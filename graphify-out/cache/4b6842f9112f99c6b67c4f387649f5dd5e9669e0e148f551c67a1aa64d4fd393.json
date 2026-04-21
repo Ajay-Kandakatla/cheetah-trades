@@ -1,0 +1,1 @@
+{"nodes": [{"id": "backend_main", "label": "main.py \u2014 FastAPI App + SSE + WebSocket Consumer", "file_type": "code", "source_file": "backend/main.py", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
