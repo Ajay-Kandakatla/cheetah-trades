@@ -14,11 +14,14 @@ export function NavBar() {
         <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
           Dashboard
         </NavLink>
+        <NavLink to="/india" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+          India
+        </NavLink>
         <NavLink to="/live" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
           Live Stream
         </NavLink>
       </nav>
-      <div className="nav-meta">
+      <div className="meta">
         Prepared for <strong>Aj</strong> · Apr 20 2026
       </div>
     </header>

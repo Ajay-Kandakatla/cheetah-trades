@@ -23,10 +23,10 @@ export function QuoteRow({ quote, cheetahScore, onRemove }: Props) {
   }, [quote.price]);
 
   const pct = quote.pct_change;
-  const pctClass = pct === undefined ? 'neutral' : pct >= 0 ? 'pos' : 'neg';
+  const pctClass = pct == null ? 'neutral' : pct >= 0 ? 'pos' : 'neg';
 
-  function rsiClass(rsi: number | undefined) {
-    if (rsi === undefined) return '';
+  function rsiClass(rsi: number | undefined | null) {
+    if (rsi == null) return '';
     if (rsi >= 70) return 'neg';
     if (rsi <= 30) return 'pos';
     return '';
@@ -44,15 +44,15 @@ export function QuoteRow({ quote, cheetahScore, onRemove }: Props) {
     <tr className={flash ? `flash-${flash}` : ''}>
       <td className="ticker">{quote.symbol}</td>
       <td className="price">
-        {quote.price !== undefined ? `$${quote.price.toFixed(2)}` : '—'}
+        {quote.price != null ? `$${quote.price.toFixed(2)}` : '—'}
       </td>
       <td className={pctClass}>
-        {pct !== undefined ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '—'}
+        {pct != null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '—'}
       </td>
       <td className={rsiClass(quote.rsi14)}>
-        {quote.rsi14 !== undefined ? quote.rsi14.toFixed(0) : '—'}
+        {quote.rsi14 != null ? quote.rsi14.toFixed(0) : '—'}
       </td>
-      <td>{quote.vwap !== undefined ? `$${quote.vwap.toFixed(2)}` : '—'}</td>
+      <td>{quote.vwap != null ? `$${quote.vwap.toFixed(2)}` : '—'}</td>
       <td>
         <Sparkline values={quote.sparkline} />
       </td>
@@ -65,9 +65,9 @@ export function QuoteRow({ quote, cheetahScore, onRemove }: Props) {
           <span className="muted small">—</span>
         )}
       </td>
-      <td>{quote.open !== undefined ? `$${quote.open.toFixed(2)}` : '—'}</td>
-      <td>{quote.high !== undefined ? `$${quote.high.toFixed(2)}` : '—'}</td>
-      <td>{quote.low !== undefined ? `$${quote.low.toFixed(2)}` : '—'}</td>
+      <td>{quote.open != null ? `$${quote.open.toFixed(2)}` : '—'}</td>
+      <td>{quote.high != null ? `$${quote.high.toFixed(2)}` : '—'}</td>
+      <td>{quote.low != null ? `$${quote.low.toFixed(2)}` : '—'}</td>
       <td>{quote.volume?.toLocaleString() ?? '—'}</td>
       <td className="source">{quote.source === 'finnhub_ws' ? 'LIVE' : 'REST'}</td>
       <td>

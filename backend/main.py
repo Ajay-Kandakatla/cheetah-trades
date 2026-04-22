@@ -20,7 +20,7 @@ import os
 import time
 from collections import deque
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 import httpx
 import websockets
@@ -37,7 +37,8 @@ from cheetah_data import (
     get_competitor_groups,
     with_computed_scores,
 )
-from news import fetch_news, market_news
+from news import fetch_news, indian_news, market_news
+from indian_market import fetch_indian_market
 
 load_dotenv()
 
@@ -331,3 +332,24 @@ async def stream(
             "Connection": "keep-alive",
         },
     )
+
+
+@app.get("/indian-stocks")
+async def indian_stocks():
+    """Live Indian market quotes + indices from Yahoo Finance (free, no key)."""
+    data = await fetch_indian_market()
+    return data
+
+
+@app.get("/indian-news")
+async def indian_news_endpoint(symbol: Optional[str] = Query(None)):
+    """Indian market news from Google News RSS (India edition).
+
+    Pass ?symbol=RELIANCE for company-specific; omit for general Nifty/Sensex.
+    """
+    items = await indian_news(symbol)
+    return {
+        "symbol": (symbol or "MARKET").upper(),
+        "items": items,
+        "fetchedAt": int(time.time()),
+    }

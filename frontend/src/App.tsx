@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './components/NavBar';
 import { Dashboard } from './pages/Dashboard';
 import { LiveStream } from './pages/LiveStream';
+import { IndianMarket } from './pages/IndianMarket';
 
 export function App() {
   return (
@@ -11,6 +12,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/india" element={<IndianMarket />} />
           <Route path="/live" element={<LiveStream />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
