@@ -7,16 +7,19 @@ interface Props {
 }
 
 /**
- * Canvas sparkline — zero external dependencies. Draws a smooth path
- * colored green/red based on whether the trend is up or down.
+ * Canvas sparkline — zero external dependencies. Path color follows the
+ * direction of the series (green up / red down) and is pulled from CSS tokens
+ * so it respects light/dark theme.
  */
-export function Sparkline({ values, width = 84, height = 28 }: Props) {
+export function Sparkline({ values, width = 96, height = 28 }: Props) {
   const ref = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const c = ref.current;
     if (!c || !values || values.length < 2) return;
-    const ctx = c.getContext('2d')!;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+
     const dpr = window.devicePixelRatio || 1;
     c.width = width * dpr;
     c.height = height * dpr;
@@ -29,10 +32,16 @@ export function Sparkline({ values, width = 84, height = 28 }: Props) {
     const max = Math.max(...values);
     const range = Math.max(max - min, 0.0001);
     const up = values[values.length - 1] >= values[0];
-    const color = up ? '#10b981' : '#ef4444';
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
+    // Pull colors from theme tokens so dark/light swap works
+    const rootStyle = getComputedStyle(document.documentElement);
+    const stroke =
+      rootStyle.getPropertyValue(up ? '--positive' : '--negative').trim() ||
+      (up ? '#3F7A50' : '#A34848');
+
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.1;
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     values.forEach((v, i) => {
       const x = (i / (values.length - 1)) * width;
@@ -42,16 +51,17 @@ export function Sparkline({ values, width = 84, height = 28 }: Props) {
     });
     ctx.stroke();
 
-    // Area fill
+    // Subtle wash below the line
+    const tint = up ? 'rgba(63,122,80,0.08)' : 'rgba(163,72,72,0.08)';
     ctx.lineTo(width, height);
     ctx.lineTo(0, height);
     ctx.closePath();
-    ctx.fillStyle = up ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+    ctx.fillStyle = tint;
     ctx.fill();
   }, [values, width, height]);
 
   if (!values || values.length < 2) {
-    return <span className="sparkline-empty">—</span>;
+    return <span className="cm-sparkline-empty">—</span>;
   }
-  return <canvas ref={ref} className="sparkline" />;
+  return <canvas ref={ref} className="cm-sparkline" />;
 }

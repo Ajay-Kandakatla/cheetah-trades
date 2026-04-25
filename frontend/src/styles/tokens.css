@@ -1,0 +1,159 @@
+/* ==========================================================================
+   Cheetah Market — Design Tokens
+   Refined luxury / private-wealth aesthetic.
+   Palette: champagne + ink (light) · obsidian + bone (dark).
+   Accent: gold (#B8935A light / #C9A876 dark), used sparingly.
+   ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --bg:           #F4EFE6;   /* champagne, primary page */
+  --bg-surface:   #FAF7F1;   /* raised surface — cards, plates */
+  --bg-raised:    #FFFFFF;   /* highest elevation — modals, focused */
+  --bg-sunken:    #EDE7DA;   /* pressed / recessed */
+
+  /* Ink */
+  --ink:          #1A1A1A;   /* primary text */
+  --ink-muted:    #4A463E;   /* secondary */
+  --ink-subtle:   #5F594F;   /* tertiary / captions — 5.7:1 on --bg (AA) */
+  --ink-faint:    #7A7468;   /* disabled / watermark — 4.5:1 on --bg (AA) */
+
+  /* Accent — gold */
+  --gold:          #B8935A;
+  --gold-strong:   #997537;
+  --gold-faint:    rgba(184, 147, 90, 0.12);
+  --gold-hairline: rgba(184, 147, 90, 0.35);
+
+  /* Hairlines */
+  --hairline:        rgba(26, 26, 26, 0.12);
+  --hairline-strong: rgba(26, 26, 26, 0.22);
+  --hairline-faint:  rgba(26, 26, 26, 0.06);
+
+  /* Semantic (muted to fit the aesthetic — not retail-trader neon) */
+  --positive:      #3F7A50;
+  --positive-bg:   rgba(63, 122, 80, 0.08);
+  --negative:      #A34848;
+  --negative-bg:   rgba(163, 72, 72, 0.08);
+  --neutral:       var(--ink-subtle);
+  --warn:          #B08234;
+
+  /* Typography */
+  --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono:  'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --fs-display:  64px;
+  --fs-h1:       44px;
+  --fs-h2:       32px;
+  --fs-h3:       22px;
+  --fs-h4:       17px;
+  --fs-body:     15px;
+  --fs-small:    13px;
+  --fs-micro:    11px;
+  --fs-eyebrow:  10px;
+
+  --lh-tight:    1.08;
+  --lh-snug:     1.3;
+  --lh-normal:   1.55;
+  --lh-loose:    1.7;
+
+  --tracking-tight:   -0.6px;
+  --tracking-normal:  0;
+  --tracking-wide:    0.6px;
+  --tracking-eyebrow: 2.2px;
+
+  /* Spacing — 4px rhythm */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  --s-9:  96px;
+  --s-10: 128px;
+
+  /* Radii — luxury is mostly sharp */
+  --r-0: 0;
+  --r-1: 2px;
+  --r-2: 4px;
+
+  /* Motion */
+  --ease-soft:  cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-sharp: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in:    cubic-bezier(0.55, 0, 1, 0.45);
+  --dur-fast:   140ms;
+  --dur-med:    280ms;
+  --dur-slow:   560ms;
+
+  /* Layout */
+  --content-max:   1280px;
+  --content-prose: 680px;
+
+  color-scheme: light;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Dark theme — obsidian + warm bone                                         */
+/* -------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  --bg:           #0E0E0C;
+  --bg-surface:   #17170F;
+  --bg-raised:    #1F1F15;
+  --bg-sunken:    #0A0A08;
+
+  --ink:          #F2ECDE;
+  --ink-muted:    #B5AF9E;
+  --ink-subtle:   #9A9385;   /* 6.0:1 on --bg (AA) */
+  --ink-faint:    #8F887A;   /* 4.8:1 on --bg (AA) */
+
+  --gold:          #C9A876;
+  --gold-strong:   #E5C28E;
+  --gold-faint:    rgba(201, 168, 118, 0.12);
+  --gold-hairline: rgba(201, 168, 118, 0.35);
+
+  --hairline:        rgba(232, 226, 212, 0.14);
+  --hairline-strong: rgba(232, 226, 212, 0.26);
+  --hairline-faint:  rgba(232, 226, 212, 0.07);
+
+  --positive:    #7ABF8E;
+  --positive-bg: rgba(122, 191, 142, 0.10);
+  --negative:    #C06B6B;
+  --negative-bg: rgba(192, 107, 107, 0.10);
+  --warn:        #D9B871;
+
+  color-scheme: dark;
+}
+
+/* System preference fallback when no explicit theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg:           #0E0E0C;
+    --bg-surface:   #17170F;
+    --bg-raised:    #1F1F15;
+    --bg-sunken:    #0A0A08;
+
+    --ink:          #F2ECDE;
+    --ink-muted:    #B5AF9E;
+    --ink-subtle:   #9A9385;
+    --ink-faint:    #8F887A;
+
+    --gold:          #C9A876;
+    --gold-strong:   #E5C28E;
+    --gold-faint:    rgba(201, 168, 118, 0.12);
+    --gold-hairline: rgba(201, 168, 118, 0.35);
+
+    --hairline:        rgba(232, 226, 212, 0.14);
+    --hairline-strong: rgba(232, 226, 212, 0.26);
+    --hairline-faint:  rgba(232, 226, 212, 0.07);
+
+    --positive:    #7ABF8E;
+    --positive-bg: rgba(122, 191, 142, 0.10);
+    --negative:    #C06B6B;
+    --negative-bg: rgba(192, 107, 107, 0.10);
+    --warn:        #D9B871;
+
+    color-scheme: dark;
+  }
+}

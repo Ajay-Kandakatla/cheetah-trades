@@ -37,8 +37,11 @@ from cheetah_data import (
     get_competitor_groups,
     with_computed_scores,
 )
-from news import fetch_news, indian_news, market_news
-from indian_market import fetch_indian_market
+from news import fetch_news, market_news
+from sepa import scanner as sepa_scanner, brief as sepa_brief, risk as sepa_risk
+from sepa.catalyst import catalyst_for as sepa_catalyst_for
+from sepa.insider import insider_activity as sepa_insider
+from sepa.ipo_age import age as sepa_ipo_age
 
 load_dotenv()
 
@@ -125,9 +128,63 @@ cache = QuoteCache()
 
 
 # ---------------------------------------------------------------------------
+# Dynamic subscription registry — symbols the WS + REST poller are tracking.
+# New symbols can be added at any time via subscribe_symbols().
+# ---------------------------------------------------------------------------
+tracked_symbols: set[str] = set()
+_ws_subscribe_queue: asyncio.Queue[str] = asyncio.Queue()
+_rest_client: Optional[httpx.AsyncClient] = None
+
+
+async def _rest_fetch_once(sym: str) -> None:
+    """One-shot REST quote so newly-added symbols populate cache immediately."""
+    global _rest_client
+    if not FINNHUB_API_KEY:
+        return
+    if _rest_client is None:
+        _rest_client = httpx.AsyncClient(timeout=10)
+    try:
+        resp = await _rest_client.get(
+            "https://finnhub.io/api/v1/quote",
+            params={"symbol": sym, "token": FINNHUB_API_KEY},
+        )
+        if resp.status_code == 200:
+            d = resp.json()
+            await cache.update(
+                sym,
+                {
+                    "price": d.get("c"),
+                    "open": d.get("o"),
+                    "high": d.get("h"),
+                    "low": d.get("l"),
+                    "prev_close": d.get("pc"),
+                    "pct_change": (
+                        round((d["c"] - d["pc"]) / d["pc"] * 100, 3)
+                        if d.get("c") and d.get("pc")
+                        else None
+                    ),
+                    "source": "finnhub_rest",
+                },
+            )
+    except Exception as exc:
+        log.warning("One-shot REST fetch failed for %s: %s", sym, exc)
+
+
+async def subscribe_symbols(symbols: list[str]) -> None:
+    """Register new symbols for streaming + REST polling. Idempotent."""
+    new = [s for s in symbols if s and s not in tracked_symbols]
+    for s in new:
+        tracked_symbols.add(s)
+        await _ws_subscribe_queue.put(s)
+    # Kick off one-shot REST fetches in parallel so SSE has data fast.
+    for s in new:
+        asyncio.create_task(_rest_fetch_once(s))
+
+
+# ---------------------------------------------------------------------------
 # Finnhub WebSocket (primary real-time feed)
 # ---------------------------------------------------------------------------
-async def finnhub_ws_consumer(symbols: list[str]) -> None:
+async def finnhub_ws_consumer() -> None:
     if not FINNHUB_API_KEY:
         log.warning("FINNHUB_API_KEY not set — skipping real-time WS feed.")
         return
@@ -138,22 +195,40 @@ async def finnhub_ws_consumer(symbols: list[str]) -> None:
             async with websockets.connect(url, ping_interval=20) as ws:
                 log.info("Connected to Finnhub WebSocket.")
                 backoff = 2
-                for sym in symbols:
+                # Re-subscribe everything tracked (covers reconnects).
+                for sym in list(tracked_symbols):
                     await ws.send(json.dumps({"type": "subscribe", "symbol": sym}))
-                async for raw in ws:
-                    msg = json.loads(raw)
-                    if msg.get("type") != "trade":
-                        continue
-                    for t in msg.get("data", []):
-                        await cache.update(
-                            t["s"],
-                            {
-                                "price": t["p"],
-                                "volume": t.get("v"),
-                                "source": "finnhub_ws",
-                                "trade_ts": t.get("t"),
-                            },
-                        )
+
+                async def pump_subs() -> None:
+                    while True:
+                        sym = await _ws_subscribe_queue.get()
+                        try:
+                            await ws.send(json.dumps({"type": "subscribe", "symbol": sym}))
+                            log.info("WS subscribed to %s", sym)
+                        except Exception as exc:
+                            log.warning("WS subscribe failed for %s: %s", sym, exc)
+                            # Put it back so the next reconnect picks it up.
+                            await _ws_subscribe_queue.put(sym)
+                            raise
+
+                pump_task = asyncio.create_task(pump_subs())
+                try:
+                    async for raw in ws:
+                        msg = json.loads(raw)
+                        if msg.get("type") != "trade":
+                            continue
+                        for t in msg.get("data", []):
+                            await cache.update(
+                                t["s"],
+                                {
+                                    "price": t["p"],
+                                    "volume": t.get("v"),
+                                    "source": "finnhub_ws",
+                                    "trade_ts": t.get("t"),
+                                },
+                            )
+                finally:
+                    pump_task.cancel()
         except Exception as exc:
             log.error("Finnhub WS error: %s. Reconnecting in %ss", exc, backoff)
             await asyncio.sleep(backoff)
@@ -163,13 +238,13 @@ async def finnhub_ws_consumer(symbols: list[str]) -> None:
 # ---------------------------------------------------------------------------
 # REST poller for day context (open/high/low/prev close)
 # ---------------------------------------------------------------------------
-async def finnhub_rest_poller(symbols: list[str]) -> None:
+async def finnhub_rest_poller() -> None:
     if not FINNHUB_API_KEY:
         return
     client = httpx.AsyncClient(timeout=10)
     while True:
         try:
-            for sym in symbols:
+            for sym in list(tracked_symbols):
                 resp = await client.get(
                     "https://finnhub.io/api/v1/quote",
                     params={"symbol": sym, "token": FINNHUB_API_KEY},
@@ -203,11 +278,12 @@ async def finnhub_rest_poller(symbols: list[str]) -> None:
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await subscribe_symbols([s.strip().upper() for s in DEFAULT_SYMBOLS if s.strip()])
     tasks = [
-        asyncio.create_task(finnhub_ws_consumer(DEFAULT_SYMBOLS)),
-        asyncio.create_task(finnhub_rest_poller(DEFAULT_SYMBOLS)),
+        asyncio.create_task(finnhub_ws_consumer()),
+        asyncio.create_task(finnhub_rest_poller()),
     ]
-    log.info("Background market feeds started for %s", DEFAULT_SYMBOLS)
+    log.info("Background market feeds started for %s", sorted(tracked_symbols))
     try:
         yield
     finally:
@@ -323,6 +399,7 @@ async def stream(
     syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     if not syms:
         raise HTTPException(400, "At least one symbol required")
+    await subscribe_symbols(syms)
     return StreamingResponse(
         sse_event_generator(request, syms),
         media_type="text/event-stream",
@@ -334,22 +411,181 @@ async def stream(
     )
 
 
-@app.get("/indian-stocks")
-async def indian_stocks():
-    """Live Indian market quotes + indices from Yahoo Finance (free, no key)."""
-    data = await fetch_indian_market()
-    return data
+# ---------------------------------------------------------------------------
+# SEPA (Minervini) endpoints
+# ---------------------------------------------------------------------------
+@app.get("/sepa/scan")
+async def sepa_scan_get():
+    """Return the most recent persisted scan (no recompute).
+    Trigger a fresh scan via POST /sepa/scan."""
+    latest = sepa_scanner.load_latest()
+    if not latest:
+        return JSONResponse({"candidates": [], "message": "no scan yet — POST /sepa/scan"},
+                            status_code=200)
+    return JSONResponse(latest)
 
 
-@app.get("/indian-news")
-async def indian_news_endpoint(symbol: Optional[str] = Query(None)):
-    """Indian market news from Google News RSS (India edition).
+@app.post("/sepa/scan")
+async def sepa_scan_post(
+    with_catalyst: bool = Query(False),
+    no_catalyst: Optional[bool] = Query(None, deprecated=True),
+):
+    """Run a fresh scan across the universe. Heavy — 30-90s typical.
+    Pass ?with_catalyst=true to also fetch news/earnings/analyst revisions.
+    Legacy ?no_catalyst=bool still accepted (inverted)."""
+    include = (not no_catalyst) if no_catalyst is not None else with_catalyst
+    result = await asyncio.to_thread(sepa_scanner.scan_universe, None, include, True)
+    return JSONResponse(result)
 
-    Pass ?symbol=RELIANCE for company-specific; omit for general Nifty/Sensex.
-    """
-    items = await indian_news(symbol)
-    return {
-        "symbol": (symbol or "MARKET").upper(),
-        "items": items,
-        "fetchedAt": int(time.time()),
-    }
+
+@app.get("/sepa/brief")
+async def sepa_brief_get():
+    """Return the cached morning brief. Regenerate via POST /sepa/brief."""
+    b = sepa_brief.load_brief()
+    if not b:
+        return JSONResponse({"message": "no brief yet — POST /sepa/brief"},
+                            status_code=200)
+    return JSONResponse(b)
+
+
+@app.post("/sepa/brief")
+async def sepa_brief_post():
+    result = await asyncio.to_thread(sepa_brief.generate_brief, True)
+    return JSONResponse(result)
+
+
+_profile_cache: dict[str, dict] = {}
+
+
+async def _company_profile(sym: str) -> dict:
+    """Lightweight company profile (name + exchange) from Finnhub. Cached in-process."""
+    if sym in _profile_cache:
+        return _profile_cache[sym]
+    if not FINNHUB_API_KEY:
+        return {}
+    global _rest_client
+    if _rest_client is None:
+        _rest_client = httpx.AsyncClient(timeout=10)
+    try:
+        r = await _rest_client.get(
+            "https://finnhub.io/api/v1/stock/profile2",
+            params={"symbol": sym, "token": FINNHUB_API_KEY},
+        )
+        if r.status_code == 200:
+            d = r.json() or {}
+            profile = {
+                "name": d.get("name"),
+                "exchange": d.get("exchange"),
+                "industry": d.get("finnhubIndustry"),
+                "country": d.get("country"),
+                "logo": d.get("logo"),
+                "weburl": d.get("weburl"),
+            }
+            _profile_cache[sym] = profile
+            return profile
+    except Exception as exc:
+        log.warning("profile fetch failed for %s: %s", sym, exc)
+    return {}
+
+
+@app.get("/sepa/candidate/{symbol}")
+async def sepa_candidate_detail(symbol: str):
+    """Deep-dive on a single candidate: trend + catalyst + insider + IPO age."""
+    sym = symbol.upper()
+    latest = sepa_scanner.load_latest() or {}
+    base = next(
+        (c for c in (latest.get("all_results") or []) if c["symbol"] == sym),
+        None,
+    )
+    profile_task = asyncio.create_task(_company_profile(sym))
+    catalyst = await sepa_catalyst_for(sym)
+    insider = await sepa_insider(sym)
+    ipo = await asyncio.to_thread(sepa_ipo_age, sym)
+    profile = await profile_task
+    return JSONResponse({
+        "symbol": sym,
+        "profile": profile,
+        "base": base,
+        "catalyst": catalyst,
+        "insider": insider,
+        "ipo_age": ipo,
+    })
+
+
+@app.post("/sepa/rescan/{symbol}")
+async def sepa_rescan(symbol: str):
+    """Force a fresh price pull + re-analyze a single ticker."""
+    from sepa import prices, rs_rank, scanner as sc
+    sym = symbol.upper()
+    await asyncio.to_thread(prices.load_prices, sym, "2y", True)
+    # Mini RS across universe to contextualize this symbol
+    rs_map = await asyncio.to_thread(rs_rank.rs_ranks, [sym])
+    res = await asyncio.to_thread(sc._analyze_symbol, sym, rs_map)
+    return JSONResponse(res or {"error": "no data"})
+
+
+@app.get("/sepa/watchlist")
+async def sepa_watchlist_get():
+    return JSONResponse(sepa_scanner.load_watchlist())
+
+
+@app.post("/sepa/watchlist")
+async def sepa_watchlist_add(symbol: str = Query(...),
+                              entry: float = Query(...),
+                              stop: float = Query(...)):
+    items = sepa_scanner.add_to_watchlist(symbol, entry, stop)
+    return JSONResponse(items)
+
+
+@app.delete("/sepa/watchlist/{symbol}")
+async def sepa_watchlist_remove(symbol: str):
+    items = sepa_scanner.remove_from_watchlist(symbol)
+    return JSONResponse(items)
+
+
+@app.get("/sepa/history/runs")
+async def sepa_history_runs(limit: int = Query(30, ge=1, le=200)):
+    """List of recent scan runs (date, market regime, candidate count)."""
+    from sepa import history
+    return JSONResponse({"runs": history.get_recent_runs(limit)})
+
+
+@app.get("/sepa/history/diff")
+async def sepa_history_diff(from_date: str = Query(..., alias="from"),
+                             to_date: str = Query(..., alias="to")):
+    """Symbols entered/exited the candidate list and score deltas between two dates."""
+    from sepa import history
+    return JSONResponse(history.diff_dates(from_date, to_date))
+
+
+@app.get("/sepa/history/date/{date_et}")
+async def sepa_history_by_date(date_et: str):
+    """Full scan as it stood on the given Eastern date (YYYY-MM-DD)."""
+    from sepa import history
+    run = history.get_scan_by_date(date_et)
+    if not run:
+        raise HTTPException(404, f"no scan stored for {date_et}")
+    return JSONResponse(run)
+
+
+@app.get("/sepa/history/{symbol}")
+async def sepa_history_symbol(symbol: str, days: int = Query(30, ge=1, le=365)):
+    """Trajectory of one ticker — score, RS, stage, setup over the last N days."""
+    from sepa import history
+    return JSONResponse({"symbol": symbol.upper(), "days": days,
+                         "snapshots": history.get_symbol_history(symbol, days)})
+
+
+@app.post("/sepa/position-plan")
+async def sepa_position_plan(entry: float = Query(...),
+                              stop: float = Query(...),
+                              account_size: float = Query(...),
+                              risk_per_trade_pct: float = Query(1.0),
+                              max_stop_pct: float = Query(10.0)):
+    plan = sepa_risk.plan_position(entry, stop, account_size,
+                                    risk_per_trade_pct, max_stop_pct)
+    if not plan:
+        raise HTTPException(400, "invalid inputs")
+    return JSONResponse(plan.to_dict())
+
+

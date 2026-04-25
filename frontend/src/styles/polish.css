@@ -1,0 +1,765 @@
+/* ==========================================================================
+   Cheetah Market — Polish pass
+   Covers NewsPanel, EnhancedIndianStockTable, CompetitorScoutCard-like
+   legacy cards, and global focus/motion behavior.
+   Loaded LAST so it always wins over legacy EnhancedStyles.css.
+   ========================================================================== */
+
+/* -------------------------------------------------------------------------- */
+/*  Global focus-visible ring — subtle gold                                   */
+/* -------------------------------------------------------------------------- */
+.cm-page a:focus-visible,
+.cm-page button:focus-visible,
+.cm-page select:focus-visible,
+.cm-page input:focus-visible,
+.cm-page [role='button']:focus-visible,
+.cm-nav a:focus-visible,
+.cm-nav button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--gold);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  NewsPanel (shared with IndianNewsPanel)                                   */
+/* -------------------------------------------------------------------------- */
+.cm-page .news-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-3);
+}
+
+.cm-page .news-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-subtle);
+}
+
+.cm-page .refresh-btn-mini {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0.5px solid var(--hairline-strong);
+  border-radius: 0;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-soft),
+              border-color var(--dur-fast) var(--ease-soft);
+}
+.cm-page .refresh-btn-mini:hover {
+  color: var(--gold);
+  border-color: var(--gold-hairline);
+}
+.cm-page .refresh-btn-mini:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.cm-page .news-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+  padding: var(--s-3) 0;
+  border-top: 0.5px solid var(--hairline-faint);
+  border-bottom: 0.5px solid var(--hairline-faint);
+  margin-bottom: var(--s-4);
+}
+
+.cm-page .news-tab {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--ink-subtle);
+  background: transparent;
+  border: 0;
+  padding: var(--s-1) 0;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--dur-fast) var(--ease-soft);
+  border-radius: 0;
+}
+.cm-page .news-tab:hover { color: var(--ink); }
+.cm-page .news-tab.active {
+  color: var(--ink);
+}
+.cm-page .news-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -5px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.cm-page .news-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cm-page .news-item {
+  padding: var(--s-4) 0;
+  border-bottom: 0.5px solid var(--hairline-faint);
+}
+.cm-page .news-item:last-child { border-bottom: 0; }
+
+.cm-page .news-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  align-items: baseline;
+}
+
+.cm-page .news-title {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+  letter-spacing: -0.2px;
+  font-variation-settings: 'opsz' 144, 'SOFT' 20;
+  text-decoration: none;
+  border-bottom: 0.5px solid transparent;
+  transition: border-color var(--dur-fast) var(--ease-soft),
+              color var(--dur-fast) var(--ease-soft);
+  max-width: 68ch;
+}
+.cm-page .news-title:hover {
+  color: var(--gold);
+  border-bottom-color: var(--gold-hairline);
+}
+
+.cm-page .news-src {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--ink-subtle);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cm-page .news-summary {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+  margin-top: var(--s-2);
+  max-width: 68ch;
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+}
+
+.cm-page .news-foot {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  margin-top: var(--s-2);
+  letter-spacing: 0.4px;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  EnhancedIndianStockTable — card grid                                      */
+/* -------------------------------------------------------------------------- */
+.cm-page .enhanced-card {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+.cm-page .enhanced-card .card-header {
+  margin-bottom: var(--s-4);
+}
+.cm-page .enhanced-card .card-header h2 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-h3);
+  color: var(--ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  letter-spacing: -0.3px;
+  font-variation-settings: 'opsz' 144, 'SOFT' 20;
+}
+.cm-page .enhanced-card .card-header .subheading {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-muted);
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+  margin-top: var(--s-1);
+}
+
+.cm-page .enhanced-card .table-controls {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  border-top: 0.5px solid var(--hairline-faint);
+  border-bottom: 0.5px solid var(--hairline-faint);
+  margin-bottom: var(--s-5);
+}
+.cm-page .enhanced-card .filter-group {
+  display: flex;
+  gap: var(--s-5);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.cm-page .enhanced-card .filter-group label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--ink-subtle);
+}
+.cm-page .enhanced-card .filter-select,
+.cm-page .enhanced-card .search-input {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 0.5px solid var(--hairline-strong);
+  padding: var(--s-2) var(--s-1);
+  min-width: 180px;
+}
+.cm-page .enhanced-card .filter-select:focus,
+.cm-page .enhanced-card .search-input:focus {
+  outline: none;
+  border-bottom-color: var(--gold);
+}
+.cm-page .enhanced-card .sort-info {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-subtle);
+}
+
+.cm-page .stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0;
+  border-top: 0.5px solid var(--hairline);
+  border-left: 0.5px solid var(--hairline);
+}
+
+.cm-page .stock-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: transparent;
+  border-right: 0.5px solid var(--hairline);
+  border-bottom: 0.5px solid var(--hairline);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft);
+  border-radius: 0;
+}
+.cm-page .stock-card:hover {
+  background: var(--bg-surface);
+}
+.cm-page .stock-card.selected {
+  background: var(--gold-faint);
+  outline: 1px solid var(--gold-hairline);
+  outline-offset: -1px;
+}
+
+.cm-page .stock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+.cm-page .stock-header .ticker-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cm-page .stock-header .ticker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.4px;
+}
+.cm-page .stock-header .company-name {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-page .stock-header .price-change {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.cm-page .stock-header .price {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+
+.cm-page .change-badge,
+.cm-page .change-indicator {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-small);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+}
+.cm-page .change-badge.positive,
+.cm-page .change-indicator.positive { color: var(--positive); }
+.cm-page .change-badge.negative,
+.cm-page .change-indicator.negative { color: var(--negative); }
+
+.cm-page .stock-details { display: flex; flex-direction: column; gap: var(--s-1); }
+.cm-page .detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-small);
+}
+.cm-page .detail-row .label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--ink-subtle);
+}
+.cm-page .detail-row .value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.cm-page .empty-state {
+  padding: var(--s-6);
+  text-align: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--ink-muted);
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+  border: 0.5px solid var(--hairline);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Error card (legacy .error-card used in NewsPanel)                         */
+/* -------------------------------------------------------------------------- */
+.cm-page .error-card {
+  display: block;
+  padding: var(--s-4) var(--s-5);
+  background: var(--negative-bg);
+  border: 0.5px solid var(--hairline);
+  border-left: 2px solid var(--negative);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  border-radius: 0;
+  margin: var(--s-4) 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  CompetitorScoutCard / UnicornsCard / EtfsCard — reinforce card look       */
+/*  (their markup uses .card already; dashboard.css handles the rest)         */
+/* -------------------------------------------------------------------------- */
+.cm-grid-3 .card {
+  height: 100%;
+  margin-bottom: 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Smooth theme transitions on common elements                               */
+/* -------------------------------------------------------------------------- */
+.cm-page,
+.cm-page .card,
+.cm-page .enhanced-card,
+.cm-page .stock-card,
+.cm-page table,
+.cm-page thead th,
+.cm-page tbody td,
+.cm-indices,
+.cm-index {
+  transition:
+    background-color var(--dur-med) var(--ease-soft),
+    color var(--dur-med) var(--ease-soft),
+    border-color var(--dur-med) var(--ease-soft);
+}
+
+/* ==========================================================================
+   Global overrides — kill italic, force sans, theme SEPA surfaces
+   ========================================================================== */
+* { font-style: normal !important; }
+
+h1, h2, h3, h4, h5, h6,
+.display, .lede,
+.cm-nav__wordmark,
+.sepa-page__h1, .sepa-title,
+.sepa-pick__sym, .sepa-stat__num,
+.sepa-toppick__score, .sepa-hero__market-label {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+}
+
+/* All SEPA surfaces → theme tokens (covers v1 brief + v2 hero/cards) */
+.sepa-brief,
+.sepa-pick,
+.sepa-hero,
+.sepa-filterbar,
+.sepa-results,
+.sepa-empty,
+.sepa-empty-card,
+.sepa-toppick,
+.sepa-card,
+.sepa-hero__market,
+.sepa-btn,
+.sepa-chip,
+.sepa-filterbar__search,
+.sepa-filterbar__select,
+.sepa-table tbody tr:hover,
+.sepa-row--candidate,
+.sepa-row--candidate:hover {
+  background: var(--bg-surface) !important;
+  border-color: var(--hairline-strong) !important;
+  color: var(--ink) !important;
+}
+.sepa-btn--primary,
+.sepa-chip.is-active {
+  background: var(--gold) !important;
+  color: var(--bg) !important;
+  border-color: var(--gold) !important;
+}
+.sepa-btn:hover,
+.sepa-chip:hover { background: var(--bg-raised) !important; }
+
+/* Numbers + headers — high contrast on dark */
+.sepa-stat__num,
+.sepa-toppick__score,
+.sepa-toppick__sym,
+.sepa-hero__market-label,
+.sepa-score__num,
+.sepa-card__sym,
+.sepa-rs-bar__num {
+  color: var(--ink) !important;
+}
+
+/* Secondary labels — medium contrast (still ≥4.5:1) */
+.sepa-stat__label,
+.sepa-toppick__sub,
+.sepa-hero__market-sub,
+.sepa-pick__score,
+.sepa-card__label,
+.sepa-dots__count,
+.sepa-filterbar__count {
+  color: var(--ink-muted) !important;
+}
+
+/* Bars and inactive backgrounds */
+.sepa-score__bar,
+.sepa-rs-bar { background: var(--bg-sunken) !important; }
+
+/* ==========================================================================
+   Info popover — top-right of each SEPA section
+   ========================================================================== */
+.info-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+}
+.info-button__trigger {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0.5px solid var(--hairline-strong) !important;
+  background: var(--bg-raised) !important;
+  color: var(--ink-muted) !important;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.info-button__trigger:hover,
+.info-button__trigger[aria-expanded="true"] {
+  color: var(--gold) !important;
+  border-color: var(--gold) !important;
+}
+.info-button__pop {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  width: min(360px, 80vw);
+  background: var(--bg-raised) !important;
+  border: 0.5px solid var(--hairline-strong) !important;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  color: var(--ink) !important;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.info-button__title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold) !important;
+  margin-bottom: 8px;
+}
+.info-button__body { color: var(--ink-muted) !important; }
+.info-button__body p { margin: 0 0 8px; }
+.info-button__body p:last-child { margin-bottom: 0; }
+.info-button__body strong { color: var(--ink) !important; font-weight: 600; }
+.info-button__body ul { margin: 4px 0 8px; padding-left: 18px; }
+.info-button__body li { margin: 2px 0; }
+
+/* Make section roots position relative so the info button anchors correctly */
+.sepa-brief,
+.sepa-page__title,
+.sepa-hero,
+.sepa-toppicks,
+.sepa-filterbar,
+.sepa-results { position: relative; }
+
+/* ==========================================================================
+   Detail drawer — dark theme overrides
+   ========================================================================== */
+.sepa-drawer-backdrop {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px);
+}
+.sepa-drawer {
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+  border-left: 0.5px solid var(--hairline-strong);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.6) !important;
+}
+.sepa-drawer__head {
+  border-bottom-color: var(--hairline) !important;
+}
+.sepa-drawer__sym { color: var(--ink) !important; }
+
+.sepa-tabs { border-bottom-color: var(--hairline) !important; }
+.sepa-tab { color: var(--ink-muted) !important; }
+.sepa-tab.is-active,
+.sepa-tab:hover {
+  color: var(--gold) !important;
+  border-bottom-color: var(--gold) !important;
+}
+
+.sepa-meta-grid > div,
+.sepa-fund__row,
+.sepa-plan {
+  background: var(--bg-raised) !important;
+  border: 0.5px solid var(--hairline) !important;
+  color: var(--ink) !important;
+}
+.sepa-meta-grid strong,
+.sepa-fund__row strong,
+.sepa-plan strong { color: var(--ink) !important; }
+.sepa-meta-label,
+.sepa-fund__row span,
+.sepa-plan__row span { color: var(--ink-muted) !important; }
+.sepa-fund__row .pass { color: var(--positive, #4ade80) !important; }
+.sepa-fund__row .fail { color: var(--ink-muted) !important; }
+.sepa-plan__row { border-bottom-color: var(--hairline) !important; }
+.sepa-plan__row--target strong { color: var(--positive, #4ade80) !important; }
+
+.sepa-callout {
+  background: var(--bg-raised) !important;
+  border-left: 3px solid var(--gold) !important;
+  color: var(--ink) !important;
+}
+.sepa-vcp {
+  background: var(--bg-raised) !important;
+  border-left-color: var(--gold) !important;
+}
+.sepa-checks li { border-bottom-color: var(--hairline) !important; }
+.sepa-checks li.pass { color: var(--positive, #4ade80) !important; }
+.sepa-checks li.fail { color: var(--ink-muted) !important; }
+.sepa-news a {
+  color: var(--ink) !important;
+  border-bottom: 0.5px solid var(--hairline);
+}
+.sepa-news a:hover { color: var(--gold) !important; }
+.sepa-kv li { color: var(--ink) !important; }
+.sepa-flag--good { background: rgba(74, 222, 128, 0.15) !important; color: var(--positive, #4ade80) !important; }
+.sepa-warn { color: var(--gold) !important; }
+.sepa-rladder__entry { color: var(--ink) !important; }
+.sepa-rladder__labels { color: var(--ink-muted) !important; }
+
+input[type="number"] {
+  background: var(--bg-raised) !important;
+  color: var(--ink) !important;
+  border: 0.5px solid var(--hairline-strong) !important;
+  border-radius: 4px;
+  padding: 6px 10px !important;
+}
+input[type="number"]:focus { border-color: var(--gold) !important; }
+
+/* Section help — small explainer block above each drawer tab section */
+.sepa-tab-help {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  background: var(--bg-raised);
+  border-left: 2px solid var(--gold);
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  border-radius: 0 4px 4px 0;
+}
+.sepa-tab-help strong { color: var(--ink); font-weight: 600; }
+
+/* Hero action explainer — one-liners under Scan / + catalyst */
+.sepa-hero__actions-help {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-muted);
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.sepa-hero__actions-help b { color: var(--ink); font-weight: 600; }
+
+/* Toggle — Include catalyst */
+.sepa-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-muted);
+  user-select: none;
+}
+.sepa-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.sepa-toggle__track {
+  width: 32px;
+  height: 18px;
+  background: var(--bg-sunken);
+  border: 0.5px solid var(--hairline-strong);
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.sepa-toggle__thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  background: var(--ink-muted);
+  border-radius: 50%;
+  transition: left 0.15s ease, background 0.15s ease;
+}
+.sepa-toggle.is-on .sepa-toggle__track {
+  background: rgba(212, 175, 55, 0.25);
+  border-color: var(--gold);
+}
+.sepa-toggle.is-on .sepa-toggle__thumb {
+  left: 15px;
+  background: var(--gold);
+}
+.sepa-toggle.is-on .sepa-toggle__label { color: var(--ink); }
+
+.sepa-stat__sub {
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Modal header — company name + actions row */
+.sepa-drawer__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+.sepa-drawer__close { width: 36px; height: 36px; }
+.sepa-drawer__company {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: -4px 0 10px;
+  line-height: 1.4;
+}
+.sepa-drawer__exchange { color: var(--ink-faint) !important; }
+.sepa-drawer__industry { color: var(--ink-faint); font-size: 12px; }
+
+/* Trend Template — friendly labels with help text under each */
+.sepa-checks li { padding: 8px 0 !important; }
+.sepa-check__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.sepa-check__icon { width: 14px; flex-shrink: 0; }
+.sepa-check__label { font-size: 13px; }
+.sepa-check__help {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  margin: 4px 0 0 22px;
+}
+.sepa-checks li.fail .sepa-check__help { color: var(--ink-faint); }
+
+/* Stat tile — explainer line under the number */
+.sepa-meta-grid > div { padding: 10px 12px !important; }
+.sepa-meta-hint {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--ink-faint);
+  margin-top: 6px;
+  display: block;
+}
+
+/* Live chart tab */
+.sepa-drawer__chart {
+  width: 100%;
+  height: 480px;
+  background: var(--bg-sunken);
+  border: 0.5px solid var(--hairline);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.sepa-drawer__chart iframe { display: block; }
+.sepa-drawer__chart-links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.sepa-drawer__chart-links a {
+  color: var(--ink-muted) !important;
+  border-bottom: 0.5px solid var(--hairline);
+  padding-bottom: 1px;
+}
+.sepa-drawer__chart-links a:hover {
+  color: var(--gold) !important;
+  border-bottom-color: var(--gold);
+}

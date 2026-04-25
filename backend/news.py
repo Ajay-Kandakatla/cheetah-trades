@@ -171,39 +171,6 @@ async def fetch_news(symbol: str) -> list[dict]:
     return merged
 
 
-async def indian_news(symbol: str | None = None) -> list[dict]:
-    """Google News RSS filtered for Indian markets.
-
-    If `symbol` is given (e.g. RELIANCE), queries for that company + "NSE".
-    Otherwise returns general India market headlines (Nifty, Sensex).
-    """
-    now = time.time()
-    key = f"__IN_{symbol.upper() if symbol else 'MARKET'}__"
-    async with _lock:
-        cached = _cache.get(key)
-        if cached and now - cached[0] < CACHE_TTL_SEC:
-            return cached[1]
-
-    if symbol:
-        q = f"{symbol}+NSE+share+price+OR+results"
-    else:
-        q = "Nifty+50+OR+Sensex+OR+Indian+stock+market"
-    url = f"https://news.google.com/rss/search?q={q}&hl=en-IN&gl=IN&ceid=IN:en"
-
-    items: list[dict] = []
-    try:
-        async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
-            r = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Cheetah-app)"})
-            if r.status_code == 200:
-                items = _parse_rss(r.text, "google")[:MAX_ITEMS]
-    except Exception as e:
-        log.warning("indian news %s: %s", symbol, e)
-
-    async with _lock:
-        _cache[key] = (now, items)
-    return items
-
-
 async def market_news() -> list[dict]:
     """General-market headlines (Finnhub general + Google 'market')."""
     now = time.time()

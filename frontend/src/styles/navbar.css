@@ -1,0 +1,177 @@
+/* ==========================================================================
+   Cheetah Market — Navbar + Theme Toggle
+   Depends on: tokens.css, typography.css
+   Loaded AFTER EnhancedStyles.css so it wins over legacy .navbar styles.
+   ========================================================================== */
+
+.cm-nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: var(--s-5);
+  padding: var(--s-6) var(--s-5) var(--s-4);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  border-bottom: 0.5px solid var(--hairline);
+  background: var(--bg);
+}
+
+/* -- Brand / wordmark ----------------------------------------------------- */
+.cm-nav__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.cm-nav__wordmark {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--ink);
+  letter-spacing: -0.4px;
+  font-variation-settings: 'opsz' 144, 'SOFT' 30;
+}
+
+.cm-nav__eyebrow {
+  /* eyebrow class provides gold mono uppercase already */
+  font-size: var(--fs-eyebrow);
+}
+
+/* -- Primary navigation --------------------------------------------------- */
+.cm-nav__links {
+  display: flex;
+  gap: var(--s-6);
+  align-items: baseline;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
+.cm-nav__link {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--ink-subtle);
+  padding: var(--s-2) 0;
+  position: relative;
+  transition: color var(--dur-fast) var(--ease-soft);
+  border-bottom: 1px solid transparent;
+}
+
+.cm-nav__link:hover {
+  color: var(--ink);
+}
+
+.cm-nav__link.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--gold);
+}
+
+.cm-nav__link.is-active::before {
+  /* subtle bullet before active link */
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  background: var(--gold);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+/* -- Right meta cluster --------------------------------------------------- */
+.cm-nav__meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-3);
+  font-size: var(--fs-small);
+  color: var(--ink-subtle);
+  padding-bottom: var(--s-1);
+}
+
+.cm-nav__meta-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--ink-faint);
+}
+
+.cm-nav__meta-name {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+}
+
+.cm-nav__meta-sep {
+  color: var(--ink-faint);
+}
+
+.cm-nav__meta-date {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- Theme toggle button -------------------------------------------------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: var(--s-2);
+  border-radius: 50%;
+  border: 0.5px solid var(--hairline-strong);
+  color: var(--ink-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft),
+    background-color var(--dur-fast) var(--ease-soft);
+}
+
+.theme-toggle:hover {
+  color: var(--gold);
+  border-color: var(--gold-hairline);
+  background: var(--gold-faint);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-faint);
+}
+
+/* -- Responsive: stack cleanly under ~900px ------------------------------- */
+@media (max-width: 900px) {
+  .cm-nav {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: var(--s-4);
+    padding: var(--s-4) var(--s-4) var(--s-3);
+  }
+  .cm-nav__links {
+    justify-content: flex-start;
+    gap: var(--s-5);
+    flex-wrap: wrap;
+  }
+  .cm-nav__meta {
+    justify-content: flex-start;
+  }
+}
+
+/* -- Legacy override: suppress old orange .navbar visuals ------------------
+   EnhancedStyles.css defines `.navbar` with an orange gradient bar. The new
+   masthead is a different class (.cm-nav), so the old rules no longer apply.
+   Nothing to override here — this comment is a signpost for future cleanup.
+   ========================================================================== */

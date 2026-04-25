@@ -130,33 +130,3 @@ export interface NewsResponse {
   fetchedAt: number;
 }
 
-// Indian Market Types
-export interface IndianStock {
-  symbol: string;
-  name: string;
-  sector: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  marketCap?: number | null;
-  peRatio?: number | null;
-  high52?: number | null;
-  low52?: number | null;
-  currency?: string;
-}
-
-export interface IndianMarketIndex {
-  name: string;
-  symbol: string;
-  value: number;
-  change: number;
-  changePercent: number;
-  lastUpdated: number;
-}
-
-export interface IndianMarketResponse {
-  stocks: IndianStock[];
-  indices: IndianMarketIndex[];
-  fetchedAt: number;
-}

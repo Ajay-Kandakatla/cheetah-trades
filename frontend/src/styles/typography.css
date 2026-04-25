@@ -1,0 +1,212 @@
+/* ==========================================================================
+   Cheetah Market — Typography & Base Reset
+   Applied after tokens.css. Sets base element defaults.
+   Depends on: tokens.css, Fraunces / Geist / JetBrains Mono from index.html
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Headings — Fraunces serif, light weight, tight tracking                   */
+/* -------------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  color: var(--ink);
+  letter-spacing: var(--tracking-tight);
+}
+
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); letter-spacing: -0.3px; }
+h4 { font-size: var(--fs-h4); letter-spacing: -0.1px; font-weight: 500; }
+
+p  { margin: 0; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-soft),
+              border-color var(--dur-fast) var(--ease-soft);
+}
+
+hr {
+  border: 0;
+  border-top: 0.5px solid var(--hairline);
+  margin: var(--s-5) 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Editorial utilities                                                       */
+/* -------------------------------------------------------------------------- */
+
+/* Uppercase gold mono label — "№ 01 — Methodology" */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  font-weight: 400;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--gold);
+  display: inline-block;
+}
+
+/* Serif italic lede — the paragraph under the headline */
+.lede {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+  max-width: 58ch;
+}
+
+/* Display headline — bigger, lighter */
+.display {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--fs-display);
+  line-height: 1.02;
+  letter-spacing: -0.8px;
+}
+
+/* Tabular numbers — for tickers, prices, percentages */
+.num,
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'zero', 'ss01';
+  letter-spacing: 0;
+}
+
+.caps {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.subtle   { color: var(--ink-subtle); }
+.muted    { color: var(--ink-muted); }
+.faint    { color: var(--ink-faint); }
+.gold     { color: var(--gold); }
+.positive { color: var(--positive); }
+.negative { color: var(--negative); }
+
+/* -------------------------------------------------------------------------- */
+/*  Form elements — inherit theme, no native browser styling                  */
+/* -------------------------------------------------------------------------- */
+input, button, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+input[type="text"], input:not([type]), textarea, select {
+  background: transparent;
+  border: 0;
+  border-bottom: 0.5px solid var(--hairline-strong);
+  padding: var(--s-2) 0;
+  color: var(--ink);
+  transition: border-color var(--dur-fast) var(--ease-soft);
+  outline: none;
+}
+
+input[type="text"]:focus, input:not([type]):focus, textarea:focus, select:focus {
+  border-bottom-color: var(--gold);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Selection + scrollbar                                                     */
+/* -------------------------------------------------------------------------- */
+::selection {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--hairline-strong); border-radius: 0; }
+
+/* -------------------------------------------------------------------------- */
+/*  Theme transitions — smooth color swaps, nothing else                      */
+/* -------------------------------------------------------------------------- */
+html,
+body,
+.theme-transition,
+.theme-transition * {
+  transition: background-color var(--dur-med) var(--ease-soft),
+              color var(--dur-med) var(--ease-soft),
+              border-color var(--dur-med) var(--ease-soft),
+              fill var(--dur-med) var(--ease-soft),
+              stroke var(--dur-med) var(--ease-soft);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Layout primitives                                                         */
+/* -------------------------------------------------------------------------- */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  /* Page-level bounds are handled by .cm-page; .main is just a flex filler. */
+}
+
+/* Editorial prose width — for dashboard methodology content */
+.prose {
+  max-width: var(--content-prose);
+}
+
+/* Full-bleed for data-heavy pages */
+.bleed { max-width: none; }

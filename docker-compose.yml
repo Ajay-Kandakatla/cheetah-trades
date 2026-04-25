@@ -1,0 +1,59 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # Bound to loopback only — the mini's other services reach it via the
+    # compose network, nothing on the LAN should hit Mongo directly.
+    ports:
+      - "127.0.0.1:27017:27017"
+
+  api:
+    build:
+      context: ./backend
+    image: cheetah-api:latest
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB: cheetah
+      TZ: America/New_York
+    volumes:
+      # Cron writes scan JSON here; api reads it. Shared with the cron service.
+      - cheetah-scans:/root/.cheetah
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  cron:
+    image: cheetah-api:latest
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB: cheetah
+      TZ: America/New_York
+    volumes:
+      - cheetah-scans:/root/.cheetah
+      - ./backend/crontab:/app/crontab:ro
+    depends_on:
+      - mongo
+      - api
+    command: ["supercronic", "/app/crontab"]
+
+  frontend:
+    build:
+      context: ./frontend
+    image: cheetah-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  mongo-data:
+  cheetah-scans:

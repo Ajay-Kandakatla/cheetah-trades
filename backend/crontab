@@ -1,0 +1,4 @@
+# Cheetah SEPA cron — times are container-local; container TZ set to America/New_York.
+# Min  Hour  DOM  Mon  DOW  Command
+30     16    *    *    1-5  python -m sepa.cli scan
+30     8     *    *    1-5  python -m sepa.cli brief

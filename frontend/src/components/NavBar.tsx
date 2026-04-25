@@ -1,28 +1,54 @@
 import { NavLink } from 'react-router-dom';
+import { ThemeToggle } from './ThemeToggle';
+
+/* ==========================================================================
+   NavBar — editorial masthead
+   Left:   italic serif wordmark + mono dateline
+   Center: uppercase letter-spaced nav links, gold hairline for active
+   Right:  "Prepared for" meta + theme toggle
+   ========================================================================== */
+
+const TODAY = new Date().toLocaleDateString('en-US', {
+  month: 'short',
+  day: '2-digit',
+  year: 'numeric',
+});
 
 export function NavBar() {
   return (
-    <header className="navbar">
-      <div className="brand">
-        <span className="brand-mark" />
-        <div>
-          <div className="brand-title">Cheetah Market</div>
-          <div className="brand-sub">Research + real-time</div>
-        </div>
+    <header className="cm-nav">
+      <div className="cm-nav__brand">
+        <div className="cm-nav__wordmark">Cheetah Market</div>
+        <div className="cm-nav__eyebrow eyebrow">№ 01 — Research &amp; Real-Time</div>
       </div>
-      <nav>
-        <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+
+      <nav className="cm-nav__links" aria-label="Primary">
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
+        >
           Dashboard
         </NavLink>
-        <NavLink to="/india" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-          India
-        </NavLink>
-        <NavLink to="/live" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+        <NavLink
+          to="/live"
+          className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
+        >
           Live Stream
         </NavLink>
+        <NavLink
+          to="/sepa"
+          className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
+        >
+          SEPA
+        </NavLink>
       </nav>
-      <div className="meta">
-        Prepared for <strong>Aj</strong> · Apr 20 2026
+
+      <div className="cm-nav__meta">
+        <span className="cm-nav__meta-label">Prepared for</span>
+        <span className="cm-nav__meta-name">Aj</span>
+        <span className="cm-nav__meta-sep" aria-hidden="true">·</span>
+        <span className="cm-nav__meta-date mono">{TODAY}</span>
+        <ThemeToggle />
       </div>
     </header>
   );
