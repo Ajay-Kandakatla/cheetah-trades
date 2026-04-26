@@ -36,6 +36,9 @@ services:
   cron:
     image: cheetah-api:latest
     restart: unless-stopped
+    # Run tini as PID 1 so supercronic isn't PID 1 — supercronic's
+    # subreaper-child re-exec fails on the Apple Silicon Docker VM.
+    init: true
     env_file: ./backend/.env
     environment:
       MONGO_URL: mongodb://mongo:27017

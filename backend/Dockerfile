@@ -10,11 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install supercronic for cron-style scheduling without root cron
+# Install supercronic for cron-style scheduling without root cron.
+# Detect arch at build time so this works on both amd64 and arm64 hosts
+# regardless of whether BuildKit passes TARGETARCH.
 ARG SUPERCRONIC_VERSION=v0.2.33
-ARG TARGETARCH=amd64
-RUN curl -fsSL -o /usr/local/bin/supercronic \
-      "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-${TARGETARCH}" \
+RUN arch="$(dpkg --print-architecture)" \
+    && curl -fsSL -o /usr/local/bin/supercronic \
+         "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-${arch}" \
     && chmod +x /usr/local/bin/supercronic
 
 COPY requirements.txt .
