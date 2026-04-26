@@ -4,6 +4,7 @@ import { ModernDashboard } from './pages/ModernDashboard';
 import { LiveStream } from './pages/LiveStream';
 import { SepaPage } from './pages/Sepa';
 import { SepaCandidatePage } from './pages/SepaCandidate';
+import { DualMomentumPage } from './pages/DualMomentum';
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
           <Route path="/live" element={<LiveStream />} />
           <Route path="/sepa" element={<SepaPage />} />
           <Route path="/sepa/:symbol" element={<SepaCandidatePage />} />
+          <Route path="/dual-momentum" element={<DualMomentumPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>

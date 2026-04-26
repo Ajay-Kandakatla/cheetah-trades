@@ -58,6 +58,7 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | POST | `/sepa/brief` | — | brief payload | writes `~/.cheetah/scans/brief.json`; pulls catalyst+insider for top5+watchlist | `sepa.brief.generate_brief` |
 | GET | `/sepa/candidate/{symbol}` | path | `{symbol, base, catalyst, insider, ipo_age, smart_money}` | catalyst pulls news+earnings; insider hits SEC EDGAR; smart_money fans out to Finnhub + RSS + Reddit (15-min Mongo cache) | `catalyst_for, insider_activity, ipo_age, smart_money_for` |
 | GET | `/sepa/smartmoney/{symbol}` | path | `{analyst, blogs, reddit, fetched_at, cached}` | 15-min cache in `smart_money_cache` Mongo collection | `sepa.smart_money.smart_money_for` |
+| GET | `/sepa/dual-momentum` | `?top_n=15&lookback_days=252&min_rs_rank=0` | `{regime, rows, picks, universe_size, gate_lookback_days}` | reuses latest scan + cached prices; computes 1/3/6/12-month returns + Antonacci two-gate ranking | `sepa.dual_momentum.compute` |
 | POST | `/sepa/rescan/{symbol}` | path | analyzed dict for one symbol | force-refreshes parquet cache for symbol | `prices.load_prices(force=True), rs_rank.rs_ranks, scanner._analyze_symbol` |
 | GET | `/sepa/watchlist` | — | `[{symbol, entry, stop, shares?, added}]` | reads `watchlist.json` | `scanner.load_watchlist` |
 | POST | `/sepa/watchlist` | `?symbol&entry&stop&shares=0` | updated list | writes `watchlist.json` | `scanner.add_to_watchlist` |
@@ -364,6 +365,27 @@ Frontend wiring: data lands on the SepaCandidate detail (`/sepa/:symbol`) under
   "below your +2R target" warning when applicable.
 - Catalyst tab — "Top discussion" callout listing 2 blog mentions + 3 Reddit
   threads, linking to the dedicated tab.
+
+### `dual_momentum.py` — Antonacci's two-gate ranking
+Reuses the latest persisted scan (`scanner.load_latest()`) for universe + names
++ RS rank, then recomputes 1/3/6/12-month returns from cached daily bars (no
+provider re-hits).
+
+- **Absolute momentum gate**: `return_12m > 0`. Page also reports SPY's 12m
+  return as the regime indicator — when SPY 12m ≤ 0, label flips to
+  `DEFENSIVE — classic Antonacci says cash/bonds`.
+- **Relative momentum**: ranks eligible names by a weighted composite —
+  50% 12m + 25% 6m + 15% 3m + 10% 1m return.
+- Each row carries `is_sepa_candidate` and the SEPA `entry_setup`, so a row
+  flagged both `abs` AND `SEPA` is the strongest signal in the app.
+- Frontend page: `/dual-momentum` (NavBar entry "Dual Momentum"). Lookback +
+  top-N + min-RS controls; toggle between picks-only and full universe.
+
+### `company_names.py` — symbol → company name resolver
+Backs the `name` field shown beneath each ticker on the SEPA candidate cards
+and the Dual Momentum table. Mongo collection `company_names_cache` (30-day
+TTL); cache misses fetch via yfinance `.info["longName"]`. The scanner calls
+`bulk_warm()` before iterating so a scan pays the lookup cost once.
 
 ### `providers.py`
 Tiny env-var holder. `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `has_polygon()`,

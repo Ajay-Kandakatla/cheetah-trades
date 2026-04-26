@@ -951,7 +951,18 @@ tr:last-child td { border-bottom: none; }
 .sepa-card:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,0,0,0.07); border-color: #999; }
 .sepa-card.is-candidate { border-left: 4px solid var(--cm-green); }
 .sepa-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-.sepa-card__sym { display: flex; align-items: center; gap: 0.5rem; font: 700 1.15rem monospace; }
+.sepa-card__sym { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+.sepa-card__sym-line { display: flex; align-items: center; gap: 0.5rem; font: 700 1.15rem monospace; }
+.sepa-card__name {
+  font: 400 0.72rem var(--serif, ui-serif, Georgia, serif);
+  color: var(--cm-slate, #6b6557);
+  font-style: italic;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 .sepa-stage { font: 700 0.7rem var(--serif, serif); padding: 1px 6px; border-radius: 3px; background: #eef; color: #335; }
 .sepa-stage--2 { background: #dcfce7; color: #15803d; }
 .sepa-stage--4 { background: #fee2e2; color: #b91c1c; }
@@ -1066,4 +1077,85 @@ tr:last-child td { border-bottom: none; }
   .sepa-grid { grid-template-columns: 1fr; }
   .sepa-drawer { width: 100%; }
   .sepa-toppicks__rail { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ==========================================================================
+   Dual Momentum page (/dual-momentum)
+   Antonacci's two-gate ranking — regime banner, controls, and ranked table.
+   ========================================================================== */
+.dm-page { display: flex; flex-direction: column; gap: 1.4rem; }
+
+.dm-regime {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1.4rem;
+  padding: 1rem 1.4rem; border-radius: 4px; border: 1px solid #d8d2bf;
+}
+.dm-regime--on  { background: rgba(34, 139, 86, 0.06); border-left: 4px solid var(--cm-green, #228b56); }
+.dm-regime--off { background: rgba(184, 121, 0, 0.08); border-left: 4px solid var(--cm-amber, #b87900); }
+.dm-regime__label { font: 600 1rem var(--serif, ui-serif, Georgia, serif); margin-top: 4px; }
+.dm-regime__metric { text-align: right; }
+.dm-regime__pct { font: 700 1.6rem ui-monospace, monospace; margin-top: 2px; }
+
+.dm-controls {
+  display: flex; flex-wrap: wrap; align-items: end; gap: 1rem;
+  padding: 0.8rem 1rem; background: #f7f4ec; border-radius: 4px;
+}
+.dm-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.dm-controls select,
+.dm-controls input[type="number"] {
+  padding: 6px 10px; font: 500 0.85rem ui-monospace, monospace;
+  border: 1px solid #c7bfa6; border-radius: 3px; background: #fffdf6;
+}
+.dm-controls__toggle { flex-direction: row !important; align-items: center; gap: 6px; }
+.dm-refresh {
+  margin-left: auto; padding: 8px 16px; font: 600 0.8rem var(--sans, system-ui);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  background: #1f1d18; color: #fbf8ef; border: none; border-radius: 3px; cursor: pointer;
+}
+.dm-refresh:hover:not(:disabled) { background: var(--cm-amber, #b87900); }
+.dm-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.dm-results__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem; }
+.dm-results__sub { color: var(--cm-slate, #6b6557); font-size: 0.78rem; }
+
+.dm-table-wrap { overflow-x: auto; border-radius: 4px; border: 1px solid #d8d2bf; background: #fffdf6; }
+.dm-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.dm-table th {
+  text-align: left; padding: 10px 12px; background: #f0ebd9;
+  font: 600 0.7rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--cm-slate, #6b6557); border-bottom: 1px solid #d8d2bf;
+  position: sticky; top: 0;
+}
+.dm-table th.num, .dm-table td.num { text-align: right; font-family: ui-monospace, monospace; }
+.dm-table td { padding: 10px 12px; border-bottom: 1px solid #efeadb; vertical-align: middle; }
+.dm-row { cursor: pointer; transition: background 0.08s; }
+.dm-row:hover { background: #fbf6e6; }
+.dm-row--pass td:first-child { color: var(--cm-green-strong, #15803d); font-weight: 700; }
+.dm-row--fail { opacity: 0.55; }
+.dm-row--sepa { background: rgba(34, 139, 86, 0.04); }
+.dm-row--sepa:hover { background: rgba(34, 139, 86, 0.10); }
+.dm-sym strong { font-size: 0.95rem; }
+.dm-name { color: var(--cm-slate, #6b6557); font-style: italic; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.dm-pct--strong { color: #15803d; font-weight: 700; }
+.dm-pct--good   { color: #228b56; }
+.dm-pct--bad    { color: #b87900; }
+.dm-pct--worst  { color: #b91c1c; font-weight: 600; }
+.dm-pct--na     { color: #999; }
+
+.dm-flags { display: flex; gap: 4px; flex-wrap: wrap; }
+.dm-flag {
+  font: 700 0.62rem var(--sans, system-ui);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: 2px;
+}
+.dm-flag--good    { background: rgba(34, 139, 86, 0.14); color: #15803d; }
+.dm-flag--sepa    { background: rgba(184, 121, 0, 0.18); color: #b87900; border: 1px solid rgba(184, 121, 0, 0.3); }
+.dm-flag--neutral { background: #eef0f5; color: #475569; }
+
+@media (max-width: 720px) {
+  .dm-regime { grid-template-columns: 1fr; }
+  .dm-regime__metric { text-align: left; }
+  .dm-controls { flex-direction: column; align-items: stretch; }
+  .dm-refresh { margin-left: 0; }
+  .dm-name { display: none; }
 }

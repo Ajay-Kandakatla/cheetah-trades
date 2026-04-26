@@ -41,6 +41,12 @@ export function NavBar() {
         >
           SEPA
         </NavLink>
+        <NavLink
+          to="/dual-momentum"
+          className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
+        >
+          Dual Momentum
+        </NavLink>
       </nav>
 
       <div className="cm-nav__meta">

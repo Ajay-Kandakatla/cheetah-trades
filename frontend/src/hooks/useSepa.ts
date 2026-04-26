@@ -6,6 +6,7 @@ export type Rating = 'STRONG_BUY' | 'BUY' | 'WATCH' | 'NEUTRAL' | 'AVOID';
 
 export type SepaCandidate = {
   symbol: string;
+  name?: string | null;
   score: number;
   rating?: Rating;
   rs_rank: number | null;

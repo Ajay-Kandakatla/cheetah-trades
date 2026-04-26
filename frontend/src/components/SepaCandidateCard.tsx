@@ -33,11 +33,14 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
     >
       <header className="sepa-card__head">
         <div className="sepa-card__sym">
-          <strong>{row.symbol}</strong>
-          {stage != null && (
-            <span className={`sepa-stage sepa-stage--${stage}`}>S{stage}</span>
-          )}
-          {lateBase && <span className="sepa-tag sepa-tag--warn" title="Late-stage base — exhaustion risk">late</span>}
+          <div className="sepa-card__sym-line">
+            <strong>{row.symbol}</strong>
+            {stage != null && (
+              <span className={`sepa-stage sepa-stage--${stage}`}>S{stage}</span>
+            )}
+            {lateBase && <span className="sepa-tag sepa-tag--warn" title="Late-stage base — exhaustion risk">late</span>}
+          </div>
+          {row.name && <div className="sepa-card__name" title={row.name}>{row.name}</div>}
         </div>
         <div className="sepa-card__head-right">
           <button

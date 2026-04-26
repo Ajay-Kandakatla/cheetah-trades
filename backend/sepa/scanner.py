@@ -28,7 +28,7 @@ from typing import Optional, List
 from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
-    adr, canslim,
+    adr, canslim, company_names,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -147,6 +147,7 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
 
     return {
         "symbol": symbol,
+        "name": company_names.name_for(symbol),
         "score": round(score, 1),
         "rating": _rating_label(score),
         "trend": tr.to_dict(),
@@ -180,6 +181,13 @@ def scan_universe(symbols: Optional[List[str]] = None,
 
     log.info("Computing RS ranks over %d symbols...", len(work))
     rs_map = rs_rank.rs_ranks(work)
+
+    # Warm company-name cache so each result can attach its long name without
+    # paying a per-row yfinance lookup. Cached 30 days in Mongo.
+    try:
+        company_names.bulk_warm(work)
+    except Exception as exc:
+        log.warning("company_names bulk_warm skipped: %s", exc)
 
     results: List[dict] = []
     # Use a thread pool since yfinance + pandas are I/O + CPU mix

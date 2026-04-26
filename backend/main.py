@@ -43,6 +43,7 @@ from sepa.catalyst import catalyst_for as sepa_catalyst_for
 from sepa.insider import insider_activity as sepa_insider
 from sepa.ipo_age import age as sepa_ipo_age
 from sepa.smart_money import smart_money_for as sepa_smart_money
+from sepa import dual_momentum as sepa_dual_momentum
 
 load_dotenv()
 
@@ -514,6 +515,24 @@ async def sepa_candidate_detail(symbol: str):
         "ipo_age": ipo,
         "smart_money": smart_money,
     })
+
+
+@app.get("/sepa/dual-momentum")
+async def sepa_dual_momentum_get(
+    top_n: int = Query(15, ge=1, le=50),
+    lookback_days: int = Query(252, ge=21, le=504),
+    min_rs_rank: int = Query(0, ge=0, le=99),
+):
+    """Antonacci's dual momentum ranking against the latest scan universe.
+
+    Reuses the most recent /sepa/scan results — universe, names, RS rank — and
+    recomputes 1/3/6/12-month returns from cached daily bars (no extra fetches).
+    Run /sepa/scan first if you've never scanned.
+    """
+    result = await asyncio.to_thread(
+        sepa_dual_momentum.compute, top_n, lookback_days, min_rs_rank
+    )
+    return JSONResponse(result)
 
 
 @app.get("/sepa/smartmoney/{symbol}")
