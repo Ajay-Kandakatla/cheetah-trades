@@ -63,7 +63,9 @@ def check_positions() -> dict:
         if df is None or df.empty:
             continue
 
-        last = float(df["close"].iloc[-1])
+        # Real-time price for the stop comparison; fall back to daily close.
+        live = prices.last_trade_price(sym)
+        last = float(live) if live is not None else float(df["close"].iloc[-1])
         entry = float(pos.get("entry") or last)
         stop = float(pos.get("stop") or 0)
         shares = float(pos.get("shares") or 0)

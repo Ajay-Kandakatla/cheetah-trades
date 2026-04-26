@@ -195,6 +195,35 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
     return df[["open", "high", "low", "close", "volume"]]
 
 
+def last_trade_price(symbol: str) -> Optional[float]:
+    """Real-time last trade price from Massive (Developer tier).
+
+    Falls back to the most recent daily close if the live endpoint fails.
+    Used by the alerts checker so stop-loss decisions use live prices."""
+    import requests
+    key = os.getenv("MASSIVE_API_KEY")
+    if key:
+        try:
+            r = requests.get(
+                f"https://api.massive.com/v2/last/trade/{symbol.upper()}",
+                params={"apiKey": key},
+                timeout=5,
+            )
+            if r.status_code == 200:
+                results = (r.json() or {}).get("results") or {}
+                price = results.get("p") or results.get("price")
+                if price:
+                    return float(price)
+            else:
+                log.warning("massive last-trade %s -> HTTP %s", symbol, r.status_code)
+        except Exception as exc:
+            log.warning("massive last-trade fetch failed for %s: %s", symbol, exc)
+    df = load_prices(symbol)
+    if df is not None and not df.empty:
+        return float(df["close"].iloc[-1])
+    return None
+
+
 def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
     provider = os.getenv("PRICE_PROVIDER", "massive").lower()
     if provider == "massive":
