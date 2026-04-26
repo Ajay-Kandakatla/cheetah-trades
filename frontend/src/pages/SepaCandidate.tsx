@@ -4,6 +4,7 @@ import { fetchSepaCandidate, addToWatchlist, planPosition } from '../hooks/useSe
 import { SepaScoreBar } from '../components/SepaScoreBar';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
+import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
@@ -59,7 +60,7 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney';
+type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis';
 
 const SmartMoneyInfo = (
   <>
@@ -190,7 +191,7 @@ export function SepaCandidatePage() {
       {data && (
         <>
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'fundamentals', 'catalyst', 'insider', 'smartmoney'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'fundamentals', 'analysis', 'catalyst', 'insider', 'smartmoney'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
@@ -401,6 +402,19 @@ export function SepaCandidatePage() {
                 ) : (
                   <p className="sepa-empty">No fundamentals — re-scan with <code>+catalyst</code> to populate.</p>
                 )}
+              </section>
+            )}
+
+            {tab === 'analysis' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Analysis</strong> — Fidelity-style multi-panel readout.
+                  Fundamental scoring (S&amp;P-style), three-horizon technical
+                  sentiment (Trading-Central-style), ESG bands (Sustainalytics),
+                  and consolidated analyst rating with 1-year history. All from
+                  free data sources, cached 60 min.
+                </div>
+                <StockAnalysisPanel symbol={symbol} />
               </section>
             )}
 

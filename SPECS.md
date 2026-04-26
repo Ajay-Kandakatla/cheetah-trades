@@ -59,6 +59,7 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | GET | `/sepa/candidate/{symbol}` | path | `{symbol, base, catalyst, insider, ipo_age, smart_money}` | catalyst pulls news+earnings; insider hits SEC EDGAR; smart_money fans out to Finnhub + RSS + Reddit (15-min Mongo cache) | `catalyst_for, insider_activity, ipo_age, smart_money_for` |
 | GET | `/sepa/smartmoney/{symbol}` | path | `{analyst, blogs, reddit, fetched_at, cached}` | 15-min cache in `smart_money_cache` Mongo collection | `sepa.smart_money.smart_money_for` |
 | GET | `/sepa/dual-momentum` | `?top_n=15&lookback_days=252&min_rs_rank=0` | `{regime, rows, picks, universe_size, gate_lookback_days}` | reuses latest scan + cached prices; computes 1/3/6/12-month returns + Antonacci two-gate ranking | `sepa.dual_momentum.compute` |
+| GET | `/sepa/analysis/{symbol}` | path | `{fundamental, technical, esg, analyst, cached}` | Fidelity-style multi-panel readout. 60-min Mongo cache (`stock_analysis_cache`). Composes yfinance fundamentals, derived technical sentiment, Sustainalytics ESG, Finnhub analyst rating | `sepa.stock_analysis.analysis_for` |
 | POST | `/sepa/rescan/{symbol}` | path | analyzed dict for one symbol | force-refreshes parquet cache for symbol | `prices.load_prices(force=True), rs_rank.rs_ranks, scanner._analyze_symbol` |
 | GET | `/sepa/watchlist` | — | `[{symbol, entry, stop, shares?, added}]` | reads `watchlist.json` | `scanner.load_watchlist` |
 | POST | `/sepa/watchlist` | `?symbol&entry&stop&shares=0` | updated list | writes `watchlist.json` | `scanner.add_to_watchlist` |
@@ -380,6 +381,29 @@ provider re-hits).
   flagged both `abs` AND `SEPA` is the strongest signal in the app.
 - Frontend page: `/dual-momentum` (NavBar entry "Dual Momentum"). Lookback +
   top-N + min-RS controls; toggle between picks-only and full universe.
+
+### `stock_analysis.py` — Fidelity-style multi-panel readout
+Per-ticker; cached 60 min in Mongo `stock_analysis_cache`. Four panels:
+
+1. **Fundamental analysis** — yfinance `.info` fields scored 0-100 across:
+   Valuation (P/E, P/B, P/S inverted), Quality (ROE, ROA, margins), Growth
+   Stability (revenue + earnings YoY), Financial Health (D/E, current ratio,
+   FCF positivity).
+2. **Technical sentiment** — three time horizons, derived from cached prices:
+   Short-term (21-day return + 10/20-day MAs), Mid-term (stage classifier +
+   50/200-day stack + 6-month return), Long-term (12-month return + 200-day
+   trend slope). Output Weak / Neutral / Strong cells.
+3. **ESG** — yfinance `Ticker.sustainability` (Sustainalytics risk scores,
+   inverted to 0-10 quality). Bands: Laggard / Average / Leader. Returns
+   `available: false` for tickers without ESG data.
+4. **Analyst consensus** — Finnhub `/stock/recommendation` (12 monthly
+   buckets) + `/stock/price-target`. Synthesizes a 0-10 Equity Summary
+   Score and label (Very Bullish → Very Bearish), the latest distribution,
+   12-month price target stats, and a 1-year history timeline.
+
+Frontend: surfaced as the **analysis** tab on the SepaCandidate detail page
+(`StockAnalysisPanel` component). All four panels render side-by-side; any
+panel with `available: false` collapses to a single empty placeholder.
 
 ### `company_names.py` — symbol → company name resolver
 Backs the `name` field shown beneath each ticker on the SEPA candidate cards

@@ -44,6 +44,7 @@ from sepa.insider import insider_activity as sepa_insider
 from sepa.ipo_age import age as sepa_ipo_age
 from sepa.smart_money import smart_money_for as sepa_smart_money
 from sepa import dual_momentum as sepa_dual_momentum
+from sepa.stock_analysis import analysis_for as sepa_analysis_for
 
 load_dotenv()
 
@@ -533,6 +534,17 @@ async def sepa_dual_momentum_get(
         sepa_dual_momentum.compute, top_n, lookback_days, min_rs_rank
     )
     return JSONResponse(result)
+
+
+@app.get("/sepa/analysis/{symbol}")
+async def sepa_analysis_endpoint(symbol: str):
+    """Fidelity-style multi-panel stock analysis.
+
+    Returns four panels: fundamental (S&P-style), technical sentiment
+    (Trading-Central-style), ESG (MSCI-style), and analyst consensus
+    (LSEG-StarMine-style). Cached 60 min in Mongo `stock_analysis_cache`.
+    """
+    return JSONResponse(await asyncio.to_thread(sepa_analysis_for, symbol.upper()))
 
 
 @app.get("/sepa/smartmoney/{symbol}")
