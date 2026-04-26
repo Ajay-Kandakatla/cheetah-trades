@@ -27,8 +27,10 @@
   pandas (transitive via yfinance/pyarrow), python-dotenv. SSE for streaming.
 - Frontend: React 18, Vite 5, TypeScript 5, react-router-dom 6. No state lib,
   no UI lib — plain CSS in `src/styles/*.css`.
-- Persistence: parquet files at `~/.cheetah/prices/`, JSON at `~/.cheetah/scans/`,
-  in-process dicts for tick window + news cache.
+- Persistence: MongoDB (`price_cache`, `scan_runs`, `candidate_snapshots`), with
+  parquet at `~/.cheetah/prices/` as a fallback when Mongo is down. JSON at
+  `~/.cheetah/scans/` for `latest.json` + `brief.json`. In-process dicts for
+  tick window + news cache.
 - Scheduling: macOS launchd (two plists in `launchd/`).
 
 **Deployment model.** Local-only laptop app. `run-app.sh` boots backend on
@@ -87,13 +89,23 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 ### `__init__.py`
 Docstring only: "Minervini SEPA — screener, morning brief, catalyst + insider signals."
 
-### `prices.py` — yfinance loader with parquet cache
+### `prices.py` — daily OHLCV loader with Mongo + parquet cache
 - **Public:** `load_prices(symbol, period="2y", force=False) -> Optional[pd.DataFrame]`
   with columns `[open, high, low, close, volume]`, indexed by date.
-- Cache: `~/.cheetah/prices/{SYM}.parquet`, TTL = **20 hours** (constant
-  `CACHE_TTL_SEC = 20 * 3600`).
-- Falls back to live `yf.Ticker(symbol).history(period=period, auto_adjust=False)`
-  on miss/expire/force.
+- **Provider:** selected by `PRICE_PROVIDER` env (`massive` default → falls back
+  to `yfinance` on miss/error). Massive endpoint:
+  `GET https://api.massive.com/v2/aggs/ticker/{SYM}/range/1/day/{from}/{to}`
+  using `MASSIVE_API_KEY`. Free tier is 5 req/min — paid plan recommended for
+  full-universe scans.
+- **Cache layers, in order:**
+  1. **MongoDB** — `cheetah.price_cache` collection, one doc per symbol
+     `{symbol, bars: [{date, open, high, low, close, volume}], cached_at}`,
+     unique index on `symbol`. Survives container restarts and is shared
+     between the api and cron services. TTL = **20 hours** (`CACHE_TTL_SEC`).
+  2. **Parquet** — `~/.cheetah/prices/{SYM}.parquet`, used as fallback when
+     Mongo is unreachable. Same TTL. Requires `pyarrow`.
+- Cache miss (or `force=True`) calls the provider, then writes to **both**
+  cache layers. Mongo is backfilled from parquet when only parquet is fresh.
 
 ### `universe.py` — scanning universe
 - `UNIVERSE` — hardcoded ~250 US tickers (mega-cap tech, semis, software, consumer
@@ -312,7 +324,9 @@ symbol, fills in `{open, high, low, prev_close, pct_change}`. Preserves
 ### Caching
 | Store | Path / Key | TTL | Writer |
 |---|---|---|---|
-| Parquet OHLCV | `~/.cheetah/prices/{SYM}.parquet` | 20 h | `prices.load_prices` |
+| Mongo OHLCV (primary) | `cheetah.price_cache` (one doc per symbol) | 20 h | `prices.load_prices` |
+| Parquet OHLCV (fallback) | `~/.cheetah/prices/{SYM}.parquet` | 20 h | `prices.load_prices` |
+| Mongo scan history | `cheetah.scan_runs` + `cheetah.candidate_snapshots` | persistent | `history.write_scan` |
 | Latest scan | `~/.cheetah/scans/latest.json` | manual | `scanner.scan_universe` |
 | Morning brief | `~/.cheetah/scans/brief.json` | manual | `brief.generate_brief` |
 | Watchlist | `~/.cheetah/scans/watchlist.json` | manual | `scanner.add/remove_to_watchlist` |
