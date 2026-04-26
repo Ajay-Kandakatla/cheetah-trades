@@ -42,6 +42,7 @@ from sepa import scanner as sepa_scanner, brief as sepa_brief, risk as sepa_risk
 from sepa.catalyst import catalyst_for as sepa_catalyst_for
 from sepa.insider import insider_activity as sepa_insider
 from sepa.ipo_age import age as sepa_ipo_age
+from sepa.smart_money import smart_money_for as sepa_smart_money
 
 load_dotenv()
 
@@ -498,10 +499,12 @@ async def sepa_candidate_detail(symbol: str):
         None,
     )
     profile_task = asyncio.create_task(_company_profile(sym))
+    smart_task = asyncio.create_task(sepa_smart_money(sym))
     catalyst = await sepa_catalyst_for(sym)
     insider = await sepa_insider(sym)
     ipo = await asyncio.to_thread(sepa_ipo_age, sym)
     profile = await profile_task
+    smart_money = await smart_task
     return JSONResponse({
         "symbol": sym,
         "profile": profile,
@@ -509,7 +512,15 @@ async def sepa_candidate_detail(symbol: str):
         "catalyst": catalyst,
         "insider": insider,
         "ipo_age": ipo,
+        "smart_money": smart_money,
     })
+
+
+@app.get("/sepa/smartmoney/{symbol}")
+async def sepa_smart_money_endpoint(symbol: str):
+    """Smart Money tab data — analyst consensus + curated blogs + filtered Reddit.
+    Cached 15 min in Mongo (smart_money_cache)."""
+    return JSONResponse(await sepa_smart_money(symbol.upper()))
 
 
 @app.post("/sepa/rescan/{symbol}")

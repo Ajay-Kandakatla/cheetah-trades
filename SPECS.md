@@ -56,7 +56,8 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | POST | `/sepa/scan` | `?no_catalyst=bool` | full scan payload | writes `latest.json`; warms parquet cache; spins thread pool of 8 + asyncio sem of 4 for catalyst | `sepa.scanner.scan_universe` |
 | GET | `/sepa/brief` | — | latest `brief.json` | — | `sepa.brief.load_brief` |
 | POST | `/sepa/brief` | — | brief payload | writes `~/.cheetah/scans/brief.json`; pulls catalyst+insider for top5+watchlist | `sepa.brief.generate_brief` |
-| GET | `/sepa/candidate/{symbol}` | path | `{symbol, base, catalyst, insider, ipo_age}` | catalyst pulls news+earnings; insider hits SEC EDGAR | `catalyst_for, insider_activity, ipo_age` |
+| GET | `/sepa/candidate/{symbol}` | path | `{symbol, base, catalyst, insider, ipo_age, smart_money}` | catalyst pulls news+earnings; insider hits SEC EDGAR; smart_money fans out to Finnhub + RSS + Reddit (15-min Mongo cache) | `catalyst_for, insider_activity, ipo_age, smart_money_for` |
+| GET | `/sepa/smartmoney/{symbol}` | path | `{analyst, blogs, reddit, fetched_at, cached}` | 15-min cache in `smart_money_cache` Mongo collection | `sepa.smart_money.smart_money_for` |
 | POST | `/sepa/rescan/{symbol}` | path | analyzed dict for one symbol | force-refreshes parquet cache for symbol | `prices.load_prices(force=True), rs_rank.rs_ranks, scanner._analyze_symbol` |
 | GET | `/sepa/watchlist` | — | `[{symbol, entry, stop, shares?, added}]` | reads `watchlist.json` | `scanner.load_watchlist` |
 | POST | `/sepa/watchlist` | `?symbol&entry&stop&shares=0` | updated list | writes `watchlist.json` | `scanner.add_to_watchlist` |
@@ -330,6 +331,39 @@ Public:
   trigger, applies 6h cooldown, persists fire row, dispatches WhatsApp if
   `"whatsapp" in channels`. Browser channel is passive (UI polls `recent_fires`).
 - `recent_fires(since)`.
+
+### `smart_money.py` — Smart Money & Sentiment (3 lanes)
+Per-ticker fan-out, cached 15 min in Mongo `smart_money_cache`.
+
+- **Lane 1 — analyst consensus** (Finnhub free tier). `/stock/recommendation`
+  monthly buckets (strongBuy/buy/hold/sell/strongSell) + `/stock/price-target`
+  (mean/median/high/low/n). Surfaces month-over-month bullish-rating delta as a
+  sentiment-shift tell. Free tier exposes aggregate ratings only — **not**
+  per-analyst hit rates. The "80% top-analyst accuracy" stat from TipRanks is
+  not reproducible without a paid feed; see Lane 1 research notes.
+- **Lane 2 — curated blogs** (RSS). Allowlist: Damodaran (Blogger Atom),
+  Bespoke "Think B.I.G." blog, Morningstar stock-analysis feed. Body regex
+  `\$?TICKER\b` (with non-letter borders) against title + stripped body.
+  Top 8 most recent.
+- **Lane 3 — Reddit** (PRAW, optional). Allowlist:
+  r/SecurityAnalysis (score ≥30), r/ValueInvesting (≥100), r/investing (≥250),
+  r/stocks (≥500), r/options (≥150). 30-day window. r/wallstreetbets
+  intentionally skipped. Disabled when `REDDIT_CLIENT_ID` not set — UI shows a
+  configure-to-enable hint.
+
+**13F institutional data is intentionally excluded** despite being the obvious
+fourth lane. The 45-day filing lag plus the empirical underperformance of 13F-
+clone ETFs (ALFA liquidated 2022, IBLN delisted, GURU underperforms SPY) makes
+13F net-misleading on a 1-12wk swing-trading timeframe. Cohen-Polk-Silli's
+~3% annual "best ideas" alpha holds at *quarterly* rebalance, not weekly.
+
+Frontend wiring: data lands on the SepaCandidate detail (`/sepa/:symbol`) under
+`smart_money` key. Surfaced three places:
+- Dedicated **smart money** tab (full breakdown via `SmartMoneyPanel`).
+- Setup tab — analyst mean target callout under the R-multiple ladder, with a
+  "below your +2R target" warning when applicable.
+- Catalyst tab — "Top discussion" callout listing 2 blog mentions + 3 Reddit
+  threads, linking to the dedicated tab.
 
 ### `providers.py`
 Tiny env-var holder. `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `has_polygon()`,

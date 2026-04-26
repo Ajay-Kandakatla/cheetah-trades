@@ -59,7 +59,38 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider';
+type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney';
+
+const SmartMoneyInfo = (
+  <>
+    <p>
+      <strong>Smart Money & Sentiment</strong> — three independent lanes telling you
+      what credentialed analysts and credible commentators think about this name.
+    </p>
+    <ul>
+      <li>
+        <strong>Analyst consensus</strong> — Wall Street ratings + price targets from
+        Finnhub. Look at the bullish % <em>and</em> the month-over-month delta — a
+        flat 60% bullish that just dropped from 80% is a tell.
+      </li>
+      <li>
+        <strong>Curated commentary</strong> — body-regex matches against a small
+        allowlist of credible blogs (Damodaran, Bespoke, Morningstar). Most names
+        will have zero hits — that's expected.
+      </li>
+      <li>
+        <strong>Reddit discussion</strong> — top-scored threads from a 5-sub allowlist
+        (r/SecurityAnalysis, r/ValueInvesting, r/investing, r/stocks, r/options).
+        Skipping r/wallstreetbets by design.
+      </li>
+    </ul>
+    <p className="sepa-note">
+      Note: 13F institutional holdings data is intentionally <em>excluded</em>. The
+      45-day filing lag and the empirical track record of 13F-clone strategies make
+      it net-misleading on a 1–12 week swing-trading timeframe.
+    </p>
+  </>
+);
 
 function tvSymbolFor(symbol: string, exchange?: string): string {
   const ex = (exchange || '').toUpperCase();
@@ -159,13 +190,13 @@ export function SepaCandidatePage() {
       {data && (
         <>
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'fundamentals', 'catalyst', 'insider'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'fundamentals', 'catalyst', 'insider', 'smartmoney'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t}</button>
             ))}
           </nav>
 
@@ -218,6 +249,16 @@ export function SepaCandidatePage() {
                           <span>+2R ${rMultiples.twoR.toFixed(2)}</span>
                           <span>+3R ${rMultiples.threeR.toFixed(2)}</span>
                         </div>
+                      </div>
+                    )}
+                    {data.smart_money?.analyst?.available && data.smart_money.analyst.target_mean != null && (
+                      <div className="sepa-callout mono">
+                        🎯 Analyst mean target <strong>${Number(data.smart_money.analyst.target_mean).toFixed(2)}</strong>
+                        {' '}(n={data.smart_money.analyst.target_n ?? '—'},
+                        {' '}range ${Number(data.smart_money.analyst.target_low).toFixed(2)}–${Number(data.smart_money.analyst.target_high).toFixed(2)})
+                        {rMultiples && data.smart_money.analyst.target_mean < rMultiples.twoR && (
+                          <span className="sepa-warn-inline"> · below your +2R target</span>
+                        )}
                       </div>
                     )}
                     <div className="sepa-planner">
@@ -389,6 +430,27 @@ export function SepaCandidatePage() {
                         </li>
                       ))}
                     </ul>
+                    {(data.smart_money?.reddit?.threads?.length > 0 || data.smart_money?.blogs?.length > 0) && (
+                      <div className="sepa-callout">
+                        <div className="eyebrow">Top discussion</div>
+                        <ul className="sepa-news">
+                          {data.smart_money.blogs?.slice(0, 2).map((b: any, i: number) => (
+                            <li key={`b${i}`}>
+                              <span className="sepa-pill sepa-pill--blog">{b.source}</span>{' '}
+                              <a href={b.link} target="_blank" rel="noreferrer">{b.title}</a>
+                            </li>
+                          ))}
+                          {data.smart_money.reddit?.threads?.slice(0, 3).map((t: any, i: number) => (
+                            <li key={`r${i}`}>
+                              <span className="sepa-pill sepa-pill--reddit">r/{t.subreddit}</span>{' '}
+                              <a href={t.url} target="_blank" rel="noreferrer">{t.title}</a>
+                              <span className="mono"> · ↑{t.score} · {t.n_comments}c</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="sepa-meta-hint">See full breakdown in the <strong>smart money</strong> tab.</div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <p className="sepa-empty">No catalyst data — run <code>+catalyst</code> scan.</p>
@@ -419,9 +481,161 @@ export function SepaCandidatePage() {
                 )}
               </section>
             )}
+
+            {tab === 'smartmoney' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Smart Money & Sentiment</strong>{' '}
+                  <InfoButton title="What this tab shows">{SmartMoneyInfo}</InfoButton>
+                  <span> — what credentialed analysts and credible commentators think.</span>
+                </div>
+                <SmartMoneyPanel data={data.smart_money} symbol={symbol} />
+              </section>
+            )}
           </div>
         </>
       )}
     </div>
+  );
+}
+
+type SmartMoneyAnalyst = {
+  available: boolean;
+  reason?: string;
+  buckets?: { strong_buy: number; buy: number; hold: number; sell: number; strong_sell: number };
+  total_analysts?: number;
+  bullish_pct?: number | null;
+  delta_bullish_mom?: number;
+  target_mean?: number | null;
+  target_median?: number | null;
+  target_high?: number | null;
+  target_low?: number | null;
+  target_n?: number | null;
+  period?: string;
+};
+
+type SmartMoneyBlog = {
+  source: string; title: string; link: string;
+  published: string; snippet: string;
+};
+
+type SmartMoneyReddit = {
+  available: boolean; reason?: string;
+  threads?: Array<{
+    subreddit: string; title: string; url: string;
+    score: number; n_comments: number; created: number; snippet: string;
+  }>;
+};
+
+type SmartMoneyData = {
+  symbol: string; fetched_at: number; cached: boolean;
+  analyst: SmartMoneyAnalyst;
+  blogs: SmartMoneyBlog[];
+  reddit: SmartMoneyReddit;
+};
+
+function SmartMoneyPanel({ data, symbol }: { data?: SmartMoneyData; symbol: string }) {
+  if (!data) return <p className="sepa-empty">Smart Money data still loading…</p>;
+  const a = data.analyst;
+  const blogs = data.blogs || [];
+  const reddit = data.reddit;
+
+  return (
+    <>
+      {/* Analyst lane */}
+      <div className="eyebrow">Wall Street analyst consensus</div>
+      {a?.available && a.total_analysts ? (
+        <>
+          <div className="sepa-fund">
+            <div className="sepa-fund__row">
+              <span>Bullish %</span>
+              <strong className={(a.bullish_pct ?? 0) >= 60 ? 'pass' : (a.bullish_pct ?? 0) <= 40 ? 'fail' : ''}>
+                {a.bullish_pct ?? '—'}%
+                {a.delta_bullish_mom != null && a.delta_bullish_mom !== 0 && (
+                  <span className="mono"> ({a.delta_bullish_mom > 0 ? '+' : ''}{a.delta_bullish_mom} mom)</span>
+                )}
+              </strong>
+            </div>
+            <div className="sepa-fund__row">
+              <span>Distribution</span>
+              <strong className="mono">
+                SB {a.buckets?.strong_buy ?? 0} · B {a.buckets?.buy ?? 0} · H {a.buckets?.hold ?? 0}
+                {' · '}S {a.buckets?.sell ?? 0} · SS {a.buckets?.strong_sell ?? 0}
+              </strong>
+            </div>
+            <div className="sepa-fund__row">
+              <span>Total analysts</span><strong className="mono">{a.total_analysts}</strong>
+            </div>
+            {a.target_mean != null && (
+              <>
+                <div className="sepa-fund__row">
+                  <span>Mean price target</span>
+                  <strong className="mono">${Number(a.target_mean).toFixed(2)} (n={a.target_n ?? '—'})</strong>
+                </div>
+                <div className="sepa-fund__row">
+                  <span>Range</span>
+                  <strong className="mono">
+                    ${Number(a.target_low).toFixed(2)}–${Number(a.target_high).toFixed(2)}
+                    {a.target_median != null && ` · median $${Number(a.target_median).toFixed(2)}`}
+                  </strong>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="sepa-meta-hint">
+            Period {a.period ?? '—'}. Free Finnhub feed exposes aggregate ratings only —
+            not per-analyst track records. Use the bullish % delta as a sentiment-shift signal.
+          </div>
+        </>
+      ) : (
+        <p className="sepa-empty">No analyst data{a?.reason ? ` (${a.reason})` : ''}.</p>
+      )}
+
+      {/* Blogs lane */}
+      <div className="eyebrow" style={{ marginTop: 24 }}>Curated commentary</div>
+      {blogs.length === 0 ? (
+        <p className="sepa-empty">
+          No mentions in Damodaran / Bespoke / Morningstar feeds.
+          That's normal — most names won't show up here.
+        </p>
+      ) : (
+        <ul className="sepa-news">
+          {blogs.map((b, i) => (
+            <li key={i}>
+              <span className="sepa-pill sepa-pill--blog">{b.source}</span>{' '}
+              <a href={b.link} target="_blank" rel="noreferrer">{b.title}</a>
+              {b.published && <span className="mono sepa-meta-hint"> · {b.published.slice(0, 10)}</span>}
+              {b.snippet && <div className="sepa-check__help">{b.snippet}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Reddit lane */}
+      <div className="eyebrow" style={{ marginTop: 24 }}>Reddit discussion</div>
+      {!reddit?.available ? (
+        <p className="sepa-empty">
+          Reddit lane disabled{reddit?.reason ? ` — ${reddit.reason}` : ''}.
+          Set <code>REDDIT_CLIENT_ID</code> and <code>REDDIT_CLIENT_SECRET</code> in <code>backend/.env</code> to enable.
+        </p>
+      ) : (reddit.threads?.length ?? 0) === 0 ? (
+        <p className="sepa-empty">No threads cleared the score floor in the last 30d.</p>
+      ) : (
+        <ul className="sepa-news">
+          {reddit.threads!.map((t, i) => (
+            <li key={i}>
+              <span className="sepa-pill sepa-pill--reddit">r/{t.subreddit}</span>{' '}
+              <a href={t.url} target="_blank" rel="noreferrer">{t.title}</a>
+              <span className="mono sepa-meta-hint"> · ↑{t.score} · {t.n_comments}c</span>
+              {t.snippet && <div className="sepa-check__help">{t.snippet}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="sepa-meta-hint mono" style={{ marginTop: 16 }}>
+        {data.cached ? '↻ from cache' : '⟳ fresh'} · symbol {symbol} · 15-min TTL
+      </div>
+    </>
   );
 }

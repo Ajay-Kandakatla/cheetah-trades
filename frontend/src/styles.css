@@ -970,6 +970,9 @@ tr:last-child td { border-bottom: none; }
 .sepa-pill { display: inline-block; padding: 2px 8px; font-size: 0.7rem; font-weight: 700; border-radius: 3px; letter-spacing: 0.04em; }
 .sepa-pill--vcp { background: rgba(37, 99, 235, 0.12); color: var(--cm-vcp); }
 .sepa-pill--power_play { background: rgba(147, 51, 234, 0.12); color: var(--cm-pp); }
+.sepa-pill--blog { background: rgba(16, 185, 129, 0.14); color: #047857; }
+.sepa-pill--reddit { background: rgba(255, 69, 0, 0.14); color: #c2410c; }
+.sepa-warn-inline { color: #b87900; font-weight: 600; }
 .sepa-card__setup { gap: 0.5rem; }
 
 .sepa-risk { font-weight: 600; }
