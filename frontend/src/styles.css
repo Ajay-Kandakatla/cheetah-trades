@@ -1502,3 +1502,13 @@ tr:last-child td { border-bottom: none; }
 /* Heading-level info dots align nicely with the H3 baseline */
 .sa-card__head h3 .sa-info { margin-left: 6px; vertical-align: baseline; }
 .sa-card__head h3 .sa-info__btn { font-size: 0.7em; }
+
+.sa-meta__refresh {
+  margin-left: auto;
+  background: transparent; color: var(--ink-muted);
+  border: 1px solid var(--hairline); border-radius: 3px;
+  padding: 3px 10px; font: 600 0.7rem var(--font-sans, system-ui);
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.sa-meta__refresh:hover:not(:disabled) { color: var(--gold); border-color: var(--gold-hairline); }
+.sa-meta__refresh:disabled { opacity: 0.5; cursor: not-allowed; }

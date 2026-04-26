@@ -31,6 +31,11 @@ import httpx
 log = logging.getLogger("sepa.stock_analysis")
 
 CACHE_TTL_SEC = 60 * 60  # 1 hour — fundamentals/ESG are slow-changing
+
+# Bumped whenever the panel schema changes in a way that adds fields the UI
+# expects. Cached payloads tagged with an older version are auto-refreshed
+# instead of being served stale.
+SCHEMA_VERSION = 2
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 
 # ---------------------------------------------------------------------------
@@ -73,6 +78,11 @@ def _cache_get(symbol: str) -> Optional[dict]:
             return None
         if (time.time() - (doc.get("cached_at") or 0)) >= CACHE_TTL_SEC:
             return None
+        # Drop cached payloads from older schemas so newly added panel
+        # fields (headline strip, axis formulas, etc.) don't take an hour
+        # to surface after a deploy.
+        if doc.get("schema_version") != SCHEMA_VERSION:
+            return None
         return doc.get("payload")
     except Exception:
         return None
@@ -85,7 +95,12 @@ def _cache_put(symbol: str, payload: dict) -> None:
     try:
         coll.update_one(
             {"symbol": symbol.upper()},
-            {"$set": {"symbol": symbol.upper(), "payload": payload, "cached_at": int(time.time())}},
+            {"$set": {
+                "symbol": symbol.upper(),
+                "payload": payload,
+                "cached_at": int(time.time()),
+                "schema_version": SCHEMA_VERSION,
+            }},
             upsert=True,
         )
     except Exception as exc:
@@ -632,13 +647,18 @@ def analyst_panel(symbol: str) -> dict:
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
-def analysis_for(symbol: str) -> dict:
-    """Return all four panels for a symbol, cached 60 min in Mongo."""
+def analysis_for(symbol: str, force_refresh: bool = False) -> dict:
+    """Return all four panels for a symbol, cached 60 min in Mongo.
+
+    Pass `force_refresh=True` to bypass the cache entirely — the API exposes
+    this via `?refresh=true` so users can pull fresh fundamentals on demand.
+    """
     sym = symbol.upper()
-    cached = _cache_get(sym)
-    if cached is not None:
-        cached["cached"] = True
-        return cached
+    if not force_refresh:
+        cached = _cache_get(sym)
+        if cached is not None:
+            cached["cached"] = True
+            return cached
 
     payload = {
         "symbol": sym,

@@ -776,14 +776,21 @@ async def sepa_dual_momentum_get(
 
 
 @app.get("/sepa/analysis/{symbol}")
-async def sepa_analysis_endpoint(symbol: str):
+async def sepa_analysis_endpoint(
+    symbol: str,
+    refresh: bool = Query(False, description="Bypass the 60-min Mongo cache"),
+):
     """Fidelity-style multi-panel stock analysis.
 
     Returns four panels: fundamental (S&P-style), technical sentiment
     (Trading-Central-style), ESG (MSCI-style), and analyst consensus
-    (LSEG-StarMine-style). Cached 60 min in Mongo `stock_analysis_cache`.
+    (LSEG-StarMine-style). Cached 60 min in Mongo `stock_analysis_cache`;
+    schema-versioned so deploys with new fields auto-invalidate. Pass
+    `?refresh=true` to bust the cache manually.
     """
-    return JSONResponse(await asyncio.to_thread(sepa_analysis_for, symbol.upper()))
+    return JSONResponse(
+        await asyncio.to_thread(sepa_analysis_for, symbol.upper(), refresh)
+    )
 
 
 @app.get("/sepa/smartmoney/{symbol}")

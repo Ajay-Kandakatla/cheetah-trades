@@ -543,17 +543,20 @@ export function StockAnalysisPanel({ symbol }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = (refresh = false) => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`${API}/sepa/analysis/${encodeURIComponent(symbol)}`)
+    const url = `${API}/sepa/analysis/${encodeURIComponent(symbol)}${refresh ? '?refresh=true' : ''}`;
+    fetch(url)
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then((j) => { if (!cancelled) setData(j); })
       .catch((e) => { if (!cancelled) setError(String(e)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [symbol]);
+  };
+
+  useEffect(() => load(false), [symbol]);
 
   if (loading && !data) {
     return <div className="sepa-drawer__loading"><div className="eyebrow">Loading analysis…</div></div>;
@@ -568,6 +571,15 @@ export function StockAnalysisPanel({ symbol }: Props) {
       <div className="sa-meta mono">
         Analysis as of {new Date(data.fetched_at_iso).toLocaleString()}{' '}
         {data.cached && <span className="sa-meta__chip">cached</span>}
+        <button
+          type="button"
+          className="sa-meta__refresh"
+          onClick={() => load(true)}
+          disabled={loading}
+          title="Bypass the 60-min cache and re-pull fresh fundamentals + ESG + analyst data"
+        >
+          {loading ? 'refreshing…' : '↻ refresh'}
+        </button>
       </div>
       <div className="sa-grid">
         <FundamentalSection data={data.fundamental} />
