@@ -53,16 +53,11 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
       </header>
 
       {alertOpen && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <PriceAlertModal
-            symbol={row.symbol}
-            currentPrice={setup?.pivot ?? null}
-            onClose={() => setAlertOpen(false)}
-          />
-        </div>
+        <PriceAlertModal
+          symbol={row.symbol}
+          currentPrice={setup?.pivot ?? null}
+          onClose={() => setAlertOpen(false)}
+        />
       )}
 
       <div className="sepa-card__body">

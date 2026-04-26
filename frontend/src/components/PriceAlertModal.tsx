@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { createPriceAlert, type AlertKind } from '../hooks/usePriceAlerts';
 
 type Props = {
@@ -54,12 +55,17 @@ export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Pr
     }
   }
 
-  return (
-    <div className="sepa-drawer-backdrop" onClick={onClose}>
+  return createPortal(
+    <div
+      className="sepa-drawer-backdrop"
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
+    >
       <div
         className="sepa-drawer"
-        style={{ maxWidth: 460 }}
+        style={{ maxWidth: 460, width: '100%', height: '100%', overflow: 'auto' }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <header className="sepa-drawer__head">
           <div>
@@ -128,6 +134,7 @@ export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Pr
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
