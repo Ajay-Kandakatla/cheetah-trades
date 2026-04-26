@@ -58,10 +58,15 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | POST | `/sepa/brief` | — | brief payload | writes `~/.cheetah/scans/brief.json`; pulls catalyst+insider for top5+watchlist | `sepa.brief.generate_brief` |
 | GET | `/sepa/candidate/{symbol}` | path | `{symbol, base, catalyst, insider, ipo_age}` | catalyst pulls news+earnings; insider hits SEC EDGAR | `catalyst_for, insider_activity, ipo_age` |
 | POST | `/sepa/rescan/{symbol}` | path | analyzed dict for one symbol | force-refreshes parquet cache for symbol | `prices.load_prices(force=True), rs_rank.rs_ranks, scanner._analyze_symbol` |
-| GET | `/sepa/watchlist` | — | `[{symbol, entry, stop, added}]` | reads `watchlist.json` | `scanner.load_watchlist` |
-| POST | `/sepa/watchlist` | `?symbol&entry&stop` | updated list | writes `watchlist.json` | `scanner.add_to_watchlist` |
+| GET | `/sepa/watchlist` | — | `[{symbol, entry, stop, shares?, added}]` | reads `watchlist.json` | `scanner.load_watchlist` |
+| POST | `/sepa/watchlist` | `?symbol&entry&stop&shares=0` | updated list | writes `watchlist.json` | `scanner.add_to_watchlist` |
 | DELETE | `/sepa/watchlist/{symbol}` | path | updated list | writes `watchlist.json` | `scanner.remove_from_watchlist` |
 | POST | `/sepa/position-plan` | `?entry&stop&account_size&risk_per_trade_pct=1.0&max_stop_pct=10.0` | `PositionPlan.to_dict()` | — | `sepa.risk.plan_position` |
+| POST | `/sepa/notify/test` | — | `{sent: bool}` | sends "Cheetah test ping" via Twilio | `sepa.notify.send_whatsapp` |
+| POST | `/sepa/alerts/price` | `?symbol&kind&level&channels=CSV&note=` | created alert doc | inserts into `price_alerts` Mongo collection | `sepa.price_alerts.create` |
+| GET | `/sepa/alerts/price` | — | `PriceAlert[]` | reads `price_alerts` | `sepa.price_alerts.list_active` |
+| DELETE | `/sepa/alerts/price/{alert_id}` | path | `{ok: bool}` | removes from `price_alerts` | `sepa.price_alerts.delete` |
+| GET | `/sepa/alerts/recent` | `?since=<unix>` | `{fires: AlertFire[]}` | reads `price_alert_fires` since ts | `sepa.price_alerts.recent_fires` |
 | GET | `/indian-stocks` | — | `{stocks[], indices[], fetchedAt}` | populates `indian_market._quote_cache` | `indian_market.fetch_indian_market` |
 | GET | `/indian-news` | `?symbol=` (optional) | `{symbol, items[], fetchedAt}` | populates `news._cache` under `__IN_*__` key | `news.indian_news` |
 
@@ -284,9 +289,47 @@ trade date)/365.25`. Flags `is_young` ≤ 8 years, `is_recent_ipo` ≤ 2 years.
 - Write `~/.cheetah/scans/brief.json`.
 
 ### `cli.py`
-Subcommands invoked by launchd (`python -m sepa.cli {scan|brief|rescan SYM}`).
-`scan --no-catalyst --symbols A,B,C` and `brief` and `rescan SYM` (force price
-refresh).
+Subcommands invoked by launchd / supercronic
+(`python -m sepa.cli {scan|brief|rescan SYM|alerts}`).
+`scan --no-catalyst --symbols A,B,C`, `brief`, `rescan SYM` (force price
+refresh), `alerts` (runs both position-aware and on-demand price-alert checks).
+
+### `notify.py` — Twilio WhatsApp delivery
+Lazy-imports `twilio.rest.Client` so the module is importable without the
+package. Reads `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`
+(default `whatsapp:+14155238886`), `TWILIO_TO`. Public:
+- `send_whatsapp(body) -> bool` — returns False (and logs a warning) if any
+  env var is missing or the API call raises.
+- `format_brief(brief)` — multi-line digest of the morning brief payload.
+- `format_position_alert(item)` — single-position stop-loss / sell line.
+
+### `alerts.py` — position-aware alerts (cron, every 5 min during market hours)
+`check_positions()` iterates the watchlist; for each position with `shares>0`:
+- pulls real-time price via `prices.last_trade_price()` (Massive `/v2/last/trade`),
+- compares to `stop` (stop-loss hit) and `entry * 1.20` (take-profit at +20%),
+- runs `sell_signals.evaluate` for distribution / break-of-50DMA flags.
+- Fires once per (symbol, kind) per 6h cooldown, persisted in Mongo
+  `position_alerts` (or in-memory dict if Mongo unreachable).
+- Each fire writes to `price_alert_fires` (so the browser polling endpoint
+  surfaces it) and calls `notify.send_whatsapp(format_position_alert(...))`.
+
+### `price_alerts.py` — on-demand per-stock price alerts
+Backed by two Mongo collections:
+- `price_alerts` — active alerts: `{_id, symbol, kind, level, created_price,
+  created_at, last_fired_at, channels[], note?}`. `kind ∈ {below, above,
+  drop_pct, rise_pct}`. `_pct` kinds compare current price vs. `created_price`.
+- `price_alert_fires` — append-only log: `{_id, alert_id, symbol, kind, level,
+  price, fired_at, channels, message}`. Polled by the frontend via
+  `/sepa/alerts/recent?since=<ts>`.
+
+Public:
+- `create(symbol, kind, level, channels, note)` — captures `created_price` via
+  `prices.last_trade_price()` so `_pct` kinds have a reference baseline.
+- `list_active()`, `delete(alert_id)`.
+- `check_alerts()` — pulls current price for each active alert, evaluates
+  trigger, applies 6h cooldown, persists fire row, dispatches WhatsApp if
+  `"whatsapp" in channels`. Browser channel is passive (UI polls `recent_fires`).
+- `recent_fires(since)`.
 
 ### `providers.py`
 Tiny env-var holder. `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `has_polygon()`,
@@ -424,24 +467,57 @@ because of the hardcoded host).
 ### API surface used (from frontend)
 `/cheetah, /competitors, /unicorns, /etfs, /news, /stream, /indian-stocks,
 /indian-news, /sepa/scan, /sepa/brief, /sepa/candidate/:s, /sepa/rescan/:s,
-/sepa/watchlist*, /sepa/position-plan, /health (unused?)`.
+/sepa/watchlist*, /sepa/position-plan, /sepa/notify/test,
+/sepa/alerts/price (POST/GET/DELETE), /sepa/alerts/recent, /health (unused?)`.
+
+#### Frontend modules added for alerts
+- `src/hooks/usePriceAlerts.ts` — typed API client (`createPriceAlert`,
+  `listPriceAlerts`, `deletePriceAlert`, `fetchRecentFires`) plus
+  `useAlertNotifier()` hook that polls `/sepa/alerts/recent` every 30s and
+  surfaces fires via the browser `Notification` API. Foreground only.
+- `src/components/PriceAlertModal.tsx` — drawer-styled modal with kind
+  dropdown (`below | above | drop_pct | rise_pct`), level input, channel
+  checkboxes (WhatsApp / Browser), optional note. Calls
+  `Notification.requestPermission()` on first save when browser is enabled.
+- `src/components/SepaCandidateCard.tsx` — adds 🔔 button in the card
+  header that opens `PriceAlertModal` (with `e.stopPropagation()` so the
+  card click doesn't fire). Modal renders inside a stop-propagation
+  wrapper so backdrop clicks don't reopen the candidate detail.
+- `src/pages/Sepa.tsx` — invokes `useAlertNotifier()` so the polling loop
+  starts on mount.
 
 ---
 
-## 6. Scheduled Jobs (launchd)
+## 6. Scheduled Jobs
 
-| Plist | Schedule (local time) | Command | Logs |
-|---|---|---|---|
-| `com.cheetah.sepa.scan.plist` | Mon-Fri 17:00 | `.venv/bin/python -m sepa.cli scan` | `~/.cheetah/sepa-scan.{log,err.log}` |
-| `com.cheetah.sepa.brief.plist` | Mon-Fri 08:30 | `.venv/bin/python -m sepa.cli brief` | `~/.cheetah/sepa-brief.{log,err.log}` |
+### Production: Docker `cron` service (supercronic)
 
-`WorkingDirectory = backend/`. `RunAtLoad = false`. Both rely on machine being
-in US/Eastern. Install per `launchd/README.md`:
-```
-cp launchd/com.cheetah.sepa.*.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.cheetah.sepa.scan.plist
-launchctl load ~/Library/LaunchAgents/com.cheetah.sepa.brief.plist
-```
+The Mac mini deployment uses the `cron` service in `docker-compose.yml`,
+running `supercronic /app/crontab`. Crontab lives at `backend/crontab` and
+is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`.
+
+| Schedule | Command | Purpose |
+|---|---|---|
+| `30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli scan` | EOD scan (16:30 ET) |
+| `30 8  * * 1-5` | `/usr/local/bin/python -m sepa.cli brief` | Morning brief (08:30 ET) |
+| `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
+| `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
+
+**Two operational gotchas (load-bearing):**
+1. The crontab MUST use the absolute python path (`/usr/local/bin/python`).
+   Bare `python` fails under supercronic with `Failed to fork exec`.
+2. The cron service sets `init: true` so Docker's tini is PID 1. On Apple
+   Silicon (the production host), supercronic-as-PID-1 fails to re-exec
+   itself as a subreaper child — tini sidesteps the path entirely.
+
+### Legacy: launchd (local dev)
+
+| Plist | Schedule | Command |
+|---|---|---|
+| `com.cheetah.sepa.scan.plist` | Mon-Fri 17:00 | `.venv/bin/python -m sepa.cli scan` |
+| `com.cheetah.sepa.brief.plist` | Mon-Fri 08:30 | `.venv/bin/python -m sepa.cli brief` |
+
+Still installable via `launchd/README.md` for non-Docker dev environments.
 
 ---
 
@@ -458,10 +534,80 @@ launchctl load ~/Library/LaunchAgents/com.cheetah.sepa.brief.plist
 | `SEC_USER_AGENT` | `sepa/insider.py` | EDGAR requires identifying UA | defaults to `"Cheetah Market Research research@cheetah.local"` (works but use your own) |
 | `SEPA_UNIVERSE_FILE` | `sepa/universe.py` | Override universe with text file (one ticker/line) | ignored if file missing |
 | `SEPA_UNIVERSE` | `sepa/universe.py` | Override universe with CSV | ignored if unset |
+| `MASSIVE_API_KEY` | `sepa/prices.py` | Daily bars + real-time last-trade | falls back to yfinance |
+| `PRICE_PROVIDER` | `sepa/prices.py` | `massive` (default) or `yfinance` | defaults to massive |
+| `MONGO_URL` | `sepa/prices.py`, `sepa/alerts.py`, `sepa/price_alerts.py` | Mongo connection | falls back to parquet / in-memory |
+| `MONGO_DB` | same | DB name | `cheetah` |
+| `TWILIO_ACCOUNT_SID` | `sepa/notify.py` | Twilio API auth | WhatsApp send returns False with warning |
+| `TWILIO_AUTH_TOKEN` | `sepa/notify.py` | Twilio API auth | same |
+| `TWILIO_FROM` | `sepa/notify.py` | Sender (`whatsapp:+...`) | defaults to sandbox `whatsapp:+14155238886` |
+| `TWILIO_TO` | `sepa/notify.py` | Recipient (`whatsapp:+...`) | WhatsApp send returns False with warning |
 
 `.env.example` ships only `FINNHUB_API_KEY, DEFAULT_SYMBOLS, POLL_INTERVAL_SEC,
 TICK_WINDOW`. The current `.env` ships a **live Finnhub key** (visible in
 repo — should be rotated).
+
+---
+
+## 7b. Docker Deployment (production)
+
+Production lives on Ajay's M1 Mac mini. Docker Compose orchestrates four
+services. Repo: `https://github.com/Ajay-Kandakatla/cheetah-trades`.
+
+### Services
+
+| Service | Image | Ports | Notes |
+|---|---|---|---|
+| `mongo` | `mongo:7` | `127.0.0.1:27017` (loopback only) | persists `mongo-data` named volume |
+| `api` | `cheetah-api:latest` (from `backend/Dockerfile`) | `0.0.0.0:8000` | uvicorn |
+| `cron` | `cheetah-api:latest` (same image, different command) | — | `init: true`, runs `supercronic /app/crontab` |
+| `frontend` | `cheetah-frontend:latest` (from `frontend/Dockerfile`) | `0.0.0.0:5173 → 80` | nginx serves Vite build, reverse-proxies `/api/*` and `/ws` |
+
+### Volumes
+- `mongo-data` — Mongo data dir.
+- `cheetah-scans` — bind-mounted to `/root/.cheetah` on **both** api and
+  cron, so cron-written `latest.json` / `brief.json` are visible to the
+  api process. Same volume holds the parquet price cache fallback.
+
+### Build details
+- Backend Dockerfile is multi-arch via `dpkg --print-architecture` (no
+  reliance on BuildKit's `TARGETARCH` injection). Installs supercronic
+  `v0.2.33` from GitHub releases.
+- Frontend Dockerfile is multi-stage (Node 20 builder → nginx 1.27
+  alpine). Build-time ARG `VITE_API_BASE=/api` so the SPA always talks
+  to `same-origin/api/*`.
+- nginx config (`frontend/nginx.conf`) proxies `/api/` → `http://api:8000/`
+  and `/ws` → `http://api:8000/ws`.
+
+### Twilio env passthrough
+The compose file pulls `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
+`TWILIO_FROM`, `TWILIO_TO` from the host shell at `up` time
+(`${TWILIO_ACCOUNT_SID:-}` syntax) AND from `backend/.env`. Either source
+works; if both are set, compose uses the host shell value.
+
+### Deploy commands (on the mini)
+```
+# first time
+git clone https://github.com/Ajay-Kandakatla/cheetah-trades.git
+cd cheetah-trades
+cp backend/.env.example backend/.env   # then fill in keys
+docker compose build
+docker compose up -d
+
+# normal update
+git pull
+docker compose build api          # rebuild only what changed
+docker compose up -d --force-recreate api cron
+docker compose logs --tail 20 cron
+```
+
+### Health checks
+- `docker compose ps` — all 4 services should be `Up`.
+- `curl http://localhost:8000/health` — api liveness.
+- `curl -X POST http://localhost:8000/sepa/notify/test` → `{"sent":true}`
+  confirms Twilio.
+- `docker compose exec cron /usr/local/bin/python -m sepa.cli alerts` —
+  manual run of the alerts pipeline.
 
 ---
 
