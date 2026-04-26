@@ -271,7 +271,24 @@ function FundamentalSection({ data }: { data: FundamentalPanel }) {
     <section className="sa-card">
       <div className="sa-card__head">
         <div>
-          <h3>Fundamental analysis</h3>
+          <h3>
+            Fundamental analysis
+            <InfoDot
+              title="Fundamental analysis — how it's derived"
+              body={
+                <>
+                  <span>Four independent axes, each scored 0–100 (higher = better), composed from yfinance's free-tier <code>Ticker.info</code> snapshot — no paid feeds.</span>
+                  <span><strong>Valuation</strong> — average of P/E, P/B and P/S, each linearly inverted (lower multiples score higher).</span>
+                  <span><strong>Quality</strong> — average of ROE, ROA, profit margin and operating margin (higher score = more efficient).</span>
+                  <span><strong>Growth Stability</strong> — average of revenue YoY and earnings YoY (higher score = faster growth).</span>
+                  <span><strong>Financial Health</strong> — debt/equity, current ratio, free cashflow positivity, cash buffer.</span>
+                  <span className="sa-info__formula mono">Each axis: missing legs are dropped; score = average of the legs that returned a value. The triangle marker shows where the score lands on the 0–100 track.</span>
+                  <span>The strip above shows the underlying figures: market cap (price × shares), shareholders' equity (book × shares), TTM revenue, and enterprise value (market cap + debt − cash).</span>
+                  <span><em>Click the ⓘ on each axis below for the exact scaling formula.</em></span>
+                </>
+              }
+            />
+          </h3>
           <div className="sa-card__sub mono">Composite of yfinance fundamentals · 0-100 each axis (higher = better)</div>
         </div>
       </div>
