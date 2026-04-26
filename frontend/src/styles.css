@@ -1512,3 +1512,39 @@ tr:last-child td { border-bottom: none; }
 }
 .sa-meta__refresh:hover:not(:disabled) { color: var(--gold); border-color: var(--gold-hairline); }
 .sa-meta__refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ==========================================================================
+   CompanyHeadline — strip below the symbol on the SepaCandidate page header.
+   Shows current net worth (market cap), shareholders' equity, revenue, EV.
+   ========================================================================== */
+.cm-headline {
+  display: flex; flex-wrap: wrap; gap: 0;
+  margin-top: 1rem; padding: 0.7rem 0;
+  border-top: 1px solid var(--hairline-faint);
+  border-bottom: 1px solid var(--hairline-faint);
+}
+.cm-headline__stat {
+  flex: 1 1 160px; min-width: 140px;
+  padding: 0 1rem;
+  border-right: 1px solid var(--hairline-faint);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.cm-headline__stat:first-child { padding-left: 0; }
+.cm-headline__stat:last-child  { border-right: none; }
+.cm-headline__label {
+  font: 600 0.66rem var(--font-sans, system-ui);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--ink-subtle);
+  white-space: nowrap;
+}
+.cm-headline__value {
+  font: 700 1.35rem var(--font-mono, ui-monospace, monospace);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.cm-headline__value.is-loading { color: var(--ink-faint); }
+
+@media (max-width: 720px) {
+  .cm-headline__stat { flex: 1 1 calc(50% - 0px); border-right: none; padding: 0.4rem 0.6rem; }
+  .cm-headline__stat:nth-child(odd) { border-right: 1px solid var(--hairline-faint); }
+}

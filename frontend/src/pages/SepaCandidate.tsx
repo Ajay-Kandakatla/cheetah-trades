@@ -5,6 +5,7 @@ import { SepaScoreBar } from '../components/SepaScoreBar';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
 import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
+import { CompanyHeadline } from '../components/CompanyHeadline';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
@@ -176,6 +177,7 @@ export function SepaCandidatePage() {
           {base && (
             <SepaScoreBar score={base.score ?? 0} rating={base.rating} size="md" />
           )}
+          <CompanyHeadline symbol={symbol} />
         </div>
         <InfoButton title={`${symbol} — How to read this`}>{PageInfo}</InfoButton>
       </header>
