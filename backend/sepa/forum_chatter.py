@@ -1,15 +1,22 @@
 """Forum Chatter — crowd discussion across stock-focused portals.
 
-Three lanes per ticker:
+Four lanes per ticker. Scraping-first design: no API keys, no OAuth, no
+client registration. The only env var that matters is REDDIT_USER_AGENT
+(Reddit asks scrapers to identify themselves in the UA string).
 
-Lane 1 — Reddit "Thoughtful" (PRAW)
+Lane 1 — Reddit "Thoughtful" (old.reddit.com .json scrape)
   Allowlist: r/SecurityAnalysis, r/ValueInvesting, r/investing, r/stocks, r/options.
   Score-floored per audience size. Bear-thesis catcher.
 
-Lane 2 — Reddit "Momentum" (PRAW)
+Lane 2 — Reddit "Momentum" (old.reddit.com .json scrape)
   Allowlist: r/wallstreetbets, r/StockMarket, r/pennystocks, r/Daytrading,
   r/swingtrading. Looser score floors — these subs are the leading indicator
   for retail piling into a stage-2 leader.
+
+Why scrape old.reddit instead of PRAW: same data the website hydrates from,
+no 60-req/min OAuth bucket, no client_id/secret to provision, no token
+refresh logic. The .json suffix has been stable on every Reddit URL for 15+
+years.
 
 Lane 3 — StockTwits public stream (HTTP)
   api.stocktwits.com/api/2/streams/symbol/{sym}.json — last ~30 messages,
@@ -46,11 +53,12 @@ log = logging.getLogger("sepa.forum_chatter")
 
 CACHE_TTL_SEC = 15 * 60
 
-REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
-REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
 REDDIT_USER_AGENT = os.getenv(
-    "REDDIT_USER_AGENT", "cheetah-market-app/0.1 (forum_chatter)"
+    "REDDIT_USER_AGENT",
+    "cheetah-market-app/0.1 (+https://github.com/Ajay-Kandakatla/cheetah-trades)",
 )
+REDDIT_BASE = "https://old.reddit.com"
+REDDIT_TIMEOUT = 12
 
 # (subreddit, score_floor) — calibrated per audience size / signal density
 THOUGHTFUL_SUBS: list[tuple[str, int]] = [
@@ -85,129 +93,196 @@ def _now() -> int:
 
 
 # ---------------------------------------------------------------------------
-# Reddit lane — PRAW (sync, wrapped in to_thread)
+# Reddit lane — scraping old.reddit.com .json (no auth, no PRAW)
 # ---------------------------------------------------------------------------
-def _reddit_search_sync(
+def _reddit_headers() -> dict:
+    return {
+        "User-Agent": REDDIT_USER_AGENT,
+        "Accept": "application/json",
+        # old.reddit.com is friendlier to scrapers than www. — fewer JS gates.
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+
+async def _reddit_fetch_top_comments(
+    client: httpx.AsyncClient, permalink: str, n: int
+) -> list[dict]:
+    """Fetch top-N comments for a post by appending .json to its permalink."""
+    if not permalink or n <= 0:
+        return []
+    url = f"{REDDIT_BASE}{permalink.rstrip('/')}.json"
+    try:
+        r = await client.get(
+            url,
+            params={"limit": str(n + 5), "sort": "top"},
+            headers=_reddit_headers(),
+        )
+        if r.status_code != 200:
+            return []
+        data = r.json()
+    except Exception as exc:
+        log.debug("reddit comments fetch failed for %s: %s", permalink, exc)
+        return []
+
+    # Comment listing is the second element of the array response.
+    if not isinstance(data, list) or len(data) < 2:
+        return []
+    children = (data[1].get("data") or {}).get("children") or []
+
+    out: list[dict] = []
+    for c in children:
+        if c.get("kind") != "t1":  # skip "more" placeholders
+            continue
+        cd = c.get("data") or {}
+        body = (cd.get("body") or "").strip()
+        if not body or body in ("[deleted]", "[removed]"):
+            continue
+        out.append({
+            "score": int(cd.get("score", 0) or 0),
+            "body":  body[:280],
+        })
+        if len(out) >= n:
+            break
+    return out
+
+
+async def _reddit_search_sub(
+    client: httpx.AsyncClient,
+    symbol: str,
+    sub_name: str,
+    score_floor: int,
+    pat: re.Pattern,
+    cutoffs: tuple[float, float, float],  # (30d, 7d, 14d)
+    include_top_comments: int,
+) -> tuple[list[dict], int, int]:
+    """Search one subreddit. Returns (qualifying_threads, m_7d, m_prior_7d)."""
+    cutoff_30d, cutoff_7d, cutoff_14d = cutoffs
+    url = f"{REDDIT_BASE}/r/{sub_name}/search.json"
+    params = {
+        "q":           symbol,
+        "restrict_sr": "1",
+        "sort":        "top",
+        "t":           "month",
+        "limit":       "25",
+    }
+    try:
+        r = await client.get(url, params=params, headers=_reddit_headers())
+        if r.status_code != 200:
+            log.debug("reddit r/%s returned %d for %s", sub_name, r.status_code, symbol)
+            return [], 0, 0
+        data = r.json()
+    except Exception as exc:
+        log.debug("reddit search failed for %s in r/%s: %s", symbol, sub_name, exc)
+        return [], 0, 0
+
+    children = (data.get("data") or {}).get("children") or []
+    threads: list[dict] = []
+    m_7d = m_prior_7d = 0
+
+    # First pass: filter + count mentions; collect candidate threads.
+    candidates: list[dict] = []
+    for c in children:
+        post = c.get("data") or {}
+        created = float(post.get("created_utc") or 0)
+        if created < cutoff_30d:
+            continue
+        title = post.get("title") or ""
+        selftext = (post.get("selftext") or "")[:500]
+        if not pat.search(title) and not pat.search(selftext):
+            continue
+
+        if created >= cutoff_7d:
+            m_7d += 1
+        elif created >= cutoff_14d:
+            m_prior_7d += 1
+
+        score = int(post.get("score") or 0)
+        if score < score_floor:
+            continue
+
+        candidates.append({
+            "subreddit":  sub_name,
+            "title":      title,
+            "url":        f"https://reddit.com{post.get('permalink', '')}",
+            "permalink":  post.get("permalink", ""),
+            "score":      score,
+            "n_comments": int(post.get("num_comments") or 0),
+            "created":    int(created),
+            "snippet":    selftext[:240],
+        })
+
+    # Second pass: fan out top-N comment fetches in parallel for the kept threads.
+    candidates.sort(key=lambda t: t["score"], reverse=True)
+    top = candidates[:5]  # cap comment fetches per sub to control request volume
+    if include_top_comments > 0 and top:
+        comment_results = await asyncio.gather(
+            *(_reddit_fetch_top_comments(client, t["permalink"], include_top_comments)
+              for t in top),
+            return_exceptions=True,
+        )
+        for t, cr in zip(top, comment_results):
+            t["comments"] = cr if isinstance(cr, list) else []
+    for t in candidates:
+        t.setdefault("comments", [])
+        t.pop("permalink", None)  # internal-only
+
+    return candidates, m_7d, m_prior_7d
+
+
+async def _reddit_search(
     symbol: str,
     subs: list[tuple[str, int]],
     *,
-    include_top_comments: int = 0,
+    include_top_comments: int,
 ) -> dict:
-    """Search a list of subreddits for a ticker. Returns threads + mention windows."""
-    if not (REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET):
-        return {
-            "available": False,
-            "reason": "no REDDIT_CLIENT_ID",
-            "threads": [],
-            "mentions_7d": 0,
-            "mentions_prior_7d": 0,
-        }
-    try:
-        import praw
-    except ImportError:
-        return {
-            "available": False,
-            "reason": "praw not installed",
-            "threads": [],
-            "mentions_7d": 0,
-            "mentions_prior_7d": 0,
-        }
+    pat = _ticker_pattern(symbol)
+    now = time.time()
+    cutoffs = (now - 30 * 86400, now - 7 * 86400, now - 14 * 86400)
 
     try:
-        reddit = praw.Reddit(
-            client_id=REDDIT_CLIENT_ID,
-            client_secret=REDDIT_CLIENT_SECRET,
-            user_agent=REDDIT_USER_AGENT,
-        )
-        reddit.read_only = True
+        async with httpx.AsyncClient(
+            timeout=REDDIT_TIMEOUT, follow_redirects=True,
+            headers=_reddit_headers(),
+        ) as client:
+            results = await asyncio.gather(*(
+                _reddit_search_sub(
+                    client, symbol, sub_name, score_floor, pat, cutoffs,
+                    include_top_comments,
+                )
+                for sub_name, score_floor in subs
+            ), return_exceptions=True)
     except Exception as exc:
         return {
-            "available": False,
-            "reason": f"praw init failed: {exc}",
-            "threads": [],
-            "mentions_7d": 0,
-            "mentions_prior_7d": 0,
+            "available": False, "reason": f"http error: {exc}",
+            "threads": [], "mentions_7d": 0, "mentions_prior_7d": 0,
         }
 
-    pat = _ticker_pattern(symbol)
     threads: list[dict] = []
-    now = time.time()
-    cutoff_30d = now - 30 * 86400
-    cutoff_7d = now - 7 * 86400
-    cutoff_14d = now - 14 * 86400
-
-    mentions_7d = 0
-    mentions_prior_7d = 0
-
-    for sub_name, score_floor in subs:
-        try:
-            sub = reddit.subreddit(sub_name)
-            for post in sub.search(symbol, sort="top", time_filter="month", limit=20):
-                if post.created_utc < cutoff_30d:
-                    continue
-                title = post.title or ""
-                selftext = (post.selftext or "")[:500]
-                if not pat.search(title) and not pat.search(selftext):
-                    continue
-
-                # Mention-velocity windows (any score, any thread that mentions ticker)
-                if post.created_utc >= cutoff_7d:
-                    mentions_7d += 1
-                elif post.created_utc >= cutoff_14d:
-                    mentions_prior_7d += 1
-
-                # Threads list — gated by score floor
-                if post.score < score_floor:
-                    continue
-
-                comments_out: list[dict] = []
-                if include_top_comments > 0:
-                    try:
-                        post.comment_sort = "top"
-                        post.comments.replace_more(limit=0)
-                        for c in post.comments.list()[:include_top_comments]:
-                            body = (getattr(c, "body", "") or "")[:280]
-                            if not body:
-                                continue
-                            comments_out.append({
-                                "score": int(getattr(c, "score", 0) or 0),
-                                "body":  body,
-                            })
-                    except Exception as exc:
-                        log.debug("comments fetch failed for %s: %s", post.id, exc)
-
-                threads.append({
-                    "subreddit":  sub_name,
-                    "title":      title,
-                    "url":        f"https://reddit.com{post.permalink}",
-                    "score":      int(post.score),
-                    "n_comments": int(post.num_comments),
-                    "created":    int(post.created_utc),
-                    "snippet":    selftext[:240],
-                    "comments":   comments_out,
-                })
-        except Exception as exc:
-            log.debug("reddit search failed for %s in r/%s: %s", symbol, sub_name, exc)
+    m_7d = m_prior_7d = 0
+    for res in results:
+        if isinstance(res, Exception):
+            log.debug("reddit sub failed: %s", res)
+            continue
+        sub_threads, m7, mp = res
+        threads.extend(sub_threads)
+        m_7d += m7
+        m_prior_7d += mp
 
     threads.sort(key=lambda t: t["score"], reverse=True)
     return {
-        "available": True,
-        "threads": threads[:10],
-        "mentions_7d": mentions_7d,
-        "mentions_prior_7d": mentions_prior_7d,
+        "available":         True,
+        "threads":           threads[:10],
+        "mentions_7d":       m_7d,
+        "mentions_prior_7d": m_prior_7d,
     }
 
 
 async def _reddit_thoughtful(symbol: str) -> dict:
-    return await asyncio.to_thread(
-        _reddit_search_sync, symbol, THOUGHTFUL_SUBS, include_top_comments=2
-    )
+    return await _reddit_search(symbol, THOUGHTFUL_SUBS, include_top_comments=2)
 
 
 async def _reddit_momentum(symbol: str) -> dict:
-    return await asyncio.to_thread(
-        _reddit_search_sync, symbol, MOMENTUM_SUBS, include_top_comments=3
-    )
+    return await _reddit_search(symbol, MOMENTUM_SUBS, include_top_comments=3)
 
 
 # ---------------------------------------------------------------------------

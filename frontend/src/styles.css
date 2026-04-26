@@ -1546,7 +1546,11 @@ tr:last-child td { border-bottom: none; }
   font: 600 0.66rem var(--font-sans, system-ui);
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--ink-subtle);
-  white-space: nowrap;
+  /* allow wrap so long labels (e.g. "Revenue · Trailing 12 Months (TTM)")
+     don't bleed across cells; nowrap caused overlap on 2-col mobile widths */
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 .cm-headline__value {
   font: 700 1.35rem var(--font-mono, ui-monospace, monospace);
