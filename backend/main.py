@@ -51,6 +51,8 @@ from sepa.smart_money import smart_money_for as sepa_smart_money
 from sepa import dual_momentum as sepa_dual_momentum
 from sepa.stock_analysis import analysis_for as sepa_analysis_for
 from sepa.forum_chatter import chatter_for as sepa_chatter_for, chatter_universe as sepa_chatter_universe
+from sepa.india_chatter import chatter_for as india_chatter_for, chatter_universe as india_chatter_universe
+from sepa import india_universe
 
 load_dotenv()
 
@@ -854,6 +856,42 @@ async def sepa_chatter_universe_get(
 
     result = await sepa_chatter_universe(symbols, name_lookup=names, max_fetch=max_fetch)
     return JSONResponse(result)
+
+
+@app.get("/sepa/chatter-in/{symbol}")
+async def sepa_chatter_in_one(
+    symbol: str,
+    refresh: bool = Query(False, description="Bypass the 15-min Mongo cache"),
+):
+    """Indian forum chatter for one Nifty-50 ticker.
+
+    Aggregates three lanes — Reddit India (IndianStockMarket / IndiaInvestments
+    / NSEbets / StockMarketIndia / DalalStreetTalks), ValuePickr (Discourse
+    forum search), and MoneyControl news. No StockTwits or Hacker News —
+    those are US-centric. Cached 15 min in Mongo (india_chatter_cache);
+    pass `?refresh=true` to bust.
+    """
+    return JSONResponse(await india_chatter_for(symbol.upper(), refresh=refresh))
+
+
+@app.get("/sepa/chatter-in")
+async def sepa_chatter_in_universe(
+    max_fetch: int = Query(12, ge=0, le=30,
+                            description="Max live fetches per call — caps Reddit + ValuePickr + MoneyControl burn"),
+):
+    """Universe-wide Indian chatter ranking against the Nifty 50.
+
+    Reads `india_chatter_cache` for instant rows; cache-misses fetched live
+    up to `max_fetch` per call. Universe is hardcoded — see india_universe.py.
+    """
+    result = await india_chatter_universe(max_fetch=max_fetch)
+    return JSONResponse(result)
+
+
+@app.get("/sepa/india-universe")
+async def sepa_india_universe():
+    """List the Nifty 50 universe — useful for client-side typeahead / picklists."""
+    return JSONResponse({"symbols": india_universe.NIFTY_50})
 
 
 @app.post("/sepa/rescan/{symbol}")

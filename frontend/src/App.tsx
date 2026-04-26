@@ -6,6 +6,7 @@ import { SepaPage } from './pages/Sepa';
 import { SepaCandidatePage } from './pages/SepaCandidate';
 import { DualMomentumPage } from './pages/DualMomentum';
 import { ChatterPage } from './pages/Chatter';
+import { ChatterIndiaPage } from './pages/ChatterIndia';
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
           <Route path="/sepa/:symbol" element={<SepaCandidatePage />} />
           <Route path="/dual-momentum" element={<DualMomentumPage />} />
           <Route path="/chatter" element={<ChatterPage />} />
+          <Route path="/chatter-india" element={<ChatterIndiaPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>

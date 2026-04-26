@@ -51,7 +51,13 @@ export function NavBar() {
           to="/chatter"
           className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
         >
-          Chatter
+          Chatter · US
+        </NavLink>
+        <NavLink
+          to="/chatter-india"
+          className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
+        >
+          Chatter · IN
         </NavLink>
       </nav>
 
