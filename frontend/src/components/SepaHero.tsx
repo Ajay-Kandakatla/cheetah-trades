@@ -50,7 +50,7 @@ const MARKET_LABEL: Record<string, string> = {
  * Color-coded market gate makes "should I be long today?" instantly readable.
  */
 export function SepaHero({ data, scanning, onScan, onReload }: Props) {
-  const [includeCatalyst, setIncludeCatalyst] = useState(false);
+  const [includeCatalyst, setIncludeCatalyst] = useState(true);
   const mkt = data?.market_context;
   const mktKey = mkt?.label || 'mixed';
   const mktClass = MARKET_COLOR[mktKey] || 'sepa-mkt--warn';
@@ -82,16 +82,17 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
           <div className="sepa-stat__num">{data?.universe_size ?? 0}</div>
           <div className="sepa-stat__label">universe</div>
         </div>
-        <div className="sepa-stat">
+        <div className="sepa-stat sepa-stat--ts">
           <div className="sepa-stat__num mono">
             {fresh == null ? '—' : fresh < 1 ? `${Math.round(fresh * 60)}m` : `${Math.round(fresh)}h`}
           </div>
-          <div className="sepa-stat__label">last scan</div>
+          <div className="sepa-stat__label">since last scan</div>
           {ts && (
             <div className="sepa-stat__sub mono" title={ts.toString()}>
               {ts.toLocaleString(undefined, {
-                month: 'short', day: 'numeric',
+                weekday: 'short', month: 'short', day: 'numeric',
                 hour: 'numeric', minute: '2-digit',
+                timeZoneName: 'short',
               })}
             </div>
           )}

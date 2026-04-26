@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSepaScan } from '../hooks/useSepa';
 import { useAlertNotifier } from '../hooks/usePriceAlerts';
 import type { SepaCandidate, Rating } from '../hooks/useSepa';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
-import { SepaCandidateModal } from '../components/SepaCandidateModal';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
@@ -100,7 +100,8 @@ function defaultRating(score: number): Rating {
 export function SepaPage() {
   const { data, scanning, runScan, refetch } = useSepaScan();
   useAlertNotifier();
-  const [selected, setSelected] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const openSymbol = (sym: string) => navigate(`/sepa/${encodeURIComponent(sym)}`);
   const [filters, setFilters] = useState<SepaFilters>({
     rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: false, sortBy: 'score',
   });
@@ -168,7 +169,7 @@ export function SepaPage() {
               <button
                 key={p.symbol}
                 className={`sepa-toppick sepa-toppick--${(p.rating ?? defaultRating(p.score)).toLowerCase()}`}
-                onClick={() => setSelected(p.symbol)}
+                onClick={() => openSymbol(p.symbol)}
               >
                 <div className="sepa-toppick__sym">{p.symbol}</div>
                 <div className="sepa-toppick__score">{Math.round(p.score)}</div>
@@ -198,13 +199,12 @@ export function SepaPage() {
           <InfoButton title="Results">{ResultsInfo}</InfoButton>
           <div className="sepa-grid">
             {filtered.map((r) => (
-              <SepaCandidateCard key={r.symbol} row={r} onSelect={() => setSelected(r.symbol)} />
+              <SepaCandidateCard key={r.symbol} row={r} onSelect={() => openSymbol(r.symbol)} />
             ))}
           </div>
         </section>
       )}
 
-      <SepaCandidateModal symbol={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { NavBar } from './components/NavBar';
 import { ModernDashboard } from './pages/ModernDashboard';
 import { LiveStream } from './pages/LiveStream';
 import { SepaPage } from './pages/Sepa';
+import { SepaCandidatePage } from './pages/SepaCandidate';
 
 export function App() {
   return (
@@ -14,6 +15,7 @@ export function App() {
           <Route path="/dashboard" element={<ModernDashboard />} />
           <Route path="/live" element={<LiveStream />} />
           <Route path="/sepa" element={<SepaPage />} />
+          <Route path="/sepa/:symbol" element={<SepaCandidatePage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
