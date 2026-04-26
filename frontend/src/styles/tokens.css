@@ -29,6 +29,11 @@
   --hairline-strong: rgba(26, 26, 26, 0.22);
   --hairline-faint:  rgba(26, 26, 26, 0.06);
 
+  /* Legacy aliases — older SEPA components use these. Keep them mapped to
+     the modern surface tokens so theme switches work everywhere. */
+  --paper: var(--bg-surface);
+  --rule:  var(--hairline);
+
   /* Semantic (muted to fit the aesthetic — not retail-trader neon) */
   --positive:      #3F7A50;
   --positive-bg:   rgba(63, 122, 80, 0.08);
