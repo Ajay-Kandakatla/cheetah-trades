@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { SepaCandidate } from '../hooks/useSepa';
 import { SepaScoreBar } from './SepaScoreBar';
 import { SepaTrendDots } from './SepaTrendDots';
+import { PriceAlertModal } from './PriceAlertModal';
 
 type Props = { row: SepaCandidate; onSelect: () => void };
 
@@ -10,6 +12,7 @@ type Props = { row: SepaCandidate; onSelect: () => void };
  * stage badge, volume/late-base flags.
  */
 export function SepaCandidateCard({ row, onSelect }: Props) {
+  const [alertOpen, setAlertOpen] = useState(false);
   const setup = row.entry_setup;
   const riskPct = setup ? Math.abs((setup.pivot - setup.stop) / setup.pivot) * 100 : null;
   const stage = row.stage?.stage;
@@ -33,8 +36,28 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
           )}
           {lateBase && <span className="sepa-tag sepa-tag--warn" title="Late-stage base — exhaustion risk">late</span>}
         </div>
-        <SepaScoreBar score={row.score} rating={row.rating} size="sm" />
+        <div className="sepa-card__head-right">
+          <button
+            type="button"
+            className="sepa-card__bell"
+            title="Set alert"
+            onClick={(e) => { e.stopPropagation(); setAlertOpen(true); }}
+          >
+            🔔
+          </button>
+          <SepaScoreBar score={row.score} rating={row.rating} size="sm" />
+        </div>
       </header>
+
+      {alertOpen && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <PriceAlertModal
+            symbol={row.symbol}
+            currentPrice={setup?.pivot ?? null}
+            onClose={() => setAlertOpen(false)}
+          />
+        </div>
+      )}
 
       <div className="sepa-card__body">
         <div className="sepa-card__row">

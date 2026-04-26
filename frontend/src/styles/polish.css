@@ -763,3 +763,101 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
   color: var(--gold) !important;
   border-bottom-color: var(--gold);
 }
+
+/* Price alert bell + form ------------------------------------------------- */
+.sepa-card__head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sepa-card__bell {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.55);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 120ms ease;
+}
+.sepa-card__bell:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: var(--gold, #f4b942);
+  background: rgba(255,255,255,0.04);
+}
+
+.sepa-alert-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px 20px;
+}
+.sepa-alert-form__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+}
+.sepa-alert-form__row select,
+.sepa-alert-form__row input[type="number"],
+.sepa-alert-form__row input[type="text"] {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.sepa-alert-form__channels {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+.sepa-alert-form__channels legend {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  padding: 0 6px;
+}
+.sepa-alert-form__channels label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+.sepa-alert-form__err {
+  color: #ff8a8a;
+  font-size: 13px;
+  margin: 0;
+}
+.sepa-alert-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sepa-alert-form__actions .btn-primary,
+.sepa-alert-form__actions .btn-ghost {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.sepa-alert-form__actions .btn-primary {
+  background: var(--gold, #f4b942);
+  color: #111;
+  border-color: transparent;
+  font-weight: 600;
+}
+.sepa-alert-form__actions .btn-primary:disabled { opacity: 0.6; cursor: wait; }
+.sepa-alert-form__actions .btn-ghost {
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+}

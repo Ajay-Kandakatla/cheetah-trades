@@ -62,9 +62,12 @@ def main() -> int:
         return 0
 
     if args.cmd == "alerts":
-        from . import alerts
-        result = alerts.check_positions()
-        log.info("ALERTS — fired=%d skipped=%d", len(result["fired"]), len(result["skipped"]))
+        from . import alerts, price_alerts
+        pos = alerts.check_positions()
+        pa = price_alerts.check_alerts()
+        log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d",
+                 len(pos["fired"]), len(pos["skipped"]),
+                 pa["fired"], pa["checked"])
         return 0
 
     if args.cmd == "rescan":

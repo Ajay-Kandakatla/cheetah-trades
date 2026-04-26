@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSepaScan } from '../hooks/useSepa';
+import { useAlertNotifier } from '../hooks/usePriceAlerts';
 import type { SepaCandidate, Rating } from '../hooks/useSepa';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
 import { SepaCandidateModal } from '../components/SepaCandidateModal';
@@ -98,6 +99,7 @@ function defaultRating(score: number): Rating {
 
 export function SepaPage() {
   const { data, scanning, runScan, refetch } = useSepaScan();
+  useAlertNotifier();
   const [selected, setSelected] = useState<string | null>(null);
   const [filters, setFilters] = useState<SepaFilters>({
     rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: false, sortBy: 'score',

@@ -545,6 +545,44 @@ async def sepa_notify_test():
     return JSONResponse({"sent": ok})
 
 
+# ---------------------------------------------------------------------------
+# On-demand price alerts
+# ---------------------------------------------------------------------------
+@app.post("/sepa/alerts/price")
+async def sepa_alerts_price_create(symbol: str = Query(...),
+                                   kind: str = Query(...),
+                                   level: float = Query(...),
+                                   channels: Optional[str] = Query("whatsapp,browser"),
+                                   note: Optional[str] = Query(None)):
+    from sepa import price_alerts
+    chan_list = [c.strip() for c in (channels or "").split(",") if c.strip()]
+    try:
+        doc = price_alerts.create(symbol, kind, level, chan_list, note)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if doc is None:
+        return JSONResponse({"error": "mongo unavailable"}, status_code=503)
+    return JSONResponse(doc)
+
+
+@app.get("/sepa/alerts/price")
+async def sepa_alerts_price_list():
+    from sepa import price_alerts
+    return JSONResponse(price_alerts.list_active())
+
+
+@app.delete("/sepa/alerts/price/{alert_id}")
+async def sepa_alerts_price_delete(alert_id: str):
+    from sepa import price_alerts
+    return JSONResponse({"deleted": price_alerts.delete(alert_id)})
+
+
+@app.get("/sepa/alerts/recent")
+async def sepa_alerts_recent(since: int = Query(0)):
+    from sepa import price_alerts
+    return JSONResponse({"fires": price_alerts.recent_fires(since=since)})
+
+
 @app.delete("/sepa/watchlist/{symbol}")
 async def sepa_watchlist_remove(symbol: str):
     items = sepa_scanner.remove_from_watchlist(symbol)
