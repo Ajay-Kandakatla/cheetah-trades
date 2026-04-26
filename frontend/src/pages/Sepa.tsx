@@ -156,7 +156,7 @@ export function SepaPage() {
       <SepaHero
         data={data}
         scanning={scanning}
-        onScan={(withCat) => runScan(withCat)}
+        onScan={(withCat, opts) => runScan(withCat, opts)}
         onReload={() => refetch()}
       />
 
