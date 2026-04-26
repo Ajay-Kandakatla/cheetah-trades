@@ -6,10 +6,23 @@ type Bar0to100 = {
   score: number | null;
   label: string;
   metrics?: Record<string, any>;
+  formula?: string;
+};
+
+type FundamentalHeadline = {
+  market_cap: number | null;
+  shareholder_equity: number | null;
+  book_value_per_share: number | null;
+  shares_outstanding: number | null;
+  revenue_ttm: number | null;
+  enterprise_value: number | null;
+  total_debt: number | null;
+  total_cash: number | null;
 };
 
 type FundamentalPanel = {
   available: boolean;
+  headline?: FundamentalHeadline;
   valuation: Bar0to100;
   quality: Bar0to100;
   growth_stability: Bar0to100;
@@ -84,18 +97,76 @@ function fmtPct(v: number | null | undefined): string {
   return `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 }
 
+function fmtBig(v: number | null | undefined): string {
+  if (v == null) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+  if (a >= 1e9)  return `$${(v / 1e9).toFixed(2)}B`;
+  if (a >= 1e6)  return `$${(v / 1e6).toFixed(1)}M`;
+  if (a >= 1e3)  return `$${(v / 1e3).toFixed(1)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+/** Tiny inline ⓘ popover. Click the icon to toggle a tooltip. */
+function InfoDot({ title, body }: { title: string; body: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+  return (
+    <span className="sa-info">
+      <button
+        type="button"
+        className="sa-info__btn"
+        aria-label={`What is ${title}?`}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+      >ⓘ</button>
+      {open && (
+        <span className="sa-info__pop" onClick={(e) => e.stopPropagation()}>
+          <strong>{title}</strong>
+          <span className="sa-info__body">{body}</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 // --- Fundamental panel ------------------------------------------------------
 function FundamentalBar({
-  axis, value, leftLabel, rightLabel, score, hint,
+  axis, value, leftLabel, rightLabel, score, formula, metrics,
 }: {
   axis: string; value: string; leftLabel: string; rightLabel: string;
-  score: number | null; hint?: string;
+  score: number | null; formula?: string; metrics?: Record<string, any>;
 }) {
   const pct = score == null ? 0 : Math.max(0, Math.min(100, score));
   return (
     <div className="sa-bar-row">
-      <div className="sa-bar-row__label" title={hint}>
-        <strong>{axis}</strong>
+      <div className="sa-bar-row__label">
+        <span className="sa-bar-row__name">
+          <strong>{axis}</strong>
+          {formula && (
+            <InfoDot
+              title={axis}
+              body={
+                <>
+                  <span>{formula}</span>
+                  {metrics && Object.keys(metrics).length > 0 && (
+                    <span className="sa-info__metrics mono">
+                      {Object.entries(metrics)
+                        .filter(([, v]) => v != null)
+                        .map(([k, v]) => (
+                          <span key={k}><em>{k}:</em> {String(v)}</span>
+                        ))}
+                    </span>
+                  )}
+                </>
+              }
+            />
+          )}
+        </span>
         <span className="sa-bar-row__metrics mono">{value}</span>
       </div>
       <div className="sa-bar-row__track">
@@ -110,6 +181,79 @@ function FundamentalBar({
         <span>{leftLabel}</span>
         <span>{rightLabel}</span>
       </div>
+    </div>
+  );
+}
+
+function HeadlineStrip({ h }: { h: FundamentalHeadline }) {
+  return (
+    <div className="sa-headline">
+      <div className="sa-headline__cell">
+        <span className="sa-headline__label">
+          Market cap
+          <InfoDot
+            title="Market cap (company net worth)"
+            body={
+              <>
+                <span>What the market is paying for the whole company today.</span>
+                <span className="sa-info__formula mono">price × shares outstanding</span>
+                <span>This is the headline "net worth" — it floats with the share price every day. Compare against revenue (P/S) or earnings (P/E) to gauge whether you're paying a reasonable multiple.</span>
+              </>
+            }
+          />
+        </span>
+        <span className="sa-headline__value">{fmtBig(h.market_cap)}</span>
+      </div>
+      <div className="sa-headline__cell">
+        <span className="sa-headline__label">
+          Shareholders' equity
+          <InfoDot
+            title="Shareholders' equity (book value)"
+            body={
+              <>
+                <span>The accounting "net worth" — assets minus liabilities, what the shareholders would technically own if the company liquidated tomorrow.</span>
+                <span className="sa-info__formula mono">book value per share × shares outstanding</span>
+                <span>Differs from market cap because the market prices in future growth. The ratio market cap ÷ equity is the price-to-book (P/B) ratio.</span>
+              </>
+            }
+          />
+        </span>
+        <span className="sa-headline__value">{fmtBig(h.shareholder_equity)}</span>
+      </div>
+      <div className="sa-headline__cell">
+        <span className="sa-headline__label">
+          Revenue (TTM)
+          <InfoDot
+            title="Revenue — trailing 12 months"
+            body={
+              <>
+                <span>Top-line sales over the last four reported quarters. The "actual money the business brought in," before any costs or taxes.</span>
+                <span className="sa-info__formula mono">sum of last 4 quarters' total revenue</span>
+                <span>Revenue YoY growth is what feeds the Growth Stability axis. Compare against market cap to compute P/S — high P/S means the market is paying many years' worth of sales upfront.</span>
+              </>
+            }
+          />
+        </span>
+        <span className="sa-headline__value">{fmtBig(h.revenue_ttm)}</span>
+      </div>
+      {h.enterprise_value != null && (
+        <div className="sa-headline__cell">
+          <span className="sa-headline__label">
+            Enterprise value
+            <InfoDot
+              title="Enterprise value"
+              body={
+                <>
+                  <span>What it would actually cost an acquirer to buy the whole company outright — market cap plus debt, minus cash on hand.</span>
+                  <span className="sa-info__formula mono">market cap + total debt − total cash</span>
+                  <span>EV/Revenue and EV/EBITDA are the multiples acquirers actually pay attention to.</span>
+                </>
+              }
+            />
+          </span>
+          <span className="sa-headline__value">{fmtBig(h.enterprise_value)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -131,29 +275,34 @@ function FundamentalSection({ data }: { data: FundamentalPanel }) {
           <div className="sa-card__sub mono">Composite of yfinance fundamentals · 0-100 each axis (higher = better)</div>
         </div>
       </div>
+      {f.headline && <HeadlineStrip h={f.headline} />}
       <FundamentalBar
         axis="Valuation" leftLabel="Overvalued" rightLabel="Undervalued"
         value={pe != null ? `P/E ${fmt(pe, 1)}` : '—'}
         score={f.valuation.score}
-        hint="Composite of P/E, P/B and P/S — lower multiples score higher."
+        formula={f.valuation.formula}
+        metrics={f.valuation.metrics}
       />
       <FundamentalBar
         axis="Quality" leftLabel="Low" rightLabel="High"
         value={roe != null ? `ROE ${roe.toFixed(1)}%` : '—'}
         score={f.quality.score}
-        hint="ROE, ROA, profit margin, operating margin."
+        formula={f.quality.formula}
+        metrics={f.quality.metrics}
       />
       <FundamentalBar
         axis="Growth Stability" leftLabel="Low" rightLabel="High"
         value={rev != null ? `Rev ${fmtPct(rev)}` : '—'}
         score={f.growth_stability.score}
-        hint="Revenue growth + earnings growth."
+        formula={f.growth_stability.formula}
+        metrics={f.growth_stability.metrics}
       />
       <FundamentalBar
         axis="Financial Health" leftLabel="Less Healthy" rightLabel="Healthy"
         value={dte != null ? `D/E ${fmt(dte, 0)}` : '—'}
         score={f.financial_health.score}
-        hint="Debt/equity, current ratio, free cash flow positivity."
+        formula={f.financial_health.formula}
+        metrics={f.financial_health.metrics}
       />
     </section>
   );
@@ -190,7 +339,20 @@ function TechnicalSection({ data }: { data: TechnicalPanel }) {
     <section className="sa-card">
       <div className="sa-card__head">
         <div>
-          <h3>Technical sentiment</h3>
+          <h3>
+            Technical sentiment
+            <InfoDot
+              title="Technical sentiment — how it's derived"
+              body={
+                <>
+                  <span><strong>Short-term (2–6 weeks):</strong> 21-day return scaled −10%/+10% → 0–100, plus price-vs-10/20-day MA stack. Average gives Weak/Neutral/Strong.</span>
+                  <span><strong>Mid-term (6 weeks – 9 months):</strong> stage classifier (Stage 2 = 85, Stage 1 = 50, Stage 3/4 = 20), price-vs-50/200-day stack, 6-month return.</span>
+                  <span><strong>Long-term (9 months – 2 years):</strong> 12-month return scaled −30%/+50%, 200-day MA slope (rising = 75 / falling = 30), price-vs-200-day MA.</span>
+                  <span className="sa-info__formula mono">Weak &lt; 40 ≤ Neutral &lt; 70 ≤ Strong</span>
+                </>
+              }
+            />
+          </h3>
           <div className="sa-card__sub mono">Three time horizons · derived from cached price history</div>
         </div>
       </div>
@@ -235,7 +397,19 @@ function EsgSection({ data }: { data: EsgPanel }) {
     <section className="sa-card">
       <div className="sa-card__head">
         <div>
-          <h3>Environmental, social, &amp; governance</h3>
+          <h3>
+            Environmental, social, &amp; governance
+            <InfoDot
+              title="ESG — how it's derived"
+              body={
+                <>
+                  <span>Sustainalytics publishes per-issuer ESG <em>risk</em> scores (lower = better). yfinance exposes them on `Ticker.sustainability`.</span>
+                  <span className="sa-info__formula mono">quality = 10 − (risk / 4), clamped to 0–10</span>
+                  <span><strong>Leader</strong> ≥ 7, <strong>Average</strong> 4–7, <strong>Laggard</strong> &lt; 4. Industry quartile is from the peer-percentile field on the same payload.</span>
+                </>
+              }
+            />
+          </h3>
           <div className="sa-card__sub mono">{data.provider ?? 'Sustainalytics'} · risk-adjusted score (higher = better)</div>
         </div>
       </div>
@@ -263,7 +437,20 @@ function AnalystSection({ data }: { data: AnalystPanelData }) {
     <section className="sa-card">
       <div className="sa-card__head">
         <div>
-          <h3>Analyst ratings</h3>
+          <h3>
+            Analyst ratings
+            <InfoDot
+              title="Equity Summary Score — how it's derived"
+              body={
+                <>
+                  <span>Finnhub aggregates Wall Street ratings into monthly buckets (Strong Buy / Buy / Hold / Sell / Strong Sell). We weight them and rescale to 0–10.</span>
+                  <span className="sa-info__formula mono">weighted = (2·sb + 1·b − 1·s − 2·ss) / total<br/>score = (weighted + 2) / 4 × 10</span>
+                  <span><strong>Very Bullish</strong> ≥ 8, <strong>Bullish</strong> 6.5–8, <strong>Neutral</strong> 4–6.5, <strong>Bearish</strong> 2–4, <strong>Very Bearish</strong> &lt; 2.</span>
+                  <span>The 12-bar history shows the rating distribution per month over the last year.</span>
+                </>
+              }
+            />
+          </h3>
           <div className="sa-card__sub mono">
             Consolidates {data.firms_consolidated ?? 0} analyst opinions · {data.provider}
           </div>

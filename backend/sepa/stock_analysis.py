@@ -161,6 +161,26 @@ def fundamental_panel(symbol: str) -> dict:
     psales = info.get("priceToSalesTrailing12Months")
     peg = info.get("pegRatio")
 
+    # ── Headline figures the user asked to see explicitly ─────────────────
+    # marketCap         = current "company net worth" the market is paying
+    #                     (price × shares outstanding)
+    # totalRevenue      = TTM revenue from yfinance's income-statement summary
+    # bookValue         = per-share equity book value
+    # sharesOutstanding × bookValue ≈ total shareholders' equity
+    market_cap = info.get("marketCap")
+    revenue_ttm = info.get("totalRevenue")
+    book_value_per_share = info.get("bookValue")
+    shares_out = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
+    shareholder_equity = None
+    if book_value_per_share and shares_out:
+        try:
+            shareholder_equity = float(book_value_per_share) * float(shares_out)
+        except Exception:
+            shareholder_equity = None
+    enterprise_value = info.get("enterpriseValue")
+    total_debt = info.get("totalDebt")
+    total_cash_short = info.get("totalCash")
+
     roe = info.get("returnOnEquity")  # decimal e.g. 0.32
     roa = info.get("returnOnAssets")
     profit_margin = info.get("profitMargins")
@@ -225,12 +245,27 @@ def fundamental_panel(symbol: str) -> dict:
 
     return {
         "available": any(v is not None for v in [valuation_score, quality_score, growth_score, health_score]),
+        "headline": {
+            "market_cap": market_cap,
+            "shareholder_equity": shareholder_equity,
+            "book_value_per_share": book_value_per_share,
+            "shares_outstanding": shares_out,
+            "revenue_ttm": revenue_ttm,
+            "enterprise_value": enterprise_value,
+            "total_debt": total_debt,
+            "total_cash": total_cash_short,
+        },
         "valuation": {
             "score": valuation_score,
             "label": "Undervalued" if (valuation_score or 0) >= 70 else
                      "Overvalued" if (valuation_score or 50) < 30 else "Fair",
             "metrics": {"pe": pe, "forward_pe": fwd_pe, "price_to_book": pbv,
                         "price_to_sales": psales, "peg": peg},
+            "formula": (
+                "Lower multiples = cheaper. Composite of P/E, P/B and P/S. "
+                "P/E 50→0pts, P/E 10→100pts; P/B 10→0pts, P/B 1→100pts; "
+                "P/S 20→0pts, P/S 1→100pts. Score = average of available legs."
+            ),
         },
         "quality": {
             "score": quality_score,
@@ -238,12 +273,23 @@ def fundamental_panel(symbol: str) -> dict:
             "metrics": {"roe_pct": _pct(roe), "roa_pct": _pct(roa),
                         "profit_margin_pct": _pct(profit_margin),
                         "operating_margin_pct": _pct(op_margin)},
+            "formula": (
+                "How efficiently the business turns capital into profit. "
+                "ROE 0→0pts, ROE 30%+→100pts; ROA 0→0pts, ROA 15%+→100pts; "
+                "profit margin 0→0pts, 25%+→100pts; operating margin 0→0pts, "
+                "30%+→100pts. Score = average."
+            ),
         },
         "growth_stability": {
             "score": growth_score,
             "label": _label_0_100(growth_score),
             "metrics": {"revenue_growth_pct": _pct(rev_growth),
                         "earnings_growth_pct": _pct(earn_growth)},
+            "formula": (
+                "Year-over-year revenue + earnings growth. "
+                "Revenue YoY 0→0pts, 30%+→100pts; earnings YoY 0→0pts, "
+                "50%+→100pts. Score = average."
+            ),
         },
         "financial_health": {
             "score": health_score,
@@ -251,6 +297,12 @@ def fundamental_panel(symbol: str) -> dict:
                      "Less Healthy" if (health_score or 50) < 40 else "Average",
             "metrics": {"debt_to_equity": debt_to_equity, "current_ratio": current_ratio,
                         "free_cashflow": fcf, "total_cash": total_cash},
+            "formula": (
+                "Balance-sheet resilience. Debt/Equity 200%→0pts, 0→100pts; "
+                "current ratio 1.0→30pts, 2.5+→100pts; positive free cashflow "
+                "→80pts (negative→20); positive cash buffer →70pts. "
+                "Score = average."
+            ),
         },
     }
 

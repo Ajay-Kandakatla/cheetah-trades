@@ -1426,3 +1426,79 @@ tr:last-child td { border-bottom: none; }
 }
 .cm-row-sepa:hover { background: #fbbf24; color: #0b0d12; border-color: #fbbf24; }
 .cm-feed--stale { background: #1a1410; color: #fcd34d; }
+
+/* ==========================================================================
+   StockAnalysisPanel additions — headline strip + inline info popovers
+   ========================================================================== */
+.sa-headline {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0; border: 1px solid var(--hairline); border-radius: 4px;
+  background: var(--bg-sunken);
+  margin-bottom: 0.4rem;
+}
+.sa-headline__cell {
+  padding: 0.7rem 0.9rem;
+  border-right: 1px solid var(--hairline-faint);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.sa-headline__cell:last-child { border-right: none; }
+.sa-headline__label {
+  display: flex; align-items: center; gap: 4px;
+  font: 600 0.66rem var(--font-sans, system-ui);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-subtle);
+}
+.sa-headline__value {
+  font: 700 1.15rem var(--font-mono, ui-monospace, monospace);
+  color: var(--ink);
+}
+
+/* Two-column layout once the strip wraps on narrow viewports */
+@media (max-width: 720px) {
+  .sa-headline { grid-template-columns: 1fr 1fr; }
+}
+
+/* Inline info button — used per-axis and on each section heading */
+.sa-info { position: relative; display: inline-flex; }
+.sa-info__btn {
+  background: none; border: none; padding: 0; margin-left: 4px;
+  color: var(--ink-faint); cursor: pointer; font-size: 0.85em;
+  line-height: 1;
+}
+.sa-info__btn:hover { color: var(--gold); }
+.sa-info__pop {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 30;
+  width: min(360px, 90vw);
+  background: var(--bg-raised); color: var(--ink);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 4px; padding: 0.7rem 0.9rem;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+  font: 400 0.78rem/1.45 var(--font-sans, system-ui);
+  display: flex; flex-direction: column; gap: 0.5rem;
+  text-align: left; text-transform: none; letter-spacing: 0;
+}
+.sa-info__pop strong {
+  font: 700 0.82rem var(--font-serif, ui-serif, Georgia, serif);
+  color: var(--ink);
+  display: block;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--hairline-faint);
+}
+.sa-info__body { display: flex; flex-direction: column; gap: 0.45rem; }
+.sa-info__formula {
+  background: var(--bg-sunken); border-left: 2px solid var(--gold);
+  padding: 6px 10px; font-size: 0.78rem; color: var(--ink-muted);
+  border-radius: 2px; line-height: 1.4;
+}
+.sa-info__metrics {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  font-size: 0.74rem; color: var(--ink-muted);
+  padding-top: 4px; border-top: 1px dashed var(--hairline);
+}
+.sa-info__metrics em { color: var(--ink-subtle); font-style: normal; margin-right: 2px; }
+
+.sa-bar-row__name { display: flex; align-items: center; gap: 2px; }
+
+/* Heading-level info dots align nicely with the H3 baseline */
+.sa-card__head h3 .sa-info { margin-left: 6px; vertical-align: baseline; }
+.sa-card__head h3 .sa-info__btn { font-size: 0.7em; }
