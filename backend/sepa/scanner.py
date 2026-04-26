@@ -28,7 +28,7 @@ from typing import Optional, List
 from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
-    adr, canslim, company_names,
+    adr, canslim, company_names, research as research_mod,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -253,6 +253,180 @@ def scan_universe(symbols: Optional[List[str]] = None,
     if persist:
         LATEST_PATH.write_text(json.dumps(payload, default=str))
         log.info("Scan persisted to %s", LATEST_PATH)
+        try:
+            from sepa import history
+            history.write_scan(payload)
+        except Exception as exc:
+            log.warning("history write skipped: %s", exc)
+    return payload
+
+
+def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
+    """Re-evaluate the price-derived layers using cached research as scaffolding.
+
+    The research blob supplies VCP / Power Play / base count / fundamentals /
+    liquidity / ADR / IPO age / company name. We only re-run trend template,
+    stage classifier, today's volume, and the entry-setup match.
+    """
+    liq = blob.get("liquidity") or {}
+    if not liq.get("liquid"):
+        return None
+
+    tr = trend_template.evaluate(symbol, df)
+    if tr is None:
+        return None
+    rs = rs_map.get(symbol)
+    tr.checks["rs_rank_at_least_70"] = bool(rs and rs >= 70)
+    tr.pass_all = all(tr.checks.values())
+    tr.passed = sum(1 for v in tr.checks.values() if v)
+
+    stg = stage.classify(df)
+    vol = volume.analyze(df)
+    sells = sell_signals.evaluate(df)
+
+    # Composite score — same weights as full scan
+    vcp_info = blob.get("vcp")
+    pp_info = blob.get("power_play")
+    bc = blob.get("base_count")
+    adr_value = blob.get("adr_baseline")
+    fundamentals = blob.get("fundamentals")
+
+    score = 0.0
+    score += SCORE_WEIGHTS["trend_template"] * (tr.passed / 8.0)
+    if rs and rs >= 70:
+        score += SCORE_WEIGHTS["rs_rank"] * (min(rs, 99) / 99.0)
+    if stg and stg.get("stage") == 2:
+        score += SCORE_WEIGHTS["stage_2"]
+    if vcp_info and vcp_info.get("has_base"):
+        score += SCORE_WEIGHTS["setup"]
+        if vcp_info.get("ideal_depth_range") and vcp_info.get("good_contraction_count"):
+            score += 2
+    elif pp_info and pp_info.get("is_power_play"):
+        score += SCORE_WEIGHTS["setup"] * 0.85
+    if vol and vol.get("accumulation"):
+        score += SCORE_WEIGHTS["volume"] * 0.5
+    if vol and vol.get("high_vol_breakout"):
+        score += SCORE_WEIGHTS["volume"] * 0.5
+    if liq.get("liquid"):
+        score += SCORE_WEIGHTS["liquidity_adr"] * 0.4
+    if adr_value and adr_value >= 4.0:
+        score += SCORE_WEIGHTS["liquidity_adr"] * 0.6
+    if fundamentals and fundamentals.get("passed"):
+        score += SCORE_WEIGHTS["fundamentals"] * (fundamentals["passed"] / 3.0)
+    if bc and bc.get("is_late_stage"):
+        score -= 8
+    score = max(0.0, min(score, 100.0))
+
+    entry_setup = None
+    if vcp_info and vcp_info.get("has_base"):
+        entry_setup = {
+            "type": "VCP",
+            "pivot": vcp_info["pivot_buy_price"],
+            "stop": vcp_info["suggested_stop"],
+        }
+    elif pp_info and pp_info.get("is_power_play"):
+        entry_setup = {
+            "type": "POWER_PLAY",
+            "pivot": pp_info["pivot_buy_price"],
+            "stop": pp_info["suggested_stop"],
+        }
+
+    return {
+        "symbol": symbol,
+        "name": blob.get("name") or company_names.name_for(symbol),
+        "score": round(score, 1),
+        "rating": _rating_label(score),
+        "trend": tr.to_dict(),
+        "rs_rank": rs,
+        "stage": stg,
+        "volume": vol,
+        "vcp": vcp_info,
+        "power_play": pp_info,
+        "base_count": bc,
+        "sell_signals": sells,
+        "entry_setup": entry_setup,
+        "adr_pct": adr_value,
+        "liquidity": liq,
+        "fundamentals": fundamentals,
+        "is_candidate": bool(
+            tr.pass_all
+            and stg and stg.get("stage") == 2
+            and entry_setup is not None
+            and (bc is None or not bc.get("is_late_stage"))
+            and liq.get("liquid")
+        ),
+        "from_cache": True,
+    }
+
+
+def scan_universe_fast(symbols: Optional[List[str]] = None,
+                       persist: bool = True,
+                       universe_mode: Optional[str] = None,
+                       fallback_when_missing: bool = True) -> dict:
+    """Hot scan that joins cached research with today's prices.
+
+    Two orders of magnitude faster than `scan_universe()` (typically 20-30s
+    instead of 3-15min) because it skips VCP detection, fundamentals, IPO
+    age, and base-count analysis — those come from the research cache that
+    Sunday's cron warmed.
+
+    Args:
+        symbols: optional explicit list; otherwise resolves via universe loader.
+        persist: write the result to ~/.cheetah/scans/latest.json + history.
+        universe_mode: "curated" / "sp500" / "russell1000" / "expanded".
+        fallback_when_missing: if a symbol has no cached research, fall back to
+            full per-symbol analysis (slower but no gaps in coverage).
+    """
+    t0 = time.time()
+    symbols = symbols or load_universe(universe_mode)
+    work = [s for s in symbols if s not in {"SPY", "QQQ", "IWM"}]
+
+    cache = research_mod.get_all_research()
+    log.info("fast scan: %d symbols, %d in research cache", len(work), len(cache))
+
+    log.info("Computing RS ranks over %d symbols (fast scan)...", len(work))
+    rs_map = rs_rank.rs_ranks(work)
+
+    results: List[dict] = []
+    missing: List[str] = []
+
+    def _run(symbol: str) -> Optional[dict]:
+        blob = cache.get(symbol.upper())
+        if blob is None:
+            missing.append(symbol)
+            if fallback_when_missing:
+                return _analyze_symbol(symbol, rs_map)
+            return None
+        df = prices.load_prices(symbol)
+        if df is None or len(df) < 220:
+            return None
+        return _hot_recompute(symbol, df, rs_map, blob)
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for res in ex.map(_run, work):
+            if res is not None:
+                results.append(res)
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    candidates = [r for r in results if r["is_candidate"]]
+    mkt = market_context.market_state()
+
+    payload = {
+        "generated_at": int(time.time()),
+        "duration_sec": round(time.time() - t0, 2),
+        "universe_size": len(work),
+        "analyzed": len(results),
+        "candidate_count": len(candidates),
+        "fast_scan": True,
+        "research_cache_hits": len(work) - len(missing),
+        "research_cache_misses": len(missing),
+        "research_status": research_mod.status(),
+        "market_context": mkt,
+        "candidates": candidates,
+        "all_results": results,
+    }
+    if persist:
+        LATEST_PATH.write_text(json.dumps(payload, default=str))
         try:
             from sepa import history
             history.write_scan(payload)

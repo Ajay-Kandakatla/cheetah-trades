@@ -1,7 +1,19 @@
 # Cheetah SEPA cron — times are container-local; container TZ set to America/New_York.
 # Min  Hour  DOM  Mon  DOW  Command
-30     16    *    *    1-5  /usr/local/bin/python -m sepa.cli scan
+#
+# Sunday 8pm ET — heavy weekly research refresh across the configured universe
+# (default mode: SEPA_UNIVERSE_MODE env var; recommended: russell1000 or expanded).
+# Pre-warms VCP / Power Play / CANSLIM / liquidity / ADR / IPO age so Monday's
+# fast-scan only has to recompute the price-derived layers.
+0      20    *    *    0    /usr/local/bin/python -m sepa.cli research-refresh
+#
+# Mon-Fri 4:30pm ET — post-close fast scan. Joins cached research with today's
+# prices and rebuilds the candidate list in ~20-30s.
+30     16    *    *    1-5  /usr/local/bin/python -m sepa.cli fast-scan
+#
+# Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
+#
 # Position-aware alerts — every 5 min during market hours (9:30–16:00 ET, Mon–Fri).
 */5    9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli alerts
 0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m sepa.cli alerts

@@ -121,10 +121,14 @@ export function useSepaScan() {
     }
   }, []);
 
-  const runScan = useCallback(async (withCatalyst = false) => {
+  const runScan = useCallback(async (withCatalyst = false, opts?: { fast?: boolean; mode?: string }) => {
     setScanning(true);
     try {
-      const r = await fetch(`${API}/sepa/scan?with_catalyst=${withCatalyst}`, { method: 'POST' });
+      const u = new URL(`${API}/sepa/scan`);
+      u.searchParams.set('with_catalyst', String(withCatalyst));
+      if (opts?.fast) u.searchParams.set('fast', 'true');
+      if (opts?.mode) u.searchParams.set('mode', opts.mode);
+      const r = await fetch(u.toString(), { method: 'POST' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setData(await r.json());
       setError(null);
@@ -187,6 +191,31 @@ export async function sepaRescan(symbol: string) {
   const r = await fetch(`${API}/sepa/rescan/${encodeURIComponent(symbol)}`, {
     method: 'POST',
   });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export type ResearchStatus = {
+  available: boolean;
+  total?: number;
+  fresh?: number;
+  stale?: number;
+  oldest_age_sec?: number | null;
+  newest_age_sec?: number | null;
+  ttl_sec?: number;
+  reason?: string;
+};
+
+export async function fetchResearchStatus(): Promise<ResearchStatus> {
+  const r = await fetch(`${API}/sepa/research/status`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function refreshResearch(mode?: string): Promise<{ refreshed: string[]; failed: string[]; total: number; duration_sec: number }> {
+  const u = new URL(`${API}/sepa/research/refresh`);
+  if (mode) u.searchParams.set('mode', mode);
+  const r = await fetch(u.toString(), { method: 'POST' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }

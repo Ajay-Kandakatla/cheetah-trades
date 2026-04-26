@@ -38,7 +38,12 @@ from cheetah_data import (
     with_computed_scores,
 )
 from news import fetch_news, market_news
-from sepa import scanner as sepa_scanner, brief as sepa_brief, risk as sepa_risk
+from sepa import (
+    scanner as sepa_scanner,
+    brief as sepa_brief,
+    risk as sepa_risk,
+    research as sepa_research,
+)
 from sepa.catalyst import catalyst_for as sepa_catalyst_for
 from sepa.insider import insider_activity as sepa_insider
 from sepa.ipo_age import age as sepa_ipo_age
@@ -432,12 +437,62 @@ async def sepa_scan_get():
 async def sepa_scan_post(
     with_catalyst: bool = Query(False),
     no_catalyst: Optional[bool] = Query(None, deprecated=True),
+    fast: bool = Query(False, description="Use cached research blobs (fast path)"),
+    mode: Optional[str] = Query(None, description="Universe mode: curated/sp500/russell1000/expanded"),
 ):
-    """Run a fresh scan across the universe. Heavy — 30-90s typical.
-    Pass ?with_catalyst=true to also fetch news/earnings/analyst revisions.
-    Legacy ?no_catalyst=bool still accepted (inverted)."""
+    """Run a fresh scan across the universe.
+
+    Two paths:
+      - default (heavy)       — full per-symbol analysis. ~3-15min on a large
+                                universe. Refreshes research as a side-effect.
+      - ?fast=true            — joins cached research with today's prices.
+                                Typical ~20-30s. Falls back to full analysis
+                                for symbols missing from the cache.
+
+    Pass ?with_catalyst=true on a heavy scan to also fetch news/earnings.
+    Legacy ?no_catalyst=bool still accepted (inverted).
+    """
     include = (not no_catalyst) if no_catalyst is not None else with_catalyst
-    result = await asyncio.to_thread(sepa_scanner.scan_universe, None, include, True)
+    if fast:
+        result = await asyncio.to_thread(
+            sepa_scanner.scan_universe_fast, None, True, mode, True
+        )
+    else:
+        symbols = None
+        if mode:
+            from sepa.universe import load_universe
+            symbols = await asyncio.to_thread(load_universe, mode)
+        result = await asyncio.to_thread(
+            sepa_scanner.scan_universe, symbols, include, True
+        )
+    return JSONResponse(result)
+
+
+@app.get("/sepa/research/status")
+async def sepa_research_status():
+    """Cache freshness for the research layer (drives the UI banner)."""
+    return JSONResponse(await asyncio.to_thread(sepa_research.status))
+
+
+@app.post("/sepa/research/refresh")
+async def sepa_research_refresh(
+    mode: Optional[str] = Query(None),
+    no_canslim: bool = Query(False),
+    workers: int = Query(6, ge=1, le=16),
+):
+    """Heavy weekly batch — re-runs VCP/Power Play/CANSLIM across the universe.
+
+    Designed for the Sunday cron. Costs ~10-30 min on Russell 1000.
+    Returns immediately with the run summary; doesn't block on Mongo writes.
+    """
+    from sepa.universe import load_universe
+    syms = await asyncio.to_thread(load_universe, mode)
+    result = await asyncio.to_thread(
+        sepa_research.refresh_universe,
+        syms,
+        max_workers=workers,
+        with_canslim=not no_canslim,
+    )
     return JSONResponse(result)
 
 

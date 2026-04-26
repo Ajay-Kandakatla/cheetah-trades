@@ -53,7 +53,9 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | GET | `/news` | `?symbol=` (optional) | `{symbol, items[], fetchedAt}` | populates `news._cache` | `news.fetch_news` / `news.market_news` |
 | GET | `/stream` | `?symbols=CSV` | SSE stream of `event: quote\ndata: {Quote}` | `subscribe_symbols` (adds to `tracked_symbols`, queues WS subs, fires REST one-shot) | `cache.snapshot` loop |
 | GET | `/sepa/scan` | — | latest `scan` payload or `{candidates:[], message}` | reads `~/.cheetah/scans/latest.json` | `sepa.scanner.load_latest` |
-| POST | `/sepa/scan` | `?no_catalyst=bool` | full scan payload | writes `latest.json`; warms parquet cache; spins thread pool of 8 + asyncio sem of 4 for catalyst | `sepa.scanner.scan_universe` |
+| POST | `/sepa/scan` | `?with_catalyst&fast&mode` | full scan payload | `?fast=true` joins cached research with today's prices (~20-30s); default heavy path runs every per-symbol analysis (~3-15min). `?mode` = curated / sp500 / russell1000 / expanded | `sepa.scanner.scan_universe` / `scan_universe_fast` |
+| GET | `/sepa/research/status` | — | `{available, total, fresh, stale, oldest_age_sec, newest_age_sec, ttl_sec}` | reports freshness of `sepa_research_cache` | `sepa.research.status` |
+| POST | `/sepa/research/refresh` | `?mode&no_canslim&workers` | `{refreshed[], failed[], total, duration_sec}` | heavy weekly batch — refreshes VCP / Power Play / CANSLIM / liquidity / ADR / IPO age / company name across the universe | `sepa.research.refresh_universe` |
 | GET | `/sepa/brief` | — | latest `brief.json` | — | `sepa.brief.load_brief` |
 | POST | `/sepa/brief` | — | brief payload | writes `~/.cheetah/scans/brief.json`; pulls catalyst+insider for top5+watchlist | `sepa.brief.generate_brief` |
 | GET | `/sepa/candidate/{symbol}` | path | `{symbol, base, catalyst, insider, ipo_age, smart_money}` | catalyst pulls news+earnings; insider hits SEC EDGAR; smart_money fans out to Finnhub + RSS + Reddit (15-min Mongo cache) | `catalyst_for, insider_activity, ipo_age, smart_money_for` |
@@ -292,10 +294,18 @@ trade date)/365.25`. Flags `is_young` ≤ 8 years, `is_recent_ipo` ≤ 2 years.
 - Write `~/.cheetah/scans/brief.json`.
 
 ### `cli.py`
-Subcommands invoked by launchd / supercronic
-(`python -m sepa.cli {scan|brief|rescan SYM|alerts}`).
-`scan --no-catalyst --symbols A,B,C`, `brief`, `rescan SYM` (force price
-refresh), `alerts` (runs both position-aware and on-demand price-alert checks).
+Subcommands invoked by launchd / supercronic. All read the same env vars as
+the API container.
+
+| Subcommand | Purpose | Typical cron slot |
+|---|---|---|
+| `scan [--no-catalyst] [--symbols A,B] [--mode MODE]` | Full per-symbol analysis. Refreshes research cache as a side-effect. | (manual / fallback) |
+| `fast-scan [--mode MODE] [--no-fallback]` | Hot scan — joins cached research with today's prices. | Mon-Fri 4:30pm ET |
+| `research-refresh [--mode MODE] [--no-canslim] [--workers N]` | Heavy weekly batch. VCP / Power Play / CANSLIM / liquidity / ADR / IPO age. | **Sunday 8pm ET** |
+| `research-status` | Print research-cache freshness JSON. | (manual) |
+| `brief` | Generate the morning brief from the latest scan. | Mon-Fri 8:30am ET |
+| `alerts` | Position-aware + on-demand price-alert checks. | every 5 min during market hours |
+| `rescan SYM` | Force price refresh for one ticker. | (manual) |
 
 ### `notify.py` — Twilio WhatsApp delivery
 Lazy-imports `twilio.rest.Client` so the module is importable without the
@@ -381,6 +391,57 @@ provider re-hits).
   flagged both `abs` AND `SEPA` is the strongest signal in the app.
 - Frontend page: `/dual-momentum` (NavBar entry "Dual Momentum"). Lookback +
   top-N + min-RS controls; toggle between picks-only and full universe.
+
+### `research.py` — Heavy research cache (the weekend layer)
+
+**Architecture: SEPA's per-symbol analysis splits into two cost tiers.**
+
+  - **Research** (this module) — refreshed weekly on Sundays. Includes VCP
+    base detection, power play detection, base count, CANSLIM fundamentals,
+    liquidity baseline, ADR baseline, IPO age, company name, stage snapshot.
+    Costs ~1-2s per symbol (so 20-30 min on Russell 1000).
+  - **Hot** (`scanner.scan_universe_fast`) — runs on demand or daily. Joins
+    cached research with today's prices and recomputes only the price-derived
+    layers (trend template, today's stage, today's volume, entry-setup match
+    against cached pivot, composite score). ~20-30s per scan.
+
+**Why split?** VCPs don't change day-to-day — once a base forms it stays. The
+expensive contractions analysis is wasted work if you re-run it daily. By
+caching the research blob and joining today's prices on top, Monday's scan
+goes from 20+ min to 30s while still using current data.
+
+**Mongo collection:** `sepa_research_cache` (8-day TTL — one cycle plus a
+grace day if Sunday's cron skips). Per-symbol document keyed by `symbol`
+with `cached_at` epoch.
+
+**Cron:** Sunday 8pm ET via `sepa.cli research-refresh`. Configure the
+universe via `SEPA_UNIVERSE_MODE` env var (curated / sp500 / russell1000 /
+expanded) or `SEPA_UNIVERSE_FILE` for an explicit file path.
+
+**Fallback semantics:** if `scan_universe_fast` encounters a symbol missing
+from the research cache, it falls back to the full per-symbol analysis for
+that one symbol (so coverage gaps don't drop tickers from the result).
+Counts are reported in the scan payload as `research_cache_hits` /
+`research_cache_misses`.
+
+### `universe.py` — Multi-mode universe loader
+
+Resolves the active scanning universe from these sources, in priority order:
+
+1. Explicit `mode` argument to `load_universe(mode=...)`
+2. `SEPA_UNIVERSE_FILE` env var — path to one-ticker-per-line text file
+3. `SEPA_UNIVERSE` env var — comma-separated literal
+4. `SEPA_UNIVERSE_MODE` env var — one of `curated`, `sp500`, `russell1000`, `expanded`
+5. Default: `curated` (the hand-picked ~130 names in this file)
+
+**Remote fetchers** are cached 30 days under `~/.cheetah/universe/<mode>.txt`:
+
+- `fetch_sp500()` — Wikipedia's `List_of_S%26P_500_companies` parsed via
+  `pandas.read_html`. ~500 names. Tickers normalized: `BRK.B` → `BRK-B`.
+- `fetch_russell1000()` — iShares IWB ETF holdings CSV. ~1000 names. Same
+  ticker normalization.
+
+Benchmarks (`SPY`, `QQQ`, `IWM`) are always appended for RS-rank math.
 
 ### `stock_analysis.py` — Fidelity-style multi-panel readout
 Per-ticker; cached 60 min in Mongo `stock_analysis_cache`. Four panels:
@@ -578,7 +639,8 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 
 | Schedule | Command | Purpose |
 |---|---|---|
-| `30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli scan` | EOD scan (16:30 ET) |
+| `0 20 * * 0` | `/usr/local/bin/python -m sepa.cli research-refresh` | **Sunday 8pm ET** — heavy weekly research refresh (VCP, Power Play, CANSLIM, liquidity, ADR, IPO age, company name). Pre-warms `sepa_research_cache` for Monday. |
+| `30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli fast-scan` | EOD fast scan (16:30 ET) — joins cached research with today's prices. Typical 20-30s. |
 | `30 8  * * 1-5` | `/usr/local/bin/python -m sepa.cli brief` | Morning brief (08:30 ET) |
 | `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
@@ -775,6 +837,34 @@ FastAPI /stream
                     │
 React useMarketStream sets quotes[sym] → re-renders QuoteRow
 ```
+
+---
+
+## 8b. Spec-Driven Development (spec-kit)
+
+The repo is set up for spec-driven feature development via
+[GitHub spec-kit](https://github.com/github/spec-kit). Templates and slash
+commands are vendored under `.specify/` and `.claude/commands/` because
+spec-kit's release pipeline ships empty assets as of v0.8.1; see
+`.specify/README.md` for the workflow.
+
+| Slash command | Step in the workflow |
+|---|---|
+| `/constitution` | Update `.specify/memory/constitution.md` (project principles) |
+| `/specify <text>` | Create `specs/NNN-name/spec.md` describing *what* + *why* |
+| `/clarify` | Resolve ambiguities before planning |
+| `/plan` | Generate `plan.md` with technical design + data model + contracts |
+| `/tasks` | Break the plan into a numbered, dependency-ordered task list |
+| `/analyze` | Cross-check spec / plan / tasks for consistency |
+| `/implement` | Execute the task list |
+| `/checklist` | Generate quality / acceptance checklists |
+
+The constitution at `.specify/memory/constitution.md` codifies the
+non-negotiable architecture rules: free-tier first, cache-aware data
+layers, two-tier scan architecture (research vs hot), graceful
+degradation, SPECS.md as the source of truth. New features must respect
+it; amendments bump the constitution version + add a SPECS changelog
+entry.
 
 ---
 

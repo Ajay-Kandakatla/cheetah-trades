@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import type { SepaScan } from '../hooks/useSepa';
+import { useEffect, useState } from 'react';
+import type { SepaScan, ResearchStatus } from '../hooks/useSepa';
+import { fetchResearchStatus, refreshResearch } from '../hooks/useSepa';
 import { InfoButton } from './InfoButton';
 
 const HeroInfo = (
@@ -29,9 +30,17 @@ const HeroInfo = (
 type Props = {
   data: SepaScan | null;
   scanning: boolean;
-  onScan: (withCatalyst: boolean) => void;
+  onScan: (withCatalyst: boolean, opts?: { fast?: boolean; mode?: string }) => void;
   onReload: () => void;
 };
+
+function ageHuman(seconds: number | null | undefined): string {
+  if (seconds == null) return '—';
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h ago`;
+  return `${Math.round(seconds / 86400)}d ago`;
+}
 
 const MARKET_COLOR: Record<string, string> = {
   confirmed_uptrend: 'sepa-mkt--ok',
@@ -51,6 +60,34 @@ const MARKET_LABEL: Record<string, string> = {
  */
 export function SepaHero({ data, scanning, onScan, onReload }: Props) {
   const [includeCatalyst, setIncludeCatalyst] = useState(true);
+  const [universeMode, setUniverseMode] = useState<string>(
+    (typeof window !== 'undefined' && localStorage.getItem('sepa_mode')) || 'curated'
+  );
+  const [researchStatus, setResearchStatus] = useState<ResearchStatus | null>(null);
+  const [refreshingResearch, setRefreshingResearch] = useState(false);
+
+  useEffect(() => {
+    fetchResearchStatus().then(setResearchStatus).catch(() => setResearchStatus(null));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('sepa_mode', universeMode);
+  }, [universeMode]);
+
+  const handleResearchRefresh = async () => {
+    if (!confirm('Run heavy research refresh? This takes 5-30 min depending on universe size. Run during market-closed hours.')) return;
+    setRefreshingResearch(true);
+    try {
+      await refreshResearch(universeMode);
+      const s = await fetchResearchStatus();
+      setResearchStatus(s);
+    } catch (e) {
+      alert(`Research refresh failed: ${e}`);
+    } finally {
+      setRefreshingResearch(false);
+    }
+  };
+
   const mkt = data?.market_context;
   const mktKey = mkt?.label || 'mixed';
   const mktClass = MARKET_COLOR[mktKey] || 'sepa-mkt--warn';
@@ -103,10 +140,19 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
         <button className="sepa-btn" onClick={onReload}>Reload</button>
         <button
           className="sepa-btn sepa-btn--primary"
-          onClick={() => onScan(includeCatalyst)}
+          onClick={() => onScan(false, { fast: true, mode: universeMode })}
           disabled={scanning}
+          title="Joins cached weekend research with today's prices — typical 20-30s"
         >
-          {scanning ? 'Scanning…' : 'Scan'}
+          {scanning ? 'Scanning…' : 'Fast Scan'}
+        </button>
+        <button
+          className="sepa-btn"
+          onClick={() => onScan(includeCatalyst, { mode: universeMode })}
+          disabled={scanning}
+          title="Re-runs every per-symbol analysis from scratch. Slow."
+        >
+          Full Scan
         </button>
         <label className={`sepa-toggle ${includeCatalyst ? 'is-on' : ''}`}>
           <input
@@ -118,11 +164,52 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
           <span className="sepa-toggle__track"><span className="sepa-toggle__thumb" /></span>
           <span className="sepa-toggle__label">Include catalyst</span>
         </label>
+        <label className="sepa-mode-select">
+          <span className="eyebrow">Universe</span>
+          <select
+            value={universeMode}
+            onChange={(e) => setUniverseMode(e.target.value)}
+            disabled={scanning}
+          >
+            <option value="curated">Curated (~130)</option>
+            <option value="sp500">S&P 500 (~500)</option>
+            <option value="russell1000">Russell 1000 (~1000)</option>
+            <option value="expanded">Curated ∪ S&P 500</option>
+          </select>
+        </label>
       </div>
+
+      {researchStatus && (
+        <div className="sepa-research-banner">
+          <div className="sepa-research-banner__main">
+            <span className="eyebrow">Research cache</span>
+            {researchStatus.total ? (
+              <span className="mono">
+                {researchStatus.fresh}/{researchStatus.total} symbols fresh
+                {researchStatus.newest_age_sec != null && (
+                  <> · refreshed <strong>{ageHuman(researchStatus.newest_age_sec)}</strong></>
+                )}
+              </span>
+            ) : (
+              <span className="mono">empty — run research refresh to enable Fast Scan</span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="sepa-btn sepa-btn--ghost"
+            onClick={handleResearchRefresh}
+            disabled={refreshingResearch || scanning}
+          >
+            {refreshingResearch ? 'Refreshing research…' : 'Refresh research'}
+          </button>
+        </div>
+      )}
+
       <div className="sepa-hero__actions-help">
-        <span><b>Reload</b> — re-read the last cached scan, no network calls.</span>
-        <span><b>Scan</b> — runs the full pipeline. Fast (~30s) with catalyst <b>off</b>; slow (~2-4 min) with it <b>on</b>.</span>
-        <span><b>Include catalyst</b> — when on, the scan also fetches news, earnings calendar, and analyst revisions for each candidate. Required to populate the <b>Catalyst</b> and <b>Fundamentals</b> tabs.</span>
+        <span><b>Fast Scan</b> — joins Sunday's cached research with today's prices. Typical ~20-30s.</span>
+        <span><b>Full Scan</b> — re-runs everything from scratch. ~3-15 min depending on universe size. Refreshes research cache as a side-effect.</span>
+        <span><b>Refresh research</b> — only the heavy weekly batch (VCP / Power Play / CANSLIM / liquidity). Auto-runs Sundays 8pm ET via cron.</span>
+        <span><b>Include catalyst</b> — Full-Scan-only. Fetches news, earnings calendar, and analyst revisions for each candidate.</span>
       </div>
     </header>
   );
