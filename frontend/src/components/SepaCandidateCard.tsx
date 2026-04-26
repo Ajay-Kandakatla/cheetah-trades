@@ -26,7 +26,10 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
       onClick={onSelect}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
+      onKeyDown={(e) => {
+        if (e.currentTarget !== e.target) return;
+        if (e.key === 'Enter' || e.key === ' ') onSelect();
+      }}
     >
       <header className="sepa-card__head">
         <div className="sepa-card__sym">
@@ -50,7 +53,10 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
       </header>
 
       {alertOpen && (
-        <div onClick={(e) => e.stopPropagation()}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
           <PriceAlertModal
             symbol={row.symbol}
             currentPrice={setup?.pivot ?? null}
