@@ -11,9 +11,14 @@ export interface Quote {
   rsi14?: number;
   vwap?: number;
   sparkline?: number[];
-  source?: 'finnhub_ws' | 'finnhub_rest' | string;
+  source?: 'finnhub_ws' | 'finnhub_rest' | 'sepa_cache' | string;
   trade_ts?: number;
   ts: number;
+  /** Set to true when the row was filled from the SEPA daily-bar cache
+   *  rather than a fresh tick — e.g. off-hours, Finnhub down, restart. */
+  stale?: boolean;
+  /** ISO date of the last daily bar when source = "sepa_cache". */
+  last_bar_iso?: string;
 }
 
 export type ConnectionStatus = 'connecting' | 'open' | 'closed' | 'error';

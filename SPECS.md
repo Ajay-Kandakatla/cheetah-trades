@@ -45,7 +45,8 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | Method | Path | Inputs | Output | Side effects | Calls |
 |---|---|---|---|---|---|
 | GET | `/health` | — | `{status, cached_symbols[], finnhub_configured, time}` | — | `cache.snapshot` |
-| GET | `/snapshot` | — | `{<sym>: Quote}` | — | `cache.snapshot` |
+| GET | `/snapshot` | `?symbols=A,B,C` | `{<sym>: Quote}` | when `?symbols=` is supplied, missing entries are filled from SEPA's daily-bar cache (yesterday's close, marked `stale: true`) so off-hours / restart UIs aren't blank | `cache.snapshot` + `_quote_from_sepa_cache` |
+| GET | `/symbol-search` | `?q=ASM` | `{q, results: [{symbol, display_symbol, name, type}], cached}` | proxies Finnhub `/api/v1/search` with US exchange filter; cached 6h per query in-process | `_symbol_search_cache` |
 | GET | `/cheetah` | — | `{weights, stocks[], computedAt}` | — | `cheetah_data.with_computed_scores` (recomputes from `FORMULA_WEIGHTS`) |
 | GET | `/competitors` | — | `[{anchor, headline, sub, peers[], anchorStock}]` | — | `cheetah_data.get_competitor_groups` |
 | GET | `/unicorns` | — | `Unicorn[]` | — | static `cheetah_data.UNICORNS` |
@@ -63,6 +64,7 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | GET | `/sepa/dual-momentum` | `?top_n=15&lookback_days=252&min_rs_rank=0` | `{regime, rows, picks, universe_size, gate_lookback_days}` | reuses latest scan + cached prices; computes 1/3/6/12-month returns + Antonacci two-gate ranking | `sepa.dual_momentum.compute` |
 | GET | `/sepa/analysis/{symbol}` | path | `{fundamental, technical, esg, analyst, cached}` | Fidelity-style multi-panel readout. 60-min Mongo cache (`stock_analysis_cache`). Composes yfinance fundamentals, derived technical sentiment, Sustainalytics ESG, Finnhub analyst rating | `sepa.stock_analysis.analysis_for` |
 | POST | `/sepa/rescan/{symbol}` | path | analyzed dict for one symbol | force-refreshes parquet cache for symbol | `prices.load_prices(force=True), rs_rank.rs_ranks, scanner._analyze_symbol` |
+| POST | `/sepa/analyze/{symbol}` | path, `?with_catalyst=true` | full SEPA analysis dict | works for ANY valid US ticker (not just universe members). Pulls fresh prices, computes RS in latest scan's universe context, runs full Trend/Stage/VCP/Power Play/fundamentals stack. Persists into latest scan + research cache. | on-demand single-ticker analyze |
 | GET | `/sepa/watchlist` | — | `[{symbol, entry, stop, shares?, added}]` | reads `watchlist.json` | `scanner.load_watchlist` |
 | POST | `/sepa/watchlist` | `?symbol&entry&stop&shares=0` | updated list | writes `watchlist.json` | `scanner.add_to_watchlist` |
 | DELETE | `/sepa/watchlist/{symbol}` | path | updated list | writes `watchlist.json` | `scanner.remove_from_watchlist` |

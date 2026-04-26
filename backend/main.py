@@ -102,11 +102,61 @@ def vwap(prices: list[float], volumes: list[float]) -> float | None:
 # ---------------------------------------------------------------------------
 # Quote cache with rolling tick window per symbol
 # ---------------------------------------------------------------------------
+_LIVE_CACHE_COLL = None
+_LIVE_CACHE_DISABLED = False
+
+
+def _live_cache_mongo():
+    """Mongo collection for persisting the most recent quote per symbol so a
+    container restart can re-seed the in-memory cache instantly."""
+    global _LIVE_CACHE_COLL, _LIVE_CACHE_DISABLED
+    if _LIVE_CACHE_DISABLED:
+        return None
+    if _LIVE_CACHE_COLL is not None:
+        return _LIVE_CACHE_COLL
+    try:
+        from pymongo import MongoClient, ASCENDING
+        url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        db_name = os.getenv("MONGO_DB", "cheetah")
+        client = MongoClient(url, serverSelectionTimeoutMS=2000)
+        client.admin.command("ping")
+        coll = client[db_name].live_quote_cache
+        coll.create_index([("symbol", ASCENDING)], unique=True)
+        _LIVE_CACHE_COLL = coll
+        return _LIVE_CACHE_COLL
+    except Exception as exc:
+        log.warning("live cache: Mongo unavailable (%s) — restart wipes are possible", exc)
+        _LIVE_CACHE_DISABLED = True
+        return None
+
+
 class QuoteCache:
     def __init__(self) -> None:
         self._data: dict[str, dict] = {}
         self._ticks: dict[str, deque] = {}   # deque of (price, volume)
         self._lock = asyncio.Lock()
+
+    async def hydrate_from_mongo(self) -> int:
+        """Seed in-memory cache from the live_quote_cache collection.
+        Called once at startup so a container restart doesn't show empty rows."""
+        coll = _live_cache_mongo()
+        if coll is None:
+            return 0
+        try:
+            count = 0
+            async with self._lock:
+                for doc in coll.find({}):
+                    sym = doc.get("symbol")
+                    if not sym:
+                        continue
+                    payload = {k: v for k, v in doc.items() if k not in {"_id", "_persisted_at"}}
+                    self._data[sym] = payload
+                    count += 1
+            log.info("live cache: hydrated %d symbols from Mongo", count)
+            return count
+        except Exception as exc:
+            log.warning("live cache hydrate failed: %s", exc)
+            return 0
 
     async def update(self, symbol: str, payload: dict) -> dict:
         async with self._lock:
@@ -125,7 +175,21 @@ class QuoteCache:
                 if "price" in prev:
                     merged["change"] = round(payload["price"] - prev["price"], 4)
             self._data[symbol] = merged
-            return merged
+        # Best-effort persist outside the lock so Mongo latency doesn't
+        # stall the WS loop.
+        coll = _live_cache_mongo()
+        if coll is not None:
+            try:
+                doc = {**merged, "_persisted_at": time.time()}
+                await asyncio.to_thread(
+                    coll.update_one,
+                    {"symbol": symbol},
+                    {"$set": doc},
+                    True,  # upsert
+                )
+            except Exception as exc:
+                log.debug("live cache persist failed for %s: %s", symbol, exc)
+        return merged
 
     async def snapshot(self) -> dict[str, dict]:
         async with self._lock:
@@ -286,6 +350,9 @@ async def finnhub_rest_poller() -> None:
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Re-seed the in-memory live cache from Mongo so reloads + restarts don't
+    # blank the UI. Skipped silently if Mongo is unreachable.
+    await cache.hydrate_from_mongo()
     await subscribe_symbols([s.strip().upper() for s in DEFAULT_SYMBOLS if s.strip()])
     tasks = [
         asyncio.create_task(finnhub_ws_consumer()),
@@ -324,9 +391,70 @@ async def health() -> dict:
     }
 
 
+async def _quote_from_sepa_cache(sym: str) -> Optional[dict]:
+    """Synthesize a quote payload from SEPA's daily-bar cache as a last-resort
+    fallback when the live in-memory cache has no data for a symbol.
+
+    Used when Finnhub is unreachable, the API container just restarted (cache
+    empty), or the user added a ticker outside market hours. Returns None if
+    SEPA's price cache also has nothing for this symbol.
+    """
+    try:
+        from sepa import prices as sepa_prices
+    except Exception:
+        return None
+    df = await asyncio.to_thread(sepa_prices.load_prices, sym)
+    if df is None or df.empty:
+        return None
+    last = df.iloc[-1]
+    prev = df.iloc[-2] if len(df) >= 2 else None
+    last_close = float(last["close"])
+    prev_close = float(prev["close"]) if prev is not None else None
+    pct = round((last_close - prev_close) / prev_close * 100, 3) if prev_close else None
+    last_ts = df.index[-1]
+    try:
+        last_ts_iso = last_ts.isoformat() if hasattr(last_ts, "isoformat") else str(last_ts)
+    except Exception:
+        last_ts_iso = None
+    return {
+        "symbol": sym,
+        "price": last_close,
+        "open": float(last["open"]),
+        "high": float(last["high"]),
+        "low": float(last["low"]),
+        "volume": float(last["volume"]),
+        "prev_close": prev_close,
+        "pct_change": pct,
+        "source": "sepa_cache",
+        "last_bar_iso": last_ts_iso,
+        "ts": time.time(),
+        "stale": True,
+    }
+
+
 @app.get("/snapshot")
-async def snapshot() -> dict:
-    return await cache.snapshot()
+async def snapshot(
+    symbols: Optional[str] = Query(None, description="Optional comma-separated list to fill from SEPA cache when absent"),
+) -> dict:
+    """Return the live-cache snapshot.
+
+    If `?symbols=` is supplied, any requested symbol that is missing from the
+    live cache is filled from the SEPA daily-bar cache (yesterday's close as
+    a last-resort fallback). Lets the Live Stream UI show last-known data
+    even when Finnhub is rate-limited or the markets are closed.
+    """
+    snap = await cache.snapshot()
+    if not symbols:
+        return snap
+    needed = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    out = dict(snap)
+    for s in needed:
+        if s in out:
+            continue
+        fallback = await _quote_from_sepa_cache(s)
+        if fallback:
+            out[s] = fallback
+    return out
 
 
 @app.get("/cheetah")
@@ -358,6 +486,62 @@ async def unicorns() -> JSONResponse:
 async def etfs() -> JSONResponse:
     """Thematic ETFs riding the same tailwinds as the Cheetahs."""
     return JSONResponse(ETFS)
+
+
+_symbol_search_cache: dict[str, tuple[float, list[dict]]] = {}
+_SYMBOL_SEARCH_TTL = 6 * 3600  # 6 hours
+
+
+@app.get("/symbol-search")
+async def symbol_search(
+    q: str = Query(..., min_length=1, max_length=32, description="Free-text query — ticker or company name"),
+):
+    """Proxy Finnhub's free-tier symbol-search.
+
+    Lets the Live Stream typeahead resolve any ticker the user can type
+    (not just symbols in the curated 148-mover list). Cached 6 h per query
+    string in-process to stay under Finnhub's free-tier rate limit.
+    """
+    if not FINNHUB_API_KEY:
+        return JSONResponse({"q": q, "results": [], "error": "FINNHUB_API_KEY not set"})
+
+    key = q.strip().upper()
+    if not key:
+        return JSONResponse({"q": q, "results": []})
+
+    now = time.time()
+    hit = _symbol_search_cache.get(key)
+    if hit and (now - hit[0]) < _SYMBOL_SEARCH_TTL:
+        return JSONResponse({"q": q, "results": hit[1], "cached": True})
+
+    global _rest_client
+    if _rest_client is None:
+        _rest_client = httpx.AsyncClient(timeout=10)
+    try:
+        r = await _rest_client.get(
+            "https://finnhub.io/api/v1/search",
+            params={"q": key, "token": FINNHUB_API_KEY, "exchange": "US"},
+        )
+        if r.status_code != 200:
+            return JSONResponse({"q": q, "results": [], "error": f"finnhub {r.status_code}"})
+        data = r.json() or {}
+        # Finnhub returns {count, result: [{description, displaySymbol, symbol, type}]}
+        results = []
+        for row in (data.get("result") or [])[:25]:
+            sym = row.get("symbol") or row.get("displaySymbol")
+            if not sym or "." in sym:  # skip non-US ADR-style alt-listings
+                continue
+            results.append({
+                "symbol": sym.upper(),
+                "display_symbol": (row.get("displaySymbol") or sym).upper(),
+                "name": row.get("description") or "",
+                "type": row.get("type") or "Common Stock",
+            })
+        _symbol_search_cache[key] = (now, results)
+        return JSONResponse({"q": q, "results": results, "cached": False})
+    except Exception as exc:
+        log.warning("symbol-search failed for %s: %s", q, exc)
+        return JSONResponse({"q": q, "results": [], "error": str(exc)})
 
 
 @app.get("/news")
@@ -619,6 +803,84 @@ async def sepa_rescan(symbol: str):
     rs_map = await asyncio.to_thread(rs_rank.rs_ranks, [sym])
     res = await asyncio.to_thread(sc._analyze_symbol, sym, rs_map)
     return JSONResponse(res or {"error": "no data"})
+
+
+@app.post("/sepa/analyze/{symbol}")
+async def sepa_analyze_one(symbol: str, with_catalyst: bool = Query(False)):
+    """Run full SEPA analysis for a single ticker on demand.
+
+    Unlike `/sepa/rescan` (which only re-analyzes universe members), this
+    works for **any** valid ticker — even one not in the curated list. Pulls
+    2y of prices fresh, computes RS rank against the latest scan's universe
+    so the rank is contextualized, runs the full Trend Template / Stage /
+    VCP / Power Play / fundamentals stack, and optionally enriches with
+    catalyst + insider data.
+
+    Also writes the analyzed record into the latest scan cache so subsequent
+    `/sepa/candidate/{symbol}` calls return the fresh result.
+    """
+    from sepa import prices, rs_rank, scanner as sc, research as research_mod
+    sym = symbol.upper()
+
+    # Force a fresh price pull (might be a brand-new ticker we've never seen)
+    await asyncio.to_thread(prices.load_prices, sym, "2y", True)
+
+    # Build an RS context from the latest scan's universe so RS rank is
+    # comparable to other candidates. If no scan has run, fall back to a
+    # single-symbol "RS map" of {sym: 99} so the gate still passes.
+    latest = sepa_scanner.load_latest() or {}
+    universe_syms = [r["symbol"] for r in (latest.get("all_results") or [])] or [sym]
+    if sym not in universe_syms:
+        universe_syms.append(sym)
+    rs_map = await asyncio.to_thread(rs_rank.rs_ranks, universe_syms)
+
+    res = await asyncio.to_thread(sc._analyze_symbol, sym, rs_map,
+                                  require_liquidity=False, require_min_adr=0.0)
+    if res is None:
+        return JSONResponse(
+            {"error": f"insufficient price history for {sym}"},
+            status_code=404,
+        )
+
+    # Best-effort catalyst + insider + fundamentals enrichment
+    if with_catalyst:
+        try:
+            res["catalyst"] = await sepa_catalyst_for(sym)
+        except Exception as exc:
+            log.warning("catalyst enrichment failed for %s: %s", sym, exc)
+        try:
+            res["insider"] = await sepa_insider(sym)
+        except Exception as exc:
+            log.warning("insider enrichment failed for %s: %s", sym, exc)
+        try:
+            from sepa import canslim
+            res["fundamentals"] = await asyncio.to_thread(canslim.fundamentals_for, sym)
+        except Exception as exc:
+            log.warning("fundamentals enrichment failed for %s: %s", sym, exc)
+
+    # Persist the analyzed record alongside the latest scan so subsequent
+    # /sepa/candidate/{symbol} calls find it. Also persist a research blob
+    # so the next fast-scan picks it up automatically.
+    try:
+        latest = sepa_scanner.load_latest() or {"all_results": [], "candidates": []}
+        all_res = [r for r in (latest.get("all_results") or []) if r["symbol"] != sym]
+        all_res.append(res)
+        latest["all_results"] = all_res
+        if res.get("is_candidate"):
+            cands = [r for r in (latest.get("candidates") or []) if r["symbol"] != sym]
+            cands.append(res)
+            latest["candidates"] = cands
+        from pathlib import Path
+        Path(sepa_scanner.LATEST_PATH).write_text(json.dumps(latest, default=str))
+    except Exception as exc:
+        log.warning("on-demand persist failed for %s: %s", sym, exc)
+
+    try:
+        await asyncio.to_thread(research_mod.compute_research, sym)
+    except Exception as exc:
+        log.warning("on-demand research compute failed for %s: %s", sym, exc)
+
+    return JSONResponse(res)
 
 
 @app.get("/sepa/watchlist")

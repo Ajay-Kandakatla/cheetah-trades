@@ -7,6 +7,7 @@ interface Props {
   cheetahScore?: number;
   onRemove: () => void;
   onSelect?: () => void;
+  onAnalyze?: () => void;
 }
 
 function fmtUsd(v?: number | null, digits = 2): string {
@@ -33,7 +34,7 @@ function scoreClass(score?: number): string {
   return 'cm-score cm-score--poor';
 }
 
-export function QuoteRow({ quote, cheetahScore, onRemove, onSelect }: Props) {
+export function QuoteRow({ quote, cheetahScore, onRemove, onSelect, onAnalyze }: Props) {
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
   const lastPrice = useRef<number | undefined>(quote.price);
 
@@ -92,11 +93,24 @@ export function QuoteRow({ quote, cheetahScore, onRemove, onSelect }: Props) {
       <td className="mono">{quote.low != null ? fmtUsd(quote.low) : '—'}</td>
       <td className="mono">{fmtVolume(quote.volume)}</td>
       <td>
-        <span className={`cm-feed cm-feed--${quote.source === 'finnhub_ws' ? 'live' : 'rest'}`}>
-          {quote.source === 'finnhub_ws' ? 'Live' : 'REST'}
+        <span className={`cm-feed cm-feed--${quote.source === 'finnhub_ws' ? 'live' : quote.source === 'sepa_cache' ? 'stale' : 'rest'}`}>
+          {quote.source === 'finnhub_ws' ? 'Live'
+            : quote.source === 'sepa_cache' ? `EOD${quote.last_bar_iso ? ' ' + quote.last_bar_iso.slice(5, 10) : ''}`
+            : 'REST'}
         </span>
       </td>
       <td className="cm-live__actions">
+        {onAnalyze && (
+          <button
+            type="button"
+            className="cm-row-sepa"
+            onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
+            aria-label={`Run SEPA analysis on ${quote.symbol}`}
+            title="Run SEPA analysis"
+          >
+            SEPA
+          </button>
+        )}
         <button
           type="button"
           className="cm-row-remove"
