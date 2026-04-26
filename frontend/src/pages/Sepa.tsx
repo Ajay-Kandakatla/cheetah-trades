@@ -103,7 +103,7 @@ export function SepaPage() {
   const navigate = useNavigate();
   const openSymbol = (sym: string) => navigate(`/sepa/${encodeURIComponent(sym)}`);
   const [filters, setFilters] = useState<SepaFilters>({
-    rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: false, sortBy: 'score',
+    rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: true, sortBy: 'score',
   });
 
   const source: SepaCandidate[] = (filters.showAll ? data?.all_results : data?.candidates) ?? [];
