@@ -11,9 +11,9 @@ Lane 2 — Curated blog mentions (RSS).
   Morningstar stock-analysis RSS
   Body-regex match on $TICKER and bare TICKER. Last 90 days.
 
-Lane 3 — Reddit (PRAW, optional — only when REDDIT_CLIENT_ID is set).
+Lane 3 — Reddit (old.reddit.com .json scrape — see sepa.reddit_scrape).
   Allowlist: r/SecurityAnalysis, r/ValueInvesting, r/investing, r/stocks, r/options.
-  Score threshold scaled per sub. Last 30 days.
+  Score threshold scaled per sub. Last 30 days. No auth required.
 
 13F is intentionally NOT included — see GRAPH_REPORT decision: 45-day lag + ETF
 clone graveyard means it's net-negative for a 1-12wk swing-trading workflow.
@@ -34,14 +34,14 @@ from typing import Optional
 import httpx
 
 from .providers import FINNHUB_API_KEY
+from . import reddit_scrape
 
 log = logging.getLogger("sepa.smart_money")
 
 CACHE_TTL_SEC = 15 * 60
 
-REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
-REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
-REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "cheetah-market-app/0.1 (smart_money)")
+# Back-compat alias — UA + base URL now live in reddit_scrape
+REDDIT_USER_AGENT = reddit_scrape.REDDIT_USER_AGENT
 
 # (subreddit, score_floor) — calibrated per audience size / signal density
 SUB_ALLOWLIST: list[tuple[str, int]] = [
@@ -209,59 +209,28 @@ def _snippet_around(text: str, pat: re.Pattern, width: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Lane 3 — Reddit (PRAW)
+# Lane 3 — Reddit (old.reddit.com .json scrape via sepa.reddit_scrape)
 # ---------------------------------------------------------------------------
-def _reddit_threads_sync(symbol: str) -> dict:
-    if not (REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET):
-        return {"available": False, "reason": "no REDDIT_CLIENT_ID"}
-    try:
-        import praw  # local import — keep optional
-    except ImportError:
-        return {"available": False, "reason": "praw not installed"}
-    try:
-        reddit = praw.Reddit(
-            client_id=REDDIT_CLIENT_ID,
-            client_secret=REDDIT_CLIENT_SECRET,
-            user_agent=REDDIT_USER_AGENT,
-        )
-        reddit.read_only = True
-    except Exception as exc:
-        return {"available": False, "reason": f"praw init failed: {exc}"}
-
-    pat = _ticker_pattern(symbol)
-    threads: list[dict] = []
-    cutoff = time.time() - 30 * 86400
-
-    for sub_name, score_floor in SUB_ALLOWLIST:
-        try:
-            sub = reddit.subreddit(sub_name)
-            # search the symbol then filter by score + recency
-            for post in sub.search(symbol, sort="top", time_filter="month", limit=15):
-                if post.created_utc < cutoff:
-                    continue
-                if post.score < score_floor:
-                    continue
-                title = post.title or ""
-                selftext = (post.selftext or "")[:500]
-                if not pat.search(title) and not pat.search(selftext):
-                    continue
-                threads.append({
-                    "subreddit":  sub_name,
-                    "title":      title,
-                    "url":        f"https://reddit.com{post.permalink}",
-                    "score":      int(post.score),
-                    "n_comments": int(post.num_comments),
-                    "created":    int(post.created_utc),
-                    "snippet":    selftext[:240],
-                })
-        except Exception as exc:
-            log.debug("reddit search failed for %s in r/%s: %s", symbol, sub_name, exc)
-    threads.sort(key=lambda t: t["score"], reverse=True)
-    return {"available": True, "threads": threads[:10]}
-
-
 async def _reddit_threads(symbol: str) -> dict:
-    return await asyncio.to_thread(_reddit_threads_sync, symbol)
+    """Scrape the thoughtful-sub allowlist for ticker mentions.
+
+    Returns the same shape the previous PRAW implementation did:
+      {"available": bool, "threads": [...], "reason"?: str}
+    Smart-money UI doesn't use mention windows, so we skip those for speed.
+    """
+    result = await reddit_scrape.search_subreddits(
+        symbol, SUB_ALLOWLIST,
+        days=30,
+        fetch_comments_per_thread=0,        # smart_money doesn't render comments
+        return_mention_windows=False,
+        top_n=10,
+    )
+    # Trim mention-window keys callers don't expect to see here.
+    return {
+        "available": result.get("available", False),
+        "reason":    result.get("reason"),
+        "threads":   result.get("threads", []),
+    }
 
 
 # ---------------------------------------------------------------------------
