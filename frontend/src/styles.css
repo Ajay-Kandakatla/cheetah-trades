@@ -1598,3 +1598,229 @@ tr:last-child td { border-bottom: none; }
 .cm-headline__info-body { display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.4rem; }
 .cm-headline__info-body p { margin: 0; line-height: 1.5; }
 .cm-headline__info-body strong { font-weight: 600; color: var(--ink); display: inline; padding: 0; border: none; }
+
+/* ============================================================
+   Forum Chatter — labels, velocity, sentiment chips
+   ============================================================ */
+.cm-mom {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--hairline);
+  background: var(--bg-sunken);
+  color: var(--ink-muted);
+}
+.cm-mom--ramping {
+  color: var(--positive);
+  border-color: color-mix(in srgb, var(--positive) 40%, transparent);
+  background: color-mix(in srgb, var(--positive) 10%, var(--bg-sunken));
+}
+.cm-mom--steady {
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+.cm-mom--fading {
+  color: var(--negative);
+  border-color: color-mix(in srgb, var(--negative) 40%, transparent);
+  background: color-mix(in srgb, var(--negative) 8%, var(--bg-sunken));
+}
+.cm-mom--quiet {
+  color: var(--ink-faint);
+  background: transparent;
+}
+.cm-mom--stale {
+  color: var(--warn);
+  border-style: dashed;
+  background: transparent;
+}
+.cm-mom--na { color: var(--ink-faint); }
+
+.cm-velocity { font-weight: 600; }
+.cm-velocity--ramp   { color: var(--positive); }
+.cm-velocity--fade   { color: var(--negative); }
+.cm-velocity--steady { color: var(--ink); }
+.cm-velocity--na     { color: var(--ink-faint); }
+
+.cm-sent { font-weight: 600; }
+.cm-sent--bull  { color: var(--positive); }
+.cm-sent--bear  { color: var(--negative); }
+.cm-sent--mixed { color: var(--ink); }
+.cm-sent--na    { color: var(--ink-faint); }
+
+.dm-row--stale { opacity: 0.55; }
+.dm-row--stale td { font-style: italic; }
+
+/* ============================================================
+   ChatterPanel — per-ticker tab on the candidate page
+   ============================================================ */
+.cm-chatter { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.cm-chatter__summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .cm-chatter__summary { grid-template-columns: repeat(2, 1fr); }
+}
+
+.cm-chatter__metric { display: flex; flex-direction: column; gap: 0.35rem; }
+.cm-chatter__big {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cm-chatter__sub {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+.cm-chatter__refresh-cell { align-items: flex-end; justify-self: end; }
+.cm-chatter__refresh-cell .dm-refresh { width: 100%; }
+
+.cm-chatter__lane { display: flex; flex-direction: column; gap: 0.75rem; }
+.cm-chatter__lane > .eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 0.35rem;
+}
+.cm-chatter__lane-sub {
+  font-size: 0.65rem;
+  color: var(--ink-faint);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Reddit thread cards */
+.cm-thread-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.cm-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.cm-thread:hover {
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+.cm-thread__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+.cm-thread__sub { color: var(--gold); font-weight: 600; }
+.cm-thread__sep { opacity: 0.5; }
+.cm-thread__score { color: var(--positive); font-weight: 600; }
+.cm-thread__title { font-size: 0.95rem; font-weight: 600; line-height: 1.35; }
+.cm-thread__snippet {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+.cm-thread__comments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--hairline);
+}
+.cm-thread__comment {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+.cm-thread__comment-score {
+  color: var(--ink-faint);
+  flex-shrink: 0;
+  min-width: 3.5em;
+}
+
+/* StockTwits messages */
+.cm-st-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.cm-st-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: 3px;
+  background: var(--bg-surface);
+  text-decoration: none;
+  color: inherit;
+}
+.cm-st-msg--bullish { border-left-color: var(--positive); }
+.cm-st-msg--bearish { border-left-color: var(--negative); }
+.cm-st-msg__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  align-items: center;
+}
+.cm-st-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cm-st-tag--bullish { background: color-mix(in srgb, var(--positive) 20%, transparent); color: var(--positive); }
+.cm-st-tag--bearish { background: color-mix(in srgb, var(--negative) 20%, transparent); color: var(--negative); }
+.cm-st-msg__user { color: var(--ink); font-weight: 600; }
+.cm-st-msg__body { font-size: 0.85rem; line-height: 1.45; }
+
+/* Hacker News stories */
+.cm-hn-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.cm-hn-story {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.cm-hn-story:last-child { border-bottom: none; }
+.cm-hn-story__title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  line-height: 1.4;
+}
+.cm-hn-story__title:hover { color: var(--gold); }
+.cm-hn-story__meta {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+.cm-hn-story__meta a { color: var(--gold); text-decoration: none; }
+.cm-hn-story__meta a:hover { text-decoration: underline; }

@@ -6,6 +6,7 @@ import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
 import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
 import { CompanyHeadline } from '../components/CompanyHeadline';
+import { ChatterPanel } from '../components/ChatterPanel';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
@@ -72,7 +73,7 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis';
+type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter';
 
 const SmartMoneyInfo = (
   <>
@@ -210,7 +211,7 @@ export function SepaCandidatePage() {
       {data && (
         <>
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'fundamentals', 'analysis', 'catalyst', 'insider', 'smartmoney'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'fundamentals', 'analysis', 'catalyst', 'insider', 'smartmoney', 'chatter'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
@@ -523,6 +524,40 @@ export function SepaCandidatePage() {
                   <span> — what credentialed analysts and credible commentators think.</span>
                 </div>
                 <SmartMoneyPanel data={data.smart_money} symbol={symbol} />
+              </section>
+            )}
+
+            {tab === 'chatter' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Forum Chatter</strong>{' '}
+                  <InfoButton title="Forum Chatter">
+                    <>
+                      <p>
+                        Crowd discussion across four lanes — Reddit Momentum
+                        (r/wallstreetbets, r/StockMarket, r/pennystocks,
+                        r/Daytrading, r/swingtrading), Reddit Thoughtful
+                        (r/SecurityAnalysis, r/ValueInvesting, r/investing,
+                        r/stocks, r/options), StockTwits (Bullish/Bearish
+                        user-tagged messages), and Hacker News (last 30 days).
+                      </p>
+                      <p>
+                        <strong>Velocity</strong> = posts last 7 days ÷ posts
+                        the prior 7 days. <strong>Sentiment %</strong> blends
+                        StockTwits Bullish/Bearish counts with score-weighted
+                        Reddit upvotes. <strong>Momentum label</strong>:
+                        ramping (≥1.5× velocity, ≥3 posts), steady, fading
+                        (≤0.6× velocity), or quiet (no signal).
+                      </p>
+                      <p>
+                        Cached 15 minutes — click <em>Refresh</em> to bust the
+                        cache and pull fresh data.
+                      </p>
+                    </>
+                  </InfoButton>
+                  <span> — Reddit, StockTwits, and Hacker News for this ticker.</span>
+                </div>
+                <ChatterPanel symbol={symbol} />
               </section>
             )}
           </div>

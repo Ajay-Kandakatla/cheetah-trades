@@ -50,6 +50,7 @@ from sepa.ipo_age import age as sepa_ipo_age
 from sepa.smart_money import smart_money_for as sepa_smart_money
 from sepa import dual_momentum as sepa_dual_momentum
 from sepa.stock_analysis import analysis_for as sepa_analysis_for
+from sepa.forum_chatter import chatter_for as sepa_chatter_for, chatter_universe as sepa_chatter_universe
 
 load_dotenv()
 
@@ -798,6 +799,61 @@ async def sepa_smart_money_endpoint(symbol: str):
     """Smart Money tab data — analyst consensus + curated blogs + filtered Reddit.
     Cached 15 min in Mongo (smart_money_cache)."""
     return JSONResponse(await sepa_smart_money(symbol.upper()))
+
+
+@app.get("/sepa/chatter/{symbol}")
+async def sepa_chatter_one(
+    symbol: str,
+    refresh: bool = Query(False, description="Bypass the 15-min Mongo cache"),
+):
+    """Forum chatter for one ticker.
+
+    Aggregates four lanes — Reddit Thoughtful (SecurityAnalysis/ValueInvesting/
+    investing/stocks/options), Reddit Momentum (wallstreetbets/StockMarket/
+    pennystocks/Daytrading/swingtrading), StockTwits (Bullish/Bearish ratio),
+    and Hacker News (last 30 days). Includes mention-velocity (this week vs
+    last week) and a momentum label. Cached 15 min in Mongo
+    (forum_chatter_cache); pass `?refresh=true` to bust.
+    """
+    sym = symbol.upper()
+    name = None
+    try:
+        from sepa.company_names import name_for
+        name = name_for(sym)
+    except Exception:
+        pass
+    return JSONResponse(await sepa_chatter_for(sym, company_name=name, refresh=refresh))
+
+
+@app.get("/sepa/chatter")
+async def sepa_chatter_universe_get(
+    top_n: int = Query(20, ge=5, le=100),
+    max_fetch: int = Query(12, ge=0, le=30,
+                            description="Max live fetches per call — caps Reddit-API burn"),
+):
+    """Universe-wide chatter ranking against the latest SEPA scan.
+
+    Reads `forum_chatter_cache` for instant rows; cache-misses are fetched
+    live up to `max_fetch` per call to stay under Reddit's free-tier rate
+    limit. Run /sepa/scan first if you've never scanned.
+    """
+    latest = sepa_scanner.load_latest() or {}
+    rows = latest.get("all_results") or []
+    if not rows:
+        return JSONResponse({
+            "error": "no_scan",
+            "message": "Run /sepa/scan first — chatter reuses the SEPA universe.",
+            "rows": [],
+            "n_total": 0, "n_cached": 0, "n_fetched": 0, "n_stale": 0,
+        })
+
+    # Take top_n by composite score (already the ranking the user trusts)
+    top = rows[:top_n]
+    symbols = [r.get("symbol") for r in top if r.get("symbol")]
+    names = {r["symbol"]: r.get("name") for r in top if r.get("symbol") and r.get("name")}
+
+    result = await sepa_chatter_universe(symbols, name_lookup=names, max_fetch=max_fetch)
+    return JSONResponse(result)
 
 
 @app.post("/sepa/rescan/{symbol}")

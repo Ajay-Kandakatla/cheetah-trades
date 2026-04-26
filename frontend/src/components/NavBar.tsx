@@ -47,6 +47,12 @@ export function NavBar() {
         >
           Dual Momentum
         </NavLink>
+        <NavLink
+          to="/chatter"
+          className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
+        >
+          Chatter
+        </NavLink>
       </nav>
 
       <div className="cm-nav__meta">
