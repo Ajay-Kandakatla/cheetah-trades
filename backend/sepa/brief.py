@@ -115,6 +115,15 @@ def generate_brief(with_catalyst: bool = True) -> dict:
         "scan_generated_at": scan.get("generated_at"),
     }
     BRIEF_PATH.write_text(json.dumps(payload, default=str))
+
+    # WhatsApp delivery — no-op if Twilio env vars are missing.
+    try:
+        from . import notify
+        notify.send_whatsapp(notify.format_brief(payload))
+    except Exception as exc:
+        import logging
+        logging.getLogger("sepa.brief").warning("brief notify failed: %s", exc)
+
     return payload
 
 

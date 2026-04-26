@@ -19,6 +19,11 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: cheetah
       TZ: America/New_York
+      # Pulled from the host shell at `docker compose up` time.
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-whatsapp:+14155238886}
+      TWILIO_TO: ${TWILIO_TO:-}
     volumes:
       # Cron writes scan JSON here; api reads it. Shared with the cron service.
       - cheetah-scans:/root/.cheetah
@@ -36,6 +41,11 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: cheetah
       TZ: America/New_York
+      # Pulled from the host shell at `docker compose up` time.
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-whatsapp:+14155238886}
+      TWILIO_TO: ${TWILIO_TO:-}
     volumes:
       - cheetah-scans:/root/.cheetah
       - ./backend/crontab:/app/crontab:ro

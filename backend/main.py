@@ -532,9 +532,17 @@ async def sepa_watchlist_get():
 @app.post("/sepa/watchlist")
 async def sepa_watchlist_add(symbol: str = Query(...),
                               entry: float = Query(...),
-                              stop: float = Query(...)):
-    items = sepa_scanner.add_to_watchlist(symbol, entry, stop)
+                              stop: float = Query(...),
+                              shares: float = Query(0.0)):
+    items = sepa_scanner.add_to_watchlist(symbol, entry, stop, shares)
     return JSONResponse(items)
+
+
+@app.post("/sepa/notify/test")
+async def sepa_notify_test():
+    from sepa import notify
+    ok = notify.send_whatsapp("Cheetah test ping ✅")
+    return JSONResponse({"sent": ok})
 
 
 @app.delete("/sepa/watchlist/{symbol}")

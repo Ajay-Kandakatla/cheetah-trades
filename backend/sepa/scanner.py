@@ -279,13 +279,15 @@ def save_watchlist(items: List[dict]) -> None:
     WATCH_PATH.write_text(json.dumps(items, default=str))
 
 
-def add_to_watchlist(symbol: str, entry: float, stop: float) -> List[dict]:
+def add_to_watchlist(symbol: str, entry: float, stop: float,
+                     shares: float = 0.0) -> List[dict]:
     items = load_watchlist()
     items = [x for x in items if x["symbol"] != symbol.upper()]
     items.append({
         "symbol": symbol.upper(),
         "entry": entry,
         "stop": stop,
+        "shares": shares,
         "added": int(time.time()),
     })
     save_watchlist(items)

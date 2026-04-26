@@ -30,6 +30,7 @@ def main() -> int:
                         help="Comma-separated override for universe")
 
     sub.add_parser("brief", help="Generate the morning brief from the latest scan")
+    sub.add_parser("alerts", help="Check positions and fire WhatsApp alerts")
 
     s_re = sub.add_parser("rescan", help="Refresh a single ticker")
     s_re.add_argument("symbol", type=str)
@@ -58,6 +59,12 @@ def main() -> int:
                  len(result.get("top_candidates") or []),
                  len(result.get("watchlist_alerts") or []),
                  (result.get("market_context") or {}).get("label"))
+        return 0
+
+    if args.cmd == "alerts":
+        from . import alerts
+        result = alerts.check_positions()
+        log.info("ALERTS — fired=%d skipped=%d", len(result["fired"]), len(result["skipped"]))
         return 0
 
     if args.cmd == "rescan":
