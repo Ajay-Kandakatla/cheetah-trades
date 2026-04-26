@@ -9,55 +9,66 @@ import { CompanyHeadline } from '../components/CompanyHeadline';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
-    label: 'Price above 150-day & 200-day MA',
-    help: 'Closing price is above both the 150-day and 200-day moving averages — confirms an intermediate and long-term uptrend.',
+    label: 'Price above 150-day & 200-day Moving Average (MA)',
+    help: 'Closing price is above both the 150-day and 200-day Moving Averages (MA) — confirms an intermediate and long-term uptrend.',
   },
   ma150_above_ma200: {
     label: '150-day MA above 200-day MA',
-    help: 'Long-term moving averages are stacking up the right way — bullish ordering.',
+    help: 'The intermediate-term Moving Average (MA) is above the long-term MA — bullish ordering. "MA" is just an average of the closing price over the last N days.',
   },
   ma200_trending_up: {
     label: '200-day MA trending up',
-    help: 'The 200-day moving average is rising over the last month — the long-term trend itself is up, not just the price.',
+    help: 'The 200-day Moving Average is rising over the last month — the long-term trend itself is up, not just the spot price.',
   },
   ma50_above_ma150_above_ma200: {
     label: '50-day > 150-day > 200-day MA',
-    help: 'All three key moving averages are stacked in proper Stage 2 order. Short above intermediate above long.',
+    help: 'All three key Moving Averages are stacked in proper Stage 2 order — short above intermediate above long.',
   },
   price_above_ma50: {
     label: 'Price above 50-day MA',
-    help: 'Closing price is above the 50-day moving average — short-term trend is also intact.',
+    help: 'Closing price is above the 50-day Moving Average — short-term trend is also intact.',
   },
   at_least_30pct_above_52w_low: {
     label: 'At least 30% above 52-week low',
-    help: 'Stock has already lifted at least 30% off its yearly low — meaning it has begun its advance, not just basing.',
+    help: 'Stock has already lifted at least 30% off its yearly low — meaning it has begun its advance, not just basing at the bottom.',
   },
   within_25pct_of_52w_high: {
     label: 'Within 25% of 52-week high',
     help: 'Stock is close enough to its yearly high to be a real breakout candidate, not a deep recovery play.',
   },
   rs_rank_at_least_70: {
-    label: 'Relative Strength rank ≥ 70',
-    help: 'Outperforming at least 70% of the market over the last 12 months. Minervini\'s minimum bar.',
+    label: 'Relative Strength (RS) rank ≥ 70',
+    help: 'Outperforming at least 70% of the market over the last 12 months. RS = Relative Strength rank, percentile-scored 1–99. This is Minervini\'s minimum bar.',
   },
 };
 
 const STAT_HELP: Record<string, string> = {
-  Stage: '1 Basing → 2 Advancing → 3 Topping → 4 Declining. Only Stage 2 is a buy candidate per Stan Weinstein\'s framework.',
-  RS: 'Relative Strength rank — percentile vs the entire market over 12 months. 99 = top 1%. Need ≥ 70.',
-  ADR: 'Average Daily Range — the typical daily move as a percentage of price. Higher means more volatility (more profit potential, more risk).',
-  '$ vol': 'Average daily dollar volume traded. A liquidity check — too low and you can\'t enter or exit cleanly.',
+  Stage: 'Stan Weinstein\'s 4-stage cycle: Stage 1 Basing → Stage 2 Advancing → Stage 3 Topping → Stage 4 Declining. Only Stage 2 is a buy candidate.',
+  RS: 'Relative Strength (RS) rank — percentile vs the entire market over 12 months. 99 = top 1% of all stocks. Need RS ≥ 70 to qualify as a SEPA candidate.',
+  ADR: 'Average Daily Range (ADR) — the typical daily move as a percentage of price. Higher ADR means more volatility (more profit potential, more risk).',
+  '$ vol': 'Average daily dollar volume traded (share price × shares traded). A liquidity check — too low and you can\'t enter or exit cleanly.',
 };
 
 const PageInfo = (
   <>
     <p>
-      <strong>Stock detail view</strong> — everything the scanner found about this
-      ticker, plus a position-sizing calculator.
+      <strong>Stock detail view</strong> — everything the SEPA (Specific Entry Point Analysis)
+      scanner found about this ticker, plus a position-sizing calculator.
     </p>
-    <p>The big number is the <strong>composite score</strong> (0-100): a blend of
-      trend strength, Relative Strength rank, base quality, fundamentals, and any
-      catalyst.</p>
+    <p>
+      The big number is the <strong>composite score</strong> (0–100): a blend of
+      trend strength, Relative Strength (RS) rank, base quality, fundamentals,
+      and any near-term catalyst.
+    </p>
+    <p>
+      <strong>Acronyms used on this page:</strong> SEPA = Specific Entry Point
+      Analysis · RS = Relative Strength · MA = Moving Average · ADR = Average
+      Daily Range · VCP = Volatility Contraction Pattern · CANSLIM = O'Neil's
+      Current quarterly EPS / Annual EPS / New highs / Supply &amp; demand /
+      Leader / Institutional sponsorship / Market direction · EPS = Earnings Per
+      Share · TTM = Trailing 12 Months · ROE = Return on Equity · IPO = Initial
+      Public Offering.
+    </p>
   </>
 );
 
@@ -66,30 +77,36 @@ type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider'
 const SmartMoneyInfo = (
   <>
     <p>
-      <strong>Smart Money & Sentiment</strong> — three independent lanes telling you
-      what credentialed analysts and credible commentators think about this name.
+      <strong>Smart Money &amp; Sentiment</strong> — three independent lanes
+      telling you what credentialed analysts and credible commentators think
+      about this name.
     </p>
     <ul>
       <li>
-        <strong>Analyst consensus</strong> — Wall Street ratings + price targets from
-        Finnhub. Look at the bullish % <em>and</em> the month-over-month delta — a
-        flat 60% bullish that just dropped from 80% is a tell.
+        <strong>Analyst consensus</strong> — Wall Street ratings + price
+        targets from Finnhub. Look at the bullish % <em>and</em> the
+        Month-over-Month (MoM) delta — a flat 60% bullish that just dropped
+        from 80% is a tell.
       </li>
       <li>
-        <strong>Curated commentary</strong> — body-regex matches against a small
-        allowlist of credible blogs (Damodaran, Bespoke, Morningstar). Most names
-        will have zero hits — that's expected.
+        <strong>Curated commentary</strong> — body-text matches against a
+        small allowlist of credible finance blogs (Aswath Damodaran, Bespoke
+        Investment Group, Morningstar). Most names will have zero hits —
+        that's expected.
       </li>
       <li>
-        <strong>Reddit discussion</strong> — top-scored threads from a 5-sub allowlist
-        (r/SecurityAnalysis, r/ValueInvesting, r/investing, r/stocks, r/options).
-        Skipping r/wallstreetbets by design.
+        <strong>Reddit discussion</strong> — top-scored threads from a
+        five-subreddit allowlist (r/SecurityAnalysis, r/ValueInvesting,
+        r/investing, r/stocks, r/options). r/wallstreetbets is skipped by
+        design.
       </li>
     </ul>
     <p className="sepa-note">
-      Note: 13F institutional holdings data is intentionally <em>excluded</em>. The
-      45-day filing lag and the empirical track record of 13F-clone strategies make
-      it net-misleading on a 1–12 week swing-trading timeframe.
+      Note: 13F institutional-holdings data is intentionally <em>excluded</em>.
+      A 13F is the quarterly SEC filing where institutions ($100M+ in assets
+      under management) disclose their long positions. The 45-day filing lag
+      and the empirical track record of 13F-clone strategies make 13F net-
+      misleading on a 1–12 week swing-trading timeframe.
     </p>
   </>
 );

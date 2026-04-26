@@ -4,17 +4,17 @@
  */
 
 const INDICATORS = [
-  { name: 'Rev Growth YoY', formula: '(RevQ_t − RevQ_{t-4}) / RevQ_{t-4}' },
-  { name: 'Gross Margin', formula: '(Revenue − COGS) / Revenue' },
-  { name: 'FCF Margin', formula: 'Free Cash Flow / Revenue' },
-  { name: 'Debt / Revenue', formula: 'Total Debt / TTM Revenue (lower = safer)' },
-  { name: 'PEG Ratio', formula: 'Forward P/E / Expected EPS Growth %' },
-  { name: 'RS Rating (IBD)', formula: 'Percentile rank of 12-month total return vs US stocks' },
-  { name: '3M Price Change', formula: '(Price_today − Price_{90d}) / Price_{90d}' },
-  { name: '50/200-day MA', formula: 'Simple moving average; price above = uptrend' },
-  { name: 'RSI (Wilder, 14)', formula: '100 − (100 / (1 + avgGain/avgLoss)); live in Live Stream' },
-  { name: 'VWAP', formula: 'Σ(Price × Volume) / Σ(Volume); live in Live Stream' },
-  { name: 'Earnings Surprise %', formula: '(Actual EPS − Consensus EPS) / |Consensus EPS|' },
+  { name: 'Revenue Year-over-Year (YoY) growth', formula: '(quarterly revenue this year − quarterly revenue same quarter last year) ÷ revenue same quarter last year' },
+  { name: 'Gross Margin', formula: '(Revenue − Cost of Goods Sold) ÷ Revenue' },
+  { name: 'Free Cash Flow (FCF) Margin', formula: 'Free Cash Flow ÷ Revenue' },
+  { name: 'Debt / Revenue', formula: 'Total Debt ÷ Trailing 12-Month (TTM) Revenue (lower = safer)' },
+  { name: 'Price/Earnings to Growth (PEG) Ratio', formula: 'Forward Price-to-Earnings (P/E) ÷ Expected Earnings Per Share (EPS) Growth %' },
+  { name: 'Relative Strength (RS) Rating, Investor\'s Business Daily (IBD)', formula: 'Percentile rank of 12-month total return vs all US stocks (1–99)' },
+  { name: '3-Month Price Change', formula: '(Price today − Price 90 days ago) ÷ Price 90 days ago' },
+  { name: '50/200-day Moving Average (MA)', formula: 'Simple moving average of close; price above = uptrend' },
+  { name: 'Relative Strength Index (RSI), Wilder, 14-period', formula: '100 − (100 ÷ (1 + avgGain/avgLoss)) — live in Live Stream' },
+  { name: 'Volume-Weighted Average Price (VWAP)', formula: 'Σ(Price × Volume) ÷ Σ(Volume) — live in Live Stream' },
+  { name: 'Earnings Surprise %', formula: '(Actual EPS − Consensus EPS) ÷ |Consensus EPS|' },
   { name: 'Insider Buying', formula: 'Net insider transactions last 90 days' },
 ];
 

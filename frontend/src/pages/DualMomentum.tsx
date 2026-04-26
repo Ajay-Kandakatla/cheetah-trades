@@ -39,14 +39,15 @@ const PageInfo = (
   <>
     <p>
       <strong>Dual Momentum</strong> is Gary Antonacci's two-gate ranking from
-      his 2014 book "Dual Momentum Investing".
+      his 2014 book <em>Dual Momentum Investing</em>.
     </p>
     <ul>
       <li>
         <strong>Absolute momentum</strong> — the trend filter. The asset's own
-        12-month total return must be positive (we approximate the risk-free
-        hurdle with SPY's 12-month return). Negative SPY 12m = defensive
-        regime, the strategy moves to bonds/cash in the canonical version.
+        12-month total return must be positive. We approximate the risk-free
+        hurdle with the S&amp;P 500 ETF (SPY)'s 12-month return. A negative SPY
+        12-month return signals a "defensive" regime — the canonical strategy
+        rotates to bonds or cash in that regime.
       </li>
       <li>
         <strong>Relative momentum</strong> — the winner filter. Among names
@@ -55,14 +56,21 @@ const PageInfo = (
       </li>
     </ul>
     <p>
-      <strong>How this complements SEPA:</strong> SEPA tells you when a leader
-      has a tradable entry (tight base + pivot). Dual Momentum tells you which
-      leaders the market is already paying for. A name that shows up on both
-      lists is a high-conviction candidate.
+      <strong>How this complements SEPA:</strong> SEPA (Specific Entry Point
+      Analysis) tells you when a leader has a tradable entry (tight base + a
+      defined pivot price). Dual Momentum tells you which leaders the market
+      is already paying for. A name that shows up on both lists is a high-
+      conviction candidate.
     </p>
     <p>
-      <em>Universe + RS data is reused from the latest /sepa/scan — run a scan
-      first if you've never scanned.</em>
+      <strong>Acronyms used on this page:</strong> SPY = the SPDR S&amp;P 500
+      Exchange-Traded Fund (ETF) · RS = Relative Strength (rank 1–99) · YTD =
+      Year-to-Date · ETF = Exchange-Traded Fund (a basket of stocks that
+      trades like one share).
+    </p>
+    <p>
+      <em>The universe + RS rank are reused from the latest /sepa/scan — run a
+      SEPA scan first if you've never scanned.</em>
     </p>
   </>
 );
@@ -100,11 +108,16 @@ export function DualMomentumPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const url = new URL(`${API}/sepa/dual-momentum`);
-      url.searchParams.set('top_n', String(topN));
-      url.searchParams.set('lookback_days', String(lookback));
-      url.searchParams.set('min_rs_rank', String(minRs));
-      const r = await fetch(url.toString());
+      // Build the query string manually so this works whether API is an
+      // absolute URL (production: http://api:8000) or empty / relative
+      // (Vite dev server, served from the same origin). `new URL()` chokes
+      // on relative paths without a base.
+      const params = new URLSearchParams({
+        top_n: String(topN),
+        lookback_days: String(lookback),
+        min_rs_rank: String(minRs),
+      });
+      const r = await fetch(`${API}/sepa/dual-momentum?${params.toString()}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j: DualMomentumPayload = await r.json();
       setData(j);

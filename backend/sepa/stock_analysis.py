@@ -35,7 +35,7 @@ CACHE_TTL_SEC = 60 * 60  # 1 hour — fundamentals/ESG are slow-changing
 # Bumped whenever the panel schema changes in a way that adds fields the UI
 # expects. Cached payloads tagged with an older version are auto-refreshed
 # instead of being served stale.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 
 # ---------------------------------------------------------------------------
@@ -277,9 +277,14 @@ def fundamental_panel(symbol: str) -> dict:
             "metrics": {"pe": pe, "forward_pe": fwd_pe, "price_to_book": pbv,
                         "price_to_sales": psales, "peg": peg},
             "formula": (
-                "Lower multiples = cheaper. Composite of P/E, P/B and P/S. "
-                "P/E 50→0pts, P/E 10→100pts; P/B 10→0pts, P/B 1→100pts; "
-                "P/S 20→0pts, P/S 1→100pts. Score = average of available legs."
+                "Lower multiples = cheaper. Composite of three valuation ratios:\n"
+                "• Price-to-Earnings (P/E) — share price ÷ earnings per share. "
+                "P/E of 50 scores 0 points, P/E of 10 scores 100 points.\n"
+                "• Price-to-Book (P/B) — share price ÷ book value per share. "
+                "P/B of 10 scores 0 points, P/B of 1 scores 100 points.\n"
+                "• Price-to-Sales (P/S) — share price ÷ revenue per share. "
+                "P/S of 20 scores 0 points, P/S of 1 scores 100 points.\n"
+                "Final score = average of the legs that returned a value."
             ),
         },
         "quality": {
@@ -289,10 +294,16 @@ def fundamental_panel(symbol: str) -> dict:
                         "profit_margin_pct": _pct(profit_margin),
                         "operating_margin_pct": _pct(op_margin)},
             "formula": (
-                "How efficiently the business turns capital into profit. "
-                "ROE 0→0pts, ROE 30%+→100pts; ROA 0→0pts, ROA 15%+→100pts; "
-                "profit margin 0→0pts, 25%+→100pts; operating margin 0→0pts, "
-                "30%+→100pts. Score = average."
+                "How efficiently the business turns capital into profit:\n"
+                "• Return on Equity (ROE) — net income ÷ shareholders' equity. "
+                "0% scores 0 points, 30%+ scores 100 points.\n"
+                "• Return on Assets (ROA) — net income ÷ total assets. "
+                "0% scores 0 points, 15%+ scores 100 points.\n"
+                "• Profit margin — net income ÷ revenue. "
+                "0% scores 0 points, 25%+ scores 100 points.\n"
+                "• Operating margin — operating income ÷ revenue. "
+                "0% scores 0 points, 30%+ scores 100 points.\n"
+                "Final score = average of the legs."
             ),
         },
         "growth_stability": {
@@ -301,9 +312,12 @@ def fundamental_panel(symbol: str) -> dict:
             "metrics": {"revenue_growth_pct": _pct(rev_growth),
                         "earnings_growth_pct": _pct(earn_growth)},
             "formula": (
-                "Year-over-year revenue + earnings growth. "
-                "Revenue YoY 0→0pts, 30%+→100pts; earnings YoY 0→0pts, "
-                "50%+→100pts. Score = average."
+                "How fast the business is expanding:\n"
+                "• Revenue Year-over-Year (YoY) growth — this year's revenue "
+                "vs the prior year. 0% scores 0 points, 30%+ scores 100 points.\n"
+                "• Earnings Year-over-Year (YoY) growth — this year's earnings "
+                "vs the prior year. 0% scores 0 points, 50%+ scores 100 points.\n"
+                "Final score = average of the two legs."
             ),
         },
         "financial_health": {
@@ -313,10 +327,17 @@ def fundamental_panel(symbol: str) -> dict:
             "metrics": {"debt_to_equity": debt_to_equity, "current_ratio": current_ratio,
                         "free_cashflow": fcf, "total_cash": total_cash},
             "formula": (
-                "Balance-sheet resilience. Debt/Equity 200%→0pts, 0→100pts; "
-                "current ratio 1.0→30pts, 2.5+→100pts; positive free cashflow "
-                "→80pts (negative→20); positive cash buffer →70pts. "
-                "Score = average."
+                "Balance-sheet resilience — can the company survive a downturn:\n"
+                "• Debt-to-Equity (D/E) — total debt ÷ shareholders' equity. "
+                "200% scores 0 points, 0% scores 100 points (less debt is healthier).\n"
+                "• Current ratio — current assets ÷ current liabilities. "
+                "1.0 scores 30 points, 2.5+ scores 100 points (more cushion).\n"
+                "• Free Cash Flow (FCF) positivity — does the business generate "
+                "cash after capital spending. Positive scores 80 points, "
+                "negative scores 20 points.\n"
+                "• Cash buffer — does total cash on hand cover near-term needs. "
+                "Positive scores 70 points.\n"
+                "Final score = average of the legs."
             ),
         },
     }

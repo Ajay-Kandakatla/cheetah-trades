@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const API = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8000';
 
@@ -107,26 +107,45 @@ function fmtBig(v: number | null | undefined): string {
   return `$${v.toFixed(0)}`;
 }
 
-/** Tiny inline ⓘ popover. Click the icon to toggle a tooltip. */
+/** Tiny inline ⓘ popover. Click the icon to toggle, click outside or × to close, Esc also closes. */
 function InfoDot({ title, body }: { title: string; body: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDoc);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDoc);
+    };
   }, [open]);
+
   return (
-    <span className="sa-info">
+    <span className="sa-info" ref={ref}>
       <button
         type="button"
         className="sa-info__btn"
         aria-label={`What is ${title}?`}
+        aria-expanded={open}
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
       >ⓘ</button>
       {open && (
-        <span className="sa-info__pop" onClick={(e) => e.stopPropagation()}>
-          <strong>{title}</strong>
+        <span className="sa-info__pop" role="dialog" aria-label={title}>
+          <span className="sa-info__head">
+            <strong>{title}</strong>
+            <button
+              type="button"
+              className="sa-info__close"
+              aria-label="Close"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+            >×</button>
+          </span>
           <span className="sa-info__body">{body}</span>
         </span>
       )}
@@ -190,14 +209,14 @@ function HeadlineStrip({ h }: { h: FundamentalHeadline }) {
     <div className="sa-headline">
       <div className="sa-headline__cell">
         <span className="sa-headline__label">
-          Market cap
+          Market capitalization
           <InfoDot
-            title="Market cap (company net worth)"
+            title="Market capitalization (current company net worth)"
             body={
               <>
-                <span>What the market is paying for the whole company today.</span>
-                <span className="sa-info__formula mono">price × shares outstanding</span>
-                <span>This is the headline "net worth" — it floats with the share price every day. Compare against revenue (P/S) or earnings (P/E) to gauge whether you're paying a reasonable multiple.</span>
+                <span>Often shortened to "market cap" — what the stock market is currently paying for the entire company.</span>
+                <span className="sa-info__formula mono">share price × shares outstanding</span>
+                <span>This is the headline "net worth" — it floats with the share price every day. Compare against revenue (Price-to-Sales ratio, or P/S) or earnings (Price-to-Earnings ratio, or P/E) to gauge whether you're paying a reasonable multiple.</span>
               </>
             }
           />
@@ -211,9 +230,9 @@ function HeadlineStrip({ h }: { h: FundamentalHeadline }) {
             title="Shareholders' equity (book value)"
             body={
               <>
-                <span>The accounting "net worth" — assets minus liabilities, what the shareholders would technically own if the company liquidated tomorrow.</span>
+                <span>The accounting "net worth" — total assets minus total liabilities. What the shareholders would technically own if the company sold everything and paid off all debts tomorrow.</span>
                 <span className="sa-info__formula mono">book value per share × shares outstanding</span>
-                <span>Differs from market cap because the market prices in future growth. The ratio market cap ÷ equity is the price-to-book (P/B) ratio.</span>
+                <span>Differs from market capitalization because the market prices in expected future growth. The ratio market cap ÷ equity is the Price-to-Book (P/B) ratio — higher means the market expects a lot of growth above what's already on the balance sheet.</span>
               </>
             }
           />
@@ -222,14 +241,14 @@ function HeadlineStrip({ h }: { h: FundamentalHeadline }) {
       </div>
       <div className="sa-headline__cell">
         <span className="sa-headline__label">
-          Revenue (TTM)
+          Revenue · Trailing 12 months (TTM)
           <InfoDot
-            title="Revenue — trailing 12 months"
+            title="Revenue — Trailing 12 months (TTM)"
             body={
               <>
-                <span>Top-line sales over the last four reported quarters. The "actual money the business brought in," before any costs or taxes.</span>
-                <span className="sa-info__formula mono">sum of last 4 quarters' total revenue</span>
-                <span>Revenue YoY growth is what feeds the Growth Stability axis. Compare against market cap to compute P/S — high P/S means the market is paying many years' worth of sales upfront.</span>
+                <span>Top-line sales over the last four reported quarters. The actual money the business brought in, before any costs, expenses, or taxes are deducted. "TTM" stands for Trailing Twelve Months.</span>
+                <span className="sa-info__formula mono">sum of last 4 quarterly revenue figures</span>
+                <span>Revenue Year-over-Year (YoY) growth — this year vs the same period last year — is what feeds the Growth Stability axis. Compare against market capitalization to compute Price-to-Sales (P/S) — a high P/S means the market is paying many years' worth of sales upfront.</span>
               </>
             }
           />
@@ -239,14 +258,14 @@ function HeadlineStrip({ h }: { h: FundamentalHeadline }) {
       {h.enterprise_value != null && (
         <div className="sa-headline__cell">
           <span className="sa-headline__label">
-            Enterprise value
+            Enterprise Value (EV)
             <InfoDot
-              title="Enterprise value"
+              title="Enterprise Value (EV)"
               body={
                 <>
-                  <span>What it would actually cost an acquirer to buy the whole company outright — market cap plus debt, minus cash on hand.</span>
-                  <span className="sa-info__formula mono">market cap + total debt − total cash</span>
-                  <span>EV/Revenue and EV/EBITDA are the multiples acquirers actually pay attention to.</span>
+                  <span>The total cost an acquirer would pay to buy the whole business outright. Market capitalization tells you what the equity is worth; Enterprise Value adds the debt that the acquirer would inherit and subtracts the cash they would absorb.</span>
+                  <span className="sa-info__formula mono">market capitalization + total debt − total cash</span>
+                  <span>Acquirers care about EV/Revenue and EV/EBITDA (Earnings Before Interest, Taxes, Depreciation, and Amortization) more than P/E because those ratios are capital-structure-neutral.</span>
                 </>
               }
             />
@@ -278,12 +297,12 @@ function FundamentalSection({ data }: { data: FundamentalPanel }) {
               body={
                 <>
                   <span>Four independent axes, each scored 0–100 (higher = better), composed from yfinance's free-tier <code>Ticker.info</code> snapshot — no paid feeds.</span>
-                  <span><strong>Valuation</strong> — average of P/E, P/B and P/S, each linearly inverted (lower multiples score higher).</span>
-                  <span><strong>Quality</strong> — average of ROE, ROA, profit margin and operating margin (higher score = more efficient).</span>
-                  <span><strong>Growth Stability</strong> — average of revenue YoY and earnings YoY (higher score = faster growth).</span>
-                  <span><strong>Financial Health</strong> — debt/equity, current ratio, free cashflow positivity, cash buffer.</span>
+                  <span><strong>Valuation</strong> — average of Price-to-Earnings (P/E), Price-to-Book (P/B) and Price-to-Sales (P/S) ratios, each linearly inverted (lower multiples score higher).</span>
+                  <span><strong>Quality</strong> — average of Return on Equity (ROE), Return on Assets (ROA), profit margin and operating margin (higher score = more efficient).</span>
+                  <span><strong>Growth Stability</strong> — average of revenue Year-over-Year (YoY) and earnings YoY (higher score = faster growth).</span>
+                  <span><strong>Financial Health</strong> — Debt-to-Equity (D/E) ratio, current ratio, Free Cash Flow (FCF) positivity, cash buffer.</span>
                   <span className="sa-info__formula mono">Each axis: missing legs are dropped; score = average of the legs that returned a value. The triangle marker shows where the score lands on the 0–100 track.</span>
-                  <span>The strip above shows the underlying figures: market cap (price × shares), shareholders' equity (book × shares), TTM revenue, and enterprise value (market cap + debt − cash).</span>
+                  <span>The strip above shows the underlying figures: market capitalization (share price × shares outstanding), shareholders' equity (book value × shares outstanding), Trailing 12-Month (TTM) revenue, and Enterprise Value (market cap + debt − cash).</span>
                   <span><em>Click the ⓘ on each axis below for the exact scaling formula.</em></span>
                 </>
               }
@@ -362,10 +381,11 @@ function TechnicalSection({ data }: { data: TechnicalPanel }) {
               title="Technical sentiment — how it's derived"
               body={
                 <>
-                  <span><strong>Short-term (2–6 weeks):</strong> 21-day return scaled −10%/+10% → 0–100, plus price-vs-10/20-day MA stack. Average gives Weak/Neutral/Strong.</span>
-                  <span><strong>Mid-term (6 weeks – 9 months):</strong> stage classifier (Stage 2 = 85, Stage 1 = 50, Stage 3/4 = 20), price-vs-50/200-day stack, 6-month return.</span>
-                  <span><strong>Long-term (9 months – 2 years):</strong> 12-month return scaled −30%/+50%, 200-day MA slope (rising = 75 / falling = 30), price-vs-200-day MA.</span>
-                  <span className="sa-info__formula mono">Weak &lt; 40 ≤ Neutral &lt; 70 ≤ Strong</span>
+                  <span>Three time horizons, each scored Weak / Neutral / Strong purely from price action — no fundamentals.</span>
+                  <span><strong>Short-term (2–6 weeks):</strong> 21-day return scaled from −10% to +10% → 0–100 points, plus how the price stacks against the 10-day and 20-day Moving Averages (MA). Average of the legs gives the cell.</span>
+                  <span><strong>Mid-term (6 weeks – 9 months):</strong> Stan Weinstein's stage classifier (Stage 2 advancing = 85 points, Stage 1 basing = 50, Stage 3 topping or Stage 4 declining = 20), how price stacks against the 50-day and 200-day MAs, and 6-month return.</span>
+                  <span><strong>Long-term (9 months – 2 years):</strong> 12-month return scaled from −30% to +50%, the slope of the 200-day MA (rising = 75 points / falling = 30), and whether price is above the 200-day MA.</span>
+                  <span className="sa-info__formula mono">Weak: score &lt; 40 · Neutral: 40 ≤ score &lt; 70 · Strong: score ≥ 70</span>
                 </>
               }
             />
@@ -417,12 +437,14 @@ function EsgSection({ data }: { data: EsgPanel }) {
           <h3>
             Environmental, social, &amp; governance
             <InfoDot
-              title="ESG — how it's derived"
+              title="Environmental, Social, and Governance (ESG) — how it's derived"
               body={
                 <>
-                  <span>Sustainalytics publishes per-issuer ESG <em>risk</em> scores (lower = better). yfinance exposes them on `Ticker.sustainability`.</span>
-                  <span className="sa-info__formula mono">quality = 10 − (risk / 4), clamped to 0–10</span>
-                  <span><strong>Leader</strong> ≥ 7, <strong>Average</strong> 4–7, <strong>Laggard</strong> &lt; 4. Industry quartile is from the peer-percentile field on the same payload.</span>
+                  <span>"ESG" stands for Environmental, Social, and Governance — three dimensions that measure how responsibly a company operates beyond just financial returns.</span>
+                  <span>Sustainalytics (a Morningstar subsidiary) publishes per-company ESG <em>risk</em> scores where <strong>lower numbers are better</strong> (less exposure to ESG risks). The free yfinance library exposes them on <code>Ticker.sustainability</code>.</span>
+                  <span className="sa-info__formula mono">quality score = 10 − (risk score / 4), clamped to 0–10</span>
+                  <span>We invert the risk score to a 0–10 quality score so higher = better, matching how the rest of the app reads. Bands:</span>
+                  <span><strong>Leader</strong> ≥ 7 · <strong>Average</strong> 4–7 · <strong>Laggard</strong> &lt; 4. The industry quartile (1 worst → 4 best) comes from the peer-percentile field on the same Sustainalytics payload.</span>
                 </>
               }
             />
@@ -460,10 +482,14 @@ function AnalystSection({ data }: { data: AnalystPanelData }) {
               title="Equity Summary Score — how it's derived"
               body={
                 <>
-                  <span>Finnhub aggregates Wall Street ratings into monthly buckets (Strong Buy / Buy / Hold / Sell / Strong Sell). We weight them and rescale to 0–10.</span>
-                  <span className="sa-info__formula mono">weighted = (2·sb + 1·b − 1·s − 2·ss) / total<br/>score = (weighted + 2) / 4 × 10</span>
-                  <span><strong>Very Bullish</strong> ≥ 8, <strong>Bullish</strong> 6.5–8, <strong>Neutral</strong> 4–6.5, <strong>Bearish</strong> 2–4, <strong>Very Bearish</strong> &lt; 2.</span>
-                  <span>The 12-bar history shows the rating distribution per month over the last year.</span>
+                  <span>Finnhub aggregates Wall Street analyst ratings into monthly buckets (Strong Buy / Buy / Hold / Sell / Strong Sell). We weight each rating, average across the analysts in the latest month, and rescale to a 0–10 score.</span>
+                  <span className="sa-info__formula mono">
+                    weighted = (2 × strongBuy + 1 × buy − 1 × sell − 2 × strongSell) / total<br/>
+                    score (0–10) = (weighted + 2) / 4 × 10
+                  </span>
+                  <span>Bands:</span>
+                  <span><strong>Very Bullish</strong> ≥ 8 · <strong>Bullish</strong> 6.5–8 · <strong>Neutral</strong> 4–6.5 · <strong>Bearish</strong> 2–4 · <strong>Very Bearish</strong> &lt; 2.</span>
+                  <span>The 12-bar history below shows the analyst rating distribution per month over the last year — the colored stack on each bar represents the proportion of analysts in each rating tier (dark green = Strong Buy through dark red = Strong Sell).</span>
                 </>
               }
             />

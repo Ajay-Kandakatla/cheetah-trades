@@ -38,7 +38,15 @@ export function InfoButton({ title, children }: Props) {
       </button>
       {open && (
         <div className="info-button__pop" role="dialog" aria-label={title}>
-          <div className="info-button__title">{title}</div>
+          <div className="info-button__head">
+            <div className="info-button__title">{title}</div>
+            <button
+              type="button"
+              className="info-button__close"
+              aria-label="Close"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+            >×</button>
+          </div>
           <div className="info-button__body">{children}</div>
         </div>
       )}
