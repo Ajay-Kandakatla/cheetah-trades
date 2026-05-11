@@ -14,6 +14,131 @@
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
 #
+# Options Pulse (SOIR / Schaeffer's Open Interest Ratio).
+# Mon-Fri 5:30pm ET — daily SOIR snapshot across the Russell 1000 universe
+# (parallel via ThreadPoolExecutor; ~3-5 min for 1000 tickers @ 10 workers).
+# Runs after fast-scan so the trend/score pillars come from fresh SEPA data.
+30     17    *    *    1-5  /usr/local/bin/python -m options.scanner russell1000
+#
+# Sunday 9pm ET — full SOIR sweep alongside the weekly research refresh
+# so Monday morning's brief has a complete options-pulse picture.
+0      21    *    *    0    /usr/local/bin/python -m options.scanner russell1000
+#
 # Position-aware alerts — every 5 min during market hours (9:30–16:00 ET, Mon–Fri).
 */5    9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli alerts
 0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m sepa.cli alerts
+#
+# Hourly VCP watcher — every hour during market hours. Runs a fast scan,
+# diffs against the previous run, and fires WhatsApp + browser notifications
+# only on NEWLY discovered VCP setups (avoids spamming on the same names).
+# Universe defaults to SEPA_UNIVERSE_MODE env var (russell1000 for Aj).
+0      9-16  *    *    1-5  /usr/local/bin/python -m sepa.cli vcp-watch
+#
+# Lifeboard — Mac Studio deal scraper. Cron fires every 5min around the clock;
+# the script self-rate-limits per the user-editable config.scan_interval_min
+# (default 30min). Edit interval/RAM target/discount threshold in the dashboard.
+*/5    *     *    *    *    /usr/local/bin/python -m lifeboard.macstudio scan
+#
+# Lifeboard — MacBook deal scraper DISABLED. User wants ≥256GB RAM minimum;
+# no MacBook reaches that tier (M5 Max tops out at 128GB), so MacBook deals
+# are categorically excluded from the use case. Lines kept commented for
+# reference in case the use case ever changes back to storage-tier filtering.
+# 0      2     *    *    *    /usr/local/bin/python -m lifeboard.macbook scan --silent
+# 0      7,12,17 *  *    *    /usr/local/bin/python -m lifeboard.macbook scan
+#
+# Lifeboard — Playwright-based scraper for sites that 403 our requests-based
+# scrapers (B&H, eBay). Runs hourly. Headless Chromium with realistic
+# fingerprint + asset-blocking handles the bot-protection edges that
+# requests can't get past. Persists to the same lifeboard_deals collection
+# the macstudio scraper writes to, with source tagged "(Playwright)" so
+# you can grep cron logs to see which path produced each row.
+0      *     *    *    *    /usr/local/bin/python -m lifeboard.playwright_scraper scan
+#
+# Supply / Demand atlas — refresh sector classifications daily at 6am ET so
+# the Morning Brief reads from cache (6h TTL aligns with this).
+0      6     *    *    *    /usr/local/bin/python -m supply_demand.tracker --force
+#
+# Catalysts — volume-spike alerts every 5 min during regular session
+# (9:30am–3:55pm ET, Mon-Fri). Each ticker fires AT MOST ONCE per session.
+# Sends WhatsApp via Twilio + records to Mongo so the UI can pop a
+# browser Notification when polling.
+*/5    9-15  *    *    1-5  /usr/local/bin/python -m catalysts.volume_alerts
+0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m catalysts.volume_alerts
+#
+# Catalysts — pre-market sweep at 4am, 6am, 8am, 9:25am ET on weekdays.
+# Pre-warms the /catalysts/premarket cache so the page is instant when
+# you open it before market open.
+0      4,6,8 *    *    1-5  /usr/local/bin/python -c "from catalysts.premarket import scan_premarket; scan_premarket()"
+25     9     *    *    1-5  /usr/local/bin/python -c "from catalysts.premarket import scan_premarket; scan_premarket()"
+#
+# Catalysts — forward calendar refresh once a day at 5am ET (cache TTL is
+# 6h but daily is plenty since these dates change slowly).
+0      5     *    *    *    /usr/local/bin/python -c "from catalysts.calendar import get_calendar; get_calendar(days=30, force=True)"
+#
+# Catalysts — hourly snapshots during market hours (9:30am-4:30pm ET) to
+# build the intraday timeline + stale + multi-day-accumulator views.
+# The scan endpoint records its own snapshot too, but cron guarantees
+# coverage even when nobody's hitting the page.
+30     9-16  *    *    1-5  /usr/local/bin/python -c "from catalysts.api import _full_scan; from catalysts import history; p = _full_scan(with_gemma=False); history.record_snapshot(p)"
+#
+# Learning loop — hourly resolver grades observations whose horizon expired.
+# Runs every hour around the clock so SEPA-tier observations get graded ~24h
+# after the scan that produced them. Cheap call (~few yfinance lookups).
+15     *     *    *    *    /usr/local/bin/python -c "from learning import resolver; resolver.resolve_pending()"
+#
+# Learning loop — daily calibration snapshot at 5pm ET (after fast-scan + after
+# the day's resolves are in). Writes one row per (source, window) into
+# signal_calibration_history so the accuracy-over-time chart has data.
+0      17    *    *    1-5  /usr/local/bin/python -c "from learning import calibrator; calibrator.aggregate(snapshot=True)"
+#
+# SEPA breakout watcher — every 15 min during regular session (9:30am-4pm ET).
+# Detects fresh high-vol breakouts on candidates AND rising-momentum (TWLO-style)
+# patterns where RS is climbing on a sustained WATCH/BUY name. Alerts surface
+# in the UI banner via /sepa/breakouts.
+*/15   9-15  *    *    1-5  /usr/local/bin/python -c "from sepa import breakouts; breakouts.detect_all()"
+0,15,30,45 16 * * 1-5  /usr/local/bin/python -c "from sepa import breakouts; breakouts.detect_all()"
+#
+# SEPA Juggernaut watcher — every 15 min during regular session (9:30am-4pm ET).
+# Watchlist-scoped: detects stocks under stealth institutional accumulation
+# (up/down vol ratio ≥ 1.5) WITH rising momentum (RS climb, score climb, or
+# +3% intraday burst) — the Nokia / NVTS pattern that fires BEFORE the official
+# high-volume breakout candle. Sends ONE consolidated push titled
+# "Juggernaut stocks today from SEPA watch List" the first time a new name
+# emerges each ET day; subsequent emergences replace that banner on-device.
+*/15   9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli juggernauts
+0,15,30,45 16 * * 1-5  /usr/local/bin/python -m sepa.cli juggernauts
+#
+# Todos — every-minute reminder dispatcher. Fires push notifications for any
+# todo whose notify_at has passed and that hasn't been notified yet.
+*      *     *    *    *    /usr/local/bin/python -c "from todos import reminder; reminder.fire_due()"
+#
+# Todos — daily digest at 7 AM ET. Sends one push notification summarizing
+# important + today's items so the user starts the day with a clear list.
+0      7     *    *    *    /usr/local/bin/python -c "from todos import reminder; reminder.fire_daily_digest()"
+#
+# House — daily 8 AM ET snapshot of Redfin/Zillow/Realtor view+save+tour
+# counts. Scraper is best-effort; if it fails the user falls back to
+# entering numbers manually from the dashboard. Runs only for the
+# configured HOUSE_OWNER_EMAIL.
+0      8     *    *    *    /usr/local/bin/python -c "import os; from house import store, scraper as s; owner=os.getenv('HOUSE_OWNER_EMAIL','ajaykandakatla@gmail.com'); cfg=store.get_config(owner) or {}; m=s.scrape_all(redfin_url=cfg.get('redfin_url'), zillow_url=cfg.get('zillow_url'), realtor_url=cfg.get('realtor_url')); store.upsert_snapshot(owner, m) if m else None"
+#
+# Food — CONTINUOUS-FACTORY daily run at 4am ET. Three phases:
+#   1. revalidate_cache()  — drop dead videos (oEmbed check)
+#   2. refresh_stale(21)   — drop entries > 21 days old to find newer picks
+#   3. resolve_all()       — fill in everything missing (newly-added recipes
+#                            + replacements for what was just dropped)
+# Pure side-effect cron; no request-path Gemma calls because Mongo serves
+# whatever is cached even mid-rebuild.
+0      4     *    *    *    /usr/local/bin/python -m food.video_resolver factory 21
+#
+# Kids — same continuous-factory pattern. Runs 4:30am ET.
+30     4     *    *    *    /usr/local/bin/python -m kids.video_resolver factory 21
+#
+# DAILY warmers — pre-compute everything the phone hits so first load is
+# always cached. Runs 5am ET, before the user wakes up. Each module has
+# its own Mongo TTL, but warmer guarantees no cold-path Gemma calls on
+# the request path even right after a deploy.
+0      5     *    *    *    /usr/local/bin/python -m supply_demand.tracker --force
+5      5     *    *    *    /usr/local/bin/python -c "from food import planner as p, store as s; [p.suggest_today(u) for u in [s._default_pantry().get('owner_email') or 'ajaykandakatla@gmail.com']]"
+10     5     *    *    *    /usr/local/bin/python -c "from kids import activities as a, store as s; print('kids warm:', len(a.ACTIVITIES), 'activities')"
+15     5     *    *    *    /usr/local/bin/python -c "from overnight import movers as m; m.scan_movers(min_gap_pct=0.5)"

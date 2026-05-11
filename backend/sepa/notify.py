@@ -1,58 +1,86 @@
-"""WhatsApp notifications via Twilio.
+"""Notifications router — Web Push only.
 
-Configure with these env vars (`backend/.env`):
-  TWILIO_ACCOUNT_SID  — AC...
-  TWILIO_AUTH_TOKEN   — auth token (rotate if leaked)
-  TWILIO_FROM         — sender, e.g. whatsapp:+14155238886 (sandbox)
-  TWILIO_TO           — destination, e.g. whatsapp:+13025636375
+Twilio / WhatsApp was removed. All alerts now route through the Web Push
+pipeline — phone PWA, laptop browser, etc. The service worker on each
+device handles delivery and click-routing via the ``url`` field.
 
-If any are missing, send_whatsapp() logs and returns False — the rest of the
-app keeps working. The `twilio` package is imported lazily so the module is
-safe to import even when twilio isn't installed.
+Public API
+----------
+send_alert(title, body, *, url='/', kind='generic', ticker=None)
+    Structured payload with click routing.
 
-Sandbox setup: send "join <your-code>" from your WhatsApp to the Twilio
-sandbox number once (Twilio console shows your code). After that, outbound
-messages from this code arrive in your WhatsApp.
+send_whatsapp(body)
+    Legacy alias kept for backward compat with older call sites that
+    haven't been updated. Routes through send_alert.
 """
 from __future__ import annotations
 
 import logging
-import os
 from typing import Optional
 
 log = logging.getLogger("sepa.notify")
 
 
-def _config() -> Optional[dict]:
-    sid = os.getenv("TWILIO_ACCOUNT_SID")
-    tok = os.getenv("TWILIO_AUTH_TOKEN")
-    src = os.getenv("TWILIO_FROM")
-    dst = os.getenv("TWILIO_TO")
-    if not (sid and tok and src and dst):
-        return None
-    return {"sid": sid, "token": tok, "from": src, "to": dst}
+def _send_push(title: str, body: str, *, url: str, kind: str,
+               ticker: Optional[str]) -> int:
+    """Fire a notification to every subscribed device whose prefs allow this
+    ``kind`` — Web Push for browsers/iPhone, SSE-via-Mongo-outbox for the
+    native macOS app. Returns the (web_devices_reached + mac_users_enqueued)
+    count, mostly useful for tests/diagnostics."""
+    payload = {
+        "title": title,
+        "body": (body or "")[:300],
+        "tag": f"{kind}-{ticker}" if ticker else kind,
+        "url": url,
+        "kind": kind,
+        "ticker": ticker,
+    }
+    delivered = 0
+    # Web Push (browser + iPhone PWA).
+    try:
+        from push import sender
+        result = sender.send_to_all(
+            payload,
+            kind=kind if kind != "generic" else None,
+        )
+        delivered += result.get("sent", 0)
+    except Exception as exc:
+        log.warning("push delivery (web) failed: %s", exc)
+    # Native macOS app via the mac_outbox → SSE drain. Fully decoupled from
+    # web push, so a flaky pywebpush call never blocks Mac delivery (and vice
+    # versa). Same prefs schema, per-user fan-out.
+    try:
+        from push import mac_stream
+        delivered += mac_stream.enqueue_for_outbox(
+            payload,
+            kind=kind if kind != "generic" else None,
+        )
+    except Exception as exc:
+        log.warning("push delivery (mac) failed: %s", exc)
+    return delivered
+
+
+def send_alert(title: str, body: str, *,
+               url: str = "/",
+               kind: str = "generic",
+               ticker: Optional[str] = None) -> bool:
+    """Send a notification via Web Push. Returns True if at least one
+    device received it."""
+    pushed = _send_push(title=title, body=body, url=url,
+                        kind=kind, ticker=ticker)
+    return pushed > 0
 
 
 def send_whatsapp(body: str) -> bool:
-    """Send `body` via Twilio WhatsApp. Returns True on success."""
-    cfg = _config()
-    if cfg is None:
-        log.info("twilio not configured — skipping WhatsApp send")
+    """Legacy alias — routes through send_alert. Kept so any old callers
+    we missed continue working. The function name is now misleading but
+    breaking it would require a wider sweep."""
+    if not body:
         return False
-    try:
-        from twilio.rest import Client
-        client = Client(cfg["sid"], cfg["token"])
-        # WhatsApp body limit is 1600 chars; trim to be safe.
-        msg = client.messages.create(
-            from_=cfg["from"],
-            to=cfg["to"],
-            body=body[:1500],
-        )
-        log.info("whatsapp sent sid=%s", msg.sid)
-        return True
-    except Exception as exc:
-        log.warning("whatsapp send failed: %s", exc)
-        return False
+    lines = body.split("\n", 1)
+    title = lines[0][:80].lstrip("*").strip()
+    rest = lines[1] if len(lines) > 1 else ""
+    return send_alert(title=title, body=rest or title, kind="generic")
 
 
 # ---------------------------------------------------------------------------

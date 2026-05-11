@@ -58,6 +58,27 @@ def main() -> int:
     s_re = sub.add_parser("rescan", help="Refresh a single ticker")
     s_re.add_argument("symbol", type=str)
 
+    s_vcp = sub.add_parser(
+        "vcp-watch",
+        help="Run a fast scan, diff against last run, notify on new VCP setups",
+    )
+    s_vcp.add_argument("--include-power-play", action="store_true",
+                       help="Also alert on Power Play setups (looser than VCP).")
+    s_vcp.add_argument("--mode", type=str, default=None,
+                       help="Universe mode: curated/sp500/russell1000/expanded. "
+                            "Defaults to SEPA_UNIVERSE_MODE env var.")
+
+    s_jug = sub.add_parser(
+        "juggernauts",
+        help="Scan watchlist for accumulation + rising-momentum tickers and "
+             "send the consolidated push if new names emerged today.",
+    )
+    s_jug.add_argument("--force", action="store_true",
+                       help="Send push even when no NEW names emerged today.")
+    s_jug.add_argument("--dry-run", action="store_true",
+                       help="Compute and print the set, don't persist state "
+                            "or fire a push.")
+
     args = p.parse_args()
 
     if args.cmd == "scan":
@@ -136,6 +157,44 @@ def main() -> int:
         latest = scanner.load_latest() or {"candidates": [], "all_results": []}
         # Not a full rescan — just force a price refresh; next /sepa/scan rebuilds.
         log.info("price cache refreshed for %s", args.symbol)
+        return 0
+
+    if args.cmd == "vcp-watch":
+        from . import vcp_watch
+        result = vcp_watch.run(
+            include_power_play=bool(args.include_power_play),
+            universe_mode=args.mode,
+        )
+        kind = "VCP+PP" if args.include_power_play else "VCP"
+        log.info(
+            "VCP-WATCH — %s setups: %d total · %d new · %d cleared · "
+            "notified=%d · %.1fs",
+            kind, result["current_setups"], result["new_count"],
+            result["cleared_count"], result["notified"], result["duration_sec"],
+        )
+        if result["new_symbols"]:
+            log.info("  NEW: %s", ", ".join(result["new_symbols"]))
+        if result["cleared_symbols"]:
+            log.info("  CLEARED: %s", ", ".join(result["cleared_symbols"]))
+        return 0
+
+    if args.cmd == "juggernauts":
+        from . import juggernaut
+        r = juggernaut.scan(force_push=bool(args.force), dry_run=bool(args.dry_run))
+        if not r.get("ok"):
+            log.warning("JUGGERNAUT — skipped: %s", r.get("reason"))
+            return 0
+        log.info(
+            "JUGGERNAUT — %d current · %d new · pushed=%d (%s)",
+            len(r["juggernauts"]), len(r["new_today"]),
+            r["pushed"], r["today_et"],
+        )
+        if r["new_today"]:
+            log.info("  NEW: %s", ", ".join(r["new_today"]))
+        for j in r["juggernauts"][:10]:
+            log.info("    %s  ud=%s  todayVol=%.2f×  %s",
+                     j["ticker"], j["ud_ratio"], j["today_vol_mult"],
+                     j["momentum"])
         return 0
 
     return 1
