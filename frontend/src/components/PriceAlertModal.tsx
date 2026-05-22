@@ -58,6 +58,8 @@ export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Pr
   return createPortal(
     <div
       className="sepa-drawer-backdrop"
+      role="dialog"
+      aria-modal="true"
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
     >
@@ -75,7 +77,7 @@ export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Pr
               <div className="sepa-drawer__exchange mono">last ${currentPrice}</div>
             )}
           </div>
-          <button className="sepa-drawer__close" onClick={onClose}>×</button>
+          <button className="sepa-drawer__close" onClick={onClose} aria-label="Close alert">×</button>
         </header>
 
         <form className="sepa-alert-form" onSubmit={submit}>
