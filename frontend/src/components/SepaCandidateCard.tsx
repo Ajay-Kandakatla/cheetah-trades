@@ -47,6 +47,7 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
             type="button"
             className="sepa-card__bell"
             title="Set alert"
+            aria-label={`Set price alert for ${row.symbol}`}
             onClick={(e) => { e.stopPropagation(); setAlertOpen(true); }}
           >
             🔔
