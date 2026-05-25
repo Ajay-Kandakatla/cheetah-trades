@@ -1,0 +1,3 @@
+## 2024-05-25 - Accessible Interactive Table Headers
+**Learning:** Interactive table headers (like those for sorting) used directly on `<th>` elements via `onClick` are inaccessible to keyboard users and lack semantic context for screen readers. Using `role="button"` or, better yet, actual `<button>` elements inside `<th>` provides keyboard navigability (focus states, tab order). Additionally, `aria-sort` on the `<th>` is required to communicate sort state to screen readers.
+**Action:** Always wrap interactive table header text in `<button type="button">` and manage sort state with `aria-sort` on the parent `<th>` element rather than attaching `onClick` directly to the `<th>`.

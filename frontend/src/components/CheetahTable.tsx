@@ -76,6 +76,9 @@ export function CheetahTable({ stocks }: Props) {
     return sortAsc ? ' ↑' : ' ↓';
   }
 
+  const ariaSort = (col: SortKey): 'ascending' | 'descending' | 'none' =>
+    sortKey === col ? (sortAsc ? 'ascending' : 'descending') : 'none';
+
   return (
     <section className="card">
       <div className="controls">
@@ -117,16 +120,56 @@ export function CheetahTable({ stocks }: Props) {
         <table>
           <thead>
             <tr>
-              <th onClick={() => toggleSort('ticker')}>Tier 1{sortIcon('ticker')}</th>
-              <th onClick={() => toggleSort('sector')}>Sector{sortIcon('sector')}</th>
-              <th onClick={() => toggleSort('mcap')}>Mkt Cap{sortIcon('mcap')}</th>
-              <th onClick={() => toggleSort('revGrowth')}>Rev YoY{sortIcon('revGrowth')}</th>
-              <th onClick={() => toggleSort('grossMargin')}>GM{sortIcon('grossMargin')}</th>
-              <th onClick={() => toggleSort('debtRev')}>D/R{sortIcon('debtRev')}</th>
-              <th onClick={() => toggleSort('peg')}>PEG{sortIcon('peg')}</th>
-              <th onClick={() => toggleSort('rs')}>RS{sortIcon('rs')}</th>
-              <th onClick={() => toggleSort('perf3m')}>3M{sortIcon('perf3m')}</th>
-              <th onClick={() => toggleSort('score')}>Score{sortIcon('score')}</th>
+              <th aria-sort={ariaSort('ticker')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('ticker')}>
+                  Tier 1{sortIcon('ticker')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('sector')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('sector')}>
+                  Sector{sortIcon('sector')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('mcap')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('mcap')}>
+                  Mkt Cap{sortIcon('mcap')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('revGrowth')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('revGrowth')}>
+                  Rev YoY{sortIcon('revGrowth')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('grossMargin')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('grossMargin')}>
+                  GM{sortIcon('grossMargin')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('debtRev')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('debtRev')}>
+                  D/R{sortIcon('debtRev')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('peg')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('peg')}>
+                  PEG{sortIcon('peg')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('rs')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('rs')}>
+                  RS{sortIcon('rs')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('perf3m')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('perf3m')}>
+                  3M{sortIcon('perf3m')}
+                </button>
+              </th>
+              <th aria-sort={ariaSort('score')}>
+                <button type="button" className="cm-wl-sort" onClick={() => toggleSort('score')}>
+                  Score{sortIcon('score')}
+                </button>
+              </th>
               <th>Key Signals (formulas driving score)</th>
               <th>Tier 2 Competitors</th>
               <th>Tier 3 Competitors</th>
