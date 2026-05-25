@@ -103,6 +103,19 @@ def generate_brief(with_catalyst: bool = True) -> dict:
     # Watchlist sell-alerts = action != HOLD
     watchlist_alerts = [w for w in watchlist if w.get("action") and w["action"] != "HOLD"]
 
+    # Personal todos slice — important + today's, for the brief page + push body
+    # Cron-driven brief uses the default user identity. The frontend's
+    # MorningTodosCard hits /todos/brief-slice live so each user sees their own.
+    todos_slice: dict = {"important": [], "today": [], "upcoming_count": 0}
+    try:
+        from todos import store as todos_store
+        import os
+        default_user = os.getenv("DEFAULT_USER_EMAIL", "ajay@example.com")
+        todos_slice = todos_store.list_for_brief(user_email=default_user)
+    except Exception as exc:
+        import logging
+        logging.getLogger("sepa.brief").warning("todos slice failed: %s", exc)
+
     payload = {
         "generated_at": int(time.time()),
         "generated_at_iso": datetime.utcnow().isoformat() + "Z",
@@ -112,14 +125,33 @@ def generate_brief(with_catalyst: bool = True) -> dict:
         "watchlist_alerts": watchlist_alerts,
         "catalyst_today": catalyst_today,
         "insider_today": insider_today,
+        "todos": todos_slice,
         "scan_generated_at": scan.get("generated_at"),
     }
     BRIEF_PATH.write_text(json.dumps(payload, default=str))
 
-    # WhatsApp delivery — no-op if Twilio env vars are missing.
+    # Push notification — taps route to /morning so the user lands on the
+    # full Morning Brief view from a phone notification.
     try:
         from . import notify
-        notify.send_whatsapp(notify.format_brief(payload))
+        top_count = len(payload.get("top_candidates") or [])
+        alerts_count = len(payload.get("watchlist_alerts") or [])
+        important_count = len(todos_slice.get("important") or [])
+        today_count = len(todos_slice.get("today") or [])
+        mkt = (payload.get("market_context") or {}).get("label") or "?"
+        body_parts = [f"{top_count} candidate(s)"]
+        if alerts_count:
+            body_parts.append(f"{alerts_count} position alert(s)")
+        if important_count:
+            body_parts.append(f"⭐ {important_count} important task(s)")
+        if today_count:
+            body_parts.append(f"📅 {today_count} due today")
+        notify.send_alert(
+            title=f"📰 Morning brief — {mkt}",
+            body=" · ".join(body_parts),
+            url="/morning",
+            kind="morning_brief",
+        )
     except Exception as exc:
         import logging
         logging.getLogger("sepa.brief").warning("brief notify failed: %s", exc)

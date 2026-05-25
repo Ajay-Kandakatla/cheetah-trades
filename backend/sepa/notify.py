@@ -21,12 +21,72 @@ from typing import Optional
 log = logging.getLogger("sepa.notify")
 
 
+# ============================================================================
+# Cross-user safety: kinds that are PER-USER by definition and must NEVER
+# fall through to a system-wide broadcast.
+#
+# Why this exists:
+#   On 2026-05-17 a bug in todos.reminder.fire_due() was discovered: it
+#   called send_alert() without user_email, which routed through
+#   sender.send_to_all() and pushed every user's private todo reminder
+#   to every device on the system. Vineetha's nightly vitamin reminder
+#   (and worse — the daily love note from Ajay) was hitting every other
+#   subscribed user's phone.
+#
+#   Now fixed at the call site, but bugs like this are easy to
+#   re-introduce — someone adds a new private notification kind, forgets
+#   to pass user_email, and it broadcasts. This guard catches that
+#   regression at the notify-layer:
+#
+#     - If kind is in PRIVATE_KINDS and user_email is missing, REFUSE
+#       to send. Log loudly. Return False so the caller knows.
+#
+#   Private = "content meant for one specific user; embarrassing or
+#   confusing if leaked to others." Trading alerts (breakouts, regime,
+#   morning brief) are NOT private — they're the same data for everyone
+#   and intentionally broadcast.
+# ============================================================================
+PRIVATE_KINDS: frozenset[str] = frozenset({
+    "todo_reminder",        # personal todo pings (incl. love notes to spouse)
+    "todo_daily_digest",    # personalized digest
+    "price_alert",          # user-set price thresholds
+    "position_alert",       # user's own portfolio stops/targets
+})
+
+
 def _send_push(title: str, body: str, *, url: str, kind: str,
-               ticker: Optional[str]) -> int:
-    """Fire a notification to every subscribed device whose prefs allow this
-    ``kind`` — Web Push for browsers/iPhone, SSE-via-Mongo-outbox for the
-    native macOS app. Returns the (web_devices_reached + mac_users_enqueued)
-    count, mostly useful for tests/diagnostics."""
+               ticker: Optional[str],
+               user_email: Optional[str] = None) -> int:
+    """Fire a notification to subscribed devices whose prefs allow this
+    ``kind``. Two delivery channels in parallel: Web Push (browser /
+    iPhone PWA) and the mac_outbox → SSE drain for the native macOS app.
+
+    user_email scopes the broadcast to a single user — used by
+    per-user reminders (todos, household pings) so a notification meant
+    for Vineetha doesn't also fire on Ajay's phone. When None, the
+    notification goes to **every** matching subscription (the original
+    behavior used by SEPA-wide alerts, breakouts, etc.).
+
+    Safety guard (added 2026-05-17): if ``kind`` is in PRIVATE_KINDS
+    and ``user_email`` is missing/empty, we REFUSE to send and return 0.
+    The risk surface — accidentally pushing "💕 From Ajay…" to every
+    friend's phone — is large enough that "fail loudly" beats "fall
+    through to broadcast."
+
+    Returns the (web_devices_reached + mac_users_enqueued) total. The
+    diagnostic count is useful for tests/logs but callers usually
+    don't act on it.
+    """
+    # Belt-and-suspenders cross-user safety. See PRIVATE_KINDS docstring
+    # above for the rationale. We do this BEFORE building the payload
+    # so a misconfigured caller can't even race the network.
+    if kind in PRIVATE_KINDS and not (user_email and user_email.strip()):
+        log.error(
+            "notify: REFUSED to broadcast private kind=%s without user_email "
+            "(title=%r). Caller bug — pass user_email or use a non-private kind.",
+            kind, (title or "")[:80],
+        )
+        return 0
     payload = {
         "title": title,
         "body": (body or "")[:300],
@@ -39,10 +99,17 @@ def _send_push(title: str, body: str, *, url: str, kind: str,
     # Web Push (browser + iPhone PWA).
     try:
         from push import sender
-        result = sender.send_to_all(
-            payload,
-            kind=kind if kind != "generic" else None,
-        )
+        if user_email:
+            result = sender.send_to_user(
+                user_email,
+                payload,
+                kind=kind if kind != "generic" else None,
+            )
+        else:
+            result = sender.send_to_all(
+                payload,
+                kind=kind if kind != "generic" else None,
+            )
         delivered += result.get("sent", 0)
     except Exception as exc:
         log.warning("push delivery (web) failed: %s", exc)
@@ -54,6 +121,7 @@ def _send_push(title: str, body: str, *, url: str, kind: str,
         delivered += mac_stream.enqueue_for_outbox(
             payload,
             kind=kind if kind != "generic" else None,
+            target_user_email=user_email,
         )
     except Exception as exc:
         log.warning("push delivery (mac) failed: %s", exc)
@@ -63,11 +131,17 @@ def _send_push(title: str, body: str, *, url: str, kind: str,
 def send_alert(title: str, body: str, *,
                url: str = "/",
                kind: str = "generic",
-               ticker: Optional[str] = None) -> bool:
+               ticker: Optional[str] = None,
+               user_email: Optional[str] = None) -> bool:
     """Send a notification via Web Push. Returns True if at least one
-    device received it."""
+    device received it.
+
+    Pass user_email to target a single user (e.g. todo reminders,
+    household pings). Omit for system-wide alerts (breakouts, etc.).
+    """
     pushed = _send_push(title=title, body=body, url=url,
-                        kind=kind, ticker=ticker)
+                        kind=kind, ticker=ticker,
+                        user_email=user_email)
     return pushed > 0
 
 

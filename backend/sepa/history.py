@@ -115,6 +115,12 @@ def write_scan(payload: dict) -> Optional[str]:
                     "catalyst": r.get("catalyst"),
                     "insider": r.get("insider"),
                     "adr_pct": r.get("adr_pct"),
+                    # New fields for breakout + theme-cluster detection:
+                    "pioneer_themes": r.get("pioneer_themes") or [],
+                    "is_pioneer": bool(r.get("is_pioneer")),
+                    "volume": r.get("volume"),
+                    "last_close": r.get("last_close"),
+                    "day_change_pct": r.get("day_change_pct"),
                 })
             db.candidate_snapshots.insert_many(docs, ordered=False)
         log.info("history: persisted scan run %s with %d snapshots", run_id, len(rows))

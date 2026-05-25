@@ -69,7 +69,7 @@ def create(symbol: str, kind: str, level: float,
         "created_price": float(last) if last else None,
         "created_at": int(time.time()),
         "last_fired_at": 0,
-        "channels": channels or ["whatsapp", "browser"],
+        "channels": channels or ["push", "browser"],
         "note": note,
     }
     res = db.price_alerts.insert_one(doc)
@@ -168,9 +168,21 @@ def check_alerts() -> dict:
             msg = _format(a, last)
             channels = a.get("channels") or []
             sent_via: list[str] = []
-            if "whatsapp" in channels:
-                if notify.send_whatsapp(msg):
-                    sent_via.append("whatsapp")
+            # 'push' is the new channel name; 'whatsapp' kept for legacy
+            # alerts created before the migration. Both route to Web Push.
+            if "push" in channels or "whatsapp" in channels:
+                # Route notification taps to /sepa/{ticker} so the user lands
+                # on that ticker's detail page from a phone push.
+                title_line = msg.split("\n", 1)[0][:80].lstrip("*").strip()
+                body_rest = msg.split("\n", 1)[1] if "\n" in msg else ""
+                if notify.send_alert(
+                    title=f"🎯 {sym} · {title_line}" if title_line else f"🎯 {sym}",
+                    body=body_rest or msg,
+                    url=f"/sepa/{sym}",
+                    kind="price_alert",
+                    ticker=sym,
+                ):
+                    sent_via.append("push")
             # "browser" is a passive channel — we record the fire and the UI
             # picks it up on its next /sepa/alerts/recent poll.
             if "browser" in channels:
@@ -190,6 +202,23 @@ def check_alerts() -> dict:
             }
             db.price_alert_fires.insert_one(fire_doc)
             fired.append(_strip_id(fire_doc))
+            # Push the fire to every open tab via SSE so banners and
+            # the in-page "recent fires" feed update without waiting
+            # for the 30s poll cycle on the frontend.
+            try:
+                from events import publish as _bus_publish
+                _bus_publish("alert.fired", {
+                    "alert_id": str(a["_id"]),
+                    "symbol":   sym,
+                    "kind":     a["kind"],
+                    "level":    a["level"],
+                    "price":    float(last),
+                    "fired_at": now,
+                    "channels": sent_via,
+                    "message":  msg,
+                })
+            except Exception as exc:
+                log.debug("bus publish alert.fired failed: %s", exc)
 
     log.info("price alerts: checked=%d fired=%d", checked, len(fired))
     return {"checked": checked, "fired": len(fired), "details": fired}

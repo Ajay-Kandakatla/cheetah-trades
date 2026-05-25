@@ -79,6 +79,11 @@ def main() -> int:
                        help="Compute and print the set, don't persist state "
                             "or fire a push.")
 
+    sub.add_parser(
+        "stage-out-alerts",
+        help="Check live prices vs MA50/MA200 for Stage-2 candidates and fire alerts",
+    )
+
     args = p.parse_args()
 
     if args.cmd == "scan":
@@ -195,6 +200,13 @@ def main() -> int:
             log.info("    %s  ud=%s  todayVol=%.2f×  %s",
                      j["ticker"], j["ud_ratio"], j["today_vol_mult"],
                      j["momentum"])
+        return 0
+
+    if args.cmd == "stage-out-alerts":
+        from . import alerts
+        r = alerts.check_stage_outs()
+        log.info("STAGE-OUTS — checked=%d fired=%s skipped=%s",
+                 r.get("checked", 0), r.get("fired"), r.get("skipped"))
         return 0
 
     return 1

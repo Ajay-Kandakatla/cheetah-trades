@@ -681,10 +681,20 @@ def analysis_for(symbol: str, force_refresh: bool = False) -> dict:
             cached["cached"] = True
             return cached
 
+    # ETF detection — included up-front so the frontend can branch the header
+    # and skip CANSLIM rendering for funds. Mongo-cached 30d in etf_info_cache.
+    try:
+        from . import etf_info
+        etf = etf_info.etf_data_for(sym)
+    except Exception:
+        etf = None
+
     payload = {
         "symbol": sym,
         "fetched_at": int(time.time()),
         "fetched_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "is_etf":   bool(etf and etf.get("is_etf")),
+        "etf_info": etf if (etf and etf.get("is_etf")) else None,
         "fundamental": fundamental_panel(sym),
         "technical": technical_panel(sym),
         "esg": esg_panel(sym),

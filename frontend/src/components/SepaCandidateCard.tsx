@@ -1,59 +1,339 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
+// Lazy — modal payload + per-ticker fetch only when the user clicks.
+// Keeps the list-view bundle slim since most users won't tap every
+// whale chip on every visit.
 import type { SepaCandidate } from '../hooks/useSepa';
+import type { SoirRow } from '../hooks/useOptionsPulse';
+import type { WhalesFlowRow } from '../hooks/useWhalesFlow';
 import { SepaScoreBar } from './SepaScoreBar';
 import { SepaTrendDots } from './SepaTrendDots';
 import { PriceAlertModal } from './PriceAlertModal';
+import { WatchlistButton } from './WatchlistButton';
+import { useQuote } from '../hooks/useWatchlist';
+import { TradePlanInline } from './TradePlanInline';
+// Shared chip strip — renders the volume-driven signals (strong/accumulating/
+// distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
+// drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
+// both surfaces stay in sync. Pass subset="volume_only" so it skips the chips
+// that the card already renders via dedicated UI (score bar / trend dots /
+// RS bar / setup pill / stage badge).
+import { SepaSignalChips } from './SepaSignalChips';
 
-type Props = { row: SepaCandidate; onSelect: () => void };
+// Lazy — the moat-peers modal pulls a real API call and isn't needed
+// until the user actually taps the chip, so don't bloat the card chunk.
+const MoatPeersModal = lazy(() =>
+  import('./MoatPeersModal').then(m => ({ default: m.MoatPeersModal })),
+);
+const ProductLaunchesChip = lazy(() =>
+  import('./ProductLaunchesChip').then(m => ({ default: m.ProductLaunchesChip })),
+);
+const TickerAlertPresets = lazy(() =>
+  import('./TickerAlertPresets').then(m => ({ default: m.TickerAlertPresets })),
+);
+const WhalesFlowModal = lazy(() =>
+  import('./WhalesFlowModal').then(m => ({ default: m.WhalesFlowModal })),
+);
+const MacroContextModal = lazy(() =>
+  import('./MacroContextModal').then(m => ({ default: m.MacroContextModal })),
+);
+// Drill-in for clickable signal chips (hi-vol breakout, pocket pivot,
+// accumulation strength, money outflow, distribution-day warning).
+// Lazy because the spec map is ~400 lines and only loads when the
+// user actually taps a chip.
+const SignalDrillModal = lazy(() =>
+  import('./SignalDrillModal').then(m => ({ default: m.SignalDrillModal })),
+);
+import type { SignalKind } from './SignalDrillModal';
+import type { LivePrice } from '../hooks/useLivePrices';
+
+type Props = {
+  row: SepaCandidate;
+  /** Latest SOIR (Schaeffer's Open Interest Ratio) snapshot for this ticker.
+   *  Optional — when present, the card shows put/call open interest + signal. */
+  soir?: SoirRow;
+  /** Institutional flow signal from cached 13F / whales data. Optional —
+   *  chip only renders when present (i.e. ticker has been opened before
+   *  in the supply/demand panel). */
+  whalesFlow?: WhalesFlowRow;
+  /** Real-time bulk snapshot price from /sepa/live-prices (polled every 2 min
+   *  during market hours). When present, overlays the card with a LIVE badge
+   *  and uses live change_pct for the day-change display. */
+  livePrice?: LivePrice;
+  /** Optional banner rendered immediately above the card content. Used by
+   *  the /sepa setup-category tabs (Phase 2) to overlay the precomputed
+   *  trigger / stop / target / R:R for the active setup kind. Pass
+   *  undefined (default) to preserve the existing card chrome unchanged. */
+  setupOverlay?: ReactNode;
+  onSelect: (e?: React.MouseEvent) => void;
+};
 
 /**
  * SepaCandidateCard — replaces the dense table row with a glance-readable card.
  * Shows: rating + score, trend dots, RS, setup pill, pivot/stop with risk %,
  * stage badge, volume/late-base flags.
  */
-export function SepaCandidateCard({ row, onSelect }: Props) {
+export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverlay, onSelect }: Props) {
   const [alertOpen, setAlertOpen] = useState(false);
+  const [presetOpen, setPresetOpen] = useState(false);
+  const [moatOpen,  setMoatOpen]  = useState(false);
+  // Drill-in for the institutional-flow chip — full top-10 buyers
+  // and top-10 sellers fetched on demand.
+  const [whalesOpen, setWhalesOpen] = useState(false);
+  // Drill-in for the macro chip — Claude-generated geopolitics +
+  // futures + bear case + sector context, plus a few live headlines.
+  const [macroOpen, setMacroOpen] = useState(false);
   const setup = row.entry_setup;
   const riskPct = setup ? Math.abs((setup.pivot - setup.stop) / setup.pivot) * 100 : null;
   const stage = row.stage?.stage;
   const lateBase = row.base_count?.is_late_stage;
-  const accumulation = row.volume?.accumulation;
-  const breakout = row.volume?.high_vol_breakout;
+  // accStrength stays as a local because signalData below feeds it to
+  // the SignalDrillModal for cards where the user taps an accum chip.
+  // (The other v2 volume locals — pocketPivot / cmfSignal / distDays /
+  // breakout / accumulation — were inlined as chip render-conditions and
+  // moved to <SepaSignalChips subset="volume_only"> on 2026-05-22.)
+  const accStrength  = row.volume?.accumulation_strength;
 
-  return (
+  // One state slot for whatever signal-drill modal is open (or null).
+  // Used instead of a boolean per chip because at most one is open at
+  // a time. Click handlers set this; the modal at the bottom of the
+  // card reads it.
+  const [openSignal, setOpenSignal] = useState<SignalKind | null>(null);
+  // Snapshot of all data the modal might read — built once per render
+  // from the candidate row. Includes both volume signals AND score
+  // components so any chip can open into a meaningful drill view.
+  const signalData = {
+    symbol:                row.symbol,
+    // Volume-signal fields
+    last_vol:              (row.volume as any)?.last_vol ?? null,
+    avg_vol_50:            (row.volume as any)?.avg_vol_50 ?? null,
+    up_down_vol_ratio:     row.volume?.up_down_vol_ratio ?? null,
+    last_close:            row.last_close ?? null,
+    recent_21d_high:       (row.volume as any)?.recent_21d_high ?? null,
+    accumulation_strength: accStrength ?? null,
+    pocket_pivot_detail:   (row.volume as any)?.pocket_pivot_detail ?? null,
+    cmf_20:                (row.volume as any)?.cmf_20 ?? null,
+    distribution_days_25:  row.volume?.distribution_days_25 ?? null,
+    accumulation_days_25:  row.volume?.accumulation_days_25 ?? null,
+    // Score-component fields (added 2026-05-22 for ranking transparency)
+    score:                 row.score ?? null,
+    rating:                row.rating ?? null,
+    trend_passed:          row.trend?.passed ?? null,
+    trend_checks:          (row.trend as any)?.checks ?? null,
+    rs_rank:               row.rs_rank ?? null,
+    stage_num:             (row.stage as any)?.stage ?? null,
+    stage_label:           (row.stage as any)?.label ?? null,
+    fundamentals_passed:   (row.fundamentals as any)?.passed ?? null,
+    adr_pct:               row.adr_pct ?? null,
+    base_count_n:          (row.base_count as any)?.base_count ?? null,
+    base_count_is_late:    lateBase ?? null,
+    setup_type:            setup?.type ?? null,
+    setup_pivot:           setup?.pivot ?? null,
+    setup_stop:            setup?.stop ?? null,
+    liquidity_liquid:      (row as any)?.liquidity?.liquid ?? null,
+    high_vol_breakout:     row.volume?.high_vol_breakout ?? null,
+    pocket_pivot:          row.volume?.pocket_pivot ?? null,
+    cmf_signal:            row.volume?.cmf_signal ?? null,
+  };
+
+  // Live intraday quote (Massive lastTrade-backed via /quote/{ticker}).
+  // SEPA's `last_close` is by-design the most recent COMPLETED daily bar
+  // (Minervini's templates run on EOD closes), but during regular hours
+  // that's stale by today's intraday move. We show both: close stays as
+  // the SEPA-honest source-of-truth, live as a "what's actually happening
+  // right now" overlay so the user isn't blindsided.
+  const liveQuote = useQuote(row.symbol);
+  const showLive =
+    liveQuote && liveQuote.ok &&
+    liveQuote.last_price != null &&
+    row.last_close != null &&
+    Math.abs(liveQuote.last_price - row.last_close) / row.last_close > 0.001;
+  const liveDeltaPct = showLive
+    ? ((liveQuote!.last_price! - row.last_close!) / row.last_close!) * 100
+    : null;
+
+  // Day-change tint — color the whole card so down-days pop visually.
+  // -2% threshold for "strong down" matches the chip color thresholds.
+  const dayClass = (() => {
+    const d = row.day_change_pct;
+    if (d == null) return '';
+    if (d <= -2) return 'sepa-card--day-down-strong';
+    if (d < 0)   return 'sepa-card--day-down';
+    if (d >= 2)  return 'sepa-card--day-up-strong';
+    if (d > 0)   return 'sepa-card--day-up';
+    return '';
+  })();
+
+  // When the parent passes a setup overlay (Phase 2 SEPA tabs), wrap the
+  // article so the overlay sits flush against the top of the card. The
+  // wrapper is display: contents-equivalent — purely structural — when
+  // there's no overlay, so existing layout behavior is preserved.
+  const cardBody = (
     <article
-      className={`sepa-card ${row.is_candidate ? 'is-candidate' : ''}`}
-      onClick={onSelect}
+      className={`sepa-card ${row.is_candidate ? 'is-candidate' : ''} ${dayClass}`}
+      onClick={(e) => onSelect(e)}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.currentTarget !== e.target) return;
         if (e.key === 'Enter' || e.key === ' ') onSelect();
       }}
+      title="Cmd/Ctrl-click to open in new tab"
     >
       <header className="sepa-card__head">
         <div className="sepa-card__sym">
           <div className="sepa-card__sym-line">
             <strong>{row.symbol}</strong>
+            <WatchlistButton ticker={row.symbol} />
             {stage != null && (
-              <span className={`sepa-stage sepa-stage--${stage}`}>S{stage}</span>
+              <span
+                role="button" tabIndex={0}
+                className={`sepa-stage sepa-stage--${stage}`}
+                title="Tap for Weinstein stage analysis + score contribution"
+                onClick={(e) => { e.stopPropagation(); setOpenSignal('stage'); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation(); e.preventDefault(); setOpenSignal('stage');
+                }}}
+                style={{ cursor: 'pointer' }}
+              >
+                S{stage}
+                <span className="sepa-stage__label">
+                  {' · '}
+                  {stage === 1 ? 'Basing' :
+                   stage === 2 ? 'Advancing' :
+                   stage === 3 ? 'Topping' :
+                   stage === 4 ? 'Declining' :
+                   '—'}
+                </span>
+              </span>
             )}
-            {lateBase && <span className="sepa-tag sepa-tag--warn" title="Late-stage base — exhaustion risk">late</span>}
+            {lateBase && (
+              <span
+                role="button" tabIndex={0}
+                className="sepa-tag sepa-tag--warn"
+                title="Tap for late-base framework + -8 penalty rationale"
+                onClick={(e) => { e.stopPropagation(); setOpenSignal('base_count_late'); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation(); e.preventDefault(); setOpenSignal('base_count_late');
+                }}}
+                style={{ cursor: 'pointer' }}
+              >
+                late · base #{row.base_count?.base_count ?? '?'}
+              </span>
+            )}
+            {row.is_etf && (
+              <span
+                className="sepa-tag sepa-tag--etf"
+                title={
+                  `Exchange-Traded Fund (ETF) — basket of underlying stocks. ` +
+                  `CANSLIM Earnings Per Share (EPS) / fundamentals don't apply; ` +
+                  `relevant metrics are Assets Under Management (AUM), expense ` +
+                  `ratio, dividend yield, and holdings.` +
+                  (row.etf_data?.category ? `\nCategory: ${row.etf_data.category}` : '') +
+                  (row.etf_data?.fund_family ? `\nIssuer: ${row.etf_data.fund_family}` : '')
+                }
+              >ETF</span>
+            )}
           </div>
           {row.name && <div className="sepa-card__name" title={row.name}>{row.name}</div>}
+          {row.last_close != null && (
+            <div className="sepa-card__price mono"
+                 title="Last completed daily close — SEPA scoring runs on EOD bars, not intraday">
+              <span className="sepa-card__price-num">${row.last_close.toFixed(2)}</span>
+              {row.day_change_pct != null && (
+                <span className={`sepa-card__price-day ${row.day_change_pct >= 0 ? 'is-up' : 'is-down'}`}>
+                  {row.day_change_pct >= 0 ? '▲' : '▼'} {Math.abs(row.day_change_pct).toFixed(2)}%
+                </span>
+              )}
+              <span className="sepa-card__price-tag mono">close</span>
+            </div>
+          )}
+          {/* Live overlay — only renders when intraday last differs from
+              the scan-time close. Uses /quote/{symbol} (Massive lastTrade
+              with 60s server cache + 60s client memo). */}
+          {showLive && (
+            <div className={`sepa-card__price sepa-card__price--live mono ${liveDeltaPct! >= 0 ? 'is-up' : 'is-down'}`}
+                 title={
+                   liveQuote?._extended
+                     ? `Overnight / extended-hours print (${liveQuote._ext_type ?? 'extended'}) via StockTwits. Includes Blue Ocean ATS overnight session.`
+                     : `Intraday last trade as of ${liveQuote?.as_of ?? '—'}. Differs from close by ${liveDeltaPct!.toFixed(2)}% — SEPA pillars still use the close.`
+                 }>
+              <span className="sepa-card__price-num">${liveQuote!.last_price!.toFixed(2)}</span>
+              <span className={`sepa-card__price-day ${liveDeltaPct! >= 0 ? 'is-up' : 'is-down'}`}>
+                {liveDeltaPct! >= 0 ? '▲' : '▼'} {Math.abs(liveDeltaPct!).toFixed(2)}%
+              </span>
+              <span className="sepa-card__price-tag sepa-card__price-tag--live mono">
+                {liveQuote?._extended ? '🌙 overnight' : 'live'}
+              </span>
+            </div>
+          )}
+          {/* Bulk snapshot overlay — from /sepa/live-prices, polled every 2 min
+              during market hours. Shows live price + change_pct with a LIVE badge.
+              Rendered only when livePrice is available AND the per-card useQuote
+              didn't already cover it (avoids double-showing). */}
+          {livePrice && livePrice.price != null && !showLive && (
+            <div
+              className={`sepa-card__price sepa-card__price--live mono ${
+                (livePrice.change_pct ?? 0) >= 0 ? 'is-up' : 'is-down'
+              }`}
+              title="Real-time price from Massive bulk snapshot (refreshed every 2 min during market hours). SEPA scoring still uses the official daily close."
+            >
+              <span className="sepa-card__price-num">${livePrice.price.toFixed(2)}</span>
+              {livePrice.change_pct != null && (
+                <span className={`sepa-card__price-day ${livePrice.change_pct >= 0 ? 'is-up' : 'is-down'}`}>
+                  {livePrice.change_pct >= 0 ? '▲' : '▼'} {Math.abs(livePrice.change_pct).toFixed(2)}%
+                </span>
+              )}
+              <span className="sepa-card__price-tag sepa-card__price-tag--live mono">
+                🟢 LIVE
+              </span>
+            </div>
+          )}
         </div>
         <div className="sepa-card__head-right">
-          <button
-            type="button"
-            className="sepa-card__bell"
-            title="Set alert"
-            onClick={(e) => { e.stopPropagation(); setAlertOpen(true); }}
-          >
-            🔔
-          </button>
-          <SepaScoreBar score={row.score} rating={row.rating} size="sm" />
+          <div className="sepa-card__head-right-top">
+            <button
+              type="button"
+              className="sepa-card__bell"
+              title="Quick alerts — tap a preset (-5%, -10%, +20%, etc.) instead of typing a number"
+              onClick={(e) => { e.stopPropagation(); setPresetOpen(true); }}
+            >
+              🔔
+            </button>
+            {/* Score bar wrapped in a clickable button so the user can
+                tap the score to see the breakdown of which components
+                contributed. Same role+tabIndex pattern as the volume chips. */}
+            <span
+              role="button" tabIndex={0}
+              title="Tap to see score breakdown — which components contributed how much"
+              onClick={(e) => { e.stopPropagation(); setOpenSignal('score_breakdown'); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation(); e.preventDefault(); setOpenSignal('score_breakdown');
+              }}}
+              style={{ cursor: 'pointer', display: 'inline-block' }}
+            >
+              <SepaScoreBar score={row.score} rating={row.rating} size="sm" />
+            </span>
+          </div>
+          {/* Buy / Stop / +1R inline summary — sits in the right column
+              under the score so the entry/stop levels read on the same
+              eye-line as the conviction score. Full plan with all levels
+              is on the detail page. */}
+          {row.trade_plan && (
+            <TradePlanInline plan={row.trade_plan} lastClose={row.last_close} />
+          )}
         </div>
       </header>
+
+      {presetOpen && (
+        <Suspense fallback={null}>
+          <TickerAlertPresets
+            symbol={row.symbol}
+            currentPrice={liveQuote?.last_price ?? row.last_close ?? null}
+            onClose={() => setPresetOpen(false)}
+            onCustomLevel={() => setAlertOpen(true)}
+          />
+        </Suspense>
+      )}
 
       {alertOpen && (
         <PriceAlertModal
@@ -63,13 +343,68 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
         />
       )}
 
+      {moatOpen && (
+        <Suspense fallback={null}>
+          <MoatPeersModal symbol={row.symbol} onClose={() => setMoatOpen(false)} />
+        </Suspense>
+      )}
+
+      {whalesOpen && (
+        <Suspense fallback={null}>
+          <WhalesFlowModal symbol={row.symbol} onClose={() => setWhalesOpen(false)} />
+        </Suspense>
+      )}
+
+      {macroOpen && (
+        <Suspense fallback={null}>
+          <MacroContextModal symbol={row.symbol} onClose={() => setMacroOpen(false)} />
+        </Suspense>
+      )}
+
+      {/* Signal drill-in — one modal slot used by all 6 clickable volume
+          chips (strong/accumulating/distributing accumulation, pocket
+          pivot, hi-vol breakout, money outflow, dist-days warning).
+          Pattern: chip onClick sets openSignal; modal reads it; close
+          resets to null. */}
+      {openSignal && (
+        <Suspense fallback={null}>
+          <SignalDrillModal
+            kind={openSignal}
+            data={signalData}
+            onClose={() => setOpenSignal(null)}
+          />
+        </Suspense>
+      )}
+
       <div className="sepa-card__body">
-        <div className="sepa-card__row">
+        {/* Trend row — clickable. Opens the trend_template drill showing
+            which of the 8 gates passed/failed. */}
+        <div
+          className="sepa-card__row"
+          role="button" tabIndex={0}
+          title={`Trend Template — passed ${row.trend.passed} of 8. Tap for gate-by-gate breakdown.`}
+          onClick={(e) => { e.stopPropagation(); setOpenSignal('trend_template'); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation(); e.preventDefault(); setOpenSignal('trend_template');
+          }}}
+          style={{ cursor: 'pointer' }}
+        >
           <span className="sepa-card__label">Trend</span>
           <SepaTrendDots checks={row.trend.checks} passed={row.trend.passed} />
         </div>
 
-        <div className="sepa-card__row">
+        {/* RS row — clickable. Opens the rs_rank drill explaining the
+            ≥70 gate + score contribution. */}
+        <div
+          className="sepa-card__row"
+          role="button" tabIndex={0}
+          title="RS rank — IBD-style 1-99 percentile. Tap for ≥70 gate explanation + score contribution."
+          onClick={(e) => { e.stopPropagation(); setOpenSignal('rs_rank'); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation(); e.preventDefault(); setOpenSignal('rs_rank');
+          }}}
+          style={{ cursor: 'pointer' }}
+        >
           <span className="sepa-card__label">RS</span>
           <div className="sepa-rs-bar">
             <div
@@ -83,32 +418,341 @@ export function SepaCandidateCard({ row, onSelect }: Props) {
 
         {setup && riskPct != null && (
           <div className="sepa-card__row sepa-card__setup">
-            <span className={`sepa-pill sepa-pill--${setup.type.toLowerCase()}`}>{setup.type}</span>
-            <span className="mono">
+            <span
+              role="button" tabIndex={0}
+              className={`sepa-pill sepa-pill--${setup.type.toLowerCase()}`}
+              title="Tap for setup detail + score contribution"
+              onClick={(e) => { e.stopPropagation();
+                const kind: SignalKind = setup.type === 'VCP' ? 'setup_vcp' : 'setup_power_play';
+                setOpenSignal(kind);
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation(); e.preventDefault();
+                const kind: SignalKind = setup.type === 'VCP' ? 'setup_vcp' : 'setup_power_play';
+                setOpenSignal(kind);
+              }}}
+              style={{ cursor: 'pointer' }}
+            >{setup.type === 'POWER_PLAY' ? 'Power Play' : setup.type}<span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span></span>
+            <span
+              className="mono"
+              title={
+                `Pivot $${setup.pivot} = buy point. Stop $${setup.stop} = exit. ` +
+                `Risk = (pivot − stop) / pivot × 100 = ${riskPct.toFixed(1)}%.\n\n` +
+                `⚠️ Evaluate stop at CLOSE (3:00 PM CT / 4:00 PM ET).\n` +
+                `Pre-close intraday touches are noise; a CLOSE below the stop is the ` +
+                `actual exit signal. Exception: an intraday move of −12% or more from ` +
+                `yesterday's close is a structural break — exit immediately.`
+              }
+            >
               ${setup.pivot} → stop ${setup.stop}{' '}
               <span className={`sepa-risk ${riskPct > 10 ? 'sepa-risk--bad' : riskPct > 7 ? 'sepa-risk--warn' : 'sepa-risk--ok'}`}>
                 ({riskPct.toFixed(1)}%)
               </span>
+              <span
+                style={{
+                  marginLeft: '0.3rem',
+                  padding: '0 4px',
+                  fontSize: '0.6rem',
+                  border: '1px solid var(--warn, #d97706)',
+                  color: 'var(--warn, #d97706)',
+                  borderRadius: 3,
+                  letterSpacing: '0.03em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                  cursor: 'help',
+                }}
+                aria-label="Stop is evaluated at close, not intraday"
+              >@ close ⓘ</span>
             </span>
           </div>
         )}
 
         <div className="sepa-card__flags">
-          {accumulation && <span className="sepa-flag sepa-flag--good">↑ accumulation</span>}
-          {breakout && <span className="sepa-flag sepa-flag--good">🚀 hi-vol breakout</span>}
+          {/* Volume signal chips — strong/accumulating/distributing accum,
+              pocket pivot, hi-vol breakout, money outflow, dist-days warning.
+              Until 2026-05-22 this was ~125 lines of inline JSX duplicated
+              between here and the SEPA detail page. Now it's the shared
+              <SepaSignalChips> component with `subset="volume_only"` so the
+              detail-page-specific chips (score, trend, RS, stage, setup, ADR)
+              don't render here — the card already shows those via its
+              dedicated score bar / trend dots / RS bar / setup pill / stage
+              badge UI, so re-rendering them as chips would double-up.
+              The shared component manages its own SignalDrillModal slot —
+              unrelated to this card's `openSignal` state which still drives
+              the trend / RS / setup / stage / ADR / score-breakdown drills
+              from the card-specific UI elements above and below. */}
+          <SepaSignalChips row={row} subset="volume_only" />
           {row.adr_pct != null && (
-            <span className={`sepa-flag ${row.adr_pct >= 4 ? 'sepa-flag--good' : 'sepa-flag--neutral'}`}>
-              ADR {row.adr_pct}%
+            <span
+              role="button" tabIndex={0}
+              className={`sepa-flag ${row.adr_pct >= 4 ? 'sepa-flag--good' : 'sepa-flag--neutral'}`}
+              title="Tap for ADR explanation + how much it added to the score"
+              onClick={(e) => { e.stopPropagation(); setOpenSignal('adr'); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation(); e.preventDefault(); setOpenSignal('adr');
+              }}}
+              style={{ cursor: 'pointer' }}
+            >
+              ADR {row.adr_pct}%<span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+            </span>
+          )}
+          {row.day_change_pct != null && (
+            <span
+              className={`sepa-flag ${
+                row.day_change_pct >= 2 ? 'sepa-flag--good' :
+                row.day_change_pct <= -2 ? 'sepa-flag--bad' :
+                'sepa-flag--neutral'
+              }`}
+              title={
+                `Day % — change from yesterday's close. ` +
+                (row.last_close != null ? `Last close $${row.last_close}` : '')
+              }
+            >
+              Day {row.day_change_pct > 0 ? '+' : ''}{row.day_change_pct}%
+            </span>
+          )}
+          {row.dual_momentum?.return_12m != null && (
+            <span
+              className={`sepa-flag ${
+                row.dual_momentum.abs_mom_pass && row.dual_momentum.beats_spy
+                  ? 'sepa-flag--good'
+                  : row.dual_momentum.abs_mom_pass
+                    ? 'sepa-flag--neutral'
+                    : 'sepa-flag--bad'
+              }`}
+              title={
+                `Dual Momentum (Antonacci) 12-month return. ✓ when both gates pass: ` +
+                `(a) Absolute Momentum: 12m return positive ` +
+                `(b) Relative Momentum: 12m return beats SPDR S&P 500 ETF (SPY).\n\n` +
+                `Returns waterfall:\n` +
+                `  1-month:  ${row.dual_momentum.return_1m ?? '—'}%\n` +
+                `  3-month:  ${row.dual_momentum.return_3m ?? '—'}%\n` +
+                `  6-month:  ${row.dual_momentum.return_6m ?? '—'}%\n` +
+                `  12-month: ${row.dual_momentum.return_12m ?? '—'}%` +
+                (row.dual_momentum.beats_spy === true ? '\n  ✓ beats SPY' :
+                 row.dual_momentum.beats_spy === false ? '\n  ✗ trails SPY' : '')
+              }
+            >
+              12m {row.dual_momentum.return_12m > 0 ? '+' : ''}{row.dual_momentum.return_12m}%
+              {row.dual_momentum.abs_mom_pass && row.dual_momentum.beats_spy && ' ✓'}
             </span>
           )}
           {row.vcp?.has_base && row.vcp?.pivot_quality_ok && (
-            <span className="sepa-flag sepa-flag--good">✓ pivot quality</span>
+            <span
+              className="sepa-flag sepa-flag--good"
+              title="Pivot quality ✓ — the Volatility Contraction Pattern (VCP) pivot sits at the top of a meaningful prior advance, not a random flat zone. Per Minervini p.199."
+            >✓ pivot quality</span>
+          )}
+          {/* Hedge fund / institutional flow chip from cached 13F data.
+              Only renders when whales data is present in the cache for
+              this ticker — drill into supply/demand panel to populate. */}
+          {whalesFlow && (
+            <span
+              role="button"
+              tabIndex={0}
+              className={`sepa-flag ${
+                whalesFlow.signal === 'accumulating' ? 'sepa-flag--good' :
+                whalesFlow.signal === 'distributing' ? 'sepa-flag--bad' :
+                'sepa-flag--neutral'
+              }`}
+              // Click stops propagation so we don't ALSO open the
+              // candidate drill (parent card has onSelect on click).
+              // Keyboard handler mirrors click for accessibility.
+              onClick={(e) => { e.stopPropagation(); setWhalesOpen(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setWhalesOpen(true);
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+              title={
+                `Tap for full list of buyers + sellers\n\n` +
+                `Institutional flow (13F filings, 45-day lag):\n` +
+                `${whalesFlow.n_buying} institution(s) BUYING\n` +
+                `${whalesFlow.n_selling} institution(s) SELLING\n` +
+                (whalesFlow.n_unchanged ? `${whalesFlow.n_unchanged} unchanged\n` : '') +
+                (whalesFlow.top_buy  ? `\nTop buy:  ${whalesFlow.top_buy}` : '') +
+                (whalesFlow.top_sell ? `\nTop sell: ${whalesFlow.top_sell}` : '')
+              }
+            >
+              🐋 {whalesFlow.signal === 'accumulating' ? `Accumulating +${whalesFlow.n_buying}`
+                  : whalesFlow.signal === 'distributing' ? `Distributing −${whalesFlow.n_selling}`
+                  : `Balanced (${whalesFlow.n_buying}↑/${whalesFlow.n_selling}↓)`}
+              <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+            </span>
+          )}
+          {/* 🌍 Macro chip — Claude-generated brief on geopolitics,
+              futures/commodities tied to this stock, the bear case
+              right now, and sector context. Plus live headlines from
+              Finnhub. Cached 6h on the backend per symbol so repeat
+              clicks are free.
+
+              Always renders (no data dependency) — every ticker gets
+              a macro read. Clicking fires the modal which lazy-loads
+              the chunk + hits /macro/{symbol}. */}
+          <span
+            role="button"
+            tabIndex={0}
+            className="sepa-flag sepa-flag--neutral"
+            onClick={(e) => { e.stopPropagation(); setMacroOpen(true); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                e.preventDefault();
+                setMacroOpen(true);
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+            title="Macro context: geopolitics, futures, bear case, sector dynamics + recent headlines. Generated by Claude, cached 6h."
+          >
+            🌍 Macro
+            <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+          </span>
+          {/* Put / Call open interest from latest SOIR snapshot.
+              Tone: BULLISH = green, BEARISH = red, WATCH = amber, else neutral.
+              Hover for full SOIR ratio + signal reason. */}
+          {soir && (soir.put_oi != null || soir.call_oi != null) && (
+            <span
+              className={`sepa-flag ${
+                soir.signal === 'BULLISH' ? 'sepa-flag--good' :
+                soir.signal === 'BEARISH' ? 'sepa-flag--bad' :
+                soir.signal === 'WATCH'   ? 'sepa-flag--warn' :
+                'sepa-flag--neutral'
+              }`}
+              title={
+                `Schaeffer's Open Interest Ratio (SOIR) — sentiment from option chain.\n\n` +
+                `Puts open: ${(soir.put_oi ?? 0).toLocaleString()}\n` +
+                `Calls open: ${(soir.call_oi ?? 0).toLocaleString()}\n` +
+                `SOIR (put/call OI): ${soir.soir != null ? soir.soir.toFixed(2) : '—'}` +
+                (soir.soir_percentile != null ? `  (${soir.soir_percentile.toFixed(0)}th pct)` : '') +
+                `\nSignal: ${soir.signal ?? '—'}\n\n` +
+                (soir.reason || 'No additional context')
+              }
+            >
+              📊 P {((soir.put_oi ?? 0) / 1000).toFixed(0)}k / C {((soir.call_oi ?? 0) / 1000).toFixed(0)}k
+              {soir.signal && soir.signal !== 'NEUTRAL' && ` · ${soir.signal[0]}`}
+            </span>
           )}
           {row.fundamentals && row.fundamentals.passed > 0 && (
-            <span className="sepa-flag sepa-flag--good">CANSLIM {row.fundamentals.passed}/3</span>
+            <span
+              className="sepa-flag sepa-flag--good"
+              title={`CANSLIM (William O'Neil) — ${row.fundamentals.passed} of 3 quantifiable gates passed: C (Current Quarterly Earnings ≥25%), A (Annual Earnings 3yr ≥25%), I (Institutional Sponsorship 40-80%).`}
+            >CANSLIM {row.fundamentals.passed}/3</span>
           )}
+          {/* Buffett-style moat chip. Tier 4 = WIDE, 3 = NARROW, 2 = SOME,
+              1 = NONE, 0 = UNKNOWN (data missing — chip suppressed). */}
+          {row.moat && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setMoatOpen(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setMoatOpen(true);
+                }
+              }}
+              className={`sepa-flag ${
+                row.moat.tier >= 4 ? 'sepa-flag--good' :
+                row.moat.tier >= 3 ? 'sepa-flag--good' :
+                row.moat.tier >= 2 ? 'sepa-flag--neutral' :
+                row.moat.tier >= 1 ? 'sepa-flag--bad' :
+                'sepa-flag--muted'
+              }`}
+              title={
+                row.moat.tier === 0
+                  ? (`No moat data — yfinance is missing fundamentals (ROE/margins/FCF) for ${row.symbol}. ` +
+                     `Common for ADRs, recent IPOs, or stocks with no analyst coverage. ` +
+                     `Tap to see what data IS available.`)
+                  : (`Tap to see peer comparison and why this scored ${row.moat.score}/100.\n\n` +
+                     `Buffett-style economic moat — ${row.moat.label}.\n` +
+                     `${row.moat.narrative}` +
+                     (row.moat.is_partial
+                       ? `\n\n⚠ Partial data — scored from ${row.moat.data_completeness}/6 underlying metrics. Score may understate true moat.`
+                       : ''))
+              }
+              style={{ cursor: 'pointer', opacity: row.moat.tier === 0 ? 0.7 : 1 }}
+            >
+              🏰 {row.moat.tier === 0 ? 'no data' : `${row.moat.label} ${row.moat.score.toFixed(0)}`}
+              {row.moat.is_partial && row.moat.tier >= 1 && (
+                <span style={{ fontSize: '0.7em', opacity: 0.7, marginLeft: 3 }} title="Partial data — see tooltip">⚠</span>
+              )}
+              <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 2 }}>↗</span>
+            </span>
+          )}
+          {/* Product launches chip — only renders if cached launches exist
+              for this ticker. Lazy-loaded so the network call doesn't fire
+              on cards the user never scrolls past. */}
+          <Suspense fallback={null}>
+            <ProductLaunchesChip symbol={row.symbol} />
+          </Suspense>
+          {row.pioneer_themes?.map((t) => (
+            <span
+              key={t.id}
+              className={`sepa-flag sepa-pioneer-tag sepa-pioneer-tag--${t.id}`}
+              title={
+                `Pioneer theme — ${t.label}. ` +
+                `This ticker is in our curated list of breakthrough categories. ` +
+                `Click "Pioneers" in the nav for full theme breakdown + breakthrough news.`
+              }
+            >🚀 {t.label}</span>
+          ))}
         </div>
+
+        {/* SEPA staleness footer — every card is rated against yesterday's
+            close. Today's intraday damage doesn't reflect until tonight's
+            16:00 ET / 15:00 CT close + 15:30 CT cron rescan. Spelled out
+            so a stale BUY chip during a collapsing tape doesn't fool the
+            user (the MU lesson). */}
+        <SepaAnchorFooter scannedAt={(row as any).scanned_at} />
       </div>
     </article>
+  );
+
+  if (setupOverlay) {
+    return (
+      <div className="sepa-card-with-overlay">
+        {setupOverlay}
+        {cardBody}
+      </div>
+    );
+  }
+  return cardBody;
+}
+
+/** Tiny mono footer noting when the card's rating was computed and when
+ *  it will next re-rate. CT-anchored because that's the user's timezone. */
+function SepaAnchorFooter({ scannedAt }: { scannedAt?: string | null }) {
+  const fmt = (iso?: string | null): string => {
+    if (!iso) return 'yesterday\'s close';
+    try {
+      const d = new Date(iso);
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true,
+      }).format(d) + ' CT';
+    } catch { return 'yesterday\'s close'; }
+  };
+  return (
+    <div
+      className="mono"
+      style={{
+        marginTop: '0.4rem',
+        fontSize: '0.66rem',
+        color: 'var(--cm-slate)',
+        opacity: 0.75,
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.6rem',
+      }}
+      title="SEPA ratings are computed against the official daily close, not intraday prices. Today's intraday move won't flip the rating until after 4 PM ET / 3 PM CT close."
+    >
+      <span>Rated: {fmt(scannedAt)}</span>
+      <span>· Re-rates after 3:00 PM CT (4:00 PM ET)</span>
+    </div>
   );
 }

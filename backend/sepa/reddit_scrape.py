@@ -47,6 +47,15 @@ REDDIT_BASE = "https://old.reddit.com"
 REDDIT_TIMEOUT = 12
 
 
+class _RedditFetchError(Exception):
+    """Internal marker — raised when a Reddit HTTP call fails so the
+    caller can distinguish "ticker has no chatter" from "Reddit blocked
+    us." Used by _search_one_sub → search_subreddits to surface a
+    failure rate up to forum_chatter.chatter_for so we don't poison
+    the cache with empty results during a 429."""
+    pass
+
+
 def _ticker_pattern(symbol: str) -> re.Pattern:
     sym = re.escape(symbol.upper())
     return re.compile(rf"(?:\${sym}\b|(?<![A-Za-z]){sym}(?![A-Za-z]))")
@@ -123,12 +132,21 @@ async def _search_one_sub(
     try:
         r = await client.get(url, params=params, headers=_headers())
         if r.status_code != 200:
-            log.debug("reddit r/%s returned %d for %s", sub_name, r.status_code, symbol)
-            return [], 0, 0
+            # Rate-limiting (429) and Cloudflare blocks (403, 503) show up
+            # here. Used to silently return 0 mentions — which the
+            # downstream forum_chatter classifier then read as "this
+            # ticker has no chatter," polluting the cache. Now we
+            # surface the failure so the caller can preserve stale
+            # data instead of overwriting with garbage.
+            log.warning("reddit r/%s returned %d for %s — treating as failed fetch",
+                        sub_name, r.status_code, symbol)
+            raise _RedditFetchError(f"r/{sub_name} HTTP {r.status_code}")
         data = r.json()
+    except _RedditFetchError:
+        raise
     except Exception as exc:
         log.debug("reddit search failed for %s in r/%s: %s", symbol, sub_name, exc)
-        return [], 0, 0
+        raise _RedditFetchError(f"r/{sub_name} {exc}")
 
     children = (data.get("data") or {}).get("children") or []
     candidates: list[dict] = []
@@ -233,9 +251,12 @@ async def search_subreddits(
 
     threads: list[dict] = []
     m_7d = m_prior_7d = 0
+    n_failed = 0
+    n_total = len(subs)
     for res in results:
-        if isinstance(res, Exception):
+        if isinstance(res, _RedditFetchError) or isinstance(res, Exception):
             log.debug("reddit sub failed: %s", res)
+            n_failed += 1
             continue
         sub_threads, m7, mp = res
         threads.extend(sub_threads)
@@ -243,8 +264,21 @@ async def search_subreddits(
         m_prior_7d += mp
 
     threads.sort(key=lambda t: t["score"], reverse=True)
+    # Lane availability decision:
+    #   - ALL subs failed → available=False (full Reddit outage / rate-limited).
+    #     Caller (forum_chatter) preserves stale data instead of writing
+    #     "0 mentions" to the cache.
+    #   - SOME subs failed → available=True with partial=True so the UI
+    #     can show a "partial data" hint.
+    #   - None failed → clean result.
+    available = n_failed < n_total
     return {
-        "available":         True,
+        "available":         available,
+        "partial":           n_failed > 0 and n_failed < n_total,
+        "subs_total":        n_total,
+        "subs_failed":       n_failed,
+        "reason":            ("all subs returned errors (rate-limit?)"
+                              if not available else None),
         "threads":           threads[:top_n],
         "mentions_7d":       m_7d,
         "mentions_prior_7d": m_prior_7d,

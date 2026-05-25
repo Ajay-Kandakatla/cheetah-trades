@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Iterable
 
 log = logging.getLogger("sepa.company_names")
@@ -110,12 +110,18 @@ def name_for(symbol: str) -> Optional[str]:
     return name
 
 
-def bulk_warm(symbols: Iterable[str], max_workers: int = 8) -> dict[str, Optional[str]]:
+def bulk_warm(symbols: Iterable[str], max_workers: int = 8,
+              emitter=None) -> dict[str, Optional[str]]:
     """Ensure the name cache contains entries for every symbol in `symbols`.
 
     Names already cached are skipped. Missing names are fetched via yfinance in
     a thread pool and persisted to Mongo. Returns a dict {symbol: name} with
-    the full resolved set."""
+    the full resolved set.
+
+    Optional `emitter` (sepa.progress.ProgressEmitter) fires `name_progress`
+    events every 25 completions so the SSE stream can show progress during
+    cold-start fetches (~25-60s on a 1000-name universe with empty cache).
+    """
     syms = [s.upper() for s in symbols]
     out: dict[str, Optional[str]] = {}
     missing: list[str] = []
@@ -128,18 +134,35 @@ def bulk_warm(symbols: Iterable[str], max_workers: int = 8) -> dict[str, Optiona
         else:
             missing.append(s)
 
+    if emitter:
+        emitter.emit("phase", phase="warming_names",
+                     total=len(syms), missing=len(missing),
+                     message=(f"Company-name cache: {len(syms) - len(missing)} hits, "
+                              f"fetching {len(missing)} missing"))
+
     if not missing:
+        # All cached — emit a final 100% tick so the bar lands on full
+        if emitter:
+            emitter.emit("name_progress",
+                         current=len(syms), total=len(syms), fetched=0)
         return out
 
     log.info("company_names: warming %d missing name(s)", len(missing))
+    completed = 0
 
     def _one(sym: str) -> tuple[str, Optional[str]]:
         return sym, _fetch_yfinance(sym)
 
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        for sym, name in ex.map(_one, missing):
+        futures = {ex.submit(_one, s): s for s in missing}
+        for fut in as_completed(futures):
+            sym, name = fut.result()
             _memo[sym] = name
             _mongo_put(sym, name)
             out[sym] = name
+            completed += 1
+            if emitter and (completed % 25 == 0 or completed == len(missing)):
+                emitter.emit("name_progress",
+                             current=completed, total=len(missing), fetched=completed)
 
     return out

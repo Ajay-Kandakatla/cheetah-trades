@@ -1,12 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { fetchSepaCandidate, addToWatchlist, planPosition } from '../hooks/useSepa';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
+import { ageHuman } from '../lib/swrCache';
+import { TradePlanPanel } from '../components/TradePlanPanel';
+import { PositionLens } from '../components/PositionLens';
 import { SepaScoreBar } from '../components/SepaScoreBar';
+import { SepaSignalChips } from '../components/SepaSignalChips';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
+import { GlobalStockSearch } from '../components/GlobalStockSearch';
 import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
 import { CompanyHeadline } from '../components/CompanyHeadline';
 import { ChatterPanel } from '../components/ChatterPanel';
+import { PriceAlertModal } from '../components/PriceAlertModal';
+import { TickerAlertPresets } from '../components/TickerAlertPresets';
+import { DependencyGraph } from '../components/DependencyGraph';
+import { CompanyAbout } from '../components/CompanyAbout';
+import { GabbarLevels } from '../components/GabbarLevels';
+import { useLiveQuote } from '../hooks/useLiveQuote';
+import { CandleAnatomyExplainer } from '../components/CandleAnatomyExplainer';
+import { NodeThesisPanel } from '../components/NodeThesisPanel';
+import { useTickerSupplyDemand } from '../hooks/useSupplyDemand';
+import type { TickerContext } from '../hooks/useSupplyDemand';
+// Per-ticker options-flow read — Schaeffer SOIR snapshot + 90-day P/C
+// trajectory. Added 2026-05-22 as a tab so the user can see what the
+// options crowd is doing on the ticker they're researching, not just on
+// the multi-ticker /options page.
+import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
+import { API } from '../lib/apiBase';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
@@ -73,7 +94,7 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter';
+type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
 
 const SmartMoneyInfo = (
   <>
@@ -112,33 +133,214 @@ const SmartMoneyInfo = (
   </>
 );
 
+// Hardcoded TradingView prefix overrides for foreign ADRs and dual-listed
+// names where Massive / Finnhub's exchange-name string isn't reliable.
+// E.g. ASML's profile is sometimes returned with "NEW YORK STOCK EXCHANGE"
+// even though it actually trades on NASDAQ (ASML on Nasdaq Global Select).
+// Without this override TradingView gets `NYSE:ASML` and shows
+// "This symbol doesn't exist".
+const TV_SYMBOL_OVERRIDES: Record<string, string> = {
+  // European tech
+  ASML: 'NASDAQ:ASML',
+  ARM:  'NASDAQ:ARM',
+  // European telecom / Nordics — NOK (Nokia, Finnish) trades on NYSE.
+  // Profile lookup sometimes returns NASDAQ for legacy reasons and trips
+  // TradingView's "This symbol doesn't exist" empty state.
+  NOK:  'NYSE:NOK',
+  ERIC: 'NASDAQ:ERIC',  // Ericsson (Swedish ADR)
+  // Chinese ADRs
+  BABA: 'NYSE:BABA',
+  JD:   'NASDAQ:JD',
+  PDD:  'NASDAQ:PDD',
+  BIDU: 'NASDAQ:BIDU',
+  NTES: 'NASDAQ:NTES',
+  NIO:  'NYSE:NIO',
+  XPEV: 'NYSE:XPEV',
+  LI:   'NASDAQ:LI',
+  // Asian / other ADRs
+  TSM:  'NYSE:TSM',
+  SONY: 'NYSE:SONY',
+  TM:   'NYSE:TM',
+  HMC:  'NYSE:HMC',
+  // European pharma
+  NVO:  'NYSE:NVO',
+  NVS:  'NYSE:NVS',
+  AZN:  'NASDAQ:AZN',
+  GSK:  'NYSE:GSK',
+  // Misc
+  SE:   'NYSE:SE',
+  SHOP: 'NYSE:SHOP',
+  SAP:  'NYSE:SAP',
+};
+
 function tvSymbolFor(symbol: string, exchange?: string): string {
+  const upperSym = (symbol || '').toUpperCase();
+  // Check known-bad-data override first
+  if (TV_SYMBOL_OVERRIDES[upperSym]) return TV_SYMBOL_OVERRIDES[upperSym];
+
   const ex = (exchange || '').toUpperCase();
-  if (ex.includes('NYSE')) return `NYSE:${symbol}`;
-  if (ex.includes('AMEX')) return `AMEX:${symbol}`;
-  return `NASDAQ:${symbol}`;
+  // Massive / Finnhub return the full exchange name ("NEW YORK STOCK EXCHANGE,
+  // INC.", "NASDAQ GLOBAL SELECT MARKET", "NYSE AMERICAN", etc.). Match on
+  // both the abbreviation and the full name so we don't mis-route a NYSE-
+  // listed ticker (like ALB) to NASDAQ — that triggers TradingView's
+  // "This symbol doesn't exist" empty state.
+  // IMPORTANT: NASDAQ check goes BEFORE NYSE so a string like
+  // "NASDAQ NMS" doesn't accidentally match the broader NYSE patterns.
+  if (ex.includes('NASDAQ')) return `NASDAQ:${symbol}`;
+  if (ex.includes('NYSE AMERICAN') || ex.includes('AMEX')) return `AMEX:${symbol}`;
+  if (ex.includes('NEW YORK STOCK EXCHANGE') || ex.includes('NYSE ARCA') ||
+      ex.startsWith('NYSE')) return `NYSE:${symbol}`;
+  if (ex.includes('CBOE') || ex.includes('BATS')) return `BATS:${symbol}`;
+  // Unknown exchange — let TradingView's symbol-search auto-resolve it.
+  // Returning bare symbol is safer than a wrong prefix.
+  return symbol;
 }
+
+import { usePageContext } from '../hooks/usePageContext';
 
 export function SepaCandidatePage() {
   const { symbol = '' } = useParams<{ symbol: string }>();
   const navigate = useNavigate();
-  const [data, setData] = useState<any>(null);
+  const location = useLocation();
+  // Page-context registration so the floating Claude widget can ground
+  // "what's this stock doing?" type questions in the actual candidate
+  // data. Compact snapshot only — we send a JSON blob to the backend
+  // on every chat turn, so trimming the noise keeps token costs sane.
+  const { setPageContext } = usePageContext();
+  // Source-tracking: when a caller passes navigate('/sepa/X', { state: { from, label } })
+  // we render a contextual "← Back to Catalysts" button. Otherwise nav(-1)
+  // works via browser history for the generic case.
+  const navState = (location.state as { from?: string; label?: string } | null) || null;
+  const handleBack = () => {
+    if (navState?.from) navigate(navState.from);
+    else if (window.history.length > 1) navigate(-1);
+    else navigate('/sepa');
+  };
+  const backLabel = navState?.label ? `← Back to ${navState.label}` : '← Back';
+  // SWR-backed detail fetch — page renders cached data instantly while
+  // revalidating in the background. Navigating MU → AAPL → MU brings the
+  // cached MU view back without a flash of "Loading…".
+  const {
+    data,
+    cachedAt,
+    revalidating: detailRevalidating,
+    error: detailError,
+    setFresh: setData,
+  } = useSepaCandidate(symbol);
+  const err = detailError;
+  // The non-data state was previously bundled into the same `data` slot
+  // and reset on every symbol switch. We split out the per-symbol panels
+  // so they reset cleanly while `data` itself is owned by the SWR hook.
   const [plan, setPlan] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
   const [accountSize, setAccountSize] = useState(100000);
   const [riskPct, setRiskPct] = useState(1);
   const [tab, setTab] = useState<Tab>('chart');
   const [added, setAdded] = useState(false);
+  const [rescanState, setRescanState] = useState<'idle' | 'running' | 'error'>('idle');
+  const [rescanMsg, setRescanMsg] = useState<string | null>(null);
+  const [alertOpen,  setAlertOpen]  = useState(false);
+  const [presetOpen, setPresetOpen] = useState(false);
+  const [alertConfirm, setAlertConfirm] = useState<string | null>(null);
 
+  // Reset the per-symbol UI bits when the symbol changes. `data` is
+  // managed by the hook above (which keeps stale across navigations).
+  useEffect(() => {
+    setPlan(null);
+    setAdded(false);
+    setTab('chart');
+    setRescanState('idle');
+    setRescanMsg(null);
+    setAlertOpen(false);
+    setAlertConfirm(null);
+  }, [symbol]);
+
+  // Register page context for the ChatWidget. Re-runs when the candidate
+  // data refreshes so Claude always sees the live snapshot. We send a
+  // CONDENSED projection — full SEPA candidate objects can be 30+
+  // nested fields, but Claude only needs the trade-relevant ones to
+  // ground its answers. Adding `tab` lets the user ask things like
+  // "what is the catalyst tab telling me?" and Claude knows the view.
   useEffect(() => {
     if (!symbol) return;
-    setData(null); setErr(null); setPlan(null); setAdded(false); setTab('chart');
-    fetchSepaCandidate(symbol).then(setData).catch((e) => setErr(String(e)));
-  }, [symbol]);
+    if (!data) {
+      setPageContext({ page: 'sepa-detail', symbol, tab });
+      return;
+    }
+    const d = data as any;
+    setPageContext({
+      page:           'sepa-detail',
+      symbol,
+      tab,
+      score:          d.score,
+      rating:         d.rating,
+      rs_rank:        d.rs_rank,
+      last_close:     d.last_close,
+      day_change_pct: d.day_change_pct,
+      stage:          d.stage?.label || d.stage_label,
+      trend:          d.trend,
+      vcp_present:    !!d.vcp,
+      entry_setup:    d.entry_setup
+        ? {
+            type:  d.entry_setup.type,
+            pivot: d.entry_setup.pivot,
+            stop:  d.entry_setup.stop,
+          }
+        : null,
+      adr_pct:        d.adr_pct,
+      pioneer_themes: d.pioneer_themes,
+      catalyst_summary: d.catalyst?.headline || d.catalyst?.label,
+    });
+    return () => setPageContext(null);
+  }, [symbol, data, tab, setPageContext]);
+
+  // Rescan a single ticker. The backend POST /sepa/analyze/{symbol} runs full
+  // SEPA analysis (price refresh + trend template + stage + VCP + Power Play +
+  // base count + ADR + liquidity), and with `?with_catalyst=true` also fetches
+  // CANSLIM fundamentals + earnings catalyst + insider activity. The result
+  // is persisted into the latest scan, so reloading SepaCandidate picks it up.
+  const rescan = async (withCatalyst: boolean) => {
+    if (!symbol) return;
+    setRescanState('running');
+    setRescanMsg(withCatalyst ? 'Re-scanning with catalyst + fundamentals…' : 'Re-scanning…');
+    try {
+      const params = withCatalyst ? '?with_catalyst=true' : '';
+      const r = await fetch(`${API}/sepa/analyze/${encodeURIComponent(symbol)}${params}`,
+                            { method: 'POST' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      // Refetch the candidate so the page picks up the new fundamentals + setup
+      const fresh = await fetchSepaCandidate(symbol);
+      setData(fresh);
+      setRescanState('idle');
+      setRescanMsg(`Refreshed ${new Date().toLocaleTimeString()}`);
+    } catch (e) {
+      setRescanState('error');
+      setRescanMsg(`Rescan failed: ${e}`);
+    }
+  };
 
   const setup = data?.base?.entry_setup;
   const base = data?.base;
   const fetchedAt = useMemo(() => new Date(), [symbol, data]);
+
+  // Live SSE-backed quote — subscribes to the bus, prefills from
+  // /quote/<sym> on mount, and updates as ticks arrive. Anywhere we
+  // previously fell back to ``data?.last_close`` for "current price"
+  // (alert dialogs, Gabbar's buy-zone marker), we now prefer this so
+  // the user sees the actual present-moment price instead of
+  // yesterday's close. last_close stays as a fallback for tickers
+  // Finnhub WS hasn't started streaming yet.
+  const live = useLiveQuote(symbol);
+  const currentLivePrice: number | null =
+    (typeof live?.last_price === 'number' ? live.last_price : null)
+    ?? data?.last_close
+    ?? null;
+
+  // Force-reload counter for the TradingView iframe. Incrementing this
+  // changes the <iframe key>, React unmounts + remounts, and the embed
+  // re-fetches its data. Useful because the free widgetembed has a
+  // ~15-min delay for non-subscribers and sometimes doesn't auto-tick
+  // when the tab regains focus — a manual reload is the cheap fix.
+  const [chartReloadKey, setChartReloadKey] = useState(0);
 
   useEffect(() => {
     if (!setup || !accountSize) { setPlan(null); return; }
@@ -168,12 +370,28 @@ export function SepaCandidatePage() {
   return (
     <div className="sepa-candidate-page">
       <div className="sepa-candidate-page__topbar">
-        <Link to="/sepa" className="sepa-btn sepa-candidate-page__back">← Back to SEPA</Link>
+        <button
+          type="button"
+          className="sepa-btn sepa-candidate-page__back"
+          onClick={handleBack}
+          title={navState?.from ? `Return to ${navState.label || navState.from}` : 'Go back'}
+        >
+          {backLabel}
+        </button>
         <div className="sepa-candidate-page__asof mono">
           Data as of {fetchedAt.toLocaleString(undefined, {
             month: 'short', day: 'numeric',
             hour: 'numeric', minute: '2-digit',
           })}
+          {/* Stale-while-revalidate indicator. When the page renders from
+              cache and a background refresh is in flight, show a subtle
+              "cached … refreshing" hint so the user knows the visible
+              numbers might be a few seconds stale. */}
+          {detailRevalidating && cachedAt && (
+            <span className="sepa-candidate-page__stale" title="Showing cached data while a fresh fetch runs in background">
+              {' · '}cached {ageHuman({ ts: cachedAt })} · refreshing…
+            </span>
+          )}
         </div>
       </div>
 
@@ -195,10 +413,148 @@ export function SepaCandidatePage() {
           {base && (
             <SepaScoreBar score={base.score ?? 0} rating={base.rating} size="md" />
           )}
+          {/* Clickable ranking-component chips — each opens a SignalDrillModal
+              explaining what the signal measures + how it affected this
+              ticker's score. Mirrors the chips on the list card so the
+              same UX works after a typeahead search. */}
+          {base && <SepaSignalChips row={base} />}
+          {/* Live price badge — pulls from the SSE bus (Finnhub WS feed)
+              via useLiveQuote. This is the page's authoritative "what
+              is MU trading at RIGHT NOW" — much fresher than the
+              embedded TradingView iframe below which is ~15 min
+              delayed for non-subscribers. Falls back to last_close
+              when WS hasn't started streaming yet. */}
+          {(currentLivePrice != null || live?.last_price != null) && (() => {
+            const price = currentLivePrice;
+            const dayPct = live?.day_pct;
+            const prev = data?.last_close;
+            const source = live?._source || '';
+            const isLive = !!(live?.last_price);
+            // Color the delta by direction; gray when no delta info.
+            const deltaColor =
+              dayPct == null ? 'var(--cm-slate)' :
+              dayPct >= 0 ? 'var(--positive)' : 'var(--negative)';
+            return (
+              <div style={{
+                display: 'inline-flex', alignItems: 'baseline', gap: '0.6rem',
+                marginTop: '0.5rem', flexWrap: 'wrap',
+              }}>
+                <span className="mono" style={{ fontSize: '1.6rem', fontWeight: 700 }}>
+                  ${price?.toFixed(2)}
+                </span>
+                {dayPct != null && (
+                  <span className="mono" style={{ color: deltaColor, fontSize: '0.95rem', fontWeight: 600 }}>
+                    {dayPct >= 0 ? '+' : ''}{dayPct.toFixed(2)}%
+                    {prev != null && (
+                      <span style={{ marginLeft: 4, color: 'var(--cm-slate)', fontSize: '0.78rem' }}>
+                        (prev ${prev.toFixed(2)})
+                      </span>
+                    )}
+                  </span>
+                )}
+                <span style={{
+                  fontSize: '0.66rem', padding: '1px 6px',
+                  borderRadius: 3, letterSpacing: '0.04em',
+                  background: isLive ? 'rgba(16,185,129,0.1)' : 'rgba(120,120,120,0.1)',
+                  color:      isLive ? 'var(--positive)' : 'var(--cm-slate)',
+                  border:    `1px solid ${isLive ? 'rgba(16,185,129,0.3)' : 'var(--rule, #555)'}`,
+                  textTransform: 'uppercase',
+                }} title={`Source: ${source || 'fallback'}`}>
+                  {isLive ? '● live' : '◯ close'}
+                </span>
+              </div>
+            );
+          })()}
           <CompanyHeadline symbol={symbol} />
         </div>
-        <InfoButton title={`${symbol} — How to read this`}>{PageInfo}</InfoButton>
+        <div className="sepa-candidate-page__head-actions">
+          {/* Universe-wide typeahead — jump straight to any other ticker
+              without having to go back to /sepa first. ⌘K focuses it from
+              anywhere on the page. */}
+          <GlobalStockSearch
+            className="sepa-candidate-page__head-search"
+            placeholder="Jump to ticker — ⌘K"
+          />
+          <button
+            className="sepa-btn sepa-btn--ghost"
+            onClick={() => setPresetOpen(true)}
+            title={`Quick alert presets on ${symbol} — tap −7% / −12% / +20% etc. instead of typing a number.`}
+          >
+            🔔 Quick alerts
+          </button>
+          <button
+            className="sepa-btn sepa-btn--ghost"
+            onClick={() => setAlertOpen(true)}
+            title={`Set a custom-level price alert on ${symbol} (type the exact price you want to be notified at).`}
+          >
+            ✎ Custom level
+          </button>
+          <button
+            className="sepa-btn sepa-btn--ghost"
+            onClick={() => rescan(false)}
+            disabled={rescanState === 'running'}
+            title={`Re-pull prices and rerun trend / stage / VCP / Power Play / DM for ${symbol}`}
+          >
+            {rescanState === 'running' ? '↻ Re-scanning…' : `↻ Re-scan ${symbol}`}
+          </button>
+          <button
+            className="sepa-btn sepa-btn--ghost"
+            onClick={() => rescan(true)}
+            disabled={rescanState === 'running'}
+            title="Re-scan AND fetch CANSLIM fundamentals + earnings catalyst + insider activity"
+          >
+            ↻ + catalyst
+          </button>
+          <InfoButton title={`${symbol} — How to read this`}>{PageInfo}</InfoButton>
+        </div>
       </header>
+
+      {/* Sticky category badges — Pioneer themes, ETF tag, exchange, industry.
+          Anchors below the page header so when the user scrolls through the
+          long-form sections (trend gates, supply/demand, chatter) they don't
+          lose track of WHAT this ticker is. Position-sticky keeps the strip
+          pinned to the top of the viewport once it scrolls there. Added
+          2026-05-22 alongside the SepaSignalChips refactor — chips above
+          tell you HOW the ticker scored, this strip tells you WHAT category
+          it belongs to. */}
+      {base && (
+        <StickyCategoryBadges
+          pioneerThemes={base.pioneer_themes}
+          isEtf={base.is_etf}
+          etfCategory={base.etf_data?.category ?? null}
+          exchange={data?.profile?.exchange ?? null}
+          industry={data?.profile?.industry ?? null}
+        />
+      )}
+
+      {alertConfirm && (
+        <div className="sepa-rescan-status">{alertConfirm}</div>
+      )}
+      {presetOpen && (
+        <TickerAlertPresets
+          symbol={symbol}
+          currentPrice={currentLivePrice ?? base?.entry_setup?.pivot ?? null}
+          onClose={() => setPresetOpen(false)}
+          onCustomLevel={() => setAlertOpen(true)}
+        />
+      )}
+      {alertOpen && (
+        <PriceAlertModal
+          symbol={symbol}
+          currentPrice={currentLivePrice ?? base?.entry_setup?.pivot ?? null}
+          onClose={() => setAlertOpen(false)}
+          onCreated={() => {
+            setAlertConfirm(`✓ Alert set on ${symbol} — you'll be notified when the trigger fires.`);
+            // auto-clear the confirmation after 6s
+            setTimeout(() => setAlertConfirm(null), 6000);
+          }}
+        />
+      )}
+      {rescanMsg && rescanState !== 'running' && (
+        <div className={`sepa-rescan-status ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
+          {rescanMsg}
+        </div>
+      )}
 
       {err && <p className="sepa-err">{err}</p>}
       {!data && !err && (
@@ -210,16 +566,32 @@ export function SepaCandidatePage() {
 
       {data && (
         <>
+          {/* Position Lens — promoted ABOVE the tabs because if the user
+              already owns this stock, "should I sell today?" is the very
+              first question to answer. Tabs below are for deeper analysis.
+              Hidden behind a thin section header so it doesn't dominate
+              when the user is researching a fresh buy. */}
+          <section className="sepa-candidate-page__position">
+            <div className="eyebrow">
+              Position Lens — Hold or Sell <strong>{symbol}</strong>?
+            </div>
+            <PositionLens symbol={symbol} />
+          </section>
+
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'fundamentals', 'analysis', 'catalyst', 'insider', 'smartmoney', 'chatter'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'fundamentals', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t === 'smartmoney' ? 'smart money' : t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t}</button>
             ))}
           </nav>
+
+          {/* "What this company does" — yfinance summary, cached 30d. Shown
+              once at the top, regardless of active tab. */}
+          <CompanyAbout symbol={symbol} collapsed={true} />
 
           <div className="sepa-candidate-page__body">
             {tab === 'chart' && (
@@ -230,17 +602,64 @@ export function SepaCandidatePage() {
                 </div>
                 <div className="sepa-candidate-page__chart">
                   <iframe
+                    key={chartReloadKey}
                     title={`${symbol} live chart`}
                     src={`https://s.tradingview.com/widgetembed/?frameElementId=tv-sepa-${symbol}&symbol=${encodeURIComponent(tvSymbolFor(symbol, data?.profile?.exchange))}&interval=D&theme=dark&style=1&timezone=America%2FNew_York&withdateranges=1&hide_side_toolbar=0&allow_symbol_change=1&save_image=0&studies=%5B%5D&locale=en`}
                     style={{ width: '100%', height: '100%', border: 0 }}
                     allow="clipboard-write"
                   />
                 </div>
+                {/* TradingView free-embed disclaimer + reload affordance.
+                    The widgetembed feed is delayed ~15 min for non-
+                    subscribers (can't sign in through an iframe due
+                    to cookie isolation), so the real-time price for
+                    THIS page is the badge in the header — which pulls
+                    from the Finnhub WebSocket stream through our SSE
+                    bus. The reload button bumps an iframe key so
+                    React tears down + remounts; useful when the
+                    embed appears to have frozen on tab refocus. */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  flexWrap: 'wrap', gap: '0.4rem',
+                  fontSize: '0.7rem', color: 'var(--cm-slate)',
+                  margin: '0.3rem 0 0.4rem', padding: '0.3rem 0.5rem',
+                  background: 'rgba(255,255,255,0.02)', borderRadius: 4,
+                }}>
+                  <span>
+                    🕐 Chart embed is delayed ~15 min (TradingView free tier).
+                    The <strong>● live</strong> price in the page header above is real-time from your SSE feed.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setChartReloadKey((k) => k + 1)}
+                    style={{
+                      background: 'none', border: '1px solid var(--rule, #555)',
+                      color: 'var(--ink, inherit)', padding: '2px 8px',
+                      borderRadius: 3, cursor: 'pointer', fontSize: '0.7rem',
+                    }}
+                    title="Force-reload the chart iframe — useful when it freezes after tab refocus."
+                  >
+                    ↻ Reload chart
+                  </button>
+                </div>
                 <div className="sepa-drawer__chart-links">
                   <a href={`https://www.tradingview.com/symbols/${symbol}/`} target="_blank" rel="noreferrer">Open in TradingView</a>
                   <a href={`https://finance.yahoo.com/quote/${symbol}`} target="_blank" rel="noreferrer">Yahoo Finance</a>
                   <a href={`https://stockanalysis.com/stocks/${symbol.toLowerCase()}/`} target="_blank" rel="noreferrer">StockAnalysis</a>
+                  <a href={`https://stocktwits.com/symbol/${symbol}`} target="_blank" rel="noreferrer">StockTwits</a>
                 </div>
+
+                {/* Gabbar's buy-zone bands (ported from the Pine Script
+                    of the same name — see backend/catalysts/gabbar_levels.py
+                    for attribution). Renders inline if the ticker is in
+                    the source table, otherwise renders nothing. */}
+                <GabbarLevels symbol={symbol} currentPrice={currentLivePrice} />
+
+                {/* Candle-reading reference — collapsed by default, expand
+                    to learn what green/red bodies and wicks actually mean.
+                    Tied directly to Minervini's "evaluate at close, not on
+                    wicks" rule so it reinforces the framework above. */}
+                <CandleAnatomyExplainer />
               </section>
             )}
 
@@ -248,8 +667,20 @@ export function SepaCandidatePage() {
               <section>
                 <div className="sepa-tab-help">
                   <strong>Setup</strong> — buy point (<strong>pivot</strong>), exit (<strong>stop</strong>),
-                  and a position-sizing calculator.
+                  and a position-sizing calculator. (Position Lens is at the top of the page —
+                  use this tab for the buy-side trade plan.)
                 </div>
+
+                {/* Comprehensive trade plan — entry/stop/target/levels with
+                    Minervini/O'Neil/Wilder methodology. Renders for every
+                    analyzed ticker, even ones without a clean VCP base.
+                    Note: candidate endpoint nests the SEPA record under
+                    `base`, so the path is `data.base.trade_plan`. */}
+                {data?.base?.trade_plan && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <TradePlanPanel plan={data.base.trade_plan} />
+                  </div>
+                )}
                 {setup ? (
                   <>
                     <div className="sepa-setup-bar">
@@ -387,40 +818,133 @@ export function SepaCandidatePage() {
             {tab === 'fundamentals' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>CANSLIM</strong> — quantifiable rows: C (Q EPS Y/Y ≥25%),
-                  A (3yr annual EPS ≥25%), I (institutional own 40-80%).
+                  <strong>CANSLIM Fundamentals</strong>{' '}
+                  <InfoButton title="What CANSLIM stands for">
+                    <>
+                      <p>
+                        <strong>CANSLIM</strong> is William O'Neil's 7-letter
+                        framework from <em>How to Make Money in Stocks</em>.
+                        Cheetah scores the three quantitative letters
+                        (<strong>C</strong>, <strong>A</strong>, <strong>I</strong>);
+                        the rest are qualitative.
+                      </p>
+                      <ul>
+                        <li><strong>C</strong> — <strong>Current Quarterly Earnings</strong>: latest-quarter Earnings Per Share (EPS) growth Year-over-Year (Y/Y) ≥ 25%.</li>
+                        <li><strong>A</strong> — <strong>Annual Earnings</strong>: 3-year annual EPS growth ≥ 25% per year.</li>
+                        <li><strong>N</strong> — <strong>New</strong> products / services / management / price highs (qualitative).</li>
+                        <li><strong>S</strong> — <strong>Supply &amp; Demand</strong>: tight float, accumulation on volume.</li>
+                        <li><strong>L</strong> — <strong>Leader</strong>: top of its industry group on Relative Strength (RS).</li>
+                        <li><strong>I</strong> — <strong>Institutional Sponsorship</strong>: institutional ownership 40-80% (too low = unloved, too high = saturated).</li>
+                        <li><strong>M</strong> — <strong>Market Direction</strong>: bull-trend confirmed (handled by the Market Regime banner on the SEPA page).</li>
+                      </ul>
+                    </>
+                  </InfoButton>
+                  <span> — the three quantifiable letters scored from this stock's reported fundamentals.</span>
                 </div>
                 <div className="eyebrow">CANSLIM fundamentals</div>
-                {base?.fundamentals ? (
+                {base?.is_etf ? (
+                  <div className="sepa-etf-banner">
+                    <p>
+                      <strong>{symbol} is an Exchange-Traded Fund (ETF)</strong>
+                      {base.etf_data?.category && (
+                        <> · {base.etf_data.category}</>
+                      )}
+                      {base.etf_data?.fund_family && (
+                        <> · {base.etf_data.fund_family}</>
+                      )}
+                    </p>
+                    <p>
+                      CANSLIM is a stock-picking framework — it scores Earnings
+                      Per Share (EPS) growth, Annual Earnings, and Institutional
+                      Sponsorship at the company level. ETFs are baskets of
+                      stocks, not operating companies, so these gates don't
+                      apply. The relevant metrics for {symbol} appear in the
+                      page header above (Assets Under Management, Expense Ratio,
+                      Dividend Yield, Top Holding).
+                    </p>
+                    {base.etf_data?.top_holdings && base.etf_data.top_holdings.length > 0 && (
+                      <>
+                        <div className="eyebrow" style={{ marginTop: '0.8rem' }}>
+                          Top {base.etf_data.top_holdings.length} holdings
+                        </div>
+                        <ul className="sepa-etf-banner__holdings">
+                          {base.etf_data.top_holdings.map((h: any) => (
+                            <li key={h.symbol}>
+                              <strong className="mono">{h.symbol}</strong>
+                              {h.name && <span className="sepa-etf-banner__name"> · {h.name}</span>}
+                              <span className="mono sepa-etf-banner__wt"> {(h.weight * 100).toFixed(2)}%</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                ) : base?.fundamentals ? (
                   <div className="sepa-fund">
-                    <div className="sepa-fund__row">
-                      <span>C — Q EPS Y/Y</span>
+                    <div className="sepa-fund__row" title="Current Quarterly Earnings — Earnings Per Share (EPS) growth, latest quarter vs same quarter last year.">
+                      <span>
+                        <strong>C</strong> — Current Quarterly Earnings
+                        <span className="sepa-fund__sub">
+                          Quarterly Earnings Per Share (EPS), Year-over-Year (Y/Y)
+                        </span>
+                      </span>
                       <strong className={base.fundamentals.checks.c_strong_q_eps ? 'pass' : 'fail'}>
                         {base.fundamentals.q_eps_growth_pct ?? '—'}%
-                        {base.fundamentals.checks.c_strong_q_eps ? ' ✓' : ' (need ≥25%)'}
+                        {base.fundamentals.checks.c_strong_q_eps ? ' ✓' : ' (need ≥ 25%)'}
                       </strong>
                     </div>
-                    <div className="sepa-fund__row">
-                      <span>A — Annual EPS 3yr</span>
+                    <div className="sepa-fund__row" title="Annual Earnings — 3-year annual Earnings Per Share (EPS) growth rate.">
+                      <span>
+                        <strong>A</strong> — Annual Earnings
+                        <span className="sepa-fund__sub">
+                          3-year annual Earnings Per Share (EPS) growth
+                        </span>
+                      </span>
                       <strong className={base.fundamentals.checks.a_strong_y_eps ? 'pass' : 'fail'}>
                         {base.fundamentals.y_eps_growth_pct ?? '—'}%
-                        {base.fundamentals.checks.a_strong_y_eps ? ' ✓' : ' (need ≥25%)'}
+                        {base.fundamentals.checks.a_strong_y_eps ? ' ✓' : ' (need ≥ 25%)'}
                       </strong>
                     </div>
-                    <div className="sepa-fund__row">
-                      <span>I — Institutional own</span>
+                    <div className="sepa-fund__row" title="Institutional Sponsorship — % of float owned by mutual funds, pension funds, banks, and other institutions. 40-80% is the sweet spot.">
+                      <span>
+                        <strong>I</strong> — Institutional Sponsorship
+                        <span className="sepa-fund__sub">
+                          % of shares held by funds &amp; institutions
+                        </span>
+                      </span>
                       <strong className={base.fundamentals.checks.i_institutional ? 'pass' : 'fail'}>
                         {base.fundamentals.inst_ownership_pct ?? '—'}%
                         {base.fundamentals.checks.i_institutional ? ' ✓' : ' (need 40-80%)'}
                       </strong>
                     </div>
-                    <div className="sepa-fund__row">
-                      <span>Revenue Q Y/Y</span>
+                    <div className="sepa-fund__row" title="Quarterly revenue growth Year-over-Year (Y/Y) — informational, not part of CANSLIM gates.">
+                      <span>
+                        Quarterly Revenue (Y/Y)
+                        <span className="sepa-fund__sub">
+                          revenue, latest quarter vs same quarter last year
+                        </span>
+                      </span>
                       <strong>{base.fundamentals.rev_growth_q_pct ?? '—'}%</strong>
                     </div>
                   </div>
                 ) : (
-                  <p className="sepa-empty">No fundamentals — re-scan with <code>+catalyst</code> to populate.</p>
+                  <div className="sepa-empty sepa-empty--action">
+                    <p>No fundamentals cached for {symbol}.</p>
+                    <button
+                      className="sepa-btn sepa-btn--primary"
+                      onClick={() => rescan(true)}
+                      disabled={rescanState === 'running'}
+                    >
+                      {rescanState === 'running'
+                        ? 'Re-scanning…'
+                        : `Re-scan ${symbol} with +catalyst (fundamentals · news · insider)`}
+                    </button>
+                    {rescanMsg && (
+                      <p className={`sepa-empty__hint ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
+                        {rescanMsg}
+                      </p>
+                    )}
+                  </div>
                 )}
               </section>
             )}
@@ -560,10 +1084,228 @@ export function SepaCandidatePage() {
                 <ChatterPanel symbol={symbol} />
               </section>
             )}
+
+            {tab === 'options' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Options flow · SOIR (Schaeffer)</strong> — what the
+                  options crowd is doing on this ticker. Put/call open
+                  interest, expected move, ATM IV, and a 90-day P/C ratio
+                  trajectory. Schaeffer's framework reads CROWDED puts as
+                  contrarianly <em>bullish</em> (wrong-footed unwind = fuel
+                  for upside) and crowded calls as bearish. If no snapshot
+                  exists yet, click "Scan options flow" to fetch the chain
+                  on-demand — backed by Massive Options Advanced, the scan
+                  returns in ~1s (down from ~30s on the yfinance fallback).
+                </div>
+                <OptionsFlowPanel symbol={symbol} />
+              </section>
+            )}
+
+            {tab === 'supply' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Supply / Demand context</strong> — who this company
+                  depends on, who depends on it, and which global sector
+                  supply/demand cycles drive its results. Hover edges for
+                  evidence + recent news. Click any node to drill into that company.
+                </div>
+                <TickerSupplyDemandPanel symbol={symbol} />
+              </section>
+            )}
           </div>
         </>
       )}
     </div>
+  );
+}
+
+// --- Sticky category badges ---
+//
+// Pinned strip showing what KIND of ticker this is — Pioneer themes (AI,
+// space, biotech-pioneer, etc.), ETF tag, exchange, industry. Anchors
+// below the page header so the user keeps context while scrolling
+// through long-form sections (trend gates, supply-demand, chatter,
+// catalysts). Complements <SepaSignalChips> right above: chips tell
+// you HOW it scored, badges tell you WHAT it is.
+//
+// Layout: small pill badges in a horizontal row, wrapping on narrow
+// screens. CSS position:sticky with top:0 — they stay glued to the
+// viewport once scrolled past. z-index above the body so iframes /
+// other section content don't paint over them.
+function StickyCategoryBadges({
+  pioneerThemes,
+  isEtf,
+  etfCategory,
+  exchange,
+  industry,
+}: {
+  pioneerThemes?: { id: string; label: string }[];
+  isEtf?: boolean;
+  etfCategory?: string | null;
+  exchange?: string | null;
+  industry?: string | null;
+}) {
+  const hasAny =
+    (pioneerThemes && pioneerThemes.length > 0) ||
+    isEtf ||
+    exchange ||
+    industry;
+  if (!hasAny) return null;
+
+  // Compact pill style — smaller than the SignalChips above so the
+  // visual hierarchy reads "score chips > category badges". Backgrounds
+  // tinted per category type for at-a-glance recognition.
+  const baseBadge: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 3,
+    padding: '0.18rem 0.55rem',
+    borderRadius: 12,
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    border: '1px solid',
+  };
+
+  return (
+    <div
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        background: 'var(--cm-bg, #0a0a0a)',
+        // Subtle bottom border so the strip visually detaches from the
+        // section beneath when it's pinned to the viewport top.
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: '0.45rem 0',
+        marginBottom: '0.4rem',
+        // Negative top-margin pulls it tight against the header so the
+        // gap doesn't double-up before the user scrolls.
+        marginTop: '-0.2rem',
+      }}
+      title="Category badges — stays visible as you scroll. Tells you what kind of asset this is."
+    >
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+      }}>
+        {/* Pioneer themes — curated breakthrough categories (AI, space,
+            quantum, etc.). Same color as the card chip for consistency. */}
+        {pioneerThemes?.map((t) => (
+          <span
+            key={t.id}
+            style={{
+              ...baseBadge,
+              background:  'rgba(139,92,246,0.10)',
+              borderColor: 'rgba(139,92,246,0.35)',
+              color:       '#a78bfa',
+            }}
+            title={`Pioneer theme — ${t.label}. Click "Pioneers" in the nav for full theme breakdown.`}
+          >🚀 {t.label}</span>
+        ))}
+
+        {/* ETF marker — flag this isn't a single-company stock. CANSLIM
+            fundamentals don't apply; relevant metrics live in the
+            etf_data block (AUM, expense ratio, top holdings). */}
+        {isEtf && (
+          <span
+            style={{
+              ...baseBadge,
+              background:  'rgba(245,158,11,0.10)',
+              borderColor: 'rgba(245,158,11,0.35)',
+              color:       '#f59e0b',
+            }}
+            title={
+              `Exchange-Traded Fund — basket of underlying stocks. ` +
+              `CANSLIM EPS / fundamentals don't apply; relevant metrics ` +
+              `are AUM, expense ratio, dividend yield, and holdings.` +
+              (etfCategory ? `\nCategory: ${etfCategory}` : '')
+            }
+          >📊 ETF{etfCategory ? ` · ${etfCategory}` : ''}</span>
+        )}
+
+        {/* Exchange — NYSE / NASDAQ / etc. Useful for distinguishing
+            ADRs (often non-NYSE/NASDAQ) at a glance. */}
+        {exchange && (
+          <span
+            style={{
+              ...baseBadge,
+              background:  'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.12)',
+              color:       '#cfcfd4',
+            }}
+            title="Listing exchange"
+          >🏛 {exchange}</span>
+        )}
+
+        {/* Industry — yfinance/Finnhub category. Helps the user spot
+            sector rotation (e.g. all my picks are software). */}
+        {industry && (
+          <span
+            style={{
+              ...baseBadge,
+              background:  'rgba(59,130,246,0.10)',
+              borderColor: 'rgba(59,130,246,0.35)',
+              color:       '#60a5fa',
+            }}
+            title="Industry classification (yfinance / Finnhub)"
+          >🏷 {industry}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Embedded ticker supply/demand panel ---
+function TickerSupplyDemandPanel({ symbol }: { symbol: string }) {
+  const { data, loading } = useTickerSupplyDemand(symbol, 1);
+  const [drillTicker, setDrillTicker] = useState<string | null>(null);
+
+  if (loading) return <p className="sepa-empty">Loading supply chain context…</p>;
+  if (!data) return <p className="sepa-empty">No supply/demand data for {symbol}.</p>;
+
+  const sg = data.subgraph;
+  return (
+    <>
+      {/* Per-ticker flow + accumulation/distribution panel */}
+      <TickerFlowAccumPanel ctx={data} />
+
+      {sg.edges.length > 0 ? (
+        <>
+          <div className="eyebrow" style={{ marginTop: 16, marginBottom: 8 }}>{sg.nodes.length} companies · {sg.edges.length} relationships · click any bubble for thesis</div>
+          <DependencyGraph
+            nodes={sg.nodes}
+            edges={sg.edges}
+            height={460}
+            centerTicker={sg.center}
+            onNodeClick={(t) => setDrillTicker(t)}
+            selectedTicker={drillTicker}
+          />
+          <NodeThesisPanel ticker={drillTicker} onClose={() => setDrillTicker(null)} />
+        </>
+      ) : (
+        <p className="sepa-empty">No curated dependencies for {symbol} yet — Phase 2 will auto-expand from 10-K filings.</p>
+      )}
+
+      {data.sectors.length > 0 && (
+        <>
+          <div className="eyebrow" style={{ marginTop: 24, marginBottom: 8 }}>Sector exposures</div>
+          <ul className="sepa-news">
+            {data.sectors.map((s) => {
+              const c = s.classification;
+              const moodClass = c.state === 'constrained' ? 'good' : c.state === 'oversupplied' ? 'bad' : 'warn';
+              return (
+                <li key={s.sector_id}>
+                  <span className={`sepa-pill sepa-pill--${moodClass}`}>{s.label}</span>{' '}
+                  <strong>{c.state}</strong> · gap {c.gap_index}/100 · trend {c.trend_direction}
+                  <div className="sepa-check__help">{c.narrative}</div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </>
   );
 }
 
@@ -705,5 +1447,151 @@ function SmartMoneyPanel({ data, symbol }: { data?: SmartMoneyData; symbol: stri
         {data.cached ? '↻ from cache' : '⟳ fresh'} · symbol {symbol} · 15-min TTL
       </div>
     </>
+  );
+}
+
+
+/**
+ * TickerFlowAccumPanel — top of the SUPPLY/DEMAND tab on SepaCandidate.
+ * Shows two adjacent panels:
+ *   1. Live flow — current price, today's % change, volume, market state.
+ *      Same data Yahoo's "Pre-Market" line shows (from Massive's lastTrade
+ *      which is extended-hours-aware).
+ *   2. Multi-day accumulation/distribution — Chaikin Money Flow over 10
+ *      sessions, with the score, label, and the three sub-signals it's
+ *      computed from.
+ */
+function TickerFlowAccumPanel({ ctx }: { ctx: TickerContext }) {
+  const flow = ctx.flow;
+  const accum = ctx.accumulation;
+
+  const isUp = (flow?.change_pct ?? 0) > 0.05;
+  const isDown = (flow?.change_pct ?? 0) < -0.05;
+  const flowColor = isUp ? 'var(--positive)' : isDown ? 'var(--negative)' : 'var(--ink-muted)';
+
+  const accumScore = accum?.score ?? 0;
+  const accumLabel = accum?.label;
+  const accumColor =
+    accumScore >= 30 ? '#22c55e' :
+    accumScore <= -30 ? '#ef4444' :
+    'var(--ink-muted)';
+
+  // Score bar: -100 → +100, with center at 50%
+  const accumPct = Math.max(0, Math.min(100, 50 + accumScore / 2));
+
+  const marketLabel = flow?.market?.label || 'Markets closed';
+  const marketState = flow?.market?.state || 'closed';
+
+  const fmtVol = (v?: number) => {
+    if (!v) return '—';
+    if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+    if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e3) return `${(v / 1e3).toFixed(0)}k`;
+    return v.toString();
+  };
+
+  return (
+    <div className="tfa-panel">
+      {/* Left: Today's flow (intraday + market state) */}
+      <div className="tfa-card">
+        <div className="tfa-card__h">
+          <span className="eyebrow">Live flow</span>
+          <span className={`tfa-state tfa-state--${marketState}`}>
+            {marketState === 'open' && '🟢 LIVE DATA'}
+            {marketState === 'pre' && '🌅 PRE-MKT'}
+            {marketState === 'after' && '🟠 AFTER-HRS'}
+            {marketState === 'closed' && '⚪️ CLOSED · stale'}
+            {marketState === 'weekend' && '⚪️ WEEKEND'}
+          </span>
+        </div>
+        {flow ? (
+          <>
+            <div className="tfa-price-row">
+              <span className="tfa-price mono">${flow.price?.toFixed(2)}</span>
+              <span className="tfa-chg mono" style={{ color: flowColor }}>
+                {isUp ? '+' : ''}{flow.change_pct?.toFixed(2)}%
+              </span>
+              <span className="tfa-prevclose mono">vs prev ${flow.prev_close?.toFixed(2)}</span>
+            </div>
+            <div className="tfa-stats mono">
+              <span>vol {fmtVol(flow.volume)}</span>
+              <span>$ vol {fmtVol(flow.dollar_volume)}</span>
+              {flow.day_high ? <span>HoD ${flow.day_high.toFixed(2)}</span> : null}
+              {flow.day_low ? <span>LoD ${flow.day_low.toFixed(2)}</span> : null}
+            </div>
+            <div className="tfa-hint">
+              {marketLabel} · price reflects {marketState === 'pre' ? 'pre-market' : marketState === 'after' ? 'after-hours' : marketState === 'open' ? 'live regular session' : "yesterday's close"}
+            </div>
+          </>
+        ) : (
+          <p className="sepa-empty">No flow data available.</p>
+        )}
+      </div>
+
+      {/* Right: Multi-day accumulation/distribution */}
+      <div className="tfa-card">
+        <div className="tfa-card__h">
+          <span className="eyebrow">Accumulation / Distribution</span>
+          {accumLabel && (
+            <span className="tfa-label" style={{ color: accumColor }}>
+              {accumScore >= 30 && '🟢 '}
+              {accumScore <= -30 && '🔴 '}
+              {accumLabel}
+            </span>
+          )}
+        </div>
+        {accum ? (
+          <>
+            <div className="tfa-score-row">
+              <span className="tfa-score-num mono" style={{ color: accumColor }}>
+                {accumScore >= 0 ? '+' : ''}{accumScore.toFixed(1)}
+              </span>
+              <span className="tfa-score-suffix">/ 100</span>
+            </div>
+            <div className="tfa-score-track">
+              <div className="tfa-score-axis" />
+              <div
+                className="tfa-score-fill"
+                style={{
+                  left: accumScore >= 0 ? '50%' : `${accumPct}%`,
+                  width: `${Math.abs(accumScore) / 2}%`,
+                  background: accumColor,
+                  boxShadow: `0 0 8px ${accumColor}`,
+                }}
+              />
+            </div>
+            <div className="tfa-score-axis-labels mono">
+              <span>−100 dist</span>
+              <span>0</span>
+              <span>+100 accum</span>
+            </div>
+
+            {/* Sub-signals */}
+            <details className="tfa-subsignals">
+              <summary>signals breakdown ({accum.n_days}-day window)</summary>
+              <div className="tfa-sub-row">
+                <span className="tfa-sub-label">Chaikin Money Flow</span>
+                <span className="mono">{(accum.cmf * 100).toFixed(1)}%</span>
+                <span className="tfa-sub-hint">close-vs-range × volume, normalised</span>
+              </div>
+              <div className="tfa-sub-row">
+                <span className="tfa-sub-label">Up vs Down vol</span>
+                <span className="mono">
+                  {accum.up_down_vol_ratio > 0 ? '+' : ''}{(accum.up_down_vol_ratio * 100).toFixed(0)}%
+                </span>
+                <span className="tfa-sub-hint">net of volume on green vs red days</span>
+              </div>
+              <div className="tfa-sub-row">
+                <span className="tfa-sub-label">Close-position (5d)</span>
+                <span className="mono">{(accum.close_position_5d * 100).toFixed(0)}%</span>
+                <span className="tfa-sub-hint">avg close as % of intraday range — {'>'}50% = bulls in control</span>
+              </div>
+            </details>
+          </>
+        ) : (
+          <p className="sepa-empty">Not enough OHLCV history for {ctx.ticker}.</p>
+        )}
+      </div>
+    </div>
   );
 }

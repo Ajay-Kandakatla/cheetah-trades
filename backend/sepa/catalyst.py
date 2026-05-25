@@ -53,9 +53,41 @@ def _score_headline(text: str) -> int:
 
 
 async def _fetch_google_news(symbol: str, company_hint: str = "") -> List[dict]:
-    """Use Google News RSS — no key required."""
+    """Fetch ticker-relevant news headlines.
+
+    Two-step strategy to avoid the USD-as-currency / ETH-as-Ethereum /
+    AI-as-buzzword false-positive trap:
+
+      1. Resolve the company's full name (via the company_names cache).
+         Search Google News by the *company name*, not the bare ticker.
+         "Nvidia Corporation" returns Nvidia-relevant articles;
+         "NVDA stock" returns articles about every other ticker too because
+         NVDA prices are quoted in dollars, the dollar is "USD", etc.
+
+      2. Post-filter the returned items: require the title to contain either
+         the company name (or its first word) OR a ticker cashtag ($NVDA).
+         Drops macro/currency/cross-ticker pollution.
+
+    No API key required.
+    """
+    import re
     import xml.etree.ElementTree as ET
-    q = f"{symbol} stock" if not company_hint else f"{symbol} OR {company_hint}"
+    from . import company_names
+
+    sym = symbol.upper()
+    name = company_hint or company_names.name_for(sym) or ""
+    # First word of the company name (drops "Inc", "Corporation", "Holdings"
+    # etc. for laxer matching). E.g. "NVIDIA Corporation" → "NVIDIA".
+    name_first = name.split()[0] if name else ""
+
+    # Search query: prefer the company name. Fall back to `$TICKER stock` only
+    # when we have no name. Quoted phrase + the word "stock" anchors the news
+    # away from unrelated mentions of the same string.
+    if name:
+        q = f'"{name}" stock'
+    else:
+        q = f'${sym} stock'
+
     url = f"https://news.google.com/rss/search?q={quote(q)}&hl=en-US&gl=US&ceid=US:en"
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -63,17 +95,37 @@ async def _fetch_google_news(symbol: str, company_hint: str = "") -> List[dict]:
         if resp.status_code != 200:
             return []
         root = ET.fromstring(resp.text)
-        items = []
-        for it in root.findall(".//item")[:15]:
-            title = (it.findtext("title") or "").strip()
-            link = (it.findtext("link") or "").strip()
-            pub = (it.findtext("pubDate") or "").strip()
-            items.append({"title": title, "link": link, "pub": pub,
-                          "score": _score_headline(title)})
-        return items
     except Exception as exc:
         log.warning("google news fetch failed for %s: %s", symbol, exc)
         return []
+
+    # Build a relevance regex: company name OR first-word OR cashtag.
+    relevance_terms: List[str] = []
+    if name:
+        relevance_terms.append(re.escape(name))
+    if name_first and name_first.lower() != name.lower():
+        relevance_terms.append(re.escape(name_first))
+    relevance_terms.append(re.escape(f"${sym}"))
+    # Cashtag-less ticker — only for tickers that aren't common English/acronym
+    # collisions (4+ chars typically safe; 2-3 char tickers too risky).
+    if len(sym) >= 4:
+        relevance_terms.append(rf"\b{re.escape(sym)}\b")
+    relevance_re = re.compile("|".join(relevance_terms), re.IGNORECASE)
+
+    items: List[dict] = []
+    for it in root.findall(".//item")[:30]:  # fetch more, filter down
+        title = (it.findtext("title") or "").strip()
+        if not title:
+            continue
+        if not relevance_re.search(title):
+            continue  # dropped: title doesn't mention this company
+        link = (it.findtext("link") or "").strip()
+        pub = (it.findtext("pubDate") or "").strip()
+        items.append({"title": title, "link": link, "pub": pub,
+                      "score": _score_headline(title)})
+        if len(items) >= 15:
+            break
+    return items
 
 
 async def _fetch_finnhub_earnings(symbol: str) -> Optional[dict]:

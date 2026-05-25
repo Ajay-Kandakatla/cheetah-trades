@@ -259,3 +259,178 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
     _mongo_put(symbol, df)
     _parquet_put(symbol, df)
     return df
+
+
+# ---------------------------------------------------------------------------
+# Real-time upgrades — bulk snapshot (2026-05-25)
+# ---------------------------------------------------------------------------
+
+_SNAP_CHUNK = 250  # Massive allows up to 250 tickers per snapshot call
+
+
+def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
+    """Fetch today's OHLCV snapshot for up to N tickers in one Massive call.
+
+    Massive endpoint: GET /v2/snapshot/locale/us/markets/stocks/tickers
+    Returns {SYMBOL: {open, high, low, close, volume, vwap, date, change_pct}}
+    Missing or errored symbols are simply absent from the dict.
+    """
+    key = os.getenv("MASSIVE_API_KEY")
+    if not key:
+        return {}
+    try:
+        import requests as _req
+    except ImportError:
+        return {}
+
+    result: dict[str, dict] = {}
+    chunks = [symbols[i : i + _SNAP_CHUNK] for i in range(0, len(symbols), _SNAP_CHUNK)]
+    for chunk in chunks:
+        try:
+            r = _req.get(
+                "https://api.massive.com/v2/snapshot/locale/us/markets/stocks/tickers",
+                params={"tickers": ",".join(s.upper() for s in chunk), "apiKey": key},
+                timeout=15,
+            )
+            if r.status_code != 200:
+                log.warning("bulk_snapshot: HTTP %s for chunk of %d", r.status_code, len(chunk))
+                continue
+            for item in (r.json() or {}).get("tickers") or []:
+                sym = (item.get("ticker") or "").upper()
+                if not sym:
+                    continue
+                day = item.get("day") or {}
+                # Use the start-of-day timestamp from `day.t`; fall back to now-UTC
+                day_t = day.get("t")
+                if day_t:
+                    bar_date = pd.Timestamp(day_t, unit="ms", tz="UTC").normalize().tz_localize(None)
+                else:
+                    bar_date = pd.Timestamp.now(tz="UTC").normalize().tz_localize(None)
+                result[sym] = {
+                    "open":       day.get("o"),
+                    "high":       day.get("h"),
+                    "low":        day.get("l"),
+                    "close":      day.get("c"),
+                    "volume":     day.get("v"),
+                    "vwap":       day.get("vw"),
+                    "date":       bar_date,
+                    "change_pct": item.get("todaysChangePerc"),
+                }
+        except Exception as exc:
+            log.warning("bulk_snapshot: chunk failed: %s", exc)
+
+    log.info("bulk_snapshot: fetched %d/%d symbols", len(result), len(symbols))
+    return result
+
+
+def patch_latest_closes(symbols: list[str]) -> dict:
+    """Append today's close to every already-cached symbol using bulk snapshot.
+
+    Instead of re-downloading 2 years of history when the 20h TTL expires,
+    we grab just the latest bar for every ticker in one bulk API call and
+    append it to the existing Mongo-cached series. The TTL is also reset so
+    the scan workers see a fresh cache hit and skip the full re-fetch.
+
+    Symbols not yet cached are left alone — the scan worker will do a full
+    history fetch for them as usual.
+
+    Returns stats dict: {patched, already_current, no_cache, total_snapshot}
+    """
+    snaps = bulk_snapshot(symbols)
+    if not snaps:
+        return {"patched": 0, "already_current": 0, "no_cache": 0, "total_snapshot": 0}
+
+    coll = _get_mongo()
+    patched = already_current = no_cache = 0
+
+    for sym, bar in snaps.items():
+        # Skip bars with any missing or zero price field (0 = no session today,
+        # i.e. weekend/holiday response from Massive).
+        if any(not bar.get(k) for k in ("open", "high", "low", "close", "volume")):
+            continue
+        bar_date: pd.Timestamp = bar["date"]
+        if bar_date is None:
+            continue
+        today_iso = bar_date.date().isoformat()
+
+        # Load just the tail of the stored series (last 5 rows is enough to
+        # check whether today is already present).
+        doc = None
+        if coll is not None:
+            try:
+                doc = coll.find_one({"symbol": sym}, {"bars": {"$slice": -5}, "cached_at": 1})
+            except Exception:
+                pass
+
+        if not doc or not doc.get("bars"):
+            no_cache += 1
+            continue
+
+        # Check if today is already in the tail
+        def _bar_iso(b: dict) -> str:
+            d = b.get("date")
+            if d is None:
+                return ""
+            if hasattr(d, "date"):
+                return d.date().isoformat()
+            return str(d)[:10]
+
+        if any(_bar_iso(b) == today_iso for b in doc["bars"]):
+            # Bar exists — just bump the TTL so load_prices skips a re-fetch
+            if coll is not None:
+                try:
+                    coll.update_one({"symbol": sym}, {"$set": {"cached_at": int(time.time())}})
+                except Exception:
+                    pass
+            already_current += 1
+            continue
+
+        # Append the new bar and reset TTL
+        new_bar = {
+            "date":   bar_date.to_pydatetime(),
+            "open":   float(bar["open"]),
+            "high":   float(bar["high"]),
+            "low":    float(bar["low"]),
+            "close":  float(bar["close"]),
+            "volume": float(bar["volume"]),
+        }
+        if coll is not None:
+            try:
+                coll.update_one(
+                    {"symbol": sym},
+                    {"$push": {"bars": new_bar}, "$set": {"cached_at": int(time.time())}},
+                )
+                patched += 1
+            except Exception as exc:
+                log.warning("patch_latest_closes: %s failed: %s", sym, exc)
+
+    log.info(
+        "patch_latest_closes: patched=%d already_current=%d no_cache=%d",
+        patched, already_current, no_cache,
+    )
+    return {
+        "patched":        patched,
+        "already_current": already_current,
+        "no_cache":       no_cache,
+        "total_snapshot": len(snaps),
+    }
+
+
+def bulk_live_prices(symbols: list[str]) -> dict[str, dict]:
+    """Real-time last prices for the given symbols.
+
+    Returns {SYMBOL: {price, change_pct, volume}} — suitable for fast
+    intraday card refreshes without re-running the full SEPA scan.
+    """
+    snaps = bulk_snapshot(symbols)
+    return {
+        sym: {
+            "price":      bar.get("close"),
+            "change_pct": bar.get("change_pct"),
+            "volume":     bar.get("volume"),
+        }
+        for sym, bar in snaps.items()
+        # Exclude zero prices — Massive returns 0 on weekends/holidays
+        # (no trading session active yet). Frontend would otherwise show $0.00.
+        if bar.get("close")  # falsy check drops both None and 0
+    }

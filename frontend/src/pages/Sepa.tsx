@@ -1,13 +1,39 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSepaScan } from '../hooks/useSepa';
+import { ageHuman } from '../lib/swrCache';
+import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useAlertNotifier } from '../hooks/usePriceAlerts';
 import type { SepaCandidate, Rating } from '../hooks/useSepa';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
+import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketClockStrip } from '../components/MarketClockStrip';
+import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
+import { SepaScanProgress } from '../components/SepaScanProgress';
+import { SepaDateScrubber } from '../components/SepaDateScrubber';
+import { useSepaScanByDate } from '../hooks/useSepaHistory';
 import { InfoButton } from '../components/InfoButton';
+import { GlobalStockSearch } from '../components/GlobalStockSearch';
+import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
+import { useWhalesFlow } from '../hooks/useWhalesFlow';
+import { prefillBulkQuotes } from '../hooks/useLiveQuote';
+import { registerSymbolInterest } from '../lib/eventBus';
+import { useLivePrices } from '../hooks/useLivePrices';
+import {
+  SepaSetupTabs,
+  TAB_TO_KIND,
+  tabLabel,
+  type SepaTab,
+} from '../components/SepaSetupTabs';
+import {
+  useSetupsByKind,
+  getCachedSetupCount,
+  type Setup,
+} from '../hooks/useSetupsByKind';
+import { SetupOverlayStrip } from '../components/SetupOverlayStrip';
 
 const PageInfo = (
   <>
@@ -97,16 +123,192 @@ function defaultRating(score: number): Rating {
   return 'AVOID';
 }
 
-export function SepaPage() {
-  const { data, scanning, runScan, refetch } = useSepaScan();
-  useAlertNotifier();
-  const navigate = useNavigate();
-  const openSymbol = (sym: string) => navigate(`/sepa/${encodeURIComponent(sym)}`);
-  const [filters, setFilters] = useState<SepaFilters>({
-    rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: true, sortBy: 'score',
-  });
+import { usePageContext } from '../hooks/usePageContext';
 
-  const source: SepaCandidate[] = (filters.showAll ? data?.all_results : data?.candidates) ?? [];
+export function SepaPage() {
+  const {
+    data: liveData,
+    scanning: legacyScanning,
+    revalidating,
+    cachedAt,
+    refetch,
+    loadFull,
+    hasFull,
+  } = useSepaScan();
+  const stream = useSepaScanStream();
+  useAlertNotifier();
+  const { setPageContext } = usePageContext();
+
+  // Date scrubber: when set, the candidate list comes from the historical
+  // snapshot at that date instead of the live scan. Persists in URL hash so
+  // links to historical states are shareable.
+  const [historicalDate, setHistoricalDate] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const m = window.location.hash.match(/date=(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : null;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (historicalDate) {
+      window.location.hash = `date=${historicalDate}`;
+    } else if (window.location.hash.startsWith('#date=')) {
+      window.location.hash = '';
+    }
+  }, [historicalDate]);
+
+  const { scan: histScan } = useSepaScanByDate(historicalDate);
+
+  // Register page context for the ChatWidget. Sends just the top-N
+  // symbols + scan metadata — the candidate list can have hundreds of
+  // rows and sending all of them would blow the system-prompt budget.
+  // If the user wants to ask about a specific candidate, they'll click
+  // into its detail page where the full data ships.
+  useEffect(() => {
+    const cands = (liveData as any)?.candidates || [];
+    const top = cands.slice(0, 10).map((c: any) => ({
+      symbol:    c.symbol,
+      score:     c.score,
+      rating:    c.rating,
+      rs_rank:   c.rs_rank,
+      day_pct:   c.day_change_pct,
+    }));
+    setPageContext({
+      page:            'sepa-list',
+      historical_date: historicalDate,
+      candidate_count: cands.length,
+      top_10:          top,
+    });
+    return () => setPageContext(null);
+  }, [liveData, historicalDate, setPageContext]);
+
+  // Adapt the historical-snapshot shape to the live-scan shape so the rest
+  // of the page renders against either source without branching.
+  const data = useMemo(() => {
+    if (!historicalDate) return liveData;
+    if (!histScan) return null;
+    const cands = (histScan.candidates as any[]) || [];
+    const isCandidate = (c: any) => ['STRONG_BUY', 'BUY', 'WATCH'].includes(c?.rating);
+    return {
+      generated_at: histScan.generated_at,
+      universe_size: histScan.universe_size,
+      analyzed: histScan.analyzed,
+      candidate_count: cands.filter(isCandidate).length,
+      market_context: histScan.market_context,
+      candidates: cands.filter(isCandidate),
+      all_results: cands,
+    } as any;
+  }, [historicalDate, liveData, histScan]);
+  const navigate = useNavigate();
+  const openSymbol = (sym: string, e?: React.MouseEvent) => {
+    const url = `/sepa/${encodeURIComponent(sym)}`;
+    if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    navigate(url, { state: { from: '/sepa', label: 'SEPA' } });
+  };
+  // Filters persist across reloads — reading the page should always pick up
+  // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
+  const FILTER_DEFAULTS: SepaFilters = {
+    rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: true,
+    dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
+    moatMin: 0,
+    sortBy: 'score',
+  };
+  const [filters, setFilters] = useState<SepaFilters>(() => {
+    if (typeof window === 'undefined') return FILTER_DEFAULTS;
+    try {
+      const raw = localStorage.getItem('sepa_filters_v1');
+      if (!raw) return FILTER_DEFAULTS;
+      return { ...FILTER_DEFAULTS, ...JSON.parse(raw) };
+    } catch { return FILTER_DEFAULTS; }
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('sepa_filters_v1', JSON.stringify(filters));
+  }, [filters]);
+
+  // Phase 2 — setup-category tab strip. "all" is the default (existing
+  // behavior). "vcp" is a client-side filter on already-loaded rows.
+  // Every other tab maps to a backend /setups/{kind} endpoint via
+  // TAB_TO_KIND and is fetched lazily on tab open.
+  const [activeTab, setActiveTab] = useState<SepaTab>('all');
+  const activeKind = TAB_TO_KIND[activeTab];
+  const {
+    setups: tabSetups,
+    loading: tabLoading,
+    error: tabError,
+  } = useSetupsByKind(activeKind);
+
+  // When the streaming scan completes, refetch the canonical /sepa/scan
+  // endpoint so the candidate cards reflect the just-persisted result.
+  useEffect(() => {
+    if (stream.phase === 'done' && stream.result) {
+      refetch();
+    }
+  }, [stream.phase, stream.result, refetch]);
+
+  // Unified "scanning" boolean — either legacy POST or the SSE stream
+  const scanning = legacyScanning || stream.scanning;
+
+  // Lazy-load the full all_results array only when the user enables
+  // "show all analyzed". Saves ~4MB / 5-15sec on phone first paint.
+  // Falls back to candidates while the full payload is in flight.
+  useEffect(() => {
+    if (filters.showAll && !hasFull && !data?.all_results) {
+      loadFull();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.showAll, hasFull, data?.all_results]);
+  const source: SepaCandidate[] =
+    (filters.showAll ? (data?.all_results ?? data?.candidates) : data?.candidates) ?? [];
+
+  // Pull the latest SOIR scan once and build a per-symbol lookup so each
+  // candidate card can show put/call open interest + signal without firing
+  // a per-card request. Cached at module level by useOptionsPulse.
+  const { data: optionsScan } = useOptionsPulse();
+  const optionsBySymbol = useMemo(() => {
+    const map = new Map<string, SoirRow>();
+    for (const r of optionsScan?.rows || []) {
+      if (r.symbol) map.set(r.symbol.toUpperCase(), r);
+    }
+    return map;
+  }, [optionsScan]);
+
+  // Institutional flow — only renders chip on cards where the ticker has
+  // a cached whales record (previously visited supply/demand panel).
+  const whalesFlow = useWhalesFlow();
+
+  // Real-time intraday prices — polled every 2 min during market hours.
+  // Overlaid on SEPA cards so the user sees live price + change_pct without
+  // a full re-scan. Polling is a no-op outside 9:30–16:00 ET Mon-Fri.
+  const livePrices = useLivePrices();
+
+  // Bulk prefill + SSE subscription whenever the candidate list changes.
+  //
+  // Two HTTP requests for the entire SEPA list:
+  //   1. prefillBulkQuotes  → POST /quotes — fills server-side cache
+  //      AND seeds the client-side `_quoteState`, so every card's
+  //      useQuote/useLiveQuote skips its individual GET.
+  //   2. registerSymbolInterest → POST /events/subscribe — adds all
+  //      visible symbols to the Finnhub WebSocket feed so subsequent
+  //      price changes arrive as live `quote.update` SSE frames.
+  //
+  // After this useEffect: zero per-card HTTP requests, one persistent
+  // SSE stream, and prices update in real time as Finnhub pushes them.
+  // Replaces the old N×GET /quote/<sym> stack that used to fill the
+  // network tab with "pending" rows.
+  useEffect(() => {
+    const syms = source.map((r) => r.symbol).filter(Boolean);
+    if (syms.length === 0) return;
+    // Cap at 200 to avoid pathological bulk calls — beyond that the user
+    // is probably viewing the full 'showAll' Russell 1000 and the cache
+    // benefit is marginal.
+    const list = syms.slice(0, 200);
+    void prefillBulkQuotes(list);
+    registerSymbolInterest(list);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source.length, source[0]?.symbol]);  // re-run on list change
 
   const filtered = useMemo(() => {
     const out = source.filter((r) => {
@@ -115,22 +317,284 @@ export function SepaPage() {
       if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
       if (filters.search && !r.symbol.includes(filters.search)) return false;
+      if (filters.dmEligibleOnly) {
+        const dm = r.dual_momentum;
+        if (!dm) return false;
+        if (!dm.abs_mom_pass) return false;
+        if (dm.beats_spy === false) return false;
+      }
+      if (filters.type === 'equity' && r.is_etf) return false;
+      if (filters.type === 'etf' && !r.is_etf) return false;
+      if (filters.pioneerOnly && !r.is_pioneer) return false;
+      // Stage filter — gate by Weinstein stage (1/2/3/4). When ALL, no gate.
+      if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
+      // Moat filter — Buffett tier minimum. When 0, no gate. UNKNOWN
+      // (tier 0) gets excluded as soon as the user opts into any minimum.
+      if (filters.moatMin > 0) {
+        const tier = r.moat?.tier ?? 0;
+        if (tier < filters.moatMin) return false;
+      }
       return true;
     });
     out.sort((a, b) => {
       if (filters.sortBy === 'symbol') return a.symbol.localeCompare(b.symbol);
       if (filters.sortBy === 'rs') return (b.rs_rank ?? 0) - (a.rs_rank ?? 0);
+      if (filters.sortBy === 'day_change') {
+        // Top gainers descending. Nulls land at the bottom.
+        const av = a.day_change_pct ?? -Infinity;
+        const bv = b.day_change_pct ?? -Infinity;
+        return bv - av;
+      }
+      if (filters.sortBy === 'day_change_abs') {
+        // Biggest movers regardless of direction (useful for spotting catalysts).
+        const av = Math.abs(a.day_change_pct ?? 0);
+        const bv = Math.abs(b.day_change_pct ?? 0);
+        return bv - av;
+      }
+      // Dual Momentum sorts — descending; nulls sink to the bottom
+      const dmKey: Record<string, keyof NonNullable<SepaCandidate['dual_momentum']>> = {
+        dm_12m:   'return_12m',
+        dm_6m:    'return_6m',
+        dm_3m:    'return_3m',
+        dm_1m:    'return_1m',
+        dm_score: 'dm_score',
+      };
+      if (filters.sortBy in dmKey) {
+        const k = dmKey[filters.sortBy as keyof typeof dmKey];
+        const av = (a.dual_momentum?.[k] as number | null | undefined) ?? -Infinity;
+        const bv = (b.dual_momentum?.[k] as number | null | undefined) ?? -Infinity;
+        return (bv as number) - (av as number);
+      }
+      if (filters.sortBy === 'moat') {
+        // Higher moat score wins. Tie-break by SEPA composite score.
+        const av = a.moat?.score ?? -1;
+        const bv = b.moat?.score ?? -1;
+        if (bv !== av) return bv - av;
+        return b.score - a.score;
+      }
+      if (filters.sortBy === 'pioneer') {
+        // More themes = stronger pioneer signal. Tie-break by SEPA score.
+        const av = a.pioneer_themes?.length ?? 0;
+        const bv = b.pioneer_themes?.length ?? 0;
+        if (bv !== av) return bv - av;
+        return b.score - a.score;
+      }
+      if (filters.sortBy === 'price_asc' || filters.sortBy === 'price_desc') {
+        // Sort by stock price (yesterday's close). Nulls always last so
+        // missing-data rows don't poison the head of the list. Tie-break
+        // by SEPA score so equal-priced names keep quality ranking.
+        const av = a.last_close ?? null;
+        const bv = b.last_close ?? null;
+        if (av == null && bv == null) return b.score - a.score;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        const cmp = filters.sortBy === 'price_asc' ? av - bv : bv - av;
+        if (cmp !== 0) return cmp;
+        return b.score - a.score;
+      }
+
+      // ── Volume / VCP sorts ───────────────────────────────────────
+      // Backend `candidate.volume` (see backend/sepa/volume.py) exposes:
+      //   up_down_vol_ratio : numeric  — sum(up-day vol) / sum(down-day vol)
+      //                                  over last 50 bars. >1 = accumulation,
+      //                                  <1 = distribution.
+      //   high_vol_breakout : bool     — latest bar > 1.5× 50d avg AND
+      //                                  closed above prior 22-day high.
+      //   accumulation      : bool     — up_down_vol_ratio above threshold.
+      //   vol_dryup         : numeric  — 10d/50d avg volume; <0.7 = drying
+      //                                  up (constructive on a base RHS).
+      //
+      // These sorts surface volume signal the default composite-score
+      // sort *dilutes* — volume contributes only 5/100, so MU's
+      // top-of-list position is driven by trend template + RS, not
+      // by actual volume character. Users asking "rank by volume +
+      // VCP" want this view.
+      const volStrength = (x: SepaCandidate): number => {
+        // Composite "is this stock under institutional accumulation"
+        // score. Refactored 2026-05-21 alongside the volume detector v2.
+        //
+        // The old version was: ratio + (breakout ? 1.0 : 0) + (accum ? 0.3 : 0)
+        // — but `accumulation` tripped for 49% of universe so the +0.3
+        // boost was noise, and the ratio alone misled when CMF disagreed
+        // (e.g. OGN ratio 3.57 but cmf -0.23 = real distribution).
+        //
+        // New formula stacks the graded signals so a name with multiple
+        // accumulation confirmations sorts above one with just a high
+        // ratio. Distribution days subtract — Minervini's 4-distribution-
+        // days rule actively penalizes the score.
+        const v = x.volume;
+        if (!v) return 0;
+        const ratio = v.up_down_vol_ratio ?? 0;
+        let score = ratio;
+        // Strength tier — replaces the loose binary accumulation flag.
+        if (v.accumulation_strength === 'strong')        score += 1.0;
+        else if (v.accumulation_strength === 'accumulating') score += 0.5;
+        else if (v.accumulation_strength === 'distributing') score -= 0.5;
+        // Pocket pivot — Minervini's pre-breakout signal.
+        if (v.pocket_pivot) score += 0.6;
+        // Confirmed high-volume breakout.
+        if (v.high_vol_breakout) score += 1.0;
+        // Chaikin Money Flow — independent confirmation that close-position
+        // weighted by volume is bullish.
+        if (v.cmf_signal === 'inflow')  score += 0.4;
+        if (v.cmf_signal === 'outflow') score -= 0.4;
+        // Distribution-day penalty (institutional selling).
+        const distDays = v.distribution_days_25 ?? 0;
+        if (distDays >= 4) score -= 0.5 * (distDays - 3);  // -0.5 per dist day above 3
+        return score;
+      };
+      const setupRank = (x: SepaCandidate): number => {
+        // 2 = vcp, 1 = powerplay, 0 = neither. Higher = "more like
+        // an actionable base," which is what the user wants pinned
+        // at the top of the list.
+        //
+        // Case-normalize: backend (sepa/scanner.py) writes "VCP" and
+        // "POWER_PLAY" (uppercase, with underscore) when a setup is
+        // detected. Earlier code here compared to 'vcp'/'powerplay'
+        // lowercase, so setupRank always returned 0 — the
+        // "VCP/PowerPlay setups first" sort was silently a no-op.
+        // Discovered 2026-05-21 when the current universe has 0
+        // detected bases so the bug was invisible; fixed before any
+        // future base shows up and ranks wrong.
+        const t = (x.entry_setup?.type || '').toLowerCase().replace(/_/g, '');
+        if (t === 'vcp') return 2;
+        if (t === 'powerplay') return 1;
+        return 0;
+      };
+
+      if (filters.sortBy === 'vol_ratio') {
+        // Pure volume-strength descending — accumulation + breakout
+        // signal stacked into one number. Tickers being heavily
+        // accumulated rise to the top regardless of composite score.
+        const av = volStrength(a);
+        const bv = volStrength(b);
+        if (bv !== av) return bv - av;
+        return b.score - a.score;
+      }
+      if (filters.sortBy === 'vcp_first') {
+        // VCP setups first (then PowerPlay), with score as tie-break
+        // within each tier. No volume signal mixed in.
+        const ar = setupRank(a);
+        const br = setupRank(b);
+        if (br !== ar) return br - ar;
+        return b.score - a.score;
+      }
+      if (filters.sortBy === 'vol_vcp') {
+        // Combined: VCP/PowerPlay setups pinned to the top, sorted
+        // within each tier by volume strength descending, with score
+        // as a final tiebreaker. The "show me the actionable bases
+        // AND under-accumulation" sort.
+        const ar = setupRank(a);
+        const br = setupRank(b);
+        if (br !== ar) return br - ar;
+        const av = volStrength(a);
+        const bv = volStrength(b);
+        if (bv !== av) return bv - av;
+        return b.score - a.score;
+      }
+
       return b.score - a.score;
     });
     return out;
   }, [source, filters]);
 
+  // Build a fast lookup: symbol → SepaCandidate. Used when a setup tab is
+  // active to match incoming /setups/{kind} setups to the existing SEPA
+  // candidate rows (the card data lives on `source`, the trigger/stop/
+  // target lives on each `setup`). Built off `source` (all loaded rows)
+  // because setups can reference symbols that don't pass the strict SEPA
+  // gates but still have valid bases.
+  const candidateBySymbol = useMemo(() => {
+    const m = new Map<string, SepaCandidate>();
+    for (const r of source) {
+      m.set(r.symbol.toUpperCase(), r);
+    }
+    return m;
+  }, [source]);
+
+  // Reuse the same predicate the filter bar applies so RS slider,
+  // pioneer toggle, etc. continue to gate the visible setup matches.
+  // Pulled into a callback so we can apply it in two different render
+  // paths (default and setup-tab) without copying the logic.
+  const passesFilters = useMemo(() => (r: SepaCandidate): boolean => {
+    const rating = r.rating ?? defaultRating(r.score);
+    if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
+    if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
+    if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
+    if (filters.search && !r.symbol.includes(filters.search)) return false;
+    if (filters.dmEligibleOnly) {
+      const dm = r.dual_momentum;
+      if (!dm) return false;
+      if (!dm.abs_mom_pass) return false;
+      if (dm.beats_spy === false) return false;
+    }
+    if (filters.type === 'equity' && r.is_etf) return false;
+    if (filters.type === 'etf' && !r.is_etf) return false;
+    if (filters.pioneerOnly && !r.is_pioneer) return false;
+    if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
+    if (filters.moatMin > 0) {
+      const tier = r.moat?.tier ?? 0;
+      if (tier < filters.moatMin) return false;
+    }
+    return true;
+  }, [filters]);
+
+  // VCP-tab list — client-side filter on the already-loaded SEPA list.
+  // Composes with the existing SepaFilterBar so RS, pioneer, etc. still
+  // gate the result.
+  const vcpFiltered = useMemo<SepaCandidate[]>(() => {
+    if (activeTab !== 'vcp') return [];
+    return filtered.filter((r) => r.vcp?.has_base === true);
+  }, [activeTab, filtered]);
+
+  // Setup-tab list — pair each fetched setup to its matching SEPA row
+  // (when one exists). Filter bar predicates apply to the matched rows.
+  // When a setup has no matching row in `source` we still surface a
+  // minimal placeholder pair (candidate=null) so the user sees the match.
+  const setupTabPairs = useMemo<Array<{ setup: Setup; candidate: SepaCandidate | null }>>(() => {
+    if (!activeKind) return [];
+    return tabSetups
+      .map((s) => ({
+        setup: s,
+        candidate: candidateBySymbol.get(s.symbol.toUpperCase()) ?? null,
+      }))
+      .filter(({ candidate }) => {
+        // Placeholder rows (no candidate) bypass the filter bar — they're
+        // edge cases worth surfacing regardless.
+        if (!candidate) return true;
+        return passesFilters(candidate);
+      });
+  }, [activeKind, tabSetups, candidateBySymbol, passesFilters]);
+
+  // Tab counts — only show numbers for tabs whose data we already have.
+  // `all` and `vcp` come from local data (cheap to compute always).
+  // Backend-kind tabs use the cached count from useSetupsByKind so we
+  // don't fan out 7 fetches just to populate badges.
+  const tabCounts = useMemo<Partial<Record<SepaTab, number | null>>>(() => {
+    const out: Partial<Record<SepaTab, number | null>> = {
+      all: source.length,
+      vcp: source.filter((r) => r.vcp?.has_base === true).length,
+    };
+    (Object.keys(TAB_TO_KIND) as SepaTab[]).forEach((t) => {
+      const kind = TAB_TO_KIND[t];
+      if (!kind) return;
+      // Currently-active tab uses live state (covers the during-load case
+      // where the cache hasn't been written yet but setups are in hand).
+      if (t === activeTab) {
+        out[t] = tabSetups.length;
+      } else {
+        out[t] = getCachedSetupCount(kind);
+      }
+    });
+    return out;
+  }, [source, activeTab, tabSetups]);
+
   // Hero rail — top 5 by rating then score (always from candidates, ignores filters)
-  const topPicks = useMemo(() => {
-    const c = (data?.candidates ?? []).slice();
-    c.sort((a, b) => {
-      const ra = RATING_ORDER[a.rating ?? defaultRating(a.score)];
-      const rb = RATING_ORDER[b.rating ?? defaultRating(b.score)];
+  const topPicks = useMemo<SepaCandidate[]>(() => {
+    const c = ((data?.candidates as SepaCandidate[]) ?? []).slice();
+    c.sort((a: SepaCandidate, b: SepaCandidate) => {
+      const ra = RATING_ORDER[(a.rating ?? defaultRating(a.score)) as Rating];
+      const rb = RATING_ORDER[(b.rating ?? defaultRating(b.score)) as Rating];
       if (rb !== ra) return rb - ra;
       return b.score - a.score;
     });
@@ -139,6 +603,9 @@ export function SepaPage() {
 
   return (
     <div className="sepa-page">
+      <MarketRegimeBanner />
+      <MarketClockStrip />
+      <MinerviniLesson />
       <SepaBriefBanner />
 
       <div className="sepa-page__title">
@@ -151,14 +618,41 @@ export function SepaPage() {
             tight base + risk-managed entry. Market-context aware.
           </p>
         </div>
+        {/* Universe-wide typeahead — search ANY US ticker, not just SEPA picks. */}
+        <div className="sepa-page__title-search">
+          <GlobalStockSearch />
+        </div>
       </div>
+
+      <SepaDateScrubber value={historicalDate} onChange={setHistoricalDate} />
+
+      {/* Stale-while-revalidate indicator — shown only on the live view
+          (historical scrubs are immutable so they don't revalidate). When
+          the page is rendering from localStorage cache while a fresh fetch
+          is in flight, surface "cached … refreshing" so the user knows
+          the visible numbers might be a few minutes old. */}
+      {!historicalDate && revalidating && cachedAt && data && (
+        <div className="sepa-stale-banner mono">
+          Showing cached scan from <strong>{ageHuman({ ts: cachedAt })}</strong>
+          {' · '}refreshing in background…
+        </div>
+      )}
 
       <SepaHero
         data={data}
         scanning={scanning}
-        onScan={(withCat, opts) => runScan(withCat, opts)}
+        onScan={(withCat, opts) => stream.start({
+          fast: opts?.fast,
+          mode: opts?.mode,
+          with_catalyst: withCat,
+        })}
         onReload={() => refetch()}
       />
+
+      {/* Live progress — shown whenever a stream is in flight or has just finished */}
+      {(stream.scanning || stream.phase === 'done' || stream.phase === 'error') && (
+        <SepaScanProgress {...stream} />
+      )}
 
       {topPicks.length > 0 && (
         <section className="sepa-toppicks">
@@ -169,7 +663,8 @@ export function SepaPage() {
               <button
                 key={p.symbol}
                 className={`sepa-toppick sepa-toppick--${(p.rating ?? defaultRating(p.score)).toLowerCase()}`}
-                onClick={() => openSymbol(p.symbol)}
+                onClick={(e) => openSymbol(p.symbol, e)}
+                title="Cmd/Ctrl-click to open in new tab"
               >
                 <div className="sepa-toppick__sym">{p.symbol}</div>
                 <div className="sepa-toppick__score">{Math.round(p.score)}</div>
@@ -182,27 +677,164 @@ export function SepaPage() {
         </section>
       )}
 
+      {/* Phase 2 — setup-category tabs. Filter the SEPA list by Minervini
+          setup type (VCP / Cheat / Bull Flag / PEG / Episodic Pivot / HTF /
+          etc.) ranked safest → most aggressive. "All Candidates" is the
+          default and preserves the original behavior 1:1. */}
+      <SepaSetupTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabCounts={tabCounts}
+      />
+
       <SepaFilterBar
         filters={filters}
         onChange={setFilters}
         total={source.length}
-        shown={filtered.length}
+        shown={
+          activeTab === 'all'
+            ? filtered.length
+            : activeTab === 'vcp'
+              ? vcpFiltered.length
+              : setupTabPairs.length
+        }
       />
 
-      {filtered.length === 0 ? (
-        <div className="sepa-empty-card">
-          <div className="eyebrow">Nothing matches</div>
-          <p>No rows match the current filters. Try widening the rating tier, lowering RS, or click <strong>Scan</strong> to refresh.</p>
-        </div>
-      ) : (
-        <section className="sepa-results">
-          <InfoButton title="Results">{ResultsInfo}</InfoButton>
-          <div className="sepa-grid">
-            {filtered.map((r) => (
-              <SepaCandidateCard key={r.symbol} row={r} onSelect={() => openSymbol(r.symbol)} />
-            ))}
+      {activeTab === 'all' && (
+        filtered.length === 0 ? (
+          <div className="sepa-empty-card">
+            <div className="eyebrow">Nothing matches</div>
+            <p>No rows match the current filters. Try widening the rating tier, lowering RS, or click <strong>Scan</strong> to refresh.</p>
           </div>
-        </section>
+        ) : (
+          <section className="sepa-results">
+            <InfoButton title="Results">{ResultsInfo}</InfoButton>
+            <div className="sepa-grid">
+              {filtered.map((r) => (
+                <SepaCandidateCard
+                  key={r.symbol}
+                  row={r}
+                  soir={optionsBySymbol.get(r.symbol.toUpperCase())}
+                  whalesFlow={whalesFlow.get(r.symbol.toUpperCase())}
+                  livePrice={livePrices[r.symbol.toUpperCase()]}
+                  onSelect={(e) => openSymbol(r.symbol, e)}
+                />
+              ))}
+            </div>
+          </section>
+        )
+      )}
+
+      {activeTab === 'vcp' && (
+        vcpFiltered.length === 0 ? (
+          <div className="sepa-empty-card">
+            <div className="eyebrow">No {tabLabel(activeTab)} setups</div>
+            <p>
+              No {tabLabel(activeTab)} setups today. Common reasons: regime is
+              cautious, no symbols meet the strict pattern requirements, or
+              the scanner hasn't run yet (refreshes nightly at 6:40–7:00 PM ET).
+            </p>
+          </div>
+        ) : (
+          <section className="sepa-results">
+            <InfoButton title="Results">{ResultsInfo}</InfoButton>
+            <div className="sepa-grid">
+              {vcpFiltered.map((r) => (
+                <SepaCandidateCard
+                  key={r.symbol}
+                  row={r}
+                  soir={optionsBySymbol.get(r.symbol.toUpperCase())}
+                  whalesFlow={whalesFlow.get(r.symbol.toUpperCase())}
+                  livePrice={livePrices[r.symbol.toUpperCase()]}
+                  onSelect={(e) => openSymbol(r.symbol, e)}
+                />
+              ))}
+            </div>
+          </section>
+        )
+      )}
+
+      {activeTab !== 'all' && activeTab !== 'vcp' && (
+        tabLoading ? (
+          <div
+            className="sepa-empty-card"
+            style={{ color: '#9a9aa3', fontSize: '0.92rem' }}
+          >
+            loading {tabLabel(activeTab)}…
+          </div>
+        ) : tabError ? (
+          <div className="sepa-empty-card">
+            <div className="eyebrow">Couldn't load setups</div>
+            <p style={{ color: '#fca5a5' }}>{tabError}</p>
+          </div>
+        ) : setupTabPairs.length === 0 ? (
+          <div className="sepa-empty-card">
+            <div className="eyebrow">No {tabLabel(activeTab)} setups</div>
+            <p>
+              No {tabLabel(activeTab)} setups today. Common reasons: regime is
+              cautious, no symbols meet the strict pattern requirements, or
+              the scanner hasn't run yet (refreshes nightly at 6:40–7:00 PM ET).
+            </p>
+          </div>
+        ) : (
+          <section className="sepa-results">
+            <InfoButton title="Results">{ResultsInfo}</InfoButton>
+            <div className="sepa-grid">
+              {setupTabPairs.map(({ setup, candidate }) => {
+                const sym = setup.symbol.toUpperCase();
+                if (candidate) {
+                  return (
+                    <SepaCandidateCard
+                      key={candidate.symbol}
+                      row={candidate}
+                      soir={optionsBySymbol.get(sym)}
+                      whalesFlow={whalesFlow.get(sym)}
+                      livePrice={livePrices[sym]}
+                      setupOverlay={<SetupOverlayStrip setup={setup} />}
+                      onSelect={(e) => openSymbol(candidate.symbol, e)}
+                    />
+                  );
+                }
+                // Placeholder when the setup's symbol isn't in the
+                // currently-loaded SEPA source array — surface the match
+                // anyway so the user knows the scanner saw it.
+                return (
+                  <div
+                    key={setup._id || setup.symbol}
+                    className="sepa-card-with-overlay"
+                  >
+                    <SetupOverlayStrip setup={setup} />
+                    <article
+                      className="sepa-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => openSymbol(setup.symbol, e)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') openSymbol(setup.symbol);
+                      }}
+                      title="Cmd/Ctrl-click to open in new tab"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <header className="sepa-card__head">
+                        <div className="sepa-card__sym">
+                          <div className="sepa-card__sym-line">
+                            <strong>{setup.symbol}</strong>
+                          </div>
+                          <div
+                            className="sepa-card__name"
+                            style={{ color: '#9a9aa3', fontSize: '0.78rem', marginTop: 4 }}
+                          >
+                            Setup match — no live SEPA row loaded for this symbol
+                          </div>
+                        </div>
+                      </header>
+                    </article>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )
       )}
 
     </div>

@@ -9,6 +9,19 @@ numpy==2.0.2
 yfinance==1.2.0
 requests==2.32.5
 beautifulsoup4==4.14.3
+# lxml — pandas.read_html uses it under the hood for the Wikipedia
+# S&P 500 component fetcher (sepa/universe.py fetch_sp500). Without
+# it, fetch falls all the way through to the 112-symbol curated list.
+# Added 2026-05-21 when iShares CSV blocked direct downloads, forcing
+# Wikipedia to become the primary public source.
+lxml==5.3.0
 pyarrow==21.0.0
-twilio==9.3.5
+pywebpush==2.0.0
+cryptography>=41.0.0
+# Playwright + stealth patches for the lifeboard.playwright_scraper module.
+# stealth defeats most navigator-based bot fingerprinting; Chromium is
+# installed in the Dockerfile after pip install (separate step).
+playwright==1.49.1
+playwright-stealth==1.0.6
 
+pytest>=9.0

@@ -32,7 +32,7 @@ from typing import Optional
 
 from . import (
     prices, vcp, power_play, base_count, canslim,
-    adr, stage as stage_mod, company_names,
+    adr, stage as stage_mod, company_names, moat as moat_mod,
 )
 from .ipo_age import age as ipo_age_for
 
@@ -136,11 +136,18 @@ def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict
     stg = stage_mod.classify(df)
 
     fundamentals = None
+    moat = None
     if with_canslim:
         try:
             fundamentals = canslim.fundamentals_for(symbol)
         except Exception as exc:
             log.warning("canslim failed for %s: %s", symbol, exc)
+        # Buffett-style economic moat — uses yfinance .info same as canslim,
+        # so we already paid the network cost. Cheap to add.
+        try:
+            moat = moat_mod.compute_moat(symbol)
+        except Exception as exc:
+            log.warning("moat failed for %s: %s", symbol, exc)
 
     try:
         ipo_info = ipo_age_for(symbol)
@@ -154,6 +161,7 @@ def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict
         "base_count": bc,
         "stage_snapshot": stg,
         "fundamentals": fundamentals,
+        "moat": moat,
         "liquidity": liq,
         "adr_baseline": adr_value,
         "ipo_age": ipo_info,

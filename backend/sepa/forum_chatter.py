@@ -229,7 +229,15 @@ def _summarize(thoughtful: dict, momentum: dict, stocktwits: dict, hn: dict) -> 
         int(thoughtful.get("mentions_prior_7d", 0))
         + int(momentum.get("mentions_prior_7d", 0))
     )
-    velocity = mentions_7d / max(mentions_prior_7d, 1)
+    # Velocity guard: 0/0 used to compute as 0 and fall through to "fading"
+    # below — but 0 mentions vs 0 prior isn't fading, it's never-started.
+    # Treat the 0/0 case as undefined (None) so the classifier handles it
+    # via the explicit "no chatter" branch instead of misreading silence
+    # as a downtrend.
+    if mentions_prior_7d == 0 and mentions_7d == 0:
+        velocity = None
+    else:
+        velocity = mentions_7d / max(mentions_prior_7d, 1)
 
     bullish = int(stocktwits.get("bullish", 0))
     bearish = int(stocktwits.get("bearish", 0))
@@ -244,11 +252,21 @@ def _summarize(thoughtful: dict, momentum: dict, stocktwits: dict, hn: dict) -> 
     sentiment_den = bullish + bearish + (reddit_score // 100)
     sentiment_ratio = sentiment_num / sentiment_den if sentiment_den > 0 else None
 
-    if mentions_7d == 0 and not (stocktwits.get("messages") or []):
+    # Forum-chatter momentum classifier. This describes RETAIL FORUM
+    # buzz velocity, NOT stock-price momentum — a quiet ticker can still
+    # be ripping (institutions don't post on Reddit). Frontend label
+    # makes this distinction explicit.
+    if mentions_7d == 0 and mentions_prior_7d == 0:
+        # Genuinely no reddit/HN chatter either window — "quiet" regardless
+        # of stocktwits state (stocktwits is a separate, much noisier signal).
         label = "quiet"
-    elif velocity >= 1.5 and mentions_7d >= 3:
+    elif velocity is not None and velocity >= 1.5 and mentions_7d >= 3:
         label = "ramping"
-    elif velocity <= 0.6:
+    elif mentions_7d > 0 and velocity is not None and velocity <= 0.6:
+        # Real drop-off: had chatter before, has less now. THIS is fading.
+        label = "fading"
+    elif mentions_7d == 0 and mentions_prior_7d > 0:
+        # Was being talked about, now silent — still legitimately fading.
         label = "fading"
     else:
         label = "steady"
@@ -256,7 +274,7 @@ def _summarize(thoughtful: dict, momentum: dict, stocktwits: dict, hn: dict) -> 
     return {
         "mentions_7d":       mentions_7d,
         "mentions_prior_7d": mentions_prior_7d,
-        "mention_velocity":  round(velocity, 2),
+        "mention_velocity":  round(velocity, 2) if velocity is not None else 0.0,
         "sentiment_ratio":   round(sentiment_ratio, 2) if sentiment_ratio is not None else None,
         "stocktwits_bullish": bullish,
         "stocktwits_bearish": bearish,
@@ -266,10 +284,37 @@ def _summarize(thoughtful: dict, momentum: dict, stocktwits: dict, hn: dict) -> 
 
 
 # ---------------------------------------------------------------------------
-# Mongo cache
+# Mongo cache + history
+#
+# Two collections:
+#
+#   * ``forum_chatter_cache`` — latest snapshot per ticker, upserted by _id.
+#     Used for the 15-min TTL fast path. Wiped/overwritten on every fetch.
+#
+#   * ``forum_chatter_history`` — append-only timeline of every fetched
+#     snapshot (added 2026-05-20 after user reported "is the cron running?
+#     chatter looks stale" — see prewarm_top_sepa() + the new crontab
+#     entry. Powers the ChatterMomentumDrillModal trend view).
+#
+#     Schema: {symbol, fetched_at, mentions_7d, mentions_prior_7d,
+#              mention_velocity, momentum_label, sentiment_ratio,
+#              bullish, bearish, hn_stories, n_threads}
+#
+#     Index: (symbol, fetched_at desc). TTL 90 days on fetched_at so
+#     the collection self-prunes — we don't need year-old chatter for
+#     a 60-day modal sparkline.
 # ---------------------------------------------------------------------------
 _mongo_coll = None
+_mongo_hist = None
 _mongo_disabled = False
+HISTORY_TTL_DAYS = 90
+
+
+def _get_db_client():
+    """Shared Mongo client so we don't open two connections for cache + history."""
+    from pymongo import MongoClient
+    url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+    return MongoClient(url, serverSelectionTimeoutMS=2000)
 
 
 def _get_cache():
@@ -279,10 +324,8 @@ def _get_cache():
     if _mongo_coll is not None:
         return _mongo_coll
     try:
-        from pymongo import MongoClient
-        url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
         db_name = os.getenv("MONGO_DB", "cheetah")
-        client = MongoClient(url, serverSelectionTimeoutMS=2000)
+        client = _get_db_client()
         client.admin.command("ping")
         _mongo_coll = client[db_name].forum_chatter_cache
         return _mongo_coll
@@ -290,6 +333,100 @@ def _get_cache():
         log.warning("forum_chatter: mongo unavailable (%s)", exc)
         _mongo_disabled = True
         return None
+
+
+def _get_history():
+    """Append-only history collection. Lazy-creates the (symbol, fetched_at)
+    compound index + a TTL index on fetched_at so old rows auto-expire."""
+    global _mongo_hist, _mongo_disabled
+    if _mongo_disabled:
+        return None
+    if _mongo_hist is not None:
+        return _mongo_hist
+    try:
+        from pymongo import ASCENDING, DESCENDING
+        db_name = os.getenv("MONGO_DB", "cheetah")
+        client = _get_db_client()
+        client.admin.command("ping")
+        coll = client[db_name].forum_chatter_history
+        coll.create_index([("symbol", ASCENDING), ("fetched_at", DESCENDING)])
+        # Mongo TTL is on a datetime field. We use fetched_at_dt (set in
+        # _append_history) and expire after HISTORY_TTL_DAYS.
+        try:
+            coll.create_index(
+                "fetched_at_dt",
+                expireAfterSeconds=HISTORY_TTL_DAYS * 86400,
+            )
+        except Exception:
+            # Index might already exist with different expiry — ignore.
+            pass
+        _mongo_hist = coll
+        return _mongo_hist
+    except Exception as exc:
+        log.warning("forum_chatter history: mongo unavailable (%s)", exc)
+        return None
+
+
+def _append_history(payload: dict) -> None:
+    """Insert one snapshot per chatter fetch. Failures are logged + swallowed
+    — the live-fetch result is far more important than history bookkeeping."""
+    coll = _get_history()
+    if coll is None:
+        return
+    try:
+        summary = payload.get("summary") or {}
+        thoughtful = payload.get("thoughtful") or {}
+        momentum = payload.get("momentum") or {}
+        fetched_at = int(payload.get("fetched_at") or _now())
+        coll.insert_one({
+            "symbol":             payload.get("symbol"),
+            "fetched_at":         fetched_at,
+            # Datetime variant — required for the Mongo TTL index above.
+            "fetched_at_dt":      datetime.fromtimestamp(fetched_at, tz=timezone.utc),
+            "mentions_7d":        int(summary.get("mentions_7d", 0)),
+            "mentions_prior_7d":  int(summary.get("mentions_prior_7d", 0)),
+            "mention_velocity":   float(summary.get("mention_velocity") or 0),
+            "momentum_label":     summary.get("momentum_label"),
+            "sentiment_ratio":    summary.get("sentiment_ratio"),
+            "bullish":            int(summary.get("stocktwits_bullish", 0)),
+            "bearish":            int(summary.get("stocktwits_bearish", 0)),
+            "hn_stories":         int(summary.get("hn_stories", 0)),
+            "n_threads": (
+                len(thoughtful.get("threads") or []) +
+                len(momentum.get("threads") or [])
+            ),
+        })
+    except Exception as exc:
+        log.debug("forum_chatter history insert failed: %s", exc)
+
+
+def get_history(symbol: str, days: int = 60, limit: int = 200) -> list[dict]:
+    """Return the last `days` of history snapshots for `symbol`, oldest first.
+
+    Powers the ChatterMomentumDrillModal — sparkline + table of how the
+    momentum label was computed over time. Returns [] if Mongo is down
+    or there's no history yet (e.g. ticker hasn't been prewarmed yet).
+    """
+    coll = _get_history()
+    if coll is None:
+        return []
+    cutoff = _now() - days * 86400
+    try:
+        cur = coll.find(
+            {"symbol": symbol.upper().strip(), "fetched_at": {"$gte": cutoff}},
+            projection={
+                "_id": 0,
+                "symbol": 1, "fetched_at": 1,
+                "mentions_7d": 1, "mentions_prior_7d": 1,
+                "mention_velocity": 1, "momentum_label": 1,
+                "sentiment_ratio": 1, "bullish": 1, "bearish": 1,
+                "hn_stories": 1, "n_threads": 1,
+            },
+        ).sort("fetched_at", 1).limit(limit)
+        return list(cur)
+    except Exception as exc:
+        log.warning("forum_chatter get_history failed: %s", exc)
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +460,41 @@ async def chatter_for(
         _hacker_news(sym, company_name),
     )
 
+    # Reddit-outage handling: if BOTH Reddit lanes came back unavailable
+    # (e.g. rate-limited to all-429 across all subs), don't pollute the
+    # cache with empty data. Return the previously cached payload — even
+    # if it's older than the 15-min TTL — and mark it `stale: True` so
+    # the UI can render a "Reddit data unavailable, showing last known"
+    # banner. The next prewarm or visit will retry the live fetch.
+    #
+    # StockTwits and HN remain real-time even during a Reddit outage,
+    # so this preserves the user's trust in the lanes that DO work.
+    reddit_down = (
+        not thoughtful.get("available", True)
+        and not momentum.get("available", True)
+    )
+    if reddit_down and coll is not None:
+        try:
+            doc = coll.find_one({"_id": sym})
+            if doc:
+                stale_payload = dict(doc.get("payload") or {})
+                stale_payload["cached"] = True
+                stale_payload["stale"] = True
+                stale_payload["stale_reason"] = "reddit unavailable; showing last good fetch"
+                # Still refresh StockTwits + HN portions and the
+                # timestamps so the user knows those lanes are live.
+                stale_payload["stocktwits"] = stocktwits
+                stale_payload["hn"] = hn
+                stale_payload["last_attempt_at"] = now
+                log.warning("forum_chatter %s: reddit lanes both unavailable; "
+                            "preserving stale cache", sym)
+                return stale_payload
+        except Exception as exc:
+            log.debug("forum_chatter stale-read failed: %s", exc)
+        # No prior cache to fall back to — fall through and write the
+        # empty-Reddit payload but mark it explicitly. Better than
+        # nothing for first-ever fetch of a ticker during an outage.
+
     summary = _summarize(thoughtful, momentum, stocktwits, hn)
     payload = {
         "symbol":        sym,
@@ -335,6 +507,10 @@ async def chatter_for(
         "hn":            hn,
         "summary":       summary,
         "cached":        False,
+        # When both Reddit lanes failed AND there was no prior cache,
+        # we still cache this minimally-useful payload but flag it so
+        # the UI can hint that the chatter data is degraded.
+        "reddit_degraded": reddit_down,
     }
 
     if coll is not None:
@@ -347,7 +523,64 @@ async def chatter_for(
         except Exception as exc:
             log.debug("forum_chatter cache write failed: %s", exc)
 
+    # Append to the history timeline so the drill-in modal can render
+    # a trend sparkline. Best-effort — failures are swallowed; the
+    # latest-cache update above is the one that matters for the API
+    # response.
+    _append_history(payload)
+
     return payload
+
+
+async def prewarm_top_sepa(top_n: int = 20) -> dict:
+    """Refresh chatter for the top `top_n` SEPA candidates.
+
+    Called from a daily cron — see backend/crontab. Without this the
+    chatter cache only refreshes when a user opens a ticker detail
+    page, so any ticker that goes unvisited for >15 minutes ends up
+    showing stale data the next time someone opens it.
+
+    Returns ``{ok, fetched, failed, took_sec}``. Caps live Reddit hits
+    via the chatter_universe(max_fetch=N) plumbing so we don't burn
+    Reddit's free-tier rate budget — the rest fall through to cache.
+
+    Idempotent: safe to call ad-hoc to refresh chatter on demand.
+    """
+    import time
+    t0 = time.time()
+    try:
+        # Late import to dodge circular: scanner imports prices, prices
+        # imports… we just want load_latest here. No async required.
+        from sepa import scanner as sepa_scanner
+        latest = sepa_scanner.load_latest() or {}
+    except Exception as exc:
+        log.warning("prewarm_top_sepa: load_latest failed: %s", exc)
+        return {"ok": False, "fetched": 0, "failed": 0, "reason": str(exc)}
+
+    rows = latest.get("all_results") or latest.get("candidates") or []
+    if not rows:
+        return {"ok": False, "fetched": 0, "failed": 0, "reason": "no scan yet"}
+    top = rows[:top_n]
+    symbols = [r.get("symbol") for r in top if r.get("symbol")]
+    names = {r["symbol"]: r.get("name") for r in top if r.get("symbol") and r.get("name")}
+
+    fetched = 0
+    failed = 0
+    for sym in symbols:
+        try:
+            # refresh=True bypasses the 15-min cache check so we always
+            # do a live fetch on the prewarm path. The 15-min TTL still
+            # protects the request-path fast reads in chatter_for().
+            await chatter_for(sym, company_name=names.get(sym), refresh=True)
+            fetched += 1
+        except Exception as exc:
+            log.warning("prewarm_top_sepa: %s failed: %s", sym, exc)
+            failed += 1
+    took = round(time.time() - t0, 1)
+    log.info("forum_chatter prewarm: fetched=%d failed=%d in %ss",
+             fetched, failed, took)
+    return {"ok": True, "fetched": fetched, "failed": failed,
+            "took_sec": took, "symbols": symbols}
 
 
 async def chatter_universe(

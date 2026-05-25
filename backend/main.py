@@ -25,9 +25,13 @@ from typing import AsyncGenerator, Optional
 import httpx
 import websockets
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks, Header
+from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+# Moved to the top so all routes (including the ones defined near the
+# router-registration block, before the original line-1771 import) can
+# use the user-email dependency without a NameError at module load.
+from auth import current_user_email  # noqa: E402  -- intentional early import
 
 from cheetah_data import (
     CHEETAH_STOCKS,
@@ -179,6 +183,26 @@ class QuoteCache:
                 if "price" in prev:
                     merged["change"] = round(payload["price"] - prev["price"], 4)
             self._data[symbol] = merged
+        # Fan out to SSE clients. Throttled to 2 updates/s per symbol so
+        # a Finnhub WS burst (many trades arriving in a single tick)
+        # doesn't flood every browser tab. No-op if nobody's subscribed
+        # to /events. Import inline to avoid a hard module-load
+        # dependency between cache and events.
+        try:
+            from events import publish_throttled as _pub
+            _pub("quote.update", symbol, {
+                "symbol":     symbol,
+                "price":      merged.get("price"),
+                "change":     merged.get("change"),
+                "open":       merged.get("open"),
+                "high":       merged.get("high"),
+                "low":        merged.get("low"),
+                "prev_close": merged.get("prev_close"),
+                "source":     merged.get("source"),
+                "ts":         merged.get("ts"),
+            }, min_interval_s=0.5)
+        except Exception as exc:
+            log.debug("bus publish quote.update failed for %s: %s", symbol, exc)
         # Best-effort persist outside the lock so Mongo latency doesn't
         # stall the WS loop.
         coll = _live_cache_mongo()
@@ -358,6 +382,11 @@ async def lifespan(app: FastAPI):
     # blank the UI. Skipped silently if Mongo is unreachable.
     await cache.hydrate_from_mongo()
     await subscribe_symbols([s.strip().upper() for s in DEFAULT_SYMBOLS if s.strip()])
+    # Wire /events/subscribe so the SSE side can register new symbols
+    # with the Finnhub WS feed. Without this, /events/subscribe returns
+    # "not ready" and quote.update never fires for non-default symbols.
+    from events import set_symbol_registrar
+    set_symbol_registrar(subscribe_symbols)
     tasks = [
         asyncio.create_task(finnhub_ws_consumer()),
         asyncio.create_task(finnhub_rest_poller()),
@@ -398,6 +427,98 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ============================================================================
+# Auth gate (added 2026-05-18)
+# ----------------------------------------------------------------------------
+# Why this exists: when we broadened OAUTH2_PROXY_SKIP_AUTH_ROUTES to
+# wildcard so password users could reach /signin, oauth2-proxy stopped
+# rejecting anonymous requests. That left the API publicly accessible
+# unless individual route handlers happened to call
+# Depends(current_user_email) AND OAUTH2_REQUIRED was set — most
+# endpoints don't, so most endpoints became open.
+#
+# This middleware re-establishes the gate at the backend layer:
+# anonymous requests get 401 except for an explicit public allowlist.
+# Authenticated requests (via oauth2-proxy header OR local session
+# cookie) pass through, and individual routes still use
+# current_user_email to read the identity.
+#
+# The frontend's installAuthRedirect monkeypatch catches the 401 and
+# routes the browser to /signin so unauthenticated users land on
+# something useful instead of seeing blank pages.
+
+# Exact paths that don't require auth.
+_PUBLIC_API_PATHS = {
+    # Health probes — used by docker compose healthcheck + admin spot-check.
+    "/health",
+    "/llm/health",
+    # Local-auth endpoints — by definition the caller doesn't have auth
+    # yet when hitting login/signup.
+    "/auth/local/signup",
+    "/auth/local/login",
+    "/auth/local/logout",
+    "/auth/local/me",
+}
+
+# Path prefixes that don't require auth. Kept short — every entry
+# here is a potential bypass, so add things carefully.
+_PUBLIC_API_PREFIXES = (
+    # OAuth handshake — these are served by oauth2-proxy at nginx, not
+    # by this backend, but in case routing ever changes we don't want
+    # the auth gate blocking the Google flow.
+    "/oauth2/",
+)
+
+
+@app.middleware("http")
+async def require_auth_middleware(request, call_next):
+    """Reject anonymous requests to non-public API paths with 401.
+
+    Order of checks (cheap → expensive):
+      1. OPTIONS preflight — always allowed
+      2. Public allowlist (exact path) — always allowed
+      3. Public prefix allowlist — always allowed
+      4. X-User-Email header from oauth2-proxy — allowed
+      5. pounce_local_session signed cookie — allowed
+      6. Otherwise → 401
+    """
+    # CORS preflight carries no credentials by spec — let it through so
+    # the browser can complete the preflight before the real request.
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    path = request.url.path
+    if path in _PUBLIC_API_PATHS:
+        return await call_next(request)
+    if any(path.startswith(p) for p in _PUBLIC_API_PREFIXES):
+        return await call_next(request)
+
+    # Path 1: oauth2-proxy header. Present when the user has a valid
+    # Google session and the request reached the backend through
+    # nginx → oauth2-proxy.
+    if (request.headers.get("X-User-Email") or "").strip():
+        return await call_next(request)
+
+    # Path 2: local-auth session cookie. Validated via HMAC signature
+    # against OAUTH2_PROXY_COOKIE_SECRET-derived key.
+    try:
+        from local_auth import session as _local_sess
+        raw = request.cookies.get(_local_sess.COOKIE_NAME)
+        if _local_sess.parse_cookie(raw):
+            return await call_next(request)
+    except Exception:
+        # Local-auth module failure shouldn't 500 the request — just
+        # treat it as no auth and let the 401 fall through. The admin
+        # will see import errors in the api logs.
+        pass
+
+    return JSONResponse(
+        {"detail": "not authenticated"},
+        status_code=401,
+    )
+
+
 # Day-trading module — intraday signals, walk-forward backtest, AI second-opinion.
 from daytrading.api import router as daytrading_router  # noqa: E402
 app.include_router(daytrading_router)
@@ -425,10 +546,16 @@ app.include_router(catalysts_router)
 from options.api import router as options_router  # noqa: E402
 app.include_router(options_router)
 
+# Short-volume foundation (2026-05-24). Shared by SEPA scorer, whales
+# chip, and accumulation/distribution classifier — exposes /short/{symbol}
+# debug endpoint and the time-series for sparkline rendering.
+from short_interest.api import router as short_router  # noqa: E402
+app.include_router(short_router)
 
-# Lifeboard — non-trading personal trackers (deal scrapers).
-from lifeboard.api import router as lifeboard_router  # noqa: E402
-app.include_router(lifeboard_router)
+
+# Lifeboard (Mac deal scrapers) removed 2026-05-15 — user purchased
+# their target Mac so the watchlist is no longer needed. The whole
+# backend/lifeboard/ directory was deleted along with this import.
 
 
 # House — owner-only real-estate dashboard. Every route inside is gated
@@ -458,6 +585,97 @@ app.include_router(kids_router)
 # stays in the user's face every trading morning.
 from portfolio.api import router as portfolio_router  # noqa: E402
 app.include_router(portfolio_router)
+
+
+# Analytics — page-view + dwell time tracking. Ingestion is open to any
+# authenticated user (logs their own activity). Dashboard read endpoint
+# is gated to ADMIN_EMAILS (defaults to ajaykandakatla@gmail.com).
+from analytics.api import router as analytics_router  # noqa: E402
+app.include_router(analytics_router)
+
+
+# Events — single SSE stream replacing per-resource polling loops.
+# Browser tabs open GET /events once; backend modules call
+# events.publish(type, payload) to push updates (alert fires, scan
+# completions, launch refreshes). See backend/events/ for details.
+from events import router as events_router  # noqa: E402
+app.include_router(events_router)
+
+
+# Access — per-user feature visibility. Admin (Ajay) decides which menu
+# items each signed-in user can see via the matrix at /admin/access.
+# The NavBar fetches /me/features on mount and filters the menu.
+from access import router as access_router  # noqa: E402
+app.include_router(access_router)
+
+
+# Macro — Claude-generated per-ticker macro brief (geopolitics,
+# futures, bear case, sector). Backed by 6h Mongo cache so spamming
+# the 🌍 chip on a candidate card doesn't ring up repeat Claude bills.
+from macro import router as macro_router  # noqa: E402
+app.include_router(macro_router)
+
+
+# Local auth — password-based signin for users who don't have a Google
+# account. oauth2-proxy still handles the Google OAuth handshake; this
+# adds a parallel path for the allowlisted-but-non-Google folks. See
+# backend/local_auth/__init__.py for the architecture comment.
+from local_auth import router as local_auth_router  # noqa: E402
+app.include_router(local_auth_router)
+
+
+# Setups — bull-regime intraday + short-swing setups (PEG / ORB / Inside-Day).
+# Three scanners that read off the SEPA candidate list and produce
+# concrete buy-stop + stop-loss + target triplets the user can place at
+# Fidelity in 60 seconds. See setups/__init__.py for the architecture
+# comment + each scanner's docstring for the setup definition.
+from setups import router as setups_router  # noqa: E402
+app.include_router(setups_router)
+
+
+# Chat — in-app Claude assistant. The floating chat widget on every page
+# POSTs to /chat with the conversation history + a snapshot of what the
+# user is currently looking at. Backend forwards to the Anthropic
+# Messages API with a system prompt that frames Claude as "the
+# assistant inside Pounce" + the page context. See chat/__init__.py.
+from chat import router as chat_router  # noqa: E402
+app.include_router(chat_router)
+
+
+# Flashcards — Minervini + general-trading learning module. The
+# scheduler fires one card per hour as a push; this router exposes
+# the FULL card bank so the /learn page can browse all 90 cards by
+# topic. See backend/flashcards/__init__.py.
+from flashcards import router as flashcards_router  # noqa: E402
+app.include_router(flashcards_router)
+
+
+# Volleyball — personal fitness module. 7-day workout plan tuned to
+# Ajay's right-shoulder rehab + right-finger plantar plate + supplement
+# stack (Magnesium Glycinate, Moringa, D3/K2) + gear (Viktry insoles,
+# Jumplete knee braces). Education card bank similar to flashcards.
+# See backend/volleyball/__init__.py.
+from volleyball import router as volleyball_router  # noqa: E402
+app.include_router(volleyball_router)
+
+
+# Per-user alert thresholds — granular control over the -12% intraday
+# emergency level, the early-warning percentage, and the stop-buffer
+# bell. Each user picks their own risk tolerance; defaults match
+# Minervini's published rules.
+@app.get("/alert-settings")
+async def alert_settings_get(email: str = Depends(current_user_email)):
+    from users import store as user_store
+    return JSONResponse(user_store.get_alert_settings(email))
+
+
+@app.post("/alert-settings")
+async def alert_settings_post(
+    payload: dict,
+    email: str = Depends(current_user_email),
+):
+    from users import store as user_store
+    return JSONResponse(user_store.set_alert_settings(email, payload))
 
 
 @app.get("/llm/health")
@@ -963,15 +1181,84 @@ async def _company_profile(sym: str) -> dict:
     return {}
 
 
+@app.get("/sepa/live-prices")
+async def sepa_live_prices():
+    """Real-time prices for all current SEPA candidates via Massive bulk snapshot.
+
+    Returns within 2-3s. Frontend polls this every 2 min during market hours
+    to keep price/change_pct fresh without re-running the full SEPA scan.
+
+    Response: {updated_at, prices: {SYMBOL: {price, change_pct, volume}}}
+    """
+    from sepa import prices as sepa_prices, scanner as sepa_sc
+    latest = sepa_sc.load_latest() or {}
+    # Pool all_results symbols so we cover watchlist + non-candidates too
+    symbols = [r["symbol"] for r in (latest.get("all_results") or [])]
+    if not symbols:
+        return {"updated_at": int(time.time()), "prices": {}}
+
+    live = await asyncio.to_thread(sepa_prices.bulk_live_prices, symbols)
+    return {"updated_at": int(time.time()), "prices": live}
+
+
 @app.get("/sepa/candidate/{symbol}")
 async def sepa_candidate_detail(symbol: str):
-    """Deep-dive on a single candidate: trend + catalyst + insider + IPO age."""
+    """Deep-dive on a single candidate: trend + catalyst + insider + IPO age.
+
+    If the ticker isn't in the latest scan's results (e.g. a user-searched
+    name like RYOJ that wasn't in the universe, or a name like NOK that
+    dropped out of liquidity gates), we auto-fall-back to an on-demand
+    analyze. That way the detail page never renders a chipless head — the
+    chips strip is the most important UI on this page since it lets the
+    user see WHY a score was assigned. Added 2026-05-22.
+    """
     sym = symbol.upper()
     latest = sepa_scanner.load_latest() or {}
     base = next(
         (c for c in (latest.get("all_results") or []) if c["symbol"] == sym),
         None,
     )
+
+    # Fallback path — symbol isn't in the latest scan, so run a one-shot
+    # analyze. Mirrors POST /sepa/analyze/{symbol} but inline so the GET
+    # endpoint is self-healing. We don't enrich with catalyst/insider here
+    # because those are already fetched below in their own tasks.
+    if base is None:
+        try:
+            from sepa import prices, rs_rank, scanner as sc, research as research_mod
+            await asyncio.to_thread(prices.load_prices, sym, "2y", True)
+            universe_syms = [r["symbol"] for r in (latest.get("all_results") or [])] or [sym]
+            if sym not in universe_syms:
+                universe_syms.append(sym)
+            rs_map = await asyncio.to_thread(rs_rank.rs_ranks, universe_syms)
+            analyzed = await asyncio.to_thread(
+                sc._analyze_symbol, sym, rs_map,
+                require_liquidity=False, require_min_adr=0.0,
+            )
+            if analyzed is not None:
+                base = analyzed
+                # Persist into latest scan so subsequent calls hit the fast path.
+                try:
+                    all_res = [r for r in (latest.get("all_results") or []) if r["symbol"] != sym]
+                    all_res.append(analyzed)
+                    latest["all_results"] = all_res
+                    if analyzed.get("is_candidate"):
+                        cands = [r for r in (latest.get("candidates") or []) if r["symbol"] != sym]
+                        cands.append(analyzed)
+                        latest["candidates"] = cands
+                    from pathlib import Path
+                    Path(sepa_scanner.LATEST_PATH).write_text(json.dumps(latest, default=str))
+                except Exception as exc:
+                    log.warning("on-demand candidate persist failed for %s: %s", sym, exc)
+                # Best-effort research blob refresh so the page picks up
+                # technical/fundamental summaries on the analysis tab.
+                try:
+                    await asyncio.to_thread(research_mod.compute_research, sym)
+                except Exception as exc:
+                    log.warning("on-demand research compute failed for %s: %s", sym, exc)
+        except Exception as exc:
+            log.warning("on-demand candidate analyze failed for %s: %s", sym, exc)
+
     profile_task = asyncio.create_task(_company_profile(sym))
     smart_task = asyncio.create_task(sepa_smart_money(sym))
     catalyst = await sepa_catalyst_for(sym)
@@ -1031,6 +1318,35 @@ async def sepa_smart_money_endpoint(symbol: str):
     """Smart Money tab data — analyst consensus + curated blogs + filtered Reddit.
     Cached 15 min in Mongo (smart_money_cache)."""
     return JSONResponse(await sepa_smart_money(symbol.upper()))
+
+
+@app.get("/sepa/chatter/{symbol}/history")
+async def sepa_chatter_history(
+    symbol: str,
+    days: int = Query(60, ge=7, le=120,
+                      description="How many days of history to return"),
+):
+    """Historical chatter snapshots for one ticker.
+
+    Returns the timeline of every chatter fetch we've stored for this
+    symbol over the last `days` days, oldest first. Used by the
+    ChatterMomentumDrillModal to render the trend sparkline + table
+    showing how the momentum label was computed over time.
+
+    Empty list is expected when:
+      - the ticker has never been visited AND isn't in the daily
+        prewarm top-20 (cron runs at 5:30 AM ET — see backend/crontab)
+      - history is being collected forward from 2026-05-20; older data
+        wasn't captured because the previous cache was upsert-only.
+    """
+    from sepa import forum_chatter
+    rows = await asyncio.to_thread(forum_chatter.get_history, symbol, days)
+    return JSONResponse({
+        "symbol": symbol.upper().strip(),
+        "days":   days,
+        "rows":   rows,
+        "count":  len(rows),
+    })
 
 
 @app.get("/sepa/chatter/{symbol}")
@@ -1280,10 +1596,22 @@ async def sepa_alerts_price_create(symbol: str = Query(...),
                                    level: float = Query(...),
                                    channels: Optional[str] = Query("push,browser"),
                                    note: Optional[str] = Query(None)):
+    """Create an on-demand price alert.
+
+    Runs in a thread because ``price_alerts.create`` does TWO sync calls
+    that would otherwise park the event loop:
+      • ``requests.get`` to Massive for the live last-trade price (up to 5s).
+      • ``pymongo.insert_one`` for the alert document (~100ms but blocking).
+    Without ``to_thread`` here, clicking three preset buttons in a row
+    serializes every other in-flight request behind them — exactly the
+    "pending" stack visible in the network tab.
+    """
     from sepa import price_alerts
     chan_list = [c.strip() for c in (channels or "").split(",") if c.strip()]
     try:
-        doc = price_alerts.create(symbol, kind, level, chan_list, note)
+        doc = await asyncio.to_thread(
+            price_alerts.create, symbol, kind, level, chan_list, note,
+        )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     if doc is None:
@@ -1293,20 +1621,29 @@ async def sepa_alerts_price_create(symbol: str = Query(...),
 
 @app.get("/sepa/alerts/price")
 async def sepa_alerts_price_list():
+    """List active price alerts. ``list_active`` is sync pymongo —
+    push to threadpool so the GET doesn't park the loop while Mongo
+    serializes the query."""
     from sepa import price_alerts
-    return JSONResponse(price_alerts.list_active())
+    rows = await asyncio.to_thread(price_alerts.list_active)
+    return JSONResponse(rows)
 
 
 @app.delete("/sepa/alerts/price/{alert_id}")
 async def sepa_alerts_price_delete(alert_id: str):
     from sepa import price_alerts
-    return JSONResponse({"deleted": price_alerts.delete(alert_id)})
+    deleted = await asyncio.to_thread(price_alerts.delete, alert_id)
+    return JSONResponse({"deleted": deleted})
 
 
 @app.get("/sepa/alerts/recent")
 async def sepa_alerts_recent(since: int = Query(0)):
+    """Recent fires feed. Now mostly redundant with the SSE
+    ``alert.fired`` push — this endpoint stays as a 5-min safety-net
+    backfill. Threaded so the safety-net call can't block the loop."""
     from sepa import price_alerts
-    return JSONResponse({"fires": price_alerts.recent_fires(since=since)})
+    fires = await asyncio.to_thread(price_alerts.recent_fires, since)
+    return JSONResponse({"fires": fires})
 
 
 @app.delete("/sepa/watchlist/{symbol}")
@@ -1759,13 +2096,23 @@ async def auth_me(
     """
     import os
     from users import store as user_store
+    from auth import is_admin_email
     profile = user_store.get_or_fetch(email, access_token=x_access_token)
+    # resolve_display_name honors DISPLAY_NAME_OVERRIDES_JSON (env-driven,
+    # server-side only) so personal-nickname overrides stay out of the
+    # frontend bundle. Falls through to Google profile name, then to a
+    # title-cased email handle.
+    display_name = user_store.resolve_display_name(email, profile.get("display_name"))
     return JSONResponse({
         "email": email,
-        "display_name": profile.get("display_name") or email.split("@", 1)[0],
+        "display_name": display_name,
         "given_name": profile.get("given_name"),
         "picture": profile.get("picture"),
         "is_default_user": email == os.getenv("DEFAULT_USER_EMAIL", "ajay@example.com"),
+        # Server-side admin check — replaces the 6 hardcoded ADMIN_EMAIL
+        # constants that used to live in App.tsx, NavBar.tsx,
+        # AdminAccess/Push/Todos.tsx, Notifications.tsx.
+        "is_admin": is_admin_email(email),
     })
 
 
@@ -1775,11 +2122,25 @@ async def auth_me(
 @app.get("/todos")
 async def todos_list(status: str = Query("all"),
                      important_only: bool = Query(False),
+                     workspace: str = Query("all", regex="^(all|personal|work)$"),
                      email: str = Depends(current_user_email)):
+    """List todos for the current user. `workspace` filters between the
+    'personal' and 'work' buckets — 'all' returns both."""
     from todos import store
     return JSONResponse({"rows": store.list_todos(
-        user_email=email, status=status, important_only=important_only,
+        user_email=email,
+        status=status,
+        important_only=important_only,
+        workspace=workspace if workspace != "all" else None,
     )})
+
+
+@app.get("/todos/dashboard")
+async def todos_dashboard(email: str = Depends(current_user_email)):
+    """Aggregated counts for the dashboard widget at the top of /todos."""
+    from todos import store
+    stats = await asyncio.to_thread(store.dashboard_stats, email)
+    return JSONResponse(stats)
 
 
 @app.get("/todos/brief-slice")
@@ -1791,7 +2152,15 @@ async def todos_brief_slice(email: str = Depends(current_user_email)):
 
 @app.post("/todos")
 async def todos_add(payload: dict, email: str = Depends(current_user_email)):
-    """Body: {text, due_at?, notify_at?, ticker?, important?}"""
+    """Body: {text, due_at?, notify_at?, ticker?, important?, workspace?, ai_task?, source?}
+
+    Optional fields (2026-05-17):
+      - workspace: 'personal' | 'work' (default personal)
+      - ai_task:   if true, the LLM runner cron will pick it up and
+                   write a research note to ai_result
+      - source:    free-form tag (e.g. 'manual', 'claude', 'cron');
+                   surfaced as a small badge in the UI
+    """
     from todos import store
     return JSONResponse(store.add_todo(
         text=payload.get("text") or "",
@@ -1800,6 +2169,9 @@ async def todos_add(payload: dict, email: str = Depends(current_user_email)):
         notify_at=payload.get("notify_at"),
         ticker=payload.get("ticker"),
         important=bool(payload.get("important")),
+        workspace=(payload.get("workspace") or "personal"),
+        ai_task=bool(payload.get("ai_task")),
+        source=(payload.get("source") or "manual"),
     ))
 
 
@@ -1821,6 +2193,467 @@ async def todos_reminder_run():
     """Manual trigger for the reminder dispatcher (also runs every minute via cron)."""
     from todos import reminder
     return JSONResponse(reminder.fire_due())
+
+
+@app.post("/todos/{todo_id}/run-ai")
+async def todos_run_ai(todo_id: str, email: str = Depends(current_user_email)):
+    """Manually trigger the LLM runner on a single todo. Useful right
+    after adding an AI task — the cron only runs every 15 min, so this
+    lets the user get results immediately without waiting for the next
+    tick. Sync (we await the LLM round-trip in a threadpool slot) so
+    the response carries the result.
+
+    The user can only run this on their own todos — the underlying
+    store call sets status by id, but we look it up first under
+    user_email to confirm ownership and 404 otherwise.
+    """
+    from todos import store, llm_runner
+    from bson import ObjectId
+    db = store._get_db()
+    if db is None:
+        return JSONResponse({"ok": False, "reason": "db unavailable"}, status_code=503)
+    try:
+        oid = ObjectId(todo_id)
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "bad id"}, status_code=400)
+    doc = db.todos.find_one({"_id": oid, "user_email": email.lower()})
+    if not doc:
+        return JSONResponse({"ok": False, "reason": "not found"}, status_code=404)
+    if not doc.get("ai_task"):
+        return JSONResponse({"ok": False, "reason": "todo is not flagged as ai_task"}, status_code=400)
+    doc["_id"] = str(doc["_id"])
+    # Force re-process even if already done — user explicitly clicked the button.
+    store.set_ai_status(doc["_id"], status="pending")
+    result = await asyncio.to_thread(llm_runner._process_one, doc)
+    return JSONResponse(result)
+
+
+@app.post("/todos/llm-runner/run")
+async def todos_llm_runner_run(email: str = Depends(current_user_email)):
+    """Manual trigger for the LLM runner batch — same path the cron
+    takes. Picks up the next N pending AI tasks across ALL users. The
+    gate is loose on purpose: any authenticated user can poke the
+    runner, but the runner itself only processes that user's tasks via
+    its own filters... actually no — it processes any pending. Keep
+    this admin-gated."""
+    if not _is_admin_email_check(email):
+        raise HTTPException(404, "Not Found")
+    from todos import llm_runner
+    return JSONResponse(await asyncio.to_thread(llm_runner.run_once))
+
+
+# ----------------------------------------------------------------------------
+# Recurring todo rules — day-of-week scheduled templates that materialize
+# into real todos every morning at 6 AM ET (see backend/todos/daily_recurring.py).
+# Each rule belongs to one user; the /todos page UI lets each user manage
+# their own rules. No cross-user reads or writes.
+# ----------------------------------------------------------------------------
+@app.get("/todos/recurring")
+async def todos_recurring_list(email: str = Depends(current_user_email)):
+    from todos import recurring_store
+    rules = await asyncio.to_thread(recurring_store.list_rules, email)
+    return JSONResponse({"rules": rules})
+
+
+@app.post("/todos/recurring")
+async def todos_recurring_create(
+    payload: dict,
+    email: str = Depends(current_user_email),
+):
+    """Body: {text, days_of_week: [0..6], hour, minute, important?, ticker?}"""
+    from todos import recurring_store
+    result = await asyncio.to_thread(
+        recurring_store.create_rule,
+        email,
+        text=payload.get("text") or "",
+        days_of_week=payload.get("days_of_week") or [],
+        hour=payload.get("hour", 9),
+        minute=payload.get("minute", 0),
+        important=bool(payload.get("important")),
+        ticker=payload.get("ticker"),
+    )
+    if not result.get("ok"):
+        return JSONResponse(result, status_code=400)
+    return JSONResponse(result)
+
+
+@app.patch("/todos/recurring/{rule_id}")
+async def todos_recurring_update(
+    rule_id: str,
+    payload: dict,
+    email: str = Depends(current_user_email),
+):
+    from todos import recurring_store
+    result = await asyncio.to_thread(
+        recurring_store.update_rule, rule_id, email, payload,
+    )
+    if not result.get("ok"):
+        return JSONResponse(result, status_code=400)
+    return JSONResponse(result)
+
+
+@app.delete("/todos/recurring/{rule_id}")
+async def todos_recurring_delete(
+    rule_id: str,
+    email: str = Depends(current_user_email),
+):
+    from todos import recurring_store
+    return JSONResponse(await asyncio.to_thread(
+        recurring_store.delete_rule, rule_id, email,
+    ))
+
+
+@app.post("/todos/recurring/materialize")
+async def todos_recurring_materialize(
+    email: str = Depends(current_user_email),
+):
+    """Manually run the materializer for today — useful right after
+    adding a new rule whose fire-time is later today, since the cron
+    won't run again until tomorrow morning. Idempotent."""
+    from todos import daily_recurring
+    return JSONResponse(await asyncio.to_thread(daily_recurring.materialize_for_today))
+
+
+# ----------------------------------------------------------------------------
+# Admin: add a todo on behalf of another user (e.g. Ajay adds a todo to
+# Vineetha's list). Strict allowlist on the target email — we don't want
+# the admin endpoint to be a generic "create a todo for anyone, ever"
+# escape hatch. The recipient pool is the same as HOUSE_OWNER_EMAILS
+# (configured via env) so spouses/co-owners can ping each other but
+# strangers can't.
+# ----------------------------------------------------------------------------
+# Admin check is now sourced from auth.is_admin_email which consults
+# HOUSE_OWNER_EMAILS (env-driven). The previous hardcoded constant
+# kept Ajay's personal Gmail in the Python source as a default — moved
+# to the env-config path along with the frontend ADMIN_EMAIL cleanup.
+from auth import is_admin_email as _is_admin_email_check  # noqa: E402
+
+
+def _admin_allowed_recipients() -> list[str]:
+    """The set of emails this admin can post todos to.
+
+    Source: HOUSE_OWNER_EMAILS from backend/auth.py — covers Ajay + any
+    co-owners. We deliberately don't grant access to every email in
+    oauth2-emails.txt so a misuse / typo can't ping any signed-up user.
+    """
+    from auth import HOUSE_OWNER_EMAILS
+    return [e.lower() for e in HOUSE_OWNER_EMAILS]
+
+
+@app.get("/admin/todos/recipients")
+async def admin_todos_recipients(email: str = Depends(current_user_email)):
+    """List the email allowlist the admin can post todos to. Used by the
+    frontend admin page to render its recipient picker.
+
+    404s non-admins (stealth — keeps the endpoint's existence opaque to
+    the rest of the email allowlist)."""
+    if not _is_admin_email_check(email):
+        raise HTTPException(404, "Not Found")
+    return JSONResponse({"recipients": _admin_allowed_recipients()})
+
+
+@app.post("/admin/todos")
+async def admin_todos_add(
+    payload: dict,
+    email: str = Depends(current_user_email),
+):
+    """Admin-only: insert a todo on behalf of another user.
+
+    Body: {
+      text:        str,
+      user_email:  str — recipient; must be on the recipients allowlist,
+      due_at:      int? (epoch seconds),
+      notify_at:   int? (epoch seconds),
+      ticker:      str?,
+      important:   bool?,
+    }
+
+    Threaded — store.add_todo + push delivery are both sync pymongo /
+    sync HTTP and would otherwise park the event loop on each click.
+    """
+    if not _is_admin_email_check(email):
+        raise HTTPException(404, "Not Found")
+
+    target = (payload.get("user_email") or "").strip().lower()
+    if not target:
+        return JSONResponse({"ok": False, "error": "user_email required"}, status_code=400)
+    if target not in _admin_allowed_recipients():
+        # Stealth-style — don't echo the allowlist back.
+        return JSONResponse({"ok": False, "error": "recipient not allowed"}, status_code=403)
+
+    text = (payload.get("text") or "").strip()
+    if not text:
+        return JSONResponse({"ok": False, "error": "text required"}, status_code=400)
+
+    from todos import store
+    result = await asyncio.to_thread(
+        store.add_todo,
+        text=text,
+        user_email=target,
+        due_at=payload.get("due_at"),
+        notify_at=payload.get("notify_at"),
+        ticker=payload.get("ticker"),
+        important=bool(payload.get("important")),
+    )
+
+    # Push-notify the recipient so they see it on their phone immediately
+    # instead of waiting for their next visit. Best-effort — a failed
+    # push doesn't roll back the todo (the row is already in Mongo, and
+    # they'll see it on /todos when they next open the app).
+    if result.get("ok") and target != email.lower():
+        try:
+            await asyncio.to_thread(_admin_todo_push, target, text, result["todo"])
+        except Exception as exc:
+            log.warning("admin todo push failed for %s: %s", target, exc)
+
+    return JSONResponse(result)
+
+
+def _admin_todo_push(target_email: str, text: str, todo_doc: dict) -> None:
+    """Sync helper — fires a single Web Push to the recipient announcing
+    the new todo. Routed through the `todo_reminder` category so the
+    recipient's category toggles still apply (they can opt out).
+    """
+    from push import sender
+    sender.send_to_user(
+        target_email,
+        {
+            "title": "📌 New todo from Ajay",
+            "body":  text[:140],
+            "tag":   f"admin-todo-{todo_doc.get('_id')}",
+            "url":   "/todos",
+            "kind":  "todo_reminder",
+        },
+        kind="todo_reminder",
+    )
+
+
+# ----------------------------------------------------------------------------
+# Admin: push-subscription visibility
+#
+# Read-only window into who has push set up. Useful for:
+#   1. Confirming someone's iPhone PWA actually registered after install
+#   2. Auditing which categories they have enabled (so missing pings can
+#      be diagnosed before assuming a delivery bug)
+#   3. Seeing who in the OAuth allowlist has NEVER subscribed any device
+# ----------------------------------------------------------------------------
+@app.get("/admin/push/users")
+async def admin_push_users(email: str = Depends(current_user_email)):
+    """Per-user push setup overview.
+
+    Returns one row per email in the OAuth allowlist (plus any emails
+    that appear only in `push_subscriptions` — that catches users who
+    were removed from the allowlist but still have devices on file).
+    Each row carries:
+      - `devices`: list of registered subscriptions with kind, label,
+        truncated endpoint, created_at, and the pref toggles.
+      - `category_summary`: per-category booleans aggregated across the
+        user's devices (`True` if any device has it on). Lets the admin
+        page render a single tick column per category instead of one
+        column per (device, category).
+
+    Sorted by email so the admin sees a stable layout.
+    """
+    if not _is_admin_email_check(email):
+        raise HTTPException(404, "Not Found")
+
+    def _gather() -> dict:
+        from push import subs as psubs
+        db = psubs._get_db()
+        if db is None:
+            return {"users": [], "categories": [], "store_available": False}
+
+        # Pull every subscription (web + mac). The store's
+        # list_subscriptions excludes kind=mac on purpose for delivery
+        # paths; the admin view wants the full picture.
+        all_docs = list(db.push_subscriptions.find({}))
+
+        # Build the canonical user universe: OAuth allowlist file ∪
+        # emails currently present in push_subscriptions.
+        emails: set[str] = set()
+        try:
+            with open("oauth2-emails.txt") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    emails.add(line.lower())
+        except FileNotFoundError:
+            pass
+        for d in all_docs:
+            ue = (d.get("user_email") or "").lower()
+            if ue:
+                emails.add(ue)
+
+        # Group docs by user.
+        by_email: dict[str, list[dict]] = {e: [] for e in emails}
+        for d in all_docs:
+            ue = (d.get("user_email") or "").lower()
+            if ue not in by_email:
+                by_email[ue] = []
+            endpoint = d.get("endpoint") or ""
+            by_email[ue].append({
+                "kind":        d.get("kind") or "web",
+                "label":       d.get("label") or "",
+                # Trim the endpoint to its last 24 chars — full URLs are
+                # ~300 chars of opaque token and dominate the row width.
+                "endpoint_short": endpoint[-24:] if endpoint else "",
+                "device_id":   d.get("device_id"),
+                "created_at":  d.get("created_at"),
+                "updated_at":  d.get("updated_at"),
+                "prefs":       d.get("prefs") or {},
+            })
+
+        # Aggregate category prefs per user — True if ANY device has it
+        # on, since a single phone is enough to receive the push.
+        users_out: list[dict] = []
+        for ue in sorted(by_email.keys()):
+            devices = by_email[ue]
+            category_summary: dict[str, bool] = {}
+            for d in devices:
+                for k, v in (d.get("prefs") or {}).items():
+                    if isinstance(v, bool):
+                        category_summary[k] = category_summary.get(k, False) or v
+            # Server-resolve display_name so the admin page renders
+            # "Ajay" / "Vineetha" without the personal-name override
+            # map living in the JS bundle. See users.store.resolve_display_name.
+            try:
+                from users import store as _user_store
+                prof = _user_store.get_or_fetch(ue, access_token=None) or {}
+                dn = _user_store.resolve_display_name(ue, prof.get("display_name"))
+            except Exception:
+                dn = ue.split("@", 1)[0]
+            users_out.append({
+                "email":            ue,
+                "display_name":     dn,
+                "device_count":     len(devices),
+                "devices":          devices,
+                "category_summary": category_summary,
+            })
+
+        # Pull the canonical category catalog so the frontend doesn't have
+        # to hardcode it. We derive it from the union of pref keys across
+        # all known subscriptions — gives us whatever's actually in use
+        # without duplicating the list maintained in push/subs.py.
+        cats: set[str] = set()
+        for u in users_out:
+            for k in u["category_summary"].keys():
+                cats.add(k)
+        return {
+            "users":            users_out,
+            "categories":       sorted(cats),
+            "store_available":  True,
+        }
+
+    out = await asyncio.to_thread(_gather)
+    return JSONResponse(out)
+
+
+@app.post("/admin/push/test")
+async def admin_push_test(
+    payload: dict,
+    email: str = Depends(current_user_email),
+):
+    """Send a single test push to a SPECIFIC user — proves to the admin
+    that scoping is working before they trust private content (love
+    notes, household reminders) to the system.
+
+    Body: ``{"user_email": "...", "title": "...", "body": "..."}``
+    title/body default to harmless test strings if omitted, so a
+    casual admin click can't accidentally fire embarrassing content.
+
+    Threaded — uses sync pymongo + pywebpush under the hood.
+    """
+    if not _is_admin_email_check(email):
+        raise HTTPException(404, "Not Found")
+
+    target = (payload.get("user_email") or "").strip().lower()
+    if not target:
+        return JSONResponse({"ok": False, "error": "user_email required"}, status_code=400)
+
+    title = (payload.get("title") or "🔬 Pounce test push").strip()[:80]
+    body  = (payload.get("body")  or "If you see this on YOUR phone only, scoping works.").strip()[:280]
+
+    def _fire() -> dict:
+        from push import sender
+        return sender.send_to_user(
+            target,
+            {
+                "title": title,
+                "body":  body,
+                "tag":   "admin-test-push",
+                "url":   "/notifications",
+                "kind":  "todo_reminder",   # use a per-user kind; test push
+                                            # respects the recipient's category toggle
+            },
+            kind="todo_reminder",
+        )
+
+    result = await asyncio.to_thread(_fire)
+    return JSONResponse({"ok": True, "target": target, **result})
+
+
+@app.get("/admin/push/audit")
+async def admin_push_audit(email: str = Depends(current_user_email)):
+    """Surface rows in ``push_subscriptions`` that might mis-route a
+    user-scoped notification:
+
+      - rows with empty/missing ``user_email`` (would never match a
+        scoped send_to_user query — silent black-hole)
+      - rows whose ``user_email`` isn't in the OAuth allowlist
+        (stale, removed user; their devices may still receive system
+        broadcasts)
+
+    The admin should inspect anything that comes back and either
+    delete the row via Mongo or re-register the device under the
+    correct user. No write actions here — this is pure read.
+    """
+    if not _is_admin_email_check(email):
+        raise HTTPException(404, "Not Found")
+
+    def _audit() -> dict:
+        from push import subs as psubs
+        db = psubs._get_db()
+        if db is None:
+            return {"missing_user_email": [], "stale_user_email": [], "store_available": False}
+
+        # Allowlist from oauth2-emails.txt
+        allowed: set[str] = set()
+        try:
+            with open("oauth2-emails.txt") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        allowed.add(line.lower())
+        except FileNotFoundError:
+            pass
+
+        missing: list[dict] = []
+        stale:   list[dict] = []
+        for d in db.push_subscriptions.find({}):
+            ue = (d.get("user_email") or "").strip().lower()
+            endpoint = d.get("endpoint") or ""
+            row = {
+                "kind":           d.get("kind") or "web",
+                "user_email":     ue,
+                "label":          d.get("label") or "",
+                "endpoint_short": endpoint[-24:] if endpoint else "",
+                "device_id":      d.get("device_id"),
+                "created_at":     d.get("created_at"),
+            }
+            if not ue:
+                missing.append(row)
+            elif allowed and ue not in allowed:
+                stale.append(row)
+        return {
+            "missing_user_email": missing,
+            "stale_user_email":   stale,
+            "allowlist_size":     len(allowed),
+            "store_available":    True,
+        }
+
+    out = await asyncio.to_thread(_audit)
+    return JSONResponse(out)
 
 
 # ============================================================================
@@ -1862,7 +2695,12 @@ async def push_update_prefs(payload: dict):
 
 @app.get("/push/subscriptions")
 async def push_list_subscriptions(email: str = Depends(current_user_email)):
-    """List registered devices for the current user only."""
+    """List registered devices for the current user only.
+
+    Returns full `endpoint` so the management UI can update prefs / remove
+    devices. Authenticated + user-scoped — only your own endpoints are
+    revealed, and the push-service URL alone isn't a credential (you also
+    need the VAPID private key to send notifications)."""
     from push import subs
     web_rows = subs.list_subscriptions(user_email=email)
     mac_rows = subs.list_mac_subscriptions(user_email=email)
@@ -1870,6 +2708,7 @@ async def push_list_subscriptions(email: str = Depends(current_user_email)):
     for r in web_rows:
         out.append({
             "kind": r.get("kind") or "web",
+            "endpoint": r.get("endpoint"),
             "endpoint_short": r.get("endpoint", "")[-30:],
             "label": r.get("label"),
             "prefs": r.get("prefs"),
@@ -1880,6 +2719,7 @@ async def push_list_subscriptions(email: str = Depends(current_user_email)):
         out.append({
             "kind": "mac",
             "device_id": r.get("device_id"),
+            "endpoint": f"mac:{r.get('device_id') or ''}",
             "endpoint_short": f"mac:{(r.get('device_id') or '')[-12:]}",
             "label": r.get("label"),
             "prefs": r.get("prefs"),
@@ -1887,6 +2727,139 @@ async def push_list_subscriptions(email: str = Depends(current_user_email)):
             "updated_at": r.get("updated_at"),
         })
     return JSONResponse({"rows": out})
+
+
+@app.get("/notifications/recent")
+async def notifications_recent(
+    limit: int = Query(25, ge=1, le=100,
+                       description="Max merged rows to return"),
+    email: str = Depends(current_user_email),
+):
+    """Unified recent-notifications feed: push_history + sepa_breakouts.
+
+    The NotificationBell dropdown and the /notifications history panel
+    both consume this endpoint so volume breakouts / stage breakdowns
+    from the sepa_breakouts collection show up alongside the pushes
+    captured via push_history (flashcards, morning brief, etc.).
+
+    Output row shape (normalized across both sources):
+
+        {
+          _id, ts, ts_iso, title, body, kind, ticker, url,
+          source:   'push' | 'breakout',
+          sent, failed, total,    # push-only; 0 for breakouts
+          dismissed: bool,        # breakout-only; absent for pushes
+        }
+
+    Sorted by ts desc, capped at ``limit``. Breakouts are pulled with
+    a 200-row hard cap on the source side so a wildly long banner
+    stack doesn't bloat the merge.
+    """
+    from push import history
+    from sepa import breakouts as bk
+
+    def _gather() -> list[dict]:
+        # Push-history rows are already in the right shape; just tag them.
+        pushes = history.list_recent(email, limit)
+        for p in pushes:
+            p["source"] = "push"
+
+        # Breakout rows need normalization. Fetch wider than `limit` so
+        # we have plenty of candidates to merge against pushes.
+        try:
+            db = bk._get_db()
+        except Exception:
+            db = None
+        breakout_rows: list[dict] = []
+        if db is not None:
+            try:
+                cur = db.sepa_breakouts.find({}).sort("ts", -1).limit(200)
+                for b in cur:
+                    ticker = b.get("ticker") or ""
+                    kind = b.get("kind") or "volume_breakout"
+                    # Title — emoji + kind label + ticker, similar
+                    # vocabulary to the existing BreakoutAlertBanner.
+                    emoji_map = {
+                        "volume_breakout":          "🚀",
+                        "rising_momentum":          "📈",
+                        "stage_breakdown_2_3":      "⚠️",
+                        "stage_breakdown_2_4":      "🔻",
+                        "stage_breakdown_3_4":      "🔻",
+                    }
+                    label_map = {
+                        "volume_breakout":          "Volume breakout",
+                        "rising_momentum":          "Rising momentum",
+                        "stage_breakdown_2_3":      "Stage 2→3 topping",
+                        "stage_breakdown_2_4":      "Stage 2→4 cliff",
+                        "stage_breakdown_3_4":      "Stage 3→4 decline",
+                    }
+                    emoji = emoji_map.get(kind, "📣")
+                    label = label_map.get(kind, kind)
+                    ts = int(b.get("ts") or 0)
+                    ctx = b.get("context") or {}
+                    # Append a compact data row to the reason so the
+                    # history view shows price + day change even after
+                    # the live BreakoutAlertBanner has been dismissed.
+                    extras: list[str] = []
+                    if ctx.get("last_close") is not None:
+                        extras.append(f"${float(ctx['last_close']):.2f}")
+                    if ctx.get("day_change_pct") is not None:
+                        d = float(ctx["day_change_pct"])
+                        extras.append(f"{'+' if d >= 0 else ''}{d:.1f}%")
+                    extras_str = "  ·  ".join(extras)
+                    reason = (b.get("reason") or "").strip()
+                    body = f"{extras_str}\n{reason}" if extras_str else reason
+                    breakout_rows.append({
+                        "_id":          str(b.get("_id")),
+                        "ts":           ts,
+                        "ts_iso":       datetime.fromtimestamp(
+                                            ts, tz=timezone.utc
+                                        ).isoformat() if ts else None,
+                        "title":        f"{emoji} {label} · {ticker}",
+                        "body":         body,
+                        "kind":         kind,
+                        "ticker":       ticker,
+                        "url":          f"/sepa/{ticker}?from=alert" if ticker else None,
+                        "user_email":   None,
+                        "sent":         0,
+                        "failed":       0,
+                        "total":        0,
+                        "source":       "breakout",
+                        "dismissed":    bool(b.get("dismissed_at")),
+                    })
+            except Exception:
+                pass
+
+        # Merge + sort + cap.
+        merged = pushes + breakout_rows
+        merged.sort(key=lambda r: r.get("ts") or 0, reverse=True)
+        return merged[:limit]
+
+    rows = await asyncio.to_thread(_gather)
+    return JSONResponse({"rows": rows, "count": len(rows)})
+
+
+@app.get("/push/history")
+async def push_history_get(
+    limit: int = Query(25, ge=1, le=200,
+                       description="Max rows to return; UI defaults to 25"),
+    kind: Optional[str] = Query(None,
+                                description="Optional filter by push kind (e.g. 'minervini_flashcards')"),
+    email: str = Depends(current_user_email),
+):
+    """Return the caller's recent push notifications.
+
+    Visibility: pushes scoped to this user (private price alerts, todo
+    reminders, etc.) PLUS all broadcast pushes (flashcards, breakouts,
+    morning brief). The frontend renders this on /notifications so the
+    user can re-read alerts whose body got clipped on the lock-screen.
+
+    Pushes self-prune after 90 days via the push_history collection's
+    TTL index — see backend/push/history.py.
+    """
+    from push import history
+    rows = await asyncio.to_thread(history.list_recent, email, limit, kind)
+    return JSONResponse({"rows": rows, "count": len(rows)})
 
 
 @app.get("/push/scope")
@@ -2007,9 +2980,14 @@ async def push_mac_test(payload: dict, email: str = Depends(current_user_email))
 # ============================================================================
 @app.get("/sepa/breakouts")
 async def sepa_breakouts(since: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200)):
-    """Active (un-dismissed) breakout alerts since the given epoch."""
+    """Active (un-dismissed) breakout alerts since the given epoch.
+
+    Threaded — ``list_active`` is sync pymongo. Without this the safety-net
+    poll on the frontend (every 5 min) would briefly park the loop on
+    every fire."""
     from sepa import breakouts
-    return JSONResponse({"alerts": breakouts.list_active(since_ts=since, limit=limit)})
+    rows = await asyncio.to_thread(breakouts.list_active, since, limit)
+    return JSONResponse({"alerts": rows})
 
 
 @app.post("/sepa/breakouts/scan")
@@ -2022,13 +3000,15 @@ async def sepa_breakouts_scan():
 @app.post("/sepa/breakouts/{alert_id}/dismiss")
 async def sepa_breakouts_dismiss(alert_id: str):
     from sepa import breakouts
-    return JSONResponse({"ok": breakouts.dismiss(alert_id)})
+    ok = await asyncio.to_thread(breakouts.dismiss, alert_id)
+    return JSONResponse({"ok": ok})
 
 
 @app.post("/sepa/breakouts/dismiss-all")
 async def sepa_breakouts_dismiss_all():
     from sepa import breakouts
-    return JSONResponse({"dismissed": breakouts.dismiss_all()})
+    n = await asyncio.to_thread(breakouts.dismiss_all)
+    return JSONResponse({"dismissed": n})
 
 
 # ============================================================================
@@ -2394,6 +3374,7 @@ async def quote_ticker(ticker: str):
     close until 9:30am next day even when a stock has gapped 18%.
     """
     import time
+    from datetime import datetime, timezone
     ticker = ticker.upper()
     now_ts = int(time.time())
     cached = _quote_cache.get(ticker)
@@ -2418,33 +3399,54 @@ async def quote_ticker(ticker: str):
         # Scrape failed (timeout, structure changed, etc.) — try the
         # cheaper batch endpoint. Will return at most the 8pm post-market
         # close, but better than nothing during overnight.
-        st = _stocktwits_quote(ticker)
+        # Threaded — `_stocktwits_quote` uses sync `requests` and would
+        # otherwise park the event loop on the overnight fallback path.
+        st = await asyncio.to_thread(_stocktwits_quote, ticker)
         if st and st.get("ok"):
             _quote_cache[ticker] = (now_ts, st)
             return JSONResponse(st)
 
-    try:
-        import yfinance as yf
-        t = yf.Ticker(ticker)
-        hist = t.history(period="5d", auto_adjust=False)
-        if hist.empty:
-            payload = {"ticker": ticker, "ok": False, "reason": "no data"}
-        else:
-            last = float(hist["Close"].iloc[-1])
-            prev = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else last
+    # yfinance is fully sync — `fast_info` and `history()` both hit
+    # the network synchronously. Push the whole block to the threadpool
+    # so concurrent /quote requests don't serialize through a single
+    # event loop. Single-threaded yfinance was the dominant tail
+    # latency contributor before this change.
+    def _yfinance_fetch() -> dict:
+        try:
+            import yfinance as yf
+            t = yf.Ticker(ticker)
+            fi = t.fast_info
+            last = fi.get("last_price") or fi.get("lastPrice")
+            prev = fi.get("previous_close") or fi.get("previousClose")
+            if last is None:
+                # fast_info missed — fall back to history daily close.
+                hist = t.history(period="5d", auto_adjust=False)
+                if hist.empty:
+                    return {"ticker": ticker, "ok": False, "reason": "no data"}
+                last = float(hist["Close"].iloc[-1])
+                prev = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else last
+                as_of = str(hist.index[-1])[:10]
+                source_tag = "yfinance_history_fallback"
+            else:
+                last = float(last)
+                prev = float(prev) if prev is not None else last
+                as_of = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                source_tag = "yfinance_fast_info"
             day_pct = ((last - prev) / prev * 100.0) if prev else 0.0
-            payload = {
+            return {
                 "ticker": ticker, "ok": True,
                 "last_price": round(last, 2),
                 "day_pct": round(day_pct, 3),
-                "as_of": str(hist.index[-1])[:10],
-                "_source": "yfinance",
+                "as_of": as_of,
+                "_source": source_tag,
                 "_extended": False,
             }
-        _quote_cache[ticker] = (now_ts, payload)
-        return JSONResponse(payload)
-    except Exception as exc:
-        return JSONResponse({"ticker": ticker, "ok": False, "reason": str(exc)})
+        except Exception as exc:
+            return {"ticker": ticker, "ok": False, "reason": str(exc)}
+
+    payload = await asyncio.to_thread(_yfinance_fetch)
+    _quote_cache[ticker] = (now_ts, payload)
+    return JSONResponse(payload)
 
 
 @app.post("/quotes")
@@ -2458,6 +3460,7 @@ async def quote_batch(tickers: list[str]):
     daily-bar download for any symbols StockTwits couldn't price.
     """
     import time
+    from datetime import datetime, timezone
     out: dict[str, dict] = {}
     now_ts = int(time.time())
     fresh_needed: list[str] = []
@@ -2490,43 +3493,98 @@ async def quote_batch(tickers: list[str]):
             _quote_cache[t] = (now_ts, payload)
             out[t] = payload
         fresh_needed = [t for t in fresh_needed if t not in scrape_results]
-        # Batch fallback for the rest
+        # Batch fallback for the rest. _stocktwits_batch is sync requests —
+        # threaded so the overnight path doesn't park the loop on a
+        # several-hundred-ms upstream call.
         if fresh_needed:
-            st_results = _stocktwits_batch(fresh_needed)
+            st_results = await asyncio.to_thread(_stocktwits_batch, fresh_needed)
             for t, payload in st_results.items():
                 _quote_cache[t] = (now_ts, payload)
                 out[t] = payload
             fresh_needed = [t for t in fresh_needed if t not in st_results]
 
     if fresh_needed:
-        try:
-            import yfinance as yf
-            data = yf.download(fresh_needed, period="5d", group_by="ticker",
-                                progress=False, auto_adjust=False)
-            for t in fresh_needed:
-                try:
-                    if len(fresh_needed) == 1:
-                        sub = data
-                    else:
-                        sub = data[t]
-                    sub = sub.dropna(subset=["Close"])
-                    if sub.empty:
-                        payload = {"ticker": t, "ok": False, "reason": "no data"}
-                    else:
-                        last = float(sub["Close"].iloc[-1])
-                        prev = float(sub["Close"].iloc[-2]) if len(sub) >= 2 else last
-                        day_pct = ((last - prev) / prev * 100.0) if prev else 0.0
-                        payload = {"ticker": t, "ok": True,
-                                    "last_price": round(last, 2),
-                                    "day_pct": round(day_pct, 3),
-                                    "as_of": str(sub.index[-1])[:10]}
-                    _quote_cache[t] = (now_ts, payload)
-                    out[t] = payload
-                except Exception:
-                    out[t] = {"ticker": t, "ok": False, "reason": "parse"}
-        except Exception as exc:
-            for t in fresh_needed:
-                out[t] = {"ticker": t, "ok": False, "reason": str(exc)}
+        phase_now = _market_phase_et()
+        # During regular market hours, yfinance daily bars lag intraday —
+        # the SEPA card "Live" badge would freeze at yesterday's close
+        # until 4pm. Use fast_info instead (live intraday last trade).
+        # After close + pre-market, daily bars are correct and faster as
+        # one batched call.
+        #
+        # The whole yfinance block is sync — fast_info and yf.download
+        # both make blocking HTTP calls. Wrap in to_thread so this
+        # batch endpoint stops being the dominant event-loop blocker
+        # on the SEPA list pre-warm path.
+        use_fast_info = (phase_now == "regular")
+        symbols_for_thread = list(fresh_needed)
+
+        def _yf_batch_fetch() -> dict[str, dict]:
+            results: dict[str, dict] = {}
+            try:
+                import yfinance as yf
+                if use_fast_info:
+                    # ~8 tickers ≈ 1-2s total. yfinance pools connections
+                    # under the hood, so this isn't N round trips end-to-end.
+                    bundle = yf.Tickers(" ".join(symbols_for_thread))
+                    for t in symbols_for_thread:
+                        try:
+                            tk = bundle.tickers.get(t)
+                            if tk is None:
+                                results[t] = {"ticker": t, "ok": False, "reason": "no ticker"}
+                                continue
+                            fi = tk.fast_info
+                            last = fi.get("last_price") or fi.get("lastPrice")
+                            prev = fi.get("previous_close") or fi.get("previousClose")
+                            if last is None:
+                                results[t] = {"ticker": t, "ok": False, "reason": "no live price"}
+                                continue
+                            last = float(last)
+                            prev = float(prev) if prev is not None else last
+                            day_pct = ((last - prev) / prev * 100.0) if prev else 0.0
+                            results[t] = {
+                                "ticker": t, "ok": True,
+                                "last_price": round(last, 2),
+                                "day_pct": round(day_pct, 3),
+                                "as_of": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                                "_source": "yfinance_fast_info",
+                                "_extended": False,
+                            }
+                        except Exception:
+                            results[t] = {"ticker": t, "ok": False, "reason": "parse"}
+                else:
+                    data = yf.download(symbols_for_thread, period="5d", group_by="ticker",
+                                       progress=False, auto_adjust=False)
+                    for t in symbols_for_thread:
+                        try:
+                            if len(symbols_for_thread) == 1:
+                                sub = data
+                            else:
+                                sub = data[t]
+                            sub = sub.dropna(subset=["Close"])
+                            if sub.empty:
+                                results[t] = {"ticker": t, "ok": False, "reason": "no data"}
+                            else:
+                                last = float(sub["Close"].iloc[-1])
+                                prev = float(sub["Close"].iloc[-2]) if len(sub) >= 2 else last
+                                day_pct = ((last - prev) / prev * 100.0) if prev else 0.0
+                                results[t] = {"ticker": t, "ok": True,
+                                              "last_price": round(last, 2),
+                                              "day_pct": round(day_pct, 3),
+                                              "as_of": str(sub.index[-1])[:10],
+                                              "_source": "yfinance_history"}
+                        except Exception:
+                            results[t] = {"ticker": t, "ok": False, "reason": "parse"}
+            except Exception as exc:
+                for t in symbols_for_thread:
+                    results[t] = {"ticker": t, "ok": False, "reason": str(exc)}
+            return results
+
+        # Run the whole sync yfinance pass off the event loop.
+        yf_results = await asyncio.to_thread(_yf_batch_fetch)
+        for t, payload in yf_results.items():
+            if payload.get("ok"):
+                _quote_cache[t] = (now_ts, payload)
+            out[t] = payload
     return JSONResponse({"quotes": out})
 
 

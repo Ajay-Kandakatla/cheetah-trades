@@ -5,11 +5,15 @@ percentile-rank across the full universe. Output is 1-99 where higher = leader.
 """
 from __future__ import annotations
 
-from typing import Dict, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, Optional, TYPE_CHECKING
 
 import pandas as pd
 
 from .prices import load_prices
+
+if TYPE_CHECKING:
+    from .progress import ProgressEmitter
 
 
 def _return(df: pd.DataFrame, lookback_days: int) -> Optional[float]:
@@ -33,14 +37,50 @@ def rs_score(df: pd.DataFrame) -> Optional[float]:
     return 0.4 * r63 + 0.2 * r126 + 0.2 * r189 + 0.2 * r252
 
 
-def rs_ranks(symbols: list[str]) -> Dict[str, int]:
-    """Return {symbol: rank 1-99}. Symbols with insufficient data are omitted."""
+def _score_one(symbol: str) -> tuple[str, Optional[float]]:
+    """Worker: fetch prices + compute RS score for one ticker."""
+    try:
+        return symbol, rs_score(load_prices(symbol))
+    except Exception:
+        return symbol, None
+
+
+def rs_ranks(symbols: list[str],
+             emitter: Optional["ProgressEmitter"] = None,
+             *,
+             workers: int = 8) -> Dict[str, int]:
+    """Return {symbol: rank 1-99}. Symbols with insufficient data are omitted.
+
+    Parallelizes the slow `load_prices` step across `workers` threads (was
+    sequential, which made Russell-1000 RS take 5-10 minutes of dead air
+    before the per-ticker scan loop could start).
+
+    Optional `emitter` fires `phase` events with per-batch progress so the
+    SSE stream can show RS progress instead of staring at a "Computing RS
+    ranks…" message.
+    """
     scores: Dict[str, float] = {}
-    for s in symbols:
-        df = load_prices(s)
-        val = rs_score(df)
-        if val is not None:
-            scores[s] = val
+    total = len(symbols)
+    completed = 0
+
+    if emitter:
+        emitter.emit("phase", phase="rs", total=total,
+                     message=f"Computing RS ranks over {total} symbols")
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = {ex.submit(_score_one, s): s for s in symbols}
+        for fut in as_completed(futures):
+            sym, val = fut.result()
+            completed += 1
+            if val is not None:
+                scores[sym] = val
+            # Emit a heartbeat every 25 tickers (or on the final tick) — fine
+            # granularity would flood the SSE channel, none would look frozen.
+            if emitter and (completed % 25 == 0 or completed == total):
+                emitter.emit("rs_progress",
+                             current=completed, total=total,
+                             scored=len(scores))
+
     if not scores:
         return {}
 

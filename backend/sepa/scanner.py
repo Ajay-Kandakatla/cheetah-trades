@@ -20,15 +20,18 @@ import asyncio
 import json
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional, List
+
+from .progress import ProgressEmitter
 
 from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
     adr, canslim, company_names, research as research_mod,
+    dual_momentum as dm, etf_info, pioneers,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -65,6 +68,23 @@ SCORE_WEIGHTS = {
 }
 
 
+# SPY's 12-month return — cached at scan start. dual_momentum.metrics_for_df
+# uses this to compute the per-ticker `beats_spy` flag without each worker
+# re-loading SPY's price file. Reset by scan_universe / scan_universe_fast.
+_SPY_12M_RETURN: Optional[float] = None
+
+
+def _refresh_spy_baseline() -> Optional[float]:
+    """Compute SPY's 12m return once at scan start; stash for per-symbol use."""
+    global _SPY_12M_RETURN
+    try:
+        _SPY_12M_RETURN = dm._benchmark_return("SPY", 252)
+    except Exception as exc:
+        log.warning("scanner: SPY 12m baseline fetch failed (%s)", exc)
+        _SPY_12M_RETURN = None
+    return _SPY_12M_RETURN
+
+
 def _analyze_symbol(symbol: str, rs_map: dict, *,
                     require_liquidity: bool = True,
                     require_min_adr: float = 0.0) -> Optional[dict]:
@@ -81,6 +101,44 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     adr_value = adr.adr_pct(df, period=20)
     if require_min_adr and adr_value is not None and adr_value < require_min_adr:
         return None
+
+    # ── Day change (last close vs prior close, %) ────────────────────────
+    # Used for the "Sort: Day %" filter and the daily-mover badge on cards.
+    day_change_pct = None
+    last_close = None
+    try:
+        if len(df) >= 2:
+            last = float(df["close"].iloc[-1])
+            prev = float(df["close"].iloc[-2])
+            last_close = round(last, 2)
+            if prev > 0:
+                day_change_pct = round((last / prev - 1) * 100, 2)
+    except Exception:
+        pass
+
+    # ── Dual Momentum metrics (Antonacci) ────────────────────────────────
+    # 1m/3m/6m/12m returns + abs_mom_pass + beats_spy. Computed from the same
+    # df we already loaded — zero extra fetches. Surfaces sort/filter on the
+    # SEPA page without users having to bounce to /dual-momentum.
+    try:
+        dm_metrics = dm.metrics_for_df(df, spy_12m=_SPY_12M_RETURN)
+    except Exception as exc:
+        log.debug("dm metrics failed for %s: %s", symbol, exc)
+        dm_metrics = None
+
+    # ── ETF detection ────────────────────────────────────────────────────
+    # Cached 30 days in Mongo. Negative-result is cached too, so equity
+    # tickers only pay the yfinance call once per month.
+    try:
+        etf_data = etf_info.etf_data_for(symbol)
+    except Exception as exc:
+        log.debug("etf_info failed for %s: %s", symbol, exc)
+        etf_data = None
+
+    # ── Pioneer theme membership (static) ────────────────────────────────
+    # Cheap dict lookup — no network. Live news scoring happens lazily via
+    # the /sepa/pioneers endpoint when the user clicks the Pioneers tab.
+    pioneer_themes = pioneers.themes_for_symbol(symbol)
 
     tr = trend_template.evaluate(symbol, df)
     if tr is None:
@@ -116,10 +174,27 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     elif pp_info and pp_info.get("is_power_play"):
         score += SCORE_WEIGHTS["setup"] * 0.85  # PowerPlay slightly less strict
     # Volume confirmation
-    if vol and vol.get("accumulation"):
-        score += SCORE_WEIGHTS["volume"] * 0.5
-    if vol and vol.get("high_vol_breakout"):
-        score += SCORE_WEIGHTS["volume"] * 0.5
+    # Volume signals — refactored 2026-05-21 from binary accum/breakout to
+    # a graded contribution. The old code awarded 0.5 weight for the loose
+    # `accumulation` flag (49% of universe tripped it — meaningless) and
+    # 0.5 for high_vol_breakout (0.6% — too strict). Now distributed
+    # across four signals so a name with multiple accumulation
+    # confirmations scores higher than one with just a barely-above-1
+    # up/down ratio.
+    if vol:
+        strength = vol.get("accumulation_strength")
+        if strength == "strong":
+            score += SCORE_WEIGHTS["volume"] * 0.40   # ratio≥1.5 + cmf inflow + ≤1 dist day
+        elif strength == "accumulating":
+            score += SCORE_WEIGHTS["volume"] * 0.20
+        elif strength == "distributing":
+            score -= SCORE_WEIGHTS["volume"] * 0.20   # penalize active distribution
+        if vol.get("pocket_pivot"):
+            score += SCORE_WEIGHTS["volume"] * 0.20   # Minervini's pre-breakout signal
+        if vol.get("high_vol_breakout"):
+            score += SCORE_WEIGHTS["volume"] * 0.20   # confirmed breakout
+        if vol.get("cmf_signal") == "inflow":
+            score += SCORE_WEIGHTS["volume"] * 0.20   # CMF confirms institutional money in
     # Liquidity / ADR bonus
     if liq["liquid"]:
         score += SCORE_WEIGHTS["liquidity_adr"] * 0.4
@@ -145,6 +220,24 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
             "stop": pp_info["suggested_stop"],
         }
 
+    # Comprehensive trade plan (entry/stop/target/support/resistance/levels)
+    # — built for every analyzed ticker, NOT just those with a VCP base.
+    # Falls back to current-price entry + Minervini 7% / ATR×2 stop when
+    # no clean base is detected, so the cards still surface actionable
+    # numbers for stage-2 names without a textbook setup.
+    try:
+        from analysis.trade_plan import build_plan as _build_trade_plan
+        trade_plan = _build_trade_plan(
+            last_close=float(last_close) if last_close else float(df["close"].iloc[-1]),
+            df=df,
+            vcp_setup=vcp_info,
+            powerplay_setup=pp_info,
+            direction="long",
+        )
+    except Exception as exc:
+        log.debug("trade plan failed for %s: %s", symbol, exc)
+        trade_plan = None
+
     return {
         "symbol": symbol,
         "name": company_names.name_for(symbol),
@@ -159,7 +252,15 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "base_count": bc,
         "sell_signals": sells,
         "entry_setup": entry_setup,
+        "trade_plan":  trade_plan,
         "adr_pct": adr_value,
+        "day_change_pct": day_change_pct,
+        "last_close": last_close,
+        "dual_momentum": dm_metrics,
+        "is_etf":        bool(etf_data and etf_data.get("is_etf")),
+        "etf_data":      etf_data if (etf_data and etf_data.get("is_etf")) else None,
+        "pioneer_themes": pioneer_themes,
+        "is_pioneer":    bool(pioneer_themes),
         "liquidity": liq,
         "is_candidate": bool(
             tr.pass_all
@@ -173,42 +274,166 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
 
 def scan_universe(symbols: Optional[List[str]] = None,
                   with_catalyst: bool = False,
-                  persist: bool = True) -> dict:
+                  persist: bool = True,
+                  emitter: Optional[ProgressEmitter] = None) -> dict:
+    """Run the full SEPA scan across the universe.
+
+    If `emitter` is provided, fires per-phase + per-ticker progress events.
+    See sepa.progress for the event shape; safe to omit for non-streaming
+    callers (e.g. POST /sepa/scan, the cron CLI).
+    """
+    def _emit(event_type: str, **kw):
+        if emitter:
+            emitter.emit(event_type, **kw)
+
     t0 = time.time()
     symbols = symbols or load_universe()
     # Exclude benchmarks from candidate list
     work = [s for s in symbols if s not in {"SPY", "QQQ", "IWM"}]
 
+    _emit("phase", phase="loading_universe", total=len(work))
+
+    # Refresh SPY's 12m return once at scan start. Used by dual_momentum.
+    # metrics_for_df for the per-ticker `beats_spy` flag.
+    _refresh_spy_baseline()
+
+    # ── Bulk price patch — append today's close to all cached histories ──
+    # This converts "re-download 2y of history" cold-starts into a single
+    # bulk snapshot call. No-ops silently if Massive isn't configured.
+    try:
+        patch_stats = prices.patch_latest_closes(work)
+        log.info("price patch: patched=%d already_current=%d no_cache=%d",
+                 patch_stats.get("patched", 0),
+                 patch_stats.get("already_current", 0),
+                 patch_stats.get("no_cache", 0))
+        _emit("log", level="info",
+              message=f"Price cache patched: {patch_stats.get('patched', 0)} updated, "
+                      f"{patch_stats.get('already_current', 0)} current")
+    except Exception as exc:
+        log.warning("scanner: bulk price patch failed (%s) — proceeding", exc)
+
     log.info("Computing RS ranks over %d symbols...", len(work))
-    rs_map = rs_rank.rs_ranks(work)
+    rs_map = rs_rank.rs_ranks(work, emitter=emitter)
 
     # Warm company-name cache so each result can attach its long name without
     # paying a per-row yfinance lookup. Cached 30 days in Mongo.
+    # bulk_warm emits its own `phase` event (with hits vs missing breakdown)
+    # plus `name_progress` ticks, so we don't pre-emit here.
     try:
-        company_names.bulk_warm(work)
+        company_names.bulk_warm(work, emitter=emitter)
     except Exception as exc:
         log.warning("company_names bulk_warm skipped: %s", exc)
+        _emit("log", level="warn", message=f"company_names bulk_warm skipped: {exc}")
+
+    _emit("phase", phase="scanning", total=len(work))
 
     results: List[dict] = []
-    # Use a thread pool since yfinance + pandas are I/O + CPU mix
+    failures: List[dict] = []  # symbols that errored on the first pass
+    # Use a thread pool since yfinance + pandas are I/O + CPU mix.
+    # Switched from ex.map() to as_completed() so progress events fire on
+    # actual completion order (which symbol just finished), not submission order.
     with ThreadPoolExecutor(max_workers=8) as ex:
-        for res in ex.map(lambda s: _analyze_symbol(s, rs_map), work):
+        futures = {ex.submit(_analyze_symbol, s, rs_map): s for s in work}
+        completed = 0
+        for fut in as_completed(futures):
+            sym = futures[fut]
+            completed += 1
+            try:
+                res = fut.result()
+            except Exception as exc:
+                log.warning("scan failed for %s: %s", sym, exc)
+                err_msg = str(exc) or type(exc).__name__
+                failures.append({"symbol": sym, "error": err_msg, "attempt": 1})
+                _emit("failure",
+                      symbol=sym, error=err_msg, attempt=1,
+                      will_retry=True,
+                      current=completed, total=len(work))
+                res = None
             if res is not None:
                 results.append(res)
+                if res.get("is_candidate"):
+                    _emit("candidate",
+                          symbol=res["symbol"],
+                          score=res["score"],
+                          rating=res.get("rating"),
+                          rs_rank=res.get("rs_rank"))
+            _emit("ticker",
+                  current=completed, total=len(work),
+                  symbol=sym,
+                  analyzed=len(results),
+                  candidate_count=sum(1 for r in results if r.get("is_candidate")),
+                  failures=len(failures))
+
+    # Retry pass — single attempt, lower concurrency, brief settle delay.
+    # Most failures are yfinance rate-limits or transient network blips that
+    # clear in a few seconds. Permanent failures (delisted, malformed symbol)
+    # land in `failures` for the final payload.
+    permanent_failures: List[dict] = []
+    if failures:
+        retry_targets = [f["symbol"] for f in failures]
+        _emit("phase", phase="retrying", total=len(retry_targets),
+              message=f"Retrying {len(retry_targets)} failed tickers")
+        time.sleep(0.5)  # tiny settle for transient yfinance rate-limits
+
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            retry_futures = {ex.submit(_analyze_symbol, s, rs_map): s for s in retry_targets}
+            retry_done = 0
+            for fut in as_completed(retry_futures):
+                sym = retry_futures[fut]
+                retry_done += 1
+                _emit("retry",
+                      symbol=sym, attempt=2,
+                      current=retry_done, total=len(retry_targets))
+                try:
+                    res = fut.result()
+                except Exception as exc:
+                    err_msg = str(exc) or type(exc).__name__
+                    permanent_failures.append({
+                        "symbol": sym, "error": err_msg, "attempt": 2,
+                    })
+                    _emit("failure",
+                          symbol=sym, error=err_msg, attempt=2,
+                          will_retry=False,
+                          current=retry_done, total=len(retry_targets))
+                    continue
+                if res is None:
+                    permanent_failures.append({
+                        "symbol": sym, "error": "no data after retry", "attempt": 2,
+                    })
+                    _emit("failure",
+                          symbol=sym, error="no data after retry", attempt=2,
+                          will_retry=False,
+                          current=retry_done, total=len(retry_targets))
+                    continue
+                results.append(res)
+                _emit("recovered",
+                      symbol=sym,
+                      score=res.get("score"),
+                      rating=res.get("rating"))
+                if res.get("is_candidate"):
+                    _emit("candidate",
+                          symbol=res["symbol"],
+                          score=res["score"],
+                          rating=res.get("rating"),
+                          rs_rank=res.get("rs_rank"))
 
     # Rank + cut to candidates
     results.sort(key=lambda x: x["score"], reverse=True)
     candidates = [r for r in results if r["is_candidate"]]
 
     # Market context
+    _emit("phase", phase="market_context")
     mkt = market_context.market_state()
 
     # Optional catalyst/insider/fundamentals enrichment on top N candidates only
     if with_catalyst and candidates:
         top = candidates[:20]
+        _emit("phase", phase="enriching", total=len(top),
+              message=f"Catalyst + insider + CANSLIM on top {len(top)} candidates")
 
         async def enrich_all() -> None:
             sem = asyncio.Semaphore(4)
+            done = {"n": 0}
 
             async def one(rec: dict) -> None:
                 async with sem:
@@ -233,6 +458,18 @@ def scan_universe(symbols: Optional[List[str]] = None,
                             rec["rating"] = _rating_label(rec["score"])
                     except Exception as exc:
                         log.warning("fundamentals failed for %s: %s", rec["symbol"], exc)
+                    # Buffett moat — same yfinance.info call as canslim, so cheap.
+                    try:
+                        from sepa import moat as _moat
+                        rec["moat"] = await asyncio.to_thread(
+                            _moat.compute_moat, rec["symbol"],
+                        )
+                    except Exception as exc:
+                        log.warning("moat failed for %s: %s", rec["symbol"], exc)
+                    done["n"] += 1
+                    _emit("enrich",
+                          current=done["n"], total=len(top),
+                          symbol=rec["symbol"])
 
             await asyncio.gather(*(one(r) for r in top))
 
@@ -249,8 +486,12 @@ def scan_universe(symbols: Optional[List[str]] = None,
         "market_context": mkt,
         "candidates": candidates,
         "all_results": results,
+        "retry_count": len(failures),
+        "permanent_failures": permanent_failures,
+        "recovered_count": len(failures) - len(permanent_failures),
     }
     if persist:
+        _emit("phase", phase="writing")
         LATEST_PATH.write_text(json.dumps(payload, default=str))
         log.info("Scan persisted to %s", LATEST_PATH)
         try:
@@ -258,6 +499,71 @@ def scan_universe(symbols: Optional[List[str]] = None,
             history.write_scan(payload)
         except Exception as exc:
             log.warning("history write skipped: %s", exc)
+        # ── Live signal logging for the calibration loop ──────────────
+        # Every SEPA-positive candidate becomes a `pending` observation.
+        # The hourly resolver cron grades them after their 24h horizon.
+        try:
+            from learning import observations as _obs
+            from tiny_stocks import scorer as _tiny
+            _ts = int(payload.get("generated_at") or 0)
+            _positive = {"STRONG_BUY", "BUY", "WATCH"}
+            for c in payload.get("all_results") or payload.get("candidates") or []:
+                rating = c.get("rating")
+                px = c.get("last_close")
+                if not px or not c.get("symbol"):
+                    continue
+
+                # Log SEPA observation if positive
+                if rating in _positive:
+                    _obs.record_observation(
+                        source=f"sepa_tier_{rating}",
+                        ticker=c["symbol"],
+                        ts=_ts,
+                        direction="up",
+                        value=float(c.get("score") or 0.0),
+                        baseline_price=float(px),
+                        horizon_hours=24,
+                        predicted_pct=0.0,
+                    )
+
+                # Compute Pounce Tiny Score (PTS) on every candidate that has
+                # a small/micro-cap profile, regardless of SEPA rating. Tiny
+                # stocks often fail SEPA's institutional-sponsorship gate but
+                # are excellent under the small-cap-specific composite.
+                try:
+                    tiny_result = _tiny.score_candidate(
+                        c,
+                        market_cap=c.get("market_cap"),
+                        frenzy=c.get("frenzy") or {},
+                        avg_dollar_volume=(c.get("liquidity") or {}).get("avg_dollar_volume"),
+                        float_shares=(c.get("liquidity") or {}).get("float"),
+                        si_pct=(c.get("short_interest") or {}).get("si_pct"),
+                        days_to_cover=(c.get("short_interest") or {}).get("days_to_cover"),
+                        ps_ratio=(c.get("fundamentals") or {}).get("ps_ratio"),
+                    )
+                    c["tiny_score"] = tiny_result["score"]
+                    c["tiny_tier"] = tiny_result["tier"]
+                    c["tiny_components"] = tiny_result.get("components") or {}
+                    c["tiny_narrative"] = tiny_result.get("narrative") or ""
+
+                    # Log tiny tier as an observation IF the score is meaningful
+                    # (TINY_WATCH+) — tracks accuracy via the same calibration loop
+                    if tiny_result["tier"] in ("TINY_STRONG", "TINY_BUY", "TINY_WATCH"):
+                        _obs.record_observation(
+                            source=f"tiny_tier_{tiny_result['tier'].replace('TINY_', '')}",
+                            ticker=c["symbol"],
+                            ts=_ts,
+                            direction="up",
+                            value=float(tiny_result["score"]),
+                            baseline_price=float(px),
+                            horizon_hours=72,   # tiny stocks move faster — 3d horizon
+                            predicted_pct=0.0,
+                        )
+                except Exception as exc:
+                    log.warning("tiny_stocks scoring failed for %s: %s",
+                                c.get("symbol"), exc)
+        except Exception as exc:
+            log.warning("learning observation log skipped: %s", exc)
     return payload
 
 
@@ -284,12 +590,42 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     vol = volume.analyze(df)
     sells = sell_signals.evaluate(df)
 
+    # Day change (today's close vs yesterday's, %) — used for "Sort: Day %"
+    day_change_pct = None
+    last_close = None
+    try:
+        if len(df) >= 2:
+            last = float(df["close"].iloc[-1])
+            prev = float(df["close"].iloc[-2])
+            last_close = round(last, 2)
+            if prev > 0:
+                day_change_pct = round((last / prev - 1) * 100, 2)
+    except Exception:
+        pass
+
+    # Dual Momentum metrics — same as the full scanner path, recomputed live
+    # off today's df (these layers are cheap and intraday-sensitive).
+    try:
+        dm_metrics = dm.metrics_for_df(df, spy_12m=_SPY_12M_RETURN)
+    except Exception:
+        dm_metrics = None
+
+    # ETF detection — Mongo-cached 30d, fast on cache hit.
+    try:
+        etf_data = etf_info.etf_data_for(symbol)
+    except Exception:
+        etf_data = None
+
+    # Pioneer theme membership (static) — same as the full scanner path.
+    pioneer_themes = pioneers.themes_for_symbol(symbol)
+
     # Composite score — same weights as full scan
     vcp_info = blob.get("vcp")
     pp_info = blob.get("power_play")
     bc = blob.get("base_count")
     adr_value = blob.get("adr_baseline")
     fundamentals = blob.get("fundamentals")
+    moat = blob.get("moat")
 
     score = 0.0
     score += SCORE_WEIGHTS["trend_template"] * (tr.passed / 8.0)
@@ -303,10 +639,27 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
             score += 2
     elif pp_info and pp_info.get("is_power_play"):
         score += SCORE_WEIGHTS["setup"] * 0.85
-    if vol and vol.get("accumulation"):
-        score += SCORE_WEIGHTS["volume"] * 0.5
-    if vol and vol.get("high_vol_breakout"):
-        score += SCORE_WEIGHTS["volume"] * 0.5
+    # Volume signals — refactored 2026-05-21 from binary accum/breakout to
+    # a graded contribution. The old code awarded 0.5 weight for the loose
+    # `accumulation` flag (49% of universe tripped it — meaningless) and
+    # 0.5 for high_vol_breakout (0.6% — too strict). Now distributed
+    # across four signals so a name with multiple accumulation
+    # confirmations scores higher than one with just a barely-above-1
+    # up/down ratio.
+    if vol:
+        strength = vol.get("accumulation_strength")
+        if strength == "strong":
+            score += SCORE_WEIGHTS["volume"] * 0.40   # ratio≥1.5 + cmf inflow + ≤1 dist day
+        elif strength == "accumulating":
+            score += SCORE_WEIGHTS["volume"] * 0.20
+        elif strength == "distributing":
+            score -= SCORE_WEIGHTS["volume"] * 0.20   # penalize active distribution
+        if vol.get("pocket_pivot"):
+            score += SCORE_WEIGHTS["volume"] * 0.20   # Minervini's pre-breakout signal
+        if vol.get("high_vol_breakout"):
+            score += SCORE_WEIGHTS["volume"] * 0.20   # confirmed breakout
+        if vol.get("cmf_signal") == "inflow":
+            score += SCORE_WEIGHTS["volume"] * 0.20   # CMF confirms institutional money in
     if liq.get("liquid"):
         score += SCORE_WEIGHTS["liquidity_adr"] * 0.4
     if adr_value and adr_value >= 4.0:
@@ -331,6 +684,20 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
             "stop": pp_info["suggested_stop"],
         }
 
+    # Comprehensive trade plan — see top scanner branch for rationale.
+    try:
+        from analysis.trade_plan import build_plan as _build_trade_plan
+        trade_plan = _build_trade_plan(
+            last_close=float(last_close) if last_close else float(df["close"].iloc[-1]),
+            df=df,
+            vcp_setup=vcp_info,
+            powerplay_setup=pp_info,
+            direction="long",
+        )
+    except Exception as exc:
+        log.debug("trade plan failed for %s (fast scan): %s", symbol, exc)
+        trade_plan = None
+
     return {
         "symbol": symbol,
         "name": blob.get("name") or company_names.name_for(symbol),
@@ -345,9 +712,18 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "base_count": bc,
         "sell_signals": sells,
         "entry_setup": entry_setup,
+        "trade_plan":  trade_plan,
         "adr_pct": adr_value,
+        "day_change_pct": day_change_pct,
+        "last_close": last_close,
+        "dual_momentum": dm_metrics,
+        "is_etf":        bool(etf_data and etf_data.get("is_etf")),
+        "etf_data":      etf_data if (etf_data and etf_data.get("is_etf")) else None,
+        "pioneer_themes": pioneer_themes,
+        "is_pioneer":    bool(pioneer_themes),
         "liquidity": liq,
         "fundamentals": fundamentals,
+        "moat": moat,
         "is_candidate": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
@@ -362,7 +738,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
 def scan_universe_fast(symbols: Optional[List[str]] = None,
                        persist: bool = True,
                        universe_mode: Optional[str] = None,
-                       fallback_when_missing: bool = True) -> dict:
+                       fallback_when_missing: bool = True,
+                       emitter: Optional[ProgressEmitter] = None) -> dict:
     """Hot scan that joins cached research with today's prices.
 
     Two orders of magnitude faster than `scan_universe()` (typically 20-30s
@@ -376,16 +753,41 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         universe_mode: "curated" / "sp500" / "russell1000" / "expanded".
         fallback_when_missing: if a symbol has no cached research, fall back to
             full per-symbol analysis (slower but no gaps in coverage).
+        emitter: optional ProgressEmitter for SSE streaming (see sepa.progress).
     """
+    def _emit(event_type: str, **kw):
+        if emitter:
+            emitter.emit(event_type, **kw)
+
     t0 = time.time()
     symbols = symbols or load_universe(universe_mode)
     work = [s for s in symbols if s not in {"SPY", "QQQ", "IWM"}]
 
+    _emit("phase", phase="loading_universe", total=len(work),
+          mode=universe_mode or "default")
+
     cache = research_mod.get_all_research()
     log.info("fast scan: %d symbols, %d in research cache", len(work), len(cache))
+    _emit("log", level="info",
+          message=f"Research cache: {len(cache)} entries · universe: {len(work)}")
+
+    # Refresh SPY 12m baseline for the per-ticker beats_spy flag.
+    _refresh_spy_baseline()
+
+    # ── Bulk price patch (same as scan_universe) ─────────────────────────
+    try:
+        patch_stats = prices.patch_latest_closes(work)
+        log.info("fast-scan price patch: patched=%d already_current=%d no_cache=%d",
+                 patch_stats.get("patched", 0),
+                 patch_stats.get("already_current", 0),
+                 patch_stats.get("no_cache", 0))
+    except Exception as exc:
+        log.warning("scanner: bulk price patch failed (%s) — proceeding", exc)
 
     log.info("Computing RS ranks over %d symbols (fast scan)...", len(work))
-    rs_map = rs_rank.rs_ranks(work)
+    rs_map = rs_rank.rs_ranks(work, emitter=emitter)
+
+    _emit("phase", phase="scanning", total=len(work))
 
     results: List[dict] = []
     missing: List[str] = []
@@ -402,13 +804,88 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
             return None
         return _hot_recompute(symbol, df, rs_map, blob)
 
+    failures: List[dict] = []
     with ThreadPoolExecutor(max_workers=8) as ex:
-        for res in ex.map(_run, work):
+        futures = {ex.submit(_run, s): s for s in work}
+        completed = 0
+        for fut in as_completed(futures):
+            sym = futures[fut]
+            completed += 1
+            try:
+                res = fut.result()
+            except Exception as exc:
+                log.warning("fast scan failed for %s: %s", sym, exc)
+                err_msg = str(exc) or type(exc).__name__
+                failures.append({"symbol": sym, "error": err_msg, "attempt": 1})
+                _emit("failure",
+                      symbol=sym, error=err_msg, attempt=1,
+                      will_retry=True,
+                      current=completed, total=len(work))
+                res = None
             if res is not None:
                 results.append(res)
+                if res.get("is_candidate"):
+                    _emit("candidate",
+                          symbol=res["symbol"],
+                          score=res["score"],
+                          rating=res.get("rating"),
+                          rs_rank=res.get("rs_rank"))
+            _emit("ticker",
+                  current=completed, total=len(work),
+                  symbol=sym,
+                  analyzed=len(results),
+                  candidate_count=sum(1 for r in results if r.get("is_candidate")),
+                  cache_hits=completed - len(missing),
+                  cache_misses=len(missing),
+                  failures=len(failures))
+
+    # Retry pass — reuse _run so cache hits/misses behave identically.
+    permanent_failures: List[dict] = []
+    if failures:
+        retry_targets = [f["symbol"] for f in failures]
+        _emit("phase", phase="retrying", total=len(retry_targets),
+              message=f"Retrying {len(retry_targets)} failed tickers")
+        time.sleep(0.5)
+
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            retry_futures = {ex.submit(_run, s): s for s in retry_targets}
+            retry_done = 0
+            for fut in as_completed(retry_futures):
+                sym = retry_futures[fut]
+                retry_done += 1
+                _emit("retry",
+                      symbol=sym, attempt=2,
+                      current=retry_done, total=len(retry_targets))
+                try:
+                    res = fut.result()
+                except Exception as exc:
+                    err_msg = str(exc) or type(exc).__name__
+                    permanent_failures.append({"symbol": sym, "error": err_msg, "attempt": 2})
+                    _emit("failure",
+                          symbol=sym, error=err_msg, attempt=2, will_retry=False,
+                          current=retry_done, total=len(retry_targets))
+                    continue
+                if res is None:
+                    permanent_failures.append({"symbol": sym, "error": "no data after retry", "attempt": 2})
+                    _emit("failure",
+                          symbol=sym, error="no data after retry", attempt=2, will_retry=False,
+                          current=retry_done, total=len(retry_targets))
+                    continue
+                results.append(res)
+                _emit("recovered",
+                      symbol=sym,
+                      score=res.get("score"),
+                      rating=res.get("rating"))
+                if res.get("is_candidate"):
+                    _emit("candidate",
+                          symbol=res["symbol"],
+                          score=res["score"],
+                          rating=res.get("rating"),
+                          rs_rank=res.get("rs_rank"))
 
     results.sort(key=lambda x: x["score"], reverse=True)
     candidates = [r for r in results if r["is_candidate"]]
+    _emit("phase", phase="market_context")
     mkt = market_context.market_state()
 
     payload = {
@@ -424,8 +901,12 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         "market_context": mkt,
         "candidates": candidates,
         "all_results": results,
+        "retry_count": len(failures),
+        "permanent_failures": permanent_failures,
+        "recovered_count": len(failures) - len(permanent_failures),
     }
     if persist:
+        _emit("phase", phase="writing")
         LATEST_PATH.write_text(json.dumps(payload, default=str))
         try:
             from sepa import history

@@ -34,25 +34,23 @@
 # Universe defaults to SEPA_UNIVERSE_MODE env var (russell1000 for Aj).
 0      9-16  *    *    1-5  /usr/local/bin/python -m sepa.cli vcp-watch
 #
-# Lifeboard — Mac Studio deal scraper. Cron fires every 5min around the clock;
-# the script self-rate-limits per the user-editable config.scan_interval_min
-# (default 30min). Edit interval/RAM target/discount threshold in the dashboard.
-*/5    *     *    *    *    /usr/local/bin/python -m lifeboard.macstudio scan
+# Lifeboard (Mac deal scrapers) removed 2026-05-15 — user bought their
+# target Mac, no longer hunting deals. The previous block had three
+# cron entries: lifeboard.macstudio (every 5min, self-rate-limited),
+# lifeboard.playwright_scraper (hourly fallback for bot-protected
+# sites), and a disabled lifeboard.macbook job. All three deleted
+# along with the backend/lifeboard/ module.
 #
-# Lifeboard — MacBook deal scraper DISABLED. User wants ≥256GB RAM minimum;
-# no MacBook reaches that tier (M5 Max tops out at 128GB), so MacBook deals
-# are categorically excluded from the use case. Lines kept commented for
-# reference in case the use case ever changes back to storage-tier filtering.
-# 0      2     *    *    *    /usr/local/bin/python -m lifeboard.macbook scan --silent
-# 0      7,12,17 *  *    *    /usr/local/bin/python -m lifeboard.macbook scan
+# Product launches — Gemma classifies news from last 30d across watchlist +
+# portfolio + scan top-50, surfaces new hardware/software/drug announcements
+# as catalysts. ~2-5 min depending on universe size and LLM queue. Runs after
+# the 4:30 fast-scan so the SEPA top-50 reflects today's close before we
+# scan its launch catalysts.
+0      17    *    *    1-5  /usr/local/bin/python -m catalysts.product_launches --workers 3
 #
-# Lifeboard — Playwright-based scraper for sites that 403 our requests-based
-# scrapers (B&H, eBay). Runs hourly. Headless Chromium with realistic
-# fingerprint + asset-blocking handles the bot-protection edges that
-# requests can't get past. Persists to the same lifeboard_deals collection
-# the macstudio scraper writes to, with source tagged "(Playwright)" so
-# you can grep cron logs to see which path produced each row.
-0      *     *    *    *    /usr/local/bin/python -m lifeboard.playwright_scraper scan
+# Sunday weekly catch-up — scans the same universe with --days 60 to backfill
+# anything missed during the week. Cheaper because most articles are cache hits.
+0      22    *    *    0    /usr/local/bin/python -m catalysts.product_launches --workers 3
 #
 # Supply / Demand atlas — refresh sector classifications daily at 6am ET so
 # the Morning Brief reads from cache (6h TTL aligns with this).
@@ -112,15 +110,36 @@
 # todo whose notify_at has passed and that hasn't been notified yet.
 *      *     *    *    *    /usr/local/bin/python -c "from todos import reminder; reminder.fire_due()"
 #
+# Todos — LLM runner. Picks up todos flagged ai_task=true and writes a
+# research note back via the local LM Studio model (see backend/llm/ and
+# backend/todos/llm_runner.py). Runs every 15 minutes between 6 AM and
+# 11 PM ET — outside that window users are unlikely to be writing new
+# research tasks. Each tick processes up to 5 pending tasks to keep
+# LM Studio's queue bounded. Safe to invoke manually:
+#   docker compose exec cron python -m todos.llm_runner
+*/15   6-23  *    *    *    /usr/local/bin/python -m todos.llm_runner
+#
 # Todos — daily digest at 7 AM ET. Sends one push notification summarizing
 # important + today's items so the user starts the day with a clear list.
 0      7     *    *    *    /usr/local/bin/python -c "from todos import reminder; reminder.fire_daily_digest()"
 #
-# House — daily 8 AM ET snapshot of Redfin/Zillow/Realtor view+save+tour
-# counts. Scraper is best-effort; if it fails the user falls back to
-# entering numbers manually from the dashboard. Runs only for the
-# configured HOUSE_OWNER_EMAIL.
-0      8     *    *    *    /usr/local/bin/python -c "import os; from house import store, scraper as s; owner=os.getenv('HOUSE_OWNER_EMAIL','ajaykandakatla@gmail.com'); cfg=store.get_config(owner) or {}; m=s.scrape_all(redfin_url=cfg.get('redfin_url'), zillow_url=cfg.get('zillow_url'), realtor_url=cfg.get('realtor_url')); store.upsert_snapshot(owner, m) if m else None"
+# Todos — daily recurring materializer at 6 AM ET. Creates that day's
+# vitamin/hydration/love-note reminders for Vineetha (see
+# backend/todos/daily_recurring.py for the schedule). Idempotent — re-
+# running mid-day is safe, won't duplicate existing entries. Runs an
+# hour BEFORE the 7am digest so today's items show up in the digest.
+0      6     *    *    *    /usr/local/bin/python -m todos.daily_recurring
+#
+# House — daily 8 AM ET scrape + push notification.
+# Scrapes Redfin/Zillow/Realtor for view+save+tour counts, diffs vs
+# yesterday, persists the daily snapshot, and pushes a per-user
+# notification with the day's summary. Three push kinds:
+#   house_daily          — daily summary (always fires when scrape worked)
+#   house_scrape_failed  — all sources blocked, manual entry needed
+#   house_stagnant       — 3+ days with no new views (price-drop nudge)
+# Manual invocation for testing:
+#   docker compose exec cron python -m house.daily_scrape --dry-run
+0      8     *    *    *    /usr/local/bin/python -m house.daily_scrape
 #
 # Food — CONTINUOUS-FACTORY daily run at 4am ET. Three phases:
 #   1. revalidate_cache()  — drop dead videos (oEmbed check)
@@ -142,3 +161,168 @@
 5      5     *    *    *    /usr/local/bin/python -c "from food import planner as p, store as s; [p.suggest_today(u) for u in [s._default_pantry().get('owner_email') or 'ajaykandakatla@gmail.com']]"
 10     5     *    *    *    /usr/local/bin/python -c "from kids import activities as a, store as s; print('kids warm:', len(a.ACTIVITIES), 'activities')"
 15     5     *    *    *    /usr/local/bin/python -c "from overnight import movers as m; m.scan_movers(min_gap_pct=0.5)"
+
+#
+# ============================================================================
+# Real-time SEPA upgrades (2026-05-25)
+# ============================================================================
+#
+# Stage-out alert — every 15 min during regular session (9:30am-4pm ET).
+# Checks live prices vs MA50/MA200 for all Stage-2 SEPA candidates.
+# Fires a push notification if a name is breaking down intraday.
+# Market-hours guard is inside the function; cron spec is broad for safety.
+*/15   9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli stage-out-alerts
+0,15,30,45 16 * * 1-5  /usr/local/bin/python -m sepa.cli stage-out-alerts
+
+#
+# ============================================================================
+# Setups — bull-regime intraday + short-swing scanners (PEG / ORB / Inside-Day)
+# ============================================================================
+# Each runs against the latest SEPA candidate list and produces concrete
+# trigger/stop/target rows in Mongo. See backend/setups/{kind}.py for the
+# setup definitions. All three short-circuit to a no-op when
+# sepa.market_regime.classify_regime() returns a bearish label — the user
+# explicitly chose to sit out bears.
+#
+# PEG (Power Earnings Gap)  — nightly at 6:30 PM ET Mon-Fri. After the
+# fast-scan + product-launch cron have updated the SEPA universe, we look
+# for any candidate that gapped >= 5% on >= 4x volume in the last 5 sessions
+# and hasn't run away yet. Setup expires 72h after creation.
+30     18    *    *    1-5  /usr/local/bin/python -m setups.peg
+#
+# Inside-Day  — nightly at 6:35 PM ET Mon-Fri. Detects compression bars
+# (today's HL inside yesterday's HL) on SEPA candidates. Setup expires
+# 48h after creation.
+35     18    *    *    1-5  /usr/local/bin/python -m setups.inside_day
+#
+# Cheat scanner — runs all 3 variants (low/mid/high) at 6:40 PM ET weekdays.
+# Detects Minervini's earlier-entry points within VCP bases.
+40     18    *    *    1-5  /usr/local/bin/python -m setups.cheat
+#
+# Bull Flag — 6:45 PM ET weekdays.
+45     18    *    *    1-5  /usr/local/bin/python -m setups.bull_flag
+#
+# Episodic Pivot — broader catalyst-agnostic gap scanner. 6:50 PM ET weekdays.
+50     18    *    *    1-5  /usr/local/bin/python -m setups.episodic_pivot
+#
+# High Tight Flag — 6:55 PM ET weekdays. Aggressive momentum setup.
+55     18    *    *    1-5  /usr/local/bin/python -m setups.high_tight_flag
+#
+# Post-Earnings Drift — 7:00 PM ET weekdays. Tracks names riding earnings drift.
+0      19    *    *    1-5  /usr/local/bin/python -m setups.post_earnings_drift
+#
+# ORB capture — 9:46 AM ET Mon-Fri. After the first 15-minute opening
+# range closes, we grab the 9:30-9:45 high/low for the top 10 SEPA
+# candidates and create pending ORB setups.
+46     9     *    *    1-5  /usr/local/bin/python -m setups.orb capture
+#
+# ORB watch — every minute from 9:47 AM to 3:55 PM ET Mon-Fri. Polls the
+# latest minute bar; if any pending ORB setup's trigger is broken on
+# meaningful volume, marks it triggered + fires a push notification.
+# Wide hour spec (9-15) is fine — the function short-circuits cheaply
+# when there are no pending setups outside session bounds.
+*      10-15 *    *    1-5  /usr/local/bin/python -m setups.orb watch
+47-59  9     *    *    1-5  /usr/local/bin/python -m setups.orb watch
+0-55   16    *    *    1-5  /usr/local/bin/python -m setups.orb watch
+#
+# Setups sweeper — 16:30 ET daily. Flips any pending row past its
+# expires_at to "expired" so the UI doesn't keep showing stale setups.
+30     16    *    *    1-5  /usr/local/bin/python -m setups.orb expire
+
+#
+# ============================================================================
+# Forum chatter prewarm — Reddit / HN / StockTwits velocity for top SEPA
+# ============================================================================
+# Without this, the forum_chatter_cache is purely lazy: a ticker only refreshes
+# its chatter when someone opens its detail page. If MU is in the SEPA list
+# but nobody visits MU for 3 days, /sepa/chatter/MU returns a 3-day-old
+# snapshot. User flagged this 2026-05-20: "chatter looks stale, are the
+# crons running?" — they weren't, because there were none.
+#
+# Runs daily at 5:30 AM ET (after the SEPA fast-scan/research-refresh has
+# updated the candidate universe). Pulls top 20 SEPA candidates, fetches
+# fresh chatter for each, appends a row to forum_chatter_history for the
+# drill-in modal's sparkline. ~2 minutes total at ~4 Reddit calls/ticker
+# under the free-tier 60 req/min rate budget.
+#
+# Manual run for testing:
+#   docker compose exec cron python -c "import asyncio; from sepa.forum_chatter import prewarm_top_sepa; print(asyncio.run(prewarm_top_sepa(20)))"
+30     5     *    *    *    /usr/local/bin/python -c "import asyncio; from sepa.forum_chatter import prewarm_top_sepa; asyncio.run(prewarm_top_sepa(20))"
+
+#
+# ============================================================================
+# Trading flash cards — hourly push notifications, broad curriculum
+# ============================================================================
+# Bite-sized education that fires every hour 8 AM - 8 PM ET on weekdays.
+# Cards rotate through nine topic pools — each hour maps to ONE topic,
+# the specific card within a topic cycles by day-of-year. See the
+# HOURLY_TOPIC dict in backend/flashcards/flashcards.py for the full
+# hour-to-topic schedule.
+#
+# Topics covered (9 pools, ~80 cards total):
+#   * entry / risk / sell_rules / psychology / review (Minervini)
+#   * fundamentals — EPS, P/E vs PEG, FCF, ROIC, book value, equity types
+#                    (added 2026-05-21: user asked about "company equity
+#                    vs shareholder equity" gap)
+#   * market_structure — T+1, dark pools, LULD bands, NBBO, Greeks, halts
+#   * history — Livermore, LTCM, Archegos, GME squeeze, flash crash, etc.
+#                (the "fun facts traders get stoked by" pool)
+#   * edge_math — expectancy, Kelly, drawdown math, compounding, R-multiples
+#
+# Single cron entry — the script itself decides whether to fire based on
+# the current hour (no-op outside the populated window). Beats 13
+# separate cron lines and the schedule lives in one place (the Python).
+#
+# User can mute via /notifications → "Minervini flash cards" toggle.
+# Default ON for new subscriptions. NOTE: pref key kept as
+# "minervini_flashcards" for backward compat with existing subscriptions —
+# the label in the UI may be renamed but the key shouldn't move.
+#
+# Manual ad-hoc fires for testing:
+#   docker compose exec cron python -m flashcards.flashcards hourly
+#   docker compose exec cron python -m flashcards.flashcards history     # any topic
+#   docker compose exec cron python -m flashcards.flashcards fundamentals
+#
+# Every hour, EVERY day (weekends too — education isn't time-zone-locked).
+# The HOURLY_TOPIC map in flashcards.py covers 0-23 so every fire has a
+# valid topic. Quiet-hours pref (per-user, default 22:00-08:00 if enabled)
+# suppresses delivery during the user's chosen sleep window — see
+# push/subs.py _is_in_quiet_hours.
+0      *     *    *    *    /usr/local/bin/python -m flashcards.flashcards hourly
+#
+# ============================================================================
+# Market open / close reminders — 15 min before each bell, weekdays only
+# ============================================================================
+# Skips US market holidays via the hardcoded calendar in
+# backend/market_hours/reminder.py (update yearly).
+# Manual ad-hoc:
+#   docker compose exec cron python -m market_hours.reminder open
+#   docker compose exec cron python -m market_hours.reminder close
+#
+# OPEN — 9:15 AM ET, 15 min before the 9:30 ET regular-session open.
+# Routes the user to /morning for the brief + top SEPA candidates.
+15     9     *    *    1-5  /usr/local/bin/python -m market_hours.reminder open
+#
+# CLOSE — 3:45 PM ET, 15 min before the 4:00 PM ET close.
+# Routes to /sepa for position management + tomorrow's buy-stop setup.
+45     15    *    *    1-5  /usr/local/bin/python -m market_hours.reminder close
+
+#
+# ============================================================================
+# Volleyball / personal fitness reminders — daily (all days)
+# ============================================================================
+# Workout module tuned to Ajay's right-shoulder rehab + right-finger
+# plantar-plate issue + supplement stack. Three daily pings:
+#
+# 07:00 ET — morning workout brief: today's session focus, duration,
+# tags + AM supplement reminder (D3/K2 + Moringa with breakfast).
+# Routes to /volleyball page.
+0      7     *    *    *    /usr/local/bin/python -m volleyball.reminders morning
+#
+# 18:00 ET — daily education card. ~30-card bank rotating across shoulder,
+# fingers, jumps, knees, recovery, supplements, technique, longevity.
+# Day-of-year cycle so each card surfaces ~once a month.
+0      18    *    *    *    /usr/local/bin/python -m volleyball.reminders education
+#
+# 21:30 ET — Magnesium Glycinate pre-sleep reminder (30-60 min before bed).
+30     21    *    *    *    /usr/local/bin/python -m volleyball.reminders magnesium

@@ -72,6 +72,46 @@ def _benchmark_return(symbol: str = "SPY", lookback_days: int = 252) -> Optional
     return _return_pct(df, lookback_days)
 
 
+def metrics_for_df(df, spy_12m: Optional[float] = None) -> dict:
+    """Compute per-symbol Dual Momentum metrics from an already-loaded price df.
+
+    Used by the SEPA scanner to attach DM data to every row so the UI can
+    sort/filter by 1m/3m/6m/12m return + abs_mom_pass + beats_spy without
+    making the caller run a separate /sepa/dual-momentum query.
+
+    Args:
+        df: pandas DataFrame with a 'close' column (daily bars).
+        spy_12m: SPY's 12-month % return. If None, beats_spy is left null.
+
+    Returns dict with the same keys the dual-momentum UI uses:
+        return_1m, return_3m, return_6m, return_12m, abs_mom_pass, beats_spy,
+        and a 0-100 dm_score (50/25/15/10 weighted blend, only when 12m>0).
+    """
+    returns = {k: _return_pct(df, days) for k, days in LOOKBACKS.items()}
+    r12 = returns.get("return_12m")
+    abs_mom_pass = bool(r12 is not None and r12 > 0)
+    beats_spy = (
+        None if (r12 is None or spy_12m is None)
+        else bool(r12 > spy_12m)
+    )
+    # Composite DM score: weighted blend of 12m/6m/3m/1m, only meaningful
+    # when abs_mom_pass is True (otherwise Antonacci says go defensive).
+    parts = [
+        (returns.get("return_12m"), 0.50),
+        (returns.get("return_6m"),  0.25),
+        (returns.get("return_3m"),  0.15),
+        (returns.get("return_1m"),  0.10),
+    ]
+    weighted = sum(v * w for v, w in parts if v is not None)
+    dm_score = round(weighted, 2) if abs_mom_pass else None
+    return {
+        **returns,
+        "abs_mom_pass": abs_mom_pass,
+        "beats_spy":    beats_spy,
+        "dm_score":     dm_score,
+    }
+
+
 def compute(top_n: int = 15, gate_lookback_days: int = 252,
             min_rs_rank: int = 0) -> dict:
     """Run dual momentum ranking against the latest scan universe.
