@@ -3,9 +3,10 @@
  * Entry/Stop/Target rules, hold time, risk note, and (where applicable)
  * a real-world example from market history.
  *
- * Content sourced from Oliver Kell's "Victory in Stock Trading" (2021)
- * and his Cycle of Price Action framework. The rules and tiers are
- * Kell's published criteria, not invented.
+ * Content sourced from Oliver Kell's "Victory in Stock Trading" (2021),
+ * Cycle of Price Action chapter (pp. 14-27). The rules and tiers are
+ * Kell's published criteria, not invented. Page references in each
+ * blurb point back to the specific book pages.
  */
 import type { KellTab } from './KellSetupTabs';
 
@@ -39,87 +40,87 @@ const INFO: Record<KellTab, InfoBlock> = {
     blurb:     "Every detection across the six Cycle of Price Action scanners. Sorted by R:R within each kind — drill into a specific tab for pattern-specific entry rules.",
     entry:     'Per-card trigger — varies by pattern',
     stop:      'Per-card stop — pattern-specific',
-    target:    'Per-card target — Kell\'s typical first-scale',
+    target:    "Per-card target — Kell's typical first scale",
     hold:      'Pattern-specific',
     riskNote:  "Combined view — each Kell pattern has its own risk profile. Open the per-pattern tab on the left to see the canonical rules and risk notes.",
   },
 
-  volatility_compression: {
-    title:     'Volatility Compression',
+  base_n_break: {
+    title:     "Base n' Break",
     tier:      'safe',
     tierLabel: 'SAFE',
-    blurb:     "Kell's ATR-based contraction setup. Recent volatility (ATR_10) is at least 30% below the long-term ATR (ATR_50), the last-week range is under 4% of price, and volume is drying up — the spring is coiled.",
-    entry:     '5-day high × 1.005 (breakout above the coil)',
-    stop:      'Just below the 5-day low — the coil floor',
-    target:    'Trigger × 1.10 (Kell\'s typical 10% first leg)',
-    hold:      '1–3 weeks (until volatility expands)',
-    riskNote:  "If price breaks the coil low BEFORE breaking out, the compression resolves down — exit immediately. Compressions can extend for weeks; don't anticipate the break, wait for it.",
-    example:   'NVDA mid-2023 multi-week consolidations, MSFT early-2024 base coil',
+    blurb:     "Kell's lower-risk consolidation breakout. After a confirmed uptrend (10 EMA > 20 EMA > 50 SMA), the stock builds a 5-15 day base ON the 10/20 EMA cluster with volume drying, then breaks the range on >1.3× volume. Book pp. 18-19, 39: 'the first consolidation into the 10/20 EMA … a lower risk area to buy against the moving averages.'",
+    entry:     'Base pivot (highest high of the base) + 1¢',
+    stop:      'min(20 EMA, base low) − 1¢',
+    target:    'Trigger × 1.10 (typical first leg)',
+    hold:      '2–10 trading days (short window — already broken out)',
+    riskNote:  "Breakout failures cluster — if the stock closes back below the pivot on a subsequent day on rising volume, the breakout failed and you exit immediately. Per pp. 48 'Breakout Day Low' rule: violation of the breakout-day low is the kill switch.",
+    example:   "$TWLO Daily (book p. 39 [D/E]) — multi-week consolidations above the 10/20 EMA followed by breakouts on volume",
   },
 
-  wedge_drop: {
-    title:     'Wedge Drop',
+  ema_crossback: {
+    title:     'EMA Crossback / Pullback',
     tier:      'safe_mod',
     tierLabel: 'SAFE-MOD',
-    blurb:     "Kell's 'shakeout that resolves to upside.' A Stage-2 leader pulls back 3-7 days in a descending wedge that touches MA21 or MA50, then prints a bullish reversal candle on volume. Institutions step in at the moving average.",
-    entry:     'Reversal candle high + 1¢ on confirmation day',
-    stop:      'Just below the reversal candle low',
-    target:    'Trigger × 1.08 (typical 8% first scale)',
+    blurb:     "Kell's lowest-risk add point. Inside an established uptrend (10 EMA rising 10+ days, closes above 10 EMA in 10 of last 15 sessions), price pulls back to tag the 10 or 20 EMA on LIGHT volume and rebounds with a bullish close back above the 10 EMA. Book p. 27 [Q]: 'a low risk-spot to add to the position or raise stops and continue to hold.'",
+    entry:     "Today's bar high + 1¢ on confirmation day",
+    stop:      'min(20 EMA, last 3-day low) − 1¢',
+    target:    'Trigger × 1.08 (typical continuation)',
     hold:      '3–10 trading days',
-    riskNote:  "If the reversal candle low fails the next session, the wedge is breaking down — exit. False wedge drops are common on the first try; Kell suggests waiting for a CLOSE above trigger before adding size.",
-    example:   'NVDA Aug 2023 (post-earnings wedge drop into MA21), AAPL late-2024 wedge resolutions',
+    riskNote:  "If volume on the pullback is HEAVY (not light), this isn't a constructive pullback — institutions are distributing. Skip. Per pp. 49 '10/20 EMA Trailing Stop': a CLOSE below the 20 EMA invalidates the pullback thesis.",
+    example:   "$TSLA Phase 3 (book pp. 26-27 [Q]) — the canonical EMA pullback entry after the $TSLA Wedge Pop on S&P inclusion catalyst",
   },
 
-  base_break: {
-    title:     'Base Break',
+  wedge_pop: {
+    title:     'Wedge Pop',
     tier:      'moderate',
     tierLabel: 'MODERATE',
-    blurb:     "Classic 30-day high breakout on volume. Kell's name for the cup-with-handle / VCP-completion entry — the textbook breakout from a base, confirmed by institutional volume.",
-    entry:     '30-day pivot + 1¢ (entry on confirmation pullback or re-test)',
-    stop:      'Below the 15-session base low',
-    target:    'Trigger × 1.10 (Kell\'s typical 10% measured move)',
-    hold:      '5–20 trading days (short window — already broken out)',
-    riskNote:  "Breakout failures happen in clusters. If the broader market is choppy (regime not 'confirmed uptrend'), reduce size or skip — the win rate falls sharply when index volatility expands.",
-    example:   'MSFT Dec 2023 cup-with-handle, META Feb 2024 base break',
+    blurb:     "Kell's Phase-2 turn — the FIRST reclaim of the 10/20 EMA cluster after a downtrend. Price has been trending down and tightening into the EMAs in a wedge of higher lows; today's bar closes above BOTH EMAs (first such close in 10 sessions). Book pp. 17, 23-24, 26 [O]: 'Price pops back through the 10/20 EMA on the CATALYST … this is a new traditional flat base pattern.'",
+    entry:     "Today's bar high + 1¢",
+    stop:      'min(lows[−7:]) (wedge floor)',
+    target:    "Today's close × 1.10",
+    hold:      "1–4 trading days to first base, then re-evaluate as Base n' Break",
+    riskNote:  "First reclaims fail often — wait for a confirmed close above both EMAs and size SMALL. Per pp. 47-49 stop-loss canon, if today's low is broken in the next session, the Wedge Pop is failing and you exit.",
+    example:   "$TSLA late-2019 S&P inclusion (book p. 26 [O]), $LVGO Mar 2020 from COVID lows (book pp. 32-33)",
   },
 
   reversal_extension: {
     title:     'Reversal Extension',
     tier:      'aggressive',
     tierLabel: 'AGGRESSIVE',
-    blurb:     "Kell's 'buy the bottom turn.' After a recent swing low (3-20 sessions ago), price extends above the prior 5-day high on a bullish close with >1.5× volume — the turn is confirmed, not anticipated.",
-    entry:     "Today's close × 1.005 (small buffer over the extension)",
-    stop:      'Just below the recent swing low',
-    target:    'Trigger × 1.15 (15% typical first-leg target)',
-    hold:      '5–20 days',
-    riskNote:  "Stops are wider than other Kell setups because the swing low is deeper. Size SMALLER than your base-break positions — the volatility floor is further away, which means more $$ at risk per share.",
-    example:   'TSLA Jan 2023 bottom turn, NVDA Oct 2022 reversal extension',
+    blurb:     "Phase-1 capitulation bottom. After 5+ days of closes below the 10 EMA, price extends ≥5% below the 10 EMA today, then prints a bullish reversal bar on >1.5× volume that either engulfs the prior bar's high or closes in the upper half of range. Book pp. 16, 22-23: the moment supply is exhausted.",
+    entry:     'Reversal bar high + 1¢',
+    stop:      'Reversal bar low − 1¢',
+    target:    "20 EMA (Kell's first profit target — pp. 26-27)",
+    hold:      '3–10 days to the 20 EMA',
+    riskNote:  "Catching the bottom is the riskiest spot in the entire cycle. Size SMALLER than safer setups and accept that many of these fail. The Wedge Pop (Phase 2) is the cleaner second-chance entry — Kell explicitly recommends waiting for that confirmation if you missed the reversal bar.",
+    example:   "$LVGO Mar 2020 (book pp. 32-33 [D/E] — the 2B Reversal that became the $LVGO leadership trade)",
   },
 
-  power_trend: {
-    title:     'Power Trend',
-    tier:      'aggressive',
-    tierLabel: 'AGGRESSIVE',
-    blurb:     "Kell's stair-step continuation. A Stage-2 leader making higher highs (>=2 distinct HHs in 30 days, pullbacks under 10%) while holding above the 21-day EMA. Each pullback to MA21 is a fresh continuation entry on the rail.",
-    entry:     "Today's close × 1.005 (continuation buy above MA21)",
-    stop:      'MA21 × 0.98 (below MA21 with 2% buffer)',
-    target:    'Trigger × 1.12 (next stair-step, ~12% leg)',
-    hold:      '2–6 weeks (until MA21 break)',
-    riskNote:  "When MA21 breaks on a CLOSE, the power trend is over — exit cleanly. Don't anchor to the prior leg's targets; the trend has changed character. A failed MA21 hold on rising volume is especially toxic — that's distribution.",
-    example:   'NVDA 2023-2024 multiple stair-steps, COST 2024 power trend along MA21',
-  },
-
-  climax_run: {
-    title:     'Climax Run · WARNING',
+  exhaustion_extension: {
+    title:     'Exhaustion Extension · WARNING',
     tier:      'defensive',
     tierLabel: 'DEFENSIVE — SELL/TAKE PROFITS',
-    blurb:     "Not an entry — this is Kell's blow-off / exhaustion detection. A 50%+ run in 30 days prints a wide-range bar (>5% intraday) on 2.5×+ volume, closing red or in the lower third of range, while price is 30%+ stretched above MA50. Institutions are distributing into euphoria.",
+    blurb:     "NOT an entry. After an established uptrend (closes above 10 EMA for 20+ of last 30 sessions), today's close is ≥8% above the 10 EMA on >2× volume with a wide-range bar (range > 5% of close) that either closes in the upper half OR is a bearish reversal. Book pp. 19, 25, 40: the 2nd or 3rd such extension is the canonical 'sell into strength' moment.",
     entry:     '— (NO ENTRY — this is a sell signal)',
     stop:      '— (no stop applies)',
     target:    '— (no target — TAKE PROFITS instead)',
     hold:      "— (act now: lighten 1/3 to 1/2 of the position)",
-    riskNote:  "When you see this pattern on a name you OWN, scale out. Climax-run tops can give back 30-50% in days. Don't try to 'short' a Climax Run — Kell explicitly warns against it; the bounce can be violent before the real top.",
-    example:   'GME Jan 2021 (textbook climax run), AMC June 2021, NVDA blow-off bars 2024',
+    riskNote:  "FIRST extension can often be held through (Kell p. 40 [F]). SECOND extension is where you START scaling out. THIRD is the canonical lock-in. The `extension_count` field in meta tells you which one this is. Don't try to SHORT — the bounce can be violent before the real top (book p. 53 'To Short or Not to Short').",
+    example:   "$TSLA Aug 2020 third extension into the split (book p. 27 [P/S]), GME Jan 2021, NVDA blow-off bars 2024",
+  },
+
+  wedge_drop: {
+    title:     'Wedge Drop · WARNING',
+    tier:      'defensive',
+    tierLabel: 'DEFENSIVE — SELL/TAKE PROFITS',
+    blurb:     "NOT an entry. CONFIRMATION that the previous Exhaustion Extension was the real top. There was an extension 5-15 sessions ago; since then price wedged higher in a tight range; TODAY price closes below BOTH the 10 EMA and 20 EMA (first such close in 10 sessions) on a bearish bar with >1.3× volume. Book pp. 18, 20, 24, 41 [U/J]: 'officially ending the uptrend cycle.'",
+    entry:     '— (NO ENTRY — this is a sell signal)',
+    stop:      '— (no stop applies)',
+    target:    '— (no target — exit remaining position)',
+    hold:      "— (act now: exit any remaining shares from the cycle)",
+    riskNote:  "Wedge Drop is the second SELL signal in the cycle — if you already trimmed on Exhaustion Extension, this is the moment to exit the rest. Trying to hold for a bounce 'because the stock had a great run' is how Kell-style trends become buy-and-hope disasters. Per book p. 53, raise cash rather than short.",
+    example:   "$TSLA gap-down post-earnings (book p. 27 [U]), $TWLO post-blowoff (book pp. 38-39 [I/J])",
   },
 };
 

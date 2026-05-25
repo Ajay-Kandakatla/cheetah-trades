@@ -7,7 +7,11 @@ AND after any Kell-adjacent change to prove nothing drifted:
 
 Tests are intentionally cheap — no Massive calls, no Mongo. Constants are
 asserted by re-importing the modules; detector callability is verified
-against a synthetic in-memory DataFrame.
+indirectly via the `scan()` smoke import.
+
+Six canonical CoPA patterns covered (book pp. 14-21):
+  reversal_extension, wedge_pop, ema_crossback, base_n_break,
+  exhaustion_extension, wedge_drop.
 """
 from __future__ import annotations
 
@@ -19,63 +23,69 @@ import pytest
 # §4 — Per-scanner constant locks
 # =============================================================================
 
-def test_wedge_drop_constants_locked():
-    m = importlib.import_module("kell.wedge_drop")
-    assert m._WEDGE_MIN_LEN == 3
-    assert m._WEDGE_MAX_LEN == 7
-    assert m._MA_TOUCH_TOLERANCE_PCT == 2.0
-    assert m._MIN_VOL_RATIO == 0.7
-    assert m._AVG_VOL_WINDOW == 50
-
-
 def test_reversal_extension_constants_locked():
     m = importlib.import_module("kell.reversal_extension")
-    assert m._LOW_LOOKBACK == 20
-    assert m._LOW_MIN_AGE == 3
-    assert m._PRIOR_HIGH_WIN == 5
-    assert m._MIN_VOL_MULT == 1.5
+    assert m._DOWNTREND_MIN_DAYS == 5
+    assert m._EXTENSION_MIN_PCT  == 0.05
+    assert m._MIN_VOL_MULT       == 1.5
+    assert m._AVG_VOL_WINDOW     == 50
+    assert m._HTF_SUPPORT_PCT    == 0.03
+
+
+def test_wedge_pop_constants_locked():
+    m = importlib.import_module("kell.wedge_pop")
+    assert m._DOWNTREND_WIN        == 14
+    assert m._EMA_CLUSTER_MAX_PCT  == 0.02
+    assert m._WEDGE_MIN_LEN        == 5
+    assert m._WEDGE_MAX_LEN        == 10
+    assert m._FIRST_CLOSE_LOOKBACK == 10
+    assert m._AVG_VOL_WINDOW       == 50
+    assert m._STOP_LOOKBACK        == 7
+
+
+def test_ema_crossback_constants_locked():
+    m = importlib.import_module("kell.ema_crossback")
+    assert m._TREND_WIN          == 15
+    assert m._TREND_MIN_CLOSES   == 10
+    assert m._EMA10_RISING_DAYS  == 10
+    assert m._PULLBACK_LOOKBACK  == 3
+    assert m._EMA_TOUCH_PCT      == 0.01
+    assert m._AVG_VOL_WINDOW     == 50
+    assert m._LIGHT_VOL_WINDOW   == 3
+
+
+def test_base_n_break_constants_locked():
+    m = importlib.import_module("kell.base_n_break")
+    assert m._BASE_MIN_LEN         == 5
+    assert m._BASE_MAX_LEN         == 15
+    assert m._BASE_MAX_RANGE_PCT   == 0.10
+    assert m._BASE_NEAR_EMA_PCT    == 0.03
+    assert m._BASE_VOL_DRY_RATIO   == 0.85
+    assert m._BREAKOUT_VOL_MULT    == 1.3
+    assert m._AVG_VOL_WINDOW       == 50
+    assert m._TREND_STACK_DAYS     == 5
+
+
+def test_exhaustion_extension_constants_locked():
+    m = importlib.import_module("kell.exhaustion_extension")
+    assert m._TREND_AGE_WIN  == 30
+    assert m._TREND_AGE_MIN  == 20
+    assert m._EXT_MIN_PCT    == 0.08
+    assert m._WIDE_RANGE_MIN == 0.05
+    assert m._MIN_VOL_MULT   == 2.0
+    assert m._EXT_COUNT_WIN  == 60
     assert m._AVG_VOL_WINDOW == 50
 
 
-def test_volatility_compression_constants_locked():
-    m = importlib.import_module("kell.volatility_compression")
-    assert m._ATR_SHORT_WIN == 10
-    assert m._ATR_LONG_WIN == 50
-    assert m._ATR_RATIO_MAX == 0.7
-    assert m._RANGE_WIN == 5
-    assert m._RANGE_MAX_PCT == 0.04
-    assert m._MA_PROX_PCT == 0.05
-    assert m._VOL_DRY_RATIO == 0.85
-
-
-def test_base_break_constants_locked():
-    m = importlib.import_module("kell.base_break")
-    assert m._PIVOT_LOOKBACK == 30
-    assert m._STOP_LOOKBACK == 15
-    assert m._MIN_VOL_MULT == 1.5
-    assert m._AVG_VOL_WINDOW == 50
-
-
-def test_power_trend_constants_locked():
-    m = importlib.import_module("kell.power_trend")
-    assert m._TREND_WIN == 50
-    assert m._HH_LOOKBACK == 30
-    assert m._HH_MIN_COUNT == 2
-    assert m._PULLBACK_MAX_PCT == 10.0
-    assert m._MA21_TOUCH_LOOKBK == 5
-    assert m._MA21_TOUCH_PCT == 2.5
-
-
-def test_climax_run_constants_locked():
-    m = importlib.import_module("kell.climax_run")
-    assert m._RUN_WIN == 30
-    assert m._MIN_RUN_PCT == 50.0
-    assert m._MIN_RANGE_RATIO == 0.05
-    assert m._MIN_VOL_MULT == 2.5
-    assert m._MIN_MA50_STRETCH == 0.30
-    # 1/3 exactly (within float tolerance)
-    assert abs(m._LOWER_THIRD_RATIO - (1.0 / 3.0)) < 1e-9
-    assert m._AVG_VOL_WINDOW == 50
+def test_wedge_drop_constants_locked():
+    m = importlib.import_module("kell.wedge_drop")
+    assert m._EXHAUSTION_LOOKBACK_MIN == 5
+    assert m._EXHAUSTION_LOOKBACK_MAX == 15
+    assert m._EXT_MIN_PCT             == 0.08
+    assert m._EXT_MIN_VOL_MULT        == 2.0
+    assert m._FIRST_CLOSE_LOOKBACK    == 10
+    assert m._MIN_VOL_MULT            == 1.3
+    assert m._AVG_VOL_WINDOW          == 50
 
 
 # =============================================================================
@@ -83,12 +93,12 @@ def test_climax_run_constants_locked():
 # =============================================================================
 
 KELL_MODULES = [
-    "kell.wedge_drop",
     "kell.reversal_extension",
-    "kell.volatility_compression",
-    "kell.base_break",
-    "kell.power_trend",
-    "kell.climax_run",
+    "kell.wedge_pop",
+    "kell.ema_crossback",
+    "kell.base_n_break",
+    "kell.exhaustion_extension",
+    "kell.wedge_drop",
 ]
 
 
@@ -105,12 +115,12 @@ def test_kell_module_has_scan(mod_name):
 # =============================================================================
 
 KELL_KINDS = {
-    "wedge_drop",
     "reversal_extension",
-    "volatility_compression",
-    "base_break",
-    "power_trend",
-    "climax_run",
+    "wedge_pop",
+    "ema_crossback",
+    "base_n_break",
+    "exhaustion_extension",
+    "wedge_drop",
 }
 
 
@@ -148,36 +158,38 @@ def test_store_make_setup_shape_for_kell_kinds():
     """make_setup produces every required key for a representative Kell kind."""
     from setups import store
     s = store.make_setup(
-        kind="wedge_drop",
+        kind="base_n_break",
         symbol="TEST",
-        trigger=100.0, stop=95.0, target=108.0,
-        expires_in_hours=72,
+        trigger=100.0, stop=95.0, target=110.0,
+        expires_in_hours=48,
         meta={"sepa_score": 80.0},
     )
     missing = REQUIRED_SETUP_KEYS - set(s.keys())
     assert not missing, f"missing keys in make_setup output: {missing}"
-    # Status is always pending on emit
+    # Status is always pending on emit.
     assert s["status"] == "pending"
-    # R:R sanity
+    # R:R sanity.
     assert s["risk_pct"] > 0
     assert s["reward_pct"] > 0
     assert s["rr"] > 0
 
 
 # =============================================================================
-# §4.6 — climax_run signal_type literal is permanent
+# §4.5 / §4.6 — Both SELL scanners contain the SELL signal literal
 # =============================================================================
 
-def test_climax_run_signal_type_literal():
-    """The string 'SELL_OR_TAKE_PROFITS' must appear in the climax_run module
-    — frontend rendering keys on this exact literal."""
+def test_sell_signals_emit_signal_type_literal():
+    """Both SELL-signal scanners (exhaustion_extension, wedge_drop) must
+    emit the literal 'SELL_OR_TAKE_PROFITS' in their source — frontend
+    rendering keys on this exact string (KELL_CONTRACTS.md §4.5/§4.6)."""
     import inspect
-    m = importlib.import_module("kell.climax_run")
-    src = inspect.getsource(m)
-    assert "SELL_OR_TAKE_PROFITS" in src, (
-        "climax_run must emit the literal SELL_OR_TAKE_PROFITS in meta — "
-        "frontend rendering depends on it"
-    )
+    for mod_name in ("kell.exhaustion_extension", "kell.wedge_drop"):
+        m = importlib.import_module(mod_name)
+        src = inspect.getsource(m)
+        assert "SELL_OR_TAKE_PROFITS" in src, (
+            f"{mod_name} must emit the literal SELL_OR_TAKE_PROFITS in meta — "
+            "frontend rendering depends on it"
+        )
 
 
 # =============================================================================
@@ -190,12 +202,12 @@ def test_kell_init_exports_all_kinds():
     # __all__ is the documented export list. Should include all 6 kinds.
     declared = set(getattr(kell, "__all__", []))
     expected = {
-        "wedge_drop",
         "reversal_extension",
-        "volatility_compression",
-        "base_break",
-        "power_trend",
-        "climax_run",
+        "wedge_pop",
+        "ema_crossback",
+        "base_n_break",
+        "exhaustion_extension",
+        "wedge_drop",
     }
     missing = expected - declared
     assert not missing, f"kell.__all__ missing: {missing}"
@@ -210,7 +222,7 @@ def test_crontab_has_all_kell_entries():
     from pathlib import Path
     cron_path = Path("/app/crontab")
     if not cron_path.exists():
-        # Fallback for in-repo test runs (not container)
+        # Fallback for in-repo test runs (not container).
         cron_path = Path(__file__).parent.parent / "crontab"
     text = cron_path.read_text() if cron_path.exists() else ""
     for kind in KELL_KINDS:

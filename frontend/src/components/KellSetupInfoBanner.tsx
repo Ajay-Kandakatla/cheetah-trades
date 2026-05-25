@@ -2,9 +2,10 @@
  * below KellSetupTabs. Hidden on the "all" tab.
  *
  * Same shape as SepaSetupInfoBanner, content sourced from Oliver Kell's
- * "Victory in Stock Trading" (2021) — these are the author's published
- * rules, not invented. The Climax-Run banner reads as a warning rather
- * than a buy because the underlying pattern IS a sell signal.
+ * "Victory in Stock Trading" (2021) Cycle of Price Action chapter (pp.
+ * 14-27). The Exhaustion Extension and Wedge Drop banners read as
+ * warnings rather than buys because the underlying patterns ARE sell
+ * signals.
  */
 import type { KellTab } from './KellSetupTabs';
 
@@ -28,56 +29,56 @@ type BannerInfo = {
 };
 
 const INFO: Partial<Record<KellTab, BannerInfo>> = {
-  volatility_compression: {
-    title:     'Volatility Compression',
+  base_n_break: {
+    title:     "Base n' Break",
     tier:      'safe',
     tierLabel: 'SAFE',
-    pitch:     "Kell's ATR-based contraction. ATR_10 < 0.7×ATR_50, 5-day range under 4% of price, coiled near MA20/MA50, volume drying.",
-    entry:     '5-day high × 1.005',
-    stop:      'Just below 5-day low',
-    hold:      '1–3 weeks',
+    pitch:     "5-15 day base on the 10/20 EMA with volume drying, then breakout on >1.3× volume (book pp. 18-19, 39).",
+    entry:     'Base pivot + 1¢',
+    stop:      'min(20 EMA, base low) − 1¢',
+    hold:      '2–10 days',
   },
-  wedge_drop: {
-    title:     'Wedge Drop',
+  ema_crossback: {
+    title:     'EMA Crossback',
     tier:      'safe_mod',
     tierLabel: 'SAFE-MOD',
-    pitch:     "3–7 day pullback wedge into MA21 or MA50, then a bullish reversal candle on volume. 'The shakeout that resolves to upside.'",
-    entry:     'Reversal candle high + 1¢',
-    stop:      'Just below reversal candle low',
+    pitch:     "First pullback to the 10/20 EMA on LIGHT volume inside a confirmed uptrend (book pp. 18, 27).",
+    entry:     "Today's bar high + 1¢",
+    stop:      'min(20 EMA, 3-day low) − 1¢',
     hold:      '3–10 days',
   },
-  base_break: {
-    title:     'Base Break',
+  wedge_pop: {
+    title:     'Wedge Pop',
     tier:      'moderate',
     tierLabel: 'MODERATE',
-    pitch:     "Classic 30-day high breakout on >1.5× volume. Kell's cup-with-handle / VCP-completion entry.",
-    entry:     '30-day pivot + 1¢',
-    stop:      'Below 15-session base low',
-    hold:      '5–20 days',
+    pitch:     "First close above BOTH 10 EMA and 20 EMA after a downtrend tightened into a wedge (book pp. 17, 23-24).",
+    entry:     "Today's bar high + 1¢",
+    stop:      'min(lows[−7:])',
+    hold:      '1–4 days',
   },
   reversal_extension: {
     title:     'Reversal Extension',
     tier:      'aggressive',
     tierLabel: 'AGGRESSIVE',
-    pitch:     "Bottom-turn confirmation — recent swing low, then a strong bullish close above the prior 5-day high on >1.5× volume.",
-    entry:     'Today\'s close × 1.005',
-    stop:      'Just below the swing low',
-    hold:      '5–20 days',
+    pitch:     "Bullish reversal bar on >1.5× volume after price extended ≥5% below the 10 EMA (book pp. 16, 22-23).",
+    entry:     'Reversal bar high + 1¢',
+    stop:      'Reversal bar low − 1¢',
+    hold:      '3–10 days to 20 EMA',
   },
-  power_trend: {
-    title:     'Power Trend',
-    tier:      'aggressive',
-    tierLabel: 'AGGRESSIVE',
-    pitch:     "Stage-2 stair-step continuation. Higher highs with shallow pullbacks (<10%); latest pullback bottomed at MA21.",
-    entry:     'Today\'s close × 1.005',
-    stop:      'MA21 × 0.98',
-    hold:      '2–6 weeks',
-  },
-  climax_run: {
-    title:     'Climax Run · WARNING',
+  exhaustion_extension: {
+    title:     'Exhaustion Extension · WARNING',
     tier:      'defensive',
     tierLabel: 'DEFENSIVE — SELL/TAKE PROFITS',
-    pitch:     "Not an entry. Wide-range red/weak-close bar on 2.5×+ volume after a 50%+ run, stretched 30%+ above MA50. Lighten positions.",
+    pitch:     "Not an entry. 2nd or 3rd extension ≥8% above the 10 EMA on >2× volume, wide-range bar. Take profits (book pp. 19, 25, 40).",
+    entry:     '— (no entry)',
+    stop:      '— (no stop)',
+    hold:      '— (act now)',
+  },
+  wedge_drop: {
+    title:     'Wedge Drop · WARNING',
+    tier:      'defensive',
+    tierLabel: 'DEFENSIVE — SELL/TAKE PROFITS',
+    pitch:     "Not an entry. First close BELOW both EMAs after a recent Exhaustion Extension on >1.3× volume. Cycle is over (book pp. 18, 20, 24, 41).",
     entry:     '— (no entry)',
     stop:      '— (no stop)',
     hold:      '— (act now)',

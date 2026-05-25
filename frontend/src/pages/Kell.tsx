@@ -2,9 +2,10 @@
  *
  * SEPARATE page from /sepa. The Kell scanners read the SAME SEPA
  * candidate list (universe parity) but produce Kell-specific pattern
- * detections (wedge_drop, reversal_extension, volatility_compression,
- * base_break, power_trend, climax_run) ranked safest → most aggressive
- * with climax_run as a defensive warning.
+ * detections (reversal_extension, wedge_pop, ema_crossback,
+ * base_n_break, exhaustion_extension, wedge_drop) ranked safest → most
+ * aggressive, with exhaustion_extension and wedge_drop as defensive
+ * warnings (SELL signals, not entries).
  *
  * Architecture (mirror of Sepa.tsx but stripped down):
  *   - Reuse useSepaScan() for the candidate universe (the symbol-set is
@@ -53,15 +54,15 @@ const PageInfo = (
     <p>
       <strong>Oliver Kell's Cycle of Price Action (CoPA)</strong> reframes
       stock setups as a recurring <em>cycle</em> rather than independent
-      patterns. A typical Stage-2 leader rotates through these phases:
+      patterns. A typical Stage-2 leader rotates through these six phases:
     </p>
     <ul>
-      <li><strong>Volatility Compression</strong> — ATR-based contraction; the spring coils.</li>
-      <li><strong>Wedge Drop</strong> — a 3-7 day pullback shakeout into MA21 / MA50, then a bullish reversal.</li>
-      <li><strong>Reversal Extension</strong> — confirmed bottom turn extending above the prior 5-day high.</li>
-      <li><strong>Base Break</strong> — 30-day high breakout on confirming volume.</li>
-      <li><strong>Power Trend</strong> — stair-step continuation along MA21.</li>
-      <li><strong>Climax Run</strong> — wide-range, high-volume distribution at the top. <em>SELL signal.</em></li>
+      <li><strong>Reversal Extension</strong> — bullish reversal bar after price extended below the 10 EMA.</li>
+      <li><strong>Wedge Pop</strong> — first reclaim of the 10/20 EMA cluster after a downtrend.</li>
+      <li><strong>EMA Crossback</strong> — first pullback to the EMAs in a confirmed new uptrend. Kell's safest add point.</li>
+      <li><strong>Base n' Break</strong> — 5-15 day consolidation on the 10/20 EMA, then breakout on expanding volume.</li>
+      <li><strong>Exhaustion Extension</strong> — 2nd or 3rd extension ≥8% above the 10 EMA. <em>SELL signal.</em></li>
+      <li><strong>Wedge Drop</strong> — first close below both EMAs after Exhaustion. <em>Cycle end — SELL signal.</em></li>
     </ul>
     <p>
       Each Kell scanner reads the SAME SEPA candidate universe, so quality is
@@ -106,14 +107,14 @@ export function KellPage() {
   };
 
   // ── Active tab — persists in URL hash so sharing a Kell tab link
-  // (e.g. /kell#tab=power_trend) lands the user on the right view.
+  // (e.g. /kell#tab=base_n_break) lands the user on the right view.
   const [activeTab, setActiveTab] = useState<KellTab>(() => {
     if (typeof window === 'undefined') return 'all';
     const m = window.location.hash.match(/tab=([a-z_]+)/);
     const candidate = m?.[1] as KellTab | undefined;
     const valid: KellTab[] = [
-      'all', 'volatility_compression', 'wedge_drop', 'base_break',
-      'reversal_extension', 'power_trend', 'climax_run',
+      'all', 'base_n_break', 'ema_crossback', 'wedge_pop',
+      'reversal_extension', 'exhaustion_extension', 'wedge_drop',
     ];
     return candidate && valid.includes(candidate) ? candidate : 'all';
   });
@@ -142,29 +143,29 @@ export function KellPage() {
   // fetches — no duplicate API calls when the user flips between 'all'
   // and a specific kind. Each kind is its own hook call (React rules
   // require static hook order, so we expand all 6 here explicitly).
-  const w = useSetupsByKind(activeTab === 'all' ? 'wedge_drop' : null);
-  const r = useSetupsByKind(activeTab === 'all' ? 'reversal_extension' : null);
-  const v = useSetupsByKind(activeTab === 'all' ? 'volatility_compression' : null);
-  const b = useSetupsByKind(activeTab === 'all' ? 'base_break' : null);
-  const p = useSetupsByKind(activeTab === 'all' ? 'power_trend' : null);
-  const c = useSetupsByKind(activeTab === 'all' ? 'climax_run' : null);
+  const bnb = useSetupsByKind(activeTab === 'all' ? 'base_n_break' : null);
+  const emc = useSetupsByKind(activeTab === 'all' ? 'ema_crossback' : null);
+  const wp  = useSetupsByKind(activeTab === 'all' ? 'wedge_pop' : null);
+  const re  = useSetupsByKind(activeTab === 'all' ? 'reversal_extension' : null);
+  const ex  = useSetupsByKind(activeTab === 'all' ? 'exhaustion_extension' : null);
+  const wd  = useSetupsByKind(activeTab === 'all' ? 'wedge_drop' : null);
 
   const allKellSetups: Setup[] = useMemo(() => {
     if (activeTab !== 'all') return [];
     const merged = [
-      ...w.setups, ...r.setups, ...v.setups,
-      ...b.setups, ...p.setups, ...c.setups,
+      ...bnb.setups, ...emc.setups, ...wp.setups,
+      ...re.setups,  ...ex.setups,  ...wd.setups,
     ];
-    // Sort by R:R desc — best risk/reward floats up. Climax-run rows
-    // have rr ~= 0 (no real target) so they sink to the bottom of the
-    // combined feed, which is the intended order: entries first,
-    // warnings last.
+    // Sort by R:R desc — best risk/reward floats up. Exhaustion/Wedge
+    // Drop rows have rr ~= 0 (no real target) so they sink to the
+    // bottom of the combined feed, which is the intended order:
+    // entries first, warnings last.
     merged.sort((a, b2) => (b2.rr || 0) - (a.rr || 0));
     return merged;
-  }, [activeTab, w.setups, r.setups, v.setups, b.setups, p.setups, c.setups]);
+  }, [activeTab, bnb.setups, emc.setups, wp.setups, re.setups, ex.setups, wd.setups]);
 
   const allLoading = activeTab === 'all' && (
-    w.loading || r.loading || v.loading || b.loading || p.loading || c.loading
+    bnb.loading || emc.loading || wp.loading || re.loading || ex.loading || wd.loading
   );
 
   // Effective setup list for the currently-active tab.
@@ -270,7 +271,7 @@ export function KellPage() {
 
   const isLoading = activeTab === 'all' ? allLoading : tabLoading;
   const errorMsg = activeTab === 'all'
-    ? (w.error || r.error || v.error || b.error || p.error || c.error || null)
+    ? (bnb.error || emc.error || wp.error || re.error || ex.error || wd.error || null)
     : tabError;
 
   return (

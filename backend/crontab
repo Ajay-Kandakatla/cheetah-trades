@@ -234,15 +234,16 @@
 # Oliver Kell — Cycle of Price Action scanners (2026-05-25)
 # ============================================================================
 # Six pattern detectors per Kell's book "Victory in Stock Trading":
-# wedge_drop, reversal_extension, volatility_compression, base_break,
-# power_trend, climax_run. Run nightly after the 4:30 PM ET SEPA fast-scan.
+# Cycle of Price Action — reversal_extension, wedge_pop, ema_crossback,
+# base_n_break, exhaustion_extension, wedge_drop. Run nightly after the
+# 4:30 PM ET SEPA fast-scan.
 #
-5      19    *    *    1-5  /usr/local/bin/python -m kell.wedge_drop
-10     19    *    *    1-5  /usr/local/bin/python -m kell.reversal_extension
-15     19    *    *    1-5  /usr/local/bin/python -m kell.volatility_compression
-20     19    *    *    1-5  /usr/local/bin/python -m kell.base_break
-25     19    *    *    1-5  /usr/local/bin/python -m kell.power_trend
-30     19    *    *    1-5  /usr/local/bin/python -m kell.climax_run
+5      19    *    *    1-5  /usr/local/bin/python -m kell.reversal_extension
+10     19    *    *    1-5  /usr/local/bin/python -m kell.wedge_pop
+15     19    *    *    1-5  /usr/local/bin/python -m kell.ema_crossback
+20     19    *    *    1-5  /usr/local/bin/python -m kell.base_n_break
+25     19    *    *    1-5  /usr/local/bin/python -m kell.exhaustion_extension
+30     19    *    *    1-5  /usr/local/bin/python -m kell.wedge_drop
 
 #
 # ============================================================================

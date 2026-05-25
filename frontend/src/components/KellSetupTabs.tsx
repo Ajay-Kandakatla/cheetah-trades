@@ -1,17 +1,21 @@
 /* KellSetupTabs — horizontal tab strip filtering the /kell page by
  * Oliver Kell's Cycle of Price Action setups. Ranked safest → most
- * aggressive (volatility_compression → climax_run). Same tier color
- * scheme as SepaSetupTabs so the visual coding is consistent across
- * pages — green/lime/yellow/amber/orange/red ladder.
+ * aggressive (base_n_break → exhaustion_extension/wedge_drop). Same tier
+ * color scheme as SepaSetupTabs so the visual coding is consistent
+ * across pages — green/lime/yellow/amber/red ladder.
  *
- * Tabs:
+ * Cycle order (book pp. 14-21):
+ *   Reversal Extension → Wedge Pop → EMA Crossback → Base n' Break →
+ *   Exhaustion Extension → Wedge Drop → (cycle repeats from RE).
+ *
+ * Tabs (display order: safest → most aggressive → warnings):
  *   ALL                    — combined feed of all 6 Kell kinds
- *   VOLATILITY_COMPRESSION — SAFE (ATR contraction)
- *   WEDGE_DROP             — SAFE-MOD (shakeout reversal)
- *   BASE_BREAK             — MODERATE (cup/VCP breakout)
- *   REVERSAL_EXTENSION     — AGGRESSIVE (bottom-turn extension)
- *   POWER_TREND            — AGGRESSIVE (stair-step continuation)
- *   CLIMAX_RUN             — DEFENSIVE (red, SELL/take-profit warning)
+ *   BASE_N_BREAK           — SAFE (longer base breakout)
+ *   EMA_CROSSBACK          — SAFE-MOD (first pullback in new uptrend)
+ *   WEDGE_POP              — MODERATE (first reclaim of EMAs)
+ *   REVERSAL_EXTENSION     — AGGRESSIVE (capitulation bottom)
+ *   EXHAUSTION_EXTENSION   — DEFENSIVE / WARN (2nd-3rd ext, SELL signal)
+ *   WEDGE_DROP             — DEFENSIVE / WARN (cycle end, SELL signal)
  *
  * Counts: same lazy strategy as SepaSetupTabs — only show numbers for
  * tabs whose data has been loaded (the active tab + any previously
@@ -22,12 +26,12 @@ import { InfoButton } from './InfoButton';
 
 export type KellTab =
   | 'all'
-  | 'volatility_compression'   // SAFE
-  | 'wedge_drop'               // SAFE-MOD
-  | 'base_break'               // MODERATE
-  | 'reversal_extension'       // AGGRESSIVE
-  | 'power_trend'              // AGGRESSIVE
-  | 'climax_run';              // DEFENSIVE (red, warning)
+  | 'base_n_break'           // SAFE
+  | 'ema_crossback'          // SAFE-MOD
+  | 'wedge_pop'              // MODERATE
+  | 'reversal_extension'     // AGGRESSIVE
+  | 'exhaustion_extension'   // DEFENSIVE / WARN (SELL signal)
+  | 'wedge_drop';            // DEFENSIVE / WARN (SELL signal)
 
 type Tier = 'safe' | 'safe_mod' | 'moderate' | 'aggressive' | 'defensive';
 
@@ -38,7 +42,7 @@ type TabMeta = {
   tierLabel: string;
 };
 
-// Ranked safest → most aggressive (defensive last because it's the warning).
+// Ranked safest → most aggressive (defensive last because they are warnings).
 const TAB_META: Record<KellTab, TabMeta> = {
   all: {
     label: 'All Kell setups',
@@ -46,20 +50,20 @@ const TAB_META: Record<KellTab, TabMeta> = {
     tier: 'safe',
     tierLabel: 'Combined feed',
   },
-  volatility_compression: {
-    label: 'Volatility Compression',
+  base_n_break: {
+    label: "Base n' Break",
     icon: '🟢',
     tier: 'safe',
     tierLabel: 'SAFE',
   },
-  wedge_drop: {
-    label: 'Wedge Drop',
+  ema_crossback: {
+    label: 'EMA Crossback',
     icon: '🟢',
     tier: 'safe_mod',
     tierLabel: 'SAFE-MOD',
   },
-  base_break: {
-    label: 'Base Break',
+  wedge_pop: {
+    label: 'Wedge Pop',
     icon: '🟡',
     tier: 'moderate',
     tierLabel: 'MODERATE',
@@ -70,14 +74,14 @@ const TAB_META: Record<KellTab, TabMeta> = {
     tier: 'aggressive',
     tierLabel: 'AGGRESSIVE',
   },
-  power_trend: {
-    label: 'Power Trend',
-    icon: '🟠',
-    tier: 'aggressive',
-    tierLabel: 'AGGRESSIVE',
+  exhaustion_extension: {
+    label: 'Exhaustion Extension · ⚠',
+    icon: '🔴',
+    tier: 'defensive',
+    tierLabel: 'DEFENSIVE — SELL/TAKE PROFITS',
   },
-  climax_run: {
-    label: 'Climax Run · ⚠',
+  wedge_drop: {
+    label: 'Wedge Drop · ⚠',
     icon: '🔴',
     tier: 'defensive',
     tierLabel: 'DEFENSIVE — SELL/TAKE PROFITS',
@@ -86,12 +90,12 @@ const TAB_META: Record<KellTab, TabMeta> = {
 
 const TAB_ORDER: KellTab[] = [
   'all',
-  'volatility_compression',
-  'wedge_drop',
-  'base_break',
+  'base_n_break',
+  'ema_crossback',
+  'wedge_pop',
   'reversal_extension',
-  'power_trend',
-  'climax_run',
+  'exhaustion_extension',
+  'wedge_drop',
 ];
 
 const TIER_COLOR: Record<Tier, string> = {
@@ -206,19 +210,19 @@ export function KellSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
 
 function KellCategoriesLegend() {
   const entries: Array<{ key: KellTab; pitch: string }> = [
-    { key: 'all',                     pitch: "Combined feed of every Kell scan — see all six patterns in one grid, sorted by R:R." },
-    { key: 'volatility_compression',  pitch: "ATR-based contraction — recent volatility 30%+ below long-term, coiled near MA20/MA50, volume drying. Wait for the expansion break." },
-    { key: 'wedge_drop',              pitch: "3-7 day pullback wedge into MA21 or MA50, then a bullish reversal candle on volume. 'The shakeout that resolves to upside.'" },
-    { key: 'base_break',              pitch: "Classic 30-day high breakout on >1.5× volume. Kell's name for the cup-with-handle / VCP-completion entry." },
-    { key: 'reversal_extension',      pitch: "Recent swing low (3-20 sessions ago) followed by a strong bullish close above the prior 5-day high on >1.5× volume. The bottom turn confirmed." },
-    { key: 'power_trend',             pitch: "Stage-2 stair-step — higher highs with shallow pullbacks, latest pullback bottomed at MA21. Continuation buy on the rail." },
-    { key: 'climax_run',              pitch: "WARNING — not an entry. Wide-range red bar on 2.5×+ volume after a 50%+ run, stretched 30%+ above MA50. Lighten positions." },
+    { key: 'all',                  pitch: "Combined feed of every Kell scan — see all six patterns in one grid, sorted by R:R." },
+    { key: 'base_n_break',         pitch: "5-15 day consolidation finding support at the 10/20 EMA, then breakout on >1.3× volume. Kell's lower-risk 'buy against the moving averages' entry (book pp. 18-19, 39)." },
+    { key: 'ema_crossback',        pitch: "First pullback to the 10/20 EMA inside a confirmed uptrend on LIGHT volume — Kell's lowest-risk add point (book pp. 18, 27)." },
+    { key: 'wedge_pop',            pitch: "First close above BOTH 10 EMA and 20 EMA after a downtrend tightens into a wedge. The Stage 1→2 turn (book pp. 17, 23-24)." },
+    { key: 'reversal_extension',   pitch: "Bullish reversal candle on >1.5× volume after price extended ≥5% below the 10 EMA. The capitulation bottom — risky to catch (book pp. 16, 22-23)." },
+    { key: 'exhaustion_extension', pitch: "WARNING — not an entry. 2nd or 3rd extension ≥8% above the 10 EMA on 2×+ volume, wide-range bar. Take profits (book pp. 19, 25, 40)." },
+    { key: 'wedge_drop',           pitch: "WARNING — not an entry. First close below BOTH EMAs after a recent Exhaustion Extension on >1.3× volume. Cycle is over (book pp. 18, 20, 24, 41)." },
   ];
   return (
     <>
       <p style={{ marginTop: 0 }}>
-        Oliver Kell's <strong>Cycle of Price Action</strong> (book: <em>Victory in Stock Trading</em>, 2021).
-        Patterns ranked safest → most aggressive, with <strong>Climax Run</strong> as a defensive warning rather than an entry.
+        Oliver Kell's <strong>Cycle of Price Action</strong> (book: <em>Victory in Stock Trading</em>, 2021, pp. 14-21).
+        Six phases, in order: Reversal Extension → Wedge Pop → EMA Crossback → Base n' Break → Exhaustion Extension → Wedge Drop → (cycle repeats).
       </p>
       <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
         {entries.map(({ key, pitch }) => {
@@ -259,8 +263,7 @@ function KellCategoriesLegend() {
         })}
       </ul>
       <p style={{ fontSize: '0.78rem', color: '#9a9aa3', marginBottom: 0 }}>
-        Counts appear after you open each tab — Kell scanners are lazy-loaded
-        so the page doesn't fan out six fetches at mount.
+        The two WARNING tabs (Exhaustion Extension, Wedge Drop) are SELL signals — they have no entry/stop/target and run in any market regime. The four BUY tabs only scan in confirmed uptrends.
       </p>
     </>
   );
@@ -275,19 +278,19 @@ export function kellTabLabel(tab: KellTab): string {
  *  fetches and merges client-side). */
 export const KELL_TAB_TO_KIND: Record<KellTab, string | null> = {
   all: null,
-  volatility_compression: 'volatility_compression',
-  wedge_drop:             'wedge_drop',
-  base_break:             'base_break',
-  reversal_extension:     'reversal_extension',
-  power_trend:            'power_trend',
-  climax_run:             'climax_run',
+  base_n_break:         'base_n_break',
+  ema_crossback:        'ema_crossback',
+  wedge_pop:            'wedge_pop',
+  reversal_extension:   'reversal_extension',
+  exhaustion_extension: 'exhaustion_extension',
+  wedge_drop:           'wedge_drop',
 };
 
 export const KELL_KINDS: string[] = [
-  'volatility_compression',
-  'wedge_drop',
-  'base_break',
+  'base_n_break',
+  'ema_crossback',
+  'wedge_pop',
   'reversal_extension',
-  'power_trend',
-  'climax_run',
+  'exhaustion_extension',
+  'wedge_drop',
 ];
