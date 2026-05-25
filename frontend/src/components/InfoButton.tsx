@@ -3,9 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 type Props = {
   title: string;
   children: React.ReactNode;
+  /** If true, renders inline (next to a label) instead of the default
+   *  absolute-positioned top-right corner pin. Use this whenever the icon
+   *  should sit beside a heading/label rather than float in a container. */
+  inline?: boolean;
 };
 
-export function InfoButton({ title, children }: Props) {
+export function InfoButton({ title, children, inline = false }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -26,7 +30,7 @@ export function InfoButton({ title, children }: Props) {
   }, [open]);
 
   return (
-    <div className="info-button" ref={ref}>
+    <div className={`info-button${inline ? ' info-button--inline' : ''}`} ref={ref}>
       <button
         type="button"
         className="info-button__trigger"

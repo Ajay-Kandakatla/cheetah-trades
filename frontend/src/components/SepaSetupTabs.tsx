@@ -162,27 +162,12 @@ export function SepaSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
         }}
       >
         <span className="eyebrow">Setup category</span>
-        {/* Info icon next to the label — opens a popover with the full legend.
-            Wrapped in a non-eyebrow span so the icon stays full-size and not
-            shrunk by the uppercase/tiny eyebrow CSS. */}
-        <span
-          style={{
-            display:      'inline-flex',
-            alignItems:   'center',
-            justifyContent: 'center',
-            width:        18,
-            height:       18,
-            borderRadius: '50%',
-            border:       '1px solid rgba(212,175,55,0.4)',
-            color:        'rgba(243,232,200,0.85)',
-            fontSize:     '0.7rem',
-            fontWeight:   600,
-          }}
-        >
-          <InfoButton title="Setup categories — what each chip means">
-            <SetupCategoriesLegend />
-          </InfoButton>
-        </span>
+        {/* InfoButton renders its own native <button> with "ⓘ" + popover.
+            Do NOT wrap it in a styled span — the wrapper hides the button.
+            Just place it directly inline next to the label. */}
+        <InfoButton inline title="Setup categories — what each chip means">
+          <SetupCategoriesLegend />
+        </InfoButton>
       </div>
 
       {/* Brief always-visible explanation — saves the user from having

@@ -127,16 +127,17 @@ export function KellSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
   return (
     <section style={{ marginTop: '1rem', marginBottom: '0.85rem' }}>
       <div
-        className="eyebrow"
         style={{
-          marginBottom: '0.35rem',
-          display:      'inline-flex',
+          display:      'flex',
           alignItems:   'center',
-          gap:          '0.3rem',
+          gap:          '0.45rem',
+          marginBottom: '0.35rem',
         }}
       >
-        Kell setup category
-        <InfoButton title="Kell setup categories — what each chip means">
+        <span className="eyebrow">Kell setup category</span>
+        {/* InfoButton OUTSIDE the .eyebrow span — that class force-shrinks
+            font to 10px on mobile and makes the "ⓘ" glyph invisible. */}
+        <InfoButton inline title="Kell setup categories — what each chip means">
           <KellCategoriesLegend />
         </InfoButton>
       </div>
