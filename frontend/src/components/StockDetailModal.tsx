@@ -71,6 +71,17 @@ export function StockDetailModal({ symbol, meta, onClose }: Props) {
           <a href={`https://www.google.com/finance/quote/${symbol}:NASDAQ`} target="_blank" rel="noreferrer">Google Finance</a>
           <a href={`https://www.tradingview.com/symbols/${symbol}/`} target="_blank" rel="noreferrer">TradingView</a>
           <a href={`https://stockanalysis.com/stocks/${symbol.toLowerCase()}/`} target="_blank" rel="noreferrer">StockAnalysis</a>
+          <a href={`https://stocktwits.com/symbol/${symbol}`} target="_blank" rel="noreferrer">StockTwits</a>
+          {/* One-time install for Gabbar's aggressive / 3-conservative
+              entry levels. See SepaCandidate.tsx for the install flow. */}
+          <a
+            href="https://www.tradingview.com/script/hcLOuzBX-Gabbar-s-Price-Levels-script/"
+            target="_blank"
+            rel="noreferrer"
+            title="Open the indicator on TradingView → 'Add to Chart' → save as default layout, then it overlays on every chart you open from Pounce."
+          >
+            📊 Gabbar's Levels
+          </a>
           <a href={`https://news.google.com/search?q=${symbol}+stock`} target="_blank" rel="noreferrer">Google News</a>
         </footer>
       </div>

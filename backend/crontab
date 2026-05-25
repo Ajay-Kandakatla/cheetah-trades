@@ -231,6 +231,21 @@
 
 #
 # ============================================================================
+# Oliver Kell — Cycle of Price Action scanners (2026-05-25)
+# ============================================================================
+# Six pattern detectors per Kell's book "Victory in Stock Trading":
+# wedge_drop, reversal_extension, volatility_compression, base_break,
+# power_trend, climax_run. Run nightly after the 4:30 PM ET SEPA fast-scan.
+#
+5      19    *    *    1-5  /usr/local/bin/python -m kell.wedge_drop
+10     19    *    *    1-5  /usr/local/bin/python -m kell.reversal_extension
+15     19    *    *    1-5  /usr/local/bin/python -m kell.volatility_compression
+20     19    *    *    1-5  /usr/local/bin/python -m kell.base_break
+25     19    *    *    1-5  /usr/local/bin/python -m kell.power_trend
+30     19    *    *    1-5  /usr/local/bin/python -m kell.climax_run
+
+#
+# ============================================================================
 # Forum chatter prewarm — Reddit / HN / StockTwits velocity for top SEPA
 # ============================================================================
 # Without this, the forum_chatter_cache is purely lazy: a ticker only refreshes

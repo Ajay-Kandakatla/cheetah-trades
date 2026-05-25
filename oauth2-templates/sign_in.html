@@ -1,0 +1,181 @@
+{{/*
+  Pounce — custom oauth2-proxy sign-in page.
+
+  Replaces the default OAuth2 Proxy landing page (white background,
+  generic green icon, "Secured with OAuth2 Proxy v7.7.1" footer) with
+  one that matches the Pounce dark theme + serif wordmark.
+
+  Template context (provided by oauth2-proxy):
+    .ProxyPrefix   — typically "/oauth2"
+    .ProviderName  — "Google" given our env config
+    .SignInMessage — banner text from OAUTH2_PROXY_BANNER, may be ""
+    .Redirect      — the page the user was trying to reach
+    .CustomLogin   — bool, true if basic auth is also enabled (unused here)
+    .Footer        — footer text from OAUTH2_PROXY_FOOTER, "-" hides it
+    .Version       — oauth2-proxy version
+
+  Form submit MUST stay as GET /oauth2/start with `rd` as a query
+  parameter — that's the entry point the proxy expects. Don't switch
+  to POST; the proxy doesn't read POST bodies on /start.
+*/}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sign in · Pounce</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#0a0a0b">
+  <style>
+    /* Reset + base — kept self-contained so we don't depend on the app
+       bundle (the auth page is served by oauth2-proxy, not the frontend
+       container). */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background:
+        radial-gradient(circle at 20% 0%, rgba(212,175,55,0.06), transparent 40%),
+        radial-gradient(circle at 80% 100%, rgba(59,130,246,0.05), transparent 45%),
+        #0a0a0b;
+      color: #e6e6e6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.2rem;
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+      padding: 2.2rem 1.8rem 1.6rem;
+      background: rgba(20, 20, 22, 0.85);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.55),
+        0 0 0 1px rgba(212,175,55,0.04);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      text-align: center;
+    }
+
+    .auth-eyebrow {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #7a7a80;
+      margin-bottom: 0.5rem;
+    }
+
+    .auth-wordmark {
+      font-family: "Times New Roman", Georgia, ui-serif, serif;
+      font-style: italic;
+      font-size: 2.6rem;
+      letter-spacing: -0.01em;
+      line-height: 1;
+      margin: 0 0 0.35rem;
+      color: #f3e8c8;
+    }
+
+    .auth-tagline {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      color: #9a9aa3;
+      margin: 0 0 1.6rem;
+    }
+
+    .auth-banner {
+      background: rgba(212,175,55,0.08);
+      border: 1px solid rgba(212,175,55,0.18);
+      color: #d4af37;
+      padding: 0.55rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      margin-bottom: 1.2rem;
+    }
+
+    .auth-form { margin: 0; }
+
+    /* Google-styled button. The "G" mark is inlined as an SVG so we don't
+       depend on an external image host (Google's CDN can hit corp/firewall
+       blocks). Spec follows Google's official identity guidelines:
+       white background, 1px hairline border, "G" in their four colors. */
+    .auth-google-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: #ffffff;
+      color: #1f1f1f;
+      border: 1px solid #dadce0;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      cursor: pointer;
+      transition: background 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+    }
+    .auth-google-btn:hover { background: #f7f8fa; box-shadow: 0 1px 6px rgba(0,0,0,0.18); }
+    .auth-google-btn:active { transform: translateY(1px); }
+    .auth-google-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(66,133,244,0.35);
+    }
+
+    .auth-foot {
+      margin-top: 1.4rem;
+      font-size: 0.66rem;
+      color: #6a6a72;
+      line-height: 1.5;
+    }
+    .auth-foot a { color: #9aa8c8; text-decoration: none; }
+    .auth-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      .auth-card { padding: 1.7rem 1.3rem 1.3rem; }
+      .auth-wordmark { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="auth-card" role="main">
+    <div class="auth-eyebrow">№ Pounce · invite only</div>
+    <h1 class="auth-wordmark">Pounce</h1>
+    <p class="auth-tagline">wait · then · strike</p>
+
+    {{ if .SignInMessage }}
+      <div class="auth-banner">{{ .SignInMessage }}</div>
+    {{ end }}
+
+    {{/* The default oauth2-proxy /start route accepts the redirect via the
+         `rd` query parameter on a GET, so we mirror that. POST would
+         return a 405 from the proxy. */}}
+    <form class="auth-form" method="GET" action="{{.ProxyPrefix}}/start">
+      <input type="hidden" name="rd" value="{{.Redirect}}">
+      <button type="submit" class="auth-google-btn" aria-label="Sign in with {{.ProviderName}}">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.836.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        Sign in with {{.ProviderName}}
+      </button>
+    </form>
+
+    <p class="auth-foot">
+      Access is invite-only. If your email isn't on the allowlist,
+      Google will sign you in but the app will return you here —
+      contact the person who invited you.
+    </p>
+  </main>
+</body>
+</html>

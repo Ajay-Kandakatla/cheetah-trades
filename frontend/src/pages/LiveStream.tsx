@@ -1,14 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMarketStream } from '../hooks/useMarketStream';
 import { useCheetahStocks } from '../hooks/useCheetahStocks';
+import { useSepaScan } from '../hooks/useSepa';
 import { QuoteRow } from '../components/QuoteRow';
 import { WatchlistSection } from '../components/WatchlistSection';
 import { StockDetailModal } from '../components/StockDetailModal';
 import { SymbolSearch } from '../components/SymbolSearch';
 import { OnDemandSepaModal } from '../components/OnDemandSepaModal';
+import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
 import { WATCHLIST } from '../data/watchlist';
 
-const DEFAULT_WATCHLIST = ['NVDA', 'META', 'AAPL', 'MSFT', 'TSLA', 'AMD', 'PLTR', 'CRDO'];
+// Hardcoded fallback used only when no SEPA scan exists yet.
+const FALLBACK_WATCHLIST = ['NVDA', 'META', 'AAPL', 'MSFT', 'TSLA', 'AMD', 'PLTR', 'CRDO'];
+const SEPA_TOP_N = 20;
+const STORAGE_KEY = 'live_symbols_v1';
 
 const STATUS_LABEL: Record<string, string> = {
   connecting: 'Connecting',
@@ -18,11 +23,71 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function LiveStream() {
-  const [symbols, setSymbols] = useState<string[]>(DEFAULT_WATCHLIST);
+  // Symbols persisted across reloads. On first visit (no localStorage), we
+  // seed with the top N SEPA tickers by composite score. Subsequent visits
+  // remember whatever tweaks the user made (added/removed names).
+  const [symbols, setSymbols] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return FALLBACK_WATCHLIST;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return FALLBACK_WATCHLIST;
+  });
+  const [seededFromSepa, setSeededFromSepa] = useState(false);
   const [detail, setDetail] = useState<string | null>(null);
   const [sepaTarget, setSepaTarget] = useState<{ symbol: string; name?: string } | null>(null);
   const { quotes, status } = useMarketStream(symbols);
   const { stocks: cheetahStocks } = useCheetahStocks();
+  const { data: sepaData } = useSepaScan();
+
+  // Persist symbols to localStorage on every change so next visit restores them.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(symbols)); } catch {}
+  }, [symbols]);
+
+  // First-time seeding: if the user has never customized the live list AND
+  // a SEPA scan has results, swap in the top N by composite score. Stops
+  // running once seeded so subsequent SEPA scans don't trample the user's
+  // additions/removals.
+  useEffect(() => {
+    if (seededFromSepa) return;
+    if (typeof window === 'undefined') return;
+    const userHasCustomList = !!localStorage.getItem(STORAGE_KEY);
+    if (userHasCustomList) {
+      setSeededFromSepa(true);
+      return;
+    }
+    const rows = sepaData?.all_results;
+    if (!rows || rows.length === 0) return;
+    const top = [...rows]
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, SEPA_TOP_N)
+      .map((r) => r.symbol);
+    if (top.length > 0) {
+      setSymbols(top);
+      setSeededFromSepa(true);
+    }
+  }, [sepaData, seededFromSepa]);
+
+  /** Replace the live symbols with the top N from the latest SEPA scan. */
+  const reloadFromSepa = (n = SEPA_TOP_N) => {
+    const rows = sepaData?.all_results;
+    if (!rows || rows.length === 0) {
+      // eslint-disable-next-line no-alert
+      alert('No SEPA scan data yet. Run a scan from the SEPA tab first.');
+      return;
+    }
+    const top = [...rows]
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, n)
+      .map((r) => r.symbol);
+    setSymbols(top);
+  };
 
   const scoreLookup = useMemo(() => {
     const map: Record<string, number> = {};
@@ -31,6 +96,25 @@ export function LiveStream() {
     });
     return map;
   }, [cheetahStocks]);
+
+  // Company-name lookup for the ticker column. Three sources, in priority:
+  //   1. SEPA scan results — has fresh names for every Russell 1000 ticker
+  //   2. WATCHLIST static data — covers a curated set with hand-checked names
+  //   3. cheetahStocks — fallback for niche tickers in that list
+  // We never block on a name; if missing, the row just shows the bare ticker.
+  const nameLookup = useMemo(() => {
+    const map: Record<string, string> = {};
+    sepaData?.all_results?.forEach((r: any) => {
+      if (r?.symbol && r?.name) map[r.symbol] = r.name;
+    });
+    WATCHLIST.forEach((w) => {
+      if (w.symbol && w.name && !map[w.symbol]) map[w.symbol] = w.name;
+    });
+    cheetahStocks?.forEach((s: any) => {
+      if (s?.ticker && s?.name && !map[s.ticker]) map[s.ticker] = s.name;
+    });
+    return map;
+  }, [sepaData, cheetahStocks]);
 
   const rows = useMemo(
     () => symbols.map((s) => quotes[s] ?? { symbol: s, ts: 0 }),
@@ -75,6 +159,7 @@ export function LiveStream() {
 
   return (
     <div className="cm-page cm-page--live">
+      <MarketRegimeBanner />
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
           <div className="eyebrow">№ 02 — Live Feed</div>
@@ -116,6 +201,43 @@ export function LiveStream() {
           />
         </div>
 
+        <div className="cm-live__sepa-actions">
+          <span className="eyebrow">From SEPA</span>
+          <div className="cm-live__sepa-btns">
+            <button
+              type="button"
+              className="sepa-btn sepa-btn--ghost"
+              onClick={() => reloadFromSepa(20)}
+              disabled={!sepaData?.all_results?.length}
+              title="Replace the live watchlist with the top 20 tickers from the most recent SEPA scan, ranked by composite score."
+            >
+              ↻ Top 20
+            </button>
+            <button
+              type="button"
+              className="sepa-btn sepa-btn--ghost"
+              onClick={() => reloadFromSepa(50)}
+              disabled={!sepaData?.all_results?.length}
+              title="Top 50 from the latest SEPA scan."
+            >
+              ↻ Top 50
+            </button>
+            {sepaData?.candidate_count ? (
+              <button
+                type="button"
+                className="sepa-btn sepa-btn--ghost"
+                onClick={() => {
+                  const cands = (sepaData.candidates ?? []).map((c: any) => c.symbol);
+                  if (cands.length) setSymbols(cands);
+                }}
+                title="Load only stocks that passed every SEPA gate (Trend Template + RS≥70 + Stage 2 + tight base + entry setup + liquid)."
+              >
+                ↻ Candidates only ({sepaData.candidate_count})
+              </button>
+            ) : null}
+          </div>
+        </div>
+
         <div className="cm-live__count">
           <span className="eyebrow">Watching</span>
           <span className="mono">{symbols.length}</span>
@@ -147,6 +269,7 @@ export function LiveStream() {
                 key={q.symbol}
                 quote={q}
                 cheetahScore={scoreLookup[q.symbol]}
+                companyName={nameLookup[q.symbol]}
                 onRemove={() => removeSymbol(q.symbol)}
                 onSelect={() => setDetail(q.symbol)}
                 onAnalyze={() => setSepaTarget({ symbol: q.symbol })}

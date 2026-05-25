@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { SepaScan, ResearchStatus } from '../hooks/useSepa';
-import { fetchResearchStatus, refreshResearch } from '../hooks/useSepa';
+import type { SepaScan } from '../hooks/useSepa';
 import { InfoButton } from './InfoButton';
 
 const HeroInfo = (
@@ -34,14 +33,6 @@ type Props = {
   onReload: () => void;
 };
 
-function ageHuman(seconds: number | null | undefined): string {
-  if (seconds == null) return '—';
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.round(seconds / 3600)}h ago`;
-  return `${Math.round(seconds / 86400)}d ago`;
-}
-
 const MARKET_COLOR: Record<string, string> = {
   confirmed_uptrend: 'sepa-mkt--ok',
   mixed:             'sepa-mkt--warn',
@@ -60,33 +51,15 @@ const MARKET_LABEL: Record<string, string> = {
  */
 export function SepaHero({ data, scanning, onScan, onReload }: Props) {
   const [includeCatalyst, setIncludeCatalyst] = useState(true);
+  // Default universe is Russell 1000 — Aj's standard daily-decision universe.
+  // Bumped key from 'sepa_mode' → 'sepa_mode_v2' so older 'curated' preferences
+  // saved before this default-flip don't sticky-reset the dropdown.
   const [universeMode, setUniverseMode] = useState<string>(
-    (typeof window !== 'undefined' && localStorage.getItem('sepa_mode')) || 'curated'
+    (typeof window !== 'undefined' && localStorage.getItem('sepa_mode_v2')) || 'russell1000'
   );
-  const [researchStatus, setResearchStatus] = useState<ResearchStatus | null>(null);
-  const [refreshingResearch, setRefreshingResearch] = useState(false);
-
   useEffect(() => {
-    fetchResearchStatus().then(setResearchStatus).catch(() => setResearchStatus(null));
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('sepa_mode', universeMode);
+    if (typeof window !== 'undefined') localStorage.setItem('sepa_mode_v2', universeMode);
   }, [universeMode]);
-
-  const handleResearchRefresh = async () => {
-    if (!confirm('Run heavy research refresh? This takes 5-30 min depending on universe size. Run during market-closed hours.')) return;
-    setRefreshingResearch(true);
-    try {
-      await refreshResearch(universeMode);
-      const s = await fetchResearchStatus();
-      setResearchStatus(s);
-    } catch (e) {
-      alert(`Research refresh failed: ${e}`);
-    } finally {
-      setRefreshingResearch(false);
-    }
-  };
 
   const mkt = data?.market_context;
   const mktKey = mkt?.label || 'mixed';
@@ -179,36 +152,14 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
         </label>
       </div>
 
-      {researchStatus && (
-        <div className="sepa-research-banner">
-          <div className="sepa-research-banner__main">
-            <span className="eyebrow">Research cache</span>
-            {researchStatus.total ? (
-              <span className="mono">
-                {researchStatus.fresh}/{researchStatus.total} symbols fresh
-                {researchStatus.newest_age_sec != null && (
-                  <> · refreshed <strong>{ageHuman(researchStatus.newest_age_sec)}</strong></>
-                )}
-              </span>
-            ) : (
-              <span className="mono">empty — run research refresh to enable Fast Scan</span>
-            )}
-          </div>
-          <button
-            type="button"
-            className="sepa-btn sepa-btn--ghost"
-            onClick={handleResearchRefresh}
-            disabled={refreshingResearch || scanning}
-          >
-            {refreshingResearch ? 'Refreshing research…' : 'Refresh research'}
-          </button>
-        </div>
-      )}
+      {/* Research-cache banner removed — the heavy weekly batch auto-runs
+          Sundays 8pm ET via cron, so the manual button was rarely needed
+          and added clutter. Full Scan also refreshes research as a side
+          effect when needed. */}
 
       <div className="sepa-hero__actions-help">
         <span><b>Fast Scan</b> — joins Sunday's cached research with today's prices. Typical ~20-30s.</span>
         <span><b>Full Scan</b> — re-runs everything from scratch. ~3-15 min depending on universe size. Refreshes research cache as a side-effect.</span>
-        <span><b>Refresh research</b> — only the heavy weekly batch (VCP / Power Play / CANSLIM / liquidity). Auto-runs Sundays 8pm ET via cron.</span>
         <span><b>Include catalyst</b> — Full-Scan-only. Fetches news, earnings calendar, and analyst revisions for each candidate.</span>
       </div>
     </header>

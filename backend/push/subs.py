@@ -89,8 +89,47 @@ def update_prefs(endpoint: str, prefs: dict) -> dict:
     return {"ok": True}
 
 
+def _is_in_quiet_hours(prefs: dict, now: Optional[datetime] = None) -> bool:
+    """True if ``now`` (server-local time — America/New_York in compose)
+    falls within this subscription's quiet-hours window.
+
+    The window is per-subscription so a user can mute their phone overnight
+    but keep desktop alerts active. Stored as 24h strings (``"22:00"``,
+    ``"08:00"``). Overnight ranges (start > end) are handled by treating
+    "after start OR before end" as in-window.
+
+    Added 2026-05-21 alongside extending the flashcards schedule to
+    24h — without this, the every-hour cron would ping users at 3 AM
+    regardless of their pref. Quiet hours had been in the schema but
+    never enforced anywhere in the delivery path.
+    """
+    from datetime import datetime as _dt
+    if not prefs.get("quiet_hours_enabled"):
+        return False
+    start = prefs.get("quiet_hours_start", "22:00")
+    end = prefs.get("quiet_hours_end", "08:00")
+    try:
+        sh, sm = [int(x) for x in str(start).split(":")[:2]]
+        eh, em = [int(x) for x in str(end).split(":")[:2]]
+    except Exception:
+        # Malformed pref — fail-open (deliver the notification) rather
+        # than silently drop it. Logging would be noisy in this hot path.
+        return False
+    n = now if now is not None else _dt.now()
+    cur = n.hour * 60 + n.minute
+    s = sh * 60 + sm
+    e = eh * 60 + em
+    if s == e:
+        return False              # zero-length window — pref-makes-no-sense, ignore
+    if s < e:
+        return s <= cur < e       # same-day window (e.g. 12:00 → 14:00)
+    return cur >= s or cur < e    # overnight window (e.g. 22:00 → 08:00)
+
+
 def list_subscriptions(filter_kind: Optional[str] = None,
-                       user_email: Optional[str] = None) -> list[dict]:
+                       user_email: Optional[str] = None,
+                       *,
+                       honor_quiet_hours: bool = True) -> list[dict]:
     """List active subscriptions, optionally filtered by alert kind and user.
 
     Excludes ``kind=mac`` rows — those are pure-prefs records for the native
@@ -101,6 +140,12 @@ def list_subscriptions(filter_kind: Optional[str] = None,
     Auto-backfills missing pref keys + user_email onto every subscription so
     future schema additions don't silently drop notifications for existing
     devices.
+
+    Quiet hours: when ``honor_quiet_hours=True`` (default), drops any
+    subscription whose user has quiet_hours_enabled AND the current
+    server-local time falls within their window. Caller can pass False
+    for critical alerts that should bypass quiet hours (none today —
+    but kept as a hatch for future "trade stopped out" style pings).
     """
     db = _get_db()
     if db is None:
@@ -113,7 +158,12 @@ def list_subscriptions(filter_kind: Optional[str] = None,
         q[f"prefs.{filter_kind}"] = True
     if user_email:
         q["user_email"] = user_email.lower()
-    return list(db.push_subscriptions.find(q))
+    rows = list(db.push_subscriptions.find(q))
+    if honor_quiet_hours:
+        from datetime import datetime as _dt
+        now = _dt.now()   # server local TZ (America/New_York set in compose)
+        rows = [r for r in rows if not _is_in_quiet_hours(r.get("prefs") or {}, now)]
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +296,40 @@ def default_prefs() -> dict:
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         "todo_daily_digest": True,    # 7 AM ET daily summary push
-        "macbook_deal": True,         # MacBook deal scraper — strict-verified URLs only
+        # macbook_deal removed 2026-05-15 along with the lifeboard module.
+        # Existing user docs may still have the key on them — pymongo
+        # tolerates unknown keys in default_prefs intersection, so leaving
+        # them be is harmless. If we ever want to clean up, run a one-shot
+        # $unset migration over `notification_devices.prefs`.
+        "product_launch": True,       # new hardware/software launches detected by
+                                      # catalysts.product_launches (Gemma-classified)
+        # ── Real-estate listing notifications (HOUSE_OWNER_EMAIL only;
+        # non-owners would never receive these because house pushes are
+        # scoped via send_to_user(owner_email, ...) in
+        # backend/house/daily_scrape.py). Default ON so the owner gets
+        # the morning summary out of the box; they can mute any of the
+        # three from /notifications.
+        "house_daily":          True, # daily 8am summary: views, saves, tours, offers
+        "house_scrape_failed":  True, # ⚠ scraper couldn't pull any numbers today
+        "house_stagnant":       True, # 📉 N+ days with no view movement — consider price drop
+        "user_signin": True,          # admin-only: ping when a NEW user signs in
+                                      # for the first time (fires once per email)
+        # ── Minervini flash cards — 3 bite-sized lessons/day (9 ET morning,
+        # 12:30 ET midday, 16:00 ET close). Education, not signals.
+        # Broadcast (everyone gets the same card). User toggles off here
+        # if they find the cadence noisy. See backend/flashcards/.
+        "minervini_flashcards": True,
+        # ── Market open / close reminders — pings 15 min before each bell
+        # (9:15 ET + 3:45 ET Mon-Fri, skips US holidays). Broadcast.
+        # Mute via this toggle if the user finds it noisy. See
+        # backend/market_hours/reminder.py.
+        "market_hours_reminder": True,
+        # ── Volleyball fitness module — three daily kinds, separate
+        # toggles so non-VB users can mute each independently. See
+        # backend/volleyball/reminders.py.
+        "vb_workout":     True,    # 7 AM morning workout brief
+        "vb_supplement":  True,    # 9 PM magnesium reminder
+        "vb_education":   True,    # 6 PM daily volleyball/health card
         "quiet_hours_enabled": False,
         "quiet_hours_start": "22:00",
         "quiet_hours_end": "08:00",

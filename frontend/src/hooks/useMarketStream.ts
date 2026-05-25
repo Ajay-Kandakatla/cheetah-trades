@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Quote, ConnectionStatus } from '../types';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? '';
 
 /**
  * useMarketStream — wires the SSE feed but is resilient to outages.

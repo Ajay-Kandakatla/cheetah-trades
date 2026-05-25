@@ -5,6 +5,8 @@ import { Sparkline } from './Sparkline';
 interface Props {
   quote: Quote;
   cheetahScore?: number;
+  /** Long company name shown under the ticker (e.g. "Micron Technology, Inc."). */
+  companyName?: string;
   onRemove: () => void;
   onSelect?: () => void;
   onAnalyze?: () => void;
@@ -34,7 +36,7 @@ function scoreClass(score?: number): string {
   return 'cm-score cm-score--poor';
 }
 
-export function QuoteRow({ quote, cheetahScore, onRemove, onSelect, onAnalyze }: Props) {
+export function QuoteRow({ quote, cheetahScore, companyName, onRemove, onSelect, onAnalyze }: Props) {
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
   const lastPrice = useRef<number | undefined>(quote.price);
 
@@ -61,14 +63,21 @@ export function QuoteRow({ quote, cheetahScore, onRemove, onSelect, onAnalyze }:
 
   return (
     <tr className={flash ? `cm-flash cm-flash--${flash}` : ''}>
-      <td className="cm-live__ticker mono">
-        {onSelect ? (
-          <button type="button" className="cm-live__ticker-btn" onClick={onSelect} aria-label={`Open detail for ${quote.symbol}`}>
-            {quote.symbol}
-          </button>
-        ) : (
-          quote.symbol
-        )}
+      <td className="cm-live__ticker">
+        <div className="cm-live__ticker-cell">
+          <span className="cm-live__ticker-sym mono">
+            {onSelect ? (
+              <button type="button" className="cm-live__ticker-btn" onClick={onSelect} aria-label={`Open detail for ${quote.symbol}`}>
+                {quote.symbol}
+              </button>
+            ) : (
+              quote.symbol
+            )}
+          </span>
+          {companyName && (
+            <span className="cm-live__ticker-name" title={companyName}>{companyName}</span>
+          )}
+        </div>
       </td>
       <td className="mono">{quote.price != null ? fmtUsd(quote.price) : '—'}</td>
       <td className={`mono ${pctClass}`}>

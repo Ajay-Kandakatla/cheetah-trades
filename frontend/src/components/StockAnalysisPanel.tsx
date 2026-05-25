@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8000';
 
 type Bar0to100 = {
   score: number | null;

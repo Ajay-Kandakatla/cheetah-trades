@@ -28,6 +28,8 @@ import {
   tabLabel,
   type SepaTab,
 } from '../components/SepaSetupTabs';
+import { SepaSetupInfoPanel } from '../components/SepaSetupInfoPanel';
+import { SepaSetupInfoBanner } from '../components/SepaSetupInfoBanner';
 import {
   useSetupsByKind,
   getCachedSetupCount,
@@ -158,28 +160,10 @@ export function SepaPage() {
 
   const { scan: histScan } = useSepaScanByDate(historicalDate);
 
-  // Register page context for the ChatWidget. Sends just the top-N
-  // symbols + scan metadata — the candidate list can have hundreds of
-  // rows and sending all of them would blow the system-prompt budget.
-  // If the user wants to ask about a specific candidate, they'll click
-  // into its detail page where the full data ships.
-  useEffect(() => {
-    const cands = (liveData as any)?.candidates || [];
-    const top = cands.slice(0, 10).map((c: any) => ({
-      symbol:    c.symbol,
-      score:     c.score,
-      rating:    c.rating,
-      rs_rank:   c.rs_rank,
-      day_pct:   c.day_change_pct,
-    }));
-    setPageContext({
-      page:            'sepa-list',
-      historical_date: historicalDate,
-      candidate_count: cands.length,
-      top_10:          top,
-    });
-    return () => setPageContext(null);
-  }, [liveData, historicalDate, setPageContext]);
+  // Page context is set further down (after all useMemos for filtered /
+  // tabCounts / setupTabPairs are computed) so the chat assistant has
+  // visibility into the active tab, current filters, and visible names —
+  // not just the static candidate list.
 
   // Adapt the historical-snapshot shape to the live-scan shape so the rest
   // of the page renders against either source without branching.
@@ -337,6 +321,22 @@ export function SepaPage() {
       return true;
     });
     out.sort((a, b) => {
+      // ── Minervini risk guard (applies to ALL sorts) ──────────────────
+      // User policy (2026-05-25): "If anything is risky, do not put it
+      // at the top of the list." Late-stage bases (#4+) are flagged risky
+      // — they sink to the bottom of the list regardless of which sort
+      // criterion the user picked. Within early-vs-late buckets the
+      // user's sort then applies normally.
+      //
+      // Exception: 'symbol' (alphabetical) — A→Z ordering is fully
+      // user-driven; respecting it across base stage matters more than
+      // pushing risky names down. The chip is still visible.
+      if (filters.sortBy !== 'symbol') {
+        const aLate = a.base_count?.is_late_stage ? 1 : 0;
+        const bLate = b.base_count?.is_late_stage ? 1 : 0;
+        if (aLate !== bLate) return aLate - bLate; // early (0) before late (1)
+      }
+
       if (filters.sortBy === 'symbol') return a.symbol.localeCompare(b.symbol);
       if (filters.sortBy === 'rs') return (b.rs_rank ?? 0) - (a.rs_rank ?? 0);
       if (filters.sortBy === 'day_change') {
@@ -493,6 +493,10 @@ export function SepaPage() {
         return b.score - a.score;
       }
 
+      // Default: SEPA composite score, descending. The Minervini late-base
+      // guard at the top of the sort already pushed risky names below the
+      // early-base pool, so within the early-vs-late buckets the score
+      // order is honest.
       return b.score - a.score;
     });
     return out;
@@ -588,6 +592,106 @@ export function SepaPage() {
     });
     return out;
   }, [source, activeTab, tabSetups]);
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Page context for ChatWidget — rich snapshot of the SEPA list page so
+  // the in-app chat assistant can answer questions like:
+  //   "why is NVDA not in the top 10?"
+  //   "what's in the Bull Flag tab today?"
+  //   "should I take FCEL?"
+  //   "why are there 0 candidates?"
+  //
+  // Includes: active tab, filter state, universe stats, top visible names
+  // with full setup context. Capped to keep system-prompt under the 4000-
+  // char limit enforced by backend/chat/prompt.py.
+  // ──────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const allResults = (data as any)?.all_results || [];
+    const cands = (data as any)?.candidates || [];
+
+    // Determine which rows are CURRENTLY visible (depends on active tab).
+    let visibleRows: SepaCandidate[];
+    if (activeTab === 'all') {
+      visibleRows = filtered;
+    } else if (activeTab === 'vcp') {
+      visibleRows = vcpFiltered;
+    } else {
+      visibleRows = setupTabPairs.map(p => p.candidate || ({
+        symbol: p.setup.symbol,
+      } as SepaCandidate));
+    }
+
+    const top_visible = visibleRows.slice(0, 12).map((c) => ({
+      symbol:     c.symbol,
+      score:      c.score,
+      rating:     c.rating,
+      rs_rank:    c.rs_rank,
+      stage:      c.stage?.stage,
+      day_pct:    c.day_change_pct,
+      base_n:     c.base_count?.base_count,
+      late_base:  c.base_count?.is_late_stage || false,
+      has_vcp:    c.vcp?.has_base || false,
+    }));
+
+    // Setup tab counts — show only tabs that have been opened (have
+    // a non-null count). Skips the "All" and "VCP" pseudo-tabs which
+    // are always client-computed.
+    const tab_counts: Record<string, number | null> = {};
+    (Object.keys(tabCounts) as SepaTab[]).forEach((t) => {
+      const v = tabCounts[t];
+      if (v != null) tab_counts[t] = v;
+    });
+
+    // If on a setup tab, attach the active setup's entry/stop/target
+    // for the top 5 names so the chat can answer "should I take MU?"
+    let active_setups: Array<Record<string, unknown>> | undefined;
+    if (activeTab !== 'all' && activeTab !== 'vcp' && setupTabPairs.length > 0) {
+      active_setups = setupTabPairs.slice(0, 5).map(({ setup }) => ({
+        symbol:  setup.symbol,
+        trigger: setup.trigger,
+        stop:    setup.stop,
+        target:  setup.target,
+        rr:      setup.rr,
+        kind:    setup.kind,
+      }));
+    }
+
+    setPageContext({
+      page:             'sepa-list',
+      historical_date:  historicalDate,
+      universe_size:    (data as any)?.universe_size,
+      analyzed_count:   allResults.length,
+      candidate_count:  cands.length,
+      visible_count:    visibleRows.length,
+      active_setup_tab: activeTab,
+      tab_counts,
+      filters: {
+        rating:       filters.rating,
+        rs_min:       filters.rsMin,
+        sort_by:      filters.sortBy,
+        search:       filters.search || undefined,
+        setup:        filters.setup,
+        stage:        filters.stage,
+        type:         filters.type,
+        moat_min:     filters.moatMin,
+        pioneer_only: filters.pioneerOnly || undefined,
+        show_all:     filters.showAll || undefined,
+      },
+      top_visible,
+      active_setups,
+      market_context: (data as any)?.market_context
+        ? {
+            label:        (data as any).market_context.label,
+            safe_to_long: (data as any).market_context.safe_to_long,
+          }
+        : undefined,
+    });
+    return () => setPageContext(null);
+  }, [
+    data, historicalDate, activeTab, filters,
+    filtered, vcpFiltered, setupTabPairs, tabCounts,
+    setPageContext,
+  ]);
 
   // Hero rail — top 5 by rating then score (always from candidates, ignores filters)
   const topPicks = useMemo<SepaCandidate[]>(() => {
@@ -687,6 +791,11 @@ export function SepaPage() {
         tabCounts={tabCounts}
       />
 
+      {/* Inline info banner — explains the currently-selected setup at a
+          glance. Hidden on the 'all' tab. Complements the right-side
+          SepaSetupInfoPanel which has the full breakdown. */}
+      <SepaSetupInfoBanner activeTab={activeTab} />
+
       <SepaFilterBar
         filters={filters}
         onChange={setFilters}
@@ -699,6 +808,16 @@ export function SepaPage() {
               : setupTabPairs.length
         }
       />
+
+      <div
+        style={{
+          display:        'flex',
+          gap:            '1rem',
+          alignItems:     'flex-start',
+          flexWrap:       'wrap',
+        }}
+      >
+        <div style={{ flex: '1 1 600px', minWidth: 0 }}>
 
       {activeTab === 'all' && (
         filtered.length === 0 ? (
@@ -836,6 +955,10 @@ export function SepaPage() {
           </section>
         )
       )}
+
+        </div>
+        <SepaSetupInfoPanel activeTab={activeTab} />
+      </div>
 
     </div>
   );

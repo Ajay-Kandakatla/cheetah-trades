@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? '';
 
 export type SearchResult = {
   symbol: string;

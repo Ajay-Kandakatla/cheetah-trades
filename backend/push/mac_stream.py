@@ -108,7 +108,12 @@ async def _deliver_to_user(user_email: str, payload: dict,
 # ---------------------------------------------------------------------------
 # Outbox — producer-side (called by notify._send_push from api OR cron)
 # ---------------------------------------------------------------------------
-def enqueue_for_outbox(payload: dict, *, kind: Optional[str] = None) -> int:
+def enqueue_for_outbox(
+    payload: dict,
+    *,
+    kind: Optional[str] = None,
+    target_user_email: Optional[str] = None,
+) -> int:
     """Record one outbox doc per user that has at least one kind=mac
     subscription whose prefs allow this ``kind``.
 
@@ -118,6 +123,10 @@ def enqueue_for_outbox(payload: dict, *, kind: Optional[str] = None) -> int:
 
     Generic kind (kind=None) bypasses pref filtering — every user with at
     least one kind=mac sub gets it.
+
+    target_user_email scopes the broadcast to a single user. Used by
+    user-specific reminders (e.g. Vineetha's nightly vitamin push) so
+    other users don't receive notifications meant for someone else.
     """
     from push import subs
     db = subs._get_db()
@@ -126,6 +135,8 @@ def enqueue_for_outbox(payload: dict, *, kind: Optional[str] = None) -> int:
     q: dict = {"kind": "mac"}
     if kind:
         q[f"prefs.{kind}"] = True
+    if target_user_email:
+        q["user_email"] = target_user_email.lower()
     users: set[str] = set()
     for r in db.push_subscriptions.find(q, {"user_email": 1}):
         u = (r.get("user_email") or "").lower()

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8000';
 
 type ChatterRow = {
   symbol: string;
@@ -229,7 +229,15 @@ export function ChatterPage() {
                   <tr
                     key={row.symbol}
                     className={`dm-row ${row.stale ? 'dm-row--stale' : ''}`}
-                    onClick={() => navigate(`/sepa/${encodeURIComponent(row.symbol)}`)}
+                    onClick={(e) => {
+                      const url = `/sepa/${encodeURIComponent(row.symbol)}`;
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                        return;
+                      }
+                      navigate(url, { state: { from: '/chatter', label: 'Chatter · US' } });
+                    }}
+                    title="Cmd/Ctrl-click to open in new tab"
                   >
                     <td className="mono">{idx + 1}</td>
                     <td className="mono dm-sym">

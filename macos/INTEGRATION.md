@@ -24,7 +24,7 @@ docker compose build api
 docker compose up -d api cron        # cron picks up the same image
 ```
 
-Sanity-check the new endpoints from the Mac mini:
+Sanity-check the new endpoints from the Mac book pro M5 (this machine):
 
 ```sh
 # Should 401 (no auth) — confirms route is reachable through nginx + oauth2-proxy

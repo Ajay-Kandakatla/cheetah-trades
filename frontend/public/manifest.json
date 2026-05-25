@@ -1,0 +1,24 @@
+{
+  "name": "Pounce",
+  "short_name": "Pounce",
+  "description": "Wait, then strike. Personal trading dashboard — SEPA scanner, catalysts, calibration, watchlist.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#b87900",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

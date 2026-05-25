@@ -361,9 +361,20 @@ def fetch_russell1000() -> list[str]:
         return out
     except Exception as exc:
         log.warning("universe: Russell 1000 fetch failed (%s) — trying Massive fallback", exc)
-        massive = fetch_massive_universe(limit=1000)
+        # NOTE: Massive's /v3/reference/tickers endpoint returns tickers in
+        # ALPHABETICAL order, not by market cap. A naive `limit=1000` would
+        # give us only A→C tickers (~1000 names) and silently drop every
+        # leader from D onwards (DASH, META, MU, NVDA, NFLX, ORCL, PLTR,
+        # SMCI, TSLA, etc.). To prevent that, we ALWAYS prepend the curated
+        # leader list (~130 mega/large-caps) and grab the next ~2000
+        # alphabetical from Massive on top.
+        massive = fetch_massive_universe(limit=2000)
         if massive:
-            return massive
+            merged = list(dict.fromkeys(list(UNIVERSE) + massive))
+            log.info("universe: russell1000 via curated+Massive = %d names "
+                     "(%d curated + %d Massive, deduped)",
+                     len(merged), len(UNIVERSE), len(massive))
+            return merged
         log.warning("universe: Massive fallback also empty — using S&P 500")
         return fetch_sp500()
 
@@ -430,9 +441,13 @@ def fetch_russell3000() -> list[str]:
         return out
     except Exception as exc:
         log.warning("universe: Russell 3000 fetch failed (%s) — trying Massive fallback", exc)
-        massive = fetch_massive_universe(limit=3000)
+        # Same alphabetical-cutoff guard as fetch_russell1000() — prepend
+        # the curated leader list so we never lose mega/large-caps.
+        massive = fetch_massive_universe(limit=5000)
         if massive:
-            return massive
+            merged = list(dict.fromkeys(list(UNIVERSE) + massive))
+            log.info("universe: russell3000 via curated+Massive = %d names", len(merged))
+            return merged
         log.warning("universe: Massive fallback also empty — using Russell 1000")
         return fetch_russell1000()
 

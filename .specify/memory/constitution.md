@@ -11,7 +11,7 @@ Every feature must work end-to-end on free data sources by default. Paid
 upgrades (Massive Developer, Twilio, Reddit OAuth, Finnhub paid) are
 opt-in and must degrade gracefully when keys are missing. Never gate a
 feature behind a paid key without a documented fallback path. The user
-running this app on a Mac mini at home should never hit a hard wall.
+running this app on a Mac book pro M5 (this machine) at home should never hit a hard wall.
 
 ### II. Cache-aware data layers
 Every external data hit goes through a layered cache: in-process →

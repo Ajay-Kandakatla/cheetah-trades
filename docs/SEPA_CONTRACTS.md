@@ -136,7 +136,7 @@ CandidateRow = {
         "accumulation_days_25":   int | None,      # count over last 25 sessions
         "distribution_days_25":   int | None,
         "cmf_20":                 float | None,    # Chaikin Money Flow
-        "cmf_signal":             "inflow" | "outflow" | None,
+        "cmf_signal":             "inflow" | "outflow" | "neutral" | None,
         "pocket_pivot":           bool,
         "pocket_pivot_detail":    dict | None,
         "high_vol_breakout":      bool,

@@ -192,7 +192,17 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
     df["date"] = pd.to_datetime(df["t"], unit="ms", utc=True).dt.tz_convert(None)
     df = df.set_index("date")
     df = df.rename(columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
-    return df[["open", "high", "low", "close", "volume"]]
+    df = df[["open", "high", "low", "close", "volume"]]
+    # Defensive: drop any rows where close/open/volume is zero. Massive's
+    # daily aggs endpoint occasionally emits placeholder bars on the
+    # current day during holidays (e.g. Memorial Day) with all zeros.
+    # These corrupt RS rank and Stage classification downstream — drop them
+    # at the source so they never reach the price cache.
+    pre_n = len(df)
+    df = df[(df["close"] > 0) & (df["open"] > 0) & (df["volume"] > 0)]
+    if len(df) < pre_n:
+        log.info("massive %s: dropped %d zero-priced bars", symbol, pre_n - len(df))
+    return df
 
 
 def last_trade_price(symbol: str) -> Optional[float]:

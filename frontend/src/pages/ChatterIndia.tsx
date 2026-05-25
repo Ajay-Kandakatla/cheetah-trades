@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { InfoButton } from '../components/InfoButton';
 import { ChatterIndiaPanel } from '../components/ChatterIndiaPanel';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8000';
 
 type IndiaRow = {
   symbol: string;

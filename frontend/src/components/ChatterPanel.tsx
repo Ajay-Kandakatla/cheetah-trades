@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { API } from '../lib/apiBase';
+import { ChatterMomentumDrillModal } from './ChatterMomentumDrillModal';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8000';
 
 type RedditThread = {
   subreddit: string;
@@ -120,6 +121,10 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
   const [data, setData] = useState<ChatterPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Drill-in modal — opened by tapping the "Chatter momentum" chip.
+  // Lives at this scope so we can pass the current snapshot summary
+  // into the modal without an extra fetch.
+  const [drillOpen, setDrillOpen] = useState(false);
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -159,8 +164,31 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
       {/* Summary strip */}
       <div className="cm-chatter__summary">
         <div className="cm-chatter__metric">
-          <div className="eyebrow">Momentum</div>
-          <div className={`cm-mom cm-mom--${s.momentum_label}`}>{s.momentum_label}</div>
+          {/* Eyebrow clarified: this measures FORUM CHATTER velocity
+              (Reddit/HN mention count change), NOT stock-price momentum.
+              A ticker can be ripping +15% on earnings while showing
+              "quiet" here because nobody's posting about it on Reddit. */}
+          <div className="eyebrow" title="Velocity of Reddit/HN mentions over 7d vs the prior 7d. Independent of stock price.">
+            Chatter momentum
+          </div>
+          {/* Tap to open the drill-in modal: explains what the label
+              measures (Reddit/HN chatter, NOT price), shows a 60-day
+              trend sparkline, and tables out the underlying snapshots
+              so the user can audit "how was this computed?" */}
+          <button
+            type="button"
+            onClick={() => setDrillOpen(true)}
+            className={`cm-mom cm-mom--${s.momentum_label} cm-mom--clickable`}
+            title="Open trend + breakdown"
+            aria-label={`Open chatter momentum trend for ${data.symbol}`}
+            style={{
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              border: 0,
+            }}
+          >
+            {s.momentum_label} <span aria-hidden="true" style={{ marginLeft: 4, fontSize: '0.7em', opacity: 0.7 }}>▸</span>
+          </button>
         </div>
         <div className="cm-chatter__metric">
           <div className="eyebrow">Mentions · 7d</div>
@@ -174,10 +202,11 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
         <div className="cm-chatter__metric">
           <div className="eyebrow">Velocity</div>
           <div className={`cm-chatter__big mono cm-velocity cm-velocity--${
+            s.mentions_7d === 0 && s.mentions_prior_7d === 0 ? 'na' :
             s.mention_velocity >= 1.5 ? 'ramp' :
             s.mention_velocity <= 0.6 ? 'fade' : 'steady'
           }`}>
-            {s.mention_velocity}×
+            {s.mentions_7d === 0 && s.mentions_prior_7d === 0 ? '—' : `${s.mention_velocity}×`}
           </div>
         </div>
         <div className="cm-chatter__metric">
@@ -304,6 +333,24 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
           </div>
         )}
       </section>
+
+      {/* Drill-in modal — explains the "Chatter momentum" label and
+          shows a 60-day trend sparkline. Opens when the user taps the
+          chip above. Mounts inside the panel so its prop closure picks
+          up the current `data` snapshot without an extra fetch. */}
+      {drillOpen && (
+        <ChatterMomentumDrillModal
+          symbol={data.symbol}
+          current={{
+            mentions_7d:       s.mentions_7d,
+            mentions_prior_7d: s.mentions_prior_7d,
+            mention_velocity:  s.mention_velocity,
+            momentum_label:    s.momentum_label,
+            sentiment_ratio:   s.sentiment_ratio,
+          }}
+          onClose={() => setDrillOpen(false)}
+        />
+      )}
     </div>
   );
 }

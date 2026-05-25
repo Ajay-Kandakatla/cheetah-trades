@@ -137,7 +137,7 @@ notes (including the `init: true` gotcha for supercronic on Apple Silicon).
   workflow instead of theirs.
 - You want a real Minervini SEPA pipeline, not a checkbox UI on top of someone else's
   scanner.
-- You're comfortable running a 4-container compose on a Mac mini / NUC / VPS.
+- You're comfortable running a 4-container compose on a Mac book pro M5 (this machine) / NUC / VPS.
 - You want WhatsApp alerts that fire from your own cron, not a SaaS you can't introspect.
 
 ## Disclaimer

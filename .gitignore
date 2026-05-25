@@ -6,6 +6,10 @@ __pycache__/
 venv/
 env/
 .env
+.env.bak
+.env.bak.*
+*.env.bak
+*.env.bak.*
 
 # Node / Vite
 node_modules/

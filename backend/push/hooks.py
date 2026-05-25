@@ -112,41 +112,33 @@ def notify_juggernauts(*, juggernauts: list[dict],
     return sender.send_to_all(payload, kind="juggernaut_watchlist")
 
 
-def notify_macbook_deals(new_deals: list[dict]) -> dict:
-    """Fire ONE consolidated push for newly-seen MacBook deals.
+# Sole admin — never expected to change. Hardcoded rather than env-var
+# because we don't want accidental privilege escalation via misconfig.
+ADMIN_EMAIL = "ajaykandakatla@gmail.com"
 
-    Called by lifeboard.macbook.scan_and_persist after a non-silent scan
-    when at least one deal's URL wasn't in Mongo before this run. We
-    intentionally batch into a single notification — four scans/day × N
-    deals would otherwise spam.
 
-    Click-routes to the morning page's macbook section.
+def notify_new_user(email: str) -> dict:
+    """One-time admin push when a brand-new user signs in.
+
+    Fires only once per user (gated by `users.store.record_signin`
+    flipping `notified_admin` to True on its first call). Recipient: the
+    admin's subscribed devices. Goes through the `user_signin` pref so
+    the admin can mute later if onboarding bursts get noisy.
     """
-    if not new_deals:
-        return {"sent": 0, "reason": "no new deals"}
-
-    # Best deal headlines the body — biggest discount wins, ties broken by
-    # lowest absolute price.
-    new_deals = sorted(
-        new_deals,
-        key=lambda d: (-(d.get("discount_pct") or 0), d.get("price") or 9999999),
-    )
-    top = new_deals[0]
-    src = top.get("source") or "?"
-    cfg = top.get("config") or top.get("title", "")[:40]
-    price = top.get("price")
-    disc = top.get("discount_pct")
-    extra = f" — {disc:.0f}% off" if disc else ""
-    body = f"{cfg} · ${price:,.0f} ({src}){extra}"
-    if len(new_deals) > 1:
-        body += f"\n+{len(new_deals) - 1} more new deal{'s' if len(new_deals) > 2 else ''}"
-
-    n = len(new_deals)
     payload = {
-        "title": f"💻 {n} new MacBook deal{'s' if n > 1 else ''}",
-        "body": body,
-        "tag": "macbook-deals",  # de-dupe on device — newest replaces previous
-        "url": "/morning#macbook-deals",
-        "kind": "macbook_deal",
+        "title":  "👋 New user signed in",
+        "body":   f"{email} just opened Pounce for the first time.",
+        "tag":    f"new-user-{email}",     # de-dupe in case it ever re-fires
+        "url":    "/admin/usage",
+        "kind":   "user_signin",
+        "email":  email,
     }
-    return sender.send_to_all(payload, kind="macbook_deal")
+    r = sender.send_to_user(ADMIN_EMAIL, payload, kind="user_signin")
+    log.info("notify_new_user: %s → admin sent=%d failed=%d",
+             email, r.get("sent", 0), r.get("failed", 0))
+    return r
+
+
+# notify_macbook_deals(...) removed 2026-05-15 along with the rest of
+# the lifeboard module. The caller (lifeboard.macbook.scan_and_persist)
+# was deleted, so this hook had no callers left.

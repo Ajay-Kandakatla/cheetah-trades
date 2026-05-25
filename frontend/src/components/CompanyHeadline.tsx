@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? '';
 
 type Headline = {
   market_cap: number | null;
@@ -11,6 +11,21 @@ type Headline = {
   enterprise_value: number | null;
   total_debt: number | null;
   total_cash: number | null;
+};
+
+type EtfInfo = {
+  is_etf: boolean;
+  symbol: string;
+  name?: string | null;
+  category?: string | null;
+  fund_family?: string | null;
+  aum?: number | null;
+  expense_ratio?: number | null;
+  dividend_yield?: number | null;
+  ytd_return?: number | null;
+  nav?: number | null;
+  holdings_count?: number | null;
+  top_holdings?: { symbol: string; name?: string; weight: number }[];
 };
 
 type Props = { symbol: string };
@@ -34,20 +49,32 @@ function fmtBig(v: number | null | undefined): string {
  * Pulls from the same /sepa/analysis endpoint the Analysis tab uses, so
  * the cache is shared and there's no extra provider hit.
  */
+function fmtPct(v: number | null | undefined, digits = 2): string {
+  if (v == null) return '—';
+  // yfinance returns expense_ratio / yield as decimals already (0.0095 = 0.95%)
+  return `${(v * 100).toFixed(digits)}%`;
+}
+
 export function CompanyHeadline({ symbol }: Props) {
   const [h, setH] = useState<Headline | null>(null);
+  const [etf, setEtf] = useState<EtfInfo | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setH(null);
+    setEtf(null);
     setError(false);
     fetch(`${API}/sepa/analysis/${encodeURIComponent(symbol)}`)
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then((j) => {
         if (cancelled) return;
-        const head = j?.fundamental?.headline;
-        if (head) setH(head); else setError(true);
+        if (j?.is_etf && j?.etf_info) {
+          setEtf(j.etf_info);
+        } else {
+          const head = j?.fundamental?.headline;
+          if (head) setH(head); else setError(true);
+        }
       })
       .catch(() => { if (!cancelled) setError(true); })
       ;
@@ -55,6 +82,87 @@ export function CompanyHeadline({ symbol }: Props) {
   }, [symbol]);
 
   if (error) return null;
+
+  // ETF layout — different metrics make sense for funds.
+  if (etf) {
+    return (
+      <div className="cm-headline">
+        <Stat
+          label="Assets Under Management (AUM)"
+          value={fmtBig(etf.aum)}
+          loading={false}
+          info={{
+            title: 'Assets Under Management (AUM)',
+            body: (
+              <>
+                <p>The total dollar value of all assets the ETF holds on behalf of its shareholders. Analogous to "market cap" for an operating company, but it's the value of the basket rather than the price the market pays for shares.</p>
+                <p>AUM grows when investors buy shares of the ETF (creation units) or when the underlying holdings appreciate; it shrinks on redemptions or drawdowns.</p>
+                <p>Larger AUM generally means tighter bid/ask spreads and more reliable tracking of the underlying index.</p>
+              </>
+            ),
+          }}
+        />
+        <Stat
+          label="Expense Ratio"
+          value={fmtPct(etf.expense_ratio, 2)}
+          loading={false}
+          info={{
+            title: 'Expense Ratio',
+            body: (
+              <>
+                <p>The annual fee the fund charges, expressed as a % of AUM. Deducted continuously from the fund's NAV — you never see a separate bill, but the drag is real.</p>
+                <p>Index ETFs are typically 0.03%-0.20%. Active or specialty ETFs can run 0.50%-1.50%+. Leveraged products (like ProShares Ultra series) sit in the 0.95%+ range due to the daily rebalancing cost.</p>
+              </>
+            ),
+          }}
+        />
+        <Stat
+          label="Dividend Yield (TTM)"
+          value={fmtPct(etf.dividend_yield, 2)}
+          loading={false}
+          info={{
+            title: 'Dividend Yield (Trailing 12 Months)',
+            body: (
+              <>
+                <p>Sum of distributions over the last 12 months divided by current price. ETFs pass through dividends from their underlying holdings (and bond coupons for fixed-income ETFs).</p>
+                <p>For leveraged or daily-rebalanced ETFs this is often 0% — they reinvest internally rather than distribute.</p>
+              </>
+            ),
+          }}
+        />
+        <Stat
+          label={etf.holdings_count ? `Top Holding · of ${etf.holdings_count}` : 'Top Holding'}
+          value={
+            etf.top_holdings && etf.top_holdings.length > 0
+              ? `${etf.top_holdings[0].symbol} · ${(etf.top_holdings[0].weight * 100).toFixed(1)}%`
+              : '—'
+          }
+          loading={false}
+          info={{
+            title: 'Top Holding',
+            body: (
+              <>
+                <p>The single largest position in the fund's basket, with its weight as a % of total AUM.</p>
+                {etf.top_holdings && etf.top_holdings.length > 1 && (
+                  <>
+                    <p><strong>Top 5 holdings:</strong></p>
+                    <ul>
+                      {etf.top_holdings.slice(0, 5).map((tH) => (
+                        <li key={tH.symbol}>
+                          <strong>{tH.symbol}</strong> {tH.name ? `· ${tH.name}` : ''} — {(tH.weight * 100).toFixed(2)}%
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <p>The weights sum to ~100% across all holdings (some ETFs hold cash or futures alongside equities).</p>
+              </>
+            ),
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="cm-headline">

@@ -1,0 +1,15 @@
+# One email per line. Only listed emails can sign in.
+# Update this file then `docker compose restart oauth2-proxy`.
+# (no rebuild needed — it's mounted at runtime)
+
+ajaykandakatla@gmail.com
+deepankarsai27@gmail.com
+gandurivineetha@gmail.com
+chiranjeevikarkolla@gmail.com
+Korvi.Nareshkumar@gmail.com
+kathakoo1991@gmail.com
+aravindreddy481@gmail.com
+vijayganduri@gmail.com
+Karthikganduri07@gmail.com
+Rajaramr.ba@gmail.com
+aby1@yahoo.com

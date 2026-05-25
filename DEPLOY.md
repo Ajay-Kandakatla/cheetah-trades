@@ -1,12 +1,12 @@
 # Cheetah / Pounce — Deploy Guide
 
-Backend + cron + Mongo run as Docker containers on the **Mac mini**. The
+Backend + cron + Mongo run as Docker containers on this machine
 **native macOS Pounce.app** runs on the **laptop**. They talk through HTTPS
 + SSE via Tailscale Funnel at `https://ajays-macbook-pro.tailb3dc79.ts.net`.
 
 | Where you run it | Touches |
 | --- | --- |
-| Mac mini (SSH or in person) | `docker compose` for `api`, `cron`, `frontend`, `mongo` |
+| Mac book pro M5 (this machine) (SSH or in person) | `docker compose` for `api`, `cron`, `frontend`, `mongo` |
 | Laptop (Pounce.app build) | `macos/app/build.sh` — compiles Swift, drops the bundle in `/Applications` |
 | Either | `git pull`, env vars |
 
@@ -74,7 +74,7 @@ cd macos/app && ./build.sh install && killall Dock
 
 ## 2. One-time setup
 
-### 2a. Mac mini — Docker stack
+### 2a. Mac book pro M5 (this machine) — Docker stack
 
 ```sh
 docker version && docker compose version

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8000';
 
 export type AlertKind = 'below' | 'above' | 'drop_pct' | 'rise_pct';
 
@@ -35,13 +35,16 @@ export async function createPriceAlert(input: {
   channels?: string[];
   note?: string;
 }): Promise<PriceAlert> {
-  const u = new URL(`${API}/sepa/alerts/price`);
-  u.searchParams.set('symbol', input.symbol);
-  u.searchParams.set('kind', input.kind);
-  u.searchParams.set('level', String(input.level));
-  if (input.channels?.length) u.searchParams.set('channels', input.channels.join(','));
-  if (input.note) u.searchParams.set('note', input.note);
-  const r = await fetch(u, { method: 'POST' });
+  // API is a relative path ('/api') in production, which `new URL()` rejects
+  // without a base. Use URLSearchParams for query construction and append.
+  const params = new URLSearchParams({
+    symbol: input.symbol,
+    kind: input.kind,
+    level: String(input.level),
+  });
+  if (input.channels?.length) params.set('channels', input.channels.join(','));
+  if (input.note) params.set('note', input.note);
+  const r = await fetch(`${API}/sepa/alerts/price?${params}`, { method: 'POST' });
   if (!r.ok) throw new Error(`createPriceAlert ${r.status}`);
   return r.json();
 }
@@ -96,9 +99,64 @@ export function useAlertNotifier() {
   }, []);
 
   useEffect(() => {
+    // Initial backfill — replaces the first poll. After this we trust SSE
+    // for new fires; the safety-net poll catches anything missed during
+    // an SSE disconnect window.
     tick();
-    const id = setInterval(tick, 30_000);
-    return () => clearInterval(id);
+    // Live updates via the SSE bus. Each backend alert fire publishes
+    // an `alert.fired` event with the same shape this hook used to
+    // synthesize from /sepa/alerts/recent.
+    let cancelled = false;
+    // Lazy import to avoid pulling eventBus into modules that don't
+    // need it during tree-shake.
+    import('../lib/eventBus').then(({ subscribe }) => {
+      if (cancelled) return;
+      const off = subscribe('alert.fired', (evt) => {
+        const p = evt.payload as any;
+        if (!p) return;
+        const fire: AlertFire = {
+          // The SSE payload doesn't carry the Mongo _id (we don't need
+          // round-trippable identity, only dedup), so synthesize a
+          // stable key from alert_id + fired_at.
+          _id:      `${p.alert_id}-${p.fired_at}`,
+          alert_id: p.alert_id,
+          symbol:   p.symbol,
+          kind:     p.kind,
+          level:    p.level,
+          price:    p.price,
+          fired_at: p.fired_at,
+          channels: p.channels || [],
+          message:  p.message || '',
+        };
+        sinceRef.current = Math.max(fire.fired_at, sinceRef.current);
+        setLatest((prev) => [fire, ...prev].slice(0, 30));
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            new Notification(`Cheetah · ${fire.symbol}`, {
+              body: fire.message,
+              tag:  `cheetah-${fire.alert_id}-${fire.fired_at}`,
+              icon: '/favicon.ico',
+            });
+          } catch { /* browser may throttle/block */ }
+        }
+      });
+      // Stash the unsubscribe so the cleanup below can run it.
+      (cleanup as any).off = off;
+    });
+    const cleanup = () => {
+      cancelled = true;
+      const off = (cleanup as any).off;
+      if (typeof off === 'function') off();
+    };
+
+    // 5-minute safety-net poll. Was 30s — cuts /sepa/alerts/recent traffic
+    // by 10× while SSE handles the live path.
+    const id = setInterval(tick, 5 * 60_000);
+    return () => {
+      clearInterval(id);
+      cleanup();
+    };
   }, [tick]);
 
   return { latest };

@@ -315,7 +315,7 @@ def test_volume_nested_shape(scan_payload):
                 "strong", "accumulating", "neutral", "distributing",
             }
         if vol["cmf_signal"] is not None:
-            assert vol["cmf_signal"] in {"inflow", "outflow"}
+            assert vol["cmf_signal"] in {"inflow", "outflow", "neutral"}
 
 
 def test_liquidity_nested_shape(scan_payload):

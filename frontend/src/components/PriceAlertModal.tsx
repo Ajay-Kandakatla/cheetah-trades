@@ -7,6 +7,12 @@ type Props = {
   currentPrice?: number | null;
   onClose: () => void;
   onCreated?: () => void;
+  /** Pre-fill the trigger kind. Default 'below' (stop-loss style).
+   *  Pass 'above' for target-price alerts (used by the Watchlist bell). */
+  defaultKind?: AlertKind;
+  /** Pre-fill the level field. If omitted, defaults to a sensible value
+   *  derived from currentPrice + kind. Pass '' to leave empty. */
+  defaultLevel?: string;
 };
 
 const KIND_LABEL: Record<AlertKind, string> = {
@@ -16,12 +22,22 @@ const KIND_LABEL: Record<AlertKind, string> = {
   rise_pct: 'Rises % from now',
 };
 
-export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Props) {
-  const [kind, setKind] = useState<AlertKind>('below');
-  const [level, setLevel] = useState<string>(
-    currentPrice ? String((currentPrice * 0.95).toFixed(2)) : ''
-  );
-  const [whatsapp, setWhatsapp] = useState(true);
+export function PriceAlertModal({
+  symbol, currentPrice, onClose, onCreated,
+  defaultKind = 'below', defaultLevel,
+}: Props) {
+  const [kind, setKind] = useState<AlertKind>(defaultKind);
+  const [level, setLevel] = useState<string>(() => {
+    if (defaultLevel !== undefined) return defaultLevel;
+    if (!currentPrice) return '';
+    // Sensible auto-default based on kind:
+    //   below  → 95% of current (stop-loss territory)
+    //   above  → empty (user wants to type target)
+    //   *_pct  → empty
+    if (defaultKind === 'below') return String((currentPrice * 0.95).toFixed(2));
+    return '';
+  });
+  const [push, setPush] = useState(true);    // Web Push to phone (replaces WhatsApp)
   const [browser, setBrowser] = useState(true);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,7 +59,9 @@ export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Pr
         await Notification.requestPermission();
       }
       const channels: string[] = [];
-      if (whatsapp) channels.push('whatsapp');
+      // 'push' fans out to all the user's registered Web Push devices
+      // (phone PWA, laptop, etc.). Always paired with browser fallback.
+      if (push) channels.push('push');
       if (browser) channels.push('browser');
       await createPriceAlert({ symbol, kind, level: num, channels, note: note || undefined });
       onCreated?.();
@@ -104,12 +122,12 @@ export function PriceAlertModal({ symbol, currentPrice, onClose, onCreated }: Pr
           <fieldset className="sepa-alert-form__channels">
             <legend>Notify via</legend>
             <label>
-              <input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} />
-              WhatsApp
+              <input type="checkbox" checked={push} onChange={(e) => setPush(e.target.checked)} />
+              Push (phone + laptop)
             </label>
             <label>
               <input type="checkbox" checked={browser} onChange={(e) => setBrowser(e.target.checked)} />
-              Browser
+              Browser (this tab)
             </label>
           </fieldset>
 

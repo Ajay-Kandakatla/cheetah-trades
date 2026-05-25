@@ -1,5 +1,0 @@
-frontend/index.html
-graphify-out/graph.html
-graphify-out/GRAPH_REPORT.md
-launchd/README.md
-backend/sepa/minervini.pdf

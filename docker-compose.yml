@@ -19,11 +19,7 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: cheetah
       TZ: America/New_York
-      # Pulled from the host shell at `docker compose up` time.
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_FROM: ${TWILIO_FROM:-whatsapp:+14155238886}
-      TWILIO_TO: ${TWILIO_TO:-}
+      # Twilio was removed — all notifications now route via Web Push.
     volumes:
       # Cron writes scan JSON here; api reads it. Shared with the cron service.
       - cheetah-scans:/root/.cheetah
@@ -44,11 +40,7 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB: cheetah
       TZ: America/New_York
-      # Pulled from the host shell at `docker compose up` time.
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_FROM: ${TWILIO_FROM:-whatsapp:+14155238886}
-      TWILIO_TO: ${TWILIO_TO:-}
+      # Twilio was removed — all notifications now route via Web Push.
     volumes:
       - cheetah-scans:/root/.cheetah
       - ./backend/crontab:/app/crontab:ro
@@ -66,6 +58,83 @@ services:
       - api
     ports:
       - "5173:80"
+
+  # ── oauth2-proxy ────────────────────────────────────────────────────
+  # Sits between the public-facing nginx and the app, requiring Google OAuth
+  # before any request reaches the SPA or /api/*. Email allowlist controls
+  # who can log in (see backend/oauth2-emails.txt). On successful login,
+  # X-Auth-Request-Email header is forwarded to the backend so each user
+  # sees only their own todos / watchlist / etc.
+  #
+  # Required env vars (in backend/.env):
+  #   OAUTH2_PROXY_CLIENT_ID
+  #   OAUTH2_PROXY_CLIENT_SECRET
+  #   OAUTH2_PROXY_COOKIE_SECRET   (32-byte url-safe base64; auto-generated below if missing)
+  #   OAUTH2_PROXY_REDIRECT_URL    (e.g. https://your-mac.tail-xxxxx.ts.net/oauth2/callback)
+  oauth2-proxy:
+    # OPT-IN. Only runs when you start with: docker compose --profile oauth up -d
+    # Until you've added Google OAuth credentials to backend/.env, leave it off.
+    profiles: ["oauth"]
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      OAUTH2_PROXY_PROVIDER: google
+      OAUTH2_PROXY_HTTP_ADDRESS: 0.0.0.0:4180
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_UPSTREAMS: static://200
+      OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: /etc/oauth2/emails.txt
+      # IMPORTANT: leave this empty (NOT "*"). oauth2-proxy uses OR semantics
+      # between EMAIL_DOMAINS and AUTHENTICATED_EMAILS_FILE — setting "*" here
+      # means "any Google account passes" regardless of what's in the file,
+      # making the allowlist a no-op. With this empty, only emails listed in
+      # backend/oauth2-emails.txt can sign in.
+      OAUTH2_PROXY_EMAIL_DOMAINS: ""
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      # Forward the Google access token so the backend can fetch the user's
+      # name + picture from /oauth2/v3/userinfo on first sign-in.
+      OAUTH2_PROXY_PASS_ACCESS_TOKEN: "true"
+      OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER: "true"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_DOMAINS: "" # empty = same as request host
+      # Session lifetime — without these, sessions die when the Google access
+      # token expires (~1h), which shows up as a "connection dropped" on
+      # mobile after a backgrounded tab wakes up.
+      OAUTH2_PROXY_COOKIE_EXPIRE: "720h"     # 30-day cookie lifetime
+      OAUTH2_PROXY_COOKIE_REFRESH: "1h"      # silently refresh Google token before expiry
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"    # survives OAuth redirect on mobile Chrome
+      OAUTH2_PROXY_WHITELIST_DOMAINS: "*"
+      # SKIP_AUTH_ROUTES is wildcard since 2026-05-18 — oauth2-proxy
+      # stops being the blanket gate so password users (who don't have
+      # a Google session) can reach the app. The backend now enforces
+      # auth via the local_auth session cookie OR the X-User-Email
+      # header oauth2-proxy still injects when a Google session is
+      # present. See backend/local_auth/__init__.py for the dual-path
+      # architecture rationale.
+      #
+      # oauth2-proxy still handles the Google OAuth handshake at
+      # /oauth2/* (always served by oauth2-proxy regardless of the
+      # skip-routes list). That's how Google users still sign in.
+      OAUTH2_PROXY_SKIP_AUTH_ROUTES: "GET=^/.*$,POST=^/.*$,PUT=^/.*$,DELETE=^/.*$,PATCH=^/.*$,HEAD=^/.*$,OPTIONS=^/.*$"
+      # Custom sign-in template — dark theme, Pounce wordmark, Google-
+      # branded button (see oauth2-templates/sign_in.html). Drops the
+      # generic OAuth2 Proxy logo and the "Secured with OAuth2 Proxy
+      # vX.X.X" footer in favor of a branded landing page.
+      OAUTH2_PROXY_CUSTOM_TEMPLATES_DIR: /etc/oauth2/templates
+      # Hide the "Secured with OAuth2 Proxy" footer — our custom
+      # template already includes its own footer. "-" is the oauth2-proxy
+      # sentinel for "render no footer at all".
+      OAUTH2_PROXY_FOOTER: "-"
+    volumes:
+      - ./backend/oauth2-emails.txt:/etc/oauth2/emails.txt:ro
+      # Read-only mount of the custom-templates dir. Only sign_in.html
+      # is overridden; other oauth2-proxy templates (error.html, etc.)
+      # fall back to the built-in defaults — which is fine, those pages
+      # are rarely seen anyway.
+      - ./oauth2-templates:/etc/oauth2/templates:ro
+    ports:
+      - "127.0.0.1:4180:4180"
 
 volumes:
   mongo-data:

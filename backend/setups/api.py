@@ -41,12 +41,24 @@ _KIND_DISPATCH = {
     "episodic_pivot":       ("setups.episodic_pivot",       "scan"),
     "high_tight_flag":      ("setups.high_tight_flag",      "scan"),
     "post_earnings_drift":  ("setups.post_earnings_drift",  "scan"),
+    # Kell — Cycle of Price Action scanners (Oliver Kell, 2021). All
+    # write into the same `setups` Mongo collection with their own
+    # `kind` discriminator. UI: /kell page.
+    "wedge_drop":             ("kell.wedge_drop",             "scan"),
+    "reversal_extension":     ("kell.reversal_extension",     "scan"),
+    "volatility_compression": ("kell.volatility_compression", "scan"),
+    "base_break":             ("kell.base_break",             "scan"),
+    "power_trend":            ("kell.power_trend",            "scan"),
+    "climax_run":             ("kell.climax_run",             "scan"),
 }
 _VALID_KINDS = {
     "peg", "orb", "inside_day",
     "low_cheat", "mid_cheat", "high_cheat",
     "bull_flag", "episodic_pivot",
     "high_tight_flag", "post_earnings_drift",
+    # Kell additions
+    "wedge_drop", "reversal_extension", "volatility_compression",
+    "base_break", "power_trend", "climax_run",
 }
 
 
@@ -115,6 +127,13 @@ def force_scan(
         "episodic_pivot":      _KIND_DISPATCH["episodic_pivot"],
         "high_tight_flag":     _KIND_DISPATCH["high_tight_flag"],
         "post_earnings_drift": _KIND_DISPATCH["post_earnings_drift"],
+        # Kell scanners
+        "wedge_drop":             _KIND_DISPATCH["wedge_drop"],
+        "reversal_extension":     _KIND_DISPATCH["reversal_extension"],
+        "volatility_compression": _KIND_DISPATCH["volatility_compression"],
+        "base_break":             _KIND_DISPATCH["base_break"],
+        "power_trend":            _KIND_DISPATCH["power_trend"],
+        "climax_run":             _KIND_DISPATCH["climax_run"],
     }
     if kind not in target_map:
         raise HTTPException(404, f"unknown scan target: {kind}")

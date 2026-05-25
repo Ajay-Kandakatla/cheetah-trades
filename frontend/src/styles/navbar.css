@@ -6,10 +6,11 @@
 
 .cm-nav {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: end;
-  gap: var(--s-5);
-  padding: var(--s-6) var(--s-5) var(--s-4);
+  /* brand fixed-narrow · nav grows to fill · meta fixed-narrow */
+  grid-template-columns: minmax(110px, auto) 1fr minmax(150px, auto);
+  align-items: center;
+  gap: var(--s-4);
+  padding: 14px var(--s-5) 12px;
   max-width: var(--content-max);
   margin: 0 auto;
   border-bottom: 0.5px solid var(--hairline);
@@ -20,68 +21,141 @@
 .cm-nav__brand {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: 2px;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .cm-nav__wordmark {
   font-family: var(--font-serif);
   font-weight: 400;
   font-style: italic;
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1;
   color: var(--ink);
   letter-spacing: -0.4px;
   font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  white-space: nowrap;
 }
 
 .cm-nav__eyebrow {
   /* eyebrow class provides gold mono uppercase already */
-  font-size: var(--fs-eyebrow);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 /* -- Primary navigation --------------------------------------------------- */
 .cm-nav__links {
   display: flex;
-  gap: var(--s-6);
-  align-items: baseline;
-  justify-content: center;
-  padding-bottom: 2px;
+  gap: 2px;
+  align-items: center;
+  justify-content: space-around;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .cm-nav__link {
   font-family: var(--font-sans);
-  font-size: var(--fs-small);
+  font-size: 12px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 1.6px;
+  letter-spacing: 0.6px;
   color: var(--ink-subtle);
-  padding: var(--s-2) 0;
+  padding: 8px 14px;
   position: relative;
-  transition: color var(--dur-fast) var(--ease-soft);
-  border-bottom: 1px solid transparent;
+  transition:
+    color var(--dur-fast) var(--ease-soft),
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft);
+  border-bottom: 2px solid transparent;
+  border-radius: 4px 4px 0 0;
+  white-space: nowrap;
+  text-decoration: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .cm-nav__link:hover {
   color: var(--ink);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
 }
 
 .cm-nav__link.is-active {
-  color: var(--ink);
+  color: var(--gold);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
   border-bottom-color: var(--gold);
+  box-shadow: 0 0 16px -8px var(--gold);
 }
 
-.cm-nav__link.is-active::before {
-  /* subtle bullet before active link */
-  content: '';
+/* Removed the bullet pseudo-element — the pill background is the indicator now */
+
+/* -- More dropdown -------------------------------------------------------- */
+.cm-nav__more {
+  position: relative;
+}
+
+.cm-nav__more-btn {
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cm-nav__caret {
+  font-size: 9px;
+  transition: transform var(--dur-fast) var(--ease-soft);
+}
+
+.cm-nav__more-btn.is-open .cm-nav__caret {
+  transform: rotate(180deg);
+}
+
+.cm-nav__dropdown {
   position: absolute;
-  left: -10px;
-  top: 50%;
-  width: 3px;
-  height: 3px;
-  background: var(--gold);
-  border-radius: 50%;
-  transform: translateY(-50%);
+  top: calc(100% + 2px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: dd-fade 150ms ease-out;
+}
+
+@keyframes dd-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cm-nav__dropdown-link {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--ink-subtle);
+  padding: 8px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-soft), background-color var(--dur-fast) var(--ease-soft);
+}
+
+.cm-nav__dropdown-link:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+
+.cm-nav__dropdown-link.is-active {
+  color: var(--gold);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
 }
 
 /* -- Right meta cluster --------------------------------------------------- */
@@ -89,24 +163,16 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--s-3);
-  font-size: var(--fs-small);
+  gap: 6px;
+  font-size: 12px;
   color: var(--ink-subtle);
-  padding-bottom: var(--s-1);
-}
-
-.cm-nav__meta-label {
-  font-family: var(--font-sans);
-  font-size: var(--fs-micro);
-  text-transform: uppercase;
-  letter-spacing: 1.6px;
-  color: var(--ink-faint);
+  white-space: nowrap;
 }
 
 .cm-nav__meta-name {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: var(--fs-body);
+  font-size: 14px;
   color: var(--ink);
   font-variation-settings: 'opsz' 144, 'SOFT' 40;
 }
@@ -116,9 +182,90 @@
 }
 
 .cm-nav__meta-date {
-  font-size: var(--fs-small);
+  font-size: 11px;
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* -- Profile menu (replaces the old UserChip + sign-out link) ----------- */
+.cm-nav__profile {
+  position: relative;
+  display: inline-flex;
+  margin-left: 4px;
+}
+
+.cm-nav__profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 4px 2px 2px;
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  color: inherit;
+  transition:
+    border-color var(--dur-fast) var(--ease-soft),
+    background-color var(--dur-fast) var(--ease-soft);
+}
+
+.cm-nav__profile-btn:hover,
+.cm-nav__profile-btn.is-open {
+  border-color: var(--hairline-strong);
+  background: var(--surface-raised, rgba(255,255,255,0.04));
+}
+
+.cm-nav__profile-btn.is-active .cm-nav__avatar {
+  border-color: var(--gold, currentColor);
+}
+
+.cm-nav__profile-btn:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-faint);
+}
+
+/* Circular initial — colored ring + tinted bg so it reads as a real
+   avatar even without an image source. */
+.cm-nav__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: var(--gold-faint, rgba(212, 175, 55, 0.12));
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  user-select: none;
+  letter-spacing: 0;
+}
+
+/* Profile dropdown — anchored to the right edge of the trigger so it
+   doesn't overflow off-screen on narrow desktops. */
+.cm-nav__dropdown--profile {
+  right: 0;
+  left: auto;
+  min-width: 220px;
+}
+
+.cm-nav__dropdown-header {
+  padding: 10px 14px 8px;
+  border-bottom: 0.5px solid var(--hairline);
+  margin-bottom: 4px;
+}
+
+/* Danger variant — used by the "Sign out" link at the bottom of the
+   profile dropdown and the mobile drawer. Keeps the visual signal
+   consistent with "destructive action" elsewhere in the app. */
+.cm-nav__dropdown-link--danger {
+  color: var(--negative, #ef4444);
+}
+.cm-nav__dropdown-link--danger:hover {
+  background: rgba(239, 68, 68, 0.08);
 }
 
 /* -- Theme toggle button -------------------------------------------------- */
@@ -126,9 +273,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-left: var(--s-2);
+  width: 26px;
+  height: 26px;
+  margin-left: 4px;
   border-radius: 50%;
   border: 0.5px solid var(--hairline-strong);
   color: var(--ink-muted);
@@ -152,26 +299,173 @@
   box-shadow: 0 0 0 3px var(--gold-faint);
 }
 
-/* -- Responsive: stack cleanly under ~900px ------------------------------- */
-@media (max-width: 900px) {
-  .cm-nav {
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: var(--s-4);
-    padding: var(--s-4) var(--s-4) var(--s-3);
-  }
-  .cm-nav__links {
-    justify-content: flex-start;
-    gap: var(--s-5);
-    flex-wrap: wrap;
-  }
-  .cm-nav__meta {
-    justify-content: flex-start;
-  }
+/* -- Responsive: shrink labels at narrow widths --------------------------- */
+@media (max-width: 1280px) {
+  .cm-nav__link { padding: 8px 10px; font-size: 11px; letter-spacing: 0.4px; }
+  .cm-nav__brand .cm-nav__eyebrow { display: none; }
 }
 
-/* -- Legacy override: suppress old orange .navbar visuals ------------------
-   EnhancedStyles.css defines `.navbar` with an orange gradient bar. The new
-   masthead is a different class (.cm-nav), so the old rules no longer apply.
-   Nothing to override here — this comment is a signpost for future cleanup.
-   ========================================================================== */
+@media (max-width: 1100px) {
+  .cm-nav { grid-template-columns: auto 1fr auto; gap: var(--s-3); }
+  .cm-nav__link { padding: 7px 8px; font-size: 10.5px; }
+  .cm-nav__meta-date { display: none; }
+}
+
+@media (max-width: 900px) {
+  .cm-nav:not(.cm-nav--mobile) {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--s-3);
+    padding: 10px var(--s-4);
+  }
+  .cm-nav:not(.cm-nav--mobile) .cm-nav__links {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .cm-nav:not(.cm-nav--mobile) .cm-nav__meta {
+    justify-content: flex-end;
+  }
+  .cm-nav:not(.cm-nav--mobile) .cm-nav__meta-name { display: none; }
+}
+
+/* =====================================================================
+   Mobile NavBar (≤ 720px) — hamburger + slide-down drawer
+   ===================================================================== */
+.cm-nav--mobile {
+  display: flex !important;
+  grid-template-columns: none !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 0.5px solid var(--hairline);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+}
+.cm-nav--mobile .cm-nav__brand {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.cm-nav--mobile .cm-nav__wordmark {
+  font-size: 18px;
+}
+.cm-nav__current {
+  font-size: 13px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hamburger button — 44px tap target */
+.cm-nav__hamburger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 44px;
+  height: 44px;
+  padding: 12px 10px;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cm-nav__hamburger span {
+  display: block;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 1px;
+  transition: transform 200ms, opacity 200ms;
+  transform-origin: center;
+}
+.cm-nav__hamburger.is-open span:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+.cm-nav__hamburger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+.cm-nav__hamburger.is-open span:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+.cm-nav__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 199;
+  animation: drawer-fade 160ms ease-out;
+}
+
+.cm-nav__drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(82vw, 320px);
+  background: var(--bg);
+  border-left: 1px solid var(--hairline);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 70px 0 16px;       /* leave room for the close button at top */
+  overflow-y: auto;
+  animation: drawer-slide-in 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes drawer-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes drawer-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.cm-nav__drawer-section-label {
+  padding: 10px 18px 4px;
+  font: 700 10px/1 inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.cm-nav__drawer-link {
+  display: block;
+  padding: 14px 18px;             /* tap target ≥44px */
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+.cm-nav__drawer-link:hover,
+.cm-nav__drawer-link:active {
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+.cm-nav__drawer-link.is-active {
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+  border-left-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.cm-nav__drawer-foot {
+  margin-top: auto;
+  padding: 16px 18px;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-muted);
+}

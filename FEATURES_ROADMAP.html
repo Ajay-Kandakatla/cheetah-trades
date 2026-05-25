@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cheetah — Personal-Life Feature Roadmap</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #11141b;
+    --panel2: #161a23;
+    --border: #232838;
+    --text: #e6e8ef;
+    --muted: #8a93a8;
+    --accent: #ffb547;
+    --accent2: #6ee7b7;
+    --bad: #f87171;
+    --good: #34d399;
+    --warn: #fbbf24;
+    --chip: #1e2330;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif; }
+  a { color: var(--accent); }
+  header {
+    padding: 28px 24px 16px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #11141b 0%, #0b0d12 100%);
+  }
+  h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px 80px; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
+    padding: 14px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; margin: 18px 0;
+  }
+  .controls label { font-size: 12px; color: var(--muted); margin-right: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; background: var(--chip); border: 1px solid var(--border);
+    border-radius: 999px; font-size: 12px; color: var(--text); cursor: pointer;
+    user-select: none;
+  }
+  .chip.active { background: #2a3142; border-color: var(--accent); color: var(--accent); }
+  .chip:hover { border-color: #3a4256; }
+  input[type=search] {
+    flex: 1 1 200px; min-width: 200px;
+    padding: 8px 10px; background: var(--chip); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font: inherit;
+  }
+  select { background: var(--chip); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 7px 8px; font: inherit; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0 16px; color: var(--muted); font-size: 12px; }
+  .grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: #3a4256; }
+  .card .row1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .card h3 { margin: 0; font-size: 15px; line-height: 1.3; }
+  .badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+    background: var(--chip); border: 1px solid var(--border); color: var(--muted);
+    white-space: nowrap;
+  }
+  .badge.routines { color: #c4b5fd; border-color: #4b3f7a; background: #1c1932; }
+  .badge.finance  { color: #6ee7b7; border-color: #1e5a44; background: #122a22; }
+  .badge.health   { color: #fca5a5; border-color: #5a2a2a; background: #2a1414; }
+  .badge.family   { color: #fcd34d; border-color: #5a4a1e; background: #2a2412; }
+  .badge.productivity { color: #93c5fd; border-color: #1e3a5a; background: #122236; }
+  .badge.automation   { color: #f0abfc; border-color: #5a1e5a; background: #2a122a; }
+  .meta { display: flex; gap: 10px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .effort, .impact { display: inline-flex; align-items: center; gap: 4px; }
+  .stars { color: var(--accent); letter-spacing: 1px; }
+  .desc { font-size: 13px; color: #c5cad8; }
+  .arch {
+    font-size: 12px; background: var(--panel2); border: 1px dashed var(--border);
+    border-radius: 8px; padding: 8px 10px; color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .arch b { color: var(--accent2); font-weight: 500; }
+  details.refs { font-size: 12px; color: var(--muted); }
+  details.refs summary { cursor: pointer; color: var(--muted); }
+  details.refs summary:hover { color: var(--text); }
+  details.refs ul { margin: 6px 0 0; padding-left: 18px; }
+  section.block { margin-top: 32px; }
+  section.block > h2 { font-size: 16px; margin: 0 0 10px; letter-spacing: -0.01em; }
+  table.tear {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  table.tear th, table.tear td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  table.tear thead th { background: var(--panel2); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  table.tear tr:last-child td { border-bottom: none; }
+  table.tear td.app { font-weight: 600; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 4px; background: var(--chip); border: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .legend { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .footer-note { margin-top: 28px; padding: 14px; background: var(--panel); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 13px; color: #c5cad8; }
+  .footer-note b { color: var(--accent); }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+    .controls { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cheetah — Personal-Life Feature Roadmap</h1>
+  <div class="sub">
+    35 candidate features pulled from what techies actually use (Monarch, YNAB, Hevy, Day One, Habitica, Sunsama, Home Assistant, Beeminder, Notion/Obsidian Life OS, Skylight, AnyList, Reclaim, etc.) — each mapped to where it fits in your FastAPI&nbsp;+&nbsp;Mongo&nbsp;+&nbsp;React stack. Generated 2026-05-17.
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="controls" role="region" aria-label="filters">
+    <label>Category</label>
+    <span class="chip active" data-filter="cat" data-val="all">All</span>
+    <span class="chip" data-filter="cat" data-val="routines">Routines &amp; Habits</span>
+    <span class="chip" data-filter="cat" data-val="finance">Finance &amp; Household</span>
+    <span class="chip" data-filter="cat" data-val="health">Health &amp; Fitness</span>
+    <span class="chip" data-filter="cat" data-val="family">Family &amp; Home Ops</span>
+    <span class="chip" data-filter="cat" data-val="productivity">Productivity</span>
+    <span class="chip" data-filter="cat" data-val="automation">Automation / Glue</span>
+  </div>
+
+  <div class="controls">
+    <label>Sort by</label>
+    <select id="sort">
+      <option value="fit">Fit score (best first)</option>
+      <option value="impact">Impact (high → low)</option>
+      <option value="effort">Effort (low → high)</option>
+      <option value="cat">Category</option>
+    </select>
+    <label style="margin-left:12px">Min impact</label>
+    <select id="minImpact">
+      <option value="1">★ or higher</option>
+      <option value="2">★★ or higher</option>
+      <option value="3">★★★ only</option>
+    </select>
+    <label style="margin-left:12px">Max effort</label>
+    <select id="maxEffort">
+      <option value="4">Any</option>
+      <option value="3">L or smaller</option>
+      <option value="2">M or smaller</option>
+      <option value="1">S only</option>
+    </select>
+    <input id="q" type="search" placeholder="Search features, apps, modules…" />
+  </div>
+
+  <div class="legend">
+    <b>Effort</b>: S = 1–2 days · M = 3–5 days · L = 1–2 wks · XL = 3+ wks &nbsp;|&nbsp;
+    <b>Impact</b>: ★ nice · ★★ good · ★★★ daily game-changer &nbsp;|&nbsp;
+    <b>Fit</b>: impact × (5 − effort) — pre-sorted by where you'll get the most lift for your existing stack.
+  </div>
+
+  <div class="stats"><span id="count"></span></div>
+
+  <div id="grid" class="grid"></div>
+
+  <section class="block">
+    <h2>App teardown — what each one does best</h2>
+    <div class="legend">The reference apps each feature borrows from. Useful as inspiration / for screenshots when designing your own pages.</div>
+    <table class="tear">
+      <thead><tr>
+        <th style="width:140px">App</th>
+        <th style="width:130px">Category</th>
+        <th>Killer feature</th>
+        <th style="width:100px">Pricing</th>
+        <th>What techies love</th>
+      </tr></thead>
+      <tbody id="tearbody"></tbody>
+    </table>
+  </section>
+
+  <section class="block">
+    <h2>Top-5 ruthless pick — what I'd ship first</h2>
+    <div class="legend">Five highest-fit features given what you already have (push, Mongo, cron, oauth gate, per-user scoping). Each one re-uses existing infrastructure rather than introducing new dependencies.</div>
+    <ol id="top5" style="padding-left:18px; color:#c5cad8;"></ol>
+  </section>
+
+  <div class="footer-note">
+    <b>Architectural note.</b> Your app is unusually well-positioned for a "personal life OS" pivot because the hard parts are already done: Google-OAuth-gated multi-user data scoping (<code>X-User-Email</code> partition), Web Push without SaaS (VAPID + service worker), per-minute cron, Mongo + per-user collections, SSE streaming, and an SWR-cached React frontend with PWA-capable shell. Most of the features below are <i>module-shaped</i> — a new <code>backend/&lt;module&gt;/</code> folder with an <code>api.py</code>, a Mongo collection, a cron line, and a frontend route. The expensive integrations (HealthKit ingestion, Plaid/SimpleFin, voice capture) are best treated as <i>ingest endpoints</i> the client posts to, rather than SDKs to embed.
+  </div>
+
+  <p style="color:var(--muted); font-size:11px; margin-top:24px;">Generated by Claude for ajaykandakatla@gmail.com — sources cited per feature card. Refresh: re-run the prompt in Cowork.</p>
+</div>
+
+<script>
+const FEATURES = [
+  // ---------- Routines & Habits ----------
+  {
+    id: "habit-tracker",
+    title: "Habit tracker with Loop-style score (not just streaks)",
+    cat: "routines",
+    inspiration: "Loop Habit Tracker, Habitica, Streaks",
+    desc: "Per-habit score that decays gradually instead of resetting to 0 on a miss. 24-tile grid in the spirit of Streaks. Optionally adds Habitica-style XP for shared family habits (kids brushing teeth, you doing pull-ups).",
+    arch: "backend/habits/ — Mongo: habits, habit_log, habit_score_cache\nCron: 0 4 * * * → recompute scores nightly\nPush hook: morning brief shows red habits\nFrontend: /habits route + <HabitGrid> on /morning",
+    effort: 2,  // M
+    impact: 3,
+    refs: [
+      "https://calmevo.com/loop-habit-tracker-review/",
+      "https://reclaim.ai/blog/habit-tracker-apps",
+      "https://www.mindfulsuite.com/reviews/best-habit-tracker-apps"
+    ]
+  },
+  {
+    id: "morning-ritual",
+    title: "Morning ritual + evening review checklist",
+    cat: "routines",
+    inspiration: "Sunsama, Notion daily template",
+    desc: "Sunsama-style: a 5-step morning checklist (review brief, set 3 priorities, time-block, mood check, intention) and a 3-step evening review. Slot directly into your /morning page since it already runs at 8:30 ET.",
+    arch: "backend/morning/ritual.py (new) — Mongo: ritual_log\nReuse: existing morning/brief.py composer\nFrontend: <RitualChecklist> tab on /morning, persists state per day",
+    effort: 1,
+    impact: 2,
+    refs: [
+      "https://calmevo.com/sunsama-review/",
+      "https://temporal.day/blog/motion-vs-reclaim-vs-clockwise-vs-akiflow-vs-sunsama"
+    ]
+  },
+  {
+    id: "smart-reminders",
+    title: "Smart push reminders (time-of-day learns from completion patterns)",
+    cat: "routines",
+    inspiration: "Streaks, Things, Apple Reminders",
+    desc: "Right now todos.reminder fires at notify_at. Add a learning loop: if you keep snoozing 'meditate' from 7am to 8:15am for 14 days, shift the default. Reuse your existing learning/ aggregator pattern.",
+    arch: "backend/todos/learn.py (new) — Mongo: todo_completion_stats\nReuse: learning/calibrator.py pattern + push/sender.py\nCron: hourly recompute optimal notify_at per (user, label)",
+    effort: 2,
+    impact: 2,
+    refs: ["https://habi.app/insights/best-habit-tracker-apps/"]
+  },
+  {
+    id: "on-this-day",
+    title: "\"On This Day\" memory surfacing",
+    cat: "routines",
+    inspiration: "Day One, Apple Photos",
+    desc: "Pull anything from a year/month ago (journals, trades, photos, todos completed) and surface in the morning brief. Cheap to implement because you already index by date.",
+    arch: "backend/morning/brief.py — extend composer\nQueries existing collections WHERE date == today-1y/today-1m\nNo new collection needed",
+    effort: 1,
+    impact: 2,
+    refs: ["https://dayoneapp.com/features/"]
+  },
+  {
+    id: "mood-energy",
+    title: "Mood + energy log with weekly trend",
+    cat: "routines",
+    inspiration: "Bearable, Daylio, Apple Health State of Mind",
+    desc: "1-tap mood log (1–5) plus optional tag (sleep, work, family). Plot on /morning. Quietly powerful for correlating sleep/exercise → trading focus.",
+    arch: "backend/mood/ — Mongo: mood_log {email, ts, score, tags[]}\nFrontend: <MoodChip> footer on every page, <MoodTrend> on /morning\nWeekly digest joins with sleep + workout data",
+    effort: 1,
+    impact: 2,
+    refs: ["https://rize.io/blog/quantified-self"]
+  },
+
+  // ---------- Finance & Household ----------
+  {
+    id: "plaid-networth",
+    title: "Plaid/SimpleFin net-worth tracker on Morning Brief",
+    cat: "finance",
+    inspiration: "Monarch, Copilot, Mint",
+    desc: "Daily account-balance sync (banks, brokerages, crypto). Net-worth sparkline on /morning. SimpleFin is cheaper than Plaid for personal use ($1.50/mo flat) and developer-friendly.",
+    arch: "backend/finance/connectors.py (new) — Mongo: accounts, account_balances\nCron: 0 6 * * * → fetch + snapshot\nMorning brief composer pulls today's net worth + Δ from last week\nFrontend: <NetWorthCard> on /morning",
+    effort: 3,
+    impact: 3,
+    refs: [
+      "https://www.monarch.com/compare/ynab-alternative",
+      "https://www.firefly-iii.org/"
+    ]
+  },
+  {
+    id: "subscription-tracker",
+    title: "Subscription tracker → kill the silent bleeders",
+    cat: "finance",
+    inspiration: "Rocket Money, Bobby",
+    desc: "Detect recurring debits ($X every 28–31 days). Flag new ones. Push a quarterly 'subs you forgot about' digest. Bobby-style manual entry as a fallback for cash-pay services.",
+    arch: "backend/finance/subs.py — Mongo: subscriptions {email, vendor, amount, cadence, next_charge}\nDepends on: plaid-networth (for auto-detect) — without it, manual entry only\nCron: 0 7 1 * * monthly digest push\nFrontend: /finance/subs",
+    effort: 2,
+    impact: 2,
+    refs: ["https://www.cnbc.com/select/best-subscription-trackers/"]
+  },
+  {
+    id: "bill-calendar",
+    title: "Bills + recurring payments calendar (synced to todos)",
+    cat: "finance",
+    inspiration: "Rocket Money bill reminders, Notion finance OS",
+    desc: "Each bill becomes a forward todo with notify_at. Surface 'due this week' in the morning brief. Optionally auto-deduct from a 'projected balance' to avoid surprises.",
+    arch: "backend/finance/bills.py — Mongo: bills + writes into existing todos collection on schedule\nReuse: todos/reminder/run pipeline you already have\nCron: 0 0 * * * → materialize next 30 days of bill todos",
+    effort: 1,
+    impact: 2,
+    refs: ["https://www.kiplinger.com/personal-finance/how-to-save-money/best-budgeting-apps"]
+  },
+  {
+    id: "llm-categorize",
+    title: "LLM auto-categorize transactions (using your local Gemma)",
+    cat: "finance",
+    inspiration: "Copilot AI categorization, Monarch",
+    desc: "Copilot's killer feature is that it stops asking you to clean up category guesses. You already have Gemma running for /food and /kids — re-use it. Classifications cached per merchant string.",
+    arch: "backend/finance/categorize.py — LM Studio at localhost:1234 (you already have this)\nMongo: txn_category_cache {merchant_norm, category, confidence, source}\nDepends on: plaid-networth",
+    effort: 2,
+    impact: 2,
+    refs: [
+      "https://www.techno-pulse.com/2026/04/best-ai-personal-finance-tools-in-2026.html",
+      "https://useorigin.com/resources/blog/origin-vs-ynab-vs-monarch-money-best-all-in-one-finance-app-for-2026"
+    ]
+  },
+  {
+    id: "envelope-budget",
+    title: "Zero-based envelope budget (YNAB-style)",
+    cat: "finance",
+    inspiration: "YNAB, Actual Budget",
+    desc: "Every dollar gets a job. Monthly budget rolls forward, overage from one envelope can be reassigned. Best paired with the categorizer above. Self-hosted Actual is the reference if you want to skip this and link to it from /finance.",
+    arch: "backend/finance/budget.py — Mongo: budgets, envelopes, envelope_assignments\nDepends on: plaid-networth + llm-categorize\nFrontend: /finance/budget — table UI, drag to reassign",
+    effort: 3,
+    impact: 2,
+    refs: [
+      "https://www.monarch.com/compare/ynab-alternative",
+      "https://github.com/firefly-iii/firefly-iii/"
+    ]
+  },
+  {
+    id: "deal-scraper-expand",
+    title: "Expand Lifeboard from Mac Studio → multi-product deal scraper",
+    cat: "finance",
+    inspiration: "Slickdeals, Camelcamelcamel",
+    desc: "You already scrape Mac Studio deals every 5 min. Generalize the scraper to a watch-list of products with price-history and a push when a target price hits. Hyderabadi-ingredients grocery price tracking is a natural extension.",
+    arch: "backend/lifeboard/ → generalize macstudio.py into a Pluggable Scraper interface\nMongo: lifeboard_watchlist, lifeboard_price_history\nReuse: existing /lifeboard route + push/sender",
+    effort: 2,
+    impact: 2,
+    refs: ["https://www.firefly-iii.org/"]
+  },
+
+  // ---------- Health & Fitness ----------
+  {
+    id: "healthkit-webhook",
+    title: "Apple HealthKit ingest via Shortcuts webhook",
+    cat: "health",
+    inspiration: "Open Wearables, Day One auto-metadata",
+    desc: "Skip native iOS SDK pain. Build a Shortcuts automation that runs at 11pm and POSTs HealthKit metrics (steps, sleep, HRV, weight) to /api/health/ingest. Same pattern works for Oura and Whoop via their own Shortcuts.",
+    arch: "backend/health/ingest.py — POST /api/health/ingest (X-User-Email scoped)\nMongo: health_daily {email, date, steps, sleep_hr, hrv, weight, ...}\nDoc: shortcuts/healthkit-export.shortcut + DEPLOY.md instructions",
+    effort: 1,
+    impact: 3,
+    refs: [
+      "https://support.whoop.com/s/article/Apple-Health-Integration?language=en_US",
+      "https://www.themomentum.ai/resources/wearables-integration-playbook-for-health-apps"
+    ]
+  },
+  {
+    id: "recovery-panel",
+    title: "Sleep + recovery panel on Morning Brief",
+    cat: "health",
+    inspiration: "Whoop, Oura, Bevel",
+    desc: "Once HealthKit ingest is in, you have everything to render a 'recovery' tile: sleep duration, HRV trend, resting HR, training strain. Becomes the second thing you look at after SEPA picks.",
+    arch: "backend/morning/brief.py — extend composer with health slice\nFrontend: <RecoveryCard> on /morning\nDepends on: healthkit-webhook",
+    effort: 1,
+    impact: 3,
+    refs: ["https://www.healthcare.digital/single-post/whoop-and-the-future-of-the-quantified-self"]
+  },
+  {
+    id: "workout-logger",
+    title: "Workout logger with PR detection (Hevy-style)",
+    cat: "health",
+    inspiration: "Hevy, Strong, Strava",
+    desc: "Log sets/reps/weight. Auto-detect PRs (1RM via Epley). Pre-built templates for push/pull/legs. Phone-friendly UI. Hevy's social/feed is the part you can skip — keep it private and self-hosted.",
+    arch: "backend/fitness/ — Mongo: workouts, exercises, prs\nFrontend: /fitness route — touch-optimized set logger\nWeekly digest joins with health_daily for 'tonnage vs recovery' chart",
+    effort: 3,
+    impact: 2,
+    refs: [
+      "https://www.hevyapp.com/",
+      "https://gymgod.app/blog/strong-vs-hevy"
+    ]
+  },
+  {
+    id: "weekly-health-digest",
+    title: "Weekly health digest push (Sunday 6pm)",
+    cat: "health",
+    inspiration: "Whoop weekly report, Apple weekly summary",
+    desc: "Tonnage, average sleep, weight delta, step total, mood average. Push lands Sunday evening so you plan the next week.",
+    arch: "backend/health/digest.py — Cron: 0 18 * * 0\nPulls from health_daily + workouts + mood_log + plaid balances\nDepends on: healthkit-webhook + workout-logger",
+    effort: 1,
+    impact: 2,
+    refs: ["https://www.themomentum.ai/blog/wearables-integration-playbook-for-health-apps"]
+  },
+  {
+    id: "meds-supplements",
+    title: "Meds + supplements reminders (stackable schedules)",
+    cat: "health",
+    inspiration: "Round, MyTherapy",
+    desc: "Recurring todos with specific cadences (every 8h, AM/PM, every Mon/Wed/Fri). Logs adherence. You already have the reminder dispatcher.",
+    arch: "Extend backend/todos/ — add medication subtype\nMongo: meds {email, name, schedule_cron, adherence_log[]}\nReuse: todos.reminder.fire_due (already runs every minute)",
+    effort: 1,
+    impact: 1,
+    refs: ["https://rize.io/blog/quantified-self"]
+  },
+  {
+    id: "biomarker-trend",
+    title: "Lab biomarker trend tracker (cholesterol, glucose, vit D)",
+    cat: "health",
+    inspiration: "InsideTracker, Bevel",
+    desc: "Manual entry after each annual physical. Plots over time, flags out-of-range. Cheap, high-leverage — most people lose these PDFs after 6 months.",
+    arch: "backend/health/labs.py — Mongo: lab_results {email, date, panel, marker, value, units, ref_low, ref_high}\nFrontend: /health/labs",
+    effort: 1,
+    impact: 1,
+    refs: ["https://neura.health/insight/bevel-health-app-in-depth-review"]
+  },
+
+  // ---------- Family & Home Ops ----------
+  {
+    id: "family-calendar",
+    title: "Shared family calendar (CalDAV-backed)",
+    cat: "family",
+    inspiration: "Skylight, Cozi, Hearth, Maple",
+    desc: "Skylight charges $79/yr for a calendar that's worse than what you can self-host. Render Google Calendars from both spouses on a single weekly grid, mark whose event is whose, optionally show on a Mac book pro M5 (this machine) wall display via Tailscale.",
+    arch: "backend/calendar/ — Google Calendar API (you already have Google OAuth tokens)\nMongo: cal_events_cache (5min TTL)\nFrontend: /family route — weekly grid, color-coded per email\nReuse: HOUSE_OWNER_EMAILS allowlist from FAMILY_DASHBOARD_OPS",
+    effort: 2,
+    impact: 3,
+    refs: [
+      "https://cybernews.com/reviews/skylight-calendar-alternatives/",
+      "https://www.cozyla.com/blogs/comparisons/skylight-vs-hearth-vs-cozyla-finding-the-right-digital-calendar-for-your-home"
+    ]
+  },
+  {
+    id: "chore-rotation",
+    title: "Chore rotation engine (auto-assigns weekly)",
+    cat: "family",
+    inspiration: "ChoreOps (Home Assistant), Cozi chores",
+    desc: "Pool of chores, rotates through household members on a configurable cadence. XP/coins for kids = Habitica-style. Push reminder on assignment day.",
+    arch: "backend/chores/ — Mongo: chores, chore_assignments, chore_rewards\nCron: 0 7 * * 1 → assign for the week\nReuse: HOUSE_OWNER_EMAILS scoping, push/sender\nFrontend: /family/chores",
+    effort: 2,
+    impact: 2,
+    refs: [
+      "https://community.home-assistant.io/t/choreops-level-up-your-household-tasks/995326",
+      "https://community.home-assistant.io/t/kidschores-family-chore-management-integration/827719"
+    ]
+  },
+  {
+    id: "meal-grocery-link",
+    title: "Meal planner → auto grocery list (recipe parsing)",
+    cat: "family",
+    inspiration: "AnyList recipe import, Grocy",
+    desc: "Your /food module already plans menus. Add ingredient extraction (Gemma can do it from cached recipe videos) → push to a shared grocery list with quantities aggregated across the week. AnyList's killer feature is recipe-URL-to-list — Gemma replicates this locally.",
+    arch: "backend/food/grocery.py — Mongo: food_grocery (already exists)\nNew: ingredient_extract() via Gemma (LM Studio)\nFrontend: /food gets an 'Add week to grocery' button\nMobile-friendly checkbox UI for in-store use",
+    effort: 2,
+    impact: 3,
+    refs: [
+      "https://www.anylist.com/",
+      "https://grocy.info/",
+      "https://www.nerdwallet.com/finance/learn/best-grocery-list-apps"
+    ]
+  },
+  {
+    id: "school-medical",
+    title: "School + medical appointment tracker for kids",
+    cat: "family",
+    inspiration: "Hearth, Cozi, Notion family OS",
+    desc: "Single timeline: pediatrician visits, dentist, school events, immunization due dates. Pre-appointment push 24h prior with the address + last visit notes.",
+    arch: "backend/kids/appts.py (extend existing /kids module)\nMongo: kids_appointments\nPush: -24h reminder via existing push hooks\nFrontend: /kids/appts",
+    effort: 1,
+    impact: 2,
+    refs: ["https://www.growmaple.com/blog-posts/best-family-calendar-app"]
+  },
+  {
+    id: "home-maintenance",
+    title: "Home maintenance schedule (HVAC, smoke detector batteries, etc.)",
+    cat: "family",
+    inspiration: "HomeZada, Centriq, Notion home OS",
+    desc: "Recurring 'change HVAC filter every 90d', 'test smoke alarms every 6mo'. Becomes high-value if you sell the McKinney house — buyers love a maintained log.",
+    arch: "backend/house/maintenance.py (extend existing /house module)\nMongo: house_maintenance, house_maintenance_log\nReuse: todos reminder pipeline for due notifications\nFrontend: /house/maintenance",
+    effort: 1,
+    impact: 1,
+    refs: ["https://www.facts.dev/self-hosted/personal-dashboards/1/"]
+  },
+  {
+    id: "wall-display-mode",
+    title: "Wall display mode (Mac book pro M5 (this machine) → kitchen TV)",
+    cat: "family",
+    inspiration: "Skylight, Dragon Touch, MagicMirror",
+    desc: "Read-only kiosk page: today's calendar, weather, top todos, the dinner plan, kids' chores, photo slideshow. Auto-rotating layout. You're already running on a Mac book pro M5 (this machine) — point an HDMI at it.",
+    arch: "frontend/src/pages/WallDisplay.tsx (new route /wall, no-auth-cookie variant via separate oauth path-exception)\nReads: family_calendar, todos, food today, kids today\nRefresh: 30s polling for low complexity",
+    effort: 2,
+    impact: 2,
+    refs: [
+      "https://smartnmagic.com/blogs/solutions/best-smart-wall-calendars-for-families-in-2026-complete-buying-guide",
+      "https://github.com/Lissy93/dashy"
+    ]
+  },
+  {
+    id: "voice-todo",
+    title: "Voice input for todos + groceries (Siri Shortcuts)",
+    cat: "family",
+    inspiration: "AnyList Alexa/Siri, Todoist Siri",
+    desc: "\"Hey Siri, add lentils to groceries\" → Shortcut → POST /api/todos or /api/food/grocery. Two-line Shortcut, lives on every iPhone in the household.",
+    arch: "Existing endpoints already work — only the Shortcut needs creating\nDocument 2 shortcuts: 'Add to groceries' and 'Add todo'\nShare via iCloud Shortcut link",
+    effort: 1,
+    impact: 2,
+    refs: ["https://www.anylist.com/"]
+  },
+
+  // ---------- Productivity / Capture / Second Brain ----------
+  {
+    id: "daily-journal",
+    title: "Daily journal module (auto-metadata)",
+    cat: "productivity",
+    inspiration: "Day One",
+    desc: "Free-form journal entry with auto-tags: weather, location, the day's trades (auto-imported from sepa scan), workout, music. End-to-end encrypted-at-rest using a per-user key derived from Google sub.",
+    arch: "backend/journal/ — Mongo: journal_entries (body field encrypted with libsodium symmetric key)\nAuto-metadata: weather via free api, trades via existing scan_runs, workouts via fitness module\nFrontend: /journal — markdown editor with auto-save",
+    effort: 2,
+    impact: 2,
+    refs: ["https://www.reflection.app/journaling-apps/day-one"]
+  },
+  {
+    id: "quick-capture",
+    title: "Quick-capture inbox (one-key add from anywhere)",
+    cat: "productivity",
+    inspiration: "Things 3 Inbox, Drafts, Obsidian",
+    desc: "A single floating button + global Shortcut that drops text into an inbox queue with zero categorization. Triage later. The friction of categorizing is what kills capture.",
+    arch: "backend/inbox/ — Mongo: inbox_items {email, ts, body, processed}\nFrontend: <QuickCaptureFab> always-visible bottom-right\nMobile Shortcut: 'Capture to inbox' POSTs to /api/inbox\n/inbox route for triage",
+    effort: 1,
+    impact: 2,
+    refs: ["https://blog.rivva.app/p/todoist-vs-things-vs-ticktick"]
+  },
+  {
+    id: "nlp-todo",
+    title: "Natural-language todo input (Todoist-style parsing)",
+    cat: "productivity",
+    inspiration: "Todoist quick-add",
+    desc: "Type \"Submit taxes every April 14 p1 @vineetha\" → parses date, recurrence, priority, assignee. Either pip-install a parser (chrono-python) or one-shot via Gemma.",
+    arch: "backend/todos/parser.py — new endpoint POST /todos/parse {text}\nReturns {body, due_at, recurrence, priority, assignee}\nFrontend: existing todo input gets a 'smart parse' toggle",
+    effort: 1,
+    impact: 2,
+    refs: [
+      "https://aitoolpick.org/blog/todoist-vs-ticktick-2026/",
+      "https://blog.rivva.app/p/todoist-vs-things-vs-ticktick"
+    ]
+  },
+  {
+    id: "weekly-review",
+    title: "Weekly review prompt (PARA-style)",
+    cat: "productivity",
+    inspiration: "Tiago Forte PARA, Sunsama weekly review",
+    desc: "Sunday 5pm push: \"Time for weekly review.\" Click → guided 7-step page that pulls in completed todos, journal highlights, weight delta, trade P&L, and asks 3 reflection prompts. Saves the result as a structured doc.",
+    arch: "backend/reviews/weekly.py — Cron: 0 17 * * 0\nMongo: weekly_reviews\nFrontend: /reviews/weekly — guided wizard\nLLM-summarized via Gemma to a 1-paragraph 'state of you'",
+    effort: 2,
+    impact: 2,
+    refs: [
+      "https://aimaker.substack.com/p/para-method-tiago-forte-claude-code-obsidian-ai-productivity-os",
+      "https://calmevo.com/sunsama-review/"
+    ]
+  },
+  {
+    id: "read-later",
+    title: "Read-it-later queue (Pocket replacement)",
+    cat: "productivity",
+    inspiration: "Pocket, Instapaper, Omnivore (RIP)",
+    desc: "URL → backend fetches readable content (mercury parser equivalent) → renders distraction-free on /read. Optional Gemma summary in 2 sentences before you commit to reading.",
+    arch: "backend/reading/ — Mongo: reading_queue, reading_content_cache\nFastAPI dep: readability-lxml\nShare-sheet Shortcut → POST /api/reading/save\nFrontend: /read — list + reader view",
+    effort: 2,
+    impact: 1,
+    refs: ["https://github.com/woop/awesome-quantified-self"]
+  },
+  {
+    id: "personal-rag",
+    title: "LLM Q&A over your own data (private RAG)",
+    cat: "productivity",
+    inspiration: "Notion AI, Obsidian Copilot, Mem.ai",
+    desc: "\"What were my main worries the week before I sold AMD?\" → query Gemma with retrieval over your journal + todos + trades. Vector index of your collections, refreshed nightly.",
+    arch: "backend/rag/ — Mongo: rag_chunks (with embedding field)\nLocal embedding via Gemma or nomic-embed\nCron: 0 3 * * * → reindex changed docs\nFrontend: /chat — single-input box, streams answer with citations",
+    effort: 4,
+    impact: 3,
+    refs: [
+      "https://www.notion4management.com/blog/best-second-brain-notion-templates",
+      "https://aimaker.substack.com/p/para-method-tiago-forte-claude-code-obsidian-ai-productivity-os",
+      "https://www.atlasworkspace.ai/blog/best-second-brain-apps"
+    ]
+  },
+
+  // ---------- Automation / Glue ----------
+  {
+    id: "webhook-receiver",
+    title: "Generic webhook receiver (IFTTT / Zapier / Shortcuts)",
+    cat: "automation",
+    inspiration: "n8n, IFTTT webhooks",
+    desc: "A single POST /api/hook/{slug} endpoint that routes to handlers by slug. Lets any external service (Shortcuts, IFTTT, Apple Watch complications, even your trading platform) post structured events.",
+    arch: "backend/webhooks/ — Mongo: webhook_routes, webhook_log (TTL 30d)\nHMAC-signed slugs for non-cookie auth\nFrontend: /settings/webhooks — create + copy URL",
+    effort: 1,
+    impact: 2,
+    refs: ["https://news.ycombinator.com/item?id=36824558"]
+  },
+  {
+    id: "personal-api-tokens",
+    title: "Personal API tokens (long-lived, scoped)",
+    cat: "automation",
+    inspiration: "GitHub PAT, Beeminder API key",
+    desc: "Right now everything is cookie-gated. Generate PAT-style tokens scoped to specific endpoints so Shortcuts, scripts, Mac book pro M5 (this machine) cron jobs etc. can hit /api/* without an OAuth dance.",
+    arch: "backend/auth.py — extend get_current_user to accept Authorization: Bearer <pat>\nMongo: api_tokens {email, token_hash, scopes, last_used}\nFrontend: /settings/tokens — generate + revoke",
+    effort: 1,
+    impact: 3,
+    refs: [
+      "https://www.beeminder.com/overview",
+      "https://news.ycombinator.com/item?id=5799706"
+    ]
+  },
+  {
+    id: "commitment-stake",
+    title: "Beeminder-style commitment contracts (red-line)",
+    cat: "automation",
+    inspiration: "Beeminder, StickK",
+    desc: "Per-habit goal trajectory with a red line. Cross it → automatic 'fine' (log it, donate $X, or notify Vineetha). The teeth is what makes habits stick.",
+    arch: "backend/commitments/ — Mongo: commitments {email, metric, slope, redline, last_value}\nDepends on: habit-tracker OR healthkit-webhook for input data\nDaily cron checks red-line crossing → push + log fine",
+    effort: 2,
+    impact: 2,
+    refs: [
+      "https://blog.beeminder.com/qs/",
+      "https://www.beeminder.com/overview"
+    ]
+  },
+  {
+    id: "email-digest",
+    title: "Weekly email digest of everything",
+    cat: "automation",
+    inspiration: "Substack-of-yourself, Daily Brief",
+    desc: "Sunday 7pm: a single email summarizing trades, P&L, top habits, sleep, weight, journal highlights, top todos done. Becomes a permanent timeline you can search later via Gmail.",
+    arch: "backend/digest/weekly.py — Cron: 0 19 * * 0\nUses smtplib or SES\nFrontend: /settings/digest — toggle on/off, preview\nReuse: weekly-review + plaid-networth + healthkit-webhook",
+    effort: 1,
+    impact: 2,
+    refs: [
+      "https://get-alfred.ai/glossary/daily-brief",
+      "https://mark-mishaev.medium.com/how-i-built-an-ai-powered-daily-brief-that-saves-me-2-hours-every-day-2504a015f79f"
+    ]
+  },
+  {
+    id: "encrypted-backup",
+    title: "Nightly encrypted backup to S3/Backblaze",
+    cat: "automation",
+    inspiration: "restic, Borg",
+    desc: "Mongo dump + cheetah-scans volume → encrypted with age → uploaded to B2. Without this, your Mac book pro M5 (this machine) dying = years of data gone. Single highest-ROI item on the list and almost nobody does it.",
+    arch: "backend/backup/run.sh — Cron: 0 2 * * * (offset from market scans)\nmongodump | age -r <pubkey> | rclone copy b2:cheetah-backups/\nFrontend: /settings/backups — show last 14 days status",
+    effort: 1,
+    impact: 3,
+    refs: ["https://digitalbiztalk.com/article/building-the-ultimate-self-hosted-homepage-dashboard-in-2026"]
+  }
+];
+
+// Effort labels
+const EFFORT = {1:"S", 2:"M", 3:"L", 4:"XL"};
+
+const TEARDOWN = [
+  {app:"Monarch Money", cat:"finance", killer:"Clean dashboard + manual override of every auto-categorization. Built around visibility, not envelope rules.", price:"$99/yr", love:"Replaced Mint after shutdown. Fast, modern, joint-account-friendly."},
+  {app:"YNAB", cat:"finance", killer:"Zero-based envelope budgeting — every dollar gets a job, overage gets reassigned.", price:"$109/yr", love:"Forces intentionality. Community is famously cult-like, in a good way."},
+  {app:"Copilot", cat:"finance", killer:"AI categorization that learns and stops asking you. Apple-only.", price:"$95/yr", love:"Polished. Only finance app on iOS that feels like a default-Apple app."},
+  {app:"Firefly III", cat:"finance", killer:"Full double-entry bookkeeping, self-hosted, REST API, Plaid connector via community tool.", price:"Free (self-host)", love:"For developers. Owns its data. EU-based, privacy-first."},
+  {app:"Actual Budget", cat:"finance", killer:"Local-first envelope budget with multi-device sync via your own server.", price:"Free (self-host)", love:"Modern UI on top of self-host. Sometimes paired with Firefly: Firefly for bookkeeping, Actual for daily."},
+  {app:"Rocket Money", cat:"finance", killer:"Subscription detection + auto-cancel concierge.", price:"$4–12/mo", love:"Most people discover $30/mo in subs they forgot. The cancel-on-your-behalf is the moat."},
+  {app:"Hevy", cat:"health", killer:"Phone-first set logger with PRs, social feed, custom routine templates.", price:"Free / $40 yr", love:"Doesn't fight you. Tap to log, see history, move on. Open data export."},
+  {app:"Strong", cat:"health", killer:"Fast set logging for powerlifters. Heavy singles, custom set types, rest timers.", price:"One-time $8", love:"Looks like it was built by an actual lifter. No social. No upsell."},
+  {app:"Whoop", cat:"health", killer:"Strain + recovery scores from continuous HR. Daily 'go hard or rest' verdict.", price:"$30/mo", love:"Aggressive but actionable. Wearable + app are inseparable."},
+  {app:"Oura", cat:"health", killer:"Sleep tracking ring — no wrist sensor, no charge anxiety, beautiful app.", price:"$300 + $6/mo", love:"Best sleep accuracy of any consumer wearable. The ring form factor."},
+  {app:"Apple Health", cat:"health", killer:"Hub for every wearable. HealthKit lets any app read/write the unified store.", price:"Free", love:"Already on every iPhone. The right write destination for everyone else's data."},
+  {app:"Streaks", cat:"routines", killer:"24-tile habit grid. iCloud sync, zero accounts, zero analytics.", price:"$5 once", love:"Apple Design Award. The minimalist gold standard."},
+  {app:"Loop Habit Tracker", cat:"routines", killer:"Habit 'score' that decays gradually instead of resetting on a miss.", price:"Free (Android, OSS)", love:"Sophisticated math. No nags. Best free habit tracker."},
+  {app:"Habitica", cat:"routines", killer:"RPG layer — your habits earn XP and gold for an avatar. Party play.", price:"Free / $5/mo", love:"Gamification that actually works for some brains. Social accountability."},
+  {app:"Beeminder", cat:"routines", killer:"Commitment contracts — cross your goal line, lose real money. API-driven, integrates with everything.", price:"Free / $5/mo + 'fines'", love:"Hacker-favorite. Combines QS data with skin-in-the-game. Brutal but effective."},
+  {app:"Sunsama", cat:"productivity", killer:"Daily review ritual that pulls from every tool you use into one calm planner.", price:"$20/mo", love:"Slow on purpose. The morning ritual is the product."},
+  {app:"Motion", cat:"productivity", killer:"AI auto-schedules every task onto your calendar. Re-plans when meetings shift.", price:"$19/mo", love:"Removes the 'what's next' cognitive load. Aggressive but consistent."},
+  {app:"Reclaim", cat:"productivity", killer:"Defends focus time and habits inside Google Calendar.", price:"Free / $22/mo", love:"Doesn't replace your calendar — augments it. Strong habit blocks."},
+  {app:"Todoist", cat:"productivity", killer:"Natural-language quick-add: 'every last Friday p1 #work @alex'.", price:"$60/yr", love:"Best parser. Filter query language. 80+ integrations. Pro choice."},
+  {app:"TickTick", cat:"productivity", killer:"All-in-one: todos + Pomodoro + habits + calendar in one app.", price:"$36/yr", love:"Cheaper than Todoist. Two-column UI is faster for triage."},
+  {app:"Things 3", cat:"productivity", killer:"Most beautifully designed task manager. Quick-entry magic.", price:"$50 once", love:"Apple-only purists. Calm, fast, no subscription."},
+  {app:"Day One", cat:"productivity", killer:"Auto-tags every entry with location, weather, music, photos, steps.", price:"$50/yr", love:"Sacred-feeling. E2E encrypted. The default journaling app."},
+  {app:"Notion", cat:"productivity", killer:"Block-based docs + databases + templates = your own custom OS.", price:"Free / $10/mo", love:"PARA / GTD templates. Becomes a 'second brain' for people who like to tinker."},
+  {app:"Obsidian", cat:"productivity", killer:"Plain markdown files on your computer + plugin marketplace.", price:"Free (sync $4/mo)", love:"Local-first. Owns data. Devs prefer it to Notion."},
+  {app:"Skylight Calendar", cat:"family", killer:"Always-on wall display with shared family calendar + chores.", price:"$170–$714 + $79/yr", love:"Kids see the week. Spouses see the week. Hardware = adoption."},
+  {app:"Cozi", cat:"family", killer:"Shared family calendar + shopping + chores in one free app (used to be).", price:"Free / $39/yr", love:"Classic. Less so after the 2024 paywall — alternatives like Maple grew."},
+  {app:"AnyList", cat:"family", killer:"Recipe URL → ingredients land on your shared shopping list.", price:"Free / $10–15/yr", love:"Real-time sync. Voice (Siri/Alexa). The grocery-list gold standard."},
+  {app:"Bring!", cat:"family", killer:"Visual grocery list with category icons. Multilingual.", price:"Free / $9/yr", love:"Colorful, fast, family-friendly. Big in Europe."},
+  {app:"Home Assistant + ChoreOps", cat:"family", killer:"Self-hosted home automation that learned to do family chores.", price:"Free", love:"Hobbyist-grade but bottomless. KidsChores → ChoreOps progression mirrors what you'd build."},
+  {app:"Glance / Dashy / Homepage", cat:"automation", killer:"Self-hosted dashboard for everything else you self-host.", price:"Free", love:"Single pane of glass for your homelab. Yours becomes one of these tabs eventually."},
+  {app:"Day One automation (Shortcuts)", cat:"automation", killer:"IFTTT applets + Apple Shortcuts pipe Spotify, Strava, Fitbit into one log.", price:"Free", love:"Set-once, never-think-again capture. The right pattern for any quantified-self app."},
+  {app:"n8n", cat:"automation", killer:"Self-hosted Zapier. Visual workflow builder, runs on your Mac book pro M5 (this machine).", price:"Free (self-host)", love:"Replaces $40/mo Zapier bills. The right tool to wire all of these together."}
+];
+
+const CAT_LABEL = {
+  routines: "Routines & Habits",
+  finance: "Finance & Household",
+  health: "Health & Fitness",
+  family: "Family & Home Ops",
+  productivity: "Productivity",
+  automation: "Automation / Glue"
+};
+const STAR_CHARS = {1:"★", 2:"★★", 3:"★★★"};
+
+// State
+let activeCat = "all";
+let sortKey = "fit";
+let minImpact = 1;
+let maxEffort = 4;
+let query = "";
+
+function fitScore(f) {
+  return f.impact * (5 - f.effort);
+}
+function archHTML(s) {
+  return s.replace(/\\b([\\w./-]+\\.py|backend\\/[\\w./_]+|frontend\\/[\\w./_]+|Mongo:\\s*[\\w_,. ]+|Cron:\\s*[^\\n]+)/g, '<b>$1</b>');
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  let rows = FEATURES.filter(f => activeCat === "all" || f.cat === activeCat)
+                     .filter(f => f.impact >= minImpact && f.effort <= maxEffort)
+                     .filter(f => !query || (f.title + " " + f.desc + " " + f.arch + " " + f.inspiration).toLowerCase().includes(query.toLowerCase()));
+
+  rows.sort((a,b) => {
+    if (sortKey === "fit") return fitScore(b) - fitScore(a);
+    if (sortKey === "impact") return b.impact - a.impact;
+    if (sortKey === "effort") return a.effort - b.effort;
+    if (sortKey === "cat") return a.cat.localeCompare(b.cat);
+    return 0;
+  });
+
+  document.getElementById("count").textContent = rows.length + " of " + FEATURES.length + " features shown";
+
+  grid.innerHTML = rows.map(f => `
+    <div class="card" data-cat="${f.cat}">
+      <div class="row1">
+        <h3>${f.title}</h3>
+        <span class="badge ${f.cat}">${CAT_LABEL[f.cat]}</span>
+      </div>
+      <div class="meta">
+        <span class="effort"><b>Effort</b> ${EFFORT[f.effort]}</span>
+        <span class="impact"><b>Impact</b> <span class="stars">${STAR_CHARS[f.impact]}</span></span>
+        <span><b>Fit</b> ${fitScore(f)}/12</span>
+        <span><b>Inspired by</b> ${f.inspiration}</span>
+      </div>
+      <div class="desc">${f.desc}</div>
+      <div class="arch">${f.arch.replace(/</g,"&lt;")}</div>
+      <details class="refs">
+        <summary>Sources</summary>
+        <ul>${f.refs.map(u => `<li><a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\\/\\//,'').replace(/\\/.*$/,'')}</a></li>`).join("")}</ul>
+      </details>
+    </div>
+  `).join("");
+}
+
+// teardown table
+function renderTear() {
+  document.getElementById("tearbody").innerHTML = TEARDOWN.map(t => `
+    <tr>
+      <td class="app">${t.app}</td>
+      <td><span class="badge ${t.cat}">${CAT_LABEL[t.cat]}</span></td>
+      <td>${t.killer}</td>
+      <td><span class="pill">${t.price}</span></td>
+      <td>${t.love}</td>
+    </tr>
+  `).join("");
+}
+
+function renderTop5() {
+  const top = [...FEATURES].sort((a,b) => fitScore(b) - fitScore(a)).slice(0, 5);
+  document.getElementById("top5").innerHTML = top.map(f => `
+    <li style="margin-bottom:8px;">
+      <b style="color:var(--accent);">${f.title}</b>
+      <span class="pill" style="margin-left:6px;">${EFFORT[f.effort]} effort · ${STAR_CHARS[f.impact]} impact · fit ${fitScore(f)}</span>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">${f.desc}</div>
+    </li>
+  `).join("");
+}
+
+// Wire up controls
+document.querySelectorAll(".chip[data-filter=cat]").forEach(c => {
+  c.addEventListener("click", () => {
+    document.querySelectorAll(".chip[data-filter=cat]").forEach(x => x.classList.remove("active"));
+    c.classList.add("active");
+    activeCat = c.dataset.val;
+    render();
+  });
+});
+document.getElementById("sort").addEventListener("change", e => { sortKey = e.target.value; render(); });
+document.getElementById("minImpact").addEventListener("change", e => { minImpact = parseInt(e.target.value, 10); render(); });
+document.getElementById("maxEffort").addEventListener("change", e => { maxEffort = parseInt(e.target.value, 10); render(); });
+document.getElementById("q").addEventListener("input", e => { query = e.target.value; render(); });
+
+render();
+renderTear();
+renderTop5();
+</script>
+</body>
+</html>

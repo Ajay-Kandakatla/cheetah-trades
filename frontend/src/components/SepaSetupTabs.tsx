@@ -15,6 +15,7 @@
  * visited.
  */
 import type { CSSProperties } from 'react';
+import { InfoButton } from './InfoButton';
 
 export type SepaTab =
   | 'all'
@@ -153,10 +154,50 @@ export function SepaSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
       }}
     >
       <div
-        className="eyebrow"
-        style={{ marginBottom: '0.35rem' }}
+        style={{
+          display:      'flex',
+          alignItems:   'center',
+          gap:          '0.45rem',
+          marginBottom: '0.35rem',
+        }}
       >
-        Setup category
+        <span className="eyebrow">Setup category</span>
+        {/* Info icon next to the label — opens a popover with the full legend.
+            Wrapped in a non-eyebrow span so the icon stays full-size and not
+            shrunk by the uppercase/tiny eyebrow CSS. */}
+        <span
+          style={{
+            display:      'inline-flex',
+            alignItems:   'center',
+            justifyContent: 'center',
+            width:        18,
+            height:       18,
+            borderRadius: '50%',
+            border:       '1px solid rgba(212,175,55,0.4)',
+            color:        'rgba(243,232,200,0.85)',
+            fontSize:     '0.7rem',
+            fontWeight:   600,
+          }}
+        >
+          <InfoButton title="Setup categories — what each chip means">
+            <SetupCategoriesLegend />
+          </InfoButton>
+        </span>
+      </div>
+
+      {/* Brief always-visible explanation — saves the user from having
+          to click the info icon to understand the chips at a glance. */}
+      <div
+        style={{
+          fontSize:     '0.76rem',
+          color:        '#9aa8c8',
+          marginBottom: '0.55rem',
+          lineHeight:   1.45,
+        }}
+      >
+        Each chip is a subset of <strong style={{ color: '#cfcfd4' }}>All Candidates</strong> matching a specific Minervini setup pattern.
+        Ranked safest (🟢 green) → most aggressive (🔴 red). Click the
+        info icon above for the full breakdown of each setup.
       </div>
       <div
         role="tablist"
@@ -223,6 +264,75 @@ export function SepaSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
         })}
       </div>
     </section>
+  );
+}
+
+/** Legend rendered inside the info popover. Same content as the tab
+ *  pills, just laid out as a list with the tier color, name, and a one-
+ *  line explanation. Lets the user understand the ENTIRE chip strip
+ *  without clicking each one. */
+function SetupCategoriesLegend() {
+  const entries: Array<{ key: SepaTab; pitch: string }> = [
+    { key: 'all', pitch: "Full SEPA quality list — every name that passes the trend template + RS ≥ 70 + Stage 2 + liquidity gate. Ranked by composite score." },
+    { key: 'vcp', pitch: "Volatility Contraction Pattern — Minervini's textbook base. Multiple shrinking contractions, drying volume." },
+    { key: 'low_cheat', pitch: "Earliest entry inside a forming VCP. Buy near the LOW of the handle. Tighter stop, lower risk than full VCP." },
+    { key: 'mid_cheat', pitch: "Mid-handle pullback entry. After 2+ contractions formed, buy on a higher low within the handle." },
+    { key: 'bull_flag', pitch: "Stage 2 stock consolidates 5-15 days after a 15-30% leg up. Tight flag with drying volume." },
+    { key: 'peg', pitch: "Power Earnings Gap (Minervini). SEPA-quality name gaps up 5%+ on 4×+ volume after earnings." },
+    { key: 'high_cheat', pitch: "Aggressive in-base entry just BELOW the pivot. Front-runs the breakout. No buffer for failure." },
+    { key: 'episodic_pivot', pitch: "Pradeep Bonde — any 8%+ gap on 5×+ volume from a fundamental catalyst. No base required." },
+    { key: 'post_earnings_drift', pitch: "Names still riding the post-earnings drift window 1-90 days after a confirmed gap." },
+    { key: 'high_tight_flag', pitch: "Minervini's most aggressive setup. 90-120% run in 4-8 weeks then tight 15-25% flag for 3-5 weeks." },
+  ];
+  return (
+    <>
+      <p style={{ marginTop: 0 }}>
+        The chips ranked left → right go from <strong>safest</strong> to <strong>most aggressive</strong>.
+        Each chip is a subset of <em>All Candidates</em> that also matches a specific Minervini setup pattern.
+      </p>
+      <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+        {entries.map(({ key, pitch }) => {
+          const meta = TAB_META[key];
+          const color = TIER_COLOR[meta.tier];
+          return (
+            <li
+              key={key}
+              style={{
+                display:      'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap:          '0.6rem',
+                padding:      '0.45rem 0',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                alignItems:   'baseline',
+              }}
+            >
+              <span
+                style={{
+                  whiteSpace:    'nowrap',
+                  padding:       '0.15rem 0.55rem',
+                  borderRadius:  999,
+                  border:        `1px solid ${color}66`,
+                  borderLeft:    `3px solid ${color}`,
+                  color:         '#f3e8c8',
+                  fontWeight:    600,
+                  fontSize:      '0.78rem',
+                }}
+              >
+                {meta.icon && <span aria-hidden="true">{meta.icon} </span>}
+                {meta.label}
+              </span>
+              <span style={{ color: '#cfcfd4', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                {pitch}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p style={{ fontSize: '0.78rem', color: '#9a9aa3', marginBottom: 0 }}>
+        Counts (e.g. <em>Bull Flag 17</em>) appear after you open each tab —
+        we don't pre-fetch all 7 scanners on page load.
+      </p>
+    </>
   );
 }
 

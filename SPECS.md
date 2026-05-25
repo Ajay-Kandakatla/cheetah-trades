@@ -635,7 +635,7 @@ because of the hardcoded host).
 
 ### Production: Docker `cron` service (supercronic)
 
-The Mac mini deployment uses the `cron` service in `docker-compose.yml`,
+The Mac book pro M5 (this machine) deployment uses the `cron` service in `docker-compose.yml`,
 running `supercronic /app/crontab`. Crontab lives at `backend/crontab` and
 is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`.
 
@@ -695,7 +695,7 @@ repo — should be rotated).
 
 ## 7b. Docker Deployment (production)
 
-Production lives on Ajay's M1 Mac mini. Docker Compose orchestrates four
+Production lives on Ajay's M1 Mac book pro M5 (this machine). Docker Compose orchestrates four
 services. Repo: `https://github.com/Ajay-Kandakatla/cheetah-trades`.
 
 ### Services

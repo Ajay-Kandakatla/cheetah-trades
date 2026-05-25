@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API } from '../lib/apiBase';
 
-const API = (import.meta as any).env?.VITE_API_BASE ?? '';
 
 type Phase = 'pending' | 'running' | 'done' | 'error';
 type Step = { key: string; label: string; phase: Phase };
@@ -127,7 +127,15 @@ export function OnDemandSepaModal({ symbol, name, onClose }: Props) {
           {result && (
             <button
               className="cm-live__add"
-              onClick={() => navigate(`/sepa/${encodeURIComponent(symbol)}`)}
+              onClick={(e) => {
+                const url = `/sepa/${encodeURIComponent(symbol)}`;
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                  return;
+                }
+                navigate(url);
+              }}
+              title="Cmd/Ctrl-click to open in new tab"
               style={{ background: '#fbbf24', color: '#0b0d12' }}
             >
               View full detail →
