@@ -257,23 +257,26 @@ export function SepaSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
  *  line explanation. Lets the user understand the ENTIRE chip strip
  *  without clicking each one. */
 function SetupCategoriesLegend() {
+  // Condensed legend — designed to be a 30-second scan, not a deep dive.
+  // For full details on any pattern, click that tab and read the inline
+  // banner + the right-side info panel.
   const entries: Array<{ key: SepaTab; pitch: string }> = [
-    { key: 'all', pitch: "Full SEPA quality list — every name that passes the trend template + RS ≥ 70 + Stage 2 + liquidity gate. Ranked by composite score." },
-    { key: 'vcp', pitch: "Volatility Contraction Pattern — Minervini's textbook base. Multiple shrinking contractions, drying volume." },
-    { key: 'low_cheat', pitch: "Earliest entry inside a forming VCP. Buy near the LOW of the handle. Tighter stop, lower risk than full VCP." },
-    { key: 'mid_cheat', pitch: "Mid-handle pullback entry. After 2+ contractions formed, buy on a higher low within the handle." },
-    { key: 'bull_flag', pitch: "Stage 2 stock consolidates 5-15 days after a 15-30% leg up. Tight flag with drying volume." },
-    { key: 'peg', pitch: "Power Earnings Gap (Minervini). SEPA-quality name gaps up 5%+ on 4×+ volume after earnings." },
-    { key: 'high_cheat', pitch: "Aggressive in-base entry just BELOW the pivot. Front-runs the breakout. No buffer for failure." },
-    { key: 'episodic_pivot', pitch: "Pradeep Bonde — any 8%+ gap on 5×+ volume from a fundamental catalyst. No base required." },
-    { key: 'post_earnings_drift', pitch: "Names still riding the post-earnings drift window 1-90 days after a confirmed gap." },
-    { key: 'high_tight_flag', pitch: "Minervini's most aggressive setup. 90-120% run in 4-8 weeks then tight 15-25% flag for 3-5 weeks." },
+    { key: 'all',                 pitch: "Every SEPA-quality name" },
+    { key: 'vcp',                 pitch: "Textbook tight base, shrinking contractions" },
+    { key: 'low_cheat',           pitch: "Buy at low of handle (earliest VCP entry)" },
+    { key: 'mid_cheat',           pitch: "Mid-handle pullback entry" },
+    { key: 'bull_flag',           pitch: "5–15 day tight flag after a leg up" },
+    { key: 'peg',                 pitch: "Earnings gap 5%+ on 4×+ volume" },
+    { key: 'high_cheat',          pitch: "Just-below-pivot front-run (aggressive)" },
+    { key: 'episodic_pivot',      pitch: "Any 8%+ gap on 5×+ volume, no base needed" },
+    { key: 'post_earnings_drift', pitch: "Riding momentum 1–90d after a gap" },
+    { key: 'high_tight_flag',     pitch: "90–120% run, then tight flag (rare)" },
   ];
   return (
     <>
-      <p style={{ marginTop: 0 }}>
-        The chips ranked left → right go from <strong>safest</strong> to <strong>most aggressive</strong>.
-        Each chip is a subset of <em>All Candidates</em> that also matches a specific Minervini setup pattern.
+      <p style={{ marginTop: 0, marginBottom: 8, fontSize: '0.82rem' }}>
+        Left → right = <strong>safest</strong> → <strong>most aggressive</strong>.
+        Each chip filters <em>All Candidates</em> to that pattern.
       </p>
       <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
         {entries.map(({ key, pitch }) => {
@@ -283,40 +286,33 @@ function SetupCategoriesLegend() {
             <li
               key={key}
               style={{
-                display:      'grid',
-                gridTemplateColumns: 'auto 1fr',
-                gap:          '0.6rem',
-                padding:      '0.45rem 0',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                alignItems:   'baseline',
+                display:        'grid',
+                gridTemplateColumns: 'minmax(120px, auto) 1fr',
+                gap:            '0.5rem',
+                padding:        '0.25rem 0',
+                alignItems:     'baseline',
+                fontSize:       '0.8rem',
               }}
             >
               <span
                 style={{
                   whiteSpace:    'nowrap',
-                  padding:       '0.15rem 0.55rem',
+                  padding:       '0.05rem 0.45rem',
                   borderRadius:  999,
-                  border:        `1px solid ${color}66`,
                   borderLeft:    `3px solid ${color}`,
                   color:         '#f3e8c8',
                   fontWeight:    600,
-                  fontSize:      '0.78rem',
+                  fontSize:      '0.72rem',
                 }}
               >
                 {meta.icon && <span aria-hidden="true">{meta.icon} </span>}
                 {meta.label}
               </span>
-              <span style={{ color: '#cfcfd4', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                {pitch}
-              </span>
+              <span style={{ color: '#cfcfd4', lineHeight: 1.35 }}>{pitch}</span>
             </li>
           );
         })}
       </ul>
-      <p style={{ fontSize: '0.78rem', color: '#9a9aa3', marginBottom: 0 }}>
-        Counts (e.g. <em>Bull Flag 17</em>) appear after you open each tab —
-        we don't pre-fetch all 7 scanners on page load.
-      </p>
     </>
   );
 }

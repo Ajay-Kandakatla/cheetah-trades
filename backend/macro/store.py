@@ -58,32 +58,91 @@ def _get_db():
 # ----------------------------------------------------------------------
 # Claude prompt
 # ----------------------------------------------------------------------
-SYSTEM_PROMPT = """You are a senior macro/markets analyst writing a short ticker-specific brief for an active retail trader.
+SYSTEM_PROMPT = """You are a senior macro/markets analyst writing a 30-SECOND macro brief for an active retail trader using Minervini's SEPA framework.
 
-Output ONLY structured markdown — no preamble like "Here is the analysis." Start directly with the first heading. Cover exactly these sections, in this order:
+This is a QUICK READ. Tight bullets, not paragraphs. The trader is glancing at this before placing an order.
+
+Output ONLY structured markdown — start directly with the first heading. Cover exactly these sections, in this order:
+
+## 🎯 Why this is SEPA + catalyst
+Why did this name pass Minervini's SEPA filter (Trend Template 8/8, RS ≥ 70, Stage 2, tight base) AND what is moving it RIGHT NOW. The page-context JSON below tells you which SEPA gates the stock currently passes — ground your answer in that, don't invent. Plus the active catalyst (earnings, FDA, contract win, sector tailwind, guidance raise). 2–3 short bullets MAX.
 
 ## 🌍 Geopolitical & macro risks
-The 2–4 specific macro forces that could move THIS company's stock right now. Tariffs, sanctions, election cycles, central-bank moves, FX, labor disputes at suppliers, regulation, etc. One short paragraph each. Be specific about transmission mechanism — don't just list "China tensions"; say *how* China tensions would hit this stock (e.g. "20% of revenue from China; CHIPS Act sanctions could cut access to BoE-supplied tools").
+2–3 SHORT BULLETS. One sentence each. Be specific about the transmission mechanism (not "China tensions" — name the actual exposure and how it hits revenue/margin).
 
 ## 📈 Futures / commodities tied to this stock
-The 2–3 most-correlated futures contracts, commodities, or rate instruments. Memory chip companies: DRAM contract pricing, NAND spot, USD/KRW. Oil majors: WTI, Brent. Banks: 10Y yields, 2s10s. Be specific — name the actual ticker / contract.
+2–3 bullets. Format: `**TICKER** — one-line why it matters`. Name the actual contract (e.g. **HG (copper)**, **USD/KRW**, **WTI**, **10Y yields**, **DRAM contract**).
 
 ## 🐻 Bear case right now
-The most credible reasons this stock could underperform in the next 1–3 months. Cyclical risk, valuation, customer concentration, technology pivots. Not generic "stocks can go down"; specific to THIS company at TODAY's valuation. 2–4 bullets.
+2–3 SHORT BULLETS. One sentence each. Specific to THIS company at TODAY's setup — not generic stock-market risk.
 
 ## Sector context
-The 2–3 sector dynamics that frame this stock's near-term tape. Industry capex cycle, competitive landscape moves, regulatory backdrop. Brief — half a paragraph.
+ONE SENTENCE. The single most-important sector dynamic framing this stock's near-term tape.
 
 Constraints:
-- Total length ≤ 700 words.
-- No price targets (you don't see live data).
-- Honest. If the bear case is weak, say so. If geopolitical risk is overblown, say so.
-- Cite specific company names, supplier names, product names where useful.
-- Don't repeat the ticker symbol every sentence — assume the reader knows."""
+- TOTAL LENGTH ≤ 250 words. This is a 30-second scan, not an essay.
+- No paragraphs longer than one sentence each in bullets.
+- No price targets.
+- Honest — if the bear case is weak, say so.
+- Don't repeat the ticker every sentence.
+- Don't preface with "Here is the analysis" — start with the first heading."""
 
 
 def _build_user_prompt(symbol: str) -> str:
-    return f"Macro brief for ticker: {symbol}"
+    """Build the user-side prompt. Pulls the SEPA snapshot for this ticker
+    from the latest scan so the LLM can ground "why this is SEPA" in real
+    data (which gates it passes, its score, base count, day move) rather
+    than guessing.
+
+    SEPA lookup is best-effort — if the scan cache is missing or the
+    ticker isn't in it, we degrade to just the symbol and let the LLM
+    speak in general terms about what makes a name SEPA-grade.
+    """
+    sepa_block = _format_sepa_snapshot(symbol)
+    if sepa_block:
+        return (
+            f"Macro brief for ticker: {symbol}\n\n"
+            f"## Live SEPA snapshot (use this in the 'Why SEPA' section)\n"
+            f"```json\n{sepa_block}\n```"
+        )
+    return f"Macro brief for ticker: {symbol}\n\n(SEPA snapshot unavailable — speak in general SEPA terms.)"
+
+
+def _format_sepa_snapshot(symbol: str) -> Optional[str]:
+    """Pull the salient SEPA fields for `symbol` from the latest scan
+    cache. Returns a compact JSON string or None if not found."""
+    try:
+        from sepa import scanner as sc
+        import json as _json
+        latest = sc.load_latest() or {}
+        rows = (latest.get("all_results") or []) + (latest.get("candidates") or [])
+        rec = next((r for r in rows if r.get("symbol", "").upper() == symbol), None)
+        if not rec:
+            return None
+        # Pick only the fields the macro LLM needs — keep payload small.
+        snap = {
+            "score":         rec.get("score"),
+            "rating":        rec.get("rating"),
+            "rs_rank":       rec.get("rs_rank"),
+            "stage":         (rec.get("stage") or {}).get("stage"),
+            "trend_passed":  (rec.get("trend") or {}).get("passed"),
+            "trend_pass_all": (rec.get("trend") or {}).get("pass_all"),
+            "has_vcp_base":  (rec.get("vcp") or {}).get("has_base"),
+            "is_power_play": (rec.get("power_play") or {}).get("is_power_play"),
+            "base_count":    (rec.get("base_count") or {}).get("base_count"),
+            "late_base":     (rec.get("base_count") or {}).get("is_late_stage"),
+            "adr_pct":       rec.get("adr_pct"),
+            "day_change_pct": rec.get("day_change_pct"),
+            "last_close":    rec.get("last_close"),
+            "is_etf":        rec.get("is_etf"),
+            "pioneer_themes": rec.get("pioneer_themes"),
+        }
+        # Drop nulls so the LLM doesn't see noise.
+        snap = {k: v for k, v in snap.items() if v not in (None, "", [])}
+        return _json.dumps(snap, default=str)
+    except Exception as exc:
+        log.debug("macro: SEPA snapshot lookup failed for %s: %s", symbol, exc)
+        return None
 
 
 # ----------------------------------------------------------------------
@@ -165,10 +224,10 @@ def _call_llm(symbol: str) -> tuple[str, str, Optional[str]]:
         resp = llm.chat(
             prompt=_build_user_prompt(symbol),
             system=SYSTEM_PROMPT,
-            max_tokens=1400,
+            max_tokens=600,              # 30-sec read — cap to ~400-500 tokens output
             temperature=0.3,
             timeout=90,
-            provider="anthropic",        # auto-falls back to local if not configured
+            provider="anthropic",
         )
         if not resp.get("ok"):
             log.warning("macro: LLM error for %s: %s", symbol, resp.get("error"))

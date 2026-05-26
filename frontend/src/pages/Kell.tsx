@@ -280,11 +280,11 @@ export function KellPage() {
       <MarketClockStrip />
 
       <div className="sepa-page__title">
-        <InfoButton title="Oliver Kell — Cycle of Price Action">{PageInfo}</InfoButton>
         <div>
           <div className="eyebrow">№ 06 — Methodology</div>
-          <h1 className="display sepa-page__h1">
+          <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Oliver Kell · Cycle of Price Action
+            <InfoButton inline title="Oliver Kell — Cycle of Price Action">{PageInfo}</InfoButton>
           </h1>
           <p className="lede">
             Six pattern detectors per Kell's <em>Victory in Stock Trading</em>:
@@ -336,7 +336,10 @@ export function KellPage() {
             </div>
           ) : (
             <section className="sepa-results">
-              <InfoButton title="Results">{ResultsInfo}</InfoButton>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+                <span className="eyebrow">Results</span>
+                <InfoButton inline title="Results">{ResultsInfo}</InfoButton>
+              </div>
               <div className="sepa-grid">
                 {setupRows.map(({ setup, candidate }) => {
                   const sym = setup.symbol.toUpperCase();

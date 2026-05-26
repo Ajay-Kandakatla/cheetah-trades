@@ -713,10 +713,12 @@ export function SepaPage() {
       <SepaBriefBanner />
 
       <div className="sepa-page__title">
-        <InfoButton title="SEPA Screen">{PageInfo}</InfoButton>
         <div>
           <div className="eyebrow">№ 05 — Methodology</div>
-          <h1 className="display sepa-page__h1">SEPA Screen</h1>
+          <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            SEPA Screen
+            <InfoButton inline title="SEPA Screen">{PageInfo}</InfoButton>
+          </h1>
           <p className="lede">
             Minervini's Specific Entry Point Analysis. Trend Template + RS + Stage 2 +
             tight base + risk-managed entry. Market-context aware.
@@ -760,8 +762,10 @@ export function SepaPage() {
 
       {topPicks.length > 0 && (
         <section className="sepa-toppicks">
-          <InfoButton title="Top Picks">{TopPicksInfo}</InfoButton>
-          <div className="eyebrow">Top picks</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.35rem' }}>
+            <span className="eyebrow">Top picks</span>
+            <InfoButton inline title="Top Picks">{TopPicksInfo}</InfoButton>
+          </div>
           <div className="sepa-toppicks__rail">
             {topPicks.map((p) => (
               <button
@@ -827,7 +831,10 @@ export function SepaPage() {
           </div>
         ) : (
           <section className="sepa-results">
-            <InfoButton title="Results">{ResultsInfo}</InfoButton>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+              <span className="eyebrow">Results</span>
+              <InfoButton inline title="Results">{ResultsInfo}</InfoButton>
+            </div>
             <div className="sepa-grid">
               {filtered.map((r) => (
                 <SepaCandidateCard
@@ -856,7 +863,10 @@ export function SepaPage() {
           </div>
         ) : (
           <section className="sepa-results">
-            <InfoButton title="Results">{ResultsInfo}</InfoButton>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+              <span className="eyebrow">Results</span>
+              <InfoButton inline title="Results">{ResultsInfo}</InfoButton>
+            </div>
             <div className="sepa-grid">
               {vcpFiltered.map((r) => (
                 <SepaCandidateCard
@@ -897,7 +907,10 @@ export function SepaPage() {
           </div>
         ) : (
           <section className="sepa-results">
-            <InfoButton title="Results">{ResultsInfo}</InfoButton>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+              <span className="eyebrow">Results</span>
+              <InfoButton inline title="Results">{ResultsInfo}</InfoButton>
+            </div>
             <div className="sepa-grid">
               {setupTabPairs.map(({ setup, candidate }) => {
                 const sym = setup.symbol.toUpperCase();

@@ -1,36 +1,39 @@
 /**
- * useLivePrices — polls /sepa/live-prices every 2 minutes during market hours.
+ * useLivePrices — polls /sepa/live-prices with a session-aware cadence.
  *
- * Returns a map { SYMBOL: { price, change_pct, volume } } that gets merged
- * into SEPA card displays.  Outside market hours (9:30–16:00 ET, Mon-Fri)
- * the hook stops polling and the map stays at its last value.
+ * Returns a map { SYMBOL: { price, change_pct, volume, last_trade_price,
+ * last_trade_ts_ms, prev_day_close } } that gets merged into SEPA card
+ * displays.  The poll cadence varies by market session — pre-market and
+ * after-hours are less active so we don't burn API quota on slow tape;
+ * the closed session doesn't poll at all (last value freezes on screen).
+ *
+ * As of 2026-05-26 this returns extended-hours fields so SEPA cards,
+ * Kell cards, Overnight Pulse, and Whales / Supply-Demand pages can
+ * render pre-market / after-hours prints with a StockTwits-style
+ * session badge.
  */
 import { useState, useEffect, useRef } from 'react';
 import { API } from '../lib/apiBase';
-const POLL_MS = 2 * 60 * 1000; // 2 minutes
+import { getMarketSession, type MarketSession, type LivePrice } from '../lib/marketSession';
 
-export interface LivePrice {
-  price: number;
-  change_pct: number | null;
-  volume: number | null;
-}
+// Re-export so existing imports (`import type { LivePrice } from '../hooks/useLivePrices'`)
+// keep working without touching every callsite.
+export type { LivePrice } from '../lib/marketSession';
 
-function isMarketHours(): boolean {
-  const now = new Date();
-  // getDay(): 0=Sun, 6=Sat
-  if (now.getDay() === 0 || now.getDay() === 6) return false;
-  // Approximate ET offset: UTC-4 (EDT) or UTC-5 (EST).
-  // Using UTC-4 year-round is close enough for a polling guard.
-  const etHour = (now.getUTCHours() - 4 + 24) % 24 + now.getUTCMinutes() / 60;
-  return etHour >= 9.5 && etHour < 16.0;
-}
+// Poll cadences per session — pre-market is less active so we don't burn
+// API quota on slow tape. Closed sessions don't poll at all.
+const POLL_MS: Record<MarketSession, number | null> = {
+  pre:    3 * 60 * 1000,   // pre-market   — every 3 min (4:00am–9:30am ET)
+  live:   2 * 60 * 1000,   // regular      — every 2 min
+  after:  3 * 60 * 1000,   // after-hours  — every 3 min (4:00pm–8:00pm ET)
+  closed: null,            // closed       — no polling, freeze last value
+};
 
 export function useLivePrices(): Record<string, LivePrice> {
   const [prices, setPrices] = useState<Record<string, LivePrice>>({});
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchPrices = async () => {
-    if (!isMarketHours()) return;
     try {
       const r = await fetch(`${API}/sepa/live-prices`, { cache: 'no-store' });
       if (!r.ok) return;
@@ -42,13 +45,22 @@ export function useLivePrices(): Record<string, LivePrice> {
   };
 
   useEffect(() => {
+    // Always do one initial fetch so the screen has data even when the
+    // market is closed (we still want yesterday's close on the cards).
     fetchPrices();
 
     const schedule = () => {
+      const session = getMarketSession();
+      const cadence = POLL_MS[session];
+      if (cadence == null) {
+        // Market closed — don't schedule another poll. The cards keep
+        // showing whatever we last fetched.
+        return;
+      }
       timerRef.current = setTimeout(() => {
         fetchPrices();
         schedule();
-      }, POLL_MS);
+      }, cadence);
     };
     schedule();
 

@@ -210,20 +210,23 @@ export function KellSetupTabs({ activeTab, onTabChange, tabCounts }: Props) {
 }
 
 function KellCategoriesLegend() {
+  // 30-second scan. Full detail per tab lives in the inline banner +
+  // right sidebar after click. Book = Kell, Victory in Stock Trading
+  // (2021) — every formula cites a page in backend/kell/<name>.py.
   const entries: Array<{ key: KellTab; pitch: string }> = [
-    { key: 'all',                  pitch: "Combined feed of every Kell scan — see all six patterns in one grid, sorted by R:R." },
-    { key: 'base_n_break',         pitch: "5-15 day consolidation finding support at the 10/20 EMA, then breakout on >1.3× volume. Kell's lower-risk 'buy against the moving averages' entry (book pp. 18-19, 39)." },
-    { key: 'ema_crossback',        pitch: "First pullback to the 10/20 EMA inside a confirmed uptrend on LIGHT volume — Kell's lowest-risk add point (book pp. 18, 27)." },
-    { key: 'wedge_pop',            pitch: "First close above BOTH 10 EMA and 20 EMA after a downtrend tightens into a wedge. The Stage 1→2 turn (book pp. 17, 23-24)." },
-    { key: 'reversal_extension',   pitch: "Bullish reversal candle on >1.5× volume after price extended ≥5% below the 10 EMA. The capitulation bottom — risky to catch (book pp. 16, 22-23)." },
-    { key: 'exhaustion_extension', pitch: "WARNING — not an entry. 2nd or 3rd extension ≥8% above the 10 EMA on 2×+ volume, wide-range bar. Take profits (book pp. 19, 25, 40)." },
-    { key: 'wedge_drop',           pitch: "WARNING — not an entry. First close below BOTH EMAs after a recent Exhaustion Extension on >1.3× volume. Cycle is over (book pp. 18, 20, 24, 41)." },
+    { key: 'all',                  pitch: "All Kell signals, sorted by R:R" },
+    { key: 'base_n_break',         pitch: "5–15 day base at 10/20 EMA → breakout" },
+    { key: 'ema_crossback',        pitch: "First EMA pullback in uptrend (light volume)" },
+    { key: 'wedge_pop',            pitch: "First reclaim of 10/20 EMA after a wedge" },
+    { key: 'reversal_extension',   pitch: "Capitulation bottom 5%+ below 10 EMA" },
+    { key: 'exhaustion_extension', pitch: "⚠ SELL — 2nd/3rd extension from 10 EMA" },
+    { key: 'wedge_drop',           pitch: "⚠ SELL — first close below both EMAs" },
   ];
   return (
     <>
-      <p style={{ marginTop: 0 }}>
-        Oliver Kell's <strong>Cycle of Price Action</strong> (book: <em>Victory in Stock Trading</em>, 2021, pp. 14-21).
-        Six phases, in order: Reversal Extension → Wedge Pop → EMA Crossback → Base n' Break → Exhaustion Extension → Wedge Drop → (cycle repeats).
+      <p style={{ marginTop: 0, marginBottom: 8, fontSize: '0.82rem' }}>
+        Kell's <strong>Cycle of Price Action</strong>. Left → right = safest → most aggressive.
+        Last two tabs are SELL signals.
       </p>
       <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
         {entries.map(({ key, pitch }) => {
@@ -233,39 +236,33 @@ function KellCategoriesLegend() {
             <li
               key={key}
               style={{
-                display:      'grid',
-                gridTemplateColumns: 'auto 1fr',
-                gap:          '0.6rem',
-                padding:      '0.45rem 0',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                alignItems:   'baseline',
+                display:        'grid',
+                gridTemplateColumns: 'minmax(140px, auto) 1fr',
+                gap:            '0.5rem',
+                padding:        '0.25rem 0',
+                alignItems:     'baseline',
+                fontSize:       '0.8rem',
               }}
             >
               <span
                 style={{
                   whiteSpace:    'nowrap',
-                  padding:       '0.15rem 0.55rem',
+                  padding:       '0.05rem 0.45rem',
                   borderRadius:  999,
-                  border:        `1px solid ${color}66`,
                   borderLeft:    `3px solid ${color}`,
                   color:         '#f3e8c8',
                   fontWeight:    600,
-                  fontSize:      '0.78rem',
+                  fontSize:      '0.72rem',
                 }}
               >
                 {meta.icon && <span aria-hidden="true">{meta.icon} </span>}
                 {meta.label}
               </span>
-              <span style={{ color: '#cfcfd4', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                {pitch}
-              </span>
+              <span style={{ color: '#cfcfd4', lineHeight: 1.35 }}>{pitch}</span>
             </li>
           );
         })}
       </ul>
-      <p style={{ fontSize: '0.78rem', color: '#9a9aa3', marginBottom: 0 }}>
-        The two WARNING tabs (Exhaustion Extension, Wedge Drop) are SELL signals — they have no entry/stop/target and run in any market regime. The four BUY tabs only scan in confirmed uptrends.
-      </p>
     </>
   );
 }

@@ -1,6 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { FlowSnapshot } from '../hooks/useSupplyDemand';
 import type { MouseEvent } from 'react';
+import { useLivePrices } from '../hooks/useLivePrices';
+import { getMarketSession, pickDisplayPrice } from '../lib/marketSession';
+import { SessionBadge } from './SessionBadge';
 
 type Props = {
   flow: FlowSnapshot;
@@ -15,6 +18,12 @@ type Props = {
 export function MoneyFlowLeaderboard({ flow, onTickerClick }: Props) {
   const nav = useNavigate();
   const location = useLocation();
+  // Session-aware extended-hours overlay. Cheap: useLivePrices is a
+  // single hook that the SEPA + Kell pages already mount, so adding it
+  // here is a no-op when the same component is also displayed on those
+  // pages, and a single fetch otherwise.
+  const livePrices = useLivePrices();
+  const session = getMarketSession();
   const fromLabel = location.pathname.startsWith('/supply-demand') ? 'Supply / Demand'
     : location.pathname.startsWith('/morning') ? 'Morning'
     : location.pathname.startsWith('/overnight') ? 'Overnight'
@@ -48,6 +57,7 @@ export function MoneyFlowLeaderboard({ flow, onTickerClick }: Props) {
         <div className="mfl__title">
           <span className={`mfl__pulse mfl__pulse--${flow.market.state}`} />
           <strong>Money flow · {flow.market.label}</strong>
+          <SessionBadge session={session} />
           <span className="mfl__sub">
             {totals.n_up} up · {totals.n_down} down · {totals.n_flat} flat ·
             {' '}breadth {breadthPct}% · ${(totals.total_dollar_volume / 1e9).toFixed(1)}B traded
@@ -64,26 +74,42 @@ export function MoneyFlowLeaderboard({ flow, onTickerClick }: Props) {
         <section className="mfl__col mfl__col--in">
           <div className="mfl__col-h">📈 BIGGEST INFLOWS</div>
           <ul>
-            {flow.leaders.top_inflow.map((t) => (
-              <li key={t.ticker} onClick={(e) => handleClick(t.ticker, e)}>
-                <strong className="mfl__ticker">{t.ticker}</strong>
-                <span className="mfl__pct mono">+{t.change_pct.toFixed(2)}%</span>
-                <span className="mfl__dv mono">{fmtDV(t.dollar_volume)}</span>
-              </li>
-            ))}
+            {flow.leaders.top_inflow.map((t) => {
+              // Session-aware override — when extended-hours data is
+              // available for this ticker we show the live pre/after-hours
+              // price + % change vs prev close, otherwise fall back to
+              // the FlowSnapshot value (which is the regular-session change).
+              const live = pickDisplayPrice(livePrices[t.ticker.toUpperCase()], session);
+              const pctText = live?.change_pct != null
+                ? `${live.change_pct >= 0 ? '+' : ''}${live.change_pct.toFixed(2)}%`
+                : `+${t.change_pct.toFixed(2)}%`;
+              return (
+                <li key={t.ticker} onClick={(e) => handleClick(t.ticker, e)}>
+                  <strong className="mfl__ticker">{t.ticker}</strong>
+                  <span className="mfl__pct mono">{pctText}</span>
+                  <span className="mfl__dv mono">{fmtDV(t.dollar_volume)}</span>
+                </li>
+              );
+            })}
           </ul>
         </section>
 
         <section className="mfl__col mfl__col--out">
           <div className="mfl__col-h">📉 BIGGEST OUTFLOWS</div>
           <ul>
-            {flow.leaders.top_outflow.map((t) => (
-              <li key={t.ticker} onClick={(e) => handleClick(t.ticker, e)}>
-                <strong className="mfl__ticker">{t.ticker}</strong>
-                <span className="mfl__pct mono">{t.change_pct.toFixed(2)}%</span>
-                <span className="mfl__dv mono">{fmtDV(t.dollar_volume)}</span>
-              </li>
-            ))}
+            {flow.leaders.top_outflow.map((t) => {
+              const live = pickDisplayPrice(livePrices[t.ticker.toUpperCase()], session);
+              const pctText = live?.change_pct != null
+                ? `${live.change_pct >= 0 ? '+' : ''}${live.change_pct.toFixed(2)}%`
+                : `${t.change_pct.toFixed(2)}%`;
+              return (
+                <li key={t.ticker} onClick={(e) => handleClick(t.ticker, e)}>
+                  <strong className="mfl__ticker">{t.ticker}</strong>
+                  <span className="mfl__pct mono">{pctText}</span>
+                  <span className="mfl__dv mono">{fmtDV(t.dollar_volume)}</span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       </div>

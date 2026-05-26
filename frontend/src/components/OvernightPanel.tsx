@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { OvernightMover } from '../hooks/useOvernight';
 import { useOvernightMovers } from '../hooks/useOvernight';
+import { useLivePrices } from '../hooks/useLivePrices';
+import { getMarketSession, pickDisplayPrice, type LivePrice } from '../lib/marketSession';
+import { SessionBadge } from './SessionBadge';
 
 const CATEGORY_COLORS: Record<string, string> = {
   Earnings:       '#10b981',
@@ -30,6 +33,10 @@ export function OvernightPanel({ compact = false, minGapPct = 0.5 }: Props) {
   const navLabel = location.pathname.startsWith('/morning') ? 'Morning' : 'Overnight';
   const navState = { from: location.pathname + location.search, label: navLabel };
   const { data, loading, refreshing, forceRefresh } = useOvernightMovers({ minGapPct, includeSepa: true });
+  // Pre-market is THIS page's primary use case — extended-hours data
+  // is the feature. The session-aware poll cadence in useLivePrices
+  // handles the 4am-9:30am pre-market window automatically.
+  const livePrices = useLivePrices();
 
   if (loading) {
     return <div className="overnight-panel overnight-panel--loading">Scanning overnight tape…</div>;
@@ -77,6 +84,7 @@ export function OvernightPanel({ compact = false, minGapPct = 0.5 }: Props) {
           <OvernightCard
             key={m.symbol}
             m={m}
+            livePrice={livePrices[m.symbol.toUpperCase()]}
             onClick={(e?: React.MouseEvent) => {
               if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) {
                 window.open(`/sepa/${encodeURIComponent(m.symbol)}`, '_blank', 'noopener,noreferrer');
@@ -97,12 +105,32 @@ export function OvernightPanel({ compact = false, minGapPct = 0.5 }: Props) {
   );
 }
 
-function OvernightCard({ m, onClick }: { m: OvernightMover; onClick: (e?: React.MouseEvent) => void }) {
+function OvernightCard({
+  m,
+  livePrice,
+  onClick,
+}: {
+  m: OvernightMover;
+  livePrice?: LivePrice;
+  onClick: (e?: React.MouseEvent) => void;
+}) {
   const gap = m.gap_pct ?? 0;
   const dir = gap > 0 ? 'up' : gap < 0 ? 'down' : 'flat';
   const cat = m.catalyst?.category ?? null;
   const catColor = cat ? CATEGORY_COLORS[cat] ?? '#94a3b8' : 'var(--ink-subtle)';
   const [newsOpen, setNewsOpen] = useState(false);
+
+  // Session-aware live price overlay. Pre-market is the primary use
+  // case here, but the same component handles after-hours + closed.
+  const session = getMarketSession();
+  const liveDisplay = pickDisplayPrice(livePrice, session);
+  const liveDir = liveDisplay
+    ? (liveDisplay.change_pct ?? 0) > 0
+      ? 'up'
+      : (liveDisplay.change_pct ?? 0) < 0
+        ? 'down'
+        : 'flat'
+    : 'flat';
 
   const newsLinks = m.news_links ?? [];
   // Avoid duplicating the catalyst headline inside the news list
@@ -121,7 +149,36 @@ function OvernightCard({ m, onClick }: { m: OvernightMover; onClick: (e?: React.
         <span className={`overnight-card__gap overnight-card__gap--${dir} mono`}>
           {gap > 0 ? '+' : ''}{gap.toFixed(2)}%
         </span>
+        <SessionBadge session={session} />
       </header>
+
+      {/* Live extended-hours quote — pre-market is THE primary use case
+          of this page, so the live print + session badge get prominent
+          placement. Falls through to the regular close-vs-y_close strip
+          below when no live data is available. */}
+      {liveDisplay && (
+        <div className="overnight-card__prices mono"
+             title={
+               session === 'pre'
+                 ? 'Live pre-market trade. Change is vs the previous regular close.'
+                 : session === 'after'
+                   ? 'Live after-hours trade. Change is vs the previous regular close.'
+                   : session === 'live'
+                     ? 'Live regular-session price.'
+                     : 'Market closed — last regular-session close.'
+             }>
+          <span className={`overnight-card__pre ${liveDir === 'up' ? 'pos' : liveDir === 'down' ? 'neg' : ''}`}
+                style={{ fontSize: '0.95rem', fontWeight: 600 }}>
+            ${liveDisplay.price.toFixed(2)}
+          </span>
+          {liveDisplay.change_pct != null && (
+            <span className={`overnight-card__gap overnight-card__gap--${liveDir} mono`}
+                  style={{ marginLeft: '0.4rem' }}>
+              {liveDisplay.change_pct >= 0 ? '+' : ''}{liveDisplay.change_pct.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="overnight-card__prices mono">
         <span className="overnight-card__y-close">y close ${m.yesterday_close.toFixed(2)}</span>

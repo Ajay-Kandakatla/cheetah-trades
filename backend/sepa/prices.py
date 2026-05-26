@@ -316,15 +316,26 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
                     bar_date = pd.Timestamp(day_t, unit="ms", tz="UTC").normalize().tz_localize(None)
                 else:
                     bar_date = pd.Timestamp.now(tz="UTC").normalize().tz_localize(None)
+                # Extended-hours surface (2026-05-26): expose lastTrade +
+                # prevDay so the frontend can render pre-market / after-hours
+                # prints with a session badge. Display-only — SEPA scoring
+                # still uses `close` (the regular-session close).
+                last_trade = item.get("lastTrade") or {}
+                prev_day = item.get("prevDay") or {}
                 result[sym] = {
-                    "open":       day.get("o"),
-                    "high":       day.get("h"),
-                    "low":        day.get("l"),
-                    "close":      day.get("c"),
-                    "volume":     day.get("v"),
-                    "vwap":       day.get("vw"),
-                    "date":       bar_date,
-                    "change_pct": item.get("todaysChangePerc"),
+                    "open":             day.get("o"),
+                    "high":             day.get("h"),
+                    "low":              day.get("l"),
+                    "close":            day.get("c"),
+                    "volume":           day.get("v"),
+                    "vwap":             day.get("vw"),
+                    "date":             bar_date,
+                    "change_pct":       item.get("todaysChangePerc"),
+                    # Extended-hours fields (additive — never read by SEPA scorer)
+                    "last_trade_price": last_trade.get("p"),
+                    "last_trade_ts_ms": last_trade.get("t"),
+                    "prev_day_close":   prev_day.get("c"),
+                    "todays_change":    item.get("todaysChange"),
                 }
         except Exception as exc:
             log.warning("bulk_snapshot: chunk failed: %s", exc)
@@ -429,18 +440,32 @@ def patch_latest_closes(symbols: list[str]) -> dict:
 def bulk_live_prices(symbols: list[str]) -> dict[str, dict]:
     """Real-time last prices for the given symbols.
 
-    Returns {SYMBOL: {price, change_pct, volume}} — suitable for fast
-    intraday card refreshes without re-running the full SEPA scan.
+    Returns {SYMBOL: {price, change_pct, volume, last_trade_price,
+    last_trade_ts_ms, prev_day_close}} — suitable for fast intraday card
+    refreshes without re-running the full SEPA scan.
+
+    Extended-hours fields (last_trade_price / last_trade_ts_ms /
+    prev_day_close) are surfaced so the frontend can render pre-market
+    and after-hours prints with a session badge. Display-only — SEPA
+    scoring still uses the regular-session close.
     """
     snaps = bulk_snapshot(symbols)
     return {
         sym: {
-            "price":      bar.get("close"),
-            "change_pct": bar.get("change_pct"),
-            "volume":     bar.get("volume"),
+            "price":            bar.get("close"),
+            "change_pct":       bar.get("change_pct"),
+            "volume":           bar.get("volume"),
+            # NEW: extended-hours data
+            "last_trade_price": bar.get("last_trade_price"),
+            "last_trade_ts_ms": bar.get("last_trade_ts_ms"),
+            "prev_day_close":   bar.get("prev_day_close"),
         }
         for sym, bar in snaps.items()
-        # Exclude zero prices — Massive returns 0 on weekends/holidays
-        # (no trading session active yet). Frontend would otherwise show $0.00.
-        if bar.get("close")  # falsy check drops both None and 0
+        # Surface a ticker if it has ANY usable price:
+        #   - close (regular session)
+        #   - last_trade_price (extended-hours pre/after print)
+        #   - prev_day_close (so the "closed" / weekend / holiday UI can
+        #     still display the previous regular close, which is what
+        #     the user explicitly asked for in the closed-market UX rules)
+        if bar.get("close") or bar.get("last_trade_price") or bar.get("prev_day_close")
     }

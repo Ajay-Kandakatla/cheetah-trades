@@ -45,6 +45,8 @@ const SignalDrillModal = lazy(() =>
 );
 import type { SignalKind } from './SignalDrillModal';
 import type { LivePrice } from '../hooks/useLivePrices';
+import { getMarketSession, pickDisplayPrice } from '../lib/marketSession';
+import { SessionBadge } from './SessionBadge';
 
 type Props = {
   row: SepaCandidate;
@@ -266,28 +268,45 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
               </span>
             </div>
           )}
-          {/* Bulk snapshot overlay — from /sepa/live-prices, polled every 2 min
-              during market hours. Shows live price + change_pct with a LIVE badge.
-              Rendered only when livePrice is available AND the per-card useQuote
-              didn't already cover it (avoids double-showing). */}
-          {livePrice && livePrice.price != null && !showLive && (
-            <div
-              className={`sepa-card__price sepa-card__price--live mono ${
-                (livePrice.change_pct ?? 0) >= 0 ? 'is-up' : 'is-down'
-              }`}
-              title="Real-time price from Massive bulk snapshot (refreshed every 2 min during market hours). SEPA scoring still uses the official daily close."
-            >
-              <span className="sepa-card__price-num">${livePrice.price.toFixed(2)}</span>
-              {livePrice.change_pct != null && (
-                <span className={`sepa-card__price-day ${livePrice.change_pct >= 0 ? 'is-up' : 'is-down'}`}>
-                  {livePrice.change_pct >= 0 ? '▲' : '▼'} {Math.abs(livePrice.change_pct).toFixed(2)}%
+          {/* Bulk snapshot overlay — from /sepa/live-prices, polled with a
+              session-aware cadence. Shows the price for the current session
+              (pre-market lastTrade, live close, after-hours lastTrade, or
+              regular close when closed) with a four-state SessionBadge.
+              Rendered only when the per-card useQuote didn't already cover
+              it (avoids double-showing). */}
+          {(() => {
+            if (showLive) return null;
+            const session = getMarketSession();
+            const display = pickDisplayPrice(livePrice, session);
+            if (!display) return null;
+            return (
+              <div
+                className={`sepa-card__price sepa-card__price--live mono ${
+                  (display.change_pct ?? 0) >= 0 ? 'is-up' : 'is-down'
+                }`}
+                title={
+                  session === 'live'
+                    ? 'Real-time regular-session price from Massive bulk snapshot. SEPA scoring still uses the official daily close.'
+                    : session === 'pre'
+                      ? 'Pre-market trade (4:00am–9:30am ET). Change is vs the previous regular close. SEPA scoring runs on regular-session closes only.'
+                      : session === 'after'
+                        ? 'After-hours trade (4:00pm–8:00pm ET). Change is vs the previous regular close. SEPA scoring runs on regular-session closes only.'
+                        : 'Market closed — showing the last completed regular-session close.'
+                }
+              >
+                <span className="sepa-card__price-num">${display.price.toFixed(2)}</span>
+                {display.change_pct != null && (
+                  <span className={`sepa-card__price-day ${display.change_pct >= 0 ? 'is-up' : 'is-down'}`}>
+                    {display.change_pct >= 0 ? '▲' : '▼'} {Math.abs(display.change_pct).toFixed(2)}%
+                  </span>
+                )}
+                <span className="sepa-card__price-tag sepa-card__price-tag--live mono"
+                      style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <SessionBadge session={session} />
                 </span>
-              )}
-              <span className="sepa-card__price-tag sepa-card__price-tag--live mono">
-                🟢 LIVE
-              </span>
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
         <div className="sepa-card__head-right">
           <div className="sepa-card__head-right-top">

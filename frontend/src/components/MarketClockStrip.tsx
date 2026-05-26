@@ -20,6 +20,9 @@
    battery on phones for no real signal.
 */
 import { useEffect, useState } from 'react';
+// Holiday calendar + dateKeyET moved to lib/marketSession.ts (2026-05-26)
+// so the new useLivePrices session detector shares the same source of truth.
+import { US_MARKET_HOLIDAYS, dateKeyET } from '../lib/marketSession';
 
 type SessionState = {
   label:     string;     // "Market open", "Pre-market", etc.
@@ -27,50 +30,6 @@ type SessionState = {
   mood:      'live' | 'pre' | 'after' | 'closed';
   nextScan:  string;     // "Next SEPA rescan: tonight 15:30 CT"
 };
-
-// ============================================================================
-// US market holidays — full closures only (NYSE + NASDAQ).
-// Mirrors backend/market_hours/reminder.py HOLIDAYS_2026/2027. Update yearly
-// when NYSE publishes the next year's calendar:
-// https://www.nyse.com/markets/hours-calendars
-// Keys are YYYY-MM-DD; values are human-readable holiday names for display.
-// ============================================================================
-const US_MARKET_HOLIDAYS: Record<string, string> = {
-  // 2026
-  '2026-01-01': "New Year's Day",
-  '2026-01-19': 'MLK Jr Day',
-  '2026-02-16': 'Presidents Day',
-  '2026-04-03': 'Good Friday',
-  '2026-05-25': 'Memorial Day',
-  '2026-06-19': 'Juneteenth',
-  '2026-07-03': 'Independence Day (observed)',
-  '2026-09-07': 'Labor Day',
-  '2026-11-26': 'Thanksgiving',
-  '2026-12-25': 'Christmas',
-  // 2027
-  '2027-01-01': "New Year's Day",
-  '2027-01-18': 'MLK Jr Day',
-  '2027-02-15': 'Presidents Day',
-  '2027-03-26': 'Good Friday',
-  '2027-05-31': 'Memorial Day',
-  '2027-06-18': 'Juneteenth (observed)',
-  '2027-07-05': 'Independence Day (observed)',
-  '2027-09-06': 'Labor Day',
-  '2027-11-25': 'Thanksgiving',
-  '2027-12-24': 'Christmas (observed)',
-};
-
-/** Get YYYY-MM-DD for the given Date in US Eastern (the market's TZ). */
-function dateKeyET(d: Date): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(d);
-  const y = parts.find(p => p.type === 'year')?.value;
-  const m = parts.find(p => p.type === 'month')?.value;
-  const da = parts.find(p => p.type === 'day')?.value;
-  return `${y}-${m}-${da}`;
-}
 
 /** Return the human-readable holiday name if today is a US market holiday,
  *  else null. */
