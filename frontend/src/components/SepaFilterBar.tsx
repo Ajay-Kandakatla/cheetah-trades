@@ -54,6 +54,13 @@ export type SepaFilters = {
    *  3 = NARROW+, 4 = WIDE only. Tickers with no moat data are kept unless
    *  filter is ≥1 — then UNKNOWN is excluded. */
   moatMin: 0 | 1 | 2 | 3 | 4;
+  /** When true, drop any candidate flagged with
+   *  ``volume.accumulation_strength === 'distributing'`` OR
+   *  ``volume.cmf_signal === 'outflow'``. Use this to keep the list focused
+   *  on tape that's actually being accumulated by institutions — distributing
+   *  names will sneak into other filters (e.g. high RS) even when they're
+   *  rolling over on volume. */
+  hideDistributing: boolean;
   sortBy:
     | 'score' | 'rs' | 'symbol'
     | 'day_change' | 'day_change_abs'
@@ -151,6 +158,18 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
           title="Antonacci's Dual Momentum two-gate filter: 12m return positive AND beats SPY"
         >
           Dual Momentum ✓
+        </button>
+        {/* Hide-distributing chip. When active, the list drops any name
+            tagged accumulation_strength === 'distributing' or with money
+            outflow (cmf). Useful because high RS + high score don't
+            preclude a stock from being heavily distributed — see the
+            Minervini sell-signal layer for why this matters. */}
+        <button
+          className={`sepa-chip ${filters.hideDistributing ? 'is-active' : ''}`}
+          onClick={() => set('hideDistributing', !filters.hideDistributing)}
+          title="Hide tickers being institutionally distributed (red 'Distributing' pill) or showing money outflow on CMF. Tightens the list to genuinely accumulating names."
+        >
+          🚫 Hide Distributing
         </button>
         <span className="sepa-filterbar__sep" />
         <button

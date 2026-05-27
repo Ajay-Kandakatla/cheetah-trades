@@ -197,6 +197,11 @@ export function SepaPage() {
     rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
+    // Default OFF — opt-in toggle. Some users want to see distributing
+    // names too (shorting, planning exits on owned positions). Chip
+    // flips it on for a cleaner accumulation-only view. Persists via
+    // localStorage with the other filters below.
+    hideDistributing: false,
     sortBy: 'score',
   };
   const [filters, setFilters] = useState<SepaFilters>(() => {
@@ -318,6 +323,15 @@ export function SepaPage() {
         const tier = r.moat?.tier ?? 0;
         if (tier < filters.moatMin) return false;
       }
+      // Hide-Distributing chip — drop institutional-distribution tape OR
+      // Chaikin money-outflow names. Opposite of "accumulation", so if
+      // the user enables this they don't want them at all, regardless of
+      // score. Same gate in passesFilters() below for setup-tab callers.
+      if (filters.hideDistributing) {
+        const v = r.volume;
+        if (v?.accumulation_strength === 'distributing') return false;
+        if (v?.cmf_signal === 'outflow') return false;
+      }
       return true;
     });
     out.sort((a, b) => {
@@ -424,20 +438,28 @@ export function SepaPage() {
         // days rule actively penalizes the score.
         const v = x.volume;
         if (!v) return 0;
+        // Hard guard (2026-05-26): a stock tagged `distributing` or with
+        // money `outflow` is the LITERAL OPPOSITE of "accumulation +
+        // breakout" — it shouldn't surface in this sort at all. Return
+        // a very negative score so these sink to the bottom regardless
+        // of how high their up/down-vol ratio is. Previously a -0.5
+        // penalty was drowned out by ratios of 3+ on thin distributed
+        // tickers like CPIX (ratio 3.x but accumulation=distributing →
+        // ranked above truly accumulating names with lower ratios).
+        if (v.accumulation_strength === 'distributing') return -100;
+        if (v.cmf_signal === 'outflow')                  return -100;
         const ratio = v.up_down_vol_ratio ?? 0;
         let score = ratio;
         // Strength tier — replaces the loose binary accumulation flag.
         if (v.accumulation_strength === 'strong')        score += 1.0;
         else if (v.accumulation_strength === 'accumulating') score += 0.5;
-        else if (v.accumulation_strength === 'distributing') score -= 0.5;
         // Pocket pivot — Minervini's pre-breakout signal.
         if (v.pocket_pivot) score += 0.6;
         // Confirmed high-volume breakout.
         if (v.high_vol_breakout) score += 1.0;
         // Chaikin Money Flow — independent confirmation that close-position
         // weighted by volume is bullish.
-        if (v.cmf_signal === 'inflow')  score += 0.4;
-        if (v.cmf_signal === 'outflow') score -= 0.4;
+        if (v.cmf_signal === 'inflow') score += 0.4;
         // Distribution-day penalty (institutional selling).
         const distDays = v.distribution_days_25 ?? 0;
         if (distDays >= 4) score -= 0.5 * (distDays - 3);  // -0.5 per dist day above 3
@@ -536,6 +558,12 @@ export function SepaPage() {
     if (filters.type === 'etf' && !r.is_etf) return false;
     if (filters.pioneerOnly && !r.is_pioneer) return false;
     if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
+    if (filters.hideDistributing) {
+      // Same gate as the main `filtered` useMemo above — keep in sync.
+      const v = r.volume;
+      if (v?.accumulation_strength === 'distributing') return false;
+      if (v?.cmf_signal === 'outflow') return false;
+    }
     if (filters.moatMin > 0) {
       const tier = r.moat?.tier ?? 0;
       if (tier < filters.moatMin) return false;
