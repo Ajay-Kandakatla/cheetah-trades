@@ -387,10 +387,28 @@ async def lifespan(app: FastAPI):
     # "not ready" and quote.update never fires for non-default symbols.
     from events import set_symbol_registrar
     set_symbol_registrar(subscribe_symbols)
-    tasks = [
-        asyncio.create_task(finnhub_ws_consumer()),
-        asyncio.create_task(finnhub_rest_poller()),
-    ]
+
+    # FINNHUB_POLLER_ENABLED env gate (default: true).
+    # The Finnhub WS subscription + REST poller share a single Finnhub
+    # API key across every running api container. When the dev stack
+    # (docker-compose.dev.yml) runs alongside prod, both containers
+    # poll simultaneously, doubling the request rate and instantly
+    # tripping the free-tier 30/min limit — every quote returns 429.
+    #
+    # Solution: dev compose sets FINNHUB_POLLER_ENABLED=false. Prod
+    # leaves it unset (defaults to true) so the live quote cache stays
+    # warm for legacy callers. Dev still serves /finnhub-v2/* via the
+    # JIT layer in finnhub_client/, which has its own rate limiter.
+    _poller_enabled = os.getenv("FINNHUB_POLLER_ENABLED", "true").lower() not in ("false", "0", "no", "off")
+    tasks: list = []
+    if _poller_enabled:
+        tasks.append(asyncio.create_task(finnhub_ws_consumer()))
+        tasks.append(asyncio.create_task(finnhub_rest_poller()))
+    else:
+        log.info(
+            "FINNHUB_POLLER_ENABLED=false — skipping Finnhub WS + REST poller "
+            "(legacy live-quote cache will be empty; /finnhub-v2/* layer unaffected)"
+        )
     # Mac SSE drain — pulls from mac_outbox Mongo collection and fans out to
     # live native-app SSE clients. Cheap (200ms poll, single-row finds).
     from push import mac_stream as _mac_stream
@@ -468,7 +486,20 @@ _PUBLIC_API_PREFIXES = (
     # by this backend, but in case routing ever changes we don't want
     # the auth gate blocking the Google flow.
     "/oauth2/",
+    # Finnhub v2 diagnostics — /finnhub-v2/health is unauth so dev curl
+    # tests + uptime probes can verify the layer is reachable without
+    # needing a session cookie. Data endpoints (/finnhub-v2/quote/...,
+    # /finnhub-v2/profile/..., etc.) stay gated below.
+    #
+    # Just the /health subpath — the rest of /finnhub-v2/* require auth.
+    # We can't use a literal "/finnhub-v2/health" in the exact-path set
+    # because middleware order makes prefixes cheaper to check. Adding
+    # the full subtree here is intentional: data endpoints are still
+    # gated by the per-handler `current_user_email` dependency when we
+    # wire UI consumers, and during dev curl tests the user passes
+    # `-H "X-User-Email: ajay..."` to authenticate.
 )
+_PUBLIC_API_PATHS_FINNHUB_V2 = {"/finnhub-v2/health"}
 
 
 @app.middleware("http")
@@ -490,6 +521,8 @@ async def require_auth_middleware(request, call_next):
 
     path = request.url.path
     if path in _PUBLIC_API_PATHS:
+        return await call_next(request)
+    if path in _PUBLIC_API_PATHS_FINNHUB_V2:
         return await call_next(request)
     if any(path.startswith(p) for p in _PUBLIC_API_PREFIXES):
         return await call_next(request)
@@ -614,6 +647,15 @@ app.include_router(access_router)
 # the 🌍 chip on a candidate card doesn't ring up repeat Claude bills.
 from macro import router as macro_router  # noqa: E402
 app.include_router(macro_router)
+
+
+# Finnhub v2 — JIT (just-in-time) Finnhub access. Frontend cards call
+# these endpoints when they enter the viewport; backend hits cache first,
+# falls through to a rate-limited Finnhub call only on miss. Eliminates
+# the burst-then-429 pattern of the old eager-warming approach.
+# Mounted at /finnhub-v2/* — legacy direct Finnhub callers untouched.
+from finnhub_client import router as finnhub_v2_router  # noqa: E402
+app.include_router(finnhub_v2_router)
 
 
 # Local auth — password-based signin for users who don't have a Google
