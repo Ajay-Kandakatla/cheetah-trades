@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
 import time
 from collections import deque
@@ -1256,6 +1257,31 @@ async def sepa_live_prices():
     return {"updated_at": int(time.time()), "prices": live}
 
 
+def _clean_json_floats(obj):
+    """Recursively replace NaN / +Inf / -Inf with None for JSON safety.
+
+    Python's stdlib json encoder (used by FastAPI's JSONResponse) rejects
+    these values with ``ValueError: Out of range float values are not
+    JSON compliant`` and the request 500s. NaN typically slips in when a
+    derived metric divides by zero (e.g. revenue/shares for a freshly
+    public ticker, or EPS growth when the prior quarter was zero).
+
+    Strategy: walk dicts, lists, and tuples in place; replace bad floats
+    with None at leaf nodes. Everything else (str, int, bool, None) is
+    returned unchanged. Cost is one pass over the response object — cheap
+    even for big candidate payloads (~5KB).
+
+    Added 2026-05-27 after AVR's /sepa/candidate response 500'd on a NaN.
+    """
+    if isinstance(obj, dict):
+        return {k: _clean_json_floats(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_clean_json_floats(v) for v in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
+
 @app.get("/sepa/candidate/{symbol}")
 async def sepa_candidate_detail(symbol: str):
     """Deep-dive on a single candidate: trend + catalyst + insider + IPO age.
@@ -1321,7 +1347,13 @@ async def sepa_candidate_detail(symbol: str):
     ipo = await asyncio.to_thread(sepa_ipo_age, sym)
     profile = await profile_task
     smart_money = await smart_task
-    return JSONResponse({
+    # Sanitize NaN/Inf floats — Python's stdlib json rejects them as
+    # "Out of range float values are not JSON compliant" and returns 500.
+    # Encountered on AVR 2026-05-27 where the candidate base had a NaN
+    # in one of its derived numeric fields (likely a per-share metric
+    # divided by zero shares for a recent IPO / spin-off). Cleaner to
+    # convert NaN→null universally than to chase down every division.
+    payload = _clean_json_floats({
         "symbol": sym,
         "profile": profile,
         "base": base,
@@ -1330,6 +1362,7 @@ async def sepa_candidate_detail(symbol: str):
         "ipo_age": ipo,
         "smart_money": smart_money,
     })
+    return JSONResponse(payload)
 
 
 @app.get("/sepa/dual-momentum")
