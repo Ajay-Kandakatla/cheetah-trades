@@ -236,10 +236,24 @@ _ws_subscribe_queue: asyncio.Queue[str] = asyncio.Queue()
 _rest_client: Optional[httpx.AsyncClient] = None
 
 
+def _finnhub_poller_enabled() -> bool:
+    """Single source of truth for the Finnhub-poller env gate. Both the
+    lifespan WS+REST tasks AND the per-symbol one-shot fetches consult
+    this so dev (FINNHUB_POLLER_ENABLED=false) doesn't burst Finnhub on
+    container startup when subscribe_symbols(DEFAULT_SYMBOLS) fires."""
+    return os.getenv("FINNHUB_POLLER_ENABLED", "true").lower() not in ("false", "0", "no", "off")
+
+
 async def _rest_fetch_once(sym: str) -> None:
     """One-shot REST quote so newly-added symbols populate cache immediately."""
     global _rest_client
     if not FINNHUB_API_KEY:
+        return
+    # Gate one-shot fetches behind the same env var as the persistent
+    # poller — otherwise dev's startup subscribe_symbols(DEFAULT_SYMBOLS)
+    # fires ~10 simultaneous Finnhub calls (one per default symbol),
+    # which is exactly what we're trying to avoid.
+    if not _finnhub_poller_enabled():
         return
     if _rest_client is None:
         _rest_client = httpx.AsyncClient(timeout=10)
@@ -399,9 +413,8 @@ async def lifespan(app: FastAPI):
     # leaves it unset (defaults to true) so the live quote cache stays
     # warm for legacy callers. Dev still serves /finnhub-v2/* via the
     # JIT layer in finnhub_client/, which has its own rate limiter.
-    _poller_enabled = os.getenv("FINNHUB_POLLER_ENABLED", "true").lower() not in ("false", "0", "no", "off")
     tasks: list = []
-    if _poller_enabled:
+    if _finnhub_poller_enabled():
         tasks.append(asyncio.create_task(finnhub_ws_consumer()))
         tasks.append(asyncio.create_task(finnhub_rest_poller()))
     else:
