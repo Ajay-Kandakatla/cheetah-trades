@@ -1,0 +1,3 @@
+## 2026-05-27 - Added aria-busy to refresh buttons
+**Learning:** Loading and refresh buttons in React often disable themselves during async operations, but miss explicit `aria-busy` attributes. A disabled state communicates that the button can't be interacted with, while `aria-busy` communicates *why* (it's loading). This is an accessibility gap specifically for screen readers which may not otherwise announce the temporary processing state clearly. Moreover, "mini" refresh buttons sometimes omit text, relying only on a symbol (like "↻") without an `aria-label`.
+**Action:** Always check refresh and async buttons for `aria-busy={loading}` and ensure icon-only buttons have an `aria-label`.

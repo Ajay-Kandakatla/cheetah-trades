@@ -260,6 +260,7 @@ export default function OptionsPulsePage() {
           className="op-refresh-btn"
           onClick={handleRefresh}
           disabled={refreshing}
+          aria-busy={refreshing}
           title="Run a fresh SOIR scan (background, 5-15 min)"
         >
           {refreshing ? 'Refreshing…' : '↻ Refresh now'}

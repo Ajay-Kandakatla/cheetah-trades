@@ -22,6 +22,7 @@ export function RefreshButton({ onClick, loading, computedAt }: Props) {
         className="refresh-btn"
         onClick={onClick}
         disabled={loading}
+        aria-busy={loading}
       >
         {loading ? '↻ Running…' : '↻ Rerun formulas'}
       </button>
