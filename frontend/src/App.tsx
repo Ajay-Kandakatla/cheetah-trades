@@ -23,6 +23,7 @@ import { PageContextProvider } from './hooks/usePageContext';
    ========================================================================== */
 const LiveStream                  = lazy(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
 const SepaPage                    = lazy(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
+const SepaV2Page                  = lazy(() => import('./pages/SepaV2').then(m => ({ default: m.SepaV2Page })));
 const SepaCandidatePage           = lazy(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
 const DualMomentumPage            = lazy(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
 const ChatterPage                 = lazy(() => import('./pages/Chatter').then(m => ({ default: m.ChatterPage })));
@@ -195,6 +196,7 @@ export function App() {
             <Route path="/overnight"      element={<FeatureRoute feature="overnight"><OvernightPage /></FeatureRoute>} />
             <Route path="/live"           element={<FeatureRoute feature="live"><LiveStream /></FeatureRoute>} />
             <Route path="/sepa"           element={<FeatureRoute feature="sepa"><SepaPage /></FeatureRoute>} />
+            <Route path="/sepa-v2"        element={<FeatureRoute feature="sepa"><SepaV2Page /></FeatureRoute>} />
             <Route path="/sepa/:symbol"   element={<FeatureRoute feature="sepa"><SepaCandidatePage /></FeatureRoute>} />
             <Route path="/dual-momentum"  element={<FeatureRoute feature="dual-momentum"><DualMomentumPage /></FeatureRoute>} />
             <Route path="/chatter"        element={<FeatureRoute feature="chatter"><ChatterPage /></FeatureRoute>} />
