@@ -27,9 +27,6 @@ type SortKey =
   | 'pct52w' | 'vsMa50' | 'vsMa200' | 'base' | 'setup' | 'adr' | 'vol';
 type SortDir = 'asc' | 'desc';
 
-const RATING_RANK: Record<Rating, number> = {
-  STRONG_BUY: 4, BUY: 3, WATCH: 2, NEUTRAL: 1, AVOID: 0,
-};
 const VOL_RANK: Record<string, number> = {
   strong: 4, accumulating: 3, neutral: 2, distributing: 1,
 };
