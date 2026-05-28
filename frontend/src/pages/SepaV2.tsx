@@ -25,10 +25,19 @@ import { SepaSetupTabs, TAB_TO_KIND, type SepaTab } from '../components/SepaSetu
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 
+// Shape of /sepa/card-enrichment/{symbol} response — duplicated here to
+// avoid importing the IntersectionObserver-coupled hook (the table
+// fetches in batch instead of per-row-on-viewport-entry).
+type Enrich = {
+  symbol: string;
+  insider:   { cluster_buy?: boolean; unique_insiders_30d?: number; form4_count_30d?: number };
+  valuation: { signal?: 'undervalued' | 'fair' | 'overvalued' | null; label?: string | null; score?: number | null; pe?: number | null; forward_pe?: number | null; peg?: number | null };
+};
+
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
   | 'pct52w' | 'vsMa50' | 'vsMa200' | 'base' | 'setup' | 'adr' | 'vol'
-  | 'flow' | 'dm12m' | 'plan';
+  | 'flow' | 'dm12m' | 'plan' | 'valuation' | 'insider';
 type SortDir = 'asc' | 'desc';
 
 const VOL_RANK: Record<string, number> = {
@@ -219,6 +228,13 @@ export function SepaV2Page() {
   const [tabCounts, setTabCounts] = useState<Partial<Record<SepaTab, number | null>>>({});
   const [setupSymbols, setSetupSymbols] = useState<Partial<Record<SepaTab, Set<string>>>>({});
 
+  // Card enrichment (valuation + insider buy) — fetched in batches for
+  // the top-N rows whenever the filtered universe changes. /sepa/card-
+  // enrichment/{symbol} is 24h-cached server-side so repeat queries are
+  // effectively free; the batching here just keeps us from firing 230
+  // parallel requests on first paint.
+  const [enrichment, setEnrichment] = useState<Map<string, Enrich>>(new Map());
+
   // Fetch counts + symbol lists for all api-backed tabs in parallel on mount.
   // /setups/{kind}?only_pending=true returns {kind, count, setups: [{symbol,...}]}.
   useEffect(() => {
@@ -323,8 +339,8 @@ export function SepaV2Page() {
       // Column-header click overrides filter sort
       const dir = colSort.dir === 'desc' ? -1 : 1;
       return [...filtered].sort((a, b) => {
-        const va = colSortVal(a, colSort.key);
-        const vb = colSortVal(b, colSort.key);
+        const va = colSortVal(a, colSort.key, enrichment);
+        const vb = colSortVal(b, colSort.key, enrichment);
         if (va === vb) return 0;
         if (va === null || va === undefined) return 1;
         if (vb === null || vb === undefined) return -1;
@@ -332,10 +348,46 @@ export function SepaV2Page() {
       });
     }
     return applySortFromFilters(filtered, filters.sortBy);
-  }, [filtered, filters.sortBy, colSort]);
+  }, [filtered, filters.sortBy, colSort, enrichment]);
 
   const qualifierCount = (data as any)?.qualifier_count ?? allRows.filter(isQualifier).length;
   const buyableCount = data?.candidate_count ?? allRows.filter(r => r.is_candidate).length;
+
+  // Batch-fetch enrichment for the top 100 visible rows. We re-fetch when
+  // the SORTED list changes, but skip symbols we already have. Concurrency
+  // is capped at 6 by chunking + Promise.all per chunk.
+  useEffect(() => {
+    if (!data) return;
+    const all = (data.all_results ?? data.candidates ?? []) as SepaCandidate[];
+    const symbols = all
+      .filter(r => isQualifier(r))
+      .slice(0, 200)
+      .map(r => r.symbol)
+      .filter(s => !enrichment.has(s));
+    if (symbols.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const CHUNK = 6;
+      for (let i = 0; i < symbols.length; i += CHUNK) {
+        if (cancelled) return;
+        const slice = symbols.slice(i, i + CHUNK);
+        const results = await Promise.all(slice.map(async (sym) => {
+          try {
+            const r = await fetch(`${API}/sepa/card-enrichment/${sym}`, { credentials: 'include' });
+            if (!r.ok) return null;
+            return await r.json() as Enrich;
+          } catch { return null; }
+        }));
+        if (cancelled) return;
+        setEnrichment(prev => {
+          const next = new Map(prev);
+          for (const e of results) if (e) next.set(e.symbol, e);
+          return next;
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [data]);
 
   function toggleColSort(k: SortKey) {
     setColSort(prev => {
@@ -412,12 +464,14 @@ export function SepaV2Page() {
               <Th k="vol"     cs={colSort} onClick={toggleColSort}>Vol</Th>
               <Th k="flow"    cs={colSort} onClick={toggleColSort}>Flow</Th>
               <Th k="dm12m"   cs={colSort} onClick={toggleColSort}>12m</Th>
+              <Th k="valuation" cs={colSort} onClick={toggleColSort}>Valuation</Th>
+              <Th k="insider"   cs={colSort} onClick={toggleColSort}>Insider</Th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map(r => <Row key={r.symbol} row={r} />)}
+            {sorted.map(r => <Row key={r.symbol} row={r} enrich={enrichment.get(r.symbol)} />)}
             {sorted.length === 0 && !loading && (
-              <tr><td colSpan={17} className="sepav2-empty">
+              <tr><td colSpan={19} className="sepav2-empty">
                 No rows match. Try lowering RS, switching Rating to ALL,
                 turning off Hide Distributing, or toggling "Show all analyzed".
               </td></tr>
@@ -444,7 +498,7 @@ function Th({ children, k, cs, onClick }: {
   );
 }
 
-function Row({ row }: { row: SepaCandidate }) {
+function Row({ row, enrich }: { row: SepaCandidate; enrich?: Enrich }) {
   const trend = row.trend ?? {} as any;
   const stage = row.stage ?? {} as any;
   const base = (row as any).base_count ?? {};
@@ -484,17 +538,20 @@ function Row({ row }: { row: SepaCandidate }) {
     : <span className="plan-empty">—</span>;
 
   // Flow chip — Distributing (red flag) > Outflow (whale) > Inflow > —
+  // Each chip is a Link to the detail page (#volume anchor) so the user
+  // can click through to see the full chart + volume detail, matching
+  // V1's clickable chip behaviour.
   const accumStr = vol.accumulation_strength;
   const cmfSignal = vol.cmf_signal;
   const flowChips: any[] = [];
   if (accumStr === 'distributing') flowChips.push(
-    <span key="d" className="flow-chip flow-distrib" title="Distributing volume">🚩 Distributing</span>
+    <Link key="d" to={`/sepa/${row.symbol}#volume`} className="flow-chip flow-distrib" title="Distributing volume — click for chart">🚩 Distributing</Link>
   );
   if (cmfSignal === 'outflow') flowChips.push(
-    <span key="o" className="flow-chip flow-outflow" title="CMF outflow (Chaikin Money Flow)">🐋 Outflow</span>
+    <Link key="o" to={`/sepa/${row.symbol}#volume`} className="flow-chip flow-outflow" title="CMF outflow (Chaikin Money Flow) — click for chart">🐋 Outflow</Link>
   );
   if (cmfSignal === 'inflow' && accumStr !== 'distributing') flowChips.push(
-    <span key="i" className="flow-chip flow-inflow" title="CMF inflow">💰 Inflow</span>
+    <Link key="i" to={`/sepa/${row.symbol}#volume`} className="flow-chip flow-inflow" title="CMF inflow — click for chart">💰 Inflow</Link>
   );
 
   // 12m return — colored, with checkmark if abs_mom_pass
@@ -530,21 +587,81 @@ function Row({ row }: { row: SepaCandidate }) {
         {base.base_count ?? '—'}
       </td>
       <td>
-        {setup ? <span className={setupCls}>{setupLabel}</span> : <span className="rv2-neutral">—</span>}
+        {setup
+          ? <Link to={`/sepa/${row.symbol}#setup`} className={setupCls} title="Click for setup details">{setupLabel}</Link>
+          : <span className="rv2-neutral">—</span>}
       </td>
-      <td>{planTxt}</td>
+      <td>
+        {setup
+          ? <Link to={`/sepa/${row.symbol}#setup`} className="plan-link" title="Click for trade plan">{planTxt}</Link>
+          : planTxt}
+      </td>
       <td>{fmt(row.adr_pct, 1)}</td>
-      <td className={volClass(vol.accumulation_strength)}>{vol.accumulation_strength ?? '—'}</td>
-      <td className="flow-cell">{flowChips.length ? flowChips : <span className="rv2-neutral">—</span>}</td>
-      <td className={dm12Class}>
-        {r12 != null ? `${r12 > 0 ? '+' : ''}${r12.toFixed(1)}%` : '—'}
-        {beatsSpy && <span className="dm-check" title="Beats SPY 12m"> ✓</span>}
+      <td className={volClass(vol.accumulation_strength)}>
+        <Link to={`/sepa/${row.symbol}#volume`} className="vol-link" title="Click for volume chart">
+          {vol.accumulation_strength ?? '—'}
+        </Link>
       </td>
+      <td className="flow-cell">{flowChips.length ? flowChips : <span className="rv2-neutral">—</span>}</td>
+      <td>
+        <Link to={`/sepa/${row.symbol}#dual-momentum`} className={`dm-link ${dm12Class}`} title="Click for Dual Momentum details">
+          {r12 != null ? `${r12 > 0 ? '+' : ''}${r12.toFixed(1)}%` : '—'}
+          {beatsSpy && <span className="dm-check" title="Beats SPY 12m"> ✓</span>}
+        </Link>
+      </td>
+      <td>{renderValuationChip(row.symbol, enrich)}</td>
+      <td>{renderInsiderChip(row.symbol, enrich)}</td>
     </tr>
   );
 }
 
-function colSortVal(r: SepaCandidate, k: SortKey): number | string | null | undefined {
+function renderValuationChip(symbol: string, enrich?: Enrich) {
+  if (!enrich || !enrich.valuation || enrich.valuation.signal == null) {
+    return <span className="rv2-neutral mono-sm">…</span>;
+  }
+  const sig = enrich.valuation.signal;
+  const label = enrich.valuation.label ?? sig;
+  const cls = sig === 'undervalued' ? 'val-under'
+    : sig === 'fair'        ? 'val-fair'
+    : sig === 'overvalued'  ? 'val-over'
+    : '';
+  const icon = sig === 'undervalued' ? '💰'
+    : sig === 'fair'        ? '⚖️'
+    : sig === 'overvalued'  ? '⚠️'
+    : '';
+  const pe = enrich.valuation.forward_pe ?? enrich.valuation.pe;
+  const tooltip = `${label}` + (pe != null ? ` · fwd P/E ${pe.toFixed(1)}` : '') + (enrich.valuation.peg != null ? ` · PEG ${enrich.valuation.peg.toFixed(2)}` : '');
+  return (
+    <Link to={`/sepa/${symbol}#fundamentals`} className={`val-chip ${cls}`} title={tooltip}>
+      {icon} {label}
+    </Link>
+  );
+}
+
+function renderInsiderChip(symbol: string, enrich?: Enrich) {
+  if (!enrich || !enrich.insider) {
+    return <span className="rv2-neutral mono-sm">…</span>;
+  }
+  const cluster = enrich.insider.cluster_buy;
+  const n = enrich.insider.unique_insiders_30d ?? 0;
+  if (cluster) {
+    return (
+      <Link to={`/sepa/${symbol}#insider`} className="ins-chip ins-cluster" title={`${n} unique insiders bought in 30d — cluster buy signal`}>
+        🟢 Cluster ({n})
+      </Link>
+    );
+  }
+  if (n > 0) {
+    return (
+      <Link to={`/sepa/${symbol}#insider`} className="ins-chip ins-some" title={`${n} insider${n === 1 ? '' : 's'} bought in 30d`}>
+        {n} buyer{n === 1 ? '' : 's'}
+      </Link>
+    );
+  }
+  return <span className="rv2-neutral mono-sm">—</span>;
+}
+
+function colSortVal(r: SepaCandidate, k: SortKey, enrichment?: Map<string, Enrich>): number | string | null | undefined {
   const trend = r.trend ?? {} as any;
   const stage = r.stage ?? {} as any;
   const base = (r as any).base_count ?? {};
@@ -570,6 +687,20 @@ function colSortVal(r: SepaCandidate, k: SortKey): number | string | null | unde
                          + (vol.cmf_signal === 'outflow' ? -1 : vol.cmf_signal === 'inflow' ? 1 : 0);
     case 'dm12m':   return dm.return_12m ?? -999;
     case 'plan':    return r.entry_setup ? (r.entry_setup.pivot ?? 0) : -1;
+    case 'valuation': {
+      const e = enrichment?.get(r.symbol);
+      if (!e?.valuation) return -1;
+      const sig = e.valuation.signal;
+      // Undervalued > Fair > Overvalued > unknown
+      return sig === 'undervalued' ? 3 : sig === 'fair' ? 2 : sig === 'overvalued' ? 1 : 0;
+    }
+    case 'insider': {
+      const e = enrichment?.get(r.symbol);
+      if (!e?.insider) return -1;
+      const cluster = e.insider.cluster_buy ? 100 : 0;
+      const n = e.insider.unique_insiders_30d ?? 0;
+      return cluster + n;
+    }
   }
 }
 
@@ -637,6 +768,28 @@ const CSS = `
 
 /* Dual-momentum checkmark when beats_spy is true */
 .dm-check { color: var(--green, #4ad29a); font-size: 11px; margin-left: 4px; }
+
+/* Clickable chip links — match the existing chip styling but underline on hover */
+.plan-link, .vol-link, .dm-link { text-decoration: none; color: inherit; }
+.plan-link:hover, .vol-link:hover, .dm-link:hover { text-decoration: underline; opacity: 0.9; }
+.flow-chip { text-decoration: none; cursor: pointer; }
+.flow-chip:hover { filter: brightness(1.15); }
+.setup-pill { cursor: pointer; text-decoration: none; }
+.setup-pill:hover { filter: brightness(1.15); }
+
+/* Valuation chip — undervalued (green) / fair (amber) / overvalued (red) */
+.val-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.val-chip:hover { filter: brightness(1.15); }
+.val-under { background: rgba(74, 210, 154, 0.12); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.3); }
+.val-fair  { background: rgba(232, 178, 91, 0.12); color: #e8b25b; border: 1px solid rgba(232, 178, 91, 0.3); }
+.val-over  { background: rgba(226, 107, 107, 0.12); color: #f87171; border: 1px solid rgba(226, 107, 107, 0.3); }
+
+/* Insider chip — cluster (green, prominent) / some buyers / none */
+.ins-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.ins-chip:hover { filter: brightness(1.15); }
+.ins-cluster { background: rgba(74, 210, 154, 0.18); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.5); font-weight: 600; }
+.ins-some    { background: rgba(122, 169, 230, 0.12); color: #7aa9e6; border: 1px solid rgba(122, 169, 230, 0.3); }
+.mono-sm { font-size: 11px; font-family: "SF Mono", Menlo, monospace; }
 `;
 
 export default SepaV2Page;
