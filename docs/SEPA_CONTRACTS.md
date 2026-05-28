@@ -244,22 +244,35 @@ Changing any gate would change what shows up on Ajay's primary research view.
 
 ## 6. Trend Template — 8 gates LOCKED
 
-`backend/sepa/trend_template.py:58-69`. Identifiers are exact dict keys.
+**Source of truth:** Mark Minervini, *Trade Like a Stock Market Wizard* (McGraw-Hill, 2013),
+**book p. 79** — the "Trend Template" box listing the 8 criteria. Verified verbatim against
+the printed list 2026-05-27.
+
+> Quote from book p. 79 (verbatim): *"It's important to point out that a stock must
+> meet all eight of the Trend Template criteria to be considered in a confirmed
+> stage 2 uptrend."*
+>
+> Note also book p. 79 prelude: *"The Trend Template is a qualifier."* — i.e., this
+> set of 8 criteria yields the screened universe Minervini then runs fundamentals +
+> setup analysis against. It is NOT his definition of "ready to buy."
+
+Code location: `backend/sepa/trend_template.py:58-69`. Identifiers are exact dict keys.
+
+| # | Book p.79 criterion | Code expression |
+|---|---|---|
+| 1 | Stock price above both 150-day (30-week) AND 200-day (40-week) MA | `price > MA150 and price > MA200` |
+| 2 | 150-day MA above 200-day MA | `MA150 > MA200` |
+| 3 | 200-day MA trending up **at least 1 month** (preferably 4–5 months) | `MA200_today > MA200_22_bars_ago` (22 bars = 1 mo) |
+| 4 | 50-day (10-week) MA above both 150-day and 200-day | `MA50 > MA150 > MA200` |
+| 5 | Stock price above 50-day MA | `price > MA50` |
+| 6 | Stock price **at least 30% above** 52-week low | `pct_above_low >= 30` |
+| 7 | Stock price **within 25% of** 52-week high | `pct_below_high <= 25` |
+| 8 | RS rank (IBD) **≥ 70** (preferably 80s–90s) | `rs_rank >= 70` |
+
+Preferred (book p.79, criterion 3 parenthetical "preferably 4–5 months minimum"):
+- `ma200_trending_up_5mo`: `MA200_today > MA200_110_bars_ago` (110 bars ≈ 5 mo)
 
 ```python
-checks = {
-    "price_above_ma150_and_ma200":   price > MA150 and price > MA200,
-    "ma150_above_ma200":             MA150 > MA200,
-    "ma200_trending_up":             MA200_today > MA200_22_bars_ago,
-    "ma50_above_ma150_above_ma200":  MA50 > MA150 > MA200,
-    "price_above_ma50":              price > MA50,
-    "at_least_30pct_above_52w_low":  pct_above_low >= 30,
-    "within_25pct_of_52w_high":      pct_below_high <= 25,
-    "rs_rank_at_least_70":           rs_rank >= 70,    # set by scanner after rs_ranks() runs
-}
-preferred = {
-    "ma200_trending_up_5mo":         MA200_today > MA200_110_bars_ago,
-}
 passed = sum(checks.values())  # 0 to 8
 ```
 
@@ -267,53 +280,147 @@ passed = sum(checks.values())  # 0 to 8
 
 ## 7. VCP rules — LOCKED
 
-`backend/sepa/vcp.py`. Constants embedded inline:
+**Source of truth:** Mark Minervini, *Trade Like a Stock Market Wizard*,
+**Chapter 10 "A Picture Is Worth a Million Dollars," pp. 198–203.** Verified
+2026-05-27.
 
-| Rule                                    | Threshold                       | Line |
-|-----------------------------------------|---------------------------------|------|
-| Lookback window                         | 325 bars (≈65 weeks)            | 51   |
-| Minimum contractions                    | 2                               | 152  |
-| Maximum contractions (ideal range)      | 6                               | 148  |
-| Monotonic shrinkage tolerance           | each ≤ 75% of previous          | 115  |
-| Tight right side (final contraction)    | ≤ 10%                           | 117-119 |
-| Maximum base depth                      | 60% (anything above = too_deep) | 66   |
-| Ideal base depth range                  | 10% to 35%                      | 149  |
-| Pivot quality — prior advance required  | ≥ 20% from pre-base low         | 138  |
-| Volume drying-up threshold              | final_vol / avg_base_vol < 0.8  | 145  |
+> **Book p. 198 (definition):** *"A common characteristic of virtually all
+> constructive price structures (those under accumulation) is a contraction
+> of volatility accompanied by specific areas in the base structure where
+> volume contracts significantly."*
+>
+> **Book p. 198 (contraction count):** *"During a VCP, you will generally see
+> a succession of anywhere from **two to six contractions**... Typically,
+> most VCP setups will be formed by two to four contractions, although
+> sometimes there can be as many as five or six."*
+>
+> **Book p. 199 (shrinkage rule):** *"I like to see each successive
+> contraction contained to **about half (plus or minus a reasonable amount)**
+> of the previous pullback or contraction."*
+>
+> **Book p. 200 (base width):** *"that is **four to seven weeks** in duration"*
+> (Darvas-style flat base). Bases can range 3–60 weeks per p. 197.
+>
+> **Book p. 186 (max correction):** *"the correction for a healthy stock from
+> peak to low will be contained within **25 to 35 percent** and during severe
+> bear market declines could be as much as **50 percent**, but the less, the
+> better. A correction of more than 50 percent is generally too much."*
+>
+> **Book p. 202 (worked example — VIVO "40W 31/3 4T"):** 40-week base,
+> 31% deepest correction, 3% final pullback, 4 contractions.
+> Earlier in the same example (p. 201–202): 31% → 17% → 8% → 3% sequence.
+>
+> **Book p. 203 (volume):** *"Tightness in price... should be accompanied
+> by a significant decrease in trading volume."* Buy point: *"when the stock
+> moves above the pivot point on expanding volume."*
 
-**`has_base = True`** requires ALL of:
+Code location: `backend/sepa/vcp.py`.
+
+| Rule | Book source | Threshold in code | Note |
+|---|---|---|---|
+| Lookback window | p.197 "3 to as many as 60 weeks" | 325 bars (≈65 weeks) | Code allows slightly longer than book max |
+| Minimum contractions | p.198 "two to six" | 2 | ✓ matches |
+| Maximum contractions | p.198 "five or six" | 6 | ✓ matches book upper bound |
+| Monotonic shrinkage | p.199 "about half ± reasonable amount" | each ≤ 75% of previous | ⚠ Code looser than book "half" ideal (50%) |
+| Tight right side (final contraction) | p.202 example "3 percent" | ≤ 10% | ⚠ Code looser than book example |
+| Maximum base depth | p.186 ">50% generally too much" | ≤ 60% (else `too_deep`) | ⚠ Code looser than book guidance |
+| Ideal base depth range | p.186 "25 to 35 percent" | 10%–35% (informational flag) | ✓ matches upper bound |
+| Pivot quality — prior advance | p.68 "rally of at least 25 to 30 percent off 52-week low" | ≥ 20% from pre-base low | ⚠ Code looser (20%) than book (25–30%) |
+| Volume drying up | p.203 "volume contracts significantly" | final_vol / avg_base_vol < 0.8 | Qualitative match |
+
+**`has_base = True`** requires ALL of (code, vcp.py current logic):
 - `n_contractions >= 2`
 - `monotonic_shrinkage == True`
 - `tight_right_side == True` (final contraction ≤ 10%)
 - `too_deep == False` (base ≤ 60%)
 - `pivot_quality_ok == True` (≥ 20% prior advance)
 
+**Known gaps vs book** (2026-05-27 audit, see `docs/rfcs/` for proposed fixes):
+1. Lookback scans entire 65-week window for swings instead of isolating the
+   *most recent* base. Can pair non-adjacent highs/lows from different bases.
+2. Swing window of 5 bars is tight; weekly-scale Ts may not be detected.
+3. No requirement that the first contraction be "say, 25 percent" (p.198).
+4. `pivot_quality` uses pre-base low across entire lookback window, not the
+   leg-up immediately preceding the base.
+
 ---
 
 ## 8. Weinstein Stage classifier — LOCKED
 
-`backend/sepa/stage.py`. Decision tree:
+**Source of truth:** Minervini Ch 5 "Trading with the Trend," **pp. 65–77**.
+Stan Weinstein 4-stage framework as adopted by Minervini (book p. 64-65 cites
+Weinstein's *Secrets for Profiting in Bull and Bear Markets*, 1988).
 
-| Stage | Condition |
-|-------|-----------|
-| **2** (Advancing) | `slope_up AND price > MA50 > MA150 > MA200` |
-| **4** (Decline)   | `slope_down AND price < MA50 < MA150 < MA200` |
-| **3** (Topping)   | `price < MA50 AND slope_up AND price > MA200 * 0.9` |
-| **1** (Basing)    | Default — any non-matching state |
+> **Book p. 66 (four stages):**
+> 1. Stage 1 — Neglect phase: consolidation
+> 2. Stage 2 — Advancing phase: accumulation
+> 3. Stage 3 — Topping phase: distribution
+> 4. Stage 4 — Declining phase: capitulation
+>
+> **Book p. 69 (Transition Stage 1→2, "Transition Criteria"):**
+> 1. Stock price above both 150-day and 200-day MA.
+> 2. 150-day MA above 200-day MA.
+> 3. 200-day MA has turned up.
+> 4. Series of higher highs and higher lows.
+> 5. Large up weeks on volume spikes vs low-volume pullbacks.
+> 6. More up weeks on volume than down weeks on volume.
+>
+> **Book p. 71–72 (Stage 2 characteristics):** price above 200-day, 200-day
+> in uptrend, 150-day above 200-day, 50-day above 150-day, volume spikes
+> on up days/weeks vs contractions on pullbacks.
+>
+> **Book p. 74–76 (Stage 3 characteristics):** widening volatility, major
+> price break on volume since stage 2 start, may undercut 200-day, 200-day
+> losing upward momentum and flattening.
+>
+> **Book p. 75 (Stage 4 characteristics):** vast majority of price action
+> below 200-day, 200-day in definite downtrend, near/at 52-week lows,
+> lower lows and lower highs, short MAs below long MAs.
+
+Code location: `backend/sepa/stage.py`. Decision tree:
+
+| Stage | Condition | Book reference |
+|-------|-----------|----------------|
+| **2** (Advancing) | `slope_up AND price > MA50 > MA150 > MA200` | p. 71-72 |
+| **4** (Decline)   | `slope_down AND price < MA50 < MA150 < MA200` | p. 75 |
+| **3** (Topping)   | `price < MA50 AND slope_up AND price > MA200 * 0.9` | p. 74 (lost MA50 but still above MA200) |
+| **1** (Basing)    | Default — any non-matching state | p. 67 |
 
 Slope = MA200 today vs MA200 22 bars ago. `slope_up = today > prior`.
+22 bars ≈ 1 month, matching book p. 79 trend template criterion #3.
 
 ---
 
 ## 9. Base count — LOCKED
 
-`backend/sepa/base_count.py`:
+**Source of truth:** Minervini Ch 5, **pp. 80–83** ("Where Are We on This
+Mountain? The Base Count").
 
-- Lookback: 504 bars (≈2 years)
+> **Book p. 80–81:** *"After a run upward, there is profit taking, causing
+> a temporary pullback, during which the stock builds a base."* Multiple
+> bases stack along a Stage 2 advance.
+>
+> **Book p. 81 (late-stage rule):** *"Generally, this occurs after three to
+> five bases have formed along the stage 2 uptrend. The later-stage bases
+> coincide with the point at which the stock's accumulation phase has
+> become too obvious."*
+>
+> **Book p. 81 (early-base bias):** *"Bases 1 and 2 generally come off a
+> market correction, which is the best time for jumping on board a new
+> trend. As the stock makes a series of bases along the stage 2 uptrend,
+> base 3 is a little more obvious but usually still tradable. By the time
+> a fourth or fifth base occurs (if it gets that far), the trend is becoming
+> extremely obvious and is definitely in its late stages."*
+
+Code location: `backend/sepa/base_count.py`:
+
+- Lookback: 504 bars (≈2 years) — practical horizon for a complete Stage 2 run
 - New base counted when: new 50-day rolling high reached AFTER ≥15 bars of
-  consolidation AND >30 bars since last base break
-- `is_early_base = base_count <= 2`
-- `is_late_stage = base_count >= 4`  ← this triggers the -8 score penalty
+  consolidation (≈3 weeks, matching book minimum base duration) AND >30 bars
+  since last base break
+- `is_early_base = base_count <= 2` ← book p. 81 "Bases 1 and 2"
+- `is_late_stage = base_count >= 4` ← book p. 81 "a fourth or fifth base...
+  definitely in its late stages." Triggers -8 score penalty in scanner.
 
 ---
 

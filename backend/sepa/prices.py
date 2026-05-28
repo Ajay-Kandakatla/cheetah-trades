@@ -310,12 +310,29 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
                 if not sym:
                     continue
                 day = item.get("day") or {}
-                # Use the start-of-day timestamp from `day.t`; fall back to now-UTC
+                # Use the start-of-day timestamp from `day.t`; fall back to today-ET.
+                # IMPORTANT (2026-05-27): normalize in US/Eastern, not UTC.
+                # Calling .normalize() directly on a UTC Timestamp truncates to
+                # midnight UTC, which rolls over to "tomorrow" any time after
+                # 8 PM ET (= midnight UTC). That bug appended future-dated bars
+                # every evening and silently broke VCP / Kell detectors that
+                # read the tail of the series. Convert to America/New_York
+                # before normalizing so a bar timestamped at any point during
+                # the May 27 ET session always stores as 2026-05-27.
                 day_t = day.get("t")
                 if day_t:
-                    bar_date = pd.Timestamp(day_t, unit="ms", tz="UTC").normalize().tz_localize(None)
+                    bar_date = (
+                        pd.Timestamp(day_t, unit="ms", tz="UTC")
+                        .tz_convert("America/New_York")
+                        .normalize()
+                        .tz_localize(None)
+                    )
                 else:
-                    bar_date = pd.Timestamp.now(tz="UTC").normalize().tz_localize(None)
+                    bar_date = (
+                        pd.Timestamp.now(tz="America/New_York")
+                        .normalize()
+                        .tz_localize(None)
+                    )
                 # Extended-hours surface (2026-05-26): expose lastTrade +
                 # prevDay so the frontend can render pre-market / after-hours
                 # prints with a session badge. Display-only — SEPA scoring
@@ -372,7 +389,21 @@ def patch_latest_closes(symbols: list[str]) -> dict:
         bar_date: pd.Timestamp = bar["date"]
         if bar_date is None:
             continue
-        today_iso = bar_date.date().isoformat()
+        bar_iso = bar_date.date().isoformat()
+
+        # Safety net (2026-05-27): refuse to store bars dated in the future.
+        # With the TZ fix in bulk_snapshot() above this should be impossible,
+        # but the guard makes a regression in date handling fail loud instead
+        # of silently corrupting the cache.
+        et_today_iso = (
+            pd.Timestamp.now(tz="America/New_York").normalize().date().isoformat()
+        )
+        if bar_iso > et_today_iso:
+            log.warning(
+                "patch_latest_closes: refusing future-dated bar for %s (%s > %s)",
+                sym, bar_iso, et_today_iso,
+            )
+            continue
 
         # Load just the tail of the stored series (last 5 rows is enough to
         # check whether today is already present).
@@ -396,13 +427,36 @@ def patch_latest_closes(symbols: list[str]) -> dict:
                 return d.date().isoformat()
             return str(d)[:10]
 
-        if any(_bar_iso(b) == today_iso for b in doc["bars"]):
-            # Bar exists — just bump the TTL so load_prices skips a re-fetch
+        if any(_bar_iso(b) == bar_iso for b in doc["bars"]):
+            # Today's bar already exists — OVERWRITE its OHLCV with the
+            # latest snapshot (2026-05-27 fix). Pre-fix behavior was to
+            # bump the TTL and skip the update, which meant a 9 AM
+            # partial / pre-market snapshot got frozen as the "daily"
+            # bar and was never updated to end-of-day values. That
+            # corrupted volume + range for the trailing bar, breaking
+            # VCP's tight_right_side check + vol_drying ratio. Now we
+            # rewrite the bar in place so subsequent calls (cron at 16:30
+            # ET, on-demand scans, etc.) always settle to the latest
+            # Massive snapshot.
             if coll is not None:
                 try:
-                    coll.update_one({"symbol": sym}, {"$set": {"cached_at": int(time.time())}})
-                except Exception:
-                    pass
+                    updated_bar = {
+                        "date":   bar_date.to_pydatetime(),
+                        "open":   float(bar["open"]),
+                        "high":   float(bar["high"]),
+                        "low":    float(bar["low"]),
+                        "close":  float(bar["close"]),
+                        "volume": float(bar["volume"]),
+                    }
+                    coll.update_one(
+                        {"symbol": sym, "bars.date": bar_date.to_pydatetime()},
+                        {"$set": {
+                            "bars.$":    updated_bar,
+                            "cached_at": int(time.time()),
+                        }},
+                    )
+                except Exception as exc:
+                    log.warning("patch_latest_closes: %s overwrite failed: %s", sym, exc)
             already_current += 1
             continue
 
