@@ -99,6 +99,12 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "tiny",          "label": "Tiny Stocks",         "group": "tools",     "default": False},
     {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "tools",  "default": False},
     {"id": "kell",          "label": "Kell (CoPA)",         "group": "tools",     "default": False},
+    # Plaid-backed portfolio view — broker holdings + R-multiples + heatmap.
+    # Owner-only by default since it surfaces real money positions; owners
+    # auto-bypass via the universal owner-feature grant (see
+    # get_user_features). Friends can be granted via /admin/access but
+    # the broker is per-user — each linker gets their own /portfolio.
+    {"id": "portfolio",     "label": "Portfolio (Fidelity)", "group": "tools",    "default": False},
     {"id": "catalysts",     "label": "Catalysts",           "group": "tools",     "default": False},
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},

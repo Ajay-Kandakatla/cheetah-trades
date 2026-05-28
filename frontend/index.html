@@ -26,6 +26,12 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
     />
+
+    <!-- Plaid Link JS SDK — provides window.Plaid.create() used by the
+         /portfolio page's Connect Brokerage flow. react-plaid-link (npm)
+         does NOT bundle this; the imperative Plaid.create() API is only
+         available via Plaid's hosted CDN. ~30 KB gzipped. -->
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   </head>
   <body>
     <div id="root"></div>
