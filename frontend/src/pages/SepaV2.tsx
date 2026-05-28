@@ -26,8 +26,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SepaCandidate, Rating, SepaScan } from '../hooks/useSepa';
-
-const API = (import.meta as any).env?.VITE_API_URL || '';
+import { API } from '../lib/apiBase';
 
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
