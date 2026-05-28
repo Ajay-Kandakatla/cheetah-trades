@@ -189,6 +189,13 @@ contract version):
 - `catalyst` — earnings catalyst summary
 - `insider` — recent insider transactions
 - `scanned_at` — per-row analysis timestamp (added by on-demand analyze path)
+- `qualifier` — bool, added 2026-05-27. True when `trend.pass_all AND
+  liquidity.liquid`. Matches Minervini's "Trend Template is a qualifier"
+  semantics (book p. 79). The wider WATCHLIST tier; `is_candidate` remains
+  the strict BUYABLE-NOW tier. Always: `is_candidate=True ⇒ qualifier=True`.
+  Surfaced in the top-level scan response as `qualifier_count` and rendered
+  in the SEPA hero stat strip alongside `candidate_count`. Additive; does
+  not change `is_candidate` semantics or any scoring weight.
 
 ---
 

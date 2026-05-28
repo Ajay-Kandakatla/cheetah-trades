@@ -83,6 +83,16 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
         <div className="sepa-stat">
           <div className="sepa-stat__num">{data?.candidate_count ?? 0}</div>
           <div className="sepa-stat__label">candidates</div>
+          <div className="sepa-stat__sub mono" title="Trend Template + Stage 2 + VCP/PowerPlay + early base + liquid">
+            buyable now
+          </div>
+        </div>
+        <div className="sepa-stat">
+          <div className="sepa-stat__num">{data?.qualifier_count ?? 0}</div>
+          <div className="sepa-stat__label">qualifiers</div>
+          <div className="sepa-stat__sub mono" title="Minervini Trend Template (book p.79) — Ajay's watchlist">
+            watchlist
+          </div>
         </div>
         <div className="sepa-stat">
           <div className="sepa-stat__num">{data?.analyzed ?? 0}</div>

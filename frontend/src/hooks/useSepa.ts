@@ -160,6 +160,10 @@ export type SepaCandidate = {
     is_partial?: boolean;         // true when <4 of 6 metrics had data
   };
   is_candidate: boolean;
+  /** Minervini "Trend Template is a qualifier" (book p.79) — wider tier
+   *  than `is_candidate`. True when trend.pass_all AND liquidity.liquid.
+   *  Use for watchlist display; use `is_candidate` for buyable-now. */
+  qualifier?: boolean;
 };
 
 export type SepaScan = {
@@ -168,6 +172,10 @@ export type SepaScan = {
   universe_size: number;
   analyzed: number;
   candidate_count: number;
+  /** Count of rows where `qualifier === true`. Always >= candidate_count.
+   *  Surfaced in the hero so the user can see "1357 analyzed → 18
+   *  qualifiers → 0 buyable" instead of just "0 candidates". */
+  qualifier_count?: number;
   market_context: {
     label: string;
     safe_to_long: boolean;

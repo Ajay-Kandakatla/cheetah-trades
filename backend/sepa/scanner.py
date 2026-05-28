@@ -262,6 +262,13 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "pioneer_themes": pioneer_themes,
         "is_pioneer":    bool(pioneer_themes),
         "liquidity": liq,
+        # Minervini's "qualifier" semantics — book p.79:
+        # *"The Trend Template is a qualifier. If a stock doesn't meet the
+        # Trend Template criteria, I don't consider it."* This is the
+        # WATCHLIST tier — names worth analyzing further. The strict
+        # `is_candidate` below adds setup + base count + stage as additional
+        # entry-timing gates. Additive per docs/SEPA_CONTRACTS.md §3.
+        "qualifier": bool(tr.pass_all and liq["liquid"]),
         "is_candidate": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
@@ -483,6 +490,10 @@ def scan_universe(symbols: Optional[List[str]] = None,
         "universe_size": len(work),
         "analyzed": len(results),
         "candidate_count": len(candidates),
+        # Watchlist tier — Minervini book p.79 "Trend Template is a qualifier."
+        # Always >= candidate_count. Surfaced so the UI can show
+        # "1357 analyzed → 18 qualifiers → 0 buyable" instead of just "0".
+        "qualifier_count": sum(1 for r in results if r.get("qualifier")),
         "market_context": mkt,
         "candidates": candidates,
         "all_results": results,
@@ -724,6 +735,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "liquidity": liq,
         "fundamentals": fundamentals,
         "moat": moat,
+        # Watchlist tier (Minervini p.79). See full-scan path for rationale.
+        "qualifier": bool(tr.pass_all and liq.get("liquid")),
         "is_candidate": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
@@ -894,6 +907,7 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         "universe_size": len(work),
         "analyzed": len(results),
         "candidate_count": len(candidates),
+        "qualifier_count": sum(1 for r in results if r.get("qualifier")),
         "fast_scan": True,
         "research_cache_hits": len(work) - len(missing),
         "research_cache_misses": len(missing),
