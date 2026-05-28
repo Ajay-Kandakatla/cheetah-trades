@@ -88,14 +88,24 @@ function volClass(strength: string | null | undefined): string {
   }
 }
 
-function fmt(n: number | null | undefined, prec = 2, fallback = '—'): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return fallback;
-  return n.toFixed(prec);
+// Coerce to a finite number or return null. JSON from the backend can
+// hand back numbers as strings ("12.34") for some fields, especially
+// fundamentals from yfinance. Calling .toFixed() on a string crashes
+// the row render — caught in prod 2026-05-28 ("u.toFixed is not a function").
+function asNum(n: any): number | null {
+  if (n === null || n === undefined) return null;
+  const v = typeof n === 'number' ? n : Number(n);
+  return Number.isFinite(v) ? v : null;
 }
-function fmtPct(n: number | null | undefined, prec = 2, withSign = false): string {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—';
-  const sign = withSign && n >= 0 ? '+' : '';
-  return `${sign}${n.toFixed(prec)}%`;
+function fmt(n: any, prec = 2, fallback = '—'): string {
+  const v = asNum(n);
+  return v === null ? fallback : v.toFixed(prec);
+}
+function fmtPct(n: any, prec = 2, withSign = false): string {
+  const v = asNum(n);
+  if (v === null) return '—';
+  const sign = withSign && v >= 0 ? '+' : '';
+  return `${sign}${v.toFixed(prec)}%`;
 }
 
 // ── Filter / sort logic matching V1 SepaFilterBar behaviour ───────────
@@ -555,9 +565,9 @@ function Row({ row, enrich }: { row: SepaCandidate; enrich?: Enrich }) {
   );
 
   // 12m return — colored, with checkmark if abs_mom_pass
-  const r12 = dm?.return_12m;
+  const r12 = asNum(dm?.return_12m);
   const beatsSpy = dm?.beats_spy;
-  const dm12Class = r12 == null ? 'rv2-neutral' : (r12 >= 100 ? 'rv2-strong' : r12 > 0 ? 'up' : 'down');
+  const dm12Class = r12 === null ? 'rv2-neutral' : (r12 >= 100 ? 'rv2-strong' : r12 > 0 ? 'up' : 'down');
 
   return (
     <tr className={isBuyable ? 'sepav2-row sepav2-row--buyable' : 'sepav2-row'}>
@@ -605,7 +615,7 @@ function Row({ row, enrich }: { row: SepaCandidate; enrich?: Enrich }) {
       <td className="flow-cell">{flowChips.length ? flowChips : <span className="rv2-neutral">—</span>}</td>
       <td>
         <Link to={`/sepa/${row.symbol}#dual-momentum`} className={`dm-link ${dm12Class}`} title="Click for Dual Momentum details">
-          {r12 != null ? `${r12 > 0 ? '+' : ''}${r12.toFixed(1)}%` : '—'}
+          {r12 !== null ? `${r12 > 0 ? '+' : ''}${r12.toFixed(1)}%` : '—'}
           {beatsSpy && <span className="dm-check" title="Beats SPY 12m"> ✓</span>}
         </Link>
       </td>
@@ -629,8 +639,11 @@ function renderValuationChip(symbol: string, enrich?: Enrich) {
     : sig === 'fair'        ? '⚖️'
     : sig === 'overvalued'  ? '⚠️'
     : '';
-  const pe = enrich.valuation.forward_pe ?? enrich.valuation.pe;
-  const tooltip = `${label}` + (pe != null ? ` · fwd P/E ${pe.toFixed(1)}` : '') + (enrich.valuation.peg != null ? ` · PEG ${enrich.valuation.peg.toFixed(2)}` : '');
+  const peNum = asNum(enrich.valuation.forward_pe) ?? asNum(enrich.valuation.pe);
+  const pegNum = asNum(enrich.valuation.peg);
+  const tooltip = `${label}`
+    + (peNum !== null ? ` · fwd P/E ${peNum.toFixed(1)}` : '')
+    + (pegNum !== null ? ` · PEG ${pegNum.toFixed(2)}` : '');
   return (
     <Link to={`/sepa/${symbol}#fundamentals`} className={`val-chip ${cls}`} title={tooltip}>
       {icon} {label}
@@ -685,8 +698,8 @@ function colSortVal(r: SepaCandidate, k: SortKey, enrichment?: Map<string, Enric
     case 'vol':     return VOL_RANK[vol.accumulation_strength ?? ''] ?? 0;
     case 'flow':    return (vol.accumulation_strength === 'distributing' ? -2 : 0)
                          + (vol.cmf_signal === 'outflow' ? -1 : vol.cmf_signal === 'inflow' ? 1 : 0);
-    case 'dm12m':   return dm.return_12m ?? -999;
-    case 'plan':    return r.entry_setup ? (r.entry_setup.pivot ?? 0) : -1;
+    case 'dm12m':   return asNum(dm.return_12m) ?? -999;
+    case 'plan':    return r.entry_setup ? (asNum(r.entry_setup.pivot) ?? 0) : -1;
     case 'valuation': {
       const e = enrichment?.get(r.symbol);
       if (!e?.valuation) return -1;
