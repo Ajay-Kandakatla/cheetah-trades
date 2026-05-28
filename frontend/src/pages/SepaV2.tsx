@@ -259,11 +259,22 @@ export function SepaV2Page() {
   const runScan = useCallback(async (withCatalyst: boolean, opts?: { fast?: boolean; mode?: string }) => {
     setScanning(true);
     try {
-      const u = new URL(`${API}/sepa/scan`);
-      u.searchParams.set('with_catalyst', String(withCatalyst));
-      if (opts?.fast) u.searchParams.set('fast', 'true');
-      if (opts?.mode) u.searchParams.set('mode', opts.mode);
-      const r = await fetch(u.toString(), { method: 'POST', credentials: 'include' });
+      // URLSearchParams instead of new URL(...) — when API resolves to a
+      // RELATIVE path like "/api" in production builds (VITE_API_BASE=/api
+      // baked into the Dockerfile), `new URL("/api/sepa/scan")` throws
+      // TypeError: Invalid URL because the constructor needs absolute URL
+      // or a base. fetch() accepts relative URLs natively, so we build
+      // the query string by hand and let fetch resolve it against the
+      // page origin. This was why Fast/Full Scan buttons appeared dead
+      // on the V2 page in production.
+      const params = new URLSearchParams();
+      params.set('with_catalyst', String(withCatalyst));
+      if (opts?.fast) params.set('fast', 'true');
+      if (opts?.mode) params.set('mode', opts.mode);
+      const r = await fetch(
+        `${API}/sepa/scan?${params.toString()}`,
+        { method: 'POST', credentials: 'include' }
+      );
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = await r.json();
       setData(j as SepaScan);
