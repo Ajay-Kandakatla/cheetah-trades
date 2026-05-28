@@ -25,7 +25,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useSepaScan, type SepaCandidate, type Rating } from '../hooks/useSepa';
+import type { SepaCandidate, Rating, SepaScan } from '../hooks/useSepa';
+
+const API = (import.meta as any).env?.VITE_API_URL || '';
 
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
@@ -82,16 +84,32 @@ function fmtPct(n: number | null | undefined, prec = 2, withSign = false): strin
 }
 
 export function SepaV2Page() {
-  const { data, loading, error, loadFull, hasFull } = useSepaScan();
+  // SepaV2 fetches the FULL /sepa/scan payload directly (no slim) instead
+  // of going through useSepaScan, which does a two-phase slim-then-loadFull
+  // dance that was leaving all_results empty in practice. Verified against
+  // the persisted scan: backend writes qualifier_count=235 + all_results
+  // with 1361 rows; we want all of it.
+  const [data, setData] = useState<SepaScan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // The hook does a 2-phase load: slim payload first (drops all_results
-  // for fast first paint), then on-demand fetch for the full universe.
-  // SepaV2 lives off all_results, so we need to trigger loadFull on mount.
-  // Without this, qualifierCount looks like "1" because the slim payload
-  // only contains the is_candidate subset.
   useEffect(() => {
-    if (!hasFull) loadFull();
-  }, [hasFull, loadFull]);
+    let cancelled = false;
+    setLoading(true);
+    fetch(`${API}/sepa/scan`, { credentials: 'include' })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(j => {
+        if (cancelled) return;
+        setData(j as SepaScan);
+        setError(null);
+      })
+      .catch(e => { if (!cancelled) setError(String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Filter state ──────────────────────────────────────────────────
   const [tickerFilter, setTickerFilter] = useState('');
@@ -151,13 +169,16 @@ export function SepaV2Page() {
     return sorted;
   }, [allRows, showAll, tickerFilter, minRs, ratingFilter, setupFilter, stageFilter, sortKey, sortDir]);
 
+  // Prefer the top-level field (always present, computed server-side over
+  // the full universe). Fall back to local recount only if the field is
+  // missing — e.g. an older persisted scan generated before 9e0195b.
   const qualifierCount = useMemo(
-    () => allRows.filter(isQualifier).length,
-    [allRows]
+    () => (data as any)?.qualifier_count ?? allRows.filter(isQualifier).length,
+    [data, allRows]
   );
   const buyableCount = useMemo(
-    () => allRows.filter(r => r.is_candidate).length,
-    [allRows]
+    () => data?.candidate_count ?? allRows.filter(r => r.is_candidate).length,
+    [data, allRows]
   );
 
   return (
