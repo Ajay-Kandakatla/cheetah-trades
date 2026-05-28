@@ -47,7 +47,7 @@ export function OvernightPanel({ compact = false, minGapPct = 0.5 }: Props) {
         <header className="overnight-panel__head">
           <h2 className="overnight-panel__h">Overnight movers</h2>
           <span className="overnight-panel__meta">{data?.n_scanned ?? 0} scanned · 0 moved ≥{minGapPct}%</span>
-          <button type="button" className="overnight-refresh" onClick={forceRefresh} disabled={refreshing}>
+          <button type="button" className="overnight-refresh" onClick={forceRefresh} disabled={refreshing} aria-busy={refreshing}>
             {refreshing ? 'Refreshing…' : '↻ Force refresh'}
           </button>
         </header>
@@ -73,7 +73,7 @@ export function OvernightPanel({ compact = false, minGapPct = 0.5 }: Props) {
           )}
           {data.as_of && <> · {new Date(data.as_of).toLocaleTimeString()}</>}
         </span>
-        <button type="button" className="overnight-refresh" onClick={forceRefresh} disabled={refreshing}
+        <button type="button" className="overnight-refresh" onClick={forceRefresh} disabled={refreshing} aria-busy={refreshing}
                 title="Bypass 30min cache and re-scrape every symbol">
           {refreshing ? 'Refreshing…' : '↻ Force refresh'}
         </button>

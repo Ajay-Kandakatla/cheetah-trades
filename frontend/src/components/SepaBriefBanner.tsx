@@ -44,7 +44,7 @@ export function SepaBriefBanner() {
             No brief yet — run scan first, then click below.
           </span>
         </div>
-        <button className="sepa-btn" onClick={regenerate} disabled={regenerating}>
+        <button className="sepa-btn" onClick={regenerate} disabled={regenerating} aria-busy={regenerating}>
           {regenerating ? 'Generating…' : 'Generate brief'}
         </button>
       </section>
@@ -71,7 +71,7 @@ export function SepaBriefBanner() {
             {mkt.safe_to_long ? ' · safe to long' : ' · caution'}
           </div>
         )}
-        <button className="sepa-btn" onClick={regenerate} disabled={regenerating}>
+        <button className="sepa-btn" onClick={regenerate} disabled={regenerating} aria-busy={regenerating}>
           {regenerating ? 'Refreshing…' : 'Refresh'}
         </button>
       </header>

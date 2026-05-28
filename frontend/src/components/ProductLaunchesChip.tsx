@@ -169,7 +169,7 @@ function LaunchesModal({ symbol, onClose }: { symbol: string; onClose: () => voi
             <h2 className="display" style={{ margin: '0.2rem 0 0', fontSize: '1.3rem' }}>{symbol} <span style={{ color: 'var(--cm-slate)', fontSize: '0.8rem', marginLeft: '0.4rem' }}>recent announcements</span></h2>
           </div>
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-            <button onClick={refresh} disabled={refreshing} style={{ background: 'none', border: '1px solid var(--rule, #444)', color: 'var(--cm-slate)', padding: '4px 10px', borderRadius: 3, cursor: 'pointer', fontSize: '0.72rem' }}>
+            <button onClick={refresh} disabled={refreshing} aria-busy={refreshing} style={{ background: 'none', border: '1px solid var(--rule, #444)', color: 'var(--cm-slate)', padding: '4px 10px', borderRadius: 3, cursor: 'pointer', fontSize: '0.72rem' }}>
               {refreshing ? '…scanning' : '↻ refresh'}
             </button>
             <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 0, color: 'var(--cm-slate)', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}>×</button>
