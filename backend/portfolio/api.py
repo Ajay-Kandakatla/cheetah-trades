@@ -188,6 +188,63 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
     holdings = plaid_response.get("holdings") or []
     securities = plaid_response.get("securities") or []
     accounts = plaid_response.get("accounts") or []
+
+    # Investment-only scope (2026-05-27).
+    # ----------------------------------------------------------------------
+    # Plaid's institution login (Fidelity) often returns more than the
+    # broker account — e.g. a linked Synchrony savings account comes back
+    # as type=depository, subtype=savings. We don't want those polluting
+    # the portfolio totals, account cards, heatmap, or alert pipeline:
+    # this page is a *stock* portfolio, not a net-worth dashboard.
+    #
+    # Plaid account "type" enum values: depository, credit, loan,
+    # investment, brokerage (legacy), other. We accept "investment" and
+    # "brokerage" defensively; both map to the same concept for Fidelity.
+    _BROKER_TYPES = {"investment", "brokerage"}
+    accounts = [
+        a for a in accounts
+        if (a.get("type") or "").lower() in _BROKER_TYPES
+    ]
+
+    # CSV-scope (2026-05-27 strict mode).
+    # ----------------------------------------------------------------------
+    # The user explicitly wants only the broker accounts represented in
+    # their uploaded Fidelity CSV — not the 401k / RSU / HSA plans that
+    # Plaid lumps in as "investment" accounts. (E.g. "Synchrony Financial
+    # My Savings Plan" is Plaid's name for the user's employer 401(k)
+    # administered by Fidelity — Plaid classifies it as type=investment,
+    # subtype=non-taxable brokerage account, so the type filter above
+    # doesn't drop it.)
+    #
+    # Mechanism: read the user's CSV-imported holdings, extract the
+    # last-4 mask from the account label ("Individual - TOD (8361)" →
+    # "8361"), and keep only Plaid accounts whose mask matches. If the
+    # user hasn't imported a CSV yet, this is a no-op and all investment
+    # accounts pass through (the original behavior).
+    #
+    # When the user expands to full net-worth view later, the toggle is:
+    # drop this block, or expose a `?scope=all` query param to bypass.
+    import re as _re
+    try:
+        csv_rows = store.list_holdings(owner_email)
+    except Exception:
+        csv_rows = []
+    csv_masks: set[str] = set()
+    for row in csv_rows:
+        if "csv-import" not in (row.get("tags") or []):
+            continue
+        m = _re.search(r"\((\d{2,6})\)\s*$", row.get("account") or "")
+        if m:
+            csv_masks.add(m.group(1))
+    if csv_masks:
+        accounts = [a for a in accounts if (a.get("mask") or "") in csv_masks]
+
+    # Also filter holdings to the surviving account_ids so we never show
+    # a position parented to an excluded account (defense in depth).
+    keep_ids = {a.get("account_id") for a in accounts if a.get("account_id")}
+    if keep_ids:
+        holdings = [h for h in holdings if h.get("account_id") in keep_ids]
+
     sec_by_id = {s.get("security_id"): s for s in securities if s.get("security_id")}
 
     meta_by_symbol = {m["symbol"]: m for m in plaid_store.get_position_meta(owner_email)}
@@ -562,9 +619,12 @@ async def portfolio_csv_import(
 
     Behavior
     --------
-    - Replaces all manual rows in any account named in the CSV (so
-      re-importing today's snapshot is the same as syncing).
-    - Manual rows from OTHER accounts (not in this CSV) are preserved.
+    - Each uploaded CSV is treated as a complete snapshot — ALL prior
+      csv-import rows for this user are wiped, then today's rows are
+      inserted. This matches how Fidelity's "Download Positions" actually
+      ships data (one file, all accounts) and prevents stale rows from
+      yesterday's accounts lingering after a different export today.
+    - Manually-typed positions (no csv-import tag) are preserved.
     - The imported rows show up in the same /portfolio/holdings response
       as Plaid-derived rows, tagged ``source: "csv"``.
     """
@@ -597,7 +657,7 @@ async def portfolio_csv_import(
             status_code=400,
         )
 
-    result = _csv_import.apply_to_store(e, parsed, replace_account=True)
+    result = _csv_import.apply_to_store(e, parsed, replace_account=True, wipe_all_csv=True)
     result["parsed_summary"] = {
         "imported_rows": parsed["imported"],
         "total_value":   parsed["total_value"],

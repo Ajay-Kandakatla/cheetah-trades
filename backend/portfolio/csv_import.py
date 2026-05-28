@@ -357,7 +357,20 @@ def sync_from_disk(user_email: str, *, archive: bool = False) -> dict:
             "headers": parsed.get("headers_seen") or [],
         }
 
-    result = apply_to_store(user_email, parsed, replace_account=True)
+    # Full-replace semantics for disk sync (2026-05-27).
+    # -------------------------------------------------------------------
+    # Fidelity's "Download all positions" export is always a *complete*
+    # snapshot of every account the user holds. If yesterday's CSV had
+    # accounts A + B + C and today's only has A (e.g. the user changed
+    # which accounts they care about, or Fidelity stopped reporting a
+    # plan), accounts B + C should be removed — not left lingering.
+    #
+    # The per-account `replace_account=True` mode only wipes accounts
+    # *present in the current CSV* — fine for additive uploads, but
+    # exactly wrong for a disk sync where each file is the new snapshot.
+    # `wipe_all_csv=True` clears every prior `csv-import` row for this
+    # user before re-inserting, making each sync the source of truth.
+    result = apply_to_store(user_email, parsed, replace_account=True, wipe_all_csv=True)
     result["file"] = latest.name
     result["parsed_summary"] = {
         "imported_rows": parsed["imported"],
@@ -383,12 +396,24 @@ def sync_from_disk(user_email: str, *, archive: bool = False) -> dict:
     return result
 
 
-def apply_to_store(user_email: str, parsed: dict, *, replace_account: bool = True) -> dict:
-    """Persist parsed rows to ``portfolio.store``. When ``replace_account``
-    is True (default), delete all existing manual rows in the same account
-    before re-inserting — this is the right semantics for "re-importing
-    today's CSV" where the user expects yesterday's stale positions to be
-    cleared. Set to False to merge instead (rare; useful for partial CSVs).
+def apply_to_store(user_email: str, parsed: dict, *,
+                    replace_account: bool = True,
+                    wipe_all_csv: bool = False) -> dict:
+    """Persist parsed rows to ``portfolio.store``.
+
+    ``replace_account=True`` (default): delete existing manual rows for
+    each account that's about to be rewritten before re-inserting. Right
+    semantics for additive uploads where the user might keep manually-
+    typed rows in *other* accounts that aren't in this CSV.
+
+    ``wipe_all_csv=True``: nuke *every* prior ``csv-import``-tagged row
+    for this user before inserting. Right semantics for whole-portfolio
+    snapshot syncs (Fidelity's "Download all positions" always returns
+    every account). Manually-typed rows (no ``csv-import`` tag) are
+    preserved.
+
+    The two flags compose: with ``wipe_all_csv=True``, ``replace_account``
+    becomes a no-op since everything's already gone.
     """
     from portfolio import store
 
@@ -397,19 +422,27 @@ def apply_to_store(user_email: str, parsed: dict, *, replace_account: bool = Tru
 
     rows = parsed["rows"]
 
-    if replace_account:
+    db = store._get_db()
+    deleted_stale = 0
+    if wipe_all_csv and db is not None:
+        # Nuke ALL csv-import rows for this user. Manually-typed rows
+        # (no csv-import tag) survive — those are user-curated.
+        res = db.portfolio_holdings.delete_many({
+            "user_email": user_email.lower(),
+            "tags":       "csv-import",
+        })
+        deleted_stale = res.deleted_count
+    elif replace_account and db is not None:
         # Delete existing manual rows for each account that's about to be
         # rewritten. We can't do a blanket delete-all because the user
         # might have manually-typed positions in OTHER accounts we don't
         # want to wipe.
         accounts_in_csv = {r["account"] for r in rows}
-        db = store._get_db()
-        if db is not None:
-            for acct in accounts_in_csv:
-                db.portfolio_holdings.delete_many({
-                    "user_email": user_email.lower(),
-                    "account":    acct,
-                })
+        for acct in accounts_in_csv:
+            db.portfolio_holdings.delete_many({
+                "user_email": user_email.lower(),
+                "account":    acct,
+            })
 
     written = 0
     failed: list[dict] = []
@@ -429,9 +462,10 @@ def apply_to_store(user_email: str, parsed: dict, *, replace_account: bool = Tru
             failed.append({"ticker": r["ticker"], "reason": res.get("reason")})
 
     return {
-        "ok":           True,
-        "written":      written,
-        "failed":       failed,
-        "total_value":  parsed["total_value"],
-        "skipped_csv":  len(parsed.get("skipped") or []),
+        "ok":             True,
+        "written":        written,
+        "failed":         failed,
+        "total_value":    parsed["total_value"],
+        "skipped_csv":    len(parsed.get("skipped") or []),
+        "deleted_stale":  deleted_stale,
     }

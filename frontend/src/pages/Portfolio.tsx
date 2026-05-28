@@ -952,7 +952,24 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
                   fontFamily:   'inherit',
                 }}
               >
-                <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{r.symbol || '—'}</div>
+                <div
+                  style={{
+                    fontWeight:   600,
+                    fontSize:     '0.95rem',
+                    overflow:     'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace:   'nowrap',
+                    // Constrain to tile width so 18-char synthetic symbols
+                    // like RESTRICTED.STOCK.UNITS or Fidelity target-date
+                    // tickers (BTC.LP.IDX.2055.H) don't bleed into the
+                    // next grid cell. minmax(120px,1fr) on the grid means
+                    // the inner label needs its own clamp.
+                    maxWidth:     '100%',
+                  }}
+                  title={r.symbol || ''}
+                >
+                  {r.symbol || '—'}
+                </div>
                 <div style={{ fontSize: '0.78rem', opacity: 0.92 }}>
                   {formatPct(r.pl_pct)}
                 </div>
