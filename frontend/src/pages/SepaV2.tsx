@@ -21,6 +21,7 @@ import { MarketClockStrip } from '../components/MarketClockStrip';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
+import { SepaSetupTabs, TAB_TO_KIND, type SepaTab } from '../components/SepaSetupTabs';
 
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
@@ -203,6 +204,42 @@ export function SepaV2Page() {
   // sort dropdown to go back to a named sort.
   const [colSort, setColSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
 
+  // ── Setup tabs (Bull Flag / Cheat / PEG / etc.) ───────────────────
+  // Each tab corresponds to a Minervini setup pattern detected by the
+  // backend setups/ scanners. Counts + symbol sets come from /setups/{kind}.
+  // 'all' = no filter (default); 'vcp' = client-side filter on entry_setup.
+  const [activeTab, setActiveTab] = useState<SepaTab>('all');
+  const [tabCounts, setTabCounts] = useState<Partial<Record<SepaTab, number | null>>>({});
+  const [setupSymbols, setSetupSymbols] = useState<Partial<Record<SepaTab, Set<string>>>>({});
+
+  // Fetch counts + symbol lists for all api-backed tabs in parallel on mount.
+  // /setups/{kind}?only_pending=true returns {kind, count, setups: [{symbol,...}]}.
+  useEffect(() => {
+    const kinds: Array<[SepaTab, string]> = Object.entries(TAB_TO_KIND)
+      .filter(([, kind]) => kind !== null)
+      .map(([tab, kind]) => [tab as SepaTab, kind as string]);
+    Promise.all(kinds.map(async ([tab, kind]) => {
+      try {
+        const r = await fetch(`${API}/setups/${kind}?only_pending=true&limit=500`, { credentials: 'include' });
+        if (!r.ok) return [tab, 0, new Set<string>()] as const;
+        const j = await r.json();
+        const syms = new Set<string>((j.setups || []).map((s: any) => String(s.symbol || '').toUpperCase()));
+        return [tab, j.count ?? syms.size, syms] as const;
+      } catch {
+        return [tab, 0, new Set<string>()] as const;
+      }
+    })).then(results => {
+      const counts: Partial<Record<SepaTab, number | null>> = {};
+      const syms: Partial<Record<SepaTab, Set<string>>> = {};
+      for (const [tab, count, set] of results) {
+        counts[tab] = count;
+        syms[tab] = set;
+      }
+      setTabCounts(counts);
+      setSetupSymbols(syms);
+    });
+  }, []);
+
   // ── Direct fetch (bypass useSepaScan slim/full lifecycle) ──────────
   const reload = useCallback(async () => {
     setLoading(true);
@@ -243,11 +280,32 @@ export function SepaV2Page() {
   const allRows: SepaCandidate[] = (data?.all_results ?? data?.candidates ?? []) as any;
 
   // Apply V1-style filters; toggle "show all" through SepaFilterBar's showAll
-  // (when on, we DON'T pre-filter to qualifiers).
-  const filtered = useMemo(
-    () => applyFilters(allRows, filters, true),
-    [allRows, filters]
-  );
+  // (when on, we DON'T pre-filter to qualifiers). After filtering, narrow
+  // further by the active setup tab if it's not 'all'.
+  const filtered = useMemo(() => {
+    let out = applyFilters(allRows, filters, true);
+    if (activeTab !== 'all') {
+      if (activeTab === 'vcp') {
+        out = out.filter(r => r.entry_setup?.type === 'VCP');
+      } else {
+        const allow = setupSymbols[activeTab];
+        if (allow && allow.size > 0) {
+          out = out.filter(r => allow.has((r.symbol || '').toUpperCase()));
+        } else {
+          out = [];
+        }
+      }
+    }
+    return out;
+  }, [allRows, filters, activeTab, setupSymbols]);
+
+  // Make the "all" tab count == the count of qualifiers currently shown.
+  const tabCountsForUI = useMemo(() => ({
+    ...tabCounts,
+    all: filtered.length,
+    // vcp is client-side — count VCP setups in current filtered view
+    vcp: allRows.filter(r => r.entry_setup?.type === 'VCP').length,
+  }), [tabCounts, filtered.length, allRows]);
 
   const sorted = useMemo(() => {
     if (colSort) {
@@ -304,6 +362,12 @@ export function SepaV2Page() {
 
       {loading && <div className="sepav2-msg">Loading scan…</div>}
       {error && <div className="sepav2-msg sepav2-err">Error: {error}</div>}
+
+      <SepaSetupTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabCounts={tabCountsForUI}
+      />
 
       <SepaFilterBar
         filters={filters}
