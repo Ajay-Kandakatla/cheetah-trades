@@ -213,6 +213,7 @@ export function MacroContextModal({
             <button
               onClick={() => load(true)}
               disabled={loading}
+              aria-busy={loading}
               style={{
                 background: 'none', border: '1px solid var(--rule, #555)',
                 color: 'var(--cm-slate)', padding: '4px 10px', borderRadius: 3,
