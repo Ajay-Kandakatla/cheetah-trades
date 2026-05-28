@@ -23,7 +23,7 @@
  * against the same scan data the /sepa page reads, the user can promote
  * this route to the default /sepa.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSepaScan, type SepaCandidate, type Rating } from '../hooks/useSepa';
 
@@ -82,7 +82,16 @@ function fmtPct(n: number | null | undefined, prec = 2, withSign = false): strin
 }
 
 export function SepaV2Page() {
-  const { data, loading, error } = useSepaScan();
+  const { data, loading, error, loadFull, hasFull } = useSepaScan();
+
+  // The hook does a 2-phase load: slim payload first (drops all_results
+  // for fast first paint), then on-demand fetch for the full universe.
+  // SepaV2 lives off all_results, so we need to trigger loadFull on mount.
+  // Without this, qualifierCount looks like "1" because the slim payload
+  // only contains the is_candidate subset.
+  useEffect(() => {
+    if (!hasFull) loadFull();
+  }, [hasFull, loadFull]);
 
   // ── Filter state ──────────────────────────────────────────────────
   const [tickerFilter, setTickerFilter] = useState('');
