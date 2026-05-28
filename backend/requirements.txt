@@ -18,6 +18,12 @@ lxml==5.3.0
 pyarrow==21.0.0
 pywebpush==2.0.0
 cryptography>=41.0.0
+# python-multipart — required by FastAPI for multipart/form-data uploads
+# (POST /portfolio/csv-import accepts a Fidelity positions CSV as UploadFile).
+python-multipart>=0.0.9
+# Plaid Investments — used by the /portfolio page's "Connect Brokerage"
+# flow to import broker holdings without storing broker credentials.
+plaid-python>=23.0.0
 # Playwright + stealth patches for the lifeboard.playwright_scraper module.
 # stealth defeats most navigator-based bot fingerprinting; Chromium is
 # installed in the Dockerfile after pip install (separate step).
