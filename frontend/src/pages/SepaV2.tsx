@@ -24,7 +24,8 @@ import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
-  | 'pct52w' | 'vsMa50' | 'vsMa200' | 'base' | 'setup' | 'adr' | 'vol';
+  | 'pct52w' | 'vsMa50' | 'vsMa200' | 'base' | 'setup' | 'adr' | 'vol'
+  | 'flow' | 'dm12m' | 'plan';
 type SortDir = 'asc' | 'desc';
 
 const VOL_RANK: Record<string, number> = {
@@ -327,14 +328,17 @@ export function SepaV2Page() {
               <Th k="vsMa200" cs={colSort} onClick={toggleColSort}>vs 200DMA</Th>
               <Th k="base"    cs={colSort} onClick={toggleColSort}>Base#</Th>
               <Th k="setup"   cs={colSort} onClick={toggleColSort}>Setup</Th>
+              <Th k="plan"    cs={colSort} onClick={toggleColSort}>Plan (buy → stop)</Th>
               <Th k="adr"     cs={colSort} onClick={toggleColSort}>ADR%</Th>
               <Th k="vol"     cs={colSort} onClick={toggleColSort}>Vol</Th>
+              <Th k="flow"    cs={colSort} onClick={toggleColSort}>Flow</Th>
+              <Th k="dm12m"   cs={colSort} onClick={toggleColSort}>12m</Th>
             </tr>
           </thead>
           <tbody>
             {sorted.map(r => <Row key={r.symbol} row={r} />)}
             {sorted.length === 0 && !loading && (
-              <tr><td colSpan={14} className="sepav2-empty">
+              <tr><td colSpan={17} className="sepav2-empty">
                 No rows match. Try lowering RS, switching Rating to ALL,
                 turning off Hide Distributing, or toggling "Show all analyzed".
               </td></tr>
@@ -366,11 +370,58 @@ function Row({ row }: { row: SepaCandidate }) {
   const stage = row.stage ?? {} as any;
   const base = (row as any).base_count ?? {};
   const vol = (row as any).volume ?? {};
+  const dm = (row as any).dual_momentum ?? null;
   const last = row.last_close ?? 0;
   const vsMa50  = trend.ma50  ? (last / trend.ma50  - 1) * 100 : null;
   const vsMa200 = trend.ma200 ? (last / trend.ma200 - 1) * 100 : null;
-  const setupStr = row.entry_setup?.type ?? '—';
+  const setup = row.entry_setup;
   const isBuyable = !!row.is_candidate;
+
+  // Setup pill — V1 styles POWER_PLAY as purple, VCP as cyan
+  const setupCls = setup?.type === 'POWER_PLAY' ? 'setup-pill setup-pp'
+    : setup?.type === 'VCP' ? 'setup-pill setup-vcp'
+    : '';
+  const setupLabel = setup?.type === 'POWER_PLAY' ? 'Power Play'
+    : setup?.type === 'VCP' ? 'VCP'
+    : '—';
+
+  // Trade plan summary — entry → stop with % risk pill
+  const planTxt = setup
+    ? (() => {
+        const pivot = setup.pivot;
+        const stop = setup.stop;
+        const riskPct = pivot && stop ? ((pivot - stop) / pivot) * 100 : null;
+        return (
+          <span className="plan-cell">
+            <span className="plan-buy">${fmt(pivot, 2)}</span>
+            <span className="plan-arrow">→</span>
+            <span className="plan-stop">${fmt(stop, 2)}</span>
+            {riskPct != null && (
+              <span className="plan-risk">{fmtPct(riskPct, 1)}</span>
+            )}
+          </span>
+        );
+      })()
+    : <span className="plan-empty">—</span>;
+
+  // Flow chip — Distributing (red flag) > Outflow (whale) > Inflow > —
+  const accumStr = vol.accumulation_strength;
+  const cmfSignal = vol.cmf_signal;
+  const flowChips: any[] = [];
+  if (accumStr === 'distributing') flowChips.push(
+    <span key="d" className="flow-chip flow-distrib" title="Distributing volume">🚩 Distributing</span>
+  );
+  if (cmfSignal === 'outflow') flowChips.push(
+    <span key="o" className="flow-chip flow-outflow" title="CMF outflow (Chaikin Money Flow)">🐋 Outflow</span>
+  );
+  if (cmfSignal === 'inflow' && accumStr !== 'distributing') flowChips.push(
+    <span key="i" className="flow-chip flow-inflow" title="CMF inflow">💰 Inflow</span>
+  );
+
+  // 12m return — colored, with checkmark if abs_mom_pass
+  const r12 = dm?.return_12m;
+  const beatsSpy = dm?.beats_spy;
+  const dm12Class = r12 == null ? 'rv2-neutral' : (r12 >= 100 ? 'rv2-strong' : r12 > 0 ? 'up' : 'down');
 
   return (
     <tr className={isBuyable ? 'sepav2-row sepav2-row--buyable' : 'sepav2-row'}>
@@ -399,9 +450,17 @@ function Row({ row }: { row: SepaCandidate }) {
       <td className={base.is_late_stage ? 'rv2-avoid' : (base.is_early_base ? 'rv2-buy' : '')}>
         {base.base_count ?? '—'}
       </td>
-      <td>{setupStr}</td>
+      <td>
+        {setup ? <span className={setupCls}>{setupLabel}</span> : <span className="rv2-neutral">—</span>}
+      </td>
+      <td>{planTxt}</td>
       <td>{fmt(row.adr_pct, 1)}</td>
       <td className={volClass(vol.accumulation_strength)}>{vol.accumulation_strength ?? '—'}</td>
+      <td className="flow-cell">{flowChips.length ? flowChips : <span className="rv2-neutral">—</span>}</td>
+      <td className={dm12Class}>
+        {r12 != null ? `${r12 > 0 ? '+' : ''}${r12.toFixed(1)}%` : '—'}
+        {beatsSpy && <span className="dm-check" title="Beats SPY 12m"> ✓</span>}
+      </td>
     </tr>
   );
 }
@@ -411,6 +470,7 @@ function colSortVal(r: SepaCandidate, k: SortKey): number | string | null | unde
   const stage = r.stage ?? {} as any;
   const base = (r as any).base_count ?? {};
   const vol = (r as any).volume ?? {};
+  const dm = (r as any).dual_momentum ?? {};
   const last = r.last_close ?? 0;
   switch (k) {
     case 'symbol':  return r.symbol;
@@ -427,6 +487,10 @@ function colSortVal(r: SepaCandidate, k: SortKey): number | string | null | unde
     case 'setup':   return r.entry_setup?.type ?? 'z';
     case 'adr':     return r.adr_pct ?? -1;
     case 'vol':     return VOL_RANK[vol.accumulation_strength ?? ''] ?? 0;
+    case 'flow':    return (vol.accumulation_strength === 'distributing' ? -2 : 0)
+                         + (vol.cmf_signal === 'outflow' ? -1 : vol.cmf_signal === 'inflow' ? 1 : 0);
+    case 'dm12m':   return dm.return_12m ?? -999;
+    case 'plan':    return r.entry_setup ? (r.entry_setup.pivot ?? 0) : -1;
   }
 }
 
@@ -471,6 +535,29 @@ const CSS = `
 .vv2-down { color: var(--red, #e26b6b); }
 .vv2-mute { color: var(--mute, #8a8f9c); }
 .sepav2-empty { padding: 32px; text-align: center; color: var(--mute, #8a8f9c); font-family: inherit; }
+
+/* Setup pills — purple for Power Play, cyan for VCP — match V1 card styling */
+.setup-pill { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+.setup-pp  { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+.setup-vcp { background: rgba(34, 211, 238, 0.15); color: #67e8f9; border: 1px solid rgba(34, 211, 238, 0.35); }
+
+/* Trade plan cell — entry → stop with % risk badge */
+.plan-cell { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.plan-buy { color: var(--green, #4ad29a); font-weight: 600; }
+.plan-arrow { color: var(--mute, #8a8f9c); }
+.plan-stop { color: var(--red, #e26b6b); }
+.plan-risk { color: var(--amber, #e8b25b); background: rgba(232, 178, 91, 0.12); padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+.plan-empty { color: var(--mute, #8a8f9c); }
+
+/* Flow chips — distributing, outflow (whale), inflow */
+.flow-cell { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.flow-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.flow-distrib { background: rgba(226, 107, 107, 0.12); color: #f87171; border: 1px solid rgba(226, 107, 107, 0.3); }
+.flow-outflow { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.flow-inflow  { background: rgba(74, 210, 154, 0.12); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.3); }
+
+/* Dual-momentum checkmark when beats_spy is true */
+.dm-check { color: var(--green, #4ad29a); font-size: 11px; margin-left: 4px; }
 `;
 
 export default SepaV2Page;
