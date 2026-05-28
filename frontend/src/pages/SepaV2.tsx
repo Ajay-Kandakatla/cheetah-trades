@@ -22,6 +22,8 @@ import { SepaBriefBanner } from '../components/SepaBriefBanner';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaSetupTabs, TAB_TO_KIND, type SepaTab } from '../components/SepaSetupTabs';
+import { SepaScanProgress } from '../components/SepaScanProgress';
+import { useSepaScanStream } from '../hooks/useSepaScanStream';
 
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
@@ -197,7 +199,12 @@ export function SepaV2Page() {
   const [data, setData] = useState<SepaScan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
+  // Real-time scan progress via SSE. Wraps EventSource against
+  // /sepa/scan/stream and pushes per-ticker activity, phase changes,
+  // candidate hits, retries, and failures into a stream object the
+  // SepaScanProgress component renders as a live log.
+  const stream = useSepaScanStream();
+  const scanning = stream.scanning;
   const [filters, setFilters] = useState<SepaFilters>(DEFAULT_FILTERS);
   // Column-click sort is a SECONDARY axis — when set, it overrides filter
   // bar's sortBy. Click a column header to use it; switch the SepaFilterBar
@@ -220,7 +227,7 @@ export function SepaV2Page() {
       .map(([tab, kind]) => [tab as SepaTab, kind as string]);
     Promise.all(kinds.map(async ([tab, kind]) => {
       try {
-        const r = await fetch(`${API}/setups/${kind}?only_pending=true&limit=500`, { credentials: 'include' });
+        const r = await fetch(`${API}/setups/${kind}?only_pending=true&limit=200`, { credentials: 'include' });
         if (!r.ok) return [tab, 0, new Set<string>()] as const;
         const j = await r.json();
         const syms = new Set<string>((j.setups || []).map((s: any) => String(s.symbol || '').toUpperCase()));
@@ -256,35 +263,28 @@ export function SepaV2Page() {
     }
   }, []);
 
-  const runScan = useCallback(async (withCatalyst: boolean, opts?: { fast?: boolean; mode?: string }) => {
-    setScanning(true);
-    try {
-      // URLSearchParams instead of new URL(...) — when API resolves to a
-      // RELATIVE path like "/api" in production builds (VITE_API_BASE=/api
-      // baked into the Dockerfile), `new URL("/api/sepa/scan")` throws
-      // TypeError: Invalid URL because the constructor needs absolute URL
-      // or a base. fetch() accepts relative URLs natively, so we build
-      // the query string by hand and let fetch resolve it against the
-      // page origin. This was why Fast/Full Scan buttons appeared dead
-      // on the V2 page in production.
-      const params = new URLSearchParams();
-      params.set('with_catalyst', String(withCatalyst));
-      if (opts?.fast) params.set('fast', 'true');
-      if (opts?.mode) params.set('mode', opts.mode);
-      const r = await fetch(
-        `${API}/sepa/scan?${params.toString()}`,
-        { method: 'POST', credentials: 'include' }
-      );
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const j = await r.json();
-      setData(j as SepaScan);
-      setError(null);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setScanning(false);
+  // Trigger an SSE-streamed scan via the useSepaScanStream hook. As
+  // each phase + ticker comes in, the SepaScanProgress component
+  // updates live. When the stream emits its final `done` event, we
+  // refresh `data` from the persisted scan so the table picks up the
+  // fresh universe + qualifier_count.
+  const runScan = useCallback((withCatalyst: boolean, opts?: { fast?: boolean; mode?: string }) => {
+    stream.start({
+      fast:          opts?.fast,
+      mode:          opts?.mode,
+      with_catalyst: withCatalyst,
+    });
+  }, [stream]);
+
+  // When the SSE stream finishes successfully, pull the latest scan
+  // payload to repopulate the qualifier/buyable counts + the table.
+  useEffect(() => {
+    if (stream.result && !stream.scanning) {
+      // Stream gave us the result inline — use it directly to avoid a
+      // second round-trip.
+      setData(stream.result as SepaScan);
     }
-  }, []);
+  }, [stream.result, stream.scanning]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -358,6 +358,10 @@ export function SepaV2Page() {
         onScan={runScan}
         onReload={reload}
       />
+
+      {(stream.scanning || stream.phase === 'error') && (
+        <SepaScanProgress {...stream} />
+      )}
 
       <div className="sepav2-counts">
         <span><b>{qualifierCount}</b> qualifiers</span>
