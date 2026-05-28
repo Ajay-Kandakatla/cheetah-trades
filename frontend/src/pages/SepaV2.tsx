@@ -1,32 +1,26 @@
 /**
- * SEPA v2 — clean rebuild. Table-first, qualifier-default, minimal filters.
+ * SEPA v2 — V1 chrome + filters with V2's clean sortable table.
  *
- * Design intent (2026-05-28):
- *   The original /sepa page accumulated ~1000 lines and 12+ overlapping
- *   filter chips that compound to "showing 0 / 163" even when the scan
- *   returned 233 qualifiers. This page is the opposite — start from the
- *   HTML qualifier export's clean tabular view, add only the filters
- *   you actually use to triage a watchlist:
- *
- *     - sort by clicking any column header
- *     - RS slider (default 70, Minervini's floor)
- *     - rating: any / BUY+ / STRONG_BUY only
- *     - setup: any / VCP / PowerPlay / has-setup
- *     - stage: any / S2 only
- *     - ticker search
- *
- * Defaults to Minervini's "qualifier" tier (book p.79 Trend Template)
- * NOT the strict is_candidate gate, so the page is useful even on days
- * where 0 names have a clean VCP. Strict candidates are flagged with ★.
- *
- * Uses the existing useSepaScan hook — no backend change. Once validated
- * against the same scan data the /sepa page reads, the user can promote
- * this route to the default /sepa.
+ * Promotion plan:
+ *   - V1 (1000-line /sepa) keeps working for fallback during validation.
+ *   - V2 (this) inherits V1's hero / market-regime / filter bar so every
+ *     chip Ajay used to use still functions: rating tier, RS slider, setup
+ *     filter, stage filter, moat tier, Dual Momentum, Pioneer, type, Hide
+ *     Distributing, full sort menu, ticker search.
+ *   - The candidate display is V2's clean table — readable at a glance,
+ *     sortable by clicking column headers, qualifier-default so 0-buyable
+ *     days still show ~230 watchlist names.
+ *   - Clicking any ticker → existing /sepa/:symbol detail page (unchanged).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SepaCandidate, Rating, SepaScan } from '../hooks/useSepa';
 import { API } from '../lib/apiBase';
+import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketClockStrip } from '../components/MarketClockStrip';
+import { SepaBriefBanner } from '../components/SepaBriefBanner';
+import { SepaHero } from '../components/SepaHero';
+import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 
 type SortKey =
   | 'symbol' | 'score' | 'rs' | 'trend' | 'stage' | 'price' | 'day'
@@ -40,9 +34,22 @@ const VOL_RANK: Record<string, number> = {
   strong: 4, accumulating: 3, neutral: 2, distributing: 1,
 };
 
+const DEFAULT_FILTERS: SepaFilters = {
+  rating: 'ALL',
+  setup: 'ALL',
+  rsMin: 70,
+  search: '',
+  showAll: false,
+  dmEligibleOnly: false,
+  type: 'all',
+  pioneerOnly: false,
+  stage: 'ALL',
+  moatMin: 0,
+  hideDistributing: false,
+  sortBy: 'score',
+};
+
 function isQualifier(row: SepaCandidate): boolean {
-  // Prefer the backend-emitted field (added 2026-05-27), fall back to
-  // the trend.pass_all + liquid combination for older scan payloads.
   if ((row as any).qualifier !== undefined) return Boolean((row as any).qualifier);
   return Boolean(row.trend?.pass_all && row.liquidity?.liquid);
 }
@@ -75,223 +82,264 @@ function fmt(n: number | null | undefined, prec = 2, fallback = '—'): string {
   if (n === null || n === undefined || Number.isNaN(n)) return fallback;
   return n.toFixed(prec);
 }
-
 function fmtPct(n: number | null | undefined, prec = 2, withSign = false): string {
   if (n === null || n === undefined || Number.isNaN(n)) return '—';
   const sign = withSign && n >= 0 ? '+' : '';
   return `${sign}${n.toFixed(prec)}%`;
 }
 
+// ── Filter / sort logic matching V1 SepaFilterBar behaviour ───────────
+function applyFilters(rows: SepaCandidate[], f: SepaFilters, showQualifiersOnly: boolean): SepaCandidate[] {
+  let out = rows;
+
+  if (showQualifiersOnly && !f.showAll) {
+    out = out.filter(isQualifier);
+  }
+
+  if (f.search.trim()) {
+    const q = f.search.trim().toUpperCase();
+    out = out.filter(r => (r.symbol || '').includes(q));
+  }
+
+  if (f.rsMin > 0) out = out.filter(r => (r.rs_rank ?? 0) >= f.rsMin);
+
+  if (f.rating !== 'ALL') {
+    out = out.filter(r => r.rating === f.rating);
+  }
+
+  if (f.setup === 'VCP') {
+    out = out.filter(r => r.entry_setup?.type === 'VCP');
+  } else if (f.setup === 'POWER_PLAY') {
+    out = out.filter(r => r.entry_setup?.type === 'POWER_PLAY');
+  }
+
+  if (f.stage !== 'ALL') {
+    out = out.filter(r => r.stage?.stage === f.stage);
+  }
+
+  if (f.type === 'equity') {
+    out = out.filter(r => !(r as any).is_etf);
+  } else if (f.type === 'etf') {
+    out = out.filter(r => (r as any).is_etf);
+  }
+
+  if (f.pioneerOnly) {
+    out = out.filter(r => (r as any).is_pioneer);
+  }
+
+  if (f.dmEligibleOnly) {
+    out = out.filter(r => {
+      const dm = (r as any).dual_momentum;
+      return dm && dm.abs_mom_pass && dm.beats_spy;
+    });
+  }
+
+  if (f.moatMin > 0) {
+    out = out.filter(r => {
+      const moat = (r as any).moat;
+      const tier = moat?.tier_rank ?? 0;
+      return tier >= f.moatMin;
+    });
+  }
+
+  if (f.hideDistributing) {
+    out = out.filter(r => {
+      const v = (r as any).volume ?? {};
+      return v.accumulation_strength !== 'distributing' && v.cmf_signal !== 'outflow';
+    });
+  }
+
+  return out;
+}
+
+function applySortFromFilters(rows: SepaCandidate[], sortBy: SepaFilters['sortBy']): SepaCandidate[] {
+  const dir = -1; // SepaFilterBar default direction is "desc" for most sorts
+  const out = [...rows];
+  const get = (r: SepaCandidate, k: SepaFilters['sortBy']): any => {
+    const dm = (r as any).dual_momentum ?? {};
+    const moat = (r as any).moat ?? {};
+    const themes = (r as any).pioneer_themes ?? [];
+    const vol = (r as any).volume ?? {};
+    switch (k) {
+      case 'score':       return r.score ?? -1;
+      case 'rs':          return r.rs_rank ?? -1;
+      case 'symbol':      return r.symbol;
+      case 'day_change':  return r.day_change_pct ?? -999;
+      case 'day_change_abs': return Math.abs(r.day_change_pct ?? 0);
+      case 'dm_12m':      return dm.return_12m ?? -999;
+      case 'dm_6m':       return dm.return_6m  ?? -999;
+      case 'dm_3m':       return dm.return_3m  ?? -999;
+      case 'dm_1m':       return dm.return_1m  ?? -999;
+      case 'dm_score':    return dm.dm_score   ?? -999;
+      case 'moat':        return moat.tier_rank ?? 0;
+      case 'pioneer':     return themes.length ?? 0;
+      case 'price_asc':   return -(r.last_close ?? 0);
+      case 'price_desc':  return r.last_close ?? 0;
+      case 'vol_vcp':     return (vol.up_down_vol_ratio ?? 0) + (r.entry_setup ? 5 : 0);
+      case 'vol_ratio':   return vol.up_down_vol_ratio ?? 0;
+      case 'vcp_first':   return r.entry_setup ? (r.score ?? 0) + 100 : (r.score ?? 0);
+    }
+  };
+  out.sort((a, b) => {
+    const va = get(a, sortBy);
+    const vb = get(b, sortBy);
+    if (va === vb) return 0;
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === 'string') return va < vb ? 1 : -1;
+    return va < vb ? -1 * dir : 1 * dir;
+  });
+  // Ascending sorts (already negated above for price_asc); ticker is asc
+  if (sortBy === 'symbol') out.reverse();
+  return out;
+}
+
 export function SepaV2Page() {
-  // SepaV2 fetches the FULL /sepa/scan payload directly (no slim) instead
-  // of going through useSepaScan, which does a two-phase slim-then-loadFull
-  // dance that was leaving all_results empty in practice. Verified against
-  // the persisted scan: backend writes qualifier_count=235 + all_results
-  // with 1361 rows; we want all of it.
   const [data, setData] = useState<SepaScan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [filters, setFilters] = useState<SepaFilters>(DEFAULT_FILTERS);
+  // Column-click sort is a SECONDARY axis — when set, it overrides filter
+  // bar's sortBy. Click a column header to use it; switch the SepaFilterBar
+  // sort dropdown to go back to a named sort.
+  const [colSort, setColSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  // ── Direct fetch (bypass useSepaScan slim/full lifecycle) ──────────
+  const reload = useCallback(async () => {
     setLoading(true);
-    fetch(`${API}/sepa/scan`, { credentials: 'include' })
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then(j => {
-        if (cancelled) return;
-        setData(j as SepaScan);
-        setError(null);
-      })
-      .catch(e => { if (!cancelled) setError(String(e)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    try {
+      const r = await fetch(`${API}/sepa/scan`, { credentials: 'include' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      setData(j as SepaScan);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // ── Filter state ──────────────────────────────────────────────────
-  const [tickerFilter, setTickerFilter] = useState('');
-  const [minRs, setMinRs] = useState(70);
-  const [ratingFilter, setRatingFilter] = useState<'any' | 'BUY+' | 'STRONG_BUY'>('any');
-  const [setupFilter, setSetupFilter] = useState<'any' | 'has' | 'VCP' | 'POWER_PLAY'>('any');
-  const [stageFilter, setStageFilter] = useState<'any' | 'S2'>('any');
-  const [showAll, setShowAll] = useState(false); // false = qualifiers only, true = all analyzed
-  const [sortKey, setSortKey] = useState<SortKey>('score');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const runScan = useCallback(async (withCatalyst: boolean, opts?: { fast?: boolean; mode?: string }) => {
+    setScanning(true);
+    try {
+      const u = new URL(`${API}/sepa/scan`);
+      u.searchParams.set('with_catalyst', String(withCatalyst));
+      if (opts?.fast) u.searchParams.set('fast', 'true');
+      if (opts?.mode) u.searchParams.set('mode', opts.mode);
+      const r = await fetch(u.toString(), { method: 'POST', credentials: 'include' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      setData(j as SepaScan);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setScanning(false);
+    }
+  }, []);
 
-  function toggleSort(k: SortKey) {
-    if (k === sortKey) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
-    else { setSortKey(k); setSortDir('desc'); }
-  }
+  useEffect(() => { reload(); }, [reload]);
 
-  // ── Source rows ───────────────────────────────────────────────────
   const allRows: SepaCandidate[] = (data?.all_results ?? data?.candidates ?? []) as any;
 
-  // ── Filtered + sorted view ────────────────────────────────────────
-  const view = useMemo(() => {
-    let rows = allRows;
-    if (!showAll) rows = rows.filter(isQualifier);
+  // Apply V1-style filters; toggle "show all" through SepaFilterBar's showAll
+  // (when on, we DON'T pre-filter to qualifiers).
+  const filtered = useMemo(
+    () => applyFilters(allRows, filters, true),
+    [allRows, filters]
+  );
 
-    const tkr = tickerFilter.trim().toUpperCase();
-    if (tkr) rows = rows.filter(r => (r.symbol || '').includes(tkr));
-
-    if (minRs > 0) rows = rows.filter(r => (r.rs_rank ?? 0) >= minRs);
-
-    if (ratingFilter === 'BUY+') {
-      rows = rows.filter(r => RATING_RANK[(r.rating as Rating) ?? 'NEUTRAL'] >= 3);
-    } else if (ratingFilter === 'STRONG_BUY') {
-      rows = rows.filter(r => r.rating === 'STRONG_BUY');
+  const sorted = useMemo(() => {
+    if (colSort) {
+      // Column-header click overrides filter sort
+      const dir = colSort.dir === 'desc' ? -1 : 1;
+      return [...filtered].sort((a, b) => {
+        const va = colSortVal(a, colSort.key);
+        const vb = colSortVal(b, colSort.key);
+        if (va === vb) return 0;
+        if (va === null || va === undefined) return 1;
+        if (vb === null || vb === undefined) return -1;
+        return va < vb ? -1 * dir : 1 * dir;
+      });
     }
+    return applySortFromFilters(filtered, filters.sortBy);
+  }, [filtered, filters.sortBy, colSort]);
 
-    if (setupFilter === 'has') {
-      rows = rows.filter(r => r.entry_setup != null);
-    } else if (setupFilter === 'VCP') {
-      rows = rows.filter(r => r.entry_setup?.type === 'VCP');
-    } else if (setupFilter === 'POWER_PLAY') {
-      rows = rows.filter(r => r.entry_setup?.type === 'POWER_PLAY');
-    }
+  const qualifierCount = (data as any)?.qualifier_count ?? allRows.filter(isQualifier).length;
+  const buyableCount = data?.candidate_count ?? allRows.filter(r => r.is_candidate).length;
 
-    if (stageFilter === 'S2') {
-      rows = rows.filter(r => r.stage?.stage === 2);
-    }
-
-    const sorted = [...rows].sort((a, b) => {
-      const dir = sortDir === 'desc' ? -1 : 1;
-      const va = sortVal(a, sortKey);
-      const vb = sortVal(b, sortKey);
-      if (va === vb) return 0;
-      if (va === null || va === undefined) return 1;
-      if (vb === null || vb === undefined) return -1;
-      return va < vb ? -1 * dir : 1 * dir;
+  function toggleColSort(k: SortKey) {
+    setColSort(prev => {
+      if (prev?.key === k) return { key: k, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
+      return { key: k, dir: 'desc' };
     });
-    return sorted;
-  }, [allRows, showAll, tickerFilter, minRs, ratingFilter, setupFilter, stageFilter, sortKey, sortDir]);
-
-  // Prefer the top-level field (always present, computed server-side over
-  // the full universe). Fall back to local recount only if the field is
-  // missing — e.g. an older persisted scan generated before 9e0195b.
-  const qualifierCount = useMemo(
-    () => (data as any)?.qualifier_count ?? allRows.filter(isQualifier).length,
-    [data, allRows]
-  );
-  const buyableCount = useMemo(
-    () => data?.candidate_count ?? allRows.filter(r => r.is_candidate).length,
-    [data, allRows]
-  );
+  }
 
   return (
-    <div className="sepav2">
+    <div className="sepav2-page">
       <style>{CSS}</style>
 
-      <header className="sepav2-header">
-        <div>
-          <div className="sepav2-eyebrow">Minervini SEPA · v2</div>
-          <h1>Qualifier Watchlist</h1>
-          <div className="sepav2-sub">
-            book p.79 Trend Template · sortable · {data?.market_context?.label ?? '—'}
-            {data?.market_context?.safe_to_long && ' · safe to long'}
-          </div>
-        </div>
-        <div className="sepav2-stats">
-          <Stat n={qualifierCount} label="qualifiers" />
-          <Stat n={buyableCount} label="buyable ★" />
-          <Stat n={data?.analyzed ?? 0} label="analyzed" />
-          <Stat n={data?.universe_size ?? 0} label="universe" />
-        </div>
-      </header>
+      <MarketRegimeBanner />
+      <MarketClockStrip />
+      <SepaBriefBanner />
+
+      <SepaHero
+        data={data}
+        scanning={scanning}
+        onScan={runScan}
+        onReload={reload}
+      />
+
+      <div className="sepav2-counts">
+        <span><b>{qualifierCount}</b> qualifiers</span>
+        <span><b>{buyableCount}</b> buyable ★</span>
+        <span><b>{data?.analyzed ?? 0}</b> analyzed</span>
+        <span><b>{data?.universe_size ?? 0}</b> universe</span>
+        {colSort && (
+          <span className="sepav2-counts__reset">
+            sorting by <b>{colSort.key} {colSort.dir}</b> (click again or use filter dropdown to reset)
+          </span>
+        )}
+      </div>
 
       {loading && <div className="sepav2-msg">Loading scan…</div>}
       {error && <div className="sepav2-msg sepav2-err">Error: {error}</div>}
 
-      <div className="sepav2-filters">
-        <label className="sepav2-field">
-          <span>Ticker</span>
-          <input
-            type="text"
-            value={tickerFilter}
-            placeholder="filter symbol…"
-            onChange={(e) => setTickerFilter(e.target.value)}
-          />
-        </label>
-
-        <label className="sepav2-field">
-          <span>RS ≥ {minRs}</span>
-          <input
-            type="range"
-            min={0}
-            max={99}
-            value={minRs}
-            onChange={(e) => setMinRs(Number(e.target.value))}
-          />
-        </label>
-
-        <label className="sepav2-field">
-          <span>Rating</span>
-          <select value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value as any)}>
-            <option value="any">Any</option>
-            <option value="BUY+">BUY+</option>
-            <option value="STRONG_BUY">STRONG_BUY</option>
-          </select>
-        </label>
-
-        <label className="sepav2-field">
-          <span>Setup</span>
-          <select value={setupFilter} onChange={(e) => setSetupFilter(e.target.value as any)}>
-            <option value="any">Any</option>
-            <option value="has">Has setup</option>
-            <option value="VCP">VCP</option>
-            <option value="POWER_PLAY">Power Play</option>
-          </select>
-        </label>
-
-        <label className="sepav2-field">
-          <span>Stage</span>
-          <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value as any)}>
-            <option value="any">Any</option>
-            <option value="S2">S2 only</option>
-          </select>
-        </label>
-
-        <label className="sepav2-field sepav2-toggle">
-          <input
-            type="checkbox"
-            checked={showAll}
-            onChange={(e) => setShowAll(e.target.checked)}
-          />
-          <span>Show all analyzed (not just qualifiers)</span>
-        </label>
-
-        <div className="sepav2-counter">
-          showing <b>{view.length}</b> of {showAll ? allRows.length : qualifierCount}
-        </div>
-      </div>
+      <SepaFilterBar
+        filters={filters}
+        onChange={setFilters}
+        total={allRows.length}
+        shown={sorted.length}
+      />
 
       <div className="sepav2-tablewrap">
         <table className="sepav2-table">
           <thead>
             <tr>
-              <Th k="symbol"  sk={sortKey} sd={sortDir} onClick={toggleSort}>Symbol</Th>
-              <Th k="score"   sk={sortKey} sd={sortDir} onClick={toggleSort}>Score</Th>
-              <Th k="trend"   sk={sortKey} sd={sortDir} onClick={toggleSort}>Trend</Th>
-              <Th k="rs"      sk={sortKey} sd={sortDir} onClick={toggleSort}>RS</Th>
-              <Th k="stage"   sk={sortKey} sd={sortDir} onClick={toggleSort}>Stage</Th>
-              <Th k="price"   sk={sortKey} sd={sortDir} onClick={toggleSort}>Price</Th>
-              <Th k="day"     sk={sortKey} sd={sortDir} onClick={toggleSort}>Day %</Th>
-              <Th k="pct52w"  sk={sortKey} sd={sortDir} onClick={toggleSort}>52w hi/lo</Th>
-              <Th k="vsMa50"  sk={sortKey} sd={sortDir} onClick={toggleSort}>vs 50DMA</Th>
-              <Th k="vsMa200" sk={sortKey} sd={sortDir} onClick={toggleSort}>vs 200DMA</Th>
-              <Th k="base"    sk={sortKey} sd={sortDir} onClick={toggleSort}>Base#</Th>
-              <Th k="setup"   sk={sortKey} sd={sortDir} onClick={toggleSort}>Setup</Th>
-              <Th k="adr"     sk={sortKey} sd={sortDir} onClick={toggleSort}>ADR%</Th>
-              <Th k="vol"     sk={sortKey} sd={sortDir} onClick={toggleSort}>Vol</Th>
+              <Th k="symbol"  cs={colSort} onClick={toggleColSort}>Symbol</Th>
+              <Th k="score"   cs={colSort} onClick={toggleColSort}>Score</Th>
+              <Th k="trend"   cs={colSort} onClick={toggleColSort}>Trend</Th>
+              <Th k="rs"      cs={colSort} onClick={toggleColSort}>RS</Th>
+              <Th k="stage"   cs={colSort} onClick={toggleColSort}>Stage</Th>
+              <Th k="price"   cs={colSort} onClick={toggleColSort}>Price</Th>
+              <Th k="day"     cs={colSort} onClick={toggleColSort}>Day %</Th>
+              <Th k="pct52w"  cs={colSort} onClick={toggleColSort}>52w hi/lo</Th>
+              <Th k="vsMa50"  cs={colSort} onClick={toggleColSort}>vs 50DMA</Th>
+              <Th k="vsMa200" cs={colSort} onClick={toggleColSort}>vs 200DMA</Th>
+              <Th k="base"    cs={colSort} onClick={toggleColSort}>Base#</Th>
+              <Th k="setup"   cs={colSort} onClick={toggleColSort}>Setup</Th>
+              <Th k="adr"     cs={colSort} onClick={toggleColSort}>ADR%</Th>
+              <Th k="vol"     cs={colSort} onClick={toggleColSort}>Vol</Th>
             </tr>
           </thead>
           <tbody>
-            {view.map(r => <Row key={r.symbol} row={r} />)}
-            {view.length === 0 && (
+            {sorted.map(r => <Row key={r.symbol} row={r} />)}
+            {sorted.length === 0 && !loading && (
               <tr><td colSpan={14} className="sepav2-empty">
-                No rows match. Try lowering RS, switching Rating to Any, or enabling "Show all analyzed".
+                No rows match. Try lowering RS, switching Rating to ALL,
+                turning off Hide Distributing, or toggling "Show all analyzed".
               </td></tr>
             )}
           </tbody>
@@ -301,26 +349,17 @@ export function SepaV2Page() {
   );
 }
 
-function Stat({ n, label }: { n: number; label: string }) {
-  return (
-    <div className="sepav2-stat">
-      <div className="sepav2-stat__n">{n}</div>
-      <div className="sepav2-stat__l">{label}</div>
-    </div>
-  );
-}
-
-function Th({ children, k, sk, sd, onClick }: {
-  children: any; k: SortKey; sk: SortKey; sd: SortDir; onClick: (k: SortKey) => void;
+function Th({ children, k, cs, onClick }: {
+  children: any; k: SortKey; cs: { key: SortKey; dir: SortDir } | null; onClick: (k: SortKey) => void;
 }) {
-  const active = sk === k;
+  const active = cs?.key === k;
   return (
     <th
       onClick={() => onClick(k)}
       className={active ? 'sepav2-th sepav2-th--active' : 'sepav2-th'}
       title="Click to sort"
     >
-      {children}{active && <span className="sepav2-th__arrow">{sd === 'desc' ? '↓' : '↑'}</span>}
+      {children}{active && <span className="sepav2-th__arrow">{cs!.dir === 'desc' ? '↓' : '↑'}</span>}
     </th>
   );
 }
@@ -333,7 +372,6 @@ function Row({ row }: { row: SepaCandidate }) {
   const last = row.last_close ?? 0;
   const vsMa50  = trend.ma50  ? (last / trend.ma50  - 1) * 100 : null;
   const vsMa200 = trend.ma200 ? (last / trend.ma200 - 1) * 100 : null;
-
   const setupStr = row.entry_setup?.type ?? '—';
   const isBuyable = !!row.is_candidate;
 
@@ -371,7 +409,7 @@ function Row({ row }: { row: SepaCandidate }) {
   );
 }
 
-function sortVal(r: SepaCandidate, k: SortKey): number | string | null | undefined {
+function colSortVal(r: SepaCandidate, k: SortKey): number | string | null | undefined {
   const trend = r.trend ?? {} as any;
   const stage = r.stage ?? {} as any;
   const base = (r as any).base_count ?? {};
@@ -396,26 +434,13 @@ function sortVal(r: SepaCandidate, k: SortKey): number | string | null | undefin
 }
 
 const CSS = `
-.sepav2 { padding: 24px 32px; color: var(--text, #e6e7eb); background: var(--bg, #0f1115); min-height: 100vh; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
-.sepav2-header { display: flex; gap: 24px; align-items: flex-end; justify-content: space-between; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line, #2a2f3a); flex-wrap: wrap; }
-.sepav2-eyebrow { color: var(--mute, #8a8f9c); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-.sepav2 h1 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: 0.02em; }
-.sepav2-sub { color: var(--mute, #8a8f9c); font-size: 12px; margin-top: 4px; }
-.sepav2-stats { display: flex; gap: 28px; }
-.sepav2-stat { text-align: right; }
-.sepav2-stat__n { font: 600 18px "SF Mono", Menlo, monospace; color: var(--gold, #d4a85f); }
-.sepav2-stat__l { color: var(--mute, #8a8f9c); font-size: 11px; }
+.sepav2-page { padding: 16px 24px 32px; color: var(--text, #e6e7eb); background: var(--bg, #0f1115); min-height: 100vh; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+.sepav2-counts { display: flex; gap: 28px; padding: 12px 0; color: var(--mute, #8a8f9c); font-size: 13px; }
+.sepav2-counts b { color: var(--gold, #d4a85f); font-family: "SF Mono", Menlo, monospace; font-size: 18px; font-weight: 600; }
+.sepav2-counts__reset { margin-left: auto; font-size: 12px; color: var(--amber, #e8b25b); }
 .sepav2-msg { padding: 12px; color: var(--mute, #8a8f9c); }
 .sepav2-err { color: var(--red, #e26b6b); }
-.sepav2-filters { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 12px 0; margin-bottom: 8px; border-bottom: 1px solid var(--line, #2a2f3a); }
-.sepav2-field { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--mute, #8a8f9c); text-transform: uppercase; letter-spacing: 0.06em; }
-.sepav2-field input[type="text"], .sepav2-field select { background: var(--panel, #161a22); border: 1px solid var(--line, #2a2f3a); color: var(--text, #e6e7eb); padding: 6px 8px; border-radius: 4px; font-size: 13px; font-family: inherit; }
-.sepav2-field input[type="range"] { width: 140px; }
-.sepav2-toggle { flex-direction: row !important; align-items: center; gap: 8px; }
-.sepav2-toggle span { text-transform: none; font-size: 12px; }
-.sepav2-counter { margin-left: auto; color: var(--mute, #8a8f9c); font-size: 12px; }
-.sepav2-counter b { color: var(--gold, #d4a85f); font-family: "SF Mono", Menlo, monospace; }
-.sepav2-tablewrap { overflow-x: auto; }
+.sepav2-tablewrap { overflow-x: auto; margin-top: 8px; }
 .sepav2-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .sepav2-th { text-align: left; color: var(--mute, #8a8f9c); font-weight: 500; border-bottom: 1px solid var(--line, #2a2f3a); padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; user-select: none; white-space: nowrap; }
 .sepav2-th:hover { color: var(--text, #e6e7eb); }
