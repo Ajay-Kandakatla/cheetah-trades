@@ -1282,6 +1282,25 @@ def _clean_json_floats(obj):
     return obj
 
 
+@app.get("/sepa/card-enrichment/{symbol}")
+async def sepa_card_enrichment(
+    symbol: str,
+    refresh: bool = Query(False, description="Bypass 24h cache"),
+):
+    """JIT enrichment for SEPA cards: cluster insider buy + valuation signal.
+
+    Cards on the SEPA list call this when they enter the viewport
+    (IntersectionObserver in React). Cached 24h in Mongo so subsequent
+    scrolls and quick re-renders don't hit EDGAR / yfinance again.
+
+    See backend/sepa/card_enrichment.py for the signal definitions and
+    cache semantics. Returns {symbol, insider, valuation, cached_at}.
+    """
+    from sepa import card_enrichment as _ce
+    payload = await _ce.enrich(symbol.upper(), force_refresh=refresh)
+    return JSONResponse(_clean_json_floats(payload))
+
+
 @app.get("/sepa/candidate/{symbol}")
 async def sepa_candidate_detail(symbol: str):
     """Deep-dive on a single candidate: trend + catalyst + insider + IPO age.
