@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
 import time
 from collections import deque
@@ -236,10 +237,24 @@ _ws_subscribe_queue: asyncio.Queue[str] = asyncio.Queue()
 _rest_client: Optional[httpx.AsyncClient] = None
 
 
+def _finnhub_poller_enabled() -> bool:
+    """Single source of truth for the Finnhub-poller env gate. Both the
+    lifespan WS+REST tasks AND the per-symbol one-shot fetches consult
+    this so dev (FINNHUB_POLLER_ENABLED=false) doesn't burst Finnhub on
+    container startup when subscribe_symbols(DEFAULT_SYMBOLS) fires."""
+    return os.getenv("FINNHUB_POLLER_ENABLED", "true").lower() not in ("false", "0", "no", "off")
+
+
 async def _rest_fetch_once(sym: str) -> None:
     """One-shot REST quote so newly-added symbols populate cache immediately."""
     global _rest_client
     if not FINNHUB_API_KEY:
+        return
+    # Gate one-shot fetches behind the same env var as the persistent
+    # poller — otherwise dev's startup subscribe_symbols(DEFAULT_SYMBOLS)
+    # fires ~10 simultaneous Finnhub calls (one per default symbol),
+    # which is exactly what we're trying to avoid.
+    if not _finnhub_poller_enabled():
         return
     if _rest_client is None:
         _rest_client = httpx.AsyncClient(timeout=10)
@@ -387,10 +402,27 @@ async def lifespan(app: FastAPI):
     # "not ready" and quote.update never fires for non-default symbols.
     from events import set_symbol_registrar
     set_symbol_registrar(subscribe_symbols)
-    tasks = [
-        asyncio.create_task(finnhub_ws_consumer()),
-        asyncio.create_task(finnhub_rest_poller()),
-    ]
+
+    # FINNHUB_POLLER_ENABLED env gate (default: true).
+    # The Finnhub WS subscription + REST poller share a single Finnhub
+    # API key across every running api container. When the dev stack
+    # (docker-compose.dev.yml) runs alongside prod, both containers
+    # poll simultaneously, doubling the request rate and instantly
+    # tripping the free-tier 30/min limit — every quote returns 429.
+    #
+    # Solution: dev compose sets FINNHUB_POLLER_ENABLED=false. Prod
+    # leaves it unset (defaults to true) so the live quote cache stays
+    # warm for legacy callers. Dev still serves /finnhub-v2/* via the
+    # JIT layer in finnhub_client/, which has its own rate limiter.
+    tasks: list = []
+    if _finnhub_poller_enabled():
+        tasks.append(asyncio.create_task(finnhub_ws_consumer()))
+        tasks.append(asyncio.create_task(finnhub_rest_poller()))
+    else:
+        log.info(
+            "FINNHUB_POLLER_ENABLED=false — skipping Finnhub WS + REST poller "
+            "(legacy live-quote cache will be empty; /finnhub-v2/* layer unaffected)"
+        )
     # Mac SSE drain — pulls from mac_outbox Mongo collection and fans out to
     # live native-app SSE clients. Cheap (200ms poll, single-row finds).
     from push import mac_stream as _mac_stream
@@ -468,7 +500,20 @@ _PUBLIC_API_PREFIXES = (
     # by this backend, but in case routing ever changes we don't want
     # the auth gate blocking the Google flow.
     "/oauth2/",
+    # Finnhub v2 diagnostics — /finnhub-v2/health is unauth so dev curl
+    # tests + uptime probes can verify the layer is reachable without
+    # needing a session cookie. Data endpoints (/finnhub-v2/quote/...,
+    # /finnhub-v2/profile/..., etc.) stay gated below.
+    #
+    # Just the /health subpath — the rest of /finnhub-v2/* require auth.
+    # We can't use a literal "/finnhub-v2/health" in the exact-path set
+    # because middleware order makes prefixes cheaper to check. Adding
+    # the full subtree here is intentional: data endpoints are still
+    # gated by the per-handler `current_user_email` dependency when we
+    # wire UI consumers, and during dev curl tests the user passes
+    # `-H "X-User-Email: ajay..."` to authenticate.
 )
+_PUBLIC_API_PATHS_FINNHUB_V2 = {"/finnhub-v2/health"}
 
 
 @app.middleware("http")
@@ -490,6 +535,8 @@ async def require_auth_middleware(request, call_next):
 
     path = request.url.path
     if path in _PUBLIC_API_PATHS:
+        return await call_next(request)
+    if path in _PUBLIC_API_PATHS_FINNHUB_V2:
         return await call_next(request)
     if any(path.startswith(p) for p in _PUBLIC_API_PREFIXES):
         return await call_next(request)
@@ -614,6 +661,15 @@ app.include_router(access_router)
 # the 🌍 chip on a candidate card doesn't ring up repeat Claude bills.
 from macro import router as macro_router  # noqa: E402
 app.include_router(macro_router)
+
+
+# Finnhub v2 — JIT (just-in-time) Finnhub access. Frontend cards call
+# these endpoints when they enter the viewport; backend hits cache first,
+# falls through to a rate-limited Finnhub call only on miss. Eliminates
+# the burst-then-429 pattern of the old eager-warming approach.
+# Mounted at /finnhub-v2/* — legacy direct Finnhub callers untouched.
+from finnhub_client import router as finnhub_v2_router  # noqa: E402
+app.include_router(finnhub_v2_router)
 
 
 # Local auth — password-based signin for users who don't have a Google
@@ -1201,6 +1257,50 @@ async def sepa_live_prices():
     return {"updated_at": int(time.time()), "prices": live}
 
 
+def _clean_json_floats(obj):
+    """Recursively replace NaN / +Inf / -Inf with None for JSON safety.
+
+    Python's stdlib json encoder (used by FastAPI's JSONResponse) rejects
+    these values with ``ValueError: Out of range float values are not
+    JSON compliant`` and the request 500s. NaN typically slips in when a
+    derived metric divides by zero (e.g. revenue/shares for a freshly
+    public ticker, or EPS growth when the prior quarter was zero).
+
+    Strategy: walk dicts, lists, and tuples in place; replace bad floats
+    with None at leaf nodes. Everything else (str, int, bool, None) is
+    returned unchanged. Cost is one pass over the response object — cheap
+    even for big candidate payloads (~5KB).
+
+    Added 2026-05-27 after AVR's /sepa/candidate response 500'd on a NaN.
+    """
+    if isinstance(obj, dict):
+        return {k: _clean_json_floats(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_clean_json_floats(v) for v in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
+
+@app.get("/sepa/card-enrichment/{symbol}")
+async def sepa_card_enrichment(
+    symbol: str,
+    refresh: bool = Query(False, description="Bypass 24h cache"),
+):
+    """JIT enrichment for SEPA cards: cluster insider buy + valuation signal.
+
+    Cards on the SEPA list call this when they enter the viewport
+    (IntersectionObserver in React). Cached 24h in Mongo so subsequent
+    scrolls and quick re-renders don't hit EDGAR / yfinance again.
+
+    See backend/sepa/card_enrichment.py for the signal definitions and
+    cache semantics. Returns {symbol, insider, valuation, cached_at}.
+    """
+    from sepa import card_enrichment as _ce
+    payload = await _ce.enrich(symbol.upper(), force_refresh=refresh)
+    return JSONResponse(_clean_json_floats(payload))
+
+
 @app.get("/sepa/candidate/{symbol}")
 async def sepa_candidate_detail(symbol: str):
     """Deep-dive on a single candidate: trend + catalyst + insider + IPO age.
@@ -1266,7 +1366,13 @@ async def sepa_candidate_detail(symbol: str):
     ipo = await asyncio.to_thread(sepa_ipo_age, sym)
     profile = await profile_task
     smart_money = await smart_task
-    return JSONResponse({
+    # Sanitize NaN/Inf floats — Python's stdlib json rejects them as
+    # "Out of range float values are not JSON compliant" and returns 500.
+    # Encountered on AVR 2026-05-27 where the candidate base had a NaN
+    # in one of its derived numeric fields (likely a per-share metric
+    # divided by zero shares for a recent IPO / spin-off). Cleaner to
+    # convert NaN→null universally than to chase down every division.
+    payload = _clean_json_floats({
         "symbol": sym,
         "profile": profile,
         "base": base,
@@ -1275,6 +1381,7 @@ async def sepa_candidate_detail(symbol: str):
         "ipo_age": ipo,
         "smart_money": smart_money,
     })
+    return JSONResponse(payload)
 
 
 @app.get("/sepa/dual-momentum")

@@ -1,0 +1,80 @@
+# Dev-pounce side-by-side stack.
+#
+# Spins up the API + frontend from the CURRENT working tree (the
+# `feat/finnhub-queue-sse` branch) on different host ports so prod
+# (cheetah-market-app-api-1, etc.) keeps running undisturbed.
+#
+# Connects to the same Mongo container as prod (so dev sees the same
+# data — handy for testing against real SEPA candidates) but writes
+# Finnhub cache to the SAME database under a v2 collection name
+# (finnhub_cache_v2) that doesn't collide with anything else.
+#
+# Start:
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Tail logs:
+#   docker compose -f docker-compose.dev.yml logs -f api
+#
+# Stop (without touching prod):
+#   docker compose -f docker-compose.dev.yml down
+#
+# Endpoints to test:
+#   http://localhost:8001/finnhub-v2/health
+#   http://localhost:8001/finnhub-v2/quote/AAPL
+#   http://localhost:8001/finnhub-v2/profile/MU
+#   http://localhost:8001/finnhub-v2/news/NVDA
+#   http://localhost:8001/finnhub-v2/earnings/TSLA
+#
+# Frontend (when wired):
+#   http://localhost:5174
+
+name: cheetah-dev
+
+services:
+  api:
+    container_name: cheetah-dev-api
+    build:
+      context: ./backend
+    image: cheetah-dev-api:latest
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      # Reach the prod stack's Mongo over the host loopback. (mongo
+      # publishes 127.0.0.1:27017 in docker-compose.yml.) host.docker.internal
+      # resolves the host's loopback from inside the dev container on
+      # both Mac and Linux Docker Desktop.
+      MONGO_URL: mongodb://host.docker.internal:27017
+      MONGO_DB:  cheetah
+      TZ:        America/New_York
+      # Mark this stack so logs are obvious in mixed-tail output.
+      CHEETAH_ENV: dev
+      # Don't run the Finnhub WS subscription + REST poller in dev.
+      # Both prod and dev share one Finnhub API key — running both
+      # eager pollers doubles the request rate and instantly trips the
+      # free-tier 30/min cap. The new /finnhub-v2/* layer in this dev
+      # stack has its own rate limiter and is plenty for testing.
+      FINNHUB_POLLER_ENABLED: "false"
+    extra_hosts:
+      # Required on Linux where host.docker.internal is not a built-in
+      # alias. host-gateway is the official Docker shorthand.
+      - "host.docker.internal:host-gateway"
+    ports:
+      # 8001 instead of 8000 so prod's api keeps owning 8000.
+      - "8001:8000"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      # Live-edit: mount the backend source so changes reflect without
+      # rebuilding the image. `--reload` above watches for file changes.
+      - ./backend:/app
+
+  frontend:
+    container_name: cheetah-dev-frontend
+    build:
+      context: ./frontend
+    image: cheetah-dev-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      # 5174 instead of 5173 so prod's frontend keeps owning 5173.
+      - "5174:80"

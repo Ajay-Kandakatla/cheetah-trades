@@ -23,6 +23,10 @@ services:
     volumes:
       # Cron writes scan JSON here; api reads it. Shared with the cron service.
       - cheetah-scans:/root/.cheetah
+      # Fidelity CSV drop folder — user exports positions from Fidelity
+      # web → saves into ./backend/fidelity/ → /portfolio/csv-import/sync-disk
+      # picks up the newest file.
+      - ./backend/fidelity:/app/fidelity
     depends_on:
       - mongo
     ports:

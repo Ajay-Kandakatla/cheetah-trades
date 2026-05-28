@@ -18,6 +18,11 @@ import { TradePlanInline } from './TradePlanInline';
 // that the card already renders via dedicated UI (score bar / trend dots /
 // RS bar / setup pill / stage badge).
 import { SepaSignalChips } from './SepaSignalChips';
+// JIT-fetched cluster insider + valuation chips. Lazy via
+// IntersectionObserver so the SEPA list with 100+ cards doesn't burst
+// EDGAR / yfinance on first paint — cards fetch only when scrolled into
+// view, backend caches 24h.
+import { CardEnrichmentChips } from './CardEnrichmentChips';
 
 // Lazy — the moat-peers modal pulls a real API call and isn't needed
 // until the user actually taps the chip, so don't bloat the card chunk.
@@ -501,6 +506,10 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
               the trend / RS / setup / stage / ADR / score-breakdown drills
               from the card-specific UI elements above and below. */}
           <SepaSignalChips row={row} subset="volume_only" />
+          {/* JIT-loaded chips: cluster insider buying + valuation (under/fair/over).
+              Lazy via IntersectionObserver — fires only when card enters viewport.
+              Backend caches 24h so subsequent scrolls don't re-hit EDGAR/yfinance. */}
+          <CardEnrichmentChips symbol={row.symbol} />
           {row.adr_pct != null && (
             <span
               role="button" tabIndex={0}
