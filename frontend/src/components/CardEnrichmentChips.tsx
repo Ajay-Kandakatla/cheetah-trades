@@ -1,7 +1,8 @@
 /**
- * CardEnrichmentChips — renders two JIT-loaded chips on a SEPA card:
+ * CardEnrichmentChips — renders JIT-loaded chips on a SEPA card:
  *
- *   🟢 Cluster Insider Buy      (when ≥3 unique insiders filed Form 4 in 30d)
+ *   🟢 Cluster (N)          — ≥3 unique insiders filed Form 4 in 30d (cluster_buy)
+ *   N buyer(s)              — 1-2 unique insiders filed Form 4 in 30d
  *   💰 Undervalued / Fair / Overvalued   (from P/E + P/B + P/S composite)
  *
  * Lazy-loaded per card via IntersectionObserver (see useCardEnrichment).
@@ -9,7 +10,14 @@
  *
  * The wrapping div is the IntersectionObserver target — the hook
  * attaches via a forwarded ref. Without the wrapper, nothing to observe.
+ *
+ * Insider chip tiers + clickability ported from SepaV2.tsx so V1 cards
+ * surface the same insider signal V2's table shows: cluster (≥3) is the
+ * Minervini/O'Neil bullish tell; 1-2 buyer cases still get a chip so the
+ * user can see partial signal at a glance. Both tiers deep-link to the
+ * detail page #insider section.
  */
+import { Link } from 'react-router-dom';
 import { useCardEnrichment } from '../hooks/useCardEnrichment';
 
 interface Props {
@@ -32,32 +40,46 @@ export function CardEnrichmentChips({ symbol }: Props) {
 
   return (
     <div ref={ref} style={{ display: 'contents' }}>
-      {insiderCluster && (
-        <span
-          className="sepa-flag sepa-flag--good"
+      {insiderCluster ? (
+        <Link
+          to={`/sepa/${symbol}#insider`}
+          className="ins-chip ins-cluster"
           title={
             `Cluster insider buy — ${insiderCount} unique insiders filed Form 4 ` +
             `in the last 30 days. Multi-insider buying inside a 30-day window is ` +
-            `one of Minervini's bullish tells (William O'Neil chapter 13).`
+            `one of Minervini's bullish tells (William O'Neil chapter 13). ` +
+            `Click for the full Form 4 list on the detail page.`
           }
         >
-          🟢 Cluster insider buy{insiderCount >= 3 ? ` (${insiderCount})` : ''}
-        </span>
-      )}
+          🟢 Cluster ({insiderCount})
+        </Link>
+      ) : insiderCount > 0 ? (
+        <Link
+          to={`/sepa/${symbol}#insider`}
+          className="ins-chip ins-some"
+          title={
+            `${insiderCount} insider${insiderCount === 1 ? '' : 's'} bought in the ` +
+            `last 30 days. Not yet a cluster (≥3), but partial signal — click for ` +
+            `the Form 4 detail on the detail page.`
+          }
+        >
+          {insiderCount} buyer{insiderCount === 1 ? '' : 's'}
+        </Link>
+      ) : null}
       {valuation && (
-        <span
-          className={`sepa-flag ${
-            valuation === 'undervalued' ? 'sepa-flag--good' :
-            valuation === 'overvalued'  ? 'sepa-flag--bad' :
-                                          'sepa-flag--neutral'
+        <Link
+          to={`/sepa/${symbol}#fundamentals`}
+          className={`val-chip ${
+            valuation === 'undervalued' ? 'val-under' :
+            valuation === 'overvalued'  ? 'val-over'  :
+                                          'val-fair'
           }`}
           title={tooltipFor(valuationLabel, pe, peg, data?.valuation?.score)}
         >
           {valuation === 'undervalued' ? '💰' :
            valuation === 'overvalued'  ? '⚠️' :
                                          '⚖️'} {valuationLabel || valuation}
-          {pe != null && ` · P/E ${pe.toFixed(1)}`}
-        </span>
+        </Link>
       )}
     </div>
   );

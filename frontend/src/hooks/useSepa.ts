@@ -51,7 +51,21 @@ export type SepaCandidate = {
   score: number;
   rating?: Rating;
   rs_rank: number | null;
-  stage: { stage: number; label: string; dist_200_pct: number } | null;
+  stage: {
+    stage: number;
+    label: string;
+    dist_200_pct: number;
+    /** Present (true) when MA-geometry said Stage 2 but volume tape
+     *  (accumulation_strength=distributing OR cmf_signal=outflow) forced
+     *  a downgrade to Stage 3 per Minervini p.71-72 vs p.74-76. Added
+     *  2026-05-28 stage.classify() fix. Surfaced on the card as the
+     *  "⚠️ Stage 3 — vol disagrees" badge. */
+    volume_disagreement?: boolean;
+    /** Human-readable reason for the downgrade — embedded in the drill
+     *  modal so the user can see the specific accumulation_strength /
+     *  cmf_signal values that triggered it. */
+    volume_reason?: string;
+  } | null;
   trend: {
     pass_all: boolean;
     passed: number;

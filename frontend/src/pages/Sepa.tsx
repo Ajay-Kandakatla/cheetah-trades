@@ -12,6 +12,15 @@ import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
+// Provides per-card historical rank/score deltas to every SepaCandidateCard
+// rendered below. Single fetch per page (yesterday's + 5d-ago full scans
+// from /sepa/history/date/{date}) — see SepaTrendContext for details.
+import { SepaTrendProvider } from '../components/SepaTrendContext';
+// Tier lookup for the 🦅 Hedge-Fund-Top-Buyer filter — same curated list
+// the WhalesFlowModal uses for the per-fund ⭐⭐⭐ badge.
+import { getFundTier } from '../lib/fundTiers';
+// Political-disclosure flag lookup for 🏛️ POTUS Family + 🇺🇸 US Gov filters.
+import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { SepaDateScrubber } from '../components/SepaDateScrubber';
 import { useSepaScanByDate } from '../hooks/useSepaHistory';
@@ -202,6 +211,22 @@ export function SepaPage() {
     // flips it on for a cleaner accumulation-only view. Persists via
     // localStorage with the other filters below.
     hideDistributing: false,
+    // Default OFF — opt-in toggle. When the user is hunting for short-
+    // term Minervini setups, they may want to see candidates without
+    // 13F data too. Flip on to restrict to "whales actively buying"
+    // for buy-and-hold conviction. Added 2026-05-28.
+    whalesAccumOnly: false,
+    // Default OFF — strictest of the whale-filter chips. When on, the
+    // top buyer name from each candidate's 13F flow must match a
+    // Tier-S entry in fundTiers.ts. Added 2026-05-28.
+    hedgeFundTopBuyer: false,
+    // Default OFF — POTUS Family filter, uses politicalDisclosures.ts.
+    // When on, narrows to symbols on the curated POTUS-family list.
+    potusFamilyOnly: false,
+    // Default OFF — US Gov filter, uses politicalDisclosures.ts.
+    // When on, narrows to symbols with govt_investment OR
+    // govt_contractor category (CHIPS Act recipients, contractors).
+    usGovOnly: false,
     sortBy: 'score',
   };
   const [filters, setFilters] = useState<SepaFilters>(() => {
@@ -331,6 +356,44 @@ export function SepaPage() {
         const v = r.volume;
         if (v?.accumulation_strength === 'distributing') return false;
         if (v?.cmf_signal === 'outflow') return false;
+      }
+      // Whales-accumulating filter — pure-FE narrow to candidates whose
+      // 13F flow over the last quarter was institutionally net-buying.
+      // Reads from the whalesFlow Map already loaded for the page; rows
+      // without whales data (most tickers don't have 13F coverage) are
+      // dropped because the user explicitly opted to see whales-only.
+      // The pairing of this chip with Hide Distributing produces the
+      // "whales + tape both bullish" short-list — closest the UI gets
+      // to surfacing the user's actual decision criteria ("based on
+      // whales and the volume").
+      if (filters.whalesAccumOnly) {
+        const wf = whalesFlow.get(r.symbol.toUpperCase());
+        if (!wf || wf.signal !== 'accumulating') return false;
+      }
+      // Hedge-fund-top-buyer filter — strictest of the whale chips.
+      // The top buying fund name must match a Tier-S entry in the
+      // curated fundTiers.ts list (legendary stock-pickers: Berkshire,
+      // Tiger, Coatue, Citadel, Pershing, Altimeter, etc). When the
+      // top buyer is an index giant (🏛 Vanguard / BlackRock) or an
+      // unknown LP, the row is dropped. Same caveat as the tier badge —
+      // historical reputation, not forward prediction.
+      if (filters.hedgeFundTopBuyer) {
+        const wf = whalesFlow.get(r.symbol.toUpperCase());
+        if (!wf || !wf.top_buy) return false;
+        const tier = getFundTier(wf.top_buy);
+        if (tier?.tier !== 'S') return false;
+      }
+      // POTUS Family filter — narrow to symbols on the curated POTUS-
+      // family disclosure list. Pure FE lookup via politicalDisclosures.ts.
+      if (filters.potusFamilyOnly) {
+        if (!getPoliticalChipFlags(r.symbol).hasPotusFamily) return false;
+      }
+      // US Gov filter — narrow to symbols with U.S. government
+      // involvement (CHIPS Act recipient, govt contractor, program
+      // participant). Either category counts as a US Gov tag.
+      if (filters.usGovOnly) {
+        const flags = getPoliticalChipFlags(r.symbol);
+        if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
       }
       return true;
     });
@@ -564,12 +627,34 @@ export function SepaPage() {
       if (v?.accumulation_strength === 'distributing') return false;
       if (v?.cmf_signal === 'outflow') return false;
     }
+    // Whales-accumulating gate — mirror of the main `filtered` block.
+    // Keep both in sync so setup-tab (VCP/Power Play) filtering and
+    // the main list filter behave identically when the chip is on.
+    if (filters.whalesAccumOnly) {
+      const wf = whalesFlow.get(r.symbol.toUpperCase());
+      if (!wf || wf.signal !== 'accumulating') return false;
+    }
+    // Hedge-fund-top-buyer gate — mirror of the main `filtered` block.
+    if (filters.hedgeFundTopBuyer) {
+      const wf = whalesFlow.get(r.symbol.toUpperCase());
+      if (!wf || !wf.top_buy) return false;
+      const tier = getFundTier(wf.top_buy);
+      if (tier?.tier !== 'S') return false;
+    }
+    // POTUS Family + US Gov gates — mirror of the main `filtered` block.
+    if (filters.potusFamilyOnly) {
+      if (!getPoliticalChipFlags(r.symbol).hasPotusFamily) return false;
+    }
+    if (filters.usGovOnly) {
+      const flags = getPoliticalChipFlags(r.symbol);
+      if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
+    }
     if (filters.moatMin > 0) {
       const tier = r.moat?.tier ?? 0;
       if (tier < filters.moatMin) return false;
     }
     return true;
-  }, [filters]);
+  }, [filters, whalesFlow]);
 
   // VCP-tab list — client-side filter on the already-loaded SEPA list.
   // Composes with the existing SepaFilterBar so RS, pioneer, etc. still
@@ -733,7 +818,18 @@ export function SepaPage() {
     return c.slice(0, 5);
   }, [data]);
 
+  // Build the inputs for the trend provider: the full leaderboard the
+  // ranking is computed against (prefer all_results so rank is honest),
+  // and the current scan's date in YYYY-MM-DD ET so historical lookups
+  // strictly precede it. en-CA locale produces YYYY-MM-DD; America/
+  // New_York timezone matches what the backend uses to compute date_et.
+  const trendCandidates = (data as any)?.all_results || (data as any)?.candidates || [];
+  const trendDateEt = (data as any)?.generated_at
+    ? new Date(((data as any).generated_at as number) * 1000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+    : null;
+
   return (
+    <SepaTrendProvider currentCandidates={trendCandidates} currentDateEt={trendDateEt}>
     <div className="sepa-page">
       <MarketRegimeBanner />
       <MarketClockStrip />
@@ -1002,5 +1098,6 @@ export function SepaPage() {
       </div>
 
     </div>
+    </SepaTrendProvider>
   );
 }

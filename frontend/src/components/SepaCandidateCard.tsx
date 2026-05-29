@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, useEffect, type ReactNode } from 'react';
 // Lazy — modal payload + per-ticker fetch only when the user clicks.
 // Keeps the list-view bundle slim since most users won't tap every
 // whale chip on every visit.
@@ -23,6 +23,25 @@ import { SepaSignalChips } from './SepaSignalChips';
 // EDGAR / yfinance on first paint — cards fetch only when scrolled into
 // view, backend caches 24h.
 import { CardEnrichmentChips } from './CardEnrichmentChips';
+// Compact "why buy" thesis + ranking-drivers footer. Built from row data
+// — volume-first per Ajay's request 2026-05-28 ("Volume is my main
+// indicator"). The ranking note explains BB-style intraday rank slips
+// (steady Minervini score + live day-move tie-breaker).
+import { SepaWhyBuy } from './SepaWhyBuy';
+// Composite "Whales + Volume" conviction chip — user's actual buy/sell
+// decision signal. Combines 13F institutional flow with volume tape
+// into one pill. Disagreement (whales ≠ volume) flagged as a warning.
+import { SepaConvictionChip, computeConviction } from './SepaConvictionChip';
+// Political-disclosure chips — surfaces POTUS-family disclosed positions
+// and U.S. govt investment/contractor relationships. Informational only;
+// curated list in src/lib/politicalDisclosures.ts.
+import { SepaPoliticalChip } from './SepaPoliticalChip';
+import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
+// Δ score + Δ rank trend chips — pure FE, reads SepaTrendContext for
+// the historical maps. Added 2026-05-28 in response to user request to
+// track when "points drop" and maintain a separate ranking trend.
+import { SepaTrendChips } from './SepaTrendChips';
+import { useSepaTrend } from './SepaTrendContext';
 
 // Lazy — the moat-peers modal pulls a real API call and isn't needed
 // until the user actually taps the chip, so don't bloat the card chunk.
@@ -105,6 +124,42 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
   // a time. Click handlers set this; the modal at the bottom of the
   // card reads it.
   const [openSignal, setOpenSignal] = useState<SignalKind | null>(null);
+
+  // Trend context — provides historical rank/score maps. Used by both
+  // the trend chips and (when the trend drill modal opens) the modal
+  // itself to render the trajectory chart.
+  const trend = useSepaTrend(row.symbol);
+  // Lazy fetch of per-symbol history snapshots — only triggered when
+  // the trend drill modal actually opens. Avoids 200 cards × 1 fetch
+  // each on page load. The hook fires its own fetch on mount; we mount
+  // it conditionally below.
+  const [trendHistoryRows, setTrendHistoryRows] = useState<Array<{ date_et: string; generated_at: number; score: number | null; rank: number | null; stage_label?: string | null }>>([]);
+  useEffect(() => {
+    if (openSignal !== 'rank_trend_history') return;
+    let alive = true;
+    fetch(`${(import.meta as any).env?.VITE_API_BASE || '/api'}/sepa/history/${row.symbol}?days=30`)
+      .then(r => (r.ok ? r.json() : { snapshots: [] }))
+      .then(j => {
+        if (!alive) return;
+        const snaps = (j.snapshots || []) as Array<{ date_et: string; generated_at: number; score: number | null; stage_label?: string | null }>;
+        // Rank is computed by the trend context's rank-derivation logic
+        // (sort by score within each date). Since per-symbol history
+        // doesn't have other tickers' scores, we can only fill rank
+        // for the two anchor dates (yesterday + week-ago) for which we
+        // have full-leaderboard data in the context. Other dates get
+        // rank: null and the chart just shows score for those.
+        const ranked = snaps.map(s => ({
+          ...s,
+          rank: s.date_et === trend.yesterdayDate
+            ? (trend.yesterday?.rank ?? null)
+            : s.date_et === trend.weekAgoDate
+              ? (trend.weekAgo?.rank ?? null)
+              : null,
+        }));
+        setTrendHistoryRows(ranked);
+      });
+    return () => { alive = false; };
+  }, [openSignal, row.symbol, trend.yesterdayDate, trend.weekAgoDate, trend.yesterday, trend.weekAgo]);
   // Snapshot of all data the modal might read — built once per render
   // from the candidate row. Includes both volume signals AND score
   // components so any chip can open into a meaningful drill view.
@@ -140,6 +195,57 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
     high_vol_breakout:     row.volume?.high_vol_breakout ?? null,
     pocket_pivot:          row.volume?.pocket_pivot ?? null,
     cmf_signal:            row.volume?.cmf_signal ?? null,
+    // Dual momentum (Antonacci) — feeds the dual_momentum_12m drill modal
+    // when the user clicks the "12m" chip. All four returns + the two
+    // gate booleans live on row.dual_momentum if the scan included them.
+    return_1m:             (row.dual_momentum as any)?.return_1m ?? null,
+    return_3m:             (row.dual_momentum as any)?.return_3m ?? null,
+    return_6m:             (row.dual_momentum as any)?.return_6m ?? null,
+    return_12m:            (row.dual_momentum as any)?.return_12m ?? null,
+    abs_mom_pass:          (row.dual_momentum as any)?.abs_mom_pass ?? null,
+    beats_spy:             (row.dual_momentum as any)?.beats_spy ?? null,
+    // Stage-classifier volume-disagreement reason — surfaced when the
+    // ⚠️ Stage 3 badge is clicked. Backend embeds the full distributing /
+    // CMF outflow / book citation reason as a string in row.stage.volume_reason.
+    stage_volume_reason:   (row.stage as any)?.volume_reason ?? null,
+    // Per-symbol trend trajectory — populated lazily when the user
+    // clicks the trend chip. Empty array until the modal opens; the
+    // chart degrades gracefully on empty input.
+    trend_history:         trendHistoryRows,
+    trend_yesterday_date:  trend.yesterdayDate,
+    trend_week_ago_date:   trend.weekAgoDate,
+    // Conviction inputs — pre-computed once per render so the chip
+    // tooltip + drill modal show identical numbers. Cheap (few lookups
+    // on row fields) so safe to recompute on every render.
+    ...(() => {
+      const c = computeConviction(row, whalesFlow);
+      return {
+        conviction_tier:          c.tier,
+        conviction_label:         c.label,
+        conviction_combined:      c.combined,
+        conviction_whale_score:   c.whaleScore,
+        conviction_vol_score:     c.volScore,
+        conviction_whale_reason:  c.whaleReason,
+        conviction_vol_reason:    c.volReason,
+        conviction_summary:       c.summary,
+        conviction_disagrees:     c.disagrees,
+      };
+    })(),
+    // Political-disclosure context — empty fields when the ticker
+    // isn't on the curated list. The drill modal degrades gracefully
+    // on null entries (only opens when user clicked a rendered chip).
+    ...(() => {
+      const pol = getPoliticalChipFlags(row.symbol);
+      if (!pol.entry) return {};
+      return {
+        political_categories:  pol.entry.categories,
+        political_band:        pol.entry.disclosureBand ?? null,
+        political_company:     pol.entry.company,
+        political_sector:      pol.entry.sector,
+        political_notes:       pol.entry.notes ?? null,
+        political_is_inferred: pol.isInferred && !pol.hasPotusFamily && !pol.hasGovtInvestment && !pol.hasGovtContractor,
+      };
+    })(),
   };
 
   // Live intraday quote (Massive lastTrade-backed via /quote/{ticker}).
@@ -213,6 +319,56 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
                 </span>
               </span>
             )}
+            {/* Stage 2 → Stage 3 volume-disagreement badge — surfaced when
+                stage.classify() downgraded a name because MA geometry said
+                Stage 2 but accumulation/CMF tape said distributing/outflow.
+                This is the ANTX case: perfect MA stack but real money is
+                stepping out. Click for the book p.71-72 vs p.74-76
+                framework + the specific accumulation / CMF values that
+                triggered the downgrade. Added 2026-05-28 alongside the
+                stage.py volume-confirmation fix. */}
+            {(row.stage as any)?.volume_disagreement && (
+              <span
+                role="button" tabIndex={0}
+                className="sepa-tag sepa-tag--warn"
+                title="MA geometry says Stage 2 advancing, but volume tape says distributing / outflow. Tap for the book p.71-72 vs p.74-76 explanation."
+                onClick={(e) => { e.stopPropagation(); setOpenSignal('stage_vol_disagreement'); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation(); e.preventDefault(); setOpenSignal('stage_vol_disagreement');
+                }}}
+                style={{ cursor: 'pointer' }}
+              >
+                ⚠️ vol disagrees
+              </span>
+            )}
+            {/* Δ score (7d) + Δ rank (vs yesterday) chips. Pure FE,
+                reads SepaTrendContext built once per page by Sepa.tsx.
+                Click opens the rank_trend_history drill modal with the
+                full 30-day trajectory chart + framework + pitfalls. */}
+            <SepaTrendChips
+              symbol={row.symbol}
+              onOpenDrill={(kind) => setOpenSignal(kind)}
+            />
+            {/* Whales + Volume combined conviction chip — Ajay's actual
+                buy decision signal per 2026-05-28 ("I am trying to
+                determine which one to pick based on whales and the
+                volume"). Strong tier (both bullish, agree) gets bigger
+                + bolder; warning tier (signals disagree) gets red so
+                it pops loudest — the "don't buy yet" case. */}
+            <SepaConvictionChip
+              row={row}
+              whalesFlow={whalesFlow}
+              onOpenDrill={() => setOpenSignal('conviction')}
+            />
+            {/* Political-disclosure chips — POTUS Family / Govt
+                Investment / Inferred. Renders 0-2 chips depending on
+                what categories the ticker matches; nothing when ticker
+                isn't on the curated list. Informational only — caveat
+                shown in tooltip + drill. */}
+            <SepaPoliticalChip
+              symbol={row.symbol}
+              onOpenDrill={() => setOpenSignal('political_disclosure')}
+            />
             {lateBase && (
               <span
                 role="button" tabIndex={0}
@@ -541,6 +697,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
           )}
           {row.dual_momentum?.return_12m != null && (
             <span
+              role="button" tabIndex={0}
               className={`sepa-flag ${
                 row.dual_momentum.abs_mom_pass && row.dual_momentum.beats_spy
                   ? 'sepa-flag--good'
@@ -548,18 +705,12 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
                     ? 'sepa-flag--neutral'
                     : 'sepa-flag--bad'
               }`}
-              title={
-                `Dual Momentum (Antonacci) 12-month return. ✓ when both gates pass: ` +
-                `(a) Absolute Momentum: 12m return positive ` +
-                `(b) Relative Momentum: 12m return beats SPDR S&P 500 ETF (SPY).\n\n` +
-                `Returns waterfall:\n` +
-                `  1-month:  ${row.dual_momentum.return_1m ?? '—'}%\n` +
-                `  3-month:  ${row.dual_momentum.return_3m ?? '—'}%\n` +
-                `  6-month:  ${row.dual_momentum.return_6m ?? '—'}%\n` +
-                `  12-month: ${row.dual_momentum.return_12m ?? '—'}%` +
-                (row.dual_momentum.beats_spy === true ? '\n  ✓ beats SPY' :
-                 row.dual_momentum.beats_spy === false ? '\n  ✗ trails SPY' : '')
-              }
+              title="Tap for Antonacci dual-momentum breakdown — returns waterfall (1m/3m/6m/12m) and the two pass/fail gates (absolute & relative momentum)"
+              onClick={(e) => { e.stopPropagation(); setOpenSignal('dual_momentum_12m'); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation(); e.preventDefault(); setOpenSignal('dual_momentum_12m');
+              }}}
+              style={{ cursor: 'pointer' }}
             >
               12m {row.dual_momentum.return_12m > 0 ? '+' : ''}{row.dual_momentum.return_12m}%
               {row.dual_momentum.abs_mom_pass && row.dual_momentum.beats_spy && ' ✓'}
@@ -729,6 +880,13 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
             >🚀 {t.label}</span>
           ))}
         </div>
+
+        {/* "Why buy" + ranking-drivers block — sits above the staleness
+            footer so the thesis is the last actionable thing the user
+            reads before the disclaimer. Volume signals are the headline
+            (user's primary buy signal); ranking note explains why the
+            same card can move from rank 3 → 9 within minutes. */}
+        <SepaWhyBuy row={row} signalData={signalData} />
 
         {/* SEPA staleness footer — every card is rated against yesterday's
             close. Today's intraday damage doesn't reflect until tonight's

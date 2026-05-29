@@ -34,10 +34,10 @@ UNIVERSE: list[str] = [
     "NVDA", "MSFT", "AAPL", "META", "GOOGL", "AMZN", "TSLA", "AVGO", "ORCL", "NFLX",
     # Semis / AI infra
     "AMD", "ASML", "TSM", "MU", "ARM", "MRVL", "LRCX", "AMAT", "KLAC", "SMCI",
-    "CRDO", "ALAB", "ANET", "CRWV", "NEBIUS",
+    "CRDO", "ALAB", "ANET", "CRWV", "NBIS",
     # Software / cloud
     "CRM", "NOW", "SNOW", "DDOG", "NET", "CRWD", "PANW", "ZS", "MDB", "PLTR",
-    "SHOP", "TEAM", "WDAY", "HUBS", "CFLX", "SMAR", "TOST",
+    "SHOP", "TEAM", "WDAY", "HUBS", "CFLT", "SMAR", "TOST",
     # Consumer growth
     "ABNB", "UBER", "DASH", "BKNG", "CMG", "LULU", "DECK", "COST", "WMT",
     # Health / biotech leaders

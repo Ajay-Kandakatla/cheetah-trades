@@ -1153,6 +1153,149 @@ tr:last-child td { border-bottom: none; }
 
 .sepa-empty-card { padding: 2rem; text-align: center; border: 1px dashed var(--rule, var(--hairline)); background: var(--paper, var(--bg-surface)); }
 
+/* ── V2-parity chips: valuation + insider (ported from SepaV2.tsx) ──────
+   Used by CardEnrichmentChips on the /sepa cards so V1 cards show the
+   same pill-style chips that V2's table renders. Bigger / more rounded
+   than .sepa-flag, with hover lift, and rendered as clickable <Link>s
+   that deep-link to the detail page anchors. */
+.val-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 500;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.val-chip:hover { filter: brightness(1.15); }
+.val-under { background: rgba(74, 210, 154, 0.12); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.3); }
+.val-fair  { background: rgba(232, 178, 91, 0.12); color: #e8b25b; border: 1px solid rgba(232, 178, 91, 0.3); }
+.val-over  { background: rgba(226, 107, 107, 0.12); color: #f87171; border: 1px solid rgba(226, 107, 107, 0.3); }
+
+.ins-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 500;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.ins-chip:hover { filter: brightness(1.15); }
+.ins-cluster { background: rgba(74, 210, 154, 0.18); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.5); font-weight: 600; }
+.ins-some    { background: rgba(122, 169, 230, 0.12); color: #7aa9e6; border: 1px solid rgba(122, 169, 230, 0.3); }
+
+/* ── Why Buy + Ranking drivers block on SEPA cards ──────────────────────
+   Compact bottom-of-card section. Three bullets (Minervini stack /
+   Volume / Entry plan) + a 1-paragraph footer explaining what's
+   actually moving the rank intraday (since the Minervini stack is
+   steady, day-move + live drift are the rank tie-breakers). */
+.sepa-why-buy {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(122, 169, 230, 0.18);
+  border-radius: 6px;
+  background: rgba(122, 169, 230, 0.04);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.sepa-why-buy__head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.sepa-why-buy__title {
+  font-weight: 700; color: var(--gold, #d4a85f);
+  text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;
+}
+.sepa-why-buy__sub {
+  color: var(--mute, #8a8f9c); font-size: 11px; font-style: italic;
+}
+.sepa-why-buy__list {
+  margin: 4px 0 8px; padding: 0; list-style: none;
+}
+.sepa-why-buy__list li {
+  padding: 2px 0;
+  color: var(--text, #e6e7eb);
+}
+.sepa-why-buy__rank {
+  border-top: 1px dashed rgba(138, 143, 156, 0.25);
+  padding-top: 8px;
+  margin-top: 6px;
+}
+.sepa-why-buy__rank-title {
+  display: block;
+  font-weight: 600; color: var(--gold, #d4a85f);
+  text-transform: uppercase; letter-spacing: 0.04em; font-size: 10.5px;
+  margin-bottom: 3px;
+}
+.sepa-why-buy__rank-body {
+  margin: 0; color: var(--mute, #b0b4be); font-size: 11.5px;
+}
+.sepa-why-buy__rank-body b { color: var(--text, #e6e7eb); font-weight: 600; }
+.sepa-why-buy__rank-body b.is-up   { color: var(--positive, #4ad29a); }
+.sepa-why-buy__rank-body b.is-down { color: var(--negative, #f87171); }
+.sepa-why-buy__rank-body em { color: var(--mute, #8a8f9c); }
+
+/* ── Trend chips: Δ score (7d) + Δ rank (vs yesterday) ──────────────────
+   Tiny pill chips placed in the card header alongside Stage / late-base
+   badges. Two states: up (green), down (red), flat/new (neutral). Same
+   pill geometry as the .ins-chip family so the row feels consistent. */
+.trend-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 7px; border-radius: 3px;
+  font-size: 10.5px; font-weight: 600;
+  white-space: nowrap; font-family: "SF Mono", Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+.trend-chip:hover { filter: brightness(1.15); }
+.trend-up   { background: rgba(74, 210, 154, 0.14); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.35); }
+.trend-down { background: rgba(226, 107, 107, 0.14); color: #f87171; border: 1px solid rgba(226, 107, 107, 0.35); }
+.trend-flat { background: rgba(138, 143, 156, 0.10); color: #8a8f9c; border: 1px solid rgba(138, 143, 156, 0.25); }
+.trend-new  { background: rgba(212, 168,  95, 0.14); color: #d4a85f; border: 1px solid rgba(212, 168,  95, 0.35); font-weight: 700; }
+
+/* ── Conviction chip — composite Whales + Volume buy signal ─────────────
+   One pill per card that combines 13F net flow + volume tape (CMF,
+   accumulation strength, pivots). Color tracks the tier; bigger /
+   bolder for stronger signals so the eye picks them up first when
+   scanning 230 cards. Disagreement (red) intentionally stands out
+   most — that's the "don't buy yet" warning. */
+.conv-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.conv-chip:hover { filter: brightness(1.18); }
+.conv-strong   { background: rgba(74, 210, 154, 0.22); color: #5ee0a8; border: 1px solid rgba(74, 210, 154, 0.6); font-weight: 800; padding: 3px 10px; font-size: 12px; }
+.conv-bullish  { background: rgba(74, 210, 154, 0.12); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.4); }
+.conv-neutral  { background: rgba(138, 143, 156, 0.10); color: #8a8f9c; border: 1px solid rgba(138, 143, 156, 0.25); }
+.conv-mixed    { background: rgba(232, 178, 91, 0.12); color: #e8b25b; border: 1px solid rgba(232, 178, 91, 0.4); }
+.conv-warning  { background: rgba(226, 107, 107, 0.18); color: #f87171; border: 1px solid rgba(226, 107, 107, 0.5); font-weight: 800; padding: 3px 10px; font-size: 12px; }
+.conv-bearish  { background: rgba(226, 107, 107, 0.12); color: #f87171; border: 1px solid rgba(226, 107, 107, 0.35); }
+.conv-whales_only { background: rgba(122, 169, 230, 0.12); color: #7aa9e6; border: 1px solid rgba(122, 169, 230, 0.35); }
+.conv-volume_only { background: rgba(122, 169, 230, 0.10); color: #93b8e8; border: 1px solid rgba(122, 169, 230, 0.3); }
+
+/* ── Political-disclosure chips (POTUS family / Govt invest / Inferred) ─
+   Renders on cards when ticker appears in src/lib/politicalDisclosures.ts.
+   Two distinct chips for the two distinct signals; inferred gets a
+   dashed border + dim color to signal lower confidence. */
+.pol-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.pol-chip:hover { filter: brightness(1.18); }
+.pol-chip--potus {
+  background: rgba(212, 168, 95, 0.16);
+  color: #d4a85f;
+  border: 1px solid rgba(212, 168, 95, 0.45);
+}
+.pol-chip--govt {
+  background: rgba(122, 169, 230, 0.16);
+  color: #7aa9e6;
+  border: 1px solid rgba(122, 169, 230, 0.45);
+}
+.pol-chip--inferred {
+  background: rgba(138, 143, 156, 0.08);
+  color: #8a8f9c;
+  border: 1px dashed rgba(138, 143, 156, 0.45);
+  opacity: 0.82;
+}
+
 /* ── Drawer (replaces modal) ──────────────────────────────────────────── */
 .sepa-drawer-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100;

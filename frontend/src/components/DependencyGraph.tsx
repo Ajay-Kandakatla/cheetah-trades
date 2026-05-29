@@ -35,6 +35,27 @@ const RELATION_COLORS: Record<string, string> = {
   depends_on_chip:  '#06b6d4',  // cyan
 };
 
+/** Render a relation as a directional sentence using the actual ticker
+ *  pair. Solves the "depends on chip" ambiguity from 2026-05-28: with
+ *  three "depends on chip" edges fanning out from ARM, the user couldn't
+ *  tell which direction each one went. Now: `QCOM depends on ARM's chip`.
+ *
+ *  The convention in this codebase is: edge.source is the actor / the
+ *  one performing the relation; edge.target is the receiver. So
+ *  `{source: 'QCOM', target: 'ARM', relation: 'depends_on_chip'}`
+ *  reads "QCOM depends on ARM's chip". */
+function humanizeRelation(relation: string, source: string, target: string): string {
+  switch (relation) {
+    case 'depends_on_chip':  return `${source} depends on ${target}'s chip`;
+    case 'foundry_for':      return `${source} is a foundry for ${target}`;
+    case 'supplier_of':      return `${source} is a supplier of ${target}`;
+    case 'customer_of':      return `${source} is a customer of ${target}`;
+    case 'competitor_of':    return `${source} ⇄ ${target} (competitors)`;
+    case 'partner_with':     return `${source} partners with ${target}`;
+    default:                 return `${source} → ${target} (${relation.replace(/_/g, ' ')})`;
+  }
+}
+
 const SECTOR_COLORS: Record<string, string> = {
   Semiconductors: '#a855f7',
   Tech:           '#3b82f6',
@@ -459,16 +480,25 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
             <stop offset="100%" stopColor="#475569" />
           </radialGradient>
 
-          {/* Arrowhead defs — one per relation color */}
+          {/* Arrowhead defs — one per relation color.
+              Bumped from 6×6 to 14×14 with markerUnits="userSpaceOnUse"
+              so size stays absolute regardless of stroke width. The old
+              size was barely visible against the node halos — user
+              feedback 2026-05-28: "Don't know who is dependent on who".
+              We also pull the marker BACK from the path end (refX=2)
+              and let the edge path itself stop short of the target node
+              (see endpoint trimming below) so the arrow sits cleanly in
+              the gap, not hidden behind the node circle. */}
           {Object.entries(RELATION_COLORS).map(([rel, color]) => (
             <marker
               key={rel}
               id={`arrow-${rel}`}
               viewBox="0 0 10 10"
-              refX={9}
+              refX={2}
               refY={5}
-              markerWidth={6}
-              markerHeight={6}
+              markerWidth={14}
+              markerHeight={14}
+              markerUnits="userSpaceOnUse"
               orient="auto-start-reverse"
             >
               <path d="M0,0 L10,5 L0,10 z" fill={color} />
@@ -533,8 +563,28 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
             ? (isAdjacent ? 0.95 : 0.1)
             : (isSelectedAdj ? 0.95 : (isHovered ? 1 : 0.6));
           const dx = b.x - a.x, dy = b.y - a.y;
-          const dr = Math.sqrt(dx * dx + dy * dy) * 1.6;
-          const path = `M${a.x.toFixed(1)},${a.y.toFixed(1)}A${dr.toFixed(1)},${dr.toFixed(1)} 0 0,1 ${b.x.toFixed(1)},${b.y.toFixed(1)}`;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const dr = dist * 1.6;
+          // Trim both endpoints so the path starts just outside the
+          // source node and ends just outside the target node. Otherwise
+          // the arrowhead sits at the path end which is the center of
+          // the target node — hidden by the node circle.
+          //   sourceTrim = node radius + small gap
+          //   targetTrim = node radius + arrow length (so arrow tip
+          //                kisses the node edge instead of overlapping)
+          // Node radii (see node render): 14 base / 18 hover / 24 center.
+          // Use 22 for source trim and 28 for target trim so the arrow
+          // is always visible regardless of which node is the bigger
+          // centered one.
+          const ux = dist > 0 ? dx / dist : 0;
+          const uy = dist > 0 ? dy / dist : 0;
+          const sourceTrim = 22;
+          const targetTrim = 28;
+          const ax = a.x + ux * sourceTrim;
+          const ay = a.y + uy * sourceTrim;
+          const bx = b.x - ux * targetTrim;
+          const by = b.y - uy * targetTrim;
+          const path = `M${ax.toFixed(1)},${ay.toFixed(1)}A${dr.toFixed(1)},${dr.toFixed(1)} 0 0,1 ${bx.toFixed(1)},${by.toFixed(1)}`;
           const midX = (a.x + b.x) / 2;
           const midY = (a.y + b.y) / 2;
           const pathId = `edge-path-${i}`;
@@ -581,7 +631,14 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
                 style={{ transition: 'opacity 100ms', cursor: 'pointer' }}
                 onMouseEnter={() => setHoveredEdge({ edge: e, x: midX, y: midY })}
                 onMouseLeave={() => setHoveredEdge(null)}
-              />
+              >
+                {/* Native SVG <title> renders as a system tooltip on any
+                    OS, including mobile long-press. Belt and braces with
+                    the rendered label — if the user just rests on an
+                    edge without hovering an adjacent node, they still
+                    get the plain-English direction. */}
+                <title>{humanizeRelation(e.relation, e.source, e.target)}</title>
+              </path>
               {/* Money flow particles (animated along the edge path).
                   ADA: skipped entirely when prefers-reduced-motion is set —
                   edge color/strength already encodes flow direction. */}
@@ -602,31 +659,56 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
                   </animateMotion>
                 </circle>
               ))}
-              {/* Edge label appears only when adjacent node is hovered */}
-              {isAdjacent && (
-                <g style={{ pointerEvents: 'none' }}>
-                  <rect
-                    x={midX - 44}
-                    y={midY - 10}
-                    width={88}
-                    height={18}
-                    rx={4}
-                    fill="rgba(10,10,10,0.92)"
-                    stroke={color}
-                    strokeWidth={0.6}
-                  />
-                  <text
-                    x={midX}
-                    y={midY + 3}
-                    textAnchor="middle"
-                    fontSize={11}
-                    fontWeight={700}
-                    fill={color}
-                  >
-                    {e.relation.replace(/_/g, ' ')}
-                  </text>
-                </g>
-              )}
+              {/* Edge label appears only when adjacent node is hovered.
+                  Format: SRC → TGT · relation. This was previously just
+                  the relation alone ("depends on chip") which left users
+                  asking who depends on whom (user feedback 2026-05-28).
+                  Showing the ticker pair with an explicit arrow direction
+                  removes the ambiguity even before they read the relation
+                  phrase. Width scales with text content. */}
+              {isAdjacent && (() => {
+                const relText = humanizeRelation(e.relation, e.source, e.target);
+                const arrowText = `${e.source} → ${e.target}`;
+                // Cheap text-width estimate (~6.5 px per char at 11px font).
+                const w = Math.max(arrowText.length, relText.length) * 6.8 + 16;
+                return (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <rect
+                      x={midX - w / 2}
+                      y={midY - 22}
+                      width={w}
+                      height={36}
+                      rx={5}
+                      fill="rgba(10,10,10,0.95)"
+                      stroke={color}
+                      strokeWidth={0.8}
+                    />
+                    {/* Line 1: ticker pair with arrow, slightly bolder */}
+                    <text
+                      x={midX}
+                      y={midY - 8}
+                      textAnchor="middle"
+                      fontSize={12}
+                      fontWeight={800}
+                      fill="#f3f4f6"
+                      style={{ fontFamily: '"SF Mono", Menlo, monospace' }}
+                    >
+                      {arrowText}
+                    </text>
+                    {/* Line 2: human-readable relation in the edge color */}
+                    <text
+                      x={midX}
+                      y={midY + 8}
+                      textAnchor="middle"
+                      fontSize={10}
+                      fontWeight={600}
+                      fill={color}
+                    >
+                      {relText}
+                    </text>
+                  </g>
+                );
+              })()}
             </g>
           );
         })}

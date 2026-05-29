@@ -257,6 +257,16 @@ export function SepaSignalChips({ row, subset = 'all' }: { row: SepaCandidate; s
                 onClick={() => setOpenSignal('cmf_outflow')}>💸 Money outflow</Chip>
         )}
 
+        {/* CMF inflow — ported from SepaV2.tsx flow column. V1 was missing
+            this positive-signal chip; only the negative outflow case was
+            surfaced. Now V1 cards show the same buy-side confirmation V2's
+            table renders. Click opens the cmf_inflow drill modal (formula
+            + tape numbers, same UX as the other volume chips). */}
+        {row.volume?.cmf_signal === 'inflow' && accStrength !== 'distributing' && (
+          <Chip tone="good" title="Chaikin Money Flow ≥ +0.10 — money flowing IN"
+                onClick={() => setOpenSignal('cmf_inflow')}>💰 Inflow</Chip>
+        )}
+
         {/* Distribution day warning (only when ≥3 but not yet flagged as
             'distributing' by the strength classifier) */}
         {distDays >= 3 && accStrength !== 'distributing' && (

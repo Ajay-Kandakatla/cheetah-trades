@@ -27,7 +27,13 @@ export type SignalKind =
   | 'accum_accumulating'
   | 'accum_distributing'
   | 'cmf_outflow'
+  | 'cmf_inflow'
   | 'dist_days_warning'
+  | 'dual_momentum_12m'
+  | 'stage_vol_disagreement'
+  | 'rank_trend_history'
+  | 'conviction'
+  | 'political_disclosure'
   // Score / ranking components (added 2026-05-22 — user asked for
   // ranking transparency: "I want to see why · what actually helped
   // the ranking"). Each kind drills into one piece of the SEPA score.
@@ -84,6 +90,57 @@ export type SignalData = {
   high_vol_breakout?:    boolean | null;
   pocket_pivot?:         boolean | null;
   cmf_signal?:           string | null;
+  // Dual momentum (Antonacci) — drives the dual_momentum_12m spec.
+  // Each return is a percentage (e.g. 178.1 means +178.1%).
+  return_1m?:            number | null;
+  return_3m?:            number | null;
+  return_6m?:            number | null;
+  return_12m?:           number | null;
+  abs_mom_pass?:         boolean | null;
+  beats_spy?:            boolean | null;
+  // Stage classifier volume-disagreement (added 2026-05-28). When MA
+  // geometry says Stage 2 but volume tape disagrees, stage.classify()
+  // downgrades to Stage 3 and includes a reason string. Surfaced in
+  // the stage_vol_disagreement drill modal so the user can see exactly
+  // which volume condition (distributing accumulation, CMF outflow)
+  // triggered the downgrade.
+  stage_volume_reason?:  string | null;
+  // Rank-trend trajectory — full timeline of (date, score, rank) over
+  // the last 30 days. Built by SepaCandidateCard from the symbol-history
+  // API (/sepa/history/{symbol}?days=30). Empty array when the symbol
+  // has no prior snapshots (new entrant). Powers the rank_trend_history
+  // drill chart.
+  trend_history?:        Array<{
+    date_et:   string;
+    generated_at: number;
+    score:     number | null;
+    rank:      number | null;
+    stage_label?: string | null;
+  }> | null;
+  /** Date string for the "yesterday" anchor on the trend chart. */
+  trend_yesterday_date?: string | null;
+  /** Date string for the "~5 trading days ago" anchor. */
+  trend_week_ago_date?:  string | null;
+  // Conviction (Whales + Volume composite) — feeds the conviction drill.
+  // Computed in SepaConvictionChip; passed verbatim so the modal renders
+  // the same numbers the chip-tooltip shows.
+  conviction_tier?:        string | null;     // ConvictionTier value
+  conviction_label?:       string | null;
+  conviction_combined?:    number | null;
+  conviction_whale_score?: number | null;
+  conviction_vol_score?:   number | null;
+  conviction_whale_reason?: string | null;
+  conviction_vol_reason?:   string | null;
+  conviction_summary?:     string | null;
+  conviction_disagrees?:   boolean | null;
+  // Political-disclosure context for the political_disclosure drill —
+  // passed from SepaCandidateCard, looked up from politicalDisclosures.ts.
+  political_categories?:   string[] | null;
+  political_band?:         string | null;
+  political_company?:      string | null;
+  political_sector?:       string | null;
+  political_notes?:        string | null;
+  political_is_inferred?:  boolean | null;
 };
 
 type Field = { label: string; value: string; tone?: 'good' | 'bad' | 'neutral' };
@@ -462,6 +519,258 @@ const SIGNAL_SPECS: Record<SignalKind, SignalSpec> = {
       },
     ],
     source: 'backend/sepa/volume.py · _chaikin_money_flow()',
+  },
+
+  cmf_inflow: {
+    emoji:   '💰',
+    title:   'Money inflow',
+    oneLine: "Chaikin Money Flow ≥ +0.10. Independent confirmation of buying — closes are skewed toward the highs of the daily range, weighted by volume.",
+    formula: "CMF = sum(money_flow_volume, 20) / sum(volume, 20); inflow when CMF ≥ +0.10 sustained.",
+    buildFields: (d) => [
+      { label: 'CMF 20-period',     value: d.cmf_20 != null ? d.cmf_20.toFixed(3) : '—', tone: 'good' },
+      { label: 'Up/down vol ratio', value: d.up_down_vol_ratio != null ? `${d.up_down_vol_ratio.toFixed(2)}×` : '—', tone: 'neutral' },
+    ],
+    framework: [
+      "Inflow + accumulation is the cleanest 'institutional support' read. Money flowing in while the up/down ratio is also bullish means the bid is real, not a low-volume bounce.",
+      "When CMF inflow disagrees with a weak up/down ratio, trust CMF — close-position-weighted-by-volume is harder to fake than raw volume direction.",
+    ],
+    pitfalls: [
+      {
+        title:   "Inflow alone doesn't make it a buy",
+        body:    "Inflow is a tape confirmation, not an entry signal. Combine with a setup (VCP / Power Play) + Trend Template + Stage 2 before acting.",
+      },
+    ],
+    source: 'backend/sepa/volume.py · _chaikin_money_flow()',
+  },
+
+  dual_momentum_12m: {
+    emoji:   '📈',
+    title:   '12-month Dual Momentum (Antonacci)',
+    oneLine: "Two gates — absolute momentum (12m return > 0) AND relative momentum (12m return beats SPY). Both pass = ✓ Dual Momentum trend confirmation.",
+    formula: "absolute_momentum = (return_12m > 0); relative_momentum = (return_12m > spy_return_12m); dual_momentum = absolute_momentum AND relative_momentum",
+    buildFields: (d) => [
+      { label: '1-month return',  value: d.return_1m  != null ? `${d.return_1m > 0 ? '+' : ''}${d.return_1m.toFixed(1)}%`  : '—', tone: d.return_1m  != null && d.return_1m  > 0 ? 'good' : 'neutral' },
+      { label: '3-month return',  value: d.return_3m  != null ? `${d.return_3m > 0 ? '+' : ''}${d.return_3m.toFixed(1)}%`  : '—', tone: d.return_3m  != null && d.return_3m  > 0 ? 'good' : 'neutral' },
+      { label: '6-month return',  value: d.return_6m  != null ? `${d.return_6m > 0 ? '+' : ''}${d.return_6m.toFixed(1)}%`  : '—', tone: d.return_6m  != null && d.return_6m  > 0 ? 'good' : 'neutral' },
+      { label: '12-month return', value: d.return_12m != null ? `${d.return_12m > 0 ? '+' : ''}${d.return_12m.toFixed(1)}%` : '—', tone: d.return_12m != null && d.return_12m > 0 ? 'good' : 'bad' },
+      { label: 'Absolute momentum (12m > 0)', value: d.abs_mom_pass == null ? '—' : d.abs_mom_pass ? '✓ pass' : '✗ fail', tone: d.abs_mom_pass ? 'good' : 'bad' },
+      { label: 'Relative momentum (beats SPY)', value: d.beats_spy == null ? '—' : d.beats_spy ? '✓ pass' : '✗ fail', tone: d.beats_spy ? 'good' : 'bad' },
+    ],
+    framework: [
+      "Gary Antonacci's Dual Momentum (2014) — absolute momentum filters out bear markets, relative momentum keeps the strongest leaders. Combined they have historically reduced max-drawdown vs SPY by ~50%.",
+      "Why 12 months? It smooths out noise from short-term swings while still being short enough to rotate when leadership changes. Shorter windows (1m / 3m) catch reversals but also produce more whipsaws.",
+      "When both gates pass, the stock is in a confirmed up-trend that's also outperforming the index — the kind of stock Minervini wants you in. When only absolute passes, the stock is rising but lagging — there's a better leader to be holding.",
+    ],
+    pitfalls: [
+      {
+        title:   "Don't lean on 12m return alone",
+        body:    "A stock can have a great trailing 12m number after a parabolic move that's already exhausted. Combine with stage analysis (Stage 2 = good, Stage 3 = warning, Stage 4 = exit) and base count (early base = good, late base = exhaustion).",
+      },
+      {
+        title:   "Beats-SPY is the gate that often fails first",
+        body:    "When SPY itself is ripping (e.g. AI rally), individual stocks need to rip harder to clear relative momentum. A 12m return of +35% looks great but if SPY did +40%, relative momentum fails.",
+      },
+    ],
+    source: 'backend/sepa/dual_momentum.py · compute_dual_momentum() + scanner row.dual_momentum',
+  },
+
+  stage_vol_disagreement: {
+    emoji:   '⚠️',
+    title:   'Stage 3 — geometry says 2, volume disagrees',
+    oneLine: "The MA stack (price > MA50 > MA150 > MA200, 200DMA rising) is textbook Stage 2 advancing — but the volume tape is distributing or has CMF outflow. Per Minervini, distribution is a Stage 3 (topping) characteristic, not Stage 2.",
+    formula: "stage 2 geometry (p.71-72) AND (accumulation_strength = 'distributing' OR cmf_signal = 'outflow') → downgrade 2 → 3 (Topping, p.74-76)",
+    buildFields: (d) => [
+      { label: 'Reported stage',          value: d.stage_label ?? '—',                          tone: 'neutral' },
+      { label: 'Accumulation strength',   value: d.accumulation_strength ?? '—',                tone: d.accumulation_strength === 'distributing' ? 'bad' : 'neutral' },
+      { label: 'CMF signal',              value: d.cmf_signal ?? '—',                           tone: d.cmf_signal === 'outflow' ? 'bad' : 'neutral' },
+      { label: 'CMF 20-period',           value: d.cmf_20 != null ? d.cmf_20.toFixed(3) : '—',  tone: d.cmf_20 != null && d.cmf_20 <= -0.10 ? 'bad' : 'neutral' },
+    ],
+    framework: [
+      "Minervini p.71-72 (Stage 2): \"Volume spikes on big up days and big up weeks are contrasted by volume contractions during normal price pullbacks. There are more up days and up weeks on above-average volume than down days and down weeks on above-average volume.\" Accumulation, not distribution.",
+      "Minervini p.74-76 (Stage 3 topping): distribution shows up as more down days/weeks on above-average volume than up. The stock can still look strong on the daily chart — price hasn't broken down yet — but the tape is telling you institutions are stepping out.",
+      "Pre-2026-05-28, the classifier was geometry-only, so distributing names with perfect MA stacks (e.g. ANTX) came back as Stage 2 'Advancing' and made the buyable list. The fix consults volume tape and downgrades these to Stage 3 — Topping = not buyable.",
+    ],
+    pitfalls: [
+      {
+        title:   "Don't buy a name flagged here even if everything else looks good",
+        body:    "Trend Template can pass, RS can be ≥70, ADR can be ≥4%, but if the volume disagreement chip is showing, institutions are distributing. The pivot may still trigger, the breakout may still print, but the follow-through usually fails. Wait for re-accumulation.",
+      },
+      {
+        title:   "Some names recover — watch for re-accumulation",
+        body:    "A Stage 3 downgrade isn't permanent. If accumulation_strength flips back to accumulating or strong AND CMF moves above zero on the next scan, the stock is back in Stage 2 candidacy. Stalk it on the watchlist; don't write it off.",
+      },
+    ],
+    source: 'backend/sepa/stage.py · classify() volume-disagreement branch · added 2026-05-28',
+  },
+
+  rank_trend_history: {
+    emoji:   '📈',
+    title:   'Score & rank trajectory',
+    oneLine: "How this stock's SEPA score AND its leaderboard rank have changed over the last few weeks. Lets you see at a glance whether it's strengthening, fading, or just bouncing around the same tier.",
+    formula: "Δ score = current_score − historical_score; Δ rank = historical_rank − current_rank (positive Δ rank means climbed). Rank is derived client-side by sorting each scan's candidates by score descending — does NOT modify ranking logic.",
+    buildFields: (d) => {
+      const hist = d.trend_history ?? [];
+      // Find anchor points to display in the table view.
+      const yda = hist.find(p => p.date_et === d.trend_yesterday_date);
+      const wka = hist.find(p => p.date_et === d.trend_week_ago_date);
+      const oldest = hist.length > 0 ? hist[hist.length - 1] : null;
+      const fields: Field[] = [];
+      if (yda) {
+        fields.push(
+          { label: `Score on ${yda.date_et}`,
+            value: yda.score != null ? yda.score.toFixed(1) : '—',
+            tone:  'neutral' },
+          { label: `Rank on ${yda.date_et}`,
+            value: yda.rank != null ? `#${yda.rank}` : '—',
+            tone:  'neutral' },
+        );
+      }
+      if (wka && wka.date_et !== yda?.date_et) {
+        fields.push(
+          { label: `Score on ${wka.date_et}`,
+            value: wka.score != null ? wka.score.toFixed(1) : '—',
+            tone:  'neutral' },
+          { label: `Rank on ${wka.date_et}`,
+            value: wka.rank != null ? `#${wka.rank}` : '—',
+            tone:  'neutral' },
+        );
+      }
+      if (oldest && oldest.date_et !== wka?.date_et && oldest.date_et !== yda?.date_et) {
+        fields.push(
+          { label: `Earliest snapshot — ${oldest.date_et}`,
+            value: oldest.score != null ? `score ${oldest.score.toFixed(1)}` : '—',
+            tone:  'neutral' },
+        );
+      }
+      fields.push(
+        { label: 'Snapshots available',
+          value: String(hist.length),
+          tone:  hist.length >= 5 ? 'good' : 'neutral' },
+      );
+      return fields;
+    },
+    framework: [
+      "Score trend > rank trend for fundamental conviction. A rising score means real Minervini gates are activating (Trend Template gaining checks, RS climbing, base setup detected, volume confirming). A rising rank with flat score might just be tie-breakers shifting around — less meaningful.",
+      "Rank trend > score trend for intraday positioning. Within a tight scoring band (e.g. 70-74), rank can swing wildly because day-move and live-quote drift are the tie-breakers. Use rank movement to identify rotation among similarly-scored leaders.",
+      "Dropping score AND dropping rank = real exit signal. The methodology is telling you this stock is weakening on multiple gates simultaneously. Cross-reference with the Trend Template breakdown and Stage classifier — usually one specific gate has flipped (RS dropped below 70, Stage 2 → 3, etc).",
+      "Climbing score from a low base (e.g. 50 → 72 over 7 days) is the bullish setup pattern. The stock has just qualified onto the leaderboard and is gaining gates. Often coincides with a fresh VCP or Power Play base completing.",
+    ],
+    pitfalls: [
+      {
+        title:   "Don't confuse intraday rank slips with real weakening",
+        body:    "Rank drops of 5-10 spots within a day are usually just live-quote drift through a tight scoring tier. The Minervini gates compute off MAs and base structure — those don't shift minute-to-minute. Score Δ over multiple days is the honest signal.",
+      },
+      {
+        title:   "New-to-list ≠ buyable",
+        body:    "A '🆕 NEW today' chip means the stock just qualified onto the leaderboard. That's a heads-up, not an entry signal. Verify the volume tape, base structure, and Stage 2 confirmation before sizing in. Fresh qualifiers often have unstable scores for the first 1-2 days.",
+      },
+      {
+        title:   "Weekends + holidays gap the chart",
+        body:    "Cron only runs on trading days, so a 'Δ vs yesterday' chip on Monday compares to Friday — not Sunday. The tooltip date is what's being compared. If the gap looks unusually large, check whether you're spanning a holiday.",
+      },
+    ],
+    source: 'frontend/src/components/SepaTrendContext.tsx + /sepa/history/runs + /sepa/history/date/{date_et} — pure FE, no ranking logic touched',
+  },
+
+  conviction: {
+    emoji:   '🎯',
+    title:   'Whales + Volume — combined conviction',
+    oneLine: "Your two decision signals on one line. When 13F whales (lagging, quarterly) and volume tape (live, daily) agree, conviction is high. When they disagree, one of them is wrong — wait.",
+    formula: "combined = whale_score + volume_score\n  whale_score: accumulating +2, distributing −2, balanced 0\n  volume_score: strong accum +3, accumulating +2, distributing −2; CMF inflow +1 / outflow −2; pocket pivot +1; hi-vol breakout +1; ≥4 dist days −1\n\nWARNING tier triggers when both |scores| ≥ 2 AND signs oppose (the ANTX class).",
+    buildFields: (d) => {
+      const tier = d.conviction_tier ?? '—';
+      const label = d.conviction_label ?? '—';
+      const whaleScore = d.conviction_whale_score ?? 0;
+      const volScore = d.conviction_vol_score ?? 0;
+      const combined = d.conviction_combined ?? 0;
+      const disagrees = !!d.conviction_disagrees;
+      return [
+        { label: 'Tier',                  value: `${tier} — ${label}`,                          tone: disagrees ? 'bad' : (combined >= 2 ? 'good' : combined <= -2 ? 'bad' : 'neutral') },
+        { label: '🐋 Whales score (13F)', value: `${whaleScore >= 0 ? '+' : ''}${whaleScore}`,  tone: whaleScore > 0 ? 'good' : whaleScore < 0 ? 'bad' : 'neutral' },
+        { label: '🐋 Whales detail',      value: d.conviction_whale_reason ?? '—',              tone: 'neutral' },
+        { label: '📊 Volume score',       value: `${volScore >= 0 ? '+' : ''}${volScore}`,      tone: volScore > 0 ? 'good' : volScore < 0 ? 'bad' : 'neutral' },
+        { label: '📊 Volume detail',      value: d.conviction_vol_reason ?? '—',                tone: 'neutral' },
+        { label: 'Combined score',        value: `${combined >= 0 ? '+' : ''}${combined}`,      tone: combined >= 2 ? 'good' : combined <= -2 ? 'bad' : 'neutral' },
+        { label: 'Signals disagree?',     value: disagrees ? 'YES — wait for resolution' : 'no — signals aligned', tone: disagrees ? 'bad' : 'good' },
+      ];
+    },
+    framework: [
+      "Whales = slow signal. 13F filings disclose institutional positions at the end of each quarter, filed within 45 days. By the time you see them, the actual buying happened 1-4 months ago. But it's high-quality: real funds, real money, real disclosure obligations. Use it to see WHO has committed.",
+      "Volume = fast signal. CMF + accumulation strength + pivot detection use this week's tape. Updates daily. Noisier per indicator but together they tell you what's happening RIGHT NOW. Use it to see WHEN to act.",
+      "Both bullish (🟢🟢 strong tier) is the highest-confidence setup. Institutions are committed AND the tape is still confirming. This is when conviction position-sizing makes sense.",
+      "Signal disagreement (🔴 warning tier) is the ANTX class. Whales accumulated last quarter, but CMF says they're now distributing. Either the institutions are wrong (rare) or the tape is wrong (more common — could be a temporary shakeout). Either way, wait — you have no edge yet.",
+    ],
+    pitfalls: [
+      {
+        title:   "Don't trust whales alone in a fast-moving tape",
+        body:    "13F data is 45-90 days old. In a stock that's run hard since the filing, the institutions you're following may have already trimmed. Always cross-reference with current volume — that's why this chip combines them.",
+      },
+      {
+        title:   "Don't trust volume alone over multi-week views",
+        body:    "Volume signals can flicker on a single big day. Strong accumulation on a Friday earnings beat doesn't mean institutional commitment. The 13F whale layer gives you the months-long context that filters noise from real positioning.",
+      },
+      {
+        title:   "Disagreement = wait, not sell",
+        body:    "🔴 warning is not a sell signal on its own — it's a 'don't buy yet' signal. If you already hold, look at the broader Stage classifier and Trend Template before exiting. The disagreement might resolve in the bullish direction within 1-2 weeks.",
+      },
+      {
+        title:   "Missing whales data is common for new IPOs and tiny floats",
+        body:    "13F coverage requires the fund to hold ≥ a million shares. Newly-IPO'd names and microcap floats often don't show up in 13F data yet. The chip degrades to 📊 'volume-only' for those — treat it as one signal, not two.",
+      },
+    ],
+    source: 'frontend/src/components/SepaConvictionChip.tsx · computeConviction()',
+  },
+
+  political_disclosure: {
+    emoji:   '🏛️',
+    title:   'Political-disclosure context',
+    oneLine: "This ticker appears on the curated list of stocks with disclosed POTUS-family positions or direct U.S. government involvement. Informational only — disclosed positions don't predict outcomes.",
+    formula: "Curated list lookup in src/lib/politicalDisclosures.ts. Two distinct chip types: POTUS Family (gold) for disclosed personal/family positions per OGE filings + news reporting; Govt Investment / Contractor (blue) for U.S. govt equity stakes (CHIPS Act) and major contractors. Inferred subset uses dashed border + dim color.",
+    buildFields: (d) => {
+      const cats = (d.political_categories ?? []).join(' · ');
+      const fields: Field[] = [
+        { label: 'Company',             value: d.political_company ?? '—',                 tone: 'neutral' },
+        { label: 'Sector',              value: d.political_sector ?? '—',                  tone: 'neutral' },
+        { label: 'Category',            value: cats || '—',                                tone: 'neutral' },
+      ];
+      if (d.political_band) {
+        fields.push({ label: 'Disclosed band',  value: d.political_band,                   tone: 'neutral' });
+      }
+      if (d.political_notes) {
+        fields.push({ label: 'Source note',     value: d.political_notes,                  tone: 'neutral' });
+      }
+      fields.push({
+        label: 'Confidence',
+        value: d.political_is_inferred ? 'Inferred (not directly disclosed)' : 'Directly disclosed / sourced',
+        tone:  d.political_is_inferred ? 'neutral' : 'good',
+      });
+      return fields;
+    },
+    framework: [
+      "What this chip IS: a context flag that this stock has been touched by political-disclosure reporting. It surfaces things you'd want to be aware of when evaluating the name — disclosed positions, govt equity stakes, contractor / program relationships. Use it like a sector tag.",
+      "What this chip is NOT: a buy or sell signal. Disclosed positions don't predict outcomes — there's no statistical edge in following them, and even if there were, the disclosure lag (often 30-45 days) usually erases it. Trade the chart, not the headline.",
+      "Two-chip design reflects the two-signal nature: POTUS Family disclosures are about personal financial behavior; Govt Investment / Contractor is about institutional capital flows. They mean different things — multiple chips on one card means multiple distinct context layers, not 'more bullish'.",
+      "The Inferred subset (dashed chips) is for tickers scan-classified into the political-signal cluster but not directly disclosed. These have lower confidence — treat them as soft context, not as evidence.",
+    ],
+    pitfalls: [
+      {
+        title:   "Don't trade because a politician owns it",
+        body:    "There's no consistent edge in copying disclosed political positions. By the time you see the filing, the position has already been held for weeks-to-months, and other market participants have priced in any disclosure premium. Treat the chip as background context — your buy decision should still come from Trend Template + Stage 2 + volume + setup.",
+      },
+      {
+        title:   "Disclosed band ≠ current position",
+        body:    "OGE forms show position bands as of the reporting date, which lags by 30-45 days minimum. The actual position may have been added to, trimmed, or fully exited since then. Don't infer current conviction from a stale disclosure band.",
+      },
+      {
+        title:   "List freshness is manual",
+        body:    "This list is curated and only updates when src/lib/politicalDisclosures.ts is edited. Sources (OGE.gov + reputable news) update on their own schedule. If you've seen a relevant disclosure in the news that's not in this list, add it to the file — there's no automated refresh.",
+      },
+      {
+        title:   "Inferred ≠ verified",
+        body:    "The dashed 'Inferred' chips are for tickers grouped with the political-signal cluster but lacking direct disclosure. Be more skeptical of these — they may be guilt-by-association rather than actual disclosed holdings.",
+      },
+    ],
+    source: 'frontend/src/lib/politicalDisclosures.ts — curated from OGE.gov disclosures + reputable news reporting (NYT, Bloomberg, WSJ). User-editable.',
   },
 
   dist_days_warning: {

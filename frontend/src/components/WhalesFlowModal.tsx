@@ -11,15 +11,37 @@
  * disclosed prominently in the footer so the user doesn't read it
  * as today's flow.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { API } from '../lib/apiBase';
 import { patchWhalesFlowRow } from '../hooks/useWhalesFlow';
+// Curated fund-credibility tier list — added 2026-05-28 per user
+// request to distinguish smart-money active managers (Tiger, Coatue,
+// Berkshire) from passive index giants (Vanguard) and unknown LPs.
+// Edit src/lib/fundTiers.ts to add/remove funds.
+import {
+  getFundTier,
+  fundScore,
+  fundDollarsAdded,
+  fmtPositionValue,
+  fmtPctHeld,
+  fmtDeltaUSD,
+  TIER_EMOJI,
+  TIER_LABEL,
+  type FundTierInfo,
+} from '../lib/fundTiers';
 
 type Mover = {
   holder:     string;
   pct_change: number;     // 0.15 = +15%, -0.20 = −20%
   type?:      string | null;
+  // Added 2026-05-28 alongside the fund-credibility tier feature.
+  // value    = dollar value of this fund's position in this stock
+  // pct_held = % of the stock's float this fund holds (0.025 = 2.5%)
+  // Both are forwarded by backend supply_demand/whales.py · _summarize_moves.
+  // Optional — older cached responses won't have them; chip degrades.
+  value?:     number | null;
+  pct_held?:  number | null;
 };
 
 type WhalesPayload = {
@@ -66,8 +88,39 @@ function fmtPct(p: number): string {
  */
 function MoverRow({ mover: m, tone }: { mover: Mover; tone: 'buy' | 'sell' }) {
   const isBuy = tone === 'buy';
+  // Look up the curated fund tier once per row. Returns null for funds
+  // not on the smart-money / index-giant lists in src/lib/fundTiers.ts
+  // — those rows render with no badge, just the bare holder name.
+  const tier: FundTierInfo | null = useMemo(() => getFundTier(m.holder), [m.holder]);
+  const positionStr = fmtPositionValue(m.value);
+  const concentrationStr = fmtPctHeld(m.pct_held);
+  // $ deployed last quarter — the headline number per user feedback
+  // 2026-05-28 ("add total volume of these investments instead of
+  // percentage"). Falls back to null when backend value is missing.
+  const dollarsAdded = fundDollarsAdded(m.value, m.pct_change);
+  const dollarsAddedStr = dollarsAdded != null ? fmtDeltaUSD(dollarsAdded) : null;
+  const tierBadge = tier ? TIER_EMOJI[tier.tier as 'S' | 'A' | 'B'] : null;
+  const tierLabel = tier ? TIER_LABEL[tier.tier as 'S' | 'A' | 'B'] : null;
+  // Build a rich title (tooltip) so hovering the row explains exactly
+  // what the badge means + the honesty caveat (Tier S ≠ "will be right
+  // on this stock"; Tier B ≠ "bad signal", just mandate-driven).
+  const titleParts: string[] = [];
+  if (tier) {
+    titleParts.push(`${tierBadge} ${tierLabel}`);
+    if (tier.manager) titleParts.push(`  ${tier.display} · ${tier.manager}`);
+    else              titleParts.push(`  ${tier.display}`);
+  }
+  if (dollarsAddedStr)          titleParts.push(`${isBuy ? 'Bought' : 'Sold'} last quarter: ${dollarsAddedStr}`);
+  if (positionStr !== '—')      titleParts.push(`Current position: ${positionStr}`);
+  if (concentrationStr !== '—') titleParts.push(`% of float: ${concentrationStr}`);
+  titleParts.push(`Position change: ${fmtPct(m.pct_change)}`);
+  if (m.type)                   titleParts.push(`Backend tag: ${m.type}`);
+  titleParts.push('');
+  titleParts.push('Tier S/A reflects the fund\'s historical reputation for active stock-picking — NOT a forward prediction that they\'re right on this stock. Tier B "index giant" buys due to mandate, not conviction.');
+  const tooltip = titleParts.join('\n');
   return (
     <li
+      title={tooltip}
       style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
@@ -86,32 +139,67 @@ function MoverRow({ mover: m, tone }: { mover: Mover; tone: 'buy' | 'sell' }) {
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
+          display: 'flex',
+          gap: 4,
+          alignItems: 'baseline',
         }}>
-          {m.holder}
+          {tierBadge && (
+            <span style={{
+              fontSize: '0.72rem',
+              flexShrink: 0,
+              opacity: 0.95,
+            }}>{tierBadge}</span>
+          )}
+          <span style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>{m.holder}</span>
         </div>
-        {m.type && (
-          <div style={{
-            color: 'var(--cm-slate)',
-            fontSize: '0.66rem',
-            marginTop: 1,
-          }}>
-            ({m.type})
-          </div>
-        )}
+        {/* Second line: type + (when $ headline is shown) the % change
+            + current position + concentration. Compact even with all
+            four present. */}
+        <div style={{
+          color: 'var(--cm-slate)',
+          fontSize: '0.66rem',
+          marginTop: 1,
+          display: 'flex',
+          gap: 6,
+          flexWrap: 'wrap',
+        }}>
+          {m.type && <span>({m.type})</span>}
+          {dollarsAddedStr && (
+            // Only show % change as secondary when $ delta is the headline.
+            // Otherwise % change IS the headline and would be redundant here.
+            <span style={{ fontFamily: '"SF Mono", Menlo, monospace' }}>
+              {fmtPct(m.pct_change)} qoq
+            </span>
+          )}
+          {positionStr !== '—' && (
+            <span style={{
+              color: 'var(--ink-body, #c7c9d1)',
+              fontFamily: '"SF Mono", Menlo, monospace',
+            }}>· {positionStr} position</span>
+          )}
+          {concentrationStr !== '—' && (
+            <span style={{
+              fontFamily: '"SF Mono", Menlo, monospace',
+            }}>· {concentrationStr} float</span>
+          )}
+        </div>
       </div>
+      {/* Headline number — $ deployed when we have it, falls back to %
+          change when backend hasn't shipped value/pct_held yet. */}
       <strong
         className="mono"
         style={{
           color: isBuy ? 'var(--positive)' : 'var(--negative)',
           whiteSpace: 'nowrap',
-          // Pin to top of the row so when the type label adds a second
-          // line under the name, the percentage doesn't drift down with
-          // the baseline.
           alignSelf: 'start',
           lineHeight: 1.3,
         }}
       >
-        {fmtPct(m.pct_change)}
+        {dollarsAddedStr ?? fmtPct(m.pct_change)}
       </strong>
     </li>
   );
@@ -178,6 +266,30 @@ export function WhalesFlowModal({
     '';
   const cachedAtIso = data?.cached_at ? new Date(data.cached_at * 1000).toLocaleDateString() : null;
 
+  // ── $ totals across buyers / sellers — user request 2026-05-28
+  //    "add total volume of these investments instead of percentage".
+  //    Aggregates the per-fund dollars-added estimate so the header
+  //    shows "Net inflow: +$11.2B from 15 funds" instead of just
+  //    counts. When backend hasn't shipped value yet, sums collapse
+  //    to 0 and the UI falls back to fund counts only.
+  const totals = useMemo(() => {
+    if (!moves) return { buyUSD: 0, sellUSD: 0, buyCovered: 0, sellCovered: 0 };
+    let buyUSD = 0, sellUSD = 0, buyCovered = 0, sellCovered = 0;
+    for (const m of moves.notable_buys || []) {
+      const d = fundDollarsAdded(m.value, m.pct_change);
+      if (d != null) { buyUSD += d; buyCovered += 1; }
+    }
+    for (const m of moves.notable_sells || []) {
+      const d = fundDollarsAdded(m.value, m.pct_change);
+      // sells produce a NEGATIVE delta naturally (pct_change < 0);
+      // convert to a positive "magnitude sold" for display.
+      if (d != null) { sellUSD += Math.abs(d); sellCovered += 1; }
+    }
+    return { buyUSD, sellUSD, buyCovered, sellCovered };
+  }, [moves]);
+  const netUSD = totals.buyUSD - totals.sellUSD;
+  const hasUSDData = totals.buyCovered > 0 || totals.sellCovered > 0;
+
   return createPortal(
     <div
       onClick={onClose}
@@ -228,6 +340,45 @@ export function WhalesFlowModal({
                   ? `  (out of ${data.major.n_institutions} reporting funds)` : ''}
               </p>
             )}
+            {/* $ totals line — shows the actual capital deployed last
+                quarter when backend ships value/pct_held. Falls back
+                silently when the data isn't there yet (backend not
+                rebuilt, or yfinance didn't return value for any holder). */}
+            {moves && hasUSDData && (
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  margin: '0.35rem 0 0',
+                  fontFamily: '"SF Mono", Menlo, monospace',
+                  lineHeight: 1.45,
+                }}
+                title={
+                  `Estimated capital deployed last quarter (sum of per-fund position change in $).\n\n` +
+                  `Formula: ΔPosition ≈ current_value × pct_change / (1 + pct_change)\n\n` +
+                  `Coverage: ${totals.buyCovered}/${moves.notable_buys.length} buyers, ` +
+                  `${totals.sellCovered}/${moves.notable_sells.length} sellers had reportable position values. ` +
+                  `Funds with missing value are excluded from the sum.`
+                }
+              >
+                <span style={{ color: 'var(--positive)' }}>
+                  +{fmtDeltaUSD(totals.buyUSD).replace('+', '')} bought
+                </span>
+                {totals.sellUSD > 0 && (
+                  <>
+                    {' · '}
+                    <span style={{ color: 'var(--negative)' }}>
+                      −{fmtDeltaUSD(totals.sellUSD).replace('+', '')} sold
+                    </span>
+                  </>
+                )}
+                {' · '}
+                <strong style={{
+                  color: netUSD >= 0 ? 'var(--positive)' : 'var(--negative)',
+                }}>
+                  Net {netUSD >= 0 ? 'inflow' : 'outflow'}: {fmtDeltaUSD(netUSD)}
+                </strong>
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -268,6 +419,29 @@ export function WhalesFlowModal({
           </div>
         )}
 
+        {/* Banner shown when no row in either list has a usable
+            position value — typically means the backend container still
+            has the pre-2026-05-28 image that didn't forward value /
+            pct_held. Rebuild the api container to populate. */}
+        {moves && !hasUSDData &&
+         ((moves.notable_buys || []).length + (moves.notable_sells || []).length) > 0 && (
+          <div style={{
+            marginTop: '0.5rem',
+            padding: '0.4rem 0.6rem',
+            background: 'rgba(212,168,95,0.08)',
+            border: '1px solid rgba(212,168,95,0.25)',
+            borderRadius: 4,
+            fontSize: '0.72rem',
+            color: 'var(--gold, #d4a85f)',
+            lineHeight: 1.45,
+          }}>
+            <strong>$ totals unavailable.</strong> Per-fund position values not in this
+            payload — most likely the api container needs a rebuild to ship the
+            additive whales-payload change from 2026-05-28. Falling back to
+            % change. Run <code style={{ fontSize: '0.92em' }}>docker compose build api &amp;&amp; docker compose up -d --force-recreate api</code> to enable totals.
+          </div>
+        )}
+
         {/* Two columns: buyers + sellers. Grid for desktop, stacks
             naturally on narrow phones via the `repeat(auto-fit, …)`
             wrap-down behavior. */}
@@ -285,8 +459,23 @@ export function WhalesFlowModal({
           }}>
             {/* ── Buyers ─────────────────────────────────────────── */}
             <section style={{ minWidth: 0 }}>
-              <div className="eyebrow" style={{ color: 'var(--positive)', marginBottom: '0.4rem' }}>
+              <div
+                className="eyebrow"
+                style={{ color: 'var(--positive)', marginBottom: '0.4rem' }}
+                title={hasUSDData
+                  ? `${totals.buyCovered} of ${moves.notable_buys.length} listed buyers had reportable position values. Total = ${fmtDeltaUSD(totals.buyUSD)}.`
+                  : `Position-value data not yet available. Showing buy count only.`}
+              >
                 ▲ BUYING — {moves.n_buying} funds
+                {hasUSDData && totals.buyUSD > 0 && (
+                  <span style={{
+                    marginLeft: '0.5rem',
+                    fontFamily: '"SF Mono", Menlo, monospace',
+                    fontSize: '0.85em',
+                  }}>
+                    · {fmtDeltaUSD(totals.buyUSD)} total
+                  </span>
+                )}
               </div>
               {moves.notable_buys.length === 0 ? (
                 <p style={{ fontSize: '0.8rem', color: 'var(--cm-slate)' }}>
@@ -294,8 +483,20 @@ export function WhalesFlowModal({
                 </p>
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.3rem' }}>
-                  {moves.notable_buys.map((m, i) => (
-                    <MoverRow key={`buy-${i}-${m.holder}`} mover={m} tone="buy" />
+                  {/* Sorted by composite credibility score
+                      (tier × log10(position $) × concentration). When
+                      backend hasn't shipped value/pct_held yet, score
+                      collapses to tier only — Tier S/A funds still
+                      float to top of their respective lists. */}
+                  {[...moves.notable_buys]
+                    .sort((a, b) => {
+                      const tA = getFundTier(a.holder)?.tier ?? null;
+                      const tB = getFundTier(b.holder)?.tier ?? null;
+                      return fundScore(b.value, b.pct_held, tB) -
+                             fundScore(a.value, a.pct_held, tA);
+                    })
+                    .map((m, i) => (
+                      <MoverRow key={`buy-${i}-${m.holder}`} mover={m} tone="buy" />
                   ))}
                 </ul>
               )}
@@ -303,8 +504,23 @@ export function WhalesFlowModal({
 
             {/* ── Sellers ─────────────────────────────────────────── */}
             <section style={{ minWidth: 0 }}>
-              <div className="eyebrow" style={{ color: 'var(--negative)', marginBottom: '0.4rem' }}>
+              <div
+                className="eyebrow"
+                style={{ color: 'var(--negative)', marginBottom: '0.4rem' }}
+                title={hasUSDData
+                  ? `${totals.sellCovered} of ${moves.notable_sells.length} listed sellers had reportable position values. Total = ${fmtDeltaUSD(totals.sellUSD)}.`
+                  : `Position-value data not yet available. Showing sell count only.`}
+              >
                 ▼ SELLING — {moves.n_selling} funds
+                {hasUSDData && totals.sellUSD > 0 && (
+                  <span style={{
+                    marginLeft: '0.5rem',
+                    fontFamily: '"SF Mono", Menlo, monospace',
+                    fontSize: '0.85em',
+                  }}>
+                    · −{fmtDeltaUSD(totals.sellUSD).replace('+', '')} total
+                  </span>
+                )}
               </div>
               {moves.notable_sells.length === 0 ? (
                 <p style={{ fontSize: '0.8rem', color: 'var(--cm-slate)' }}>
@@ -312,8 +528,15 @@ export function WhalesFlowModal({
                 </p>
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.3rem' }}>
-                  {moves.notable_sells.map((m, i) => (
-                    <MoverRow key={`sell-${i}-${m.holder}`} mover={m} tone="sell" />
+                  {[...moves.notable_sells]
+                    .sort((a, b) => {
+                      const tA = getFundTier(a.holder)?.tier ?? null;
+                      const tB = getFundTier(b.holder)?.tier ?? null;
+                      return fundScore(b.value, b.pct_held, tB) -
+                             fundScore(a.value, a.pct_held, tA);
+                    })
+                    .map((m, i) => (
+                      <MoverRow key={`sell-${i}-${m.holder}`} mover={m} tone="sell" />
                   ))}
                 </ul>
               )}
@@ -338,6 +561,24 @@ export function WhalesFlowModal({
           <strong>How to read "balanced":</strong> it means roughly equal numbers of large
           funds opened/grew vs trimmed/exited. It's not "no one's trading"; it's "the smart
           money disagrees right now."
+          <br />
+          {/* Fund-tier legend — added 2026-05-28. Curated list in
+              src/lib/fundTiers.ts. The honesty caveat is critical:
+              Tier S/A is BACKWARD-LOOKING reputation, not a forward
+              prediction. Tier B (Vanguard etc.) is mandate-driven flow,
+              not a "bad" signal — just a different KIND of signal. */}
+          <strong>Fund tiers:</strong>{' '}
+          <span title="Legendary stock-picker with a long track record of active alpha">⭐⭐⭐ legendary stock-picker</span>
+          {' · '}
+          <span title="Well-known active mutual-fund manager">⭐⭐ active alpha-seeker</span>
+          {' · '}
+          <span title="Index giant — buys due to index inclusion mandate, not conviction">🏛 index giant (mandate)</span>
+          {' · '}
+          <em>no badge = not on the curated list.</em>{' '}
+          Tier is the fund's <em>historical</em> reputation for active stock-picking, NOT
+          a forward prediction that they'll be right on this stock. Lists are sorted by
+          composite credibility = tier × log(position $) × concentration. Edit{' '}
+          <code style={{ fontSize: '0.85em' }}>src/lib/fundTiers.ts</code> to add/remove funds.
           {cachedAtIso && <> · Cached {cachedAtIso}.</>}
         </p>
       </div>

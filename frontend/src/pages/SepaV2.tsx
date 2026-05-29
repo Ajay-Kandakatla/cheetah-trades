@@ -56,6 +56,10 @@ const DEFAULT_FILTERS: SepaFilters = {
   stage: 'ALL',
   moatMin: 0,
   hideDistributing: false,
+  whalesAccumOnly: false,
+  hedgeFundTopBuyer: false,
+  potusFamilyOnly: false,
+  usGovOnly: false,
   sortBy: 'score',
 };
 

@@ -246,12 +246,31 @@ def _summarize_moves(holders: list[dict]) -> dict:
             n_buying += 1
             total_buy_pct += pc
             if pc > 0.10:  # >10% increase = notable
-                notable_buys.append({"holder": h["holder"], "pct_change": pc, "type": h.get("type")})
+                # ADDITIVE: also forward value (position $) + pct_held (%
+                # of float). The FE uses these for the fund-credibility
+                # tier score added 2026-05-28 (size + concentration are
+                # half the rubric; the smart-money curated list is the
+                # other half). No change to ranking / classification
+                # logic — these fields are already collected by
+                # _row_to_holder, just weren't being exposed.
+                notable_buys.append({
+                    "holder":     h["holder"],
+                    "pct_change": pc,
+                    "type":       h.get("type"),
+                    "value":      h.get("value"),
+                    "pct_held":   h.get("pct_held"),
+                })
         elif pc < -0.05:
             n_selling += 1
             total_sell_pct += abs(pc)
             if pc < -0.10:
-                notable_sells.append({"holder": h["holder"], "pct_change": pc, "type": h.get("type")})
+                notable_sells.append({
+                    "holder":     h["holder"],
+                    "pct_change": pc,
+                    "type":       h.get("type"),
+                    "value":      h.get("value"),
+                    "pct_held":   h.get("pct_held"),
+                })
         else:
             n_unchanged += 1
 

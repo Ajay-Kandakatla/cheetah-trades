@@ -61,6 +61,30 @@ export type SepaFilters = {
    *  names will sneak into other filters (e.g. high RS) even when they're
    *  rolling over on volume. */
   hideDistributing: boolean;
+  /** When true, drop any candidate whose 13F whales signal is anything
+   *  other than 'accumulating'. Tightens the list to names that BOTH
+   *  passed SEPA AND have institutional capital flowing in over the last
+   *  quarter — the "Whales + SEPA agree" buy-and-hold short-list. Added
+   *  2026-05-28. Pure FE, reads from the existing whalesFlow map. */
+  whalesAccumOnly: boolean;
+  /** When true, drop any candidate whose TOP whale buyer isn't a Tier-S
+   *  fund per src/lib/fundTiers.ts (legendary stock-pickers — Berkshire,
+   *  Tiger, Coatue, Citadel, etc). Sits on top of whalesAccumOnly to
+   *  produce the "smart money is accumulating" short-list. Same caveat
+   *  as the fund-tier badge — historical reputation, not forward
+   *  prediction. Added 2026-05-28. */
+  hedgeFundTopBuyer: boolean;
+  /** When true, drop candidates not on the POTUS-family disclosure list
+   *  in src/lib/politicalDisclosures.ts (categories includes
+   *  'potus_family'). Informational filter — disclosed positions don't
+   *  predict outcomes; pairs well with other filters to narrow to names
+   *  the user has political-context awareness about. Added 2026-05-28. */
+  potusFamilyOnly: boolean;
+  /** When true, drop candidates without U.S. government involvement
+   *  per politicalDisclosures.ts (categories includes 'govt_investment'
+   *  OR 'govt_contractor'). Catches CHIPS Act recipients, defense/govt
+   *  contractors, and program participants. Added 2026-05-28. */
+  usGovOnly: boolean;
   sortBy:
     | 'score' | 'rs' | 'symbol'
     | 'day_change' | 'day_change_abs'
@@ -170,6 +194,58 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
           title="Hide tickers being institutionally distributed (red 'Distributing' pill) or showing money outflow on CMF. Tightens the list to genuinely accumulating names."
         >
           🚫 Hide Distributing
+        </button>
+        {/* Whales-accumulating filter — narrows the SEPA list to names
+            where 13F institutional flow over the last quarter was net
+            accumulating (n_buying >> n_selling). Pairs with Hide
+            Distributing for the full "whales agree + tape agrees"
+            short-list: institutions adding (quarterly) AND volume
+            accumulation (daily). Added 2026-05-28 per user request
+            "Can you add a chip for whale only filter". */}
+        <button
+          className={`sepa-chip ${filters.whalesAccumOnly ? 'is-active' : ''}`}
+          onClick={() => set('whalesAccumOnly', !filters.whalesAccumOnly)}
+          title="Only show candidates whose 13F whales flow is 'accumulating' (n_buying > n_selling × 1.5). Tightens the list to names that passed SEPA AND have institutional capital flowing in. Pairs well with Hide Distributing for the full whales+tape agreement short-list."
+        >
+          🐋 Whales Accumulating
+        </button>
+        {/* Hedge-fund top-buyer filter — narrows further to names where
+            the LEADING whale buyer is a Tier-S fund per the curated
+            fundTiers.ts list (Berkshire, Tiger Global, Coatue, Citadel,
+            Pershing Square, Altimeter, etc). Stacks on top of Whales
+            Accumulating: the chip is most useful when both are on.
+            Same honesty caveat as the fund-tier badge — historical
+            reputation, not forward prediction. */}
+        <button
+          className={`sepa-chip ${filters.hedgeFundTopBuyer ? 'is-active' : ''}`}
+          onClick={() => set('hedgeFundTopBuyer', !filters.hedgeFundTopBuyer)}
+          title="Only show candidates whose top whale BUYER matches ANY hedge fund on the curated Tier-S list in src/lib/fundTiers.ts (Berkshire, Tiger Global, Coatue, Citadel, Pershing Square, Greenlight, Soros, Renaissance, D.E. Shaw, Two Sigma, Bridgewater, AQR, Millennium, Point72, Lone Pine, Viking Global, Maverick, Whale Rock, Glenview, Trian, Starboard, Icahn, ValueAct, Jana, Pelican, Altimeter, Scion, and more). Match is case-insensitive substring on the top_buy fund name — 'any hedge fund' on the curated list counts. Tier S = historical active alpha reputation, NOT a forward prediction. Pair with Whales Accumulating for the 'smart money is buying' short-list."
+        >
+          🦅 Hedge Fund Top Buyer
+        </button>
+        {/* POTUS Family filter — narrows the SEPA list to candidates
+            that appear in the curated POTUS-family disclosure list
+            (src/lib/politicalDisclosures.ts). Informational only —
+            disclosed positions don't predict outcomes; use as one
+            context layer alongside Minervini + whales + volume. */}
+        <button
+          className={`sepa-chip ${filters.potusFamilyOnly ? 'is-active' : ''}`}
+          onClick={() => set('potusFamilyOnly', !filters.potusFamilyOnly)}
+          title="Only show candidates on the curated POTUS-family disclosure list (NVDA, MSFT, AAPL, NOW, AMD, GOOGL, INTC, PLTR, HOOD, etc — full list in src/lib/politicalDisclosures.ts). Informational context flag — disclosed positions don't predict outcomes. Use as ONE signal among many."
+        >
+          🏛️ POTUS Family
+        </button>
+        {/* US Gov filter — narrows to candidates with direct U.S.
+            government involvement: CHIPS Act recipients (INTC), major
+            govt contractors (PLTR), or program participants (HOOD as
+            Trump Accounts trustee). Caught via the political-disclosure
+            list's govt_investment / govt_contractor categories. */}
+        <button
+          className={`sepa-chip ${filters.usGovOnly ? 'is-active' : ''}`}
+          onClick={() => set('usGovOnly', !filters.usGovOnly)}
+          title="Only show candidates with direct U.S. government involvement — CHIPS Act recipients (e.g., INTC), major govt contractors (e.g., PLTR), or program participants (e.g., HOOD as Trump Accounts trustee). Curated in src/lib/politicalDisclosures.ts. Same caveat as POTUS Family — informational context, not a buy signal."
+        >
+          🇺🇸 US Gov
         </button>
         <span className="sepa-filterbar__sep" />
         <button
