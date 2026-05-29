@@ -81,18 +81,38 @@ def _write_cached(name: str, syms: list[str]) -> None:
     _cache_path(name).write_text("\n".join(syms))
 
 
+def _fetch_wikipedia_table(url: str) -> "list":
+    """Fetch a Wikipedia page with a proper User-Agent and pass the HTML
+    to pandas.read_html.
+
+    Wikipedia started returning 403 to UA-less requests (which is what
+    pandas.read_html(url) does under the hood) in mid-2026. Hand-rolling
+    requests with a desktop UA + StringIO restores access without taking
+    a dependency on a Wikipedia API key.
+    """
+    import io
+    import pandas as pd
+    import requests
+    resp = requests.get(
+        url,
+        timeout=20,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; cheetah-trades/0.1)"},
+    )
+    resp.raise_for_status()
+    return pd.read_html(io.StringIO(resp.text))
+
+
 def fetch_sp500() -> list[str]:
     """Return S&P 500 components, cached 30 days.
 
-    Source: Wikipedia's `List_of_S%26P_500_companies` article, which exposes a
-    plain HTML table that pandas.read_html can parse.
+    Source: Wikipedia's `List_of_S%26P_500_companies` article. Fetched via
+    requests + UA header (Wikipedia 403s the bare pd.read_html call).
     """
     cached = _read_cached("sp500")
     if cached:
         return cached
     try:
-        import pandas as pd
-        tables = pd.read_html(
+        tables = _fetch_wikipedia_table(
             "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         )
         syms = [str(s).replace(".", "-").upper() for s in tables[0]["Symbol"].tolist()]
@@ -108,6 +128,86 @@ def fetch_sp500() -> list[str]:
     except Exception as exc:
         log.warning("universe: S&P 500 fetch failed (%s) — falling back to curated", exc)
         return list(UNIVERSE)
+
+
+def _fetch_sp_index_via_wikipedia(url: str, cache_key: str, label: str) -> list[str]:
+    """Shared loader for S&P 400 (MidCap) + S&P 600 (SmallCap) tables.
+
+    Both Wikipedia pages expose the holdings table as the first <table>
+    with a Symbol column, same shape as the S&P 500 page. Centralizing
+    keeps the BRK-B-style dot/dash normalization consistent across the
+    three S&P indexes.
+    """
+    cached = _read_cached(cache_key)
+    if cached:
+        return cached
+    try:
+        tables = _fetch_wikipedia_table(url)
+        # Find the first table with a 'Symbol' column — varies slightly
+        # by index page. Wikipedia sometimes inserts an intro table above.
+        df = next((t for t in tables if "Symbol" in t.columns), None)
+        if df is None:
+            raise RuntimeError(f"{label}: no table with 'Symbol' column")
+        syms = [str(s).replace(".", "-").upper() for s in df["Symbol"].tolist()]
+        seen, out = set(), []
+        for s in syms:
+            if s and s not in seen:
+                seen.add(s)
+                out.append(s)
+        _write_cached(cache_key, out)
+        log.info("universe: fetched %d %s components", len(out), label)
+        return out
+    except Exception as exc:
+        log.warning("universe: %s fetch failed (%s)", label, exc)
+        return []
+
+
+def fetch_sp400() -> list[str]:
+    """Return S&P MidCap 400 components, cached 30 days.
+
+    Wikipedia source — same parsing pattern as fetch_sp500.
+    """
+    return _fetch_sp_index_via_wikipedia(
+        "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies",
+        cache_key="sp400",
+        label="S&P 400",
+    )
+
+
+def fetch_sp600() -> list[str]:
+    """Return S&P SmallCap 600 components, cached 30 days.
+
+    Wikipedia source — same parsing pattern as fetch_sp500.
+    """
+    return _fetch_sp_index_via_wikipedia(
+        "https://en.wikipedia.org/wiki/List_of_S%26P_600_companies",
+        cache_key="sp600",
+        label="S&P 600",
+    )
+
+
+def fetch_sp1500() -> list[str]:
+    """Return the S&P Composite 1500 — S&P 500 + 400 + 600 unioned.
+
+    Covers ~90% of US public-market cap with a quality screen (S&P
+    methodology requires positive trailing-twelve-month earnings + min
+    float + min trading volume). Different methodology than Russell —
+    Russell uses raw market-cap ranking. Pair with fetch_russell3000()
+    for the broadest "growth + quality" union.
+    """
+    cached = _read_cached("sp1500")
+    if cached:
+        return cached
+    seen, out = set(), []
+    # Order: large → mid → small (largest cap first for batching efficiency)
+    for fn in (fetch_sp500, fetch_sp400, fetch_sp600):
+        for s in fn():
+            if s and s not in seen:
+                seen.add(s)
+                out.append(s)
+    _write_cached("sp1500", out)
+    log.info("universe: composed S&P 1500 = %d unique components", len(out))
+    return out
 
 
 # ============================================================================
@@ -483,10 +583,26 @@ def load_universe(mode: str | None = None) -> list[str]:
 
     if selected == "sp500":
         return _with_benchmarks(fetch_sp500())
+    if selected == "sp400":
+        return _with_benchmarks(fetch_sp400())
+    if selected == "sp600":
+        return _with_benchmarks(fetch_sp600())
+    if selected == "sp1500":
+        # S&P 500 + 400 + 600 (the S&P Composite 1500 — quality-screened
+        # large+mid+small caps, ~1,500 names. Wiki-sourced).
+        return _with_benchmarks(fetch_sp1500())
     if selected == "russell1000":
         return _with_benchmarks(fetch_russell1000())
     if selected == "russell3000":
         return _with_benchmarks(fetch_russell3000())
+    if selected == "russell3000_sp1500":
+        # Union of Russell 3000 ∪ S&P 1500. Russell catches small caps S&P
+        # excludes (no earnings req); S&P catches some quality names
+        # Russell drops. After dedup ~3,500-4,000 unique tickers.
+        # Recommended "broadest growth" mode — added 2026-05-29 per user.
+        merged = list(dict.fromkeys(fetch_russell3000() + fetch_sp1500()))
+        log.info("universe: russell3000 ∪ sp1500 = %d unique", len(merged))
+        return _with_benchmarks(merged)
     if selected == "all_us":
         # All active US common stocks via Massive (~5,300 names). Scans
         # take 8-10 minutes with the bulk-snapshot pre-warm — SEPA's
