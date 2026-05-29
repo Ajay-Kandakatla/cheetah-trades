@@ -1,19 +1,23 @@
-/* Whales13DModal — list of recent SC 13D / 13G filings for one ticker.
+/* Whales13DModal — recent SEC filings of interest for one ticker.
  *
- * Triggered by the "📜 13D" chip on SepaCandidateCard. Renders a compact
- * table of every filing in the lookback window: date · form · accession
- * number · deep link to the cover page on SEC.gov.
+ * Triggered by the "📋 SEC activity" chip on SepaCandidateCard. Sections:
+ *   - 4   / 4-A   — insider trades (2-day lag, fires constantly)
+ *   - 144         — insider pre-sale notice (planned restricted sale)
+ *   - SC 13D/G    — fund crossed 5% ownership (rare, high-signal)
  *
- * Filer name and exact % owned aren't surfaced in v1 — those require
- * cover-page parsing which is in the v2 backlog. The deep link is the
- * fallback: one click and the user sees the full filing.
+ * Filer name and trade details live on the cover page of each filing;
+ * the modal renders deep links to SEC.gov so the user can verify.
+ * Cover-page parse for inline display is a v2 work item.
  *
- * Data lag: 13D/G must be filed within 10 days of crossing 5% ownership.
- * That's the "real-time-ish" signal — way fresher than 13F's 45-day lag.
+ * History: started 2026-05-29 as a 13D/G-only chip. Widened later the
+ * same day after SEPA's liquid universe yielded ~0 13D hits across
+ * 150 candidates — Form 4/144 is the actual real-time-ish signal here.
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { API } from '../lib/apiBase';
+
+type Bucket = 'form4' | 'form144' | 'form13' | null;
 
 type Filing = {
   form:              string;
@@ -21,6 +25,7 @@ type Filing = {
   accession_number:  string;
   primary_doc_url:   string | null;
   primary_doc_desc?: string | null;
+  bucket?:           Bucket;
   filer_name?:       string | null;
   pct_owned?:        number | null;
 };
@@ -32,20 +37,48 @@ type Payload = {
   window_days?:  number;
   filings?:      Filing[];
   n_filings?:    number;
+  n_form4?:      number;
+  n_form144?:    number;
+  n_form13?:     number;
   source?:       string;
   disclaimer?:   string;
   error?:        string;
 };
 
-function fmtForm(f: string): { emoji: string; tone: 'new' | 'amend'; label: string } {
+function fmtForm(f: string): { emoji: string; tone: 'new' | 'amend' | 'insider' | 'notice'; label: string } {
   const isAmend = f.endsWith('/A');
-  const is13D = f.startsWith('SC 13D');
-  return {
-    emoji: is13D ? '📜' : '📑',
-    tone: isAmend ? 'amend' : 'new',
-    label: f,
-  };
+  if (f === '4' || f === '4/A') {
+    return { emoji: '👤', tone: 'insider', label: 'Form 4 (insider trade)' + (isAmend ? ' · amend' : '') };
+  }
+  if (f === '144') {
+    return { emoji: '📤', tone: 'notice', label: 'Form 144 (pre-sale notice)' };
+  }
+  if (f.startsWith('SC 13D')) {
+    return { emoji: '📜', tone: isAmend ? 'amend' : 'new', label: f };
+  }
+  if (f.startsWith('SC 13G')) {
+    return { emoji: '📑', tone: isAmend ? 'amend' : 'new', label: f };
+  }
+  return { emoji: '📄', tone: 'new', label: f };
 }
+
+const BUCKET_HEADERS: Record<Exclude<Bucket, null>, { emoji: string; title: string; subtitle: string }> = {
+  form4: {
+    emoji: '👤',
+    title: 'Insider trades · Form 4',
+    subtitle: 'Officers, directors, and 10%+ owners filing within 2 business days of a transaction.',
+  },
+  form144: {
+    emoji: '📤',
+    title: 'Insider pre-sale notice · Form 144',
+    subtitle: 'Planned sale of restricted stock — supply-side warning, not an executed trade.',
+  },
+  form13: {
+    emoji: '📜',
+    title: '5% ownership threshold · SC 13D / 13G',
+    subtitle: 'Outside fund crossed 5% ownership. Rare but high-signal (activist plays, anchors).',
+  },
+};
 
 type Props = { symbol: string; onClose: () => void; windowDays?: number };
 
@@ -98,16 +131,21 @@ export function Whales13DModal({ symbol, onClose, windowDays = 120 }: Props) {
           alignItems: 'baseline', marginBottom: '0.6rem', gap: '0.4rem', flexWrap: 'wrap',
         }}>
           <div>
-            <div className="eyebrow">📜 SEC 13D / 13G filings · 5% ownership threshold</div>
+            <div className="eyebrow">📋 SEC activity · insider trades + 5% threshold</div>
             <h2 className="display" style={{ margin: '0.2rem 0 0', fontSize: '1.3rem' }}>
               {symbol}
               <span style={{ fontSize: '0.78rem', marginLeft: '0.5rem', color: 'var(--cm-slate)' }}>
                 {n} filing{n === 1 ? '' : 's'} · last {data?.window_days ?? windowDays} days
               </span>
             </h2>
-            <p style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.3rem 0 0', opacity: 0.85 }}>
-              Filed within 10 days of a fund crossing 5% ownership — closest free
-              real-time-ish institutional signal. Click a row for the full cover page.
+            {n > 0 && (
+              <p style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.3rem 0 0', opacity: 0.9, fontFamily: '"SF Mono", Menlo, monospace' }}>
+                {(data?.n_form4   ?? 0)} Form 4 · {(data?.n_form144 ?? 0)} Form 144 · {(data?.n_form13 ?? 0)} SC 13D/G
+              </p>
+            )}
+            <p style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.25rem 0 0', opacity: 0.75 }}>
+              Real-time-ish institutional + insider tape from SEC EDGAR.
+              Click any row for the full filing on SEC.gov.
             </p>
           </div>
           <button
@@ -134,80 +172,83 @@ export function Whales13DModal({ symbol, onClose, windowDays = 120 }: Props) {
 
         {!err && data && n === 0 && (
           <div style={{ padding: '0.9rem 0', color: 'var(--cm-slate)', fontSize: '0.88rem' }}>
-            No 13D/13G filings in the last {data.window_days ?? windowDays} days.
+            No tracked SEC filings (Form 4 / 144 / 13D / 13G) in the last {data.window_days ?? windowDays} days.
           </div>
         )}
 
-        {n > 0 && (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.45rem' }}>
-            {filings.map((f, i) => {
-              const meta = fmtForm(f.form);
-              const tone = meta.tone === 'new' ? 'good' : 'neutral';
-              const bg = tone === 'good' ? 'rgba(16,185,129,0.06)' : 'rgba(148,163,184,0.06)';
-              const border = tone === 'good' ? 'rgba(16,185,129,0.22)' : 'rgba(148,163,184,0.22)';
-              return (
-                <li
-                  key={`${f.accession_number}-${i}`}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'auto 1fr auto',
-                    columnGap: '0.6rem',
-                    alignItems: 'baseline',
-                    padding: '0.5rem 0.6rem',
-                    background: bg,
-                    border: `1px solid ${border}`,
-                    borderRadius: 5,
-                    fontSize: '0.84rem',
-                    minWidth: 0,
-                  }}
-                >
-                  <span style={{ fontFamily: '"SF Mono", Menlo, monospace', fontSize: '0.78rem', color: 'var(--cm-slate)' }}>
-                    {f.filing_date}
+        {n > 0 && (['form13', 'form4', 'form144'] as const).map((bucketKey) => {
+          const bucketFilings = filings.filter((f) => f.bucket === bucketKey);
+          if (bucketFilings.length === 0) return null;
+          const header = BUCKET_HEADERS[bucketKey];
+          return (
+            <section key={bucketKey} style={{ marginTop: '0.9rem' }}>
+              <div style={{ marginBottom: '0.35rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+                  {header.emoji} {header.title}
+                  <span style={{ marginLeft: 6, color: 'var(--cm-slate)', fontWeight: 400 }}>
+                    ({bucketFilings.length})
                   </span>
-                  <span style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                  }}>
-                    {meta.emoji} <strong>{meta.label}</strong>
-                    {meta.tone === 'amend' && (
-                      <span style={{ marginLeft: 6, color: 'var(--cm-slate)', fontSize: '0.74rem' }}>
-                        (amendment)
-                      </span>
-                    )}
-                    {f.filer_name && (
-                      <span style={{ marginLeft: 8 }}>· {f.filer_name}</span>
-                    )}
-                    {f.pct_owned != null && (
-                      <span style={{ marginLeft: 8, fontFamily: '"SF Mono", Menlo, monospace' }}>
-                        · {(f.pct_owned * 100).toFixed(1)}%
-                      </span>
-                    )}
-                    <div style={{ color: 'var(--cm-slate)', fontSize: '0.7rem', marginTop: 1 }}>
-                      Accession: {f.accession_number}
-                      {f.primary_doc_desc ? ` · ${f.primary_doc_desc}` : ''}
-                    </div>
-                  </span>
-                  {f.primary_doc_url && (
-                    <a
-                      href={f.primary_doc_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--cm-slate)', marginTop: 1, opacity: 0.85 }}>
+                  {header.subtitle}
+                </div>
+              </div>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.35rem' }}>
+                {bucketFilings.map((f, i) => {
+                  const meta = fmtForm(f.form);
+                  const tone = bucketKey === 'form13' ? 'good' : 'neutral';
+                  const bg = tone === 'good' ? 'rgba(16,185,129,0.06)' : 'rgba(148,163,184,0.06)';
+                  const border = tone === 'good' ? 'rgba(16,185,129,0.22)' : 'rgba(148,163,184,0.22)';
+                  return (
+                    <li
+                      key={`${f.accession_number}-${i}`}
                       style={{
-                        color: 'var(--cm-mint, #6ee7b7)',
-                        fontSize: '0.76rem',
-                        textDecoration: 'none',
+                        display: 'grid',
+                        gridTemplateColumns: 'auto 1fr auto',
+                        columnGap: '0.6rem',
+                        alignItems: 'baseline',
+                        padding: '0.45rem 0.6rem',
+                        background: bg,
+                        border: `1px solid ${border}`,
+                        borderRadius: 5,
+                        fontSize: '0.82rem',
+                        minWidth: 0,
                       }}
                     >
-                      SEC.gov ↗
-                    </a>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                      <span style={{ fontFamily: '"SF Mono", Menlo, monospace', fontSize: '0.76rem', color: 'var(--cm-slate)' }}>
+                        {f.filing_date}
+                      </span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                        {meta.emoji} <strong>{meta.label}</strong>
+                        {f.filer_name && <span style={{ marginLeft: 8 }}>· {f.filer_name}</span>}
+                        {f.pct_owned != null && (
+                          <span style={{ marginLeft: 8, fontFamily: '"SF Mono", Menlo, monospace' }}>
+                            · {(f.pct_owned * 100).toFixed(1)}%
+                          </span>
+                        )}
+                        {f.primary_doc_desc && (
+                          <div style={{ color: 'var(--cm-slate)', fontSize: '0.68rem', marginTop: 1 }}>
+                            {f.primary_doc_desc}
+                          </div>
+                        )}
+                      </span>
+                      {f.primary_doc_url && (
+                        <a
+                          href={f.primary_doc_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--cm-mint, #6ee7b7)', fontSize: '0.74rem', textDecoration: 'none' }}
+                        >
+                          SEC.gov ↗
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })}
 
         <footer style={{
           marginTop: '0.9rem',

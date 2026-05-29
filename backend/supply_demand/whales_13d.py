@@ -34,10 +34,34 @@ _USER_AGENT = os.getenv(
     "Cheetah Market App ajay@kandakatla.dev",
 )
 
-_FORMS_13D_G = (
+# Forms tracked, in order of "weight" for the SEPA decision lens:
+#   - Form 4   — insider trades (officers/directors/10%+ owners), 2-day lag.
+#                Most common; fires constantly on liquid names.
+#   - Form 144 — insider pre-sale notice (planned restricted-stock sales).
+#                Useful "watch for upcoming insider supply" signal.
+#   - SC 13D/G + amendments — 5% ownership threshold crossings.
+#                Rare but high-signal (activist plays, post-IPO anchors).
+#
+# Widened 2026-05-29: was 13D/G-only, but SEPA's liquid-name universe
+# almost never triggers 13D — ARM had 25 Form 4s + 9 Form 144s but
+# zero 13D/G in 6 months. Form 4/144 is the actual real-time-ish
+# institutional signal for established names.
+_FORMS_TRACKED = (
+    "4", "4/A",
+    "144",
     "SC 13D", "SC 13D/A",
     "SC 13G", "SC 13G/A",
 )
+
+# Buckets used for per-form-type counts in the payload.
+def _form_bucket(form: str) -> str | None:
+    if form in ("4", "4/A"):
+        return "form4"
+    if form == "144":
+        return "form144"
+    if form.startswith("SC 13"):
+        return "form13"
+    return None
 
 
 # --- Mongo cache ---------------------------------------------------------
@@ -199,18 +223,26 @@ def _accession_to_url(cik: str, accession: str, primary_doc: str | None) -> str:
 
 
 def get_13d(ticker: str, days: int = 120, force: bool = False) -> dict:
-    """Return recent SC 13D / 13D/A / 13G / 13G/A filings for a ticker.
+    """Return recent SEC filings of interest for SEPA-tier flow signal.
+
+    Tracks Form 4 (insider trades), Form 144 (insider pre-sale notice),
+    and SC 13D/G + amendments (5% ownership threshold). Function name
+    kept as get_13d() for backwards-compat with the cache + endpoint
+    plumbing — the widened form set is the 2026-05-29 pivot.
 
     Output:
       {
-        ticker, cik, company_name,
+        ticker, cik,
         as_of, window_days,
         filings: [
-          {form, filing_date, accession_number, primary_doc_url,
-           filer_name (None — needs cover-page parse for v2), ...},
+          {form, filing_date, accession_number, primary_doc_url, ...},
           ...
         ],
-        n_filings, latest, error?
+        n_filings,           # total across all tracked forms
+        n_form4,             # insider Form 4 (+ 4/A)
+        n_form144,           # insider Form 144
+        n_form13,            # SC 13D/G (+ amendments)
+        latest, error?
       }
     """
     t = ticker.upper()
@@ -254,11 +286,15 @@ def get_13d(ticker: str, days: int = 120, force: bool = False) -> dict:
 
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
     keep = []
+    n_by_bucket = {"form4": 0, "form144": 0, "form13": 0}
     for row in all_rows:
-        if row["form"] not in _FORMS_13D_G:
+        if row["form"] not in _FORMS_TRACKED:
             continue
         if row["filing_date"] < cutoff:
             continue
+        bucket = _form_bucket(row["form"])
+        if bucket:
+            n_by_bucket[bucket] += 1
         url = _accession_to_url(cik, row["accession_number"], row.get("primary_doc"))
         keep.append({
             "form": row["form"],
@@ -266,6 +302,7 @@ def get_13d(ticker: str, days: int = 120, force: bool = False) -> dict:
             "accession_number": row["accession_number"],
             "primary_doc_url": url,
             "primary_doc_desc": row.get("primary_doc_desc"),
+            "bucket": bucket,
             # Filer name lives in the cover page — left None for v1.
             # Cover-page parse is the v2 work item.
             "filer_name": None,
@@ -282,12 +319,16 @@ def get_13d(ticker: str, days: int = 120, force: bool = False) -> dict:
         "window_days": days,
         "filings": keep,
         "n_filings": len(keep),
+        "n_form4":   n_by_bucket["form4"],
+        "n_form144": n_by_bucket["form144"],
+        "n_form13":  n_by_bucket["form13"],
         "latest": keep[0] if keep else None,
         "source": "SEC EDGAR submissions API",
         "disclaimer": (
-            "13D/G filings are required within 10 days of crossing 5% "
-            "ownership. Filer names and exact % owned are on the cover "
-            "page of the linked filing — open the link to verify."
+            "Form 4 = insider trades (2-day lag). Form 144 = insider "
+            "pre-sale notice. SC 13D/G = 5% ownership threshold crossings. "
+            "Filer names and trade details are on the cover page of each "
+            "linked filing — open the link to verify."
         ),
     }
 

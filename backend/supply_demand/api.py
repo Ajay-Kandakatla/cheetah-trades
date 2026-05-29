@@ -232,12 +232,15 @@ async def get_13d_flow_bulk(
     days: int = Query(90, ge=1, le=365,
                       description="Lookback window in days (default: 90)"),
 ):
-    """Bulk read of recent 13D/G filings across all cached tickers.
+    """Bulk read of recent SEC filings of interest across all cached tickers.
 
-    Used by SEPA cards to render a "📜 13D" chip when a ticker has had
-    recent filings. Returns a compact per-ticker summary (n_filings,
-    latest filing's date + form) — full filing list requires the
-    per-ticker /whales/{t}/13d endpoint.
+    Tracks Form 4 (insider trades) + Form 144 (insider pre-sale notice) +
+    SC 13D/G (5% ownership threshold). Used by SEPA cards to render the
+    📋 SEC activity chip — compact per-ticker counts. Full filing list
+    requires the per-ticker /whales/{t}/13d endpoint.
+
+    Endpoint name kept as /13d-flow for backwards-compat with the
+    frontend hook; semantically it now covers a wider form set.
     """
     import os
     from datetime import datetime, timezone, timedelta
@@ -256,6 +259,7 @@ async def get_13d_flow_bulk(
         "ticker": 1,
         "payload.filings.form": 1,
         "payload.filings.filing_date": 1,
+        "payload.filings.bucket": 1,
         "payload.n_filings": 1,
         "payload.latest": 1,
         "cached_at": 1,
@@ -266,10 +270,18 @@ async def get_13d_flow_bulk(
         recent = [f for f in all_filings if (f.get("filing_date") or "") >= cutoff]
         if not recent:
             continue
+        # Bucket counts within the caller's window — can't trust cached
+        # totals which may have used a longer window.
+        n_form4 = sum(1 for f in recent if f.get("bucket") == "form4")
+        n_form144 = sum(1 for f in recent if f.get("bucket") == "form144")
+        n_form13 = sum(1 for f in recent if f.get("bucket") == "form13")
         latest = recent[0]  # already sorted newest-first by get_13d()
         rows.append({
             "ticker":       (d.get("ticker") or "").upper(),
             "n_filings":    len(recent),
+            "n_form4":      n_form4,
+            "n_form144":    n_form144,
+            "n_form13":     n_form13,
             "latest_form":  latest.get("form"),
             "latest_date":  latest.get("filing_date"),
             "latest_url":   latest.get("primary_doc_url"),

@@ -14,8 +14,11 @@ import { API } from '../lib/apiBase';
 
 export type Whales13DRow = {
   ticker:       string;
-  n_filings:    number;
-  latest_form:  string;       // "SC 13D" | "SC 13D/A" | "SC 13G" | "SC 13G/A"
+  n_filings:    number;       // total across all tracked forms
+  n_form4:      number;       // Form 4 + 4/A (insider trades, 2-day lag)
+  n_form144:    number;       // Form 144 (insider pre-sale notice)
+  n_form13:     number;       // SC 13D / 13G + amendments (5% threshold)
+  latest_form:  string;       // "4" | "144" | "SC 13D" | "SC 13G" | ...
   latest_date:  string;       // "YYYY-MM-DD"
   latest_url:   string | null;
 };

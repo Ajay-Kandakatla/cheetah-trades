@@ -787,9 +787,11 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
             </span>
           )}
-          {/* 📜 13D/G chip — fund crossed 5% ownership in the lookback
-              window. Filed within 10 days of the event (vs 13F's 45-day
-              lag), so this is the closest free real-time-ish signal.
+          {/* 📋 SEC activity chip — combined Form 4 (insider trades) +
+              Form 144 (insider pre-sale notice) + SC 13D/G (5% ownership
+              threshold). The 13D-only version pivoted on 2026-05-29
+              because SEPA's liquid-name universe almost never triggers
+              13D; Form 4/144 is the real real-time-ish signal here.
               Only renders when whales13d is in the bulk cache. */}
           {whales13d && whales13d.n_filings > 0 && (
             <span
@@ -806,14 +808,18 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               }}
               style={{ cursor: 'pointer' }}
               title={
-                `Tap for full list of recent SEC 13D/G filings\n\n` +
-                `SC 13D/G — filed within 10 days of a fund crossing 5%\n` +
-                `ownership. Closest free real-time-ish institutional signal.\n\n` +
-                `Filings in window: ${whales13d.n_filings}\n` +
+                `Tap for full list of recent SEC filings\n\n` +
+                `Recent filings in lookback window:\n` +
+                `  ${whales13d.n_form4} Form 4 (insider trades)\n` +
+                `  ${whales13d.n_form144} Form 144 (insider pre-sale notice)\n` +
+                `  ${whales13d.n_form13} SC 13D/G (5% ownership threshold)\n\n` +
                 `Latest: ${whales13d.latest_form} on ${whales13d.latest_date}`
               }
             >
-              📜 13D · {whales13d.n_filings} filing{whales13d.n_filings === 1 ? '' : 's'}
+              📋 SEC · {whales13d.n_filings}
+              {whales13d.n_form13 > 0 && (
+                <span style={{ marginLeft: 4, opacity: 0.85 }}>· {whales13d.n_form13}×13D</span>
+              )}
               <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
             </span>
           )}
