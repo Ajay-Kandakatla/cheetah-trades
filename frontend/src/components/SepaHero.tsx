@@ -156,7 +156,12 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
           >
             <option value="curated">Curated (~130)</option>
             <option value="sp500">S&P 500 (~500)</option>
+            <option value="sp400">S&P 400 MidCap (~400)</option>
+            <option value="sp600">S&P 600 SmallCap (~600)</option>
+            <option value="sp1500">S&P 1500 (~1500)</option>
             <option value="russell1000">Russell 1000 (~1000)</option>
+            <option value="russell3000">Russell 3000 (~3000)</option>
+            <option value="russell3000_sp1500">Russell 3000 ∪ S&P 1500 (~5000)</option>
             <option value="expanded">Curated ∪ S&P 500</option>
           </select>
         </label>
