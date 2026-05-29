@@ -329,10 +329,41 @@ def test_liquidity_nested_shape(scan_payload):
 
 
 def test_is_candidate_gate_logic(scan_payload):
-    """Contract §5: is_candidate = (pass_all & stage==2 & entry_setup & ~late & liquid)."""
+    """Contract §5 (UPDATED 2026-05-29 per Minervini book p.79 verbatim):
+
+    "The Trend Template is a qualifier. If a stock doesn't meet the Trend
+    Template criteria, I don't consider it."
+
+    Therefore is_candidate = qualifier = (trend.pass_all AND liquidity.liquid).
+
+    The strict "ready to buy NOW" gate (Stage 2 + setup + not late base) is
+    now tested separately as is_buyable below.
+    """
     if not scan_payload["all_results"]:
         pytest.skip("No scan results yet")
     for row in scan_payload["all_results"]:
+        expected = bool(
+            row["trend"]["pass_all"]
+            and row["liquidity"]["liquid"]
+        )
+        assert row["is_candidate"] == expected, (
+            f"{row['symbol']}: is_candidate gate drift from book p.79. "
+            f"expected={expected}, got={row['is_candidate']}. "
+            f"pass_all={row['trend']['pass_all']}, "
+            f"liquid={row['liquidity']['liquid']}"
+        )
+
+
+def test_is_buyable_gate_logic(scan_payload):
+    """Contract §5 strict tier (added 2026-05-29): is_buyable adds the
+    entry-now gates Minervini layers on top of the Trend Template qualifier
+    (Ch 10 / Ch 11: Stage 2 advancing + tight base setup + not late base)."""
+    if not scan_payload["all_results"]:
+        pytest.skip("No scan results yet")
+    for row in scan_payload["all_results"]:
+        # Skip rows from a pre-2026-05-29 cached scan that lack is_buyable.
+        if "is_buyable" not in row:
+            continue
         expected = bool(
             row["trend"]["pass_all"]
             and row["stage"] and row["stage"].get("stage") == 2
@@ -340,9 +371,9 @@ def test_is_candidate_gate_logic(scan_payload):
             and (row["base_count"] is None or not row["base_count"]["is_late_stage"])
             and row["liquidity"]["liquid"]
         )
-        assert row["is_candidate"] == expected, (
-            f"{row['symbol']}: is_candidate gate drift. expected={expected}, "
-            f"got={row['is_candidate']}. Pillars: pass_all={row['trend']['pass_all']}, "
+        assert row["is_buyable"] == expected, (
+            f"{row['symbol']}: is_buyable gate drift. expected={expected}, "
+            f"got={row['is_buyable']}. Pillars: pass_all={row['trend']['pass_all']}, "
             f"stage={row['stage'] and row['stage'].get('stage')}, "
             f"entry_setup={row['entry_setup'] is not None}, "
             f"late_base={row['base_count'] and row['base_count']['is_late_stage']}, "
