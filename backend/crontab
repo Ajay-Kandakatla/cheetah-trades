@@ -24,6 +24,14 @@
 # so Monday morning's brief has a complete options-pulse picture.
 0      21    *    *    0    /usr/local/bin/python -m options.scanner russell1000
 #
+# Daily 7pm ET — pre-warm SC 13D/G filings cache for every candidate in
+# the latest scan. EDGAR is fast (~0.3 sec/ticker) so this is cheap;
+# without it the 📜 13D chip never renders on cards because the bulk
+# /supply-demand/13d-flow endpoint reads from cache only. 120-day
+# lookback gives the chip enough history to flag a recent stake-up
+# even for slower-moving names.
+0      19    *    *    *    /usr/local/bin/python -m sepa.warm_whales_13d --days 120
+#
 # Position-aware alerts — every 5 min during market hours (9:30–16:00 ET, Mon–Fri).
 */5    9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli alerts
 0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m sepa.cli alerts
