@@ -1153,7 +1153,18 @@ async def sepa_scan_stream(
                     task.cancel()
                     return
                 event_type = ev.pop("type", "message")
-                yield f"event: {event_type}\ndata: {_json.dumps(ev, default=str)}\n\n"
+                # Scrub NaN/Inf — json.dumps default allow_nan=True emits
+                # literal NaN/Infinity which is invalid JSON per spec, so
+                # the FE's JSON.parse throws on the 'done' event's payload
+                # (it contains the full scan result with 230+ candidates;
+                # any NaN in volume/dual_momentum sinks the parse). When
+                # parse fails inside the try/catch, setState({scanning:
+                # false}) never runs and the button stays stuck on
+                # "Scanning..." after the scan actually finished. Fixed
+                # 2026-05-29 by scrubbing the event payload + emitting
+                # strict JSON.
+                clean = _scrub_nan(ev)
+                yield f"event: {event_type}\ndata: {_json.dumps(clean, default=str, allow_nan=False)}\n\n"
         finally:
             # Make sure the underlying scan is cancelled if the stream is closing
             if not task.done():
