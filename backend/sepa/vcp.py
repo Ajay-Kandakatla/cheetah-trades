@@ -109,10 +109,22 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
             "reason": "no contractions",
         }
 
-    # Book p.199: each contraction "about half" the previous, ±tolerance.
-    # Enforce <= 75% of previous (allows 0.5 ideal, tolerates noisy 0.6-0.7).
+    # Book p.199 verbatim: "each successive contraction contained to about
+    # half (plus or minus a reasonable amount) of the previous pullback or
+    # contraction."
+    # Book's worked examples (all averaging well below 0.6× shrinkage):
+    #   p.198 FSI:    25 → 15 → 8           (0.60 → 0.53)
+    #   p.199 example: 25 → 10 → 5          (0.40 → 0.50)
+    #   p.202 Meridian: 31 → 17 → 8 → 3     (0.55 → 0.47 → 0.38)
+    # Previous code (≤ 0.75×) tolerated patterns where each contraction
+    # was as much as 3/4 the previous — far looser than any worked example.
+    # That admitted "VCPs" that aren't tightening on a book-faithful read.
+    # Fix: tighten to 0.60× (matches FSI's first step, which is the loosest
+    # the book's examples ever get). Strictly enforces shrinkage; the
+    # "plus or minus reasonable amount" is the difference between 0.5 ideal
+    # and the 0.6 ceiling.
     depths = [ct["depth_pct"] for ct in contractions]
-    monotonic = all(depths[k] <= depths[k - 1] * 0.75 for k in range(1, len(depths)))
+    monotonic = all(depths[k] <= depths[k - 1] * 0.60 for k in range(1, len(depths)))
 
     # Right-side tightness: final contraction depth ≤ 10% = ideal per book
     final_depth = depths[-1]
@@ -148,12 +160,23 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
     good_count = 2 <= n_contractions <= 6
     good_depth = 10 <= base_depth_pct <= 35  # "most constructive setups"
 
+    # Volume drying is a non-negotiable VCP requirement per the book —
+    # NOT just a quality flag. Minervini p.198: "[VCP is] a contraction of
+    # volatility accompanied by specific areas in the base structure where
+    # volume contracts significantly." p.203: "Tightness in price ... should
+    # be accompanied by a significant decrease in trading volume."
+    # Before this fix, vol_drying was computed but excluded from has_base, so
+    # price-only contractions without institutional drying were emitting
+    # has_base=True. Book p.204: "almost every failed base structure ... can
+    # be traced back to some faulty characteristic that was overlooked" —
+    # volume contraction is exactly that.
     has_base = (
         n_contractions >= 2
         and monotonic
         and tight_right
         and not too_deep
         and pivot_quality_ok
+        and vol_drying
     )
 
     return {
