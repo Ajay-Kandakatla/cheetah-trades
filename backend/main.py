@@ -987,6 +987,28 @@ async def market_regime_get(force: bool = Query(False, description="Bypass 15-mi
 # ---------------------------------------------------------------------------
 # SEPA (Minervini) endpoints
 # ---------------------------------------------------------------------------
+
+import math as _math
+
+def _scrub_nan(o):
+    """Recursively replace NaN/Inf floats with None so JSONResponse can
+    serialize them. Added 2026-05-28 after the is_candidate semantics fix
+    (book p.79) exposed NaN values latent in scanner outputs — the old
+    1-candidate state never hit them, but with the wider 230-name watchlist
+    one of the rows has a NaN that crashes strict JSON encoding.
+    Recursive but cheap — payload is ~1.2MB / 230 candidates."""
+    if isinstance(o, float):
+        if _math.isnan(o) or _math.isinf(o):
+            return None
+        return o
+    if isinstance(o, dict):
+        return {k: _scrub_nan(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_scrub_nan(v) for v in o]
+    if isinstance(o, tuple):
+        return tuple(_scrub_nan(v) for v in o)
+    return o
+
 @app.get("/sepa/scan")
 async def sepa_scan_get(
     slim: bool = Query(False, description="Drop all_results (~95% payload reduction). Use for fast phone first-paint."),
@@ -1024,8 +1046,11 @@ async def sepa_scan_get(
         slim_payload["candidates"] = cands
         slim_payload["_slim"] = True
         slim_payload["_full_count"] = len(all_r)
-        return JSONResponse(slim_payload)
-    return JSONResponse(latest)
+        # Scrub NaN/Inf — strict JSON encoder can't emit them. Exposed
+        # 2026-05-28 by book-aligned is_candidate semantics fix that
+        # widened the candidate list from 1 to 230.
+        return JSONResponse(_scrub_nan(slim_payload))
+    return JSONResponse(_scrub_nan(latest))
 
 
 @app.post("/sepa/scan")
