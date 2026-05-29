@@ -226,6 +226,60 @@ def _row_to_holder(row, ticker: str, kind: str) -> dict:
     }
 
 
+def _summarize_period(holders: list[dict]) -> dict | None:
+    """Aggregate `date_reported` across all funds into a single timeline.
+
+    yfinance emits per-fund date_reported strings like '2026-03-31 00:00:00'.
+    Most institutional funds line up on 13F quarter-ends (Mar/Jun/Sep/Dec
+    last day) since 13F is quarterly; mutual funds add monthly stamps.
+    Surface the dominant (mode) date as the headline, with earliest/latest
+    span so the user can see how stale the oldest fund's snapshot is.
+    """
+    from collections import Counter
+    dates = []
+    for h in holders:
+        d = h.get("date_reported")
+        if not d:
+            continue
+        # Strip time portion: "2026-03-31 00:00:00" -> "2026-03-31".
+        # Ignore anything that doesn't start with YYYY-MM-DD.
+        head = str(d)[:10]
+        if len(head) == 10 and head[4] == "-" and head[7] == "-":
+            dates.append(head)
+    if not dates:
+        return None
+    sorted_dates = sorted(dates)
+    earliest = sorted_dates[0]
+    latest = sorted_dates[-1]
+    dominant = Counter(dates).most_common(1)[0][0]
+
+    # Derive quarter label from dominant date (most reflects the 13F period).
+    try:
+        y, m, _ = dominant.split("-")
+        month = int(m)
+        q = (month - 1) // 3 + 1
+        quarter_label = f"Q{q} {y}"
+    except Exception:
+        quarter_label = None
+
+    # Human-readable "As of Mon DD, YYYY" for the dominant period.
+    try:
+        from datetime import datetime as _dt
+        dom_dt = _dt.strptime(dominant, "%Y-%m-%d")
+        human_dominant = dom_dt.strftime("%b %-d, %Y")
+    except Exception:
+        human_dominant = dominant
+
+    return {
+        "dominant": dominant,
+        "earliest": earliest,
+        "latest": latest,
+        "quarter_label": quarter_label,
+        "human": f"As of {quarter_label} ({human_dominant})" if quarter_label else f"As of {human_dominant}",
+        "n_dates": len(set(dates)),
+    }
+
+
 def _summarize_moves(holders: list[dict]) -> dict:
     """Compute aggregate buy/sell signal from holders' pct_change values."""
     n_buying = 0
@@ -330,11 +384,14 @@ def get_whales(ticker: str, force: bool = False) -> dict:
     mutuals = raw.get("mutual_fund", [])
 
     # Combine for aggregate summary (institutional + mutual)
-    moves = _summarize_moves(holders + mutuals)
+    combined = holders + mutuals
+    moves = _summarize_moves(combined)
+    period = _summarize_period(combined)
 
     payload = {
         "ticker": t,
         "as_of": datetime.now(timezone.utc).isoformat(),
+        "period": period,
         "holders": holders,
         "mutual_funds": mutuals,
         "major": raw.get("major", {}),
