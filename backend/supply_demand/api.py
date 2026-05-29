@@ -11,6 +11,7 @@ from . import sectors as sec
 from . import news as news_mod
 from . import tracker as tr
 from . import whales as whales_mod
+from . import whales_13d as whales_13d_mod
 from . import flow as flow_mod
 from . import equity_premium as equity_premium_mod
 
@@ -204,6 +205,77 @@ async def get_whales_flow_bulk():
                           if moves.get("notable_sells") else None,
         })
     return {"rows": rows, "n": len(rows)}
+
+
+# --- 13D / 13G filings (real-time-ish institutional accumulation) ---
+
+@router.get("/supply-demand/whales/{ticker}/13d")
+async def get_whales_13d(
+    ticker: str,
+    days: int = Query(120, ge=1, le=730,
+                      description="Lookback window in days (default: 120)"),
+    force: bool = Query(False, description="Bypass 24h cache"),
+):
+    """SC 13D / 13D-A / 13G / 13G-A filings for a ticker.
+
+    Closest free "real-time" institutional signal — filed within 10 days
+    of crossing 5% ownership. Source: SEC EDGAR submissions API.
+
+    v1: surfaces filing dates + deep links to cover pages. Filer name
+    and exact % owned require parsing the cover page — deferred to v2.
+    """
+    return whales_13d_mod.get_13d(ticker, days=days, force=force)
+
+
+@router.get("/supply-demand/13d-flow")
+async def get_13d_flow_bulk(
+    days: int = Query(90, ge=1, le=365,
+                      description="Lookback window in days (default: 90)"),
+):
+    """Bulk read of recent 13D/G filings across all cached tickers.
+
+    Used by SEPA cards to render a "📜 13D" chip when a ticker has had
+    recent filings. Returns a compact per-ticker summary (n_filings,
+    latest filing's date + form) — full filing list requires the
+    per-ticker /whales/{t}/13d endpoint.
+    """
+    import os
+    from datetime import datetime, timezone, timedelta
+    try:
+        from pymongo import MongoClient
+        url = os.getenv("MONGO_URL", "mongodb://mongo:27017")
+        db_name = os.getenv("MONGO_DB", "cheetah")
+        client = MongoClient(url, serverSelectionTimeoutMS=2000)
+        coll = client[db_name].whales13d_cache
+    except Exception:
+        return {"rows": [], "n": 0}
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
+    rows = []
+    for d in coll.find({}, {
+        "ticker": 1,
+        "payload.filings.form": 1,
+        "payload.filings.filing_date": 1,
+        "payload.n_filings": 1,
+        "payload.latest": 1,
+        "cached_at": 1,
+    }):
+        payload = d.get("payload") or {}
+        all_filings = payload.get("filings") or []
+        # Apply caller's window even if the cached doc used a longer one.
+        recent = [f for f in all_filings if (f.get("filing_date") or "") >= cutoff]
+        if not recent:
+            continue
+        latest = recent[0]  # already sorted newest-first by get_13d()
+        rows.append({
+            "ticker":       (d.get("ticker") or "").upper(),
+            "n_filings":    len(recent),
+            "latest_form":  latest.get("form"),
+            "latest_date":  latest.get("filing_date"),
+            "latest_url":   latest.get("primary_doc_url"),
+        })
+    rows.sort(key=lambda r: r.get("latest_date") or "", reverse=True)
+    return {"rows": rows, "n": len(rows), "window_days": days}
 
 
 # In-process per-ticker cache for /supply-demand/ticker/{ticker}.
