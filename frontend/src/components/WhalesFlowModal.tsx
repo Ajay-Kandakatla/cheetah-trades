@@ -39,6 +39,16 @@ type WhalesPayload = {
     notable_buys:  Mover[];
     notable_sells: Mover[];
   };
+  // Aggregated 13F filing timeline — dominant period_of_report across
+  // funds, plus earliest/latest span so a stale outlier is visible.
+  period?: {
+    dominant:       string;  // "2026-03-31"
+    earliest:       string;
+    latest:         string;
+    quarter_label?: string | null;  // "Q1 2026"
+    human?:         string;  // "As of Q1 2026 (Mar 31, 2026)"
+    n_dates?:       number;
+  } | null;
 };
 
 /** Format a pct_change like 0.234 → "+23.4%" (or "−12.5%"). Capped at
@@ -226,6 +236,19 @@ export function WhalesFlowModal({
                 {moves.n_unchanged ? ` · ${moves.n_unchanged} unchanged` : ''}
                 {data?.major?.n_institutions
                   ? `  (out of ${data.major.n_institutions} reporting funds)` : ''}
+              </p>
+            )}
+            {data?.period?.human && (
+              <p
+                style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.25rem 0 0', opacity: 0.85 }}
+                title={`Earliest filing in this snapshot: ${data.period.earliest}  ·  latest: ${data.period.latest}`}
+              >
+                📅 {data.period.human}
+                {data.period.earliest !== data.period.latest && (
+                  <span style={{ marginLeft: '0.4rem' }}>
+                    · filings span {data.period.earliest} → {data.period.latest}
+                  </span>
+                )}
               </p>
             )}
           </div>
