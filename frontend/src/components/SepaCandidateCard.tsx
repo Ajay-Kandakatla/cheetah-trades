@@ -195,6 +195,14 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
     high_vol_breakout:     row.volume?.high_vol_breakout ?? null,
     pocket_pivot:          row.volume?.pocket_pivot ?? null,
     cmf_signal:            row.volume?.cmf_signal ?? null,
+    // Dollar flows — added 2026-05-29. Surfaces in the cmf_inflow /
+    // cmf_outflow / accum_strong / accumulating / distributing drill
+    // modals so users see actual $ amounts instead of just ratios.
+    // Null-safe — older cached scans won't have these.
+    up_dollar_vol_50:      (row.volume as any)?.up_dollar_vol_50 ?? null,
+    dn_dollar_vol_50:      (row.volume as any)?.dn_dollar_vol_50 ?? null,
+    net_dollar_vol_50:     (row.volume as any)?.net_dollar_vol_50 ?? null,
+    cmf_dollar_flow_20:    (row.volume as any)?.cmf_dollar_flow_20 ?? null,
     // Dual momentum (Antonacci) — feeds the dual_momentum_12m drill modal
     // when the user clicks the "12m" chip. All four returns + the two
     // gate booleans live on row.dual_momentum if the scan included them.

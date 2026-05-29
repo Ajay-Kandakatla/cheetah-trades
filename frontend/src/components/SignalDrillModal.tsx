@@ -90,6 +90,12 @@ export type SignalData = {
   high_vol_breakout?:    boolean | null;
   pocket_pivot?:         boolean | null;
   cmf_signal?:           string | null;
+  // Dollar flows — added 2026-05-29 so drill modals show actual $
+  // accumulation instead of just abstract ratios.
+  up_dollar_vol_50?:     number | null;   // sum of (close × vol) on up days, 50d
+  dn_dollar_vol_50?:     number | null;   // sum of (close × vol) on down days, 50d
+  net_dollar_vol_50?:    number | null;   // up_dollar - dn_dollar
+  cmf_dollar_flow_20?:   number | null;   // CMF money-flow-volume × close, summed 20d
   // Dual momentum (Antonacci) — drives the dual_momentum_12m spec.
   // Each return is a percentage (e.g. 178.1 means +178.1%).
   return_1m?:            number | null;
@@ -163,6 +169,18 @@ function fmtVol(n: number | null | undefined): string {
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
   return Math.round(n).toLocaleString();
+}
+
+// Signed dollar formatter — e.g. +$1.2B, −$340M. Used by the volume +
+// CMF drill modals to display actual dollar flow numbers added 2026-05-29.
+function fmtSignedUSD(n: number | null | undefined): string {
+  if (n == null || !isFinite(n)) return '—';
+  const sign = n >= 0 ? '+' : '−';
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
+  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(0)}K`;
+  return `${sign}$${Math.round(abs).toLocaleString()}`;
 }
 
 /* ============================================================================
@@ -433,6 +451,12 @@ const SIGNAL_SPECS: Record<SignalKind, SignalSpec> = {
                                           tone: d.distribution_days_25 != null && d.distribution_days_25 <= 1 ? 'good' : 'bad' },
       { label: 'Accumulation days (25)',  value: d.accumulation_days_25 != null ? String(d.accumulation_days_25) : '—',
                                           tone: d.accumulation_days_25 != null && d.accumulation_days_25 >= 8 ? 'good' : 'neutral' },
+      // Actual dollar amounts — added 2026-05-29 so users see real
+      // money flow not just abstract ratios.
+      { label: '$ on up days (50d)',       value: `$${fmtVol(d.up_dollar_vol_50)}`,    tone: 'good' },
+      { label: '$ on down days (50d)',     value: `$${fmtVol(d.dn_dollar_vol_50)}`,    tone: 'neutral' },
+      { label: 'Net $ accumulation (50d)', value: fmtSignedUSD(d.net_dollar_vol_50),
+                                           tone: d.net_dollar_vol_50 != null && d.net_dollar_vol_50 > 0 ? 'good' : 'bad' },
     ],
     framework: [
       "Rare — about 5% of the universe trips all three gates. When you see this on a Stage 2 leader with a clean base forming, it's the highest-conviction long setup in the framework.",
@@ -459,6 +483,10 @@ const SIGNAL_SPECS: Record<SignalKind, SignalSpec> = {
                                           tone: d.cmf_20 != null && d.cmf_20 >= 0 ? 'good' : 'neutral' },
       { label: 'Distribution days (25)',  value: d.distribution_days_25 != null ? String(d.distribution_days_25) : '—',
                                           tone: d.distribution_days_25 != null && d.distribution_days_25 < 4 ? 'neutral' : 'bad' },
+      { label: '$ on up days (50d)',       value: `$${fmtVol(d.up_dollar_vol_50)}`,    tone: 'good' },
+      { label: '$ on down days (50d)',     value: `$${fmtVol(d.dn_dollar_vol_50)}`,    tone: 'neutral' },
+      { label: 'Net $ accumulation (50d)', value: fmtSignedUSD(d.net_dollar_vol_50),
+                                           tone: d.net_dollar_vol_50 != null && d.net_dollar_vol_50 > 0 ? 'good' : 'bad' },
     ],
     framework: [
       "Meaningful but not maxed — the stock is being net-bought but doesn't qualify for 'strong' (needs all three confirmations). About 12% of universe trips this.",
@@ -485,6 +513,10 @@ const SIGNAL_SPECS: Record<SignalKind, SignalSpec> = {
                                           tone: d.cmf_20 != null && d.cmf_20 <= -0.10 ? 'bad' : 'neutral' },
       { label: 'Distribution days (25)',  value: d.distribution_days_25 != null ? String(d.distribution_days_25) : '—',
                                           tone: d.distribution_days_25 != null && d.distribution_days_25 >= 4 ? 'bad' : 'neutral' },
+      { label: '$ on up days (50d)',       value: `$${fmtVol(d.up_dollar_vol_50)}`,    tone: 'neutral' },
+      { label: '$ on down days (50d)',     value: `$${fmtVol(d.dn_dollar_vol_50)}`,    tone: 'bad' },
+      { label: 'Net $ distribution (50d)', value: fmtSignedUSD(d.net_dollar_vol_50),
+                                           tone: d.net_dollar_vol_50 != null && d.net_dollar_vol_50 < 0 ? 'bad' : 'neutral' },
     ],
     framework: [
       "Per Minervini Ch.5: 4-5 distribution days in 25 = institutional selling. Trim or exit. Don't fight the tape on a single ticker showing this signal even if the broader market is rallying.",
@@ -506,6 +538,9 @@ const SIGNAL_SPECS: Record<SignalKind, SignalSpec> = {
     formula: "CMF = sum(money_flow_volume, 20) / sum(volume, 20); money_flow_volume weights each day by close position within range.",
     buildFields: (d) => [
       { label: 'CMF 20-period', value: d.cmf_20 != null ? d.cmf_20.toFixed(3) : '—', tone: 'bad' },
+      { label: 'Net $ outflow (20d, CMF-weighted)',
+                                  value: fmtSignedUSD(d.cmf_dollar_flow_20),
+                                  tone: d.cmf_dollar_flow_20 != null && d.cmf_dollar_flow_20 < 0 ? 'bad' : 'neutral' },
       { label: 'Up/down vol ratio', value: d.up_down_vol_ratio != null ? `${d.up_down_vol_ratio.toFixed(2)}×` : '—', tone: 'neutral' },
     ],
     framework: [
@@ -528,6 +563,9 @@ const SIGNAL_SPECS: Record<SignalKind, SignalSpec> = {
     formula: "CMF = sum(money_flow_volume, 20) / sum(volume, 20); inflow when CMF ≥ +0.10 sustained.",
     buildFields: (d) => [
       { label: 'CMF 20-period',     value: d.cmf_20 != null ? d.cmf_20.toFixed(3) : '—', tone: 'good' },
+      { label: 'Net $ inflow (20d, CMF-weighted)',
+                                     value: fmtSignedUSD(d.cmf_dollar_flow_20),
+                                     tone: d.cmf_dollar_flow_20 != null && d.cmf_dollar_flow_20 > 0 ? 'good' : 'neutral' },
       { label: 'Up/down vol ratio', value: d.up_down_vol_ratio != null ? `${d.up_down_vol_ratio.toFixed(2)}×` : '—', tone: 'neutral' },
     ],
     framework: [

@@ -74,31 +74,46 @@ def _safe_float(x) -> Optional[float]:
         return None
 
 
-def _chaikin_money_flow(df: pd.DataFrame, period: int = 20) -> Optional[float]:
+def _chaikin_money_flow(df: pd.DataFrame, period: int = 20) -> dict:
     """Chaikin Money Flow over `period` sessions.
 
     Formula:
         money_flow_multiplier = ((close - low) - (high - close)) / (high - low)
-        money_flow_volume     = mfm * volume
-        cmf = sum(mfv, period) / sum(volume, period)
+        money_flow_volume     = mfm * volume                  (in SHARES)
+        cmf = sum(mfv, period) / sum(volume, period)          (ratio -1..+1)
 
-    Range: -1.0 to +1.0. Positive = buying pressure on close near highs;
-    negative = selling pressure on close near lows. Treats every day
-    independently, so it doesn't get fooled by one big-volume reversal.
+    Range of cmf: -1.0 to +1.0. Positive = buying pressure on close near
+    highs; negative = selling pressure on close near lows.
+
+    Also returns the DOLLAR money flow over the same window:
+        money_flow_dollar = mfm * volume * close              (in DOLLARS)
+        net_dollar_flow   = sum(money_flow_dollar, period)
+    so drill modals can show "Net $-flow last 20d: +$1.2B" instead of just
+    the abstract CMF ratio.
     """
     if len(df) < period:
-        return None
+        return {"cmf": None, "net_dollar_flow": None}
     sub = df.iloc[-period:].copy()
     rng = (sub["high"] - sub["low"]).replace(0, pd.NA)
     mfm = ((sub["close"] - sub["low"]) - (sub["high"] - sub["close"])) / rng
-    mfv = mfm * sub["volume"]
+    mfv_shares = mfm * sub["volume"]
     total_vol = float(sub["volume"].sum())
     if total_vol <= 0:
-        return None
-    cmf = float(mfv.sum() / total_vol)
+        return {"cmf": None, "net_dollar_flow": None}
+    cmf = float(mfv_shares.sum() / total_vol)
     if cmf != cmf:           # NaN guard
-        return None
-    return cmf
+        return {"cmf": None, "net_dollar_flow": None}
+    # Dollar money flow — weight each day's MFV by its close price so the
+    # output is in dollars not shares. Positive = net $ inflow over 20d,
+    # negative = net $ outflow. Surfaced in drill modals.
+    try:
+        mfv_dollars = mfv_shares * sub["close"]
+        net_dollar_flow = float(mfv_dollars.sum())
+        if net_dollar_flow != net_dollar_flow:
+            net_dollar_flow = None
+    except Exception:
+        net_dollar_flow = None
+    return {"cmf": cmf, "net_dollar_flow": net_dollar_flow}
 
 
 def _pocket_pivot(df: pd.DataFrame, lookback: int = 10) -> dict:
@@ -244,6 +259,15 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
     up_vol = float(vol50[last50 > 0].sum())
     dn_vol = float(vol50[last50 < 0].sum())
     ratio = up_vol / dn_vol if dn_vol > 0 else None
+    # Dollar volume on up / down days (close × volume). Surfaces in the
+    # accum_strong / accumulating / distributing drill modals as "actual $
+    # accumulated last 50d" instead of just the abstract ratio.
+    # Added 2026-05-29 per user request.
+    close50 = c.iloc[-50:]
+    dv50 = (close50 * vol50)
+    up_dollar_vol = float(dv50[last50 > 0].sum())
+    dn_dollar_vol = float(dv50[last50 < 0].sum())
+    net_dollar_vol = up_dollar_vol - dn_dollar_vol
 
     avg50 = float(vol50.mean()) if len(vol50) else 0
     avg10 = float(v.iloc[-10:].mean())
@@ -260,7 +284,9 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
     )
 
     # --- new signals (2026-05-21 upgrade) ---
-    cmf = _chaikin_money_flow(df, period=20)
+    cmf_info = _chaikin_money_flow(df, period=20)
+    cmf = cmf_info.get("cmf")
+    cmf_dollar_flow_20 = cmf_info.get("net_dollar_flow")  # dollars
     cmf_signal = (
         "inflow"  if cmf is not None and cmf >= CMF_INFLOW_THRESHOLD  else
         "outflow" if cmf is not None and cmf <= CMF_OUTFLOW_THRESHOLD else
@@ -289,4 +315,12 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
         "distribution_days_25":  counts["distribution_days_25"],
         "cmf_20":                round(cmf, 3) if cmf is not None else None,
         "cmf_signal":            cmf_signal,
+        # Dollar flows — added 2026-05-29 so drill modals can show actual
+        # $ accumulation instead of just ratios. Up/dn dollar volume over
+        # 50d for the accum_strong/accumulating/distributing drills; CMF
+        # net $ flow over 20d for the cmf_inflow/cmf_outflow drills.
+        "up_dollar_vol_50":      int(up_dollar_vol),
+        "dn_dollar_vol_50":      int(dn_dollar_vol),
+        "net_dollar_vol_50":     int(net_dollar_vol),
+        "cmf_dollar_flow_20":    int(cmf_dollar_flow_20) if cmf_dollar_flow_20 is not None else None,
     }
