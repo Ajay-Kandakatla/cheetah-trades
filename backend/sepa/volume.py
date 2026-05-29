@@ -241,9 +241,33 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
     vol50 = v.iloc[-50:]
 
     # --- legacy fields (kept for backward compat with existing UI / score) ---
-    up_vol = float(vol50[last50 > 0].sum())
-    dn_vol = float(vol50[last50 < 0].sum())
-    ratio = up_vol / dn_vol if dn_vol > 0 else None
+    # FIXED 2026-05-29 per formula audit. Book p.71-72 (Stage 2 verbatim):
+    #   "There are more up DAYS and up WEEKS on above-average volume than
+    #    down DAYS and down WEEKS on above-average volume."
+    # And p.75 (Stage 4 verbatim):
+    #   "There are more down days and weeks on above-average volume than
+    #    up days and up weeks on above-average volume."
+    # The book is asking for a COUNT of qualifying days, NOT a sum of volume.
+    # Previous formula:
+    #   ratio = sum(up_day_volume) / sum(down_day_volume)
+    # was a different thing — one big up day on huge volume could inflate
+    # the ratio without there actually being "more up days" the way Minervini
+    # defines it. A name with 5 up days totaling 100M volume vs 15 down days
+    # totaling 60M volume would emit ratio=1.67 (accumulation) when the
+    # book's count-of-days rule says it's distributing (3× more down days).
+    # New formula counts above-average-volume days on each side, matching
+    # the book's wording. The "above-average" qualifier (>= 50-day avg
+    # volume) is also from p.71-72: "on above-average volume."
+    avg_vol_50_for_ratio = float(vol50.mean()) if len(vol50) else 0.0
+    if avg_vol_50_for_ratio > 0:
+        above_avg_mask = vol50 >= avg_vol_50_for_ratio
+        # ret > 0 on above-avg volume = "up day on above-average volume"
+        n_up_days = int(((last50 > 0) & above_avg_mask).sum())
+        n_dn_days = int(((last50 < 0) & above_avg_mask).sum())
+        ratio = (n_up_days / n_dn_days) if n_dn_days > 0 else None
+    else:
+        n_up_days = n_dn_days = 0
+        ratio = None
 
     avg50 = float(vol50.mean()) if len(vol50) else 0
     avg10 = float(v.iloc[-10:].mean())
@@ -272,9 +296,14 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
 
     return {
         # Legacy fields — DO NOT remove (frontend chips + scoring depend
-        # on these). Threshold-tightening for `accumulation` flag is
-        # the one behavior change.
+        # on these). 2026-05-29: ratio formula now book-aligned —
+        # COUNT of above-average-volume days, not sum of volumes.
         "up_down_vol_ratio":     round(ratio, 2) if ratio is not None else None,
+        # New (2026-05-29): expose the raw day counts the ratio is built
+        # from so the FE drill modal can show "8 up days vs 4 down days
+        # on above-avg volume" instead of just the abstract ratio.
+        "up_days_on_avg_vol":    n_up_days,
+        "dn_days_on_avg_vol":    n_dn_days,
         "accumulation":          bool(ratio is not None and ratio >= ACCUM_RATIO_THRESHOLD),
         "vol_dryup":             round(dryup, 2) if dryup is not None else None,
         "is_drying_up":          bool(dryup is not None and dryup < 0.7),
