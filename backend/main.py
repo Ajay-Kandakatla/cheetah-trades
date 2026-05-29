@@ -1788,7 +1788,7 @@ async def sepa_watchlist_remove(symbol: str):
 async def sepa_history_runs(limit: int = Query(30, ge=1, le=200)):
     """List of recent scan runs (date, market regime, candidate count)."""
     from sepa import history
-    return JSONResponse({"runs": history.get_recent_runs(limit)})
+    return JSONResponse(_scrub_nan({"runs": history.get_recent_runs(limit)}))
 
 
 @app.get("/sepa/history/diff")
@@ -1796,7 +1796,7 @@ async def sepa_history_diff(from_date: str = Query(..., alias="from"),
                              to_date: str = Query(..., alias="to")):
     """Symbols entered/exited the candidate list and score deltas between two dates."""
     from sepa import history
-    return JSONResponse(history.diff_dates(from_date, to_date))
+    return JSONResponse(_scrub_nan(history.diff_dates(from_date, to_date)))
 
 
 @app.get("/sepa/history/date/{date_et}")
@@ -1806,15 +1806,21 @@ async def sepa_history_by_date(date_et: str):
     run = history.get_scan_by_date(date_et)
     if not run:
         raise HTTPException(404, f"no scan stored for {date_et}")
-    return JSONResponse(run)
+    # Scrub NaN/Inf — strict JSON encoder rejects them. Persisted scans
+    # from before the 2026-05-28 fix may have NaN values in dual_momentum
+    # / volume / etc. fields. Browser sees a 500 otherwise.
+    return JSONResponse(_scrub_nan(run))
 
 
 @app.get("/sepa/history/{symbol}")
 async def sepa_history_symbol(symbol: str, days: int = Query(30, ge=1, le=365)):
     """Trajectory of one ticker — score, RS, stage, setup over the last N days."""
     from sepa import history
-    return JSONResponse({"symbol": symbol.upper(), "days": days,
-                         "snapshots": history.get_symbol_history(symbol, days)})
+    return JSONResponse(_scrub_nan({
+        "symbol":    symbol.upper(),
+        "days":      days,
+        "snapshots": history.get_symbol_history(symbol, days),
+    }))
 
 
 # ============================================================================
