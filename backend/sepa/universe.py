@@ -37,13 +37,17 @@ UNIVERSE: list[str] = [
     "CRDO", "ALAB", "ANET", "CRWV", "NBIS",
     # Software / cloud
     "CRM", "NOW", "SNOW", "DDOG", "NET", "CRWD", "PANW", "ZS", "MDB", "PLTR",
-    "SHOP", "TEAM", "WDAY", "HUBS", "CFLT", "SMAR", "TOST",
+    "SHOP", "TEAM", "WDAY", "HUBS", "TOST",
+    # Removed 2026-05-29 — dead in live yfinance + Yahoo Finance:
+    #   CFLT  (Confluent — verify status; remove unless renamed)
+    #   SMAR  (Smartsheet — taken private by Vista / Blackstone Q1 2025)
     # Consumer growth
     "ABNB", "UBER", "DASH", "BKNG", "CMG", "LULU", "DECK", "COST", "WMT",
     # Health / biotech leaders
     "LLY", "UNH", "ISRG", "VRTX", "REGN", "BMRN", "RMD", "BSX",
     # Fintech / payments
-    "V", "MA", "PYPL", "AXP", "COIN", "HOOD", "SQ", "SOFI", "NU", "MELI",
+    # Note: SQ → XYZ (Block Inc rebrand January 2025).
+    "V", "MA", "PYPL", "AXP", "COIN", "HOOD", "XYZ", "SOFI", "NU", "MELI",
     # Energy / industrials / materials
     "CEG", "VST", "GEV", "ETN", "PH", "CAT", "DE", "FSLR", "ENPH",
     # China ADR growth
