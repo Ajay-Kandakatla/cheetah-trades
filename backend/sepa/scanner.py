@@ -265,14 +265,26 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "pioneer_themes": pioneer_themes,
         "is_pioneer":    bool(pioneer_themes),
         "liquidity": liq,
-        # Minervini's "qualifier" semantics — book p.79:
+        # Minervini's "candidate" semantics — book p.79 verbatim:
         # *"The Trend Template is a qualifier. If a stock doesn't meet the
-        # Trend Template criteria, I don't consider it."* This is the
-        # WATCHLIST tier — names worth analyzing further. The strict
-        # `is_candidate` below adds setup + base count + stage as additional
-        # entry-timing gates. Additive per docs/SEPA_CONTRACTS.md §3.
+        # Trend Template criteria, I don't consider it."*
+        #
+        # FIXED 2026-05-28 per user feedback: previous version had
+        # is_candidate as the strict "buyable-now" gate (Stage 2 + setup +
+        # not-late-base). That contradicts the book — a Minervini "candidate"
+        # is a name worth CONSIDERING, not a name worth BUYING TODAY. The
+        # buyable-now gate is now exposed separately as `is_buyable` so the
+        # V1 page surfaces the wider watchlist matching V2's 230-name view.
         "qualifier": bool(tr.pass_all and liq["liquid"]),
-        "is_candidate": bool(
+        # Per the book: candidate = qualifier. Same field, kept for backward
+        # compatibility with existing FE / API consumers that read
+        # `is_candidate`. They'll now correctly receive the watchlist tier.
+        "is_candidate": bool(tr.pass_all and liq["liquid"]),
+        # The strict "ready to buy NOW" gate — book pp.79-83, 198-203:
+        # Trend Template + Stage 2 advancing + tight base setup (VCP or
+        # Power Play) + not a late-stage base. NEW field name so existing
+        # code reading is_candidate doesn't accidentally over-restrict the list.
+        "is_buyable": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
             and entry_setup is not None
@@ -492,11 +504,14 @@ def scan_universe(symbols: Optional[List[str]] = None,
         "duration_sec": round(time.time() - t0, 2),
         "universe_size": len(work),
         "analyzed": len(results),
+        # Book p.79: candidate = passes Trend Template = qualifier. The
+        # strict "buyable today" gate is now `buyable_count` below.
         "candidate_count": len(candidates),
-        # Watchlist tier — Minervini book p.79 "Trend Template is a qualifier."
-        # Always >= candidate_count. Surfaced so the UI can show
-        # "1357 analyzed → 18 qualifiers → 0 buyable" instead of just "0".
         "qualifier_count": sum(1 for r in results if r.get("qualifier")),
+        # New buyable_count — the count surfaced for "ready to buy NOW"
+        # (Stage 2 + setup + not late base + liquid). Was the old
+        # candidate_count semantic before the 2026-05-28 fix.
+        "buyable_count": sum(1 for r in results if r.get("is_buyable")),
         "market_context": mkt,
         "candidates": candidates,
         "all_results": results,
@@ -739,9 +754,12 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "liquidity": liq,
         "fundamentals": fundamentals,
         "moat": moat,
-        # Watchlist tier (Minervini p.79). See full-scan path for rationale.
+        # Book p.79 candidate = qualifier. See full-scan path for rationale.
+        # is_candidate aligned with the book; is_buyable holds the strict
+        # entry-now gate. Fix applied 2026-05-28.
         "qualifier": bool(tr.pass_all and liq.get("liquid")),
-        "is_candidate": bool(
+        "is_candidate": bool(tr.pass_all and liq.get("liquid")),
+        "is_buyable": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
             and entry_setup is not None
@@ -910,8 +928,10 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         "duration_sec": round(time.time() - t0, 2),
         "universe_size": len(work),
         "analyzed": len(results),
+        # Book p.79: candidate = qualifier; buyable is the strict tier.
         "candidate_count": len(candidates),
         "qualifier_count": sum(1 for r in results if r.get("qualifier")),
+        "buyable_count": sum(1 for r in results if r.get("is_buyable")),
         "fast_scan": True,
         "research_cache_hits": len(work) - len(missing),
         "research_cache_misses": len(missing),
