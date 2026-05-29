@@ -60,6 +60,7 @@ const DEFAULT_FILTERS: SepaFilters = {
   hedgeFundTopBuyer: false,
   potusFamilyOnly: false,
   usGovOnly: false,
+  insiderClusterBuy: false,
   sortBy: 'score',
 };
 

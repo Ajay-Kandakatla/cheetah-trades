@@ -85,6 +85,13 @@ export type SepaFilters = {
    *  OR 'govt_contractor'). Catches CHIPS Act recipients, defense/govt
    *  contractors, and program participants. Added 2026-05-28. */
   usGovOnly: boolean;
+  /** When true, drop candidates without insider cluster-buy activity in
+   *  the last 30 days (≥3 unique insiders filed Form 4). Surfaces the
+   *  Minervini/O'Neil bullish tell that multiple corporate officers are
+   *  buying their own stock. Note: insider data is enriched on the top
+   *  20 candidates per Full Scan with catalyst — names outside that
+   *  enriched subset are dropped when the chip is on. Added 2026-05-29. */
+  insiderClusterBuy: boolean;
   sortBy:
     | 'score' | 'rs' | 'symbol'
     | 'day_change' | 'day_change_abs'
@@ -246,6 +253,18 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
           title="Only show candidates with direct U.S. government involvement — CHIPS Act recipients (e.g., INTC), major govt contractors (e.g., PLTR), or program participants (e.g., HOOD as Trump Accounts trustee). Curated in src/lib/politicalDisclosures.ts. Same caveat as POTUS Family — informational context, not a buy signal."
         >
           🇺🇸 US Gov
+        </button>
+        {/* Insider cluster-buy filter — narrows to candidates with ≥3
+            unique insiders filing Form 4 buys in the last 30 days.
+            Minervini/O'Neil bullish tell. Data is enriched on top 20
+            candidates per Full Scan + catalyst — names outside the
+            enriched subset are dropped when this is on. */}
+        <button
+          className={`sepa-chip ${filters.insiderClusterBuy ? 'is-active' : ''}`}
+          onClick={() => set('insiderClusterBuy', !filters.insiderClusterBuy)}
+          title="Only show candidates where ≥3 unique insiders filed Form 4 buys in the last 30 days (cluster-buy signal — bullish tell per Minervini / O'Neil Ch 13). Insider enrichment runs on the top 20 candidates after Full Scan with 'Include catalyst' — names outside that enriched subset will be excluded when this filter is on."
+        >
+          🟢 Insider Cluster Buy
         </button>
         <span className="sepa-filterbar__sep" />
         <button

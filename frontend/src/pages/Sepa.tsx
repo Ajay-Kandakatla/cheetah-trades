@@ -227,6 +227,9 @@ export function SepaPage() {
     // When on, narrows to symbols with govt_investment OR
     // govt_contractor category (CHIPS Act recipients, contractors).
     usGovOnly: false,
+    // Default OFF — insider cluster-buy filter. Uses row.insider data
+    // populated by scanner's catalyst enrichment on top 20 candidates.
+    insiderClusterBuy: false,
     sortBy: 'score',
   };
   const [filters, setFilters] = useState<SepaFilters>(() => {
@@ -394,6 +397,16 @@ export function SepaPage() {
       if (filters.usGovOnly) {
         const flags = getPoliticalChipFlags(r.symbol);
         if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
+      }
+      // Insider cluster-buy filter — narrow to candidates where ≥3
+      // unique insiders filed Form 4 buys in the last 30 days. Reads
+      // row.insider populated by scanner.py's catalyst-enrichment path
+      // (top 20 candidates after Full Scan + catalyst). Names outside
+      // that enriched subset have no row.insider data and are dropped
+      // — documented in the chip tooltip so users know coverage.
+      if (filters.insiderClusterBuy) {
+        const ins = (r as any).insider;
+        if (!ins?.form4_cluster_buy) return false;
       }
       return true;
     });
@@ -648,6 +661,11 @@ export function SepaPage() {
     if (filters.usGovOnly) {
       const flags = getPoliticalChipFlags(r.symbol);
       if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
+    }
+    // Insider cluster-buy gate — mirror of the main `filtered` block.
+    if (filters.insiderClusterBuy) {
+      const ins = (r as any).insider;
+      if (!ins?.form4_cluster_buy) return false;
     }
     if (filters.moatMin > 0) {
       const tier = r.moat?.tier ?? 0;
