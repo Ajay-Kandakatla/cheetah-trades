@@ -237,12 +237,18 @@ export function SepaPage() {
     try {
       const raw = localStorage.getItem('sepa_filters_v1');
       if (!raw) return FILTER_DEFAULTS;
-      return { ...FILTER_DEFAULTS, ...JSON.parse(raw) };
+      const restored = { ...FILTER_DEFAULTS, ...JSON.parse(raw) };
+      // search is transient — a ticker typed into the box shouldn't
+      // survive a reload (it'd silently zero out the table when the
+      // typed ticker isn't in the latest scan).
+      restored.search = '';
+      return restored;
     } catch { return FILTER_DEFAULTS; }
   });
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('sepa_filters_v1', JSON.stringify(filters));
+    const { search: _omit, ...persistable } = filters;
+    localStorage.setItem('sepa_filters_v1', JSON.stringify(persistable));
   }, [filters]);
 
   // Phase 2 — setup-category tab strip. "all" is the default (existing
