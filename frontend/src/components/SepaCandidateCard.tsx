@@ -5,6 +5,7 @@ import { lazy, Suspense, useState, useEffect, type ReactNode } from 'react';
 import type { SepaCandidate } from '../hooks/useSepa';
 import type { SoirRow } from '../hooks/useOptionsPulse';
 import type { WhalesFlowRow } from '../hooks/useWhalesFlow';
+import type { Whales13DRow } from '../hooks/useWhales13DFlow';
 import { SepaScoreBar } from './SepaScoreBar';
 import { SepaTrendDots } from './SepaTrendDots';
 import { PriceAlertModal } from './PriceAlertModal';
@@ -57,6 +58,9 @@ const TickerAlertPresets = lazy(() =>
 const WhalesFlowModal = lazy(() =>
   import('./WhalesFlowModal').then(m => ({ default: m.WhalesFlowModal })),
 );
+const Whales13DModal = lazy(() =>
+  import('./Whales13DModal').then(m => ({ default: m.Whales13DModal })),
+);
 const MacroContextModal = lazy(() =>
   import('./MacroContextModal').then(m => ({ default: m.MacroContextModal })),
 );
@@ -81,6 +85,10 @@ type Props = {
    *  chip only renders when present (i.e. ticker has been opened before
    *  in the supply/demand panel). */
   whalesFlow?: WhalesFlowRow;
+  /** Recent SC 13D/G filing summary from cached SEC EDGAR data. Optional —
+   *  chip only renders when present (i.e. fund has crossed 5% ownership
+   *  in the lookback window). */
+  whales13d?: Whales13DRow;
   /** Real-time bulk snapshot price from /sepa/live-prices (polled every 2 min
    *  during market hours). When present, overlays the card with a LIVE badge
    *  and uses live change_pct for the day-change display. */
@@ -98,13 +106,16 @@ type Props = {
  * Shows: rating + score, trend dots, RS, setup pill, pivot/stop with risk %,
  * stage badge, volume/late-base flags.
  */
-export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverlay, onSelect }: Props) {
+export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice, setupOverlay, onSelect }: Props) {
   const [alertOpen, setAlertOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
   const [moatOpen,  setMoatOpen]  = useState(false);
   // Drill-in for the institutional-flow chip — full top-10 buyers
   // and top-10 sellers fetched on demand.
   const [whalesOpen, setWhalesOpen] = useState(false);
+  // Drill-in for the SEC 13D/G filings chip — list of recent
+  // ownership-threshold filings fetched on demand.
+  const [whales13dOpen, setWhales13dOpen] = useState(false);
   // Drill-in for the macro chip — Claude-generated geopolitics +
   // futures + bear case + sector context, plus a few live headlines.
   const [macroOpen, setMacroOpen] = useState(false);
@@ -543,6 +554,12 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
         </Suspense>
       )}
 
+      {whales13dOpen && (
+        <Suspense fallback={null}>
+          <Whales13DModal symbol={row.symbol} onClose={() => setWhales13dOpen(false)} />
+        </Suspense>
+      )}
+
       {macroOpen && (
         <Suspense fallback={null}>
           <MacroContextModal symbol={row.symbol} onClose={() => setMacroOpen(false)} />
@@ -767,6 +784,36 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
               🐋 {whalesFlow.signal === 'accumulating' ? `Accumulating +${whalesFlow.n_buying}`
                   : whalesFlow.signal === 'distributing' ? `Distributing −${whalesFlow.n_selling}`
                   : `Balanced (${whalesFlow.n_buying}↑/${whalesFlow.n_selling}↓)`}
+              <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+            </span>
+          )}
+          {/* 📜 13D/G chip — fund crossed 5% ownership in the lookback
+              window. Filed within 10 days of the event (vs 13F's 45-day
+              lag), so this is the closest free real-time-ish signal.
+              Only renders when whales13d is in the bulk cache. */}
+          {whales13d && whales13d.n_filings > 0 && (
+            <span
+              role="button"
+              tabIndex={0}
+              className="sepa-flag sepa-flag--good"
+              onClick={(e) => { e.stopPropagation(); setWhales13dOpen(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setWhales13dOpen(true);
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+              title={
+                `Tap for full list of recent SEC 13D/G filings\n\n` +
+                `SC 13D/G — filed within 10 days of a fund crossing 5%\n` +
+                `ownership. Closest free real-time-ish institutional signal.\n\n` +
+                `Filings in window: ${whales13d.n_filings}\n` +
+                `Latest: ${whales13d.latest_form} on ${whales13d.latest_date}`
+              }
+            >
+              📜 13D · {whales13d.n_filings} filing{whales13d.n_filings === 1 ? '' : 's'}
               <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
             </span>
           )}
