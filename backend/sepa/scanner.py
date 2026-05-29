@@ -149,8 +149,11 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     tr.pass_all = all(tr.checks.values())
     tr.passed = sum(1 for v in tr.checks.values() if v)
 
-    stg = stage.classify(df)
+    # Compute volume signals FIRST so stage.classify() can consult them
+    # for the Stage-2 volume-confirmation check (book p.71-72: Stage 2
+    # requires accumulation; distribution downgrades to Stage 3).
     vol = volume.analyze(df)
+    stg = stage.classify(df, vol=vol)
     vcp_info = vcp.detect(df)
     pp_info = power_play.detect(df)
     bc = base_count.count_bases(df)
@@ -597,8 +600,9 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     tr.pass_all = all(tr.checks.values())
     tr.passed = sum(1 for v in tr.checks.values() if v)
 
-    stg = stage.classify(df)
+    # See above; vol-first ordering enables Stage-2 volume confirmation.
     vol = volume.analyze(df)
+    stg = stage.classify(df, vol=vol)
     sells = sell_signals.evaluate(df)
 
     # Day change (today's close vs yesterday's, %) — used for "Sort: Day %"

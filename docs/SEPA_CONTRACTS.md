@@ -388,13 +388,54 @@ Code location: `backend/sepa/stage.py`. Decision tree:
 
 | Stage | Condition | Book reference |
 |-------|-----------|----------------|
-| **2** (Advancing) | `slope_up AND price > MA50 > MA150 > MA200` | p. 71-72 |
+| **2** (Advancing) | `slope_up AND price > MA50 > MA150 > MA200` **AND** volume confirms (not distributing, no CMF outflow) | p. 71-72 (geometry **and volume**) |
+| **3** (Topping — geometry) | `price < MA50 AND slope_up AND price > MA200 * 0.9` | p. 74 (lost MA50 but still above MA200) |
+| **3** (Topping — volume override) | Geometry says Stage 2 BUT `vol.accumulation_strength == 'distributing'` OR `vol.cmf_signal == 'outflow'` | p. 74-76 (distribution is a stage-3 tell) |
 | **4** (Decline)   | `slope_down AND price < MA50 < MA150 < MA200` | p. 75 |
-| **3** (Topping)   | `price < MA50 AND slope_up AND price > MA200 * 0.9` | p. 74 (lost MA50 but still above MA200) |
 | **1** (Basing)    | Default — any non-matching state | p. 67 |
 
 Slope = MA200 today vs MA200 22 bars ago. `slope_up = today > prior`.
 22 bars ≈ 1 month, matching book p. 79 trend template criterion #3.
+
+**Volume confirmation rule (added 2026-05-28, with explicit user sign-off).**
+Pre-fix behaviour: classify only inspected MA geometry + 200-DMA slope.
+A name with perfect Stage 2 MA stack but actively-distributing volume
+was returned as `stage: 2`, directly contradicting book p.71-72 verbatim:
+
+> *"Volume spikes on big up days and big up weeks are contrasted by
+> volume contractions during normal price pullbacks. There are more up
+> days and up weeks on above-average volume than down days and down
+> weeks on above-average volume."*
+
+That description IS Stage 2; its absence rules it OUT. Post-fix, when
+`stage.classify(df, vol=...)` is called with the output of
+`volume.analyze(df)`, a Stage-2-by-geometry result is downgraded to
+Stage 3 (Topping) when **either** of the following volume signals fires:
+
+- `vol.accumulation_strength == 'distributing'` — more selling pressure
+  than buying over the recent window
+- `vol.cmf_signal == 'outflow'` — Chaikin Money Flow signals
+  institutional money exiting
+
+Downgrade payloads include two extra keys (`volume_disagreement: True`,
+`volume_reason: <human-readable explanation citing the book pages>`)
+so a downstream caller can surface WHY a name was reclassified.
+
+**Backwards-compat.** `stage.classify(df)` with no `vol=` kwarg behaves
+exactly as before — pure geometry. The contracts regression suite
+(`backend/tests/test_sepa_contracts.py`) continues to pass against the
+no-vol code path. `backend/sepa/scanner.py` was updated to compute
+`vol = volume.analyze(df)` BEFORE calling `stage.classify(df, vol=vol)`
+in both the full-scan and fast-scan paths.
+
+**Why this is a contracts §12 change** despite being a refinement, not a
+rewrite: it changes the **set of names returned with `stage: 2`** in
+the SEPA scan output. Names previously labelled Stage 2 with distributing
+volume (e.g. ANTX on 2026-05-28) now return Stage 3. Strict
+`is_candidate` gate (§5) requires Stage 2, so those names also drop out
+of the candidate list. Bumping contracts version not required (formula
+is now MORE faithful to the book — the original was a documented gap),
+but explicit user sign-off was obtained before edit.
 
 ---
 
