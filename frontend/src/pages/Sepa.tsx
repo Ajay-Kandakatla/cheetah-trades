@@ -28,6 +28,7 @@ import { InfoButton } from '../components/InfoButton';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
 import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
 import { useWhalesFlow } from '../hooks/useWhalesFlow';
+import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { prefillBulkQuotes } from '../hooks/useLiveQuote';
 import { registerSymbolInterest } from '../lib/eventBus';
 import { useLivePrices } from '../hooks/useLivePrices';
@@ -295,6 +296,10 @@ export function SepaPage() {
   // Institutional flow — only renders chip on cards where the ticker has
   // a cached whales record (previously visited supply/demand panel).
   const whalesFlow = useWhalesFlow();
+  // Recent SC 13D/G filings (5% ownership threshold) — fed from the
+  // whales13d_cache Mongo collection. Only renders chip on tickers
+  // with filings in the lookback window (default 90 days).
+  const whales13d = useWhales13DFlow(90);
 
   // Real-time intraday prices — polled every 2 min during market hours.
   // Overlaid on SEPA cards so the user sees live price + change_pct without
@@ -984,6 +989,7 @@ export function SepaPage() {
                   row={r}
                   soir={optionsBySymbol.get(r.symbol.toUpperCase())}
                   whalesFlow={whalesFlow.get(r.symbol.toUpperCase())}
+                  whales13d={whales13d.get(r.symbol.toUpperCase())}
                   livePrice={livePrices[r.symbol.toUpperCase()]}
                   onSelect={(e) => openSymbol(r.symbol, e)}
                 />
@@ -1016,6 +1022,7 @@ export function SepaPage() {
                   row={r}
                   soir={optionsBySymbol.get(r.symbol.toUpperCase())}
                   whalesFlow={whalesFlow.get(r.symbol.toUpperCase())}
+                  whales13d={whales13d.get(r.symbol.toUpperCase())}
                   livePrice={livePrices[r.symbol.toUpperCase()]}
                   onSelect={(e) => openSymbol(r.symbol, e)}
                 />
@@ -1063,6 +1070,7 @@ export function SepaPage() {
                       row={candidate}
                       soir={optionsBySymbol.get(sym)}
                       whalesFlow={whalesFlow.get(sym)}
+                      whales13d={whales13d.get(sym)}
                       livePrice={livePrices[sym]}
                       setupOverlay={<SetupOverlayStrip setup={setup} />}
                       onSelect={(e) => openSymbol(candidate.symbol, e)}
