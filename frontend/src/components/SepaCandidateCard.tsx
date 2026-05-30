@@ -521,14 +521,19 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           {row.trade_plan && (
             <TradePlanInline plan={row.trade_plan} lastClose={row.last_close} />
           )}
-          {/* Timed entry/exit decision + dated timeline — "what do I do
-              THIS week." Synthesis of trade_plan + stage + volume + ADX.
-              Source: backend/sepa/entry_exit.py. */}
-          {row.entry_exit && (
-            <EntryExitPlanBlock plan={row.entry_exit} />
-          )}
         </div>
       </header>
+
+      {/* Timed entry/exit decision + dated timeline — "what do I do THIS
+          week." Full-width row UNDER the header (not in the score column)
+          so the banner doesn't collide with the price / CLOSE button.
+          Synthesis of trade_plan + stage + volume + ADX. Source:
+          backend/sepa/entry_exit.py. */}
+      {row.entry_exit && (
+        <div style={{ padding: '0 0.2rem' }}>
+          <EntryExitPlanBlock plan={row.entry_exit} />
+        </div>
+      )}
 
       {presetOpen && (
         <Suspense fallback={null}>
