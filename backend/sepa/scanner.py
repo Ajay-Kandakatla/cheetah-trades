@@ -172,7 +172,16 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # Setup quality
     if vcp_info and vcp_info.get("has_base"):
         score += SCORE_WEIGHTS["setup"]
-        if vcp_info.get("ideal_depth_range") and vcp_info.get("good_contraction_count"):
+        # Quality bonus — now requires the book's VOLUME signature too.
+        # Book p.199-200: a real VCP's tight areas are "accompanied by a
+        # significant decrease in trading volume … volume dries up at the
+        # pivot." Previously the +2 ignored volume; a structurally-clean
+        # base with NO volume contraction got the same bonus as a textbook
+        # one. Gating the bonus on volume_drying rewards the book-correct
+        # footprint without over-filtering has_base (soft, not a hard gate).
+        if (vcp_info.get("ideal_depth_range")
+                and vcp_info.get("good_contraction_count")
+                and vcp_info.get("volume_drying")):
             score += 2  # quality bonus
     elif pp_info and pp_info.get("is_power_play"):
         score += SCORE_WEIGHTS["setup"] * 0.85  # PowerPlay slightly less strict

@@ -109,10 +109,19 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
             "reason": "no contractions",
         }
 
-    # Book p.199: each contraction "about half" the previous, ±tolerance.
-    # Enforce <= 75% of previous (allows 0.5 ideal, tolerates noisy 0.6-0.7).
+    # Book p.199: each contraction "about half (±a reasonable amount) of the
+    # previous" — the worked example is 25% → 15% → 8%. Tightened 2026-05-30
+    # from 0.75 → 0.65: the old tolerance accepted a 25→20→18% "base" that's
+    # barely contracting (a 25% reduction, not the ~half the book wants),
+    # letting shallow fake-VCPs through that fail more often on breakout.
+    SHRINK_TOLERANCE = 0.65
     depths = [ct["depth_pct"] for ct in contractions]
-    monotonic = all(depths[k] <= depths[k - 1] * 0.75 for k in range(1, len(depths)))
+    monotonic = all(depths[k] <= depths[k - 1] * SHRINK_TOLERANCE for k in range(1, len(depths)))
+    # Absolute tightening check (complements the step-wise one): the FINAL
+    # contraction must be ≤ half the FIRST. Book example 25%→…→8% has the
+    # final at ~⅓ of the first; ≤0.5 is a lenient floor that still rejects
+    # bases which never meaningfully tightened end-to-end.
+    final_vs_first_ok = len(depths) < 2 or depths[-1] <= depths[0] * 0.5
 
     # Right-side tightness: final contraction depth ≤ 10% = ideal per book
     final_depth = depths[-1]
@@ -151,6 +160,7 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
     has_base = (
         n_contractions >= 2
         and monotonic
+        and final_vs_first_ok          # NEW (2026-05-30): end-to-end tightening
         and tight_right
         and not too_deep
         and pivot_quality_ok
@@ -164,6 +174,7 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         "n_contractions": n_contractions,
         "contractions": contractions,
         "monotonic_shrinkage": monotonic,
+        "final_vs_first_ok": final_vs_first_ok,
         "final_contraction_pct": round(final_depth, 2),
         "tight_right_side": tight_right,
         "volume_drying": vol_drying,

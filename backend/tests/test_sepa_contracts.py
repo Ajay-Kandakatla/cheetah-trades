@@ -97,7 +97,8 @@ EXPECTED_LIQUIDITY_KEYS = {"liquid", "avg_dollar_vol", "avg_shares", "reason"}
 # §3 — required nested keys in `vcp` (when not None)
 EXPECTED_VCP_KEYS = {
     "has_base", "base_depth_pct", "n_contractions",
-    "monotonic_shrinkage", "final_contraction_pct", "tight_right_side",
+    "monotonic_shrinkage", "final_vs_first_ok",
+    "final_contraction_pct", "tight_right_side",
     "volume_drying", "too_deep",
     "good_contraction_count", "ideal_depth_range",
     "pivot_buy_price", "suggested_stop",
@@ -157,6 +158,9 @@ def test_vcp_constants_locked():
     assert "2 <= n_contractions <= 6" in source      # ideal contraction count
     assert "10 <= base_depth_pct <= 35" in source    # ideal depth range
     assert ">= 20" in source                          # pivot quality prior advance
+    # 2026-05-30 Minervini-audit tightening (book p.199):
+    assert "SHRINK_TOLERANCE = 0.65" in source       # each contraction ≤ 65% of prior
+    assert "depths[-1] <= depths[0] * 0.5" in source  # final ≤ half the first
 
 
 def test_trend_template_8_gates_locked():
