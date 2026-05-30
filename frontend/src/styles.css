@@ -967,6 +967,54 @@ tr:last-child td { border-bottom: none; }
 .sepa-filterbar__toggle { font-size: 0.78rem; }
 .sepa-filterbar__count { margin-left: auto; font-size: 0.78rem; color: var(--cm-slate); }
 
+/* ── Active-filter glow (2026-05-30) ───────────────────────────────────────
+   Make it obvious at a glance WHICH filters are actually narrowing the list
+   — user feedback: "very confusing when this filter is on." Any engaged
+   control glows amber: toggle chips when on, the selected non-default
+   segmented chip, and the RS slider / ticker search / "all analyzed" toggle
+   when set away from their defaults. The passive "All / Any / Any stage /
+   Any moat / All types" options carry `.sepa-chip--passive` so they stay
+   solid-but-unglowing — selecting them is the *no-filter* state and should
+   not read as an engaged filter. */
+.sepa-chip,
+.sepa-filterbar__field,
+.sepa-filterbar__search,
+.sepa-filterbar__toggle {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.sepa-chip.is-active:not(.sepa-chip--passive),
+.sepa-filterbar__field.is-filtering,
+.sepa-filterbar__search.is-filtering,
+.sepa-filterbar__toggle.is-filtering {
+  border-color: var(--cm-amber, #d97706);
+  box-shadow: 0 0 0 1px var(--cm-amber, #d97706),
+              0 0 9px 1px rgba(217, 119, 6, 0.50);
+}
+/* Stage 4 (sell/short) keeps its red identity even while glowing. */
+.sepa-chip.sepa-chip--bad.is-active:not(.sepa-chip--passive) {
+  border-color: var(--negative, #ef4444);
+  box-shadow: 0 0 0 1px var(--negative, #ef4444),
+              0 0 9px 1px rgba(239, 68, 68, 0.50);
+}
+/* The inline RS slider / "all analyzed" labels have no border of their own,
+   so round the glow box. No padding — keeps the row from reflowing when the
+   filter toggles on/off. */
+.sepa-filterbar__field.is-filtering,
+.sepa-filterbar__toggle.is-filtering {
+  border-radius: 6px;
+}
+/* "N filters on" count badge in the results row. */
+.sepa-filterbar__active-badge {
+  display: inline-block;
+  margin-right: 0.6rem;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+  color: var(--cm-amber, #d97706);
+  border: 1px solid var(--cm-amber, #d97706);
+  box-shadow: 0 0 8px 0 rgba(217, 119, 6, 0.45);
+}
+
 /* ── Score visuals ─────────────────────────────────────────────────────── */
 .sepa-score { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px; }
 .sepa-score__num { font: 700 1.5rem var(--serif, serif); line-height: 1; }

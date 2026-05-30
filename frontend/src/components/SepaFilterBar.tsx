@@ -129,6 +129,33 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
   const set = <K extends keyof SepaFilters>(k: K, v: SepaFilters[K]) =>
     onChange({ ...filters, [k]: v });
 
+  // How many filters are ACTIVELY narrowing the list (non-default state).
+  // Drives the "N filters on" badge. Per-control glow is handled in CSS:
+  // any selected non-default chip (`.is-active` without `.sepa-chip--passive`)
+  // glows amber, plus the RS slider / ticker search when engaged. Added
+  // 2026-05-30 — user: "very confusing when this filter is on."
+  const activeCount = [
+    filters.rating !== 'ALL',
+    filters.setup !== 'ALL',
+    filters.stage !== 'ALL',
+    filters.moatMin !== 0,
+    filters.type !== 'all',
+    filters.rsMin > 0,
+    filters.search.trim() !== '',
+    filters.dmEligibleOnly,
+    filters.hideDistributing,
+    filters.whalesAccumOnly,
+    filters.hedgeFundTopBuyer,
+    filters.potusFamilyOnly,
+    filters.usGovOnly,
+    filters.insiderClusterBuy,
+    filters.weekly21SmaPass,
+    filters.atrPctMax > 0,
+    filters.adxMin > 0,
+    filters.pioneerOnly,
+    filters.showAll,
+  ].filter(Boolean).length;
+
   return (
     <div className="sepa-filterbar">
       <InfoButton title="Filters">{FilterInfo}</InfoButton>
@@ -136,7 +163,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
         {RATINGS.map((r) => (
           <button
             key={r}
-            className={`sepa-chip ${filters.rating === r ? 'is-active' : ''}`}
+            className={`sepa-chip ${filters.rating === r ? 'is-active' : ''} ${r === 'ALL' ? 'sepa-chip--passive' : ''}`}
             onClick={() => set('rating', r)}
           >
             {r === 'ALL' ? 'All' : r.replace('_', ' ').toLowerCase()}
@@ -146,7 +173,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
         {(['ALL', 'VCP', 'POWER_PLAY'] as const).map((s) => (
           <button
             key={s}
-            className={`sepa-chip ${filters.setup === s ? 'is-active' : ''}`}
+            className={`sepa-chip ${filters.setup === s ? 'is-active' : ''} ${s === 'ALL' ? 'sepa-chip--passive' : ''}`}
             onClick={() => set('setup', s)}
           >
             {s === 'ALL' ? 'Any setup' : s === 'POWER_PLAY' ? 'Power Play' : s}
@@ -167,7 +194,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
             key={String(v)}
             className={`sepa-chip ${filters.stage === v ? 'is-active' : ''} ${
               v === 3 ? 'sepa-chip--warn' : v === 4 ? 'sepa-chip--bad' : ''
-            }`}
+            } ${v === 'ALL' ? 'sepa-chip--passive' : ''}`}
             onClick={() => set('stage', v)}
             title={tip}
           >
@@ -186,7 +213,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
         ] as const).map(({v, label, tip}) => (
           <button
             key={`moat-${v}`}
-            className={`sepa-chip ${filters.moatMin === v ? 'is-active' : ''}`}
+            className={`sepa-chip ${filters.moatMin === v ? 'is-active' : ''} ${v === 0 ? 'sepa-chip--passive' : ''}`}
             onClick={() => set('moatMin', v)}
             title={tip}
           >
@@ -322,7 +349,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
         {(['all', 'equity', 'etf'] as const).map((t) => (
           <button
             key={t}
-            className={`sepa-chip ${filters.type === t ? 'is-active' : ''}`}
+            className={`sepa-chip ${filters.type === t ? 'is-active' : ''} ${t === 'all' ? 'sepa-chip--passive' : ''}`}
             onClick={() => set('type', t)}
             title={
               t === 'all' ? 'Show both operating companies and ETFs' :
@@ -336,7 +363,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
       </div>
 
       <div className="sepa-filterbar__group">
-        <label className="sepa-filterbar__field">
+        <label className={`sepa-filterbar__field ${filters.rsMin > 0 ? 'is-filtering' : ''}`}>
           <span className="mono">RS ≥ {filters.rsMin}</span>
           <input
             type="range"
@@ -348,7 +375,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
         </label>
         <input
           type="search"
-          className="sepa-filterbar__search"
+          className={`sepa-filterbar__search ${filters.search.trim() !== '' ? 'is-filtering' : ''}`}
           placeholder="Filter ticker…"
           value={filters.search}
           onChange={(e) => set('search', e.target.value.toUpperCase())}
@@ -408,7 +435,7 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
             $ Price ↓
           </button>
         </div>
-        <label className="sepa-filterbar__toggle mono">
+        <label className={`sepa-filterbar__toggle mono ${filters.showAll ? 'is-filtering' : ''}`}>
           <input
             type="checkbox"
             checked={filters.showAll}
@@ -419,6 +446,14 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
       </div>
 
       <div className="sepa-filterbar__count mono">
+        {activeCount > 0 && (
+          <span
+            className="sepa-filterbar__active-badge"
+            title="Number of filters actively narrowing the list. Glowing controls above are the ones that are on."
+          >
+            ● {activeCount} filter{activeCount === 1 ? '' : 's'} on
+          </span>
+        )}
         showing <strong>{shown}</strong> / {total}
       </div>
     </div>
