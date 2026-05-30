@@ -1,6 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
+// Supply/demand + flow chips — ported from the SEPA list card so the
+// single-ticker research view has the same 🐋 whales / 📋 SEC / conviction /
+// political / 🌍 macro / insider+valuation surface (user 2026-05-30:
+// "add whales and other chips into this in the details").
+import { useWhalesFlow } from '../hooks/useWhalesFlow';
+import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
+import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
+import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
+import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
+import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
+import type { SignalKind } from '../components/SignalDrillModal';
+const WhalesFlowModal = lazy(() =>
+  import('../components/WhalesFlowModal').then(m => ({ default: m.WhalesFlowModal })),
+);
+const Whales13DModal = lazy(() =>
+  import('../components/Whales13DModal').then(m => ({ default: m.Whales13DModal })),
+);
+const MacroContextModal = lazy(() =>
+  import('../components/MacroContextModal').then(m => ({ default: m.MacroContextModal })),
+);
+const SignalDrillModal = lazy(() =>
+  import('../components/SignalDrillModal').then(m => ({ default: m.SignalDrillModal })),
+);
 import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PositionLens } from '../components/PositionLens';
@@ -242,6 +265,64 @@ export function SepaCandidatePage() {
   const [presetOpen, setPresetOpen] = useState(false);
   const [alertConfirm, setAlertConfirm] = useState<string | null>(null);
 
+  // ── Supply/demand + flow chips (ported from the SEPA list card) ──────────
+  // Bulk hooks return Map<ticker, row> and are shared (module-cached) with
+  // the list page, so looking up this one symbol matches the card exactly.
+  const whalesFlowMap = useWhalesFlow();
+  const whales13dMap  = useWhales13DFlow();
+  const symU          = symbol ? symbol.toUpperCase() : '';
+  const whalesFlow    = symU ? whalesFlowMap.get(symU) : undefined;
+  const whales13d     = symU ? whales13dMap.get(symU) : undefined;
+  const [whalesOpen,    setWhalesOpen]    = useState(false);
+  const [whales13dOpen, setWhales13dOpen] = useState(false);
+  const [macroOpen,     setMacroOpen]     = useState(false);
+  const [openSignal,    setOpenSignal]    = useState<SignalKind | null>(null);
+
+  // Drill payload for the conviction / political chips — mirrors the card's
+  // `signalData` projection so the shared SignalDrillModal shows identical
+  // numbers regardless of whether the user came from the list or a search.
+  const signalData = useMemo(() => {
+    const r: any = (data as any)?.base ?? null;
+    if (!r) return null;
+    const conv = computeConviction(r, whalesFlow);
+    const pol  = getPoliticalChipFlags(r.symbol);
+    return {
+      symbol: r.symbol,
+      // conviction (whales + volume) inputs
+      conviction_tier:         conv.tier,
+      conviction_label:        conv.label,
+      conviction_combined:     conv.combined,
+      conviction_whale_score:  conv.whaleScore,
+      conviction_vol_score:    conv.volScore,
+      conviction_whale_reason: conv.whaleReason,
+      conviction_vol_reason:   conv.volReason,
+      conviction_summary:      conv.summary,
+      conviction_disagrees:    conv.disagrees,
+      // volume context shared by several drills
+      up_down_vol_ratio:       r.volume?.up_down_vol_ratio ?? null,
+      accumulation_strength:   r.volume?.accumulation_strength ?? null,
+      cmf_20:                  r.volume?.cmf_20 ?? null,
+      cmf_signal:              r.volume?.cmf_signal ?? null,
+      distribution_days_25:    r.volume?.distribution_days_25 ?? null,
+      accumulation_days_25:    r.volume?.accumulation_days_25 ?? null,
+      net_dollar_vol_50:       r.volume?.net_dollar_vol_50 ?? null,
+      score:                   r.score ?? null,
+      rating:                  r.rating ?? null,
+      rs_rank:                 r.rs_rank ?? null,
+      stage_num:               r.stage?.stage ?? null,
+      stage_label:             r.stage?.label ?? null,
+      // political-disclosure context (empty unless on the curated list)
+      ...(pol.entry ? {
+        political_categories:  pol.entry.categories,
+        political_band:        pol.entry.disclosureBand ?? null,
+        political_company:     pol.entry.company,
+        political_sector:      pol.entry.sector,
+        political_notes:       pol.entry.notes ?? null,
+        political_is_inferred: pol.isInferred && !pol.hasPotusFamily && !pol.hasGovtInvestment && !pol.hasGovtContractor,
+      } : {}),
+    };
+  }, [data, whalesFlow]);
+
   // Reset the per-symbol UI bits when the symbol changes. `data` is
   // managed by the hook above (which keeps stale across navigations).
   useEffect(() => {
@@ -252,6 +333,10 @@ export function SepaCandidatePage() {
     setRescanMsg(null);
     setAlertOpen(false);
     setAlertConfirm(null);
+    setWhalesOpen(false);
+    setWhales13dOpen(false);
+    setMacroOpen(false);
+    setOpenSignal(null);
   }, [symbol]);
 
   // Register page context for the ChatWidget. Re-runs when the candidate
@@ -418,6 +503,99 @@ export function SepaCandidatePage() {
               ticker's score. Mirrors the chips on the list card so the
               same UX works after a typeahead search. */}
           {base && <SepaSignalChips row={base} />}
+          {/* Supply/demand + flow chips — same surface as the SEPA list
+              card: 🐋 13F whales, 📋 SEC activity, whales+volume conviction,
+              political disclosure, 🌍 macro, and the insider-cluster +
+              valuation enrichment chips. Ported 2026-05-30 so the
+              single-ticker research view matches the card. */}
+          {base && (
+            <div className="sepa-card__flags" style={{ marginTop: '0.5rem' }}>
+              {/* Whales + Volume combined conviction — the actual buy-decision
+                  signal; warning tier (whales ≠ volume) pops red. */}
+              <SepaConvictionChip
+                row={base}
+                whalesFlow={whalesFlow}
+                onOpenDrill={() => setOpenSignal('conviction')}
+              />
+              {/* 🐋 Institutional flow from cached 13F (45-day lag). */}
+              {whalesFlow && (
+                <span
+                  role="button" tabIndex={0}
+                  className={`sepa-flag ${
+                    whalesFlow.signal === 'accumulating' ? 'sepa-flag--good' :
+                    whalesFlow.signal === 'distributing' ? 'sepa-flag--bad' :
+                    'sepa-flag--neutral'
+                  }`}
+                  onClick={() => setWhalesOpen(true)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault(); setWhalesOpen(true);
+                  }}}
+                  style={{ cursor: 'pointer' }}
+                  title={
+                    `Tap for full list of buyers + sellers\n\n` +
+                    `Institutional flow (13F filings, 45-day lag):\n` +
+                    `${whalesFlow.n_buying} institution(s) BUYING\n` +
+                    `${whalesFlow.n_selling} institution(s) SELLING\n` +
+                    (whalesFlow.n_unchanged ? `${whalesFlow.n_unchanged} unchanged\n` : '') +
+                    (whalesFlow.top_buy  ? `\nTop buy:  ${whalesFlow.top_buy}` : '') +
+                    (whalesFlow.top_sell ? `\nTop sell: ${whalesFlow.top_sell}` : '')
+                  }
+                >
+                  🐋 {whalesFlow.signal === 'accumulating' ? `Accumulating +${whalesFlow.n_buying}`
+                      : whalesFlow.signal === 'distributing' ? `Distributing −${whalesFlow.n_selling}`
+                      : `Balanced (${whalesFlow.n_buying}↑/${whalesFlow.n_selling}↓)`}
+                  <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+                </span>
+              )}
+              {/* 📋 Combined SEC activity — Form 4 + 144 + SC 13D/G. */}
+              {whales13d && whales13d.n_filings > 0 && (
+                <span
+                  role="button" tabIndex={0}
+                  className="sepa-flag sepa-flag--good"
+                  onClick={() => setWhales13dOpen(true)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault(); setWhales13dOpen(true);
+                  }}}
+                  style={{ cursor: 'pointer' }}
+                  title={
+                    `Tap for full list of recent SEC filings\n\n` +
+                    `Recent filings in lookback window:\n` +
+                    `  ${whales13d.n_form4} Form 4 (insider trades)\n` +
+                    `  ${whales13d.n_form144} Form 144 (insider pre-sale notice)\n` +
+                    `  ${whales13d.n_form13} SC 13D/G (5% ownership threshold)\n\n` +
+                    `Latest: ${whales13d.latest_form} on ${whales13d.latest_date}`
+                  }
+                >
+                  📋 SEC · {whales13d.n_filings}
+                  {whales13d.n_form13 > 0 && (
+                    <span style={{ marginLeft: 4, opacity: 0.85 }}>· {whales13d.n_form13}×13D</span>
+                  )}
+                  <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+                </span>
+              )}
+              {/* Political-disclosure chips — renders nothing off-list. */}
+              <SepaPoliticalChip
+                symbol={base.symbol}
+                onOpenDrill={() => setOpenSignal('political_disclosure')}
+              />
+              {/* 🌍 Macro read — geopolitics / futures / bear case + headlines. */}
+              <span
+                role="button" tabIndex={0}
+                className="sepa-flag sepa-flag--neutral"
+                onClick={() => setMacroOpen(true)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault(); setMacroOpen(true);
+                }}}
+                style={{ cursor: 'pointer' }}
+                title="Macro context: geopolitics, futures, bear case, sector dynamics + recent headlines. Generated by Claude, cached 6h."
+              >
+                🌍 Macro
+                <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
+              </span>
+              {/* Insider cluster-buy + valuation (under/fair/over) — self-fetch. */}
+              <CardEnrichmentChips symbol={base.symbol} />
+            </div>
+          )}
           {/* Live price badge — pulls from the SSE bus (Finnhub WS feed)
               via useLiveQuote. This is the page's authoritative "what
               is MU trading at RIGHT NOW" — much fresher than the
@@ -549,6 +727,31 @@ export function SepaCandidatePage() {
             setTimeout(() => setAlertConfirm(null), 6000);
           }}
         />
+      )}
+      {/* Flow-chip modals — lazy, self-contained (fetch by symbol). */}
+      {whalesOpen && symbol && (
+        <Suspense fallback={null}>
+          <WhalesFlowModal symbol={symbol} onClose={() => setWhalesOpen(false)} />
+        </Suspense>
+      )}
+      {whales13dOpen && symbol && (
+        <Suspense fallback={null}>
+          <Whales13DModal symbol={symbol} onClose={() => setWhales13dOpen(false)} />
+        </Suspense>
+      )}
+      {macroOpen && symbol && (
+        <Suspense fallback={null}>
+          <MacroContextModal symbol={symbol} onClose={() => setMacroOpen(false)} />
+        </Suspense>
+      )}
+      {openSignal && signalData && (
+        <Suspense fallback={null}>
+          <SignalDrillModal
+            kind={openSignal}
+            data={signalData}
+            onClose={() => setOpenSignal(null)}
+          />
+        </Suspense>
       )}
       {rescanMsg && rescanState !== 'running' && (
         <div className={`sepa-rescan-status ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
