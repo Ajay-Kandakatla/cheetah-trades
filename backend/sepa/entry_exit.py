@@ -49,6 +49,15 @@ PREEARNINGS_BLOCK_DAYS = 3      # don't enter naked within N days of earnings
 ADX_CHOP_THRESHOLD     = 20.0   # below this = chop, no trend edge
 TIME_STOP_DAYS         = 15     # swing shouldn't sit dead past ~3 weeks
 TARGET_HORIZON_DAYS    = {"t1": 5, "t2": 10, "t3": 15}  # rough ETA per R-target
+# ATR-based dynamic stop — "Method 1: ATR-Based Dynamic Stop" slide:
+#   Stop = Entry − (ATR × Multiplier)
+# Slide multipliers: 1.5 for INTRADAY (ATR on 1-min bars), 2.0 for SWING
+# (ATR on DAILY bars). This app runs on daily stock bars + a live quote — it
+# has no 1-min stock bars, so the SWING/daily ×2.0 variant is the applicable
+# one. The stop "breathes with the market": it widens when daily ATR expands
+# (volatile regime) and tightens when ATR contracts (calm), recomputed every
+# scan. Surfaced ALONGSIDE the Minervini stop, not replacing it.
+ATR_STOP_MULTIPLIER    = 2.0    # daily-ATR swing multiplier (slide: 2.0)
 
 
 def _bday_offset(start: datetime, n: int) -> str:
@@ -241,12 +250,43 @@ def build_entry_exit(
         # Intraday hard floor mirrors the existing card's "-12% INTRADAY"
         intraday_floor = round(pivot * 0.88, 2)
 
+        # ── ATR-based dynamic stop ("breathes with the market") ───────────
+        # Stop = Entry − (ATR × Multiplier). Entry = the pivot/buy point (your
+        # fill on the breakout), ATR = 14-day in dollars (atr_pct × price),
+        # multiplier = 2.0 (daily/swing per the slide). Recomputes each scan,
+        # so during open market the exit reflects the current volatility
+        # regime. Kept SEPARATE from the Minervini stop above.
+        atr_dollars = None
+        atr_stop = None
+        atr_stop_pct = None
+        atr_vs_fixed = None
+        if atr_pct and pivot:
+            atr_dollars = round(pivot * atr_pct / 100, 2)
+            atr_stop = round(pivot - atr_dollars * ATR_STOP_MULTIPLIER, 2)
+            atr_stop_pct = round((atr_stop / pivot - 1) * 100, 2)   # negative
+            if stop_px:
+                # Which stop is tighter? Positive = ATR sits BELOW (wider) the
+                # Minervini stop; negative = ATR is tighter (above it).
+                atr_vs_fixed = "wider" if atr_stop < stop_px else "tighter"
+
         exit_plan = {
             "stop": stop_px,
             "stop_basis": stop_basis,
             "stop_rule": "Exit on a CLOSE below this — ignore the intraday wick.",
             "intraday_floor": intraday_floor,
             "intraday_rule": "Hard intraday floor (−12%) — only if it gaps through the close stop.",
+            # ATR dynamic stop — recomputed every scan; widens in volatile
+            # tape, tightens in calm. Source: ATR Dynamic Stop (swing ×2.0).
+            "atr_stop": atr_stop,
+            "atr_stop_pct": atr_stop_pct,
+            "atr_stop_mult": ATR_STOP_MULTIPLIER,
+            "atr_dollars": atr_dollars,
+            "atr_vs_fixed": atr_vs_fixed,
+            "atr_stop_rule": (
+                f"Dynamic stop = entry − ATR(14d) × {ATR_STOP_MULTIPLIER}. "
+                "Recomputes each scan — widens when volatility expands, "
+                "tightens when it contracts."
+            ),
             "targets": exit_targets,
             "time_stop_days": TIME_STOP_DAYS,
             "time_stop_date": time_stop_date,

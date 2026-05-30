@@ -75,6 +75,13 @@ export type EntryExitPlan = {
     stop_rule: string;
     intraday_floor: number;
     intraday_rule: string;
+    // ATR-based dynamic stop — entry − ATR(14d)×mult; recomputes each scan.
+    atr_stop?: number | null;
+    atr_stop_pct?: number | null;
+    atr_stop_mult?: number | null;
+    atr_dollars?: number | null;
+    atr_vs_fixed?: 'wider' | 'tighter' | null;
+    atr_stop_rule?: string;
     targets: Array<{ label: string; price: number; horizon_days: number | null; eta: string }>;
     time_stop_days: number;
     time_stop_date: string;

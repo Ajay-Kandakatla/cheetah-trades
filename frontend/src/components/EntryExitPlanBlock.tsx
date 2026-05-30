@@ -153,6 +153,16 @@ export function EntryExitPlanBlock({ plan }: Props) {
               {plan.exit.stop != null && (
                 <div>🛑 Stop ${plan.exit.stop.toFixed(2)} — {plan.exit.stop_rule}</div>
               )}
+              {plan.exit.atr_stop != null && (
+                <div style={{ color: 'var(--cm-amber, #d97706)' }}
+                     title={plan.exit.atr_stop_rule}>
+                  📡 ATR stop ${plan.exit.atr_stop.toFixed(2)}
+                  {plan.exit.atr_stop_pct != null && ` (${plan.exit.atr_stop_pct}%)`}
+                  {' '}— ×{plan.exit.atr_stop_mult} daily ATR, breathes w/ volatility
+                  {plan.exit.atr_vs_fixed && plan.exit.stop != null &&
+                    ` · ${plan.exit.atr_vs_fixed} than the ${plan.exit.stop_basis ?? 'fixed'} stop`}
+                </div>
+              )}
               <div>⏱️ {plan.exit.time_stop_rule}</div>
               {plan.regime?.chop && (
                 <div style={{ color: '#fbbf24' }}>
