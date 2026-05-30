@@ -997,7 +997,12 @@ tr:last-child td { border-bottom: none; }
   background: var(--bg-raised);
   padding: 0.85rem 1rem;
   cursor: pointer;
-  transition: transform 0.08s, box-shadow 0.12s, border-color 0.12s;
+  /* `background` IS in the transition list: the day-tinted cards
+     (.sepa-card--day-up/down-strong:hover) change their background-tint on
+     hover (14%→20%). Without easing that property it snapped instantly,
+     which read as a "flash" as the cursor swept off a chip onto an adjacent
+     tinted card. Easing it kills the pop. (2026-05-30) */
+  transition: transform 0.08s, box-shadow 0.12s, border-color 0.12s, background 0.12s ease;
   display: flex; flex-direction: column; gap: 0.55rem;
 }
 .sepa-card:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,0,0,0.07); border-color: #999; }
