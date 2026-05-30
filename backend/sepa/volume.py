@@ -59,7 +59,8 @@ DIST_RATIO_THRESHOLD        = 0.70   # ratio <= 0.7 = distribution
 CMF_INFLOW_THRESHOLD        = 0.10
 CMF_OUTFLOW_THRESHOLD       = -0.10
 # Accumulation day = up close + close in upper half + volume > 50-day avg.
-# Distribution day = down close ≤ -0.2% + volume > yesterday (Minervini's def).
+# Distribution day = down close ≤ -0.2% + volume > 50-day avg (book p.76,
+#   "down days on ABOVE-AVERAGE volume"). Symmetric with accumulation.
 DIST_DAY_DOWN_PCT           = -0.002
 DIST_DAY_LOOKBACK           = 25
 
@@ -168,9 +169,19 @@ def _count_accum_dist_days(df: pd.DataFrame,
       * close in upper half of today's range
       * volume > 50-day avg (heavier-than-typical institutional footprint)
 
-    Distribution day (Minervini's classic):
+    Distribution day (book p.76 — "down days … on ABOVE-AVERAGE volume"):
       * close down ≥ 0.2%
-      * volume > yesterday's volume (heavier-than-prior-session)
+      * volume > 50-day average (institutional selling footprint)
+
+    NOTE (2026-05-30 fix): previously this required only `volume > yesterday`
+    (the O'Neil/IBD intraday-relative definition). That was ASYMMETRIC with
+    the accumulation-day test above, which requires above-AVERAGE volume —
+    so a down day on volume merely higher than the prior session but still
+    below average was over-counted as distribution. Minervini's literal
+    language (p.76, Stage 4 / topping signature) is "above-average volume,"
+    so we now use the 50-day average for BOTH counters. This stops the
+    "N distribution days → distributing → AVOID" flag from over-firing on
+    ordinary pullbacks (the CVGI-class false-avoid).
 
     These two counters are complementary: a stock with 8 accum days + 1
     dist day is in a very different state than 2 accum + 6 dist, even
@@ -207,9 +218,10 @@ def _count_accum_dist_days(df: pd.DataFrame,
         # Accumulation day
         if c_today > c_yest and upper_half and v_today > avg_vol:
             accum += 1
-        # Distribution day (Minervini def: down ≥ 0.2% on heavier vol)
+        # Distribution day (book p.76: down ≥ 0.2% on ABOVE-AVERAGE volume).
+        # Symmetric with the accumulation test above (both use avg_vol).
         if c_yest > 0 and ((c_today - c_yest) / c_yest) <= DIST_DAY_DOWN_PCT \
-                and v_today > v_yest:
+                and v_today > avg_vol:
             dist += 1
     return {"accumulation_days_25": accum, "distribution_days_25": dist}
 
