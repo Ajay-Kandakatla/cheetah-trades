@@ -11,6 +11,7 @@ import { PriceAlertModal } from './PriceAlertModal';
 import { WatchlistButton } from './WatchlistButton';
 import { useQuote } from '../hooks/useWatchlist';
 import { TradePlanInline } from './TradePlanInline';
+import { EntryExitPlanBlock } from './EntryExitPlanBlock';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -508,6 +509,12 @@ export function SepaCandidateCard({ row, soir, whalesFlow, livePrice, setupOverl
               is on the detail page. */}
           {row.trade_plan && (
             <TradePlanInline plan={row.trade_plan} lastClose={row.last_close} />
+          )}
+          {/* Timed entry/exit decision + dated timeline — "what do I do
+              THIS week." Synthesis of trade_plan + stage + volume + ADX.
+              Source: backend/sepa/entry_exit.py. */}
+          {row.entry_exit && (
+            <EntryExitPlanBlock plan={row.entry_exit} />
           )}
         </div>
       </header>

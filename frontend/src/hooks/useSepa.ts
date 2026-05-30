@@ -45,6 +45,47 @@ export type TradePlan = {
   setup_source:  string;
 };
 
+/** Timed entry/exit + decision plan. Source: backend/sepa/entry_exit.py */
+export type EntryExitDecision = 'ENTER' | 'WAIT' | 'HOLD_WATCH' | 'AVOID' | 'CUT';
+export type EntryExitPlan = {
+  decision: EntryExitDecision | null;
+  decision_color: 'green' | 'amber' | 'red' | null;
+  decision_reason: string;
+  entry: {
+    status: 'actionable' | 'wait_trigger' | 'missed_extended' | 'above_zone';
+    trigger: number;
+    zone_lo: number;
+    zone_hi: number;
+    current: number;
+    distance_pct: number;
+    valid_through: string;   // ISO date
+    valid_days: number;
+  } | null;
+  missed: {
+    extended_pct: number;
+    next_entry_lo: number;
+    next_entry_hi: number;
+    next_entry_basis: string;
+    next_entry_note: string;
+    rescan_hint: string;
+  } | null;
+  exit: {
+    stop: number | null;
+    stop_basis: string | null;
+    stop_rule: string;
+    intraday_floor: number;
+    intraday_rule: string;
+    targets: Array<{ label: string; price: number; horizon_days: number | null; eta: string }>;
+    time_stop_days: number;
+    time_stop_date: string;
+    time_stop_rule: string;
+  } | null;
+  earnings: { date: string | null; in_days: number | null; blackout: boolean } | null;
+  regime: { adx: number | null; atr_pct: number | null; chop: boolean } | null;
+  timeline: Array<{ when: string; kind: string; key: string; label: string }>;
+  as_of: string | null;
+};
+
 export type SepaCandidate = {
   symbol: string;
   name?: string | null;
@@ -119,6 +160,10 @@ export type SepaCandidate = {
    *  every analyzed ticker (not just those with VCP base). See
    *  backend/analysis/trade_plan.py for methodology + source citations. */
   trade_plan?: TradePlan | null;
+  /** Timed entry/exit + decision verdict — "what do I do THIS week."
+   *  Computed in the scan from trade_plan + stage + volume + ATR/ADX.
+   *  See backend/sepa/entry_exit.py. */
+  entry_exit?: EntryExitPlan | null;
   adr_pct?: number | null;
   day_change_pct?: number | null;
   last_close?: number | null;
