@@ -31,7 +31,7 @@ from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
     adr, canslim, company_names, research as research_mod,
-    dual_momentum as dm, etf_info, pioneers,
+    dual_momentum as dm, etf_info, pioneers, venky_filters,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -158,6 +158,10 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     pp_info = power_play.detect(df)
     bc = base_count.count_bases(df)
     sells = sell_signals.evaluate(df)
+    # Venky's filter stack (weekly 21-SMA + ATR + ADX). Always returns a
+    # nested dict shape so the FE chips can rely on the schema; gates
+    # internally set `error` rather than raising.
+    venky = venky_filters.compute_all(df)
 
     # ── Normalized composite 0-100 ───────────────────────────────────────
     score = 0.0
@@ -256,6 +260,9 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "sell_signals": sells,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
+        # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as
+        # optional toggle chips on the SEPA filter bar (added 2026-05-29).
+        "venky":       venky,
         "adr_pct": adr_value,
         "day_change_pct": day_change_pct,
         "last_close": last_close,
@@ -619,6 +626,9 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     vol = volume.analyze(df)
     stg = stage.classify(df, vol=vol)
     sells = sell_signals.evaluate(df)
+    # Venky's filter stack — recomputed live since it's price-derived
+    # (weekly resample changes when new weekly close comes in).
+    venky = venky_filters.compute_all(df)
 
     # Day change (today's close vs yesterday's, %) — used for "Sort: Day %"
     day_change_pct = None
@@ -743,6 +753,9 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "sell_signals": sells,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
+        # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as
+        # optional toggle chips on the SEPA filter bar (added 2026-05-29).
+        "venky":       venky,
         "adr_pct": adr_value,
         "day_change_pct": day_change_pct,
         "last_close": last_close,
