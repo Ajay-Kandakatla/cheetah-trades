@@ -241,6 +241,22 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         log.debug("trade plan failed for %s: %s", symbol, exc)
         trade_plan = None
 
+    # Timed entry/exit + decision verdict — pure synthesis of the plan +
+    # stage + volume + venky (ATR/ADX). Answers "what do I do THIS week"
+    # with a dated timeline + missed-entry recovery. Added 2026-05-29.
+    try:
+        from . import entry_exit as _ee
+        entry_exit_plan = _ee.build_entry_exit(
+            last_close=float(last_close) if last_close else float(df["close"].iloc[-1]),
+            trade_plan=trade_plan,
+            df=df,
+            stage=stg,
+            vol=vol,
+        )
+    except Exception as exc:
+        log.debug("entry_exit failed for %s: %s", symbol, exc)
+        entry_exit_plan = None
+
     return {
         "symbol": symbol,
         "name": company_names.name_for(symbol),
@@ -256,6 +272,7 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "sell_signals": sells,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
+        "entry_exit":  entry_exit_plan,
         "adr_pct": adr_value,
         "day_change_pct": day_change_pct,
         "last_close": last_close,
@@ -728,6 +745,20 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         log.debug("trade plan failed for %s (fast scan): %s", symbol, exc)
         trade_plan = None
 
+    # Timed entry/exit + decision verdict — recomputed live (price-derived).
+    try:
+        from . import entry_exit as _ee
+        entry_exit_plan = _ee.build_entry_exit(
+            last_close=float(last_close) if last_close else float(df["close"].iloc[-1]),
+            trade_plan=trade_plan,
+            df=df,
+            stage=stg,
+            vol=vol,
+        )
+    except Exception as exc:
+        log.debug("entry_exit failed for %s (fast scan): %s", symbol, exc)
+        entry_exit_plan = None
+
     return {
         "symbol": symbol,
         "name": blob.get("name") or company_names.name_for(symbol),
@@ -743,6 +774,7 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "sell_signals": sells,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
+        "entry_exit":  entry_exit_plan,
         "adr_pct": adr_value,
         "day_change_pct": day_change_pct,
         "last_close": last_close,
