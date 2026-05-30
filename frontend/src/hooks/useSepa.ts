@@ -82,6 +82,13 @@ export type EntryExitPlan = {
     atr_dollars?: number | null;
     atr_vs_fixed?: 'wider' | 'tighter' | null;
     atr_stop_rule?: string;
+    // Structure-based stop — recent daily swing low − ATR×0.5.
+    structure_stop?: number | null;
+    structure_stop_pct?: number | null;
+    structure_swing_low?: number | null;
+    structure_atr_buffer?: number | null;
+    structure_ma50_aligned?: boolean;
+    structure_stop_rule?: string;
     targets: Array<{ label: string; price: number; horizon_days: number | null; eta: string }>;
     time_stop_days: number;
     time_stop_date: string;

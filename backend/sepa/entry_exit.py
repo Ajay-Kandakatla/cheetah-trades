@@ -58,6 +58,16 @@ TARGET_HORIZON_DAYS    = {"t1": 5, "t2": 10, "t3": 15}  # rough ETA per R-target
 # (volatile regime) and tightens when ATR contracts (calm), recomputed every
 # scan. Surfaced ALONGSIDE the Minervini stop, not replacing it.
 ATR_STOP_MULTIPLIER    = 2.0    # daily-ATR swing multiplier (slide: 2.0)
+# Structure-based stop — "Method 2: Structure-Based Stop" slide ("place your
+# stop where the thesis is invalidated, not at a random distance"). Swing
+# variant: below the recent daily swing low, with a small ATR buffer so it
+# isn't sitting right on support. Slide example: AAPL daily low $190,
+# ATR(14)=$3.50 -> stop = 190 − 3.50×0.5 = $188.25. The intraday variant
+# (1-/5-min swing low, BOS candle, order block, tick offsets) needs intraday
+# bars this app doesn't have, so only the daily/swing variant is implemented.
+STRUCTURE_STOP_ATR_BUFFER = 0.5    # daily swing low − ATR×0.5 (slide: 0.5)
+SWING_LOW_LOOKBACK_BARS   = 10     # bars back to locate the recent swing low
+MA50_ALIGN_BAND_PCT       = 3.0    # swing low within ±this % of MA50 = "aligns"
 
 
 def _bday_offset(start: datetime, n: int) -> str:
@@ -269,6 +279,31 @@ def build_entry_exit(
                 # Minervini stop; negative = ATR is tighter (above it).
                 atr_vs_fixed = "wider" if atr_stop < stop_px else "tighter"
 
+        # ── Structure-based stop (Method 2: "where the thesis breaks") ────
+        # Below the recent daily swing low, minus an ATR×0.5 buffer so it's
+        # not sitting right on support. Note 50-SMA alignment when the swing
+        # low coincides with the MA50 (the slide's "below the 50 SMA if it
+        # aligns"). df-dependent — skipped when df is unavailable.
+        structure_stop = None
+        structure_swing_low = None
+        structure_stop_pct = None
+        structure_ma50_aligned = False
+        if df is not None and atr_pct and pivot:
+            try:
+                if len(df) >= SWING_LOW_LOOKBACK_BARS:
+                    structure_swing_low = round(
+                        float(df["low"].iloc[-SWING_LOW_LOOKBACK_BARS:].min()), 2)
+                    atr_abs = round(last_close * atr_pct / 100, 2)
+                    structure_stop = round(
+                        structure_swing_low - atr_abs * STRUCTURE_STOP_ATR_BUFFER, 2)
+                    structure_stop_pct = round((structure_stop / pivot - 1) * 100, 2)
+                    ma50 = _sma(df, 50)
+                    if ma50:
+                        band = ma50 * MA50_ALIGN_BAND_PCT / 100
+                        structure_ma50_aligned = abs(structure_swing_low - ma50) <= band
+            except Exception:
+                pass
+
         exit_plan = {
             "stop": stop_px,
             "stop_basis": stop_basis,
@@ -286,6 +321,18 @@ def build_entry_exit(
                 f"Dynamic stop = entry − ATR(14d) × {ATR_STOP_MULTIPLIER}. "
                 "Recomputes each scan — widens when volatility expands, "
                 "tightens when it contracts."
+            ),
+            # Structure stop — below the recent daily swing low − ATR×0.5;
+            # where the swing thesis is invalidated. Source: Structure-Based
+            # Stop (swing). Includes 50-SMA alignment flag.
+            "structure_stop": structure_stop,
+            "structure_stop_pct": structure_stop_pct,
+            "structure_swing_low": structure_swing_low,
+            "structure_atr_buffer": STRUCTURE_STOP_ATR_BUFFER,
+            "structure_ma50_aligned": structure_ma50_aligned,
+            "structure_stop_rule": (
+                "Below the recent daily swing low minus an ATR×0.5 buffer — "
+                "where the swing thesis breaks. Room without going random."
             ),
             "targets": exit_targets,
             "time_stop_days": TIME_STOP_DAYS,

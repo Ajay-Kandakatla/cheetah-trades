@@ -163,6 +163,16 @@ export function EntryExitPlanBlock({ plan }: Props) {
                     ` · ${plan.exit.atr_vs_fixed} than the ${plan.exit.stop_basis ?? 'fixed'} stop`}
                 </div>
               )}
+              {plan.exit.structure_stop != null && (
+                <div style={{ color: 'var(--cm-teal, #14b8a6)' }}
+                     title={plan.exit.structure_stop_rule}>
+                  🧱 Structure stop ${plan.exit.structure_stop.toFixed(2)}
+                  {plan.exit.structure_stop_pct != null && ` (${plan.exit.structure_stop_pct}%)`}
+                  {plan.exit.structure_swing_low != null &&
+                    ` — swing low $${plan.exit.structure_swing_low.toFixed(2)} − ATR×${plan.exit.structure_atr_buffer}`}
+                  {plan.exit.structure_ma50_aligned && ' · aligns w/ 50 SMA ✓'}
+                </div>
+              )}
               <div>⏱️ {plan.exit.time_stop_rule}</div>
               {plan.regime?.chop && (
                 <div style={{ color: '#fbbf24' }}>
