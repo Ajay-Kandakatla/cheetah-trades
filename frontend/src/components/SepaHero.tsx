@@ -51,14 +51,16 @@ const MARKET_LABEL: Record<string, string> = {
  */
 export function SepaHero({ data, scanning, onScan, onReload }: Props) {
   const [includeCatalyst, setIncludeCatalyst] = useState(true);
-  // Default universe is Russell 1000 — Aj's standard daily-decision universe.
-  // Bumped key from 'sepa_mode' → 'sepa_mode_v2' so older 'curated' preferences
-  // saved before this default-flip don't sticky-reset the dropdown.
+  // Default universe is now 'broad' — Russell 3000 + micro-caps (IWC) + the
+  // broad ETF list (~3,600 names, ETFs included). User 2026-05-30 wanted the
+  // full universe by default ("it did not give full stack"). Key bumped
+  // v2 → v3 so the old sticky 'russell1000' preference doesn't override the
+  // new default. Switch back to russell1000 in the dropdown for fast scans.
   const [universeMode, setUniverseMode] = useState<string>(
-    (typeof window !== 'undefined' && localStorage.getItem('sepa_mode_v2')) || 'russell1000'
+    (typeof window !== 'undefined' && localStorage.getItem('sepa_mode_v3')) || 'broad'
   );
   useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('sepa_mode_v2', universeMode);
+    if (typeof window !== 'undefined') localStorage.setItem('sepa_mode_v3', universeMode);
   }, [universeMode]);
 
   const mkt = data?.market_context;
@@ -157,6 +159,8 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
             <option value="curated">Curated (~130)</option>
             <option value="sp500">S&P 500 (~500)</option>
             <option value="russell1000">Russell 1000 (~1000)</option>
+            <option value="russell3000">Russell 3000 (~2,600)</option>
+            <option value="broad">Broad — R3000 + Micro + ETFs (~3,600)</option>
             <option value="expanded">Curated ∪ S&P 500</option>
           </select>
         </label>
