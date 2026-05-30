@@ -48,6 +48,9 @@ type WhalesPayload = {
   ticker?:   string;
   cached_at?: number | null;
   generated_at?: number | null;
+  // Count of institutional holders returned by this fetch. 0 = empty/failed
+  // fetch (used to avoid clobbering the card chip with a false 0/0).
+  n_holders?: number | null;
   major?: {
     institutional_pct?: string | number | null;
     insider_pct?:       string | number | null;
@@ -246,15 +249,30 @@ export function WhalesFlowModal({
         const m = j?.moves || {};
         const notableBuys  = m.notable_buys  || [];
         const notableSells = m.notable_sells || [];
-        patchWhalesFlowRow(symbol, {
-          ticker:      symbol.toUpperCase(),
-          signal:      m.net_signal || 'balanced',
-          n_buying:    m.n_buying ?? 0,
-          n_selling:   m.n_selling ?? 0,
-          n_unchanged: m.n_unchanged,
-          top_buy:     notableBuys[0]?.holder ?? null,
-          top_sell:    notableSells[0]?.holder ?? null,
-        });
+        // Only sync the card chip when this per-ticker fetch actually
+        // returned institutional data. A transient empty/failed fetch (no
+        // holders, no moves) used to clobber a CORRECT bulk value — e.g. a
+        // "🐋 Accumulating +9" chip collapsing to "Balanced 0/0" the moment
+        // the modal opened ("the 9 goes away after clicking", user
+        // 2026-05-30). Heavier 13F load under the broad universe makes those
+        // empty fetches more frequent. When the fetch is empty we leave the
+        // bulk chip untouched rather than overwrite good data with zeros.
+        const fetchHasData =
+          (j?.n_holders ?? 0) > 0 ||
+          (m.n_buying ?? 0) > 0 || (m.n_selling ?? 0) > 0 ||
+          (m.n_unchanged ?? 0) > 0 ||
+          notableBuys.length > 0 || notableSells.length > 0;
+        if (fetchHasData) {
+          patchWhalesFlowRow(symbol, {
+            ticker:      symbol.toUpperCase(),
+            signal:      m.net_signal || 'balanced',
+            n_buying:    m.n_buying ?? 0,
+            n_selling:   m.n_selling ?? 0,
+            n_unchanged: m.n_unchanged,
+            top_buy:     notableBuys[0]?.holder ?? null,
+            top_sell:    notableSells[0]?.holder ?? null,
+          });
+        }
       })
       .catch((e) => { if (!cancelled) { setErr(String(e?.message || e)); setLoading(false); } });
     return () => { cancelled = true; };
@@ -268,7 +286,17 @@ export function WhalesFlowModal({
   }, [onClose]);
 
   const moves = data?.moves;
-  const signal = moves?.net_signal;
+  // True only when this fetch returned real institutional data. Distinguishes
+  // "genuinely balanced / no movers" from "the fetch came back empty"
+  // (yfinance returned nothing). When empty we don't assert a BALANCED verdict
+  // — that's what was contradicting the card chip.
+  const hasData = !!data && (
+    (data.n_holders ?? 0) > 0 ||
+    (moves?.n_buying ?? 0) > 0 || (moves?.n_selling ?? 0) > 0 ||
+    (moves?.n_unchanged ?? 0) > 0 ||
+    (moves?.notable_buys?.length ?? 0) > 0 || (moves?.notable_sells?.length ?? 0) > 0
+  );
+  const signal = hasData ? moves?.net_signal : undefined;
   const signalLabel =
     signal === 'accumulating' ? '🟢 ACCUMULATING' :
     signal === 'distributing' ? '🔴 DISTRIBUTING' :
@@ -342,7 +370,13 @@ export function WhalesFlowModal({
                 </span>
               )}
             </h2>
-            {moves && (
+            {!loading && !err && !hasData && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--cm-amber, #d97706)', margin: '0.3rem 0 0' }}>
+                No fresh 13F holder data returned for {symbol} right now — the card
+                chip keeps its last cached reading rather than resetting to 0/0.
+              </p>
+            )}
+            {hasData && moves && (
               <p style={{ fontSize: '0.78rem', color: 'var(--cm-slate)', margin: '0.3rem 0 0' }}>
                 {moves.n_buying} buying · {moves.n_selling} selling
                 {moves.n_unchanged ? ` · ${moves.n_unchanged} unchanged` : ''}
