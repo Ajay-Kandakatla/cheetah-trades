@@ -231,6 +231,12 @@ export function SepaPage() {
     // Default OFF — insider cluster-buy filter. Uses row.insider data
     // populated by scanner's catalyst enrichment on top 20 candidates.
     insiderClusterBuy: false,
+    // Venky's filter stack (2026-05-29) — all default OFF, layered on
+    // top of SEPA. 21-week SMA gate is boolean; ATR%/ADX gates are
+    // numeric (0 means disabled, >0 means active with that threshold).
+    weekly21SmaPass: false,
+    atrPctMax: 0,
+    adxMin: 0,
     sortBy: 'score',
   };
   const [filters, setFilters] = useState<SepaFilters>(() => {
@@ -412,6 +418,20 @@ export function SepaPage() {
       if (filters.insiderClusterBuy) {
         const ins = (r as any).insider;
         if (!ins?.form4_cluster_buy) return false;
+      }
+      // Venky's filter stack (2026-05-29) — independent toggles layered
+      // on top of SEPA's qualifier gate.
+      const venky = (r as any).venky;
+      if (filters.weekly21SmaPass) {
+        if (!venky?.weekly_21sma?.pass) return false;
+      }
+      if (filters.atrPctMax > 0) {
+        const a = venky?.atr?.atr_pct;
+        if (a == null || a > filters.atrPctMax) return false;
+      }
+      if (filters.adxMin > 0) {
+        const adx = venky?.adx?.adx;
+        if (adx == null || adx < filters.adxMin) return false;
       }
       return true;
     });
@@ -671,6 +691,19 @@ export function SepaPage() {
     if (filters.insiderClusterBuy) {
       const ins = (r as any).insider;
       if (!ins?.form4_cluster_buy) return false;
+    }
+    // Venky's filter stack — mirror of the main `filtered` block.
+    const venky = (r as any).venky;
+    if (filters.weekly21SmaPass) {
+      if (!venky?.weekly_21sma?.pass) return false;
+    }
+    if (filters.atrPctMax > 0) {
+      const a = venky?.atr?.atr_pct;
+      if (a == null || a > filters.atrPctMax) return false;
+    }
+    if (filters.adxMin > 0) {
+      const adx = venky?.adx?.adx;
+      if (adx == null || adx < filters.adxMin) return false;
     }
     if (filters.moatMin > 0) {
       const tier = r.moat?.tier ?? 0;

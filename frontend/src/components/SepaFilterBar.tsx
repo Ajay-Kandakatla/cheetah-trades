@@ -92,6 +92,17 @@ export type SepaFilters = {
    *  20 candidates per Full Scan with catalyst — names outside that
    *  enriched subset are dropped when the chip is on. Added 2026-05-29. */
   insiderClusterBuy: boolean;
+  /** Venky's "weekly 21-SMA trend confirmation" filter (2026-05-29).
+   *  When true, drops candidates where the latest weekly close isn't
+   *  above the 21-week SMA OR where the SMA isn't sloping up. Mirrors
+   *  the strategy debated in Ajay's WhatsApp trading group. */
+  weekly21SmaPass: boolean;
+  /** ATR%-cap filter — drops candidates whose 14-day ATR is more than
+   *  `atrPctMax` % of price (too volatile to swing-trade). 0 = off. */
+  atrPctMax: number;
+  /** ADX-floor filter — requires 14-day ADX ≥ `adxMin` (confirms an
+   *  actual trend, not chop). 0 = off. */
+  adxMin: number;
   sortBy:
     | 'score' | 'rs' | 'symbol'
     | 'day_change' | 'day_change_abs'
@@ -265,6 +276,39 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
           title="Only show candidates where ≥3 unique insiders filed Form 4 buys in the last 30 days (cluster-buy signal — bullish tell per Minervini / O'Neil Ch 13). Insider enrichment runs on the top 20 candidates after Full Scan with 'Include catalyst' — names outside that enriched subset will be excluded when this filter is on."
         >
           🟢 Insider Cluster Buy
+        </button>
+        <span className="sepa-filterbar__sep" />
+        {/* Venky's filter stack (2026-05-29): weekly 21-SMA confirmation,
+            ATR% cap, ADX floor. Layered on top of SEPA — each chip is
+            independent so the user can mix/match. */}
+        <button
+          className={`sepa-chip ${filters.weekly21SmaPass ? 'is-active' : ''}`}
+          onClick={() => set('weekly21SmaPass', !filters.weekly21SmaPass)}
+          title="Venky's filter: only candidates where the latest weekly close is above the 21-week SMA AND that SMA is sloping up over the last 4 weeks. 'Trend confirmation, inclined not flat.'"
+        >
+          📈 21W SMA ↑
+        </button>
+        <button
+          className={`sepa-chip ${filters.atrPctMax > 0 ? 'is-active' : ''}`}
+          onClick={() => set('atrPctMax', filters.atrPctMax > 0 ? 0 : 8)}
+          title={
+            filters.atrPctMax > 0
+              ? `Active: dropping names with ATR% > ${filters.atrPctMax}%. Tap to disable.`
+              : "Cap ATR (14-day) at 8% of price — drops names too volatile for swing-trade stops. Tap to enable."
+          }
+        >
+          📐 ATR% ≤ {filters.atrPctMax > 0 ? filters.atrPctMax : 8}
+        </button>
+        <button
+          className={`sepa-chip ${filters.adxMin > 0 ? 'is-active' : ''}`}
+          onClick={() => set('adxMin', filters.adxMin > 0 ? 0 : 25)}
+          title={
+            filters.adxMin > 0
+              ? `Active: requiring ADX ≥ ${filters.adxMin}. Tap to disable.`
+              : "Require ADX (14-day) ≥ 25 — Wilder threshold for a real trend (vs chop). Tap to enable."
+          }
+        >
+          🎯 ADX ≥ {filters.adxMin > 0 ? filters.adxMin : 25}
         </button>
         <span className="sepa-filterbar__sep" />
         <button
