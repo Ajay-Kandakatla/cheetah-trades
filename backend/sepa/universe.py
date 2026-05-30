@@ -288,19 +288,178 @@ def fetch_massive_universe(limit: int | None = None) -> list[str]:
         return []
 
 
+# --- iShares manually-downloaded SpreadsheetML loader -------------------
+#
+# Why this exists (2026-05-29): iShares' public CSV download endpoints
+# (1467271812596.ajax?fileType=csv&...) now serve a Cloudflare-style HTML
+# disclaimer interstitial instead of CSV unless the requester executes JS
+# AND clicks "Individual Investor". Even Chrome TLS impersonation via
+# curl_cffi fails. Headless browsers (Playwright) would work but add a
+# heavy dep for one source.
+#
+# Pragmatic answer: Ajay downloads the IWB / IWV "Download Holdings" file
+# from iShares (the button gives a .xls SpreadsheetML XML, not CSV) and
+# drops it into `backend/sepa/data/`. We parse that file as the primary
+# source. Russell reconstitutes annually + iShares rebalances quarterly,
+# so a manual refresh every ~3 months keeps coverage current.
+
+_DATA_DIR = Path(__file__).parent / "data"
+_LOCAL_IWB_PATH = _DATA_DIR / "iShares-Russell-1000-ETF_fund.xls"
+_LOCAL_IWV_PATH = _DATA_DIR / "iShares-Russell-3000-ETF_fund.xls"
+# Micro-cap extension ("beyond Russell 3000", user 2026-05-30). The Russell
+# 3000 ≈ Russell 1000 + Russell 2000, so true small/micro names below it come
+# from the iShares Micro-Cap ETF (IWC) holdings. Same "Download Holdings" .xls
+# format. Optional — if the file isn't present, the micro-cap layer is just
+# skipped (the broad mode still returns R3000 ∪ ETFs).
+_LOCAL_IWC_PATH = _DATA_DIR / "iShares-Micro-Cap-ETF_fund.xls"
+
+# SpreadsheetML 2003 namespace — iShares' Holdings.xls export uses this.
+_SS_NS = "{urn:schemas-microsoft-com:office:spreadsheet}"
+
+
+def _load_ishares_local_xls(path: Path, *, source_label: str) -> list[str]:
+    """Parse an iShares "Download Holdings" .xls (SpreadsheetML XML).
+
+    Locates the 'Holdings' worksheet, finds the row whose first cell
+    is 'Ticker', then iterates data rows pulling column 0 (Ticker)
+    and column 3 (Asset Class) — filters to Equity only to drop
+    cash / derivatives / future positions.
+
+    Each surviving ticker is run through _normalize_ishares_ticker
+    (class-share remap + futures/junk filter) for symmetry with the
+    network path, and dedup'd.
+
+    Raises FileNotFoundError if the file isn't present, RuntimeError
+    on parse failure (bad XML, missing Holdings sheet, etc.).
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"iShares local file missing: {path}")
+
+    # File age — useful warning when the user forgets to refresh quarterly.
+    age_days = (time.time() - path.stat().st_mtime) / 86400
+    if age_days > 120:
+        log.warning(
+            "universe: %s local file is %.0f days old (%s) — "
+            "refresh from iShares.com 'Download Holdings'",
+            source_label, age_days, path.name,
+        )
+
+    from lxml import etree
+    # iShares files have occasional malformed bits; recover=True
+    # lets lxml skip them rather than aborting the whole parse.
+    parser = etree.XMLParser(recover=True)
+    tree = etree.parse(str(path), parser)
+    root = tree.getroot()
+
+    holdings_ws = None
+    for ws in root.findall(f"{_SS_NS}Worksheet"):
+        if ws.get(f"{_SS_NS}Name") == "Holdings":
+            holdings_ws = ws
+            break
+    if holdings_ws is None:
+        raise RuntimeError(f"{source_label}: 'Holdings' worksheet not found in {path.name}")
+
+    rows = holdings_ws.findall(f".//{_SS_NS}Row")
+
+    def _cell_strings(row) -> list[str]:
+        out = []
+        for cell in row.findall(f"{_SS_NS}Cell"):
+            data = cell.find(f"{_SS_NS}Data")
+            out.append(data.text if data is not None and data.text else "")
+        return out
+
+    # Find the header row (first cell == 'Ticker'). iShares puts ~7 rows
+    # of fund metadata above it; that count drifts so detect, don't hardcode.
+    header_idx = None
+    ticker_col = 0
+    asset_class_col = None
+    for i, r in enumerate(rows[:50]):
+        cells = _cell_strings(r)
+        if cells and cells[0].strip() == "Ticker":
+            header_idx = i
+            for j, h in enumerate(cells):
+                if h.strip().lower() == "asset class":
+                    asset_class_col = j
+                    break
+            break
+    if header_idx is None:
+        raise RuntimeError(f"{source_label}: header row with 'Ticker' not found in {path.name}")
+
+    raw_tickers = []
+    n_skipped_non_equity = 0
+    for r in rows[header_idx + 1:]:
+        cells = _cell_strings(r)
+        if not cells:
+            continue
+        ticker_raw = (cells[ticker_col] if ticker_col < len(cells) else "").strip()
+        if not ticker_raw:
+            continue
+        # Asset Class filter — drop cash, derivatives, futures, etc.
+        if asset_class_col is not None and asset_class_col < len(cells):
+            asset_class = cells[asset_class_col].strip().lower()
+            if asset_class and asset_class != "equity":
+                n_skipped_non_equity += 1
+                continue
+        raw_tickers.append(ticker_raw)
+
+    # Same cleanup pipeline as the network path so behavior is identical.
+    n_dropped_non_equity = 0
+    n_dropped_shape = 0
+    n_remapped_class = 0
+    seen, out = set(), []
+    for r in raw_tickers:
+        r_up = r.strip().upper()
+        norm = _normalize_ishares_ticker(r)
+        if norm is None:
+            if r_up in _NON_EQUITY_BLOCKLIST or _FUTURES_PATTERN.match(r_up):
+                n_dropped_non_equity += 1
+            else:
+                n_dropped_shape += 1
+            continue
+        if r_up in _CLASS_SHARE_REMAP and norm != r_up:
+            n_remapped_class += 1
+        if norm not in seen:
+            seen.add(norm)
+            out.append(norm)
+
+    log.info(
+        "universe: %s local-xls loaded — kept=%d  "
+        "class_share_remapped=%d  skipped_non_equity_row=%d  "
+        "dropped_non_equity_norm=%d  dropped_shape=%d  age=%.0fd",
+        source_label, len(out), n_remapped_class, n_skipped_non_equity,
+        n_dropped_non_equity, n_dropped_shape, age_days,
+    )
+    return out
+
+
 def fetch_russell1000() -> list[str]:
     """Return Russell 1000 components, cached 30 days.
 
-    Primary source: iShares IWB ETF holdings CSV. As of 2026-05, iShares
-    has begun serving HTML landing pages instead of CSV for some download
-    URLs — when that happens we fall back to ``fetch_massive_universe(1000)``
-    which returns the first 1000 active US common stocks (alphabetical).
-    Not strictly the Russell 1000 by market cap, but a comparable
-    institutional-quality universe slice.
+    Source priority:
+      1. ``backend/sepa/data/iShares-Russell-1000-ETF_fund.xls`` — manually
+         downloaded SpreadsheetML export from iShares.com (their public
+         CSV download URLs now require JS / Cloudflare clearance and
+         can't be fetched programmatically). Quarterly refresh.
+      2. Network fetch of the iShares IWB CSV URL (usually returns HTML
+         interstitial these days; kept for if/when iShares relaxes).
+      3. Clean fallback: curated ∪ S&P 500 ∪ S&P 400 MidCap.
     """
     cached = _read_cached("russell1000")
     if cached:
         return cached
+
+    # --- (1) local SpreadsheetML file --------------------------------
+    try:
+        out = _load_ishares_local_xls(_LOCAL_IWB_PATH, source_label="russell1000")
+        if out:
+            _write_cached("russell1000", out)
+            return out
+    except FileNotFoundError:
+        log.info("universe: russell1000 local xls absent — trying network")
+    except Exception as exc:
+        log.warning("universe: russell1000 local-xls parse failed (%s) — trying network", exc)
+
+    # --- (2) network fetch (legacy path; usually 200/HTML now) -------
     try:
         import io
         import pandas as pd
@@ -360,36 +519,57 @@ def fetch_russell1000() -> list[str]:
         _write_cached("russell1000", out)
         return out
     except Exception as exc:
-        log.warning("universe: Russell 1000 fetch failed (%s) — trying Massive fallback", exc)
-        # NOTE: Massive's /v3/reference/tickers endpoint returns tickers in
-        # ALPHABETICAL order, not by market cap. A naive `limit=1000` would
-        # give us only A→C tickers (~1000 names) and silently drop every
-        # leader from D onwards (DASH, META, MU, NVDA, NFLX, ORCL, PLTR,
-        # SMCI, TSLA, etc.). To prevent that, we ALWAYS prepend the curated
-        # leader list (~130 mega/large-caps) and grab the next ~2000
-        # alphabetical from Massive on top.
-        massive = fetch_massive_universe(limit=2000)
-        if massive:
-            merged = list(dict.fromkeys(list(UNIVERSE) + massive))
-            log.info("universe: russell1000 via curated+Massive = %d names "
-                     "(%d curated + %d Massive, deduped)",
-                     len(merged), len(UNIVERSE), len(massive))
+        log.warning(
+            "universe: russell1000 network fetch failed (%s) — "
+            "falling back to curated ∪ S&P 500 ∪ S&P 400 MidCap", exc,
+        )
+        # Deterministic, no-404 fallback: curated leaders + S&P 500 (large)
+        # + S&P 400 (mid). Together ~1030 strict names from Wikipedia —
+        # much cleaner than the Massive alphabetical grab which used to
+        # silently truncate at A-C.
+        try:
+            sp500 = fetch_sp500()
+            try:
+                sp400 = fetch_sp400()
+            except Exception:
+                sp400 = []
+            merged = list(dict.fromkeys(list(UNIVERSE) + sp500 + sp400))
+            log.info(
+                "universe: russell1000 via curated+sp500+sp400 = %d names",
+                len(merged),
+            )
             return merged
-        log.warning("universe: Massive fallback also empty — using S&P 500")
-        return fetch_sp500()
+        except Exception as exc2:
+            log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
+            return fetch_sp500()
 
 
 def fetch_russell3000() -> list[str]:
     """Return Russell 3000 components, cached 30 days.
 
-    Source: iShares IWV ETF holdings CSV — the canonical source for the
-    full Russell 3000 universe. Mirrors fetch_russell1000() exactly,
-    including the dynamic-header parse and the _normalize_ishares_ticker
-    cleanup pipeline (class-share remap + futures/junk filter).
+    Source priority (same as fetch_russell1000):
+      1. ``backend/sepa/data/iShares-Russell-3000-ETF_fund.xls`` — manually
+         downloaded SpreadsheetML export.
+      2. Network fetch of the IWV CSV URL (usually returns HTML now).
+      3. Clean fallback: curated ∪ S&P 500 ∪ S&P 400 MidCap (~1030 names,
+         strict; better than Massive's noisy alphabetical 5097).
     """
     cached = _read_cached("russell3000")
     if cached:
         return cached
+
+    # --- (1) local SpreadsheetML file --------------------------------
+    try:
+        out = _load_ishares_local_xls(_LOCAL_IWV_PATH, source_label="russell3000")
+        if out:
+            _write_cached("russell3000", out)
+            return out
+    except FileNotFoundError:
+        log.info("universe: russell3000 local xls absent — trying network")
+    except Exception as exc:
+        log.warning("universe: russell3000 local-xls parse failed (%s) — trying network", exc)
+
+    # --- (2) network fetch (legacy path; usually 200/HTML now) -------
     try:
         import io
         import pandas as pd
@@ -440,16 +620,87 @@ def fetch_russell3000() -> list[str]:
         _write_cached("russell3000", out)
         return out
     except Exception as exc:
-        log.warning("universe: Russell 3000 fetch failed (%s) — trying Massive fallback", exc)
-        # Same alphabetical-cutoff guard as fetch_russell1000() — prepend
-        # the curated leader list so we never lose mega/large-caps.
-        massive = fetch_massive_universe(limit=5000)
-        if massive:
-            merged = list(dict.fromkeys(list(UNIVERSE) + massive))
-            log.info("universe: russell3000 via curated+Massive = %d names", len(merged))
+        log.warning(
+            "universe: russell3000 network fetch failed (%s) — "
+            "falling back to curated ∪ S&P 500 ∪ S&P 400 MidCap", exc,
+        )
+        # Same clean fallback as russell1000 — strict ~1030 names from
+        # Wikipedia instead of the noisy Massive 5097.
+        try:
+            sp500 = fetch_sp500()
+            try:
+                sp400 = fetch_sp400()
+            except Exception:
+                sp400 = []
+            merged = list(dict.fromkeys(list(UNIVERSE) + sp500 + sp400))
+            log.info(
+                "universe: russell3000 via curated+sp500+sp400 = %d names",
+                len(merged),
+            )
             return merged
-        log.warning("universe: Massive fallback also empty — using Russell 1000")
-        return fetch_russell1000()
+        except Exception as exc2:
+            log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
+            return fetch_sp500()
+
+
+def fetch_microcap() -> list[str]:
+    """Micro-cap names below the Russell 3000, from the local iShares
+    Micro-Cap ETF (IWC) holdings .xls. Returns [] (not an error) when the
+    file is absent — the broad universe is still valid without it.
+
+    Cached 30 days like the other Russell sources.
+    """
+    cached = _read_cached("microcap")
+    if cached:
+        return cached
+    if not _LOCAL_IWC_PATH.exists():
+        log.info("universe: microcap IWC file absent (%s) — skipping micro-cap layer",
+                 _LOCAL_IWC_PATH.name)
+        return []
+    try:
+        out = _load_ishares_local_xls(_LOCAL_IWC_PATH, source_label="microcap")
+        if out:
+            _write_cached("microcap", out)
+        return out
+    except Exception as exc:
+        log.warning("universe: microcap local-xls parse failed (%s) — skipping", exc)
+        return []
+
+
+def fetch_etf_universe() -> list[str]:
+    """Broad list of liquid US-listed ETFs (see sepa/etf_universe.py).
+
+    SEPA's liquidity gate + trend template filter downstream, so this list is
+    intentionally over-inclusive. Static (no network), so no caching needed.
+    """
+    try:
+        from .etf_universe import etf_universe as _etfs
+        return _etfs()
+    except Exception as exc:
+        log.warning("universe: ETF universe import failed (%s)", exc)
+        return []
+
+
+def fetch_broad() -> list[str]:
+    """Widest equity + ETF net (user 2026-05-30: "expand beyond Russell 3000
+    alongside ETFs"):
+
+        Russell 3000 equities  ∪  micro-caps (IWC, if file present)  ∪  ETFs
+
+    Order: large/mega first (R3000 is ranked by index weight in the iShares
+    file), then micro-caps, then ETFs — so the most liquid names pre-warm
+    first and scans surface the heavyweights early. Dedup preserves that
+    order. Expect ~2,500 equities (+ ~1,700 micro if IWC present) + ~300 ETFs.
+    """
+    equities = fetch_russell3000()
+    micro = fetch_microcap()
+    etfs = fetch_etf_universe()
+    merged = list(dict.fromkeys(equities + micro + etfs))
+    log.info(
+        "universe: broad mode = %d R3000 + %d micro + %d ETF -> %d unique",
+        len(equities), len(micro), len(etfs), len(merged),
+    )
+    return merged
 
 
 def load_universe(mode: str | None = None) -> list[str]:
@@ -459,8 +710,12 @@ def load_universe(mode: str | None = None) -> list[str]:
     1. `mode` argument (explicit caller choice)
     2. SEPA_UNIVERSE_FILE env var (path to one-ticker-per-line text file)
     3. SEPA_UNIVERSE env var (comma-separated literal)
-    4. SEPA_UNIVERSE_MODE env var (one of: curated / sp500 / russell1000 / russell3000 / expanded)
+    4. SEPA_UNIVERSE_MODE env var (one of: curated / sp500 / russell1000 /
+       russell3000 / broad / all_us / expanded)
     5. Default: curated
+
+    `broad` = Russell 3000 ∪ micro-caps (IWC, if present) ∪ broad ETF list —
+    the widest net, equities + ETFs together.
 
     Always preserves dedup + insertion order. Always appends benchmarks
     (SPY/QQQ/IWM) so RS math has anchors.
@@ -483,6 +738,11 @@ def load_universe(mode: str | None = None) -> list[str]:
         return _with_benchmarks(fetch_russell1000())
     if selected == "russell3000":
         return _with_benchmarks(fetch_russell3000())
+    if selected in ("broad", "russell3000_etf", "max"):
+        # Russell 3000 ∪ micro-caps (IWC if present) ∪ broad ETF list.
+        # The widest net — equities + ETFs together. SEPA's liquidity gate
+        # handles the small-cap / thin-ETF noise floor downstream.
+        return _with_benchmarks(fetch_broad())
     if selected == "all_us":
         # All active US common stocks via Massive (~5,300 names). Scans
         # take 8-10 minutes with the bulk-snapshot pre-warm — SEPA's
