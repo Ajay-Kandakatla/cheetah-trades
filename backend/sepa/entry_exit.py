@@ -304,7 +304,42 @@ def build_entry_exit(
             except Exception:
                 pass
 
+        # ── Unified stops list — the comparison menu the user picks from ──
+        # One row per available stop method, sorted tightest → widest (for a
+        # long, tightest = highest price = smallest $ risk). Extensible: new
+        # stop methods just append here and the card table renders them. Each
+        # row carries the price, % from entry, $ risk/share, and a basis blurb.
+        stops_menu: list[dict] = []
+
+        def _add_stop(kind: str, label: str, price, basis: str) -> None:
+            if price is None or not pivot:
+                return
+            stops_menu.append({
+                "kind": kind,
+                "label": label,
+                "price": price,
+                "pct": round((price / pivot - 1) * 100, 2),
+                "risk_per_share": round(pivot - price, 2),
+                "basis": basis,
+            })
+
+        _add_stop("structure", "Structure", structure_stop,
+                  (f"swing low ${structure_swing_low} − ATR×{STRUCTURE_STOP_ATR_BUFFER}"
+                   + (" · 50SMA ✓" if structure_ma50_aligned else "")))
+        _add_stop("minervini", "Minervini", stop_px,
+                  f"{stop_basis or 'base low / MA50 / 7%'} · close-basis")
+        _add_stop("atr", f"ATR ×{ATR_STOP_MULTIPLIER}", atr_stop,
+                  f"{ATR_STOP_MULTIPLIER}× daily ATR — breathes w/ volatility")
+        # Tightest (smallest risk) first; tag the extremes for the UI.
+        stops_menu.sort(key=lambda s: -s["price"])
+        if stops_menu:
+            stops_menu[0]["tag"] = "tightest"
+            if len(stops_menu) > 1:
+                stops_menu[-1]["tag"] = "widest"
+
         exit_plan = {
+            "entry": pivot,
+            "stops": stops_menu,
             "stop": stop_px,
             "stop_basis": stop_basis,
             "stop_rule": "Exit on a CLOSE below this — ignore the intraday wick.",

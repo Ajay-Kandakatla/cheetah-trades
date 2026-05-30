@@ -12,6 +12,7 @@ import { PriceAlertModal } from './PriceAlertModal';
 import { WatchlistButton } from './WatchlistButton';
 import { useQuote } from '../hooks/useWatchlist';
 import { TradePlanInline } from './TradePlanInline';
+import { StopsPanel } from './StopsPanel';
 import { EntryExitPlanBlock } from './EntryExitPlanBlock';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
@@ -514,13 +515,16 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               <SepaScoreBar score={row.score} rating={row.rating} size="sm" />
             </span>
           </div>
-          {/* Buy / Stop / +1R inline summary — sits in the right column
-              under the score so the entry/stop levels read on the same
-              eye-line as the conviction score. Full plan with all levels
-              is on the detail page. */}
-          {row.trade_plan && (
+          {/* Entry + Stops menu — replaces the old BUY/STOP/+1R/EXIT box
+              (user 2026-05-30). Shows the buy point + every stop method
+              (Structure / Minervini / ATR) tightest→widest so you pick your
+              line in the sand. Falls back to the old inline plan only when
+              the entry/exit stops haven't been computed for this card. */}
+          {row.entry_exit?.exit?.stops?.length ? (
+            <StopsPanel exit={row.entry_exit.exit} />
+          ) : row.trade_plan ? (
             <TradePlanInline plan={row.trade_plan} lastClose={row.last_close} />
-          )}
+          ) : null}
         </div>
       </header>
 

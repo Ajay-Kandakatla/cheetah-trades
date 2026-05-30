@@ -70,6 +70,18 @@ export type EntryExitPlan = {
     rescan_hint: string;
   } | null;
   exit: {
+    // Entry (pivot/buy point) the stops are measured from.
+    entry?: number | null;
+    // Unified stops comparison menu — one row per method, tightest → widest.
+    stops?: Array<{
+      kind: string;
+      label: string;
+      price: number;
+      pct: number;
+      risk_per_share: number;
+      basis: string;
+      tag?: 'tightest' | 'widest';
+    }>;
     stop: number | null;
     stop_basis: string | null;
     stop_rule: string;

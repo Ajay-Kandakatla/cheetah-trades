@@ -1101,6 +1101,49 @@ tr:last-child td { border-bottom: none; }
 .sepa-card__head-right .trade-plan-inline .tpi__lab { font-size: 0.58rem; }
 .sepa-card__head-right .trade-plan-inline .tpi__risk { font-size: 0.66rem; }
 .sepa-card__head-right .trade-plan-inline .tpi__source { font-size: 0.58rem; padding: 1px 4px; }
+
+/* ── Entry + Stops menu (replaces the BUY/STOP/+1R/EXIT box) ───────────── */
+.stops-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: auto;
+  max-width: 260px;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--rule, var(--hairline));
+  border-radius: 6px;
+  background: var(--bg-sunken, rgba(255,255,255,0.02));
+}
+.stops-panel__buy {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 0.6rem; padding-bottom: 3px;
+}
+.stops-panel__buy-lab { font-size: 0.58rem; letter-spacing: 0.06em; color: var(--cm-slate); }
+.stops-panel__buy-px { font: 700 0.92rem var(--mono, monospace); color: var(--positive, #10b981); }
+.stops-panel__hdr {
+  font-size: 0.54rem; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--cm-slate); border-top: 1px dashed var(--rule, #2a2a2a);
+  padding-top: 3px; margin-bottom: 1px;
+}
+.stops-panel__row {
+  display: grid;
+  grid-template-columns: 1.1em auto 1fr auto auto;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.64rem;
+  cursor: help;
+}
+.stops-panel__icon { font-size: 0.7rem; }
+.stops-panel__label { color: var(--ink, #ddd); }
+.stops-panel__px { font-weight: 700; text-align: right; }
+.stops-panel__pct { color: var(--negative, #ef4444); text-align: right; font-size: 0.6rem; }
+.stops-panel__tag {
+  font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0 3px; border-radius: 2px; align-self: center;
+}
+.stops-panel__tag--tightest { color: var(--positive, #10b981); border: 1px solid var(--positive, #10b981); }
+.stops-panel__tag--widest   { color: var(--cm-amber, #d97706); border: 1px solid var(--cm-amber, #d97706); }
 .sepa-card__bell {
   flex-shrink: 0;
   background: transparent;
