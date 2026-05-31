@@ -1023,6 +1023,7 @@ export function SepaPage() {
       <SepaFilterBar
         filters={filters}
         onChange={setFilters}
+        onClear={() => setFilters(FILTER_DEFAULTS)}
         total={source.length}
         shown={
           activeTab === 'all'
@@ -1047,7 +1048,18 @@ export function SepaPage() {
         filtered.length === 0 ? (
           <div className="sepa-empty-card">
             <div className="eyebrow">Nothing matches</div>
-            <p>No rows match the current filters. Try widening the rating tier, lowering RS, or click <strong>Scan</strong> to refresh.</p>
+            <p>
+              None of the <strong>{source.length}</strong> scanned names match your
+              current filters{filters.search ? <> (including the ticker search “<strong>{filters.search}</strong>”)</> : null}.
+              {' '}Clear them to see the full list.
+            </p>
+            <button
+              className="sepa-btn sepa-btn--primary"
+              style={{ marginTop: '0.6rem' }}
+              onClick={() => setFilters(FILTER_DEFAULTS)}
+            >
+              ✕ Clear all filters
+            </button>
           </div>
         ) : (
           <section className="sepa-results">

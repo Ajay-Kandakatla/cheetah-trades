@@ -1014,6 +1014,16 @@ tr:last-child td { border-bottom: none; }
   border: 1px solid var(--cm-amber, #d97706);
   box-shadow: 0 0 8px 0 rgba(217, 119, 6, 0.45);
 }
+/* Clickable variant — one-tap reset of every filter. */
+.sepa-filterbar__active-badge--btn {
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sepa-filterbar__active-badge--btn:hover {
+  background: rgba(217, 119, 6, 0.14);
+}
 
 /* ── Score visuals ─────────────────────────────────────────────────────── */
 .sepa-score { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px; }

@@ -119,13 +119,15 @@ export type SepaFilters = {
 type Props = {
   filters: SepaFilters;
   onChange: (next: SepaFilters) => void;
+  /** Reset every filter to defaults (clears the glow + the ticker search). */
+  onClear?: () => void;
   total: number;
   shown: number;
 };
 
 const RATINGS: Array<Rating | 'ALL'> = ['ALL', 'STRONG_BUY', 'BUY', 'WATCH'];
 
-export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
+export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Props) {
   const set = <K extends keyof SepaFilters>(k: K, v: SepaFilters[K]) =>
     onChange({ ...filters, [k]: v });
 
@@ -447,12 +449,23 @@ export function SepaFilterBar({ filters, onChange, total, shown }: Props) {
 
       <div className="sepa-filterbar__count mono">
         {activeCount > 0 && (
-          <span
-            className="sepa-filterbar__active-badge"
-            title="Number of filters actively narrowing the list. Glowing controls above are the ones that are on."
-          >
-            ● {activeCount} filter{activeCount === 1 ? '' : 's'} on
-          </span>
+          onClear ? (
+            <button
+              type="button"
+              className="sepa-filterbar__active-badge sepa-filterbar__active-badge--btn"
+              onClick={onClear}
+              title="Clear all filters — tap to reset everything (including the ticker search) and show the full list."
+            >
+              ● {activeCount} filter{activeCount === 1 ? '' : 's'} on · ✕ clear
+            </button>
+          ) : (
+            <span
+              className="sepa-filterbar__active-badge"
+              title="Number of filters actively narrowing the list. Glowing controls above are the ones that are on."
+            >
+              ● {activeCount} filter{activeCount === 1 ? '' : 's'} on
+            </span>
+          )
         )}
         showing <strong>{shown}</strong> / {total}
       </div>
