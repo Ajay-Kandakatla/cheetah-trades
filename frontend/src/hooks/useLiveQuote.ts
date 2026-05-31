@@ -38,12 +38,43 @@ const _prefillInFlight = new Map<string, Promise<void>>();
 const PREFILL_TTL_MS = 60_000;
 const _prefillAt = new Map<string, number>();
 
+// Concurrency cap for per-card prefill GETs. Under the broad universe the
+// SEPA list can mount 500+ cards at once; without a cap, each card's
+// prefillOnce fires fetch('/quote/<sym>') simultaneously and the browser
+// trips net::ERR_INSUFFICIENT_RESOURCES (it ran out of connection slots).
+// We queue them so at most MAX_CONCURRENT_PREFILL are in flight; the rest
+// wait their turn. The bulk POST /quotes path still covers the top of the
+// list fast — this just keeps the stragglers from flooding. (2026-05-30)
+const MAX_CONCURRENT_PREFILL = 6;
+let _activePrefills = 0;
+const _prefillWaiters: Array<() => void> = [];
+
+function _acquirePrefillSlot(): Promise<void> {
+  if (_activePrefills < MAX_CONCURRENT_PREFILL) {
+    _activePrefills += 1;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => _prefillWaiters.push(resolve));
+}
+function _releasePrefillSlot() {
+  const next = _prefillWaiters.shift();
+  if (next) {
+    next();                 // hand the slot straight to the next waiter
+  } else {
+    _activePrefills = Math.max(0, _activePrefills - 1);
+  }
+}
+
 async function prefillOnce(symbol: string) {
   const at = _prefillAt.get(symbol) || 0;
   if (Date.now() - at < PREFILL_TTL_MS) return;
   let inflight = _prefillInFlight.get(symbol);
   if (inflight) return inflight;
   inflight = (async () => {
+    // Gate the actual network call behind the concurrency limiter. The
+    // dedup above already prevents duplicate symbols; this bounds the TOTAL
+    // number of simultaneous GETs.
+    await _acquirePrefillSlot();
     try {
       const r = await fetch(`${API}/quote/${encodeURIComponent(symbol)}`);
       const j: LiveQuote = await r.json();
@@ -56,6 +87,7 @@ async function prefillOnce(symbol: string) {
     } catch {
       // Swallow — SSE will eventually deliver something. No state update.
     } finally {
+      _releasePrefillSlot();
       _prefillInFlight.delete(symbol);
     }
   })();

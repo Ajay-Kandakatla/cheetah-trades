@@ -343,12 +343,19 @@ export function SepaPage() {
   useEffect(() => {
     const syms = source.map((r) => r.symbol).filter(Boolean);
     if (syms.length === 0) return;
-    // Cap at 200 to avoid pathological bulk calls — beyond that the user
-    // is probably viewing the full 'showAll' Russell 1000 and the cache
-    // benefit is marginal.
-    const list = syms.slice(0, 200);
-    void prefillBulkQuotes(list);
-    registerSymbolInterest(list);
+    // Prefill prices for EVERY rendered card via batched bulk POSTs (HTTP has
+    // no live-feed limit). This is what suppresses the per-card GET /quote —
+    // critical under the broad universe (500+ cards), where the old 200 cap
+    // left ~300 cards firing their own GETs → net::ERR_INSUFFICIENT_RESOURCES.
+    // 150/batch keeps each POST reasonable; a handful of POSTs replaces
+    // hundreds of GETs.
+    for (let i = 0; i < syms.length; i += 150) {
+      void prefillBulkQuotes(syms.slice(i, i + 150));
+    }
+    // Live SSE push stays bounded to the top of the list (upstream feed has a
+    // symbol-subscription cap); the rest show their prefilled price, which is
+    // refreshed each scan.
+    registerSymbolInterest(syms.slice(0, 200));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source.length, source[0]?.symbol]);  // re-run on list change
 
