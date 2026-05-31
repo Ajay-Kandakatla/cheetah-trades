@@ -106,6 +106,46 @@ def fetch_sp500() -> list[str]:
         return list(UNIVERSE)
 
 
+def fetch_sp400() -> list[str]:
+    """Return S&P 400 MidCap components, cached 30 days.
+
+    Mirror of fetch_sp500 against Wikipedia's S&P 400 list. These names are
+    almost all already inside the Russell 3000, so this is belt-and-suspenders
+    coverage — it just guarantees mid-caps even if the iShares snapshot is
+    stale. Returns [] (not curated) on failure so it can't pollute a union
+    with large-caps. Also referenced by the russell* network fallback paths
+    (previously called but never defined — a latent NameError).
+    """
+    cached = _read_cached("sp400")
+    if cached:
+        return cached
+    try:
+        import pandas as pd
+        tables = pd.read_html(
+            "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies"
+        )
+        # Find the table that actually has a Symbol/Ticker column — the
+        # constituents table isn't always tables[0] on this page.
+        syms: list[str] = []
+        for tb in tables:
+            col = next((c for c in tb.columns if str(c).lower() in ("symbol", "ticker")), None)
+            if col is not None:
+                syms = [str(s).replace(".", "-").upper() for s in tb[col].tolist()]
+                break
+        seen, out = set(), []
+        for s in syms:
+            if s and s != "NAN" and s not in seen:
+                seen.add(s)
+                out.append(s)
+        if out:
+            _write_cached("sp400", out)
+            log.info("universe: fetched %d S&P 400 MidCap components", len(out))
+        return out
+    except Exception as exc:
+        log.warning("universe: S&P 400 fetch failed (%s) — skipping mid-cap layer", exc)
+        return []
+
+
 # ============================================================================
 # iShares CSV cleanup (added 2026-05-21)
 # ----------------------------------------------------------------------------
@@ -696,13 +736,24 @@ def fetch_broad() -> list[str]:
     AND pre-warms them early. Dedup keeps first-seen order.
     """
     curated = list(UNIVERSE)
+    # S&P 500 + 400 explicit union — almost entirely a subset of Russell 3000
+    # already (so net-new is ~0), but it guarantees full S&P coverage even if
+    # the quarterly iShares snapshot is stale on a recent index add, and it
+    # restores the old fallback universe (curated ∪ sp500 ∪ sp400) the user
+    # asked to preserve. Both fall back gracefully (sp500→curated, sp400→[]).
+    sp500 = fetch_sp500()
+    sp400 = fetch_sp400()
     equities = fetch_russell3000()
     micro = fetch_microcap()
     etfs = fetch_etf_universe()
-    merged = list(dict.fromkeys(curated + equities + micro + etfs))
+    merged = list(dict.fromkeys(
+        curated + sp500 + sp400 + equities + micro + etfs
+    ))
     log.info(
-        "universe: broad mode = %d curated + %d R3000 + %d micro + %d ETF -> %d unique",
-        len(curated), len(equities), len(micro), len(etfs), len(merged),
+        "universe: broad mode = %d curated + %d sp500 + %d sp400 + %d R3000 "
+        "+ %d micro + %d ETF -> %d unique",
+        len(curated), len(sp500), len(sp400), len(equities), len(micro),
+        len(etfs), len(merged),
     )
     return merged
 
