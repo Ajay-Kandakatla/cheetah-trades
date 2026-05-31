@@ -155,6 +155,21 @@ export default function AdminAccessPage() {
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [accessDenied, setAccessDenied] = useState(false);
 
+  // The pages×users matrix is unusable on a phone (sticky columns overlap).
+  // On narrow screens we render a single-user editor instead. (2026-05-30)
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 680px)').matches,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 680px)');
+    const on = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  // Which user the mobile editor is showing.
+  const [mobileUserEmail, setMobileUserEmail] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -465,7 +480,8 @@ export default function AdminAccessPage() {
 
       {(!catalog || !users) && <div style={{ color: 'var(--cm-slate)' }}>Loading…</div>}
 
-      {catalog && users && (
+      {/* ── Desktop: the full pages×users matrix ────────────────────────── */}
+      {catalog && users && !isMobile && (
         <div
           style={{
             overflow: 'auto',
@@ -633,6 +649,102 @@ export default function AdminAccessPage() {
           </table>
         </div>
       )}
+
+      {/* ── Mobile: single-user editor (the matrix can't fit a phone) ─────── */}
+      {catalog && users && isMobile && (() => {
+        const activeEmail = mobileUserEmail ?? users[0]?.email ?? null;
+        const u = users.find((x) => x.email === activeEmail) ?? users[0];
+        if (!u) return null;
+        return (
+          <div>
+            {/* User picker — horizontally scrollable chips. */}
+            <div style={{
+              display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6,
+              marginBottom: '0.6rem', WebkitOverflowScrolling: 'touch',
+            }}>
+              {users.map((x) => {
+                const on = x.email === u.email;
+                return (
+                  <button
+                    key={x.email}
+                    type="button"
+                    onClick={() => setMobileUserEmail(x.email)}
+                    style={{
+                      flex: '0 0 auto', padding: '5px 12px', borderRadius: 999,
+                      fontSize: '0.8rem', fontWeight: on ? 700 : 500, cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      background: on ? 'var(--ink, #eee)' : 'var(--bg-raised, #181818)',
+                      color: on ? 'var(--bg, #111)' : 'var(--ink, #ddd)',
+                      border: `1px solid ${x.is_owner ? 'var(--cm-amber, #d4af37)' : 'var(--rule, #333)'}`,
+                    }}
+                  >
+                    {displayName(x)}{x.is_owner ? ' ★' : ''}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected user header + reset. */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, padding: '0.5rem 0.7rem', marginBottom: '0.5rem',
+              border: '1px solid var(--rule, #333)', borderRadius: 6,
+              background: u.is_owner ? 'rgba(212,175,55,0.06)' : 'var(--bg-raised, #181818)',
+            }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>{displayName(u)}{u.is_owner ? ' ★ owner' : ''}</div>
+                <div style={{ fontSize: '0.66rem', color: 'var(--cm-slate)' }}>
+                  {u.features.length}/{catalog.length} features · {u.email}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => resetUser(u)}
+                style={{
+                  flex: '0 0 auto', padding: '4px 10px', fontSize: '0.74rem', cursor: 'pointer',
+                  background: 'none', color: 'var(--cm-slate)',
+                  border: '1px solid var(--rule, #444)', borderRadius: 6,
+                }}
+              >↺ reset</button>
+            </div>
+
+            {/* Feature list for the selected user — grouped by section. */}
+            <div style={{ border: '1px solid var(--rule, #333)', borderRadius: 6, overflow: 'hidden' }}>
+              {rows.map((row, i) => {
+                if (row.kind === 'section') {
+                  return (
+                    <div key={`m-grp-${row.group}-${i}`} style={{
+                      padding: '0.4rem 0.7rem', fontSize: '0.62rem', fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '0.1em',
+                      color: 'var(--cm-slate)', background: 'var(--bg, #0f0f0f)',
+                      borderTop: i > 0 ? '1px solid var(--rule, #333)' : undefined,
+                    }}>{row.group}</div>
+                  );
+                }
+                const f = row.feature;
+                const checked = u.features.includes(f.id);
+                const isPending = pending.has(`${u.email} ${f.id}`) || pending.has(`${u.email} *`) || pending.has(`* ${f.id}`);
+                return (
+                  <div key={`m-${f.id}`} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: 10, padding: '0.55rem 0.7rem',
+                    borderTop: '1px solid var(--rule, #222)',
+                  }}>
+                    <span style={{ fontSize: '0.9rem' }}>{f.label}</span>
+                    <Toggle
+                      on={checked}
+                      disabled={isPending}
+                      onClick={() => toggleFeature(u, f.id, !checked)}
+                      variant="cell"
+                      title={`${displayName(u)} · ${f.label} — ${checked ? 'ON' : 'OFF'}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       <p style={{ fontSize: '0.7rem', color: 'var(--cm-slate)', marginTop: '0.9rem', lineHeight: 1.6 }}>
         <strong>Defaults:</strong> non-owner users start with food, kids, notifications, todos, and glossary on; everything else off.
