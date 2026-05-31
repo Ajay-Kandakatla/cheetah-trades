@@ -685,20 +685,24 @@ def fetch_broad() -> list[str]:
     """Widest equity + ETF net (user 2026-05-30: "expand beyond Russell 3000
     alongside ETFs"):
 
-        Russell 3000 equities  ∪  micro-caps (IWC, if file present)  ∪  ETFs
+        curated  ∪  Russell 3000  ∪  micro-caps (IWC, if present)  ∪  ETFs
 
-    Order: large/mega first (R3000 is ranked by index weight in the iShares
-    file), then micro-caps, then ETFs — so the most liquid names pre-warm
-    first and scans surface the heavyweights early. Dedup preserves that
-    order. Expect ~2,500 equities (+ ~1,700 micro if IWC present) + ~300 ETFs.
+    `curated` goes FIRST and is non-negotiable: the iShares Russell holdings
+    are US-domiciled only, so foreign ADRs Ajay actively trades — ARM, ASML,
+    TSM, SHOP, BABA, … — are NOT Russell constituents and silently vanished
+    from `broad` (ARM dropped 2026-05-30: "it was in the list till
+    yesterday"). The hand-picked curated list carries those names plus the
+    mega-cap leaders, so unioning it back guarantees they're always scanned
+    AND pre-warms them early. Dedup keeps first-seen order.
     """
+    curated = list(UNIVERSE)
     equities = fetch_russell3000()
     micro = fetch_microcap()
     etfs = fetch_etf_universe()
-    merged = list(dict.fromkeys(equities + micro + etfs))
+    merged = list(dict.fromkeys(curated + equities + micro + etfs))
     log.info(
-        "universe: broad mode = %d R3000 + %d micro + %d ETF -> %d unique",
-        len(equities), len(micro), len(etfs), len(merged),
+        "universe: broad mode = %d curated + %d R3000 + %d micro + %d ETF -> %d unique",
+        len(curated), len(equities), len(micro), len(etfs), len(merged),
     )
     return merged
 
