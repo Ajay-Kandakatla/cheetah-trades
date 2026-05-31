@@ -405,6 +405,22 @@ def patch_latest_closes(symbols: list[str]) -> dict:
             )
             continue
 
+        # Reject WEEKEND-dated bars (2026-05-31). On a Saturday/Sunday run,
+        # Massive returns the last (Friday) session's OHLCV, but when `day.t`
+        # is absent the date falls back to "today" — so it appends a phantom
+        # weekend bar: a near-duplicate of Friday with a drifted volume. The
+        # future-date guard above misses it (Sat bar dated today-is-Sat is not
+        # "future"). That phantom bar shifts every symbol's 25-bar volume
+        # window by one and flips borderline distribution calls (e.g. BB
+        # sitting on the 3/4 distribution-day threshold → wrong S2/S3). Real
+        # daily bars only ever fall Mon–Fri.
+        if bar_date.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+            log.warning(
+                "patch_latest_closes: skipping weekend-dated bar for %s (%s, weekday %d)",
+                sym, bar_iso, bar_date.weekday(),
+            )
+            continue
+
         # Load just the tail of the stored series (last 5 rows is enough to
         # check whether today is already present).
         doc = None
@@ -489,6 +505,39 @@ def patch_latest_closes(symbols: list[str]) -> dict:
         "no_cache":       no_cache,
         "total_snapshot": len(snaps),
     }
+
+
+def purge_weekend_bars() -> dict:
+    """One-off repair: drop any Saturday/Sunday-dated bar from every cached
+    symbol. These are phantom bars a weekend run of patch_latest_closes wrote
+    before the weekday guard existed (2026-05-31) — a near-dup of Friday with
+    a drifted volume that corrupts the trailing 25-bar volume window.
+
+    Idempotent and safe to re-run. Returns
+    {symbols_scanned, symbols_fixed, bars_removed}.
+    """
+    coll = _get_mongo()
+    if coll is None:
+        return {"symbols_scanned": 0, "symbols_fixed": 0, "bars_removed": 0}
+    scanned = fixed = removed = 0
+    for doc in coll.find({}, {"symbol": 1, "bars": 1}):
+        scanned += 1
+        bars = doc.get("bars") or []
+        kept = [
+            b for b in bars
+            if not (hasattr(b.get("date"), "weekday") and b["date"].weekday() >= 5)
+        ]
+        drop = len(bars) - len(kept)
+        if drop:
+            try:
+                coll.update_one({"_id": doc["_id"]}, {"$set": {"bars": kept}})
+                fixed += 1
+                removed += drop
+            except Exception as exc:
+                log.warning("purge_weekend_bars: %s failed: %s", doc.get("symbol"), exc)
+    log.info("purge_weekend_bars: fixed %d/%d symbols, removed %d bars",
+             fixed, scanned, removed)
+    return {"symbols_scanned": scanned, "symbols_fixed": fixed, "bars_removed": removed}
 
 
 def bulk_live_prices(symbols: list[str]) -> dict[str, dict]:
