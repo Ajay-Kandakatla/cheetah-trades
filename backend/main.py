@@ -67,6 +67,16 @@ DEFAULT_SYMBOLS = os.getenv(
     "DEFAULT_SYMBOLS", "NVDA,META,AAPL,MSFT,TSLA,AMD,PLTR,CRDO,AVGO,LLY"
 ).split(",")
 POLL_INTERVAL_SEC = int(os.getenv("POLL_INTERVAL_SEC", "5"))
+# Finnhub free tier is ~30-60 quote calls/min. Under the broad universe the
+# frontend registers 200+ symbols of interest, and the REST poller + one-shot
+# fetches used to fire them all back-to-back → constant 429s (2026-05-31).
+# Throttle per call, back off hard on a 429, and cap how many symbols the REST
+# poller and on-subscribe one-shots touch (the WS feed still streams live
+# prices for everything tracked; REST only fills day-context o/h/l/pc).
+FINNHUB_REST_DELAY_SEC   = float(os.getenv("FINNHUB_REST_DELAY_SEC", "2.0"))
+FINNHUB_REST_BACKOFF_SEC = float(os.getenv("FINNHUB_REST_BACKOFF_SEC", "60"))
+FINNHUB_REST_MAX_SYMBOLS = int(os.getenv("FINNHUB_REST_MAX_SYMBOLS", "40"))
+FINNHUB_ONESHOT_MAX      = int(os.getenv("FINNHUB_ONESHOT_MAX", "8"))
 TICK_WINDOW = int(os.getenv("TICK_WINDOW", "64"))  # ticks kept per symbol for indicators
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -291,8 +301,12 @@ async def subscribe_symbols(symbols: list[str]) -> None:
     for s in new:
         tracked_symbols.add(s)
         await _ws_subscribe_queue.put(s)
-    # Kick off one-shot REST fetches in parallel so SSE has data fast.
-    for s in new:
+    # Kick off one-shot REST fetches so SSE has data fast — but only for the
+    # FIRST few new symbols. A bulk subscribe (broad-universe registerSymbol-
+    # Interest sends 40+ at once) firing one Finnhub call each in parallel was
+    # a 429 flood; the throttled REST poller backfills day-context for the
+    # rest, and the WS feed streams live prices for all of them.
+    for s in new[:FINNHUB_ONESHOT_MAX]:
         asyncio.create_task(_rest_fetch_once(s))
 
 
@@ -359,11 +373,18 @@ async def finnhub_rest_poller() -> None:
     client = httpx.AsyncClient(timeout=10)
     while True:
         try:
-            for sym in list(tracked_symbols):
+            # Only REST-poll a bounded slice (WS streams live prices for the
+            # rest); throttle each call + back off hard on a 429 so we stay
+            # under Finnhub's free-tier rate limit instead of flooding it.
+            for sym in list(tracked_symbols)[:FINNHUB_REST_MAX_SYMBOLS]:
                 resp = await client.get(
                     "https://finnhub.io/api/v1/quote",
                     params={"symbol": sym, "token": FINNHUB_API_KEY},
                 )
+                if resp.status_code == 429:
+                    log.warning("Finnhub REST 429 — backing off %ss", FINNHUB_REST_BACKOFF_SEC)
+                    await asyncio.sleep(FINNHUB_REST_BACKOFF_SEC)
+                    break
                 if resp.status_code == 200:
                     d = resp.json()
                     prev_cached = cache._data.get(sym, {})
@@ -383,6 +404,9 @@ async def finnhub_rest_poller() -> None:
                             "source": prev_cached.get("source", "finnhub_rest"),
                         },
                     )
+                # Throttle between per-symbol calls to stay under Finnhub's
+                # free-tier quote limit (the whole point of this fix).
+                await asyncio.sleep(FINNHUB_REST_DELAY_SEC)
         except Exception as exc:
             log.warning("REST poll error: %s", exc)
         await asyncio.sleep(POLL_INTERVAL_SEC)

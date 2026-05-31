@@ -363,10 +363,11 @@ export function SepaPage() {
     for (let i = 0; i < syms.length; i += 150) {
       void prefillBulkQuotes(syms.slice(i, i + 150));
     }
-    // Live SSE push stays bounded to the top of the list (upstream feed has a
-    // symbol-subscription cap); the rest show their prefilled price, which is
-    // refreshed each scan.
-    registerSymbolInterest(syms.slice(0, 200));
+    // Live SSE push stays bounded to the top ~40 names — Finnhub's free tier
+    // caps both WS subscriptions and REST quote-rate, and 200 tripped constant
+    // 429s (2026-05-31). The rest show their bulk-prefilled price, refreshed
+    // each scan; the visible leaders get the live stream.
+    registerSymbolInterest(syms.slice(0, 40));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source.length, source[0]?.symbol]);  // re-run on list change
 
