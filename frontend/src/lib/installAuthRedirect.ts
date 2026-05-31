@@ -41,6 +41,32 @@ const ALREADY_AUTH_PATHS = ['/signin', '/signup'];
 
 let _installed = false;
 
+// Verify-before-redirect (2026-05-31). A single stray 401 — from a background
+// call flaking, or oauth2-proxy hiccuping under the broad-universe request
+// load — used to hard-redirect a perfectly-logged-in user to /signin ("logged
+// out from time to time"). Before ejecting, we probe a lightweight authed
+// endpoint: only redirect if THAT is also 401 (session genuinely dead).
+let _lastVerifiedAliveAt = 0;     // ms timestamp of last confirmed-alive session
+let _verifyInFlight = false;
+
+async function _sessionIsAlive(realFetch: typeof fetch): Promise<boolean> {
+  // Trust a very recent positive verify so a burst of 401s only probes once.
+  if (Date.now() - _lastVerifiedAliveAt < 30_000) return true;
+  if (_verifyInFlight) return true;         // a probe is already running
+  _verifyInFlight = true;
+  try {
+    const r = await realFetch(`${API}/me/features`, { credentials: 'include' });
+    const alive = r.status !== 401;
+    if (alive) _lastVerifiedAliveAt = Date.now();
+    return alive;
+  } catch {
+    // Network error is NOT a dead session — never eject on a fetch failure.
+    return true;
+  } finally {
+    _verifyInFlight = false;
+  }
+}
+
 /** Should `credentials: 'include'` be auto-injected for this URL? */
 function _isOurApiUrl(url: string): boolean {
   if (!url) return false;
@@ -94,6 +120,13 @@ export function installAuthRedirect() {
 
     // Don't redirect from the auth pages themselves.
     if (ALREADY_AUTH_PATHS.some((p) => window.location.pathname.startsWith(p))) {
+      return response;
+    }
+
+    // Don't eject on a stray 401 — confirm the session is actually dead first.
+    // If the probe says we're still authed, return the 401 to the caller (it
+    // can show its own error) WITHOUT a full-page redirect.
+    if (await _sessionIsAlive(originalFetch)) {
       return response;
     }
 
