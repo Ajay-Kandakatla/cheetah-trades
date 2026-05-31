@@ -25,6 +25,7 @@ import { SepaScanProgress } from '../components/SepaScanProgress';
 import { SepaDateScrubber } from '../components/SepaDateScrubber';
 import { useSepaScanByDate } from '../hooks/useSepaHistory';
 import { InfoButton } from '../components/InfoButton';
+import { SiteTour, TOUR_DONE_KEY } from '../components/SiteTour';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
 import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
 import { useWhalesFlow } from '../hooks/useWhalesFlow';
@@ -159,6 +160,19 @@ export function SepaPage() {
     const m = window.location.hash.match(/date=(\d{4}-\d{2}-\d{2})/);
     return m ? m[1] : null;
   });
+
+  // Onboarding tour — auto-start for first-time visitors (no done-flag), and
+  // replayable via the 🎓 Tour button. Delay so the page has rendered the
+  // elements the tour points at. (2026-05-30)
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let done = false;
+    try { done = !!localStorage.getItem(TOUR_DONE_KEY); } catch { /* ignore */ }
+    if (done) return;
+    const t = setTimeout(() => setTourOpen(true), 900);
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (historicalDate) {
@@ -887,6 +901,7 @@ export function SepaPage() {
   return (
     <SepaTrendProvider currentCandidates={trendCandidates} currentDateEt={trendDateEt}>
     <div className="sepa-page">
+      {tourOpen && <SiteTour onClose={() => setTourOpen(false)} />}
       <MarketRegimeBanner />
       <MarketClockStrip />
       <MinerviniLesson />
@@ -902,6 +917,13 @@ export function SepaPage() {
           <p className="lede">
             Minervini's Specific Entry Point Analysis. Trend Template + RS + Stage 2 +
             tight base + risk-managed entry. Market-context aware.
+            {' '}
+            <button
+              type="button"
+              className="sepa-tour-btn"
+              onClick={() => setTourOpen(true)}
+              title="Replay the guided walkthrough of the screen"
+            >🎓 Tour</button>
           </p>
         </div>
         {/* Universe-wide typeahead — search ANY US ticker, not just SEPA picks. */}

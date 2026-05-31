@@ -1849,6 +1849,50 @@ tr:last-child td { border-bottom: none; }
 }
 .sepa-univ__sep { width: 1px; height: 16px; background: var(--rule, var(--hairline)); margin: 0 2px; }
 .sepa-univ__preset { font-size: 0.7rem; }
+
+/* ── Site tour (onboarding walkthrough) ──────────────────────────────────── */
+.sepa-tour-btn {
+  margin-left: 0.4rem; padding: 1px 8px; font-size: 0.72rem; font-weight: 600;
+  background: transparent; color: var(--cm-amber, #d97706);
+  border: 1px solid var(--cm-amber, #d97706); border-radius: 999px; cursor: pointer;
+  white-space: nowrap; vertical-align: middle;
+}
+.sepa-tour-btn:hover { background: rgba(217, 119, 6, 0.12); }
+
+.tour { position: fixed; inset: 0; z-index: 4000; pointer-events: none; }
+/* Full dim for centered steps (clickable to dismiss). */
+.tour__dim {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);
+  pointer-events: auto; animation: tour-fade 0.18s ease;
+}
+/* Spotlight cutout: the giant box-shadow dims everything EXCEPT this rect. */
+.tour__spot {
+  position: fixed; border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.68);
+  outline: 2px solid var(--cm-amber, #d97706);
+  outline-offset: 0; transition: all 0.2s ease; pointer-events: none;
+}
+.tour__tip {
+  position: fixed; pointer-events: auto; z-index: 4001;
+  background: var(--bg-raised, #1a1a1a); color: var(--ink, #eee);
+  border: 1px solid var(--cm-amber, #d97706); border-radius: 10px;
+  padding: 0.9rem 1rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: tour-fade 0.18s ease;
+}
+.tour__step { font-size: 0.6rem; letter-spacing: 0.08em; color: var(--cm-slate); margin-bottom: 4px; }
+.tour__title { font-weight: 700; font-size: 0.98rem; margin-bottom: 0.35rem; }
+.tour__body { font-size: 0.82rem; line-height: 1.5; color: var(--ink-subtle, #cfcfcf); }
+.tour__nav { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.85rem; }
+.tour__btn {
+  padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  background: var(--bg-sunken, #222); color: var(--ink, #eee);
+  border: 1px solid var(--rule, #444); border-radius: 6px;
+}
+.tour__btn--primary { background: var(--cm-amber, #d97706); color: #111; border-color: var(--cm-amber, #d97706); }
+.tour__btn:hover { filter: brightness(1.1); }
+.tour__skip { background: none; border: 0; color: var(--cm-slate); font-size: 0.74rem; cursor: pointer; padding: 4px 2px; }
+.tour__skip:hover { color: var(--ink, #eee); }
+@keyframes tour-fade { from { opacity: 0; } to { opacity: 1; } }
 .sepa-btn--ghost { background: transparent; border: 1px solid var(--hairline); color: var(--ink); }
 .sepa-btn--ghost:hover:not(:disabled) { background: var(--bg-sunken); }
 
