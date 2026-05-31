@@ -111,12 +111,19 @@ def name_for(symbol: str) -> Optional[str]:
 
 
 def bulk_warm(symbols: Iterable[str], max_workers: int = 8,
-              emitter=None) -> dict[str, Optional[str]]:
+              emitter=None, fetch: bool = True,
+              throttle_sec: float = 0.0) -> dict[str, Optional[str]]:
     """Ensure the name cache contains entries for every symbol in `symbols`.
 
     Names already cached are skipped. Missing names are fetched via yfinance in
     a thread pool and persisted to Mongo. Returns a dict {symbol: name} with
     the full resolved set.
+
+    fetch=False makes this CACHE-ONLY — it never touches yfinance, so the hot
+    scan path doesn't flood Yahoo (the broad universe has thousands of
+    un-cached names → 429 storm). The daily warmer (sepa.warm_names) fills the
+    misses instead. throttle_sec>0 fetches sequentially with that delay between
+    calls (rate-limit-safe) — used by the daily warmer.
 
     Optional `emitter` (sepa.progress.ProgressEmitter) fires `name_progress`
     events every 25 completions so the SSE stream can show progress during
@@ -140,8 +147,10 @@ def bulk_warm(symbols: Iterable[str], max_workers: int = 8,
                      message=(f"Company-name cache: {len(syms) - len(missing)} hits, "
                               f"fetching {len(missing)} missing"))
 
-    if not missing:
-        # All cached — emit a final 100% tick so the bar lands on full
+    if not missing or not fetch:
+        # All cached, or cache-only mode — emit a final tick + return what we
+        # have. Missing names simply stay absent; the caller falls back to the
+        # ticker and the daily warmer fills them later.
         if emitter:
             emitter.emit("name_progress",
                          current=len(syms), total=len(syms), fetched=0)
@@ -152,6 +161,20 @@ def bulk_warm(symbols: Iterable[str], max_workers: int = 8,
 
     def _one(sym: str) -> tuple[str, Optional[str]]:
         return sym, _fetch_yfinance(sym)
+
+    # Throttled sequential path — rate-limit-safe for the daily warmer.
+    if throttle_sec > 0:
+        for sym in missing:
+            name = _fetch_yfinance(sym)
+            _memo[sym] = name
+            _mongo_put(sym, name)
+            out[sym] = name
+            completed += 1
+            if emitter and (completed % 25 == 0 or completed == len(missing)):
+                emitter.emit("name_progress",
+                             current=completed, total=len(missing), fetched=completed)
+            time.sleep(throttle_sec)
+        return out
 
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         futures = {ex.submit(_one, s): s for s in missing}

@@ -32,6 +32,12 @@
 # even for slower-moving names.
 0      19    *    *    *    /usr/local/bin/python -m sepa.warm_whales_13d --days 120
 #
+# Daily 5pm ET — warm company names + business descriptions for the whole
+# broad universe, throttled (1.5s/call) so yfinance doesn't 429. The scan
+# path is cache-only now, so this is what fills names/descriptions; un-cached
+# names show the ticker until this runs. Resumable — re-runs skip cached ones.
+0      17    *    *    *    /usr/local/bin/python -m sepa.warm_names
+#
 # Position-aware alerts — every 5 min during market hours (9:30–16:00 ET, Mon–Fri).
 */5    9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli alerts
 0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m sepa.cli alerts

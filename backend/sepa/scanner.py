@@ -376,7 +376,11 @@ def scan_universe(symbols: Optional[List[str]] = None,
     # bulk_warm emits its own `phase` event (with hits vs missing breakdown)
     # plus `name_progress` ticks, so we don't pre-emit here.
     try:
-        company_names.bulk_warm(work, emitter=emitter)
+        # CACHE-ONLY during the scan (fetch=False): the broad universe has
+        # thousands of un-cached names, and fetching them live here floods
+        # yfinance → 429 storm. Missing names fall back to the ticker; the
+        # daily `sepa.warm_names` cron fills them in the background.
+        company_names.bulk_warm(work, emitter=emitter, fetch=False)
     except Exception as exc:
         log.warning("company_names bulk_warm skipped: %s", exc)
         _emit("log", level="warn", message=f"company_names bulk_warm skipped: {exc}")
