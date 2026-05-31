@@ -173,6 +173,14 @@ export function SepaPage() {
     const t = setTimeout(() => setTourOpen(true), 900);
     return () => clearTimeout(t);
   }, []);
+
+  // Cap how many candidate cards we render at once. Under the broad universe a
+  // scan returns 500+ candidates; rendering them all (each card is heavy —
+  // stops panel + entry/exit + chips) freezes phones and can render NOTHING
+  // at all (user 2026-05-31: "no cards on phone after scan"). Show the top
+  // CARD_PAGE, with a "show more" button for the rest.
+  const CARD_PAGE = 60;
+  const [visibleCount, setVisibleCount] = useState(CARD_PAGE);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (historicalDate) {
@@ -271,6 +279,9 @@ export function SepaPage() {
   // Every other tab maps to a backend /setups/{kind} endpoint via
   // TAB_TO_KIND and is fetched lazily on tab open.
   const [activeTab, setActiveTab] = useState<SepaTab>('all');
+  // Reset the visible-card window back to the first page whenever the filters,
+  // tab, or scan date change — so re-filtering shows the top of the new set.
+  useEffect(() => { setVisibleCount(CARD_PAGE); }, [filters, activeTab, historicalDate]);
   const activeKind = TAB_TO_KIND[activeTab];
   const {
     setups: tabSetups,
@@ -1045,7 +1056,7 @@ export function SepaPage() {
               <InfoButton inline title="Results">{ResultsInfo}</InfoButton>
             </div>
             <div className="sepa-grid">
-              {filtered.map((r) => (
+              {filtered.slice(0, visibleCount).map((r) => (
                 <SepaCandidateCard
                   key={r.symbol}
                   row={r}
@@ -1057,6 +1068,26 @@ export function SepaPage() {
                 />
               ))}
             </div>
+            {filtered.length > visibleCount && (
+              <div style={{ textAlign: 'center', margin: '1rem 0' }}>
+                <button
+                  className="sepa-btn"
+                  onClick={() => setVisibleCount((c) => c + CARD_PAGE)}
+                >
+                  Show {Math.min(CARD_PAGE, filtered.length - visibleCount)} more
+                  {' '}· {visibleCount} of {filtered.length}
+                </button>
+                {filtered.length - visibleCount > CARD_PAGE && (
+                  <button
+                    className="sepa-btn sepa-btn--ghost"
+                    style={{ marginLeft: '0.5rem' }}
+                    onClick={() => setVisibleCount(filtered.length)}
+                  >
+                    Show all {filtered.length}
+                  </button>
+                )}
+              </div>
+            )}
           </section>
         )
       )}
