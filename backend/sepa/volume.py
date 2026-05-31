@@ -63,6 +63,11 @@ CMF_OUTFLOW_THRESHOLD       = -0.10
 #   "down days on ABOVE-AVERAGE volume"). Symmetric with accumulation.
 DIST_DAY_DOWN_PCT           = -0.002
 DIST_DAY_LOOKBACK           = 25
+# Day-count BACKSTOP (2026-05-31): volume is the primary distribution signal;
+# the day count only acts as a safety net for a slow persistent bleed, and
+# only when down-volume isn't being out-traded (ratio < 1). Raised from the
+# old trigger-happy 4 so it catches persistence, not normal pullbacks.
+DIST_DAYS_BACKSTOP          = 8
 
 
 def _safe_float(x) -> Optional[float]:
@@ -235,11 +240,20 @@ def _strength_label(ratio: Optional[float], cmf: Optional[float],
     """
     if ratio is None:
         return "unknown"
-    # Hard distribution gate first — a stock with 4+ distribution days is
-    # under institutional selling regardless of the rolling ratio.
-    if dist_days >= 4:
-        return "distributing"
+    # PRIMARY signal is VOLUME-weighted, not a day count (2026-05-31). Research
+    # note: O'Neil's distribution-DAY count (4-5 in ~4-5 weeks) is a MARKET /
+    # index timing tool, not a per-stock read; the per-stock convention (incl.
+    # Minervini-style platforms) is the up/down volume ratio + money flow,
+    # which captures the MAGNITUDE of selling. The old `dist_days >= 4` hard
+    # gate flagged names like ARM as distributing even while up/down vol was
+    # 1.92 and CMF was +0.32 (clear accumulation) — a false topping call.
     if ratio <= DIST_RATIO_THRESHOLD or (cmf is not None and cmf <= CMF_OUTFLOW_THRESHOLD):
+        return "distributing"
+    # BACKSTOP for a slow persistent bleed the volume balance might miss —
+    # but GATED on the volume balance so it can't fire on pullbacks inside an
+    # advance: many down-on-volume days AND down-volume isn't being out-traded
+    # (ratio < 1). ARM (8 dist days but ratio 1.92) is correctly excluded.
+    if dist_days >= DIST_DAYS_BACKSTOP and ratio < 1.0:
         return "distributing"
     # Strong accumulation requires alignment.
     if (ratio >= ACCUM_STRONG_THRESHOLD
