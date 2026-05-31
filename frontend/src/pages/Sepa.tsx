@@ -967,11 +967,20 @@ export function SepaPage() {
       <SepaHero
         data={data}
         scanning={scanning}
-        onScan={(withCat, opts) => stream.start({
-          fast: opts?.fast,
-          mode: opts?.mode,
-          with_catalyst: withCat,
-        })}
+        onScan={(withCat, opts) => {
+          // On a FULL scan (not Fast Scan), clear every filter and switch to
+          // "all analyzed" so the fresh results show the whole universe with
+          // no leftover filters (user 2026-05-31). Fast Scan leaves your
+          // filters alone.
+          if (!opts?.fast) {
+            setFilters({ ...FILTER_DEFAULTS, showAll: true });
+          }
+          stream.start({
+            fast: opts?.fast,
+            mode: opts?.mode,
+            with_catalyst: withCat,
+          });
+        }}
         onReload={() => refetch()}
       />
 
