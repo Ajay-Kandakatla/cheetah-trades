@@ -113,6 +113,7 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
     {"id": "pioneers",      "label": "Pioneers",            "group": "tools",     "default": False},
     {"id": "dual-momentum", "label": "Dual Momentum",       "group": "tools",     "default": False},
+    {"id": "ravi-strategy", "label": "Ravi's Strategy",     "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
 

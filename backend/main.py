@@ -2188,6 +2188,36 @@ async def company_info(symbol: str, force: bool = Query(False)):
 
 
 # ============================================================================
+# Ravi's Strategy — high-beta + trend screen (a friend's ToS study, ported).
+# NOT Minervini — beta(lookback, vs SPY) >= min_beta AND close > SMA(trend).
+# ============================================================================
+@app.get("/ravi/scan")
+async def ravi_scan(
+    min_beta: float = Query(1.2, description="Minimum 60-day beta vs SPY"),
+    lookback: int = Query(60, description="Beta lookback (trading days)"),
+    trend_length: int = Query(50, description="SMA length for the trend filter"),
+    require_trending: bool = Query(True, description="Require close > SMA(trend_length)"),
+    mode: str = Query("broad", description="Universe mode (broad/russell1000/curated/...)"),
+):
+    """Run Ravi's high-beta + trend screen. Computed off cached daily bars;
+    15-min server cache, so the first call on the broad universe is slow but
+    repeat calls are instant."""
+    from sepa import ravi
+    rows = await asyncio.to_thread(
+        ravi.scan, min_beta=min_beta, lookback=lookback,
+        trend_length=trend_length, require_trending=require_trending,
+        universe_mode=mode,
+    )
+    return JSONResponse({
+        "n": len(rows),
+        "rows": rows,
+        "params": {"min_beta": min_beta, "lookback": lookback,
+                   "trend_length": trend_length, "require_trending": require_trending,
+                   "mode": mode},
+    })
+
+
+# ============================================================================
 # Tiny Stocks — Pounce Tiny Score (PTS)
 # ============================================================================
 @app.get("/tiny/list")

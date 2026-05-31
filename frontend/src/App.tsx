@@ -26,6 +26,7 @@ const SepaPage                    = lazy(() => import('./pages/Sepa').then(m => 
 const SepaV2Page                  = lazy(() => import('./pages/SepaV2').then(m => ({ default: m.SepaV2Page })));
 const SepaCandidatePage           = lazy(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
 const DualMomentumPage            = lazy(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
+const RaviStrategyPage            = lazy(() => import('./pages/RaviStrategy').then(m => ({ default: m.RaviStrategyPage })));
 const ChatterPage                 = lazy(() => import('./pages/Chatter').then(m => ({ default: m.ChatterPage })));
 const ChatterIndiaPage            = lazy(() => import('./pages/ChatterIndia').then(m => ({ default: m.ChatterIndiaPage })));
 const PioneersPage                = lazy(() => import('./pages/Pioneers').then(m => ({ default: m.PioneersPage })));
@@ -199,6 +200,7 @@ export function App() {
             <Route path="/sepa-v2"        element={<FeatureRoute feature="sepa"><SepaV2Page /></FeatureRoute>} />
             <Route path="/sepa/:symbol"   element={<FeatureRoute feature="sepa"><SepaCandidatePage /></FeatureRoute>} />
             <Route path="/dual-momentum"  element={<FeatureRoute feature="dual-momentum"><DualMomentumPage /></FeatureRoute>} />
+            <Route path="/ravi-strategy"  element={<FeatureRoute feature="ravi-strategy"><RaviStrategyPage /></FeatureRoute>} />
             <Route path="/chatter"        element={<FeatureRoute feature="chatter"><ChatterPage /></FeatureRoute>} />
             <Route path="/chatter-india"  element={<FeatureRoute feature="chatter-india"><ChatterIndiaPage /></FeatureRoute>} />
             <Route path="/pioneers"       element={<FeatureRoute feature="pioneers"><PioneersPage /></FeatureRoute>} />
