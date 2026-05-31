@@ -27,6 +27,14 @@ from typing import Optional
 log = logging.getLogger("supply_demand.whales")
 
 _CACHE_TTL_SEC = 24 * 60 * 60  # 24 hours
+# EMPTY results (yfinance returned 0 holders — common for foreign ADRs like
+# ARM, recent IPOs, or transient Yahoo failures) expire much sooner so we
+# retry and recover real data instead of serving 0/0 for a full day.
+_EMPTY_CACHE_TTL_SEC = 60 * 60  # 1 hour
+
+
+def _payload_is_empty(p: dict) -> bool:
+    return not (p.get("n_holders") or p.get("n_mutuals"))
 
 
 # --- Mongo cache ---------------------------------------------------------
@@ -45,7 +53,14 @@ def _cache_coll():
         return None
 
 
-def _cache_get(ticker: str) -> Optional[dict]:
+def _cache_get(ticker: str, ignore_ttl: bool = False) -> Optional[dict]:
+    """Return the cached whales payload, or None.
+
+    `ignore_ttl=True` returns the last cached payload regardless of age — used
+    as a fallback when a fresh fetch comes back empty, so we keep serving the
+    last GOOD snapshot instead of resetting to 0/0. Empty payloads use the
+    shorter _EMPTY_CACHE_TTL_SEC so the system retries yfinance sooner.
+    """
     coll = _cache_coll()
     if coll is None:
         return None
@@ -59,14 +74,16 @@ def _cache_get(ticker: str) -> Optional[dict]:
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
         age = (datetime.now(timezone.utc) - ts).total_seconds()
-        if age > _CACHE_TTL_SEC:
-            return None
         payload = doc.get("payload")
-        if isinstance(payload, dict):
-            payload = dict(payload)
-            payload["_cached"] = True
-            payload["_cache_age_sec"] = round(age)
-            return payload
+        if not isinstance(payload, dict):
+            return None
+        ttl = _EMPTY_CACHE_TTL_SEC if _payload_is_empty(payload) else _CACHE_TTL_SEC
+        if age > ttl and not ignore_ttl:
+            return None
+        payload = dict(payload)
+        payload["_cached"] = True
+        payload["_cache_age_sec"] = round(age)
+        return payload
     except Exception as exc:
         log.warning("whales cache get failed for %s: %s", ticker, exc)
     return None
@@ -382,6 +399,24 @@ def get_whales(ticker: str, force: bool = False) -> dict:
     raw = _fetch_yfinance_holders(t)
     holders = raw.get("institutional", [])
     mutuals = raw.get("mutual_fund", [])
+
+    # Guard against an empty fetch destroying good data. yfinance intermittently
+    # returns ZERO holders for foreign ADRs (ARM), recent IPOs, or on transient
+    # Yahoo failures. If THIS fetch is empty but we have a prior NON-empty
+    # snapshot, return that (flagged stale) and do NOT overwrite the cache —
+    # otherwise the chip + modal collapse to 0/0 even though the holders are
+    # known (user 2026-05-30: ARM showed 14 but clicking showed nothing).
+    if not holders and not mutuals:
+        prev = _cache_get(t, ignore_ttl=True)
+        if prev and not _payload_is_empty(prev):
+            prev["_stale_empty_refetch"] = True
+            prev["_stale_note"] = (
+                "yfinance returned no holders on the latest refresh — showing "
+                "the last good 13F snapshot."
+            )
+            return prev
+        # Genuinely no data anywhere: fall through and cache the empty payload
+        # (short TTL) so we retry soon instead of hammering yfinance per request.
 
     # Combine for aggregate summary (institutional + mutual)
     combined = holders + mutuals

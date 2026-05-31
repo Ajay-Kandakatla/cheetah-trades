@@ -51,6 +51,10 @@ type WhalesPayload = {
   // Count of institutional holders returned by this fetch. 0 = empty/failed
   // fetch (used to avoid clobbering the card chip with a false 0/0).
   n_holders?: number | null;
+  // Set when the backend served the last GOOD snapshot because the latest
+  // yfinance refresh came back empty (foreign-ADR / transient flakiness).
+  _stale_empty_refetch?: boolean;
+  _stale_note?: string;
   major?: {
     institutional_pct?: string | number | null;
     insider_pct?:       string | number | null;
@@ -374,6 +378,11 @@ export function WhalesFlowModal({
               <p style={{ fontSize: '0.75rem', color: 'var(--cm-amber, #d97706)', margin: '0.3rem 0 0' }}>
                 No fresh 13F holder data returned for {symbol} right now — the card
                 chip keeps its last cached reading rather than resetting to 0/0.
+              </p>
+            )}
+            {!loading && !err && hasData && data?._stale_empty_refetch && (
+              <p style={{ fontSize: '0.72rem', color: 'var(--cm-amber, #d97706)', margin: '0.3rem 0 0' }}>
+                ⓘ {data._stale_note || 'Showing the last good 13F snapshot — the latest refresh came back empty.'}
               </p>
             )}
             {hasData && moves && (
