@@ -45,23 +45,69 @@ const MARKET_LABEL: Record<string, string> = {
   caution:           'Caution',
 };
 
+// ── Universe multi-select (2026-05-30) ──────────────────────────────────
+// Orthogonal building blocks the user can mix. `subsetOf` lists the broader
+// sets that already CONTAIN this one, so we can flag/skip overlaps: e.g.
+// S&P 500 ⊂ Russell 1000 ⊂ Russell 3000. Curated/micro/ETF are independent.
+type UnivComp = { key: string; label: string; approx: string; subsetOf: string[] };
+const UNIVERSE_COMPONENTS: UnivComp[] = [
+  { key: 'curated',     label: 'Curated',      approx: '130',  subsetOf: [] },
+  { key: 'sp500',       label: 'S&P 500',      approx: '500',  subsetOf: ['russell1000', 'russell3000'] },
+  { key: 'sp400',       label: 'S&P 400',      approx: '400',  subsetOf: ['russell3000'] },
+  { key: 'russell1000', label: 'Russell 1000', approx: '1k',   subsetOf: ['russell3000'] },
+  { key: 'russell3000', label: 'Russell 3000', approx: '2.6k', subsetOf: [] },
+  { key: 'micro',       label: 'Micro-caps',   approx: '1.3k', subsetOf: [] },
+  { key: 'etf',         label: 'ETFs',         approx: '370',  subsetOf: [] },
+];
+const BROAD_SET = ['curated', 'sp500', 'sp400', 'russell3000', 'micro', 'etf'];
+// Migrate the old single-mode preference (sepa_mode_v3) to component sets.
+const LEGACY_MODE_MAP: Record<string, string[]> = {
+  broad: BROAD_SET,
+  expanded: ['curated', 'sp500'],
+  all_us: ['russell3000', 'micro'],
+  russell1000: ['russell1000'],
+  russell3000: ['russell3000'],
+  sp500: ['sp500'],
+  curated: ['curated'],
+};
+
 /**
  * SepaHero — top strip with market state, scan freshness, key counts, actions.
  * Color-coded market gate makes "should I be long today?" instantly readable.
  */
 export function SepaHero({ data, scanning, onScan, onReload }: Props) {
   const [includeCatalyst, setIncludeCatalyst] = useState(true);
-  // Default universe is now 'broad' — Russell 3000 + micro-caps (IWC) + the
-  // broad ETF list (~3,600 names, ETFs included). User 2026-05-30 wanted the
-  // full universe by default ("it did not give full stack"). Key bumped
-  // v2 → v3 so the old sticky 'russell1000' preference doesn't override the
-  // new default. Switch back to russell1000 in the dropdown for fast scans.
-  const [universeMode, setUniverseMode] = useState<string>(
-    (typeof window !== 'undefined' && localStorage.getItem('sepa_mode_v3')) || 'broad'
-  );
+  // Universe is now a MULTI-select of building blocks (user 2026-05-30:
+  // "make the dropdown multiselect, remove overlaps"). Stored as a string[]
+  // of component keys; default = the full broad set. Migrates from the old
+  // single-mode preference. Key bumped v3 → v4 for the new shape.
+  const [components, setComponents] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return BROAD_SET;
+    const v4 = localStorage.getItem('sepa_universe_v4');
+    if (v4) return v4.split(',').filter(Boolean);
+    const v3 = localStorage.getItem('sepa_mode_v3');
+    if (v3 && LEGACY_MODE_MAP[v3]) return LEGACY_MODE_MAP[v3];
+    return BROAD_SET;
+  });
   useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('sepa_mode_v3', universeMode);
-  }, [universeMode]);
+    if (typeof window !== 'undefined') localStorage.setItem('sepa_universe_v4', components.join(','));
+  }, [components]);
+
+  const selectedSet = new Set(components);
+  const toggleComp = (key: string) =>
+    setComponents((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  // A selected component is "redundant" when a broader selected set already
+  // contains it (e.g. S&P 500 when Russell 3000 is on). We DIM it as a hint,
+  // but still send it: overlaps are removed by the backend's set-union dedup
+  // (each ticker scanned once), and the few names a subset has that the
+  // broader snapshot is missing — recent index adds — are still picked up.
+  const isRedundant = (c: UnivComp) =>
+    selectedSet.has(c.key) && c.subsetOf.some((s) => selectedSet.has(s));
+  // Send all selected components in canonical order; backend unions + dedups.
+  const effectiveMode =
+    UNIVERSE_COMPONENTS.filter((c) => selectedSet.has(c.key))
+      .map((c) => c.key)
+      .join(',') || 'curated';
 
   const mkt = data?.market_context;
   const mktKey = mkt?.label || 'mixed';
@@ -125,7 +171,7 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
         <button className="sepa-btn" onClick={onReload}>Reload</button>
         <button
           className="sepa-btn sepa-btn--primary"
-          onClick={() => onScan(false, { fast: true, mode: universeMode })}
+          onClick={() => onScan(false, { fast: true, mode: effectiveMode })}
           disabled={scanning}
           title="Joins cached weekend research with today's prices — typical 20-30s"
         >
@@ -133,7 +179,7 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
         </button>
         <button
           className="sepa-btn"
-          onClick={() => onScan(includeCatalyst, { mode: universeMode })}
+          onClick={() => onScan(includeCatalyst, { mode: effectiveMode })}
           disabled={scanning}
           title="Re-runs every per-symbol analysis from scratch. Slow."
         >
@@ -149,21 +195,48 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
           <span className="sepa-toggle__track"><span className="sepa-toggle__thumb" /></span>
           <span className="sepa-toggle__label">Include catalyst</span>
         </label>
-        <label className="sepa-mode-select">
-          <span className="eyebrow">Universe</span>
-          <select
-            value={universeMode}
-            onChange={(e) => setUniverseMode(e.target.value)}
-            disabled={scanning}
-          >
-            <option value="curated">Curated (~130)</option>
-            <option value="sp500">S&P 500 (~500)</option>
-            <option value="russell1000">Russell 1000 (~1000)</option>
-            <option value="russell3000">Russell 3000 (~2,600)</option>
-            <option value="broad">Broad — R3000 + Micro + ETFs (~3,600)</option>
-            <option value="expanded">Curated ∪ S&P 500</option>
-          </select>
-        </label>
+        <div className="sepa-univ">
+          <span className="eyebrow">Universe · mix &amp; match</span>
+          <div className="sepa-univ__chips">
+            {UNIVERSE_COMPONENTS.map((c) => {
+              const on = selectedSet.has(c.key);
+              const redundant = isRedundant(c);
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`sepa-chip ${on ? 'is-active' : ''} ${redundant ? 'sepa-univ__chip--redundant' : ''}`}
+                  onClick={() => toggleComp(c.key)}
+                  disabled={scanning}
+                  title={
+                    redundant
+                      ? `${c.label} is already inside a broader set you've selected — overlap removed, it won't be double-scanned.`
+                      : `~${c.approx} names. Tap to ${on ? 'remove' : 'add'}.`
+                  }
+                >
+                  {on ? '✓ ' : ''}{c.label}
+                  <span className="sepa-univ__n">{c.approx}</span>
+                  {redundant && <span className="sepa-univ__incl">⊂ incl</span>}
+                </button>
+              );
+            })}
+            <span className="sepa-univ__sep" />
+            <button
+              type="button"
+              className="sepa-chip sepa-univ__preset"
+              onClick={() => setComponents(BROAD_SET)}
+              disabled={scanning}
+              title="Select everything (the broad universe)"
+            >★ All</button>
+            <button
+              type="button"
+              className="sepa-chip sepa-univ__preset"
+              onClick={() => setComponents(['russell1000'])}
+              disabled={scanning}
+              title="Russell 1000 only — fastest scans"
+            >⚡ Fast</button>
+          </div>
+        </div>
       </div>
 
       {/* Research-cache banner removed — the heavy weekly batch auto-runs

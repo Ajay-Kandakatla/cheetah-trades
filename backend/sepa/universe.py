@@ -758,6 +758,33 @@ def fetch_broad() -> list[str]:
     return merged
 
 
+# Orthogonal universe building blocks → fetcher. Used by the multi-select
+# path in load_universe: the user picks any combination and we union + dedup
+# (overlaps removed). Defined here, after every fetcher, so the direct
+# function references resolve.
+def _fetch_component(name: str) -> list[str]:
+    fetchers = {
+        "curated":     lambda: list(UNIVERSE),
+        "sp500":       fetch_sp500,
+        "sp400":       fetch_sp400,
+        "russell1000": fetch_russell1000,
+        "russell3000": fetch_russell3000,
+        "micro":       fetch_microcap,
+        "microcap":    fetch_microcap,
+        "etf":         fetch_etf_universe,
+        "etfs":        fetch_etf_universe,
+    }
+    fn = fetchers.get(name)
+    if fn is None:
+        log.warning("universe: unknown component '%s' — skipping", name)
+        return []
+    try:
+        return fn()
+    except Exception as exc:
+        log.warning("universe: component '%s' failed (%s) — skipping", name, exc)
+        return []
+
+
 def load_universe(mode: str | None = None) -> list[str]:
     """Resolve the active universe.
 
@@ -786,6 +813,21 @@ def load_universe(mode: str | None = None) -> list[str]:
         return _with_benchmarks(syms)
 
     selected = (mode or os.getenv("SEPA_UNIVERSE_MODE") or "curated").lower()
+
+    # Multi-select: a comma-separated list of components (e.g.
+    # "russell3000,etf,micro"). Union each + dedup so overlaps are removed.
+    # The frontend already strips subset-covered components, but the set
+    # union here makes dedup correct regardless of what's sent.
+    if "," in selected:
+        combined: list[str] = []
+        seen_parts: set[str] = set()
+        for part in (p.strip() for p in selected.split(",")):
+            if part and part not in seen_parts:
+                seen_parts.add(part)
+                combined.extend(_fetch_component(part))
+        log.info("universe: multi-select [%s] -> %d unique (pre-benchmark)",
+                 selected, len(dict.fromkeys(combined)))
+        return _with_benchmarks(combined)
 
     if selected == "sp500":
         return _with_benchmarks(fetch_sp500())

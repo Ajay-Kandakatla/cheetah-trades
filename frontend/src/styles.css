@@ -1828,6 +1828,27 @@ tr:last-child td { border-bottom: none; }
   padding: 6px 10px; font: 500 0.82rem var(--sans, system-ui);
   background: var(--bg-raised); border: 1px solid var(--hairline-strong); border-radius: 3px;
 }
+
+/* ── Universe multi-select (mix & match building blocks) ─────────────────── */
+.sepa-univ { display: flex; flex-direction: column; gap: 4px; }
+.sepa-univ__chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 320px; }
+.sepa-univ .sepa-chip {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 3px 8px; font-size: 0.72rem;
+}
+/* The approx-count sub-label inside each chip. */
+.sepa-univ__n { font-size: 0.58rem; opacity: 0.6; }
+/* Redundant = a selected subset already covered by a broader selected set.
+   Dim it and tag "⊂ incl" so the overlap is visibly removed (not scanned
+   twice). Still toggleable. */
+.sepa-univ__chip--redundant { opacity: 0.5; }
+.sepa-univ__incl {
+  font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--cm-slate); border: 1px solid var(--rule, #555);
+  border-radius: 2px; padding: 0 3px;
+}
+.sepa-univ__sep { width: 1px; height: 16px; background: var(--rule, var(--hairline)); margin: 0 2px; }
+.sepa-univ__preset { font-size: 0.7rem; }
 .sepa-btn--ghost { background: transparent; border: 1px solid var(--hairline); color: var(--ink); }
 .sepa-btn--ghost:hover:not(:disabled) { background: var(--bg-sunken); }
 
