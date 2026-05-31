@@ -31,11 +31,14 @@ export function RaviStrategyPage() {
 
   const run = useCallback(() => {
     setLoading(true); setErr(null);
-    const u = new URL(`${API}/ravi/scan`);
-    u.searchParams.set('min_beta', String(minBeta));
-    u.searchParams.set('require_trending', String(trending));
-    u.searchParams.set('mode', mode);
-    fetch(u.toString())
+    // URLSearchParams (not new URL()) — API is a relative/proxied base in
+    // prod, and new URL() throws "Invalid URL" without an absolute base.
+    const qs = new URLSearchParams({
+      min_beta: String(minBeta),
+      require_trending: String(trending),
+      mode,
+    });
+    fetch(`${API}/ravi/scan?${qs.toString()}`)
       .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then((j) => setRows(j.rows || []))
       .catch((e) => setErr(String(e?.message || e)))
