@@ -48,6 +48,9 @@ UNIVERSE: list[str] = [
     "CEG", "VST", "GEV", "ETN", "PH", "CAT", "DE", "FSLR", "ENPH",
     # China ADR growth
     "BABA", "PDD", "JD", "NIO", "LI", "XPEV",
+    # Other foreign ADRs — NOT in the US Russell indices (Canada/EU/Asia
+    # domiciled), so they only reach the scan via this curated list.
+    "BB",
     # Small/mid momentum movers (edit freely)
     "RKLB", "ACHR", "JOBY", "SERV", "OKLO", "LUNR", "ASTS", "AEHR", "IONQ",
     "RGTI", "QBTS", "BBAI", "SOUN", "TEM", "HIMS", "DUOL", "RBLX", "DKNG",
