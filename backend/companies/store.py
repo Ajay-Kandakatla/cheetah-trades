@@ -109,3 +109,55 @@ def get(symbol: str, force: bool = False) -> dict:
 
     # Last resort — return a stub
     return {"symbol": symbol, "summary": None, "refreshed_at": None}
+
+
+def backfill_descriptions(
+    symbols: list[str],
+    delay_sec: float = 1.5,
+    max_fetch: Optional[int] = None,
+) -> dict:
+    """Throttled backfill of company info for symbols missing a summary.
+
+    The broad universe (3,600+ names) floods yfinance and Yahoo rate-limits it,
+    so per-page fetches fail and descriptions stay blank. This walks the list
+    SLOWLY (delay_sec between calls) and only fetches symbols that don't already
+    have a good cached summary — so it's resumable and won't re-hammer names
+    that already filled in. On a rate-limit hit it backs off and keeps going.
+
+    Returns {checked, fetched, still_missing, rate_limited}.
+    """
+    import time
+    db = _get_db()
+    checked = fetched = still_missing = rate_limited = 0
+    for raw in symbols:
+        if max_fetch and fetched >= max_fetch:
+            break
+        sym = (raw or "").upper().strip()
+        if not sym:
+            continue
+        cached = db.companies.find_one({"symbol": sym}) if db is not None else None
+        if cached and (cached.get("summary") or "").strip():
+            continue                      # already good — skip
+        checked += 1
+        info = _fetch_from_yfinance(sym)
+        if info and (info.get("summary") or "").strip():
+            doc = {"symbol": sym, **info, "refreshed_at": _now()}
+            if db is not None:
+                db.companies.update_one(
+                    {"symbol": sym},
+                    {"$set": doc, "$setOnInsert": {"created_at": _now()}},
+                    upsert=True,
+                )
+            fetched += 1
+        else:
+            still_missing += 1
+            if info is None:
+                rate_limited += 1
+                time.sleep(delay_sec * 4)   # extra cool-down after a likely 429
+        time.sleep(delay_sec)
+    out = {
+        "checked": checked, "fetched": fetched,
+        "still_missing": still_missing, "rate_limited": rate_limited,
+    }
+    log.info("backfill_descriptions: %s", out)
+    return out
