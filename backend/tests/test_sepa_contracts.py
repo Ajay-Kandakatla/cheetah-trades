@@ -163,6 +163,67 @@ def test_vcp_constants_locked():
     assert "depths[-1] <= depths[0] * 0.5" in source  # final ≤ half the first
 
 
+# ============================================================================
+# Distribution methodology contract (2026-05-31).
+# Spec + rationale: docs/sepa/distribution_methodology.md
+#
+# Decision: per-stock distribution is VOLUME-PRIMARY (up/down $-vol ratio +
+# CMF). The distribution-DAY count is O'Neil's MARKET-timing tool, not a
+# per-stock read, so it is NOT the trigger — it survives only as a slow-bleed
+# BACKSTOP, and only when the volume balance is also negative (ratio < 1).
+# These tests lock that decision so the old `dist_days >= 4` hard gate (which
+# falsely flagged accumulating names like ARM as S3) can never silently return.
+# ============================================================================
+def test_distribution_is_volume_primary_not_day_count():
+    from sepa import volume as V
+    # ARM-class: 8 distribution days, but up/down ratio 1.92 + CMF +0.32 = clear
+    # accumulation. Old count gate -> 'distributing' (false S3). Now -> accumulating.
+    assert V._strength_label(1.92, 0.32, 8) == "accumulating"
+
+
+def test_high_day_count_with_positive_volume_is_not_distribution():
+    from sepa import volume as V
+    # Regression guard: a high count ALONE must not trip distribution when the
+    # volume balance is positive (ratio >= 1) — the backstop is gated on ratio<1.
+    assert V._strength_label(1.5, None, 9) != "distributing"
+    assert V._strength_label(1.05, 0.0, 12) != "distributing"
+
+
+def test_old_four_day_distribution_gate_is_removed():
+    from sepa import volume as V
+    # Under the removed `dist_days >= 4` gate this was 'distributing'. With
+    # positive volume it must now read as accumulation.
+    assert V._strength_label(1.5, 0.2, 5) == "accumulating"
+
+
+def test_volume_outflow_flags_distribution():
+    from sepa import volume as V
+    assert V._strength_label(0.60, -0.20, 5) == "distributing"   # ratio <= 0.70
+    assert V._strength_label(0.50, None, 2) == "distributing"
+    assert V._strength_label(1.2, -0.15, 1) == "distributing"    # CMF outflow
+
+
+def test_slow_bleed_backstop_is_volume_gated():
+    from sepa import volume as V
+    assert V._strength_label(0.95, 0.0, 8) == "distributing"     # persistent + ratio<1
+    assert V._strength_label(0.95, 0.0, 7) != "distributing"     # below the count
+    assert V._strength_label(1.10, 0.0, 8) != "distributing"     # ratio>=1 -> not gated
+
+
+def test_distribution_constants_locked():
+    import inspect
+    from sepa import volume as V
+    assert V.DIST_DAYS_BACKSTOP == 8
+    assert V.DIST_RATIO_THRESHOLD == 0.70
+    src = inspect.getsource(V._strength_label)
+    # Strip comments — a comment legitimately documents the removed gate; we
+    # only forbid it from returning as LIVE code.
+    code_only = "\n".join(ln.split("#", 1)[0] for ln in src.splitlines())
+    assert "dist_days >= 4" not in code_only, "the removed count-based distribution gate must not return as live code"
+    assert "DIST_DAYS_BACKSTOP" in code_only, "the slow-bleed backstop must use the named constant"
+    assert "ratio < 1.0" in code_only, "the backstop must stay volume-gated (ratio < 1.0)"
+
+
 def test_trend_template_8_gates_locked():
     """The 8 Trend Template gates must have the exact dict keys per §6."""
     import pandas as pd

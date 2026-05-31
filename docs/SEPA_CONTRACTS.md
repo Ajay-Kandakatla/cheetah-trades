@@ -417,6 +417,13 @@ Stage 3 (Topping) when **either** of the following volume signals fires:
 - `vol.cmf_signal == 'outflow'` — Chaikin Money Flow signals
   institutional money exiting
 
+> **How `accumulation_strength == 'distributing'` is decided** is its own
+> locked spec: **`docs/sepa/distribution_methodology.md`** (v1.0, 2026-05-31).
+> Short version: distribution is **volume-primary** (up/down vol ratio + CMF),
+> not a distribution-day count — the count is only a `ratio < 1` gated
+> backstop. Enforced by the `test_distribution_*` cases in
+> `test_sepa_contracts.py`.
+
 Downgrade payloads include two extra keys (`volume_disagreement: True`,
 `volume_reason: <human-readable explanation citing the book pages>`)
 so a downstream caller can surface WHY a name was reclassified.
