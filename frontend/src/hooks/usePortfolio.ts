@@ -381,3 +381,62 @@ export async function clearCsvImport(account?: string): Promise<{ ok: boolean; r
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// useDropAttribution — is each holding's move driven by the MARKET, its
+// SECTOR, or the STOCK itself? Backend: /portfolio/attribution (CAPM split).
+// ────────────────────────────────────────────────────────────────────────
+export type AttrVerdict = 'macro' | 'sector' | 'stock' | 'quiet';
+
+export type AttributionRow = {
+  symbol: string;
+  window_days: number;
+  move_pct: number;
+  notable: boolean;
+  market_move_pct: number;
+  sector_move_pct: number | null;
+  sector_etf: string;
+  sector_name: string | null;
+  beta_market: number | null;
+  expected_from_market_pct: number;
+  explained_by_market_pct: number;
+  explained_by_sector_pct: number;
+  idiosyncratic_pct: number;
+  verdict: AttrVerdict;
+  confidence: number;
+  summary: string;
+};
+
+export type AttributionResponse = {
+  rows: AttributionRow[];
+  counts: { macro: number; sector: number; stock: number };
+  n: number;
+  window_days: number;
+};
+
+export function useDropAttribution(window: number = 5, enabled: boolean = true) {
+  const [data, setData] = useState<AttributionResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/portfolio/attribution?window=${window}`, { credentials: 'include' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setData((await r.json()) as AttributionResponse);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [window]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    load();
+  }, [enabled, load]);
+
+  return { data, loading, error, reload: load };
+}
