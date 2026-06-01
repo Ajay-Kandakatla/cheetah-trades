@@ -42,6 +42,11 @@
 */5    9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli alerts
 0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m sepa.cli alerts
 #
+# Portfolio drop-attribution — 4:40pm ET weekdays, after the 4:30 fast-scan
+# refreshes today's close. Flags holdings dropping on their OWN (not the
+# market/sector) so the user knows which names need a news check.
+40     16    *    *    1-5  /usr/local/bin/python -c "from portfolio.alerts import run_drop_attribution_default as f; f()"
+#
 # Hourly VCP watcher — every hour during market hours. Runs a fast scan,
 # diffs against the previous run, and fires WhatsApp + browser notifications
 # only on NEWLY discovered VCP setups (avoids spamming on the same names).

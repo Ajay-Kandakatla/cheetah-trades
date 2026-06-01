@@ -538,3 +538,55 @@ def run_eod_brief_default() -> dict:
 
 def run_eod_escalate_default() -> dict:
     return eod_escalate(_resolve_owner())
+
+
+# --------------------------------------------------------------------------
+# Drop attribution — post-close, flag holdings dropping on their OWN (not the
+# market/sector), so the user knows which names need a news check.
+# --------------------------------------------------------------------------
+DROP_ATTR_ALERT_PCT = -3.0   # only flag stock-specific 1-day drops worse than this
+
+
+def eod_drop_attribution(user_email: str) -> dict:
+    """Flag holdings whose drop is STOCK-SPECIFIC (market & sector don't
+    explain it). One consolidated push so the user can separate 'the company
+    has a problem' from 'just riding a red tape'."""
+    if not user_email:
+        return {"ok": False, "reason": "no user_email"}
+    from portfolio import drop_attribution as da
+
+    scanned = 0
+    flagged: list[dict] = []
+    for holding, _meta in _load_positions(user_email):
+        sym = (holding.get("ticker") or "").upper()
+        if not sym:
+            continue
+        scanned += 1
+        a = da.attribute(sym, window_days=1)
+        if a and a["verdict"] == "stock" and a["move_pct"] <= DROP_ATTR_ALERT_PCT:
+            flagged.append(a)
+
+    if not flagged:
+        log.info("portfolio.alerts: drop_attribution user=%s scanned=%d flagged=0", user_email, scanned)
+        return {"ok": True, "scanned": scanned, "flagged": 0}
+
+    flagged.sort(key=lambda x: x["move_pct"])
+    worst = flagged[0]
+    names = ", ".join(f"{a['symbol']} {a['move_pct']:+.1f}%" for a in flagged[:5])
+    n = len(flagged)
+    payload = {
+        "title": f"🎯 {n} holding{'s' if n != 1 else ''} dropping on their own",
+        "body": f"{names} — not the market. ~{worst['idiosyncratic_pct']:.0f}% of "
+                f"{worst['symbol']}'s drop is stock-specific. Check the news.",
+        "tag": "portfolio-drop-attr",
+        "url": "/portfolio",
+    }
+    result = _send_push(user_email, payload, kind="portfolio-drop-attr")
+    log.info("portfolio.alerts: drop_attribution user=%s scanned=%d flagged=%d pushed=%s",
+             user_email, scanned, n, (result or {}).get("sent", 0))
+    return {"ok": True, "scanned": scanned, "flagged": n,
+            "names": [a["symbol"] for a in flagged]}
+
+
+def run_drop_attribution_default() -> dict:
+    return eod_drop_attribution(_resolve_owner())
