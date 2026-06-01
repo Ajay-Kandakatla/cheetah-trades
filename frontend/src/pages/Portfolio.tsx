@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { DropAttributionPanel } from '../components/DropAttributionPanel';
+import { PortfolioBetaPanel } from '../components/PortfolioBetaPanel';
 import {
   useStatus,
   useHoldings,
@@ -574,6 +575,8 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
       </section>
 
       <DropAttributionPanel />
+
+      <PortfolioBetaPanel />
 
       {/* Alerts — manual trigger + result summary. Cron handles the scheduled
           runs (every 15 min during market hours + 3:00 PM + 3:30 PM EOD).

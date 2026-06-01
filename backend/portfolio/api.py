@@ -498,6 +498,17 @@ async def portfolio_attribution(
     return await asyncio.to_thread(da.attribute_portfolio, e, window)
 
 
+@router.get("/portfolio/betas")
+async def portfolio_betas_get(user_email: str = Depends(current_user_email)):
+    """Per-holding beta (market sensitivity) + expected -1%/-3% day move, plus
+    a $-weighted blended portfolio beta. Individual stocks only. See
+    portfolio/drop_attribution.py."""
+    e = _require_portfolio_access(user_email)
+    import asyncio
+    from portfolio import drop_attribution as da
+    return await asyncio.to_thread(da.portfolio_betas, e)
+
+
 @router.get("/portfolio/holdings")
 async def portfolio_holdings_get(
     refresh: bool = Query(False),

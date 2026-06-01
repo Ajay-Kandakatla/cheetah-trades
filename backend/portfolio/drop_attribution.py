@@ -206,3 +206,83 @@ def attribute_portfolio(user_email: str, window_days: int = 5) -> dict:
         "stock":  sum(1 for r in rows if r["verdict"] == "stock"),
     }
     return {"rows": rows, "counts": counts, "n": len(rows), "window_days": window_days}
+
+
+# --------------------------------------------------------------------------
+# Beta profile — "what to expect on a down day" per holding + blended.
+# Reuses sepa.ravi._beta. Beta = how much a stock moves per 1% market move.
+# --------------------------------------------------------------------------
+TECH_ETF = "QQQ"
+
+
+def _round2(v: Optional[float]) -> Optional[float]:
+    return round(float(v), 2) if v is not None else None
+
+
+def _beta_profile(symbol: str, market_lr, tech_lr) -> Optional[dict]:
+    df = prices.load_prices(symbol)
+    if df is None or len(df) < 70:
+        return None
+    lr = np.log(df["close"]).diff()
+    return {
+        "beta_spy_60": _round2(_beta(lr, market_lr, 60)),    # recent sensitivity
+        "beta_spy_1y": _round2(_beta(lr, market_lr, 252)),   # steadier
+        "beta_qqx_60": _round2(_beta(lr, tech_lr, 60)),
+        "last_price":  round(float(df["close"].iloc[-1]), 2),
+    }
+
+
+def portfolio_betas(user_email: str) -> dict:
+    """Per-holding beta (vs SPY 60d/1y + QQX) + expected move on a -1%/-3% day,
+    plus a $-weighted blended portfolio beta. Individual stocks only."""
+    from portfolio import store as pstore
+    from sepa import company_names
+
+    spy = prices.load_prices(MARKET_ETF)
+    qqq = prices.load_prices(TECH_ETF)
+    if spy is None:
+        return {"rows": [], "n": 0, "total_value": 0,
+                "blended_beta_60d": None, "blended_beta_1y": None}
+    mlr = np.log(spy["close"]).diff()
+    tlr = np.log(qqq["close"]).diff() if qqq is not None else mlr
+
+    rows: list[dict] = []
+    total = 0.0
+    seen = set()
+    for h in pstore.list_holdings(user_email):
+        sym = (h.get("ticker") or "").upper()
+        if not sym or sym in seen or not is_individual_stock(sym):
+            continue
+        seen.add(sym)
+        prof = _beta_profile(sym, mlr, tlr)
+        if prof is None:
+            continue
+        shares = float(h.get("shares") or 0)
+        value = shares * (prof["last_price"] or 0)
+        b60 = prof["beta_spy_60"]
+        rows.append({
+            "symbol": sym,
+            "name": company_names.name_for(sym) or sym,
+            **prof,
+            "shares": shares,
+            "market_value": round(value),
+            "expect_down_1pct": _round2(-b60) if b60 is not None else None,
+            "expect_down_3pct": _round2(-b60 * 3) if b60 is not None else None,
+        })
+        total += value
+
+    rows.sort(key=lambda r: -(r["beta_spy_60"] or 0))
+
+    def _blended(key: str) -> Optional[float]:
+        pairs = [(r["market_value"], r[key]) for r in rows
+                 if r.get(key) is not None and r.get("market_value")]
+        tv = sum(v for v, _ in pairs)
+        return round(sum(v * b for v, b in pairs) / tv, 2) if tv else None
+
+    return {
+        "rows": rows,
+        "n": len(rows),
+        "total_value": round(total),
+        "blended_beta_60d": _blended("beta_spy_60"),
+        "blended_beta_1y": _blended("beta_spy_1y"),
+    }

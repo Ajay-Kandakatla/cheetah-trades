@@ -440,3 +440,52 @@ export function useDropAttribution(window: number = 5, enabled: boolean = true) 
 
   return { data, loading, error, reload: load };
 }
+
+// ────────────────────────────────────────────────────────────────────────
+// usePortfolioBetas — per-holding market sensitivity (beta) + expected
+// down-day move + a blended portfolio beta. Backend: /portfolio/betas.
+// ────────────────────────────────────────────────────────────────────────
+export type BetaRow = {
+  symbol: string;
+  name: string;
+  beta_spy_60: number | null;
+  beta_spy_1y: number | null;
+  beta_qqx_60: number | null;
+  last_price: number;
+  shares: number;
+  market_value: number;
+  expect_down_1pct: number | null;   // expected % move on a SPY -1% day
+  expect_down_3pct: number | null;
+};
+
+export type BetaResponse = {
+  rows: BetaRow[];
+  n: number;
+  total_value: number;
+  blended_beta_60d: number | null;
+  blended_beta_1y: number | null;
+};
+
+export function usePortfolioBetas(enabled: boolean = true) {
+  const [data, setData] = useState<BetaResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/portfolio/betas`, { credentials: 'include' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setData((await r.json()) as BetaResponse);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (enabled) load(); }, [enabled, load]);
+
+  return { data, loading, error, reload: load };
+}
