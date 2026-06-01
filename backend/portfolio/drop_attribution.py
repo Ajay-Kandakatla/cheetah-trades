@@ -60,6 +60,34 @@ SECTOR_ETF = {
 }
 
 
+_CASH_SYMS = {"CASH", "SPAXX", "FDRXX", "FZFXX", "FNSXX", "FCASH", "SPRXX"}
+
+
+def is_individual_stock(symbol: str) -> bool:
+    """True only for individual equities — excludes mutual funds, ETFs, CUSIP
+    fund holdings, and cash. The macro/sector attribution is meaningless for an
+    index/bond fund, so the portfolio analysis only runs on real stocks.
+
+      ARM/BB/IONQ → True;  FTIHX/FXNAX (5-letter ·X mutual funds) → False;
+      09260L455 (CUSIP target-date fund) → False;  cash/money-market → False.
+    """
+    s = (symbol or "").upper().strip()
+    if not s or s in _CASH_SYMS or "CASH" in s:
+        return False
+    if len(s) == 9 and any(c.isdigit() for c in s):     # CUSIP, not a ticker
+        return False
+    if len(s) == 5 and s.isalpha() and s.endswith("X"):  # US mutual fund convention
+        return False
+    try:
+        from sepa import etf_info
+        d = etf_info.etf_data_for(s)
+        if d and d.get("is_etf"):                        # ETFs / yfinance-detected funds
+            return False
+    except Exception:
+        pass
+    return True
+
+
 def _sector_etf_for(symbol: str) -> tuple[str, Optional[str]]:
     """Return (sector_etf, sector_name) for a stock. Uses the cached company
     sector; falls back to QQQ when unknown."""
@@ -167,7 +195,7 @@ def attribute_portfolio(user_email: str, window_days: int = 5) -> dict:
     seen = set()
     for h in holdings:
         t = (h.get("ticker") or "").upper()
-        if t and t not in seen:
+        if t and t not in seen and is_individual_stock(t):   # stocks only — skip funds/cash
             seen.add(t)
             syms.append(t)
     rows = [a for s in syms if (a := attribute(s, window_days)) is not None]

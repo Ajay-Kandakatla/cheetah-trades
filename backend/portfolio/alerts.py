@@ -559,7 +559,7 @@ def eod_drop_attribution(user_email: str) -> dict:
     flagged: list[dict] = []
     for holding, _meta in _load_positions(user_email):
         sym = (holding.get("ticker") or "").upper()
-        if not sym:
+        if not sym or not da.is_individual_stock(sym):   # stocks only — skip funds/cash
             continue
         scanned += 1
         a = da.attribute(sym, window_days=1)
