@@ -484,6 +484,44 @@ def test_sponsorship_penalty_tiers_locked():
         "sponsorship penalty must be applied in both full + fast scan score paths"
 
 
+# ============================================================================
+# Company net-worth / shareholders'-equity headline (2026-06-01).
+# Spec: docs/sepa/fundamentals_headline.md
+# This block has silently vanished THREE times via rebases + a stale,
+# schema-versioned analysis cache. These lock it in both modules that surface
+# it (detail-page CompanyHeadline + the SEPA card chips) so it can't drop again.
+# Source-level / offline asserts — no yfinance/network needed.
+# ============================================================================
+def test_fundamental_headline_keys_locked():
+    import inspect
+    from sepa import stock_analysis as SA
+    src = inspect.getsource(SA.fundamental_panel)
+    assert '"headline"' in src, "fundamental_panel must return a `headline` block"
+    for key in ("market_cap", "shareholder_equity", "book_value_per_share",
+                "revenue_ttm", "enterprise_value"):
+        assert key in src, f"fundamental.headline must include {key}"
+
+
+def test_analysis_schema_version_bumped_for_headline():
+    """SCHEMA_VERSION must be bumped when fundamental fields change so the cache
+    invalidates instead of serving headline-less blobs. Locked at the bump
+    (>= 4) that restored the headline after the cache served stale shapes."""
+    from sepa import stock_analysis as SA
+    assert isinstance(SA.SCHEMA_VERSION, int) and SA.SCHEMA_VERSION >= 4
+
+
+def test_card_enrichment_surfaces_headline():
+    """Card enrichment must surface net-worth/equity so the SEPA cards show it,
+    not just the detail page."""
+    import inspect
+    from sepa import card_enrichment as CE
+    assert hasattr(CE, "_extract_headline"), "card_enrichment must extract the headline"
+    esrc = inspect.getsource(CE._extract_headline)
+    assert "market_cap" in esrc and "shareholder_equity" in esrc
+    enrich_src = inspect.getsource(CE.enrich)
+    assert '"headline"' in enrich_src, "enrich() payload + cache must carry `headline`"
+
+
 def test_candidate_detail_endpoint_shape():
     """/sepa/candidate/{symbol} returns the §3 wrapper shape."""
     try:
