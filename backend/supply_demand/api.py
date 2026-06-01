@@ -14,9 +14,33 @@ from . import whales as whales_mod
 from . import whales_13d as whales_13d_mod
 from . import flow as flow_mod
 from . import equity_premium as equity_premium_mod
+from . import stock_supply_demand as stocks_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
+
+
+@router.get("/supply-demand/stocks")
+async def get_stock_supply_demand(
+    mode: str = Query("broad", description="universe: broad | russell1000 | curated | sp500 …"),
+    min_dollar_vol: float = Query(3_000_000.0, ge=0, description="drop tape thinner than this avg $/day"),
+    state: Optional[str] = Query(None, description="filter: demand | supply | churning"),
+    limit: int = Query(300, ge=1, le=4000),
+    force: bool = Query(False, description="bypass the cache and recompute"),
+):
+    """Per-stock supply/demand screen — Minervini Ch.10 (pp.204-210).
+
+    Scores every name in `mode`'s universe on overhead supply, supply
+    absorption (volume dry-up), demand (accumulation), and distance from the
+    52-week high. Cached ~3h + warmed by cron (the broad pass is ~3.7k frames),
+    so the first cold call can take a while; subsequent calls are instant.
+    """
+    import asyncio
+    data = await asyncio.to_thread(stocks_mod.screen, mode, min_dollar_vol, None, force)
+    rows = data["rows"]
+    if state in ("demand", "supply", "churning"):
+        rows = [r for r in rows if r["state"] == state]
+    return {**data, "rows": rows[:limit], "n_shown": min(len(rows), limit)}
 
 
 @router.get("/supply-demand/graph")
