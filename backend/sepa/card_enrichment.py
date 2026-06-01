@@ -115,6 +115,18 @@ def _extract_valuation(analysis_blob: dict) -> dict:
     }
 
 
+def _extract_headline(analysis_blob: dict) -> dict:
+    """Pull the company net-worth / shareholders'-equity figures (from
+    ``.fundamental.headline``) so the card can show them next to the valuation
+    chip — the same numbers the detail-page CompanyHeadline strip shows."""
+    fundamental = (analysis_blob or {}).get("fundamental") or {}
+    head = fundamental.get("headline") or {}
+    return {
+        "market_cap":          head.get("market_cap"),          # "current net worth"
+        "shareholder_equity":  head.get("shareholder_equity"),  # book equity
+    }
+
+
 # --------------------------------------------------------------------------
 # Public entry — compute or fetch from cache
 # --------------------------------------------------------------------------
@@ -154,21 +166,28 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
     if coll is not None and not force_refresh:
         try:
             doc = coll.find_one({"symbol": sym})
-            if doc and (now - (doc.get("cached_at") or 0)) < _CACHE_TTL_SEC:
+            # The `doc.get("headline") is not None` guard forces a recompute for
+            # cards cached BEFORE the net-worth/equity headline was added, so it
+            # shows up immediately instead of waiting out the 24h TTL.
+            if (doc and (now - (doc.get("cached_at") or 0)) < _CACHE_TTL_SEC
+                    and doc.get("headline") is not None):
                 return {
                     "symbol":     sym,
                     "cached_at":  doc.get("cached_at"),
                     "fresh":      False,
                     "insider":    doc.get("insider") or {},
                     "valuation":  doc.get("valuation") or {},
+                    "headline":   doc.get("headline") or {},
                 }
         except Exception as exc:
             log.warning("card_enrichment cache read failed for %s: %s", sym, exc)
 
     # Compute both signals in parallel.
     insider_task = asyncio.create_task(_compute_insider(sym))
-    valuation_task = asyncio.create_task(_compute_valuation(sym))
-    insider, valuation = await asyncio.gather(insider_task, valuation_task)
+    fundamentals_task = asyncio.create_task(_compute_fundamentals(sym))
+    insider, fundamentals = await asyncio.gather(insider_task, fundamentals_task)
+    valuation = (fundamentals or {}).get("valuation") or {}
+    headline = (fundamentals or {}).get("headline") or {}
 
     payload = {
         "symbol":     sym,
@@ -176,6 +195,7 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
         "fresh":      True,
         "insider":    insider,
         "valuation":  valuation,
+        "headline":   headline,
     }
 
     # Best-effort cache write. A failure here doesn't break the response —
@@ -189,6 +209,7 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
                     "symbol":     sym,
                     "insider":    insider,
                     "valuation":  valuation,
+                    "headline":   headline,
                     "cached_at":  now,
                 }},
                 upsert=True,
@@ -216,9 +237,9 @@ async def _compute_insider(sym: str) -> dict:
         return {"cluster_buy": False, "unique_insiders_30d": 0, "form4_count_30d": 0}
 
 
-async def _compute_valuation(sym: str) -> dict:
-    """Compute the valuation signal from the stock-analysis blob. Slim
-    view: just the chip's bucket + a few facts for the tooltip."""
+async def _compute_fundamentals(sym: str) -> dict:
+    """Compute the valuation signal + the net-worth/equity headline from a
+    SINGLE stock-analysis fetch. Returns {"valuation": {...}, "headline": {...}}."""
     try:
         # ``analysis_for`` is sync — wrap with to_thread so the
         # enrichment endpoint stays cooperative. Caching of the full
@@ -226,7 +247,10 @@ async def _compute_valuation(sym: str) -> dict:
         # versioned, 60-min TTL).
         from sepa.stock_analysis import analysis_for
         analysis = await asyncio.to_thread(analysis_for, sym, False)
-        return _extract_valuation(analysis or {})
+        return {
+            "valuation": _extract_valuation(analysis or {}),
+            "headline":  _extract_headline(analysis or {}),
+        }
     except Exception as exc:
-        log.warning("card_enrichment._compute_valuation(%s) failed: %s", sym, exc)
-        return {"score": None, "signal": None}
+        log.warning("card_enrichment._compute_fundamentals(%s) failed: %s", sym, exc)
+        return {"valuation": {"score": None, "signal": None}, "headline": {}}

@@ -37,6 +37,8 @@ export function CardEnrichmentChips({ symbol }: Props) {
   const valuationLabel = data?.valuation?.label;
   const pe = data?.valuation?.pe;
   const peg = data?.valuation?.peg;
+  const netWorth = data?.headline?.market_cap;
+  const equity = data?.headline?.shareholder_equity;
 
   return (
     <div ref={ref} style={{ display: 'contents' }}>
@@ -81,8 +83,35 @@ export function CardEnrichmentChips({ symbol }: Props) {
                                          '⚖️'} {valuationLabel || valuation}
         </Link>
       )}
+      {netWorth != null && (
+        <Link
+          to={`/sepa/${symbol}#fundamentals`}
+          className="val-chip val-fair"
+          title={`Current net worth (market capitalization): ${fmtBig(netWorth)} — what the market is paying for the whole company right now.`}
+        >
+          💵 {fmtBig(netWorth)} net worth
+        </Link>
+      )}
+      {equity != null && (
+        <Link
+          to={`/sepa/${symbol}#fundamentals`}
+          className="val-chip val-fair"
+          title={`Shareholders' equity (book value): ${fmtBig(equity)} — total assets minus liabilities.`}
+        >
+          🏛️ {fmtBig(equity)} equity
+        </Link>
+      )}
     </div>
   );
+}
+
+function fmtBig(v: number | null | undefined): string {
+  if (v == null) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+  if (a >= 1e9)  return `$${(v / 1e9).toFixed(1)}B`;
+  if (a >= 1e6)  return `$${(v / 1e6).toFixed(0)}M`;
+  return `$${v.toFixed(0)}`;
 }
 
 function tooltipFor(label: string | null | undefined, pe: number | null | undefined,

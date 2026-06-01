@@ -34,6 +34,10 @@ export type CardEnrichment = {
     psales?:      number | null;
     peg?:         number | null;
   };
+  headline?: {
+    market_cap?:          number | null;   // "current net worth"
+    shareholder_equity?:  number | null;   // book equity
+  };
 };
 
 export function useCardEnrichment(symbol: string | null | undefined) {
