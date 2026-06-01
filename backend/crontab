@@ -70,6 +70,12 @@
 # the Morning Brief reads from cache (6h TTL aligns with this).
 0      6     *    *    *    /usr/local/bin/python -m supply_demand.tracker --force
 #
+# Per-stock supply/demand screen (Minervini Ch.10) — warm the broad-universe
+# cache to Mongo after the 4:30pm fast-scan refreshes prices, so the Stocks tab
+# serves instantly. Weekdays 5:15pm ET + a Sunday 9pm catch-up.
+15     17    *    *    1-5  /usr/local/bin/python -m supply_demand.stock_supply_demand --mode broad
+0      21    *    *    0    /usr/local/bin/python -m supply_demand.stock_supply_demand --mode broad
+#
 # Catalysts — volume-spike alerts every 5 min during regular session
 # (9:30am–3:55pm ET, Mon-Fri). Each ticker fires AT MOST ONCE per session.
 # Sends WhatsApp via Twilio + records to Mongo so the UI can pop a

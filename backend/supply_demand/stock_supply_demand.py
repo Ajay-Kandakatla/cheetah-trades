@@ -32,7 +32,9 @@ Spec + page cites: docs/supply_demand/per_stock_methodology.md
 from __future__ import annotations
 
 import logging
+import os
 import time
+from datetime import datetime, timezone
 from typing import Optional
 
 import pandas as pd
@@ -51,10 +53,62 @@ DEEP_CORRECTION_PCT  = 50.0    # ≥50% below 52w high → deep correction, fail
 NEAR_HIGH_PCT        = 15.0    # within 15% of the 52w high → near new-high ground
 DIST_DAYS_HEAVY      = 8       # persistent distribution (matches volume.py backstop)
 
-# In-memory cache, keyed by (mode, min_dollar_vol). The screen is analytical,
-# not a live quote feed, so a multi-hour TTL + a daily cron warm is plenty.
+# Two-level cache, keyed by (mode, min_dollar_vol). L1 = in-process dict; L2 =
+# Mongo (so a cron warm in a SEPARATE process populates the cache the API
+# reads, and it survives API restarts). The screen is analytical, not a live
+# quote feed, so a multi-hour TTL + a daily cron warm is plenty.
 _CACHE_TTL_SEC = 3 * 60 * 60
 _cache: dict = {}
+
+
+def _cache_key(mode: str, min_dollar_vol: float) -> str:
+    return f"{mode}:{int(min_dollar_vol)}"
+
+
+def _cache_coll():
+    try:
+        from pymongo import MongoClient
+        url = os.getenv("MONGO_URL", "mongodb://mongo:27017")
+        db = os.getenv("MONGO_DB", "cheetah")
+        client = MongoClient(url, serverSelectionTimeoutMS=2000)
+        return client[db]["stock_supply_demand_cache"]
+    except Exception as exc:
+        log.warning("supply/demand cache mongo unavailable: %s", exc)
+        return None
+
+
+def _mongo_get(key: str) -> Optional[dict]:
+    coll = _cache_coll()
+    if coll is None:
+        return None
+    try:
+        doc = coll.find_one({"_id": key})
+        if not doc:
+            return None
+        ts = doc.get("cached_at")
+        if not isinstance(ts, datetime):
+            return None
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if (datetime.now(timezone.utc) - ts).total_seconds() > _CACHE_TTL_SEC:
+            return None
+        return doc.get("payload")
+    except Exception:
+        return None
+
+
+def _mongo_put(key: str, payload: dict):
+    coll = _cache_coll()
+    if coll is None:
+        return
+    try:
+        coll.update_one(
+            {"_id": key},
+            {"$set": {"cached_at": datetime.now(timezone.utc), "payload": payload}},
+            upsert=True,
+        )
+    except Exception:
+        pass
 
 
 def _clamp(x: float, lo: float, hi: float) -> float:
@@ -215,11 +269,18 @@ def screen(mode: str = "broad", min_dollar_vol: float = 3_000_000.0,
     demand_score desc. Cached `_CACHE_TTL_SEC`; pass force=True to recompute.
     """
     key = (mode, min_dollar_vol)
-    cached = _cache.get(key)
-    if not force and cached and (time.time() - cached["ts"]) < _CACHE_TTL_SEC:
-        out = dict(cached["data"])
-        out["cached"] = True
-        return _apply_limit(out, limit)
+    if not force:
+        # L1 — in-process.
+        cached = _cache.get(key)
+        if cached and (time.time() - cached["ts"]) < _CACHE_TTL_SEC:
+            out = dict(cached["data"]); out["cached"] = True
+            return _apply_limit(out, limit)
+        # L2 — Mongo (populated by the cron warm / another worker).
+        mdoc = _mongo_get(_cache_key(mode, min_dollar_vol))
+        if mdoc:
+            _cache[key] = {"data": mdoc, "ts": time.time()}
+            out = dict(mdoc); out["cached"] = True
+            return _apply_limit(out, limit)
 
     syms = universe_mod.load_universe(mode)
     rows: list[dict] = []
@@ -239,6 +300,7 @@ def screen(mode: str = "broad", min_dollar_vol: float = 3_000_000.0,
     }
     data = {"rows": rows, "counts": counts, "n": len(rows), "mode": mode, "cached": False}
     _cache[key] = {"data": data, "ts": time.time()}
+    _mongo_put(_cache_key(mode, min_dollar_vol), data)
     log.info("supply/demand screen: %d names (mode=%s) demand=%d supply=%d churning=%d",
              len(rows), mode, counts["demand"], counts["supply"], counts["churning"])
     return _apply_limit(dict(data), limit)
@@ -248,3 +310,18 @@ def _apply_limit(out: dict, limit: Optional[int]) -> dict:
     if limit and out.get("rows"):
         out = {**out, "rows": out["rows"][:limit]}
     return out
+
+
+if __name__ == "__main__":
+    # Cron warm: recompute + persist to Mongo so the API serves it instantly.
+    #   python -m supply_demand.stock_supply_demand --mode broad
+    import argparse
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    ap = argparse.ArgumentParser(description="Warm the per-stock supply/demand screen cache.")
+    ap.add_argument("--mode", default="broad")
+    ap.add_argument("--min-dollar-vol", type=float, default=3_000_000.0)
+    args = ap.parse_args()
+    t0 = time.time()
+    out = screen(mode=args.mode, min_dollar_vol=args.min_dollar_vol, force=True)
+    print(f"warmed supply/demand [{args.mode}]: {out['n']} names, counts={out['counts']} "
+          f"in {time.time() - t0:.1f}s")
