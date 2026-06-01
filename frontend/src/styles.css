@@ -1285,6 +1285,20 @@ tr:last-child td { border-bottom: none; }
 .ins-cluster { background: rgba(74, 210, 154, 0.18); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.5); font-weight: 600; }
 .ins-some    { background: rgba(122, 169, 230, 0.12); color: #7aa9e6; border: 1px solid rgba(122, 169, 230, 0.3); }
 
+/* ── Real-time tape + short-interest chips (RealtimeChips.tsx) ──────────
+   Same pill geometry as .ins-chip. Accumulation green / distribution red;
+   short-interest squeeze amber (elevated) → red (high). */
+.rt-chip, .si-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap; cursor: default;
+}
+.rt-accum   { background: rgba(74, 210, 154, 0.18);  color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.5); }
+.rt-distrib { background: rgba(232, 110, 110, 0.16);  color: #e86e6e; border: 1px solid rgba(232, 110, 110, 0.45); }
+.si-elev    { background: rgba(232, 178, 90, 0.14);   color: #e8b25a; border: 1px solid rgba(232, 178, 90, 0.4); }
+.si-high    { background: rgba(232, 110, 110, 0.18);  color: #ff8a8a; border: 1px solid rgba(232, 110, 110, 0.55); font-weight: 700; }
+
 /* ── Why Buy + Ranking drivers block on SEPA cards ──────────────────────
    Compact bottom-of-card section. Three bullets (Minervini stack /
    Volume / Entry plan) + a 1-paragraph footer explaining what's

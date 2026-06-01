@@ -26,6 +26,9 @@ import { SepaSignalChips } from './SepaSignalChips';
 // EDGAR / yfinance on first paint — cards fetch only when scrolled into
 // view, backend caches 24h.
 import { CardEnrichmentChips } from './CardEnrichmentChips';
+// Real-time tape (accumulation/distribution) + short-interest squeeze chips.
+// Lazy via IntersectionObserver; accumulation polls while the card is visible.
+import { RealtimeChips } from './RealtimeChips';
 // Compact "why buy" thesis + ranking-drivers footer. Built from row data
 // — volume-first per Ajay's request 2026-05-28 ("Volume is my main
 // indicator"). The ranking note explains BB-style intraday rank slips
@@ -718,6 +721,9 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               Lazy via IntersectionObserver — fires only when card enters viewport.
               Backend caches 24h so subsequent scrolls don't re-hit EDGAR/yfinance. */}
           <CardEnrichmentChips symbol={row.symbol} />
+          {/* Real-time accumulation/distribution + short-interest squeeze.
+              Live tape polls every 6s while the card is on screen. */}
+          <RealtimeChips symbol={row.symbol} />
           {row.adr_pct != null && (
             <span
               role="button" tabIndex={0}
