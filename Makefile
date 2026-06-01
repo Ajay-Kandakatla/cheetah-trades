@@ -12,7 +12,7 @@
 # Default target: print available commands.
 .DEFAULT_GOAL := help
 
-.PHONY: help contracts contracts-sepa contracts-kell contracts-frontend install-hooks lint
+.PHONY: help contracts contracts-sepa contracts-kell contracts-frontend contracts-realtime install-hooks lint
 
 help:                          ## Show this help.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -26,6 +26,10 @@ contracts-sepa:                ## Run the SEPA contracts regression test (docs/S
 contracts-kell:                ## Run the Kell scanner contracts regression test (docs/KELL_CONTRACTS.md).
 	@echo "→ Kell contracts (docs/KELL_CONTRACTS.md)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_kell_contracts.py -v --tb=short
+
+contracts-realtime:            ## Massive key-routing + WS live-feed contracts. Fold into `contracts` after the api image is rebuilt with live_feed.py.
+	@echo "→ Real-time contracts (massive_keys + live_feed)"
+	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_massive_keys.py tests/test_live_feed.py -v --tb=short
 
 contracts-frontend:            ## Frontend source contracts (alert-banner cap, etc.) — pure Node, no docker.
 	@echo "→ Frontend contracts (frontend/scripts/contracts.mjs)"

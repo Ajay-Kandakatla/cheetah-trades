@@ -62,6 +62,11 @@ from sepa import india_universe
 
 load_dotenv()
 
+# Real-time stock feed (Massive WebSocket). Imported AFTER load_dotenv() so its
+# module-level env knobs (MASSIVE_WS_URL, channels) resolve from .env in local
+# runs. See backend/live_feed.py — it feeds the same QuoteCache as Finnhub did.
+import live_feed  # noqa: E402
+
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 DEFAULT_SYMBOLS = os.getenv(
     "DEFAULT_SYMBOLS", "NVDA,META,AAPL,MSFT,TSLA,AMD,PLTR,CRDO,AVGO,LLY"
@@ -439,7 +444,21 @@ async def lifespan(app: FastAPI):
     # warm for legacy callers. Dev still serves /finnhub-v2/* via the
     # JIT layer in finnhub_client/, which has its own rate limiter.
     tasks: list = []
-    if _finnhub_poller_enabled():
+    if live_feed.enabled():
+        # Massive Stocks Advanced WebSocket = real-time tick feed. It owns the
+        # live-quote cache; the Finnhub WS + REST poller stay OFF so 15-min-
+        # capable Finnhub data can't overwrite real-time Massive prices. The
+        # snapshot poller backfills the day frame (open/high/low/prev_close).
+        from sepa.prices import bulk_snapshot
+        tasks.append(asyncio.create_task(
+            live_feed.massive_ws_consumer(cache, tracked_symbols, _ws_subscribe_queue)))
+        tasks.append(asyncio.create_task(
+            live_feed.massive_snapshot_poller(cache, tracked_symbols, bulk_snapshot)))
+        log.info(
+            "Live feed: Massive WebSocket (%s) — real-time; Finnhub WS/poller disabled.",
+            live_feed.MASSIVE_WS_URL,
+        )
+    elif _finnhub_poller_enabled():
         tasks.append(asyncio.create_task(finnhub_ws_consumer()))
         tasks.append(asyncio.create_task(finnhub_rest_poller()))
     else:
@@ -1315,6 +1334,28 @@ async def sepa_live_prices():
 
     live = await asyncio.to_thread(sepa_prices.bulk_live_prices, symbols)
     return {"updated_at": int(time.time()), "prices": live}
+
+
+@app.get("/live/feed-status")
+async def live_feed_status():
+    """Health of the real-time quote feed — which source is active, whether the
+    Massive WebSocket is connected/authenticated, and how fresh the last tick is.
+
+    Use after a deploy to confirm prod is genuinely live: ``active_source``
+    should be ``massive_ws`` and ``last_trade_age_s`` a few seconds during RTH.
+    """
+    now = time.time()
+    st = dict(live_feed.feed_state)
+    st["tracked"] = len(tracked_symbols)
+    st["active_source"] = (
+        "massive_ws" if live_feed.enabled()
+        else ("finnhub" if _finnhub_poller_enabled() else "none")
+    )
+    if st.get("last_trade_ts"):
+        st["last_trade_age_s"] = round(now - st["last_trade_ts"], 1)
+    if st.get("last_msg_ts"):
+        st["last_msg_age_s"] = round(now - st["last_msg_ts"], 1)
+    return st
 
 
 def _clean_json_floats(obj):
