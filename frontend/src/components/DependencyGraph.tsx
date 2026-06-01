@@ -95,6 +95,14 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
   // Pinned (user-dragged) positions persist across re-layouts
   const [pinned, setPinned] = useState<Record<string, { x: number; y: number }>>({});
   const [drag, setDrag] = useState<{ ticker: string; x: number; y: number } | null>(null);
+  // Drag-vs-click discrimination. onClick fires AFTER mouseup, by which point
+  // `drag` is already null — so guarding the click on `drag` never works.
+  // Instead track whether the pointer actually moved past a small threshold
+  // during the drag; if it did, swallow the click so dragging a node doesn't
+  // pop the thesis panel.
+  const draggedRef = useRef(false);
+  const dragStartScreenRef = useRef<{ x: number; y: number } | null>(null);
+  const DRAG_THRESHOLD_PX = 4;
 
   // --- Fullscreen ---
   // Uses the standard Fullscreen API where available. iOS Safari doesn't
@@ -281,6 +289,10 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
       return;
     }
     if (drag) {
+      const start = dragStartScreenRef.current;
+      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > DRAG_THRESHOLD_PX) {
+        draggedRef.current = true;   // real drag → suppress the click that follows
+      }
       const w = screenToWorld(sx, sy);
       setDrag({ ticker: drag.ticker, x: w.x, y: w.y });
     }
@@ -378,6 +390,10 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
       const sy = t.clientY - rect.top;
 
       if (drag) {
+        const start = dragStartScreenRef.current;
+        if (start && Math.hypot(t.clientX - start.x, t.clientY - start.y) > DRAG_THRESHOLD_PX) {
+          draggedRef.current = true;   // real drag → suppress the tap/click that follows
+        }
         const w = screenToWorld(sx, sy);
         setDrag({ ticker: drag.ticker, x: w.x, y: w.y });
         e.preventDefault();
@@ -807,6 +823,8 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
             if (!svgRef.current) return;
             const rect = svgRef.current.getBoundingClientRect();
             const w = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+            draggedRef.current = false;
+            dragStartScreenRef.current = { x: e.clientX, y: e.clientY };
             setDrag({ ticker: n.ticker, x: w.x, y: w.y });
             e.stopPropagation();
           };
@@ -824,6 +842,8 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
             const t = e.touches[0];
             const rect = svgRef.current.getBoundingClientRect();
             const w = screenToWorld(t.clientX - rect.left, t.clientY - rect.top);
+            draggedRef.current = false;
+            dragStartScreenRef.current = { x: t.clientX, y: t.clientY };
             setDrag({ ticker: n.ticker, x: w.x, y: w.y });
             e.stopPropagation();
           };
@@ -843,8 +863,14 @@ export function DependencyGraph({ nodes, edges, height: heightProp = 600, center
               onMouseDown={onMouseDown}
               onTouchStart={onTouchStart}
               onClick={(e) => {
-                // Only trigger click if not dragging
-                if (drag) return;
+                // Suppress the click that fires right after a drag. onClick
+                // lands after mouseup (when `drag` is already null), so we key
+                // off whether the pointer actually moved, not on `drag`.
+                if (draggedRef.current) {
+                  draggedRef.current = false;
+                  e.stopPropagation();
+                  return;
+                }
                 if (onNodeClick) onNodeClick(n.ticker);
                 e.stopPropagation();
               }}
