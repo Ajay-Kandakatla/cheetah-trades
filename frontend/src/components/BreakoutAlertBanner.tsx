@@ -27,6 +27,12 @@ import { useBreakouts, type BreakoutAlert } from '../hooks/useBreakouts';
    Animation: pulse glow + shimmer + slide-in (unchanged).
    ========================================================================== */
 
+// Cap how many cards render at once. On a broad down day the scanner can fire
+// dozens of stage-breakdown alerts; without a cap the fixed banner becomes a
+// full-height wall of red strips that buries the page. Show the top few + a
+// "+N more" footer; the header's "Dismiss all" clears the rest.
+const VISIBLE_MAX = 6;
+
 function fmtKindLabel(kind: string): string {
   if (kind === 'volume_breakout')      return '🚀 Volume breakout';
   if (kind === 'rising_momentum')      return '📈 Rising momentum';
@@ -175,6 +181,8 @@ export function BreakoutAlertBanner() {
   if (alerts.length === 0) return null;
 
   const newIds = new Set(newAlerts.map((a) => a._id));
+  const visible = alerts.slice(0, VISIBLE_MAX);
+  const hiddenCount = alerts.length - visible.length;
 
   return (
     <aside className="bk-stack" aria-label="Active breakout alerts">
@@ -194,7 +202,7 @@ export function BreakoutAlertBanner() {
         )}
       </header>
       <div className="bk-stack__list">
-        {alerts.map((a) => (
+        {visible.map((a) => (
           <AlertCard
             key={a._id}
             alert={a}
@@ -203,6 +211,16 @@ export function BreakoutAlertBanner() {
           />
         ))}
       </div>
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          className="bk-stack__more"
+          onClick={dismissAll}
+          title="Dismiss all alerts"
+        >
+          + {hiddenCount} more — dismiss all
+        </button>
+      )}
     </aside>
   );
 }

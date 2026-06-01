@@ -7678,6 +7678,16 @@ a.tk-link:hover   { color: inherit; }
 }
 .bk-stack__dismiss-all:hover { color: var(--ink); border-color: var(--gold-hairline); }
 
+.bk-stack__more {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 5px 9px; font-size: 0.7rem;
+  background: transparent; border: 1px dashed var(--hairline);
+  color: var(--ink-muted); cursor: pointer; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.bk-stack__more:hover { color: var(--ink); border-color: var(--gold-hairline); }
+
 .bk-stack__list {
   display: flex; flex-direction: column; gap: 0.4rem;
   max-height: calc(100vh - 140px); overflow-y: auto;
