@@ -12,12 +12,12 @@
 # Default target: print available commands.
 .DEFAULT_GOAL := help
 
-.PHONY: help contracts contracts-sepa contracts-kell install-hooks lint
+.PHONY: help contracts contracts-sepa contracts-kell contracts-frontend install-hooks lint
 
 help:                          ## Show this help.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-contracts: contracts-sepa contracts-kell  ## Run ALL contracts regression tests. MANDATORY before any sepa/options/setups change.
+contracts: contracts-sepa contracts-kell contracts-frontend  ## Run ALL contracts regression tests. MANDATORY before any sepa/options/setups change.
 
 contracts-sepa:                ## Run the SEPA contracts regression test (docs/SEPA_CONTRACTS.md).
 	@echo "→ SEPA contracts (docs/SEPA_CONTRACTS.md)"
@@ -26,6 +26,10 @@ contracts-sepa:                ## Run the SEPA contracts regression test (docs/S
 contracts-kell:                ## Run the Kell scanner contracts regression test (docs/KELL_CONTRACTS.md).
 	@echo "→ Kell contracts (docs/KELL_CONTRACTS.md)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_kell_contracts.py -v --tb=short
+
+contracts-frontend:            ## Frontend source contracts (alert-banner cap, etc.) — pure Node, no docker.
+	@echo "→ Frontend contracts (frontend/scripts/contracts.mjs)"
+	@node frontend/scripts/contracts.mjs
 
 install-hooks:                 ## Install the pre-commit guard at .git/hooks/pre-commit.
 	@cp scripts/pre-commit-hook .git/hooks/pre-commit
