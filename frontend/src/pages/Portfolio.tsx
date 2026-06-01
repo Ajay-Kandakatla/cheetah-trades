@@ -3,25 +3,22 @@
  * Render state machine (three branches):
  *   A. Plaid env keys missing → "Setup Plaid" instructions card.
  *   B. Configured, no linked broker → "Connect Fidelity via Plaid" CTA.
- *   C. Linked → heatmap + R-multiples table + sync timestamp.
+ *   C. Linked → heatmap + positions table + drop-attribution + sync timestamp.
  *
  * State A and B never load react-plaid-link's modal. State C uses
  * usePlaidLink() only after the user clicks Connect AND a link_token
  * has been minted server-side — so an offline backend doesn't break
  * the page render.
  *
- * R-multiple math is in `computeR()` below; entry/stop come from the
- * /portfolio/position-meta store, current_price comes from Plaid
- * (refreshed with a yfinance live overlay).
+ * current_price comes from Plaid (refreshed with a yfinance live overlay).
  */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { DropAttributionPanel } from '../components/DropAttributionPanel';
 import {
   useStatus,
   useHoldings,
-  usePositionMeta,
   fetchLinkToken,
   exchangePublicToken,
   disconnectPlaid,
@@ -79,19 +76,6 @@ async function openPlaidLink(linkToken: string, onSuccess: (publicToken: string)
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// R-multiple — reward / risk for a long position.
-//   R = (price - entry) / (entry - stop)
-// Positive when price has moved your way; negative when underwater.
-// Source: Van Tharp's position-sizing math, also used by Minervini.
-// ──────────────────────────────────────────────────────────────────────
-function computeR(currentPrice: number | null, entry: number | null, stop: number | null): number | null {
-  if (currentPrice == null || entry == null || stop == null) return null;
-  if (entry === stop) return null;
-  const risk = entry - stop;
-  const reward = currentPrice - entry;
-  return reward / risk;
-}
-
 function formatMoney(v: number | null | undefined, sign: boolean = false): string {
   if (v == null) return '—';
   const sgn = sign && v > 0 ? '+' : '';
@@ -103,12 +87,6 @@ function formatPct(v: number | null | undefined, sign: boolean = true): string {
   if (v == null) return '—';
   const sgn = sign && v > 0 ? '+' : '';
   return `${sgn}${v.toFixed(1)}%`;
-}
-
-function formatR(v: number | null | undefined): string {
-  if (v == null) return '—';
-  const sgn = v > 0 ? '+' : '';
-  return `${sgn}${v.toFixed(2)}R`;
 }
 
 function timeAgo(epochSec: number | null | undefined): string {
@@ -136,14 +114,8 @@ function heatColor(plPct: number | null | undefined): string {
 const PageInfo = (
   <>
     <p>
-      Your Fidelity holdings imported via Plaid, augmented with R-multiples
-      so you can see at a glance whether each position is up or down vs.
-      its risk unit.
-    </p>
-    <p>
-      <strong>R-multiple</strong> = (current price − entry) / (entry − stop).
-      Setting your stop is what tells the math how big "1R" is for the
-      position. Targets are typically 2–3R for swing trades.
+      Your Fidelity holdings imported via Plaid, with live P&amp;L and the
+      "Why is it moving?" macro/sector/stock attribution for each position.
     </p>
     <p>
       Plaid handles the Fidelity login — your broker password is never
@@ -258,83 +230,10 @@ function ConnectState({ onLinked }: { onLinked: () => void }) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Inline editor for entry / stop / target. PUT lands on
-// /portfolio/position-meta and triggers a meta refetch on success.
-// ──────────────────────────────────────────────────────────────────────
-function MetaEditor({
-  symbol,
-  initial,
-  onSave,
-}: {
-  symbol: string;
-  initial: { entry: number | null; stop: number | null; target: number | null };
-  onSave: (fields: { entry: number | null; stop: number | null; target: number | null }) => void;
-}) {
-  const [entry, setEntry]   = useState<string>(initial.entry == null ? '' : String(initial.entry));
-  const [stop, setStop]     = useState<string>(initial.stop == null ? '' : String(initial.stop));
-  const [target, setTarget] = useState<string>(initial.target == null ? '' : String(initial.target));
-
-  const parse = (s: string): number | null => {
-    const t = s.trim();
-    if (t === '') return null;
-    const n = Number(t);
-    return Number.isFinite(n) ? n : null;
-  };
-
-  const submit = () => onSave({ entry: parse(entry), stop: parse(stop), target: parse(target) });
-
-  const inputStyle: CSSProperties = {
-    width: 70,
-    background: 'transparent',
-    border: '1px solid #2c2f3a',
-    borderRadius: 4,
-    color: '#e6e8ee',
-    padding: '2px 6px',
-    fontSize: '0.85rem',
-  };
-
-  return (
-    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-      <input
-        type="number"
-        step="0.01"
-        placeholder="entry"
-        value={entry}
-        onChange={(e) => setEntry(e.target.value)}
-        onBlur={submit}
-        style={inputStyle}
-        aria-label={`${symbol} entry`}
-      />
-      <input
-        type="number"
-        step="0.01"
-        placeholder="stop"
-        value={stop}
-        onChange={(e) => setStop(e.target.value)}
-        onBlur={submit}
-        style={inputStyle}
-        aria-label={`${symbol} stop`}
-      />
-      <input
-        type="number"
-        step="0.01"
-        placeholder="target"
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        onBlur={submit}
-        style={inputStyle}
-        aria-label={`${symbol} target`}
-      />
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────
 // State C — connected. The big "real" view: heatmap + table + sync.
 // ──────────────────────────────────────────────────────────────────────
 function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; onDisconnected: () => void }) {
   const { data, loading, error, refresh } = useHoldings(true);
-  const { metas, set: setMeta } = usePositionMeta();
   const navigate = useNavigate();
   const [disconnecting, setDisconnecting] = useState(false);
   const [csvUploading, setCsvUploading] = useState(false);
@@ -438,37 +337,7 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
     }
   };
 
-  // Join meta in by symbol so the inline editor starts from the current
-  // saved values without an extra fetch.
-  const metaBySymbol = useMemo(() => {
-    const m: Record<string, { entry: number | null; stop: number | null; target: number | null }> = {};
-    for (const row of metas) {
-      m[row.symbol] = {
-        entry:  row.entry ?? null,
-        stop:   row.stop ?? null,
-        target: row.target ?? null,
-      };
-    }
-    return m;
-  }, [metas]);
-
-  // The backend already computes pl_pct, pl_dollars, r_multiple — but
-  // when the user edits entry/stop inline, the next render needs to
-  // reflect their new numbers BEFORE the backend has refetched. Compute
-  // R locally on top of whatever the backend returned for the price.
-  const rows: HoldingRow[] = useMemo(() => {
-    return (data?.rows || []).map((r) => {
-      const meta = metaBySymbol[r.symbol] || { entry: r.entry, stop: r.stop, target: r.target };
-      const r_multiple = computeR(r.current_price, meta.entry, meta.stop);
-      return {
-        ...r,
-        entry:  meta.entry,
-        stop:   meta.stop,
-        target: meta.target,
-        r_multiple,
-      };
-    });
-  }, [data?.rows, metaBySymbol]);
+  const rows: HoldingRow[] = data?.rows || [];
 
   // Two totals to track:
   //   - holdingsValue: sum of per-position rows (only useful where Plaid
@@ -600,7 +469,7 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
               for active Fidelity brokerage sub-accounts — not the line-item
               positions. Until your team's Investments Production access is
               approved, you can dump Fidelity's own CSV here and get the same
-              heatmap + R-multiples + alerts treatment.
+              heatmap + attribution + alerts treatment.
             </p>
             <p>
               <strong>How to get the CSV:</strong> Fidelity → Accounts & Trade
@@ -971,14 +840,8 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
           <span className="eyebrow">Positions</span>
           <InfoButton inline title="Positions">
             <p>
-              Sortable list of every position from your linked Fidelity account.
-              The <em>entry / stop / target</em> columns are user-typed (Plaid
-              doesn't have these) — set them inline to make the R-multiple math
-              meaningful for that row.
-            </p>
-            <p>
-              <strong>R</strong> = (current price − entry) / (entry − stop).
-              Positive R means you're in profit relative to your risk unit.
+              Every position from your linked Fidelity account with live price,
+              cost basis, and P&amp;L.
             </p>
           </InfoButton>
         </div>
@@ -1004,8 +867,6 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
                   <th style={{ padding: '0.5rem', textAlign: 'right' }}>Cost</th>
                   <th style={{ padding: '0.5rem', textAlign: 'right' }}>P&amp;L $</th>
                   <th style={{ padding: '0.5rem', textAlign: 'right' }}>P&amp;L %</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'right' }}>R</th>
-                  <th style={{ padding: '0.5rem' }}>Entry / Stop / Target</th>
                 </tr>
               </thead>
               <tbody>
@@ -1106,23 +967,6 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
                       color: (r.pl_pct ?? 0) >= 0 ? '#10b981' : '#ef4444',
                     }}>
                       {formatPct(r.pl_pct)}
-                    </td>
-                    <td style={{
-                      padding: '0.5rem', textAlign: 'right',
-                      color: (r.r_multiple ?? 0) >= 0 ? '#10b981' : '#ef4444',
-                    }}>
-                      {formatR(r.r_multiple)}
-                    </td>
-                    <td style={{ padding: '0.5rem' }}>
-                      <MetaEditor
-                        symbol={r.symbol}
-                        initial={{
-                          entry:  r.entry ?? null,
-                          stop:   r.stop ?? null,
-                          target: r.target ?? null,
-                        }}
-                        onSave={(fields) => setMeta(r.symbol, fields)}
-                      />
                     </td>
                   </tr>
                 ))}
