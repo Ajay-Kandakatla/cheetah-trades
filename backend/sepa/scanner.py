@@ -19,11 +19,21 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional, List
+
+# Scan parallelism — the per-symbol analyze is an I/O (Mongo price reads) + CPU
+# (pandas) mix, so we oversubscribe the cores. Defaults to 2× CPU count (capped
+# 32) instead of the old hardcoded 8, which left a big multi-core box idle.
+# Override with SEPA_SCAN_WORKERS to tune for the host (e.g. the M5 Pro).
+_SCAN_WORKERS = int(os.getenv("SEPA_SCAN_WORKERS", "0") or 0) or min(32, (os.cpu_count() or 8) * 2)
+# Retries are for rate-limited/transient failures — keep that pass gentle so we
+# don't re-hammer the same flaky source.
+_SCAN_RETRY_WORKERS = max(2, _SCAN_WORKERS // 8)
 
 from .progress import ProgressEmitter
 
@@ -435,7 +445,7 @@ def scan_universe(symbols: Optional[List[str]] = None,
     # Use a thread pool since yfinance + pandas are I/O + CPU mix.
     # Switched from ex.map() to as_completed() so progress events fire on
     # actual completion order (which symbol just finished), not submission order.
-    with ThreadPoolExecutor(max_workers=8) as ex:
+    with ThreadPoolExecutor(max_workers=_SCAN_WORKERS) as ex:
         futures = {ex.submit(_analyze_symbol, s, rs_map): s for s in work}
         completed = 0
         for fut in as_completed(futures):
@@ -478,7 +488,7 @@ def scan_universe(symbols: Optional[List[str]] = None,
               message=f"Retrying {len(retry_targets)} failed tickers")
         time.sleep(0.5)  # tiny settle for transient yfinance rate-limits
 
-        with ThreadPoolExecutor(max_workers=4) as ex:
+        with ThreadPoolExecutor(max_workers=_SCAN_RETRY_WORKERS) as ex:
             retry_futures = {ex.submit(_analyze_symbol, s, rs_map): s for s in retry_targets}
             retry_done = 0
             for fut in as_completed(retry_futures):
@@ -947,7 +957,7 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         return _hot_recompute(symbol, df, rs_map, blob)
 
     failures: List[dict] = []
-    with ThreadPoolExecutor(max_workers=8) as ex:
+    with ThreadPoolExecutor(max_workers=_SCAN_WORKERS) as ex:
         futures = {ex.submit(_run, s): s for s in work}
         completed = 0
         for fut in as_completed(futures):
@@ -989,7 +999,7 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
               message=f"Retrying {len(retry_targets)} failed tickers")
         time.sleep(0.5)
 
-        with ThreadPoolExecutor(max_workers=4) as ex:
+        with ThreadPoolExecutor(max_workers=_SCAN_RETRY_WORKERS) as ex:
             retry_futures = {ex.submit(_run, s): s for s in retry_targets}
             retry_done = 0
             for fut in as_completed(retry_futures):
