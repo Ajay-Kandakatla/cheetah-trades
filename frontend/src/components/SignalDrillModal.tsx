@@ -86,6 +86,7 @@ export type SignalData = {
   setup_pivot?:          number | null;
   setup_stop?:           number | null;
   liquidity_liquid?:     boolean | null;
+  avg_dollar_vol?:       number | null;   // for the sponsorship-demotion tier (book p.195)
   // Volume flags relevant to the score-breakdown view
   high_vol_breakout?:    boolean | null;
   pocket_pivot?:         boolean | null;
@@ -321,6 +322,25 @@ export function computeScoreBreakdown(d: SignalData): ScoreComponent[] {
       earned: -8,
       detail: `base #${d.base_count_n ?? '?'} — failure rate climbs sharply by base 4+`,
     });
+  }
+
+  // Institutional-sponsorship demotion (book p.195). MIRRORS backend
+  // scanner.SPONSORSHIP_TIERS — source of truth is the backend +
+  // test_sponsorship_penalty_tiers_locked; keep these bands in sync.
+  const adv = d.avg_dollar_vol;
+  if (adv != null) {
+    const pen = adv >= 100_000_000 ? 0
+              : adv >=  20_000_000 ? 4
+              : adv >=   5_000_000 ? 10
+              : 18;
+    if (pen > 0) {
+      out.push({
+        label:  'Sponsorship demotion',
+        weight: -pen,
+        earned: -pen,
+        detail: `thin tape ($${fmtVol(adv)}/day) — institutions can't accumulate (book p.195)`,
+      });
+    }
   }
 
   return out;

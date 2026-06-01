@@ -108,6 +108,14 @@ export function SepaWhyBuy({ row, signalData }: Props) {
   const top3Str = top3
     .map(c => `${c.label} +${c.earned.toFixed(1)}`)
     .join(' · ');
+  // Penalties (sponsorship demotion, late base) are the STORY when a name
+  // drops in rank — surface them, don't hide them behind positive-only top3.
+  const penalties = breakdown
+    .filter(c => c.earned < 0)
+    .sort((a, b) => a.earned - b.earned);
+  const penaltyStr = penalties
+    .map(c => `${c.label} ${c.earned.toFixed(1)}`)
+    .join(' · ');
   const dayMove = row.day_change_pct;
   const dayMoveStr = dayMove != null
     ? `${dayMove > 0 ? '+' : ''}${dayMove.toFixed(2)}%`
@@ -128,7 +136,8 @@ export function SepaWhyBuy({ row, signalData }: Props) {
       <div className="sepa-why-buy__rank">
         <span className="sepa-why-buy__rank-title">What's moving the rank</span>
         <p className="sepa-why-buy__rank-body">
-          Score <b>{scoreStr}</b> = {top3Str || 'no positive contributors'}.
+          Score <b>{scoreStr}</b> = {top3Str || 'no positive contributors'}
+          {penaltyStr && <> <b className="is-down">− {penaltyStr}</b></>}.
           {' '}Minervini gates are <em>steady through the day</em>. The score recomputes when prices refresh,
           so day move (<b className={dayMove != null && dayMove < 0 ? 'is-down' : 'is-up'}>{dayMoveStr}</b>) and
           live-quote drift act as the tie-breakers that shuffle ranks in the same-score tier
