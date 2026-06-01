@@ -5,11 +5,17 @@
 # (default mode: SEPA_UNIVERSE_MODE env var; recommended: russell1000 or expanded).
 # Pre-warms VCP / Power Play / CANSLIM / liquidity / ADR / IPO age so Monday's
 # fast-scan only has to recompute the price-derived layers.
-0      20    *    *    0    /usr/local/bin/python -m sepa.cli research-refresh
+# --mode broad: cover the FULL universe (curated foreign ADRs like ARM + micro
+# + ETFs), not the russell1000 default — else foreign ADRs never get research
+# and the daily fast-scan can't surface them. (Fixes "ARM only shows on a
+# manual Full Scan", 2026-06-01.)
+0      20    *    *    0    /usr/local/bin/python -m sepa.cli research-refresh --mode broad
 #
 # Mon-Fri 4:30pm ET — post-close fast scan. Joins cached research with today's
-# prices and rebuilds the candidate list in ~20-30s.
-30     16    *    *    1-5  /usr/local/bin/python -m sepa.cli fast-scan
+# prices and rebuilds the candidate list. --mode broad so it scans everything
+# in the universe (incl. ARM and the other pinned foreign ADRs), matching the
+# UI's broad Full Scan instead of the russell1000 default.
+30     16    *    *    1-5  /usr/local/bin/python -m sepa.cli fast-scan --mode broad
 #
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
