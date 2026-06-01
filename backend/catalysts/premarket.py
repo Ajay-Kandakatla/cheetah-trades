@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Optional
@@ -86,7 +87,7 @@ def _seed_universe() -> list[str]:
     out: list[str] = []
 
     # 1) Yesterday's biggest movers (still likely to gap pre-market)
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if key:
         for direction in ("gainers", "losers"):
             try:
@@ -132,7 +133,7 @@ def _fetch_premarket_quote(ticker: str) -> Optional[dict]:
     Falls back gracefully across Massive → yfinance.
     """
     # Try Massive first (paid + reliable)
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if key:
         try:
             r = requests.get(

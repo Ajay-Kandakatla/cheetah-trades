@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -123,7 +124,7 @@ def _fetch_etf_metrics(ticker: str) -> Optional[dict]:
 def _fetch_sector_news(keywords: list[str], limit: int = 8) -> list[dict]:
     """Fetch recent news matching any sector keyword via Massive news API."""
     import requests
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return []
     # Use the first 1-2 keywords as the search query (Massive doesn't AND multiple)

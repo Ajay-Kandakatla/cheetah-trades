@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import time
 from datetime import datetime, timezone
 from typing import Optional
@@ -115,7 +116,7 @@ def _fetch_massive_bulk(tickers: list[str]) -> dict[str, dict]:
       - prevDay.c (previous close)
       - todaysChange / todaysChangePerc
     """
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return {}
 

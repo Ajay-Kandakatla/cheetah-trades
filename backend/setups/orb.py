@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -82,7 +83,7 @@ def _fetch_minute_bars(symbol: str, date_iso: str) -> list[dict]:
     Massive endpoint: /v2/aggs/ticker/{T}/range/1/minute/{from}/{to}
     Returns list of {t (unix ms), o, h, l, c, v}.
     """
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         log.warning("orb: MASSIVE_API_KEY not set")
         return []

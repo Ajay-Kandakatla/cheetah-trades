@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+from massive_keys import stocks_key
 import sys
 import time
 from datetime import datetime, timedelta
@@ -33,7 +34,7 @@ SYMBOL = "SPY"
 
 def _hit(path: str, params: Optional[dict] = None, label: str = "") -> dict:
     """Hit an endpoint, return {ok, status, sample, error}."""
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return {"ok": False, "error": "MASSIVE_API_KEY not set"}
     p = dict(params or {})

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import options_key
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -42,7 +43,7 @@ log = logging.getLogger("options.scanner")
 # We pick a value that's safe for both, override with SOIR_WORKERS env.
 DEFAULT_WORKERS = int(os.getenv(
     "SOIR_WORKERS",
-    "20" if os.getenv("MASSIVE_API_KEY") else "10",
+    "20" if options_key() else "10",
 ))
 
 # Hard ceiling — never burn more than this many ticker fetches per run.

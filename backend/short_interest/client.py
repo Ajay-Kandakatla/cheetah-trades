@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
@@ -138,7 +139,7 @@ def _fetch_from_massive(symbol: str, days_back: int = 30) -> list[dict]:
     global _short_volume_disabled
     if _short_volume_disabled:
         return []
-    api_key = os.getenv("MASSIVE_API_KEY")
+    api_key = stocks_key()
     if not api_key:
         return []
 

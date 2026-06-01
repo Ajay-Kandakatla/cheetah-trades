@@ -15,6 +15,8 @@ All sources are FREE — Massive is already paid for, SEC EDGAR is free.
 """
 from __future__ import annotations
 
+from massive_keys import stocks_key
+
 import logging
 import re
 import time
@@ -48,8 +50,7 @@ _BEARISH_NEWS_KEYWORDS = (
 
 def _fetch_massive_news(ticker: str, hours: int = 48) -> list[dict]:
     """Pull recent news from Massive. Same source we already use elsewhere."""
-    import os
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return []
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)

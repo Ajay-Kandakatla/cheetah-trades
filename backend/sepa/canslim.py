@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 from typing import Optional
 
 log = logging.getLogger("sepa.canslim")
@@ -127,7 +128,7 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
     global _massive_financials_disabled
     if _massive_financials_disabled:
         return None
-    api_key = os.getenv("MASSIVE_API_KEY")
+    api_key = stocks_key()
     if not api_key:
         return None
 

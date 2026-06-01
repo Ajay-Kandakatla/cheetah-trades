@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
@@ -36,7 +37,7 @@ DEFAULT_MIN_PRICE = 0.10           # filter out the most degenerate sub-pennies
 
 
 def _massive_key() -> Optional[str]:
-    return os.getenv("MASSIVE_API_KEY")
+    return stocks_key()
 
 
 def _fetch_movers(direction: str, limit: int = 50) -> list[dict]:

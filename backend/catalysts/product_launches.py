@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from massive_keys import stocks_key
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -103,7 +104,7 @@ def _cache_coll():
 # Massive news fetch (same source as catalysts/evidence.py)
 # ---------------------------------------------------------------------------
 def _fetch_news(symbol: str, days: int = 30) -> list[dict]:
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return []
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)

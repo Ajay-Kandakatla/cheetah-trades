@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import time
 from datetime import datetime, date, timedelta, time as dtime
 from typing import Optional
@@ -60,7 +61,7 @@ def _classify_session(ts_utc: pd.Timestamp) -> str:
 def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Optional[pd.DataFrame]:
     """Fetch 1-minute bars from Massive for a date range, inclusive."""
     import requests
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         log.error("MASSIVE_API_KEY missing — cannot fetch intraday bars")
         return None

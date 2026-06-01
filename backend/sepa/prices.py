@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import time
 from pathlib import Path
 from typing import Optional
@@ -151,7 +152,7 @@ def _fetch_yfinance(symbol: str, period: str) -> Optional[pd.DataFrame]:
 
 def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
     import requests
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         log.warning("MASSIVE_API_KEY not set — cannot fetch %s from Massive", symbol)
         return None
@@ -211,7 +212,7 @@ def last_trade_price(symbol: str) -> Optional[float]:
     Falls back to the most recent daily close if the live endpoint fails.
     Used by the alerts checker so stop-loss decisions use live prices."""
     import requests
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if key:
         try:
             r = requests.get(
@@ -285,7 +286,7 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
     Returns {SYMBOL: {open, high, low, close, volume, vwap, date, change_pct}}
     Missing or errored symbols are simply absent from the dict.
     """
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return {}
     try:

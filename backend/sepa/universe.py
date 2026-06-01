@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import time
 from pathlib import Path
 
@@ -273,7 +274,7 @@ def fetch_massive_universe(limit: int | None = None) -> list[str]:
     if cached:
         return cached[:limit] if limit else cached
 
-    api_key = os.getenv("MASSIVE_API_KEY")
+    api_key = stocks_key()
     if not api_key:
         log.warning("universe: MASSIVE_API_KEY not set; cannot fetch Massive universe")
         return []

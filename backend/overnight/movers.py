@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -64,7 +65,7 @@ CATALYST_PATTERNS: list[tuple[str, str, list[str]]] = [
 
 
 def _hit(path: str, params: Optional[dict] = None) -> Optional[dict]:
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return None
     p = dict(params or {})

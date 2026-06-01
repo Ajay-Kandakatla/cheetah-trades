@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import options_key
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -122,7 +123,7 @@ def _fetch_chain_massive(symbol: str, session=None) -> Optional[dict]:
     global _massive_options_disabled
     if _massive_options_disabled:
         return None
-    api_key = os.getenv("MASSIVE_API_KEY")
+    api_key = options_key()
     if not api_key:
         return None
 
@@ -423,7 +424,7 @@ def _fetch_chain(symbol: str, session=None) -> Optional[dict]:
     yfinance fallback exists so the scanner still works if MASSIVE_API_KEY
     is missing (dev environments, expired keys, etc).
     """
-    if os.getenv("MASSIVE_API_KEY"):
+    if options_key():
         snap = _fetch_chain_massive(symbol, session=session)
         if snap:
             return snap

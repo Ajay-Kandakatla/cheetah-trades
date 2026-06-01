@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -67,7 +68,7 @@ def _get_db():
 def _massive_get(path: str, params: dict) -> dict:
     """Thin wrapper around requests.get with API key injection. Returns
     {} on any non-200 so callers can rely on a stable shape."""
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return {}
     try:

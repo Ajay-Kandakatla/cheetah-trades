@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+from massive_keys import stocks_key
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -87,7 +88,7 @@ def fetch_edge_news(source: str, target: str, limit: int = 5,
             return cached
 
     import requests
-    key = os.getenv("MASSIVE_API_KEY")
+    key = stocks_key()
     if not key:
         return []
 
