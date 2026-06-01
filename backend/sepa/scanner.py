@@ -68,6 +68,38 @@ SCORE_WEIGHTS = {
 }
 
 
+# ── Institutional-sponsorship ranking penalty (Minervini p.195) ──────────────
+# The book: "limit your selections to those displaying evidence of being
+# supported by institutional buying" (p.195). Thin names can't be accumulated
+# by institutions and are the easily-manipulated single-digit stocks. The book
+# gives the CONCEPT but NO dollar threshold, and uses NO nominal share-price
+# floor (its "Cheap Trap", p.43, is about VALUATION, not share price). So we
+# rank-demote by average daily DOLLAR-volume in tiers. Bands are our
+# codification, user-approved 2026-05-31 ("tiered bands; stay book-pure, no
+# price floor"). Applied as a post-sum penalty (like the late-stage −8), so the
+# SCORE_WEIGHTS contract (§4, sums to 100) is unchanged.
+SPONSORSHIP_TIERS = [
+    (100_000_000.0,  0.0),   # ≥ $100M/day — full institutional sponsorship
+    ( 20_000_000.0,  4.0),   # $20M–$100M  — minor demotion
+    (  5_000_000.0, 10.0),   # $5M–$20M    — moderate (light sponsorship)
+    (          0.0, 18.0),   # < $5M       — heavy (thin/manipulable; CVGI ≈ $2.3M)
+]
+
+
+def _sponsorship_penalty(avg_dollar_vol: Optional[float]) -> float:
+    """Rank demotion for names lacking institutional sponsorship (book p.195).
+
+    Tiered by average daily dollar-volume. Returns 0.0 when liquidity is
+    unknown (don't punish missing data) or for genuinely liquid leaders.
+    """
+    if avg_dollar_vol is None:
+        return 0.0
+    for floor, penalty in SPONSORSHIP_TIERS:
+        if avg_dollar_vol >= floor:
+            return penalty
+    return 0.0
+
+
 # SPY's 12-month return — cached at scan start. dual_momentum.metrics_for_df
 # uses this to compute the per-ticker `beats_spy` flag without each worker
 # re-loading SPY's price file. Reset by scan_universe / scan_universe_fast.
@@ -219,6 +251,9 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # Base count penalty (late stage = exhaustion)
     if bc and bc.get("is_late_stage"):
         score -= 8
+    # Institutional-sponsorship demotion (book p.195) — thin names rank below
+    # liquid leaders so single-digit/manipulable stocks can't top the list.
+    score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
 
     score = max(0.0, min(score, 100.0))
 
@@ -316,14 +351,22 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "is_candidate": bool(tr.pass_all and liq["liquid"]),
         # The strict "ready to buy NOW" gate — book pp.79-83, 198-203:
         # Trend Template + Stage 2 advancing + tight base setup (VCP or
-        # Power Play) + not a late-stage base. NEW field name so existing
-        # code reading is_candidate doesn't accidentally over-restrict the list.
+        # Power Play) + not a late-stage base + a VOLUME-CONFIRMED breakout.
+        # Book p.203 verbatim: "the point at which you want to buy is when the
+        # stock moves above the pivot point ON EXPANDING VOLUME." A breakout on
+        # below-average volume is NOT a Minervini buy (p.203-204: "almost every
+        # failed base structure can be traced back to some faulty characteristic
+        # that was overlooked"). high_vol_breakout = breaking out on volume now;
+        # pocket_pivot = Minervini's in-base institutional-footprint buy point.
+        # Without one of those the name stays a watchlist candidate, not buyable.
+        # (Hard-gate chosen by user 2026-05-31; fixes CVGI-class low-vol breakouts.)
         "is_buyable": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
             and entry_setup is not None
             and (bc is None or not bc.get("is_late_stage"))
             and liq["liquid"]
+            and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
         ),
     }
 
@@ -739,6 +782,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         score += SCORE_WEIGHTS["fundamentals"] * (fundamentals["passed"] / 3.0)
     if bc and bc.get("is_late_stage"):
         score -= 8
+    # Institutional-sponsorship demotion (book p.195) — see full-scan path.
+    score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
     score = max(0.0, min(score, 100.0))
 
     entry_setup = None
@@ -819,12 +864,14 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         # entry-now gate. Fix applied 2026-05-28.
         "qualifier": bool(tr.pass_all and liq.get("liquid")),
         "is_candidate": bool(tr.pass_all and liq.get("liquid")),
+        # Volume-confirmed breakout required (book p.203). See full-scan path.
         "is_buyable": bool(
             tr.pass_all
             and stg and stg.get("stage") == 2
             and entry_setup is not None
             and (bc is None or not bc.get("is_late_stage"))
             and liq.get("liquid")
+            and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
         ),
         "from_cache": True,
     }

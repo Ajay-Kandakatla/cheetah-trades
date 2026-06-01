@@ -9,7 +9,9 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.0 (2026-05-24)
+**Version:** 1.1 (2026-05-31) — added §5b `is_buyable` volume-confirmed-breakout
+pillar (book p.203) + §4 institutional-sponsorship rank demotion (book p.195).
+Prior: 1.0 (2026-05-24).
 **Anchor commit:** locked at the SHA of the first commit that adds this doc.
 
 ---
@@ -217,6 +219,24 @@ SCORE_WEIGHTS = {
 # Sum = 100 + late-base penalty of -8 if applicable.
 ```
 
+**Post-sum penalties** (applied to `score` AFTER the weighted sum, so the
+weights above stay summed to 100):
+
+| Penalty | Amount | Source |
+|---|---|---|
+| Late-stage base | −8 | exhaustion (≥4 bases) |
+| Institutional-sponsorship demotion | −0 / −4 / −10 / −18 by avg daily $-vol tier | **book p.195** (added 2026-05-31) |
+
+> **Sponsorship tiers** (`scanner.SPONSORSHIP_TIERS`, locked by
+> `test_sponsorship_penalty_tiers_locked`): ≥$100M → 0; $20M–$100M → −4;
+> $5M–$20M → −10; <$5M → −18; unknown → 0. Book p.195: *"limit your selections
+> to those displaying evidence of being supported by institutional buying."*
+> The book gives the concept but **no $ number and no nominal share-price floor**
+> (its "Cheap Trap", p.43, is about valuation, not share price). Bands are the
+> user-approved (2026-05-31) codification — "tiered bands, stay book-pure, no
+> price floor." This sinks thin single-digit names (CVGI ≈ $2.3M/day → −18)
+> below liquid leaders without excluding them.
+
 ### Rating thresholds — LOCKED
 
 `backend/sepa/scanner.py:48`
@@ -232,20 +252,45 @@ def _rating_label(score: float) -> str:
 
 ---
 
-## 5. `is_candidate` gate — LOCKED
+## 5. `is_candidate` (watchlist) + `is_buyable` (entry-now) gates — LOCKED
 
-A row is `is_candidate: True` if and only if ALL of:
+Two distinct tiers (book p.79 separates the *qualifier* from the *buy point*):
+
+### 5a. `is_candidate` = the qualifier / watchlist (book p.79)
+
+A row is `is_candidate: True` if and only if BOTH of:
 
 1. `trend.pass_all == True` (all 8 Trend Template gates pass)
+2. `liquidity.liquid == True` (institutional-grade liquidity)
+
+> Book p.79: *"The Trend Template is a qualifier."* A "candidate" is a name worth
+> **considering**, not necessarily buying today. (Fixed 2026-05-28 — `is_candidate`
+> used to carry the strict gate below; that contradicted the book.)
+
+### 5b. `is_buyable` = the strict "buy NOW" gate (book pp.79-83, 195, 198-204)
+
+A row is `is_buyable: True` if and only if ALL of:
+
+1. `trend.pass_all == True`
 2. `stage.stage == 2` (Weinstein Stage 2 advancing)
 3. `entry_setup is not None` (VCP or Power Play present)
 4. `base_count` is None OR `base_count.is_late_stage == False` (≤3 bases)
-5. `liquidity.liquid == True` (institutional-grade liquidity)
+5. `liquidity.liquid == True`
+6. **`volume.high_vol_breakout OR volume.pocket_pivot`** — a VOLUME-CONFIRMED
+   breakout (**added 2026-05-31**).
 
-Source: `backend/sepa/scanner.py:265-271`.
+> Book p.203 verbatim: *"the point at which you want to buy is when the stock
+> moves above the pivot point **on expanding volume**."* A breakout on
+> below-average volume is NOT a Minervini buy (p.203-204: *"almost every failed
+> base structure can be traced back to some faulty characteristic that was
+> overlooked"*). This drops CVGI-class single-digit names that pass 8/8 but are
+> breaking out on thin volume from the buyable tier — they stay `is_candidate`.
 
-**Why this matters:** the /sepa list shows is_candidate=True names by default.
-Changing any gate would change what shows up on Ajay's primary research view.
+Source: `backend/sepa/scanner.py` (`_analyze_symbol` full + fast paths).
+Contract test: `test_is_candidate_gate_logic` + `test_is_buyable_gate_logic`.
+
+**Why this matters:** the /sepa list ranks by `score` and the buyable tier flags
+what's actionable today. Both feed Ajay's real-money decisions.
 
 ---
 

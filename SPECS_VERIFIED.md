@@ -134,3 +134,27 @@
 - Risk-per-trade 0.5–2% range → not stated in Ch.12–13; industry convention
 - CANSLIM Q/Y/I thresholds → O'Neil, not Minervini
 - RS weights 40/20/20/20 → IBD/O'Neil, not Minervini
+
+---
+
+## 2026-05-31 additions — ranking / buyable (leadership audit)
+
+Triggered by: CVGI (a $5.15 stock at ~$2.3M/day) ranking #1 despite a breakout
+on BELOW-average volume. Read Ch.9 "Follow the Leaders" + Ch.10 p.203-204.
+
+| module | rule | book quote | page | status |
+|---|---|---|---|---|
+| scanner.is_buyable | buy point requires expanding volume → gate is_buyable on `high_vol_breakout OR pocket_pivot` | "the point at which you want to buy is when the stock moves above the pivot point **on expanding volume**" | **p.203** | VERIFIED (concept + explicit) |
+| scanner.is_buyable | a low-volume breakout is a failed-base risk, not a buy | "almost every failed base structure … can be traced back to some faulty characteristic that was overlooked" | **p.204** | VERIFIED |
+| scanner.SPONSORSHIP_TIERS | rank-demote thin names lacking institutional sponsorship | "limit your selections to those displaying evidence of being supported by institutional buying" | **p.195** | CONCEPT VERIFIED — $ bands are author/user codification (no number in book) |
+| scanner (no price floor) | NO nominal share-price floor added | "Cheap Trap" is about VALUATION (P/E, beaten-up), not nominal share price: "look for **leaders** … instead of bargains" | **p.43** | VERIFIED — book uses no price floor; user chose book-pure |
+
+**Ranking philosophy (for future reference), Ch.9 "Follow the Leaders":**
+- p.178 "Which Leaders Should I Buy First?": *"Buy the strongest first … buy in
+  order of breakout … the stocks that emerge first … with the greatest power are
+  generally the best candidates for superperformance."*
+- p.176: *"own the top one, two, or three names in the industry in terms of
+  relative performance and earnings power."*
+- Takeaway: the Trend Template (p.79) is a FILTER; ranking among survivors is by
+  RELATIVE STRENGTH leadership + a VOLUME-CONFIRMED breakout + earnings power.
+  Minervini does NOT use a weighted 0-100 composite — our score is a codification.
