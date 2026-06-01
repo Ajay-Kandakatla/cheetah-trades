@@ -766,20 +766,37 @@ export function SepaPage() {
   // (when one exists). Filter bar predicates apply to the matched rows.
   // When a setup has no matching row in `source` we still surface a
   // minimal placeholder pair (candidate=null) so the user sees the match.
+  // Dedupe the setup matches by symbol FIRST — the setup scanner can return a
+  // symbol more than once (multiple sub-pattern hits), which rendered duplicate
+  // cards (EVC×2, CYRX×2 …) and inflated the tab count vs what's shown.
+  const dedupedSetups = useMemo<Setup[]>(() => {
+    const seen = new Set<string>();
+    return tabSetups.filter((s) => {
+      const k = (s.symbol || '').toUpperCase();
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [tabSetups]);
+
   const setupTabPairs = useMemo<Array<{ setup: Setup; candidate: SepaCandidate | null }>>(() => {
     if (!activeKind) return [];
-    return tabSetups
+    const q = filters.search.trim().toUpperCase();
+    return dedupedSetups
       .map((s) => ({
         setup: s,
         candidate: candidateBySymbol.get(s.symbol.toUpperCase()) ?? null,
       }))
-      .filter(({ candidate }) => {
-        // Placeholder rows (no candidate) bypass the filter bar — they're
-        // edge cases worth surfacing regardless.
+      .filter(({ setup, candidate }) => {
+        // Always honor the ticker search — searching "ARM" must not leave
+        // EVC/CYRX placeholders on screen.
+        if (q && !setup.symbol.toUpperCase().includes(q)) return false;
+        // Placeholder rows (no live SEPA candidate) bypass the data-dependent
+        // filter bar — they're edge cases worth surfacing regardless.
         if (!candidate) return true;
         return passesFilters(candidate);
       });
-  }, [activeKind, tabSetups, candidateBySymbol, passesFilters]);
+  }, [activeKind, dedupedSetups, candidateBySymbol, passesFilters, filters.search]);
 
   // Tab counts — only show numbers for tabs whose data we already have.
   // `all` and `vcp` come from local data (cheap to compute always).
@@ -796,13 +813,13 @@ export function SepaPage() {
       // Currently-active tab uses live state (covers the during-load case
       // where the cache hasn't been written yet but setups are in hand).
       if (t === activeTab) {
-        out[t] = tabSetups.length;
+        out[t] = dedupedSetups.length;   // unique symbols, matches what renders
       } else {
         out[t] = getCachedSetupCount(kind);
       }
     });
     return out;
-  }, [source, activeTab, tabSetups]);
+  }, [source, activeTab, dedupedSetups]);
 
   // ──────────────────────────────────────────────────────────────────────
   // Page context for ChatWidget — rich snapshot of the SEPA list page so
@@ -991,7 +1008,6 @@ export function SepaPage() {
             with_catalyst: withCat,
           });
         }}
-        onReload={() => refetch()}
       />
 
       {/* Live progress — shown whenever a stream is in flight or has just finished */}

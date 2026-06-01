@@ -427,7 +427,6 @@ export function SepaV2Page() {
         data={data}
         scanning={scanning}
         onScan={runScan}
-        onReload={reload}
       />
 
       {(stream.scanning || stream.phase === 'error') && (

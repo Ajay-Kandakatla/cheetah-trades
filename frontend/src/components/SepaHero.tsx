@@ -30,7 +30,6 @@ type Props = {
   data: SepaScan | null;
   scanning: boolean;
   onScan: (withCatalyst: boolean, opts?: { fast?: boolean; mode?: string }) => void;
-  onReload: () => void;
 };
 
 const MARKET_COLOR: Record<string, string> = {
@@ -75,7 +74,7 @@ const LEGACY_MODE_MAP: Record<string, string[]> = {
  * SepaHero — top strip with market state, scan freshness, key counts, actions.
  * Color-coded market gate makes "should I be long today?" instantly readable.
  */
-export function SepaHero({ data, scanning, onScan, onReload }: Props) {
+export function SepaHero({ data, scanning, onScan }: Props) {
   const [includeCatalyst, setIncludeCatalyst] = useState(true);
   // Universe is now a MULTI-select of building blocks (user 2026-05-30:
   // "make the dropdown multiselect, remove overlaps"). Stored as a string[]
@@ -168,22 +167,13 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
       </div>
 
       <div className="sepa-hero__actions">
-        <button className="sepa-btn" onClick={onReload}>Reload</button>
         <button
           className="sepa-btn sepa-btn--primary"
-          onClick={() => onScan(false, { fast: true, mode: effectiveMode })}
-          disabled={scanning}
-          title="Joins cached weekend research with today's prices — typical 20-30s"
-        >
-          {scanning ? 'Scanning…' : 'Fast Scan'}
-        </button>
-        <button
-          className="sepa-btn"
           onClick={() => onScan(includeCatalyst, { mode: effectiveMode })}
           disabled={scanning}
-          title="Re-runs every per-symbol analysis from scratch. Slow."
+          title="Re-runs every per-symbol analysis from scratch over the selected universe."
         >
-          Full Scan
+          {scanning ? 'Scanning…' : 'Full Scan'}
         </button>
         <label className={`sepa-toggle ${includeCatalyst ? 'is-on' : ''}`}>
           <input
@@ -245,8 +235,7 @@ export function SepaHero({ data, scanning, onScan, onReload }: Props) {
           effect when needed. */}
 
       <div className="sepa-hero__actions-help">
-        <span><b>Fast Scan</b> — joins Sunday's cached research with today's prices. Typical ~20-30s.</span>
-        <span><b>Full Scan</b> — re-runs everything from scratch. ~3-15 min depending on universe size. Refreshes research cache as a side-effect.</span>
+        <span><b>Full Scan</b> — re-runs everything from scratch over the selected universe. ~3-15 min depending on size. Refreshes research cache as a side-effect.</span>
         <span><b>Include catalyst</b> — Full-Scan-only. Fetches news, earnings calendar, and analyst revisions for each candidate.</span>
       </div>
     </header>
