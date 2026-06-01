@@ -438,3 +438,62 @@ export function useTickerSupplyDemand(ticker: string | null, depth: number = 1) 
 
   return { data, loading };
 }
+
+// ── Per-stock supply/demand screen (Minervini Ch.10) ────────────────────────
+export type SDState = 'demand' | 'supply' | 'churning';
+
+export type StockSupplyDemandRow = {
+  symbol: string;
+  name: string;
+  last_close: number;
+  state: SDState;
+  demand_score: number;
+  overhead_supply_pct: number | null;
+  pct_below_52w_high: number | null;
+  distribution_days_25: number | null;
+  is_drying_up: boolean | null;
+  vol_dryup: number | null;
+  n_contractions: number | null;
+  has_base: boolean | null;
+  volume_drying: boolean | null;
+  accumulation_strength: string | null;
+  up_down_vol_ratio: number | null;
+  cmf_signal: string | null;
+  high_vol_breakout: boolean | null;
+  pocket_pivot: boolean | null;
+  dollar_vol: number | null;
+};
+
+export type StockSupplyDemandResponse = {
+  rows: StockSupplyDemandRow[];
+  counts: { demand: number; supply: number; churning: number };
+  n: number;
+  mode: string;
+  cached: boolean;
+  n_shown: number;
+};
+
+export function useStockSupplyDemand(mode: string, opts?: { minDollarVol?: number; limit?: number }) {
+  const [data, setData] = useState<StockSupplyDemandResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback((force = false) => {
+    setLoading(true); setErr(null);
+    const qs = new URLSearchParams({ mode });
+    if (opts?.minDollarVol != null) qs.set('min_dollar_vol', String(opts.minDollarVol));
+    if (opts?.limit != null) qs.set('limit', String(opts.limit));
+    if (force) qs.set('force', 'true');
+    // The broad cold pass can be slow (~3.7k frames); cached after.
+    fetch(`${API}/supply-demand/stocks?${qs.toString()}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(setData)
+      .catch((e) => setErr(String(e?.message || e)))
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, opts?.minDollarVol, opts?.limit]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return { data, loading, err, reload: load };
+}

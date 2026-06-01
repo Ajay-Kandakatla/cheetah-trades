@@ -4,11 +4,12 @@ import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
 import { DependencyGraph } from '../components/DependencyGraph';
 import { NodeThesisPanel } from '../components/NodeThesisPanel';
 import { MoneyFlowLeaderboard } from '../components/MoneyFlowLeaderboard';
+import { StockSupplyDemandPanel } from '../components/StockSupplyDemandPanel';
 import { useSupplyDemandGraph, useSectors, useMarketFlow, useEquityPremium } from '../hooks/useSupplyDemand';
 import type { SectorPayload, FlowTicker, EquityTag } from '../hooks/useSupplyDemand';
 import { useSepaScan } from '../hooks/useSepa';
 
-type Tab = 'graph' | 'sectors' | 'equity';
+type Tab = 'stocks' | 'graph' | 'sectors' | 'equity';
 
 /* Mega-cap tickers — when "highlight tradeable names only" mode is on,
    these get their SEPA gold ring stripped even if they're on the list.
@@ -24,7 +25,7 @@ const MEGACAP_EXCLUDE = new Set([
 ]);
 
 export function SupplyDemandPage() {
-  const [tab, setTab] = useState<Tab>('graph');
+  const [tab, setTab] = useState<Tab>('stocks');
   const [enrichNews, setEnrichNews] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   const [showFlow, setShowFlow] = useState(true);
@@ -88,6 +89,10 @@ export function SupplyDemandPage() {
 
       {/* Tab switcher */}
       <div className="sd-tabs">
+        <button type="button" className={`sd-tab ${tab === 'stocks' ? 'is-active' : ''}`}
+                onClick={() => setTab('stocks')}>
+          📊 Stocks (Supply / Demand)
+        </button>
         <button type="button" className={`sd-tab ${tab === 'graph' ? 'is-active' : ''}`}
                 onClick={() => setTab('graph')}>
           Dependency Graph
@@ -101,6 +106,8 @@ export function SupplyDemandPage() {
           💎 External Equity
         </button>
       </div>
+
+      {tab === 'stocks' && <StockSupplyDemandPanel />}
 
       {tab === 'equity' && <EquityPremiumPanel onClickTicker={(t) => setSelectedTicker(t)} />}
 
