@@ -15,6 +15,7 @@ in the SEPA scanner's parallel worker pool.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
@@ -38,6 +39,22 @@ async def get_short_volume(symbol: str, refresh: bool = Query(False)):
                         "for this ticker, or it's an ADR/foreign listing."},
         )
     return {"symbol": sym, "found": True, "snapshot": snap}
+
+
+@router.get("/short/{symbol}/interest")
+async def get_short_interest(symbol: str):
+    """Bi-monthly FINRA short interest + squeeze gauges (short % of shares
+    outstanding, days-to-cover, settlement-over-settlement trend).
+
+    Complements ``/short/{symbol}`` (daily short-sale VOLUME). Returns
+    ``{available: False}`` when Massive has no short-interest record (ADRs,
+    foreign listings, very thin names).
+    """
+    sym = symbol.upper()
+    data = await asyncio.to_thread(si_client.short_interest_for, sym)
+    if not data:
+        return JSONResponse({"symbol": sym, "available": False})
+    return {**data, "available": True}
 
 
 @router.get("/short/{symbol}/history")

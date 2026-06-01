@@ -253,3 +253,115 @@ def latest_short_pct(symbol: str) -> Optional[float]:
     if not snap:
         return None
     return snap.get("short_volume_ratio")
+
+
+# ---------- Short INTEREST (bi-monthly FINRA settlement) -----------------------
+# Distinct from short VOLUME above: short interest is the FINRA bi-monthly
+# settlement of total shares sold short — the classic squeeze gauge. Massive:
+# GET /stocks/v1/short-interest (note the .desc dot-sort; order=desc is ignored).
+
+_float_cache: dict[str, Optional[int]] = {}
+
+# Squeeze-fuel thresholds. STANDARD market heuristics (NOT from a SEPA book) —
+# % of shares short and days-to-cover are the two classic gauges of how hard a
+# short position would be to unwind. Conservative bands; env-tunable. The raw
+# numbers are always returned so the user can judge for themselves.
+SI_HIGH_PCT = float(os.getenv("SI_HIGH_PCT_FLOAT", "20"))
+SI_ELEV_PCT = float(os.getenv("SI_ELEV_PCT_FLOAT", "10"))
+SI_HIGH_DTC = float(os.getenv("SI_HIGH_DAYS_TO_COVER", "5"))
+SI_ELEV_DTC = float(os.getenv("SI_ELEV_DAYS_TO_COVER", "2.5"))
+
+
+def _fetch_short_interest_rows(symbol: str, limit: int = 4) -> list[dict]:
+    """Latest `limit` bi-monthly short-interest settlements, newest first."""
+    api_key = stocks_key()
+    if not api_key:
+        return []
+    try:
+        import requests
+    except ImportError:
+        return []
+    try:
+        r = requests.get(
+            "https://api.massive.com/stocks/v1/short-interest",
+            params={"ticker": symbol.upper(), "sort": "settlement_date.desc",
+                    "limit": limit, "apiKey": api_key},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            log.debug("short_interest(SI): %s HTTP %s", symbol, r.status_code)
+            return []
+        return (r.json() or {}).get("results") or []
+    except Exception as exc:
+        log.warning("short_interest(SI): fetch failed for %s: %s", symbol, exc)
+        return []
+
+
+def _shares_outstanding(symbol: str) -> Optional[int]:
+    """Share count from Massive ticker reference (cached per process). A true
+    free float isn't in the feed, so this is shares OUTSTANDING — the metric is
+    labelled accordingly (short % of shares outstanding)."""
+    sym = symbol.upper()
+    if sym in _float_cache:
+        return _float_cache[sym]
+    api_key = stocks_key()
+    val = None
+    if api_key:
+        try:
+            import requests
+            r = requests.get(f"https://api.massive.com/v3/reference/tickers/{sym}",
+                             params={"apiKey": api_key}, timeout=10)
+            if r.status_code == 200:
+                res = (r.json() or {}).get("results") or {}
+                val = res.get("share_class_shares_outstanding") or res.get("weighted_shares_outstanding")
+        except Exception as exc:
+            log.debug("short_interest(shares): %s failed: %s", sym, exc)
+    _float_cache[sym] = val
+    return val
+
+
+def _squeeze_signal(pct, dtc) -> str:
+    """Squeeze-fuel label. PCT-PRIMARY: short % of shares is the fuel; days-to-
+    cover only amplifies it. A low short % can't squeeze no matter how high the
+    days-to-cover (avoids flagging mega-caps like AAPL at <1% short)."""
+    d = dtc or 0
+    if pct is None:                          # no share count → coarse dtc-only
+        return "elevated" if d >= SI_HIGH_DTC else "low"
+    if pct >= SI_HIGH_PCT or (pct >= SI_ELEV_PCT and d >= SI_HIGH_DTC):
+        return "high"
+    if pct >= SI_ELEV_PCT or (pct >= SI_ELEV_PCT / 2 and d >= SI_HIGH_DTC):
+        return "elevated"
+    return "low"
+
+
+def short_interest_for(symbol: str) -> Optional[dict]:
+    """Latest bi-monthly short interest + squeeze gauges, or None if Massive has
+    no short-interest record (ADRs / thin names).
+
+    Keys: settlement_date, short_interest (shares), avg_daily_volume,
+    days_to_cover, shares_outstanding, pct_of_shares, prev_settlement_date,
+    si_change_pct (vs prior settlement), squeeze (low|elevated|high).
+    """
+    rows = _fetch_short_interest_rows(symbol, limit=4)
+    if not rows:
+        return None
+    latest = rows[0]
+    prev = rows[1] if len(rows) > 1 else None
+    si = latest.get("short_interest")
+    shares = _shares_outstanding(symbol)
+    pct = (si / shares * 100) if (si and shares) else None
+    dtc = latest.get("days_to_cover")
+    prev_si = prev.get("short_interest") if prev else None
+    chg = ((si - prev_si) / prev_si * 100) if (si and prev_si) else None
+    return {
+        "symbol": symbol.upper(),
+        "settlement_date": latest.get("settlement_date"),
+        "short_interest": si,
+        "avg_daily_volume": latest.get("avg_daily_volume"),
+        "days_to_cover": dtc,
+        "shares_outstanding": shares,
+        "pct_of_shares": round(pct, 2) if pct is not None else None,
+        "prev_settlement_date": prev.get("settlement_date") if prev else None,
+        "si_change_pct": round(chg, 1) if chg is not None else None,
+        "squeeze": _squeeze_signal(pct, dtc),
+    }
