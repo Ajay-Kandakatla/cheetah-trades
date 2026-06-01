@@ -92,6 +92,10 @@ export type SepaFilters = {
    *  20 candidates per Full Scan with catalyst — names outside that
    *  enriched subset are dropped when the chip is on. Added 2026-05-29. */
   insiderClusterBuy: boolean;
+  /** Emerging Momentum Leader filter (2026-06-01) — the "next ARM" fingerprint:
+   *  RS leader at new highs + pocket pivot + heavy accumulation + CMF inflow.
+   *  See lib/momentumLeader.ts. */
+  momentumLeaderOnly: boolean;
   /** Venky's "weekly 21-SMA trend confirmation" filter (2026-05-29).
    *  When true, drops candidates where the latest weekly close isn't
    *  above the 21-week SMA OR where the SMA isn't sloping up. Mirrors
@@ -151,6 +155,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     filters.potusFamilyOnly,
     filters.usGovOnly,
     filters.insiderClusterBuy,
+    filters.momentumLeaderOnly,
     filters.weekly21SmaPass,
     filters.atrPctMax > 0,
     filters.adxMin > 0,
@@ -305,6 +310,16 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           title="Only show candidates where ≥3 unique insiders filed Form 4 buys in the last 30 days (cluster-buy signal — bullish tell per Minervini / O'Neil Ch 13). Insider enrichment runs on the top 20 candidates after Full Scan with 'Include catalyst' — names outside that enriched subset will be excluded when this filter is on."
         >
           🟢 Insider Cluster Buy
+        </button>
+        {/* Emerging Momentum Leader (2026-06-01) — the "next ARM" fingerprint:
+            RS leader at new highs + pocket pivot + heavy accumulation + CMF
+            inflow. Surfaces fast momentum movers that score "no setup". */}
+        <button
+          className={`sepa-chip ${filters.momentumLeaderOnly ? 'is-active' : ''}`}
+          onClick={() => set('momentumLeaderOnly', !filters.momentumLeaderOnly)}
+          title="Only show Emerging Momentum Leaders — the ARM/DDOG fingerprint: an RS leader at new highs (no overhead) with a pocket pivot, heavy net buying (up/down vol ≥ 1.9) and CMF inflow. Catches fast momentum movers that have no base, so they normally score 'no setup'."
+        >
+          🚀 Momentum Leader
         </button>
         <span className="sepa-filterbar__sep" />
         {/* Venky's filter stack (2026-05-29): weekly 21-SMA confirmation,

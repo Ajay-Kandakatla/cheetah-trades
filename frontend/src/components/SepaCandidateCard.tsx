@@ -40,6 +40,7 @@ import { SepaConvictionChip, computeConviction } from './SepaConvictionChip';
 // curated list in src/lib/politicalDisclosures.ts.
 import { SepaPoliticalChip } from './SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
+import { isMomentumLeader, MOMENTUM_LEADER_TOOLTIP } from '../lib/momentumLeader';
 // Δ score + Δ rank trend chips — pure FE, reads SepaTrendContext for
 // the historical maps. Added 2026-05-28 in response to user request to
 // track when "points drop" and maintain a separate ranking trend.
@@ -704,6 +705,15 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               the trend / RS / setup / stage / ADR / score-breakdown drills
               from the card-specific UI elements above and below. */}
           <SepaSignalChips row={row} subset="volume_only" />
+          {isMomentumLeader(row) && (
+            <span
+              className="sepa-flag sepa-flag--good"
+              style={{ fontWeight: 700 }}
+              title={MOMENTUM_LEADER_TOOLTIP}
+            >
+              🚀 Momentum Leader
+            </span>
+          )}
           {/* JIT-loaded chips: cluster insider buying + valuation (under/fair/over).
               Lazy via IntersectionObserver — fires only when card enters viewport.
               Backend caches 24h so subsequent scrolls don't re-hit EDGAR/yfinance. */}

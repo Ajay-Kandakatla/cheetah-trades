@@ -19,6 +19,7 @@ import { SepaTrendProvider } from '../components/SepaTrendContext';
 // Tier lookup for the 🦅 Hedge-Fund-Top-Buyer filter — same curated list
 // the WhalesFlowModal uses for the per-fund ⭐⭐⭐ badge.
 import { getFundTier } from '../lib/fundTiers';
+import { isMomentumLeader } from '../lib/momentumLeader';
 // Political-disclosure flag lookup for 🏛️ POTUS Family + 🇺🇸 US Gov filters.
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -253,6 +254,10 @@ export function SepaPage() {
     // Default OFF — insider cluster-buy filter. Uses row.insider data
     // populated by scanner's catalyst enrichment on top 20 candidates.
     insiderClusterBuy: false,
+    // Default OFF — Emerging Momentum Leader (2026-06-01). The "next ARM"
+    // fingerprint: RS leader at new highs + pocket pivot + heavy accumulation
+    // + CMF inflow. Computed from existing row fields (lib/momentumLeader.ts).
+    momentumLeaderOnly: false,
     // Venky's filter stack (2026-05-29) — all default OFF, layered on
     // top of SEPA. 21-week SMA gate is boolean; ATR%/ADX gates are
     // numeric (0 means disabled, >0 means active with that threshold).
@@ -451,6 +456,10 @@ export function SepaPage() {
       if (filters.insiderClusterBuy) {
         const ins = (r as any).insider;
         if (!ins?.form4_cluster_buy) return false;
+      }
+      // Emerging Momentum Leader — the "next ARM" fingerprint.
+      if (filters.momentumLeaderOnly) {
+        if (!isMomentumLeader(r)) return false;
       }
       // Venky's filter stack (2026-05-29) — independent toggles layered
       // on top of SEPA's qualifier gate.

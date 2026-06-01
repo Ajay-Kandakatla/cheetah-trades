@@ -61,6 +61,7 @@ const DEFAULT_FILTERS: SepaFilters = {
   potusFamilyOnly: false,
   usGovOnly: false,
   insiderClusterBuy: false,
+  momentumLeaderOnly: false,
   weekly21SmaPass: false,
   atrPctMax: 0,
   adxMin: 0,
