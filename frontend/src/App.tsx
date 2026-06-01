@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode, type ComponentType } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './components/NavBar';
 import { BreakoutAlertBanner } from './components/BreakoutAlertBanner';
@@ -21,42 +21,69 @@ import { PageContextProvider } from './hooks/usePageContext';
    Named-export pages need the `.then(m => ({default: m.X}))` wrapper because
    React.lazy expects a default export.
    ========================================================================== */
-const LiveStream                  = lazy(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
-const SepaPage                    = lazy(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
-const SepaV2Page                  = lazy(() => import('./pages/SepaV2').then(m => ({ default: m.SepaV2Page })));
-const SepaCandidatePage           = lazy(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
-const DualMomentumPage            = lazy(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
-const RaviStrategyPage            = lazy(() => import('./pages/RaviStrategy').then(m => ({ default: m.RaviStrategyPage })));
-const ChatterPage                 = lazy(() => import('./pages/Chatter').then(m => ({ default: m.ChatterPage })));
-const ChatterIndiaPage            = lazy(() => import('./pages/ChatterIndia').then(m => ({ default: m.ChatterIndiaPage })));
-const PioneersPage                = lazy(() => import('./pages/Pioneers').then(m => ({ default: m.PioneersPage })));
-const DayTrading                  = lazy(() => import('./pages/DayTrading').then(m => ({ default: m.DayTrading })));
-const MorningBrief                = lazy(() => import('./pages/MorningBrief').then(m => ({ default: m.MorningBrief })));
-const OvernightPage               = lazy(() => import('./pages/Overnight').then(m => ({ default: m.OvernightPage })));
-const SupplyDemandPage            = lazy(() => import('./pages/SupplyDemand').then(m => ({ default: m.SupplyDemandPage })));
-const PortfolioPage               = lazy(() => import('./pages/Portfolio'));
-const CatalystsPage               = lazy(() => import('./pages/Catalysts').then(m => ({ default: m.CatalystsPage })));
-const TrackPage                   = lazy(() => import('./pages/Track'));
-const WatchlistPage               = lazy(() => import('./pages/Watchlist'));
-const GlossaryPage                = lazy(() => import('./pages/Glossary'));
-const NotificationsPage           = lazy(() => import('./pages/Notifications'));
-const AdminUsagePage              = lazy(() => import('./pages/AdminUsage'));
-const AdminTodosPage              = lazy(() => import('./pages/AdminTodos'));
-const AdminAccessPage             = lazy(() => import('./pages/AdminAccess'));
-const SignInPage                  = lazy(() => import('./pages/SignIn'));
-const SignUpPage                  = lazy(() => import('./pages/SignUp'));
-const AdminPushPage               = lazy(() => import('./pages/AdminPush'));
-const TodosPage                   = lazy(() => import('./pages/Todos'));
-const TinyPage                    = lazy(() => import('./pages/Tiny'));
-const SetupsPage                  = lazy(() => import('./pages/Setups'));
-const KellPage                    = lazy(() => import('./pages/Kell').then(m => ({ default: m.KellPage })));
-const LearnPage                   = lazy(() => import('./pages/Learn'));
-const VolleyballPage              = lazy(() => import('./pages/Volleyball'));
-const OptionsPulsePage            = lazy(() => import('./pages/OptionsPulse'));
-const OptionsPulseMethodologyPage = lazy(() => import('./pages/OptionsPulseMethodology'));
-const HousePage                   = lazy(() => import('./pages/House'));
-const FoodPage                    = lazy(() => import('./pages/Food'));
-const KidsPage                    = lazy(() => import('./pages/Kids'));
+
+/* Stale-chunk self-heal. After a frontend redeploy, a long-open tab is still
+   running an OLD bundle whose lazy chunk hashes no longer exist on the server
+   (e.g. /assets/Portfolio-<oldhash>.js). The next route navigation then throws
+   "Failed to fetch dynamically imported module" and the page goes blank.
+   lazyWithReload catches that and reloads ONCE to pull the fresh index.html +
+   chunk map (index.html is no-cache in nginx, so the reload gets the new build).
+   A 10s sessionStorage guard prevents a reload loop if the chunk is genuinely
+   missing (a truly broken deploy → surface the error instead of looping). */
+function lazyWithReload<T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const KEY = 'chunkReloadTs';
+      const last = Number(sessionStorage.getItem(KEY) || '0');
+      if (Date.now() - last > 10_000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {}); // hang until reload swaps the page
+      }
+      throw err; // reloaded moments ago and still failing → real error
+    }
+  });
+}
+const LiveStream                  = lazyWithReload(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
+const SepaPage                    = lazyWithReload(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
+const SepaV2Page                  = lazyWithReload(() => import('./pages/SepaV2').then(m => ({ default: m.SepaV2Page })));
+const SepaCandidatePage           = lazyWithReload(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
+const DualMomentumPage            = lazyWithReload(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
+const RaviStrategyPage            = lazyWithReload(() => import('./pages/RaviStrategy').then(m => ({ default: m.RaviStrategyPage })));
+const ChatterPage                 = lazyWithReload(() => import('./pages/Chatter').then(m => ({ default: m.ChatterPage })));
+const ChatterIndiaPage            = lazyWithReload(() => import('./pages/ChatterIndia').then(m => ({ default: m.ChatterIndiaPage })));
+const PioneersPage                = lazyWithReload(() => import('./pages/Pioneers').then(m => ({ default: m.PioneersPage })));
+const DayTrading                  = lazyWithReload(() => import('./pages/DayTrading').then(m => ({ default: m.DayTrading })));
+const MorningBrief                = lazyWithReload(() => import('./pages/MorningBrief').then(m => ({ default: m.MorningBrief })));
+const OvernightPage               = lazyWithReload(() => import('./pages/Overnight').then(m => ({ default: m.OvernightPage })));
+const SupplyDemandPage            = lazyWithReload(() => import('./pages/SupplyDemand').then(m => ({ default: m.SupplyDemandPage })));
+const PortfolioPage               = lazyWithReload(() => import('./pages/Portfolio'));
+const CatalystsPage               = lazyWithReload(() => import('./pages/Catalysts').then(m => ({ default: m.CatalystsPage })));
+const TrackPage                   = lazyWithReload(() => import('./pages/Track'));
+const WatchlistPage               = lazyWithReload(() => import('./pages/Watchlist'));
+const GlossaryPage                = lazyWithReload(() => import('./pages/Glossary'));
+const NotificationsPage           = lazyWithReload(() => import('./pages/Notifications'));
+const AdminUsagePage              = lazyWithReload(() => import('./pages/AdminUsage'));
+const AdminTodosPage              = lazyWithReload(() => import('./pages/AdminTodos'));
+const AdminAccessPage             = lazyWithReload(() => import('./pages/AdminAccess'));
+const SignInPage                  = lazyWithReload(() => import('./pages/SignIn'));
+const SignUpPage                  = lazyWithReload(() => import('./pages/SignUp'));
+const AdminPushPage               = lazyWithReload(() => import('./pages/AdminPush'));
+const TodosPage                   = lazyWithReload(() => import('./pages/Todos'));
+const TinyPage                    = lazyWithReload(() => import('./pages/Tiny'));
+const SetupsPage                  = lazyWithReload(() => import('./pages/Setups'));
+const KellPage                    = lazyWithReload(() => import('./pages/Kell').then(m => ({ default: m.KellPage })));
+const LearnPage                   = lazyWithReload(() => import('./pages/Learn'));
+const VolleyballPage              = lazyWithReload(() => import('./pages/Volleyball'));
+const OptionsPulsePage            = lazyWithReload(() => import('./pages/OptionsPulse'));
+const OptionsPulseMethodologyPage = lazyWithReload(() => import('./pages/OptionsPulseMethodology'));
+const HousePage                   = lazyWithReload(() => import('./pages/House'));
+const FoodPage                    = lazyWithReload(() => import('./pages/Food'));
+const KidsPage                    = lazyWithReload(() => import('./pages/Kids'));
 
 // Register the service worker as soon as the app loads so push delivery works
 // even when this tab is closed. No-op if already registered or unsupported.
