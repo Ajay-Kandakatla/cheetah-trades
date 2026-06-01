@@ -484,6 +484,20 @@ def _refresh_from_plaid(owner_email: str) -> Optional[dict]:
     return resp
 
 
+@router.get("/portfolio/attribution")
+async def portfolio_attribution(
+    window: int = Query(5, ge=1, le=30, description="lookback window in trading days"),
+    user_email: str = Depends(current_user_email),
+):
+    """Drop/move attribution per holding — is each move driven by the MARKET
+    (SPY), its SECTOR (sector ETF), or the STOCK itself? CAPM decomposition;
+    see portfolio/drop_attribution.py for the method + honest caveats."""
+    e = _require_portfolio_access(user_email)
+    import asyncio
+    from portfolio import drop_attribution as da
+    return await asyncio.to_thread(da.attribute_portfolio, e, window)
+
+
 @router.get("/portfolio/holdings")
 async def portfolio_holdings_get(
     refresh: bool = Query(False),

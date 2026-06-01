@@ -1,0 +1,180 @@
+"""Portfolio Drop-Attribution — is a holding's move driven by the MARKET, its
+SECTOR, or the STOCK itself?
+
+Plain idea (CAPM decomposition): a stock's move is partly "the whole market
+moved" and partly "this company specifically." We measure how much of the move
+each benchmark explains:
+
+    expected_from_market = beta_market × market_move      (SPY)
+    expected_from_sector = beta_sector × sector_move      (sector ETF, e.g. XLK)
+    residual (idiosyncratic) = actual_move − expected_from_sector
+
+Verdict (works for drops AND rallies — it's signed):
+    🌍 Macro          market explains ≥60% of the move
+    🏭 Sector         sector (not the broad market) explains ≥60%
+    🎯 Stock-specific neither does — the residual is the story, go find the news
+
+Honest limits (this is a real-money tool): beta drifts over time; single-day
+splits are noisy; a non-zero residual means "not explained by SPY/sector," NOT
+"confirmed news." It tells you WHERE to look, not the reason.
+
+Reuses sepa.ravi._beta + sepa.prices; no new data source.
+"""
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+import numpy as np
+
+from sepa import prices
+from sepa.ravi import _beta
+
+log = logging.getLogger("portfolio.drop_attribution")
+
+MARKET_ETF = "SPY"
+FALLBACK_SECTOR_ETF = "QQQ"   # when we can't determine a stock's sector
+BETA_LOOKBACK = 60
+EXPLAINED_THRESHOLD = 0.60    # ≥60% explained by one factor → that's the verdict
+
+
+def _notable_threshold(window_days: int) -> float:
+    """Below this |move| the attribution is just noise — don't force a verdict.
+    ~1.5% for a day, scaling up with the window."""
+    return max(1.5, window_days * 0.7)
+
+# yfinance GICS sector string → SPDR sector ETF.
+SECTOR_ETF = {
+    "Technology":             "XLK",
+    "Financial Services":     "XLF",
+    "Financial":              "XLF",
+    "Healthcare":             "XLV",
+    "Consumer Cyclical":      "XLY",
+    "Consumer Defensive":     "XLP",
+    "Energy":                 "XLE",
+    "Industrials":            "XLI",
+    "Basic Materials":        "XLB",
+    "Utilities":              "XLU",
+    "Real Estate":            "XLRE",
+    "Communication Services": "XLC",
+}
+
+
+def _sector_etf_for(symbol: str) -> tuple[str, Optional[str]]:
+    """Return (sector_etf, sector_name) for a stock. Uses the cached company
+    sector; falls back to QQQ when unknown."""
+    try:
+        from companies import store as company_store
+        sector = (company_store.get(symbol) or {}).get("sector")
+    except Exception as exc:
+        log.debug("sector lookup failed for %s: %s", symbol, exc)
+        sector = None
+    return SECTOR_ETF.get(sector or "", FALLBACK_SECTOR_ETF), sector
+
+
+def _ret_pct(df, n: int) -> Optional[float]:
+    if df is None or len(df) < n + 1:
+        return None
+    a, b = float(df["close"].iloc[-1]), float(df["close"].iloc[-1 - n])
+    if b <= 0:
+        return None
+    return (a / b - 1) * 100
+
+
+def _explained_fraction(actual: Optional[float], expected: float) -> float:
+    """Fraction of `actual` that `expected` accounts for, clamped to [0,1].
+    Opposite-sign (e.g. stock down while the benchmark predicts up) → 0."""
+    if actual is None or abs(actual) < 1e-9:
+        return 0.0
+    return max(0.0, min(1.0, expected / actual))
+
+
+def attribute(symbol: str, window_days: int = 5,
+              beta_lookback: int = BETA_LOOKBACK) -> Optional[dict]:
+    """Decompose one symbol's `window_days` move into market / sector / stock."""
+    df = prices.load_prices(symbol)
+    spy = prices.load_prices(MARKET_ETF)
+    if df is None or spy is None or len(df) < beta_lookback + 2:
+        return None
+    sector_etf, sector_name = _sector_etf_for(symbol)
+    sec_df = prices.load_prices(sector_etf)
+
+    r = _ret_pct(df, window_days)
+    mkt = _ret_pct(spy, window_days)
+    sec = _ret_pct(sec_df, window_days) if sec_df is not None else None
+    if r is None or mkt is None:
+        return None
+
+    slr = np.log(df["close"]).diff()
+    beta_mkt = _beta(slr, np.log(spy["close"]).diff(), beta_lookback)
+    beta_sec = _beta(slr, np.log(sec_df["close"]).diff(), beta_lookback) if sec_df is not None else None
+
+    exp_mkt = (beta_mkt if beta_mkt is not None else 1.0) * mkt
+    exp_sec = (beta_sec if beta_sec is not None else 1.0) * sec if sec is not None else None
+
+    frac_mkt = _explained_fraction(r, exp_mkt)
+    frac_sec = _explained_fraction(r, exp_sec) if exp_sec is not None else 0.0
+    idiosyncratic = round((1.0 - max(frac_mkt, frac_sec)) * 100, 0)
+
+    notable = abs(r) >= _notable_threshold(window_days)
+    if not notable:
+        verdict, conf = "quiet", 1.0          # move too small to attribute
+    elif frac_mkt >= EXPLAINED_THRESHOLD:
+        verdict, conf = "macro", frac_mkt
+    elif frac_sec >= EXPLAINED_THRESHOLD:
+        verdict, conf = "sector", frac_sec
+    else:
+        verdict, conf = "stock", 1.0 - max(frac_mkt, frac_sec)
+
+    return {
+        "symbol": symbol,
+        "window_days": window_days,
+        "move_pct": round(r, 2),
+        "notable": notable,
+        "market_move_pct": round(mkt, 2),
+        "sector_move_pct": round(sec, 2) if sec is not None else None,
+        "sector_etf": sector_etf,
+        "sector_name": sector_name,
+        "beta_market": round(beta_mkt, 2) if beta_mkt is not None else None,
+        "beta_sector": round(beta_sec, 2) if beta_sec is not None else None,
+        "expected_from_market_pct": round(exp_mkt, 2),
+        "expected_from_sector_pct": round(exp_sec, 2) if exp_sec is not None else None,
+        "explained_by_market_pct": round(frac_mkt * 100, 0),
+        "explained_by_sector_pct": round(frac_sec * 100, 0),
+        "idiosyncratic_pct": idiosyncratic,
+        "verdict": verdict,                 # macro | sector | stock
+        "confidence": round(conf, 2),
+        "summary": _summary(symbol, verdict, r, mkt, sec, beta_mkt, frac_mkt, frac_sec, idiosyncratic),
+    }
+
+
+def _summary(sym, verdict, r, mkt, sec, beta_mkt, frac_mkt, frac_sec, idio) -> str:
+    move = f"{sym} {r:+.1f}%"
+    if verdict == "quiet":
+        return f"{move}: too small to attribute — noise."
+    if verdict == "macro":
+        return f"{move}: market {mkt:+.1f}% × β{(beta_mkt or 1):.1f} explains ~{frac_mkt*100:.0f}% — ride it out, it's the market."
+    if verdict == "sector":
+        return f"{move}: its sector ({sec:+.1f}%) explains ~{frac_sec*100:.0f}% but the broad market didn't — it's sector rotation."
+    return f"{move}: market/sector only explain ~{max(frac_mkt, frac_sec)*100:.0f}% — ~{idio:.0f}% is {sym} itself. Check the news."
+
+
+def attribute_portfolio(user_email: str, window_days: int = 5) -> dict:
+    """Run attribution for every holding in a user's portfolio."""
+    from portfolio import store as pstore
+    holdings = pstore.list_holdings(user_email)
+    syms = []
+    seen = set()
+    for h in holdings:
+        t = (h.get("ticker") or "").upper()
+        if t and t not in seen:
+            seen.add(t)
+            syms.append(t)
+    rows = [a for s in syms if (a := attribute(s, window_days)) is not None]
+    rows.sort(key=lambda x: x["move_pct"])   # worst movers first
+    counts = {
+        "macro":  sum(1 for r in rows if r["verdict"] == "macro"),
+        "sector": sum(1 for r in rows if r["verdict"] == "sector"),
+        "stock":  sum(1 for r in rows if r["verdict"] == "stock"),
+    }
+    return {"rows": rows, "counts": counts, "n": len(rows), "window_days": window_days}
