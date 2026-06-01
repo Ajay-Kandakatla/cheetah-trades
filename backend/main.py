@@ -66,6 +66,7 @@ load_dotenv()
 # module-level env knobs (MASSIVE_WS_URL, channels) resolve from .env in local
 # runs. See backend/live_feed.py — it feeds the same QuoteCache as Finnhub did.
 import live_feed  # noqa: E402
+import accumulation  # noqa: E402
 
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 DEFAULT_SYMBOLS = os.getenv(
@@ -249,6 +250,9 @@ cache = QuoteCache()
 # ---------------------------------------------------------------------------
 tracked_symbols: set[str] = set()
 _ws_subscribe_queue: asyncio.Queue[str] = asyncio.Queue()
+# Phase-2 accumulation: focus symbols whose NBBO (Q channel) we want streamed on
+# the single WS connection (portfolio holdings + top-N candidates + on-demand).
+_ws_q_subscribe_queue: asyncio.Queue[str] = asyncio.Queue()
 _rest_client: Optional[httpx.AsyncClient] = None
 
 
@@ -418,6 +422,66 @@ async def finnhub_rest_poller() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Phase-2 accumulation focus set — portfolio holdings + top-N candidates
+# ---------------------------------------------------------------------------
+def _portfolio_focus_symbols() -> list[str]:
+    """Best-effort holding symbols for the default user (empty on any failure)."""
+    try:
+        from portfolio.plaid_store import get_cached_holdings
+        email = os.getenv("DEFAULT_USER_EMAIL", "")
+        if not email:
+            return []
+        resp = get_cached_holdings(email, max_age_sec=7 * 24 * 3600) or {}
+        out = []
+        for h in (resp.get("holdings") or []):
+            sym = (h.get("symbol") or h.get("ticker") or "").upper()
+            if sym:
+                out.append(sym)
+        return out
+    except Exception as exc:
+        log.debug("focus: portfolio holdings unavailable: %s", exc)
+        return []
+
+
+def _top_candidate_symbols(n: int) -> list[str]:
+    """Top-N symbols from the latest scan, ranked by score (best first)."""
+    try:
+        latest = sepa_scanner.load_latest() or {}
+        rows = sorted(latest.get("all_results") or [], key=lambda r: r.get("score") or 0, reverse=True)
+        return [(r.get("symbol") or "").upper() for r in rows[:n] if r.get("symbol")]
+    except Exception as exc:
+        log.debug("focus: latest scan unavailable: %s", exc)
+        return []
+
+
+def _compute_focus_symbols() -> list[str]:
+    """Accumulation focus = portfolio holdings + top-N candidates + defaults."""
+    top_n = int(os.getenv("ACCUM_TOP_N", "5"))
+    syms = _portfolio_focus_symbols() + _top_candidate_symbols(top_n)
+    syms += [s.strip().upper() for s in DEFAULT_SYMBOLS if s.strip()]
+    return list(dict.fromkeys(s for s in syms if s))  # dedupe, keep order
+
+
+async def _accumulation_focus_refresher() -> None:
+    """Periodically refresh the focus set and subscribe Q (NBBO) for new names
+    (also ensuring each is T-tracked for the trade stream)."""
+    interval = float(os.getenv("ACCUM_FOCUS_REFRESH_SEC", "300"))
+    while True:
+        try:
+            added = accumulation.tracker.set_focus(_compute_focus_symbols())
+            for sym in accumulation.tracker.focus:
+                if sym not in tracked_symbols:
+                    await subscribe_symbols([sym])
+            for sym in added:
+                await _ws_q_subscribe_queue.put(sym)
+            if added:
+                log.info("Accumulation focus +%d (%d total)", len(added), len(accumulation.tracker.focus))
+        except Exception as exc:
+            log.warning("focus refresh error: %s", exc)
+        await asyncio.sleep(interval)
+
+
+# ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
 @asynccontextmanager
@@ -450,10 +514,20 @@ async def lifespan(app: FastAPI):
         # capable Finnhub data can't overwrite real-time Massive prices. The
         # snapshot poller backfills the day frame (open/high/low/prev_close).
         from sepa.prices import bulk_snapshot
+        # Seed the accumulation focus set BEFORE the WS connects so the first
+        # subscribe frame already carries Q (NBBO) for portfolio + top-N names.
+        try:
+            accumulation.tracker.set_focus(_compute_focus_symbols())
+            for s in accumulation.tracker.focus:
+                if s not in tracked_symbols:
+                    await subscribe_symbols([s])
+        except Exception as exc:
+            log.warning("initial accumulation focus seed failed: %s", exc)
         tasks.append(asyncio.create_task(
-            live_feed.massive_ws_consumer(cache, tracked_symbols, _ws_subscribe_queue)))
+            live_feed.massive_ws_consumer(cache, tracked_symbols, _ws_subscribe_queue, _ws_q_subscribe_queue)))
         tasks.append(asyncio.create_task(
             live_feed.massive_snapshot_poller(cache, tracked_symbols, bulk_snapshot)))
+        tasks.append(asyncio.create_task(_accumulation_focus_refresher()))
         log.info(
             "Live feed: Massive WebSocket (%s) — real-time; Finnhub WS/poller disabled.",
             live_feed.MASSIVE_WS_URL,
@@ -1356,6 +1430,40 @@ async def live_feed_status():
     if st.get("last_msg_ts"):
         st["last_msg_age_s"] = round(now - st["last_msg_ts"], 1)
     return st
+
+
+@app.get("/live/accumulation")
+async def live_accumulation():
+    """Real-time accumulation/distribution for every focus symbol.
+
+    Each entry classifies the live trade tape against the NBBO (buy = lifted
+    offer, sell = hit bid) and splits flow lit vs dark-pool (off-exchange).
+    """
+    return {
+        "updated_at": int(time.time()),
+        "focus": sorted(accumulation.tracker.focus),
+        "accumulation": accumulation.tracker.snapshot_all(),
+    }
+
+
+@app.get("/live/accumulation/{symbol}")
+async def live_accumulation_symbol(symbol: str):
+    """Real-time accumulation/distribution for one stock.
+
+    If the symbol isn't already in the focus set, it's added on demand (its Q
+    feed is subscribed) and a ``warming_up`` flag is returned — poll again in a
+    few seconds during market hours and it'll be populated.
+    """
+    sym = symbol.upper()
+    snap = accumulation.tracker.snapshot(sym)
+    if snap is None:
+        if accumulation.tracker.add_focus(sym):
+            if sym not in tracked_symbols:
+                await subscribe_symbols([sym])
+            await _ws_q_subscribe_queue.put(sym)
+        return {"symbol": sym, "warming_up": True,
+                "message": "subscribed — accumulation populates within seconds during market hours"}
+    return snap
 
 
 def _clean_json_floats(obj):

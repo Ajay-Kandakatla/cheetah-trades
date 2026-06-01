@@ -28,8 +28,8 @@ contracts-kell:                ## Run the Kell scanner contracts regression test
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_kell_contracts.py -v --tb=short
 
 contracts-realtime:            ## Massive key-routing + WS live-feed contracts. Fold into `contracts` after the api image is rebuilt with live_feed.py.
-	@echo "→ Real-time contracts (massive_keys + live_feed)"
-	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_massive_keys.py tests/test_live_feed.py -v --tb=short
+	@echo "→ Real-time contracts (massive_keys + live_feed + accumulation)"
+	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_massive_keys.py tests/test_live_feed.py tests/test_accumulation.py -v --tb=short
 
 contracts-frontend:            ## Frontend source contracts (alert-banner cap, etc.) — pure Node, no docker.
 	@echo "→ Frontend contracts (frontend/scripts/contracts.mjs)"

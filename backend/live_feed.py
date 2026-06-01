@@ -45,6 +45,7 @@ import time
 import websockets
 
 from massive_keys import stocks_key
+import accumulation
 
 log = logging.getLogger("market_stream")
 
@@ -56,6 +57,10 @@ SNAPSHOT_INTERVAL_SEC = float(os.getenv("MASSIVE_SNAPSHOT_INTERVAL_SEC", "15"))
 # Symbols per subscribe frame. Massive accepts long param strings; we chunk to
 # stay well under any frame-size limit on a broad-universe subscribe.
 _SUBSCRIBE_BATCH = int(os.getenv("MASSIVE_WS_SUBSCRIBE_BATCH", "250"))
+# The account allows only ONE concurrent WS connection and the server takes
+# ~20-60s to release a dropped one. Reconnecting sooner just trips
+# "max_connections" (1008), so after an authenticated drop we wait this cooldown.
+_RECONNECT_COOLDOWN = float(os.getenv("MASSIVE_WS_RECONNECT_COOLDOWN", "30"))
 
 # Observable state for the /live/feed-status endpoint. Single process, single
 # WS — a plain dict is enough (no cross-process sharing needed).
@@ -66,6 +71,7 @@ feed_state: dict = {
     "connected": False,
     "authed": False,
     "tracked": 0,
+    "focus": 0,
     "trades": 0,
     "last_msg_ts": 0.0,
     "last_trade_ts": 0.0,
@@ -114,14 +120,16 @@ async def _await_auth(ws, timeout: float = 8.0) -> bool:
     return False
 
 
-async def _subscribe(ws, symbols: list[str]) -> None:
-    """Send subscribe frames for ``symbols`` across all configured channels."""
+async def _subscribe(ws, symbols: list[str], channels: list[str] | None = None) -> None:
+    """Send subscribe frames for ``symbols`` across ``channels`` (default: the
+    price channels in MASSIVE_WS_CHANNELS). Pass ``["Q"]`` for focus quotes."""
+    chans = channels or MASSIVE_WS_CHANNELS
     syms = [s for s in symbols if s]
     if not syms:
         return
     for i in range(0, len(syms), _SUBSCRIBE_BATCH):
         chunk = syms[i : i + _SUBSCRIBE_BATCH]
-        params = ",".join(f"{ch}.{s}" for s in chunk for ch in MASSIVE_WS_CHANNELS)
+        params = ",".join(f"{ch}.{s}" for s in chunk for ch in chans)
         await ws.send(json.dumps({"action": "subscribe", "params": params}))
 
 
@@ -152,6 +160,17 @@ async def _handle(raw, cache) -> None:
                     "trade_ts": e.get("t"),
                 },
             )
+            # Phase 2: feed the accumulation tracker (focus symbols only). The
+            # trade's `trfi` field (FINRA TRF id) marks an off-exchange/dark print.
+            if accumulation.tracker.in_focus(sym):
+                await accumulation.tracker.on_trade(
+                    sym, e.get("p"), e.get("s"), is_dark=("trfi" in e), ts=now
+                )
+        elif ev == "Q":  # NBBO quote (focus symbols) — for buy/sell classification
+            sym = e.get("sym")
+            if sym:
+                feed_state["last_msg_ts"] = now
+                accumulation.tracker.on_quote(sym, e.get("bp"), e.get("ap"), now)
         elif ev == "A":  # per-second aggregate (only if "A" in MASSIVE_WS_CHANNELS)
             sym = e.get("sym")
             if not sym:
@@ -175,8 +194,11 @@ async def _handle(raw, cache) -> None:
                 log.error("Massive WS status %s — %s", st, e.get("message"))
 
 
-async def massive_ws_consumer(cache, tracked_symbols: set, subscribe_queue: "asyncio.Queue") -> None:
-    """Maintain one authenticated Massive WS, streaming trades into ``cache``."""
+async def massive_ws_consumer(cache, tracked_symbols: set, subscribe_queue: "asyncio.Queue",
+                              q_subscribe_queue: "asyncio.Queue | None" = None) -> None:
+    """Maintain THE one authenticated Massive WS (account allows a single
+    socket). Streams T trades into ``cache`` for every tracked symbol and Q
+    quotes into the accumulation tracker for the bounded focus set."""
     key = stocks_key()
     if not key:
         log.warning("Massive WS: no stocks key configured — feed not started.")
@@ -192,9 +214,14 @@ async def massive_ws_consumer(cache, tracked_symbols: set, subscribe_queue: "asy
                 # Subscribe ONLY after auth_success (covers first connect + reconnects).
                 await _subscribe(ws, list(tracked_symbols))
                 feed_state["tracked"] = len(tracked_symbols)
+                # Phase 2: Q (NBBO) for the bounded focus set on the SAME socket.
+                focus = list(accumulation.tracker.focus)
+                if focus:
+                    await _subscribe(ws, focus, channels=["Q"])
+                feed_state["focus"] = len(focus)
                 log.info(
-                    "Massive WS authenticated — subscribed %d symbols on channels %s",
-                    len(tracked_symbols), MASSIVE_WS_CHANNELS,
+                    "Massive WS authenticated — %d symbols (T) + %d focus (Q).",
+                    len(tracked_symbols), len(focus),
                 )
                 backoff = 2
 
@@ -208,17 +235,36 @@ async def massive_ws_consumer(cache, tracked_symbols: set, subscribe_queue: "asy
                             await subscribe_queue.put(sym)  # retry on next reconnect
                             raise
 
-                pump_task = asyncio.create_task(pump_subs())
+                async def pump_q() -> None:
+                    while True:
+                        sym = await q_subscribe_queue.get()
+                        try:
+                            await _subscribe(ws, [sym], channels=["Q"])
+                            feed_state["focus"] = len(accumulation.tracker.focus)
+                        except Exception:
+                            await q_subscribe_queue.put(sym)
+                            raise
+
+                pumps = [asyncio.create_task(pump_subs())]
+                if q_subscribe_queue is not None:
+                    pumps.append(asyncio.create_task(pump_q()))
                 try:
                     async for raw in ws:
                         await _handle(raw, cache)
                 finally:
-                    pump_task.cancel()
+                    for p in pumps:
+                        p.cancel()
         except Exception as exc:
+            was_authed = feed_state.get("authed")
             feed_state.update(connected=False, authed=False, error=str(exc)[:140])
             feed_state["reconnects"] += 1
-            log.error("Massive WS error: %s — reconnecting in %ss", exc, backoff)
-            await asyncio.sleep(backoff)
+            # One-connection limit: the server holds a dropped socket ~20-60s, so
+            # after an authed drop (or an explicit max_connections) wait the
+            # cooldown before retrying — reconnecting sooner just 1008s again.
+            cooling = was_authed or "max_connections" in str(exc).lower()
+            wait = _RECONNECT_COOLDOWN if cooling else backoff
+            log.error("Massive WS error: %s — reconnecting in %ss", exc, wait)
+            await asyncio.sleep(wait)
             backoff = min(backoff * 2, 60)
 
 
