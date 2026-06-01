@@ -35,7 +35,11 @@ CACHE_TTL_SEC = 60 * 60  # 1 hour — fundamentals/ESG are slow-changing
 # Bumped whenever the panel schema changes in a way that adds fields the UI
 # expects. Cached payloads tagged with an older version are auto-refreshed
 # instead of being served stale.
-SCHEMA_VERSION = 3
+# v4 (2026-06-01): forces a refresh so cached blobs predating the
+# `fundamental.headline` block (net worth / shareholders' equity / revenue /
+# enterprise value — surfaced by CompanyHeadline) get recomputed WITH it,
+# instead of the company-headline strip silently disappearing on deploy.
+SCHEMA_VERSION = 4
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 
 # ---------------------------------------------------------------------------
