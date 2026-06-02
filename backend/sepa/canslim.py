@@ -40,6 +40,8 @@ import os
 from massive_keys import stocks_key
 from typing import Optional
 
+from sepa import sales
+
 log = logging.getLogger("sepa.canslim")
 
 
@@ -105,6 +107,9 @@ def _from_hybrid(symbol: str) -> dict:
         "y_eps_growth_pct":   m.get("y_eps_growth_pct"),
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
         "inst_ownership_pct": inst,
+        # Sales Confidence (Bonde/Stockbee-inspired) — computed from the SAME
+        # financials fetch (no extra API call). See sepa/sales.py.
+        "sales": sales.compute(m.get("rev_q_series"), m.get("q_eps_growth_pct")),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "hybrid",
@@ -142,10 +147,11 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
     base = "https://api.massive.com/vX/reference/financials"
 
     try:
-        # Quarterly — need 5 quarters for YoY comparison (Q vs Q-4)
+        # Quarterly — 8 quarters: 5 for the latest YoY (Q vs Q-4), and enough
+        # back-history for the sales score's acceleration + 4-quarter consistency.
         rq = sess.get(base, params={
             "ticker":    symbol.upper(),
-            "limit":     6,
+            "limit":     8,
             "timeframe": "quarterly",
             "apiKey":    api_key,
         }, timeout=8)
@@ -179,6 +185,8 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         "q_eps_growth_pct": _compute_q_eps_growth(q_results),
         "y_eps_growth_pct": _compute_y_eps_growth(a_results),
         "rev_growth_q_pct": _compute_q_rev_growth(q_results),
+        # Newest-first quarterly revenue series — feeds the Sales Confidence score.
+        "rev_q_series": [_income_value(q, "revenues") for q in q_results],
     }
 
 
@@ -254,6 +262,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "y_eps_growth_pct":   y,
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
         "inst_ownership_pct": inst,
+        "sales": sales.compute(m.get("rev_q_series"), q),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "massive",
@@ -287,6 +296,9 @@ def _from_yfinance(symbol: str) -> dict:
         "y_eps_growth_pct":   y_eps,
         "rev_growth_q_pct":   rev_q,
         "inst_ownership_pct": inst,
+        # yfinance fallback doesn't expose a clean revenue SERIES here, so the
+        # full sales score is unknown on this path (Massive is the primary).
+        "sales": sales.compute([], q_eps),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "yfinance",
@@ -297,6 +309,7 @@ def _empty() -> dict:
     return {
         "q_eps_growth_pct": None, "y_eps_growth_pct": None,
         "rev_growth_q_pct": None, "inst_ownership_pct": None,
+        "sales": sales.compute([]),
         "checks": {"c_strong_q_eps": False, "a_strong_y_eps": False, "i_institutional": False},
         "passed": 0,
         "_source": "empty",

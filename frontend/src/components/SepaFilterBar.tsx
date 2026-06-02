@@ -58,6 +58,10 @@ export type SepaFilters = {
    *  contraction ≤ 5% (book pp.198/202; user 2026-06-02 "5% is good"). Optional
    *  so SepaV2 keeps compiling. */
   tightPivotOnly?: boolean;
+  /** Keep only names with a STRONG sales-confidence read (tier strong/explosive
+   *  — ≥25% YoY revenue, Bonde's "preferred"). See lib sales score. Optional so
+   *  SepaV2 keeps compiling. */
+  salesStrongOnly?: boolean;
   rsMin: number;
   search: string;
   showAll: boolean;
@@ -132,7 +136,7 @@ export type SepaFilters = {
    *  actual trend, not chop). 0 = off. */
   adxMin: number;
   sortBy:
-    | 'score' | 'rs' | 'symbol' | 'closest_trigger' | 'most_buyable'
+    | 'score' | 'rs' | 'symbol' | 'closest_trigger' | 'most_buyable' | 'sales_confidence'
     | 'day_change' | 'day_change_abs'
     | 'dm_12m' | 'dm_6m' | 'dm_3m' | 'dm_1m' | 'dm_score'
     | 'moat'
@@ -204,6 +208,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     (filters.decision ?? 'ALL') !== 'ALL',
     (filters.breakoutWindow ?? 'TODAY') !== 'TODAY',
     filters.tightPivotOnly,
+    filters.salesStrongOnly,
     filters.stage !== 'ALL',
     filters.moatMin !== 0,
     filters.type !== 'all',
@@ -457,6 +462,13 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           >
             🎯 ADX ≥ {filters.adxMin > 0 ? filters.adxMin : 25}
           </button>
+          <button
+            className={`sepa-chip ${filters.salesStrongOnly ? 'is-active' : ''}`}
+            onClick={() => set('salesStrongOnly', !filters.salesStrongOnly)}
+            title="Pradeep Bonde / Stockbee: only names with STRONG sales — Sales-Confidence tier 'strong' or 'explosive' (≥25% YoY revenue growth, his 'preferred' bar). The 'stocks driven by sales' short-list. Sort by '📈 Sales confidence' to rank within it."
+          >
+            🚀 Strong Sales
+          </button>
         </div>
 
         {/* 🔎 TYPE — utility: operating companies vs ETFs. */}
@@ -503,6 +515,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           onChange={(e) => set('sortBy', e.target.value as SepaFilters['sortBy'])}
         >
           <option value="most_buyable">Sort: 🎯 Most buyable (Enter · VCP)</option>
+          <option value="sales_confidence">Sort: 📈 Sales confidence (Bonde)</option>
           <option value="score">Sort: Score</option>
           <option value="closest_trigger">Sort: ⚡ Closest to trigger</option>
           <option value="rs">Sort: RS rank</option>

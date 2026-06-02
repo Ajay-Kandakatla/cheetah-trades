@@ -561,6 +561,27 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
         </div>
       )}
 
+      {/* Sales Confidence (Bonde/Stockbee) — revenue growth + acceleration. */}
+      {(() => {
+        const s = row.fundamentals?.sales;
+        if (!s || s.score == null) return null;
+        const tone =
+          s.tier === 'explosive' ? '#10b981' : s.tier === 'strong' ? '#34d399' :
+          s.tier === 'steady' ? '#eab308' : s.tier === 'weak' ? '#94a3b8' : '#f87171';
+        return (
+          <div style={{ padding: '0.35rem 0.2rem 0' }}>
+            <span
+              className="sepa-chip"
+              title={`Sales Confidence ${s.score}/100 (${s.tier}). Revenue ${s.growth_yoy_pct}% YoY${s.accelerating ? ', accelerating ⚡' : ''}${s.consecutive_growth_q ? `, ${s.consecutive_growth_q}q growth` : ''}${s.sales_led ? ', sales-led' : ''}. Pradeep Bonde / Stockbee: 5% floor · 25% preferred · 100% explosive.`}
+              style={{ color: tone, borderColor: tone, cursor: 'help', fontSize: '0.72rem' }}
+            >
+              📈 Sales {s.score} · {s.growth_yoy_pct != null ? `${s.growth_yoy_pct > 0 ? '+' : ''}${s.growth_yoy_pct}% YoY` : '—'}
+              {s.accelerating ? ' ⚡' : ''}{s.sales_led ? ' · led' : ''}
+            </span>
+          </div>
+        );
+      })()}
+
       {presetOpen && (
         <Suspense fallback={null}>
           <TickerAlertPresets

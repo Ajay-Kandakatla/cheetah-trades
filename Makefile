@@ -35,6 +35,10 @@ contracts-breakout:            ## Breakout-recency (volume.days_since_breakout) 
 	@echo "→ Breakout-window contracts (backend/sepa/volume.py + scanner._is_setup_ready)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_breakout_window.py -v --tb=short
 
+contracts-sales:               ## Sales Confidence score contracts (docs/sepa/sales_confidence_methodology.md). Fold into `contracts-sepa` after the api image is rebuilt with test_sales.py.
+	@echo "→ Sales Confidence contracts (backend/sepa/sales.py)"
+	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_sales.py -v --tb=short
+
 contracts-kell:                ## Run the Kell scanner contracts regression test (docs/KELL_CONTRACTS.md).
 	@echo "→ Kell contracts (docs/KELL_CONTRACTS.md)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_kell_contracts.py -v --tb=short

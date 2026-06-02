@@ -271,7 +271,7 @@ export function SepaPage() {
   // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
   const FILTER_DEFAULTS: SepaFilters = {
     rating: 'ALL', setup: 'ALL', decision: 'ALL', breakoutWindow: 'TODAY',
-    tightPivotOnly: false, rsMin: 70, search: '', showAll: true,
+    tightPivotOnly: false, salesStrongOnly: false, rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
     // Default OFF — opt-in toggle. Some users want to see distributing
@@ -433,6 +433,8 @@ export function SepaPage() {
       // shows. (Helper passesDecision keeps the two apply paths in sync.)
       if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
       if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
+
+      if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
       if (filters.search && !r.symbol.includes(filters.search)) return false;
       if (filters.dmEligibleOnly) {
@@ -559,6 +561,11 @@ export function SepaPage() {
       // top, then Enter, then coiling VCP bases, by score. See buyabilityRank.
       if (filters.sortBy === 'most_buyable') {
         return buyabilityRank(a, pivotTiming(a)) - buyabilityRank(b, pivotTiming(b));
+      }
+      // Sales Confidence (Bonde/Stockbee) — highest sales-driven conviction first.
+      // Names with no sales data sink (null score → -1).
+      if (filters.sortBy === 'sales_confidence') {
+        return (b.fundamentals?.sales?.score ?? -1) - (a.fundamentals?.sales?.score ?? -1);
       }
       if (filters.sortBy === 'day_change') {
         // Top gainers descending. Nulls land at the bottom.
@@ -757,6 +764,8 @@ export function SepaPage() {
     // gate (is_buyable); Wait/Watch match the entry_exit.decision banner.
     if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
     if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
+
+    if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
     if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
     if (filters.search && !r.symbol.includes(filters.search)) return false;
     if (filters.dmEligibleOnly) {

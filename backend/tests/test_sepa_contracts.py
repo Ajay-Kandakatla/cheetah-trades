@@ -186,6 +186,24 @@ def test_setup_ready_is_buyable_minus_breakout():
     assert V.BREAKOUT_RECENCY_LOOKBACK >= 5
 
 
+def test_sales_confidence_thresholds_locked():
+    """Sales Confidence (sepa/sales.py) anchors to Pradeep Bonde's DOCUMENTED
+    sales numbers (Stockbee 2007 'How to trade earnings' / 2010 EP taxonomy):
+    5% floor · 25% preferred · 100% 'explosive'. It must NOT drift to the
+    third-party 30%/39% figures that FAILED source verification (Deepvue /
+    TradeZella / TraderLion). See docs/sepa/sales_confidence_methodology.md."""
+    from sepa import sales
+    assert sales.SALES_FLOOR_PCT == 5.0
+    assert sales.SALES_PREFERRED_PCT == 25.0
+    assert sales.SALES_EXPLOSIVE_PCT == 100.0
+    # Tiering follows those thresholds; <5 quarters → None (no invented score).
+    assert sales.compute([])["score"] is None
+    explosive = sales.compute([300, 260, 220, 180, 100, 100, 100, 100])  # ~200% YoY
+    assert explosive["tier"] == "explosive" and explosive["score"] >= 90
+    weak = sales.compute([103, 102, 101, 101, 100, 100, 100, 100])       # ~3% YoY (< floor)
+    assert weak["tier"] == "weak" and weak["score"] < 40
+
+
 def test_rating_thresholds_locked():
     """_rating_label maps score → label per contract §4."""
     from sepa.scanner import _rating_label

@@ -241,6 +241,18 @@ export type SepaCandidate = {
     inst_ownership_pct: number | null;
     checks: { c_strong_q_eps: boolean; a_strong_y_eps: boolean; i_institutional: boolean };
     passed: number;
+    /** Sales Confidence (Bonde/Stockbee-inspired) — revenue growth +
+     *  acceleration + consistency. See backend/sepa/sales.py. `score` is null
+     *  when there isn't enough revenue history. */
+    sales?: {
+      score: number | null;
+      tier: 'explosive' | 'strong' | 'steady' | 'weak' | 'declining' | 'unknown';
+      growth_yoy_pct: number | null;
+      prior_yoy_pct: number | null;
+      accelerating: boolean | null;
+      consecutive_growth_q: number;
+      sales_led: boolean | null;
+    };
   };
   /** Buffett-style economic moat score. tier: 4=Wide, 3=Narrow, 2=Some,
    *  1=None, 0=Unknown (insufficient data). */
