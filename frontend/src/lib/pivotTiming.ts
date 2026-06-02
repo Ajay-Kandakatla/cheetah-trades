@@ -128,28 +128,33 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
 }
 
 /** "Most buyable" sort key — lower = more buyable (user 2026-06-02: "sort by
- *  enter, vcp most buyable after a scan"). Tiers by actionability with VCP
- *  preferred at each level, then by composite score, then closeness to pivot:
- *    0 buyable-now VCP · 1 buyable-now / GO VCP · 2 GO / Enter VCP · 3 Enter ·
- *    4 at-pivot VCP · 5 coiling VCP · 6 VCP base waiting · 7 other setup · 8 rest.
- *  So a Stage-2 VCP breaking out on volume sits at the very top; an extended or
- *  setup-less name sinks. Degrades gracefully (VCP bases by score) on a day with
- *  no live breakouts. */
+ *  enter, vcp most buyable after a scan").
+ *
+ *  Ranks PRIMARILY by the pivot-meter STATE — the same price-vs-pivot + volume
+ *  read the user sees on the card — so a name that is `is_buyable` only via an
+ *  in-base pocket pivot while still BELOW its breakout pivot (e.g. FRST: buyable,
+ *  but price $14.68 < pivot $14.84, meter = WAIT) ranks as a WAIT, NOT at the top.
+ *  Earlier this used raw `is_buyable`, which floated below-pivot pocket-pivots
+ *  above cleaner breakouts (user 2026-06-02: "shouldn't be right").
+ *
+ *  State order: GO (at/through pivot on volume) → AT_PIVOT → COILING → WAIT →
+ *  EXTENDED → none. VCP preferred within a state; `is_buyable` at/above the pivot
+ *  (a confirmed breakout buy) gets a small nudge to the very top. Then composite
+ *  score, then closeness to pivot. */
+const STATE_RANK: Record<PivotState, number> = {
+  GO: 0, AT_PIVOT: 1, COILING: 2, WAIT: 3, EXTENDED: 5, NONE: 6,
+};
+
 export function buyabilityRank(row: SepaCandidate, t: PivotTiming): number {
   const vcp = row.entry_setup?.type === 'VCP';
-  const dec = row.entry_exit?.decision ?? null;
-  let tier = 8;
-  if (row.is_buyable) tier = vcp ? 0 : 1;
-  else if (t.state === 'GO') tier = vcp ? 1 : 2;
-  else if (dec === 'ENTER') tier = vcp ? 2 : 3;
-  else if (t.state === 'AT_PIVOT') tier = vcp ? 3 : 4;
-  else if (t.state === 'COILING') tier = vcp ? 4 : 5;
-  else if (vcp) tier = 6;
-  else if (row.entry_setup) tier = 7;
-  // EXTENDED / no-setup fall through to 8.
+  let base = STATE_RANK[t.state] ?? 6;
+  // A confirmed breakout buy (is_buyable AND price at/through the pivot) edges
+  // ahead within its state band — but a below-pivot pocket pivot does NOT.
+  if (row.is_buyable && (t.state === 'GO' || t.state === 'AT_PIVOT')) base -= 0.5;
+  const tier = base * 2 + (vcp ? 0 : 1);          // VCP preferred within a state
   const score = row.score ?? 0;
   const dist = t.distToPivotPct == null ? 999 : Math.abs(t.distToPivotPct);
-  return tier * 1e6 - score * 100 + dist;   // tier first, then score desc, then closeness
+  return tier * 1e6 - score * 100 + dist;          // state first, then score desc, then closeness
 }
 
 /** Sort key for "Closest to trigger" — lower = nearer the buy.
