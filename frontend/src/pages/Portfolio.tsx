@@ -15,6 +15,7 @@ import { InfoButton } from '../components/InfoButton';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { SepaTopPicks } from '../components/SepaTopPicks';
+import { SepaRankLeaderboard } from '../components/SepaRankLeaderboard';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 
@@ -83,6 +84,8 @@ export default function PortfolioPage() {
       </div>
 
       <SepaTopPicks n={3} />
+
+      <SepaRankLeaderboard n={12} />
 
       <AddHoldingForm onAdded={refresh} />
 
