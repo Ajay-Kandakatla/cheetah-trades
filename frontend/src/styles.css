@@ -957,6 +957,9 @@ tr:last-child td { border-bottom: none; }
 .sepa-chip.sepa-chip--warn.is-active { background: var(--warn); color: var(--bg); border-color: var(--warn); }
 .sepa-chip.sepa-chip--bad  { color: var(--negative); border-color: rgba(239, 68, 68, 0.45); }
 .sepa-chip.sepa-chip--bad.is-active  { background: var(--negative); color: var(--bg); border-color: var(--negative); }
+/* Green "Enter" decision chip — actionable breakout (entry_exit.decision==ENTER). */
+.sepa-chip.sepa-chip--good { color: var(--positive, #10b981); border-color: rgba(16, 185, 129, 0.45); }
+.sepa-chip.sepa-chip--good.is-active { background: var(--positive, #10b981); color: var(--bg); border-color: var(--positive, #10b981); }
 .sepa-filterbar__field { display: flex; gap: 0.5rem; align-items: center; font-size: 0.78rem; }
 .sepa-filterbar__field input[type="range"] { width: 110px; }
 .sepa-filterbar__search, .sepa-filterbar__select {
@@ -995,6 +998,12 @@ tr:last-child td { border-bottom: none; }
   border-color: var(--negative, #ef4444);
   box-shadow: 0 0 0 1px var(--negative, #ef4444),
               0 0 9px 1px rgba(239, 68, 68, 0.50);
+}
+/* "Enter" decision chip keeps its green identity while glowing. */
+.sepa-chip.sepa-chip--good.is-active:not(.sepa-chip--passive) {
+  border-color: var(--positive, #10b981);
+  box-shadow: 0 0 0 1px var(--positive, #10b981),
+              0 0 9px 1px rgba(16, 185, 129, 0.50);
 }
 /* The inline RS slider / "all analyzed" labels have no border of their own,
    so round the glow box. No padding — keeps the row from reflowing when the

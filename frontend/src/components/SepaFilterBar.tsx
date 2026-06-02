@@ -34,6 +34,13 @@ const FilterInfo = (
 export type SepaFilters = {
   rating: Rating | 'ALL';
   setup: 'ALL' | 'VCP' | 'POWER_PLAY';
+  /** Timed-entry decision gate — mirrors the ENTER/WAIT/WATCH banner the
+   *  card already shows (`entry_exit.decision`, backend/sepa/entry_exit.py).
+   *  'ALL' = no gate. 'ENTER' = breakout actionable now; 'WAIT' = valid base,
+   *  pivot not yet triggered (the Minervini "don't buy until it breaks out"
+   *  state, p.203); 'HOLD_WATCH' = on the radar, no setup trigger. Optional so
+   *  SepaV2's own DEFAULT_FILTERS keeps compiling. Added 2026-06-02. */
+  decision?: 'ALL' | 'ENTER' | 'WAIT' | 'HOLD_WATCH';
   rsMin: number;
   search: string;
   showAll: boolean;
@@ -135,6 +142,10 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
   const set = <K extends keyof SepaFilters>(k: K, v: SepaFilters[K]) =>
     onChange({ ...filters, [k]: v });
 
+  // Decision gate selection (optional field — treat missing as 'ALL' so
+  // SepaV2, which doesn't seed it, still renders the "Any signal" default).
+  const decSel = filters.decision ?? 'ALL';
+
   // How many filters are ACTIVELY narrowing the list (non-default state).
   // Drives the "N filters on" badge. Per-control glow is handled in CSS:
   // any selected non-default chip (`.is-active` without `.sepa-chip--passive`)
@@ -143,6 +154,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
   const activeCount = [
     filters.rating !== 'ALL',
     filters.setup !== 'ALL',
+    (filters.decision ?? 'ALL') !== 'ALL',
     filters.stage !== 'ALL',
     filters.moatMin !== 0,
     filters.type !== 'all',
@@ -181,9 +193,43 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           <button
             key={s}
             className={`sepa-chip ${filters.setup === s ? 'is-active' : ''} ${s === 'ALL' ? 'sepa-chip--passive' : ''}`}
-            onClick={() => set('setup', s)}
+            // Tap an active setup chip again to clear it back to "Any setup" —
+            // gives VCP / Power Play simple on/off behavior (user request
+            // 2026-06-02: "a filter to turn VCP on and off").
+            onClick={() => set('setup', filters.setup === s ? 'ALL' : s)}
+            title={
+              s === 'VCP' ? 'Show only names whose entry setup is a Volatility Contraction Pattern. Tap again to turn off.' :
+              s === 'POWER_PLAY' ? 'Show only Power Play (high-tight-flag) setups. Tap again to turn off.' :
+              'No setup filter — show every candidate regardless of setup.'
+            }
           >
             {s === 'ALL' ? 'Any setup' : s === 'POWER_PLAY' ? 'Power Play' : s}
+          </button>
+        ))}
+        <span className="sepa-filterbar__sep" />
+        {/* Timed-entry decision filter (2026-06-02) — mirrors the ENTER / WAIT /
+            WATCH banner each card already shows (entry_exit.decision). Most VCP
+            bases sit in WAIT until the pivot breaks: Minervini p.203 — you don't
+            buy the base, you buy the breakout. ENTER = actionable now. Lets the
+            user flip "show me what's basing (Wait)" vs "what's triggering now
+            (Enter)" without reading every card. */}
+        {([
+          { v: 'ALL' as const,        label: 'Any signal', tip: 'No entry-timing gate — show every decision state (Enter, Wait, Watch, Avoid).' },
+          { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'Breakout is actionable now — price at/through the pivot with the entry window open. Matches the card\'s green ENTER banner.' },
+          { v: 'WAIT' as const,       label: '🟡 Wait',     tip: 'Valid base, but the pivot has not triggered yet — Minervini\'s "wait for the breakout" state (p.203). Most VCP bases live here. Tap a card\'s WAIT banner to see the trigger price + distance + valid-through date.' },
+          { v: 'HOLD_WATCH' as const, label: '⚪ Watch',    tip: 'On the radar — passes trend/RS but has no setup trigger. Keep watching for a base to form.' },
+        ]).map(({ v, label, tip }) => (
+          <button
+            key={`dec-${v}`}
+            className={`sepa-chip ${decSel === v ? 'is-active' : ''} ${
+              v === 'ENTER' ? 'sepa-chip--good' : ''
+            } ${v === 'ALL' ? 'sepa-chip--passive' : ''}`}
+            // Same toggle behavior as the setup chips — tap the active one to
+            // clear back to "Any signal".
+            onClick={() => set('decision', decSel === v ? 'ALL' : v)}
+            title={tip}
+          >
+            {label}
           </button>
         ))}
         <span className="sepa-filterbar__sep" />

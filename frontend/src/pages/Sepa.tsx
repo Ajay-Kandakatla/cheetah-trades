@@ -236,7 +236,7 @@ export function SepaPage() {
   // Filters persist across reloads — reading the page should always pick up
   // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
   const FILTER_DEFAULTS: SepaFilters = {
-    rating: 'ALL', setup: 'ALL', rsMin: 70, search: '', showAll: true,
+    rating: 'ALL', setup: 'ALL', decision: 'ALL', rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
     // Default OFF — opt-in toggle. Some users want to see distributing
@@ -390,6 +390,9 @@ export function SepaPage() {
       const rating = r.rating ?? defaultRating(r.score);
       if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
       if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
+      // Timed-entry decision gate (Enter / Wait / Watch) — matches the
+      // entry_exit.decision banner the card shows.
+      if ((filters.decision ?? 'ALL') !== 'ALL' && (r.entry_exit?.decision ?? null) !== filters.decision) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
       if (filters.search && !r.symbol.includes(filters.search)) return false;
       if (filters.dmEligibleOnly) {
@@ -698,6 +701,9 @@ export function SepaPage() {
     const rating = r.rating ?? defaultRating(r.score);
     if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
     if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
+    // Timed-entry decision gate (Enter / Wait / Watch) — matches the
+    // entry_exit.decision banner the card shows.
+    if ((filters.decision ?? 'ALL') !== 'ALL' && (r.entry_exit?.decision ?? null) !== filters.decision) return false;
     if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
     if (filters.search && !r.symbol.includes(filters.search)) return false;
     if (filters.dmEligibleOnly) {
@@ -926,6 +932,7 @@ export function SepaPage() {
         sort_by:      filters.sortBy,
         search:       filters.search || undefined,
         setup:        filters.setup,
+        decision:     (filters.decision ?? 'ALL') !== 'ALL' ? filters.decision : undefined,
         stage:        filters.stage,
         type:         filters.type,
         moat_min:     filters.moatMin,
