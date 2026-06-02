@@ -90,6 +90,13 @@ def upsert_holding(user_email: str, ticker: str, shares: float,
         {"$set": doc, "$setOnInsert": {"added_at": _now()}},
         upsert=True,
     )
+    # Adding/updating a holding UN-HIDES it: if the user previously deleted
+    # (hid) this ticker, re-adding it must bring it back into the view —
+    # otherwise the new row is silently filtered out (2026-06-02 fix).
+    try:
+        db.portfolio_hidden.delete_many({"user_email": user_email.lower(), "ticker": ticker})
+    except Exception:
+        pass
     return {"ok": True, "ticker": ticker, "shares": shares}
 
 
