@@ -366,34 +366,47 @@ passed = sum(checks.values())  # 0 to 8
 > by a significant decrease in trading volume."* Buy point: *"when the stock
 > moves above the pivot point on expanding volume."*
 
-Code location: `backend/sepa/vcp.py`.
+Code location: `backend/sepa/vcp.py`. Contracts: `backend/tests/test_vcp.py`
+(behavioral, synthetic series) + `tests/test_sepa_contracts.py::test_vcp_constants_locked`
+(source guard). Full spec: **`docs/sepa/vcp_methodology.md`**.
 
-| Rule | Book source | Threshold in code | Note |
-|---|---|---|---|
-| Lookback window | p.197 "3 to as many as 60 weeks" | 325 bars (≈65 weeks) | Code allows slightly longer than book max |
-| Minimum contractions | p.198 "two to six" | 2 | ✓ matches |
-| Maximum contractions | p.198 "five or six" | 6 | ✓ matches book upper bound |
-| Monotonic shrinkage | p.199 "about half ± reasonable amount" | each ≤ 75% of previous | ⚠ Code looser than book "half" ideal (50%) |
-| Tight right side (final contraction) | p.202 example "3 percent" | ≤ 10% | ⚠ Code looser than book example |
-| Maximum base depth | p.186 ">50% generally too much" | ≤ 60% (else `too_deep`) | ⚠ Code looser than book guidance |
-| Ideal base depth range | p.186 "25 to 35 percent" | 10%–35% (informational flag) | ✓ matches upper bound |
-| Pivot quality — prior advance | p.68 "rally of at least 25 to 30 percent off 52-week low" | ≥ 20% from pre-base low | ⚠ Code looser (20%) than book (25–30%) |
-| Volume drying up | p.203 "volume contracts significantly" | final_vol / avg_base_vol < 0.8 | Qualitative match |
+> **Base-window rewrite (2026-06-01).** The detector now measures the base on
+> the **most recent CONTRACTING consolidation**, not high-to-low across the
+> whole 325-bar window. Book p.205: *"the contractions will be smaller from left
+> to right as supply is absorbed."* The old whole-window measure read every
+> momentum leader as 60–94% deep → `too_deep` → **zero VCPs** (see "Resolved
+> gaps" below).
+
+| Rule | Book source | Threshold in code (current) |
+|---|---|---|
+| Search horizon (max base age) | p.197 "3 to as many as 60 weeks" | 325 bars (≈65 wks) — SEARCH window, not the base |
+| Recent-base isolation | p.205 "smaller from left to right" | maximal suffix of contractions with decreasing depth |
+| Min / max contractions | p.198–199 "two to six" | 2 ≤ n ≤ 6 |
+| End-to-end tightening | p.199 "about half ± reasonable amount" | final ≤ 0.6 × first contraction |
+| Tight right side (final contraction) | p.202 example "3 percent" | ≤ 12% |
+| Maximum base depth | p.186 ">50% generally too much" | base ≤ 40% (else `too_deep`) |
+| Minimum base depth | p.198 "say, 25 percent" / handle ~5% | base ≥ 5% (sub-handle = flat line) |
+| Ideal base depth (flag) | p.186 "25 to 35 percent" | 8%–35% (`ideal_depth_range`) |
+| Pivot quality — prior advance | p.197 "forms after an advance" | ≥ 20% from pre-base low to base high |
+| Volume drying (flag) | p.205 "volume contracts" | final_vol / base_vol < 0.8 |
 
 **`has_base = True`** requires ALL of (code, vcp.py current logic):
 - `n_contractions >= 2`
-- `monotonic_shrinkage == True`
-- `tight_right_side == True` (final contraction ≤ 10%)
-- `too_deep == False` (base ≤ 60%)
+- end-to-end tightening — `final ≤ 0.6 × first` contraction depth
+- `base_depth_pct >= 5` (deep enough to be a real pullback)
+- `too_deep == False` (base ≤ 40%)
+- `tight_right_side == True` (final contraction ≤ 12%)
 - `pivot_quality_ok == True` (≥ 20% prior advance)
 
-**Known gaps vs book** (2026-05-27 audit, see `docs/rfcs/` for proposed fixes):
-1. Lookback scans entire 65-week window for swings instead of isolating the
-   *most recent* base. Can pair non-adjacent highs/lows from different bases.
-2. Swing window of 5 bars is tight; weekly-scale Ts may not be detected.
-3. No requirement that the first contraction be "say, 25 percent" (p.198).
-4. `pivot_quality` uses pre-base low across entire lookback window, not the
-   leg-up immediately preceding the base.
+**Resolved gaps** (2026-05-27 audit → fixed 2026-06-01, locked by `test_vcp.py`):
+1. ✅ Whole-window depth → now isolates the most recent contracting base
+   (`test_measures_recent_base_not_full_window`).
+4. ✅ `pivot_quality` now measures the pre-base low up to the base's left-side
+   high, not an unrelated window low.
+
+**Open** (acceptable): the 5-bar swing window is tight, so weekly-scale Ts in
+very long bases may be missed; first-contraction magnitude is captured by the
+overall depth gate rather than a separate "≈25%" rule.
 
 ---
 
