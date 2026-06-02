@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useNavigationType } from 'react-router-dom';
 import { useSepaScan } from '../hooks/useSepa';
 import { ageHuman } from '../lib/swrCache';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
@@ -216,12 +216,21 @@ export function SepaPage() {
     } as any;
   }, [historicalDate, liveData, histScan]);
   const navigate = useNavigate();
+  const navType = useNavigationType();
+  const restoredRef = useRef(false);
   const openSymbol = (sym: string, e?: React.MouseEvent) => {
     const url = `/sepa/${encodeURIComponent(sym)}`;
     if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) {
       window.open(url, '_blank', 'noopener,noreferrer');
       return;
     }
+    // Remember the list position so returning from the detail page lands on the
+    // same card + scroll (restored below, gated on POP / a recent save).
+    try {
+      sessionStorage.setItem('sepa_list_pos', JSON.stringify({
+        y: window.scrollY, vc: visibleCount, sym, t: Date.now(),
+      }));
+    } catch { /* sessionStorage unavailable — non-fatal */ }
     navigate(url, { state: { from: '/sepa', label: 'SEPA' } });
   };
   // Filters persist across reloads — reading the page should always pick up
@@ -833,6 +842,24 @@ export function SepaPage() {
   // with full setup context. Capped to keep system-prompt under the 4000-
   // char limit enforced by backend/chat/prompt.py.
   // ──────────────────────────────────────────────────────────────────────
+  // Restore list scroll + how many cards were expanded when the user returns
+  // from a detail page. Gated on a back-nav (POP) or a very recent save so a
+  // fresh visit doesn't jump. Grows visibleCount first (so the target card is
+  // rendered), then scrolls after paint. Runs at most once per mount.
+  useEffect(() => {
+    if (restoredRef.current) return;
+    let saved: { y: number; vc: number; t: number } | null = null;
+    try { saved = JSON.parse(sessionStorage.getItem('sepa_list_pos') || 'null'); } catch { saved = null; }
+    if (!saved) { restoredRef.current = true; return; }
+    const recent = Date.now() - (saved.t || 0) < 5 * 60 * 1000;
+    if (!(navType === 'POP' || recent)) { restoredRef.current = true; return; }
+    if (saved.vc && saved.vc > visibleCount) { setVisibleCount(saved.vc); return; } // grow, then re-run
+    if (filtered.length === 0) return;                                              // wait for data
+    restoredRef.current = true;
+    const y = saved.y || 0;
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+  }, [navType, visibleCount, filtered.length]);
+
   useEffect(() => {
     const allResults = (data as any)?.all_results || [];
     const cands = (data as any)?.candidates || [];
