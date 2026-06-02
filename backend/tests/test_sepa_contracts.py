@@ -123,6 +123,41 @@ def test_score_weights_sum_to_100():
     assert sum(scanner.SCORE_WEIGHTS.values()) == 100
 
 
+def test_rerank_setup_and_risk_locked():
+    """Re-rank logic (2026-06-01, book p.203): a volume-confirmed breakout is a
+    valid setup even without a detected base; setup credit is scaled by risk-to-
+    stop (a wide stop is demoted); and is_buyable fires on a volume breakout.
+    """
+    from types import SimpleNamespace
+    from sepa.scanner import _determine_setup, _is_buyable, SCORE_WEIGHTS
+    W = SCORE_WEIGHTS["setup"]
+
+    # Priority: VCP > Power Play > volume breakout > none
+    es, bm, _, _ = _determine_setup({"has_base": True, "pivot_buy_price": 100, "suggested_stop": 93}, None, None, 100)
+    assert es["type"] == "VCP" and bm == 1.0
+    es, bm, _, _ = _determine_setup(None, {"is_power_play": True, "pivot_buy_price": 100, "suggested_stop": 93}, None, 100)
+    assert es["type"] == "POWER_PLAY" and bm == 0.85
+    es, bm, _, _ = _determine_setup(None, None, {"high_vol_breakout": True}, 100)
+    assert es["type"] == "BREAKOUT" and bm == 0.70
+    es, bm, _, _ = _determine_setup(None, None, {"pocket_pivot": True}, 100)
+    assert es["type"] == "POCKET_PIVOT" and bm == 0.70
+    assert _determine_setup(None, None, {"accumulation_strength": "accumulating"}, 100)[0] is None
+
+    # Risk-to-stop scaling: tight stop keeps full credit; a 25% stop is gutted.
+    _, _, rm_tight, risk_t = _determine_setup(None, {"is_power_play": True, "pivot_buy_price": 100, "suggested_stop": 93}, None, 100)
+    assert risk_t == 7.0 and rm_tight == 1.0
+    _, _, rm_wide, risk_w = _determine_setup(None, {"is_power_play": True, "pivot_buy_price": 18.66, "suggested_stop": 14.0}, None, 17.17)
+    assert risk_w == 25.0 and rm_wide == 0.30
+    assert W * 0.85 * rm_wide < W * 0.85 * rm_tight          # wide-stop PP ranks below tight
+
+    # is_buyable: book p.203 — a volume-confirmed breakout IS buyable (no
+    # textbook base required); without a breakout it is not.
+    tr = SimpleNamespace(pass_all=True)
+    es_brk = _determine_setup(None, None, {"high_vol_breakout": True}, 100)[0]
+    assert _is_buyable(tr, {"stage": 2}, None, {"liquid": True}, {"high_vol_breakout": True}, es_brk) is True
+    assert _is_buyable(tr, {"stage": 2}, None, {"liquid": True}, {"accumulation_strength": "accumulating"}, None) is False
+
+
 def test_rating_thresholds_locked():
     """_rating_label maps score → label per contract §4."""
     from sepa.scanner import _rating_label

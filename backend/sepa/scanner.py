@@ -64,6 +64,66 @@ def _rating_label(score: float) -> str:
     return "AVOID"
 
 
+def _determine_setup(vcp_info, pp_info, vol, last_px):
+    """Entry setup + score multipliers (book pp.198-205, p.203).
+
+    Priority: VCP base > Power Play > volume-confirmed breakout with NO detected
+    base. Book p.203: the buy point IS the breakout above the pivot on EXPANDING
+    volume (a pocket pivot is the in-base institutional buy). So a Stage-2 leader
+    breaking out on volume is a valid setup even when the base detector didn't
+    catch the consolidation shape — it often resolves INTO the breakout (e.g.
+    DDOG). Returns (entry_setup|None, base_mult, risk_mult, risk_to_stop_pct).
+    """
+    entry_setup = None
+    base_mult = 0.0
+    if vcp_info and vcp_info.get("has_base"):
+        entry_setup = {"type": "VCP", "pivot": vcp_info["pivot_buy_price"], "stop": vcp_info["suggested_stop"]}
+        base_mult = 1.0
+    elif pp_info and pp_info.get("is_power_play"):
+        entry_setup = {"type": "POWER_PLAY", "pivot": pp_info["pivot_buy_price"], "stop": pp_info["suggested_stop"]}
+        base_mult = 0.85
+    elif vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot")):
+        pp_only = bool(vol.get("pocket_pivot") and not vol.get("high_vol_breakout"))
+        entry_setup = {
+            "type": "POCKET_PIVOT" if pp_only else "BREAKOUT",
+            "pivot": round(last_px, 2),
+            "stop": round(last_px * 0.92, 2),   # tight 8% Minervini-discipline stop
+        }
+        base_mult = 0.70
+
+    # Risk-to-stop: a proper entry has a TIGHT stop (Minervini cut-loss ~7-8%,
+    # max ~10%). Scale the setup credit DOWN as the stop widens — a 25% stop is
+    # barely a setup (it was letting an un-triggered Power Play top the rank).
+    risk_mult = 1.0
+    risk_to_stop_pct = None
+    if entry_setup and entry_setup.get("pivot") and entry_setup.get("stop"):
+        p, s = entry_setup["pivot"], entry_setup["stop"]
+        if p and p > 0:
+            risk_to_stop_pct = round((p - s) / p * 100, 1)
+            if risk_to_stop_pct <= 8:
+                risk_mult = 1.0
+            elif risk_to_stop_pct <= 12:
+                risk_mult = 0.80
+            elif risk_to_stop_pct <= 18:
+                risk_mult = 0.55
+            else:
+                risk_mult = 0.30
+    return entry_setup, base_mult, risk_mult, risk_to_stop_pct
+
+
+def _is_buyable(tr, stg, bc, liq, vol, entry_setup) -> bool:
+    """Book buy-now gate (pp.79-83, 198-203): Trend Template + Stage 2 advancing
+    + a setup + not a late-stage base + liquid + a VOLUME-CONFIRMED breakout."""
+    return bool(
+        tr.pass_all
+        and stg and stg.get("stage") == 2
+        and entry_setup is not None
+        and (bc is None or not bc.get("is_late_stage"))
+        and liq.get("liquid")
+        and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
+    )
+
+
 # Composite score weights — each component contributes up to N points; total = 100.
 # Weights chosen to bias toward Minervini's hard gates (Trend Template + RS), with
 # bonus contribution from setup quality and fundamentals.
@@ -215,22 +275,21 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # Stage 2 only
     if stg and stg.get("stage") == 2:
         score += SCORE_WEIGHTS["stage_2"]
-    # Setup quality
-    if vcp_info and vcp_info.get("has_base"):
-        score += SCORE_WEIGHTS["setup"]
-        # Quality bonus — now requires the book's VOLUME signature too.
-        # Book p.199-200: a real VCP's tight areas are "accompanied by a
-        # significant decrease in trading volume … volume dries up at the
-        # pivot." Previously the +2 ignored volume; a structurally-clean
-        # base with NO volume contraction got the same bonus as a textbook
-        # one. Gating the bonus on volume_drying rewards the book-correct
-        # footprint without over-filtering has_base (soft, not a hard gate).
-        if (vcp_info.get("ideal_depth_range")
+    # Setup quality — determined here (not later) so the credit can be RISK-
+    # SCALED and a live volume breakout with no detected base can earn credit.
+    # See _determine_setup (book pp.198-205, p.203).
+    _last_px = float(last_close) if last_close else float(df["close"].iloc[-1])
+    entry_setup, _setup_base_mult, _risk_mult, risk_to_stop_pct = _determine_setup(
+        vcp_info, pp_info, vol, _last_px)
+    if entry_setup:
+        score += SCORE_WEIGHTS["setup"] * _setup_base_mult * _risk_mult
+        # Textbook-VCP volume-signature bonus (book p.199-200: volume dries up
+        # at the pivot).
+        if (entry_setup["type"] == "VCP" and vcp_info
+                and vcp_info.get("ideal_depth_range")
                 and vcp_info.get("good_contraction_count")
                 and vcp_info.get("volume_drying")):
-            score += 2  # quality bonus
-    elif pp_info and pp_info.get("is_power_play"):
-        score += SCORE_WEIGHTS["setup"] * 0.85  # PowerPlay slightly less strict
+            score += 2
     # Volume confirmation
     # Volume signals — refactored 2026-05-21 from binary accum/breakout to
     # a graded contribution. The old code awarded 0.5 weight for the loose
@@ -265,21 +324,17 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # liquid leaders so single-digit/manipulable stocks can't top the list.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
 
+    # Actionability bonus (book p.203): a name you can BUY today — a volume-
+    # confirmed breakout in a Stage-2 setup, not late — outranks one still
+    # waiting below its trigger (ranks in-buy-zone above WAIT). 2026-06-01.
+    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup)
+    if buyable:
+        score += 4
+
     score = max(0.0, min(score, 100.0))
 
-    entry_setup = None
-    if vcp_info and vcp_info.get("has_base"):
-        entry_setup = {
-            "type": "VCP",
-            "pivot": vcp_info["pivot_buy_price"],
-            "stop": vcp_info["suggested_stop"],
-        }
-    elif pp_info and pp_info.get("is_power_play"):
-        entry_setup = {
-            "type": "POWER_PLAY",
-            "pivot": pp_info["pivot_buy_price"],
-            "stop": pp_info["suggested_stop"],
-        }
+    # entry_setup + risk_to_stop_pct were determined above (before scoring) so
+    # the setup credit could be risk-scaled and a live breakout could earn it.
 
     # Comprehensive trade plan (entry/stop/target/support/resistance/levels)
     # — built for every analyzed ticker, NOT just those with a VCP base.
@@ -370,14 +425,8 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         # pocket_pivot = Minervini's in-base institutional-footprint buy point.
         # Without one of those the name stays a watchlist candidate, not buyable.
         # (Hard-gate chosen by user 2026-05-31; fixes CVGI-class low-vol breakouts.)
-        "is_buyable": bool(
-            tr.pass_all
-            and stg and stg.get("stage") == 2
-            and entry_setup is not None
-            and (bc is None or not bc.get("is_late_stage"))
-            and liq["liquid"]
-            and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
-        ),
+        "is_buyable": buyable,
+        "risk_to_stop_pct": risk_to_stop_pct,
     }
 
 
@@ -757,12 +806,15 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         score += SCORE_WEIGHTS["rs_rank"] * (min(rs, 99) / 99.0)
     if stg and stg.get("stage") == 2:
         score += SCORE_WEIGHTS["stage_2"]
-    if vcp_info and vcp_info.get("has_base"):
-        score += SCORE_WEIGHTS["setup"]
-        if vcp_info.get("ideal_depth_range") and vcp_info.get("good_contraction_count"):
+    _last_px = float(last_close) if last_close else float(df["close"].iloc[-1])
+    entry_setup, _setup_base_mult, _risk_mult, risk_to_stop_pct = _determine_setup(
+        vcp_info, pp_info, vol, _last_px)
+    if entry_setup:
+        score += SCORE_WEIGHTS["setup"] * _setup_base_mult * _risk_mult
+        if (entry_setup["type"] == "VCP" and vcp_info
+                and vcp_info.get("ideal_depth_range")
+                and vcp_info.get("good_contraction_count")):
             score += 2
-    elif pp_info and pp_info.get("is_power_play"):
-        score += SCORE_WEIGHTS["setup"] * 0.85
     # Volume signals — refactored 2026-05-21 from binary accum/breakout to
     # a graded contribution. The old code awarded 0.5 weight for the loose
     # `accumulation` flag (49% of universe tripped it — meaningless) and
@@ -794,21 +846,13 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         score -= 8
     # Institutional-sponsorship demotion (book p.195) — see full-scan path.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
+    # Actionability bonus (book p.203) — see full-scan path.
+    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup)
+    if buyable:
+        score += 4
     score = max(0.0, min(score, 100.0))
 
-    entry_setup = None
-    if vcp_info and vcp_info.get("has_base"):
-        entry_setup = {
-            "type": "VCP",
-            "pivot": vcp_info["pivot_buy_price"],
-            "stop": vcp_info["suggested_stop"],
-        }
-    elif pp_info and pp_info.get("is_power_play"):
-        entry_setup = {
-            "type": "POWER_PLAY",
-            "pivot": pp_info["pivot_buy_price"],
-            "stop": pp_info["suggested_stop"],
-        }
+    # entry_setup determined above (before scoring) — see _determine_setup.
 
     # Comprehensive trade plan — see top scanner branch for rationale.
     try:
@@ -875,14 +919,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "qualifier": bool(tr.pass_all and liq.get("liquid")),
         "is_candidate": bool(tr.pass_all and liq.get("liquid")),
         # Volume-confirmed breakout required (book p.203). See full-scan path.
-        "is_buyable": bool(
-            tr.pass_all
-            and stg and stg.get("stage") == 2
-            and entry_setup is not None
-            and (bc is None or not bc.get("is_late_stage"))
-            and liq.get("liquid")
-            and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
-        ),
+        "is_buyable": buyable,
+        "risk_to_stop_pct": risk_to_stop_pct,
         "from_cache": True,
     }
 
