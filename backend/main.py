@@ -1911,7 +1911,8 @@ async def sepa_alerts_price_create(symbol: str = Query(...),
                                    kind: str = Query(...),
                                    level: float = Query(...),
                                    channels: Optional[str] = Query("push,browser"),
-                                   note: Optional[str] = Query(None)):
+                                   note: Optional[str] = Query(None),
+                                   email: str = Depends(current_user_email)):
     """Create an on-demand price alert.
 
     Runs in a thread because ``price_alerts.create`` does TWO sync calls
@@ -1926,7 +1927,7 @@ async def sepa_alerts_price_create(symbol: str = Query(...),
     chan_list = [c.strip() for c in (channels or "").split(",") if c.strip()]
     try:
         doc = await asyncio.to_thread(
-            price_alerts.create, symbol, kind, level, chan_list, note,
+            price_alerts.create, symbol, kind, level, chan_list, note, email,
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
