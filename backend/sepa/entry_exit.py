@@ -157,6 +157,7 @@ def build_entry_exit(
     vol: Optional[dict] = None,
     venky: Optional[dict] = None,
     earnings_date: Optional[str] = None,   # "YYYY-MM-DD" if known
+    setup_ready: Optional[bool] = None,    # scanner._is_setup_ready (Stage 2 + Trend Template)
     now: Optional[datetime] = None,
 ) -> dict:
     """Compute the timed entry/exit plan + decision verdict for one ticker.
@@ -381,7 +382,7 @@ def build_entry_exit(
             entry_status=entry_status, earnings_block=earnings_block,
             earnings_in_days=earnings_in_days, adx=adx, vol_ok=vol_ok,
             pivot=pivot, zone_lo=zone_lo, zone_hi=zone_hi,
-            missed=missed,
+            missed=missed, setup_ready=setup_ready,
         )
 
         # ── Timeline strip (chronological events) ─────────────────────
@@ -430,8 +431,15 @@ def build_entry_exit(
 
 
 def _decide(*, stage_num, distributing, entry_status, earnings_block,
-            earnings_in_days, adx, vol_ok, pivot, zone_lo, zone_hi, missed) -> tuple:
+            earnings_in_days, adx, vol_ok, pivot, zone_lo, zone_hi, missed,
+            setup_ready=None) -> tuple:
     """Adjudicate the one-line verdict. Order = precedence."""
+    # Book buyable-eligibility (Trade Like a Stock Market Wizard, pp.39-71 stage
+    # analysis; pp.79-83 Trend Template): Minervini buys ONLY a confirmed Stage 2
+    # advance. Prefer the scanner's strict `_is_setup_ready` (Trend Template 8/8 +
+    # Stage 2 + a setup + not late-stage + liquid); fall back to stage==2 alone
+    # when called standalone (setup_ready not provided).
+    buyable_eligible = bool(setup_ready) if setup_ready is not None else (stage_num == 2)
     # 1. Late-stage distribution overrides everything (CVGI-class trap)
     if stage_num in (3, 4) and distributing:
         return ("AVOID", "red",
@@ -467,7 +475,28 @@ def _decide(*, stage_num, distributing, entry_status, earnings_block,
                 f"ADX {round(adx, 0):.0f} — chop, no trend yet. Wait for ADX ≥ "
                 f"{int(ADX_CHOP_THRESHOLD)} before committing.")
 
-    # 6. In the buy zone + demand confirmed = the green light
+    # 6. Trend Template gate (book pp.39-71 stage analysis; pp.79-83 template):
+    #    an in-zone, volume-confirmed pop is NOT a buy unless the stock is in a
+    #    confirmed Stage 2 advance. A Stage 1 base (SMCI-class) or a name failing
+    #    the 8-point Trend Template can fire a one-day pocket pivot and look
+    #    "actionable", but Minervini waits for the Stage 1→2 transition to CONFIRM.
+    #    Keeps this green ENTER banner in lock-step with the card's strict
+    #    `is_buyable` verdict and the Stage label (no more WATCH-but-ENTER cards).
+    if entry_status == "actionable" and not buyable_eligible:
+        if stage_num == 1 or stage_num is None:
+            return ("WAIT", "amber",
+                    "In the buy zone, but still basing (Stage 1) — not a confirmed "
+                    "Stage 2 advance. Minervini buys only Stage 2; wait for the base "
+                    "to break into a real uptrend before entering.")
+        if stage_num == 3:
+            return ("WAIT", "amber",
+                    "In the buy zone, but Stage 3 (topping) — not a Stage 2 advance. "
+                    "Stand aside; don't buy into a top.")
+        return ("HOLD_WATCH", "amber",
+                "In the zone, but doesn't clear the full Trend Template yet — not a "
+                "clean Stage 2 book buy. Watch.")
+
+    # 7. In the buy zone + demand confirmed + Stage 2 = the green light
     if entry_status == "actionable" and vol_ok:
         return ("ENTER", "green",
                 f"In the buy zone ${round(zone_lo, 2)}-${round(zone_hi, 2)}, "
