@@ -17,6 +17,8 @@ import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { DropAttributionPanel } from '../components/DropAttributionPanel';
 import { PortfolioBetaPanel } from '../components/PortfolioBetaPanel';
+import { AddHoldingForm } from '../components/AddHoldingForm';
+import { API } from '../lib/apiBase';
 import {
   useStatus,
   useHoldings,
@@ -304,6 +306,19 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
   // without going through the file-picker. Cheaper UX for users who
   // already drop their Fidelity export into a watched folder (cloud-
   // sync, scripted save, etc).
+  const removeHolding = async (sym: string) => {
+    if (!sym || !window.confirm(`Remove ${sym} from your manually-added holdings?`)) return;
+    try {
+      const res = await fetch(`${API}/portfolio?ticker=${encodeURIComponent(sym)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) await refresh();
+    } catch {
+      /* leave the row in place; the user can retry */
+    }
+  };
+
   const onSyncFromDisk = async () => {
     setCsvUploading(true);
     setCsvResult(null);
@@ -449,6 +464,10 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
           <button onClick={() => refresh()}>Retry</button>
         </div>
       )}
+
+      {/* Add a holding by hand (shares + price paid). Sits alongside Plaid-
+          synced and CSV-imported rows; merges into the same table + rollup. */}
+      <AddHoldingForm onAdded={refresh} />
 
       {/* Fidelity CSV upload — manual fallback when Plaid Investments Trial
           withholds per-position detail. The user clicks "Download" on the
@@ -904,6 +923,19 @@ function ConnectedState({ status, onDisconnected }: { status: PortfolioStatus; o
                           >
                             {r.source}
                           </span>
+                        )}
+                        {r.source && r.source !== 'plaid' && (
+                          <button
+                            type="button"
+                            onClick={() => removeHolding(r.symbol)}
+                            title="Remove this manually-added holding"
+                            style={{
+                              background: 'transparent', border: 'none', cursor: 'pointer',
+                              color: '#7a8499', fontSize: '0.72rem', padding: '0 2px', lineHeight: 1,
+                            }}
+                          >
+                            🗑
+                          </button>
                         )}
                         {(() => {
                           const a = alertBySymbol[(r.symbol || '').toUpperCase()];
