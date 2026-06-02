@@ -8,6 +8,7 @@ import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } fr
 import { useWhalesFlow } from '../hooks/useWhalesFlow';
 import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
+import { RankTrendChart } from '../components/RankTrendChart';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
@@ -117,7 +118,7 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
+type Tab = 'chart' | 'setup' | 'trend' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
 
 const SmartMoneyInfo = (
   <>
@@ -782,13 +783,13 @@ export function SepaCandidatePage() {
           </section>
 
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'fundamentals', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t}</button>
             ))}
           </nav>
 
@@ -951,6 +952,18 @@ export function SepaCandidatePage() {
                 ) : (
                   <p className="sepa-empty">No qualifying entry setup detected.</p>
                 )}
+              </section>
+            )}
+
+            {tab === 'ranking' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Ranking</strong> — how {symbol} has moved through the SEPA
+                  ranking over time (rank #1 = top). Overlay the score that drives it
+                  or the price; markers show breakouts, when it became buyable, and
+                  stage changes. Daily by default — toggle intraday for the churn.
+                </div>
+                <RankTrendChart symbol={symbol} />
               </section>
             )}
 
