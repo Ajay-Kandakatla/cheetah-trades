@@ -166,7 +166,13 @@ async def portfolio_delete(
     account: str | None = Query(None),
     user_email: str = Depends(current_user_email),
 ):
-    return JSONResponse(store.remove_holding(user_email, ticker, account))
+    # Remove the manual/CSV row if present, AND hide the ticker so a
+    # Plaid-synced position (which can't be deleted — it re-syncs live) also
+    # disappears from the holdings view. Non-destructive; reversible via unhide.
+    removed = store.remove_holding(user_email, ticker, account)
+    hidden = store.hide_ticker(user_email, ticker)
+    return JSONResponse({"ok": True, "ticker": (ticker or "").upper().strip(),
+                         "removed": removed.get("removed", 0), "hidden": hidden.get("hidden", False)})
 
 
 # ===========================================================================
@@ -338,6 +344,15 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
         })
 
     rows.sort(key=lambda r: -((r.get("current_value") or 0)))
+
+    # Drop user-hidden tickers (the 🗑 dismiss list) — lets a Plaid-synced
+    # position disappear from the view even though we can't delete it upstream.
+    try:
+        hidden = store.list_hidden(owner_email)
+        if hidden:
+            rows = [r for r in rows if (r.get("symbol") or "").upper() not in hidden]
+    except Exception:
+        pass
 
     return {
         "rows":      rows,

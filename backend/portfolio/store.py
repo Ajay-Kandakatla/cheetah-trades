@@ -105,6 +105,47 @@ def remove_holding(user_email: str, ticker: str,
     return {"ok": True, "removed": res.deleted_count}
 
 
+# ---------------------------------------------------------------------------
+# Hidden tickers (2026-06-02) — a per-user dismiss list. Plaid-synced positions
+# can't be "deleted" (they re-appear on every live sync), so the 🗑 button hides
+# them here and the holdings response filters them out. Non-destructive: this
+# never touches Fidelity/Plaid and is reversible via unhide_ticker.
+# ---------------------------------------------------------------------------
+def hide_ticker(user_email: str, ticker: str) -> dict:
+    db = _get_db()
+    if db is None:
+        return {"ok": False, "reason": "db unavailable"}
+    t = (ticker or "").upper().strip()
+    if not t:
+        return {"ok": False, "reason": "invalid ticker"}
+    db.portfolio_hidden.update_one(
+        {"user_email": user_email.lower(), "ticker": t},
+        {"$set": {"user_email": user_email.lower(), "ticker": t, "hidden_at": _now()}},
+        upsert=True,
+    )
+    return {"ok": True, "ticker": t, "hidden": True}
+
+
+def unhide_ticker(user_email: str, ticker: str) -> dict:
+    db = _get_db()
+    if db is None:
+        return {"ok": False}
+    res = db.portfolio_hidden.delete_many(
+        {"user_email": user_email.lower(), "ticker": (ticker or "").upper().strip()})
+    return {"ok": True, "removed": res.deleted_count}
+
+
+def list_hidden(user_email: str) -> set:
+    db = _get_db()
+    if db is None:
+        return set()
+    try:
+        return {d["ticker"] for d in db.portfolio_hidden.find(
+            {"user_email": user_email.lower()}, {"ticker": 1})}
+    except Exception:
+        return set()
+
+
 def list_holdings(user_email: str) -> list[dict]:
     db = _get_db()
     if db is None:
