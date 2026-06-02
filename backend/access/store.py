@@ -99,12 +99,14 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "tiny",          "label": "Tiny Stocks",         "group": "tools",     "default": False},
     {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "tools",  "default": False},
     {"id": "kell",          "label": "Kell (CoPA)",         "group": "tools",     "default": False},
-    # Plaid-backed portfolio view — broker holdings + R-multiples + heatmap.
+    # Real-money holdings view — hold/sell signals + R-multiples + live sell
+    # alerts. Promoted to the PRIMARY top-nav (group "daily") on 2026-06-02:
+    # Ajay checks holdings + acts on sell pings every trading day, so it earns a
+    # first-class tab next to SEPA rather than living in the Misc dropdown.
     # Owner-only by default since it surfaces real money positions; owners
-    # auto-bypass via the universal owner-feature grant (see
-    # get_user_features). Friends can be granted via /admin/access but
-    # the broker is per-user — each linker gets their own /portfolio.
-    {"id": "portfolio",     "label": "Portfolio (Fidelity)", "group": "tools",    "default": False},
+    # auto-bypass via the universal owner-feature grant (see get_user_features).
+    # Friends can be granted via /admin/access; positions are per-user.
+    {"id": "portfolio",     "label": "Portfolio",           "group": "daily",     "default": False},
     {"id": "catalysts",     "label": "Catalysts",           "group": "tools",     "default": False},
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
