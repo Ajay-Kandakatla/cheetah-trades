@@ -974,6 +974,28 @@ tr:last-child td { border-bottom: none; }
    + R-target ladder (PositionSignal). */
 .portfolio-totals { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.7rem 0 0.2rem;
   font-size: 0.8rem; color: var(--cm-slate, #94a3b8); }
+
+/* SEPA Top Picks — investment indicator on the portfolio page. */
+.top-picks { border: 1px solid var(--hairline, #222); border-radius: 12px;
+  background: linear-gradient(180deg, rgba(16,185,129,0.05), transparent 60%);
+  padding: 0.7rem 0.8rem; margin: 0.9rem 0 0.4rem; }
+.top-picks__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.top-picks__meta { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
+.top-picks__empty { font-size: 0.82rem; color: #9aa8c8; margin: 0.5rem 0 0.2rem; }
+.top-picks__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.5rem; margin-top: 0.55rem; }
+.top-pick { display: block; text-decoration: none; color: inherit;
+  border: 1px solid var(--hairline, #222); border-radius: 9px; padding: 0.5rem 0.6rem;
+  background: rgba(255,255,255,0.015); transition: border-color .15s, transform .15s; }
+.top-pick:hover { border-color: #10b981; transform: translateY(-1px); }
+.top-pick__row { display: flex; align-items: center; gap: 0.4rem; }
+.top-pick__sym { font-weight: 700; font-size: 0.96rem; letter-spacing: 0.01em; }
+.top-pick__score { margin-left: auto; font-size: 0.8rem; color: var(--cm-slate, #94a3b8); }
+.top-pick__badge { font-size: 0.62rem; padding: 0.05rem 0.35rem; border: 1px solid currentColor;
+  border-radius: 999px; white-space: nowrap; }
+.top-pick__why { font-size: 0.7rem; color: #9aa8c8; margin-top: 0.3rem; line-height: 1.25; }
+.top-pick__buy { font-size: 0.72rem; color: #cbd5e1; margin-top: 0.2rem; }
+.top-picks__foot { font-size: 0.66rem; color: var(--cm-slate, #64748b); margin: 0.5rem 0 0; opacity: 0.8; }
 .portfolio-list { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.8rem; }
 .portfolio-card { border: 1px solid var(--hairline, #222); border-radius: 10px;
   padding: 0.7rem 0.8rem; background: var(--bg-surface, #141414); }

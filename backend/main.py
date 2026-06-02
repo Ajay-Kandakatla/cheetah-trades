@@ -1904,6 +1904,18 @@ async def sepa_notify_test():
 
 
 # ---------------------------------------------------------------------------
+# SEPA top picks — "what do I buy right now" shortlist for the portfolio page
+# ---------------------------------------------------------------------------
+@app.get("/sepa/top-picks")
+async def sepa_top_picks(n: int = Query(3, ge=1, le=10)):
+    """Top `n` actionable SEPA buys from the latest scan (reused cache, so it
+    refreshes on every scan). Feeds the portfolio page's investment indicator."""
+    from sepa import top_picks as _tp
+    data = await asyncio.to_thread(_tp.top_picks, n)
+    return JSONResponse(data)
+
+
+# ---------------------------------------------------------------------------
 # On-demand price alerts
 # ---------------------------------------------------------------------------
 @app.post("/sepa/alerts/price")

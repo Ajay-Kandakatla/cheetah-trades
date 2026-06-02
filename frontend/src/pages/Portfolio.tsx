@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
+import { SepaTopPicks } from '../components/SepaTopPicks';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 
@@ -80,6 +81,8 @@ export default function PortfolioPage() {
           </p>
         </div>
       </div>
+
+      <SepaTopPicks n={3} />
 
       <AddHoldingForm onAdded={refresh} />
 
