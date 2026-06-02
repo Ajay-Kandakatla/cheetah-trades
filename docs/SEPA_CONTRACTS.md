@@ -350,6 +350,40 @@ point is the breakout day itself (p.203). Contract: `test_breakout_window.py`
 > weekend / holiday / transient-patch-gap noise. `prices.is_stale(df, asof=…)`;
 > regression in `test_phantom_bar.py` (`test_is_stale_*`).
 
+### 5d. The green **ENTER** verdict requires Stage 2 (2026-06-02)
+
+The per-card **decision verdict** (`entry_exit.decision` — the green/amber banner
+"In the buy zone … Enter with a close-basis stop") and the **pivot meter**
+(`frontend/src/lib/pivotTiming.ts`, the `GO · at pivot on volume` pill) are
+SEPARATE code paths from `is_buyable`. Before this fix `entry_exit._decide`
+consulted stage **only to reject Stage 3/4** — so a **Stage 1 base** that fired a
+one-day pocket-pivot/volume pop with price sitting at the pivot read
+`actionable + volume-confirmed → ENTER`, **contradicting the same card's WATCH
+verdict and `S1 · Basing` label** (the **SMCI** case, 2026-06-02).
+
+> **Book — only buy Stage 2.** Stage 1 is the neglect/basing phase (p.69); the buy
+> comes on the **Stage 1→2 transition** confirmed by the Trend Template (p.79) and
+> a breakout on expanding volume (p.203). A volume pop *inside* a Stage 1 base is
+> exactly the false-start the template filters out.
+
+**Contract:** `ENTER` (green) may fire only when the name is book buyable-eligible:
+
+- Backend `entry_exit.build_entry_exit` takes `setup_ready` (the scanner's
+  `_is_setup_ready`: Trend Template 8/8 + Stage 2 + setup + not late + liquid) and
+  `_decide` gates the ENTER branch on it; standalone (no `setup_ready` passed) it
+  falls back to `stage == 2`. A non-eligible in-zone name returns **WAIT** ("still
+  basing (Stage 1) — not a confirmed Stage 2 advance") / **HOLD_WATCH**, never ENTER.
+- Frontend `pivotTiming` mirrors the gate: an at/above-pivot name that is not
+  `is_buyable`/`setup_ready` (or, fallback, `stage.stage === 2`) downgrades from
+  `GO`/`AT_PIVOT` to the new **`NOT_STAGE2`** state ("Wait · not Stage 2 yet")
+  instead of flashing a green GO.
+
+This keeps the banner + meter in lock-step with `is_buyable` and the Stage label —
+no more WATCH-but-ENTER cards. Contracts: `test_entry_decision_stage2.py` +
+`test_enter_verdict_requires_stage2` (in `test_sepa_contracts.py`) +
+`pivot-meter` frontend contract (`scripts/contracts.mjs`). Methodology:
+`docs/sepa/entry_decision_methodology.md`.
+
 ---
 
 ## 6. Trend Template — 8 gates LOCKED

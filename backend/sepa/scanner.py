@@ -385,6 +385,7 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
             df=df,
             stage=stg,
             vol=vol,
+            setup_ready=setup_ready,
         )
     except Exception as exc:
         log.debug("entry_exit failed for %s: %s", symbol, exc)
@@ -904,6 +905,7 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
             df=df,
             stage=stg,
             vol=vol,
+            setup_ready=setup_ready,
         )
     except Exception as exc:
         log.debug("entry_exit failed for %s (fast scan): %s", symbol, exc)

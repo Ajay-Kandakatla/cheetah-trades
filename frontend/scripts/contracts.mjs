@@ -60,6 +60,15 @@ const CONTRACTS = [
       if (!/above\s*&&\s*breakingOut/.test(src)) {
         errs.push("GO state must require `above && breakingOut` (price at pivot AND volume expanding)");
       }
+      // Stage-2 gate (2026-06-02, book pp.39-71 stage analysis): a name at/above
+      // the pivot but NOT a confirmed Stage 2 setup must NOT flash a green GO —
+      // it downgrades to NOT_STAGE2. Mirrors backend entry_exit `_decide`.
+      if (!/above\s*&&\s*!eligible/.test(src)) {
+        errs.push("meter must gate the buy states on Stage-2 eligibility (`above && !eligible` → NOT_STAGE2)");
+      }
+      if (!/NOT_STAGE2/.test(src)) {
+        errs.push("NOT_STAGE2 state missing — the Stage-2 downgrade for at-pivot non-Stage-2 names");
+      }
       return errs;
     },
   },

@@ -25,7 +25,7 @@ export const BUY_ZONE_PCT = 5;
 /** A breakout counts as "recent" (≤1wk) up to this many trading days back. */
 export const RECENT_BREAKOUT_MAX_DAYS = 5;
 
-export type PivotState = 'GO' | 'AT_PIVOT' | 'COILING' | 'WAIT' | 'EXTENDED' | 'NONE';
+export type PivotState = 'GO' | 'AT_PIVOT' | 'COILING' | 'WAIT' | 'NOT_STAGE2' | 'EXTENDED' | 'NONE';
 export type PivotTone = 'go' | 'warn' | 'wait' | 'bad' | 'none';
 
 export type PivotTiming = {
@@ -53,12 +53,13 @@ export type PivotTiming = {
 };
 
 const LABELS: Record<PivotState, { label: string; tone: PivotTone }> = {
-  GO:       { label: 'GO · at pivot on volume', tone: 'go' },
-  AT_PIVOT: { label: 'At pivot · needs volume', tone: 'warn' },
-  COILING:  { label: 'Coiling · volume dried', tone: 'wait' },
-  WAIT:     { label: 'Wait · below pivot', tone: 'wait' },
-  EXTENDED: { label: 'Extended · don’t chase', tone: 'bad' },
-  NONE:     { label: 'No setup', tone: 'none' },
+  GO:        { label: 'GO · at pivot on volume', tone: 'go' },
+  AT_PIVOT:  { label: 'At pivot · needs volume', tone: 'warn' },
+  COILING:   { label: 'Coiling · volume dried', tone: 'wait' },
+  WAIT:      { label: 'Wait · below pivot', tone: 'wait' },
+  NOT_STAGE2:{ label: 'Wait · not Stage 2 yet', tone: 'wait' },
+  EXTENDED:  { label: 'Extended · don’t chase', tone: 'bad' },
+  NONE:      { label: 'No setup', tone: 'none' },
 };
 
 export function pivotTiming(row: SepaCandidate): PivotTiming {
@@ -93,14 +94,27 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
 
   const hasSetup = setup != null && pivot != null;
 
+  // Book buyable-eligibility (pp.39-71 stage analysis; pp.79-83 Trend Template):
+  // Minervini buys ONLY a confirmed Stage 2 advance. Mirror the backend gate
+  // (scanner._is_setup_ready, surfaced as setup_ready) so the meter can never
+  // flash a green GO on a Stage 1 base that fired a one-day volume pop (the
+  // SMCI-class bug, 2026-06-02). is_buyable is a strict superset → also eligible.
+  const stage2 = row.stage?.stage === 2;
+  const eligible =
+    row.is_buyable === true ||
+    row.setup_ready === true ||
+    (row.setup_ready == null && stage2);
+
   // State machine — book pp.198-205. You buy the breakout ABOVE the pivot on
   // expanding volume (GO), after the right-side pullback tightens on dried
-  // volume (COILING). In the zone but volume light = not yet (AT_PIVOT).
+  // volume (COILING). In the zone but volume light = not yet (AT_PIVOT). At/above
+  // the pivot but NOT a Stage 2 setup = NOT_STAGE2 (not a buy by the book).
   // Below pivot, no dry-up = WAIT. Past the buy zone = EXTENDED (don't chase).
   let state: PivotState = 'NONE';
   if (hasSetup && current != null && pivot != null) {
     const extended = zoneHi != null && current > zoneHi;
     if (extended) state = 'EXTENDED';
+    else if (above && !eligible) state = 'NOT_STAGE2';
     else if (above && breakingOut) state = 'GO';
     else if (above) state = 'AT_PIVOT';
     else if (drying) state = 'COILING';
@@ -142,7 +156,7 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
  *  (a confirmed breakout buy) gets a small nudge to the very top. Then composite
  *  score, then closeness to pivot. */
 const STATE_RANK: Record<PivotState, number> = {
-  GO: 0, AT_PIVOT: 1, COILING: 2, WAIT: 3, EXTENDED: 5, NONE: 6,
+  GO: 0, AT_PIVOT: 1, COILING: 2, WAIT: 3, NOT_STAGE2: 4, EXTENDED: 5, NONE: 6,
 };
 
 export function buyabilityRank(row: SepaCandidate, t: PivotTiming): number {
@@ -167,6 +181,7 @@ export function triggerRank(t: PivotTiming): number {
     case 'AT_PIVOT': return -500 + (t.distToPivotPct ?? 0);
     case 'COILING':  return Math.abs(t.distToPivotPct) - (t.pivotTight ? 0.5 : 0);
     case 'WAIT':     return Math.abs(t.distToPivotPct) + 0.25;
+    case 'NOT_STAGE2': return 5e5 + Math.abs(t.distToPivotPct);  // at pivot but not Stage 2 — not a buy
     case 'EXTENDED': return 1e6 + t.distToPivotPct;   // past the zone — bottom
     default:         return 1e9;
   }

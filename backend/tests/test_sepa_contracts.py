@@ -345,6 +345,45 @@ def test_stage_classifier_outputs_locked():
         )
 
 
+def test_enter_verdict_requires_stage2():
+    """The green ENTER banner (entry_exit._decide) must NOT fire outside a
+    confirmed Stage 2 advance — book pp.39-71 (stage analysis), pp.79-83 (Trend
+    Template): Minervini buys ONLY Stage 2. Regression for the SMCI-class bug
+    (2026-06-02) where a Stage 1 base with a one-day volume pop read ENTER while
+    the card's own verdict said WATCH. Locks the banner to the same gate as
+    `is_buyable` (scanner._is_setup_ready)."""
+    import inspect
+    from sepa.entry_exit import build_entry_exit, _decide
+
+    # Source guard: the eligibility gate must remain LIVE code, not a comment.
+    src = inspect.getsource(_decide)
+    code_only = "\n".join(ln.split("#", 1)[0] for ln in src.splitlines())
+    assert "buyable_eligible" in code_only, "the Stage-2 eligibility gate was removed from _decide"
+    assert "setup_ready" in code_only, "_decide must consult the scanner setup_ready gate"
+
+    plan = {
+        "entries": {"aggressive": 100.0},
+        "buy_zone": {"lo": 100.0, "hi": 102.5},
+        "stop": {"recommended": 93.0, "recommended_label": "base low"},
+        "targets": {"r1": 110.0, "r2": 120.0, "r3": 135.0},
+    }
+
+    def verdict(stage_num, setup_ready):
+        return build_entry_exit(
+            last_close=101.0, trade_plan=plan, df=None,
+            stage={"stage": stage_num}, vol={"high_vol_breakout": True},
+            setup_ready=setup_ready,
+        )["decision"]
+
+    # Stage 2 + book-buyable → ENTER. Stage 1 (basing) → never ENTER, even with
+    # the same in-zone volume pop. Standalone fallback (setup_ready=None) gates
+    # on stage==2 alone.
+    assert verdict(2, True) == "ENTER"
+    assert verdict(1, False) != "ENTER"
+    assert verdict(1, None) != "ENTER"
+    assert verdict(3, False) != "ENTER"
+
+
 # --- Live scan tests (require running API) -------------------------------
 
 API_HOST = os.getenv("SEPA_TEST_API", "http://localhost:8000")

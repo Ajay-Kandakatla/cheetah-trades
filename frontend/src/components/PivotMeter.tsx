@@ -19,7 +19,7 @@ const TONE_COLOR: Record<PivotTiming['tone'], string> = {
   go: '#10b981', warn: '#d97706', wait: '#eab308', bad: '#ef4444', none: '#64748b',
 };
 const STATE_DOT: Record<PivotTiming['state'], string> = {
-  GO: '🟢', AT_PIVOT: '🟠', COILING: '🟡', WAIT: '🟡', EXTENDED: '🔴', NONE: '⚪️',
+  GO: '🟢', AT_PIVOT: '🟠', COILING: '🟡', WAIT: '🟡', NOT_STAGE2: '🟡', EXTENDED: '🔴', NONE: '⚪️',
 };
 
 function fmt(n: number | null, d = 2): string {
