@@ -26,6 +26,7 @@ import { SepaSignalChips } from './SepaSignalChips';
 // EDGAR / yfinance on first paint — cards fetch only when scrolled into
 // view, backend caches 24h.
 import { CardEnrichmentChips } from './CardEnrichmentChips';
+import { SoirModal } from './SoirModal';
 // Real-time tape (accumulation/distribution) + short-interest squeeze chips.
 // Lazy via IntersectionObserver; accumulation polls while the card is visible.
 import { RealtimeChips } from './RealtimeChips';
@@ -125,6 +126,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
   // Drill-in for the macro chip — Claude-generated geopolitics +
   // futures + bear case + sector context, plus a few live headlines.
   const [macroOpen, setMacroOpen] = useState(false);
+  const [soirOpen, setSoirOpen] = useState(false);
   const setup = row.entry_setup;
   const riskPct = setup ? Math.abs((setup.pivot - setup.stop) / setup.pivot) * 100 : null;
   const stage = row.stage?.stage;
@@ -888,25 +890,26 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               Hover for full SOIR ratio + signal reason. */}
           {soir && (soir.put_oi != null || soir.call_oi != null) && (
             <span
+              role="button" tabIndex={0}
               className={`sepa-flag ${
                 soir.signal === 'BULLISH' ? 'sepa-flag--good' :
                 soir.signal === 'BEARISH' ? 'sepa-flag--bad' :
                 soir.signal === 'WATCH'   ? 'sepa-flag--warn' :
                 'sepa-flag--neutral'
               }`}
-              title={
-                `Schaeffer's Open Interest Ratio (SOIR) — sentiment from option chain.\n\n` +
-                `Puts open: ${(soir.put_oi ?? 0).toLocaleString()}\n` +
-                `Calls open: ${(soir.call_oi ?? 0).toLocaleString()}\n` +
-                `SOIR (put/call OI): ${soir.soir != null ? soir.soir.toFixed(2) : '—'}` +
-                (soir.soir_percentile != null ? `  (${soir.soir_percentile.toFixed(0)}th pct)` : '') +
-                `\nSignal: ${soir.signal ?? '—'}\n\n` +
-                (soir.reason || 'No additional context')
-              }
+              style={{ cursor: 'pointer' }}
+              title="Tap for full options-sentiment (SOIR) detail"
+              onClick={(e) => { e.stopPropagation(); setSoirOpen(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setSoirOpen(true); }
+              }}
             >
               📊 P {((soir.put_oi ?? 0) / 1000).toFixed(0)}k / C {((soir.call_oi ?? 0) / 1000).toFixed(0)}k
               {soir.signal && soir.signal !== 'NEUTRAL' && ` · ${soir.signal[0]}`}
             </span>
+          )}
+          {soir && soirOpen && (
+            <SoirModal soir={soir} symbol={row.symbol} onClose={() => setSoirOpen(false)} />
           )}
           {row.fundamentals && row.fundamentals.passed > 0 && (
             <span

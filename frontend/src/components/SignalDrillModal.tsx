@@ -1129,7 +1129,7 @@ export function SignalDrillModal({ kind, data, onClose }: {
       role="dialog"
       aria-modal="true"
       aria-label={`${spec.title} for ${data.symbol}`}
-      onClick={onClose}
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,0.7)',
@@ -1166,7 +1166,7 @@ export function SignalDrillModal({ kind, data, onClose }: {
             </h2>
           </div>
           <button
-            onClick={onClose} aria-label="Close"
+            onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close"
             style={{
               background: 'none', border: '1px solid rgba(255,255,255,0.15)',
               color: '#cfcfd4', padding: '4px 10px', borderRadius: 4,
