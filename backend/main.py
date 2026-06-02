@@ -1915,6 +1915,17 @@ async def sepa_top_picks(n: int = Query(3, ge=1, le=10)):
     return JSONResponse(data)
 
 
+@app.get("/sepa/rank-history/{symbol}")
+async def sepa_rank_history(symbol: str,
+                            days: int = Query(30, ge=1, le=45),
+                            granularity: str = Query("daily")):
+    """Per-symbol rank trajectory (+ score, price, events) for the detail page's
+    'Ranking' tab. Derived from scan history; rank = #qualifiers scoring higher +1."""
+    from sepa import rank_history as _rh
+    data = await asyncio.to_thread(_rh.rank_history, symbol, days, granularity)
+    return JSONResponse(data)
+
+
 # ---------------------------------------------------------------------------
 # On-demand price alerts
 # ---------------------------------------------------------------------------
