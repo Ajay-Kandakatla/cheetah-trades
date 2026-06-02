@@ -425,7 +425,7 @@ def check_intraday(user_email: str) -> dict:
         # Make the body more actionable by stacking all triggers.
         if len(triggers) > 1:
             payload["body"] = " · ".join(t["msg"] for t in triggers)[:240]
-        send_result = _send_push(user_email, payload, kind="portfolio-alert")
+        send_result = _send_push(user_email, payload, kind="position_alert")
         if (send_result or {}).get("sent", 0) > 0:
             _record_fire(user_email, sym, "FULL_EXIT")
             pushed += 1
@@ -467,7 +467,7 @@ def eod_brief(user_email: str) -> dict:
         # distinguish it from the intraday pings in the notification
         # history view.
         payload["title"] = "EOD · " + payload["title"]
-        result = _send_push(user_email, payload, kind="portfolio-eod")
+        result = _send_push(user_email, payload, kind="position_alert")
         if (result or {}).get("sent", 0) > 0:
             _record_fire(user_email, sym, verdict)
             pushed += 1
@@ -506,7 +506,7 @@ def eod_escalate(user_email: str) -> dict:
         payload = _build_push_payload(verdict_doc, source="eod_escalate")
         payload["title"] = "⏰ CLOSE-30 · " + payload["title"]
         payload["body"] = "Still unacknowledged — market closes in 30 min. " + payload["body"]
-        result = _send_push(user_email, payload, kind="portfolio-eod-escalate")
+        result = _send_push(user_email, payload, kind="position_alert")
         if (result or {}).get("sent", 0) > 0:
             _record_fire(user_email, sym, verdict)
             pushed += 1
@@ -585,7 +585,7 @@ def eod_drop_attribution(user_email: str) -> dict:
         "tag": "portfolio-drop-attr",
         "url": "/portfolio",
     }
-    result = _send_push(user_email, payload, kind="portfolio-drop-attr")
+    result = _send_push(user_email, payload, kind="position_alert")
     log.info("portfolio.alerts: drop_attribution user=%s scanned=%d flagged=%d pushed=%s",
              user_email, scanned, n, (result or {}).get("sent", 0))
     return {"ok": True, "scanned": scanned, "flagged": n,
