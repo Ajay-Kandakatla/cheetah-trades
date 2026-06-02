@@ -70,10 +70,24 @@ def evaluate(symbol: str, entry: float, *,
     base = next((c for c in (latest.get("all_results") or [])
                  if (c.get("symbol") or "").upper() == sym), None)
     if base is None:
-        return {
-            "ok": False,
-            "reason": f"{sym} not in latest scan — run a scan first",
-        }
+        # On-demand fallback (2026-06-02): a held position is usually NOT a scan
+        # candidate (it didn't qualify, or isn't in the scanned universe). Analyze
+        # it one-shot so the Portfolio hold/sell read works for ANY ticker —
+        # mirrors GET /sepa/candidate's self-healing path. An empty rs_map is fine:
+        # rs just reads None (rs gate → False) and the verdict comes from
+        # sell_signals + stage + trade_plan, not RS. require_liquidity=False so a
+        # thin holding still gets judged.
+        try:
+            base = scanner._analyze_symbol(
+                sym, {}, require_liquidity=False, require_min_adr=0.0,
+            )
+        except Exception:
+            base = None
+        if base is None:
+            return {
+                "ok": False,
+                "reason": f"{sym}: no recent price data to judge (delisted or unlisted?)",
+            }
 
     last_close = float(base.get("last_close") or 0)
     if last_close <= 0:

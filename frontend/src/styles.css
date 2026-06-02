@@ -969,6 +969,46 @@ tr:last-child td { border-bottom: none; }
   letter-spacing: 0.05em; color: var(--cm-slate, #94a3b8); opacity: 0.72; margin-right: 0.1rem;
   white-space: nowrap; align-self: center; }
 
+/* ── Portfolio hold/sell page (2026-06-02) ─────────────────────────────────
+   Lean manual-holdings page: each position is a card with a hold/sell verdict
+   + R-target ladder (PositionSignal). */
+.portfolio-totals { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.7rem 0 0.2rem;
+  font-size: 0.8rem; color: var(--cm-slate, #94a3b8); }
+.portfolio-list { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.8rem; }
+.portfolio-card { border: 1px solid var(--hairline, #222); border-radius: 10px;
+  padding: 0.7rem 0.8rem; background: var(--bg-surface, #141414); }
+.portfolio-card__top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.portfolio-card__id { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+.portfolio-card__sym { background: transparent; border: none; color: #9aa8ff; cursor: pointer;
+  padding: 0; font-weight: 700; font-size: 1.02rem; font-family: inherit; }
+.portfolio-card__sym:hover { text-decoration: underline; }
+.portfolio-card__name { font-size: 0.76rem; color: #6f7689; }
+.portfolio-card__rm { background: transparent; border: none; cursor: pointer; color: #7a8499;
+  font-size: 0.82rem; padding: 0 2px; line-height: 1; }
+.portfolio-card__rm:hover { color: #ef4444; }
+.portfolio-card__nums { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 0.3rem;
+  font-size: 0.8rem; color: var(--cm-slate, #94a3b8); }
+
+.pos-sig { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.55rem;
+  padding-top: 0.55rem; border-top: 1px solid var(--hairline, #222); }
+.pos-sig--muted { color: var(--cm-slate, #94a3b8); font-size: 0.74rem; opacity: 0.8; border-top: none; padding-top: 0; }
+.pos-sig__head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.pos-sig__verdict { font-size: 0.74rem; font-weight: 700; padding: 2px 9px; border: 1px solid; border-radius: 999px; }
+.pos-sig__r { font-size: 0.82rem; font-weight: 700; }
+.pos-sig__chip { font-size: 0.66rem; color: var(--cm-slate, #94a3b8); border: 1px solid var(--hairline, #222);
+  border-radius: 999px; padding: 1px 7px; }
+.pos-sig__summary { font-size: 0.78rem; color: #cbd5e1; }
+.pos-sig__targets { display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.72rem; }
+.pos-sig__t { padding: 2px 7px; border-radius: 5px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--hairline, #222); }
+.pos-sig__t em { font-style: normal; opacity: 0.65; }
+.pos-sig__t--stop { color: #f87171; }
+.pos-sig__t--tgt { color: #34d399; }
+.pos-sig__why-btn { background: none; border: none; color: var(--cm-slate, #94a3b8); font-size: 0.7rem;
+  cursor: pointer; padding: 0; text-align: left; }
+.pos-sig__why { margin: 0; padding-left: 1rem; font-size: 0.74rem; color: #cbd5e1;
+  display: flex; flex-direction: column; gap: 0.2rem; }
+
 /* ── Pivot entry-timing meter (2026-06-02) ─────────────────────────────────
    The "am I hopping on at the right time?" gauge on each candidate card:
    a price track (stop · pivot · buy-zone + a ▲ for current price) and a volume
