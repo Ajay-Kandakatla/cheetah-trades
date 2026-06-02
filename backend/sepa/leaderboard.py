@@ -21,19 +21,30 @@ from . import history, scanner
 LOOKBACK_DAYS = 14          # ≈ 10 business days
 TOP_TIER = 20               # "scored high" = ranked within the top this many
 VOLATILE_RANGE = 30         # best→worst rank spread that counts as "volatile"
-MAX_RUNS = 40               # cap runs processed per call (cost guard)
+MAX_DAYS = 30               # cap trading days processed per call (cost guard)
 
 _cache: dict = {}
 _CACHE_TTL_SEC = 180
 
 
 def _rank_runs(db, cutoff: int) -> list[dict]:
-    """Most-recent runs in the window, each as {symbol: rank} by score desc."""
+    """ONE scan per trading day (the latest that day), each as {symbol: rank} by
+    score desc. Day-LEVEL on purpose: persistence then means "% of DAYS in the
+    top", which is what "how often is it on top this week" actually asks. Ranking
+    by raw scans instead over-weighted the last few dense-intraday days (recent
+    days have ~10 scans each, so the most-recent-N-scans window only spanned ~3
+    days) and dropped week-strong names — BB read 28% over recent scans but 88%
+    over recent DAYS (top-20 on 7 of 8 days). 2026-06-02."""
     runs = list(db.scan_runs.find({"generated_at": {"$gte": cutoff}},
-                                   {"generated_at": 1})
-                .sort("generated_at", -1).limit(MAX_RUNS))
+                                   {"generated_at": 1, "date_et": 1})
+                .sort("generated_at", 1))                  # oldest first
+    by_date: dict = {}
+    for r in runs:
+        if r.get("date_et"):
+            by_date[r["date_et"]] = r                      # last per date = latest that day
+    daily = [by_date[d] for d in sorted(by_date)][-MAX_DAYS:]
     out = []
-    for run in runs:
+    for run in reversed(daily):                            # newest first (aggregate uses ranks[0] = current)
         snaps = list(db.candidate_snapshots.find(
             {"scan_run_id": run["_id"]}, {"symbol": 1, "score": 1}))
         snaps = [s for s in snaps if s.get("score") is not None]

@@ -53,12 +53,13 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
       <div className="rank-lb__head">
         <span className="eyebrow">📊 Rank leaderboard · honourable mentions</span>
         <span className="rank-lb__meta mono">
-          {data.scans_in_window ?? 0} scans · {data.lookback_days ?? 0}d
+          {data.scans_in_window ?? 0} days · {data.lookback_days ?? 0}d window
         </span>
       </div>
       <p className="rank-lb__sub">
-        Scored high across the window. <b style={{ color: '#eab308' }}>⚡ Primed</b> = setup ready,
-        watch for the breakout · <b style={{ color: '#fb923c' }}>Volatile</b> = big rank swings.
+        <b>%</b> = how often it was in the top {data.top_tier ?? 20} <b>per day</b> this window.
+        <b style={{ color: '#eab308' }}> ⚡ Primed</b> = setup ready, watch for the breakout ·
+        <b style={{ color: '#fb923c' }}> Volatile</b> = big rank swings.
       </p>
 
       <div className="rank-lb__list">
@@ -67,7 +68,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
           const dropped = l.current_rank > l.best_rank + 5;
           return (
             <Link key={l.symbol} to={`/sepa/${l.symbol}`} className="rank-lb__row" title={
-              `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · in top ${data.top_tier ?? 20} for ${l.persistence_pct}% of ${l.appearances} scans`
+              `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
             }>
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
               <span className="rank-lb__sym">{l.symbol}</span>
@@ -75,7 +76,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
                 best #{l.best_rank}
                 {dropped ? <span className="rank-lb__drop"> ↓ now #{l.current_rank}</span> : null}
               </span>
-              <span className="rank-lb__pers mono" title="% of scans in the top tier">
+              <span className="rank-lb__pers mono" title="% of days in the top tier">
                 {l.persistence_pct}%
               </span>
               <span className="rank-lb__flag" style={{ color: f.color, borderColor: f.color }}>
