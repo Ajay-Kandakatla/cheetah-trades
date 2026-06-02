@@ -56,9 +56,13 @@ log = logging.getLogger("portfolio.alerts")
 # tick fires again. Lifted on ack.
 _REFIRE_SECONDS = 14 * 60   # 14 min so cron-window jitter never skips a fire
 
-# Hard cap on intraday fires per {ticker, day} to prevent runaway pushes
-# if something goes wrong with the ack flow.
-_MAX_FIRES_PER_DAY = 12
+# Fires per {ticker, day} cap. User 2026-06-02: "keep pushing until I
+# acknowledge the sell signal." So this is raised to cover the FULL market
+# session at the 14-min refire cadence (≈28 ticks 9:30-16:00 ET) — i.e. it
+# keeps pinging all session until you ack, then stops; resets next day. It is
+# NOT removed entirely: it stays as a runaway backstop in case the ack flow
+# ever breaks (you'd still stop at end of session rather than ping forever).
+_MAX_FIRES_PER_DAY = 40
 
 # Which verdicts trigger an intraday push. HOLD and TIGHTEN_STOP are
 # informational — the user doesn't need to be hounded for those. They
