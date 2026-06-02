@@ -278,6 +278,40 @@ def _drop_phantom_tail(df: Optional[pd.DataFrame]) -> Optional[pd.DataFrame]:
     return df
 
 
+# A symbol whose newest daily bar is older than this many CALENDAR days is
+# treated as delisted / halted / renamed (no live data) and excluded from the
+# scan. ~10 trading days; the gap between an active name (last bar 0-3 days old)
+# and a delisted one (months) is huge, so this sits comfortably clear of
+# weekend / holiday / transient-patch-gap noise.
+STALE_MAX_CALENDAR_DAYS = 14
+
+
+def is_stale(
+    df: Optional[pd.DataFrame],
+    asof: Optional[pd.Timestamp] = None,
+    max_days: int = STALE_MAX_CALENDAR_DAYS,
+) -> bool:
+    """True when the newest bar is older than ``max_days`` calendar days — the
+    symbol has stopped printing daily bars (delisted, halted, renamed, or a
+    persistent data gap). Such a name has no live price and no chart, and must
+    not surface in the scan or the buyable tier: a frozen last bar can read as a
+    pocket pivot / breakout and leak into is_buyable (see CFLT, last bar
+    2026-03-16 — an M&A volume spike that scored buyable months after delisting).
+    ``asof`` defaults to today (ET). Conservative: returns False on any error so
+    a parsing hiccup never silently empties the scan."""
+    if df is None or len(df) == 0:
+        return True
+    try:
+        last_ts = pd.Timestamp(df.index[-1])
+        if asof is None:
+            asof = pd.Timestamp.now(tz="America/New_York").tz_localize(None).normalize()
+        else:
+            asof = pd.Timestamp(asof)
+        return (asof - last_ts).days > max_days
+    except Exception:
+        return False
+
+
 def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optional[pd.DataFrame]:
     """Return a DataFrame indexed by date with [open, high, low, close, volume].
 

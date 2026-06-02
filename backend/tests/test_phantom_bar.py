@@ -66,3 +66,45 @@ def test_phantom_suppresses_breakout_guard_restores_it():
 
     healed = prices._drop_phantom_tail(phantom)
     assert volume.analyze(healed)["high_vol_breakout"] is True        # guard brings it back
+
+
+# --- staleness guard (delisted / halted / renamed) -------------------------
+
+def _df_last_dated(last_date, n=6):
+    idx = pd.bdate_range(end=last_date, periods=n)
+    closes = [100.0] * n
+    return pd.DataFrame(
+        {"open": closes, "high": closes, "low": closes, "close": closes, "volume": [1000] * n},
+        index=idx,
+    )
+
+
+def test_is_stale_fresh():
+    df = _df_last_dated("2026-06-02")
+    assert prices.is_stale(df, asof=pd.Timestamp("2026-06-02")) is False
+
+
+def test_is_stale_delisted():
+    # CFLT's real situation: last bar 2026-03-16, scan run 2026-06-02.
+    df = _df_last_dated("2026-03-16")
+    assert prices.is_stale(df, asof=pd.Timestamp("2026-06-02")) is True
+
+
+def test_is_stale_within_window_is_fresh():
+    df = _df_last_dated("2026-05-26")          # ~7 calendar days back
+    assert prices.is_stale(df, asof=pd.Timestamp("2026-06-02")) is False
+
+
+def test_is_stale_boundary_14_days():
+    base = pd.Timestamp("2026-06-02")
+    assert prices.is_stale(_df_last_dated("2026-05-19"), asof=base) is False   # exactly 14 → keep
+    assert prices.is_stale(_df_last_dated("2026-05-18"), asof=base) is True    # 15 → stale
+
+
+def test_is_stale_empty_is_stale():
+    assert prices.is_stale(pd.DataFrame()) is True
+    assert prices.is_stale(None) is True
+
+
+def test_stale_constant_sane():
+    assert 7 <= prices.STALE_MAX_CALENDAR_DAYS <= 30

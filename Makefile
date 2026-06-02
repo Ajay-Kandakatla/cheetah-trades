@@ -27,8 +27,8 @@ contracts-vcp:                 ## VCP behavioral contracts (docs/sepa/vcp_method
 	@echo "→ VCP behavioral contracts (docs/sepa/vcp_methodology.md)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_vcp.py -v --tb=short
 
-contracts-phantom:             ## Phantom trailing-bar guard (prices.py) — breakout/is_buyable regression. Fold into `contracts-sepa` after the api image is rebuilt with test_phantom_bar.py.
-	@echo "→ Phantom-bar guard contracts (backend/sepa/prices.py)"
+contracts-phantom:             ## prices.py data-hygiene: phantom trailing-bar guard + delisted/stale-symbol floor. Fold into `contracts-sepa` after the api image is rebuilt with test_phantom_bar.py.
+	@echo "→ prices.py data-hygiene contracts (phantom-bar + staleness, backend/sepa/prices.py)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_phantom_bar.py -v --tb=short
 
 contracts-breakout:            ## Breakout-recency (volume.days_since_breakout) + setup_ready gate. Fold into `contracts-sepa` after the api image is rebuilt with test_breakout_window.py.

@@ -207,6 +207,11 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     df = prices.load_prices(symbol)
     if df is None or len(df) < 220:
         return None
+    # ── Staleness floor (delisted / halted / renamed) ────────────────────
+    # No bar in the last ~10 trading days = no live data, no chart, and a
+    # frozen last bar that can fake a breakout (see CFLT). Drop it entirely.
+    if prices.is_stale(df):
+        return None
 
     # ── Liquidity floor (institutional-grade) ────────────────────────────
     liq = adr.liquidity_check(df)
@@ -1015,6 +1020,8 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
             return None
         df = prices.load_prices(symbol)
         if df is None or len(df) < 220:
+            return None
+        if prices.is_stale(df):   # delisted/halted — see _analyze_symbol
             return None
         return _hot_recompute(symbol, df, rs_map, blob)
 

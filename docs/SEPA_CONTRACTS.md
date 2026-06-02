@@ -338,6 +338,18 @@ point is the breakout day itself (p.203). Contract: `test_breakout_window.py`
 > `make contracts-phantom`. Two real sessions never share volume to the share, so
 > the guard only ever drops placeholders.
 
+> **Staleness floor — delisted / halted / renamed (2026-06-02).** `_analyze_symbol`
+> (and the fast path) drop any symbol whose newest bar is older than
+> `prices.STALE_MAX_CALENDAR_DAYS` (**14** ≈ 10 trading days) BEFORE scoring. A
+> delisted name keeps a frozen last bar in the cache (the patcher bumps its TTL
+> but appends nothing because the feed returns NotFound), and that frozen bar can
+> read as a pocket pivot / breakout and leak straight into the buyable tier — e.g.
+> **CFLT** stopped trading 2026-03-16 on an M&A volume spike yet scored
+> `is_buyable` ~3 months later with a dead chart. The gap between an active name
+> (last bar 0–3 days old) and a delisted one (months) is large, so 14 days clears
+> weekend / holiday / transient-patch-gap noise. `prices.is_stale(df, asof=…)`;
+> regression in `test_phantom_bar.py` (`test_is_stale_*`).
+
 ---
 
 ## 6. Trend Template — 8 gates LOCKED
