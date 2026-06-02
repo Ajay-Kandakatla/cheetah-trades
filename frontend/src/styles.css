@@ -957,6 +957,18 @@ tr:last-child td { border-bottom: none; }
 .sepa-chip.sepa-chip--warn.is-active { background: var(--warn); color: var(--bg); border-color: var(--warn); }
 .sepa-chip.sepa-chip--bad  { color: var(--negative); border-color: rgba(239, 68, 68, 0.45); }
 .sepa-chip.sepa-chip--bad.is-active  { background: var(--negative); color: var(--bg); border-color: var(--negative); }
+/* ── Filter-bar categories (2026-06-02) ────────────────────────────────────
+   Group the chips into labeled, Minervini-ordered categories (Tier → Trend →
+   Setup → Entry → Volume → Smart money → Catalyst → Overlays → Type) so the bar
+   reads as categories instead of a wall of chips. Each category is an inline
+   cluster with a small grey label and a left divider. */
+.sepa-filterbar__cat-group { display: inline-flex; align-items: center; gap: 0.3rem;
+  flex-wrap: wrap; padding: 0 0.55rem; border-left: 1px solid var(--hairline, #222); }
+.sepa-filterbar__cat-group:first-of-type { border-left: none; padding-left: 0; }
+.sepa-filterbar__cat-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--cm-slate, #94a3b8); opacity: 0.72; margin-right: 0.1rem;
+  white-space: nowrap; align-self: center; }
+
 /* ── Pivot entry-timing meter (2026-06-02) ─────────────────────────────────
    The "am I hopping on at the right time?" gauge on each candidate card:
    a price track (stop · pivot · buy-zone + a ▲ for current price) and a volume

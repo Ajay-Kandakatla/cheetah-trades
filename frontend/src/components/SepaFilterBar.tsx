@@ -4,10 +4,16 @@ import { InfoButton } from './InfoButton';
 const FilterInfo = (
   <>
     <p>Narrow the candidate list down to what you actually want to trade.</p>
+    <p>
+      The bar is grouped left→right in <strong>Minervini's order of priority</strong>:
+      Tier → Trend &amp; Stage (the qualifier) → Setup → Entry timing → Volume →
+      Smart money → Catalyst → Overlays → Type.
+    </p>
     <ul>
       <li>
         <strong>Rating tier</strong> — Strong Buy, Buy, Watch. Tier comes from the
-        composite score (0-100): Strong Buy ≥ 85, Buy ≥ 70, Watch ≥ 60.
+        composite score (0-100): Strong Buy ≥ 85, Buy ≥ 70, Watch ≥ 60. (The score
+        is an app synthesis layered on Minervini's gates — not a book formula.)
       </li>
       <li>
         <strong>Setup type</strong> — <strong>Volatility Contraction Pattern (VCP)</strong>
@@ -149,6 +155,34 @@ type Props = {
 
 const RATINGS: Array<Rating | 'ALL'> = ['ALL', 'STRONG_BUY', 'BUY', 'WATCH'];
 
+const STAGE_OPTS = [
+  { v: 'ALL' as const, label: 'Any stage', tip: 'No stage filter — all four stages mixed in the list.' },
+  { v: 2 as const,     label: 'S2 Advance', tip: 'Stage 2 only — Weinstein/Minervini buy zone (price > 50 > 150 > 200 MA, 200 rising).' },
+  { v: 3 as const,     label: 'S3 Topping', tip: 'Stage 3 only — distribution phase. 50-day rolled, price lost 50, still above 200. Sell-prep / tighten stops.' },
+  { v: 4 as const,     label: 'S4 Decline', tip: 'Stage 4 only — confirmed downtrend (price < 50 < 150 < 200 MA, 200 falling). Sell longs / short candidate.' },
+  { v: 1 as const,     label: 'S1 Basing', tip: 'Stage 1 only — sideways accumulation after a downtrend. Pre-buy zone; not yet trending.' },
+];
+
+const DECISION_OPTS = [
+  { v: 'ALL' as const,        label: 'Any signal', tip: 'No entry-timing gate — show every decision state (Enter, Wait, Watch, Avoid).' },
+  { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'BUYABLE NOW — the strict Minervini gate (pp.79-83/198-203): Trend Template + Stage 2 + a setup + not late-stage + liquid + a VOLUME-CONFIRMED breakout (high-volume breakout or pocket pivot). The real "you may buy this today" list, so on a quiet day it can be short — by design.' },
+  { v: 'WAIT' as const,       label: '🟡 Wait',     tip: 'Valid base, but the pivot has not triggered yet — Minervini\'s "wait for the breakout" state (p.203). Most VCP bases live here. Tap a card\'s WAIT banner for the trigger price + distance + valid-through date.' },
+  { v: 'HOLD_WATCH' as const, label: '⚪ Watch',    tip: 'On the radar — passes trend/RS but has no setup trigger. Keep watching for a base to form.' },
+];
+
+const BREAKOUT_OPTS = [
+  { v: 'TODAY' as const, label: 'Today', tip: 'Strict Minervini buy point (p.203): Enter = a VOLUME-CONFIRMED breakout TODAY (the is_buyable gate). The shortest, most disciplined list.' },
+  { v: 'WEEK' as const,  label: '≤1wk',  tip: 'Relax Enter to names that broke out on volume within the last ~5 trading days AND are still set up — you can buy in the days following a breakout while it holds above the pivot.' },
+  { v: 'ANY' as const,   label: 'Any',   tip: 'Drop the breakout trigger entirely: Enter = setup-ready (Trend Template + Stage 2 + base + not-late + liquid). The "ready to go, no trigger required" view.' },
+];
+
+const MOAT_OPTS = [
+  { v: 0 as const, label: 'Any moat', tip: 'No moat filter — show all candidates regardless of moat score.' },
+  { v: 2 as const, label: '🏰 Some+',  tip: 'At least SOME moat — score ≥ 40. Filters out commodity/cyclical names with no measurable moat.' },
+  { v: 3 as const, label: '🏰 Narrow+', tip: 'NARROW moat or wider — score ≥ 60. Quality compounders only.' },
+  { v: 4 as const, label: '🏰 Wide',    tip: 'WIDE moat only — score ≥ 80. Coca-Cola / Visa / Microsoft tier (Buffett\'s ideal).' },
+] as const;
+
 export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Props) {
   const set = <K extends keyof SepaFilters>(k: K, v: SepaFilters[K]) =>
     onChange({ ...filters, [k]: v });
@@ -193,288 +227,256 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
   return (
     <div className="sepa-filterbar">
       <InfoButton title="Filters">{FilterInfo}</InfoButton>
+      {/* Chips grouped into labeled categories, ordered left→right by
+          Minervini's priority (user 2026-06-02): the Trend Template qualifier
+          first (p.79), then the base/setup (pp.197-205), the entry trigger
+          (p.203), volume confirmation, institutional sponsorship (p.195), then
+          catalyst/context and non-Minervini overlays. RS≥70 is the slider in the
+          controls row below. */}
       <div className="sepa-filterbar__group">
-        {RATINGS.map((r) => (
+
+        {/* 🏅 TIER — the composite verdict. The 0-100 score is an app synthesis
+            layered on the Minervini gates, not a book formula — but it's the
+            headline filter people reach for first. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="The app's composite score tier (a ranking layered on Minervini's gates).">🏅 Tier</span>
+          {RATINGS.map((r) => (
+            <button
+              key={r}
+              className={`sepa-chip ${filters.rating === r ? 'is-active' : ''} ${r === 'ALL' ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('rating', r)}
+            >
+              {r === 'ALL' ? 'All' : r.replace('_', ' ').toLowerCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* 📈 TREND & STAGE — Minervini's qualifier (p.79): a Stage-2 advance
+            (Weinstein 4-stage). RS≥70, the 8th Trend Template gate, is the
+            slider in the controls row. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Minervini's qualifier — Stage 2 + the Trend Template (book p.79). The non-negotiable foundation.">📈 Trend &amp; Stage</span>
+          {STAGE_OPTS.map(({ v, label, tip }) => (
+            <button
+              key={String(v)}
+              className={`sepa-chip ${filters.stage === v ? 'is-active' : ''} ${
+                v === 3 ? 'sepa-chip--warn' : v === 4 ? 'sepa-chip--bad' : ''
+              } ${v === 'ALL' ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('stage', v)}
+              title={tip}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 🧱 SETUP — the base: VCP / Power Play (pp.197-205) + the textbook-tight
+            ≤5% pivot (pp.198/202). */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="The base structure — Volatility Contraction Pattern / Power Play (book pp.197-205).">🧱 Setup</span>
+          {(['ALL', 'VCP', 'POWER_PLAY'] as const).map((s) => (
+            <button
+              key={s}
+              className={`sepa-chip ${filters.setup === s ? 'is-active' : ''} ${s === 'ALL' ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('setup', filters.setup === s ? 'ALL' : s)}
+              title={
+                s === 'VCP' ? 'Show only names whose entry setup is a Volatility Contraction Pattern. Tap again to turn off.' :
+                s === 'POWER_PLAY' ? 'Show only Power Play (high-tight-flag) setups. Tap again to turn off.' :
+                'No setup filter — show every candidate regardless of setup.'
+              }
+            >
+              {s === 'ALL' ? 'Any setup' : s === 'POWER_PLAY' ? 'Power Play' : s}
+            </button>
+          ))}
           <button
-            key={r}
-            className={`sepa-chip ${filters.rating === r ? 'is-active' : ''} ${r === 'ALL' ? 'sepa-chip--passive' : ''}`}
-            onClick={() => set('rating', r)}
+            className={`sepa-chip ${filters.tightPivotOnly ? 'is-active' : ''}`}
+            onClick={() => set('tightPivotOnly', !filters.tightPivotOnly)}
+            title="Only names whose FINAL contraction is ≤ 5% — the textbook-tight Minervini pivot (book pp.198/202: FSII 5% handle, VIVO 3%). The genuinely book-tight setups, where a break on volume is the cleanest entry."
           >
-            {r === 'ALL' ? 'All' : r.replace('_', ' ').toLowerCase()}
+            ⚡ Tight pivot ≤5%
           </button>
-        ))}
-        <span className="sepa-filterbar__sep" />
-        {(['ALL', 'VCP', 'POWER_PLAY'] as const).map((s) => (
+        </div>
+
+        {/* 🎯 ENTRY TIMING — the trigger: buy the breakout above the pivot on
+            expanding volume (p.203). Decision = Enter/Wait/Watch; the Breakout
+            sub-control tunes how recent the breakout must be. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="The buy trigger — break above the pivot on expanding volume (book p.203).">🎯 Entry timing</span>
+          {DECISION_OPTS.map(({ v, label, tip }) => (
+            <button
+              key={`dec-${v}`}
+              className={`sepa-chip ${decSel === v ? 'is-active' : ''} ${
+                v === 'ENTER' ? 'sepa-chip--good' : ''
+              } ${v === 'ALL' ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('decision', decSel === v ? 'ALL' : v)}
+              title={tip}
+            >
+              {label}
+            </button>
+          ))}
+          <span
+            className="mono"
+            style={{ opacity: 0.7, fontSize: '0.74rem', alignSelf: 'center' }}
+            title="Tunes what the 🟢 Enter chip counts as a breakout. Only affects the Enter chip."
+          >
+            ⚡ Breakout
+          </span>
+          {BREAKOUT_OPTS.map(({ v, label, tip }) => (
+            <button
+              key={`bw-${v}`}
+              className={`sepa-chip ${bwSel === v ? 'is-active' : ''} ${v === 'TODAY' ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('breakoutWindow', v)}
+              title={tip}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 📊 VOLUME & MOMENTUM — accumulation vs distribution (book p.71-72,
+            203) + emerging RS leaders breaking out with no base yet. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Volume confirmation — accumulation vs distribution (book p.71-72, 203).">📊 Volume</span>
           <button
-            key={s}
-            className={`sepa-chip ${filters.setup === s ? 'is-active' : ''} ${s === 'ALL' ? 'sepa-chip--passive' : ''}`}
-            // Tap an active setup chip again to clear it back to "Any setup" —
-            // gives VCP / Power Play simple on/off behavior (user request
-            // 2026-06-02: "a filter to turn VCP on and off").
-            onClick={() => set('setup', filters.setup === s ? 'ALL' : s)}
+            className={`sepa-chip ${filters.hideDistributing ? 'is-active' : ''}`}
+            onClick={() => set('hideDistributing', !filters.hideDistributing)}
+            title="Hide tickers being institutionally distributed (red 'Distributing' pill) or showing money outflow on CMF. Tightens the list to genuinely accumulating names."
+          >
+            🚫 Hide Distributing
+          </button>
+          <button
+            className={`sepa-chip ${filters.momentumLeaderOnly ? 'is-active' : ''}`}
+            onClick={() => set('momentumLeaderOnly', !filters.momentumLeaderOnly)}
+            title="Only show Emerging Momentum Leaders — the ARM/DDOG fingerprint: an RS leader at new highs (no overhead) with a pocket pivot, heavy net buying (up/down vol ≥ 1.9) and CMF inflow. Catches fast movers that have no base, so they normally score 'no setup'."
+          >
+            🚀 Momentum Leader
+          </button>
+        </div>
+
+        {/* 🐋 SMART MONEY — institutional sponsorship (book p.195: "limit your
+            selections to those supported by institutional buying"). */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Institutional sponsorship — supported by institutional buying (book p.195).">🐋 Smart money</span>
+          <button
+            className={`sepa-chip ${filters.whalesAccumOnly ? 'is-active' : ''}`}
+            onClick={() => set('whalesAccumOnly', !filters.whalesAccumOnly)}
+            title="Only show candidates whose 13F whales flow is 'accumulating' (n_buying > n_selling × 1.5). Tightens the list to names that passed SEPA AND have institutional capital flowing in. Pairs well with Hide Distributing for the full whales+tape agreement short-list."
+          >
+            🐋 Whales Accumulating
+          </button>
+          <button
+            className={`sepa-chip ${filters.hedgeFundTopBuyer ? 'is-active' : ''}`}
+            onClick={() => set('hedgeFundTopBuyer', !filters.hedgeFundTopBuyer)}
+            title="Only show candidates whose top whale BUYER matches ANY hedge fund on the curated Tier-S list in src/lib/fundTiers.ts (Berkshire, Tiger Global, Coatue, Citadel, Pershing Square, Greenlight, Soros, Renaissance, D.E. Shaw, Two Sigma, Bridgewater, AQR, Millennium, Point72, Lone Pine, Viking Global, Maverick, Whale Rock, Glenview, Trian, Starboard, Icahn, ValueAct, Jana, Pelican, Altimeter, Scion, and more). Match is case-insensitive substring on the top_buy fund name. Tier S = historical active alpha reputation, NOT a forward prediction. Pair with Whales Accumulating for the 'smart money is buying' short-list."
+          >
+            🦅 Hedge Fund Top Buyer
+          </button>
+        </div>
+
+        {/* 🗞️ CATALYST & CONTEXT — insider cluster buys (O'Neil/Minervini tell),
+            political-disclosure context, and breakthrough themes. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Supporting context — insider buying, political disclosures, breakthrough themes.">🗞️ Catalyst</span>
+          <button
+            className={`sepa-chip ${filters.insiderClusterBuy ? 'is-active' : ''}`}
+            onClick={() => set('insiderClusterBuy', !filters.insiderClusterBuy)}
+            title="Only show candidates where ≥3 unique insiders filed Form 4 buys in the last 30 days (cluster-buy signal — bullish tell per Minervini / O'Neil Ch 13). Insider enrichment runs on the top 20 candidates after Full Scan with 'Include catalyst' — names outside that enriched subset will be excluded when this filter is on."
+          >
+            🟢 Insider Cluster Buy
+          </button>
+          <button
+            className={`sepa-chip ${filters.potusFamilyOnly ? 'is-active' : ''}`}
+            onClick={() => set('potusFamilyOnly', !filters.potusFamilyOnly)}
+            title="Only show candidates on the curated POTUS-family disclosure list (NVDA, MSFT, AAPL, NOW, AMD, GOOGL, INTC, PLTR, HOOD, etc — full list in src/lib/politicalDisclosures.ts). Informational context flag — disclosed positions don't predict outcomes. Use as ONE signal among many."
+          >
+            🏛️ POTUS Family
+          </button>
+          <button
+            className={`sepa-chip ${filters.usGovOnly ? 'is-active' : ''}`}
+            onClick={() => set('usGovOnly', !filters.usGovOnly)}
+            title="Only show candidates with direct U.S. government involvement — CHIPS Act recipients (e.g., INTC), major govt contractors (e.g., PLTR), or program participants (e.g., HOOD as Trump Accounts trustee). Curated in src/lib/politicalDisclosures.ts. Same caveat as POTUS Family — informational context, not a buy signal."
+          >
+            🇺🇸 US Gov
+          </button>
+          <button
+            className={`sepa-chip ${filters.pioneerOnly ? 'is-active' : ''}`}
+            onClick={() => set('pioneerOnly', !filters.pioneerOnly)}
+            title="Show only tickers tagged as part of a curated breakthrough theme (AI infra, AI storage, SMR nuclear, quantum, GLP-1, etc.). See the Pioneers nav tab for the full breakdown."
+          >
+            🚀 Pioneer
+          </button>
+        </div>
+
+        {/* 🧩 OVERLAYS — non-Minervini frameworks layered on top: Buffett moat,
+            Antonacci Dual Momentum, Venky's 21W-SMA / ATR / ADX. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Other frameworks layered on top of Minervini (Buffett moat, Antonacci dual momentum, Venky's filters).">🧩 Overlays</span>
+          {MOAT_OPTS.map(({ v, label, tip }) => (
+            <button
+              key={`moat-${v}`}
+              className={`sepa-chip ${filters.moatMin === v ? 'is-active' : ''} ${v === 0 ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('moatMin', v)}
+              title={tip}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            className={`sepa-chip ${filters.dmEligibleOnly ? 'is-active' : ''}`}
+            onClick={() => set('dmEligibleOnly', !filters.dmEligibleOnly)}
+            title="Antonacci's Dual Momentum two-gate filter: 12m return positive AND beats SPY"
+          >
+            Dual Momentum ✓
+          </button>
+          <button
+            className={`sepa-chip ${filters.weekly21SmaPass ? 'is-active' : ''}`}
+            onClick={() => set('weekly21SmaPass', !filters.weekly21SmaPass)}
+            title="Venky's filter: only candidates where the latest weekly close is above the 21-week SMA AND that SMA is sloping up over the last 4 weeks. 'Trend confirmation, inclined not flat.'"
+          >
+            📈 21W SMA ↑
+          </button>
+          <button
+            className={`sepa-chip ${filters.atrPctMax > 0 ? 'is-active' : ''}`}
+            onClick={() => set('atrPctMax', filters.atrPctMax > 0 ? 0 : 8)}
             title={
-              s === 'VCP' ? 'Show only names whose entry setup is a Volatility Contraction Pattern. Tap again to turn off.' :
-              s === 'POWER_PLAY' ? 'Show only Power Play (high-tight-flag) setups. Tap again to turn off.' :
-              'No setup filter — show every candidate regardless of setup.'
+              filters.atrPctMax > 0
+                ? `Active: dropping names with ATR% > ${filters.atrPctMax}%. Tap to disable.`
+                : "Cap ATR (14-day) at 8% of price — drops names too volatile for swing-trade stops. Tap to enable."
             }
           >
-            {s === 'ALL' ? 'Any setup' : s === 'POWER_PLAY' ? 'Power Play' : s}
+            📐 ATR% ≤ {filters.atrPctMax > 0 ? filters.atrPctMax : 8}
           </button>
-        ))}
-        <span className="sepa-filterbar__sep" />
-        {/* Timed-entry decision filter (2026-06-02) — mirrors the ENTER / WAIT /
-            WATCH banner each card already shows (entry_exit.decision). Most VCP
-            bases sit in WAIT until the pivot breaks: Minervini p.203 — you don't
-            buy the base, you buy the breakout. ENTER = actionable now. Lets the
-            user flip "show me what's basing (Wait)" vs "what's triggering now
-            (Enter)" without reading every card. */}
-        {([
-          { v: 'ALL' as const,        label: 'Any signal', tip: 'No entry-timing gate — show every decision state (Enter, Wait, Watch, Avoid).' },
-          { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'BUYABLE NOW — the strict Minervini gate (pp.79-83/198-203): Trend Template + Stage 2 + a setup + not late-stage + liquid + a VOLUME-CONFIRMED breakout (high-volume breakout or pocket pivot). This is the real "you may buy this today" list, so on a quiet day it can be very short — that\'s by design.' },
-          { v: 'WAIT' as const,       label: '🟡 Wait',     tip: 'Valid base, but the pivot has not triggered yet — Minervini\'s "wait for the breakout" state (p.203). Most VCP bases live here. Tap a card\'s WAIT banner to see the trigger price + distance + valid-through date.' },
-          { v: 'HOLD_WATCH' as const, label: '⚪ Watch',    tip: 'On the radar — passes trend/RS but has no setup trigger. Keep watching for a base to form.' },
-        ]).map(({ v, label, tip }) => (
           <button
-            key={`dec-${v}`}
-            className={`sepa-chip ${decSel === v ? 'is-active' : ''} ${
-              v === 'ENTER' ? 'sepa-chip--good' : ''
-            } ${v === 'ALL' ? 'sepa-chip--passive' : ''}`}
-            // Same toggle behavior as the setup chips — tap the active one to
-            // clear back to "Any signal".
-            onClick={() => set('decision', decSel === v ? 'ALL' : v)}
-            title={tip}
-          >
-            {label}
-          </button>
-        ))}
-        <span className="sepa-filterbar__sep" />
-        {/* Breakout-recency window — tunes what the 🟢 Enter chip counts as a
-            breakout (user 2026-06-02: "it's ok to not have high volume
-            breakout… they may have a breakout in the past week sometime"). Only
-            affects Enter. 'Today' is the strict book gate; '≤1wk' admits a
-            breakout from the past ~5 trading days; 'Any' drops the trigger. */}
-        <span
-          className="mono"
-          style={{ opacity: 0.7, fontSize: '0.78rem', alignSelf: 'center' }}
-          title="Tunes what the 🟢 Enter chip counts as a breakout. Only affects the Enter decision chip."
-        >
-          ⚡ Breakout
-        </span>
-        {([
-          { v: 'TODAY' as const, label: 'Today', tip: 'Strict Minervini buy point (p.203): Enter = a VOLUME-CONFIRMED breakout TODAY (the is_buyable gate). The shortest, most disciplined list.' },
-          { v: 'WEEK'  as const, label: '≤1wk',  tip: 'Relax Enter to names that broke out on volume within the last ~5 trading days AND are still set up — you can buy in the days following a breakout while it holds above the pivot.' },
-          { v: 'ANY'   as const, label: 'Any',   tip: 'Drop the breakout trigger entirely: Enter = setup-ready (Trend Template + Stage 2 + base + not-late + liquid). The "ready to go, no trigger required" view.' },
-        ]).map(({ v, label, tip }) => (
-          <button
-            key={`bw-${v}`}
-            className={`sepa-chip ${bwSel === v ? 'is-active' : ''} ${v === 'TODAY' ? 'sepa-chip--passive' : ''}`}
-            onClick={() => set('breakoutWindow', v)}
-            title={tip}
-          >
-            {label}
-          </button>
-        ))}
-        {/* Textbook-tight pivot (≤5% final contraction) — Minervini's narrow
-            right-side pullback on dried volume (pp.198/202). The genuinely
-            ready-to-pounce pivots. (user 2026-06-02: "5% is good"). */}
-        <button
-          className={`sepa-chip ${filters.tightPivotOnly ? 'is-active' : ''}`}
-          onClick={() => set('tightPivotOnly', !filters.tightPivotOnly)}
-          title="Only names whose FINAL contraction is ≤ 5% — the textbook-tight Minervini pivot (book pp.198/202: FSII 5% handle, VIVO 3%). These are the genuinely book-tight setups, where a break on volume is the cleanest entry."
-        >
-          ⚡ Tight pivot ≤5%
-        </button>
-        <span className="sepa-filterbar__sep" />
-        {/* Weinstein stage filter — fastest way to flip from "what to buy"
-            (Stage 2) to "what's topping out" (Stage 3) or "what just rolled
-            over" (Stage 4). Stage 4 names are sell-now / short candidates. */}
-        {([
-          { v: 'ALL' as const,       label: 'Any stage', tip: 'No stage filter — all four stages mixed in the list.' },
-          { v: 2 as const,           label: 'S2 Advance', tip: 'Stage 2 only — Weinstein/Minervini buy zone (price > 50 > 150 > 200 MA, 200 rising).' },
-          { v: 3 as const,           label: 'S3 Topping', tip: 'Stage 3 only — distribution phase. 50-day rolled, price lost 50, still above 200. Sell-prep / tighten stops.' },
-          { v: 4 as const,           label: 'S4 Decline', tip: 'Stage 4 only — confirmed downtrend (price < 50 < 150 < 200 MA, 200 falling). Sell longs / short candidate.' },
-          { v: 1 as const,           label: 'S1 Basing', tip: 'Stage 1 only — sideways accumulation after a downtrend. Pre-buy zone; not yet trending.' },
-        ]).map(({v, label, tip}) => (
-          <button
-            key={String(v)}
-            className={`sepa-chip ${filters.stage === v ? 'is-active' : ''} ${
-              v === 3 ? 'sepa-chip--warn' : v === 4 ? 'sepa-chip--bad' : ''
-            } ${v === 'ALL' ? 'sepa-chip--passive' : ''}`}
-            onClick={() => set('stage', v)}
-            title={tip}
-          >
-            {label}
-          </button>
-        ))}
-        <span className="sepa-filterbar__sep" />
-        {/* Buffett moat filter — minimum tier the candidate must meet.
-            Tiers: 0=any, 1=NONE+, 2=SOME+, 3=NARROW+, 4=WIDE only.
-            UNKNOWN (data missing) is included only when moatMin=0. */}
-        {([
-          { v: 0 as const, label: 'Any moat', tip: 'No moat filter — show all candidates regardless of moat score.' },
-          { v: 2 as const, label: '🏰 Some+',  tip: 'At least SOME moat — score ≥ 40. Filters out commodity/cyclical names with no measurable moat.' },
-          { v: 3 as const, label: '🏰 Narrow+', tip: 'NARROW moat or wider — score ≥ 60. Quality compounders only.' },
-          { v: 4 as const, label: '🏰 Wide',    tip: 'WIDE moat only — score ≥ 80. Coca-Cola / Visa / Microsoft tier (Buffett\'s ideal).' },
-        ] as const).map(({v, label, tip}) => (
-          <button
-            key={`moat-${v}`}
-            className={`sepa-chip ${filters.moatMin === v ? 'is-active' : ''} ${v === 0 ? 'sepa-chip--passive' : ''}`}
-            onClick={() => set('moatMin', v)}
-            title={tip}
-          >
-            {label}
-          </button>
-        ))}
-        <span className="sepa-filterbar__sep" />
-        <button
-          className={`sepa-chip ${filters.dmEligibleOnly ? 'is-active' : ''}`}
-          onClick={() => set('dmEligibleOnly', !filters.dmEligibleOnly)}
-          title="Antonacci's Dual Momentum two-gate filter: 12m return positive AND beats SPY"
-        >
-          Dual Momentum ✓
-        </button>
-        {/* Hide-distributing chip. When active, the list drops any name
-            tagged accumulation_strength === 'distributing' or with money
-            outflow (cmf). Useful because high RS + high score don't
-            preclude a stock from being heavily distributed — see the
-            Minervini sell-signal layer for why this matters. */}
-        <button
-          className={`sepa-chip ${filters.hideDistributing ? 'is-active' : ''}`}
-          onClick={() => set('hideDistributing', !filters.hideDistributing)}
-          title="Hide tickers being institutionally distributed (red 'Distributing' pill) or showing money outflow on CMF. Tightens the list to genuinely accumulating names."
-        >
-          🚫 Hide Distributing
-        </button>
-        {/* Whales-accumulating filter — narrows the SEPA list to names
-            where 13F institutional flow over the last quarter was net
-            accumulating (n_buying >> n_selling). Pairs with Hide
-            Distributing for the full "whales agree + tape agrees"
-            short-list: institutions adding (quarterly) AND volume
-            accumulation (daily). Added 2026-05-28 per user request
-            "Can you add a chip for whale only filter". */}
-        <button
-          className={`sepa-chip ${filters.whalesAccumOnly ? 'is-active' : ''}`}
-          onClick={() => set('whalesAccumOnly', !filters.whalesAccumOnly)}
-          title="Only show candidates whose 13F whales flow is 'accumulating' (n_buying > n_selling × 1.5). Tightens the list to names that passed SEPA AND have institutional capital flowing in. Pairs well with Hide Distributing for the full whales+tape agreement short-list."
-        >
-          🐋 Whales Accumulating
-        </button>
-        {/* Hedge-fund top-buyer filter — narrows further to names where
-            the LEADING whale buyer is a Tier-S fund per the curated
-            fundTiers.ts list (Berkshire, Tiger Global, Coatue, Citadel,
-            Pershing Square, Altimeter, etc). Stacks on top of Whales
-            Accumulating: the chip is most useful when both are on.
-            Same honesty caveat as the fund-tier badge — historical
-            reputation, not forward prediction. */}
-        <button
-          className={`sepa-chip ${filters.hedgeFundTopBuyer ? 'is-active' : ''}`}
-          onClick={() => set('hedgeFundTopBuyer', !filters.hedgeFundTopBuyer)}
-          title="Only show candidates whose top whale BUYER matches ANY hedge fund on the curated Tier-S list in src/lib/fundTiers.ts (Berkshire, Tiger Global, Coatue, Citadel, Pershing Square, Greenlight, Soros, Renaissance, D.E. Shaw, Two Sigma, Bridgewater, AQR, Millennium, Point72, Lone Pine, Viking Global, Maverick, Whale Rock, Glenview, Trian, Starboard, Icahn, ValueAct, Jana, Pelican, Altimeter, Scion, and more). Match is case-insensitive substring on the top_buy fund name — 'any hedge fund' on the curated list counts. Tier S = historical active alpha reputation, NOT a forward prediction. Pair with Whales Accumulating for the 'smart money is buying' short-list."
-        >
-          🦅 Hedge Fund Top Buyer
-        </button>
-        {/* POTUS Family filter — narrows the SEPA list to candidates
-            that appear in the curated POTUS-family disclosure list
-            (src/lib/politicalDisclosures.ts). Informational only —
-            disclosed positions don't predict outcomes; use as one
-            context layer alongside Minervini + whales + volume. */}
-        <button
-          className={`sepa-chip ${filters.potusFamilyOnly ? 'is-active' : ''}`}
-          onClick={() => set('potusFamilyOnly', !filters.potusFamilyOnly)}
-          title="Only show candidates on the curated POTUS-family disclosure list (NVDA, MSFT, AAPL, NOW, AMD, GOOGL, INTC, PLTR, HOOD, etc — full list in src/lib/politicalDisclosures.ts). Informational context flag — disclosed positions don't predict outcomes. Use as ONE signal among many."
-        >
-          🏛️ POTUS Family
-        </button>
-        {/* US Gov filter — narrows to candidates with direct U.S.
-            government involvement: CHIPS Act recipients (INTC), major
-            govt contractors (PLTR), or program participants (HOOD as
-            Trump Accounts trustee). Caught via the political-disclosure
-            list's govt_investment / govt_contractor categories. */}
-        <button
-          className={`sepa-chip ${filters.usGovOnly ? 'is-active' : ''}`}
-          onClick={() => set('usGovOnly', !filters.usGovOnly)}
-          title="Only show candidates with direct U.S. government involvement — CHIPS Act recipients (e.g., INTC), major govt contractors (e.g., PLTR), or program participants (e.g., HOOD as Trump Accounts trustee). Curated in src/lib/politicalDisclosures.ts. Same caveat as POTUS Family — informational context, not a buy signal."
-        >
-          🇺🇸 US Gov
-        </button>
-        {/* Insider cluster-buy filter — narrows to candidates with ≥3
-            unique insiders filing Form 4 buys in the last 30 days.
-            Minervini/O'Neil bullish tell. Data is enriched on top 20
-            candidates per Full Scan + catalyst — names outside the
-            enriched subset are dropped when this is on. */}
-        <button
-          className={`sepa-chip ${filters.insiderClusterBuy ? 'is-active' : ''}`}
-          onClick={() => set('insiderClusterBuy', !filters.insiderClusterBuy)}
-          title="Only show candidates where ≥3 unique insiders filed Form 4 buys in the last 30 days (cluster-buy signal — bullish tell per Minervini / O'Neil Ch 13). Insider enrichment runs on the top 20 candidates after Full Scan with 'Include catalyst' — names outside that enriched subset will be excluded when this filter is on."
-        >
-          🟢 Insider Cluster Buy
-        </button>
-        {/* Emerging Momentum Leader (2026-06-01) — the "next ARM" fingerprint:
-            RS leader at new highs + pocket pivot + heavy accumulation + CMF
-            inflow. Surfaces fast momentum movers that score "no setup". */}
-        <button
-          className={`sepa-chip ${filters.momentumLeaderOnly ? 'is-active' : ''}`}
-          onClick={() => set('momentumLeaderOnly', !filters.momentumLeaderOnly)}
-          title="Only show Emerging Momentum Leaders — the ARM/DDOG fingerprint: an RS leader at new highs (no overhead) with a pocket pivot, heavy net buying (up/down vol ≥ 1.9) and CMF inflow. Catches fast momentum movers that have no base, so they normally score 'no setup'."
-        >
-          🚀 Momentum Leader
-        </button>
-        <span className="sepa-filterbar__sep" />
-        {/* Venky's filter stack (2026-05-29): weekly 21-SMA confirmation,
-            ATR% cap, ADX floor. Layered on top of SEPA — each chip is
-            independent so the user can mix/match. */}
-        <button
-          className={`sepa-chip ${filters.weekly21SmaPass ? 'is-active' : ''}`}
-          onClick={() => set('weekly21SmaPass', !filters.weekly21SmaPass)}
-          title="Venky's filter: only candidates where the latest weekly close is above the 21-week SMA AND that SMA is sloping up over the last 4 weeks. 'Trend confirmation, inclined not flat.'"
-        >
-          📈 21W SMA ↑
-        </button>
-        <button
-          className={`sepa-chip ${filters.atrPctMax > 0 ? 'is-active' : ''}`}
-          onClick={() => set('atrPctMax', filters.atrPctMax > 0 ? 0 : 8)}
-          title={
-            filters.atrPctMax > 0
-              ? `Active: dropping names with ATR% > ${filters.atrPctMax}%. Tap to disable.`
-              : "Cap ATR (14-day) at 8% of price — drops names too volatile for swing-trade stops. Tap to enable."
-          }
-        >
-          📐 ATR% ≤ {filters.atrPctMax > 0 ? filters.atrPctMax : 8}
-        </button>
-        <button
-          className={`sepa-chip ${filters.adxMin > 0 ? 'is-active' : ''}`}
-          onClick={() => set('adxMin', filters.adxMin > 0 ? 0 : 25)}
-          title={
-            filters.adxMin > 0
-              ? `Active: requiring ADX ≥ ${filters.adxMin}. Tap to disable.`
-              : "Require ADX (14-day) ≥ 25 — Wilder threshold for a real trend (vs chop). Tap to enable."
-          }
-        >
-          🎯 ADX ≥ {filters.adxMin > 0 ? filters.adxMin : 25}
-        </button>
-        <span className="sepa-filterbar__sep" />
-        <button
-          className={`sepa-chip ${filters.pioneerOnly ? 'is-active' : ''}`}
-          onClick={() => set('pioneerOnly', !filters.pioneerOnly)}
-          title="Show only tickers tagged as part of a curated breakthrough theme (AI infra, AI storage, SMR nuclear, quantum, GLP-1, etc.). See the Pioneers nav tab for the full breakdown."
-        >
-          🚀 Pioneer
-        </button>
-        <span className="sepa-filterbar__sep" />
-        {(['all', 'equity', 'etf'] as const).map((t) => (
-          <button
-            key={t}
-            className={`sepa-chip ${filters.type === t ? 'is-active' : ''} ${t === 'all' ? 'sepa-chip--passive' : ''}`}
-            onClick={() => set('type', t)}
+            className={`sepa-chip ${filters.adxMin > 0 ? 'is-active' : ''}`}
+            onClick={() => set('adxMin', filters.adxMin > 0 ? 0 : 25)}
             title={
-              t === 'all' ? 'Show both operating companies and ETFs' :
-              t === 'equity' ? 'Operating companies only — Earnings Per Share / fundamentals apply' :
-              'Exchange-Traded Funds (ETFs) only — show AUM / expense ratio / holdings instead of EPS'
+              filters.adxMin > 0
+                ? `Active: requiring ADX ≥ ${filters.adxMin}. Tap to disable.`
+                : "Require ADX (14-day) ≥ 25 — Wilder threshold for a real trend (vs chop). Tap to enable."
             }
           >
-            {t === 'all' ? 'All types' : t === 'equity' ? 'Equity' : 'ETF'}
+            🎯 ADX ≥ {filters.adxMin > 0 ? filters.adxMin : 25}
           </button>
-        ))}
+        </div>
+
+        {/* 🔎 TYPE — utility: operating companies vs ETFs. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Security type — operating companies vs ETFs.">🔎 Type</span>
+          {(['all', 'equity', 'etf'] as const).map((t) => (
+            <button
+              key={t}
+              className={`sepa-chip ${filters.type === t ? 'is-active' : ''} ${t === 'all' ? 'sepa-chip--passive' : ''}`}
+              onClick={() => set('type', t)}
+              title={
+                t === 'all' ? 'Show both operating companies and ETFs' :
+                t === 'equity' ? 'Operating companies only — Earnings Per Share / fundamentals apply' :
+                'Exchange-Traded Funds (ETFs) only — show AUM / expense ratio / holdings instead of EPS'
+              }
+            >
+              {t === 'all' ? 'All types' : t === 'equity' ? 'Equity' : 'ETF'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="sepa-filterbar__group">
