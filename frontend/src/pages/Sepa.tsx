@@ -12,7 +12,7 @@ import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
-import { pivotTiming, triggerRank } from '../lib/pivotTiming';
+import { pivotTiming, triggerRank, buyabilityRank } from '../lib/pivotTiming';
 // Provides per-card historical rank/score deltas to every SepaCandidateCard
 // rendered below. Single fetch per page (yesterday's + 5d-ago full scans
 // from /sepa/history/date/{date}) — see SepaTrendContext for details.
@@ -308,7 +308,9 @@ export function SepaPage() {
     weekly21SmaPass: false,
     atrPctMax: 0,
     adxMin: 0,
-    sortBy: 'score',
+    // Default after-scan ordering — surface the most buyable (Enter + VCP)
+    // names at the top (user 2026-06-02). Pick "Sort: Score" to revert.
+    sortBy: 'most_buyable',
   };
   const [filters, setFilters] = useState<SepaFilters>(() => {
     if (typeof window === 'undefined') return FILTER_DEFAULTS;
@@ -551,6 +553,12 @@ export function SepaPage() {
       // lib/pivotTiming.triggerRank. The watch-list-for-today ordering.
       if (filters.sortBy === 'closest_trigger') {
         return triggerRank(pivotTiming(a)) - triggerRank(pivotTiming(b));
+      }
+      // "Most buyable (Enter + VCP)" — the default after-scan ordering: the
+      // most actionable buys (Stage-2 VCP breaking out on volume) float to the
+      // top, then Enter, then coiling VCP bases, by score. See buyabilityRank.
+      if (filters.sortBy === 'most_buyable') {
+        return buyabilityRank(a, pivotTiming(a)) - buyabilityRank(b, pivotTiming(b));
       }
       if (filters.sortBy === 'day_change') {
         // Top gainers descending. Nulls land at the bottom.

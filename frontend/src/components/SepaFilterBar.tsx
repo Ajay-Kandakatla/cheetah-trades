@@ -132,7 +132,7 @@ export type SepaFilters = {
    *  actual trend, not chop). 0 = off. */
   adxMin: number;
   sortBy:
-    | 'score' | 'rs' | 'symbol' | 'closest_trigger'
+    | 'score' | 'rs' | 'symbol' | 'closest_trigger' | 'most_buyable'
     | 'day_change' | 'day_change_abs'
     | 'dm_12m' | 'dm_6m' | 'dm_3m' | 'dm_1m' | 'dm_score'
     | 'moat'
@@ -502,6 +502,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           value={filters.sortBy}
           onChange={(e) => set('sortBy', e.target.value as SepaFilters['sortBy'])}
         >
+          <option value="most_buyable">Sort: 🎯 Most buyable (Enter · VCP)</option>
           <option value="score">Sort: Score</option>
           <option value="closest_trigger">Sort: ⚡ Closest to trigger</option>
           <option value="rs">Sort: RS rank</option>

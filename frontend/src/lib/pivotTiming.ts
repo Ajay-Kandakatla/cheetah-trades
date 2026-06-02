@@ -127,6 +127,31 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
   };
 }
 
+/** "Most buyable" sort key — lower = more buyable (user 2026-06-02: "sort by
+ *  enter, vcp most buyable after a scan"). Tiers by actionability with VCP
+ *  preferred at each level, then by composite score, then closeness to pivot:
+ *    0 buyable-now VCP · 1 buyable-now / GO VCP · 2 GO / Enter VCP · 3 Enter ·
+ *    4 at-pivot VCP · 5 coiling VCP · 6 VCP base waiting · 7 other setup · 8 rest.
+ *  So a Stage-2 VCP breaking out on volume sits at the very top; an extended or
+ *  setup-less name sinks. Degrades gracefully (VCP bases by score) on a day with
+ *  no live breakouts. */
+export function buyabilityRank(row: SepaCandidate, t: PivotTiming): number {
+  const vcp = row.entry_setup?.type === 'VCP';
+  const dec = row.entry_exit?.decision ?? null;
+  let tier = 8;
+  if (row.is_buyable) tier = vcp ? 0 : 1;
+  else if (t.state === 'GO') tier = vcp ? 1 : 2;
+  else if (dec === 'ENTER') tier = vcp ? 2 : 3;
+  else if (t.state === 'AT_PIVOT') tier = vcp ? 3 : 4;
+  else if (t.state === 'COILING') tier = vcp ? 4 : 5;
+  else if (vcp) tier = 6;
+  else if (row.entry_setup) tier = 7;
+  // EXTENDED / no-setup fall through to 8.
+  const score = row.score ?? 0;
+  const dist = t.distToPivotPct == null ? 999 : Math.abs(t.distToPivotPct);
+  return tier * 1e6 - score * 100 + dist;   // tier first, then score desc, then closeness
+}
+
 /** Sort key for "Closest to trigger" — lower = nearer the buy.
  *  GO first, then in-zone, then below-pivot by smallest gap (coiling beats
  *  loose wait at equal distance), extended/none last. */
