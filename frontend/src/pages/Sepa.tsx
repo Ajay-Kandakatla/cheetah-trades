@@ -137,6 +137,20 @@ function defaultRating(score: number): Rating {
   return 'AVOID';
 }
 
+/** Decision-gate filter. Shared by both apply paths so they never drift.
+ *  - 'ALL'   → no gate.
+ *  - 'ENTER' → STRICT book buyable gate (`is_buyable`): Trend Template + Stage 2
+ *    + setup + not-late + liquid + a VOLUME-CONFIRMED breakout (pp.79-83/198-203).
+ *    User 2026-06-02: "go by the book — enter = buyable at all cost."
+ *  - 'WAIT' / 'HOLD_WATCH' → match the `entry_exit.decision` banner the card shows
+ *    (the adjudicated "valid base, waiting for the breakout" / "on the radar" states). */
+function passesDecision(r: SepaCandidate, decision: SepaFilters['decision']): boolean {
+  const d = decision ?? 'ALL';
+  if (d === 'ALL') return true;
+  if (d === 'ENTER') return r.is_buyable === true;
+  return (r.entry_exit?.decision ?? null) === d;
+}
+
 import { usePageContext } from '../hooks/usePageContext';
 
 export function SepaPage() {
@@ -390,9 +404,11 @@ export function SepaPage() {
       const rating = r.rating ?? defaultRating(r.score);
       if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
       if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
-      // Timed-entry decision gate (Enter / Wait / Watch) — matches the
-      // entry_exit.decision banner the card shows.
-      if ((filters.decision ?? 'ALL') !== 'ALL' && (r.entry_exit?.decision ?? null) !== filters.decision) return false;
+      // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
+      // gate (is_buyable, pp.79-83/198-203) per user 2026-06-02 ("enter = buyable
+      // at all cost"); Wait/Watch match the entry_exit.decision banner the card
+      // shows. (Helper passesDecision keeps the two apply paths in sync.)
+      if (!passesDecision(r, filters.decision)) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
       if (filters.search && !r.symbol.includes(filters.search)) return false;
       if (filters.dmEligibleOnly) {
@@ -701,9 +717,9 @@ export function SepaPage() {
     const rating = r.rating ?? defaultRating(r.score);
     if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
     if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
-    // Timed-entry decision gate (Enter / Wait / Watch) — matches the
-    // entry_exit.decision banner the card shows.
-    if ((filters.decision ?? 'ALL') !== 'ALL' && (r.entry_exit?.decision ?? null) !== filters.decision) return false;
+    // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
+    // gate (is_buyable); Wait/Watch match the entry_exit.decision banner.
+    if (!passesDecision(r, filters.decision)) return false;
     if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
     if (filters.search && !r.symbol.includes(filters.search)) return false;
     if (filters.dmEligibleOnly) {

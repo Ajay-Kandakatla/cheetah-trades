@@ -215,7 +215,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             (Enter)" without reading every card. */}
         {([
           { v: 'ALL' as const,        label: 'Any signal', tip: 'No entry-timing gate — show every decision state (Enter, Wait, Watch, Avoid).' },
-          { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'Breakout is actionable now — price at/through the pivot with the entry window open. Matches the card\'s green ENTER banner.' },
+          { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'BUYABLE NOW — the strict Minervini gate (pp.79-83/198-203): Trend Template + Stage 2 + a setup + not late-stage + liquid + a VOLUME-CONFIRMED breakout (high-volume breakout or pocket pivot). This is the real "you may buy this today" list, so on a quiet day it can be very short — that\'s by design.' },
           { v: 'WAIT' as const,       label: '🟡 Wait',     tip: 'Valid base, but the pivot has not triggered yet — Minervini\'s "wait for the breakout" state (p.203). Most VCP bases live here. Tap a card\'s WAIT banner to see the trigger price + distance + valid-through date.' },
           { v: 'HOLD_WATCH' as const, label: '⚪ Watch',    tip: 'On the radar — passes trend/RS but has no setup trigger. Keep watching for a base to form.' },
         ]).map(({ v, label, tip }) => (

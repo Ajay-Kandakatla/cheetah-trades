@@ -249,6 +249,14 @@ export type SepaCandidate = {
    *  than `is_candidate`. True when trend.pass_all AND liquidity.liquid.
    *  Use for watchlist display; use `is_candidate` for buyable-now. */
   qualifier?: boolean;
+  /** Strict book buy-now gate (backend `_is_buyable`, pp.79-83/198-203):
+   *  Trend Template + Stage 2 + a setup + not late-stage + liquid + a
+   *  VOLUME-CONFIRMED breakout (high_vol_breakout OR pocket_pivot). This is
+   *  the "Enter = buyable" the decision filter binds to. */
+  is_buyable?: boolean;
+  /** Distance from entry to the suggested stop, in %. Present when a setup
+   *  with a stop exists. */
+  risk_to_stop_pct?: number | null;
 };
 
 export type SepaScan = {
