@@ -3715,6 +3715,41 @@ def _market_phase_et() -> str:
     return "overnight"                      # 4:00 PM – 4:00 AM
 
 
+def _quotes_from_massive(tickers: list[str]) -> dict[str, dict]:
+    """Real-time quotes via the Massive bulk snapshot — unlimited calls, no
+    Yahoo/yfinance rate limit ("Too Many Requests"). Returns
+    {TICKER: {ticker, ok, last_price, day_pct, as_of, _source}} ONLY for the
+    symbols Massive could price; the caller falls back for the rest.
+    """
+    from datetime import datetime, timezone
+    out: dict[str, dict] = {}
+    try:
+        from sepa import prices as sepa_prices
+        live = sepa_prices.bulk_live_prices([t.upper().strip() for t in tickers if t and t.strip()])
+        as_of = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        for t, bar in (live or {}).items():
+            last = bar.get("price")
+            if last is None:
+                last = bar.get("last_trade_price")
+            if last is None:
+                continue
+            prev = bar.get("prev_day_close")
+            day_pct = bar.get("change_pct")
+            if day_pct is None and prev:
+                day_pct = (last - prev) / prev * 100.0
+            out[t] = {
+                "ticker": t, "ok": True,
+                "last_price": round(float(last), 2),
+                "day_pct": round(float(day_pct), 3) if day_pct is not None else 0.0,
+                "as_of": as_of,
+                "_source": "massive",
+                "_extended": False,
+            }
+    except Exception as exc:
+        log.debug("massive quotes failed: %s", exc)
+    return out
+
+
 @app.get("/quote/{ticker}")
 async def quote_ticker(ticker: str):
     """Return last price + day-change % for one ticker. Cached 60s.
@@ -3757,6 +3792,15 @@ async def quote_ticker(ticker: str):
         if st and st.get("ok"):
             _quote_cache[ticker] = (now_ts, st)
             return JSONResponse(st)
+
+    # Primary intraday/extended-hours source: Massive (real-time, unlimited).
+    # Replaces yfinance as the default so the Mac mini's server IP stops
+    # tripping Yahoo's "Too Many Requests" rate limit. yfinance stays below as
+    # the final fallback for anything Massive can't price.
+    massive = await asyncio.to_thread(_quotes_from_massive, [ticker])
+    if ticker in massive:
+        _quote_cache[ticker] = (now_ts, massive[ticker])
+        return JSONResponse(massive[ticker])
 
     # yfinance is fully sync — `fast_info` and `history()` both hit
     # the network synchronously. Push the whole block to the threadpool
@@ -3854,6 +3898,15 @@ async def quote_batch(tickers: list[str]):
                 _quote_cache[t] = (now_ts, payload)
                 out[t] = payload
             fresh_needed = [t for t in fresh_needed if t not in st_results]
+
+    # Primary source for everything still unpriced: Massive bulk snapshot —
+    # ONE call for all symbols, real-time, unlimited (no Yahoo rate limit).
+    if fresh_needed:
+        massive = await asyncio.to_thread(_quotes_from_massive, fresh_needed)
+        for t, payload in massive.items():
+            _quote_cache[t] = (now_ts, payload)
+            out[t] = payload
+        fresh_needed = [t for t in fresh_needed if t not in massive]
 
     if fresh_needed:
         phase_now = _market_phase_et()
