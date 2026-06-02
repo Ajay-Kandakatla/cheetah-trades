@@ -53,9 +53,27 @@ def _strip_id(doc: dict) -> dict:
 # ---------------------------------------------------------------------------
 # CRUD
 # ---------------------------------------------------------------------------
+def _target_email(alert: dict) -> Optional[str]:
+    """Who receives this alert's push. The alert's own creator wins; legacy
+    alerts (created before user-scoping, 2026-06-02) fall back to the house
+    owner so they still deliver. REQUIRED for delivery: `price_alert` is a
+    PRIVATE notify kind, and notify._send_push REFUSES a private kind without a
+    user_email (returns 0 = silent drop). This was the bug — check_alerts fired
+    with no user_email, so every price-alert push was being dropped."""
+    em = (alert.get("user_email") or "").strip()
+    if em:
+        return em
+    try:
+        from auth import HOUSE_OWNER_EMAIL
+        return HOUSE_OWNER_EMAIL or None
+    except Exception:
+        return None
+
+
 def create(symbol: str, kind: str, level: float,
            channels: Optional[list[str]] = None,
-           note: Optional[str] = None) -> Optional[dict]:
+           note: Optional[str] = None,
+           user_email: Optional[str] = None) -> Optional[dict]:
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}")
     db = _db()
@@ -71,6 +89,9 @@ def create(symbol: str, kind: str, level: float,
         "last_fired_at": 0,
         "channels": channels or ["push", "browser"],
         "note": note,
+        # Scope to creator so the fire path can deliver the push (see
+        # _target_email — without this the private-kind guard drops it).
+        "user_email": (user_email or "").lower().strip() or None,
     }
     res = db.price_alerts.insert_one(doc)
     doc["_id"] = res.inserted_id
@@ -181,6 +202,7 @@ def check_alerts() -> dict:
                     url=f"/sepa/{sym}",
                     kind="price_alert",
                     ticker=sym,
+                    user_email=_target_email(a),
                 ):
                     sent_via.append("push")
             # "browser" is a passive channel — we record the fire and the UI
