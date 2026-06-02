@@ -146,21 +146,29 @@ def test_rating_thresholds_locked():
 
 
 def test_vcp_constants_locked():
-    """VCP thresholds embedded in vcp.py must match contract §7."""
+    """VCP thresholds in vcp.py must match the 2026-06-01 base-window rewrite.
+
+    The detector measures the base on the RECENT contracting suffix of swings
+    (book p.205: "the contractions will be smaller from left to right as supply
+    is absorbed"), NOT high-to-low across the whole 325-bar window — that old
+    bug read every momentum leader as a 60-94% base and produced ZERO VCPs.
+    """
     import inspect
     from sepa import vcp
     source = inspect.getsource(vcp.detect)
-    # These literals MUST appear in the function — if a refactor moves them
-    # to named constants, update this test too.
-    assert "lookback_days: int = 325" in inspect.getsource(vcp.detect) or "325" in source
-    assert "base_depth_pct > 60" in source           # too-deep threshold
-    assert "final_depth <= 10" in source             # tight-right-side threshold
-    assert "2 <= n_contractions <= 6" in source      # ideal contraction count
-    assert "10 <= base_depth_pct <= 35" in source    # ideal depth range
-    assert ">= 20" in source                          # pivot quality prior advance
-    # 2026-05-30 Minervini-audit tightening (book p.199):
-    assert "SHRINK_TOLERANCE = 0.65" in source       # each contraction ≤ 65% of prior
-    assert "depths[-1] <= depths[0] * 0.5" in source  # final ≤ half the first
+    # Core fix: base = recent contracting suffix, anchored at its left-side high.
+    assert "depths_all[m - 1] >= depths_all[m]" in source   # recent-base suffix walk
+    assert "base_high = base[0]" in source                  # depth from the base, not c.max()
+    # Book-cited gates:
+    assert "base_depth_pct > 40" in source           # too-deep (proper base corrects least, p.197)
+    assert "base_depth_pct >= 5" in source           # min pullback — sub-handle = flat line (p.198)
+    assert "final_depth <= 12" in source             # tight right side (handle ~5%, p.198)
+    assert "2 <= n_contractions <= 6" in source      # contraction count (p.199)
+    assert "8 <= base_depth_pct <= 35" in source     # ideal depth range
+    assert ">= 20" in source                          # pivot quality prior advance (p.197)
+    assert "depths[-1] <= depths[0] * 0.6" in source  # end-to-end tightening, ~half (p.199)
+    # Regression guard: the whole-window depth bug must NOT come back.
+    assert "float(c.max())" not in source
 
 
 # ============================================================================

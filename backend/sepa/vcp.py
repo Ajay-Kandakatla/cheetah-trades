@@ -57,33 +57,27 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         return None
     c = df["close"].iloc[-lookback_days:]
     v = df["volume"].iloc[-lookback_days:]
+    cr = c.reset_index(drop=True)
+    vr = v.reset_index(drop=True)
 
-    base_high = float(c.max())
-    base_low = float(c.min())
-    base_depth_pct = (1 - base_low / base_high) * 100 if base_high else 0
+    _empty = {
+        "has_base": False, "base_depth_pct": None, "contractions": [],
+        "n_contractions": 0, "too_deep": False, "volume_drying": False,
+        "good_contraction_count": False, "ideal_depth_range": False,
+        "pivot_buy_price": None, "suggested_stop": None,
+    }
 
-    # Book: avoid corrections >60%; flag deep bases.
-    too_deep = base_depth_pct > 60
-
-    swings = _find_swings(c.reset_index(drop=True), window=5)
+    swings = _find_swings(cr, window=5)
     if len(swings) < 3:
-        return {
-            "has_base": False,
-            "base_depth_pct": round(base_depth_pct, 2),
-            "contractions": [],
-            "too_deep": too_deep,
-            "reason": "not enough swings",
-        }
+        return {**_empty, "reason": "not enough swings"}
 
-    # Extract (top, bottom) pairs = contractions.
+    # Pair each swing high with the next swing low → contractions (left→right).
     contractions: List[dict] = []
     highs = [s for s in swings if s[2] == "H"]
     lows = [s for s in swings if s[2] == "L"]
-    # Pair each high with the next low.
     i = j = 0
     while i < len(highs) and j < len(lows):
         h = highs[i]
-        # Find first low after this high
         while j < len(lows) and lows[j][0] <= h[0]:
             j += 1
         if j >= len(lows):
@@ -91,78 +85,88 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         l = lows[j]
         depth = (1 - l[1] / h[1]) * 100
         contractions.append({
-            "top_idx": h[0],
-            "top_price": round(h[1], 2),
-            "bot_idx": l[0],
-            "bot_price": round(l[1], 2),
+            "top_idx": h[0], "top_price": round(h[1], 2),
+            "bot_idx": l[0], "bot_price": round(l[1], 2),
             "depth_pct": round(depth, 2),
         })
         i += 1
 
-    n_contractions = len(contractions)
-    if n_contractions == 0:
-        return {
-            "has_base": False,
-            "base_depth_pct": round(base_depth_pct, 2),
-            "contractions": [],
-            "too_deep": too_deep,
-            "reason": "no contractions",
-        }
+    if not contractions:
+        return {**_empty, "reason": "no contractions"}
 
-    # Book p.199: each contraction "about half (±a reasonable amount) of the
-    # previous" — the worked example is 25% → 15% → 8%. Tightened 2026-05-30
-    # from 0.75 → 0.65: the old tolerance accepted a 25→20→18% "base" that's
-    # barely contracting (a 25% reduction, not the ~half the book wants),
-    # letting shallow fake-VCPs through that fail more often on breakout.
-    SHRINK_TOLERANCE = 0.65
-    depths = [ct["depth_pct"] for ct in contractions]
-    monotonic = all(depths[k] <= depths[k - 1] * SHRINK_TOLERANCE for k in range(1, len(depths)))
-    # Absolute tightening check (complements the step-wise one): the FINAL
-    # contraction must be ≤ half the FIRST. Book example 25%→…→8% has the
-    # final at ~⅓ of the first; ≤0.5 is a lenient floor that still rejects
-    # bases which never meaningfully tightened end-to-end.
-    final_vs_first_ok = len(depths) < 2 or depths[-1] <= depths[0] * 0.5
+    # ── Isolate the RECENT base (BUGFIX 2026-06-01) ────────────────────────
+    # The old code measured base depth as high-to-low across the ENTIRE 325-bar
+    # (16-month) window, so every momentum leader read as a 60-94% "base" and
+    # failed `too_deep` — zero VCPs ever fired. A VCP base is the most recent
+    # CONTRACTING consolidation, not the whole prior advance. Book p.205: "the
+    # contractions will be smaller from left to right as supply is absorbed."
+    # So take the maximal suffix of contractions whose depths are (weakly)
+    # decreasing left→right — that IS the volatility-contraction footprint —
+    # and measure everything within it.
+    depths_all = [ct["depth_pct"] for ct in contractions]
+    m = len(depths_all) - 1
+    while m > 0 and depths_all[m - 1] >= depths_all[m]:
+        m -= 1
+    base = contractions[m:]
+    n_contractions = len(base)
+    depths = [ct["depth_pct"] for ct in base]
 
-    # Right-side tightness: final contraction depth ≤ 10% = ideal per book
+    base_start_idx = base[0]["top_idx"]
+    base_high = base[0]["top_price"]
+    base_low = min(ct["bot_price"] for ct in base)
+    base_depth_pct = (1 - base_low / base_high) * 100 if base_high else 0.0
+
+    # Book pp.197-200: a proper base corrects the LEAST; the worked VCP first
+    # contraction is ~25% (flat base 10-15%). >40% from the base high is a deep,
+    # failure-prone correction, not a VCP.
+    too_deep = base_depth_pct > 40
+
+    # Book p.199: each contraction "about half (plus or minus a reasonable
+    # amount) of the previous" (25→15→8 or 25→10→5). Enforce as an END-TO-END
+    # tightening (final ≤ ~half the first) — robust to noise, where the old
+    # every-step ≤0.65 over-tightened and rejected real bases.
+    monotonic = all(depths[k] <= depths[k - 1] for k in range(1, len(depths)))  # smaller L→R
+    meaningful_tightening = len(depths) >= 2 and depths[-1] <= depths[0] * 0.6
+
+    # Right-side tightness: book final contraction ~5-8% (handle ~5%). ≤12% is a
+    # lenient ceiling that still demands a tight pivot area.
     final_depth = depths[-1]
-    tight_right = final_depth <= 10
+    tight_right = final_depth <= 12
 
-    # Pivot = most recent swing high (top of final contraction)
-    pivot_price = contractions[-1]["top_price"]
-    stop_price = contractions[-1]["bot_price"]
+    pivot_price = base[-1]["top_price"]
+    stop_price = base[-1]["bot_price"]
 
-    # Pivot quality (cookstock PIVOT_PRICE_PERC=0.20):
-    # the pivot must sit at the top of a meaningful prior advance, not just
-    # be a noise high. Require ≥20% advance from the lowest low BEFORE the
-    # base started, to the pivot price.
+    # Pivot quality: a base forms AFTER an advance (p.197). Require ≥20% run from
+    # the pre-base low to the base's left-side high.
     pivot_quality_ok = False
     pivot_prior_advance_pct = None
-    pivot_top_idx = contractions[-1]["top_idx"]
-    if pivot_top_idx > 10:
-        pre_base = c.iloc[: pivot_top_idx]
+    if base_start_idx > 10:
+        pre_base = cr.iloc[:base_start_idx]
         if len(pre_base) > 0:
             pre_low = float(pre_base.min())
             if pre_low > 0:
-                pivot_prior_advance_pct = round((pivot_price / pre_low - 1) * 100, 2)
+                pivot_prior_advance_pct = round((base_high / pre_low - 1) * 100, 2)
                 pivot_quality_ok = pivot_prior_advance_pct >= 20
 
-    # Volume drying up in final contraction: compare vol in final contraction
-    # window vs avg over base.
-    start_bot = contractions[-1]["bot_idx"]
-    avg_vol_base = float(v.mean())
-    final_vol = float(v.iloc[start_bot:].mean()) if start_bot < len(v) else avg_vol_base
+    # Volume drying in the base vs the run into it (p.205: volume contracts as
+    # supply is absorbed).
+    avg_vol_base = float(vr.iloc[base_start_idx:].mean()) if base_start_idx < len(vr) else float(vr.mean())
+    final_bot = base[-1]["bot_idx"]
+    final_vol = float(vr.iloc[final_bot:].mean()) if final_bot < len(vr) else avg_vol_base
     vol_drying = (final_vol / avg_vol_base) < 0.8 if avg_vol_base > 0 else False
 
-    # Quality flags per book
-    good_count = 2 <= n_contractions <= 6
-    good_depth = 10 <= base_depth_pct <= 35  # "most constructive setups"
+    good_count = 2 <= n_contractions <= 6          # book p.199: "two to four ... five or six"
+    good_depth = 8 <= base_depth_pct <= 35
+    # A real contraction needs a real pullback to contract from; a sub-handle
+    # (~5%, p.198) total range is a flat line / low-vol drift, not a VCP base.
+    deep_enough = base_depth_pct >= 5
 
     has_base = (
         n_contractions >= 2
-        and monotonic
-        and final_vs_first_ok          # NEW (2026-05-30): end-to-end tightening
-        and tight_right
+        and meaningful_tightening
+        and deep_enough
         and not too_deep
+        and tight_right
         and pivot_quality_ok
     )
 
@@ -171,10 +175,11 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         "base_depth_pct": round(base_depth_pct, 2),
         "base_high": round(base_high, 2),
         "base_low": round(base_low, 2),
+        "base_bars": int(len(cr) - base_start_idx),
         "n_contractions": n_contractions,
-        "contractions": contractions,
+        "contractions": base,
         "monotonic_shrinkage": monotonic,
-        "final_vs_first_ok": final_vs_first_ok,
+        "final_vs_first_ok": meaningful_tightening,
         "final_contraction_pct": round(final_depth, 2),
         "tight_right_side": tight_right,
         "volume_drying": vol_drying,
