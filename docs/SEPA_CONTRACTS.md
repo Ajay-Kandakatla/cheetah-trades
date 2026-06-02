@@ -292,6 +292,22 @@ Contract test: `test_is_candidate_gate_logic` + `test_is_buyable_gate_logic`.
 **Why this matters:** the /sepa list ranks by `score` and the buyable tier flags
 what's actionable today. Both feed Ajay's real-money decisions.
 
+> **Data-integrity dependency — the phantom-bar guard (2026-06-02).** Gate #6
+> reads the LAST cached daily bar. Before the regular session prints, the bulk
+> snapshot can echo the prior day's completed aggregate into a bar stamped with
+> *today's* date — two adjacent bars with byte-identical close AND volume. The
+> duplicate close already sits inside `recent_high`, so `last_close > recent_high`
+> (the breakout test in `volume.analyze`) becomes mathematically impossible:
+> `high_vol_breakout` reads `False` for the **entire universe** and `is_buyable`
+> collapses to ~0. This silently masks every real breakout. Guarded two ways in
+> `backend/sepa/prices.py`: `patch_latest_closes` refuses to append a snapshot bar
+> that duplicates the prior stored session, and `load_prices` strips a trailing
+> exact-duplicate bar at read time (`_drop_phantom_tail`) so the cache self-heals
+> on the next scan. Regression: `backend/tests/test_phantom_bar.py`
+> (`test_phantom_suppresses_breakout_guard_restores_it`), run via
+> `make contracts-phantom`. Two real sessions never share volume to the share, so
+> the guard only ever drops placeholders.
+
 ---
 
 ## 6. Trend Template — 8 gates LOCKED

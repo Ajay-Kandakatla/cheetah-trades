@@ -12,7 +12,7 @@
 # Default target: print available commands.
 .DEFAULT_GOAL := help
 
-.PHONY: help contracts contracts-sepa contracts-vcp contracts-kell contracts-frontend contracts-realtime install-hooks lint
+.PHONY: help contracts contracts-sepa contracts-vcp contracts-phantom contracts-kell contracts-frontend contracts-realtime install-hooks lint
 
 help:                          ## Show this help.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -26,6 +26,10 @@ contracts-sepa:                ## Run the SEPA contracts regression test (docs/S
 contracts-vcp:                 ## VCP behavioral contracts (docs/sepa/vcp_methodology.md). Fold into `contracts-sepa` after the api image is rebuilt with test_vcp.py.
 	@echo "→ VCP behavioral contracts (docs/sepa/vcp_methodology.md)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_vcp.py -v --tb=short
+
+contracts-phantom:             ## Phantom trailing-bar guard (prices.py) — breakout/is_buyable regression. Fold into `contracts-sepa` after the api image is rebuilt with test_phantom_bar.py.
+	@echo "→ Phantom-bar guard contracts (backend/sepa/prices.py)"
+	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_phantom_bar.py -v --tb=short
 
 contracts-kell:                ## Run the Kell scanner contracts regression test (docs/KELL_CONTRACTS.md).
 	@echo "→ Kell contracts (docs/KELL_CONTRACTS.md)"

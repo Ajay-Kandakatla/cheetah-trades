@@ -249,19 +249,50 @@ def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+def _drop_phantom_tail(df: Optional[pd.DataFrame]) -> Optional[pd.DataFrame]:
+    """Drop a trailing phantom bar that exactly duplicates the prior session.
+
+    A pre-session bulk snapshot can echo the previous day's completed aggregate
+    into a bar stamped with *today's* date, leaving two adjacent bars with
+    byte-identical close AND volume. Two real daily sessions never share volume
+    to the exact share, so an identical (close, volume) tail is a placeholder,
+    not a session. Left in place it makes the breakout test
+    ``last_close > recent_high`` impossible (the duplicate close already sits
+    inside ``recent_high``), which zeros ``high_vol_breakout`` for the entire
+    universe and collapses ``is_buyable`` (book pp.198-203). Read-time guard so
+    the existing cache self-heals on the next scan without a repair pass — and
+    so the stored bar survives to be overwritten in place when the real session
+    prints. Conservative: drops at most one trailing bar, only on an exact match.
+    """
+    if df is None or len(df) < 2:
+        return df
+    try:
+        last, prev = df.iloc[-1], df.iloc[-2]
+        if (
+            float(last["close"]) == float(prev["close"])
+            and float(last["volume"]) == float(prev["volume"])
+        ):
+            return df.iloc[:-1]
+    except (KeyError, ValueError, TypeError):
+        pass
+    return df
+
+
 def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optional[pd.DataFrame]:
     """Return a DataFrame indexed by date with [open, high, low, close, volume].
 
-    Cache order: Mongo → parquet → fetch. None on failure (delisted, no data)."""
+    Cache order: Mongo → parquet → fetch. None on failure (delisted, no data).
+    A trailing phantom-duplicate bar is stripped at read time (see
+    ``_drop_phantom_tail``) so detectors never see a placeholder last session."""
     if not force:
         df = _mongo_get(symbol)
         if df is not None:
-            return df
+            return _drop_phantom_tail(df)
         df = _parquet_get(symbol)
         if df is not None:
             # Backfill Mongo so subsequent reads stay there
             _mongo_put(symbol, df)
-            return df
+            return _drop_phantom_tail(df)
 
     df = _fetch(symbol, period)
     if df is None or df.empty:
@@ -269,7 +300,7 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
 
     _mongo_put(symbol, df)
     _parquet_put(symbol, df)
-    return df
+    return _drop_phantom_tail(df)
 
 
 # ---------------------------------------------------------------------------
@@ -380,7 +411,7 @@ def patch_latest_closes(symbols: list[str]) -> dict:
         return {"patched": 0, "already_current": 0, "no_cache": 0, "total_snapshot": 0}
 
     coll = _get_mongo()
-    patched = already_current = no_cache = 0
+    patched = already_current = no_cache = phantom_skipped = 0
 
     for sym, bar in snaps.items():
         # Skip bars with any missing or zero price field (0 = no session today,
@@ -477,6 +508,30 @@ def patch_latest_closes(symbols: list[str]) -> dict:
             already_current += 1
             continue
 
+        # Phantom-rollover guard (2026-06-02): before the regular session
+        # prints, the bulk snapshot can echo the PREVIOUS day's completed
+        # aggregate but stamp it with today's date (day.t missing -> falls
+        # back to now-ET). Appending it creates two adjacent bars with
+        # byte-identical close AND volume. Two real sessions never share
+        # volume to the exact share, and the duplicate close makes the
+        # breakout test `last_close > recent_high` impossible (the dup close
+        # already sits inside recent_high), which zeros high_vol_breakout
+        # across the WHOLE universe and collapses is_buyable to ~0. Skip the
+        # phantom; the real bar lands via the overwrite-in-place branch above
+        # once the session actually trades.
+        prev_stored = doc["bars"][-1]
+        if (
+            float(bar["close"]) == float(prev_stored.get("close", -1.0))
+            and float(bar["volume"]) == float(prev_stored.get("volume", -1.0))
+        ):
+            log.info(
+                "patch_latest_closes: skip phantom dup bar for %s "
+                "(close=%.4f vol=%.0f duplicates prior session)",
+                sym, float(bar["close"]), float(bar["volume"]),
+            )
+            phantom_skipped += 1
+            continue
+
         # Append the new bar and reset TTL
         new_bar = {
             "date":   bar_date.to_pydatetime(),
@@ -497,13 +552,14 @@ def patch_latest_closes(symbols: list[str]) -> dict:
                 log.warning("patch_latest_closes: %s failed: %s", sym, exc)
 
     log.info(
-        "patch_latest_closes: patched=%d already_current=%d no_cache=%d",
-        patched, already_current, no_cache,
+        "patch_latest_closes: patched=%d already_current=%d no_cache=%d phantom_skipped=%d",
+        patched, already_current, no_cache, phantom_skipped,
     )
     return {
         "patched":        patched,
         "already_current": already_current,
         "no_cache":       no_cache,
+        "phantom_skipped": phantom_skipped,
         "total_snapshot": len(snaps),
     }
 
