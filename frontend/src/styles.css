@@ -957,6 +957,32 @@ tr:last-child td { border-bottom: none; }
 .sepa-chip.sepa-chip--warn.is-active { background: var(--warn); color: var(--bg); border-color: var(--warn); }
 .sepa-chip.sepa-chip--bad  { color: var(--negative); border-color: rgba(239, 68, 68, 0.45); }
 .sepa-chip.sepa-chip--bad.is-active  { background: var(--negative); color: var(--bg); border-color: var(--negative); }
+/* ── Pivot entry-timing meter (2026-06-02) ─────────────────────────────────
+   The "am I hopping on at the right time?" gauge on each candidate card:
+   a price track (stop · pivot · buy-zone + a ▲ for current price) and a volume
+   gauge (today vs the 1.5× breakout line). Encodes Minervini pp.197-205. */
+.pivot-meter { margin-top: 0.45rem; padding: 0.5rem 0.6rem; border: 1px solid var(--hairline, #222);
+  border-radius: 8px; background: rgba(255,255,255,0.02); }
+.pivot-meter__head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.45rem; }
+.pivot-meter__badge { font-size: 0.74rem; font-weight: 600; padding: 2px 9px; border: 1px solid; border-radius: 999px; }
+.pivot-meter__tight { font-size: 0.66rem; color: #fbbf24; border: 1px solid rgba(217,119,6,0.5);
+  border-radius: 999px; padding: 1px 7px; }
+.pivot-meter__track { position: relative; height: 10px; border-radius: 5px;
+  background: linear-gradient(90deg, rgba(239,68,68,0.14), rgba(100,116,139,0.12)); }
+.pivot-meter__zone { position: absolute; top: 0; bottom: 0; background: rgba(16,185,129,0.18);
+  border-left: 1px dashed rgba(16,185,129,0.55); border-radius: 0 5px 5px 0; }
+.pivot-meter__pivot { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #10b981; transform: translateX(-1px); }
+.pivot-meter__cur { position: absolute; top: -5px; width: 0; height: 0; transform: translateX(-5px);
+  border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid; }
+.pivot-meter__scale { display: flex; justify-content: space-between; gap: 0.4rem;
+  font-size: 0.68rem; color: var(--cm-slate, #94a3b8); margin-top: 0.3rem; }
+.pivot-meter__pivot-lbl { color: #34d399; }
+.pivot-meter__vol { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.pivot-meter__vol-bar { position: relative; flex: 1; height: 7px; border-radius: 4px; background: rgba(100,116,139,0.18); }
+.pivot-meter__vol-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.pivot-meter__vol-thr { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #e5e7eb; opacity: 0.7; }
+.pivot-meter__vol-lbl { font-size: 0.7rem; white-space: nowrap; }
+
 /* Green "Enter" decision chip — actionable breakout (entry_exit.decision==ENTER). */
 .sepa-chip.sepa-chip--good { color: var(--positive, #10b981); border-color: rgba(16, 185, 129, 0.45); }
 .sepa-chip.sepa-chip--good.is-active { background: var(--positive, #10b981); color: var(--bg); border-color: var(--positive, #10b981); }

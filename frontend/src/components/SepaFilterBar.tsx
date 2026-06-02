@@ -48,6 +48,10 @@ export type SepaFilters = {
    *  'ANY' = setup_ready, no breakout trigger required. Only affects Enter.
    *  Optional → SepaV2 keeps compiling; default 'TODAY' preserves strict. */
   breakoutWindow?: 'TODAY' | 'WEEK' | 'ANY';
+  /** When true, keep only names with a textbook-tight pivot — final right-side
+   *  contraction ≤ 5% (book pp.198/202; user 2026-06-02 "5% is good"). Optional
+   *  so SepaV2 keeps compiling. */
+  tightPivotOnly?: boolean;
   rsMin: number;
   search: string;
   showAll: boolean;
@@ -122,7 +126,7 @@ export type SepaFilters = {
    *  actual trend, not chop). 0 = off. */
   adxMin: number;
   sortBy:
-    | 'score' | 'rs' | 'symbol'
+    | 'score' | 'rs' | 'symbol' | 'closest_trigger'
     | 'day_change' | 'day_change_abs'
     | 'dm_12m' | 'dm_6m' | 'dm_3m' | 'dm_1m' | 'dm_score'
     | 'moat'
@@ -165,6 +169,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     filters.setup !== 'ALL',
     (filters.decision ?? 'ALL') !== 'ALL',
     (filters.breakoutWindow ?? 'TODAY') !== 'TODAY',
+    filters.tightPivotOnly,
     filters.stage !== 'ALL',
     filters.moatMin !== 0,
     filters.type !== 'all',
@@ -269,6 +274,16 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             {label}
           </button>
         ))}
+        {/* Textbook-tight pivot (≤5% final contraction) — Minervini's narrow
+            right-side pullback on dried volume (pp.198/202). The genuinely
+            ready-to-pounce pivots. (user 2026-06-02: "5% is good"). */}
+        <button
+          className={`sepa-chip ${filters.tightPivotOnly ? 'is-active' : ''}`}
+          onClick={() => set('tightPivotOnly', !filters.tightPivotOnly)}
+          title="Only names whose FINAL contraction is ≤ 5% — the textbook-tight Minervini pivot (book pp.198/202: FSII 5% handle, VIVO 3%). These are the genuinely book-tight setups, where a break on volume is the cleanest entry."
+        >
+          ⚡ Tight pivot ≤5%
+        </button>
         <span className="sepa-filterbar__sep" />
         {/* Weinstein stage filter — fastest way to flip from "what to buy"
             (Stage 2) to "what's topping out" (Stage 3) or "what just rolled
@@ -486,6 +501,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           onChange={(e) => set('sortBy', e.target.value as SepaFilters['sortBy'])}
         >
           <option value="score">Sort: Score</option>
+          <option value="closest_trigger">Sort: ⚡ Closest to trigger</option>
           <option value="rs">Sort: RS rank</option>
           <option value="day_change">Sort: Day % (top gainers)</option>
           <option value="day_change_abs">Sort: Day % |abs| (movers)</option>

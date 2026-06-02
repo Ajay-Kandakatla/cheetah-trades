@@ -14,6 +14,8 @@ import { useQuote } from '../hooks/useWatchlist';
 import { TradePlanInline } from './TradePlanInline';
 import { StopsPanel } from './StopsPanel';
 import { EntryExitPlanBlock } from './EntryExitPlanBlock';
+import { PivotMeter } from './PivotMeter';
+import { pivotTiming } from '../lib/pivotTiming';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -540,6 +542,19 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           so the banner doesn't collide with the price / CLOSE button.
           Synthesis of trade_plan + stage + volume + ADX. Source:
           backend/sepa/entry_exit.py. */}
+      {/* Pivot entry-timing meter — the visual "am I hopping on at the right
+          time?" gauge (Minervini pp.197-205): price vs pivot + buy-zone and the
+          volume dried→expanding state. GO only when price ≥ pivot AND volume
+          expands. Shown for names with a setup (VCP / Power Play). */}
+      {(() => {
+        const t = pivotTiming(row);
+        return t.hasSetup ? (
+          <div style={{ padding: '0 0.2rem' }}>
+            <PivotMeter t={t} />
+          </div>
+        ) : null;
+      })()}
+
       {row.entry_exit && (
         <div style={{ padding: '0 0.2rem' }}>
           <EntryExitPlanBlock plan={row.entry_exit} />

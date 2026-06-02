@@ -12,6 +12,7 @@ import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
+import { pivotTiming, triggerRank } from '../lib/pivotTiming';
 // Provides per-card historical rank/score deltas to every SepaCandidateCard
 // rendered below. Single fetch per page (yesterday's + 5d-ago full scans
 // from /sepa/history/date/{date}) — see SepaTrendContext for details.
@@ -270,7 +271,7 @@ export function SepaPage() {
   // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
   const FILTER_DEFAULTS: SepaFilters = {
     rating: 'ALL', setup: 'ALL', decision: 'ALL', breakoutWindow: 'TODAY',
-    rsMin: 70, search: '', showAll: true,
+    tightPivotOnly: false, rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
     // Default OFF — opt-in toggle. Some users want to see distributing
@@ -429,6 +430,7 @@ export function SepaPage() {
       // at all cost"); Wait/Watch match the entry_exit.decision banner the card
       // shows. (Helper passesDecision keeps the two apply paths in sync.)
       if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
+      if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
       if (filters.search && !r.symbol.includes(filters.search)) return false;
       if (filters.dmEligibleOnly) {
@@ -544,6 +546,12 @@ export function SepaPage() {
 
       if (filters.sortBy === 'symbol') return a.symbol.localeCompare(b.symbol);
       if (filters.sortBy === 'rs') return (b.rs_rank ?? 0) - (a.rs_rank ?? 0);
+      // "Closest to trigger" — floats names nearest their pivot buy point (and
+      // confirming on volume) to the top; extended/no-setup sink. See
+      // lib/pivotTiming.triggerRank. The watch-list-for-today ordering.
+      if (filters.sortBy === 'closest_trigger') {
+        return triggerRank(pivotTiming(a)) - triggerRank(pivotTiming(b));
+      }
       if (filters.sortBy === 'day_change') {
         // Top gainers descending. Nulls land at the bottom.
         const av = a.day_change_pct ?? -Infinity;
@@ -740,6 +748,7 @@ export function SepaPage() {
     // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
     // gate (is_buyable); Wait/Watch match the entry_exit.decision banner.
     if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
+    if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
     if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
     if (filters.search && !r.symbol.includes(filters.search)) return false;
     if (filters.dmEligibleOnly) {

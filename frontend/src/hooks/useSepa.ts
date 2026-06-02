@@ -152,6 +152,10 @@ export type SepaCandidate = {
     vol_dryup: number | null;
     is_drying_up: boolean;
     high_vol_breakout: boolean;
+    /** Latest bar's volume + the trailing 50-day average — used by the pivot
+     *  meter's volume gauge (today vs the 1.5× breakout threshold). */
+    last_vol?: number;
+    avg_vol_50?: number;
     /** Bars since the most recent volume-confirmed breakout within the last 15
      *  (0 = today, null = none in window). Powers the FE 'Breakout: ≤1wk'
      *  toggle — a name may have broken out earlier in the week. Same-day value
@@ -183,6 +187,12 @@ export type SepaCandidate = {
     suggested_stop: number;
     pivot_quality_ok?: boolean;
     pivot_prior_advance_pct?: number;
+    /** Depth of the final (right-side) contraction, %. The book's pivot forms on
+     *  a narrow 3-5% pullback on dried volume (pp.198, 202) — used for the
+     *  "textbook-tight pivot" (≤5%) entry-timing badge. */
+    final_contraction_pct?: number;
+    /** Volume dried up in the base (constructive — supply exhausted, p.203/205). */
+    volume_drying?: boolean;
   };
   power_play?: { is_power_play: boolean; pivot_buy_price: number; suggested_stop: number };
   base_count?: { base_count: number; is_early_base: boolean; is_late_stage: boolean };

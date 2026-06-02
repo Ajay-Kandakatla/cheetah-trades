@@ -40,6 +40,29 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'pivot-meter locks the book entry-timing thresholds',
+    file: 'src/lib/pivotTiming.ts',
+    // The meter's GO/COILING/EXTENDED states + the "tight pivot" badge encode
+    // Minervini's buy rule (pp.198-205): final right-side contraction ≤5%
+    // (FSII 5% handle, VIVO 3%) and a volume-confirmed breakout ≥1.5× avg
+    // (p.203, "on expanding volume"). Lock the constants so a refactor can't
+    // silently loosen them away from the book.
+    checks: (src) => {
+      const errs = [];
+      const tight = src.match(/TIGHT_PIVOT_MAX_PCT\s*=\s*([\d.]+)/);
+      if (!tight) errs.push('TIGHT_PIVOT_MAX_PCT missing (the ≤5% textbook-tight pivot, book pp.198/202)');
+      else if (Number(tight[1]) !== 5) errs.push(`TIGHT_PIVOT_MAX_PCT=${tight[1]} — should be 5 (book pivot is 3-5%)`);
+      const vmult = src.match(/BREAKOUT_VOL_MULT\s*=\s*([\d.]+)/);
+      if (!vmult) errs.push('BREAKOUT_VOL_MULT missing (the 1.5× volume breakout threshold, book p.203)');
+      else if (Number(vmult[1]) !== 1.5) errs.push(`BREAKOUT_VOL_MULT=${vmult[1]} — should be 1.5 to match backend volume.py`);
+      // GO must require BOTH price ≥ pivot AND a confirmed breakout.
+      if (!/above\s*&&\s*breakingOut/.test(src)) {
+        errs.push("GO state must require `above && breakingOut` (price at pivot AND volume expanding)");
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
