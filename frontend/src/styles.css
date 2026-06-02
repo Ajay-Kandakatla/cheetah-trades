@@ -1065,6 +1065,17 @@ tr:last-child td { border-bottom: none; }
 }
 .sepa-card:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,0,0,0.07); border-color: #999; }
 .sepa-card.is-candidate { border-left: 4px solid var(--cm-green); }
+
+/* ── Phone layout fix (2026-06-01) ─────────────────────────────────────
+   Placed LATE on purpose: the earlier mobile override `.main{padding:12px}`
+   (top of file) lost to the unconditional `.main{padding:24px}` by source
+   order, so phones were getting 24px gutters + a 420px min-column that
+   overflowed the viewport. Here it wins — edge-to-edge single-column cards. */
+@media (max-width: 720px) {
+  .main { padding: 10px; }
+  .sepa-grid { grid-template-columns: 1fr; gap: 0.55rem; }
+  .sepa-card { padding: 0.7rem 0.7rem; }
+}
 .sepa-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .sepa-card__sym { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 /* Allow tags (S2·Advancing, LATE, ETF) to wrap onto a second line on tight
