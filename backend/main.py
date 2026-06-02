@@ -1915,6 +1915,17 @@ async def sepa_top_picks(n: int = Query(3, ge=1, le=10)):
     return JSONResponse(data)
 
 
+@app.get("/sepa/leaderboard")
+async def sepa_leaderboard(n: int = Query(12, ge=1, le=30),
+                           days: int = Query(14, ge=1, le=45)):
+    """Day-level rank leaderboard / honourable mentions — names that have scored
+    high across the lookback window (with rank volatility + 'primed' flags), for
+    the portfolio page. Built from scan history."""
+    from sepa import leaderboard as _lb
+    data = await asyncio.to_thread(_lb.leaderboard, n, days)
+    return JSONResponse(data)
+
+
 # ---------------------------------------------------------------------------
 # On-demand price alerts
 # ---------------------------------------------------------------------------

@@ -996,6 +996,30 @@ tr:last-child td { border-bottom: none; }
 .top-pick__why { font-size: 0.7rem; color: #9aa8c8; margin-top: 0.3rem; line-height: 1.25; }
 .top-pick__buy { font-size: 0.72rem; color: #cbd5e1; margin-top: 0.2rem; }
 .top-picks__foot { font-size: 0.66rem; color: var(--cm-slate, #64748b); margin: 0.5rem 0 0; opacity: 0.8; }
+
+/* SEPA Rank Leaderboard — honourable mentions on the portfolio page. */
+.rank-lb { border: 1px solid var(--hairline, #222); border-radius: 12px; padding: 0.7rem 0.8rem;
+  margin: 0.5rem 0 0.4rem; background: rgba(255,255,255,0.012); }
+.rank-lb__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.rank-lb__meta { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
+.rank-lb__sub { font-size: 0.72rem; color: #9aa8c8; margin: 0.35rem 0 0.5rem; line-height: 1.3; }
+.rank-lb__list { display: flex; flex-direction: column; gap: 0.18rem; }
+.rank-lb__row { display: grid; grid-template-columns: 2.6rem 3.2rem 1fr auto auto;
+  align-items: center; gap: 0.5rem; text-decoration: none; color: inherit;
+  padding: 0.32rem 0.4rem; border-radius: 7px; transition: background .12s; }
+.rank-lb__row:hover { background: rgba(255,255,255,0.03); }
+.rank-lb__cur { font-size: 0.82rem; color: #cbd5e1; font-weight: 700; }
+.rank-lb__sym { font-size: 0.9rem; font-weight: 700; }
+.rank-lb__traj { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
+.rank-lb__drop { color: #fb923c; }
+.rank-lb__pers { font-size: 0.74rem; color: #9aa8c8; text-align: right; min-width: 2.6rem; }
+.rank-lb__flag { font-size: 0.62rem; padding: 0.05rem 0.4rem; border: 1px solid currentColor;
+  border-radius: 999px; white-space: nowrap; }
+.rank-lb__foot { font-size: 0.66rem; color: var(--cm-slate, #64748b); margin: 0.5rem 0 0; opacity: 0.8; }
+@media (max-width: 560px) {
+  .rank-lb__row { grid-template-columns: 2.2rem 2.8rem 1fr auto; }
+  .rank-lb__traj { display: none; }
+}
 .portfolio-list { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.8rem; }
 .portfolio-card { border: 1px solid var(--hairline, #222); border-radius: 10px;
   padding: 0.7rem 0.8rem; background: var(--bg-surface, #141414); }

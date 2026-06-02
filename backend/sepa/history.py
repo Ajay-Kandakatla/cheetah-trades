@@ -70,6 +70,26 @@ def _get_db():
         return None
 
 
+# Scan-history retention (2026-06-02). Was previously UNBOUNDED — every scan's
+# ~3k snapshots kept forever. Now we keep a generous, explicit window so the rank
+# leaderboard / trend always has ≥10 business days to look back on (user: "increase
+# the caching ... 10 or more biz days so ranking can be better") while bounding
+# Mongo growth. 45 calendar days ≈ 31 business days — well past the ask.
+HISTORY_RETENTION_DAYS = 45
+
+
+def _prune_old(db) -> None:
+    """Delete scan_runs + candidate_snapshots older than HISTORY_RETENTION_DAYS.
+    Best-effort — a prune failure must never block a scan write."""
+    try:
+        cutoff = int((datetime.now(tz=timezone.utc)
+                      - timedelta(days=HISTORY_RETENTION_DAYS)).timestamp())
+        db.candidate_snapshots.delete_many({"generated_at": {"$lt": cutoff}})
+        db.scan_runs.delete_many({"generated_at": {"$lt": cutoff}})
+    except Exception as exc:
+        log.warning("history: prune failed (non-fatal): %s", exc)
+
+
 def write_scan(payload: dict) -> Optional[str]:
     """Insert a scan_runs doc + N candidate_snapshots. Returns scan_run_id or None."""
     db = _get_db()
@@ -124,6 +144,7 @@ def write_scan(payload: dict) -> Optional[str]:
                 })
             db.candidate_snapshots.insert_many(docs, ordered=False)
         log.info("history: persisted scan run %s with %d snapshots", run_id, len(rows))
+        _prune_old(db)
         return str(run_id)
     except Exception as exc:
         log.warning("history: write failed: %s", exc)
