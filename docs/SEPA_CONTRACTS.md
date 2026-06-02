@@ -292,6 +292,36 @@ Contract test: `test_is_candidate_gate_logic` + `test_is_buyable_gate_logic`.
 **Why this matters:** the /sepa list ranks by `score` and the buyable tier flags
 what's actionable today. Both feed Ajay's real-money decisions.
 
+### 5c. `setup_ready` + breakout recency — the toggleable "Enter" (2026-06-02)
+
+`is_buyable` is the canonical STRICT gate (today's volume-confirmed breakout) and
+is unchanged. Two additive fields let the FE relax the SAME-DAY breakout
+requirement without touching the strict gate (user: *"it's ok to not have high
+volume breakout… they may have a breakout in the past week sometime"*):
+
+- **`setup_ready`** (row, `scanner._is_setup_ready`) = is_buyable gates **1–5
+  minus** the volume-breakout clause (#6). The "in a proper base, waiting for the
+  trigger" tier. `is_buyable == setup_ready AND (high_vol_breakout OR pocket_pivot)`.
+- **`volume.days_since_breakout`** (int | null) = bars since the most recent
+  volume-confirmed breakout within `BREAKOUT_RECENCY_LOOKBACK` (**15**); `0` =
+  today, `null` = none in window. A bar is a breakout when its volume > 1.5× the
+  trailing 50-day average AND its close exceeds the prior-21-bar high (the same
+  test as `high_vol_breakout`, vectorized). At the last bar it equals
+  `high_vol_breakout`.
+
+The FE **Breakout** toggle maps to:
+
+| Mode | Enter set |
+|---|---|
+| **Today** (default, book-strict) | `is_buyable` |
+| **≤1wk** | `setup_ready AND days_since_breakout ≤ 5` |
+| **Any** | `setup_ready` (no trigger gate) |
+
+The 15-bar horizon and the ≤5 "1-week" threshold are pragmatic recency
+operationalizations, **not** verbatim book numbers — Minervini's canonical buy
+point is the breakout day itself (p.203). Contract: `test_breakout_window.py`
+(`make contracts-breakout`) + `test_setup_ready_is_buyable_minus_breakout`.
+
 > **Data-integrity dependency — the phantom-bar guard (2026-06-02).** Gate #6
 > reads the LAST cached daily bar. Before the regular session prints, the bulk
 > snapshot can echo the prior day's completed aggregate into a bar stamped with

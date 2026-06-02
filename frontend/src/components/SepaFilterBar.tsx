@@ -41,6 +41,13 @@ export type SepaFilters = {
    *  state, p.203); 'HOLD_WATCH' = on the radar, no setup trigger. Optional so
    *  SepaV2's own DEFAULT_FILTERS keeps compiling. Added 2026-06-02. */
   decision?: 'ALL' | 'ENTER' | 'WAIT' | 'HOLD_WATCH';
+  /** Tunes what the 🟢 Enter chip counts as a breakout (user 2026-06-02 —
+   *  "it's ok to not have high volume breakout… they may have a breakout in the
+   *  past week sometime"). 'TODAY' = strict same-day book gate (`is_buyable`);
+   *  'WEEK' = setup_ready AND a volume breakout in the last ≤5 trading days;
+   *  'ANY' = setup_ready, no breakout trigger required. Only affects Enter.
+   *  Optional → SepaV2 keeps compiling; default 'TODAY' preserves strict. */
+  breakoutWindow?: 'TODAY' | 'WEEK' | 'ANY';
   rsMin: number;
   search: string;
   showAll: boolean;
@@ -145,6 +152,8 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
   // Decision gate selection (optional field — treat missing as 'ALL' so
   // SepaV2, which doesn't seed it, still renders the "Any signal" default).
   const decSel = filters.decision ?? 'ALL';
+  // Breakout-recency window for the Enter gate (default 'TODAY' = strict).
+  const bwSel = filters.breakoutWindow ?? 'TODAY';
 
   // How many filters are ACTIVELY narrowing the list (non-default state).
   // Drives the "N filters on" badge. Per-control glow is handled in CSS:
@@ -155,6 +164,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     filters.rating !== 'ALL',
     filters.setup !== 'ALL',
     (filters.decision ?? 'ALL') !== 'ALL',
+    (filters.breakoutWindow ?? 'TODAY') !== 'TODAY',
     filters.stage !== 'ALL',
     filters.moatMin !== 0,
     filters.type !== 'all',
@@ -227,6 +237,33 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             // Same toggle behavior as the setup chips — tap the active one to
             // clear back to "Any signal".
             onClick={() => set('decision', decSel === v ? 'ALL' : v)}
+            title={tip}
+          >
+            {label}
+          </button>
+        ))}
+        <span className="sepa-filterbar__sep" />
+        {/* Breakout-recency window — tunes what the 🟢 Enter chip counts as a
+            breakout (user 2026-06-02: "it's ok to not have high volume
+            breakout… they may have a breakout in the past week sometime"). Only
+            affects Enter. 'Today' is the strict book gate; '≤1wk' admits a
+            breakout from the past ~5 trading days; 'Any' drops the trigger. */}
+        <span
+          className="mono"
+          style={{ opacity: 0.7, fontSize: '0.78rem', alignSelf: 'center' }}
+          title="Tunes what the 🟢 Enter chip counts as a breakout. Only affects the Enter decision chip."
+        >
+          ⚡ Breakout
+        </span>
+        {([
+          { v: 'TODAY' as const, label: 'Today', tip: 'Strict Minervini buy point (p.203): Enter = a VOLUME-CONFIRMED breakout TODAY (the is_buyable gate). The shortest, most disciplined list.' },
+          { v: 'WEEK'  as const, label: '≤1wk',  tip: 'Relax Enter to names that broke out on volume within the last ~5 trading days AND are still set up — you can buy in the days following a breakout while it holds above the pivot.' },
+          { v: 'ANY'   as const, label: 'Any',   tip: 'Drop the breakout trigger entirely: Enter = setup-ready (Trend Template + Stage 2 + base + not-late + liquid). The "ready to go, no trigger required" view.' },
+        ]).map(({ v, label, tip }) => (
+          <button
+            key={`bw-${v}`}
+            className={`sepa-chip ${bwSel === v ? 'is-active' : ''} ${v === 'TODAY' ? 'sepa-chip--passive' : ''}`}
+            onClick={() => set('breakoutWindow', v)}
             title={tip}
           >
             {label}

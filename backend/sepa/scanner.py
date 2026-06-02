@@ -111,15 +111,29 @@ def _determine_setup(vcp_info, pp_info, vol, last_px):
     return entry_setup, base_mult, risk_mult, risk_to_stop_pct
 
 
-def _is_buyable(tr, stg, bc, liq, vol, entry_setup) -> bool:
-    """Book buy-now gate (pp.79-83, 198-203): Trend Template + Stage 2 advancing
-    + a setup + not a late-stage base + liquid + a VOLUME-CONFIRMED breakout."""
+def _is_setup_ready(tr, stg, bc, liq, entry_setup) -> bool:
+    """The book buy-now gate MINUS the volume-breakout trigger (pp.79-83, 198):
+    Trend Template + Stage 2 advancing + a setup + not a late-stage base +
+    liquid. A name that is_setup_ready is sitting in a proper base one
+    volume-confirmed breakout away from is_buyable — the "ready, waiting for the
+    trigger" tier. Exposed so the FE 'Breakout: ≤1wk / Any' toggle can relax the
+    strict SAME-DAY breakout requirement (the breakout may have fired earlier in
+    the week, or the user may want the ready set without a trigger gate)."""
     return bool(
         tr.pass_all
         and stg and stg.get("stage") == 2
         and entry_setup is not None
         and (bc is None or not bc.get("is_late_stage"))
         and liq.get("liquid")
+    )
+
+
+def _is_buyable(tr, stg, bc, liq, vol, entry_setup) -> bool:
+    """Book buy-now gate (pp.79-83, 198-203): `_is_setup_ready` PLUS a TODAY
+    VOLUME-CONFIRMED breakout (high_vol_breakout or pocket_pivot, p.203). This
+    is the canonical strict gate and is intentionally unchanged."""
+    return bool(
+        _is_setup_ready(tr, stg, bc, liq, entry_setup)
         and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
     )
 
@@ -328,6 +342,7 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # confirmed breakout in a Stage-2 setup, not late — outranks one still
     # waiting below its trigger (ranks in-buy-zone above WAIT). 2026-06-01.
     buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup)
+    setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup)
     if buyable:
         score += 4
 
@@ -426,6 +441,12 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         # Without one of those the name stays a watchlist candidate, not buyable.
         # (Hard-gate chosen by user 2026-05-31; fixes CVGI-class low-vol breakouts.)
         "is_buyable": buyable,
+        # Same gates as is_buyable MINUS the same-day volume breakout — the
+        # "set up, waiting for the trigger" tier. Feeds the FE 'Breakout:
+        # ≤1wk / Any' toggle (2026-06-02): combine with volume.days_since_breakout
+        # to admit a breakout that fired earlier in the week, or with no breakout
+        # gate at all. Strict same-day buyable stays `is_buyable`.
+        "setup_ready": setup_ready,
         "risk_to_stop_pct": risk_to_stop_pct,
     }
 
@@ -848,6 +869,7 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
     # Actionability bonus (book p.203) — see full-scan path.
     buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup)
+    setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup)
     if buyable:
         score += 4
     score = max(0.0, min(score, 100.0))
@@ -920,6 +942,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "is_candidate": bool(tr.pass_all and liq.get("liquid")),
         # Volume-confirmed breakout required (book p.203). See full-scan path.
         "is_buyable": buyable,
+        # is_buyable minus the same-day breakout trigger — see full-scan path.
+        "setup_ready": setup_ready,
         "risk_to_stop_pct": risk_to_stop_pct,
         "from_cache": True,
     }

@@ -158,6 +158,34 @@ def test_rerank_setup_and_risk_locked():
     assert _is_buyable(tr, {"stage": 2}, None, {"liquid": True}, {"accumulation_strength": "accumulating"}, None) is False
 
 
+def test_setup_ready_is_buyable_minus_breakout():
+    """`setup_ready` (feeds the FE 'Breakout: ≤1wk / Any' toggle, 2026-06-02) is
+    is_buyable with the same-day volume-breakout requirement removed. A Stage-2
+    name in a proper base is setup_ready even with NO breakout; is_buyable still
+    requires the trigger. `volume.days_since_breakout` reports recency so the
+    ≤1wk view can admit a breakout that fired earlier in the week. The canonical
+    strict gate (is_buyable, today's breakout) is intentionally unchanged."""
+    from types import SimpleNamespace
+    from sepa.scanner import _is_buyable, _is_setup_ready
+    from sepa import volume as V
+
+    tr = SimpleNamespace(pass_all=True)
+    es = {"type": "VCP", "pivot": 100, "stop": 93}
+
+    # In a base with no trigger: setup_ready True, is_buyable False.
+    assert _is_setup_ready(tr, {"stage": 2}, None, {"liquid": True}, es) is True
+    assert _is_buyable(tr, {"stage": 2}, None, {"liquid": True},
+                       {"accumulation_strength": "accumulating"}, es) is False
+    # With the trigger: is_buyable == setup_ready AND breakout.
+    assert _is_buyable(tr, {"stage": 2}, None, {"liquid": True},
+                       {"high_vol_breakout": True}, es) is True
+    # The non-breakout gates still bind setup_ready.
+    assert _is_setup_ready(tr, {"stage": 2}, None, {"liquid": True}, None) is False   # no setup
+    assert _is_setup_ready(tr, {"stage": 3}, None, {"liquid": True}, es) is False     # not stage 2
+    # Recency horizon stays at/above the FE '≤1wk' threshold (<=5).
+    assert V.BREAKOUT_RECENCY_LOOKBACK >= 5
+
+
 def test_rating_thresholds_locked():
     """_rating_label maps score → label per contract §4."""
     from sepa.scanner import _rating_label

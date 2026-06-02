@@ -137,17 +137,36 @@ function defaultRating(score: number): Rating {
   return 'AVOID';
 }
 
+/** How recent a volume-confirmed breakout the 🟢 Enter chip will accept. */
+const BREAKOUT_WEEK_MAX_DAYS = 5;   // "past week" = ≤5 trading days
+
 /** Decision-gate filter. Shared by both apply paths so they never drift.
  *  - 'ALL'   → no gate.
- *  - 'ENTER' → STRICT book buyable gate (`is_buyable`): Trend Template + Stage 2
- *    + setup + not-late + liquid + a VOLUME-CONFIRMED breakout (pp.79-83/198-203).
- *    User 2026-06-02: "go by the book — enter = buyable at all cost."
- *  - 'WAIT' / 'HOLD_WATCH' → match the `entry_exit.decision` banner the card shows
- *    (the adjudicated "valid base, waiting for the breakout" / "on the radar" states). */
-function passesDecision(r: SepaCandidate, decision: SepaFilters['decision']): boolean {
+ *  - 'ENTER' → buyable, with the breakout-recency requirement tuned by
+ *    `breakoutWindow` (user 2026-06-02):
+ *      • 'TODAY' (default) → STRICT book gate `is_buyable` — a SAME-DAY
+ *        volume-confirmed breakout (pp.79-83/198-203).
+ *      • 'WEEK'  → `setup_ready` AND a breakout fired in the last ≤5 trading
+ *        days (still in/near the buy range — buy the days following a breakout).
+ *      • 'ANY'   → `setup_ready` (Stage 2 + base + not-late + liquid), no
+ *        breakout trigger required.
+ *  - 'WAIT' / 'HOLD_WATCH' → match the `entry_exit.decision` banner the card shows. */
+function passesDecision(
+  r: SepaCandidate,
+  decision: SepaFilters['decision'],
+  breakoutWindow: SepaFilters['breakoutWindow'],
+): boolean {
   const d = decision ?? 'ALL';
   if (d === 'ALL') return true;
-  if (d === 'ENTER') return r.is_buyable === true;
+  if (d === 'ENTER') {
+    const w = breakoutWindow ?? 'TODAY';
+    if (w === 'ANY') return r.setup_ready === true;
+    if (w === 'WEEK') {
+      const dsb = r.volume?.days_since_breakout;
+      return r.setup_ready === true && dsb != null && dsb <= BREAKOUT_WEEK_MAX_DAYS;
+    }
+    return r.is_buyable === true;   // 'TODAY' — strict book gate
+  }
   return (r.entry_exit?.decision ?? null) === d;
 }
 
@@ -250,7 +269,8 @@ export function SepaPage() {
   // Filters persist across reloads — reading the page should always pick up
   // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
   const FILTER_DEFAULTS: SepaFilters = {
-    rating: 'ALL', setup: 'ALL', decision: 'ALL', rsMin: 70, search: '', showAll: true,
+    rating: 'ALL', setup: 'ALL', decision: 'ALL', breakoutWindow: 'TODAY',
+    rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
     // Default OFF — opt-in toggle. Some users want to see distributing
@@ -408,7 +428,7 @@ export function SepaPage() {
       // gate (is_buyable, pp.79-83/198-203) per user 2026-06-02 ("enter = buyable
       // at all cost"); Wait/Watch match the entry_exit.decision banner the card
       // shows. (Helper passesDecision keeps the two apply paths in sync.)
-      if (!passesDecision(r, filters.decision)) return false;
+      if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
       if (filters.search && !r.symbol.includes(filters.search)) return false;
       if (filters.dmEligibleOnly) {
@@ -719,7 +739,7 @@ export function SepaPage() {
     if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
     // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
     // gate (is_buyable); Wait/Watch match the entry_exit.decision banner.
-    if (!passesDecision(r, filters.decision)) return false;
+    if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
     if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
     if (filters.search && !r.symbol.includes(filters.search)) return false;
     if (filters.dmEligibleOnly) {

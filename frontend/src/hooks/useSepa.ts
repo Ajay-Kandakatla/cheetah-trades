@@ -152,6 +152,11 @@ export type SepaCandidate = {
     vol_dryup: number | null;
     is_drying_up: boolean;
     high_vol_breakout: boolean;
+    /** Bars since the most recent volume-confirmed breakout within the last 15
+     *  (0 = today, null = none in window). Powers the FE 'Breakout: ≤1wk'
+     *  toggle — a name may have broken out earlier in the week. Same-day value
+     *  equals `high_vol_breakout`. See backend/sepa/volume.py. */
+    days_since_breakout?: number | null;
     /** Added 2026-05-21 with the volume detector v2 — see
      *  backend/sepa/volume.py. Fields are optional so older cached
      *  candidate dicts without them still render. */
@@ -254,6 +259,11 @@ export type SepaCandidate = {
    *  VOLUME-CONFIRMED breakout (high_vol_breakout OR pocket_pivot). This is
    *  the "Enter = buyable" the decision filter binds to. */
   is_buyable?: boolean;
+  /** `is_buyable` MINUS the same-day volume-breakout trigger — Trend Template +
+   *  Stage 2 + setup + not-late + liquid. The "set up, waiting for the trigger"
+   *  tier. Combined with `volume.days_since_breakout` it powers the FE
+   *  'Breakout: ≤1wk / Any' Enter toggle. See backend/sepa/scanner._is_setup_ready. */
+  setup_ready?: boolean;
   /** Distance from entry to the suggested stop, in %. Present when a setup
    *  with a stop exists. */
   risk_to_stop_pct?: number | null;

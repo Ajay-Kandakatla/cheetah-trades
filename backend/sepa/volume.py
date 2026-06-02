@@ -63,6 +63,15 @@ CMF_OUTFLOW_THRESHOLD       = -0.10
 #   "down days on ABOVE-AVERAGE volume"). Symmetric with accumulation.
 DIST_DAY_DOWN_PCT           = -0.002
 DIST_DAY_LOOKBACK           = 25
+# How far back to look for a high-volume breakout when reporting recency.
+# `high_vol_breakout` is the SAME-DAY (last bar) flag the strict is_buyable
+# gate uses (book p.203). `days_since_breakout` additionally reports how many
+# bars ago the most recent volume-confirmed breakout fired within this window
+# (0 = today, None = none in window) so the FE 'Breakout: ≤1wk / Any' toggle
+# can admit a name that broke out earlier in the week. The 15-bar cap is a
+# pragmatic recency horizon, NOT a verbatim book number — the canonical buy
+# point remains the breakout day itself.
+BREAKOUT_RECENCY_LOOKBACK   = 15
 # Day-count BACKSTOP (2026-05-31): volume is the primary distribution signal;
 # the day count only acts as a safety net for a slow persistent bleed, and
 # only when down-volume isn't being out-traded (ratio < 1). Raised from the
@@ -309,6 +318,26 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
         and last_close > recent_high
     )
 
+    # Breakout RECENCY (2026-06-02): the same `breakout` test, vectorized across
+    # the trailing window, so the FE can admit a name whose volume-confirmed
+    # breakout fired earlier in the week (not just on the last bar). A bar is a
+    # breakout if its volume > 1.5× the trailing 50-day average AND its close
+    # exceeds the highest close of the prior 21 bars. days_since_breakout = bars
+    # since the most recent such bar within BREAKOUT_RECENCY_LOOKBACK (0 = today,
+    # None = none in window). At the last bar this matches `breakout` exactly.
+    days_since_breakout = None
+    try:
+        vol_avg50 = v.rolling(50).mean()
+        prior_high_21 = c.rolling(21).max().shift(1)
+        bo_series = (vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)
+        window = bo_series.iloc[-BREAKOUT_RECENCY_LOOKBACK:]
+        for k, fired in enumerate(reversed(list(window.values))):
+            if bool(fired):
+                days_since_breakout = k          # 0 = today, 1 = yesterday, ...
+                break
+    except Exception:
+        days_since_breakout = None
+
     # --- new signals (2026-05-21 upgrade) ---
     cmf_info = _chaikin_money_flow(df, period=20)
     cmf = cmf_info.get("cmf")
@@ -331,6 +360,7 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
         "vol_dryup":             round(dryup, 2) if dryup is not None else None,
         "is_drying_up":          bool(dryup is not None and dryup < 0.7),
         "high_vol_breakout":     bool(breakout),
+        "days_since_breakout":   days_since_breakout,   # 0=today, None=no breakout in last 15 bars
         "last_vol":              int(last_vol),
         "avg_vol_50":            int(avg50),
         # New fields — additive, no rename of existing keys.
