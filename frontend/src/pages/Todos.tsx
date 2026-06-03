@@ -464,6 +464,13 @@ function TodoRow({ todo, onToggle, onRemove, onUpdate, onRunAi }: {
                 </span>
               )}
               {todo.text}
+              {todo.url && (
+                <a href={todo.url} target="_blank" rel="noopener noreferrer"
+                   onClick={(e) => e.stopPropagation()}
+                   style={{ marginLeft: 6, fontSize: '0.72rem', color: '#38bdf8', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  open ↗
+                </a>
+              )}
             </div>
             {/* AI brief — shown below the title for completed AI rows.
                 Lets the user scan the answer without expanding the
