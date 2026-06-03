@@ -62,6 +62,7 @@ const MorningBrief                = lazyWithReload(() => import('./pages/Morning
 const OvernightPage               = lazyWithReload(() => import('./pages/Overnight').then(m => ({ default: m.OvernightPage })));
 const SupplyDemandPage            = lazyWithReload(() => import('./pages/SupplyDemand').then(m => ({ default: m.SupplyDemandPage })));
 const PortfolioPage               = lazyWithReload(() => import('./pages/Portfolio'));
+const LeaderboardPage             = lazyWithReload(() => import('./pages/Leaderboard').then(m => ({ default: m.LeaderboardPage })));
 const CatalystsPage               = lazyWithReload(() => import('./pages/Catalysts').then(m => ({ default: m.CatalystsPage })));
 const TrackPage                   = lazyWithReload(() => import('./pages/Track'));
 const WatchlistPage               = lazyWithReload(() => import('./pages/Watchlist'));
@@ -234,6 +235,7 @@ export function App() {
             <Route path="/day-trading"    element={<FeatureRoute feature="day-trading"><DayTrading /></FeatureRoute>} />
             <Route path="/supply-demand"  element={<FeatureRoute feature="supply-demand"><SupplyDemandPage /></FeatureRoute>} />
             <Route path="/portfolio"      element={<FeatureRoute feature="portfolio"><PortfolioPage /></FeatureRoute>} />
+            <Route path="/leaderboard"    element={<FeatureRoute feature="leaderboard"><LeaderboardPage /></FeatureRoute>} />
             <Route path="/catalysts"      element={<FeatureRoute feature="catalysts"><CatalystsPage /></FeatureRoute>} />
             <Route path="/track"          element={<FeatureRoute feature="track"><TrackPage /></FeatureRoute>} />
             <Route path="/watchlist"      element={<FeatureRoute feature="watchlist"><WatchlistPage /></FeatureRoute>} />

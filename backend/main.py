@@ -1926,6 +1926,19 @@ async def sepa_leaderboard(n: int = Query(12, ge=1, le=30),
     return JSONResponse(data)
 
 
+@app.get("/sepa/top-picks/tracker")
+async def sepa_top_picks_tracker(n: int = Query(5, ge=1, le=12),
+                                 days: int = Query(14, ge=1, le=45),
+                                 granularity: str = Query("daily")):
+    """How the Top-Picks set has churned over time — streak / first-seen / score
+    trend for the current picks, plus per-scan (or per-day) entered/dropped.
+    Reconstructed from scan history (same data as the leaderboard); feeds the
+    Leaderboard page's Top-Picks tracker tabs."""
+    from sepa import top_picks_history as _tph
+    data = await asyncio.to_thread(_tph.top_picks_tracker, n, days, granularity)
+    return JSONResponse(data)
+
+
 @app.get("/sepa/rank-history/{symbol}")
 async def sepa_rank_history(symbol: str,
                             days: int = Query(30, ge=1, le=45),

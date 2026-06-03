@@ -107,6 +107,10 @@ FEATURE_CATALOG: list[dict] = [
     # auto-bypass via the universal owner-feature grant (see get_user_features).
     # Friends can be granted via /admin/access; positions are per-user.
     {"id": "portfolio",     "label": "Portfolio",           "group": "daily",     "default": False},
+    # Dedicated rank home (2026-06-03): Top Picks (+ volume-deviation metrics),
+    # the Top-Picks churn tracker, honourable mentions and the rank-compare chart.
+    # Primary nav next to Portfolio — Ajay checks ranking daily. Owner-only default.
+    {"id": "leaderboard",   "label": "Leaderboard",         "group": "daily",     "default": False},
     {"id": "catalysts",     "label": "Catalysts",           "group": "tools",     "default": False},
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},

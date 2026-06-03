@@ -20,7 +20,32 @@ type Pick = {
   buy?: number | null;
   stop?: number | null;
   why?: string;
+  // confidence metrics (backend sepa/top_picks._metrics)
+  vol_x?: number | null;            // today vol ÷ 50-day avg — volume deviation
+  vol_dryup?: number | null;
+  ud_ratio?: number | null;
+  accumulation?: string | null;
+  dist_to_pivot_pct?: number | null;
+  risk_pct?: number | null;
+  tightness?: number | null;        // VCP final contraction %
 };
+
+function volTone(v?: number | null): string {
+  if (v == null) return 'dim';
+  if (v >= 1.5) return 'hot';        // breakout-level participation
+  if (v >= 1.0) return 'warm';
+  return 'cool';                     // below average — thin
+}
+function accTone(a?: string | null): string {
+  if (a === 'strong' || a === 'accumulating') return 'good';
+  if (a === 'distributing') return 'bad';
+  return 'dim';
+}
+function pivotLabel(d?: number | null): string {
+  if (d == null) return '—';
+  if (Math.abs(d) < 0.5) return 'at pivot';
+  return d > 0 ? `+${d}% past` : `${d}% to piv`;
+}
 type Resp = {
   picks: Pick[];
   as_of?: number | null;
@@ -86,6 +111,33 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
                   buy {p.buy != null ? `$${p.buy}` : '—'}
                   {p.stop != null ? ` · stop $${p.stop}` : ''}
                   {p.rs_rank != null ? ` · RS ${p.rs_rank}` : ''}
+                </div>
+                <div className="top-pick__metrics mono">
+                  <span className="tpm" data-tone={volTone(p.vol_x)}
+                        title="Today's bar volume ÷ its own 50-day average (volume deviation / relative volume). ≥1.5× = breakout-level participation.">
+                    Vol {p.vol_x != null ? `${p.vol_x}×` : '—'}
+                  </span>
+                  {p.accumulation && (
+                    <span className="tpm" data-tone={accTone(p.accumulation)}
+                          title={`Up/down volume pressure${p.ud_ratio != null ? ` · U/D ${p.ud_ratio}` : ''}`}>
+                      {p.accumulation}
+                    </span>
+                  )}
+                  <span className="tpm" data-tone={p.dist_to_pivot_pct != null && p.dist_to_pivot_pct > 3 ? 'cool' : 'dim'}
+                        title="Close vs the pivot (entry). Past pivot = already triggered; below = still coiling.">
+                    {pivotLabel(p.dist_to_pivot_pct)}
+                  </span>
+                  {p.risk_pct != null && (
+                    <span className="tpm" data-tone="dim" title="Entry (pivot) → stop distance — the per-share risk on a buy.">
+                      risk {p.risk_pct}%
+                    </span>
+                  )}
+                  {p.tightness != null && (
+                    <span className="tpm" data-tone={p.tightness <= 5 ? 'good' : 'dim'}
+                          title="VCP final contraction % — tighter coil = lower-risk pivot.">
+                      tight {p.tightness}%
+                    </span>
+                  )}
                 </div>
               </Link>
             );

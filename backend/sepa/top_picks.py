@@ -59,6 +59,37 @@ def _why(row: dict) -> str:
     return " · ".join(str(b) for b in bits)
 
 
+def _metrics(row: dict) -> dict:
+    """Confidence metrics for the card (Ajay 2026-06-03: "build confidence from
+    ranking — add volume deviation and other important indicators"). All read off
+    fields the scanner already computes — no new math:
+
+      vol_x        today's bar volume ÷ its own 50-day avg (volume DEVIATION /
+                   relative volume — the same surge multiple that decides
+                   high_vol_breakout at 1.5×; >1 = above-average participation).
+      vol_dryup    10-day avg ÷ 50-day avg (<0.7 = volume drying into the base).
+      ud_ratio     up/down volume ratio (accumulation pressure, volume.py p.~).
+      accumulation strong/accumulating/neutral/distributing.
+      dist_to_pivot how far close is past (+) or below (−) the pivot, %.
+      risk_pct     entry(pivot)→stop distance, % — the per-share risk on a buy.
+      tightness    VCP final-contraction %, smaller = tighter coil.
+    """
+    v = row.get("volume") or {}
+    vcp = row.get("vcp") or {}
+    es = row.get("entry_setup") or {}
+    last_vol, avg50 = v.get("last_vol"), v.get("avg_vol_50")
+    pivot, close, stop = es.get("pivot"), row.get("last_close"), es.get("stop")
+    return {
+        "vol_x":        round(last_vol / avg50, 2) if (last_vol and avg50) else None,
+        "vol_dryup":    v.get("vol_dryup"),
+        "ud_ratio":     v.get("up_down_vol_ratio"),
+        "accumulation": v.get("accumulation_strength"),
+        "dist_to_pivot_pct": round((close / pivot - 1) * 100, 1) if (pivot and close) else None,
+        "risk_pct":     round((pivot - stop) / pivot * 100, 1) if (pivot and stop) else None,
+        "tightness":    vcp.get("final_contraction_pct"),
+    }
+
+
 def _pick(row: dict, status: str) -> dict:
     ee = row.get("entry_exit") or {}
     es = row.get("entry_setup") or {}
@@ -78,6 +109,7 @@ def _pick(row: dict, status: str) -> dict:
         "buy_zone_lo": (ee.get("entry") or {}).get("zone_lo") if ee else None,
         "stop":        es.get("stop"),
         "why":         _why(row),
+        **_metrics(row),
     }
 
 

@@ -997,6 +997,56 @@ tr:last-child td { border-bottom: none; }
 .top-pick__buy { font-size: 0.72rem; color: #cbd5e1; margin-top: 0.2rem; }
 .top-picks__foot { font-size: 0.66rem; color: var(--cm-slate, #64748b); margin: 0.5rem 0 0; opacity: 0.8; }
 
+/* Top-pick confidence metrics row — volume deviation, dist-to-pivot, risk, tightness. */
+.top-pick__metrics { display: flex; flex-wrap: wrap; gap: 0.28rem; margin-top: 0.4rem; }
+.tpm { font-size: 0.62rem; padding: 0.05rem 0.34rem; border-radius: 5px; white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); color: var(--cm-slate, #94a3b8); }
+.tpm[data-tone="hot"]  { color: #10b981; border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.08); }
+.tpm[data-tone="warm"] { color: #eab308; border-color: rgba(234,179,8,0.4); }
+.tpm[data-tone="cool"] { color: #93c5fd; border-color: rgba(147,197,253,0.3); }
+.tpm[data-tone="good"] { color: #34d399; border-color: rgba(52,211,153,0.4); }
+.tpm[data-tone="bad"]  { color: #f87171; border-color: rgba(248,113,113,0.45); }
+.tpm[data-tone="dim"]  { color: var(--cm-slate, #94a3b8); }
+
+/* Top-Picks tracker (streak + churn / daily timeline) on the Leaderboard page. */
+.tpt { border: 1px solid var(--hairline, #222); border-radius: 12px; padding: 0.7rem 0.8rem; margin: 0.6rem 0 0.4rem;
+  background: linear-gradient(180deg, rgba(234,179,8,0.04), transparent 60%); }
+.tpt__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.tpt__tabs, .tpt__gran { display: inline-flex; gap: 0.2rem; }
+.tpt__tabs button, .tpt__gran button { font: inherit; font-size: 0.7rem; cursor: pointer; background: transparent;
+  color: var(--cm-slate, #94a3b8); border: 1px solid var(--hairline, #2a2a2a); border-radius: 6px; padding: 0.12rem 0.5rem; }
+.tpt__gran button { font-size: 0.64rem; padding: 0.08rem 0.4rem; }
+.tpt__tabs button.is-on, .tpt__gran button.is-on { color: #0b0b0b; background: #eab308; border-color: #eab308; }
+.tpt__bar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0.45rem 0 0.4rem; flex-wrap: wrap; }
+.tpt__sub { font-size: 0.72rem; color: #9aa8c8; line-height: 1.3; }
+.tpt__msg { font-size: 0.78rem; color: #9aa8c8; margin: 0.6rem 0; }
+.tpt__list { display: flex; flex-direction: column; gap: 0.18rem; }
+.tpt__row { display: grid; grid-template-columns: 2.6rem 3.2rem 4rem auto 1fr auto; align-items: center;
+  gap: 0.4rem; padding: 0.26rem 0.3rem; border-radius: 7px; text-decoration: none; color: inherit; }
+.tpt__row:hover { background: rgba(255,255,255,0.03); }
+.tpt__streakbadge { font-size: 0.8rem; font-weight: 700; color: #cbd5e1; text-align: center; }
+.tpt__streakbadge[data-strong="1"] { color: #10b981; }
+.tpt__sym { font-size: 0.9rem; font-weight: 700; }
+.tpt__score { font-size: 0.78rem; color: #cbd5e1; }
+.tpt__status { font-size: 0.6rem; padding: 0.04rem 0.36rem; border: 1px solid currentColor; border-radius: 999px; white-space: nowrap; }
+.tpt__since { font-size: 0.68rem; color: var(--cm-slate, #94a3b8); text-align: right; white-space: nowrap; }
+.tpt__new { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.04em; color: #0b0b0b; background: #10b981; padding: 0.05rem 0.3rem; border-radius: 4px; }
+.tpt__churn { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.55rem;
+  border-top: 1px dashed var(--hairline, #2a2a2a); padding-top: 0.5rem; }
+.tpt__churn-col { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+.tpt__churn-h { font-size: 0.66rem; width: 100%; margin-bottom: 0.1rem; }
+.tpt__churn-none { font-size: 0.72rem; color: var(--cm-slate, #64748b); }
+.tpt__chip { font-size: 0.7rem; font-weight: 600; text-decoration: none; padding: 0.07rem 0.4rem; border-radius: 5px;
+  border: 1px solid var(--hairline, #2a2a2a); color: #cbd5e1; }
+.tpt__chip--in { color: #10b981; border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.08); }
+.tpt__chip--out { color: #f87171; border-color: rgba(248,113,113,0.4); opacity: 0.75; text-decoration: line-through; }
+.tpt__daily { display: flex; flex-direction: column; gap: 0.3rem; }
+.tpt__day { display: grid; grid-template-columns: 4rem 1fr; align-items: start; gap: 0.5rem;
+  padding: 0.28rem 0.2rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.tpt__day-date { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); padding-top: 0.12rem; }
+.tpt__day-picks { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.tpt__foot { font-size: 0.66rem; color: var(--cm-slate, #64748b); margin: 0.5rem 0 0; opacity: 0.8; }
+
 /* SEPA Rank Leaderboard — honourable mentions on the portfolio page. */
 .rank-lb { border: 1px solid var(--hairline, #222); border-radius: 12px; padding: 0.7rem 0.8rem;
   margin: 0.5rem 0 0.4rem; background: rgba(255,255,255,0.012); }
