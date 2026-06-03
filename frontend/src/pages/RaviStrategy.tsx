@@ -3,7 +3,8 @@
    where volZ = (volume-avgVol)/stdVol and volRatio = volume/avgVol over a 20-bar
    window. Backend: /ravi/scan (cached 15 min). */
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { openTickerWithModifier } from '../components/TickerLink';
 import { API } from '../lib/apiBase';
 
 type Row = {
@@ -32,6 +33,7 @@ const rankColor = (r: number): string =>
 
 export function RaviStrategyPage() {
   const nav = useNavigate();
+  const location = useLocation();
   const [minRank, setMinRank] = useState(0);
   const [breakoutThresh, setBreakoutThresh] = useState(2.0);
   const [mode, setMode] = useState('broad');
@@ -130,9 +132,9 @@ export function RaviStrategyPage() {
             {rows.map((r, i) => (
               <tr
                 key={r.symbol}
-                onClick={() => nav(`/sepa/${r.symbol}`)}
+                onClick={(e) => openTickerWithModifier(e, nav, location, r.symbol, 'Ravi')}
                 style={{ cursor: 'pointer', borderTop: '1px solid var(--rule, #222)' }}
-                title={`${r.name} — volume ${fmtVol(r.volume)} vs ${fmtVol(r.avg_vol)} avg · raw ${r.raw_score} · open in SEPA detail`}
+                title={`${r.name} — volume ${fmtVol(r.volume)} vs ${fmtVol(r.avg_vol)} avg · raw ${r.raw_score} · click (Cmd-click = new tab) to open SEPA detail`}
               >
                 <td style={{ padding: '0.35rem 0.5rem', color: 'var(--cm-slate)' }}>{i + 1}</td>
                 <td style={{ padding: '0.35rem 0.5rem' }}>

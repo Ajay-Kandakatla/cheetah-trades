@@ -4,7 +4,9 @@
    the 52-week high. Spec: docs/supply_demand/per_stock_methodology.md.
    Backend: GET /supply-demand/stocks. */
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import type { MouseEvent } from 'react';
+import { openTickerWithModifier } from './TickerLink';
 import { useStockSupplyDemand, type StockSupplyDemandRow, type SDState } from '../hooks/useSupplyDemand';
 
 const STATE_META: Record<SDState, { dot: string; label: string; color: string }> = {
@@ -23,6 +25,7 @@ type SortKey = 'demand_score' | 'overhead_supply_pct' | 'pct_below_52w_high';
 
 export function StockSupplyDemandPanel() {
   const nav = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState('broad');
   const [stateFilter, setStateFilter] = useState<SDState | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('demand_score');
@@ -113,7 +116,7 @@ export function StockSupplyDemandPanel() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => <Row key={r.symbol} r={r} i={i} onClick={() => nav(`/sepa/${r.symbol}`)} />)}
+            {rows.map((r, i) => <Row key={r.symbol} r={r} i={i} onClick={(e) => openTickerWithModifier(e, nav, location, r.symbol, 'Supply / Demand')} />)}
           </tbody>
         </table>
       )}
@@ -137,7 +140,7 @@ function FilterChip({ active, onClick, label, color }:
   );
 }
 
-function Row({ r, i, onClick }: { r: StockSupplyDemandRow; i: number; onClick: () => void }) {
+function Row({ r, i, onClick }: { r: StockSupplyDemandRow; i: number; onClick: (e: MouseEvent) => void }) {
   const sm = STATE_META[r.state];
   const overhead = r.overhead_supply_pct;
   // Overhead color: green near 0 (clean runway) → red as it climbs.

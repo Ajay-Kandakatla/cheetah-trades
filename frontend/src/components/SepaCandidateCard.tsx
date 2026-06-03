@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 // Lazy — modal payload + per-ticker fetch only when the user clicks.
 // Keeps the list-view bundle slim since most users won't tap every
 // whale chip on every visit.
@@ -327,7 +328,22 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
       <header className="sepa-card__head">
         <div className="sepa-card__sym">
           <div className="sepa-card__sym-line">
-            <strong>{row.symbol}</strong>
+            {/* Real anchor so right-click → "Open in new tab", middle-click and
+                Cmd/Ctrl-click all work natively. Plain click is intercepted and
+                routed through the card's onSelect (which saves the list scroll
+                position), so in-place drill-in behaviour is unchanged. */}
+            <Link
+              to={`/sepa/${encodeURIComponent(row.symbol)}`}
+              className="sepa-card__sym-link"
+              onClick={(e) => {
+                e.stopPropagation();           // never double-fire the card onClick
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; // browser opens new tab
+                e.preventDefault();            // suppress default; do controlled in-place nav
+                onSelect();
+              }}
+            >
+              <strong>{row.symbol}</strong>
+            </Link>
             <WatchlistButton ticker={row.symbol} />
             {owned && (
               <span className="sepa-owned"
