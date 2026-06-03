@@ -1033,6 +1033,14 @@ tr:last-child td { border-bottom: none; }
 .rank-chart__sep { width: 1px; height: 1rem; background: var(--hairline, #2a2a2a); margin: 0 0.2rem; }
 .rank-chart__wrap { position: relative; }
 .rank-chart__svg { width: 100%; height: 248px; display: block; }
+/* dotted FLOOR baseline + crisp HTML axis labels (overlaid by %, never stretched) */
+.rank-chart__floor { stroke: rgba(148,163,184,0.4); stroke-width: 1; stroke-dasharray: 2 4; }
+.rank-chart__floor-tag { position: absolute; right: 14px; transform: translateY(-50%);
+  font-size: 0.58rem; letter-spacing: 0.05em; color: rgba(148,163,184,0.65); pointer-events: none; }
+.rank-chart__ylabel { position: absolute; left: 0; width: 4.2%; text-align: right; padding-right: 4px;
+  transform: translateY(-50%); font-size: 0.66rem; color: var(--cm-slate, #94a3b8); pointer-events: none; }
+.rank-chart__xlabel { position: absolute; font-size: 0.66rem; color: var(--cm-slate, #94a3b8);
+  white-space: nowrap; pointer-events: none; }
 .rank-chart__grid { stroke: rgba(255,255,255,0.06); stroke-width: 1; }
 .rank-chart__axis { fill: var(--cm-slate, #64748b); font-size: 10px; font-family: ui-monospace, monospace; }
 .rank-chart__rank { fill: none; stroke: #e2e8f0; stroke-width: 2; vector-effect: non-scaling-stroke;

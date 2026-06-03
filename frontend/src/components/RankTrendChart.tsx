@@ -1,9 +1,11 @@
 /* RankTrendChart — "TradingView for rank" on the SEPA detail page.
    How a stock moved through the SEPA ranking over a real TIMELINE (x = date),
-   rank inverted (#1 at top). Daily = last 30 days, Intraday = last 10 days
-   (the churn). Optional SCORE / PRICE overlays (off by default — clean rank
-   line). Markers: breakout / became-buyable / stage change. Gaps where the
-   stock fell out of the ranking are left as real gaps. Custom SVG, no chart dep. */
+   rank inverted (#1 at top). Daily = last 30 days, Intraday = last 10 days.
+   Axis labels are crisp HTML overlays (the SVG is stretched, so text never goes
+   in it). A dotted FLOOR baseline marks the bottom/out-of-ranking level so empty
+   stretches still read as "down here", not blank. Optional Score/Price overlays
+   (off by default). Markers: breakout / became-buyable / stage change. Gaps
+   (fell out of the ranking) stay as gaps — real values are never invented. */
 import { useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 
@@ -18,8 +20,8 @@ type Resp = {
   best_rank: number | null; worst_rank: number | null; current_rank: number | null;
 };
 
-const W = 760, H = 256;
-const PAD = { l: 38, r: 14, t: 16, b: 30 };
+const W = 760, H = 248;
+const PAD = { l: 34, r: 12, t: 14, b: 24 };        // gutters for HTML #labels (left) + dates (bottom)
 const PLOT_W = W - PAD.l - PAD.r;
 const PLOT_H = H - PAD.t - PAD.b;
 const RANK_COLOR = '#e2e8f0';
@@ -37,6 +39,8 @@ function fmtDate(tSec: number): string {
   const d = new Date(tSec * 1000);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
+const xPct = (x: number) => (x / W) * 100;
+const yPct = (y: number) => (y / H) * 100;
 
 export function RankTrendChart({ symbol }: { symbol: string }) {
   const [granularity, setGranularity] = useState<'daily' | 'intraday'>('daily');
@@ -65,7 +69,6 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
 
   const geom = useMemo(() => {
     const pts = (data?.points || []).filter((p) => p.t);
-    // x-axis = a real timeline: the last `windowDays` up to now.
     const nowSec = Math.floor(Date.now() / 1000);
     const tMax = Math.max(nowSec, ...pts.map((p) => p.t));
     const tMin = tMax - windowDays * 86400;
@@ -79,10 +82,10 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
     const yPrice = (p: number) => pMax === pMin ? PAD.t + PLOT_H / 2
       : PAD.t + (1 - (p - pMin) / (pMax - pMin)) * PLOT_H;
     const ticks = Array.from({ length: 6 }, (_, i) => tMin + (i / 5) * span);
-    return { pts, tMin, tMax, span, maxRank, x, yRank, yScore, yPrice, ticks };
+    const floorY = yRank(maxRank);
+    return { pts, tMin, tMax, span, maxRank, x, yRank, yScore, yPrice, ticks, floorY };
   }, [data, windowDays]);
 
-  // Path that BREAKS at null values (gaps = stock outside the ranked set).
   function linePath(yOf: (p: Pt) => number | null): string {
     let d = '', pen = false;
     geom.pts.forEach((p) => {
@@ -105,7 +108,6 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
 
   const hp = hover != null ? geom.pts[hover] : null;
   const rankTicks = [1, Math.round(geom.maxRank / 2), geom.maxRank];
-  // Last point that actually has a rank — the "now" dot.
   const lastRanked = [...geom.pts].reverse().find((p) => p.rank != null);
 
   return (
@@ -125,27 +127,16 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
 
       <div className="rank-chart__wrap">
         <svg viewBox={`0 0 ${W} ${H}`} className="rank-chart__svg" preserveAspectRatio="none">
-          {/* rank gridlines + #labels (#1 at top) */}
           {rankTicks.map((r) => (
-            <g key={r}>
-              <line x1={PAD.l} x2={W - PAD.r} y1={geom.yRank(r)} y2={geom.yRank(r)} className="rank-chart__grid" />
-              <text x={PAD.l - 6} y={geom.yRank(r) + 3} className="rank-chart__axis" textAnchor="end">#{r}</text>
-            </g>
+            <line key={r} x1={PAD.l} x2={W - PAD.r} y1={geom.yRank(r)} y2={geom.yRank(r)} className="rank-chart__grid" />
           ))}
-          {/* date axis */}
-          {geom.ticks.map((t, i) => (
-            <text key={i} x={geom.x(t)} y={H - 10} className="rank-chart__axis" textAnchor={i === 0 ? 'start' : i === 5 ? 'end' : 'middle'}>
-              {fmtDate(t)}
-            </text>
-          ))}
-          {/* overlays (under the rank line) */}
+          {/* dotted FLOOR baseline — the bottom/out-of-ranking level (always shown,
+              so empty stretches read as "down here" rather than blank). */}
+          <line x1={PAD.l} x2={W - PAD.r} y1={geom.floorY} y2={geom.floorY} className="rank-chart__floor" />
           {showScore && <path d={linePath((p) => (p.score != null ? geom.yScore(p.score) : null))} className="rank-chart__score" />}
           {showPrice && <path d={linePath((p) => (p.price != null ? geom.yPrice(p.price) : null))} className="rank-chart__price" />}
-          {/* rank line */}
           <path d={linePath((p) => (p.rank != null ? geom.yRank(p.rank) : null))} className="rank-chart__rank" />
-          {/* now dot */}
           {lastRanked && <circle cx={geom.x(lastRanked.t)} cy={geom.yRank(lastRanked.rank!)} r={3.2} className="rank-chart__dot" />}
-          {/* event markers */}
           {geom.pts.map((p, i) =>
             p.rank != null && p.events.length ? (
               <text key={i} x={geom.x(p.t)} y={geom.yRank(p.rank) - 6} textAnchor="middle"
@@ -154,9 +145,7 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
               </text>
             ) : null,
           )}
-          {/* hover guide */}
           {hp && <line x1={geom.x(hp.t)} x2={geom.x(hp.t)} y1={PAD.t} y2={PAD.t + PLOT_H} className="rank-chart__cursor" />}
-          {/* hit area — snap to nearest point by time */}
           <rect x={PAD.l} y={PAD.t} width={PLOT_W} height={PLOT_H} fill="transparent"
                 onMouseLeave={() => setHover(null)}
                 onMouseMove={(e) => {
@@ -168,8 +157,25 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
                 }} />
         </svg>
 
+        {/* crisp HTML axis labels (overlaid by %, never stretched) */}
+        {rankTicks.map((r) => (
+          <span key={r} className="rank-chart__ylabel mono"
+                style={{ top: `${yPct(geom.yRank(r))}%` }}>#{r}</span>
+        ))}
+        <span className="rank-chart__floor-tag mono" style={{ top: `${yPct(geom.floorY)}%` }}>out</span>
+        {geom.ticks.map((t, i) => (
+          <span key={i} className="rank-chart__xlabel mono"
+                style={{
+                  left: `${xPct(geom.x(t))}%`,
+                  top: `${yPct(PAD.t + PLOT_H + 9)}%`,
+                  transform: i === 0 ? 'none' : i === 5 ? 'translateX(-100%)' : 'translateX(-50%)',
+                }}>
+            {fmtDate(t)}
+          </span>
+        ))}
+
         {hp && (
-          <div className="rank-chart__tip" style={{ left: `${(geom.x(hp.t) / W) * 100}%` }}>
+          <div className="rank-chart__tip" style={{ left: `${xPct(geom.x(hp.t))}%` }}>
             <div className="rank-chart__tip-date mono">{hp.date}</div>
             <div className="mono">rank <b style={{ color: RANK_COLOR }}>{hp.rank != null ? `#${hp.rank}` : 'out'}</b>{hp.total ? <span className="rank-chart__tip-dim"> / {hp.total}</span> : null}</div>
             <div className="mono">score <b style={{ color: SCORE_COLOR }}>{hp.score ?? '—'}</b> · px <b style={{ color: PRICE_COLOR }}>{hp.price != null ? `$${hp.price}` : '—'}</b></div>
@@ -187,7 +193,7 @@ export function RankTrendChart({ symbol }: { symbol: string }) {
         <span style={{ color: EV.breakout.color }}>▲ breakout</span>
         <span style={{ color: EV.became_buyable.color }}>★ buyable</span>
         <span style={{ color: '#a78bfa' }}>◆ stage</span>
-        <span className="rank-chart__tip-dim">· gaps = fell out of the ranking</span>
+        <span className="rank-chart__tip-dim">· dotted floor = out of the ranking</span>
       </div>
       <p className="rank-chart__foot mono">Derived from SEPA scan history · not investment advice</p>
     </div>
