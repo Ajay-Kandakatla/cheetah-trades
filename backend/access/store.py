@@ -110,7 +110,7 @@ FEATURE_CATALOG: list[dict] = [
     # Dedicated rank home (2026-06-03): Top Picks (+ volume-deviation metrics),
     # the Top-Picks churn tracker, honourable mentions and the rank-compare chart.
     # Primary nav next to Portfolio — Ajay checks ranking daily. Owner-only default.
-    {"id": "leaderboard",   "label": "Leaderboard",         "group": "daily",     "default": False},
+    {"id": "leaderboard",   "label": "Leaderboard",         "group": "daily",     "default": False, "added_in": 2},
     {"id": "catalysts",     "label": "Catalysts",           "group": "tools",     "default": False},
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
@@ -151,6 +151,41 @@ FEATURE_CATALOG: list[dict] = [
 DEFAULT_FEATURES: set[str] = {f["id"] for f in FEATURE_CATALOG if f["default"]}
 RESTRICTED_FEATURES: set[str] = {f["id"] for f in FEATURE_CATALOG if not f["default"]}
 ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
+
+# ── Owner auto-grant of NEW pages (Ajay 2026-06-03: "by default when I build
+# pages, turn them on for me"). Implemented as authorization LOGIC, not a per-user
+# DB grant, so it can only be driven by a real catalog addition — never by a
+# stray write or injected instruction.
+#
+# Each catalog entry carries an `added_in` version (default 1). When an OWNER has
+# a customized (saved) feature set, get_user_features unions it with every feature
+# whose `added_in` exceeds the version they last "saw" — so a page added after
+# they decluttered shows up automatically, WITHOUT re-granting pages they hid on
+# purpose. set_user_features records the version they've seen.
+#
+# To add a new owner-visible page: add the catalog entry with `"added_in":
+# CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
+CATALOG_VERSION = 2
+OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
+
+
+def _added_in(entry: dict) -> int:
+    return int(entry.get("added_in", 1))
+
+
+def _features_added_after(version: int) -> set[str]:
+    """Catalog ids introduced after `version` — auto-granted to owners."""
+    return {e["id"] for e in FEATURE_CATALOG if _added_in(e) > version}
+
+
+def effective_features(saved: set[str], *, is_owner: bool, seen_version: int) -> set[str]:
+    """Pure: resolve a saved feature set into the EFFECTIVE set. Owners also get
+    any feature added to the catalog after `seen_version` (new pages appear by
+    default). Separated from Mongo so it's unit-testable."""
+    eff = {f for f in saved if f in ALL_FEATURE_IDS}
+    if is_owner:
+        eff |= _features_added_after(seen_version)
+    return eff
 
 
 # ----------------------------------------------------------------------
@@ -202,9 +237,11 @@ def get_user_features(email: str) -> set[str]:
 
     doc = db.user_features.find_one({"user_email": email_lc})
     if doc and isinstance(doc.get("features"), list):
-        # Saved overrides win — including for owners. Intersect with
-        # ALL_FEATURE_IDS to drop any orphaned ids from old catalogs.
-        return {f for f in doc["features"] if f in ALL_FEATURE_IDS}
+        # Saved overrides win — but OWNERS also auto-receive pages added to the
+        # catalog AFTER they last saved (see effective_features / CATALOG_VERSION),
+        # so a new page appears by default without re-granting ones they hid.
+        seen = int(doc.get("seen_catalog_version", OWNER_AUTO_BASELINE))
+        return effective_features(set(doc["features"]), is_owner=is_owner, seen_version=seen)
     # No saved doc: role-appropriate default.
     return set(ALL_FEATURE_IDS if is_owner else DEFAULT_FEATURES)
 
@@ -232,6 +269,7 @@ def set_user_features(
         {"$set": {
             "user_email":  email_lc,
             "features":    clean,
+            "seen_catalog_version": CATALOG_VERSION,   # records "owner has seen up to here"
             "updated_at":  now,
             "updated_by":  (updated_by or "").lower(),
         }},
