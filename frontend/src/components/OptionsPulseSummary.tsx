@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import type { MouseEvent } from 'react';
+import { openTickerWithModifier } from './TickerLink';
 import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
 
 /* ==========================================================================
@@ -24,6 +26,7 @@ type Props = {
 export function OptionsPulseSummary({ topN = 5 }: Props) {
   const { data, loading } = useOptionsPulse();
   const nav = useNavigate();
+  const location = useLocation();
 
   const { bullish, bearish, total } = useMemo(() => {
     const rows = data?.rows ?? [];
@@ -73,7 +76,7 @@ export function OptionsPulseSummary({ topN = 5 }: Props) {
               <span className="op-summary__col-tag op-summary__col-tag--bull">★ Bullish</span>
               <span className="mono op-summary__col-sub">crowd in puts → unwind = upside</span>
             </div>
-            {bullish.map((r) => <SoirRowMini key={r.symbol} r={r} onClick={() => nav(`/sepa/${r.symbol}`)} />)}
+            {bullish.map((r) => <SoirRowMini key={r.symbol} r={r} onClick={(e) => openTickerWithModifier(e, nav, location, r.symbol, 'Options Pulse')} />)}
           </div>
         )}
         {bearish.length > 0 && (
@@ -82,7 +85,7 @@ export function OptionsPulseSummary({ topN = 5 }: Props) {
               <span className="op-summary__col-tag op-summary__col-tag--bear">Bearish</span>
               <span className="mono op-summary__col-sub">crowd in calls → unwind = downside</span>
             </div>
-            {bearish.map((r) => <SoirRowMini key={r.symbol} r={r} onClick={() => nav(`/sepa/${r.symbol}`)} />)}
+            {bearish.map((r) => <SoirRowMini key={r.symbol} r={r} onClick={(e) => openTickerWithModifier(e, nav, location, r.symbol, 'Options Pulse')} />)}
           </div>
         )}
       </div>
@@ -90,7 +93,7 @@ export function OptionsPulseSummary({ topN = 5 }: Props) {
   );
 }
 
-function SoirRowMini({ r, onClick }: { r: SoirRow; onClick: () => void }) {
+function SoirRowMini({ r, onClick }: { r: SoirRow; onClick: (e: MouseEvent) => void }) {
   return (
     <button
       type="button"

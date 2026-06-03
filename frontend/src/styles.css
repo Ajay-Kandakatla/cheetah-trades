@@ -1434,6 +1434,10 @@ tr:last-child td { border-bottom: none; }
 }
 .sepa-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .sepa-card__sym { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+/* Ticker symbol is a real anchor (right-click / middle-click / Cmd-click → new
+   tab) but must look exactly like the old <strong> — no underline, inherit color. */
+.sepa-card__sym-link { color: inherit; text-decoration: none; }
+.sepa-card__sym-link:hover strong { text-decoration: underline; text-underline-offset: 2px; }
 /* Allow tags (S2·Advancing, LATE, ETF) to wrap onto a second line on tight
    cards instead of bleeding under the bell + score column on the right.
    row-gap stays small so the wrapped tags hug the ticker line. */
