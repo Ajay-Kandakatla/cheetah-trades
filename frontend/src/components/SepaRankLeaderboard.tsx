@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { leveragedEtfInfo } from '../lib/leveragedEtf';
 
 type Leader = {
   symbol: string;
@@ -66,6 +67,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
         {data.leaders.map((l) => {
           const f = FLAG[l.flag];
           const dropped = l.current_rank > l.best_rank + 5;
+          const lev = leveragedEtfInfo(l.symbol, l.name);
           return (
             <Link key={l.symbol} to={`/sepa/${l.symbol}`} className="rank-lb__row" title={
               `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
@@ -73,6 +75,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
               <span className="rank-lb__sym">{l.symbol}</span>
               <span className="rank-lb__traj mono">
+                {lev.isLeveraged && <span className="lev-badge" title="Leveraged/inverse ETF — not an individual stock; SEPA criteria don't apply">⚡ {lev.label}</span>}{lev.isLeveraged ? ' ' : ''}
                 best #{l.best_rank}
                 {dropped ? <span className="rank-lb__drop"> ↓ now #{l.current_rank}</span> : null}
               </span>

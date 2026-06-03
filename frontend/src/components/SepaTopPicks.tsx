@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { leveragedEtfInfo } from '../lib/leveragedEtf';
 
 type Pick = {
   symbol: string;
@@ -97,6 +98,7 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
         <div className="top-picks__list">
           {picks.map((p) => {
             const s = statusOf(p);
+            const lev = leveragedEtfInfo(p.symbol, p.name);
             return (
               <Link key={p.symbol} to={`/sepa/${p.symbol}`} className="top-pick" title={p.decision_reason || p.why || ''}>
                 <div className="top-pick__row">
@@ -106,6 +108,11 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
                     {s.label}
                   </span>
                 </div>
+                {lev.isLeveraged && (
+                  <div className="top-pick__lev" title="Leveraged/inverse ETF — daily-rebalance decay + amplified drawdown; SEPA/Minervini criteria don't apply.">
+                    <span className="lev-badge">⚡ {lev.label} · not a SEPA stock</span>
+                  </div>
+                )}
                 <div className="top-pick__why mono">{p.why}</div>
                 <div className="top-pick__buy mono">
                   buy {p.buy != null ? `$${p.buy}` : '—'}

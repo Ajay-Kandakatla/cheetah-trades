@@ -1008,6 +1008,15 @@ tr:last-child td { border-bottom: none; }
 .tpm[data-tone="bad"]  { color: #f87171; border-color: rgba(248,113,113,0.45); }
 .tpm[data-tone="dim"]  { color: var(--cm-slate, #94a3b8); }
 
+/* Leveraged / inverse ETF guardrail badge + detail-page warning. */
+.lev-badge { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.02em; color: #f59e0b; border: 1px solid rgba(245,158,11,0.5);
+  background: rgba(245,158,11,0.1); border-radius: 5px; padding: 0.04rem 0.34rem; white-space: nowrap; }
+.top-pick__lev { margin-top: 0.3rem; }
+.lev-warn { margin: 0.5rem 0; padding: 0.5rem 0.65rem; border: 1px solid rgba(245,158,11,0.45);
+  background: rgba(245,158,11,0.08); border-radius: 8px; color: #fbbf24; font-size: 0.78rem; line-height: 1.4; }
+.lev-warn b { color: #fcd34d; }
+
 /* Top-Picks tracker (streak + churn / daily timeline) on the Leaderboard page. */
 .tpt { border: 1px solid var(--hairline, #222); border-radius: 12px; padding: 0.7rem 0.8rem; margin: 0.6rem 0 0.4rem;
   background: linear-gradient(180deg, rgba(234,179,8,0.04), transparent 60%); }

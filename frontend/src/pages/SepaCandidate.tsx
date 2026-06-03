@@ -52,6 +52,7 @@ import type { TickerContext } from '../hooks/useSupplyDemand';
 // the multi-ticker /options page.
 import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
 import { API } from '../lib/apiBase';
+import { leveragedEtfInfo } from '../lib/leveragedEtf';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
@@ -496,6 +497,17 @@ export function SepaCandidatePage() {
               )}
             </div>
           )}
+          {(() => {
+            const lev = leveragedEtfInfo(symbol, data?.profile?.name);
+            return lev.isLeveraged ? (
+              <div className="lev-warn" role="note">
+                <b>⚡ {lev.label}</b> — a leveraged/inverse product, <b>not an individual stock</b>.
+                SEPA/Minervini criteria (earnings, sponsorship, VCP) don't apply; it carries
+                daily-rebalance volatility decay and 2–3× amplified drawdowns. The score/rank
+                reflects price action only — <b>not a buy signal</b>.
+              </div>
+            ) : null;
+          })()}
           {base && (
             <SepaScoreBar score={base.score ?? 0} rating={base.rating} size="md" />
           )}

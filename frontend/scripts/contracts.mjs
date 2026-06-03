@@ -72,6 +72,26 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'leveraged/inverse ETF guardrail flags 2x/3x products',
+    file: 'src/lib/leveragedEtf.ts',
+    // Minervini's framework is for individual STOCKS; leveraged/inverse ETFs
+    // (TECL, USD, TQQQ, SOXL…) have no fundamentals + daily-rebalance decay +
+    // 2–3× drawdowns. Lock the detector so the badge can't silently drop and let
+    // a 3× ETF read as a clean SEPA buy (TECL showed up Primed/#2, USD 100%).
+    checks: (src) => {
+      const errs = [];
+      if (!/export function leveragedEtfInfo/.test(src)) {
+        errs.push('leveragedEtfInfo export missing — the shared detector is gone');
+      }
+      for (const t of ['TECL', 'TQQQ', 'SOXL', 'USD', 'SPXL']) {
+        if (!src.includes(`'${t}'`)) errs.push(`curated leveraged ticker ${t} missing`);
+      }
+      if (!/Leveraged ETF/.test(src)) errs.push('"Leveraged ETF" label missing');
+      if (!/\[23\]/.test(src)) errs.push('the 2×/3× name pattern is missing');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
