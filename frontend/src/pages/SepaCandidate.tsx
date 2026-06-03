@@ -9,6 +9,7 @@ import { useWhalesFlow } from '../hooks/useWhalesFlow';
 import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
 import { RankTrendChart } from '../components/RankTrendChart';
+import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
@@ -1278,6 +1279,9 @@ export function SepaCandidatePage() {
                     <li>13G (180d): {data.insider.sc13g_180d}</li>
                   </ul>
                 ) : <p className="sepa-empty">No insider data.</p>}
+                {data.insider?.recent_filings && (
+                  <InsiderFilingTimeline recent={data.insider.recent_filings} />
+                )}
                 {data.ipo_age && (
                   <div className="sepa-callout mono">
                     IPO {data.ipo_age.first_trade_date} · {data.ipo_age.years_since_ipo}y old

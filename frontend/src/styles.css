@@ -842,6 +842,51 @@ tr:last-child td { border-bottom: none; }
 .sepa-kv li { padding: 2px 0; }
 .sepa-flag { color: var(--positive); font-weight: 700; }
 
+/* Insider filing timeline — dated vertical tape of SEC filings (Form 4 / 13D /
+   13G) on the SEPA detail insider tab. Newest first, with a left rule + dots. */
+.insf { margin-top: 0.7rem; }
+.insf__title {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cm-slate, #94a3b8); opacity: 0.8; margin-bottom: 0.45rem;
+}
+.insf__list {
+  list-style: none; margin: 0; padding: 0 0 0 0.7rem;
+  border-left: 1px solid var(--rule, var(--hairline, #333));
+  display: grid; gap: 0.4rem;
+}
+.insf__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: baseline;
+  column-gap: 0.55rem;
+  font-size: 0.8rem;
+  padding: 0.15rem 0;
+}
+.insf__dot {
+  position: absolute; left: calc(-0.7rem - 4px); top: 0.45rem;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--cm-slate, #64748b);
+  box-shadow: 0 0 0 2px var(--bg, #0d0d0d);
+}
+.insf__row--form4 .insf__dot { background: var(--cm-slate, #64748b); }
+.insf__row--13d   .insf__dot { background: var(--cm-amber, #d97706); }
+.insf__row--13g   .insf__dot { background: var(--cm-green, #22c55e); }
+.insf__date { color: var(--cm-slate, #94a3b8); font-size: 0.74rem; white-space: nowrap; }
+.insf__badge { font-weight: 600; white-space: nowrap; }
+.insf__row--13d   .insf__badge { color: var(--cm-amber, #d97706); }
+.insf__row--13g   .insf__badge { color: var(--cm-green, #22c55e); }
+.insf__who {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0; color: var(--ink, inherit); opacity: 0.92;
+}
+.insf__ago { color: var(--cm-slate, #94a3b8); font-size: 0.72rem; white-space: nowrap; }
+.insf__lnk {
+  color: var(--cm-mint, #6ee7b7); font-size: 0.7rem; text-decoration: none;
+  white-space: nowrap;
+}
+.insf__lnk:hover { text-decoration: underline; }
+
 /* ==========================================================================
    SEPA v2 — Hero, cards, drawer, score visuals
    ========================================================================== */
