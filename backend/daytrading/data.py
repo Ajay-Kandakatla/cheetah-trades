@@ -30,6 +30,34 @@ ET_RTH_OPEN = dtime(9, 30)
 ET_RTH_CLOSE = dtime(16, 0)
 ET_AFTERHOURS_CLOSE = dtime(20, 0)
 
+# ── Massive REST circuit-breaker ──────────────────────────────────────────
+# Massive's REST data API can go fully unresponsive (read-timeouts) while the
+# host still accepts connections, so each blocking fetch hangs for the whole
+# timeout and a watchlist poll multiplies that. The breaker trips after a few
+# consecutive failures and short-circuits subsequent fetches for a cooldown, so
+# a dead provider returns instantly (None) instead of stalling every caller.
+# 2026-06-03 — after a Massive REST outage froze the API event loop.
+_CB = {"fails": 0, "open_until": 0.0}
+_CB_TRIP_AFTER = 3
+_CB_COOLDOWN_SEC = 60.0
+_FETCH_TIMEOUT_SEC = 6          # was 20 — fail fast; Massive answers in <1s when healthy
+
+
+def _cb_is_open(now: float) -> bool:
+    """True while the breaker is tripped — skip the network call entirely."""
+    return now < _CB["open_until"]
+
+
+def _cb_record(ok: bool, now: float) -> None:
+    """Reset on success; trip after `_CB_TRIP_AFTER` consecutive failures."""
+    if ok:
+        _CB["fails"] = 0
+        _CB["open_until"] = 0.0
+    else:
+        _CB["fails"] += 1
+        if _CB["fails"] >= _CB_TRIP_AFTER:
+            _CB["open_until"] = now + _CB_COOLDOWN_SEC
+
 
 def _get_mongo_coll():
     try:
@@ -65,6 +93,9 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
     if not key:
         log.error("MASSIVE_API_KEY missing — cannot fetch intraday bars")
         return None
+    if _cb_is_open(time.time()):
+        log.debug("massive intraday: circuit open, skipping fetch for %s", symbol)
+        return None
     url = f"{BASE_URL}/v2/aggs/ticker/{symbol.upper()}/range/1/minute/{from_date}/{to_date}"
     rows = []
     next_url = url
@@ -72,15 +103,17 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
     page = 0
     while next_url:
         try:
-            r = requests.get(next_url, params=next_params, timeout=20)
+            r = requests.get(next_url, params=next_params, timeout=_FETCH_TIMEOUT_SEC)
         except Exception as exc:
             log.warning("massive intraday fetch failed for %s: %s", symbol, exc)
+            _cb_record(False, time.time())
             return None
         if r.status_code == 429:
             time.sleep(2)
             continue
         if r.status_code != 200:
             log.warning("massive intraday %s -> HTTP %s: %s", symbol, r.status_code, r.text[:200])
+            _cb_record(False, time.time())
             return None
         body = r.json() or {}
         rows.extend(body.get("results") or [])
@@ -95,6 +128,8 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
                 break
         else:
             next_url = None
+
+    _cb_record(True, time.time())     # provider responded 200 — reset the breaker
 
     if not rows:
         return None

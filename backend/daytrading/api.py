@@ -11,6 +11,7 @@ Routes:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -93,9 +94,9 @@ async def get_bars(symbol: str, days: int = Query(1, ge=1, le=10),
     """Return recent 1m bars + the indicators a chart needs (VWAP, ORB, prem H/L)."""
     end = datetime.utcnow().date()
     start = (datetime.utcnow() - timedelta(days=days * 2)).date()  # over-fetch to cover weekends
-    df = data_mod.load_intraday_range(symbol.upper(), start, end,
-                                      include_premarket=include_premarket,
-                                      include_afterhours=include_afterhours)
+    df = await asyncio.to_thread(data_mod.load_intraday_range, symbol.upper(), start, end,
+                                 include_premarket=include_premarket,
+                                 include_afterhours=include_afterhours)
     if df is None or df.empty:
         return JSONResponse({"symbol": symbol.upper(), "bars": [], "indicators": {}}, status_code=200)
 
@@ -151,7 +152,7 @@ async def signals_today(
     today = datetime.utcnow().date()
     out = []
     for s in syms:
-        df = data_mod.load_intraday(s, today, include_premarket=True)
+        df = await asyncio.to_thread(data_mod.load_intraday, s, today, include_premarket=True)
         if df is None or df.empty:
             continue
         for name in selected:
@@ -173,7 +174,7 @@ async def signals_symbol_today(symbol: str,
                                strategies: Optional[str] = Query(None)):
     selected = [s.strip() for s in strategies.split(",")] if strategies else list(_STRATEGIES.keys())
     today = datetime.utcnow().date()
-    df = data_mod.load_intraday(symbol.upper(), today, include_premarket=True)
+    df = await asyncio.to_thread(data_mod.load_intraday, symbol.upper(), today, include_premarket=True)
     if df is None or df.empty:
         return {"symbol": symbol.upper(), "signals": [], "reason": "no bars yet"}
     out = []
