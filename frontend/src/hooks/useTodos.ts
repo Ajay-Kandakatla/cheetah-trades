@@ -15,6 +15,8 @@ export type Todo = {
   completed_at: number | null;
   ticker: string | null;
   important: boolean;
+  /** Optional tappable resource link, rendered as an "open ↗" on the row. */
+  url?: string | null;
   /** New axis: 'personal' (default) | 'work'. Legacy rows without
    *  the field are treated as personal by the backend filter. */
   workspace?: Workspace;

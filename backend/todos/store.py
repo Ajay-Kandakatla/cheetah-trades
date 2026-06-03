@@ -49,6 +49,7 @@ def add_todo(text: str, *, user_email: str,
              important: bool = False,
              workspace: str = "personal",
              ai_task: bool = False,
+             url: Optional[str] = None,
              source: str = "manual") -> dict:
     """Insert a new todo. New fields (2026-05-17):
 
@@ -82,6 +83,9 @@ def add_todo(text: str, *, user_email: str,
         "completed_at": None,
         "ticker": ticker.upper() if ticker else None,
         "important": bool(important),
+        # Optional tappable link (2026-06-03) — e.g. a resource the suggestion
+        # points to. Rendered as an "open ↗" link on the todo row.
+        "url": (url or None) if (url and url.strip().startswith(("http://", "https://"))) else None,
         # New axes — workspace + source for grouping, ai_* for the
         # research-by-LLM pipeline (see todos/llm_runner.py).
         "workspace": workspace,
@@ -340,7 +344,7 @@ def update_todo(todo_id: str, patch: dict, *, user_email: str) -> dict:
     if db is None:
         return {"ok": False}
     from bson import ObjectId
-    allowed = {"text", "due_at", "notify_at", "ticker", "status", "important"}
+    allowed = {"text", "due_at", "notify_at", "ticker", "status", "important", "url"}
     update = {k: v for k, v in patch.items() if k in allowed}
     if "ticker" in update and update["ticker"]:
         update["ticker"] = update["ticker"].upper()

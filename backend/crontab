@@ -167,6 +167,11 @@
 # hour BEFORE the 7am digest so today's items show up in the digest.
 0      6     *    *    *    /usr/local/bin/python -m todos.daily_recurring
 #
+# Connect nudge — ONE gentle intimacy suggestion, once a week (Sun 10 AM ET),
+# rotating + tappable. Replaced the old aggressive setup (6 reminders, two daily)
+# after it was "too much noise" (2026-06-03). Idempotent within the week.
+0      10    *    *    0    /usr/local/bin/python -m todos.connect_nudge
+#
 # House — daily 8 AM ET scrape + push notification.
 # Scrapes Redfin/Zillow/Realtor for view+save+tour counts, diffs vs
 # yesterday, persists the daily snapshot, and pushes a per-user
