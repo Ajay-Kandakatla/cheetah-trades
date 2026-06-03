@@ -1268,13 +1268,23 @@ export function SepaCandidatePage() {
             {tab === 'insider' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>Insider activity</strong> from SEC filings. Form 4 = insider trades,
-                  13D = activist 5%+ stake, 13G = passive 5%+ stake.
+                  <strong>Insider activity</strong> from SEC filings, scoped to this issuer's
+                  CIK. Form 4 = insider trades; only open-market <em>purchases</em> (code P) by
+                  officers/directors count as buying — grants, option exercises and
+                  tax-withholding don't. 13D = activist 5%+ stake, 13G = passive 5%+ stake.
                 </div>
                 {data.insider ? (
                   <ul className="sepa-kv mono">
-                    <li>Form 4 (30d): <strong>{data.insider.form4_count_30d}</strong> · unique insiders: <strong>{data.insider.form4_unique_insiders_30d}</strong></li>
-                    {data.insider.form4_cluster_buy && <li className="sepa-flag sepa-flag--good">★ Cluster insider buying</li>}
+                    <li>Form 4 (30d): <strong>{data.insider.form4_count_30d}</strong> · distinct filers: <strong>{data.insider.form4_unique_insiders_30d}</strong></li>
+                    <li>
+                      Open-market: <strong className={(data.insider.form4_buy_count_30d ?? 0) > 0 ? 'sepa-flag sepa-flag--good' : undefined}>{data.insider.form4_buy_count_30d ?? 0} buy</strong>
+                      {(data.insider.form4_buy_count_30d ?? 0) !== 1 ? 's' : ''}
+                      {' · '}{data.insider.form4_sell_count_30d ?? 0} sell{(data.insider.form4_sell_count_30d ?? 0) !== 1 ? 's' : ''}
+                      {' · insider buyers: '}<strong>{data.insider.form4_insider_buyers_30d ?? 0}</strong>
+                    </li>
+                    {data.insider.form4_cluster_buy
+                      ? <li className="sepa-flag sepa-flag--good">★ Cluster insider buying — {data.insider.form4_insider_buyers_30d} officers/directors bought open-market</li>
+                      : <li className="sepa-muted">No open-market insider buying cluster</li>}
                     <li>13D (180d): {data.insider.sc13d_180d} {data.insider.has_recent_13d && '★ recent'}</li>
                     <li>13G (180d): {data.insider.sc13g_180d}</li>
                   </ul>

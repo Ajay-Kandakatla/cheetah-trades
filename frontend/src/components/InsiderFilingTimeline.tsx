@@ -1,20 +1,26 @@
 /* InsiderFilingTimeline — chronological tape of the SEC filings behind the
    insider-activity tab on the SEPA detail page.
 
-   Ajay 2026-06-03: "add a timeline of these filings." The summary counts
-   (Form 4 30d, 13D/13G 180d) were already there; this surfaces the actual
-   individual filings on a dated vertical timeline so he can see WHEN the
-   insider/institutional activity happened, not just how many.
+   Ajay 2026-06-03: "add a timeline of these filings", then "update accurately
+   to distinguish insiders." Each Form 4 row now shows the filer's relationship
+   (Officer / Director / 10% owner) and what the transaction actually was —
+   a real open-market Buy (green) vs a Sell (red) vs a grant / option-exercise /
+   tax-withholding (muted), so a routine comp event never reads as conviction.
 
    Data source: data.insider.recent_filings from sepa.insider.insider_activity():
      { form4: Filing[], "13d": Filing[], "13g": Filing[] }
-   where Filing = { form, filed (YYYY-MM-DD), display_names: string[], url }.
-   We merge all three buckets into one newest-first stream. */
+   Form 4 entries carry owner / relationship / title / txn / is_buy / is_sell. */
 
 type Filing = {
   form?: string | null;
   filed?: string | null;
   display_names?: string[] | null;
+  owner?: string | null;
+  relationship?: string | null;
+  title?: string | null;
+  txn?: string | null;
+  is_buy?: boolean | null;
+  is_sell?: boolean | null;
   url?: string | null;
 };
 
@@ -46,6 +52,17 @@ function agoLabel(filed?: string | null): string {
   return months <= 1 ? '1mo ago' : `${months}mo ago`;
 }
 
+/** Strip the "(CIK 0001234567)" suffix EDGAR appends to filer names. */
+function cleanName(s?: string | null): string {
+  return (s || '').replace(/\s*\(CIK\s*\d+\)\s*$/i, '').trim();
+}
+
+function txnClass(r: Row): string {
+  if (r.is_buy) return 'insf__txn--buy';
+  if (r.is_sell) return 'insf__txn--sell';
+  return 'insf__txn--neutral';
+}
+
 export function InsiderFilingTimeline({ recent }: { recent?: RecentFilings | null }) {
   if (!recent) return null;
 
@@ -66,27 +83,45 @@ export function InsiderFilingTimeline({ recent }: { recent?: RecentFilings | nul
       <ol className="insf__list">
         {rows.map((r, i) => {
           const meta = KIND_META[r.kind];
-          const who = (r.display_names ?? []).filter(Boolean).join(', ');
+          const who = cleanName(r.owner) || cleanName((r.display_names ?? [])[0]) || '—';
+          const rel = r.relationship && r.relationship !== '—' ? r.relationship : '';
           return (
             <li key={`${r.kind}-${r.filed}-${i}`} className={`insf__row ${meta.cls}`}>
               <span className="insf__dot" aria-hidden="true" />
-              <span className="insf__date mono">{r.filed}</span>
-              <span className="insf__badge">{meta.emoji} {meta.label}</span>
-              <span className="insf__who" title={who || undefined}>{who || '—'}</span>
-              <span className="insf__ago mono">{agoLabel(r.filed)}</span>
-              {r.url && (
-                <a
-                  className="insf__lnk"
-                  href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >SEC ↗</a>
-              )}
+              <div className="insf__main">
+                <div className="insf__line1">
+                  <span className="insf__date mono">{r.filed}</span>
+                  <span className="insf__badge">{meta.emoji} {meta.label}</span>
+                  <span className="insf__who" title={who}>{who}</span>
+                  {r.url && (
+                    <a
+                      className="insf__lnk"
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >SEC ↗</a>
+                  )}
+                </div>
+                <div className="insf__line2">
+                  {rel && (
+                    <span className="insf__rel" title={r.title || undefined}>
+                      {rel}{r.title ? ` · ${r.title}` : ''}
+                    </span>
+                  )}
+                  {r.txn && <span className={`insf__txn ${txnClass(r)}`}>{r.txn}</span>}
+                  <span className="insf__ago mono">{agoLabel(r.filed)}</span>
+                </div>
+              </div>
             </li>
           );
         })}
       </ol>
+      <div className="insf__legend mono">
+        <span className="insf__txn--buy">● Buy</span>
+        <span className="insf__txn--sell">● Sell</span>
+        <span className="insf__txn--neutral">● Grant / exercise / tax</span>
+      </div>
     </div>
   );
 }

@@ -227,14 +227,18 @@ async def _compute_insider(sym: str) -> dict:
         from sepa.insider import insider_activity
         full = await insider_activity(sym)
         return {
+            # cluster_buy now means real open-market buying by officers/directors
             "cluster_buy":          bool(full.get("form4_cluster_buy")),
             "unique_insiders_30d":  int(full.get("form4_unique_insiders_30d") or 0),
             "form4_count_30d":      int(full.get("form4_count_30d") or 0),
+            "buy_count_30d":        int(full.get("form4_buy_count_30d") or 0),
+            "insider_buyers_30d":   int(full.get("form4_insider_buyers_30d") or 0),
             "has_recent_13d":       bool(full.get("has_recent_13d")),
         }
     except Exception as exc:
         log.warning("card_enrichment._compute_insider(%s) failed: %s", sym, exc)
-        return {"cluster_buy": False, "unique_insiders_30d": 0, "form4_count_30d": 0}
+        return {"cluster_buy": False, "unique_insiders_30d": 0, "form4_count_30d": 0,
+                "buy_count_30d": 0, "insider_buyers_30d": 0}
 
 
 async def _compute_fundamentals(sym: str) -> dict:
