@@ -120,3 +120,58 @@ def rank_history(symbol: str, days: int = 30, granularity: str = "daily") -> dic
     }
     _cache[key] = {"data": data, "ts": time.time()}
     return data
+
+
+MAX_COMPARE = 12
+
+
+def rank_history_batch(symbols: list, days: int = 30, granularity: str = "daily") -> dict:
+    """Rank trajectories for SEVERAL symbols sharing one date axis — feeds the
+    multi-stock compare chart. Ranks each scan ONCE (qualifiers by score) and
+    reads every requested symbol off it, so cost is per-run not per-symbol."""
+    syms = [s.upper().strip() for s in (symbols or []) if s and s.strip()][:MAX_COMPARE]
+    granularity = granularity if granularity in ("daily", "intraday") else "daily"
+    key = ("batch", tuple(syms), days, granularity)
+    hit = _cache.get(key)
+    if hit and time.time() - hit["ts"] < _CACHE_TTL_SEC:
+        return hit["data"]
+
+    base = {"symbols": syms, "days": days, "granularity": granularity, "series": {}}
+    db = history._get_db()
+    if db is None or not syms:
+        return base
+
+    cutoff = int(time.time()) - days * 86400
+    runs = _select_runs(db, cutoff, granularity)          # oldest → newest
+    series: dict[str, list] = {s: [] for s in syms}
+    for run in runs:
+        snaps = list(db.candidate_snapshots.find(
+            {"scan_run_id": run["_id"]}, {"symbol": 1, "score": 1, "trend.pass_all": 1}))
+        quals = [s for s in snaps
+                 if s.get("score") is not None and (s.get("trend") or {}).get("pass_all")]
+        quals.sort(key=lambda s: -s["score"])
+        rankmap = {s["symbol"]: i + 1 for i, s in enumerate(quals)}
+        scoremap = {s["symbol"]: s["score"] for s in quals}
+        total = len(quals)
+        t, date = run.get("generated_at"), run.get("date_et")
+        for sym in syms:
+            r = rankmap.get(sym)
+            series[sym].append({
+                "t": t, "date": date, "rank": r, "total": total,
+                "score": round(float(scoremap[sym]), 1) if sym in scoremap else None,
+            })
+
+    out = {}
+    for sym in syms:
+        pts = series[sym]
+        ranked = [p["rank"] for p in pts if p["rank"]]
+        out[sym] = {
+            "points": pts,
+            "best_rank": min(ranked) if ranked else None,
+            "worst_rank": max(ranked) if ranked else None,
+            "current_rank": next((p["rank"] for p in reversed(pts) if p["rank"]), None),
+        }
+
+    data = {"symbols": syms, "days": days, "granularity": granularity, "series": out}
+    _cache[key] = {"data": data, "ts": time.time()}
+    return data

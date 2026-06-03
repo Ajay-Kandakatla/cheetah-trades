@@ -1937,6 +1937,18 @@ async def sepa_rank_history(symbol: str,
     return JSONResponse(data)
 
 
+@app.get("/sepa/rank-history-batch")
+async def sepa_rank_history_batch(symbols: str = Query(..., description="comma-separated tickers"),
+                                  days: int = Query(30, ge=1, le=45),
+                                  granularity: str = Query("daily")):
+    """Rank trajectories for several symbols on one shared date axis — feeds the
+    multi-stock rank-compare chart on the portfolio page."""
+    from sepa import rank_history as _rh
+    syms = [s for s in (symbols or "").split(",") if s.strip()]
+    data = await asyncio.to_thread(_rh.rank_history_batch, syms, days, granularity)
+    return JSONResponse(data)
+
+
 # ---------------------------------------------------------------------------
 # On-demand price alerts
 # ---------------------------------------------------------------------------
