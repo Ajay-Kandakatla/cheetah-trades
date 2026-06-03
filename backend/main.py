@@ -2377,27 +2377,26 @@ async def company_info(symbol: str, force: bool = Query(False)):
 # ============================================================================
 @app.get("/ravi/scan")
 async def ravi_scan(
-    min_beta: float = Query(1.2, description="Minimum 60-day beta vs SPY"),
-    lookback: int = Query(60, description="Beta lookback (trading days)"),
-    trend_length: int = Query(50, description="SMA length for the trend filter"),
-    require_trending: bool = Query(True, description="Require close > SMA(trend_length)"),
+    breakout_thresh: float = Query(2.0, description="volZ ≥ this flags a volume breakout"),
+    min_rank: float = Query(0.0, description="Drop rows with rank below this (0-100)"),
+    min_close: float = Query(10.0, description="Minimum share price"),
+    min_dollar_vol: float = Query(5_000_000.0, description="Minimum daily $ volume"),
     mode: str = Query("broad", description="Universe mode (broad/russell1000/curated/...)"),
 ):
-    """Run Ravi's high-beta + trend screen. Computed off cached daily bars;
-    15-min server cache, so the first call on the broad universe is slow but
-    repeat calls are instant."""
+    """Run Ravi's volume-surge rank (volume z-score formula, 0-100). Computed off
+    cached daily bars; 15-min server cache, so the first call on the broad
+    universe is slow but repeat calls are instant."""
     from sepa import ravi
     rows = await asyncio.to_thread(
-        ravi.scan, min_beta=min_beta, lookback=lookback,
-        trend_length=trend_length, require_trending=require_trending,
-        universe_mode=mode,
+        ravi.scan, universe_mode=mode, min_close=min_close,
+        min_dollar_vol=min_dollar_vol, breakout_thresh=breakout_thresh,
+        min_rank=min_rank,
     )
     return JSONResponse({
         "n": len(rows),
         "rows": rows,
-        "params": {"min_beta": min_beta, "lookback": lookback,
-                   "trend_length": trend_length, "require_trending": require_trending,
-                   "mode": mode},
+        "params": {"breakout_thresh": breakout_thresh, "min_rank": min_rank,
+                   "min_close": min_close, "min_dollar_vol": min_dollar_vol, "mode": mode},
     })
 
 
