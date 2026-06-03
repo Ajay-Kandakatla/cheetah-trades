@@ -1,6 +1,7 @@
-/* Ravi's Strategy — a high-beta + trend screen ported from a ThinkOrSwim
-   study. NOT Minervini: beta(60d, vs SPY, log returns) >= minBeta AND
-   close > 50-day SMA. Backend: /ravi/scan (cached 15 min). */
+/* Ravi's Strategy — volume-surge rank, ported verbatim from his ThinkOrSwim
+   study (user-provided 2026-06-02). rank = clamp(volZ*30 + volRatio*10, 0, 100)
+   where volZ = (volume-avgVol)/stdVol and volRatio = volume/avgVol over a 20-bar
+   window. Backend: /ravi/scan (cached 15 min). */
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -8,10 +9,16 @@ import { API } from '../lib/apiBase';
 type Row = {
   symbol: string;
   name: string;
-  beta: number;
+  rank: number;
+  raw_score: number;
+  vol_z: number;
+  vol_ratio: number;
+  volume: number;
+  avg_vol: number;
+  is_bullish: boolean;
+  is_flat: boolean;
+  is_breakout: boolean;
   close: number;
-  sma: number;
-  above_sma_pct: number | null;
   dollar_vol: number;
 };
 
@@ -20,10 +27,13 @@ const fmtVol = (n: number): string =>
   : n >= 1e6 ? `$${(n / 1e6).toFixed(0)}M`
   : `$${n.toLocaleString()}`;
 
+const rankColor = (r: number): string =>
+  r >= 80 ? '#10b981' : r >= 50 ? '#34d399' : r >= 25 ? '#eab308' : 'var(--cm-slate)';
+
 export function RaviStrategyPage() {
   const nav = useNavigate();
-  const [minBeta, setMinBeta] = useState(1.2);
-  const [trending, setTrending] = useState(true);
+  const [minRank, setMinRank] = useState(0);
+  const [breakoutThresh, setBreakoutThresh] = useState(2.0);
   const [mode, setMode] = useState('broad');
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,11 +41,9 @@ export function RaviStrategyPage() {
 
   const run = useCallback(() => {
     setLoading(true); setErr(null);
-    // URLSearchParams (not new URL()) — API is a relative/proxied base in
-    // prod, and new URL() throws "Invalid URL" without an absolute base.
     const qs = new URLSearchParams({
-      min_beta: String(minBeta),
-      require_trending: String(trending),
+      min_rank: String(minRank),
+      breakout_thresh: String(breakoutThresh),
       mode,
     });
     fetch(`${API}/ravi/scan?${qs.toString()}`)
@@ -43,41 +51,43 @@ export function RaviStrategyPage() {
       .then((j) => setRows(j.rows || []))
       .catch((e) => setErr(String(e?.message || e)))
       .finally(() => setLoading(false));
-  }, [minBeta, trending, mode]);
+  }, [minRank, breakoutThresh, mode]);
 
-  // Run once on mount.
   useEffect(() => { run(); /* eslint-disable-next-line */ }, []);
 
   return (
     <div className="cm-page" style={{ padding: '1.2rem 1.4rem', maxWidth: 1100, margin: '0 auto' }}>
       <header className="cm-pagehead" style={{ marginBottom: '0.6rem' }}>
-        <div className="eyebrow">№ — High-beta momentum screen</div>
+        <div className="eyebrow">№ — Volume-surge rank</div>
         <h1 className="display cm-pagehead__title" style={{ margin: '0.25rem 0 0' }}>
           Ravi's Strategy
         </h1>
         <p className="lede" style={{ marginTop: '0.4rem' }}>
-          High-beta + trend filter (ported from his ThinkOrSwim study). A stock
-          qualifies when its <strong>60-day beta vs SPY ≥ {minBeta.toFixed(1)}</strong>
-          {trending && <> and its <strong>close is above its 50-day SMA</strong></>}.
-          This is <em>not</em> the Minervini SEPA screen — it's a separate, purely
-          volatility-driven setup.
+          Volume-surge rank (ported verbatim from his ThinkOrSwim study). Each name
+          scores <strong>0–100</strong> from today's volume:
+          {' '}<code>rank = clamp(volZ·30 + volRatio·10, 0, 100)</code>, where
+          {' '}<strong>volZ</strong> is the 20-day volume z-score and
+          {' '}<strong>volRatio</strong> is volume ÷ its 20-day average. Higher = a
+          bigger, more unusual spike. <strong style={{ color: '#10b981' }}>⚡</strong> = volume
+          breakout (volZ ≥ {breakoutThresh.toFixed(1)}); <span style={{ color: '#10b981' }}>▲</span> up day,
+          {' '}<span style={{ color: 'var(--cm-slate)' }}>▬</span> flat. Not the Minervini SEPA screen.
         </p>
       </header>
 
-      {/* Controls */}
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: '0.9rem', alignItems: 'center',
         padding: '0.6rem 0.8rem', border: '1px solid var(--rule, #333)',
         borderRadius: 6, marginBottom: '0.9rem',
       }}>
         <label className="mono" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
-          Min beta ≥ {minBeta.toFixed(1)}
-          <input type="range" min={1.0} max={4.0} step={0.1} value={minBeta}
-                 onChange={(e) => setMinBeta(Number(e.target.value))} />
+          Min rank ≥ {minRank}
+          <input type="range" min={0} max={100} step={5} value={minRank}
+                 onChange={(e) => setMinRank(Number(e.target.value))} />
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem' }}>
-          <input type="checkbox" checked={trending} onChange={(e) => setTrending(e.target.checked)} />
-          require &gt; 50-day SMA
+        <label className="mono" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
+          Breakout volZ ≥ {breakoutThresh.toFixed(1)}
+          <input type="range" min={1.0} max={4.0} step={0.5} value={breakoutThresh}
+                 onChange={(e) => setBreakoutThresh(Number(e.target.value))} />
         </label>
         <select className="sepa-filterbar__select" value={mode} onChange={(e) => setMode(e.target.value)}>
           <option value="broad">Universe: Broad (~3.7k)</option>
@@ -87,19 +97,19 @@ export function RaviStrategyPage() {
         <button className="sepa-btn sepa-btn--primary" onClick={run} disabled={loading}>
           {loading ? 'Scanning…' : 'Scan'}
         </button>
-        {rows && <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--cm-slate)' }}>{rows.length} matches</span>}
+        {rows && <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--cm-slate)' }}>{rows.length} names</span>}
       </div>
 
       {err && <div className="sepa-err">Scan failed: {err}</div>}
       {loading && !rows && (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
-          Computing beta across the universe… the first broad scan can take a
-          minute (it's cached after).
+          Computing volume rank across the universe… the first broad scan can take
+          a minute (it's cached after).
         </div>
       )}
 
       {rows && rows.length === 0 && !loading && (
-        <div className="sepa-empty-card"><p>No names pass beta ≥ {minBeta.toFixed(1)}{trending ? ' and the 50-day trend filter' : ''}.</p></div>
+        <div className="sepa-empty-card"><p>No names with rank ≥ {minRank}.</p></div>
       )}
 
       {rows && rows.length > 0 && (
@@ -108,9 +118,11 @@ export function RaviStrategyPage() {
             <tr style={{ color: 'var(--cm-slate)', textAlign: 'right' }}>
               <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem' }}>#</th>
               <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem' }}>Symbol</th>
-              <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>Beta</th>
+              <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>Rank</th>
+              <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>volZ</th>
+              <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>×Avg</th>
+              <th style={{ textAlign: 'center', padding: '0.3rem 0.5rem' }}>Dir</th>
               <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>Close</th>
-              <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>vs 50-SMA</th>
               <th style={{ textAlign: 'right', padding: '0.3rem 0.5rem' }}>$ Vol</th>
             </tr>
           </thead>
@@ -120,18 +132,23 @@ export function RaviStrategyPage() {
                 key={r.symbol}
                 onClick={() => nav(`/sepa/${r.symbol}`)}
                 style={{ cursor: 'pointer', borderTop: '1px solid var(--rule, #222)' }}
-                title={`${r.name} — open in SEPA detail`}
+                title={`${r.name} — volume ${fmtVol(r.volume)} vs ${fmtVol(r.avg_vol)} avg · raw ${r.raw_score} · open in SEPA detail`}
               >
                 <td style={{ padding: '0.35rem 0.5rem', color: 'var(--cm-slate)' }}>{i + 1}</td>
                 <td style={{ padding: '0.35rem 0.5rem' }}>
                   <strong>{r.symbol}</strong>
-                  <span style={{ marginLeft: 8, color: 'var(--cm-slate)', fontSize: '0.7rem' }}>{r.name.slice(0, 32)}</span>
+                  {r.is_breakout && <span style={{ marginLeft: 6, color: '#10b981' }} title="Volume breakout">⚡</span>}
+                  <span style={{ marginLeft: 8, color: 'var(--cm-slate)', fontSize: '0.7rem' }}>{r.name.slice(0, 30)}</span>
                 </td>
-                <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 700, color: 'var(--cm-amber, #d97706)' }}>{r.beta.toFixed(2)}</td>
+                <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 700, color: rankColor(r.rank) }}>{r.rank}</td>
+                <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>{r.vol_z.toFixed(2)}</td>
+                <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>{r.vol_ratio.toFixed(1)}×</td>
+                <td style={{ padding: '0.35rem 0.5rem', textAlign: 'center' }}>
+                  {r.is_bullish ? <span style={{ color: '#10b981' }}>▲</span>
+                    : r.is_flat ? <span style={{ color: 'var(--cm-slate)' }}>▬</span>
+                    : <span style={{ color: '#ef4444' }}>▼</span>}
+                </td>
                 <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>${r.close.toFixed(2)}</td>
-                <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: (r.above_sma_pct ?? 0) >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
-                  {r.above_sma_pct != null ? `${r.above_sma_pct > 0 ? '+' : ''}${r.above_sma_pct}%` : '—'}
-                </td>
                 <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: 'var(--cm-slate)' }}>{fmtVol(r.dollar_vol)}</td>
               </tr>
             ))}
