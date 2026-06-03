@@ -133,7 +133,7 @@ function SoirSparkline({ history }: { history: SoirRow[] }) {
 }
 
 export function OptionsFlowPanel({ symbol }: { symbol: string }) {
-  const { data, loading, found } = useOptionsPulseForSymbol(symbol);
+  const { data, loading } = useOptionsPulseForSymbol(symbol);
   const { snapshots } = useSoirSymbolHistory(symbol, 90);
 
   // On-demand scan state. With Massive Options Advanced (2026-05-24+)
@@ -155,8 +155,11 @@ export function OptionsFlowPanel({ symbol }: { symbol: string }) {
     );
   }
 
-  // No SOIR data — offer to scan on-demand.
-  if (!found || !row) {
+  // No SOIR data — offer to scan on-demand. Gate on `row` only: an on-demand
+  // scan sets overrideData (→ row truthy) but does NOT flip `found` (that's from
+  // the initial GET), so gating on `!found` here kept showing the empty CTA even
+  // after a successful scan returned a full snapshot. (OGN bug 2026-06-03.)
+  if (!row) {
     return (
       <section style={containerStyle}>
         <Header symbol={symbol} />
