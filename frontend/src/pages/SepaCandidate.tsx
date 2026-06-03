@@ -417,7 +417,7 @@ export function SepaCandidatePage() {
   // Finnhub WS hasn't started streaming yet.
   const live = useLiveQuote(symbol);
   const currentLivePrice: number | null =
-    (typeof live?.last_price === 'number' ? live.last_price : null)
+    (typeof live?.last_price === 'number' && live.last_price > 0 ? live.last_price : null)
     ?? data?.last_close
     ?? null;
 
@@ -605,10 +605,14 @@ export function SepaCandidatePage() {
               when WS hasn't started streaming yet. */}
           {(currentLivePrice != null || live?.last_price != null) && (() => {
             const price = currentLivePrice;
-            const dayPct = live?.day_pct;
+            // A live tick of 0 (no trade yet / stale feed) is NOT a price — treat
+            // only a positive last_price as live, otherwise fall back to the real
+            // close and its day change instead of rendering $0.00. (NUE 2026-06-03:
+            // feed sent last_price 0, header showed "$0.00 · -0.56% · close".)
+            const isLive = typeof live?.last_price === 'number' && live.last_price > 0;
+            const dayPct = isLive ? live?.day_pct : (data?.day_change_pct ?? null);
             const prev = data?.last_close;
             const source = live?._source || '';
-            const isLive = !!(live?.last_price);
             // Color the delta by direction; gray when no delta info.
             const deltaColor =
               dayPct == null ? 'var(--cm-slate)' :
