@@ -128,9 +128,10 @@ export function useHoldings(enabled: boolean = true) {
   const [data, setData] = useState<HoldingsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
-  const load = useCallback(async (forceRefresh: boolean = false) => {
-    setLoading(true);
+  const load = useCallback(async (forceRefresh: boolean = false, silent: boolean = false) => {
+    if (!silent) setLoading(true);
     try {
       const url = `${API}/portfolio/holdings${forceRefresh ? '?refresh=true' : ''}`;
       const r = await fetch(url, { credentials: 'include' });
@@ -142,17 +143,23 @@ export function useHoldings(enabled: boolean = true) {
         throw new Error(`HTTP ${r.status} ${body}`);
       }
       setData((await r.json()) as HoldingsResponse);
+      setUpdatedAt(Date.now());
       setError(null);
     } catch (e) {
       setError(String(e));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
     load(false);
+    // Live: silent background refresh every 60s. The quotes overlay has a 60s
+    // cache TTL, so each poll picks up fresh prices + recomputed hold/sell
+    // verdicts. Silent = no loading flicker; keeps the last good rows on screen.
+    const id = setInterval(() => load(false, true), 60_000);
+    return () => clearInterval(id);
   }, [enabled, load]);
 
   const refresh = useCallback(async () => {
@@ -168,7 +175,7 @@ export function useHoldings(enabled: boolean = true) {
     await load(true);
   }, [load]);
 
-  return { data, loading, error, refresh };
+  return { data, loading, error, refresh, updatedAt };
 }
 
 // ────────────────────────────────────────────────────────────────────────

@@ -46,7 +46,7 @@ function pct(n: number | null | undefined): string {
 
 export default function PortfolioPage() {
   const navigate = useNavigate();
-  const { data, loading, error, refresh } = useHoldings(true);
+  const { data, loading, error, refresh, updatedAt } = useHoldings(true);
   const rows: HoldingRow[] = data?.rows ?? [];
 
   const removeHolding = async (sym: string) => {
@@ -98,6 +98,9 @@ export default function PortfolioPage() {
           <span>· value {money(totalValue)}</span>
           <span style={{ color: totalPL >= 0 ? '#10b981' : '#ef4444' }}>
             · open P&amp;L {money(totalPL, true)}
+          </span>
+          <span className="rank-lb__live" title={updatedAt ? `updated ${new Date(updatedAt).toLocaleTimeString()}` : 'live'}>
+            {' · '}<span className="dot">●</span> live
           </span>
         </div>
       )}
