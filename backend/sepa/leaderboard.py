@@ -59,6 +59,22 @@ def _rank_runs(db, cutoff: int) -> list[dict]:
     return out  # newest first
 
 
+def _drop_reason(stage, dist_days, accum) -> str:
+    """Human 'why the rank slipped', from the current scan's weakening signals,
+    most-severe first: a Stage downgrade > a distribution cluster (book p.76) >
+    volume turning, else a relative ease vs stronger peers. Pure → unit-testable.
+    Only meaningful for names whose rank fell well below their best."""
+    if stage is not None and stage != 2:
+        return f"Stage {stage} — advance stalling"
+    if dist_days is not None and dist_days >= 4:
+        return f"{dist_days} distribution days — institutions selling"
+    if accum == "distributing":
+        return "volume distributing — supply > demand"
+    if accum == "neutral":
+        return "demand cooled — volume neutral"
+    return "score eased vs stronger peers"
+
+
 def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
     """Pure: collapse ranked runs (newest first) + a live-status map into the
     sorted leaderboard rows. Separated from Mongo so it's unit-testable."""
@@ -81,6 +97,15 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
         ready = bool(cur.get("setup_ready"))
         flag = ("breaking_out" if buyable else "primed" if ready
                 else "volatile" if (worst - best) >= VOLATILE_RANGE else "steady")
+        vol = cur.get("volume") or {}
+        stage = cur.get("stage")
+        stage = stage.get("stage") if isinstance(stage, dict) else stage
+        last_vol = vol.get("last_vol")
+        avg50 = vol.get("avg_vol_50")
+        close = cur.get("last_close")
+        dist_days = vol.get("distribution_days_25")
+        accum = vol.get("accumulation_strength")
+        dropped = ranks[0] > best + 5            # rank fell well below its best
         rows.append({
             "symbol":        sym,
             "name":          cur.get("name"),
@@ -95,6 +120,14 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
             "persistence_pct": persistence,       # % of scans in the top TOP_TIER
             "status":        "buyable" if buyable else "ready" if ready else "watch",
             "flag":          flag,
+            # Enrichment (Ajay 2026-06-03 "add total volume + why these went down"):
+            "volume":        last_vol,                                          # today's share volume
+            "dollar_vol":    int(last_vol * close) if (last_vol and close) else None,
+            "vol_x":         round(last_vol / avg50, 2) if (last_vol and avg50) else None,  # relative vol
+            "stage":         stage,
+            "distribution_days": dist_days,
+            "accumulation":  accum,
+            "drop_reason":   _drop_reason(stage, dist_days, accum) if dropped else None,
         })
 
     # Honourable mentions: most consistently high first; ties → best rank.

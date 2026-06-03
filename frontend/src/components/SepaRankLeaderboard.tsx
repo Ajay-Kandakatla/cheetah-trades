@@ -28,8 +28,30 @@ type Leader = {
   persistence_pct: number;
   status: 'buyable' | 'ready' | 'watch';
   flag: 'breaking_out' | 'primed' | 'volatile' | 'steady';
+  // enrichment
+  volume?: number | null;
+  dollar_vol?: number | null;
+  vol_x?: number | null;
+  stage?: number | null;
+  distribution_days?: number | null;
+  accumulation?: string | null;
+  drop_reason?: string | null;
 };
 type Resp = { leaders: Leader[]; scans_in_window?: number; lookback_days?: number; top_tier?: number };
+
+function fmtVol(v?: number | null): string {
+  if (v == null) return '—';
+  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
+  return String(v);
+}
+function fmtDollar(v?: number | null): string {
+  if (v == null) return '';
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+  return `$${v}`;
+}
 
 const FLAG: Record<Leader['flag'], { label: string; color: string }> = {
   breaking_out: { label: 'Breaking out', color: '#10b981' },
@@ -125,7 +147,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
           const lev = leveragedEtfInfo(l.symbol, l.name);
           return (
             <Link key={l.symbol} to={`/sepa/${l.symbol}`} className="rank-lb__row" title={
-              `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · swing ${l.rank_range} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
+              `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · swing ${l.rank_range} · score ${l.current_score ?? '—'} · RS ${l.rs_rank ?? '—'} · vol ${fmtVol(l.volume)}${l.dollar_vol ? ' / ' + fmtDollar(l.dollar_vol) : ''} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
             }>
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
               <span className="rank-lb__sym">{l.symbol}</span>
@@ -133,6 +155,16 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
                 {lev.isLeveraged && <span className="lev-badge" title="Leveraged/inverse ETF — not an individual stock; SEPA criteria don't apply">⚡ {lev.label}</span>}{lev.isLeveraged ? ' ' : ''}
                 best #{l.best_rank}
                 {dropped ? <span className="rank-lb__drop"> ↓ now #{l.current_rank}</span> : null}
+                <span className="rank-lb__metrics">
+                  {l.current_score != null && <>score <b>{l.current_score}</b></>}
+                  {l.rs_rank != null && <> · RS {l.rs_rank}</>}
+                  {l.volume != null && (
+                    <> · vol {fmtVol(l.volume)}{l.vol_x != null && <span style={{ color: l.vol_x >= 1.5 ? '#10b981' : undefined }}> ×{l.vol_x}</span>}</>
+                  )}
+                  {l.stage != null && <> · <span style={{ color: l.stage !== 2 ? '#fb923c' : undefined }}>Stg {l.stage}</span></>}
+                  {l.distribution_days ? <> · <span style={{ color: l.distribution_days >= 4 ? '#fb923c' : undefined }}>{l.distribution_days} dist</span></> : null}
+                </span>
+                {l.drop_reason && <span className="rank-lb__why">↓ {l.drop_reason}</span>}
               </span>
               <span className="rank-lb__pers mono" title="% of days in the top tier">
                 {l.persistence_pct}%

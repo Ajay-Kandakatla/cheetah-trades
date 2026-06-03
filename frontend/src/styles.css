@@ -1064,13 +1064,16 @@ tr:last-child td { border-bottom: none; }
 .rank-lb__sub { font-size: 0.72rem; color: #9aa8c8; margin: 0.35rem 0 0.5rem; line-height: 1.3; }
 .rank-lb__list { display: flex; flex-direction: column; gap: 0.18rem; }
 .rank-lb__row { display: grid; grid-template-columns: 2.6rem 3.2rem 1fr auto auto;
-  align-items: center; gap: 0.5rem; text-decoration: none; color: inherit;
-  padding: 0.32rem 0.4rem; border-radius: 7px; transition: background .12s; }
+  align-items: start; gap: 0.5rem; text-decoration: none; color: inherit;
+  padding: 0.4rem 0.4rem; border-radius: 7px; transition: background .12s; }
 .rank-lb__row:hover { background: rgba(255,255,255,0.03); }
-.rank-lb__cur { font-size: 0.82rem; color: #cbd5e1; font-weight: 700; }
-.rank-lb__sym { font-size: 0.9rem; font-weight: 700; }
+.rank-lb__cur { font-size: 0.82rem; color: #cbd5e1; font-weight: 700; padding-top: 0.05rem; }
+.rank-lb__sym { font-size: 0.9rem; font-weight: 700; padding-top: 0.02rem; }
 .rank-lb__traj { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
 .rank-lb__drop { color: #fb923c; }
+.rank-lb__metrics { display: block; font-size: 0.66rem; color: var(--cm-slate, #8595ad); margin-top: 0.14rem; }
+.rank-lb__metrics b { color: #cbd5e1; }
+.rank-lb__why { display: block; font-size: 0.66rem; color: #fb923c; margin-top: 0.1rem; }
 .rank-lb__pers { font-size: 0.74rem; color: #9aa8c8; text-align: right; min-width: 2.6rem; }
 .rank-lb__flag { font-size: 0.62rem; padding: 0.05rem 0.4rem; border: 1px solid currentColor;
   border-radius: 999px; white-space: nowrap; }
