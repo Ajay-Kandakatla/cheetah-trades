@@ -44,7 +44,7 @@ export function CardEnrichmentChips({ symbol }: Props) {
     <div ref={ref} style={{ display: 'contents' }}>
       {insiderCluster ? (
         <Link
-          to={`/sepa/${symbol}#insider`}
+          to={`/sepa/${symbol}?tab=insider`}
           className="ins-chip ins-cluster"
           title={
             `Cluster insider buy — ${insiderCount} unique insiders filed Form 4 ` +
@@ -57,7 +57,7 @@ export function CardEnrichmentChips({ symbol }: Props) {
         </Link>
       ) : insiderCount > 0 ? (
         <Link
-          to={`/sepa/${symbol}#insider`}
+          to={`/sepa/${symbol}?tab=insider`}
           className="ins-chip ins-some"
           title={
             `${insiderCount} insider${insiderCount === 1 ? '' : 's'} bought in the ` +
@@ -70,7 +70,7 @@ export function CardEnrichmentChips({ symbol }: Props) {
       ) : null}
       {valuation && (
         <Link
-          to={`/sepa/${symbol}#fundamentals`}
+          to={`/sepa/${symbol}?tab=fundamentals`}
           className={`val-chip ${
             valuation === 'undervalued' ? 'val-under' :
             valuation === 'overvalued'  ? 'val-over'  :
@@ -85,7 +85,7 @@ export function CardEnrichmentChips({ symbol }: Props) {
       )}
       {netWorth != null && (
         <Link
-          to={`/sepa/${symbol}#fundamentals`}
+          to={`/sepa/${symbol}?tab=fundamentals`}
           className="val-chip val-fair"
           title={`Current net worth (market capitalization): ${fmtBig(netWorth)} — what the market is paying for the whole company right now.`}
         >
@@ -94,7 +94,7 @@ export function CardEnrichmentChips({ symbol }: Props) {
       )}
       {equity != null && (
         <Link
-          to={`/sepa/${symbol}#fundamentals`}
+          to={`/sepa/${symbol}?tab=fundamentals`}
           className="val-chip val-fair"
           title={`Shareholders' equity (book value): ${fmtBig(equity)} — total assets minus liabilities.`}
         >

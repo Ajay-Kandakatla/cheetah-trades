@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
 // Supply/demand + flow chips — ported from the SEPA list card so the
 // single-ticker research view has the same 🐋 whales / 📋 SEC / conviction /
@@ -122,6 +122,19 @@ const PageInfo = (
 );
 
 type Tab = 'chart' | 'setup' | 'trend' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
+
+// The active tab lives in the URL (?tab=insider) so it survives reload, back/
+// forward, and deep-links from cards — instead of always snapping to 'chart'.
+// We also accept the legacy #hash deep-links some chips still emit.
+const TABS: Tab[] = ['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
+const HASH_TO_TAB: Record<string, Tab> = {
+  chart: 'chart', setup: 'setup', trend: 'trend', ranking: 'ranking',
+  fundamentals: 'fundamentals', analysis: 'analysis', options: 'options',
+  catalyst: 'catalyst', insider: 'insider', smartmoney: 'smartmoney',
+  chatter: 'chatter', supply: 'supply',
+  // legacy hashes that don't map 1:1 to a tab → nearest sensible tab
+  volume: 'chart', 'dual-momentum': 'ranking',
+};
 
 const SmartMoneyInfo = (
   <>
@@ -261,7 +274,22 @@ export function SepaCandidatePage() {
   const [plan, setPlan] = useState<any>(null);
   const [accountSize, setAccountSize] = useState(100000);
   const [riskPct, setRiskPct] = useState(1);
-  const [tab, setTab] = useState<Tab>('chart');
+  // Active tab is derived from the URL: ?tab= wins, then a legacy #hash, else
+  // 'chart'. Switching tabs rewrites ?tab= in place (replace, no history spam)
+  // so a reload or a shared link lands on the same tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const hashKey = (location.hash || '').replace(/^#/, '').toLowerCase();
+  const tab: Tab = TABS.includes(tabParam as Tab)
+    ? (tabParam as Tab)
+    : (HASH_TO_TAB[hashKey] ?? 'chart');
+  const setTab = (t: Tab) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', t);
+      return next;
+    }, { replace: true });
+  };
   const [added, setAdded] = useState(false);
   const [rescanState, setRescanState] = useState<'idle' | 'running' | 'error'>('idle');
   const [rescanMsg, setRescanMsg] = useState<string | null>(null);
@@ -332,7 +360,8 @@ export function SepaCandidatePage() {
   useEffect(() => {
     setPlan(null);
     setAdded(false);
-    setTab('chart');
+    // Tab is URL-driven now — navigating to a new symbol without ?tab= lands on
+    // 'chart' automatically; a deep-link with ?tab= is honoured. No reset here.
     setRescanState('idle');
     setRescanMsg(null);
     setAlertOpen(false);
