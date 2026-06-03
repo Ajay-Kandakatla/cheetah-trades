@@ -928,6 +928,13 @@ tr:last-child td { border-bottom: none; }
   }
 }
 .sepa-page__h1 { margin: 0.25rem 0 0.5rem; font: 700 2.4rem/1.05 var(--serif, serif); letter-spacing: -0.02em; }
+/* The eyebrow kicker (№ — Methodology) must sit on its OWN line above the
+   title. The h1 carries an inline display:inline-flex so its ⓘ centers with
+   the text; that makes the h1 inline-level, so the global inline-block
+   .eyebrow flows onto the SAME line and crams left of the big title. Forcing
+   the eyebrow to block here stacks it correctly above the headline.
+   Ajay 2026-06-03: "the small font may need to follow the big one." */
+.sepa-page__title .eyebrow { display: block; margin-bottom: 0.1rem; }
 
 /* ── Hero ──────────────────────────────────────────────────────────────── */
 .sepa-hero {
