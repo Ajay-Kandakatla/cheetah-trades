@@ -127,6 +127,12 @@
 */15   9-15  *    *    1-5  /usr/local/bin/python -c "from sepa import breakouts; breakouts.detect_all()"
 0,15,30,45 16 * * 1-5  /usr/local/bin/python -c "from sepa import breakouts; breakouts.detect_all()"
 #
+# Leaderboard breakout watcher — every 15 min during the session. Pushes a
+# notification titled "Leaderboard" when a name ON the rank leaderboard breaks
+# out today (high-vol breakout, days_since_breakout==0). De-duped per ET day.
+*/15   9-15  *    *    1-5  /usr/local/bin/python -m sepa.leaderboard_breakout_watch
+0,15,30,45 16 * * 1-5  /usr/local/bin/python -m sepa.leaderboard_breakout_watch
+#
 # SEPA Juggernaut watcher — every 15 min during regular session (9:30am-4pm ET).
 # Watchlist-scoped: detects stocks under stealth institutional accumulation
 # (up/down vol ratio ≥ 1.5) WITH rising momentum (RS climb, score climb, or

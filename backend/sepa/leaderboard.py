@@ -75,6 +75,28 @@ def _drop_reason(stage, dist_days, accum) -> str:
     return "score eased vs stronger peers"
 
 
+def _coiling(ready: bool, buyable: bool, vcp: dict, vol: dict) -> bool:
+    """Pre-breakout 'coiling' = setup ready, NOT yet broken out, in a tight VCP
+    base with volume drying up (book pp.198-205) — the spring before the move."""
+    if not (ready and not buyable and vcp.get("has_base")):
+        return False
+    drying = bool(vcp.get("volume_drying")) or (
+        vol.get("vol_dryup") is not None and vol.get("vol_dryup") < 0.85)
+    fc = vcp.get("final_contraction_pct")
+    tight = fc is not None and fc <= 6.0
+    return bool(drying and tight)
+
+
+def _near_r1(close, targets: list):
+    """(near_r1, r1_price, dist_pct): is price approaching its first R-target?
+    'near' = within ~4% below R1 (or just past it). dist +ve = R1 still above."""
+    r1 = next((t.get("price") for t in (targets or []) if t.get("label") == "R1"), None)
+    if not (r1 and close):
+        return False, r1, None
+    dist = round((r1 / close - 1) * 100, 1)
+    return (-1.0 <= dist <= 4.0), r1, dist
+
+
 def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
     """Pure: collapse ranked runs (newest first) + a live-status map into the
     sorted leaderboard rows. Separated from Mongo so it's unit-testable."""
@@ -106,6 +128,10 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
         dist_days = vol.get("distribution_days_25")
         accum = vol.get("accumulation_strength")
         dropped = ranks[0] > best + 5            # rank fell well below its best
+        vcp = cur.get("vcp") or {}
+        targets = ((cur.get("entry_exit") or {}).get("exit") or {}).get("targets") or []
+        coiling = _coiling(ready, buyable, vcp, vol)
+        near_r1, r1_price, dist_r1 = _near_r1(close, targets)
         rows.append({
             "symbol":        sym,
             "name":          cur.get("name"),
@@ -128,6 +154,11 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
             "distribution_days": dist_days,
             "accumulation":  accum,
             "drop_reason":   _drop_reason(stage, dist_days, accum) if dropped else None,
+            # Coiling (pre-breakout spring) + near first R-target (Ajay 2026-06-03)
+            "coiling":       coiling,
+            "near_r1":       near_r1,
+            "r1_price":      r1_price,
+            "dist_to_r1_pct": dist_r1,
         })
 
     # Honourable mentions: most consistently high first; ties → best rank.

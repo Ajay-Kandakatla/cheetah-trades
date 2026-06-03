@@ -36,6 +36,10 @@ type Leader = {
   distribution_days?: number | null;
   accumulation?: string | null;
   drop_reason?: string | null;
+  coiling?: boolean | null;
+  near_r1?: boolean | null;
+  r1_price?: number | null;
+  dist_to_r1_pct?: number | null;
 };
 type Resp = { leaders: Leader[]; scans_in_window?: number; lookback_days?: number; top_tier?: number };
 
@@ -155,6 +159,8 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
                 {lev.isLeveraged && <span className="lev-badge" title="Leveraged/inverse ETF — not an individual stock; SEPA criteria don't apply">⚡ {lev.label}</span>}{lev.isLeveraged ? ' ' : ''}
                 best #{l.best_rank}
                 {dropped ? <span className="rank-lb__drop"> ↓ now #{l.current_rank}</span> : null}
+                {l.coiling && <span className="rank-lb__coil" title="Coiling — tight VCP base + volume drying, primed to break out (book pp.198-205)"> 🌀 Coiling</span>}
+                {l.near_r1 && <span className="rank-lb__r1" title={`Approaching its first target${l.r1_price ? ' · R1 $' + l.r1_price : ''}`}> 🎯 near R1{l.dist_to_r1_pct != null ? ` (${l.dist_to_r1_pct > 0 ? '+' : ''}${l.dist_to_r1_pct}%)` : ''}</span>}
                 <span className="rank-lb__metrics">
                   {l.current_score != null && <>score <b>{l.current_score}</b></>}
                   {l.rs_rank != null && <> · RS {l.rs_rank}</>}

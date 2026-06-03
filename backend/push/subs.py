@@ -285,6 +285,9 @@ def default_prefs() -> dict:
         "juggernaut_watchlist": True, # consolidated daily: watchlist names where
                                       # accumulation + rising momentum align
                                       # (fired by sepa.juggernaut cron)
+        "leaderboard_breakout": True, # consolidated: a name ON the rank leaderboard
+                                      # breaks out today (fired by
+                                      # sepa.leaderboard_breakout_watch cron, 2026-06-03)
         # SELL-side signals — Weinstein stage transitions. Default on
         # because these are the highest-value alerts for an active book
         # (catching a topping name 1-2 days early vs the morning brief

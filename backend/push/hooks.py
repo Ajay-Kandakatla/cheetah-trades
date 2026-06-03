@@ -112,6 +112,41 @@ def notify_juggernauts(*, juggernauts: list[dict],
     return sender.send_to_all(payload, kind="juggernaut_watchlist")
 
 
+def notify_leaderboard_breakout(*, broke_out: list[dict], today_et: str) -> dict:
+    """Consolidated push titled 'Leaderboard' — a name ON the rank leaderboard
+    broke out today. Body lists which one(s). Tag keyed by ET date so a later
+    breakout the same day replaces the banner rather than stacking on-device.
+    Fired by the sepa.leaderboard_breakout_watch cron (Ajay 2026-06-03)."""
+    if not broke_out:
+        return {"sent": 0, "reason": "empty"}
+    lines: list[str] = []
+    for b in broke_out:
+        bits: list[str] = []
+        if b.get("last_close") is not None:
+            bits.append(f"${b['last_close']:.2f}")
+        if b.get("day_change_pct") is not None:
+            bits.append(f"{'+' if b['day_change_pct'] >= 0 else ''}{b['day_change_pct']:.1f}%")
+        if b.get("rs_rank") is not None:
+            bits.append(f"RS {b['rs_rank']}")
+        if b.get("rank") is not None:
+            bits.append(f"#{b['rank']}")
+        lines.append(f"🚀 {b['symbol']} · {' · '.join(bits)}")
+    visible = lines[:8]
+    body = "\n".join(visible)
+    if len(broke_out) > len(visible):
+        body += f"\n+{len(broke_out) - len(visible)} more"
+
+    payload = {
+        "title": "Leaderboard",
+        "body": body,
+        "tag":  f"leaderboard-breakout-{today_et}",
+        "url":  "/leaderboard",
+        "kind": "leaderboard_breakout",
+        "ticker": broke_out[0]["symbol"] if len(broke_out) == 1 else None,
+    }
+    return sender.send_to_all(payload, kind="leaderboard_breakout")
+
+
 # Sole admin — never expected to change. Hardcoded rather than env-var
 # because we don't want accidental privilege escalation via misconfig.
 ADMIN_EMAIL = "ajaykandakatla@gmail.com"
