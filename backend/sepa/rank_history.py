@@ -144,21 +144,26 @@ def rank_history_batch(symbols: list, days: int = 30, granularity: str = "daily"
     cutoff = int(time.time()) - days * 86400
     runs = _select_runs(db, cutoff, granularity)          # oldest → newest
     series: dict[str, list] = {s: [] for s in syms}
+    want = set(syms)
     for run in runs:
         snaps = list(db.candidate_snapshots.find(
-            {"scan_run_id": run["_id"]}, {"symbol": 1, "score": 1, "trend.pass_all": 1}))
+            {"scan_run_id": run["_id"]},
+            {"symbol": 1, "score": 1, "trend.pass_all": 1, "volume.last_vol": 1, "last_close": 1}))
         quals = [s for s in snaps
                  if s.get("score") is not None and (s.get("trend") or {}).get("pass_all")]
         quals.sort(key=lambda s: -s["score"])
         rankmap = {s["symbol"]: i + 1 for i, s in enumerate(quals)}
         scoremap = {s["symbol"]: s["score"] for s in quals}
+        bysym = {s["symbol"]: s for s in snaps if s["symbol"] in want}  # for vol/price (incl non-quals)
         total = len(quals)
         t, date = run.get("generated_at"), run.get("date_et")
         for sym in syms:
-            r = rankmap.get(sym)
+            snap = bysym.get(sym) or {}
             series[sym].append({
-                "t": t, "date": date, "rank": r, "total": total,
+                "t": t, "date": date, "rank": rankmap.get(sym), "total": total,
                 "score": round(float(scoremap[sym]), 1) if sym in scoremap else None,
+                "volume": (snap.get("volume") or {}).get("last_vol"),
+                "price": snap.get("last_close"),
             })
 
     out = {}

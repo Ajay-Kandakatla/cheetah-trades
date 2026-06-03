@@ -1038,6 +1038,21 @@ tr:last-child td { border-bottom: none; }
   transform: translateY(-50%); font-size: 0.66rem; color: var(--cm-slate, #94a3b8); pointer-events: none; }
 .rank-cmp__xlabel { position: absolute; font-size: 0.66rem; color: var(--cm-slate, #94a3b8); white-space: nowrap; pointer-events: none; }
 .rank-cmp__endlabel { position: absolute; transform: translateY(-50%); font-size: 0.7rem; white-space: nowrap; cursor: default; }
+.rank-cmp__date { font-size: 0.72rem; padding: 0.12rem 0.35rem; border-radius: 6px;
+  border: 1px solid var(--hairline, #2a2a2a); background: transparent; color: var(--cm-slate, #94a3b8); cursor: pointer; }
+.rank-cmp__reload { font-size: 0.85rem; line-height: 1; padding: 0.18rem 0.45rem; border-radius: 6px;
+  border: 1px solid var(--hairline, #2a2a2a); background: transparent; color: var(--cm-slate, #94a3b8); cursor: pointer; }
+.rank-cmp__reload:hover { color: #e2e8f0; }
+.rank-cmp__cursor { stroke: rgba(255,255,255,0.28); stroke-width: 1; }
+.rank-cmp__tip { position: absolute; top: 8px; background: rgba(10,12,18,0.96);
+  border: 1px solid var(--hairline, #2a2a2a); border-radius: 8px; padding: 0.4rem 0.55rem;
+  font-size: 0.72rem; pointer-events: none; z-index: 4; min-width: 130px; }
+.rank-cmp__tip-date { color: #cbd5e1; margin-bottom: 0.25rem; }
+.rank-cmp__tip-row { display: grid; grid-template-columns: 0.6rem 1fr auto auto; align-items: center; gap: 0.4rem; line-height: 1.5; }
+.rank-cmp__tip-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; display: inline-block; }
+.rank-cmp__tip-sym { font-weight: 700; }
+.rank-cmp__tip-rank { color: #e2e8f0; text-align: right; }
+.rank-cmp__tip-vol { color: var(--cm-slate, #94a3b8); text-align: right; min-width: 2.6rem; }
 .rank-cmp__cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; }
 .rank-cmp__cell { border: 1px solid var(--hairline, #222); border-radius: 8px; padding: 0.3rem 0.4rem; }
 .rank-cmp__cell-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.4rem; }

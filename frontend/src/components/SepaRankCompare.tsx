@@ -2,26 +2,31 @@
    Compares several names' SEPA rank over a date window without the spaghetti
    problem, two ways (research-backed):
      • Overlay (bump chart) — all on one axis, with FOCUS+CONTEXT (hover a name
-       → it pops, the rest fade) and DIRECT END-LABELS instead of a legend.
+       → it pops, the rest fade) + DIRECT END-LABELS, and a per-DATE hover/pin
+       readout (date · each name's rank & volume).
      • Small multiples — one mini panel per name; never tangled.
    Multi-select from the leaderboard; rank inverted (#1 top). Custom SVG. */
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 
-type Pt = { t: number; date: string | null; rank: number | null; total: number | null; score: number | null };
+type Pt = { t: number; date: string | null; rank: number | null; total: number | null;
+            score: number | null; volume: number | null; price: number | null };
 type Series = { points: Pt[]; best_rank: number | null; worst_rank: number | null; current_rank: number | null };
 type Batch = { symbols: string[]; days: number; granularity: string; series: Record<string, Series> };
 
 const COLORS = ['#10b981', '#38bdf8', '#fbbf24', '#a78bfa', '#f472b6', '#fb923c',
                 '#34d399', '#60a5fa', '#facc15', '#c084fc', '#f87171', '#4ade80'];
 const W = 760, H = 300;
-const PAD = { l: 34, r: 60, t: 14, b: 24 };       // right gutter for end-labels
+const PAD = { l: 34, r: 60, t: 14, b: 24 };
 const PLOT_W = W - PAD.l - PAD.r;
 const PLOT_H = H - PAD.t - PAD.b;
 const xPct = (x: number) => (x / W) * 100;
 const yPct = (y: number) => (y / H) * 100;
 const fmtDate = (tSec: number) => { const d = new Date(tSec * 1000); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const fmtVol = (n: number | null) =>
+  n == null ? '—' : n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M`
+  : n >= 1e3 ? `${(n / 1e3).toFixed(0)}K` : String(n);
 
 export function SepaRankCompare() {
   const [universe, setUniverse] = useState<string[]>([]);
@@ -29,7 +34,10 @@ export function SepaRankCompare() {
   const [mode, setMode] = useState<'overlay' | 'multiples'>('overlay');
   const [windowDays, setWindowDays] = useState(30);
   const [data, setData] = useState<Batch | null>(null);
-  const [hover, setHover] = useState<string | null>(null);
+  const [focus, setFocus] = useState<string | null>(null);   // hovered series (end-label)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);  // hovered date column
+  const [pinIdx, setPinIdx] = useState<number | null>(null);      // date-picker pin
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -39,25 +47,34 @@ export function SepaRankCompare() {
         if (!alive) return;
         const syms: string[] = (d.leaders || []).map((l: { symbol: string }) => l.symbol);
         setUniverse(syms);
-        setSelected(syms.slice(0, 5));
+        setSelected((cur) => cur.length ? cur : syms.slice(0, 5));
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!selected.length) { setData(null); return; }
     let alive = true;
     fetch(`${API}/sepa/rank-history-batch?symbols=${selected.join(',')}&days=${windowDays}&granularity=daily`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-      .then((d: Batch) => alive && setData(d))
+      .then((d: Batch) => { if (alive) { setData(d); setPinIdx(null); setHoverIdx(null); } })
       .catch(() => {});
     return () => { alive = false; };
-  }, [selected, windowDays]);
+  }, [selected, windowDays, reloadKey]);
 
   const colorOf = (sym: string) => COLORS[Math.max(0, selected.indexOf(sym)) % COLORS.length];
   const toggle = (sym: string) =>
     setSelected((s) => s.includes(sym) ? s.filter((x) => x !== sym) : s.length >= 8 ? s : [...s, sym]);
+
+  // All selected series share the SAME run dates (one point per scan day), so
+  // index i lines up across symbols — this is the canonical date axis.
+  const dates: Pt[] = useMemo(() => {
+    if (!data) return [];
+    for (const sym of selected) { const s = data.series[sym]; if (s?.points?.length) return s.points; }
+    return [];
+  }, [data, selected]);
+  const activeIdx = pinIdx != null ? pinIdx : hoverIdx;
 
   const geom = useMemo(() => {
     const nowSec = Math.floor(Date.now() / 1000);
@@ -82,6 +99,12 @@ export function SepaRankCompare() {
   }
 
   const rankTicks = [1, Math.round(geom.maxRank / 2), geom.maxRank];
+  const cur = activeIdx != null && dates[activeIdx] ? dates[activeIdx] : null;
+  const readout = cur
+    ? selected.map((sym) => ({ sym, p: data?.series[sym]?.points[activeIdx!] }))
+        .filter((r) => r.p)
+        .sort((a, b) => (a.p!.rank ?? 1e9) - (b.p!.rank ?? 1e9))
+    : [];
 
   return (
     <section className="rank-cmp">
@@ -93,11 +116,17 @@ export function SepaRankCompare() {
           <span className="rank-cmp__sep" />
           <button className={windowDays === 30 ? 'is-on' : ''} onClick={() => setWindowDays(30)}>30d</button>
           <button className={windowDays === 14 ? 'is-on' : ''} onClick={() => setWindowDays(14)}>14d</button>
+          <span className="rank-cmp__sep" />
+          <select className="rank-cmp__date" value={pinIdx ?? ''} title="Pin a date"
+                  onChange={(e) => setPinIdx(e.target.value === '' ? null : Number(e.target.value))}>
+            <option value="">Jump to date…</option>
+            {dates.map((p, i) => p.date ? <option key={i} value={i}>{p.date}</option> : null)}
+          </select>
+          <button className="rank-cmp__reload" title="Reload" onClick={() => setReloadKey((k) => k + 1)}>⟳</button>
         </div>
       </div>
-      <p className="rank-cmp__sub">Pick names to compare how their rank moved (hover to focus one). Up to 8.</p>
+      <p className="rank-cmp__sub">Pick names to compare how their rank moved (hover for a date readout · pick a name to focus). Up to 8.</p>
 
-      {/* multi-select chips */}
       <div className="rank-cmp__picks">
         {universe.map((sym) => {
           const on = selected.includes(sym);
@@ -117,35 +146,70 @@ export function SepaRankCompare() {
             {rankTicks.map((r) => <line key={r} x1={PAD.l} x2={W - PAD.r} y1={geom.yRank(r)} y2={geom.yRank(r)} className="rank-cmp__grid" />)}
             {selected.map((sym) => {
               const s = data.series[sym]; if (!s) return null;
-              const dim = hover && hover !== sym;
+              const dim = focus && focus !== sym;
               return <path key={sym} d={path(s.points, geom.yRank, geom.x)} fill="none"
-                           stroke={dim ? '#475569' : colorOf(sym)} strokeWidth={hover === sym ? 2.6 : 1.8}
+                           stroke={dim ? '#475569' : colorOf(sym)} strokeWidth={focus === sym ? 2.6 : 1.8}
                            opacity={dim ? 0.45 : 1} vectorEffect="non-scaling-stroke"
                            style={{ transition: 'opacity .12s' }} />;
             })}
+            {/* date cursor + dots at the active column */}
+            {cur && (
+              <>
+                <line x1={geom.x(cur.t)} x2={geom.x(cur.t)} y1={PAD.t} y2={PAD.t + PLOT_H} className="rank-cmp__cursor" />
+                {readout.map(({ sym, p }) => p!.rank != null ? (
+                  <circle key={sym} cx={geom.x(cur.t)} cy={geom.yRank(p!.rank!)} r={2.8} fill={colorOf(sym)} />
+                ) : null)}
+              </>
+            )}
+            {/* hit area — snap to nearest date column */}
+            <rect x={PAD.l} y={PAD.t} width={PLOT_W} height={PLOT_H} fill="transparent"
+                  onMouseLeave={() => setHoverIdx(null)}
+                  onMouseMove={(e) => {
+                    if (!dates.length) return;
+                    const r = (e.currentTarget as SVGRectElement).getBoundingClientRect();
+                    const targetT = geom.tMin + ((e.clientX - r.left) / r.width) * geom.span;
+                    let bi = 0, bd = Infinity;
+                    dates.forEach((p, i) => { const dd = Math.abs(p.t - targetT); if (dd < bd) { bd = dd; bi = i; } });
+                    setHoverIdx(bi);
+                  }} />
           </svg>
-          {/* rank labels (left) */}
+
           {rankTicks.map((r) => <span key={r} className="rank-cmp__ylabel mono" style={{ top: `${yPct(geom.yRank(r))}%` }}>#{r}</span>)}
-          {/* date labels (bottom) */}
           {geom.ticks.map((t, i) => (
             <span key={i} className="rank-cmp__xlabel mono"
                   style={{ left: `${xPct(geom.x(t))}%`, top: `${yPct(PAD.t + PLOT_H + 9)}%`,
                            transform: i === 0 ? 'none' : i === 5 ? 'translateX(-100%)' : 'translateX(-50%)' }}>{fmtDate(t)}</span>
           ))}
-          {/* direct END-LABELS (replace the legend) */}
           {selected.map((sym) => {
             const s = data.series[sym]; if (!s) return null;
             const last = [...s.points].reverse().find((p) => p.rank != null); if (!last) return null;
-            const dim = hover && hover !== sym;
+            const dim = focus && focus !== sym;
             return (
               <span key={sym} className="rank-cmp__endlabel mono"
                     style={{ top: `${yPct(geom.yRank(last.rank!))}%`, left: `${xPct(PAD.l + PLOT_W) + 0.6}%`,
-                             color: dim ? '#64748b' : colorOf(sym), fontWeight: hover === sym ? 700 : 500 }}
-                    onMouseEnter={() => setHover(sym)} onMouseLeave={() => setHover(null)}>
+                             color: dim ? '#64748b' : colorOf(sym), fontWeight: focus === sym ? 700 : 500 }}
+                    onMouseEnter={() => setFocus(sym)} onMouseLeave={() => setFocus(null)}>
                 {sym} #{last.rank}
               </span>
             );
           })}
+
+          {/* per-date readout tooltip */}
+          {cur && (
+            <div className="rank-cmp__tip"
+                 style={{ left: `${xPct(geom.x(cur.t))}%`,
+                          transform: xPct(geom.x(cur.t)) > 58 ? 'translateX(-100%) translateX(-10px)' : 'translateX(10px)' }}>
+              <div className="rank-cmp__tip-date mono">{cur.date}{pinIdx != null ? ' · pinned' : ''}</div>
+              {readout.map(({ sym, p }) => (
+                <div key={sym} className="rank-cmp__tip-row mono">
+                  <span className="rank-cmp__tip-dot" style={{ background: colorOf(sym) }} />
+                  <span className="rank-cmp__tip-sym" style={{ color: colorOf(sym) }}>{sym}</span>
+                  <span className="rank-cmp__tip-rank">{p!.rank != null ? `#${p!.rank}` : 'out'}</span>
+                  <span className="rank-cmp__tip-vol">{fmtVol(p!.volume)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="rank-cmp__cells">
