@@ -1,9 +1,15 @@
-/* SepaRankLeaderboard — day-level "honourable mentions" on the portfolio page.
-   Reads GET /sepa/leaderboard: names that scored high across the lookback window,
-   with rank volatility + a 'primed' flag (setup ready → catch the breakout ahead).
-   Complements Top Picks (buy NOW) with "who's been strong / who's about to go."
-   Fails quiet. */
-import { useEffect, useState } from 'react';
+/* SepaRankLeaderboard — day-level "honourable mentions" on the portfolio /
+   leaderboard pages. Reads GET /sepa/leaderboard: names that scored high across
+   the lookback window, with rank volatility + a 'primed' flag.
+
+   Interactive (Ajay 2026-06-03 "real-time sort these ranks", both flavours):
+     • click-to-sort — the sort bar reorders the rows instantly client-side by
+       Rank / Best / Swing (volatility) / Score / Persist %; click again flips
+       the direction.
+     • live — re-fetches every 60s so the board tracks the latest scan without a
+       reload; a pulsing dot shows it's live (turns amber + "stale" on a failed
+       refresh, keeping the last good data on screen). Fails quiet. */
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
@@ -32,22 +38,55 @@ const FLAG: Record<Leader['flag'], { label: string; color: string }> = {
   steady:       { label: 'Steady', color: '#38bdf8' },
 };
 
+type SortKey = 'current_rank' | 'best_rank' | 'rank_range' | 'current_score' | 'persistence_pct';
+const SORTS: { key: SortKey; label: string; dir: 'asc' | 'desc'; get: (l: Leader) => number | null }[] = [
+  { key: 'current_rank',    label: 'Rank',    dir: 'asc',  get: (l) => l.current_rank },
+  { key: 'best_rank',       label: 'Best',    dir: 'asc',  get: (l) => l.best_rank },
+  { key: 'rank_range',      label: 'Swing',   dir: 'desc', get: (l) => l.rank_range },
+  { key: 'current_score',   label: 'Score',   dir: 'desc', get: (l) => l.current_score ?? null },
+  { key: 'persistence_pct', label: 'Persist', dir: 'desc', get: (l) => l.persistence_pct },
+];
+
+const REFRESH_MS = 60_000;
+
 export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
   const [data, setData] = useState<Resp | null>(null);
-  const [err, setErr] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('persistence_pct');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
+  // Live: initial load + poll every REFRESH_MS. A failed refresh keeps the last
+  // good data and flags "stale" rather than blanking the board.
   useEffect(() => {
     let alive = true;
-    fetch(`${API}/sepa/leaderboard?n=${n}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d) => alive && setData(d))
-      .catch(() => alive && setErr(true));
-    return () => {
-      alive = false;
-    };
+    const load = () =>
+      fetch(`${API}/sepa/leaderboard?n=${n}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((d: Resp) => { if (alive) { setData(d); setUpdatedAt(Date.now()); setStale(false); } })
+        .catch(() => { if (alive) setStale(true); });
+    load();
+    const id = setInterval(load, REFRESH_MS);
+    return () => { alive = false; clearInterval(id); };
   }, [n]);
 
-  if (err || !data || !(data.leaders || []).length) return null;
+  function clickSort(s: { key: SortKey; dir: 'asc' | 'desc' }) {
+    if (s.key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(s.key); setSortDir(s.dir); }
+  }
+
+  const rows = useMemo(() => {
+    const get = SORTS.find((s) => s.key === sortKey)!.get;
+    return [...(data?.leaders ?? [])].sort((a, b) => {
+      const av = get(a), bv = get(b);
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;                       // nulls last
+      if (bv == null) return -1;
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
+  }, [data, sortKey, sortDir]);
+
+  if (!data || !(data.leaders || []).length) return null; // fail quiet
 
   return (
     <section className="rank-lb">
@@ -55,6 +94,10 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
         <span className="eyebrow">📊 Rank leaderboard · honourable mentions</span>
         <span className="rank-lb__meta mono">
           {data.scans_in_window ?? 0} days · {data.lookback_days ?? 0}d window
+          <span className="rank-lb__live" data-stale={stale ? '1' : '0'}
+                title={updatedAt ? `${stale ? 'stale — last good ' : 'updated '}${new Date(updatedAt).toLocaleTimeString()}` : 'live'}>
+            {' · '}<span className="dot">●</span> {stale ? 'stale' : 'live'}
+          </span>
         </span>
       </div>
       <p className="rank-lb__sub">
@@ -63,14 +106,26 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
         <b style={{ color: '#fb923c' }}> Volatile</b> = big rank swings.
       </p>
 
+      <div className="rank-lb__sortbar mono">
+        <span className="rank-lb__sortlabel">sort:</span>
+        {SORTS.map((s) => {
+          const on = s.key === sortKey;
+          return (
+            <button key={s.key} className={`rank-lb__sortchip${on ? ' is-on' : ''}`} onClick={() => clickSort(s)}>
+              {s.label}{on ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="rank-lb__list">
-        {data.leaders.map((l) => {
+        {rows.map((l) => {
           const f = FLAG[l.flag];
           const dropped = l.current_rank > l.best_rank + 5;
           const lev = leveragedEtfInfo(l.symbol, l.name);
           return (
             <Link key={l.symbol} to={`/sepa/${l.symbol}`} className="rank-lb__row" title={
-              `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
+              `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · swing ${l.rank_range} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
             }>
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
               <span className="rank-lb__sym">{l.symbol}</span>
@@ -89,7 +144,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
           );
         })}
       </div>
-      <p className="rank-lb__foot mono">From SEPA scan history · not investment advice</p>
+      <p className="rank-lb__foot mono">From SEPA scan history · auto-refreshes every 60s · not investment advice</p>
     </section>
   );
 }
