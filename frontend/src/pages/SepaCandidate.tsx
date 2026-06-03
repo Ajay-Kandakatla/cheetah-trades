@@ -53,6 +53,7 @@ import type { TickerContext } from '../hooks/useSupplyDemand';
 import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
+import { useOwnedPosition } from '../hooks/useOwnedPositions';
 
 const TREND_LABEL: Record<string, { label: string; help: string }> = {
   price_above_ma150_and_ma200: {
@@ -417,6 +418,7 @@ export function SepaCandidatePage() {
   // yesterday's close. last_close stays as a fallback for tickers
   // Finnhub WS hasn't started streaming yet.
   const live = useLiveQuote(symbol);
+  const ownedPos = useOwnedPosition(symbol);   // your portfolio position in this name, if any
   const currentLivePrice: number | null =
     (typeof live?.last_price === 'number' && live.last_price > 0 ? live.last_price : null)
     ?? data?.last_close
@@ -508,6 +510,20 @@ export function SepaCandidatePage() {
               </div>
             ) : null;
           })()}
+          {ownedPos && (
+            <div className="sepa-owned-banner" role="note">
+              📍 <strong>You own this</strong> — {ownedPos.quantity ?? '?'} sh
+              {ownedPos.avg_cost != null && <> · cost ${ownedPos.avg_cost.toFixed(2)}</>}
+              {ownedPos.current_price != null && <> · now ${ownedPos.current_price.toFixed(2)}</>}
+              {ownedPos.pl_pct != null && (
+                <span style={{ color: ownedPos.pl_pct >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                  {' · '}{ownedPos.pl_pct >= 0 ? '+' : ''}{ownedPos.pl_pct.toFixed(1)}%
+                  {ownedPos.pl_dollars != null && ` ($${Math.round(ownedPos.pl_dollars).toLocaleString()})`}
+                </span>
+              )}
+              <span className="sepa-owned-banner__hint"> · hold/sell read in Position Lens below ↓</span>
+            </div>
+          )}
           {base && (
             <SepaScoreBar score={base.score ?? 0} rating={base.rating} size="md" />
           )}

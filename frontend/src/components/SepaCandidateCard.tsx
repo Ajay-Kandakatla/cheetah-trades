@@ -11,6 +11,7 @@ import { SepaTrendDots } from './SepaTrendDots';
 import { PriceAlertModal } from './PriceAlertModal';
 import { WatchlistButton } from './WatchlistButton';
 import { useQuote } from '../hooks/useWatchlist';
+import { useOwnedPosition } from '../hooks/useOwnedPositions';
 import { TradePlanInline } from './TradePlanInline';
 import { StopsPanel } from './StopsPanel';
 import { EntryExitPlanBlock } from './EntryExitPlanBlock';
@@ -150,6 +151,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
   // the trend chips and (when the trend drill modal opens) the modal
   // itself to render the trajectory chart.
   const trend = useSepaTrend(row.symbol);
+  const owned = useOwnedPosition(row.symbol);   // your position, if you hold this name
   // Lazy fetch of per-symbol history snapshots — only triggered when
   // the trend drill modal actually opens. Avoids 200 cards × 1 fetch
   // each on page load. The hook fires its own fetch on mount; we mount
@@ -327,6 +329,14 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           <div className="sepa-card__sym-line">
             <strong>{row.symbol}</strong>
             <WatchlistButton ticker={row.symbol} />
+            {owned && (
+              <span className="sepa-owned"
+                    style={{ color: (owned.pl_pct ?? 0) >= 0 ? '#10b981' : '#ef4444' }}
+                    title={`You own ${owned.quantity ?? '?'} sh${owned.avg_cost ? ` · cost $${owned.avg_cost.toFixed(2)}` : ''}${owned.current_value ? ` · value $${Math.round(owned.current_value).toLocaleString()}` : ''}`}
+                    onClick={(e) => e.stopPropagation()}>
+                📍 Owned{owned.pl_pct != null ? ` ${owned.pl_pct >= 0 ? '+' : ''}${owned.pl_pct.toFixed(1)}%` : ''}
+              </span>
+            )}
             {stage != null && (
               <span
                 role="button" tabIndex={0}

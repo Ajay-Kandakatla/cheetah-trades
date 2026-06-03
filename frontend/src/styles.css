@@ -1017,6 +1017,14 @@ tr:last-child td { border-bottom: none; }
   background: rgba(245,158,11,0.08); border-radius: 8px; color: #fbbf24; font-size: 0.78rem; line-height: 1.4; }
 .lev-warn b { color: #fcd34d; }
 
+/* Portfolio ↔ SEPA: "you own this" badge (list card) + banner (detail page). */
+.sepa-owned { font-size: 0.62rem; font-weight: 700; border: 1px solid currentColor; border-radius: 5px;
+  padding: 0.02rem 0.32rem; white-space: nowrap; background: rgba(255,255,255,0.04); cursor: default; }
+.sepa-owned-banner { margin: 0.5rem 0; padding: 0.45rem 0.65rem; border: 1px solid rgba(129,140,248,0.4);
+  background: rgba(129,140,248,0.08); border-radius: 8px; color: #c7d2fe; font-size: 0.82rem; line-height: 1.45; }
+.sepa-owned-banner strong { color: #e0e7ff; }
+.sepa-owned-banner__hint { color: var(--cm-slate, #94a3b8); font-size: 0.72rem; }
+
 /* Top-Picks tracker (streak + churn / daily timeline) on the Leaderboard page. */
 .tpt { border: 1px solid var(--hairline, #222); border-radius: 12px; padding: 0.7rem 0.8rem; margin: 0.6rem 0 0.4rem;
   background: linear-gradient(180deg, rgba(234,179,8,0.04), transparent 60%); }

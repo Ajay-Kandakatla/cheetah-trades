@@ -112,6 +112,30 @@ def check_positions() -> dict:
     return {"fired": fired, "skipped": skipped, "checked_at": int(time.time())}
 
 
+def _topping_watch_symbols() -> set:
+    """Names we fire topping (Stage-2 → Stage-3) alerts on: the rank-leaderboard
+    set ∪ owner portfolio holdings (Ajay 2026-06-03 — only alert on what he's
+    tracking or owns, not the whole Stage-2 universe). Empty set = alert nobody."""
+    syms: set = set()
+    try:
+        from . import leaderboard as lb
+        for l in (lb.leaderboard(30, 14) or {}).get("leaders", []):
+            if l.get("symbol"):
+                syms.add(str(l["symbol"]).upper())
+    except Exception as exc:
+        log.warning("topping watch: leaderboard load failed: %s", exc)
+    try:
+        import auth
+        from portfolio import store as pstore
+        for em in auth.HOUSE_OWNER_EMAILS:
+            for h in pstore.list_holdings(em):
+                if h.get("symbol"):
+                    syms.add(str(h["symbol"]).upper())
+    except Exception as exc:
+        log.warning("topping watch: portfolio load failed: %s", exc)
+    return syms
+
+
 def check_stage_outs() -> dict:
     """Intraday Stage-2 preservation check.
 
@@ -138,12 +162,17 @@ def check_stage_outs() -> dict:
     # ── Load Stage-2 SEPA candidates ────────────────────────────────────
     from .scanner import load_latest, LATEST_PATH
     latest = load_latest() or {}
+    # Scope to leaderboard ∪ portfolio only (Ajay 2026-06-03).
+    watch = _topping_watch_symbols()
+    if not watch:
+        return {"fired": [], "skipped": [], "reason": "empty_watch_set"}
     candidates = [
         c for c in (latest.get("all_results") or latest.get("candidates") or [])
         if (c.get("stage") or {}).get("stage") == 2
+        and str(c.get("symbol", "")).upper() in watch
     ]
     if not candidates:
-        return {"fired": [], "skipped": [], "reason": "no_stage2_candidates"}
+        return {"fired": [], "skipped": [], "reason": "no_watched_stage2_candidates"}
 
     # ── Bulk live prices ─────────────────────────────────────────────────
     syms = [c["symbol"] for c in candidates]
