@@ -9744,3 +9744,20 @@ a.tk-link:hover   { color: inherit; }
 }
 .livechart-toggle button:last-child { border-right: 0; }
 .livechart-toggle button.is-active { background: color-mix(in srgb, var(--gold, #d9a441) 14%, transparent); color: var(--gold, #d9a441); }
+
+/* Holding diagnosis — "what's driving this move?" expander on portfolio cards */
+.hdiag { margin-top: 0.5rem; border-top: 1px dashed var(--rule, #333); padding-top: 0.4rem; }
+.hdiag__toggle { background: none; border: 0; color: var(--cm-slate, #94a3b8); font-size: 0.74rem; font-weight: 600; cursor: pointer; padding: 0.1rem 0; }
+.hdiag__toggle:hover { color: var(--ink, #e8e8e8); }
+.hdiag__body { margin-top: 0.4rem; }
+.hdiag__muted { font-size: 0.78rem; color: var(--cm-slate, #94a3b8); }
+.hdiag__headline { font-size: 0.8rem; margin-bottom: 0.4rem; }
+.hdiag__move { color: var(--cm-slate, #94a3b8); }
+.hdiag__writeup { font-size: 0.82rem; line-height: 1.5; color: var(--ink, #e8e8e8); margin: 0 0 0.6rem; }
+.hdiag__scores { display: grid; gap: 0.25rem; margin-bottom: 0.5rem; }
+.hdiag__row { display: grid; grid-template-columns: 9.5rem 1fr 2rem; align-items: center; gap: 0.5rem; font-size: 0.72rem; }
+.hdiag__label { color: var(--cm-slate, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hdiag__track { height: 7px; border-radius: 4px; background: rgba(100,116,139,0.18); overflow: hidden; }
+.hdiag__fill { display: block; height: 100%; border-radius: 4px; }
+.hdiag__num { font-family: "SF Mono", Menlo, monospace; text-align: right; color: var(--ink, #e8e8e8); }
+.hdiag__refresh { background: none; border: 1px solid var(--rule, #444); color: var(--cm-slate, #94a3b8); font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 4px; cursor: pointer; }

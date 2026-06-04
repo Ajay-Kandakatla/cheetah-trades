@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
+import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
 import { SepaTopPicks } from '../components/SepaTopPicks';
 import { SepaRankLeaderboard } from '../components/SepaRankLeaderboard';
 import { MarketPulsePanel } from '../components/MarketPulsePanel';
@@ -176,6 +177,7 @@ export default function PortfolioPage() {
               </div>
 
               <PositionSignal symbol={r.symbol} entry={entry} shares={r.quantity} stop={r.stop} />
+              <HoldingDiagnosis symbol={r.symbol} />
             </div>
           );
         })}
