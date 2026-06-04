@@ -9733,6 +9733,39 @@ a.tk-link:hover   { color: inherit; }
 .mrisk--elevated { color: var(--cm-amber, #d97706); background: rgba(217,119,6,0.10); }
 .mrisk--high     { color: #fb923c; background: rgba(251,146,60,0.12); }
 .mrisk--severe   { color: var(--cm-red, #ef4444); background: rgba(239,68,68,0.12); }
+/* In a leaderboard row the divergence chip sits on its own line under metrics. */
+.rank-lb__traj > .mrisk { margin-top: 0.2rem; }
+
+/* Macro market strip — the one tape-wide read at the top of a list. */
+.mrisk-strip {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  margin: 0.3rem 0 0.55rem; padding: 0.32rem 0.55rem; border-radius: 8px;
+  font-size: 0.72rem; line-height: 1.2;
+  border: 1px solid currentColor; background: rgba(255,255,255,0.025);
+}
+.mrisk-strip__lead { letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.6rem; font-weight: 700; opacity: 0.8; }
+.mrisk-strip__lvl { font-weight: 800; }
+.mrisk-strip__score { font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+.mrisk-strip__sum { color: var(--cm-slate, #94a3b8); font-weight: 500; flex: 1 1 12rem; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* "Still qualifies despite the macro" — buyable / closest-qualifier shortlist. */
+.rlb-resi { margin: 0.1rem 0 0.6rem; padding: 0.5rem 0.6rem; border-radius: 9px;
+  border: 1px solid rgba(56,189,248,0.28); background: rgba(56,189,248,0.05); }
+.rlb-resi--buyable { border-color: rgba(34,197,94,0.40); background: rgba(34,197,94,0.06); }
+.rlb-resi__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; margin-bottom: 0.35rem; }
+.rlb-resi__title { font-size: 0.8rem; font-weight: 800; color: #e2e8f0; }
+.rlb-resi__sub { font-size: 0.65rem; color: var(--cm-slate, #94a3b8); }
+.rlb-resi__rows { display: flex; flex-direction: column; gap: 0.1rem; }
+.rlb-resi__row { display: grid; grid-template-columns: 3.4rem auto minmax(0,1fr) auto; align-items: center;
+  gap: 0.5rem; padding: 0.28rem 0.35rem; border-radius: 6px; text-decoration: none;
+  color: inherit; transition: background .12s; }
+.rlb-resi__row:hover { background: rgba(255,255,255,0.05); }
+.rlb-resi__sym { font-weight: 800; font-size: 0.85rem; color: #f1f5f9; }
+.rlb-resi__nums { font-size: 0.68rem; color: var(--cm-slate, #8595ad); white-space: nowrap; }
+.rlb-resi__nums b { color: #cbd5e1; }
+.rlb-resi__why { font-size: 0.66rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rlb-resi__row .mrisk { justify-self: end; }
 
 /* Native live candlestick chart (Lightweight Charts) — fills the chart slot. */
 .livechart { width: 100%; height: 100%; min-height: 360px; }

@@ -167,6 +167,72 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
     return rows[:n]
 
 
+def _stage_of(r: dict):
+    st = r.get("stage")
+    return st.get("stage") if isinstance(st, dict) else st
+
+
+def _why_not_buyable(r: dict) -> str:
+    """Plain-English reason a QUALIFIED name (passes the trend template +
+    liquidity, book p.79) is not yet a clean same-day buy — so the watchlist
+    says what to wait FOR, not just 'no'."""
+    stg = _stage_of(r)
+    if stg != 2:
+        return f"Stage {stg} — wait for a Stage-2 advance" if stg else "Not Stage 2 yet"
+    if not r.get("setup_ready"):
+        return "Stage 2 · strong RS — waiting on a pivot/setup trigger"
+    return "Qualified — not a same-day entry"
+
+
+def resilient_picks(latest: dict, macro_market: Optional[dict], k: int = 5) -> dict:
+    """Names that still pass the SEPA gate while the macro backdrop is risky
+    (Ajay 2026-06-04: 'if these are risky due to macro, pull the top 5 that
+    qualify all the other criteria'). Two honest tiers, never blurred:
+      • 'buyable'  — clears the FULL buy gate right now (scanner `is_buyable`:
+        Stage 2 + setup + not-extended + trend + liquidity). Clean entries.
+      • 'qualified'— when nothing is a clean buy (risk-off), the closest names
+        that pass the qualifier gate (trend template + liquidity, book p.79),
+        each tagged with what's holding it out of a buy.
+    Macro is an OVERLAY here, not a gate — `is_buyable` never factored macro in —
+    so this answers 'what still qualifies technically, regardless of the
+    backdrop', with each pick's own macro read attached for context."""
+    rows = latest.get("all_results") or latest.get("candidates") or []
+
+    _mrisk = None
+    if macro_market:
+        try:
+            from . import macro_risk as _mrisk
+        except Exception:
+            _mrisk = None
+
+    def pack(r: dict, why: str) -> dict:
+        item = {
+            "symbol":  r.get("symbol"),
+            "name":    r.get("name"),
+            "score":   r.get("score"),
+            "rs_rank": r.get("rs_rank"),
+            "stage":   _stage_of(r),
+            "why":     why,
+        }
+        if _mrisk is not None:
+            try:
+                item["macro_risk"] = _mrisk.score_stock(r.get("symbol", ""), macro_market)
+            except Exception:
+                pass
+        return item
+
+    buyable = sorted((r for r in rows if r.get("is_buyable")),
+                     key=lambda r: r.get("score") or 0, reverse=True)
+    if buyable:
+        return {"tier": "buyable", "count": len(buyable),
+                "picks": [pack(r, "Clean entry — clears the full buy gate") for r in buyable[:k]]}
+
+    cand = sorted((r for r in rows if r.get("is_candidate")),
+                  key=lambda r: r.get("score") or 0, reverse=True)
+    return {"tier": "qualified", "count": len(cand),
+            "picks": [pack(r, _why_not_buyable(r)) for r in cand[:k]]}
+
+
 def leaderboard(n: int = 12, lookback_days: int = LOOKBACK_DAYS) -> dict:
     key = (n, lookback_days)
     hit = _cache.get(key)
@@ -204,6 +270,7 @@ def leaderboard(n: int = 12, lookback_days: int = LOOKBACK_DAYS) -> dict:
 
     data = {
         "leaders":         leaders,
+        "buyable_despite_macro": resilient_picks(latest, macro_market),
         "scans_in_window": len(runs),
         "lookback_days":   lookback_days,
         "top_tier":        TOP_TIER,
