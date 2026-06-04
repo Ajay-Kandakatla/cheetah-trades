@@ -9658,3 +9658,65 @@ a.tk-link:hover   { color: inherit; }
 @media (max-width: 720px) {
   .kids-filters label { min-width: 100%; }
 }
+
+/* ==========================================================================
+   Market Pulse panel (Portfolio) — macro + news + liquidity read
+   ========================================================================== */
+.mpulse {
+  border: 1px solid var(--rule, #333);
+  border-left: 4px solid var(--cm-slate, #64748b);
+  border-radius: 8px;
+  padding: 0.9rem 1.05rem;
+  margin: 0 0 1.1rem;
+  background: var(--bg-surface, #141414);
+}
+.mpulse--loading { color: var(--cm-slate, #94a3b8); }
+.mpulse--good { border-left-color: var(--cm-green, #22c55e); }
+.mpulse--warn { border-left-color: var(--cm-amber, #d97706); }
+.mpulse--bad  { border-left-color: var(--cm-red, #ef4444); }
+.mpulse.is-emphasized {
+  background: linear-gradient(180deg, rgba(239,68,68,0.06), rgba(239,68,68,0));
+  box-shadow: 0 0 0 1px rgba(239,68,68,0.15) inset;
+}
+.mpulse__head { display: flex; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.7rem; }
+.mpulse__eyebrow { font-size: 0.74rem; color: var(--cm-slate, #94a3b8); margin-bottom: 0.2rem; }
+.mpulse__pf { font-weight: 600; }
+.mpulse__pf.is-up { color: var(--cm-green, #22c55e); }
+.mpulse__pf.is-down { color: var(--cm-red, #ef4444); }
+.mpulse__title { font-size: 1.05rem; font-weight: 700; margin: 0; line-height: 1.2; }
+.mpulse__tagline { font-size: 0.78rem; font-weight: 400; color: var(--cm-slate, #94a3b8); }
+.mpulse__score {
+  margin-left: auto; flex: 0 0 auto; font-family: "SF Mono", Menlo, monospace;
+  font-size: 1.3rem; font-weight: 700; min-width: 2.4rem; text-align: center;
+  border: 1px solid var(--rule, #333); border-radius: 6px; padding: 0.1rem 0.4rem;
+}
+.mpulse__score--good { color: var(--cm-green, #22c55e); }
+.mpulse__score--warn { color: var(--cm-amber, #d97706); }
+.mpulse__score--bad  { color: var(--cm-red, #ef4444); }
+.mpulse__indices { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.7rem; }
+.mpulse__idx {
+  display: flex; flex-direction: column; gap: 1px; min-width: 84px;
+  border: 1px solid var(--rule, #333); border-radius: 6px; padding: 0.35rem 0.55rem;
+  background: var(--bg, #0d0d0d);
+}
+.mpulse__idx-label { font-size: 0.66rem; color: var(--cm-slate, #94a3b8); text-transform: uppercase; letter-spacing: 0.03em; }
+.mpulse__idx-pct { font-family: "SF Mono", Menlo, monospace; font-size: 0.92rem; font-weight: 700; }
+.mpulse__idx-pct.is-up { color: var(--cm-green, #22c55e); }
+.mpulse__idx-pct.is-down { color: var(--cm-red, #ef4444); }
+.mpulse__gauges { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; font-size: 0.74rem; color: var(--cm-slate, #94a3b8); padding-bottom: 0.6rem; margin-bottom: 0.4rem; border-bottom: 1px solid var(--rule, #333); }
+.mpulse__gauges strong { color: var(--ink, #e8e8e8); }
+.mpulse__section { margin: 0.7rem 0; }
+.mpulse__section-title { font-size: 0.82rem; font-weight: 700; margin-bottom: 0.35rem; }
+.mpulse__bullets { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
+.mpulse__bullets li { font-size: 0.82rem; line-height: 1.45; color: var(--ink, #e8e8e8); }
+.mpulse__muted { font-size: 0.8rem; color: var(--cm-slate, #94a3b8); margin: 0; }
+.mpulse__trend { font-size: 0.84rem; line-height: 1.45; margin: 0 0 0.4rem; }
+.mpulse__watch-label { font-size: 0.74rem; color: var(--cm-slate, #94a3b8); margin-bottom: 0.2rem; }
+.mpulse__base { font-size: 0.72rem; line-height: 1.5; color: var(--ink-muted, #a8a8a8); margin: 0.5rem 0 0; padding-top: 0.45rem; border-top: 1px dashed var(--rule, #333); }
+.mpulse__news { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.mpulse__news li { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.8rem; }
+.mpulse__news a { color: var(--cm-mint, #6ee7b7); text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+.mpulse__news a:hover { text-decoration: underline; }
+.mpulse__news-src { font-size: 0.68rem; color: var(--cm-slate, #94a3b8); white-space: nowrap; flex: 0 0 auto; }
+.mpulse__foot { font-size: 0.7rem; color: var(--cm-slate, #94a3b8); font-style: italic; margin-top: 0.8rem; padding-top: 0.55rem; border-top: 1px dashed var(--rule, #333); }
+.mpulse__divergence { font-size: 0.8rem; line-height: 1.5; color: var(--ink, #e8e8e8); background: rgba(217,164,65,0.08); border: 1px solid rgba(217,164,65,0.25); border-radius: 6px; padding: 0.5rem 0.65rem; margin-bottom: 0.7rem; }
