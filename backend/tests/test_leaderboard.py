@@ -64,3 +64,53 @@ def test_current_rank_is_from_newest_run():
     z = next(r for r in rows if r["symbol"] == "Z")
     assert z["current_rank"] == 1            # newest run had Z at #1
     assert z["worst_rank"] == 2
+
+
+# ── resilient_picks — "still qualifies despite the macro" (Ajay 2026-06-04) ──
+
+def test_resilient_picks_prefers_buyable_sorted_by_score():
+    # When ANY name clears the full buy gate, that's the tier — buyable only,
+    # best score first. macro=None keeps it pure (no overlay).
+    rows = [
+        {"symbol": "AAA", "is_buyable": True,  "is_candidate": True, "score": 70, "stage": 2},
+        {"symbol": "BBB", "is_buyable": True,  "is_candidate": True, "score": 90, "stage": 2},
+        {"symbol": "CCC", "is_buyable": False, "is_candidate": True, "score": 99, "stage": 2},
+    ]
+    out = lb.resilient_picks({"all_results": rows}, None, k=5)
+    assert out["tier"] == "buyable"
+    assert [p["symbol"] for p in out["picks"]] == ["BBB", "AAA"]   # buyable only, score desc
+    assert out["count"] == 2
+    assert "Clean entry" in out["picks"][0]["why"]
+
+
+def test_resilient_picks_falls_back_to_qualifiers_when_no_buyable():
+    # Risk-off: nothing's a clean buy → closest QUALIFIERS (book p.79), with a
+    # reason each isn't a buy. Non-candidates are excluded even at higher score.
+    rows = [
+        {"symbol": "Q1", "is_buyable": False, "is_candidate": True,  "score": 80, "stage": 2, "setup_ready": False},
+        {"symbol": "Q2", "is_buyable": False, "is_candidate": True,  "score": 88, "stage": 3, "setup_ready": False},
+        {"symbol": "NO", "is_buyable": False, "is_candidate": False, "score": 99, "stage": 2},
+    ]
+    out = lb.resilient_picks({"all_results": rows}, None, k=5)
+    assert out["tier"] == "qualified"
+    assert [p["symbol"] for p in out["picks"]] == ["Q2", "Q1"]     # candidates only, score desc
+    assert "NO" not in [p["symbol"] for p in out["picks"]]         # never blur the gate
+    why = {p["symbol"]: p["why"] for p in out["picks"]}
+    assert "Stage-2" in why["Q2"]                                  # stage 3 → wait for stage 2
+    assert "pivot" in why["Q1"].lower()                            # stage 2, no setup → wait on pivot
+
+
+def test_resilient_picks_respects_k_limit():
+    rows = [{"symbol": f"S{i}", "is_buyable": True, "is_candidate": True, "score": i, "stage": 2}
+            for i in range(10)]
+    out = lb.resilient_picks({"all_results": rows}, None, k=3)
+    assert len(out["picks"]) == 3
+    assert out["count"] == 10                                      # pool size, not the cap
+
+
+def test_why_not_buyable_and_stage_of():
+    assert "Stage-2" in lb._why_not_buyable({"stage": 3})
+    assert "pivot" in lb._why_not_buyable({"stage": 2, "setup_ready": False}).lower()
+    assert lb._why_not_buyable({"stage": 2, "setup_ready": True})  # non-empty
+    assert lb._stage_of({"stage": 2}) == 2
+    assert lb._stage_of({"stage": {"stage": 3}}) == 3              # dict form from scanner

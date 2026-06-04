@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
-import { MacroRiskBadge, type MacroRisk } from './MacroRiskBadge';
+import { MacroRiskBadge, MacroMarketStrip, type MacroRisk, type MacroMarket } from './MacroRiskBadge';
 
 type Leader = {
   symbol: string;
@@ -43,7 +43,22 @@ type Leader = {
   dist_to_r1_pct?: number | null;
   macro_risk?: MacroRisk | null;
 };
-type Resp = { leaders: Leader[]; scans_in_window?: number; lookback_days?: number; top_tier?: number };
+// "Still qualifies despite the macro" — top names that pass the SEPA gate while
+// the backdrop is risky. Two honest tiers from the backend (never blurred):
+//   buyable   = clears the full buy gate now (is_buyable) — clean entries
+//   qualified = nothing's a clean buy (risk-off) → closest qualifiers (book p.79)
+type ResilientPick = {
+  symbol: string; name?: string | null;
+  score?: number | null; rs_rank?: number | null; stage?: number | null;
+  why: string; macro_risk?: MacroRisk | null;
+};
+type Resilient = { tier: 'buyable' | 'qualified'; count: number; picks: ResilientPick[] };
+type Resp = {
+  leaders: Leader[];
+  buyable_despite_macro?: Resilient | null;
+  macro_market?: MacroMarket | null;
+  scans_in_window?: number; lookback_days?: number; top_tier?: number;
+};
 
 function fmtVol(v?: number | null): string {
   if (v == null) return '—';
@@ -116,6 +131,9 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
 
   if (!data || !(data.leaders || []).length) return null; // fail quiet
 
+  const resi = data.buyable_despite_macro && data.buyable_despite_macro.picks.length
+    ? data.buyable_despite_macro : null;
+
   return (
     <section className="rank-lb">
       <div className="rank-lb__head">
@@ -128,6 +146,43 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
           </span>
         </span>
       </div>
+
+      {/* The whole tape's macro read, ONCE — rows only chip in when they diverge. */}
+      {data.macro_market && <MacroMarketStrip market={data.macro_market} />}
+
+      {/* "Still qualifies despite the macro" — the answer to "pull the 5 that
+          qualify all the other criteria even with the risk" (Ajay 2026-06-04). */}
+      {resi && (
+        <div className={`rlb-resi rlb-resi--${resi.tier}`}>
+          <div className="rlb-resi__head">
+            <span className="rlb-resi__title">
+              {resi.tier === 'buyable'
+                ? '✅ Buyable now — clears the full gate despite the macro'
+                : '🛡️ Holds up despite the macro — closest to a buy'}
+            </span>
+            <span className="rlb-resi__sub mono">
+              {resi.tier === 'buyable'
+                ? `${resi.count} name${resi.count === 1 ? '' : 's'} pass the full buy gate`
+                : `0 clean buys in this tape · ${resi.count} still qualify (Stage 2 + trend template, book p.79)`}
+            </span>
+          </div>
+          <div className="rlb-resi__rows">
+            {resi.picks.map((p) => (
+              <Link key={p.symbol} to={`/sepa/${p.symbol}`} className="rlb-resi__row" title={p.why}>
+                <span className="rlb-resi__sym">{p.symbol}</span>
+                <span className="rlb-resi__nums mono">
+                  {p.score != null && <>score <b>{p.score}</b></>}
+                  {p.rs_rank != null && <> · RS {p.rs_rank}</>}
+                  {p.stage != null && <> · <span style={{ color: p.stage !== 2 ? '#fb923c' : undefined }}>Stg {p.stage}</span></>}
+                </span>
+                <span className="rlb-resi__why">{p.why}</span>
+                {p.macro_risk && <MacroRiskBadge risk={p.macro_risk} marketScore={data.macro_market?.score} compact />}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="rank-lb__sub">
         <b>%</b> = how often it was in the top {data.top_tier ?? 20} <b>per day</b> this window.
         <b style={{ color: '#eab308' }}> ⚡ Primed</b> = setup ready, watch for the breakout ·
@@ -157,7 +212,6 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
             }>
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
               <span className="rank-lb__sym">{l.symbol}</span>
-              {l.macro_risk && <MacroRiskBadge risk={l.macro_risk} compact />}
               <span className="rank-lb__traj mono">
                 {lev.isLeveraged && <span className="lev-badge" title="Leveraged/inverse ETF — not an individual stock; SEPA criteria don't apply">⚡ {lev.label}</span>}{lev.isLeveraged ? ' ' : ''}
                 best #{l.best_rank}
@@ -173,6 +227,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
                   {l.stage != null && <> · <span style={{ color: l.stage !== 2 ? '#fb923c' : undefined }}>Stg {l.stage}</span></>}
                   {l.distribution_days ? <> · <span style={{ color: l.distribution_days >= 4 ? '#fb923c' : undefined }}>{l.distribution_days} dist</span></> : null}
                 </span>
+                {l.macro_risk && <MacroRiskBadge risk={l.macro_risk} marketScore={data.macro_market?.score} compact />}
                 {l.drop_reason && <span className="rank-lb__why">↓ {l.drop_reason}</span>}
               </span>
               <span className="rank-lb__pers mono" title="% of days in the top tier">
