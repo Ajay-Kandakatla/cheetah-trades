@@ -10,6 +10,7 @@ import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
 import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
+import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
@@ -460,6 +461,10 @@ export function SepaCandidatePage() {
   // ~15-min delay for non-subscribers and sometimes doesn't auto-tick
   // when the tab regains focus — a manual reload is the cheap fix.
   const [chartReloadKey, setChartReloadKey] = useState(0);
+  // Native (live, our data) is the default; TradingView embed kept for its
+  // full drawing toolset. (Ajay 2026-06-04: the embed can't use his paid TV.)
+  const [chartSource, setChartSource] = useState<'native' | 'tv'>('native');
+  const [chartInterval, setChartInterval] = useState<ChartInterval>('D');
 
   useEffect(() => {
     if (!setup || !accountSize) { setPlan(null); return; }
@@ -862,28 +867,38 @@ export function SepaCandidatePage() {
           <div className="sepa-candidate-page__body">
             {tab === 'chart' && (
               <section>
-                <div className="sepa-tab-help">
-                  <strong>Live chart</strong> — TradingView's interactive daily chart.
-                  Click <strong>Indicators</strong> to overlay the 50/150/200-day moving averages.
+                <div className="sepa-tab-help" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <strong>Chart</strong>
+                  <span className="livechart-toggle">
+                    <button type="button" className={chartSource === 'native' ? 'is-active' : ''} onClick={() => setChartSource('native')}>● Live</button>
+                    <button type="button" className={chartSource === 'tv' ? 'is-active' : ''} onClick={() => setChartSource('tv')}>TradingView</button>
+                  </span>
+                  {chartSource === 'native' && (
+                    <span className="livechart-toggle">
+                      <button type="button" className={chartInterval === 'D' ? 'is-active' : ''} onClick={() => setChartInterval('D')}>D</button>
+                      <button type="button" className={chartInterval === '1m' ? 'is-active' : ''} onClick={() => setChartInterval('1m')}>1m</button>
+                    </span>
+                  )}
+                  <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>
+                    {chartSource === 'native'
+                      ? 'Real-time from your own feed — the current candle ticks live.'
+                      : 'TradingView’s full toolset (embed is ~15-min delayed).'}
+                  </span>
                 </div>
                 <div className="sepa-candidate-page__chart">
-                  <iframe
-                    key={chartReloadKey}
-                    title={`${symbol} live chart`}
-                    src={`https://s.tradingview.com/widgetembed/?frameElementId=tv-sepa-${symbol}&symbol=${encodeURIComponent(tvSymbolFor(symbol, data?.profile?.exchange))}&interval=D&theme=dark&style=1&timezone=America%2FNew_York&withdateranges=1&hide_side_toolbar=0&allow_symbol_change=1&save_image=0&studies=%5B%5D&locale=en`}
-                    style={{ width: '100%', height: '100%', border: 0 }}
-                    allow="clipboard-write"
-                  />
+                  {chartSource === 'native' ? (
+                    <LiveCandlesChart symbol={symbol} interval={chartInterval} />
+                  ) : (
+                    <iframe
+                      key={chartReloadKey}
+                      title={`${symbol} live chart`}
+                      src={`https://s.tradingview.com/widgetembed/?frameElementId=tv-sepa-${symbol}&symbol=${encodeURIComponent(tvSymbolFor(symbol, data?.profile?.exchange))}&interval=D&theme=dark&style=1&timezone=America%2FNew_York&withdateranges=1&hide_side_toolbar=0&allow_symbol_change=1&save_image=0&studies=%5B%5D&locale=en`}
+                      style={{ width: '100%', height: '100%', border: 0 }}
+                      allow="clipboard-write"
+                    />
+                  )}
                 </div>
-                {/* TradingView free-embed disclaimer + reload affordance.
-                    The widgetembed feed is delayed ~15 min for non-
-                    subscribers (can't sign in through an iframe due
-                    to cookie isolation), so the real-time price for
-                    THIS page is the badge in the header — which pulls
-                    from the Finnhub WebSocket stream through our SSE
-                    bus. The reload button bumps an iframe key so
-                    React tears down + remounts; useful when the
-                    embed appears to have frozen on tab refocus. */}
+                {chartSource === 'tv' && (
                 <div style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   flexWrap: 'wrap', gap: '0.4rem',
@@ -892,8 +907,8 @@ export function SepaCandidatePage() {
                   background: 'rgba(255,255,255,0.02)', borderRadius: 4,
                 }}>
                   <span>
-                    🕐 Chart embed is delayed ~15 min (TradingView free tier).
-                    The <strong>● live</strong> price in the page header above is real-time from your SSE feed.
+                    🕐 TradingView embed is delayed ~15 min (a paid TV account can’t unlock the
+                    embed — it’s anonymous). Switch to <strong>● Live</strong> for real-time from your feed.
                   </span>
                   <button
                     type="button"
@@ -908,6 +923,7 @@ export function SepaCandidatePage() {
                     ↻ Reload chart
                   </button>
                 </div>
+                )}
                 <div className="sepa-drawer__chart-links">
                   <a href={`https://www.tradingview.com/symbols/${symbol}/`} target="_blank" rel="noreferrer">Open in TradingView</a>
                   <a href={`https://finance.yahoo.com/quote/${symbol}`} target="_blank" rel="noreferrer">Yahoo Finance</a>

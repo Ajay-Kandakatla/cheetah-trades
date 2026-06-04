@@ -2105,6 +2105,36 @@ async def sepa_history_symbol(symbol: str, days: int = Query(30, ge=1, le=365)):
     }))
 
 
+@app.get("/sepa/price-bars/{symbol}")
+async def sepa_price_bars(symbol: str, days: int = Query(250, ge=20, le=1500)):
+    """Daily OHLCV candles from the price cache, for the native (live) chart.
+    Lightweight-Charts daily series take a 'YYYY-MM-DD' time. The current day's
+    candle ticks live on the client from the SSE last price."""
+    from sepa import prices as _prices
+
+    def _run():
+        df = _prices.load_prices(symbol.upper())
+        if df is None or df.empty:
+            return {"symbol": symbol.upper(), "bars": []}
+        tail = df.tail(days)
+        bars = []
+        for ts, row in tail.iterrows():
+            try:
+                bars.append({
+                    "time":   ts.strftime("%Y-%m-%d"),
+                    "open":   round(float(row["open"]), 4),
+                    "high":   round(float(row["high"]), 4),
+                    "low":    round(float(row["low"]), 4),
+                    "close":  round(float(row["close"]), 4),
+                    "volume": float(row["volume"]),
+                })
+            except Exception:
+                continue
+        return {"symbol": symbol.upper(), "bars": bars}
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
 # ============================================================================
 # Learning / calibration endpoints
 # ============================================================================
