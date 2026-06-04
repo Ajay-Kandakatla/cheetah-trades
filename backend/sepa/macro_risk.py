@@ -103,10 +103,13 @@ EVENT_RULES = [
             "air strike", "military strike", "ground offensive", "war zone", "civil war",
             "at war", "goes to war", "declares war", "wartime", "armed conflict", "ceasefire"],
      "label": "Armed conflict / war", "severity": 5, "sectors": ["broad", "energy", "defense"]},
-    {"kw": ["sanctions", "sanctioned", "export control", "export controls", "export curb",
-            "export curbs", "chip ban", "chip curb", "chip export", "blacklist", "entity list",
-            "semiconductor restrictions"],
-     "label": "Sanctions / export controls", "severity": 4, "sectors": ["broad", "semis_ai"]},
+    # Chip export controls hit SEMIS specifically — not the whole market — so an
+    # energy/financial name shouldn't inherit semi-policy risk (Ajay 2026-06-04).
+    {"kw": ["export control", "export controls", "export curb", "export curbs",
+            "chip ban", "chip curb", "chip export", "semiconductor restrictions"],
+     "label": "Chip export controls", "severity": 4, "sectors": ["semis_ai"]},
+    {"kw": ["sanctions", "sanctioned", "blacklist", "entity list"],
+     "label": "Sanctions", "severity": 3, "sectors": ["broad"]},
     {"kw": ["tariff", "tariffs", "trade war", "trade ban", "import ban", "trade restrictions"],
      "label": "Tariffs / trade war", "severity": 3, "sectors": ["broad", "semis_ai", "materials"]},
     {"kw": ["oil price", "oil prices", "opec", "crude surge", "crude spike", "oil shock",
@@ -181,17 +184,26 @@ def _regime_stress(regime: dict) -> tuple[float, list[str]]:
 
 # ── LLM analyst refinement (optional, best-effort) ───────────────────────────
 _LLM_SYSTEM = (
-    "You are a markets macro-risk analyst. Given today's market-regime stats and "
-    "top headlines, assess how risky it is to hold/long US equities RIGHT NOW from "
-    "a macro + geopolitical standpoint. Be sober and specific; do not predict prices "
-    "or dates. Output STRICT JSON only: {\"risk_score\": 0-100 (higher=more risk), "
-    "\"summary\": \"2-3 plain sentences\", \"factors\": [{\"label\": str, \"severity\": "
-    "1-5, \"sectors\": [one or more of broad,semis_ai,software_growth,energy,"
-    "financials,materials,defense,healthcare,consumer], \"note\": str}]}"
+    "You are a markets macro/catalyst analyst. Given today's market-regime stats, "
+    "market headlines, and key-stock headlines, identify the SPECIFIC events moving "
+    "stocks RIGHT NOW and how risky it is to be long. Cover three kinds: (1) broad "
+    "macro/geopolitical events (war, rates, oil, debt); (2) SECTOR-specific shifts "
+    "— e.g. chip export controls hit ONLY semis, an oil move hits ONLY energy; (3) "
+    "COMPANY-SPECIFIC catalysts and executive statements — e.g. what NVIDIA's Jensen "
+    "Huang said, a Marvell/MRVL earnings blow-up. Do NOT predict prices or dates. "
+    "For each event, tag the SECTORS and specific TICKERS it affects and whether it "
+    "is a 'headwind' (raises risk) or 'tailwind' (bullish, lowers risk). CRITICAL: a "
+    "semis-only event must NOT be tagged 'broad' — only use 'broad' for true "
+    "whole-market macro, so a semi event never moves an oil name. Output STRICT JSON "
+    "only: {\"risk_score\": 0-100 (higher=more risk), \"summary\": \"2-3 plain "
+    "sentences\", \"factors\": [{\"label\": str, \"severity\": 1-5, \"direction\": "
+    "\"headwind\"|\"tailwind\", \"sectors\": [subset of broad,semis_ai,software_growth,"
+    "energy,financials,materials,defense,healthcare,consumer], \"affected_tickers\": "
+    "[tickers], \"note\": str}]}"
 )
 
 
-def _llm_refine(regime: dict, headlines: list[str]) -> Optional[dict]:
+def _llm_refine(regime: dict, headlines: list[str], key_headlines: list[str]) -> Optional[dict]:
     if os.getenv("MACRO_RISK_LLM", "1") not in ("1", "true", "True"):
         return None
     try:
@@ -202,10 +214,12 @@ def _llm_refine(regime: dict, headlines: list[str]) -> Optional[dict]:
             f"VIX {(comp.get('stress') or {}).get('vix')}, "
             f"breadth {(comp.get('breadth') or {}).get('pct_above_200ma')}% above 200-DMA, "
             f"{(comp.get('distribution') or {}).get('count')} distribution days.\n\n"
-            "Top market headlines:\n" + "\n".join(f"- {h}" for h in headlines[:15])
+            "Top market headlines:\n" + "\n".join(f"- {h}" for h in headlines[:15]) +
+            ("\n\nKey-stock headlines (ticker-tagged — use these for company/exec events):\n"
+             + "\n".join(f"- {h}" for h in key_headlines[:25]) if key_headlines else "")
         )
-        res = llm.chat(prompt, system=_LLM_SYSTEM, max_tokens=600, temperature=0.2,
-                       json_only=True, timeout=60, provider="anthropic")
+        res = llm.chat(prompt, system=_LLM_SYSTEM, max_tokens=800, temperature=0.2,
+                       json_only=True, timeout=75, provider="anthropic")
         if res.get("ok") and isinstance(res.get("parsed"), dict):
             p = res["parsed"]
             if isinstance(p.get("risk_score"), (int, float)) and isinstance(p.get("factors"), list):
@@ -244,29 +258,36 @@ def cached_market() -> Optional[dict]:
         return None
 
 
-def assess_market(regime: dict, headlines: list[str], *, use_llm: bool = True) -> dict:
+def assess_market(regime: dict, headlines: list[str],
+                  key_headlines: Optional[list[str]] = None, *, use_llm: bool = True) -> dict:
     """Build the market-wide macro-risk read from regime + headlines (+ optional
-    LLM). Pure given its inputs — the caller fetches regime/news and persists."""
+    LLM, fed ticker-tagged key-stock headlines for company/exec events). Pure
+    given its inputs — the caller fetches regime/news and persists."""
+    key_headlines = key_headlines or []
     stress, stress_reasons = _regime_stress(regime)
-    events = detect_events(headlines)
+    events = detect_events(headlines + key_headlines)
     event_load = min(60.0, sum(f["severity"] for f in events) * 9)
 
     # Deterministic blend: market stress is the floor, events add on top.
     base_score = round(min(100.0, 0.6 * stress + event_load), 1)
     factors = list(events)
     for r in stress_reasons:
-        factors.append({"label": r, "severity": 2, "sectors": ["broad"], "note": "market regime"})
+        factors.append({"label": r, "severity": 2, "sectors": ["broad"],
+                        "direction": "headwind", "note": "market regime"})
 
     summary = None
     provider = "deterministic"
     if use_llm:
-        ref = _llm_refine(regime, headlines)
+        ref = _llm_refine(regime, headlines, key_headlines)
         if ref:
             base_score = round(float(ref["risk_score"]), 1)
-            # keep the keyword events too, but lead with the LLM's factors
+            # lead with the LLM's specific (per-ticker / directional) factors
             llm_factors = [
                 {"label": f.get("label", "?"), "severity": int(f.get("severity", 2) or 2),
-                 "sectors": f.get("sectors") or ["broad"], "note": f.get("note", "")}
+                 "direction": str(f.get("direction") or "headwind").lower(),
+                 "sectors": f.get("sectors") or ["broad"],
+                 "affected_tickers": [str(t).upper() for t in (f.get("affected_tickers") or [])],
+                 "note": f.get("note", "")}
                 for f in ref.get("factors", []) if isinstance(f, dict)
             ]
             factors = llm_factors or factors
@@ -276,7 +297,7 @@ def assess_market(regime: dict, headlines: list[str], *, use_llm: bool = True) -
     return {
         "score": base_score,
         "level": level_for(base_score),
-        "factors": factors[:6],
+        "factors": factors[:8],
         "summary": summary,
         "provider": provider,
     }
@@ -297,30 +318,54 @@ def store_market(assessment: dict) -> None:
 # ── Per-stock score (pure, cheap) ────────────────────────────────────────────
 def score_stock(symbol: str, market: Optional[dict], *,
                 news_sentiment: Optional[int] = None) -> dict:
-    """Per-stock macro risk = market base + this stock's sector exposure to the
-    active factors (+ optional negative-news bump). Returns score/level/drivers."""
+    """Per-stock macro risk = market base, adjusted by how each active factor
+    hits THIS name. Targeting precedence: an exact ticker match (e.g. a Marvell
+    catalyst on MRVL) beats a sector match (a chip-export curb on all semis)
+    beats a broad market factor. Each factor carries a DIRECTION — a headwind
+    raises risk, a tailwind (e.g. bullish Jensen-Huang AI comments) LOWERS it —
+    so a semis-only event never moves an oil name and vice-versa."""
     if not market:
         return {"score": None, "level": "unknown", "drivers": [], "sector": sector_of(symbol)}
+    sym = (symbol or "").upper()
     bucket = sector_of(symbol)
     score = float(market.get("score") or 0)
     drivers: list[str] = []
     for f in market.get("factors", []) or []:
         secs = f.get("sectors") or []
-        if "broad" in secs or bucket in secs:
-            # sector-specific factors hit harder than broad ones
-            specific = bucket in secs and bucket != "broad"
-            score += (f.get("severity", 2) or 2) * (2.0 if specific else 1.0)
-            drivers.append(f.get("label", "?"))
+        tickers = [str(t).upper() for t in (f.get("affected_tickers") or [])]
+        ticker_hit = sym in tickers
+        sector_hit = bucket in secs and bucket != "broad"
+        broad_hit = "broad" in secs
+        if not (ticker_hit or sector_hit or broad_hit):
+            continue                                    # this name isn't exposed
+        sev = float(f.get("severity", 2) or 2)
+        weight = 2.5 if ticker_hit else (2.0 if sector_hit else 1.0)
+        delta = sev * weight
+        direction = str(f.get("direction") or "headwind").lower()
+        label = f.get("label", "?")
+        if direction == "tailwind":
+            score -= delta
+            drivers.append("↓ " + label)              # reduces macro risk
+        else:
+            score += delta
+            drivers.append(("↑ " if direction == "headwind" else "• ") + label)
     if news_sentiment is not None and news_sentiment < 0:
         score += min(12.0, abs(news_sentiment) * 3)
-        drivers.append("negative news flow")
+        drivers.append("↑ negative news flow")
     score = round(max(0.0, min(100.0, score)), 1)
-    return {"score": score, "level": level_for(score), "drivers": drivers[:3], "sector": bucket}
+    return {"score": score, "level": level_for(score), "drivers": drivers[:4], "sector": bucket}
 
 
-# ── Orchestration (cron + endpoint) ──────────────────────────────────────────
+# Bellwether stocks whose news drives a whole sector — fetched so the analyst
+# can surface "what Jensen Huang said" (NVDA) or "Marvell blew up" (MRVL) and
+# route the impact to the right tickers/sectors. Semis-heavy by design (Ajay's
+# focus) plus an energy + financials anchor.
+BELLWETHERS = ["NVDA", "MRVL", "AVGO", "AMD", "TSM", "MU", "ASML", "AAPL", "MSFT", "XOM", "JPM"]
+
+
 async def refresh_market(*, use_llm: bool = True) -> dict:
-    """Fetch regime + market headlines, compute the assessment, cache it."""
+    """Fetch regime + market headlines + key-stock headlines, compute, cache."""
+    import asyncio
     from . import market_regime, scanner
     try:
         import news as news_mod
@@ -332,6 +377,7 @@ async def refresh_market(*, use_llm: bool = True) -> dict:
     regime = market_regime.regime(scan_rows=rows)
 
     headlines: list[str] = []
+    key_headlines: list[str] = []
     if news_mod is not None:
         try:
             items = await news_mod.market_news()
@@ -339,7 +385,19 @@ async def refresh_market(*, use_llm: bool = True) -> dict:
         except Exception as exc:
             log.warning("macro_risk: market news fetch failed: %s", exc)
 
-    assessment = assess_market(regime, headlines, use_llm=use_llm)
+        async def _one(t):
+            try:
+                its = await news_mod.fetch_news(t)
+                return [f"[{t}] {i.get('title', '')}" for i in (its or [])[:3]]
+            except Exception:
+                return []
+        try:
+            per = await asyncio.gather(*[_one(t) for t in BELLWETHERS])
+            key_headlines = [h for sub in per for h in sub]
+        except Exception as exc:
+            log.warning("macro_risk: bellwether news fetch failed: %s", exc)
+
+    assessment = assess_market(regime, headlines, key_headlines, use_llm=use_llm)
     store_market(assessment)
     return assessment
 

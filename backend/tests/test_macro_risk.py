@@ -35,7 +35,40 @@ def test_real_events_detected():
     assert "Oil / energy shock" in labels
     assert "Rates / inflation" in labels
     assert "Credit / debt stress" in labels
-    assert "Sanctions / export controls" in labels
+    assert "Chip export controls" in labels
+
+
+def test_chip_controls_are_semis_only_not_broad():
+    """A semis-specific event must NOT inherit 'broad' — so it can't move an oil
+    or financial name. Ajay 2026-06-04."""
+    events = mr.detect_events(["US tightens chip export controls on China"])
+    chip = next(f for f in events if f["label"] == "Chip export controls")
+    assert chip["sectors"] == ["semis_ai"]
+    assert "broad" not in chip["sectors"]
+
+
+def test_ticker_targeting_and_direction():
+    """A bellwether tailwind (Jensen Huang AI) LOWERS semi risk; a name-specific
+    headwind (Marvell guidance) hits only that ticker; an energy name sees
+    neither — only the broad oil factor."""
+    market = {"score": 40, "factors": [
+        {"label": "Jensen Huang: strong AI demand", "severity": 3, "direction": "tailwind",
+         "sectors": ["semis_ai"], "affected_tickers": ["NVDA", "MRVL"]},
+        {"label": "Marvell guidance disappoints", "severity": 4, "direction": "headwind",
+         "sectors": [], "affected_tickers": ["MRVL"]},
+        {"label": "Oil shock", "severity": 3, "direction": "headwind", "sectors": ["broad", "energy"]},
+    ]}
+    nvda = mr.score_stock("NVDA", market)
+    mrvl = mr.score_stock("MRVL", market)
+    dino = mr.score_stock("DINO", market)
+    # NVDA: AI tailwind (−) partly offsets the broad oil headwind → below MRVL.
+    assert nvda["score"] < mrvl["score"]
+    # The energy name never sees the semi events — only the broad oil factor.
+    assert all("Marvell" not in d and "Jensen" not in d for d in dino["drivers"])
+    assert any("Oil" in d for d in dino["drivers"])
+    # Direction arrows are surfaced for the UI.
+    assert any(d.startswith("↓") for d in nvda["drivers"])     # tailwind lowers risk
+    assert any("Marvell" in d for d in mrvl["drivers"])         # ticker-targeted
 
 
 def test_levels():
@@ -64,7 +97,7 @@ def test_score_stock_sector_exposure():
     energy = mr.score_stock("DINO", market)   # energy stock — hit specifically by oil
     semi = mr.score_stock("NVDA", market)     # not energy — only the broad part
     assert energy["score"] > semi["score"]
-    assert "Oil / energy shock" in energy["drivers"]
+    assert any("Oil / energy shock" in d for d in energy["drivers"])
     # The semi still carries the broad factors.
     assert semi["score"] >= market["score"]
     assert energy["level"] in ("low", "elevated", "high", "severe")
@@ -82,7 +115,7 @@ def test_news_sentiment_raises_risk():
     neutral = mr.score_stock("NVDA", market)
     negative = mr.score_stock("NVDA", market, news_sentiment=-3)
     assert negative["score"] > neutral["score"]
-    assert "negative news flow" in negative["drivers"]
+    assert any("negative news flow" in d for d in negative["drivers"])
 
 
 # ── Deterministic market assessment ─────────────────────────────────────────
