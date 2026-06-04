@@ -390,6 +390,13 @@
 # leaderboard / portfolio / SEPA cards.
 0      7-20  *    *    *    /usr/local/bin/python -m sepa.macro_risk
 #
+# Portfolio diagnosis pre-warm — 9:50am, 12:30pm, 3:50pm ET weekdays. Computes
+# the "what's driving this move" factor scorecard + LLM write-up per holding so
+# the Portfolio panel loads from cache instead of waiting on the LLM.
+50     9     *    *    1-5  /usr/local/bin/python -m portfolio.diagnosis
+30     12    *    *    1-5  /usr/local/bin/python -m portfolio.diagnosis
+50     15    *    *    1-5  /usr/local/bin/python -m portfolio.diagnosis
+#
 # 6:30pm ET Mon-Fri — refresh the Research page insider thesis (bullish vs
 # bearish EDGAR sample). Slow + rate-limited, so out-of-band after the close.
 30     18    *    *    1-5  /usr/local/bin/python -m sepa.pattern_research
