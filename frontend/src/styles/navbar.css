@@ -51,7 +51,10 @@
   gap: 2px;
   align-items: center;
   justify-content: space-around;
-  flex-wrap: nowrap;
+  /* wrap (not nowrap) so a crowded row can never overflow its grid track and
+     overlap the date/meta cluster — at any width it stacks instead. The
+     ≤1300px rule gives the clean full-width row for the common cramped case. */
+  flex-wrap: wrap;
   min-width: 0;
 }
 
@@ -311,7 +314,12 @@
   .cm-nav__meta-date { display: none; }
 }
 
-@media (max-width: 900px) {
+/* Below ~1300px the trading + household pages (8 items, some with long labels
+   like "Food (meal planner)") no longer fit one line beside the brand + meta,
+   so the links drop to their own full-width row that wraps cleanly — no overlap
+   with the date / Misc / avatar cluster. Raised from 900px on 2026-06-04 after
+   adding the Research page tipped the row into the meta. */
+@media (max-width: 1300px) {
   .cm-nav:not(.cm-nav--mobile) {
     grid-template-columns: 1fr auto;
     align-items: center;
