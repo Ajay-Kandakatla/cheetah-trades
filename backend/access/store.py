@@ -352,12 +352,13 @@ def build_menu(email: str) -> dict:
             continue
 
         group = entry["group"]
-        # Household placement: primary for owners (daily use alongside
-        # Morning brief), profile for non-owners (it's an added grant,
-        # not their main workflow). House Sale always goes to profile —
-        # nobody runs daily real-estate checks except the seller.
+        # Household placement: Food/Kids go in the Misc dropdown for owners
+        # (Ajay 2026-06-04 — "move kids and food under misc" to declutter the
+        # primary trading nav), profile for non-owners (it's an added grant, not
+        # their main workflow). House Sale always goes to profile — nobody runs
+        # daily real-estate checks except the seller.
         if group == "household":
-            section = "primary" if (is_owner and fid in ("food", "kids")) else "profile"
+            section = "misc" if (is_owner and fid in ("food", "kids")) else "profile"
         else:
             section = _GROUP_TO_SECTION.get(group, "profile")
 
