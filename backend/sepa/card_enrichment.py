@@ -178,6 +178,9 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
                     "insider":    doc.get("insider") or {},
                     "valuation":  doc.get("valuation") or {},
                     "headline":   doc.get("headline") or {},
+                    # Macro risk is overlaid FRESH (hourly market read), never
+                    # frozen in the 24h card cache.
+                    "macro_risk": _macro_for(sym),
                 }
         except Exception as exc:
             log.warning("card_enrichment cache read failed for %s: %s", sym, exc)
@@ -196,6 +199,7 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
         "insider":    insider,
         "valuation":  valuation,
         "headline":   headline,
+        "macro_risk": _macro_for(sym),
     }
 
     # Best-effort cache write. A failure here doesn't break the response —
@@ -218,6 +222,18 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
             log.warning("card_enrichment cache write failed for %s: %s", sym, exc)
 
     return payload
+
+
+def _macro_for(sym: str) -> dict:
+    """Per-stock macro-risk overlay from the hourly-cached market read. Cheap +
+    pure; returns {} if the market read isn't available yet."""
+    try:
+        from sepa import macro_risk as mrisk
+        market = mrisk.get_market()
+        return mrisk.score_stock(sym, market) if market else {}
+    except Exception as exc:
+        log.warning("card_enrichment macro_risk for %s failed: %s", sym, exc)
+        return {}
 
 
 async def _compute_insider(sym: str) -> dict:
