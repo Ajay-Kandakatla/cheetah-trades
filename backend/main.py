@@ -1124,6 +1124,26 @@ async def market_macro_risk_refresh(email: str = Depends(current_user_email)):
     return JSONResponse({"ok": True, "market": out})
 
 
+@app.get("/portfolio/diagnosis/{symbol}")
+async def portfolio_diagnosis_symbol(symbol: str,
+                                     force: bool = Query(False),
+                                     provider: str = Query("anthropic", description="anthropic | local")):
+    """'What's driving this move?' — a factor scorecard (macro / sector / distribution
+    / liquidity / stock-specific / trend) + an LLM write-up. Cached 3h. Not advice."""
+    from portfolio import diagnosis as dg
+    out = await asyncio.to_thread(dg.diagnose, symbol, force=force, provider=provider)
+    return JSONResponse(_scrub_nan(out))
+
+
+@app.get("/portfolio/diagnosis")
+async def portfolio_diagnosis_all(email: str = Depends(current_user_email),
+                                  provider: str = Query("anthropic")):
+    """Diagnose every holding in the caller's portfolio."""
+    from portfolio import diagnosis as dg
+    out = await asyncio.to_thread(dg.diagnose_portfolio, email, provider=provider)
+    return JSONResponse(_scrub_nan(out))
+
+
 # ---------------------------------------------------------------------------
 # SEPA (Minervini) endpoints
 # ---------------------------------------------------------------------------
