@@ -384,3 +384,7 @@
 #
 # 21:30 ET — Magnesium Glycinate pre-sleep reminder (30-60 min before bed).
 30     21    *    *    *    /usr/local/bin/python -m volleyball.reminders magnesium
+#
+# 6:30pm ET Mon-Fri — refresh the Research page insider thesis (bullish vs
+# bearish EDGAR sample). Slow + rate-limited, so out-of-band after the close.
+30     18    *    *    1-5  /usr/local/bin/python -m sepa.pattern_research

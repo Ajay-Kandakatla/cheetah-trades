@@ -111,6 +111,9 @@ FEATURE_CATALOG: list[dict] = [
     # the Top-Picks churn tracker, honourable mentions and the rank-compare chart.
     # Primary nav next to Portfolio — Ajay checks ranking daily. Owner-only default.
     {"id": "leaderboard",   "label": "Leaderboard",         "group": "daily",     "default": False, "added_in": 2},
+    # Research (2026-06-04): bullish-vs-bearish pattern mining + the insider
+    # thesis. A living analysis page Ajay wants to keep using. Owner-on default.
+    {"id": "research",      "label": "Research",            "group": "daily",     "default": False, "added_in": 3},
     {"id": "catalysts",     "label": "Catalysts",           "group": "tools",     "default": False},
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
@@ -165,7 +168,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 2
+CATALOG_VERSION = 3
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

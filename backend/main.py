@@ -1963,6 +1963,44 @@ async def sepa_rank_history_batch(symbols: str = Query(..., description="comma-s
 
 
 # ---------------------------------------------------------------------------
+# Research — bullish vs bearish pattern mining (the /research page)
+# ---------------------------------------------------------------------------
+@app.get("/research/patterns")
+async def research_patterns():
+    """Mine which app signals separate winners from losers. Cohorts are defined
+    by trailing 3-month return (computed from price_cache); each pattern's
+    prevalence is measured in the bullish vs bearish cohort. Live + fast. The
+    slow insider thesis (live EDGAR) is served from its 24h Mongo cache."""
+    from sepa import pattern_research as pr
+    from sepa import prices as _prices
+
+    def _run():
+        latest = sepa_scanner.load_latest() or {}
+        records = latest.get("all_results") or latest.get("candidates") or []
+        out = pr.get_research(records, _prices.load_prices)
+        out["scan_generated_at"] = latest.get("generated_at")
+        out["universe_size"] = latest.get("universe_size")
+        return out
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@app.post("/research/insider-refresh")
+async def research_insider_refresh(email: str = Depends(current_user_email)):
+    """Recompute the insider thesis (live EDGAR, slow) and cache it. Owner-only —
+    it makes dozens of SEC calls. Also runs nightly via cron."""
+    import auth
+    if email not in getattr(auth, "HOUSE_OWNER_EMAILS", set()):
+        return JSONResponse({"error": "owner only"}, status_code=403)
+    from sepa import pattern_research as pr
+    from sepa import prices as _prices
+    latest = sepa_scanner.load_latest() or {}
+    records = latest.get("all_results") or latest.get("candidates") or []
+    thesis = await pr.refresh_insider_thesis(records, _prices.load_prices, per_cohort=12)
+    return JSONResponse({"ok": thesis.get("ok", False), "thesis": thesis})
+
+
+# ---------------------------------------------------------------------------
 # On-demand price alerts
 # ---------------------------------------------------------------------------
 @app.post("/sepa/alerts/price")
