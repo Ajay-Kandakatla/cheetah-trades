@@ -1303,6 +1303,19 @@ tr:last-child td { border-bottom: none; }
 .pivot-meter__vol-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
 .pivot-meter__vol-thr { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #e5e7eb; opacity: 0.7; }
 .pivot-meter__vol-lbl { font-size: 0.7rem; white-space: nowrap; }
+/* Plain-English caption — decodes the meter into one sentence (what's happening
+   + what you're waiting on). Coloured left rule matches the state tone. */
+.pivot-meter__caption {
+  margin: 0.55rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border-left: 3px solid var(--cm-slate, #64748b);
+  background: rgba(148, 163, 184, 0.06);
+  border-radius: 3px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--ink, #e8e8e8);
+  opacity: 0.95;
+}
 
 /* Green "Enter" decision chip — actionable breakout (entry_exit.decision==ENTER). */
 .sepa-chip.sepa-chip--good { color: var(--positive, #10b981); border-color: rgba(16, 185, 129, 0.45); }

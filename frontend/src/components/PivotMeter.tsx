@@ -93,6 +93,41 @@ export function PivotMeter({ t }: { t: PivotTiming }) {
           {vr ? `${vr.toFixed(1)}×` : '—'} {t.breakingOut ? '⚡ expanding' : t.drying ? '🤫 dried' : 'vol'}
         </span>
       </div>
+
+      {/* Plain-English one-liner — decodes the gauge into "what's happening +
+          what you're waiting on" so the user doesn't have to read the meter.
+          Ajay 2026-06-03: "what am I waiting on, dumbed down". */}
+      {plainCaption(t) && (
+        <p className="pivot-meter__caption" style={{ borderColor: color }}>
+          {plainCaption(t)}
+        </p>
+      )}
     </div>
   );
+}
+
+/** One dumbed-down sentence per pivot state: what's happening, and — crucially —
+ *  what has to happen next (the thing the user is "waiting on"). Mirrors the
+ *  state machine in pivotTiming.ts. */
+function plainCaption(t: PivotTiming): string | null {
+  const pivot = `$${fmt(t.pivot)}`;
+  const stop = t.stop != null ? `$${fmt(t.stop)}` : 'your stop';
+  const vr = t.volRatio ? `${t.volRatio.toFixed(1)}×` : 'light';
+  const dist = t.distToPivotPct == null ? '' : `${Math.abs(t.distToPivotPct).toFixed(1)}%`;
+  switch (t.state) {
+    case 'GO':
+      return `✅ It pushed above the buy line (${pivot}) on a volume surge — the breakout is confirmed. Plan your exit if it closes below ${stop}.`;
+    case 'AT_PIVOT':
+      return `Price is sitting right on the buy line (${pivot}). Waiting on: volume to jump to 1.5×+ the average (it's ${vr} now) to confirm the breakout.`;
+    case 'COILING':
+      return `It's coiling tight just under the buy line (${pivot}) on quiet volume — a constructive sign. Waiting on: a push above ${pivot} on heavy volume (it's ${dist} away).`;
+    case 'WAIT':
+      return `Still ${dist} below the buy line (${pivot}). Waiting on: price to climb up to ${pivot} and volume to surge to 1.5×+.`;
+    case 'NOT_STAGE2':
+      return `It's at the price, but the stock isn't in a confirmed uptrend (Stage 2) yet — not a buy by the rules. Waiting on: a proper Stage 2 advance first.`;
+    case 'EXTENDED':
+      return `It's already ${dist} past the buy line — too far above to chase safely. Waiting on: a fresh base to form before the next entry.`;
+    default:
+      return null;
+  }
 }
