@@ -129,8 +129,12 @@ def _topping_watch_symbols() -> set:
         from portfolio import store as pstore
         for em in auth.HOUSE_OWNER_EMAILS:
             for h in pstore.list_holdings(em):
-                if h.get("symbol"):
-                    syms.add(str(h["symbol"]).upper())
+                # Holdings store the symbol under "ticker" (not "symbol") — the
+                # old "symbol" lookup silently dropped EVERY portfolio name, so
+                # owned stocks like ST/DINO never got their topping alerts.
+                t = h.get("ticker") or h.get("symbol")
+                if t:
+                    syms.add(str(t).upper())
     except Exception as exc:
         log.warning("topping watch: portfolio load failed: %s", exc)
     return syms
