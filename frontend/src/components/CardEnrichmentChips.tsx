@@ -19,6 +19,7 @@
  */
 import { Link } from 'react-router-dom';
 import { useCardEnrichment } from '../hooks/useCardEnrichment';
+import { MacroRiskBadge, type MacroRisk } from './MacroRiskBadge';
 
 interface Props {
   symbol: string;
@@ -40,8 +41,11 @@ export function CardEnrichmentChips({ symbol }: Props) {
   const netWorth = data?.headline?.market_cap;
   const equity = data?.headline?.shareholder_equity;
 
+  const macroRisk = (data as { macro_risk?: MacroRisk } | undefined)?.macro_risk;
+
   return (
     <div ref={ref} style={{ display: 'contents' }}>
+      <MacroRiskBadge risk={macroRisk} compact />
       {insiderCluster ? (
         <Link
           to={`/sepa/${symbol}?tab=insider`}
