@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
+import { MacroRiskBadge, type MacroRisk } from './MacroRiskBadge';
 
 type Leader = {
   symbol: string;
@@ -40,6 +41,7 @@ type Leader = {
   near_r1?: boolean | null;
   r1_price?: number | null;
   dist_to_r1_pct?: number | null;
+  macro_risk?: MacroRisk | null;
 };
 type Resp = { leaders: Leader[]; scans_in_window?: number; lookback_days?: number; top_tier?: number };
 
@@ -155,6 +157,7 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
             }>
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
               <span className="rank-lb__sym">{l.symbol}</span>
+              {l.macro_risk && <MacroRiskBadge risk={l.macro_risk} compact />}
               <span className="rank-lb__traj mono">
                 {lev.isLeveraged && <span className="lev-badge" title="Leveraged/inverse ETF — not an individual stock; SEPA criteria don't apply">⚡ {lev.label}</span>}{lev.isLeveraged ? ' ' : ''}
                 best #{l.best_rank}
