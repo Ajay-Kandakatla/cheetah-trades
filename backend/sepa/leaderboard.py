@@ -13,6 +13,7 @@ who's primed." Reads the same history other tabs use; cached briefly.
 """
 from __future__ import annotations
 
+import logging
 import time
 from typing import Optional
 
@@ -186,11 +187,27 @@ def leaderboard(n: int = 12, lookback_days: int = LOOKBACK_DAYS) -> dict:
     live = {r.get("symbol"): r
             for r in (latest.get("all_results") or latest.get("candidates") or [])}
 
+    leaders = aggregate(runs, live, n)
+
+    # Macro-risk overlay (Ajay 2026-06-04): per-name macro/geopolitical risk from
+    # the cached market read — pure + cheap, never blocks. Surfaces on the
+    # Leaderboard + Portfolio lists alongside the SEPA score.
+    macro_market = None
+    try:
+        from . import macro_risk as _mrisk
+        macro_market = _mrisk.get_market()
+        if macro_market:
+            for row in leaders:
+                row["macro_risk"] = _mrisk.score_stock(row.get("symbol", ""), macro_market)
+    except Exception as exc:
+        logging.getLogger("sepa.leaderboard").warning("macro_risk overlay failed: %s", exc)
+
     data = {
-        "leaders":         aggregate(runs, live, n),
+        "leaders":         leaders,
         "scans_in_window": len(runs),
         "lookback_days":   lookback_days,
         "top_tier":        TOP_TIER,
+        "macro_market":    macro_market,
     }
     _cache[key] = {"data": data, "ts": time.time()}
     return data

@@ -1101,6 +1101,29 @@ async def market_regime_get(force: bool = Query(False, description="Bypass 15-mi
     return JSONResponse(mr.regime(scan_rows=rows, force=force))
 
 
+@app.get("/market/macro-risk")
+async def market_macro_risk_get():
+    """Macro / geopolitical RISK read (war, sanctions, oil, rates, debt …) layered
+    on top of the SEPA score. Returns the cached market-wide assessment + per-stock
+    scores for any ?symbols=AAA,BBB. Higher = more macro risk. Refreshed by cron;
+    this never blocks on a fresh compute. Analytical gauge, not advice."""
+    from sepa import macro_risk as mrisk
+    market = mrisk.get_market()
+    return JSONResponse({"market": market, "stale": (market or {}).get("stale", True)})
+
+
+@app.post("/market/macro-risk/refresh")
+async def market_macro_risk_refresh(email: str = Depends(current_user_email)):
+    """Recompute the macro-risk read now (regime + headlines + optional LLM).
+    Owner-only — also runs hourly via cron."""
+    import auth
+    if email not in getattr(auth, "HOUSE_OWNER_EMAILS", set()):
+        return JSONResponse({"error": "owner only"}, status_code=403)
+    from sepa import macro_risk as mrisk
+    out = await mrisk.refresh_market()
+    return JSONResponse({"ok": True, "market": out})
+
+
 # ---------------------------------------------------------------------------
 # SEPA (Minervini) endpoints
 # ---------------------------------------------------------------------------
