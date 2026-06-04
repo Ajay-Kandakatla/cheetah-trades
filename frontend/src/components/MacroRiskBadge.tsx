@@ -28,9 +28,11 @@ export function MacroRiskBadge({ risk, compact = false }: { risk?: MacroRisk | n
   const drivers = (risk.drivers ?? []).filter(Boolean);
   const tip =
     `Macro risk ${Math.round(risk.score)}/100 — ${m.label}.` +
-    (drivers.length ? `\nDrivers: ${drivers.join('; ')}.` : '') +
+    (drivers.length ? `\nDrivers:\n  ${drivers.join('\n  ')}` : '') +
     (risk.sector && risk.sector !== 'broad' ? `\nSector: ${risk.sector}.` : '') +
-    `\nHow risky the current macro/geopolitical backdrop is for being long this name. Not advice.`;
+    `\n↑ raises risk · ↓ tailwind (lowers it). Reads the current macro + major news` +
+    `\n(war, oil, rates, chip policy, key exec/company catalysts) routed to this name's` +
+    `\nsector/ticker. An analytical gauge, not advice.`;
   return (
     <span className={`mrisk ${m.cls}`} title={tip}>
       🌍 {compact ? '' : 'Macro '}{m.label}
