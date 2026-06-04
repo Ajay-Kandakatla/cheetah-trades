@@ -16,6 +16,7 @@ import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { SepaTopPicks } from '../components/SepaTopPicks';
 import { SepaRankLeaderboard } from '../components/SepaRankLeaderboard';
+import { MarketPulsePanel } from '../components/MarketPulsePanel';
 import { SepaRankCompare } from '../components/SepaRankCompare';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
@@ -83,6 +84,9 @@ export default function PortfolioPage() {
           </p>
         </div>
       </div>
+
+      {/* Macro + news + liquidity read — leans in when holdings are red today. */}
+      <MarketPulsePanel holdings={rows} />
 
       <SepaTopPicks n={3} />
 
