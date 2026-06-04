@@ -86,17 +86,6 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Macro + news + liquidity read — leans in when holdings are red today. */}
-      <MarketPulsePanel holdings={rows} />
-
-      <SepaTopPicks n={3} />
-
-      <SepaRankLeaderboard n={12} />
-
-      <SepaRankCompare />
-
-      <AddHoldingForm onAdded={refresh} />
-
       {rows.length > 0 && (
         <div className="portfolio-totals mono">
           <span>{rows.length} position{rows.length === 1 ? '' : 's'}</span>
@@ -177,11 +166,21 @@ export default function PortfolioPage() {
               </div>
 
               <PositionSignal symbol={r.symbol} entry={entry} shares={r.quantity} stop={r.stop} />
-              <HoldingDiagnosis symbol={r.symbol} />
+              <HoldingDiagnosis symbol={r.symbol} defaultOpen />
             </div>
           );
         })}
       </div>
+
+      <AddHoldingForm onAdded={refresh} />
+
+      {/* Leadership + ranking BELOW your holdings (Ajay 2026-06-04). */}
+      <SepaRankLeaderboard n={12} />
+      <SepaRankCompare />
+      <SepaTopPicks n={3} />
+
+      {/* Overall market context — secondary to the per-stock reads above. */}
+      <MarketPulsePanel holdings={rows} />
     </div>
   );
 }

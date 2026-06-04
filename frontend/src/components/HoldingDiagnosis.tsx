@@ -5,11 +5,14 @@
    and an LLM read (Claude Sonnet). Lazy: fetches /portfolio/diagnosis/{symbol}
    only when expanded (the LLM write-up is the slow part; the backend caches it). */
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { API } from '../lib/apiBase';
 
 type Factor = { score: number; note: string };
 type Diagnosis = {
   symbol: string;
+  sector?: string | null;
+  name?: string | null;
   move_pct: number | null;
   verdict?: string | null;
   headline_label?: string;
@@ -34,20 +37,37 @@ function barColor(score: number, health?: boolean): string {
   return score >= 60 ? '#ef4444' : score >= 35 ? '#d97706' : '#64748b';
 }
 
-export function HoldingDiagnosis({ symbol }: { symbol: string }) {
-  const [open, setOpen] = useState(false);
+export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: string; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [data, setData] = useState<Diagnosis | null>(null);
   const [loading, setLoading] = useState(false);
+  const [writingUp, setWritingUp] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const base = `${API}/portfolio/diagnosis/${encodeURIComponent(symbol)}?writeup=`;
   const load = (force = false) => {
     setLoading(true); setErr(null);
-    fetch(`${API}/portfolio/diagnosis/${encodeURIComponent(symbol)}${force ? '?force=true' : ''}`, { credentials: 'include' })
+    const f = force ? '&force=true' : '';
+    // Phase 1 — instant scorecard (no LLM). A cache hit returns the full read
+    // (write-up included) so this is usually one-and-done.
+    fetch(`${base}false${f}`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((j: Diagnosis) => setData(j))
-      .catch((e) => setErr(String(e?.message || e)))
-      .finally(() => setLoading(false));
+      .then((j: Diagnosis) => {
+        setData(j); setLoading(false);
+        if (!j.writeup) {
+          // Phase 2 — the tailored write-up streams in.
+          setWritingUp(true);
+          fetch(`${base}true${f}`, { credentials: 'include' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j2: Diagnosis | null) => { if (j2) setData(j2); })
+            .finally(() => setWritingUp(false));
+        }
+      })
+      .catch((e) => { setErr(String(e?.message || e)); setLoading(false); });
   };
+
+  // Auto-load when opened by default (each holding shows its own read).
+  useEffect(() => { if (defaultOpen && !data && !loading) load(); /* eslint-disable-next-line */ }, []);
 
   const toggle = () => {
     const next = !open;
@@ -69,12 +89,15 @@ export function HoldingDiagnosis({ symbol }: { symbol: string }) {
               {data.headline_label && (
                 <div className="hdiag__headline">
                   Likely driver: <strong>{data.headline_label}</strong>
+                  {data.sector && data.sector !== '—' && <span className="hdiag__sector"> · {data.sector}</span>}
                   {data.move_pct != null && <span className="hdiag__move"> · {symbol} {data.move_pct >= 0 ? '+' : ''}{data.move_pct}% (5d)</span>}
                 </div>
               )}
               {data.writeup
                 ? <p className="hdiag__writeup">{data.writeup}</p>
-                : <p className="hdiag__muted">Write-up pending — the LLM read fills in on the next refresh.</p>}
+                : writingUp
+                  ? <p className="hdiag__muted">✍️ Writing the tailored read for {symbol}…</p>
+                  : <p className="hdiag__muted">Scorecard ready — the tailored write-up fills in shortly.</p>}
               {data.scorecard && (
                 <div className="hdiag__scores">
                   {ORDER.filter((k) => data.scorecard![k]).map((k) => {

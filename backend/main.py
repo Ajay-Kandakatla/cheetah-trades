@@ -1127,11 +1127,14 @@ async def market_macro_risk_refresh(email: str = Depends(current_user_email)):
 @app.get("/portfolio/diagnosis/{symbol}")
 async def portfolio_diagnosis_symbol(symbol: str,
                                      force: bool = Query(False),
+                                     writeup: bool = Query(True, description="false = fast scorecard, skip the LLM"),
                                      provider: str = Query("anthropic", description="anthropic | local")):
     """'What's driving this move?' — a factor scorecard (macro / sector / distribution
-    / liquidity / stock-specific / trend) + an LLM write-up. Cached 3h. Not advice."""
+    / liquidity / stock-specific / trend) + a sector-tailored LLM write-up. Cached 3h.
+    writeup=false returns the scorecard instantly (no LLM); a cache hit returns the
+    full read either way. Not advice."""
     from portfolio import diagnosis as dg
-    out = await asyncio.to_thread(dg.diagnose, symbol, force=force, provider=provider)
+    out = await asyncio.to_thread(dg.diagnose, symbol, use_llm=writeup, force=force, provider=provider)
     return JSONResponse(_scrub_nan(out))
 
 

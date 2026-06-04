@@ -110,12 +110,18 @@ def _trend_health(scan_rec: Optional[dict]) -> tuple[int, str]:
 
 # ── LLM write-up (Claude Sonnet, local fallback) ─────────────────────────────
 _SYS = (
-    "You are a disciplined trading analyst. Given a holding's factor scorecard, "
-    "explain in 3-5 plain sentences what is MOST LIKELY driving its current move, "
-    "leading with the dominant factor (macro/market, sector rotation, distribution/"
-    "institutional selling, liquidity, or stock-specific news). Be concrete and "
-    "reference the numbers. Do NOT predict prices or give buy/sell advice. End with "
-    "one line on what to watch next. Output plain text, no markdown headers."
+    "You are a disciplined trading analyst writing a SPECIFIC, TAILORED note for "
+    "ONE stock — never a generic market paragraph. Use the stock's SECTOR to name "
+    "the macro driver that actually matters for IT: energy names hinge on oil/OPEC/"
+    "crude; semis/chip names on the chip cycle, AI-capex, and export controls; "
+    "electronics/industrials on rates, demand and supply chains; financials on "
+    "rates/credit; materials on commodity prices. Do NOT attribute an energy name's "
+    "move to chip policy, or a semi's move to oil. In 3-5 plain sentences: lead with "
+    "the dominant factor from the scorecard, name the sector-specific driver, "
+    "reference this stock's own numbers (its distribution/accumulation, its β to its "
+    "sector, its idiosyncratic %), and say whether the move is the market/sector vs "
+    "the stock itself. Do NOT predict prices or give buy/sell advice. End with one "
+    "line on what to watch for THIS name. Plain text, no markdown headers."
 )
 
 
@@ -222,8 +228,13 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
         "stock_specific": "Stock-specific (news/earnings)", "macro_risk_fwd": "Macro/geopolitical risk",
     }.get(headline, headline)
 
+    sector_name = attr.get("sector_name") or macro.get("sector") or "—"
+    macro_drivers = macro.get("drivers") or []
+
     out = {
         "symbol": sym,
+        "name": (scan_rec or {}).get("name"),
+        "sector": sector_name,
         "move_pct": move,
         "verdict": attr.get("verdict"),
         "attribution": attr,
@@ -237,11 +248,19 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
     }
     if use_llm:
         out["writeup"] = _llm_writeup(sym, {
-            "move_pct": move, "verdict": attr.get("verdict"),
-            "headline_driver": headline_label, "scorecard": scorecard,
+            "symbol": sym,
+            "company": (scan_rec or {}).get("name"),
+            "sector": sector_name,
+            "move_pct": move,
+            "verdict": attr.get("verdict"),
+            "headline_driver": headline_label,
+            "sector_specific_macro_factors": macro_drivers,   # oil for energy, chips for semis…
+            "scorecard": scorecard,
         }, provider)
 
-    if coll is not None:
+    # Only persist when the LLM ran — so the fast (writeup=false) path can't
+    # overwrite a cached full diagnosis with a write-up-less one.
+    if coll is not None and use_llm:
         try:
             coll.update_one({"_id": sym}, {"$set": {**out, "_id": sym}}, upsert=True)
         except Exception:

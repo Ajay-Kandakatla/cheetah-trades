@@ -9761,3 +9761,4 @@ a.tk-link:hover   { color: inherit; }
 .hdiag__fill { display: block; height: 100%; border-radius: 4px; }
 .hdiag__num { font-family: "SF Mono", Menlo, monospace; text-align: right; color: var(--ink, #e8e8e8); }
 .hdiag__refresh { background: none; border: 1px solid var(--rule, #444); color: var(--cm-slate, #94a3b8); font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 4px; cursor: pointer; }
+.hdiag__sector { color: var(--gold, #d9a441); font-weight: 600; }
