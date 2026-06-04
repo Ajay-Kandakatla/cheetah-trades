@@ -1303,6 +1303,82 @@ tr:last-child td { border-bottom: none; }
 .pivot-meter__vol-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
 .pivot-meter__vol-thr { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #e5e7eb; opacity: 0.7; }
 .pivot-meter__vol-lbl { font-size: 0.7rem; white-space: nowrap; }
+
+/* ==========================================================================
+   Research page — bullish vs bearish pattern mining
+   ========================================================================== */
+.rsx-page { max-width: 1100px; }
+.rsx-loading { padding: 1.4rem; color: var(--cm-slate, #94a3b8); }
+.rsx-thesis {
+  border: 1px solid var(--rule, #333);
+  border-left: 4px solid var(--gold, #d9a441);
+  background: linear-gradient(180deg, rgba(217,164,65,0.06), rgba(217,164,65,0));
+  border-radius: 8px; padding: 1rem 1.15rem; margin: 0.5rem 0 1rem;
+}
+.rsx-thesis__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.9rem; margin-bottom: 0.5rem; }
+.rsx-thesis__eyebrow { font-size: 0.74rem; color: var(--cm-slate, #94a3b8); font-style: italic; }
+.rsx-thesis__verdict {
+  margin-left: auto; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--cm-amber, #d97706); border: 1px solid var(--cm-amber, #d97706);
+  border-radius: 999px; padding: 0.15rem 0.6rem; white-space: nowrap;
+}
+.rsx-thesis__body { font-size: 0.9rem; line-height: 1.55; color: var(--ink, #e8e8e8); margin: 0 0 0.8rem; }
+.rsx-thesis__metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.6rem; margin-bottom: 0.6rem; }
+.rsx-tmetric { border: 1px solid var(--rule, #333); border-radius: 6px; padding: 0.5rem 0.6rem; background: var(--bg, #0d0d0d); }
+.rsx-tmetric__label { font-size: 0.7rem; color: var(--cm-slate, #94a3b8); margin-bottom: 0.3rem; }
+.rsx-tmetric__row { display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.78rem; }
+.rsx-tmetric__vs { color: var(--cm-slate, #94a3b8); font-size: 0.68rem; }
+.rsx-tmetric__verdict { font-size: 0.68rem; margin-top: 0.25rem; font-weight: 600; }
+.is-bull { color: var(--cm-green, #22c55e); }
+.is-bear { color: var(--cm-red, #ef4444); }
+.rsx-thesis__foot { font-size: 0.68rem; color: var(--cm-slate, #94a3b8); opacity: 0.85; }
+.rsx-cohorts {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; align-items: baseline;
+  font-size: 0.76rem; color: var(--cm-slate, #94a3b8);
+  padding: 0.45rem 0.2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--rule, #333);
+}
+.rsx-cohorts__bull { color: var(--cm-green, #22c55e); }
+.rsx-cohorts__bear { color: var(--cm-red, #ef4444); }
+.rsx-section { margin: 1.4rem 0; }
+.rsx-section__title { font-size: 1rem; font-weight: 700; margin: 0 0 0.4rem; display: flex; align-items: baseline; gap: 0.5rem; }
+.rsx-section__title--bull { color: var(--cm-green, #22c55e); }
+.rsx-section__title--bear { color: var(--cm-red, #ef4444); }
+.rsx-section__sub { font-size: 0.72rem; font-weight: 400; color: var(--cm-slate, #94a3b8); }
+.rsx-section__lede { font-size: 0.84rem; line-height: 1.5; color: var(--ink-muted, #b8b8b8); margin: 0 0 0.8rem; max-width: 72ch; }
+.rsx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 0.7rem; }
+.rsx-card {
+  border: 1px solid var(--rule, #333); border-left: 3px solid var(--cm-slate, #64748b);
+  border-radius: 6px; padding: 0.65rem 0.75rem; background: var(--bg-surface, #141414);
+}
+.rsx-card--high { border-left-color: var(--cm-green, #22c55e); }
+.rsx-card--medium { border-left-color: var(--cm-amber, #d97706); }
+.rsx-card--low { border-left-color: var(--cm-red, #ef4444); }
+.rsx-card__head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.45rem; }
+.rsx-card__label { font-weight: 700; font-size: 0.84rem; flex: 1; }
+.rsx-card__lift { font-size: 0.72rem; font-weight: 700; font-family: "SF Mono", Menlo, monospace; white-space: nowrap; }
+.rsx-card__lift.is-bull { color: var(--cm-green, #22c55e); }
+.rsx-card__lift.is-bear { color: var(--cm-red, #ef4444); }
+.rsx-card__lift--proposed { color: var(--cm-slate, #94a3b8); font-weight: 500; font-style: italic; border: 1px dashed var(--rule, #444); border-radius: 4px; padding: 0 0.35rem; }
+.rsx-bars { display: grid; gap: 0.25rem; margin-bottom: 0.5rem; }
+.rsx-bar { display: grid; grid-template-columns: 3.4rem 1fr 2.6rem; align-items: center; gap: 0.4rem; }
+.rsx-bar__tag { font-size: 0.64rem; color: var(--cm-slate, #94a3b8); text-transform: uppercase; letter-spacing: 0.03em; }
+.rsx-bar__track { height: 8px; border-radius: 4px; background: rgba(100,116,139,0.18); overflow: hidden; }
+.rsx-bar__fill { height: 100%; border-radius: 4px; }
+.rsx-bar__fill.is-bull { background: var(--cm-green, #22c55e); }
+.rsx-bar__fill.is-bear { background: var(--cm-red, #ef4444); }
+.rsx-bar__pct { font-size: 0.72rem; text-align: right; color: var(--ink, #e8e8e8); }
+.rsx-card__plain { font-size: 0.82rem; line-height: 1.45; margin: 0 0 0.4rem; color: var(--ink, #e8e8e8); }
+.rsx-card__conf { font-size: 0.68rem; color: var(--cm-slate, #94a3b8); }
+.rsx-card__caveat { font-size: 0.7rem; line-height: 1.4; margin: 0.4rem 0 0; padding-top: 0.4rem; border-top: 1px dashed var(--rule, #333); color: var(--ink-muted, #a8a8a8); font-style: italic; }
+.rsx-overlaps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.3rem; }
+.rsx-overlaps li { font-size: 0.8rem; color: var(--ink-muted, #b8b8b8); padding-left: 1.1rem; position: relative; }
+.rsx-overlaps li::before { content: "≈"; position: absolute; left: 0; color: var(--cm-slate, #94a3b8); }
+.rsx-caveats { margin: 1.4rem 0; padding: 0.9rem 1rem; border: 1px dashed var(--rule, #333); border-radius: 6px; background: rgba(148,163,184,0.04); }
+.rsx-caveats ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+.rsx-caveats li { font-size: 0.8rem; line-height: 1.5; color: var(--ink-muted, #b8b8b8); margin-bottom: 0.35rem; }
+.rsx-caveats__foot { font-size: 0.74rem; color: var(--cm-slate, #94a3b8); margin: 0.7rem 0 0; font-style: italic; }
+@media (max-width: 560px) { .rsx-grid { grid-template-columns: 1fr; } }
+
 /* Plain-English caption — decodes the meter into one sentence (what's happening
    + what you're waiting on). Coloured left rule matches the state tone. */
 .pivot-meter__caption {
