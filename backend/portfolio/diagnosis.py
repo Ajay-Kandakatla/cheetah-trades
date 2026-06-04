@@ -46,11 +46,25 @@ def volume_factors(df) -> dict:
         last25 = df.tail(25)
         dist_days = int(((last25["close"].diff() < 0) & (last25["volume"] > avg50)).sum())
         accum_days = int(((last25["close"].diff() > 0) & (last25["volume"] > avg50)).sum())
+
+        # Pocket pivot (O'Neil): an up day whose volume tops the biggest DOWN-day
+        # volume of the prior 10 sessions — a low-risk re-entry / strength signal.
+        cv = c.values
+        vv = v.values
+        pp_days = 0
+        for i in range(max(11, len(cv) - 12), len(cv)):
+            if cv[i] <= cv[i - 1]:
+                continue
+            downs = [vv[j] for j in range(i - 10, i) if cv[j] < cv[j - 1]]
+            if downs and vv[i] > max(downs):
+                pp_days += 1
+
         return {
             "up_down_vol_ratio": udr,
             "vol_dryup": dryup,                       # <0.8 = drying up
             "distribution_days_25": dist_days,
             "accumulation_days_25": accum_days,
+            "pocket_pivots_12d": pp_days,             # O'Neil low-risk re-entry signal
             "avg_dollar_vol": round(avg50 * float(c.iloc[-1])),
         }
     except Exception as exc:
@@ -108,6 +122,27 @@ def _trend_health(scan_rec: Optional[dict]) -> tuple[int, str]:
     return max(0, min(100, score)), "; ".join(notes) or "neutral"
 
 
+def _uptrend_driver(vf: dict, scan_rec: Optional[dict]) -> tuple[str, str]:
+    """For an UP move: WHAT drove the gain — steady accumulation, a specific
+    O'Neil pocket pivot, or a fresh volume breakout? (Ajay 2026-06-04: "explain
+    if it's growing, is it accumulation or more a pocket pivot.")"""
+    if not vf:
+        return "—", "no volume data"
+    pp = vf.get("pocket_pivots_12d") or 0
+    udr = vf.get("up_down_vol_ratio")
+    accum = vf.get("accumulation_days_25") or 0
+    hi_vol_breakout = bool(((scan_rec or {}).get("volume") or {}).get("high_vol_breakout"))
+    if hi_vol_breakout:
+        return "Volume breakout", "fresh high-volume breakout flagged in the scan"
+    if pp >= 1:
+        return "Pocket pivot", f"{pp} pocket-pivot day(s) in the last ~2 weeks — O'Neil low-risk strength"
+    if (udr is not None and udr >= 1.5) or accum >= 6:
+        return "Accumulation", f"steady buying — up/down vol {udr}, {accum} accumulation days in 25"
+    if udr is not None and udr >= 1.1:
+        return "Mild accumulation", f"up-volume edging out down-volume (up/down {udr})"
+    return "Drift", "rising on light/quiet volume — low conviction"
+
+
 # ── LLM write-up (Claude Sonnet, local fallback) ─────────────────────────────
 _SYS = (
     "You are a disciplined trading analyst writing a SPECIFIC, TAILORED note for "
@@ -120,8 +155,12 @@ _SYS = (
     "the dominant factor from the scorecard, name the sector-specific driver, "
     "reference this stock's own numbers (its distribution/accumulation, its β to its "
     "sector, its idiosyncratic %), and say whether the move is the market/sector vs "
-    "the stock itself. Do NOT predict prices or give buy/sell advice. End with one "
-    "line on what to watch for THIS name. Plain text, no markdown headers."
+    "the stock itself. If the stock is UP (direction=up), explain WHAT powered the "
+    "gain using `uptrend_driver`: steady ACCUMULATION (up-volume, accumulation "
+    "days) vs a specific O'Neil POCKET PIVOT vs a fresh volume BREAKOUT — say which, "
+    "and what it implies for the move's durability. Do NOT predict prices or give "
+    "buy/sell advice. End with one line on what to watch for THIS name. Plain text, "
+    "no markdown headers."
 )
 
 
@@ -218,15 +257,27 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
         "trend_health":   {"score": trend_score, "note": trend_note},
     }
 
-    # Headline driver = the biggest PRESSURE factor (trend_health is a health, not
-    # a pressure, so it's excluded from the argmax).
+    # For UP names: what's powering the gain — accumulation, a pocket pivot, or
+    # a breakout? Becomes the headline for green holdings.
+    up = move is not None and move >= 0
+    uptrend_driver = None
+    if up:
+        ud_label, ud_note = _uptrend_driver(vf, scan_rec)
+        uptrend_driver = {"label": ud_label, "note": ud_note}
+
+    # Headline driver. For down names = the biggest PRESSURE factor; for up names
+    # = the uptrend driver (accumulation / pocket pivot / breakout).
     pressures = {k: v["score"] for k, v in scorecard.items() if k != "trend_health"}
-    headline = max(pressures, key=pressures.get) if pressures else "market_macro"
-    headline_label = {
-        "market_macro": "Broad market (macro)", "sector_rotation": "Sector rotation",
-        "distribution": "Distribution (institutions selling)", "liquidity": "Thin liquidity",
-        "stock_specific": "Stock-specific (news/earnings)", "macro_risk_fwd": "Macro/geopolitical risk",
-    }.get(headline, headline)
+    if up and uptrend_driver:
+        headline_label = uptrend_driver["label"]
+        headline = "uptrend"
+    else:
+        headline = max(pressures, key=pressures.get) if pressures else "market_macro"
+        headline_label = {
+            "market_macro": "Broad market (macro)", "sector_rotation": "Sector rotation",
+            "distribution": "Distribution (institutions selling)", "liquidity": "Thin liquidity",
+            "stock_specific": "Stock-specific (news/earnings)", "macro_risk_fwd": "Macro/geopolitical risk",
+        }.get(headline, headline)
 
     sector_name = attr.get("sector_name") or macro.get("sector") or "—"
     macro_drivers = macro.get("drivers") or []
@@ -241,6 +292,7 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
         "volume": vf,
         "macro_risk": macro,
         "scorecard": scorecard,
+        "uptrend_driver": uptrend_driver,
         "headline_driver": headline,
         "headline_label": headline_label,
         "writeup": None,
@@ -252,8 +304,10 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
             "company": (scan_rec or {}).get("name"),
             "sector": sector_name,
             "move_pct": move,
+            "direction": "up" if up else "down",
             "verdict": attr.get("verdict"),
             "headline_driver": headline_label,
+            "uptrend_driver": uptrend_driver,                 # accumulation vs pocket pivot vs breakout
             "sector_specific_macro_factors": macro_drivers,   # oil for energy, chips for semis…
             "scorecard": scorecard,
         }, provider)

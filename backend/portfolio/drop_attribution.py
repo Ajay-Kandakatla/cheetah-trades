@@ -26,11 +26,28 @@ import logging
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 
 from sepa import prices
-from sepa.ravi import _beta
 
 log = logging.getLogger("portfolio.drop_attribution")
+
+
+def _beta(stock_lr: "pd.Series", bench_lr: "pd.Series", lookback: int):
+    """Date-aligned beta over the last `lookback` common bars. Inlined here after
+    sepa.ravi dropped its high-beta screen (commit 9040264) — the import was
+    broken, which 500'd drop-attribution + the portfolio diagnosis. Verbatim from
+    the original sepa.ravi._beta."""
+    j = pd.concat([stock_lr.rename("s"), bench_lr.rename("b")], axis=1, join="inner").dropna()
+    if len(j) < lookback:
+        return None
+    w = j.iloc[-lookback:]
+    s, b = w["s"], w["b"]
+    var_b = float(((b - b.mean()) ** 2).sum() / lookback)
+    if var_b == 0:
+        return None
+    cov = float(((s - s.mean()) * (b - b.mean())).sum() / lookback)
+    return cov / var_b
 
 MARKET_ETF = "SPY"
 FALLBACK_SECTOR_ETF = "QQQ"   # when we can't determine a stock's sector

@@ -16,6 +16,7 @@ type Diagnosis = {
   move_pct: number | null;
   verdict?: string | null;
   headline_label?: string;
+  uptrend_driver?: { label: string; note: string } | null;
   writeup?: string | null;
   scorecard?: Record<string, Factor>;
 };
@@ -88,11 +89,12 @@ export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: stri
             <>
               {data.headline_label && (
                 <div className="hdiag__headline">
-                  Likely driver: <strong>{data.headline_label}</strong>
+                  {data.uptrend_driver ? 'Powered by: ' : 'Likely driver: '}<strong>{data.headline_label}</strong>
                   {data.sector && data.sector !== '—' && <span className="hdiag__sector"> · {data.sector}</span>}
                   {data.move_pct != null && <span className="hdiag__move"> · {symbol} {data.move_pct >= 0 ? '+' : ''}{data.move_pct}% (5d)</span>}
                 </div>
               )}
+              {data.uptrend_driver?.note && <div className="hdiag__muted" style={{ marginBottom: '0.4rem' }}>{data.uptrend_driver.note}</div>}
               {data.writeup
                 ? <p className="hdiag__writeup">{data.writeup}</p>
                 : writingUp

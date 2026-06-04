@@ -63,3 +63,22 @@ def test_trend_health_rewards_stage2_leader():
 def test_no_volume_data_is_safe():
     assert dg._distribution_pressure({})[0] == 0
     assert dg._liquidity_pressure({})[0] == 0
+
+
+def test_volume_factors_has_pocket_pivots():
+    f = dg.volume_factors(_df(up_bias=0.003))
+    assert "pocket_pivots_12d" in f and isinstance(f["pocket_pivots_12d"], int)
+
+
+def test_uptrend_driver_pocket_pivot_beats_accumulation():
+    pp = dg._uptrend_driver({"pocket_pivots_12d": 2, "up_down_vol_ratio": 1.2, "accumulation_days_25": 4}, None)
+    assert pp[0] == "Pocket pivot"
+    acc = dg._uptrend_driver({"pocket_pivots_12d": 0, "up_down_vol_ratio": 1.8, "accumulation_days_25": 7}, None)
+    assert acc[0] == "Accumulation"
+    drift = dg._uptrend_driver({"pocket_pivots_12d": 0, "up_down_vol_ratio": 1.0, "accumulation_days_25": 2}, None)
+    assert drift[0] == "Drift"
+
+
+def test_uptrend_driver_breakout_from_scan_wins():
+    out = dg._uptrend_driver({"pocket_pivots_12d": 2}, {"volume": {"high_vol_breakout": True}})
+    assert out[0] == "Volume breakout"
