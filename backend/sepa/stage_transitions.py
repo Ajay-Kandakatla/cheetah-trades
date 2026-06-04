@@ -175,8 +175,22 @@ def detect_all() -> dict:
          "entry_setup": 1, "pioneer_themes": 1, "date_et": 1},
     ))
 
+    # Scope stage-breakdown / topping alerts to the names the user actually
+    # tracks — their leaderboard top list + portfolio holdings. Ajay 2026-06-04:
+    # "I only need them for my portfolio and leaderboards top stocks." Every
+    # ticker still updates its stage history below (so transitions keep getting
+    # detected) but only WATCHED names record an alert + notify. An empty/failed
+    # watch set fires nothing (fail-quiet beats spamming the whole universe).
+    try:
+        from . import alerts as _alerts
+        watch = _alerts._topping_watch_symbols()
+    except Exception as exc:
+        log.warning("stage_transitions: watch set load failed (%s) — suppressing alerts", exc)
+        watch = set()
+
     fired = 0
     skipped_cooldown = 0
+    skipped_scope = 0
     new_seen = 0
     for c in cands:
         ticker = (c.get("symbol") or "").upper()
@@ -206,7 +220,9 @@ def detect_all() -> dict:
             new_seen += 1
         elif prior != cur and (prior, cur) in TRANSITIONS:
             kind = TRANSITIONS[(prior, cur)]
-            if _recent_alert_exists(db, ticker, kind):
+            if ticker not in watch:
+                skipped_scope += 1            # not on leaderboard/portfolio — no alert
+            elif _recent_alert_exists(db, ticker, kind):
                 skipped_cooldown += 1
             else:
                 ctx = {
@@ -244,12 +260,15 @@ def detect_all() -> dict:
             upsert=True,
         )
 
-    log.info("stage_transitions: fired=%d cooldown_skipped=%d first_seen=%d "
-             "from %d candidate_snapshots", fired, skipped_cooldown, new_seen, len(cands))
+    log.info("stage_transitions: fired=%d cooldown_skipped=%d out_of_scope=%d first_seen=%d "
+             "watch=%d from %d candidate_snapshots",
+             fired, skipped_cooldown, skipped_scope, new_seen, len(watch), len(cands))
     return {
         "ok": True,
         "alerts": fired,
         "cooldown_skipped": skipped_cooldown,
+        "out_of_scope": skipped_scope,
+        "watch_size": len(watch),
         "first_seen": new_seen,
         "kind": "stage_breakdown",
     }

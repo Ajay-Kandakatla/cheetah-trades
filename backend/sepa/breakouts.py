@@ -289,16 +289,39 @@ def detect_all() -> dict:
 
 
 def list_active(since_ts: int = 0, limit: int = 50) -> list[dict]:
-    """Return all alerts since `since_ts` that haven't been dismissed."""
+    """Return all alerts since `since_ts` that haven't been dismissed.
+
+    Stage-breakdown / topping alerts (kind starts with "stage_breakdown") are
+    filtered to the user's watched names — leaderboard top list + portfolio — at
+    READ time too, so pre-existing universe-wide records stop showing right away
+    (Ajay 2026-06-04: "I only need them for my portfolio and leaderboards top
+    stocks"). Volume breakouts and every other kind pass through unchanged so
+    new-breakout discovery still works universe-wide."""
     db = _get_db()
     if db is None:
         return []
+    # Pull extra so the post-filter can still fill the requested limit.
     rows = list(db.sepa_breakouts.find(
         {"ts": {"$gte": since_ts}, "dismissed_at": None},
-    ).sort("ts", -1).limit(limit))
+    ).sort("ts", -1).limit(limit * 3))
+
+    watch = None  # lazily resolved only if a stage-breakdown row shows up
+    out: list[dict] = []
     for r in rows:
+        if str(r.get("kind") or "").startswith("stage_breakdown"):
+            if watch is None:
+                try:
+                    from . import alerts as _alerts
+                    watch = _alerts._topping_watch_symbols()
+                except Exception:
+                    watch = set()
+            if str(r.get("ticker") or "").upper() not in watch:
+                continue                     # out-of-scope topping alert — hide it
         r["_id"] = str(r["_id"])
-    return rows
+        out.append(r)
+        if len(out) >= limit:
+            break
+    return out
 
 
 def dismiss(alert_id: str) -> bool:
