@@ -364,3 +364,53 @@ async def insider_activity(symbol: str) -> dict:
             "13g": d13g[:3],
         },
     }
+
+
+# ── Result cache (Mongo) — so broad coverage doesn't re-hit EDGAR every scan ──
+# Ajay 2026-06-05: the cluster-buy chip needs insider data on far more than the
+# top-20 candidates. Form 4 filings are daily, so a result cache (default 12h)
+# lets a scan sweep hundreds of names while only fetching the STALE ones.
+_INSIDER_TTL_SEC = int(os.getenv("INSIDER_CACHE_TTL_SEC", str(12 * 3600)))
+_INSIDER_COLL = None
+
+
+def _insider_coll():
+    """The app's Mongo `insider_cache` collection (reuses history's connection).
+    Memoized once it succeeds; retries on a later call if Mongo was unavailable."""
+    global _INSIDER_COLL
+    if _INSIDER_COLL is not None:
+        return _INSIDER_COLL
+    try:
+        from . import history
+        db = history._get_db()
+        if db is not None:
+            _INSIDER_COLL = db.insider_cache
+            return _INSIDER_COLL
+    except Exception:
+        pass
+    return None
+
+
+async def insider_activity_cached(symbol: str) -> dict:
+    """`insider_activity` with a Mongo result cache (TTL `_INSIDER_TTL_SEC`).
+    Cache hit → instant (no EDGAR call); miss → fetch + store. Same return shape
+    as the uncached call, so callers are interchangeable."""
+    sym = (symbol or "").upper().strip()
+    coll = _insider_coll()
+    now = int(time.time())
+    if coll is not None:
+        try:
+            doc = coll.find_one({"_id": sym})
+            if doc and (now - int(doc.get("computed_at") or 0)) < _INSIDER_TTL_SEC:
+                doc.pop("_id", None)
+                doc.pop("computed_at", None)
+                return doc
+        except Exception:
+            pass
+    data = await insider_activity(sym)
+    if coll is not None and data:
+        try:
+            coll.update_one({"_id": sym}, {"$set": {**data, "_id": sym, "computed_at": now}}, upsert=True)
+        except Exception:
+            pass
+    return data
