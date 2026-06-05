@@ -1168,9 +1168,12 @@ tr:last-child td { border-bottom: none; }
 .heatmap__sym { font-weight: 800; letter-spacing: 0.01em; }
 .heatmap__pct { font-size: 0.6rem; font-family: "SF Mono", Menlo, monospace; opacity: 0.9; }
 .heatmap-panel { margin: 0.4rem 0 0.8rem; }
-.heatmap-panel__head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.3rem; }
+.heatmap-panel__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.2rem 0.5rem; margin-bottom: 0.3rem; }
 .heatmap-panel__title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cm-slate, #94a3b8); }
 .heatmap-panel__hint { font-size: 0.64rem; color: var(--cm-slate, #8595ad); }
+.heatmap-panel__finviz { margin-left: auto; font-size: 0.66rem; font-weight: 600; white-space: nowrap;
+  color: var(--gold, #d9a441); text-decoration: none; }
+.heatmap-panel__finviz:hover { text-decoration: underline; }
 @keyframes rank-lb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .rank-lb__live .dot { animation: none; } }
 
