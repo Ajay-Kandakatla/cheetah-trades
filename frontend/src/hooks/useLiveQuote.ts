@@ -151,7 +151,11 @@ export async function prefillBulkQuotes(symbols: string[]): Promise<void> {
 /** Convert a `quote.update` SSE payload into the LiveQuote shape that
  *  components already know how to render. The backend sends `price`
  *  + `prev_close`; useQuote consumers expect `last_price` + `day_pct`. */
-function payloadToQuote(payload: any): LiveQuote | null {
+export function getCachedQuote(symbol: string): LiveQuote | null {
+  return _quoteState.get((symbol || '').toUpperCase()) ?? null;
+}
+
+export function payloadToQuote(payload: any): LiveQuote | null {
   if (!payload || typeof payload !== 'object') return null;
   const symbol = String(payload.symbol || '').toUpperCase();
   if (!symbol) return null;

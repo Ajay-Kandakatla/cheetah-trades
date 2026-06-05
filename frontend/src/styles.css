@@ -1155,6 +1155,9 @@ tr:last-child td { border-bottom: none; }
 .rank-lb__live { color: #10b981; }
 .rank-lb__live[data-stale="1"] { color: #fb923c; }
 .rank-lb__live .dot { animation: rank-lb-pulse 2s ease-in-out infinite; }
+.port-live-dot { color: #10b981; font-size: 0.62em; margin-left: 0.25rem; vertical-align: middle;
+  animation: rank-lb-pulse 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .port-live-dot { animation: none; } }
 @keyframes rank-lb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .rank-lb__live .dot { animation: none; } }
 

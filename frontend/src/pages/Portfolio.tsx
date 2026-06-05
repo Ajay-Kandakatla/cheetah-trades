@@ -21,6 +21,7 @@ import { MarketPulsePanel } from '../components/MarketPulsePanel';
 import { SepaRankCompare } from '../components/SepaRankCompare';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
+import { useLivePortfolio } from '../hooks/useLivePortfolio';
 
 const PageInfo = (
   <>
@@ -51,6 +52,19 @@ export default function PortfolioPage() {
   const { data, loading, error, refresh, updatedAt } = useHoldings(true);
   const rows: HoldingRow[] = data?.rows ?? [];
 
+  // Live SSE quotes (same stream the chart uses) overlaid on the delayed
+  // endpoint snapshot — so price / value / P&L / totals tick in real-time like
+  // Fidelity, falling back to the snapshot when a symbol has no live tick.
+  const live = useLivePortfolio(rows.map((r) => r.symbol));
+  const liveView = (r: HoldingRow) => {
+    const q = live.get((r.symbol || '').toUpperCase());
+    const price = q?.last_price ?? r.current_price;
+    const value = price != null ? price * r.quantity : r.current_value;
+    const pl = value != null && r.cost_basis != null ? value - r.cost_basis : r.pl_dollars;
+    const plPct = value != null && r.cost_basis ? (value / r.cost_basis - 1) * 100 : r.pl_pct;
+    return { price, value, pl, plPct, isLive: q?.last_price != null };
+  };
+
   const removeHolding = async (sym: string) => {
     if (!sym || !window.confirm(`Remove ${sym} from your positions?`)) return;
     try {
@@ -64,8 +78,8 @@ export default function PortfolioPage() {
     }
   };
 
-  const totalValue = rows.reduce((s, r) => s + (r.current_value ?? 0), 0);
-  const totalPL = rows.reduce((s, r) => s + (r.pl_dollars ?? 0), 0);
+  const totalValue = rows.reduce((s, r) => s + (liveView(r).value ?? 0), 0);
+  const totalPL = rows.reduce((s, r) => s + (liveView(r).pl ?? 0), 0);
 
   return (
     <div className="sepa-page">
@@ -125,6 +139,7 @@ export default function PortfolioPage() {
             r.avg_cost ??
             r.entry ??
             (r.cost_basis != null && r.quantity ? r.cost_basis / r.quantity : null);
+          const lv = liveView(r);
           return (
             <div key={`${r.symbol}-${r.account_id || ''}`} className="portfolio-card">
               <div className="portfolio-card__top">
@@ -159,9 +174,12 @@ export default function PortfolioPage() {
               <div className="portfolio-card__nums mono">
                 <span>{r.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })} sh</span>
                 <span>cost {money(entry)}</span>
-                <span>now {money(r.current_price)}</span>
-                <span style={{ color: (r.pl_dollars ?? 0) >= 0 ? '#10b981' : '#ef4444' }}>
-                  {money(r.pl_dollars, true)} ({pct(r.pl_pct)})
+                <span>
+                  now {money(lv.price)}
+                  {lv.isLive && <span className="port-live-dot" title="streaming live">●</span>}
+                </span>
+                <span style={{ color: (lv.pl ?? 0) >= 0 ? '#10b981' : '#ef4444' }}>
+                  {money(lv.pl, true)} ({pct(lv.plPct)})
                 </span>
               </div>
 
