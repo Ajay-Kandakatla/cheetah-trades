@@ -1124,6 +1124,44 @@ async def market_macro_risk_refresh(email: str = Depends(current_user_email)):
     return JSONResponse({"ok": True, "market": out})
 
 
+@app.get("/market/overview")
+async def market_overview():
+    """Overall-market context for the heatmap header: the major index ETFs with
+    today's % move + breadth across the scanned universe (how many names are up vs
+    down today) — so a holder can see it's the whole tape, not just their names."""
+    from portfolio import quotes
+    from sepa import scanner
+    INDICES = [("SPY", "S&P 500"), ("QQQ", "Nasdaq 100"), ("DIA", "Dow"), ("IWM", "Russell 2000")]
+
+    def _run():
+        qm = quotes.fetch_quotes([s for s, _ in INDICES]) or {}
+        idx = []
+        for sym, label in INDICES:
+            q = qm.get(sym) or {}
+            last, prev, dc = q.get("last"), q.get("prev_close"), q.get("day_change")
+            pct = None
+            if last is not None and prev:
+                pct = round((last / prev - 1) * 100, 2)
+            elif dc is not None and prev:
+                pct = round(dc / prev * 100, 2)
+            idx.append({"symbol": sym, "label": label, "last": last, "day_pct": pct})
+
+        # Breadth across the latest scan (today's day_change_pct per name).
+        rows = (scanner.load_latest() or {}).get("all_results") or []
+        ch = [r.get("day_change_pct") for r in rows if r.get("day_change_pct") is not None]
+        breadth = None
+        if ch:
+            down = sum(1 for x in ch if x < 0)
+            breadth = {
+                "total": len(ch), "down": down, "up": sum(1 for x in ch if x > 0),
+                "down_pct": round(100 * down / len(ch)),
+                "avg_pct": round(sum(ch) / len(ch), 2),
+            }
+        return {"indices": idx, "breadth": breadth}
+
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(_run)))
+
+
 @app.get("/portfolio/diagnosis/{symbol}")
 async def portfolio_diagnosis_symbol(symbol: str,
                                      force: bool = Query(False),

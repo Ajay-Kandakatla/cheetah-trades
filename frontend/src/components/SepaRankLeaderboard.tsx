@@ -15,6 +15,7 @@ import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { MacroRiskBadge, MacroMarketStrip, type MacroRisk, type MacroMarket } from './MacroRiskBadge';
 import { Heatmap, type HeatTile } from './Heatmap';
+import { MarketContextStrip } from './MarketContextStrip';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 
 type Leader = {
@@ -204,6 +205,7 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
 
       {heatmap && heatTiles.length > 1 && (
         <div className="heatmap-panel">
+          <MarketContextStrip />
           <div className="heatmap-panel__head">
             <span className="heatmap-panel__title">📊 Leaders heatmap</span>
             <span className="heatmap-panel__hint">size = SEPA score · colour = today’s move · click to open</span>
