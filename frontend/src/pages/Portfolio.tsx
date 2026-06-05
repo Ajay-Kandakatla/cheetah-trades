@@ -22,6 +22,7 @@ import { SepaRankCompare } from '../components/SepaRankCompare';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
+import { Heatmap, type HeatTile } from '../components/Heatmap';
 
 const PageInfo = (
   <>
@@ -81,6 +82,13 @@ export default function PortfolioPage() {
   const totalValue = rows.reduce((s, r) => s + (liveView(r).value ?? 0), 0);
   const totalPL = rows.reduce((s, r) => s + (liveView(r).pl ?? 0), 0);
 
+  // Day heatmap tiles — sized by live position value, coloured by today's move.
+  const heatTiles: HeatTile[] = rows.map((r) => ({
+    symbol: r.symbol,
+    value: Math.max(0, liveView(r).value ?? r.current_value ?? 0),
+    pct: live.get((r.symbol || '').toUpperCase())?.day_pct ?? r.day_change_pct,
+  }));
+
   return (
     <div className="sepa-page">
       <div className="sepa-page__title">
@@ -128,6 +136,20 @@ export default function PortfolioPage() {
             Add a stock above — ticker, shares, and the price you paid — and you'll get a
             hold/sell read with the R-target ladder.
           </p>
+        </div>
+      )}
+
+      {rows.length > 1 && (
+        <div className="heatmap-panel">
+          <div className="heatmap-panel__head">
+            <span className="heatmap-panel__title">📊 Day heatmap</span>
+            <span className="heatmap-panel__hint">size = position value · colour = today’s move · click to open</span>
+          </div>
+          <Heatmap
+            tiles={heatTiles}
+            height={170}
+            onTileClick={(s) => navigate(`/sepa/${encodeURIComponent(s)}`, { state: { from: '/portfolio', label: 'Portfolio' } })}
+          />
         </div>
       )}
 

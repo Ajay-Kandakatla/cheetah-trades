@@ -1158,6 +1158,19 @@ tr:last-child td { border-bottom: none; }
 .port-live-dot { color: #10b981; font-size: 0.62em; margin-left: 0.25rem; vertical-align: middle;
   animation: rank-lb-pulse 2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .port-live-dot { animation: none; } }
+
+/* Heatmap — native squarified treemap (Finviz-style) on portfolio + leaderboard. */
+.heatmap { border-radius: 8px; overflow: hidden; background: #14171d; }
+.heatmap__tile { border: 0; padding: 2px; margin: 0; cursor: pointer; color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  overflow: hidden; line-height: 1.05; text-shadow: 0 1px 2px rgba(0,0,0,0.45); transition: outline .1s; }
+.heatmap__tile:hover { outline: 2px solid rgba(255,255,255,0.7); outline-offset: -2px; z-index: 1; }
+.heatmap__sym { font-weight: 800; letter-spacing: 0.01em; }
+.heatmap__pct { font-size: 0.6rem; font-family: "SF Mono", Menlo, monospace; opacity: 0.9; }
+.heatmap-panel { margin: 0.4rem 0 0.8rem; }
+.heatmap-panel__head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.3rem; }
+.heatmap-panel__title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cm-slate, #94a3b8); }
+.heatmap-panel__hint { font-size: 0.64rem; color: var(--cm-slate, #8595ad); }
 @keyframes rank-lb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .rank-lb__live .dot { animation: none; } }
 

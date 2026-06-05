@@ -10,10 +10,12 @@
        reload; a pulsing dot shows it's live (turns amber + "stale" on a failed
        refresh, keeping the last good data on screen). Fails quiet. */
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { MacroRiskBadge, MacroMarketStrip, type MacroRisk, type MacroMarket } from './MacroRiskBadge';
+import { Heatmap, type HeatTile } from './Heatmap';
+import { useLivePortfolio } from '../hooks/useLivePortfolio';
 
 type Leader = {
   symbol: string;
@@ -92,7 +94,8 @@ const SORTS: { key: SortKey; label: string; dir: 'asc' | 'desc'; get: (l: Leader
 
 const REFRESH_MS = 60_000;
 
-export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
+export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; heatmap?: boolean }) {
+  const navigate = useNavigate();
   const [data, setData] = useState<Resp | null>(null);
   const [stale, setStale] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -128,6 +131,16 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
       return sortDir === 'asc' ? av - bv : bv - av;
     });
   }, [data, sortKey, sortDir]);
+
+  // Leaderboard heatmap (Leaderboard page only): live day-change colour, score size.
+  const liveQuotes = useLivePortfolio(heatmap ? rows.map((r) => r.symbol) : []);
+  const heatTiles: HeatTile[] = heatmap
+    ? rows.map((r) => ({
+        symbol: r.symbol,
+        value: Math.max(1, r.current_score ?? 1),
+        pct: liveQuotes.get(r.symbol.toUpperCase())?.day_pct ?? null,
+      }))
+    : [];
 
   if (!data || !(data.leaders || []).length) return null; // fail quiet
 
@@ -188,6 +201,16 @@ export function SepaRankLeaderboard({ n = 12 }: { n?: number }) {
         <b style={{ color: '#eab308' }}> ⚡ Primed</b> = setup ready, watch for the breakout ·
         <b style={{ color: '#fb923c' }}> Volatile</b> = big rank swings.
       </p>
+
+      {heatmap && heatTiles.length > 1 && (
+        <div className="heatmap-panel">
+          <div className="heatmap-panel__head">
+            <span className="heatmap-panel__title">📊 Leaders heatmap</span>
+            <span className="heatmap-panel__hint">size = SEPA score · colour = today’s move · click to open</span>
+          </div>
+          <Heatmap tiles={heatTiles} height={180} onTileClick={(s) => navigate(`/sepa/${encodeURIComponent(s)}`)} />
+        </div>
+      )}
 
       <div className="rank-lb__sortbar mono">
         <span className="rank-lb__sortlabel">sort:</span>

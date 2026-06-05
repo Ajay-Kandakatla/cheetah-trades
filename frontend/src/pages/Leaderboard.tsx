@@ -62,7 +62,7 @@ export function LeaderboardPage() {
 
       <TopPicksTracker n={5} days={14} />
 
-      <SepaRankLeaderboard n={12} />
+      <SepaRankLeaderboard n={12} heatmap />
 
       <SepaRankCompare />
     </div>
