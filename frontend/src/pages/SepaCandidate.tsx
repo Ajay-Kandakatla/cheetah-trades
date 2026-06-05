@@ -924,6 +924,32 @@ export function SepaCandidatePage() {
                   </button>
                 </div>
                 )}
+                {chartSource === 'tv' && (
+                  <div className="sepa-tv-canslim">
+                    <a
+                      className="sepa-tv-canslim__add"
+                      href="https://www.tradingview.com/script/QqSTfaiF-Extended-CANSLIM-Indicator/"
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Opens the Extended CANSLIM indicator on TradingView. Click 'Add to Chart', then save it to your default layout so it loads on every chart you open there."
+                    >
+                      📈 Add the Extended CANSLIM indicator
+                    </a>
+                    <a
+                      className="sepa-tv-canslim__open"
+                      href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbolFor(symbol, data?.profile?.exchange))}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      ↗ Open {symbol} in your TradingView (full toolset · your saved indicators)
+                    </a>
+                    <span className="sepa-tv-canslim__note">
+                      Custom indicators live on TradingView itself — the in-app embed above is anonymous, so it
+                      can’t carry them. Add CANSLIM once and save it to your <strong>default layout</strong>; it
+                      then shows every time you open the full chart from here.
+                    </span>
+                  </div>
+                )}
                 <div className="sepa-drawer__chart-links">
                   <a href={`https://www.tradingview.com/symbols/${symbol}/`} target="_blank" rel="noreferrer">Open in TradingView</a>
                   <a href={`https://finance.yahoo.com/quote/${symbol}`} target="_blank" rel="noreferrer">Yahoo Finance</a>
