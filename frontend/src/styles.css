@@ -1029,6 +1029,15 @@ tr:last-child td { border-bottom: none; }
 .portfolio-totals { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.7rem 0 0.2rem;
   font-size: 0.8rem; color: var(--cm-slate, #94a3b8); }
 
+/* Market-posture banner — top-down defensive read driving the hold/sell overlay. */
+.port-posture { border-radius: 9px; padding: 0.6rem 0.8rem; margin: 0.5rem 0 0.7rem; border: 1px solid; }
+.port-posture.is-riskoff { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.08); }
+.port-posture.is-caution { border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.07); }
+.port-posture__head { font-weight: 800; font-size: 0.82rem; color: #fca5a5; }
+.port-posture.is-caution .port-posture__head { color: #fcd34d; }
+.port-posture__drivers { font-weight: 500; color: var(--cm-slate, #94a3b8); font-size: 0.72rem; }
+.port-posture__body { font-size: 0.74rem; color: #e2e8f0; line-height: 1.45; margin-top: 0.25rem; }
+
 /* SEPA Top Picks — investment indicator on the portfolio page. */
 .top-picks { border: 1px solid var(--hairline, #222); border-radius: 12px;
   background: linear-gradient(180deg, rgba(16,185,129,0.05), transparent 60%);

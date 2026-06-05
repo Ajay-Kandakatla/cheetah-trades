@@ -23,6 +23,7 @@ import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { Heatmap, type HeatTile } from '../components/Heatmap';
+import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
 
 const PageInfo = (
   <>
@@ -107,6 +108,8 @@ export default function PortfolioPage() {
           </p>
         </div>
       </div>
+
+      <PortfolioPostureBanner />
 
       {rows.length > 0 && (
         <div className="portfolio-totals mono">

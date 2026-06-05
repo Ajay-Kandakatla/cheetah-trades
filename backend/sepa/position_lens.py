@@ -45,6 +45,59 @@ _PRIORITY = {
 }
 
 
+# ── Market-regime overlay (Ajay 2026-06-05) ──────────────────────────────────
+# "Be defensive when the whole tape is red." The general market is the dominant
+# factor — ~3 of 4 stocks follow it (O'Neil CANSLIM 'M'); Minervini trades WITH
+# the market trend (Ch.5) and reduces exposure in weak markets (Ch.12-13). The
+# per-stock sell signals are bottom-up only, so this adds the top-down read: in a
+# risk-off tape every holding escalates HOLD→TIGHTEN, and combines with any
+# name-specific weakness to step toward REDUCE (via the tighten-count rule below).
+def _posture_from(level, safe_to_long, breadth_red_pct) -> str:
+    """Pure: macro regime + market trend-confirmation + breadth → posture band."""
+    risk_off = (level in ("severe", "high")
+                or safe_to_long is False
+                or (breadth_red_pct is not None and breadth_red_pct >= 65))
+    if risk_off:
+        return "risk_off"
+    caution = (level == "elevated"
+               or (breadth_red_pct is not None and breadth_red_pct >= 55))
+    return "caution" if caution else "constructive"
+
+
+def _market_posture() -> dict:
+    """Top-down market read for the defensive overlay (best-effort; never blocks)."""
+    level, score, safe_to_long, breadth = "unknown", None, None, None
+    drivers: list = []
+    try:
+        from . import macro_risk
+        m = macro_risk.get_market() or {}
+        level, score = (m.get("level") or "unknown"), m.get("score")
+    except Exception:
+        pass
+    try:
+        from . import market_context
+        safe_to_long = (market_context.market_state() or {}).get("safe_to_long")
+    except Exception:
+        pass
+    try:
+        from . import scanner as _scanner
+        rows = (_scanner.load_latest() or {}).get("all_results") or []
+        ch = [r.get("day_change_pct") for r in rows if r.get("day_change_pct") is not None]
+        if ch:
+            breadth = round(100 * sum(1 for x in ch if x < 0) / len(ch))
+    except Exception:
+        pass
+    posture = _posture_from(level, safe_to_long, breadth)
+    if level != "unknown":
+        drivers.append(f"macro {level}" + (f" {int(score)}" if score is not None else ""))
+    if safe_to_long is False:
+        drivers.append("S&P/Nasdaq not in a confirmed uptrend")
+    if breadth is not None:
+        drivers.append(f"{breadth}% of scanned names red")
+    return {"posture": posture, "level": level, "score": score,
+            "safe_to_long": safe_to_long, "breadth_red_pct": breadth, "drivers": drivers}
+
+
 def evaluate(symbol: str, entry: float, *,
              shares: Optional[float] = None,
              user_stop: Optional[float] = None) -> dict:
@@ -289,6 +342,19 @@ def evaluate(symbol: str, entry: float, *,
             "msg": f"Up {r_multiple:.1f}R from entry — move stop to break-even (${entry:.2f}). 'Never let a winner turn into a loser.'"
         })
 
+    # Market-regime overlay — defensive when the whole tape is red (see top of
+    # file). Risk-off adds a TIGHTEN baseline (HOLD→TIGHTEN); stacked with any
+    # name-specific TIGHTEN it escalates to REDUCE via the tighten-count rule.
+    market = _market_posture()
+    if market["posture"] == "risk_off":
+        triggers.append({
+            "rule":    "market_risk_off",
+            "verdict": "TIGHTEN_STOP",
+            "msg":     ("General market is risk-off (" + "; ".join(market["drivers"][:3]) + "). "
+                        "The market drives ~3 of 4 stocks — tighten stops and take partial "
+                        "profits / raise cash (O'Neil 'M'; Minervini Ch.5, 12-13)."),
+        })
+
     # --- Resolve verdict (highest-priority trigger wins) --------------------
     verdict = "HOLD"
     for t in triggers:
@@ -323,6 +389,7 @@ def evaluate(symbol: str, entry: float, *,
         "verdict": verdict,
         "severity": severity,
         "summary": _summary_line(verdict, triggers),
+        "market":  market,                       # top-down posture driving the overlay
 
         "pnl":     pnl,
         "r_multiple": round(r_multiple, 2) if r_multiple is not None else None,

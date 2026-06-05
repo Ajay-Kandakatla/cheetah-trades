@@ -1124,6 +1124,16 @@ async def market_macro_risk_refresh(email: str = Depends(current_user_email)):
     return JSONResponse({"ok": True, "market": out})
 
 
+@app.get("/market/posture")
+async def market_posture():
+    """Top-down DEFENSIVE posture for the portfolio — combines our macro regime,
+    market trend-confirmation (S&P/Nasdaq), and breadth into
+    risk_off / caution / constructive. The same read drives the market-aware
+    hold/sell overlay in position_lens. Analytical gauge, not advice."""
+    from sepa import position_lens
+    return JSONResponse(await asyncio.to_thread(position_lens._market_posture))
+
+
 @app.get("/portfolio/diagnosis/{symbol}")
 async def portfolio_diagnosis_symbol(symbol: str,
                                      force: bool = Query(False),
