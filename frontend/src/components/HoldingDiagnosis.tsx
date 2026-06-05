@@ -9,6 +9,25 @@ import { useEffect } from 'react';
 import { API } from '../lib/apiBase';
 
 type Factor = { score: number; note: string };
+type Tripwire = { label: string; level: number | null; distance_pct: number | null; note: string; cite: string };
+type Target = { label: string; price: number | null; pct_from_here: number | null };
+type Fired = { rule: string; verdict: string; msg: string };
+type Position = {
+  entry: number;
+  shares?: number | null;
+  last_close: number;
+  gain_pct: number | null;
+  gain_dollars?: number | null;
+  r_multiple: number | null;
+  to_breakeven_pct: number;
+  verdict?: string | null;
+  verdict_summary?: string | null;
+  stage?: number | null;
+  stop?: { price: number | null; distance_pct: number | null } | null;
+  targets?: Target[];
+  tripwires?: Tripwire[];
+  fired?: Fired[];
+};
 type Diagnosis = {
   symbol: string;
   sector?: string | null;
@@ -17,9 +36,12 @@ type Diagnosis = {
   verdict?: string | null;
   headline_label?: string;
   uptrend_driver?: { label: string; note: string } | null;
+  position?: Position | null;
   writeup?: string | null;
   scorecard?: Record<string, Factor>;
 };
+
+const money0 = (n: number) => `$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
 // label + whether a high score means "pressure" (red) or "health" (green).
 const FACTOR_META: Record<string, { label: string; health?: boolean }> = {
@@ -87,11 +109,71 @@ export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: stri
           {err && <div className="hdiag__muted">Couldn’t load: {err}</div>}
           {data && (
             <>
+              {data.position && (() => {
+                const p = data.position!;
+                const up = (p.gain_pct ?? 0) >= 0;
+                const v = (p.verdict || 'HOLD').toUpperCase();
+                return (
+                  <div className="hdiag__pos">
+                    <div className="hdiag__posrow">
+                      <span className="hdiag__poslabel">Your position</span>
+                      <span className={`hdiag__pnl ${up ? 'is-up' : 'is-down'}`}>
+                        {up ? '+' : ''}{p.gain_pct}%
+                        {p.r_multiple != null && <> · {p.r_multiple >= 0 ? '+' : ''}{p.r_multiple}R</>}
+                        {p.gain_dollars != null && <> · {p.gain_dollars >= 0 ? '+' : '−'}{money0(p.gain_dollars)}</>}
+                      </span>
+                      <span className="hdiag__since">since ${p.entry}</span>
+                    </div>
+                    {!up && p.to_breakeven_pct > 0 && (
+                      <div className="hdiag__be">Back to your cost: <b>+{p.to_breakeven_pct}%</b> from here</div>
+                    )}
+                    {p.verdict && (
+                      <div className={`hdiag__verdict v-${v.toLowerCase()}`}>
+                        {v === 'HOLD' ? '✓ ' : '⚠ '}{p.verdict_summary || v}
+                      </div>
+                    )}
+                    {(p.fired?.length ?? 0) > 0 && (
+                      <ul className="hdiag__fired">
+                        {p.fired!.map((t, i) => <li key={i}>⚠ {t.msg}</li>)}
+                      </ul>
+                    )}
+                    {(p.tripwires?.length ?? 0) > 0 && (
+                      <div className="hdiag__trip">
+                        <div className="hdiag__triphead">
+                          You hold until one of these fires
+                          <span className="hdiag__cite"> · Minervini pp.295–296</span>
+                        </div>
+                        {p.tripwires!.map((t, i) => (
+                          <div key={i} className="hdiag__tripitem" title={`${t.note} (Minervini ${t.cite})`}>
+                            <span className="hdiag__tripname">{t.label}</span>
+                            {t.level != null && <span className="hdiag__triplvl mono">${t.level}</span>}
+                            {t.distance_pct != null && (
+                              <span className="hdiag__tripdist mono">{t.distance_pct >= 0 ? '+' : ''}{t.distance_pct}%</span>
+                            )}
+                            <span className="hdiag__tripnote">{t.note}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(p.targets?.length ?? 0) > 0 && (
+                      <div className="hdiag__targets">
+                        <span className="hdiag__tgtlabel">Targets from here:</span>
+                        {p.targets!.map((t) => (
+                          <span key={t.label} className="hdiag__tgt">
+                            {t.label} <b className="mono">${t.price}</b>
+                            {t.pct_from_here != null && <span className="hdiag__tgtpct"> +{t.pct_from_here}%</span>}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {data.headline_label && (
                 <div className="hdiag__headline">
                   {data.uptrend_driver ? 'Powered by: ' : 'Likely driver: '}<strong>{data.headline_label}</strong>
                   {data.sector && data.sector !== '—' && <span className="hdiag__sector"> · {data.sector}</span>}
-                  {data.move_pct != null && <span className="hdiag__move"> · {symbol} {data.move_pct >= 0 ? '+' : ''}{data.move_pct}% (5d)</span>}
+                  {data.move_pct != null && <span className="hdiag__move"> · {data.position ? 'stock’s last 5d ' : ''}{data.move_pct >= 0 ? '+' : ''}{data.move_pct}%{data.position ? '' : ' (5d)'}</span>}
                 </div>
               )}
               {data.uptrend_driver?.note && <div className="hdiag__muted" style={{ marginBottom: '0.4rem' }}>{data.uptrend_driver.note}</div>}

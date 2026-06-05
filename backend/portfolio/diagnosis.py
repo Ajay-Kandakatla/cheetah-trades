@@ -143,6 +143,106 @@ def _uptrend_driver(vf: dict, scan_rec: Optional[dict]) -> tuple[str, str]:
     return "Drift", "rising on light/quiet volume — low conviction"
 
 
+# ── Personal position read — anchored to the USER's cost basis ───────────────
+# Ajay 2026-06-04: "make it personal to my P/L — the +6.5% is misleading, I'm
+# down on the position; tell me the change since I invested, what accumulation
+# needs to continue, and (Minervini) how long to hold." Reuses position_lens —
+# the SAME Minervini Ch.12-13 sell engine the Portfolio card already uses — for
+# verdict / R-multiple / stop / fired triggers, then frames the move from THEIR
+# entry and lists the HOLD-until-signal tripwires.
+#
+# Minervini, Trade Like a Stock Market Wizard (2013), printed pages (repo PDF +15):
+#   • Hold a Stage-2 advance; RAISE the stop as it advances (trailing stop)  p.295
+#   • Never let a winner turn into a loser → stop to breakeven once the gain
+#     is a multiple of the stop                                              p.296
+#   • Keep risk below your average gain (the R-multiple discipline)          p.298
+#   • Stage 2 is the only hold zone; Stage 3/4 = sell/stand aside        pp.69-76
+def _ma(df, n: int):
+    try:
+        if df is None or len(df) < n:
+            return None
+        import pandas as pd
+        m = float(df["close"].astype(float).rolling(n).mean().iloc[-1])
+        return m if pd.notna(m) else None
+    except Exception:
+        return None
+
+
+def _position_read(sym: str, entry: float, shares, df) -> Optional[dict]:
+    """P&L + hold-until-signal read from the user's cost basis. Honest: no price
+    or date forecast — only their position, the accumulation to keep seeing, and
+    the book's mechanical sell tripwires with live distances."""
+    try:
+        from sepa import position_lens
+        pos = position_lens.evaluate(sym, float(entry), shares=shares) or {}
+    except Exception as exc:
+        log.warning("position_lens failed for %s: %s", sym, exc)
+        return None
+    return _shape_position(pos, float(entry), df)
+
+
+def _shape_position(pos: dict, entry: float, df) -> Optional[dict]:
+    """Pure: shape position_lens output + the price frame into the personal block
+    (P&L, breakeven, R-targets, hold-until-signal tripwires). Unit-testable."""
+    if not pos.get("ok"):
+        return None
+
+    cur = pos.get("current") or {}
+    last = float(cur.get("last_close") or 0)
+    if last <= 0:
+        return None
+    gain_pct = (pos.get("pnl") or {}).get("gain_pct")
+
+    # How far price must RISE to get back to your cost (only when underwater).
+    to_breakeven_pct = (round((entry / last - 1) * 100, 2)
+                        if (gain_pct is not None and gain_pct < 0) else 0.0)
+
+    # R-target ladder from position_lens (same numbers the card shows), each with
+    # the % move from here.
+    tgt = pos.get("targets") or {}
+    def _pct_from(p):
+        return round((p / last - 1) * 100, 1) if (p and last) else None
+    targets = [{"label": k.upper(), "price": tgt.get(k), "pct_from_here": _pct_from(tgt.get(k))}
+               for k in ("r1", "r2", "r3") if tgt.get(k)]
+
+    # Hold-until-signal tripwires — the exits to WATCH, nearest first, each with
+    # how far below price it sits. (Triggers ALREADY firing live in pos['triggers'].)
+    stop = pos.get("stop") or {}
+    ma50, ma200 = _ma(df, 50), _ma(df, 200)
+    def _below(level):
+        # signed % from current price; negative = sits BELOW price (you'd fall to it).
+        return round((level / last - 1) * 100, 1) if (level and last) else None
+    tripwires = []
+    if stop.get("used"):
+        tripwires.append({"label": "Hard stop", "level": round(float(stop["used"]), 2),
+                          "distance_pct": _below(float(stop["used"])),
+                          "note": "exit in full if hit", "cite": "p.296"})
+    if ma50:
+        tripwires.append({"label": "50-day line", "level": round(ma50, 2), "distance_pct": _below(ma50),
+                          "note": "first warning if lost on heavy volume", "cite": "Ch.13"})
+    if ma200:
+        tripwires.append({"label": "200-day line", "level": round(ma200, 2), "distance_pct": _below(ma200),
+                          "note": "Stage-2 trend broken — exit", "cite": "pp.69-76"})
+    tripwires.sort(key=lambda t: (t["distance_pct"] is None, abs(t["distance_pct"]) if t["distance_pct"] is not None else 99))
+
+    return {
+        "entry": round(float(entry), 2),
+        "shares": (pos.get("pnl") or {}).get("shares"),
+        "last_close": last,
+        "gain_pct": gain_pct,
+        "gain_dollars": (pos.get("pnl") or {}).get("gain_dollars"),
+        "r_multiple": pos.get("r_multiple"),
+        "to_breakeven_pct": to_breakeven_pct,
+        "verdict": pos.get("verdict"),
+        "verdict_summary": pos.get("summary"),
+        "stage": cur.get("stage"),
+        "stop": {"price": stop.get("used"), "distance_pct": stop.get("distance_pct")},
+        "targets": targets,
+        "tripwires": tripwires,
+        "fired": pos.get("triggers") or [],
+    }
+
+
 # ── LLM write-up (Claude Sonnet, local fallback) ─────────────────────────────
 _SYS = (
     "You are a disciplined trading analyst writing a SPECIFIC, TAILORED note for "
@@ -158,9 +258,22 @@ _SYS = (
     "the stock itself. If the stock is UP (direction=up), explain WHAT powered the "
     "gain using `uptrend_driver`: steady ACCUMULATION (up-volume, accumulation "
     "days) vs a specific O'Neil POCKET PIVOT vs a fresh volume BREAKOUT — say which, "
-    "and what it implies for the move's durability. Do NOT predict prices or give "
-    "buy/sell advice. End with one line on what to watch for THIS name. Plain text, "
-    "no markdown headers."
+    "and what it implies for the move's durability. "
+    "If a `position` block is present this is the USER'S OWN HOLDING — make it "
+    "PERSONAL and lead with THEIR trade, not the stock's recent move: open with "
+    "their gain/loss since their entry (position.gain_pct / gain_dollars), their "
+    "R-multiple, and — if underwater — how far up to breakeven "
+    "(position.to_breakeven_pct). Then the Minervini HOLD discipline (encouraging "
+    "but disciplined): you hold a Stage-2 advance and RAISE the stop as it advances "
+    "(p.295); you do NOT sell on a clock, you sell when a signal fires — state "
+    "position.verdict and name the specific tripwires in position.tripwires (hard "
+    "stop, 50-day on volume, 200-day) with their distances so they know exactly what "
+    "they're holding for and what would end it. For 'how much more accumulation and "
+    "at what rate': describe the measurable accumulation signature to keep seeing — "
+    "up days on heavier volume than down days, accumulation days, pocket pivots, RS "
+    "holding — NOT a numeric rate. Do NOT predict prices or dates or give buy/sell "
+    "advice beyond the book's mechanical rules. End with one line on what to watch "
+    "for THIS name. Plain text, no markdown headers."
 )
 
 
@@ -208,15 +321,22 @@ def _scan_record(symbol: str) -> Optional[dict]:
     return None
 
 
-def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
+def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[float] = None,
+             use_llm: bool = True, provider: str = "anthropic",
              force: bool = False) -> dict:
-    """Full factor diagnosis + write-up for one holding. Cached _TTL_SEC."""
+    """Full factor diagnosis + write-up for one holding. Cached _TTL_SEC.
+
+    When `entry` (the user's per-share cost) is given the read is PERSONALIZED:
+    it anchors to their P&L / R-multiple and adds the hold-until-signal tripwires
+    (cache is keyed per cost basis so two owners at different costs don't collide)."""
     sym = (symbol or "").upper().strip()
+    # Personalized reads cache per cost basis; stock-only reads stay keyed by symbol.
+    cache_id = sym if entry is None else f"{sym}|{round(float(entry), 2)}"
     coll = _coll()
     now = int(time.time())
     if coll is not None and not force:
         try:
-            doc = coll.find_one({"_id": sym})
+            doc = coll.find_one({"_id": cache_id})
             if doc and (now - int(doc.get("computed_at") or 0)) < _TTL_SEC:
                 doc.pop("_id", None)
                 return doc
@@ -265,6 +385,10 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
         ud_label, ud_note = _uptrend_driver(vf, scan_rec)
         uptrend_driver = {"label": ud_label, "note": ud_note}
 
+    # Personal position read — when we know the user's cost basis, anchor the whole
+    # card to THEIR P&L and add the Minervini hold-until-signal tripwires.
+    position = _position_read(sym, entry, shares, df) if (entry and float(entry) > 0) else None
+
     # Headline driver. For down names = the biggest PRESSURE factor; for up names
     # = the uptrend driver (accumulation / pocket pivot / breakout).
     pressures = {k: v["score"] for k, v in scorecard.items() if k != "trend_health"}
@@ -293,6 +417,7 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
         "macro_risk": macro,
         "scorecard": scorecard,
         "uptrend_driver": uptrend_driver,
+        "position": position,                                 # personal P&L + hold-until-signal
         "headline_driver": headline,
         "headline_label": headline_label,
         "writeup": None,
@@ -308,6 +433,7 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
             "verdict": attr.get("verdict"),
             "headline_driver": headline_label,
             "uptrend_driver": uptrend_driver,                 # accumulation vs pocket pivot vs breakout
+            "position": position,                             # the user's trade: P&L, R, breakeven, tripwires
             "sector_specific_macro_factors": macro_drivers,   # oil for energy, chips for semis…
             "scorecard": scorecard,
         }, provider)
@@ -316,7 +442,7 @@ def diagnose(symbol: str, *, use_llm: bool = True, provider: str = "anthropic",
     # overwrite a cached full diagnosis with a write-up-less one.
     if coll is not None and use_llm:
         try:
-            coll.update_one({"_id": sym}, {"$set": {**out, "_id": sym}}, upsert=True)
+            coll.update_one({"_id": cache_id}, {"$set": {**out, "_id": cache_id}}, upsert=True)
         except Exception:
             pass
     return out
@@ -327,12 +453,21 @@ def diagnose_portfolio(user_email: str, *, use_llm: bool = True,
     """Per-holding diagnoses for a user's portfolio."""
     from portfolio import store as pstore
     holdings = pstore.list_holdings(user_email)
-    syms = []
+    # Aggregate per symbol — a name can sit in several accounts; the personal read
+    # wants ONE blended cost basis (Σcost / Σshares).
+    agg: dict = {}
     for h in holdings:
-        t = h.get("ticker") or h.get("symbol")
-        if t and drop_attribution_individual(t):
-            syms.append(str(t).upper())
-    rows = [diagnose(s, use_llm=use_llm, provider=provider) for s in syms]
+        t = (h.get("ticker") or h.get("symbol") or "").upper()
+        if not t or not drop_attribution_individual(t):
+            continue
+        a = agg.setdefault(t, {"shares": 0.0, "cost": 0.0})
+        a["shares"] += float(h.get("shares") or 0)
+        a["cost"] += float(h.get("cost_basis") or 0)
+    rows = []
+    for t, a in agg.items():
+        entry = round(a["cost"] / a["shares"], 4) if (a["shares"] > 0 and a["cost"] > 0) else None
+        rows.append(diagnose(t, entry=entry, shares=(a["shares"] or None),
+                             use_llm=use_llm, provider=provider))
     return {"holdings": rows, "count": len(rows)}
 
 

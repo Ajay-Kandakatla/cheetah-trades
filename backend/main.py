@@ -1128,13 +1128,30 @@ async def market_macro_risk_refresh(email: str = Depends(current_user_email)):
 async def portfolio_diagnosis_symbol(symbol: str,
                                      force: bool = Query(False),
                                      writeup: bool = Query(True, description="false = fast scorecard, skip the LLM"),
-                                     provider: str = Query("anthropic", description="anthropic | local")):
+                                     provider: str = Query("anthropic", description="anthropic | local"),
+                                     email: str = Depends(current_user_email)):
     """'What's driving this move?' — a factor scorecard (macro / sector / distribution
     / liquidity / stock-specific / trend) + a sector-tailored LLM write-up. Cached 3h.
     writeup=false returns the scorecard instantly (no LLM); a cache hit returns the
-    full read either way. Not advice."""
+    full read either way. When the caller HOLDS the name the read is personalized to
+    their cost basis (P&L, R-multiple, hold-until-signal). Not advice."""
     from portfolio import diagnosis as dg
-    out = await asyncio.to_thread(dg.diagnose, symbol, use_llm=writeup, force=force, provider=provider)
+    from portfolio import store as pstore
+    # Resolve the caller's blended cost basis server-side (never in the URL — it's
+    # personal financial data); a name can sit across accounts so aggregate.
+    entry = shares = None
+    try:
+        hs = [h for h in pstore.list_holdings(email)
+              if (h.get("ticker") or "").upper() == symbol.upper()]
+        tot_sh = sum(float(h.get("shares") or 0) for h in hs)
+        tot_cost = sum(float(h.get("cost_basis") or 0) for h in hs)
+        if tot_sh > 0 and tot_cost > 0:
+            entry = round(tot_cost / tot_sh, 4)
+            shares = tot_sh
+    except Exception:
+        pass
+    out = await asyncio.to_thread(dg.diagnose, symbol, entry=entry, shares=shares,
+                                  use_llm=writeup, force=force, provider=provider)
     return JSONResponse(_scrub_nan(out))
 
 

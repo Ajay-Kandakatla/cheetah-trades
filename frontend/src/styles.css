@@ -9762,3 +9762,39 @@ a.tk-link:hover   { color: inherit; }
 .hdiag__num { font-family: "SF Mono", Menlo, monospace; text-align: right; color: var(--ink, #e8e8e8); }
 .hdiag__refresh { background: none; border: 1px solid var(--rule, #444); color: var(--cm-slate, #94a3b8); font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 4px; cursor: pointer; }
 .hdiag__sector { color: var(--gold, #d9a441); font-weight: 600; }
+
+/* Personal position block — leads the card with YOUR P&L, not the stock's move
+   (Ajay 2026-06-04). Hold-until-signal framing, Minervini pp.295-296. */
+.hdiag__pos { border: 1px solid var(--rule, #333); border-radius: 8px; padding: 0.5rem 0.6rem;
+  margin-bottom: 0.6rem; background: rgba(255,255,255,0.02); }
+.hdiag__posrow { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.hdiag__poslabel { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--cm-slate, #94a3b8); }
+.hdiag__pnl { font-family: "SF Mono", Menlo, monospace; font-weight: 800; font-size: 0.92rem; }
+.hdiag__pnl.is-up { color: #10b981; }
+.hdiag__pnl.is-down { color: #ef4444; }
+.hdiag__since { font-size: 0.7rem; color: var(--cm-slate, #94a3b8); }
+.hdiag__be { font-size: 0.76rem; color: #e2e8f0; margin-top: 0.25rem; }
+.hdiag__be b { color: #f59e0b; }
+.hdiag__verdict { font-size: 0.78rem; font-weight: 700; margin-top: 0.3rem; }
+.hdiag__verdict.v-hold { color: #10b981; }
+.hdiag__verdict.v-tighten_stop, .hdiag__verdict.v-reduce { color: #f59e0b; }
+.hdiag__verdict.v-full_exit { color: #ef4444; }
+.hdiag__fired { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.hdiag__fired li { font-size: 0.74rem; color: #f59e0b; margin-bottom: 0.1rem; }
+.hdiag__trip { margin-top: 0.45rem; }
+.hdiag__triphead { font-size: 0.7rem; font-weight: 700; color: #cbd5e1; margin-bottom: 0.25rem; }
+.hdiag__cite { font-weight: 500; color: var(--cm-slate, #8595ad); }
+.hdiag__tripitem { display: grid; grid-template-columns: 6rem 4rem 3.2rem 1fr; align-items: baseline;
+  gap: 0.4rem; font-size: 0.72rem; padding: 0.12rem 0; }
+.hdiag__tripname { font-weight: 600; color: #e2e8f0; }
+.hdiag__triplvl { color: var(--cm-slate, #94a3b8); text-align: right; }
+.hdiag__tripdist { color: #ef4444; text-align: right; }
+.hdiag__tripnote { color: var(--cm-slate, #8595ad); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdiag__targets { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.55rem; margin-top: 0.45rem; }
+.hdiag__tgtlabel { font-size: 0.68rem; color: var(--cm-slate, #94a3b8); }
+.hdiag__tgt { font-size: 0.72rem; color: #cbd5e1; }
+.hdiag__tgtpct { color: #10b981; }
+@media (max-width: 560px) {
+  .hdiag__tripitem { grid-template-columns: 5rem 4rem 3rem; }
+  .hdiag__tripnote { display: none; }
+}
