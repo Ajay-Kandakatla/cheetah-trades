@@ -147,6 +147,7 @@ export default function PortfolioPage() {
           <div className="heatmap-panel__head">
             <span className="heatmap-panel__title">📊 Day heatmap</span>
             <span className="heatmap-panel__hint">size = position value · colour = today’s move · click to open</span>
+            <a className="heatmap-panel__finviz" href="https://finviz.com/map?t=sec&st=d1" target="_blank" rel="noreferrer" title="Open the full S&P 500 sector map on Finviz">Full market map ↗</a>
           </div>
           <Heatmap
             tiles={heatTiles}
