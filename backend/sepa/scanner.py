@@ -45,7 +45,7 @@ from . import (
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
-from .insider import insider_activity
+from .insider import insider_activity, insider_activity_cached
 
 log = logging.getLogger("sepa.scanner")
 
@@ -631,7 +631,7 @@ def scan_universe(symbols: Optional[List[str]] = None,
                     except Exception as exc:
                         log.warning("catalyst failed for %s: %s", rec["symbol"], exc)
                     try:
-                        rec["insider"] = await insider_activity(rec["symbol"])
+                        rec["insider"] = await insider_activity_cached(rec["symbol"])
                     except Exception as exc:
                         log.warning("insider failed for %s: %s", rec["symbol"], exc)
                     # CANSLIM fundamentals (sync yfinance, run in thread)
@@ -665,6 +665,35 @@ def scan_universe(symbols: Optional[List[str]] = None,
         asyncio.run(enrich_all())
         # Re-sort after fundamentals bumps
         candidates.sort(key=lambda x: x["score"], reverse=True)
+
+        # Broader INSIDER-only sweep (Ajay 2026-06-05): the cluster-buy chip needs
+        # insider data on far more than the top 20. Cache-backed (12h) + throttled
+        # so EDGAR stays under its limit — only stale names actually fetch; after
+        # the first warm pass most scans are instant cache hits. Insider-only (not
+        # the expensive catalyst/fundamentals/moat) so coverage scales cheaply.
+        insider_max = int(os.getenv("SEPA_INSIDER_ENRICH_MAX", "300"))
+        rest = [r for r in candidates[20:insider_max] if r.get("insider") is None]
+        if rest:
+            _emit("phase", phase="insider_sweep", total=len(rest),
+                  message=f"Insider scan on {len(rest)} more candidates")
+
+            async def insider_sweep() -> None:
+                sem = asyncio.Semaphore(4)
+                done = {"n": 0}
+
+                async def one(rec: dict) -> None:
+                    async with sem:
+                        try:
+                            rec["insider"] = await insider_activity_cached(rec["symbol"])
+                        except Exception as exc:
+                            log.warning("insider sweep failed for %s: %s", rec["symbol"], exc)
+                        done["n"] += 1
+                        if done["n"] % 25 == 0 or done["n"] == len(rest):
+                            _emit("enrich", current=done["n"], total=len(rest), symbol=rec["symbol"])
+
+                await asyncio.gather(*(one(r) for r in rest))
+
+            asyncio.run(insider_sweep())
 
     payload = {
         "generated_at": int(time.time()),
