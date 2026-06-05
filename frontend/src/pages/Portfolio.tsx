@@ -24,6 +24,7 @@ import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { Heatmap, type HeatTile } from '../components/Heatmap';
 import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
+import { MarketContextStrip } from '../components/MarketContextStrip';
 
 const PageInfo = (
   <>
@@ -144,6 +145,7 @@ export default function PortfolioPage() {
 
       {rows.length > 1 && (
         <div className="heatmap-panel">
+          <MarketContextStrip />
           <div className="heatmap-panel__head">
             <span className="heatmap-panel__title">📊 Day heatmap</span>
             <span className="heatmap-panel__hint">size = position value · colour = today’s move · click to open</span>

@@ -1183,6 +1183,17 @@ tr:last-child td { border-bottom: none; }
 .heatmap-panel__finviz { margin-left: auto; font-size: 0.66rem; font-weight: 600; white-space: nowrap;
   color: var(--gold, #d9a441); text-decoration: none; }
 .heatmap-panel__finviz:hover { text-decoration: underline; }
+
+/* Market-context strip atop the heatmap — "is it just my stocks, or the tape?" */
+.mktctx { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.7rem;
+  margin-bottom: 0.45rem; padding: 0.35rem 0.55rem; border-radius: 7px;
+  background: rgba(255,255,255,0.03); font-size: 0.72rem; }
+.mktctx__lead { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--cm-slate, #94a3b8); }
+.mktctx__idx { color: #cbd5e1; }
+.mktctx__idx b { font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+.mktctx__idx.is-up b { color: #10b981; }
+.mktctx__idx.is-down b { color: #ef4444; }
+.mktctx__breadth { margin-left: auto; font-size: 0.66rem; color: var(--cm-slate, #8595ad); }
 @keyframes rank-lb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .rank-lb__live .dot { animation: none; } }
 
