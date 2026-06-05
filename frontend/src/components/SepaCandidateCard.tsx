@@ -838,6 +838,17 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               {row.dual_momentum.abs_mom_pass && row.dual_momentum.beats_spy && ' ✓'}
             </span>
           )}
+          {row.vcp?.tightness != null && (
+            <span
+              className={`sepa-flag ${row.vcp.tightness_band === 'tight' ? 'sepa-flag--good' : 'sepa-flag--neutral'}`}
+              title={`VCP tightness ${row.vcp.tightness}/100 — ${row.vcp.tightness_band} (≥70 well-formed · 40–69 developing · <40 early)`
+                + ((row.vcp.tightness_drivers && row.vcp.tightness_drivers.length) ? `\n${row.vcp.tightness_drivers.join(' · ')}` : '')
+                + `\nHow textbook the contraction footprint is — tightening, handle, volume dry-up, depth, proximity to pivot (Minervini pp.198–205).`}
+            >
+              🎯 VCP {row.vcp.tightness}
+              {' · '}{row.vcp.tightness_band === 'tight' ? 'Tight' : row.vcp.tightness_band === 'developing' ? 'Developing' : 'Early'}
+            </span>
+          )}
           {row.vcp?.has_base && row.vcp?.pivot_quality_ok && (
             <span
               className="sepa-flag sepa-flag--good"

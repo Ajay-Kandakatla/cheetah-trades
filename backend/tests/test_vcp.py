@@ -94,3 +94,26 @@ def test_volume_drying_flag():
     wet = vcp.detect(_df(50, base, vol=1000, vol_final=1000))
     assert dry["volume_drying"] is True
     assert wet["volume_drying"] is False
+
+
+def test_tightness_score_bands():
+    # Textbook tight VCP: 24% -> 12% -> 5%, volume drying, price at the pivot.
+    base = [{"depth_pct": 24}, {"depth_pct": 12}, {"depth_pct": 5}]
+    s, band, drivers = vcp._tightness_score(base, 5.0, 24.0, True, 3, 100.0, 99.0)
+    assert s >= 70 and band == "tight"
+    assert any("tighten" in d for d in drivers)
+
+    # Loose: barely tightens (20->18), no volume dry-up, far below the pivot.
+    s2, band2, _ = vcp._tightness_score(
+        [{"depth_pct": 20}, {"depth_pct": 18}], 18.0, 20.0, False, 2, 100.0, 60.0)
+    assert s2 < s and band2 in ("early", "developing")
+
+    # No gradable sequence (<2 contractions) -> None.
+    assert vcp._tightness_score([{"depth_pct": 10}], 10.0, 10.0, False, 1, None, None) == (None, None, [])
+
+
+def test_tightness_attached_to_detect_output():
+    base = [100, 75, 95, 80.75, 92, 84.6, 91]          # deep->shallow clean VCP
+    out = vcp.detect(_df(50, base, vol=1000, vol_final=300))
+    assert out["tightness"] is not None and 0 <= out["tightness"] <= 100
+    assert out["tightness_band"] in ("tight", "developing", "early")

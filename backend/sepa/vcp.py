@@ -48,6 +48,63 @@ def _find_swings(c: pd.Series, window: int = 5) -> List[Tuple[int, float, str]]:
     return clean
 
 
+def _tightness_score(base, final_depth, base_depth_pct, vol_drying,
+                     n_contractions, pivot_price, last_close):
+    """0-100 VCP quality / tightness — how textbook the contraction footprint is.
+
+    Aggregates the detector's book-grounded components (Minervini pp.198-205):
+    end-to-end tightening, right-side handle tightness, volume dry-up, constructive
+    depth + contraction count, and proximity to the pivot. Each PIECE is from the
+    book; the WEIGHTING (35/25/20/10/10) is OURS — a presentation heuristic, not a
+    Minervini formula. Banded: ≥70 tight (well-formed) · 40-69 developing · <40 early.
+    Returns (score, band, drivers) or (None, None, []) when there's no contraction
+    sequence to grade."""
+    if not base or n_contractions < 2:
+        return None, None, []
+    depths = [c["depth_pct"] for c in base]
+    first, last = depths[0], depths[-1]
+    score = 0.0
+    drivers: list = []
+
+    # 1) End-to-end tightening — the heart of a VCP (p.199). 35 pts.
+    #    ratio 1.0 (no tightening) → 0; ratio ≤ 0.25 (≥4× tighter) → full.
+    if first > 0:
+        ratio = last / first
+        score += 35 * max(0.0, min(1.0, (1.0 - ratio) / 0.75))
+        if ratio <= 0.45:
+            drivers.append(f"tightens {first:.0f}%→{last:.0f}%")
+
+    # 2) Right-side tightness — the handle (pp.198, 202). 25 pts. ≤4% → full, ≥12% → 0.
+    score += 25 * max(0.0, min(1.0, (12.0 - final_depth) / 8.0))
+    if final_depth <= 6:
+        drivers.append(f"{final_depth:.0f}% handle")
+
+    # 3) Volume drying up (p.205). 20 pts.
+    if vol_drying:
+        score += 20
+        drivers.append("volume drying up")
+
+    # 4) Constructive depth + contraction count (pp.198-199). 10 pts.
+    if 8 <= base_depth_pct <= 35:
+        score += 6
+    if 2 <= n_contractions <= 6:
+        score += 4
+        drivers.append(f"{n_contractions} contractions")
+
+    # 5) Proximity to the pivot — ready when it's at the line (p.203). 10 pts.
+    if pivot_price and last_close:
+        above = (pivot_price / last_close - 1) * 100   # +ve = pivot still above price
+        if -1 <= above <= 4:
+            score += 10
+            drivers.append("at the pivot")
+        elif above <= 8:
+            score += 5
+
+    s = int(round(min(100.0, score)))
+    band = "tight" if s >= 70 else "developing" if s >= 40 else "early"
+    return s, band, drivers[:3]
+
+
 def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
     # Book p.212: bases form over 3-65 weeks. 65w * 5 trading days = 325 bars.
     # Previous default of 90 missed legitimate long bases.
@@ -65,6 +122,7 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         "n_contractions": 0, "too_deep": False, "volume_drying": False,
         "good_contraction_count": False, "ideal_depth_range": False,
         "pivot_buy_price": None, "suggested_stop": None,
+        "tightness": None, "tightness_band": None, "tightness_drivers": [],
     }
 
     swings = _find_swings(cr, window=5)
@@ -170,6 +228,11 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         and pivot_quality_ok
     )
 
+    tightness, tightness_band, tightness_drivers = _tightness_score(
+        base, final_depth, base_depth_pct, vol_drying, n_contractions,
+        pivot_price, float(cr.iloc[-1]),
+    )
+
     return {
         "has_base": has_base,
         "base_depth_pct": round(base_depth_pct, 2),
@@ -190,4 +253,7 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
         "suggested_stop": stop_price,
         "pivot_quality_ok": pivot_quality_ok,
         "pivot_prior_advance_pct": pivot_prior_advance_pct,
+        "tightness": tightness,                 # 0-100 VCP quality (None if <2 contractions)
+        "tightness_band": tightness_band,        # tight | developing | early
+        "tightness_drivers": tightness_drivers,  # short human reasons
     }

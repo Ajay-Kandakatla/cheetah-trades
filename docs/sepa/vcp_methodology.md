@@ -155,3 +155,27 @@ To change any threshold: edit `vcp.detect()`, update `test_vcp_constants_locked`
 - **`test_sepa_contracts.py::test_vcp_constants_locked`** — guards the source
   literals + the regression (`float(c.max())` must not return).
 - Both run in **`make contracts-sepa`** (and the pre-commit hook).
+
+## 10. VCP tightness score (added 2026-06-05)
+
+A single **0-100 tightness / quality** score per VCP — "how textbook is this
+base?" — surfaced as a card chip (🎯 VCP 80 · Tight), banded like the
+breakoutshappen scanner: **≥70 tight (well-formed) · 40-69 developing · <40 early**.
+
+`vcp._tightness_score(...)` aggregates the detector's already-book-grounded
+pieces; the **weighting is OURS** (a presentation heuristic, NOT a Minervini
+formula — each component cites the book, the blend does not):
+
+| Component | Pts | Book |
+|---|---|---|
+| End-to-end tightening (final ÷ first contraction depth) | 35 | p.199 |
+| Right-side handle tightness (final contraction %) | 25 | pp.198, 202 |
+| Volume drying up | 20 | p.205 |
+| Constructive depth (8-35%) + contraction count (2-6) | 10 | pp.198-199 |
+| Proximity to the pivot | 10 | p.203 |
+
+Returned by `detect()` as `tightness` / `tightness_band` / `tightness_drivers`.
+Scored whenever ≥2 contractions exist (so developing bases band too), independent
+of the strict `has_base` gate. **Display-only** — it does NOT change `has_base`,
+the gates, or the composite score. Tests: `test_vcp.py::test_tightness_score_bands`
++ `::test_tightness_attached_to_detect_output`.
