@@ -187,6 +187,12 @@ export type SepaCandidate = {
     suggested_stop: number;
     pivot_quality_ok?: boolean;
     pivot_prior_advance_pct?: number;
+    /** 0-100 VCP quality / tightness (breakoutshappen-style), banded
+     *  tight ≥70 · developing 40-69 · early <40. Components book-grounded
+     *  (pp.198-205); the weighting is ours. Null when <2 contractions. */
+    tightness?: number | null;
+    tightness_band?: 'tight' | 'developing' | 'early' | null;
+    tightness_drivers?: string[];
     /** Depth of the final (right-side) contraction, %. The book's pivot forms on
      *  a narrow 3-5% pullback on dried volume (pp.198, 202) — used for the
      *  "textbook-tight pivot" (≤5%) entry-timing badge. */
