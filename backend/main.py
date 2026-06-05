@@ -28,7 +28,7 @@ import websockets
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, PlainTextResponse
 # Moved to the top so all routes (including the ones defined near the
 # router-registration block, before the original line-1771 import) can
 # use the user-email dependency without a NameError at module load.
@@ -2196,6 +2196,49 @@ async def sepa_price_bars(symbol: str, days: int = Query(250, ge=20, le=1500)):
         return {"symbol": symbol.upper(), "bars": bars}
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+# ============================================================================
+# TradingView Charting Library — UDF datafeed (backs the licensed library so it
+# can carry custom CANSLIM studies). Sourced from our price cache. See
+# docs/tradingview_charting_library.md and backend/tv_datafeed.py.
+# ============================================================================
+@app.get("/tv/udf/config")
+async def tv_udf_config():
+    import tv_datafeed
+    return JSONResponse(tv_datafeed.udf_config())
+
+
+@app.get("/tv/udf/time")
+async def tv_udf_time():
+    import tv_datafeed
+    return PlainTextResponse(str(tv_datafeed.server_time()))
+
+
+@app.get("/tv/udf/symbols")
+async def tv_udf_symbols(symbol: str):
+    import tv_datafeed
+    return JSONResponse(tv_datafeed.resolve_symbol(symbol))
+
+
+@app.get("/tv/udf/search")
+async def tv_udf_search(query: str = "", limit: int = Query(30, ge=1, le=50),
+                        type: str = "", exchange: str = ""):
+    import tv_datafeed
+    from sepa import scanner
+    latest = scanner.load_latest() or {}
+    universe = [r.get("symbol") for r in (latest.get("all_results") or []) if r.get("symbol")]
+    return JSONResponse(await asyncio.to_thread(tv_datafeed.search_symbols, query, universe, limit=limit))
+
+
+@app.get("/tv/udf/history")
+async def tv_udf_history(symbol: str, resolution: str = "1D",
+                         from_: int = Query(None, alias="from"),
+                         to: int = Query(None),
+                         countback: int = Query(None)):
+    import tv_datafeed
+    out = await asyncio.to_thread(tv_datafeed.history, symbol, resolution, from_, to, countback)
+    return JSONResponse(out)
 
 
 # ============================================================================
