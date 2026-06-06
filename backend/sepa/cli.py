@@ -18,6 +18,13 @@ logging.basicConfig(
 )
 log = logging.getLogger("sepa.cli")
 
+# Persist cron logs to the shared rotating file so silent failures leave a trail.
+try:
+    from observability.logsetup import install_file_handler as _install_file_handler
+    _install_file_handler()
+except Exception:
+    pass
+
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="sepa.cli")
@@ -91,6 +98,14 @@ def main() -> int:
     )
     s_pb.add_argument("--top-n", type=int, default=50,
                       help="How many top-ranked picks to keep in the artifact")
+
+    s_ha = sub.add_parser(
+        "health-audit",
+        help="Fail-safe health audit — checks critical data fired + app logs, "
+             "pushes the owner on a silent failure",
+    )
+    s_ha.add_argument("--digest", action="store_true",
+                      help="Send a summary push even when healthy (the 2-day digest)")
 
     args = p.parse_args()
 
@@ -228,6 +243,17 @@ def main() -> int:
                      c["symbol"], c.get("pullback_pct") or 0,
                      c.get("pullback_band"), c.get("pct_from_ma50") or 0,
                      c.get("vol_ratio") or 0)
+        return 0
+
+    if args.cmd == "health-audit":
+        from observability import health_audit
+        r = health_audit.run_audit(alert=True, digest=bool(args.digest))
+        log.info("HEALTH-AUDIT — status=%s critical=%d warn=%d (%d checks, %.1fs)",
+                 r["status"], r["n_critical"], r["n_warn"], r["n_checks"],
+                 r["duration_sec"])
+        for c in r["checks"]:
+            if not c["ok"]:
+                log.warning("  %-18s [%s] %s", c["name"], c["severity"], c["detail"])
         return 0
 
     return 1
