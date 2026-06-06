@@ -73,11 +73,11 @@ function WatchEntry({ entry, onRemove, onRefresh, onAlert }: {
         {statusPill(entry.status)}
         <div className="wl-card__actions">
           <button type="button" className="wl-action" onClick={() => onAlert(entry)}
-                  title="Set price alert (defaults to price-above target)">🔔</button>
+                  title="Set price alert (defaults to price-above target)" aria-label="Set price alert">🔔</button>
           <button type="button" className="wl-action" onClick={() => onRefresh(entry.ticker)}
-                  title="Re-run research">↻</button>
+                  title="Re-run research" aria-label="Re-run research">↻</button>
           <button type="button" className="wl-action wl-action--danger" onClick={() => onRemove(entry.ticker)}
-                  title="Remove from watchlist">✕</button>
+                  title="Remove from watchlist" aria-label="Remove from watchlist">✕</button>
         </div>
       </header>
 
