@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useUser';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MorningTodosCard } from '../components/MorningTodosCard';
 import { HoldingsCard } from '../components/HoldingsCard';
 import { MinerviniLesson } from '../components/MinerviniLesson';
@@ -59,7 +59,7 @@ export function MorningBrief() {
 
   return (
     <div className="cm-page morning-page">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">

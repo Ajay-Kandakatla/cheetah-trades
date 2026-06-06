@@ -7,6 +7,7 @@ import { InstallToHomeScreen, shouldAutoShowInstallPrompt } from './components/I
 import { ensureServiceWorker } from './lib/pushSubscribe';
 import { usePageTracking } from './hooks/usePageTracking';
 import { useMyFeatures } from './hooks/useMyFeatures';
+import { useMyMenu } from './hooks/useMyMenu';
 import { useCurrentUser } from './hooks/useUser';
 import { PageContextProvider } from './hooks/usePageContext';
 
@@ -162,11 +163,16 @@ function AdminRoute({ children }: { children: ReactNode }) {
  *  because they have every feature. */
 function SmartLanding() {
   const f = useMyFeatures();
-  if (!f.loaded) return <PageLoader />;
-  // Preferred landing order — owners hit /morning first; friends
-  // typically have /food, so that's next; further fallbacks chain down
-  // through other plausible landing pages before bailing into a 404.
-  const PREFERRED_ORDER = ['morning', 'food', 'kids', 'sepa', 'todos', 'notifications', 'glossary'];
+  const { menu, loaded: menuLoaded } = useMyMenu();
+  // Wait for BOTH so we know is_admin before redirecting (else Ajay would flash
+  // to the wrong page before the admin flag resolves).
+  if (!f.loaded || !menuLoaded) return <PageLoader />;
+  // Ajay (admin) lands on Portfolio going forward (2026-06-06); everyone else
+  // keeps the morning-first order. First accessible feature in the list wins;
+  // further fallbacks chain down before bailing into a 404.
+  const PREFERRED_ORDER = menu.is_admin
+    ? ['portfolio', 'morning', 'sepa', 'leaderboard', 'todos', 'notifications']
+    : ['morning', 'food', 'kids', 'sepa', 'todos', 'notifications', 'glossary'];
   for (const id of PREFERRED_ORDER) {
     if (f.features.has(id)) return <Navigate to={`/${id}`} replace />;
   }
