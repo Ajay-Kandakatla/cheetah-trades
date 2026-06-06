@@ -1774,6 +1774,16 @@ async def sepa_pullback_ma_get(top_n: int = Query(20, ge=1, le=100)):
     return JSONResponse(_scrub_nan(result))
 
 
+@app.get("/sepa/money-movement")
+async def sepa_money_movement_get(force: bool = Query(False, description="Bypass the 10-min cache")):
+    """Money Movement — fund-centric 13F flows: for each giant, the stocks it's
+    moving money into, grouped Hedge Funds / Institutional / Whales, each stock
+    flagged when it also hits the SEPA or Pullback-to-MA list. Inverts the
+    whales_cache; scanner.py untouched. See backend/sepa/money_movement.py."""
+    from sepa import money_movement
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(money_movement.get_money_movement, force)))
+
+
 @app.get("/sepa/analysis/{symbol}")
 async def sepa_analysis_endpoint(
     symbol: str,

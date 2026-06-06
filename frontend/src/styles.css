@@ -2256,6 +2256,51 @@ tr:last-child td { border-bottom: none; }
 .mg-explain li { margin: 0.3rem 0; }
 .mg-disclaimer { font-size: 0.78rem; opacity: 0.65; margin-top: 0.8rem; font-style: italic; }
 
+/* ── Money Movement (Leaderboard fund-flow section) ──────────────────────── */
+.money-movement { margin: 1.2rem 0 1.6rem; }
+.mm-head { margin-bottom: 0.6rem; }
+.mm-title { font: 700 1.5rem/1.1 var(--serif, serif); margin: 0.2rem 0 0.3rem; letter-spacing: -0.01em; }
+.mm-lede { font: 400 0.92rem/1.45 inherit; color: var(--ink-subtle, #9aa8c8); margin: 0; max-width: 62ch; }
+.mm-stats { font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8); margin: 0.4rem 0 0; opacity: 0.85; }
+
+.mm-section { margin: 1rem 0; }
+.mm-section__label {
+  font: 700 0.8rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--cm-slate, #9aa8c8); margin: 0.8rem 0 0.5rem;
+  border-bottom: 1px solid var(--hairline); padding-bottom: 3px;
+}
+
+.mm-fund { padding: 0.55rem 0.2rem; border-bottom: 1px solid var(--bg-sunken); }
+.mm-fund__head { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; font-size: 0.9rem; }
+.mm-tier { font-size: 0.78rem; }
+.mm-fund__name { font-weight: 700; }
+.mm-fund__type { font-size: 0.78rem; color: var(--ink-subtle, #9aa8c8); }
+.mm-fund__added { color: var(--positive); font-weight: 700; }
+.mm-fund__meta { font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); margin-left: auto; }
+
+.mm-stocks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.4rem; }
+.mm-stock {
+  display: inline-flex; align-items: center; gap: 3px;
+  font: 600 0.72rem ui-monospace, monospace; padding: 2px 6px; border-radius: 3px; cursor: pointer;
+  background: var(--bg-sunken); color: var(--ink-subtle, #9aa8c8); border: 1px solid transparent;
+}
+.mm-stock:hover { background: var(--bg-raised); color: inherit; }
+.mm-stock--sepa { border-color: var(--positive); color: var(--positive); background: var(--positive-bg); }
+.mm-stock--pb { border-color: var(--gold-strong, #d4af37); }
+.mm-stock--more { cursor: default; opacity: 0.6; background: transparent; }
+.mm-tag {
+  font: 700 0.54rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0 3px; border-radius: 2px; background: var(--positive); color: #06240f;
+}
+.mm-tag--pb { background: var(--gold-strong, #d4af37); color: #2a2100; }
+
+.mm-more {
+  background: none; border: 1px solid var(--hairline); color: var(--ink-subtle, #9aa8c8);
+  font: 600 0.76rem var(--sans, system-ui); padding: 3px 10px; border-radius: 4px;
+  cursor: pointer; margin-top: 0.5rem;
+}
+.mm-more:hover { background: var(--bg-sunken); color: inherit; }
+
 @media (max-width: 720px) {
   .dm-regime { grid-template-columns: 1fr; }
   .dm-regime__metric { text-align: left; }

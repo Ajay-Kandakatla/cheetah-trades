@@ -16,6 +16,7 @@ import { SepaTopPicks } from '../components/SepaTopPicks';
 import { TopPicksTracker } from '../components/TopPicksTracker';
 import { SepaRankLeaderboard } from '../components/SepaRankLeaderboard';
 import { SepaRankCompare } from '../components/SepaRankCompare';
+import { MoneyMovement } from '../components/MoneyMovement';
 
 const PageInfo = (
   <>
@@ -57,6 +58,8 @@ export function LeaderboardPage() {
           </p>
         </div>
       </div>
+
+      <MoneyMovement />
 
       <SepaTopPicks n={5} />
 
