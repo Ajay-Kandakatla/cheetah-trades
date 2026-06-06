@@ -695,6 +695,7 @@ def test_pullback_ma_constants_locked():
     assert pb.RECENT_HIGH_LOOKBACK == 25     # recent-high window  (configured)
     assert pb.PULLBACK_ZONE_CEILING == 8.0   # "toward the line", not extended  (configured)
     assert pb.MIN_PULLBACK_PCT == 0.5
+    assert pb.UNIVERSE_MODE == "sp500"       # scan S&P 500 only (Ajay 2026-06-05)
 
 
 def test_pullback_ma_gate_is_book_structural_subset():

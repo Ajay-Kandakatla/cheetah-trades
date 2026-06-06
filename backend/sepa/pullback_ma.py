@@ -55,6 +55,7 @@ from typing import Optional
 
 from . import prices, company_names
 from . import scanner as sepa_scanner
+from .universe import load_universe
 
 log = logging.getLogger("sepa.pullback_ma")
 
@@ -67,6 +68,7 @@ MIN_PULLBACK_PCT = 0.5         # must have actually retraced from the recent hig
 BAND_TIGHT_MAX = 5.0           # tight pullback  < 5%   (spec)
 BAND_MID_MAX = 8.0             # mid pullback   5-8%; deep > 8%  (spec)
 VOL_HEALTHY_MAX = 1.0          # vol ratio < 1x = contracting (book p.72)
+UNIVERSE_MODE = "sp500"        # scan the S&P 500 only (Ajay 2026-06-05)
 
 # Cron pre-warm artifact — lives on the shared `cheetah-scans` volume next to
 # latest.json so the `cron` container writes it and the `api` container reads
@@ -230,12 +232,27 @@ def _evaluate_row(rec: dict) -> Optional[dict]:
 
 def _config() -> dict:
     return {
+        "universe": UNIVERSE_MODE,
         "recent_high_lookback": RECENT_HIGH_LOOKBACK,
         "vol_avg_lookback": VOL_AVG_LOOKBACK,
         "pullback_zone_ceiling_pct": PULLBACK_ZONE_CEILING,
         "bands": {"tight_max": BAND_TIGHT_MAX, "mid_max": BAND_MID_MAX},
         "vol_healthy_max": VOL_HEALTHY_MAX,
     }
+
+
+def _universe_filter() -> set:
+    """Symbols to keep — the S&P 500 set (UNIVERSE_MODE). The daily scan runs a
+    BROAD universe (curated ∪ sp500 ∪ sp400); we narrow the pullback view to the
+    index here so the page is S&P 500-only (Ajay 2026-06-05). An empty set means
+    "no filter" so a one-off universe-load failure degrades to the full scan
+    rather than a blank page."""
+    try:
+        return {str(s).upper() for s in load_universe(UNIVERSE_MODE)}
+    except Exception as exc:
+        log.warning("pullback_ma: %s universe load failed (%s) — not filtering",
+                    UNIVERSE_MODE, exc)
+        return set()
 
 
 def compute(top_n: int = 20) -> dict:
@@ -266,8 +283,13 @@ def compute(top_n: int = 20) -> dict:
             "error": "no_scan",
         }
 
+    keep = _universe_filter()           # S&P 500 only (UNIVERSE_MODE)
     rows: list[dict] = []
+    considered = 0
     for rec in universe:
+        if keep and (rec.get("symbol") or "").upper() not in keep:
+            continue
+        considered += 1
         try:
             row = _evaluate_row(rec)
         except Exception as exc:  # one bad symbol must not sink the scan
@@ -289,7 +311,7 @@ def compute(top_n: int = 20) -> dict:
         "config": _config(),
         "rows": rows,
         "picks": picks,
-        "universe_size": len(universe),
+        "universe_size": considered,
         "candidate_count": len(rows),
         "scan_generated_at": latest.get("generated_at"),
     }

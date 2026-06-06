@@ -70,7 +70,7 @@ const PageInfo = (
       50&nbsp;&gt;&nbsp;150&nbsp;&gt;&nbsp;200-day stack (Trend Template
       criteria&nbsp;#4–5, p.&nbsp;79). The scan then keeps only those that have
       pulled back <em>toward</em> the 50-day rather than running extended above
-      it.
+      it. The universe is the <strong>S&amp;P 500</strong>.
     </p>
     <ul>
       <li>
@@ -168,12 +168,12 @@ export function PullbackMaPage() {
       <div className="sepa-page__title">
         <InfoButton title="Pullback to MA">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ — Setup · Minervini</div>
+          <div className="eyebrow">№ — Setup · Minervini · S&amp;P 500</div>
           <h1 className="display sepa-page__h1">Pullback to MA</h1>
           <p className="lede">
-            Stage-2 leaders making a brief, low-volume pullback toward the rising
-            50-day moving average — the “tennis ball” re-entry. Reuses the SEPA
-            scan universe.
+            S&amp;P 500 Stage-2 leaders making a brief, low-volume pullback toward
+            the rising 50-day moving average — the “tennis ball” re-entry. Reuses
+            the latest SEPA scan, narrowed to index names.
           </p>
         </div>
       </div>

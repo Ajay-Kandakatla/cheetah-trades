@@ -74,6 +74,7 @@ CI. **Tune here, not in scattered call sites.**
 | `RECENT_HIGH_LOOKBACK` | 25 | window defining the "recent high" | configured (book says "recent high", no window) |
 | `PULLBACK_ZONE_CEILING` | 8.0 | include names within +8% above the 50-day | configured (the "pulled back *toward* the line" requirement) |
 | `MIN_PULLBACK_PCT` | 0.5 | must have actually retraced | configured |
+| `UNIVERSE_MODE` | `"sp500"` | scan the **S&P 500 only** | Ajay (2026-06-05) |
 
 If Ajay wants different bands or windows, change the constant and update the
 guard test in the same commit.
@@ -101,6 +102,11 @@ GET /sepa/pullback-ma ───serves──────┘  (falls back to on-th
 
 It mirrors `dual_momentum.py` exactly — a pure *derivation* of the existing
 scan. `backend/sepa/scanner.py` and the daily scan are untouched (Rule #2).
+
+**Universe:** the daily scan runs a *broad* universe (curated ∪ sp500 ∪ sp400),
+but this page is narrowed to the **S&P 500** (`UNIVERSE_MODE="sp500"` via
+`load_universe`) so it screens index names only. If the index list ever fails
+to load it degrades to the full scan (logged) rather than a blank page.
 
 ## 7. Not advice
 

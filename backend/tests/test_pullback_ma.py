@@ -142,6 +142,7 @@ def test_compute_filters_ranks_and_shapes(monkeypatch):
         "EXT": make_df(),                       # extended        -> out
     }
     _patch_prices(monkeypatch, dfs)
+    monkeypatch.setattr(pb, "_universe_filter", lambda: set())   # no universe filter here
     monkeypatch.setattr(
         pb.sepa_scanner, "load_latest",
         lambda: {
@@ -165,6 +166,25 @@ def test_compute_filters_ranks_and_shapes(monkeypatch):
     assert out["rows"][0]["rank"] == 1
     assert out["scan_generated_at"] == 111
     assert out["config"]["vol_avg_lookback"] == pb.VOL_AVG_LOOKBACK
+
+
+def test_compute_restricts_to_sp500_universe(monkeypatch):
+    # Only AAA is "in the index"; DEEP is a valid pullback but NOT S&P 500, so
+    # the universe filter must drop it (Ajay 2026-06-05: scan S&P 500 only).
+    _patch_prices(monkeypatch, {
+        "AAA": make_df(recent_high=107.0),
+        "DEEP": make_df(recent_high=120.0),
+    })
+    monkeypatch.setattr(pb, "_universe_filter", lambda: {"AAA"})
+    monkeypatch.setattr(
+        pb.sepa_scanner, "load_latest",
+        lambda: {"generated_at": 1,
+                 "all_results": [rec("AAA", 103.0), rec("DEEP", 103.0)]},
+    )
+    out = pb.compute(top_n=10)
+    assert [r["symbol"] for r in out["rows"]] == ["AAA"]
+    assert out["universe_size"] == 1            # only 1 index name considered
+    assert out["config"]["universe"] == "sp500"
 
 
 def test_compute_handles_no_scan(monkeypatch):

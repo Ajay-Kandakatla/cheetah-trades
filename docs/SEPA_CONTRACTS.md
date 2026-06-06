@@ -668,7 +668,9 @@ from cached bars — it does **not** touch `scanner.py` or the money-path scan.
 `dual_momentum.py` was the first; **`pullback_ma.py`** is the second.
 
 - **What:** Stage-2 leaders making a brief, low-volume pullback toward the
-  rising 50-day MA (Minervini "tennis ball" re-entry).
+  rising 50-day MA (Minervini "tennis ball" re-entry). **Universe: S&P 500
+  only** (`UNIVERSE_MODE="sp500"`) — the broad daily scan filtered to index
+  members.
 - **Gate (book p.79 structural subset):** `last_close > ma50 AND ma50 > ma150
   > ma200 AND last_close > ma200`, then within `+PULLBACK_ZONE_CEILING%` of the
   50-day and retraced `≥ MIN_PULLBACK_PCT` from the 25-day recent high. It is
@@ -680,7 +682,8 @@ from cached bars — it does **not** touch `scanner.py` or the money-path scan.
   contracting, book p.72).
 - **Configured constants (LOCKED by `test_pullback_ma_constants_locked`):**
   bands tight `<5` / mid `5–8` / deep `>8`; `VOL_AVG_LOOKBACK=20`;
-  `RECENT_HIGH_LOOKBACK=25`; `PULLBACK_ZONE_CEILING=8.0`; `VOL_HEALTHY_MAX=1.0`.
+  `RECENT_HIGH_LOOKBACK=25`; `PULLBACK_ZONE_CEILING=8.0`; `VOL_HEALTHY_MAX=1.0`;
+  `UNIVERSE_MODE="sp500"`.
   These are operationalized from the user spec (2026-06-05), **not** invented
   Minervini precision — see `docs/sepa/pullback_ma_methodology.md`.
 - **Cron + serve:** `sepa.cli pullback-scan` (weekdays 4:50pm ET, after the
