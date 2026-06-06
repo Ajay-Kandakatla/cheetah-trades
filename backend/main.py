@@ -1135,6 +1135,17 @@ async def market_posture():
     return JSONResponse(await asyncio.to_thread(position_lens._market_posture))
 
 
+@app.get("/market/gauge")
+async def market_gauge_get(force: bool = Query(False, description="Bypass the 5-min cache")):
+    """Pounce Market Gauge — our own book-grounded read of the general market's
+    health: a 0-100 score + Constructive / Caution / Risk-Off + a Minervini
+    exposure band. Composes the index Trend Template (SPY/QQQ, p.79), the macro
+    regime, breadth, and an index distribution-day / follow-through read.
+    Educational, NOT advice. See docs/sepa/market_gauge_methodology.md."""
+    from sepa import market_gauge
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(market_gauge.get_gauge, force)))
+
+
 @app.get("/market/overview")
 async def market_overview():
     """Overall-market context for the heatmap header: the major index ETFs with

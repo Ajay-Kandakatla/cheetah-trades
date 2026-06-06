@@ -4,6 +4,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
 import { useCurrentUser } from '../hooks/useUser';
 import { useMyMenu, type MenuItem } from '../hooks/useMyMenu';
+import { MarketGaugeBadge } from './MarketGaugeBadge';
 
 /* ==========================================================================
    NavBar — editorial masthead
@@ -60,6 +61,8 @@ export function NavBar() {
   const PRIMARY_VISIBLE: MenuItem[] = menu.primary;
   const SECONDARY_VISIBLE: MenuItem[] = menu.misc;
   const PROFILE_VISIBLE: MenuItem[] = [...menu.profile, ...menu.admin];
+  // Market Gauge badge (top-right, every page) — only when the user has access.
+  const hasGauge = [...menu.primary, ...menu.misc].some((t) => t.feature === 'market-gauge');
 
   // "Which tabs trigger this dropdown's active state?" — checks if the
   // current route starts with any of the section's hrefs.
@@ -123,15 +126,18 @@ export function NavBar() {
           {currentTab && <div className="cm-nav__current">· {currentTab.label}</div>}
         </div>
 
-        <button
-          type="button"
-          className={`cm-nav__hamburger${drawerOpen ? ' is-open' : ''}`}
-          onClick={() => setDrawerOpen(!drawerOpen)}
-          aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={drawerOpen}
-        >
-          <span /><span /><span />
-        </button>
+        <div className="cm-nav__mobile-actions">
+          {hasGauge && <MarketGaugeBadge compact />}
+          <button
+            type="button"
+            className={`cm-nav__hamburger${drawerOpen ? ' is-open' : ''}`}
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={drawerOpen}
+          >
+            <span /><span /><span />
+          </button>
+        </div>
 
         {drawerOpen && (
           <>
@@ -256,6 +262,7 @@ export function NavBar() {
       </nav>
 
       <div className="cm-nav__meta">
+        {hasGauge && <MarketGaugeBadge />}
         <span className="cm-nav__meta-date mono">{TODAY}</span>
         <ThemeToggle />
         {/* Bell + dropdown of the last 8 unified notifications (pushes

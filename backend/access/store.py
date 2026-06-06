@@ -114,6 +114,10 @@ FEATURE_CATALOG: list[dict] = [
     # Research (2026-06-04): bullish-vs-bearish pattern mining + the insider
     # thesis. A living analysis page Ajay wants to keep using. Owner-on default.
     {"id": "research",      "label": "Research",            "group": "daily",     "default": False, "added_in": 3},
+    # Market Gauge (2026-06-05): our own book-grounded general-market health read
+    # (0-100 + Constructive/Caution/Risk-Off + a Minervini exposure band). The
+    # score also renders top-right on every page. Owner-on via added_in/VERSION.
+    {"id": "market-gauge",  "label": "Market Gauge",        "group": "tools",     "default": False, "added_in": 5},
     {"id": "catalysts",     "label": "Catalysts",           "group": "tools",     "default": False},
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
@@ -173,7 +177,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 4
+CATALOG_VERSION = 5
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

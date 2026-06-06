@@ -707,3 +707,23 @@ def test_pullback_ma_gate_is_book_structural_subset():
     src = inspect.getsource(pb._evaluate_row)
     assert "last_close > ma50 and ma50 > ma150 > ma200 and last_close > ma200" in src
     assert "load_latest" in inspect.getsource(pb.compute)
+
+
+# ============================================================================
+# Market Gauge contract (2026-06-05).
+# Spec + page cites: docs/sepa/market_gauge_methodology.md
+#
+# OUR OWN general-market health read (not a clone of any paid indicator). Weights
+# sum 100; the O'Neil-style distribution/follow-through numbers are CONFIGURED
+# (no O'Neil book in repo) — lock them so any change is explicit, and require
+# that the gauge COMPOSES the book-grounded inputs rather than inventing a number.
+# ============================================================================
+def test_market_gauge_locked():
+    import inspect
+    from sepa import market_gauge as mg
+    assert (mg.W_TREND + mg.W_REGIME + mg.W_BREADTH
+            + mg.W_DISTRIBUTION + mg.W_FOLLOW_THROUGH) == 100
+    assert mg.DIST_TOPPING == 5 and mg.FTD_UP_PCT == 1.4          # configured
+    assert mg.STATE_CONSTRUCTIVE == 67 and mg.STATE_CAUTION == 34
+    src = inspect.getsource(mg)
+    assert "market_context" in src and "macro_risk" in src       # composes book-grounded inputs

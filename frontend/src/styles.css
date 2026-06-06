@@ -2192,6 +2192,63 @@ tr:last-child td { border-bottom: none; }
 .pb-band--mid   { background: var(--warn-bg, rgba(180, 120, 0, 0.14)); color: var(--warn); }
 .pb-band--deep  { background: var(--negative-bg, rgba(190, 40, 40, 0.14)); color: var(--negative); }
 
+/* ── Market Gauge — nav badge (top-right, every page) + dedicated page ─────── */
+.cm-nav__mobile-actions { display: flex; align-items: center; gap: 0.6rem; }
+
+.mg-badge {
+  display: inline-flex; align-items: center; gap: 0.32rem;
+  padding: 2px 8px; border-radius: 999px;
+  font: 600 0.72rem var(--sans, system-ui);
+  text-decoration: none; border: 1px solid transparent; white-space: nowrap;
+}
+.mg-badge__dot { font-size: 0.55rem; line-height: 1; }
+.mg-badge__score { font-weight: 700; }
+.mg-badge__state { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.9; }
+.mg-badge--compact { padding: 2px 7px; }
+.mg-badge--constructive { background: var(--positive-bg); color: var(--positive); border-color: var(--positive); }
+.mg-badge--caution      { background: var(--warn-bg, rgba(180,120,0,0.14)); color: var(--warn); border-color: var(--warn); }
+.mg-badge--risk_off     { background: var(--negative-bg, rgba(190,40,40,0.14)); color: var(--negative); border-color: var(--negative); }
+.mg-badge.is-active { outline: 1px solid currentColor; outline-offset: 1px; }
+
+.mg-hero {
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  padding: 1.2rem 1.4rem; border-radius: 10px; margin: 0.5rem 0 1.2rem;
+  border: 1px solid var(--hairline); background: var(--bg-raised);
+}
+.mg-hero--constructive { border-left: 4px solid var(--positive); }
+.mg-hero--caution      { border-left: 4px solid var(--warn); }
+.mg-hero--risk_off     { border-left: 4px solid var(--negative); }
+.mg-hero__score { display: flex; align-items: baseline; gap: 0.3rem; }
+.mg-hero__num { font: 800 3rem/1 var(--serif, serif); letter-spacing: -0.02em; }
+.mg-hero__outof { font-size: 1rem; opacity: 0.55; }
+.mg-hero__meta { display: flex; flex-direction: column; gap: 0.35rem; }
+.mg-state { font: 700 1.1rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.05em; }
+.mg-state--constructive { color: var(--positive); }
+.mg-state--caution      { color: var(--warn); }
+.mg-state--risk_off     { color: var(--negative); }
+.mg-hero__exposure { font-size: 0.9rem; color: var(--ink-subtle, #9aa8c8); }
+.mg-hero__note { font-size: 0.8rem; opacity: 0.72; margin-top: 2px; }
+
+.mg-drivers ul { margin: 0.4rem 0 1.2rem; padding-left: 1.1rem; }
+.mg-drivers li { margin: 0.15rem 0; color: var(--ink-subtle, #9aa8c8); }
+
+.mg-comps { margin: 0.5rem 0 1.4rem; }
+.mg-comp { margin: 0.7rem 0; }
+.mg-comp__head { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.86rem; }
+.mg-comp__label { font-weight: 600; }
+.mg-comp__val { color: var(--ink-subtle, #9aa8c8); font-size: 0.8rem; }
+.mg-comp__track { height: 7px; border-radius: 4px; background: var(--bg-sunken); overflow: hidden; margin: 4px 0 2px; }
+.mg-comp__fill { height: 100%; border-radius: 4px; }
+.mg-comp__fill--good { background: var(--positive); }
+.mg-comp__fill--mid  { background: var(--warn); }
+.mg-comp__fill--bad  { background: var(--negative); }
+.mg-comp__basis { font-size: 0.72rem; opacity: 0.58; }
+
+.mg-explain { margin-top: 1rem; padding: 1rem 1.2rem; border-radius: 8px; background: rgba(20,20,22,0.4); border: 1px dashed rgba(255,255,255,0.1); }
+.mg-explain ul { padding-left: 1.1rem; }
+.mg-explain li { margin: 0.3rem 0; }
+.mg-disclaimer { font-size: 0.78rem; opacity: 0.65; margin-top: 0.8rem; font-style: italic; }
+
 @media (max-width: 720px) {
   .dm-regime { grid-template-columns: 1fr; }
   .dm-regime__metric { text-align: left; }

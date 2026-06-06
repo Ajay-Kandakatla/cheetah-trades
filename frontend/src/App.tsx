@@ -54,6 +54,7 @@ const SepaV2Page                  = lazyWithReload(() => import('./pages/SepaV2'
 const SepaCandidatePage           = lazyWithReload(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
 const DualMomentumPage            = lazyWithReload(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
 const PullbackMaPage              = lazyWithReload(() => import('./pages/PullbackMa').then(m => ({ default: m.PullbackMaPage })));
+const MarketGaugePage             = lazyWithReload(() => import('./pages/MarketGauge').then(m => ({ default: m.MarketGaugePage })));
 const RaviStrategyPage            = lazyWithReload(() => import('./pages/RaviStrategy').then(m => ({ default: m.RaviStrategyPage })));
 const ChatterPage                 = lazyWithReload(() => import('./pages/Chatter').then(m => ({ default: m.ChatterPage })));
 const ChatterIndiaPage            = lazyWithReload(() => import('./pages/ChatterIndia').then(m => ({ default: m.ChatterIndiaPage })));
@@ -231,6 +232,7 @@ export function App() {
             <Route path="/sepa/:symbol"   element={<FeatureRoute feature="sepa"><SepaCandidatePage /></FeatureRoute>} />
             <Route path="/dual-momentum"  element={<FeatureRoute feature="dual-momentum"><DualMomentumPage /></FeatureRoute>} />
             <Route path="/pullback-ma"    element={<FeatureRoute feature="pullback-ma"><PullbackMaPage /></FeatureRoute>} />
+            <Route path="/market-gauge"   element={<FeatureRoute feature="market-gauge"><MarketGaugePage /></FeatureRoute>} />
             <Route path="/ravi-strategy"  element={<FeatureRoute feature="ravi-strategy"><RaviStrategyPage /></FeatureRoute>} />
             <Route path="/chatter"        element={<FeatureRoute feature="chatter"><ChatterPage /></FeatureRoute>} />
             <Route path="/chatter-india"  element={<FeatureRoute feature="chatter-india"><ChatterIndiaPage /></FeatureRoute>} />

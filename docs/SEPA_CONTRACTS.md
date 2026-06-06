@@ -700,6 +700,31 @@ lock any thresholds with a source-guard, and ship a methodology doc.
 
 ---
 
+## 11c. Market Gauge (2026-06-05)
+
+OUR OWN general-market health read — **not** a clone of any paid indicator
+(those formulas are undisclosed; we will not reverse-engineer a real-money
+signal). Educational, not advice.
+
+- **Output:** 0–100 score + Constructive / Caution / Risk-Off + a Minervini
+  exposure band. Renders on `/market-gauge` AND as a top-right nav badge on
+  **every** page (`MarketGaugeBadge`).
+- **Components (weights sum 100):** index trend "in gear" (SPY/QQQ Trend
+  Template, p.79) 40 · macro regime 20 · breadth 15 · index distribution days 15
+  · follow-through 10 (concept p.248).
+- **Exposure bands** restate Minervini pp.304–305 (scale down in weak tapes,
+  pyramid up when in gear, pace re-entry) — educational, NOT advice.
+- **Configured (NOT book-cited):** the O'Neil-style distribution/FTD numbers
+  (`DIST_TOPPING=5`, `FTD_UP_PCT=1.4`, windows) — we don't hold *How to Make
+  Money in Stocks*. Locked by `test_market_gauge_locked`; drop the O'Neil PDF to
+  make them exact.
+- **Code:** `sepa/market_gauge.py` (`compute()` / `get_gauge()`, 5-min cache);
+  `GET /market/gauge`. `scanner.py` and the daily scan untouched (Rule #2).
+- **Contracts:** `backend/tests/test_market_gauge.py` +
+  `test_sepa_contracts.py::test_market_gauge_locked`.
+
+---
+
 ## 12. How to extend this doc safely
 
 ### The hard rule (added 2026-05-25 after the RFC 001 lesson)
