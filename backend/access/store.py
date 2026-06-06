@@ -91,14 +91,20 @@ def _get_db():
 FEATURE_CATALOG: list[dict] = [
     # Daily-driver pages — heavy trading content, default OFF for friends.
     {"id": "morning",       "label": "Morning Brief",       "group": "daily",     "default": False},
-    {"id": "sepa",          "label": "SEPA",                "group": "daily",     "default": False},
     {"id": "overnight",     "label": "Overnight",           "group": "daily",     "default": False},
 
-    # Trading tools — admin-only by default. Opt friends in per-user
-    # if any of them actually trades.
-    {"id": "tiny",          "label": "Tiny Stocks",         "group": "tools",     "default": False},
-    {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "tools",  "default": False},
-    {"id": "kell",          "label": "Kell (CoPA)",         "group": "tools",     "default": False},
+    # Scanners — equity screeners, grouped under the "Scanners" nav tab
+    # (Ajay 2026-06-05). SEPA + Pullback to MA lead; the rest are the
+    # methodology/setup screens. Nav order follows THIS list (ids are stable,
+    # so reordering here is safe and never orphans a saved access set).
+    {"id": "sepa",          "label": "SEPA",                "group": "scanner",   "default": False},
+    {"id": "pullback-ma",   "label": "Pullback to MA",      "group": "scanner",   "default": False, "added_in": 4},
+    {"id": "dual-momentum", "label": "Dual Momentum",       "group": "scanner",   "default": False},
+    {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "scanner", "default": False},
+    {"id": "kell",          "label": "Kell (CoPA)",         "group": "scanner",   "default": False},
+    {"id": "tiny",          "label": "Tiny Stocks",         "group": "scanner",   "default": False},
+    {"id": "pioneers",      "label": "Pioneers",            "group": "scanner",   "default": False},
+    {"id": "ravi-strategy", "label": "Ravi's Strategy",     "group": "scanner",   "default": False},
     # Real-money holdings view — hold/sell signals + R-multiples + live sell
     # alerts. Promoted to the PRIMARY top-nav (group "daily") on 2026-06-02:
     # Ajay checks holdings + acts on sell pings every trading day, so it earns a
@@ -124,14 +130,6 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "day-trading",   "label": "Day Trading",         "group": "tools",     "default": False},
     {"id": "supply-demand", "label": "Supply / Demand",     "group": "tools",     "default": False},
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
-    {"id": "pioneers",      "label": "Pioneers",            "group": "tools",     "default": False},
-    {"id": "dual-momentum", "label": "Dual Momentum",       "group": "tools",     "default": False},
-    # Pullback to MA (2026-06-05): Stage-2 leaders making a brief, low-volume
-    # pullback toward the rising 50-day MA (Minervini "tennis ball" re-entry,
-    # pp.72/79/237-238). Derived from the latest scan + a post-close cron.
-    # Owner-on default via added_in/CATALOG_VERSION bump.
-    {"id": "pullback-ma",   "label": "Pullback to MA",      "group": "tools",     "default": False, "added_in": 4},
-    {"id": "ravi-strategy", "label": "Ravi's Strategy",     "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
 
@@ -305,7 +303,8 @@ def user_has_feature(email: str, feature_id: str) -> bool:
 # with the catalog so adding a feature doesn't require touching the
 # frontend NavBar too.
 _GROUP_TO_SECTION: dict[str, str] = {
-    "daily":     "primary",   # Morning / SEPA / Overnight — top of nav
+    "daily":     "primary",   # Morning / Overnight / Portfolio — top of nav
+    "scanner":   "scanners",  # SEPA / Pullback to MA / Setups / ... — Scanners dropdown
     "tools":     "misc",      # Catalysts / Day Trading / ... — Misc dropdown
     "account":   "profile",   # Notifications / Todos / Glossary
     # Household features have a conditional placement (see build_menu):
@@ -353,7 +352,7 @@ def build_menu(email: str) -> dict:
     # places if it ever rotates.
     is_admin = email_lc == "ajaykandakatla@gmail.com"
 
-    sections: dict[str, list[dict]] = {"primary": [], "misc": [], "profile": [], "admin": []}
+    sections: dict[str, list[dict]] = {"primary": [], "scanners": [], "misc": [], "profile": [], "admin": []}
 
     for entry in FEATURE_CATALOG:
         fid = entry["id"]

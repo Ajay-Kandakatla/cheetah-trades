@@ -24,6 +24,7 @@ export type MenuItem = {
 
 export type Menu = {
   primary:  MenuItem[];
+  scanners: MenuItem[];
   misc:     MenuItem[];
   profile:  MenuItem[];
   admin:    MenuItem[];
@@ -38,6 +39,7 @@ type MenuState = {
 
 const EMPTY_MENU: Menu = {
   primary:  [],
+  scanners: [],
   misc:     [],
   profile:  [],
   admin:    [],

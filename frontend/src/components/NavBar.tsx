@@ -47,9 +47,11 @@ function useIsMobile(): boolean {
 export function NavBar() {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const [scannersOpen, setScannersOpen] = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [drawerOpen,  setDrawerOpen]  = useState(false);
+  const scannersRef = useRef<HTMLDivElement>(null);
   const moreRef    = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +61,7 @@ export function NavBar() {
   // a separate `admin` section so we can render them inside the
   // Profile dropdown beneath the regular profile items.
   const PRIMARY_VISIBLE: MenuItem[] = menu.primary;
+  const SCANNERS_VISIBLE: MenuItem[] = menu.scanners;
   const SECONDARY_VISIBLE: MenuItem[] = menu.misc;
   const PROFILE_VISIBLE: MenuItem[] = [...menu.profile, ...menu.admin];
   // Market Gauge badge (top-right, every page) — only when the user has access.
@@ -66,18 +69,22 @@ export function NavBar() {
 
   // "Which tabs trigger this dropdown's active state?" — checks if the
   // current route starts with any of the section's hrefs.
+  const isScannersActive  = SCANNERS_VISIBLE.some((t) => location.pathname.startsWith(t.to));
   const isSecondaryActive = SECONDARY_VISIBLE.some((t) => location.pathname.startsWith(t.to));
   const isProfileActive   = PROFILE_VISIBLE.some((t) => location.pathname.startsWith(t.to));
 
   // Find the active item for the mobile breadcrumb "Pounce · {label}".
-  const allItems: MenuItem[] = [...PRIMARY_VISIBLE, ...SECONDARY_VISIBLE, ...PROFILE_VISIBLE];
+  const allItems: MenuItem[] = [...PRIMARY_VISIBLE, ...SCANNERS_VISIBLE, ...SECONDARY_VISIBLE, ...PROFILE_VISIBLE];
   const currentTab = allItems.find((t) => location.pathname.startsWith(t.to));
 
   // Close desktop dropdowns on outside click + Esc.
   useEffect(() => {
-    if (!moreOpen && !profileOpen) return;
+    if (!moreOpen && !profileOpen && !scannersOpen) return;
     const onClick = (e: MouseEvent) => {
       const target = e.target as Node;
+      if (scannersOpen && scannersRef.current && !scannersRef.current.contains(target)) {
+        setScannersOpen(false);
+      }
       if (moreOpen && moreRef.current && !moreRef.current.contains(target)) {
         setMoreOpen(false);
       }
@@ -86,7 +93,7 @@ export function NavBar() {
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setMoreOpen(false); setProfileOpen(false); }
+      if (e.key === 'Escape') { setScannersOpen(false); setMoreOpen(false); setProfileOpen(false); }
     };
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKey);
@@ -94,7 +101,7 @@ export function NavBar() {
       document.removeEventListener('mousedown', onClick);
       document.removeEventListener('keydown', onKey);
     };
-  }, [moreOpen, profileOpen]);
+  }, [moreOpen, profileOpen, scannersOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -105,6 +112,7 @@ export function NavBar() {
 
   // Close menus on route change.
   useEffect(() => {
+    setScannersOpen(false);
     setMoreOpen(false);
     setProfileOpen(false);
     setDrawerOpen(false);
@@ -150,6 +158,21 @@ export function NavBar() {
                 <>
                   <div className="cm-nav__drawer-section-label">Daily</div>
                   {PRIMARY_VISIBLE.map((t) => (
+                    <NavLink
+                      key={t.to}
+                      to={t.to}
+                      className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
+                      onClick={() => setDrawerOpen(false)}
+                    >
+                      {t.label}
+                    </NavLink>
+                  ))}
+                </>
+              )}
+              {SCANNERS_VISIBLE.length > 0 && (
+                <>
+                  <div className="cm-nav__drawer-section-label">Scanners</div>
+                  {SCANNERS_VISIBLE.map((t) => (
                     <NavLink
                       key={t.to}
                       to={t.to}
@@ -232,12 +255,40 @@ export function NavBar() {
           </NavLink>
         ))}
 
+        {SCANNERS_VISIBLE.length > 0 && (
+          <div className="cm-nav__more" ref={scannersRef}>
+            <button
+              type="button"
+              className={`cm-nav__link cm-nav__more-btn${isScannersActive ? ' is-active' : ''}${scannersOpen ? ' is-open' : ''}`}
+              onClick={() => { setScannersOpen(!scannersOpen); setMoreOpen(false); setProfileOpen(false); }}
+              aria-haspopup="menu"
+              aria-expanded={scannersOpen}
+            >
+              Scanners <span className="cm-nav__caret">▾</span>
+            </button>
+            {scannersOpen && (
+              <div className="cm-nav__dropdown" role="menu">
+                {SCANNERS_VISIBLE.map((t) => (
+                  <NavLink
+                    key={t.to}
+                    to={t.to}
+                    className={({ isActive }) => `cm-nav__dropdown-link${isActive ? ' is-active' : ''}`}
+                    role="menuitem"
+                  >
+                    {t.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {SECONDARY_VISIBLE.length > 0 && (
           <div className="cm-nav__more" ref={moreRef}>
             <button
               type="button"
               className={`cm-nav__link cm-nav__more-btn${isSecondaryActive ? ' is-active' : ''}${moreOpen ? ' is-open' : ''}`}
-              onClick={() => { setMoreOpen(!moreOpen); setProfileOpen(false); }}
+              onClick={() => { setMoreOpen(!moreOpen); setScannersOpen(false); setProfileOpen(false); }}
               aria-haspopup="menu"
               aria-expanded={moreOpen}
             >
@@ -275,7 +326,7 @@ export function NavBar() {
           <button
             type="button"
             className={`cm-nav__profile-btn${isProfileActive ? ' is-active' : ''}${profileOpen ? ' is-open' : ''}`}
-            onClick={() => { setProfileOpen(!profileOpen); setMoreOpen(false); }}
+            onClick={() => { setProfileOpen(!profileOpen); setMoreOpen(false); setScannersOpen(false); }}
             aria-haspopup="menu"
             aria-expanded={profileOpen}
             aria-label="Profile menu"
