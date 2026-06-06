@@ -17,8 +17,13 @@ Signals scored (each adds points; SEPA candidacy is the gate):
   • Whales accumulating   (+2)  many funds increasing (13F whale moves)
   • 13D activist          (+2)  SC 13D/G filed (5%+ stake)
   • Political disclosure  (+1)  on the curated POTUS/Gov list
+  • Market-resilient      (+3)  holding up (green today, or up on the month and not
+                                cratering) WHILE the Market Gauge reads weak — i.e.
+                                relative strength against a soft tape (only scored
+                                when the gauge is Caution / Risk-Off)
 
-Reads the latest scan + leaderboard + pullback artifact + whale caches; the
+Reads the latest scan + leaderboard + pullback artifact + whale caches + the Market
+Gauge; the
 daily scan / scanner.py are untouched (Rule #2). NOT advice.
 """
 from __future__ import annotations
@@ -27,7 +32,7 @@ import logging
 import time
 
 from . import history, scanner as sepa_scanner
-from . import pullback_ma, leaderboard, political_disclosures
+from . import pullback_ma, leaderboard, political_disclosures, market_gauge
 
 log = logging.getLogger("sepa.confluence")
 
@@ -36,10 +41,12 @@ PERSISTENCE_FLOOR = 50
 MIN_APPEARANCES = 4
 VCP_TIGHT = 70
 WHALES_ACCUM = 8           # >= this many funds increasing = "whales accumulating"
-TOP_N = 5
+TOP_N = 30                 # return a deep ranked list; the FE shows ~12 then expands
+MATCH_FLOOR = 2            # need >=2 independent confirmations to make the shortlist
+RESILIENT_DAY_FLOOR = -1.5 # up on the month but not cratering today still counts as "held"
 
 WEIGHTS = {
-    "buyable": 3, "pullback": 3, "consistent": 3,
+    "buyable": 3, "pullback": 3, "consistent": 3, "market_resilient": 3,
     "strong_buy": 2, "buy": 1, "vcp_tight": 2, "accumulation": 2, "cmf_inflow": 1,
     "insider_cluster": 2, "whales": 2, "activist_13d": 2, "political": 1,
 }
@@ -85,6 +92,17 @@ def compute(top_n: int = TOP_N) -> dict:
     db = history._get_db()
     nbuy, form13 = ({}, {}) if db is None else _whale_and_13d(db)
 
+    # Market Gauge context — fold the market-wide read into a per-stock signal:
+    # in a weak tape, names that hold up are showing relative strength (the thing
+    # that "stood against the downturn").
+    gauge = {}
+    try:
+        gauge = market_gauge.get_gauge() or {}
+    except Exception as exc:
+        log.debug("confluence gauge read failed: %s", exc)
+    mkt_state = gauge.get("state")
+    mkt_weak = mkt_state in ("caution", "risk_off")
+
     rows = []
     for s in sepa:
         rec = by_sym[s]
@@ -123,6 +141,14 @@ def compute(top_n: int = TOP_N) -> dict:
             add("activist_13d", "13D activist")
         if political_disclosures.categories_for(s):
             add("political", "Political")
+        if mkt_weak:
+            dchg = rec.get("day_change_pct")
+            r1m = (rec.get("dual_momentum") or {}).get("return_1m")
+            green_today = isinstance(dchg, (int, float)) and dchg >= 0
+            held_month = (isinstance(r1m, (int, float)) and r1m > 0
+                          and (not isinstance(dchg, (int, float)) or dchg >= RESILIENT_DAY_FLOOR))
+            if green_today or held_month:
+                add("market_resilient", "Market-resilient")
 
         rows.append({
             **rec,
@@ -134,15 +160,26 @@ def compute(top_n: int = TOP_N) -> dict:
         })
 
     rows.sort(key=lambda r: (-r["confluence_score"], -r["match_count"], -(r.get("score") or 0)))
+    qualified = [r for r in rows if r["match_count"] >= MATCH_FLOOR]
+    shortlist = qualified[: max(0, top_n)]
 
     return {
         "generated_at": int(time.time()),
         "generated_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "duration_sec": round(time.time() - t0, 2),
-        "rows": rows[: max(0, top_n)],
+        "rows": shortlist,
         "n_scored": len(rows),
+        "n_qualified": len(qualified),
+        "match_floor": MATCH_FLOOR,
         "max_score": rows[0]["confluence_score"] if rows else 0,
         "n_signals": len(WEIGHTS) - 1,   # buy/strong_buy count as one "rating" axis
+        "market": {
+            "state": mkt_state,
+            "state_label": gauge.get("state_label"),
+            "score": gauge.get("score"),
+            "weak": mkt_weak,
+            "resilient_count": sum(1 for r in qualified if "Market-resilient" in r["matches"]),
+        },
         "scan_generated_at": latest.get("generated_at"),
         "disclaimer": "Confluence of independent screens — not advice or a forecast.",
     }

@@ -3,13 +3,15 @@ from sepa import confluence as cf
 
 
 def _setup(monkeypatch, all_results, leaders=(), pullback_syms=(),
-           whale_docs=(), d13_docs=()):
+           whale_docs=(), d13_docs=(), gauge=None):
     monkeypatch.setattr(cf.sepa_scanner, "load_latest",
                         lambda: {"generated_at": 1, "all_results": all_results})
     monkeypatch.setattr(cf.leaderboard, "leaderboard",
                         lambda n=300: {"leaders": list(leaders)})
     monkeypatch.setattr(cf.pullback_ma, "load_latest_pullback",
                         lambda: {"rows": [{"symbol": s} for s in pullback_syms]})
+    g = gauge or {"state": "constructive", "state_label": "Constructive", "score": 75}
+    monkeypatch.setattr(cf.market_gauge, "get_gauge", lambda force=False: g)
 
     class _C:
         def __init__(self, docs): self._d = docs
@@ -66,7 +68,38 @@ def test_only_sepa_candidates_scored(monkeypatch):
     assert o["rows"] == [] and o["n_scored"] == 0
 
 
+def test_market_resilient_only_when_tape_is_weak(monkeypatch):
+    allr = [
+        rec("UP", rating="BUY", day_change_pct=1.2, dual_momentum={"return_1m": 5.0}),    # green today
+        rec("DN", rating="BUY", day_change_pct=-9.0, dual_momentum={"return_1m": 3.0}),   # cratering today
+    ]
+    _setup(monkeypatch, allr,
+           gauge={"state": "risk_off", "state_label": "Risk-Off", "score": 20})
+    o = cf.compute()
+    by = {r["symbol"]: r for r in o["rows"]}
+    assert "Market-resilient" in by["UP"]["matches"]                 # held up vs weak tape
+    assert "DN" not in by                                            # 1 match (BUY) -> below floor
+    assert o["market"]["weak"] is True and o["market"]["resilient_count"] >= 1
+
+
+def test_no_resilience_credit_in_constructive_market(monkeypatch):
+    allr = [rec("UP", rating="BUY", day_change_pct=1.2,
+                dual_momentum={"return_1m": 5.0}, vcp={"tightness": 80})]
+    _setup(monkeypatch, allr,
+           gauge={"state": "constructive", "state_label": "Constructive", "score": 78})
+    o = cf.compute()
+    assert "Market-resilient" not in o["rows"][0]["matches"]
+    assert o["market"]["weak"] is False
+
+
+def test_match_floor_filters_single_signal(monkeypatch):
+    _setup(monkeypatch, [rec("ONE", rating="BUY")])      # only 1 signal -> filtered out
+    o = cf.compute()
+    assert o["rows"] == [] and o["n_qualified"] == 0 and o["n_scored"] == 1
+
+
 def test_weights_locked():
     assert cf.WEIGHTS["pullback"] == 3 and cf.WEIGHTS["consistent"] == 3
     assert cf.WEIGHTS["whales"] == 2 and cf.WEIGHTS["activist_13d"] == 2
-    assert cf.WHALES_ACCUM == 8 and cf.VCP_TIGHT == 70
+    assert cf.WEIGHTS["market_resilient"] == 3
+    assert cf.WHALES_ACCUM == 8 and cf.VCP_TIGHT == 70 and cf.MATCH_FLOOR == 2
