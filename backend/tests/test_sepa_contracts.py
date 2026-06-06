@@ -727,3 +727,22 @@ def test_market_gauge_locked():
     src = inspect.getsource(mg)
     assert "market_context" in src and "macro_risk" in src       # composes book-grounded inputs
     assert "FRED" in src                                         # unwired feeds flagged, not faked
+
+
+# ============================================================================
+# Cross Junctions contract (2026-06-06).
+# Spec: docs/SEPA_CONTRACTS.md 11d. Confluence of SEPA ∩ consistent-rank ∩
+# pullback, S&P-first then Russell. Configured thresholds locked; require that
+# it actually composes the three legs (not a single-signal rename).
+# ============================================================================
+def test_cross_junctions_locked():
+    import inspect
+    from sepa import cross_junctions as cj
+    assert cj.PERSISTENCE_FLOOR == 50 and cj.MIN_APPEARANCES == 4
+    assert cj.MIN_SP500_RESULTS == 6
+    assert round(cj.W_SEPA + cj.W_PULLBACK + cj.W_PERSIST, 5) == 1.0
+    src = inspect.getsource(cj)
+    assert "is_candidate" in src                                  # SEPA leg
+    assert "persistence_pct" in src                              # consistency leg
+    assert "pullback_ma" in src and "_evaluate_row" in src        # pullback leg
+    assert "sp500" in src and "russell1000" in src                # S&P-first, Russell fallback
