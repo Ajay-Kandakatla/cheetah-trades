@@ -1795,6 +1795,16 @@ async def sepa_cross_junctions_get(force: bool = Query(False, description="Bypas
     return JSONResponse(_scrub_nan(await asyncio.to_thread(cross_junctions.get_cross_junctions, force)))
 
 
+@app.get("/sepa/confluence")
+async def sepa_confluence_get(force: bool = Query(False, description="Bypass the 5-min cache")):
+    """Top Confluence — the SEPA candidates that match the MOST of our screens at
+    once (pullback, consistent rank, VCP, accumulation, whales, insider/13D,
+    rating, political), ranked by weighted match score. Returns the top picks as
+    full candidate rows + a matched-signal list. See backend/sepa/confluence.py."""
+    from sepa import confluence
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(confluence.get_confluence, force)))
+
+
 @app.get("/sepa/analysis/{symbol}")
 async def sepa_analysis_endpoint(
     symbol: str,

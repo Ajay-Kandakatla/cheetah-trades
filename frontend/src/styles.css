@@ -2344,6 +2344,23 @@ tr:last-child td { border-bottom: none; }
 .cj-uni--russell1000 { background: var(--bg-sunken); color: var(--ink-subtle, #9aa8c8); }
 .cj-consist { color: var(--ink-subtle, #9aa8c8); font-family: ui-monospace, monospace; }
 
+/* ── Top Confluence (Leaderboard "matches everything" section) ───────────── */
+.top-confluence { margin: 1.2rem 0 1.6rem; }
+.tc-head { margin-bottom: 0.6rem; }
+.tc-title { font: 700 1.55rem/1.1 var(--serif, serif); margin: 0.2rem 0 0.3rem; letter-spacing: -0.01em; }
+.tc-lede { font: 400 0.92rem/1.45 inherit; color: var(--ink-subtle, #9aa8c8); margin: 0; max-width: 62ch; }
+.tc-stats { font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8); margin: 0.4rem 0 0.6rem; opacity: 0.85; }
+
+.tc-strip { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; padding: 4px 2px; font-size: 0.72rem; }
+.tc-rank { font: 700 0.8rem var(--sans, system-ui); color: var(--ink-subtle, #9aa8c8); }
+.tc-score { font: 700 0.85rem var(--sans, system-ui); color: var(--gold-strong, #d4af37); }
+.tc-count { color: var(--ink-subtle, #9aa8c8); }
+.tc-matches { display: flex; flex-wrap: wrap; gap: 3px; }
+.tc-chip {
+  font: 600 0.6rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 1px 5px; border-radius: 2px; background: var(--positive-bg); color: var(--positive);
+}
+
 @media (max-width: 720px) {
   .dm-regime { grid-template-columns: 1fr; }
   .dm-regime__metric { text-align: left; }
