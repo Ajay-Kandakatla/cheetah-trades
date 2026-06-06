@@ -34,6 +34,18 @@ function stateClass(s?: string): string {
   return s ? `mg-state mg-state--${s}` : 'mg-state';
 }
 
+// Group pillars by category, preserving first-seen order.
+function groupByCategory(comps: GaugeComponent[]): [string, GaugeComponent[]][] {
+  const order: string[] = [];
+  const map = new Map<string, GaugeComponent[]>();
+  for (const c of comps) {
+    const cat = c.category || 'Other';
+    if (!map.has(cat)) { map.set(cat, []); order.push(cat); }
+    map.get(cat)!.push(c);
+  }
+  return order.map((cat) => [cat, map.get(cat)!] as [string, GaugeComponent[]]);
+}
+
 function ComponentBar({ c }: { c: GaugeComponent }) {
   const pct = c.max > 0 ? Math.round((c.points / c.max) * 100) : 0;
   return (
@@ -98,10 +110,15 @@ export function MarketGaugePage() {
             </section>
           )}
 
-          {/* Component breakdown */}
+          {/* Pillar breakdown, grouped by category */}
           <section className="mg-comps">
-            <div className="eyebrow">Components</div>
-            {g.components.map((c) => <ComponentBar key={c.key} c={c} />)}
+            <div className="eyebrow">Pillars</div>
+            {groupByCategory(g.components).map(([cat, comps]) => (
+              <div key={cat} className="mg-catgroup">
+                <div className="mg-catgroup__label">{cat}</div>
+                {comps.map((c) => <ComponentBar key={c.key} c={c} />)}
+              </div>
+            ))}
           </section>
 
           {/* How people "read the week" */}

@@ -709,9 +709,15 @@ signal). Educational, not advice.
 - **Output:** 0–100 score + Constructive / Caution / Risk-Off + a Minervini
   exposure band. Renders on `/market-gauge` AND as a top-right nav badge on
   **every** page (`MarketGaugeBadge`).
-- **Components (weights sum 100):** index trend "in gear" (SPY/QQQ Trend
-  Template, p.79) 40 · macro regime 20 · breadth 15 · index distribution days 15
-  · follow-through 10 (concept p.248).
+- **10 pillars (weights sum 100, 6 categories — Ajay 2026-06-05):** Quant =
+  index trend in-gear (p.79) 20 + VIX 11 · Trend-tech = distribution 8 +
+  follow-through 5 (p.248) · Breadth 8 · Flow & Liquidity = net $-vol + CMF
+  aggregate 11 · Sentiment = options put/call SOIR 8 · Alt-data = insider
+  cluster-buy breadth 6 · Economic = yield curve 10y−3m (`^TNX`/`^IRX`) 11 ·
+  Macro = regime + news 12. All REAL data or honestly neutral.
+- **NOT wired (flagged in `config.not_wired`, never faked):** CPI / jobs /
+  Fed-funds / FRED series, true order-flow / dark-pool, fear/greed. Economic
+  pillar is yield-curve only until a FRED feed is added.
 - **Exposure bands** restate Minervini pp.304–305 (scale down in weak tapes,
   pyramid up when in gear, pace re-entry) — educational, NOT advice.
 - **Configured (NOT book-cited):** the O'Neil-style distribution/FTD numbers

@@ -10,6 +10,7 @@ import { API } from '../lib/apiBase';
 
 export type GaugeComponent = {
   key: string;
+  category: string;
   label: string;
   value: string | number | boolean;
   points: number;

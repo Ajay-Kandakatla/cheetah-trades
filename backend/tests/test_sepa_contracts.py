@@ -721,9 +721,9 @@ def test_pullback_ma_gate_is_book_structural_subset():
 def test_market_gauge_locked():
     import inspect
     from sepa import market_gauge as mg
-    assert (mg.W_TREND + mg.W_REGIME + mg.W_BREADTH
-            + mg.W_DISTRIBUTION + mg.W_FOLLOW_THROUGH) == 100
+    assert sum(mg._config()["weights"].values()) == 100          # all 10 pillars
     assert mg.DIST_TOPPING == 5 and mg.FTD_UP_PCT == 1.4          # configured
     assert mg.STATE_CONSTRUCTIVE == 67 and mg.STATE_CAUTION == 34
     src = inspect.getsource(mg)
     assert "market_context" in src and "macro_risk" in src       # composes book-grounded inputs
+    assert "FRED" in src                                         # unwired feeds flagged, not faked

@@ -32,17 +32,38 @@ It is **not** personalized buy/sell or position-sizing advice.
 - **Follow-through (p.248):** wait for a move to "pause and then follow through"
   before committing — confirmation, not a guess.
 
-## 2. Components & weights (sum = 100)
+## 2. Pillars & weights (sum = 100)
 
-| # | Component | Source | Max pts | Basis |
+Ten pillars across the six categories Ajay asked for (2026-06-05). Each is REAL
+data or honestly degraded to neutral — **nothing is fabricated.**
+
+| Category | Pillar | wt | Source | Basis |
 |---|---|---|---|---|
-| 1 | **Index trend** (SPY+QQQ "in gear") | `market_context.market_state()` | 40 | Minervini Trend Template **p.79**, Ch.5 |
-| 2 | **Macro regime** | `macro_risk.get_market()` | 20 | our macro-risk model |
-| 3 | **Breadth** (% of scan red) | latest scan | 15 | participation |
-| 4 | **Index distribution days** | SPY/QQQ price | 15 | **configured** (O'Neil-style) |
-| 5 | **Follow-through** | SPY/QQQ price | 10 | concept Minervini **p.248**; trigger **configured** |
+| Quant | Index trend "in gear" | 20 | `market_context.market_state()` | Minervini Trend Template **p.79**, Ch.5 |
+| Quant | Volatility (VIX + 252d pct) | 11 | `market_regime._stress_score("^VIX")` | VIX percentile |
+| Trend tech | Index distribution days | 8 | SPY/QQQ price | **configured** (O'Neil-style) |
+| Trend tech | Follow-through | 5 | SPY/QQQ price | concept Minervini **p.248**; trigger **configured** |
+| Breadth | % of scan red | 8 | latest scan | participation |
+| Flow & Liquidity | Net $-vol + Chaikin MF | 11 | scan `volume.*` aggregate | accumulation vs distribution |
+| Sentiment | Options put/call (median SOIR) | 8 | `soir_latest` aggregate | Schaeffer's OI ratio |
+| Alt-data | Insider cluster-buy breadth | 6 | scan `insider.*` (SEC Form 4) | open-market buys |
+| Economic | Yield curve 10y−3m | 11 | `^TNX`/`^IRX` (yfinance) | inversion = recession risk |
+| Macro | Regime + news events | 12 | `macro_risk.get_market()` | VIX/distribution/news |
 
 State cutoffs: **≥67 Constructive · 34–66 Caution · <34 Risk-Off.**
+
+### Feeds we do NOT have (flagged, not faked)
+
+CPI · unemployment/jobs · Fed-funds · the rest of the FRED economic series ·
+true order-flow / dark-pool tape · a fear/greed index. The **Economic pillar is
+yield-curve only**; missing-feed pillars stay neutral and list themselves in
+`config.not_wired`. Give me a FRED key (or an order-flow provider) and I'll wire
+them as real pillars.
+
+**Put/call direction:** a heavy put-skew is read as *defensive* (lower health) —
+the tape-health reading. Standard contrarian caveat applies (extreme fear can
+mark a bottom), so it's weighted modestly (8). `^TNX`/`^IRX` are normalised for
+the occasional ×10 yfinance quote.
 
 Exposure bands (educational, Minervini pp.304–305): Constructive 75–100% ·
 Caution 25–50% · Risk-Off 0–25%. These restate Minervini's *framework*, not a

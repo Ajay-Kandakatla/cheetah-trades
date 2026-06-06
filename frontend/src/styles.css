@@ -2233,6 +2233,13 @@ tr:last-child td { border-bottom: none; }
 .mg-drivers li { margin: 0.15rem 0; color: var(--ink-subtle, #9aa8c8); }
 
 .mg-comps { margin: 0.5rem 0 1.4rem; }
+.mg-catgroup { margin: 0.3rem 0 0.9rem; }
+.mg-catgroup__label {
+  font: 700 0.72rem var(--sans, system-ui); text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--cm-slate, #9aa8c8);
+  margin: 0.7rem 0 0.4rem; padding-bottom: 3px;
+  border-bottom: 1px solid var(--hairline);
+}
 .mg-comp { margin: 0.7rem 0; }
 .mg-comp__head { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.86rem; }
 .mg-comp__label { font-weight: 600; }
