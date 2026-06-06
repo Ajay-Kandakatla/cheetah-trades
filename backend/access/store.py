@@ -122,6 +122,11 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
     {"id": "pioneers",      "label": "Pioneers",            "group": "tools",     "default": False},
     {"id": "dual-momentum", "label": "Dual Momentum",       "group": "tools",     "default": False},
+    # Pullback to MA (2026-06-05): Stage-2 leaders making a brief, low-volume
+    # pullback toward the rising 50-day MA (Minervini "tennis ball" re-entry,
+    # pp.72/79/237-238). Derived from the latest scan + a post-close cron.
+    # Owner-on default via added_in/CATALOG_VERSION bump.
+    {"id": "pullback-ma",   "label": "Pullback to MA",      "group": "tools",     "default": False, "added_in": 4},
     {"id": "ravi-strategy", "label": "Ravi's Strategy",     "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
@@ -168,7 +173,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 3
+CATALOG_VERSION = 4
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

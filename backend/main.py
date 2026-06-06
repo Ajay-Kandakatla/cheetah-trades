@@ -54,6 +54,7 @@ from sepa.insider import insider_activity as sepa_insider
 from sepa.ipo_age import age as sepa_ipo_age
 from sepa.smart_money import smart_money_for as sepa_smart_money
 from sepa import dual_momentum as sepa_dual_momentum
+from sepa import pullback_ma as sepa_pullback_ma
 from sepa.stock_analysis import analysis_for as sepa_analysis_for
 from sepa.forum_chatter import chatter_for as sepa_chatter_for, chatter_universe as sepa_chatter_universe
 from sepa.progress import ProgressEmitter as SepaProgressEmitter
@@ -1720,6 +1721,24 @@ async def sepa_dual_momentum_get(
         sepa_dual_momentum.compute, top_n, lookback_days, min_rs_rank
     )
     return JSONResponse(result)
+
+
+@app.get("/sepa/pullback-ma")
+async def sepa_pullback_ma_get(top_n: int = Query(20, ge=1, le=100)):
+    """Minervini Stage-2 pullback-to-50-day-MA scanner.
+
+    Serves the cron pre-warmed list (`sepa.cli pullback-scan`) when present;
+    otherwise derives it on the fly from the latest /sepa/scan. Reuses the scan
+    universe + cached daily bars — no extra provider calls. Book: Minervini,
+    Trade Like a Stock Market Wizard, pp.72, 79, 237-238.
+    """
+    cached = sepa_pullback_ma.load_latest_pullback()
+    if cached and not cached.get("error"):
+        rows = cached.get("rows") or []
+        cached = {**cached, "picks": rows[: top_n]}
+        return JSONResponse(_scrub_nan(cached))
+    result = await asyncio.to_thread(sepa_pullback_ma.compute, top_n)
+    return JSONResponse(_scrub_nan(result))
 
 
 @app.get("/sepa/analysis/{symbol}")

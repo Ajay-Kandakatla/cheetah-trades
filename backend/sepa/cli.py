@@ -84,6 +84,14 @@ def main() -> int:
         help="Check live prices vs MA50/MA200 for Stage-2 candidates and fire alerts",
     )
 
+    s_pb = sub.add_parser(
+        "pullback-scan",
+        help="Pre-warm the Pullback-to-MA list (Stage-2 pullbacks toward the "
+             "50-day MA) from the latest scan",
+    )
+    s_pb.add_argument("--top-n", type=int, default=50,
+                      help="How many top-ranked picks to keep in the artifact")
+
     args = p.parse_args()
 
     if args.cmd == "scan":
@@ -207,6 +215,19 @@ def main() -> int:
         r = alerts.check_stage_outs()
         log.info("STAGE-OUTS — checked=%d fired=%s skipped=%s",
                  r.get("checked", 0), r.get("fired"), r.get("skipped"))
+        return 0
+
+    if args.cmd == "pullback-scan":
+        from . import pullback_ma
+        r = pullback_ma.run_and_persist(top_n=args.top_n)
+        log.info("PULLBACK-MA — %d candidates from %d analyzed in %.1fs",
+                 r.get("candidate_count", 0), r.get("universe_size", 0),
+                 r.get("duration_sec", 0.0))
+        for c in r.get("picks", [])[:10]:
+            log.info("  %-6s  pullback=%.1f%% (%s)  fromMA50=%.1f%%  vol=%.2fx",
+                     c["symbol"], c.get("pullback_pct") or 0,
+                     c.get("pullback_band"), c.get("pct_from_ma50") or 0,
+                     c.get("vol_ratio") or 0)
         return 0
 
     return 1

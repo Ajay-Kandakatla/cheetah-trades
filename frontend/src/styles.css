@@ -2181,6 +2181,17 @@ tr:last-child td { border-bottom: none; }
 .dm-flag--sepa    { background: var(--gold-faint); color: var(--gold-strong); border: 1px solid var(--gold-hairline); }
 .dm-flag--neutral { background: var(--bg-sunken); color: var(--ink-subtle); }
 
+/* Pullback-to-MA depth pills — tight (shallow/healthy) → mid → deep. */
+.pb-band {
+  font: 700 0.62rem var(--sans, system-ui);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 7px; border-radius: 2px;
+  background: var(--bg-sunken); color: var(--ink-subtle);
+}
+.pb-band--tight { background: var(--positive-bg); color: var(--positive); }
+.pb-band--mid   { background: var(--warn-bg, rgba(180, 120, 0, 0.14)); color: var(--warn); }
+.pb-band--deep  { background: var(--negative-bg, rgba(190, 40, 40, 0.14)); color: var(--negative); }
+
 @media (max-width: 720px) {
   .dm-regime { grid-template-columns: 1fr; }
   .dm-regime__metric { text-align: left; }

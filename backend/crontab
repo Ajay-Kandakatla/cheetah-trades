@@ -17,6 +17,13 @@
 # UI's broad Full Scan instead of the russell1000 default.
 30     16    *    *    1-5  /usr/local/bin/python -m sepa.cli fast-scan --mode broad
 #
+# Mon-Fri 4:50pm ET — Pullback-to-MA scanner. Derives the Stage-2 "pullback
+# toward the rising 50-day MA on contracting volume" list from the latest
+# fast-scan (reuses the universe + cached bars — no new provider fetch) and
+# pre-warms /sepa/pullback-ma. Runs 20 min after the 4:30 fast-scan so today's
+# close is already in the cache. Book: Minervini pp.72, 79, 237-238.
+50     16    *    *    1-5  /usr/local/bin/python -m sepa.cli pullback-scan
+#
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
 #

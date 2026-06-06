@@ -674,3 +674,35 @@ def test_candidate_detail_endpoint_shape():
     if payload["base"] is not None:
         missing = EXPECTED_CANDIDATE_KEYS - set(payload["base"].keys())
         assert not missing, f"AAPL detail.base missing {missing}"
+
+
+# ============================================================================
+# Pullback-to-MA contract (2026-06-05).
+# Spec + page cites: docs/sepa/pullback_ma_methodology.md
+#
+# The page is a pure derivation of the latest scan (scanner.py untouched). Its
+# bands/windows are CONFIGURED (from the user spec) except the < 1x volume idea
+# (book p.72). Behavioral tests live in test_pullback_ma.py; these lock the
+# constants + gate so a silent edit trips CI — they gate what shows up on a
+# real-money scanner.
+# ============================================================================
+def test_pullback_ma_constants_locked():
+    from sepa import pullback_ma as pb
+    assert pb.BAND_TIGHT_MAX == 5.0          # tight < 5%  (user spec)
+    assert pb.BAND_MID_MAX == 8.0            # mid 5-8%, deep > 8%  (user spec)
+    assert pb.VOL_HEALTHY_MAX == 1.0         # contracting volume on the pullback (book p.72)
+    assert pb.VOL_AVG_LOOKBACK == 20         # 20-day average volume  (user spec)
+    assert pb.RECENT_HIGH_LOOKBACK == 25     # recent-high window  (configured)
+    assert pb.PULLBACK_ZONE_CEILING == 8.0   # "toward the line", not extended  (configured)
+    assert pb.MIN_PULLBACK_PCT == 0.5
+
+
+def test_pullback_ma_gate_is_book_structural_subset():
+    """Defined-uptrend gate must require price above a rising 50>150>200 stack
+    (Trend Template #1,2,4,5, p.79) — never a falling knife — and the page must
+    DERIVE from the latest scan (scanner.py / the money-path scan untouched)."""
+    import inspect
+    from sepa import pullback_ma as pb
+    src = inspect.getsource(pb._evaluate_row)
+    assert "last_close > ma50 and ma50 > ma150 > ma200 and last_close > ma200" in src
+    assert "load_latest" in inspect.getsource(pb.compute)

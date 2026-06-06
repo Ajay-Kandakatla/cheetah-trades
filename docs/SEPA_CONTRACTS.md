@@ -661,6 +661,42 @@ migration commit to prove nothing leaked. CI gate to be added.
 
 ---
 
+## 11b. Derived scanners — Pullback to MA (2026-06-05)
+
+A **derived scanner** reads the latest persisted scan and recomputes a view
+from cached bars — it does **not** touch `scanner.py` or the money-path scan.
+`dual_momentum.py` was the first; **`pullback_ma.py`** is the second.
+
+- **What:** Stage-2 leaders making a brief, low-volume pullback toward the
+  rising 50-day MA (Minervini "tennis ball" re-entry).
+- **Gate (book p.79 structural subset):** `last_close > ma50 AND ma50 > ma150
+  > ma200 AND last_close > ma200`, then within `+PULLBACK_ZONE_CEILING%` of the
+  50-day and retraced `≥ MIN_PULLBACK_PCT` from the 25-day recent high. It is
+  intentionally **looser** than `is_candidate` (no RS≥70 / 30%-above-low hard
+  gate) so the page surfaces a wider watch tier; full-SEPA names get a `SEPA`
+  flag.
+- **Columns:** Pullback % (retrace from 25-day high), % from MA50, RS 3M
+  (`dual_momentum.return_3m`), Vol Ratio (today ÷ 20-day avg vol; `< 1.0×` =
+  contracting, book p.72).
+- **Configured constants (LOCKED by `test_pullback_ma_constants_locked`):**
+  bands tight `<5` / mid `5–8` / deep `>8`; `VOL_AVG_LOOKBACK=20`;
+  `RECENT_HIGH_LOOKBACK=25`; `PULLBACK_ZONE_CEILING=8.0`; `VOL_HEALTHY_MAX=1.0`.
+  These are operationalized from the user spec (2026-06-05), **not** invented
+  Minervini precision — see `docs/sepa/pullback_ma_methodology.md`.
+- **Cron + serve:** `sepa.cli pullback-scan` (weekdays 4:50pm ET, after the
+  4:30 fast-scan) writes `latest_pullback.json` to the shared `cheetah-scans`
+  volume; `GET /sepa/pullback-ma` serves it, falling back to live `compute()`.
+- **Feature:** catalog id `pullback-ma` (`access/store.py`, `CATALOG_VERSION=4`).
+- **Contracts:** `backend/tests/test_pullback_ma.py` (behavioral) +
+  `test_sepa_contracts.py::test_pullback_ma_constants_locked` /
+  `::test_pullback_ma_gate_is_book_structural_subset`.
+
+**Rule for future derived scanners:** if you reuse the scan but recompute a
+view, build a sibling module (like these two), keep `scanner.py` untouched,
+lock any thresholds with a source-guard, and ship a methodology doc.
+
+---
+
 ## 12. How to extend this doc safely
 
 ### The hard rule (added 2026-05-25 after the RFC 001 lesson)
