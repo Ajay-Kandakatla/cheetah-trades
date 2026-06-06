@@ -2322,6 +2322,28 @@ tr:last-child td { border-bottom: none; }
 .mm-stock--dim { opacity: 0.5; }
 .mm-note { font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); opacity: 0.8; margin: 0.5rem 0 0; font-style: italic; }
 
+/* ── Cross Junctions (Leaderboard confluence section) ────────────────────── */
+.cross-junctions { margin: 1.2rem 0 1.6rem; }
+.cj-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.cj-title { font: 700 1.5rem/1.1 var(--serif, serif); margin: 0.2rem 0 0.3rem; letter-spacing: -0.01em; }
+.cj-lede { font: 400 0.92rem/1.45 inherit; color: var(--ink-subtle, #9aa8c8); margin: 0; max-width: 62ch; }
+.cj-sort { display: flex; flex-direction: column; gap: 0.2rem; }
+.cj-sort select {
+  background: var(--bg-sunken); color: inherit; border: 1px solid var(--hairline);
+  border-radius: 4px; padding: 4px 8px; font-size: 0.85rem;
+}
+.cj-stats { font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8); margin: 0.5rem 0 0.8rem; opacity: 0.85; }
+
+.cj-strip { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; padding: 4px 2px; font-size: 0.74rem; }
+.cj-strip__score { font: 700 0.82rem var(--sans, system-ui); color: var(--gold-strong, #d4af37); }
+.cj-uni {
+  font: 700 0.62rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 6px; border-radius: 2px;
+}
+.cj-uni--sp500 { background: var(--positive-bg); color: var(--positive); }
+.cj-uni--russell1000 { background: var(--bg-sunken); color: var(--ink-subtle, #9aa8c8); }
+.cj-consist { color: var(--ink-subtle, #9aa8c8); font-family: ui-monospace, monospace; }
+
 @media (max-width: 720px) {
   .dm-regime { grid-template-columns: 1fr; }
   .dm-regime__metric { text-align: left; }

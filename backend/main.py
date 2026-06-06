@@ -1784,6 +1784,17 @@ async def sepa_money_movement_get(force: bool = Query(False, description="Bypass
     return JSONResponse(_scrub_nan(await asyncio.to_thread(money_movement.get_money_movement, force)))
 
 
+@app.get("/sepa/cross-junctions")
+async def sepa_cross_junctions_get(force: bool = Query(False, description="Bypass the 5-min cache")):
+    """Cross Junctions — names where Pullback-to-MA, the SEPA qualifier list, AND
+    a consistent SEPA rank all meet at once (S&P 500 first, Russell 1000 fallback
+    on the pullback leg). Returns full candidate rows (so the cards keep all their
+    chips) + a junction score. Derived from the latest scan + the rank
+    leaderboard. See backend/sepa/cross_junctions.py."""
+    from sepa import cross_junctions
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(cross_junctions.get_cross_junctions, force)))
+
+
 @app.get("/sepa/analysis/{symbol}")
 async def sepa_analysis_endpoint(
     symbol: str,

@@ -731,6 +731,32 @@ signal). Educational, not advice.
 
 ---
 
+## 11d. Cross Junctions (2026-06-06)
+
+Confluence screen on the Leaderboard — names that are SIMULTANEOUSLY:
+1. a **SEPA candidate** (`is_candidate`, trend template + liquidity, p.79),
+2. **consistently ranked** (leaderboard `persistence_pct ≥ 50` over `≥ 4` of the
+   14-day window's days), and
+3. a **Pullback-to-MA** candidate (`pullback_ma._evaluate_row`).
+
+**Universe order (Ajay 2026-06-06):** S&P 500 first; if the S&P set is `< 6`,
+broaden the pullback leg to the Russell 1000. Each row tags its `junction_universe`.
+
+- **Junction score** = `0.45·SEPA + 0.30·pullback + 0.25·persistence` (configured,
+  locked by `test_cross_junctions_locked`). Sortable by any leg on the FE.
+- Returns **full candidate rows** so `SepaCandidateCard` keeps every chip
+  (BUY/STRONG_BUY, conviction, whales, volume, VCP tightness…).
+- **Code:** `sepa/cross_junctions.py` (`compute` / `get_cross_junctions`, 5-min
+  cache); `GET /sepa/cross-junctions`. Derived from the scan + the rank
+  leaderboard; `scanner.py` and the daily scan untouched (Rule #2).
+- **Contracts:** `backend/tests/test_cross_junctions.py` +
+  `test_sepa_contracts.py::test_cross_junctions_locked`.
+- **Empty is valid:** when no consistently-ranked leader is currently pulling back
+  (extended/cautious tape → leaders are stretched above their MAs), the section is
+  empty by design — not a bug.
+
+---
+
 ## 12. How to extend this doc safely
 
 ### The hard rule (added 2026-05-25 after the RFC 001 lesson)
