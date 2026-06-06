@@ -491,9 +491,29 @@ h1, h2, h3, h4, h5, h6,
  * the top-right of its nearest positioned ancestor. Use via the
  * `inline` prop on <InfoButton>. */
 .info-button--inline {
-  position: static;
+  position: relative;   /* anchor the popover to the button, not a distant
+                           ancestor — otherwise its `right:0` escaped to the
+                           page's right edge in any non-relative section. */
   display: inline-flex;
   vertical-align: middle;
+}
+/* Inline popover opens INTO the content (rightward from the trigger) so it
+   never runs off the right edge. The corner-pin (non-inline) variant keeps
+   right:0 since it's already pinned to the section's top-right. */
+.info-button--inline .info-button__pop {
+  left: 0;
+  right: auto;
+}
+/* On phones, float it as a near-full-width sheet so a long info body is never
+   clipped by a trigger that sits far from the left edge. */
+@media (max-width: 560px) {
+  .info-button--inline .info-button__pop {
+    position: fixed;
+    top: 56px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+  }
 }
 /* Inline trigger keeps a sane fixed size regardless of the parent's
  * font-size (e.g. .eyebrow forces 10px on mobile which would shrink
