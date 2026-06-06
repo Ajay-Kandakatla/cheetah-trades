@@ -34,6 +34,8 @@ SECTIONS = ("hedge_fund", "institutional", "whales")
 
 PER_SECTION = 25            # funds kept per section (FE shows ~10 + "expand")
 MAX_STOCKS_PER_FUND = 25    # stocks kept per fund row (top buys/overlaps)
+COORD_FUNDS = 10            # >= this many funds increasing = "coordinated" accumulation
+SEC_TOP = 24                # SEC big-moves rows kept
 
 
 def _added_usd(value, pct_change):
@@ -84,6 +86,71 @@ def _empty(t0, reason=None):
     }
 
 
+def _sec_moves(db, by_sym, ticker_nbuying, sepa_syms, pullback_syms, top=SEC_TOP):
+    """Big / coordinated SEC moves: 13D/G activist stakes + insider Form-4
+    clusters + coordinated multi-fund accumulation — all from data we cache."""
+    form13, form4 = {}, {}
+    try:
+        for d in db.whales13d_cache.find({}, {"ticker": 1, "payload.filings.bucket": 1}):
+            tkr = (d.get("ticker") or "").upper()
+            fl = ((d.get("payload") or {}).get("filings")) or []
+            f13 = sum(1 for f in fl if f.get("bucket") == "form13")
+            f4 = sum(1 for f in fl if f.get("bucket") == "form4")
+            if f13 or f4:
+                form13[tkr], form4[tkr] = f13, f4
+    except Exception as exc:
+        log.debug("sec_moves 13d read failed: %s", exc)
+
+    rows = []
+    for tkr in (set(form13) | set(by_sym)):
+        rec = by_sym.get(tkr) or {}
+        cluster = bool((rec.get("insider") or {}).get("cluster_buy"))
+        n13 = form13.get(tkr, 0)
+        nbuy = ticker_nbuying.get(tkr, 0)
+        coordinated = nbuy >= COORD_FUNDS
+        if not (n13 > 0 or cluster or coordinated):
+            continue
+        signals = []
+        if n13 > 0:
+            signals.append("activist_13d")
+        if cluster:
+            signals.append("insider_cluster")
+        if coordinated:
+            signals.append("coordinated_funds")
+        rows.append({
+            "ticker": tkr, "name": rec.get("name") or tkr,
+            "n_form13": n13, "n_form4": form4.get(tkr, 0),
+            "insider_cluster": cluster, "n_funds_buying": nbuy,
+            "signals": signals,
+            "score": n13 * 40 + (30 if cluster else 0) + min(nbuy, 20) * 2,
+            "is_sepa": tkr in sepa_syms, "is_pullback": tkr in pullback_syms,
+        })
+    rows.sort(key=lambda r: -r["score"])
+    return rows[:top]
+
+
+def _political(by_sym, ticker_nbuying, sepa_syms, pullback_syms):
+    """POTUS-family + U.S.-gov disclosed names cross-referenced with the flow.
+    Curated list (political_disclosures) — informational, NOT a signal."""
+    from .political_disclosures import POLITICAL
+    potus, gov = [], []
+    for tkr, cats in POLITICAL.items():
+        rec = by_sym.get(tkr) or {}
+        row = {
+            "ticker": tkr, "name": rec.get("name") or tkr, "categories": cats,
+            "n_funds_buying": ticker_nbuying.get(tkr, 0), "in_scan": tkr in by_sym,
+            "is_sepa": tkr in sepa_syms, "is_pullback": tkr in pullback_syms,
+        }
+        if "potus_family" in cats:
+            potus.append(row)
+        if "govt_investment" in cats or "govt_contractor" in cats:
+            gov.append(row)
+    key = lambda r: (r["n_funds_buying"], r["is_sepa"], r["in_scan"])
+    potus.sort(key=key, reverse=True)
+    gov.sort(key=key, reverse=True)
+    return {"potus_family": potus, "us_gov": gov}
+
+
 def compute() -> dict:
     t0 = time.time()
     db = history._get_db()
@@ -103,6 +170,7 @@ def compute() -> dict:
 
     # ── Invert whales_cache -> fund -> {stocks} ──────────────────────────────
     funds: dict = {}
+    ticker_nbuying: dict = {}          # ticker -> # funds that INCREASED (coordination)
     covered = 0
     for doc in db.whales_cache.find({}, {"ticker": 1, "payload": 1}):
         tkr = doc.get("ticker")
@@ -111,6 +179,9 @@ def compute() -> dict:
         if not tkr or not holders:
             continue
         covered += 1
+        nbuy = (payload.get("moves") or {}).get("n_buying")
+        if isinstance(nbuy, int):
+            ticker_nbuying[tkr] = nbuy
         for h in holders:
             nm = h.get("holder")
             if not nm:
@@ -155,6 +226,9 @@ def compute() -> dict:
         "section_labels": {"hedge_fund": "Hedge Funds", "institutional": "Institutional", "whales": "Whales"},
         "tickers_covered": covered,
         "funds_total": len(funds),
+        "sec_moves": _sec_moves(db, by_sym, ticker_nbuying, sepa_syms, pullback_syms),
+        "political": _political(by_sym, ticker_nbuying, sepa_syms, pullback_syms),
+        "not_wired": ["retail / small-retailer order flow (needs a paid retail-tape feed)"],
         "scan_generated_at": latest.get("generated_at"),
         "disclaimer": "13F holdings are quarter-lagged; informational, not advice.",
     }

@@ -21,9 +21,21 @@ type FundRow = {
   fund: string; type: string; total_added: number;
   n_stocks: number; n_sepa: number; n_pullback: number; stocks: Stock[];
 };
+type SecMove = {
+  ticker: string; name: string; n_form13: number; n_form4: number;
+  insider_cluster: boolean; n_funds_buying: number; signals: string[];
+  score: number; is_sepa: boolean; is_pullback: boolean;
+};
+type PolRow = {
+  ticker: string; name: string; categories: string[]; n_funds_buying: number;
+  in_scan: boolean; is_sepa: boolean; is_pullback: boolean;
+};
 type Payload = {
   sections: Record<'hedge_fund' | 'institutional' | 'whales', FundRow[]>;
   section_labels: Record<string, string>;
+  sec_moves: SecMove[];
+  political: { potus_family: PolRow[]; us_gov: PolRow[] };
+  not_wired: string[];
   tickers_covered: number; funds_total: number; generated_at: number; error?: string;
 };
 
@@ -127,7 +139,72 @@ export function MoneyMovement() {
           </div>
         );
       })}
+
+      {/* SEC big moves & coordinated buying (13D activist / insider cluster / coordinated funds) */}
+      {data && data.sec_moves && data.sec_moves.length > 0 && (
+        <div className="mm-section">
+          <div className="mm-section__label">
+            SEC Big Moves &amp; Coordinated <span className="mono">· {data.sec_moves.length}</span>
+          </div>
+          <div className="mm-stocks">
+            {data.sec_moves.map((r) => (
+              <button
+                key={r.ticker} type="button"
+                className={`mm-sec${r.is_sepa ? ' mm-stock--sepa' : ''}${r.is_pullback ? ' mm-stock--pb' : ''}`}
+                onClick={() => navigate(`/sepa/${encodeURIComponent(r.ticker)}`, { state: { from: '/leaderboard', label: 'Leaderboard' } })}
+                title={`${r.ticker} · ${r.signals.join(', ')}`}
+              >
+                <span className="mm-sec__t">{r.ticker}</span>
+                {r.n_form13 > 0 && <span className="mm-sig mm-sig--activist" title="SC 13D/G activist filings">🏛 {r.n_form13}×13D</span>}
+                {r.insider_cluster && <span className="mm-sig mm-sig--insider" title="Insider cluster buy (≥2 insiders)">👥 cluster</span>}
+                {r.n_funds_buying >= 10 && <span className="mm-sig mm-sig--coord" title="Coordinated multi-fund accumulation">🌊 {r.n_funds_buying}</span>}
+                {r.is_sepa && <span className="mm-tag mm-tag--sepa">SEPA</span>}
+                {r.is_pullback && <span className="mm-tag mm-tag--pb">PB</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* POTUS family + US Gov (curated disclosure list) */}
+      {data && data.political && (data.political.potus_family.length > 0 || data.political.us_gov.length > 0) && (
+        <div className="mm-section">
+          <div className="mm-section__label">Government &amp; POTUS-Family Disclosures</div>
+          <PoliticalRowView label="POTUS family" rows={data.political.potus_family}
+            onTicker={(t) => navigate(`/sepa/${encodeURIComponent(t)}`, { state: { from: '/leaderboard', label: 'Leaderboard' } })} />
+          <PoliticalRowView label="US Government" rows={data.political.us_gov}
+            onTicker={(t) => navigate(`/sepa/${encodeURIComponent(t)}`, { state: { from: '/leaderboard', label: 'Leaderboard' } })} />
+          <p className="mm-note">Curated disclosure list (OGE filings / news) — informational, not a buy/sell signal.</p>
+        </div>
+      )}
+
+      {data && data.not_wired && data.not_wired.length > 0 && (
+        <p className="mm-note">Not tracked: {data.not_wired.join('; ')}.</p>
+      )}
     </section>
+  );
+}
+
+function PoliticalRowView({ label, rows, onTicker }: { label: string; rows: PolRow[]; onTicker: (t: string) => void }) {
+  if (!rows.length) return null;
+  return (
+    <div className="mm-pol">
+      <span className="mm-pol__label">{label}</span>
+      <div className="mm-stocks">
+        {rows.map((r) => (
+          <button
+            key={r.ticker} type="button"
+            className={`mm-stock${r.is_sepa ? ' mm-stock--sepa' : ''}${!r.in_scan ? ' mm-stock--dim' : ''}`}
+            onClick={() => onTicker(r.ticker)}
+            title={`${r.ticker}${r.n_funds_buying ? ` · ${r.n_funds_buying} funds buying` : ''}${r.is_sepa ? ' · SEPA candidate' : ''}`}
+          >
+            {r.ticker}
+            {r.n_funds_buying > 0 && <span className="mm-pol__n">{r.n_funds_buying}🐋</span>}
+            {r.is_sepa && <span className="mm-tag mm-tag--sepa">SEPA</span>}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
