@@ -407,3 +407,21 @@
 # 6:30pm ET Mon-Fri — refresh the Research page insider thesis (bullish vs
 # bearish EDGAR sample). Slow + rate-limited, so out-of-band after the close.
 30     18    *    *    1-5  /usr/local/bin/python -m sepa.pattern_research
+#
+# ============================================================================
+# Health observability — fail-safe audit for silently-failing critical data
+# ============================================================================
+# Heartbeat: 10:05am, 1:05pm, 5:05pm ET weekdays. Runs the in-process check
+# battery (scan freshness, price cache, Mongo, market gauge, app-log error count,
+# disk) and pushes the owner ONCE PER DAY per critical miss — a dead pipeline is
+# caught within hours, not days. Writes ~/.cheetah/health/latest_audit.json + the
+# rotating app log, and (if env set) pings HEALTHCHECKS_URL (dead-man's switch) +
+# POSTs OBSERVABILITY_WEBHOOK_URL. Manual run:
+#   docker compose exec cron python -m sepa.cli health-audit
+5      10,13,17 *  *  1-5  /usr/local/bin/python -m sepa.cli health-audit
+#
+# Digest: every 2 days at 8:10am ET — a summary push even when green, so silence
+# never means "is it even running?". The */2 day-of-month gives an every-other-
+# day floor; with the weekday heartbeats it guarantees a Healthchecks ping at
+# least every ~2 days (set the check's period accordingly).
+10     8     */2  *  *     /usr/local/bin/python -m sepa.cli health-audit --digest

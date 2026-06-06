@@ -87,6 +87,11 @@ FINNHUB_ONESHOT_MAX      = int(os.getenv("FINNHUB_ONESHOT_MAX", "8"))
 TICK_WINDOW = int(os.getenv("TICK_WINDOW", "64"))  # ticks kept per symbol for indicators
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+try:
+    from observability.logsetup import install_file_handler as _install_file_handler
+    _install_file_handler()
+except Exception:
+    pass
 log = logging.getLogger("market_stream")
 
 
@@ -871,6 +876,23 @@ async def health() -> dict:
         "finnhub_configured": bool(FINNHUB_API_KEY),
         "time": time.time(),
     }
+
+
+@app.get("/health/audit")
+async def health_audit_get(
+    run: bool = Query(False, description="Run a fresh audit (no alert) instead of the cached one"),
+):
+    """Fail-safe health audit — silent-failure observability across the data +
+    compute layer (scan freshness, price cache, Mongo, gauge, app-log errors,
+    disk). Returns the cron's latest result; ?run=true recomputes on the spot
+    without pushing an alert. See backend/observability/health_audit.py."""
+    from observability import health_audit
+    if run:
+        return JSONResponse(_scrub_nan(await asyncio.to_thread(health_audit.run_audit, False, False)))
+    cached = health_audit.load_latest_audit()
+    if cached is None:
+        cached = await asyncio.to_thread(health_audit.run_audit, False, False)
+    return JSONResponse(_scrub_nan(cached))
 
 
 async def _quote_from_sepa_cache(sym: str) -> Optional[dict]:
