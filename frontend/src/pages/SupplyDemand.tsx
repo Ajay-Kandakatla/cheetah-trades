@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { DependencyGraph } from '../components/DependencyGraph';
 import { NodeThesisPanel } from '../components/NodeThesisPanel';
 import { MoneyFlowLeaderboard } from '../components/MoneyFlowLeaderboard';
@@ -71,7 +71,7 @@ export function SupplyDemandPage() {
 
   return (
     <div className="cm-page sd-page">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">

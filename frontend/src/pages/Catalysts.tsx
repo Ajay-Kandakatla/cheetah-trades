@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import {
   useCatalystScan,
   useDeepDive,
@@ -92,7 +92,7 @@ export function CatalystsPage() {
 
   return (
     <div className="cm-page cat-page">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">

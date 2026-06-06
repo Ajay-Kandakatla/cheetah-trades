@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SepaCandidate, Rating, SepaScan } from '../hooks/useSepa';
 import { API } from '../lib/apiBase';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MarketClockStrip } from '../components/MarketClockStrip';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
 import { SepaHero } from '../components/SepaHero';
@@ -419,7 +419,7 @@ export function SepaV2Page() {
     <div className="sepav2-page">
       <style>{CSS}</style>
 
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
       <MarketClockStrip />
       <SepaBriefBanner />
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { IntradayChart } from '../components/IntradayChart';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
@@ -42,7 +42,7 @@ export function DayTrading() {
 
   return (
     <div className="cm-page day-page">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">

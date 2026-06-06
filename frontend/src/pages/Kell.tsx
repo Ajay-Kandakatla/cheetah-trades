@@ -25,7 +25,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSepaScan } from '../hooks/useSepa';
 import type { SepaCandidate } from '../hooks/useSepa';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MarketClockStrip } from '../components/MarketClockStrip';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
 import { InfoButton } from '../components/InfoButton';
@@ -276,7 +276,7 @@ export function KellPage() {
 
   return (
     <div className="sepa-page">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
       <MarketClockStrip />
 
       <div className="sepa-page__title">

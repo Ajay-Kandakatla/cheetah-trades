@@ -7,7 +7,7 @@ import { WatchlistSection } from '../components/WatchlistSection';
 import { StockDetailModal } from '../components/StockDetailModal';
 import { SymbolSearch } from '../components/SymbolSearch';
 import { OnDemandSepaModal } from '../components/OnDemandSepaModal';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { WATCHLIST } from '../data/watchlist';
 
 // Hardcoded fallback used only when no SEPA scan exists yet.
@@ -159,7 +159,7 @@ export function LiveStream() {
 
   return (
     <div className="cm-page cm-page--live">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
           <div className="eyebrow">№ 02 — Live Feed</div>

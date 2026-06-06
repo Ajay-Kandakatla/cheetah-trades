@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { OvernightPanel } from '../components/OvernightPanel';
 import { OptionsPulseSummary } from '../components/OptionsPulseSummary';
 import { SupplyDemandSummary } from '../components/SupplyDemandSummary';
@@ -9,7 +9,7 @@ export function OvernightPage() {
 
   return (
     <div className="cm-page">
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">

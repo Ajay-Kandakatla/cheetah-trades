@@ -6,7 +6,7 @@ import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useAlertNotifier } from '../hooks/usePriceAlerts';
 import type { SepaCandidate, Rating } from '../hooks/useSepa';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
-import { MarketRegimeBanner } from '../components/MarketRegimeBanner';
+import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MarketClockStrip } from '../components/MarketClockStrip';
 import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
@@ -1043,7 +1043,7 @@ export function SepaPage() {
     <SepaTrendProvider currentCandidates={trendCandidates} currentDateEt={trendDateEt}>
     <div className="sepa-page">
       {tourOpen && <SiteTour onClose={() => setTourOpen(false)} />}
-      <MarketRegimeBanner />
+      <MarketGaugeBanner />
       <MarketClockStrip />
       <MinerviniLesson />
       <SepaBriefBanner />
