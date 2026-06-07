@@ -755,7 +755,8 @@ def test_weekly_gauge_locked():
     ww = mg._config()["weekly_weights"]
     assert sum(ww.values()) == 100                               # weekly pillars sum 100
     assert mg.WK_MA_FAST == 10 and mg.WK_MA_MID == 30 and mg.WK_MA_SLOW == 40
-    assert mg.WK_DIST_TOPPING == 4 and mg.WK_FTD_UP_PCT == 2.5 and mg.WK_MIN_BARS == 35
+    assert mg.WK_DIST_TOPPING == 4 and mg.WK_FTD_UP_PCT == 2.5 and mg.WK_MIN_BARS == 45
+    assert mg.WK_MIN_BARS >= mg.WK_MA_SLOW + mg.WK_TREND_RISING + 1   # full trend template evaluable
     src = inspect.getsource(mg)
     # weekly gauge must compose the book-grounded helpers on resampled weekly bars
     assert "_to_weekly" in src and 'resample("W-FRI")' in src
@@ -765,7 +766,8 @@ def test_weekly_gauge_locked():
     # honest: no index-futures feed; only the SPY/QQQ ETF pre-market print
     nw = " ".join(mg._config()["not_wired"]).lower()
     assert "futures" in nw
-    assert "_premarket_gap" in src and "not index futures" in src.lower()
+    # lock the structural implied_open source string (in compute()), not prose
+    assert "_premarket_gap" in src and "no index-futures" in src.lower()
 
 
 # ============================================================================

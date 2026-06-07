@@ -330,8 +330,18 @@ def test_outlook_is_explicitly_not_a_prediction():
 
 def test_weekly_constants_locked():
     assert mg.WK_MA_FAST == 10 and mg.WK_MA_MID == 30 and mg.WK_MA_SLOW == 40
-    assert mg.WK_DIST_TOPPING == 4 and mg.WK_FTD_UP_PCT == 2.5 and mg.WK_MIN_BARS == 35
+    assert mg.WK_DIST_TOPPING == 4 and mg.WK_FTD_UP_PCT == 2.5 and mg.WK_MIN_BARS == 45
     assert sum(mg._config()["weekly_weights"].values()) == 100
+
+
+def test_weekly_min_bars_admits_full_trend_pillar():
+    # Regression (review 2026-06-06): the frame floor must cover the full trend
+    # template — the 40-wk MA + the rising-gate lookback — else _weekly_frames
+    # admits a frame _weekly_trend_score can't fully score, the 45-pt trend pillar
+    # silently drops, and Constructive becomes structurally unreachable.
+    assert mg.WK_MIN_BARS >= mg.WK_MA_SLOW + mg.WK_TREND_RISING + 1
+    w = _wdf(list(np.linspace(50.0, 150.0, mg.WK_MIN_BARS)))   # raging uptrend at the floor
+    assert mg._weekly_trend_score(w) == 1.0                    # full 5/5, incl. the rising gate
 
 
 def test_not_wired_flags_index_futures():

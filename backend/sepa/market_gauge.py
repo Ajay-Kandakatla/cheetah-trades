@@ -88,8 +88,13 @@ FTD_UP_PCT = 1.4
 WK_MA_FAST = 10           # ≈ 50-day  (Minervini p.79 short-term gate, weekly)
 WK_MA_MID = 30            # ≈ 150-day (intermediate gate, weekly)
 WK_MA_SLOW = 40           # ≈ 200-day (long-term gate, weekly)
-WK_TREND_RISING = 4       # 30-week MA must exceed its value this many weeks ago to be "rising"
-WK_MIN_BARS = 35          # need >= this many weekly bars so the 30-week MA is meaningful
+WK_TREND_RISING = 4       # 40-week MA must exceed its value this many weeks ago to be "rising"
+# Frame floor MUST cover the full trend template: the 40-week MA is first valid at
+# bar 39, and the "rising" gate looks back WK_TREND_RISING more — so a frame needs
+# WK_MA_SLOW + WK_TREND_RISING + 1 (= 45) bars for ALL 5 gates to be evaluable.
+# Admitting shorter frames would silently drop the 45-pt trend pillar and make
+# Constructive unreachable (locked by test_weekly_min_bars_admits_full_trend_pillar).
+WK_MIN_BARS = WK_MA_SLOW + WK_TREND_RISING + 1   # = 45 weekly bars
 WK_DIST_LOOKBACK = 8      # distribution WEEKS over the trailing 8 weeks
 WK_DIST_DOWN_PCT = -1.0   # a down WEEK <= -1.0% (weekly bar; wider than the daily -0.2%)
 WK_DIST_TOPPING = 4       # >= this many distribution weeks in 8 = topping
@@ -487,13 +492,15 @@ def _state_of(score: int) -> tuple[str, str]:
 
 
 def _et_hhmm() -> str:
-    """HH:MM in US/Eastern (market time), regardless of container TZ."""
+    """Weekday + HH:MM in US/Eastern (market time), regardless of container TZ.
+    The weekday keeps a persisted pre-open doc from reading as 'today' over a
+    weekend/holiday (e.g. a Friday read shown Saturday is 'pre-open Fri 08:32')."""
     try:
         from datetime import datetime, timezone
         from zoneinfo import ZoneInfo
-        return datetime.now(timezone.utc).astimezone(ZoneInfo("America/New_York")).strftime("%H:%M ET")
+        return datetime.now(timezone.utc).astimezone(ZoneInfo("America/New_York")).strftime("%a %H:%M ET")
     except Exception:
-        return time.strftime("%H:%M")
+        return time.strftime("%a %H:%M")
 
 
 # ── Weekly gauge — the SAME book concepts on WEEKLY bars ─────────────────────
@@ -668,7 +675,8 @@ def _outlook(score: int, state: str, comps: list, weekly: Optional[dict],
         d_rank, w_rank = order.get(state, 1), order.get(weekly["state"], 1)
         if w_rank - d_rank >= 1:
             watch.append("WEEKLY structure stronger than the day — near-term softness inside a "
-                         "healthier larger trend (often a pullback to buy, not a top)")
+                         "healthier larger trend (historically a pullback within an uptrend "
+                         "rather than a top)")
         elif d_rank - w_rank >= 1:
             watch.append("day stronger than the WEEKLY structure — treat strength as counter-trend "
                          "until the week confirms")
@@ -677,9 +685,11 @@ def _outlook(score: int, state: str, comps: list, weekly: Optional[dict],
         gtxt = ", ".join(f"{s} {'+' if g >= 0 else ''}{g}%" for s, g in premarket.items())
         watch.append(f"pre-market (SPY/QQQ ETF print, not futures): {gtxt}")
 
-    label = {"constructive": "Trend in gear — exposure can run high",
-             "caution": "Mixed tape — smaller size, be selective",
-             "risk_off": "Defensive — capital preservation first"}[state]
+    # Band descriptors restate Minervini's exposure FRAMEWORK (pp.304-305),
+    # educational — not a personalized position-sizing instruction.
+    label = {"constructive": "Trend in gear — Minervini's high-exposure band",
+             "caution": "Mixed tape — reduced-exposure band",
+             "risk_off": "Risk-off — capital-preservation band"}[state]
     note = f"Daily gauge {score} ({state.replace('_', ' ')})"
     if weekly:
         note += f" · weekly {weekly['score']} ({weekly['state'].replace('_', ' ')})"
