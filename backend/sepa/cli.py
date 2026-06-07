@@ -107,6 +107,13 @@ def main() -> int:
     s_ha.add_argument("--digest", action="store_true",
                       help="Send a summary push even when healthy (the 2-day digest)")
 
+    sub.add_parser(
+        "market-gauge-preopen",
+        help="Recompute the Market Gauge pre-open (8:30am ET) with the SPY/QQQ "
+             "ETF pre-market gap + weekly read, and persist it so the nav badge "
+             "shows the morning read all day",
+    )
+
     args = p.parse_args()
 
     if args.cmd == "scan":
@@ -254,6 +261,18 @@ def main() -> int:
         for c in r["checks"]:
             if not c["ok"]:
                 log.warning("  %-18s [%s] %s", c["name"], c["severity"], c["detail"])
+        return 0
+
+    if args.cmd == "market-gauge-preopen":
+        from . import market_gauge
+        r = market_gauge.run_and_persist()
+        w = r.get("weekly") or {}
+        o = r.get("next_day_outlook") or {}
+        log.info("MARKET-GAUGE PRE-OPEN — daily=%s (%s) weekly=%s (%s) | %s",
+                 r.get("score"), r.get("state"),
+                 w.get("score", "n/a"), w.get("state", "n/a"), o.get("label", ""))
+        for wch in (o.get("watch") or []):
+            log.info("  watch: %s", wch)
         return 0
 
     return 1

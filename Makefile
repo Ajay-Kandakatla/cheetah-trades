@@ -27,6 +27,10 @@ contracts-vcp:                 ## VCP behavioral contracts (docs/sepa/vcp_method
 	@echo "→ VCP behavioral contracts (docs/sepa/vcp_methodology.md)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_vcp.py -v --tb=short
 
+contracts-gauge:               ## Market Gauge behavioral contracts incl. weekly + outlook (docs/sepa/market_gauge_methodology.md). Fold into `contracts-sepa` after the api image is rebuilt with test_market_gauge.py.
+	@echo "→ Market Gauge behavioral contracts (backend/sepa/market_gauge.py, daily + weekly + outlook)"
+	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_market_gauge.py -v --tb=short
+
 contracts-phantom:             ## prices.py data-hygiene: phantom trailing-bar guard + delisted/stale-symbol floor. Fold into `contracts-sepa` after the api image is rebuilt with test_phantom_bar.py.
 	@echo "→ prices.py data-hygiene contracts (phantom-bar + staleness, backend/sepa/prices.py)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_phantom_bar.py -v --tb=short

@@ -9,8 +9,18 @@ SCORING and the graceful-degradation, not live market data.
 """
 import numpy as np
 import pandas as pd
+import pytest
 
 from sepa import market_gauge as mg
+
+
+@pytest.fixture(autouse=True)
+def _hermetic(monkeypatch):
+    """Keep the suite off the network: compute() must not fetch live index bars
+    for the weekly gauge or call the live pre-market snapshot. Weekly-specific
+    tests override _weekly_frames with synthetic frames."""
+    monkeypatch.setattr(mg, "_weekly_frames", lambda: [])
+    monkeypatch.setattr(mg, "_premarket_gap", lambda: None)
 
 
 def _df(closes, vols):
@@ -21,6 +31,15 @@ def _df(closes, vols):
          "volume": np.asarray(vols, dtype=float)},
         index=idx,
     )
+
+
+def _wdf(closes, vols=None):
+    """Synthetic WEEKLY OHLCV frame (Fri-anchored)."""
+    idx = pd.date_range("2024-01-05", periods=len(closes), freq="W-FRI")
+    c = np.asarray(closes, dtype=float)
+    v = np.asarray(vols if vols is not None else [1e6] * len(closes), dtype=float)
+    return pd.DataFrame(
+        {"open": c, "high": c * 1.01, "low": c * 0.99, "close": c, "volume": v}, index=idx)
 
 
 def _fake_pillar(points, key="x", drv=None):
@@ -223,3 +242,98 @@ def test_constants_locked():
     assert mg.DIST_LOOKBACK == 25 and mg.DIST_DOWN_PCT == -0.2 and mg.DIST_TOPPING == 5
     assert mg.FTD_LOOKBACK == 12 and mg.FTD_UP_PCT == 1.4
     assert mg.STATE_CONSTRUCTIVE == 67 and mg.STATE_CAUTION == 34
+
+
+# ── Weekly gauge (the longer-horizon companion) ──────────────────────────────
+def test_distribution_count_daily_default_unchanged():
+    # Parametrizing the helpers must NOT change the daily behaviour.
+    n = 40
+    closes = list(np.linspace(100.0, 110.0, n))
+    vols = [1e6] * n
+    for i in (35, 38):
+        closes[i] = closes[i - 1] * 0.995
+        vols[i] = vols[i - 1] * 1.5
+    assert mg._distribution_count(_df(closes, vols)) >= 2          # daily defaults
+    assert mg._follow_through(_df(list(np.linspace(90, 100, 70)) , [1e6] * 70)) in (True, False)
+
+
+def test_weekly_trend_score_full_in_strong_uptrend():
+    w = _wdf(list(np.linspace(50.0, 150.0, 50)))
+    assert mg._weekly_trend_score(w) == 1.0                        # all 5 gates
+
+
+def test_weekly_trend_score_low_in_downtrend():
+    w = _wdf(list(np.linspace(150.0, 60.0, 50)))
+    s = mg._weekly_trend_score(w)
+    assert s is not None and s <= 0.2
+
+
+def test_weekly_trend_score_none_when_too_short():
+    assert mg._weekly_trend_score(_wdf(list(np.linspace(50.0, 60.0, 20)))) is None
+
+
+def test_weekly_distribution_counts_down_weeks():
+    closes = list(np.linspace(100.0, 120.0, 40))
+    vols = [1e6] * 40
+    for i in (36, 38):
+        closes[i] = closes[i - 1] * 0.98                          # -2% week
+        vols[i] = vols[i - 1] * 1.5                               # on higher weekly volume
+    w = _wdf(closes, vols)
+    assert mg._distribution_count(w, lookback=mg.WK_DIST_LOOKBACK, down_pct=mg.WK_DIST_DOWN_PCT) >= 2
+
+
+def test_compute_weekly_constructive_in_uptrend(monkeypatch):
+    w = _wdf(list(np.linspace(50.0, 150.0, 50)))
+    monkeypatch.setattr(mg, "_weekly_frames", lambda: [w, w])
+    monkeypatch.setattr(mg, "_macro_level", lambda: ("low", None))
+    out = mg.compute_weekly()
+    assert out["state"] == "constructive" and out["score"] >= mg.STATE_CONSTRUCTIVE
+    assert any(c["key"] == "wk_trend" for c in out["components"])
+    assert sum(c["points"] for c in out["components"]) == out["score"]
+
+
+def test_compute_weekly_none_without_index_data(monkeypatch):
+    monkeypatch.setattr(mg, "_weekly_frames", lambda: [])
+    assert mg.compute_weekly() is None
+
+
+def test_compute_embeds_weekly_and_outlook(monkeypatch):
+    w = _wdf(list(np.linspace(50.0, 150.0, 50)))
+    monkeypatch.setattr(mg, "_weekly_frames", lambda: [w])
+    monkeypatch.setattr(mg, "_macro_level", lambda: ("low", None))
+    monkeypatch.setattr(mg, "PILLARS", (_fake_pillar(40, "a"),))
+    out = mg.compute()
+    assert out["weekly"] and out["weekly"]["state"] == "constructive"
+    assert out["next_day_outlook"]["bias"] == out["state"]
+    assert "not a prediction" in out["next_day_outlook"]["note"].lower()
+    assert out["implied_open"]["gaps"] is None                    # include_premarket False
+
+
+# ── Next-day outlook ─────────────────────────────────────────────────────────
+def test_outlook_flags_distribution_divergence_and_premarket():
+    comps = [{"key": "distribution", "value": "5 in 25d", "points": 0, "max": 6},
+             {"key": "follow_through", "value": "no", "points": 0, "max": 4}]
+    weekly = {"score": 85, "state": "constructive", "state_label": "Constructive"}
+    o = mg._outlook(40, "caution", comps, weekly, {"SPY": -0.5})
+    txt = " ".join(o["watch"]).lower()
+    assert o["bias"] == "caution"
+    assert "distribution at 5/5" in txt
+    assert "weekly structure stronger" in txt
+    assert "pre-market" in txt and "not futures" in txt
+
+
+def test_outlook_is_explicitly_not_a_prediction():
+    o = mg._outlook(75, "constructive", [], None, None)
+    assert "not a prediction" in o["note"].lower()
+    assert o["bias"] == "constructive"
+
+
+def test_weekly_constants_locked():
+    assert mg.WK_MA_FAST == 10 and mg.WK_MA_MID == 30 and mg.WK_MA_SLOW == 40
+    assert mg.WK_DIST_TOPPING == 4 and mg.WK_FTD_UP_PCT == 2.5 and mg.WK_MIN_BARS == 35
+    assert sum(mg._config()["weekly_weights"].values()) == 100
+
+
+def test_not_wired_flags_index_futures():
+    nw = " ".join(mg._config()["not_wired"]).lower()
+    assert "futures" in nw                                        # honest: no /ES,/NQ feed

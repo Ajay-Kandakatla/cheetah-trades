@@ -18,15 +18,44 @@ export type GaugeComponent = {
   basis: string;
 };
 
+export type GaugeState = 'constructive' | 'caution' | 'risk_off';
+
+export type WeeklyGauge = {
+  score: number;
+  state: GaugeState;
+  state_label: string;
+  drivers?: string[];
+  components?: GaugeComponent[];
+  basis?: string;
+};
+
+export type NextDayOutlook = {
+  bias: GaugeState | string;
+  label: string;
+  note: string;
+  watch?: string[];
+};
+
+export type ImpliedOpen = {
+  source: string;
+  gaps: Record<string, number> | null;
+};
+
 export type MarketGauge = {
   generated_at: number;
   generated_at_iso: string;
+  as_of_label?: string;          // "pre-open 08:32 ET" / "live 14:05 ET"
   score: number;
-  state: 'constructive' | 'caution' | 'risk_off';
+  state: GaugeState;
   state_label: string;
   exposure_band: { low: number; high: number; note: string };
   components: GaugeComponent[];
   drivers: string[];
+  weekly?: WeeklyGauge | null;
+  next_day_outlook?: NextDayOutlook;
+  implied_open?: ImpliedOpen;
+  source?: string;               // "preopen" when served from the pre-open cron doc
+  age_sec?: number;
   config?: Record<string, unknown>;
   disclaimer?: string;
 };

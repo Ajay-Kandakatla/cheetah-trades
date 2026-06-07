@@ -27,6 +27,11 @@
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
 #
+# Mon-Fri 8:32am ET (pre-open) — recompute the Market Gauge with the SPY/QQQ ETF
+# pre-market gap + the weekly read and persist it, so the nav-bar badge shows the
+# morning pre-open read all day. Runs just after the brief to avoid contention.
+32     8     *    *    1-5  /usr/local/bin/python -m sepa.cli market-gauge-preopen
+#
 # Options Pulse (SOIR / Schaeffer's Open Interest Ratio).
 # Mon-Fri 5:30pm ET — daily SOIR snapshot across the Russell 1000 universe
 # (parallel via ThreadPoolExecutor; ~3-5 min for 1000 tickers @ 10 workers).

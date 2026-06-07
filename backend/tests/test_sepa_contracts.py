@@ -741,6 +741,34 @@ def test_market_gauge_locked():
 
 
 # ============================================================================
+# Weekly Gauge + next-day outlook contract (2026-06-06).
+# Spec + page cites: docs/sepa/market_gauge_methodology.md (§ Weekly).
+# The SAME Minervini concepts on WEEKLY bars — Trend Template (p.79) mapped to
+# 10/30/40-week MAs, distribution/follow-through (concept p.248) recomputed
+# weekly. Weekly weights sum 100 (kept separate from the daily set). The weekly-MA
+# lengths + weekly thresholds are CONFIGURED (no book in repo for weekly numbers).
+# The next-day outlook is conditions-based (flip triggers), NOT a price forecast.
+# ============================================================================
+def test_weekly_gauge_locked():
+    import inspect
+    from sepa import market_gauge as mg
+    ww = mg._config()["weekly_weights"]
+    assert sum(ww.values()) == 100                               # weekly pillars sum 100
+    assert mg.WK_MA_FAST == 10 and mg.WK_MA_MID == 30 and mg.WK_MA_SLOW == 40
+    assert mg.WK_DIST_TOPPING == 4 and mg.WK_FTD_UP_PCT == 2.5 and mg.WK_MIN_BARS == 35
+    src = inspect.getsource(mg)
+    # weekly gauge must compose the book-grounded helpers on resampled weekly bars
+    assert "_to_weekly" in src and 'resample("W-FRI")' in src
+    assert "_weekly_trend_score" in src and "compute_weekly" in src
+    # outlook must stay a conditions read, never a price prediction
+    assert "_outlook" in src and "not a prediction" in src
+    # honest: no index-futures feed; only the SPY/QQQ ETF pre-market print
+    nw = " ".join(mg._config()["not_wired"]).lower()
+    assert "futures" in nw
+    assert "_premarket_gap" in src and "not index futures" in src.lower()
+
+
+# ============================================================================
 # Cross Junctions contract (2026-06-06).
 # Spec: docs/SEPA_CONTRACTS.md 11d. Confluence of SEPA ∩ consistent-rank ∩
 # pullback, S&P-first then Russell. Configured thresholds locked; require that

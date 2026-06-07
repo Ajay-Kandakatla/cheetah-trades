@@ -101,6 +101,22 @@ export function MarketGaugePage() {
             </div>
           </section>
 
+          {/* Next-day outlook — current regime + what would flip it (NOT a price call) */}
+          {g.next_day_outlook && (
+            <section className={`mg-outlook mg-outlook--${g.next_day_outlook.bias}`}>
+              <div className="eyebrow">
+                Next-day outlook{g.as_of_label ? ` · as of ${g.as_of_label}` : ''}
+              </div>
+              <div className="mg-outlook__bias">{g.next_day_outlook.label}</div>
+              <p className="mg-outlook__note">{g.next_day_outlook.note}</p>
+              {g.next_day_outlook.watch && g.next_day_outlook.watch.length > 0 && (
+                <ul className="mg-outlook__watch">
+                  {g.next_day_outlook.watch.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              )}
+            </section>
+          )}
+
           {g.drivers && g.drivers.length > 0 && (
             <section className="mg-drivers">
               <div className="eyebrow">What's driving it</div>
@@ -120,6 +136,30 @@ export function MarketGaugePage() {
               </div>
             ))}
           </section>
+
+          {/* Weekly structural read (weekly bars) — the "what kind of week" horizon */}
+          {g.weekly && (
+            <section className={`mg-week mg-week--${g.weekly.state}`}>
+              <div className="eyebrow">This week — structural read (weekly bars)</div>
+              <div className="mg-week__head">
+                <span className="mg-week__score mono">{g.weekly.score}</span>
+                <span className="mg-week__outof mono">/ 100</span>
+                <span className={stateClass(g.weekly.state)}>{g.weekly.state_label}</span>
+              </div>
+              {g.weekly.drivers && g.weekly.drivers.length > 0 && (
+                <ul className="mg-week__drivers">
+                  {g.weekly.drivers.map((d, i) => <li key={i}>{d}</li>)}
+                </ul>
+              )}
+              {g.weekly.components && g.weekly.components.length > 0 &&
+                groupByCategory(g.weekly.components).map(([cat, comps]) => (
+                  <div key={cat} className="mg-catgroup">
+                    <div className="mg-catgroup__label">{cat}</div>
+                    {comps.map((c) => <ComponentBar key={c.key} c={c} />)}
+                  </div>
+                ))}
+            </section>
+          )}
 
           {/* How people "read the week" */}
           <section className="mg-explain">

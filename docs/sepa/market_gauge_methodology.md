@@ -1,9 +1,10 @@
 # Market Gauge — methodology
 
-**Code:** `backend/sepa/market_gauge.py` (`compute()` / `get_gauge()`)
+**Code:** `backend/sepa/market_gauge.py` (`compute()` / `compute_weekly()` / `get_gauge()` / `run_and_persist()`)
 **Endpoint:** `GET /market/gauge`
-**Page:** `frontend/src/pages/MarketGauge.tsx` (`/market-gauge`) + nav badge `MarketGaugeBadge.tsx` (top-right, every page)
-**Contracts:** `backend/tests/test_market_gauge.py` (behavioral) · `tests/test_sepa_contracts.py::test_market_gauge_locked` (source guard)
+**Page:** `frontend/src/pages/MarketGauge.tsx` (`/market-gauge`) + nav badge `MarketGaugeBadge.tsx` (top-right, every page; shows daily + weekly + pre-open stamp)
+**Cron:** `sepa.cli market-gauge-preopen` — Mon–Fri **8:32am ET** (`backend/crontab`); recomputes pre-open with the pre-market gap and persists it for the badge.
+**Contracts:** `backend/tests/test_market_gauge.py` (behavioral, incl. weekly + outlook) · `tests/test_sepa_contracts.py::test_market_gauge_locked` + `::test_weekly_gauge_locked` (source guards)
 **Book:** Mark Minervini, *Trade Like a Stock Market Wizard* (2013) — **pp. 79, 248, 303–305; Ch. 5, 12–13**. (Printed page = repo-PDF page − 15.)
 **Economic data:** St. Louis Fed **FRED** API (<https://fred.stlouisfed.org/docs/api/fred/>) — series `CPIAUCSL`, `UNRATE`, `FEDFUNDS`, `T10Y3M`, cited inline. FRED supplies the *data*; the scoring thresholds are **CONFIGURED / standard-macro**, NOT book-derived (see the Economic block below).
 
@@ -143,8 +144,73 @@ absorb the badge's per-page hits.
 `backend/sepa/scanner.py` and the daily scan are untouched (Rule #2). The only
 new infra is the `FRED_API_KEY` env var (add it to `backend/.env`).
 
+## 4b. Multi-horizon: weekly gauge + next-day outlook (2026-06-06)
+
+The gauge now reads **two horizons** and frames the day ahead. None of it predicts
+price — it reads the *current* regime across timeframes and names the triggers
+that would change it.
+
+### Weekly gauge — `compute_weekly()`
+
+The **same Minervini concepts on WEEKLY bars** ("what kind of *week* are we in").
+SPY/QQQ daily frames are resampled to weekly (`df.resample("W-FRI")`) and the
+structural reads recomputed. Weekly weights sum to **100** independently of the
+daily set (stored in `config.weekly_weights`); same state cutoffs.
+
+| Weekly pillar | wt | What | Book grounding |
+|---|---|---|---|
+| Weekly trend template | 45 | fraction of 5 Trend-Template gates on weekly MAs | **Minervini p.79 — the book gives the weekly equivalents in parentheses verbatim:** 50-day **(10-week)**, 150-day **(30-week)**, 200-day **(40-week)**. Gates: close>10wk (crit 5), close>30wk & >40wk (crit 1), 10wk>30wk (crit 4), 40wk MA rising ≥1 month (crit 3). |
+| Weekly distribution | 20 | distribution *weeks* (down-week on higher weekly volume) in the trailing 8 | concept p.248 / O'Neil-style; **configured** weekly magnitudes |
+| Weekly momentum | 15 | index distance from the 30-week MA | **configured** |
+| Weekly follow-through | 10 | a +2.5% up-*week* on higher volume, above the 10-week MA | concept **p.248**; **configured** weekly trigger |
+| Macro backdrop | 10 | `macro_risk` regime (reused) | `macro_risk` |
+
+The **weekly-MA lengths are NOT a guess — they are Minervini's own parenthetical
+weekly equivalents on p.79.** Only the weekly *lookbacks/magnitudes* (8-week
+distribution window, 4-week topping count, +2.5% weekly FTD, ±8% momentum band)
+are **CONFIGURED** (no book prescribes weekly numbers in the repo) — labelled and
+locked by `test_weekly_gauge_locked`.
+
+**Why two horizons:** the daily↔weekly *divergence* is the most useful read. Daily
+Caution inside a Constructive weekly structure = a pullback within a larger uptrend
+(often a place to buy, not a top); the reverse = treat daily strength as
+counter-trend until the week confirms.
+
+### Next-day outlook — `_outlook()`
+
+**Conditions-based, NOT a price prediction.** It restates the daily state's
+exposure-band guidance (book **pp.304–305**) as a one-line `label`, a `note`
+pairing the daily and weekly reads, and a `watch` list of **leading signals +
+regime-flip triggers**: distance to the 67/34 cutoffs ("X pts would flip it up to
+Constructive"), distribution approaching the topping count, an absent
+follow-through (what up-day would confirm a turn), VIX percentile, the daily↔weekly
+divergence, and the pre-market gap. The `note` carries the literal phrase *"not a
+prediction of where price closes"*, locked by a contract.
+
+### Implied open — SPY/QQQ ETF pre-market, **NOT** futures
+
+There is **no index-futures feed** in the app (Massive carries the cash ETFs, not
+/ES, /NQ — verified). "Implied open" therefore uses the **SPY/QQQ ETF pre-market
+print** vs prior close (`prices.bulk_snapshot`), freshness-guarded (last trade
+within ~18 h), and is **labelled as the ETF print, not futures.** Unavailable →
+`implied_open.gaps = null` + a "not wired" source string — flagged, never faked.
+Only the pre-open cron makes this live call (`include_premarket=True`); the
+per-page badge path never does. Index futures are listed in `config.not_wired`.
+
+### Pre-open cron + persistence
+
+`sepa.cli market-gauge-preopen` runs **Mon–Fri 8:32am ET** (`backend/crontab`; the
+`cron` container's TZ is `America/New_York`). It calls `run_and_persist()` →
+`compute(include_premarket=True)` and upserts to Mongo `market_gauge`
+(`_id:"latest"`, `computed_at`). `get_gauge()` then **prefers that fresh pre-open
+doc (< 20 h old)** so the nav badge shows the morning pre-open read all day
+(stamped `pre-open HH:MM ET`); `?force=true` recomputes live. `scanner.py` and the
+daily scan are untouched (Rule #2); the only new infra is the cron line.
+
 ## 5. Not advice
 
-This page is an educational market-health read. A pattern that worked before
+This page is an educational market-health read across horizons. It reads the
+current regime and the triggers that would change it — it does **not** forecast
+where price closes today, this week, or any horizon. A pattern that worked before
 does not guarantee future results; nothing here is a personalized
 buy/sell/position-sizing recommendation.

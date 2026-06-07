@@ -499,7 +499,10 @@ def _et_hhmm() -> str:
 # ── Weekly gauge — the SAME book concepts on WEEKLY bars ─────────────────────
 def _weekly_trend_score(wdf) -> Optional[float]:
     """Minervini Trend Template (p.79) on WEEKLY bars → fraction of 5 structural
-    gates passed: close>10wk, close>30wk, 10wk>30wk, 30wk rising, close>40wk."""
+    gates passed. p.79 gives the weekly equivalents in parentheses verbatim
+    (50-day=10-week, 150-day=30-week, 200-day=40-week), so these gates map straight
+    onto the book's criteria: close>10wk (crit 5), close>30wk & close>40wk (crit 1),
+    10wk>30wk (crit 4), 40wk MA rising ≥1 month (crit 3)."""
     if wdf is None or len(wdf) < WK_MA_SLOW:
         return None
     c = wdf["close"]
@@ -511,7 +514,8 @@ def _weekly_trend_score(wdf) -> Optional[float]:
     if any(x != x for x in (px, f, m, s)):          # NaN guard
         return None
     j = i - WK_TREND_RISING
-    rising = bool(j >= 0 and float(ma_m.iloc[j]) == float(ma_m.iloc[j]) and m > float(ma_m.iloc[j]))
+    s_prev = float(ma_s.iloc[j]) if j >= 0 else float("nan")
+    rising = bool(s_prev == s_prev and s > s_prev)  # 40-wk (≈200-day) trending up
     gates = [px > f, px > m, f > m, rising, px > s]
     return sum(1 for g in gates if g) / len(gates)
 
@@ -660,10 +664,14 @@ def _outlook(score: int, state: str, comps: list, weekly: Optional[dict],
         watch.append(f"VIX {vol.get('value')} — a spike above the 70th percentile pressures the tape")
 
     if weekly:
-        if state == "constructive" and weekly["state"] == "risk_off":
-            watch.append("daily firm but WEEKLY structure is risk-off — treat strength as counter-trend")
-        elif state == "risk_off" and weekly["state"] == "constructive":
-            watch.append("daily weak but WEEKLY structure holds — likely a pullback inside a larger uptrend")
+        order = {"risk_off": 0, "caution": 1, "constructive": 2}
+        d_rank, w_rank = order.get(state, 1), order.get(weekly["state"], 1)
+        if w_rank - d_rank >= 1:
+            watch.append("WEEKLY structure stronger than the day — near-term softness inside a "
+                         "healthier larger trend (often a pullback to buy, not a top)")
+        elif d_rank - w_rank >= 1:
+            watch.append("day stronger than the WEEKLY structure — treat strength as counter-trend "
+                         "until the week confirms")
 
     if premarket:
         gtxt = ", ".join(f"{s} {'+' if g >= 0 else ''}{g}%" for s, g in premarket.items())
@@ -693,12 +701,27 @@ def _config() -> dict:
         "state_cutoffs": {"constructive": STATE_CONSTRUCTIVE, "caution": STATE_CAUTION},
         "fred_series": {"cpi": FRED_CPI_SERIES, "unemployment": FRED_UNEMP_SERIES,
                         "fed_funds": FRED_FEDFUNDS_SERIES, "yield_curve": FRED_CURVE_SERIES},
-        "not_wired": ["true order-flow / dark-pool tape", "fear/greed index"],
+        # Weekly gauge weights kept SEPARATE from `weights` (which sums to 100 on
+        # the daily pillars); the weekly set sums to 100 independently.
+        "weekly_weights": {"trend": WK_W_TREND, "distribution": WK_W_DISTRIBUTION,
+                           "momentum": WK_W_MOMENTUM, "follow_through": WK_W_FOLLOW_THROUGH,
+                           "macro": WK_W_MACRO},
+        "weekly": {"ma_weeks": [WK_MA_FAST, WK_MA_MID, WK_MA_SLOW],
+                   "dist_lookback": WK_DIST_LOOKBACK, "dist_topping": WK_DIST_TOPPING,
+                   "ftd_lookback": WK_FTD_LOOKBACK, "ftd_up_pct": WK_FTD_UP_PCT,
+                   "min_bars": WK_MIN_BARS},
+        "not_wired": ["index futures (/ES, /NQ) — only SPY/QQQ ETF pre-market is available",
+                      "true order-flow / dark-pool tape", "fear/greed index"],
     }
 
 
-def compute() -> dict:
-    """Compose every pillar (real data or honestly degraded) into the gauge."""
+def compute(include_premarket: bool = False) -> dict:
+    """Compose every pillar (real data or honestly degraded) into the gauge, plus
+    the WEEKLY companion gauge and a conditions-based next-day outlook.
+
+    `include_premarket` makes a live SPY/QQQ ETF snapshot call for the pre-market
+    gap — only the pre-open cron sets it True; the per-page badge path leaves it
+    False (no live call on every refresh)."""
     t0 = time.time()
     comps: list[dict] = []
     drivers: list[str] = []
@@ -713,16 +736,21 @@ def compute() -> dict:
             drivers.append(drv)
 
     score = max(0, min(100, round(sum(c["points"] for c in comps))))
-    if score >= STATE_CONSTRUCTIVE:
-        state, state_label = "constructive", "Constructive"
-    elif score >= STATE_CAUTION:
-        state, state_label = "caution", "Caution"
-    else:
-        state, state_label = "risk_off", "Risk-Off"
+    state, state_label = _state_of(score)
+
+    weekly = None
+    try:
+        weekly = compute_weekly()
+    except Exception as exc:
+        log.debug("market_gauge weekly failed: %s", exc)
+
+    premarket = _premarket_gap() if include_premarket else None
+    outlook = _outlook(score, state, comps, weekly, premarket)
 
     return {
         "generated_at": int(time.time()),
         "generated_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "as_of_label": "live " + _et_hhmm(),
         "duration_sec": round(time.time() - t0, 3),
         "score": score,
         "state": state,
@@ -730,14 +758,74 @@ def compute() -> dict:
         "exposure_band": EXPOSURE[state],
         "components": comps,
         "drivers": drivers,
+        "weekly": weekly,
+        "next_day_outlook": outlook,
+        "implied_open": ({"source": "SPY/QQQ ETF pre-market gap (no index-futures feed)",
+                          "gaps": premarket}
+                         if premarket else
+                         {"source": "not wired — no index-futures feed; only the SPY/QQQ "
+                                    "ETF pre-market print is available", "gaps": None}),
         "config": _config(),
         "disclaimer": ("Educational market-health read, not a forecast or "
-                       "personalized buy/sell/position-sizing advice. The Economic "
-                       "pillars (CPI, unemployment, Fed-funds, yield curve) read "
-                       "live from FRED; if no FRED_API_KEY is set they stay neutral, "
-                       "not faked. True order-flow / dark-pool tape is still not "
-                       "wired (needs a tape feed)."),
+                       "personalized buy/sell/position-sizing advice. The weekly "
+                       "gauge and outlook read the CURRENT regime across horizons — "
+                       "they do not predict where price closes. Economic pillars read "
+                       "live from FRED (neutral if no key); index futures are not "
+                       "wired (only the SPY/QQQ ETF pre-market print), and true "
+                       "order-flow / dark-pool tape needs a feed."),
     }
+
+
+# ── Persistence — the 8:30 ET pre-open cron writes "latest"; the badge reads it ─
+_PERSIST_FRESH_SEC = 20 * 3600    # a pre-open read stands as "today's" for ~20h
+
+
+def _coll():
+    try:
+        from pymongo import MongoClient
+        url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        client = MongoClient(url, serverSelectionTimeoutMS=2000)
+        client.admin.command("ping")
+        return client[os.getenv("MONGO_DB", "cheetah")].market_gauge
+    except Exception:
+        return None
+
+
+def run_and_persist() -> dict:
+    """Compute the gauge (with the pre-market gap) and upsert it as the pre-open
+    'latest' doc. Called by the `sepa.cli market-gauge-preopen` 8:30am ET cron."""
+    payload = compute(include_premarket=True)
+    payload["as_of_label"] = "pre-open " + _et_hhmm()
+    payload["source"] = "preopen"
+    coll = _coll()
+    if coll is not None:
+        try:
+            doc = dict(payload)
+            doc["_id"] = "latest"
+            doc["computed_at"] = int(time.time())
+            coll.update_one({"_id": "latest"}, {"$set": doc}, upsert=True)
+            log.info("market_gauge persisted pre-open: score=%s state=%s",
+                     payload.get("score"), payload.get("state"))
+        except Exception as exc:
+            log.warning("market_gauge persist failed: %s", exc)
+    _CACHE.update(at=time.time(), data=payload)     # warm the in-proc cache too
+    return payload
+
+
+def load_persisted() -> Optional[dict]:
+    """Read the cron-persisted pre-open gauge (with age_sec), or None."""
+    coll = _coll()
+    if coll is None:
+        return None
+    try:
+        doc = coll.find_one({"_id": "latest"})
+        if not doc:
+            return None
+        doc.pop("_id", None)
+        doc["age_sec"] = int(time.time()) - int(doc.get("computed_at") or 0)
+        return doc
+    except Exception:
+        return None
 
 
 # ── In-process cache (the top-right badge hits this on every page) ───────────
@@ -745,10 +833,18 @@ _CACHE: dict = {"at": 0.0, "data": None}
 _TTL_SEC = 300
 
 
-def get_gauge(force: bool = False) -> dict:
+def get_gauge(force: bool = False, prefer_persisted: bool = True) -> dict:
+    """Serve the gauge. Default order: in-proc cache → the fresh pre-open doc
+    (so the badge shows the morning read all day) → a live recompute. `force`
+    always recomputes live and ignores the persisted pre-open doc."""
     now = time.time()
     if not force and _CACHE["data"] is not None and (now - _CACHE["at"]) < _TTL_SEC:
         return _CACHE["data"]
+    if not force and prefer_persisted:
+        doc = load_persisted()
+        if doc is not None and doc.get("age_sec", 1e12) < _PERSIST_FRESH_SEC:
+            _CACHE.update(at=now, data=doc)
+            return doc
     data = compute()
     _CACHE.update(at=now, data=data)
     return data

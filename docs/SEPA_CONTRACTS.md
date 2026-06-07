@@ -770,6 +770,41 @@ broaden the pullback leg to the Russell 1000. Each row tags its `junction_univer
 
 ---
 
+## 11e. Weekly Gauge + next-day outlook + pre-open cron (2026-06-06)
+
+Multi-horizon companion to the daily Market Gauge (§11c). **Reads the regime
+across timeframes; does NOT forecast price.**
+
+- **Weekly gauge** (`market_gauge.compute_weekly()`): the SAME Minervini concepts
+  on **weekly bars** (SPY/QQQ resampled `W-FRI`). 5 weekly pillars, **weights sum
+  100** (separate `config.weekly_weights`): weekly Trend Template 45, weekly
+  distribution 20, weekly momentum 15, weekly follow-through 10, macro 10.
+- **Weekly MAs are book-grounded, not configured:** Minervini **p.79** gives the
+  weekly equivalents in parentheses verbatim — 50-day **(10-wk)**, 150-day
+  **(30-wk)**, 200-day **(40-wk)**. The weekly *lookbacks/magnitudes* (8-wk
+  distribution window, 4-wk topping, +2.5% weekly FTD, ±8% momentum) ARE configured.
+- **Next-day outlook** (`_outlook()`): conditions-based — exposure-band label
+  (pp.304–305) + daily/weekly note + a `watch` list of regime-flip triggers
+  (distance to the 67/34 cutoffs, distribution nearing topping, absent FTD, VIX
+  percentile, daily↔weekly divergence, pre-market gap). Carries the literal phrase
+  **"not a prediction of where price closes"** — locked.
+- **Implied open = SPY/QQQ ETF pre-market print, NOT futures** (no index-futures
+  feed exists). `prices.bulk_snapshot`, freshness-guarded ≤18h; `null` + "not
+  wired" when unavailable. Index futures listed in `config.not_wired`.
+- **Pre-open cron:** `sepa.cli market-gauge-preopen` — **Mon–Fri 8:32am ET**
+  (`backend/crontab`, container TZ America/New_York) → `run_and_persist()` upserts
+  Mongo `market_gauge` (`_id:"latest"`). `get_gauge()` prefers the fresh pre-open
+  doc (<20h) so the **nav badge shows the morning read all day** (daily score +
+  weekly chip + `pre-open HH:MM ET` stamp); `?force=true` recomputes live.
+- **Code:** `sepa/market_gauge.py` (+`compute_weekly`/`_outlook`/`_premarket_gap`/
+  `run_and_persist`/`load_persisted`), `sepa/cli.py`, `crontab`; FE
+  `MarketGauge.tsx` (weekly section + outlook), `MarketGaugeBadge.tsx` (weekly chip
+  + stamp), `useMarketGauge.ts`. `scanner.py` untouched (Rule #2).
+- **Contracts:** `backend/tests/test_market_gauge.py` (weekly + outlook behavioral)
+  + `test_sepa_contracts.py::test_weekly_gauge_locked` (source guard).
+
+---
+
 ## 12. How to extend this doc safely
 
 ### The hard rule (added 2026-05-25 after the RFC 001 lesson)
