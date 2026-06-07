@@ -50,12 +50,27 @@ def test_follow_through_detects_power_up_day():
     assert mg._follow_through(_df(closes, vols), lookback=12) is True
 
 
-def test_treasury_yield_normalizes_x10_quote(monkeypatch):
-    # yfinance sometimes quotes ^TNX as 42.5 (= 4.25%); we normalise /10.
-    monkeypatch.setattr(mg.prices, "load_prices", lambda s: _df([40.0, 42.5], [0, 0]))
-    assert mg._treasury_yield("^TNX") == 4.25
-    monkeypatch.setattr(mg.prices, "load_prices", lambda s: _df([4.1, 4.25], [0, 0]))
-    assert mg._treasury_yield("^TNX") == 4.25
+# ── FRED reader (the Economic pillars' source) ───────────────────────────────
+def test_fred_parse_drops_missing_and_sorts_newest_first():
+    from sepa import fred
+    payload = {"observations": [
+        {"date": "2026-01-01", "value": "100.0"},
+        {"date": "2026-03-01", "value": "."},        # FRED "missing" -> dropped
+        {"date": "2026-02-01", "value": "102.0"},
+    ]}
+    out = fred._parse_observations(payload)
+    assert [d for d, _ in out] == ["2026-02-01", "2026-01-01"]   # newest-first, "." gone
+    assert out[0][1] == 102.0
+
+
+def test_fred_yoy_and_change_compute_from_series(monkeypatch):
+    from sepa import fred
+    # newest-first: data[0]=112 (latest), data[6]=106, data[12]=100 (12mo ago)
+    data = [("d%02d" % (12 - i), 100.0 + (12 - i)) for i in range(13)]
+    monkeypatch.setattr(fred, "_fetch", lambda sid, limit=fred._DEFAULT_LIMIT: data)
+    assert fred.yoy("X") == 12.0          # (112/100 - 1) * 100
+    assert fred.change("X", 6) == 6.0     # 112 - 106
+    assert fred.latest("X") == 112.0
 
 
 # ── aggregating pillars (real shape, synthetic rows) ─────────────────────────
@@ -78,12 +93,77 @@ def test_insider_component_counts_cluster_buys(monkeypatch):
 
 
 def test_yield_curve_inverted_scores_low(monkeypatch):
-    # 10y below 3m -> inverted -> low credit + driver.
-    monkeypatch.setattr(mg, "_treasury_yield",
-                        lambda s: 3.5 if s == "^TNX" else 4.5)
+    # FRED T10Y3M negative -> inverted curve -> low credit + driver.
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: -0.4)
     comp, drv = mg._yield_curve_component()
     assert comp["points"] < round(mg.W_YIELD * 0.5)
     assert drv and "inverted" in drv
+    assert mg.FRED_CURVE_SERIES in comp["basis"]
+
+
+def test_yield_curve_steep_scores_high(monkeypatch):
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: 1.6)   # >= CURVE_STEEP
+    comp, drv = mg._yield_curve_component()
+    assert comp["points"] == mg.W_YIELD and drv is None
+
+
+# ── FRED economic pillars (behavioral) ───────────────────────────────────────
+def test_cpi_hot_inflation_scores_low(monkeypatch):
+    monkeypatch.setattr(mg.fred, "yoy", lambda sid: 6.5)     # above CPI_HOT
+    comp, drv = mg._cpi_component()
+    assert comp["points"] <= round(mg.W_CPI * 0.1)
+    assert drv and "inflation hot" in drv
+    assert mg.FRED_CPI_SERIES in comp["basis"]
+
+
+def test_cpi_target_inflation_scores_full(monkeypatch):
+    monkeypatch.setattr(mg.fred, "yoy", lambda sid: 2.0)     # at Fed target
+    comp, drv = mg._cpi_component()
+    assert comp["points"] == mg.W_CPI and drv is None
+
+
+def test_unemployment_rising_scores_low(monkeypatch):
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: 5.0)
+    monkeypatch.setattr(mg.fred, "change", lambda sid, n: 0.6)   # +0.6pp/6mo (Sahm)
+    comp, drv = mg._unemployment_component()
+    assert comp["points"] < round(mg.W_UNEMP * 0.5)
+    assert drv and "rising" in drv
+    assert mg.FRED_UNEMP_SERIES in comp["basis"]
+
+
+def test_unemployment_low_and_stable_scores_high(monkeypatch):
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: 3.6)
+    monkeypatch.setattr(mg.fred, "change", lambda sid, n: -0.1)
+    comp, drv = mg._unemployment_component()
+    assert comp["points"] > round(mg.W_UNEMP * 0.5) and drv is None
+
+
+def test_fed_funds_tightening_scores_low(monkeypatch):
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: 5.5)
+    monkeypatch.setattr(mg.fred, "change", lambda sid, n: 1.5)   # +1.5pp/yr hiking
+    comp, drv = mg._fed_funds_component()
+    assert comp["points"] < round(mg.W_FEDFUNDS * 0.5)
+    assert drv and "tightening" in drv
+    assert mg.FRED_FEDFUNDS_SERIES in comp["basis"]
+
+
+def test_fed_funds_easing_scores_high(monkeypatch):
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: 2.0)
+    monkeypatch.setattr(mg.fred, "change", lambda sid, n: -1.5)  # cutting
+    comp, drv = mg._fed_funds_component()
+    assert comp["points"] > round(mg.W_FEDFUNDS * 0.5) and drv is None
+
+
+def test_economic_pillars_degrade_to_neutral_without_fred(monkeypatch):
+    # No FRED data (no key / fetch fail) -> neutral, never crash, basis cites FRED.
+    monkeypatch.setattr(mg.fred, "latest", lambda sid: None)
+    monkeypatch.setattr(mg.fred, "yoy", lambda sid: None)
+    monkeypatch.setattr(mg.fred, "change", lambda sid, n: None)
+    for fn, w in ((mg._cpi_component, mg.W_CPI), (mg._unemployment_component, mg.W_UNEMP),
+                  (mg._fed_funds_component, mg.W_FEDFUNDS), (mg._yield_curve_component, mg.W_YIELD)):
+        comp, drv = fn()
+        assert comp["points"] == round(w * 0.5)        # neutral, not faked
+        assert "FRED" in comp["basis"] and drv is None
 
 
 # ── composition + state ──────────────────────────────────────────────────────
@@ -124,10 +204,19 @@ def test_weights_sum_to_100():
 
 
 def test_config_flags_unwired_feeds():
-    # Honesty: feeds we don't have are listed, not silently faked.
+    # Honesty: the feeds we STILL don't have (a real tape) stay listed; the
+    # economic feeds are now WIRED via FRED, so they must NOT be flagged unwired.
     nw = " ".join(mg._config()["not_wired"]).lower()
-    assert "fred" in nw or "cpi" in nw
     assert "order-flow" in nw or "dark-pool" in nw
+    assert "cpi" not in nw and "unemployment" not in nw and "fed funds" not in nw
+    assert "fred" not in nw
+
+
+def test_config_exposes_fred_series():
+    # The Economic pillars cite their FRED series ids (source-of-truth in config).
+    fs = mg._config()["fred_series"]
+    assert fs["cpi"] == "CPIAUCSL" and fs["unemployment"] == "UNRATE"
+    assert fs["fed_funds"] == "FEDFUNDS" and fs["yield_curve"] == "T10Y3M"
 
 
 def test_constants_locked():

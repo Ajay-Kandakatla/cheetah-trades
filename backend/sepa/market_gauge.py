@@ -6,9 +6,9 @@ composes the market signals the app ALREADY computes into a single 0-100 health
 score + a Constructive / Caution / Risk-Off state + a Minervini exposure band.
 
 Every pillar is REAL data or honestly degraded — nothing is fabricated. Where a
-feed isn't in the app (CPI / jobs / Fed-funds need FRED; true order-flow /
-dark-pool need a tape feed), the pillar says so and stays neutral rather than
-inventing a number.
+feed isn't in the app (true order-flow / dark-pool need a tape feed), the pillar
+says so and stays neutral rather than inventing a number. The Economic pillars
+read live from FRED (free key) and degrade to neutral if FRED_API_KEY is unset.
 
 PILLARS (category → signal → source):
   • Quant      — Index trend "in gear" (SPY/QQQ Trend Template, Minervini p.79)
@@ -19,8 +19,9 @@ PILLARS (category → signal → source):
                  scan (institutional accumulation vs distribution)
   • Sentiment  — Options put/call: median SOIR across the optionable universe
   • Alt-data   — Insider cluster-BUY breadth (SEC Form 4 open-market buys)
-  • Economic   — Treasury yield curve (10y − 3m via ^TNX/^IRX). CPI/jobs/Fed-funds
-                 are NOT wired (need FRED) — flagged, not faked.
+  • Economic   — FRED macro feed (free key): CPI YoY (CPIAUCSL), unemployment
+                 level+trend (UNRATE), Fed-funds level+direction (FEDFUNDS), and
+                 the 10y−3m recession curve (T10Y3M). Neutral if no FRED_API_KEY.
   • Macro      — macro_risk regime + major-news event detection
 
 WHY (book): O'Neil's "M" — ~3 of 4 stocks follow the market. Minervini Ch.5
@@ -35,9 +36,11 @@ labelled and locked by a source-guard test.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Optional
 
+from . import fred
 from . import prices
 from . import scanner as sepa_scanner
 
@@ -46,16 +49,24 @@ log = logging.getLogger("sepa.market_gauge")
 INDEXES = ("SPY", "QQQ")
 
 # ── Pillar weights (sum = 100) ───────────────────────────────────────────────
-W_TREND = 20            # index Trend Template "in gear" (Minervini p.79, Ch.5)
-W_MACRO = 12            # macro-risk regime + news events
-W_VOLATILITY = 11       # VIX level + percentile (Quant)
-W_FLOW = 11             # net $-volume + CMF aggregated across the scan
-W_BREADTH = 8           # participation
-W_DISTRIBUTION = 8      # institutional selling on the indices
-W_FOLLOW_THROUGH = 5    # rally confirmation
-W_SENTIMENT = 8         # options put/call (SOIR)
-W_INSIDER = 6           # insider cluster-buy breadth (alt-data)
-W_YIELD = 11            # treasury yield curve (economic)
+# 13 pillars. The Economic block is now FRED-wired and weighted HEAVY (34/100 —
+# Ajay 2026-06-06): the four macro pillars together outweigh the price-trend
+# block. The 9 non-economic pillars were trimmed proportionally (×66/89) so the
+# total stays 100. Locked by test_sepa_contracts.py::test_market_gauge_locked.
+W_TREND = 15            # index Trend Template "in gear" (Minervini p.79, Ch.5)
+W_MACRO = 9             # macro-risk regime + news events
+W_VOLATILITY = 8        # VIX level + percentile (Quant)
+W_FLOW = 8              # net $-volume + CMF aggregated across the scan
+W_BREADTH = 6           # participation
+W_DISTRIBUTION = 6      # institutional selling on the indices
+W_FOLLOW_THROUGH = 4    # rally confirmation
+W_SENTIMENT = 6         # options put/call (SOIR)
+W_INSIDER = 4           # insider cluster-buy breadth (alt-data)
+# Economic block (FRED) — sum 34:
+W_YIELD = 8             # 10y−3m recession curve (FRED T10Y3M)
+W_CPI = 9               # CPI YoY inflation (FRED CPIAUCSL)
+W_UNEMP = 9             # unemployment level + 6mo trend (FRED UNRATE)
+W_FEDFUNDS = 8          # Fed-funds level + 12mo direction (FRED FEDFUNDS)
 # (legacy alias so older callers/tests referencing W_REGIME still resolve)
 W_REGIME = W_MACRO
 
@@ -66,6 +77,61 @@ DIST_TOPPING = 5
 # ── Follow-through (CONCEPT Minervini p.248; trigger CONFIGURED) ─────────────
 FTD_LOOKBACK = 12
 FTD_UP_PCT = 1.4
+
+# ── Weekly gauge (the SAME book concepts on WEEKLY bars) ─────────────────────
+# Horizon companion to the daily gauge: "what kind of WEEK are we in." Minervini's
+# Trend Template (p.79) maps the daily 50/150/200-day MAs to the classic weekly
+# 10/30/40-week MAs; distribution + follow-through (concept p.248) recomputed on
+# weekly bars. The weekly-MA lengths + weekly lookbacks/thresholds are CONFIGURED
+# (no book in the repo prescribes weekly numbers) — clearly labelled, locked by
+# the source-guard. NOT a forecast: a longer-horizon read of the CURRENT regime.
+WK_MA_FAST = 10           # ≈ 50-day  (Minervini p.79 short-term gate, weekly)
+WK_MA_MID = 30            # ≈ 150-day (intermediate gate, weekly)
+WK_MA_SLOW = 40           # ≈ 200-day (long-term gate, weekly)
+WK_TREND_RISING = 4       # 30-week MA must exceed its value this many weeks ago to be "rising"
+WK_MIN_BARS = 35          # need >= this many weekly bars so the 30-week MA is meaningful
+WK_DIST_LOOKBACK = 8      # distribution WEEKS over the trailing 8 weeks
+WK_DIST_DOWN_PCT = -1.0   # a down WEEK <= -1.0% (weekly bar; wider than the daily -0.2%)
+WK_DIST_TOPPING = 4       # >= this many distribution weeks in 8 = topping
+WK_FTD_LOOKBACK = 5       # a power up-WEEK within the trailing 5 weeks
+WK_FTD_UP_PCT = 2.5       # >= +2.5% on the week, on higher weekly volume, above the 10-week MA
+WK_MOM_FULL = 8.0         # weekly close >= +8% above the 30-week MA -> full momentum
+WK_MOM_ZERO = -8.0        # weekly close <= -8% below the 30-week MA -> zero
+
+# Weekly pillar weights (sum = 100; kept separate from the daily `weights`)
+WK_W_TREND = 45           # weekly trend-template structure (the dominant weekly read)
+WK_W_DISTRIBUTION = 20    # weekly distribution-week count
+WK_W_MOMENTUM = 15        # index distance above/below the 30-week MA
+WK_W_FOLLOW_THROUGH = 10  # weekly follow-through (re-accumulation tell)
+WK_W_MACRO = 10           # macro-risk regime (weekly backdrop, reused)
+
+# ── Economic pillars (FRED) — series ids + CONFIGURED thresholds ─────────────
+# Data: St. Louis Fed FRED (cited per series in each pillar's `basis`). The
+# thresholds that map a series to a 0-1 health score are standard-macro defaults
+# (Fed ~2% inflation target; Sahm-rule rising-unemployment recession signal;
+# policy tightening-vs-easing; curve inversion) — NOT from any book we hold.
+# Clearly labelled, locked by the source-guard, like the O'Neil-style numbers.
+FRED_CPI_SERIES = "CPIAUCSL"        # CPI, All Urban Consumers, All Items (YoY = inflation)
+FRED_UNEMP_SERIES = "UNRATE"        # civilian unemployment rate (%)
+FRED_FEDFUNDS_SERIES = "FEDFUNDS"   # Fed funds effective rate (%)
+FRED_CURVE_SERIES = "T10Y3M"        # 10y − 3m constant-maturity spread (recession curve)
+
+CPI_COOL = 2.0          # YoY <= this (Fed target) -> full health
+CPI_HOT = 6.0           # YoY >= this -> zero (restrictive-Fed headwind)
+CPI_DRIVER = 4.0        # YoY >= this surfaces an "inflation hot" driver
+
+UNEMP_LOW = 3.5         # rate <= this -> strong labour market (level leg full)
+UNEMP_HIGH = 7.0        # rate >= this -> weak labour market (level leg zero)
+UNEMP_RISE_BAD = 0.5    # +this many pp over 6 months -> Sahm-style recession signal
+UNEMP_RISE_DRIVER = 0.3 # +this many pp over 6 months surfaces a "rising" driver
+
+FF_EASY = 2.0           # funds <= this -> accommodative (level leg full)
+FF_RESTRICTIVE = 5.5    # funds >= this -> restrictive (level leg zero)
+FF_TIGHTEN = 1.0        # +/- this many pp over 12 months defines the direction leg
+FF_TIGHTEN_DRIVER = 0.5 # +this many pp over 12 months surfaces a "tightening" driver
+
+CURVE_INVERT = -0.5     # spread <= this -> zero
+CURVE_STEEP = 1.5       # spread >= this -> full
 
 # ── State cutoffs on the 0-100 score ─────────────────────────────────────────
 STATE_CONSTRUCTIVE = 67
@@ -85,9 +151,26 @@ def _clamp01(x: float) -> float:
     return max(0.0, min(1.0, x))
 
 
-# ── raw index-price helpers ──────────────────────────────────────────────────
-def _distribution_count(df, lookback: int = DIST_LOOKBACK) -> Optional[int]:
-    """Down closes <= DIST_DOWN_PCT on HIGHER volume than prior, over `lookback`."""
+def _to_weekly(df):
+    """Resample a daily OHLCV DataFrame (DatetimeIndex) to weekly (Fri-anchored)
+    bars. Returns None if input is empty/unusable. Used by the weekly gauge."""
+    if df is None or not len(df):
+        return None
+    try:
+        w = df.resample("W-FRI").agg(
+            {"open": "first", "high": "max", "low": "min",
+             "close": "last", "volume": "sum"}).dropna()
+        return w if len(w) else None
+    except Exception:
+        return None
+
+
+# ── raw index-price helpers (timeframe-agnostic — daily OR weekly bars) ───────
+def _distribution_count(df, lookback: int = DIST_LOOKBACK,
+                        down_pct: float = DIST_DOWN_PCT) -> Optional[int]:
+    """Down closes <= `down_pct` on HIGHER volume than prior, over `lookback` bars.
+    Daily defaults reproduce the original behaviour; weekly callers pass weekly
+    bars + weekly thresholds."""
     if df is None or len(df) < lookback + 2:
         return None
     c = df["close"].to_numpy(dtype=float)
@@ -96,22 +179,25 @@ def _distribution_count(df, lookback: int = DIST_LOOKBACK) -> Optional[int]:
     cnt = 0
     for i in range(max(1, n - lookback), n):
         chg = (c[i] / c[i - 1] - 1.0) * 100.0 if c[i - 1] else 0.0
-        if chg <= DIST_DOWN_PCT and v[i] > v[i - 1]:
+        if chg <= down_pct and v[i] > v[i - 1]:
             cnt += 1
     return cnt
 
 
-def _follow_through(df, lookback: int = FTD_LOOKBACK) -> bool:
-    """A power up-day (>= FTD_UP_PCT on higher volume, above the 50-day)."""
-    if df is None or len(df) < 60:
+def _follow_through(df, lookback: int = FTD_LOOKBACK, up_pct: float = FTD_UP_PCT,
+                    ma_window: int = 50, min_bars: int = 60) -> bool:
+    """A power up-bar (>= `up_pct` on higher volume, above the `ma_window`-bar MA).
+    Daily defaults reproduce the original behaviour; weekly callers pass weekly
+    bars + a 10-week MA + a lower bar-count gate."""
+    if df is None or len(df) < min_bars:
         return False
     c = df["close"].to_numpy(dtype=float)
     v = df["volume"].to_numpy(dtype=float)
-    ma50 = df["close"].rolling(50).mean().to_numpy(dtype=float)
+    ma = df["close"].rolling(ma_window).mean().to_numpy(dtype=float)
     n = len(c)
     for i in range(max(1, n - lookback), n):
         chg = (c[i] / c[i - 1] - 1.0) * 100.0 if c[i - 1] else 0.0
-        if chg >= FTD_UP_PCT and v[i] > v[i - 1] and ma50[i] == ma50[i] and c[i] > ma50[i]:
+        if chg >= up_pct and v[i] > v[i - 1] and ma[i] == ma[i] and c[i] > ma[i]:
             return True
     return False
 
@@ -160,21 +246,6 @@ def _scan_rows() -> list:
         return (sepa_scanner.load_latest() or {}).get("all_results") or []
     except Exception:
         return []
-
-
-def _treasury_yield(sym: str) -> Optional[float]:
-    """Latest yield from a CBOE yield index (^TNX = 10y, ^IRX = 3m). yfinance
-    sometimes quotes these x10 (e.g. 42.5 = 4.25%); normalise that."""
-    try:
-        df = prices.load_prices(sym)
-        if df is None or not len(df):
-            return None
-        v = float(df["close"].iloc[-1])
-        if v != v:  # NaN
-            return None
-        return round(v / 10.0, 2) if v > 20 else round(v, 2)
-    except Exception:
-        return None
 
 
 # ── pillar components — each returns (component_dict, driver_or_None) ─────────
@@ -327,26 +398,286 @@ def _insider_component():
 
 
 def _yield_curve_component():
-    ten = _treasury_yield("^TNX")
-    three = _treasury_yield("^IRX")
-    if ten is None or three is None:
+    # FRED T10Y3M publishes the 10y−3m spread directly (the recession curve).
+    spread = fred.latest(FRED_CURVE_SERIES)
+    if spread is None:
         return ({"key": "yield_curve", "category": "Economic", "label": "Yield curve (10y − 3m)",
-                 "value": "n/a — CPI/jobs need FRED", "points": round(W_YIELD * 0.5),
-                 "max": W_YIELD, "basis": "^TNX/^IRX (yfinance); CPI/jobs need FRED"}, None)
-    spread = round(ten - three, 2)
-    pts = round(W_YIELD * _clamp01((spread + 0.5) / 2.0))  # <=-0.5 zero, >=1.5 full
+                 "value": "n/a — set FRED_API_KEY", "points": round(W_YIELD * 0.5),
+                 "max": W_YIELD, "basis": f"FRED {FRED_CURVE_SERIES} (10y−3m); set FRED_API_KEY"}, None)
+    spread = round(spread, 2)
+    pts = round(W_YIELD * _clamp01((spread - CURVE_INVERT) / (CURVE_STEEP - CURVE_INVERT)))
     drv = f"yield curve inverted ({spread})" if spread < 0 else None
     return ({"key": "yield_curve", "category": "Economic", "label": "Yield curve (10y − 3m)",
-             "value": f"{spread}% ({ten} − {three})", "points": pts, "max": W_YIELD,
-             "basis": "10y ^TNX − 3m ^IRX; CPI/jobs/Fed-funds need FRED"}, drv)
+             "value": f"{spread}%", "points": pts, "max": W_YIELD,
+             "basis": f"FRED {FRED_CURVE_SERIES} — 10y−3m constant-maturity spread"}, drv)
+
+
+def _cpi_component():
+    infl = fred.yoy(FRED_CPI_SERIES)
+    if infl is None:
+        return ({"key": "cpi", "category": "Economic", "label": "Inflation (CPI YoY)",
+                 "value": "n/a — set FRED_API_KEY", "points": round(W_CPI * 0.5),
+                 "max": W_CPI, "basis": f"FRED {FRED_CPI_SERIES} YoY; set FRED_API_KEY"}, None)
+    # Lower, target-anchored inflation = less Fed pressure = healthier tape. One-
+    # sided (high inflation is THE regime risk); disinflation lifts the score
+    # automatically as YoY falls. CONFIGURED, standard-macro (Fed ~2% target).
+    pts = round(W_CPI * _clamp01((CPI_HOT - infl) / (CPI_HOT - CPI_COOL)))
+    drv = f"inflation hot ({infl}% YoY)" if infl >= CPI_DRIVER else None
+    return ({"key": "cpi", "category": "Economic", "label": "Inflation (CPI YoY)",
+             "value": f"{infl}% YoY", "points": pts, "max": W_CPI,
+             "basis": f"FRED {FRED_CPI_SERIES} year-over-year; CONFIGURED (Fed ~2% target)"}, drv)
+
+
+def _unemployment_component():
+    rate = fred.latest(FRED_UNEMP_SERIES)
+    chg6 = fred.change(FRED_UNEMP_SERIES, 6)
+    if rate is None:
+        return ({"key": "unemployment", "category": "Economic", "label": "Unemployment (UNRATE)",
+                 "value": "n/a — set FRED_API_KEY", "points": round(W_UNEMP * 0.5),
+                 "max": W_UNEMP, "basis": f"FRED {FRED_UNEMP_SERIES}; set FRED_API_KEY"}, None)
+    level01 = _clamp01((UNEMP_HIGH - rate) / (UNEMP_HIGH - UNEMP_LOW))
+    # Rising unemployment is the recession signal (Sahm rule): +UNEMP_RISE_BAD pp
+    # over 6 months -> trend leg zero, falling -> full. CONFIGURED, standard-macro.
+    trend01 = 0.5 if chg6 is None else _clamp01((UNEMP_RISE_BAD - chg6) / (2 * UNEMP_RISE_BAD))
+    pts = round(W_UNEMP * (0.5 * level01 + 0.5 * trend01))
+    drv = (f"unemployment rising ({rate}%, +{chg6}pp/6mo)"
+           if (chg6 is not None and chg6 >= UNEMP_RISE_DRIVER) else None)
+    val = f"{rate}%" + (f" ({'+' if chg6 >= 0 else ''}{chg6}pp/6mo)" if chg6 is not None else "")
+    return ({"key": "unemployment", "category": "Economic", "label": "Unemployment (UNRATE)",
+             "value": val, "points": pts, "max": W_UNEMP,
+             "basis": f"FRED {FRED_UNEMP_SERIES} level + 6mo trend; CONFIGURED (Sahm-style)"}, drv)
+
+
+def _fed_funds_component():
+    rate = fred.latest(FRED_FEDFUNDS_SERIES)
+    chg12 = fred.change(FRED_FEDFUNDS_SERIES, 12)
+    if rate is None:
+        return ({"key": "fed_funds", "category": "Economic", "label": "Fed funds rate",
+                 "value": "n/a — set FRED_API_KEY", "points": round(W_FEDFUNDS * 0.5),
+                 "max": W_FEDFUNDS, "basis": f"FRED {FRED_FEDFUNDS_SERIES}; set FRED_API_KEY"}, None)
+    level01 = _clamp01((FF_RESTRICTIVE - rate) / (FF_RESTRICTIVE - FF_EASY))
+    # Policy DIRECTION dominates the regime: cutting = tailwind, hiking = headwind.
+    # +/- FF_TIGHTEN pp over 12 months spans the direction leg. CONFIGURED.
+    dir01 = 0.5 if chg12 is None else _clamp01((FF_TIGHTEN - chg12) / (2 * FF_TIGHTEN))
+    pts = round(W_FEDFUNDS * (0.6 * dir01 + 0.4 * level01))
+    drv = (f"Fed tightening (funds {rate}%, +{chg12}pp/yr)"
+           if (chg12 is not None and chg12 >= FF_TIGHTEN_DRIVER) else None)
+    val = f"{rate}%" + (f" ({'+' if chg12 >= 0 else ''}{chg12}pp/yr)" if chg12 is not None else "")
+    return ({"key": "fed_funds", "category": "Economic", "label": "Fed funds rate",
+             "value": val, "points": pts, "max": W_FEDFUNDS,
+             "basis": f"FRED {FRED_FEDFUNDS_SERIES} level + 12mo direction; CONFIGURED"}, drv)
 
 
 PILLARS = (
     _trend_component, _volatility_component, _distribution_component,
     _follow_through_component, _breadth_component, _flow_component,
-    _sentiment_component, _insider_component, _yield_curve_component,
+    _sentiment_component, _insider_component,
+    # Economic block (FRED)
+    _yield_curve_component, _cpi_component, _unemployment_component, _fed_funds_component,
     _macro_component,
 )
+
+
+def _state_of(score: int) -> tuple[str, str]:
+    if score >= STATE_CONSTRUCTIVE:
+        return "constructive", "Constructive"
+    if score >= STATE_CAUTION:
+        return "caution", "Caution"
+    return "risk_off", "Risk-Off"
+
+
+def _et_hhmm() -> str:
+    """HH:MM in US/Eastern (market time), regardless of container TZ."""
+    try:
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
+        return datetime.now(timezone.utc).astimezone(ZoneInfo("America/New_York")).strftime("%H:%M ET")
+    except Exception:
+        return time.strftime("%H:%M")
+
+
+# ── Weekly gauge — the SAME book concepts on WEEKLY bars ─────────────────────
+def _weekly_trend_score(wdf) -> Optional[float]:
+    """Minervini Trend Template (p.79) on WEEKLY bars → fraction of 5 structural
+    gates passed: close>10wk, close>30wk, 10wk>30wk, 30wk rising, close>40wk."""
+    if wdf is None or len(wdf) < WK_MA_SLOW:
+        return None
+    c = wdf["close"]
+    ma_f = c.rolling(WK_MA_FAST).mean()
+    ma_m = c.rolling(WK_MA_MID).mean()
+    ma_s = c.rolling(WK_MA_SLOW).mean()
+    i = len(c) - 1
+    px, f, m, s = float(c.iloc[i]), float(ma_f.iloc[i]), float(ma_m.iloc[i]), float(ma_s.iloc[i])
+    if any(x != x for x in (px, f, m, s)):          # NaN guard
+        return None
+    j = i - WK_TREND_RISING
+    rising = bool(j >= 0 and float(ma_m.iloc[j]) == float(ma_m.iloc[j]) and m > float(ma_m.iloc[j]))
+    gates = [px > f, px > m, f > m, rising, px > s]
+    return sum(1 for g in gates if g) / len(gates)
+
+
+def _weekly_frames() -> list:
+    out = []
+    for sym in INDEXES:
+        try:
+            w = _to_weekly(prices.load_prices(sym))
+        except Exception:
+            w = None
+        if w is not None and len(w) >= WK_MIN_BARS:
+            out.append(w)
+    return out
+
+
+def compute_weekly() -> Optional[dict]:
+    """Longer-horizon companion to `compute()`: the structural read of the WEEK,
+    from SPY/QQQ weekly bars. Returns None when index data is unavailable."""
+    frames = _weekly_frames()
+    if not frames:
+        return None
+    comps: list[dict] = []
+    drivers: list[str] = []
+
+    # 1) Weekly trend template (avg per-index gate fraction)
+    ts = [t for t in (_weekly_trend_score(w) for w in frames) if t is not None]
+    if ts:
+        frac = sum(ts) / len(ts)
+        comps.append({"key": "wk_trend", "category": "Weekly structure",
+                      "label": "Weekly trend template (10/30/40-wk)",
+                      "value": f"{round(frac * 5)}/5 gates", "points": round(WK_W_TREND * frac),
+                      "max": WK_W_TREND,
+                      "basis": "Minervini Trend Template p.79 on weekly bars (10/30/40-wk ≈ 50/150/200-day)"})
+        if frac < 0.6:
+            drivers.append("weekly trend structure broken (below key weekly MAs)")
+        elif frac >= 0.8:
+            drivers.append("weekly trend in gear (above stacked, rising weekly MAs)")
+
+    # 2) Weekly distribution
+    wd = [d for d in (_distribution_count(w, lookback=WK_DIST_LOOKBACK, down_pct=WK_DIST_DOWN_PCT)
+                      for w in frames) if d is not None]
+    if wd:
+        dist = max(wd)
+        comps.append({"key": "wk_distribution", "category": "Weekly structure",
+                      "label": "Weekly distribution",
+                      "value": f"{dist} in {WK_DIST_LOOKBACK}wk",
+                      "points": round(WK_W_DISTRIBUTION * _clamp01((WK_DIST_TOPPING - dist) / float(WK_DIST_TOPPING))),
+                      "max": WK_W_DISTRIBUTION, "basis": "configured (O'Neil-style) on weekly bars"})
+        if dist >= WK_DIST_TOPPING:
+            drivers.append(f"{dist} distribution weeks (sustained weekly selling)")
+
+    # 3) Weekly momentum — distance from the 30-week MA
+    moms = []
+    for w in frames:
+        c = w["close"]
+        ma = c.rolling(WK_MA_MID).mean()
+        if len(c) and ma.iloc[-1] == ma.iloc[-1] and float(ma.iloc[-1]):
+            moms.append((float(c.iloc[-1]) / float(ma.iloc[-1]) - 1.0) * 100.0)
+    if moms:
+        mom = sum(moms) / len(moms)
+        comps.append({"key": "wk_momentum", "category": "Weekly structure",
+                      "label": "Weekly momentum (vs 30-wk MA)",
+                      "value": f"{'+' if mom >= 0 else ''}{round(mom, 1)}%",
+                      "points": round(WK_W_MOMENTUM * _clamp01((mom - WK_MOM_ZERO) / (WK_MOM_FULL - WK_MOM_ZERO))),
+                      "max": WK_W_MOMENTUM, "basis": "index distance from the 30-week MA (configured)"})
+
+    # 4) Weekly follow-through
+    wftd = any(_follow_through(w, lookback=WK_FTD_LOOKBACK, up_pct=WK_FTD_UP_PCT,
+                               ma_window=WK_MA_FAST, min_bars=WK_MIN_BARS) for w in frames)
+    comps.append({"key": "wk_follow_through", "category": "Weekly structure",
+                  "label": "Weekly follow-through",
+                  "value": "yes" if wftd else "no",
+                  "points": WK_W_FOLLOW_THROUGH if wftd else round(WK_W_FOLLOW_THROUGH * 0.4),
+                  "max": WK_W_FOLLOW_THROUGH,
+                  "basis": "Minervini p.248 (concept) on weekly bars; configured trigger"})
+    if wftd:
+        drivers.append("weekly follow-through (institutional re-accumulation)")
+
+    # 5) Macro backdrop (reused)
+    level, _score = _macro_level()
+    mpts = {"low": WK_W_MACRO, "elevated": round(WK_W_MACRO * 0.55), "high": round(WK_W_MACRO * 0.2),
+            "severe": 0, "unknown": round(WK_W_MACRO * 0.5)}.get(level, round(WK_W_MACRO * 0.5))
+    comps.append({"key": "wk_macro", "category": "Macro", "label": "Macro backdrop",
+                  "value": level, "points": mpts, "max": WK_W_MACRO,
+                  "basis": "macro_risk regime (weekly backdrop)"})
+
+    score = max(0, min(100, round(sum(c["points"] for c in comps))))
+    state, state_label = _state_of(score)
+    return {"score": score, "state": state, "state_label": state_label,
+            "drivers": drivers, "components": comps,
+            "basis": "Minervini Trend Template p.79 + distribution/FTD concept p.248, on weekly bars"}
+
+
+def _premarket_gap() -> Optional[dict]:
+    """SPY/QQQ ETF pre-market gap vs prior close — NOT index futures (no futures
+    feed exists; Massive carries the cash ETFs, not /ES,/NQ). Freshness-guarded:
+    only returns a print from the last ~18h. {symbol: gap_pct} or None."""
+    try:
+        snap = prices.bulk_snapshot(list(INDEXES)) or {}
+    except Exception:
+        return None
+    out = {}
+    now_ms = time.time() * 1000.0
+    for sym in INDEXES:
+        d = snap.get(sym) or {}
+        last, prev, ts = d.get("last_trade_price"), d.get("prev_day_close"), d.get("last_trade_ts_ms")
+        if (isinstance(last, (int, float)) and isinstance(prev, (int, float)) and prev
+                and isinstance(ts, (int, float)) and (now_ms - ts) <= 18 * 3600 * 1000):
+            out[sym] = round((last / prev - 1.0) * 100.0, 2)
+    return out or None
+
+
+def _outlook(score: int, state: str, comps: list, weekly: Optional[dict],
+             premarket: Optional[dict]) -> dict:
+    """Conditions-based NEXT-DAY read: where the regime stands + exactly what would
+    flip it. NOT a price prediction — leading signals + regime-flip triggers."""
+    by = {c.get("key"): c for c in comps}
+    watch: list[str] = []
+
+    # distance to the nearest regime flip (the cutoffs ARE the flip lines)
+    if score >= STATE_CONSTRUCTIVE:
+        watch.append(f"{score - STATE_CONSTRUCTIVE} pts of cushion above the Constructive line ({STATE_CONSTRUCTIVE})")
+    elif score >= STATE_CAUTION:
+        watch.append(f"{STATE_CONSTRUCTIVE - score} pts would flip it up to Constructive; "
+                     f"{score - STATE_CAUTION} down to Risk-Off")
+    else:
+        watch.append(f"{STATE_CAUTION - score} pts to climb back into Caution ({STATE_CAUTION})")
+
+    dist = by.get("distribution") or {}
+    dval = dist.get("value")
+    if isinstance(dval, str) and " in " in dval:
+        try:
+            n = int(dval.split()[0])
+            if n >= DIST_TOPPING - 1:
+                watch.append(f"distribution at {n}/{DIST_TOPPING} — one more index distribution day tips it weaker")
+        except Exception:
+            pass
+
+    ft = by.get("follow_through") or {}
+    if ft.get("value") == "no" and state != "constructive":
+        watch.append(f"no recent follow-through — a +{FTD_UP_PCT}% up-day on higher volume would confirm a turn")
+
+    vol = by.get("volatility") or {}
+    if isinstance(vol.get("value"), str) and "pct" in vol.get("value", ""):
+        watch.append(f"VIX {vol.get('value')} — a spike above the 70th percentile pressures the tape")
+
+    if weekly:
+        if state == "constructive" and weekly["state"] == "risk_off":
+            watch.append("daily firm but WEEKLY structure is risk-off — treat strength as counter-trend")
+        elif state == "risk_off" and weekly["state"] == "constructive":
+            watch.append("daily weak but WEEKLY structure holds — likely a pullback inside a larger uptrend")
+
+    if premarket:
+        gtxt = ", ".join(f"{s} {'+' if g >= 0 else ''}{g}%" for s, g in premarket.items())
+        watch.append(f"pre-market (SPY/QQQ ETF print, not futures): {gtxt}")
+
+    label = {"constructive": "Trend in gear — exposure can run high",
+             "caution": "Mixed tape — smaller size, be selective",
+             "risk_off": "Defensive — capital preservation first"}[state]
+    note = f"Daily gauge {score} ({state.replace('_', ' ')})"
+    if weekly:
+        note += f" · weekly {weekly['score']} ({weekly['state'].replace('_', ' ')})"
+    note += (". Reads the CURRENT regime and the triggers that would change it — "
+             "not a prediction of where price closes. " + EXPOSURE[state]["note"])
+    return {"bias": state, "label": label, "note": note, "watch": watch}
 
 
 def _config() -> dict:
@@ -354,13 +685,15 @@ def _config() -> dict:
         "weights": {"trend": W_TREND, "macro": W_MACRO, "volatility": W_VOLATILITY,
                     "flow": W_FLOW, "breadth": W_BREADTH, "distribution": W_DISTRIBUTION,
                     "follow_through": W_FOLLOW_THROUGH, "sentiment": W_SENTIMENT,
-                    "insider": W_INSIDER, "yield_curve": W_YIELD},
+                    "insider": W_INSIDER, "yield_curve": W_YIELD, "cpi": W_CPI,
+                    "unemployment": W_UNEMP, "fed_funds": W_FEDFUNDS},
         "distribution": {"lookback": DIST_LOOKBACK, "down_pct": DIST_DOWN_PCT,
                          "topping": DIST_TOPPING},
         "follow_through": {"lookback": FTD_LOOKBACK, "up_pct": FTD_UP_PCT},
         "state_cutoffs": {"constructive": STATE_CONSTRUCTIVE, "caution": STATE_CAUTION},
-        "not_wired": ["CPI", "unemployment", "Fed funds", "FRED yield series",
-                      "true order-flow / dark-pool tape", "fear/greed index"],
+        "fred_series": {"cpi": FRED_CPI_SERIES, "unemployment": FRED_UNEMP_SERIES,
+                        "fed_funds": FRED_FEDFUNDS_SERIES, "yield_curve": FRED_CURVE_SERIES},
+        "not_wired": ["true order-flow / dark-pool tape", "fear/greed index"],
     }
 
 
@@ -399,9 +732,11 @@ def compute() -> dict:
         "drivers": drivers,
         "config": _config(),
         "disclaimer": ("Educational market-health read, not a forecast or "
-                       "personalized buy/sell/position-sizing advice. CPI, jobs, "
-                       "Fed-funds and true order-flow are not wired (need FRED / a "
-                       "tape feed) — those pillars stay neutral, not faked."),
+                       "personalized buy/sell/position-sizing advice. The Economic "
+                       "pillars (CPI, unemployment, Fed-funds, yield curve) read "
+                       "live from FRED; if no FRED_API_KEY is set they stay neutral, "
+                       "not faked. True order-flow / dark-pool tape is still not "
+                       "wired (needs a tape feed)."),
     }
 
 

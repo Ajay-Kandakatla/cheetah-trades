@@ -710,23 +710,34 @@ def test_pullback_ma_gate_is_book_structural_subset():
 
 
 # ============================================================================
-# Market Gauge contract (2026-06-05).
+# Market Gauge contract (2026-06-05; Economic pillars wired to FRED 2026-06-06).
 # Spec + page cites: docs/sepa/market_gauge_methodology.md
 #
-# OUR OWN general-market health read (not a clone of any paid indicator). Weights
-# sum 100; the O'Neil-style distribution/follow-through numbers are CONFIGURED
-# (no O'Neil book in repo) — lock them so any change is explicit, and require
-# that the gauge COMPOSES the book-grounded inputs rather than inventing a number.
+# OUR OWN general-market health read (not a clone of any paid indicator). 13
+# pillars, weights sum 100. The O'Neil-style distribution/follow-through numbers
+# and the FRED economic thresholds (CPI/UNRATE/FEDFUNDS/T10Y3M) are CONFIGURED /
+# standard-macro (no book in repo for them) — lock them so any change is explicit.
+# The Economic block is HEAVY (34/100 — Ajay 2026-06-06) and reads REAL FRED data
+# (cited by series id), not a fabricated number.
 # ============================================================================
 def test_market_gauge_locked():
     import inspect
     from sepa import market_gauge as mg
-    assert sum(mg._config()["weights"].values()) == 100          # all 10 pillars
-    assert mg.DIST_TOPPING == 5 and mg.FTD_UP_PCT == 1.4          # configured
+    w = mg._config()["weights"]
+    assert sum(w.values()) == 100                                # 13 pillars
+    # Economic block wired to FRED, weighted HEAVY: 34/100.
+    assert w["yield_curve"] == 8 and w["cpi"] == 9 \
+        and w["unemployment"] == 9 and w["fed_funds"] == 8
+    assert w["yield_curve"] + w["cpi"] + w["unemployment"] + w["fed_funds"] == 34
+    assert mg.DIST_TOPPING == 5 and mg.FTD_UP_PCT == 1.4          # configured (unchanged)
     assert mg.STATE_CONSTRUCTIVE == 67 and mg.STATE_CAUTION == 34
     src = inspect.getsource(mg)
     assert "market_context" in src and "macro_risk" in src       # composes book-grounded inputs
-    assert "FRED" in src                                         # unwired feeds flagged, not faked
+    assert "from . import fred" in src                           # economic pillars read REAL FRED data
+    assert all(s in src for s in ("CPIAUCSL", "UNRATE", "FEDFUNDS", "T10Y3M"))  # FRED series cited
+    # the now-wired economic feeds are no longer flagged as unwired
+    nw = " ".join(mg._config()["not_wired"]).lower()
+    assert "cpi" not in nw and "fed funds" not in nw
 
 
 # ============================================================================

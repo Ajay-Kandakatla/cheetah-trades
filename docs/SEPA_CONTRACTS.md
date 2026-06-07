@@ -700,7 +700,7 @@ lock any thresholds with a source-guard, and ship a methodology doc.
 
 ---
 
-## 11c. Market Gauge (2026-06-05)
+## 11c. Market Gauge (2026-06-05; Economic block wired to FRED 2026-06-06)
 
 OUR OWN general-market health read — **not** a clone of any paid indicator
 (those formulas are undisclosed; we will not reverse-engineer a real-money
@@ -709,25 +709,38 @@ signal). Educational, not advice.
 - **Output:** 0–100 score + Constructive / Caution / Risk-Off + a Minervini
   exposure band. Renders on `/market-gauge` AND as a top-right nav badge on
   **every** page (`MarketGaugeBadge`).
-- **10 pillars (weights sum 100, 6 categories — Ajay 2026-06-05):** Quant =
-  index trend in-gear (p.79) 20 + VIX 11 · Trend-tech = distribution 8 +
-  follow-through 5 (p.248) · Breadth 8 · Flow & Liquidity = net $-vol + CMF
-  aggregate 11 · Sentiment = options put/call SOIR 8 · Alt-data = insider
-  cluster-buy breadth 6 · Economic = yield curve 10y−3m (`^TNX`/`^IRX`) 11 ·
-  Macro = regime + news 12. All REAL data or honestly neutral.
-- **NOT wired (flagged in `config.not_wired`, never faked):** CPI / jobs /
-  Fed-funds / FRED series, true order-flow / dark-pool, fear/greed. Economic
-  pillar is yield-curve only until a FRED feed is added.
+- **13 pillars (weights sum 100, 6 categories):** Quant = index trend in-gear
+  (p.79) 15 + VIX 8 · Trend-tech = distribution 6 + follow-through 4 (p.248) ·
+  Breadth 6 · Flow & Liquidity = net $-vol + CMF aggregate 8 · Sentiment =
+  options put/call SOIR 6 · Alt-data = insider cluster-buy breadth 4 · **Economic
+  (FRED) = yield curve `T10Y3M` 8 + CPI YoY `CPIAUCSL` 9 + unemployment `UNRATE`
+  9 + Fed-funds `FEDFUNDS` 8 = 34** · Macro = regime + news 9. All REAL data or
+  honestly neutral.
+- **Economic block is HEAVY (34/100 — Ajay 2026-06-06):** the macro block now
+  outweighs the price-trend block. The 9 non-economic pillars were trimmed
+  proportionally (×66/89) to keep the sum at 100; the old weights live in git.
+- **Economic data is REAL, from FRED** (free key): `backend/sepa/fred.py` reads
+  the four series above, cited by series id, cached in-process 24 h. Key is the
+  `FRED_API_KEY` env var (in `backend/.env`, never hardcoded). No key → the four
+  pillars degrade to neutral (`"n/a — set FRED_API_KEY"`), never faked. The
+  yfinance `^TNX`/`^IRX` proxy (and its ×10/NaN hack) was **replaced** by FRED
+  `T10Y3M`.
+- **NOT wired (flagged in `config.not_wired`, never faked):** true order-flow /
+  dark-pool tape, fear/greed index. (CPI / jobs / Fed-funds / FRED yield are now
+  WIRED — no longer in `not_wired`.)
 - **Exposure bands** restate Minervini pp.304–305 (scale down in weak tapes,
   pyramid up when in gear, pace re-entry) — educational, NOT advice.
 - **Configured (NOT book-cited):** the O'Neil-style distribution/FTD numbers
   (`DIST_TOPPING=5`, `FTD_UP_PCT=1.4`, windows) — we don't hold *How to Make
-  Money in Stocks*. Locked by `test_market_gauge_locked`; drop the O'Neil PDF to
-  make them exact.
-- **Code:** `sepa/market_gauge.py` (`compute()` / `get_gauge()`, 5-min cache);
-  `GET /market/gauge`. `scanner.py` and the daily scan untouched (Rule #2).
-- **Contracts:** `backend/tests/test_market_gauge.py` +
-  `test_sepa_contracts.py::test_market_gauge_locked`.
+  Money in Stocks* — AND the FRED economic thresholds (Fed ~2% target, Sahm-rule
+  rising unemployment, tightening-vs-easing, curve inversion): the FRED *data* is
+  authoritative, the macro *interpretation* is standard-macro, not book-derived.
+  All locked by `test_market_gauge_locked`.
+- **Code:** `sepa/market_gauge.py` (`compute()` / `get_gauge()`, 5-min cache) +
+  `sepa/fred.py` (FRED reader, 24 h cache); `GET /market/gauge`. `scanner.py` and
+  the daily scan untouched (Rule #2); no new cron.
+- **Contracts:** `backend/tests/test_market_gauge.py` (behavioral, incl. FRED
+  pillars + graceful degradation) + `test_sepa_contracts.py::test_market_gauge_locked`.
 
 ---
 
