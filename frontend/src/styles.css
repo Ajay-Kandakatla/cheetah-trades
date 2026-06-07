@@ -3751,6 +3751,35 @@ tr:last-child td { border-bottom: none; }
 }
 .market-regime-banner__tagline { color: var(--ink-muted); flex: 1 1 auto; min-width: 200px; }
 .market-regime-banner__time    { color: var(--ink-subtle); font-size: 11px; }
+/* Weekly-gauge chip in the morning banner */
+.mgb-week {
+  font: 700 11px var(--sans, system-ui); padding: 2px 8px; border-radius: 999px;
+  border: 1px solid currentColor; white-space: nowrap;
+}
+.mgb-week--constructive { color: var(--positive); }
+.mgb-week--caution      { color: var(--warn); }
+.mgb-week--risk_off     { color: var(--negative); }
+
+/* ── Usage Heatmap page ──────────────────────────────────────────────────── */
+.uh-stats { color: var(--ink-subtle, #9aa8c8); margin: 0.2rem 0 1rem; font-size: 0.85rem; }
+.uh-card {
+  margin: 0 0 1.4rem; padding: 1rem 1.2rem; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,22,0.35);
+}
+.uh-card .eyebrow { margin-bottom: 0.7rem; }
+.uh-heat { display: flex; flex-direction: column; gap: 3px; overflow-x: auto; }
+.uh-heat__row { display: flex; gap: 3px; align-items: center; }
+.uh-heat__row--head { opacity: 0.6; }
+.uh-heat__wd { width: 34px; flex: 0 0 34px; font: 600 0.7rem var(--sans, system-ui); color: var(--ink-subtle, #9aa8c8); }
+.uh-heat__hr { width: 14px; flex: 0 0 14px; text-align: center; font: 0.6rem var(--sans, system-ui); color: var(--ink-subtle, #9aa8c8); }
+.uh-cell { width: 14px; height: 14px; flex: 0 0 14px; border-radius: 2px; }
+
+.uh-bar { display: flex; align-items: center; gap: 0.6rem; padding: 3px 0; }
+.uh-bar__label { width: 120px; flex: 0 0 120px; font: 600 0.82rem var(--sans, system-ui); text-transform: lowercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh-bar__track { flex: 1 1 auto; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.uh-bar__fill { display: block; height: 100%; background: var(--gold-strong, #d4af37); border-radius: 999px; }
+.uh-bar__fill--alt { background: var(--positive, #4ade80); }
+.uh-bar__num { flex: 0 0 auto; font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); min-width: 90px; text-align: right; }
 .market-regime-banner__dot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%;
   background: var(--ink-subtle); animation: pulse 1.6s ease-in-out infinite;

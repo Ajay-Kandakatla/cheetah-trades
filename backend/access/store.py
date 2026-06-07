@@ -143,6 +143,9 @@ FEATURE_CATALOG: list[dict] = [
     # flashcard bank by topic with deep-links from push notifications.
     # Default ON for everyone — trading education isn't owner-only.
     {"id": "learn",         "label": "Learning",            "group": "account",   "default": True},
+    # Usage heatmap — personal analytics: which pages/features Ajay uses
+    # heavily + a weekday×hour heatmap. Owner-on via added_in/VERSION.
+    {"id": "usage",         "label": "Usage Heatmap",       "group": "account",   "default": False, "added_in": 6},
     # Personal fitness — volleyball training module tuned to Ajay's
     # injury profile. Default OFF for friends (it's personal); owners
     # get it via the universal owner-feature bypass in store.py.
@@ -175,7 +178,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 5
+CATALOG_VERSION = 6
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

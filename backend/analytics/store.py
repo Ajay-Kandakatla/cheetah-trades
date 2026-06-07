@@ -254,3 +254,53 @@ def aggregate_dashboard(days: int = 14) -> dict:
         "total_sec":       sum(u["total_sec"] for u in users),
         "window_days":     days,
     }
+
+
+def personal_heatmap(email: str, days: int = 30) -> dict:
+    """Per-user usage rollup for the /usage page: top modules/routes by visits +
+    dwell, and a weekday(Sun=0)×hour(ET) heatmap of when the app is used.
+    Reads the same usage_events the page-view tracker already writes."""
+    from collections import defaultdict
+    db = _get_db()
+    empty = {"available": False, "modules": [], "routes": [], "heatmap": {},
+             "total_visits": 0, "total_sec": 0, "window_days": days}
+    if db is None or not email:
+        return empty
+    try:
+        from zoneinfo import ZoneInfo
+        et = ZoneInfo("America/New_York")
+    except Exception:
+        et = None
+    cutoff = _now() - days * 86400
+    mods: dict = defaultdict(lambda: {"visits": 0, "total_sec": 0})
+    routes: dict = defaultdict(lambda: {"visits": 0, "total_sec": 0})
+    heat: dict = defaultdict(int)
+    total_visits = total_sec = 0
+    try:
+        cur = db.usage_events.find(
+            {"user_email": email, "started_at": {"$gte": cutoff}},
+            {"module": 1, "route": 1, "started_at_dt": 1, "duration_sec": 1},
+        )
+        for d in cur:
+            m, r = (d.get("module") or "other"), (d.get("route") or "/")
+            dur = int(d.get("duration_sec") or 0)
+            mods[m]["visits"] += 1; mods[m]["total_sec"] += dur
+            routes[r]["visits"] += 1; routes[r]["total_sec"] += dur
+            total_visits += 1; total_sec += dur
+            dt = d.get("started_at_dt")
+            if dt is not None and et is not None:
+                try:
+                    e = dt.astimezone(et)
+                    heat[f"{(e.weekday() + 1) % 7}_{e.hour}"] += 1   # Mon=0 -> Sun=0
+                except Exception:
+                    pass
+    except Exception:
+        return empty
+
+    def _top(dd):
+        return sorted(({"key": k, **v} for k, v in dd.items()),
+                      key=lambda x: -x["visits"])[:30]
+
+    return {"available": True, "total_visits": total_visits, "total_sec": total_sec,
+            "modules": _top(mods), "routes": _top(routes),
+            "heatmap": dict(heat), "window_days": days}

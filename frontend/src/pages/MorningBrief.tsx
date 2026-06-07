@@ -4,7 +4,6 @@ import { useCurrentUser } from '../hooks/useUser';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MorningTodosCard } from '../components/MorningTodosCard';
 import { HoldingsCard } from '../components/HoldingsCard';
-import { MinerviniLesson } from '../components/MinerviniLesson';
 import { useMorningBrief } from '../hooks/useMorningBrief';
 import type { Verdict, OverallAction } from '../hooks/useMorningBrief';
 import { useLiveSignals, useWatchlist, usePaperTrading } from '../hooks/useDayTrading';
@@ -74,6 +73,20 @@ export function MorningBrief() {
         </div>
       </header>
 
+      {/* PERSONAL TODOS — promoted to the TOP (Ajay 2026-06-07: "todo list
+          first, then portfolio"). Independent fetch, renders ASAP. */}
+      <section className="morning-overnight-section">
+        <MorningTodosCard />
+      </section>
+
+      {/* PORTFOLIO — actual holdings + live P/L, second per Ajay's order.
+          Inline in the brief payload (no extra round trip). */}
+      {data?.holdings && (
+        <section className="morning-overnight-section">
+          <HoldingsCard holdings={data.holdings} />
+        </section>
+      )}
+
       {/* HERO VERDICT — shows skeleton until brief data arrives. */}
       {data && action ? (
         <section className={`morning-hero morning-hero--${action.mood}`}>
@@ -101,27 +114,6 @@ export function MorningBrief() {
           </div>
         </section>
       )}
-
-      {/* MINERVINI DAILY LESSON — rotating tips on the day's topic with a
-          full-framework expand. Anchored at the top so the discipline is
-          the FIRST thing seen at decision time. */}
-      <section className="morning-overnight-section">
-        <MinerviniLesson />
-      </section>
-
-      {/* HOLDINGS — actual portfolio + live P/L. Inline in the brief
-          payload (no extra round trip). Stays above-fold so it's seen
-          on every brief open. */}
-      {data?.holdings && (
-        <section className="morning-overnight-section">
-          <HoldingsCard holdings={data.holdings} />
-        </section>
-      )}
-
-      {/* PERSONAL TODOS — independent fetch, renders ASAP regardless of brief */}
-      <section className="morning-overnight-section">
-        <MorningTodosCard />
-      </section>
 
       {/* Below-fold sections — defer-mount so the stocks (above) render
           first on phone. User asked for stocks-first, then cooking. */}

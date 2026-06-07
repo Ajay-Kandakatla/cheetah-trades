@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { trackFeature } from '../lib/usageTracker';
 
 type Props = {
   title: string;
@@ -36,7 +37,10 @@ export function InfoButton({ title, children, inline = false }: Props) {
         className="info-button__trigger"
         aria-label={`What is ${title}?`}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((v) => {
+          if (!v) trackFeature(`info:${title}`);   // which features the user explores
+          return !v;
+        })}
       >
         ⓘ
       </button>

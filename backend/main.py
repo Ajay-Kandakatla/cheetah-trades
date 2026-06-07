@@ -1168,6 +1168,25 @@ async def market_gauge_get(force: bool = Query(False, description="Bypass the 5-
     return JSONResponse(_scrub_nan(await asyncio.to_thread(market_gauge.get_gauge, force)))
 
 
+@app.post("/usage/track")
+async def usage_track(payload: dict, email: str = Depends(current_user_email)):
+    """Record a batch of usage events (page views + feature interactions) for the
+    /usage heatmap. Owner-only; stores route/feature NAMES only — no PII."""
+    import usage
+    events = (payload or {}).get("events") or []
+    return JSONResponse(await asyncio.to_thread(usage.record_events, events))
+
+
+@app.get("/usage/summary")
+async def usage_summary(days: int = Query(30, ge=1, le=180),
+                        email: str = Depends(current_user_email)):
+    """Aggregated usage — top pages/features + a weekday×hour heatmap of when YOU
+    use the app (page data from the existing analytics; feature clicks from
+    usage_stats). Powers /usage."""
+    import usage
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(usage.summary, email, days)))
+
+
 @app.get("/market/overview")
 async def market_overview():
     """Overall-market context for the heatmap header: the major index ETFs with
