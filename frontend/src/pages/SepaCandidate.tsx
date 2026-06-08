@@ -30,6 +30,8 @@ const SignalDrillModal = lazy(() =>
 import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PivotMeter } from '../components/PivotMeter';
+import { StopsPanel } from '../components/StopsPanel';
+import { EntryExitPlanBlock } from '../components/EntryExitPlanBlock';
 import { pivotTiming } from '../lib/pivotTiming';
 import { PositionLens } from '../components/PositionLens';
 import { SepaScoreBar } from '../components/SepaScoreBar';
@@ -1005,17 +1007,25 @@ export function SepaCandidatePage() {
                   use this tab for the buy-side trade plan.)
                 </div>
 
-                {/* Pivot buy framework — the visual "right time to buy" gauge
-                    (same one the leaderboard cards use), built from this ticker's
-                    scan record. Leads the buy section; the numeric trade plan
-                    follows below. */}
-                {pivotT && pivotT.hasSetup && (
+                {/* Pivot buy framework — the SAME block the leaderboard cards
+                    show: BUY + STOPS·PICK ONE (StopsPanel) → the pivot gauge
+                    (PivotMeter) → the timed decision / WATCH line
+                    (EntryExitPlanBlock). Built from this ticker's entry_exit. */}
+                {base?.entry_exit && (
                   <div className="sepa-pivot-framework" style={{ marginBottom: '1rem' }}>
-                    <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
                       Pivot · buy framework
                       <InfoButton title="Pivot buy framework" inline>{PivotFrameworkInfo}</InfoButton>
                     </div>
-                    <PivotMeter t={pivotT} />
+                    {base.entry_exit.exit?.stops?.length ? (
+                      <StopsPanel exit={base.entry_exit.exit} />
+                    ) : null}
+                    {pivotT?.hasSetup && (
+                      <div style={{ margin: '0.6rem 0' }}>
+                        <PivotMeter t={pivotT} />
+                      </div>
+                    )}
+                    <EntryExitPlanBlock plan={base.entry_exit} />
                   </div>
                 )}
 
