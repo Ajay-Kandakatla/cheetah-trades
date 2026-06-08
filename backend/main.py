@@ -783,7 +783,12 @@ app.include_router(access_router)
 # futures, bear case, sector). Backed by 6h Mongo cache so spamming
 # the 🌍 chip on a candidate card doesn't ring up repeat Claude bills.
 from macro import router as macro_router  # noqa: E402
-app.include_router(macro_router)
+# NOTE: macro_router exposes a CATCH-ALL `/macro/{symbol}` route. It must be
+# included AFTER the specific `/macro/calendar` route is registered, otherwise
+# it swallows `/macro/calendar` (matched as symbol="calendar") and returns the
+# LLM macro-brief shape instead of the calendar — which hard-crashed the Market
+# Gauge page (2026-06-07, `s.macro.length` of undefined). The include now lives
+# right after the `/macro/calendar` handler below.
 
 
 # Finnhub v2 — JIT (just-in-time) Finnhub access. Frontend cards call
@@ -1186,6 +1191,12 @@ async def macro_calendar_get(days: int = Query(14, ge=7, le=30),
     context, plus earnings ahead for tracked names. Educational, NOT a forecast."""
     import macro_calendar
     return JSONResponse(_scrub_nan(await asyncio.to_thread(macro_calendar.get_macro_calendar, force, days)))
+
+
+# Catch-all `/macro/{symbol}` (LLM macro brief) is registered HERE — AFTER the
+# specific `/macro/calendar` route above — so it does NOT swallow it. Moving
+# this include back up next to its import re-breaks the Market Gauge page.
+app.include_router(macro_router)
 
 
 @app.get("/longterm/summary")

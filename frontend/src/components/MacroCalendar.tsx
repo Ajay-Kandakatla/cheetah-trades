@@ -42,7 +42,11 @@ export function MacroCalendar() {
     })();
   }, []);
 
-  if (!d) return null;
+  // Defense in depth: only render once we have the CALENDAR shape. If the
+  // endpoint ever returns a different object (e.g. a route collision serving
+  // the LLM macro-brief), bail to null instead of crashing the whole gauge
+  // page on `d.macro.length` of undefined.
+  if (!d || !Array.isArray(d.macro)) return null;
 
   return (
     <section className="mc-cal">
@@ -69,7 +73,7 @@ export function MacroCalendar() {
         <p className="mono" style={{ opacity: 0.6 }}>No scheduled releases in the next {d.days} days.</p>
       )}
 
-      {d.earnings_by_day.length > 0 && (
+      {Array.isArray(d.earnings_by_day) && d.earnings_by_day.length > 0 && (
         <div className="mc-earn">
           <div className="mc-earn__head">Earnings to watch · your tracked names</div>
           {d.earnings_by_day.map((ed) => (
@@ -86,7 +90,7 @@ export function MacroCalendar() {
         {(['1', '2', '3'] as const).map((t) => (
           <div key={t} className="mc-tier">
             <span className={`mc-tb mc-tb--${t}`}>T{t}</span>
-            <strong>{d.tier_labels[t]}</strong>
+            <strong>{d.tier_labels?.[t]}</strong>
             <span className="mc-tier__items"> — {d.tier_taxonomy[t]?.join(' · ')}</span>
           </div>
         ))}
