@@ -132,6 +132,12 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
     {"id": "day-trading",   "label": "Day Trading",         "group": "tools",     "default": False},
     {"id": "supply-demand", "label": "Supply / Demand",     "group": "tools",     "default": False},
+    # Demand Zones (2026-06-07): Minervini-basing demand-zone price BANDS for the
+    # leaderboard + day-trading universe — each name's most-recent VCP base
+    # (floor → pivot), depth-classified, with where price sits vs the band.
+    # Educational; derived from the contract-locked vcp.detect. Owner-on via
+    # added_in/VERSION.
+    {"id": "demand-zones",  "label": "Demand Zones",        "group": "tools",     "default": False, "added_in": 8},
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
@@ -181,7 +187,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 7
+CATALOG_VERSION = 8
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

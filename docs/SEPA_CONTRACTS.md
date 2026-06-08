@@ -462,6 +462,13 @@ Code location: `backend/sepa/vcp.py`. Contracts: `backend/tests/test_vcp.py`
 (behavioral, synthetic series) + `tests/test_sepa_contracts.py::test_vcp_constants_locked`
 (source guard). Full spec: **`docs/sepa/vcp_methodology.md`**.
 
+> **Downstream consumer — Demand Zones (2026-06-07).** `backend/supply_demand/
+> demand_zones.py` reads `base_low`, `pivot_buy_price`, and `base_depth_pct` off
+> `vcp.detect` to build the `/demand-zones` price bands. Renaming or dropping any
+> of those three fields breaks the demand-zone band — guarded by
+> `tests/test_supply_demand.py::test_zone_source_is_the_locked_vcp_detector` and
+> the base→zone mapping tests. Spec: `docs/supply_demand/demand_zones_methodology.md`.
+
 > **Base-window rewrite (2026-06-01).** The detector now measures the base on
 > the **most recent CONTRACTING consolidation**, not high-to-low across the
 > whole 325-bar window. Book p.205: *"the contractions will be smaller from left

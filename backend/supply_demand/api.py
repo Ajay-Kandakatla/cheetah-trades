@@ -15,6 +15,7 @@ from . import whales_13d as whales_13d_mod
 from . import flow as flow_mod
 from . import equity_premium as equity_premium_mod
 from . import stock_supply_demand as stocks_mod
+from . import demand_zones as zones_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
@@ -41,6 +42,25 @@ async def get_stock_supply_demand(
     if state in ("demand", "supply", "churning"):
         rows = [r for r in rows if r["state"] == state]
     return {**data, "rows": rows[:limit], "n_shown": min(len(rows), limit)}
+
+
+@router.get("/supply-demand/demand-zones")
+async def get_demand_zones(force: bool = Query(False, description="bypass the 3h cache and recompute")):
+    """Minervini-basing demand-zone bands for the leaderboard + day-trading
+    universe (Ch.10 pp.197-213).
+
+    Each name's most-recent VCP consolidation base becomes a price band —
+    `zone_low` (the base floor where strong hands accumulate, Fig 10.8 p.205) up
+    to `zone_high` (the pivot/breakout line, p.203) — classified by correction
+    depth (constructive 8-35% · deep · failure-prone ≥60%, p.210-211), with
+    where the current price sits relative to the band (in / above / below) and
+    its signed distance to it. Sorted in-zone (pullbacks) then nearest first.
+
+    Educational — a structural read of where demand showed up, NOT a buy signal
+    and NOT advice. Derived from the contract-locked `sepa.vcp.detect`.
+    """
+    import asyncio
+    return await asyncio.to_thread(zones_mod.compute_zones, force)
 
 
 @router.get("/supply-demand/graph")

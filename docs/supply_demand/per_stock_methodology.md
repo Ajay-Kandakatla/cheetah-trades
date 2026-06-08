@@ -116,3 +116,20 @@ Additive so it spreads instead of saturating at 100:
 `backend/tests/test_supply_demand.py` locks the overhead-supply metric
 (new-high → 0, deep-correction → high, monotonic) and the state precedence
 (distribution → supply; clear-runway + accumulation → demand).
+
+## 9. Demand Zones (companion — the price BAND)
+
+This screen answers *whether* a name is in demand (a state). The companion
+**Demand Zones** feature answers *where* — it renders each name's most-recent
+consolidation **base** as a price band (floor `base_low` → pivot
+`pivot_buy_price`), classified by correction depth (constructive 8-35% / deep /
+failure-prone ≥60%, Minervini p.210-211), with where the current price sits
+relative to it (in / above / below). It is derived from the same contract-locked
+`sepa.vcp.detect` and is **descriptive, not advice**.
+
+- **Code:** `backend/supply_demand/demand_zones.py`
+- **Endpoint:** `GET /supply-demand/demand-zones`
+- **Page:** `/demand-zones` (leaderboard + day-trading universe)
+- **Spec + page cites:** `docs/supply_demand/demand_zones_methodology.md`
+- **Contract:** same file — `tests/test_supply_demand.py` (depth bands, geometry,
+  base→zone mapping, source guard `vcp_mod is sepa.vcp`).
