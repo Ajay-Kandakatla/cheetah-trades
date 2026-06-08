@@ -7,6 +7,7 @@
  */
 import { InfoButton } from '../components/InfoButton';
 import { ReactionMap } from '../components/ReactionMap';
+import { MacroCalendar } from '../components/MacroCalendar';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
 
 const PageInfo = (
@@ -161,6 +162,9 @@ export function MarketGaugePage() {
                 ))}
             </section>
           )}
+
+          {/* Macro calendar — tiered "what's ahead" for the regime */}
+          <MacroCalendar />
 
           {/* How people "read the week" */}
           <section className="mg-explain">
