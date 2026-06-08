@@ -24,12 +24,13 @@ from .data import load_intraday, trading_days_back
 from .signals import orb, gap_and_go, bull_flag, vwap_reversion, momentum_failure
 
 
+# Long-only (bull swing): the short-only momentum_failure strategy is excluded,
+# and every strategy here is filtered to long signals at the detect() call sites.
 SIGNAL_REGISTRY = {
     "orb": orb,
     "gap_and_go": gap_and_go,
     "bull_flag": bull_flag,
     "vwap_reversion": vwap_reversion,
-    "momentum_failure": momentum_failure,
 }
 
 
@@ -52,6 +53,7 @@ def backtest_symbol(symbol: str, days: int = 30, strategy: str = "orb",
             continue
         days_evaluated += 1
         signals = mod.detect(df, **detect_kwargs)
+        signals = [s for s in signals if s.get("side") == "long"]   # long-only (bull swing)
         if signals:
             days_with_signal += 1
         for sig in signals:

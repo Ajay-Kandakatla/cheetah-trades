@@ -58,38 +58,31 @@ DEFAULT_WATCHLIST = ["TSLA", "NVDA", "COIN", "MSTR", "AMD", "PLTR", "META", "AAP
 STRATEGY_INFO = {
     "orb": {
         "name": "Opening Range Breakout",
-        "description": "Break above/below first 15min RTH high/low on volume.",
+        "description": "Break above the first 15-min RTH high on volume (long).",
         "research": "Toby Crabel (1990), Linda Raschke (1995)",
-        "side": "both",
+        "side": "long",
         "30d_baseline_winrate": 43.4, "30d_baseline_avgR": 0.20, "30d_baseline_pf": 1.39,
     },
     "gap_and_go": {
         "name": "Gap and Go",
-        "description": "Premarket gap ≥1% + first-bar confirmation + breakout above 5-min range.",
+        "description": "Premarket gap-UP ≥1% + first-bar confirmation + breakout above the 5-min high (long).",
         "research": "Ross Cameron / Warrior Trading; classic gappers framework.",
-        "side": "both",
+        "side": "long",
         "note": "Rare-fire on calm tape (0 trades in last 30d on this watchlist). Catches big premarket-driven days.",
     },
     "bull_flag": {
-        "name": "Bull/Bear Flag continuation",
-        "description": "Strong impulse move (≥2%) + tight consolidation + volume-confirmed breakout.",
+        "name": "Bull Flag continuation",
+        "description": "Strong up-impulse (≥2%) + tight consolidation + volume-confirmed breakout (long).",
         "research": "Stockbee / classical chart patterns",
-        "side": "both",
+        "side": "long",
         "30d_baseline_winrate": 44.4, "30d_baseline_avgR": 0.31, "30d_baseline_pf": 1.9,
     },
     "vwap_reversion": {
         "name": "VWAP Reversion",
-        "description": "Price extended ≥1.5 ATR from VWAP with reversal candle. Mean-reversion fade.",
+        "description": "Price extended ≥1.5 ATR BELOW VWAP with a reversal candle — fade back up to VWAP (long).",
         "research": "Brett Steenbarger / Mike Bellafiore",
-        "side": "both",
-        "warning": "Negative expectancy on momentum names (-0.11 avgR over 30d). Works better in choppy regimes.",
-    },
-    "momentum_failure": {
-        "name": "Momentum Failure (short-only)",
-        "description": "Parabolic +3% move + topping candle + confirmation. Fade exhausted moves.",
-        "research": "Bo Yoder / Steenbarger",
-        "side": "short",
-        "warning": "Asymmetric — shorts are harder than longs in equity markets. Works best on COIN-like names.",
+        "side": "long",
+        "warning": "Long dip-fades only. Works in choppy/range days, weak in strong trends — use selectively.",
     },
 }
 
@@ -186,9 +179,11 @@ async def get_bars(symbol: str, days: int = Query(1, ge=1, le=10),
     }
 
 
+# Long-only (bull swing): momentum_failure is short-only so it's excluded; the
+# rest are filtered to long signals at the scan call sites below.
 _STRATEGIES = {
     "orb": orb, "gap_and_go": gap_and_go, "bull_flag": bull_flag,
-    "vwap_reversion": vwap_reversion, "momentum_failure": momentum_failure,
+    "vwap_reversion": vwap_reversion,
 }
 
 
@@ -213,7 +208,7 @@ async def signals_today(
             if mod is None:
                 continue
             try:
-                sigs = mod.detect(df)
+                sigs = [x for x in mod.detect(df) if x.get("side") == "long"]   # long-only (bull swing)
             except Exception:
                 continue
             for sig in sigs:
@@ -236,7 +231,7 @@ async def signals_symbol_today(symbol: str,
         if mod is None:
             continue
         try:
-            sigs = mod.detect(df)
+            sigs = [x for x in mod.detect(df) if x.get("side") == "long"]   # long-only (bull swing)
         except Exception:
             continue
         for sig in sigs:

@@ -16,13 +16,12 @@ const STRATEGY_COLORS: Record<string, string> = {
   gap_and_go:        '#a855f7',
   bull_flag:         'var(--positive)',
   vwap_reversion:    '#06b6d4',
-  momentum_failure:  'var(--negative)',
 };
 
 const StrategiesInfo = (
   <>
     <p>
-      Five intraday setups, each from a documented day-trading framework. Toggle a
+      Four long-only setups, each from a documented day-trading framework. Toggle a
       chip to include/exclude it from the live scan + paper trades. The “%·R” on a
       chip is its 30-day walk-forward backtest (win&nbsp;rate · average&nbsp;R).
     </p>
@@ -49,15 +48,9 @@ const StrategiesInfo = (
       </li>
       <li>
         <strong>VWAP Reversion</strong> — <em>Steenbarger / Bellafiore.</em> A
-        mean-reversion fade: when price stretches ≥1.5&nbsp;ATR from VWAP with a
-        reversal candle, fade it back toward VWAP. ⚠ Works in choppy/range days,
-        loses on trending momentum names — use selectively.
-      </li>
-      <li>
-        <strong>Momentum Failure (short-only)</strong> — <em>Yoder / Steenbarger.</em>{' '}
-        A parabolic spike (+3% on high RelVol) exhausts; a topping candle plus a
-        confirmation close below it = short the failure. ⚠ Asymmetric — shorts are
-        harder; best on high-beta names like COIN.
+        long dip-fade: when price stretches ≥1.5&nbsp;ATR <em>below</em> VWAP with a
+        reversal candle, fade it back up to VWAP. ⚠ Works in choppy/range days,
+        weak in strong trends — use selectively.
       </li>
     </ul>
     <p>
@@ -84,7 +77,7 @@ export function DayTrading() {
   useEffect(() => {
     if (watchlist.length && !watchlist.includes(selected)) setSelected(watchlist[0]);
   }, [watchlist]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const [activeStrategies, setActiveStrategies] = useState<Set<string>>(new Set(['orb', 'bull_flag', 'gap_and_go', 'momentum_failure']));
+  const [activeStrategies, setActiveStrategies] = useState<Set<string>>(new Set(['orb', 'bull_flag', 'gap_and_go']));
   const [reviewSymbol, setReviewSymbol] = useState<string | null>(null);
 
   const stratFilter = useMemo(() => Array.from(activeStrategies), [activeStrategies]);
@@ -110,12 +103,12 @@ export function DayTrading() {
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
           <div className="eyebrow">№ 06 — Methodology</div>
-          <h1 className="display cm-pagehead__title">Day Trading · 5 Strategies + Live Paper</h1>
+          <h1 className="display cm-pagehead__title">Day Trading · 4 Strategies + Live Paper</h1>
           <p className="lede">
-            ORB, Gap-and-Go, Bull Flag, VWAP Reversion, Momentum Failure short.
-            Walk-forward backtested on 30 trading days. Paper-trades all signals
-            in real time during market hours — no orders placed, just hypothetical
-            P&L tracking with 1% risk per trade.
+            ORB, Gap-and-Go, Bull Flag, VWAP Reversion — <strong>long-only (bull
+            swing)</strong>. Walk-forward backtested on 30 trading days.
+            Paper-trades all signals in real time during market hours — no orders
+            placed, just hypothetical P&L tracking with 1% risk per trade.
           </p>
 
           {/* Dynamic universe — today's liquid movers, not a fixed list */}

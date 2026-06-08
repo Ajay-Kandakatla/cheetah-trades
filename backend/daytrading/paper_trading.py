@@ -64,7 +64,7 @@ def _scan_symbol(symbol: str, today: date, strategies: Optional[list[str]] = Non
         if mod is None:
             continue
         try:
-            signals = mod.detect(df)
+            signals = [s for s in mod.detect(df) if s.get("side") == "long"]   # long-only (bull swing)
         except Exception as exc:
             log.warning("detect() failed %s/%s: %s", symbol, strat_name, exc)
             continue
