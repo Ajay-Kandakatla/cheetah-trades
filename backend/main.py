@@ -1857,6 +1857,16 @@ async def sepa_confluence_get(force: bool = Query(False, description="Bypass the
     return JSONResponse(_scrub_nan(await asyncio.to_thread(confluence.get_confluence, force)))
 
 
+@app.get("/sepa/at-pivot")
+async def sepa_at_pivot_get(force: bool = Query(False, description="Bypass the 2-min cache")):
+    """At-the-pivot — SEPA candidates sitting AT or just under their buy point today
+    (Stage 2, not extended, not climaxing), with a LIVE-price overlay flagging which
+    are still at the pivot vs. already gapped over it. The low-risk Minervini entry
+    is the breakout at the pivot (p.203), not chasing. See backend/sepa/at_pivot.py."""
+    from sepa import at_pivot
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(at_pivot.get_at_pivot, force)))
+
+
 @app.get("/sepa/analysis/{symbol}")
 async def sepa_analysis_endpoint(
     symbol: str,

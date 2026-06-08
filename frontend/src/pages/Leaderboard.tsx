@@ -19,6 +19,7 @@ import { SepaRankCompare } from '../components/SepaRankCompare';
 import { MoneyMovement } from '../components/MoneyMovement';
 import { CrossJunctions } from '../components/CrossJunctions';
 import { TopConfluence } from '../components/TopConfluence';
+import { AtPivotToday } from '../components/AtPivotToday';
 
 const PageInfo = (
   <>
@@ -60,6 +61,8 @@ export function LeaderboardPage() {
           </p>
         </div>
       </div>
+
+      <AtPivotToday />
 
       <TopConfluence />
 
