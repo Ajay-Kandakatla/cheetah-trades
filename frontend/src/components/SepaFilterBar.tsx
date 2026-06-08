@@ -58,6 +58,12 @@ export type SepaFilters = {
    *  contraction ≤ 5% (book pp.198/202; user 2026-06-02 "5% is good"). Optional
    *  so SepaV2 keeps compiling. */
   tightPivotOnly?: boolean;
+  /** Keep only names already AT/through the pivot inside the +5% buy zone
+   *  (pivotTiming GO / AT_PIVOT) — buyable now. Optional so SepaV2 keeps compiling. */
+  buyZoneOnly?: boolean;
+  /** Keep only names coiling within 5% BELOW the pivot (pivotTiming COILING/WAIT)
+   *  — close to the trigger, a watch-for-the-break list. Optional. */
+  nearPivotOnly?: boolean;
   /** Keep only names with a STRONG sales-confidence read (tier strong/explosive
    *  — ≥25% YoY revenue, Bonde's "preferred"). See lib sales score. Optional so
    *  SepaV2 keeps compiling. */
@@ -208,6 +214,8 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     (filters.decision ?? 'ALL') !== 'ALL',
     (filters.breakoutWindow ?? 'TODAY') !== 'TODAY',
     filters.tightPivotOnly,
+    filters.buyZoneOnly,
+    filters.nearPivotOnly,
     filters.salesStrongOnly,
     filters.stage !== 'ALL',
     filters.moatMin !== 0,
@@ -299,6 +307,20 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             title="Only names whose FINAL contraction is ≤ 5% — the textbook-tight Minervini pivot (book pp.198/202: FSII 5% handle, VIVO 3%). The genuinely book-tight setups, where a break on volume is the cleanest entry."
           >
             ⚡ Tight pivot ≤5%
+          </button>
+          <button
+            className={`sepa-chip ${filters.nearPivotOnly ? 'is-active' : ''}`}
+            onClick={() => set('nearPivotOnly', !filters.nearPivotOnly)}
+            title="Close to the trigger — coiling within 5% BELOW the pivot (not yet broken out). Your watch-for-the-break list (book pp.198-205: buy as it crosses the pivot on volume)."
+          >
+            ◓ Close to trigger
+          </button>
+          <button
+            className={`sepa-chip ${filters.buyZoneOnly ? 'is-active' : ''}`}
+            onClick={() => set('buyZoneOnly', !filters.buyZoneOnly)}
+            title="In the buy zone now — at/through the pivot and within the +5% buy zone (not extended, not a non-Stage-2 false break). Buyable today on the book's cross-the-pivot rule (p.203)."
+          >
+            ● In buy zone
           </button>
         </div>
 

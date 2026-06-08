@@ -271,7 +271,8 @@ export function SepaPage() {
   // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
   const FILTER_DEFAULTS: SepaFilters = {
     rating: 'ALL', setup: 'ALL', decision: 'ALL', breakoutWindow: 'TODAY',
-    tightPivotOnly: false, salesStrongOnly: false, rsMin: 70, search: '', showAll: true,
+    tightPivotOnly: false, buyZoneOnly: false, nearPivotOnly: false,
+    salesStrongOnly: false, rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
     // Default OFF — opt-in toggle. Some users want to see distributing
@@ -433,6 +434,8 @@ export function SepaPage() {
       // shows. (Helper passesDecision keeps the two apply paths in sync.)
       if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
       if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
+      if (filters.buyZoneOnly && !pivotTiming(r).inBuyZone) return false;
+      if (filters.nearPivotOnly && !pivotTiming(r).nearPivot) return false;
 
       if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
       if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
@@ -764,6 +767,8 @@ export function SepaPage() {
     // gate (is_buyable); Wait/Watch match the entry_exit.decision banner.
     if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
     if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
+    if (filters.buyZoneOnly && !pivotTiming(r).inBuyZone) return false;
+    if (filters.nearPivotOnly && !pivotTiming(r).nearPivot) return false;
 
     if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
     if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
