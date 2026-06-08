@@ -30,6 +30,7 @@ from .indicators import (
 from .signals import orb, gap_and_go, bull_flag, vwap_reversion, momentum_failure
 from . import universe as universe_mod
 from . import premarket as premarket_mod
+from . import leaderboard_intraday as lbi_mod
 
 log = logging.getLogger("daytrading.api")
 router = APIRouter(tags=["daytrading"])
@@ -129,6 +130,17 @@ async def day_gappers(profile: str = Query("aggressive", description="aggressive
     high/low + 10-day RelVol + earnings-ahead on the top names. Educational, not
     advice."""
     return _json_safe(await asyncio.to_thread(premarket_mod.gappers, profile, force))
+
+
+@router.get("/day/leaderboard")
+async def day_leaderboard(n: int = Query(14, ge=1, le=30),
+                          days: int = Query(14, ge=1, le=45),
+                          force: bool = Query(False, description="bypass the 2-min cache")):
+    """Leaderboard leaders crossed with TODAY's intraday move + a live buyable flag.
+    The rank-consistent SEPA leaders, sorted by today's % move (gainers first), each
+    tagged buyable/not. When the market is closed this is the 'as of last close'
+    watch list for the open (market_session/is_open say which). Educational, not advice."""
+    return _json_safe(await asyncio.to_thread(lbi_mod.get_leaders_intraday, n, days, force))
 
 
 @router.get("/day/bars/{symbol}")

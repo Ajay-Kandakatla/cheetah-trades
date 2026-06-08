@@ -338,3 +338,56 @@ export function useSymbolBacktest(symbol: string | null, days = 30) {
   }, [symbol, days]);
   return { data, loading };
 }
+
+
+// ── Leaderboard leaders · intraday movers ────────────────────────────────────
+export type DayLeader = {
+  symbol: string;
+  current_rank?: number | null;
+  persistence_pct?: number | null;
+  appearances?: number | null;
+  status?: string | null;            // buyable | ready | watch (rank-tier)
+  flag?: string | null;              // breaking_out | primed | volatile | steady
+  coiling?: boolean | null;
+  stage?: number | null;
+  near_r1?: boolean | null;
+  // intraday overlay
+  intraday_change_pct?: number | null;
+  intraday_rank?: number | null;
+  last_price?: number | null;
+  prev_close?: number | null;
+  is_buyable?: boolean;
+  setup_ready?: boolean;
+  rating?: string | null;
+};
+
+export type DayLeaderboard = {
+  available: boolean;
+  market_session: 'premarket' | 'open' | 'afterhours' | 'closed' | 'unknown';
+  is_open: boolean;
+  as_of_close: boolean;
+  as_of: number;
+  leaders: DayLeader[];
+  n: number;
+  buyable_count: number;
+  up_count?: number;
+  scans_in_window?: number | null;
+  lookback_days?: number;
+};
+
+export function useDayLeaderboard(n = 14, days = 14) {
+  const [data, setData] = useState<DayLeaderboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/day/leaderboard?n=${n}&days=${days}`, { cache: 'no-store' });
+      if (r.ok) setData(await r.json());
+    } catch {
+      /* keep last */
+    } finally {
+      setLoading(false);
+    }
+  }, [n, days]);
+  useEffect(() => { load(); const t = setInterval(load, 120_000); return () => clearInterval(t); }, [load]);
+  return { data, loading, refetch: load };
+}
