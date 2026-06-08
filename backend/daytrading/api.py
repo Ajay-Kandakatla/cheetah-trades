@@ -29,6 +29,7 @@ from .indicators import (
 )
 from .signals import orb, gap_and_go, bull_flag, vwap_reversion, momentum_failure
 from . import universe as universe_mod
+from . import premarket as premarket_mod
 
 log = logging.getLogger("daytrading.api")
 router = APIRouter(tags=["daytrading"])
@@ -125,6 +126,16 @@ async def list_symbols(profile: str = Query("aggressive", description="aggressiv
 @router.get("/day/strategies")
 async def list_strategies():
     return {"strategies": STRATEGY_INFO}
+
+
+@router.get("/day/gappers")
+async def day_gappers(profile: str = Query("aggressive", description="aggressive | conservative"),
+                      force: bool = Query(False, description="bypass the 2-min cache")):
+    """Overnight gappers — the pre-market 'set the day' scan made live: names
+    gapping ≥2% on real volume, ranked by gap × relative-volume, with premarket
+    high/low + 10-day RelVol + earnings-ahead on the top names. Educational, not
+    advice."""
+    return _json_safe(await asyncio.to_thread(premarket_mod.gappers, profile, force))
 
 
 @router.get("/day/bars/{symbol}")

@@ -10363,3 +10363,25 @@ a.tk-link:hover   { color: inherit; }
 .day-universe__cap { margin: 0; font-size: 0.8rem; color: var(--cm-slate, #8595ad); line-height: 1.45; }
 .day-universe__cap strong { color: var(--ink, #e7e7e7); }
 .day-universe__crit { display: block; font-size: 0.68rem; opacity: 0.75; margin-top: 0.1rem; }
+
+/* ── Overnight gappers (pre-market scan) ──────────────────────────────────── */
+.og__lede { font-size: 0.82rem; color: var(--cm-slate, #8595ad); margin: 0.2rem 0 0.7rem; line-height: 1.5; }
+.og__lede strong { color: var(--ink, #e7e7e7); }
+.og__wrap { overflow-x: auto; }
+.og__table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.og__table th {
+  text-align: left; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cm-slate, #8595ad); padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--rule, #2a2a2a);
+}
+.og__table td { padding: 0.35rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.og__num { text-align: right; white-space: nowrap; }
+.og__sym { font-weight: 700; color: var(--accent, #c2ef50); }
+.og__up { color: #10b981; }
+.og__dn { color: #f87171; }
+.og__hot { color: #10b981; font-weight: 600; }     /* RelVol ≥ elevated */
+.og__cold { color: #f87171; }                       /* RelVol < 1× — thin */
+.og__row--click { cursor: pointer; }
+.og__row--click:hover { background: rgba(255,255,255,0.03); }
+.og__earn { color: #fbbf24; font-size: 0.74rem; font-weight: 600; cursor: help; }
+.og__earn-ok { color: var(--cm-slate, #8595ad); font-size: 0.72rem; }
+.og__disc { margin-top: 0.6rem; font-size: 0.66rem; color: var(--cm-slate, #8595ad); line-height: 1.5; }

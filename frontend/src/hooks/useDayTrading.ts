@@ -124,6 +124,48 @@ export function useDayUniverse() {
   return { symbols, movers, live, universeSize, criteria, profile, setProfile };
 }
 
+export type Gapper = {
+  symbol: string;
+  gap_pct: number;
+  direction: 'up' | 'down';
+  rel_vol: number | null;
+  last: number | null;
+  prev_close: number | null;
+  pm_high?: number | null;
+  pm_low?: number | null;
+  rel_vol_10d?: number | null;
+  earnings_soon?: boolean | null;
+  earnings_date?: string | null;
+};
+export type GappersPayload = {
+  gappers: Gapper[];
+  n_gappers: number;
+  n_enriched: number;
+  gap_min_pct: number;
+  rel_vol_elevated: number;
+  profile: string;
+  live: boolean;
+  as_of: string;
+  disclaimer: string;
+};
+
+/** /day/gappers — overnight gappers (pre-market "set the day"), polls 60s. */
+export function useGappers(profile: DayProfile) {
+  const [data, setData] = useState<GappersPayload | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      fetch(`${API}/day/gappers?profile=${profile}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (!cancelled && j) setData(j); })
+        .catch(() => { /* best-effort */ });
+    load();
+    const t = setInterval(load, 60_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [profile]);
+  return data;
+}
+
 /** /day/bars/{symbol} */
 export function useDayBars(symbol: string | null, days = 1) {
   const [data, setData] = useState<DayBars | null>(null);

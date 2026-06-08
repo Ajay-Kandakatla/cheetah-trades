@@ -3,6 +3,7 @@ import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { IntradayChart } from '../components/IntradayChart';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
+import { OvernightGappers } from '../components/OvernightGappers';
 import {
   useDayUniverse, useDayBars, useLiveSignals,
   useSymbolBacktest,
@@ -122,6 +123,9 @@ export function DayTrading() {
           </div>
         </section>
       )}
+
+      {/* Pre-market — overnight gappers ("set the day") */}
+      <OvernightGappers profile={universe.profile} onPick={setSelected} />
 
       {/* Paper trading panel */}
       {paper && (
