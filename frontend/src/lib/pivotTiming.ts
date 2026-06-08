@@ -22,6 +22,10 @@ export const TIGHT_PIVOT_MAX_PCT = 5;
 export const BREAKOUT_VOL_MULT = 1.5;
 /** Buy zone ceiling above the pivot — don't chase more than ~5% past it. */
 export const BUY_ZONE_PCT = 5;
+/** "Close to trigger" band — within this % BELOW the pivot the name is coiling
+ *  right under the buy point (about to break out). Mirror of the buy-zone width;
+ *  a UX convenience around the book's buy-on-the-cross rule (pp.198-205). */
+export const NEAR_PIVOT_PCT = 5;
 /** A breakout counts as "recent" (≤1wk) up to this many trading days back. */
 export const RECENT_BREAKOUT_MAX_DAYS = 5;
 
@@ -47,6 +51,12 @@ export type PivotTiming = {
   /** Final contraction ≤ 5% — a textbook-tight Minervini pivot. */
   pivotTight: boolean;
   finalContractionPct: number | null;
+  /** Already AT/through the pivot inside the +5% buy zone (GO or AT_PIVOT) —
+   *  buyable now, not extended, not a non-Stage-2 false break. */
+  inBuyZone: boolean;
+  /** Coiling right UNDER the pivot — within NEAR_PIVOT_PCT below it and not yet
+   *  triggered. "Close to the trigger", a watch-for-the-break list. */
+  nearPivot: boolean;
   state: PivotState;
   label: string;
   tone: PivotTone;
@@ -121,6 +131,15 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
     else state = 'WAIT';
   }
 
+  // Two actionable buckets derived from the same state machine:
+  //  • inBuyZone — at/through the pivot, within the +5% zone (GO / AT_PIVOT).
+  //  • nearPivot — below the pivot but within NEAR_PIVOT_PCT, coiling toward the
+  //    trigger (COILING / WAIT). Excludes extended / not-Stage-2 / no-setup.
+  const inBuyZone = state === 'GO' || state === 'AT_PIVOT';
+  const nearPivot =
+    (state === 'COILING' || state === 'WAIT') &&
+    distToPivotPct != null && distToPivotPct < 0 && distToPivotPct >= -NEAR_PIVOT_PCT;
+
   return {
     hasSetup,
     setupType: setup?.type ?? null,
@@ -135,6 +154,8 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
     drying,
     pivotTight,
     finalContractionPct,
+    inBuyZone,
+    nearPivot,
     state,
     label: LABELS[state].label,
     tone: LABELS[state].tone,
