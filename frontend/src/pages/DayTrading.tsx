@@ -4,6 +4,7 @@ import { IntradayChart } from '../components/IntradayChart';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
 import { OvernightGappers } from '../components/OvernightGappers';
+import { DayTradingSchedule } from '../components/DayTradingSchedule';
 import { InfoButton } from '../components/InfoButton';
 import {
   useDayUniverse, useDayBars, useLiveSignals,
@@ -140,6 +141,9 @@ export function DayTrading() {
           </div>
         </div>
       </header>
+
+      {/* Session-aware schedule — when do buy signals fire */}
+      <DayTradingSchedule />
 
       {/* Strategy filter */}
       {Object.keys(strategies).length > 0 && (
