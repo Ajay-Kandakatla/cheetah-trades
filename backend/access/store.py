@@ -105,6 +105,9 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "tiny",          "label": "Tiny Stocks",         "group": "scanner",   "default": False},
     {"id": "pioneers",      "label": "Pioneers",            "group": "scanner",   "default": False},
     {"id": "ravi-strategy", "label": "Ravi's Strategy",     "group": "scanner",   "default": False},
+    # ZONETRADER618 long-term report-card tracker (curated 70-stock list, live
+    # enriched). Owner-on via added_in/VERSION.
+    {"id": "longterm",      "label": "Long-Term Stocks",    "group": "scanner",   "default": False, "added_in": 7},
     # Real-money holdings view — hold/sell signals + R-multiples + live sell
     # alerts. Promoted to the PRIMARY top-nav (group "daily") on 2026-06-02:
     # Ajay checks holdings + acts on sell pings every trading day, so it earns a
@@ -178,7 +181,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 6
+CATALOG_VERSION = 7
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

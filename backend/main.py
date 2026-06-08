@@ -1177,6 +1177,17 @@ async def usage_track(payload: dict, email: str = Depends(current_user_email)):
     return JSONResponse(await asyncio.to_thread(usage.record_events, events))
 
 
+@app.get("/longterm/summary")
+async def longterm_summary(force: bool = Query(False, description="Bypass the 5-min cache"),
+                           email: str = Depends(current_user_email)):
+    """Live tracker for the ZONETRADER618 Long-Term Stocks report card — the
+    author's frozen entry/gain numbers enriched with current price, gain-now,
+    demand-zone state (our engine), 10% trailing-stop status, and SEPA
+    leaderboard/pullback cross-refs. Educational tracking, NOT advice."""
+    import longterm
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(longterm.get_longterm, force)))
+
+
 @app.get("/usage/summary")
 async def usage_summary(days: int = Query(30, ge=1, le=180),
                         email: str = Depends(current_user_email)):

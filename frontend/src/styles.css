@@ -3760,6 +3760,64 @@ tr:last-child td { border-bottom: none; }
 .mgb-week--caution      { color: var(--warn); }
 .mgb-week--risk_off     { color: var(--negative); }
 
+/* ── Long-Term Stocks tracker ────────────────────────────────────────────── */
+.lt-g--dark  { color: #1a9e54; font-weight: 700; }
+.lt-g--light { color: #36c47a; font-weight: 600; }
+.lt-g--pale  { color: #8fce9f; }
+.lt-g--red   { color: var(--negative, #e5534b); font-weight: 600; }
+.lt-up { color: #36c47a; }
+.lt-dn { color: var(--negative, #e5534b); }
+
+.lt-summary { display: flex; flex-wrap: wrap; gap: 0.8rem; margin: 0.4rem 0 1rem; }
+.lt-stat {
+  flex: 1 1 200px; min-width: 180px; padding: 0.7rem 0.9rem; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,22,0.35);
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.lt-stat--now { border-left: 3px solid var(--gold-strong, #d4af37); }
+.lt-stat__k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-subtle, #9aa8c8); }
+.lt-stat__v { font: 800 1.6rem/1 var(--serif, serif); }
+.lt-stat__sub { font-size: 0.78rem; color: var(--ink-subtle, #9aa8c8); }
+.lt-stat__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.lt-sort { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 0.6rem; font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); }
+.lt-sort__btn { font: inherit; padding: 2px 9px; border-radius: 999px; cursor: pointer; color: var(--ink-subtle, #9aa8c8); background: transparent; border: 1px solid rgba(255,255,255,0.14); }
+.lt-sort__btn.is-active { color: var(--ink, #e7ecf6); border-color: var(--gold-strong, #d4af37); }
+
+.lt-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+.lt-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.lt-table thead th { text-align: left; padding: 8px 10px; font: 600 0.7rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-subtle, #9aa8c8); border-bottom: 1px solid rgba(255,255,255,0.12); position: sticky; top: 0; background: var(--bg-sunken, #121316); }
+.lt-table td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+.lt-table .lt-num { text-align: right; font-variant-numeric: tabular-nums; }
+.lt-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.lt-row--demand { background: rgba(54, 196, 122, 0.07); }
+.lt-cat { color: var(--ink-subtle, #9aa8c8); font-size: 0.76rem; }
+.lt-tk { font-weight: 700; letter-spacing: 0.01em; }
+.lt-basis { margin-left: 5px; font-size: 0.58rem; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+.lt-basis--demand { background: rgba(54,196,122,0.18); color: #36c47a; }
+.lt-basis--close { background: rgba(255,255,255,0.07); color: var(--ink-subtle, #9aa8c8); }
+
+.lt-status { display: flex; flex-wrap: wrap; gap: 4px; white-space: normal !important; }
+.lt-chip { font: 600 0.6rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.02em; padding: 1px 6px; border-radius: 3px; text-decoration: none; white-space: nowrap; }
+.lt-chip--demand { background: rgba(54,196,122,0.18); color: #36c47a; }
+.lt-chip--ldr { background: rgba(212,175,55,0.16); color: var(--gold-strong, #d4af37); }
+.lt-chip--ldr:hover { box-shadow: inset 0 0 0 1px rgba(212,175,55,0.5); }
+.lt-chip--pull { background: rgba(120,160,255,0.16); color: #8fb2ff; }
+.lt-chip--pull:hover { box-shadow: inset 0 0 0 1px rgba(120,160,255,0.5); }
+.lt-chip--high { background: rgba(54,196,122,0.14); color: #36c47a; }
+.lt-chip--stop { background: rgba(255,255,255,0.06); color: var(--ink-subtle, #9aa8c8); }
+
+.lt-legend { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0.9rem 0 0.4rem; font-size: 0.78rem; color: var(--ink-subtle, #9aa8c8); align-items: center; }
+.lt-leg { display: inline-flex; align-items: center; gap: 5px; }
+.lt-sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.lt-sw.lt-g--dark { background: #1a9e54; }
+.lt-sw.lt-g--light { background: #36c47a; }
+.lt-sw.lt-g--pale { background: #8fce9f; }
+.lt-sw.lt-g--red { background: var(--negative, #e5534b); }
+.lt-note { font-size: 0.84rem; color: var(--warn, #f5a623); margin: 0.6rem 0 0; }
+.lt-note--muted { color: var(--ink-subtle, #9aa8c8); }
+.lt-disclaimer { font-size: 0.74rem; opacity: 0.6; margin-top: 0.8rem; font-style: italic; }
+
 /* ── Usage Heatmap page ──────────────────────────────────────────────────── */
 .uh-stats { color: var(--ink-subtle, #9aa8c8); margin: 0.2rem 0 1rem; font-size: 0.85rem; }
 .uh-card {

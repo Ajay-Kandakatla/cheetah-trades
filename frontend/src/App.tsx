@@ -57,6 +57,7 @@ const DualMomentumPage            = lazyWithReload(() => import('./pages/DualMom
 const PullbackMaPage              = lazyWithReload(() => import('./pages/PullbackMa').then(m => ({ default: m.PullbackMaPage })));
 const MarketGaugePage             = lazyWithReload(() => import('./pages/MarketGauge').then(m => ({ default: m.MarketGaugePage })));
 const UsagePage                   = lazyWithReload(() => import('./pages/UsagePage').then(m => ({ default: m.UsagePage })));
+const LongTermPage                = lazyWithReload(() => import('./pages/LongTermPage').then(m => ({ default: m.LongTermPage })));
 const RaviStrategyPage            = lazyWithReload(() => import('./pages/RaviStrategy').then(m => ({ default: m.RaviStrategyPage })));
 const ChatterPage                 = lazyWithReload(() => import('./pages/Chatter').then(m => ({ default: m.ChatterPage })));
 const ChatterIndiaPage            = lazyWithReload(() => import('./pages/ChatterIndia').then(m => ({ default: m.ChatterIndiaPage })));
@@ -241,6 +242,7 @@ export function App() {
             <Route path="/pullback-ma"    element={<FeatureRoute feature="pullback-ma"><PullbackMaPage /></FeatureRoute>} />
             <Route path="/market-gauge"   element={<FeatureRoute feature="market-gauge"><MarketGaugePage /></FeatureRoute>} />
             <Route path="/usage"          element={<FeatureRoute feature="usage"><UsagePage /></FeatureRoute>} />
+            <Route path="/longterm"       element={<FeatureRoute feature="longterm"><LongTermPage /></FeatureRoute>} />
             <Route path="/ravi-strategy"  element={<FeatureRoute feature="ravi-strategy"><RaviStrategyPage /></FeatureRoute>} />
             <Route path="/chatter"        element={<FeatureRoute feature="chatter"><ChatterPage /></FeatureRoute>} />
             <Route path="/chatter-india"  element={<FeatureRoute feature="chatter-india"><ChatterIndiaPage /></FeatureRoute>} />
