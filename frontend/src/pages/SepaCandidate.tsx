@@ -29,6 +29,8 @@ const SignalDrillModal = lazy(() =>
 );
 import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
+import { PivotMeter } from '../components/PivotMeter';
+import { pivotTiming } from '../lib/pivotTiming';
 import { PositionLens } from '../components/PositionLens';
 import { SepaScoreBar } from '../components/SepaScoreBar';
 import { SepaSignalChips } from '../components/SepaSignalChips';
@@ -239,6 +241,27 @@ function tvSymbolFor(symbol: string, exchange?: string): string {
 
 import { usePageContext } from '../hooks/usePageContext';
 
+const PivotFrameworkInfo = (
+  <>
+    <p>
+      The <strong>pivot</strong> is the buy trigger — the high of the base's final
+      tight contraction (Minervini pp.&nbsp;198–205). You buy when price crosses
+      <em> above</em> the pivot on <strong>expanding volume</strong> (≥&nbsp;1.5× the
+      50-day average, p.&nbsp;203), within about 1–2% of it.
+    </p>
+    <ul>
+      <li><strong>Buy zone</strong> — pivot up to ~2.5% above. Past that = extended, don't chase.</li>
+      <li><strong>Stop</strong> — ~7–8% below entry; cut losses fast (Ch.&nbsp;10–11).</li>
+      <li><strong>No trigger, no buy</strong> — below the pivot, or above it on light volume → wait.</li>
+    </ul>
+    <p>
+      The gauge shows where price sits (stop · pivot · buy-zone), today's volume vs
+      the 1.5× line, and a plain-English read of what to wait for.{' '}
+      <em>Educational, not advice.</em>
+    </p>
+  </>
+);
+
 export function SepaCandidatePage() {
   const { symbol = '' } = useParams<{ symbol: string }>();
   const navigate = useNavigate();
@@ -439,6 +462,9 @@ export function SepaCandidatePage() {
 
   const setup = data?.base?.entry_setup;
   const base = data?.base;
+  // Pivot buy framework — same gauge the leaderboard cards use, built from this
+  // ticker's scan record (entry_setup / vcp / volume / stage).
+  const pivotT = useMemo(() => (base ? pivotTiming(base as any) : null), [base]);
   const fetchedAt = useMemo(() => new Date(), [symbol, data]);
 
   // Live SSE-backed quote — subscribes to the bus, prefills from
@@ -978,6 +1004,20 @@ export function SepaCandidatePage() {
                   and a position-sizing calculator. (Position Lens is at the top of the page —
                   use this tab for the buy-side trade plan.)
                 </div>
+
+                {/* Pivot buy framework — the visual "right time to buy" gauge
+                    (same one the leaderboard cards use), built from this ticker's
+                    scan record. Leads the buy section; the numeric trade plan
+                    follows below. */}
+                {pivotT && pivotT.hasSetup && (
+                  <div className="sepa-pivot-framework" style={{ marginBottom: '1rem' }}>
+                    <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      Pivot · buy framework
+                      <InfoButton title="Pivot buy framework" inline>{PivotFrameworkInfo}</InfoButton>
+                    </div>
+                    <PivotMeter t={pivotT} />
+                  </div>
+                )}
 
                 {/* Comprehensive trade plan — entry/stop/target/levels with
                     Minervini/O'Neil/Wilder methodology. Renders for every
