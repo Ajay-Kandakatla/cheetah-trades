@@ -85,6 +85,45 @@ export function useWatchlist() {
   return data;
 }
 
+export type DayProfile = 'aggressive' | 'conservative';
+export type DayMover = {
+  symbol: string;
+  adr_pct: number | null;
+  rel_vol: number | null;
+  change_pct: number | null;
+  last: number | null;
+};
+
+/** /day/symbols — dynamic day-trade universe (today's movers) + profile control.
+ *  `symbols` is the bounded set the page charts + live-scans; `universeSize` is
+ *  the full day-tradeable pool they were drawn from. */
+export function useDayUniverse() {
+  const [profile, setProfile] = useState<DayProfile>('aggressive');
+  const [symbols, setSymbols] = useState<string[]>([]);
+  const [movers, setMovers] = useState<DayMover[]>([]);
+  const [live, setLive] = useState(false);
+  const [universeSize, setUniverseSize] = useState(0);
+  const [criteria, setCriteria] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/day/symbols?profile=${profile}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        setSymbols(j.watchlist || []);
+        setMovers(j.movers || []);
+        setLive(!!j.live);
+        setUniverseSize(j.universe_size || 0);
+        setCriteria(j.criteria || '');
+      })
+      .catch(() => { /* best-effort */ });
+    return () => { cancelled = true; };
+  }, [profile]);
+
+  return { symbols, movers, live, universeSize, criteria, profile, setProfile };
+}
+
 /** /day/bars/{symbol} */
 export function useDayBars(symbol: string | null, days = 1) {
   const [data, setData] = useState<DayBars | null>(null);

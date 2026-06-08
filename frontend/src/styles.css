@@ -10343,3 +10343,23 @@ a.tk-link:hover   { color: inherit; }
   .dz-bar__edge { min-width: 2.6rem; font-size: 0.6rem; }
   .dz-name { max-width: 9rem; }
 }
+
+/* ── Day-trading dynamic universe control ─────────────────────────────────── */
+.day-universe {
+  display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+.day-universe__toggle {
+  display: inline-flex; border: 1px solid var(--rule, #333); border-radius: 999px;
+  overflow: hidden; flex-shrink: 0;
+}
+.day-universe__tg {
+  background: transparent; color: var(--cm-slate, #8595ad);
+  border: none; padding: 0.3rem 0.85rem; font-size: 0.76rem; cursor: pointer;
+  font-weight: 600; letter-spacing: 0.02em;
+}
+.day-universe__tg.is-on { background: var(--accent, #c2ef50); color: #0c0c0c; }
+.day-universe__tg:not(.is-on):hover { color: var(--ink, #e7e7e7); }
+.day-universe__cap { margin: 0; font-size: 0.8rem; color: var(--cm-slate, #8595ad); line-height: 1.45; }
+.day-universe__cap strong { color: var(--ink, #e7e7e7); }
+.day-universe__crit { display: block; font-size: 0.68rem; opacity: 0.75; margin-top: 0.1rem; }

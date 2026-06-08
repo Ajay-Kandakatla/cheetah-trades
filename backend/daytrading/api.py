@@ -28,6 +28,7 @@ from .indicators import (
     relative_volume, session_high_low, vwap_session,
 )
 from .signals import orb, gap_and_go, bull_flag, vwap_reversion, momentum_failure
+from . import universe as universe_mod
 
 log = logging.getLogger("daytrading.api")
 router = APIRouter(tags=["daytrading"])
@@ -92,9 +93,33 @@ STRATEGY_INFO = {
 }
 
 
+def _live_scan_symbols(symbols: Optional[str], profile: str) -> list[str]:
+    """Bounded symbol set for the LIVE 1-minute scan. A small explicit list is
+    honored as-is; anything larger (or no list) falls back to today's active
+    movers so the per-symbol Massive fetches stay within budget."""
+    if symbols:
+        syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        if 0 < len(syms) <= universe_mod.LIVE_SCAN_CAP:
+            return syms
+    return universe_mod.active_movers(profile)["symbols"] or DEFAULT_WATCHLIST
+
+
 @router.get("/day/symbols")
-async def list_symbols():
-    return {"watchlist": DEFAULT_WATCHLIST}
+async def list_symbols(profile: str = Query("aggressive", description="aggressive | conservative")):
+    """Dynamic day-trade universe — today's liquid, volatile movers (replaces the
+    old static 10-name list). `watchlist` is the bounded set to chart + live-scan;
+    `universe_size` is the full day-tradeable pool the movers were drawn from."""
+    movers = await asyncio.to_thread(universe_mod.active_movers, profile)
+    uni = await asyncio.to_thread(universe_mod.day_trade_universe, profile)
+    return {
+        "watchlist": movers["symbols"] or DEFAULT_WATCHLIST,
+        "movers": movers["active"],
+        "profile": movers["profile"],
+        "live": movers["live"],
+        "universe_size": uni["n"],
+        "criteria": uni["criteria"],
+        "as_of": movers["as_of"],
+    }
 
 
 @router.get("/day/strategies")
@@ -158,11 +183,13 @@ _STRATEGIES = {
 
 @router.get("/day/signals/today")
 async def signals_today(
-    symbols: Optional[str] = Query(None, description="comma-sep override"),
+    symbols: Optional[str] = Query(None, description="comma-sep override (small lists honored; larger lists fall back to active movers)"),
     strategies: Optional[str] = Query(None, description="comma-sep filter; default = all"),
+    profile: str = Query("aggressive", description="aggressive | conservative"),
 ):
-    """Live signals for today across the watchlist + all strategies (or filtered)."""
-    syms = [s.strip().upper() for s in symbols.split(",")] if symbols else DEFAULT_WATCHLIST
+    """Live signals for today across today's active movers (bounded) + all
+    strategies (or filtered)."""
+    syms = await asyncio.to_thread(_live_scan_symbols, symbols, profile)
     selected = [s.strip() for s in strategies.split(",")] if strategies else list(_STRATEGIES.keys())
     today = datetime.utcnow().date()
     out = []
@@ -213,9 +240,10 @@ async def signals_symbol_today(symbol: str,
 async def paper_today(
     symbols: Optional[str] = Query(None),
     strategies: Optional[str] = Query(None),
+    profile: str = Query("aggressive", description="aggressive | conservative"),
 ):
     """Run scan + close-exited workflow, then return today's paper trades + stats."""
-    syms = [s.strip().upper() for s in symbols.split(",")] if symbols else DEFAULT_WATCHLIST
+    syms = await asyncio.to_thread(_live_scan_symbols, symbols, profile)
     strats = [s.strip() for s in strategies.split(",")] if strategies else None
     update = paper_mod.scan_and_update(syms, strategies=strats)
     state = paper_mod.list_today(symbols=syms)

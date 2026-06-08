@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { IntradayChart } from '../components/IntradayChart';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
 import {
-  useWatchlist, useDayBars, useLiveSignals,
+  useDayUniverse, useDayBars, useLiveSignals,
   useSymbolBacktest,
   useStrategies, usePaperTrading,
 } from '../hooks/useDayTrading';
@@ -18,9 +18,16 @@ const STRATEGY_COLORS: Record<string, string> = {
 };
 
 export function DayTrading() {
-  const watchlist = useWatchlist();
+  const universe = useDayUniverse();
+  const watchlist = universe.symbols;
   const strategies = useStrategies();
   const [selected, setSelected] = useState<string>('NVDA');
+
+  // Keep the charted symbol valid as the dynamic universe changes — if the
+  // current pick isn't in today's movers, jump to the top mover.
+  useEffect(() => {
+    if (watchlist.length && !watchlist.includes(selected)) setSelected(watchlist[0]);
+  }, [watchlist]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [activeStrategies, setActiveStrategies] = useState<Set<string>>(new Set(['orb', 'bull_flag', 'gap_and_go', 'momentum_failure']));
   const [reviewSymbol, setReviewSymbol] = useState<string | null>(null);
 
@@ -54,6 +61,34 @@ export function DayTrading() {
             in real time during market hours — no orders placed, just hypothetical
             P&L tracking with 1% risk per trade.
           </p>
+
+          {/* Dynamic universe — today's liquid movers, not a fixed list */}
+          <div className="day-universe">
+            <div className="day-universe__toggle" role="group" aria-label="Universe profile">
+              <button
+                type="button"
+                className={`day-universe__tg${universe.profile === 'aggressive' ? ' is-on' : ''}`}
+                onClick={() => universe.setProfile('aggressive')}
+                title="Highest-ADR movers (more volatile, higher beta) that are still liquid enough to fill."
+              >
+                Aggressive
+              </button>
+              <button
+                type="button"
+                className={`day-universe__tg${universe.profile === 'conservative' ? ' is-on' : ''}`}
+                onClick={() => universe.setProfile('conservative')}
+                title="Mega-liquid names with a moderate daily range (steadier intraday)."
+              >
+                Conservative
+              </button>
+            </div>
+            <p className="day-universe__cap">
+              Dynamic universe · <strong>{universe.universeSize}</strong> day-tradeable names →
+              {' '}showing today's <strong>{watchlist.length}</strong>{' '}
+              {universe.live ? 'active movers' : 'top names (market closed)'}.
+              {universe.criteria && <span className="day-universe__crit mono"> {universe.criteria}</span>}
+            </p>
+          </div>
         </div>
       </header>
 
