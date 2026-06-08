@@ -876,6 +876,17 @@ tr:last-child td { border-bottom: none; }
 .insf__badge { font-weight: 600; white-space: nowrap; }
 .insf__row--13d   .insf__badge { color: var(--cm-amber, #d97706); }
 .insf__row--13g   .insf__badge { color: var(--cm-green, #22c55e); }
+
+/* Bold buy/sell/comp pill — the at-a-glance "is this a real buy?" signal. */
+.insf__pill {
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.08rem 0.4rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+}
+.insf__pill--buy { background: #10b981; color: #04130d; }
+.insf__pill--sell { background: #ef4444; color: #190606; }
+.insf__pill--neutral { background: rgba(148, 163, 184, 0.18); color: var(--cm-slate, #94a3b8); }
+.insf__row--txn-buy  .insf__dot { background: #10b981; }
+.insf__row--txn-sell .insf__dot { background: #ef4444; }
 .insf__who {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   min-width: 0; flex: 1 1 auto; color: var(--ink, inherit); opacity: 0.95; font-weight: 600;
