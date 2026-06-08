@@ -22,6 +22,11 @@ export type CardEnrichment = {
     cluster_buy?:          boolean;
     unique_insiders_30d?:  number;
     form4_count_30d?:      number;
+    buy_count_30d?:        number;
+    sell_count_30d?:       number;
+    insider_buyers_30d?:   number;
+    buysell_score?:        number | null;   // 0-100 net buy-vs-sell, 50 neutral
+    buysell_label?:        string | null;   // "Insider buying" / "Buy-leaning" / "Mixed" / "Insider selling"
     has_recent_13d?:       boolean;
   };
   valuation: {

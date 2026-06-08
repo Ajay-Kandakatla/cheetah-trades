@@ -34,6 +34,10 @@ export function CardEnrichmentChips({ symbol }: Props) {
   // chips appear; the chips themselves have natural flow inside it.)
   const insiderCluster = data?.insider?.cluster_buy === true;
   const insiderCount = data?.insider?.unique_insiders_30d ?? 0;
+  const bsScore = data?.insider?.buysell_score;            // 0-100, 50 neutral; null = no activity
+  const bsLabel = data?.insider?.buysell_label;
+  const bsBuys = data?.insider?.buy_count_30d ?? 0;
+  const bsSells = data?.insider?.sell_count_30d ?? 0;
   const valuation = data?.valuation?.signal;
   const valuationLabel = data?.valuation?.label;
   const pe = data?.valuation?.pe;
@@ -72,6 +76,23 @@ export function CardEnrichmentChips({ symbol }: Props) {
           {insiderCount} buyer{insiderCount === 1 ? '' : 's'}
         </Link>
       ) : null}
+      {bsScore != null && (
+        <Link
+          to={`/sepa/${symbol}?tab=insider`}
+          className={`ins-chip ins-bs ${
+            bsScore >= 55 ? 'ins-bs--buy' : bsScore < 42 ? 'ins-bs--sell' : 'ins-bs--mixed'
+          }`}
+          title={
+            `Insider buy/sell score ${bsScore}/100 — ${bsLabel}. ` +
+            `Open-market Form 4 (30d): ${bsBuys} buy${bsBuys === 1 ? '' : 's'} · ` +
+            `${bsSells} sell${bsSells === 1 ? '' : 's'}. ` +
+            `Higher = more net insider buying (what you want for a swing). ` +
+            `Click for the Form 4 detail.`
+          }
+        >
+          {bsScore >= 55 ? '🟢' : bsScore < 42 ? '🔴' : '⚪'} Insider {bsScore}
+        </Link>
+      )}
       {valuation && (
         <Link
           to={`/sepa/${symbol}?tab=fundamentals`}

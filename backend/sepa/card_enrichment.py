@@ -170,7 +170,10 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
             # cards cached BEFORE the net-worth/equity headline was added, so it
             # shows up immediately instead of waiting out the 24h TTL.
             if (doc and (now - (doc.get("cached_at") or 0)) < _CACHE_TTL_SEC
-                    and doc.get("headline") is not None):
+                    and doc.get("headline") is not None
+                    # force a recompute for cards cached before the insider
+                    # buy/sell score was added, so it appears without the 24h wait
+                    and "sell_count_30d" in (doc.get("insider") or {})):
                 return {
                     "symbol":     sym,
                     "cached_at":  doc.get("cached_at"),
@@ -236,25 +239,67 @@ def _macro_for(sym: str) -> dict:
         return {}
 
 
+# Net insider buy-vs-sell score thresholds (CONFIGURED, alt-data — not book).
+INSIDER_BS_STRONG = 70      # >= this -> "Insider buying"
+INSIDER_BS_LEAN = 55        # >= this -> "Buy-leaning"
+INSIDER_BS_SELL = 42        # <  this -> "Insider selling"  (else "Mixed")
+INSIDER_BS_BUYER_BONUS = 5  # +this per distinct open-market buyer (breadth)
+INSIDER_BS_BUYER_CAP = 15
+
+
+def _insider_buysell_score(buy: int, sell: int, buyers: int):
+    """Net open-market insider buy-vs-sell read → (score 0-100, label) or
+    (None, None) when there's no open-market activity to score.
+
+    Laplace-smoothed buy share so 1 buy / 0 sell isn't a blowout, plus a small
+    breadth bonus for distinct buyers (a cluster is more meaningful than one
+    insider). 50 = neutral; higher = more buying — what Ajay wants for swings.
+    """
+    if buy + sell <= 0:
+        return None, None
+    share = (buy + 1.0) / (buy + sell + 2.0)            # 0.5 neutral
+    score = round(100 * share) + min(INSIDER_BS_BUYER_CAP, max(0, buyers) * INSIDER_BS_BUYER_BONUS)
+    score = max(0, min(100, score))
+    if score >= INSIDER_BS_STRONG:
+        label = "Insider buying"
+    elif score >= INSIDER_BS_LEAN:
+        label = "Buy-leaning"
+    elif score < INSIDER_BS_SELL:
+        label = "Insider selling"
+    else:
+        label = "Mixed"
+    return score, label
+
+
 async def _compute_insider(sym: str) -> dict:
     """Compute the cluster-insider signal from EDGAR. Slim view: just
     the fields the chip + tooltip need."""
     try:
         from sepa.insider import insider_activity
         full = await insider_activity(sym)
+        buy = int(full.get("form4_buy_count_30d") or 0)
+        sell = int(full.get("form4_sell_count_30d") or 0)
+        buyers = int(full.get("form4_insider_buyers_30d") or 0)
+        bs_score, bs_label = _insider_buysell_score(buy, sell, buyers)
         return {
             # cluster_buy now means real open-market buying by officers/directors
             "cluster_buy":          bool(full.get("form4_cluster_buy")),
             "unique_insiders_30d":  int(full.get("form4_unique_insiders_30d") or 0),
             "form4_count_30d":      int(full.get("form4_count_30d") or 0),
-            "buy_count_30d":        int(full.get("form4_buy_count_30d") or 0),
-            "insider_buyers_30d":   int(full.get("form4_insider_buyers_30d") or 0),
+            "buy_count_30d":        buy,
+            "sell_count_30d":       sell,
+            "insider_buyers_30d":   buyers,
+            # Net open-market buy-vs-sell score (0-100, 50 neutral); None when
+            # there's no open-market activity to read. CONFIGURED (not book).
+            "buysell_score":        bs_score,
+            "buysell_label":        bs_label,
             "has_recent_13d":       bool(full.get("has_recent_13d")),
         }
     except Exception as exc:
         log.warning("card_enrichment._compute_insider(%s) failed: %s", sym, exc)
         return {"cluster_buy": False, "unique_insiders_30d": 0, "form4_count_30d": 0,
-                "buy_count_30d": 0, "insider_buyers_30d": 0}
+                "buy_count_30d": 0, "sell_count_30d": 0, "insider_buyers_30d": 0,
+                "buysell_score": None, "buysell_label": None}
 
 
 async def _compute_fundamentals(sym: str) -> dict:

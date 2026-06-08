@@ -1783,6 +1783,11 @@ tr:last-child td { border-bottom: none; }
 .ins-chip:hover { filter: brightness(1.15); }
 .ins-cluster { background: rgba(74, 210, 154, 0.18); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.5); font-weight: 600; }
 .ins-some    { background: rgba(122, 169, 230, 0.12); color: #7aa9e6; border: 1px solid rgba(122, 169, 230, 0.3); }
+/* Net insider buy-vs-sell score chip */
+.ins-bs { font-weight: 700; }
+.ins-bs--buy   { background: rgba(74, 210, 154, 0.18); color: #4ad29a; border: 1px solid rgba(74, 210, 154, 0.5); }
+.ins-bs--mixed { background: rgba(255, 255, 255, 0.06); color: var(--ink-subtle, #9aa8c8); border: 1px solid rgba(255, 255, 255, 0.16); }
+.ins-bs--sell  { background: rgba(229, 83, 75, 0.16); color: var(--negative, #e5534b); border: 1px solid rgba(229, 83, 75, 0.45); }
 
 /* ── Real-time tape + short-interest chips (RealtimeChips.tsx) ──────────
    Same pill geometry as .ins-chip. Accumulation green / distribution red;
