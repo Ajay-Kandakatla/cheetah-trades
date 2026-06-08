@@ -10378,6 +10378,10 @@ a.tk-link:hover   { color: inherit; }
 .og__sym { font-weight: 700; color: var(--accent, #c2ef50); }
 .og__symlink { color: inherit; text-decoration: none; }
 .og__symlink:hover { text-decoration: underline; }
+.dt-strat-info { margin: 0.4rem 0; padding-left: 1.1rem; display: grid; gap: 0.55rem; }
+.dt-strat-info li { font-size: 0.82rem; line-height: 1.5; }
+.dt-strat-info li strong { color: var(--ink, #e7e7e7); }
+.dt-strat-info__disc { font-size: 0.7rem; opacity: 0.7; margin-top: 0.5rem; }
 .og__up { color: #10b981; }
 .og__dn { color: #f87171; }
 .og__hot { color: #10b981; font-weight: 600; }     /* RelVol ≥ elevated */

@@ -4,6 +4,7 @@ import { IntradayChart } from '../components/IntradayChart';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
 import { OvernightGappers } from '../components/OvernightGappers';
+import { InfoButton } from '../components/InfoButton';
 import {
   useDayUniverse, useDayBars, useLiveSignals,
   useSymbolBacktest,
@@ -17,6 +18,60 @@ const STRATEGY_COLORS: Record<string, string> = {
   vwap_reversion:    '#06b6d4',
   momentum_failure:  'var(--negative)',
 };
+
+const StrategiesInfo = (
+  <>
+    <p>
+      Five intraday setups, each from a documented day-trading framework. Toggle a
+      chip to include/exclude it from the live scan + paper trades. The “%·R” on a
+      chip is its 30-day walk-forward backtest (win&nbsp;rate · average&nbsp;R).
+    </p>
+    <ul className="dt-strat-info">
+      <li>
+        <strong>Opening Range Breakout (ORB)</strong> — <em>Crabel; Raschke.</em>{' '}
+        The first 15&nbsp;min sets the day’s range; a break above that high (long)
+        or below the low (short) on rising volume signals the day’s direction. Stop
+        at the opposite end / 1×ATR, target ≈1.5R. Best on volatile single names —
+        not indices.
+      </li>
+      <li>
+        <strong>Gap and Go</strong> — <em>Cameron / Warrior Trading.</em> A stock
+        gaps ≥1–2% premarket on a catalyst; if the first bar confirms the gap and it
+        breaks the first-5-min high, the move continues. Use the premarket high/low
+        (from the Overnight Movers panel above) as target/stop. Best on premarket
+        gappers with news + high RelVol.
+      </li>
+      <li>
+        <strong>Bull/Bear Flag</strong> — <em>Stockbee / IBD.</em> A strong impulse
+        (the pole), then a tight low-volume pause (the flag), then a breakout
+        continues the move. Stop at the flag low; target = pole height projected
+        from the breakout. Highest edge of the five in our backtest.
+      </li>
+      <li>
+        <strong>VWAP Reversion</strong> — <em>Steenbarger / Bellafiore.</em> A
+        mean-reversion fade: when price stretches ≥1.5&nbsp;ATR from VWAP with a
+        reversal candle, fade it back toward VWAP. ⚠ Works in choppy/range days,
+        loses on trending momentum names — use selectively.
+      </li>
+      <li>
+        <strong>Momentum Failure (short-only)</strong> — <em>Yoder / Steenbarger.</em>{' '}
+        A parabolic spike (+3% on high RelVol) exhausts; a topping candle plus a
+        confirmation close below it = short the failure. ⚠ Asymmetric — shorts are
+        harder; best on high-beta names like COIN.
+      </li>
+    </ul>
+    <p>
+      <strong>Do they work on any stock? No.</strong> They need <em>liquid,
+      high-volatility</em> names — tight spreads, real volume, a wide daily range.
+      On thin/low-volume stocks the signal still fires but you can’t fill it and
+      slippage eats the edge. That’s why the page scans today’s liquid movers (the
+      Aggressive/Conservative universe toggle above), not the whole market.
+    </p>
+    <p className="dt-strat-info__disc">
+      Educational — backtested on a small sample, paper-traded only. Not advice.
+    </p>
+  </>
+);
 
 export function DayTrading() {
   const universe = useDayUniverse();
@@ -96,7 +151,10 @@ export function DayTrading() {
       {/* Strategy filter */}
       {Object.keys(strategies).length > 0 && (
         <section className="day-section">
-          <h2 className="day-section__h">Strategies</h2>
+          <h2 className="day-section__h">
+            Strategies
+            <InfoButton title="Day-trading strategies" inline>{StrategiesInfo}</InfoButton>
+          </h2>
           <div className="day-strategies">
             {Object.entries(strategies).map(([key, info]) => (
               <button
