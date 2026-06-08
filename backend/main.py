@@ -1177,6 +1177,17 @@ async def usage_track(payload: dict, email: str = Depends(current_user_email)):
     return JSONResponse(await asyncio.to_thread(usage.record_events, events))
 
 
+@app.get("/macro/calendar")
+async def macro_calendar_get(days: int = Query(14, ge=7, le=30),
+                             force: bool = Query(False, description="Bypass the 6h cache"),
+                             email: str = Depends(current_user_email)):
+    """Tiered macro calendar for the regime check — upcoming data releases (real
+    FRED-scheduled dates) bucketed T1 market-movers / T2 trend-shapers / T3
+    context, plus earnings ahead for tracked names. Educational, NOT a forecast."""
+    import macro_calendar
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(macro_calendar.get_macro_calendar, force, days)))
+
+
 @app.get("/longterm/summary")
 async def longterm_summary(force: bool = Query(False, description="Bypass the 5-min cache"),
                            email: str = Depends(current_user_email)):

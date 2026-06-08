@@ -6,6 +6,7 @@
  * forecast. The same score shows top-right on every page (MarketGaugeBadge).
  */
 import { InfoButton } from '../components/InfoButton';
+import { MacroCalendar } from '../components/MacroCalendar';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
 
 const PageInfo = (
@@ -160,6 +161,9 @@ export function MarketGaugePage() {
                 ))}
             </section>
           )}
+
+          {/* Macro calendar — tiered "what's ahead" for the regime */}
+          <MacroCalendar />
 
           {/* How people "read the week" */}
           <section className="mg-explain">
