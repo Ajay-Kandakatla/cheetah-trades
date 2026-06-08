@@ -3769,6 +3769,25 @@ tr:last-child td { border-bottom: none; }
 .mgb-info-wrap { display: flex; align-items: center; gap: 0.4rem; }
 .mgb-info-wrap .market-regime-banner { flex: 1 1 auto; }
 
+/* ── Reaction map (regime cheat sheet) ───────────────────────────────────── */
+.rxn { margin: 1rem 0 1.4rem; padding: 1rem 1.2rem; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,22,0.35); }
+.rxn__lede { font-size: 0.9rem; color: var(--ink-subtle, #9aa8c8); margin: 0.3rem 0 0.7rem; }
+.rxn__toggle { display: inline-flex; gap: 0; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; overflow: hidden; margin-bottom: 0.8rem; }
+.rxn__tg { font: 600 0.8rem var(--sans, system-ui); padding: 5px 14px; cursor: pointer; color: var(--ink-subtle, #9aa8c8); background: transparent; border: none; }
+.rxn__tg.is-active { color: #0c0d10; background: var(--gold-strong, #d4af37); }
+.rxn__wrap { overflow-x: auto; }
+.rxn__table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.rxn__table th { text-align: left; padding: 7px 10px; font: 700 0.72rem var(--sans, system-ui); text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-subtle, #9aa8c8); border-bottom: 1px solid rgba(255,255,255,0.14); }
+.rxn__table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.rxn__table .rxn__num { text-align: center; }
+.rxn__if { font-weight: 600; }
+.rxn__arr { font-size: 1.05rem; letter-spacing: -2px; }
+.rxn__arr--up { color: #d39b3e; }
+.rxn__arr--dn { color: var(--negative, #e5534b); }
+.rxn__note { font-size: 0.82rem; color: var(--ink-subtle, #9aa8c8); margin-top: 0.8rem; line-height: 1.5; }
+.rxn__note strong { color: var(--warn, #f5a623); }
+
 /* ── Long-Term Stocks tracker ────────────────────────────────────────────── */
 .lt-g--dark  { color: #1a9e54; font-weight: 700; }
 .lt-g--light { color: #36c47a; font-weight: 600; }

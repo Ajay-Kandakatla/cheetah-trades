@@ -6,6 +6,7 @@
  * forecast. The same score shows top-right on every page (MarketGaugeBadge).
  */
 import { InfoButton } from '../components/InfoButton';
+import { ReactionMap } from '../components/ReactionMap';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
 
 const PageInfo = (
@@ -178,6 +179,9 @@ export function MarketGaugePage() {
               {g.disclaimer}
             </p>
           </section>
+
+          {/* Reaction map — pre-decide the direction for a data surprise */}
+          <ReactionMap />
         </>
       )}
     </div>
