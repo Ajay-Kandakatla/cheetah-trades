@@ -8,6 +8,7 @@
  * Ranked by move × relative-volume, enriched (top names) with premarket H/L,
  * 10-day RelVol, and earnings-ahead. Reads /day/gappers. Educational, not advice.
  */
+import { Link } from 'react-router-dom';
 import { useGappers, type DayProfile } from '../hooks/useDayTrading';
 
 const SESSION_META: Record<string, { title: string; badge: string; cls: string }> = {
@@ -80,7 +81,16 @@ export function OvernightGappers({ profile, onPick }: {
                     onClick={() => onPick?.(g.symbol)}
                     title={onPick ? `Chart ${g.symbol}` : undefined}
                   >
-                    <td className="og__sym">{g.symbol}</td>
+                    <td className="og__sym">
+                      <Link
+                        to={`/sepa/${g.symbol}`}
+                        className="og__symlink"
+                        onClick={(e) => e.stopPropagation()}
+                        title={`${g.symbol} — open details`}
+                      >
+                        {g.symbol}
+                      </Link>
+                    </td>
                     <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>
                       {g.direction === 'up' ? '▲' : '▼'} {Math.abs(g.move_pct).toFixed(1)}%
                       {g.ext_label && <span className="og__extlbl">{g.ext_label}</span>}

@@ -10376,6 +10376,8 @@ a.tk-link:hover   { color: inherit; }
 .og__table td { padding: 0.35rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
 .og__num { text-align: right; white-space: nowrap; }
 .og__sym { font-weight: 700; color: var(--accent, #c2ef50); }
+.og__symlink { color: inherit; text-decoration: none; }
+.og__symlink:hover { text-decoration: underline; }
 .og__up { color: #10b981; }
 .og__dn { color: #f87171; }
 .og__hot { color: #10b981; font-weight: 600; }     /* RelVol ≥ elevated */
