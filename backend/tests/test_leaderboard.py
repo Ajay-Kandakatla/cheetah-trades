@@ -108,6 +108,34 @@ def test_resilient_picks_respects_k_limit():
     assert out["count"] == 10                                      # pool size, not the cap
 
 
+# ── buyable note must defer to active sell-signals (Ajay 2026-06-08) ─────────
+def test_buyable_note_caveats_climax_run():
+    # A name that clears the full buy gate but is ALSO in a climax run is kept in
+    # the buyable tier (user: "keep it, flag it") but its note flips from "Clean
+    # entry" to the climax caveat — so "Buyable now" can't contradict the position
+    # card's REDUCE. Minervini Ch.13 (don't initiate into a climax/parabolic).
+    clean = {"symbol": "CLN", "is_buyable": True, "is_candidate": True, "score": 80, "stage": 2}
+    climax = {"symbol": "CLX", "is_buyable": True, "is_candidate": True, "score": 90, "stage": 2,
+              "sell_signals": {"action": "REDUCE",
+                               "signals": {"climax_run_25pct_in_3w": True},
+                               "climax_15d_gain_pct": 31.41}}
+    out = lb.resilient_picks({"all_results": [clean, climax]}, None, k=5)
+    assert out["tier"] == "buyable" and out["count"] == 2          # still listed, not dropped
+    why = {p["symbol"]: p["why"] for p in out["picks"]}
+    assert "Clean entry" in why["CLN"]
+    assert "Clean entry" not in why["CLX"]
+    assert "climax run" in why["CLX"].lower() and "31" in why["CLX"] and "Ch.13" in why["CLX"]
+
+
+def test_buyable_note_helper_direct():
+    assert lb._buyable_note({}) == "Clean entry — clears the full buy gate"
+    assert lb._buyable_note({"sell_signals": {"action": "REDUCE", "signals": {}}}).startswith("⚠")
+    assert "stop breached" in lb._buyable_note(
+        {"sell_signals": {"action": "REDUCE", "signals": {"stop_loss_breached": True}}}).lower()
+    # a benign/no-action sell_signals block still reads clean
+    assert "Clean entry" in lb._buyable_note({"sell_signals": {"action": "HOLD", "signals": {}}})
+
+
 def test_why_not_buyable_and_stage_of():
     assert "Stage-2" in lb._why_not_buyable({"stage": 3})
     assert "pivot" in lb._why_not_buyable({"stage": 2, "setup_ready": False}).lower()

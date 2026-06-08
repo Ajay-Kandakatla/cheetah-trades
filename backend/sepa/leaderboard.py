@@ -184,12 +184,39 @@ def _why_not_buyable(r: dict) -> str:
     return "Qualified — not a same-day entry"
 
 
+def _buyable_note(r: dict) -> str:
+    """Note for a name that clears the full buy gate. If the SAME row ALSO carries
+    an active distribution/exit sell-signal (climax run, stop breach, below the
+    50/200-day), it is NOT a clean fresh entry: Minervini does not initiate into a
+    climax/parabolic (Ch.13 climax tops; p.203 — buy AT the pivot, never chasing an
+    extended run). Reconciles 'Buyable now' with the position card's REDUCE so the
+    same stock can't read 'clean entry' AND 'trim' at once (Ajay 2026-06-08)."""
+    ss = r.get("sell_signals") or {}
+    if ss.get("action") in ("REDUCE", "SELL"):
+        sigs = ss.get("signals") or {}
+        if sigs.get("climax_run_25pct_in_3w"):
+            g = ss.get("climax_15d_gain_pct")
+            gtxt = f"+{round(g)}%/15d" if isinstance(g, (int, float)) else "climax"
+            return f"⚠ clears the gate BUT climax run {gtxt} — don't chase (Ch.13)"
+        if sigs.get("stop_loss_breached"):
+            return "⚠ clears the gate BUT stop breached — manage, don't add"
+        if sigs.get("close_below_200ma"):
+            return "⚠ clears the gate BUT closed below the 200-day — caution"
+        if sigs.get("close_below_50ma_on_high_vol"):
+            return "⚠ clears the gate BUT below the 50-day on volume — caution"
+        return "⚠ clears the gate BUT flagged for reduction — don't chase (Ch.13)"
+    return "Clean entry — clears the full buy gate"
+
+
 def resilient_picks(latest: dict, macro_market: Optional[dict], k: int = 5) -> dict:
     """Names that still pass the SEPA gate while the macro backdrop is risky
     (Ajay 2026-06-04: 'if these are risky due to macro, pull the top 5 that
     qualify all the other criteria'). Two honest tiers, never blurred:
       • 'buyable'  — clears the FULL buy gate right now (scanner `is_buyable`:
-        Stage 2 + setup + not-extended + trend + liquidity). Clean entries.
+        Stage 2 + setup + trend + liquidity + volume-confirmed breakout). Clean
+        entries — EXCEPT a name that also carries an active sell-signal (climax
+        run / stop breach / below the 50-200d) is kept but flagged "don't chase"
+        via `_buyable_note`, so it can't read clean-entry AND reduce at once.
       • 'qualified'— when nothing is a clean buy (risk-off), the closest names
         that pass the qualifier gate (trend template + liquidity, book p.79),
         each tagged with what's holding it out of a buy.
@@ -225,7 +252,7 @@ def resilient_picks(latest: dict, macro_market: Optional[dict], k: int = 5) -> d
                      key=lambda r: r.get("score") or 0, reverse=True)
     if buyable:
         return {"tier": "buyable", "count": len(buyable),
-                "picks": [pack(r, "Clean entry — clears the full buy gate") for r in buyable[:k]]}
+                "picks": [pack(r, _buyable_note(r)) for r in buyable[:k]]}
 
     cand = sorted((r for r in rows if r.get("is_candidate")),
                   key=lambda r: r.get("score") or 0, reverse=True)
