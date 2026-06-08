@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -30,6 +31,20 @@ from .signals import orb, gap_and_go, bull_flag, vwap_reversion, momentum_failur
 
 log = logging.getLogger("daytrading.api")
 router = APIRouter(tags=["daytrading"])
+
+
+def _json_safe(o):
+    """Recursively replace NaN/Inf floats with None so the strict JSON encoder
+    can serialize backtest/paper payloads. Intraday stats divide by trade counts
+    and read indicator columns (ATR/VWAP at session start) that can be NaN; a
+    single NaN/Inf 500s the whole route (observed on /day/backtest/{symbol})."""
+    if isinstance(o, float):
+        return None if (math.isnan(o) or math.isinf(o)) else o
+    if isinstance(o, dict):
+        return {k: _json_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_json_safe(v) for v in o]
+    return o
 
 
 # Default watchlist — high-volume, high-volatility names where ORB has edge.
@@ -204,7 +219,7 @@ async def paper_today(
     strats = [s.strip() for s in strategies.split(",")] if strategies else None
     update = paper_mod.scan_and_update(syms, strategies=strats)
     state = paper_mod.list_today(symbols=syms)
-    return {**state, "scan_summary": update}
+    return _json_safe({**state, "scan_summary": update})
 
 
 @router.post("/day/paper/reset")
@@ -217,13 +232,13 @@ async def paper_reset(symbols: Optional[str] = Query(None)):
 async def backtest_yesterday(symbols: Optional[str] = Query(None)):
     """Yesterday-only stats: did each strategy fire and what was the outcome."""
     syms = [s.strip().upper() for s in symbols.split(",")] if symbols else DEFAULT_WATCHLIST
-    return bt_mod.backtest_universe(syms, days=2, strategy="orb")  # 2-day window covers yesterday
+    return _json_safe(bt_mod.backtest_universe(syms, days=2, strategy="orb"))  # 2-day window covers yesterday
 
 
 @router.get("/day/backtest/{symbol}")
 async def backtest_symbol(symbol: str, days: int = Query(30, ge=5, le=365),
                           strategy: str = Query("orb")):
-    return bt_mod.backtest_symbol(symbol.upper(), days=days, strategy=strategy)
+    return _json_safe(bt_mod.backtest_symbol(symbol.upper(), days=days, strategy=strategy))
 
 
 @router.get("/day/explain/{symbol}")
