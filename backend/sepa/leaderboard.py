@@ -205,6 +205,17 @@ def _buyable_note(r: dict) -> str:
         if sigs.get("close_below_50ma_on_high_vol"):
             return "⚠ clears the gate BUT below the 50-day on volume — caution"
         return "⚠ clears the gate BUT flagged for reduction — don't chase (Ch.13)"
+    # EXTENDED (no sell-signal needed): the raw is_buyable gate can fire on a LATE
+    # pocket pivot while price is already well past the pivot (KNX: is_buyable but
+    # +22.9% past). Minervini buys AT the pivot, not chasing (p.203) — so flag it
+    # missed/extended rather than "clean entry" (Ajay 2026-06-08, KNX case).
+    ee = r.get("entry_exit") or {}
+    if (ee.get("entry") or {}).get("status") == "missed_extended":
+        pivot = (r.get("entry_setup") or {}).get("pivot")
+        cur = r.get("last_close")
+        if pivot and cur and pivot > 0:
+            return f"⚠ extended — missed, don't chase (+{round((cur / pivot - 1) * 100)}% past pivot)"
+        return "⚠ extended past the pivot — missed, don't chase"
     return "Clean entry — clears the full buy gate"
 
 

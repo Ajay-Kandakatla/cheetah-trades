@@ -127,6 +127,18 @@ def test_buyable_note_caveats_climax_run():
     assert "climax run" in why["CLX"].lower() and "31" in why["CLX"] and "Ch.13" in why["CLX"]
 
 
+def test_buyable_note_caveats_extended_pivot():
+    # KNX case: is_buyable fired on a LATE pocket pivot but price is +22.9% past the
+    # pivot (entry_exit status missed_extended, no sell-signal). Must read
+    # "extended — missed", not "Clean entry" (Ajay 2026-06-08).
+    knx = {"symbol": "KNX", "is_buyable": True, "is_candidate": True, "score": 85, "stage": 2,
+           "entry_setup": {"pivot": 65.77}, "last_close": 80.80,
+           "entry_exit": {"entry": {"status": "missed_extended"}}}
+    note = lb._buyable_note(knx)
+    assert "extended" in note.lower() and "Clean entry" not in note
+    assert "23" in note                                           # +23% past pivot
+
+
 def test_buyable_note_helper_direct():
     assert lb._buyable_note({}) == "Clean entry — clears the full buy gate"
     assert lb._buyable_note({"sell_signals": {"action": "REDUCE", "signals": {}}}).startswith("⚠")

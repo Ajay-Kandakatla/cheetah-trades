@@ -177,12 +177,13 @@ def main() -> int:
         return 0
 
     if args.cmd == "alerts":
-        from . import alerts, price_alerts
+        from . import alerts, price_alerts, pivot_alerts
         pos = alerts.check_positions()
         pa = price_alerts.check_alerts()
-        log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d",
+        pv = pivot_alerts.check_pivot_alerts()
+        log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d  pivot: fired=%d",
                  len(pos["fired"]), len(pos["skipped"]),
-                 pa["fired"], pa["checked"])
+                 pa["fired"], pa["checked"], len(pv["fired"]))
         return 0
 
     if args.cmd == "rescan":

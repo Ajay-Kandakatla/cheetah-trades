@@ -54,6 +54,7 @@ def _compute() -> dict:
             continue
         cands.append({
             "symbol": r.get("symbol"), "name": r.get("name"),
+            "is_etf": bool(r.get("is_etf")),
             "pivot": round(pivot, 2), "last_close": round(cur, 2),
             "scan_dist_pct": round(d, 2),
             "rs_rank": r.get("rs_rank"), "score": r.get("score"),
