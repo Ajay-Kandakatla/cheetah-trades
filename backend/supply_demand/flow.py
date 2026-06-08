@@ -154,8 +154,9 @@ def _fetch_massive_bulk(tickers: list[str]) -> dict[str, dict]:
 
             out[t.upper()] = {
                 "ticker": t.upper(),
-                "price": float(price),
-                "prev_close": float(prev_close),
+                "price": float(price),                       # lastTrade.p — extended-hours aware
+                "prev_close": float(prev_close),             # prevDay.c — prior regular close
+                "reg_close": float(day.get("c") or 0),       # day.c — today's regular close (0 pre-open)
                 "change_pct": round(float(change_pct or 0), 2),
                 "volume": int(volume or 0),
                 "dollar_volume": int((volume or 0) * (price or 0)),

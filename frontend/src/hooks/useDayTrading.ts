@@ -124,9 +124,13 @@ export function useDayUniverse() {
   return { symbols, movers, live, universeSize, criteria, profile, setProfile };
 }
 
+export type MarketSession = 'regular' | 'premarket' | 'afterhours' | 'closed';
 export type Gapper = {
   symbol: string;
-  gap_pct: number;
+  move_pct: number;                 // headline move (session-aware)
+  gap_pct: number | null;           // last regular-session move
+  ext_move_pct: number | null;      // live extended-hours move
+  ext_label: string | null;         // PM | AH | O/N | null
   direction: 'up' | 'down';
   rel_vol: number | null;
   last: number | null;
@@ -144,6 +148,7 @@ export type GappersPayload = {
   gap_min_pct: number;
   rel_vol_elevated: number;
   profile: string;
+  session: MarketSession;
   live: boolean;
   as_of: string;
   disclaimer: string;

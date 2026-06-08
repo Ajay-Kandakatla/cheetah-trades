@@ -1,10 +1,30 @@
-/* OvernightGappers — the pre-market "set the day" checklist made live.
+/* OvernightGappers — session-aware pre-market / overnight movers.
  *
- * Names that repositioned overnight (gap ≥2% on real volume), ranked by
- * gap × relative-volume, with premarket high/low + 10-day RelVol + earnings
- * ahead on the top names. Reads /day/gappers. Educational, not advice.
+ * Tracks who's in play using Massive realtime extended-hours data:
+ *   • premarket  → live gaps vs the prior close
+ *   • afterhours → live reactions vs today's close
+ *   • closed     → last regular session + after-hours drift (overnight)
+ *   • regular    → live intraday gaps
+ * Ranked by move × relative-volume, enriched (top names) with premarket H/L,
+ * 10-day RelVol, and earnings-ahead. Reads /day/gappers. Educational, not advice.
  */
 import { useGappers, type DayProfile } from '../hooks/useDayTrading';
+
+const SESSION_META: Record<string, { title: string; badge: string; cls: string }> = {
+  premarket:  { title: 'Premarket Movers · live',        badge: 'PREMARKET',     cls: 'og-sess--pm' },
+  afterhours: { title: 'After-hours Movers · live',      badge: 'AFTER-HOURS',   cls: 'og-sess--ah' },
+  closed:     { title: 'Overnight Movers',               badge: 'MARKET CLOSED', cls: 'og-sess--cl' },
+  regular:    { title: 'Intraday Gappers · live',        badge: 'OPEN',          cls: 'og-sess--rg' },
+};
+
+function ledeFor(session: string): string {
+  switch (session) {
+    case 'premarket':  return 'Live premarket gaps vs the prior close — who repositioned overnight.';
+    case 'afterhours': return 'Live after-hours reactions vs today’s close.';
+    case 'closed':     return 'Tracked overnight from Massive realtime extended-hours data — last regular session plus after-hours drift. Premarket gaps fill in from 4:00 ET.';
+    default:           return 'Live intraday gaps vs the prior close.';
+  }
+}
 
 export function OvernightGappers({ profile, onPick }: {
   profile: DayProfile;
@@ -14,31 +34,30 @@ export function OvernightGappers({ profile, onPick }: {
   if (!data) return null;
 
   const elevated = data.rel_vol_elevated;
+  const sm = SESSION_META[data.session] || SESSION_META.closed;
 
   return (
     <section className="day-section og">
       <h2 className="day-section__h">
-        Pre-market · Overnight Gappers
-        <span className="day-section__as-of mono">
-          {' '}· {data.n_gappers} gapping ≥{data.gap_min_pct}%{data.live ? '' : ' (last session)'}
-        </span>
+        {sm.title}
+        <span className={`og-sess ${sm.cls}`}>{sm.badge}</span>
+        <span className="day-section__as-of mono"> · {data.n_gappers} moving ≥{data.gap_min_pct}%</span>
       </h2>
       <p className="og__lede">
-        Names that repositioned overnight — gap on real volume, premarket levels,
-        relative volume, earnings ahead. <strong>RelVol ≥{elevated}×</strong> = elevated
-        interest; <strong>&lt;1×</strong> = thin tape, slippage will hurt. Premarket
-        H/L populate during the 8:00–9:30 ET window.
+        {ledeFor(data.session)}{' '}
+        <strong>RelVol ≥{elevated}×</strong> = elevated interest;{' '}
+        <strong>&lt;1×</strong> = thin tape, slippage will hurt.
       </p>
 
       {data.gappers.length === 0 ? (
-        <div className="day-empty">No {data.gap_min_pct}%+ gappers right now.</div>
+        <div className="day-empty">No {data.gap_min_pct}%+ movers right now.</div>
       ) : (
         <div className="og__wrap">
           <table className="og__table">
             <thead>
               <tr>
                 <th>Symbol</th>
-                <th className="og__num">Gap</th>
+                <th className="og__num">Move</th>
                 <th className="og__num">RelVol</th>
                 <th className="og__num">PM High</th>
                 <th className="og__num">PM Low</th>
@@ -49,6 +68,11 @@ export function OvernightGappers({ profile, onPick }: {
               {data.gappers.map((g) => {
                 const rv = g.rel_vol_10d ?? g.rel_vol;
                 const rvCls = rv == null ? '' : rv >= elevated ? 'og__hot' : rv < 1 ? 'og__cold' : '';
+                const sgn = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+                const moveTitle = [
+                  g.gap_pct != null ? `Regular session ${sgn(g.gap_pct)}` : null,
+                  g.ext_move_pct != null ? `${g.ext_label} ${sgn(g.ext_move_pct)}` : null,
+                ].filter(Boolean).join(' · ');
                 return (
                   <tr
                     key={g.symbol}
@@ -57,8 +81,9 @@ export function OvernightGappers({ profile, onPick }: {
                     title={onPick ? `Chart ${g.symbol}` : undefined}
                   >
                     <td className="og__sym">{g.symbol}</td>
-                    <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`}>
-                      {g.direction === 'up' ? '▲' : '▼'} {Math.abs(g.gap_pct).toFixed(1)}%
+                    <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>
+                      {g.direction === 'up' ? '▲' : '▼'} {Math.abs(g.move_pct).toFixed(1)}%
+                      {g.ext_label && <span className="og__extlbl">{g.ext_label}</span>}
                     </td>
                     <td className={`og__num ${rvCls}`}>{rv != null ? `${rv.toFixed(1)}×` : '—'}</td>
                     <td className="og__num mono">{g.pm_high != null ? `$${g.pm_high}` : '—'}</td>

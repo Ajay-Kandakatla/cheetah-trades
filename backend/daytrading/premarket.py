@@ -37,6 +37,26 @@ _TTL = 120                  # 2-min cache (premarket moves)
 _cache: dict = {}
 
 
+def _session_now() -> str:
+    """Current US-equity session in ET: regular | premarket | afterhours | closed.
+    Drives whether we headline the live extended-hours move or the last regular gap."""
+    try:
+        import pandas as pd
+        now = pd.Timestamp.now(tz="America/New_York")
+    except Exception:
+        return "closed"
+    if now.weekday() >= 5:                         # Sat / Sun
+        return "closed"
+    mins = now.hour * 60 + now.minute
+    if 4 * 60 <= mins < 9 * 60 + 30:
+        return "premarket"
+    if 9 * 60 + 30 <= mins < 16 * 60:
+        return "regular"
+    if 16 * 60 <= mins < 20 * 60:
+        return "afterhours"
+    return "closed"                                # 20:00–04:00 overnight
+
+
 def _enrich_one(symbol: str) -> tuple[str, dict]:
     """Premarket H/L + proper 10-day relative volume + earnings-ahead for one
     name. Best-effort — any piece that fails just stays absent."""
@@ -82,28 +102,65 @@ def gappers(profile: str = "aggressive", force: bool = False) -> dict:
     syms = [n["symbol"] for n in pool]
     snaps = U._bulk_snapshot(syms)
 
+    session = _session_now()
     rows: list[dict] = []
     for s in syms:
         snap = snaps.get(s)
         if not snap:
             continue
-        gap = snap.get("change_pct")
-        if gap is None or abs(float(gap)) < GAP_MIN_PCT:
+        gap = snap.get("change_pct")                     # last regular-session move
+        last = snap.get("price")                         # lastTrade (extended-hours aware)
+        prev_close = snap.get("prev_close")
+        reg_close = snap.get("reg_close") or 0.0
+
+        # Extended-hours / overnight move vs the session-appropriate reference:
+        #   premarket  → gap into the open vs the prior regular close
+        #   afterhours → reaction vs today's regular close
+        #   closed/ON  → last after-hours drift vs the most-recent regular close
+        ext, ext_label = None, None
+        if last:
+            if session == "premarket":
+                ref, ext_label = prev_close, "PM"
+            elif session == "afterhours":
+                ref, ext_label = (reg_close or prev_close), "AH"
+            elif session == "closed":
+                ref, ext_label = (reg_close or prev_close), "O/N"
+            else:
+                ref = None                               # regular hours → intraday gap only
+            if ref:
+                ext = round((last - ref) / ref * 100, 2)
+
+        gap = round(float(gap), 2) if gap is not None else None
+        # Keep the name if EITHER the regular gap OR the extended-hours move is material.
+        if max(abs(gap or 0.0), abs(ext or 0.0)) < GAP_MIN_PCT:
             continue
+
+        # Headline move: the live extended-hours move when in/around an extended
+        # session, else the last regular session's gap.
+        if session in ("premarket", "afterhours") and ext is not None:
+            move = ext
+        elif session == "closed":
+            move = ext if (ext is not None and abs(ext) >= GAP_MIN_PCT) else gap
+        else:
+            move = gap
+
         vol = snap.get("volume")
         a = avg.get(s)
         relvol = round(float(vol) / float(a), 2) if (vol and a) else None
         rows.append({
             "symbol": s,
-            "gap_pct": round(float(gap), 2),
-            "direction": "up" if gap > 0 else "down",
-            "rel_vol": relvol,                    # snapshot-volume vs 50d avg (rough)
-            "last": snap.get("price"),
-            "prev_close": snap.get("prev_close"),
+            "move_pct": round(float(move), 2) if move is not None else None,
+            "direction": "up" if (move or 0) > 0 else "down",
+            "gap_pct": gap,                               # last regular-session move
+            "ext_move_pct": ext,                          # live extended-hours move
+            "ext_label": ext_label,                       # PM | AH | O/N | None
+            "rel_vol": relvol,                            # snapshot-volume vs 50d avg (rough)
+            "last": last,
+            "prev_close": prev_close,
         })
 
-    # Rank: biggest gaps backed by the most volume first.
-    rows.sort(key=lambda r: -(abs(r["gap_pct"]) * (r["rel_vol"] or 1.0)))
+    # Rank: biggest move (regular or extended) backed by the most volume first.
+    rows.sort(key=lambda r: -(abs(r.get("move_pct") or 0.0) * (r["rel_vol"] or 1.0)))
     top = rows[:ENRICH_TOP_N]
 
     if top:
@@ -122,11 +179,13 @@ def gappers(profile: str = "aggressive", force: bool = False) -> dict:
         "gap_min_pct": GAP_MIN_PCT,
         "rel_vol_elevated": REL_VOL_ELEVATED,
         "profile": profile,
+        "session": session,                          # regular | premarket | afterhours | closed
         "live": bool(rows),
         "as_of": datetime.now(timezone.utc).isoformat(),
-        "disclaimer": ("Overnight gap scan — gap% is last trade vs prior close; "
-                       "premarket H/L and 10-day RelVol enrich the top names. "
-                       "Educational, not advice."),
+        "disclaimer": ("Overnight movers from Massive realtime extended-hours data — "
+                       "in/around premarket & after-hours the move is the live "
+                       "extended-hours change vs the most-recent regular close; in "
+                       "regular hours it's the intraday gap. Educational, not advice."),
     }
     _cache[profile] = {"ts": time.time(), "data": data}
     log.info("gappers[%s]: %d gappers (%d enriched)", profile, len(rows), len(top))
