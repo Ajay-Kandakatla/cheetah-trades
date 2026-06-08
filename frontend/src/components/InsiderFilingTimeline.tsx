@@ -63,6 +63,20 @@ function txnClass(r: Row): string {
   return 'insf__txn--neutral';
 }
 
+/** A bold, color-coded category pill so buy vs sell vs routine comp is obvious
+ *  at a glance (Form 4 only — 13D/13G are stake filings, not transactions). */
+function txnCat(r: Row): { key: 'buy' | 'sell' | 'neutral'; label: string } | null {
+  if (r.kind !== 'form4') return null;
+  if (r.is_buy) return { key: 'buy', label: 'BUY' };
+  if (r.is_sell) return { key: 'sell', label: 'SELL' };
+  const t = (r.txn || '').toLowerCase();
+  if (t.includes('tax')) return { key: 'neutral', label: 'TAX' };
+  if (t.includes('exercise') || t.includes('option')) return { key: 'neutral', label: 'EXERCISE' };
+  if (t.includes('grant') || t.includes('award')) return { key: 'neutral', label: 'GRANT' };
+  if (t.includes('gift')) return { key: 'neutral', label: 'GIFT' };
+  return { key: 'neutral', label: 'NEUTRAL' };
+}
+
 export function InsiderFilingTimeline({ recent }: { recent?: RecentFilings | null }) {
   if (!recent) return null;
 
@@ -83,15 +97,17 @@ export function InsiderFilingTimeline({ recent }: { recent?: RecentFilings | nul
       <ol className="insf__list">
         {rows.map((r, i) => {
           const meta = KIND_META[r.kind];
+          const cat = txnCat(r);
           const who = cleanName(r.owner) || cleanName((r.display_names ?? [])[0]) || '—';
           const rel = r.relationship && r.relationship !== '—' ? r.relationship : '';
           return (
-            <li key={`${r.kind}-${r.filed}-${i}`} className={`insf__row ${meta.cls}`}>
+            <li key={`${r.kind}-${r.filed}-${i}`} className={`insf__row ${meta.cls}${cat ? ` insf__row--txn-${cat.key}` : ''}`}>
               <span className="insf__dot" aria-hidden="true" />
               <div className="insf__main">
                 <div className="insf__line1">
                   <span className="insf__date mono">{r.filed}</span>
                   <span className="insf__badge">{meta.emoji} {meta.label}</span>
+                  {cat && <span className={`insf__pill insf__pill--${cat.key}`}>{cat.label}</span>}
                   <span className="insf__who" title={who}>{who}</span>
                   {r.url && (
                     <a
