@@ -1337,6 +1337,7 @@ tr:last-child td { border-bottom: none; }
 .pivot-meter__scale { display: flex; justify-content: space-between; gap: 0.4rem;
   font-size: 0.68rem; color: var(--cm-slate, #94a3b8); margin-top: 0.3rem; }
 .pivot-meter__pivot-lbl { color: #34d399; }
+.pivot-meter__kind { color: var(--cm-slate, #8595ad); font-weight: 400; cursor: help; }
 .pivot-meter__vol { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
 .pivot-meter__vol-bar { position: relative; flex: 1; height: 7px; border-radius: 4px; background: rgba(100,116,139,0.18); }
 .pivot-meter__vol-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }

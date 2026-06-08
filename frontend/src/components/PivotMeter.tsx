@@ -22,6 +22,17 @@ const STATE_DOT: Record<PivotTiming['state'], string> = {
   GO: '🟢', AT_PIVOT: '🟠', COILING: '🟡', WAIT: '🟡', NOT_STAGE2: '🟡', EXTENDED: '🔴', NONE: '⚪️',
 };
 
+// What KIND of pivot this is — so "pivot = current price" reads as intentional.
+// A VCP/Power-Play pivot is a fixed base level (usually below price); a
+// breakout/pocket-pivot has no base, so the buy point IS the live breakout
+// (Minervini p.203) and the pivot equals the current price by design.
+const PIVOT_KIND: Record<string, { label: string; title: string }> = {
+  VCP:          { label: 'base',          title: 'Pivot = the VCP base breakout level — a fixed price (usually below). You buy a volume breakout above it.' },
+  POWER_PLAY:   { label: 'power play',    title: 'Pivot = the Power Play breakout level (high-tight-flag style).' },
+  BREAKOUT:     { label: 'live breakout', title: 'No defined base — the buy point IS the breakout happening now (Minervini p.203), so the pivot equals the current price.' },
+  POCKET_PIVOT: { label: 'pocket pivot',  title: 'Pocket pivot — an in-base institutional buy point; the pivot is the current footprint level, not a level below.' },
+};
+
 function fmt(n: number | null, d = 2): string {
   return n == null ? '—' : n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
@@ -79,7 +90,14 @@ export function PivotMeter({ t }: { t: PivotTiming }) {
       </div>
       <div className="pivot-meter__scale mono">
         <span>stop {fmt(t.stop)}</span>
-        <span className="pivot-meter__pivot-lbl">pivot {fmt(t.pivot)}</span>
+        <span className="pivot-meter__pivot-lbl">
+          pivot {fmt(t.pivot)}
+          {t.setupType && PIVOT_KIND[t.setupType] && (
+            <span className="pivot-meter__kind" title={PIVOT_KIND[t.setupType].title}>
+              {' '}· {PIVOT_KIND[t.setupType].label}
+            </span>
+          )}
+        </span>
         <span>now {fmt(t.current)} · {distTxt}</span>
       </div>
 
