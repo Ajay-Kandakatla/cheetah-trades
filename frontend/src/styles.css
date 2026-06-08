@@ -3759,6 +3759,10 @@ tr:last-child td { border-bottom: none; }
 .mgb-week--constructive { color: var(--positive); }
 .mgb-week--caution      { color: var(--warn); }
 .mgb-week--risk_off     { color: var(--negative); }
+/* Banner + its leading ⓘ explainer (sibling of the link, so the whole banner
+   stays one click target). The inline popover opens rightward, on-screen. */
+.mgb-info-wrap { display: flex; align-items: center; gap: 0.4rem; }
+.mgb-info-wrap .market-regime-banner { flex: 1 1 auto; }
 
 /* ── Long-Term Stocks tracker ────────────────────────────────────────────── */
 .lt-g--dark  { color: #1a9e54; font-weight: 700; }
