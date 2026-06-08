@@ -135,6 +135,9 @@ export type Gapper = {
   rel_vol: number | null;
   last: number | null;
   prev_close: number | null;
+  adr_pct?: number | null;       // volatility — avg daily range %
+  dollar_vol?: number | null;    // avg daily $ volume (liquidity)
+  rs_rank?: number | null;
   pm_high?: number | null;
   pm_low?: number | null;
   rel_vol_10d?: number | null;

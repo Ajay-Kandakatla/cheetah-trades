@@ -99,6 +99,7 @@ def gappers(profile: str = "aggressive", force: bool = False) -> dict:
 
     pool = U.day_trade_universe(profile)["names"]
     avg = {n["symbol"]: n.get("avg_vol_50") for n in pool}
+    meta = {n["symbol"]: n for n in pool}        # adr_pct / dollar_vol / rs_rank
     syms = [n["symbol"] for n in pool]
     snaps = U._bulk_snapshot(syms)
 
@@ -157,6 +158,10 @@ def gappers(profile: str = "aggressive", force: bool = False) -> dict:
             "rel_vol": relvol,                            # snapshot-volume vs 50d avg (rough)
             "last": last,
             "prev_close": prev_close,
+            # Always-available context (from the day-trade universe).
+            "adr_pct": (meta.get(s) or {}).get("adr_pct"),        # volatility (avg daily range %)
+            "dollar_vol": (meta.get(s) or {}).get("dollar_vol"),  # avg daily $ volume (liquidity)
+            "rs_rank": (meta.get(s) or {}).get("rs_rank"),
         })
 
     # Rank: biggest move (regular or extended) backed by the most volume first.

@@ -27,6 +27,12 @@ function ledeFor(session: string): string {
   }
 }
 
+function fmtVol(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+  return `$${(v / 1e3).toFixed(0)}K`;
+}
+
 export function OvernightGappers({ profile, onPick }: {
   profile: DayProfile;
   onPick?: (symbol: string) => void;
@@ -59,7 +65,10 @@ export function OvernightGappers({ profile, onPick }: {
               <tr>
                 <th>Symbol</th>
                 <th className="og__num">Move</th>
+                <th className="og__num">Last</th>
+                <th className="og__num">ADR</th>
                 <th className="og__num">RelVol</th>
+                <th className="og__num">$ Vol</th>
                 <th className="og__num">PM High</th>
                 <th className="og__num">PM Low</th>
                 <th>Earnings</th>
@@ -95,7 +104,14 @@ export function OvernightGappers({ profile, onPick }: {
                       {g.direction === 'up' ? '▲' : '▼'} {Math.abs(g.move_pct).toFixed(1)}%
                       {g.ext_label && <span className="og__extlbl">{g.ext_label}</span>}
                     </td>
+                    <td className="og__num mono">{g.last != null ? `$${g.last.toFixed(2)}` : '—'}</td>
+                    <td className="og__num">
+                      {g.adr_pct != null
+                        ? <span className={`og-adr${g.adr_pct >= 6 ? ' og-adr--hi' : ''}`} title="Average daily range — typical intraday volatility">{g.adr_pct.toFixed(1)}%</span>
+                        : '—'}
+                    </td>
                     <td className={`og__num ${rvCls}`}>{rv != null ? `${rv.toFixed(1)}×` : '—'}</td>
+                    <td className="og__num mono" title="Average daily $ volume (liquidity)">{g.dollar_vol != null ? fmtVol(g.dollar_vol) : '—'}</td>
                     <td className="og__num mono">{g.pm_high != null ? `$${g.pm_high}` : '—'}</td>
                     <td className="og__num mono">{g.pm_low != null ? `$${g.pm_low}` : '—'}</td>
                     <td>
