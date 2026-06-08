@@ -71,7 +71,7 @@ ROSTER = [
     ("Mid Cap",   "ZS",    131.50, "demand", 191.25,  172.12,  "tsl",      30.9),
     ("Biotech",   "BEAM",  23.83,  "close",  34.38,   30.94,   "tsl",      29.8),
     ("Large Cap", "AAPL",  245.00, "demand", 315.00,  315.00,  "max_high", 28.6),
-    ("Nuclear",   "LEU",   165.00, "close",  235.00,  211.50,  "tsl",      28.2),
+    ("Nuclear",   "LEU",   165.00, "demand", 235.00,  211.50,  "tsl",      28.2),
     ("Large Cap", "TSM",   337.95, "close",  430.55,  430.55,  "max_high", 27.4),
     ("Mid Cap",   "MNST",  72.46,  "close",  89.85,   89.85,   "max_high", 24.0),
     ("Large Cap", "NVDA",  174.40, "close",  236.54,  212.89,  "tsl",      22.1),
@@ -132,6 +132,22 @@ REPORT_META = {
                       "(matching the title) — we track forward with 10%."),
     },
     "disclaimer": "Not financial advice. Educational only. Past performance does not guarantee future results.",
+}
+
+# The author's second card — DEMAND ZONE ENTRIES ONLY (the 25 names that hit a
+# buy zone). Same window; its own frozen stats (all winners in this phase).
+REPORT_META_DEMAND = {
+    "title": "ZONETRADER618 — Demand Zone Entries Only",
+    "window": "Mar 27 – May 29, 2026",
+    "n_stocks": 25,
+    "tsl_pct": 10,
+    "summary": {"winners": 25, "losses": 0, "win_rate_pct": 100, "avg_gain_pct": 53.1,
+                "demand_zones_hit": 25, "median_return_pct": 30.9},
+    "benchmark": {"sp500_return_pct": 19.0, "portfolio_return_pct": 53.1,
+                  "alpha_pct": 34.1, "alpha_x": 2.8, "sharpe": 0.95, "sortino": 1.53,
+                  "std_dev_pct": 54.9},
+    "notes": REPORT_META["notes"],
+    "disclaimer": REPORT_META["disclaimer"],
 }
 
 _TICKERS = [r[1] for r in ROSTER]
@@ -270,7 +286,8 @@ def compute() -> dict:
         "generated_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "duration_sec": round(time.time() - t0, 2),
         "tsl_pct": int(TSL_PCT * 100),
-        "rows": rows, "summary": summary, "report": REPORT_META,
+        "rows": rows, "summary": summary,
+        "report": REPORT_META, "report_demand": REPORT_META_DEMAND,
         "prev_snapshot_avg_pct": prev_avg,
         "disclaimer": REPORT_META["disclaimer"],
     }

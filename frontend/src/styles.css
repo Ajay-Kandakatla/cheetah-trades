@@ -3780,6 +3780,10 @@ tr:last-child td { border-bottom: none; }
 .lt-stat__sub { font-size: 0.78rem; color: var(--ink-subtle, #9aa8c8); }
 .lt-stat__chips { display: flex; flex-wrap: wrap; gap: 4px; }
 
+.lt-views { display: flex; gap: 6px; margin: 0 0 0.8rem; }
+.lt-view { font: 600 0.82rem var(--sans, system-ui); padding: 5px 14px; border-radius: 999px; cursor: pointer; color: var(--ink-subtle, #9aa8c8); background: transparent; border: 1px solid rgba(255,255,255,0.14); }
+.lt-view.is-active { color: var(--ink, #e7ecf6); border-color: var(--gold-strong, #d4af37); background: rgba(212,175,55,0.1); }
+
 .lt-sort { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 0.6rem; font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); }
 .lt-sort__btn { font: inherit; padding: 2px 9px; border-radius: 999px; cursor: pointer; color: var(--ink-subtle, #9aa8c8); background: transparent; border: 1px solid rgba(255,255,255,0.14); }
 .lt-sort__btn.is-active { color: var(--ink, #e7ecf6); border-color: var(--gold-strong, #d4af37); }

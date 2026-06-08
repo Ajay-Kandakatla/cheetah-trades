@@ -29,13 +29,16 @@ type Payload = {
     avg_gain_delta_pct: number | null; in_demand_zone: number; pulling_back: number;
     in_leaderboard: number; tsl_hit: number; new_high: number;
   };
-  report: {
-    title: string; window: string; n_stocks: number; tsl_pct: number;
-    summary: { winners: number; losses: number; win_rate_pct: number; avg_gain_pct: number; demand_zones_hit: number; median_return_pct: number };
-    benchmark: { sp500_return_pct: number; portfolio_return_pct: number; alpha_pct: number; alpha_x: number; sharpe: number; sortino: number; std_dev_pct: number };
-    notes: { strategy_risk: string; options: string; tsl_label: string };
-    disclaimer: string;
-  };
+  report: ReportMeta;
+  report_demand: ReportMeta;
+  disclaimer: string;
+};
+
+type ReportMeta = {
+  title: string; window: string; n_stocks: number; tsl_pct: number;
+  summary: { winners: number; losses: number; win_rate_pct: number; avg_gain_pct: number; demand_zones_hit: number; median_return_pct: number };
+  benchmark: { sp500_return_pct: number; portfolio_return_pct: number; alpha_pct: number; alpha_x: number; sharpe: number; sortino: number; std_dev_pct: number };
+  notes: { strategy_risk: string; options: string; tsl_label: string };
   disclaimer: string;
 };
 
@@ -74,6 +77,7 @@ export function LongTermPage() {
   const [d, setD] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortKey>('report');
+  const [view, setView] = useState<'all' | 'demand'>('all');
 
   useEffect(() => {
     (async () => {
@@ -85,7 +89,8 @@ export function LongTermPage() {
   }, []);
 
   const rows = useMemo(() => {
-    const rs = [...(d?.rows ?? [])];
+    let rs = [...(d?.rows ?? [])];
+    if (view === 'demand') rs = rs.filter((r) => r.entry_basis === 'demand');
     const num = (x: number | null) => (x == null ? -1e9 : x);
     switch (sort) {
       case 'gain_now': rs.sort((a, b) => num(b.gain_now_pct) - num(a.gain_now_pct)); break;
@@ -95,10 +100,28 @@ export function LongTermPage() {
       default: break; // report order
     }
     return rs;
-  }, [d, sort]);
+  }, [d, sort, view]);
 
-  const s = d?.summary;
-  const rep = d?.report;
+  // Live "now" stats recomputed for whatever subset is showing.
+  const vs = useMemo(() => {
+    const priced = rows.filter((r) => r.gain_now_pct != null);
+    const winners = priced.filter((r) => (r.gain_now_pct ?? 0) > 0).length;
+    const avg = priced.length ? priced.reduce((a, r) => a + (r.gain_now_pct ?? 0), 0) / priced.length : null;
+    const deltas = rows.map((r) => r.gain_delta_pct).filter((x): x is number => x != null);
+    const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
+    const r1 = (x: number | null) => (x == null ? null : Math.round(x * 10) / 10);
+    return {
+      priced: priced.length, winners,
+      win_rate: priced.length ? Math.round(100 * winners / priced.length) : null,
+      avg: r1(avg), avgDelta: r1(avgDelta),
+      demand: rows.filter((r) => r.in_demand_zone).length,
+      ldr: rows.filter((r) => r.leaderboard).length,
+      tsl: rows.filter((r) => r.tsl_hit).length,
+      high: rows.filter((r) => r.new_high).length,
+    };
+  }, [rows]);
+
+  const rep = view === 'demand' ? d?.report_demand : d?.report;
 
   return (
     <div className="sepa-page lt-page">
@@ -119,8 +142,18 @@ export function LongTermPage() {
 
       {loading && !d && <p className="mono" style={{ opacity: 0.7 }}>…pricing the roster</p>}
 
-      {d && s && rep && (
+      {d && rep && (
         <>
+          {/* View toggle: the full 70 vs the demand-zone-entries-only 25 */}
+          <div className="lt-views">
+            <button type="button" className={`lt-view${view === 'all' ? ' is-active' : ''}`} onClick={() => setView('all')}>
+              All {d.report.n_stocks}
+            </button>
+            <button type="button" className={`lt-view${view === 'demand' ? ' is-active' : ''}`} onClick={() => setView('demand')}>
+              ● Demand-zone entries {d.report_demand.n_stocks}
+            </button>
+          </div>
+
           {/* How it's changing */}
           <section className="lt-summary">
             <div className="lt-stat">
@@ -130,12 +163,12 @@ export function LongTermPage() {
             </div>
             <div className="lt-stat lt-stat--now">
               <span className="lt-stat__k">Avg now</span>
-              <span className={`lt-stat__v ${gainClass(s.avg_gain_now_pct)}`}>{pct(s.avg_gain_now_pct)}</span>
+              <span className={`lt-stat__v ${gainClass(vs.avg)}`}>{pct(vs.avg)}</span>
               <span className="lt-stat__sub">
-                {s.winners_now}/{s.priced} winners · {s.win_rate_now_pct}%
-                {s.avg_gain_delta_pct != null && (
-                  <em className={s.avg_gain_delta_pct >= 0 ? 'lt-up' : 'lt-dn'}>
-                    {' '}{s.avg_gain_delta_pct >= 0 ? '▲' : '▼'} {pct(s.avg_gain_delta_pct)} since last check
+                {vs.winners}/{vs.priced} winners{vs.win_rate != null ? ` · ${vs.win_rate}%` : ''}
+                {vs.avgDelta != null && (
+                  <em className={vs.avgDelta >= 0 ? 'lt-up' : 'lt-dn'}>
+                    {' '}{vs.avgDelta >= 0 ? '▲' : '▼'} {pct(vs.avgDelta)} since last check
                   </em>
                 )}
               </span>
@@ -143,10 +176,10 @@ export function LongTermPage() {
             <div className="lt-stat">
               <span className="lt-stat__k">Live signals</span>
               <span className="lt-stat__chips">
-                <span className="lt-chip lt-chip--demand">● {s.in_demand_zone} in demand zone</span>
-                <Link to="/leaderboard" className="lt-chip lt-chip--ldr">★ {s.in_leaderboard} in leaderboard</Link>
-                <span className="lt-chip lt-chip--stop">{s.tsl_hit} below 10% stop</span>
-                <span className="lt-chip lt-chip--high">{s.new_high} at new highs</span>
+                <span className="lt-chip lt-chip--demand">● {vs.demand} in demand zone</span>
+                <Link to="/leaderboard" className="lt-chip lt-chip--ldr">★ {vs.ldr} in leaderboard</Link>
+                <span className="lt-chip lt-chip--stop">{vs.tsl} below 10% stop</span>
+                <span className="lt-chip lt-chip--high">{vs.high} at new highs</span>
               </span>
             </div>
             <div className="lt-stat">
