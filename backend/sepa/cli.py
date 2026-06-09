@@ -185,6 +185,13 @@ def main() -> int:
         log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d  pivot: fired=%d  pankaj: fired=%d",
                  len(pos["fired"]), len(pos["skipped"]),
                  pa["fired"], pa["checked"], len(pv["fired"]), len(pk["fired"]))
+        # Stamp the engine heartbeat so the UI can show a "paused" banner if this
+        # job stops running (e.g. the host slept). Best-effort; never blocks.
+        try:
+            from observability.engine_heartbeat import beat
+            beat("alerts")
+        except Exception:
+            pass
         return 0
 
     if args.cmd == "rescan":

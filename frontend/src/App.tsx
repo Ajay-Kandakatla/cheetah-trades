@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ReactNode, type ComponentType
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './components/NavBar';
 import { BreakoutAlertBanner } from './components/BreakoutAlertBanner';
+import { EngineStalledBanner } from './components/EngineStalledBanner';
 import { ChatWidget } from './components/ChatWidget';
 import { InstallToHomeScreen, shouldAutoShowInstallPrompt } from './components/InstallToHomeScreen';
 import { ensureServiceWorker } from './lib/pushSubscribe';
@@ -211,6 +212,7 @@ export function App() {
     <PageContextProvider>
     <div className="app">
       <NavBar />
+      <EngineStalledBanner />
       <BreakoutAlertBanner />
       {/* Floating Claude chat — every page can call setPageContext() so
           the assistant has structured state about what's on screen. */}

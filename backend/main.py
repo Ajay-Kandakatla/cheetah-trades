@@ -883,6 +883,21 @@ async def health() -> dict:
     }
 
 
+@app.get("/health/engine")
+async def health_engine() -> dict:
+    """Alert-engine freshness for the UI 'paused' banner. Tells the frontend
+    (which runs on the user's phone, not the frozen host) whether the alert cron
+    has actually run recently during market hours. DISPLAY-only; see
+    backend/observability/engine_heartbeat.py."""
+    try:
+        from observability.engine_heartbeat import engine_status
+        return await asyncio.to_thread(engine_status)
+    except Exception as exc:  # never break the page on a freshness read
+        log.warning("health/engine failed: %s", exc)
+        return {"market_open": False, "stale": False, "stale_reason": None,
+                "error": str(exc)}
+
+
 @app.get("/health/audit")
 async def health_audit_get(
     run: bool = Query(False, description="Run a fresh audit (no alert) instead of the cached one"),
