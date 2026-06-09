@@ -139,6 +139,11 @@ FEATURE_CATALOG: list[dict] = [
     # Educational; derived from the contract-locked vcp.detect. Owner-on via
     # added_in/VERSION.
     {"id": "demand-zones",  "label": "Demand Zones",        "group": "tools",     "default": False, "added_in": 8},
+    # Pankaj's Market Analysis (2026-06-09): curated picks from a trusted outside
+    # analyst, surfaced WITH the app's own SEPA indicators + live status vs his
+    # entry/stop/target levels, plus owner-scoped alerts when price hits them.
+    # Owner-on via added_in/VERSION; Pankaj's calls shown for context, not advice.
+    {"id": "pankaj",        "label": "Pankaj's Analysis",   "group": "tools",     "default": False, "added_in": 9},
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
@@ -188,7 +193,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 8
+CATALOG_VERSION = 9
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

@@ -2241,6 +2241,90 @@ async def research_patterns():
     return JSONResponse(await asyncio.to_thread(_run))
 
 
+@app.get("/pankaj/picks")
+async def pankaj_picks_endpoint():
+    """Pankaj's curated picks (VG / OKE / MRVL …) surfaced WITH the app's own SEPA
+    indicators + a live price + where price sits vs each of his levels. These are
+    Pankaj's discretionary calls, shown for context — not advice from the app."""
+    from sepa import pankaj_picks as pk
+    from sepa import prices as _prices
+
+    def _run():
+        picks = pk.load_picks()
+        latest = sepa_scanner.load_latest() or {}
+        by_sym = {r.get("symbol"): r for r in (latest.get("all_results") or []) if r.get("symbol")}
+        syms = [p["symbol"] for p in picks]
+
+        live: dict = {}
+        try:
+            live = _prices.bulk_live_prices(syms) or {}
+        except Exception:
+            live = {}
+
+        out = []
+        for p in picks:
+            sym = p["symbol"]
+            row = by_sym.get(sym) or {}
+            lv = live.get(sym) or {}
+            price = lv.get("price") or lv.get("last_trade_price")
+            if price is None:
+                try:
+                    price = _prices.last_trade_price(sym)
+                except Exception:
+                    price = None
+            if price is None:
+                price = row.get("last_close")
+
+            if row:
+                stage = row.get("stage") or {}
+                trend = row.get("trend") or {}
+                es = row.get("entry_setup") or {}
+                indicators = {
+                    "in_scan": True,
+                    "score": row.get("score"),
+                    "rating": row.get("rating"),
+                    "rs_rank": row.get("rs_rank"),
+                    "stage": stage.get("label") if isinstance(stage, dict) else stage,
+                    "trend_pass_all": trend.get("pass_all"),
+                    "trend_passed": trend.get("passed"),
+                    "pivot": es.get("pivot"),
+                    "is_candidate": row.get("is_candidate"),
+                    "is_buyable": row.get("is_buyable"),
+                    "day_change_pct": lv.get("change_pct") if lv.get("change_pct") is not None else row.get("day_change_pct"),
+                }
+            else:
+                indicators = {
+                    "in_scan": False,
+                    "day_change_pct": lv.get("change_pct"),
+                }
+
+            setups = [{**s, "status": pk.setup_status(s, price)} for s in p.get("setups", [])]
+
+            out.append({
+                "symbol": sym,
+                "name": p.get("name") or row.get("name"),
+                "analyst": p.get("analyst"),
+                "updated": p.get("updated"),
+                "horizon": p.get("horizon"),
+                "thesis": p.get("thesis"),
+                "price": round(price, 2) if isinstance(price, (int, float)) else None,
+                "indicators": indicators,
+                "setups": setups,
+            })
+
+        return {
+            "ok": True,
+            "analyst": pk.ANALYST,
+            "generated_at": int(time.time()),
+            "scan_generated_at": latest.get("generated_at"),
+            "picks": out,
+            "disclaimer": "Pankaj's discretionary calls, shown alongside the app's own "
+                          "indicators for context. Not financial advice.",
+        }
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
 @app.post("/research/insider-refresh")
 async def research_insider_refresh(email: str = Depends(current_user_email)):
     """Recompute the insider thesis (live EDGAR, slow) and cache it. Owner-only —
