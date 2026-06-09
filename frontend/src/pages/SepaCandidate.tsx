@@ -10,6 +10,7 @@ import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
 import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
+import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
@@ -1296,6 +1297,9 @@ export function SepaCandidatePage() {
                       </span>
                       <strong>{base.fundamentals.rev_growth_q_pct ?? '—'}%</strong>
                     </div>
+                    {(base.fundamentals as any).earnings_quality && (
+                      <EarningsQualityPanel eq={(base.fundamentals as any).earnings_quality} />
+                    )}
                   </div>
                 ) : (
                   <div className="sepa-empty sepa-empty--action">

@@ -608,6 +608,39 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
         );
       })()}
 
+      {/* Earnings Quality (Minervini Ch.8, book p.140-159) — Code 33 / margins /
+          red flags. Folds into the score; chip surfaces the verdict at a glance. */}
+      {(() => {
+        const e = (row.fundamentals as any)?.earnings_quality;
+        if (!e || e.score == null) return null;
+        const c = e.components || {};
+        const tone =
+          e.tier === 'code33' ? '#10b981' : e.tier === 'accelerating' ? '#34d399' :
+          e.tier === 'steady' ? '#eab308' : e.tier === 'red_flag' ? '#f87171' : '#94a3b8';
+        const pct = (v: number | null | undefined) =>
+          v != null ? `${v > 0 ? '+' : ''}${v}%` : '—';
+        const label =
+          e.tier === 'code33' ? '🎯 Code 33' :
+          e.tier === 'red_flag' ? `⚠️ EQ ${e.score}` : `💎 EQ ${e.score}`;
+        const title =
+          `Earnings Quality ${e.score}/100 — ${e.reason}. ` +
+          `EPS ${pct(c.eps_growth_yoy_pct)} YoY${c.eps_accelerating ? ' ⚡' : ''}, ` +
+          `Sales ${pct(c.rev_growth_yoy_pct)} YoY${c.rev_accelerating ? ' ⚡' : ''}, ` +
+          `Net margin ${pct(c.npm_latest_pct)}${c.npm_expanding ? ' expanding ↑' : ''}. ` +
+          `Minervini, Trade Like a Stock Market Wizard, Ch.8 (Assessing Earnings Quality, p.140-159).`;
+        return (
+          <div style={{ padding: '0.35rem 0.2rem 0' }}>
+            <span
+              className="sepa-chip"
+              title={title}
+              style={{ color: tone, borderColor: tone, cursor: 'help', fontSize: '0.72rem' }}
+            >
+              {label}{e.code_33 && e.tier !== 'code33' ? ' 🎯' : ''}
+            </span>
+          </div>
+        );
+      })()}
+
       {presetOpen && (
         <Suspense fallback={null}>
           <TickerAlertPresets
