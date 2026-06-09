@@ -185,19 +185,47 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         "q_eps_growth_pct": _compute_q_eps_growth(q_results),
         "y_eps_growth_pct": _compute_y_eps_growth(a_results),
         "rev_growth_q_pct": _compute_q_rev_growth(q_results),
-        # Newest-first quarterly revenue series — feeds the Sales Confidence score.
+        # Newest-first quarterly series (index 0 = latest filed quarter). These
+        # feed the Sales Confidence score AND the Minervini Ch.8 earnings-quality
+        # score (sepa/earnings_quality.py): revenue + EPS + net income give the
+        # Code 33 (EPS/sales/margin triple-acceleration, book p.158-159) and
+        # margin-expansion read (p.145-147); inventory gives the inventory-vs-sales
+        # red flag (p.153-155). All come from the SAME 8-quarter fetch — no extra
+        # API call. net_income_loss & inventory verified present on Massive
+        # /vX/reference/financials (income_statement + balance_sheet) 2026-06-08.
         "rev_q_series": [_income_value(q, "revenues") for q in q_results],
+        "eps_q_series": [_income_value(q, "diluted_earnings_per_share") for q in q_results],
+        "ni_q_series":  [_income_value(q, "net_income_loss") for q in q_results],
+        "inv_q_series": [_balance_value(q, "inventory") for q in q_results],
     }
 
 
 def _income_value(report: dict, key: str) -> Optional[float]:
-    """Pull a value from a Massive financials report safely.
+    """Pull an income-statement value from a Massive financials report safely.
 
     Massive structure: {'financials': {'income_statement': {'<key>': {'value': X, 'unit': 'USD'}}}}
     """
     try:
         v = ((report.get("financials") or {})
                   .get("income_statement") or {}).get(key, {}).get("value")
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _balance_value(report: dict, key: str) -> Optional[float]:
+    """Pull a balance-sheet value from a Massive financials report safely.
+
+    Same shape as income_statement but under the 'balance_sheet' section, e.g.
+    {'financials': {'balance_sheet': {'inventory': {'value': X, 'unit': 'USD'}}}}.
+    NOTE: Massive's standardized balance sheet exposes TOTAL 'inventory' only —
+    no finished-goods/WIP/raw split, and no 'accounts_receivable' (verified
+    2026-06-08). Receivables come from a yfinance supplement; the finished-goods
+    breakdown (Minervini Fig 8.9) is unavailable from any provider.
+    """
+    try:
+        v = ((report.get("financials") or {})
+                  .get("balance_sheet") or {}).get(key, {}).get("value")
         return float(v) if v is not None else None
     except (TypeError, ValueError):
         return None
