@@ -31,6 +31,7 @@ const SignalDrillModal = lazy(() =>
 import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PivotMeter } from '../components/PivotMeter';
+import { SepaWhyBuy } from '../components/SepaWhyBuy';
 import { StopsPanel } from '../components/StopsPanel';
 import { EntryExitPlanBlock } from '../components/EntryExitPlanBlock';
 import { pivotTiming } from '../lib/pivotTiming';
@@ -370,6 +371,26 @@ export function SepaCandidatePage() {
       rs_rank:                 r.rs_rank ?? null,
       stage_num:               r.stage?.stage ?? null,
       stage_label:             r.stage?.label ?? null,
+      // Score-component fields — needed so computeScoreBreakdown (the
+      // "What's moving the rank" block + the score_breakdown drill) can
+      // reconstruct the FULL composite (Trend +30, Setup +15, fundamentals,
+      // ADR/liquidity tiers), not just the volume/conviction slice. Mirrors
+      // SepaCandidateCard's signalData projection so the detail page shows the
+      // same breakdown as the list card (2026-06-09 card↔detail parity).
+      trend_passed:            r.trend?.passed ?? null,
+      trend_checks:            r.trend?.checks ?? null,
+      fundamentals_passed:     r.fundamentals?.passed ?? null,
+      adr_pct:                 r.adr_pct ?? null,
+      base_count_n:            r.base_count?.base_count ?? null,
+      base_count_is_late:      r.base_count?.is_late_stage ?? null,
+      setup_type:              r.entry_setup?.type ?? null,
+      setup_pivot:             r.entry_setup?.pivot ?? null,
+      setup_stop:              r.entry_setup?.stop ?? null,
+      liquidity_liquid:        r.liquidity?.liquid ?? null,
+      avg_dollar_vol:          r.liquidity?.avg_dollar_vol ?? null,
+      high_vol_breakout:       r.volume?.high_vol_breakout ?? null,
+      pocket_pivot:            r.volume?.pocket_pivot ?? null,
+      last_close:              r.last_close ?? null,
       // political-disclosure context (empty unless on the curated list)
       ...(pol.entry ? {
         political_categories:  pol.entry.categories,
@@ -536,6 +557,9 @@ export function SepaCandidatePage() {
             month: 'short', day: 'numeric',
             hour: 'numeric', minute: '2-digit',
           })}
+          {/* Re-rate window — same note the list card carries in its footer, so
+              the user knows when fresh ratings land (card↔detail parity 2026-06-09). */}
+          <span style={{ opacity: 0.7 }}> · Re-rates after 3:00 PM CT (4:00 PM ET)</span>
           {/* Stale-while-revalidate indicator. When the page renders from
               cache and a background refresh is in flight, show a subtle
               "cached … refreshing" hint so the user knows the visible
@@ -1007,6 +1031,18 @@ export function SepaCandidatePage() {
                   and a position-sizing calculator. (Position Lens is at the top of the page —
                   use this tab for the buy-side trade plan.)
                 </div>
+
+                {/* Why-buy thesis + "what's moving the rank" — the SAME summary
+                    block the leaderboard / SEPA list card shows at the bottom of
+                    each card. Lives here on the detail page (Setup tab = the
+                    buy-side read) so nothing on the card is missing from detail
+                    (2026-06-09 card↔detail parity). signalData is the completed
+                    projection built above, so the score breakdown matches the card. */}
+                {base && signalData && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <SepaWhyBuy row={base} signalData={signalData} />
+                  </div>
+                )}
 
                 {/* Pivot buy framework — the SAME block the leaderboard cards
                     show: BUY + STOPS·PICK ONE (StopsPanel) → the pivot gauge
