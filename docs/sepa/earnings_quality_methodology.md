@@ -73,7 +73,7 @@ Additive, then clamped. Positive contributions reward sales-backed, accelerating
 margin-expanding earnings; penalties dock low-quality beats and red flags:
 
 ```
-+ eps_level   (0–20)   latest EPS YoY, full at ≥25% (p.140)
++ eps_level   (0–20)   latest EPS YoY, full at ≥25% (p.127 "20 to 25 percent" min)
 + sales       (0–20)   sepa/sales.py score /100 (p.140,158)
 + margin      (0–15)   net-margin YoY expanding=15 / flat=7 / contracting=0 (p.145-147)
 + eps_accel   (0–12)   3-q rise=12, 2-q=6 (p.158)

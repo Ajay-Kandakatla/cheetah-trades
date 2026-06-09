@@ -1,9 +1,12 @@
 """VCP — Volatility Contraction Pattern detector.
 
 Book Ch 10 (p.198-213):
-  - Base forms over 3-65 weeks after a Stage 2 advance.
+  - Base forms over ~3 to 60 weeks after a Stage 2 advance (p.197). The 325-bar
+    (≈65-week) lookback below is the SEARCH window — the 60-week max base plus a
+    buffer — NOT the base length itself.
   - 2 to 6 successive contractions ("Ts"), each ~half the previous.
-  - Total base depth typically 10-35%; AVOID >60% corrections (failure-prone).
+  - Ideal correction 25-35%; >50% is "generally too much" (p.186). (The code's
+    too_deep cutoff is a tighter 40% — see vcp_methodology.md / SEPA_CONTRACTS §7.)
   - Right-side tightness: final pullback <10%, volume drying up.
   - Pivot = high of final contraction. Buy on volume expansion above pivot.
 
@@ -106,7 +109,8 @@ def _tightness_score(base, final_depth, base_depth_pct, vol_drying,
 
 
 def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
-    # Book p.212: bases form over 3-65 weeks. 65w * 5 trading days = 325 bars.
+    # Book p.197: bases form over ~3 to 60 weeks. The 325-bar default is the
+    # SEARCH horizon (60-week max base + buffer ≈ 65 weeks), NOT the base length.
     # Previous default of 90 missed legitimate long bases.
     """Detect a VCP in the last `lookback_days` bars. Returns None if no
     discernible base is found."""

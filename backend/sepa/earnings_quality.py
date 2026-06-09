@@ -38,7 +38,7 @@ from sepa import sales
 
 # ── Codified thresholds (Minervini gives direction, not exact numbers) ────────
 # Locked in test_sepa_contracts.py. "(p.X)" notes the rule each anchors to.
-STRONG_EPS_YOY_PCT = 25.0      # canonical O'Neil/Minervini "strong" Q EPS (p.140)
+STRONG_EPS_YOY_PCT = 25.0      # top of Minervini's "20 to 25 percent" Q-EPS minimum (book p.127; p.140 bullets "accelerating EPS" but states no number)
 SALES_FLOOR_PCT = 5.0          # Bonde floor reused for "sales-backed" (p.141)
 MARGIN_FLAT_BAND_PCT = 0.5     # |Δ net margin| <= this (pp) reads as "flat"
 INV_OVER_SALES_GAP_PCT = 15.0  # inventory YoY > sales YoY by this -> red flag (p.155 codification)

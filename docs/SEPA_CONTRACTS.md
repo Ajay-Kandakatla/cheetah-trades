@@ -188,7 +188,10 @@ contract version):
 
 - `fundamentals` — CANSLIM C+A+I checks (gated behind `with_catalyst=True`)
 - `moat` — Buffett-style economic moat score
-- `catalyst` — earnings catalyst summary
+- `catalyst` — earnings catalyst summary (book Ch.6 "Categories, Industry
+  Groups, and Catalysts," p.95-116). Note: catalyst is a surfaced signal, not a
+  scored gate; the chapter's category/industry-group rules are not implemented —
+  see the v2 RFC `docs/rfcs/001-industry-group-leadership.md`.
 - `insider` — recent insider transactions
 - `scanned_at` — per-row analysis timestamp (added by on-demand analyze path)
 - `qualifier` — bool, added 2026-05-27. True when `trend.pass_all AND

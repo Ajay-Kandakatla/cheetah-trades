@@ -53,8 +53,9 @@ pivot quality, and volume are all measured **within that base**.
 
 `detect(df, lookback_days=325)` →
 
-1. **Guard:** need ≥ `lookback_days + 10` (335) bars (p.197 bases run up to ~65
-   weeks; 325 bars + buffer). Else `None`.
+1. **Guard:** need ≥ `lookback_days + 10` (335) bars (p.197: bases run up to ~60
+   weeks; the 325-bar search horizon is that 60-week max + buffer ≈ 65 weeks).
+   Else `None`.
 2. **Swings:** `_find_swings(close[-325:], window=5)` → alternating highs/lows
    (a bar is a swing high/low if it's the extreme of the 5 bars on each side).
 3. **Contractions:** pair each swing high with the next swing low →
@@ -127,7 +128,7 @@ Soft flags (returned, used by the scorer for a quality bonus, **not** hard gates
 
 | Var / constant | Default | Meaning |
 |---|---|---|
-| `lookback_days` (arg) | 325 | search horizon (≈65 weeks) |
+| `lookback_days` (arg) | 325 | search horizon ≈65 wks = book's 60-wk max base (p.197) + buffer |
 | `_find_swings` window | 5 | bars each side for a swing |
 | too-deep / min-depth | 40% / 5% | base-depth bounds |
 | tightening / tight-right | 0.6× / 12% | contraction shape |
