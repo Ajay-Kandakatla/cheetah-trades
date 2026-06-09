@@ -41,6 +41,7 @@ from massive_keys import stocks_key
 from typing import Optional
 
 from sepa import sales
+from sepa import earnings_quality
 
 log = logging.getLogger("sepa.canslim")
 
@@ -110,6 +111,13 @@ def _from_hybrid(symbol: str) -> dict:
         # Sales Confidence (Bonde/Stockbee-inspired) — computed from the SAME
         # financials fetch (no extra API call). See sepa/sales.py.
         "sales": sales.compute(m.get("rev_q_series"), m.get("q_eps_growth_pct")),
+        # Minervini Ch.8 earnings quality (Code 33 / margins / red flags, book
+        # p.140-159) — also from the same fetch. See sepa/earnings_quality.py.
+        # Computed + surfaced here; folded into the scanner score separately.
+        "earnings_quality": earnings_quality.compute(
+            m.get("eps_q_series"), m.get("rev_q_series"),
+            m.get("ni_q_series"), m.get("inv_q_series"),
+        ),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "hybrid",
@@ -291,6 +299,10 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
         "inst_ownership_pct": inst,
         "sales": sales.compute(m.get("rev_q_series"), q),
+        "earnings_quality": earnings_quality.compute(
+            m.get("eps_q_series"), m.get("rev_q_series"),
+            m.get("ni_q_series"), m.get("inv_q_series"),
+        ),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "massive",
@@ -325,8 +337,10 @@ def _from_yfinance(symbol: str) -> dict:
         "rev_growth_q_pct":   rev_q,
         "inst_ownership_pct": inst,
         # yfinance fallback doesn't expose a clean revenue SERIES here, so the
-        # full sales score is unknown on this path (Massive is the primary).
+        # full sales + earnings-quality scores are unknown on this path
+        # (Massive is the primary). Field present (score None) for contract parity.
         "sales": sales.compute([], q_eps),
+        "earnings_quality": earnings_quality.compute([], [], []),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "yfinance",
@@ -338,6 +352,7 @@ def _empty() -> dict:
         "q_eps_growth_pct": None, "y_eps_growth_pct": None,
         "rev_growth_q_pct": None, "inst_ownership_pct": None,
         "sales": sales.compute([]),
+        "earnings_quality": earnings_quality.compute([], [], []),
         "checks": {"c_strong_q_eps": False, "a_strong_y_eps": False, "i_institutional": False},
         "passed": 0,
         "_source": "empty",
