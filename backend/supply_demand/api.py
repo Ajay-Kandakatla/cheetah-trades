@@ -16,9 +16,22 @@ from . import flow as flow_mod
 from . import equity_premium as equity_premium_mod
 from . import stock_supply_demand as stocks_mod
 from . import demand_zones as zones_mod
+from . import price_zones as price_zones_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
+
+
+@router.get("/supply-demand/price-zones/{symbol}")
+async def get_price_zones(symbol: str):
+    """On-demand per-ticker supply/demand price zones + an entry read. Swing-high
+    clusters = overhead supply (resistance), swing-low clusters = demand (support),
+    weighted by tests + volume; reports nearest resistance/support vs the live
+    close and a plain 'favorable / caution / neutral' entry read. Configured
+    price-structure method (NOT a book method); decision-support only, not advice.
+    See backend/supply_demand/price_zones.py."""
+    import asyncio
+    return await asyncio.to_thread(price_zones_mod.for_symbol, symbol)
 
 
 @router.get("/supply-demand/stocks")
