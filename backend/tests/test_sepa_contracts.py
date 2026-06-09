@@ -646,6 +646,13 @@ def test_is_buyable_gate_logic(scan_payload):
             continue
         vol = row.get("volume") or {}
         vol_breakout = bool(vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
+        # Extension cap (ARCB fix, 2026-06-09): is_buyable also requires the name
+        # be in the buy zone — within BUYABLE_MAX_EXT_PCT (3%) past the pivot, book
+        # p.224 ("without chasing more than a few percentage points"). A name that
+        # has run >3% past its pivot (is_in_buy_zone False, e.g. CROX at +5%) is a
+        # correct is_buyable=False even with every other pillar green. Older cached
+        # rows that predate the field default to in-zone (no behavior change).
+        in_buy_zone = bool(row.get("is_in_buy_zone", True))
         expected = bool(
             row["trend"]["pass_all"]
             and row["stage"] and row["stage"].get("stage") == 2
@@ -653,6 +660,7 @@ def test_is_buyable_gate_logic(scan_payload):
             and (row["base_count"] is None or not row["base_count"]["is_late_stage"])
             and row["liquidity"]["liquid"]
             and vol_breakout
+            and in_buy_zone
         )
         assert row["is_buyable"] == expected, (
             f"{row['symbol']}: is_buyable gate drift. expected={expected}, "
