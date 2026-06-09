@@ -326,6 +326,34 @@ def _scan_record(symbol: str) -> Optional[dict]:
     return None
 
 
+def _earnings_quality_sell_risk(eq: Optional[dict]) -> list:
+    """Earnings-quality SELL-RISK heads-ups for a held name (Minervini Ch.8,
+    'Assessing Earnings Quality', book p.140-159).
+
+    These are a HEADS-UP for the owner, NOT a mechanical sell trigger: Minervini
+    sells on PRICE (broken trend / stops, Ch.12-13), not on the fundamental
+    story. So deteriorating earnings quality is surfaced so a price break isn't a
+    surprise — it does not flip the price-based hold/sell verdict."""
+    if not eq or eq.get("score") is None:
+        return []
+    rf = eq.get("red_flags") or {}
+    c = eq.get("components") or {}
+    risks: list = []
+    if rf.get("double_trouble"):
+        risks.append("Inventory AND receivables growing faster than sales — 'double trouble' (p.157)")
+    elif rf.get("inventory_vs_sales"):
+        risks.append("Inventory building faster than sales (p.155)")
+    if rf.get("low_quality_beat"):
+        risks.append("Low-quality beat — EPS up on flat sales, no margin expansion (p.143)")
+    npm_now, npm_prior = c.get("npm_latest_pct"), c.get("npm_prior_year_pct")
+    if (npm_now is not None and npm_prior is not None and npm_now < npm_prior
+            and not c.get("npm_expanding")):
+        risks.append(f"Net margin contracting ({npm_now}% vs {npm_prior}% yr-ago) (p.146)")
+    if eq.get("tier") == "weak":
+        risks.append(f"Weak earnings quality ({eq['score']}/100) — growth not sales-driven (p.141)")
+    return risks
+
+
 def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[float] = None,
              use_llm: bool = True, provider: str = "anthropic",
              force: bool = False) -> dict:
@@ -355,6 +383,18 @@ def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[flo
     attr = drop_attribution.attribute(sym) or {}
     vf = volume_factors(df)
     scan_rec = _scan_record(sym)
+    # Minervini Ch.8 earnings quality for the held name (book p.140-159). Prefer
+    # the cached SEPA candidate's value; else compute fresh (one Massive call,
+    # and diagnose() is itself cached). Surfaced as a sell-RISK heads-up — it does
+    # NOT change the price-based hold/sell verdict.
+    eq = ((scan_rec or {}).get("fundamentals") or {}).get("earnings_quality")
+    if not eq or eq.get("score") is None:
+        try:
+            from sepa import canslim
+            eq = (canslim.fundamentals_for(sym) or {}).get("earnings_quality")
+        except Exception:
+            eq = None
+    eq_sell_risk = _earnings_quality_sell_risk(eq)
     try:
         from sepa import macro_risk
         macro = macro_risk.score_stock(sym, macro_risk.get_market()) or {}
@@ -423,6 +463,10 @@ def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[flo
         "scorecard": scorecard,
         "uptrend_driver": uptrend_driver,
         "position": position,                                 # personal P&L + hold-until-signal
+        # Minervini Ch.8 earnings quality (p.140-159) — informational sell-RISK
+        # heads-up; does NOT alter the price-based verdict above.
+        "earnings_quality": eq,
+        "eq_sell_risk": eq_sell_risk,
         "headline_driver": headline,
         "headline_label": headline_label,
         "writeup": None,
@@ -441,6 +485,9 @@ def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[flo
             "position": position,                             # the user's trade: P&L, R, breakeven, tripwires
             "sector_specific_macro_factors": macro_drivers,   # oil for energy, chips for semis…
             "scorecard": scorecard,
+            "earnings_quality": ({"tier": eq.get("tier"), "code_33": eq.get("code_33"),
+                                  "score": eq.get("score"), "sell_risk": eq_sell_risk}
+                                 if eq else None),            # Ch.8 heads-up for the narrative
         }, provider)
 
     # Only persist when the LLM ran — so the fast (writeup=false) path can't

@@ -76,3 +76,22 @@ book's mechanical rules. Analytical gauge, not advice.
 - The scanner gates (`is_buyable` / `is_candidate`), VCP, stage, distribution — untouched.
 - Stock-only diagnosis (no `entry`) behaves exactly as before — the `position`
   block is simply absent.
+
+## 6. Earnings-quality sell-risk (Minervini Ch.8, added 2026-06-08)
+
+The diagnosis now carries the held name's **earnings-quality read** (`earnings_quality`,
+from `sepa/earnings_quality.py` — see `docs/sepa/earnings_quality_methodology.md`) and a
+derived `eq_sell_risk` list (`diagnosis._earnings_quality_sell_risk`). A heads-up fires
+when the earnings story is deteriorating:
+
+- inventory / receivables growing faster than sales — *piling up* (**p.155, 157**)
+- a low-quality "beat" — EPS up on flat sales with no margin expansion (**p.143**)
+- net margin contracting year-over-year (**p.146**)
+- weak overall earnings quality — growth not sales-driven (**p.141**)
+
+**This does NOT change the hold/sell verdict.** Minervini sells on **price** (broken
+trend / violated stop, **Ch.12–13**), not on the fundamental story — `position_lens`
+stays the authority. The earnings-quality risk is purely informational: it makes a
+weakening earnings picture **visible before price confirms it**, so a subsequent price
+break isn't a surprise. It is surfaced as a labeled "sell-risk heads-up," never as a
+mechanical SELL/TRIM trigger. Test: `tests/test_portfolio_eq_risk.py`.

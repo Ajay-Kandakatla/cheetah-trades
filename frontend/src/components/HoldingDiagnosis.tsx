@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { API } from '../lib/apiBase';
+import { EarningsQualityPanel } from './EarningsQualityPanel';
 
 type Factor = { score: number; note: string };
 type Tripwire = { label: string; level: number | null; distance_pct: number | null; note: string; cite: string };
@@ -39,6 +40,9 @@ type Diagnosis = {
   position?: Position | null;
   writeup?: string | null;
   scorecard?: Record<string, Factor>;
+  // Minervini Ch.8 earnings quality — a sell-RISK heads-up (not a verdict change).
+  earnings_quality?: any | null;
+  eq_sell_risk?: string[] | null;
 };
 
 const money0 = (n: number) => `$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -196,6 +200,23 @@ export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: stri
                   })}
                 </div>
               )}
+              {/* Minervini Ch.8 earnings quality — sell-RISK heads-up. Does NOT
+                  change the price-based hold/sell verdict above; it just makes a
+                  deteriorating earnings story visible before price confirms. */}
+              {data.eq_sell_risk && data.eq_sell_risk.length > 0 && (
+                <div style={{
+                  marginTop: '0.7rem', padding: '0.5rem 0.75rem', borderRadius: 6,
+                  background: 'rgba(217,119,6,0.10)', border: '1px solid rgba(217,119,6,0.40)',
+                  fontSize: '0.8rem', color: 'var(--ink, #eee)',
+                }}>
+                  <strong style={{ color: '#d97706' }}>⚠️ Earnings-quality sell-risk</strong>
+                  <span style={{ color: 'var(--cm-slate, #94a3b8)' }}> — heads-up, not a sell signal (Minervini sells on price):</span>
+                  <ul style={{ margin: '0.3rem 0 0', paddingLeft: '1.1rem' }}>
+                    {data.eq_sell_risk.map((r, i) => <li key={i} style={{ marginTop: 2 }}>{r}</li>)}
+                  </ul>
+                </div>
+              )}
+              {data.earnings_quality && <EarningsQualityPanel eq={data.earnings_quality} />}
               <button type="button" className="hdiag__refresh" onClick={() => load(true)} disabled={loading}>↻ Re-run</button>
             </>
           )}
