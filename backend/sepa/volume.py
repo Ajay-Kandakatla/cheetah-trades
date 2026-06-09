@@ -361,6 +361,10 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
         "is_drying_up":          bool(dryup is not None and dryup < 0.7),
         "high_vol_breakout":     bool(breakout),
         "days_since_breakout":   days_since_breakout,   # 0=today, None=no breakout in last 15 bars
+        # The 21-bar high the breakout cleared = the breakout reference price.
+        # Used as the "not extended" reference for bare-breakout setups (which
+        # have no stable VCP/Power-Play pivot). Additive; book p.224 buy-zone gate.
+        "recent_high":           round(recent_high, 4) if recent_high == recent_high else None,
         "last_vol":              int(last_vol),
         "avg_vol_50":            int(avg50),
         # New fields — additive, no rename of existing keys.

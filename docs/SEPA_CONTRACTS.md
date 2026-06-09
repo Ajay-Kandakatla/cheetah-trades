@@ -306,6 +306,24 @@ A row is `is_buyable: True` if and only if ALL of:
 5. `liquidity.liquid == True`
 6. **`volume.high_vol_breakout OR volume.pocket_pivot`** — a VOLUME-CONFIRMED
    breakout (**added 2026-05-31**).
+7. **NOT extended past the pivot** — `ext_from_pivot_pct <= BUYABLE_MAX_EXT_PCT`
+   (**3.0%**, user-approved 2026-06-09). `ext_from_pivot_pct` = % the last close
+   sits above the **buy reference**: `entry_setup.pivot` for VCP / Power-Play (the
+   stable base-high pivot), else `volume.recent_high` (the 21-bar breakout high)
+   for a bare breakout. `None` reference ⇒ clause passes (degrades to the prior
+   behavior). Pocket pivots form inside the base (≤ reference) so they always pass.
+
+> Book p.224 verbatim: *"You want to buy as close to the pivot point as possible
+> without chasing the stock up more than a few percentage points."* The book gives
+> no exact number; **3%** is the user-approved house value, shared with the pivot
+> meter (`frontend/src/lib/pivotTiming.ts` `BUY_ZONE_PCT`) so the gate, the meter's
+> "Extended" line, and the WAIT-on-extended banner agree. **Fixes the 2026-06-09
+> ARCB/VECO real-money bug**: a high-volume breakout that ran well past its pivot
+> read `is_buyable=True` even though clause 6 (`high_vol_breakout` = close above the
+> 21-bar high, no upper bound) ignored distance-to-pivot. Extended names now drop to
+> `is_candidate` / `setup_ready` (watchlist), not the buyable tier. Additive row
+> fields `ext_from_pivot_pct` and `is_in_buy_zone` surface the reason + feed the
+> leaderboard live re-check. Locked by `test_buyable_rejects_extended_past_pivot`.
 
 > Book p.203 verbatim: *"the point at which you want to buy is when the stock
 > moves above the pivot point **on expanding volume**."* A breakout on

@@ -20,8 +20,11 @@ export const TIGHT_PIVOT_MAX_PCT = 5;
 /** Volume-confirmed breakout: today's volume > 1.5× the 50-day average
  *  (book p.203, "on expanding volume"). Mirrors backend volume.py. */
 export const BREAKOUT_VOL_MULT = 1.5;
-/** Buy zone ceiling above the pivot — don't chase more than ~5% past it. */
-export const BUY_ZONE_PCT = 5;
+/** Buy zone ceiling above the pivot — don't chase more than this % past it
+ *  (book p.224, "a few percentage points"). MUST match the backend buyable gate
+ *  scanner.BUYABLE_MAX_EXT_PCT so the meter's "Extended" line and is_buyable agree
+ *  (user-approved 3%, 2026-06-09; was 5%). */
+export const BUY_ZONE_PCT = 3;
 /** "Close to trigger" band — within this % BELOW the pivot the name is coiling
  *  right under the buy point (about to break out). Mirror of the buy-zone width;
  *  a UX convenience around the book's buy-on-the-cross rule (pp.198-205). */

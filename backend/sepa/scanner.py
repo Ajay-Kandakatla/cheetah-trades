@@ -132,14 +132,57 @@ def _is_setup_ready(tr, stg, bc, liq, entry_setup) -> bool:
     )
 
 
-def _is_buyable(tr, stg, bc, liq, vol, entry_setup) -> bool:
+# Buy-zone ceiling: a volume-confirmed breakout is only BUYABLE while price is
+# still within this % above the pivot. Book p.224: "buy as close to the pivot
+# point as possible without chasing the stock up more than a few percentage
+# points." The book gives no exact number; 3% is the user-approved (2026-06-09)
+# house value (the pivot-meter buy zone, frontend/src/lib/pivotTiming.ts, matches).
+BUYABLE_MAX_EXT_PCT = 3.0
+
+
+def _buy_reference(entry_setup, vol):
+    """The pivot/breakout price the buy 'should' have happened at — the anchor for
+    the not-extended check. For VCP / Power-Play that's the STABLE base-high pivot
+    (catches a multi-day run past the pivot). For a bare BREAKOUT (whose entry_setup
+    pivot is just today's close, not a real pivot) fall back to the 21-bar breakout
+    high from volume.analyze. Returns None when no reliable reference exists."""
+    t = (entry_setup or {}).get("type")
+    if t in ("VCP", "POWER_PLAY"):
+        return (entry_setup or {}).get("pivot")
+    rh = (vol or {}).get("recent_high")
+    return rh if (rh is not None and rh == rh) else None
+
+
+def ext_from_pivot_pct(entry_setup, vol, last_px):
+    """% the last close sits ABOVE the buy reference (negative = below/in base).
+    None when no reference/price. Additive — surfaced on the row so the FE + the
+    new-buyable watcher can describe / re-check 'extended' without recomputing."""
+    ref = _buy_reference(entry_setup, vol)
+    if ref and last_px and ref > 0:
+        return round((last_px - ref) / ref * 100.0, 2)
+    return None
+
+
+def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None) -> bool:
     """Book buy-now gate (pp.79-83, 198-203): `_is_setup_ready` PLUS a TODAY
-    VOLUME-CONFIRMED breakout (high_vol_breakout or pocket_pivot, p.203). This
-    is the canonical strict gate and is intentionally unchanged."""
-    return bool(
-        _is_setup_ready(tr, stg, bc, liq, entry_setup)
-        and vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))
-    )
+    VOLUME-CONFIRMED breakout (high_vol_breakout or pocket_pivot, p.203) that is
+    still NEAR the pivot — NOT extended past it (book p.224, added 2026-06-09).
+
+    The extended clause closes a real-money gap: a high-volume breakout that ran
+    well past its pivot (e.g. ARCB/VECO) used to read is_buyable=True even though
+    the same card's pivot meter said 'Extended' and the banner said 'WAIT', because
+    the gate never looked at distance-to-pivot. Now a breakout >BUYABLE_MAX_EXT_PCT
+    above the buy reference drops out of the buyable tier (it stays is_candidate /
+    setup_ready — watchlist). Pocket pivots form INSIDE the base (at/below the
+    pivot) so they are never extended and pass."""
+    if not _is_setup_ready(tr, stg, bc, liq, entry_setup):
+        return False
+    if not (vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))):
+        return False
+    ext = ext_from_pivot_pct(entry_setup, vol, last_px)
+    if ext is not None and ext > BUYABLE_MAX_EXT_PCT:
+        return False
+    return True
 
 
 # Composite score weights — each component contributes up to N points; total = 100.
@@ -394,7 +437,8 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # Actionability bonus (book p.203): a name you can BUY today — a volume-
     # confirmed breakout in a Stage-2 setup, not late — outranks one still
     # waiting below its trigger (ranks in-buy-zone above WAIT). 2026-06-01.
-    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup)
+    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px)
+    _ext_pct = ext_from_pivot_pct(entry_setup, vol, _last_px)
     setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup)
     if buyable:
         score += 4
@@ -501,6 +545,11 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         # to admit a breakout that fired earlier in the week, or with no breakout
         # gate at all. Strict same-day buyable stays `is_buyable`.
         "setup_ready": setup_ready,
+        # % above the buy reference (pivot / breakout high). Additive (2026-06-09):
+        # lets the FE live-recheck "still in the buy zone?" and the new-buyable
+        # watcher describe extension, without recomputing. None = no reference.
+        "ext_from_pivot_pct": _ext_pct,
+        "is_in_buy_zone": (_ext_pct is None or _ext_pct <= BUYABLE_MAX_EXT_PCT),
         "risk_to_stop_pct": risk_to_stop_pct,
     }
 
@@ -961,7 +1010,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     # Institutional-sponsorship demotion (book p.195) — see full-scan path.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
     # Actionability bonus (book p.203) — see full-scan path.
-    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup)
+    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px)
+    _ext_pct = ext_from_pivot_pct(entry_setup, vol, _last_px)
     setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup)
     if buyable:
         score += 4
@@ -1038,6 +1088,11 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "is_buyable": buyable,
         # is_buyable minus the same-day breakout trigger — see full-scan path.
         "setup_ready": setup_ready,
+        # % above the buy reference (pivot / breakout high). Additive (2026-06-09):
+        # lets the FE live-recheck "still in the buy zone?" and the new-buyable
+        # watcher describe extension, without recomputing. None = no reference.
+        "ext_from_pivot_pct": _ext_pct,
+        "is_in_buy_zone": (_ext_pct is None or _ext_pct <= BUYABLE_MAX_EXT_PCT),
         "risk_to_stop_pct": risk_to_stop_pct,
         "from_cache": True,
     }

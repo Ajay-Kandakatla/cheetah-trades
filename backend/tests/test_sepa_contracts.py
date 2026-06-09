@@ -186,6 +186,37 @@ def test_setup_ready_is_buyable_minus_breakout():
     assert V.BREAKOUT_RECENCY_LOOKBACK >= 5
 
 
+def test_buyable_rejects_extended_past_pivot():
+    """is_buyable must drop a volume-breakout that ran too far past the pivot
+    (book p.224 — don't chase more than a few percentage points). User-approved
+    threshold 3% (2026-06-09), shared with the pivot meter. Fixes the ARCB/VECO
+    real-money gap where an extended name read is_buyable=True. Extended names
+    stay setup_ready (watchlist), only the strict buyable tier excludes them."""
+    from types import SimpleNamespace
+    from sepa.scanner import _is_buyable, _is_setup_ready, BUYABLE_MAX_EXT_PCT
+
+    assert BUYABLE_MAX_EXT_PCT == 3.0          # locked house value
+    tr = SimpleNamespace(pass_all=True)
+    stg, liq = {"stage": 2}, {"liquid": True}
+
+    # VCP pivot 100; a breakout sitting 2% above the pivot is still buyable.
+    es = {"type": "VCP", "pivot": 100.0, "stop": 93.0}
+    assert _is_buyable(tr, stg, None, liq, {"high_vol_breakout": True}, es, 102.0) is True
+    # ...but 10% extended past the pivot is NOT buyable (yet still setup_ready).
+    assert _is_buyable(tr, stg, None, liq, {"high_vol_breakout": True}, es, 110.0) is False
+    assert _is_setup_ready(tr, stg, None, liq, es) is True
+    # Bare BREAKOUT (pivot==last close, unreliable) falls back to the 21-bar
+    # breakout high in vol.recent_high — extended above THAT is rejected.
+    es_brk = {"type": "BREAKOUT", "pivot": 110.0, "stop": 101.0}
+    assert _is_buyable(tr, stg, None, liq,
+                       {"high_vol_breakout": True, "recent_high": 100.0}, es_brk, 110.0) is False
+    # Pocket pivot forms inside the base (price at/below the reference) → buyable.
+    assert _is_buyable(tr, stg, None, liq,
+                       {"pocket_pivot": True, "recent_high": 105.0}, es_brk, 100.0) is True
+    # Backward-compat: with no last_px the extended check is skipped (old behavior).
+    assert _is_buyable(tr, stg, None, liq, {"high_vol_breakout": True}, es) is True
+
+
 def test_sales_confidence_thresholds_locked():
     """Sales Confidence (sepa/sales.py) anchors to Pradeep Bonde's DOCUMENTED
     sales numbers (Stockbee 2007 'How to trade earnings' / 2010 EP taxonomy):
