@@ -67,6 +67,19 @@ future demand, or both" (p.155). **But** (p.156) inventory/raw-material build
 **suppressed when sales YoY ≥ 25%** *(codification)* — e.g. a chipmaker building
 inventory into +85% revenue is not flagged.
 
+> **Additive-vs-multiplicative codification (acknowledged 2026-06-09 audit).**
+> The book states the red flag **multiplicatively**: p.156 "if receivables and
+> inventories are both increasing at a greater rate than sales (**twice or more**
+> without explanation)"; Fig 8.9 shows inventory up ~4× and receivables ~3× the
+> rate of sales. We approximate it **additively** — `inv_YoY > sales_YoY + 15pp`
+> (`INV_OVER_SALES_GAP_PCT`) — plus an absolute noise floor
+> `inv_YoY > 10%` (`INV_REDFLAG_ABS_FLOOR_PCT`). Neither the +15pp gap nor the
+> 10% floor is a book number — p.155 explicitly says the absolute inventory level
+> "is not that meaningful," so the floor exists only to suppress tiny-denominator
+> noise. Both are **owned codifications** of the book's "twice or more" concept,
+> locked in `test_sepa_contracts.py`; a future pass could switch to the literal
+> ≥2× ratio test (tracked in the audit follow-ups).
+
 ## Scoring (0–100)
 
 Additive, then clamped. Positive contributions reward sales-backed, accelerating,

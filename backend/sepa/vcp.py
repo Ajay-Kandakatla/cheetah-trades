@@ -178,10 +178,12 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
     base_low = min(ct["bot_price"] for ct in base)
     base_depth_pct = (1 - base_low / base_high) * 100 if base_high else 0.0
 
-    # Book pp.197-200: a proper base corrects the LEAST; the worked VCP first
-    # contraction is ~25% (flat base 10-15%). >40% from the base high is a deep,
-    # failure-prone correction, not a VCP.
-    too_deep = base_depth_pct > 40
+    # Book p.186: the ideal correction is 25-35% and ">50 percent is generally
+    # too much." The 40% cutoff here is a CONFIGURED, deliberately-tighter floor
+    # (not a book number) — it rejects 40-50% bases the book would still tolerate
+    # in weak tapes, trading a little recall for cleaner pivots. Owned deviation;
+    # see SEPA_CONTRACTS.md §7 and vcp_methodology.md.
+    too_deep = base_depth_pct > 40  # configured < book's 50% "too much" (p.186)
 
     # Book p.199: each contraction "about half (plus or minus a reasonable
     # amount) of the previous" (25→15→8 or 25→10→5). Enforce as an END-TO-END
@@ -198,8 +200,10 @@ def detect(df: pd.DataFrame, lookback_days: int = 325) -> Optional[dict]:
     pivot_price = base[-1]["top_price"]
     stop_price = base[-1]["bot_price"]
 
-    # Pivot quality: a base forms AFTER an advance (p.197). Require ≥20% run from
-    # the pre-base low to the base's left-side high.
+    # Pivot quality: a base forms AFTER an advance (p.197, QUALITATIVE — the book
+    # gives no % here). The ≥20% prior-run requirement is a CONFIGURED threshold
+    # (owned deviation, like the 12% right-side ceiling and 0.6× tightening), not
+    # a Minervini number. See SEPA_CONTRACTS.md §7 and vcp_methodology.md §4/§7.
     pivot_quality_ok = False
     pivot_prior_advance_pct = None
     if base_start_idx > 10:

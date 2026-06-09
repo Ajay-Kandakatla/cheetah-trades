@@ -258,7 +258,12 @@ def build_entry_exit(
                     "eta": _bday_offset(now, TARGET_HORIZON_DAYS.get(key.replace("r", "t"), 10)),
                 })
         time_stop_date = _bday_offset(now, TIME_STOP_DAYS)
-        # Intraday hard floor mirrors the existing card's "-12% INTRADAY"
+        # Intraday hard floor mirrors the existing card's "-12% INTRADAY" — a UI
+        # backstop, NOT a book number. NOTE (2026-06-09 audit): -12% is WIDER than
+        # Minervini's stated absolute maximum of 10% (p.276 "absolute maximum line
+        # in the sand of no more than 10 percent"; p.299). Flagged as an owned
+        # deviation; a follow-up may tighten this to pivot × 0.90 (-10%). See
+        # docs/sepa/entry_decision_methodology.md.
         intraday_floor = round(pivot * 0.88, 2)
 
         # ── ATR-based dynamic stop ("breathes with the market") ───────────

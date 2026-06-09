@@ -87,7 +87,10 @@ def _determine_setup(vcp_info, pp_info, vol, last_px):
         entry_setup = {
             "type": "POCKET_PIVOT" if pp_only else "BREAKOUT",
             "pivot": round(last_px, 2),
-            "stop": round(last_px * 0.92, 2),   # tight 8% Minervini-discipline stop
+            "stop": round(last_px * 0.92, 2),   # configured tight 8% stop. NOTE: Minervini's
+            # actual stop rule is 1/2 × your real average gain (p.299), with a 10% absolute
+            # max (p.276); 8% is a fixed proxy, not the book's adaptive rule. See
+            # docs/sepa/entry_decision_methodology.md (owned deviation, 2026-06-09 audit).
         }
         base_mult = 0.70
 

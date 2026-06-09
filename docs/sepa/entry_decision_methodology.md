@@ -81,3 +81,21 @@ else if (above && breakingOut) state = 'GO'
 - The buy mechanics (pivot ≤5% tight handle, 1.5× breakout volume, buy-zone
   ceiling) — unchanged; see `vcp_methodology.md`.
 - A genuine Stage 2 breakout still reads **ENTER / GO** exactly as before.
+
+## 5. Stop-loss levels are configured proxies, NOT the book's adaptive rule (owned deviations, 2026-06-09 audit)
+
+The surfaced stops are fixed-percentage / structure-based proxies. Minervini's
+actual stop discipline is **adaptive** and is **not** implemented; we flag the
+gaps rather than claim book-fidelity:
+
+| Surfaced stop | Where | Book says | Status |
+|---|---|---|---|
+| Flat **7%** hard cap | `analysis/trade_plan.py` `MINERVINI_HARD_STOP_PCT` | Stop = **½ × your real average gain** (p.299), monitored & adjusted over time (p.300) | Configured proxy — book's avg-gain rule needs the user's realized batting stats, which we don't track. |
+| Tight **8%** breakout stop | `scanner.py` entry_setup | same p.299 rule; **10% absolute max** (p.276) | Configured proxy. |
+| **−12%** intraday hard floor | `entry_exit.py` `intraday_floor = pivot × 0.88` | **"absolute maximum line in the sand of no more than 10 percent"** (p.276, p.299) | **Wider than the book's hard 10% max** — owned deviation; candidate to tighten to −10%. |
+| Difficult-market tightening | market-posture overlay says "TIGHTEN" | concretely **7-8% → 5-6%**, targets 15-20% → 10-12% (p.311) | The verdict escalates but the surfaced stop/target **numbers do not move** — owned gap. |
+| Position sizing | `analysis/trade_plan.py` `position_size` (0.5-1% risk) | concentration: **~25% / 4-6 names, ≤20 positions** (p.312) | Generic fixed-fractional, **not** the book's concentration model — flagged, not implemented. |
+
+These are decision-support displays; none is a book-faithful reproduction of
+Minervini's risk rules. Tracked as audit follow-ups for a possible future
+"realized-stats-aware" stop module.

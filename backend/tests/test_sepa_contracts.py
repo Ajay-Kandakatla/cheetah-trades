@@ -214,6 +214,7 @@ def test_earnings_quality_thresholds_locked():
     assert eq.STRONG_EPS_YOY_PCT == 25.0
     assert eq.SALES_FLOOR_PCT == 5.0
     assert eq.INV_OVER_SALES_GAP_PCT == 15.0
+    assert eq.INV_REDFLAG_ABS_FLOOR_PCT == 10.0  # codified noise floor (book p.155 — not a book number)
     assert eq.INV_REDFLAG_SALES_STRONG_PCT == 25.0
     assert eq.LOWQ_EPS_MIN_PCT == 25.0
     assert eq.LOWQ_SALES_MAX_PCT == 5.0

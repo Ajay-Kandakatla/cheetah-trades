@@ -41,7 +41,13 @@ from sepa import sales
 STRONG_EPS_YOY_PCT = 25.0      # top of Minervini's "20 to 25 percent" Q-EPS minimum (book p.127; p.140 bullets "accelerating EPS" but states no number)
 SALES_FLOOR_PCT = 5.0          # Bonde floor reused for "sales-backed" (p.141)
 MARGIN_FLAT_BAND_PCT = 0.5     # |Δ net margin| <= this (pp) reads as "flat"
-INV_OVER_SALES_GAP_PCT = 15.0  # inventory YoY > sales YoY by this -> red flag (p.155 codification)
+INV_OVER_SALES_GAP_PCT = 15.0  # CODIFICATION of book p.156 "twice or more": the book
+#   states the red flag MULTIPLICATIVELY (inv/recv growing ≥ ~2× sales). We approximate
+#   it as an ADDITIVE +15pp gap (inv YoY > sales YoY + 15). Owned deviation — a future
+#   pass could switch to the literal ratio test. See SEPA_CONTRACTS.md §4.
+INV_REDFLAG_ABS_FLOOR_PCT = 10.0  # CODIFICATION, NOT a book number: book p.155 says the
+#   absolute inventory level "is not that meaningful" — this floor only suppresses the
+#   flag on tiny-denominator noise (inv/recv YoY ≤ 10%). Owned deviation, locked below.
 INV_REDFLAG_SALES_STRONG_PCT = 25.0  # p.156: inventory build WITH strong sales is
 #   demand-anticipation, NOT piling up. Suppress the flag above this sales YoY.
 LOWQ_EPS_MIN_PCT = 25.0        # "EPS jumped" leg of a low-quality beat (p.143)
@@ -160,7 +166,7 @@ def compute(
     inventory_redflag = bool(
         inv_g0 is not None and rev_g[0] is not None
         and inv_g0 > rev_g[0] + INV_OVER_SALES_GAP_PCT
-        and inv_g0 > 10
+        and inv_g0 > INV_REDFLAG_ABS_FLOOR_PCT
         and not sales_strong
     )
     # Receivables red flag (p.156-157) — only when the yfinance supplement is
@@ -169,7 +175,7 @@ def compute(
     recv_g0 = _yoy(recv, 0) if recv else None
     receivables_redflag = (
         bool(recv_g0 is not None and rev_g[0] is not None
-             and recv_g0 > rev_g[0] + INV_OVER_SALES_GAP_PCT and recv_g0 > 10)
+             and recv_g0 > rev_g[0] + INV_OVER_SALES_GAP_PCT and recv_g0 > INV_REDFLAG_ABS_FLOOR_PCT)
         if recv else None
     )
     double_trouble = bool(inventory_redflag and receivables_redflag)

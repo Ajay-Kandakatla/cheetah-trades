@@ -513,6 +513,21 @@ Code location: `backend/sepa/vcp.py`. Contracts: `backend/tests/test_vcp.py`
 - `tight_right_side == True` (final contraction ≤ 12%)
 - `pivot_quality_ok == True` (≥ 20% prior advance)
 
+> **Configured thresholds — NOT book numbers (acknowledged 2026-06-09 audit).**
+> Several gates above operationalize qualitative book guidance with chosen
+> numbers; the page cites anchor the *concept*, not the figure:
+> - **`too_deep` = 40%** is deliberately *tighter* than the book's **50%**
+>   "generally too much" line (p.186, ideal 25-35%). It rejects 40-50% bases the
+>   book would still tolerate in weak tapes — a recall/precision trade we own.
+> - **pivot prior-advance ≥ 20%**: p.197 only says a base "forms after an
+>   advance" (qualitative, no %). The 20% is chosen, like the 12% right-side
+>   ceiling and the 0.6× end-to-end tightening.
+> - **final ≤ 0.6× first** codifies p.199's "about half (plus or minus a
+>   reasonable amount)"; **0.8** volume-dry ratio codifies p.205's "volume
+>   contracts."
+> None of these are "Minervini said 40/20/0.6"; they are our codifications and
+> may be tuned without contradicting the book.
+
 **Resolved gaps** (2026-05-27 audit → fixed 2026-06-01, locked by `test_vcp.py`):
 1. ✅ Whole-window depth → now isolates the most recent contracting base
    (`test_measures_recent_base_not_full_window`).
