@@ -20,6 +20,7 @@ import { MoneyMovement } from '../components/MoneyMovement';
 import { CrossJunctions } from '../components/CrossJunctions';
 import { TopConfluence } from '../components/TopConfluence';
 import { AtPivotToday } from '../components/AtPivotToday';
+import { FullScanModal } from '../components/FullScanModal';
 
 const PageInfo = (
   <>
@@ -60,6 +61,7 @@ export function LeaderboardPage() {
             has trended. Built to turn rank <em>volatility</em> into confidence.
           </p>
         </div>
+        <FullScanModal />
       </div>
 
       <AtPivotToday />

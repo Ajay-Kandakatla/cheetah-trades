@@ -25,6 +25,7 @@ import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { Heatmap, type HeatTile } from '../components/Heatmap';
 import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
 import { MarketContextStrip } from '../components/MarketContextStrip';
+import { FullScanModal } from '../components/FullScanModal';
 
 const PageInfo = (
   <>
@@ -108,6 +109,7 @@ export default function PortfolioPage() {
             R-targets and a Minervini stop measured from your cost. Add what you own below.
           </p>
         </div>
+        <FullScanModal />
       </div>
 
       <PortfolioPostureBanner />
