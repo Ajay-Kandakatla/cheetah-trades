@@ -804,9 +804,9 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none',
             color: 'var(--cm-slate, #94a3b8)', font: 'inherit', fontSize: '0.7rem',
             cursor: 'pointer', padding: '0.2rem 0', opacity: 0.85 }}
-          title="Show/hide the full signal chips — volume, insider/valuation, realtime accum/dist, ADR, 13F whales, SEC activity, macro, moat, pioneer themes. All of these also live on the ticker detail page."
+          title="Show/hide the full read for this name — the why-buy thesis, what's moving the rank, and all signal chips (volume, insider/valuation, realtime accum/dist, ADR, 13F whales, SEC activity, macro, moat, pioneer themes). Everything also lives on the ticker detail page."
         >
-          {showSignals ? '▾ fewer signals' : '▸ all signals'}
+          {showSignals ? '▾ less' : '▸ why-buy & signals'}
         </button>
 
         {showSignals && (
@@ -1110,7 +1110,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             reads before the disclaimer. Volume signals are the headline
             (user's primary buy signal); ranking note explains why the
             same card can move from rank 3 → 9 within minutes. */}
-        <SepaWhyBuy row={row} signalData={signalData} />
+        {showSignals && <SepaWhyBuy row={row} signalData={signalData} />}
 
         {/* SEPA staleness footer — every card is rated against yesterday's
             close. Today's intraday damage doesn't reflect until tonight's
