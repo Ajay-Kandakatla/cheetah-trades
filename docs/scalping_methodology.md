@@ -99,3 +99,59 @@ VWAP (clearly labeled practitioner/discretionary).
 See `scalping/detectors.py`, `scalping/nbbo.py`, `scalping/costs.py`. The cost
 defaults (commission $0.0035/share per Zarattini; 5 bps/side slippage; SEC §31 +
 FINRA TAF; 2% short-borrow) are conservative retail assumptions, not gospel.
+
+---
+
+# SEPA-cross tape watch (added 2026-06-09) — candle wick/body reads at levels
+
+The autonomous alert layer: holdings + buyable + at-pivot + leaderboard names,
+each completed 5-min candle read at its levels (SEPA pivot, VWAP, opening-range
+high, day high) → states (BREAKOUT_STRONG / BREAKOUT_WEAK / REJECTION /
+BREAKDOWN / RECLAIM / STALL) → one push per (symbol, state, ET-day), each alert
+self-graded against the +30-min tape. `scalping/candles.py` + `sepa_watch.py`.
+
+## What the evidence actually says (adversarially verified 2026-06-09)
+
+The candle measures we compute (body % of range, wick ratios, Chaikin
+close-location-value, volume ratio) are DESCRIPTIVE arithmetic. The question is
+whether candle PATTERNS predict — and the verified record is mostly null:
+
+- **Duvinage, Mazza & Petitjean (2013)**, Quantitative Finance 13(7) — **the
+  decisive study for this exact tool**: 5-MIN bars, 30 DJIA stocks, 83 candle
+  rules. Some pre-cost predictive content, but **no rule beats buy-and-hold
+  after costs plus data-snooping correction**. Our horizon, their null.
+- **Marshall, Young & Rose (2006)**, J. Banking & Finance 30(8) — NULL: DJIA
+  stocks 1992–2002, bootstrap test; candlestick strategies have no value.
+- **Marshall, Young & Cahan (2008)**, RQFA 31(2) — NULL in candlesticks' home
+  market (TSE 1975–2004): "not even consistently profitable before costs."
+- **Horton (2009)**, QREF 49(2) — NULL on 349 US stocks; grounds our rule that
+  a doji is a STATE label, never a reversal signal.
+- **Fock, Klein & Zwergel (2005)**, J. Derivatives 13(1) — NULL on intraday
+  DAX/Bund futures, alone or with momentum.
+- Contested daily-bar positives exist — **Caginalp & Laurent (1998)** (S&P 500
+  daily, out-of-sample positive; but their test "removes conditions on
+  magnitudes", so NO body/wick size threshold has academic validation) and
+  **Lu & Shiu (2012, 2016)** (Taiwan/DJIA daily) — cited to show the daily
+  evidence is contested, not settled. None of it transfers to 5-min bars.
+- **Engle (1982)**, Econometrica 50 — the ONE strong predictive claim we ship:
+  volatility clustering means range compression/expansion forecasts more
+  VOLATILITY, never direction. STALL is therefore "expect movement", direction
+  unsaid.
+- **Bulkowski (ThePatternSite)** — used ONLY for identification conventions
+  (wick ≥ 2–3× body etc.). His own daily-bar stats are near-random (shooting
+  star 59%, hammer 60%); never quoted as win rates here.
+
+## Therefore: what this layer claims, and what it refuses to claim
+
+- Verdicts are **descriptive** ("constructive" / "deteriorating") — who won the
+  bar at the level, on what participation. Never "will go up".
+- Thresholds (body ≥60%, doji <5%, wick dominance ≥2×, CLV ≥0.6, vol ≥1.5×,
+  level band 0.3%) are **CONFIGURED** conventions, not validated formulas — per
+  Caginalp & Laurent, no magnitude threshold has academic backing anywhere.
+- **Self-scoring is the contract**: every alert is graded against the next 30
+  minutes and the page shows the live per-state hit-rate; the historical
+  tape-read backtest (`tape_backtest.py`) reports follow-through per state and
+  says plainly that ~50% = the read is noise. If the record says the read adds
+  nothing, believe the record over the read.
+- Refused as folklore: fixed win-rates for hammer/shooting-star/engulfing,
+  doji-as-reversal, any "this pattern means X% odds" claim.

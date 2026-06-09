@@ -4,7 +4,9 @@ action and candle wicks and body").
 
 HONESTY CONTRACT (per the verified research, see docs/scalping_methodology.md):
 the academic record on candlestick patterns as STANDALONE predictors is weak to
-null (Marshall, Young & Rose 2006 found no value on US stocks). What this module
+null — Marshall, Young & Rose (2006) found no value on US stocks, and Duvinage,
+Mazza & Petitjean (2013) found no candle rule survives costs on 5-MIN bars (our
+exact horizon). What this module
 does instead is DESCRIPTIVE supply/demand arithmetic about each completed 5-min
 bar — who won the bar (body %, close-location), where rejection happened (wick
 dominance), and on what participation (volume ratio) — evaluated AT a level that
@@ -22,9 +24,9 @@ import pandas as pd
 
 # ── CONFIGURED thresholds (descriptive cutoffs, not book formulas) ────────────
 STRONG_BODY_PCT = 0.60       # body ≥60% of range = one side controlled the bar
-DOJI_BODY_PCT = 0.15         # body <15% of range = indecision
+DOJI_BODY_PCT = 0.05         # body <5% of range = true doji (open≈close)
 WICK_DOMINANCE = 2.0         # wick ≥2× body = rejection tail
-CLV_STRONG = 0.50            # close-location-value (Chaikin): +1 close at high
+CLV_STRONG = 0.60            # close-location-value (Chaikin): +1 close at high
 VOL_RATIO_MIN = 1.5          # bar volume ≥1.5× today's avg 5-min bar = real participation
 LEVEL_TOL_PCT = 0.30         # "at the level" band, % of price
 BARS_5M = "5min"
@@ -118,7 +120,10 @@ def classify(df5: pd.DataFrame, levels: dict, avg_vol_5m: Optional[float]) -> Op
                 "reasons": reasons, "metrics": metrics}
 
     # REJECTION — poked the reference level, wick rejected it, closed back under.
-    if ref and h >= ref and c < ref and a["upper_wick_dominant"]:
+    # Volume gate (when known): a low-participation poke-and-fade is noise, not
+    # supply — per the vetted spec. Unknown volume doesn't block (honest default).
+    if ref and h >= ref and c < ref and a["upper_wick_dominant"] \
+            and (vol_ratio is None or vol_ratio >= VOL_RATIO_MIN):
         return out("REJECTION", "deteriorating", "alert", [
             f"Tested {ref_name} {ref:.2f} and got rejected — upper wick "
             f"{a['upper_wick_pct']:.0%} of the bar vs body {a['body_pct']:.0%}",
@@ -130,7 +135,7 @@ def classify(df5: pd.DataFrame, levels: dict, avg_vol_5m: Optional[float]) -> Op
     crossed = ref and pc <= ref < c
     holding_above = ref and c > ref and pc > ref and _near(float(last["low"]), ref)
     if crossed or holding_above:
-        if a["is_strong"] and a["clv"] >= CLV_STRONG and vol_ok:
+        if a["is_strong"] and a["dir"] == "up" and a["clv"] >= CLV_STRONG and vol_ok:
             return out("BREAKOUT_STRONG", "constructive", "alert", [
                 f"{'Broke' if crossed else 'Holding'} {ref_name} {ref:.2f} with a "
                 f"{a['body_pct']:.0%}-body bar closing near its high (CLV {a['clv']:+.2f})",
@@ -147,7 +152,8 @@ def classify(df5: pd.DataFrame, levels: dict, avg_vol_5m: Optional[float]) -> Op
     # BREAKDOWN — lost VWAP, or fell back under the pivot after being above.
     lost_vwap = vwap and pc >= vwap and c < vwap
     failed_pivot = pivot and pc >= pivot and c < pivot
-    if (lost_vwap or failed_pivot) and a["dir"] == "down" and a["is_strong"]:
+    if (lost_vwap or failed_pivot) and a["dir"] == "down" and a["is_strong"] \
+            and a["clv"] <= -CLV_STRONG:
         lvl_name, lvl = ("VWAP", vwap) if lost_vwap else ("pivot", pivot)
         return out("BREAKDOWN", "deteriorating", "alert", [
             f"Lost {lvl_name} {lvl:.2f} on a {a['body_pct']:.0%}-body red bar"
