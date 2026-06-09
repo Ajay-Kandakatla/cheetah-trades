@@ -30,7 +30,9 @@ def _now_et() -> datetime:
         from zoneinfo import ZoneInfo
         return datetime.now(ZoneInfo("America/New_York"))
     except Exception:
-        return datetime.now(timezone.utc) - timedelta(hours=5)
+        # Container TZ is America/New_York — local time IS ET and stays
+        # DST-correct (fixed UTC-5 was wrong half the year; review fix 2026-06-09).
+        return datetime.now().astimezone()
 
 
 def _spy_first30_return(now_et: Optional[datetime] = None) -> Optional[dict]:

@@ -63,9 +63,7 @@ export function BacktestPanel({ active }: { active: boolean }) {
           <tbody>
             <StatRow name="stocks_in_play_orb" s={data.by_strategy.stocks_in_play_orb} />
             <StatRow name="shock_fade" s={data.by_strategy.shock_fade} />
-            <tr style={{ borderTop: '2px solid var(--hairline,#2a2a2a)', fontWeight: 700 }}>
-              <StatRow name="overall" s={data.overall} />
-            </tr>
+            <StatRow name="overall" s={data.overall} />
           </tbody>
         </table>
       </div>

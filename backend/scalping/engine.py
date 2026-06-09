@@ -30,7 +30,9 @@ def _now_et() -> datetime:
         from zoneinfo import ZoneInfo
         return datetime.now(ZoneInfo("America/New_York"))
     except Exception:
-        return datetime.now(timezone.utc) - timedelta(hours=5)
+        # Container TZ is America/New_York (compose) — local time IS ET, and
+        # this stays DST-correct (a fixed UTC-5 was wrong half the year).
+        return datetime.now().astimezone()
 
 
 def _market_open(now_et: Optional[datetime] = None) -> bool:
@@ -60,7 +62,11 @@ def _universe(profile: str, limit: int) -> list:
 
 def _daily_atr(df: pd.DataFrame, period: int = 14) -> Optional[float]:
     """Daily ATR(period) from a multi-day 1-min RTH frame (paper uses daily ATR
-    for the stop). Groups bars by ET date → daily OHLC → Wilder TR mean."""
+    for the stop). Groups bars by ET date → daily OHLC → Wilder TR mean.
+
+    Excludes the most recent (developing) day — including today's partial bar
+    biased the live ATR vs the backtest's strictly-prior _daily_atr_asof
+    (review fix 2026-06-09)."""
     if df is None or df.empty:
         return None
     rth = df[df["session"] == "rth"]
@@ -69,6 +75,8 @@ def _daily_atr(df: pd.DataFrame, period: int = 14) -> Optional[float]:
     et = rth.index.tz_localize("UTC").tz_convert("America/New_York")
     day = pd.Series(et.date, index=rth.index)
     daily = rth.groupby(day).agg(high=("high", "max"), low=("low", "min"), close=("close", "last"))
+    if len(daily) >= 2:
+        daily = daily.iloc[:-1]              # drop the developing day
     if len(daily) < 3:
         return None
     prev_close = daily["close"].shift(1)
@@ -121,8 +129,12 @@ def scan_now(profile: str = "aggressive", limit: int = UNIVERSE_LIMIT) -> dict:
     signals: list = []
     if open_now:
         syms = _universe(profile, limit)
-        for sym in syms:
-            signals.extend(_scan_symbol(sym, bias))
+        # Parallel — sequential 21-day loads for ~20 names blew past the 45s TTL
+        # whenever Massive was slow (review fix 2026-06-09).
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            for sigs in ex.map(lambda s: _scan_symbol(s, bias), syms):
+                signals.extend(sigs)
 
         # Live spread gate + net-of-cost on the active set only.
         quotes = nbbo.fetch_nbbo_bulk([s["symbol"] for s in signals])
@@ -158,14 +170,16 @@ def scan_now(profile: str = "aggressive", limit: int = UNIVERSE_LIMIT) -> dict:
     }
 
 
-_CACHE: dict = {"at": 0.0, "key": None, "data": None}
+# Per-profile cache entries — a single shared slot let two concurrent requests
+# for different profiles clobber each other (review fix 2026-06-09).
+_CACHE: dict = {}
 
 
 def get_signals(profile: str = "aggressive", force: bool = False) -> dict:
     now = time.time()
-    key = profile
-    if not force and _CACHE["data"] is not None and _CACHE["key"] == key and (now - _CACHE["at"]) < _TTL_SEC:
-        return _CACHE["data"]
+    hit = _CACHE.get(profile)
+    if not force and hit and (now - hit["at"]) < _TTL_SEC:
+        return hit["data"]
     data = scan_now(profile=profile)
-    _CACHE.update(at=now, key=key, data=data)
+    _CACHE[profile] = {"at": now, "data": data}
     return data

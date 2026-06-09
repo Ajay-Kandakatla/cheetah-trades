@@ -54,6 +54,7 @@ def orb_entries(day_rth: pd.DataFrame, *, rel_vol: Optional[float], atr14: Optio
                 "stop": round(stop, 4), "target": None,          # primary exit = EOD/stop
                 "rel_vol": round(rel_vol, 2), "atr14": round(atr14, 4),
                 "risk": round(risk, 4),
+                "check_entry_bar_stop": True,    # stop-order fill — entry bar can also stop out
             }]
     return []
 
@@ -109,12 +110,22 @@ def simulate_outcome(day_rth: pd.DataFrame, sig: dict) -> dict:
     if entry_ts.tzinfo is not None:
         entry_ts = entry_ts.tz_convert(None)
     after = day_rth[day_rth.index > entry_ts]
-    if after.empty:
-        return {"outcome": "no_data", "pnl_pct": 0.0, "r_multiple": 0.0}
     entry = sig["entry_price"]; stop = sig["stop"]; target = sig.get("target")
     side = sig["side"]; risk = abs(entry - stop)
     if risk == 0:
         return {"outcome": "invalid_risk", "pnl_pct": 0.0, "r_multiple": 0.0}
+
+    # Entry-bar edge case (review fix 2026-06-09): a stop-order fill (ORB) happens
+    # INSIDE the entry bar; if that same bar's range also spans the protective
+    # stop, assume the WORST (stopped) rather than silently skipping the bar.
+    if sig.get("check_entry_bar_stop"):
+        eb = day_rth[day_rth.index == entry_ts]
+        if not eb.empty:
+            lo, hi = float(eb.iloc[0]["low"]), float(eb.iloc[0]["high"])
+            if (side == "long" and lo <= stop) or (side == "short" and hi >= stop):
+                return _exit("stop", entry_ts, stop, entry, risk, side)
+    if after.empty:
+        return {"outcome": "no_data", "pnl_pct": 0.0, "r_multiple": 0.0}
     time_stop = None
     if sig.get("time_stop_min"):
         time_stop = entry_ts + pd.Timedelta(minutes=int(sig["time_stop_min"]))

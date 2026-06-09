@@ -27,7 +27,9 @@ def _now_et() -> datetime:
         from zoneinfo import ZoneInfo
         return datetime.now(ZoneInfo("America/New_York"))
     except Exception:
-        return datetime.now(timezone.utc) - timedelta(hours=5)
+        # Container TZ is America/New_York — local time IS ET and stays
+        # DST-correct (fixed UTC-5 was wrong half the year; review fix 2026-06-09).
+        return datetime.now().astimezone()
 
 
 def _coll():
@@ -95,7 +97,9 @@ def resolve_open() -> dict:
     from daytrading.data import load_intraday
     n = _now_et()
     today = n.date()
-    after_close = n.time() >= dtime(16, 0)
+    # 5-min buffer past the bell so a long resolve pass can't prematurely
+    # finalize eod_flat while the close is still printing (review fix).
+    after_close = n.time() >= dtime(16, 5)
     closed = 0
     for doc in coll.find({"status": "open"}):
         try:
@@ -114,7 +118,8 @@ def resolve_open() -> dict:
             continue
         cost = costs.round_trip_cost_pct(doc["entry_price"], spread_pct=doc.get("live_spread_pct"),
                                          is_short=doc["side"] == "short").get("total_pct") or 0.0
-        risk_pct = doc["risk"] / doc["entry_price"] * 100.0 if doc["entry_price"] else None
+        ep = doc.get("entry_price")
+        risk_pct = (doc["risk"] / ep * 100.0) if ep and ep > 0 else None
         net_pnl = out["pnl_pct"] - cost
         coll.update_one({"_id": doc["_id"]}, {"$set": {
             "status": "closed", **out, "cost_pct": round(cost, 4),

@@ -58,6 +58,41 @@ def _et_minute(ts_et) -> int:
     return ts_et.hour * 60 + ts_et.minute
 
 
+def _same_clock_sigma(df: pd.DataFrame, today: pd.DataFrame,
+                      lookback_min: int, min_days: int = 5) -> Optional[float]:
+    """Stdev (in %) of the SAME-CLOCK `lookback_min` window move across the
+    PRIOR days in `df` — the paper's baseline (Zawadowski uses 60 days; the
+    live engine carries ~21). None when there aren't `min_days` prior samples."""
+    if df is None or df.empty or today is None or today.empty:
+        return None
+    rth = df[df["session"] == "rth"]
+    if rth.empty:
+        return None
+    end_minute = _et_minute(today.iloc[-1]["_et"])
+    et = rth.index.tz_localize("UTC").tz_convert("America/New_York")
+    day_ser = pd.Series([t.date() for t in et], index=rth.index)
+    minute_ser = pd.Series([t.hour * 60 + t.minute for t in et], index=rth.index)
+    today_date = today.iloc[-1]["_et"].date()
+    moves = []
+    for d in day_ser.unique():
+        if d >= today_date:
+            continue
+        sub = rth[day_ser == d]
+        mins = minute_ser[day_ser == d]
+        at_end = sub[mins <= end_minute]
+        at_start = sub[mins <= end_minute - lookback_min]
+        if len(at_end) < 2 or at_start.empty:
+            continue
+        c_end = float(at_end["close"].iloc[-1])
+        c_start = float(at_start["close"].iloc[-1])
+        if c_start > 0:
+            moves.append((c_end / c_start - 1.0) * 100.0)
+    if len(moves) < min_days:
+        return None
+    s = float(pd.Series(moves).std())
+    return s if s and s > 0 else None
+
+
 def stocks_in_play_orb(
     df: pd.DataFrame,
     *,
@@ -172,15 +207,18 @@ def shock_fade(
     ref = float(closes.iloc[-(lookback_min + 1)])
     move_pct = (px / ref - 1.0) * 100.0
 
-    # Baseline intraday sigma from BEFORE the shock window. The paper's sigma is a
-    # NORMAL-vol baseline; computing it over today's full series would include the
-    # shock bars, inflate sigma, and the 8x relative filter would never fire.
-    baseline = closes.iloc[:-lookback_min]
-    rets = baseline.pct_change().dropna() * 100.0
-    sigma_1min = float(rets.std()) if len(rets) > 5 else None
-    if not sigma_1min or sigma_1min <= 0:
-        return None
-    sigma_window = sigma_1min * math.sqrt(lookback_min)
+    # Baseline sigma — the paper's filter is vs the stock's own stdev of the
+    # SAME-CLOCK window over prior days (Zawadowski uses 60 days). When the frame
+    # carries history (the engine loads ~21 days), use prior-day same-clock window
+    # moves; else fall back to today's pre-shock 1-min vol (documented approx).
+    sigma_window = _same_clock_sigma(df, today, lookback_min)
+    if sigma_window is None:
+        baseline = closes.iloc[:-lookback_min]
+        rets = baseline.pct_change().dropna() * 100.0
+        sigma_1min = float(rets.std()) if len(rets) > 5 else None
+        if not sigma_1min or sigma_1min <= 0:
+            return None
+        sigma_window = sigma_1min * math.sqrt(lookback_min)
 
     if abs(move_pct) < min_move_pct:
         return None                                    # absolute filter

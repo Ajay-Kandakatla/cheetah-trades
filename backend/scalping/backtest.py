@@ -79,7 +79,7 @@ def _net(trade: dict, assumed_spread_pct: float) -> dict:
     entry = trade["entry_price"]
     cost = costs.round_trip_cost_pct(entry, spread_pct=assumed_spread_pct,
                                      is_short=trade["side"] == "short").get("total_pct") or 0.0
-    risk_pct = (trade["risk"] / entry * 100.0) if entry else None
+    risk_pct = (trade["risk"] / entry * 100.0) if entry and entry > 0 else None
     net_pnl = trade["pnl_pct"] - cost
     net_r = round(net_pnl / risk_pct, 3) if risk_pct else None
     return {"cost_pct": round(cost, 4), "net_pnl_pct": round(net_pnl, 3), "net_r_multiple": net_r}
