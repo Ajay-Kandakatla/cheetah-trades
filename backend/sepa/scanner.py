@@ -42,6 +42,7 @@ from . import (
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
+    group_leadership,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -655,6 +656,9 @@ def scan_universe(symbols: Optional[List[str]] = None,
 
     # Rank + cut to candidates
     results.sort(key=lambda x: x["score"], reverse=True)
+    # Additive industry-group leadership tags (Minervini Ch.6, p.102/108) — pure
+    # DISPLAY annotation, cache-only, does NOT read/alter score or is_candidate.
+    group_leadership.annotate(results)
     candidates = [r for r in results if r["is_candidate"]]
 
     # Market context
@@ -1190,6 +1194,9 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
                           rs_rank=res.get("rs_rank"))
 
     results.sort(key=lambda x: x["score"], reverse=True)
+    # Additive industry-group leadership tags (Minervini Ch.6, p.102/108) — pure
+    # DISPLAY annotation, cache-only, does NOT read/alter score or is_candidate.
+    group_leadership.annotate(results)
     candidates = [r for r in results if r["is_candidate"]]
     _emit("phase", phase="market_context")
     mkt = market_context.market_state()

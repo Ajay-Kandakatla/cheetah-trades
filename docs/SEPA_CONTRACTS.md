@@ -190,8 +190,20 @@ contract version):
 - `moat` — Buffett-style economic moat score
 - `catalyst` — earnings catalyst summary (book Ch.6 "Categories, Industry
   Groups, and Catalysts," p.95-116). Note: catalyst is a surfaced signal, not a
-  scored gate; the chapter's category/industry-group rules are not implemented —
-  see the v2 RFC `docs/rfcs/001-industry-group-leadership.md`.
+  scored gate.
+- **Industry-group leadership** (additive, DISPLAY-only, 2026-06-09; book Ch.6
+  p.102/108): `industry`, `sector`, `group_rs_rank` (int|null, 1=strongest RS in
+  its industry group), `group_size` (int|null), `group_leader` (bool, top-3 &
+  not a laggard), `is_laggard` (bool, RS trails the group's strongest by
+  ≥`LAGGARD_RS_GAP`), `group_leader_symbol` (str|null). Written by
+  `sepa/group_leadership.annotate()` as an additive post-pass; the v1 formula
+  does NOT read them (no score/gate impact — §12-safe). Source: yfinance
+  `industry` via `companies.store` cache (cache-only `get_many_cached`, never
+  hits the scan hot path with a live fetch). Thresholds locked by
+  `test_group_leadership_constants_locked`; full derivation:
+  `docs/sepa/group_leadership_methodology.md` + RFC
+  `docs/rfcs/001-industry-group-leadership.md`. Laggard policy is "caution chip
+  only" (flag, never demote/exclude).
 - `insider` — recent insider transactions
 - `scanned_at` — per-row analysis timestamp (added by on-demand analyze path)
 - `qualifier` — bool, added 2026-05-27. True when `trend.pass_all AND

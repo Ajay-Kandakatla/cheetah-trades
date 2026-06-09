@@ -231,6 +231,29 @@ def test_earnings_quality_thresholds_locked():
     assert scanner.EQ_REDFLAG_DOUBLE_PENALTY == 6.0
 
 
+def test_group_leadership_constants_locked():
+    """Industry-group leadership tags (sepa/group_leadership.py, Minervini Ch.6
+    p.102/108) are DISPLAY-only additive fields. The thresholds are configured
+    codifications — locked here; changing one needs a page-cited update to
+    docs/sepa/group_leadership_methodology.md. The annotation must NOT touch the
+    v1 score or gates (the formula does not read these fields, per §12)."""
+    from sepa import group_leadership as gl
+    assert gl.GROUP_LEADER_TOP_N == 3          # "top two or three" (p.102)
+    assert gl.LAGGARD_RS_GAP == 20.0           # configured, not a book number (p.108)
+    assert gl.MIN_GROUP_SIZE == 2
+    assert set(gl.ANNOTATED_KEYS) == {
+        "industry", "sector", "group_rs_rank", "group_size",
+        "group_leader", "is_laggard", "group_leader_symbol",
+    }
+    # DISPLAY-only contract: annotate leaves score / is_candidate untouched.
+    rows = [{"symbol": "A", "rs_rank": 95, "score": 80, "is_candidate": True},
+            {"symbol": "B", "rs_rank": 40, "score": 30, "is_candidate": False}]
+    imap = {"A": ("Semiconductors", "Technology"), "B": ("Semiconductors", "Technology")}
+    gl.annotate(rows, industry_map=imap)
+    assert (rows[0]["score"], rows[0]["is_candidate"]) == (80, True)
+    assert rows[1]["is_laggard"] is True and rows[0]["group_leader"] is True
+
+
 def test_rating_thresholds_locked():
     """_rating_label maps score → label per contract §4."""
     from sepa.scanner import _rating_label

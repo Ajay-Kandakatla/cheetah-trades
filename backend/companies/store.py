@@ -111,6 +111,36 @@ def get(symbol: str, force: bool = False) -> dict:
     return {"symbol": symbol, "summary": None, "refreshed_at": None}
 
 
+def get_many_cached(symbols: list[str]) -> dict:
+    """Batch CACHE-ONLY lookup — one Mongo read, never touches yfinance.
+
+    Safe to call on the scan hot path (the daily money-path scan): it does NOT
+    fetch, refresh, or write, so it can never slow the scan or trip a yfinance
+    rate-limit. Returns ``{SYMBOL: company_info_dict}`` for the symbols that have
+    a cached doc; missing symbols are simply absent from the result (callers
+    degrade gracefully, never fake). Returns ``{}`` when Mongo is unavailable.
+
+    Used by ``sepa.group_leadership`` to attach industry/sector labels for the
+    group-leadership annotation. Coverage grows over time via ``get()`` /
+    ``backfill_descriptions``; uncached names just go ungrouped.
+    """
+    syms = sorted({(s or "").upper().strip() for s in symbols if (s or "").strip()})
+    if not syms:
+        return {}
+    db = _get_db()
+    if db is None:
+        return {}
+    out: dict = {}
+    try:
+        for doc in db.companies.find({"symbol": {"$in": syms}}):
+            doc["_id"] = str(doc.get("_id"))
+            out[doc["symbol"]] = doc
+    except Exception as exc:  # pragma: no cover - defensive
+        log.warning("companies.store.get_many_cached failed: %s", exc)
+        return {}
+    return out
+
+
 def backfill_descriptions(
     symbols: list[str],
     delay_sec: float = 1.5,
