@@ -1,10 +1,12 @@
 """JIT news-read — does recent news make this name more or less buyable?
 
-On-demand ONLY (never preloaded). Pulls recent Massive headlines for the ticker,
-classifies the net read into a simple swing-trader verdict
+On-demand ONLY (never preloaded). Pulls the ticker's recent headlines from the
+SAME source the catalyst tab uses (sepa.catalyst._fetch_google_news — company-
+name-resolved Google News with a per-headline sentiment score; Massive news as a
+fallback), and classifies the net read into a simple swing-trader verdict
 (more_buyable / neutral / less_buyable / sell) with a one-line reason. Uses the
-local LLM when configured; falls back to a keyword-tone heuristic. Cached 15 min
-per symbol so re-clicks don't re-hit the model.
+local LLM when configured for the summary; falls back to the score heuristic.
+Cached 15 min per symbol so re-clicks don't re-hit the model.
 
 Educational — a read of recent news SENTIMENT for buyability, NOT a forecast and
 NOT advice.
@@ -31,20 +33,64 @@ DISCLAIMER = ("A read of recent news sentiment for swing-buyability — not a "
               "forecast and not advice.")
 
 
-def _heuristic(tones: list[str]) -> tuple[str, str]:
-    """Verdict from keyword-tone counts when the LLM isn't available."""
-    bull = tones.count("bullish")
-    bear = tones.count("bearish")
-    net = bull - bear
-    if net >= 2:
-        return "more_buyable", f"{bull} bullish vs {bear} bearish headlines — news leans constructive."
-    if net == 1:
-        return "more_buyable", f"Slightly more bullish ({bull}) than bearish ({bear}) headlines."
-    if net <= -2:
-        return ("sell" if bear >= 3 else "less_buyable"), f"{bear} bearish vs {bull} bullish headlines — news leans negative."
-    if net == -1:
-        return "less_buyable", f"Slightly more bearish ({bear}) than bullish ({bull}) headlines."
-    return "neutral", f"Mixed tape — {bull} bullish, {bear} bearish."
+def _tone_from_score(score: float) -> str:
+    if score > 0.05:
+        return "bullish"
+    if score < -0.05:
+        return "bearish"
+    return "neutral"
+
+
+def _fetch_news(sym: str) -> list[dict]:
+    """Headlines + per-item tone. Google News (same as the catalyst tab) first,
+    Massive (7d) as fallback. Each item: {title, url, tone, score}."""
+    items: list[dict] = []
+    try:
+        import asyncio
+        from sepa.catalyst import _fetch_google_news
+        news = asyncio.run(_fetch_google_news(sym)) or []
+        for n in news[:12]:
+            sc = float(n.get("score") or 0.0)
+            items.append({
+                "title": n.get("title"),
+                "url": n.get("link") or n.get("url"),
+                "tone": _tone_from_score(sc),
+                "score": round(sc, 3),
+            })
+    except Exception as exc:
+        log.debug("news_read: google news failed for %s: %s", sym, exc)
+
+    if not items:
+        try:
+            from .evidence import _fetch_massive_news, _tag_news_tone
+            raw = _fetch_massive_news(sym, hours=168) or []
+            for n in raw[:12]:
+                tone = _tag_news_tone(n.get("title") or "", n.get("description") or "")
+                sc = 1.0 if tone == "bullish" else -1.0 if tone == "bearish" else 0.0
+                items.append({
+                    "title": n.get("title"),
+                    "url": n.get("url"),
+                    "tone": tone,
+                    "score": sc,
+                })
+        except Exception as exc:
+            log.debug("news_read: massive fallback failed for %s: %s", sym, exc)
+    return items
+
+
+def _heuristic(items: list[dict]) -> tuple[str, str]:
+    net = sum(i.get("score") or 0.0 for i in items)
+    bull = sum(1 for i in items if i["tone"] == "bullish")
+    bear = sum(1 for i in items if i["tone"] == "bearish")
+    if net >= 0.6:
+        return "more_buyable", f"Net-positive headlines ({bull} bullish vs {bear} bearish)."
+    if net <= -0.6:
+        return ("sell" if bear >= 3 else "less_buyable"), f"Net-negative headlines ({bear} bearish vs {bull} bullish)."
+    if bull and not bear:
+        return "more_buyable", f"{bull} bullish headlines, none bearish."
+    if bear and not bull:
+        return "less_buyable", f"{bear} bearish headlines, none bullish."
+    return "neutral", f"Mixed — {bull} bullish, {bear} bearish."
 
 
 def news_read(symbol: str, force: bool = False) -> dict:
@@ -56,37 +102,23 @@ def news_read(symbol: str, force: bool = False) -> dict:
         if hit and (time.time() - hit["ts"]) < _TTL:
             return hit["data"]
 
-    from .evidence import _fetch_massive_news, _tag_news_tone
-    raw = _fetch_massive_news(sym, hours=72) or []
-    items = []
-    for n in raw[:12]:
-        title = n.get("title") or ""
-        tone = _tag_news_tone(title, n.get("description") or "")
-        items.append({
-            "title": title,
-            "url": n.get("url"),
-            "publisher": n.get("publisher"),
-            "when": n.get("published_utc"),
-            "tone": tone,
-        })
-
+    items = _fetch_news(sym)
     now = datetime.now(timezone.utc).isoformat()
     if not items:
-        data = {"available": False, "reason": "No recent news (last 72h).",
+        data = {"available": False, "reason": "No recent news found.",
                 "verdict": "neutral", "label": "No recent news", "color": "slate",
                 "n": 0, "headlines": [], "as_of": now, "disclaimer": DISCLAIMER}
         _cache[sym] = {"ts": time.time(), "data": data}
         return data
 
-    tones = [i["tone"] for i in items]
-    verdict, reason = _heuristic(tones)
-    source = "heuristic"
+    verdict, reason = _heuristic(items)
+    source = "headlines"
 
     # Prefer an LLM read when configured — a real one-line summary verdict.
     try:
         from llm import chat, is_enabled
         if is_enabled():
-            lines = "\n".join(f"- ({i['tone']}) {i['title']}" for i in items if i["title"])
+            lines = "\n".join(f"- ({i['tone']}) {i['title']}" for i in items if i.get("title"))
             system = (
                 "You classify equity NEWS for a swing trader who only buys constructive setups. "
                 "From the headlines decide if the news makes the stock MORE buyable, LESS buyable, "
@@ -94,7 +126,7 @@ def news_read(symbol: str, force: bool = False) -> dict:
                 '{"verdict":"more_buyable|less_buyable|sell|neutral","reason":"<=18 words"}. '
                 "Reason states WHAT in the news drives it. No advice — just the news read."
             )
-            prompt = f"Ticker {sym}. Recent headlines (last 72h):\n{lines}\n\nClassify."
+            prompt = f"Ticker {sym}. Recent headlines:\n{lines}\n\nClassify."
             res = chat(prompt, system=system, json_only=True, max_tokens=160, timeout=30)
             parsed = (res or {}).get("parsed") or {}
             v = (parsed.get("verdict") or "").strip().lower()
@@ -106,6 +138,7 @@ def news_read(symbol: str, force: bool = False) -> dict:
         log.debug("news_read LLM failed for %s: %s", sym, exc)
 
     meta = VERDICT_META[verdict]
+    tones = [i["tone"] for i in items]
     data = {
         "available": True,
         "verdict": verdict,
@@ -118,7 +151,7 @@ def news_read(symbol: str, force: bool = False) -> dict:
             "bearish": tones.count("bearish"),
             "neutral": tones.count("neutral"),
         },
-        "headlines": items[:8],
+        "headlines": [{"title": i["title"], "url": i["url"], "tone": i["tone"]} for i in items[:8]],
         "source": source,
         "as_of": now,
         "disclaimer": DISCLAIMER,

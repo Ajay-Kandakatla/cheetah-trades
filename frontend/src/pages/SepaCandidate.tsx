@@ -1336,59 +1336,16 @@ export function SepaCandidatePage() {
             {tab === 'catalyst' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>Catalyst</strong> — news sentiment, analyst revisions, top
-                  headlines. Empty unless scanned with <strong>+ catalyst</strong> on.
+                  <strong>Catalyst</strong> — a just-in-time read of the latest headlines.
+                  Click below and it tells you whether the news makes {symbol}{' '}
+                  <strong>more buyable, less buyable, or a sell</strong>. Nothing is preloaded.
                 </div>
 
                 {/* JIT news read — summarized on click, NOT preloaded: does
-                    recent news make this more/less buyable or a sell. */}
+                    recent news make this more/less buyable or a sell. This is
+                    now the whole catalyst tab (the old preloaded sentiment grid
+                    + raw headline dump was removed per Ajay 2026-06-08). */}
                 <NewsReadButton symbol={symbol} />
-
-                {data.catalyst ? (
-                  <>
-                    {data.catalyst.earnings_upcoming && (
-                      <div className="sepa-callout">
-                        📅 Earnings <strong>{data.catalyst.earnings_upcoming.date}</strong>{' '}
-                        ({data.catalyst.earnings_upcoming.hour ?? '—'})
-                      </div>
-                    )}
-                    <div className="sepa-meta-grid">
-                      <div><span className="sepa-meta-label">News sentiment</span><strong>{data.catalyst.news_sentiment_score ?? 0}</strong></div>
-                      <div><span className="sepa-meta-label">Up revs (30d)</span><strong>{data.catalyst.analyst_up_revisions_30d ?? 0}</strong></div>
-                      <div><span className="sepa-meta-label">Down revs (30d)</span><strong>{data.catalyst.analyst_down_revisions_30d ?? 0}</strong></div>
-                    </div>
-                    <ul className="sepa-news">
-                      {data.catalyst.top_news?.slice(0, 6).map((n: any, i: number) => (
-                        <li key={i}>
-                          <a href={n.link} target="_blank" rel="noreferrer">{n.title}</a>
-                        </li>
-                      ))}
-                    </ul>
-                    {(data.smart_money?.reddit?.threads?.length > 0 || data.smart_money?.blogs?.length > 0) && (
-                      <div className="sepa-callout">
-                        <div className="eyebrow">Top discussion</div>
-                        <ul className="sepa-news">
-                          {data.smart_money.blogs?.slice(0, 2).map((b: any, i: number) => (
-                            <li key={`b${i}`}>
-                              <span className="sepa-pill sepa-pill--blog">{b.source}</span>{' '}
-                              <a href={b.link} target="_blank" rel="noreferrer">{b.title}</a>
-                            </li>
-                          ))}
-                          {data.smart_money.reddit?.threads?.slice(0, 3).map((t: any, i: number) => (
-                            <li key={`r${i}`}>
-                              <span className="sepa-pill sepa-pill--reddit">r/{t.subreddit}</span>{' '}
-                              <a href={t.url} target="_blank" rel="noreferrer">{t.title}</a>
-                              <span className="mono"> · ↑{t.score} · {t.n_comments}c</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="sepa-meta-hint">See full breakdown in the <strong>smart money</strong> tab.</div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="sepa-empty">No catalyst data — run <code>+catalyst</code> scan.</p>
-                )}
               </section>
             )}
 
