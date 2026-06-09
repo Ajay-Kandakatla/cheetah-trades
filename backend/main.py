@@ -1768,6 +1768,13 @@ async def sepa_candidate_detail(symbol: str):
     profile_task = asyncio.create_task(_company_profile(sym))
     smart_task = asyncio.create_task(sepa_smart_money(sym))
     catalyst = await sepa_catalyst_for(sym)
+    # Detail-page only: grounded plain-English catalyst summary (cached per day,
+    # local LLM / heuristic fallback). Never run in the multi-ticker scan.
+    try:
+        from sepa.catalyst import summarize_catalyst
+        catalyst["summary"] = await asyncio.to_thread(summarize_catalyst, catalyst)
+    except Exception:
+        catalyst["summary"] = None
     insider = await sepa_insider(sym)
     ipo = await asyncio.to_thread(sepa_ipo_age, sym)
     profile = await profile_task
@@ -2096,6 +2103,9 @@ async def sepa_analyze_one(symbol: str, with_catalyst: bool = Query(False)):
     if with_catalyst:
         try:
             res["catalyst"] = await sepa_catalyst_for(sym)
+            # Single-symbol analyze path: attach the grounded catalyst summary.
+            from sepa.catalyst import summarize_catalyst
+            res["catalyst"]["summary"] = await asyncio.to_thread(summarize_catalyst, res["catalyst"])
         except Exception as exc:
             log.warning("catalyst enrichment failed for %s: %s", sym, exc)
         try:

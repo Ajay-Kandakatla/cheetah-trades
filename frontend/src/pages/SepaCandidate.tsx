@@ -1380,6 +1380,20 @@ export function SepaCandidatePage() {
                 </div>
                 {data.catalyst ? (
                   <>
+                    {data.catalyst.summary && (
+                      <div
+                        className="sepa-callout"
+                        style={{ borderLeft: '3px solid var(--gold, #c9a227)', background: 'rgba(201,162,39,0.06)' }}
+                      >
+                        <div className="eyebrow" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>🧠 Catalyst summary</span>
+                          <span style={{ fontWeight: 400, opacity: 0.6, fontSize: '0.62rem' }}>
+                            AI digest of the headlines below · verify before trading
+                          </span>
+                        </div>
+                        <div style={{ lineHeight: 1.45, marginTop: 4 }}>{data.catalyst.summary}</div>
+                      </div>
+                    )}
                     {data.catalyst.earnings_upcoming && (
                       <div className="sepa-callout">
                         📅 Earnings <strong>{data.catalyst.earnings_upcoming.date}</strong>{' '}

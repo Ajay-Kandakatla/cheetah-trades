@@ -216,3 +216,166 @@ async def catalyst_for(symbol: str) -> dict:
         "top_news": top_news,
         "provider": "polygon" if has_polygon() else "free_stack",
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Catalyst SUMMARY — a grounded, plain-English digest of the headlines/signals
+# for the detail page (Ajay asked: "summarize the catalyst info", 2026-06-09).
+#
+# Real-money safety: the LLM is told to use ONLY the provided headlines/signals,
+# never invent a fact/number/price, downweight generic "outperforms/underperforms
+# on <day>" filler, and never give buy/sell/hold advice. When the local LLM is
+# off we fall back to a deterministic heuristic line so the section is never
+# empty and never fabricated. Cached per symbol per UTC day in Mongo. Uses the
+# LOCAL model by default (free) — it is ONLY called on the single-symbol detail
+# path, never in the multi-ticker scan, so cost/latency stay bounded.
+# ════════════════════════════════════════════════════════════════════════════
+import os  # noqa: E402
+
+_SUMMARY_DB = None
+
+
+def _summary_db():
+    global _SUMMARY_DB
+    if _SUMMARY_DB is not None:
+        return _SUMMARY_DB
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(os.getenv("MONGO_URL", "mongodb://localhost:27017"),
+                             serverSelectionTimeoutMS=2000)
+        client.admin.command("ping")
+        _SUMMARY_DB = client[os.getenv("MONGO_DB", "cheetah")]
+        _SUMMARY_DB.catalyst_summaries.create_index("symbol", unique=True)
+        return _SUMMARY_DB
+    except Exception as exc:
+        log.warning("catalyst summary: Mongo unavailable: %s", exc)
+        return None
+
+
+def _heuristic_summary(cat: dict) -> str:
+    """Deterministic, data-grounded one-liner — used when the LLM is disabled.
+    Says only what the counts/signals actually show; invents nothing."""
+    news = cat.get("top_news") or []
+    n = cat.get("news_count") or len(news)
+    sent = cat.get("news_sentiment_score") or 0
+    up = cat.get("analyst_up_revisions_30d") or 0
+    dn = cat.get("analyst_down_revisions_30d") or 0
+    earn = cat.get("earnings_upcoming")
+    if not news and not earn and not (up or dn):
+        return "No recent news catalyst found."
+    tone = "net-bullish" if sent > 0 else "net-bearish" if sent < 0 else "neutral"
+    bits = [f"{n} recent headline{'s' if n != 1 else ''} ({tone} tone)"]
+    if up or dn:
+        bits.append(f"{up} up / {dn} down analyst revisions (30d)")
+    if earn:
+        bits.append("earnings upcoming")
+    return "; ".join(bits) + "."
+
+
+def _generate_summary(cat: dict, *, provider: str) -> Optional[str]:
+    try:
+        import llm
+    except Exception:
+        return _heuristic_summary(cat)
+    if not llm.is_enabled():
+        return _heuristic_summary(cat)
+
+    headlines = cat.get("top_news") or []
+    if not headlines and not cat.get("earnings_upcoming"):
+        return _heuristic_summary(cat)
+
+    lines = []
+    for nws in headlines[:6]:
+        sc = nws.get("score", 0) or 0
+        tag = "+" if sc > 0 else "-" if sc < 0 else "."
+        title = (nws.get("title") or "").strip()
+        if title:
+            lines.append(f"  [{tag}] {title}")
+
+    facts = []
+    earn = cat.get("earnings_upcoming")
+    if earn:
+        facts.append(f"earnings upcoming ({earn.get('date') if isinstance(earn, dict) else earn})")
+    sup = cat.get("last_earnings_surprise_pct")
+    if sup is not None:
+        try:
+            facts.append(f"last EPS surprise {float(sup):+.1f}%")
+        except Exception:
+            pass
+    up = cat.get("analyst_up_revisions_30d") or 0
+    dn = cat.get("analyst_down_revisions_30d") or 0
+    facts.append(f"analyst revisions 30d: {up} up / {dn} down")
+
+    prompt = (
+        f"Ticker {cat.get('symbol')}. Recent news headlines "
+        f"(+ bullish, - bearish, . neutral):\n"
+        + ("\n".join(lines) if lines else "  (no headlines)")
+        + "\n\nOther signals: " + "; ".join(facts)
+        + "\n\nWrite a 1-2 sentence (<=40 words) plain-English summary of the CATALYST "
+          "picture: what, if anything, is actually driving this stock right now. "
+          "Use ONLY the headlines and signals above — do NOT invent any fact, number, "
+          "or price that is not shown. Explicitly downweight generic "
+          "'outperforms/underperforms competitors on <day>' filler headlines. "
+          "If there is no real catalyst, say so plainly. Do NOT give buy/sell/hold "
+          "advice or a price target."
+    )
+    system = (
+        "You summarize stock-news catalysts for an experienced trader. Be terse, "
+        "factual, and grounded strictly in the provided text. Never fabricate a fact "
+        "or number. Never give investment advice."
+    )
+    try:
+        resp = llm.chat(prompt, system=system, max_tokens=120,
+                        temperature=0.1, timeout=20, provider=provider)
+    except Exception as exc:
+        log.warning("catalyst summary llm error %s: %s", cat.get("symbol"), exc)
+        return _heuristic_summary(cat)
+    if not resp.get("ok"):
+        return _heuristic_summary(cat)
+    text = (resp.get("text") or "").strip().strip('"').strip()
+    return text or _heuristic_summary(cat)
+
+
+def summarize_catalyst(cat: dict, *, provider: str = "local", force: bool = False) -> Optional[str]:
+    """Grounded plain-English catalyst summary for the detail page.
+
+    Cached per symbol per UTC day in Mongo (regenerated at most once/day per
+    name). Local LLM by default (free); deterministic heuristic fallback when the
+    LLM is off. Never invents facts and never gives advice (prompt-enforced).
+    Returns None only if there is no symbol.
+    """
+    sym = (cat or {}).get("symbol")
+    if not sym:
+        return None
+    import datetime as _dt
+    ymd = _dt.datetime.utcnow().strftime("%Y-%m-%d")
+    db = _summary_db()
+    if db is not None and not force:
+        try:
+            doc = db.catalyst_summaries.find_one({"symbol": sym})
+            if doc and doc.get("ymd") == ymd and doc.get("summary"):
+                return doc["summary"]
+        except Exception:
+            pass
+    summary = _generate_summary(cat, provider=provider)
+    if summary and db is not None:
+        try:
+            db.catalyst_summaries.update_one(
+                {"symbol": sym},
+                {"$set": {"symbol": sym, "ymd": ymd, "summary": summary,
+                          "is_llm": llm_used(cat)}},
+                upsert=True,
+            )
+        except Exception:
+            pass
+    return summary
+
+
+def llm_used(cat: dict) -> bool:
+    """Best-effort flag: was the LLM available for this summary? (For the UI to
+    label heuristic vs AI.)"""
+    try:
+        import llm
+        return bool(llm.is_enabled())
+    except Exception:
+        return False
