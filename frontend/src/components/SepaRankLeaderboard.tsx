@@ -61,6 +61,14 @@ type Leader = {
       rev_accelerating?: boolean;
     };
   } | null;
+  // Industry-group leadership (Minervini Ch.6, p.102/108) — additive, display
+  // only; the leaderboard SORT is unchanged (still persistence-based).
+  industry?: string | null;
+  group_leader?: boolean;
+  is_laggard?: boolean;
+  group_rs_rank?: number | null;
+  group_size?: number | null;
+  group_leader_symbol?: string | null;
 };
 // "Still qualifies despite the macro" — top names that pass the SEPA gate while
 // the backdrop is risky. Two honest tiers from the backend (never blurred):
@@ -279,6 +287,12 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
                       <> · <span style={{ color: tone }} title={`Earnings Quality ${e.score}/100 — ${e.reason || ''} (Minervini Ch.8, p.140-159). EPS ${pct(c.eps_growth_yoy_pct)}${c.eps_accelerating ? ' ⚡' : ''}, Sales ${pct(c.rev_growth_yoy_pct)}${c.rev_accelerating ? ' ⚡' : ''}, Net margin ${pct(c.npm_latest_pct)}${c.npm_expanding ? ' expanding ↑' : ''}`}>{label}</span></>
                     );
                   })()}
+                  {l.industry && l.group_leader && (
+                    <> · <span style={{ color: '#10b981' }} title={`Group leader: RS #${l.group_rs_rank}/${l.group_size} in ${l.industry} (Minervini Ch.6, p.102 "top two or three stocks in a group").`}>👑 #{l.group_rs_rank} {l.industry}</span></>
+                  )}
+                  {l.industry && l.is_laggard && (
+                    <> · <span style={{ color: '#f59e0b' }} title={`Laggard in ${l.industry} — RS #${l.group_rs_rank}/${l.group_size}, trails leader ${l.group_leader_symbol ?? ''} (Minervini Ch.6, p.108 "stay away from the laggards").`}>⤵ laggard vs {l.group_leader_symbol ?? 'leader'}</span></>
+                  )}
                 </span>
                 {l.macro_risk && <MacroRiskBadge risk={l.macro_risk} marketScore={data.macro_market?.score} compact />}
                 {l.drop_reason && <span className="rank-lb__why">↓ {l.drop_reason}</span>}

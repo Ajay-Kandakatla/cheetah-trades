@@ -160,6 +160,16 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
             # catalyst-enriched (same coverage as CANSLIM). The RANKING already
             # reflects it via current_score (scanner folds eq into the score).
             "earnings_quality": (cur.get("fundamentals") or {}).get("earnings_quality"),
+            # Industry-group leadership (Minervini Ch.6, p.102/108) — additive,
+            # DISPLAY-only, passed through from the live candidate (annotated by
+            # sepa.group_leadership). The leaderboard SORT is unchanged (still
+            # persistence-based); these only drive the leader/laggard chip + filter.
+            "industry":            cur.get("industry"),
+            "group_leader":        cur.get("group_leader"),
+            "is_laggard":          cur.get("is_laggard"),
+            "group_rs_rank":       cur.get("group_rs_rank"),
+            "group_size":          cur.get("group_size"),
+            "group_leader_symbol": cur.get("group_leader_symbol"),
             "drop_reason":   _drop_reason(stage, dist_days, accum) if dropped else None,
             # Coiling (pre-breakout spring) + near first R-target (Ajay 2026-06-03)
             "coiling":       coiling,
