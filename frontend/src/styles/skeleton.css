@@ -1,0 +1,75 @@
+/* ==========================================================================
+   Pounce — Skeleton / shimmer loading primitives
+   Depends on: tokens.css
+   --------------------------------------------------------------------------
+   One loading framework, reused everywhere (SEPA card grid, leaderboard
+   widgets, portfolio, morning brief). Two non-negotiables behind the design:
+
+     1. LAYOUT-PRESERVING. A skeleton must occupy the SAME dimensions as the
+        real content it stands in for, so the page assembles in place instead
+        of flashing empty -> popping in -> reflowing. A space-reserving
+        skeleton is also the cure for the layout-shift (CLS) that causes
+        misclicks during a fast 9:31 AM scan.
+     2. THEME-AWARE + reduced-motion-safe. Uses surface/hairline tokens so it
+        works in light + dark; the shimmer sweep is disabled (replaced by a
+        gentle opacity pulse) when the user prefers reduced motion.
+
+   Replaces the ad-hoc .pulse / .rank-lb-pulse / .sepa-progress-pulse /
+   .pulse-soft one-offs with a single shared base. (2026-06-09)
+   ========================================================================== */
+
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-sunken, rgba(127, 127, 127, 0.10));
+  border-radius: var(--r-2, 4px);
+}
+
+/* The moving highlight sweep. */
+.skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--hairline-strong, rgba(127, 127, 127, 0.18)) 50%,
+    transparent 100%
+  );
+  animation: skel-shimmer 1.5s var(--ease-soft, ease-in-out) infinite;
+}
+
+@keyframes skel-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Reduced motion: drop the sweep, fall back to a calm opacity pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .skel::after { animation: none; content: none; }
+  .skel { animation: skel-pulse 1.8s ease-in-out infinite; }
+}
+@keyframes skel-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+/* Shape variants — width is set per-use via inline style or utility. */
+.skel-line       { height: 0.75rem; }
+.skel-line--lg   { height: 1.1rem; }
+.skel-line--sm   { height: 0.6rem; }
+.skel-pill       { height: 1.25rem; border-radius: 999px; }
+.skel-bar        { height: 0.5rem;  border-radius: 999px; }
+.skel-block      { height: 100%; width: 100%; }
+
+/* --------------------------------------------------------------------------
+   SEPA candidate-card skeleton — mirrors SepaCandidateCard's silhouette
+   (left: symbol + sub line · right: score bar + meta · a chip strip · two
+   thesis lines) so the .sepa-grid keeps its exact height while real cards
+   stream in. Reuses .sepa-card for identical border / padding / radius.
+   -------------------------------------------------------------------------- */
+.sepa-card-skel { pointer-events: none; gap: 0.6rem; }
+.sepa-card-skel__head  { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.sepa-card-skel__sym   { display: flex; flex-direction: column; gap: 0.4rem; flex: 1 1 auto; min-width: 0; }
+.sepa-card-skel__right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; flex-shrink: 0; }
+.sepa-card-skel__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.1rem; }

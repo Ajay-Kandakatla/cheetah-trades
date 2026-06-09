@@ -12,6 +12,7 @@ import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
+import { SepaCardGridSkeleton } from '../components/SepaCardSkeleton';
 import { pivotTiming, triggerRank, buyabilityRank } from '../lib/pivotTiming';
 // Provides per-card historical rank/score deltas to every SepaCandidateCard
 // rendered below. Single fetch per page (yesterday's + 5d-ago full scans
@@ -363,6 +364,12 @@ export function SepaPage() {
   }, [filters.showAll, hasFull, data?.all_results]);
   const source: SepaCandidate[] =
     (filters.showAll ? (data?.all_results ?? data?.candidates) : data?.candidates) ?? [];
+
+  // True cold load — no scan data yet AND a fetch is in flight. Drives the
+  // card-grid skeleton instead of a false "Nothing matches" flash before the
+  // first payload lands. Gated on revalidating/scanning so an errored fetch
+  // (no cache) falls through to the empty state rather than spinning forever.
+  const coldLoading = !data && (revalidating || legacyScanning);
 
   // Pull the latest SOIR scan once and build a per-symbol lookup so each
   // candidate card can show put/call open interest + signal without firing
@@ -1181,7 +1188,9 @@ export function SepaPage() {
         <div style={{ flex: '1 1 600px', minWidth: 0 }}>
 
       {activeTab === 'all' && (
-        filtered.length === 0 ? (
+        coldLoading ? (
+          <SepaCardGridSkeleton n={6} />
+        ) : filtered.length === 0 ? (
           <div className="sepa-empty-card">
             <div className="eyebrow">Nothing matches</div>
             <p>
@@ -1241,7 +1250,9 @@ export function SepaPage() {
       )}
 
       {activeTab === 'vcp' && (
-        vcpFiltered.length === 0 ? (
+        coldLoading ? (
+          <SepaCardGridSkeleton n={6} />
+        ) : vcpFiltered.length === 0 ? (
           <div className="sepa-empty-card">
             <div className="eyebrow">No {tabLabel(activeTab)} setups</div>
             <p>
@@ -1275,12 +1286,7 @@ export function SepaPage() {
 
       {activeTab !== 'all' && activeTab !== 'vcp' && (
         tabLoading ? (
-          <div
-            className="sepa-empty-card"
-            style={{ color: '#9a9aa3', fontSize: '0.92rem' }}
-          >
-            loading {tabLabel(activeTab)}…
-          </div>
+          <SepaCardGridSkeleton n={6} />
         ) : tabError ? (
           <div className="sepa-empty-card">
             <div className="eyebrow">Couldn't load setups</div>

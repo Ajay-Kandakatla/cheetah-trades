@@ -15,6 +15,7 @@ import './styles/typography.css';
 import './styles/navbar.css';
 import './styles/live.css';
 import './styles/polish.css';
+import './styles/skeleton.css';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
