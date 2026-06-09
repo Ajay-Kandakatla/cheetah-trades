@@ -13,6 +13,7 @@ import { IntradayChart } from '../components/IntradayChart';
 import { useDayBars } from '../hooks/useDayTrading';
 import { useScalpingSignals, type ScalpSignal, type ScalpRegime } from '../hooks/useScalpingSignals';
 import { BacktestPanel, PaperPanel } from '../components/ScalpingResearchPanels';
+import { SepaWatchPanel } from '../components/SepaWatchPanel';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 
@@ -106,13 +107,13 @@ function SignalCard({ s, selected, onSelect }: { s: ScalpSignal; selected: boole
   );
 }
 
-type Tab = 'live' | 'backtest' | 'paper';
+type Tab = 'watch' | 'live' | 'backtest' | 'paper';
 
 export function ScalpingPage() {
   const [profile] = useState<'aggressive' | 'conservative'>('aggressive');
   const { data, loading, error } = useScalpingSignals(profile);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('live');
+  const [tab, setTab] = useState<Tab>('watch');
   const bars = useDayBars(selected, 1);
 
   const TabBtn = ({ id, label }: { id: Tab; label: string }) => (
@@ -144,12 +145,14 @@ export function ScalpingPage() {
         win rate it needs just to break even — no backtest changes that base rate. The last 30 minutes are auction-dominated and especially hostile.
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+        <TabBtn id="watch" label="SEPA Watch" />
         <TabBtn id="live" label="Live signals" />
         <TabBtn id="backtest" label="Backtest (~1mo)" />
         <TabBtn id="paper" label="Paper trade" />
       </div>
 
+      {tab === 'watch' && <SepaWatchPanel active={tab === 'watch'} onChart={(s) => setSelected(s)} />}
       {tab === 'backtest' && <BacktestPanel active={tab === 'backtest'} />}
       {tab === 'paper' && <PaperPanel active={tab === 'paper'} />}
 
@@ -180,19 +183,19 @@ export function ScalpingPage() {
             <SignalCard key={`${s.symbol}-${s.strategy}`} s={s} selected={selected === s.symbol} onSelect={() => setSelected(s.symbol)} />
           ))}
 
-          {/* Live intraday chart for the selected name */}
-          {selected && bars.data && (
-            <div style={{ marginTop: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <strong>{selected} — live 1-min (VWAP + opening range)</strong>
-                <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.74rem' }}>Close chart</button>
-              </div>
-              <IntradayChart data={bars.data} signals={[]} />
-            </div>
-          )}
-
           <p style={{ fontSize: '0.66rem', color: C.sub, marginTop: 14 }}>{data.disclaimer}</p>
         </>
+      )}
+
+      {/* Live intraday chart for the selected name — shared by the Watch + Live tabs */}
+      {(tab === 'watch' || tab === 'live') && selected && bars.data && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <strong>{selected} — live 1-min (VWAP + opening range)</strong>
+            <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.74rem' }}>Close chart</button>
+          </div>
+          <IntradayChart data={bars.data} signals={[]} />
+        </div>
       )}
     </div>
   );

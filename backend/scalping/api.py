@@ -52,6 +52,26 @@ async def scalping_paper(days: int = Query(30, ge=1, le=120)):
     return JSONResponse(await asyncio.to_thread(paper.track_record, days))
 
 
+@router.get("/scalping/watch")
+async def scalping_watch(refresh: bool = Query(False, description="Recompute if the cron snapshot is stale")):
+    """SEPA-cross tape watch — holdings + buyable + at-pivot + leaderboard names
+    with the live 5-min candle read at their levels (pivot/VWAP/OR/day-high),
+    today's alerts, and the LIVE per-state hit-rate (every alert is graded
+    against the next 30 minutes). Descriptive reads, not predictions."""
+    from . import sepa_watch
+    return JSONResponse(await asyncio.to_thread(sepa_watch.snapshot, refresh))
+
+
+@router.get("/scalping/watch/backtest")
+async def scalping_watch_backtest(days: int = Query(15, ge=5, le=60),
+                                  force: bool = Query(False)):
+    """Backtest of the tape READ itself — classify historical 5-min candles at
+    levels and measure the +30-min outcome per state. Follow-through ≈50% means
+    the read adds nothing; the verdict says so honestly."""
+    from . import tape_backtest
+    return JSONResponse(await asyncio.to_thread(tape_backtest.get, days, force))
+
+
 @router.get("/scalping/config")
 async def scalping_config():
     """The thresholds + sources behind the detectors, for the page's info panel."""

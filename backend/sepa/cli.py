@@ -127,6 +127,13 @@ def main() -> int:
     )
 
     sub.add_parser(
+        "scalping-watch",
+        help="SEPA-cross tape watch tick: read every watched name's latest 5-min "
+             "candle at its levels, push alerts on new alertable reads (deduped), "
+             "and grade past alerts against the +30-min tape",
+    )
+
+    sub.add_parser(
         "scalping-paper-record",
         help="Record live scalping signals as forward paper trades with the real "
              "captured spread (every ~5 min in market hours)",
@@ -325,6 +332,12 @@ def main() -> int:
             log.info("MACRO — %-11s %s%s (chg %s, next %s)",
                      ind["id"], ind["value"], ind["unit"], ind["change"],
                      ind.get("next_release_label") or "—")
+        return 0
+
+    if args.cmd == "scalping-watch":
+        from scalping import sepa_watch
+        r = sepa_watch.run_watch()
+        log.info("SCALPING-WATCH: %s", r)
         return 0
 
     if args.cmd == "scalping-paper-record":

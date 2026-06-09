@@ -61,6 +61,20 @@
 # intraday across the universe; the intraday_cache makes prior days instant).
 0      6     *    *    1-5  /usr/local/bin/python -c "from scalping import backtest; backtest.get_backtest(days=20, force=True)"
 #
+# SEPA-cross tape watch — the autonomous real-time alert layer. Every 5 min
+# (minute 1,6,…,56 so each completed 5-min candle is in) during the regular
+# session: reads holdings + buyable + at-pivot + leaderboard names' latest
+# 5-min candle at their levels (pivot/VWAP/OR/day-high), pushes ONE alert per
+# (symbol, state, day) on alertable reads (kind=scalp_tape; mark-before-send
+# dedup), and grades past alerts against the +30-min tape (self-scoring).
+# The 16:01 pass reads the final candle + grades the stragglers.
+1-56/5 9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli scalping-watch
+1      16    *    *    1-5  /usr/local/bin/python -m sepa.cli scalping-watch
+#
+# Tape-read backtest warmer — 6:10 AM ET so the "does this read work" panel
+# loads from cache (reuses the intraday_cache warmed by the 6:00 backtest).
+10     6     *    *    1-5  /usr/local/bin/python -c "from scalping import tape_backtest; tape_backtest.get(force=True)"
+#
 # Options Pulse (SOIR / Schaeffer's Open Interest Ratio).
 # Mon-Fri 5:30pm ET — daily SOIR snapshot across the Russell 1000 universe
 # (parallel via ThreadPoolExecutor; ~3-5 min for 1000 tickers @ 10 workers).
