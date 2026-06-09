@@ -649,6 +649,42 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
         );
       })()}
 
+      {/* Industry-group leadership (Minervini Ch.6, p.102/108) — additive,
+          DISPLAY-only. Chip only for the actionable ends: group LEADER or
+          LAGGARD; mid-pack names show nothing. See group_leadership.py. */}
+      {(() => {
+        const ind = row.industry;
+        if (!ind || (!row.group_leader && !row.is_laggard)) return null;
+        const shortInd = ind.length > 22 ? ind.slice(0, 21) + '…' : ind;
+        const rankTxt = row.group_rs_rank && row.group_size
+          ? `#${row.group_rs_rank}/${row.group_size}` : '';
+        const cite = 'Minervini, Trade Like a Stock Market Wizard, Ch.6 (p.102 "concentrate on the top two or three stocks in a group"; p.108 "stay away from the laggards").';
+        if (row.group_leader) {
+          return (
+            <div style={{ padding: '0.35rem 0.2rem 0' }}>
+              <span
+                className="sepa-chip"
+                title={`Group leader: RS ${rankTxt} in ${ind}. ${cite}`}
+                style={{ color: '#10b981', borderColor: '#10b981', cursor: 'help', fontSize: '0.72rem' }}
+              >
+                👑 #{row.group_rs_rank} in {shortInd}
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div style={{ padding: '0.35rem 0.2rem 0' }}>
+            <span
+              className="sepa-chip"
+              title={`Laggard in ${ind} — RS ${rankTxt}, trails the group leader ${row.group_leader_symbol ?? ''}. ${cite}`}
+              style={{ color: '#f59e0b', borderColor: '#f59e0b', cursor: 'help', fontSize: '0.72rem' }}
+            >
+              ⤵ laggard vs {row.group_leader_symbol ?? 'leader'}
+            </span>
+          </div>
+        );
+      })()}
+
       {presetOpen && (
         <Suspense fallback={null}>
           <TickerAlertPresets

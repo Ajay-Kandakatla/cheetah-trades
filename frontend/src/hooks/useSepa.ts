@@ -225,6 +225,16 @@ export type SepaCandidate = {
   } | null;
   is_pioneer?: boolean;
   pioneer_themes?: { id: string; label: string }[];
+  /** Industry-group leadership (Minervini Ch.6, p.102/108). Additive,
+   *  DISPLAY-only — see backend/sepa/group_leadership.py. group_rs_rank is the
+   *  stock's RS rank WITHIN its yfinance industry group (1=strongest). */
+  industry?: string | null;
+  sector?: string | null;
+  group_rs_rank?: number | null;
+  group_size?: number | null;
+  group_leader?: boolean;
+  is_laggard?: boolean;
+  group_leader_symbol?: string | null;
   is_etf?: boolean;
   etf_data?: {
     is_etf: boolean;
