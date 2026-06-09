@@ -41,6 +41,11 @@ export type NotificationPrefs = {
   vb_workout?:    boolean;
   vb_supplement?: boolean;
   vb_education?:  boolean;
+  // Pivot / entry alerts (sepa.pivot_alerts cron) — at-pivot / approaching.
+  pivot_alert?: boolean;
+  // SEPA-cross tape watch (scalping.sepa_watch) — 5-min candle reads at
+  // pivot/VWAP/levels on holdings + buyable + at-pivot + leaderboard names.
+  scalp_tape?: boolean;
   // Real-estate (house) notifications — see backend/house/daily_scrape.py.
   // Default ON for everyone; only HOUSE_OWNER_EMAIL actually receives
   // pushes since the cron scopes via send_to_user(owner, ...).

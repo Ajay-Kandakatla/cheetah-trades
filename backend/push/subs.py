@@ -333,6 +333,16 @@ def default_prefs() -> dict:
         "vb_workout":     True,    # 7 AM morning workout brief
         "vb_supplement":  True,    # 9 PM magnesium reminder
         "vb_education":   True,    # 6 PM daily volleyball/health card
+        # ── Pivot / entry alerts (sepa.pivot_alerts cron). BUG FIX 2026-06-09:
+        # this kind was never added here, and list_subscriptions(filter_kind=k)
+        # only matches devices whose prefs.<k>==True — so pivot pushes were
+        # silently targeting ZERO devices (the in-app feed still showed them via
+        # push_history). The _backfill merge stamps it onto existing devices.
+        "pivot_alert": True,
+        # ── SEPA-cross tape watch (scalping.sepa_watch cron) — 5-min candle
+        # reads at pivot/VWAP/levels on holdings + buyable + at-pivot +
+        # leaderboard names. One alert per (symbol, state, day), self-graded.
+        "scalp_tape": True,
         "quiet_hours_enabled": False,
         "quiet_hours_start": "22:00",
         "quiet_hours_end": "08:00",
