@@ -154,6 +154,12 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
             "stage":         stage,
             "distribution_days": dist_days,
             "accumulation":  accum,
+            # Minervini Ch.8 earnings quality (Code 33 / margins / red flags,
+            # book p.140-159) — passed through from the live candidate so the
+            # leaderboard can show the chip. None for names whose scan wasn't
+            # catalyst-enriched (same coverage as CANSLIM). The RANKING already
+            # reflects it via current_score (scanner folds eq into the score).
+            "earnings_quality": (cur.get("fundamentals") or {}).get("earnings_quality"),
             "drop_reason":   _drop_reason(stage, dist_days, accum) if dropped else None,
             # Coiling (pre-breakout spring) + near first R-target (Ajay 2026-06-03)
             "coiling":       coiling,

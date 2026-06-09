@@ -45,6 +45,22 @@ type Leader = {
   r1_price?: number | null;
   dist_to_r1_pct?: number | null;
   macro_risk?: MacroRisk | null;
+  // Minervini Ch.8 earnings quality (Code 33 / margins / red flags) — present
+  // for catalyst-enriched names; the ranking already reflects it via score.
+  earnings_quality?: {
+    score?: number | null;
+    tier?: string;
+    code_33?: boolean;
+    reason?: string;
+    components?: {
+      eps_growth_yoy_pct?: number | null;
+      rev_growth_yoy_pct?: number | null;
+      npm_latest_pct?: number | null;
+      npm_expanding?: boolean;
+      eps_accelerating?: boolean;
+      rev_accelerating?: boolean;
+    };
+  } | null;
 };
 // "Still qualifies despite the macro" — top names that pass the SEPA gate while
 // the backdrop is risky. Two honest tiers from the backend (never blurred):
@@ -252,6 +268,17 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
                   )}
                   {l.stage != null && <> · <span style={{ color: l.stage !== 2 ? '#fb923c' : undefined }}>Stg {l.stage}</span></>}
                   {l.distribution_days ? <> · <span style={{ color: l.distribution_days >= 4 ? '#fb923c' : undefined }}>{l.distribution_days} dist</span></> : null}
+                  {l.earnings_quality?.score != null && (() => {
+                    const e = l.earnings_quality!;
+                    const tone = e.tier === 'code33' ? '#10b981' : e.tier === 'accelerating' ? '#34d399'
+                      : e.tier === 'red_flag' ? '#f87171' : e.tier === 'steady' ? '#eab308' : '#94a3b8';
+                    const c = e.components || {};
+                    const pct = (v?: number | null) => (v != null ? `${v > 0 ? '+' : ''}${v}%` : '—');
+                    const label = e.code_33 ? '🎯 Code 33' : e.tier === 'red_flag' ? `⚠️ EQ ${e.score}` : `EQ ${e.score}`;
+                    return (
+                      <> · <span style={{ color: tone }} title={`Earnings Quality ${e.score}/100 — ${e.reason || ''} (Minervini Ch.8, p.140-159). EPS ${pct(c.eps_growth_yoy_pct)}${c.eps_accelerating ? ' ⚡' : ''}, Sales ${pct(c.rev_growth_yoy_pct)}${c.rev_accelerating ? ' ⚡' : ''}, Net margin ${pct(c.npm_latest_pct)}${c.npm_expanding ? ' expanding ↑' : ''}`}>{label}</span></>
+                    );
+                  })()}
                 </span>
                 {l.macro_risk && <MacroRiskBadge risk={l.macro_risk} marketScore={data.macro_market?.score} compact />}
                 {l.drop_reason && <span className="rank-lb__why">↓ {l.drop_reason}</span>}

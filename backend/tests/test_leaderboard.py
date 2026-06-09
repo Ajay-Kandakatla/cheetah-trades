@@ -57,6 +57,18 @@ def test_breaking_out_flag_when_buyable_now():
     assert next(r for r in rows if r["symbol"] == "BO")["flag"] == "breaking_out"
 
 
+def test_earnings_quality_passes_through_from_live():
+    # Ch.8 earnings quality is carried from the live candidate's fundamentals so
+    # the leaderboard can show the chip; absent (non-enriched name) -> None.
+    runs = [_run(["EQ", "NONE"])]
+    live = {"EQ": {"fundamentals": {"earnings_quality": {"score": 80, "tier": "code33", "code_33": True}}}}
+    rows = lb.aggregate(runs, live=live, n=5)
+    eq = next(r for r in rows if r["symbol"] == "EQ")
+    assert eq["earnings_quality"]["score"] == 80
+    assert eq["earnings_quality"]["code_33"] is True
+    assert next(r for r in rows if r["symbol"] == "NONE")["earnings_quality"] is None
+
+
 def test_current_rank_is_from_newest_run():
     # newest run first → current_rank reflects the latest, not the average.
     runs = [_run(["Z", "Q"]), _run(["Q", "Z"])]
