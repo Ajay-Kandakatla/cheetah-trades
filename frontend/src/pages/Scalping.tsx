@@ -12,6 +12,7 @@ import { InfoButton } from '../components/InfoButton';
 import { IntradayChart } from '../components/IntradayChart';
 import { useDayBars } from '../hooks/useDayTrading';
 import { useScalpingSignals, type ScalpSignal, type ScalpRegime } from '../hooks/useScalpingSignals';
+import { BacktestPanel, PaperPanel } from '../components/ScalpingResearchPanels';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 
@@ -105,11 +106,23 @@ function SignalCard({ s, selected, onSelect }: { s: ScalpSignal; selected: boole
   );
 }
 
+type Tab = 'live' | 'backtest' | 'paper';
+
 export function ScalpingPage() {
   const [profile] = useState<'aggressive' | 'conservative'>('aggressive');
   const { data, loading, error } = useScalpingSignals(profile);
   const [selected, setSelected] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('live');
   const bars = useDayBars(selected, 1);
+
+  const TabBtn = ({ id, label }: { id: Tab; label: string }) => (
+    <button onClick={() => setTab(id)} style={{
+      padding: '0.4rem 0.9rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+      border: `1px solid ${tab === id ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}`,
+      background: tab === id ? 'var(--gold,#c9a227)' : 'transparent',
+      color: tab === id ? '#1a1a1a' : 'inherit',
+    }}>{label}</button>
+  );
 
   return (
     <div className="sepa-page">
@@ -131,10 +144,19 @@ export function ScalpingPage() {
         win rate it needs just to break even — no backtest changes that base rate. The last 30 minutes are auction-dominated and especially hostile.
       </div>
 
-      {loading && !data && <p className="mono" style={{ opacity: 0.7 }}>…scanning the tape</p>}
-      {error && <p className="mono" style={{ color: C.red }}>Couldn't load signals — {error}</p>}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <TabBtn id="live" label="Live signals" />
+        <TabBtn id="backtest" label="Backtest (~1mo)" />
+        <TabBtn id="paper" label="Paper trade" />
+      </div>
 
-      {data && (
+      {tab === 'backtest' && <BacktestPanel active={tab === 'backtest'} />}
+      {tab === 'paper' && <PaperPanel active={tab === 'paper'} />}
+
+      {tab === 'live' && loading && !data && <p className="mono" style={{ opacity: 0.7 }}>…scanning the tape</p>}
+      {tab === 'live' && error && <p className="mono" style={{ color: C.red }}>Couldn't load signals — {error}</p>}
+
+      {tab === 'live' && data && (
         <>
           <RegimeBar r={data.regime} />
 

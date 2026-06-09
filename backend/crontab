@@ -47,6 +47,20 @@
 40     8     *    *    1-5  /usr/local/bin/python -m sepa.cli macro-indicators-refresh
 0      17    *    *    1-5  /usr/local/bin/python -m sepa.cli macro-indicators-refresh
 #
+# Scalping forward paper-trade (the honest real-time-data track record). RECORD
+# every 5 min during the regular session: opens a paper position for each live
+# TRIGGERED signal, capturing the real live spread. RESOLVE every 5 min (plus a
+# final pass at 16:05 ET) closes open positions on the tape with net-of-cost.
+# Educational track record — most retail day-trading nets a loss.
+*/5    9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli scalping-paper-record
+1-56/5 9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli scalping-paper-resolve
+5      16    *    *    1-5  /usr/local/bin/python -m sepa.cli scalping-paper-resolve
+#
+# Scalping historical backtest warmer — recompute the ~1-month walk-forward at
+# 6 AM ET daily so the page's backtest panel loads from cache (heavy: multi-day
+# intraday across the universe; the intraday_cache makes prior days instant).
+0      6     *    *    1-5  /usr/local/bin/python -c "from scalping import backtest; backtest.get_backtest(days=20, force=True)"
+#
 # Options Pulse (SOIR / Schaeffer's Open Interest Ratio).
 # Mon-Fri 5:30pm ET — daily SOIR snapshot across the Russell 1000 universe
 # (parallel via ThreadPoolExecutor; ~3-5 min for 1000 tickers @ 10 workers).

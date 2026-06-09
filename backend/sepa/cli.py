@@ -126,6 +126,17 @@ def main() -> int:
              "funds/yield curve + trends + next-release dates) into Mongo (daily cron)",
     )
 
+    sub.add_parser(
+        "scalping-paper-record",
+        help="Record live scalping signals as forward paper trades with the real "
+             "captured spread (every ~5 min in market hours)",
+    )
+    sub.add_parser(
+        "scalping-paper-resolve",
+        help="Resolve open scalping paper trades to stop/target/time-stop/EOD on "
+             "the tape (every ~5 min in market hours + EOD)",
+    )
+
     args = p.parse_args()
 
     if args.cmd == "scan":
@@ -314,6 +325,18 @@ def main() -> int:
             log.info("MACRO — %-11s %s%s (chg %s, next %s)",
                      ind["id"], ind["value"], ind["unit"], ind["change"],
                      ind.get("next_release_label") or "—")
+        return 0
+
+    if args.cmd == "scalping-paper-record":
+        from scalping import paper
+        r = paper.record_live()
+        log.info("SCALPING-PAPER record: %s", r)
+        return 0
+
+    if args.cmd == "scalping-paper-resolve":
+        from scalping import paper
+        r = paper.resolve_open()
+        log.info("SCALPING-PAPER resolve: %s", r)
         return 0
 
     return 1

@@ -31,6 +31,27 @@ async def scalping_regime():
     return JSONResponse(await asyncio.to_thread(regime.intraday_regime))
 
 
+@router.get("/scalping/backtest")
+async def scalping_backtest(days: int = Query(20, ge=5, le=90),
+                           profile: str = Query("aggressive"),
+                           force: bool = Query(False, description="Bypass the 6h cache")):
+    """Historical walk-forward backtest of the detectors over real Massive 1-min
+    bars — GROSS beside NET-of-cost. The spread is ASSUMED (no historical NBBO),
+    so net is an optimistic upper bound; caveats travel in the payload."""
+    from . import backtest
+    data = await asyncio.to_thread(backtest.get_backtest, days, profile, force)
+    return JSONResponse(data)
+
+
+@router.get("/scalping/paper")
+async def scalping_paper(days: int = Query(30, ge=1, le=120)):
+    """Forward paper-trade track record — every live signal recorded with its
+    REAL captured spread and resolved on the tape. The honest net read; builds
+    up over sessions."""
+    from . import paper
+    return JSONResponse(await asyncio.to_thread(paper.track_record, days))
+
+
 @router.get("/scalping/config")
 async def scalping_config():
     """The thresholds + sources behind the detectors, for the page's info panel."""
