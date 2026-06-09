@@ -100,6 +100,26 @@ So the data is in hand; this is wiring + a v2 view, not a new pipeline.
    rendered on a `/sepa-v2`-style view or as sortable columns, run **alongside**
    v1 for live observation. v1's list and score are untouched.
 
+## Surfaces — where the signal shows up (Ajay 2026-06-09: "on the leaderboard as well")
+
+The same additive fields should surface everywhere a candidate is rendered, not
+just the scanner:
+
+| Surface | How it inherits | Work needed |
+|---|---|---|
+| **SEPA scanner cards / detail** | `SepaCandidateCard` reads the additive row fields | add a `group_leader` / `is_laggard` chip + the `group_rs_rank` line |
+| **Leaderboard — Cross Junctions** | returns **full candidate rows** (`SEPA_CONTRACTS.md` §11d) | chips appear **automatically** once the card renders them — zero backend work |
+| **Leaderboard — main rank table** | `leaderboard.aggregate()` builds a **slim projection**, not a full row | **one-line pass-through** per field, exactly like the existing Ch.8 chip (`leaderboard.py:162` `"earnings_quality": (cur.get("fundamentals") or {})…`); then a `Group leader / Laggard` filter + a sortable **Group RS** column |
+| **Portfolio / holding read** | reads candidate fields | a "laggard in its group" caution on holdings (optional) |
+
+**Leaderboard ranking stays persistence-based.** Like the EQ chip
+(`leaderboard.py:160` — *"the RANKING already reflects it via current_score"*),
+group-leadership on the leaderboard is a **display + filter** signal by default;
+it does **not** silently re-sort the board. A dedicated "group leaders only"
+filter or a group-leadership sort is opt-in (and, if it ever feeds a score, that
+is the v2 path, not v1). This keeps the leaderboard's meaning ("who's
+consistently ranked") intact while letting you slice it by group leadership.
+
 ---
 
 ## Rule #4 deliverables (when built)
