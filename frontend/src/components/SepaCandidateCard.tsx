@@ -131,6 +131,14 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
   // futures + bear case + sector context, plus a few live headlines.
   const [macroOpen, setMacroOpen] = useState(false);
   const [soirOpen, setSoirOpen] = useState(false);
+  // Lean glance-card (CX condensation 2026-06-09): the wall of secondary signal
+  // chips (volume signals, JIT insider/valuation, realtime accum/dist, ADR,
+  // whales 13F, SEC activity, macro, moat, pioneer themes) collapses behind a
+  // one-tap toggle so the card leads with price → decision → setup. All of these
+  // also live on the ticker detail page, so nothing is lost — the scan list just
+  // stops being a wall of chips. Default off = lean. Bonus: the realtime/JIT
+  // chips' polling + EDGAR fetches only fire when the user expands a card.
+  const [showSignals, setShowSignals] = useState(false);
   const setup = row.entry_setup;
   const riskPct = setup ? Math.abs((setup.pivot - setup.stop) / setup.pivot) * 100 : null;
   const stage = row.stage?.stage;
@@ -790,6 +798,18 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           </div>
         )}
 
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowSignals((v) => !v); }}
+          style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none',
+            color: 'var(--cm-slate, #94a3b8)', font: 'inherit', fontSize: '0.7rem',
+            cursor: 'pointer', padding: '0.2rem 0', opacity: 0.85 }}
+          title="Show/hide the full signal chips — volume, insider/valuation, realtime accum/dist, ADR, 13F whales, SEC activity, macro, moat, pioneer themes. All of these also live on the ticker detail page."
+        >
+          {showSignals ? '▾ fewer signals' : '▸ all signals'}
+        </button>
+
+        {showSignals && (
         <div className="sepa-card__flags">
           {/* Volume signal chips — strong/accumulating/distributing accum,
               pocket pivot, hi-vol breakout, money outflow, dist-days warning.
@@ -1083,6 +1103,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             >🚀 {t.label}</span>
           ))}
         </div>
+        )}
 
         {/* "Why buy" + ranking-drivers block — sits above the staleness
             footer so the thesis is the last actionable thing the user
