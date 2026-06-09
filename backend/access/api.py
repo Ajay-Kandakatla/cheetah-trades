@@ -172,3 +172,66 @@ async def admin_access_reset(
     if not ok:
         raise HTTPException(status_code=503, detail="store unavailable")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Admin · sign-in allowlist (who can log in at all)
+# ---------------------------------------------------------------------------
+# Separate surface from the feature matrix above. The matrix grants PAGES to
+# people already allowed in; these endpoints control the oauth2-proxy door
+# itself (backend/oauth2-emails.txt). After a change, oauth2-proxy must be
+# restarted to re-read the file — we surface that command in every response so
+# the owner (who runs deploys) knows the change isn't live until they run it.
+_OAUTH_RESTART_CMD = "docker compose --profile oauth restart oauth2-proxy"
+
+
+@router.get("/admin/access/allowlist")
+async def admin_allowlist_get(email: str = Depends(current_user_email)):
+    """Current sign-in allowlist — one row per approved email, flagged with
+    whether it's a protected (owner) address and whether the user already has
+    a saved per-user feature override."""
+    _require_admin(email)
+    emails = await asyncio.to_thread(store.read_allowlist)
+    return {
+        "emails": emails,
+        "restart_cmd": _OAUTH_RESTART_CMD,
+        "needs_restart_note": (
+            "New / removed emails take effect after oauth2-proxy re-reads the "
+            "file — it does not hot-reload."
+        ),
+    }
+
+
+@router.post("/admin/access/allowlist")
+async def admin_allowlist_add(
+    payload: dict = Body(...),
+    email: str = Depends(current_user_email),
+):
+    """Add an email to the sign-in allowlist. Body: ``{"email": "x@y.com"}``."""
+    _require_admin(email)
+    target = (payload.get("email") or "").strip()
+    if not target:
+        raise HTTPException(status_code=400, detail="email required")
+    result = await asyncio.to_thread(store.add_allowlist_email, target, added_by=email)
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("reason") or "could not add")
+    result["restart_cmd"] = _OAUTH_RESTART_CMD
+    # Only a genuine new line needs a restart; a no-op re-add does not.
+    result["needs_restart"] = bool(result.get("added"))
+    return result
+
+
+@router.delete("/admin/access/allowlist/{target_email}")
+async def admin_allowlist_remove(
+    target_email: str,
+    email: str = Depends(current_user_email),
+):
+    """Remove an email from the sign-in allowlist. Owner emails are refused
+    (would risk locking the owner out)."""
+    _require_admin(email)
+    result = await asyncio.to_thread(store.remove_allowlist_email, target_email, removed_by=email)
+    if not result.get("ok"):
+        raise HTTPException(status_code=400, detail=result.get("reason") or "could not remove")
+    result["restart_cmd"] = _OAUTH_RESTART_CMD
+    result["needs_restart"] = bool(result.get("removed"))
+    return result

@@ -22,6 +22,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { useCurrentUser } from '../hooks/useUser';
+import { AllowlistManager } from '../components/AllowlistManager';
 
 type FeatureDef = {
   id:      string;
@@ -192,6 +193,15 @@ export default function AdminAccessPage() {
       .catch((e) => { if (!cancelled) setErr(String(e?.message || e)); });
     return () => { cancelled = true; };
   }, []);
+
+  // Re-pull the matrix after the allowlist panel adds/removes a user, so a
+  // freshly-approved email shows up as a new column without a full reload.
+  const reloadUsers = () => {
+    fetch(`${API}/admin/access/users`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => { if (u) setUsers(u.users || []); })
+      .catch(() => { /* non-fatal — matrix will catch up on next load */ });
+  };
 
   // Compute the visual ordering of pages, with one synthetic "section
   // header" row inserted before each new group. The renderer treats
@@ -466,6 +476,10 @@ export default function AdminAccessPage() {
           Scroll the matrix horizontally to see more users; the page-name column stays in place.
         </p>
       </header>
+
+      {/* Who can sign in at all — the oauth2 front door. Add/remove approved
+          emails here; the matrix below grants pages to those already in. */}
+      <AllowlistManager onChanged={reloadUsers} />
 
       {err && (
         <div style={{

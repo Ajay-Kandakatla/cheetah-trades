@@ -27,6 +27,14 @@ services:
       # web → saves into ./backend/fidelity/ → /portfolio/csv-import/sync-disk
       # picks up the newest file.
       - ./backend/fidelity:/app/fidelity
+      # Sign-in allowlist, WRITABLE. The admin "User Access" page adds/removes
+      # approved emails at runtime via /admin/access/allowlist. This is the
+      # SAME host file oauth2-proxy bind-mounts read-only at
+      # /etc/oauth2/emails.txt, so a write here is what the sign-in gate
+      # enforces — after `docker compose --profile oauth restart oauth2-proxy`
+      # (oauth2-proxy v7.7.1 does not hot-reload the file). Overrides the copy
+      # baked into the image so list_users() / signup also see live edits.
+      - ./backend/oauth2-emails.txt:/app/oauth2-emails.txt
     depends_on:
       - mongo
     ports:

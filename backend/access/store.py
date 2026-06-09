@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from typing import Iterable, Optional
 
@@ -455,3 +456,190 @@ def list_users(extra_emails: Optional[list[str]] = None) -> list[dict]:
             "has_saved":  doc is not None,
         })
     return out
+
+
+# ----------------------------------------------------------------------
+# Sign-in allowlist management (oauth2-emails.txt)
+# ----------------------------------------------------------------------
+# The owner's "User Access" page edits two SEPARATE things:
+#   1. Per-user FEATURE grants            -> Mongo (set_user_features above)
+#   2. Who can SIGN IN AT ALL (allowlist) -> the oauth2-emails.txt file, below
+#
+# oauth2-proxy is the hard perimeter: it only lets a Google account reach the
+# app if its email is in this file. Feature grants are meaningless for someone
+# who can't get past the door, so adding a brand-new person is fundamentally a
+# *file* edit — not a Mongo write.
+#
+# CRITICAL — bind-mount safety:
+#   In the api container this file is bind-mounted from the host at
+#   /app/oauth2-emails.txt, the SAME host inode oauth2-proxy reads (read-only)
+#   at /etc/oauth2/emails.txt. A single-file bind mount breaks if the file is
+#   REPLACED (tempfile + os.replace gives the new content a new inode and the
+#   container keeps pointing at the old one). So every write below is
+#   TRUNCATE-IN-PLACE (open(path, "w")) — same inode, oauth2-proxy's mount stays
+#   valid. Do NOT "improve" this to an atomic rename.
+#
+# Reload note: oauth2-proxy v7.7.1 does NOT hot-reload this file. The change is
+# durable immediately but the sign-in gate only re-reads it on
+# `docker compose --profile oauth restart oauth2-proxy`. The API surfaces that.
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _allowlist_path() -> str:
+    """Resolve the oauth2 sign-in allowlist file path.
+
+    In the api container the host file is bind-mounted at
+    ``/app/oauth2-emails.txt`` (cwd == /app) — the same inode oauth2-proxy
+    reads at ``/etc/oauth2/emails.txt`` — so a write here is exactly what the
+    sign-in gate enforces. Falls back to the in-repo copy for local dev/tests.
+    """
+    candidates = [
+        "oauth2-emails.txt",
+        os.path.join(os.path.dirname(__file__), os.pardir, "oauth2-emails.txt"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return candidates[0]
+
+
+def _protected_emails() -> set[str]:
+    """Emails that must NEVER be removable from the allowlist via the UI —
+    removing one could lock the owner (or their spouse) out of sign-in. Always
+    includes the admin + every HOUSE_OWNER email."""
+    prot = {"ajaykandakatla@gmail.com"}
+    try:
+        prot |= set(_house_owner_emails())
+    except Exception:
+        pass
+    return {e.lower() for e in prot}
+
+
+def read_allowlist() -> list[dict]:
+    """Ordered list of allowlist entries for the admin UI.
+
+    Each row: ``{"email", "protected", "is_owner", "has_saved"}``. Comments and
+    blank lines in the file are skipped; duplicates collapse to the first."""
+    path = _allowlist_path()
+    prot = _protected_emails()
+    owners = set(_house_owner_emails())
+    # Which emails already carry a saved per-user feature override.
+    saved: set[str] = set()
+    db = _get_db()
+    if db is not None:
+        try:
+            for doc in db.user_features.find({}, {"user_email": 1}):
+                ue = (doc.get("user_email") or "").lower()
+                if ue:
+                    saved.add(ue)
+        except Exception:
+            pass
+
+    out: list[dict] = []
+    seen: set[str] = set()
+    try:
+        with open(path) as f:
+            for line in f:
+                s = line.strip()
+                if not s or s.startswith("#"):
+                    continue
+                lc = s.lower()
+                if lc in seen:
+                    continue
+                seen.add(lc)
+                out.append({
+                    "email":     lc,
+                    "protected": lc in prot,
+                    "is_owner":  lc in owners,
+                    "has_saved": lc in saved,
+                })
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def add_allowlist_email(email: str, *, added_by: str = "") -> dict:
+    """Append an email to the sign-in allowlist (idempotent).
+
+    Returns ``{"ok": bool, "email", "added": bool, "reason"?}``. ``added`` is
+    False when the email was already present (still ``ok``)."""
+    email_lc = (email or "").strip().lower()
+    if not email_lc:
+        return {"ok": False, "reason": "email required"}
+    if not _EMAIL_RE.match(email_lc):
+        return {"ok": False, "reason": "not a valid email address"}
+
+    path = _allowlist_path()
+    try:
+        with open(path) as f:
+            raw = f.read()
+    except FileNotFoundError:
+        raw = ""
+
+    present = {
+        ln.strip().lower()
+        for ln in raw.splitlines()
+        if ln.strip() and not ln.strip().startswith("#")
+    }
+    if email_lc in present:
+        return {"ok": True, "email": email_lc, "added": False, "reason": "already on the allowlist"}
+
+    new = raw
+    if new and not new.endswith("\n"):
+        new += "\n"
+    new += email_lc + "\n"
+    try:
+        # Truncate-in-place — preserves the single-file bind-mount inode.
+        with open(path, "w") as f:
+            f.write(new)
+    except OSError as exc:
+        log.warning("allowlist add failed for %s: %s", email_lc, exc)
+        return {"ok": False, "reason": f"could not write allowlist: {exc}"}
+
+    log.info("allowlist: added %s (by %s)", email_lc, (added_by or "?").lower())
+    return {"ok": True, "email": email_lc, "added": True}
+
+
+def remove_allowlist_email(email: str, *, removed_by: str = "") -> dict:
+    """Remove an email from the sign-in allowlist.
+
+    Refuses to remove a protected (owner/admin) email. Returns
+    ``{"ok": bool, "email", "removed": bool, "reason"?}``. The user's saved
+    feature override (if any) is intentionally left in Mongo so re-adding them
+    later restores their prior access — matching list_users() behavior."""
+    email_lc = (email or "").strip().lower()
+    if not email_lc:
+        return {"ok": False, "reason": "email required"}
+    if email_lc in _protected_emails():
+        return {"ok": False, "reason": "owner email cannot be removed"}
+
+    path = _allowlist_path()
+    try:
+        with open(path) as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return {"ok": False, "reason": "allowlist file not found"}
+
+    kept: list[str] = []
+    removed = False
+    for line in lines:
+        s = line.strip()
+        if s and not s.startswith("#") and s.lower() == email_lc:
+            removed = True
+            continue
+        kept.append(line)
+
+    if not removed:
+        return {"ok": True, "email": email_lc, "removed": False, "reason": "was not on the allowlist"}
+
+    try:
+        # Truncate-in-place — see add_allowlist_email for why not os.replace.
+        with open(path, "w") as f:
+            f.write("".join(kept))
+    except OSError as exc:
+        log.warning("allowlist remove failed for %s: %s", email_lc, exc)
+        return {"ok": False, "reason": f"could not write allowlist: {exc}"}
+
+    log.info("allowlist: removed %s (by %s)", email_lc, (removed_by or "?").lower())
+    return {"ok": True, "email": email_lc, "removed": True}
