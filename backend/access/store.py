@@ -132,6 +132,12 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "options",       "label": "Options Pulse",       "group": "tools",     "default": False},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
     {"id": "day-trading",   "label": "Day Trading",         "group": "tools",     "default": False},
+    # Scalping (2026-06-09): Phase-1 DOCUMENTED intraday patterns (Stocks-in-Play
+    # ORB / volatility-normalized shock-fade / intraday-momentum regime) with a
+    # live spread gate + net-of-cost honesty layer. Sourced from a vetted research
+    # pass (docs/scalping_methodology.md). Educational, NOT advice — most retail
+    # day-trading is net-losing. Owner-on via added_in/VERSION.
+    {"id": "scalping",      "label": "Scalping",            "group": "tools",     "default": False, "added_in": 11},
     {"id": "supply-demand", "label": "Supply / Demand",     "group": "tools",     "default": False},
     # Demand Zones (2026-06-07): Minervini-basing demand-zone price BANDS for the
     # leaderboard + day-trading universe — each name's most-recent VCP base
@@ -197,7 +203,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 10
+CATALOG_VERSION = 11
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

@@ -693,6 +693,11 @@ async def require_auth_middleware(request, call_next):
 from daytrading.api import router as daytrading_router  # noqa: E402
 app.include_router(daytrading_router)
 
+# Scalping module — Phase-1 documented intraday patterns (ORB / shock-fade /
+# intraday-momentum regime) with a live spread gate + net-of-cost honesty layer.
+from scalping.api import router as scalping_router  # noqa: E402
+app.include_router(scalping_router)
+
 # Morning brief — synthesizes regime + day-trade + swing into one answer.
 from morning.brief import router as morning_router  # noqa: E402
 app.include_router(morning_router)

@@ -64,6 +64,7 @@ const ChatterPage                 = lazyWithReload(() => import('./pages/Chatter
 const ChatterIndiaPage            = lazyWithReload(() => import('./pages/ChatterIndia').then(m => ({ default: m.ChatterIndiaPage })));
 const PioneersPage                = lazyWithReload(() => import('./pages/Pioneers').then(m => ({ default: m.PioneersPage })));
 const DayTrading                  = lazyWithReload(() => import('./pages/DayTrading').then(m => ({ default: m.DayTrading })));
+const ScalpingPage                = lazyWithReload(() => import('./pages/Scalping').then(m => ({ default: m.ScalpingPage })));
 const MorningBrief                = lazyWithReload(() => import('./pages/MorningBrief').then(m => ({ default: m.MorningBrief })));
 const OvernightPage               = lazyWithReload(() => import('./pages/Overnight').then(m => ({ default: m.OvernightPage })));
 const SupplyDemandPage            = lazyWithReload(() => import('./pages/SupplyDemand').then(m => ({ default: m.SupplyDemandPage })));
@@ -253,6 +254,7 @@ export function App() {
             <Route path="/chatter-india"  element={<FeatureRoute feature="chatter-india"><ChatterIndiaPage /></FeatureRoute>} />
             <Route path="/pioneers"       element={<FeatureRoute feature="pioneers"><PioneersPage /></FeatureRoute>} />
             <Route path="/day-trading"    element={<FeatureRoute feature="day-trading"><DayTrading /></FeatureRoute>} />
+            <Route path="/scalping"       element={<FeatureRoute feature="scalping"><ScalpingPage /></FeatureRoute>} />
             <Route path="/supply-demand"  element={<FeatureRoute feature="supply-demand"><SupplyDemandPage /></FeatureRoute>} />
             <Route path="/demand-zones"   element={<FeatureRoute feature="demand-zones"><DemandZonesPage /></FeatureRoute>} />
             <Route path="/zones"          element={<FeatureRoute feature="zones"><PriceZonesPage /></FeatureRoute>} />
