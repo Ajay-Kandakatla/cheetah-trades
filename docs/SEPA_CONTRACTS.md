@@ -212,12 +212,24 @@ SCORE_WEIGHTS = {
     "rs_rank":        25,   # rs/99 * 25
     "stage_2":        10,
     "setup":          15,   # VCP or Power Play
-    "fundamentals":   10,   # CANSLIM C+A+I gates
+    "fundamentals":   10,   # earnings quality — see note below
     "volume":          5,
     "liquidity_adr":   5,
 }
 # Sum = 100 + late-base penalty of -8 if applicable.
 ```
+
+> **The `fundamentals` bucket = earnings quality (Minervini Ch.8, book p.140-159)**
+> *(meaning changed 2026-06-08, weight unchanged at 10).* It used to be just the
+> CANSLIM C+A+I count /3. It is now scaled by the **0-100
+> `sepa/earnings_quality.py` score**, which *subsumes* C+A+I and adds the Code 33
+> (EPS+sales+margin triple-acceleration, p.158-159), margin expansion (p.145-147),
+> EPS/sales acceleration (p.140), and a sales-driven quality penalty for
+> cost-cutting/one-time beats (p.141-144). `bonus = 10 × eq_score/100`. When eq is
+> unscored (thin history / yfinance fallback) it falls back to the legacy
+> `passed/3` bonus, so the prior signal is never lost. Full derivation +
+> page cites: `docs/sepa/earnings_quality_methodology.md`. Thresholds locked by
+> `test_sepa_contracts.test_earnings_quality_thresholds_locked`.
 
 **Post-sum penalties** (applied to `score` AFTER the weighted sum, so the
 weights above stay summed to 100):
@@ -226,6 +238,7 @@ weights above stay summed to 100):
 |---|---|---|
 | Late-stage base | −8 | exhaustion (≥4 bases) |
 | Institutional-sponsorship demotion | −0 / −4 / −10 / −18 by avg daily $-vol tier | **book p.195** (added 2026-05-31) |
+| Earnings-quality red flag | −4 (low-quality beat / inventory) · −6 (double trouble) | **book p.143, 155-157** (Ch.8, added 2026-06-08) |
 
 > **Sponsorship tiers** (`scanner.SPONSORSHIP_TIERS`, locked by
 > `test_sponsorship_penalty_tiers_locked`): ≥$100M → 0; $20M–$100M → −4;

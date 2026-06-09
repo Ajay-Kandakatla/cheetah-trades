@@ -184,6 +184,50 @@ def _sponsorship_penalty(avg_dollar_vol: Optional[float]) -> float:
     return 0.0
 
 
+# ── Earnings-quality adjustment (Minervini Ch.8, book p.140-159) ─────────────
+# The `fundamentals` score bucket (SCORE_WEIGHTS["fundamentals"], 10 pts) used to
+# be the CANSLIM C+A+I count /3. It now scales by the richer 0-100 earnings-
+# quality score (sepa/earnings_quality.py) — which SUBSUMES C+A+I and adds the
+# Code 33, margin expansion, EPS/sales acceleration, and a sales-driven quality
+# penalty. The bucket WEIGHT is unchanged (still 10), so the §4 sums-to-100
+# contract holds. Balance-sheet red flags apply as a small POST-SUM penalty,
+# exactly like the sponsorship (p.195) and late-stage (−8) demotions — also
+# leaving the §4 sum untouched. Penalty sizes are our codification, locked in
+# test_sepa_contracts.py.
+EQ_REDFLAG_PENALTY = 4.0          # low-quality beat / inventory red flag (p.143,155)
+EQ_REDFLAG_DOUBLE_PENALTY = 6.0   # 'double trouble' — inventory + receivables (p.157)
+
+
+def _earnings_quality_adjustment(fundamentals: Optional[dict]) -> tuple:
+    """Score delta from the Ch.8 earnings-quality read: (delta, notes).
+
+    delta = SCORE_WEIGHTS["fundamentals"] * eq_score/100  (positive, sales-backed
+    accelerating margin-expanding earnings)  minus a red-flag penalty. Falls back
+    to the legacy CANSLIM passed/3 bonus when eq is unscored (thin history /
+    yfinance fallback) so we never lose the prior signal. Used by BOTH the
+    scan_universe enrich loop and _hot_recompute, so the two can't drift."""
+    if not fundamentals:
+        return 0.0, []
+    delta = 0.0
+    notes: list = []
+    eq = fundamentals.get("earnings_quality") or {}
+    eq_score = eq.get("score")
+    if eq_score is not None:
+        delta += SCORE_WEIGHTS["fundamentals"] * (eq_score / 100.0)
+        if eq.get("code_33"):
+            notes.append("Code 33 (p.158)")
+    elif fundamentals.get("passed"):
+        delta += SCORE_WEIGHTS["fundamentals"] * (fundamentals["passed"] / 3.0)
+    rf = eq.get("red_flags") or {}
+    if rf.get("double_trouble"):
+        delta -= EQ_REDFLAG_DOUBLE_PENALTY
+        notes.append("double-trouble red flag (p.157)")
+    elif rf.get("low_quality_beat") or rf.get("inventory_vs_sales"):
+        delta -= EQ_REDFLAG_PENALTY
+        notes.append("earnings red flag (p.143/155)")
+    return delta, notes
+
+
 # SPY's 12-month return — cached at scan start. dual_momentum.metrics_for_df
 # uses this to compute the per-ticker `beats_spy` flag without each worker
 # re-loading SPY's price file. Reset by scan_universe / scan_universe_fast.
@@ -639,12 +683,17 @@ def scan_universe(symbols: Optional[List[str]] = None,
                         rec["fundamentals"] = await asyncio.to_thread(
                             canslim.fundamentals_for, rec["symbol"]
                         )
-                        # Re-score with fundamentals bump
+                        # Re-score with the Minervini Ch.8 earnings-quality read
+                        # (Code 33 / margins / red flags) — folded into the same
+                        # `fundamentals` bucket that used to hold only CANSLIM C/A/I.
                         f = rec["fundamentals"]
-                        if f and f.get("passed"):
-                            bonus = SCORE_WEIGHTS["fundamentals"] * (f["passed"] / 3.0)
-                            rec["score"] = round(min(100.0, rec["score"] + bonus), 1)
-                            rec["rating"] = _rating_label(rec["score"])
+                        if f:
+                            eq_delta, eq_notes = _earnings_quality_adjustment(f)
+                            if eq_delta:
+                                rec["score"] = round(max(0.0, min(100.0, rec["score"] + eq_delta)), 1)
+                                rec["rating"] = _rating_label(rec["score"])
+                            if eq_notes:
+                                rec["score_notes"] = (rec.get("score_notes") or []) + eq_notes
                     except Exception as exc:
                         log.warning("fundamentals failed for %s: %s", rec["symbol"], exc)
                     # Buffett moat — same yfinance.info call as canslim, so cheap.
@@ -896,8 +945,10 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         score += SCORE_WEIGHTS["liquidity_adr"] * 0.4
     if adr_value and adr_value >= 4.0:
         score += SCORE_WEIGHTS["liquidity_adr"] * 0.6
-    if fundamentals and fundamentals.get("passed"):
-        score += SCORE_WEIGHTS["fundamentals"] * (fundamentals["passed"] / 3.0)
+    # Minervini Ch.8 earnings-quality bump + red-flag penalty (subsumes the old
+    # CANSLIM C/A/I bonus). Same helper the scan_universe enrich loop uses.
+    eq_delta, _eq_notes = _earnings_quality_adjustment(fundamentals)
+    score += eq_delta
     if bc and bc.get("is_late_stage"):
         score -= 8
     # Institutional-sponsorship demotion (book p.195) — see full-scan path.

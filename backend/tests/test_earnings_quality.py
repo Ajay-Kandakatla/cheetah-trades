@@ -124,6 +124,37 @@ def test_insufficient_history_is_none():
     assert out["_insufficient"] is True
 
 
+def test_scanner_earnings_quality_adjustment():
+    # Integration: the scanner folds eq into the `fundamentals` score bucket and
+    # docks red flags. scanner pulls pandas etc., so self-skip on a bare host;
+    # this runs in the container / CI.
+    try:
+        from sepa import scanner as sc
+    except Exception:
+        return
+
+    # §4 contract: weights still sum to 100 after the wiring.
+    assert sum(sc.SCORE_WEIGHTS.values()) == 100
+    assert sc.SCORE_WEIGHTS["fundamentals"] == 10
+
+    rev = rev_from_yoy([50, 35, 20, 10]); eps = eps_from_yoy([60, 40, 20, 10])
+    ni = ni_from_margins(rev, [0.20, 0.18, 0.16, 0.15, 0.12, 0.12, 0.12, 0.12])
+    eq_good = eq.compute(eps, rev, ni)
+    delta_good, notes_good = sc._earnings_quality_adjustment({"earnings_quality": eq_good})
+    assert delta_good > 0
+    assert any("Code 33" in n for n in notes_good)
+
+    rev2 = rev_from_yoy([2, 2, 2, 2]); eps2 = eps_from_yoy([40, 40, 40, 40])
+    eq_bad = eq.compute(eps2, rev2, ni_from_margins(rev2, [0.10] * 8))
+    delta_bad, notes_bad = sc._earnings_quality_adjustment({"earnings_quality": eq_bad})
+    assert delta_bad < delta_good
+    assert any("red flag" in n for n in notes_bad)
+
+    # eq unscored -> legacy CANSLIM passed/3 fallback (never lose the prior signal)
+    delta_fb, _ = sc._earnings_quality_adjustment({"passed": 3, "earnings_quality": {"score": None}})
+    assert delta_fb == sc.SCORE_WEIGHTS["fundamentals"]
+
+
 def test_thresholds_locked():
     # Mirrors the source-guard in test_sepa_contracts.py. Changing any of these
     # is a methodology change (Rule #4) and must update the page-cited doc.

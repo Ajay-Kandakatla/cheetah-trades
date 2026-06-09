@@ -204,6 +204,32 @@ def test_sales_confidence_thresholds_locked():
     assert weak["tier"] == "weak" and weak["score"] < 40
 
 
+def test_earnings_quality_thresholds_locked():
+    """Earnings-quality score (sepa/earnings_quality.py) encodes Minervini
+    *Trade Like a Stock Market Wizard* Ch.8 (Assessing Earnings Quality, book
+    p.140-159). These codified thresholds + the scanner's red-flag penalties are
+    LOCKED — changing any is a methodology change (Rule #4) requiring a page-cited
+    update to docs/sepa/earnings_quality_methodology.md + this contract's §4."""
+    from sepa import earnings_quality as eq
+    assert eq.STRONG_EPS_YOY_PCT == 25.0
+    assert eq.SALES_FLOOR_PCT == 5.0
+    assert eq.INV_OVER_SALES_GAP_PCT == 15.0
+    assert eq.INV_REDFLAG_SALES_STRONG_PCT == 25.0
+    assert eq.LOWQ_EPS_MIN_PCT == 25.0
+    assert eq.LOWQ_SALES_MAX_PCT == 5.0
+    # Thin history -> no invented score (Rule #1).
+    assert eq.compute([2.0, 2.1], [100.0], [10.0])["score"] is None
+
+    # The `fundamentals` bucket now MEANS earnings quality, but its WEIGHT — and
+    # the §4 sums-to-100 contract — are unchanged. Red-flag penalties are post-sum
+    # (like sponsorship/late-stage), so they don't touch the sum either.
+    from sepa import scanner
+    assert scanner.SCORE_WEIGHTS["fundamentals"] == 10
+    assert sum(scanner.SCORE_WEIGHTS.values()) == 100
+    assert scanner.EQ_REDFLAG_PENALTY == 4.0
+    assert scanner.EQ_REDFLAG_DOUBLE_PENALTY == 6.0
+
+
 def test_rating_thresholds_locked():
     """_rating_label maps score → label per contract §4."""
     from sepa.scanner import _rating_label
