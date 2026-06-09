@@ -144,6 +144,10 @@ FEATURE_CATALOG: list[dict] = [
     # entry/stop/target levels, plus owner-scoped alerts when price hits them.
     # Owner-on via added_in/VERSION; Pankaj's calls shown for context, not advice.
     {"id": "pankaj",        "label": "Pankaj's Analysis",   "group": "tools",     "default": False, "added_in": 9},
+    # S/D Zones (2026-06-09): on-demand per-ticker price-structure supply/demand
+    # zones + an entry read (resistance above / support below / favorable-caution).
+    # Configured method (not a book method); decision-support, not advice.
+    {"id": "zones",         "label": "S/D Zones",           "group": "tools",     "default": False, "added_in": 10},
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
@@ -193,7 +197,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 9
+CATALOG_VERSION = 10
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 
