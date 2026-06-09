@@ -97,6 +97,10 @@ def _from_hybrid(symbol: str) -> dict:
     # Got EPS data from Massive — now pull just the institutional ownership
     # from yfinance (cheaper than fetching the whole income statement).
     inst = _inst_ownership_yfinance(symbol)
+    # Receivables (Ch.8 'double trouble', p.156-157) — Massive lacks AR, so this
+    # is a best-effort yfinance supplement. None when unavailable (often: short
+    # quarterly history), and the receivables flag degrades to None.
+    recv = _receivables_yfinance(symbol)
 
     checks = {
         "c_strong_q_eps":  (m["q_eps_growth_pct"] is not None and m["q_eps_growth_pct"] >= 25),
@@ -117,6 +121,7 @@ def _from_hybrid(symbol: str) -> dict:
         "earnings_quality": earnings_quality.compute(
             m.get("eps_q_series"), m.get("rev_q_series"),
             m.get("ni_q_series"), m.get("inv_q_series"),
+            recv_q_series=recv,
         ),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
@@ -285,6 +290,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
     No fallback to yfinance for C+A when `strict=True`."""
     m = _fetch_massive_financials(symbol) or {}
     inst = _inst_ownership_yfinance(symbol)
+    recv = _receivables_yfinance(symbol)
 
     q = m.get("q_eps_growth_pct")
     y = m.get("y_eps_growth_pct")
@@ -302,6 +308,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "earnings_quality": earnings_quality.compute(
             m.get("eps_q_series"), m.get("rev_q_series"),
             m.get("ni_q_series"), m.get("inv_q_series"),
+            recv_q_series=recv,
         ),
         "checks":  checks,
         "passed":  sum(1 for v in checks.values() if v),
@@ -432,4 +439,31 @@ def _inst_ownership_yfinance(symbol: str) -> Optional[float]:
         return _inst_ownership_yf(yf.Ticker(symbol))
     except Exception as exc:
         log.debug("inst ownership lookup failed for %s: %s", symbol, exc)
+        return None
+
+
+def _receivables_yfinance(symbol: str) -> Optional[list]:
+    """Newest-first quarterly accounts-receivable series from yfinance — the
+    only input the Minervini Ch.8 receivables / 'double trouble' red flag needs
+    (p.156-157) that Massive does NOT expose (no accounts_receivable on its
+    standardized balance sheet).
+
+    Best-effort: returns None on any failure or when yfinance has too few
+    quarters (its quarterly balance sheet is often only ~4 deep, short of the 5
+    needed for one YoY read) — so the receivables flag stays None rather than
+    being falsely treated as 'clean'. Runs only on the top-N enrich set.
+    """
+    try:
+        import yfinance as yf
+        bs = yf.Ticker(symbol).quarterly_balance_sheet
+        if bs is None or getattr(bs, "empty", True):
+            return None
+        # yfinance columns are dates ordered newest-first; row label varies.
+        for row in ("Accounts Receivable", "Receivables", "Net Receivables"):
+            if row in bs.index:
+                vals = bs.loc[row].dropna().tolist()
+                return [float(v) for v in vals] if vals else None
+        return None
+    except Exception as exc:
+        log.debug("receivables lookup failed for %s: %s", symbol, exc)
         return None
