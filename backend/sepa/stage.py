@@ -13,6 +13,12 @@ Implementation notes:
   - Stage 2 geometry: price > MA50 > MA150 > MA200, 200DMA slope up (p.71-72)
   - Stage 2 volume:   accumulation — vol spikes on up days/weeks, vol
                       contractions on pullbacks (p.71-72 verbatim)
+  - Stage 3 geometry: price has lost the 50-day and is within 10% of the
+                      200-day while 150-day > 200-day; the 200-day "will lose
+                      upside momentum, flatten out, and then roll over" and
+                      price "may undercut its 200-day" (p.74). Slope-agnostic —
+                      a top does NOT require a rising 200-day (fixed 2026-06-09;
+                      see the Stage 3 branch comment below).
   - Stage 3 volume:   distribution — major price break on volume since
                       stage 2 began; vol expansion on down days (p.74-76)
   - Stage 4 volume:   more down days/weeks on above-avg volume than up
@@ -109,8 +115,30 @@ def classify(df: pd.DataFrame, *, vol: Optional[dict] = None) -> Optional[dict]:
     if slope_down and p < s50 < s150 < s200:
         return {"stage": 4, "label": "Decline", "slope_up": False, "dist_200_pct": round(dist_200, 2)}
 
-    # ── Stage 3: price still above 200 but 50-MA rolled over + price lost 50-MA
-    if p < s50 and s200 > s200_prev and p > s200 * 0.9:
+    # ── Stage 3 (Topping), book p.74: in a top the 200-day MA "will lose upside
+    #    momentum, flatten out, and then roll over into a downtrend," and price
+    #    "may undercut its 200-day." Stage 3 therefore must NOT require a *rising*
+    #    200-day. Before 2026-06-09 this branch was gated on `s200 > s200_prev`,
+    #    which is backwards for a top: a genuinely topping name whose 200-day had
+    #    flattened or started rolling over fell through to Stage 1 "Basing",
+    #    masking the top (book-audit finding, 2026-06-09).
+    #
+    #    Topping is now: price has lost the 50-day, is still within 10% of the
+    #    200-day (the book's "may undercut" allowance), and the prior Stage-2 MA
+    #    stack is still intact (150-day > 200-day). That intact-but-stalling
+    #    structure is what separates a post-advance TOP from a Stage-1 BASE — a
+    #    base forms after a Stage-4 decline with the stack recovering from
+    #    inversion (150-day <= 200-day), so it does not match here. A deeper break
+    #    with a fully-inverted stack is Stage 4 (matched above).
+    #
+    #    BUY-SIDE-SAFE BY CONSTRUCTION: this branch can only return Stage 3, never
+    #    Stage 2, so it cannot manufacture a buy (is_buyable / the ENTER verdict
+    #    both require stage == 2). It only refines the Basing-vs-Topping label that
+    #    feeds the holding / sell-side read — and Topping is the more cautious,
+    #    book-correct label for a stalling post-advance name. Quantified against the
+    #    latest scan the day it shipped: 1 of 105 names (VRTX) moved Basing->Topping;
+    #    0 names moved into Stage 2.
+    if p < s50 and p > s200 * 0.9 and s150 > s200:
         return {"stage": 3, "label": "Topping", "slope_up": slope_up, "dist_200_pct": round(dist_200, 2)}
 
     # ── Default: Stage 1 (basing / neglect, book p.67)

@@ -559,13 +559,41 @@ Code location: `backend/sepa/stage.py`. Decision tree:
 | Stage | Condition | Book reference |
 |-------|-----------|----------------|
 | **2** (Advancing) | `slope_up AND price > MA50 > MA150 > MA200` **AND** volume confirms (not distributing, no CMF outflow) | p. 71-72 (geometry **and volume**) |
-| **3** (Topping — geometry) | `price < MA50 AND slope_up AND price > MA200 * 0.9` | p. 74 (lost MA50 but still above MA200) |
+| **3** (Topping — geometry) | `price < MA50 AND price > MA200 * 0.9 AND MA150 > MA200` (slope-agnostic) | p. 74 (200-day "loses upside momentum, flattens, rolls over"; price "may undercut its 200-day") |
 | **3** (Topping — volume override) | Geometry says Stage 2 BUT `vol.accumulation_strength == 'distributing'` OR `vol.cmf_signal == 'outflow'` | p. 74-76 (distribution is a stage-3 tell) |
 | **4** (Decline)   | `slope_down AND price < MA50 < MA150 < MA200` | p. 75 |
 | **1** (Basing)    | Default — any non-matching state | p. 67 |
 
 Slope = MA200 today vs MA200 22 bars ago. `slope_up = today > prior`.
 22 bars ≈ 1 month, matching book p. 79 trend template criterion #3.
+
+**Stage-3 slope fix (2026-06-09, book-audit, explicit user sign-off).** The
+geometric Stage-3 branch previously required a *rising* 200-day MA
+(`slope_up`). That is backwards for a top: **book p.74** — *"The 200-day moving
+average will lose upside momentum, flatten out, and then roll over into a
+downtrend"* and price *"may undercut its 200-day."* So a genuinely topping name
+whose 200-day had flattened/rolled over matched neither this branch nor Stage 4
+(which needs a fully-inverted stack) and fell through to **Stage 1 "Basing,"**
+masking the top. The branch is now **slope-agnostic** and instead requires the
+prior Stage-2 stack to still be intact (`MA150 > MA200`) — the structural marker
+that separates a *post-advance top* from a *post-decline base* (where the stack
+is recovering from inversion, `MA150 ≤ MA200`). The earlier cite "lost MA50 but
+still above MA200" was also corrected: **p.74 describes the 200-day rolling
+over and price undercutting it, and does not mention the 50-day MA.**
+
+> **Buy-side-safe by construction.** This branch can only return Stage 3, never
+> Stage 2, so it cannot manufacture a buy signal (`is_buyable` and the ENTER
+> verdict both require `stage == 2`). It only refines the Basing-vs-Topping label
+> feeding the holding / sell-side read — and Topping is the more cautious,
+> book-correct label for a stalling post-advance name. Quantified against the
+> latest scan the day it shipped: **1 of 105 names (VRTX) moved Basing→Topping;
+> 0 names moved into Stage 2.** Behavioral + regression locks:
+> `backend/tests/test_stage_classifier.py`
+> (`test_stage3_flat_200_rollover_is_topping_not_basing`,
+> `test_stage3_branch_never_returns_stage2`). Bumping the contracts version is
+> not required (the formula is now MORE faithful to the book — the original was a
+> documented gap), matching the precedent of the 2026-05-28 volume-confirmation
+> refinement below.
 
 **Volume confirmation rule (added 2026-05-28, with explicit user sign-off).**
 Pre-fix behaviour: classify only inspected MA geometry + 200-DMA slope.
