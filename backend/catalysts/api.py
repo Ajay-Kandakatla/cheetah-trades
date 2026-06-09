@@ -212,6 +212,17 @@ def _full_scan(*,
 
 # --- Endpoints ----------------------------------------------------------
 
+@router.get("/catalysts/news-read/{symbol}")
+async def get_news_read(symbol: str, force: bool = Query(False, description="bypass the 15-min cache")):
+    """JIT news verdict — does recent news make this name MORE buyable, LESS
+    buyable, or a SELL? On-demand only (never preloaded): pulls the last 72h of
+    headlines, classifies the net read (LLM when available, else keyword tone).
+    Educational — a news-sentiment read, NOT advice."""
+    import asyncio
+    from .news_read import news_read
+    return await asyncio.to_thread(news_read, symbol, force)
+
+
 @router.get("/catalysts/scan")
 async def scan_catalysts(
     force: bool = Query(False, description="bypass cache"),

@@ -10,6 +10,7 @@ import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
 import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
+import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
@@ -1338,6 +1339,11 @@ export function SepaCandidatePage() {
                   <strong>Catalyst</strong> — news sentiment, analyst revisions, top
                   headlines. Empty unless scanned with <strong>+ catalyst</strong> on.
                 </div>
+
+                {/* JIT news read — summarized on click, NOT preloaded: does
+                    recent news make this more/less buyable or a sell. */}
+                <NewsReadButton symbol={symbol} />
+
                 {data.catalyst ? (
                   <>
                     {data.catalyst.earnings_upcoming && (
