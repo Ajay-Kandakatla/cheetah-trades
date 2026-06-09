@@ -81,10 +81,15 @@ def _parse_observations(payload: dict) -> list:
 def _fetch(series_id: str, limit: int = _DEFAULT_LIMIT) -> list:
     """Cached (24h) [(date, value)] newest-first for `series_id`. Returns an
     empty list on ANY failure (no key, network, bad series) — callers treat an
-    empty list as "no data" and degrade to neutral."""
+    empty list as "no data" and degrade to neutral.
+
+    The cache key includes `limit` so a caller asking for a longer history
+    window (e.g. the macro-indicators panel) does NOT clobber the gauge's
+    24-point slot, and vice-versa."""
     global _disabled
     now = time.time()
-    hit = _CACHE.get(series_id)
+    ck = (series_id, limit)
+    hit = _CACHE.get(ck)
     if hit and (now - hit[0]) < _TTL_SEC:
         return hit[1]
     key = api_key()
@@ -117,11 +122,41 @@ def _fetch(series_id: str, limit: int = _DEFAULT_LIMIT) -> list:
             return []
         data = _parse_observations(r.json() or {})
         if data:
-            _CACHE[series_id] = (now, data)
+            _CACHE[ck] = (now, data)
         return data
     except Exception as exc:
         log.warning("fred: fetch failed for %s: %s", series_id, exc)
         return []
+
+
+def observations(series_id: str, limit: int = _DEFAULT_LIMIT) -> list:
+    """Public: cached [(date, value)] newest-first for `series_id`, up to
+    `limit` points. Empty list when unavailable. Used by the macro-indicators
+    panel to draw a trend (it needs more history than the gauge's default)."""
+    return list(_fetch(series_id, limit))
+
+
+def yoy_history(series_id: str, points: int = 24) -> list:
+    """[(date, yoy_pct)] newest-first for a MONTHLY index/level series — the
+    YoY % at each of the last `points` months. Needs `points + 12` raw
+    observations; returns as many as the history allows (possibly empty)."""
+    data = _fetch(series_id, points + 14)
+    out = []
+    for i in range(len(data)):
+        if i + 12 >= len(data):
+            break
+        now, prior = data[i][1], data[i + 12][1]
+        if prior:
+            out.append((data[i][0], round((now / prior - 1.0) * 100.0, 2)))
+        if len(out) >= points:
+            break
+    return out
+
+
+def level_history(series_id: str, points: int = 24) -> list:
+    """[(date, value)] newest-first for a rate/spread series (no transform),
+    up to `points` observations."""
+    return _fetch(series_id, points)[:points]
 
 
 # ── derived reads used by the gauge's Economic pillars ───────────────────────

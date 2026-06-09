@@ -1188,6 +1188,26 @@ async def market_gauge_get(force: bool = Query(False, description="Bypass the 5-
     return JSONResponse(_scrub_nan(await asyncio.to_thread(market_gauge.get_gauge, force)))
 
 
+@app.get("/market/fear-greed")
+async def market_fear_greed_get(force: bool = Query(False, description="Bypass the cache")):
+    """Fear & Greed index — CNN Business's published index surfaced in-app: the
+    0-100 score + rating, previous close / 1wk / 1mo / 1yr, the seven component
+    sub-indices, and a recent trend. Attribution travels in the payload (`source`
+    = CNN Business). Sentiment context for the Market Gauge page — NOT advice."""
+    from sepa import fear_greed
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(fear_greed.get, force)))
+
+
+@app.get("/market/macro-indicators")
+async def market_macro_indicators_get(force: bool = Query(False, description="Bypass the 6h cache")):
+    """Live macro dashboard for the Market Gauge page — CPI & Core CPI (YoY),
+    unemployment, Fed funds and the 10y-3m curve, each with the latest value, the
+    change vs the prior print, a ~24-point trend, and the next scheduled release
+    date (real FRED release calendar). Educational context, NOT a forecast."""
+    import macro_indicators
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(macro_indicators.get, force)))
+
+
 @app.post("/usage/track")
 async def usage_track(payload: dict, email: str = Depends(current_user_email)):
     """Record a batch of usage events (page views + feature interactions) for the

@@ -32,6 +32,21 @@
 # morning pre-open read all day. Runs just after the brief to avoid contention.
 32     8     *    *    1-5  /usr/local/bin/python -m sepa.cli market-gauge-preopen
 #
+# Fear & Greed (CNN) — mirror CNN Business's published index into Mongo so the
+# Market Gauge page's dial serves instantly. CNN updates intraday, so refresh
+# every 30 min during the session (9-16:30 ET), once pre-open (8:35), and once
+# in the evening (8pm, all days) so the dial shows a fresh read over the weekend.
+35     8     *    *    1-5  /usr/local/bin/python -m sepa.cli fear-greed-refresh
+0,30   9-16  *    *    1-5  /usr/local/bin/python -m sepa.cli fear-greed-refresh
+0      20    *    *    *    /usr/local/bin/python -m sepa.cli fear-greed-refresh
+#
+# Macro indicators (FRED) — refresh the CPI/Core CPI/unemployment/Fed funds/
+# yield-curve dashboard (values + trends + next-release dates). CPI/jobs print
+# at 8:30am ET on release days, so refresh at 8:40am ET weekdays (catches the
+# fresh print) and again at 5pm ET (the daily 10y-3m curve updates after close).
+40     8     *    *    1-5  /usr/local/bin/python -m sepa.cli macro-indicators-refresh
+0      17    *    *    1-5  /usr/local/bin/python -m sepa.cli macro-indicators-refresh
+#
 # Options Pulse (SOIR / Schaeffer's Open Interest Ratio).
 # Mon-Fri 5:30pm ET — daily SOIR snapshot across the Russell 1000 universe
 # (parallel via ThreadPoolExecutor; ~3-5 min for 1000 tickers @ 10 workers).

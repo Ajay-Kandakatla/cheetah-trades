@@ -8,6 +8,8 @@
 import { InfoButton } from '../components/InfoButton';
 import { ReactionMap } from '../components/ReactionMap';
 import { MacroCalendar } from '../components/MacroCalendar';
+import { FearGreedGauge } from '../components/FearGreedGauge';
+import { MacroIndicators } from '../components/MacroIndicators';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
 
 const PageInfo = (
@@ -127,6 +129,12 @@ export function MarketGaugePage() {
               </ul>
             </section>
           )}
+
+          {/* CNN Fear & Greed — sentiment read (mirrored from CNN Business) */}
+          <FearGreedGauge />
+
+          {/* Live macro dashboard — CPI/Core CPI/unemployment/Fed funds/curve */}
+          <MacroIndicators />
 
           {/* Pillar breakdown, grouped by category */}
           <section className="mg-comps">

@@ -114,6 +114,18 @@ def main() -> int:
              "shows the morning read all day",
     )
 
+    sub.add_parser(
+        "fear-greed-refresh",
+        help="Refresh CNN's Fear & Greed index into Mongo so the Market Gauge "
+             "page's dial serves instantly (market-hours cron)",
+    )
+
+    sub.add_parser(
+        "macro-indicators-refresh",
+        help="Refresh the FRED macro dashboard (CPI/Core CPI/unemployment/Fed "
+             "funds/yield curve + trends + next-release dates) into Mongo (daily cron)",
+    )
+
     args = p.parse_args()
 
     if args.cmd == "scan":
@@ -282,6 +294,26 @@ def main() -> int:
                  w.get("score", "n/a"), w.get("state", "n/a"), o.get("label", ""))
         for wch in (o.get("watch") or []):
             log.info("  watch: %s", wch)
+        return 0
+
+    if args.cmd == "fear-greed-refresh":
+        from . import fear_greed
+        r = fear_greed.run_and_persist()
+        if r.get("error"):
+            log.warning("FEAR-GREED — feed unavailable (%s); kept last persisted", r["error"])
+        else:
+            log.info("FEAR-GREED — score=%s (%s) | prev_close=%s",
+                     r.get("score"), r.get("rating"),
+                     (r.get("previous") or {}).get("close", {}).get("value"))
+        return 0
+
+    if args.cmd == "macro-indicators-refresh":
+        import macro_indicators
+        r = macro_indicators.run_and_persist()
+        for ind in r.get("indicators", []):
+            log.info("MACRO — %-11s %s%s (chg %s, next %s)",
+                     ind["id"], ind["value"], ind["unit"], ind["change"],
+                     ind.get("next_release_label") or "—")
         return 0
 
     return 1
