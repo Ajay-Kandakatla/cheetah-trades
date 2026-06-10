@@ -34,6 +34,21 @@ SHOULDER_TOL_PCT = 1.5      # CITED — LMW Def. 1: shoulders within 1.5% of the
 ARMPIT_TOL_PCT = 1.5        # CITED — LMW Def. 1: armpits within 1.5% of their average
 VALIDATION_HORIZON = 21     # CONVENTION — self-validation forward window (bars ≈ 1 month)
 
+# Triple bottom (Bulkowski tb.html, verified verbatim 2026-06-09)
+TB_MIN_ADJ_SEP = 10         # CONVENTION — "three DISTINCT valleys" needs separation; no bar count is cited
+TB_MAX_SPAN = 120           # CONVENTION — total width cap; the page cites no min/max duration
+TB_TARGET_FACTOR = 0.74     # CITED — Bulkowski's measure rule multiplies the height by his 74% target-hit rate
+
+# Cup with handle (Bulkowski cup.html, verified verbatim 2026-06-09)
+CUP_MIN_BARS = 35           # CITED — cup duration "from 7 to 65 weeks" (7wk ≈ 35 bars)
+CUP_MAX_BARS = 325          # CITED — 65 weeks ≈ 325 bars
+RIM_TOL_PCT = 5.0           # CONVENTION — "rims near the same price level but be flexible" (no number cited)
+CUP_MIN_DEPTH_PCT = 8.0     # CONVENTION — "a rounded turn that looks like a cup" needs real depth; uncited
+CUP_U_SHAPE_BARS = 3        # CONVENTION — ≥3 bars near the low = "U-shaped, not V-shaped" operationalized
+CUP_LOW_POS = (0.15, 0.85)  # CONVENTION — cup low must sit in the middle of the span (U, not a ramp)
+HANDLE_MIN_BARS = 5         # CITED — handle "1 week minimum with no maximum"
+CWH_TARGET_FACTOR = 0.61    # CITED — measure rule multiplies the height by his 61% target-hit rate
+
 
 def swing_points(df: pd.DataFrame, window: int = SWING_WINDOW) -> tuple:
     """(lows, highs) — lists of (iloc_index, price) strict local extrema."""
@@ -152,7 +167,7 @@ def double_bottom(df: pd.DataFrame, **kw) -> dict:
             k = _confirm_index(closes, j, peak)
             if k is not None:
                 out["historical_confirms"].append({"confirm_idx": k, "neckline": peak,
-                                                   "pattern_low": lo})
+                                                   "pattern_low": lo, "start_idx": i})
             # Fresh? confirmed recently, or still forming near the line (and not
             # expired — no confirming close within FORMING_MAX_AGE of low2).
             fresh_confirm = k is not None and (n - 1 - k) <= CONFIRM_MAX_AGE
@@ -220,7 +235,7 @@ def inverse_head_shoulders(df: pd.DataFrame, **kw) -> dict:
         c = _confirm_index(closes, k2, neckline)
         if c is not None:
             out["historical_confirms"].append({"confirm_idx": c, "neckline": neckline,
-                                               "pattern_low": h})
+                                               "pattern_low": h, "start_idx": i})
         fresh_confirm = c is not None and (n - 1 - c) <= CONFIRM_MAX_AGE
         forming = (c is None and last_close > h
                    and (n - 1 - k2) <= FORMING_MAX_AGE
@@ -242,9 +257,165 @@ def inverse_head_shoulders(df: pd.DataFrame, **kw) -> dict:
     return out
 
 
+def triple_bottom(df: pd.DataFrame, **kw) -> dict:
+    """Triple bottom. Bulkowski's ID rules (tb.html, verified verbatim):
+    "three distinct valleys that look similar", bottoming "near the same price
+    — allow variations", and the pattern "confirms as a true triple bottom once
+    price closes above the highest peak between the valleys". His volume
+    guideline (downward 61% of the time) is descriptive, so it does not gate.
+    Measure rule per the page: height × 74% added to the breakout price.
+    """
+    tol = kw.get("low_tolerance_pct", LOW_TOLERANCE_PCT)
+    out: dict = {"fresh": [], "historical_confirms": []}
+    if df is None or len(df) < 2 * TB_MIN_ADJ_SEP + 2 * SWING_WINDOW + 5:
+        return out
+    closes = df["close"].to_numpy(dtype=float)
+    highs = df["high"].to_numpy(dtype=float)
+    lows_arr = df["low"].to_numpy(dtype=float)
+    last_close = float(closes[-1])
+    swing_lows, _ = swing_points(df)
+    n = len(df)
+    seen = set()
+
+    for t in range(len(swing_lows) - 2):
+        (i, p1), (j, p2), (k2, p3) = swing_lows[t], swing_lows[t + 1], swing_lows[t + 2]
+        if j - i < TB_MIN_ADJ_SEP or k2 - j < TB_MIN_ADJ_SEP:
+            continue
+        if k2 - i > TB_MAX_SPAN:
+            continue
+        lo = min(p1, p2, p3)
+        if (max(p1, p2, p3) / lo - 1) * 100 > tol:
+            continue                                     # valleys not "near the same price"
+        # The three valleys must be the section's dominant lows (nothing between
+        # undercuts them — same dominance check as the double bottom).
+        if float(lows_arr[i + 1: k2].min()) < lo * 0.995:
+            continue
+        peak1 = float(highs[i + 1: j].max()) if j - i > 1 else None
+        peak2 = float(highs[j + 1: k2].max()) if k2 - j > 1 else None
+        if not peak1 or not peak2:
+            continue
+        neckline = max(peak1, peak2)                     # CITED — "the highest peak between the valleys"
+        if (neckline / lo - 1) * 100 < MIN_INTERIM_RISE_PCT:
+            continue                                     # rises between valleys must be real (shared gate)
+        c = _confirm_index(closes, k2, neckline)
+        if c is not None:
+            out["historical_confirms"].append({"confirm_idx": c, "neckline": neckline,
+                                               "pattern_low": lo, "start_idx": i})
+        fresh_confirm = c is not None and (n - 1 - c) <= CONFIRM_MAX_AGE
+        forming = (c is None and last_close > lo
+                   and (n - 1 - k2) <= FORMING_MAX_AGE
+                   and (neckline / last_close - 1) * 100 <= FORMING_MAX_GAP_PCT)
+        if fresh_confirm or forming:
+            key = (round(neckline, 2), df.index[k2])
+            if key in seen:
+                continue
+            seen.add(key)
+            rec = _pattern_record(df, "triple_bottom",
+                                  [i, j, k2], [p1, p2, p3], neckline, c, last_close)
+            # Bulkowski's stated measure rule: height × his 74% target-hit rate.
+            rec["target"] = round(neckline + TB_TARGET_FACTOR * (neckline - lo), 2)
+            out["fresh"].append(rec)
+    out["historical_confirms"] = _dedupe_confirms(out["historical_confirms"])
+    out["fresh"].sort(key=lambda r: (0 if r["status"] == "confirmed" else 1,
+                                     r.get("bars_since_confirm", 99),
+                                     r.get("to_confirm_pct", 99)))
+    out["fresh"] = out["fresh"][:1]
+    return out
+
+
+def cup_with_handle(df: pd.DataFrame, **kw) -> dict:
+    """Cup with handle. Bulkowski's ID rules (cup.html, verified verbatim):
+    a U-shaped (not V-shaped) cup of "7 to 65 weeks", "cup rims should be near
+    the same price level but be flexible", a mandatory handle on the right of
+    "1 week minimum with no maximum, forming in the upper half of the cup", and
+    breakout above the right cup lip. Measure rule per the page: height (right
+    lip to lowest valley) × 61% added to the breakout price.
+    """
+    rim_tol = kw.get("rim_tol_pct", RIM_TOL_PCT)
+    out: dict = {"fresh": [], "historical_confirms": []}
+    if df is None or len(df) < CUP_MIN_BARS + HANDLE_MIN_BARS + 2 * SWING_WINDOW:
+        return out
+    closes = df["close"].to_numpy(dtype=float)
+    highs = df["high"].to_numpy(dtype=float)
+    lows_arr = df["low"].to_numpy(dtype=float)
+    last_close = float(closes[-1])
+    _, swing_highs = swing_points(df)
+    n = len(df)
+    seen = set()
+
+    for a in range(len(swing_highs)):
+        i, left_rim = swing_highs[a]
+        for b in range(a + 1, len(swing_highs)):
+            j, right_rim = swing_highs[b]
+            span = j - i
+            if span < CUP_MIN_BARS:
+                continue
+            if span > CUP_MAX_BARS:
+                break
+            rim_avg = (left_rim + right_rim) / 2.0
+            if abs(left_rim - right_rim) / rim_avg * 100 > rim_tol:
+                continue                                 # rims not near the same level
+            inner_lows = lows_arr[i + 1: j]
+            cup_low = float(inner_lows.min())
+            depth_pct = (min(left_rim, right_rim) / cup_low - 1) * 100
+            if depth_pct < CUP_MIN_DEPTH_PCT:
+                continue                                 # too shallow to be a cup (our gate)
+            # Nothing inside the cup may poke meaningfully above the rims.
+            if float(highs[i + 1: j].max()) > max(left_rim, right_rim) * 1.005:
+                continue
+            # U-shape, operationalized: the low sits in the middle of the span
+            # and price spent ≥ CUP_U_SHAPE_BARS bars near it (not a one-bar V).
+            m_rel = int(np.argmin(inner_lows)) + 1
+            if not (CUP_LOW_POS[0] * span <= m_rel <= CUP_LOW_POS[1] * span):
+                continue
+            if int((inner_lows <= cup_low * 1.05).sum()) < CUP_U_SHAPE_BARS:
+                continue
+            # Handle: everything after the right rim must hold the upper half
+            # of the cup ("forming in the upper half") for ≥ HANDLE_MIN_BARS.
+            half_level = right_rim - 0.5 * (right_rim - cup_low)
+            c = _confirm_index(closes, j + HANDLE_MIN_BARS - 1, right_rim)
+            handle_end = c if c is not None else n
+            if handle_end - (j + 1) < HANDLE_MIN_BARS:
+                continue                                 # no handle yet — still just a cup
+            handle_lows = lows_arr[j + 1: handle_end]
+            if handle_lows.size == 0 or float(handle_lows.min()) < half_level:
+                continue                                 # handle broke the upper half — pattern void
+            if c is not None:
+                out["historical_confirms"].append({"confirm_idx": c, "neckline": right_rim,
+                                                   "pattern_low": cup_low, "start_idx": i})
+            fresh_confirm = c is not None and (n - 1 - c) <= CONFIRM_MAX_AGE
+            forming = (c is None
+                       and (right_rim / last_close - 1) * 100 <= FORMING_MAX_GAP_PCT)
+            if fresh_confirm or forming:
+                key = (round(right_rim, 2), df.index[j])
+                if key in seen:
+                    continue
+                seen.add(key)
+                rec = _pattern_record(df, "cup_with_handle",
+                                      [i + 1 + (m_rel - 1)], [cup_low],
+                                      right_rim, c, last_close)
+                # Bulkowski's stated measure rule: height × his 61% hit rate.
+                rec["target"] = round(right_rim + CWH_TARGET_FACTOR * (right_rim - cup_low), 2)
+                # Stop under the handle low (tighter than the cup low — the cup
+                # low invalidates far too late; same under-the-low family).
+                rec["stop"] = round(float(handle_lows.min()) * 0.99, 2)
+                rec["rims"] = [{"date": _date(df, i), "price": round(left_rim, 2)},
+                               {"date": _date(df, j), "price": round(right_rim, 2)}]
+                rec["handle_low"] = round(float(handle_lows.min()), 2)
+                out["fresh"].append(rec)
+    out["historical_confirms"] = _dedupe_confirms(out["historical_confirms"])
+    out["fresh"].sort(key=lambda r: (0 if r["status"] == "confirmed" else 1,
+                                     r.get("bars_since_confirm", 99),
+                                     r.get("to_confirm_pct", 99)))
+    out["fresh"] = out["fresh"][:1]
+    return out
+
+
 DETECTORS = {
     "double_bottom": double_bottom,
     "inverse_head_shoulders": inverse_head_shoulders,
+    "triple_bottom": triple_bottom,
+    "cup_with_handle": cup_with_handle,
 }
 
 
