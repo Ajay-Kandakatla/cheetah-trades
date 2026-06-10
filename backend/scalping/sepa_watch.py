@@ -71,6 +71,44 @@ def _pivot_of(row: dict):
     return es.get("pivot") or (row.get("vcp") or {}).get("pivot_buy_price")
 
 
+PATTERN_LINE_LABEL = {
+    "double_bottom": "W line", "triple_bottom": "triple-bottom line",
+    "inverse_head_shoulders": "iH&S neckline", "cup_with_handle": "cup-handle line",
+}
+
+
+def _lines_from_doc(doc: dict) -> dict:
+    """{symbol: {line, label}} — FORMING patterns' confirmation lines from a
+    verdict-scan doc. Stale docs (>24h) yield nothing: in-the-moment only."""
+    if int(time.time()) - int((doc or {}).get("generated_at") or 0) > 24 * 3600:
+        return {}
+    out = {}
+    for v in doc.get("verdicts") or []:
+        sym = (v.get("symbol") or "").upper()
+        for m in v.get("matches") or []:
+            if m.get("status") == "forming" and m.get("neckline"):
+                out[sym] = {"line": float(m["neckline"]),
+                            "label": PATTERN_LINE_LABEL.get(m.get("pattern"), "pattern line")}
+                break
+    return out
+
+
+def _pattern_lines() -> dict:
+    """The daily↔intraday join (Ajay 2026-06-09): the daily pattern defines the
+    trigger level; this 5-min engine watches it. Reads the latest verdict scan."""
+    try:
+        from pymongo import MongoClient
+        url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        c = MongoClient(url, serverSelectionTimeoutMS=2000)
+        c.admin.command("ping")
+        doc = c[os.getenv("MONGO_DB", "cheetah")].patterns_scan.find_one(
+            {"_id": "qualifier_verdicts"}) or {}
+    except Exception as exc:
+        log.debug("pattern lines load failed: %s", exc)
+        return {}
+    return _lines_from_doc(doc)
+
+
 # Common leveraged/inverse ETFs — the leaderboard can surface them but they're
 # not stock tape-reads (the app has the same guardrail on the frontend).
 _LEV_ETFS = {"TQQQ", "SQQQ", "TECL", "TECS", "SOXL", "SOXS", "UPRO", "SPXU",
@@ -131,6 +169,17 @@ def watch_universe() -> list:
     except Exception as exc:
         log.debug("watch universe leaderboard failed: %s", exc)
 
+    # Forming-pattern trigger lines: names already on the watch get their line
+    # attached; forming-pattern names not otherwise watched join with PATTERN.
+    lines = _pattern_lines()
+    for sym in lines:
+        add(sym, "PATTERN")
+    for e in out.values():
+        info = lines.get(e["symbol"])
+        if info:
+            e["pattern_line"] = info["line"]
+            e["pattern_label"] = info["label"]
+
     # Fill missing pivots from the scan rows (holdings/leaders that are also scanned).
     for e in out.values():
         if not e["pivot"] and e["symbol"] in scan_rows:
@@ -138,8 +187,8 @@ def watch_universe() -> list:
             if p:
                 e["pivot"] = round(float(p), 2)
 
-    # Priority: holdings first, then buyable, at-pivot, leaders.
-    rank = {"HOLDING": 0, "BUYABLE": 1, "AT_PIVOT": 2, "LEADER": 3}
+    # Priority: holdings first, then buyable, at-pivot, pattern lines, leaders.
+    rank = {"HOLDING": 0, "BUYABLE": 1, "AT_PIVOT": 2, "PATTERN": 3, "LEADER": 4}
     rows = sorted(out.values(), key=lambda e: min(rank.get(t, 9) for t in e["tags"]))
     return rows[:WATCH_CAP]
 
@@ -170,6 +219,8 @@ def _read_symbol(entry: dict) -> Optional[dict]:
     last_bar_end = df5.index[-1]
     levels = {
         "pivot": entry.get("pivot"),
+        "pattern_line": entry.get("pattern_line"),
+        "pattern_name": entry.get("pattern_label"),
         "vwap": round(vwap_now, 4) if vwap_now else None,
         "or_high": orng.get("high") if orng else None,
         "day_high": round(float(rth["high"].max()), 4),

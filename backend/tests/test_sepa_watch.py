@@ -101,6 +101,48 @@ def test_classify_none_when_nothing_at_levels():
     assert read is None or read["severity"] == "info"
 
 
+# ── daily-pattern trigger lines as levels (the daily↔intraday join) ──────────
+def test_classify_breakout_at_pattern_line():
+    """A forming pattern's confirmation line is watched like a pivot — and the
+    read carries the close-discipline caveat (confirms only at the CLOSE)."""
+    df5 = _df5([(99.0, 99.6, 98.9, 99.5, 10_000),
+                (99.5, 101.2, 99.45, 101.1, 30_000)])
+    read = candles.classify(df5, {"pivot": None, "pattern_line": 100.0,
+                                  "pattern_name": "cup-handle line",
+                                  "vwap": 99.0, "or_high": None, "day_high": None}, 10_000)
+    assert read and read["state"] == "BREAKOUT_STRONG"
+    joined = " ".join(read["reasons"])
+    assert "cup-handle line" in joined
+    assert "CLOSES above the line" in joined
+
+
+def test_classify_pivot_beats_pattern_line():
+    df5 = _df5([(99.0, 99.6, 98.9, 99.5, 10_000),
+                (99.5, 101.2, 99.45, 101.1, 30_000)])
+    read = candles.classify(df5, {"pivot": 100.0, "pattern_line": 100.4,
+                                  "pattern_name": "W line",
+                                  "vwap": 99.0, "or_high": None, "day_high": None}, 10_000)
+    assert read and read["state"] == "BREAKOUT_STRONG"
+    assert "pivot" in read["reasons"][0]
+    assert "CLOSES above the line" not in " ".join(read["reasons"])
+
+
+def test_lines_from_doc_forming_only_and_freshness():
+    import time as _t
+    now = int(_t.time())
+    doc = {"generated_at": now, "verdicts": [
+        {"symbol": "psx", "matches": [
+            {"pattern": "cup_with_handle", "status": "forming", "neckline": 132.45}]},
+        {"symbol": "CNC", "matches": [
+            {"pattern": "double_bottom", "status": "confirmed", "neckline": 66.03}]},
+        {"symbol": "XYZ", "matches": []},
+    ]}
+    lines = sepa_watch._lines_from_doc(doc)
+    assert lines == {"PSX": {"line": 132.45, "label": "cup-handle line"}}
+    # stale doc (>24h) yields nothing — in-the-moment only
+    assert sepa_watch._lines_from_doc({**doc, "generated_at": now - 25 * 3600}) == {}
+
+
 # ── alert dedup: mark BEFORE send ────────────────────────────────────────────
 def test_fire_alert_dedups_even_when_send_fails(monkeypatch):
     sepa_watch._mem.clear()

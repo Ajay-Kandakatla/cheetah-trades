@@ -155,6 +155,15 @@ whether candle PATTERNS predict — and the verified record is mostly null:
   nothing, believe the record over the read.
 - Refused as folklore: fixed win-rates for hammer/shooting-star/engulfing,
   doji-as-reversal, any "this pattern means X% odds" claim.
+- **Daily↔intraday join (2026-06-09)**: FORMING daily patterns' confirmation
+  lines (from the verdict scan, ≤24h old) feed the watch as levels — ranked
+  just under the SEPA pivot, names not otherwise watched join with the PATTERN
+  tag. A 5-min close through the line fires the usual BREAKOUT read WITH the
+  discipline caveat ("daily pattern confirms only if today CLOSES above the
+  line"). We deliberately do NOT detect cup/W geometry on intraday bars —
+  every verified base-rate is a daily-bar statistic and the intraday candle
+  record is null (Duvinage 2013); the daily chart defines the level, the
+  intraday engine only watches it.
 
 ---
 

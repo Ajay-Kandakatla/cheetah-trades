@@ -107,10 +107,18 @@ def classify(df5: pd.DataFrame, levels: dict, avg_vol_5m: Optional[float]) -> Op
 
     pivot, vwap = levels.get("pivot"), levels.get("vwap")
     or_high, day_high = levels.get("or_high"), levels.get("day_high")
-    # The breakout reference: pivot beats OR-high beats day-high.
+    # Daily-pattern trigger line (forming W / cup / iH&S neckline from the
+    # verdict scan) — the daily pattern defines the level, this 5-min engine
+    # watches it (Ajay 2026-06-09). Ranked just under the SEPA pivot.
+    pattern_line = levels.get("pattern_line")
+    pattern_name = levels.get("pattern_name") or "pattern line"
+    # The breakout reference: pivot beats pattern line beats OR-high beats day-high.
     ref_name, ref = next(((n, v) for n, v in
-                          (("pivot", pivot), ("OR high", or_high), ("day high", day_high))
+                          (("pivot", pivot), (pattern_name, pattern_line),
+                           ("OR high", or_high), ("day high", day_high))
                           if v), (None, None))
+    is_pattern_ref = pattern_line is not None and ref == pattern_line \
+        and ref_name == pattern_name
 
     metrics = {**a, "vol_ratio": round(vol_ratio, 2) if vol_ratio is not None else None,
                "close": round(c, 4), "ref_level": ref, "ref_name": ref_name}
@@ -136,12 +144,17 @@ def classify(df5: pd.DataFrame, levels: dict, avg_vol_5m: Optional[float]) -> Op
     holding_above = ref and c > ref and pc > ref and _near(float(last["low"]), ref)
     if crossed or holding_above:
         if a["is_strong"] and a["dir"] == "up" and a["clv"] >= CLV_STRONG and vol_ok:
-            return out("BREAKOUT_STRONG", "constructive", "alert", [
+            reasons = [
                 f"{'Broke' if crossed else 'Holding'} {ref_name} {ref:.2f} with a "
                 f"{a['body_pct']:.0%}-body bar closing near its high (CLV {a['clv']:+.2f})",
                 f"{vol_ratio:.1f}× average 5-min volume — real participation",
                 "Demand controlled the bar at the level",
-            ])
+            ]
+            if is_pattern_ref:
+                # Minervini discipline: the daily pattern only confirms at the
+                # CLOSE — this is an early intraday read of that trigger.
+                reasons.insert(1, "Daily pattern confirms only if today CLOSES above the line")
+            return out("BREAKOUT_STRONG", "constructive", "alert", reasons)
         return out("BREAKOUT_WEAK", "neutral", "info", [
             f"Above {ref_name} {ref:.2f} but the bar is "
             + ("wick-heavy" if a["upper_wick_dominant"] else f"only {a['body_pct']:.0%} body")
