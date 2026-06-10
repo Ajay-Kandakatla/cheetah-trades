@@ -62,6 +62,15 @@ async def scalping_watch(refresh: bool = Query(False, description="Recompute if 
     return JSONResponse(await asyncio.to_thread(sepa_watch.snapshot, refresh))
 
 
+@router.get("/scalping/tape-read/{symbol}")
+async def scalping_tape_read(symbol: str):
+    """On-demand single-symbol tape read: the latest completed 5-min candle vs
+    its levels (SEPA pivot, forming daily-pattern line, VWAP, opening range,
+    day high). Powers the live read strip on the Day Trading + Scalping pages."""
+    from . import sepa_watch
+    return JSONResponse(await asyncio.to_thread(sepa_watch.tape_read, symbol))
+
+
 @router.get("/scalping/watch/backtest")
 async def scalping_watch_backtest(days: int = Query(15, ge=5, le=60),
                                   force: bool = Query(False)):

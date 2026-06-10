@@ -239,6 +239,39 @@ def _read_symbol(entry: dict) -> Optional[dict]:
     }
 
 
+def tape_read(symbol: str) -> dict:
+    """On-demand single-symbol tape read (Ajay 2026-06-10: the pattern-reading
+    logic live on the Day Trading + Scalping pages). Builds the same entry the
+    watch uses — SEPA pivot from the latest scan, the forming daily-pattern
+    line from the verdict scan — and reads the latest completed 5-min candle
+    against those levels. Fresh compute, no persistence, no alert."""
+    sym = (symbol or "").strip().upper()
+    entry: dict = {"symbol": sym, "tags": ["ON_DEMAND"], "pivot": None}
+    try:
+        from sepa import scanner
+        for r in (scanner.load_latest() or {}).get("all_results") or []:
+            if r.get("symbol") == sym:
+                p = _pivot_of(r)
+                if p:
+                    entry["pivot"] = round(float(p), 2)
+                break
+    except Exception as exc:
+        log.debug("tape_read pivot lookup failed %s: %s", sym, exc)
+    info = _pattern_lines().get(sym)
+    if info:
+        entry["pattern_line"] = info["line"]
+        entry["pattern_label"] = info["label"]
+
+    row = _read_symbol(entry)
+    if not row:
+        return {"symbol": sym, "ok": False,
+                "note": "No intraday data yet — the read needs ≥2 completed "
+                        "5-min candles in the regular session."}
+    return {**row, "ok": True,
+            "note": "Latest completed 5-min candle vs pivot / pattern line / "
+                    "VWAP / OR — descriptive supply-demand read, not a prediction."}
+
+
 # ── state + alerts ───────────────────────────────────────────────────────────
 def _doc_key(sym: str, d: str) -> str:
     return f"{sym}:{d}"

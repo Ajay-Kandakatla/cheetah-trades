@@ -143,6 +143,36 @@ def test_lines_from_doc_forming_only_and_freshness():
     assert sepa_watch._lines_from_doc({**doc, "generated_at": now - 25 * 3600}) == {}
 
 
+# ── on-demand single-symbol tape read (Day Trading / Scalping strip) ─────────
+def test_tape_read_assembles_levels(monkeypatch):
+    captured = {}
+
+    def fake_read(entry):
+        captured.update(entry)
+        return {"symbol": entry["symbol"], "read": None, "levels": {}, "last_price": 1.0,
+                "tags": entry["tags"], "pivot": entry.get("pivot"), "bar_ts": "t",
+                "vs_pivot_pct": None, "vs_vwap_pct": None}
+    monkeypatch.setattr(sepa_watch, "_read_symbol", fake_read)
+    monkeypatch.setattr(sepa_watch, "_pattern_lines",
+                        lambda: {"PSX": {"line": 132.45, "label": "cup-handle line"}})
+    from sepa import scanner
+    monkeypatch.setattr(scanner, "load_latest", lambda: {"all_results": [
+        {"symbol": "PSX", "entry_setup": {"pivot": 131.2}}]})
+
+    out = sepa_watch.tape_read("psx")
+    assert out["ok"] is True
+    assert captured["pivot"] == 131.2
+    assert captured["pattern_line"] == 132.45
+    assert captured["pattern_label"] == "cup-handle line"
+
+
+def test_tape_read_no_data(monkeypatch):
+    monkeypatch.setattr(sepa_watch, "_read_symbol", lambda e: None)
+    monkeypatch.setattr(sepa_watch, "_pattern_lines", lambda: {})
+    out = sepa_watch.tape_read("ZZZZ")
+    assert out["ok"] is False and "note" in out
+
+
 # ── alert dedup: mark BEFORE send ────────────────────────────────────────────
 def test_fire_alert_dedups_even_when_send_fails(monkeypatch):
     sepa_watch._mem.clear()

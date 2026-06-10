@@ -8,6 +8,9 @@ import { DayTradingSchedule } from '../components/DayTradingSchedule';
 import { DayLeaderboardLeaders } from '../components/DayLeaderboardLeaders';
 import { InfoButton } from '../components/InfoButton';
 import { useMarketGauge } from '../hooks/useMarketGauge';
+import { LiveTapeRead } from '../components/LiveTapeRead';
+import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
+import { PatternChips } from '../components/PatternChips';
 import {
   useDayUniverse, useDayBars, useLiveSignals,
   useSymbolBacktest, useStrategies,
@@ -268,6 +271,10 @@ export function DayTrading() {
           </div>
         </div>
         {barsLoading && <div className="day-empty">Loading {selected}…</div>}
+        {/* The pattern-reading strip (Ajay 2026-06-10): latest completed 5-min
+            candle vs pivot / daily-pattern line / VWAP / OR — who won the bar,
+            at what level, on what volume — plus the daily pattern chip. */}
+        <LiveTapeRead symbol={selected} />
         {bars && (
           <>
             <div className="day-chart-meta mono">
@@ -333,12 +340,16 @@ function SignalCard({ s, stratName, choppy, onChart, onReview }: {
   const favored = choppy && fit?.kind === 'chop';
   const r = s.r_multiple_potential;
   const rClass = r >= 1.5 ? 'is-strong' : r >= 1 ? 'is-ok' : 'is-weak';
+  const { verdicts } = usePatternVerdicts();
   return (
     <div className={`dt-sig${mismatch ? ' dt-sig--caution' : ''}`} onClick={onChart} role="button" tabIndex={0}>
       <div className="dt-sig__top">
         <span className="dt-sig__sym">{s.symbol}</span>
         <span className={`dt-sig__side dt-sig__side--${s.side}`}>{s.side === 'long' ? '↑ LONG' : '↓ SHORT'}</span>
         <span className={`dt-sig__rr ${rClass}`}>{r}R</span>
+        {/* Daily pattern confluence — an intraday entry on a name whose DAILY
+            chart is also forming/confirming carries swing-tailwind context. */}
+        <PatternChips v={verdicts.get((s.symbol || '').toUpperCase())} max={1} />
         <button type="button" className="day-ai-btn" onClick={(e) => { e.stopPropagation(); onReview(); }} title="Gemma's read">🤖</button>
       </div>
       <div className="dt-sig__strat">

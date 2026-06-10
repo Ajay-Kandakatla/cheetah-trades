@@ -14,6 +14,9 @@ import { useDayBars } from '../hooks/useDayTrading';
 import { useScalpingSignals, type ScalpSignal, type ScalpRegime } from '../hooks/useScalpingSignals';
 import { BacktestPanel, PaperPanel } from '../components/ScalpingResearchPanels';
 import { SepaWatchPanel } from '../components/SepaWatchPanel';
+import { LiveTapeRead } from '../components/LiveTapeRead';
+import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
+import { PatternChips } from '../components/PatternChips';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 
@@ -57,6 +60,7 @@ function SignalCard({ s, selected, onSelect }: { s: ScalpSignal; selected: boole
   const nc = s.net_of_cost;
   const sp = s.spread;
   const dim = !s.tradeable;
+  const { verdicts } = usePatternVerdicts();
   return (
     <div onClick={onSelect} style={{
       padding: '0.7rem 0.85rem', borderRadius: 10, cursor: 'pointer',
@@ -71,6 +75,9 @@ function SignalCard({ s, selected, onSelect }: { s: ScalpSignal; selected: boole
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{s.strategy_label}</span>
         {!s.tradeable && <Pill text="SPREAD GATE" color={C.red} bg={`${C.red}14`} />}
         {s.regime_aligned === false && <Pill text="vs REGIME" color={C.amber} bg={`${C.amber}14`} />}
+        {/* Daily pattern confluence — a scalp on a name whose DAILY chart is
+            also forming/confirming a pattern carries swing context. */}
+        <PatternChips v={verdicts.get(s.symbol.toUpperCase())} max={1} />
       </div>
 
       {/* Levels */}
@@ -194,6 +201,9 @@ export function ScalpingPage() {
             <strong>{selected} — live 1-min (VWAP + opening range)</strong>
             <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.74rem' }}>Close chart</button>
           </div>
+          {/* The pattern-reading strip: latest 5-min candle vs pivot / daily
+              pattern line / VWAP / OR + the daily pattern verdict chip. */}
+          <LiveTapeRead symbol={selected} />
           <IntradayChart data={bars.data} signals={[]} />
         </div>
       )}
