@@ -44,6 +44,7 @@ import { GlobalStockSearch } from '../components/GlobalStockSearch';
 import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
 import { CompanyHeadline } from '../components/CompanyHeadline';
 import { ChatterPanel } from '../components/ChatterPanel';
+import { TickerPatternPanel } from '../components/TickerPatternPanel';
 import { PriceAlertModal } from '../components/PriceAlertModal';
 import { TickerAlertPresets } from '../components/TickerAlertPresets';
 import { DependencyGraph } from '../components/DependencyGraph';
@@ -1015,6 +1016,12 @@ export function SepaCandidatePage() {
                     for attribution). Renders inline if the ticker is in
                     the source table, otherwise renders nothing. */}
                 <GabbarLevels symbol={symbol} currentPrice={currentLivePrice} />
+
+                {/* On-demand pattern scanner for THIS ticker (Ajay 2026-06-09)
+                    — auto-runs on open, ↻ re-scans on demand. Which pattern it
+                    matches / is closest to, or an explicit no-match, plus this
+                    chart's own +21-bar record after past confirmations. */}
+                <TickerPatternPanel symbol={symbol} />
 
                 {/* Candle-reading reference — collapsed by default, expand
                     to learn what green/red bodies and wicks actually mean.

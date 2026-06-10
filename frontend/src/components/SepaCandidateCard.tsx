@@ -47,9 +47,9 @@ import { SepaConvictionChip, computeConviction } from './SepaConvictionChip';
 // and U.S. govt investment/contractor relationships. Informational only;
 // curated list in src/lib/politicalDisclosures.ts.
 import { SepaPoliticalChip } from './SepaPoliticalChip';
-// Pattern verdict chip (bullish structure + bearish-read warning) — reads the
-// latest 🎯 verdict scan via the shared deduped hook; fails quiet.
-import { SepaPatternChip } from './SepaPatternChip';
+// Pattern verdict row (bullish structure / closest pattern / bearish warning /
+// explicit no-match) — reads the latest 🎯 verdict scan via the deduped hook.
+import { SepaPatternRow } from './SepaPatternChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { isMomentumLeader, MOMENTUM_LEADER_TOOLTIP } from '../lib/momentumLeader';
 // Δ score + Δ rank trend chips — pure FE, reads SepaTrendContext for
@@ -436,11 +436,6 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               symbol={row.symbol}
               onOpenDrill={() => setOpenSignal('political_disclosure')}
             />
-            {/* Pattern verdict from the latest 🎯 scan — bullish reversal
-                structure (confirmed/forming) for the swing case, plus a
-                ⚠️ red warning when the recent daily candles printed a
-                bearish read (Ajay 2026-06-09). Tap → /patterns. */}
-            <SepaPatternChip symbol={row.symbol} />
             {lateBase && (
               <span
                 role="button" tabIndex={0}
@@ -578,6 +573,13 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           ) : null}
         </div>
       </header>
+
+      {/* Pattern row — ALWAYS present, fixed position under the header so
+          the verdict is evident on every card: the pattern it matches, the
+          one it's closest to (% to line), a candle read, an explicit
+          "no pattern", or "not in last verdict scan" (Ajay 2026-06-09).
+          Tap any chip → /patterns. */}
+      <SepaPatternRow symbol={row.symbol} />
 
       {/* Timed entry/exit decision + dated timeline — "what do I do THIS
           week." Full-width row UNDER the header (not in the score column)

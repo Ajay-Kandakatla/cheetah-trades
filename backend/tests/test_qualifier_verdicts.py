@@ -89,3 +89,28 @@ def test_short_frame_reports_error_not_silence(monkeypatch):
     row = scan._verdict_for_symbol("TINY", {})
     assert row["error"]
     assert row["no_match"] is True
+
+
+def _double_w_frame():
+    """An OLD confirmed W (complete +21-bar outcome → feeds the chart's own
+    record) followed by a FRESH confirmed W (recent → a current match)."""
+    w = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 92, 13)) +
+         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 95, 12)))
+    quiet = list(100 + np.random.RandomState(5).normal(0, 0.2, 30))
+    mid = list(np.linspace(95, 100, 30))
+    return _df(quiet + w + mid + w)
+
+
+def test_symbol_verdict_on_demand(monkeypatch):
+    """The individual-ticker scanner: fresh verdict + THIS chart's own record."""
+    from sepa import prices, scanner
+    monkeypatch.setattr(prices, "load_prices", lambda s, **k: _double_w_frame())
+    monkeypatch.setattr(scanner, "load_latest",
+                        lambda: {"all_results": [{"symbol": "WSTOCK", "rs_rank": 91,
+                                                  "is_candidate": True, "stage": {"stage": 2}}]})
+    row = scan.symbol_verdict("wstock")
+    assert row["symbol"] == "WSTOCK"
+    assert row["matches"] and row["matches"][0]["pattern"] == "double_bottom"
+    assert row["sepa"]["rs_rank"] == 91
+    assert row["generated_at"] > 0
+    assert "double_bottom" in (row.get("validation") or {})

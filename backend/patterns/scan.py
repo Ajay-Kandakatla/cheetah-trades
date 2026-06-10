@@ -356,6 +356,53 @@ def status() -> dict:
         return dict(_STATE)
 
 
+def symbol_verdict(sym: str) -> dict:
+    """On-demand single-ticker pattern read (Ajay 2026-06-09: "add an on-demand
+    pattern scanner in the individual tickers"). Fresh compute — ~10ms against
+    the cached daily frame, so no background thread, no persistence. Includes
+    THIS chart's own historical record per pattern (+21-bar outcomes)."""
+    sym = (sym or "").strip().upper()
+    ctx = {}
+    try:
+        from sepa import scanner
+        for r in (scanner.load_latest() or {}).get("all_results") or []:
+            if r.get("symbol") == sym:
+                ctx = {"rs_rank": r.get("rs_rank"), "score": r.get("score"),
+                       "stage": (r.get("stage") or {}).get("stage"),
+                       "is_candidate": bool(r.get("is_candidate")),
+                       "is_buyable": bool(r.get("is_buyable"))}
+                break
+    except Exception as exc:
+        log.debug("symbol_verdict ctx failed for %s: %s", sym, exc)
+
+    row = _verdict_for_symbol(sym, ctx)
+    row["generated_at"] = int(time.time())
+
+    # This chart's own measured record — how often each pattern has confirmed
+    # on THIS symbol's ~2y frame and what +21 bars did after, win or lose.
+    try:
+        from sepa import prices
+        df = prices.load_prices(sym)
+        if df is not None and len(df) >= 80:
+            outcome_lists = {}
+            for name, fn in detector.DETECTORS.items():
+                try:
+                    hist = fn(df).get("historical_confirms") or []
+                except Exception:
+                    continue
+                if hist:
+                    outcome_lists[name] = detector.measure_outcomes(df, hist)
+            row["validation"] = _aggregate_validation(outcome_lists)
+    except Exception as exc:
+        log.debug("symbol_verdict validation failed for %s: %s", sym, exc)
+
+    row["disclaimer"] = (
+        "Fresh read of the cached daily chart. Geometry is descriptive, not "
+        "predictive; candle reads carry no standalone academic support. "
+        "Educational, not advice.")
+    return row
+
+
 # Self-healing freshness (Ajay 2026-06-09: deployed pages showed NO pattern
 # info because the verdict scan had never been run — a button-press dependency).
 # A stale/missing doc kicks the background scan on read; the nightly cron is

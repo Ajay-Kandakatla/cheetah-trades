@@ -41,6 +41,15 @@ async def patterns_latest():
     return JSONResponse(await asyncio.to_thread(scan.latest))
 
 
+@router.get("/patterns/symbol/{symbol}")
+async def patterns_symbol(symbol: str):
+    """On-demand single-ticker pattern read: which pattern this chart matches
+    right now (or explicitly none), recent candle reads, and THIS chart's own
+    historical record per pattern. Fresh compute on cached daily bars (~10ms)."""
+    from . import scan
+    return JSONResponse(await asyncio.to_thread(scan.symbol_verdict, symbol))
+
+
 @router.get("/patterns/qualifiers")
 async def patterns_qualifiers():
     """The last qualifier verdict scan: every SEPA qualifier with the pattern(s)

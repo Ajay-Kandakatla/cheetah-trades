@@ -20,6 +20,29 @@ const SHORT: Record<string, string> = {
   inverse_head_shoulders: 'Inv H&S', cup_with_handle: 'Cup w/ handle',
 };
 
+/** Always-visible labeled row for the SEPA card — "I want to see evidently
+ *  which pattern; if not, something in the pattern column" (Ajay, round 3).
+ *  Fixed position under the card header, so the eye always finds it. */
+export function SepaPatternRow({ symbol }: { symbol: string }) {
+  const { verdicts, generatedAt } = usePatternVerdicts();
+  const v = verdicts.get((symbol || '').toUpperCase());
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+                  padding: '0.3rem 0.2rem 0' }}>
+      <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#6b7280',
+                     textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            title={generatedAt ? `From the pattern verdict scan · ${new Date(generatedAt * 1000).toLocaleString()}` : 'Pattern verdict scan'}>
+        📐 Pattern
+      </span>
+      {v ? <SepaPatternChip symbol={symbol} />
+         : <span style={{ fontSize: '0.66rem', color: '#6b7280' }}
+                 title="Not covered by the last verdict scan (it scans qualifiers + holdings + buyable + at-pivot + leaders). Open the ticker for an on-demand scan of this chart.">
+             — not in last verdict scan
+           </span>}
+    </div>
+  );
+}
+
 export function SepaPatternChip({ symbol }: { symbol: string }) {
   const navigate = useNavigate();
   const { verdicts } = usePatternVerdicts();
