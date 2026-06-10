@@ -245,6 +245,14 @@ def _run_qualifier_scan() -> None:
                 coll.update_one({"_id": "qualifier_verdicts"}, {"$set": payload}, upsert=True)
             except Exception as exc:
                 log.warning("qualifier verdicts persist failed: %s", exc)
+        # Forward track record (Ajay 2026-06-10): every flagged pattern/candle
+        # becomes a dated observation, graded later by the resolver cron —
+        # the data behind "are our patterns accurate in the long run?".
+        try:
+            from . import history
+            history.record_observations(verdicts)
+        except Exception as exc:
+            log.warning("pattern ledger record failed: %s", exc)
         with _LOCK:
             _STATE.update(running=False, finished_at=int(time.time()))
         log.info("qualifier verdict scan done: %d qualifiers, %d matched",

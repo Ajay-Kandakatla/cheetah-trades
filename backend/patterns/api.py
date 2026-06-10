@@ -50,6 +50,16 @@ async def patterns_symbol(symbol: str):
     return JSONResponse(await asyncio.to_thread(scan.symbol_verdict, symbol))
 
 
+@router.get("/patterns/accuracy")
+async def patterns_accuracy():
+    """The live forward record: every pattern/candle the verdict scan flagged,
+    graded later against the real tape (target-before-stop within 21 bars,
+    forming→confirm rate, candle direction hits). Measured frequencies — the
+    honest answer to "what's our patterns' success rate?"."""
+    from . import history
+    return JSONResponse(await asyncio.to_thread(history.accuracy))
+
+
 @router.get("/patterns/qualifiers")
 async def patterns_qualifiers():
     """The last qualifier verdict scan: every SEPA qualifier with the pattern(s)

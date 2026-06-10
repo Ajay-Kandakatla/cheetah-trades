@@ -27,6 +27,17 @@ type Latest = {
   validation?: Validation; validation_note?: string; disclaimer?: string; note?: string;
 };
 type ScanStatus = { running: boolean; scope?: string; done: number; total: number; error?: string | null };
+type AccConfirmed = {
+  n: number; target_before_stop_pct?: number | null; stop_first_pct?: number | null;
+  neither_pct?: number | null; pct_positive_21d?: number | null; median_fwd_21d_pct?: number | null;
+  buyable_n?: number; buyable_target_before_stop_pct?: number | null;
+};
+type AccForming = { n: number; went_on_to_confirm_pct?: number | null; stopped_first_pct?: number | null; expired_pct?: number | null };
+type Accuracy = {
+  ok: boolean; patterns: Record<string, { confirmed?: AccConfirmed; forming?: AccForming }>;
+  candles: Record<string, { n: number; direction_hit_pct?: number | null; median_fwd_5d_pct?: number | null }>;
+  pending: number; since?: string | null; disclaimer?: string;
+};
 type CandleFormation = { name: string; date: string; read: string; note: string; stat?: string };
 type Candles = {
   formations: CandleFormation[];
@@ -89,6 +100,7 @@ export function PatternsPage() {
   const navigate = useNavigate();
   const [latest, setLatest] = useState<Latest | null>(null);
   const [quals, setQuals] = useState<QualLatest | null>(null);
+  const [acc, setAcc] = useState<Accuracy | null>(null);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -98,6 +110,8 @@ export function PatternsPage() {
       .then((r) => r.json()).then(setLatest).catch((e) => setErr(String(e)));
     fetch(`${API}/patterns/qualifiers`, { cache: 'no-store' })
       .then((r) => r.json()).then(setQuals).catch(() => undefined);
+    fetch(`${API}/patterns/accuracy`, { cache: 'no-store' })
+      .then((r) => r.json()).then(setAcc).catch(() => undefined);
   }, []);
 
   useEffect(() => { loadLatest(); return () => { if (pollRef.current) window.clearInterval(pollRef.current); }; }, [loadLatest]);
@@ -192,6 +206,47 @@ export function PatternsPage() {
             </div>
           ))}
           {latest?.validation_note && <div style={{ color: C.sub, marginTop: 4, fontSize: '0.7rem' }}>{latest.validation_note}</div>}
+        </div>
+      )}
+
+      {/* LIVE forward record — every flagged pattern, graded later against the
+          real tape. This is the "are our patterns accurate?" ledger; it grows
+          a row per flagged event from 2026-06-10 onward. */}
+      {acc?.ok && (Object.keys(acc.patterns).length > 0 || Object.keys(acc.candles).length > 0 || acc.pending > 0) && (
+        <div style={{ padding: '0.6rem 0.8rem', borderRadius: 10, background: 'var(--bg-sunken,#0f1115)',
+                      border: '1px solid var(--hairline,#2a2a2a)', marginBottom: 12, fontSize: '0.78rem' }}>
+          <div style={{ fontSize: '0.68rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
+            📊 Live forward record — what WE flagged, graded against what happened
+            {acc.since ? ` · since ${acc.since}` : ''} {acc.pending > 0 ? ` · ${acc.pending} awaiting their window` : ''}
+          </div>
+          {Object.entries(acc.patterns).map(([k, v]) => (
+            <div key={k} style={{ padding: '1px 0' }}>
+              <b>{PATTERN_LABEL[k] || k}</b>:
+              {v.confirmed && v.confirmed.n > 0 && (
+                <> confirmed n={v.confirmed.n} · <b style={{ color: (v.confirmed.target_before_stop_pct ?? 0) >= 50 ? C.green : C.amber }}>
+                  {v.confirmed.target_before_stop_pct ?? '—'}%</b> hit target before stop ·
+                  {' '}{v.confirmed.pct_positive_21d ?? '—'}% positive +21d
+                  {v.confirmed.median_fwd_21d_pct != null && <> · median {v.confirmed.median_fwd_21d_pct > 0 ? '+' : ''}{v.confirmed.median_fwd_21d_pct}%</>}
+                  {(v.confirmed.buyable_n ?? 0) > 0 && <> · <span title="The subset that ALSO cleared the full Minervini buy gate when flagged">⭐ buyable subset: {v.confirmed.buyable_target_before_stop_pct ?? '—'}% (n={v.confirmed.buyable_n})</span></>}
+                </>
+              )}
+              {v.forming && v.forming.n > 0 && (
+                <> {v.confirmed && v.confirmed.n > 0 ? ' · ' : ' '}forming n={v.forming.n} ·
+                  {' '}{v.forming.went_on_to_confirm_pct ?? '—'}% went on to confirm · {v.forming.stopped_first_pct ?? '—'}% stopped first
+                </>
+              )}
+            </div>
+          ))}
+          {Object.entries(acc.candles).map(([k, v]) => (
+            <div key={k} style={{ padding: '1px 0' }}>
+              <b>{CANDLE_META[k]?.label || k}</b> (candle): n={v.n} · {v.direction_hit_pct ?? '—'}% moved its way over 5 bars
+              {v.median_fwd_5d_pct != null && <> · median {v.median_fwd_5d_pct > 0 ? '+' : ''}{v.median_fwd_5d_pct}%</>}
+            </div>
+          ))}
+          {Object.keys(acc.patterns).length === 0 && Object.keys(acc.candles).length === 0 && (
+            <div style={{ color: C.muted }}>Recording started — first grades land once flagged patterns complete their 21-bar window.</div>
+          )}
+          {acc.disclaimer && <div style={{ color: C.sub, marginTop: 4, fontSize: '0.68rem' }}>{acc.disclaimer}</div>}
         </div>
       )}
 

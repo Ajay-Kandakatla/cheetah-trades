@@ -417,6 +417,14 @@
 # self-heal: a missing/stale doc kicks a background rescan on first page view.
 5      17    *    *    1-5  /usr/local/bin/python -m patterns.scan all
 #
+# Pattern observation resolver — 5:20 PM ET weekdays, after the 5:05 verdict
+# scan has recorded today's observations and the price cache has today's
+# close. Grades the ledger: confirmed patterns → target-before-stop within 21
+# bars + the +21-bar return; forming → went on to confirm vs stopped; candle
+# reads → next-5-bar direction. Feeds GET /patterns/accuracy — the live
+# "are our patterns accurate?" record Ajay asked for 2026-06-10.
+20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
+#
 # ============================================================================
 # Market open / close reminders — 15 min before each bell, weekdays only
 # ============================================================================
