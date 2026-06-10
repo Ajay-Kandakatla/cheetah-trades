@@ -21,6 +21,7 @@
  *  with a banner explaining why. By design (user chose to sit out bears).
  */
 import { useEffect, useState, type ReactNode } from 'react';
+import { TickerName } from '../components/TickerCell';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { SetupExplainer } from '../components/SetupExplainer';
@@ -159,7 +160,7 @@ function SetupRow({ s }: { s: Setup }) {
     >
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-          <span style={{ fontWeight: 700, fontSize: '1.02rem' }}>{s.symbol}</span>
+          <span style={{ fontWeight: 700, fontSize: '1.02rem' }}>{s.symbol}<TickerName symbol={s.symbol} width={18} /></span>
           <span style={{
             fontSize: '0.66rem',
             color: STATUS_COLOR[s.status],

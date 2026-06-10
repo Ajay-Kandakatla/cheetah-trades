@@ -21,6 +21,7 @@ import { OnDemandPatternScan } from '../components/OnDemandPatternScan';
 import { RallyScanPanel } from '../components/RallyScanPanel';
 import { UniverseConvictionPanel } from '../components/UniverseConvictionPanel';
 import { useDayUniverse } from '../hooks/useDayTrading';
+import { TickerCell } from '../components/TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 
@@ -73,7 +74,7 @@ function SignalCard({ s, selected, onSelect }: { s: ScalpSignal; selected: boole
       opacity: dim ? 0.6 : 1, marginBottom: 8,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 800, fontSize: '1rem' }}>{s.symbol}</span>
+        <TickerCell symbol={s.symbol} size="1rem" />
         <Pill text={s.side.toUpperCase()} color={sideColor} bg={`${sideColor}18`} />
         <Pill text={s.status === 'armed' ? 'ARMED · buy-stop' : s.status.toUpperCase()} color={C.amber} bg={`${C.amber}14`} />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{s.strategy_label}</span>

@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import type { PatternVerdict } from '../hooks/usePatternVerdicts';
+import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
@@ -86,7 +87,7 @@ export function OnDemandPatternScan({ symbols, title = '📐 Daily-pattern scan 
                    style={{ padding: '0.45rem 0.55rem', borderRadius: 9, cursor: 'pointer',
                             background: 'var(--bg-raised,#16181d)', border: `1px solid ${col}55` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <b style={{ fontSize: '0.86rem' }}>{v.symbol}</b>
+                  <TickerCell symbol={v.symbol} size="0.86rem" />
                   <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700,
                                  color: v.sepa?.is_buyable ? C.green : v.sepa?.is_candidate ? C.muted : C.sub }}>
                     {v.sepa?.is_buyable ? '✅ BUYABLE' : v.sepa?.is_candidate ? 'qualifier' : 'mover'}

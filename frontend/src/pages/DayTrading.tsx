@@ -12,6 +12,7 @@ import { LiveTapeRead } from '../components/LiveTapeRead';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
 import { OnDemandPatternScan } from '../components/OnDemandPatternScan';
+import { TickerCell } from '../components/TickerCell';
 import {
   useDayUniverse, useDayBars, useLiveSignals,
   useSymbolBacktest, useStrategies,
@@ -351,7 +352,7 @@ function SignalCard({ s, stratName, choppy, onChart, onReview }: {
   return (
     <div className={`dt-sig${mismatch ? ' dt-sig--caution' : ''}`} onClick={onChart} role="button" tabIndex={0}>
       <div className="dt-sig__top">
-        <span className="dt-sig__sym">{s.symbol}</span>
+        <span className="dt-sig__sym"><TickerCell symbol={s.symbol || ''} size="1rem" /></span>
         <span className={`dt-sig__side dt-sig__side--${s.side}`}>{s.side === 'long' ? '↑ LONG' : '↓ SHORT'}</span>
         <span className={`dt-sig__rr ${rClass}`}>{r}R</span>
         {/* Daily pattern confluence — an intraday entry on a name whose DAILY

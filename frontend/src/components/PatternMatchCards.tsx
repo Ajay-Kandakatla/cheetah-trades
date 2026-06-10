@@ -13,6 +13,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePatternVerdicts, type PatternVerdict } from '../hooks/usePatternVerdicts';
+import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
@@ -91,7 +92,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
                           background: star ? 'rgba(16,185,129,0.07)' : 'var(--bg-raised,#16181d)',
                           border: `1px solid ${star ? C.green : conf ? '#10b98155' : '#f59e0b44'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <b style={{ fontSize: '0.86rem' }}>{v.symbol}</b>
+                <TickerCell symbol={v.symbol} size="0.86rem" />
                 {star && <span title="Confirmed pattern AND clears the full Minervini buy gate (Stage 2 + setup + volume + buy zone)">⭐</span>}
                 <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700,
                                color: s.is_buyable ? C.green : s.is_candidate ? C.muted : C.sub }}>

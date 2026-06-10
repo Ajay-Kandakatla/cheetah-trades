@@ -8,6 +8,7 @@ import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from './PatternChips';
+import { TickerName } from './TickerCell';
 
 type Pick = {
   symbol: string;
@@ -105,7 +106,7 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
             return (
               <Link key={p.symbol} to={`/sepa/${p.symbol}`} className="top-pick" title={p.decision_reason || p.why || ''}>
                 <div className="top-pick__row">
-                  <span className="top-pick__sym">{p.symbol}</span>
+                  <span className="top-pick__sym">{p.symbol}<TickerName symbol={p.symbol} name={p.name} width={20} /></span>
                   <span className="top-pick__score mono">{p.score ?? '—'}</span>
                   <span className="top-pick__badge" style={{ color: s.color, borderColor: s.color }}>
                     {s.label}

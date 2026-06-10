@@ -1,17 +1,12 @@
 /* Backtest + paper-trade validation panels for the scalping page. Both lead with
  * GROSS-vs-NET honesty: the backtest's net is spread-ASSUMED (optimistic), the
  * paper-trade's net uses REAL captured spreads. Educational, not advice. */
-import { Link } from 'react-router-dom';
 import { useScalpingBacktest, useScalpingPaper, type StratStats } from '../hooks/useScalpingResearch';
 import { useSort } from '../lib/useSort';
+import { TickerCell } from './TickerCell';
 
 function Sym({ s }: { s: string }) {
-  return (
-    <Link to={`/sepa/${encodeURIComponent(s)}`} title={`${s} — open the full read`}
-          style={{ width: 56, fontWeight: 700, color: 'inherit', textDecoration: 'none' }}>
-      {s}
-    </Link>
-  );
+  return <span style={{ width: 88 }}><TickerCell symbol={s} size="0.78rem" nameWidth={12} /></span>;
 }
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };

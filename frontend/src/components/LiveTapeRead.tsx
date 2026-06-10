@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from './PatternChips';
+import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 const STATE_META: Record<string, { icon: string; color: string }> = {
@@ -74,7 +75,7 @@ export function LiveTapeRead({ symbol }: { symbol: string }) {
                   background: read ? `${(meta as any).color}0d` : 'var(--bg-raised,#16181d)',
                   border: `1px solid ${read ? (meta as any).color + '55' : 'var(--hairline,#2a2a2a)'}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <b style={{ fontSize: '0.86rem' }}>{row.symbol}</b>
+        <TickerCell symbol={row.symbol} size="0.86rem" />
         {!row.ok ? (
           <span style={{ fontSize: '0.74rem', color: C.muted }}>{row.note}</span>
         ) : read ? (

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { InfoButton } from './InfoButton';
+import { TickerCell } from './TickerCell';
 
 type Row = {
   symbol: string;
@@ -112,7 +113,7 @@ export function AtPivotToday() {
                 title={`Chart ${r.symbol}`}
               >
                 <span className={`ap-tag ap-tag--${b.cls}`}>{b.tag}</span>
-                <span className="ap-sym"><strong>{r.symbol}</strong></span>
+                <span className="ap-sym"><TickerCell symbol={r.symbol} size="0.9rem" nameWidth={16} /></span>
                 <span className={`ap-num mono ${r.dist_pct > 0 ? 'pos' : r.dist_pct < 0 ? 'neg' : ''}`}>
                   {r.dist_pct > 0 ? '+' : ''}{r.dist_pct}%
                 </span>

@@ -2226,6 +2226,16 @@ async def sepa_top_picks(n: int = Query(3, ge=1, le=10)):
     return JSONResponse(data)
 
 
+@app.get("/sepa/company-names")
+async def sepa_company_names():
+    """The whole cached {SYMBOL: company name} map (≈6k names, warmed daily by
+    sepa.warm_names). One fetch per FE session — powers the tiny company-name
+    label under every clickable ticker app-wide (Ajay 2026-06-10)."""
+    from sepa import company_names as _cn
+    names = await asyncio.to_thread(_cn.all_names)
+    return JSONResponse({"names": names, "n": len(names)})
+
+
 @app.get("/sepa/leaderboard")
 async def sepa_leaderboard(n: int = Query(12, ge=1, le=30),
                            days: int = Query(14, ge=1, le=45)):

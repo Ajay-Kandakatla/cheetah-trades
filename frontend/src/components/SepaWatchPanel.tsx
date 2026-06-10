@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useSepaWatch, useTapeBacktest, type WatchRow, type WatchAlert } from '../hooks/useSepaWatch';
 import { useSort } from '../lib/useSort';
+import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 
@@ -46,10 +47,7 @@ function Row({ r, onChart }: { r: WatchRow; onChart: (s: string) => void }) {
          style={{ padding: '0.55rem 0.7rem', borderRadius: 10, marginBottom: 6, cursor: 'pointer',
                   background: 'var(--bg-raised,#16181d)', border: `1px solid ${read?.severity === 'alert' ? sc + '77' : 'var(--hairline,#2a2a2a)'}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={() => onChart(r.symbol)} title="Open the live chart"
-                style={{ fontWeight: 800, fontSize: '0.95rem', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>
-          {r.symbol}
-        </button>
+        <TickerCell symbol={r.symbol} size="0.95rem" />
         <span style={{ fontSize: '0.72rem' }}>{r.tags.map((t) => TAG_LABEL[t] || t).join(' ')}</span>
         {read ? (
           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: sc, border: `1px solid ${sc}55`, background: `${sc}14`, borderRadius: 5, padding: '1px 7px' }}>
@@ -74,18 +72,14 @@ function Row({ r, onChart }: { r: WatchRow; onChart: (s: string) => void }) {
   );
 }
 
-function AlertRow({ a, onChart }: { a: WatchAlert; onChart: (s: string) => void }) {
+function AlertRow({ a }: { a: WatchAlert }) {
   const sc = STATE_COLOR[a.state] || C.muted;
   const t = new Date(a.fired_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const sym = a.dedup.split(':')[0];
   return (
     <div style={{ display: 'flex', gap: 10, fontSize: '0.76rem', padding: '2px 0', alignItems: 'center' }}>
       <span style={{ color: C.sub, width: 58 }}>{t}</span>
-      <button onClick={() => onChart(sym)} title={`Open the live chart for ${sym}`}
-              style={{ width: 54, textAlign: 'left', fontWeight: 700, background: 'transparent',
-                       border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>
-        {sym}
-      </button>
+      <span style={{ width: 76 }}><TickerCell symbol={sym} size="0.76rem" nameWidth={10} /></span>
       <span style={{ color: sc, width: 130 }}>{fmtState(a.state)}</span>
       {a.fwd_pct == null
         ? <span style={{ color: C.sub }}>grading in 30m…</span>
@@ -208,7 +202,7 @@ export function SepaWatchPanel({ active, onChart }: { active: boolean; onChart: 
       {data.alerts_today.length > 0 && (
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>Alerts today ({data.alerts_today.length})</div>
-          {data.alerts_today.map((a) => <AlertRow key={a.dedup} a={a} onChart={onChart} />)}
+          {data.alerts_today.map((a) => <AlertRow key={a.dedup} a={a} />)}
         </div>
       )}
 

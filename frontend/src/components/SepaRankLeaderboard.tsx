@@ -19,6 +19,7 @@ import { MarketContextStrip } from './MarketContextStrip';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
 import { PatternChips } from './PatternChips';
+import { TickerName } from './TickerCell';
 
 type Leader = {
   symbol: string;
@@ -268,7 +269,7 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
               `Best #${l.best_rank} · worst #${l.worst_rank} · avg #${l.avg_rank} · swing ${l.rank_range} · score ${l.current_score ?? '—'} · RS ${l.rs_rank ?? '—'} · vol ${fmtVol(l.volume)}${l.dollar_vol ? ' / ' + fmtDollar(l.dollar_vol) : ''} · in the top ${data.top_tier ?? 20} on ${l.persistence_pct}% of ${l.appearances} days`
             }>
               <span className="rank-lb__cur mono">#{l.current_rank}</span>
-              <span className="rank-lb__sym">{l.symbol}</span>
+              <span className="rank-lb__sym">{l.symbol}<TickerName symbol={l.symbol} name={l.name} width={18} /></span>
               <span className="rank-lb__traj mono">
                 {lev.isLeveraged && <span className="lev-badge" title="Leveraged/inverse ETF — not an individual stock; SEPA criteria don't apply">⚡ {lev.label}</span>}{lev.isLeveraged ? ' ' : ''}
                 best #{l.best_rank}

@@ -110,6 +110,23 @@ def name_for(symbol: str) -> Optional[str]:
     return name
 
 
+def all_names() -> dict:
+    """The ENTIRE cached {SYMBOL: name} map in one read — powers the app-wide
+    ticker labels (Ajay 2026-06-10: company name in tiny font everywhere a
+    ticker shows). Cache-only, never fetches; ~one small Mongo scan."""
+    coll = _get_mongo()
+    if coll is None:
+        return {}
+    out = {}
+    try:
+        for doc in coll.find({}, {"symbol": 1, "name": 1}):
+            if doc.get("symbol") and doc.get("name"):
+                out[doc["symbol"]] = doc["name"]
+    except Exception as exc:
+        log.warning("company_names.all_names failed: %s", exc)
+    return out
+
+
 def bulk_warm(symbols: Iterable[str], max_workers: int = 8,
               emitter=None, fetch: bool = True,
               throttle_sec: float = 0.0) -> dict[str, Optional[str]]:

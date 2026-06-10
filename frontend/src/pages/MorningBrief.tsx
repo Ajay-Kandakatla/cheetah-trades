@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { TickerCell } from '../components/TickerCell';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useUser';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
@@ -184,7 +185,7 @@ export function MorningBrief() {
             </div>
             {dayTradeSignals.slice(0, 3).map((s, i) => (
               <div key={i} className="morning-mini-row">
-                <strong>{s.symbol}</strong>
+                <TickerCell symbol={s.symbol || ''} size="0.92rem" nameWidth={16} />
                 <span className={`morning-mini-side morning-mini-side--${s.side}`}>{s.side === 'long' ? '↑' : '↓'} {s.strategy}</span>
                 <span className="mono">${s.entry_price.toFixed(2)} · {s.r_multiple_potential}R</span>
               </div>
@@ -254,7 +255,7 @@ export function MorningBrief() {
                 }}
                 title="Cmd/Ctrl-click to open in new tab"
               >
-                <strong>{c.symbol}</strong>
+                <TickerCell symbol={c.symbol} size="0.92rem" nameWidth={16} />
                 <span className={`morning-mini-rating morning-mini-rating--${c.rating?.toLowerCase()}`}>{c.rating}</span>
                 <span className="mono">{c.score}/100</span>
                 <span className="mono morning-mini-dist">

@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)', blue: '#4fc3f7' };
 const SHORT: Record<string, string> = {
@@ -82,7 +83,7 @@ export function UniverseConvictionPanel() {
                           border: `1px solid ${p.pattern_status === 'confirmed' ? C.green + '66' : 'var(--hairline,#2a2a2a)'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: '0.66rem', color: C.sub, fontVariantNumeric: 'tabular-nums' }}>#{i + 1}</span>
-                <b style={{ fontSize: '0.9rem' }}>{p.symbol}</b>
+                <TickerCell symbol={p.symbol} />
                 {p.is_buyable ? <span style={{ fontSize: '0.6rem', color: C.green }}>✅</span>
                   : p.is_candidate ? <span style={{ fontSize: '0.6rem', color: C.muted }}>SEPA</span>
                   : <span style={{ fontSize: '0.6rem', color: C.sub }} title="Outside the SEPA gate — that's allowed here">non-SEPA</span>}

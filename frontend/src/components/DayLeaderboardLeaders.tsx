@@ -7,6 +7,7 @@
 import { useDayLeaderboard } from '../hooks/useDayTrading';
 import { InfoButton } from './InfoButton';
 import { useSort } from '../lib/useSort';
+import { TickerCell } from './TickerCell';
 
 const SESSION: Record<string, { tag: string; note: string }> = {
   open:       { tag: 'LIVE',        note: "live intraday move" },
@@ -101,7 +102,7 @@ export function DayLeaderboardLeaders({ onPick }: { onPick?: (s: string) => void
               title={`Chart ${L.symbol}`}
             >
               <span className="dl-rank mono">{L.intraday_rank}</span>
-              <span className="dl-sym"><strong>{L.symbol}</strong></span>
+              <span className="dl-sym"><TickerCell symbol={L.symbol} size="0.86rem" nameWidth={18} /></span>
               <span className={`dl-num mono dl-move dl-move--${moveClass(L.intraday_change_pct)}`}>
                 {pct(L.intraday_change_pct)}
               </span>

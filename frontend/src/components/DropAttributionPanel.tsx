@@ -2,6 +2,7 @@
    its SECTOR, or the STOCK itself? Backend: /portfolio/attribution.
    Method + caveats: backend/portfolio/drop_attribution.py. */
 import { useState } from 'react';
+import { TickerCell } from './TickerCell';
 import { useDropAttribution, type AttrVerdict, type AttributionRow } from '../hooks/usePortfolio';
 
 const VERDICT: Record<AttrVerdict, { dot: string; label: string; color: string; hint: string }> = {
@@ -84,7 +85,7 @@ function Row({ r }: { r: AttributionRow }) {
       borderLeft: `3px solid ${v.color}`,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem' }}>
-        <strong style={{ minWidth: 54 }}>{r.symbol}</strong>
+        <strong style={{ minWidth: 54 }}><TickerCell symbol={r.symbol} size="0.82rem" nameWidth={12} /></strong>
         <span className="mono" style={{ color: moveColor, fontWeight: 700, minWidth: 64 }}>{pct(r.move_pct)}</span>
         <span style={{ color: v.color, fontWeight: 700, fontSize: '0.78rem' }}>{v.dot} {v.label}</span>
         <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--cm-slate)' }}>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TickerCell } from './TickerCell';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { OvernightMover } from '../hooks/useOvernight';
 import { useOvernightMovers } from '../hooks/useOvernight';
@@ -145,7 +146,7 @@ function OvernightCard({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
               style={{ cursor: 'pointer' }}
               title="Cmd/Ctrl-click to open in new tab">
-        <strong className="overnight-card__sym">{m.symbol}</strong>
+        <strong className="overnight-card__sym"><TickerCell symbol={m.symbol} size="0.95rem" nameWidth={16} /></strong>
         <span className={`overnight-card__gap overnight-card__gap--${dir} mono`}>
           {gap > 0 ? '+' : ''}{gap.toFixed(2)}%
         </span>

@@ -10,6 +10,7 @@ import { API } from '../lib/apiBase';
 import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
 import { PatternMatchCards } from '../components/PatternMatchCards';
+import { TickerCell } from '../components/TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
 
@@ -357,11 +358,7 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
     <div style={{ padding: '0.45rem 0.6rem', borderRadius: 8, marginBottom: 5,
                   background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={() => navigate(`/sepa/${encodeURIComponent(v.symbol)}`)}
-                style={{ fontWeight: 800, fontSize: '0.88rem', background: 'transparent', border: 'none',
-                         color: 'inherit', cursor: 'pointer', padding: 0 }}>
-          {v.symbol}
-        </button>
+        <TickerCell symbol={v.symbol} size="0.88rem" />
         {s.is_buyable && <span style={{ fontSize: '0.64rem', color: C.green }}>✅ buyable</span>}
         {sources.map((m) => (
           <button key={m.label} onClick={() => navigate(m.to)}
@@ -412,7 +409,7 @@ function Section({ title, rows, navigate }: { title: string; rows: Pattern[]; na
   );
 }
 
-function Card({ p, navigate }: { p: Pattern; navigate: (path: string) => void }) {
+function Card({ p }: { p: Pattern; navigate?: (path: string) => void }) {
   const s = p.sepa || {};
   const conf = p.status === 'confirmed';
   const ext = p.ext_past_confirm_pct;
@@ -422,10 +419,7 @@ function Card({ p, navigate }: { p: Pattern; navigate: (path: string) => void })
                   background: 'var(--bg-raised,#16181d)',
                   border: `1px solid ${conf ? C.green + '55' : 'var(--hairline,#2a2a2a)'}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={() => navigate(`/sepa/${encodeURIComponent(p.symbol)}`)}
-                style={{ fontWeight: 800, fontSize: '0.95rem', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>
-          {p.symbol}
-        </button>
+        <TickerCell symbol={p.symbol} size="0.95rem" />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{PATTERN_LABEL[p.pattern] || p.pattern}</span>
         <span style={{ fontSize: '0.68rem', fontWeight: 700, color: conf ? C.green : C.amber,
                        border: `1px solid ${(conf ? C.green : C.amber)}55`, background: `${conf ? C.green : C.amber}14`,

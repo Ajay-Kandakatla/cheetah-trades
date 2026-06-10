@@ -13,6 +13,7 @@
 
    Reads GET /sepa/top-picks/tracker (sepa/top_picks_history.py). Fails quiet. */
 import { useEffect, useState } from 'react';
+import { TickerName } from './TickerCell';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 
@@ -95,7 +96,7 @@ export function TopPicksTracker({ n = 5, days = 14 }: { n?: number; days?: numbe
                   <span className="tpt__streakbadge mono" data-strong={c.streak >= 3 ? '1' : '0'}>
                     {c.streak >= 3 ? '🔥' : ''}{c.streak}
                   </span>
-                  <span className="tpt__sym">{c.symbol}</span>
+                  <span className="tpt__sym">{c.symbol}<TickerName symbol={c.symbol} width={16} /></span>
                   <span className="tpt__score mono">
                     {c.score}<b style={{ color: trendColor(c.score_trend) }}> {c.score_trend}</b>
                   </span>

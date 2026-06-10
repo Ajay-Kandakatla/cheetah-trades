@@ -29,6 +29,7 @@ import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MarketClockStrip } from '../components/MarketClockStrip';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
 import { InfoButton } from '../components/InfoButton';
+import { TickerCell } from '../components/TickerCell';
 import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
 import { useWhalesFlow } from '../hooks/useWhalesFlow';
 import { useLivePrices } from '../hooks/useLivePrices';
@@ -379,7 +380,7 @@ export function KellPage() {
                         <header className="sepa-card__head">
                           <div className="sepa-card__sym">
                             <div className="sepa-card__sym-line">
-                              <strong>{setup.symbol}</strong>
+                              <TickerCell symbol={setup.symbol} size="0.95rem" nameWidth={18} />
                               <span
                                 style={{
                                   marginLeft: 8,

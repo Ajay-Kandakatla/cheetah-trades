@@ -11,6 +11,7 @@
 import { Link } from 'react-router-dom';
 import { useGappers, type DayProfile } from '../hooks/useDayTrading';
 import { useSort } from '../lib/useSort';
+import { TickerName } from './TickerCell';
 
 const SESSION_META: Record<string, { title: string; badge: string; cls: string }> = {
   premarket:  { title: 'Premarket Movers · live',        badge: 'PREMARKET',     cls: 'og-sess--pm' },
@@ -114,6 +115,7 @@ export function OvernightGappers({ profile, onPick }: {
                         title={`${g.symbol} — open details`}
                       >
                         {g.symbol}
+                        <TickerName symbol={g.symbol} width={16} />
                       </Link>
                     </td>
                     <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>

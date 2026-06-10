@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
@@ -91,7 +92,7 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
                             background: star ? 'rgba(16,185,129,0.08)' : 'var(--bg-sunken,#0f1115)',
                             border: `1px solid ${star ? C.green : C.green + '44'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <b style={{ fontSize: '0.9rem' }}>{c.symbol}</b>
+                  <TickerCell symbol={c.symbol} />
                   {star && <span title="Confirmed pattern AND full Minervini buy gate">⭐</span>}
                   <span style={{ marginLeft: 'auto', fontWeight: 800, color: C.green, fontSize: '0.82rem' }}
                         title="Typical daily range = price × ADR — capacity, not a prediction">
