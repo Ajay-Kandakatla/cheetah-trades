@@ -15,6 +15,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { API } from '../lib/apiBase';
 import { patchWhalesFlowRow } from '../hooks/useWhalesFlow';
+import { GiantsRotationModal } from './GiantsRotationModal';
 // Curated fund-credibility tier list — added 2026-05-28 per user
 // request to distinguish smart-money active managers (Tiger, Coatue,
 // Berkshire) from passive index giants (Vanguard) and unknown LPs.
@@ -232,6 +233,9 @@ export function WhalesFlowModal({
   const [data,    setData]    = useState<WhalesPayload | null>(null);
   const [err,     setErr]     = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Giant money-rotation drill-in (2026-06-10): "Capital World sold $14.5B
+  // of MU — where did it GO?" Answered from full EDGAR 13F portfolios.
+  const [rotOpen, setRotOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -473,6 +477,25 @@ export function WhalesFlowModal({
             )}
           </div>
         )}
+
+        {/* Money-rotation jump — which Tier S/A giants moved this name, and
+            where THEIR money went in the same quarterly filing. */}
+        {!loading && !err && (
+          <button
+            onClick={() => setRotOpen(true)}
+            className="mono"
+            style={{
+              fontSize: '0.74rem', padding: '3px 10px', borderRadius: 6,
+              cursor: 'pointer', marginBottom: '0.7rem',
+              background: 'transparent', color: 'inherit',
+              border: '1px solid var(--gold,#c9a227)',
+            }}
+            title="Full-portfolio 13F diff: every curated giant that moved this name last quarter, and their biggest adds/trims in the SAME filing — where the money actually rotated."
+          >
+            🧭 Where did the money move? →
+          </button>
+        )}
+        {rotOpen && <GiantsRotationModal symbol={symbol} onClose={() => setRotOpen(false)} />}
 
         {loading && <div style={{ color: 'var(--cm-slate)', marginTop: '0.5rem' }}>Loading 13F filings…</div>}
 
