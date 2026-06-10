@@ -41,6 +41,16 @@ async def patterns_latest():
     return JSONResponse(await asyncio.to_thread(scan.latest))
 
 
+@router.get("/patterns/verdicts-for")
+async def patterns_verdicts_for(symbols: str):
+    """Bulk on-demand pattern verdicts for an arbitrary comma-separated symbol
+    list (≤60) — powers the 📐 scan button on the Day Trading / Scalping pages
+    whose universes (today's movers) sit outside the stored verdict scan."""
+    from . import scan
+    syms = symbols.split(",")
+    return JSONResponse(await asyncio.to_thread(scan.verdicts_for, syms))
+
+
 @router.get("/patterns/symbol/{symbol}")
 async def patterns_symbol(symbol: str):
     """On-demand single-ticker pattern read: which pattern this chart matches

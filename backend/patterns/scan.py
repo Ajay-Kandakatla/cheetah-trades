@@ -364,6 +364,34 @@ def status() -> dict:
         return dict(_STATE)
 
 
+def verdicts_for(symbols: list) -> dict:
+    """Bulk on-demand verdicts for an arbitrary symbol list (Ajay 2026-06-10:
+    the 📐 scan button on the Day Trading / Scalping pages — today's movers
+    are mostly OUTSIDE the stored verdict scan's universe). Fresh compute
+    against cached daily frames, ~10ms/symbol; no persistence."""
+    syms = [s.strip().upper() for s in symbols if s and s.strip()][:60]
+    ctx: dict = {}
+    try:
+        from sepa import scanner
+        want = set(syms)
+        for r in (scanner.load_latest() or {}).get("all_results") or []:
+            sym = r.get("symbol")
+            if sym in want:
+                ctx[sym] = {"rs_rank": r.get("rs_rank"), "score": r.get("score"),
+                            "stage": (r.get("stage") or {}).get("stage"),
+                            "is_candidate": bool(r.get("is_candidate")),
+                            "is_buyable": bool(r.get("is_buyable"))}
+    except Exception as exc:
+        log.debug("verdicts_for ctx failed: %s", exc)
+    verdicts = [_verdict_for_symbol(s, ctx.get(s) or {}) for s in syms]
+    return {"generated_at": int(time.time()), "n_symbols": len(verdicts),
+            "n_matched": sum(1 for v in verdicts if v["matches"]),
+            "verdicts": verdicts,
+            "disclaimer": (
+                "Fresh on-demand read of these symbols' cached daily charts. "
+                "Geometry is descriptive, not predictive. Not advice.")}
+
+
 def symbol_verdict(sym: str) -> dict:
     """On-demand single-ticker pattern read (Ajay 2026-06-09: "add an on-demand
     pattern scanner in the individual tickers"). Fresh compute — ~10ms against

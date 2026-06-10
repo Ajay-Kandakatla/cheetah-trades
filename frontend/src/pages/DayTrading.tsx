@@ -11,6 +11,7 @@ import { useMarketGauge } from '../hooks/useMarketGauge';
 import { LiveTapeRead } from '../components/LiveTapeRead';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
+import { OnDemandPatternScan } from '../components/OnDemandPatternScan';
 import {
   useDayUniverse, useDayBars, useLiveSignals,
   useSymbolBacktest, useStrategies,
@@ -171,6 +172,12 @@ export function DayTrading() {
       </div>
 
       <DayTradingSchedule />
+
+      {/* 📐 On-demand daily-pattern scan of today's movers (Ajay 2026-06-10) —
+          these names are mostly OUTSIDE the stored verdict scan's universe,
+          so this computes fresh verdicts for exactly what's on this page. */}
+      <OnDemandPatternScan symbols={watchlist}
+                           title="📐 Daily patterns — today's movers, scanned on demand" />
 
       {/* ① BUYABLE NOW — the live entry signals, redesigned + tape-aware */}
       <section className="day-section">

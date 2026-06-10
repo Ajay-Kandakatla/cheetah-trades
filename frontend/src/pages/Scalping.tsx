@@ -17,6 +17,8 @@ import { SepaWatchPanel } from '../components/SepaWatchPanel';
 import { LiveTapeRead } from '../components/LiveTapeRead';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
+import { OnDemandPatternScan } from '../components/OnDemandPatternScan';
+import { useDayUniverse } from '../hooks/useDayTrading';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 
@@ -122,6 +124,11 @@ export function ScalpingPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('watch');
   const bars = useDayBars(selected, 1);
+  // Today's movers (same universe the Day Trading page scans) + any live
+  // signal symbols — the set the 📐 on-demand pattern scan runs against.
+  const universe = useDayUniverse();
+  const scanSyms = Array.from(new Set([
+    ...universe.symbols, ...(data?.signals || []).map((s) => s.symbol)]));
 
   const TabBtn = ({ id, label }: { id: Tab; label: string }) => (
     <button onClick={() => setTab(id)} style={{
@@ -158,6 +165,11 @@ export function ScalpingPage() {
         <TabBtn id="backtest" label="Backtest (~1mo)" />
         <TabBtn id="paper" label="Paper trade" />
       </div>
+
+      {/* 📐 On-demand daily-pattern scan of today's movers + live signal names
+          (Ajay 2026-06-10: the on-demand scan button this page was missing). */}
+      <OnDemandPatternScan symbols={scanSyms}
+                           title="📐 Daily patterns — today's movers, scanned on demand" />
 
       {tab === 'watch' && <SepaWatchPanel active={tab === 'watch'} onChart={(s) => setSelected(s)} />}
       {tab === 'backtest' && <BacktestPanel active={tab === 'backtest'} />}
