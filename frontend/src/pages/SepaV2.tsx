@@ -51,6 +51,7 @@ const DEFAULT_FILTERS: SepaFilters = {
   search: '',
   showAll: false,
   dmEligibleOnly: false,
+  volX15Only: false,
   type: 'all',
   pioneerOnly: false,
   stage: 'ALL',
