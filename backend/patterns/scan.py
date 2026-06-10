@@ -356,21 +356,68 @@ def status() -> dict:
         return dict(_STATE)
 
 
+# Self-healing freshness (Ajay 2026-06-09: deployed pages showed NO pattern
+# info because the verdict scan had never been run — a button-press dependency).
+# A stale/missing doc kicks the background scan on read; the nightly cron is
+# the guaranteed floor. start_scan is single-flight, so storms are no-ops.
+QUALIFIERS_STALE_S = 6 * 3600
+UNIVERSE_STALE_S = 24 * 3600
+
+
+def _kick_if_stale(doc: Optional[dict], max_age_s: int, scope: str) -> bool:
+    age = int(time.time()) - int((doc or {}).get("generated_at") or 0)
+    if age <= max_age_s:
+        return False
+    try:
+        start_scan(scope)
+    except Exception:
+        log.exception("auto-kick %s scan failed", scope)
+    return True
+
+
 def latest() -> dict:
     coll = _coll()
     doc = coll.find_one({"_id": "latest"}) if coll is not None else None
+    refreshing = _kick_if_stale(doc, UNIVERSE_STALE_S, "universe")
     if not doc:
-        return {"results": [], "n_found": 0, "generated_at": 0,
-                "note": "No pattern scan yet — hit Scan Patterns."}
+        return {"results": [], "n_found": 0, "generated_at": 0, "refreshing": refreshing,
+                "note": "First pattern scan is running now — check back in a minute."}
     doc.pop("_id", None)
+    doc["refreshing"] = refreshing
     return doc
 
 
 def latest_qualifiers() -> dict:
     coll = _coll()
     doc = coll.find_one({"_id": "qualifier_verdicts"}) if coll is not None else None
+    refreshing = _kick_if_stale(doc, QUALIFIERS_STALE_S, "qualifiers")
     if not doc:
-        return {"verdicts": [], "n_symbols": 0, "generated_at": 0,
-                "note": "No qualifier verdict scan yet — hit Scan Qualifiers."}
+        return {"verdicts": [], "n_symbols": 0, "generated_at": 0, "refreshing": refreshing,
+                "note": "First verdict scan is running now — refresh in ~30s."}
     doc.pop("_id", None)
+    doc["refreshing"] = refreshing
     return doc
+
+
+if __name__ == "__main__":
+    # Cron entry point: `python -m patterns.scan [qualifiers|universe|all]`.
+    # Runs synchronously (no thread) so the cron job's exit code is honest.
+    import sys
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    which = (sys.argv[1] if len(sys.argv) > 1 else "all").lower()
+    failed = False
+    for scope, fn in (("universe", _run_scan), ("qualifiers", _run_qualifier_scan)):
+        if which not in (scope, "all"):
+            continue
+        with _LOCK:
+            _STATE.update(running=True, scope=scope, done=0, total=0, error=None,
+                          started_at=int(time.time()), finished_at=0)
+        fn()
+        err = status().get("error")
+        if err:
+            log.error("PATTERNS %s scan failed: %s", scope, err)
+            failed = True
+        else:
+            log.info("PATTERNS %s scan ok", scope)
+    sys.exit(1 if failed else 0)

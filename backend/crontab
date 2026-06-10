@@ -409,6 +409,14 @@
 # Page: /chart-school. Generated on-demand too if this cron misses.
 40     8     *    *    1-5  /usr/local/bin/python -m flashcards.chart_quiz
 #
+# Pattern verdicts — 5:05 PM ET weekdays, after the 4:30 fast-scan has today's
+# close in the price cache. Runs the universe pattern sweep + the per-name
+# verdict scan (qualifiers + holdings + buyable + at-pivot + leaders) so the
+# 📐 chips on SEPA / Portfolio / Leaderboard and the /patterns page are always
+# populated WITHOUT anyone pressing the buttons. The GET endpoints also
+# self-heal: a missing/stale doc kicks a background rescan on first page view.
+5      17    *    *    1-5  /usr/local/bin/python -m patterns.scan all
+#
 # ============================================================================
 # Market open / close reminders — 15 min before each bell, weekdays only
 # ============================================================================

@@ -25,6 +25,9 @@ let cache: { at: number; map: Map<string, PatternVerdict>; generatedAt: number |
 let inflight: Promise<{ map: Map<string, PatternVerdict>; generatedAt: number | null }> | null = null;
 const CACHE_MS = 60_000;   // verdicts only change when the owner re-scans
 
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+const listeners = new Set<(s: { map: Map<string, PatternVerdict>; generatedAt: number | null }) => void>();
+
 function fetchVerdicts() {
   // Single shared request — a SEPA page mounts one chip per card, so without
   // this dedup the first render would fire ~100 identical fetches.
@@ -35,6 +38,16 @@ function fetchVerdicts() {
         const map = new Map<string, PatternVerdict>();
         for (const v of d?.verdicts || []) map.set((v.symbol || '').toUpperCase(), v);
         cache = { at: Date.now(), map, generatedAt: d?.generated_at || null };
+        // Backend auto-kicks a rescan when its doc is missing/stale and says
+        // so via `refreshing` — poll again shortly so chips appear without a
+        // manual reload (first deploy / first visit of the day).
+        if (d?.refreshing && !retryTimer) {
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            cache = null;
+            fetchVerdicts().then((s) => listeners.forEach((fn) => fn(s))).catch(() => undefined);
+          }, 25_000);
+        }
         return { map, generatedAt: cache.generatedAt };
       })
       .finally(() => { inflight = null; });
@@ -49,11 +62,14 @@ export function usePatternVerdicts(): { verdicts: Map<string, PatternVerdict>; g
 
   useEffect(() => {
     let alive = true;
-    if (cache && Date.now() - cache.at < CACHE_MS) return;
-    fetchVerdicts()
-      .then((s) => { if (alive) setState(s); })
-      .catch(() => undefined);   // fail quiet
-    return () => { alive = false; };
+    const onUpdate = (s: { map: Map<string, PatternVerdict>; generatedAt: number | null }) => {
+      if (alive) setState(s);
+    };
+    listeners.add(onUpdate);
+    if (!cache || Date.now() - cache.at >= CACHE_MS) {
+      fetchVerdicts().then(onUpdate).catch(() => undefined);   // fail quiet
+    }
+    return () => { alive = false; listeners.delete(onUpdate); };
   }, []);
 
   return { verdicts: state.map, generatedAt: state.generatedAt };
