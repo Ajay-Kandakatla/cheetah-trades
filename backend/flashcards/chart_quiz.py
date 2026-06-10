@@ -24,10 +24,12 @@ from typing import Optional
 log = logging.getLogger("flashcards.chart_quiz")
 
 N_ITEMS = 2
-BARS_BEFORE = 65            # context bars shown before the confirmation bar
+BARS_BEFORE = 65            # minimum context bars shown before the confirmation bar
 CANDIDATE_POOL = 60        # symbols sampled per generation attempt
-CHOICES = ["Double bottom (W)", "Inverse head & shoulders", "Flat base / no reversal pattern"]
-ANSWER_OF = {"double_bottom": CHOICES[0], "inverse_head_shoulders": CHOICES[1]}
+CHOICES = ["Double bottom (W)", "Triple bottom", "Inverse head & shoulders",
+           "Cup with handle", "Flat base / no reversal pattern"]
+ANSWER_OF = {"double_bottom": CHOICES[0], "triple_bottom": CHOICES[1],
+             "inverse_head_shoulders": CHOICES[2], "cup_with_handle": CHOICES[3]}
 
 WHY = {
     "double_bottom": (
@@ -36,12 +38,24 @@ WHY = {
         "supply. The close above the middle peak (the confirmation line) proved "
         "demand had absorbed the overhead — that close is the pattern; the W "
         "shape alone continues lower 48% of the time (Bulkowski)."),
+    "triple_bottom": (
+        "Three separate trips to the same price, and sellers couldn't break it "
+        "once — each test burned through more of the remaining supply at that "
+        "level. It only becomes a pattern when price closes above the highest "
+        "peak between the valleys (Bulkowski's confirmation rule); before that "
+        "it's a stock going sideways."),
     "inverse_head_shoulders": (
         "The head was the panic low. The right shoulder made a HIGHER low — "
         "sellers couldn't push price back down — and the close through the "
         "neckline added short-covering to fresh demand. The best-studied "
         "reversal family in the academic record (Chang & Osler 1999; Savin et "
         "al. 2007), both short of standalone-profit claims."),
+    "cup_with_handle": (
+        "The cup's slow right side means supply was absorbed gradually, not in "
+        "a panic squeeze. The handle is the final shakeout: the first approach "
+        "of the old high flushes the buyers who waited a year to break even — "
+        "and if that drift stays shallow, in the upper half of the cup, there's "
+        "nobody left to sell. The close above the rim confirms it."),
 }
 
 
@@ -91,6 +105,8 @@ def _item_from_symbol(sym: str, rng: random.Random) -> Optional[dict]:
     closes = df["close"].to_numpy(dtype=float)
     options = []
     for kind, fn in detector.DETECTORS.items():
+        if kind not in ANSWER_OF:
+            continue                # a detector the quiz doesn't teach yet
         try:
             res = fn(df)
         except Exception:
@@ -107,12 +123,15 @@ def _item_from_symbol(sym: str, rng: random.Random) -> Optional[dict]:
     k = c["confirm_idx"]
     base = closes[k]
     fwd = round(float(closes[k + detector.VALIDATION_HORIZON] / base - 1) * 100, 2)
+    # Show at least BARS_BEFORE bars, extended back so wide patterns (a 7-65
+    # week cup, a triple bottom) fit on the chart with a little lead-in.
+    ctx_start = min(k - BARS_BEFORE, max(0, c.get("start_idx", k) - 12))
     return {
         "symbol": sym,
         "pattern": kind,
         "answer": ANSWER_OF[kind],
         "choices": list(CHOICES),
-        "bars": _bars_payload(df, k - BARS_BEFORE, k + 1),   # ends ON the confirmation bar
+        "bars": _bars_payload(df, ctx_start, k + 1),   # ends ON the confirmation bar
         "confirm_date": df.index[k].strftime("%Y-%m-%d"),
         "neckline": round(float(c["neckline"]), 2),
         "pattern_low": round(float(c["pattern_low"]), 2),
