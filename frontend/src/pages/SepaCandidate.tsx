@@ -11,6 +11,7 @@ import { SepaConvictionChip, computeConviction } from '../components/SepaConvict
 import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
+import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
@@ -1382,9 +1383,17 @@ export function SepaCandidatePage() {
             {tab === 'catalyst' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>Catalyst</strong> — news sentiment, analyst revisions, top
-                  headlines. Empty unless scanned with <strong>+ catalyst</strong> on.
+                  <strong>Catalyst</strong> — a just-in-time read of the latest headlines.
+                  Click below and it tells you whether the news makes {symbol}{' '}
+                  <strong>more buyable, less buyable, or a sell</strong>. Nothing is preloaded.
                 </div>
+                {/* JIT news read — summarized on click, NOT preloaded: does
+                    recent news make this more/less buyable or a sell
+                    (Ajay 2026-06-08). The preloaded summary/sentiment block
+                    below it stayed — he asked for the AI catalyst digest the
+                    very next day (2026-06-09), so both live here. */}
+                <NewsReadButton symbol={symbol} />
+
                 {data.catalyst ? (
                   <>
                     {data.catalyst.summary && (
