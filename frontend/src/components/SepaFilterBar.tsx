@@ -95,6 +95,14 @@ export type SepaFilters = {
    *  names will sneak into other filters (e.g. high RS) even when they're
    *  rolling over on volume. */
   hideDistributing: boolean;
+  /** When true (DEFAULT ON, Ajay 2026-06-10: "do not qualify unless we have
+   *  1.5× average volume"), drop rows whose TODAY volume < 1.5× their 50-day
+   *  average. Implemented as a default-on FILTER, not a change to the book's
+   *  p.79 qualifier gate: 1.5× expanding volume is Minervini's ENTRY condition
+   *  (p.203, already in is_buyable), while pre-breakout VCP bases are quiet by
+   *  definition (pp.198–203) — one tap shows the coilers again. Rows with
+   *  unknown volume are hidden while the chip is on. */
+  volX15Only: boolean;
   /** When true, drop any candidate whose 13F whales signal is anything
    *  other than 'accumulating'. Tightens the list to names that BOTH
    *  passed SEPA AND have institutional capital flowing in over the last
@@ -223,6 +231,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     filters.rsMin > 0,
     filters.search.trim() !== '',
     filters.dmEligibleOnly,
+    filters.volX15Only,
     filters.hideDistributing,
     filters.whalesAccumOnly,
     filters.hedgeFundTopBuyer,
@@ -364,6 +373,13 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             203) + emerging RS leaders breaking out with no base yet. */}
         <div className="sepa-filterbar__cat-group">
           <span className="sepa-filterbar__cat-label" title="Volume confirmation — accumulation vs distribution (book p.71-72, 203).">📊 Volume</span>
+          <button
+            className={`sepa-chip ${filters.volX15Only ? 'is-active' : ''}`}
+            onClick={() => set('volX15Only', !filters.volX15Only)}
+            title="Only show names trading ≥1.5× their 50-day average volume TODAY (default ON). This is the book's ENTRY volume condition (p.203) used as a view filter — turn it OFF to see quiet pre-breakout VCP coilers, which are low-volume by definition (pp.198-203). Unknown-volume rows are hidden while on."
+          >
+            ⚡ ≥1.5× Volume
+          </button>
           <button
             className={`sepa-chip ${filters.hideDistributing ? 'is-active' : ''}`}
             onClick={() => set('hideDistributing', !filters.hideDistributing)}

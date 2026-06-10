@@ -276,6 +276,12 @@ export function SepaPage() {
     salesStrongOnly: false, rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
     moatMin: 0,
+    // Default ON (Ajay 2026-06-10: "do not qualify unless we have 1.5×
+    // average volume"). A FILTER, deliberately not a change to the book's
+    // p.79 qualifier gate — 1.5× is the ENTRY volume condition (p.203,
+    // already enforced in is_buyable), and quiet pre-breakout VCP coilers
+    // (pp.198-203) reappear with one tap.
+    volX15Only: true,
     // Default OFF — opt-in toggle. Some users want to see distributing
     // names too (shorting, planning exits on owned positions). Chip
     // flips it on for a cleaner accumulation-only view. Persists via
@@ -463,6 +469,13 @@ export function SepaPage() {
       if (filters.moatMin > 0) {
         const tier = r.moat?.tier ?? 0;
         if (tier < filters.moatMin) return false;
+      }
+      // ≥1.5× volume chip (default ON) — today's volume must be ≥1.5× the
+      // 50-day average; unknown volume hides while on. Same gate in
+      // passesFilters() below — keep in sync.
+      if (filters.volX15Only) {
+        const v = r.volume;
+        if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
       }
       // Hide-Distributing chip — drop institutional-distribution tape OR
       // Chaikin money-outflow names. Opposite of "accumulation", so if
@@ -790,6 +803,11 @@ export function SepaPage() {
     if (filters.type === 'etf' && !r.is_etf) return false;
     if (filters.pioneerOnly && !r.is_pioneer) return false;
     if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
+    if (filters.volX15Only) {
+      // Same gate as the main `filtered` useMemo above — keep in sync.
+      const v = r.volume;
+      if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
+    }
     if (filters.hideDistributing) {
       // Same gate as the main `filtered` useMemo above — keep in sync.
       const v = r.volume;
