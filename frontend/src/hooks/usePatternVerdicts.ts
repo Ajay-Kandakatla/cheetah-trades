@@ -13,12 +13,17 @@ export type PatternMatch = {
   to_confirm_pct?: number;
 };
 export type PatternFormation = { name: string; date: string; read: string; note: string; stat?: string };
+export type PatternSepa = {
+  rs_rank?: number | null; score?: number | null; stage?: number | null;
+  is_candidate?: boolean; is_buyable?: boolean;
+};
 export type PatternVerdict = {
   symbol: string;
   matches: PatternMatch[];
   candles?: { formations: PatternFormation[]; last_bar?: { read?: string } | null; trend?: string } | null;
   no_match: boolean;
   sources?: string[];
+  sepa?: PatternSepa;
 };
 
 let cache: { at: number; map: Map<string, PatternVerdict>; generatedAt: number | null } | null = null;

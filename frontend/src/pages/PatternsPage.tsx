@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
+import { PatternMatchCards } from '../components/PatternMatchCards';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
 
@@ -249,14 +250,9 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
         )}
       </div>
 
-      {matched.length > 0 && (
-        <>
-          <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', margin: '10px 0 4px' }}>
-            Pattern matched ({matched.length})
-          </div>
-          {matched.map((v) => <VerdictRow key={v.symbol} v={v} navigate={navigate} />)}
-        </>
-      )}
+      {/* Tiny-card grid (Ajay 2026-06-09): minimal SEPA-style cards, ranked so
+          ⭐ confirmed-pattern + full-Minervini-buy-gate confluence leads. */}
+      {matched.length > 0 && <PatternMatchCards title={`Pattern matched (${matched.length})`} allLink={false} />}
 
       {candleOnly.length > 0 && (
         <>

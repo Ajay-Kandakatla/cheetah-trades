@@ -21,6 +21,7 @@ import { CrossJunctions } from '../components/CrossJunctions';
 import { TopConfluence } from '../components/TopConfluence';
 import { AtPivotToday } from '../components/AtPivotToday';
 import { FullScanModal } from '../components/FullScanModal';
+import { PatternMatchCards } from '../components/PatternMatchCards';
 
 const PageInfo = (
   <>
@@ -65,6 +66,10 @@ export function LeaderboardPage() {
       </div>
 
       <AtPivotToday />
+
+      {/* Tiny pattern cards (Ajay 2026-06-09) — names whose chart matches a
+          Bulkowski pattern, ⭐ confluence (confirmed + full buy gate) first. */}
+      <PatternMatchCards limit={12} />
 
       <TopConfluence />
 

@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
+import { PatternMatchCards } from '../components/PatternMatchCards';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
@@ -285,6 +286,11 @@ export default function PortfolioPage() {
       </div>
 
       <AddHoldingForm onAdded={refresh} />
+
+      {/* Tiny pattern cards (Ajay 2026-06-09) — same view as the Patterns /
+          Leaderboard pages: pattern-matched names, ⭐ confluence first;
+          💼 marks your holdings. */}
+      <PatternMatchCards limit={12} />
 
       {/* Leadership + ranking BELOW your holdings (Ajay 2026-06-04). */}
       <SepaRankLeaderboard n={12} />
