@@ -155,3 +155,66 @@ whether candle PATTERNS predict — and the verified record is mostly null:
   nothing, believe the record over the read.
 - Refused as folklore: fixed win-rates for hammer/shooting-star/engulfing,
   doji-as-reversal, any "this pattern means X% odds" claim.
+
+---
+
+# Patterns page (added 2026-06-09) — bullish-reversal scan, double bottom + inverse H&S
+
+On-demand scan (owner ⚡ button, like the SEPA full scan) over the SEPA
+universe's cached daily frames. `patterns/detector.py` + `scan.py`.
+Confirmation-line discipline: a pattern exists only once price CLOSES above the
+peak between the bottoms / the neckline (Bulkowski, verified verbatim) — before
+that it renders as "forming — NOT a signal" (unconfirmed double bottoms continue
+lower 48% of the time per Bulkowski). Every scan also measures OUR universe's
++21-bar outcomes for historically confirmed patterns (deduped per breakout bar)
+and shows that record above any book number.
+
+## Verified evidence (adversarial pass 2026-06-09)
+
+- **Lo, Mamaysky & Wang (2000)**, J. Finance 55(4):1705–1765 — PRECISE CLAIM:
+  algorithmically-detected patterns carried statistically significant
+  INFORMATIONAL content (conditional return distributions differ); NOT a
+  profitability result. Per-pattern detail that matters: the **double bottom was
+  a NULL on NYSE/AMEX** (failed both their tests there) and significant on
+  Nasdaq only — where all 10 patterns were. Inverse H&S: KS p=0.104 on
+  NYSE/AMEX (null), significant on Nasdaq.
+- **Chang & Osler (1999)**, Economic Journal 109(458) — H&S on FX 1973–94:
+  "profitable, but not efficient — dominated by simpler trading rules."
+- **Savin, Weller & Zvingelis (2007)**, J. Financial Econometrics 5(2) — H&S on
+  S&P 500/Russell 2000 1990–99: predictive excess returns, minimal stand-alone
+  strategy profitability. The H&S family is the only one here with two
+  independent peer-reviewed predictive results — its grade ceiling is MEDIUM.
+- **Dawson & Steeley (2003)**, JBFA 30(1-2) — UK replication of LMW: information
+  present, returns not exploitable.
+- **Nekrasov (2010)** — self-published LMW replication on 1995–2010 data: "not
+  anymore reproducible" (a null we disclose; not peer-reviewed).
+- **Park & Irwin (2007)**, J. Economic Surveys 21(4) — the survey backdrop: of
+  95 modern studies 56 positive / 20 negative / 19 mixed, with pervasive
+  data-snooping caveats.
+- **Bulkowski (ThePatternSite, verified verbatim)** — identification conventions,
+  the confirmation rule, measure-rule targets, and the ONLY permitted stat
+  framing: break-even failure rates (double bottoms 12–16% by variant; inverse
+  H&S 11%, n=3,197, throwback 65%) always with the caveat: daily bars,
+  bull-market sample, hindsight-measured, no costs, not peer-reviewed. NEVER
+  win rates, average rises, or expected returns.
+
+## Geometry provenance (CITED vs CONVENTION — constants in patterns/detector.py)
+CITED: bottoms >22 trading days apart (LMW/Edwards & Magee → MIN_SEPARATION 23);
+most double bottoms within 2–7 weeks (Bulkowski → MAX_SEPARATION 35); ≥10%
+interim rise (Bulkowski); inverse-H&S shoulders AND armpits within 1.5% of their
+average (LMW Definition 1); close-above-the-line confirmation (Bulkowski).
+CONVENTION (ours, labeled): 3% bottom tolerance (inside the honest 1.5–6% band),
+zigzag swing extrema as a substitute for LMW's kernel smoothing, the 3% head-depth
+gate (no depth gate is cited anywhere), horizontal-neckline simplification
+(confirm above the higher armpit — conservative), 60-bar forming expiry,
+under-the-low stop, +21-bar validation horizon.
+
+## Rejected (and why)
+- **Rounding bottom** — Bulkowski himself says find it on WEEKLY charts; any
+  daily-bar curvature test is an uncited modeling choice.
+- **Falling wedge** — bottom-quartile on the source's own numbers (rank 31/39,
+  26% break-even failure, only 68% even break upward).
+- **Bull flag / high-and-tight flag** — continuation patterns, definitionally
+  not a bounce; HTF's "85% success" folklore is contradicted by Bulkowski's own
+  current page.
+- **Deferred**: triple bottom (single-source stats), Adam/Eve variant labeling.

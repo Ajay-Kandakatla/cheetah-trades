@@ -19,17 +19,20 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-# ── CONFIGURED geometry (Bulkowski-convention defaults; see methodology doc) ──
-SWING_WINDOW = 5            # bars each side for a local extreme
-LOW_TOLERANCE_PCT = 4.0     # the two bottoms must match within this %
-MIN_SEPARATION = 15         # bars between bottoms (Bulkowski: weeks apart)
-MAX_SEPARATION = 120
-MIN_INTERIM_RISE_PCT = 10.0  # the peak between bottoms must rise ≥ this above them
-CONFIRM_MAX_AGE = 15        # a confirmation older than this (bars) is stale, not fresh
-FORMING_MAX_GAP_PCT = 8.0   # forming patterns shown only if price within this of confirmation
-HEAD_DEPTH_PCT = 3.0        # inverse H&S: head must undercut shoulders by ≥ this %
-SHOULDER_TOL_PCT = 6.0      # inverse H&S: shoulders match within this %
-VALIDATION_HORIZON = 21     # self-validation forward window (bars ≈ 1 month)
+# ── Geometry — cited where a source exists, labeled CONVENTION where not ─────
+# (verified pass 2026-06-09; see docs/scalping_methodology.md → Patterns)
+SWING_WINDOW = 5            # CONVENTION — zigzag substitute for LMW's kernel-smoothed extrema
+LOW_TOLERANCE_PCT = 3.0     # default inside the honest band: 1.5% (LMW Def. 5 strict) … 6% (Bulkowski)
+MIN_SEPARATION = 23         # CITED — LMW: bottoms "more than 22 trading days" apart (after Edwards & Magee)
+MAX_SEPARATION = 35         # CITED — Bulkowski: most double bottoms fall in the 2–7 week range
+MIN_INTERIM_RISE_PCT = 10.0  # CITED — Bulkowski: ≥10% rise between the bottoms
+CONFIRM_MAX_AGE = 15        # CONVENTION — confirmations older than this (bars) aren't "fresh"
+FORMING_MAX_GAP_PCT = 8.0   # CONVENTION — forming shown only within this of the line
+FORMING_MAX_AGE = 60        # CONVENTION — no confirming close within 60 bars of low2 = expired
+HEAD_DEPTH_PCT = 3.0        # CONVENTION — no head-depth gate is cited anywhere; this is ours
+SHOULDER_TOL_PCT = 1.5      # CITED — LMW Def. 1: shoulders within 1.5% of their average
+ARMPIT_TOL_PCT = 1.5        # CITED — LMW Def. 1: armpits within 1.5% of their average
+VALIDATION_HORIZON = 21     # CONVENTION — self-validation forward window (bars ≈ 1 month)
 
 
 def swing_points(df: pd.DataFrame, window: int = SWING_WINDOW) -> tuple:
@@ -150,9 +153,11 @@ def double_bottom(df: pd.DataFrame, **kw) -> dict:
             if k is not None:
                 out["historical_confirms"].append({"confirm_idx": k, "neckline": peak,
                                                    "pattern_low": lo})
-            # Fresh? confirmed recently, or still forming near the line.
+            # Fresh? confirmed recently, or still forming near the line (and not
+            # expired — no confirming close within FORMING_MAX_AGE of low2).
             fresh_confirm = k is not None and (n - 1 - k) <= CONFIRM_MAX_AGE
             forming = (k is None and last_close > lo
+                       and (n - 1 - j) <= FORMING_MAX_AGE
                        and (peak / last_close - 1) * 100 <= FORMING_MAX_GAP_PCT)
             if fresh_confirm or forming:
                 key = (round(peak, 2), df.index[j])
@@ -192,15 +197,23 @@ def inverse_head_shoulders(df: pd.DataFrame, **kw) -> dict:
         if not (h < ls and h < rs):
             continue
         if (min(ls, rs) / h - 1) * 100 < head_depth:
-            continue                                     # head not meaningfully lower
-        if abs(ls - rs) / min(ls, rs) * 100 > sh_tol:
-            continue                                     # shoulders unmatched
+            continue                                     # head-depth gate — OUR convention (uncited)
+        # LMW Definition 1 (CITED): shoulders within 1.5% of their average.
+        sh_avg = (ls + rs) / 2.0
+        if abs(ls - rs) / sh_avg * 100 > sh_tol:
+            continue
         if k2 - i > MAX_SEPARATION * 2:
             continue
         peak1 = float(highs[i + 1: j].max()) if j - i > 1 else None
         peak2 = float(highs[j + 1: k2].max()) if k2 - j > 1 else None
         if not peak1 or not peak2:
             continue
+        # LMW Definition 1 (CITED): armpits within 1.5% of their average too.
+        ap_avg = (peak1 + peak2) / 2.0
+        if abs(peak1 - peak2) / ap_avg * 100 > ARMPIT_TOL_PCT:
+            continue
+        # Horizontal-neckline simplification: confirm above the HIGHER armpit —
+        # conservative vs the sloping line at breakout time (documented).
         neckline = max(peak1, peak2)
         if (neckline / h - 1) * 100 < MIN_INTERIM_RISE_PCT:
             continue
@@ -210,6 +223,7 @@ def inverse_head_shoulders(df: pd.DataFrame, **kw) -> dict:
                                                "pattern_low": h})
         fresh_confirm = c is not None and (n - 1 - c) <= CONFIRM_MAX_AGE
         forming = (c is None and last_close > h
+                   and (n - 1 - k2) <= FORMING_MAX_AGE
                    and (neckline / last_close - 1) * 100 <= FORMING_MAX_GAP_PCT)
         if fresh_confirm or forming:
             key = (round(neckline, 2), df.index[k2])

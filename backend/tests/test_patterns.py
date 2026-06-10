@@ -18,11 +18,13 @@ def _df(closes, lows=None, highs=None, start="2025-06-01"):
 
 
 def _w_bottom(confirm=True, second_low_offset=0.0):
-    """Build a W: 100 → 80 (low1) → 92 (peak) → 80.x (low2) → breakout/stall."""
+    """Build a W: 100 → 80 (low1) → 92 (peak) → 80.x (low2) → breakout/stall.
+    Bottom separation ~26 bars — inside the cited 23–35 band (LMW >22 days;
+    Bulkowski 2–7 weeks)."""
     seg = []
     seg += list(np.linspace(100, 80, 25))          # decline to low1
-    seg += list(np.linspace(80, 92, 20))           # interim peak ~15% above
-    seg += list(np.linspace(92, 80 + second_low_offset, 20))   # back to low2
+    seg += list(np.linspace(80, 92, 13))           # interim peak ~15% above
+    seg += list(np.linspace(92, 80 + second_low_offset, 13))   # back to low2
     if confirm:
         seg += list(np.linspace(80 + second_low_offset, 95, 12))  # close above 92
     else:
@@ -57,8 +59,8 @@ def test_double_bottom_rejects_unequal_lows():
 
 
 def test_double_bottom_rejects_shallow_interim_peak():
-    seg = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 84, 20)) +
-           list(np.linspace(84, 80, 20)) + list(np.linspace(80, 90, 12)))
+    seg = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 84, 13)) +
+           list(np.linspace(84, 80, 13)) + list(np.linspace(80, 90, 12)))
     res = detector.double_bottom(_df(seg))         # peak only +5% — below the 10% gate
     assert res["fresh"] == []
 

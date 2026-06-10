@@ -30,11 +30,12 @@ type ScanStatus = { running: boolean; done: number; total: number; error?: strin
 const PATTERN_LABEL: Record<string, string> = {
   double_bottom: 'Double bottom (W)', inverse_head_shoulders: 'Inverse head & shoulders',
 };
-// Practitioner base rates — Bulkowski, Encyclopedia of Chart Patterns (daily
-// bars, NO costs, hindsight-perfect identification). Context, not a promise.
+// Practitioner base rates — Bulkowski database, quoted in the ONLY permitted
+// framing (verified pass 2026-06-09): break-even failure rates with the full
+// caveat. Never win rates, average rises, or expected returns.
 const BULKOWSKI: Record<string, string> = {
-  double_bottom: 'Bulkowski (daily, no costs): confirmed double bottoms historically rose in roughly two-thirds of his samples',
-  inverse_head_shoulders: 'Bulkowski (daily, no costs): among his better-performing bullish reversals once the neckline closes',
+  double_bottom: 'Bulkowski (daily bars, bull-market sample, hindsight-measured, no costs): break-even failure 12–16% across Adam/Eve variants; unconfirmed double bottoms continue LOWER 48% of the time',
+  inverse_head_shoulders: 'Bulkowski (n=3,197; daily bars, hindsight-measured, no costs): break-even failure 11%, throwback rate 65%, rank 13 of 39',
 };
 
 const PageInfo = (
@@ -155,7 +156,7 @@ export function PatternsPage() {
       ) : (
         <>
           {confirmed.length > 0 && <Section title={`Confirmed — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} />}
-          {forming.length > 0 && <Section title={`Forming — shapes near their confirmation line (${forming.length})`} rows={forming} navigate={navigate} />}
+          {forming.length > 0 && <Section title={`Forming — NOT a signal: unconfirmed Ws continue lower 48% of the time (${forming.length})`} rows={forming} navigate={navigate} />}
           {latest.generated_at > 0 && (
             <p style={{ fontSize: '0.68rem', color: C.sub }}>
               Scanned {latest.symbols_scanned} charts · {new Date(latest.generated_at * 1000).toLocaleString()}
