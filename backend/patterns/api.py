@@ -3,8 +3,9 @@ full scan), polled progress, and the persisted latest results."""
 from __future__ import annotations
 
 import asyncio
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from auth import current_user_email, is_admin_email
@@ -13,13 +14,17 @@ router = APIRouter(tags=["patterns"])
 
 
 @router.post("/patterns/scan")
-async def patterns_scan_start(email: str = Depends(current_user_email)):
-    """Owner: kick off a full-universe pattern scan (background thread; poll
-    /patterns/scan/status). Reads cached daily frames — no provider calls."""
+async def patterns_scan_start(email: str = Depends(current_user_email),
+                              payload: Optional[dict] = Body(default=None)):
+    """Owner: kick off a pattern scan (background thread; poll
+    /patterns/scan/status). Reads cached daily frames — no provider calls.
+    Body {"scope": "qualifiers"} answers EVERY SEPA qualifier (match or
+    no-match); default scope "universe" is the hits-only sweep."""
     if not is_admin_email(email):
         raise HTTPException(403, "admin only")
+    scope = (payload or {}).get("scope") or "universe"
     from . import scan
-    return JSONResponse(await asyncio.to_thread(scan.start_scan))
+    return JSONResponse(await asyncio.to_thread(scan.start_scan, scope))
 
 
 @router.get("/patterns/scan/status")
@@ -34,3 +39,12 @@ async def patterns_latest():
     context, plus OUR universe's measured +21-bar outcomes per pattern."""
     from . import scan
     return JSONResponse(await asyncio.to_thread(scan.latest))
+
+
+@router.get("/patterns/qualifiers")
+async def patterns_qualifiers():
+    """The last qualifier verdict scan: every SEPA qualifier with the pattern(s)
+    it matches (confirmed/forming), recent candle reads, or an explicit
+    no-match. The chart-analysis column beside SEPA, VCP and volume."""
+    from . import scan
+    return JSONResponse(await asyncio.to_thread(scan.latest_qualifiers))
