@@ -31,6 +31,30 @@ _db = None
 _disabled = False
 ALERT_COOLDOWN_HOURS = 24
 
+# Minimum composite score for BUY-SIDE discovery alerts (volume_breakout,
+# rising_momentum). Ajay 2026-06-10: "Don't show me alerts that do not have
+# a score of at least 70. Even they broke out on volume" — an SFNC-grade
+# NEUTRAL name (score 44) popping on volume is noise, not a candidate.
+# Applied at DETECT time (not recorded, no push) AND at READ time (already-
+# persisted low-score alerts vanish immediately, same pattern as the
+# stage-breakdown watch-scope filter below).
+# Deliberately NOT applied to stage-breakdown/topping alerts: those are
+# SELL-side risk on held/watched names, and a breaking-down stock has a low
+# score by definition — flooring them would suppress exactly the warnings
+# that protect real positions.
+MIN_ALERT_SCORE = 70.0
+_SCORE_FLOORED_KINDS = ("volume_breakout", "rising_momentum")
+
+
+def _passes_score_floor(score) -> bool:
+    """True when a buy-side alert's score clears MIN_ALERT_SCORE.
+    Missing/None score fails closed — both floored kinds are built from scan
+    candidates, so a missing score means something is wrong upstream."""
+    try:
+        return score is not None and float(score) >= MIN_ALERT_SCORE
+    except (TypeError, ValueError):
+        return False
+
 
 def _get_db():
     global _db, _disabled
@@ -154,6 +178,10 @@ def detect_volume_breakouts(limit: int = 50) -> dict:
         ticker = c.get("symbol")
         if not ticker:
             continue
+        if not _passes_score_floor(c.get("score")):
+            log.info("volume breakout suppressed (score %s < %s): %s",
+                     c.get("score"), MIN_ALERT_SCORE, ticker)
+            continue
         if _recent_alert_exists(db, ticker, "volume_breakout"):
             continue
         ctx = {
@@ -236,6 +264,10 @@ def detect_rising_momentum(min_days_on_list: int = 3,
         if (days >= min_days_on_list
                 and rs_delta >= rs_climb_threshold
                 and score_delta >= score_climb_threshold):
+            if not _passes_score_floor(last_score):
+                log.info("rising momentum suppressed (score %s < %s): %s",
+                         last_score, MIN_ALERT_SCORE, ticker)
+                continue
             if _recent_alert_exists(db, ticker, "rising_momentum"):
                 continue
             ctx = {
@@ -308,6 +340,11 @@ def list_active(since_ts: int = 0, limit: int = 50) -> list[dict]:
     watch = None  # lazily resolved only if a stage-breakdown row shows up
     out: list[dict] = []
     for r in rows:
+        # Buy-side score floor (Ajay 2026-06-10) — applied at read time too so
+        # alerts recorded before the floor existed stop showing immediately.
+        if (r.get("kind") in _SCORE_FLOORED_KINDS
+                and not _passes_score_floor(r.get("score"))):
+            continue
         if str(r.get("kind") or "").startswith("stage_breakdown"):
             if watch is None:
                 try:
