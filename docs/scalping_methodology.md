@@ -237,7 +237,12 @@ CONVENTION (ours, labeled): 3% bottom tolerance (inside the honest 1.5–6% band
 zigzag swing extrema as a substitute for LMW's kernel smoothing, the 3% head-depth
 gate (no depth gate is cited anywhere), horizontal-neckline simplification
 (confirm above the higher armpit — conservative), 60-bar forming expiry,
-under-the-low stop, +21-bar validation horizon.
+under-the-low stop, +21-bar validation horizon. CONFIRM_MAX_AGE=1 (2026-06-09,
+was 15): a confirmation is an actionable match only on the day it happens or
+the next ("decision in the moment, not historical cup patterns" — Ajay);
+candle reads likewise only on the most recent bar (RECENT_BARS=1). Older
+confirmations feed self-validation and Chart School only. A same-day
+confirmation is labeled provisional intraday — it counts at the CLOSE.
 
 Triple bottom — CITED: confirmation above the highest peak between the valleys;
 valleys "near the same price, allow variations"; measure-rule ×0.74

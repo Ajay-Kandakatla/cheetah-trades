@@ -84,7 +84,9 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
                  role="button" tabIndex={0}
                  onClick={() => navigate(`/sepa/${encodeURIComponent(v.symbol)}`)}
                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/sepa/${encodeURIComponent(v.symbol)}`); }}
-                 title={`${SHORT[m.pattern] || m.pattern} — ${conf ? `confirmed ${m.confirmed_date || ''}` : `forming, ${m.to_confirm_pct}% to the line`}. Open the full SEPA read.`}
+                 title={`${SHORT[m.pattern] || m.pattern} — ${conf
+                   ? `confirmed ${m.bars_since_confirm === 0 ? 'TODAY — counts only if it CLOSES above the line' : 'yesterday'}`
+                   : `forming, ${m.to_confirm_pct}% to the line`}. Open the full SEPA read.`}
                  style={{ padding: '0.45rem 0.55rem', borderRadius: 9, cursor: 'pointer',
                           background: star ? 'rgba(16,185,129,0.07)' : 'var(--bg-raised,#16181d)',
                           border: `1px solid ${star ? C.green : conf ? '#10b98155' : '#f59e0b44'}` }}>
@@ -97,7 +99,9 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
                 </span>
               </div>
               <div style={{ fontSize: '0.7rem', color: col, fontWeight: 600, marginTop: 1 }}>
-                📐 {SHORT[m.pattern] || m.pattern} {conf ? '✓' : `· ${m.to_confirm_pct}% to line`}
+                📐 {SHORT[m.pattern] || m.pattern} {conf
+                  ? `✓ ${m.bars_since_confirm === 0 ? 'today' : '1d'}`
+                  : `· ${m.to_confirm_pct}% to line`}
               </div>
               <div style={{ fontSize: '0.66rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                 line {m.neckline} → tgt {m.target} · <span style={{ color: C.red }}>stop {m.stop}</span>

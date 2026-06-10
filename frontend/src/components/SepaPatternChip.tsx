@@ -81,8 +81,11 @@ export function SepaPatternChip({ symbol }: { symbol: string }) {
   return (
     <>
       {best && (best.status === 'confirmed'
-        ? chip(`📐 ${SHORT[best.pattern] || best.pattern} ✓`,
-               `${SHORT[best.pattern] || best.pattern} — CONFIRMED ${best.confirmed_date || ''}: closed above its line ${best.neckline}. Target ${best.target} (measure rule — a convention, not a promise) · stop ${best.stop}. Bullish structure for a swing entry.`,
+        ? chip(`📐 ${SHORT[best.pattern] || best.pattern} ✓ ${best.bars_since_confirm === 0 ? 'today' : '1d'}`,
+               `${SHORT[best.pattern] || best.pattern} — CONFIRMED ${best.bars_since_confirm === 0
+                 ? 'TODAY. Intraday read: it only counts if it CLOSES above the line ' + best.neckline + ' (evaluate at the close, not on wicks).'
+                 : `yesterday (${best.confirmed_date || ''}): closed above its line ${best.neckline}.`
+               } Target ${best.target} (measure rule — a convention, not a promise) · stop ${best.stop}. Bullish structure for a swing entry.`,
                '#10b981')
         : chip(`📐 ${SHORT[best.pattern] || best.pattern} · ${best.to_confirm_pct}% to line`,
                `Closest pattern: ${SHORT[best.pattern] || best.pattern}, still FORMING — ${best.to_confirm_pct}% below its confirmation line ${best.neckline}. A shape, not a signal until it CLOSES above the line; unconfirmed bottoms keep falling about half the time.`,

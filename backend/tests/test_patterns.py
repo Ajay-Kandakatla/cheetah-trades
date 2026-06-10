@@ -26,7 +26,9 @@ def _w_bottom(confirm=True, second_low_offset=0.0):
     seg += list(np.linspace(80, 92, 13))           # interim peak ~15% above
     seg += list(np.linspace(92, 80 + second_low_offset, 13))   # back to low2
     if confirm:
-        seg += list(np.linspace(80 + second_low_offset, 95, 12))  # close above 92
+        # rise to JUST under the line, then the confirming close on the LAST
+        # bar — fresh confirmations are now today/yesterday only (≤24h).
+        seg += list(np.linspace(80 + second_low_offset, 92, 11)) + [96]
     else:
         seg += list(np.linspace(80 + second_low_offset, 88, 12))  # stalls below the line
     return _df(seg)
@@ -72,7 +74,7 @@ def test_inverse_head_shoulders_confirmed():
     seg += list(np.linspace(95, 78, 15))           # head ~78 (deeper)
     seg += list(np.linspace(78, 96, 15))           # peak2
     seg += list(np.linspace(96, 86, 12))           # right shoulder ~86
-    seg += list(np.linspace(86, 99, 12))           # confirm above neckline 96
+    seg += list(np.linspace(86, 96, 11)) + [99.5]  # confirm above neckline ON the last bar
     res = detector.inverse_head_shoulders(_df(seg))
     assert res["fresh"], "should detect the inverse H&S"
     p = res["fresh"][0]
@@ -108,7 +110,8 @@ def _triple(confirm=True, third_low_offset=0.0):
     seg += list(np.linspace(80, 91, 8))
     seg += list(np.linspace(91, 80 + third_low_offset, 8))   # valley 3
     if confirm:
-        seg += list(np.linspace(80 + third_low_offset, 97, 10))  # close above 91
+        # confirming close lands on the LAST bar (fresh = ≤24h)
+        seg += list(np.linspace(80 + third_low_offset, 91, 9)) + [97]
     else:
         seg += list(np.linspace(80 + third_low_offset, 88, 10))  # stalls below the line
     return _df(seg)
@@ -158,7 +161,8 @@ def _cup(confirm=True, handle_break_pct=0.0, v_shaped=False):
     handle_low = 92 - handle_break_pct
     seg += list(np.linspace(99, handle_low, 7))    # the handle (≥ 1 week, upper half)
     if confirm:
-        seg += list(np.linspace(handle_low, 104, 8))   # close above the right rim
+        # handle drift, then the rim-clearing close on the LAST bar (≤24h)
+        seg += list(np.linspace(handle_low, 99, 7)) + [104]
     else:
         seg += list(np.linspace(handle_low, 96, 8))    # never takes out the rim
     return _df(seg)

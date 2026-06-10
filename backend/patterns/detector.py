@@ -26,7 +26,12 @@ LOW_TOLERANCE_PCT = 3.0     # default inside the honest band: 1.5% (LMW Def. 5 s
 MIN_SEPARATION = 23         # CITED — LMW: bottoms "more than 22 trading days" apart (after Edwards & Magee)
 MAX_SEPARATION = 35         # CITED — Bulkowski: most double bottoms fall in the 2–7 week range
 MIN_INTERIM_RISE_PCT = 10.0  # CITED — Bulkowski: ≥10% rise between the bottoms
-CONFIRM_MAX_AGE = 15        # CONVENTION — confirmations older than this (bars) aren't "fresh"
+CONFIRM_MAX_AGE = 1         # CONVENTION — a confirmation is actionable TODAY or yesterday only
+                            # (Ajay 2026-06-09: "current day … or most recent past within 24
+                            # hours. To make a decision in the moment, not to inform me of
+                            # historical cup patterns"). Older confirmations live on ONLY in
+                            # historical_confirms (self-validation + Chart School), never as
+                            # a fresh match. Was 15 — that surfaced 3-week-old entries.
 FORMING_MAX_GAP_PCT = 8.0   # CONVENTION — forming shown only within this of the line
 FORMING_MAX_AGE = 60        # CONVENTION — no confirming close within 60 bars of low2 = expired
 HEAD_DEPTH_PCT = 3.0        # CONVENTION — no head-depth gate is cited anywhere; this is ours

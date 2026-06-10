@@ -216,7 +216,7 @@ export function PatternsPage() {
         </div>
       ) : (
         <>
-          {confirmed.length > 0 && <Section title={`Confirmed — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} />}
+          {confirmed.length > 0 && <Section title={`Confirmed today / yesterday — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} />}
           {forming.length > 0 && <Section title={`Forming — NOT a signal: unconfirmed Ws continue lower 48% of the time (${forming.length})`} rows={forming} navigate={navigate} />}
           {latest.generated_at > 0 && (
             <p style={{ fontSize: '0.68rem', color: C.sub }}>

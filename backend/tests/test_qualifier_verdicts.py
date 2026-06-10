@@ -19,8 +19,8 @@ def _df(closes, start="2025-06-01"):
 def _frames():
     quiet = list(100 + np.random.RandomState(3).normal(0, 0.2, 30))
     w = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 92, 13)) +
-         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 95, 12)))
-    return {"WSTOCK": _df(quiet + w),             # ≥80 bars, ends on a confirmed W
+         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 92, 11)) + [96])
+    return {"WSTOCK": _df(quiet + w),             # ≥80 bars, confirms ON the last bar
             "PLAIN": _df(list(np.linspace(100, 130, 120)))}
 
 
@@ -95,7 +95,7 @@ def _double_w_frame():
     """An OLD confirmed W (complete +21-bar outcome → feeds the chart's own
     record) followed by a FRESH confirmed W (recent → a current match)."""
     w = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 92, 13)) +
-         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 95, 12)))
+         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 92, 11)) + [96])
     quiet = list(100 + np.random.RandomState(5).normal(0, 0.2, 30))
     mid = list(np.linspace(95, 100, 30))
     return _df(quiet + w + mid + w)

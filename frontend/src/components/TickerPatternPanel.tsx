@@ -89,8 +89,13 @@ export function TickerPatternPanel({ symbol }: { symbol: string }) {
                   <b style={{ fontSize: '0.85rem' }}>{LABEL[m.pattern] || m.pattern}</b>
                   <span style={{ fontSize: '0.68rem', fontWeight: 700, color: col,
                                  border: `1px solid ${col}55`, borderRadius: 5, padding: '1px 7px' }}>
-                    {conf ? `CONFIRMED ${m.confirmed_date || ''}` : `FORMING · ${m.to_confirm_pct}% to the line`}
+                    {conf ? `CONFIRMED ${m.bars_since_confirm === 0 ? 'TODAY' : 'yesterday'}` : `FORMING · ${m.to_confirm_pct}% to the line`}
                   </span>
+                  {conf && m.bars_since_confirm === 0 && (
+                    <span style={{ fontSize: '0.64rem', color: C.muted }}>
+                      provisional — counts only if today CLOSES above the line
+                    </span>
+                  )}
                   {conf && m.ext_past_confirm_pct != null && m.ext_past_confirm_pct > 5 && (
                     <span style={{ fontSize: '0.68rem', color: C.amber }}>⚠ +{m.ext_past_confirm_pct}% past the line — extended</span>
                   )}

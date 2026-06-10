@@ -29,7 +29,8 @@ TREND_MIN_PCT = 3.0          # ±3% over the lookback = a trend worth reversing
 SMALL_WICK_PCT = 0.15        # "little or no shadow" operationalized
 TALL_BODY_PCT = 0.60         # "tall" candle = body ≥60% of its range (shared w/ tape layer)
 SMALL_BODY_PCT = 0.30        # the morning-star "star" = body ≤30% of its range
-RECENT_BARS = 3              # formations are only reported on the last N completed bars
+RECENT_BARS = 1              # formations only count on the MOST RECENT bar (Ajay 2026-06-09:
+                             # in-the-moment reads, ≤24h — a hammer from 3 days ago is history)
 VOL_AVG_BARS = 50            # last-bar volume vs this average = participation read
 
 # Bulkowski's measured reversal frequencies — VERIFIED VERBATIM against
