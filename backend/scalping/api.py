@@ -62,6 +62,16 @@ async def scalping_watch(refresh: bool = Query(False, description="Recompute if 
     return JSONResponse(await asyncio.to_thread(sepa_watch.snapshot, refresh))
 
 
+@router.get("/scalping/conviction-scan")
+async def scalping_conviction_scan(n: int = Query(20, ge=5, le=50)):
+    """🌐 Full-universe Top-N conviction scan — every analyzed name (the SEPA
+    gate NOT required) scored by pattern conviction + trend safety + volume
+    magnitude (anti-manipulation rail) + earnings quality when known. Hard
+    exclusions: thin tape, Stage 4, EQ red flags, bearish last-bar candles."""
+    from . import conviction
+    return JSONResponse(await asyncio.to_thread(conviction.top_picks, n))
+
+
 @router.get("/scalping/rally")
 async def scalping_rally(profile: str = Query("aggressive"),
                          min_dollar: float = Query(2.0, ge=0.5, le=20.0)):
