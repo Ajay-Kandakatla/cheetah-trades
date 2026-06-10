@@ -16,13 +16,31 @@ export type PatternFormation = { name: string; date: string; read: string; note:
 export type PatternVerdict = {
   symbol: string;
   matches: PatternMatch[];
-  candles?: { formations: PatternFormation[]; last_bar?: { read?: string } | null } | null;
+  candles?: { formations: PatternFormation[]; last_bar?: { read?: string } | null; trend?: string } | null;
   no_match: boolean;
   sources?: string[];
 };
 
 let cache: { at: number; map: Map<string, PatternVerdict>; generatedAt: number | null } | null = null;
+let inflight: Promise<{ map: Map<string, PatternVerdict>; generatedAt: number | null }> | null = null;
 const CACHE_MS = 60_000;   // verdicts only change when the owner re-scans
+
+function fetchVerdicts() {
+  // Single shared request — a SEPA page mounts one chip per card, so without
+  // this dedup the first render would fire ~100 identical fetches.
+  if (!inflight) {
+    inflight = fetch(`${API}/patterns/qualifiers`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => {
+        const map = new Map<string, PatternVerdict>();
+        for (const v of d?.verdicts || []) map.set((v.symbol || '').toUpperCase(), v);
+        cache = { at: Date.now(), map, generatedAt: d?.generated_at || null };
+        return { map, generatedAt: cache.generatedAt };
+      })
+      .finally(() => { inflight = null; });
+  }
+  return inflight;
+}
 
 export function usePatternVerdicts(): { verdicts: Map<string, PatternVerdict>; generatedAt: number | null } {
   const [state, setState] = useState<{ map: Map<string, PatternVerdict>; generatedAt: number | null }>(
@@ -32,14 +50,8 @@ export function usePatternVerdicts(): { verdicts: Map<string, PatternVerdict>; g
   useEffect(() => {
     let alive = true;
     if (cache && Date.now() - cache.at < CACHE_MS) return;
-    fetch(`${API}/patterns/qualifiers`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d) => {
-        const map = new Map<string, PatternVerdict>();
-        for (const v of d?.verdicts || []) map.set((v.symbol || '').toUpperCase(), v);
-        cache = { at: Date.now(), map, generatedAt: d?.generated_at || null };
-        if (alive) setState({ map, generatedAt: cache.generatedAt });
-      })
+    fetchVerdicts()
+      .then((s) => { if (alive) setState(s); })
       .catch(() => undefined);   // fail quiet
     return () => { alive = false; };
   }, []);

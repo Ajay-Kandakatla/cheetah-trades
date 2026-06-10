@@ -47,6 +47,9 @@ import { SepaConvictionChip, computeConviction } from './SepaConvictionChip';
 // and U.S. govt investment/contractor relationships. Informational only;
 // curated list in src/lib/politicalDisclosures.ts.
 import { SepaPoliticalChip } from './SepaPoliticalChip';
+// Pattern verdict chip (bullish structure + bearish-read warning) — reads the
+// latest 🎯 verdict scan via the shared deduped hook; fails quiet.
+import { SepaPatternChip } from './SepaPatternChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { isMomentumLeader, MOMENTUM_LEADER_TOOLTIP } from '../lib/momentumLeader';
 // Δ score + Δ rank trend chips — pure FE, reads SepaTrendContext for
@@ -433,6 +436,11 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               symbol={row.symbol}
               onOpenDrill={() => setOpenSignal('political_disclosure')}
             />
+            {/* Pattern verdict from the latest 🎯 scan — bullish reversal
+                structure (confirmed/forming) for the swing case, plus a
+                ⚠️ red warning when the recent daily candles printed a
+                bearish read (Ajay 2026-06-09). Tap → /patterns. */}
+            <SepaPatternChip symbol={row.symbol} />
             {lateBase && (
               <span
                 role="button" tabIndex={0}
