@@ -154,6 +154,10 @@ FEATURE_CATALOG: list[dict] = [
     # zones + an entry read (resistance above / support below / favorable-caution).
     # Configured method (not a book method); decision-support, not advice.
     {"id": "zones",         "label": "S/D Zones",           "group": "tools",     "default": False, "added_in": 10},
+    # Patterns (2026-06-09): on-demand bullish-reversal pattern scan (double
+    # bottom, inverse H&S) over the SEPA universe's cached daily frames, with
+    # confirmation-line discipline + our-universe self-validation. Owner-on.
+    {"id": "patterns",      "label": "Patterns",            "group": "tools",     "default": False, "added_in": 12},
     {"id": "live",          "label": "Live Stream",         "group": "tools",     "default": False},
     {"id": "chatter",       "label": "Chatter · US",        "group": "tools",     "default": False},
     {"id": "chatter-india", "label": "Chatter · IN",        "group": "tools",     "default": False},
@@ -203,7 +207,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 11
+CATALOG_VERSION = 12
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

@@ -698,6 +698,11 @@ app.include_router(daytrading_router)
 from scalping.api import router as scalping_router  # noqa: E402
 app.include_router(scalping_router)
 
+# Patterns module — on-demand bullish-reversal pattern scan (double bottom,
+# inverse H&S) over the SEPA universe's cached daily frames, self-validated.
+from patterns.api import router as patterns_router  # noqa: E402
+app.include_router(patterns_router)
+
 # Morning brief — synthesizes regime + day-trade + swing into one answer.
 from morning.brief import router as morning_router  # noqa: E402
 app.include_router(morning_router)
