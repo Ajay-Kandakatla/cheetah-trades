@@ -159,9 +159,14 @@ whether candle PATTERNS predict — and the verified record is mostly null:
 ---
 
 # Patterns page (added 2026-06-09) — bullish-reversal scan, double bottom + inverse H&S
+# (extended same day: triple bottom, cup with handle, qualifier verdicts, daily candle reads)
 
 On-demand scan (owner ⚡ button, like the SEPA full scan) over the SEPA
 universe's cached daily frames. `patterns/detector.py` + `scan.py`.
+Second scope (🎯 Scan Qualifiers): EVERY current SEPA qualifier gets a verdict
+row — matched pattern(s), recent candle formations, or an explicit "no
+pattern". No-match is an answer, not an omission; that's the decision input
+Ajay asked for beside SEPA, VCP and volume.
 Confirmation-line discipline: a pattern exists only once price CLOSES above the
 peak between the bottoms / the neckline (Bulkowski, verified verbatim) — before
 that it renders as "forming — NOT a signal" (unconfirmed double bottoms continue
@@ -197,6 +202,31 @@ and shows that record above any book number.
   H&S 11%, n=3,197, throwback 65%) always with the caveat: daily bars,
   bull-market sample, hindsight-measured, no costs, not peer-reviewed. NEVER
   win rates, average rises, or expected returns.
+- **Bulkowski, second verified pass (2026-06-09, adversarial workflow over
+  tb.html / cup.html and his candle pages — every quote re-fetched, zero
+  refuted)**:
+  - **Triple bottom** (n>2,500): break-even failure 13%, throwback 65%, rank
+    12/39. ID rules used verbatim: three distinct valleys near the same price
+    ("allow variations"), confirmation "once price closes above the highest
+    peak between the valleys". His measure rule multiplies the height by his
+    74% target-hit rate — we use that factor, not full height. SINGLE-SOURCE
+    stats (the reason it was previously deferred); built 2026-06-09 at Ajay's
+    explicit request with this caveat disclosed.
+  - **Cup with handle** (n=913): break-even failure 5%, throwback 62%, rank
+    3/39 — AND his own 1990–2024 lesson, disclosed everywhere the rank is:
+    "47% of the cup with handle patterns dropped substantially within two
+    months of the breakout." ID rules verbatim: U-shaped not V-shaped, cup
+    7–65 weeks, rims near the same level ("be flexible"), handle mandatory,
+    "1 week minimum with no maximum, forming in the upper half of the cup".
+    Measure rule ×61% per the page.
+  - **Candlesticks** (all out of 103 candle types, his hindsight sample):
+    hammer reverses 60% (overall rank 65); shooting star 59% — his words:
+    "near random" (rank 55); southern doji 52% — a coin flip (rank 78);
+    bullish engulfing 63% but overall rank 84 — "the post breakout performance
+    can be dreadful"; bearish engulfing 79% (rank 5) yet "does not imply a
+    lasting reversal" (overall rank 91); morning star 78% (rank 6) with the
+    rare strong post-breakout trend (overall rank 12). These frequencies are
+    NOT win rates and ride next to the academic nulls below.
 
 ## Geometry provenance (CITED vs CONVENTION — constants in patterns/detector.py)
 CITED: bottoms >22 trading days apart (LMW/Edwards & Magee → MIN_SEPARATION 23);
@@ -209,6 +239,33 @@ gate (no depth gate is cited anywhere), horizontal-neckline simplification
 (confirm above the higher armpit — conservative), 60-bar forming expiry,
 under-the-low stop, +21-bar validation horizon.
 
+Triple bottom — CITED: confirmation above the highest peak between the valleys;
+valleys "near the same price, allow variations"; measure-rule ×0.74
+(TB_TARGET_FACTOR). CONVENTION: 3% valley tolerance (reusing the double-bottom
+band), ≥10 bars between adjacent valleys (TB_MIN_ADJ_SEP — "distinct" needs
+separation; no bar count is cited), 120-bar span cap (TB_MAX_SPAN), the shared
+≥10% interim-rise gate. His descriptive volume guideline (downward 61% of the
+time) deliberately does NOT gate.
+
+Cup with handle — CITED: cup 7–65 weeks (CUP_MIN_BARS 35 / CUP_MAX_BARS 325),
+handle mandatory and ≥1 week (HANDLE_MIN_BARS 5) "in the upper half of the cup"
+(the half-level kill), breakout above the right cup lip, measure-rule ×0.61
+(CWH_TARGET_FACTOR). CONVENTION: 5% rim tolerance ("be flexible" — no number
+cited), 8% minimum depth, U-shape operationalized as low-in-the-middle-70%
+plus ≥3 bars within 5% of the low (his "U-shaped, not V-shaped" has no formula),
+stop under the HANDLE low (the cup low invalidates far too late).
+
+## Daily candle reads (patterns/candles_daily.py) — context, never signals
+Named formations (hammer, shooting star, southern doji, bullish/bearish
+engulfing, morning star) are STRUCTURAL definitions from Bulkowski's candle
+pages with a trend gate (a reversal needs a trend to reverse; ±3% over 10 bars,
+CONFIGURED). Every formation carries his verified frequency AND his own
+deflating verdict where he gives one, plus the standing caveat: the academic
+record on candlesticks as standalone predictors is NULL (Marshall, Young & Rose
+2006; Horton 2009; Fock 2005). The last-bar read is the same descriptive
+supply/demand arithmetic as the 5-min tape layer (body %, wicks, CLV, volume
+ratio) — "who won the bar", never "what happens next".
+
 ## Rejected (and why)
 - **Rounding bottom** — Bulkowski himself says find it on WEEKLY charts; any
   daily-bar curvature test is an uncited modeling choice.
@@ -217,4 +274,6 @@ under-the-low stop, +21-bar validation horizon.
 - **Bull flag / high-and-tight flag** — continuation patterns, definitionally
   not a bounce; HTF's "85% success" folklore is contradicted by Bulkowski's own
   current page.
-- **Deferred**: triple bottom (single-source stats), Adam/Eve variant labeling.
+- **Deferred**: Adam/Eve variant labeling. (Triple bottom was deferred here for
+  single-source stats; built 2026-06-09 at Ajay's explicit request with that
+  caveat disclosed above.)
