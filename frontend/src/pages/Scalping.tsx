@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { InfoButton } from '../components/InfoButton';
 import { IntradayChart } from '../components/IntradayChart';
+import { ChartReadingGuide } from '../components/ChartReadingGuide';
 import { useDayBars } from '../hooks/useDayTrading';
 import { useScalpingSignals, type ScalpSignal, type ScalpRegime } from '../hooks/useScalpingSignals';
 import { BacktestPanel, PaperPanel } from '../components/ScalpingResearchPanels';
@@ -224,7 +225,10 @@ export function ScalpingPage() {
         <div style={{ marginTop: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <strong>{selected} — live 1-min (VWAP + opening range)</strong>
-            <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.74rem' }}>Close chart</button>
+            <span style={{ display: 'inline-flex', gap: 6 }}>
+              <ChartReadingGuide />
+              <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.2rem 0.55rem', cursor: 'pointer', fontSize: '0.74rem' }}>Close chart</button>
+            </span>
           </div>
           {/* The pattern-reading strip: latest 5-min candle vs pivot / daily
               pattern line / VWAP / OR + the daily pattern verdict chip. */}

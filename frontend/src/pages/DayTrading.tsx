@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { IntradayChart } from '../components/IntradayChart';
+import { ChartReadingGuide } from '../components/ChartReadingGuide';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
 import { OvernightGappers } from '../components/OvernightGappers';
@@ -297,6 +298,7 @@ export function DayTrading() {
                   RelVol {bars.indicators.relative_volume}× vs 10d avg
                 </span>
               )}
+              <ChartReadingGuide />
             </div>
             <IntradayChart data={bars} signals={symbolSignals} />
           </>

@@ -13,6 +13,7 @@ import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
+import { ChartReadingGuide } from '../components/ChartReadingGuide';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
@@ -930,6 +931,7 @@ export function SepaCandidatePage() {
                     <button type="button" className={chartSource === 'native' ? 'is-active' : ''} onClick={() => setChartSource('native')}>● Live</button>
                     <button type="button" className={chartSource === 'tv' ? 'is-active' : ''} onClick={() => setChartSource('tv')}>TradingView</button>
                   </span>
+                  <ChartReadingGuide />
                   {chartSource === 'native' && (
                     <span className="livechart-toggle">
                       <button type="button" className={chartInterval === 'D' ? 'is-active' : ''} onClick={() => setChartInterval('D')}>D</button>
