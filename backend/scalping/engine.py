@@ -51,7 +51,10 @@ def _market_open(now_et: Optional[datetime] = None) -> bool:
 def _universe(profile: str, limit: int) -> list:
     try:
         from daytrading.universe import day_trade_universe
-        rows = day_trade_universe(profile=profile, limit=limit) or []
+        # BUG FIX 2026-06-10: day_trade_universe returns {"names": [...]}, not a
+        # list — iterating the dict raised inside the comprehension and this
+        # silently fell back to the static list on EVERY scan.
+        rows = (day_trade_universe(profile=profile, limit=limit) or {}).get("names") or []
         syms = [r.get("symbol") for r in rows if r.get("symbol")]
         if syms:
             return syms[:limit]

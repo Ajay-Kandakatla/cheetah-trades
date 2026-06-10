@@ -62,6 +62,17 @@ async def scalping_watch(refresh: bool = Query(False, description="Recompute if 
     return JSONResponse(await asyncio.to_thread(sepa_watch.snapshot, refresh))
 
 
+@router.get("/scalping/rally")
+async def scalping_rally(profile: str = Query("aggressive"),
+                         min_dollar: float = Query(2.0, ge=0.5, le=20.0)):
+    """The 🚀 confirmed-bullish rally screen: names that confirmed a bullish
+    daily pattern (≤1d) or clear the full Minervini buy gate, with a typical
+    daily range ≥ $min_dollar (price × ADR), no bearish last-bar candle, and a
+    live tape check on the leaders. Capacity, not prediction — not advice."""
+    from . import rally
+    return JSONResponse(await asyncio.to_thread(rally.candidates, profile, min_dollar))
+
+
 @router.get("/scalping/tape-read/{symbol}")
 async def scalping_tape_read(symbol: str):
     """On-demand single-symbol tape read: the latest completed 5-min candle vs

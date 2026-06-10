@@ -18,6 +18,7 @@ import { LiveTapeRead } from '../components/LiveTapeRead';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
 import { OnDemandPatternScan } from '../components/OnDemandPatternScan';
+import { RallyScanPanel } from '../components/RallyScanPanel';
 import { useDayUniverse } from '../hooks/useDayTrading';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
@@ -165,6 +166,11 @@ export function ScalpingPage() {
         <TabBtn id="backtest" label="Backtest (~1mo)" />
         <TabBtn id="paper" label="Paper trade" />
       </div>
+
+      {/* 🚀 Confirmed bullish + room to rally a few $ (Ajay 2026-06-10) —
+          on-demand: pattern ✓ ≤1d or full buy gate, no bearish candle,
+          typical daily range ≥ $2, live tape check on the leaders. */}
+      <RallyScanPanel profile={profile} onChart={(s) => setSelected(s)} />
 
       {/* 📐 On-demand daily-pattern scan of today's movers + live signal names
           (Ajay 2026-06-10: the on-demand scan button this page was missing). */}
