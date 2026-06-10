@@ -513,9 +513,11 @@ export function SepaCandidatePage() {
   // ~15-min delay for non-subscribers and sometimes doesn't auto-tick
   // when the tab regains focus — a manual reload is the cheap fix.
   const [chartReloadKey, setChartReloadKey] = useState(0);
-  // Native (live, our data) is the default; TradingView embed kept for its
-  // full drawing toolset. (Ajay 2026-06-04: the embed can't use his paid TV.)
-  const [chartSource, setChartSource] = useState<'native' | 'tv'>('native');
+  // TradingView widget is the DEFAULT chart (Ajay 2026-06-10: "for the chart
+  // I wanted the trading view widget, not ours"). This is TV's free public
+  // embed — no approval needed; the approval-gated Advanced Charting Library
+  // stays removed. The native live chart remains behind the ● Live toggle.
+  const [chartSource, setChartSource] = useState<'native' | 'tv'>('tv');
   const [chartInterval, setChartInterval] = useState<ChartInterval>('D');
 
   useEffect(() => {
