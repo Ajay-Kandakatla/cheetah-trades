@@ -17,6 +17,8 @@ import { MacroRiskBadge, MacroMarketStrip, type MacroRisk, type MacroMarket } fr
 import { Heatmap, type HeatTile } from './Heatmap';
 import { MarketContextStrip } from './MarketContextStrip';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
+import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
+import { PatternChips } from './PatternChips';
 
 type Leader = {
   symbol: string;
@@ -108,13 +110,15 @@ const FLAG: Record<Leader['flag'], { label: string; color: string }> = {
   steady:       { label: 'Steady', color: '#38bdf8' },
 };
 
-type SortKey = 'current_rank' | 'best_rank' | 'rank_range' | 'current_score' | 'persistence_pct';
+type SortKey = 'current_rank' | 'best_rank' | 'rank_range' | 'current_score' | 'persistence_pct' | 'pattern';
 const SORTS: { key: SortKey; label: string; dir: 'asc' | 'desc'; get: (l: Leader) => number | null }[] = [
   { key: 'current_rank',    label: 'Rank',    dir: 'asc',  get: (l) => l.current_rank },
   { key: 'best_rank',       label: 'Best',    dir: 'asc',  get: (l) => l.best_rank },
   { key: 'rank_range',      label: 'Swing',   dir: 'desc', get: (l) => l.rank_range },
   { key: 'current_score',   label: 'Score',   dir: 'desc', get: (l) => l.current_score ?? null },
   { key: 'persistence_pct', label: 'Persist', dir: 'desc', get: (l) => l.persistence_pct },
+  // resolved against the latest 🎯 verdict scan in the sort memo (needs the map)
+  { key: 'pattern',         label: '📐 Pattern', dir: 'asc', get: () => null },
 ];
 
 const REFRESH_MS = 60_000;
@@ -146,8 +150,11 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
     else { setSortKey(s.key); setSortDir(s.dir); }
   }
 
+  const { verdicts } = usePatternVerdicts();
   const rows = useMemo(() => {
-    const get = SORTS.find((s) => s.key === sortKey)!.get;
+    const get = sortKey === 'pattern'
+      ? (l: Leader) => patternRank(verdicts.get(l.symbol.toUpperCase()))
+      : SORTS.find((s) => s.key === sortKey)!.get;
     return [...(data?.leaders ?? [])].sort((a, b) => {
       const av = get(a), bv = get(b);
       if (av == null && bv == null) return 0;
@@ -155,7 +162,7 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
       if (bv == null) return -1;
       return sortDir === 'asc' ? av - bv : bv - av;
     });
-  }, [data, sortKey, sortDir]);
+  }, [data, sortKey, sortDir, verdicts]);
 
   // Leaderboard heatmap (Leaderboard page only): live day-change colour, score size.
   const liveQuotes = useLivePortfolio(heatmap ? rows.map((r) => r.symbol) : []);
@@ -294,6 +301,7 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
                     <> · <span style={{ color: '#f59e0b' }} title={`Laggard in ${l.industry} — RS #${l.group_rs_rank}/${l.group_size}, trails leader ${l.group_leader_symbol ?? ''} (Minervini Ch.6, p.108 "stay away from the laggards").`}>⤵ laggard vs {l.group_leader_symbol ?? 'leader'}</span></>
                   )}
                 </span>
+                {' '}<PatternChips v={verdicts.get(l.symbol.toUpperCase())} />
                 {l.macro_risk && <MacroRiskBadge risk={l.macro_risk} marketScore={data.macro_market?.score} compact />}
                 {l.drop_reason && <span className="rank-lb__why">↓ {l.drop_reason}</span>}
               </span>

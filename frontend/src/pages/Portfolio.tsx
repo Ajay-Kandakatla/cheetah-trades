@@ -10,8 +10,11 @@
  * page. Holdings come from /portfolio/holdings (manual rows); add via the form,
  * remove via the 🗑. Backend untouched.
  */
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
+import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
+import { PatternChips } from '../components/PatternChips';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
@@ -51,10 +54,23 @@ function pct(n: number | null | undefined): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 }
 
+type HoldSortKey = 'default' | 'value' | 'pl' | 'plpct' | 'day' | 'symbol' | 'pattern';
+const HOLD_SORTS: { key: HoldSortKey; label: string; dir: 'asc' | 'desc' }[] = [
+  { key: 'value',   label: 'Value',     dir: 'desc' },
+  { key: 'pl',      label: 'P&L $',     dir: 'desc' },
+  { key: 'plpct',   label: 'P&L %',     dir: 'desc' },
+  { key: 'day',     label: 'Day %',     dir: 'desc' },
+  { key: 'symbol',  label: 'A–Z',       dir: 'asc' },
+  { key: 'pattern', label: '📐 Pattern', dir: 'asc' },
+];
+
 export default function PortfolioPage() {
   const navigate = useNavigate();
   const { data, loading, error, refresh, updatedAt } = useHoldings(true);
   const rows: HoldingRow[] = data?.rows ?? [];
+  const { verdicts } = usePatternVerdicts();
+  const [sortKey, setSortKey] = useState<HoldSortKey>('default');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Live SSE quotes (same stream the chart uses) overlaid on the delayed
   // endpoint snapshot — so price / value / P&L / totals tick in real-time like
@@ -84,6 +100,39 @@ export default function PortfolioPage() {
 
   const totalValue = rows.reduce((s, r) => s + (liveView(r).value ?? 0), 0);
   const totalPL = rows.reduce((s, r) => s + (liveView(r).pl ?? 0), 0);
+
+  // Sortable holdings (Ajay 2026-06-09) — live values feed the sort, so P&L /
+  // value / day ordering tracks the stream. 'default' keeps insertion order.
+  const sortedRows = useMemo(() => {
+    if (sortKey === 'default') return rows;
+    const val = (r: HoldingRow): number | string | null => {
+      const lv = liveView(r);
+      switch (sortKey) {
+        case 'value':   return lv.value ?? null;
+        case 'pl':      return lv.pl ?? null;
+        case 'plpct':   return lv.plPct ?? null;
+        case 'day':     return live.get((r.symbol || '').toUpperCase())?.day_pct ?? r.day_change_pct ?? null;
+        case 'symbol':  return r.symbol || '';
+        case 'pattern': return patternRank(verdicts.get((r.symbol || '').toUpperCase()));
+        default:        return null;
+      }
+    };
+    return [...rows].sort((a, b) => {
+      const av = val(a), bv = val(b);
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;                        // nulls last
+      if (bv == null) return -1;
+      const cmp = typeof av === 'string'
+        ? av.localeCompare(String(bv))
+        : (av as number) - (bv as number);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [rows, sortKey, sortDir, live, verdicts]);
+
+  const clickSort = (s: { key: HoldSortKey; dir: 'asc' | 'desc' }) => {
+    if (s.key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(s.key); setSortDir(s.dir); }
+  };
 
   // Day heatmap tiles — sized by live position value, coloured by today's move.
   const heatTiles: HeatTile[] = rows.map((r) => ({
@@ -161,8 +210,22 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {rows.length > 1 && (
+        <div className="rank-lb__sortbar mono" style={{ marginTop: '0.6rem' }}>
+          <span className="rank-lb__sortlabel">sort:</span>
+          {HOLD_SORTS.map((s) => {
+            const on = s.key === sortKey;
+            return (
+              <button key={s.key} className={`rank-lb__sortchip${on ? ' is-on' : ''}`} onClick={() => clickSort(s)}>
+                {s.label}{on ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="portfolio-list">
-        {rows.map((r) => {
+        {sortedRows.map((r) => {
           // PER-SHARE average cost — `avg_cost` is per share; `cost_basis` is the
           // TOTAL dollars invested, so derive per-share from it as a fallback.
           const entry =
@@ -190,6 +253,7 @@ export default function PortfolioPage() {
                       {r.name.length > 40 ? r.name.slice(0, 40) + '…' : r.name}
                     </span>
                   )}
+                  <PatternChips v={verdicts.get((r.symbol || '').toUpperCase())} />
                 </div>
                 <button
                   type="button"

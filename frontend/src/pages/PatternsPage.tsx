@@ -34,7 +34,7 @@ type Candles = {
 };
 type Verdict = {
   symbol: string; sepa?: Sepa; matches: Pattern[]; historical?: Record<string, number>;
-  candles?: Candles | null; no_match: boolean; error?: string;
+  candles?: Candles | null; no_match: boolean; error?: string; sources?: string[];
 };
 type QualLatest = {
   generated_at: number; n_symbols: number; n_matched?: number; n_candle_only?: number;
@@ -240,7 +240,7 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>🎯 Qualifier verdicts</div>
         <span style={{ fontSize: '0.72rem', color: C.muted }}>
-          {q.n_symbols} qualifiers · {matched.length} match a pattern · {candleOnly.length} candle reads only · {noMatch.length} no pattern
+          {q.n_symbols} names (qualifiers + holdings + leaders) · {matched.length} match a pattern · {candleOnly.length} candle reads only · {noMatch.length} no pattern
         </span>
         {q.generated_at > 0 && (
           <span style={{ marginLeft: 'auto', fontSize: '0.66rem', color: C.sub }}>
@@ -290,9 +290,18 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
   );
 }
 
+// Where this name lives in the app — the reverse cross-link (chip → that page).
+const SOURCE_META: Record<string, { icon: string; label: string; to: string } | undefined> = {
+  holding: { icon: '💼', label: 'Holding', to: '/portfolio' },
+  leader: { icon: '🏆', label: 'Leader', to: '/leaderboard' },
+  at_pivot: { icon: '🎯', label: 'At pivot', to: '/leaderboard' },
+};
+
 function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void }) {
   const s = v.sepa || {};
   const formations = v.candles?.formations || [];
+  const sources = (v.sources || []).map((k) => SOURCE_META[k]).filter(Boolean) as
+    { icon: string; label: string; to: string }[];
   return (
     <div style={{ padding: '0.45rem 0.6rem', borderRadius: 8, marginBottom: 5,
                   background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)' }}>
@@ -303,6 +312,14 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
           {v.symbol}
         </button>
         {s.is_buyable && <span style={{ fontSize: '0.64rem', color: C.green }}>✅ buyable</span>}
+        {sources.map((m) => (
+          <button key={m.label} onClick={() => navigate(m.to)}
+                  title={`This name is on your ${m.label === 'Holding' ? 'Portfolio' : 'Leaderboard'} — click to open`}
+                  style={{ fontSize: '0.62rem', color: C.muted, cursor: 'pointer', background: 'transparent',
+                           border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 5, padding: '0 6px' }}>
+            {m.icon} {m.label}
+          </button>
+        ))}
         {s.rs_rank != null && <span style={{ fontSize: '0.68rem', color: C.muted }}>RS {s.rs_rank}</span>}
         {s.stage != null && <span style={{ fontSize: '0.68rem', color: C.muted }}>Stage {s.stage}</span>}
         {v.matches.map((p, i) => {

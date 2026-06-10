@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
+import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
+import { PatternChips } from './PatternChips';
 
 type Pick = {
   symbol: string;
@@ -65,6 +67,7 @@ function statusOf(p: Pick): { label: string; color: string } {
 export function SepaTopPicks({ n = 3 }: { n?: number }) {
   const [data, setData] = useState<Resp | null>(null);
   const [err, setErr] = useState(false);
+  const { verdicts } = usePatternVerdicts();
 
   useEffect(() => {
     let alive = true;
@@ -107,6 +110,7 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
                   <span className="top-pick__badge" style={{ color: s.color, borderColor: s.color }}>
                     {s.label}
                   </span>
+                  <PatternChips v={verdicts.get(p.symbol.toUpperCase())} />
                 </div>
                 {lev.isLeveraged && (
                   <div className="top-pick__lev" title="Leveraged/inverse ETF — daily-rebalance decay + amplified drawdown; SEPA/Minervini criteria don't apply.">
