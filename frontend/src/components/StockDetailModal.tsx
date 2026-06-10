@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
 import type { WatchlistStock } from '../data/watchlist';
+// Native live chart (lightweight-charts, our own data feed). The TradingView
+// widget embed was removed 2026-06-10 — no embed approval, and it was ~15-min
+// delayed anyway. External TV links below are plain hyperlinks and stay.
+import { LiveCandlesChart } from './LiveCandlesChart';
 
 interface Props {
   symbol: string;
@@ -19,9 +23,6 @@ export function StockDetailModal({ symbol, meta, onClose }: Props) {
       document.body.style.overflow = '';
     };
   }, [onClose]);
-
-  const tvSymbol = `NASDAQ:${symbol}`;
-  const chartSrc = `https://s.tradingview.com/widgetembed/?frameElementId=tv-chart&symbol=${encodeURIComponent(tvSymbol)}&interval=D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&hide_side_toolbar=0&allow_symbol_change=1&save_image=0&studies=%5B%5D&locale=en`;
 
   return (
     <div
@@ -57,13 +58,7 @@ export function StockDetailModal({ symbol, meta, onClose }: Props) {
         </header>
 
         <div className="cm-modal__chart">
-          <iframe
-            id="tv-chart"
-            title={`${symbol} price chart`}
-            src={chartSrc}
-            style={{ width: '100%', height: '100%', border: 0 }}
-            allow="clipboard-write"
-          />
+          <LiveCandlesChart symbol={symbol} interval="D" />
         </div>
 
         <footer className="cm-modal__links">

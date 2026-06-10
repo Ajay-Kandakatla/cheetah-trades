@@ -182,69 +182,6 @@ const SmartMoneyInfo = (
   </>
 );
 
-// Hardcoded TradingView prefix overrides for foreign ADRs and dual-listed
-// names where Massive / Finnhub's exchange-name string isn't reliable.
-// E.g. ASML's profile is sometimes returned with "NEW YORK STOCK EXCHANGE"
-// even though it actually trades on NASDAQ (ASML on Nasdaq Global Select).
-// Without this override TradingView gets `NYSE:ASML` and shows
-// "This symbol doesn't exist".
-const TV_SYMBOL_OVERRIDES: Record<string, string> = {
-  // European tech
-  ASML: 'NASDAQ:ASML',
-  ARM:  'NASDAQ:ARM',
-  // European telecom / Nordics — NOK (Nokia, Finnish) trades on NYSE.
-  // Profile lookup sometimes returns NASDAQ for legacy reasons and trips
-  // TradingView's "This symbol doesn't exist" empty state.
-  NOK:  'NYSE:NOK',
-  ERIC: 'NASDAQ:ERIC',  // Ericsson (Swedish ADR)
-  // Chinese ADRs
-  BABA: 'NYSE:BABA',
-  JD:   'NASDAQ:JD',
-  PDD:  'NASDAQ:PDD',
-  BIDU: 'NASDAQ:BIDU',
-  NTES: 'NASDAQ:NTES',
-  NIO:  'NYSE:NIO',
-  XPEV: 'NYSE:XPEV',
-  LI:   'NASDAQ:LI',
-  // Asian / other ADRs
-  TSM:  'NYSE:TSM',
-  SONY: 'NYSE:SONY',
-  TM:   'NYSE:TM',
-  HMC:  'NYSE:HMC',
-  // European pharma
-  NVO:  'NYSE:NVO',
-  NVS:  'NYSE:NVS',
-  AZN:  'NASDAQ:AZN',
-  GSK:  'NYSE:GSK',
-  // Misc
-  SE:   'NYSE:SE',
-  SHOP: 'NYSE:SHOP',
-  SAP:  'NYSE:SAP',
-};
-
-function tvSymbolFor(symbol: string, exchange?: string): string {
-  const upperSym = (symbol || '').toUpperCase();
-  // Check known-bad-data override first
-  if (TV_SYMBOL_OVERRIDES[upperSym]) return TV_SYMBOL_OVERRIDES[upperSym];
-
-  const ex = (exchange || '').toUpperCase();
-  // Massive / Finnhub return the full exchange name ("NEW YORK STOCK EXCHANGE,
-  // INC.", "NASDAQ GLOBAL SELECT MARKET", "NYSE AMERICAN", etc.). Match on
-  // both the abbreviation and the full name so we don't mis-route a NYSE-
-  // listed ticker (like ALB) to NASDAQ — that triggers TradingView's
-  // "This symbol doesn't exist" empty state.
-  // IMPORTANT: NASDAQ check goes BEFORE NYSE so a string like
-  // "NASDAQ NMS" doesn't accidentally match the broader NYSE patterns.
-  if (ex.includes('NASDAQ')) return `NASDAQ:${symbol}`;
-  if (ex.includes('NYSE AMERICAN') || ex.includes('AMEX')) return `AMEX:${symbol}`;
-  if (ex.includes('NEW YORK STOCK EXCHANGE') || ex.includes('NYSE ARCA') ||
-      ex.startsWith('NYSE')) return `NYSE:${symbol}`;
-  if (ex.includes('CBOE') || ex.includes('BATS')) return `BATS:${symbol}`;
-  // Unknown exchange — let TradingView's symbol-search auto-resolve it.
-  // Returning bare symbol is safer than a wrong prefix.
-  return symbol;
-}
-
 import { usePageContext } from '../hooks/usePageContext';
 
 const PivotFrameworkInfo = (
@@ -507,15 +444,6 @@ export function SepaCandidatePage() {
     ?? data?.last_close
     ?? null;
 
-  // Force-reload counter for the TradingView iframe. Incrementing this
-  // changes the <iframe key>, React unmounts + remounts, and the embed
-  // re-fetches its data. Useful because the free widgetembed has a
-  // ~15-min delay for non-subscribers and sometimes doesn't auto-tick
-  // when the tab regains focus — a manual reload is the cheap fix.
-  const [chartReloadKey, setChartReloadKey] = useState(0);
-  // Native (live, our data) is the default; TradingView embed kept for its
-  // full drawing toolset. (Ajay 2026-06-04: the embed can't use his paid TV.)
-  const [chartSource, setChartSource] = useState<'native' | 'tv'>('native');
   const [chartInterval, setChartInterval] = useState<ChartInterval>('D');
 
   useEffect(() => {
@@ -717,9 +645,7 @@ export function SepaCandidatePage() {
           )}
           {/* Live price badge — pulls from the SSE bus (Finnhub WS feed)
               via useLiveQuote. This is the page's authoritative "what
-              is MU trading at RIGHT NOW" — much fresher than the
-              embedded TradingView iframe below which is ~15 min
-              delayed for non-subscribers. Falls back to last_close
+              is MU trading at RIGHT NOW". Falls back to last_close
               when WS hasn't started streaming yet. */}
           {(currentLivePrice != null || live?.last_price != null) && (() => {
             const price = currentLivePrice;
@@ -922,89 +848,25 @@ export function SepaCandidatePage() {
           <div className="sepa-candidate-page__body">
             {tab === 'chart' && (
               <section>
+                {/* TradingView widget embed removed 2026-06-10 (Ajay: no embed
+                    approval from TradingView, and it was ~15-min delayed and
+                    limiting). The native chart below is lightweight-charts
+                    (TradingView's Apache-licensed open-source library) over our
+                    own real-time feed — no embed, no approval needed. External
+                    TV links in the row below are plain hyperlinks and stay. */}
                 <div className="sepa-tab-help" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <strong>Chart</strong>
                   <span className="livechart-toggle">
-                    <button type="button" className={chartSource === 'native' ? 'is-active' : ''} onClick={() => setChartSource('native')}>● Live</button>
-                    <button type="button" className={chartSource === 'tv' ? 'is-active' : ''} onClick={() => setChartSource('tv')}>TradingView</button>
+                    <button type="button" className={chartInterval === 'D' ? 'is-active' : ''} onClick={() => setChartInterval('D')}>D</button>
+                    <button type="button" className={chartInterval === '1m' ? 'is-active' : ''} onClick={() => setChartInterval('1m')}>1m</button>
                   </span>
-                  {chartSource === 'native' && (
-                    <span className="livechart-toggle">
-                      <button type="button" className={chartInterval === 'D' ? 'is-active' : ''} onClick={() => setChartInterval('D')}>D</button>
-                      <button type="button" className={chartInterval === '1m' ? 'is-active' : ''} onClick={() => setChartInterval('1m')}>1m</button>
-                    </span>
-                  )}
                   <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>
-                    {chartSource === 'native'
-                      ? 'Real-time from your own feed — the current candle ticks live.'
-                      : 'TradingView’s full toolset (embed is ~15-min delayed).'}
+                    Real-time from your own feed — the current candle ticks live.
                   </span>
                 </div>
                 <div className="sepa-candidate-page__chart">
-                  {chartSource === 'native' ? (
-                    <LiveCandlesChart symbol={symbol} interval={chartInterval} />
-                  ) : (
-                    <iframe
-                      key={chartReloadKey}
-                      title={`${symbol} live chart`}
-                      src={`https://s.tradingview.com/widgetembed/?frameElementId=tv-sepa-${symbol}&symbol=${encodeURIComponent(tvSymbolFor(symbol, data?.profile?.exchange))}&interval=D&theme=dark&style=1&timezone=America%2FNew_York&withdateranges=1&hide_side_toolbar=0&allow_symbol_change=1&save_image=0&studies=%5B%5D&locale=en`}
-                      style={{ width: '100%', height: '100%', border: 0 }}
-                      allow="clipboard-write"
-                    />
-                  )}
+                  <LiveCandlesChart symbol={symbol} interval={chartInterval} />
                 </div>
-                {chartSource === 'tv' && (
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  flexWrap: 'wrap', gap: '0.4rem',
-                  fontSize: '0.7rem', color: 'var(--cm-slate)',
-                  margin: '0.3rem 0 0.4rem', padding: '0.3rem 0.5rem',
-                  background: 'rgba(255,255,255,0.02)', borderRadius: 4,
-                }}>
-                  <span>
-                    🕐 TradingView embed is delayed ~15 min (a paid TV account can’t unlock the
-                    embed — it’s anonymous). Switch to <strong>● Live</strong> for real-time from your feed.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setChartReloadKey((k) => k + 1)}
-                    style={{
-                      background: 'none', border: '1px solid var(--rule, #555)',
-                      color: 'var(--ink, inherit)', padding: '2px 8px',
-                      borderRadius: 3, cursor: 'pointer', fontSize: '0.7rem',
-                    }}
-                    title="Force-reload the chart iframe — useful when it freezes after tab refocus."
-                  >
-                    ↻ Reload chart
-                  </button>
-                </div>
-                )}
-                {chartSource === 'tv' && (
-                  <div className="sepa-tv-canslim">
-                    <a
-                      className="sepa-tv-canslim__add"
-                      href="https://www.tradingview.com/script/QqSTfaiF-Extended-CANSLIM-Indicator/"
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Opens the Extended CANSLIM indicator on TradingView. Click 'Add to Chart', then save it to your default layout so it loads on every chart you open there."
-                    >
-                      📈 Add the Extended CANSLIM indicator
-                    </a>
-                    <a
-                      className="sepa-tv-canslim__open"
-                      href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbolFor(symbol, data?.profile?.exchange))}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      ↗ Open {symbol} in your TradingView (full toolset · your saved indicators)
-                    </a>
-                    <span className="sepa-tv-canslim__note">
-                      Custom indicators live on TradingView itself — the in-app embed above is anonymous, so it
-                      can’t carry them. Add CANSLIM once and save it to your <strong>default layout</strong>; it
-                      then shows every time you open the full chart from here.
-                    </span>
-                  </div>
-                )}
                 <div className="sepa-drawer__chart-links">
                   <a href={`https://www.tradingview.com/symbols/${symbol}/`} target="_blank" rel="noreferrer">Open in TradingView</a>
                   <a href={`https://finance.yahoo.com/quote/${symbol}`} target="_blank" rel="noreferrer">Yahoo Finance</a>
