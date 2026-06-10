@@ -715,6 +715,11 @@ app.include_router(overnight_router)
 from supply_demand.api import router as supply_demand_router  # noqa: E402
 app.include_router(supply_demand_router)
 
+# Giants module — full per-fund 13F portfolios from SEC EDGAR: "where the
+# giants are buying" aggregate leaderboard + per-symbol money rotation.
+from giants.api import router as giants_router  # noqa: E402
+app.include_router(giants_router)
+
 
 # Catalysts — tiny-stock catalyst + chatter scanner (RYOJ-style names).
 from catalysts.api import router as catalysts_router  # noqa: E402

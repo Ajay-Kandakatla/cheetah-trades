@@ -425,6 +425,14 @@
 # "are our patterns accurate?" record Ajay asked for 2026-06-10.
 20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
 #
+# Giants 13F flows — 5:35 PM ET weekdays. Checks SEC EDGAR for new 13F-HR
+# filings from the curated Tier S/A funds (giants/registry.py), parses any
+# new full-portfolio information tables, and rebuilds the "where the giants
+# are buying" aggregate + rotation doc. Filings are immutable and cached
+# forever, so outside the quarterly windows (mid-Feb/May/Aug/Nov) this is
+# just ~38 cheap submissions checks + a re-aggregation.
+35     17    *    *    1-5  /usr/local/bin/python -m giants.refresh
+#
 # ============================================================================
 # Market open / close reminders — 15 min before each bell, weekdays only
 # ============================================================================
