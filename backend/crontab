@@ -403,6 +403,12 @@
 # push/subs.py _is_in_quiet_hours.
 0      *     *    *    *    /usr/local/bin/python -m flashcards.flashcards hourly
 #
+# Chart School daily quiz — 8:40 AM ET weekdays: generate today's 2 real-chart
+# pattern-identification exercises (historical confirmations from the scan
+# universe, cut at the confirmation bar) + one push under the learning pref.
+# Page: /chart-school. Generated on-demand too if this cron misses.
+40     8     *    *    1-5  /usr/local/bin/python -m flashcards.chart_quiz
+#
 # ============================================================================
 # Market open / close reminders — 15 min before each bell, weekdays only
 # ============================================================================

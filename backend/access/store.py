@@ -168,10 +168,15 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "todos",         "label": "Todos",               "group": "account",   "default": True},
     {"id": "watchlist",     "label": "Watchlist",           "group": "account",   "default": False},
     {"id": "glossary",      "label": "Glossary",            "group": "account",   "default": True},
-    # Education — Minervini Learning module. Surfaces the 90-card
-    # flashcard bank by topic with deep-links from push notifications.
+    # Education — Minervini Learning module. Surfaces the flashcard bank
+    # by topic with deep-links from push notifications.
     # Default ON for everyone — trading education isn't owner-only.
     {"id": "learn",         "label": "Learning",            "group": "account",   "default": True},
+    # Chart School (2026-06-09): the visual half of learning — daily real-chart
+    # pattern-ID quiz (from the scan universe's historical confirmations),
+    # Bulkowski pattern library with the supply/demand WHY, candle-read anatomy
+    # tied to the SEPA Watch alert states, and the 8-week curriculum. Default ON.
+    {"id": "chart-school",  "label": "Chart School",        "group": "account",   "default": True, "added_in": 13},
     # Usage heatmap — personal analytics: which pages/features Ajay uses
     # heavily + a weekday×hour heatmap. Owner-on via added_in/VERSION.
     {"id": "usage",         "label": "Usage Heatmap",       "group": "account",   "default": False, "added_in": 6},
@@ -207,7 +212,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 12
+CATALOG_VERSION = 13
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

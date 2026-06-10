@@ -375,6 +375,94 @@ EDGE_MATH_CARDS: list[dict] = [
 
 # ===========================================================================
 # HOUR → TOPIC routing
+# ── CHART PATTERNS — Bulkowski geometry + the WHY (supply/demand mechanics) ──
+# Added 2026-06-09 (Ajay: "I want to understand the why behind the chart
+# pattern"). Sources verified in this repo's adversarial evidence passes (see
+# docs/scalping_methodology.md → Patterns): Bulkowski quoted only in permitted
+# framings; the WHY is Minervini's overhead-supply mechanics (TLSMW pp.204-206).
+CHART_PATTERN_CARDS: list[dict] = [
+    {"topic": "chart_patterns", "title": "🗺️ The master key — every base is ONE story",
+     "body":  "VCP, cup-handle, double bottom, flat base — the same story in different shapes: price returns to a resistance level, each visit absorbs more overhead supply, sellers exhaust, then modest demand pops it through. The pattern doesn't predict the breakout — the BEHAVIOR at resistance does.",
+     "source": "Minervini TLSMW pp.204-206 · curriculum wk.2"},
+    {"topic": "chart_patterns", "title": "🗺️ Why resistance exists — trapped buyers",
+     "body":  "Who sells at the old high? (1) Trapped buyers who bought there, sat through the drawdown, and 'just want out even.' (2) Bottom-fishers nailing down quick profit. Their selling IS the resistance. A base is the time it takes to exhaust them.",
+     "source": "Minervini TLSMW pp.204-205"},
+    {"topic": "chart_patterns", "title": "W Double bottom — the anatomy",
+     "body":  "Two near-equal lows, weeks apart (most form in 2-7 weeks), with a ≥10% peak between them. The BUY POINT is that middle peak — not the lows. Bulkowski: the pattern only EXISTS once price closes above that peak.",
+     "source": "Bulkowski ThePatternSite (eedb) · LMW 2000"},
+    {"topic": "chart_patterns", "title": "W Double bottom — WHY the second low matters",
+     "body":  "The second trip to the low is a TEST: does new selling show up at the old price? When it holds (or briefly undercuts then snaps back), the weak holders who were going to sell already have. The undercut flushes the last stops — fewer sellers left for the move up.",
+     "source": "O'Neil HTMMIS · Minervini shakeout concept"},
+    {"topic": "chart_patterns", "title": "W Unconfirmed = NOT a pattern",
+     "body":  "Bulkowski's verified number: unconfirmed double bottoms continue LOWER 48% of the time — a coin flip. The W shape means nothing until a daily CLOSE above the middle peak. Before that it's a shape you watch, never a signal you act on.",
+     "source": "Bulkowski ThePatternSite, verified 2026-06-09"},
+    {"topic": "chart_patterns", "title": "W Adam vs Eve bottoms",
+     "body":  "Bulkowski names bottoms by shape: ADAM = narrow, V-shaped, single-spike low (panic). EVE = wide, rounded, choppy low (gradual exhaustion). Eve&Eve is his best double-bottom variant (12% break-even failure in his hindsight database; caveats apply).",
+     "source": "Bulkowski, Encyclopedia of Chart Patterns"},
+    {"topic": "chart_patterns", "title": "👤 Inverse H&S — the anatomy",
+     "body":  "Three lows: the middle (head) lowest, the two shoulders near-equal (within ~1.5% in the academic definition). Neckline through the two interim peaks. Confirmation = close above the neckline. Target convention: head-to-neckline height added above.",
+     "source": "Lo-Mamaysky-Wang 2000 Def.1 · Bulkowski hsb"},
+    {"topic": "chart_patterns", "title": "👤 Inverse H&S — WHY it works when it works",
+     "body":  "The head is the panic low. The right shoulder makes a HIGHER low — sellers couldn't push it back down. That failed retest + shorts covering through the neckline is the demand that fuels the breakout. The best-studied reversal: two peer-reviewed predictive results (FX & US indices) — both short of standalone profitability.",
+     "source": "Chang & Osler 1999 · Savin et al. 2007"},
+    {"topic": "chart_patterns", "title": "☕ Cup-with-handle — why the handle exists",
+     "body":  "The cup works through most of the overhead supply; the handle is the FINAL shakeout — a quiet downward drift in the upper half of the cup that clears the last weak hands. A handle that forms in the LOWER half or wedges upward = supply still in control. Buy through the handle high.",
+     "source": "O'Neil HTMMIS · Bulkowski cup.html"},
+    {"topic": "chart_patterns", "title": "📏 Flat base — boring is bullish",
+     "body":  "A shallow (≤15%) sideways shelf after a run-up. Why it's strong: holders REFUSE to sell despite weeks of chop — no supply. Often stacks on a prior base ('base on base'). Tight weekly closes + RS line at highs = institutions sitting on the bid.",
+     "source": "O'Neil HTMMIS · IBD base reading"},
+    {"topic": "chart_patterns", "title": "🚩 Bull flag — continuation, NOT a bounce",
+     "body":  "A flag needs a POLE: a sharp prior advance, then a light-volume drift against it. It's a rest in a trend, not a bottom — don't confuse it with reversal patterns. Red flag: the flag retraces >50% of the pole.",
+     "source": "Bulkowski flags.html · curriculum wk.3"},
+    {"topic": "chart_patterns", "title": "📐 The measure rule is a convention",
+     "body":  "Target = pattern height added to the breakout. Even in Bulkowski's hindsight-perfect data it's met only ~65-73% of the time. Use it to judge whether the trade's reward justifies the risk BEFORE entry — never as a prediction.",
+     "source": "Bulkowski, Encyclopedia of Chart Patterns"},
+    {"topic": "chart_patterns", "title": "↩️ Throwbacks — don't panic on the retest",
+     "body":  "After ~65% of inverse-H&S breakouts, price THROWS BACK to the neckline before continuing. The retest of a broken level is normal — old resistance becoming support. Panic-selling the throwback is how breakout buyers turn winners into losers.",
+     "source": "Bulkowski hsb.html, verified 2026-06-09"},
+    {"topic": "chart_patterns", "title": "⚖️ What the science actually says",
+     "body":  "Lo-Mamaysky-Wang (J. Finance 2000): algorithmically-detected patterns carry INFORMATION — return distributions differ — but that's not a profit guarantee, and the double bottom was a null on NYSE/AMEX. Patterns are context for entries with defined risk, not crystal balls.",
+     "source": "Lo, Mamaysky & Wang 2000 · see docs/scalping_methodology.md"},
+]
+
+# ── CANDLE READS — wick/body anatomy as a supply/demand scoreboard ───────────
+# The vocabulary the scalp_tape (SEPA Watch) alerts speak. Honest per the
+# verified record: candle patterns standalone are weak-to-null; the read only
+# means something AT a level WITH volume.
+CANDLE_READ_CARDS: list[dict] = [
+    {"topic": "candle_reads", "title": "🕯 Candle anatomy — the bar's scoreboard",
+     "body":  "Every candle answers one question: who won the bar? Body% of range = control (≥60% one side dominated). Wicks = rejected prices. Close-location (CLV): close at the high = +1, at the low = -1. That's the whole vocabulary — everything else is combinations.",
+     "source": "Chaikin CLV · scalping/candles.py"},
+    {"topic": "candle_reads", "title": "🕯 Strong body = control",
+     "body":  "A ≥60%-body bar closing near its extreme means one side controlled the auction start to finish. THROUGH a level on volume, that's the read you want (it's exactly your BREAKOUT_STRONG alert). The same bar in the middle of nowhere means little.",
+     "source": "scalping/candles.py thresholds (CONFIGURED)"},
+    {"topic": "candle_reads", "title": "🕯 Upper-wick rejection — supply showed up",
+     "body":  "A long upper wick (2-3× the body, Bulkowski's shooting-star convention) AT a breakout level says: buyers pushed through, sellers slammed it back. That's distribution at the level — your REJECTION alert. Same wick in open air = noise.",
+     "source": "Bulkowski ID convention — never quoted as a win rate"},
+    {"topic": "candle_reads", "title": "🕯 Hammer honesty",
+     "body":  "The hammer (long lower wick = dip-buying) is one of the most-taught candles — and Bulkowski's own database ranks it near-random (~60%, rank 65/103). The LOCATION (at support, after a flush, on volume) carries the information; the candle alone doesn't.",
+     "source": "Bulkowski thepatternsite.com/Hammer.html"},
+    {"topic": "candle_reads", "title": "🕯 Doji = undecided, NOT reversal",
+     "body":  "A doji (body <5% of range — open≈close) means the auction ended where it started: nobody won. Academic check on 349 US stocks found dojis carry little predictive value. Treat it as a state label ('unresolved at the level'), never a signal.",
+     "source": "Horton 2009, QREF — null result"},
+    {"topic": "candle_reads", "title": "🕯 Engulfing = body dominance",
+     "body":  "Bulkowski's engulfing convention: today's BODY swallows yesterday's body — ignore the shadows. The read: the new bar completely repriced the prior bar's auction. Direction + level + volume decide whether it matters.",
+     "source": "Bulkowski ID convention"},
+    {"topic": "candle_reads", "title": "🕯 No volume, no read",
+     "body":  "A candle read at a level only counts WITH participation — ≥1.5× the average bar volume. A breakout bar on dry volume is the CVGI-class fake: the shape without the demand. This is why your tape-watch alerts carry the volume ratio on every read.",
+     "source": "Minervini TLSMW p.203 (expanding volume)"},
+    {"topic": "candle_reads", "title": "🕯 Compression forecasts volatility, not direction",
+     "body":  "Tight ranges and dojis at a level (your STALL state) mean energy is building — volatility clustering is one of the most robust findings in finance (Engle 1982). But compression says MOVE COMING, never which way. Wait for the resolving bar.",
+     "source": "Engle 1982, Econometrica"},
+    {"topic": "candle_reads", "title": "🕯 The null that keeps you honest",
+     "body":  "The decisive study at the 5-minute horizon (83 candle rules, DJIA stocks): NO rule beat buy-and-hold after costs and data-snooping correction. Candles are a context layer for reads at levels — never a standalone system.",
+     "source": "Duvinage, Mazza & Petitjean 2013, Quantitative Finance"},
+    {"topic": "candle_reads", "title": "🕯 Your alerts speak this language",
+     "body":  "The SEPA Watch pushes ARE candle reads at levels: BREAKOUT_STRONG (big body + close-at-highs + volume through the pivot), REJECTION (upper wick at the level), BREAKDOWN/RECLAIM (strong body losing/retaking VWAP), STALL (doji at the line). Every alert self-grades vs the next 30 min on /scalping.",
+     "source": "scalping/sepa_watch.py · /scalping"},
+]
+
+
 # ===========================================================================
 # Each hour of the day (24h, server local TZ = America/New_York) maps to
 # one TOPIC; the specific card within a topic cycles by day-of-year.
@@ -389,23 +477,23 @@ HOURLY_TOPIC: dict[int, str] = {
     0:  "history",            # midnight — fun fact
     1:  "edge_math",
     2:  "psychology",
-    3:  "history",
+    3:  "chart_patterns",     # 2026-06-09: Bulkowski patterns + the why
     4:  "fundamentals",       # premarket starts ~4 AM ET
     5:  "market_structure",
-    6:  "fundamentals",
+    6:  "candle_reads",       # 2026-06-09: wick/body anatomy at levels
     7:  "edge_math",
-    8:  "fundamentals",
+    8:  "chart_patterns",     # pre-open pattern rep (was a 3rd fundamentals slot)
     9:  "entry",              # 9:30 ET regular session open
     10: "market_structure",
     11: "risk",
-    12: "history",
+    12: "chart_patterns",     # midday pattern rep
     13: "sell_rules",
     14: "psychology",
     15: "entry",
     16: "review",             # 16:00 ET close
     17: "fundamentals",
     18: "edge_math",
-    19: "history",
+    19: "candle_reads",       # evening candle rep
     20: "psychology",
     21: "review",
     22: "edge_math",
@@ -422,6 +510,8 @@ TOPIC_POOLS: dict[str, list[dict]] = {
     "market_structure": MARKET_STRUCTURE_CARDS,
     "history":          HISTORY_CARDS,
     "edge_math":        EDGE_MATH_CARDS,
+    "chart_patterns":   CHART_PATTERN_CARDS,
+    "candle_reads":     CANDLE_READ_CARDS,
 }
 
 # Convenience flat list — used by tests and the count line in admin diagnostics.

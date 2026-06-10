@@ -67,11 +67,17 @@ const TOPIC_META: Record<string, { label: string; emoji: string; tone: string; b
   edge_math:        { label: 'Edge math',  emoji: '🧮', tone: '#22c55e',
                       blurb: 'Expectancy, Kelly criterion, drawdown math, Sharpe vs Sortino, '
                               + 'compounding, R-multiples.' },
+  chart_patterns:   { label: 'Patterns',   emoji: '🗺️', tone: '#c9a227',
+                      blurb: 'Bulkowski bases + the supply/demand WHY — double bottoms, '
+                              + 'inverse H&S, cup-handle, flags. Visual drills on /chart-school.' },
+  candle_reads:     { label: 'Candles',    emoji: '🕯️', tone: '#fb923c',
+                      blurb: 'Wick/body anatomy at levels — the language your SEPA Watch '
+                              + 'alerts speak. Honest about the nulls.' },
 };
 
 const TOPIC_ORDER: string[] = [
-  'entry', 'risk', 'sell_rules', 'psychology', 'review',
-  'fundamentals', 'market_structure', 'history', 'edge_math',
+  'entry', 'chart_patterns', 'candle_reads', 'risk', 'sell_rules', 'psychology',
+  'review', 'fundamentals', 'market_structure', 'history', 'edge_math',
 ];
 
 // Session-scoped cache so navigating between /learn and other pages

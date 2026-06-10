@@ -64,6 +64,16 @@ def all_cards(email: str = Depends(current_user_email)):
     })
 
 
+@router.get("/flashcards/chart-quiz")
+def chart_quiz_today(email: str = Depends(current_user_email)):
+    """Today's chart-identification quiz — 2 real historical charts from the
+    scan universe, cut at the pattern's confirmation bar. Answers + the WHY +
+    the actual +21-bar outcome ride in the payload; the page hides them until
+    the user answers. Deterministic per ET day."""
+    from . import chart_quiz
+    return JSONResponse(chart_quiz.get_today())
+
+
 @router.get("/flashcards/topic/{topic}")
 def topic_cards(topic: str, email: str = Depends(current_user_email)):
     """Return one topic's cards, with the same decoration as /all."""

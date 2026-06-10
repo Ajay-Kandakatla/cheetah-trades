@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stocks &amp; Trading Curriculum — Beyond VCP</title>
+<style>
+  :root{
+    --bg:#0f1419; --card:#1a2129; --card2:#212a35; --text:#e8e6e3; --muted:#9aa5b1;
+    --accent:#4fc3f7; --green:#66bb6a; --red:#ef5350; --gold:#ffca28; --line:#2e3a47;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; padding:0 0 60px;}
+  header{background:linear-gradient(135deg,#13293d,#1a2129); padding:48px 24px 36px; text-align:center; border-bottom:1px solid var(--line);}
+  header h1{font-size:1.9rem; margin-bottom:8px;}
+  header p{color:var(--muted); max-width:720px; margin:0 auto;}
+  .wrap{max-width:960px; margin:0 auto; padding:0 20px;}
+  nav{position:sticky; top:0; background:rgba(15,20,25,.95); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); z-index:10; padding:10px 0; text-align:center;}
+  nav a{color:var(--accent); text-decoration:none; font-size:.85rem; margin:0 10px; white-space:nowrap;}
+  nav a:hover{text-decoration:underline;}
+  h2{font-size:1.4rem; margin:48px 0 6px; color:var(--gold);}
+  h2 .wk{font-size:.75rem; color:var(--muted); display:block; letter-spacing:.12em; text-transform:uppercase;}
+  h3{font-size:1.05rem; margin:24px 0 8px; color:var(--accent);}
+  p{margin:8px 0; color:var(--text);}
+  .goal{color:var(--muted); font-style:italic; margin-bottom:16px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin:14px 0;}
+  .term{background:var(--card2); border-left:3px solid var(--accent); border-radius:8px; padding:12px 16px; margin:10px 0;}
+  .term b{color:var(--gold);}
+  a{color:var(--accent);}
+  ul{margin:8px 0 8px 22px;}
+  li{margin:5px 0;}
+  .links{margin-top:12px; padding-top:10px; border-top:1px dashed var(--line); font-size:.9rem;}
+  .links span{color:var(--muted); font-weight:600;}
+  .diagrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin:16px 0;}
+  figure{background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center;}
+  figcaption{font-size:.82rem; color:var(--muted); margin-top:6px; text-align:left;}
+  figcaption b{color:var(--text);}
+  svg{width:100%; height:auto;}
+  .tag{display:inline-block; font-size:.7rem; padding:2px 8px; border-radius:10px; background:#0d2b3d; color:var(--accent); margin-right:6px; vertical-align:middle;}
+  .note{background:#2b2417; border:1px solid #4d3f1e; border-radius:10px; padding:14px 18px; margin:24px 0; font-size:.9rem; color:#d8c89a;}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:.9rem;}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left;}
+  th{background:var(--card2); color:var(--gold);}
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 Stocks &amp; Trading Curriculum</h1>
+  <p>An 8-week program for a Minervini-style trader who knows VCP but wants to master chart patterns, price action, liquidity concepts, fundamentals, and macro. Each week: concepts → diagrams → free videos &amp; readings.</p>
+</header>
+
+<nav class="wrap">
+  <a href="#w1">1 Language</a>
+  <a href="#w2">2 S/R &amp; Price Action</a>
+  <a href="#w3">3 Base Patterns</a>
+  <a href="#w4">4 Pullbacks &amp; Squeezes</a>
+  <a href="#w5">5 Liquidity (ICT)</a>
+  <a href="#w6">6 Macro</a>
+  <a href="#w7">7 Fundamentals</a>
+  <a href="#w8">8 Trade Plan</a>
+</nav>
+
+<div class="wrap">
+
+<!-- ================= WEEK 1 ================= -->
+<h2 id="w1"><span class="wk">Week 1</span>Market Language &amp; Measurement</h2>
+<p class="goal">Goal: never get lost in trading vocabulary again — points, equity, ATR, standard deviation.</p>
+
+<div class="term"><b>Points</b> — for an individual stock, 1 point = $1 of price ("NVDA fell 5 points" = fell $5). For an index, points are the index's own units (S&amp;P 500 down 50 points ≈ 1% if it's at 5,000). Points ≠ percent: a 100-point Dow move is tiny; a 100-point S&amp;P move is huge. Always convert to % in your head.</div>
+<div class="term"><b>Equity</b> — two meanings: (1) ownership in a company (stocks are "equities"); (2) your account equity = cash + market value of open positions. Minervini's risk rules ("never risk more than 1–2%") refer to account equity.</div>
+<div class="term"><b>ATR (Average True Range)</b> — the average size of a stock's daily range over N days (usually 14). A $200 stock with ATR $8 moves ~4% a day. Use it to size positions and place stops <em>outside</em> normal noise (e.g., stop 1.5–2× ATR below entry, if that fits your max loss).</div>
+<div class="term"><b>Standard Deviation</b> — a statistical measure of how spread out returns are. ~68% of moves fall within ±1σ, ~95% within ±2σ. Bollinger Bands are just a 20-day average ±2σ — when bands pinch, volatility has contracted (the statistical cousin of a VCP).</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://www.investopedia.com/terms/p/point.asp" target="_blank">Points (Investopedia)</a> ·
+  <a href="https://www.investopedia.com/terms/e/equity.asp" target="_blank">Equity</a> ·
+  <a href="https://www.investopedia.com/terms/a/atr.asp" target="_blank">ATR</a> ·
+  <a href="https://www.investopedia.com/terms/s/standarddeviation.asp" target="_blank">Standard Deviation</a> ·
+  <a href="https://school.stockcharts.com/doku.php?id=technical_indicators:average_true_range_atr" target="_blank">ATR — StockCharts ChartSchool</a>
+</div>
+
+<!-- ================= WEEK 2 ================= -->
+<h2 id="w2"><span class="wk">Week 2</span>Support, Resistance &amp; Price Action</h2>
+<p class="goal">Goal: understand WHY patterns work — they are pictures of supply being absorbed at resistance.</p>
+
+<div class="card">
+<h3>The core idea (this answers your main question)</h3>
+<p>Every bullish base — VCP, cup-and-handle, double bottom, flat base — is the <b>same story told in different shapes</b>: a stock hits <b>resistance</b> (a price where trapped buyers and profit-takers want to sell), pulls back, and returns. Each return chews through more of that overhead supply. When sellers are exhausted, even modest demand pushes price through the level — the <b>breakout</b>.</p>
+<p>So the question "which pattern grows from resistance?" has a clean answer: <b>the pattern doesn't predict the breakout — the behavior at resistance does.</b> A pattern is likely to resolve upward when:</p>
+<ul>
+  <li><b>Each pullback is shallower</b> than the last (that's literally what VCP measures) — sellers are losing power;</li>
+  <li><b>Volume dries up</b> inside the base and near the pivot — nobody left to sell;</li>
+  <li><b>Price tightens just under resistance</b> instead of falling away from it — demand sits right beneath supply;</li>
+  <li>The stock shows <b>relative strength</b> vs. the index, and the general market is in an uptrend;</li>
+  <li>The base is <b>early in the trend</b> (1st or 2nd base out of a consolidation, not the 4th–5th).</li>
+</ul>
+<p>A double bottom, cup-and-handle, or flat base with those traits is a VCP wearing a different costume. Without them, the same shape often fails.</p>
+</div>
+
+<div class="term"><b>Price Action</b> — reading price and volume directly (candles, swings, ranges) instead of relying on indicators. Core skills: identifying swing highs/lows, trend structure (higher highs/higher lows), range vs. trend, and how price behaves at key levels (rejection wicks, tight closes, wide-range breakout bars on volume).</div>
+<div class="term"><b>Resistance / Support</b> — price zones (not exact lines) where supply/demand previously overwhelmed the other side. Old resistance, once broken, often becomes support — which is why breakouts frequently get a "retest."</div>
+
+<div class="diagrid">
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="55" x2="300" y2="55" stroke="#ef5350" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="24" y="48" fill="#ef5350" font-size="10">resistance (supply)</text>
+  <polyline points="20,140 50,60 70,100 100,58 118,85 145,57 158,72 180,56 195,63 210,55 215,42 230,30 240,48 252,38 280,18" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <circle cx="210" cy="55" r="4" fill="#ffca28"/>
+  <text x="190" y="120" fill="#ffca28" font-size="10">pivot / breakout</text>
+  <text x="60" y="155" fill="#9aa5b1" font-size="10">pullbacks get shallower → sellers exhausted</text>
+  <circle cx="240" cy="48" r="3" fill="#66bb6a"/>
+  <text x="232" y="68" fill="#66bb6a" font-size="9">retest holds</text>
+</svg>
+<figcaption><b>Resistance being absorbed.</b> Each touch of the red zone is met with a smaller pullback. The breakout through the pivot on volume, then a successful retest, confirms supply is gone.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <text x="20" y="20" fill="#9aa5b1" font-size="10">VCP: contractions e.g. 18% → 10% → 5%</text>
+  <polyline points="15,150 55,40 95,110 135,45 165,85 195,48 215,68 235,50 245,58 258,52 262,35 290,15" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <path d="M55,40 L95,110" stroke="#ef5350" stroke-width="0" />
+  <line x1="55" y1="158" x2="95" y2="158" stroke="#ef5350" stroke-width="3"/>
+  <line x1="135" y1="158" x2="165" y2="158" stroke="#ffca28" stroke-width="3"/>
+  <line x1="195" y1="158" x2="215" y2="158" stroke="#66bb6a" stroke-width="3"/>
+  <text x="100" y="163" fill="#9aa5b1" font-size="9">−18%</text>
+  <text x="168" y="163" fill="#9aa5b1" font-size="9">−10%</text>
+  <text x="218" y="163" fill="#9aa5b1" font-size="9">−5%</text>
+  <circle cx="262" cy="35" r="4" fill="#ffca28"/>
+</svg>
+<figcaption><b>VCP (your home base).</b> Successive contractions shrink roughly by half; volume should dry up into the final tight area before the pivot.</figcaption>
+</figure>
+</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://www.investopedia.com/trading/support-and-resistance-basics/" target="_blank">Support &amp; Resistance Basics (Investopedia)</a> ·
+  <a href="https://school.stockcharts.com/doku.php?id=chart_analysis:support_and_resistance" target="_blank">S/R — ChartSchool</a> ·
+  <a href="https://www.investopedia.com/terms/p/price-action.asp" target="_blank">Price Action</a> ·
+  <a href="https://traderlion.com/technical-analysis/volatility-contraction-pattern/" target="_blank">Mastering VCP — TraderLion</a> ·
+  <a href="https://www.youtube.com/watch?v=jbuMTat87-Q" target="_blank">▶ VCP in 6 steps (YouTube)</a>
+</div>
+
+<!-- ================= WEEK 3 ================= -->
+<h2 id="w3"><span class="wk">Week 3</span>Base Patterns: Double Bottom, Cup &amp; Handle, Flat Base</h2>
+<p class="goal">Goal: recognize the classic bases, know exactly where the pivot (buy point) sits in each, and what confirms vs. invalidates them.</p>
+
+<div class="diagrid">
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="60" x2="300" y2="60" stroke="#2e3a47" stroke-width="1" stroke-dasharray="4,4"/>
+  <polyline points="20,40 70,130 115,70 160,140 200,75 230,55 250,45 285,20" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <circle cx="115" cy="70" r="4" fill="#ffca28"/>
+  <text x="85" y="55" fill="#ffca28" font-size="10">pivot = middle peak</text>
+  <text x="48" y="148" fill="#9aa5b1" font-size="10">low 1</text>
+  <text x="148" y="156" fill="#9aa5b1" font-size="10">low 2 (slightly undercuts low 1)</text>
+</svg>
+<figcaption><b>Double Bottom ("W").</b> The 2nd low ideally <em>undercuts</em> the 1st — that shakeout flushes weak holders (and grabs liquidity, see Week 5). Buy point: through the middle peak, on volume. Invalid if the 2nd leg closes far below low 1.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="50" x2="300" y2="50" stroke="#2e3a47" stroke-width="1" stroke-dasharray="4,4"/>
+  <path d="M30,50 C70,150 150,150 195,52" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <polyline points="195,52 215,80 235,72 245,58 250,40 285,18" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <circle cx="245" cy="58" r="4" fill="#ffca28"/>
+  <text x="200" y="110" fill="#ffca28" font-size="10">handle: drifts DOWN</text>
+  <text x="200" y="124" fill="#9aa5b1" font-size="9">on light volume, upper half of cup</text>
+  <text x="90" y="160" fill="#9aa5b1" font-size="10">rounded cup (weeks–months)</text>
+</svg>
+<figcaption><b>Cup &amp; Handle.</b> One of the highest-performing bullish patterns in Bulkowski's studies. The handle is a final small shakeout — really the last VCP contraction. Buy through the handle high.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="45" x2="300" y2="45" stroke="#ef5350" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polyline points="20,150 60,50 80,72 105,52 125,70 150,50 170,68 195,52 215,66 235,50 252,60 262,30 290,15" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <circle cx="262" cy="30" r="4" fill="#ffca28"/>
+  <text x="70" y="100" fill="#9aa5b1" font-size="10">sideways drift, ≤15% deep, 5+ weeks</text>
+  <text x="222" y="20" fill="#ffca28" font-size="10">breakout</text>
+</svg>
+<figcaption><b>Flat Base.</b> A shallow, boring shelf after a prior run-up. Boring is good: holders refuse to sell. Often forms <em>on top of</em> a prior cup base ("base on base").</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <polyline points="15,155 90,35" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <polyline points="90,35 110,60 125,48 140,72 155,58 170,80" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <line x1="88" y1="30" x2="172" y2="68" stroke="#2e3a47" stroke-width="1.5"/>
+  <line x1="105" y1="68" x2="185" y2="98" stroke="#2e3a47" stroke-width="1.5"/>
+  <polyline points="170,80 180,55 290,15" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <circle cx="180" cy="55" r="4" fill="#ffca28"/>
+  <text x="40" y="60" fill="#9aa5b1" font-size="10">flagpole</text>
+  <text x="105" y="120" fill="#9aa5b1" font-size="10">flag: drifts against trend, light volume</text>
+</svg>
+<figcaption><b>Bull Flag / High Tight Flag.</b> Continuation pattern after a sharp advance. The rarest and most powerful version (high tight flag): stock doubles in &lt;2 months, then corrects only 10–25% for a few weeks.</figcaption>
+</figure>
+</div>
+
+<div class="card">
+<h3>Pattern cheat sheet — what tilts odds toward a breakout</h3>
+<table>
+  <tr><th>Pattern</th><th>Buy pivot</th><th>Best confirmation</th><th>Red flag</th></tr>
+  <tr><td>VCP</td><td>High of final contraction</td><td>Volume dry-up at lows, then surge on break</td><td>Contractions getting <em>wider</em></td></tr>
+  <tr><td>Double bottom</td><td>Middle peak of the W</td><td>2nd low undercuts 1st, then recovers fast</td><td>2nd low on heavy volume that doesn't recover</td></tr>
+  <tr><td>Cup &amp; handle</td><td>Handle high</td><td>Handle forms in upper half, drifts down quietly</td><td>Handle in lower half, or wedging upward</td></tr>
+  <tr><td>Flat base</td><td>Base high</td><td>Tight weekly closes, RS line at new high</td><td>Wide-and-loose action, &gt;15% deep</td></tr>
+  <tr><td>Bull flag</td><td>Flag's upper trendline</td><td>Volume contracts inside the flag</td><td>Flag retraces &gt;50% of the pole</td></tr>
+</table>
+</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://thepatternsite.com/cup.html" target="_blank">Bulkowski: Cup with Handle (stats)</a> ·
+  <a href="https://thepatternsite.com/" target="_blank">ThePatternSite — every pattern, with success rates</a> ·
+  <a href="https://www.investopedia.com/terms/d/doublebottom.asp" target="_blank">Double Bottom (Investopedia)</a> ·
+  <a href="https://school.stockcharts.com/doku.php?id=chart_analysis:chart_patterns" target="_blank">Chart Patterns — ChartSchool</a> ·
+  <a href="https://www.investors.com/how-to-invest/investors-corner/" target="_blank">IBD Investor's Corner (base reading)</a> ·
+  <a href="https://www.youtube.com/c/RichardMoglen" target="_blank">▶ Richard Moglen's channel (Minervini-style chart walkthroughs)</a>
+</div>
+
+<!-- ================= WEEK 4 ================= -->
+<h2 id="w4"><span class="wk">Week 4</span>Pullbacks, Tennis Ball Action &amp; Short Squeezes</h2>
+<p class="goal">Goal: judge whether a dip is healthy (buyable) or distribution (sellable), and understand squeeze mechanics.</p>
+
+<div class="term"><b>Pullback</b> — a counter-trend dip within an uptrend, typically to a rising moving average (10/21-day EMA, 50-day SMA) or prior breakout level. Healthy pullbacks come on <em>declining</em> volume. The pullback buy is Minervini's lower-risk alternative to chasing extended breakouts.</div>
+<div class="term"><b>Tennis Ball Action</b> — Minervini's term: after a breakout, a strong stock pulls back for 2–5 days (up to 2 weeks) and <b>bounces back fast to new highs, like a tennis ball</b>. Weak stocks splat like an egg. Rule of thumb he cites: a healthy leader closes in the upper half of its range in most recent sessions and recovers pullbacks on rising volume. It's a <em>hold/add</em> signal — the institutions are still accumulating.</div>
+<div class="term"><b>Short Squeeze</b> — when a heavily shorted stock rises, shorts must buy to cover, fueling more rise. Watch: short interest % of float (&gt;15–20% is high), days-to-cover. Squeezes are violent but end abruptly — they are fuel for a breakout, not a substitute for a sound base.</div>
+
+<div class="diagrid">
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <text x="20" y="18" fill="#66bb6a" font-size="11">🎾 tennis ball</text>
+  <polyline points="15,140 70,60 85,80 95,75 105,85 120,50 150,40" fill="none" stroke="#66bb6a" stroke-width="2"/>
+  <text x="175" y="18" fill="#ef5350" font-size="11">🥚 broken egg</text>
+  <polyline points="170,140 225,60 240,85 250,80 262,100 275,95 295,125" fill="none" stroke="#ef5350" stroke-width="2"/>
+  <text x="60" y="160" fill="#9aa5b1" font-size="9">3–5 day dip → snaps to new high</text>
+  <text x="205" y="160" fill="#9aa5b1" font-size="9">bounce fails → lower lows</text>
+</svg>
+<figcaption><b>Tennis ball vs. broken egg.</b> The first pullbacks after a breakout reveal whether institutions are supporting the stock.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <polyline points="15,60 55,95 85,80 115,110 145,95 175,120" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <polyline points="175,120 185,90 192,100 200,60 210,72 220,35 240,20 260,45 285,80" fill="none" stroke="#ef5350" stroke-width="2"/>
+  <text x="40" y="140" fill="#9aa5b1" font-size="10">downtrend, shorts pile in</text>
+  <text x="185" y="20" fill="#ef5350" font-size="10">squeeze: forced covering</text>
+  <text x="245" y="105" fill="#9aa5b1" font-size="9">…then air-pocket down</text>
+</svg>
+<figcaption><b>Short squeeze anatomy.</b> Parabolic, news-driven, ends fast. Trade small or just understand it — don't anchor a system on it.</figcaption>
+</figure>
+</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://www.investopedia.com/terms/p/pullback.asp" target="_blank">Pullback (Investopedia)</a> ·
+  <a href="https://x.com/markminervini/status/1280336937858084874" target="_blank">Minervini on Tennis Ball Action (original post)</a> ·
+  <a href="https://tradingcanslim.com/bounce-back-strong-master-the-tennis-ball-action-strategy/" target="_blank">Tennis Ball Action strategy guide</a> ·
+  <a href="https://www.investopedia.com/terms/s/shortsqueeze.asp" target="_blank">Short Squeeze (Investopedia)</a>
+</div>
+
+<!-- ================= WEEK 5 ================= -->
+<h2 id="w5"><span class="wk">Week 5</span>Liquidity Concepts (Smart Money / ICT)</h2>
+<p class="goal">Goal: understand liquidity grabs, sweeps, fair value gaps, and supply/demand zones — and how they explain the shakeouts you already see in Minervini setups.</p>
+
+<div class="card">
+<p><b>The bridge to what you already know:</b> the "undercut" in a double bottom, the handle shakeout in a cup, the final flush before a VCP pivot — ICT traders call these the same thing: a <b>liquidity sweep</b>. Stop-losses cluster below obvious lows; institutions push price into them to fill large buy orders, then reverse. Different vocabulary, same market mechanics.</p>
+</div>
+
+<div class="term"><b>Liquidity Sweep</b> — price wicks beyond an obvious high/low (where stops sit), triggers those orders, and snaps back inside the range. Liquidity sits above swing highs (buy stops) and below swing lows (sell stops).</div>
+<div class="term"><b>Liquidity Grab</b> — a sweep that leads to a reversal: institutions "grabbed" the liquidity to enter positions. Every grab is a sweep; not every sweep reverses.</div>
+<div class="term"><b>Fair Value Gap (FVG)</b> — a 3-candle imbalance: price moved so fast that the 1st candle's high and 3rd candle's low don't overlap, leaving a "gap" of untraded prices. Price often returns to "fill" part of the gap before continuing — a popular entry zone.</div>
+<div class="term"><b>Supply Zone / Demand Zone (S/D)</b> — the price areas where a big move originated. A demand zone = the base before a strong rally (unfilled institutional buy orders may remain); a supply zone = the consolidation before a strong drop. Fresher, untested zones are stronger. "S/D trading" = buying at demand, selling/shorting at supply.</div>
+<div class="term"><b>Scalp</b> — a very short-term trade (seconds to minutes) capturing small moves with size, dozens of times a day. Opposite end of the spectrum from your swing/position style; know the term, but mixing timeframes is how swing traders sabotage themselves.</div>
+
+<div class="diagrid">
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="120" x2="220" y2="120" stroke="#ef5350" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="22" y="135" fill="#ef5350" font-size="9">equal lows — sell-stops below</text>
+  <polyline points="20,60 50,118 80,70 110,118 140,75 170,118 190,145 205,118 220,80 250,50 285,25" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+  <circle cx="190" cy="145" r="4" fill="#ffca28"/>
+  <text x="150" y="160" fill="#ffca28" font-size="10">sweep → reversal (grab)</text>
+</svg>
+<figcaption><b>Liquidity sweep / grab.</b> The dip below "equal lows" is the institutional fill. Compare: double-bottom undercut, handle shakeout.</figcaption>
+</figure>
+<figure>
+<svg viewBox="0 0 320 170" xmlns="http://www.w3.org/2000/svg">
+  <!-- candle 1 -->
+  <line x1="60" y1="150" x2="60" y2="95" stroke="#66bb6a" stroke-width="2"/>
+  <rect x="50" y="105" width="20" height="38" fill="#66bb6a"/>
+  <!-- candle 2 big -->
+  <line x1="120" y1="118" x2="120" y2="25" stroke="#66bb6a" stroke-width="2"/>
+  <rect x="110" y="32" width="20" height="80" fill="#66bb6a"/>
+  <!-- candle 3 -->
+  <line x1="180" y1="62" x2="180" y2="15" stroke="#66bb6a" stroke-width="2"/>
+  <rect x="170" y="22" width="20" height="34" fill="#66bb6a"/>
+  <rect x="45" y="62" width="150" height="33" fill="#ffca28" opacity="0.22"/>
+  <text x="200" y="84" fill="#ffca28" font-size="10">FVG: candle 1 high ↔ candle 3 low</text>
+  <polyline points="195,30 230,75 265,45 295,20" fill="none" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="218" y="100" fill="#9aa5b1" font-size="9">price returns to fill, then continues</text>
+</svg>
+<figcaption><b>Fair Value Gap.</b> The shaded imbalance between candle 1's high and candle 3's low often acts as a magnet, then support.</figcaption>
+</figure>
+</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://www.litefinance.org/blog/for-beginners/trading-strategies/ict-trading-strategy/" target="_blank">ICT Strategy — complete beginner guide</a> ·
+  <a href="https://liquidity-provider.com/articles/ict-tradingexplained/" target="_blank">Smart Money Concepts &amp; setups explained</a> ·
+  <a href="https://arongroups.co/technical-analyze/liquidity-in-ict/" target="_blank">Guide to ICT liquidity &amp; sweeps</a> ·
+  <a href="https://www.investopedia.com/terms/s/scalping.asp" target="_blank">Scalping (Investopedia)</a>
+</div>
+
+<!-- ================= WEEK 6 ================= -->
+<h2 id="w6"><span class="wk">Week 6</span>Macro &amp; the Market: Why the Index Leads Your Stocks</h2>
+<p class="goal">Goal: understand the chain Macro → Index → Sectors → Your stock, and what "forward guidance" actually moves.</p>
+
+<div class="card">
+<h3>The causal chain</h3>
+<p><b>Macro → Index:</b> interest rates, inflation, employment, and earnings expectations set how much investors will pay for future profits. Higher rates make future earnings worth less today (discounting), compress P/E multiples, and pull money toward bonds — so hawkish surprises knock indexes down; dovish surprises lift them.</p>
+<p><b>Index → Stocks:</b> roughly 50–75% of an individual stock's daily move is explained by the market + its sector (this is "beta"). Index ETFs and funds buy/sell whole baskets at once, so when SPY moves, your stock moves with it regardless of its own merits. This is why Minervini and O'Neil both insist: <b>3 of 4 stocks follow the general market's direction — trade aggressively only when the index is in a confirmed uptrend.</b></p>
+<p>Practical routine: each weekend check the S&amp;P 500 and Nasdaq vs. their 21/50-day MAs, count distribution days, glance at the economic calendar for CPI / jobs / FOMC dates, and size positions accordingly.</p>
+</div>
+
+<div class="term"><b>Forward Guidance</b> — the Fed's public signaling about future policy ("rates will stay higher for longer…"). Markets trade on <em>expectations</em>, so guidance moves prices before any actual rate change. Tools: the FOMC "dot plot" and CME FedWatch (rate-cut odds implied by futures).</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://www.brookings.edu/articles/what-is-forward-guidance/" target="_blank">What is Forward Guidance? — Brookings</a> ·
+  <a href="https://www.investopedia.com/terms/f/forwardguidance.asp" target="_blank">Forward Guidance (Investopedia)</a> ·
+  <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank">CME FedWatch tool (live rate odds)</a> ·
+  <a href="https://fred.stlouisfed.org/" target="_blank">FRED — free macro data</a> ·
+  <a href="https://www.khanacademy.org/economics-finance-domain/macroeconomics" target="_blank">▶ Khan Academy Macroeconomics (free full course)</a> ·
+  <a href="https://www.federalreserveeducation.org/teaching-resources/economics/monetary-policy-the-federal-reserve/monetary-policy-explained" target="_blank">▶ Monetary Policy Explained — Fed Education</a>
+</div>
+
+<!-- ================= WEEK 7 ================= -->
+<h2 id="w7"><span class="wk">Week 7</span>Fundamentals: Balance Sheet &amp; Cash Flow</h2>
+<p class="goal">Goal: read the three statements well enough to filter for the fundamentally strong leaders SEPA demands.</p>
+
+<div class="term"><b>Balance Sheet</b> — a snapshot at one date: <b>Assets = Liabilities + Shareholders' Equity</b>. For growth-stock screening, check: low/manageable debt (debt-to-equity), rising book equity, and enough current assets to cover current liabilities (current ratio &gt; 1.5).</div>
+<div class="term"><b>Cash Flow (Statement)</b> — tracks actual cash over a period in three buckets: operating (cash the business generates — should be positive and growing), investing (capex), financing (debt/share issuance). <b>Free cash flow = operating cash flow − capex.</b> Earnings can be massaged; cash is much harder to fake. A company with rising EPS but negative operating cash flow is a red flag.</div>
+<div class="term"><b>How this plugs into SEPA</b> — Minervini's fundamental screen looks for accelerating quarterly EPS and sales growth, expanding margins, and institutional-quality balance sheets. The chart (VCP) tells you <em>when</em>; the statements tell you <em>which</em> stocks deserve a spot on your watchlist.</div>
+
+<div class="links"><span>Learn:</span>
+  <a href="https://www.investopedia.com/terms/b/balancesheet.asp" target="_blank">Balance Sheet (Investopedia)</a> ·
+  <a href="https://www.investopedia.com/terms/c/cashflowstatement.asp" target="_blank">Cash Flow Statement</a> ·
+  <a href="https://www.investopedia.com/terms/f/freecashflow.asp" target="_blank">Free Cash Flow</a> ·
+  <a href="https://www.khanacademy.org/economics-finance-domain/core-finance/stock-and-bonds" target="_blank">▶ Khan Academy: Stocks &amp; Bonds (statements, valuation)</a>
+</div>
+
+<!-- ================= WEEK 8 ================= -->
+<h2 id="w8"><span class="wk">Week 8</span>Putting It Together: Your Trade Plan</h2>
+<p class="goal">Goal: fuse pattern + price action + liquidity + macro + fundamentals into one repeatable checklist.</p>
+
+<div class="card">
+<h3>Pre-trade checklist</h3>
+<ul>
+  <li><b>Market:</b> index above rising 21/50-day MA? No FOMC/CPI landmine within 1–2 days of entry?</li>
+  <li><b>Stock:</b> Stage 2 uptrend (above rising 150/200-day), RS line near highs, sound fundamentals (EPS + sales accelerating, positive FCF)?</li>
+  <li><b>Pattern:</b> recognizable base (VCP / cup-handle / double bottom / flat base), contractions tightening, volume drying up, pivot defined?</li>
+  <li><b>Liquidity read:</b> did the base already shake out below an obvious low (undercut / sweep)? Bases that have flushed are safer than ones with untouched equal lows beneath.</li>
+  <li><b>Risk:</b> stop placement (below pivot day low or 1.5–2× ATR), position sized so a stop-out costs ≤1% of equity, reward:risk ≥ 3:1.</li>
+  <li><b>Post-entry:</b> watch for tennis ball action on the first pullback; sell into weakness if it splats.</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Books (in this order)</h3>
+<ul>
+  <li>Mark Minervini — <i>Trade Like a Stock Market Wizard</i> (re-read ch. on SEPA &amp; VCP) then <i>Think &amp; Trade Like a Champion</i> (risk math)</li>
+  <li>William O'Neil — <i>How to Make Money in Stocks</i> (the original base patterns: cup-handle, double bottom, flat base)</li>
+  <li>Stan Weinstein — <i>Secrets for Profiting in Bull and Bear Markets</i> (stage analysis — the macro/market-timing layer)</li>
+  <li>Thomas Bulkowski — <i>Encyclopedia of Chart Patterns</i> (reference: real success-rate statistics for every pattern)</li>
+  <li>Moglen/Schmidt/Haber/Rai — <i>TraderLion Model Book</i> (annotated historical winners — pure pattern-recognition training)</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Ongoing free resources</h3>
+<ul>
+  <li><a href="https://traderlion.com/" target="_blank">TraderLion</a> — free Ultimate Trading Guide PDF, webinars, podcast with US Investing Champions</li>
+  <li><a href="https://www.youtube.com/c/RichardMoglen" target="_blank">Richard Moglen (YouTube)</a> — trader interviews + TradingView tutorials in the Minervini/O'Neil school</li>
+  <li><a href="https://thepatternsite.com/" target="_blank">ThePatternSite (Bulkowski)</a> — free statistics on every chart pattern</li>
+  <li><a href="https://school.stockcharts.com/" target="_blank">StockCharts ChartSchool</a> — free encyclopedia of technical analysis</li>
+  <li><a href="https://www.youtube.com/playlist?list=PLVMOgaPqrk1slwuHVXKCa-dp_Kb1V9nST" target="_blank">▶ VCP / Minervini playlist (YouTube)</a></li>
+</ul>
+</div>
+
+<div class="note">⚠️ Educational content, not financial advice. Pattern statistics are historical tendencies, not guarantees — risk management (position sizing + stops) is what keeps you in the game, not pattern accuracy. Verify any strategy on paper before committing capital.</div>
+
+</div>
+</body>
+</html>
