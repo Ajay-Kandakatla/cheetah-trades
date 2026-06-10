@@ -809,7 +809,7 @@ export function SepaCandidatePage() {
           >
             ↻ + catalyst
           </button>
-          <InfoButton title={`${symbol} — How to read this`}>{PageInfo}</InfoButton>
+          <InfoButton inline title={`${symbol} — How to read this`}>{PageInfo}</InfoButton>
         </div>
       </header>
 
@@ -1238,7 +1238,7 @@ export function SepaCandidatePage() {
               <section>
                 <div className="sepa-tab-help">
                   <strong>CANSLIM Fundamentals</strong>{' '}
-                  <InfoButton title="What CANSLIM stands for">
+                  <InfoButton inline title="What CANSLIM stands for">
                     <>
                       <p>
                         <strong>CANSLIM</strong> is William O'Neil's 7-letter
@@ -1501,7 +1501,7 @@ export function SepaCandidatePage() {
               <section>
                 <div className="sepa-tab-help">
                   <strong>Smart Money & Sentiment</strong>{' '}
-                  <InfoButton title="What this tab shows">{SmartMoneyInfo}</InfoButton>
+                  <InfoButton inline title="What this tab shows">{SmartMoneyInfo}</InfoButton>
                   <span> — what credentialed analysts and credible commentators think.</span>
                 </div>
                 <SmartMoneyPanel data={data.smart_money} symbol={symbol} />
@@ -1512,7 +1512,7 @@ export function SepaCandidatePage() {
               <section>
                 <div className="sepa-tab-help">
                   <strong>Forum Chatter</strong>{' '}
-                  <InfoButton title="Forum Chatter">
+                  <InfoButton inline title="Forum Chatter">
                     <>
                       <p>
                         Crowd discussion across four lanes — Reddit Momentum

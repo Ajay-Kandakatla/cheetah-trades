@@ -494,8 +494,25 @@ h1, h2, h3, h4, h5, h6,
   position: relative;   /* anchor the popover to the button, not a distant
                            ancestor — otherwise its `right:0` escaped to the
                            page's right edge in any non-relative section. */
+  /* Reset the base rule's corner-pin offsets. On a position:relative element
+     top/right still APPLY as a nudge, so every inline icon sat 12px down +
+     12px left of its slot (Ajay 2026-06-10: market-banner ⓘ overlapping the
+     banner's bottom-left corner). */
+  top: auto;
+  right: auto;
   display: inline-flex;
   vertical-align: middle;
+}
+/* Containers hosting a corner-pin (non-inline) <InfoButton> MUST be a
+   positioning context, or the icon escapes to the nearest positioned
+   ancestor and lands somewhere random. These page-title blocks had none
+   (.sepa-page__title already gets position:relative elsewhere). */
+.todos-page__title,
+.tiny-page__title,
+.track-page__title,
+.wl-page__title,
+.op-page__title {
+  position: relative;
 }
 /* Inline popover opens INTO the content (rightward from the trigger) so it
    never runs off the right edge. The corner-pin (non-inline) variant keeps
