@@ -25,10 +25,25 @@ type Latest = {
   generated_at: number; symbols_scanned?: number; n_found: number; results: Pattern[];
   validation?: Validation; validation_note?: string; disclaimer?: string; note?: string;
 };
-type ScanStatus = { running: boolean; done: number; total: number; error?: string | null };
+type ScanStatus = { running: boolean; scope?: string; done: number; total: number; error?: string | null };
+type CandleFormation = { name: string; date: string; read: string; note: string; stat?: string };
+type Candles = {
+  formations: CandleFormation[];
+  last_bar?: { read?: string; date?: string; vol_ratio?: number | null } | null;
+  trend?: string;
+};
+type Verdict = {
+  symbol: string; sepa?: Sepa; matches: Pattern[]; historical?: Record<string, number>;
+  candles?: Candles | null; no_match: boolean; error?: string;
+};
+type QualLatest = {
+  generated_at: number; n_symbols: number; n_matched?: number; n_candle_only?: number;
+  n_no_match?: number; verdicts: Verdict[]; disclaimer?: string; note?: string;
+};
 
 const PATTERN_LABEL: Record<string, string> = {
   double_bottom: 'Double bottom (W)', inverse_head_shoulders: 'Inverse head & shoulders',
+  triple_bottom: 'Triple bottom', cup_with_handle: 'Cup with handle',
 };
 // Practitioner base rates — Bulkowski database, quoted in the ONLY permitted
 // framing (verified pass 2026-06-09): break-even failure rates with the full
@@ -36,12 +51,29 @@ const PATTERN_LABEL: Record<string, string> = {
 const BULKOWSKI: Record<string, string> = {
   double_bottom: 'Bulkowski (daily bars, bull-market sample, hindsight-measured, no costs): break-even failure 12–16% across Adam/Eve variants; unconfirmed double bottoms continue LOWER 48% of the time',
   inverse_head_shoulders: 'Bulkowski (n=3,197; daily bars, hindsight-measured, no costs): break-even failure 11%, throwback rate 65%, rank 13 of 39',
+  triple_bottom: 'Bulkowski (n>2,500; daily bars, bull-market sample, hindsight-measured, no costs): break-even failure 13%, throwback rate 65%, rank 12 of 39',
+  cup_with_handle: 'Bulkowski (n=913; daily bars, bull-market, hindsight, no costs): break-even failure 5%, throwback 62%, rank 3 of 39 — yet his 1990–2024 lesson: 47% dropped substantially within two months of the breakout',
+};
+const CANDLE_META: Record<string, { label: string; icon: string }> = {
+  hammer: { label: 'Hammer', icon: '🔨' },
+  shooting_star: { label: 'Shooting star', icon: '☄️' },
+  doji: { label: 'Doji', icon: '➖' },
+  bullish_engulfing: { label: 'Bullish engulfing', icon: '🟢' },
+  bearish_engulfing: { label: 'Bearish engulfing', icon: '🔴' },
+  morning_star: { label: 'Morning star', icon: '🌅' },
+};
+const READ_COLOR: Record<string, string> = {
+  bullish_reversal_setup: C.green, bearish_warning: C.red, indecision: C.muted,
 };
 
 const PageInfo = (
   <>
     <p><strong>Patterns</strong> — an on-demand scan for bullish-reversal geometry on daily bars:
-      <strong> double bottoms</strong> and <strong>inverse head &amp; shoulders</strong>, found across the SEPA universe's cached charts.</p>
+      <strong> double bottoms</strong>, <strong>triple bottoms</strong>, <strong>inverse head &amp; shoulders</strong> and
+      <strong> cup-with-handles</strong>, found across the SEPA universe's cached charts.</p>
+    <p><strong>🎯 Scan Qualifiers</strong> answers <em>every</em> current SEPA qualifier: the pattern(s) its chart matches
+      right now, recent candle formations (hammer, engulfing, morning star — each shown with Bulkowski's measured
+      frequency AND the academic null), or an explicit <em>no pattern</em>. A chart-analysis input beside SEPA, VCP and volume.</p>
     <p>Discipline: a pattern only counts when it <strong>closes above its confirmation line</strong> (the interim peak / neckline) —
       before that it's listed as "forming", a shape to watch, not a signal. Targets use the measure rule; stops sit under the pattern low.</p>
     <p>Evidence, honestly: Lo, Mamaysky &amp; Wang (2000, J. Finance) found algorithmically-detected patterns carry
@@ -55,6 +87,7 @@ export function PatternsPage() {
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [latest, setLatest] = useState<Latest | null>(null);
+  const [quals, setQuals] = useState<QualLatest | null>(null);
   const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -62,16 +95,21 @@ export function PatternsPage() {
   const loadLatest = useCallback(() => {
     fetch(`${API}/patterns/latest`, { cache: 'no-store' })
       .then((r) => r.json()).then(setLatest).catch((e) => setErr(String(e)));
+    fetch(`${API}/patterns/qualifiers`, { cache: 'no-store' })
+      .then((r) => r.json()).then(setQuals).catch(() => undefined);
   }, []);
 
   useEffect(() => { loadLatest(); return () => { if (pollRef.current) window.clearInterval(pollRef.current); }; }, [loadLatest]);
 
-  const startScan = async () => {
+  const startScan = async (scope: 'universe' | 'qualifiers') => {
     setErr(null);
     try {
-      const r = await fetch(`${API}/patterns/scan`, { method: 'POST', credentials: 'include' });
+      const r = await fetch(`${API}/patterns/scan`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope }),
+      });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setScanStatus(await r.json());
+      setScanStatus({ ...(await r.json()), scope });
       pollRef.current = window.setInterval(async () => {
         try {
           const s: ScanStatus = await (await fetch(`${API}/patterns/scan/status`, { cache: 'no-store' })).json();
@@ -101,17 +139,27 @@ export function PatternsPage() {
             Patterns
             <InfoButton inline title="Patterns">{PageInfo}</InfoButton>
           </h1>
-          <p className="lede">Double bottoms &amp; inverse H&amp;S across the SEPA universe — confirmed vs forming, with our own measured record beside the book numbers.</p>
+          <p className="lede">Double bottoms, triple bottoms, inverse H&amp;S &amp; cup-with-handles across the SEPA universe — confirmed vs forming, with our own measured record beside the book numbers.</p>
         </div>
         {user?.is_admin && (
-          <button onClick={startScan} disabled={!!scanStatus?.running}
-                  title="Scan the whole SEPA universe's cached daily charts for bullish-reversal patterns"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.8rem',
-                           borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
-                           fontSize: '0.8rem', background: C.gold, color: '#1a1a1a', border: 'none',
-                           opacity: scanStatus?.running ? 0.7 : 1 }}>
-            ⚡ {scanStatus?.running ? 'Scanning…' : 'Scan Patterns'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => startScan('qualifiers')} disabled={!!scanStatus?.running}
+                    title="Answer EVERY current SEPA qualifier: which Bulkowski pattern its chart matches right now — or that it matches none"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.8rem',
+                             borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
+                             fontSize: '0.8rem', background: 'transparent', color: C.gold,
+                             border: `1px solid ${C.gold}88`, opacity: scanStatus?.running ? 0.7 : 1 }}>
+              🎯 {scanStatus?.running && scanStatus.scope === 'qualifiers' ? 'Scanning…' : 'Scan Qualifiers'}
+            </button>
+            <button onClick={() => startScan('universe')} disabled={!!scanStatus?.running}
+                    title="Scan the whole SEPA universe's cached daily charts for bullish-reversal patterns"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.8rem',
+                             borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
+                             fontSize: '0.8rem', background: C.gold, color: '#1a1a1a', border: 'none',
+                             opacity: scanStatus?.running ? 0.7 : 1 }}>
+              ⚡ {scanStatus?.running && scanStatus.scope !== 'qualifiers' ? 'Scanning…' : 'Scan Patterns'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -146,6 +194,18 @@ export function PatternsPage() {
         </div>
       )}
 
+      {/* Qualifier verdicts — every qualifier answered: match or no-match */}
+      {quals && quals.verdicts && quals.verdicts.length > 0 && (
+        <QualifierVerdicts q={quals} navigate={navigate} />
+      )}
+      {quals && (!quals.verdicts || quals.verdicts.length === 0) && user?.is_admin && (
+        <div style={{ padding: '0.55rem 0.8rem', borderRadius: 10, marginBottom: 12, fontSize: '0.76rem',
+                      color: C.muted, border: '1px dashed var(--hairline,#2a2a2a)' }}>
+          🎯 {quals.note || 'No qualifier verdict scan yet'} — it answers every current SEPA qualifier:
+          which pattern its chart matches right now, or that it matches none.
+        </div>
+      )}
+
       {!latest ? (
         <p className="mono" style={{ opacity: 0.7 }}>…loading</p>
       ) : latest.n_found === 0 ? (
@@ -166,6 +226,111 @@ export function PatternsPage() {
       )}
 
       <p style={{ fontSize: '0.66rem', color: C.sub, marginTop: 12 }}>{latest?.disclaimer}</p>
+    </div>
+  );
+}
+
+function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: string) => void }) {
+  const matched = q.verdicts.filter((v) => v.matches.length > 0);
+  const candleOnly = q.verdicts.filter((v) => v.matches.length === 0 && !v.no_match);
+  const noMatch = q.verdicts.filter((v) => v.no_match);
+  return (
+    <div style={{ marginBottom: 18, padding: '0.7rem 0.85rem', borderRadius: 12,
+                  border: `1px solid ${C.gold}44`, background: 'var(--bg-raised,#16181d)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>🎯 Qualifier verdicts</div>
+        <span style={{ fontSize: '0.72rem', color: C.muted }}>
+          {q.n_symbols} qualifiers · {matched.length} match a pattern · {candleOnly.length} candle reads only · {noMatch.length} no pattern
+        </span>
+        {q.generated_at > 0 && (
+          <span style={{ marginLeft: 'auto', fontSize: '0.66rem', color: C.sub }}>
+            {new Date(q.generated_at * 1000).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      {matched.length > 0 && (
+        <>
+          <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', margin: '10px 0 4px' }}>
+            Pattern matched ({matched.length})
+          </div>
+          {matched.map((v) => <VerdictRow key={v.symbol} v={v} navigate={navigate} />)}
+        </>
+      )}
+
+      {candleOnly.length > 0 && (
+        <>
+          <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', margin: '10px 0 4px' }}>
+            No chart pattern — candle reads only ({candleOnly.length})
+          </div>
+          {candleOnly.map((v) => <VerdictRow key={v.symbol} v={v} navigate={navigate} />)}
+        </>
+      )}
+
+      {noMatch.length > 0 && (
+        <>
+          <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', margin: '10px 0 4px' }}>
+            No pattern, no notable candles ({noMatch.length}) — that's an answer too
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {noMatch.map((v) => (
+              <button key={v.symbol} onClick={() => navigate(`/sepa/${encodeURIComponent(v.symbol)}`)}
+                      title={v.error ? v.error : `RS ${v.sepa?.rs_rank ?? '—'} · Stage ${v.sepa?.stage ?? '—'} — no pattern on the daily chart`}
+                      style={{ fontSize: '0.72rem', padding: '2px 9px', borderRadius: 6, cursor: 'pointer',
+                               background: 'var(--bg-sunken,#0f1115)', color: C.muted,
+                               border: '1px solid var(--hairline,#2a2a2a)' }}>
+                {v.symbol}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {q.disclaimer && <div style={{ fontSize: '0.64rem', color: C.sub, marginTop: 8 }}>{q.disclaimer}</div>}
+    </div>
+  );
+}
+
+function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void }) {
+  const s = v.sepa || {};
+  const formations = v.candles?.formations || [];
+  return (
+    <div style={{ padding: '0.45rem 0.6rem', borderRadius: 8, marginBottom: 5,
+                  background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={() => navigate(`/sepa/${encodeURIComponent(v.symbol)}`)}
+                style={{ fontWeight: 800, fontSize: '0.88rem', background: 'transparent', border: 'none',
+                         color: 'inherit', cursor: 'pointer', padding: 0 }}>
+          {v.symbol}
+        </button>
+        {s.is_buyable && <span style={{ fontSize: '0.64rem', color: C.green }}>✅ buyable</span>}
+        {s.rs_rank != null && <span style={{ fontSize: '0.68rem', color: C.muted }}>RS {s.rs_rank}</span>}
+        {s.stage != null && <span style={{ fontSize: '0.68rem', color: C.muted }}>Stage {s.stage}</span>}
+        {v.matches.map((p, i) => {
+          const conf = p.status === 'confirmed';
+          return (
+            <span key={`${p.pattern}-${i}`}
+                  title={`${BULKOWSKI[p.pattern] || ''}\nline ${p.neckline} · target ${p.target} (measure rule) · stop ${p.stop}`}
+                  style={{ fontSize: '0.68rem', fontWeight: 700, color: conf ? C.green : C.amber,
+                           border: `1px solid ${(conf ? C.green : C.amber)}55`,
+                           background: `${conf ? C.green : C.amber}14`, borderRadius: 5, padding: '1px 7px' }}>
+              {PATTERN_LABEL[p.pattern] || p.pattern} · {conf ? `CONFIRMED ${p.confirmed_date || ''}` : `forming, ${p.to_confirm_pct}% to line`}
+            </span>
+          );
+        })}
+        {formations.map((f) => (
+          <span key={`${f.name}-${f.date}`} title={`${f.note}\n${f.stat || ''}`}
+                style={{ fontSize: '0.66rem', color: READ_COLOR[f.read] || C.muted,
+                         border: `1px solid ${(READ_COLOR[f.read] || C.muted)}44`, borderRadius: 5, padding: '1px 6px' }}>
+            {CANDLE_META[f.name]?.icon || '🕯'} {CANDLE_META[f.name]?.label || f.name} {f.date.slice(5)}
+          </span>
+        ))}
+        {v.matches.length === 0 && formations.length === 0 && (
+          <span style={{ fontSize: '0.68rem', color: C.sub }}>no pattern</span>
+        )}
+      </div>
+      {v.candles?.last_bar?.read && (
+        <div style={{ fontSize: '0.66rem', color: C.sub, marginTop: 3 }}>{v.candles.last_bar.read}</div>
+      )}
     </div>
   );
 }
