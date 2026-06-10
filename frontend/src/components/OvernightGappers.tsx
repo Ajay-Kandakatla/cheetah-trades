@@ -10,6 +10,7 @@
  */
 import { Link } from 'react-router-dom';
 import { useGappers, type DayProfile } from '../hooks/useDayTrading';
+import { useSort } from '../lib/useSort';
 
 const SESSION_META: Record<string, { title: string; badge: string; cls: string }> = {
   premarket:  { title: 'Premarket Movers · live',        badge: 'PREMARKET',     cls: 'og-sess--pm' },
@@ -38,10 +39,25 @@ export function OvernightGappers({ profile, onPick }: {
   onPick?: (symbol: string) => void;
 }) {
   const data = useGappers(profile);
+  const sort = useSort<any>(data?.gappers || [], {
+    symbol: (g) => g.symbol,
+    move: (g) => Math.abs(g.move_pct ?? 0) * ((g.direction === 'up' ? 1 : -1)),
+    last: (g) => g.last,
+    adr: (g) => g.adr_pct,
+    relvol: (g) => g.rel_vol_10d ?? g.rel_vol,
+    dvol: (g) => g.dollar_vol,
+  }, 'move');
   if (!data) return null;
 
   const elevated = data.rel_vol_elevated;
   const sm = SESSION_META[data.session] || SESSION_META.closed;
+  const H = ({ k, label, dir = 'desc' as const }: { k: string; label: string; dir?: 'asc' | 'desc' }) => (
+    <button type="button" onClick={() => sort.toggle(k, dir)} title={`Sort by ${label}`}
+            style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer',
+                     padding: 0, font: 'inherit', fontWeight: sort.key === k ? 700 : 400 }}>
+      {label}{sort.arrow(k)}
+    </button>
+  );
 
   return (
     <section className="day-section og">
@@ -63,19 +79,19 @@ export function OvernightGappers({ profile, onPick }: {
           <table className="og__table">
             <thead>
               <tr>
-                <th>Symbol</th>
-                <th className="og__num">Move</th>
-                <th className="og__num">Last</th>
-                <th className="og__num">ADR</th>
-                <th className="og__num">RelVol</th>
-                <th className="og__num">$ Vol</th>
+                <th><H k="symbol" label="Symbol" dir="asc" /></th>
+                <th className="og__num"><H k="move" label="Move" /></th>
+                <th className="og__num"><H k="last" label="Last" /></th>
+                <th className="og__num"><H k="adr" label="ADR" /></th>
+                <th className="og__num"><H k="relvol" label="RelVol" /></th>
+                <th className="og__num"><H k="dvol" label="$ Vol" /></th>
                 <th className="og__num">PM High</th>
                 <th className="og__num">PM Low</th>
                 <th>Earnings</th>
               </tr>
             </thead>
             <tbody>
-              {data.gappers.map((g) => {
+              {sort.sorted.map((g) => {
                 const rv = g.rel_vol_10d ?? g.rel_vol;
                 const rvCls = rv == null ? '' : rv >= elevated ? 'og__hot' : rv < 1 ? 'og__cold' : '';
                 const sgn = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';

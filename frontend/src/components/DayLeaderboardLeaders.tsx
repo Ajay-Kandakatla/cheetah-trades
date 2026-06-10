@@ -6,6 +6,7 @@
  */
 import { useDayLeaderboard } from '../hooks/useDayTrading';
 import { InfoButton } from './InfoButton';
+import { useSort } from '../lib/useSort';
 
 const SESSION: Record<string, { tag: string; note: string }> = {
   open:       { tag: 'LIVE',        note: "live intraday move" },
@@ -43,8 +44,24 @@ function moveClass(n?: number | null): string {
 
 export function DayLeaderboardLeaders({ onPick }: { onPick?: (s: string) => void }) {
   const { data } = useDayLeaderboard(14, 14);
+  const sort = useSort<any>(data?.leaders || [], {
+    rank: (L) => L.intraday_rank,
+    symbol: (L) => L.symbol,
+    today: (L) => L.intraday_change_pct,
+    last: (L) => L.last_price,
+    persist: (L) => L.persistence_pct,
+    signal: (L) => (L.is_buyable ? 2 : L.setup_ready ? 1 : 0),
+  }, 'rank', 'asc');
   if (!data) return null;
   const sess = SESSION[data.market_session] ?? SESSION.unknown;
+  const H = ({ k, label, dir = 'desc' as const, cls = '' }: { k: string; label: string; dir?: 'asc' | 'desc'; cls?: string }) => (
+    <button type="button" onClick={() => sort.toggle(k, dir)} title={`Sort by ${label}`}
+            className={cls}
+            style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer',
+                     padding: 0, font: 'inherit', fontWeight: sort.key === k ? 700 : 400 }}>
+      {label}{sort.arrow(k)}
+    </button>
+  );
 
   return (
     <section className="day-section dl-section">
@@ -67,14 +84,14 @@ export function DayLeaderboardLeaders({ onPick }: { onPick?: (s: string) => void
       {data.available && (
         <div className="dl-list">
           <div className="dl-row dl-row--head">
-            <span className="dl-rank">#</span>
-            <span>Symbol</span>
-            <span className="dl-num">Today</span>
-            <span className="dl-num">Last</span>
-            <span className="dl-num">Rank · Persist</span>
-            <span className="dl-sig">Signal</span>
+            <span className="dl-rank"><H k="rank" label="#" dir="asc" /></span>
+            <span><H k="symbol" label="Symbol" dir="asc" /></span>
+            <span className="dl-num"><H k="today" label="Today" /></span>
+            <span className="dl-num"><H k="last" label="Last" /></span>
+            <span className="dl-num"><H k="persist" label="Rank · Persist" /></span>
+            <span className="dl-sig"><H k="signal" label="Signal" /></span>
           </div>
-          {data.leaders.map((L) => (
+          {sort.sorted.map((L) => (
             <div
               key={L.symbol}
               className={`dl-row${L.is_buyable ? ' dl-row--buyable' : ''}`}

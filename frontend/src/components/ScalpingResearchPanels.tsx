@@ -1,7 +1,18 @@
 /* Backtest + paper-trade validation panels for the scalping page. Both lead with
  * GROSS-vs-NET honesty: the backtest's net is spread-ASSUMED (optimistic), the
  * paper-trade's net uses REAL captured spreads. Educational, not advice. */
+import { Link } from 'react-router-dom';
 import { useScalpingBacktest, useScalpingPaper, type StratStats } from '../hooks/useScalpingResearch';
+import { useSort } from '../lib/useSort';
+
+function Sym({ s }: { s: string }) {
+  return (
+    <Link to={`/sepa/${encodeURIComponent(s)}`} title={`${s} — open the full read`}
+          style={{ width: 56, fontWeight: 700, color: 'inherit', textDecoration: 'none' }}>
+      {s}
+    </Link>
+  );
+}
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
 const LABELS: Record<string, string> = {
@@ -82,8 +93,19 @@ export function BacktestPanel({ active }: { active: boolean }) {
   );
 }
 
+const CLOSED_SORTS: { key: string; label: string; dir: 'asc' | 'desc' }[] = [
+  { key: 'recent', label: 'Recent', dir: 'desc' },
+  { key: 'netr', label: 'Net R', dir: 'desc' },
+  { key: 'symbol', label: 'A–Z', dir: 'asc' },
+];
+
 export function PaperPanel({ active }: { active: boolean }) {
   const { data, error } = useScalpingPaper(30, active);
+  const closedSort = useSort<any>(data?.closed || [], {
+    recent: (_c: any) => 0,                      // API order is already newest-first
+    netr: (c: any) => c.net_r_multiple,
+    symbol: (c: any) => c.symbol,
+  }, 'recent');
   if (error) return <p className="mono" style={{ color: C.red }}>Paper track record failed — {error}</p>;
   if (!data) return <p className="mono" style={{ opacity: 0.7 }}>…loading track record</p>;
   const st = data.closed_stats;
@@ -110,7 +132,7 @@ export function PaperPanel({ active }: { active: boolean }) {
           <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>Open ({data.n_open})</div>
           {data.open.slice(0, 10).map((o: any, i: number) => (
             <div key={i} style={{ display: 'flex', gap: 10, fontSize: '0.78rem', padding: '2px 0' }}>
-              <b style={{ width: 56 }}>{o.symbol}</b>
+              <Sym s={o.symbol} />
               <span style={{ color: o.side === 'long' ? C.green : C.red, width: 44 }}>{o.side}</span>
               <span style={{ color: C.muted }}>entry {o.entry_price} · stop {o.stop}</span>
               <span style={{ color: C.sub }}>{LABELS[o.strategy] || o.strategy}</span>
@@ -121,10 +143,23 @@ export function PaperPanel({ active }: { active: boolean }) {
 
       {data.closed.length > 0 && (
         <div>
-          <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>Recent closed</div>
-          {data.closed.slice(0, 15).map((c: any, i: number) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <span style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase' }}>Recent closed</span>
+            <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
+              {CLOSED_SORTS.map((s) => (
+                <button key={s.key} onClick={() => closedSort.toggle(s.key, s.dir)}
+                        style={{ fontSize: '0.64rem', padding: '0 6px', borderRadius: 5, cursor: 'pointer',
+                                 background: closedSort.key === s.key ? 'var(--gold,#c9a227)' : 'transparent',
+                                 color: closedSort.key === s.key ? '#1a1a1a' : 'inherit',
+                                 border: `1px solid ${closedSort.key === s.key ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}` }}>
+                  {s.label}{closedSort.arrow(s.key)}
+                </button>
+              ))}
+            </span>
+          </div>
+          {closedSort.sorted.slice(0, 15).map((c: any, i: number) => (
             <div key={i} style={{ display: 'flex', gap: 10, fontSize: '0.78rem', padding: '2px 0' }}>
-              <b style={{ width: 56 }}>{c.symbol}</b>
+              <Sym s={c.symbol} />
               <span style={{ color: c.side === 'long' ? C.green : C.red, width: 44 }}>{c.side}</span>
               <span style={{ color: C.sub, width: 70 }}>{c.outcome}</span>
               <span style={{ color: rColor(c.net_r_multiple), fontWeight: 600 }}>{c.net_pnl_pct == null ? '—' : `${c.net_pnl_pct > 0 ? '+' : ''}${c.net_pnl_pct}% (${c.net_r_multiple}R net)`}</span>
