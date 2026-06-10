@@ -43,6 +43,46 @@ def test_verdict_row_match_and_no_match(monkeypatch):
     assert miss["candles"] is not None             # last-bar read still present
 
 
+def _stub_module(monkeypatch, name, **attrs):
+    """Install a fake module (and bind it on an already-imported parent) so the
+    test never imports the real one — some use py3.10+ type syntax that the
+    host's 3.9 venv can't parse (the container runs 3.11)."""
+    import sys
+    import types
+    mod = types.ModuleType(name)
+    for k, v in attrs.items():
+        setattr(mod, k, v)
+    monkeypatch.setitem(sys.modules, name, mod)
+    parent, _, child = name.rpartition(".")
+    if parent:
+        if parent not in sys.modules:
+            monkeypatch.setitem(sys.modules, parent, types.ModuleType(parent))
+        monkeypatch.setattr(sys.modules[parent], child, mod, raising=False)
+    return mod
+
+
+def test_verdict_universe_merges_sources(monkeypatch):
+    """Cross-linking contract: holdings / buyable / at-pivot / leaderboard names
+    join the qualifier set, each tagged with every source it belongs to."""
+    monkeypatch.setattr(scan, "_universe_with_context", lambda: (
+        ["AAA", "BBB"],
+        {"AAA": {"is_candidate": True, "is_buyable": True},
+         "BBB": {"is_candidate": True, "is_buyable": False}}))
+    _stub_module(monkeypatch, "portfolio.store",
+                 list_holdings=lambda owner: [{"ticker": "CCC"}, {"ticker": "AAA"}])
+    _stub_module(monkeypatch, "sepa.at_pivot",
+                 get_at_pivot=lambda: {"rows": [{"symbol": "BBB"}]})
+    _stub_module(monkeypatch, "sepa.leaderboard",
+                 leaderboard=lambda n=12: {"leaders": [{"symbol": "DDD"}]})
+
+    u = scan._verdict_universe()
+    assert set(u) == {"AAA", "BBB", "CCC", "DDD"}
+    assert u["AAA"]["sources"] == ["qualifier", "buyable", "holding"]
+    assert u["CCC"]["sources"] == ["holding"] and u["CCC"]["ctx"] == {}
+    assert "at_pivot" in u["BBB"]["sources"]
+    assert u["DDD"]["sources"] == ["leader"]
+
+
 def test_short_frame_reports_error_not_silence(monkeypatch):
     from sepa import prices
     monkeypatch.setattr(prices, "load_prices", lambda s, **k: _df([100] * 20))

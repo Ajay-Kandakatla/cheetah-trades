@@ -101,6 +101,54 @@ def _scan_symbol(sym: str) -> Optional[dict]:
     return {"symbol": sym, "found": found, "outcomes": confirms}
 
 
+def _verdict_universe() -> dict:
+    """{symbol: {"ctx": sepa_ctx, "sources": [...]}} for the verdict scan —
+    qualifiers ∪ portfolio holdings ∪ buyable ∪ at-pivot ∪ leaderboard, so the
+    Portfolio and Leaderboard pages can cross-link every name they show
+    (Ajay 2026-06-09). Source tags: qualifier / buyable / holding / at_pivot /
+    leader. Same shape as scalping's watch universe, without its size cap."""
+    _, ctx = _universe_with_context()
+    out: dict = {}
+
+    def add(sym, source, sepa_ctx=None):
+        if not sym:
+            return
+        sym = sym.upper()
+        e = out.setdefault(sym, {"ctx": sepa_ctx or ctx.get(sym) or {}, "sources": []})
+        if source not in e["sources"]:
+            e["sources"].append(source)
+
+    for sym, c in ctx.items():
+        if c.get("is_candidate"):
+            add(sym, "qualifier", c)
+        if c.get("is_buyable"):
+            add(sym, "buyable", c)
+
+    try:
+        from portfolio.store import list_holdings
+        owner = os.getenv("DEFAULT_USER_EMAIL", "ajaykandakatla@gmail.com")
+        for h in list_holdings(owner) or []:
+            add(h.get("ticker") or h.get("symbol"), "holding")
+    except Exception as exc:
+        log.debug("verdict universe holdings failed: %s", exc)
+
+    try:
+        from sepa import at_pivot
+        for r in (at_pivot.get_at_pivot() or {}).get("rows") or []:
+            if not r.get("is_etf"):
+                add(r.get("symbol"), "at_pivot")
+    except Exception as exc:
+        log.debug("verdict universe at_pivot failed: %s", exc)
+
+    try:
+        from sepa import leaderboard
+        for l in (leaderboard.leaderboard(n=12) or {}).get("leaders") or []:
+            add(l.get("symbol"), "leader")
+    except Exception as exc:
+        log.debug("verdict universe leaderboard failed: %s", exc)
+    return out
+
+
 def _verdict_for_symbol(sym: str, ctx: dict) -> dict:
     """One qualifier's full verdict — every detector's answer (match or not),
     historical pattern counts on this chart, and the recent candle reads.
@@ -145,22 +193,22 @@ def _verdict_for_symbol(sym: str, ctx: dict) -> dict:
 
 def _run_qualifier_scan() -> None:
     try:
-        _, ctx = _universe_with_context()
-        quals = {s: c for s, c in ctx.items() if c.get("is_candidate")}
+        universe = _verdict_universe()
         with _LOCK:
-            _STATE.update(total=len(quals), done=0, error=None)
-        if not quals:
+            _STATE.update(total=len(universe), done=0, error=None)
+        if not universe:
             raise RuntimeError("no qualifiers in the latest SEPA scan — run a SEPA scan first")
 
         def work(item):
-            sym, c = item
-            r = _verdict_for_symbol(sym, c)
+            sym, entry = item
+            r = _verdict_for_symbol(sym, entry["ctx"])
+            r["sources"] = entry["sources"]
             with _LOCK:
                 _STATE["done"] += 1
             return r
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-            verdicts = [r for r in ex.map(work, sorted(quals.items())) if r]
+            verdicts = [r for r in ex.map(work, sorted(universe.items())) if r]
 
         # Confirmed matches first, then forming, then candle-only, then no-match;
         # inside each bucket the higher RS rank first.
@@ -183,7 +231,8 @@ def _run_qualifier_scan() -> None:
             "n_no_match": sum(1 for v in verdicts if v["no_match"]),
             "verdicts": verdicts,
             "disclaimer": (
-                "Every SEPA qualifier, answered: the Bulkowski pattern(s) its daily "
+                "Every SEPA qualifier — plus your holdings, buyables, at-pivot and "
+                "leaderboard names — answered: the Bulkowski pattern(s) the daily "
                 "chart matches right now (confirmed or forming), recent candle "
                 "formations, or — most of the time — no pattern at all. Geometry is "
                 "descriptive, not predictive; candle formations have NO standalone "
