@@ -70,6 +70,15 @@ async def patterns_accuracy():
     return JSONResponse(await asyncio.to_thread(history.accuracy))
 
 
+@router.get("/patterns/accuracy/monthly")
+async def patterns_accuracy_monthly():
+    """Month-by-month winners' record (Ajay 2026-06-10: "how accurate the
+    winning patterns have been throughout the months going forward").
+    Persisted perpetually in pattern_accuracy_monthly — never pruned."""
+    from . import history
+    return JSONResponse(await asyncio.to_thread(history.monthly_series))
+
+
 @router.get("/patterns/qualifiers")
 async def patterns_qualifiers():
     """The last qualifier verdict scan: every SEPA qualifier with the pattern(s)

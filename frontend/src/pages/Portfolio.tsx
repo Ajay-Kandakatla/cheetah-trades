@@ -16,6 +16,7 @@ import { InfoButton } from '../components/InfoButton';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
 import { PatternMatchCards } from '../components/PatternMatchCards';
+import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
@@ -291,6 +292,10 @@ export default function PortfolioPage() {
           Leaderboard pages: pattern-matched names, ⭐ confluence first;
           💼 marks your holdings. */}
       <PatternMatchCards limit={12} />
+
+      {/* Month-by-month winners' record for the paper-trading review (Ajay
+          2026-06-10) — perpetual, never pruned. */}
+      <PatternAccuracyMonthly />
 
       {/* Leadership + ranking BELOW your holdings (Ajay 2026-06-04). */}
       <SepaRankLeaderboard n={12} />

@@ -10,6 +10,7 @@ import { API } from '../lib/apiBase';
 import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
 import { PatternMatchCards } from '../components/PatternMatchCards';
+import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
 import { TickerCell } from '../components/TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
@@ -250,6 +251,9 @@ export function PatternsPage() {
           {acc.disclaimer && <div style={{ color: C.sub, marginTop: 4, fontSize: '0.68rem' }}>{acc.disclaimer}</div>}
         </div>
       )}
+
+      {/* Month-by-month winners' record — perpetual, never pruned (2026-06-10). */}
+      <PatternAccuracyMonthly />
 
       {/* Qualifier verdicts — every qualifier answered: match or no-match */}
       {quals && quals.verdicts && quals.verdicts.length > 0 && (

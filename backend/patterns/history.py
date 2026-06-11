@@ -315,10 +315,146 @@ def accuracy() -> dict:
     }
 
 
+# ── 4. MONTHLY ROLLUP (perpetual) ────────────────────────────────────────────
+# Ajay 2026-06-10: "record another set of analytics to track how accurate the
+# winning patterns have been throughout the months going forward… I do not
+# want the data to be pruned — available perpetually."
+#
+# One doc per calendar month in `pattern_accuracy_monthly` (_id "YYYY-MM"),
+# recomputed idempotently from the observation ledger on every nightly run —
+# months keep absorbing late-resolving observations near their boundary.
+# NOTHING here or anywhere in this module deletes: no TTL index, no pruning.
+# The raw `pattern_observations` ledger is likewise append+grade only, so the
+# rollup can always be rebuilt from first principles.
+
+def _monthly_coll():
+    try:
+        from pymongo import MongoClient
+        url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        c = MongoClient(url, serverSelectionTimeoutMS=2000)
+        c.admin.command("ping")
+        return c[os.getenv("MONGO_DB", "cheetah")].pattern_accuracy_monthly
+    except Exception:
+        return None
+
+
+def compute_monthly() -> list:
+    """Aggregate the resolved ledger per calendar month (of the observation
+    date) → per-pattern winners' record. Pure read; returns oldest→newest."""
+    coll = _coll()
+    if coll is None:
+        return []
+    months: dict = {}
+    for obs in coll.find({"resolved": True}):
+        m = (obs.get("et_date") or "")[:7]
+        if len(m) != 7:
+            continue
+        slot = months.setdefault(m, {"patterns": {}, "candles": {},
+                                     "n_observations": 0})
+        slot["n_observations"] += 1
+        o = obs.get("outcome")
+        if obs.get("kind") == "pattern":
+            p = slot["patterns"].setdefault(obs["pattern"], {
+                "confirmed_n": 0, "target_first": 0, "stop_first": 0,
+                "neither": 0, "forming_n": 0, "went_on_to_confirm": 0,
+                "fwd": [], "buyable_n": 0, "buyable_target_first": 0})
+            if obs.get("status") == "confirmed":
+                p["confirmed_n"] += 1
+                if o in ("target_first", "stop_first", "neither"):
+                    p[o] += 1
+                if obs.get("fwd_21_pct") is not None:
+                    p["fwd"].append(obs["fwd_21_pct"])
+                if obs.get("is_buyable"):
+                    p["buyable_n"] += 1
+                    if o == "target_first":
+                        p["buyable_target_first"] += 1
+            else:
+                p["forming_n"] += 1
+                if o == "confirmed":
+                    p["went_on_to_confirm"] += 1
+        else:
+            cd = slot["candles"].setdefault(obs.get("formation"),
+                                            {"n": 0, "hit": 0})
+            cd["n"] += 1
+            if o == "hit":
+                cd["hit"] += 1
+
+    out = []
+    for m in sorted(months):
+        s = months[m]
+        pats = {}
+        for name, p in s["patterns"].items():
+            fwd = sorted(p["fwd"])
+            pats[name] = {
+                "confirmed_n": p["confirmed_n"],
+                "win_pct": _pct(p["target_first"], p["confirmed_n"]),
+                "stop_pct": _pct(p["stop_first"], p["confirmed_n"]),
+                "median_fwd_21d_pct": fwd[len(fwd) // 2] if fwd else None,
+                "buyable_n": p["buyable_n"],
+                "buyable_win_pct": _pct(p["buyable_target_first"], p["buyable_n"]),
+                "forming_n": p["forming_n"],
+                "forming_confirm_pct": _pct(p["went_on_to_confirm"], p["forming_n"]),
+            }
+        cands = {name: {"n": c["n"], "direction_hit_pct": _pct(c["hit"], c["n"])}
+                 for name, c in s["candles"].items()}
+        conf_total = sum(p["confirmed_n"] for p in s["patterns"].values())
+        wins_total = sum(p["target_first"] for p in s["patterns"].values())
+        out.append({"month": m,
+                    "n_observations": s["n_observations"],
+                    "confirmed_n": conf_total,
+                    "overall_win_pct": _pct(wins_total, conf_total),
+                    "patterns": pats, "candles": cands})
+    return out
+
+
+def snapshot_monthly() -> dict:
+    """Persist the rollup — one upserted doc per month, kept forever."""
+    rows = compute_monthly()
+    coll = _monthly_coll()
+    if coll is None:
+        return {"ok": False, "reason": "no mongo"}
+    now = int(time.time())
+    for row in rows:
+        try:
+            coll.update_one({"_id": row["month"]},
+                            {"$set": {**row, "updated_at": now}}, upsert=True)
+        except Exception as exc:
+            log.warning("monthly snapshot upsert failed %s: %s", row["month"], exc)
+    log.info("pattern ledger: monthly rollup persisted for %d months", len(rows))
+    return {"ok": True, "months": len(rows)}
+
+
+def monthly_series() -> dict:
+    """The persisted month-by-month record, oldest→newest (for the API)."""
+    coll = _monthly_coll()
+    rows = []
+    if coll is not None:
+        try:
+            rows = sorted(coll.find({}), key=lambda r: r["_id"])
+            for r in rows:
+                r["month"] = r.pop("_id")
+        except Exception as exc:
+            log.warning("monthly series read failed: %s", exc)
+            rows = []
+    if not rows:                                # not snapshotted yet → live
+        rows = compute_monthly()
+    return {
+        "ok": True, "months": rows,
+        "retention": ("perpetual — pattern_observations and "
+                      "pattern_accuracy_monthly are never pruned (no TTL, "
+                      "no deletes); rollup recomputed nightly so months keep "
+                      "absorbing late-resolving observations"),
+        "disclaimer": ("Measured frequencies from OUR live forward ledger, "
+                       "month by month. Gross, no costs; small months mean "
+                       "wide error bars — read the n before the %."),
+    }
+
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
     r = resolve_pending()
-    log.info("PATTERN-LEDGER: %s", r)
+    s = snapshot_monthly()
+    log.info("PATTERN-LEDGER: %s · monthly rollup: %s", r, s)
     sys.exit(0 if r.get("ok") else 1)
