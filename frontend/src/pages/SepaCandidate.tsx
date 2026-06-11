@@ -47,6 +47,7 @@ import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
 import { CompanyHeadline } from '../components/CompanyHeadline';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { TickerPatternPanel } from '../components/TickerPatternPanel';
+import { ChartAnalysisPanel } from '../components/ChartAnalysisPanel';
 import { PriceAlertModal } from '../components/PriceAlertModal';
 import { TickerAlertPresets } from '../components/TickerAlertPresets';
 import { DependencyGraph } from '../components/DependencyGraph';
@@ -1027,6 +1028,11 @@ export function SepaCandidatePage() {
                     matches / is closest to, or an explicit no-match, plus this
                     chart's own +21-bar record after past confirmations. */}
                 <TickerPatternPanel symbol={symbol} />
+
+                {/* On-demand Sonnet buy-signal read (Ajay 2026-06-11) —
+                    a pattern saying CONFIRMED isn't the same as buyable;
+                    this answers the actual question with the facts shown. */}
+                <ChartAnalysisPanel symbol={symbol} />
 
                 {/* Candle-reading reference — collapsed by default, expand
                     to learn what green/red bodies and wicks actually mean.
