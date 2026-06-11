@@ -1,4 +1,5 @@
 import { useSepaBrief } from '../hooks/useSepa';
+import { useLiveQuote } from '../hooks/useLiveQuote';
 import { InfoButton } from './InfoButton';
 
 const BriefInfo = (
@@ -89,22 +90,55 @@ export function SepaBriefBanner() {
 
       <div className="sepa-brief__top">
         {top.map((c) => (
-          <article key={c.symbol} className="sepa-pick">
-            <div className="sepa-pick__sym">{c.symbol}</div>
-            <div className="sepa-pick__score mono">
-              score {c.score?.toFixed(0)} · RS {c.rs_rank ?? '—'}
-            </div>
-            {c.entry_setup && (
-              <div className="sepa-pick__setup mono">
-                {c.entry_setup.type} pivot ${c.entry_setup.pivot} · stop ${c.entry_setup.stop}
-              </div>
-            )}
-          </article>
+          <BriefPick key={c.symbol} c={c} />
         ))}
         {top.length === 0 && (
           <div className="sepa-brief__empty">No SEPA candidates today.</div>
         )}
       </div>
     </section>
+  );
+}
+
+/* One pick card with the LIVE price next to last night's scan levels (Ajay
+   2026-06-11: the brief showed LRCX "pivot $297" while it traded $346 —
+   without the live number you can't see a name already ran past its pivot).
+   useLiveQuote registers WS interest, streams via SSE, and re-polls every
+   30s as a fallback. */
+function BriefPick({ c }: { c: any }) {
+  const q = useLiveQuote(c.symbol);
+  const pivot = c.entry_setup?.pivot;
+  const pastPivotPct = q?.last_price != null && pivot
+    ? ((q.last_price / pivot) - 1) * 100 : null;
+  const dayUp = (q?.day_pct ?? 0) >= 0;
+  return (
+    <article className="sepa-pick">
+      <div className="sepa-pick__sym">{c.symbol}</div>
+      <div className="sepa-pick__score mono">
+        score {c.score?.toFixed(0)} · RS {c.rs_rank ?? '—'}
+      </div>
+      {q?.last_price != null && (
+        <div className="mono" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+          ${q.last_price.toFixed(2)}
+          {q.day_pct != null && (
+            <span style={{ color: dayUp ? 'var(--positive,#10b981)' : 'var(--negative,#ef4444)', marginLeft: 6 }}>
+              {dayUp ? '▲' : '▼'} {Math.abs(q.day_pct).toFixed(1)}%
+            </span>
+          )}
+          <span style={{ fontSize: '0.58rem', color: 'var(--ink-subtle)', marginLeft: 6, textTransform: 'uppercase' }}>live</span>
+        </div>
+      )}
+      {c.entry_setup && (
+        <div className="sepa-pick__setup mono">
+          {c.entry_setup.type} pivot ${c.entry_setup.pivot} · stop ${c.entry_setup.stop}
+          {pastPivotPct != null && Math.abs(pastPivotPct) >= 0.5 && (
+            <span style={{ color: pastPivotPct > 5 ? 'var(--negative,#ef4444)' : 'var(--ink-muted)', marginLeft: 6 }}
+                  title={pastPivotPct > 5 ? 'Well past the pivot — late entry, chasing risk' : 'distance from the scan pivot'}>
+              ({pastPivotPct > 0 ? '+' : ''}{pastPivotPct.toFixed(1)}% vs pivot{pastPivotPct > 5 ? ' — late' : ''})
+            </span>
+          )}
+        </div>
+      )}
+    </article>
   );
 }

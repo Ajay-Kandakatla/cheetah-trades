@@ -105,7 +105,8 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
         try:
             r = requests.get(next_url, params=next_params, timeout=_FETCH_TIMEOUT_SEC)
         except Exception as exc:
-            log.warning("massive intraday fetch failed for %s: %s", symbol, exc)
+            from sepa.prices import _scrub_key
+            log.warning("massive intraday fetch failed for %s: %s", symbol, _scrub_key(exc))
             _cb_record(False, time.time())
             return None
         if r.status_code == 429:

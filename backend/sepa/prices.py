@@ -24,6 +24,20 @@ import pandas as pd
 
 log = logging.getLogger("sepa.prices")
 
+
+_APIKEY_RE = None
+
+
+def _scrub_key(exc) -> str:
+    """Exception text with any apiKey=... query param redacted — requests
+    embeds the full URL in connection errors, which would otherwise print
+    the Massive API key into the logs (leaked once, 2026-06-11; rotated)."""
+    global _APIKEY_RE
+    import re as _re
+    if _APIKEY_RE is None:
+        _APIKEY_RE = _re.compile(r"(apiKey=)[A-Za-z0-9_-]+")
+    return _APIKEY_RE.sub(r"\1<redacted>", str(exc))
+
 CACHE_DIR = Path.home() / ".cheetah" / "prices"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_TTL_SEC = 20 * 3600
@@ -183,7 +197,7 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
             return None
         results = (r.json() or {}).get("results") or []
     except Exception as exc:
-        log.warning("massive fetch failed for %s: %s", symbol, exc)
+        log.warning("massive fetch failed for %s: %s", symbol, _scrub_key(exc))
         return None
 
     if not results:
@@ -421,7 +435,7 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
                     "todays_change":    item.get("todaysChange"),
                 }
         except Exception as exc:
-            log.warning("bulk_snapshot: chunk failed: %s", exc)
+            log.warning("bulk_snapshot: chunk failed: %s", _scrub_key(exc))
 
     log.info("bulk_snapshot: fetched %d/%d symbols", len(result), len(symbols))
     return result

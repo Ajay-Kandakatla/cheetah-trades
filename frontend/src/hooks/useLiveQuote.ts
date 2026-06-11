@@ -215,8 +215,23 @@ export function useLiveQuote(ticker: string | null | undefined): LiveQuote | nul
       if (symRef.current === s) setQuote(lq);
     });
 
+    // 5. Safety net (2026-06-11: "these are not realtime") — if the SSE
+    //    stream silently dies, the price would freeze at the prefill value
+    //    forever. Re-run the HTTP prefill every 30s; prefillOnce's own 60s
+    //    TTL + concurrency cap keep this cheap, and SSE-sourced values are
+    //    never clobbered by older HTTP ones.
+    const fallback = setInterval(() => {
+      _prefillAt.delete(s);              // allow a refetch past the TTL gate
+      prefillOnce(s).then(() => {
+        if (symRef.current !== s) return;
+        const after = _quoteState.get(s);
+        if (after) setQuote(after);
+      });
+    }, 30_000);
+
     return () => {
       off();
+      clearInterval(fallback);
       symRef.current = null;
     };
   }, [ticker]);
