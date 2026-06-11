@@ -12,6 +12,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { TickerCell } from './TickerCell';
+import { EarningsChip } from './EarningsChip';
+import { useEarningsMap } from '../hooks/useEarningsMap';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)', blue: '#4fc3f7' };
 const SHORT: Record<string, string> = {
@@ -36,6 +38,7 @@ export function UniverseConvictionPanel() {
   const [data, setData] = useState<Resp | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
+  const earningsMap = useEarningsMap();
 
   const scan = () => {
     setBusy(true);
@@ -87,6 +90,7 @@ export function UniverseConvictionPanel() {
                 {p.is_buyable ? <span style={{ fontSize: '0.7rem', color: C.green }}>✅</span>
                   : p.is_candidate ? <span style={{ fontSize: '0.7rem', color: C.muted }}>SEPA</span>
                   : <span style={{ fontSize: '0.7rem', color: C.sub }} title="Outside the SEPA gate — that's allowed here">non-SEPA</span>}
+                <EarningsChip symbol={p.symbol} info={earningsMap.get(p.symbol.toUpperCase())} />
                 <span style={{ marginLeft: 'auto', fontWeight: 800, color: C.blue, fontSize: '0.84rem' }}
                       title="Conviction = how many independent measured signals agree (0–100). A ranking device, not a probability.">
                   {p.conviction}

@@ -14,6 +14,8 @@ import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePatternVerdicts, type PatternVerdict } from '../hooks/usePatternVerdicts';
 import { TickerCell } from './TickerCell';
+import { EarningsChip } from './EarningsChip';
+import { useEarningsMap } from '../hooks/useEarningsMap';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
@@ -40,6 +42,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
 }) {
   const navigate = useNavigate();
   const { verdicts, generatedAt } = usePatternVerdicts();
+  const earningsMap = useEarningsMap();
 
   const rows = useMemo(() => {
     let list = [...verdicts.values()].filter((v) => v.matches.length > 0);
@@ -94,6 +97,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <TickerCell symbol={v.symbol} size="0.86rem" />
                 {star && <span title="Confirmed pattern AND clears the full Minervini buy gate (Stage 2 + setup + volume + buy zone)">⭐</span>}
+                <EarningsChip symbol={v.symbol} info={earningsMap.get(v.symbol.toUpperCase())} />
                 <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 700,
                                color: s.is_buyable ? C.green : s.is_candidate ? C.muted : C.sub }}>
                   {s.is_buyable ? '✅ BUYABLE' : s.is_candidate ? 'qualifier' : 'watch'}

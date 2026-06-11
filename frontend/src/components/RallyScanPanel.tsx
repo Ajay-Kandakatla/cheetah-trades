@@ -12,6 +12,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { TickerCell } from './TickerCell';
+import { EarningsChip } from './EarningsChip';
+import { useEarningsMap } from '../hooks/useEarningsMap';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
@@ -40,6 +42,7 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
   const [data, setData] = useState<Resp | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
+  const earningsMap = useEarningsMap();
 
   const scan = () => {
     setBusy(true);
@@ -94,6 +97,7 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <TickerCell symbol={c.symbol} />
                   {star && <span title="Confirmed pattern AND full Minervini buy gate">⭐</span>}
+                  <EarningsChip symbol={c.symbol} info={earningsMap.get(c.symbol.toUpperCase())} />
                   <span style={{ marginLeft: 'auto', fontWeight: 800, color: C.green, fontSize: '0.82rem' }}
                         title="Typical daily range = price × ADR — capacity, not a prediction">
                     ~${c.dollar_range}/day

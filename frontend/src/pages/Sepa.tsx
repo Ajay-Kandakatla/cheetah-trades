@@ -11,6 +11,7 @@ import { MarketClockStrip } from '../components/MarketClockStrip';
 import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
+import { useEarningsMap, EARNINGS_WARN_DAYS } from '../hooks/useEarningsMap';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
 import { SepaCardGridSkeleton } from '../components/SepaCardSkeleton';
 import { pivotTiming, triggerRank, buyabilityRank } from '../lib/pivotTiming';
@@ -282,6 +283,11 @@ export function SepaPage() {
     // already enforced in is_buyable), and quiet pre-breakout VCP coilers
     // (pp.198-203) reappear with one tap.
     volX15Only: true,
+    // Default ON (Ajay 2026-06-11, the ATEX lesson: bought it hours before
+    // an AMC report that missed by 28%). Hides names whose next earnings is
+    // within 7 days — buying into a report is a gap bet, not a SEPA entry.
+    // One tap shows them again (the ⚠ ER chip still marks each name).
+    hideEarningsSoon: true,
     // Default OFF — opt-in toggle. Some users want to see distributing
     // names too (shorting, planning exits on owned positions). Chip
     // flips it on for a cleaner accumulation-only view. Persists via
@@ -320,6 +326,7 @@ export function SepaPage() {
     // names at the top (user 2026-06-02). Pick "Sort: Score" to revert.
     sortBy: 'most_buyable',
   };
+  const earningsMap = useEarningsMap();
   const [filters, setFilters] = useState<SepaFilters>(() => {
     if (typeof window === 'undefined') return FILTER_DEFAULTS;
     try {
@@ -476,6 +483,13 @@ export function SepaPage() {
       if (filters.volX15Only) {
         const v = r.volume;
         if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
+      }
+      // Earnings-soon gate (ATEX lesson 2026-06-11) — same gate in
+      // passesFilters() below, keep in sync. Unknown dates pass (fail
+      // open; the chip's absence is honest about coverage).
+      if (filters.hideEarningsSoon) {
+        const er = earningsMap.get(r.symbol?.toUpperCase());
+        if (er && er.days_to <= EARNINGS_WARN_DAYS) return false;
       }
       // Hide-Distributing chip — drop institutional-distribution tape OR
       // Chaikin money-outflow names. Opposite of "accumulation", so if
@@ -759,7 +773,7 @@ export function SepaPage() {
       return b.score - a.score;
     });
     return out;
-  }, [source, filters]);
+  }, [source, filters, earningsMap]);
 
   // Build a fast lookup: symbol → SepaCandidate. Used when a setup tab is
   // active to match incoming /setups/{kind} setups to the existing SEPA
@@ -807,6 +821,11 @@ export function SepaPage() {
       // Same gate as the main `filtered` useMemo above — keep in sync.
       const v = r.volume;
       if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
+    }
+    if (filters.hideEarningsSoon) {
+      // Same gate as the main `filtered` useMemo above — keep in sync.
+      const er = earningsMap.get(r.symbol?.toUpperCase());
+      if (er && er.days_to <= EARNINGS_WARN_DAYS) return false;
     }
     if (filters.hideDistributing) {
       // Same gate as the main `filtered` useMemo above — keep in sync.
@@ -859,7 +878,7 @@ export function SepaPage() {
       if (tier < filters.moatMin) return false;
     }
     return true;
-  }, [filters, whalesFlow]);
+  }, [filters, whalesFlow, earningsMap]);
 
   // VCP-tab list — client-side filter on the already-loaded SEPA list.
   // Composes with the existing SepaFilterBar so RS, pioneer, etc. still

@@ -15,6 +15,8 @@ import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
+import { EarningsChip } from '../components/EarningsChip';
+import { useEarningsMap } from '../hooks/useEarningsMap';
 import { PatternMatchCards } from '../components/PatternMatchCards';
 import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
 import { AddHoldingForm } from '../components/AddHoldingForm';
@@ -71,6 +73,7 @@ export default function PortfolioPage() {
   const { data, loading, error, refresh, updatedAt } = useHoldings(true);
   const rows: HoldingRow[] = data?.rows ?? [];
   const { verdicts } = usePatternVerdicts();
+  const earningsMap = useEarningsMap();   // ⚠ ER chip on each holding row
   const [sortKey, setSortKey] = useState<HoldSortKey>('default');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -256,6 +259,7 @@ export default function PortfolioPage() {
                     </span>
                   )}
                   <PatternChips v={verdicts.get((r.symbol || '').toUpperCase())} />
+                  <EarningsChip symbol={r.symbol} info={earningsMap.get((r.symbol || '').toUpperCase())} />
                 </div>
                 <button
                   type="button"

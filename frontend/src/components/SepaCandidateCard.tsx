@@ -47,6 +47,10 @@ import { SepaConvictionChip, computeConviction } from './SepaConvictionChip';
 // and U.S. govt investment/contractor relationships. Informational only;
 // curated list in src/lib/politicalDisclosures.ts.
 import { SepaPoliticalChip } from './SepaPoliticalChip';
+// Earnings-within-7-days warning chip — renders null outside the warn
+// window, so it's safe to mount unconditionally on every card.
+import { EarningsChip } from './EarningsChip';
+import { useEarningsMap } from '../hooks/useEarningsMap';
 // Pattern verdict row (bullish structure / closest pattern / bearish warning /
 // explicit no-match) — reads the latest 🎯 verdict scan via the deduped hook.
 import { SepaPatternRow } from './SepaPatternChip';
@@ -164,6 +168,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
   // itself to render the trajectory chart.
   const trend = useSepaTrend(row.symbol);
   const owned = useOwnedPosition(row.symbol);   // your position, if you hold this name
+  const earningsMap = useEarningsMap();         // ⚠ ER chip — session-cached map
   // Lazy fetch of per-symbol history snapshots — only triggered when
   // the trend drill modal actually opens. Avoids 200 cards × 1 fetch
   // each on page load. The hook fires its own fetch on mount; we mount
@@ -436,6 +441,9 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               symbol={row.symbol}
               onOpenDrill={() => setOpenSignal('political_disclosure')}
             />
+            {/* ⚠ ER chip — earnings within 7 days. Renders null otherwise;
+                click opens EarningsWhispers (stopPropagation inside). */}
+            <EarningsChip symbol={row.symbol} info={earningsMap.get(row.symbol.toUpperCase())} />
             {lateBase && (
               <span
                 role="button" tabIndex={0}

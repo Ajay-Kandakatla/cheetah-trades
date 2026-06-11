@@ -9,6 +9,8 @@ import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from './PatternChips';
 import { TickerName } from './TickerCell';
+import { EarningsChip } from './EarningsChip';
+import { useEarningsMap } from '../hooks/useEarningsMap';
 
 type Pick = {
   symbol: string;
@@ -69,6 +71,7 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
   const [data, setData] = useState<Resp | null>(null);
   const [err, setErr] = useState(false);
   const { verdicts } = usePatternVerdicts();
+  const earningsMap = useEarningsMap();
 
   useEffect(() => {
     let alive = true;
@@ -112,6 +115,8 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
                     {s.label}
                   </span>
                   <PatternChips v={verdicts.get(p.symbol.toUpperCase())} />
+                  {/* asLink={false} — we're inside the row's <Link>; nested anchors are invalid */}
+                  <EarningsChip symbol={p.symbol} info={earningsMap.get(p.symbol.toUpperCase())} asLink={false} />
                 </div>
                 {lev.isLeveraged && (
                   <div className="top-pick__lev" title="Leveraged/inverse ETF — daily-rebalance decay + amplified drawdown; SEPA/Minervini criteria don't apply.">

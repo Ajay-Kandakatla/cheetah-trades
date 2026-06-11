@@ -52,6 +52,7 @@ const DEFAULT_FILTERS: SepaFilters = {
   showAll: false,
   dmEligibleOnly: false,
   volX15Only: false,
+  hideEarningsSoon: false,
   type: 'all',
   pioneerOnly: false,
   stage: 'ALL',

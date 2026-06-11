@@ -103,6 +103,7 @@ export type SepaFilters = {
    *  definition (pp.198–203) — one tap shows the coilers again. Rows with
    *  unknown volume are hidden while the chip is on. */
   volX15Only: boolean;
+  hideEarningsSoon: boolean;
   /** When true, drop any candidate whose 13F whales signal is anything
    *  other than 'accumulating'. Tightens the list to names that BOTH
    *  passed SEPA AND have institutional capital flowing in over the last
@@ -232,6 +233,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     filters.search.trim() !== '',
     filters.dmEligibleOnly,
     filters.volX15Only,
+    filters.hideEarningsSoon,
     filters.hideDistributing,
     filters.whalesAccumOnly,
     filters.hedgeFundTopBuyer,
@@ -379,6 +381,13 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             title="Only show names trading ≥1.5× their 50-day average volume TODAY (default ON). This is the book's ENTRY volume condition (p.203) used as a view filter — turn it OFF to see quiet pre-breakout VCP coilers, which are low-volume by definition (pp.198-203). Unknown-volume rows are hidden while on."
           >
             ⚡ ≥1.5× Volume
+          </button>
+          <button
+            className={`sepa-chip ${filters.hideEarningsSoon ? 'is-active' : ''}`}
+            onClick={() => set('hideEarningsSoon', !filters.hideEarningsSoon)}
+            title="Hide names reporting earnings within 7 days (default ON — the ATEX lesson: a chart can pass every gate hours before a -28% earnings miss). Buying into a report is a gap bet, not a SEPA entry. Turn OFF to see them; each still carries the ⚠ ER chip. Dates from yfinance — verify on EarningsWhispers."
+          >
+            🚫 ER ≤7d
           </button>
           <button
             className={`sepa-chip ${filters.hideDistributing ? 'is-active' : ''}`}
