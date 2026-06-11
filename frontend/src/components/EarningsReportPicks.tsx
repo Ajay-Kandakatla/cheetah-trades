@@ -9,6 +9,7 @@
  * -28% EPS miss — the tape is the judge). Same-day reactions are flagged
  * provisional until the close grades the full volume. */
 import { useEffect, useState } from 'react';
+import { WatchlistButton } from './WatchlistButton';
 import { API } from '../lib/apiBase';
 import { TickerCell } from './TickerCell';
 import { useSort } from '../lib/useSort';
@@ -163,7 +164,7 @@ export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
                               borderRadius: 10, padding: '0.55rem 0.7rem',
                               background: p.is_buyable ? 'rgba(16,185,129,0.05)' : 'var(--bg-raised,#16181d)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <TickerCell symbol={p.symbol} size="0.9rem" nameWidth={18} />
+                    <TickerCell symbol={p.symbol} size="0.9rem" nameWidth={18} /><WatchlistButton ticker={p.symbol} />
                     {p.is_buyable && <span style={{ color: C.green, fontSize: '0.7rem', fontWeight: 700 }}>✅ BUYABLE</span>}
                     {p.provisional && (
                       <span style={{ color: C.amber, fontSize: '0.7rem', fontWeight: 600 }}
@@ -254,6 +255,7 @@ function UpcomingView({ upc }: { upc: UpcomingResp | null }) {
                             border: `1px solid ${n.is_buyable ? C.green + '55' : watch ? 'var(--gold,#c9a227)55' : 'var(--hairline,#2a2a2a)'}` }}>
                   {watch && <span title="Currently a SEPA qualifier/buyable">⭐</span>}
                   <b>{n.symbol}</b>
+                  <WatchlistButton ticker={n.symbol} />
                   {n.when && <span style={{ color: C.sub, fontSize: '0.64rem' }}>{n.when}</span>}
                   {n.rs_rank != null && <span style={{ color: C.muted, fontSize: '0.64rem' }}>RS{n.rs_rank}</span>}
                 </a>

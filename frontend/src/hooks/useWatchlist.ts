@@ -90,7 +90,12 @@ export function useWatchlist() {
   const add = useCallback(async (ticker: string) => {
     const t = ticker.toUpperCase().trim();
     if (!t) return;
-    await fetch(`${API}/watchlist?ticker=${encodeURIComponent(t)}`, { method: 'POST' });
+    // StockTwits-style: a ★ tap adds ONLY this ticker (Ajay 2026-06-11).
+    // expand_competitors=false so starring KIM doesn't silently dump peer
+    // REITs onto the list — competitor expansion stays a /watchlist-page
+    // power feature, not a side effect of the global star.
+    await fetch(`${API}/watchlist?ticker=${encodeURIComponent(t)}&expand_competitors=false`,
+                { method: 'POST' });
     refetchNow();
   }, []);
 

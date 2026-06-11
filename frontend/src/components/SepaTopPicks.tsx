@@ -3,6 +3,7 @@
    refreshes whenever a scan runs. Ranks fresh breakouts first (see backend
    sepa/top_picks.py). Fails quiet — never breaks the portfolio page. */
 import { useEffect, useState } from 'react';
+import { WatchlistButton } from './WatchlistButton';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
@@ -109,7 +110,7 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
             return (
               <Link key={p.symbol} to={`/sepa/${p.symbol}`} className="top-pick" title={p.decision_reason || p.why || ''}>
                 <div className="top-pick__row">
-                  <span className="top-pick__sym">{p.symbol}<TickerName symbol={p.symbol} name={p.name} width={20} /></span>
+                  <span className="top-pick__sym">{p.symbol}<WatchlistButton ticker={p.symbol} /><TickerName symbol={p.symbol} name={p.name} width={20} /></span>
                   <span className="top-pick__score mono">{p.score ?? '—'}</span>
                   <span className="top-pick__badge" style={{ color: s.color, borderColor: s.color }}>
                     {s.label}

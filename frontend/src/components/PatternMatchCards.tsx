@@ -11,6 +11,7 @@
  * stop · RS/Stage · ⚠ bearish read when the candles disagree.
  * Click card → /sepa/{sym}. Fails quiet when no verdict scan exists yet. */
 import { useMemo } from 'react';
+import { WatchlistButton } from './WatchlistButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePatternVerdicts, type PatternVerdict } from '../hooks/usePatternVerdicts';
 import { TickerCell } from './TickerCell';
@@ -95,7 +96,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
                           background: star ? 'rgba(16,185,129,0.07)' : 'var(--bg-raised,#16181d)',
                           border: `1px solid ${star ? C.green : conf ? '#10b98155' : '#f59e0b44'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <TickerCell symbol={v.symbol} size="0.86rem" />
+                <TickerCell symbol={v.symbol} size="0.86rem" /><WatchlistButton ticker={v.symbol} />
                 {star && <span title="Confirmed pattern AND clears the full Minervini buy gate (Stage 2 + setup + volume + buy zone)">⭐</span>}
                 <EarningsChip symbol={v.symbol} info={earningsMap.get(v.symbol.toUpperCase())} />
                 <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 700,
