@@ -130,7 +130,7 @@ function PickCard({ pick }: { pick: PankajPick }) {
   // re-scan, so there's no reason to strand them here.
   const symEl = (
     <Link to={`/sepa/${pick.symbol}`}
-          title={i?.in_scan ? pick.name : `${pick.name} — not in the latest scan; the detail page can re-scan it on demand`}
+          title={i?.in_scan ? (pick.name ?? pick.symbol) : `${pick.name ?? pick.symbol} — not in the latest scan; the detail page can re-scan it on demand`}
           style={{ color: 'var(--ink)', textDecoration: 'none' }}>
       {pick.symbol}
     </Link>
