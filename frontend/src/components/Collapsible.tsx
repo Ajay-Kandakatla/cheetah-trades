@@ -23,7 +23,7 @@ export function Collapsible({ label = 'more', children, defaultOpen = false }: {
       <button
         type="button"
         aria-expanded={open}
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
         className="mono"
         style={{
           fontSize: '0.72rem', padding: '2px 9px', borderRadius: 6, cursor: 'pointer',
@@ -60,7 +60,7 @@ export function ClampText({ lines = 2, children, style }: {
       <button
         type="button"
         aria-expanded={open}
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
         style={{
           fontSize: '0.7rem', padding: 0, marginTop: 2, cursor: 'pointer',
           background: 'transparent', border: 'none',

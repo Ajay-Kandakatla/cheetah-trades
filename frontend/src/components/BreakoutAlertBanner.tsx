@@ -54,11 +54,15 @@ function AlertCard({ alert, isNew, onDismiss }: {
   // recognizable instead of an empty card.
   const ticker = (alert.ticker || '').trim() || '?';
 
-  // Stop propagation when the user clicks inside the body's interactive
-  // elements (close X, expand details button). Without this, clicks on
-  // the body bubble up to the wrapping <Link> and navigate away when
-  // the user just meant to expand the row.
-  const stop = (e: MouseEvent) => e.stopPropagation();
+  // The close X / expand button are DESCENDANTS of the wrapping <Link>'s
+  // <a href>. stopPropagation alone is NOT enough there: it keeps the event
+  // from reaching react-router's onClick on the anchor, but the browser's
+  // NATIVE default for a click inside an <a href> still fires — so the ✕
+  // dismissed the alert and then full-page-navigated to the ticker anyway
+  // (Ajay 2026-06-11: "alert close is triggering the open details").
+  // preventDefault kills the native navigation; stopPropagation keeps the
+  // card's client-side handlers out of it.
+  const stop = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
 
   return (
     <article
