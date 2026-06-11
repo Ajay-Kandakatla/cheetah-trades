@@ -227,7 +227,7 @@ def alert_events(pick: dict, price: Optional[float], now_hm: Optional[str] = Non
             if st["state"] == "triggered":
                 out.append({
                     "setup_id": sid, "event": "TRIGGER", "emoji": "🟢",
-                    "title": f"{sym} crossed {ANALYST}'s {trig:g} trigger",
+                    "title": f"Pankaj Swing Alert \u00b7 {sym} \u2014 crossed {trig:g} trigger",
                     "body": (f"{sym} tagged {trig:g} (now {price:g}). {ANALYST}'s entry wants a "
                              f"CLOSE above{_confirm_text(setup)}.{_targets_text(setup)}{_stops_text(setup)} "
                              f"{ANALYST}'s call — not advice."),
@@ -235,7 +235,7 @@ def alert_events(pick: dict, price: Optional[float], now_hm: Optional[str] = Non
                 if _in_close_window(now_hm):
                     out.append({
                         "setup_id": sid, "event": "CLOSE_CONFIRM", "emoji": "✅",
-                        "title": f"{sym} closing above {ANALYST}'s {trig:g} trigger",
+                        "title": f"Pankaj Swing Alert \u00b7 {sym} \u2014 closing above {trig:g}",
                         "body": (f"{sym} is {price:g} into the close — above {ANALYST}'s {trig:g} "
                                  f"trigger (conservative daily-close entry).{_targets_text(setup)}"
                                  f"{_stops_text(setup)} {ANALYST}'s call — not advice."),
@@ -243,7 +243,7 @@ def alert_events(pick: dict, price: Optional[float], now_hm: Optional[str] = Non
             elif st["state"] == "approaching":
                 out.append({
                     "setup_id": sid, "event": "APPROACH", "emoji": "🟡",
-                    "title": f"{sym} nearing {ANALYST}'s {trig:g} trigger",
+                    "title": f"Pankaj Swing Alert \u00b7 {sym} \u2014 nearing {trig:g} trigger",
                     "body": (f"{sym} is {abs(st['dist_pct']):.1f}% below {ANALYST}'s breakout trigger "
                              f"{trig:g}{_confirm_text(setup)}.{_stops_text(setup)} Set the buy-stop now so a "
                              f"gap can't steal it. {ANALYST}'s call — not advice."),
@@ -254,7 +254,7 @@ def alert_events(pick: dict, price: Optional[float], now_hm: Optional[str] = Non
                 zone = setup["zone"]
                 out.append({
                     "setup_id": sid, "event": "ZONE", "emoji": "🟡",
-                    "title": f"{sym} in {ANALYST}'s {zone['lo']:g}-{zone['hi']:g} demand zone",
+                    "title": f"Pankaj Swing Alert \u00b7 {sym} \u2014 in {zone['lo']:g}-{zone['hi']:g} zone",
                     "body": (f"{sym} ({price:g}) pulled into {ANALYST}'s {zone['lo']:g}-{zone['hi']:g} "
                              f"demand zone — the conservative entry area.{_targets_text(setup)}"
                              f"{_stops_text(setup)} {ANALYST}'s call — not advice."),

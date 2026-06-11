@@ -93,3 +93,11 @@ def test_events_have_attribution_and_levels():
     for e in ev:
         assert "not advice" in e["body"].lower()
         assert e["emoji"] and e["title"] and e["setup_id"]
+
+
+def test_titles_lead_with_brand_then_ticker():
+    # Ajay 2026-06-10: notifications must read "Pankaj Swing Alert" then the
+    # actual ticker, so the source is unmistakable on a phone lock screen.
+    for sym, price in (("VG", 13.40), ("VG", 13.20), ("VG", 11.30), ("MRVL", 200.0)):
+        for e in pk.alert_events(_pick(sym), price, "16:00"):
+            assert e["title"].startswith(f"Pankaj Swing Alert · {sym}"), e["title"]
