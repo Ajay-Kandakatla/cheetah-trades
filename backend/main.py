@@ -2241,6 +2241,17 @@ async def sepa_company_names():
     return JSONResponse({"names": names, "n": len(names)})
 
 
+@app.get("/sepa/analyze-chart/{symbol}")
+async def sepa_analyze_chart(symbol: str):
+    """On-demand AI chart analysis (Ajay 2026-06-11): Claude Sonnet
+    synthesizes OUR system's facts — pattern verdict, scan row, live Massive
+    price, market gauge — into a buyable-signal verdict (BUY_NOW /
+    BUY_ON_CLOSE_CONFIRM / WAIT / PASS). Facts ship alongside so the verdict
+    is checkable. Cached 10 min per symbol+price; owner-pressed button only."""
+    from sepa import chart_analysis
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(chart_analysis.analyze, symbol)))
+
+
 @app.get("/sepa/leaderboard")
 async def sepa_leaderboard(n: int = Query(12, ge=1, le=30),
                            days: int = Query(14, ge=1, le=45)):
