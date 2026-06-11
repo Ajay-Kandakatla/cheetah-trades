@@ -124,9 +124,17 @@ function PickCard({ pick }: { pick: PankajPick }) {
   const i = pick.indicators;
   const chg = i?.day_change_pct;
   const chgColor = chg == null ? 'var(--ink-muted)' : chg >= 0 ? 'var(--positive)' : 'var(--negative)';
-  const symEl = i?.in_scan
-    ? <Link to={`/sepa/${pick.symbol}`} style={{ color: 'var(--ink)', textDecoration: 'none' }}>{pick.symbol}</Link>
-    : <span>{pick.symbol}</span>;
+  // ALWAYS a link (Ajay 2026-06-11: "VG does not go to the ticker details
+  // page, it's stuck"). The old in_scan gate made off-universe picks dead
+  // text — but /sepa/{symbol} handles any ticker and offers the on-demand
+  // re-scan, so there's no reason to strand them here.
+  const symEl = (
+    <Link to={`/sepa/${pick.symbol}`}
+          title={i?.in_scan ? pick.name : `${pick.name} — not in the latest scan; the detail page can re-scan it on demand`}
+          style={{ color: 'var(--ink)', textDecoration: 'none' }}>
+      {pick.symbol}
+    </Link>
+  );
 
   return (
     <section className="card" style={{ display: 'grid', gap: 14, padding: '16px 18px' }}>
