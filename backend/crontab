@@ -440,6 +440,12 @@
 # Built 2026-06-11 after ATEX reported the evening it was bought.
 45     17    *    *    1-5  /usr/local/bin/python -m sepa.earnings_watch
 #
+# Earnings-report picks — 5:55 PM ET weekdays, after earnings_watch has the
+# day's report results and the 4:30 fast-scan put today's close in the price
+# cache. Rebuilds the "good report + tape agreed" picks doc shown on
+# Portfolio / SEPA / Leaderboard / Scalping.
+55     17    *    *    1-5  /usr/local/bin/python -m sepa.earnings_picks
+#
 # ============================================================================
 # Market open / close reminders — 15 min before each bell, weekdays only
 # ============================================================================

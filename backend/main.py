@@ -2261,6 +2261,16 @@ async def sepa_earnings_map():
     return JSONResponse(await asyncio.to_thread(earnings_watch.bulk_map))
 
 
+@app.get("/sepa/earnings-picks")
+async def sepa_earnings_picks():
+    """Earnings-report picks: names whose last report was good AND the tape
+    agreed (reaction +3%+ on 1.5x volume, still holding). The ATEX lesson's
+    bull side (Ajay 2026-06-11) — surfaced on Portfolio/SEPA/Leaderboard/
+    Scalping. Self-heals when stale."""
+    from sepa import earnings_picks
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(earnings_picks.latest)))
+
+
 @app.get("/sepa/analyze-chart/{symbol}")
 async def sepa_analyze_chart(symbol: str):
     """On-demand AI chart analysis (Ajay 2026-06-11): Claude Sonnet

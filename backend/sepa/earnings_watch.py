@@ -52,9 +52,21 @@ def _today_et() -> datetime:
         return datetime.now().astimezone()
 
 
+def _f(x) -> Optional[float]:
+    """float or None — NaN-safe (yfinance hands back NaN for missing cells)."""
+    try:
+        v = float(x)
+        return v if v == v else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _fetch_next(symbol: str) -> Optional[dict]:
-    """Next earnings event for one symbol via yfinance. Returns
-    {next_date: 'YYYY-MM-DD', when: 'BMO'|'AMC'|None, eps_estimate} or None."""
+    """Next earnings event for one symbol via yfinance — AND the most recent
+    PAST report from the same frame (date, actual vs estimate, surprise %),
+    at zero extra API cost. The past report powers the "good earnings →
+    potential bull" picks (Ajay 2026-06-11, after being shaken out of ATEX
+    right before its post-earnings rip)."""
     try:
         import yfinance as yf
         t = yf.Ticker(symbol)
@@ -64,16 +76,32 @@ def _fetch_next(symbol: str) -> Optional[dict]:
             df = t.get_earnings_dates(limit=8)
         except Exception:
             df = None
+        out: dict = {}
         if df is not None and len(df):
-            future = [(ts, row) for ts, row in df.iterrows()
-                      if ts.date() >= today]
+            def when_of(ts):
+                return "BMO" if ts.hour < 9 else ("AMC" if ts.hour >= 15 else None)
+            future = [(ts, row) for ts, row in df.iterrows() if ts.date() >= today]
+            past = [(ts, row) for ts, row in df.iterrows()
+                    if ts.date() < today and _f(row.get("Reported EPS")) is not None]
             if future:
                 ts, row = min(future, key=lambda x: x[0])
-                hour = ts.hour
-                when = "BMO" if hour < 9 else ("AMC" if hour >= 15 else None)
-                est = row.get("EPS Estimate")
-                return {"next_date": ts.date().isoformat(), "when": when,
-                        "eps_estimate": float(est) if est == est and est is not None else None}
+                out.update(next_date=ts.date().isoformat(), when=when_of(ts),
+                           eps_estimate=_f(row.get("EPS Estimate")))
+            if past:
+                ts, row = max(past, key=lambda x: x[0])
+                out.update(last_report={
+                    "date": ts.date().isoformat(),
+                    "when": when_of(ts),
+                    "eps_actual": _f(row.get("Reported EPS")),
+                    "eps_estimate": _f(row.get("EPS Estimate")),
+                    "surprise_pct": _f(row.get("Surprise(%)")),
+                })
+            if out:
+                out.setdefault("next_date", None)
+                out.setdefault("when", None)
+                out.setdefault("eps_estimate", None)
+                out.setdefault("last_report", None)
+                return out
         # Fallback: Ticker.calendar (sometimes an estimate/range, no time).
         cal = t.calendar
         dates = (cal or {}).get("Earnings Date") if isinstance(cal, dict) else None
@@ -81,7 +109,7 @@ def _fetch_next(symbol: str) -> Optional[dict]:
             future = [d for d in dates if d >= today]
             if future:
                 return {"next_date": min(future).isoformat(), "when": None,
-                        "eps_estimate": None}
+                        "eps_estimate": None, "last_report": None}
     except Exception as exc:
         log.debug("earnings fetch failed %s: %s", symbol, exc)
     return None
@@ -112,9 +140,11 @@ def _universe() -> List[str]:
     return sorted(syms)
 
 
-def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4) -> dict:
+def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4,
+            force: bool = False) -> dict:
     """Fetch/update earnings dates for the decision universe. A doc is
-    re-fetched when missing, stale (>3d), or its date already passed."""
+    re-fetched when missing, stale (>3d), its date already passed, or it
+    predates the last_report schema (2026-06-11). force=True refetches all."""
     coll = _coll()
     if coll is None:
         return {"ok": False, "reason": "no mongo"}
@@ -126,9 +156,11 @@ def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4) -> dict:
     todo = []
     for s in syms:
         doc = existing.get(s)
-        if (doc is None
+        if (force
+                or doc is None
                 or now - (doc.get("fetched_at") or 0) > _REFETCH_AFTER_SEC
-                or (doc.get("next_date") and doc["next_date"] < today)):
+                or (doc.get("next_date") and doc["next_date"] < today)
+                or "last_report" not in doc):
             todo.append(s)
 
     fetched = 0
@@ -136,7 +168,8 @@ def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4) -> dict:
         nonlocal fetched
         res = _fetch_next(sym)
         doc = {"_id": sym, "fetched_at": int(time.time()),
-               **(res or {"next_date": None, "when": None, "eps_estimate": None})}
+               **(res or {"next_date": None, "when": None,
+                          "eps_estimate": None, "last_report": None})}
         try:
             coll.replace_one({"_id": sym}, doc, upsert=True)
             fetched += 1
