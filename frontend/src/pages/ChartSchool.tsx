@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { InfoButton } from '../components/InfoButton';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)', blue: '#4fc3f7' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)', blue: '#4fc3f7' };
 
 /* ── tiny pure-SVG candlestick chart for the quiz ─────────────────────────── */
 type Bar = { t: string; o: number; h: number; l: number; c: number; v: number };

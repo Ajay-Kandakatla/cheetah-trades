@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import type { PatternMatch, PatternFormation } from '../hooks/usePatternVerdicts';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 const LABEL: Record<string, string> = {
   double_bottom: 'Double bottom (W)', triple_bottom: 'Triple bottom',
   inverse_head_shoulders: 'Inverse head & shoulders', cup_with_handle: 'Cup with handle',
@@ -92,7 +92,7 @@ export function TickerPatternPanel({ symbol }: { symbol: string }) {
                     {conf ? `CONFIRMED ${m.bars_since_confirm === 0 ? 'TODAY' : 'yesterday'}` : `FORMING · ${m.to_confirm_pct}% to the line`}
                   </span>
                   {conf && m.bars_since_confirm === 0 && (
-                    <span style={{ fontSize: '0.64rem', color: C.muted }}>
+                    <span style={{ fontSize: '0.72rem', color: C.amber }}>
                       provisional — counts only if today CLOSES above the line
                     </span>
                   )}
@@ -110,7 +110,7 @@ export function TickerPatternPanel({ symbol }: { symbol: string }) {
                     A shape, not a signal — it only counts on a CLOSE above the line.
                   </div>
                 )}
-                <div style={{ fontSize: '0.64rem', color: C.sub, marginTop: 4 }}>{BULKOWSKI[m.pattern]}</div>
+                <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 4 }}>{BULKOWSKI[m.pattern]}</div>
               </div>
             );
           }) : !data.error && (
@@ -124,14 +124,14 @@ export function TickerPatternPanel({ symbol }: { symbol: string }) {
           {/* Candle reads — bullish / bearish / indecision, with the honesty stat */}
           {formations.length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: '0.64rem', color: C.sub, textTransform: 'uppercase', marginBottom: 3 }}>
+              <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 3 }}>
                 Recent candle reads (context, not signals)
               </div>
               {formations.map((f) => (
                 <div key={`${f.name}-${f.date}`} style={{ fontSize: '0.74rem', marginBottom: 3 }}>
                   <b style={{ color: READ_COLOR[f.read] || C.muted }}>{f.name.replace(/_/g, ' ')}</b>
                   <span style={{ color: C.sub }}> ({f.date}) — {f.note}.</span>
-                  {f.stat && <span style={{ color: C.sub, fontSize: '0.66rem' }}> {f.stat}.</span>}
+                  {f.stat && <span style={{ color: C.sub, fontSize: '0.7rem' }}> {f.stat}.</span>}
                 </div>
               ))}
             </div>
@@ -140,7 +140,7 @@ export function TickerPatternPanel({ symbol }: { symbol: string }) {
           {/* This chart's own record — the self-validation that keeps us honest */}
           {val.length > 0 && (
             <div style={{ marginTop: 8, fontSize: '0.72rem', color: C.muted }}>
-              <div style={{ fontSize: '0.64rem', color: C.sub, textTransform: 'uppercase', marginBottom: 3 }}>
+              <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 3 }}>
                 This chart's own record (+21 trading days after past confirmations, gross)
               </div>
               {val.map(([k, v]) => (
@@ -154,11 +154,11 @@ export function TickerPatternPanel({ symbol }: { symbol: string }) {
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
             <button onClick={() => navigate('/patterns')}
-                    style={{ fontSize: '0.68rem', background: 'transparent', border: 'none', padding: 0,
+                    style={{ fontSize: '0.72rem', background: 'transparent', border: 'none', padding: '6px 0',
                              color: 'var(--gold,#c9a227)', cursor: 'pointer', textDecoration: 'underline' }}>
               All pattern verdicts →
             </button>
-            <span style={{ fontSize: '0.62rem', color: C.sub }}>{data.disclaimer}</span>
+            <span style={{ fontSize: '0.66rem', color: C.sub }}>{data.disclaimer}</span>
           </div>
         </>
       )}

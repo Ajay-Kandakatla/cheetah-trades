@@ -8,6 +8,7 @@
  * for the large majority of retail traders.
  */
 import { useState } from 'react';
+import { ClampText } from '../components/Collapsible';
 import { InfoButton } from '../components/InfoButton';
 import { IntradayChart } from '../components/IntradayChart';
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
@@ -24,7 +25,7 @@ import { UniverseConvictionPanel } from '../components/UniverseConvictionPanel';
 import { useDayUniverse } from '../hooks/useDayTrading';
 import { TickerCell } from '../components/TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 
 const PageInfo = (
   <>
@@ -41,20 +42,20 @@ const PageInfo = (
 );
 
 function Pill({ text, color, bg }: { text: string; color: string; bg: string }) {
-  return <span style={{ fontSize: '0.66rem', fontWeight: 700, color, background: bg, border: `1px solid ${color}55`, borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>{text}</span>;
+  return <span style={{ fontSize: '0.72rem', fontWeight: 700, color, background: bg, border: `1px solid ${color}55`, borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' }}>{text}</span>;
 }
 
 function RegimeBar({ r }: { r: ScalpRegime }) {
   const color = r.bias === 'long_bias' ? C.green : r.bias === 'short_bias' ? C.red : C.muted;
   const icon = r.bias === 'long_bias' ? '▲' : r.bias === 'short_bias' ? '▼' : r.bias === 'pending' ? '…' : '↔';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.55rem 0.8rem', borderRadius: 10, background: `${color}14`, border: `1px solid ${color}44`, marginBottom: 12 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.55rem 0.8rem', borderRadius: 10, background: `${color}14`, border: `1px solid ${color}44`, marginBottom: 12, flexWrap: 'wrap' }}>
       <span style={{ fontSize: '1.1rem', color }}>{icon}</span>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, color, fontSize: '0.86rem' }}>Intraday-momentum regime — {r.bias.replace('_', ' ')}</div>
         <div style={{ fontSize: '0.76rem', color: C.muted }}>{r.label}</div>
       </div>
-      <span style={{ fontSize: '0.62rem', color: C.sub, maxWidth: 230, textAlign: 'right' }}>{r.note}</span>
+      <span style={{ fontSize: '0.72rem', color: C.sub, maxWidth: 230, minWidth: 120, textAlign: 'right' }}>{r.note}</span>
     </div>
   );
 }
@@ -115,7 +116,7 @@ function SignalCard({ s, selected, onSelect }: { s: ScalpSignal; selected: boole
         </div>
       )}
 
-      <div style={{ fontSize: '0.64rem', color: C.sub, marginTop: 5 }}>{s.reasons[0]} · <span style={{ opacity: 0.8 }}>{s.source}</span></div>
+      <div style={{ fontSize: '0.72rem', color: C.sub, marginTop: 5 }}>{s.reasons[0]} · <span style={{ opacity: 0.8 }}>{s.source}</span></div>
     </div>
   );
 }
@@ -136,7 +137,7 @@ export function ScalpingPage() {
 
   const TabBtn = ({ id, label }: { id: Tab; label: string }) => (
     <button onClick={() => setTab(id)} style={{
-      padding: '0.4rem 0.9rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+      padding: '0.4rem 0.9rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, minHeight: 40,
       border: `1px solid ${tab === id ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}`,
       background: tab === id ? 'var(--gold,#c9a227)' : 'transparent',
       color: tab === id ? '#1a1a1a' : 'inherit',
@@ -158,9 +159,11 @@ export function ScalpingPage() {
 
       {/* Persistent full honesty banner */}
       <div style={{ padding: '0.6rem 0.8rem', borderRadius: 10, background: `${C.red}12`, border: `1px solid ${C.red}44`, marginBottom: 14, fontSize: '0.8rem', lineHeight: 1.45 }}>
-        <strong style={{ color: C.red }}>Educational — not advice.</strong> These are <em>documented patterns, not proven retail edges.</em> Account-level
-        studies find <strong>~80–99% of retail day-traders net lose</strong> after costs. Every signal shows <strong>gross beside net-of-cost</strong> and the
-        win rate it needs just to break even — no backtest changes that base rate. The last 30 minutes are auction-dominated and especially hostile.
+        <ClampText lines={2}>
+          <strong style={{ color: C.red }}>Educational — not advice.</strong> These are <em>documented patterns, not proven retail edges.</em> Account-level
+          studies find <strong>~80–99% of retail day-traders net lose</strong> after costs. Every signal shows <strong>gross beside net-of-cost</strong> and the
+          win rate it needs just to break even — no backtest changes that base rate. The last 30 minutes are auction-dominated and especially hostile.
+        </ClampText>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>

@@ -152,7 +152,7 @@ input::placeholder, textarea::placeholder {
 /* -------------------------------------------------------------------------- */
 ::selection {
   background: var(--gold);
-  color: var(--bg);
+  color: #1A1A1A;   /* fixed dark ink — var(--bg) was 2.4:1 in light theme */
 }
 
 * {

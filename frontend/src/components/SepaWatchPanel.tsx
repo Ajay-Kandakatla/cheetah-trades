@@ -8,7 +8,7 @@ import { useSepaWatch, useTapeBacktest, type WatchRow, type WatchAlert } from '.
 import { useSort } from '../lib/useSort';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 
 const STATE_COLOR: Record<string, string> = {
   BREAKOUT_STRONG: C.green, RECLAIM: C.green,
@@ -77,7 +77,7 @@ function AlertRow({ a }: { a: WatchAlert }) {
   const t = new Date(a.fired_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const sym = a.dedup.split(':')[0];
   return (
-    <div style={{ display: 'flex', gap: 10, fontSize: '0.76rem', padding: '2px 0', alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 10, fontSize: '0.76rem', padding: '2px 0', alignItems: 'center', flexWrap: 'wrap' }}>
       <span style={{ color: C.sub, width: 58 }}>{t}</span>
       <span style={{ width: 76 }}><TickerCell symbol={sym} size="0.76rem" nameWidth={10} /></span>
       <span style={{ color: sc, width: 130 }}>{fmtState(a.state)}</span>
@@ -123,7 +123,7 @@ export function SepaWatchPanel({ active, onChart }: { active: boolean; onChart: 
     <div>
       {/* Live self-graded track record */}
       <div style={{ padding: '0.55rem 0.75rem', borderRadius: 10, background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)', marginBottom: 12, fontSize: '0.78rem' }}>
-        <div style={{ fontSize: '0.68rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
+        <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
           Live track record — every alert graded vs the next 30 min
         </div>
         {trEntries.length === 0
@@ -135,7 +135,7 @@ export function SepaWatchPanel({ active, onChart }: { active: boolean; onChart: 
               </span>
             ))}
         <button onClick={() => setShowValidation(!showValidation)}
-                style={{ marginLeft: 8, background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.1rem 0.5rem', cursor: 'pointer', fontSize: '0.7rem' }}>
+                style={{ marginLeft: 8, background: 'transparent', border: '1px solid var(--hairline,#2a2a2a)', color: 'inherit', borderRadius: 6, padding: '0.3rem 0.7rem', cursor: 'pointer', fontSize: '0.72rem', minHeight: 32 }}>
           {showValidation ? 'hide' : 'show'} historical validation
         </button>
       </div>
@@ -146,7 +146,7 @@ export function SepaWatchPanel({ active, onChart }: { active: boolean; onChart: 
           {bt.error && <span style={{ color: C.red }}>validation failed — {bt.error}</span>}
           {bt.data && !bt.data.error && (
             <>
-              <div style={{ fontSize: '0.68rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
+              <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
                 Does the read work? {bt.data.days}d · {bt.data.symbols_used} names · {bt.data.n_events} events (OR/day-high/VWAP contexts — no historical pivot)
               </div>
               {Object.entries(bt.data.by_state).map(([state, s]) => (
@@ -183,7 +183,7 @@ export function SepaWatchPanel({ active, onChart }: { active: boolean; onChart: 
               <span style={{ fontSize: '0.64rem', color: C.sub }}>sort:</span>
               {ROW_SORTS.map((s) => (
                 <button key={s.key} onClick={() => sort.toggle(s.key, s.dir)}
-                        style={{ fontSize: '0.66rem', padding: '1px 7px', borderRadius: 5, cursor: 'pointer',
+                        style={{ fontSize: '0.72rem', padding: '0.3rem 0.7rem', borderRadius: 5, cursor: 'pointer', minHeight: 32,
                                  background: sort.key === s.key ? 'var(--gold,#c9a227)' : 'transparent',
                                  color: sort.key === s.key ? '#1a1a1a' : 'inherit',
                                  border: `1px solid ${sort.key === s.key ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}` }}>
@@ -206,7 +206,7 @@ export function SepaWatchPanel({ active, onChart }: { active: boolean; onChart: 
         </div>
       )}
 
-      <p style={{ fontSize: '0.66rem', color: C.sub, marginTop: 14 }}>{data.disclaimer}</p>
+      <p style={{ fontSize: '0.7rem', color: C.sub, marginTop: 14 }}>{data.disclaimer}</p>
     </div>
   );
 }

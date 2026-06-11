@@ -11,9 +11,10 @@ import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
 import { PatternMatchCards } from '../components/PatternMatchCards';
 import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
+import { ClampText } from '../components/Collapsible';
 import { TickerCell } from '../components/TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)' };
 
 type Sepa = { rs_rank?: number | null; score?: number | null; stage?: number | null; is_candidate?: boolean; is_buyable?: boolean };
 type Pattern = {
@@ -198,7 +199,7 @@ export function PatternsPage() {
       {Object.keys(val).length > 0 && (
         <div style={{ padding: '0.6rem 0.8rem', borderRadius: 10, background: 'var(--bg-sunken,#0f1115)',
                       border: '1px solid var(--hairline,#2a2a2a)', marginBottom: 12, fontSize: '0.78rem' }}>
-          <div style={{ fontSize: '0.68rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
+          <div style={{ fontSize: '0.72rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
             Our universe's record — confirmed patterns, +21 trading days (gross, no costs)
           </div>
           {Object.entries(val).map(([k, v]) => (
@@ -217,7 +218,7 @@ export function PatternsPage() {
       {acc?.ok && (Object.keys(acc.patterns).length > 0 || Object.keys(acc.candles).length > 0 || acc.pending > 0) && (
         <div style={{ padding: '0.6rem 0.8rem', borderRadius: 10, background: 'var(--bg-sunken,#0f1115)',
                       border: '1px solid var(--hairline,#2a2a2a)', marginBottom: 12, fontSize: '0.78rem' }}>
-          <div style={{ fontSize: '0.68rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
+          <div style={{ fontSize: '0.72rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>
             📊 Live forward record — what WE flagged, graded against what happened
             {acc.since ? ` · since ${acc.since}` : ''} {acc.pending > 0 ? ` · ${acc.pending} awaiting their window` : ''}
           </div>
@@ -286,7 +287,7 @@ export function PatternsPage() {
         </>
       )}
 
-      <p style={{ fontSize: '0.66rem', color: C.sub, marginTop: 12 }}>{latest?.disclaimer}</p>
+      <p style={{ fontSize: '0.7rem', color: C.sub, marginTop: 12 }}>{latest?.disclaimer}</p>
     </div>
   );
 }
@@ -341,7 +342,7 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
           </div>
         </>
       )}
-      {q.disclaimer && <div style={{ fontSize: '0.64rem', color: C.sub, marginTop: 8 }}>{q.disclaimer}</div>}
+      {q.disclaimer && <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 8 }}>{q.disclaimer}</div>}
     </div>
   );
 }
@@ -363,23 +364,23 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
                   background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <TickerCell symbol={v.symbol} size="0.88rem" />
-        {s.is_buyable && <span style={{ fontSize: '0.64rem', color: C.green }}>✅ buyable</span>}
+        {s.is_buyable && <span style={{ fontSize: '0.72rem', color: C.green }}>✅ buyable</span>}
         {sources.map((m) => (
           <button key={m.label} onClick={() => navigate(m.to)}
                   title={`This name is on your ${m.label === 'Holding' ? 'Portfolio' : 'Leaderboard'} — click to open`}
-                  style={{ fontSize: '0.62rem', color: C.muted, cursor: 'pointer', background: 'transparent',
-                           border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 5, padding: '0 6px' }}>
+                  style={{ fontSize: '0.72rem', color: C.muted, cursor: 'pointer', background: 'transparent',
+                           border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 5, padding: '4px 8px' }}>
             {m.icon} {m.label}
           </button>
         ))}
-        {s.rs_rank != null && <span style={{ fontSize: '0.68rem', color: C.muted }}>RS {s.rs_rank}</span>}
-        {s.stage != null && <span style={{ fontSize: '0.68rem', color: C.muted }}>Stage {s.stage}</span>}
+        {s.rs_rank != null && <span style={{ fontSize: '0.72rem', color: C.muted }}>RS {s.rs_rank}</span>}
+        {s.stage != null && <span style={{ fontSize: '0.72rem', color: C.muted }}>Stage {s.stage}</span>}
         {v.matches.map((p, i) => {
           const conf = p.status === 'confirmed';
           return (
             <span key={`${p.pattern}-${i}`}
                   title={`${BULKOWSKI[p.pattern] || ''}\nline ${p.neckline} · target ${p.target} (measure rule) · stop ${p.stop}`}
-                  style={{ fontSize: '0.68rem', fontWeight: 700, color: conf ? C.green : C.amber,
+                  style={{ fontSize: '0.72rem', fontWeight: 700, color: conf ? C.green : C.amber,
                            border: `1px solid ${(conf ? C.green : C.amber)}55`,
                            background: `${conf ? C.green : C.amber}14`, borderRadius: 5, padding: '1px 7px' }}>
               {PATTERN_LABEL[p.pattern] || p.pattern} · {conf ? `CONFIRMED ${p.confirmed_date || ''}` : `forming, ${p.to_confirm_pct}% to line`}
@@ -388,17 +389,17 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
         })}
         {formations.map((f) => (
           <span key={`${f.name}-${f.date}`} title={`${f.note}\n${f.stat || ''}`}
-                style={{ fontSize: '0.66rem', color: READ_COLOR[f.read] || C.muted,
+                style={{ fontSize: '0.7rem', color: READ_COLOR[f.read] || C.muted,
                          border: `1px solid ${(READ_COLOR[f.read] || C.muted)}44`, borderRadius: 5, padding: '1px 6px' }}>
             {CANDLE_META[f.name]?.icon || '🕯'} {CANDLE_META[f.name]?.label || f.name} {f.date.slice(5)}
           </span>
         ))}
         {v.matches.length === 0 && formations.length === 0 && (
-          <span style={{ fontSize: '0.68rem', color: C.sub }}>no pattern</span>
+          <span style={{ fontSize: '0.72rem', color: C.sub }}>no pattern</span>
         )}
       </div>
       {v.candles?.last_bar?.read && (
-        <div style={{ fontSize: '0.66rem', color: C.sub, marginTop: 3 }}>{v.candles.last_bar.read}</div>
+        <div style={{ fontSize: '0.72rem', color: C.sub, marginTop: 3 }}>{v.candles.last_bar.read}</div>
       )}
     </div>
   );
@@ -443,7 +444,7 @@ function Card({ p }: { p: Pattern; navigate?: (path: string) => void }) {
         {s.rs_rank != null && <span>RS {s.rs_rank}</span>}
         {s.stage != null && <span>Stage {s.stage}</span>}
       </div>
-      <div style={{ fontSize: '0.64rem', color: C.sub, marginTop: 4 }}>{BULKOWSKI[p.pattern]}</div>
+      <ClampText lines={1} style={{ fontSize: '0.7rem', color: C.sub, marginTop: 4 }}>{BULKOWSKI[p.pattern]}</ClampText>
     </div>
   );
 }

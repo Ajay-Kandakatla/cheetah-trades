@@ -16,7 +16,7 @@
   --ink:          #1A1A1A;   /* primary text */
   --ink-muted:    #4A463E;   /* secondary */
   --ink-subtle:   #5F594F;   /* tertiary / captions — 5.7:1 on --bg (AA) */
-  --ink-faint:    #7A7468;   /* disabled / watermark — 4.5:1 on --bg (AA) */
+  --ink-faint:    #6A645A;   /* disabled / watermark — ~4.9:1 on --bg (AA) */
 
   /* Accent — gold */
   --gold:          #B8935A;
@@ -55,7 +55,7 @@
   --fs-body:     15px;
   --fs-small:    13px;
   --fs-micro:    11px;
-  --fs-eyebrow:  10px;
+  --fs-eyebrow:  11px;
 
   --lh-tight:    1.08;
   --lh-snug:     1.3;

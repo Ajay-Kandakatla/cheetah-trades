@@ -34,9 +34,9 @@ function Card({ ind }: { ind: MacroIndicator }) {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
         <span style={{ fontWeight: 700, fontSize: '0.86rem' }}>{ind.label}</span>
-        {yoy && <span style={{ fontSize: '0.62rem', color: 'var(--ink-subtle,#6b7280)', border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 4, padding: '0 4px' }}>YoY</span>}
+        {yoy && <span style={{ fontSize: '0.62rem', color: 'var(--ink-subtle,#8a93a6)', border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 4, padding: '0 4px' }}>YoY</span>}
       </div>
-      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#6b7280)', marginTop: -2 }}>{ind.blurb}</div>
+      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#8a93a6)', marginTop: -2 }}>{ind.blurb}</div>
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
         <span style={{ fontSize: '1.5rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
@@ -49,10 +49,10 @@ function Card({ ind }: { ind: MacroIndicator }) {
         <span style={{ color: cc, fontWeight: 700 }}>
           {arrow} {ind.change == null ? '—' : `${ind.change > 0 ? '+' : ''}${ind.change.toFixed(2)}`}
         </span>
-        <span style={{ color: 'var(--ink-subtle,#6b7280)' }}>vs prior</span>
+        <span style={{ color: 'var(--ink-subtle,#8a93a6)' }}>vs prior</span>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.66rem', color: 'var(--ink-subtle,#6b7280)', marginTop: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.66rem', color: 'var(--ink-subtle,#8a93a6)', marginTop: 2 }}>
         <span>as of {ind.as_of_label}</span>
         {ind.next_release_label && <span>next: {ind.next_release_label}</span>}
       </div>
@@ -89,7 +89,7 @@ export function MacroIndicators() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.7rem' }}>
         {m.indicators.map((ind) => <Card key={ind.id} ind={ind} />)}
       </div>
-      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#6b7280)', marginTop: 10 }}>{m.disclaimer}</div>
+      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#8a93a6)', marginTop: 10 }}>{m.disclaimer}</div>
     </section>
   );
 }

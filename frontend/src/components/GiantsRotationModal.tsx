@@ -44,7 +44,7 @@ type Payload = {
   note?: string;
 };
 
-const C = { green: '#10b981', red: '#ef4444', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', muted: '#94a3b8', sub: '#8a93a6' };
 
 function MoveChips({ moves }: { moves: Move[] }) {
   if (!moves?.length) {
@@ -147,7 +147,7 @@ export function GiantsRotationModal({ symbol, onClose }: { symbol: string; onClo
           </div>
           <button onClick={onClose} className="mono"
                   style={{ background: 'transparent', border: '1px solid var(--rule,#333)',
-                           borderRadius: 6, cursor: 'pointer', padding: '2px 10px', color: 'inherit' }}>
+                           borderRadius: 6, cursor: 'pointer', padding: '8px 14px', color: 'inherit' }}>
             ✕
           </button>
         </header>

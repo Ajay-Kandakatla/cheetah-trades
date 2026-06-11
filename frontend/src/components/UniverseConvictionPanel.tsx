@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)', blue: '#4fc3f7' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)', blue: '#4fc3f7' };
 const SHORT: Record<string, string> = {
   double_bottom: 'Double bottom', triple_bottom: 'Triple bottom',
   inverse_head_shoulders: 'Inv H&S', cup_with_handle: 'Cup w/ handle',
@@ -56,18 +56,18 @@ export function UniverseConvictionPanel() {
         <button onClick={scan} disabled={busy}
                 title="Score EVERY analyzed name (SEPA gate not required): pattern conviction + trend safety + volume magnitude + earnings quality, with hard safety rails. ~5–10s."
                 style={{ fontSize: '0.74rem', fontWeight: 700, cursor: busy ? 'wait' : 'pointer',
-                         padding: '0.25rem 0.8rem', borderRadius: 7, border: 'none',
+                         padding: '0.45rem 0.9rem', borderRadius: 7, border: 'none', minHeight: 36,
                          background: C.blue, color: '#0a1014', opacity: busy ? 0.6 : 1 }}>
           {busy ? 'Scanning the universe…' : '🌐 Scan full universe'}
         </button>
         {data?.ok && (
-          <span style={{ fontSize: '0.68rem', color: C.sub }}>
+          <span style={{ fontSize: '0.72rem', color: C.sub }}>
             {data.n_screened} of {data.n_universe} pass the safety rails
             {ex.liquidity != null && <> · excluded: {ex.liquidity} thin tape, {ex.stage4 || 0} Stage 4, {ex.red_flag || 0} EQ red flag</>}
           </span>
         )}
       </div>
-      {data?.criteria && <div style={{ fontSize: '0.66rem', color: C.sub, marginTop: 3 }}>{data.criteria}</div>}
+      {data?.criteria && <div style={{ fontSize: '0.72rem', color: C.sub, marginTop: 3 }}>{data.criteria}</div>}
       {err && <p className="mono" style={{ color: C.red, fontSize: '0.74rem' }}>Scan failed — retry.</p>}
       {data && !data.ok && <p className="mono" style={{ color: C.amber, fontSize: '0.74rem' }}>{data.reason}</p>}
 
@@ -84,15 +84,15 @@ export function UniverseConvictionPanel() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: '0.66rem', color: C.sub, fontVariantNumeric: 'tabular-nums' }}>#{i + 1}</span>
                 <TickerCell symbol={p.symbol} />
-                {p.is_buyable ? <span style={{ fontSize: '0.6rem', color: C.green }}>✅</span>
-                  : p.is_candidate ? <span style={{ fontSize: '0.6rem', color: C.muted }}>SEPA</span>
-                  : <span style={{ fontSize: '0.6rem', color: C.sub }} title="Outside the SEPA gate — that's allowed here">non-SEPA</span>}
+                {p.is_buyable ? <span style={{ fontSize: '0.7rem', color: C.green }}>✅</span>
+                  : p.is_candidate ? <span style={{ fontSize: '0.7rem', color: C.muted }}>SEPA</span>
+                  : <span style={{ fontSize: '0.7rem', color: C.sub }} title="Outside the SEPA gate — that's allowed here">non-SEPA</span>}
                 <span style={{ marginLeft: 'auto', fontWeight: 800, color: C.blue, fontSize: '0.84rem' }}
                       title="Conviction = how many independent measured signals agree (0–100). A ranking device, not a probability.">
                   {p.conviction}
                 </span>
               </div>
-              <div style={{ fontSize: '0.66rem', color: C.muted, marginTop: 2 }}>
+              <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 2 }}>
                 ${p.price} · ${p.dollar_vol_m}M/day{p.rs_rank != null ? ` · RS ${p.rs_rank}` : ''}{p.stage != null ? ` · Stg ${p.stage}` : ''}{p.eq_score != null ? ` · EQ ${p.eq_score}` : ''}
               </div>
               {p.pattern && (
@@ -102,14 +102,14 @@ export function UniverseConvictionPanel() {
                   {p.target != null && <span style={{ color: C.sub, fontWeight: 400 }}> · line {p.neckline} → tgt {p.target} · stop {p.stop}</span>}
                 </div>
               )}
-              <div style={{ fontSize: '0.62rem', color: C.sub, marginTop: 3, lineHeight: 1.35 }}>
+              <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 3, lineHeight: 1.35 }}>
                 {p.drivers.slice(0, 3).join(' · ')}
               </div>
             </div>
           ))}
         </div>
       )}
-      {data?.disclaimer && <div style={{ fontSize: '0.62rem', color: C.sub, marginTop: 7 }}>{data.disclaimer}</div>}
+      {data?.disclaimer && <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 7 }}>{data.disclaimer}</div>}
     </section>
   );
 }

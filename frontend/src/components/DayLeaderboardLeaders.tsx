@@ -59,7 +59,7 @@ export function DayLeaderboardLeaders({ onPick }: { onPick?: (s: string) => void
     <button type="button" onClick={() => sort.toggle(k, dir)} title={`Sort by ${label}`}
             className={cls}
             style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer',
-                     padding: 0, font: 'inherit', fontWeight: sort.key === k ? 700 : 400 }}>
+                     padding: '6px 4px', font: 'inherit', fontWeight: sort.key === k ? 700 : 400 }}>
       {label}{sort.arrow(k)}
     </button>
   );
@@ -88,8 +88,8 @@ export function DayLeaderboardLeaders({ onPick }: { onPick?: (s: string) => void
             <span className="dl-rank"><H k="rank" label="#" dir="asc" /></span>
             <span><H k="symbol" label="Symbol" dir="asc" /></span>
             <span className="dl-num"><H k="today" label="Today" /></span>
-            <span className="dl-num"><H k="last" label="Last" /></span>
-            <span className="dl-num"><H k="persist" label="Rank · Persist" /></span>
+            <span className="dl-num dl-last"><H k="last" label="Last" /></span>
+            <span className="dl-num dl-meta"><H k="persist" label="Rank · Persist" /></span>
             <span className="dl-sig"><H k="signal" label="Signal" /></span>
           </div>
           {sort.sorted.map((L) => (

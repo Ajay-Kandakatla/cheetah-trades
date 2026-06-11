@@ -38,9 +38,9 @@ export function PatternChips({ v, max = 2 }: { v?: PatternVerdict | null; max?: 
               title={`${m.pattern.replace(/_/g, ' ')} — ${conf
                 ? `CONFIRMED ${m.confirmed_date || ''} · line ${m.neckline} · target ${m.target} (measure rule) · stop ${m.stop}`
                 : `forming, ${m.to_confirm_pct}% to the line ${m.neckline} — a shape, not a signal until it closes above`}\nClick for the Patterns page`}
-              style={{ fontSize: '0.64rem', fontWeight: 700, color: col, cursor: 'pointer',
+              style={{ fontSize: '0.7rem', fontWeight: 700, color: col, cursor: 'pointer',
                        border: `1px solid ${col}55`, background: `${col}14`,
-                       borderRadius: 5, padding: '0 6px', lineHeight: '1.25rem' }}>
+                       borderRadius: 5, padding: '3px 8px', lineHeight: '1.25rem' }}>
         📐 {SHORT[m.pattern] || m.pattern} {conf ? '✓' : '…'}
       </button>,
     );
@@ -52,9 +52,9 @@ export function PatternChips({ v, max = 2 }: { v?: PatternVerdict | null; max?: 
       chips.push(
         <button key={`c-${f.name}`} onClick={go}
                 title={`${f.name.replace(/_/g, ' ')} (${f.date}) — ${f.note}\n${f.stat || ''}\nClick for the Patterns page`}
-                style={{ fontSize: '0.64rem', color: col, cursor: 'pointer',
+                style={{ fontSize: '0.7rem', color: col, cursor: 'pointer',
                          border: `1px solid ${col}44`, background: 'transparent',
-                         borderRadius: 5, padding: '0 6px', lineHeight: '1.25rem' }}>
+                         borderRadius: 5, padding: '3px 8px', lineHeight: '1.25rem' }}>
           {CANDLE_ICON[f.name] || '🕯'} {f.name.replace(/_/g, ' ')}
         </button>,
       );

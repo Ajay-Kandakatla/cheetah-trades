@@ -14,7 +14,7 @@ import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
 import { PatternChips } from './PatternChips';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 const STATE_META: Record<string, { icon: string; color: string }> = {
   BREAKOUT_STRONG: { icon: '🟢', color: C.green },
   RECLAIM: { icon: '🟢', color: C.green },
@@ -93,7 +93,7 @@ export function LiveTapeRead({ symbol }: { symbol: string }) {
         )}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4, alignItems: 'center' }}>
           <PatternChips v={verdicts.get(symbol.toUpperCase())} max={1} />
-          {barTime && <span style={{ fontSize: '0.62rem', color: C.sub }}>bar {barTime} · refreshes 60s</span>}
+          {barTime && <span style={{ fontSize: '0.7rem', color: C.sub }}>bar {barTime} · refreshes 60s</span>}
         </span>
       </div>
 
@@ -103,7 +103,7 @@ export function LiveTapeRead({ symbol }: { symbol: string }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: '0.68rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: '0.74rem', flexWrap: 'wrap' }}>
         {lvl('pivot', lv.pivot)}
         {lvl(lv.pattern_name || 'pattern line', lv.pattern_line, true)}
         {lvl('VWAP', lv.vwap)}

@@ -84,7 +84,7 @@ function savePosition(symbol: string, p: { entry: string; shares: string; stop: 
 const VERDICT_TONE: Record<string, { color: string; bg: string; label: string }> = {
   FULL_EXIT:    { color: 'var(--negative, #ef4444)', bg: 'rgba(239, 68, 68, 0.10)', label: '🚨 SELL FULL' },
   REDUCE:       { color: 'var(--warn, #d97706)',     bg: 'rgba(217, 119, 6, 0.10)', label: '⚠️ TRIM / REDUCE' },
-  TIGHTEN_STOP: { color: 'var(--ink, #6b7280)',      bg: 'rgba(107, 114, 128, 0.10)', label: '🔒 TIGHTEN STOP' },
+  TIGHTEN_STOP: { color: 'var(--ink, #8a93a6)',      bg: 'rgba(107, 114, 128, 0.10)', label: '🔒 TIGHTEN STOP' },
   HOLD:         { color: 'var(--positive, #10b981)', bg: 'rgba(16, 185, 129, 0.10)', label: '✓ HOLD' },
 };
 

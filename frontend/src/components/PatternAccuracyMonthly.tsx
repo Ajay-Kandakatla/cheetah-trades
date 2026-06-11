@@ -33,7 +33,7 @@ type MonthRow = {
 
 type Resp = { ok: boolean; months: MonthRow[]; retention?: string; disclaimer?: string };
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 
 const PATTERN_LABEL: Record<string, string> = {
   double_bottom: 'Double bottom',

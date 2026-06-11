@@ -3,13 +3,14 @@
  * paper-trade's net uses REAL captured spreads. Educational, not advice. */
 import { useScalpingBacktest, useScalpingPaper, type StratStats } from '../hooks/useScalpingResearch';
 import { useSort } from '../lib/useSort';
+import { ClampText } from './Collapsible';
 import { TickerCell } from './TickerCell';
 
 function Sym({ s }: { s: string }) {
   return <span style={{ width: 88 }}><TickerCell symbol={s} size="0.78rem" nameWidth={12} /></span>;
 }
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 const LABELS: Record<string, string> = {
   stocks_in_play_orb: 'Stocks-in-Play ORB', shock_fade: 'Shock fade', overall: 'Overall',
 };
@@ -51,9 +52,11 @@ export function BacktestPanel({ active }: { active: boolean }) {
   return (
     <div>
       <div style={{ padding: '0.55rem 0.75rem', borderRadius: 10, background: `${C.amber}12`, border: `1px solid ${C.amber}44`, marginBottom: 12, fontSize: '0.78rem', lineHeight: 1.4 }}>
-        <strong style={{ color: C.amber }}>Spread is ASSUMED at {data.assumed_spread_pct}%</strong> — there's no historical bid/ask, and
-        the research says the spread is exactly what kills these trades. So treat the <strong>net</strong> figures as an
-        <strong> optimistic upper bound</strong>, not a promise. {data.days}-day window · {data.symbols_used} names · {data.n_trades} trades.
+        <ClampText lines={2}>
+          <strong style={{ color: C.amber }}>Spread is ASSUMED at {data.assumed_spread_pct}%</strong> — there's no historical bid/ask, and
+          the research says the spread is exactly what kills these trades. So treat the <strong>net</strong> figures as an
+          <strong> optimistic upper bound</strong>, not a promise. {data.days}-day window · {data.symbols_used} names · {data.n_trades} trades.
+        </ClampText>
       </div>
 
       <div style={{ overflowX: 'auto' }}>
@@ -126,7 +129,7 @@ export function PaperPanel({ active }: { active: boolean }) {
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', marginBottom: 4 }}>Open ({data.n_open})</div>
           {data.open.slice(0, 10).map((o: any, i: number) => (
-            <div key={i} style={{ display: 'flex', gap: 10, fontSize: '0.78rem', padding: '2px 0' }}>
+            <div key={i} style={{ display: 'flex', gap: 10, fontSize: '0.78rem', padding: '2px 0', flexWrap: 'wrap' }}>
               <Sym s={o.symbol} />
               <span style={{ color: o.side === 'long' ? C.green : C.red, width: 44 }}>{o.side}</span>
               <span style={{ color: C.muted }}>entry {o.entry_price} · stop {o.stop}</span>
@@ -143,7 +146,7 @@ export function PaperPanel({ active }: { active: boolean }) {
             <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
               {CLOSED_SORTS.map((s) => (
                 <button key={s.key} onClick={() => closedSort.toggle(s.key, s.dir)}
-                        style={{ fontSize: '0.64rem', padding: '0 6px', borderRadius: 5, cursor: 'pointer',
+                        style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem', borderRadius: 5, cursor: 'pointer', minHeight: 32,
                                  background: closedSort.key === s.key ? 'var(--gold,#c9a227)' : 'transparent',
                                  color: closedSort.key === s.key ? '#1a1a1a' : 'inherit',
                                  border: `1px solid ${closedSort.key === s.key ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}` }}>
@@ -153,7 +156,7 @@ export function PaperPanel({ active }: { active: boolean }) {
             </span>
           </div>
           {closedSort.sorted.slice(0, 15).map((c: any, i: number) => (
-            <div key={i} style={{ display: 'flex', gap: 10, fontSize: '0.78rem', padding: '2px 0' }}>
+            <div key={i} style={{ display: 'flex', gap: 10, fontSize: '0.78rem', padding: '2px 0', flexWrap: 'wrap' }}>
               <Sym s={c.symbol} />
               <span style={{ color: c.side === 'long' ? C.green : C.red, width: 44 }}>{c.side}</span>
               <span style={{ color: C.sub, width: 70 }}>{c.outcome}</span>

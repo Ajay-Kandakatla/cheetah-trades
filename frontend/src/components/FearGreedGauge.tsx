@@ -82,7 +82,7 @@ function ComponentBar({ label, blurb, score }: { label: string; blurb: string; s
       <div style={{ height: 6, borderRadius: 4, background: 'var(--bg-sunken,#0f1115)', marginTop: 3, overflow: 'hidden' }}>
         <div style={{ width: `${Math.min(100, Math.max(0, score))}%`, height: '100%', background: c, borderRadius: 4 }} />
       </div>
-      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#6b7280)', marginTop: 2 }}>{blurb}</div>
+      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#8a93a6)', marginTop: 2 }}>{blurb}</div>
     </div>
   );
 }
@@ -115,7 +115,7 @@ export function FearGreedGauge() {
           </div>
           {histVals.length > 2 && (
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#6b7280)' }}>3-mo trend</span>
+              <span style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#8a93a6)' }}>3-mo trend</span>
               <Sparkline values={histVals} width={150} height={26} />
             </div>
           )}
@@ -123,7 +123,7 @@ export function FearGreedGauge() {
 
         {/* Previous readings */}
         <div style={{ flex: '1 1 200px', minWidth: 190 }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--ink-subtle,#6b7280)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--ink-subtle,#8a93a6)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Where it stood
           </div>
           <PrevRow label="Previous close" p={fg.previous.close} />
@@ -136,7 +136,7 @@ export function FearGreedGauge() {
       {/* Component sub-indices */}
       {fg.components.length > 0 && (
         <div style={{ marginTop: '1rem' }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--ink-subtle,#6b7280)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--ink-subtle,#8a93a6)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             What's driving it — 7 indicators
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0 1.4rem' }}>
@@ -147,7 +147,7 @@ export function FearGreedGauge() {
         </div>
       )}
 
-      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#6b7280)', marginTop: 10 }}>
+      <div style={{ fontSize: '0.66rem', color: 'var(--ink-subtle,#8a93a6)', marginTop: 10 }}>
         Source:{' '}
         <a href={fg.source_url} target="_blank" rel="noreferrer" style={{ color: 'var(--gold,#c9a227)' }}>
           {fg.source}

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { IntradayChart } from '../components/IntradayChart';
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
+import { ClampText } from '../components/Collapsible';
 import { DayTradingGuide } from '../components/DayTradingGuide';
 import { AiReviewModal } from '../components/AiReviewModal';
 import { OvernightGappers } from '../components/OvernightGappers';
@@ -326,13 +327,13 @@ export function DayTrading() {
 
       <footer className="cm-disclaimer cm-disclaimer--footer">
         <span className="cm-disclaimer__label">Methodology</span>
-        <p>
+        <ClampText lines={1}>
           Four long-only strategies on 1m bars from Massive, walk-forward backtested on
           30 trading days; leaders crossed with live prices + the latest scan's buyable
           flag. No orders are placed anywhere — educational, not advice. References:
           Toby Crabel / Linda Raschke (ORB), Ross Cameron (Gap-and-Go), Stockbee (flag),
           Mike Bellafiore (VWAP).
-        </p>
+        </ClampText>
       </footer>
 
       {reviewSymbol && <AiReviewModal symbol={reviewSymbol} onClose={() => setReviewSymbol(null)} />}

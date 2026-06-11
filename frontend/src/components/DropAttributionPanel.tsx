@@ -6,7 +6,7 @@ import { TickerCell } from './TickerCell';
 import { useDropAttribution, type AttrVerdict, type AttributionRow } from '../hooks/usePortfolio';
 
 const VERDICT: Record<AttrVerdict, { dot: string; label: string; color: string; hint: string }> = {
-  macro:  { dot: '🌍', label: 'Macro',  color: 'var(--cm-slate, #6b7280)', hint: "it's the market — ride it out" },
+  macro:  { dot: '🌍', label: 'Macro',  color: 'var(--cm-slate, #8a93a6)', hint: "it's the market — ride it out" },
   sector: { dot: '🏭', label: 'Sector', color: 'var(--cm-amber, #d97706)', hint: 'your industry group is rotating' },
   stock:  { dot: '🎯', label: 'Stock',  color: 'var(--negative, #dc2626)', hint: 'stock-specific — check the news' },
   quiet:  { dot: '·',  label: 'Quiet',  color: 'var(--rule, #555)',        hint: 'move too small to attribute' },

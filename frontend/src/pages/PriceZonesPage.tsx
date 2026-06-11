@@ -172,7 +172,7 @@ export function PriceZonesPage() {
             })}
           </div>
 
-          <p style={{ color: 'var(--ink-subtle, #6b7280)', fontSize: '0.68rem', marginTop: 14 }}>
+          <p style={{ color: 'var(--ink-subtle, #8a93a6)', fontSize: '0.68rem', marginTop: 14 }}>
             {data.disclaimer}
           </p>
         </>

@@ -15,7 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { usePatternVerdicts, type PatternVerdict } from '../hooks/usePatternVerdicts';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
   double_bottom: 'Double bottom', triple_bottom: 'Triple bottom',
   inverse_head_shoulders: 'Inv H&S', cup_with_handle: 'Cup w/ handle',
@@ -59,7 +59,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
     <section style={{ margin: '0.9rem 0' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
         <span className="eyebrow">{title}</span>
-        <span style={{ fontSize: '0.68rem', color: C.sub }}>
+        <span style={{ fontSize: '0.72rem', color: C.sub }}>
           {starCount > 0
             ? `${starCount} name${starCount === 1 ? '' : 's'} ⭐ confirmed pattern + full Minervini buy gate`
             : 'none currently pair a confirmed pattern with the full Minervini buy gate'}
@@ -94,7 +94,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <TickerCell symbol={v.symbol} size="0.86rem" />
                 {star && <span title="Confirmed pattern AND clears the full Minervini buy gate (Stage 2 + setup + volume + buy zone)">⭐</span>}
-                <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700,
+                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 700,
                                color: s.is_buyable ? C.green : s.is_candidate ? C.muted : C.sub }}>
                   {s.is_buyable ? '✅ BUYABLE' : s.is_candidate ? 'qualifier' : 'watch'}
                 </span>
@@ -104,10 +104,10 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
                   ? `✓ ${m.bars_since_confirm === 0 ? 'today' : '1d'}`
                   : `· ${m.to_confirm_pct}% to line`}
               </div>
-              <div style={{ fontSize: '0.66rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: '0.7rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                 line {m.neckline} → tgt {m.target} · <span style={{ color: C.red }}>stop {m.stop}</span>
               </div>
-              <div style={{ fontSize: '0.62rem', color: C.sub, marginTop: 2, display: 'flex', gap: 8 }}>
+              <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {s.rs_rank != null && <span>RS {s.rs_rank}</span>}
                 {s.stage != null && <span style={{ color: s.stage !== 2 ? C.amber : undefined }}>Stg {s.stage}</span>}
                 {(v.sources || []).includes('holding') && <span>💼</span>}
@@ -118,7 +118,7 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
         })}
       </div>
       {limit != null && rows.length > shown.length && (
-        <div style={{ fontSize: '0.66rem', color: C.sub, marginTop: 4 }}>
+        <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 4 }}>
           +{rows.length - shown.length} more on the <Link to="/patterns" style={{ color: C.gold }}>Patterns page</Link>
         </div>
       )}

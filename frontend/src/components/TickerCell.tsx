@@ -20,7 +20,7 @@ export function TickerName({ symbol, name, width = 28 }: {
   const nm = name || names.get((symbol || '').toUpperCase());
   if (!nm) return null;
   return (
-    <span style={{ display: 'block', fontSize: '0.56rem', fontWeight: 400,
+    <span style={{ display: 'block', fontSize: '0.66rem', fontWeight: 400,
                    color: 'var(--cm-slate,#8a93a6)', whiteSpace: 'nowrap', overflow: 'hidden',
                    textOverflow: 'ellipsis', lineHeight: 1.15, maxWidth: `${width}ch` }}
           title={nm}>

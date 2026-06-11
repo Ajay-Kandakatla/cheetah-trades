@@ -20,7 +20,7 @@ import { InfoButton } from './InfoButton';
 import { GiantsRotationModal } from './GiantsRotationModal';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
 
 /** Tiny per-quarter net-flow bars — the row's trend at a glance. */
 function Sparkline({ timeline }: { timeline: { q: string; net_usd: number }[] }) {
@@ -68,7 +68,7 @@ function FlowTable({ rows, direction, onPick }: {
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginBottom: 4 }}>
         {SORTS.map((s) => (
           <button key={s.key} onClick={() => sort.toggle(s.key, s.dir)}
-                  style={{ fontSize: '0.64rem', padding: '0 6px', borderRadius: 5, cursor: 'pointer',
+                  style={{ fontSize: '0.72rem', padding: '4px 10px', borderRadius: 5, cursor: 'pointer', minHeight: 28,
                            background: sort.key === s.key ? 'var(--gold,#c9a227)' : 'transparent',
                            color: sort.key === s.key ? '#1a1a1a' : 'inherit',
                            border: `1px solid ${sort.key === s.key ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}` }}>
@@ -119,8 +119,8 @@ function FlowTable({ rows, direction, onPick }: {
       </div>
       {sort.sorted.length > 12 && (
         <button onClick={() => setShowAll(!showAll)} className="mono"
-                style={{ marginTop: 6, fontSize: '0.7rem', background: 'transparent', cursor: 'pointer',
-                         border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 6, padding: '2px 10px', color: 'inherit' }}>
+                style={{ marginTop: 6, fontSize: '0.72rem', background: 'transparent', cursor: 'pointer', minHeight: 32,
+                         border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 6, padding: '5px 12px', color: 'inherit' }}>
           {showAll ? 'show top 12' : `show all ${sort.sorted.length}`}
         </button>
       )}

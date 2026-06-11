@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom';
 const GREEN = '#10b981';
 const RED = '#ef4444';
 const WICK = '#94a3b8';
-const SUB = '#6b7280';
+const SUB = '#8a93a6';
 
 /** One candle: body between bodyTop/bodyBot, wick hi→lo (SVG y grows down). */
 function Candle({ x, hi, bodyTop, bodyBot, lo, color, w = 12 }: {
@@ -160,7 +160,7 @@ function CardBox({ c }: { c: Card }) {
           </div>
           <div style={{ fontSize: '0.76rem', lineHeight: 1.45 }}>{c.read}</div>
           {c.stat && (
-            <div className="mono" style={{ fontSize: '0.66rem', color: SUB, marginTop: 3 }}>
+            <div className="mono" style={{ fontSize: '0.72rem', color: SUB, marginTop: 3 }}>
               {c.stat}
             </div>
           )}
@@ -176,7 +176,7 @@ export function ChartReadingGuide() {
     <>
       <button type="button" onClick={() => setOpen(true)} className="mono"
               title="How to read this candle chart — every candle shape, what it means, and how to read the volume bars"
-              style={{ fontSize: '0.72rem', padding: '2px 10px', borderRadius: 6, cursor: 'pointer',
+              style={{ fontSize: '0.72rem', padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
                        background: 'transparent', color: 'inherit',
                        border: '1px solid var(--hairline,#2a2a2a)' }}>
         ❓ How to read
@@ -201,7 +201,7 @@ export function ChartReadingGuide() {
               </div>
               <button onClick={() => setOpen(false)}
                       style={{ background: 'none', border: 0, color: 'var(--cm-slate)', cursor: 'pointer',
-                               fontSize: '1.4rem', lineHeight: 1 }}>×</button>
+                               fontSize: '1.4rem', lineHeight: 1, padding: '8px 10px', margin: '-8px -10px 0 0' }}>×</button>
             </header>
 
             {/* 1 — anatomy */}
@@ -212,14 +212,14 @@ export function ChartReadingGuide() {
                      style={{ background: 'var(--bg-sunken,#0f1115)', borderRadius: 6 }}>
                   <Candle x={60} hi={10} bodyTop={24} bodyBot={62} lo={78} color={GREEN} w={18} />
                   <Candle x={150} hi={10} bodyTop={24} bodyBot={62} lo={78} color={RED} w={18} />
-                  <text x={78} y={15} fontSize={8} fill={SUB}>high</text>
-                  <text x={78} y={28} fontSize={8} fill={GREEN}>close</text>
-                  <text x={78} y={64} fontSize={8} fill={SUB}>open</text>
-                  <text x={78} y={82} fontSize={8} fill={SUB}>low</text>
-                  <text x={168} y={28} fontSize={8} fill={SUB}>open</text>
-                  <text x={168} y={64} fontSize={8} fill={RED}>close</text>
-                  <text x={44} y={88} fontSize={8} fill={GREEN}>up day</text>
-                  <text x={132} y={88} fontSize={8} fill={RED}>down day</text>
+                  <text x={78} y={15} fontSize={10} fill="#94a3b8">high</text>
+                  <text x={78} y={28} fontSize={10} fill={GREEN}>close</text>
+                  <text x={78} y={64} fontSize={10} fill="#94a3b8">open</text>
+                  <text x={78} y={82} fontSize={10} fill="#94a3b8">low</text>
+                  <text x={168} y={28} fontSize={10} fill="#94a3b8">open</text>
+                  <text x={168} y={64} fontSize={10} fill={RED}>close</text>
+                  <text x={44} y={88} fontSize={10} fill={GREEN}>up day</text>
+                  <text x={132} y={88} fontSize={10} fill={RED}>down day</text>
                 </svg>
                 <p style={{ fontSize: '0.8rem', maxWidth: 420, lineHeight: 1.5 }}>
                   The <b>body</b> spans open→close (<span style={{ color: GREEN }}>green = closed higher</span>,{' '}
@@ -233,7 +233,7 @@ export function ChartReadingGuide() {
             {/* 2 — single-candle possibilities */}
             <section style={{ marginBottom: 14 }}>
               <div className="eyebrow" style={{ marginBottom: 6 }}>2 · The single-candle possibilities</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(330px, 100%), 1fr))', gap: 8 }}>
                 {SINGLE_CARDS.map((c) => <CardBox key={c.title} c={c} />)}
               </div>
             </section>
@@ -241,7 +241,7 @@ export function ChartReadingGuide() {
             {/* 3 — multi-candle reads */}
             <section style={{ marginBottom: 14 }}>
               <div className="eyebrow" style={{ marginBottom: 6 }}>3 · Two- and three-candle reads (the ones our scanner flags)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(330px, 100%), 1fr))', gap: 8 }}>
                 {MULTI_CARDS.map((c) => <CardBox key={c.title} c={c} />)}
               </div>
             </section>
@@ -264,7 +264,7 @@ export function ChartReadingGuide() {
               </div>
             </section>
 
-            <p className="mono" style={{ fontSize: '0.68rem', color: SUB, lineHeight: 1.5 }}>
+            <p className="mono" style={{ fontSize: '0.72rem', color: SUB, lineHeight: 1.5 }}>
               Reversal frequencies are Bulkowski's daily-bar measurements, hindsight, no costs — quoted with his
               own deflating verdicts on purpose. Academic tests find NO standalone trading value in candle
               patterns (Marshall 2006; Horton 2009). Candles are context for the SEPA/volume decision,

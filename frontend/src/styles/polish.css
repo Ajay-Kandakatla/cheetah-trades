@@ -446,7 +446,7 @@ h1, h2, h3, h4, h5, h6,
 .sepa-btn--primary,
 .sepa-chip.is-active {
   background: var(--gold) !important;
-  color: var(--bg) !important;
+  color: #1A1A1A !important;
   border-color: var(--gold) !important;
 }
 .sepa-btn:hover,
@@ -543,6 +543,7 @@ h1, h2, h3, h4, h5, h6,
   flex-shrink: 0;
 }
 .info-button__trigger {
+  position: relative;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -590,7 +591,7 @@ h1, h2, h3, h4, h5, h6,
 .info-button__close {
   background: transparent; border: none; cursor: pointer;
   color: var(--ink-faint); font-size: 1.3rem; line-height: 1;
-  padding: 0 4px; margin: -3px -4px 0 0;
+  padding: 8px 10px; margin: -8px -10px 0 0;
   border-radius: 3px; flex-shrink: 0;
 }
 .info-button__close:hover { color: var(--ink); background: var(--bg-sunken); }
@@ -751,8 +752,8 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
 .sepa-toggle.is-on .sepa-toggle__label { color: var(--ink); }
 
 .sepa-stat__sub {
-  font-size: 10px;
-  color: var(--ink-faint);
+  font-size: 11px;
+  color: var(--ink-subtle);
   margin-top: 2px;
   letter-spacing: 0.02em;
 }
@@ -795,9 +796,9 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
 /* Stat tile — explainer line under the number */
 .sepa-meta-grid > div { padding: 10px 12px !important; }
 .sepa-meta-hint {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.4;
-  color: var(--ink-faint);
+  color: var(--ink-subtle);
   margin-top: 6px;
   display: block;
 }
@@ -888,10 +889,10 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
 }
 .sepa-card__bell {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.55);
-  width: 30px;
-  height: 30px;
+  border: 1px solid var(--hairline);
+  color: var(--ink-muted);
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
@@ -914,14 +915,14 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: rgba(255,255,255,0.6);
+  color: var(--ink-muted);
 }
 .sepa-alert-form__row select,
 .sepa-alert-form__row input[type="number"],
 .sepa-alert-form__row input[type="text"] {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--bg-raised);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
@@ -939,7 +940,7 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
 .sepa-alert-form__channels legend {
   font-size: 11px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.5);
+  color: var(--ink-subtle);
   padding: 0 6px;
 }
 .sepa-alert-form__channels label {
@@ -975,5 +976,24 @@ input[type="number"]:focus { border-color: var(--gold) !important; }
 .sepa-alert-form__actions .btn-primary:disabled { opacity: 0.6; cursor: wait; }
 .sepa-alert-form__actions .btn-ghost {
   background: transparent;
-  color: rgba(255,255,255,0.7);
+  color: var(--ink-muted);
+}
+
+
+/* Expanded invisible hit-area for the 22-24px info triggers (WCAG 2.5.8 —
+   the visual stays small, the thumb target doesn't). 2026-06-11 a11y pass. */
+.info-button__trigger::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+/* Phone layout for the ticker detail page — previously desktop-only
+   (48px symbol, 600px chart, no wrapping). 2026-06-11 a11y pass. */
+@media (max-width: 720px) {
+  .sepa-candidate-page { padding: 12px 12px 48px; }
+  .sepa-candidate-page__sym { font-size: 32px; }
+  .sepa-candidate-page__chart { height: min(420px, 55vh); }
+  .sepa-candidate-page__head,
+  .sepa-candidate-page__topbar { flex-wrap: wrap; }
 }

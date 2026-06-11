@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
   double_bottom: 'Double bottom', triple_bottom: 'Triple bottom',
   inverse_head_shoulders: 'Inv H&S', cup_with_handle: 'Cup w/ handle',
@@ -59,7 +59,7 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
         <button onClick={scan} disabled={busy}
                 title="Scan today's movers + every current buyable: confirmed bullish daily setup AND a typical daily range big enough to rally a few dollars"
                 style={{ fontSize: '0.74rem', fontWeight: 700, cursor: busy ? 'wait' : 'pointer',
-                         padding: '0.25rem 0.8rem', borderRadius: 7, border: 'none',
+                         padding: '0.45rem 0.9rem', borderRadius: 7, border: 'none', minHeight: 36,
                          background: C.green, color: '#0c1210', opacity: busy ? 0.6 : 1 }}>
           {busy ? 'Scanning…' : '🚀 Scan now'}
         </button>
@@ -69,7 +69,7 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
           </span>
         )}
       </div>
-      {data?.criteria && <div style={{ fontSize: '0.66rem', color: C.sub, marginTop: 3 }}>{data.criteria}</div>}
+      {data?.criteria && <div style={{ fontSize: '0.72rem', color: C.sub, marginTop: 3 }}>{data.criteria}</div>}
       {err && <p className="mono" style={{ color: C.red, fontSize: '0.74rem' }}>Scan failed — retry.</p>}
 
       {data && data.candidates.length === 0 && (
@@ -112,17 +112,17 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
                   {c.bullish_candle && <span style={{ color: C.muted }}> · 🕯 {c.bullish_candle.replace(/_/g, ' ')}</span>}
                 </div>
                 {c.target != null && (
-                  <div style={{ fontSize: '0.64rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                     line {c.neckline} → tgt {c.target} · <span style={{ color: C.red }}>stop {c.stop}</span>
                   </div>
                 )}
                 {c.tape_state && (
-                  <div style={{ fontSize: '0.64rem', marginTop: 2, color: TAPE_COLOR[c.tape_state] || C.muted }}>
+                  <div style={{ fontSize: '0.72rem', marginTop: 2, color: TAPE_COLOR[c.tape_state] || C.muted }}>
                     tape now: {c.tape_state.replace(/_/g, ' ')} · {c.tape_verdict}
                   </div>
                 )}
                 {c.confirmed_today && (
-                  <div style={{ fontSize: '0.6rem', color: C.sub, marginTop: 2 }}>
+                  <div style={{ fontSize: '0.72rem', color: C.amber, marginTop: 2 }}>
                     provisional — counts only if today CLOSES above the line
                   </div>
                 )}
@@ -131,7 +131,7 @@ export function RallyScanPanel({ profile = 'aggressive', onChart }: {
           })}
         </div>
       )}
-      {data?.disclaimer && <div style={{ fontSize: '0.62rem', color: C.sub, marginTop: 7 }}>{data.disclaimer}</div>}
+      {data?.disclaimer && <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 7 }}>{data.disclaimer}</div>}
     </section>
   );
 }

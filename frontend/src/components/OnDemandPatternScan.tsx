@@ -16,7 +16,7 @@ import { API } from '../lib/apiBase';
 import type { PatternVerdict } from '../hooks/usePatternVerdicts';
 import { TickerCell } from './TickerCell';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#6b7280', gold: 'var(--gold,#c9a227)' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6', gold: 'var(--gold,#c9a227)' };
 const SHORT: Record<string, string> = {
   double_bottom: 'Double bottom', triple_bottom: 'Triple bottom',
   inverse_head_shoulders: 'Inv H&S', cup_with_handle: 'Cup w/ handle',
@@ -65,7 +65,7 @@ export function OnDemandPatternScan({ symbols, title = '📐 Daily-pattern scan 
           {busy ? 'Scanning…' : `📐 Scan ${syms.length} names`}
         </button>
         {data && (
-          <span style={{ fontSize: '0.68rem', color: C.sub }}>
+          <span style={{ fontSize: '0.72rem', color: C.sub }}>
             {data.n_matched} match a pattern · {candleOnly.length} candle reads · {noMatch.length} no pattern
             {' · '}{new Date(data.generated_at * 1000).toLocaleTimeString()}
           </span>
@@ -88,7 +88,7 @@ export function OnDemandPatternScan({ symbols, title = '📐 Daily-pattern scan 
                             background: 'var(--bg-raised,#16181d)', border: `1px solid ${col}55` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <TickerCell symbol={v.symbol} size="0.86rem" />
-                  <span style={{ marginLeft: 'auto', fontSize: '0.62rem', fontWeight: 700,
+                  <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 700,
                                  color: v.sepa?.is_buyable ? C.green : v.sepa?.is_candidate ? C.muted : C.sub }}>
                     {v.sepa?.is_buyable ? '✅ BUYABLE' : v.sepa?.is_candidate ? 'qualifier' : 'mover'}
                   </span>
@@ -98,10 +98,10 @@ export function OnDemandPatternScan({ symbols, title = '📐 Daily-pattern scan 
                     ? `✓ ${m.bars_since_confirm === 0 ? 'today' : '1d'}`
                     : `· ${m.to_confirm_pct}% to line`}
                 </div>
-                <div style={{ fontSize: '0.66rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '0.7rem', color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                   line {m.neckline} → tgt {m.target} · <span style={{ color: C.red }}>stop {m.stop}</span>
                 </div>
-                {bearish && <div style={{ fontSize: '0.62rem', color: C.red, marginTop: 2 }}>⚠ bearish candle read</div>}
+                {bearish && <div style={{ fontSize: '0.72rem', color: C.amber, fontWeight: 600, marginTop: 2 }}>⚠ bearish candle read</div>}
               </div>
             );
           })}
@@ -126,7 +126,7 @@ export function OnDemandPatternScan({ symbols, title = '📐 Daily-pattern scan 
       )}
 
       {data && (
-        <div style={{ fontSize: '0.64rem', color: C.sub, marginTop: 6 }}>
+        <div style={{ fontSize: '0.7rem', color: C.sub, marginTop: 6 }}>
           {noMatch.length > 0 && <>No pattern: {noMatch.map((v) => v.symbol).join(' · ')} — an answer, not a gap. </>}
           {data.disclaimer}
         </div>

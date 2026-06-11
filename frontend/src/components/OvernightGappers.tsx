@@ -55,7 +55,7 @@ export function OvernightGappers({ profile, onPick }: {
   const H = ({ k, label, dir = 'desc' as const }: { k: string; label: string; dir?: 'asc' | 'desc' }) => (
     <button type="button" onClick={() => sort.toggle(k, dir)} title={`Sort by ${label}`}
             style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer',
-                     padding: 0, font: 'inherit', fontWeight: sort.key === k ? 700 : 400 }}>
+                     padding: '6px 4px', font: 'inherit', fontWeight: sort.key === k ? 700 : 400 }}>
       {label}{sort.arrow(k)}
     </button>
   );
@@ -134,7 +134,10 @@ export function OvernightGappers({ profile, onPick }: {
                     <td className="og__num mono">{g.pm_low != null ? `$${g.pm_low}` : '—'}</td>
                     <td>
                       {g.earnings_soon ? (
-                        <span className="og__earn" title={`Earnings ${g.earnings_date} — don't day-trade through it`}>⚠ soon</span>
+                        <>
+                          <span className="og__earn" title={`Earnings ${g.earnings_date} — don't day-trade through it`}>⚠ soon</span>
+                          {g.earnings_date && <span className="og__earn-ok mono"> {g.earnings_date}</span>}
+                        </>
                       ) : g.earnings_date ? (
                         <span className="og__earn-ok mono" title="Next earnings date">{g.earnings_date}</span>
                       ) : '—'}
