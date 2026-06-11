@@ -203,6 +203,17 @@ def detect_volume_breakouts(limit: int = 50) -> dict:
             + (f" ({vol_x:.1f}× avg)" if vol_x else "")
             + (f" · {c.get('day_change_pct'):+.1f}% today" if c.get('day_change_pct') is not None else "")
         )
+        # Earnings-soon warning (Ajay 2026-06-11, ATEX lesson): a breakout
+        # right before a report is a gap bet, not a SEPA entry — say so in
+        # the alert itself.
+        try:
+            from . import earnings_watch
+            ev = earnings_watch.next_event(ticker)
+            if ev and ev.get("days_to") is not None and ev["days_to"] <= earnings_watch.WARN_WINDOW_DAYS:
+                reason += f" · ⚠ EARNINGS {ev['date']}" + (f" {ev['when']}" if ev.get("when") else "")
+                ctx["earnings"] = ev
+        except Exception:
+            pass
         _record_alert(db, kind="volume_breakout", ticker=ticker,
                       reason=reason, context=ctx, score=c.get("score"))
         fired += 1

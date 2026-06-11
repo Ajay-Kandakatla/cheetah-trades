@@ -433,6 +433,13 @@
 # just ~38 cheap submissions checks + a re-aggregation.
 35     17    *    *    1-5  /usr/local/bin/python -m giants.refresh
 #
+# Earnings-date watch — 5:45 PM ET weekdays. Refreshes next-earnings dates
+# (yfinance) for the decision universe (scan candidates + holdings +
+# watchlist) so the ⚠ ER chips, the "hide earnings <=7d" filter, breakout
+# alerts and the AI chart analysis all know about scheduled reports.
+# Built 2026-06-11 after ATEX reported the evening it was bought.
+45     17    *    *    1-5  /usr/local/bin/python -m sepa.earnings_watch
+#
 # ============================================================================
 # Market open / close reminders — 15 min before each bell, weekdays only
 # ============================================================================

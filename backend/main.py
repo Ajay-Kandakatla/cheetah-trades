@@ -2241,6 +2241,15 @@ async def sepa_company_names():
     return JSONResponse({"names": names, "n": len(names)})
 
 
+@app.get("/sepa/earnings-map")
+async def sepa_earnings_map():
+    """Bulk {SYMBOL: {date, days_to, when}} for names with earnings inside
+    30 days (Ajay 2026-06-11, after ATEX reported the evening he bought it).
+    Powers the ER chips + the "hide earnings <=7d" filter."""
+    from sepa import earnings_watch
+    return JSONResponse(await asyncio.to_thread(earnings_watch.bulk_map))
+
+
 @app.get("/sepa/analyze-chart/{symbol}")
 async def sepa_analyze_chart(symbol: str):
     """On-demand AI chart analysis (Ajay 2026-06-11): Claude Sonnet

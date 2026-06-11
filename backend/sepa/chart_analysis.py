@@ -46,6 +46,9 @@ SYSTEM = (
     "the entry is late or the stop is wrong.\n"
     "- Use ONLY the facts provided. NEVER invent prices, volumes or "
     "statistics. If a needed fact is missing, say so and lower confidence.\n"
+    "- If earnings are within ~5 trading days, buying beforehand is a "
+    "bet on a binary gap, not a SEPA entry - verdict at most WAIT and "
+    "name the report date out loud.\n"
     "- The chart's own forward record and Bulkowski base rates are "
     "context, not promises — small n means wide error bars.\n"
     "Respond with ONLY a JSON object: {\"verdict\": one of "
@@ -135,6 +138,14 @@ def gather_facts(symbol: str) -> dict:
     else:
         facts["sepa"] = None
         facts["note"] = "not in the latest scan — SEPA gates unknown"
+
+    try:
+        from . import earnings_watch
+        facts["earnings"] = earnings_watch.next_event(sym) or {
+            "date": None, "note": "no earnings scheduled in the next 30d "
+                                  "per cache (verify on earningswhispers.com)"}
+    except Exception:
+        facts["earnings"] = None
 
     try:
         from . import market_gauge
