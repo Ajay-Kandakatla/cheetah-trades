@@ -14,6 +14,7 @@ import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
+import { LivePriceTag } from '../components/LivePriceTag';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
@@ -933,6 +934,9 @@ export function SepaCandidatePage() {
                     <button type="button" className={chartSource === 'tv' ? 'is-active' : ''} onClick={() => setChartSource('tv')}>TradingView</button>
                   </span>
                   <ChartReadingGuide />
+                  {/* The TV embed is ~15-min delayed (anonymous, by TV's
+                      design) — keep the REAL number on screen beside it. */}
+                  {chartSource === 'tv' && <LivePriceTag symbol={symbol} />}
                   {chartSource === 'native' && (
                     <span className="livechart-toggle">
                       <button type="button" className={chartInterval === 'D' ? 'is-active' : ''} onClick={() => setChartInterval('D')}>D</button>

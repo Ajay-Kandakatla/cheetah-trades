@@ -139,12 +139,30 @@ export default function PortfolioPage() {
     else { setSortKey(s.key); setSortDir(s.dir); }
   };
 
-  // Day heatmap tiles — sized by live position value, coloured by today's move.
-  const heatTiles: HeatTile[] = rows.map((r) => ({
-    symbol: r.symbol,
-    value: Math.max(0, liveView(r).value ?? r.current_value ?? 0),
-    pct: live.get((r.symbol || '').toUpperCase())?.day_pct ?? r.day_change_pct,
-  }));
+  // Heatmap tiles — sized by live position value. Colour mode (Ajay
+  // 2026-06-11: "I want this head chart to show my loss or profit, not the
+  // current market"): default = YOUR P&L vs cost; 'day' = today's market
+  // move. Persisted so the choice sticks.
+  const [heatMode, setHeatMode] = useState<'pnl' | 'day'>(() => {
+    try { return localStorage.getItem('portfolio_heat_mode') === 'day' ? 'day' : 'pnl'; }
+    catch { return 'pnl'; }
+  });
+  const setHeat = (m: 'pnl' | 'day') => {
+    setHeatMode(m);
+    try { localStorage.setItem('portfolio_heat_mode', m); } catch { /* ignore */ }
+  };
+  const heatTiles: HeatTile[] = rows.map((r) => {
+    const lv = liveView(r);
+    const pct = heatMode === 'pnl'
+      ? (lv.plPct ?? null)
+      : (live.get((r.symbol || '').toUpperCase())?.day_pct ?? r.day_change_pct);
+    return {
+      symbol: r.symbol,
+      value: Math.max(0, lv.value ?? r.current_value ?? 0),
+      pct,
+      label: pct != null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : undefined,
+    };
+  });
 
   return (
     <div className="sepa-page">
@@ -203,8 +221,21 @@ export default function PortfolioPage() {
         <div className="heatmap-panel">
           <MarketContextStrip />
           <div className="heatmap-panel__head">
-            <span className="heatmap-panel__title">📊 Day heatmap</span>
-            <span className="heatmap-panel__hint">size = position value · colour = today’s move · click to open</span>
+            <span className="heatmap-panel__title">📊 {heatMode === 'pnl' ? 'My P&L heatmap' : 'Day heatmap'}</span>
+            <span className="heatmap-panel__hint">
+              size = position value · colour = {heatMode === 'pnl' ? 'YOUR gain/loss vs cost' : 'today’s move'} · click to open
+            </span>
+            <span style={{ display: 'inline-flex', gap: 4 }}>
+              {(['pnl', 'day'] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setHeat(m)} className="mono"
+                        style={{ fontSize: '0.7rem', padding: '3px 10px', borderRadius: 6, cursor: 'pointer', minHeight: 26,
+                                 background: heatMode === m ? 'var(--gold,#c9a227)' : 'transparent',
+                                 color: heatMode === m ? '#1a1a1a' : 'inherit',
+                                 border: `1px solid ${heatMode === m ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}` }}>
+                  {m === 'pnl' ? 'My P&L' : 'Day %'}
+                </button>
+              ))}
+            </span>
             <a className="heatmap-panel__finviz" href="https://finviz.com/map?t=sec&st=d1" target="_blank" rel="noreferrer" title="Open the full S&P 500 sector map on Finviz">Full market map ↗</a>
           </div>
           <Heatmap

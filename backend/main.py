@@ -1657,6 +1657,17 @@ async def sepa_live_prices():
     return {"updated_at": int(time.time()), "prices": live}
 
 
+@app.get("/sepa/live-price/{symbol}")
+async def sepa_live_price(symbol: str):
+    """Single-symbol real-time quote (Massive). Powers the live-price tag
+    next to the TradingView embed, which is ~15-min delayed by design
+    (anonymous embed) — this keeps the REAL number on screen anyway."""
+    from sepa import prices as sepa_prices
+    live = await asyncio.to_thread(sepa_prices.bulk_live_prices, [symbol.upper()])
+    return JSONResponse({"updated_at": int(time.time()),
+                         **(live.get(symbol.upper()) or {})})
+
+
 @app.get("/live/feed-status")
 async def live_feed_status():
     """Health of the real-time quote feed — which source is active, whether the
