@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom';
 import { API } from '../lib/apiBase';
 import { patchWhalesFlowRow } from '../hooks/useWhalesFlow';
 import { GiantsRotationModal } from './GiantsRotationModal';
+import { Collapsible } from './Collapsible';
 // Curated fund-credibility tier list — added 2026-05-28 per user
 // request to distinguish smart-money active managers (Tiger, Coatue,
 // Berkshire) from passive index giants (Vanguard) and unknown LPs.
@@ -179,7 +180,7 @@ function MoverRow({ mover: m, tone }: { mover: Mover; tone: 'buy' | 'sell' }) {
             four present. */}
         <div style={{
           color: 'var(--cm-slate)',
-          fontSize: '0.66rem',
+          fontSize: '0.72rem',
           marginTop: 1,
           display: 'flex',
           gap: 6,
@@ -440,7 +441,7 @@ export function WhalesFlowModal({
                 Cherry-picked from feat/whales-modal-timeline 2026-05-30. */}
             {data?.period?.human && (
               <p
-                style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.25rem 0 0', opacity: 0.85 }}
+                style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.25rem 0 0' }}
                 title={`Earliest filing in this snapshot: ${data.period.earliest}  ·  latest: ${data.period.latest}`}
               >
                 📅 {data.period.human}
@@ -636,13 +637,22 @@ export function WhalesFlowModal({
         )}
 
         {/* Disclaimer / freshness — 13F data is QUARTERLY and filed
-            up to 45 days after quarter end, so even fresh data is
-            describing positions that may be 1-4 months old by the
-            time the user reads it. Surface this prominently so the
-            "balanced" signal isn't misread as "real-time flow". */}
+            up to 45 days after quarter end. The one-line teaser stays
+            ALWAYS visible (the lag + tier legend are the load-bearing
+            caveats); the full explainer collapses behind "more"
+            (Ajay 2026-06-11: verbose card content should collapse). */}
         <p style={{
-          fontSize: '0.66rem', color: 'var(--cm-slate)',
-          marginTop: '1rem', lineHeight: 1.55,
+          fontSize: '0.72rem', color: 'var(--cm-slate)',
+          marginTop: '1rem', lineHeight: 1.55, marginBottom: 4,
+        }}>
+          Quarterly 13F, up to 45-day lag — positioning, not real-time flow ·
+          ⭐⭐⭐ stock-picker · ⭐⭐ active · 🏛 index mandate
+          {cachedAtIso && <> · Cached {cachedAtIso}</>}
+        </p>
+        <Collapsible label="what this is + how to read the tiers">
+        <p style={{
+          fontSize: '0.72rem', color: 'var(--cm-slate)',
+          marginTop: 0, lineHeight: 1.55,
         }}>
           <strong>What this is:</strong> 13F filings show what institutions held at the
           <em> end</em> of last quarter, filed within 45 days. A "buying" fund increased its
@@ -670,8 +680,8 @@ export function WhalesFlowModal({
           a forward prediction that they'll be right on this stock. Lists are sorted by
           composite credibility = tier × log(position $) × concentration. Edit{' '}
           <code style={{ fontSize: '0.85em' }}>src/lib/fundTiers.ts</code> to add/remove funds.
-          {cachedAtIso && <> · Cached {cachedAtIso}.</>}
         </p>
+        </Collapsible>
       </div>
     </div>,
     document.body,
