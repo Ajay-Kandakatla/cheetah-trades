@@ -8,6 +8,7 @@
  * for the large majority of retail traders.
  */
 import { useState } from 'react';
+import { EarningsReportPicks } from '../components/EarningsReportPicks';
 import { ClampText } from '../components/Collapsible';
 import { InfoButton } from '../components/InfoButton';
 import { IntradayChart } from '../components/IntradayChart';
@@ -177,6 +178,9 @@ export function ScalpingPage() {
           on-demand: pattern ✓ ≤1d or full buy gate, no bearish candle,
           typical daily range ≥ $2, live tape check on the leaders. */}
       <RallyScanPanel profile={profile} onChart={(s) => setSelected(s)} />
+
+      {/* Post-earnings bulls — momentum candidates for the day (2026-06-11). */}
+      <EarningsReportPicks limit={6} />
 
       {/* 🌐 Full-universe Top-20 conviction scan (Ajay 2026-06-10) — every
           analyzed name, SEPA gate NOT required; pattern + trend + volume

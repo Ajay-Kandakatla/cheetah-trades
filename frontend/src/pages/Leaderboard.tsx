@@ -18,6 +18,7 @@ import { SepaRankLeaderboard } from '../components/SepaRankLeaderboard';
 import { SepaRankCompare } from '../components/SepaRankCompare';
 import { MoneyMovement } from '../components/MoneyMovement';
 import { GiantsFlowBoard } from '../components/GiantsFlowBoard';
+import { EarningsReportPicks } from '../components/EarningsReportPicks';
 import { CrossJunctions } from '../components/CrossJunctions';
 import { TopConfluence } from '../components/TopConfluence';
 import { AtPivotToday } from '../components/AtPivotToday';
@@ -83,6 +84,9 @@ export function LeaderboardPage() {
           timeline + click-through money-rotation view ("where did the money
           from MU move"). Full EDGAR portfolios — not the top-15 snapshot. */}
       <GiantsFlowBoard />
+
+      {/* Post-earnings bulls (Ajay 2026-06-11). */}
+      <EarningsReportPicks />
 
       <SepaTopPicks n={5} />
 

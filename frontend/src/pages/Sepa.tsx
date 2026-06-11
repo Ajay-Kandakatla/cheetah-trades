@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { EarningsReportPicks } from '../components/EarningsReportPicks';
 import { useNavigate, useNavigationType } from 'react-router-dom';
 import { useSepaScan } from '../hooks/useSepa';
 import { ageHuman } from '../lib/swrCache';
@@ -1096,6 +1097,9 @@ export function SepaPage() {
       <MarketClockStrip />
       <MinerviniLesson />
       <SepaBriefBanner />
+
+      {/* Good reports the tape endorsed (Ajay 2026-06-11, ATEX lesson). */}
+      <EarningsReportPicks limit={6} />
 
       <div className="sepa-page__title">
         <div>
