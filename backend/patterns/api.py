@@ -23,8 +23,12 @@ async def patterns_scan_start(email: str = Depends(current_user_email),
     if not is_admin_email(email):
         raise HTTPException(403, "admin only")
     scope = (payload or {}).get("scope") or "universe"
+    # refresh_today: patch each name's daily frame with today's live close
+    # before scanning, so a breakout confirming THIS session is caught
+    # instead of waiting for the post-close cron (Ajay 2026-06-11).
+    refresh_today = bool((payload or {}).get("refresh_today"))
     from . import scan
-    return JSONResponse(await asyncio.to_thread(scan.start_scan, scope))
+    return JSONResponse(await asyncio.to_thread(scan.start_scan, scope, refresh_today))
 
 
 @router.get("/patterns/scan/status")

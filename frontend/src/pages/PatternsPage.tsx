@@ -119,12 +119,13 @@ export function PatternsPage() {
 
   useEffect(() => { loadLatest(); return () => { if (pollRef.current) window.clearInterval(pollRef.current); }; }, [loadLatest]);
 
-  const startScan = async (scope: 'universe' | 'qualifiers') => {
+  const startScan = async (scope: 'universe' | 'qualifiers', refreshToday = true) => {
     setErr(null);
     try {
       const r = await fetch(`${API}/patterns/scan`, {
         method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope, refresh_today: refreshToday }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setScanStatus({ ...(await r.json()), scope });
@@ -161,21 +162,21 @@ export function PatternsPage() {
         </div>
         {user?.is_admin && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => startScan('qualifiers')} disabled={!!scanStatus?.running}
-                    title="Answer EVERY current SEPA qualifier: which Bulkowski pattern its chart matches right now — or that it matches none"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.8rem',
-                             borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
-                             fontSize: '0.8rem', background: 'transparent', color: C.gold,
-                             border: `1px solid ${C.gold}88`, opacity: scanStatus?.running ? 0.7 : 1 }}>
-              🎯 {scanStatus?.running && scanStatus.scope === 'qualifiers' ? 'Scanning…' : 'Scan Qualifiers'}
-            </button>
-            <button onClick={() => startScan('universe')} disabled={!!scanStatus?.running}
-                    title="Scan the whole SEPA universe's cached daily charts for bullish-reversal patterns"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.8rem',
-                             borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
-                             fontSize: '0.8rem', background: C.gold, color: '#1a1a1a', border: 'none',
+            <button onClick={() => startScan('qualifiers', true)} disabled={!!scanStatus?.running}
+                    title="Re-run the pattern read on every current SEPA qualifier, refreshing each chart's TODAY bar with the live close first — so a breakout confirming this session shows up now (not after the post-close run). Geometry still uses the full daily history; only the trigger freshness is 'today'."
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.9rem',
+                             borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 700,
+                             fontSize: '0.8rem', minHeight: 36, background: C.gold, color: '#1a1a1a', border: 'none',
                              opacity: scanStatus?.running ? 0.7 : 1 }}>
-              ⚡ {scanStatus?.running && scanStatus.scope !== 'qualifiers' ? 'Scanning…' : 'Scan Patterns'}
+              ↻ {scanStatus?.running && scanStatus.scope === 'qualifiers' ? 'Rescanning…' : 'Rescan (today’s data)'}
+            </button>
+            <button onClick={() => startScan('universe', true)} disabled={!!scanStatus?.running}
+                    title="Heavier sweep of the WHOLE SEPA universe (not just qualifiers) for fresh bullish-reversal breakouts, also refreshing today's bar first. ~1–2 min."
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.9rem',
+                             borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
+                             fontSize: '0.8rem', minHeight: 36, background: 'transparent', color: C.gold,
+                             border: `1px solid ${C.gold}88`, opacity: scanStatus?.running ? 0.7 : 1 }}>
+              ⚡ {scanStatus?.running && scanStatus.scope !== 'qualifiers' ? 'Sweeping…' : 'Full sweep'}
             </button>
           </div>
         )}

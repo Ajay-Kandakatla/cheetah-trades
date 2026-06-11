@@ -191,13 +191,31 @@ def _verdict_for_symbol(sym: str, ctx: dict) -> dict:
     return row
 
 
-def _run_qualifier_scan() -> None:
+def _refresh_today(symbols) -> None:
+    """Patch each symbol's daily frame with TODAY'S latest close before
+    scanning (Ajay 2026-06-11: "rescan from the last 12 hours"). The
+    detectors need months of daily bars for the GEOMETRY — the window can't
+    shrink — but a confirmation breaking out RIGHT NOW only shows up if the
+    last daily bar is today's. patch_latest_closes pulls the live close into
+    that bar so a same-session break is caught; the freshness gate
+    (CONFIRM_MAX_AGE=1) already restricts what's 'actionable now'."""
+    try:
+        from sepa import prices
+        stats = prices.patch_latest_closes(sorted({s for s in symbols if s}))
+        log.info("patterns rescan: refreshed today's bar — %s", stats)
+    except Exception as exc:
+        log.warning("patterns rescan: today-bar refresh failed: %s", exc)
+
+
+def _run_qualifier_scan(refresh_today: bool = False) -> None:
     try:
         universe = _verdict_universe()
         with _LOCK:
             _STATE.update(total=len(universe), done=0, error=None)
         if not universe:
             raise RuntimeError("no qualifiers in the latest SEPA scan — run a SEPA scan first")
+        if refresh_today:
+            _refresh_today(universe.keys())
 
         def work(item):
             sym, entry = item
@@ -280,13 +298,15 @@ def _aggregate_validation(outcome_lists: dict) -> dict:
     return out
 
 
-def _run_scan() -> None:
+def _run_scan(refresh_today: bool = False) -> None:
     try:
         symbols, ctx = _universe_with_context()
         with _LOCK:
             _STATE.update(total=len(symbols), done=0, error=None)
         if not symbols:
             raise RuntimeError("no universe — run a SEPA scan first")
+        if refresh_today:
+            _refresh_today(symbols)
 
         all_found: list = []
         outcome_lists: dict = {}
@@ -346,15 +366,17 @@ def _run_scan() -> None:
             _STATE.update(running=False, error=str(exc), finished_at=int(time.time()))
 
 
-def start_scan(scope: str = "universe") -> dict:
+def start_scan(scope: str = "universe", refresh_today: bool = False) -> dict:
     scope = scope if scope in ("universe", "qualifiers") else "universe"
     with _LOCK:
         if _STATE["running"]:
             return {**_STATE, "note": "already running"}
         _STATE.update(running=True, scope=scope, done=0, total=0, error=None,
-                      started_at=int(time.time()), finished_at=0)
-    target = _run_qualifier_scan if scope == "qualifiers" else _run_scan
-    t = threading.Thread(target=target, name=f"patterns-scan-{scope}", daemon=True)
+                      started_at=int(time.time()), finished_at=0,
+                      refreshed_today=bool(refresh_today))
+    base = _run_qualifier_scan if scope == "qualifiers" else _run_scan
+    t = threading.Thread(target=lambda: base(refresh_today=refresh_today),
+                         name=f"patterns-scan-{scope}", daemon=True)
     t.start()
     return dict(_STATE)
 
