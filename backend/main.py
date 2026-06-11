@@ -2261,6 +2261,15 @@ async def sepa_earnings_map():
     return JSONResponse(await asyncio.to_thread(earnings_watch.bulk_map))
 
 
+@app.get("/sepa/earnings-upcoming")
+async def sepa_earnings_upcoming(days: int = 14):
+    """Names reporting in the next `days`, grouped by date, with SEPA context
+    (Ajay 2026-06-11: "add upcoming post-earnings tabs by dates"). Powers the
+    Upcoming tab in the Earnings Report Picks section."""
+    from sepa import earnings_watch
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(earnings_watch.upcoming, days)))
+
+
 @app.get("/sepa/earnings-picks")
 async def sepa_earnings_picks():
     """Earnings-report picks: names whose last report was good AND the tape

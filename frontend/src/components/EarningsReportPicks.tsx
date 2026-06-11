@@ -48,9 +48,26 @@ const SORTS: { key: string; label: string; dir: 'asc' | 'desc' }[] = [
   { key: 'symbol', label: 'A–Z', dir: 'asc' },
 ];
 
+type UpcomingName = {
+  symbol: string;
+  when: 'BMO' | 'AMC' | null;
+  days_to: number;
+  rs_rank?: number | null;
+  stage?: number | null;
+  is_buyable?: boolean;
+  is_candidate?: boolean;
+};
+type UpcomingGroup = {
+  date: string; label: string; days_to: number; n: number;
+  n_in_scan: number; names: UpcomingName[];
+};
+type UpcomingResp = { groups?: UpcomingGroup[]; n?: number; note?: string };
+
 export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
   const [data, setData] = useState<Resp | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [tab, setTab] = useState<'reported' | 'upcoming'>('reported');
+  const [upc, setUpc] = useState<UpcomingResp | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -69,6 +86,17 @@ export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
     return () => { alive = false; if (timer) clearTimeout(timer); };
   }, []);
 
+  // Lazy-load the upcoming calendar only when that tab is first opened.
+  useEffect(() => {
+    if (tab !== 'upcoming' || upc) return;
+    let alive = true;
+    fetch(`${API}/sepa/earnings-upcoming?days=14`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: UpcomingResp) => alive && setUpc(d))
+      .catch(() => { /* fail quiet */ });
+    return () => { alive = false; };
+  }, [tab, upc]);
+
   const picks = data?.picks || [];
   const sort = useSort<Pick>(picks, {
     rank: (p) => p.rank_score,
@@ -80,17 +108,36 @@ export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
 
   if (!data) return null;
 
+  const TABS: { key: 'reported' | 'upcoming'; label: string }[] = [
+    { key: 'reported', label: '📣 Reported (tape endorsed)' },
+    { key: 'upcoming', label: '🗓 Upcoming' },
+  ];
+
   return (
     <section className="top-picks">
       <div className="top-picks__head">
-        <span className="eyebrow">📣 Earnings report picks — good reports the tape endorsed</span>
+        <span style={{ display: 'inline-flex', gap: 4 }}>
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+                    style={{ fontSize: '0.74rem', padding: '4px 12px', borderRadius: 6, cursor: 'pointer', minHeight: 30,
+                             fontWeight: tab === t.key ? 700 : 400,
+                             background: tab === t.key ? 'var(--gold,#c9a227)' : 'transparent',
+                             color: tab === t.key ? '#1a1a1a' : 'inherit',
+                             border: `1px solid ${tab === t.key ? 'var(--gold,#c9a227)' : 'var(--hairline,#2a2a2a)'}` }}>
+              {t.label}
+            </button>
+          ))}
+        </span>
         <span className="top-picks__meta mono">
-          {picks.length ? `${picks.length} in the last 7d` : ''}
-          {data.refreshing ? ' · refreshing…' : ''}
+          {tab === 'reported'
+            ? `${picks.length ? `${picks.length} in the last 7d` : ''}${data.refreshing ? ' · refreshing…' : ''}`
+            : `${upc?.n ?? 0} in the next 14d`}
         </span>
       </div>
 
-      {picks.length === 0 ? (
+      {tab === 'upcoming' && <UpcomingView upc={upc} />}
+
+      {tab === 'reported' && (picks.length === 0 ? (
         <p style={{ color: C.sub, fontSize: '0.82rem' }}>
           {data.note || 'No post-earnings names clear the gates right now — reaction ≥ +3% vs the pre-report close on ≥1.5× volume, still holding. Fills in as reports land.'}
         </p>
@@ -160,12 +207,61 @@ export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
             </button>
           )}
         </>
-      )}
+      ))}
 
       <p className="top-picks__foot mono">
-        reaction ≥ +3% on ≥1.5× volume, still above the pre-report close, not Stage 4 · EPS beat boosts rank, not required ·
-        PEAD drift is documented but gross — confirm the SEPA read · not advice
+        {tab === 'reported'
+          ? 'reaction ≥ +3% on ≥1.5× volume, still above the pre-report close, not Stage 4 · EPS beat boosts rank, not required · PEAD drift is documented but gross — confirm the SEPA read · not advice'
+          : 'scheduled report dates (yfinance) — dates can shift, confirm on EarningsWhispers · ⭐ = currently a SEPA qualifier/buyable worth watching into the print · not advice'}
       </p>
     </section>
+  );
+}
+
+function UpcomingView({ upc }: { upc: UpcomingResp | null }) {
+  if (!upc) return <p className="mono" style={{ opacity: 0.7, fontSize: '0.8rem' }}>…loading the calendar</p>;
+  const groups = upc.groups || [];
+  if (!groups.length) {
+    return <p style={{ color: C.sub, fontSize: '0.82rem' }}>No earnings scheduled in the next 14 days for the tracked universe.</p>;
+  }
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {groups.map((g) => (
+        <div key={g.date}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+            <span style={{ fontWeight: 700, fontSize: '0.84rem',
+                           color: g.days_to <= 1 ? C.red : g.days_to <= 3 ? C.amber : 'inherit' }}>
+              {g.label}
+            </span>
+            <span className="mono" style={{ fontSize: '0.7rem', color: C.sub }}>
+              {g.days_to === 0 ? 'today' : `in ${g.days_to}d`} · {g.n} {g.n === 1 ? 'name' : 'names'}
+              {g.n_in_scan > 0 ? ` · ${g.n_in_scan} in scan` : ''}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {g.names.map((n) => {
+              const watch = n.is_candidate || n.is_buyable;
+              return (
+                <a key={n.symbol}
+                   href={`https://www.earningswhispers.com/stocks/${encodeURIComponent(n.symbol.toLowerCase())}`}
+                   target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                   title={`${n.symbol} reports ${g.label}${n.when ? ` ${n.when === 'BMO' ? 'before the open' : 'after the close'}` : ''}` +
+                          `${n.rs_rank != null ? ` · RS ${n.rs_rank}` : ''}${n.stage != null ? ` · Stage ${n.stage}` : ''}. Open on EarningsWhispers.`}
+                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none',
+                            fontSize: '0.74rem', padding: '3px 9px', borderRadius: 7,
+                            color: 'inherit',
+                            background: n.is_buyable ? 'rgba(16,185,129,0.08)' : 'var(--bg-raised,#16181d)',
+                            border: `1px solid ${n.is_buyable ? C.green + '55' : watch ? 'var(--gold,#c9a227)55' : 'var(--hairline,#2a2a2a)'}` }}>
+                  {watch && <span title="Currently a SEPA qualifier/buyable">⭐</span>}
+                  <b>{n.symbol}</b>
+                  {n.when && <span style={{ color: C.sub, fontSize: '0.64rem' }}>{n.when}</span>}
+                  {n.rs_rank != null && <span style={{ color: C.muted, fontSize: '0.64rem' }}>RS{n.rs_rank}</span>}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

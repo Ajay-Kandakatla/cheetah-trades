@@ -93,6 +93,27 @@ class TestEarningsWatch(unittest.TestCase):
         _patch(FakeColl(), "2026-06-11")
         self.assertIsNone(ew.days_to("ZZZZ"))
 
+    def test_upcoming_groups_sorted_filtered_labeled(self):
+        coll = FakeColl([
+            {"_id": "AAA", "next_date": "2026-06-11", "when": "AMC", "fetched_at": 1},
+            {"_id": "BBB", "next_date": "2026-06-12", "when": "BMO", "fetched_at": 1},
+            {"_id": "CCC", "next_date": "2026-06-12", "when": "AMC", "fetched_at": 1},
+            {"_id": "FAR", "next_date": "2026-07-30", "when": None, "fetched_at": 1},  # beyond 14d
+            {"_id": "PAST", "next_date": "2026-06-01", "when": None, "fetched_at": 1},
+            {"_id": "NONE", "next_date": None, "when": None, "fetched_at": 1},
+        ])
+        _patch(coll, "2026-06-11")
+        out = ew.upcoming(14)
+        self.assertTrue(out["ok"])
+        labels = [g["label"] for g in out["groups"]]
+        self.assertEqual(labels[0], "Today")
+        self.assertEqual(labels[1], "Tomorrow")
+        self.assertEqual(out["n"], 3)                       # AAA, BBB, CCC
+        # within a date, BMO sorts before AMC
+        jun12 = [g for g in out["groups"] if g["date"] == "2026-06-12"][0]
+        self.assertEqual([n["symbol"] for n in jun12["names"]], ["BBB", "CCC"])
+        self.assertNotIn("2026-07-30", [g["date"] for g in out["groups"]])
+
 
 if __name__ == "__main__":
     unittest.main()

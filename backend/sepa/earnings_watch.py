@@ -213,6 +213,81 @@ def bulk_map() -> dict:
             "n": len(out)}
 
 
+def _date_label(today_iso: str, date_iso: str) -> str:
+    d = _days_between(today_iso, date_iso)
+    if d == 0:
+        return "Today"
+    if d == 1:
+        return "Tomorrow"
+    from datetime import date
+    dt = date.fromisoformat(date_iso)
+    names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    mons = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return "%s %s %d" % (names[dt.weekday()], mons[dt.month - 1], dt.day)
+
+
+def upcoming(days: int = 14) -> dict:
+    """Names reporting in the next `days`, grouped by date, with SEPA context
+    so the user can spot interesting upcoming reporters (Ajay 2026-06-11:
+    "add upcoming post-earnings tabs by dates"). Cache-only — no network."""
+    coll = _coll()
+    if coll is None:
+        return {"ok": False, "groups": [], "n": 0}
+    today = _today_et().date().isoformat()
+    days = max(1, min(int(days), _MAP_HORIZON_DAYS))
+
+    ctx: dict = {}
+    try:
+        from . import scanner
+        for r in (scanner.load_latest() or {}).get("all_results") or []:
+            ctx[r.get("symbol")] = {
+                "rs_rank": r.get("rs_rank"),
+                "stage": (r.get("stage") or {}).get("stage"),
+                "is_buyable": bool(r.get("is_buyable")),
+                "is_candidate": bool(r.get("qualifier") or r.get("is_candidate")),
+            }
+    except Exception as exc:
+        log.debug("upcoming earnings: scan ctx unavailable: %s", exc)
+
+    by_date: Dict[str, list] = {}
+    try:
+        for d in coll.find({"next_date": {"$ne": None}}):
+            nd = d.get("next_date")
+            if not nd or nd < today:
+                continue
+            dt = _days_between(today, nd)
+            if dt > days:
+                continue
+            c = ctx.get(d["_id"]) or {}
+            by_date.setdefault(nd, []).append({
+                "symbol": d["_id"], "when": d.get("when"), "days_to": dt,
+                "rs_rank": c.get("rs_rank"), "stage": c.get("stage"),
+                "is_buyable": c.get("is_buyable"), "is_candidate": c.get("is_candidate"),
+            })
+    except Exception as exc:
+        log.warning("upcoming earnings read failed: %s", exc)
+
+    groups = []
+    for nd in sorted(by_date):
+        names = by_date[nd]
+        # interesting (in the SEPA scan) first, then BMO before AMC, then A-Z
+        names.sort(key=lambda x: (not (x["is_candidate"] or x["is_buyable"]),
+                                  {"BMO": 0, None: 1, "AMC": 2}.get(x["when"], 1),
+                                  x["symbol"]))
+        groups.append({
+            "date": nd, "label": _date_label(today, nd),
+            "days_to": _days_between(today, nd), "n": len(names),
+            "n_in_scan": sum(1 for x in names if x["is_candidate"] or x["is_buyable"]),
+            "names": names,
+        })
+    return {"ok": True, "as_of": today, "horizon_days": days,
+            "groups": groups, "n": sum(g["n"] for g in groups),
+            "source": "yfinance (Yahoo Finance); verify on earningswhispers.com",
+            "note": ("Scheduled report dates — dates can shift; confirm on "
+                     "EarningsWhispers. 'in scan' = currently a SEPA "
+                     "qualifier/buyable, i.e. worth watching into the print.")}
+
+
 def days_to(symbol: str) -> Optional[int]:
     """Days until the cached next earnings for one symbol (None = unknown
     or none scheduled in cache). Backend consumers (alerts, AI analysis)."""
