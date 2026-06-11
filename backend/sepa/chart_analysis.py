@@ -31,6 +31,34 @@ log = logging.getLogger("sepa.chart_analysis")
 _CACHE: dict = {}
 _CACHE_TTL_SEC = 10 * 60
 _VERDICTS = ("BUY_NOW", "BUY_ON_CLOSE_CONFIRM", "WAIT", "PASS")
+# Below this many RESOLVED instances of a pattern, this chart's own forward
+# record is anecdote, not a win rate (Ajay 2026-06-11: the model called an
+# n=1/n=2/n=5 record "catastrophic" and PASSed a clean buy gate at high
+# confidence). The flag is pre-computed so the model can't fumble the stats.
+MIN_RECORD_N = 10
+
+
+def own_record_summary(record: Optional[dict]) -> dict:
+    """Pre-judged statistical sufficiency of this chart's own pattern history.
+    `record` is the per-pattern validation aggregate ({pat: {n, ...}})."""
+    rec = record or {}
+    per = {k: (v.get("n") or 0) for k, v in rec.items() if isinstance(v, dict)}
+    total = sum(per.values())
+    sufficient = any(n >= MIN_RECORD_N for n in per.values())
+    return {
+        "per_pattern_n": per,
+        "total_resolved_instances": total,
+        "min_n_for_a_meaningful_rate": MIN_RECORD_N,
+        "statistically_sufficient": sufficient,
+        "note": ("This chart's OWN past-pattern outcomes. Every pattern here "
+                 "has fewer than %d resolved instances, so it is ANECDOTE, "
+                 "NOT a win rate — do not call it catastrophic/dreadful, do "
+                 "not let it override the SEPA buy gate, do not raise "
+                 "confidence on it." % MIN_RECORD_N) if not sufficient else
+                ("At least one pattern has >= %d resolved instances — a weak "
+                 "but usable rate; still secondary to the live SEPA gate."
+                 % MIN_RECORD_N),
+    }
 
 SYSTEM = (
     "You are the chart-analysis layer of a Minervini-SEPA trading system. "
@@ -49,8 +77,27 @@ SYSTEM = (
     "- If earnings are within ~5 trading days, buying beforehand is a "
     "bet on a binary gap, not a SEPA entry - verdict at most WAIT and "
     "name the report date out loud.\n"
-    "- The chart's own forward record and Bulkowski base rates are "
-    "context, not promises — small n means wide error bars.\n"
+    "- PRIMARY EVIDENCE is the live SEPA gate: is_buyable, stage, trend "
+    "template, RS and volume. This chart's OWN forward record and Bulkowski "
+    "base rates are WEAK CONTEXT, not the decision.\n"
+    "- SMALL-SAMPLE RULE: read own_record_summary. When "
+    "statistically_sufficient is false, the chart's own pattern history has "
+    "too few resolved instances to be a win rate. You MUST NOT call it "
+    "'catastrophic'/'dreadful'/decisive, MUST NOT let it alone flip a "
+    "passing buy gate to PASS, and MUST NOT raise confidence because of it — "
+    "treat it as a mild caution at most. Aggregating n=1 + n=2 + n=5 across "
+    "different patterns into one '0% of 8' is NOT a win rate.\n"
+    "- UNKNOWN IS NOT AVOID: if scan_context/sepa is null or the name is "
+    "'not in the latest scan', the SEPA gate is UNKNOWN. PASS means actively "
+    "avoid and requires evidence; absence of facts is not evidence. With the "
+    "gate unknown, output WAIT (say a re-scan is needed) at low/medium "
+    "confidence — never a high-confidence PASS.\n"
+    "- CONFIDENCE: 'high' requires the price-side facts to ALIGN (buy gate "
+    "passed, Stage 2, trend pass, volume confirmed) AND no critical fact "
+    "missing. A small-sample backtest, a Caution market, or missing facts can "
+    "only LOWER confidence, never justify 'high'. When a clean SEPA buy gate "
+    "conflicts with a small-n own-record, prefer BUY_ON_CLOSE_CONFIRM or WAIT "
+    "(noting the caveat) over PASS, and do not use high confidence.\n"
     "Respond with ONLY a JSON object: {\"verdict\": one of "
     "[\"BUY_NOW\",\"BUY_ON_CLOSE_CONFIRM\",\"WAIT\",\"PASS\"], "
     "\"confidence\": \"low\"|\"medium\"|\"high\", "
@@ -111,6 +158,7 @@ def gather_facts(symbol: str) -> dict:
             "candle_reads": [{k: f.get(k) for k in ("name", "read", "date", "stat")}
                              for f in ((v.get("candles") or {}).get("formations") or [])],
             "this_charts_own_record": v.get("validation"),
+            "own_record_summary": own_record_summary(v.get("validation")),
             "scan_context": v.get("sepa"),
         }
     except Exception as exc:

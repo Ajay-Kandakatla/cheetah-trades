@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from sepa.chart_analysis import _VERDICTS, _validate
+from sepa.chart_analysis import _VERDICTS, _validate, own_record_summary, MIN_RECORD_N
 
 
 class TestValidate(unittest.TestCase):
@@ -39,6 +39,27 @@ class TestValidate(unittest.TestCase):
     def test_verdict_whitelist_locked(self):
         self.assertEqual(_VERDICTS,
                          ("BUY_NOW", "BUY_ON_CLOSE_CONFIRM", "WAIT", "PASS"))
+
+
+class TestOwnRecordSummary(unittest.TestCase):
+    def test_kim_case_flagged_insufficient(self):
+        # The exact KIM record that the model wrongly called "catastrophic".
+        rec = {"double_bottom": {"n": 1, "pct_positive_21d": 0.0},
+               "triple_bottom": {"n": 2, "pct_positive_21d": 0.0},
+               "cup_with_handle": {"n": 5, "pct_positive_21d": 0.0}}
+        s = own_record_summary(rec)
+        self.assertEqual(s["total_resolved_instances"], 8)
+        self.assertFalse(s["statistically_sufficient"])
+        self.assertIn("ANECDOTE", s["note"])
+
+    def test_sufficient_when_a_pattern_clears_min_n(self):
+        rec = {"cup_with_handle": {"n": MIN_RECORD_N + 3, "pct_positive_21d": 0.6}}
+        self.assertTrue(own_record_summary(rec)["statistically_sufficient"])
+
+    def test_empty_record_is_insufficient_not_crash(self):
+        s = own_record_summary(None)
+        self.assertFalse(s["statistically_sufficient"])
+        self.assertEqual(s["total_resolved_instances"], 0)
 
 
 if __name__ == "__main__":
