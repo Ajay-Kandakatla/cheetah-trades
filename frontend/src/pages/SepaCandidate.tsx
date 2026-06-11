@@ -34,6 +34,7 @@ const SignalDrillModal = lazy(() =>
 import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PivotMeter } from '../components/PivotMeter';
+import { LiveGateStrip } from '../components/LiveGateStrip';
 import { SepaWhyBuy } from '../components/SepaWhyBuy';
 import { StopsPanel } from '../components/StopsPanel';
 import { EntryExitPlanBlock } from '../components/EntryExitPlanBlock';
@@ -1076,6 +1077,11 @@ export function SepaCandidatePage() {
                       Pivot · buy framework
                       <InfoButton title="Pivot buy framework" inline>{PivotFrameworkInfo}</InfoButton>
                     </div>
+                    {/* Live SEPA gate (Ajay 2026-06-11) — Trend Template + RelVol
+                        recomputed against the current quote, so a borderline
+                        name (KIM 7/8, 0.4% from clearing) updates in real time
+                        instead of waiting for the next scan. */}
+                    <LiveGateStrip symbol={symbol} />
                     {base.entry_exit.exit?.stops?.length ? (
                       <StopsPanel exit={base.entry_exit.exit} />
                     ) : null}

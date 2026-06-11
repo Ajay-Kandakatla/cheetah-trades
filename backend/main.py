@@ -1657,6 +1657,16 @@ async def sepa_live_prices():
     return {"updated_at": int(time.time()), "prices": live}
 
 
+@app.get("/sepa/live-gate/{symbol}")
+async def sepa_live_gate(symbol: str):
+    """Live Trend Template + relative volume recomputed against the CURRENT
+    quote (Ajay 2026-06-11: KIM sat at 7/8, failing 30%-above-low by a hair
+    on the cached close — a live tick can flip it). Same book checks, live
+    price. Powers the live SEPA gate strip on the ticker detail page."""
+    from sepa import live_gate
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(live_gate.live_gate, symbol)))
+
+
 @app.get("/sepa/live-price/{symbol}")
 async def sepa_live_price(symbol: str):
     """Single-symbol real-time quote (Massive). Powers the live-price tag
