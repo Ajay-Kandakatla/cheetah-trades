@@ -425,6 +425,14 @@
 # "are our patterns accurate?" record Ajay asked for 2026-06-10.
 20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
 #
+# Analyst Pulse — 5:25 PM ET weekdays. Refreshes analyst price targets, EPS
+# estimate-revision trends (TLSW p.124-125: the ±5% revision read + the
+# 30-day trending-higher windows) and 90d broker actions (yfinance) for the
+# decision universe (scan qualifiers/buyables + holdings + watchlist).
+# Display + tracking only — never feeds the composite scanner score; on
+# non-Stage-2 names, upgrades/target raises render as the p.89 trap caution.
+25     17    *    *    1-5  /usr/local/bin/python -m sepa.analyst_pulse refresh
+#
 # Giants 13F flows — 5:35 PM ET weekdays. Checks SEC EDGAR for new 13F-HR
 # filings from the curated Tier S/A funds (giants/registry.py), parses any
 # new full-portfolio information tables, and rebuilds the "where the giants

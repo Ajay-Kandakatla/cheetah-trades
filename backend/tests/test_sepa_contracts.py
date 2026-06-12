@@ -285,6 +285,32 @@ def test_group_leadership_constants_locked():
     assert rows[1]["is_laggard"] is True and rows[0]["group_leader"] is True
 
 
+def test_analyst_pulse_constants_locked_and_out_of_score():
+    """Analyst Pulse (sepa/analyst_pulse.py — TLSW p.124-125 revisions, p.89
+    brokerage-opinion trap, Ch.4 p.41/p.44 target framing) is DISPLAY +
+    tracking ONLY. Constants are locked; the page cites must stay in the
+    source; and scanner.py must NEVER import it — analyst data stays out of
+    the composite score (changing any of this is Rule #4: page-cited update
+    to docs/sepa/analyst_pulse_methodology.md + this contract)."""
+    import inspect
+    from sepa import analyst_pulse as ap
+    assert ap.REVISION_BIG_PCT == 5.0     # p.124 (study window unstated in book — keyed off 30d, doc'd)
+    assert ap.TREND_WINDOW_DAYS == 30     # p.125 "trending higher from 30 days earlier"
+    assert ap.ACTIONS_WINDOW_DAYS == 90   # engine param, NOT a book number
+    src = inspect.getsource(ap)
+    for cite in ("p.124", "p.125", "p.89"):
+        assert cite in src, f"analyst_pulse.py lost its {cite} citation"
+    # Signed-EPS convention: pct on the DELTA over abs(base) — a loss
+    # narrowing from -1.00 to -0.50 is an UPWARD revision (+50%).
+    assert ap.rev_pct(-0.5, -1.0) == 50.0
+    # OUT of the score: the scanner never reads analyst data.
+    from sepa import scanner
+    assert "analyst_pulse" not in inspect.getsource(scanner), (
+        "scanner.py imports analyst_pulse — analyst data must stay out of "
+        "the composite score (display + tracking only)"
+    )
+
+
 def test_rating_thresholds_locked():
     """_rating_label maps score → label per contract §4."""
     from sepa.scanner import _rating_label

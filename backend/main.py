@@ -2298,6 +2298,26 @@ async def sepa_earnings_picks():
     return JSONResponse(_scrub_nan(await asyncio.to_thread(earnings_picks.latest)))
 
 
+@app.get("/sepa/analyst-map")
+async def sepa_analyst_map(symbols: str = Query(..., description="comma-separated tickers, max 100")):
+    """Bulk per-symbol analyst read {SYM: {verdict, implied_upside_pct, ...}}
+    from the analyst_pulse cache (TLSW p.124-125 estimate revisions; p.89
+    trap gating for non-Stage-2 names; targets are data, not methodology —
+    Ch.4 p.41/p.44). Display + tracking only — never feeds the score."""
+    from sepa import analyst_pulse
+    syms = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()][:100]
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(analyst_pulse.get_map, syms)))
+
+
+@app.get("/sepa/analyst/{symbol}")
+async def sepa_analyst_detail(symbol: str):
+    """Full analyst-pulse doc + book read + last-report surprise join (from
+    the earnings_calendar cache) for the drill modal. Stale (>18h) kicks a
+    background refresh and returns cached data immediately."""
+    from sepa import analyst_pulse
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(analyst_pulse.get_detail, symbol)))
+
+
 @app.get("/sepa/analyze-chart/{symbol}")
 async def sepa_analyze_chart(symbol: str):
     """On-demand AI chart analysis (Ajay 2026-06-11): Claude Sonnet
