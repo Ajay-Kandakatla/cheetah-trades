@@ -138,6 +138,12 @@ FEATURE_CATALOG: list[dict] = [
     # pass (docs/scalping_methodology.md). Educational, NOT advice — most retail
     # day-trading is net-losing. Owner-on via added_in/VERSION.
     {"id": "scalping",      "label": "Scalping",            "group": "tools",     "default": False, "added_in": 11},
+    # Auto-Pilot (2026-06-11): automated Minervini exit engine on Alpaca —
+    # bracket entries, breakeven-ratchet stops, regime-aware widths (TLSW
+    # Ch.12-13). Places/moves REAL orders (paper by default via ALPACA_PAPER=1),
+    # so this stays owner-only unless explicitly granted. Owner-on via
+    # added_in/VERSION.
+    {"id": "trading",       "label": "🤖 Auto-Pilot",       "group": "tools",     "default": False, "added_in": 14},
     {"id": "supply-demand", "label": "Supply / Demand",     "group": "tools",     "default": False},
     # Demand Zones (2026-06-07): Minervini-basing demand-zone price BANDS for the
     # leaderboard + day-trading universe — each name's most-recent VCP base
@@ -212,7 +218,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 13
+CATALOG_VERSION = 14
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

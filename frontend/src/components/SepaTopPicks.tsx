@@ -4,7 +4,7 @@
    sepa/top_picks.py). Fails quiet — never breaks the portfolio page. */
 import { useEffect, useState } from 'react';
 import { WatchlistButton } from './WatchlistButton';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { usePatternVerdicts } from '../hooks/usePatternVerdicts';
@@ -68,6 +68,29 @@ function statusOf(p: Pick): { label: string; color: string } {
   return { label: 'In-base buy (pocket pivot)', color: '#38bdf8' };
 }
 
+/* AutoPilotButton — 🤖 jump to /trading with the symbol prefilled. Sits INSIDE
+   the card's <Link>, so it must stopPropagation AND preventDefault (house
+   lesson — preventDefault alone doesn't stop the row's Link navigation, and
+   stopPropagation alone doesn't stop the anchor default). */
+function AutoPilotButton({ symbol }: { symbol: string }) {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      className="wl-btn wl-btn--sm"
+      title="Enter via Auto-Pilot"
+      aria-label={`Enter ${symbol} via Auto-Pilot`}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        navigate(`/trading?symbol=${encodeURIComponent(symbol)}`);
+      }}
+    >
+      🤖
+    </button>
+  );
+}
+
 export function SepaTopPicks({ n = 3 }: { n?: number }) {
   const [data, setData] = useState<Resp | null>(null);
   const [err, setErr] = useState(false);
@@ -110,7 +133,7 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
             return (
               <Link key={p.symbol} to={`/sepa/${p.symbol}`} className="top-pick" title={p.decision_reason || p.why || ''}>
                 <div className="top-pick__row">
-                  <span className="top-pick__sym">{p.symbol}<WatchlistButton ticker={p.symbol} /><TickerName symbol={p.symbol} name={p.name} width={20} /></span>
+                  <span className="top-pick__sym">{p.symbol}<WatchlistButton ticker={p.symbol} /><AutoPilotButton symbol={p.symbol} /><TickerName symbol={p.symbol} name={p.name} width={20} /></span>
                   <span className="top-pick__score mono">{p.score ?? '—'}</span>
                   <span className="top-pick__badge" style={{ color: s.color, borderColor: s.color }}>
                     {s.label}
