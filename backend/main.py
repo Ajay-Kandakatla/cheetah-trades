@@ -720,6 +720,13 @@ app.include_router(supply_demand_router)
 from giants.api import router as giants_router  # noqa: E402
 app.include_router(giants_router)
 
+# Minervini Brain — BM25 RAG over the two books (TLSW + TTLAC): persona
+# chat grounding (/brain/ask) + book citations inside chart analysis.
+# HARD BOUNDARY: the Auto-Pilot trading engine NEVER consumes the brain —
+# no retrieval/LLM in the trade loop (tests/test_brain_contracts.py).
+from brain.api import router as brain_router  # noqa: E402
+app.include_router(brain_router)
+
 # Trading Auto-Pilot — Minervini risk-managed exit engine + entries
 # (TLSW pp.291-315 via trading/risk_rules.py). Stops/targets rest AT Alpaca
 # as bracket/GTC legs; ALL buys flow through trading.entries.enter (manual

@@ -206,9 +206,34 @@ def gather_facts(symbol: str) -> dict:
     return facts
 
 
+# ── book passages (Minervini brain — optional, soft-fail) ───────────────────
+
+def _book_passages(facts: dict) -> Optional[list]:
+    """Setup-specific passages from the Minervini brain (BM25 over the two
+    books). STRICTLY optional: brain absent / not ingested / erroring ->
+    None, and the analysis prompt is byte-identical to the no-brain path
+    (locked by tests/test_brain_contracts.py). Never raises."""
+    try:
+        from brain import retriever as brain_retriever
+        pats = [m.get("pattern")
+                for m in ((facts.get("patterns") or {}).get("matches") or [])
+                if m.get("pattern")]
+        setup = ((facts.get("sepa") or {}).get("setup_type")) or ""
+        focus = str(pats[0] if pats else (setup or "breakout"))
+        queries = [
+            f"{focus} buy point pivot breakout volume",
+            "stop loss placement initial risk percent",
+            "extended chase late entry pivot",
+        ]
+        return brain_retriever.search_multi(queries, k=6) or None
+    except Exception as exc:
+        log.debug("book passages unavailable: %s", exc)
+        return None
+
+
 # ── the call ─────────────────────────────────────────────────────────────────
 
-def _validate(parsed: dict) -> Optional[dict]:
+def _validate(parsed: dict, allowed_cites: Optional[list] = None) -> Optional[dict]:
     if not isinstance(parsed, dict):
         return None
     if parsed.get("verdict") not in _VERDICTS:
@@ -224,6 +249,18 @@ def _validate(parsed: dict) -> Optional[dict]:
         "risks": [str(t) for t in (parsed.get("risks") or [])][:4],
         "what_would_change_it": str(parsed.get("what_would_change_it") or ""),
     }
+    # Optional book citations — every entry must substring-match one of the
+    # cite strings we actually provided (brain passages). Invalid entries are
+    # DROPPED, never fatal: a bad cite must not kill a good analysis.
+    allowed = [c for c in (allowed_cites or []) if c]
+    if allowed:
+        cites = []
+        for c in (parsed.get("citations") or []):
+            c = str(c)
+            if any((a in c) or (c in a) for a in allowed):
+                cites.append(c)
+        if cites:
+            out["citations"] = cites[:8]
     return out
 
 
@@ -248,12 +285,33 @@ def analyze(symbol: str) -> dict:
         + json.dumps(facts, indent=1, default=str)
         + "\n\nReturn the JSON verdict object now."
     )
-    r = llm.chat(prompt, system=SYSTEM, provider="anthropic",
+    system = SYSTEM
+
+    # Optional Minervini-brain grounding — soft-fail: when the brain is
+    # absent/empty/erroring, prompt and system are EXACTLY the legacy ones.
+    passages = _book_passages(facts)
+    allowed_cites: list = []
+    if passages:
+        allowed_cites = [p.get("cite") for p in passages if p.get("cite")]
+        prompt += (
+            "\n\nBOOK PASSAGES (cite when you use them):\n"
+            + "\n".join("[%s] %s" % (p.get("cite"), p.get("text"))
+                        for p in passages)
+        )
+        system = SYSTEM + (
+            "\n- BOOK PASSAGES from Minervini's books may be appended to the "
+            "facts. If one grounds a point you make, add its bracketed cite "
+            "string to an optional \"citations\": [str] array in the JSON. "
+            "Citations may ONLY come from those provided passages — never "
+            "invent a page or section, never cite anything else."
+        )
+
+    r = llm.chat(prompt, system=system, provider="anthropic",
                  json_only=True, max_tokens=900, temperature=0.2, timeout=90)
     if not r.get("ok"):
         return {"ok": False, "error": r.get("error", "llm failed"),
                 "facts": facts}
-    analysis = _validate(r.get("parsed") or {})
+    analysis = _validate(r.get("parsed") or {}, allowed_cites)
     if analysis is None:
         return {"ok": False, "error": "model returned malformed analysis",
                 "raw_text": (r.get("text") or "")[:1200], "facts": facts}
