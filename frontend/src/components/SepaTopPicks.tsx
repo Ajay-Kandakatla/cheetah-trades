@@ -2,7 +2,7 @@
    Reads GET /sepa/top-picks (top actionable buys from the LATEST scan), so it
    refreshes whenever a scan runs. Ranks fresh breakouts first (see backend
    sepa/top_picks.py). Fails quiet — never breaks the portfolio page. */
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { WatchlistButton } from './WatchlistButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -12,6 +12,13 @@ import { PatternChips } from './PatternChips';
 import { TickerName } from './TickerCell';
 import { EarningsChip } from './EarningsChip';
 import { useEarningsMap } from '../hooks/useEarningsMap';
+import { AnalystPulseChip } from './AnalystPulseChip';
+import { useAnalystMap } from '../hooks/useAnalystMap';
+
+// Lazy — the analyst drill only loads when a 📊 chip is tapped.
+const AnalystPulseModal = lazy(() =>
+  import('./AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
+);
 
 type Pick = {
   symbol: string;
@@ -96,6 +103,11 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
   const [err, setErr] = useState(false);
   const { verdicts } = usePatternVerdicts();
   const earningsMap = useEarningsMap();
+  // 📊 Analyst Pulse — one modal instance for the whole list; chips set
+  // the symbol. Hooks stay above the early return (rules of hooks).
+  const picks = data?.picks || [];
+  const analystMap = useAnalystMap(picks.map((p) => p.symbol));
+  const [analystSym, setAnalystSym] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -110,7 +122,6 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
 
   if (err || !data) return null; // fail quiet — portfolio page must still render
 
-  const picks = data.picks || [];
   return (
     <section className="top-picks">
       <div className="top-picks__head">
@@ -141,6 +152,13 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
                   <PatternChips v={verdicts.get(p.symbol.toUpperCase())} />
                   {/* asLink={false} — we're inside the row's <Link>; nested anchors are invalid */}
                   <EarningsChip symbol={p.symbol} info={earningsMap.get(p.symbol.toUpperCase())} asLink={false} />
+                  {/* 📊 Analyst Pulse — chip stops propagation + default so the
+                      row Link doesn't navigate; opens the shared modal below. */}
+                  <AnalystPulseChip
+                    symbol={p.symbol}
+                    entry={analystMap.get(p.symbol.toUpperCase())}
+                    onOpenDrill={() => setAnalystSym(p.symbol)}
+                  />
                 </div>
                 {lev.isLeveraged && (
                   <div className="top-pick__lev" title="Leveraged/inverse ETF — daily-rebalance decay + amplified drawdown; SEPA/Minervini criteria don't apply.">
@@ -188,6 +206,12 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
       <p className="top-picks__foot mono">
         From the latest SEPA scan · refreshes each scan · not investment advice
       </p>
+
+      {analystSym && (
+        <Suspense fallback={null}>
+          <AnalystPulseModal symbol={analystSym} onClose={() => setAnalystSym(null)} />
+        </Suspense>
+      )}
     </section>
   );
 }

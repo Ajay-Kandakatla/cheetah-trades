@@ -10,13 +10,20 @@
  * page. Holdings come from /portfolio/holdings (manual rows); add via the form,
  * remove via the 🗑. Backend untouched.
  */
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
 import { EarningsChip } from '../components/EarningsChip';
 import { useEarningsMap } from '../hooks/useEarningsMap';
+import { AnalystPulseChip } from '../components/AnalystPulseChip';
+import { useAnalystMap } from '../hooks/useAnalystMap';
+
+// Lazy — the analyst drill only loads when a 📊 chip is tapped.
+const AnalystPulseModal = lazy(() =>
+  import('../components/AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
+);
 import { PatternMatchCards } from '../components/PatternMatchCards';
 import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
 import { EarningsReportPicks } from '../components/EarningsReportPicks';
@@ -75,6 +82,10 @@ export default function PortfolioPage() {
   const rows: HoldingRow[] = data?.rows ?? [];
   const { verdicts } = usePatternVerdicts();
   const earningsMap = useEarningsMap();   // ⚠ ER chip on each holding row
+  // 📊 Analyst Pulse — bulk map for the holdings; one modal instance for
+  // the whole page, opened with the clicked symbol.
+  const analystMap = useAnalystMap(rows.map((r) => r.symbol));
+  const [analystSym, setAnalystSym] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<HoldSortKey>('default');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -292,6 +303,11 @@ export default function PortfolioPage() {
                   )}
                   <PatternChips v={verdicts.get((r.symbol || '').toUpperCase())} />
                   <EarningsChip symbol={r.symbol} info={earningsMap.get((r.symbol || '').toUpperCase())} />
+                  <AnalystPulseChip
+                    symbol={r.symbol}
+                    entry={analystMap.get((r.symbol || '').toUpperCase())}
+                    onOpenDrill={() => setAnalystSym(r.symbol)}
+                  />
                 </div>
                 <button
                   type="button"
@@ -321,6 +337,12 @@ export default function PortfolioPage() {
           );
         })}
       </div>
+
+      {analystSym && (
+        <Suspense fallback={null}>
+          <AnalystPulseModal symbol={analystSym} onClose={() => setAnalystSym(null)} />
+        </Suspense>
+      )}
 
       <AddHoldingForm onAdded={refresh} />
 

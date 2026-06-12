@@ -51,6 +51,12 @@ import { SepaPoliticalChip } from './SepaPoliticalChip';
 // window, so it's safe to mount unconditionally on every card.
 import { EarningsChip } from './EarningsChip';
 import { useEarningsMap } from '../hooks/useEarningsMap';
+// Analyst Pulse chip — estimate revisions (TLSW pp.124-125), price-target
+// context (Ch.4 framing) and the p.89 upgrade-on-broken-stock trap. The
+// hook batches symbols across all mounted cards into chunked bulk
+// fetches, so this is safe to call once per card.
+import { AnalystPulseChip } from './AnalystPulseChip';
+import { useAnalystMap } from '../hooks/useAnalystMap';
 // Pattern verdict row (bullish structure / closest pattern / bearish warning /
 // explicit no-match) — reads the latest 🎯 verdict scan via the deduped hook.
 import { SepaPatternRow } from './SepaPatternChip';
@@ -88,6 +94,11 @@ const MacroContextModal = lazy(() =>
 // user actually taps a chip.
 const SignalDrillModal = lazy(() =>
   import('./SignalDrillModal').then(m => ({ default: m.SignalDrillModal })),
+);
+// Analyst Pulse drill — targets bar + revisions table + actions +
+// surprise. Lazy: only loads when the user taps the 📊 chip.
+const AnalystPulseModal = lazy(() =>
+  import('./AnalystPulseModal').then(m => ({ default: m.AnalystPulseModal })),
 );
 import type { SignalKind } from './SignalDrillModal';
 import type { LivePrice } from '../hooks/useLivePrices';
@@ -169,6 +180,8 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
   const trend = useSepaTrend(row.symbol);
   const owned = useOwnedPosition(row.symbol);   // your position, if you hold this name
   const earningsMap = useEarningsMap();         // ⚠ ER chip — session-cached map
+  const analystMap = useAnalystMap([row.symbol]); // 📊 Analyst Pulse — batched bulk map
+  const [analystOpen, setAnalystOpen] = useState(false);
   // Lazy fetch of per-symbol history snapshots — only triggered when
   // the trend drill modal actually opens. Avoids 200 cards × 1 fetch
   // each on page load. The hook fires its own fetch on mount; we mount
@@ -444,6 +457,15 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             {/* ⚠ ER chip — earnings within 7 days. Renders null otherwise;
                 click opens EarningsWhispers (stopPropagation inside). */}
             <EarningsChip symbol={row.symbol} info={earningsMap.get(row.symbol.toUpperCase())} />
+            {/* 📊 Analyst Pulse — estimate revisions (TLSW pp.124-125) +
+                target context; amber p.89 trap when upgrades land on a
+                broken / non-Stage-2 name. Renders null without data.
+                Click opens the AnalystPulseModal drill. */}
+            <AnalystPulseChip
+              symbol={row.symbol}
+              entry={analystMap.get(row.symbol.toUpperCase())}
+              onOpenDrill={() => setAnalystOpen(true)}
+            />
             {lateBase && (
               <span
                 role="button" tabIndex={0}
@@ -743,6 +765,12 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
       {macroOpen && (
         <Suspense fallback={null}>
           <MacroContextModal symbol={row.symbol} onClose={() => setMacroOpen(false)} />
+        </Suspense>
+      )}
+
+      {analystOpen && (
+        <Suspense fallback={null}>
+          <AnalystPulseModal symbol={row.symbol} onClose={() => setAnalystOpen(false)} />
         </Suspense>
       )}
 

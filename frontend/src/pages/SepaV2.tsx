@@ -12,10 +12,12 @@
  *     days still show ~230 watchlist names.
  *   - Clicking any ticker → existing /sepa/:symbol detail page (unchanged).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SepaCandidate, Rating, SepaScan } from '../hooks/useSepa';
 import { API } from '../lib/apiBase';
+import { AnalystPulseChip } from '../components/AnalystPulseChip';
+import { useAnalystMap, type AnalystMapEntry } from '../hooks/useAnalystMap';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { MarketClockStrip } from '../components/MarketClockStrip';
 import { SepaBriefBanner } from '../components/SepaBriefBanner';
@@ -24,6 +26,11 @@ import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaSetupTabs, TAB_TO_KIND, type SepaTab } from '../components/SepaSetupTabs';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
+
+// Lazy — the analyst drill only loads when a 📊 chip is tapped.
+const AnalystPulseModal = lazy(() =>
+  import('../components/AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
+);
 
 // Shape of /sepa/card-enrichment/{symbol} response — duplicated here to
 // avoid importing the IntersectionObserver-coupled hook (the table
@@ -256,6 +263,11 @@ export function SepaV2Page() {
   // parallel requests on first paint.
   const [enrichment, setEnrichment] = useState<Map<string, Enrich>>(new Map());
 
+  // 📊 Analyst Pulse — bulk map for the visible (sorted) rows, capped at
+  // 200 like the enrichment batch. One modal instance for the whole
+  // table; rows pass the clicked symbol up via onAnalystOpen.
+  const [analystSym, setAnalystSym] = useState<string | null>(null);
+
   // Fetch counts + symbol lists for all api-backed tabs in parallel on mount.
   // /setups/{kind}?only_pending=true returns {kind, count, setups: [{symbol,...}]}.
   useEffect(() => {
@@ -370,6 +382,9 @@ export function SepaV2Page() {
     }
     return applySortFromFilters(filtered, filters.sortBy);
   }, [filtered, filters.sortBy, colSort, enrichment]);
+
+  const analystSymbols = useMemo(() => sorted.slice(0, 200).map((r) => r.symbol), [sorted]);
+  const analystMap = useAnalystMap(analystSymbols);
 
   const qualifierCount = (data as any)?.qualifier_count ?? allRows.filter(isQualifier).length;
   const buyableCount = data?.candidate_count ?? allRows.filter(r => r.is_candidate).length;
@@ -486,12 +501,23 @@ export function SepaV2Page() {
               <Th k="dm12m"   cs={colSort} onClick={toggleColSort}>12m</Th>
               <Th k="valuation" cs={colSort} onClick={toggleColSort}>Valuation</Th>
               <Th k="insider"   cs={colSort} onClick={toggleColSort}>Insider</Th>
+              {/* Analyst Pulse — not sortable (map fills in async; chip
+                  renders from /sepa/analyst-map verdicts) */}
+              <th className="sepav2-th" title="Analyst Pulse — estimate revisions (TLSW pp.124-125) + target context">Analyst</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map(r => <Row key={r.symbol} row={r} enrich={enrichment.get(r.symbol)} />)}
+            {sorted.map(r => (
+              <Row
+                key={r.symbol}
+                row={r}
+                enrich={enrichment.get(r.symbol)}
+                analyst={analystMap.get((r.symbol || '').toUpperCase())}
+                onAnalystOpen={setAnalystSym}
+              />
+            ))}
             {sorted.length === 0 && !loading && (
-              <tr><td colSpan={19} className="sepav2-empty">
+              <tr><td colSpan={20} className="sepav2-empty">
                 No rows match. Try lowering RS, switching Rating to ALL,
                 turning off Hide Distributing, or toggling "Show all analyzed".
               </td></tr>
@@ -499,6 +525,12 @@ export function SepaV2Page() {
           </tbody>
         </table>
       </div>
+
+      {analystSym && (
+        <Suspense fallback={null}>
+          <AnalystPulseModal symbol={analystSym} onClose={() => setAnalystSym(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }
@@ -518,7 +550,12 @@ function Th({ children, k, cs, onClick }: {
   );
 }
 
-function Row({ row, enrich }: { row: SepaCandidate; enrich?: Enrich }) {
+function Row({ row, enrich, analyst, onAnalystOpen }: {
+  row: SepaCandidate;
+  enrich?: Enrich;
+  analyst?: AnalystMapEntry;
+  onAnalystOpen?: (sym: string) => void;
+}) {
   const trend = row.trend ?? {} as any;
   const stage = row.stage ?? {} as any;
   const base = (row as any).base_count ?? {};
@@ -631,6 +668,17 @@ function Row({ row, enrich }: { row: SepaCandidate; enrich?: Enrich }) {
       </td>
       <td>{renderValuationChip(row.symbol, enrich)}</td>
       <td>{renderInsiderChip(row.symbol, enrich)}</td>
+      <td>
+        {analyst
+          ? (
+            <AnalystPulseChip
+              symbol={row.symbol}
+              entry={analyst}
+              onOpenDrill={() => onAnalystOpen?.(row.symbol)}
+            />
+          )
+          : <span className="rv2-neutral">—</span>}
+      </td>
     </tr>
   );
 }
