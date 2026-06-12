@@ -361,7 +361,13 @@ tr:last-child td { border-bottom: none; }
   color: var(--ink-muted);
 }
 .dot {
+  /* inline-block, or the 8x8 sizing is ignored (spans are inline) and the
+     box becomes glyph-width x line-height — an oval glow (2026-06-12). The
+     font clamps keep the ● glyph inside the square box. */
+  display: inline-block;
   width: 8px; height: 8px; border-radius: 50%;
+  font-size: 8px; line-height: 8px; text-align: center; overflow: hidden;
+  vertical-align: middle;
   box-shadow: 0 0 8px currentColor;
 }
 
@@ -6750,6 +6756,18 @@ tr:last-child td { border-bottom: none; }
   input, select, textarea, button {
     min-height: 38px;
     font-size: 14px !important;          /* prevents iOS zoom-on-focus */
+  }
+  /* …but NOT small round/icon buttons: min-height beats their fixed
+     height and turns circles into ovals (Ajay 2026-06-12). Their tap
+     target comes from the ::after inset hit-area, not the visual box. */
+  .info-button__trigger,
+  .inline-info__trigger,
+  .cm-headline__info-btn,
+  .dep-graph__zoom-btn,
+  .movers__pill,
+  .wl-btn,
+  .portfolio-card__rm {
+    min-height: 0;
   }
   .cat-bar__input { min-width: 0; width: 100%; }
 
