@@ -413,3 +413,18 @@ def test_preview_is_pure_math_and_carries_contract_keys(env):
     assert out["stop"]["stop_price"] == 46.5
     assert out["target"]["target_price"] == 57.5
     assert out["breakeven_trigger"] == 60.5       # 50 + 3 x 3.50 (p.308)
+
+
+def test_detail_text_flattens_objects_for_the_feed():
+    """Regression — the ledger feed renders detail as plain text, so an object
+    reaching the frontend crashes React (#31). _detail_text must flatten the
+    exact auto_entry_disabled {gate, hint} shape that white-screened the page."""
+    from trading.exit_engine import _detail_text
+    out = _detail_text({"gate": {"configured": True, "armed": False,
+                                 "auto_entry": False, "market_open": True},
+                        "hint": "needs armed + auto_entry"})
+    assert isinstance(out, str)
+    assert "armed=False" in out and "hint: needs armed" in out
+    assert _detail_text("already a string") == "already a string"
+    assert _detail_text(None) == ""
+    assert _detail_text({"flags": ["a", "b"], "n": 3}) == "flags: a, b · n: 3"

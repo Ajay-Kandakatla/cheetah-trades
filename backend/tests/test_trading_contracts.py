@@ -321,3 +321,117 @@ def test_position_never_exceeds_quarter_of_equity():
                     f"losses={losses}, {s}"
                 )
                 assert s["shares"] == int(s["shares"])
+
+
+# --- Journal analytics: book metric targets + the cardinal-sin rule ----------
+# trading/analytics.py REPORTS Minervini's own descriptive stats (it changes no
+# gating). The cited targets (2:1/3:1, p.301) and the cardinal-sin rule
+# (avg_loss > avg_gain, p.299) are book numbers — locked here like the risk
+# constants so a "report" can never silently drop or move them
+# (docs/sepa/journal_analytics_methodology.md).
+
+ANALYTICS_PATH = os.path.join(os.path.dirname(__file__), "..",
+                              "trading", "analytics.py")
+
+ANALYTICS_TOKENS = [
+    # p.301: "at least a 2:1 win/loss ratio ... I shoot for 3:1."
+    "TARGET_RATIO = 2.0",
+    "STRETCH_RATIO = 3.0",
+    # p.298: batting average "about 50 percent of the time".
+    "BATTING_REF = 0.5",
+    # p.299: "not allow any stock to fall more than 10 percent".
+    "HALF_AVG_GAIN_CAP = 10.0",
+]
+
+ANALYTICS_PAGE_CITES = ["p.298", "p.299", "p.301"]
+
+
+def _analytics_source():
+    with open(ANALYTICS_PATH, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def test_analytics_targets_locked_in_source():
+    """The cited book targets must exist verbatim in trading/analytics.py.
+    These are Minervini Ch.13 numbers (p.298/p.299/p.301) — Rule #4 applies
+    to any change (page-cited doc + sign-off), even though analytics only
+    reports them."""
+    src = _analytics_source()
+    for token in ANALYTICS_TOKENS:
+        assert token in src, (
+            f"LOCKED analytics target drifted or was renamed: `{token}` not "
+            f"found in trading/analytics.py "
+            f"(docs/sepa/journal_analytics_methodology.md) — Rule #4."
+        )
+
+
+def test_analytics_page_cites_present_in_source():
+    """Every reported metric traces to a printed page (Rule #1): the p.298/
+    p.299/p.301 anchors must never be stripped from analytics.py."""
+    src = _analytics_source()
+    for cite in ANALYTICS_PAGE_CITES:
+        assert cite in src, (
+            f"page cite `{cite}` missing from trading/analytics.py — the "
+            f"source map to Trade Like a Stock Market Wizard Ch.13 is part of "
+            f"the contract."
+        )
+
+
+def test_analytics_targets_importable_and_equal():
+    from trading import analytics as an
+    assert an.TARGET_RATIO == 2.0
+    assert an.STRETCH_RATIO == 3.0
+    assert an.BATTING_REF == 0.5
+    assert an.HALF_AVG_GAIN_CAP == 10.0
+
+
+def test_cardinal_sin_flag_fires_and_cites_p299():
+    """p.299 functional lock: when the average loss exceeds the average gain
+    (the trader's cardinal sin), compute() MUST emit a flag citing p.299. This
+    is the red line Ajay's real money depends on seeing."""
+    from trading import analytics as an
+
+    def _losing_trade(sym, epoch, gain_pct):
+        return {"trade_id": "%s-%d" % (sym, epoch), "symbol": sym,
+                "status": "closed",
+                "entry": {"epoch": float(epoch), "price": 100.0, "qty": 1,
+                          "stop_pct": 7.0, "trigger": None},
+                "exit": {"epoch": float(epoch + 86400),
+                         "price": 100.0 * (1 + gain_pct / 100.0),
+                         "leg": "stop"},
+                "realized": {"gain_pct": gain_pct,
+                             "gain_dollars": round(gain_pct, 2),
+                             "r_multiple": round(gain_pct / 7.0, 2),
+                             "holding_days": 1.0, "exit_reason": "x"}}
+
+    # avg_gain 5, avg_loss 9 -> cardinal sin.
+    trades = [_losing_trade("W", 1, 5.0),
+              _losing_trade("L1", 2, -9.0),
+              _losing_trade("L2", 3, -9.0)]
+    a = an.compute(trades)
+    assert a["avg_loss_pct"] > a["avg_gain_pct"]
+    flags = " ".join(a["vs_book"]["flags"])
+    assert "cardinal sin" in flags and "p.299" in flags, a["vs_book"]["flags"]
+
+
+def test_analytics_win_loss_floor_flag_cites_p301():
+    """p.301 functional lock: a win/loss ratio below the 2:1 floor must be
+    flagged with the p.301 cite (the book's minimum acceptable edge)."""
+    from trading import analytics as an
+
+    def _t(sym, epoch, gain_pct):
+        return {"trade_id": "%s-%d" % (sym, epoch), "symbol": sym,
+                "status": "closed",
+                "entry": {"epoch": float(epoch), "price": 100.0, "qty": 1,
+                          "stop_pct": 7.0, "trigger": None},
+                "exit": {"epoch": float(epoch + 86400), "price": 100.0,
+                         "leg": "stop"},
+                "realized": {"gain_pct": gain_pct, "gain_dollars": gain_pct,
+                             "r_multiple": round(gain_pct / 7.0, 2),
+                             "holding_days": 1.0, "exit_reason": "x"}}
+
+    # avg_gain 8, avg_loss 7 -> win/loss 1.14 (< 2:1) but NOT the cardinal sin.
+    trades = [_t("W", 1, 8.0), _t("L", 2, -7.0)]
+    a = an.compute(trades)
+    flags = " ".join(a["vs_book"]["flags"])
+    assert "2:1 floor" in flags and "p.301" in flags, a["vs_book"]["flags"]

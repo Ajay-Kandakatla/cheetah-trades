@@ -12,6 +12,8 @@ POST /trading/flatten/{symbol}      cancel orders + close position (admin)
 POST /trading/flatten-all?confirm=yes  disaster plan (admin)
 POST /trading/sim-reset?confirm=yes wipe SIM broker state (admin, sim-only)
 GET  /trading/ledger?limit=100      trade_ledger tail
+GET  /trading/journal?limit&decisions  round-trip journal (+ open MTM, decisions)
+GET  /trading/analytics             Minervini batting/expectancy/win-loss stats
 
 Style mirrors giants/api.py (asyncio.to_thread, lazy imports) but EVERY
 route — GETs included — is admin-gated: status/preview/ledger expose account
@@ -189,3 +191,86 @@ async def trading_ledger(limit: int = 100,
     rows = await asyncio.to_thread(exit_engine.ledger_tail,
                                    max(1, min(int(limit), 1000)))
     return JSONResponse({"rows": rows})
+
+
+def _live_prices_for(symbols):
+    """Batched live quotes for open-position mark-to-market (lazy — pulls
+    pandas via sepa.prices). Failures degrade to {} (no marks, no crash)."""
+    if not symbols:
+        return {}
+    try:
+        from sepa.prices import bulk_live_prices
+        return bulk_live_prices(list(symbols)) or {}
+    except Exception:                              # noqa: BLE001
+        return {}
+
+
+def _mark_open(open_docs):
+    """Mark-to-market the OPEN journal docs with a live quote, and build the
+    open_marks list analytics.compute consumes for open_risk_dollars. The
+    journal stays pure/historical; the live overlay lives only in the API
+    response."""
+    syms = [d.get("symbol") for d in open_docs if d.get("symbol")]
+    quotes = _live_prices_for(syms)
+    marked, marks = [], []
+    for d in open_docs:
+        sym = d.get("symbol")
+        entry = d.get("entry") or {}
+        q = quotes.get(sym) or {}
+        last = q.get("price") or q.get("last_trade_price") or q.get("prev_day_close")
+        try:
+            last = float(last) if last is not None else None
+        except (TypeError, ValueError):
+            last = None
+        ep = entry.get("price")
+        qty = entry.get("qty")
+        sp = entry.get("stop_price")
+        unreal_pct = unreal_dollars = None
+        if last is not None and ep:
+            unreal_pct = round((last / ep - 1) * 100, 2)
+            if qty is not None:
+                unreal_dollars = round(qty * (last - ep), 2)
+        out = dict(d)
+        out["mark"] = {"last": last, "unrealized_pct": unreal_pct,
+                       "unrealized_dollars": unreal_dollars}
+        marked.append(out)
+        if last is not None and qty is not None and sp is not None:
+            marks.append({"qty": qty, "last": last, "stop": sp,
+                          "entry_price": ep})
+    return marked, marks
+
+
+@router.get("/journal")
+async def trading_journal(limit: int = 100, decisions: int = 0,
+                          email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import journal
+
+    def work():
+        journal.reconcile()                        # cheap + idempotent
+        closed = journal.load(limit=max(1, min(int(limit), 1000)),
+                              status="closed")
+        open_docs = journal.load(status="open")
+        marked, _ = _mark_open(open_docs)
+        out = {"trades": closed, "open": marked,
+               "summary": journal.summary()}
+        if int(decisions or 0):
+            out["decisions"] = journal.decisions(days=14)
+        return out
+
+    return JSONResponse(await asyncio.to_thread(work))
+
+
+@router.get("/analytics")
+async def trading_analytics(email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import analytics, journal
+
+    def work():
+        journal.reconcile()                        # journal always current
+        closed = journal.load(status="closed")
+        open_docs = journal.load(status="open")
+        _, marks = _mark_open(open_docs)
+        return analytics.compute(closed, open_marks=marks)
+
+    return JSONResponse(await asyncio.to_thread(work))
