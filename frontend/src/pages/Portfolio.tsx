@@ -21,6 +21,8 @@ import { AnalystPulseChip } from '../components/AnalystPulseChip';
 import { useAnalystMap } from '../hooks/useAnalystMap';
 
 // Lazy — the analyst drill only loads when a 📊 chip is tapped.
+const ChartAnalysisPanel = lazy(() =>
+  import('../components/ChartAnalysisPanel').then((m) => ({ default: m.ChartAnalysisPanel })));
 const AnalystPulseModal = lazy(() =>
   import('../components/AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
 );
@@ -87,6 +89,10 @@ export default function PortfolioPage() {
   // the whole page, opened with the clicked symbol.
   const analystMap = useAnalystMap(rows.map((r) => r.symbol));
   const [analystSym, setAnalystSym] = useState<string | null>(null);
+  // 🔮 On-demand AI chart analysis per holding (Ajay 2026-06-12, watching
+  // ASYS fade min-by-min) — a structured read instead of staring at candles.
+  // The panel only calls the model when ITS button is clicked (cached 10 min).
+  const [analyzeSym, setAnalyzeSym] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<HoldSortKey>('default');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -313,6 +319,16 @@ export default function PortfolioPage() {
                 <button
                   type="button"
                   className="portfolio-card__rm"
+                  title="AI chart analysis — on-demand buyable/hold read"
+                  aria-label={`Analyze ${r.symbol} chart`}
+                  style={{ marginRight: 2 }}
+                  onClick={() => setAnalyzeSym(r.symbol)}
+                >
+                  🔮
+                </button>
+                <button
+                  type="button"
+                  className="portfolio-card__rm"
                   title="Remove this position"
                   onClick={() => removeHolding(r.symbol)}
                 >
@@ -343,6 +359,28 @@ export default function PortfolioPage() {
         <Suspense fallback={null}>
           <AnalystPulseModal symbol={analystSym} onClose={() => setAnalystSym(null)} />
         </Suspense>
+      )}
+
+      {analyzeSym && (
+        <div onClick={() => setAnalyzeSym(null)}
+             style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.6)',
+                      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                      padding: '4rem 1rem 1rem', overflowY: 'auto' }}>
+          <div onClick={(e) => e.stopPropagation()}
+               style={{ width: 'min(680px, 100%)', background: 'var(--bg-raised,#16181d)',
+                        border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 12,
+                        padding: '0.4rem 0.9rem 0.9rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0 0' }}>
+              <strong style={{ fontSize: '0.92rem' }}>🔮 {analyzeSym}</strong>
+              <button onClick={() => setAnalyzeSym(null)} aria-label="Close"
+                      style={{ marginLeft: 'auto', background: 'transparent', border: 'none',
+                               color: '#8a93a6', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            </div>
+            <Suspense fallback={<p style={{ color: '#8a93a6', fontSize: '0.78rem' }}>loading…</p>}>
+              <ChartAnalysisPanel symbol={analyzeSym} />
+            </Suspense>
+          </div>
+        </div>
       )}
 
       <AddHoldingForm onAdded={refresh} />
