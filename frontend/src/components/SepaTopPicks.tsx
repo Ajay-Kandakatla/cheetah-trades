@@ -78,8 +78,9 @@ function statusOf(p: Pick): { label: string; color: string } {
 /* AutoPilotButton — 🤖 jump to /trading with the symbol prefilled. Sits INSIDE
    the card's <Link>, so it must stopPropagation AND preventDefault (house
    lesson — preventDefault alone doesn't stop the row's Link navigation, and
-   stopPropagation alone doesn't stop the anchor default). */
-function AutoPilotButton({ symbol }: { symbol: string }) {
+   stopPropagation alone doesn't stop the anchor default).
+   Exported — RacingBoard reuses the same button (2026-06-12). */
+export function AutoPilotButton({ symbol }: { symbol: string }) {
   const navigate = useNavigate();
   return (
     <button

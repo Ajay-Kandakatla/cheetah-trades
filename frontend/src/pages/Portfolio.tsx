@@ -27,6 +27,7 @@ const AnalystPulseModal = lazy(() =>
 import { PatternMatchCards } from '../components/PatternMatchCards';
 import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
 import { EarningsReportPicks } from '../components/EarningsReportPicks';
+import { RacingBoard } from '../components/RacingBoard';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
@@ -357,6 +358,9 @@ export default function PortfolioPage() {
 
       {/* Good reports the tape endorsed (Ajay 2026-06-11, ATEX lesson). */}
       <EarningsReportPicks />
+
+      {/* Post-breakout names racing the R-ladder (Ajay 2026-06-12). */}
+      <RacingBoard />
 
       {/* Leadership + ranking BELOW your holdings (Ajay 2026-06-04). */}
       <SepaRankLeaderboard n={12} />

@@ -22,6 +22,7 @@ import { EarningsReportPicks } from '../components/EarningsReportPicks';
 import { CrossJunctions } from '../components/CrossJunctions';
 import { TopConfluence } from '../components/TopConfluence';
 import { AtPivotToday } from '../components/AtPivotToday';
+import { RacingBoard } from '../components/RacingBoard';
 import { FullScanModal } from '../components/FullScanModal';
 import { PatternMatchCards } from '../components/PatternMatchCards';
 
@@ -68,6 +69,11 @@ export function LeaderboardPage() {
       </div>
 
       <AtPivotToday />
+
+      {/* Post-breakout names in motion (Ajay 2026-06-12: "I may have missed the
+          pivot but I think these are good stocks to get into") — the complement
+          to At-the-pivot: already PAST the pivot, running the R-ladder. */}
+      <RacingBoard />
 
       {/* Tiny pattern cards (Ajay 2026-06-09) — names whose chart matches a
           Bulkowski pattern, ⭐ confluence (confirmed + full buy gate) first. */}
