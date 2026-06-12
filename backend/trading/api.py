@@ -1,0 +1,162 @@
+"""Trading Auto-Pilot API — Minervini-risk-managed exits + manual entries.
+
+GET  /trading/status                engine + account + per-position protection
+                                    (+ auto_entry block: enabled, cap,
+                                    entries_today, per-candidate last_eval)
+POST /trading/arm?armed=true|false  master switch (admin)
+POST /trading/auto-entry?enabled=true|false  auto-entry flag (admin)
+POST /trading/config                JSON {equity_cap} — sizing ceiling (admin)
+GET  /trading/preview               pure entry math, NO order
+POST /trading/enter                 bracket entry (admin; the ONLY buy path)
+POST /trading/flatten/{symbol}      cancel orders + close position (admin)
+POST /trading/flatten-all?confirm=yes  disaster plan (admin)
+GET  /trading/ledger?limit=100      trade_ledger tail
+
+Style mirrors giants/api.py (asyncio.to_thread, lazy imports) but EVERY
+route — GETs included — is admin-gated: status/preview/ledger expose account
+equity, positions and order history, which is owner-only data.
+"""
+from __future__ import annotations
+
+import asyncio
+from typing import Optional
+
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import JSONResponse
+
+from auth import current_user_email, is_admin_email
+
+router = APIRouter(prefix="/trading", tags=["trading"])
+
+
+def _require_admin(email: Optional[str]) -> None:
+    if not is_admin_email(email):
+        raise HTTPException(403, "admin only")
+
+
+@router.get("/status")
+async def trading_status(email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import exit_engine
+    return JSONResponse(await asyncio.to_thread(exit_engine.status))
+
+
+@router.post("/arm")
+async def trading_arm(armed: bool, email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import exit_engine
+
+    def work():
+        exit_engine.update_config(armed=bool(armed))
+        exit_engine.ledger("arm" if armed else "disarm",
+                           detail={"armed": bool(armed), "by": email})
+        return {"armed": bool(armed)}
+
+    return JSONResponse(await asyncio.to_thread(work))
+
+
+@router.post("/auto-entry")
+async def trading_auto_entry(enabled: bool,
+                             email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import exit_engine
+
+    def work():
+        exit_engine.update_config(auto_entry=bool(enabled))
+        exit_engine.ledger("auto_entry_toggle",
+                           detail={"enabled": bool(enabled), "by": email})
+        return {"auto_entry": bool(enabled)}
+
+    return JSONResponse(await asyncio.to_thread(work))
+
+
+EQUITY_CAP_MIN, EQUITY_CAP_MAX = 100.0, 100_000.0
+
+
+@router.post("/config")
+async def trading_config(payload: dict = Body(...),
+                         email: str = Depends(current_user_email)):
+    _require_admin(email)
+    if "equity_cap" not in payload:
+        raise HTTPException(400, "equity_cap required")
+    try:
+        cap = float(payload.get("equity_cap"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "equity_cap must be a number")
+    if not (EQUITY_CAP_MIN <= cap <= EQUITY_CAP_MAX):
+        raise HTTPException(400, "equity_cap must be between %d and %d"
+                            % (EQUITY_CAP_MIN, EQUITY_CAP_MAX))
+    from trading import exit_engine
+
+    def work():
+        exit_engine.update_config(equity_cap=cap)
+        exit_engine.ledger("config_update",
+                           detail={"equity_cap": cap, "by": email})
+        return {"equity_cap": cap}
+
+    return JSONResponse(await asyncio.to_thread(work))
+
+
+@router.get("/preview")
+async def trading_preview(symbol: str, price: Optional[float] = None,
+                          stop_pct: Optional[float] = None,
+                          email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import entries
+    return JSONResponse(
+        await asyncio.to_thread(entries.preview, symbol, price, stop_pct))
+
+
+@router.post("/enter")
+async def trading_enter(payload: dict = Body(...),
+                        email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import entries
+    symbol = (payload.get("symbol") or "").strip().upper()
+    if not symbol:
+        raise HTTPException(400, "symbol required")
+    try:
+        result = await asyncio.to_thread(
+            entries.enter, symbol,
+            payload.get("limit_price"),
+            payload.get("stop_pct"),
+            bool(payload.get("allow_earnings")))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return JSONResponse(result)
+
+
+@router.post("/flatten/{symbol}")
+async def trading_flatten(symbol: str,
+                          email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import exit_engine
+    try:
+        result = await asyncio.to_thread(exit_engine.flatten, symbol)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return JSONResponse(result)
+
+
+@router.post("/flatten-all")
+async def trading_flatten_all(confirm: str = "",
+                              email: str = Depends(current_user_email)):
+    _require_admin(email)
+    if confirm != "yes":
+        raise HTTPException(400, "flatten-all requires ?confirm=yes")
+    from trading import exit_engine
+    try:
+        result = await asyncio.to_thread(exit_engine.flatten_all)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return JSONResponse(result)
+
+
+@router.get("/ledger")
+async def trading_ledger(limit: int = 100,
+                         email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import exit_engine
+    rows = await asyncio.to_thread(exit_engine.ledger_tail,
+                                   max(1, min(int(limit), 1000)))
+    return JSONResponse({"rows": rows})

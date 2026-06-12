@@ -516,3 +516,21 @@
 # day floor; with the weekday heartbeats it guarantees a Healthchecks ping at
 # least every ~2 days (set the check's period accordingly).
 10     8     */2  *  *     /usr/local/bin/python -m sepa.cli health-audit --digest
+
+#
+# ============================================================================
+# Trading Auto-Pilot — Minervini exit engine (TLSW pp.291-315)
+# ============================================================================
+# Reconciler tick: adopts a protective sell-stop for any unprotected Alpaca
+# position (pp.301-302), ratchets stops to breakeven at 3x initial risk
+# (p.308), and keeps the losing-streak size multiplier current (p.304).
+# Buys happen ONLY through trading.entries.enter — manually via
+# POST /trading/enter, or via the in-tick auto-entry pass (trading/auto_entry,
+# runs AFTER exit reconciliation, requires armed=true AND auto_entry=true,
+# both default false; max 2 auto buys per ET day).
+# armed=false -> every intended action becomes a dry_run trade_ledger row;
+# no order is placed anywhere. The Alpaca clock check inside tick is
+# authoritative; the hour band below (9-16 ET, container-local TZ like every
+# other market-hours job in this file) just bounds invocations — ticks before
+# 9:30 or after 16:00 no-op on the clock check.
+*      9-16  *    *    1-5  /usr/local/bin/python -m trading.exit_engine tick

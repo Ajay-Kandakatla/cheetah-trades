@@ -720,6 +720,14 @@ app.include_router(supply_demand_router)
 from giants.api import router as giants_router  # noqa: E402
 app.include_router(giants_router)
 
+# Trading Auto-Pilot — Minervini risk-managed exit engine + entries
+# (TLSW pp.291-315 via trading/risk_rules.py). Stops/targets rest AT Alpaca
+# as bracket/GTC legs; ALL buys flow through trading.entries.enter (manual
+# POST /trading/enter or the in-tick auto-entry pass, which requires
+# armed=true AND auto_entry=true) and armed=false places no orders anywhere.
+from trading.api import router as trading_router  # noqa: E402
+app.include_router(trading_router)
+
 
 # Catalysts — tiny-stock catalyst + chatter scanner (RYOJ-style names).
 from catalysts.api import router as catalysts_router  # noqa: E402
