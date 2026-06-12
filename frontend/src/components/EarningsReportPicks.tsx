@@ -98,6 +98,17 @@ export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
     return () => { alive = false; };
   }, [tab, upc]);
 
+  // "2026-06-09" -> "Tue Jun 9 · 3d ago" — Ajay couldn't tell at a glance that
+  // these names really reported (2026-06-12: "they didn't have any earning
+  // reports though did they?"). Weekday + age makes the date land.
+  const fmtReported = (iso: string): string => {
+    const d = new Date(`${iso}T12:00:00`);          // noon avoids TZ day-shift
+    if (Number.isNaN(d.getTime())) return iso;
+    const label = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    const days = Math.max(0, Math.round((Date.now() - d.getTime()) / 86400000));
+    return `${label} · ${days === 0 ? 'today' : `${days}d ago`}`;
+  };
+
   const picks = data?.picks || [];
   const sort = useSort<Pick>(picks, {
     rank: (p) => p.rank_score,
@@ -187,7 +198,7 @@ export function EarningsReportPicks({ limit = 8 }: { limit?: number }) {
                     </span>
                   </div>
                   <div className="mono" style={{ fontSize: '0.72rem', color: C.muted, marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <span>reported {p.report_date}{p.when ? ` ${p.when}` : ''}</span>
+                    <span>reported <strong>{fmtReported(p.report_date)}</strong>{p.when ? ` ${p.when}` : ''}</span>
                     <span style={{ color: p.surprise_pct == null ? C.sub : beat ? C.green : C.red }}
                           title="EPS surprise vs estimate. A beat boosts rank but is NOT required — the tape's reaction is the gate (ATEX ripped +19% on a -28% miss).">
                       {p.surprise_pct == null ? 'EPS surprise —' : `EPS ${beat ? 'beat' : 'miss'} ${p.surprise_pct > 0 ? '+' : ''}${p.surprise_pct}%`}
