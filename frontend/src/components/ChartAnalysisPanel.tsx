@@ -22,6 +22,7 @@ type Analysis = {
   thesis: string[];
   risks: string[];
   what_would_change_it: string;
+  citations?: string[];
 };
 
 type Resp = {
@@ -34,6 +35,7 @@ type Resp = {
   from_cache?: boolean;
   error?: string;
   disclaimer?: string;
+  citations?: string[];
 };
 
 const VERDICT_META: Record<Analysis['verdict'], { color: string; label: string }> = {
@@ -58,6 +60,12 @@ export function ChartAnalysisPanel({ symbol }: { symbol: string }) {
 
   const a = data?.ok ? data.analysis : undefined;
   const meta = a ? VERDICT_META[a.verdict] : null;
+  // Book citations from the Minervini brain (when the backend grounds the
+  // verdict in retrieved pages). Strings rendered verbatim, e.g.
+  // "TLSW p.214", "TTLAC §7 (ebook p.98)". Absent → no row.
+  const cites = (data?.citations ?? a?.citations ?? []).filter(
+    (c): c is string => typeof c === 'string' && c.length > 0,
+  );
 
   return (
     <section className="top-picks" style={{ marginTop: 12 }}>
@@ -107,6 +115,12 @@ export function ChartAnalysisPanel({ symbol }: { symbol: string }) {
               </span>
             )}
           </div>
+
+          {cites.length > 0 && (
+            <div className="mono" style={{ fontSize: '0.7rem', color: C.sub, marginTop: 4 }}>
+              per {cites.join(' · ')}
+            </div>
+          )}
 
           {a.thesis.length > 0 && (
             <ul style={{ margin: '8px 0 0', paddingLeft: '1.1rem', fontSize: '0.8rem', lineHeight: 1.5 }}>

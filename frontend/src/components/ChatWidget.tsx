@@ -25,10 +25,12 @@ import { useLocation } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { usePageContext } from '../hooks/usePageContext';
 
-type Msg = { role: 'user' | 'assistant'; content: string };
+type Msg = { role: 'user' | 'assistant'; content: string; citations?: string[] };
 
 const STORAGE_KEY = 'pounce_chat_v1';
+const BRAIN_KEY = 'chat.brainMode';
 const MAX_TURNS = 30;
+const GOLD = '#d4af37';
 
 
 function loadHistory(): Msg[] {
@@ -157,6 +159,16 @@ export function ChatWidget() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // 🧠 Minervini brain mode — when on, messages go to /brain/ask (RAG over
+  // the two books) instead of /chat. Persisted so the preference sticks
+  // across reloads (localStorage, unlike the sessionStorage conversation).
+  const [brainMode, setBrainMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try { return window.localStorage.getItem(BRAIN_KEY) === '1'; } catch { return false; }
+  });
+  // Set when /brain/ask answers {not_ingested: true} — the corpus index
+  // hasn't been built on this server. Inline note, not an error.
+  const [brainNote, setBrainNote] = useState<string | null>(null);
   const { context } = usePageContext();
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -180,7 +192,7 @@ export function ChatWidget() {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [history, sending, open]);
+  }, [history, sending, open, brainNote]);
 
   // Focus the input when the panel opens (mobile: avoid auto-keyboard).
   useEffect(() => {
@@ -197,19 +209,34 @@ export function ChatWidget() {
       return;
     }
     setErr(null);
+    setBrainNote(null);
     const next: Msg[] = [...history, { role: 'user', content: trimmed }];
     setHistory(next);
     setInput('');
     setSending(true);
     try {
-      const r = await fetch(`${API}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages:     next,
-          page_context: sendContext,
-        }),
-      });
+      // Brain mode → /brain/ask (book RAG); off → /chat, exactly as before.
+      const r = brainMode
+        ? await fetch(`${API}/brain/ask`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: trimmed,
+              // Last 6 prior turns, in the brain endpoint's {role, text} shape.
+              history: history.slice(-6).map((m) => ({ role: m.role, text: m.content })),
+              // Same page-context the regular chat sends, serialized — only
+              // when the page actually published context.
+              app_context: context?.page ? JSON.stringify(sendContext) : undefined,
+            }),
+          })
+        : await fetch(`${API}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages:     next,
+              page_context: sendContext,
+            }),
+          });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
         if (r.status === 429) {
@@ -222,10 +249,26 @@ export function ChatWidget() {
         return;
       }
       const j = await r.json();
-      if (j?.ok && j.text) {
-        setHistory((h) => [...h, { role: 'assistant', content: j.text }]);
+      if (brainMode && j?.not_ingested) {
+        setBrainNote(
+          'The book index hasn’t been built on this server yet, so I can’t '
+          + 'search Minervini’s pages. Toggle 🧠 off for regular chat, or run '
+          + 'the book ingest on the backend.',
+        );
+        return;
+      }
+      const text = brainMode ? (j?.answer || j?.text) : (j?.ok && j.text);
+      if (text) {
+        const citations: string[] | undefined = brainMode && Array.isArray(j?.citations)
+          ? j.citations.filter((c: unknown): c is string => typeof c === 'string')
+          : undefined;
+        setHistory((h) => [...h, {
+          role: 'assistant',
+          content: text,
+          ...(citations && citations.length ? { citations } : {}),
+        }]);
       } else {
-        setErr('Empty response from Claude.');
+        setErr(brainMode ? 'Empty response from the brain.' : 'Empty response from Claude.');
       }
     } catch (e: any) {
       setErr(String(e?.message || e));
@@ -237,7 +280,16 @@ export function ChatWidget() {
   const clear = () => {
     setHistory([]);
     setErr(null);
+    setBrainNote(null);
     try { window.sessionStorage.removeItem(STORAGE_KEY); } catch { /* */ }
+  };
+
+  const toggleBrain = () => {
+    setBrainMode((b) => {
+      const on = !b;
+      try { window.localStorage.setItem(BRAIN_KEY, on ? '1' : '0'); } catch { /* */ }
+      return on;
+    });
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -329,6 +381,29 @@ export function ChatWidget() {
               )}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
+              {/* 🧠 Minervini brain mode pill — gold-tinted while active.
+                  Routes messages to /brain/ask (RAG over TLSW + TTLAC)
+                  instead of the general /chat endpoint. */}
+              <button
+                type="button" onClick={toggleBrain}
+                aria-pressed={brainMode}
+                title={brainMode
+                  ? 'Minervini brain ON — answers come from the books, with page citations. Click to switch back to regular chat.'
+                  : 'Ask the books — answers grounded in TLSW + TTLAC with page citations.'}
+                style={{
+                  background: brainMode ? 'rgba(212,175,55,0.18)' : 'transparent',
+                  border: brainMode
+                    ? `1px solid rgba(212,175,55,0.55)`
+                    : '1px solid rgba(255,255,255,0.15)',
+                  color: brainMode ? GOLD : '#9a9aa3',
+                  padding: '2px 9px', borderRadius: 999,
+                  fontSize: '0.7rem', cursor: 'pointer', fontFamily: 'inherit',
+                  fontWeight: brainMode ? 700 : 400,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                🧠 Minervini
+              </button>
               {history.length > 0 && (
                 <button
                   type="button" onClick={clear}
@@ -427,10 +502,48 @@ export function ChatWidget() {
                 {m.role === 'user' ? (
                   <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{m.content}</div>
                 ) : (
-                  <MarkdownLite text={m.content} />
+                  <>
+                    <MarkdownLite text={m.content} />
+                    {/* Book citations from /brain/ask — rendered verbatim
+                        (e.g. "TLSW p.299", "TTLAC §9 (ebook p.142)") as
+                        muted chips under the answer. */}
+                    {m.citations && m.citations.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                        {m.citations.map((c, ci) => (
+                          <span
+                            key={ci}
+                            style={{
+                              fontSize: '0.64rem', color: '#9a9aa3',
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: 999, padding: '1px 7px',
+                              fontFamily: 'ui-monospace, monospace',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}
+
+            {brainNote && (
+              <div style={{
+                alignSelf: 'flex-start',
+                maxWidth: '92%',
+                fontSize: '0.76rem', color: '#cdbb7a', lineHeight: 1.5,
+                background: 'rgba(212,175,55,0.07)',
+                border: '1px solid rgba(212,175,55,0.25)',
+                borderRadius: 8,
+                padding: '0.45rem 0.6rem',
+              }}>
+                📚 {brainNote}
+              </div>
+            )}
 
             {sending && (
               <div style={{
@@ -438,7 +551,7 @@ export function ChatWidget() {
                 fontSize: '0.78rem', color: '#9a9aa3',
                 padding: '0.3rem 0.5rem', fontStyle: 'italic',
               }}>
-                Claude is thinking…
+                {brainMode ? 'Searching the books…' : 'Claude is thinking…'}
               </div>
             )}
           </div>
@@ -464,7 +577,7 @@ export function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKey}
-              placeholder={sending ? 'sending…' : 'Ask about this page…'}
+              placeholder={sending ? 'sending…' : brainMode ? 'Ask the books…' : 'Ask about this page…'}
               disabled={sending}
               rows={2}
               style={{
