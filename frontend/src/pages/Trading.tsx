@@ -726,6 +726,13 @@ function fmtCheckValue(v: unknown): string {
     return String(Number.isInteger(v) ? v : +v.toFixed(2));
   }
   if (typeof v === 'boolean') return '';
+  if (typeof v === 'object') {
+    // e.g. live_above_pivot {live, pivot} — was rendering "[object Object]"
+    // and hiding exactly the numbers that explain a blocked candidate.
+    return Object.entries(v as Record<string, unknown>)
+      .map(([k, x]) => `${k} ${typeof x === 'number' ? +(x as number).toFixed(2) : x}`)
+      .join(' · ');
+  }
   return String(v);
 }
 
