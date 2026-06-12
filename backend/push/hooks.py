@@ -177,3 +177,28 @@ def notify_new_user(email: str) -> dict:
 # notify_macbook_deals(...) removed 2026-05-15 along with the rest of
 # the lifeboard module. The caller (lifeboard.macbook.scan_and_persist)
 # was deleted, so this hook had no callers left.
+
+
+def notify_autopilot(kind: str, ticker: str, detail: str) -> dict:
+    """Owner-only push for trading Auto-Pilot events: auto entries placed by
+    trading.auto_entry and trade closes (stop_filled / target_filled) from
+    trading.exit_engine.
+
+    Scoped to the admin's devices the way notify_new_user is (send_to_user),
+    and deliberately NOT routed through push.scope.allowed_for or a pref
+    kind filter — these are Ajay's own trades; they are always wanted.
+    """
+    emoji = {"auto_entry": "🤖", "stop_filled": "🛑",
+             "target_filled": "🎯"}.get(kind, "🤖")
+    payload = {
+        "title": f"{emoji} Auto-Pilot · {ticker}",
+        "body": detail,
+        "tag": f"autopilot-{kind}-{ticker}",   # de-dupe on device
+        "url": "/trading",
+        "kind": "autopilot",
+        "ticker": ticker,
+    }
+    r = sender.send_to_user(ADMIN_EMAIL, payload, kind=None)
+    log.info("notify_autopilot: %s %s → sent=%d failed=%d",
+             kind, ticker, r.get("sent", 0), r.get("failed", 0))
+    return r
