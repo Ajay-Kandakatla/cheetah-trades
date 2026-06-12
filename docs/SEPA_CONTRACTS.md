@@ -901,6 +901,76 @@ across timeframes; does NOT forecast price.**
 
 ---
 
+## 11f. Auto-Pilot risk management — automated, book-faithful exits (2026-06-11)
+
+Standing-order risk management for real-money positions: stop, target, size
+and breakeven ratchet are decided **before** entry, then executed by orders
+resting at Alpaca. **Source:** Minervini, *Trade Like a Stock Market Wizard*
+(2013), Ch.13, printed pp.291–315. Full spec + verbatim page anchors:
+`docs/sepa/risk_management_methodology.md`.
+
+**The math lives in exactly one place:** `backend/trading/risk_rules.py` —
+PURE (no I/O, no broker, no Mongo), every constant page-cited. The exit
+engine (`trading/exit_engine.py`), the entry path (`trading/entries.py`) and
+the `/trading/*` router (`trading/api.py`) call into it and never re-derive a
+number. Editing `risk_rules.py` is a methodology change: Rule #4 + the §12
+sign-off process apply.
+
+### The rules — LOCKED (condensed from the methodology doc)
+
+| Rule | Value | Page |
+|---|---|---|
+| Initial stop set before entry, executed without hesitation | always | p.295, p.301–302 |
+| Stop band — normal / difficult market (default **7%**) | 7–8% / 5–6% | p.311 |
+| **Absolute maximum stop — no rule, request or override exceeds it** | **10%** | p.299, p.301 |
+| Stop from real trade history (≥ 20 closed trades) | half the average gain, capped at 10% | p.299 |
+| Reward:risk floor / stretch | **2:1** / 3:1 | p.301 |
+| Profit-taking band — normal / difficult | 15–20% / 10–12% | p.311 |
+| Stop → breakeven | price ≥ entry + **3×** initial risk | p.308 |
+| Stops never widen; difficult regime only tightens | — | p.308–309 |
+| Position count / position size | max **5** / **25%** of equity | p.312 |
+| Losing-streak governor | size ×0.5 after 3 consecutive stop-outs, ×0.25 after 6; a winner steps back up | p.304 |
+| Never average down | adds allowed only above average cost | p.304–305, p.308 |
+| Earnings shield | entry refused ≤ 7 days to the report unless explicitly overridden | pp.296–297 (disaster-plan logic) |
+
+### Engine safety invariants — LOCKED
+
+1. **The engine never self-buys.** Every entry is user-confirmed via
+   `POST /trading/enter`; the reconciler only protects and exits what is
+   already held.
+2. **Stops and targets rest AT the broker** (Alpaca GTC stop / bracket
+   legs), never only in this process — a dead Mac cannot miss a stop.
+3. **Armed gate.** `armed` defaults to **false**. Disarmed, the engine
+   places NOTHING anywhere (entries, stops, ratchets, flattens) — it writes
+   what it *would* have done to `trade_ledger` as `dry_run: true` rows.
+4. **The 10% cap is absolute** (`ABS_MAX_STOP_PCT = 10.0`): it clamps user
+   requests, the half-average-gain stop, every path. Difficult regime can
+   only tighten (≤ 6%), never widen.
+5. **Paper vs live comes from env** (`ALPACA_PAPER`, default paper); every
+   ledger row carries its page cite.
+
+- **API:** `GET /trading/status` · `POST /trading/arm` · `GET /trading/preview`
+  (pure math, NO order, `blocked[]` reasons) · `POST /trading/enter` ·
+  `POST /trading/flatten/{symbol}` · `POST /trading/flatten-all?confirm=yes` ·
+  `GET /trading/ledger`.
+- **Mongo:** `trading_config` (single doc `_id:"config"`: `armed` default
+  false, `consecutive_losses`, `processed_order_ids`); `trade_ledger` rows
+  `{ts, kind, symbol, detail, dry_run, cite}`.
+- **Contracts:** `backend/tests/test_risk_rules.py` (behavioral — the p.308
+  worked example exact, cap/band/target/sizing sweeps),
+  `backend/tests/test_trading_engine.py` (fake-broker engine behavior: armed
+  gate, adopt-and-protect, breakeven ratchet, entry refusals),
+  `backend/tests/test_trading_contracts.py` (source-guard on the constants +
+  page cites; functional 10%-cap and 2:1 sweeps). All host-runnable
+  (stdlib-only): `make contracts-trading`, chained into `make contracts`.
+- **Known issue (skip-marked BUG-REPORT in test_risk_rules.py):** cent
+  rounding can collapse a sub-dollar stop onto the entry price
+  (`initial_stop(0.37, requested_pct=1)` → stop 0.37 == entry). No exposure
+  in practice (the liquidity floor keeps sub-dollar names out); fix needs
+  sign-off per Rule #4.
+
+---
+
 ## 12. How to extend this doc safely
 
 ### The hard rule (added 2026-05-25 after the RFC 001 lesson)

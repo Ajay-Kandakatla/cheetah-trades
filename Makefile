@@ -12,12 +12,12 @@
 # Default target: print available commands.
 .DEFAULT_GOAL := help
 
-.PHONY: help contracts contracts-sepa contracts-vcp contracts-phantom contracts-breakout contracts-kell contracts-frontend contracts-realtime install-hooks lint
+.PHONY: help contracts contracts-sepa contracts-vcp contracts-phantom contracts-breakout contracts-kell contracts-trading contracts-frontend contracts-realtime install-hooks lint
 
 help:                          ## Show this help.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-contracts: contracts-sepa contracts-kell contracts-frontend  ## Run ALL contracts regression tests. MANDATORY before any sepa/options/setups change.
+contracts: contracts-sepa contracts-kell contracts-trading contracts-frontend  ## Run ALL contracts regression tests. MANDATORY before any sepa/options/setups change.
 
 contracts-sepa:                ## Run the SEPA contracts regression test (docs/SEPA_CONTRACTS.md).
 	@echo "→ SEPA contracts (docs/SEPA_CONTRACTS.md)"
@@ -42,6 +42,10 @@ contracts-breakout:            ## Breakout-recency (volume.days_since_breakout) 
 contracts-sales:               ## Sales Confidence score contracts (docs/sepa/sales_confidence_methodology.md). Fold into `contracts-sepa` after the api image is rebuilt with test_sales.py.
 	@echo "→ Sales Confidence contracts (backend/sepa/sales.py)"
 	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_sales.py -v --tb=short
+
+contracts-trading:             ## Auto-Pilot risk contracts (docs/sepa/risk_management_methodology.md + SEPA_CONTRACTS.md 11f). Stdlib-only — runs on the HOST python, no docker.
+	@echo "→ Auto-Pilot risk contracts (backend/trading/risk_rules.py + engine)"
+	@cd backend && (test -x .venv/bin/python && .venv/bin/python -m pytest tests/test_risk_rules.py tests/test_trading_contracts.py tests/test_trading_engine.py -q --tb=short || python3 -m pytest tests/test_risk_rules.py tests/test_trading_contracts.py tests/test_trading_engine.py -q --tb=short)
 
 contracts-kell:                ## Run the Kell scanner contracts regression test (docs/KELL_CONTRACTS.md).
 	@echo "→ Kell contracts (docs/KELL_CONTRACTS.md)"
