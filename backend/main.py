@@ -2298,6 +2298,17 @@ async def sepa_earnings_picks():
     return JSONResponse(_scrub_nan(await asyncio.to_thread(earnings_picks.latest)))
 
 
+@app.get("/sepa/racing")
+async def sepa_racing(max_rows: int = Query(40, ge=1, le=100)):
+    """Racing to R1/R2 — qualifier names that broke their PIVOT and sit
+    between pivot and R2 (Ajay 2026-06-12). R ladder reuses the position_lens
+    convention (risk = pivot - stop; R1 = pivot + risk; R2 = pivot + 2*risk);
+    `in_buy_range` mirrors scanner.BUYABLE_MAX_EXT_PCT. Display-only — feeds
+    no score, Auto-Pilot does not trade off it. 60s in-process cache."""
+    from sepa import racing
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(racing.get_board, max_rows)))
+
+
 @app.get("/sepa/analyst-map")
 async def sepa_analyst_map(symbols: str = Query(..., description="comma-separated tickers, max 100")):
     """Bulk per-symbol analyst read {SYM: {verdict, implied_upside_pct, ...}}

@@ -971,6 +971,36 @@ sign-off process apply.
 
 ---
 
+## 11g. Racing to R1/R2 board (2026-06-12)
+
+`backend/sepa/racing.py`, `GET /sepa/racing` — Leaderboard + Portfolio
+section tracking qualifier names that broke their PIVOT and now sit between
+the pivot and R2 ("I may have missed the pivot but I think these are good
+stocks to get into" — Ajay 2026-06-12).
+
+- **Display-only.** Feeds NO score, changes NO gate, and the Auto-Pilot
+  does NOT trade off it. The book buys near the pivot (TLSW pp.198-203);
+  rows past the buy range are shown honestly as chases, not entries.
+- **R ladder REUSES the position_lens convention** (`risk = entry - stop`,
+  `backend/sepa/position_lens.py:188`) — for a setup row:
+  `risk = pivot - setup_stop`, `R1 = pivot + 1*risk`, `R2 = pivot + 2*risk`.
+  No new R math was invented.
+- **Buy-range cap MIRRORS the scanner's own gate**:
+  `racing.RACING_BUY_RANGE_PCT = 3.0` == `scanner.BUYABLE_MAX_EXT_PCT`
+  (`backend/sepa/scanner.py:140`). One number, two modules — cross-locked
+  in `tests/test_sepa_contracts.py::test_racing_board_locked` so neither
+  can drift alone.
+- Inclusion: `qualifier`/`is_candidate` truthy + valid setup
+  (`pivot > 0`, `stop > 0`, `stop < pivot`) + live strictly past pivot and
+  strictly below R2. Leg = `to_r1` below R1, else `to_r2`.
+- Inputs: one `scanner.load_latest()` + ONE `prices.bulk_live_prices()`
+  call; projected RelVol via `live_gate` for at most 30 shown rows, each
+  failure-isolated. 60s in-process cache; every value NaN-guarded.
+- Behavioral tests: `backend/tests/test_racing.py` (leg boundaries, ladder
+  math, +3.0% inclusivity, clamping, NaN safety, sort, cache TTL).
+
+---
+
 ## 12. How to extend this doc safely
 
 ### The hard rule (added 2026-05-25 after the RFC 001 lesson)

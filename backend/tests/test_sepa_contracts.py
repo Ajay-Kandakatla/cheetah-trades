@@ -902,3 +902,46 @@ def test_cross_junctions_locked():
     assert "persistence_pct" in src                              # consistency leg
     assert "pullback_ma" in src and "_evaluate_row" in src        # pullback leg
     assert "sp500" in src and "russell1000" in src                # S&P-first, Russell fallback
+
+
+# ============================================================================
+# Racing to R1/R2 board contract (2026-06-12).
+# Spec: docs/SEPA_CONTRACTS.md 11g. Display-only post-breakout tracker —
+# feeds no score, Auto-Pilot does NOT trade off it. Locks two reuses so
+# neither can silently drift:
+#   1. the buy-range cap MIRRORS scanner.BUYABLE_MAX_EXT_PCT (one number,
+#      two modules — cross-locked by importing BOTH)
+#   2. the R ladder REUSES the position_lens risk convention
+#      (risk = entry - stop, position_lens.py:188): r1 = pivot + risk,
+#      r2 = pivot + 2*risk — probed functionally through get_board().
+# ============================================================================
+def test_racing_board_locked(monkeypatch):
+    import inspect
+    from sepa import racing, scanner
+
+    # 1. buy-range cap: locked token + cross-lock against the scanner's gate
+    assert racing.RACING_BUY_RANGE_PCT == 3.0
+    assert racing.RACING_BUY_RANGE_PCT == scanner.BUYABLE_MAX_EXT_PCT
+    src = inspect.getsource(racing)
+    assert "RACING_BUY_RANGE_PCT = 3.0" in src
+    assert "BUYABLE_MAX_EXT_PCT" in src          # comment cites the mirror
+
+    # 2. R-ladder functional probe: pivot 100, stop 93 -> risk 7, r1 107, r2 114
+    monkeypatch.setitem(racing._CACHE, "ts", 0.0)
+    monkeypatch.setitem(racing._CACHE, "payload", None)
+    monkeypatch.setattr(scanner, "load_latest", lambda: {
+        "generated_at": 1, "all_results": [{
+            "symbol": "PROBE", "score": 80.0, "qualifier": True,
+            "is_candidate": True, "is_buyable": False,
+            "entry_setup": {"type": "VCP", "pivot": 100.0, "stop": 93.0},
+        }]})
+    from sepa import prices, live_gate
+    monkeypatch.setattr(prices, "bulk_live_prices",
+                        lambda syms: {"PROBE": {"price": 101.0}})
+    monkeypatch.setattr(live_gate, "live_gate", lambda s: {})
+    row = racing.get_board()["rows"][0]
+    risk = row["pivot"] - row["stop"]            # position_lens convention
+    assert row["risk"] == risk == 7.0
+    assert row["r1"] == row["pivot"] + risk == 107.0
+    assert row["r2"] == row["pivot"] + 2 * risk == 114.0
+    monkeypatch.setitem(racing._CACHE, "payload", None)  # don't leak the probe
