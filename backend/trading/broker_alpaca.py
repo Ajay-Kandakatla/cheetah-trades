@@ -59,6 +59,11 @@ def base_url() -> str:
     return "https://paper-api.alpaca.markets"
 
 
+def mode() -> str:
+    """"paper" | "live" — follows base_url()'s ALPACA_PAPER reading."""
+    return "live" if base_url() == "https://api.alpaca.markets" else "paper"
+
+
 _session: Optional[requests.Session] = None
 
 

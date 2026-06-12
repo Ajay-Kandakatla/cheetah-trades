@@ -10,6 +10,7 @@ GET  /trading/preview               pure entry math, NO order
 POST /trading/enter                 bracket entry (admin; the ONLY buy path)
 POST /trading/flatten/{symbol}      cancel orders + close position (admin)
 POST /trading/flatten-all?confirm=yes  disaster plan (admin)
+POST /trading/sim-reset?confirm=yes wipe SIM broker state (admin, sim-only)
 GET  /trading/ledger?limit=100      trade_ledger tail
 
 Style mirrors giants/api.py (asyncio.to_thread, lazy imports) but EVERY
@@ -150,6 +151,34 @@ async def trading_flatten_all(confirm: str = "",
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     return JSONResponse(result)
+
+
+@router.post("/sim-reset")
+async def trading_sim_reset(confirm: str = "",
+                            email: str = Depends(current_user_email)):
+    """Wipe the SIM broker (orders/positions/cash back to SIM_STARTING_CASH).
+    Refused with 400 unless the ACTIVE broker is the sim — this can never
+    touch an Alpaca account."""
+    _require_admin(email)
+    if confirm != "yes":
+        raise HTTPException(400, "sim-reset requires ?confirm=yes")
+    from trading import broker as broker_factory
+    from trading import broker_sim
+    if broker_factory.get_broker() is not broker_sim:
+        raise HTTPException(400, "active broker is not the sim "
+                                 "(TRADING_BROKER/keys select Alpaca) — "
+                                 "sim-reset refused")
+
+    def work():
+        out = broker_sim.reset()
+        from trading import exit_engine
+        exit_engine.ledger("sim_reset_api", detail={"by": email})
+        return out
+
+    try:
+        return JSONResponse(await asyncio.to_thread(work))
+    except Exception as exc:                       # noqa: BLE001
+        raise HTTPException(400, str(exc))
 
 
 @router.get("/ledger")

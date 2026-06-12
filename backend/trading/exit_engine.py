@@ -20,8 +20,13 @@ Safety invariants:
     written to the trade_ledger as a dry_run row instead.
 
 Import-light on purpose: no pandas/numpy anywhere in this module's import
-chain (broker_alpaca pulls only `requests`); sepa.market_gauge (pandas) is
-imported lazily inside regime() and failure there degrades to "normal".
+chain (the broker layer pulls only `requests`); sepa.market_gauge (pandas)
+is imported lazily inside regime() and failure there degrades to "normal".
+
+The broker is OBTAINED FROM trading.broker.get_broker() (Alpaca when keys
+are set or TRADING_BROKER=alpaca; the built-in Massive-quote sim otherwise
+or when TRADING_BROKER=sim). Both expose the same duck-typed surface; the
+sim also exposes process_fills(), duck-called at the top of every tick.
 
 CLI:  python -m trading.exit_engine tick [--force]
 """
@@ -34,9 +39,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from trading import broker_alpaca as broker
 from trading import risk_rules
-from trading.broker_alpaca import BrokerError
+from trading.broker import BrokerError, get_broker
+
+broker = get_broker()    # module-level so tests can monkeypatch EE.broker
 
 log = logging.getLogger("trading.exit_engine")
 
@@ -273,6 +279,16 @@ def tick(force: bool = False) -> dict:
                "adopted": 0, "ratcheted": 0, "dry_run_rows": 0,
                "streak_events": 0, "errors": []}
 
+    # (0) sim matching engine — duck-called when the active broker has one
+    # (the sim broker fills pending orders against Massive quotes here; a
+    # real broker matches at the exchange). MUST run before adopt/ratchet/
+    # streak so a just-filled stop is seen this same tick.
+    if hasattr(broker, "process_fills"):
+        try:
+            summary["sim_fills"] = broker.process_fills()
+        except Exception as exc:                   # noqa: BLE001
+            summary["errors"].append("process_fills: %s" % exc)
+
     # (a) configured?
     if not broker.configured():
         today = _et_day()
@@ -487,10 +503,22 @@ def tick(force: bool = False) -> dict:
 
 # ── Status (GET /trading/status payload) ───────────────────────────────────
 
+def _broker_mode() -> str:
+    """"sim" | "paper" | "live" from the ACTIVE broker's mode() (duck-called
+    so test fakes without mode() fall back to the ALPACA_PAPER reading)."""
+    m = getattr(broker, "mode", None)
+    if callable(m):
+        try:
+            return str(m())
+        except Exception as exc:                   # noqa: BLE001
+            log.debug("broker mode() failed: %s", exc)
+    return "live" if (os.getenv("ALPACA_PAPER", "1") or "1").strip() == "0" else "paper"
+
+
 def status() -> dict:
     cfg = get_config()
     out = {
-        "mode": "live" if (os.getenv("ALPACA_PAPER", "1") or "1").strip() == "0" else "paper",
+        "mode": _broker_mode(),
         "configured": broker.configured(),
         "armed": cfg["armed"],
         "market_open": False,

@@ -1,7 +1,9 @@
 """Auto-Pilot entries — the ONLY code path that ever buys (invariant 1).
 
-enter() submits a bracket order at Alpaca (entry + take-profit + stop legs
-resting at the broker, invariant 2) sized/stopped/targeted exclusively by
+enter() submits a bracket order at the active broker — Alpaca or the
+built-in Massive-quote sim, picked by trading.broker.get_broker() — (entry
++ take-profit + stop legs resting at the broker, invariant 2) sized/
+stopped/targeted exclusively by
 trading/risk_rules.py (TLSW pp.291-315, page-cited). preview() is the same
 evaluation with NO order — pure math plus a blocked[] list for the UI.
 
@@ -16,10 +18,11 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from trading import broker_alpaca as broker
 from trading import risk_rules
-from trading.broker_alpaca import BrokerError
+from trading.broker import BrokerError, get_broker
 from trading.exit_engine import _db, get_config, ledger, regime
+
+broker = get_broker()    # module-level so tests can monkeypatch EN.broker
 
 log = logging.getLogger("trading.entries")
 

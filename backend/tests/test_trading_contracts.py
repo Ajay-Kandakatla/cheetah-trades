@@ -247,6 +247,67 @@ def test_auto_entry_never_submits_to_broker_directly():
     assert "entries.enter(" in src
 
 
+# --- Broker factory + SIM broker invariants ----------------------------------
+# trading/broker.py is the ONE seam that picks the execution venue (env
+# TRADING_BROKER=sim|alpaca, else Alpaca when keys exist, else the built-in
+# Massive-quote sim). Engine modules must obtain the broker THROUGH it so the
+# venue stays swappable — and the SIM honesty constants (docs/sepa/
+# auto_entry_methodology.md, "Built-in SIM broker") are owner numbers locked
+# like the engine params above.
+
+TRADING_DIR = os.path.join(os.path.dirname(__file__), "..", "trading")
+BROKER_SIM_PATH = os.path.join(TRADING_DIR, "broker_sim.py")
+
+SIM_TOKENS = [
+    # "assume you have 5k" — mirrors auto_entry.DEFAULT_EQUITY_CAP.
+    "SIM_STARTING_CASH = 5000.0",
+    # pessimistic stop-fill slippage (real gaps fill worse — honesty note).
+    "SIM_SLIPPAGE_PCT = 0.1",
+]
+
+
+def test_engine_modules_use_broker_factory_not_alpaca_directly():
+    """Factory invariant: exit_engine/entries/auto_entry contain NO direct
+    broker_alpaca reference — the broker comes from trading.broker.get_broker()
+    (BrokerError/OPEN_STATUSES re-exported there). Only broker.py and
+    broker_sim.py may name the Alpaca module. Breaking this re-pins the
+    engine to one venue and silently disables the sim/paper switch."""
+    for fname in ("exit_engine.py", "entries.py", "auto_entry.py"):
+        with open(os.path.join(TRADING_DIR, fname), encoding="utf-8") as fh:
+            src = fh.read()
+        assert "broker_alpaca" not in src, (
+            f"trading/{fname} references broker_alpaca directly — go through "
+            f"trading.broker.get_broker() so the venue stays swappable."
+        )
+        assert "get_broker" in src, (
+            f"trading/{fname} no longer obtains its broker from the factory."
+        )
+    with open(os.path.join(TRADING_DIR, "broker.py"), encoding="utf-8") as fh:
+        factory_src = fh.read()
+    assert "broker_alpaca" in factory_src and "broker_sim" in factory_src
+
+
+def test_sim_constants_locked_in_source():
+    """SIM_STARTING_CASH / SIM_SLIPPAGE_PCT are owner-chosen honesty knobs —
+    they must never move silently (doc + sign-off, like the engine params)."""
+    with open(BROKER_SIM_PATH, encoding="utf-8") as fh:
+        src = fh.read()
+    for token in SIM_TOKENS:
+        assert token in src, (
+            f"SIM constant drifted or was renamed: `{token}` not found in "
+            f"trading/broker_sim.py — owner decision + doc update required."
+        )
+
+
+def test_sim_constants_importable_and_equal():
+    from trading import auto_entry as ae
+    from trading import broker_sim as bs
+    assert bs.SIM_STARTING_CASH == 5000.0 == ae.DEFAULT_EQUITY_CAP
+    assert bs.SIM_SLIPPAGE_PCT == 0.1
+    assert bs.configured() is True
+    assert bs.mode() == "sim"
+
+
 def test_position_never_exceeds_quarter_of_equity():
     """p.312 functional lock: allocation <= 25% of equity at every price and
     streak level (whole-share flooring only ever shrinks it)."""

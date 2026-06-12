@@ -43,10 +43,12 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from trading import broker_alpaca as broker
 from trading import entries
 from trading import risk_rules
+from trading.broker import get_broker
 from trading.exit_engine import _db, _et_day, _utc_iso, get_config, ledger, update_config
+
+broker = get_broker()    # module-level so tests can monkeypatch AE.broker
 
 log = logging.getLogger("trading.auto_entry")
 

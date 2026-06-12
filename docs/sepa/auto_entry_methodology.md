@@ -142,3 +142,49 @@ the cap is what makes the $5k trial real. `GET /trading/preview` surfaces
 - `tests/test_trading_contracts.py` — "engine params" source locks for the
   five constants, the scanner mirror cross-lock, and the
   no-direct-broker-order invariant.
+
+## 9. Built-in SIM broker (paper trading without an external account)
+
+`trading/broker_sim.py` is a simulated broker with the **same duck-typed
+surface** as the Alpaca client, returning Alpaca-shaped dicts — the exit
+engine, risk rules, entries, auto-entry, ledger and pushes run **unchanged**.
+Selection lives in `trading/broker.py`:
+
+- `TRADING_BROKER=sim` or `=alpaca` — explicit choice always wins;
+- otherwise **Alpaca** when `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY` are set;
+- otherwise the **sim**. Switching to Alpaca later = set the env keys (or
+  `TRADING_BROKER=alpaca`) and restart — no code change.
+  `GET /trading/status` reports `mode: "sim" | "paper" | "live"`.
+
+State: Mongo `sim_account` (cash, starts at `SIM_STARTING_CASH = 5000.0` —
+mirrors `DEFAULT_EQUITY_CAP`), `sim_positions`, `sim_orders`.
+
+**Fill semantics** — `process_fills()` runs at the top of every
+`exit_engine.tick()`, matching pending orders against ONE batched live
+Massive quote call (`sepa.prices.bulk_live_prices`):
+
+- market buy → fills at the live print; limit buy → fills once live ≤ limit;
+- bracket legs are `held` until the entry fills, then go live (Alpaca
+  semantics); OCO — one leg fills, the sibling is canceled;
+- sell stop → triggers at live ≤ stop, **fills at
+  `stop × (1 − SIM_SLIPPAGE_PCT/100)`** (`SIM_SLIPPAGE_PCT = 0.1`,
+  deliberately pessimistic);
+- sell limit (target) → fills at the limit once live ≥ limit;
+- `account().equity` = cash + Σ(qty × live); `buying_power` = cash.
+
+**Coarseness caveat (honesty):** fills are evaluated once per engine tick
+(~1/minute) against the last trade — between-tick moves resolve at the NEXT
+tick. A stop touched-and-recovered inside a minute may not fill; a real gap
+through a stop fills far worse than 0.1% slippage. The clock has **no
+holiday calendar** (weekday 9:30–16:00 ET only). Sim results are a
+plumbing/process trial, not an execution-quality measurement.
+
+**Reset:** `POST /trading/sim-reset?confirm=yes` (admin; 400 unless the
+active broker IS the sim) or `python -m trading.broker_sim reset` — drops
+the three collections and restores starting cash.
+
+Invariants unchanged: `armed=false` places nothing anywhere (sim included);
+buys only via `entries.enter()`; constants locked in
+`tests/test_trading_contracts.py` (SIM tokens + the factory invariant: no
+direct `broker_alpaca` import in engine modules); behavior locked in
+`tests/test_broker_sim.py`.

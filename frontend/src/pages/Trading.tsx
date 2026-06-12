@@ -10,10 +10,13 @@
  *   POST /trading/enter             — bracket order {symbol, limit_price?, stop_pct?, allow_earnings?}
  *   POST /trading/flatten/{symbol}  — cancel orders + close one position
  *   POST /trading/flatten-all?confirm=yes — disaster plan
+ *   POST /trading/sim-reset?confirm=yes — sim mode only: wipe sim positions/orders, restore starting cash
  *   GET  /trading/ledger?limit=…    — action ledger (every row carries a book cite)
  *
  * Poll pattern follows LiveGateStrip (10s interval, alive-flag cleanup).
- * PAPER vs LIVE is always front-and-center — this page can move real money.
+ * SIM / PAPER / LIVE is always front-and-center — this page can move real money.
+ * mode "sim" = built-in simulated broker (fills from the app's own live
+ * quotes, no external account, always configured); "paper"/"live" = Alpaca.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -21,7 +24,7 @@ import { API } from '../lib/apiBase';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 
-const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', blue: '#38bdf8', muted: '#94a3b8', sub: '#8a93a6' };
+const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', blue: '#38bdf8', violet: '#a78bfa', muted: '#94a3b8', sub: '#8a93a6' };
 
 /* ----------------------------------------------------------------------
  * Contract types (mirror backend/trading API — keep in sync)
@@ -74,8 +77,12 @@ type AutoEntryInfo = {
   candidates: AutoEntryCandidate[];
 };
 
+/* "sim" = built-in simulated broker — no external account, always configured.
+ * Switching to Alpaca later is an env change (TRADING_BROKER=alpaca). */
+type Mode = 'sim' | 'paper' | 'live';
+
 type Status = {
-  mode: 'paper' | 'live';
+  mode: Mode;
   configured: boolean;
   armed: boolean;
   market_open: boolean;
@@ -270,24 +277,37 @@ const TD: React.CSSProperties = {
   verticalAlign: 'middle', whiteSpace: 'nowrap',
 };
 
-function PositionsTable({ positions, onFlatten, onFlattenAll }: {
+function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimReset }: {
   positions: Position[];
+  simMode: boolean;
   onFlatten: (symbol: string) => void;
   onFlattenAll: () => void;
+  onSimReset: () => void;
 }) {
   return (
     <section style={{ marginTop: '1rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <span className="eyebrow">📊 Engine-managed positions</span>
-        {positions.length > 0 && (
-          <button onClick={onFlattenAll}
-                  title="Disaster plan — cancel every open order and close every position at market."
-                  style={{ marginLeft: 'auto', background: 'transparent', color: C.red,
-                           border: `1px solid ${C.red}55`, borderRadius: 7, padding: '3px 10px',
-                           fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-            Flatten ALL
-          </button>
-        )}
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8 }}>
+          {simMode && (
+            <button onClick={onSimReset}
+                    title="Wipe all simulator positions and orders and restore the starting cash — sim mode only."
+                    style={{ background: 'transparent', color: C.muted,
+                             border: `1px solid ${C.muted}55`, borderRadius: 7, padding: '3px 10px',
+                             fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+              Reset simulator
+            </button>
+          )}
+          {positions.length > 0 && (
+            <button onClick={onFlattenAll}
+                    title="Disaster plan — cancel every open order and close every position at market."
+                    style={{ background: 'transparent', color: C.red,
+                             border: `1px solid ${C.red}55`, borderRadius: 7, padding: '3px 10px',
+                             fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+              Flatten ALL
+            </button>
+          )}
+        </span>
       </div>
 
       {positions.length === 0 ? (
@@ -384,7 +404,7 @@ const INPUT: React.CSSProperties = {
   border: '1px solid var(--hairline,#2a2a2a)',
 };
 
-function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: 'paper' | 'live'; onPlaced: () => void }) {
+function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: Mode; onPlaced: () => void }) {
   const [params, setParams] = useSearchParams();
   const [sym, setSym] = useState<string>(() => (params.get('symbol') || '').toUpperCase());
   const [limit, setLimit] = useState('');
@@ -567,8 +587,11 @@ function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: 'paper' | 
             R:R {preview.target.reward_risk?.toFixed?.(2) ?? preview.target.reward_risk}
           </p>
           <p style={{ margin: 0, color: C.sub }}>
-            This places a REAL bracket order in the <b>{mode.toUpperCase()}</b> account
-            {mode === 'paper' ? ' (paper — no real dollars)' : ' — real money'}.
+            This places a {mode === 'sim' ? 'simulated' : 'REAL'} bracket order in the{' '}
+            <b>{mode.toUpperCase()}</b> account
+            {mode === 'live' ? ' — real money'
+              : mode === 'sim' ? ' (built-in simulator — no real dollars)'
+              : ' (paper — no real dollars)'}.
           </p>
         </ConfirmDialog>
       )}
@@ -632,7 +655,7 @@ function candidateState(c: AutoEntryCandidate): { label: string; color: string; 
 }
 
 function AutoEntryCard({ auto, mode, onChanged }: {
-  auto: AutoEntryInfo; mode: 'paper' | 'live'; onChanged: () => void;
+  auto: AutoEntryInfo; mode: Mode; onChanged: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -827,15 +850,18 @@ function AutoEntryCard({ auto, mode, onChanged }: {
       </div>
 
       {confirming && (
-        <ConfirmDialog title="Enable auto entries?" color={mode === 'live' ? C.red : C.amber}
+        <ConfirmDialog title="Enable auto entries?"
+                       color={mode === 'live' ? C.red : mode === 'sim' ? C.violet : C.amber}
                        confirmLabel={`Enable (${mode})`} busy={busy}
                        onConfirm={() => void setEnabled(true)} onCancel={() => setConfirming(false)}>
           <p style={{ margin: '0 0 6px' }}>
             Once enabled, the engine will <b>BUY automatically from the SEPA buyable list</b> —
             max <b>{auto.max_per_day}/day</b>, <b>25% of {money(auto.equity_cap, 0)}</b> each,{' '}
-            {mode === 'paper'
-              ? <>in the <b>paper</b> account (no real dollars)</>
-              : <>in the <b>LIVE</b> account — real money</>}.
+            {mode === 'live'
+              ? <>in the <b>LIVE</b> account — real money</>
+              : mode === 'sim'
+                ? <>in the <b>SIM</b> account (no real dollars)</>
+                : <>in the <b>paper</b> account (no real dollars)</>}.
           </p>
           <p style={{ margin: 0, color: C.sub }}>
             Disabling later is instant and needs no confirmation. Exits stay automatic regardless.
@@ -893,7 +919,8 @@ const PageInfo = (
       <li><strong>Armed</strong> — master switch. Disarmed, the engine never places or moves an order.</li>
       <li><strong>Regime</strong> — in difficult markets stops tighten to 5-6% and targets drop to 10-12% (TLSW p.311).</li>
       <li><strong>Streak</strong> — after consecutive stop-outs the engine halves position size (p.304).</li>
-      <li><strong>PAPER vs LIVE</strong> — the banner color is the truth. Paper = no real dollars.</li>
+      <li><strong>SIM / PAPER / LIVE</strong> — the banner color is the truth. Sim runs on the built-in
+        simulator (fills from the app's own live quotes); sim and paper = no real dollars.</li>
     </ul>
     <p className="mono">Automation of YOUR decisions, not advice.</p>
   </>
@@ -903,7 +930,10 @@ type ConfirmState =
   | { kind: 'arm' }
   | { kind: 'flatten'; symbol: string }
   | { kind: 'flatten-all' }
+  | { kind: 'sim-reset' }
   | null;
+
+const SIM_NOTE_KEY = 'trading.simNoteDismissed';
 
 export function TradingPage() {
   const [status, setStatus] = useState<Status | null>(null);
@@ -913,6 +943,14 @@ export function TradingPage() {
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<string | null>(null);
+  const [simNoteDismissed, setSimNoteDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem(SIM_NOTE_KEY) === '1'; } catch { return false; }
+  });
+
+  const dismissSimNote = () => {
+    setSimNoteDismissed(true);
+    try { localStorage.setItem(SIM_NOTE_KEY, '1'); } catch { /* private mode — session-only dismiss */ }
+  };
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
@@ -960,7 +998,8 @@ export function TradingPage() {
   };
 
   const live = status?.mode === 'live';
-  const modeColor = live ? C.red : C.amber;
+  const sim = status?.mode === 'sim';
+  const modeColor = live ? C.red : sim ? C.violet : C.amber;
   const ledgerRows = ledger.length > 0 ? ledger : (status?.ledger_tail ?? []);
 
   return (
@@ -1001,18 +1040,38 @@ export function TradingPage() {
                         border: `1px solid ${modeColor}66`, background: `${modeColor}12`,
                         borderRadius: 10, padding: '0.55rem 0.8rem', marginBottom: '0.8rem' }}>
             <span style={{ fontWeight: 800, fontSize: '0.9rem', color: modeColor, letterSpacing: '0.04em' }}>
-              {live ? 'LIVE' : 'PAPER'}
+              {live ? 'LIVE' : sim ? 'SIM' : 'PAPER'}
             </span>
             <span style={{ fontSize: '0.76rem', color: live ? C.red : C.sub }}>
               {live
                 ? 'live account — orders move REAL dollars'
-                : 'paper account — no real dollars'}
+                : sim
+                  ? 'built-in simulator, fills computed from live quotes once per minute, no real dollars'
+                  : 'paper account — no real dollars'}
             </span>
             <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.7rem',
                                             color: status.market_open ? C.green : C.sub }}>
               {status.market_open ? '● market open' : '◯ market closed'}
             </span>
           </div>
+
+          {/* Sim-mode note — how to switch to Alpaca later. Dismiss persists. */}
+          {sim && !simNoteDismissed && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8,
+                          fontSize: '0.7rem', color: C.sub, margin: '-0.4rem 0 0.8rem', padding: '0 0.2rem' }}>
+              <span>
+                Running on the built-in simulator. To use Alpaca later: add{' '}
+                <span className="mono">ALPACA_KEY_ID</span> / <span className="mono">ALPACA_SECRET_KEY</span>{' '}
+                (+ <span className="mono">TRADING_BROKER=alpaca</span>) to{' '}
+                <span className="mono">backend/.env</span> and rebuild.
+              </span>
+              <button onClick={dismissSimNote} aria-label="Dismiss simulator note" title="Dismiss"
+                      style={{ background: 'transparent', border: 'none', color: C.sub,
+                               fontSize: '0.7rem', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* b. Status row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -1080,8 +1139,10 @@ export function TradingPage() {
 
           {/* d. Positions */}
           <PositionsTable positions={status.positions || []}
+                          simMode={sim}
                           onFlatten={(symbol) => setConfirm({ kind: 'flatten', symbol })}
-                          onFlattenAll={() => setConfirm({ kind: 'flatten-all' })} />
+                          onFlattenAll={() => setConfirm({ kind: 'flatten-all' })}
+                          onSimReset={() => setConfirm({ kind: 'sim-reset' })} />
 
           {/* d. Enter card */}
           <EnterCard armed={status.armed} mode={status.mode} onPlaced={refresh} />
@@ -1093,17 +1154,24 @@ export function TradingPage() {
 
       {/* Confirm dialogs */}
       {confirm?.kind === 'arm' && status && (
-        <ConfirmDialog title="Arm the Auto-Pilot?" color={live ? C.red : C.amber}
+        <ConfirmDialog title="Arm the Auto-Pilot?" color={modeColor}
                        confirmLabel={`Arm (${status.mode})`} busy={busy}
                        onConfirm={() => run(() => postJson('/trading/arm?armed=true'))}
                        onCancel={() => setConfirm(null)}>
           <p style={{ margin: '0 0 6px' }}>
-            Once armed, the engine will <b>place and move REAL orders in the {status.mode} account</b> —
+            Once armed, the engine will{' '}
+            <b>place and move {sim
+              ? 'orders in the SIM account (no real dollars)'
+              : `REAL orders in the ${status.mode} account`}</b> —
             bracket entries you submit here, adopt-protect stops on naked positions, and breakeven ratchets —
             without asking again.
           </p>
           <p style={{ margin: 0, color: C.sub }}>
-            {live ? 'This is the LIVE account. Real dollars.' : 'Paper account — fills are simulated, no real dollars.'}
+            {live
+              ? 'This is the LIVE account. Real dollars.'
+              : sim
+                ? 'SIM account — built-in simulator, fills computed from live quotes, no real dollars.'
+                : 'Paper account — fills are simulated, no real dollars.'}
             {' '}Disarming later is instant and needs no confirmation.
           </p>
         </ConfirmDialog>
@@ -1131,6 +1199,20 @@ export function TradingPage() {
             in the <b>{status.mode}</b> account.
           </p>
           <p style={{ margin: 0, color: C.sub }}>Use when something is wrong and you want to be flat NOW.</p>
+        </ConfirmDialog>
+      )}
+
+      {confirm?.kind === 'sim-reset' && status && (
+        <ConfirmDialog title="Reset the simulator?" color={C.violet}
+                       confirmLabel="Reset simulator" busy={busy}
+                       onConfirm={() => run(() => postJson('/trading/sim-reset?confirm=yes'))}
+                       onCancel={() => setConfirm(null)}>
+          <p style={{ margin: '0 0 6px' }}>
+            Wipes <b>all</b> sim positions and orders and restores <b>$5,000</b> cash — a clean slate.
+          </p>
+          <p style={{ margin: 0, color: C.sub }}>
+            SIM mode only — no external account is touched, no real dollars involved.
+          </p>
         </ConfirmDialog>
       )}
 
