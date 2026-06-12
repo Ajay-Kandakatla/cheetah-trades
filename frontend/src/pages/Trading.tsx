@@ -111,6 +111,101 @@ type Preview = {
 type EnterResult = { order_id: string; shares: number; stop?: unknown; target?: unknown };
 
 /* ----------------------------------------------------------------------
+ * Analytics contract (GET /trading/analytics)
+ * ---------------------------------------------------------------------- */
+type TriggerStats = {
+  n: number;
+  batting_avg: number;
+  avg_gain_pct: number;
+  avg_loss_pct?: number;
+};
+
+type EquityPoint = { epoch: number; cum_pnl_dollars: number };
+
+type VsBook = {
+  target_ratio: number;
+  stretch_ratio: number;
+  your_ratio: number;
+  batting_ref: number;
+  half_avg_gain_stop_pct: number;
+  flags: string[];
+};
+
+type Analytics = {
+  n_closed: number;
+  n_open: number;
+  provisional: boolean;
+  batting_avg: number;           // 0..1
+  avg_gain_pct: number;
+  avg_loss_pct: number;
+  win_loss_ratio: number;
+  expectancy_pct: number;
+  expectancy_dollars: number;
+  avg_r: number;
+  total_pnl_dollars: number;
+  avg_holding_days: number;
+  equity_curve: EquityPoint[];
+  by_trigger: {
+    intraday?: TriggerStats | null;
+    close_confirm?: TriggerStats | null;
+    manual?: TriggerStats | null;
+  };
+  open_risk_dollars: number;
+  vs_book: VsBook;
+};
+
+/* ----------------------------------------------------------------------
+ * Journal contract (GET /trading/journal?decisions=1)
+ * ---------------------------------------------------------------------- */
+type TradeTrigger = { path: string; pivot: number; relvol: number; score: number } | null;
+
+type TradeEntry = {
+  ts: number | string;
+  price: number;
+  qty: number;
+  stop_price: number;
+  stop_pct: number;
+  target_price: number;
+  target_pct: number;
+  reward_risk: number;
+  regime: string;
+  trigger: TradeTrigger;
+};
+
+type TradeExit = { ts: number | string; price: number; leg: string } | null;
+
+type TradeRealized = {
+  gain_pct: number;
+  gain_dollars: number;
+  r_multiple: number;
+  holding_days: number;
+  exit_reason: string;
+} | null;
+
+type TradeMark = { last: number; unrealized_pct: number };
+
+type Trade = {
+  trade_id: string;
+  symbol: string;
+  status: string;
+  entry: TradeEntry;
+  protected_to_breakeven: boolean;
+  exit: TradeExit;
+  realized: TradeRealized;
+  narrative: string;
+  mark?: TradeMark | null;        // open trades only
+};
+
+type Decision = { ts: number | string; kind: string; symbol?: string | null; text: string };
+
+type Journal = {
+  trades: Trade[];
+  open: Trade[];
+  decisions: Decision[];
+  summary?: unknown;
+};
+
+/* ----------------------------------------------------------------------
  * Small helpers
  * ---------------------------------------------------------------------- */
 function money(n?: number | null, d = 2): string {
@@ -128,6 +223,27 @@ function fmtTs(ts?: number | string | null): string {
     if (!Number.isFinite(ms)) return '';
     return new Date(ms).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch { return ''; }
+}
+/* Signed percent with explicit +/-, e.g. "+12.4%" / "-7.0%". */
+function signedPct(n?: number | null, d = 1): string {
+  if (n == null || !Number.isFinite(n)) return '—';
+  return `${n >= 0 ? '+' : ''}${n.toFixed(d)}%`;
+}
+/* Relative time, e.g. "3m ago", "2h ago", "5d ago". */
+function relTime(ts?: number | string | null): string {
+  if (ts == null) return '';
+  const ms = typeof ts === 'number' ? (ts < 1e12 ? ts * 1000 : ts) : Date.parse(ts);
+  if (!Number.isFinite(ms)) return '';
+  const diff = Date.now() - ms;
+  if (diff < 0) return 'just now';
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  return `${days}d ago`;
 }
 
 async function postJson(path: string, body?: unknown): Promise<any> {
@@ -891,7 +1007,9 @@ function LedgerFeed({ rows }: { rows: LedgerRow[] }) {
               <span className="mono" style={{ fontSize: '0.66rem', color: C.sub, minWidth: 96 }}>{fmtTs(r.ts)}</span>
               <KindChip kind={r.kind} />
               {r.symbol && <span className="mono" style={{ fontSize: '0.76rem', fontWeight: 700 }}>{r.symbol}</span>}
-              <span style={{ fontSize: '0.74rem', flex: 1, minWidth: 180 }}>{r.detail || ''}</span>
+              <span style={{ fontSize: '0.74rem', flex: 1, minWidth: 180 }}>
+                {typeof r.detail === 'string' ? r.detail : r.detail ? JSON.stringify(r.detail) : ''}
+              </span>
               {r.dry_run && (
                 <span className="mono" style={{ fontSize: '0.64rem', color: C.muted,
                                                 border: `1px solid ${C.muted}55`, borderRadius: 4, padding: '0 5px' }}>
@@ -904,6 +1022,395 @@ function LedgerFeed({ rows }: { rows: LedgerRow[] }) {
         </div>
       )}
     </section>
+  );
+}
+
+/* ----------------------------------------------------------------------
+ * ANALYTICS view — Minervini's batting-average math over closed round-trips.
+ * ---------------------------------------------------------------------- */
+function StatCard({ label, value, color, sub }: {
+  label: string; value: ReactNode; color?: string; sub?: ReactNode;
+}) {
+  return (
+    <div style={{ border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 10,
+                  background: 'var(--bg-raised,#16181d)', padding: '0.6rem 0.7rem',
+                  display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.05em',
+                    color: C.sub, fontWeight: 600 }}>{label}</div>
+      <div className="mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: color ?? 'inherit' }}>{value}</div>
+      {sub != null && <div style={{ fontSize: '0.7rem', color: C.sub }}>{sub}</div>}
+    </div>
+  );
+}
+
+/* Inline equity curve — polyline of cum_pnl_dollars vs index, zero baseline.
+ * No chart library: just an SVG. Guards 0/1-point curves. */
+function EquityCurve({ points }: { points: EquityPoint[] }) {
+  const W = 640, H = 130, padX = 6, padTop = 8, padBot = 14;
+  const vals = (points || []).map((p) => (Number.isFinite(p.cum_pnl_dollars) ? p.cum_pnl_dollars : 0));
+  if (vals.length === 0) {
+    return (
+      <p style={{ fontSize: '0.74rem', color: C.sub, margin: '0.3rem 0' }}>
+        No closed P&amp;L yet — the equity curve draws once trades close.
+      </p>
+    );
+  }
+  const last = vals[vals.length - 1];
+  const lastColor = last >= 0 ? C.green : C.red;
+
+  // Single point → just show a dot at its value, no line.
+  const maxV = Math.max(0, ...vals);
+  const minV = Math.min(0, ...vals);
+  const range = maxV - minV || 1;
+  const x = (i: number) => padX + (vals.length === 1 ? (W - 2 * padX) / 2 : (i / (vals.length - 1)) * (W - 2 * padX));
+  const y = (v: number) => padTop + (1 - (v - minV) / range) * (H - padTop - padBot);
+  const zeroY = y(0);
+  const poly = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none"
+         style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label="Cumulative P&L equity curve">
+      {/* zero baseline */}
+      <line x1={padX} y1={zeroY} x2={W - padX} y2={zeroY} stroke={C.sub} strokeWidth={1}
+            strokeDasharray="3 3" opacity={0.5} />
+      {vals.length > 1 && (
+        <polyline points={poly} fill="none" stroke={lastColor} strokeWidth={2}
+                  strokeLinejoin="round" strokeLinecap="round" />
+      )}
+      {/* last point dot */}
+      <circle cx={x(vals.length - 1)} cy={y(last)} r={3} fill={lastColor} />
+    </svg>
+  );
+}
+
+function RatioCell({ ratio, floor = 2 }: { ratio: number; floor?: number }) {
+  const color = !Number.isFinite(ratio) ? C.sub : ratio >= floor ? C.green : ratio >= 1 ? C.amber : C.red;
+  return (
+    <span style={{ color, fontWeight: 800 }}>
+      {Number.isFinite(ratio) ? `${ratio.toFixed(2)}:1` : '—'}
+    </span>
+  );
+}
+
+function TriggerRow({ label, s }: { label: string; s?: TriggerStats | null }) {
+  if (!s || !s.n) {
+    return (
+      <tr>
+        <td style={TD}>{label}</td>
+        <td className="mono" style={{ ...TD, color: C.sub }}>0</td>
+        <td className="mono" style={{ ...TD, color: C.sub }}>—</td>
+        <td className="mono" style={{ ...TD, color: C.sub }}>—</td>
+      </tr>
+    );
+  }
+  return (
+    <tr>
+      <td style={TD}>{label}</td>
+      <td className="mono" style={TD}>{s.n}</td>
+      <td className="mono" style={TD}>{pctf((s.batting_avg ?? 0) * 100, 0)}</td>
+      <td className="mono" style={{ ...TD, color: C.green }}>{signedPct(s.avg_gain_pct)}</td>
+    </tr>
+  );
+}
+
+function AnalyticsView({ a, err }: { a: Analytics | null; err: boolean }) {
+  if (!a && err) {
+    return <p style={{ fontSize: '0.8rem', color: C.red }}>Can't load analytics — is the api container running?</p>;
+  }
+  if (!a) {
+    return <p style={{ fontSize: '0.8rem', color: C.sub }}>Loading analytics…</p>;
+  }
+
+  const winLossColor = a.win_loss_ratio >= 2 ? C.green : a.win_loss_ratio >= 1 ? C.amber : C.red;
+  const expColor = a.expectancy_pct >= 0 ? C.green : C.red;
+  const pnlColor = a.total_pnl_dollars >= 0 ? C.green : C.red;
+  const vb = a.vs_book;
+
+  return (
+    <>
+      {a.provisional && (
+        <div style={{ border: `1px solid ${C.amber}66`, background: `${C.amber}12`, borderRadius: 10,
+                      padding: '0.55rem 0.8rem', marginBottom: '0.9rem', fontSize: '0.76rem', color: C.amber }}>
+          Provisional — only {a.n_closed} closed {a.n_closed === 1 ? 'trade' : 'trades'}. Minervini's
+          batting-average math needs a real sample (TLSW p.299).
+        </div>
+      )}
+
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
+                    gap: 8, marginBottom: '1.1rem' }}>
+        <StatCard label="Batting avg" value={pctf(a.batting_avg * 100, 0)}
+                  sub={`${a.n_closed} closed · ${a.n_open} open`} />
+        <StatCard label="Avg gain" value={signedPct(a.avg_gain_pct)} color={C.green} />
+        <StatCard label="Avg loss" value={signedPct(a.avg_loss_pct)} color={C.red} />
+        <StatCard label="Win:Loss ratio"
+                  value={<RatioCell ratio={a.win_loss_ratio} />}
+                  color={winLossColor}
+                  sub={<span style={{ color: winLossColor }}>book floor 2:1</span>} />
+        <StatCard label="Expectancy %" value={signedPct(a.expectancy_pct)} color={expColor}
+                  sub={money(a.expectancy_dollars)} />
+        <StatCard label="Avg R" value={Number.isFinite(a.avg_r) ? `${a.avg_r.toFixed(2)}R` : '—'}
+                  color={a.avg_r >= 0 ? C.green : C.red} />
+        <StatCard label="Total P&L" value={money(a.total_pnl_dollars)} color={pnlColor} />
+        <StatCard label="Avg hold"
+                  value={Number.isFinite(a.avg_holding_days) ? `${a.avg_holding_days.toFixed(1)}d` : '—'} />
+      </div>
+
+      {/* Equity curve */}
+      <section style={{ marginBottom: '1.1rem' }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>📈 Equity curve · cumulative P&amp;L</div>
+        <div style={{ border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 10,
+                      background: 'var(--bg-raised,#16181d)', padding: '0.6rem 0.7rem' }}>
+          <EquityCurve points={a.equity_curve || []} />
+        </div>
+      </section>
+
+      {/* Vs the book */}
+      <section style={{ marginBottom: '1.1rem', border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 12,
+                        background: 'var(--bg-raised,#16181d)', padding: '0.9rem 1rem' }}>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>📖 Vs the book</div>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: '0.78rem', alignItems: 'baseline' }}>
+          <span>your reward:risk <RatioCell ratio={vb.your_ratio} /></span>
+          <span style={{ color: C.sub }}>target <b style={{ color: 'inherit' }}>{vb.target_ratio}:1</b></span>
+          <span style={{ color: C.sub }}>stretch <b style={{ color: 'inherit' }}>{vb.stretch_ratio}:1</b></span>
+        </div>
+        <p style={{ fontSize: '0.74rem', color: C.sub, margin: '8px 0 0' }}>
+          Your data implies a <b style={{ color: 'inherit' }}>{pctf(vb.half_avg_gain_stop_pct, 1)}</b> stop
+          (half your average gain — p.299).
+        </p>
+        {vb.flags && vb.flags.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10 }}>
+            {vb.flags.map((f, i) => {
+              const amber = /stretch|approach|near|close to|watch/i.test(f);
+              const color = amber ? C.amber : C.red;
+              return (
+                <div key={i} style={{ fontSize: '0.74rem', color, background: `${color}12`,
+                                      border: `1px solid ${color}44`, borderRadius: 7, padding: '4px 8px' }}>
+                  {amber ? '⚠' : '⛔'} {f}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* By trigger */}
+      <section style={{ marginBottom: '0.5rem' }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>🎯 By trigger</div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>
+                <th style={TH}>Trigger</th>
+                <th style={TH}>n</th>
+                <th style={TH}>Batting</th>
+                <th style={TH}>Avg gain</th>
+              </tr>
+            </thead>
+            <tbody>
+              <TriggerRow label="intraday" s={a.by_trigger?.intraday} />
+              <TriggerRow label="close-confirm" s={a.by_trigger?.close_confirm} />
+              <TriggerRow label="manual" s={a.by_trigger?.manual} />
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p className="mono" style={{ fontSize: '0.66rem', color: C.sub, marginTop: '1rem' }}>
+        open risk {money(a.open_risk_dollars)} · batting reference {pctf((vb.batting_ref ?? 0) * 100, 0)} · TLSW p.299
+      </p>
+    </>
+  );
+}
+
+/* ----------------------------------------------------------------------
+ * JOURNAL view — round-trip cards + the engine's decision log.
+ * ---------------------------------------------------------------------- */
+function ResultChip({ t }: { t: Trade }) {
+  if (t.status === 'open') {
+    const u = t.mark?.unrealized_pct;
+    const up = (u ?? 0) >= 0;
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: C.blue, background: `${C.blue}14`,
+                       border: `1px solid ${C.blue}55`, borderRadius: 6, padding: '1px 8px' }}>OPEN</span>
+        {u != null && Number.isFinite(u) && (
+          <span className="mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: up ? C.green : C.red }}>
+            {signedPct(u, 2)}
+          </span>
+        )}
+      </span>
+    );
+  }
+  const r = t.realized;
+  const gainColor = (r?.gain_pct ?? 0) >= 0 ? C.green : C.red;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <span className="mono" style={{ fontSize: '0.85rem', fontWeight: 800, color: gainColor }}>
+        {r ? signedPct(r.gain_pct, 1) : '—'}
+      </span>
+      {r && Number.isFinite(r.r_multiple) && (
+        <span className="mono" style={{ fontSize: '0.72rem', fontWeight: 700, color: C.sub }}
+              title="R-multiple — realized P&L in units of initial risk.">
+          {r.r_multiple.toFixed(2)}R
+        </span>
+      )}
+      {t.protected_to_breakeven && (
+        <span title="The stop was ratcheted up to breakeven during this trade."
+              style={{ fontSize: '0.7rem', fontWeight: 700, color: C.green }}>BE✓</span>
+      )}
+    </span>
+  );
+}
+
+function TradeDetail({ t }: { t: Trade }) {
+  const e = t.entry;
+  const tg = e?.trigger;
+  return (
+    <div className="mono" style={{ marginTop: 8, padding: '0.5rem 0.65rem', borderRadius: 8,
+                                   background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)',
+                                   display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.72rem' }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        <span><span style={{ color: C.sub }}>entry</span> {money(e?.price)} × {e?.qty}</span>
+        <span><span style={{ color: C.sub }}>regime</span> {e?.regime || '—'}</span>
+        <span><span style={{ color: C.sub }}>opened</span> {fmtTs(e?.ts)}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        <span style={{ color: C.red }}>stop {money(e?.stop_price)} ({pctf(e?.stop_pct)})</span>
+        <span style={{ color: C.green }}>target {money(e?.target_price)} ({pctf(e?.target_pct)})</span>
+        <span><span style={{ color: C.sub }}>R:R</span> {e?.reward_risk?.toFixed?.(2) ?? '—'}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        {tg ? (
+          <span style={{ color: C.sub }}>
+            trigger <span style={{ color: 'inherit' }}>{tg.path}</span> · pivot {money(tg.pivot)} ·
+            relvol {Number.isFinite(tg.relvol) ? tg.relvol.toFixed(1) : '—'}× · score {tg.score}
+          </span>
+        ) : (
+          <span style={{ color: C.sub }}>trigger manual</span>
+        )}
+      </div>
+      {t.exit && (
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <span><span style={{ color: C.sub }}>exit</span> {money(t.exit.price)} ({t.exit.leg})</span>
+          <span><span style={{ color: C.sub }}>closed</span> {fmtTs(t.exit.ts)}</span>
+          {t.realized && <span><span style={{ color: C.sub }}>held</span> {t.realized.holding_days}d</span>}
+          {t.realized && <span style={{ color: (t.realized.gain_dollars ?? 0) >= 0 ? C.green : C.red }}>
+            {money(t.realized.gain_dollars)}
+          </span>}
+          {t.realized?.exit_reason && <span style={{ color: C.sub }}>{t.realized.exit_reason}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TradeCard({ t }: { t: Trade }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 12,
+                  background: 'var(--bg-raised,#16181d)', padding: '0.8rem 0.9rem', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <TickerLink ticker={t.symbol} fromLabel="Auto-Pilot" showWatchlist={false}
+                    style={{ fontWeight: 800, fontSize: '0.95rem', color: 'inherit', textDecoration: 'none' }} />
+        <span style={{ marginLeft: 'auto' }}><ResultChip t={t} /></span>
+      </div>
+      {t.narrative && (
+        <p style={{ fontSize: '0.82rem', lineHeight: 1.55, margin: '8px 0 0', color: 'var(--ink,inherit)' }}>
+          {t.narrative}
+        </p>
+      )}
+      <button onClick={() => setOpen((o) => !o)}
+              style={{ marginTop: 8, background: 'transparent', color: C.blue, border: 'none',
+                       padding: 0, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+        {open ? '▾ hide detail' : '▸ show detail'}
+      </button>
+      {open && <TradeDetail t={t} />}
+    </div>
+  );
+}
+
+function TradesList({ j }: { j: Journal }) {
+  const openTrades = j.open || [];
+  const closed = (j.trades || []).filter((t) => t.status !== 'open');
+  if (openTrades.length === 0 && closed.length === 0) {
+    return (
+      <p style={{ fontSize: '0.8rem', color: C.sub, margin: '0.6rem 0' }}>
+        No trades yet — the journal fills in as Auto-Pilot trades.
+      </p>
+    );
+  }
+  return (
+    <div>
+      {openTrades.map((t) => <TradeCard key={t.trade_id} t={t} />)}
+      {closed.map((t) => <TradeCard key={t.trade_id} t={t} />)}
+    </div>
+  );
+}
+
+const DECISION_COLOR: Record<string, string> = {
+  auto_entry:         C.green,
+  auto_entry_blocked: C.amber,
+  disabled:           C.muted,
+  error:              C.red,
+};
+
+function DecisionsList({ decisions }: { decisions: Decision[] }) {
+  if (!decisions || decisions.length === 0) {
+    return (
+      <p style={{ fontSize: '0.8rem', color: C.sub, margin: '0.6rem 0' }}>
+        No decisions logged yet.
+      </p>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {decisions.map((d, i) => {
+        const color = DECISION_COLOR[d.kind] || C.muted;
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
+                                padding: '6px 2px', borderTop: '1px solid var(--hairline,#2a2a2a)' }}>
+            <span className="mono" style={{ fontSize: '0.7rem', fontWeight: 700, color, background: `${color}14`,
+                                            border: `1px solid ${color}44`, borderRadius: 5, padding: '0 6px',
+                                            whiteSpace: 'nowrap' }}>
+              {d.kind}
+            </span>
+            {d.symbol && <span className="mono" style={{ fontSize: '0.76rem', fontWeight: 700 }}>{d.symbol}</span>}
+            <span style={{ fontSize: '0.76rem', flex: 1, minWidth: 160 }}>{d.text}</span>
+            <span className="mono" style={{ fontSize: '0.66rem', color: C.sub, whiteSpace: 'nowrap' }}>{relTime(d.ts)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function JournalView({ j, err }: { j: Journal | null; err: boolean }) {
+  const [tab, setTab] = useState<'trades' | 'decisions'>('trades');
+  if (!j && err) {
+    return <p style={{ fontSize: '0.8rem', color: C.red }}>Can't load the journal — is the api container running?</p>;
+  }
+  if (!j) {
+    return <p style={{ fontSize: '0.8rem', color: C.sub }}>Loading journal…</p>;
+  }
+  return (
+    <>
+      <div style={{ display: 'inline-flex', gap: 4, padding: 3, borderRadius: 9,
+                    background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)',
+                    marginBottom: '0.9rem' }}>
+        {(['trades', 'decisions'] as const).map((k) => (
+          <button key={k} onClick={() => setTab(k)}
+                  style={{ background: tab === k ? 'var(--bg-raised,#16181d)' : 'transparent',
+                           color: tab === k ? 'inherit' : C.sub,
+                           border: tab === k ? '1px solid var(--hairline,#2a2a2a)' : '1px solid transparent',
+                           borderRadius: 6, padding: '3px 14px', fontSize: '0.76rem', fontWeight: 700,
+                           cursor: 'pointer', textTransform: 'capitalize' }}>
+            {k}
+          </button>
+        ))}
+      </div>
+      {tab === 'trades' ? <TradesList j={j} /> : <DecisionsList decisions={j.decisions || []} />}
+    </>
   );
 }
 
@@ -934,6 +1441,14 @@ type ConfirmState =
   | null;
 
 const SIM_NOTE_KEY = 'trading.simNoteDismissed';
+const VIEW_KEY = 'trading.view';
+
+type View = 'dashboard' | 'journal' | 'analytics';
+const VIEWS: { key: View; label: string }[] = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'journal', label: 'Journal' },
+  { key: 'analytics', label: 'Analytics' },
+];
 
 export function TradingPage() {
   const [status, setStatus] = useState<Status | null>(null);
@@ -946,6 +1461,25 @@ export function TradingPage() {
   const [simNoteDismissed, setSimNoteDismissed] = useState<boolean>(() => {
     try { return localStorage.getItem(SIM_NOTE_KEY) === '1'; } catch { return false; }
   });
+
+  // Which view — Dashboard (default) | Journal | Analytics. Persisted.
+  const [view, setView] = useState<View>(() => {
+    try {
+      const v = localStorage.getItem(VIEW_KEY);
+      if (v === 'journal' || v === 'analytics' || v === 'dashboard') return v;
+    } catch { /* private mode */ }
+    return 'dashboard';
+  });
+  const pickView = (v: View) => {
+    setView(v);
+    try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode — session only */ }
+  };
+
+  // Journal + Analytics — fetched & polled only while their view is active.
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [analyticsErr, setAnalyticsErr] = useState(false);
+  const [journal, setJournal] = useState<Journal | null>(null);
+  const [journalErr, setJournalErr] = useState(false);
 
   const dismissSimNote = () => {
     setSimNoteDismissed(true);
@@ -971,6 +1505,36 @@ export function TradingPage() {
     const t = setInterval(tick, 10000);
     return () => { alive = false; clearInterval(t); };
   }, [refreshKey]);
+
+  // Analytics poll — only while the Analytics view is active, 15s.
+  useEffect(() => {
+    if (view !== 'analytics') return;
+    let alive = true;
+    const tick = () => {
+      fetch(`${API}/trading/analytics`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((j) => { if (alive) { setAnalytics(j); setAnalyticsErr(false); } })
+        .catch(() => { if (alive) setAnalyticsErr(true); });
+    };
+    tick();
+    const t = setInterval(tick, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [view, refreshKey]);
+
+  // Journal poll — only while the Journal view is active, 15s.
+  useEffect(() => {
+    if (view !== 'journal') return;
+    let alive = true;
+    const tick = () => {
+      fetch(`${API}/trading/journal?decisions=1`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((j) => { if (alive) { setJournal(j); setJournalErr(false); } })
+        .catch(() => { if (alive) setJournalErr(true); });
+    };
+    tick();
+    const t = setInterval(tick, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [view, refreshKey]);
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -1019,6 +1583,26 @@ export function TradingPage() {
         </div>
       </div>
 
+      {/* Segmented control — Dashboard | Journal | Analytics. Wraps on mobile. */}
+      <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, padding: 3, borderRadius: 10,
+                    background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)',
+                    marginBottom: '1rem' }}>
+        {VIEWS.map((v) => (
+          <button key={v.key} onClick={() => pickView(v.key)}
+                  style={{ background: view === v.key ? 'var(--bg-raised,#16181d)' : 'transparent',
+                           color: view === v.key ? 'inherit' : C.sub,
+                           border: view === v.key ? '1px solid var(--hairline,#2a2a2a)' : '1px solid transparent',
+                           borderRadius: 7, padding: '5px 16px', fontSize: '0.8rem', fontWeight: 700,
+                           cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'analytics' && <AnalyticsView a={analytics} err={analyticsErr} />}
+      {view === 'journal' && <JournalView j={journal} err={journalErr} />}
+
+      {view === 'dashboard' && <>
       {statusErr && !status && (
         <p style={{ fontSize: '0.8rem', color: C.red }}>
           Can't reach the trading engine — is the api container running?
@@ -1152,7 +1736,7 @@ export function TradingPage() {
         </>
       )}
 
-      {/* Confirm dialogs */}
+      {/* Confirm dialogs (dashboard actions only) */}
       {confirm?.kind === 'arm' && status && (
         <ConfirmDialog title="Arm the Auto-Pilot?" color={modeColor}
                        confirmLabel={`Arm (${status.mode})`} busy={busy}
@@ -1219,6 +1803,7 @@ export function TradingPage() {
       <p className="mono" style={{ fontSize: '0.66rem', color: C.sub, marginTop: '1.2rem' }}>
         status refreshes every 10s · every engine action is ledgered with its TLSW page cite · not investment advice
       </p>
+      </>}
     </div>
   );
 }

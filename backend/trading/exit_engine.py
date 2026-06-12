@@ -144,6 +144,28 @@ def ledger(kind: str, symbol: Optional[str] = None, detail: Optional[dict] = Non
     return row
 
 
+def _detail_text(detail) -> str:
+    """Flatten a ledger row's detail into a readable one-liner for the feed.
+
+    Rows store `detail` as a dict; the frontend renders it as plain text, so an
+    object reaching JSX crashes React (#31). Coerce here at the API boundary —
+    the raw dicts stay in Mongo for journal.reconcile()."""
+    if detail is None:
+        return ""
+    if isinstance(detail, str):
+        return detail
+    if isinstance(detail, dict):
+        parts = []
+        for k, v in detail.items():
+            if isinstance(v, dict):
+                v = ", ".join("%s=%s" % (kk, vv) for kk, vv in v.items())
+            elif isinstance(v, (list, tuple)):
+                v = ", ".join(str(x) for x in v)
+            parts.append("%s: %s" % (k, v))
+        return " · ".join(parts)
+    return str(detail)
+
+
 def ledger_tail(limit: int = 20) -> list:
     db = _db()
     rows = []
@@ -152,6 +174,7 @@ def ledger_tail(limit: int = 20) -> list:
     try:
         for d in db.trade_ledger.find().sort("epoch", -1).limit(int(limit)):
             d.pop("_id", None)
+            d["detail"] = _detail_text(d.get("detail"))
             rows.append(d)
     except Exception as exc:                       # noqa: BLE001
         log.warning("trade_ledger read failed: %s", exc)
@@ -498,6 +521,17 @@ def tick(force: bool = False) -> dict:
     except Exception as exc:                       # noqa: BLE001
         log.warning("auto_entry run failed: %s", exc)
         summary["errors"].append("auto_entry: %s" % exc)
+
+    # (g) journal reconcile — derive/update the perpetual trade_journal from
+    # the ledger so it is current between ticks. Read-only over the ledger, no
+    # trading side effects; fully fenced + lazy-imported so it can NEVER break
+    # stop protection or entries above (import-light: journal pulls no pandas).
+    try:
+        from trading import journal
+        summary["journal"] = journal.reconcile()
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("journal reconcile failed: %s", exc)
+        summary["errors"].append("journal: %s" % exc)
     return summary
 
 
