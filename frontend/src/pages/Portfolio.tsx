@@ -349,7 +349,11 @@ export default function PortfolioPage() {
               </div>
 
               <PositionSignal symbol={r.symbol} entry={entry} shares={r.quantity} stop={r.stop} />
-              <HoldingDiagnosis symbol={r.symbol} defaultOpen />
+              {/* Collapsed by default (2026-06-13) — open, it auto-fired a Claude
+                  call per holding on mount (N essays walling the sell decision,
+                  each duplicating the PositionSignal verdict above). The
+                  "Why is it moving?" toggle inside opens it on demand. */}
+              <HoldingDiagnosis symbol={r.symbol} />
             </div>
           );
         })}
