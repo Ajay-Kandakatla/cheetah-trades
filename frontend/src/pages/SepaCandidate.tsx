@@ -34,6 +34,7 @@ const SignalDrillModal = lazy(() =>
 import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PivotMeter } from '../components/PivotMeter';
+import { VolumeTrend } from '../components/VolumeTrend';
 import { LiveGateStrip } from '../components/LiveGateStrip';
 import { SepaWhyBuy } from '../components/SepaWhyBuy';
 import { StopsPanel } from '../components/StopsPanel';
@@ -1091,6 +1092,15 @@ export function SepaCandidatePage() {
                       </div>
                     )}
                     <EntryExitPlanBlock plan={base.entry_exit} />
+                  </div>
+                )}
+
+                {/* Volume trend — multi-day accumulation/distribution histogram
+                    (card↔detail parity). Shown for every name, independent of a
+                    setup; pairs with the PivotMeter's single-day relvol gauge. */}
+                {base?.volume && (
+                  <div className="sepa-pivot-framework" style={{ marginBottom: '1rem' }}>
+                    <VolumeTrend vol={base.volume} />
                   </div>
                 )}
 

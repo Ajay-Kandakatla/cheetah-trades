@@ -177,6 +177,11 @@ export type SepaCandidate = {
     distribution_days_25?: number;
     cmf_20?: number | null;
     cmf_signal?: 'inflow' | 'neutral' | 'outflow';
+    /** Volume-trend sparkline — last ~20 daily bars as SIGNED volume
+     *  (magnitude = bar volume, sign = up-close day vs down-close day).
+     *  Powers the <VolumeTrend> mini-histogram on the card + detail page.
+     *  Display-only; absent on scans taken before 2026-06-12. */
+    vol_spark?: number[];
   };
   vcp?: {
     has_base: boolean;

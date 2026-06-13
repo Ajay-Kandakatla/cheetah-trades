@@ -1450,6 +1450,52 @@ tr:last-child td { border-bottom: none; }
   opacity: 0.95;
 }
 
+/* VolumeTrend — multi-day accumulation/distribution mini histogram. */
+.vol-trend {
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.55rem 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.04);
+}
+.vol-trend__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.vol-trend__title { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); letter-spacing: 0.01em; }
+.vol-trend__verdict { font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+.vol-trend__spark {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 30px;
+  padding: 0 1px;
+}
+.vol-trend__bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 1.5px 1.5px 0 0;
+  align-self: flex-end;
+}
+.vol-trend__avg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed rgba(226, 232, 240, 0.45);
+  pointer-events: none;
+}
+.vol-trend__caption {
+  margin-top: 0.4rem;
+  font-size: 0.68rem;
+  color: var(--cm-slate, #8595ad);
+  line-height: 1.4;
+}
+
 /* Green "Enter" decision chip — actionable breakout (entry_exit.decision==ENTER). */
 .sepa-chip.sepa-chip--good { color: var(--positive, #10b981); border-color: rgba(16, 185, 129, 0.45); }
 .sepa-chip.sepa-chip--good.is-active { background: var(--positive, #10b981); color: var(--bg); border-color: var(--positive, #10b981); }

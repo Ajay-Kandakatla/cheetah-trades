@@ -18,6 +18,10 @@ import { StopsPanel } from './StopsPanel';
 import { EntryExitPlanBlock } from './EntryExitPlanBlock';
 import { PivotMeter } from './PivotMeter';
 import { pivotTiming } from '../lib/pivotTiming';
+// Multi-day volume-trend mini histogram — the accumulation/distribution
+// footprint over the last ~20 sessions. Pairs with the PivotMeter's single-day
+// relvol gauge; shown on every card (volume is Ajay's primary indicator).
+import { VolumeTrend } from './VolumeTrend';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -628,6 +632,14 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           </div>
         ) : null;
       })()}
+
+      {/* Volume trend — multi-day accumulation/distribution histogram. Shown
+          for every name (independent of having a setup) since volume is the
+          primary read. Falls back to a verdict-only line on older cached
+          scans that predate the vol_spark series. */}
+      <div style={{ padding: '0.1rem 0.2rem 0' }}>
+        <VolumeTrend vol={row.volume} />
+      </div>
 
       {row.entry_exit && (
         <div style={{ padding: '0 0.2rem' }}>
