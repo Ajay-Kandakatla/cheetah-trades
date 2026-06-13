@@ -446,6 +446,22 @@ export function SepaV2Page() {
         onScan={runScan}
       />
 
+      {/* View toggle (#6) — back to the card view. */}
+      <div style={{ display: 'inline-flex', margin: '0.2rem 0 0.4rem', border: '1px solid var(--hairline,#2a2a2a)',
+                    borderRadius: 8, overflow: 'hidden' }}>
+        <Link to="/sepa" onClick={() => { try { localStorage.setItem('sepa_view', 'cards'); } catch { /* ignore */ } }}
+              title="Switch to the card view"
+              style={{ padding: '4px 12px', fontSize: '0.76rem', textDecoration: 'none',
+                       background: 'transparent', color: 'var(--cm-slate, #94a3b8)' }}>
+          ▤ Cards
+        </Link>
+        <span title="Table view (current)"
+              style={{ padding: '4px 12px', fontSize: '0.76rem',
+                       background: 'var(--gold-faint, rgba(201,162,39,0.14))', color: 'var(--gold, #c9a227)', fontWeight: 700 }}>
+          ▦ Table
+        </span>
+      </div>
+
       {(stream.scanning || stream.phase === 'error') && (
         <SepaScanProgress {...stream} />
       )}

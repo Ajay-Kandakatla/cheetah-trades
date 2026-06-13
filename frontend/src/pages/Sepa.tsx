@@ -1105,6 +1105,22 @@ export function SepaPage() {
               title="Replay the guided walkthrough of the screen"
             >🎓 Tour</button>
           </p>
+          {/* Cards / Table view toggle (#6) — surfaces the sortable table that
+              was previously reachable only by typing /sepa-v2. Persists choice. */}
+          <div style={{ display: 'inline-flex', marginTop: '0.4rem', border: '1px solid var(--hairline,#2a2a2a)',
+                        borderRadius: 8, overflow: 'hidden' }}>
+            <button type="button" disabled aria-pressed="true" title="Card view (current)"
+                    style={{ padding: '4px 12px', fontSize: '0.76rem', border: 'none', cursor: 'default',
+                             background: 'var(--gold-faint, rgba(201,162,39,0.14))', color: 'var(--gold, #c9a227)', fontWeight: 700 }}>
+              ▤ Cards
+            </button>
+            <button type="button" title="Switch to the sortable table — better for triaging 100+ names"
+                    onClick={() => { try { localStorage.setItem('sepa_view', 'table'); } catch { /* ignore */ } navigate('/sepa-v2'); }}
+                    style={{ padding: '4px 12px', fontSize: '0.76rem', border: 'none', cursor: 'pointer',
+                             background: 'transparent', color: 'var(--cm-slate, #94a3b8)' }}>
+              ▦ Table
+            </button>
+          </div>
         </div>
         {/* Universe-wide typeahead — search ANY US ticker, not just SEPA picks. */}
         <div className="sepa-page__title-search">
