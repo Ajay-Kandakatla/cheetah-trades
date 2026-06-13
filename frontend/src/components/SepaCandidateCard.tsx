@@ -647,6 +647,11 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
         </div>
       )}
 
+      {/* Heavy fundamentals chips (Sales / Earnings-Quality / Group leadership)
+          moved behind the why-buy collapse (#3 declutter) — the default glance
+          now leads with price → verdict → setup → volume, not a wall of chips.
+          Everything reappears on ▸ why-buy & signals and on the detail page. */}
+      {showSignals && (<>
       {/* Sales Confidence (Bonde/Stockbee) — revenue growth + acceleration. */}
       {(() => {
         const s = row.fundamentals?.sales;
@@ -736,6 +741,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           </div>
         );
       })()}
+      </>)}
 
       {presetOpen && (
         <Suspense fallback={null}>
