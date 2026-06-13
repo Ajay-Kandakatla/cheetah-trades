@@ -9,6 +9,12 @@ docs/sepa/brain_methodology.md.
 Cache: all chunks load from Mongo ONCE into module memory and are
 re-loaded only when `corpus_version` changes (i.e. after a re-ingest).
 
+Index/TOC pages: chunks tagged `is_index` at ingest (back-of-book index,
+contents pages — see brain/ingest.py:is_index_page) are never returned
+by search — their "term, page–page" density makes them BM25 magnets that
+outrank the pages actually teaching the concept. Untagged chunks from a
+pre-tagging ingest keep working (the flag simply reads falsy).
+
 The BM25 math itself is PURE — `bm25_scores(query_tokens, corpus)` takes
 its corpus explicitly and is unit-tested without Mongo.
 
@@ -191,6 +197,12 @@ def _search_loaded(query: str, k: int, book: Optional[str]) -> List[dict]:
     hits = []
     for i, c in enumerate(chunks):
         if scores[i] <= 0.0:
+            continue
+        if c.get("is_index"):
+            # Back-of-book index / TOC pages (tagged at ingest): their
+            # keyword density makes them BM25 magnets — "VCP, 198–203"
+            # outranked the page that actually teaches the VCP. They
+            # locate content, they aren't content; never surface them.
             continue
         if book and c.get("book") != book:
             continue

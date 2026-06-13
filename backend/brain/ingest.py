@@ -10,6 +10,8 @@ Chunking: per page, the text is split into ~900-char chunks with
 
     {chunk_id: "{book}-{pdf_page}-{n}",   # stable across re-ingests
      book, pdf_page, printed_page, chapter, text,
+     is_index,                             # True for index/TOC pages —
+     #                                       excluded from retriever search
      ingested_at,                          # ISO-8601 string
      corpus_version}                       # int, bumped on each full ingest
 
@@ -30,6 +32,53 @@ log = logging.getLogger("brain.ingest")
 
 TARGET_CHARS = 900
 OVERLAP_CHARS = 150
+
+
+# ── index/TOC page detection (pure — unit-tested without Mongo) ──────────────
+
+# An index entry line: "averaging down, 305" / "VCP, 198–203" /
+# "Bitauto Holdings Ltd Ads (BITA), 32, 125, 126". The space after each
+# comma is load-bearing: it keeps dollar amounts ("$24,000") and other
+# thousands-separated numbers from matching.
+_INDEX_ENTRY = re.compile(
+    r",\s+\d{1,4}(?:\s*[–—-]\s*\d{1,4})?"
+    r"(?:\s*,\s+\d{1,4}(?:\s*[–—-]\s*\d{1,4})?)*$")
+
+_NON_ALPHA = re.compile(r"[^a-z]+")
+
+# Real-corpus margins behind these thresholds: content pages peak at ONE
+# matching line (a stray "..., 305" in prose); true index pages run 11-60
+# matching lines at >= 0.59 density.
+INDEX_MIN_ENTRY_LINES = 6
+INDEX_MIN_ENTRY_FRACTION = 0.45
+
+_INDEX_HEADERS = frozenset({"index", "contents"})
+
+
+def is_index_page(text: str) -> bool:
+    """True when a page is back-of-book index or front-matter TOC — pages
+    that LIST topics with page numbers instead of teaching them, and that
+    BM25 otherwise ranks above the actual content (their keyword density
+    is enormous). Two heuristics, either suffices:
+
+    1. header — one of the first 3 non-empty lines is "Index"/"Contents"
+       (letters only, so the running head "INDEX", the bare "Index" title
+       page, and the extraction artifact "C ontents" all normalize in);
+    2. entry density — >= 6 non-empty lines AND >= 45% of them look like
+       index entries ("term, 305" / "term, 198–203" / trailing page
+       lists). Catches index continuation pages that carry no header.
+
+    Pure function on one page's text — position-independent on purpose,
+    so it needs no knowledge of book length or page ordering."""
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines:
+        return False
+    for ln in lines[:3]:
+        if _NON_ALPHA.sub("", ln.lower()) in _INDEX_HEADERS:
+            return True
+    hits = sum(1 for ln in lines if _INDEX_ENTRY.search(ln))
+    return (hits >= INDEX_MIN_ENTRY_LINES
+            and hits / len(lines) >= INDEX_MIN_ENTRY_FRACTION)
 
 
 # ── chunking (pure — unit-tested without Mongo) ──────────────────────────────
@@ -96,7 +145,9 @@ def build_chunks(records: List[dict], corpus_version: int,
     for rec in records:
         book = rec.get("book")
         pdf_page = rec.get("pdf_page")
-        for n, text in enumerate(chunk_page(rec.get("text") or "")):
+        page_text = rec.get("text") or ""
+        is_index = is_index_page(page_text)
+        for n, text in enumerate(chunk_page(page_text)):
             docs.append({
                 "chunk_id":       f"{book}-{pdf_page}-{n}",
                 "book":           book,
@@ -104,6 +155,7 @@ def build_chunks(records: List[dict], corpus_version: int,
                 "printed_page":   rec.get("printed_page"),
                 "chapter":        rec.get("chapter"),
                 "text":           text,
+                "is_index":       is_index,
                 "ingested_at":    stamp,
                 "corpus_version": corpus_version,
             })
@@ -167,6 +219,7 @@ def run_ingest(jsonl_path: Optional[str] = None, coll=None) -> dict:
         "jsonl":          path,
         "pages":          len(records),
         "chunks":         len(docs),
+        "index_chunks":   sum(1 for d in docs if d["is_index"]),
         "per_book":       per_book,
         "corpus_version": version,
     }
@@ -187,6 +240,7 @@ def main(argv=None):
     print(f"  chunks:         {summary['chunks']}")
     for book, n in sorted(summary["per_book"].items()):
         print(f"    {book}: {n}")
+    print(f"  index_chunks:   {summary['index_chunks']} (index/TOC — excluded from search)")
     print(f"  corpus_version: {summary['corpus_version']}")
 
 

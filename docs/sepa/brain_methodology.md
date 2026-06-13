@@ -32,11 +32,43 @@ AI chart analysis (`sepa/chart_analysis.py`).
   run-ons are hard-split as a last resort.
 - Chunk ids are **stable across re-ingests**: `"{book}-{pdf_page}-{n}"`.
 - Each chunk doc: `{chunk_id, book, pdf_page, printed_page, chapter,
-  text, ingested_at, corpus_version}`.
+  text, is_index, ingested_at, corpus_version}`.
 - Storage: Mongo collection **`brain_chunks`**, **wipe-and-replace** on
   every ingest with `corpus_version` bumped. This collection is *derived
   data* — rebuildable from the jsonl at any time, unlike the perpetual
   ledgers (`pattern_observations`, `trade_journal`) which are never wiped.
+
+### Index/TOC page detection (`is_index_page`)
+
+Back-of-book index pages are short, keyword-dense lists ("VCP, 198–203"),
+which makes them **BM25 magnets**: before tagging, the query *"volatility
+contraction pattern pivot"* returned TLSW p.330 and p.322 (index pages)
+**above** TLSW p.198 — the page that actually teaches the VCP. TTLAC had
+the same failure (its index at ebook p.197–213).
+
+Ingest tags every chunk with `is_index` (pure, position-independent
+heuristics on the page text; either one suffices):
+
+1. **Header** — one of the first 3 non-empty lines normalizes (letters
+   only, lowercased) to `index` or `contents`. Catches the running head
+   `INDEX`, the bare `Index` title page, and the extraction artifact
+   `C ontents` in the TLSW front matter.
+2. **Entry density** — ≥ 6 non-empty lines AND ≥ 45% of them match the
+   index-entry shape `term, 305` / `term, 198–203` / `term, 32, 125, 126`
+   (en-dash or hyphen ranges, trailing page lists). The space after the
+   comma is load-bearing: dollar amounts (`$24,000`) on chart pages have
+   none and must not match. Catches index continuation pages that carry
+   no header.
+
+Real-corpus margins (why 6 / 0.45 is safe): content pages peak at **one**
+matching line; true index pages run **11–60** matching lines at ≥ 0.59
+density. On the real corpus this flags exactly TLSW pdf 8–9 (contents),
+334 + 336–346 (index) and TTLAC pdf 5 (contents), 197–213 (index) — 54
+chunks of 1410 — with zero content pages flagged.
+
+Chunks are **tagged, not skipped** (`{"is_index": true}` stays in Mongo,
+inspectable and reversible); exclusion happens in the retriever. The CLI
+prints `index_chunks` so a re-ingest can be sanity-checked at a glance.
 
 ## Retrieval: BM25, pure python (`brain/retriever.py`)
 
@@ -50,6 +82,11 @@ AI chart analysis (`sepa/chart_analysis.py`).
 - `search(query, k, book)` and `search_multi(queries, k)` — the ask path
   searches both the raw question AND a distilled-keyword variant, unions
   by `chunk_id` keeping each chunk's best score.
+- **Index/TOC chunks never surface**: any chunk tagged `is_index` at
+  ingest is filtered out of search results regardless of score (an index
+  page *locates* content, it isn't content — and citing "TLSW p.330" at
+  a user asking about the VCP is a useless answer). Chunks from a
+  pre-tagging ingest carry no flag and keep working unchanged.
 - The BM25 math is a **pure function** (`bm25_scores(query_tokens,
   corpus)`) unit-tested without Mongo (`tests/test_brain_retriever.py`).
 
@@ -129,17 +166,24 @@ docker exec cheetah-api python -m brain.ingest --jsonl /tmp/extracted_books.json
 ```
 
 (Container name per `docker compose ps`; the api container already has
-`MONGO_URL` set.) The CLI prints pages/chunks-per-book/corpus_version;
-verify with `GET /brain/status`. Re-running is always safe —
-wipe-and-replace with a version bump, and the in-process retriever cache
-reloads itself on the next search.
+`MONGO_URL` set.) The CLI prints pages/chunks-per-book/index_chunks/
+corpus_version — expect `index_chunks: 54` for the current corpus (TLSW
+contents + index, TTLAC contents + index); verify chunk totals with
+`GET /brain/status`. Re-running is always safe — wipe-and-replace with a
+version bump, and the in-process retriever cache reloads itself on the
+next search.
 
 ## Tests
 
 - `tests/test_brain_ingest.py` — chunker (overlap, sentence boundaries,
-  stable ids, metadata), wipe-and-replace + version bump (FakeColl).
+  stable ids, metadata), index/TOC detection on synthetic pages (entry
+  density, headers, dollar-amount + market-index non-matches), is_index
+  tagging, wipe-and-replace + version bump (FakeColl).
 - `tests/test_brain_retriever.py` — BM25 pure math, tokenizer, exact
-  cite strings for both books, book filter, `search_multi` dedupe.
+  cite strings for both books, book filter, `search_multi` dedupe,
+  index-chunk exclusion (REGRESSION: index pages outranked TLSW p.198
+  for the VCP query; raw-BM25 sanity check proves the filter does real
+  work), untagged legacy chunks still searchable.
 - `tests/test_brain_ask.py` — prompt assembly (passages + cites +
   persona system), history clipping, empty-corpus short-circuit (no LLM
   call), citation shape, LLM-error → 502.

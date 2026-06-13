@@ -162,6 +162,65 @@ def test_search_multi_unions_distinct_hits(primed):
     assert "tlsw-218-0" in ids and "ttlac-87-0" in ids
 
 
+# ── index/TOC exclusion ──────────────────────────────────────────────────────
+
+# REGRESSION (real corpus): for "volatility contraction pattern pivot" the
+# back-of-book index pages (TLSW p.330/p.322, TTLAC ebook p.212) outranked
+# TLSW p.198 — the page that actually teaches the VCP. Index pages are
+# short keyword lists, so BM25 loves them. Ingest now tags them
+# is_index=True and search must never return them, no matter the score.
+INDEX_DOCS = [
+    {"chunk_id": "tlsw-213-0", "book": "tlsw", "pdf_page": 213,
+     "printed_page": 198, "chapter": 10, "is_index": False,
+     "text": "The Volatility Contraction Pattern. I have a strict "
+             "discipline that only allows me to buy at a very specific "
+             "point: the pivot, where reward outweighs risk."},
+    {"chunk_id": "tlsw-345-0", "book": "tlsw", "pdf_page": 345,
+     "printed_page": 330, "chapter": 13, "is_index": True,
+     "text": "volatility contraction pattern (VCP), 198–203 pivot point, "
+             "204–207 pivot failure, 232 volatility, 248"},
+    {"chunk_id": "ttlac-212-0", "book": "ttlac", "pdf_page": 212,
+     "printed_page": None, "chapter": 11, "is_index": True,
+     "text": "volatility contraction pattern (VCP), 121–127 pivot buy "
+             "point, 130 successive contractions, 125–126"},
+]
+
+
+@pytest.fixture
+def primed_with_index(monkeypatch):
+    retriever.prime(INDEX_DOCS, version=1)
+    monkeypatch.setattr(retriever, "_current_version", lambda: 1)
+    yield
+    retriever.prime([], None)
+
+
+def test_index_chunks_never_surface_in_search(primed_with_index):
+    rows = retriever.search("volatility contraction pattern pivot", k=8)
+    assert rows, "the content chunk must still match"
+    assert [r["chunk_id"] for r in rows] == ["tlsw-213-0"]
+    assert rows[0]["cite"] == "TLSW p.198"
+    # Sanity: the exclusion is doing real work — under raw BM25 the dense
+    # index chunks DO outscore the content chunk for this query.
+    toks = [retriever.tokenize(d["text"]) for d in INDEX_DOCS]
+    raw = retriever.bm25_scores(
+        retriever.tokenize("volatility contraction pattern pivot"), toks)
+    assert max(raw[1], raw[2]) > raw[0]
+
+
+def test_index_chunks_excluded_from_search_multi(primed_with_index):
+    rows = retriever.search_multi(
+        ["volatility contraction pattern", "pivot buy point"], k=8)
+    assert rows and all(not r.get("is_index") for r in rows)
+    assert {r["chunk_id"] for r in rows} == {"tlsw-213-0"}
+
+
+def test_untagged_chunks_still_searchable(primed):
+    """Chunks ingested BEFORE the is_index field existed carry no flag at
+    all — they must keep surfacing (missing flag reads falsy)."""
+    rows = retriever.search("pivot buy point volume", k=8)
+    assert any(r["chunk_id"] == "tlsw-218-0" for r in rows)
+
+
 def test_unavailable_corpus_returns_empty(monkeypatch):
     monkeypatch.setattr(retriever, "_current_version", lambda: None)
     assert retriever.search("stop loss") == []
