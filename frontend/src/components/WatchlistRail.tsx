@@ -167,10 +167,10 @@ export function WatchlistRail() {
     <>
       {isMobile && (
         <div onClick={() => setOpen(false)} aria-hidden
-             style={{ position: 'fixed', inset: 0, zIndex: 899, background: 'rgba(0,0,0,0.45)' }} />
+             style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)' }} />
       )}
       <aside ref={panelRef as any} className="wl-rail"
-             style={{ zIndex: 900, display: 'flex', flexDirection: 'column',
+             style={{ zIndex: isMobile ? 1001 : 900, display: 'flex', flexDirection: 'column',
                       background: 'var(--bg-raised,#16181d)', color: 'var(--ink,inherit)',
                       border: '1px solid var(--hairline,#2a2a2a)',
                       borderRight: isMobile || floating ? '1px solid var(--hairline,#2a2a2a)' : 'none',
@@ -208,6 +208,7 @@ export function WatchlistRail() {
         </div>
 
         <form onSubmit={submit} style={{ display: 'flex', gap: 4, padding: '0.5rem 0.65rem',
+                                         paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)',
                                          borderTop: '1px solid var(--hairline,#2a2a2a)' }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="+ add ticker"
                  style={{ flex: 1, minWidth: 0, fontSize: '0.78rem', padding: '4px 8px', borderRadius: 6,
