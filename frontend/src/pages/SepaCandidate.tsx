@@ -35,6 +35,7 @@ import { ageHuman } from '../lib/swrCache';
 import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PivotMeter } from '../components/PivotMeter';
 import { VolumeTrend } from '../components/VolumeTrend';
+import { BreakoutStats } from '../components/BreakoutStats';
 import { LiveGateStrip } from '../components/LiveGateStrip';
 import { SepaWhyBuy } from '../components/SepaWhyBuy';
 import { StopsPanel } from '../components/StopsPanel';
@@ -1099,6 +1100,11 @@ export function SepaCandidatePage() {
                 {base?.volume && (
                   <div className="sepa-pivot-framework" style={{ marginBottom: '1rem' }}>
                     <VolumeTrend vol={base.volume} />
+                    {base.volume.breakout_count != null && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <BreakoutStats vol={base.volume} />
+                      </div>
+                    )}
                   </div>
                 )}
 

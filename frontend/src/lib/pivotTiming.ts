@@ -46,6 +46,10 @@ export type PivotTiming = {
   distToPivotPct: number | null;
   /** Today's volume ÷ 50-day average (null when data missing). */
   volRatio: number | null;
+  /** ACTUAL share volume — today's bar and the 50-day average — so the gauge can
+   *  show real numbers, not just a "2.4×" ratio (Ajay 2026-06-13). */
+  lastVol: number | null;
+  avgVol: number | null;
   /** Volume-confirmed breakout fired today or within the last ~5 trading days. */
   breakingOut: boolean;
   daysSinceBreakout: number | null;
@@ -152,6 +156,8 @@ export function pivotTiming(row: SepaCandidate): PivotTiming {
     zoneHi,
     distToPivotPct,
     volRatio,
+    lastVol,
+    avgVol,
     breakingOut,
     daysSinceBreakout,
     drying,

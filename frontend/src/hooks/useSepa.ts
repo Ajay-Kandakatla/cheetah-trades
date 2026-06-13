@@ -182,6 +182,11 @@ export type SepaCandidate = {
      *  Powers the <VolumeTrend> mini-histogram on the card + detail page.
      *  Display-only; absent on scans taken before 2026-06-12. */
     vol_spark?: number[];
+    /** Count of distinct volume-confirmed breakouts over the trailing ~year
+     *  (book p.203) + the window it was counted over. Powers <BreakoutStats>.
+     *  Display-only; absent on scans before 2026-06-13. */
+    breakout_count?: number | null;
+    breakout_window_bars?: number | null;
   };
   vcp?: {
     has_base: boolean;

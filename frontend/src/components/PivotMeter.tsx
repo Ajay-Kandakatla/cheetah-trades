@@ -14,6 +14,7 @@
    expanding); otherwise Coiling / Wait / At-pivot / Extended.
    ========================================================================== */
 import { BREAKOUT_VOL_MULT, type PivotTiming } from '../lib/pivotTiming';
+import { fmtVol } from './BreakoutStats';
 
 const TONE_COLOR: Record<PivotTiming['tone'], string> = {
   go: '#10b981', warn: '#d97706', wait: '#eab308', bad: '#ef4444', none: '#64748b',
@@ -108,7 +109,10 @@ export function PivotMeter({ t }: { t: PivotTiming }) {
           <div className="pivot-meter__vol-thr" style={{ left: `${thrPos}%` }} />
         </div>
         <span className="pivot-meter__vol-lbl mono" style={{ color: volColor }}>
-          {vr ? `${vr.toFixed(1)}×` : '—'} {t.breakingOut ? '⚡ expanding' : t.drying ? '🤫 dried' : 'vol'}
+          {t.lastVol != null ? fmtVol(t.lastVol) : '—'}
+          {t.avgVol != null && <span style={{ opacity: 0.7 }}> / {fmtVol(t.avgVol)} avg</span>}
+          {vr ? <span style={{ opacity: 0.7 }}> ({vr.toFixed(1)}×)</span> : null}
+          {' '}{t.breakingOut ? '⚡ expanding' : t.drying ? '🤫 dried' : ''}
         </span>
       </div>
 

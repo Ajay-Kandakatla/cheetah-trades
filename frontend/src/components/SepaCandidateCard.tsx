@@ -22,6 +22,8 @@ import { pivotTiming } from '../lib/pivotTiming';
 // footprint over the last ~20 sessions. Pairs with the PivotMeter's single-day
 // relvol gauge; shown on every card (volume is Ajay's primary indicator).
 import { VolumeTrend } from './VolumeTrend';
+// Breakout COUNT + actual volume chip — "how often does this name break out?"
+import { BreakoutStats } from './BreakoutStats';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -640,6 +642,14 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
       <div style={{ padding: '0.1rem 0.2rem 0' }}>
         <VolumeTrend vol={row.volume} />
       </div>
+
+      {/* Breakout count + actual volume (Ajay 2026-06-13) — how many breakouts
+          this name has actually printed, and today's real share volume. */}
+      {row.volume?.breakout_count != null && (
+        <div style={{ padding: '0.35rem 0.2rem 0' }}>
+          <BreakoutStats vol={row.volume} />
+        </div>
+      )}
 
       {row.entry_exit && (
         <div style={{ padding: '0 0.2rem' }}>

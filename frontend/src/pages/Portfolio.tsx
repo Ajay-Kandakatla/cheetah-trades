@@ -30,6 +30,7 @@ import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
+import { BreakoutStats } from '../components/BreakoutStats';
 import { MarketPulsePanel } from '../components/MarketPulsePanel';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
@@ -343,6 +344,11 @@ export default function PortfolioPage() {
               </div>
 
               <PositionSignal symbol={r.symbol} entry={entry} shares={r.quantity} stop={r.stop} />
+              {/* Breakout count + actual volume (Ajay 2026-06-13) — self-fetches
+                  per holding since a held name isn't always in the latest scan. */}
+              <div style={{ marginTop: '0.4rem' }}>
+                <BreakoutStats symbol={r.symbol} />
+              </div>
               {/* Collapsed by default (2026-06-13) — open, it auto-fired a Claude
                   call per holding on mount (N essays walling the sell decision,
                   each duplicating the PositionSignal verdict above). The

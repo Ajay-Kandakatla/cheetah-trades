@@ -2316,6 +2316,23 @@ async def sepa_racing(max_rows: int = Query(40, ge=1, le=100)):
     return JSONResponse(_scrub_nan(await asyncio.to_thread(racing.get_board, max_rows)))
 
 
+@app.get("/sepa/breakout-leaders")
+async def sepa_breakout_leaders(top: int = Query(30, ge=1, le=100)):
+    """How OFTEN each name actually breaks out — top names by count of distinct
+    volume-confirmed breakouts over the trailing ~year (book p.203). Display-only,
+    feeds no score. Powers the Leaderboard 'Breakout leaders' board."""
+    from sepa import breakout
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.leaders, top)))
+
+
+@app.get("/sepa/breakout/{symbol}")
+async def sepa_breakout_symbol(symbol: str):
+    """Per-symbol breakout read (count + ACTUAL last/avg volume) — used by the
+    Portfolio holding chip, since a held name isn't always in the latest scan."""
+    from sepa import breakout
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.for_symbol, symbol)))
+
+
 @app.get("/sepa/analyst-map")
 async def sepa_analyst_map(symbols: str = Query(..., description="comma-separated tickers, max 100")):
     """Bulk per-symbol analyst read {SYM: {verdict, implied_upside_pct, ...}}

@@ -72,6 +72,9 @@ DIST_DAY_LOOKBACK           = 25
 # pragmatic recency horizon, NOT a verbatim book number — the canonical buy
 # point remains the breakout day itself.
 BREAKOUT_RECENCY_LOOKBACK   = 15
+# Window for COUNTING distinct breakouts a name has printed (≈ one trading year).
+# Display-only — "how often does this stock actually break out?"
+BREAKOUT_COUNT_LOOKBACK     = 252
 # Volume-trend sparkline window — last N daily bars surfaced to the FE as a
 # signed-volume series (≈ one month of trading). Display-only, see detect().
 VOL_SPARK_BARS              = 20
@@ -355,17 +358,32 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
     # since the most recent such bar within BREAKOUT_RECENCY_LOOKBACK (0 = today,
     # None = none in window). At the last bar this matches `breakout` exactly.
     days_since_breakout = None
+    breakout_count = None
+    breakout_window_bars = 0
     try:
         vol_avg50 = v.rolling(50).mean()
         prior_high_21 = c.rolling(21).max().shift(1)
-        bo_series = (vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)
+        bo_series = ((vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)).fillna(False)
         window = bo_series.iloc[-BREAKOUT_RECENCY_LOOKBACK:]
         for k, fired in enumerate(reversed(list(window.values))):
             if bool(fired):
                 days_since_breakout = k          # 0 = today, 1 = yesterday, ...
                 break
+        # COUNT of distinct breakouts over the trailing year — rising edges of
+        # bo_series, so a multi-day push above the prior high counts as ONE.
+        bo_win = bo_series.iloc[-BREAKOUT_COUNT_LOOKBACK:]
+        breakout_window_bars = int(len(bo_win))
+        prev = False
+        cnt = 0
+        for fired in bo_win.values:
+            f = bool(fired)
+            if f and not prev:
+                cnt += 1
+            prev = f
+        breakout_count = cnt
     except Exception:
         days_since_breakout = None
+        breakout_count = None
 
     # --- new signals (2026-05-21 upgrade) ---
     cmf_info = _chaikin_money_flow(df, period=20)
@@ -417,6 +435,12 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
         "is_drying_up":          bool(dryup is not None and dryup < 0.7),
         "high_vol_breakout":     bool(breakout),
         "days_since_breakout":   days_since_breakout,   # 0=today, None=no breakout in last 15 bars
+        # How many DISTINCT volume-confirmed breakouts over the trailing year +
+        # the window it was counted over. Display-only ("how often does this
+        # name break out?"). Pairs with last_vol/avg_vol_50 (the ACTUAL volume,
+        # not just the ratio).
+        "breakout_count":        breakout_count,
+        "breakout_window_bars":  breakout_window_bars,
         # The 21-bar high the breakout cleared = the breakout reference price.
         # Used as the "not extended" reference for bare-breakout setups (which
         # have no stable VCP/Power-Play pivot). Additive; book p.224 buy-zone gate.

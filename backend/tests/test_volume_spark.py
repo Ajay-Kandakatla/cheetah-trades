@@ -61,6 +61,39 @@ def test_vol_spark_short_history_safe():
     assert len(out["vol_spark"]) == 20  # 63 ≥ 20, so still a full window
 
 
+def test_breakout_count_counts_distinct_events():
+    # Flat volume with four separated 3× spikes on a rising (new-high) close →
+    # four distinct breakouts. Spikes placed past bar 50 so the 50-day average is
+    # defined. A multi-day push would still count once (rising edges).
+    n = 130
+    close = [100 + 0.1 * i for i in range(n)]
+    vol = [1_000_000] * n
+    for b in (60, 80, 100, 120):
+        vol[b] = 3_000_000
+    df = pd.DataFrame({
+        "open": close, "high": [c + 1 for c in close],
+        "low": [c - 1 for c in close], "close": close, "volume": vol,
+    })
+    out = V.analyze(df)
+    assert out["breakout_count"] == 4
+    assert out["breakout_window_bars"] == min(V.BREAKOUT_COUNT_LOOKBACK, n)
+
+
+def test_breakout_count_zero_without_volume_spikes():
+    # The deterministic rising path with slowly-rising flat volume never clears
+    # the 1.5× threshold → zero breakouts.
+    out = V.analyze(_ohlcv(70))
+    assert out["breakout_count"] == 0
+
+
+def test_breakout_count_is_display_only_not_scored():
+    import inspect
+    from sepa import scanner
+    assert "breakout_count" not in inspect.getsource(scanner), (
+        "scanner.py references breakout_count — it must stay display-only."
+    )
+
+
 def test_vol_spark_is_display_only_not_scored():
     # Hard contract: the scanner score must never read the sparkline — it's a
     # display series, not a signal. Mirrors the analyst-pulse isolation guard.
