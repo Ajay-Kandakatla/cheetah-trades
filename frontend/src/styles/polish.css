@@ -522,8 +522,10 @@ h1, h2, h3, h4, h5, h6,
   right: auto;
 }
 /* On phones, float it as a near-full-width sheet so a long info body is never
-   clipped by a trigger that sits far from the left edge. */
-@media (max-width: 560px) {
+   clipped by a trigger that sits far from the left edge. Breakpoint raised
+   560->720 (2026-06-13) to match the app's mobile breakpoint + the InlineInfo /
+   headline / analysis info sheets, so every ⓘ behaves the same on a phone. */
+@media (max-width: 720px) {
   .info-button--inline .info-button__pop {
     position: fixed;
     top: 56px;

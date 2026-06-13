@@ -8283,17 +8283,32 @@ a.tk-link:hover   { color: inherit; }
 .cal-table th { position: relative; overflow: visible; }
 .cal-hero__label, .cal-hero__breakdown span { position: relative; }
 
-/* Mobile: keep popovers within viewport edges */
+/* Mobile: an info popover anchored with left:0 + a ~90vw width runs straight
+   off the right edge when its ⓘ sits on the right half of the screen — and the
+   phone can't scroll sideways, so the text is lost in "limbo". Pin every info
+   popover (InlineInfo + CompanyHeadline + StockAnalysisPanel, all anchor
+   variants) to a fixed top sheet within the viewport. Mirrors the InfoButton
+   inline sheet so all ⓘ popovers behave the same on a phone. (Ajay 2026-06-13) */
 @media (max-width: 720px) {
-  .inline-info__popover {
-    min-width: 180px; max-width: calc(100vw - 32px);
-    font-size: 0.74rem;
+  .inline-info__popover,
+  .inline-info__popover--top,
+  .inline-info__popover--bottom,
+  .inline-info__popover--left,
+  .inline-info__popover--right,
+  .cm-headline__info-pop,
+  .sa-info__pop {
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    bottom: auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    transform: none;
+    animation: ii-fade 120ms ease-out;
   }
-  .inline-info__popover--bottom { left: auto; right: 0; transform: none; }
-  @keyframes ii-fade-down {
-    from { opacity: 0; transform: translateY(-2px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  .inline-info__popover { font-size: 0.78rem; }
 }
 
 /* ── Chart wrapper + the SVG tooltip ──────────────────────────────────── */
