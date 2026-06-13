@@ -93,6 +93,17 @@ type Status = {
   ledger_tail: LedgerRow[];
   error: string | null;
   auto_entry?: AutoEntryInfo | null;
+  // Real engine heartbeat (its 1-min tick) — NOT the alert cron. stale=true
+  // means order management may be asleep while armed + market open.
+  engine?: {
+    last_tick_iso: string | null;
+    last_tick_epoch: number | null;
+    tick_age_sec: number | null;
+    stale_after_sec: number;
+    stale: boolean;
+  } | null;
+  // Symbols of open positions with no resting stop ("real risk uncovered now").
+  unprotected?: string[];
 };
 
 type Preview = {
@@ -1681,6 +1692,20 @@ export function TradingPage() {
               {status.armed ? 'ARMED' : 'DISARMED'}
             </button>
 
+            {/* Engine liveness — the REAL order-management tick, not the alert
+                cron. Only asserted when the engine SHOULD be running. */}
+            {status.engine && status.engine.stale ? (
+              <Chip color={C.amber}
+                    title={`The engine's last management pass was ${status.engine.tick_age_sec ?? '—'}s ago (stale after ${status.engine.stale_after_sec}s) while the market is open and the engine is armed. Stops/targets/ratchets may be behind — check the trading cron.`}>
+                ⚠ engine may be asleep
+              </Chip>
+            ) : status.engine && status.armed && status.market_open ? (
+              <Chip color={C.green}
+                    title={`Trading engine live — last management pass ${status.engine.tick_age_sec ?? '—'}s ago. Watches the engine's own 1-min tick, not the alert cron.`}>
+                ● engine live{status.engine.tick_age_sec != null ? ` · ${status.engine.tick_age_sec}s` : ''}
+              </Chip>
+            ) : null}
+
             {status.account && (
               <span className="mono" style={{ fontSize: '0.78rem' }}>
                 equity <b>{money(status.account.equity, 0)}</b>
@@ -1726,6 +1751,24 @@ export function TradingPage() {
           {/* c. Auto-Entry — toggle, equity cap, daily counter, candidate checks */}
           {status.auto_entry && (
             <AutoEntryCard auto={status.auto_entry} mode={status.mode} onChanged={refresh} />
+          )}
+
+          {/* UNPROTECTED page alarm (2026-06-13) — promoted out of a single
+              scroll-off-right table cell. An open position with no resting stop
+              is the one state that means "real risk uncovered NOW"; it gets a
+              loud page-level strip, not a column the eye glides past. */}
+          {status.unprotected && status.unprotected.length > 0 && (
+            <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8,
+                          background: `${C.red}1a`, border: `1px solid ${C.red}`,
+                          borderRadius: 8, padding: '0.6rem 0.8rem', margin: '0.6rem 0 0.2rem',
+                          color: C.red, fontSize: '0.82rem', fontWeight: 700 }}>
+              <span style={{ fontSize: '1.05rem' }}>⚠</span>
+              <span>
+                {status.unprotected.length} position{status.unprotected.length > 1 ? 's' : ''} UNPROTECTED —
+                no resting stop on {status.unprotected.join(', ')}. Real risk is uncovered right now; set a
+                stop or flatten.
+              </span>
+            </div>
           )}
 
           {/* d. Positions */}

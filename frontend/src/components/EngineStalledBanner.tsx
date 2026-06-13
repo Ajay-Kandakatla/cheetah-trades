@@ -75,9 +75,10 @@ export function EngineStalledBanner() {
         {status.stale_reason
           ? status.stale_reason
           : mins != null
-          ? `Alert engine last ran ${mins} min ago.`
-          : 'Alert engine has not run recently.'}
+          ? `The alerts pipeline last ran ${mins} min ago.`
+          : 'The alerts pipeline has not run recently.'}
         {' '}The Cheetah host may be asleep — wake it (or restart the cron container) to resume.
+        {' '}<span style={{ opacity: 0.8 }}>(This watches the notification cron, not the Auto-Pilot trading engine — that has its own status on the Trading page.)</span>
       </span>
       <button
         onClick={() => setDismissed(true)}

@@ -549,6 +549,38 @@ def _broker_mode() -> str:
     return "live" if (os.getenv("ALPACA_PAPER", "1") or "1").strip() == "0" else "paper"
 
 
+# Three missed 1-min ticks = the order-managing engine is behind/asleep.
+ENGINE_STALE_SEC = 180
+
+
+def _engine_liveness(last_tick_iso, *, market_open: bool, armed: bool) -> dict:
+    """Liveness of the REAL trading engine — its 1-min tick() heartbeat written
+    to trading_config.last_tick_iso, NOT the alert cron. ``stale`` is only True
+    when the engine SHOULD be running (market open AND armed) but its last pass
+    is older than ENGINE_STALE_SEC (or never recorded). This is the one signal
+    that means "order management may be uncovered right now"."""
+    age = None
+    epoch = None
+    if last_tick_iso:
+        try:
+            from datetime import datetime, timezone
+            dt = datetime.fromisoformat(str(last_tick_iso).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            epoch = dt.timestamp()
+            age = max(0.0, time.time() - epoch)
+        except Exception:                              # noqa: BLE001
+            age = None
+    stale = bool(market_open and armed and (age is None or age > ENGINE_STALE_SEC))
+    return {
+        "last_tick_iso": last_tick_iso,
+        "last_tick_epoch": epoch,
+        "tick_age_sec": round(age) if age is not None else None,
+        "stale_after_sec": ENGINE_STALE_SEC,
+        "stale": stale,
+    }
+
+
 def status() -> dict:
     cfg = get_config()
     out = {
@@ -621,6 +653,14 @@ def status() -> dict:
             })
     except Exception as exc:                       # noqa: BLE001 — BrokerError is pre-scrubbed
         out["error"] = str(exc)
+    # Real engine heartbeat (its 1-min tick), so the page can warn when order
+    # management may be asleep while armed + market open. Computed last so it
+    # sees the resolved market_open above.
+    out["engine"] = _engine_liveness(cfg.get("last_tick_iso"),
+                                     market_open=bool(out.get("market_open")),
+                                     armed=bool(out.get("armed")))
+    # Count of OPEN positions with NO resting stop — "real risk uncovered now".
+    out["unprotected"] = [p["symbol"] for p in out["positions"] if not p.get("protected")]
     return out
 
 
