@@ -178,12 +178,14 @@ function SmartLanding() {
   // Wait for BOTH so we know is_admin before redirecting (else Ajay would flash
   // to the wrong page before the admin flag resolves).
   if (!f.loaded || !menuLoaded) return <PageLoader />;
-  // Ajay (admin) lands on Portfolio going forward (2026-06-06); everyone else
-  // keeps the morning-first order. First accessible feature in the list wins;
-  // further fallbacks chain down before bailing into a 404.
+  // SEPA is the default landing for everyone going forward (2026-06-12, Ajay:
+  // "make the SEPA page the default homepage instead of Morning brief") — the
+  // scanner is the app's front door. Morning brief / portfolio chain below it.
+  // First accessible feature in the list wins; fallbacks chain down before
+  // bailing into a 404.
   const PREFERRED_ORDER = menu.is_admin
-    ? ['portfolio', 'morning', 'sepa', 'leaderboard', 'todos', 'notifications']
-    : ['morning', 'food', 'kids', 'sepa', 'todos', 'notifications', 'glossary'];
+    ? ['sepa', 'portfolio', 'morning', 'leaderboard', 'todos', 'notifications']
+    : ['sepa', 'morning', 'food', 'kids', 'todos', 'notifications', 'glossary'];
   for (const id of PREFERRED_ORDER) {
     if (f.features.has(id)) return <Navigate to={`/${id}`} replace />;
   }
