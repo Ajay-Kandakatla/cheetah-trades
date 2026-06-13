@@ -95,3 +95,32 @@ stays the authority. The earnings-quality risk is purely informational: it makes
 weakening earnings picture **visible before price confirms it**, so a subsequent price
 break isn't a surprise. It is surfaced as a labeled "sell-risk heads-up," never as a
 mechanical SELL/TRIM trigger. Test: `tests/test_portfolio_eq_risk.py`.
+
+---
+
+## 2026-06-13 — de-dup + Minervini-brain grounding
+
+**The repetition (fixed).** The TIGHTEN-STOP/HOLD read was rendered three times on
+a holding: the `PositionSignal` verdict line, its "why this read" expander, and a
+third time inside `HoldingDiagnosis`. Now the verdict + reason appear **once**
+(PositionSignal — verdict line shows `verdict · R · stage`, the reason lives only
+in "why this read"). `HoldingDiagnosis` drops the duplicated P&L / verdict / fired
+triggers / R-target ladder (all shown by the card header + PositionSignal) and
+keeps only what's **unique**: the %-back-to-cost when underwater, and the
+"hold until one fires" tripwire ladder (hard stop / 50-day / 200-day, **pp.295–296**).
+
+**Brain-grounded write-up.** `_llm_writeup()` now injects retrieved Minervini
+passages from the brain (BM25 over both books, `brain.retriever.search_multi`) so
+the write-up's ONE hold/sell teaching point cites a **real page inline**
+(e.g. _"you sell on a signal, not a clock [TLSW p.295]"_) instead of a hardcoded
+page. The query set adapts to the verdict (TIGHTEN/REDUCE pulls risk-off /
+partial-profit passages; EXIT pulls the 50/200-day violation rules).
+
+- **Soft-fail, always.** `_book_passages()` returns `None` and never raises when
+  the brain is absent / empty / erroring — the write-up falls back to the legacy
+  prompt. Locked by `tests/test_diagnosis_brain.py` (negative + positive).
+- **Condensed.** The system prompt now tells the model the page already shows the
+  P&L/verdict/stop, so the write-up is ≤4 sentences (driver → what powered the move
+  → one cited teaching point → what to watch), `max_tokens` 400→240.
+- The write-up is cached per holding (`portfolio_diagnosis` Mongo); an existing
+  holding shows its old write-up until **↻ Re-run** (force=true) or cache expiry.
