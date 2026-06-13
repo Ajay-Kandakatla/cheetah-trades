@@ -45,8 +45,6 @@ type Diagnosis = {
   eq_sell_risk?: string[] | null;
 };
 
-const money0 = (n: number) => `$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-
 // label + whether a high score means "pressure" (red) or "health" (green).
 const FACTOR_META: Record<string, { label: string; health?: boolean }> = {
   market_macro:    { label: 'Broad market (macro)' },
@@ -113,33 +111,17 @@ export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: stri
           {err && <div className="hdiag__muted">Couldn’t load: {err}</div>}
           {data && (
             <>
+              {/* De-duped (2026-06-13): the P&L, verdict, fired triggers and the
+                  R-target ladder are already shown by the card header + PositionSignal
+                  above — this panel keeps only what's UNIQUE: the % back to cost when
+                  underwater, and the Minervini "hold until one fires" tripwire ladder. */}
               {data.position && (() => {
                 const p = data.position!;
                 const up = (p.gain_pct ?? 0) >= 0;
-                const v = (p.verdict || 'HOLD').toUpperCase();
                 return (
                   <div className="hdiag__pos">
-                    <div className="hdiag__posrow">
-                      <span className="hdiag__poslabel">Your position</span>
-                      <span className={`hdiag__pnl ${up ? 'is-up' : 'is-down'}`}>
-                        {up ? '+' : ''}{p.gain_pct}%
-                        {p.r_multiple != null && <> · {p.r_multiple >= 0 ? '+' : ''}{p.r_multiple}R</>}
-                        {p.gain_dollars != null && <> · {p.gain_dollars >= 0 ? '+' : '−'}{money0(p.gain_dollars)}</>}
-                      </span>
-                      <span className="hdiag__since">since ${p.entry}</span>
-                    </div>
                     {!up && p.to_breakeven_pct > 0 && (
                       <div className="hdiag__be">Back to your cost: <b>+{p.to_breakeven_pct}%</b> from here</div>
-                    )}
-                    {p.verdict && (
-                      <div className={`hdiag__verdict v-${v.toLowerCase()}`}>
-                        {v === 'HOLD' ? '✓ ' : '⚠ '}{p.verdict_summary || v}
-                      </div>
-                    )}
-                    {(p.fired?.length ?? 0) > 0 && (
-                      <ul className="hdiag__fired">
-                        {p.fired!.map((t, i) => <li key={i}>⚠ {t.msg}</li>)}
-                      </ul>
                     )}
                     {(p.tripwires?.length ?? 0) > 0 && (
                       <div className="hdiag__trip">
@@ -156,17 +138,6 @@ export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: stri
                             )}
                             <span className="hdiag__tripnote">{t.note}</span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    {(p.targets?.length ?? 0) > 0 && (
-                      <div className="hdiag__targets">
-                        <span className="hdiag__tgtlabel">Targets from here:</span>
-                        {p.targets!.map((t) => (
-                          <span key={t.label} className="hdiag__tgt">
-                            {t.label} <b className="mono">${t.price}</b>
-                            {t.pct_from_here != null && <span className="hdiag__tgtpct"> +{t.pct_from_here}%</span>}
-                          </span>
                         ))}
                       </div>
                     )}

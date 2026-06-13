@@ -96,7 +96,8 @@ export function PositionSignal({ symbol, entry, shares, stop }: {
             S{data.signals_panel.stage} {data.signals_panel.stage_label ?? ''}
           </span>
         )}
-        {data.summary && <span className="pos-sig__summary">{data.summary}</span>}
+        {/* The long reason was shown here AND in "why this read" AND again in
+            HoldingDiagnosis (3×). Kept only in "why this read" below (2026-06-13). */}
       </div>
 
       {/* stop + R-target ladder — the same R1/R2/R3 the cards use, measured off your basis */}

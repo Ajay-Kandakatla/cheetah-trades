@@ -245,41 +245,49 @@ def _shape_position(pos: dict, entry: float, df) -> Optional[dict]:
 
 # ── LLM write-up (Claude Sonnet, local fallback) ─────────────────────────────
 _SYS = (
-    "You are a disciplined trading analyst writing a SPECIFIC, TAILORED note for "
-    "ONE stock — never a generic market paragraph. Use the stock's SECTOR to name "
-    "the macro driver that actually matters for IT: energy names hinge on oil/OPEC/"
-    "crude; semis/chip names on the chip cycle, AI-capex, and export controls; "
-    "electronics/industrials on rates, demand and supply chains; financials on "
-    "rates/credit; materials on commodity prices. Do NOT attribute an energy name's "
-    "move to chip policy, or a semi's move to oil. In 3-5 plain sentences: lead with "
-    "the dominant factor from the scorecard, name the sector-specific driver, "
-    "reference this stock's own numbers (its distribution/accumulation, its β to its "
-    "sector, its idiosyncratic %), and say whether the move is the market/sector vs "
-    "the stock itself. If the stock is UP (direction=up), explain WHAT powered the "
-    "gain using `uptrend_driver`: steady ACCUMULATION (up-volume, accumulation "
-    "days) vs a specific O'Neil POCKET PIVOT vs a fresh volume BREAKOUT — say which, "
-    "and what it implies for the move's durability. "
-    "If a `position` block is present this is the USER'S OWN HOLDING and the "
-    "OVERALL open P&L is the headline. Your FIRST sentence MUST state their TOTAL "
-    "gain/loss since entry — position.gain_pct% and position.gain_dollars$ and the "
-    "R-multiple — NOT the day's move and NOT the 5-day move. If the position is DOWN "
-    "overall, say so plainly even when the recent move is up: a pocket-pivot bounce "
-    "or a green day does NOT erase an open loss, and you must not let the recent move "
-    "read as if the trade is winning. Then RECONCILE the two — explain what has "
-    "driven the OVERALL decline since entry (sustained distribution, the sector/macro "
-    "backdrop, broken trend) versus what the recent bounce means — and, if underwater, "
-    "how far up to breakeven (position.to_breakeven_pct). Then the Minervini HOLD discipline (encouraging "
-    "but disciplined): you hold a Stage-2 advance and RAISE the stop as it advances "
-    "(p.295); you do NOT sell on a clock, you sell when a signal fires — state "
-    "position.verdict and name the specific tripwires in position.tripwires (hard "
-    "stop, 50-day on volume, 200-day) with their distances so they know exactly what "
-    "they're holding for and what would end it. For 'how much more accumulation and "
-    "at what rate': describe the measurable accumulation signature to keep seeing — "
-    "up days on heavier volume than down days, accumulation days, pocket pivots, RS "
-    "holding — NOT a numeric rate. Do NOT predict prices or dates or give buy/sell "
-    "advice beyond the book's mechanical rules. End with one line on what to watch "
-    "for THIS name. Plain text, no markdown headers."
+    "You are a disciplined Minervini-style analyst writing a SHORT, specific note for "
+    "ONE held stock. The page ALREADY shows the user's P&L, the verdict, the stop and "
+    "the R-target ladder above you — do NOT restate any of those numbers. Your job is "
+    "the WHY plus ONE teaching point. AT MOST 4 short sentences, plain text, no markdown:\n"
+    "1) Lead with the dominant driver from the scorecard and the SECTOR-specific macro "
+    "that actually matters for THIS name (energy→oil/OPEC; semis→chip cycle/AI-capex/"
+    "export controls; financials→rates/credit; materials→commodities) — never "
+    "cross-attribute. Reference this stock's OWN numbers (its accumulation/distribution, "
+    "its β to its sector, its idiosyncratic %), and say whether the move is the "
+    "market/sector or the stock itself.\n"
+    "2) If it's UP, name what powered it from `uptrend_driver` — steady ACCUMULATION vs "
+    "an O'Neil POCKET PIVOT vs a fresh volume BREAKOUT — and what that implies for "
+    "durability. If the position is DOWN overall, say so plainly even on a green day.\n"
+    "3) Give ONE Minervini hold/sell TEACHING point grounded in the BOOK PASSAGES "
+    "provided below (e.g. you hold a Stage-2 advance and RAISE the stop as it advances; "
+    "you sell on a SIGNAL, not a clock) and append that passage's bracketed [cite] "
+    "INLINE. Cite ONLY the provided passages — never invent a page or section.\n"
+    "4) End with one concrete thing to watch for THIS name (up-days on heavier volume "
+    "than down, accumulation days, pocket pivots, RS holding — not a price or date).\n"
+    "Do NOT predict prices/dates or give buy/sell advice beyond the book's mechanical rules."
 )
+
+
+def _book_passages(payload: dict):
+    """Minervini hold/sell-discipline passages from the brain (BM25 over the two
+    books, soft-fail). Grounds the write-up's teaching point so its [cite] is a
+    REAL page, not an invented one. Brain absent/empty/erroring -> None."""
+    try:
+        from brain import retriever as brain_retriever
+        pos = payload.get("position") or {}
+        verdict = str(pos.get("verdict") or payload.get("verdict") or "").upper()
+        queries = [
+            "hold a Stage 2 advance raise the stop as it advances",
+            "sell on a signal not on a clock when to sell a winning stock",
+        ]
+        if "TIGHTEN" in verdict or "REDUCE" in verdict:
+            queries.append("risk-off market tighten stops take partial profits raise cash")
+        if "EXIT" in verdict or "REDUCE" in verdict:
+            queries.append("50-day 200-day moving average violation distribution sell rules")
+        return brain_retriever.search_multi(queries, k=5) or None
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("diagnosis book passages unavailable: %s", exc)
+        return None
 
 
 def _llm_writeup(symbol: str, payload: dict, provider: str) -> Optional[str]:
@@ -293,7 +301,17 @@ def _llm_writeup(symbol: str, payload: dict, provider: str) -> Optional[str]:
             f"factor is pressuring the name):\n{json.dumps(payload, indent=2)}\n\n"
             "Write the explanation."
         )
-        res = llm.chat(prompt, system=_SYS, max_tokens=400, temperature=0.3,
+        # Minervini-brain grounding for the teaching point's citation (soft-fail:
+        # absent brain -> prompt is the legacy one).
+        passages = _book_passages(payload)
+        if passages:
+            prompt += (
+                "\n\nMINERVINI BOOK PASSAGES (cite ONLY these, inline with the "
+                "bracketed tag when you use one):\n"
+                + "\n".join("[%s] %s" % (p.get("cite"), p.get("text"))
+                            for p in passages if p.get("cite"))
+            )
+        res = llm.chat(prompt, system=_SYS, max_tokens=240, temperature=0.3,
                        timeout=60, provider=provider)
         if res.get("ok") and res.get("text"):
             return res["text"].strip()
