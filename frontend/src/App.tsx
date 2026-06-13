@@ -6,6 +6,7 @@ import { WatchlistRail } from './components/WatchlistRail';
 import { EngineStalledBanner } from './components/EngineStalledBanner';
 import { ChatWidget } from './components/ChatWidget';
 import { TourLauncher } from './components/TourLauncher';
+import { PortfolioRail } from './components/PortfolioRail';
 import { InstallToHomeScreen, shouldAutoShowInstallPrompt } from './components/InstallToHomeScreen';
 import { ensureServiceWorker } from './lib/pushSubscribe';
 import { usePageTracking } from './hooks/usePageTracking';
@@ -226,6 +227,9 @@ export function App() {
       {/* Persistent watchlist rail on every page (Ajay 2026-06-11,
           StockTwits-style). Collapsible right-edge drawer. */}
       <WatchlistRail />
+      {/* Live portfolio rail — collapsible LEFT-edge drawer (Ajay 2026-06-13),
+          mirror of the watchlist; gated to users with portfolio access. */}
+      <PortfolioRail />
       {/* Floating Claude chat — every page can call setPageContext() so
           the assistant has structured state about what's on screen. */}
       <ChatWidget />
