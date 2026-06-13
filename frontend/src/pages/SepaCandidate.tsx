@@ -42,7 +42,6 @@ import { EntryExitPlanBlock } from '../components/EntryExitPlanBlock';
 import { pivotTiming } from '../lib/pivotTiming';
 import { PositionLens } from '../components/PositionLens';
 import { SepaScoreBar } from '../components/SepaScoreBar';
-import { SepaSignalChips } from '../components/SepaSignalChips';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
@@ -624,11 +623,10 @@ export function SepaCandidatePage() {
           {base && (
             <SepaScoreBar score={base.score ?? 0} rating={base.rating} size="md" />
           )}
-          {/* Clickable ranking-component chips — each opens a SignalDrillModal
-              explaining what the signal measures + how it affected this
-              ticker's score. Mirrors the chips on the list card so the
-              same UX works after a typeahead search. */}
-          {base && <SepaSignalChips row={base} />}
+          {/* (#7) The list card's score-component chip row was re-rendered here —
+              the depth page was opening by re-showing the card. Dropped; the score
+              bar above + the 📈 ranking tab carry the breakdown. The research
+              drills (whales / SEC / macro / conviction) stay below. */}
           {/* Supply/demand + flow chips — same surface as the SEPA list
               card: 🐋 13F whales, 📋 SEC activity, whales+volume conviction,
               political disclosure, 🌍 macro, and the insider-cluster +
