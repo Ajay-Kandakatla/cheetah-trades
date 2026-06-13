@@ -2,7 +2,9 @@
    Spotlights real UI elements with a dim cutout + a stepped tooltip.
 
    - Auto-starts for first-time visitors (localStorage flag); the page wires
-     that. Replayable on demand via the 🎓 Tour button.
+     that. Replayable on demand via the in-page 🎓 Tour button or the global
+     🧭 floating launcher (TourLauncher.tsx), which routes to /sepa and fires
+     a 'cheetah:start-tour' event the page listens for.
    - Targets stable container classes; a step whose target isn't on screen
      falls back to a centered card, so it never breaks if (say) no scan has
      run yet.
@@ -20,7 +22,7 @@ type Step = {
 const STEPS: Step[] = [
   {
     title: '👋 Welcome to Pounce',
-    body: "Your SEPA stock screener — Minervini's Specific Entry Point Analysis. Here's a 60-second tour of how to use it. You can replay this anytime from the 🎓 Tour button up top.",
+    body: "Your SEPA stock screener — Minervini's Specific Entry Point Analysis. Here's a 60-second tour. Replay it anytime from the 🧭 button at the bottom-left of any page.",
   },
   {
     selector: '.sepa-hero__market',
@@ -29,8 +31,8 @@ const STEPS: Step[] = [
   },
   {
     selector: '.sepa-hero__stats',
-    title: '2 · Your daily numbers',
-    body: 'Candidates = buyable right now. Qualifiers = watchlist (passed the Trend Template). Analyzed / Universe = how many names were scanned.',
+    title: '2 · Buyable vs. watchlist',
+    body: 'Candidates = buyable right now (the strict book gate). Qualifiers = your watchlist — names that passed the Trend Template and are coiling, waiting to fire. Analyzed / Universe = how many were scanned.',
   },
   {
     selector: '.sepa-hero__actions',
@@ -40,26 +42,31 @@ const STEPS: Step[] = [
   {
     selector: '.sepa-univ',
     title: '4 · Pick your universe',
-    body: 'Mix & match building blocks — Curated, S&P 500, Russell 3000, Micro-caps, ETFs. Overlaps are deduped automatically; a subset already inside a broader pick is dimmed with “⊂ incl”.',
+    body: 'Mix & match building blocks — Curated, S&P 500, Russell 3000, Micro-caps, ETFs. Overlaps dedupe automatically; a subset already inside a broader pick is dimmed with “⊂ incl”.',
   },
   {
     selector: '.sepa-filterbar',
-    title: '5 · Narrow the list',
-    body: 'Filter by rating, stage, setup, whales, momentum and more. Any active filter glows amber, and a “● N filters on” badge shows how many are engaged.',
+    title: '5 · Buyable by default',
+    body: 'The list opens filtered to Minervini-buyable names. On quiet days that can be empty — normal, there’s nothing to buy. Widen the 🟢 decision chip (Enter → All) to see every qualifier, or filter by rating, stage, whales, momentum. Active filters glow amber.',
   },
   {
     selector: '.sepa-card',
     title: '6 · Read a candidate',
-    body: 'Each card shows the score/rating, Minervini trend, volume + 🐋 whale chips, and a timed entry/exit verdict (ENTER / WAIT / AVOID). Tap any chip to drill in.',
+    body: 'Each card leads with price, a timed ENTER / WAIT / AVOID verdict, the setup and the stop. Tap any chip to drill in; tap the symbol for the full detail page.',
+  },
+  {
+    selector: '.vol-trend',
+    title: '7 · Volume trend',
+    body: "Volume is the tell you can't fake. Green bars are up-volume days, red are down; rising green above the dashed 50-day average means institutions are accumulating. Pairs with the single-day pivot gauge above it.",
   },
   {
     selector: '.stops-panel',
-    title: '7 · Entry + stops menu',
+    title: '8 · Entry + stops',
     body: 'The buy point plus every stop method (Structure / Minervini / ATR) sorted tightest → widest — you pick your line in the sand. Hover a row for the $ risk per share.',
   },
   {
-    title: '🚀 You’re set',
-    body: 'Click any card for the full breakdown — chart, fundamentals, whales, options, catalyst. Replay this tour anytime via 🎓 Tour at the top. Happy hunting!',
+    title: '🧠 Ask Minervini anytime',
+    body: 'Tap the gold chat button (bottom-right) to ask the in-app Minervini brain — it answers from his two books with page citations and can read whatever chart you’re viewing. Replay this tour from the 🧭 button bottom-left. Happy hunting!',
   },
 ];
 

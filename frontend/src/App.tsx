@@ -5,6 +5,7 @@ import { BreakoutAlertBanner } from './components/BreakoutAlertBanner';
 import { WatchlistRail } from './components/WatchlistRail';
 import { EngineStalledBanner } from './components/EngineStalledBanner';
 import { ChatWidget } from './components/ChatWidget';
+import { TourLauncher } from './components/TourLauncher';
 import { InstallToHomeScreen, shouldAutoShowInstallPrompt } from './components/InstallToHomeScreen';
 import { ensureServiceWorker } from './lib/pushSubscribe';
 import { usePageTracking } from './hooks/usePageTracking';
@@ -228,6 +229,9 @@ export function App() {
       {/* Floating Claude chat — every page can call setPageContext() so
           the assistant has structured state about what's on screen. */}
       <ChatWidget />
+      {/* Floating 🧭 tour launcher (bottom-left) — replays the SiteTour from
+          any page. Routes to /sepa and signals the page to start. */}
+      <TourLauncher />
       {showInstall && <InstallToHomeScreen onClose={() => setShowInstall(false)} />}
       <main className="main">
         <Suspense fallback={<PageLoader />}>
