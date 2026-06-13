@@ -6866,6 +6866,11 @@ tr:last-child td { border-bottom: none; }
     padding-bottom: 5px;
   }
   .sepa-card__flags { gap: 7px; }
+
+  /* Surface the first candidate within a swipe (#5): hide the secondary
+     clock + lesson strips on phones. Market status still shows on the gauge
+     banner + hero above. */
+  .sepa-secondary-strips { display: none; }
 }
 
 /* Phone in landscape — slightly more horizontal room */

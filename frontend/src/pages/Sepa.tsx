@@ -1080,8 +1080,13 @@ export function SepaPage() {
     <div className="sepa-page">
       {tourOpen && <SiteTour onClose={() => setTourOpen(false)} />}
       <MarketGaugeBanner />
-      <MarketClockStrip />
-      <MinerviniLesson />
+      {/* Secondary strips (clock + a lesson card) — hidden on phones (#5) so the
+          first candidate is within a swipe; the gauge banner + hero already carry
+          market status. They still render on desktop. */}
+      <div className="sepa-secondary-strips">
+        <MarketClockStrip />
+        <MinerviniLesson />
+      </div>
       <SepaBriefBanner />
 
       {/* Good reports the tape endorsed (Ajay 2026-06-11, ATEX lesson). */}
