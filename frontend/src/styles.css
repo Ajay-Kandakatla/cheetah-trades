@@ -6849,6 +6849,23 @@ tr:last-child td { border-bottom: none; }
     min-height: 32px;
     padding: 4px 0;
   }
+
+  /* SEPA signal chips/pills/flags are tap-to-drill but rendered 18-28px tall —
+     below the touch standard, so fat-fingers hit the wrong drill modal. Give
+     them a >=32px tap target + more breathing room (declutter #5). Round info
+     buttons are exempted above, so this doesn't oval them. */
+  .sepa-chip,
+  .sepa-pill,
+  .sepa-stage,
+  .sepa-flag,
+  .sepa-tag {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .sepa-card__flags { gap: 7px; }
 }
 
 /* Phone in landscape — slightly more horizontal room */
