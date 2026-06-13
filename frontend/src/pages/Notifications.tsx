@@ -24,36 +24,20 @@ type CategoryDef = {
 };
 
 const CATEGORIES: CategoryDef[] = [
-  { key: 'sepa_new_candidate',     label: 'New SEPA candidate',     emoji: '🎯', group: 'trading',
-    detail: 'New VCP / Power Play setup passes all Minervini gates. Fires from the 4:30 PM ET fast-scan.' },
-  { key: 'volume_breakout',        label: 'Volume breakout',        emoji: '🚀', group: 'trading',
-    detail: 'Intraday: a watchlist ticker breaks above its pivot on 40%+ above-avg volume. Every 5min during market hours.' },
-  { key: 'rising_momentum',        label: 'Rising momentum',        emoji: '📈', group: 'trading',
-    detail: 'Pre-breakout name showing accumulation pattern (TWLO-style). Lower-confidence but earlier than a confirmed breakout.' },
-  { key: 'watchlist_breakout',     label: 'Watchlist breakout',     emoji: '⭐', group: 'trading',
-    detail: 'Any watchlist ticker fires a breakout. Subset of "volume_breakout" filtered to your watchlist.' },
-  { key: 'juggernaut_watchlist',   label: 'Juggernaut watchlist',   emoji: '💪', group: 'trading',
-    detail: 'Daily consolidated push: watchlist names where institutional accumulation AND rising momentum align.' },
-  { key: 'stage_breakdown',        label: 'Stage breakdown (any)',  emoji: '⚠️', group: 'trading',
-    detail: 'Any ticker rolls from Stage 2 → 3 or 4 (Weinstein). Highest-value sell signal — catches tops 1-2 days before the morning brief.' },
-  { key: 'watchlist_stage_breakdown', label: 'Stage breakdown (watchlist)', emoji: '🛑', group: 'trading',
-    detail: 'Same as above but only for watchlist names. Quieter — recommended over the "any" version once your watchlist is dialed in.' },
-  { key: 'price_alert',            label: 'Price alerts',           emoji: '🔔', group: 'trading',
-    detail: 'User-set alerts (e.g., "ping me when AMD breaks $250"). Fires only on the level you set.' },
-  { key: 'position_alert',         label: 'Position alerts',        emoji: '💼', group: 'trading',
-    detail: 'Stop / target hit on Lifeboard positions you are actively tracking.' },
-  { key: 'morning_brief',          label: 'Morning brief',          emoji: '🌅', group: 'trading',
-    detail: '8:30 AM ET summary push — regime, top SEPA picks, overnight news.' },
-  { key: 'product_launch',         label: 'Product launches',       emoji: '🚀', group: 'trading',
-    detail: 'New hardware/software/drug launches detected by Gemma. e.g. "DELL ships new PowerEdge servers" or "AMD unveils new GPU".' },
-  { key: 'minervini_flashcards', label: 'Minervini flash cards', emoji: '🃏', group: 'trading',
-    detail: 'Hourly bite-sized lessons (24h schedule). 9 topics: entry rules, risk, sell rules, psychology, review, fundamentals (P/E, ROIC, equity), market structure (T+1, halts, Greeks), trader history (Livermore, LTCM, GME), edge math (Kelly, expectancy). ~80 cards, ~2-3 week rotation. Quiet-hours pref below mutes overnight delivery.' },
+  // Trading alerts pared to the essentials (Ajay 2026-06-13). The breakout /
+  // momentum / new-candidate / stage-breakdown / product-launch / tape-watch /
+  // morning-brief pushes were retired here AND hard-stopped server-side
+  // (backend/push/subs.py DISABLED_ALERT_KINDS — they can't fire even for a
+  // device that still has an old toggle on). price_alert is PAUSED — it returns
+  // when custom price alerts come back.
+  { key: 'pivot_alert', label: 'Buyable / Enter-zone alerts', emoji: '🎯', group: 'trading',
+    detail: 'At-the-pivot (buyable names only) and approaching-pivot buy-stop alerts from the 5-min market-hours cron. Once per name per kind per day.' },
+  { key: 'position_alert', label: 'Portfolio alerts', emoji: '💼', group: 'trading',
+    detail: 'Stop / target hit on the positions you hold — the up/down moves on your portfolio that need action.' },
+  { key: 'minervini_flashcards', label: 'Minervini learning', emoji: '🃏', group: 'trading',
+    detail: 'Hourly bite-sized lessons (24h schedule): entry rules, risk, sell rules, psychology, review, fundamentals, market structure, trader history, edge math. ~80 cards, ~2-3 week rotation. Quiet-hours pref below mutes overnight delivery.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
-  { key: 'pivot_alert', label: 'Pivot / entry alerts', emoji: '🎯', group: 'trading',
-    detail: 'At-the-pivot (buyable names only) and approaching-pivot buy-stop alerts from the 5-min market-hours cron. Once per name per kind per day.' },
-  { key: 'scalp_tape', label: 'SEPA tape watch (candle reads)', emoji: '🕯️', group: 'trading',
-    detail: 'Real-time 5-min candle reads at the level (pivot/VWAP/range) on your holdings + buyable + at-pivot + leaderboard names — strong breakout, wick rejection, VWAP loss/reclaim. One alert per name per state per day; every alert is graded against the next 30 minutes on /scalping.' },
   { key: 'vb_workout', label: 'Volleyball · daily workout', emoji: '🏐', group: 'household',
     detail: '7 AM ET daily brief — today\'s workout focus, duration, AM supplement reminder (D3/K2 + Moringa). Routes to /volleyball.' },
   { key: 'vb_supplement', label: 'Volleyball · supplements', emoji: '💊', group: 'household',
@@ -372,19 +356,16 @@ const PRESETS: { id: string; label: string; emoji: string; detail: string; pref:
   },
   {
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'High-signal alerts only: stage breakdowns, position stops, morning brief.',
+    detail: 'High-signal only: buyable / Enter-zone + portfolio stops.',
     pref: {
-      sepa_new_candidate: false, volume_breakout: false, rising_momentum: false,
-      watchlist_breakout: true, juggernaut_watchlist: true,
-      stage_breakdown: false, watchlist_stage_breakdown: true,
-      price_alert: true, position_alert: true, morning_brief: true,
-      product_launch: false,
+      pivot_alert: true, position_alert: true,
+      minervini_flashcards: false, market_hours_reminder: false,
       todo_reminder: false, todo_daily_digest: true,
     },
   },
   {
     id: 'trading_only', label: 'Trading only', emoji: '📈',
-    detail: 'All 11 trading categories on, household + deals off.',
+    detail: 'All trading alerts on, household off.',
     pref: Object.fromEntries(CATEGORIES.map(c => [c.key, c.group === 'trading'])) as any,
   },
   {

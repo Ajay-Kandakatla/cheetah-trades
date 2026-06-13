@@ -8,6 +8,22 @@ from typing import Optional
 
 log = logging.getLogger("push.subs")
 
+# Retired alert kinds (Ajay 2026-06-13: "clean up all the alerts besides
+# Minervini learning, buyable/Enter-zone, portfolio, market open/close, and
+# household"). Delivery is hard-stopped here for these kinds regardless of any
+# per-device pref still set to True, so the retired market-scan pushes can't
+# fire for anyone — even a device that hasn't re-toggled. This is the single
+# chokepoint: both the Web Push path (sender.send_to_user/all) and the Mac SSE
+# path (mac_stream) filter through list_subscriptions / list_mac_device_ids.
+# NOTE: ``price_alert`` is PAUSED, not gone — remove it from this set when the
+# user re-adds custom price alerts.
+DISABLED_ALERT_KINDS: frozenset[str] = frozenset({
+    "sepa_new_candidate", "volume_breakout", "rising_momentum",
+    "watchlist_breakout", "juggernaut_watchlist", "stage_breakdown",
+    "watchlist_stage_breakdown", "morning_brief", "product_launch",
+    "scalp_tape", "price_alert",
+})
+
 _db = None
 
 
@@ -147,6 +163,10 @@ def list_subscriptions(filter_kind: Optional[str] = None,
     for critical alerts that should bypass quiet hours (none today —
     but kept as a hatch for future "trade stopped out" style pings).
     """
+    # Hard kill-switch for retired alert kinds — no device receives them,
+    # whatever its stored prefs say. See DISABLED_ALERT_KINDS.
+    if filter_kind and filter_kind in DISABLED_ALERT_KINDS:
+        return []
     db = _get_db()
     if db is None:
         return []
@@ -225,6 +245,9 @@ def list_mac_device_ids(user_email: str,
     """Return the set of mac device_ids for ``user_email`` whose prefs allow
     ``filter_kind``. Used by the SSE drain task to decide which clients to
     deliver each outbox doc to."""
+    # Hard kill-switch for retired alert kinds (mirror of list_subscriptions).
+    if filter_kind and filter_kind in DISABLED_ALERT_KINDS:
+        return set()
     db = _get_db()
     if db is None:
         return set()
