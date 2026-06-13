@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
@@ -42,6 +42,30 @@ function useIsMobile(): boolean {
     return () => mq.removeEventListener('change', onChange);
   }, []);
   return isMobile;
+}
+
+// The old "Misc" dropdown was a 15-item junk drawer (UX teardown #4: "no
+// destination named Misc; section by JOB so a friend can predict the contents").
+// We keep ONE "Tools" dropdown but render it under named job sub-headers so it's
+// navigable by label. Maps feature id → sub-group; unknown ids fall to "More".
+const TOOLS_SUBGROUP: Record<string, string> = {
+  trading: 'Trade',
+  'day-trading': 'Screeners', scalping: 'Screeners', patterns: 'Screeners', 'supply-demand': 'Screeners',
+  'demand-zones': 'Zones', zones: 'Zones',
+  live: 'Tape', chatter: 'Tape', 'chatter-india': 'Tape',
+  'market-gauge': 'Signals', catalysts: 'Signals', options: 'Signals', track: 'Signals', pankaj: 'Signals',
+  food: 'Life', kids: 'Life', volleyball: 'Life', house: 'Life',
+};
+const SUBGROUP_ORDER = ['Trade', 'Screeners', 'Zones', 'Tape', 'Signals', 'Life', 'More'];
+
+function groupTools(items: MenuItem[]): Array<{ label: string; items: MenuItem[] }> {
+  const buckets = new Map<string, MenuItem[]>();
+  for (const it of items) {
+    const g = TOOLS_SUBGROUP[it.feature ?? ''] ?? 'More';
+    if (!buckets.has(g)) buckets.set(g, []);
+    buckets.get(g)!.push(it);
+  }
+  return SUBGROUP_ORDER.filter((g) => buckets.has(g)).map((g) => ({ label: g, items: buckets.get(g)! }));
 }
 
 export function NavBar() {
@@ -187,15 +211,20 @@ export function NavBar() {
               {SECONDARY_VISIBLE.length > 0 && (
                 <>
                   <div className="cm-nav__drawer-section-label">Tools</div>
-                  {SECONDARY_VISIBLE.map((t) => (
-                    <NavLink
-                      key={t.to}
-                      to={t.to}
-                      className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
-                      onClick={() => setDrawerOpen(false)}
-                    >
-                      {t.label}
-                    </NavLink>
+                  {groupTools(SECONDARY_VISIBLE).map((grp) => (
+                    <Fragment key={grp.label}>
+                      <div className="cm-nav__drawer-subgroup-label">{grp.label}</div>
+                      {grp.items.map((t) => (
+                        <NavLink
+                          key={t.to}
+                          to={t.to}
+                          className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
+                          onClick={() => setDrawerOpen(false)}
+                        >
+                          {t.label}
+                        </NavLink>
+                      ))}
+                    </Fragment>
                   ))}
                 </>
               )}
@@ -292,19 +321,24 @@ export function NavBar() {
               aria-haspopup="menu"
               aria-expanded={moreOpen}
             >
-              Misc <span className="cm-nav__caret">▾</span>
+              Tools <span className="cm-nav__caret">▾</span>
             </button>
             {moreOpen && (
               <div className="cm-nav__dropdown" role="menu">
-                {SECONDARY_VISIBLE.map((t) => (
-                  <NavLink
-                    key={t.to}
-                    to={t.to}
-                    className={({ isActive }) => `cm-nav__dropdown-link${isActive ? ' is-active' : ''}`}
-                    role="menuitem"
-                  >
-                    {t.label}
-                  </NavLink>
+                {groupTools(SECONDARY_VISIBLE).map((grp) => (
+                  <Fragment key={grp.label}>
+                    <div className="cm-nav__dropdown-grouplabel">{grp.label}</div>
+                    {grp.items.map((t) => (
+                      <NavLink
+                        key={t.to}
+                        to={t.to}
+                        className={({ isActive }) => `cm-nav__dropdown-link${isActive ? ' is-active' : ''}`}
+                        role="menuitem"
+                      >
+                        {t.label}
+                      </NavLink>
+                    ))}
+                  </Fragment>
                 ))}
               </div>
             )}
