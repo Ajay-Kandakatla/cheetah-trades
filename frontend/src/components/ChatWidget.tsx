@@ -329,7 +329,17 @@ export function ChatWidget() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          💬
+          {/* Chat bubble + AI spark — the Minervini brain, not a plain emoji. */}
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" style={{ display: 'block' }}>
+            <path
+              d="M4.5 3.5 H19.5 A1.5 1.5 0 0 1 21 5 V14.5 A1.5 1.5 0 0 1 19.5 16 H11 L6.8 20 V16 H4.5 A1.5 1.5 0 0 1 3 14.5 V5 A1.5 1.5 0 0 1 4.5 3.5 Z"
+              fill="#1a1a1a"
+            />
+            <path
+              d="M12 6.2 L13 8.7 L15.5 9.7 L13 10.7 L12 13.2 L11 10.7 L8.5 9.7 L11 8.7 Z"
+              fill="#d4af37"
+            />
+          </svg>
         </button>
       )}
 
