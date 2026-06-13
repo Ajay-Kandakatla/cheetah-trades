@@ -72,6 +72,9 @@ DIST_DAY_LOOKBACK           = 25
 # pragmatic recency horizon, NOT a verbatim book number — the canonical buy
 # point remains the breakout day itself.
 BREAKOUT_RECENCY_LOOKBACK   = 15
+# Volume-trend sparkline window — last N daily bars surfaced to the FE as a
+# signed-volume series (≈ one month of trading). Display-only, see detect().
+VOL_SPARK_BARS              = 20
 # Day-count BACKSTOP (2026-05-31): volume is the primary distribution signal;
 # the day count only acts as a safety net for a slow persistent bleed, and
 # only when down-volume isn't being out-traded (ratio < 1). Raised from the
@@ -377,6 +380,28 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
     counts = _count_accum_dist_days(df, lookback=DIST_DAY_LOOKBACK)
     strength = _strength_label(ratio, cmf, counts["distribution_days_25"])
 
+    # --- volume-TREND sparkline (2026-06-12) -------------------------------
+    # Last 20 daily bars as a SIGNED-volume series so the FE can draw a mini
+    # histogram: bar HEIGHT = |volume|, bar COLOR = up-day (close ≥ prior
+    # close → positive) vs down-day (close < prior close → negative). Pairs
+    # with the single-day relative-volume gauge to show whether volume is
+    # BUILDING on up days / DRYING on pullbacks — the accumulation footprint
+    # Minervini reads off the tape ("more up days on above-average volume",
+    # Trade Like a Stock Market Wizard p.71-72).
+    # DISPLAY-ONLY: never feeds the score or any gate (locked in contracts).
+    vol_spark: list = []
+    try:
+        n = min(VOL_SPARK_BARS, len(v))
+        recent_v = v.iloc[-n:]
+        recent_d = c.diff().iloc[-n:]          # close − prior close; NaN only at the very first bar
+        for i in range(n):
+            vol_i = int(recent_v.iloc[i])
+            d = recent_d.iloc[i]
+            up = (d != d) or (d >= 0)          # NaN (no prior bar) → treat as up
+            vol_spark.append(vol_i if up else -vol_i)
+    except Exception:
+        vol_spark = []
+
     return {
         # Legacy fields — DO NOT remove (frontend chips + scoring depend
         # on these). 2026-05-29: ratio formula now book-aligned —
@@ -414,4 +439,7 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
         "dn_dollar_vol_50":      int(dn_dollar_vol),
         "net_dollar_vol_50":     int(net_dollar_vol),
         "cmf_dollar_flow_20":    int(cmf_dollar_flow_20) if cmf_dollar_flow_20 is not None else None,
+        # Volume-trend sparkline — last 20 bars, signed by up/down day.
+        # DISPLAY-ONLY (not scored). See the computation comment above.
+        "vol_spark":             vol_spark,
     }
