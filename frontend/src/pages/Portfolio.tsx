@@ -26,17 +26,11 @@ const ChartAnalysisPanel = lazy(() =>
 const AnalystPulseModal = lazy(() =>
   import('../components/AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
 );
-import { PatternMatchCards } from '../components/PatternMatchCards';
 import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
-import { EarningsReportPicks } from '../components/EarningsReportPicks';
-import { RacingBoard } from '../components/RacingBoard';
 import { AddHoldingForm } from '../components/AddHoldingForm';
 import { PositionSignal } from '../components/PositionSignal';
 import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
-import { SepaTopPicks } from '../components/SepaTopPicks';
-import { SepaRankLeaderboard } from '../components/SepaRankLeaderboard';
 import { MarketPulsePanel } from '../components/MarketPulsePanel';
-import { SepaRankCompare } from '../components/SepaRankCompare';
 import { API } from '../lib/apiBase';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
@@ -389,25 +383,15 @@ export default function PortfolioPage() {
 
       <AddHoldingForm onAdded={refresh} />
 
-      {/* Tiny pattern cards (Ajay 2026-06-09) — same view as the Patterns /
-          Leaderboard pages: pattern-matched names, ⭐ confluence first;
-          💼 marks your holdings. */}
-      <PatternMatchCards limit={12} />
+      {/* Buy-discovery widgets removed from Portfolio (2026-06-13 declutter):
+          PatternMatchCards, EarningsReportPicks, RacingBoard, SepaRankLeaderboard,
+          SepaRankCompare and SepaTopPicks are market-wide and now live ONLY on
+          /leaderboard — Portfolio is the hold/sell surface, not a second discovery
+          page. (They were cross-posted here over 06-04..06-12; consolidated now.) */}
 
       {/* Month-by-month winners' record for the paper-trading review (Ajay
           2026-06-10) — perpetual, never pruned. */}
       <PatternAccuracyMonthly />
-
-      {/* Good reports the tape endorsed (Ajay 2026-06-11, ATEX lesson). */}
-      <EarningsReportPicks />
-
-      {/* Post-breakout names racing the R-ladder (Ajay 2026-06-12). */}
-      <RacingBoard />
-
-      {/* Leadership + ranking BELOW your holdings (Ajay 2026-06-04). */}
-      <SepaRankLeaderboard n={12} />
-      <SepaRankCompare />
-      <SepaTopPicks n={3} />
 
       {/* Overall market context — secondary to the per-stock reads above. */}
       <MarketPulsePanel holdings={rows} />
