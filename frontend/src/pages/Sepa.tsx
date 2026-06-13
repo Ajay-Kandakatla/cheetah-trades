@@ -12,7 +12,7 @@ import { MarketClockStrip } from '../components/MarketClockStrip';
 import { MinerviniLesson } from '../components/MinerviniLesson';
 import { SepaHero } from '../components/SepaHero';
 import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
-import { useEarningsMap, EARNINGS_WARN_DAYS } from '../hooks/useEarningsMap';
+import { useEarningsMap, EARNINGS_WARN_DAYS, type EarningsInfo } from '../hooks/useEarningsMap';
 import { SepaCandidateCard } from '../components/SepaCandidateCard';
 import { SepaCardGridSkeleton } from '../components/SepaCardSkeleton';
 import { pivotTiming, triggerRank, buyabilityRank } from '../lib/pivotTiming';
@@ -33,7 +33,7 @@ import { InfoButton } from '../components/InfoButton';
 import { SiteTour, TOUR_DONE_KEY } from '../components/SiteTour';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
 import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
-import { useWhalesFlow } from '../hooks/useWhalesFlow';
+import { useWhalesFlow, type WhalesFlowRow } from '../hooks/useWhalesFlow';
 import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { prefillBulkQuotes } from '../hooks/useLiveQuote';
 import { registerSymbolInterest } from '../lib/eventBus';
@@ -174,6 +174,159 @@ function passesDecision(
   return (r.entry_exit?.decision ?? null) === d;
 }
 
+/** Reactive inputs the filter predicate reads beyond the row + filters
+ *  themselves: the two async Maps the page loads (earnings calendar, whale
+ *  13F flow). Passed in explicitly so `passesSepaFilters` stays a pure
+ *  module-level function with no closure over component state — and so every
+ *  call site is forced to list the SAME inputs in its useMemo dependency
+ *  array (see both call sites below). */
+type SepaFilterDeps = {
+  earningsMap: Map<string, EarningsInfo>;
+  whalesFlow: Map<string, WhalesFlowRow>;
+};
+
+/** Single source of truth for the SepaFilterBar gate chain.
+ *
+ *  Applied in two render paths that must behave identically:
+ *    1. the main "all candidates" list  → the `filtered` useMemo, and
+ *    2. the setup-category tabs (VCP / Bull Flag) → the `passesFilters`
+ *       useMemo callback.
+ *
+ *  These were previously hand-copied and had drifted — the setup-tab path was
+ *  silently missing the `momentumLeaderOnly` gate, so the 🚀 chip filtered the
+ *  main list but not the VCP/Power Play tabs. Collapsing both onto this one
+ *  function makes that class of drift impossible.
+ *
+ *  Every clause is an AND that returns false on a miss, so clause ORDER never
+ *  affects the boolean result. */
+function passesSepaFilters(
+  r: SepaCandidate,
+  filters: SepaFilters,
+  deps: SepaFilterDeps,
+): boolean {
+  const { earningsMap, whalesFlow } = deps;
+
+  const rating = r.rating ?? defaultRating(r.score);
+  if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
+  if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
+  // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
+  // gate (is_buyable, pp.79-83/198-203) per user 2026-06-02 ("enter = buyable
+  // at all cost"); Wait/Watch match the entry_exit.decision banner the card
+  // shows. (Helper passesDecision keeps the two apply paths in sync.)
+  if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
+  if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
+  if (filters.buyZoneOnly && !pivotTiming(r).inBuyZone) return false;
+  if (filters.nearPivotOnly && !pivotTiming(r).nearPivot) return false;
+
+  if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
+  if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
+  if (filters.search && !r.symbol.includes(filters.search)) return false;
+  if (filters.dmEligibleOnly) {
+    const dm = r.dual_momentum;
+    if (!dm) return false;
+    if (!dm.abs_mom_pass) return false;
+    if (dm.beats_spy === false) return false;
+  }
+  if (filters.type === 'equity' && r.is_etf) return false;
+  if (filters.type === 'etf' && !r.is_etf) return false;
+  if (filters.pioneerOnly && !r.is_pioneer) return false;
+  // Stage filter — gate by Weinstein stage (1/2/3/4). When ALL, no gate.
+  if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
+  // Moat filter — Buffett tier minimum. When 0, no gate. UNKNOWN
+  // (tier 0) gets excluded as soon as the user opts into any minimum.
+  if (filters.moatMin > 0) {
+    const tier = r.moat?.tier ?? 0;
+    if (tier < filters.moatMin) return false;
+  }
+  // ≥1.5× volume chip (default ON) — today's volume must be ≥1.5× the
+  // 50-day average; unknown volume hides while on.
+  if (filters.volX15Only) {
+    const v = r.volume;
+    if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
+  }
+  // Earnings-soon gate (ATEX lesson 2026-06-11). Unknown dates pass (fail
+  // open; the chip's absence is honest about coverage).
+  if (filters.hideEarningsSoon) {
+    const er = earningsMap.get(r.symbol?.toUpperCase());
+    if (er && er.days_to <= EARNINGS_WARN_DAYS) return false;
+  }
+  // Hide-Distributing chip — drop institutional-distribution tape OR
+  // Chaikin money-outflow names. Opposite of "accumulation", so if
+  // the user enables this they don't want them at all, regardless of score.
+  if (filters.hideDistributing) {
+    const v = r.volume;
+    if (v?.accumulation_strength === 'distributing') return false;
+    if (v?.cmf_signal === 'outflow') return false;
+  }
+  // Whales-accumulating filter — pure-FE narrow to candidates whose
+  // 13F flow over the last quarter was institutionally net-buying.
+  // Reads from the whalesFlow Map already loaded for the page; rows
+  // without whales data (most tickers don't have 13F coverage) are
+  // dropped because the user explicitly opted to see whales-only.
+  // The pairing of this chip with Hide Distributing produces the
+  // "whales + tape both bullish" short-list — closest the UI gets
+  // to surfacing the user's actual decision criteria ("based on
+  // whales and the volume").
+  if (filters.whalesAccumOnly) {
+    const wf = whalesFlow.get(r.symbol.toUpperCase());
+    if (!wf || wf.signal !== 'accumulating') return false;
+  }
+  // Hedge-fund-top-buyer filter — strictest of the whale chips.
+  // The top buying fund name must match a Tier-S entry in the
+  // curated fundTiers.ts list (legendary stock-pickers: Berkshire,
+  // Tiger, Coatue, Citadel, Pershing, Altimeter, etc). When the
+  // top buyer is an index giant (🏛 Vanguard / BlackRock) or an
+  // unknown LP, the row is dropped. Same caveat as the tier badge —
+  // historical reputation, not forward prediction.
+  if (filters.hedgeFundTopBuyer) {
+    const wf = whalesFlow.get(r.symbol.toUpperCase());
+    if (!wf || !wf.top_buy) return false;
+    const tier = getFundTier(wf.top_buy);
+    if (tier?.tier !== 'S') return false;
+  }
+  // POTUS Family filter — narrow to symbols on the curated POTUS-
+  // family disclosure list. Pure FE lookup via politicalDisclosures.ts.
+  if (filters.potusFamilyOnly) {
+    if (!getPoliticalChipFlags(r.symbol).hasPotusFamily) return false;
+  }
+  // US Gov filter — narrow to symbols with U.S. government
+  // involvement (CHIPS Act recipient, govt contractor, program
+  // participant). Either category counts as a US Gov tag.
+  if (filters.usGovOnly) {
+    const flags = getPoliticalChipFlags(r.symbol);
+    if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
+  }
+  // Insider cluster-buy filter — narrow to candidates where ≥3
+  // unique insiders filed Form 4 buys in the last 30 days. Reads
+  // row.insider populated by scanner.py's catalyst-enrichment path
+  // (top 20 candidates after Full Scan + catalyst). Names outside
+  // that enriched subset have no row.insider data and are dropped
+  // — documented in the chip tooltip so users know coverage.
+  if (filters.insiderClusterBuy) {
+    const ins = (r as any).insider;
+    if (!ins?.form4_cluster_buy) return false;
+  }
+  // Emerging Momentum Leader — the "next ARM" fingerprint.
+  if (filters.momentumLeaderOnly) {
+    if (!isMomentumLeader(r)) return false;
+  }
+  // Venky's filter stack (2026-05-29) — independent toggles layered
+  // on top of SEPA's qualifier gate.
+  const venky = (r as any).venky;
+  if (filters.weekly21SmaPass) {
+    if (!venky?.weekly_21sma?.pass) return false;
+  }
+  if (filters.atrPctMax > 0) {
+    const a = venky?.atr?.atr_pct;
+    if (a == null || a > filters.atrPctMax) return false;
+  }
+  if (filters.adxMin > 0) {
+    const adx = venky?.adx?.adx;
+    if (adx == null || adx < filters.adxMin) return false;
+  }
+  return true;
+}
+
 import { usePageContext } from '../hooks/usePageContext';
 
 export function SepaPage() {
@@ -210,6 +363,26 @@ export function SepaPage() {
     if (done) return;
     const t = setTimeout(() => setTourOpen(true), 900);
     return () => clearTimeout(t);
+  }, []);
+
+  // Replay trigger from the global 🧭 floating tour launcher (TourLauncher.tsx).
+  // It works two ways so it fires whether or not /sepa is already mounted:
+  //   • same page  → a 'cheetah:start-tour' window event, and
+  //   • navigation → a sessionStorage flag this effect reads on mount.
+  // Either path opens the tour after a short delay so the target elements exist.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const open = () => setTimeout(() => setTourOpen(true), 350);
+    let viaFlag = false;
+    try {
+      if (sessionStorage.getItem('cheetah_start_tour') === '1') {
+        sessionStorage.removeItem('cheetah_start_tour');
+        viaFlag = true;
+      }
+    } catch { /* ignore */ }
+    if (viaFlag) open();
+    window.addEventListener('cheetah:start-tour', open);
+    return () => window.removeEventListener('cheetah:start-tour', open);
   }, []);
 
   // Cap how many candidate cards we render at once. Under the broad universe a
@@ -273,7 +446,14 @@ export function SepaPage() {
   // Filters persist across reloads — reading the page should always pick up
   // where you left off (rating tier, RS slider, sort, hide-quiet toggle, etc.)
   const FILTER_DEFAULTS: SepaFilters = {
-    rating: 'ALL', setup: 'ALL', decision: 'ALL', breakoutWindow: 'TODAY',
+    // Default to Minervini's BUYABLE gate (Ajay 2026-06-12): the page opens
+    // showing only names that are actually buyable right now — `decision: 'ENTER'`
+    // + `breakoutWindow: 'TODAY'` binds to the strict book gate `is_buyable`
+    // (Stage 2 + base + not-late + liquid + a SAME-DAY volume-confirmed breakout,
+    // Trade Like a Stock Market Wizard pp.79-83/198-203). On days when nothing is
+    // buyable the empty state offers one tap to the qualifier watchlist. Widen the
+    // 🟢 decision chip (Enter→All) to see the full list.
+    rating: 'ALL', setup: 'ALL', decision: 'ENTER', breakoutWindow: 'TODAY',
     tightPivotOnly: false, buyZoneOnly: false, nearPivotOnly: false,
     salesStrongOnly: false, rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
@@ -331,14 +511,14 @@ export function SepaPage() {
   const [filters, setFilters] = useState<SepaFilters>(() => {
     if (typeof window === 'undefined') return FILTER_DEFAULTS;
     try {
-      const raw = localStorage.getItem('sepa_filters_v1');
+      const raw = localStorage.getItem('sepa_filters_v2');
       if (!raw) return FILTER_DEFAULTS;
       return { ...FILTER_DEFAULTS, ...JSON.parse(raw) };
     } catch { return FILTER_DEFAULTS; }
   });
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('sepa_filters_v1', JSON.stringify(filters));
+    localStorage.setItem('sepa_filters_v2', JSON.stringify(filters));
   }, [filters]);
 
   // Phase 2 — setup-category tab strip. "all" is the default (existing
@@ -445,130 +625,11 @@ export function SepaPage() {
   }, [source.length, source[0]?.symbol]);  // re-run on list change
 
   const filtered = useMemo(() => {
-    const out = source.filter((r) => {
-      const rating = r.rating ?? defaultRating(r.score);
-      if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
-      if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
-      // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
-      // gate (is_buyable, pp.79-83/198-203) per user 2026-06-02 ("enter = buyable
-      // at all cost"); Wait/Watch match the entry_exit.decision banner the card
-      // shows. (Helper passesDecision keeps the two apply paths in sync.)
-      if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
-      if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
-      if (filters.buyZoneOnly && !pivotTiming(r).inBuyZone) return false;
-      if (filters.nearPivotOnly && !pivotTiming(r).nearPivot) return false;
-
-      if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
-      if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
-      if (filters.search && !r.symbol.includes(filters.search)) return false;
-      if (filters.dmEligibleOnly) {
-        const dm = r.dual_momentum;
-        if (!dm) return false;
-        if (!dm.abs_mom_pass) return false;
-        if (dm.beats_spy === false) return false;
-      }
-      if (filters.type === 'equity' && r.is_etf) return false;
-      if (filters.type === 'etf' && !r.is_etf) return false;
-      if (filters.pioneerOnly && !r.is_pioneer) return false;
-      // Stage filter — gate by Weinstein stage (1/2/3/4). When ALL, no gate.
-      if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
-      // Moat filter — Buffett tier minimum. When 0, no gate. UNKNOWN
-      // (tier 0) gets excluded as soon as the user opts into any minimum.
-      if (filters.moatMin > 0) {
-        const tier = r.moat?.tier ?? 0;
-        if (tier < filters.moatMin) return false;
-      }
-      // ≥1.5× volume chip (default ON) — today's volume must be ≥1.5× the
-      // 50-day average; unknown volume hides while on. Same gate in
-      // passesFilters() below — keep in sync.
-      if (filters.volX15Only) {
-        const v = r.volume;
-        if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
-      }
-      // Earnings-soon gate (ATEX lesson 2026-06-11) — same gate in
-      // passesFilters() below, keep in sync. Unknown dates pass (fail
-      // open; the chip's absence is honest about coverage).
-      if (filters.hideEarningsSoon) {
-        const er = earningsMap.get(r.symbol?.toUpperCase());
-        if (er && er.days_to <= EARNINGS_WARN_DAYS) return false;
-      }
-      // Hide-Distributing chip — drop institutional-distribution tape OR
-      // Chaikin money-outflow names. Opposite of "accumulation", so if
-      // the user enables this they don't want them at all, regardless of
-      // score. Same gate in passesFilters() below for setup-tab callers.
-      if (filters.hideDistributing) {
-        const v = r.volume;
-        if (v?.accumulation_strength === 'distributing') return false;
-        if (v?.cmf_signal === 'outflow') return false;
-      }
-      // Whales-accumulating filter — pure-FE narrow to candidates whose
-      // 13F flow over the last quarter was institutionally net-buying.
-      // Reads from the whalesFlow Map already loaded for the page; rows
-      // without whales data (most tickers don't have 13F coverage) are
-      // dropped because the user explicitly opted to see whales-only.
-      // The pairing of this chip with Hide Distributing produces the
-      // "whales + tape both bullish" short-list — closest the UI gets
-      // to surfacing the user's actual decision criteria ("based on
-      // whales and the volume").
-      if (filters.whalesAccumOnly) {
-        const wf = whalesFlow.get(r.symbol.toUpperCase());
-        if (!wf || wf.signal !== 'accumulating') return false;
-      }
-      // Hedge-fund-top-buyer filter — strictest of the whale chips.
-      // The top buying fund name must match a Tier-S entry in the
-      // curated fundTiers.ts list (legendary stock-pickers: Berkshire,
-      // Tiger, Coatue, Citadel, Pershing, Altimeter, etc). When the
-      // top buyer is an index giant (🏛 Vanguard / BlackRock) or an
-      // unknown LP, the row is dropped. Same caveat as the tier badge —
-      // historical reputation, not forward prediction.
-      if (filters.hedgeFundTopBuyer) {
-        const wf = whalesFlow.get(r.symbol.toUpperCase());
-        if (!wf || !wf.top_buy) return false;
-        const tier = getFundTier(wf.top_buy);
-        if (tier?.tier !== 'S') return false;
-      }
-      // POTUS Family filter — narrow to symbols on the curated POTUS-
-      // family disclosure list. Pure FE lookup via politicalDisclosures.ts.
-      if (filters.potusFamilyOnly) {
-        if (!getPoliticalChipFlags(r.symbol).hasPotusFamily) return false;
-      }
-      // US Gov filter — narrow to symbols with U.S. government
-      // involvement (CHIPS Act recipient, govt contractor, program
-      // participant). Either category counts as a US Gov tag.
-      if (filters.usGovOnly) {
-        const flags = getPoliticalChipFlags(r.symbol);
-        if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
-      }
-      // Insider cluster-buy filter — narrow to candidates where ≥3
-      // unique insiders filed Form 4 buys in the last 30 days. Reads
-      // row.insider populated by scanner.py's catalyst-enrichment path
-      // (top 20 candidates after Full Scan + catalyst). Names outside
-      // that enriched subset have no row.insider data and are dropped
-      // — documented in the chip tooltip so users know coverage.
-      if (filters.insiderClusterBuy) {
-        const ins = (r as any).insider;
-        if (!ins?.form4_cluster_buy) return false;
-      }
-      // Emerging Momentum Leader — the "next ARM" fingerprint.
-      if (filters.momentumLeaderOnly) {
-        if (!isMomentumLeader(r)) return false;
-      }
-      // Venky's filter stack (2026-05-29) — independent toggles layered
-      // on top of SEPA's qualifier gate.
-      const venky = (r as any).venky;
-      if (filters.weekly21SmaPass) {
-        if (!venky?.weekly_21sma?.pass) return false;
-      }
-      if (filters.atrPctMax > 0) {
-        const a = venky?.atr?.atr_pct;
-        if (a == null || a > filters.atrPctMax) return false;
-      }
-      if (filters.adxMin > 0) {
-        const adx = venky?.adx?.adx;
-        if (adx == null || adx < filters.adxMin) return false;
-      }
-      return true;
-    });
+    // Single shared gate chain — see passesSepaFilters (module scope). The
+    // setup-tab path (`passesFilters` below) calls the SAME function so the
+    // two filter surfaces can never drift.
+    const deps = { earningsMap, whalesFlow };
+    const out = source.filter((r) => passesSepaFilters(r, filters, deps));
     out.sort((a, b) => {
       // ── Minervini risk guard (applies to ALL sorts) ──────────────────
       // User policy (2026-05-25): "If anything is risky, do not put it
@@ -774,7 +835,11 @@ export function SepaPage() {
       return b.score - a.score;
     });
     return out;
-  }, [source, filters, earningsMap]);
+    // whalesFlow added 2026-06-12: the gate chain reads it (whalesAccumOnly /
+    // hedgeFundTopBuyer), so the list must recompute when whale 13F flow loads
+    // after a scan. It was previously omitted — a latent staleness bug surfaced
+    // while extracting passesSepaFilters.
+  }, [source, filters, earningsMap, whalesFlow]);
 
   // Build a fast lookup: symbol → SepaCandidate. Used when a setup tab is
   // active to match incoming /setups/{kind} setups to the existing SEPA
@@ -794,92 +859,13 @@ export function SepaPage() {
   // pioneer toggle, etc. continue to gate the visible setup matches.
   // Pulled into a callback so we can apply it in two different render
   // paths (default and setup-tab) without copying the logic.
-  const passesFilters = useMemo(() => (r: SepaCandidate): boolean => {
-    const rating = r.rating ?? defaultRating(r.score);
-    if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
-    if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
-    // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
-    // gate (is_buyable); Wait/Watch match the entry_exit.decision banner.
-    if (!passesDecision(r, filters.decision, filters.breakoutWindow)) return false;
-    if (filters.tightPivotOnly && !pivotTiming(r).pivotTight) return false;
-    if (filters.buyZoneOnly && !pivotTiming(r).inBuyZone) return false;
-    if (filters.nearPivotOnly && !pivotTiming(r).nearPivot) return false;
-
-    if (filters.salesStrongOnly && !['strong','explosive'].includes(r.fundamentals?.sales?.tier ?? '')) return false;
-    if (filters.rsMin > 0 && (r.rs_rank ?? 0) < filters.rsMin) return false;
-    if (filters.search && !r.symbol.includes(filters.search)) return false;
-    if (filters.dmEligibleOnly) {
-      const dm = r.dual_momentum;
-      if (!dm) return false;
-      if (!dm.abs_mom_pass) return false;
-      if (dm.beats_spy === false) return false;
-    }
-    if (filters.type === 'equity' && r.is_etf) return false;
-    if (filters.type === 'etf' && !r.is_etf) return false;
-    if (filters.pioneerOnly && !r.is_pioneer) return false;
-    if (filters.stage !== 'ALL' && r.stage?.stage !== filters.stage) return false;
-    if (filters.volX15Only) {
-      // Same gate as the main `filtered` useMemo above — keep in sync.
-      const v = r.volume;
-      if (!v?.last_vol || !v?.avg_vol_50 || v.last_vol < 1.5 * v.avg_vol_50) return false;
-    }
-    if (filters.hideEarningsSoon) {
-      // Same gate as the main `filtered` useMemo above — keep in sync.
-      const er = earningsMap.get(r.symbol?.toUpperCase());
-      if (er && er.days_to <= EARNINGS_WARN_DAYS) return false;
-    }
-    if (filters.hideDistributing) {
-      // Same gate as the main `filtered` useMemo above — keep in sync.
-      const v = r.volume;
-      if (v?.accumulation_strength === 'distributing') return false;
-      if (v?.cmf_signal === 'outflow') return false;
-    }
-    // Whales-accumulating gate — mirror of the main `filtered` block.
-    // Keep both in sync so setup-tab (VCP/Power Play) filtering and
-    // the main list filter behave identically when the chip is on.
-    if (filters.whalesAccumOnly) {
-      const wf = whalesFlow.get(r.symbol.toUpperCase());
-      if (!wf || wf.signal !== 'accumulating') return false;
-    }
-    // Hedge-fund-top-buyer gate — mirror of the main `filtered` block.
-    if (filters.hedgeFundTopBuyer) {
-      const wf = whalesFlow.get(r.symbol.toUpperCase());
-      if (!wf || !wf.top_buy) return false;
-      const tier = getFundTier(wf.top_buy);
-      if (tier?.tier !== 'S') return false;
-    }
-    // POTUS Family + US Gov gates — mirror of the main `filtered` block.
-    if (filters.potusFamilyOnly) {
-      if (!getPoliticalChipFlags(r.symbol).hasPotusFamily) return false;
-    }
-    if (filters.usGovOnly) {
-      const flags = getPoliticalChipFlags(r.symbol);
-      if (!flags.hasGovtInvestment && !flags.hasGovtContractor) return false;
-    }
-    // Insider cluster-buy gate — mirror of the main `filtered` block.
-    if (filters.insiderClusterBuy) {
-      const ins = (r as any).insider;
-      if (!ins?.form4_cluster_buy) return false;
-    }
-    // Venky's filter stack — mirror of the main `filtered` block.
-    const venky = (r as any).venky;
-    if (filters.weekly21SmaPass) {
-      if (!venky?.weekly_21sma?.pass) return false;
-    }
-    if (filters.atrPctMax > 0) {
-      const a = venky?.atr?.atr_pct;
-      if (a == null || a > filters.atrPctMax) return false;
-    }
-    if (filters.adxMin > 0) {
-      const adx = venky?.adx?.adx;
-      if (adx == null || adx < filters.adxMin) return false;
-    }
-    if (filters.moatMin > 0) {
-      const tier = r.moat?.tier ?? 0;
-      if (tier < filters.moatMin) return false;
-    }
-    return true;
-  }, [filters, whalesFlow, earningsMap]);
+  const passesFilters = useMemo(() => {
+    // Same gate chain as the main `filtered` list — both delegate to the one
+    // module-level passesSepaFilters so the setup tabs (VCP / Bull Flag) and
+    // the all-candidates list stay byte-for-byte identical.
+    const deps = { earningsMap, whalesFlow };
+    return (r: SepaCandidate): boolean => passesSepaFilters(r, filters, deps);
+  }, [filters, earningsMap, whalesFlow]);
 
   // VCP-tab list — client-side filter on the already-loaded SEPA list.
   // Composes with the existing SepaFilterBar so RS, pioneer, etc. still
@@ -1233,19 +1219,41 @@ export function SepaPage() {
           <SepaCardGridSkeleton n={6} />
         ) : filtered.length === 0 ? (
           <div className="sepa-empty-card">
-            <div className="eyebrow">Nothing matches</div>
-            <p>
-              None of the <strong>{source.length}</strong> scanned names match your
-              current filters{filters.search ? <> (including the ticker search “<strong>{filters.search}</strong>”)</> : null}.
-              {' '}Clear them to see the full list.
-            </p>
-            <button
-              className="sepa-btn sepa-btn--primary"
-              style={{ marginTop: '0.6rem' }}
-              onClick={() => setFilters(FILTER_DEFAULTS)}
-            >
-              ✕ Clear all filters
-            </button>
+            {filters.decision === 'ENTER' ? (
+              <>
+                <div className="eyebrow">🎯 Nothing buyable right now</div>
+                <p>
+                  No name in the <strong>{source.length}</strong> scanned is in a
+                  buyable breakout today by Minervini's strict gate (Stage 2 + base
+                  + a same-day volume-confirmed breakout). That's normal — most days
+                  there's nothing to buy. The watchlist below passed the Trend
+                  Template and is worth tracking for when one fires.
+                </p>
+                <button
+                  className="sepa-btn sepa-btn--primary"
+                  style={{ marginTop: '0.6rem' }}
+                  onClick={() => setFilters((f) => ({ ...f, decision: 'ALL' }))}
+                >
+                  👀 Show watchlist (qualifiers)
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="eyebrow">Nothing matches</div>
+                <p>
+                  None of the <strong>{source.length}</strong> scanned names match your
+                  current filters{filters.search ? <> (including the ticker search “<strong>{filters.search}</strong>”)</> : null}.
+                  {' '}Clear them to see the full list.
+                </p>
+                <button
+                  className="sepa-btn sepa-btn--primary"
+                  style={{ marginTop: '0.6rem' }}
+                  onClick={() => setFilters(FILTER_DEFAULTS)}
+                >
+                  ✕ Clear all filters
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <section className="sepa-results">
