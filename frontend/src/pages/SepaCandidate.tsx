@@ -1100,11 +1100,11 @@ export function SepaCandidatePage() {
                 {base?.volume && (
                   <div className="sepa-pivot-framework" style={{ marginBottom: '1rem' }}>
                     <VolumeTrend vol={base.volume} />
-                    {base.volume.breakout_count != null && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <BreakoutStats vol={base.volume} />
-                      </div>
-                    )}
+                    <div style={{ marginTop: '0.5rem' }}>
+                      {/* symbol fallback → self-heals if the cached row's volume
+                          predates breakout_count (card↔detail parity). */}
+                      <BreakoutStats vol={base.volume} symbol={base.symbol} />
+                    </div>
                   </div>
                 )}
 

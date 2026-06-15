@@ -644,12 +644,13 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
       </div>
 
       {/* Breakout count + actual volume (Ajay 2026-06-13) — how many breakouts
-          this name has actually printed, and today's real share volume. */}
-      {row.volume?.breakout_count != null && (
-        <div style={{ padding: '0.35rem 0.2rem 0' }}>
-          <BreakoutStats vol={row.volume} />
-        </div>
-      )}
+          this name has actually printed, and today's real share volume. Pass
+          BOTH vol (fast path from the scan payload) AND symbol so the chip
+          self-heals on a stale cached scan that predates breakout_count
+          (Ajay 2026-06-15: "not seeing breakout counts on the SEPA cards"). */}
+      <div style={{ padding: '0.35rem 0.2rem 0' }}>
+        <BreakoutStats vol={row.volume} symbol={row.symbol} />
+      </div>
 
       {row.entry_exit && (
         <div style={{ padding: '0 0.2rem' }}>

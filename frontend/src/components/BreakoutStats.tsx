@@ -6,11 +6,16 @@
    (book p.203) + today's REAL share volume vs the 50-day average — not just a
    "2.4×" ratio.
 
-   Two modes:
-     • <BreakoutStats vol={row.volume} />  — on SEPA cards / detail, reads the
-       breakout_count already in the scan payload (no fetch).
-     • <BreakoutStats symbol="MU" />       — on Portfolio holdings, self-fetches
-       /sepa/breakout/{symbol} (a held name isn't always in the latest scan).
+   Two modes (combine them for self-healing):
+     • <BreakoutStats vol={row.volume} />  — reads the breakout_count already in
+       the scan payload (no fetch). Fast path.
+     • <BreakoutStats symbol="MU" />       — self-fetches /sepa/breakout/{symbol}
+       (a held name isn't always in the latest scan; Portfolio uses this).
+     • <BreakoutStats vol={row.volume} symbol={row.symbol} />  — SEPA cards: use
+       the payload's count when present, else FALL BACK to the per-symbol fetch.
+       This is why the chip survives a STALE cached scan that predates
+       breakout_count (the localStorage `sepa.scan` snapshot the page hydrates
+       from synchronously) — the card self-heals instead of silently hiding.
    Renders nothing until it has a breakout_count. */
 import { useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -71,18 +76,22 @@ function Chip({ v }: { v: VolLike }) {
 
 export function BreakoutStats({ vol, symbol }: { vol?: VolLike | null; symbol?: string }) {
   const [fetched, setFetched] = useState<VolLike | null>(null);
+  // The payload already carries the count? Use it, skip the network. Otherwise
+  // (no vol, OR a stale cached row whose volume predates breakout_count) and we
+  // have a symbol → self-heal by fetching the per-symbol breakout read.
+  const haveCount = vol?.breakout_count != null;
 
   useEffect(() => {
-    if (vol || !symbol) return;
+    if (haveCount || !symbol) return;
     let alive = true;
     fetch(`${API}/sepa/breakout/${encodeURIComponent(symbol)}`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => { if (alive && j && j.ok) setFetched(j as VolLike); })
       .catch(() => { /* non-fatal */ });
     return () => { alive = false; };
-  }, [vol, symbol]);
+  }, [haveCount, symbol]);
 
-  const v = vol ?? fetched;
+  const v = haveCount ? vol : (fetched ?? vol);
   if (!v) return null;
   return <Chip v={v} />;
 }
