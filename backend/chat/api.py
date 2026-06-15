@@ -45,6 +45,7 @@ from fastapi.responses import JSONResponse
 
 from auth import current_user_email
 
+from .portfolio_context import live_portfolio_block
 from .prompt import build_system_prompt
 
 log = logging.getLogger("chat.api")
@@ -129,7 +130,10 @@ async def chat_send(
             "Last message must be from the user. (Are you replaying state?)",
         )
 
-    system_prompt = build_system_prompt(page_context)
+    # Inject his live portfolio so the agent always knows his real positions
+    # (soft-fails to None — never blocks a chat turn).
+    portfolio_block = live_portfolio_block(email)
+    system_prompt = build_system_prompt(page_context, portfolio_block)
 
     # Anthropic Messages API direct call — bypasses llm.chat() because
     # that helper takes a single-prompt string. Multi-turn chat needs

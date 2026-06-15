@@ -88,6 +88,23 @@ def test_llm_raising_becomes_502_not_crash(primed, monkeypatch):
     assert "socket exploded" in exc.value.detail
 
 
+def test_ask_includes_live_portfolio_labeled_non_book(primed, fake_llm):
+    """The live-positions snapshot rides into the prompt so the coach knows
+    what he holds — but labelled app state, never a book source to cite."""
+    pf = ("## Ajay's LIVE portfolio\n"
+          "- MU: 42 sh · $591.00 avg · $746.50 · +26.3% open · 60% of book")
+    brain_api.ask_impl("should I trim my MU?", portfolio=pf)
+    assert "MU: 42 sh" in fake_llm["prompt"]
+    assert "LIVE PORTFOLIO" in fake_llm["prompt"]
+    # Grounding contract intact: portfolio is app state, never cited as books.
+    assert "never cite it as the books" in fake_llm["prompt"]
+
+
+def test_ask_without_portfolio_omits_the_block(primed, fake_llm):
+    brain_api.ask_impl("where does my stop go?")
+    assert "LIVE PORTFOLIO" not in fake_llm["prompt"]
+
+
 def test_ask_history_clipped_to_last_6_and_context_included(primed, fake_llm):
     history = [{"role": "user", "text": f"turn-{i}"} for i in range(8)]
     brain_api.ask_impl("stop loss", history=history, app_context="viewing NVDA chart")

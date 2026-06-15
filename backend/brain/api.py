@@ -21,8 +21,10 @@ import asyncio
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
+
+from auth import current_user_email
 
 log = logging.getLogger("brain.api")
 
@@ -45,9 +47,16 @@ def _distill(question: str) -> str:
 
 
 def ask_impl(question: str, history: Optional[List[dict]] = None,
-             app_context: Optional[str] = None) -> dict:
+             app_context: Optional[str] = None,
+             portfolio: Optional[str] = None) -> dict:
     """Retrieve -> build grounded prompt -> Claude with the persona system.
-    Sync (runs in a thread from the route)."""
+    Sync (runs in a thread from the route).
+
+    ``portfolio`` is the user's live-positions snapshot (app state, NOT book
+    material) so the coach knows what he actually holds when restating the
+    book's rules for a position. The persona's grounding/citation contract is
+    untouched: this is injected as app state and labelled never-cite-as-books.
+    """
     from brain import retriever
     from brain.persona import SYSTEM_PROMPT
 
@@ -70,6 +79,13 @@ def ask_impl(question: str, history: Optional[List[dict]] = None,
             parts.append("[%s] %s" % (r["cite"], r["text"]))
     else:
         parts.append("PASSAGES: none retrieved for this question.")
+
+    if portfolio:
+        parts.append("\nAJAY'S LIVE PORTFOLIO (his real positions — app state, "
+                     "NOT book material, never cite it as the books). When he "
+                     "asks about 'my position', restate the relevant book rules "
+                     "WITH citations against these actual holdings:\n"
+                     + str(portfolio)[:2500])
 
     if app_context:
         parts.append("\nAPP CONTEXT (the user's screen/app state — NOT book "
@@ -125,7 +141,8 @@ async def brain_search(q: str, k: int = 8, book: Optional[str] = None):
 
 
 @router.post("/brain/ask")
-async def brain_ask(payload: dict = Body(...)):
+async def brain_ask(payload: dict = Body(...),
+                    email: str = Depends(current_user_email)):
     question = str(payload.get("question") or "").strip()
     if not question:
         raise HTTPException(400, "question required")
@@ -133,9 +150,13 @@ async def brain_ask(payload: dict = Body(...)):
     if not isinstance(history, list):
         history = []
     app_context = payload.get("app_context")
+    # His live positions (soft-fails to None) so the coach knows what he holds.
+    from chat.portfolio_context import live_portfolio_block
+    portfolio = await asyncio.to_thread(live_portfolio_block, email)
     out = await asyncio.to_thread(
         ask_impl, question[:2000], history,
-        str(app_context) if app_context else None)
+        str(app_context) if app_context else None,
+        portfolio)
     return JSONResponse(out)
 
 
