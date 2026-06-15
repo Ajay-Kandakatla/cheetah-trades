@@ -2341,6 +2341,15 @@ async def sepa_breakout_symbol(symbol: str):
     return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.for_symbol, symbol)))
 
 
+@app.get("/sepa/breakout/{symbol}/history")
+async def sepa_breakout_history(symbol: str):
+    """Per-symbol breakout HISTORY — trailing-year close/volume series + the
+    breakout markers (where each volume-confirmed breakout fired). Powers the
+    BreakoutHistoryModal opened from the 🚀 chip."""
+    from sepa import breakout
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.history_for_symbol, symbol)))
+
+
 @app.get("/sepa/analyst-map")
 async def sepa_analyst_map(symbols: str = Query(..., description="comma-separated tickers, max 100")):
     """Bulk per-symbol analyst read {SYM: {verdict, implied_upside_pct, ...}}

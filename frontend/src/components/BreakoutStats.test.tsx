@@ -39,6 +39,20 @@ describe('BreakoutStats', () => {
     expect(fetchSpy).not.toHaveBeenCalled();   // had the count → no network
   });
 
+  it('is a clickable drill (role=button + affordance) when a symbol is given', () => {
+    vi.stubGlobal('fetch', vi.fn());
+    render(<BreakoutStats vol={{ breakout_count: 12, breakout_window_bars: 252 }} symbol="ARM" />);
+    const chip = screen.getByRole('button');
+    expect(chip).toHaveTextContent(/12 breakouts/i);
+    expect(chip).toHaveTextContent('›');                 // drill affordance
+  });
+
+  it('is NOT clickable without a symbol (no role=button)', () => {
+    render(<BreakoutStats vol={{ breakout_count: 4, breakout_window_bars: 252 }} />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByText(/4 breakouts/i)).toBeInTheDocument();
+  });
+
   it('self-heals: fetches /sepa/breakout/{symbol} when the row lacks the count', async () => {
     const fetchSpy = okFetch({ ok: true, breakout_count: 5, breakout_window_bars: 252,
                                last_vol: 3_400_000, avg_vol_50: 1_000_000 });

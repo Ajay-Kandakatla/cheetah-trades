@@ -17,8 +17,13 @@
        breakout_count (the localStorage `sepa.scan` snapshot the page hydrates
        from synchronously) — the card self-heals instead of silently hiding.
    Renders nothing until it has a breakout_count. */
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { API } from '../lib/apiBase';
+
+// Lazy so the chart modal isn't in the SEPA list's critical bundle.
+const BreakoutHistoryModal = lazy(() =>
+  import('./BreakoutHistoryModal').then((m) => ({ default: m.BreakoutHistoryModal })),
+);
 
 type VolLike = {
   breakout_count?: number | null;
@@ -45,7 +50,7 @@ function windowLabel(bars: number | null | undefined): string {
   return `${mo}mo`;
 }
 
-function Chip({ v }: { v: VolLike }) {
+function Chip({ v, onOpen }: { v: VolLike; onOpen?: (e: ReactMouseEvent) => void }) {
   const count = v.breakout_count;
   if (count == null) return null;
   const lv = v.last_vol ?? null;
@@ -53,14 +58,20 @@ function Chip({ v }: { v: VolLike }) {
   const ratio = lv != null && av && av > 0 ? lv / av : null;
   const todayBreakout = v.days_since_breakout === 0 || !!v.high_vol_breakout;
   const tone = count >= 8 ? '#10b981' : count >= 3 ? '#eab308' : '#94a3b8';
-  const title =
-    `${count} volume-confirmed breakout${count === 1 ? '' : 's'} in the last ${windowLabel(v.breakout_window_bars)} ` +
-    `(close above the prior 21-day high on >1.5× average volume — Minervini, Trade Like a Stock Market Wizard p.203). ` +
-    `Today's volume ${lv != null ? lv.toLocaleString() : '—'} vs the 50-day average ${av != null ? av.toLocaleString() : '—'}` +
-    `${ratio != null ? ` (${ratio.toFixed(1)}×)` : ''}.`;
+  const clickable = !!onOpen;
+  const title = clickable
+    ? `Click to chart where each of these ${count} breakout${count === 1 ? '' : 's'} fired (last ${windowLabel(v.breakout_window_bars)}).`
+    : `${count} volume-confirmed breakout${count === 1 ? '' : 's'} in the last ${windowLabel(v.breakout_window_bars)} ` +
+      `(close above the prior 21-day high on >1.5× average volume — Minervini, Trade Like a Stock Market Wizard p.203). ` +
+      `Today's volume ${lv != null ? lv.toLocaleString() : '—'} vs the 50-day average ${av != null ? av.toLocaleString() : '—'}` +
+      `${ratio != null ? ` (${ratio.toFixed(1)}×)` : ''}.`;
   return (
     <span className="sepa-chip" title={title}
-          style={{ color: tone, borderColor: tone, cursor: 'help', fontSize: '0.72rem' }}>
+          role={clickable ? 'button' : undefined}
+          tabIndex={clickable ? 0 : undefined}
+          onClick={onOpen}
+          onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.(e as unknown as ReactMouseEvent); } } : undefined}
+          style={{ color: tone, borderColor: tone, cursor: clickable ? 'pointer' : 'help', fontSize: '0.72rem' }}>
       🚀 {count} breakout{count === 1 ? '' : 's'} · {windowLabel(v.breakout_window_bars)}
       {lv != null && (
         <>
@@ -70,12 +81,14 @@ function Chip({ v }: { v: VolLike }) {
         </>
       )}
       {todayBreakout && ' ⚡'}
+      {clickable && <span style={{ opacity: 0.6 }}> ›</span>}
     </span>
   );
 }
 
 export function BreakoutStats({ vol, symbol }: { vol?: VolLike | null; symbol?: string }) {
   const [fetched, setFetched] = useState<VolLike | null>(null);
+  const [open, setOpen] = useState(false);
   // The payload already carries the count? Use it, skip the network. Otherwise
   // (no vol, OR a stale cached row whose volume predates breakout_count) and we
   // have a symbol → self-heal by fetching the per-symbol breakout read.
@@ -93,5 +106,21 @@ export function BreakoutStats({ vol, symbol }: { vol?: VolLike | null; symbol?: 
 
   const v = haveCount ? vol : (fetched ?? vol);
   if (!v) return null;
-  return <Chip v={v} />;
+
+  // With a symbol the chip is a drill-in: click to chart WHERE each breakout
+  // fired. Stop propagation so it doesn't also trigger the card's row-select.
+  const onOpen = symbol
+    ? (e: ReactMouseEvent) => { e.stopPropagation(); setOpen(true); }
+    : undefined;
+
+  return (
+    <>
+      <Chip v={v} onOpen={onOpen} />
+      {open && symbol && (
+        <Suspense fallback={null}>
+          <BreakoutHistoryModal symbol={symbol} onClose={() => setOpen(false)} />
+        </Suspense>
+      )}
+    </>
+  );
 }

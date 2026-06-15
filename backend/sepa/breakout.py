@@ -64,3 +64,46 @@ def for_symbol(symbol: str) -> dict:
     except Exception as exc:                           # noqa: BLE001
         log.debug("breakout.for_symbol(%s) failed: %s", sym, exc)
     return {"ok": False, "symbol": sym}
+
+
+def history_for_symbol(symbol: str) -> dict:
+    """Per-symbol breakout HISTORY for the drill chart — "where did each breakout
+    actually fire?" (Ajay 2026-06-15). Returns the trailing-year close/volume
+    series PLUS the breakout markers (same definition as the count, via
+    volume.breakout_points), so the modal can plot the line and pin a 🚀 at
+    every breakout bar:
+
+        {ok, symbol, last_close, breakout_count, window_bars, avg_vol_50,
+         series:    [{date, close, volume}, ...],   # oldest -> newest
+         breakouts: [{date, close, volume, vol_ratio}, ...]}
+
+    Display-only. Soft-fails to {ok: False, symbol}."""
+    sym = (symbol or "").upper().strip()
+    try:
+        from sepa import prices, volume
+        df = prices.load_prices(sym)
+        if df is None or len(df) == 0:
+            return {"ok": False, "symbol": sym}
+        window = df.iloc[-volume.BREAKOUT_COUNT_LOOKBACK:]
+        series = [
+            {
+                "date":   volume._date_str(idx),
+                "close":  round(float(prow["close"]), 4),
+                "volume": int(prow["volume"]),
+            }
+            for idx, prow in window.iterrows()
+        ]
+        vol = volume.analyze(df) or {}
+        return {
+            "ok":             True,
+            "symbol":         sym,
+            "last_close":     round(float(df["close"].iloc[-1]), 4),
+            "breakout_count": vol.get("breakout_count"),
+            "window_bars":    int(len(window)),
+            "avg_vol_50":     vol.get("avg_vol_50"),
+            "series":         series,
+            "breakouts":      volume.breakout_points(df),
+        }
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("breakout.history_for_symbol(%s) failed: %s", sym, exc)
+    return {"ok": False, "symbol": sym}

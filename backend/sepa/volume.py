@@ -280,6 +280,56 @@ def _strength_label(ratio: Optional[float], cmf: Optional[float],
     return "neutral"
 
 
+def _date_str(idx) -> str:
+    """Format a price-frame index label (Timestamp or string) as YYYY-MM-DD."""
+    try:
+        return idx.strftime("%Y-%m-%d")
+    except Exception:
+        return str(idx)[:10]
+
+
+def breakout_points(df: pd.DataFrame,
+                    lookback: int = BREAKOUT_COUNT_LOOKBACK) -> list:
+    """The distinct volume-confirmed breakout START bars over the trailing
+    ``lookback`` bars — the rising edges of the SAME bo_series ``analyze()``
+    counts as ``breakout_count`` (book p.203: a close above the prior 21-bar
+    high on volume > 1.5× the 50-day average). Each point:
+
+        {"date", "close", "volume", "vol_ratio"}
+
+    Kept here, right next to the count, so the chart markers can NEVER drift
+    from the number on the chip. Display-only; never feeds the score. Returns
+    ``[]`` on any problem (too-short history, bad data).
+    """
+    out: list = []
+    try:
+        if df is None or len(df) < 60:
+            return out
+        c = df["close"].astype(float)
+        v = df["volume"].astype(float)
+        vol_avg50 = v.rolling(50).mean()
+        prior_high_21 = c.rolling(21).max().shift(1)
+        bo = ((vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)).fillna(False)
+        win = bo.iloc[-lookback:]
+        prev = False
+        for idx, fired in win.items():
+            f = bool(fired)
+            if f and not prev:                 # rising edge = one breakout START
+                av = vol_avg50.loc[idx]
+                vi = v.loc[idx]
+                ratio = (float(vi) / float(av)) if (av and av > 0) else None
+                out.append({
+                    "date":      _date_str(idx),
+                    "close":     round(float(c.loc[idx]), 4),
+                    "volume":    int(vi),
+                    "vol_ratio": round(ratio, 2) if ratio else None,
+                })
+            prev = f
+    except Exception:
+        return []
+    return out
+
+
 def analyze(df: pd.DataFrame) -> Optional[dict]:
     """Full per-ticker volume read.
 
