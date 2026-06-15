@@ -214,3 +214,27 @@ current regime and the triggers that would change it — it does **not** forecas
 where price closes today, this week, or any horizon. A pattern that worked before
 does not guarantee future results; nothing here is a personalized
 buy/sell/position-sizing recommendation.
+
+---
+
+## 2026-06-13 — Gauge trend history
+
+The pre-open persist (`run_and_persist`) only ever wrote a single `_id:"latest"`
+doc in `market_gauge` — overwritten every run, so **no series was kept** (you
+couldn't see "last Friday was 53"). Added a dated history so the Market Gauge
+page can chart the trend:
+
+- **`market_gauge_history` collection** — one doc per ET day (`_id = YYYY-MM-DD`),
+  idempotent (the latest read of the day wins). Written by `_record_history()`,
+  called from both `run_and_persist()` (the 8:30am cron) and `get_gauge()` on a
+  live recompute, so the series builds from normal usage.
+- **`GET /market/gauge/history?days=90`** → `{rows: [{date_et, score, state,
+  source, computed_at}], available}`, oldest→newest.
+- **`<GaugeTrend>`** on the Market Gauge page — an SVG line chart of the score
+  with the band backgrounds (≥67 Constructive / 34–66 Caution / <34 Risk-Off).
+  Shows a "building history" note until ≥2 points exist.
+
+**History starts 2026-06-13.** Earlier reads were overwritten and can't be
+back-filled (the gauge uses live breadth/snapshot inputs that aren't stored
+historically), so the line is short at first and grows one point per trading day.
+Tests: `tests/test_gauge_history.py` (idempotent-per-day, sorted, soft-fail).

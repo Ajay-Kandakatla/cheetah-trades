@@ -9,6 +9,7 @@ import { InfoButton } from '../components/InfoButton';
 import { ReactionMap } from '../components/ReactionMap';
 import { MacroCalendar } from '../components/MacroCalendar';
 import { FearGreedGauge } from '../components/FearGreedGauge';
+import { GaugeTrend } from '../components/GaugeTrend';
 import { MacroIndicators } from '../components/MacroIndicators';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
 
@@ -129,6 +130,9 @@ export function MarketGaugePage() {
               </ul>
             </section>
           )}
+
+          {/* Gauge score over time (Ajay 2026-06-13) — stores one read per day. */}
+          <GaugeTrend days={90} />
 
           {/* CNN Fear & Greed — sentiment read (mirrored from CNN Business) */}
           <FearGreedGauge />

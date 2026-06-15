@@ -818,6 +818,7 @@ def run_and_persist() -> dict:
                      payload.get("score"), payload.get("state"))
         except Exception as exc:
             log.warning("market_gauge persist failed: %s", exc)
+    _record_history(payload)                         # keep the dated series too
     _CACHE.update(at=time.time(), data=payload)     # warm the in-proc cache too
     return payload
 
@@ -838,6 +839,62 @@ def load_persisted() -> Optional[dict]:
         return None
 
 
+# ── History — one point per ET day so the FE can chart the trend over time
+#    (Ajay 2026-06-13). The 'latest' doc above is OVERWRITTEN each run; this keeps
+#    the series. History starts accumulating now — older reads weren't retained. ─
+def _hist_coll():
+    try:
+        from pymongo import MongoClient
+        url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        client = MongoClient(url, serverSelectionTimeoutMS=2000)
+        client.admin.command("ping")
+        return client[os.getenv("MONGO_DB", "cheetah")].market_gauge_history
+    except Exception:
+        return None
+
+
+def _today_et() -> str:
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+    except Exception:
+        return datetime.now().strftime("%Y-%m-%d")
+
+
+def _record_history(payload: dict) -> None:
+    """Upsert today's gauge point (idempotent per ET day — the latest read of the
+    day wins). Never raises."""
+    coll = _hist_coll()
+    if coll is None or not payload or payload.get("score") is None:
+        return
+    try:
+        day = _today_et()
+        coll.update_one(
+            {"_id": day},
+            {"$set": {"date_et": day, "score": payload.get("score"),
+                      "state": payload.get("state"), "source": payload.get("source"),
+                      "computed_at": int(time.time())}},
+            upsert=True,
+        )
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("market_gauge history record failed: %s", exc)
+
+
+def history(days: int = 90) -> dict:
+    """The gauge trend — one point per ET day, oldest→newest."""
+    coll = _hist_coll()
+    if coll is None:
+        return {"rows": [], "available": False}
+    try:
+        rows = [r for r in coll.find({}, {"_id": 0}).sort("date_et", 1)
+                if r.get("score") is not None]
+        return {"rows": rows[-int(days):], "available": True}
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("market_gauge history read failed: %s", exc)
+        return {"rows": [], "available": False}
+
+
 # ── In-process cache (the top-right badge hits this on every page) ───────────
 _CACHE: dict = {"at": 0.0, "data": None}
 _TTL_SEC = 300
@@ -856,5 +913,6 @@ def get_gauge(force: bool = False, prefer_persisted: bool = True) -> dict:
             _CACHE.update(at=now, data=doc)
             return doc
     data = compute()
+    _record_history(data)                            # record live recomputes too
     _CACHE.update(at=now, data=data)
     return data

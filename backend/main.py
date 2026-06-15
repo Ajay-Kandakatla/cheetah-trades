@@ -1218,6 +1218,14 @@ async def market_gauge_get(force: bool = Query(False, description="Bypass the 5-
     return JSONResponse(_scrub_nan(await asyncio.to_thread(market_gauge.get_gauge, force)))
 
 
+@app.get("/market/gauge/history")
+async def market_gauge_history(days: int = Query(90, ge=2, le=365)):
+    """Daily market-gauge trend — one point per ET day (Ajay 2026-06-13). History
+    accumulates from 2026-06-13 onward; older reads weren't retained."""
+    from sepa import market_gauge
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(market_gauge.history, days)))
+
+
 @app.get("/market/fear-greed")
 async def market_fear_greed_get(force: bool = Query(False, description="Bypass the cache")):
     """Fear & Greed index — CNN Business's published index surfaced in-app: the
