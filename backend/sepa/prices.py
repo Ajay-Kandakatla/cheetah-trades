@@ -292,6 +292,42 @@ def _drop_phantom_tail(df: Optional[pd.DataFrame]) -> Optional[pd.DataFrame]:
     return df
 
 
+# Scale-discontinuity threshold for the decimal-shift guard (2026-06-15).
+# A real, already-cached, already-liquid name never moves anywhere near this
+# in a single session — even a limit move is <2x. The only things that produce
+# a >=5x close ratio between two adjacent sessions are (a) a stored history left
+# at the wrong decimal scale by an earlier bad full-history fetch, or (b) a
+# split Massive hasn't reflected yet. For BOTH the correct response is a full,
+# clean refetch (adjusted=true), never blindly stacking a correct-scale snapshot
+# bar on top of a wrong-scale series. 5x sits well clear of the most violent
+# real microcap squeeze, and — critically — even a false positive is harmless:
+# the only consequence is one extra full refetch, which returns the real series.
+_SCALE_GLITCH_RATIO = 5.0
+
+
+def _is_scale_glitch(new_close, prev_close) -> bool:
+    """True when ``new_close`` is discontinuous from ``prev_close`` by a factor
+    no real daily session can produce (>= _SCALE_GLITCH_RATIO either direction).
+
+    This is the signature of a decimal-shift / split-adjustment artifact. It is
+    exactly what corrupted KLAC's served scan on 2026-06-12: a correct 254.54
+    snapshot bar got appended onto a stored prior-session bar sitting at ~2413
+    (~10x scale), so day_change_pct = 254.54 / 2413 - 1 collapsed to -89.45%
+    (and the 200-day MA inflated, flipping dist_200_pct to -81.83%). Pure
+    function — no Mongo, no network — so it unit-tests like ``_drop_phantom_tail``.
+    Returns False (i.e. "not a glitch") on any non-positive or unparseable input,
+    so a data hiccup never trips the guard on a legitimate bar.
+    """
+    try:
+        a, b = float(new_close), float(prev_close)
+    except (TypeError, ValueError):
+        return False
+    if a <= 0 or b <= 0:
+        return False
+    r = a / b
+    return r >= _SCALE_GLITCH_RATIO or r <= 1.0 / _SCALE_GLITCH_RATIO
+
+
 # A symbol whose newest daily bar is older than this many CALENDAR days is
 # treated as delisted / halted / renamed (no live data) and excluded from the
 # scan. ~10 trading days; the gap between an active name (last bar 0-3 days old)
@@ -459,7 +495,7 @@ def patch_latest_closes(symbols: list[str]) -> dict:
         return {"patched": 0, "already_current": 0, "no_cache": 0, "total_snapshot": 0}
 
     coll = _get_mongo()
-    patched = already_current = no_cache = phantom_skipped = 0
+    patched = already_current = no_cache = phantom_skipped = scale_glitch_healed = 0
 
     for sym, bar in snaps.items():
         # Skip bars with any missing or zero price field (0 = no session today,
@@ -522,6 +558,39 @@ def patch_latest_closes(symbols: list[str]) -> dict:
             if hasattr(d, "date"):
                 return d.date().isoformat()
             return str(d)[:10]
+
+        # Decimal-shift / scale-glitch guard (2026-06-15). Compare today's
+        # snapshot close against the most recent stored bar from a PRIOR session
+        # (strictly before bar_iso). If they differ by a factor no real session
+        # can produce, the stored history is at the wrong decimal scale (left by
+        # an earlier bad full-history fetch) — appending or overwriting a
+        # correct-scale bar on top yields the KLAC 2026-06-12 signature:
+        # day_change_pct = correct / wrong-scale-prev - 1 ~= -89% plus an
+        # inflated 200-day MA (dist_200_pct -81.83%). Don't stack a mismatched
+        # bar onto a corrupt series; expire cached_at so the next load_prices()
+        # does a full clean _fetch -> _mongo_put (rewrites the WHOLE array,
+        # healing dist_200 / stage / RS too), and skip this symbol for now.
+        prior_session = next(
+            (b for b in reversed(doc["bars"]) if _bar_iso(b) and _bar_iso(b) < bar_iso),
+            None,
+        )
+        if prior_session is not None and _is_scale_glitch(
+            bar["close"], prior_session.get("close")
+        ):
+            log.warning(
+                "patch_latest_closes: scale glitch for %s (snapshot %s close=%.4f vs "
+                "stored prior session %s close=%.4f) — stored history is wrong-scale; "
+                "expiring cache to force a clean full refetch",
+                sym, bar_iso, float(bar["close"]),
+                _bar_iso(prior_session), float(prior_session.get("close") or 0.0),
+            )
+            if coll is not None:
+                try:
+                    coll.update_one({"symbol": sym}, {"$set": {"cached_at": 0}})
+                except Exception as exc:
+                    log.warning("patch_latest_closes: %s cache-expire failed: %s", sym, exc)
+            scale_glitch_healed += 1
+            continue
 
         if any(_bar_iso(b) == bar_iso for b in doc["bars"]):
             # Today's bar already exists — OVERWRITE its OHLCV with the
@@ -600,14 +669,16 @@ def patch_latest_closes(symbols: list[str]) -> dict:
                 log.warning("patch_latest_closes: %s failed: %s", sym, exc)
 
     log.info(
-        "patch_latest_closes: patched=%d already_current=%d no_cache=%d phantom_skipped=%d",
-        patched, already_current, no_cache, phantom_skipped,
+        "patch_latest_closes: patched=%d already_current=%d no_cache=%d "
+        "phantom_skipped=%d scale_glitch_healed=%d",
+        patched, already_current, no_cache, phantom_skipped, scale_glitch_healed,
     )
     return {
         "patched":        patched,
         "already_current": already_current,
         "no_cache":       no_cache,
         "phantom_skipped": phantom_skipped,
+        "scale_glitch_healed": scale_glitch_healed,
         "total_snapshot": len(snaps),
     }
 
