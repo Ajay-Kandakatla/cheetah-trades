@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { BreakoutHistoryModal } from './BreakoutHistoryModal';
+import { BreakoutHistoryModal, BreakoutHistoryBody } from './BreakoutHistoryModal';
 
 /* BreakoutHistoryModal — the chart of WHERE each breakout fired (Ajay
    2026-06-15). Locks: it plots one marker per breakout, lists them, and the
@@ -52,5 +52,23 @@ describe('BreakoutHistoryModal', () => {
     await waitFor(() =>
       expect(screen.getByText(/No volume-confirmed breakouts/i)).toBeInTheDocument());
     expect(document.querySelectorAll('circle')).toHaveLength(0);
+  });
+});
+
+// The shared body powers the SEPA detail page's Breakout tab (no modal chrome).
+describe('BreakoutHistoryBody (Breakout tab)', () => {
+  it('renders the count + markers inline', async () => {
+    vi.stubGlobal('fetch', okFetch(HISTORY));
+    const { container } = render(<BreakoutHistoryBody symbol="ROKU" />);
+    await waitFor(() =>
+      expect(screen.getByText(/3 volume-confirmed breakouts/i)).toBeInTheDocument());
+    expect(container.querySelectorAll('circle')).toHaveLength(3);   // inline, not a portal
+  });
+
+  it('shows an honest error on fetch failure (negative)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
+    render(<BreakoutHistoryBody symbol="ROKU" />);
+    await waitFor(() =>
+      expect(screen.getByText(/Couldn't load breakout history/i)).toBeInTheDocument());
   });
 });

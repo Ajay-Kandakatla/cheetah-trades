@@ -12,6 +12,7 @@ import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
+import { BreakoutHistoryBody } from '../components/BreakoutHistoryModal';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
@@ -138,19 +139,19 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'ranking' | 'fundamentals' | 'sales' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
+type Tab = 'chart' | 'setup' | 'trend' | 'breakout' | 'ranking' | 'fundamentals' | 'sales' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
 
 // The active tab lives in the URL (?tab=insider) so it survives reload, back/
 // forward, and deep-links from cards — instead of always snapping to 'chart'.
 // We also accept the legacy #hash deep-links some chips still emit.
-const TABS: Tab[] = ['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
+const TABS: Tab[] = ['chart', 'setup', 'trend', 'breakout', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
 const HASH_TO_TAB: Record<string, Tab> = {
-  chart: 'chart', setup: 'setup', trend: 'trend', ranking: 'ranking',
+  chart: 'chart', setup: 'setup', trend: 'trend', breakout: 'breakout', ranking: 'ranking',
   fundamentals: 'fundamentals', sales: 'sales', analysis: 'analysis', options: 'options',
   catalyst: 'catalyst', insider: 'insider', smartmoney: 'smartmoney',
   chatter: 'chatter', supply: 'supply',
   // legacy hashes that don't map 1:1 to a tab → nearest sensible tab
-  volume: 'chart', 'dual-momentum': 'ranking',
+  volume: 'breakout', 'dual-momentum': 'ranking',
 };
 
 const SmartMoneyInfo = (
@@ -923,13 +924,13 @@ export function SepaCandidatePage() {
           </section>
 
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'breakout', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t === 'sales' ? '📈 sales' : t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t === 'sales' ? '📈 sales' : t === 'breakout' ? '🚀 breakout' : t}</button>
             ))}
           </nav>
 
@@ -1444,6 +1445,18 @@ export function SepaCandidatePage() {
                     )}
                   </div>
                 )}
+              </section>
+            )}
+
+            {tab === 'breakout' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Breakout</strong> — how often {symbol} has actually printed a
+                  volume-confirmed breakout over the last year (close above the prior
+                  21-day high on &gt;1.5× average volume — Minervini p.203), and exactly
+                  WHERE each one fired on the price chart.
+                </div>
+                <BreakoutHistoryBody symbol={symbol} />
               </section>
             )}
 

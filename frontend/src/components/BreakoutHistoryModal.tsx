@@ -85,15 +85,11 @@ function Chart({ h }: { h: History }) {
   );
 }
 
-export function BreakoutHistoryModal({ symbol, onClose }: { symbol: string; onClose: () => void }) {
+/* The fetch + chart + list — shared by the modal (chip drill) AND the SEPA
+   detail page's Breakout tab. */
+export function BreakoutHistoryBody({ symbol }: { symbol: string }) {
   const [h, setH] = useState<History | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
-
-  useEffect(() => {
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onEsc);
-    return () => window.removeEventListener('keydown', onEsc);
-  }, [onClose]);
 
   useEffect(() => {
     let alive = true;
@@ -111,6 +107,70 @@ export function BreakoutHistoryModal({ symbol, onClose }: { symbol: string; onCl
 
   const count = h?.breakout_count ?? h?.breakouts?.length ?? 0;
 
+  return (
+    <>
+      <div className="eyebrow" style={{ fontSize: '0.66rem', color: '#9aa8c8' }}>
+        Breakout history · last 1y
+      </div>
+      <h3 style={{ margin: '0.15rem 0 0', fontSize: '1.05rem' }}>
+        🚀 {symbol} — {count} volume-confirmed breakout{count === 1 ? '' : 's'}
+      </h3>
+
+      {state === 'loading' && (
+        <p className="mono" style={{ opacity: 0.7, fontSize: '0.8rem', marginTop: '1rem' }}>…loading breakout history</p>
+      )}
+      {state === 'error' && (
+        <p className="mono" style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '1rem' }}>
+          Couldn't load breakout history for {symbol}.
+        </p>
+      )}
+
+      {state === 'ready' && h && (
+        <>
+          <p style={{ fontSize: '0.74rem', color: '#9aa8c8', margin: '0.5rem 0 0.75rem', lineHeight: 1.5 }}>
+            Each 🟢 marks where a <strong>volume-confirmed breakout</strong> fired — a close above the
+            prior 21-day high on more than 1.5× average volume (Minervini,
+            <em> Trade Like a Stock Market Wizard</em> p.203).
+          </p>
+          <Chart h={h} />
+
+          {h.breakouts && h.breakouts.length > 0 ? (
+            <div style={{ marginTop: '0.9rem' }}>
+              <div className="eyebrow" style={{ fontSize: '0.62rem', marginBottom: 4 }}>
+                Each breakout (newest first)
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {h.breakouts.slice().reverse().map((b, i) => (
+                  <div key={i} className="mono"
+                       style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem',
+                                fontSize: '0.74rem', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <span style={{ color: '#10b981' }}>🟢 {fmtDate(b.date)}</span>
+                    <span style={{ color: '#cfcfd4' }}>${b.close.toFixed(2)}</span>
+                    <span style={{ color: '#9aa8c8' }}>
+                      {fmtVol(b.volume)} sh{b.vol_ratio ? ` · ${b.vol_ratio}×` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="mono" style={{ opacity: 0.7, fontSize: '0.78rem', marginTop: '0.75rem' }}>
+              No volume-confirmed breakouts in the trailing year.
+            </p>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+export function BreakoutHistoryModal({ symbol, onClose }: { symbol: string; onClose: () => void }) {
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [onClose]);
+
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={`${symbol} breakout history`}
          onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -121,69 +181,17 @@ export function BreakoutHistoryModal({ symbol, onClose }: { symbol: string; onCl
          }}>
       <div onClick={(e) => e.stopPropagation()}
            style={{
+             position: 'relative',
              background: 'var(--cm-panel,#0f1623)', border: '1px solid var(--hairline,#243044)',
              borderRadius: 12, width: 'min(720px, 96vw)', maxHeight: '88vh', overflow: 'auto',
              padding: '1rem 1.1rem', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
            }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <div>
-            <div className="eyebrow" style={{ fontSize: '0.66rem', color: '#9aa8c8' }}>
-              Breakout history · last 1y
-            </div>
-            <h3 style={{ margin: '0.15rem 0 0', fontSize: '1.05rem' }}>
-              🚀 {symbol} — {count} volume-confirmed breakout{count === 1 ? '' : 's'}
-            </h3>
-          </div>
-          <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close"
-                  style={{ background: 'none', border: 'none', color: '#9aa8c8', fontSize: '1.3rem', cursor: 'pointer', lineHeight: 1 }}>
-            ×
-          </button>
-        </div>
-
-        {state === 'loading' && (
-          <p className="mono" style={{ opacity: 0.7, fontSize: '0.8rem', marginTop: '1rem' }}>…loading breakout history</p>
-        )}
-        {state === 'error' && (
-          <p className="mono" style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '1rem' }}>
-            Couldn't load breakout history for {symbol}.
-          </p>
-        )}
-
-        {state === 'ready' && h && (
-          <>
-            <p style={{ fontSize: '0.74rem', color: '#9aa8c8', margin: '0.5rem 0 0.75rem', lineHeight: 1.5 }}>
-              Each 🟢 marks where a <strong>volume-confirmed breakout</strong> fired — a close above the
-              prior 21-day high on more than 1.5× average volume (Minervini,
-              <em> Trade Like a Stock Market Wizard</em> p.203).
-            </p>
-            <Chart h={h} />
-
-            {h.breakouts && h.breakouts.length > 0 ? (
-              <div style={{ marginTop: '0.9rem' }}>
-                <div className="eyebrow" style={{ fontSize: '0.62rem', marginBottom: 4 }}>
-                  Each breakout (newest first)
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {h.breakouts.slice().reverse().map((b, i) => (
-                    <div key={i} className="mono"
-                         style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem',
-                                  fontSize: '0.74rem', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <span style={{ color: '#10b981' }}>🟢 {fmtDate(b.date)}</span>
-                      <span style={{ color: '#cfcfd4' }}>${b.close.toFixed(2)}</span>
-                      <span style={{ color: '#9aa8c8' }}>
-                        {fmtVol(b.volume)} sh{b.vol_ratio ? ` · ${b.vol_ratio}×` : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="mono" style={{ opacity: 0.7, fontSize: '0.78rem', marginTop: '0.75rem' }}>
-                No volume-confirmed breakouts in the trailing year.
-              </p>
-            )}
-          </>
-        )}
+        <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close"
+                style={{ position: 'absolute', top: 8, right: 12, background: 'none', border: 'none',
+                         color: '#9aa8c8', fontSize: '1.3rem', cursor: 'pointer', lineHeight: 1 }}>
+          ×
+        </button>
+        <BreakoutHistoryBody symbol={symbol} />
       </div>
     </div>,
     document.body,
