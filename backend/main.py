@@ -2350,6 +2350,18 @@ async def sepa_breakout_history(symbol: str):
     return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.history_for_symbol, symbol)))
 
 
+@app.get("/sepa/volume-movers")
+async def sepa_volume_movers(
+    top: int = Query(25, ge=1, le=100),
+    sort: str = Query("volume", description="volume | rvol | dollar_vol | change"),
+):
+    """The day's biggest-volume names with price change, RELATIVE volume, dollar
+    volume, total shares (float) and TURNOVER % (vol ÷ float = how much of the
+    supply traded). Powers the Volume Movers board on the Leaderboard."""
+    from sepa import volume_movers
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(volume_movers.movers, top, sort)))
+
+
 @app.get("/sepa/analyst-map")
 async def sepa_analyst_map(symbols: str = Query(..., description="comma-separated tickers, max 100")):
     """Bulk per-symbol analyst read {SYM: {verdict, implied_upside_pct, ...}}

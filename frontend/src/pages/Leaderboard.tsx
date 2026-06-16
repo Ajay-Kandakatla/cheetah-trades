@@ -24,6 +24,7 @@ import { TopConfluence } from '../components/TopConfluence';
 import { AtPivotToday } from '../components/AtPivotToday';
 import { RacingBoard } from '../components/RacingBoard';
 import { BreakoutLeaders } from '../components/BreakoutLeaders';
+import { VolumeMovers } from '../components/VolumeMovers';
 import { FullScanModal } from '../components/FullScanModal';
 import { PatternMatchCards } from '../components/PatternMatchCards';
 
@@ -79,6 +80,11 @@ export function LeaderboardPage() {
       {/* How often each name actually breaks out (Ajay 2026-06-13) — ranked by
           count of distinct volume-confirmed breakouts over the trailing year. */}
       <BreakoutLeaders top={20} />
+
+      {/* Day's biggest-volume names + the SUPPLY read (Ajay 2026-06-15) —
+          volume, price change, RVOL, $ volume, total shares (float) and
+          turnover% (how much of the float traded). */}
+      <VolumeMovers top={25} />
 
       {/* Tiny pattern cards (Ajay 2026-06-09) — names whose chart matches a
           Bulkowski pattern, ⭐ confluence (confirmed + full buy gate) first. */}
