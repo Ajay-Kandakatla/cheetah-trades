@@ -36,6 +36,7 @@ import { TradePlanPanel } from '../components/TradePlanPanel';
 import { PivotMeter } from '../components/PivotMeter';
 import { VolumeTrend } from '../components/VolumeTrend';
 import { BreakoutStats } from '../components/BreakoutStats';
+import { FloatTurnover } from '../components/FloatTurnover';
 import { LiveGateStrip } from '../components/LiveGateStrip';
 import { SepaWhyBuy } from '../components/SepaWhyBuy';
 import { StopsPanel } from '../components/StopsPanel';
@@ -1100,10 +1101,11 @@ export function SepaCandidatePage() {
                 {base?.volume && (
                   <div className="sepa-pivot-framework" style={{ marginBottom: '1rem' }}>
                     <VolumeTrend vol={base.volume} />
-                    <div style={{ marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
                       {/* symbol fallback → self-heals if the cached row's volume
                           predates breakout_count (card↔detail parity). */}
                       <BreakoutStats vol={base.volume} symbol={base.symbol} />
+                      <FloatTurnover symbol={base.symbol} lastVol={base.volume.last_vol} />
                     </div>
                   </div>
                 )}

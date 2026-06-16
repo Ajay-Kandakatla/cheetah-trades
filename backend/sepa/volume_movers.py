@@ -77,13 +77,19 @@ def shares_for(symbol: str):
         try:
             doc = coll.find_one({"_id": sym})
             if doc and (now - int(doc.get("as_of", 0))) < _SHARES_TTL_SEC:
-                return {k: doc.get(k) for k in ("shares_outstanding", "float_shares", "market_cap")}
+                vals = {k: doc.get(k) for k in ("shares_outstanding", "float_shares", "market_cap")}
+                # Fresh tombstone (all null) → name has no float (ETF/unknown);
+                # honor it so we don't re-hit yfinance every card render.
+                return vals if any(v is not None for v in vals.values()) else None
         except Exception:
             pass
     fetched = _fetch_shares_yf(sym)
-    if fetched and coll is not None:
+    if coll is not None:
+        # Cache the result — INCLUDING a null tombstone on a miss — so a burst of
+        # card renders for the same symbol doesn't stampede yfinance.
+        payload = fetched or {"shares_outstanding": None, "float_shares": None, "market_cap": None}
         try:
-            coll.update_one({"_id": sym}, {"$set": {**fetched, "as_of": now}}, upsert=True)
+            coll.update_one({"_id": sym}, {"$set": {**payload, "as_of": now}}, upsert=True)
         except Exception:
             pass
     return fetched

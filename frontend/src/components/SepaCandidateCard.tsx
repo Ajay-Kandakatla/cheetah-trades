@@ -24,6 +24,7 @@ import { pivotTiming } from '../lib/pivotTiming';
 import { VolumeTrend } from './VolumeTrend';
 // Breakout COUNT + actual volume chip — "how often does this name break out?"
 import { BreakoutStats } from './BreakoutStats';
+import { FloatTurnover } from './FloatTurnover';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -648,8 +649,12 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           BOTH vol (fast path from the scan payload) AND symbol so the chip
           self-heals on a stale cached scan that predates breakout_count
           (Ajay 2026-06-15: "not seeing breakout counts on the SEPA cards"). */}
-      <div style={{ padding: '0.35rem 0.2rem 0' }}>
+      {/* Breakout chip + the supply read (Ajay 2026-06-15: "total shares are an
+          important measure — add to all sepa cards"): float + turnover = how
+          much of the tradeable supply actually traded today. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', padding: '0.35rem 0.2rem 0' }}>
         <BreakoutStats vol={row.volume} symbol={row.symbol} />
+        <FloatTurnover symbol={row.symbol} lastVol={row.volume?.last_vol} />
       </div>
 
       {row.entry_exit && (

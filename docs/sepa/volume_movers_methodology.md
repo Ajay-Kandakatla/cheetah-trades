@@ -50,9 +50,19 @@ entire float** on 33× normal volume — *that's* a genuine supply/demand event.
 ## Where to get "total shares of a company"
 
 `sepa.volume_movers.shares_for(symbol)` → `{shares_outstanding, float_shares,
-market_cap}` from yfinance, cached weekly in Mongo (`shares_cache`). Float
+market_cap}` from yfinance, cached weekly in Mongo (`shares_cache`, including a
+null tombstone on a miss so ETFs/unknowns aren't re-fetched every render). Float
 (tradeable supply) drives turnover; we fall back to shares-outstanding if float
 is missing, and show "—" for ETFs (no float).
+
+## On the SEPA cards (Ajay 2026-06-15)
+
+Every SEPA card (and the detail page) shows a compact **🔁 float · turnover**
+chip in the volume cluster, next to the 🚀 breakout chip. It self-fetches
+`GET /sepa/shares/{symbol}` (the same cached `shares_for` data) and computes
+turnover from the card's `volume.last_vol`. `FloatTurnover.tsx`; renders nothing
+for ETFs / names with no float. Kept to one small chip so the lean card surface
+doesn't bloat.
 
 ## Where it lives
 

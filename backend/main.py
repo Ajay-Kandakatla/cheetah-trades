@@ -2362,6 +2362,17 @@ async def sepa_volume_movers(
     return JSONResponse(_scrub_nan(await asyncio.to_thread(volume_movers.movers, top, sort)))
 
 
+@app.get("/sepa/shares/{symbol}")
+async def sepa_shares(symbol: str):
+    """Total shares of a company — shares outstanding / float / market cap
+    (yfinance, cached weekly). Powers the float·turnover chip on SEPA cards.
+    Returns {ok, symbol, shares_outstanding, float_shares, market_cap}."""
+    from sepa import volume_movers
+    sh = await asyncio.to_thread(volume_movers.shares_for, symbol)
+    out = {"ok": bool(sh), "symbol": (symbol or "").upper().strip(), **(sh or {})}
+    return JSONResponse(_scrub_nan(out))
+
+
 @app.get("/sepa/analyst-map")
 async def sepa_analyst_map(symbols: str = Query(..., description="comma-separated tickers, max 100")):
     """Bulk per-symbol analyst read {SYM: {verdict, implied_upside_pct, ...}}
