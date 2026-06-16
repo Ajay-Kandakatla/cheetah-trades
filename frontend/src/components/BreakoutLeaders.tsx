@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { fmtVol } from './BreakoutStats';
+import { ListSkeleton } from './Skeletons';
 
 type Row = {
   symbol: string;
@@ -33,7 +34,8 @@ export function BreakoutLeaders({ top = 20 }: { top?: number }) {
     return () => { alive = false; };
   }, [top]);
 
-  if (loading || !rows || rows.length === 0) return null;
+  if (loading) return <ListSkeleton rows={6} label="🚀 Breakout leaders" />;
+  if (!rows || rows.length === 0) return null;
 
   return (
     <section className="bo-leaders" style={{ marginTop: '1.5rem' }}>

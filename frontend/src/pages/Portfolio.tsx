@@ -39,6 +39,7 @@ import { Heatmap, type HeatTile } from '../components/Heatmap';
 import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
 import { MarketContextStrip } from '../components/MarketContextStrip';
 import { FullScanModal } from '../components/FullScanModal';
+import { HoldingsSkeleton } from '../components/Skeletons';
 
 const PageInfo = (
   <>
@@ -213,9 +214,7 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {loading && rows.length === 0 && (
-        <p className="mono" style={{ opacity: 0.7, marginTop: '0.8rem' }}>…loading your positions</p>
-      )}
+      {loading && rows.length === 0 && <HoldingsSkeleton rows={4} />}
       {error && (
         <p className="mono" style={{ color: '#f87171', marginTop: '0.8rem' }}>
           Couldn't load holdings — {error}

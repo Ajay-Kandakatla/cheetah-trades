@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { fmtVol } from './BreakoutStats';
+import { ListSkeleton } from './Skeletons';
 
 type Row = {
   symbol: string;
@@ -74,7 +75,7 @@ export function VolumeMovers({ top = 25 }: { top?: number }) {
     return r;
   }, [rows, sort]);
 
-  if (loading && !rows) return null;
+  if (loading && !rows) return <ListSkeleton rows={8} label="📊 Volume movers" />;
   if (!loading && (!rows || rows.length === 0)) return null;
 
   return (
