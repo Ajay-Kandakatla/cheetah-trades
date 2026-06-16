@@ -40,6 +40,7 @@ import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
 import { MarketContextStrip } from '../components/MarketContextStrip';
 import { FullScanModal } from '../components/FullScanModal';
 import { HoldingsSkeleton } from '../components/Skeletons';
+import { TrackedSection } from '../components/TrackedSection';
 
 const PageInfo = (
   <>
@@ -183,7 +184,7 @@ export default function PortfolioPage() {
     <div className="sepa-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Hold or sell</div>
+          <div className="eyebrow">Hold or sell</div>
           <h1
             className="display sepa-page__h1"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
@@ -386,7 +387,10 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      <AddHoldingForm onAdded={refresh} />
+      {/* Sections wrapped in TrackedSection (Ajay 2026-06-16) — record
+          `section:portfolio:*` on scroll-into-view to enable a later
+          usage-driven reorder. Layout-neutral. */}
+      <TrackedSection name="portfolio:add_form"><AddHoldingForm onAdded={refresh} /></TrackedSection>
 
       {/* Buy-discovery widgets removed from Portfolio (2026-06-13 declutter):
           PatternMatchCards, EarningsReportPicks, RacingBoard, SepaRankLeaderboard,
@@ -396,10 +400,10 @@ export default function PortfolioPage() {
 
       {/* Month-by-month winners' record for the paper-trading review (Ajay
           2026-06-10) — perpetual, never pruned. */}
-      <PatternAccuracyMonthly />
+      <TrackedSection name="portfolio:pattern_accuracy"><PatternAccuracyMonthly /></TrackedSection>
 
       {/* Overall market context — secondary to the per-stock reads above. */}
-      <MarketPulsePanel holdings={rows} />
+      <TrackedSection name="portfolio:market_pulse"><MarketPulsePanel holdings={rows} /></TrackedSection>
     </div>
   );
 }

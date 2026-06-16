@@ -25,6 +25,7 @@ import { AtPivotToday } from '../components/AtPivotToday';
 import { RacingBoard } from '../components/RacingBoard';
 import { BreakoutLeaders } from '../components/BreakoutLeaders';
 import { VolumeMovers } from '../components/VolumeMovers';
+import { TrackedSection } from '../components/TrackedSection';
 import { FullScanModal } from '../components/FullScanModal';
 import { PatternMatchCards } from '../components/PatternMatchCards';
 
@@ -55,7 +56,7 @@ export function LeaderboardPage() {
     <div className="sepa-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Rank over time</div>
+          <div className="eyebrow">Rank over time</div>
           <h1 className="display sepa-page__h1"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Leaderboard
@@ -70,48 +71,51 @@ export function LeaderboardPage() {
         <FullScanModal />
       </div>
 
-      <AtPivotToday />
+      {/* Each board wrapped in TrackedSection (Ajay 2026-06-16) — records
+          `section:leaderboard:*` when it scrolls into view, so we can later
+          reorder this page by what actually gets looked at. Layout-neutral. */}
+      <TrackedSection name="leaderboard:at_pivot"><AtPivotToday /></TrackedSection>
 
       {/* Post-breakout names in motion (Ajay 2026-06-12: "I may have missed the
           pivot but I think these are good stocks to get into") — the complement
           to At-the-pivot: already PAST the pivot, running the R-ladder. */}
-      <RacingBoard />
+      <TrackedSection name="leaderboard:racing"><RacingBoard /></TrackedSection>
 
       {/* How often each name actually breaks out (Ajay 2026-06-13) — ranked by
           count of distinct volume-confirmed breakouts over the trailing year. */}
-      <BreakoutLeaders top={20} />
+      <TrackedSection name="leaderboard:breakout_leaders"><BreakoutLeaders top={20} /></TrackedSection>
 
       {/* Day's biggest-volume names + the SUPPLY read (Ajay 2026-06-15) —
           volume, price change, RVOL, $ volume, total shares (float) and
           turnover% (how much of the float traded). */}
-      <VolumeMovers top={25} />
+      <TrackedSection name="leaderboard:volume_movers"><VolumeMovers top={25} /></TrackedSection>
 
       {/* Tiny pattern cards (Ajay 2026-06-09) — names whose chart matches a
           Bulkowski pattern, ⭐ confluence (confirmed + full buy gate) first. */}
-      <PatternMatchCards limit={12} />
+      <TrackedSection name="leaderboard:patterns"><PatternMatchCards limit={12} /></TrackedSection>
 
-      <TopConfluence />
+      <TrackedSection name="leaderboard:top_confluence"><TopConfluence /></TrackedSection>
 
-      <CrossJunctions />
+      <TrackedSection name="leaderboard:cross_junctions"><CrossJunctions /></TrackedSection>
 
-      <MoneyMovement />
+      <TrackedSection name="leaderboard:money_movement"><MoneyMovement /></TrackedSection>
 
       {/* Where the giants are buying (Ajay 2026-06-10) — stock-ranked net 13F
           flow across the curated Tier S/A funds, with the per-quarter trend
           timeline + click-through money-rotation view ("where did the money
           from MU move"). Full EDGAR portfolios — not the top-15 snapshot. */}
-      <GiantsFlowBoard />
+      <TrackedSection name="leaderboard:giants_flow"><GiantsFlowBoard /></TrackedSection>
 
       {/* Post-earnings bulls (Ajay 2026-06-11). */}
-      <EarningsReportPicks />
+      <TrackedSection name="leaderboard:earnings_picks"><EarningsReportPicks /></TrackedSection>
 
-      <SepaTopPicks n={5} />
+      <TrackedSection name="leaderboard:top_picks"><SepaTopPicks n={5} /></TrackedSection>
 
-      <TopPicksTracker n={5} days={14} />
+      <TrackedSection name="leaderboard:top_picks_tracker"><TopPicksTracker n={5} days={14} /></TrackedSection>
 
-      <SepaRankLeaderboard n={12} heatmap />
+      <TrackedSection name="leaderboard:rank_board"><SepaRankLeaderboard n={12} heatmap /></TrackedSection>
 
-      <SepaRankCompare />
+      <TrackedSection name="leaderboard:rank_compare"><SepaRankCompare /></TrackedSection>
     </div>
   );
 }
