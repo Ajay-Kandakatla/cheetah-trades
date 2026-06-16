@@ -39,6 +39,7 @@ import { BreakoutStats } from '../components/BreakoutStats';
 import { FloatTurnover } from '../components/FloatTurnover';
 import { LiveGateStrip } from '../components/LiveGateStrip';
 import { SepaWhyBuy } from '../components/SepaWhyBuy';
+import { SepaSignalChips } from '../components/SepaSignalChips';
 import { StopsPanel } from '../components/StopsPanel';
 import { EntryExitPlanBlock } from '../components/EntryExitPlanBlock';
 import { pivotTiming } from '../lib/pivotTiming';
@@ -825,6 +826,15 @@ export function SepaCandidatePage() {
           2026-05-22 alongside the SepaSignalChips refactor — chips above
           tell you HOW the ticker scored, this strip tells you WHAT category
           it belongs to. */}
+      {/* Ranking-component chip strip — score / trend / RS / stage / setup /
+          accumulation / 🚀 hi-vol breakout / pocket pivot / money flow / dist
+          days. Shared with the list card (SepaCandidateCard); documented as
+          this page's "full strip right under the score bar" in
+          SepaSignalChips.tsx but the wiring was lost — re-added 2026-06-16 so
+          the breakout (and every other signal) chip renders here too. Self-
+          contained: owns its own drill-modal state. */}
+      {base && <SepaSignalChips row={base} />}
+
       {base && (
         <StickyCategoryBadges
           pioneerThemes={base.pioneer_themes}
