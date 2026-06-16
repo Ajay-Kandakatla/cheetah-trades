@@ -5,6 +5,7 @@ percentile-rank across the full universe. Output is 1-99 where higher = leader.
 """
 from __future__ import annotations
 
+import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Optional, TYPE_CHECKING
 
@@ -72,7 +73,12 @@ def rs_ranks(symbols: list[str],
         for fut in as_completed(futures):
             sym, val = fut.result()
             completed += 1
-            if val is not None:
+            # `val is not None` is NOT enough: rs_score can return NaN (a bad /
+            # NaN price bar → NaN return → NaN score). NaN survives into the
+            # percentile rank and then `int(NaN)` crashes the WHOLE scan's RS
+            # step. Only finite scores are rankable — drop the rest (the
+            # docstring already says unrankable symbols are omitted).
+            if val is not None and math.isfinite(val):
                 scores[sym] = val
             # Emit a heartbeat every 25 tickers (or on the final tick) — fine
             # granularity would flood the SSE channel, none would look frozen.
@@ -87,4 +93,12 @@ def rs_ranks(symbols: list[str],
     series = pd.Series(scores)
     # percentile rank: 0-1 → 1-99
     pct = series.rank(pct=True)
-    return {sym: max(1, min(99, int(round(pct[sym] * 99)))) for sym in scores}
+    # Defensive: a NaN percentile must never crash int() — skip it. (Scores are
+    # already finite-filtered above, so this is belt-and-suspenders.)
+    out: Dict[str, int] = {}
+    for sym in scores:
+        p = pct[sym]
+        if p is None or (isinstance(p, float) and math.isnan(p)):
+            continue
+        out[sym] = max(1, min(99, int(round(p * 99))))
+    return out
