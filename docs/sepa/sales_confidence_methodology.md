@@ -93,3 +93,15 @@ accel bonus, correctly) · MKSI 70 (15% steady, accelerating, sales-led).
 acceleration / consistency / sales-led / insufficient-history / thresholds) via
 `make contracts-sales`; `test_sales_confidence_thresholds_locked` guards the
 5/25/100 anchors against drift to the unverified 30/39% figures.
+
+## 8. The Sales tab (SEPA detail page) — added 2026-06-16
+
+`frontend/src/components/SalesPanel.tsx` renders this score on a dedicated
+**📈 Sales** tab in `SepaCandidate.tsx`, reading `base.fundamentals.sales`
+(already on the `/sepa/candidate/{symbol}` payload — no extra fetch). It leads
+with **acceleration** (latest-vs-prior-quarter YoY — Bonde's core signal), then
+sales growth %, consecutive growth quarters, and the sales-led flag, with the
+0–100 score + tier badge. Display-only; when fundamentals aren't cached the tab
+offers the same "re-scan with +catalyst" action as the Fundamentals tab. Tests:
+`SalesPanel.test.tsx` (render + accelerating/decelerating + insufficient-history
++ null negatives).

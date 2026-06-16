@@ -11,6 +11,7 @@ import { SepaConvictionChip, computeConviction } from '../components/SepaConvict
 import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
+import { SalesPanel } from '../components/SalesPanel';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
@@ -137,15 +138,15 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
+type Tab = 'chart' | 'setup' | 'trend' | 'ranking' | 'fundamentals' | 'sales' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
 
 // The active tab lives in the URL (?tab=insider) so it survives reload, back/
 // forward, and deep-links from cards — instead of always snapping to 'chart'.
 // We also accept the legacy #hash deep-links some chips still emit.
-const TABS: Tab[] = ['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
+const TABS: Tab[] = ['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
 const HASH_TO_TAB: Record<string, Tab> = {
   chart: 'chart', setup: 'setup', trend: 'trend', ranking: 'ranking',
-  fundamentals: 'fundamentals', analysis: 'analysis', options: 'options',
+  fundamentals: 'fundamentals', sales: 'sales', analysis: 'analysis', options: 'options',
   catalyst: 'catalyst', insider: 'insider', smartmoney: 'smartmoney',
   chatter: 'chatter', supply: 'supply',
   // legacy hashes that don't map 1:1 to a tab → nearest sensible tab
@@ -922,13 +923,13 @@ export function SepaCandidatePage() {
           </section>
 
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'trend', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t === 'sales' ? '📈 sales' : t}</button>
             ))}
           </nav>
 
@@ -1402,6 +1403,39 @@ export function SepaCandidatePage() {
                       {rescanState === 'running'
                         ? 'Re-scanning…'
                         : `Re-scan ${symbol} with +catalyst (fundamentals · news · insider)`}
+                    </button>
+                    {rescanMsg && (
+                      <p className={`sepa-empty__hint ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
+                        {rescanMsg}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {tab === 'sales' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Sales</strong> — revenue growth and, above all, ACCELERATION
+                  (Pradeep Bonde / Stockbee). Sales lead earnings and are harder to
+                  manipulate, so accelerating top-line growth is an early, cleaner read
+                  than EPS. Informational — not a SEPA gate.
+                </div>
+                <div className="eyebrow">Sales confidence</div>
+                {base?.fundamentals?.sales ? (
+                  <SalesPanel sales={(base.fundamentals as any).sales} />
+                ) : (
+                  <div className="sepa-empty sepa-empty--action">
+                    <p>No fundamentals cached for {symbol} yet.</p>
+                    <button
+                      className="sepa-btn sepa-btn--primary"
+                      onClick={() => rescan(true)}
+                      disabled={rescanState === 'running'}
+                    >
+                      {rescanState === 'running'
+                        ? 'Re-scanning…'
+                        : `Re-scan ${symbol} with +catalyst (fundamentals · sales · news)`}
                     </button>
                     {rescanMsg && (
                       <p className={`sepa-empty__hint ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
