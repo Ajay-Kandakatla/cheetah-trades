@@ -150,7 +150,7 @@ export default function WatchlistPage() {
       <div className="wl-page__title">
         <InfoButton title="Watchlist">{WatchlistInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 12 — Personal shelf</div>
+          <div className="eyebrow">Personal shelf</div>
           <h1 className="display wl-page__h1">Watchlist</h1>
           <p className="lede">
             Add a ticker · auto-fetch its peers + sector + score in the background.

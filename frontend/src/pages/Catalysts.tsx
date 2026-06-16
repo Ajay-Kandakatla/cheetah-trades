@@ -96,7 +96,7 @@ export function CatalystsPage() {
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ 10 — Catalyst Scanner</div>
+          <div className="eyebrow">Catalyst Scanner</div>
           <h1 className="display cm-pagehead__title">Tiny Stocks in Motion</h1>
           <p className="lede">
             Microcaps & sub-$20 names moving on a fresh catalyst or social

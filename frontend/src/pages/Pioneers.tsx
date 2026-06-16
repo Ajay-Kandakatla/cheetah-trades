@@ -203,7 +203,7 @@ export function PioneersPage() {
       <div className="sepa-page__title">
         <InfoButton title="Pioneers — Breakthrough Tracker">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 09 — Breakthrough Tracker</div>
+          <div className="eyebrow">Breakthrough Tracker</div>
           <h1 className="display sepa-page__h1">Pioneers</h1>
           <p className="lede">
             Curated breakthrough categories + auto-discoveries from today's

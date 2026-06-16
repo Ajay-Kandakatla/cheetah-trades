@@ -75,7 +75,7 @@ export function SupplyDemandPage() {
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ 09 — Supply & Demand</div>
+          <div className="eyebrow">Supply & Demand</div>
           <h1 className="display cm-pagehead__title">S&P Supply Chain Atlas</h1>
           <p className="lede">
             Curated dependency graph of who depends on whom — NVIDIA's chips

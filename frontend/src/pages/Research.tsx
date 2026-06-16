@@ -85,7 +85,7 @@ export function ResearchPage() {
     <div className="sepa-page rsx-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Winners vs losers</div>
+          <div className="eyebrow">Winners vs losers</div>
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Research
             <InfoButton inline title="Research">{PageInfo}</InfoButton>

@@ -55,7 +55,7 @@ export default function HousePage() {
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <div className="eyebrow">№ Personal · House Sale Dashboard</div>
+          <div className="eyebrow">Personal · House Sale Dashboard</div>
           <h1 className="display" style={{ margin: '0.25rem 0 0' }}>
             {config?.address || 'Set your house address →'}
           </h1>

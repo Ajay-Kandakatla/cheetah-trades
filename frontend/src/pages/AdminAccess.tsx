@@ -466,7 +466,7 @@ export default function AdminAccessPage() {
   return (
     <div className="cm-page" style={{ padding: '1.2rem 1.4rem', maxWidth: 1400, margin: '0 auto' }}>
       <header className="cm-pagehead" style={{ marginBottom: '0.9rem' }}>
-        <div className="eyebrow">№ Admin · per-user access</div>
+        <div className="eyebrow">Admin · per-user access</div>
         <h1 className="display cm-pagehead__title" style={{ margin: '0.25rem 0 0' }}>
           User access matrix
         </h1>

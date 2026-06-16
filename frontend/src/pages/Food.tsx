@@ -41,7 +41,7 @@ export default function FoodPage() {
     <div className="food-page">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <div className="eyebrow">№ Family · Meal Planner</div>
+          <div className="eyebrow">Family · Meal Planner</div>
           <h1 className="display" style={{ margin: '0.25rem 0 0' }}>Today's Menu</h1>
           {today && (
             <p className="lede" style={{ margin: '0.4rem 0 0' }}>

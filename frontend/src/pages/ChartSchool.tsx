@@ -231,7 +231,7 @@ export function ChartSchool() {
     <div className="sepa-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Learning · patterns & candles, with the why</div>
+          <div className="eyebrow">Learning · patterns & candles, with the why</div>
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Chart School
             <InfoButton inline title="Chart School">{PageInfo}</InfoButton>

@@ -126,7 +126,7 @@ export default function AdminUsage() {
   return (
     <div style={{ padding: '1.2rem 1.4rem', maxWidth: 1100, margin: '0 auto' }}>
       <header style={{ marginBottom: '1.2rem' }}>
-        <div className="eyebrow">№ Admin · Usage analytics</div>
+        <div className="eyebrow">Admin · Usage analytics</div>
         <h1 className="display" style={{ margin: '0.25rem 0 0' }}>Usage Dashboard</h1>
         <p className="lede">
           Per-user dwell time + module breakdown. Sessions ≥1 second count; idle tabs cap at 2h/visit so phantom open windows don't dominate.

@@ -177,7 +177,7 @@ export function PankajAnalysisPage() {
     <div className="sepa-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Trusted analyst</div>
+          <div className="eyebrow">Trusted analyst</div>
           <h1 className="display sepa-page__h1">Pankaj's Market Analysis</h1>
           <p className="lede">
             Picks from <strong>Pankaj</strong> — a trader you trust — surfaced next to the app's

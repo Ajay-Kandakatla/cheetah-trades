@@ -69,7 +69,7 @@ export function UsagePage() {
     <div className="sepa-page usage-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Usage · what you actually use</div>
+          <div className="eyebrow">Usage · what you actually use</div>
           <h1 className="display sepa-page__h1"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Usage Heatmap

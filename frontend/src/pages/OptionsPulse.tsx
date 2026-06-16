@@ -210,7 +210,7 @@ export default function OptionsPulsePage() {
           {PageInfo}
         </InfoButton>
         <div>
-          <div className="eyebrow">№ 17 — Options crowd</div>
+          <div className="eyebrow">Options crowd</div>
           <h1 className="display op-page__h1">Options Pulse</h1>
           <p className="lede">
             Schaeffer's Open Interest Ratio (SOIR) crossed with stage-2/stage-4

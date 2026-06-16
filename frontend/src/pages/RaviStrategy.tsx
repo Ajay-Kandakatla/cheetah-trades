@@ -60,7 +60,7 @@ export function RaviStrategyPage() {
   return (
     <div className="cm-page" style={{ padding: '1.2rem 1.4rem', maxWidth: 1100, margin: '0 auto' }}>
       <header className="cm-pagehead" style={{ marginBottom: '0.6rem' }}>
-        <div className="eyebrow">№ — Volume-surge rank</div>
+        <div className="eyebrow">Volume-surge rank</div>
         <h1 className="display cm-pagehead__title" style={{ margin: '0.25rem 0 0' }}>
           Ravi's Strategy
         </h1>

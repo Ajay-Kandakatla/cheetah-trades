@@ -13,7 +13,7 @@ export function OvernightPage() {
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ 07 — Methodology</div>
+          <div className="eyebrow">Methodology</div>
           <h1 className="display cm-pagehead__title">Overnight Tape</h1>
           <p className="lede">
             What moved while you slept and <em>why</em>. Premarket gaps from

@@ -130,7 +130,7 @@ export function ChatterIndiaPage() {
       <div className="sepa-page__title">
         <InfoButton title="Indian Stock Chatter">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 08 — Crowd Signal · India</div>
+          <div className="eyebrow">Crowd Signal · India</div>
           <h1 className="display sepa-page__h1">Chatter · India</h1>
           <p className="lede">
             Reddit India · ValuePickr · MoneyControl, ranked across the

@@ -63,7 +63,7 @@ export function MorningBrief() {
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ 00 — Today's brief · {dayLabel}</div>
+          <div className="eyebrow">Today's brief · {dayLabel}</div>
           <h1 className="display cm-pagehead__title">
             Good morning{user?.given_name ? `, ${user.given_name}` : ''}
           </h1>

@@ -257,7 +257,7 @@ export default function SetupsPage() {
     <div className="cm-page">
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ — Bull-regime setups</div>
+          <div className="eyebrow">Bull-regime setups</div>
           <h1 className="display cm-pagehead__title">Setups</h1>
           <p className="lede">
             Three mechanical, bull-only setups built on top of your SEPA candidate list.

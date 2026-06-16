@@ -113,7 +113,7 @@ export default function NotificationsPage() {
     <div className="cm-page" style={{ padding: '1.2rem 1.4rem', maxWidth: 920, margin: '0 auto' }}>
       <header className="cm-pagehead" style={{ marginBottom: '1rem' }}>
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ Notifications · subscribe / unsubscribe</div>
+          <div className="eyebrow">Notifications · subscribe / unsubscribe</div>
           <h1 className="display cm-pagehead__title" style={{ margin: '0.25rem 0 0' }}>Notifications</h1>
           <p className="lede">
             One card per device. Toggle each category to control what pings what. Changes save instantly.

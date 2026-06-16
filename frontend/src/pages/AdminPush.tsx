@@ -208,7 +208,7 @@ export default function AdminPushPage() {
   return (
     <div className="cm-page" style={{ padding: '1.2rem 1.4rem', maxWidth: 1100, margin: '0 auto' }}>
       <header className="cm-pagehead" style={{ marginBottom: '1rem' }}>
-        <div className="eyebrow">№ Admin · push subscriptions</div>
+        <div className="eyebrow">Admin · push subscriptions</div>
         <h1 className="display cm-pagehead__title" style={{ margin: '0.25rem 0 0' }}>
           Who has push set up
         </h1>

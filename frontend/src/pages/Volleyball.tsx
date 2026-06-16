@@ -179,7 +179,7 @@ export default function VolleyballPage() {
 
       <header className="cm-pagehead" style={{ marginBottom: '0.9rem' }}>
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ Volleyball · personal fitness</div>
+          <div className="eyebrow">Volleyball · personal fitness</div>
           <h1 className="display cm-pagehead__title" style={{ margin: '0.2rem 0 0' }}>
             Volleyball
           </h1>

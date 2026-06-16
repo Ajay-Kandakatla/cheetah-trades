@@ -74,7 +74,7 @@ export default function SignInPage() {
         boxShadow: '0 20px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,175,55,0.04)',
         textAlign: 'center',
       }}>
-        <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>№ Pounce · invite only</div>
+        <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>Pounce · invite only</div>
         <h1 style={{
           fontFamily: '"Times New Roman", Georgia, ui-serif, serif',
           fontStyle: 'italic',

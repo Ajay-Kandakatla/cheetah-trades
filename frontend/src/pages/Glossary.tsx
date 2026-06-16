@@ -124,7 +124,7 @@ export default function GlossaryPage() {
     <div className="gloss-page">
       <div className="gloss-page__title">
         <div>
-          <div className="eyebrow">№ 13 — Reference</div>
+          <div className="eyebrow">Reference</div>
           <h1 className="display gloss-page__h1">Glossary</h1>
           <p className="lede">
             Every short form used across the app, with a one-paragraph

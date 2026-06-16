@@ -127,7 +127,7 @@ export function LongTermPage() {
     <div className="sepa-page lt-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Long-term · ZONETRADER618 report card, live</div>
+          <div className="eyebrow">Long-term · ZONETRADER618 report card, live</div>
           <h1 className="display sepa-page__h1"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Long-Term Stocks

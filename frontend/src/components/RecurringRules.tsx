@@ -131,7 +131,7 @@ export function RecurringRules() {
     <section style={{ marginTop: '1.5rem', padding: '0.85rem 1.05rem', border: '1px solid var(--rule, #333)', borderRadius: 6, background: 'var(--bg-raised, #181818)' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
         <div>
-          <div className="eyebrow">№ Recurring rules</div>
+          <div className="eyebrow">Recurring rules</div>
           <h2 className="display" style={{ margin: '0.2rem 0 0', fontSize: '1.15rem' }}>Weekly schedule</h2>
         </div>
         <div style={{ display: 'flex', gap: '0.4rem' }}>

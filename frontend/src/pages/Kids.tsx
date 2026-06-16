@@ -117,7 +117,7 @@ export default function KidsPage() {
 
   return (
     <div style={{ padding: '1.2rem 1.6rem', maxWidth: 1100, margin: '0 auto' }}>
-      <div className="eyebrow">№ Family · Kids Activities</div>
+      <div className="eyebrow">Family · Kids Activities</div>
       <h1 className="display" style={{ margin: '0.25rem 0 0' }}>Today's Play</h1>
       <p className="lede" style={{ margin: '0.4rem 0 0' }}>
         Household-item activities for the 3.5-year-old. Grounded in Montessori, RIE, Reggio,

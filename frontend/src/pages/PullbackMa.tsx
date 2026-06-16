@@ -168,7 +168,7 @@ export function PullbackMaPage() {
       <div className="sepa-page__title">
         <InfoButton title="Pullback to MA">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ — Setup · Minervini · S&amp;P 500</div>
+          <div className="eyebrow">Setup · Minervini · S&amp;P 500</div>
           <h1 className="display sepa-page__h1">Pullback to MA</h1>
           <p className="lede">
             S&amp;P 500 Stage-2 leaders making a brief, low-volume pullback toward

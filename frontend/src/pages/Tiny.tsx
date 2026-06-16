@@ -98,7 +98,7 @@ export default function TinyPage() {
           <InfoContent methodology={methodology} />
         </InfoButton>
         <div>
-          <div className="eyebrow">№ 16 — Small caps</div>
+          <div className="eyebrow">Small caps</div>
           <h1 className="display tiny-page__h1">Tiny Stocks</h1>
           <p className="lede">
             Pounce Tiny Score — composite ranking for small/micro caps using

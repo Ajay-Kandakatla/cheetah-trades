@@ -66,7 +66,7 @@ export default function SignUpPage() {
         boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
         textAlign: 'center',
       }}>
-        <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>№ Pounce · set password</div>
+        <div className="eyebrow" style={{ marginBottom: '0.5rem' }}>Pounce · set password</div>
         <h1 style={{
           fontFamily: '"Times New Roman", Georgia, ui-serif, serif',
           fontStyle: 'italic', fontSize: '2.2rem',

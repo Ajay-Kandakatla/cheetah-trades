@@ -162,7 +162,7 @@ export function LiveStream() {
       <MarketGaugeBanner />
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ 02 — Live Feed</div>
+          <div className="eyebrow">Live Feed</div>
           <h1 className="display cm-pagehead__title">Market Stream</h1>
           <p className="lede">
             Real-time quotes over Server-Sent Events. RSI, VWAP, and the

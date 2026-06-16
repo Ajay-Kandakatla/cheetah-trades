@@ -18,7 +18,7 @@ export default function OptionsPulseMethodologyPage() {
   return (
     <div className="op-method">
       <header className="op-method__head">
-        <div className="eyebrow">№ 17 — Methodology</div>
+        <div className="eyebrow">Methodology</div>
         <h1 className="display">Options Pulse — How it works</h1>
         <p className="lede">
           Every number on the Options Pulse page, the formulas behind

@@ -1094,7 +1094,7 @@ export function SepaPage() {
 
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ 05 — Methodology</div>
+          <div className="eyebrow">Methodology</div>
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             SEPA Screen
             <InfoButton inline title="SEPA Screen">{PageInfo}</InfoButton>

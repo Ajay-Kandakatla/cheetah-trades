@@ -145,7 +145,7 @@ export function DualMomentumPage() {
       <div className="sepa-page__title">
         <InfoButton title="Dual Momentum">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 06 — Methodology</div>
+          <div className="eyebrow">Methodology</div>
           <h1 className="display sepa-page__h1">Dual Momentum</h1>
           <p className="lede">
             Antonacci's two-gate ranking — absolute momentum (regime filter) +

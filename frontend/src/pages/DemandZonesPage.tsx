@@ -140,7 +140,7 @@ export function DemandZonesPage() {
       <div className="sepa-page__title">
         <InfoButton title="Demand Zones">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ — Demand Zones · Minervini Ch.10</div>
+          <div className="eyebrow">Demand Zones · Minervini Ch.10</div>
           <h1 className="display sepa-page__h1">Demand Zones</h1>
           <p className="lede">
             The base each leader built — floor to pivot — and where price sits

@@ -144,7 +144,7 @@ export default function AdminTodosPage() {
   return (
     <div className="cm-page" style={{ padding: '1.2rem 1.4rem', maxWidth: 720, margin: '0 auto' }}>
       <header className="cm-pagehead" style={{ marginBottom: '1.2rem' }}>
-        <div className="eyebrow">№ Admin · cross-user todos</div>
+        <div className="eyebrow">Admin · cross-user todos</div>
         <h1 className="display cm-pagehead__title" style={{ margin: '0.25rem 0 0' }}>
           Add a todo {recipient && <span style={{ color: 'var(--cm-slate)', fontSize: '0.7em', marginLeft: '0.5rem' }}>for {recipientLabel(recipient)}</span>}
         </h1>

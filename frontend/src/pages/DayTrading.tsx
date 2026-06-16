@@ -125,7 +125,7 @@ export function DayTrading() {
 
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
-          <div className="eyebrow">№ 06 — Intraday</div>
+          <div className="eyebrow">Intraday</div>
           <h1 className="display cm-pagehead__title">Day Trading</h1>
           <p className="lede">
             Liquid movers, 4 long-only setups, your leaderboard leaders — organised by

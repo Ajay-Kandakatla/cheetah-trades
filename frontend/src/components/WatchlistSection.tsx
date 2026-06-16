@@ -51,7 +51,7 @@ export function WatchlistSection({ onSelect }: Props) {
     <section className="cm-watchlist" aria-labelledby="wl-heading">
       <header className="cm-watchlist__head">
         <div>
-          <div className="eyebrow">№ 03 — Watchlist</div>
+          <div className="eyebrow">Watchlist</div>
           <h2 id="wl-heading" className="cm-watchlist__title">2026 Movers</h2>
           <p className="lede">
             {WATCHLIST.length} curated tickers with 30%+ YTD performance. Click any row for the TradingView chart,

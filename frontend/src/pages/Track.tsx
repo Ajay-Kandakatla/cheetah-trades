@@ -38,7 +38,7 @@ export default function TrackPage() {
       <div className="track-page__title">
         <InfoButton title="Track">{TrackInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 11 — Timeline</div>
+          <div className="eyebrow">Timeline</div>
           <h1 className="display track-page__h1">Track</h1>
           <p className="lede">
             What changed and was it right? — historical diffs across SEPA,

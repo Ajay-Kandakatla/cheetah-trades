@@ -77,7 +77,7 @@ export function MarketGaugePage() {
       <div className="sepa-page__title">
         <InfoButton title="Market Gauge">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ — Market · Minervini / O'Neil</div>
+          <div className="eyebrow">Market · Minervini / O'Neil</div>
           <h1 className="display sepa-page__h1">Market Gauge</h1>
           <p className="lede">
             A book-grounded read of the general market — read the regime, react

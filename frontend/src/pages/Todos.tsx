@@ -108,7 +108,7 @@ export default function TodosPage() {
       <div className="todos-page__title">
         <InfoButton title="Todos">{TodosInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 15 — Tasks</div>
+          <div className="eyebrow">Tasks</div>
           <h1 className="display todos-page__h1">Todos</h1>
           <p className="lede">
             Personal tasks. Anything you want to remember.

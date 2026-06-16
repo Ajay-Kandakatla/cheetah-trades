@@ -139,7 +139,7 @@ export function ChatterPage() {
       <div className="sepa-page__title">
         <InfoButton title="Forum Chatter">{PageInfo}</InfoButton>
         <div>
-          <div className="eyebrow">№ 07 — Crowd Signal</div>
+          <div className="eyebrow">Crowd Signal</div>
           <h1 className="display sepa-page__h1">Forum Chatter</h1>
           <p className="lede">
             Reddit · StockTwits · Hacker News, ranked by mention velocity.

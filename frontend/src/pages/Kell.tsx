@@ -282,7 +282,7 @@ export function KellPage() {
 
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ 06 — Methodology</div>
+          <div className="eyebrow">Methodology</div>
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Oliver Kell · Cycle of Price Action
             <InfoButton inline title="Oliver Kell — Cycle of Price Action">{PageInfo}</InfoButton>

@@ -153,7 +153,7 @@ export function PatternsPage() {
     <div className="sepa-page">
       <div className="sepa-page__title">
         <div>
-          <div className="eyebrow">№ — Bullish reversals · confirmation-line discipline</div>
+          <div className="eyebrow">Bullish reversals · confirmation-line discipline</div>
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Patterns
             <InfoButton inline title="Patterns">{PageInfo}</InfoButton>
