@@ -643,6 +643,17 @@ def _outlook(score: int, state: str, comps: list, weekly: Optional[dict],
     by = {c.get("key"): c for c in comps}
     watch: list[str] = []
 
+    # Imminent high-impact macro events lead the watch list — they're the most
+    # actionable "hold vs add" context (a FOMC/CPI readout can gap the whole
+    # tape). Informational: does NOT change the gauge score or exposure band.
+    try:
+        from macro_calendar import imminent_events
+        for ev in imminent_events(within_days=5, max_tier=1)[:2]:
+            watch.append(f"📅 {ev['label']} {ev['when_label']} ({ev['date']}) — binary macro event; "
+                         f"reduce NEW risk into it and let the readout confirm before adding")
+    except Exception:
+        pass
+
     # distance to the nearest regime flip (the cutoffs ARE the flip lines)
     if score >= STATE_CONSTRUCTIVE:
         watch.append(f"{score - STATE_CONSTRUCTIVE} pts of cushion above the Constructive line ({STATE_CONSTRUCTIVE})")

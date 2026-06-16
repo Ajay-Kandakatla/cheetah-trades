@@ -264,6 +264,9 @@ _SYS = (
     "INLINE. Cite ONLY the provided passages — never invent a page or section.\n"
     "4) End with one concrete thing to watch for THIS name (up-days on heavier volume "
     "than down, accumulation days, pocket pivots, RS holding — not a price or date).\n"
+    "If `upcoming_macro_events` are listed, weave in ONE short clause naming the nearest one "
+    "(e.g. 'FOMC tomorrow') as BINARY EVENT RISK — so stops/sizing get attention — but NEVER "
+    "predict its outcome or how the market will react.\n"
     "Do NOT predict prices/dates or give buy/sell advice beyond the book's mechanical rules."
 )
 
@@ -372,6 +375,33 @@ def _earnings_quality_sell_risk(eq: Optional[dict]) -> list:
     return risks
 
 
+# Sectors whose moves are most directly hostage to a rate / inflation print.
+_RATE_SENSITIVE = {"financials", "banks", "reits", "real_estate", "homebuilders",
+                   "utilities", "semis_ai", "semis", "tech", "growth"}
+
+
+def _macro_events_heads_up(events: list, sector: Optional[str] = None) -> list:
+    """Imminent high-impact macro events (FOMC / CPI / jobs / PCE) as owner
+    heads-ups. INFORMATIONAL — exactly like the earnings-quality overlay, these
+    do NOT change the price-based hold/sell verdict; they flag BINARY event risk
+    (the readout can gap the whole tape) so a price move isn't a surprise and
+    stops / sizing get the attention they deserve. We never predict the outcome
+    or the reaction — only that the event is near."""
+    if not events:
+        return []
+    out: list = []
+    for e in events[:3]:
+        when = e.get("when_label") or ""
+        label = e.get("label") or e.get("kind") or "Macro event"
+        out.append(f"{label} {when} ({e.get('date')}) — binary macro event; expect a tape-wide "
+                   f"reaction, so position size and stops matter more than usual")
+    if sector and str(sector).lower() in _RATE_SENSITIVE and any(
+            (e.get("kind") in ("fomc", "cpi", "pce")) for e in events):
+        out.append("This name's sector is rate/inflation-sensitive — the print can hit it harder "
+                   "than the broad market")
+    return out
+
+
 def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[float] = None,
              use_llm: bool = True, provider: str = "anthropic",
              force: bool = False) -> dict:
@@ -469,6 +499,16 @@ def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[flo
     sector_name = attr.get("sector_name") or macro.get("sector") or "—"
     macro_drivers = macro.get("drivers") or []
 
+    # Imminent high-impact macro events (FOMC / CPI / jobs / PCE within ~5 days).
+    # Informational, like earnings_quality: a binary-event heads-up that does NOT
+    # change the price-based verdict. Single source: macro_calendar.imminent_events.
+    try:
+        from macro_calendar import imminent_events
+        _events = imminent_events(within_days=5, max_tier=1)
+    except Exception:
+        _events = []
+    macro_events = _macro_events_heads_up(_events, macro.get("sector"))
+
     out = {
         "symbol": sym,
         "name": (scan_rec or {}).get("name"),
@@ -485,6 +525,9 @@ def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[flo
         # heads-up; does NOT alter the price-based verdict above.
         "earnings_quality": eq,
         "eq_sell_risk": eq_sell_risk,
+        # Imminent macro events (FOMC/CPI/jobs/PCE) — informational binary-event
+        # heads-up; like eq_sell_risk it does NOT alter the price-based verdict.
+        "macro_events": macro_events,
         "headline_driver": headline,
         "headline_label": headline_label,
         "writeup": None,
@@ -506,6 +549,7 @@ def diagnose(symbol: str, *, entry: Optional[float] = None, shares: Optional[flo
             "earnings_quality": ({"tier": eq.get("tier"), "code_33": eq.get("code_33"),
                                   "score": eq.get("score"), "sell_risk": eq_sell_risk}
                                  if eq else None),            # Ch.8 heads-up for the narrative
+            "upcoming_macro_events": macro_events or None,    # FOMC/CPI/etc. binary-event risk
         }, provider)
 
     # Only persist when the LLM ran — so the fast (writeup=false) path can't

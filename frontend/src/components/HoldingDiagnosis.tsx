@@ -43,6 +43,9 @@ type Diagnosis = {
   // Minervini Ch.8 earnings quality — a sell-RISK heads-up (not a verdict change).
   earnings_quality?: any | null;
   eq_sell_risk?: string[] | null;
+  // Imminent macro events (FOMC/CPI/jobs/PCE) — a binary-event heads-up, also
+  // informational (does not change the price-based verdict).
+  macro_events?: string[] | null;
 };
 
 // label + whether a high score means "pressure" (red) or "health" (green).
@@ -184,6 +187,19 @@ export function HoldingDiagnosis({ symbol, defaultOpen = false }: { symbol: stri
                   <span style={{ color: 'var(--cm-slate, #94a3b8)' }}> — heads-up, not a sell signal (Minervini sells on price):</span>
                   <ul style={{ margin: '0.3rem 0 0', paddingLeft: '1.1rem' }}>
                     {data.eq_sell_risk.map((r, i) => <li key={i} style={{ marginTop: 2 }}>{r}</li>)}
+                  </ul>
+                </div>
+              )}
+              {data.macro_events && data.macro_events.length > 0 && (
+                <div style={{
+                  marginTop: '0.7rem', padding: '0.5rem 0.75rem', borderRadius: 6,
+                  background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.40)',
+                  fontSize: '0.8rem', color: 'var(--ink, #eee)',
+                }}>
+                  <strong style={{ color: '#60a5fa' }}>📅 Macro event ahead</strong>
+                  <span style={{ color: 'var(--cm-slate, #94a3b8)' }}> — binary event risk, not a sell signal (Minervini sells on price):</span>
+                  <ul style={{ margin: '0.3rem 0 0', paddingLeft: '1.1rem' }}>
+                    {data.macro_events.map((r, i) => <li key={i} style={{ marginTop: 2 }}>{r}</li>)}
                   </ul>
                 </div>
               )}

@@ -244,3 +244,48 @@ def get_macro_calendar(force: bool = False, days: int = DEFAULT_DAYS) -> dict:
     data = compute(days)
     _CACHE.update(at=now, data=data)
     return data
+
+
+def _today_et():
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("America/New_York")).date()
+    except Exception:
+        return datetime.now(timezone.utc).date()
+
+
+def imminent_events(within_days: int = 5, max_tier: int = 1) -> list:
+    """High-impact macro events within the next ``within_days`` ET days
+    (tier <= ``max_tier``). The SINGLE source for the holding-diagnosis
+    heads-up + the market-gauge outlook allusion — reuses the cached macro
+    calendar, so no extra FRED calls. Each row:
+
+        {date, kind, tier, label, days_until, when_label}
+
+    Soft-fails to ``[]``. Days-until / 'tomorrow' is computed in ET because the
+    events (FOMC 2pm, CPI 8:30am) are ET-scheduled.
+    """
+    try:
+        events = get_macro_calendar().get("macro") or []
+    except Exception:
+        return []
+    today = _today_et()
+    out: list = []
+    for e in events:
+        d = e.get("date")
+        if not d or (e.get("tier") or 9) > max_tier:
+            continue
+        try:
+            ed = datetime.strptime(d, "%Y-%m-%d").date()
+        except Exception:
+            continue
+        du = (ed - today).days
+        if 0 <= du <= within_days:
+            out.append({
+                "date": d, "kind": e.get("kind"), "tier": e.get("tier"),
+                "label": e.get("label"),
+                "days_until": du,
+                "when_label": ("today" if du == 0 else "tomorrow" if du == 1 else f"in {du} days"),
+            })
+    out.sort(key=lambda x: (x["days_until"], x["tier"]))
+    return out
