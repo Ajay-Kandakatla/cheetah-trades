@@ -557,7 +557,8 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
 def scan_universe(symbols: Optional[List[str]] = None,
                   with_catalyst: bool = False,
                   persist: bool = True,
-                  emitter: Optional[ProgressEmitter] = None) -> dict:
+                  emitter: Optional[ProgressEmitter] = None,
+                  defer_insider_sweep: bool = False) -> dict:
     """Run the full SEPA scan across the universe.
 
     If `emitter` is provided, fires per-phase + per-ticker progress events.
@@ -717,6 +718,9 @@ def scan_universe(symbols: Optional[List[str]] = None,
     # Optional catalyst/insider/fundamentals enrichment on top N candidates only
     # NOTE: the buy_verdict annotation is deliberately deferred until AFTER this
     # block so the enriched top-N rows carry fundamentals.sales (the Bonde pillar).
+    # Symbols whose BROAD insider sweep was deferred to a post-scan background task
+    # (defer_insider_sweep) — surfaced in the payload so the endpoint can kick it off.
+    deferred_insider_symbols: List[str] = []
     if with_catalyst and candidates:
         top = candidates[:20]
         _emit("phase", phase="enriching", total=len(top),
@@ -780,7 +784,17 @@ def scan_universe(symbols: Optional[List[str]] = None,
         # the expensive catalyst/fundamentals/moat) so coverage scales cheaply.
         insider_max = int(os.getenv("SEPA_INSIDER_ENRICH_MAX", "300"))
         rest = [r for r in candidates[20:insider_max] if r.get("insider") is None]
-        if rest:
+        if rest and defer_insider_sweep:
+            # ASYNC path (Ajay 2026-06-17): don't block the scan on EDGAR. The broad
+            # insider sweep is handed to a post-scan background task that fetches each
+            # name (globally rate-limited — see sepa/insider._edgar_get) and pushes an
+            # `insider.update` SSE event as the data lands, so the cards fill in live
+            # while the app stays usable. The scan returns as soon as price-side +
+            # top-20 enrichment are done.
+            deferred_insider_symbols = [r["symbol"] for r in rest]
+            _emit("log", level="info",
+                  message=f"Insider sweep on {len(rest)} candidates deferred to background")
+        elif rest:
             _emit("phase", phase="insider_sweep", total=len(rest),
                   message=f"Insider scan on {len(rest)} more candidates")
 
@@ -828,6 +842,10 @@ def scan_universe(symbols: Optional[List[str]] = None,
         "retry_count": len(failures),
         "permanent_failures": permanent_failures,
         "recovered_count": len(failures) - len(permanent_failures),
+        # Candidates whose broad insider sweep was deferred to a post-scan
+        # background task (empty unless defer_insider_sweep=True). The scan
+        # endpoint kicks off the sweep + SSE push from this list.
+        "deferred_insider_symbols": deferred_insider_symbols,
     }
     if persist:
         _emit("phase", phase="writing")

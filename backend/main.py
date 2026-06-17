@@ -1470,9 +1470,62 @@ async def sepa_scan_post(
             from sepa.universe import load_universe
             symbols = await asyncio.to_thread(load_universe, mode)
         result = await asyncio.to_thread(
-            sepa_scanner.scan_universe, symbols, include, True
+            sepa_scanner.scan_universe, symbols, include, True, None, True,  # defer_insider_sweep
         )
+        # Broad insider sweep runs in the background + pushes insider.update SSE.
+        _kick_background_insider_sweep((result or {}).get("deferred_insider_symbols"))
     return JSONResponse(result)
+
+
+# ── Post-scan background insider sweep (Ajay 2026-06-17) ─────────────────────
+# The broad EDGAR insider sweep used to run INSIDE the scan, blocking it for
+# minutes (and storming SEC with 429s). It's now deferred to this detached task:
+# the scan returns as soon as price-side + top-20 enrichment are done, and this
+# fetches each remaining candidate's insider data — globally rate-limited in
+# sepa/insider._edgar_get — pushing an `insider.update` SSE event per symbol so
+# the cards' 🟢 Cluster / Insider chips fill in LIVE while the app stays usable.
+_insider_bg_tasks: set = set()
+
+
+async def _run_background_insider_sweep(symbols: List[str]) -> None:
+    if not symbols:
+        return
+    from sepa import card_enrichment
+    from events import publish
+    sem = asyncio.Semaphore(int(os.getenv("INSIDER_BG_CONCURRENCY", "3") or 3))
+    done = {"n": 0}
+    total = len(symbols)
+    log.info("background insider sweep starting: %d candidates", total)
+
+    async def one(sym: str) -> None:
+        async with sem:
+            try:
+                insider = await card_enrichment.refresh_insider(sym)
+                publish("insider.update", {"symbol": sym, "insider": insider})
+            except Exception as exc:
+                log.warning("background insider sweep %s failed: %s", sym, exc)
+            done["n"] += 1
+
+    try:
+        await asyncio.gather(*(one(s) for s in symbols))
+        publish("insider.sweep_done", {"count": done["n"], "total": total})
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        log.warning("background insider sweep errored: %s", exc)
+    log.info("background insider sweep complete: %d/%d", done["n"], total)
+
+
+def _kick_background_insider_sweep(symbols: Optional[List[str]]) -> None:
+    """Fire-and-forget — DETACHED from the scan request so it survives the SSE
+    stream closing / the user navigating away (the live updates arrive on the
+    separate global /events stream, not the scan stream)."""
+    syms = [s for s in (symbols or []) if s]
+    if not syms:
+        return
+    task = asyncio.create_task(_run_background_insider_sweep(syms))
+    _insider_bg_tasks.add(task)            # hold a ref so it isn't GC'd mid-flight
+    task.add_done_callback(_insider_bg_tasks.discard)
 
 
 @app.get("/sepa/scan/stream")
@@ -1519,9 +1572,14 @@ async def sepa_scan_stream(
                     symbols = await asyncio.to_thread(load_universe, mode)
                 result = await asyncio.to_thread(
                     sepa_scanner.scan_universe,
-                    symbols, with_catalyst, True, emitter,
+                    symbols, with_catalyst, True, emitter, True,  # defer_insider_sweep
                 )
             emitter.emit("done", result=result)
+            # Hand the deferred insider sweep to a detached background task — the
+            # scan is DONE, the app is usable, and `insider.update` SSE events
+            # fill in the cluster/insider chips live as EDGAR data lands.
+            if not fast:
+                _kick_background_insider_sweep((result or {}).get("deferred_insider_symbols"))
         except Exception as exc:
             log.exception("scan stream failed: %s", exc)
             emitter.emit("error", message=str(exc))

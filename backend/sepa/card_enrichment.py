@@ -302,6 +302,27 @@ async def _compute_insider(sym: str) -> dict:
                 "buysell_score": None, "buysell_label": None}
 
 
+async def refresh_insider(symbol: str) -> dict:
+    """Recompute ONLY the insider signal (EDGAR Form 4, globally rate-limited via
+    sepa.insider._edgar_get) and MERGE it into the card-enrichment cache, leaving
+    valuation/headline untouched. Used by the post-scan background insider sweep
+    (Ajay 2026-06-17) so the chip is fresh on the next card view; returns the
+    insider dict (chip shape) for the live SSE push."""
+    sym = (symbol or "").upper().strip()
+    insider = await _compute_insider(sym)
+    coll = _get_coll()
+    if coll is not None:
+        try:
+            coll.update_one(
+                {"symbol": sym},
+                {"$set": {"symbol": sym, "insider": insider}},
+                upsert=True,
+            )
+        except Exception as exc:
+            log.warning("refresh_insider cache write failed for %s: %s", sym, exc)
+    return insider
+
+
 async def _compute_fundamentals(sym: str) -> dict:
     """Compute the valuation signal + the net-worth/equity headline from a
     SINGLE stock-analysis fetch. Returns {"valuation": {...}, "headline": {...}}."""

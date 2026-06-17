@@ -66,6 +66,80 @@ _FORM4_CACHE_MAX = 5000
 # import-time loop and raises "attached to a different loop" under asyncio.run.
 _FORM4_CONCURRENCY = 3
 
+# ── Global EDGAR rate limiter (root-cause fix for the 429 storm, 2026-06-17) ──
+# SEC EDGAR allows ~10 requests/second per client; exceed it and it returns
+# "429 Too Many Requests". The old code had NESTED unbounded concurrency — the
+# scanner's insider_sweep (Semaphore 4 symbols) × each symbol's 3 FTS searches +
+# 3 Form-4 XML fetches = 20+ EDGAR GETs landing in the same millisecond, with no
+# per-request pacing and no 429 backoff (the retry just re-fired the burst). This
+# single chokepoint paces EVERY EDGAR GET — across the scan sweep AND the per-card
+# enrichment path — so concurrent callers queue instead of bursting.
+EDGAR_MAX_RPS = float(os.getenv("SEC_MAX_RPS", "7") or 7)        # headroom under 10
+_EDGAR_MIN_INTERVAL = 1.0 / max(1.0, EDGAR_MAX_RPS)
+_EDGAR_MAX_RETRIES = int(os.getenv("SEC_MAX_RETRIES", "4") or 4)
+_EDGAR_MAX_BACKOFF = 8.0
+# The pacing lock binds to the RUNNING loop — a module-level Lock binds to the
+# import-time loop and breaks under asyncio.run / a fresh loop (same reason the
+# Form-4 Semaphore is created per-call).
+_edgar_lock: Optional[asyncio.Lock] = None
+_edgar_lock_loop = None
+_edgar_next_ts = 0.0          # monotonic clock of the earliest next-allowed GET
+
+
+def _get_edgar_lock() -> asyncio.Lock:
+    global _edgar_lock, _edgar_lock_loop
+    loop = asyncio.get_event_loop()
+    if _edgar_lock is None or _edgar_lock_loop is not loop:
+        _edgar_lock = asyncio.Lock()
+        _edgar_lock_loop = loop
+    return _edgar_lock
+
+
+async def _edgar_pace() -> None:
+    """Serialize the 'reserve the next slot' step so concurrent coroutines start
+    their EDGAR GETs at least _EDGAR_MIN_INTERVAL apart (a token bucket of 1)."""
+    global _edgar_next_ts
+    async with _get_edgar_lock():
+        now = time.monotonic()
+        wait = _edgar_next_ts - now
+        if wait > 0:
+            await asyncio.sleep(wait)
+            now = time.monotonic()
+        _edgar_next_ts = max(now, _edgar_next_ts) + _EDGAR_MIN_INTERVAL
+
+
+async def _edgar_get(url: str, *, params: Optional[dict] = None, timeout: float = 15):
+    """Single chokepoint for ALL EDGAR GETs: global rate-pacing + 429/5xx-aware
+    backoff (honours Retry-After). Returns the httpx.Response (the 2xx, or the
+    last response received), or None if every attempt raised. Concurrent callers
+    queue behind _edgar_pace() — they can never burst past EDGAR_MAX_RPS."""
+    last = None
+    for attempt in range(_EDGAR_MAX_RETRIES + 1):
+        await _edgar_pace()
+        try:
+            async with httpx.AsyncClient(timeout=timeout, headers=SEC_HEADERS) as client:
+                resp = await client.get(url, params=params)
+        except Exception as exc:
+            log.warning("EDGAR GET %s attempt %d errored: %s", url, attempt + 1, exc)
+            await asyncio.sleep(min(_EDGAR_MAX_BACKOFF, 0.5 * (2 ** attempt)))
+            continue
+        last = resp
+        if resp.status_code == 429 or 500 <= resp.status_code < 600:
+            ra = resp.headers.get("Retry-After")
+            try:
+                backoff = float(ra) if ra else 0.0
+            except (TypeError, ValueError):
+                backoff = 0.0
+            if backoff <= 0:
+                backoff = min(_EDGAR_MAX_BACKOFF, 1.0 * (2 ** attempt))
+            log.info("EDGAR %d on %s — backing off %.1fs (attempt %d)",
+                     resp.status_code, url, backoff, attempt + 1)
+            await asyncio.sleep(backoff)
+            continue
+        return resp
+    return last
+
+
 # Section-16 transaction codes → human label. P/S are open-market; the rest are
 # comp/mechanical and not conviction signals.
 _TXN_LABEL = {
@@ -87,9 +161,9 @@ async def _ticker_to_cik(symbol: str) -> Optional[str]:
         async with _ticker_lock:
             if _TICKER_MAP is None or (time.time() - _TICKER_MAP_TS) > _TICKER_TTL_SEC:
                 try:
-                    async with httpx.AsyncClient(timeout=15, headers=SEC_HEADERS) as client:
-                        resp = await client.get(SEC_TICKERS_URL)
-                    resp.raise_for_status()
+                    resp = await _edgar_get(SEC_TICKERS_URL, timeout=15)
+                    if resp is None or resp.status_code != 200:
+                        raise RuntimeError(f"ticker map HTTP {getattr(resp, 'status_code', 'none')}")
                     data = resp.json()
                     m: dict[str, str] = {}
                     for v in data.values():
@@ -126,9 +200,11 @@ async def _fts_search(cik: str, form: str, days: int = 60, retries: int = 2) -> 
     }
     for attempt in range(retries + 1):
         try:
-            async with httpx.AsyncClient(timeout=15, headers=SEC_HEADERS) as client:
-                resp = await client.get(EDGAR_FTS, params=params)
-            if resp.status_code == 200:
+            # Global rate-paced + 429-backed-off GET (see _edgar_get). This loop
+            # now only re-tries the rare "200 but no hits block" throttle body —
+            # actual 429/5xx backoff is handled inside _edgar_get.
+            resp = await _edgar_get(EDGAR_FTS, params=params)
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 if "hits" in data:
                     hits = data.get("hits", {}).get("hits", [])
@@ -269,9 +345,8 @@ async def _fetch_form4_detail(issuer_cik: str, accession: str, doc: str,
         adsh_nodash = accession.replace("-", "")
         url = f"https://www.sec.gov/Archives/edgar/data/{cik_int}/{adsh_nodash}/{doc}"
         async with sem:
-            async with httpx.AsyncClient(timeout=15, headers=SEC_HEADERS) as client:
-                resp = await client.get(url)
-        if resp.status_code != 200:
+            resp = await _edgar_get(url)
+        if resp is None or resp.status_code != 200:
             return None
         parsed = _parse_form4_xml(resp.content)
     except Exception as exc:
