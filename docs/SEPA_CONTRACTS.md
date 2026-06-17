@@ -213,6 +213,30 @@ contract version):
   Surfaced in the top-level scan response as `qualifier_count` and rendered
   in the SEPA hero stat strip alongside `candidate_count`. Additive; does
   not change `is_candidate` semantics or any scoring weight.
+- **`buy_verdict`** (additive, DISPLAY-only, 2026-06-16): the combined
+  Minervini-buyable + Bonde-sales **PASS / PARTIAL / FAIL** badge shown on every
+  card and leading the detail Analysis tab. Written by
+  `sepa/buyable_verdict.annotate()` as an additive post-pass (run AFTER
+  enrichment so the Bonde pillar sees `fundamentals.sales`); the v1 formula does
+  NOT read it (no score/gate impact — §12-safe). Shape: `{status, label, icon,
+  tone, both_pass, buyable_now, sales_pending, minervini:{passed, buyable_now,
+  stage, reason, cite}, bonde:{passed(bool|null), pending, strong, tier, score,
+  growth_yoy_pct, accelerating, consecutive_growth_q, sales_led, reason, cite}}`.
+  - **Minervini pillar** `passed` = the `qualifier` flag (Trend Template, p.79);
+    `buyable_now` = the `is_buyable` gate (breakout buy point, pp.198-203). It is
+    a *combination* of §5's already-locked gates — it introduces no new gate.
+  - **Bonde pillar** `passed` = `growth_yoy_pct ≥ SALES_FLOOR_PCT (5%)` AND
+    (`accelerating` OR `consecutive_growth_q ≥ BONDE_MIN_CONSEC_Q (2)`), reading
+    the already-locked `sepa/sales.py` score (§ sales-confidence). `None` =
+    sales not enriched (top-N only) → status stays honest (`sales_pending`),
+    never a faked fail.
+  - **Combined** `status`: `pass` when the Minervini pillar passes (`both_pass`
+    when Bonde also passes); `partial` when exactly one pillar passes; `fail`
+    when neither. Renders nothing for ETFs.
+  Constants re-export `sales.py`'s floor/preferred (no drift) + one configured
+  knob; locked by `test_buyable_verdict_constants_locked_and_display_only`. Full
+  derivation: `docs/sepa/buyable_verdict_methodology.md`. Behavioral/regression:
+  `tests/test_buyable_verdict.py`.
 
 ---
 

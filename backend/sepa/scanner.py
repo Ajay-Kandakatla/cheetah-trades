@@ -42,7 +42,7 @@ from . import (
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
-    group_leadership,
+    group_leadership, buyable_verdict,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -715,6 +715,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
     mkt = market_context.market_state()
 
     # Optional catalyst/insider/fundamentals enrichment on top N candidates only
+    # NOTE: the buy_verdict annotation is deliberately deferred until AFTER this
+    # block so the enriched top-N rows carry fundamentals.sales (the Bonde pillar).
     if with_catalyst and candidates:
         top = candidates[:20]
         _emit("phase", phase="enriching", total=len(top),
@@ -799,6 +801,13 @@ def scan_universe(symbols: Optional[List[str]] = None,
                 await asyncio.gather(*(one(r) for r in rest))
 
             asyncio.run(insider_sweep())
+
+    # Minervini-buyable + Bonde-sales verdict (DISPLAY-only, additive — like
+    # group_leadership). Runs LAST so enriched rows carry fundamentals.sales for
+    # the Bonde pillar; un-enriched rows get a Minervini-only verdict (sales
+    # pending). Never alters score / is_candidate / is_buyable. See
+    # docs/sepa/buyable_verdict_methodology.md.
+    buyable_verdict.annotate(results)
 
     payload = {
         "generated_at": int(time.time()),
@@ -1252,6 +1261,10 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
     # Additive industry-group leadership tags (Minervini Ch.6, p.102/108) — pure
     # DISPLAY annotation, cache-only, does NOT read/alter score or is_candidate.
     group_leadership.annotate(results)
+    # Minervini-buyable + Bonde-sales verdict — fast scan joins cached research
+    # (which carries fundamentals.sales from the last warm scan), so the Bonde
+    # pillar is available here without an extra fetch. Additive / DISPLAY-only.
+    buyable_verdict.annotate(results)
     candidates = [r for r in results if r["is_candidate"]]
     _emit("phase", phase="market_context")
     mkt = market_context.market_state()

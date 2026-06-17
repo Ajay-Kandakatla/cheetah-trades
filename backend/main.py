@@ -2212,6 +2212,15 @@ async def sepa_analyze_one(symbol: str, with_catalyst: bool = Query(False)):
         except Exception as exc:
             log.warning("fundamentals enrichment failed for %s: %s", sym, exc)
 
+    # Minervini-buyable + Bonde-sales verdict (additive, DISPLAY-only). Computed
+    # after the optional fundamentals enrich so the Bonde pillar is populated on
+    # the +catalyst path; Minervini-only (sales pending) otherwise.
+    try:
+        from sepa import buyable_verdict
+        res["buy_verdict"] = buyable_verdict.compute(res)
+    except Exception as exc:
+        log.warning("buy_verdict failed for %s: %s", sym, exc)
+
     # Persist the analyzed record alongside the latest scan so subsequent
     # /sepa/candidate/{symbol} calls find it. Also persist a research blob
     # so the next fast-scan picks it up automatically.

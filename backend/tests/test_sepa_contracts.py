@@ -285,6 +285,38 @@ def test_group_leadership_constants_locked():
     assert rows[1]["is_laggard"] is True and rows[0]["group_leader"] is True
 
 
+def test_buyable_verdict_constants_locked_and_display_only():
+    """Minervini-buyable + Bonde-sales verdict (sepa/buyable_verdict.py) is a
+    DISPLAY-only additive combination of two already-cited frameworks: Minervini's
+    qualifier/buyable gate (p.79 / pp.198-203) and Bonde's sales score
+    (sepa/sales.py, 5/25/100). It invents NO new thresholds — it re-exports
+    Bonde's floor/preferred so it can't drift, and adds ONE configured knob
+    (consecutive-quarter minimum). Changing any of this is a methodology change
+    (Rule #4): page-cited update to docs/sepa/buyable_verdict_methodology.md +
+    this contract. The verdict must NEVER touch the score or the gates."""
+    import inspect
+    from sepa import buyable_verdict as bv
+    from sepa import sales
+    # Re-exports Bonde's DOCUMENTED thresholds — locked to sales.py, no drift.
+    assert bv.SALES_FLOOR_PCT == sales.SALES_FLOOR_PCT == 5.0
+    assert bv.SALES_PREFERRED_PCT == sales.SALES_PREFERRED_PCT == 25.0
+    assert bv.BONDE_MIN_CONSEC_Q == 2          # configured (Bonde names no count)
+    assert bv.VERDICT_KEY == "buy_verdict"
+    # Page cites must stay in the source (Rule #1 / #4).
+    src = inspect.getsource(bv)
+    for cite in ("p.79", "pp.198-203"):
+        assert cite in src, f"buyable_verdict.py lost its {cite} citation"
+    assert "Bonde" in src and "Stockbee" in src
+    # DISPLAY-only: annotate adds buy_verdict but leaves score / gates untouched.
+    rows = [{"symbol": "A", "score": 80, "is_candidate": True, "is_buyable": True}]
+    bv.annotate(rows)
+    assert (rows[0]["score"], rows[0]["is_candidate"]) == (80, True)
+    assert rows[0]["buy_verdict"]["status"] == "pass"
+    # The composite-score weights are NOT affected by adding the verdict.
+    from sepa import scanner
+    assert sum(scanner.SCORE_WEIGHTS.values()) == 100
+
+
 def test_analyst_pulse_constants_locked_and_out_of_score():
     """Analyst Pulse (sepa/analyst_pulse.py — TLSW p.124-125 revisions, p.89
     brokerage-opinion trap, Ch.4 p.41/p.44 target framing) is DISPLAY +

@@ -105,3 +105,14 @@ sales growth %, consecutive growth quarters, and the sales-led flag, with the
 offers the same "re-scan with +catalyst" action as the Fundamentals tab. Tests:
 `SalesPanel.test.tsx` (render + accelerating/decelerating + insufficient-history
 + null negatives).
+
+## 9. Folded into the Minervini + Bonde buy verdict (2026-06-16)
+
+The sales score is now also the **Bonde pillar** of the combined buy verdict
+(`backend/sepa/buyable_verdict.py`). A name **passes** the Bonde pillar when its
+YoY growth clears the 5% floor AND it shows acceleration or ≥2 consecutive growth
+quarters; that pillar is paired with Minervini's buyable-stock gate into one
+PASS / PARTIAL / FAIL badge shown on every card. The Sales-confidence tab was
+merged into the **Analysis** tab (which moved up to 3rd) — the verdict leads, the
+sales detail grid follows. Full derivation:
+`docs/sepa/buyable_verdict_methodology.md`.
