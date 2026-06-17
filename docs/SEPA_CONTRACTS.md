@@ -1093,10 +1093,11 @@ in §3 under "Optional but commonly-present fields".
 
 Removing or renaming a field IS a breaking change. RFC required.
 
-## 12. Analysis-tab composite Trade Verdict (2026-06-16)
+## 12. Analysis-tab composite Cheetah Verdict (2026-06-16)
 
-The SEPA detail page **Analysis** tab leads with a composite **BUY / WATCH /
-AVOID** timing verdict combining **Minervini SEPA** (Trend Template + pivot
+The SEPA detail page **Analysis** tab leads with the **Cheetah Verdict** — a
+composite **BUY / WATCH / AVOID** timing call (shown as "🐆 Cheetah Verdict:
+…") combining **Minervini SEPA** (Trend Template + pivot
 breakout) and **Pradeep Bonde / Stockbee** (Episodic Pivot, 4% breakout,
 momentum burst, group leadership, and the anti-thesis **sell** signals).
 
@@ -1106,10 +1107,10 @@ momentum burst, group leadership, and the anti-thesis **sell** signals).
   `group_rs_rank`/`group_leader`). No backend field is added or changed; no
   scanner gate is affected. The composite verdict is **not** a scanner
   qualifier — `is_candidate` / `is_buyable` (§5a/§5b) are untouched.
-- Logic LOCKED in `frontend/src/lib/tradeVerdict.ts`, unit-tested in
-  `tradeVerdict.test.ts` (incl. the edge case: Minervini passes but a Bonde
-  sell signal fires → must NOT be BUY). Thresholds + cites in
-  `docs/sepa/trade_verdict_methodology.md`.
+- Logic LOCKED in `frontend/src/lib/cheetahVerdict.ts` (`computeCheetahVerdict`),
+  unit-tested in `cheetahVerdict.test.ts` (incl. the edge case: Minervini passes
+  but a Bonde sell signal fires → must NOT be BUY). Thresholds + cites in
+  `docs/sepa/cheetah_verdict_methodology.md`.
 - Composition rule: an anti-thesis from **either** framework (broken trend or a
   Bonde hard sell) forces AVOID; BUY requires **both** legs to confirm.
 - The pre-existing backend `buy_verdict` (Minervini buyable qualifier p.79 +

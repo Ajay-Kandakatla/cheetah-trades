@@ -1,8 +1,12 @@
-# Trade Verdict — Minervini SEPA × Pradeep Bonde (Stockbee) composite
+# Cheetah Verdict — Minervini SEPA × Pradeep Bonde (Stockbee) composite
 
-**Surface:** SEPA ticker detail page → **Analysis** tab (lead panel).
-**Code:** `frontend/src/lib/tradeVerdict.ts` (pure, unit-tested in
-`tradeVerdict.test.ts`) → rendered by `frontend/src/components/TradeVerdictPanel.tsx`.
+The **Cheetah Verdict** is the app's brand name for this composite buy/sell call.
+
+**Surface:** SEPA ticker detail page → **Analysis** tab (lead panel), shown as
+"🐆 Cheetah Verdict: BUY / WATCH / AVOID".
+**Code:** `frontend/src/lib/cheetahVerdict.ts` (`computeCheetahVerdict`, pure,
+unit-tested in `cheetahVerdict.test.ts`) → rendered by
+`frontend/src/components/CheetahVerdictPanel.tsx`.
 **Type:** frontend-only synthesis over fields the scan payload already carries
 (`trend.checks`, `rs_rank`, `volume.*`, `day_change_pct`, `stage.dist_200_pct`,
 `dual_momentum.*`, `sell_signals.*`, `group_rs_rank`/`group_leader`). No backend

@@ -1,4 +1,4 @@
-/* tradeVerdict — composite BUY / WATCH / AVOID verdict for the SEPA detail
+/* cheetahVerdict — the Cheetah Verdict: composite BUY / WATCH / AVOID for the SEPA detail
  * page's Analysis tab, combining TWO frameworks on data the scan payload
  * already carries (no extra fetch, no backend change):
  *
@@ -22,7 +22,7 @@
  *
  * Thresholds are the ones the two authors actually publish — they are NOT
  * invented here. See docs/sepa/trade_verdict_methodology.md for the cites.
- * Pure function: no I/O, no globals. Tested in tradeVerdict.test.ts.
+ * Pure function: no I/O, no globals. Tested in cheetahVerdict.test.ts.
  */
 
 // ── Published thresholds ──────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export interface FrameworkResult {
   checks: VerdictCheck[];
 }
 
-export interface TradeVerdict {
+export interface CheetahVerdict {
   verdict: Verdict;
   label: string; // BUY | WATCH | AVOID | NO DATA
   tone: string; // hex colour for the badge
@@ -74,7 +74,7 @@ const LABEL: Record<Verdict, string> = {
 const pct = (v: number | null | undefined): string =>
   v == null ? '—' : `${v > 0 ? '+' : ''}${Math.round(v * 10) / 10}%`;
 
-export interface TradeVerdictInput {
+export interface CheetahVerdictInput {
   /** Mirrors the SepaCandidate shape; loosely typed so we can read the
    *  v2 fields (sell_signals, dual_momentum, group_*) the FE type doesn't
    *  fully enumerate yet. */
@@ -84,7 +84,7 @@ export interface TradeVerdictInput {
   catalystSurprisePct?: number | null;
 }
 
-export function computeTradeVerdict({ row, catalystSurprisePct }: TradeVerdictInput): TradeVerdict {
+export function computeCheetahVerdict({ row, catalystSurprisePct }: CheetahVerdictInput): CheetahVerdict {
   const tc = row?.trend?.checks;
   const stage = row?.stage?.stage;
 

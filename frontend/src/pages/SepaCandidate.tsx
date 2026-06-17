@@ -13,7 +13,7 @@ import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
 import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
-import { TradeVerdictPanel } from '../components/TradeVerdictPanel';
+import { CheetahVerdictPanel } from '../components/CheetahVerdictPanel';
 import { BreakoutHistoryBody } from '../components/BreakoutHistoryModal';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
@@ -1448,9 +1448,9 @@ export function SepaCandidatePage() {
                 {/* Composite Minervini SEPA + Bonde/Stockbee buy-&-sell verdict —
                     leads the tab (Ajay 2026-06-16). Frontend synthesis over the
                     fields the scan already carries (trend, volume, sell_signals,
-                    dual_momentum, group_*). Logic: src/lib/tradeVerdict.ts. */}
+                    dual_momentum, group_*). Logic: src/lib/cheetahVerdict.ts. */}
                 {base && (
-                  <TradeVerdictPanel
+                  <CheetahVerdictPanel
                     row={base}
                     catalystSurprisePct={(data as any)?.catalyst?.last_earnings_surprise_pct ?? null}
                   />

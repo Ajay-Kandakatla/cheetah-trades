@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { computeTradeVerdict } from './tradeVerdict';
+import { computeCheetahVerdict } from './cheetahVerdict';
 
-/* tradeVerdict — composite Minervini (SEPA Trend Template) + Pradeep Bonde
+/* cheetahVerdict (the Cheetah Verdict) — composite Minervini (SEPA Trend Template) + Pradeep Bonde
    (Stockbee) BUY/WATCH/AVOID verdict for the detail page Analysis tab.
    Ajay 2026-06-16. Locks the composition rule, the BUY threshold, and the
    critical edge case: Minervini passes but a Bonde anti-thesis sell signal
@@ -38,9 +38,9 @@ const buyRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-describe('computeTradeVerdict — composite gate', () => {
+describe('computeCheetahVerdict — composite gate', () => {
   it('BUY when both Minervini and Bonde confirm', () => {
-    const v = computeTradeVerdict({ row: buyRow(), catalystSurprisePct: 8 });
+    const v = computeCheetahVerdict({ row: buyRow(), catalystSurprisePct: 8 });
     expect(v.verdict).toBe('buy');
     expect(v.minervini.verdict).toBe('buy');
     expect(v.bonde.verdict).toBe('buy');
@@ -48,7 +48,7 @@ describe('computeTradeVerdict — composite gate', () => {
   });
 
   it('EDGE: Minervini passes but a Bonde anti-thesis sell fires → NOT buy', () => {
-    const v = computeTradeVerdict({
+    const v = computeCheetahVerdict({
       row: buyRow({ sell_signals: { action: 'SELL', severity: 2, signals: { close_below_200ma: true } } }),
     });
     expect(v.minervini.verdict).toBe('buy'); // Minervini leg still a buy
@@ -59,7 +59,7 @@ describe('computeTradeVerdict — composite gate', () => {
   });
 
   it('WATCH when trend is intact but no fresh breakout trigger', () => {
-    const v = computeTradeVerdict({
+    const v = computeCheetahVerdict({
       row: buyRow({ volume: { high_vol_breakout: false, pocket_pivot: false, last_vol: 800_000, avg_vol_50: 1_000_000 }, day_change_pct: 1.0 }),
     });
     expect(v.minervini.verdict).toBe('watch'); // trend ok, no buy trigger
@@ -67,7 +67,7 @@ describe('computeTradeVerdict — composite gate', () => {
   });
 
   it('BUY downgrades to WATCH when a soft distribution caution shows', () => {
-    const v = computeTradeVerdict({
+    const v = computeCheetahVerdict({
       row: buyRow({ sell_signals: { action: 'HOLD', severity: 0, today_1w_return_pct: 12, signals: { largest_1w_decline_since_stage2: true } } }),
     });
     expect(v.verdict).not.toBe('buy');
@@ -76,7 +76,7 @@ describe('computeTradeVerdict — composite gate', () => {
   });
 
   it('AVOID when price is below the key moving averages (trend broken)', () => {
-    const v = computeTradeVerdict({
+    const v = computeCheetahVerdict({
       row: buyRow({ trend: { checks: { ...PASS_TREND, price_above_ma150_and_ma200: false } } }),
     });
     expect(v.minervini.verdict).toBe('avoid');
@@ -85,23 +85,23 @@ describe('computeTradeVerdict — composite gate', () => {
   });
 
   it('AVOID when past Stage 2 (Stage 4 decline)', () => {
-    const v = computeTradeVerdict({ row: buyRow({ stage: { stage: 4, dist_200_pct: -10 } }) });
+    const v = computeCheetahVerdict({ row: buyRow({ stage: { stage: 4, dist_200_pct: -10 } }) });
     expect(v.verdict).toBe('avoid');
   });
 
   it('INSUFFICIENT when there is no trend-template result', () => {
-    const v = computeTradeVerdict({ row: { rs_rank: 90 } });
+    const v = computeCheetahVerdict({ row: { rs_rank: 90 } });
     expect(v.verdict).toBe('insufficient');
     expect(v.label).toBe('NO DATA');
   });
 
   it('does not crash on a near-empty row', () => {
-    expect(() => computeTradeVerdict({ row: {} })).not.toThrow();
-    expect(computeTradeVerdict({ row: {} }).verdict).toBe('insufficient');
+    expect(() => computeCheetahVerdict({ row: {} })).not.toThrow();
+    expect(computeCheetahVerdict({ row: {} }).verdict).toBe('insufficient');
   });
 
   it('Minervini buy + Bonde only WATCH (no group strength, no trigger) → WATCH not BUY', () => {
-    const v = computeTradeVerdict({
+    const v = computeCheetahVerdict({
       row: buyRow({
         group_leader: false,
         is_laggard: false,
@@ -118,7 +118,7 @@ describe('computeTradeVerdict — composite gate', () => {
   });
 
   it('exposes per-framework check lists for the UI', () => {
-    const v = computeTradeVerdict({ row: buyRow() });
+    const v = computeCheetahVerdict({ row: buyRow() });
     expect(v.minervini.checks.length).toBe(7);
     expect(v.bonde.checks.length).toBe(6);
     expect(v.minervini.checks.every((c) => 'label' in c && 'ok' in c)).toBe(true);

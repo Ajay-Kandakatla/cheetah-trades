@@ -1,14 +1,14 @@
-/* TradeVerdictPanel — the composite BUY / WATCH / AVOID verdict that leads the
- * SEPA detail Analysis tab (Ajay 2026-06-16: "make the logic follow Minervini
- * and Pradeep Bonde's verdict of buy and sell").
+/* CheetahVerdictPanel — the Cheetah Verdict: composite BUY / WATCH / AVOID that
+ * leads the SEPA detail Analysis tab (Ajay 2026-06-16: "make the logic follow
+ * Minervini and Pradeep Bonde's verdict of buy and sell"; branded "Cheetah").
  *
  * Combines two frameworks on data the scan payload already carries:
  *   • Minervini SEPA — Trend Template (8 price/MA/RS gates) + pivot breakout.
  *   • Bonde / Stockbee — Episodic Pivot, 4% breakout, momentum burst, group
  *     leadership, AND the anti-thesis SELL signals.
- * Logic lives in src/lib/tradeVerdict.ts (pure, unit-tested). This is render-only.
+ * Logic lives in src/lib/cheetahVerdict.ts (pure, unit-tested). This is render-only.
  */
-import { computeTradeVerdict, type FrameworkResult, type VerdictCheck } from '../lib/tradeVerdict';
+import { computeCheetahVerdict, type FrameworkResult, type VerdictCheck } from '../lib/cheetahVerdict';
 
 function CheckRow({ c }: { c: VerdictCheck }) {
   const tone = c.ok === true ? '#10b981' : c.ok === false ? '#f87171' : '#64748b';
@@ -68,7 +68,7 @@ function Pillar({ fw, cite }: { fw: FrameworkResult; cite: string }) {
   );
 }
 
-export function TradeVerdictPanel({
+export function CheetahVerdictPanel({
   row,
   catalystSurprisePct,
 }: {
@@ -76,7 +76,7 @@ export function TradeVerdictPanel({
   row: any;
   catalystSurprisePct?: number | null;
 }) {
-  const v = computeTradeVerdict({ row, catalystSurprisePct });
+  const v = computeCheetahVerdict({ row, catalystSurprisePct });
 
   return (
     <div style={{ marginBottom: '1rem' }}>
@@ -91,6 +91,9 @@ export function TradeVerdictPanel({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 800, fontSize: '0.92rem', letterSpacing: '0.02em' }}>
+            🐆 Cheetah Verdict:
+          </span>
           <span
             style={{
               fontSize: '1.1rem',
