@@ -181,3 +181,86 @@ describe('BreakoutsPage — turnover / volume columns + sorting', () => {
     expect(within(rows[1]).getAllByText('—').length).toBeGreaterThanOrEqual(4);
   });
 });
+
+/* Stage + "→ R1/R2" columns (Ajay 2026-06-16: "add the stages to these columns
+   now if they are s2 and if they marching towards r1 or r2"). Stage 2 = the
+   buyable advancing phase (✓ S2); the march column shows distance to the next
+   trade-plan target. */
+
+type SOpts = { stage: number | null; price: number | null; r1: number | null; r2: number | null };
+const srow = (symbol: string, o: SOpts): BreakoutBoardRow => ({
+  symbol, name: `${symbol} Inc`, breakout_count: 3, days_since_breakout: 0,
+  high_vol_breakout: true, broke_out_today: true, last_close: o.price, last_vol: 1_000_000,
+  avg_vol_50: 1_000_000, day_change_pct: 1.0, rs_rank: 90, stage: o.stage,
+  stage_label: o.stage != null ? `Stage ${o.stage}` : null, r1: o.r1, r2: o.r2,
+  is_etf: false, buy_verdict: verdict(true, true) as any,
+});
+
+const marchHeader = () => screen.getByRole('button', { name: /R1\/R2/ });
+const stageHeader = () => screen.getByRole('button', { name: /Stage/ });
+
+describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
+  beforeEach(() => {
+    mockState = {
+      rows: [
+        srow('BELOW', { stage: 2, price: 100, r1: 110, r2: 120 }),  // → R1 +10%
+        srow('MID',   { stage: 4, price: 112, r1: 110, r2: 120 }),  // cleared R1 → R2
+        srow('PAST',  { stage: 1, price: 130, r1: 110, r2: 120 }),  // past R2
+      ],
+      summary: { total: 3, broke_out_today: 3, minervini_pass: 3, minervini_fail: 0, bonde_pass: 3, bonde_fail: 0, both_pass: 3 },
+      loading: false, error: null,
+    };
+  });
+
+  it('renders the Stage column — ✓ S2 highlighted, S4 / S1 plain', () => {
+    renderPage();
+    expect(screen.getByText('✓ S2')).toBeInTheDocument();    // Stage 2 = buyable
+    expect(screen.getByText('S4')).toBeInTheDocument();      // Stage 4 = avoid
+    expect(screen.getByText('S1')).toBeInTheDocument();
+  });
+
+  it('renders the marching-toward column for each branch (→ R1 / → R2 / Past R2)', () => {
+    renderPage();
+    expect(screen.getByText(/→ R1 \+10\.00%/)).toBeInTheDocument();   // below R1
+    expect(screen.getByText(/→ R2/)).toBeInTheDocument();             // between R1/R2
+    expect(screen.getByText(/Past R2/)).toBeInTheDocument();          // extended
+  });
+
+  it('sorts by distance-to-target ascending when → R1/R2 header is clicked', () => {
+    renderPage();
+    fireEvent.click(marchHeader());                          // preferred asc
+    expect(marchHeader().textContent).toContain('▲');
+    const rows = dataRows();
+    // MID is closest to its target (R2 ≈ +7.1%), BELOW next (R1 +10%), PAST sinks (null)
+    expect(within(rows[0]).getByText('MID')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('BELOW')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('PAST')).toBeInTheDocument();
+  });
+
+  it('sorts by Stage when the Stage header is clicked', () => {
+    renderPage();
+    fireEvent.click(stageHeader());                          // desc default → highest stage first
+    expect(stageHeader().textContent).toContain('▼');
+    const rows = dataRows();
+    expect(within(rows[0]).getByText('MID')).toBeInTheDocument();    // stage 4
+    expect(within(rows[2]).getByText('PAST')).toBeInTheDocument();   // stage 1
+  });
+});
+
+/* Mobile horizontal scroll (Ajay 2026-06-16). The table is wider than a phone
+   (many columns), so it MUST scroll horizontally on its own to reach Turnover /
+   Vol % / Total Vol on the right — otherwise those columns are unreachable. The
+   container exposes overflow-x and the inner table keeps a fixed min-width so it
+   doesn't squeeze every column into the viewport. */
+describe('BreakoutsPage — table exposes usable horizontal scroll', () => {
+  it('wraps the table in an overflow-x scroller with a fixed-width table', () => {
+    renderPage();
+    const scroller = screen.getByTestId('breakouts-scroll');
+    expect(scroller.style.overflowX).toBe('auto');
+    // contain the swipe so it scrolls the table, not the page behind it
+    expect(scroller.style.overscrollBehaviorX).toBe('contain');
+    // inner table is wider than any phone viewport, so columns aren't squeezed
+    const table = within(scroller).getByRole('table');
+    expect(parseInt(table.style.minWidth, 10)).toBeGreaterThanOrEqual(960);
+  });
+});

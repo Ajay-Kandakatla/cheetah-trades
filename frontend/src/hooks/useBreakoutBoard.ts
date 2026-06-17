@@ -21,6 +21,8 @@ export type BreakoutBoardRow = {
   rs_rank?: number | null;
   stage?: number | null;
   stage_label?: string | null;
+  r1?: number | null;                 // trade-plan R-multiple targets (entry +1R / +2R)
+  r2?: number | null;
   industry?: string | null;
   is_etf?: boolean;
   buy_verdict?: BuyVerdict | null;

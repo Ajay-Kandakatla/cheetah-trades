@@ -17,7 +17,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from sepa import breakout
 
 
-def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50):
+def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50,
+         r1=110.0, r2=120.0):
     """A scan row with a breakout count + a pre-baked buy_verdict (we test the
     BOARD's ranking/summary, not the verdict logic — that has its own tests)."""
     verdict = {
@@ -42,6 +43,10 @@ def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50):
             "days_since_breakout": 0 if today else 5,
             "high_vol_breakout": today,
         },
+        # Trade-plan R-multiple targets (entry +1R / +2R) — the board lifts
+        # targets.r1 / targets.r2 onto the row for the "marching toward R1/R2"
+        # column (Ajay 2026-06-16).
+        "trade_plan": {"targets": {"r1": r1, "r2": r2}},
         "buy_verdict": verdict,
     }
 
@@ -105,6 +110,24 @@ def test_empty_scan_is_empty_board_not_a_crash(monkeypatch):
     _patch_scan(monkeypatch, [])
     out = breakout.board()
     assert out["rows"] == [] and out["summary"]["total"] == 0
+
+
+def test_board_carries_stage_and_r1_r2_targets(monkeypatch):
+    # Stage + the trade-plan R1/R2 targets surface on the row so the /breakouts
+    # page can show "S2" and "marching toward R1/R2" without another fetch.
+    _patch_scan(monkeypatch, [_row("AAA", 4, r1=150.0, r2=175.0)])
+    r = breakout.board()["rows"][0]
+    assert r["stage"] == 2 and r["stage_label"] == "Stage 2"
+    assert r["r1"] == 150.0 and r["r2"] == 175.0
+
+
+def test_board_tolerates_a_missing_trade_plan(monkeypatch):
+    # No trade_plan on the scan row → r1/r2 are None, never a crash (negative).
+    row = _row("AAA", 4)
+    row.pop("trade_plan")
+    _patch_scan(monkeypatch, [row])
+    r = breakout.board()["rows"][0]
+    assert r["r1"] is None and r["r2"] is None
 
 
 def test_row_without_breakout_count_is_skipped(monkeypatch):

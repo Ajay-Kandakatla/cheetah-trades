@@ -16,6 +16,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoard';
 import { useSort, type SortDir } from '../lib/useSort';
+import { marchToTarget, stageMeta } from '../lib/breakoutTargets';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
@@ -48,6 +49,8 @@ const PageInfo = (
       <li><strong># breakouts</strong> — count of distinct volume-confirmed breakouts. Highest first.</li>
       <li><strong>Verdict</strong> — the combined Minervini-buyable + Bonde-sales PASS/PARTIAL/FAIL. Filter the list by which side passes.</li>
       <li><strong>⚡ today</strong> — it cleared its pivot on volume in the latest session.</li>
+      <li><strong>Stage</strong> — Weinstein/Minervini stage. <strong>✓ S2</strong> (advancing) is the only buyable stage; S4 (decline) is avoid.</li>
+      <li><strong>→ R1/R2</strong> — which trade-plan target (entry +1R / +2R) it's marching toward, and the % above price to reach it. “Past R2” = extended.</li>
     </ul>
     <p className="mono">Display-only. Not investment advice.</p>
   </>
@@ -141,6 +144,8 @@ export function BreakoutsPage() {
     volpct: volPctOf,
     volume: (r) => r.last_vol,
     turnover: turnoverOf,
+    stage: (r) => r.stage,
+    march: (r) => marchToTarget(r.last_close, r.r1, r.r2).pct,
   }, 'turnover', 'desc');
 
   return (
@@ -209,8 +214,19 @@ export function BreakoutsPage() {
       )}
 
       {shown.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
-          <div className="breakouts-table" role="table" style={{ minWidth: 960 }}>
+        <div
+          className="breakouts-scroll"
+          data-testid="breakouts-scroll"
+          style={{
+            overflowX: 'auto',
+            // Momentum scroll + don't let a horizontal swipe rubber-band the
+            // whole page on phones (the table is wider than the viewport, so
+            // it must scroll on its own — Ajay 2026-06-16 mobile fix).
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorX: 'contain',
+          }}
+        >
+          <div className="breakouts-table" role="table" style={{ minWidth: 1130 }}>
             <div className="breakouts-row breakouts-row--head" role="row" style={headRow}>
               <span style={{ width: 36 }}>#</span>
               <Th label="Ticker" k="ticker" style={colTicker} preferred="asc" sort={sort} />
@@ -221,6 +237,8 @@ export function BreakoutsPage() {
               <Th label="Vol %" k="volpct" style={colVolPct} align="right" sort={sort} />
               <Th label="Total Vol" k="volume" style={colVol} align="right" sort={sort} />
               <Th label="Turnover" k="turnover" style={colTurnover} align="right" sort={sort} />
+              <Th label="Stage" k="stage" style={colStage} sort={sort} />
+              <Th label="→ R1/R2" k="march" style={colMarch} preferred="asc" sort={sort} />
               <span style={colVerdict}>verdict</span>
             </div>
             {sort.sorted.map((r, i) => {
@@ -264,6 +282,44 @@ export function BreakoutsPage() {
                   </span>
                   <span className="mono" style={{ ...colVol, color: 'var(--cm-slate)' }}>{fmtVol(r.last_vol)}</span>
                   <span className="mono" title="Dollar volume traded today (price × volume)" style={{ ...colTurnover, fontWeight: 600 }}>{fmtDollar(to)}</span>
+                  {(() => {
+                    // Stage — Weinstein/Minervini stage analysis. Stage 2 (the
+                    // advancing phase) is the only buyable stage; ✓ + green.
+                    const sm = stageMeta(r.stage, r.stage_label);
+                    return (
+                      <span
+                        style={{ ...colStage, fontSize: '0.74rem', color: sm.tone, fontWeight: sm.isStage2 ? 700 : 400 }}
+                        title={sm.isStage2 ? 'Stage 2 — the advancing phase (the only buyable stage, Minervini/Weinstein)' : sm.label}
+                      >
+                        {sm.isStage2 ? `✓ S2` : (r.stage != null ? `S${r.stage}` : '—')}
+                      </span>
+                    );
+                  })()}
+                  {(() => {
+                    // Marching toward R1/R2 — distance (%) above current price to
+                    // the next trade-plan target (entry+1R / +2R).
+                    const m = marchToTarget(r.last_close, r.r1, r.r2);
+                    const tone =
+                      m.state === 'to_r1' ? 'var(--positive, #10b981)' :
+                      m.state === 'to_r2' ? 'var(--gold, #c9a227)' :
+                      m.state === 'past_r2' ? '#eab308' : 'var(--cm-slate, #94a3b8)';
+                    const text =
+                      m.pct != null ? `${m.label} ${pct(m.pct)}` :
+                      m.state === 'past_r2' ? '⚠ Past R2' : '—';
+                    return (
+                      <span
+                        className="mono"
+                        style={{ ...colMarch, fontSize: '0.74rem', color: tone }}
+                        title={
+                          m.state === 'past_r2' ? 'Extended past both R1 and R2 targets'
+                          : m.pct != null ? `${(m.toR1Pct != null ? `R1 ${pct(m.toR1Pct)}` : '')}  ${(m.toR2Pct != null ? `R2 ${pct(m.toR2Pct)}` : '')}`.trim()
+                          : 'No trade-plan targets on this row'
+                        }
+                      >
+                        {text}
+                      </span>
+                    );
+                  })()}
                   <span style={colVerdict}>
                     {r.is_etf ? (
                       <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>ETF — no Minervini verdict</span>
@@ -312,4 +368,6 @@ const colChg: CSSProperties = { width: 70, textAlign: 'right' };
 const colVolPct: CSSProperties = { width: 80, textAlign: 'right' };
 const colVol: CSSProperties = { width: 82, textAlign: 'right' };
 const colTurnover: CSSProperties = { width: 96, textAlign: 'right' };
+const colStage: CSSProperties = { width: 62 };
+const colMarch: CSSProperties = { width: 104 };
 const colVerdict: CSSProperties = { flex: '2 1 220px', minWidth: 200 };

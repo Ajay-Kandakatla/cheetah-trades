@@ -68,6 +68,12 @@ def board(top: int = 250, min_count: int = 1) -> dict:
         if not base or base["breakout_count"] < min_count:
             continue
         stage = r.get("stage") or {}
+        # R1/R2 = the trade-plan R-multiple targets (entry + 1R / +2R, see
+        # analysis/trade_plan._targets) — the overhead levels a breakout is
+        # "marching toward". Carried so the page can show distance-to-target
+        # without re-fetching the full plan (Ajay 2026-06-16: "if they are s2
+        # and if they marching towards r1 or r2"). None when no usable plan.
+        targets = (r.get("trade_plan") or {}).get("targets") or {}
         rows.append({
             **base,
             "broke_out_today": base.get("days_since_breakout") == 0,
@@ -75,6 +81,8 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             "rs_rank":         r.get("rs_rank"),
             "stage":           stage.get("stage") if isinstance(stage, dict) else None,
             "stage_label":     stage.get("label") if isinstance(stage, dict) else None,
+            "r1":              targets.get("r1"),
+            "r2":              targets.get("r2"),
             "industry":        r.get("industry"),
             "is_etf":          bool(r.get("is_etf")),
             "buy_verdict":     r.get("buy_verdict"),
