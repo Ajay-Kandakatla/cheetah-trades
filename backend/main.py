@@ -2342,6 +2342,17 @@ async def sepa_breakout_leaders(top: int = Query(30, ge=1, le=100)):
     return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.leaders, top)))
 
 
+@app.get("/sepa/breakout-board")
+async def sepa_breakout_board(top: int = Query(250, ge=1, le=500),
+                              min_count: int = Query(1, ge=0, le=50)):
+    """Dedicated /breakouts page feed (Ajay 2026-06-16): every name that has
+    broken out, ranked by breakout COUNT (highest first), each carrying the
+    Minervini+Bonde buy_verdict + RS/stage/day-change context, plus a summary of
+    the pass/fail mix. Display-only — feeds no score."""
+    from sepa import breakout
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.board, top, min_count)))
+
+
 @app.get("/sepa/breakout/{symbol}")
 async def sepa_breakout_symbol(symbol: str):
     """Per-symbol breakout read (count + ACTUAL last/avg volume) — used by the

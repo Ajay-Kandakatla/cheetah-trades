@@ -48,6 +48,59 @@ def leaders(top: int = 30) -> dict:
     return {"rows": rows[:top], "scan_ts": scan.get("generated_at"), "n": len(rows)}
 
 
+def board(top: int = 250, min_count: int = 1) -> dict:
+    """Rich breakout-ranked board for the dedicated /breakouts page (Ajay
+    2026-06-16: "a page to track only breakouts and # of breakouts, highest
+    first ... some passing Minervinis and some not, and Bonde, but mainly around
+    breakouts").
+
+    Every name in the latest scan that has actually broken out (>= ``min_count``
+    volume-confirmed breakouts over the trailing year), ranked by breakout COUNT
+    descending, each carrying the Minervini+Bonde ``buy_verdict`` (see
+    sepa/buyable_verdict.py) plus RS / stage / day-change context so the page can
+    slice "passing Minervinis vs not" without another fetch. Display-only.
+    """
+    from sepa import scanner
+    scan = scanner.load_latest() or {}
+    rows = []
+    for r in scan.get("all_results") or []:
+        base = _row(r.get("symbol"), r.get("volume"), r.get("last_close"), r.get("name"))
+        if not base or base["breakout_count"] < min_count:
+            continue
+        stage = r.get("stage") or {}
+        rows.append({
+            **base,
+            "broke_out_today": base.get("days_since_breakout") == 0,
+            "day_change_pct":  r.get("day_change_pct"),
+            "rs_rank":         r.get("rs_rank"),
+            "stage":           stage.get("stage") if isinstance(stage, dict) else None,
+            "stage_label":     stage.get("label") if isinstance(stage, dict) else None,
+            "industry":        r.get("industry"),
+            "is_etf":          bool(r.get("is_etf")),
+            "buy_verdict":     r.get("buy_verdict"),
+        })
+    # Highest breakout count first; RS then symbol break ties deterministically.
+    rows.sort(key=lambda x: (-x["breakout_count"], -(x.get("rs_rank") or 0), x["symbol"]))
+    rows = rows[:top]
+
+    def _mp(x):
+        return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")
+
+    def _bp(x):
+        return ((x.get("buy_verdict") or {}).get("bonde") or {}).get("passed")
+
+    summary = {
+        "total":           len(rows),
+        "broke_out_today": sum(1 for x in rows if x["broke_out_today"]),
+        "minervini_pass":  sum(1 for x in rows if _mp(x) is True),
+        "minervini_fail":  sum(1 for x in rows if _mp(x) is False),
+        "bonde_pass":      sum(1 for x in rows if _bp(x) is True),
+        "bonde_fail":      sum(1 for x in rows if _bp(x) is False),
+        "both_pass":       sum(1 for x in rows if (x.get("buy_verdict") or {}).get("both_pass")),
+    }
+    return {"rows": rows, "scan_ts": scan.get("generated_at"), "n": len(rows), "summary": summary}
+
+
 def for_symbol(symbol: str) -> dict:
     """Per-symbol breakout read — used by the Portfolio holding chip, since a held
     name isn't always in the latest scan. Loads its prices + runs volume.analyze."""

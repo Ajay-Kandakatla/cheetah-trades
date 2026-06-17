@@ -124,3 +124,6 @@ to baskets).
   in) — `BuyVerdictPanel` leads with the combined headline + the two pillars
   side by side (each with its PASS/FAIL verdict and page cites), then the
   Sales-confidence detail grid, then the Fidelity-style multi-source readout.
+- **`/breakouts` page** (2026-06-16) — the verdict is the overlay on the
+  breakout-count ranking, so the breakout tracker shows which high-breakout names
+  pass Minervini / Bonde and which don't. See `docs/sepa/breakouts_page.md`.
