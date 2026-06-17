@@ -85,3 +85,99 @@ describe('BreakoutsPage', () => {
     expect(screen.getByText(/Couldn't load breakouts/i)).toBeInTheDocument();
   });
 });
+
+/* Turnover / Vol % / Total Vol columns + sortable headers (Ajay 2026-06-16).
+   Turnover = price × today's volume; Vol % = today's volume vs its 50-day avg —
+   both derived client-side from the board payload. */
+
+type VOpts = { count: number; price: number | null; vol: number | null; avg: number | null; chg: number | null };
+const vrow = (symbol: string, o: VOpts): BreakoutBoardRow => ({
+  symbol, name: `${symbol} Inc`, breakout_count: o.count, days_since_breakout: 0,
+  high_vol_breakout: true, broke_out_today: true, last_close: o.price, last_vol: o.vol,
+  avg_vol_50: o.avg, day_change_pct: o.chg, rs_rank: 90, stage: 2, is_etf: false,
+  buy_verdict: verdict(true, true) as any,
+});
+
+const dataRows = () =>
+  screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+const turnoverHeader = () => screen.getByRole('button', { name: /Turnover/ });
+
+describe('BreakoutsPage — turnover / volume columns + sorting', () => {
+  beforeEach(() => {
+    mockState = {
+      // HIGH = biggest dollar volume, LOW = smallest; deliberately NOT in count order.
+      rows: [
+        vrow('MID', { count: 9, price: 50, vol: 2_000_000, avg: 2_000_000, chg: 1.0 }),  // $100.0M, 100%
+        vrow('HIGH', { count: 2, price: 100, vol: 5_000_000, avg: 1_000_000, chg: 3.5 }), // $500.0M, 500%
+        vrow('LOW', { count: 5, price: 10, vol: 1_000_000, avg: 4_000_000, chg: -2.0 }),  // $10.0M, 25%
+      ],
+      summary: { total: 3, broke_out_today: 3, minervini_pass: 3, minervini_fail: 0, bonde_pass: 3, bonde_fail: 0, both_pass: 3 },
+      loading: false, error: null,
+    };
+  });
+
+  it('renders Turnover, Vol % and Total Vol with humanized values', () => {
+    renderPage();
+    // headers exist as sortable buttons
+    for (const h of ['Ticker', '# breakouts', 'Price', 'Vol %', 'Total Vol', 'Turnover']) {
+      expect(screen.getByRole('button', { name: new RegExp(h.replace('#', '\\#').replace('%', '%')) })).toBeInTheDocument();
+    }
+    // HIGH row values: turnover $500.0M, total vol 5.0M, vol% 500%
+    expect(screen.getByText('$500.0M')).toBeInTheDocument();
+    expect(screen.getByText('5.0M')).toBeInTheDocument();
+    expect(screen.getByText('500%')).toBeInTheDocument();
+    // LOW row: $10.0M / 1.0M / 25%
+    expect(screen.getByText('$10.0M')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+  });
+
+  it('defaults to turnover descending (highest dollar volume first)', () => {
+    renderPage();
+    const rows = dataRows();
+    expect(within(rows[0]).getByText('HIGH')).toBeInTheDocument();  // $500M
+    expect(within(rows[1]).getByText('MID')).toBeInTheDocument();   // $100M
+    expect(within(rows[2]).getByText('LOW')).toBeInTheDocument();   // $10M
+    expect(turnoverHeader().textContent).toContain('▼');
+  });
+
+  it('toggles the turnover sort direction on each header click (desc → asc → desc)', () => {
+    renderPage();
+    expect(turnoverHeader().textContent).toContain('▼');          // desc default
+    expect(within(dataRows()[0]).getByText('HIGH')).toBeInTheDocument();
+
+    fireEvent.click(turnoverHeader());                            // → asc
+    expect(turnoverHeader().textContent).toContain('▲');
+    expect(within(dataRows()[0]).getByText('LOW')).toBeInTheDocument();
+
+    fireEvent.click(turnoverHeader());                            // → desc
+    expect(turnoverHeader().textContent).toContain('▼');
+    expect(within(dataRows()[0]).getByText('HIGH')).toBeInTheDocument();
+  });
+
+  it('sorts by a different column when its header is clicked (# breakouts desc)', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /# breakouts/ }));
+    const rows = dataRows();
+    expect(within(rows[0]).getByText('MID')).toBeInTheDocument();  // count 9
+    expect(within(rows[1]).getByText('LOW')).toBeInTheDocument();  // count 5
+    expect(within(rows[2]).getByText('HIGH')).toBeInTheDocument(); // count 2
+  });
+
+  it('shows dashes and sinks rows with no volume to the bottom (negative)', () => {
+    mockState = {
+      rows: [
+        vrow('GOOD', { count: 3, price: 40, vol: 3_000_000, avg: 1_500_000, chg: 1.1 }),
+        { ...vrow('NULL', { count: 3, price: null, vol: null, avg: null, chg: null }), broke_out_today: false, days_since_breakout: null },
+      ],
+      summary: { total: 2, broke_out_today: 1, minervini_pass: 2, minervini_fail: 0, bonde_pass: 2, bonde_fail: 0, both_pass: 2 },
+      loading: false, error: null,
+    };
+    renderPage();
+    const rows = dataRows();
+    // null-volume row sinks last under turnover-desc
+    expect(within(rows[0]).getByText('GOOD')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('NULL')).toBeInTheDocument();
+    // its turnover / vol% / total-vol all render as em-dashes
+    expect(within(rows[1]).getAllByText('—').length).toBeGreaterThanOrEqual(4);
+  });
+});

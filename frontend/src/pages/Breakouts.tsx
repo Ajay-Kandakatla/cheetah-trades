@@ -15,6 +15,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoard';
+import { useSort, type SortDir } from '../lib/useSort';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
@@ -54,6 +55,62 @@ const PageInfo = (
 
 const pct = (v?: number | null) => (v != null ? `${v > 0 ? '+' : ''}${v.toFixed(2)}%` : '—');
 
+/* Derived metrics — both computed client-side from fields already in the board
+ * payload (no backend change). Turnover = price × today's volume (dollar volume
+ * traded). Vol % = today's volume as a % of its 50-day average (≥150% is the
+ * 1.5× volume-confirmation threshold, Minervini p.203). */
+const turnoverOf = (r: BreakoutBoardRow): number | null =>
+  r.last_close != null && r.last_vol != null ? r.last_close * r.last_vol : null;
+const volPctOf = (r: BreakoutBoardRow): number | null =>
+  r.last_vol != null && r.avg_vol_50 ? (r.last_vol / r.avg_vol_50) * 100 : null;
+
+const fmtVol = (n?: number | null): string => {
+  if (n == null) return '—';
+  const a = Math.abs(n);
+  if (a >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (a >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (a >= 1e3) return `${Math.round(n / 1e3)}K`;
+  return String(Math.round(n));
+};
+const fmtDollar = (v?: number | null): string => {
+  if (v == null) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e12) return `$${(v / 1e12).toFixed(1)}T`;
+  if (a >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (a >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (a >= 1e3) return `$${Math.round(v / 1e3)}K`;
+  return `$${Math.round(v)}`;
+};
+const fmtVolPct = (v: number | null): string => (v != null ? `${Math.round(v)}%` : '—');
+
+type Sorter = { toggle: (k: string, p?: SortDir) => void; arrow: (k: string) => string; key: string };
+
+/* Sortable header cell — click to sort, click again to flip (delegates to
+ * useSort). Active column is gold so the current sort is obvious. */
+function Th({ label, k, style, align = 'left', preferred = 'desc', sort }: {
+  label: string; k: string; style: CSSProperties;
+  align?: 'left' | 'right'; preferred?: SortDir; sort: Sorter;
+}) {
+  const active = sort.key === k;
+  return (
+    <span style={{ ...style, display: 'flex', justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+      <button
+        type="button"
+        onClick={() => sort.toggle(k, preferred)}
+        title={`Sort by ${label}`}
+        style={{
+          font: 'inherit', letterSpacing: 'inherit', textTransform: 'uppercase',
+          background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer',
+          whiteSpace: 'nowrap', color: active ? 'var(--gold, #c9a227)' : 'inherit',
+          fontWeight: active ? 700 : undefined,
+        }}
+      >
+        {label}{sort.arrow(k)}
+      </button>
+    </span>
+  );
+}
+
 function Stat({ n, label, tone }: { n: number; label: string; tone?: string }) {
   return (
     <div style={{ textAlign: 'center', minWidth: 76 }}>
@@ -71,6 +128,20 @@ export function BreakoutsPage() {
     const f = FILTERS.find((x) => x.key === filter) ?? FILTERS[0];
     return rows.filter(f.match);
   }, [rows, filter]);
+
+  // Client-side sort over the filtered list. Default: turnover (dollar volume)
+  // descending — the most-actionable "where's the money" view. Every column is
+  // sortable via its header (Ajay 2026-06-16).
+  const sort = useSort<BreakoutBoardRow>(shown, {
+    ticker: (r) => r.symbol,
+    count: (r) => r.breakout_count,
+    last: (r) => r.days_since_breakout,
+    price: (r) => r.last_close,
+    change: (r) => r.day_change_pct,
+    volpct: volPctOf,
+    volume: (r) => r.last_vol,
+    turnover: turnoverOf,
+  }, 'turnover', 'desc');
 
   return (
     <div className="sepa-page">
@@ -138,54 +209,74 @@ export function BreakoutsPage() {
       )}
 
       {shown.length > 0 && (
-        <div className="breakouts-table" role="table">
-          <div className="breakouts-row breakouts-row--head" role="row" style={headRow}>
-            <span style={{ width: 36 }}>#</span>
-            <span style={{ flex: '1 1 120px' }}>Ticker</span>
-            <span style={colCount}># breakouts</span>
-            <span style={colLast}>last</span>
-            <span style={colPrice}>price</span>
-            <span style={{ flex: '2 1 260px' }}>verdict</span>
-          </div>
-          {shown.map((r, i) => (
-            <Link
-              key={r.symbol}
-              to={`/sepa/${r.symbol}?tab=breakout`}
-              className="breakouts-row"
-              role="row"
-              style={dataRow}
-            >
-              <span style={{ width: 36, color: 'var(--cm-slate)', fontWeight: 700 }}>{i + 1}</span>
-              <span style={{ flex: '1 1 120px', display: 'flex', flexDirection: 'column' }}>
-                <strong className="mono">{r.symbol}</strong>
-                {r.name && <span style={{ fontSize: '0.66rem', color: 'var(--cm-slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{r.name}</span>}
-              </span>
-              <span style={colCount}>
-                <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{r.breakout_count}</span>
-                {r.broke_out_today && <span title="Broke out today" style={{ marginLeft: 5, color: '#eab308' }}>⚡</span>}
-              </span>
-              <span style={{ ...colLast, color: 'var(--cm-slate)', fontSize: '0.74rem' }}>
-                {r.broke_out_today ? 'today' : r.days_since_breakout != null ? `${r.days_since_breakout}d ago` : '—'}
-              </span>
-              <span style={colPrice}>
-                {r.last_close != null && <span className="mono">${r.last_close.toFixed(2)}</span>}
-                {r.day_change_pct != null && (
-                  <span className="mono" style={{ marginLeft: 6, fontSize: '0.72rem', color: r.day_change_pct >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <div className="breakouts-table" role="table" style={{ minWidth: 960 }}>
+            <div className="breakouts-row breakouts-row--head" role="row" style={headRow}>
+              <span style={{ width: 36 }}>#</span>
+              <Th label="Ticker" k="ticker" style={colTicker} preferred="asc" sort={sort} />
+              <Th label="# breakouts" k="count" style={colCount} sort={sort} />
+              <Th label="Last" k="last" style={colLast} preferred="asc" sort={sort} />
+              <Th label="Price" k="price" style={colPrice} align="right" sort={sort} />
+              <Th label="Δ%" k="change" style={colChg} align="right" sort={sort} />
+              <Th label="Vol %" k="volpct" style={colVolPct} align="right" sort={sort} />
+              <Th label="Total Vol" k="volume" style={colVol} align="right" sort={sort} />
+              <Th label="Turnover" k="turnover" style={colTurnover} align="right" sort={sort} />
+              <span style={colVerdict}>verdict</span>
+            </div>
+            {sort.sorted.map((r, i) => {
+              const to = turnoverOf(r);
+              const vp = volPctOf(r);
+              return (
+                <Link
+                  key={r.symbol}
+                  to={`/sepa/${r.symbol}?tab=breakout`}
+                  className="breakouts-row"
+                  role="row"
+                  style={dataRow}
+                >
+                  <span style={{ width: 36, color: 'var(--cm-slate)', fontWeight: 700 }}>{i + 1}</span>
+                  <span style={{ ...colTicker, display: 'flex', flexDirection: 'column' }}>
+                    <strong className="mono">{r.symbol}</strong>
+                    {r.name && <span style={{ fontSize: '0.66rem', color: 'var(--cm-slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{r.name}</span>}
+                  </span>
+                  <span style={colCount}>
+                    <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{r.breakout_count}</span>
+                    {r.broke_out_today && <span title="Broke out today" style={{ marginLeft: 5, color: '#eab308' }}>⚡</span>}
+                  </span>
+                  <span style={{ ...colLast, color: 'var(--cm-slate)', fontSize: '0.74rem' }}>
+                    {r.broke_out_today ? 'today' : r.days_since_breakout != null ? `${r.days_since_breakout}d ago` : '—'}
+                  </span>
+                  <span className="mono" style={colPrice}>
+                    {r.last_close != null ? `$${r.last_close.toFixed(2)}` : '—'}
+                  </span>
+                  <span
+                    className="mono"
+                    style={{ ...colChg, fontSize: '0.74rem', color: r.day_change_pct == null ? 'var(--cm-slate)' : r.day_change_pct >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}
+                  >
                     {pct(r.day_change_pct)}
                   </span>
-                )}
-              </span>
-              <span style={{ flex: '2 1 260px' }}>
-                {r.is_etf ? (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>ETF — no Minervini verdict</span>
-                ) : r.buy_verdict ? (
-                  <BuyVerdictChip row={r} />
-                ) : (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>verdict pending</span>
-                )}
-              </span>
-            </Link>
-          ))}
+                  <span
+                    className="mono"
+                    title={vp != null ? 'Today’s volume vs its 50-day average (≥150% = the 1.5× breakout threshold, p.203)' : undefined}
+                    style={{ ...colVolPct, fontSize: '0.78rem', color: vp != null && vp >= 150 ? 'var(--gold, #c9a227)' : 'var(--ink, #eee)', fontWeight: vp != null && vp >= 150 ? 700 : 400 }}
+                  >
+                    {fmtVolPct(vp)}
+                  </span>
+                  <span className="mono" style={{ ...colVol, color: 'var(--cm-slate)' }}>{fmtVol(r.last_vol)}</span>
+                  <span className="mono" title="Dollar volume traded today (price × volume)" style={{ ...colTurnover, fontWeight: 600 }}>{fmtDollar(to)}</span>
+                  <span style={colVerdict}>
+                    {r.is_etf ? (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>ETF — no Minervini verdict</span>
+                    ) : r.buy_verdict ? (
+                      <BuyVerdictChip row={r} />
+                    ) : (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--cm-slate)' }}>verdict pending</span>
+                    )}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -213,6 +304,12 @@ const dataRow: CSSProperties = {
   borderBottom: '1px solid var(--rule, #1f1f1f)', textDecoration: 'none',
   color: 'var(--ink, #eee)',
 };
-const colCount: CSSProperties = { width: 110, textAlign: 'left' };
-const colLast: CSSProperties = { width: 80 };
-const colPrice: CSSProperties = { width: 150 };
+const colTicker: CSSProperties = { flex: '1 1 120px', minWidth: 110 };
+const colCount: CSSProperties = { width: 96, textAlign: 'left' };
+const colLast: CSSProperties = { width: 68 };
+const colPrice: CSSProperties = { width: 76, textAlign: 'right' };
+const colChg: CSSProperties = { width: 70, textAlign: 'right' };
+const colVolPct: CSSProperties = { width: 80, textAlign: 'right' };
+const colVol: CSSProperties = { width: 82, textAlign: 'right' };
+const colTurnover: CSSProperties = { width: 96, textAlign: 'right' };
+const colVerdict: CSSProperties = { flex: '2 1 220px', minWidth: 200 };
