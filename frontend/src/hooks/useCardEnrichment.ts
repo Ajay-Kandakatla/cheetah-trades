@@ -13,6 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
+import { subscribe, type BusEvent } from '../lib/eventBus';
 
 export type CardEnrichment = {
   symbol:    string;
@@ -59,6 +60,32 @@ export function useCardEnrichment(symbol: string | null | undefined) {
     fetchedRef.current = false;
     setData(null);
     setError(null);
+  }, [symbol]);
+
+  // Live insider updates (Ajay 2026-06-17). The broad insider sweep now runs in
+  // a post-scan BACKGROUND task that publishes `insider.update` over the global
+  // SSE bus as each name's EDGAR data lands. Merge those into our enrichment so
+  // the 🟢 Cluster / Insider chip fills in live — no refetch, no page reload,
+  // even for cards that haven't been JIT-fetched yet. Only the insider slice is
+  // touched; valuation/headline come from the JIT fetch as before.
+  useEffect(() => {
+    if (!symbol) return;
+    const want = symbol.toUpperCase();
+    return subscribe('insider.update', (evt: BusEvent<{ symbol?: string; insider?: CardEnrichment['insider'] }>) => {
+      const p = evt?.payload;
+      if (!p || (p.symbol || '').toUpperCase() !== want || !p.insider) return;
+      setData((prev) =>
+        prev
+          ? { ...prev, insider: { ...prev.insider, ...p.insider } }
+          : {
+              symbol: want,
+              cached_at: Math.floor(Date.now() / 1000),
+              fresh: true,
+              insider: p.insider!,
+              valuation: {},
+            },
+      );
+    });
   }, [symbol]);
 
   useEffect(() => {
