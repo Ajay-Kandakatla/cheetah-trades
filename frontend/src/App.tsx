@@ -78,6 +78,7 @@ const PatternsPage                = lazyWithReload(() => import('./pages/Pattern
 const ChartSchool                 = lazyWithReload(() => import('./pages/ChartSchool').then(m => ({ default: m.ChartSchool })));
 const PortfolioPage               = lazyWithReload(() => import('./pages/Portfolio'));
 const LeaderboardPage             = lazyWithReload(() => import('./pages/Leaderboard').then(m => ({ default: m.LeaderboardPage })));
+const BreakoutsPage               = lazyWithReload(() => import('./pages/Breakouts').then(m => ({ default: m.BreakoutsPage })));
 const ResearchPage                = lazyWithReload(() => import('./pages/Research').then(m => ({ default: m.ResearchPage })));
 const PankajAnalysisPage          = lazyWithReload(() => import('./pages/PankajAnalysis').then(m => ({ default: m.PankajAnalysisPage })));
 const CatalystsPage               = lazyWithReload(() => import('./pages/Catalysts').then(m => ({ default: m.CatalystsPage })));
@@ -280,6 +281,7 @@ export function App() {
             <Route path="/chart-school"   element={<FeatureRoute feature="chart-school"><ChartSchool /></FeatureRoute>} />
             <Route path="/portfolio"      element={<FeatureRoute feature="portfolio"><PortfolioPage /></FeatureRoute>} />
             <Route path="/leaderboard"    element={<FeatureRoute feature="leaderboard"><LeaderboardPage /></FeatureRoute>} />
+            <Route path="/breakouts"      element={<FeatureRoute feature="breakouts"><BreakoutsPage /></FeatureRoute>} />
             <Route path="/research"       element={<FeatureRoute feature="research"><ResearchPage /></FeatureRoute>} />
             <Route path="/pankaj"         element={<FeatureRoute feature="pankaj"><PankajAnalysisPage /></FeatureRoute>} />
             <Route path="/catalysts"      element={<FeatureRoute feature="catalysts"><CatalystsPage /></FeatureRoute>} />
