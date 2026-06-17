@@ -2264,6 +2264,20 @@ tr:last-child td { border-bottom: none; }
 /* ── Market Gauge — nav badge (top-right, every page) + dedicated page ─────── */
 .cm-nav__mobile-actions { display: flex; align-items: center; gap: 0.6rem; }
 
+/* Mobile-only buttons that open the floating Portfolio / Watchlist rails
+   (Ajay 2026-06-16). The rails' fixed edge tabs are hidden on phones because
+   they overlapped page content (clipped the breakouts verdict pills / blocked
+   reaching the far-right columns); these are the way in instead. >=36px tap
+   target per the app's touch standard. */
+.cm-nav__rail-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; min-height: 36px; padding: 0 6px;
+  background: transparent; border: none; cursor: pointer;
+  font-size: 1.1rem; line-height: 1; border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-nav__rail-btn:active { background: var(--bg-raised, #16181d); }
+
 .mg-badge {
   display: inline-flex; align-items: center; gap: 0.32rem;
   padding: 2px 8px; border-radius: 999px;

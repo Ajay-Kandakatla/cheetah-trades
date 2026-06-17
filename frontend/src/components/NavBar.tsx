@@ -5,6 +5,7 @@ import { NotificationBell } from './NotificationBell';
 import { useCurrentUser } from '../hooks/useUser';
 import { useMyMenu, type MenuItem } from '../hooks/useMyMenu';
 import { MarketGaugeBadge } from './MarketGaugeBadge';
+import { openRail } from '../lib/railBus';
 
 /* ==========================================================================
    NavBar — editorial masthead
@@ -90,6 +91,14 @@ export function NavBar() {
   const PROFILE_VISIBLE: MenuItem[] = [...menu.profile, ...menu.admin];
   // Market Gauge badge (top-right, every page) — only when the user has access.
   const hasGauge = [...menu.primary, ...menu.misc].some((t) => t.feature === 'market-gauge');
+  // Mobile-only entry points for the floating rails. On phones the rails' fixed
+  // edge tabs are hidden (they overlapped page content), so the NavBar action
+  // bar is the way to open them (Ajay 2026-06-16). Shown only for users who
+  // actually have the feature — same gate as the rails / routes.
+  const railFeature = (id: string) =>
+    [...menu.primary, ...menu.scanners, ...menu.misc, ...menu.profile].some((t) => t.feature === id);
+  const hasWatchlist = railFeature('watchlist');
+  const hasPortfolio = railFeature('portfolio');
 
   // "Which tabs trigger this dropdown's active state?" — checks if the
   // current route starts with any of the section's hrefs.
@@ -160,6 +169,28 @@ export function NavBar() {
 
         <div className="cm-nav__mobile-actions">
           {hasGauge && <MarketGaugeBadge compact />}
+          {hasPortfolio && (
+            <button
+              type="button"
+              className="cm-nav__rail-btn"
+              onClick={() => openRail('portfolio')}
+              aria-label="Open portfolio"
+              title="Portfolio"
+            >
+              💼
+            </button>
+          )}
+          {hasWatchlist && (
+            <button
+              type="button"
+              className="cm-nav__rail-btn"
+              onClick={() => openRail('watchlist')}
+              aria-label="Open watchlist"
+              title="Watchlist"
+            >
+              ⭐
+            </button>
+          )}
           <button
             type="button"
             className={`cm-nav__hamburger${drawerOpen ? ' is-open' : ''}`}

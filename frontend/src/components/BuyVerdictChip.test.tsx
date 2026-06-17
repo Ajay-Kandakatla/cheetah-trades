@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BuyVerdictChip, type BuyVerdict } from './BuyVerdictChip';
 
@@ -51,5 +51,51 @@ describe('BuyVerdictChip', () => {
   it('renders NOTHING when there is no verdict (old cached scan) — negative', () => {
     const { container } = render(<BuyVerdictChip row={{ buy_verdict: null }} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/* Mobile compaction (Ajay 2026-06-16). On phones the full "· Minervini ✓ ·
+   Sales ✓" trailer overflowed the breakouts verdict column and clipped at the
+   screen edge. At the mobile breakpoint the pill collapses to icon + status
+   word only; the per-side detail stays in the title. Viewport faked via
+   window.matchMedia (jsdom leaves it undefined → desktop by default, which is
+   why the suite above still sees the full trailer). */
+function setViewport(isMobile: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+    matches: isMobile, media: q, onchange: null,
+    addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+  }));
+}
+
+describe('BuyVerdictChip — mobile compaction', () => {
+  afterEach(() => {
+    // @ts-expect-error — reset the fake between tests so the desktop suite is unaffected
+    delete window.matchMedia;
+  });
+
+  it('drops the Minervini/Sales trailer at the mobile breakpoint (no overflow)', () => {
+    setViewport(true);
+    const { container } = render(<BuyVerdictChip row={{ buy_verdict: mk() }} />);
+    const text = container.textContent ?? '';
+    expect(text).toContain('🟢');
+    expect(text).toContain('PASS');
+    expect(text).not.toContain('Minervini');
+    expect(text).not.toContain('Sales');
+  });
+
+  it('keeps the full per-side detail on desktop', () => {
+    setViewport(false);
+    render(<BuyVerdictChip row={{ buy_verdict: mk() }} />);
+    expect(screen.getByText(/Minervini ✓/)).toBeInTheDocument();
+    expect(screen.getByText(/Sales ✓/)).toBeInTheDocument();
+  });
+
+  it('still carries the full detail in the hover/long-press title on mobile (nothing lost)', () => {
+    setViewport(true);
+    const { container } = render(<BuyVerdictChip row={{ buy_verdict: mk() }} />);
+    const chip = container.querySelector('.buy-verdict-chip');
+    expect(chip?.getAttribute('title')).toMatch(/Minervini \(buyable stock\)/);
+    expect(chip?.getAttribute('title')).toMatch(/Bonde \(sales\)/);
   });
 });

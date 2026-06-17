@@ -9,6 +9,8 @@
  * carry the field — graceful, never a fake verdict.
  */
 
+import { useIsMobile } from '../lib/useIsMobile';
+
 export type BuyVerdict = {
   status: 'pass' | 'partial' | 'fail';
   label: string;
@@ -47,6 +49,12 @@ const mark = (p: boolean | null) => (p === true ? '✓' : p === false ? '✗' : 
 
 export function BuyVerdictChip({ row, compact = true }:
   { row: { buy_verdict?: BuyVerdict | null; is_etf?: boolean }; compact?: boolean }) {
+  // On phones the full "· Minervini ✓ · Sales ✓" trailer overflows the verdict
+  // column and clips against the screen edge (Ajay 2026-06-16, breakouts table).
+  // Collapse to an icon + PASS/PARTIAL/FAIL pill — the per-side detail is still
+  // one tap away on the row's detail page, and stays in the hover/long-press
+  // title so nothing is lost.
+  const isMobile = useIsMobile();
   const v = row?.buy_verdict;
   if (!v || row?.is_etf) return null;
 
@@ -62,15 +70,17 @@ export function BuyVerdictChip({ row, compact = true }:
       className="sepa-chip buy-verdict-chip"
       title={title}
       style={{
-        color: v.tone, borderColor: v.tone, cursor: 'help',
+        color: v.tone, borderColor: v.tone, cursor: 'help', whiteSpace: 'nowrap',
         fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.02em',
       }}
     >
       {v.icon} {STATUS_WORD[v.status]}
-      <span style={{ fontWeight: 500, opacity: 0.85, marginLeft: 5 }}>
-        · Minervini {mark(m.passed)} · Sales {b.pending ? '—' : mark(b.passed)}
-        {!compact && v.buyable_now ? ' · buyable now' : ''}
-      </span>
+      {!isMobile && (
+        <span style={{ fontWeight: 500, opacity: 0.85, marginLeft: 5 }}>
+          · Minervini {mark(m.passed)} · Sales {b.pending ? '—' : mark(b.passed)}
+          {!compact && v.buyable_now ? ' · buyable now' : ''}
+        </span>
+      )}
     </span>
   );
 }

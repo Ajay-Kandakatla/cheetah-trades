@@ -19,6 +19,7 @@ import { useLocation } from 'react-router-dom';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useLiveQuote } from '../hooks/useLiveQuote';
 import { TickerLink } from './TickerLink';
+import { RAIL_OPEN_EVENT, type RailName } from '../lib/railBus';
 
 const C = { green: '#10b981', red: '#ef4444', muted: '#94a3b8', sub: '#8a93a6' };
 const MOBILE_MQ = '(max-width: 768px)';
@@ -94,6 +95,17 @@ export function WatchlistRail() {
     try { localStorage.setItem('wl_rail_open', open ? '1' : '0'); } catch { /* ignore */ }
   }, [open]);
 
+  // Open on request from the NavBar's mobile action bar. On phones the
+  // collapsed edge tab is hidden (it overlapped page content), so this is the
+  // way in (Ajay 2026-06-16).
+  useEffect(() => {
+    const h = (e: Event) => {
+      if ((e as CustomEvent<RailName>).detail === 'watchlist') setOpen(true);
+    };
+    window.addEventListener(RAIL_OPEN_EVENT, h);
+    return () => window.removeEventListener(RAIL_OPEN_EVENT, h);
+  }, []);
+
   // ── Desktop drag-to-float ──────────────────────────────────────────────
   const onDragMove = (e: PointerEvent) => {
     if (!drag.current || !panelRef.current) return;
@@ -134,8 +146,11 @@ export function WatchlistRail() {
     if (t) { add(t); setDraft(''); }
   };
 
-  // Collapsed edge tab.
+  // Collapsed edge tab. Desktop only — on phones the fixed vertical tab sat ON
+  // TOP of dense tables (clipped the breakouts verdict pills / blocked reaching
+  // the far-right columns), so it's hidden and opened from the NavBar instead.
   if (!open) {
+    if (isMobile) return null;
     return (
       <button onClick={() => setOpen(true)} aria-label="Open watchlist"
               className="wl-rail__tab"
