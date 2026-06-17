@@ -1092,3 +1092,26 @@ the RFC — it's additive and won't break existing readers. Just document it
 in §3 under "Optional but commonly-present fields".
 
 Removing or renaming a field IS a breaking change. RFC required.
+
+## 12. Analysis-tab composite Trade Verdict (2026-06-16)
+
+The SEPA detail page **Analysis** tab leads with a composite **BUY / WATCH /
+AVOID** timing verdict combining **Minervini SEPA** (Trend Template + pivot
+breakout) and **Pradeep Bonde / Stockbee** (Episodic Pivot, 4% breakout,
+momentum burst, group leadership, and the anti-thesis **sell** signals).
+
+- This is a **frontend-only synthesis** over fields the scan payload already
+  carries (`trend.checks`, `rs_rank`, `volume.*`, `day_change_pct`,
+  `stage.dist_200_pct`, `dual_momentum.*`, `sell_signals.*`,
+  `group_rs_rank`/`group_leader`). No backend field is added or changed; no
+  scanner gate is affected. The composite verdict is **not** a scanner
+  qualifier — `is_candidate` / `is_buyable` (§5a/§5b) are untouched.
+- Logic LOCKED in `frontend/src/lib/tradeVerdict.ts`, unit-tested in
+  `tradeVerdict.test.ts` (incl. the edge case: Minervini passes but a Bonde
+  sell signal fires → must NOT be BUY). Thresholds + cites in
+  `docs/sepa/trade_verdict_methodology.md`.
+- Composition rule: an anti-thesis from **either** framework (broken trend or a
+  Bonde hard sell) forces AVOID; BUY requires **both** legs to confirm.
+- The pre-existing backend `buy_verdict` (Minervini buyable qualifier p.79 +
+  Bonde *sales* test) is retained beneath the composite as the **fundamental
+  gate** detail.

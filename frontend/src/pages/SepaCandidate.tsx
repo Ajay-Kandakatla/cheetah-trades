@@ -13,6 +13,7 @@ import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
 import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
+import { TradeVerdictPanel } from '../components/TradeVerdictPanel';
 import { BreakoutHistoryBody } from '../components/BreakoutHistoryModal';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
@@ -1435,34 +1436,33 @@ export function SepaCandidatePage() {
             {tab === 'analysis' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>Analysis</strong> — the buy verdict first: does this name pass
-                  <strong> Minervini's</strong> buyable-stock gate (Trend Template p.79 +
-                  breakout pp.198-203) AND <strong>Pradeep Bonde's</strong> sales test
-                  (revenue growth + acceleration)? A full green needs both. Below it: the
-                  sales-confidence detail, then the Fidelity-style multi-panel readout.
+                  <strong>Analysis</strong> — the composite <strong>buy / sell verdict</strong> first,
+                  combining <strong>Minervini's</strong> SEPA Trend Template (price/MA stack, RS,
+                  pivot breakout) with <strong>Pradeep Bonde's</strong> Stockbee playbook (Episodic
+                  Pivot, 4% breakout, momentum burst, group leadership — and the anti-thesis
+                  <em> sell</em> signals). A full <strong>BUY</strong> needs both; any sell signal or
+                  broken trend forces <strong>AVOID</strong>. Below it: the buyable/sales fundamental
+                  gate, the sales-confidence detail, then the multi-panel readout.
                 </div>
 
-                {/* Minervini + Bonde combined verdict — leads the tab (Ajay
-                    2026-06-16). Reads base.buy_verdict (sepa/buyable_verdict.py). */}
-                {base?.buy_verdict ? (
-                  <BuyVerdictPanel verdict={base.buy_verdict} />
-                ) : (
-                  <div className="sepa-empty sepa-empty--action" style={{ marginBottom: '1rem' }}>
-                    <p>No buy verdict on the cached scan for {symbol} yet.</p>
-                    <button
-                      className="sepa-btn sepa-btn--primary"
-                      onClick={() => rescan(true)}
-                      disabled={rescanState === 'running'}
-                    >
-                      {rescanState === 'running'
-                        ? 'Re-scanning…'
-                        : `Re-scan ${symbol} with +catalyst (Minervini + Bonde sales)`}
-                    </button>
-                    {rescanMsg && (
-                      <p className={`sepa-empty__hint ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
-                        {rescanMsg}
-                      </p>
-                    )}
+                {/* Composite Minervini SEPA + Bonde/Stockbee buy-&-sell verdict —
+                    leads the tab (Ajay 2026-06-16). Frontend synthesis over the
+                    fields the scan already carries (trend, volume, sell_signals,
+                    dual_momentum, group_*). Logic: src/lib/tradeVerdict.ts. */}
+                {base && (
+                  <TradeVerdictPanel
+                    row={base}
+                    catalystSurprisePct={(data as any)?.catalyst?.last_earnings_surprise_pct ?? null}
+                  />
+                )}
+
+                {/* Underlying fundamental gate — Minervini buyable qualifier
+                    (p.79) + Bonde sales pass/fail. Kept as supporting detail
+                    beneath the composite verdict, not a competing headline. */}
+                {base?.buy_verdict && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div className="eyebrow">Fundamental gate — buyable qualifier + sales</div>
+                    <BuyVerdictPanel verdict={base.buy_verdict} />
                   </div>
                 )}
 
