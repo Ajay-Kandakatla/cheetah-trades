@@ -12,6 +12,7 @@ import { RankTrendChart } from '../components/RankTrendChart';
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
+import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
 import { BreakoutHistoryBody } from '../components/BreakoutHistoryModal';
 import { NewsReadButton } from '../components/NewsReadButton';
 import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
@@ -139,18 +140,22 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'trend' | 'breakout' | 'ranking' | 'fundamentals' | 'sales' | 'catalyst' | 'insider' | 'smartmoney' | 'analysis' | 'chatter' | 'supply' | 'options';
+type Tab = 'chart' | 'setup' | 'analysis' | 'trend' | 'breakout' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'chatter' | 'supply' | 'options';
 
 // The active tab lives in the URL (?tab=insider) so it survives reload, back/
 // forward, and deep-links from cards — instead of always snapping to 'chart'.
 // We also accept the legacy #hash deep-links some chips still emit.
-const TABS: Tab[] = ['chart', 'setup', 'trend', 'breakout', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
+// 'analysis' moved up to 3rd (Ajay 2026-06-16: "move the analysis tab closer")
+// and now leads with the Minervini+Bonde buy verdict and folds in the Sales tab.
+const TABS: Tab[] = ['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
 const HASH_TO_TAB: Record<string, Tab> = {
   chart: 'chart', setup: 'setup', trend: 'trend', breakout: 'breakout', ranking: 'ranking',
-  fundamentals: 'fundamentals', sales: 'sales', analysis: 'analysis', options: 'options',
+  fundamentals: 'fundamentals', analysis: 'analysis', options: 'options',
   catalyst: 'catalyst', insider: 'insider', smartmoney: 'smartmoney',
   chatter: 'chatter', supply: 'supply',
-  // legacy hashes that don't map 1:1 to a tab → nearest sensible tab
+  // legacy hashes that don't map 1:1 to a tab → nearest sensible tab.
+  // 'sales' merged into 'analysis' (Ajay 2026-06-16) — old deep-links redirect.
+  sales: 'analysis',
   volume: 'breakout', 'dual-momentum': 'ranking',
 };
 
@@ -924,13 +929,13 @@ export function SepaCandidatePage() {
           </section>
 
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'trend', 'breakout', 'ranking', 'fundamentals', 'sales', 'analysis', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t === 'sales' ? '📈 sales' : t === 'breakout' ? '🚀 breakout' : t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t === 'analysis' ? '✅ analysis' : t === 'breakout' ? '🚀 breakout' : t}</button>
             ))}
           </nav>
 
@@ -1415,39 +1420,6 @@ export function SepaCandidatePage() {
               </section>
             )}
 
-            {tab === 'sales' && (
-              <section>
-                <div className="sepa-tab-help">
-                  <strong>Sales</strong> — revenue growth and, above all, ACCELERATION
-                  (Pradeep Bonde / Stockbee). Sales lead earnings and are harder to
-                  manipulate, so accelerating top-line growth is an early, cleaner read
-                  than EPS. Informational — not a SEPA gate.
-                </div>
-                <div className="eyebrow">Sales confidence</div>
-                {base?.fundamentals?.sales ? (
-                  <SalesPanel sales={(base.fundamentals as any).sales} />
-                ) : (
-                  <div className="sepa-empty sepa-empty--action">
-                    <p>No fundamentals cached for {symbol} yet.</p>
-                    <button
-                      className="sepa-btn sepa-btn--primary"
-                      onClick={() => rescan(true)}
-                      disabled={rescanState === 'running'}
-                    >
-                      {rescanState === 'running'
-                        ? 'Re-scanning…'
-                        : `Re-scan ${symbol} with +catalyst (fundamentals · sales · news)`}
-                    </button>
-                    {rescanMsg && (
-                      <p className={`sepa-empty__hint ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
-                        {rescanMsg}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
-
             {tab === 'breakout' && (
               <section>
                 <div className="sepa-tab-help">
@@ -1463,12 +1435,47 @@ export function SepaCandidatePage() {
             {tab === 'analysis' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>Analysis</strong> — Fidelity-style multi-panel readout.
-                  Fundamental scoring (S&amp;P-style), three-horizon technical
-                  sentiment (Trading-Central-style), ESG bands (Sustainalytics),
-                  and consolidated analyst rating with 1-year history. All from
-                  free data sources, cached 60 min.
+                  <strong>Analysis</strong> — the buy verdict first: does this name pass
+                  <strong> Minervini's</strong> buyable-stock gate (Trend Template p.79 +
+                  breakout pp.198-203) AND <strong>Pradeep Bonde's</strong> sales test
+                  (revenue growth + acceleration)? A full green needs both. Below it: the
+                  sales-confidence detail, then the Fidelity-style multi-panel readout.
                 </div>
+
+                {/* Minervini + Bonde combined verdict — leads the tab (Ajay
+                    2026-06-16). Reads base.buy_verdict (sepa/buyable_verdict.py). */}
+                {base?.buy_verdict ? (
+                  <BuyVerdictPanel verdict={base.buy_verdict} />
+                ) : (
+                  <div className="sepa-empty sepa-empty--action" style={{ marginBottom: '1rem' }}>
+                    <p>No buy verdict on the cached scan for {symbol} yet.</p>
+                    <button
+                      className="sepa-btn sepa-btn--primary"
+                      onClick={() => rescan(true)}
+                      disabled={rescanState === 'running'}
+                    >
+                      {rescanState === 'running'
+                        ? 'Re-scanning…'
+                        : `Re-scan ${symbol} with +catalyst (Minervini + Bonde sales)`}
+                    </button>
+                    {rescanMsg && (
+                      <p className={`sepa-empty__hint ${rescanState === 'error' ? 'sepa-warn' : ''}`}>
+                        {rescanMsg}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Sales-confidence detail (the old Sales tab, folded in here). */}
+                {base?.fundamentals?.sales && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div className="eyebrow">Sales confidence — Pradeep Bonde detail</div>
+                    <SalesPanel sales={(base.fundamentals as any).sales} />
+                  </div>
+                )}
+
+                {/* Fidelity-style multi-panel readout (free-data composite). */}
+                <div className="eyebrow">Multi-source analysis</div>
                 <StockAnalysisPanel symbol={symbol} />
               </section>
             )}

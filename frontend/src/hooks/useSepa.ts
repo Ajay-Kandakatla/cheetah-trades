@@ -315,6 +315,10 @@ export type SepaCandidate = {
   /** Distance from entry to the suggested stop, in %. Present when a setup
    *  with a stop exists. */
   risk_to_stop_pct?: number | null;
+  /** Minervini-buyable + Bonde-sales combined PASS/PARTIAL/FAIL verdict
+   *  (backend sepa/buyable_verdict.py — additive, display-only). Present on
+   *  scans that ran the verdict annotation; absent on older cached scans. */
+  buy_verdict?: import('../components/BuyVerdictChip').BuyVerdict | null;
 };
 
 export type SepaScan = {

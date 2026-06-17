@@ -25,6 +25,7 @@ import { VolumeTrend } from './VolumeTrend';
 // Breakout COUNT + actual volume chip — "how often does this name break out?"
 import { BreakoutStats } from './BreakoutStats';
 import { FloatTurnover } from './FloatTurnover';
+import { BuyVerdictChip } from './BuyVerdictChip';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -610,6 +611,16 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           ) : null}
         </div>
       </header>
+
+      {/* Minervini + Bonde buy verdict — ALWAYS-ON pass/partial/fail badge
+          (Ajay 2026-06-16): one green/amber/red glance combining Minervini's
+          "buyable stock" gate (qualifier p.79 + breakout pp.198-203) with
+          Bonde's sales verdict. Renders nothing for ETFs / pre-verdict scans. */}
+      {row.buy_verdict && !row.is_etf && (
+        <div style={{ padding: '0.25rem 0.2rem 0' }}>
+          <BuyVerdictChip row={row} />
+        </div>
+      )}
 
       {/* Pattern row — ALWAYS present, fixed position under the header so
           the verdict is evident on every card: the pattern it matches, the
