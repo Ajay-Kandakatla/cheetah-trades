@@ -27,6 +27,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'breakouts-beta',       label: 'Beta column + sort by low volatility', addedAt: '2026-06-17', route: '/breakouts' },
   { id: 'market-gauge-events',  label: 'FOMC & macro events on Market Gauge',  addedAt: '2026-06-17', route: '/market-gauge' },
   { id: 'page-load-monitoring', label: 'Page-load speed monitoring',           addedAt: '2026-06-18' },
+  { id: 'breakouts-dynamic-scan', label: 'Update button — fast re-scan on Breakouts', addedAt: '2026-06-18', route: '/breakouts' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

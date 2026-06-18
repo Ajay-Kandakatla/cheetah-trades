@@ -30,6 +30,13 @@ volume-confirmed breakout), ranked by **breakout COUNT, highest first**.
   (`days_since_breakout == 0`).
 - Tapping a row → that name's **detail Breakout tab** (where each breakout fired
   on the price chart).
+- **Dynamic re-scan** (Ajay 2026-06-18) — the header shows the scan age
+  ("Scanned 12m ago"). **↻ Refresh** re-pulls the latest scan instantly (reuses
+  whatever the cron / other pages already scanned — no scan). **⟳ Update** runs a
+  **fast** scan (`/sepa/scan/stream?fast=true&mode=broad`, ~30s — joins cached
+  research with today's prices over the full universe), then re-pulls. Neither
+  triggers the expensive full per-symbol scan; `mode=broad` matches the board's
+  universe so a re-scan never shrinks it.
 - **Column reference (ⓘ)** — a *"What do these columns mean?"* info icon sits on
   the table itself (above it, right-aligned, so it's visible without horizontal
   scrolling on mobile). It opens a per-column legend covering every column:

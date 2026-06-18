@@ -17,6 +17,21 @@ vi.mock('../hooks/useBreakoutBoard', () => ({
   useBreakoutBoard: () => ({ ...mockState, scanTs: 1, reload: vi.fn() }),
 }));
 
+// Dynamic re-scan control (Ajay 2026-06-18): the "Update" button runs a CHEAP
+// fast scan over the broad universe, not an expensive full one.
+const scanStart = vi.fn();
+let scanScanning = false;
+vi.mock('../hooks/useSepaScanStream', () => ({
+  useSepaScanStream: () => ({
+    scanning: scanScanning,
+    phase: 'idle',
+    phaseMessage: scanScanning ? 'Enriching…' : '',
+    start: scanStart,
+    reset: vi.fn(),
+    close: vi.fn(),
+  }),
+}));
+
 import { BreakoutsPage } from './Breakouts';
 
 const verdict = (mPass: boolean, bPass: boolean | null) => ({
@@ -46,6 +61,23 @@ beforeEach(() => {
     summary: { total: 3, broke_out_today: 3, minervini_pass: 2, minervini_fail: 1, bonde_pass: 2, bonde_fail: 1, both_pass: 1 },
     loading: false, error: null,
   };
+  scanStart.mockClear();
+  scanScanning = false;
+});
+
+describe('BreakoutsPage — dynamic re-scan', () => {
+  it('Update runs a CHEAP fast scan over the broad universe (not a full scan)', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Update/i }));
+    expect(scanStart).toHaveBeenCalledWith({ fast: true, mode: 'broad' });
+  });
+
+  it('shows scan progress + disables Refresh while scanning', () => {
+    scanScanning = true;
+    renderPage();
+    expect(screen.getByText(/Enriching…/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refresh/i })).toBeDisabled();
+  });
 });
 
 describe('BreakoutsPage', () => {

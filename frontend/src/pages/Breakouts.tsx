@@ -12,9 +12,10 @@
  * Reads GET /sepa/breakout-board (backend/sepa/breakout.board). Tap a row → its
  * detail Breakout tab (where each breakout fired on the chart).
  */
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoard';
+import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useSort, type SortDir } from '../lib/useSort';
 import { marchToTarget, stageMeta } from '../lib/breakoutTargets';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
@@ -86,6 +87,16 @@ const ColumnsInfo = (
 
 const pct = (v?: number | null) => (v != null ? `${v > 0 ? '+' : ''}${v.toFixed(2)}%` : '—');
 
+/* "Scanned Nm ago" from the board's scan timestamp (epoch seconds). */
+function scanAgeLabel(ts: number | null): string {
+  if (!ts) return 'No scan yet';
+  const mins = Math.max(0, Math.round(Date.now() / 1000 / 60 - ts / 60));
+  if (mins < 1) return 'Scanned just now';
+  if (mins < 60) return `Scanned ${mins}m ago`;
+  const h = Math.floor(mins / 60);
+  return `Scanned ${h}h ${mins % 60}m ago`;
+}
+
 /* Derived metrics — both computed client-side from fields already in the board
  * payload (no backend change). Turnover = price × today's volume (dollar volume
  * traded). Vol % = today's volume as a % of its 50-day average (≥150% is the
@@ -152,8 +163,19 @@ function Stat({ n, label, tone }: { n: number; label: string; tone?: string }) {
 }
 
 export function BreakoutsPage() {
-  const { rows, summary, loading, error, reload } = useBreakoutBoard(250, 1);
+  const { rows, summary, scanTs, loading, error, reload } = useBreakoutBoard(250, 1);
   const [filter, setFilter] = useState<FilterKey>('all');
+
+  // Dynamic re-scan (Ajay 2026-06-18). "Refresh" just re-pulls the latest scan
+  // (instant, reuses what the cron / other pages already scanned). "Update" runs
+  // a FAST scan (~30s) — joins cached research with today's prices over the broad
+  // universe — NOT an expensive full scan — then re-pulls. mode:'broad' matches
+  // the board's universe so the scan never shrinks it.
+  const scan = useSepaScanStream();
+  useEffect(() => {
+    if (scan.phase === 'done') { reload(); scan.reset(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scan.phase]);
 
   const shown = useMemo(() => {
     const f = FILTERS.find((x) => x.key === filter) ?? FILTERS[0];
@@ -193,9 +215,30 @@ export function BreakoutsPage() {
             breakouts pass the book and which don't. Filter by either side below.
           </p>
         </div>
-        <button className="sepa-btn sepa-btn--ghost" onClick={reload} disabled={loading} title="Re-fetch the breakout board">
-          {loading ? '↻ …' : '↻ Refresh'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span
+            style={{ fontSize: '0.66rem', color: 'var(--cm-slate)' }}
+            title={scanTs ? new Date(scanTs * 1000).toLocaleString() : 'no scan yet'}
+          >
+            {scan.scanning ? (scan.phaseMessage || 'Scanning…') : scanAgeLabel(scanTs)}
+          </span>
+          <button
+            className="sepa-btn sepa-btn--ghost"
+            onClick={reload}
+            disabled={loading || scan.scanning}
+            title="Re-pull the latest scan — instant, reuses what's already been scanned"
+          >
+            {loading ? '↻ …' : '↻ Refresh'}
+          </button>
+          <button
+            className="sepa-btn"
+            onClick={() => scan.start({ fast: true, mode: 'broad' })}
+            disabled={scan.scanning}
+            title="Fast re-scan (~30s) — reuses cached research + today's prices over the full universe, not an expensive full scan"
+          >
+            {scan.scanning ? '⟳ Updating…' : '⟳ Update'}
+          </button>
+        </div>
       </div>
 
       {/* Summary mix — the "some pass, some don't" read at a glance */}
