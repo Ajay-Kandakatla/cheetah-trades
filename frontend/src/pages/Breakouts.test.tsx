@@ -27,10 +27,11 @@ const verdict = (mPass: boolean, bPass: boolean | null) => ({
   bonde: { passed: bPass, pending: bPass === null, tier: 't', score: 50, growth_yoy_pct: 10, reason: 'r', cite: 'Bonde' },
 });
 
-const row = (symbol: string, count: number, mPass: boolean, bPass: boolean | null): BreakoutBoardRow => ({
+const row = (symbol: string, count: number, mPass: boolean, bPass: boolean | null,
+            beta: number | null = 1.0): BreakoutBoardRow => ({
   symbol, name: `${symbol} Inc`, breakout_count: count, days_since_breakout: 0,
   high_vol_breakout: true, broke_out_today: true, last_close: 100, day_change_pct: 1.2,
-  rs_rank: 90, stage: 2, is_etf: false, buy_verdict: verdict(mPass, bPass) as any,
+  rs_rank: 90, stage: 2, beta, is_etf: false, buy_verdict: verdict(mPass, bPass) as any,
 });
 
 const renderPage = () => render(<MemoryRouter><BreakoutsPage /></MemoryRouter>);
@@ -66,6 +67,30 @@ describe('BreakoutsPage', () => {
     expect(legend.getByText(/none recent/i)).toBeInTheDocument();                  // Last
     expect(legend.getByText(/buyable-stock/i)).toBeInTheDocument();                // Verdict
     expect(legend.getByText(/the 1.5× volume that confirms a breakout/i)).toBeInTheDocument(); // Vol %
+    expect(legend.getByText(/sort low-volatility first/i)).toBeInTheDocument();    // Beta
+  });
+
+  it('shows the Beta column and sorts low-volatility (low beta) first', () => {
+    mockState.rows = [
+      row('HIVOL', 9, true, true, 1.8),
+      row('LOWVOL', 5, true, true, 0.6),
+      row('MIDVOL', 3, true, true, 1.1),
+    ];
+    renderPage();
+    // beta values render (2dp)
+    expect(screen.getByText('0.60')).toBeInTheDocument();
+    expect(screen.getByText('1.80')).toBeInTheDocument();
+    // tap the Beta header → ascending = low-volatility first
+    fireEvent.click(screen.getByRole('button', { name: /Beta/ }));
+    const dataRows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(dataRows[0]).getByText('LOWVOL')).toBeInTheDocument();   // β=0.6 first
+    expect(within(dataRows[2]).getByText('HIVOL')).toBeInTheDocument();    // β=1.8 last
+  });
+
+  it('renders a — for a missing beta (negative)', () => {
+    mockState.rows = [row('NB', 4, true, true, null)];
+    renderPage();
+    expect(screen.getByTitle(/Beta unavailable/i)).toHaveTextContent('—');
   });
 
   it('filters to only the Minervini-failing breakouts', () => {

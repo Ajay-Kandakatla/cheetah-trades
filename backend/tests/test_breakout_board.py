@@ -51,9 +51,11 @@ def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50,
     }
 
 
-def _patch_scan(monkeypatch, rows):
-    from sepa import scanner
+def _patch_scan(monkeypatch, rows, betas=None):
+    from sepa import scanner, beta
     monkeypatch.setattr(scanner, "load_latest", lambda: {"all_results": rows, "generated_at": 123})
+    # Stub beta so the board never hits prices/SPY (no network in unit tests).
+    monkeypatch.setattr(beta, "betas_for", lambda syms: dict(betas or {}))
 
 
 def test_ranks_by_breakout_count_descending(monkeypatch):
@@ -137,3 +139,51 @@ def test_row_without_breakout_count_is_skipped(monkeypatch):
         _row("GOOD", 3),
     ])
     assert [r["symbol"] for r in breakout.board()["rows"]] == ["GOOD"]
+
+
+# ── verdict CONFIRMED even when the persisted scan didn't annotate it ─────────
+# (Ajay 2026-06-17: "make sure verdicts are confirmed" — the board recomputes a
+# missing buy_verdict on the fly instead of showing "verdict pending".)
+
+def test_verdict_recomputed_when_scan_did_not_annotate(monkeypatch):
+    from sepa import buyable_verdict
+    monkeypatch.setattr(buyable_verdict, "compute",
+                        lambda r: {"status": "pass", "_recomputed": True})
+    row = _row("AAA", 5)
+    del row["buy_verdict"]                                       # stale/unannotated scan
+    _patch_scan(monkeypatch, [row])
+    r = breakout.board()["rows"][0]
+    assert r["buy_verdict"] == {"status": "pass", "_recomputed": True}
+
+
+def test_existing_verdict_is_kept_not_recomputed(monkeypatch):
+    from sepa import buyable_verdict
+    monkeypatch.setattr(buyable_verdict, "compute",
+                        lambda r: {"status": "WRONG"})           # must NOT be called
+    _patch_scan(monkeypatch, [_row("AAA", 5, m_pass=True, b_pass=True)])
+    r = breakout.board()["rows"][0]
+    assert r["buy_verdict"]["minervini"]["passed"] is True       # the scan's verdict
+
+
+def test_etf_without_verdict_stays_none(monkeypatch):
+    row = _row("SPY", 5)
+    del row["buy_verdict"]
+    row["is_etf"] = True
+    _patch_scan(monkeypatch, [row])
+    # ETF → no Minervini verdict (the page shows "ETF — no Minervini verdict").
+    assert breakout.board()["rows"][0]["buy_verdict"] is None
+
+
+# ── Beta column (volatility vs SPY) — sort-by-low-volatility ──────────────────
+
+def test_board_attaches_beta(monkeypatch):
+    _patch_scan(monkeypatch, [_row("AAA", 5), _row("BBB", 3)],
+                betas={"AAA": 0.82, "BBB": 1.44})
+    rows = {r["symbol"]: r for r in breakout.board()["rows"]}
+    assert rows["AAA"]["beta"] == 0.82                           # low-vol / defensive
+    assert rows["BBB"]["beta"] == 1.44                           # high-vol
+
+
+def test_board_beta_none_when_unavailable(monkeypatch):
+    _patch_scan(monkeypatch, [_row("AAA", 5)])                   # default betas → {}
+    assert breakout.board()["rows"][0]["beta"] is None           # never a crash

@@ -48,6 +48,24 @@ def leaders(top: int = 30) -> dict:
     return {"rows": rows[:top], "scan_ts": scan.get("generated_at"), "n": len(rows)}
 
 
+def _verdict_for(r: dict) -> Optional[dict]:
+    """The row's Minervini+Bonde verdict — CONFIRMED even when the persisted scan
+    didn't annotate it (e.g. a scan written by an older worker). The scan row
+    always carries the price-side fields buyable_verdict.compute() needs
+    (is_candidate / is_buyable / stage), so we recompute on the fly rather than
+    show "verdict pending". ETFs get no Minervini verdict (the page says so)."""
+    bv = r.get("buy_verdict")
+    if bv is not None:
+        return bv
+    if r.get("is_etf"):
+        return None
+    try:
+        from sepa import buyable_verdict
+        return buyable_verdict.compute(r)
+    except Exception:                               # noqa: BLE001
+        return None
+
+
 def board(top: int = 250, min_count: int = 1) -> dict:
     """Rich breakout-ranked board for the dedicated /breakouts page (Ajay
     2026-06-16: "a page to track only breakouts and # of breakouts, highest
@@ -85,11 +103,24 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             "r2":              targets.get("r2"),
             "industry":        r.get("industry"),
             "is_etf":          bool(r.get("is_etf")),
-            "buy_verdict":     r.get("buy_verdict"),
+            "buy_verdict":     _verdict_for(r),
         })
     # Highest breakout count first; RS then symbol break ties deterministically.
     rows.sort(key=lambda x: (-x["breakout_count"], -(x.get("rs_rank") or 0), x["symbol"]))
     rows = rows[:top]
+
+    # Beta (1y daily vs SPY) for the displayed names only — the volatility
+    # column + "sort by low volatility" on the page. Computed here (≤top names,
+    # SPY loaded once, per-symbol day-cache) so it doesn't touch the scan hot
+    # path. Display-only; None on any failure (never blocks the board).
+    try:
+        from sepa import beta as _beta
+        _betas = _beta.betas_for([x["symbol"] for x in rows])
+    except Exception as exc:                        # noqa: BLE001
+        log.debug("board: beta batch failed: %s", exc)
+        _betas = {}
+    for x in rows:
+        x["beta"] = _betas.get(x["symbol"])
 
     def _mp(x):
         return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")

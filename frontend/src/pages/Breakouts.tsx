@@ -75,6 +75,7 @@ const ColumnsInfo = (
       <li><strong>Total Vol</strong> — today’s share volume.</li>
       <li><strong>Turnover</strong> — dollar volume traded today (price × volume) — “where the money is.” The default sort.</li>
       <li><strong>Stage</strong> — Weinstein/Minervini market stage. <strong>✓ S2</strong> (advancing) is the only buyable stage; S4 (decline) = avoid.</li>
+      <li><strong>Beta</strong> — 1-year daily volatility vs the market (SPY). <strong>&lt;1</strong> (green) = calmer than the market / lower-volatility; <strong>&gt;1.3</strong> (red) = jumpier. Tap the header to <strong>sort low-volatility first</strong>.</li>
       <li><strong>→ R1/R2</strong> — which trade-plan target (entry +1R / +2R) it’s marching toward, and the % above price to reach it. “Past R2” = extended.</li>
       <li><strong>Verdict</strong> — the combined <strong>Minervini buyable-stock</strong> gate + <strong>Bonde sales</strong> test: PASS / PARTIAL / FAIL. Filter by either side with the chips above. <em>“Verdict pending”</em> = the latest scan hasn’t computed it yet.</li>
     </ul>
@@ -171,6 +172,7 @@ export function BreakoutsPage() {
     volume: (r) => r.last_vol,
     turnover: turnoverOf,
     stage: (r) => r.stage,
+    beta: (r) => r.beta,
     march: (r) => marchToTarget(r.last_close, r.r1, r.r2).pct,
   }, 'turnover', 'desc');
 
@@ -257,7 +259,7 @@ export function BreakoutsPage() {
             overscrollBehaviorX: 'contain',
           }}
         >
-          <div className="breakouts-table" role="table" style={{ minWidth: 1130 }}>
+          <div className="breakouts-table" role="table" style={{ minWidth: 1200 }}>
             <div className="breakouts-row breakouts-row--head" role="row" style={headRow}>
               <span style={{ width: 36 }}>#</span>
               <Th label="Ticker" k="ticker" style={colTicker} preferred="asc" sort={sort} />
@@ -269,6 +271,7 @@ export function BreakoutsPage() {
               <Th label="Total Vol" k="volume" style={colVol} align="right" sort={sort} />
               <Th label="Turnover" k="turnover" style={colTurnover} align="right" sort={sort} />
               <Th label="Stage" k="stage" style={colStage} sort={sort} />
+              <Th label="Beta" k="beta" style={colBeta} align="right" preferred="asc" sort={sort} />
               <Th label="→ R1/R2" k="march" style={colMarch} preferred="asc" sort={sort} />
               <span style={colVerdict}>verdict</span>
             </div>
@@ -323,6 +326,26 @@ export function BreakoutsPage() {
                         title={sm.isStage2 ? 'Stage 2 — the advancing phase (the only buyable stage, Minervini/Weinstein)' : sm.label}
                       >
                         {sm.isStage2 ? `✓ S2` : (r.stage != null ? `S${r.stage}` : '—')}
+                      </span>
+                    );
+                  })()}
+                  {(() => {
+                    // Beta — 1y daily volatility vs SPY. <1 = calmer than the
+                    // market (green/low-vol); >1.3 = jumpy (red). Sort ascending
+                    // to surface the low-volatility breakouts.
+                    const b = r.beta;
+                    const tone =
+                      b == null ? 'var(--cm-slate, #94a3b8)' :
+                      b < 1 ? 'var(--positive, #10b981)' :
+                      b > 1.3 ? 'var(--negative, #f87171)' : 'var(--ink, #eee)';
+                    return (
+                      <span
+                        className="mono"
+                        style={{ ...colBeta, fontSize: '0.78rem', color: tone }}
+                        title={b == null ? 'Beta unavailable (need ~1yr of history)'
+                          : `1-year daily beta vs SPY — ${b < 1 ? 'less' : 'more'} volatile than the market`}
+                      >
+                        {b == null ? '—' : b.toFixed(2)}
                       </span>
                     );
                   })()}
@@ -401,5 +424,6 @@ const colVolPct: CSSProperties = { width: 80, textAlign: 'right' };
 const colVol: CSSProperties = { width: 82, textAlign: 'right' };
 const colTurnover: CSSProperties = { width: 96, textAlign: 'right' };
 const colStage: CSSProperties = { width: 62 };
+const colBeta: CSSProperties = { width: 60, textAlign: 'right' };
 const colMarch: CSSProperties = { width: 104 };
 const colVerdict: CSSProperties = { flex: '2 1 220px', minWidth: 200 };

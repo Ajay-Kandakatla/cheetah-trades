@@ -21,6 +21,7 @@ export type BreakoutBoardRow = {
   rs_rank?: number | null;
   stage?: number | null;
   stage_label?: string | null;
+  beta?: number | null;               // 1y daily beta vs SPY — volatility (<1 = low-vol)
   r1?: number | null;                 // trade-plan R-multiple targets (entry +1R / +2R)
   r2?: number | null;
   industry?: string | null;

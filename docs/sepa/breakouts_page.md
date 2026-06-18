@@ -34,9 +34,16 @@ volume-confirmed breakout), ranked by **breakout COUNT, highest first**.
   the table itself (above it, right-aligned, so it's visible without horizontal
   scrolling on mobile). It opens a per-column legend covering every column:
   #, Ticker, # breakouts, Last, Price, Δ%, Vol %, Total Vol, Turnover, Stage,
-  → R1/R2, Verdict — each with the Minervini p.203 cite where relevant. This is
-  separate from the page-title ⓘ (which explains the page concept). Added
+  **Beta**, → R1/R2, Verdict — each with the Minervini p.203 cite where relevant.
+  This is separate from the page-title ⓘ (which explains the page concept). Added
   2026-06-17. Every column header is also click-to-sort.
+- **Beta** column (1-year daily volatility vs SPY) — tap the header to sort
+  **low-volatility first**. Display-only; see `beta_methodology.md`. Added
+  2026-06-17.
+- **Verdict is confirmed on the fly** — if the persisted scan didn't annotate a
+  row's `buy_verdict` (e.g. written by an older worker), `board()` recomputes it
+  from the row's price-side fields (`buyable_verdict.compute`) rather than showing
+  "verdict pending". ETFs still get no Minervini verdict. Added 2026-06-17.
 
 ## Contract
 
