@@ -56,6 +56,13 @@ def _get_db():
             )
         except Exception:
             pass
+        # Web-vitals / page-load RUM samples (one doc per metric reading).
+        _db.perf_events.create_index([("ts", DESCENDING)])
+        _db.perf_events.create_index([("module", ASCENDING), ("metric", ASCENDING)])
+        try:
+            _db.perf_events.create_index("ts_dt", expireAfterSeconds=_TTL_DAYS * 86400)
+        except Exception:
+            pass
         return _db
     except Exception as exc:
         log.warning("analytics.store: mongo unavailable: %s", exc)
@@ -254,6 +261,176 @@ def aggregate_dashboard(days: int = 14) -> dict:
         "total_sec":       sum(u["total_sec"] for u in users),
         "window_days":     days,
     }
+
+
+# ---------------------------------------------------------------------------
+# Web-vitals / page-load performance (RUM) — Ajay 2026-06-17: capture real page
+# load + paint timings (to OUR backend, no third party) so we can see which
+# pages are slow and how they fare on low-bandwidth connections, then optimize.
+# ---------------------------------------------------------------------------
+
+# Rating thresholds straight from the web-vitals spec (web.dev/articles/vitals).
+# Values are in ms except CLS (unitless). 'route_load' is our own SPA route→
+# data-ready timing. (good_max, needs_improvement_max).
+PERF_THRESHOLDS = {
+    "LCP":        (2500.0, 4000.0),
+    "FCP":        (1800.0, 3000.0),
+    "INP":        (200.0, 500.0),
+    "TTFB":       (800.0, 1800.0),
+    "CLS":        (0.1, 0.25),
+    "route_load": (1000.0, 3000.0),
+}
+SLOW_CONNS = {"slow-2g", "2g", "3g"}        # the "low internet" buckets
+
+
+def _rating(metric: str, value: float) -> str:
+    t = PERF_THRESHOLDS.get(metric)
+    if not t:
+        return "unknown"
+    good, poor = t
+    if value <= good:
+        return "good"
+    if value <= poor:
+        return "needs-improvement"
+    return "poor"
+
+
+def _module_of(route: str) -> str:
+    seg = (route or "").strip("/").split("/")[0]
+    return (seg or "home").lower()[:40]
+
+
+def record_perf(events: list) -> int:
+    """Persist a batch of web-vitals / page-load samples. Returns the count
+    stored. Best-effort: skips malformed entries, never raises."""
+    db = _get_db()
+    if db is None or not events:
+        return 0
+    now = _now()
+    now_dt = datetime.now(tz=timezone.utc)
+    day = _today_et()
+    docs = []
+    for e in events:
+        if not isinstance(e, dict):
+            continue
+        metric = str(e.get("metric") or "")[:24]
+        if metric not in PERF_THRESHOLDS:
+            continue
+        try:
+            value = float(e.get("value"))
+        except (TypeError, ValueError):
+            continue
+        if value != value or value < 0 or value > 1e7:        # NaN / nonsense guard
+            continue
+        route = str(e.get("route") or "/")[:200]
+        docs.append({
+            "metric":     metric,
+            "value":      value,
+            "rating":     _rating(metric, value),
+            "route":      route,
+            "module":     _module_of(route),
+            "conn":       str(e.get("conn") or "unknown")[:12],
+            "downlink":   _safe_float(e.get("downlink")),
+            "save_data":  bool(e.get("save_data")),
+            "session_id": str(e.get("session_id") or "")[:64],
+            "ts":         now,
+            "ts_dt":      now_dt,
+            "day_et":     day,
+        })
+    if not docs:
+        return 0
+    try:
+        db.perf_events.insert_many(docs, ordered=False)
+        return len(docs)
+    except Exception as exc:
+        log.debug("record_perf: %s", exc)
+        return 0
+
+
+def _safe_float(v):
+    try:
+        f = float(v)
+        return f if f == f else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _percentile(sorted_vals: list, q: float):
+    """Linear-interpolation percentile (q in [0,1]) over a pre-sorted list."""
+    if not sorted_vals:
+        return None
+    if len(sorted_vals) == 1:
+        return sorted_vals[0]
+    pos = q * (len(sorted_vals) - 1)
+    lo = int(pos)
+    frac = pos - lo
+    if lo + 1 < len(sorted_vals):
+        return sorted_vals[lo] + frac * (sorted_vals[lo + 1] - sorted_vals[lo])
+    return sorted_vals[lo]
+
+
+def _stat(vals: list) -> dict:
+    s = sorted(vals)
+    def r(q):
+        p = _percentile(s, q)
+        return round(p, 3) if p is not None else None
+    return {"n": len(s), "p50": r(0.5), "p75": r(0.75), "p95": r(0.95)}
+
+
+def _summarize(docs: list, days: int) -> dict:
+    """Pure roll-up of perf docs → p50/p75/p95 per (module, metric) and per
+    metric overall, PLUS a slow-vs-fast-connection split per metric (so we can
+    see how much worse the app is on low-bandwidth links). No Mongo here — unit
+    tested directly."""
+    from collections import defaultdict
+    by_mod_metric: dict = defaultdict(list)
+    by_metric: dict = defaultdict(list)
+    slow: dict = defaultdict(list)
+    fast: dict = defaultdict(list)
+    for d in docs:
+        metric = d.get("metric")
+        if metric not in PERF_THRESHOLDS:
+            continue
+        try:
+            v = float(d.get("value"))
+        except (TypeError, ValueError):
+            continue
+        mod = d.get("module") or "home"
+        by_mod_metric[(mod, metric)].append(v)
+        by_metric[metric].append(v)
+        (slow if d.get("conn") in SLOW_CONNS else fast)[metric].append(v)
+
+    routes = [{"module": mod, "metric": metric, **_stat(vals)}
+              for (mod, metric), vals in sorted(by_mod_metric.items())]
+    metrics = []
+    for m in sorted(by_metric):
+        vals = by_metric[m]
+        poor = sum(1 for v in vals if _rating(m, v) == "poor")
+        metrics.append({
+            "metric":    m,
+            **_stat(vals),
+            "poor_rate": round(poor / len(vals), 3) if vals else 0.0,
+            "slow_conn": _stat(slow.get(m, [])),
+            "fast_conn": _stat(fast.get(m, [])),
+        })
+    return {"routes": routes, "metrics": metrics, "n": len(docs),
+            "window_days": days, "available": True}
+
+
+def aggregate_perf(days: int = 14) -> dict:
+    db = _get_db()
+    if db is None:
+        return {"routes": [], "metrics": [], "n": 0, "window_days": days, "available": False}
+    cutoff = _now() - days * 86400
+    try:
+        docs = list(db.perf_events.find(
+            {"ts": {"$gte": cutoff}},
+            {"metric": 1, "value": 1, "module": 1, "conn": 1},
+        ))
+    except Exception as exc:
+        log.debug("aggregate_perf: %s", exc)
+        return {"routes": [], "metrics": [], "n": 0, "window_days": days, "available": False}
+    return _summarize(docs, days)
 
 
 def personal_heatmap(email: str, days: int = 30) -> dict:

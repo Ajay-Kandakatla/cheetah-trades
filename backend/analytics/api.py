@@ -79,6 +79,33 @@ async def analytics_event_end(payload: dict = Body(...)):
 
 
 # ---------------------------------------------------------------------------
+# Web-vitals / page-load RUM (Ajay 2026-06-17)
+# ---------------------------------------------------------------------------
+@router.post("/analytics/perf")
+async def analytics_perf(payload: dict = Body(...)):
+    """Ingest a batch of web-vitals / page-load samples (sent via sendBeacon).
+    Public-ish like /event/end — beacons fire at page-hide when the auth cookie
+    may already be gone, and the payload is non-sensitive timing data only.
+    Batch is capped to keep a bad client from flooding."""
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return JSONResponse({"ok": False, "stored": 0})
+    stored = await asyncio.to_thread(store.record_perf, events[:50])
+    return JSONResponse({"ok": True, "stored": stored})
+
+
+@router.get("/analytics/perf/summary")
+async def analytics_perf_summary(
+    days: int = Query(14, ge=1, le=180),
+    _admin: str = Depends(require_admin),
+):
+    """p50/p75/p95 per page + metric, with a slow-vs-fast-connection split —
+    the data that tells us which pages to optimize for low-bandwidth users."""
+    out = await asyncio.to_thread(store.aggregate_perf, days)
+    return JSONResponse(out)
+
+
+# ---------------------------------------------------------------------------
 # Dashboard (admin)
 # ---------------------------------------------------------------------------
 @router.get("/analytics/dashboard")
