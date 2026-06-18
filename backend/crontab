@@ -159,6 +159,13 @@
 # 6h but daily is plenty since these dates change slowly).
 0      5     *    *    *    /usr/local/bin/python -c "from catalysts.calendar import get_calendar; get_calendar(days=30, force=True)"
 #
+# Macro calendar (regime page) — warm the tiered FOMC/CPI/jobs/PCE calendar at
+# 4am, 10am, 4pm ET so /macro/calendar is instant. FRED /releases/dates is slow
+# (often >25s); without this warm-up a cold page load waits on it. days=14
+# matches the page's fetch so the warmed cache key lines up; 6h TTL means three
+# hits/day keep it continuously warm.
+0      4,10,16 *  *    *    /usr/local/bin/python -c "import macro_calendar; macro_calendar.get_macro_calendar(days=14, force=True)"
+#
 # Catalysts — hourly snapshots during market hours (9:30am-4:30pm ET) to
 # build the intraday timeline + stale + multi-day-accumulator views.
 # The scan endpoint records its own snapshot too, but cron guarantees

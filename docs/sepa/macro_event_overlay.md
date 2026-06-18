@@ -63,6 +63,39 @@ The user's "fred alerts" = the FRED-backed scheduled-release calendar we already
 have (next FOMC/CPI/jobs/PCE dates). A threshold-crossing alert system ("CPI YoY
 > 6% → notify") does **not** exist yet — that would be a separate feature.
 
+## FOMC sourcing + reliability (2026-06-17)
+
+_Ajay, on the Regime (Market Gauge) page: "pull any events that might affect the
+stock market like FOMC today as an example."_ Two defects were hiding the
+calendar — both fixed in `macro_calendar.py`:
+
+1. **FOMC was never shown.** FRED's `/releases/dates` carries a *"FOMC Press
+   Release"* row, but it has **no firm scheduled date** — FRED pads a row onto
+   **every day** of the realtime window. So (a) it can't tell us the real meeting
+   day, and (b) the no-data-padding filter (`date_count[source] <= 3`) drops it
+   entirely. Net: FOMC never appeared.
+   - **Fix:** source FOMC from the **authoritative Fed calendar** —
+     `FOMC_DECISION_DATES` (a hardcoded list from
+     federalreserve.gov/monetarypolicy/fomccalendars.htm, the statement lands on
+     the **last day** of each two-day meeting). `_fomc_events()` injects the
+     real decision days; `_fred_releases()` now **skips** any `kind == "fomc"`
+     row so the schedule is the single source. **⚠ Verify annually** — extend the
+     list when the Fed publishes the next year (~1.5 yrs ahead).
+   - The FOMC window is **ET** (`_today_et`, matching `imminent_events`), not UTC:
+     an FOMC at 2pm ET must still read as "today" in the evening even after UTC
+     has rolled past midnight.
+
+2. **The whole calendar came back empty.** `/releases/dates` is genuinely slow
+   (measured >30s); the old `(20, 25)`-second timeouts both fired → `[]` → empty
+   panel. Bumped to **`(45, 60)`**. The call is `asyncio.to_thread`-wrapped and
+   6h-cached, so the longer timeout only costs a cold load.
+
+3. **Cron warm-up.** Added a `crontab` entry warming `get_macro_calendar(days=14)`
+   at 4am/10am/4pm ET (TTL is 6h) so a cold regime-page load never waits on the
+   slow FRED call. `days=14` matches the page's fetch so the cache key lines up.
+   Deploy needs **`cron`** for this to take effect (the timeout/FOMC fixes only
+   need `api`).
+
 ## Tests
 
 - `backend/tests/test_macro_events.py` — window/tier filtering + day labels +

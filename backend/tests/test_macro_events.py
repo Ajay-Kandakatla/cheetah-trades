@@ -96,3 +96,82 @@ def test_gauge_outlook_clean_when_no_events(monkeypatch):
     monkeypatch.setattr(mc, "imminent_events", lambda within_days=5, max_tier=1: [])
     out = mg._outlook(70, "constructive", [], None, None)
     assert not any("📅" in w for w in out.get("watch", []))
+
+
+# ── FOMC from the authoritative Fed schedule (NOT FRED's padded rows) ─────────
+# FRED's "FOMC Press Release" has no firm date — it pads a row onto every day of
+# the window, so it (a) can't pin the real meeting day and (b) gets dropped by
+# the no-data-padding filter. We source the real decision day from the Fed's
+# published calendar (FOMC_DECISION_DATES, federalreserve.gov). These lock that.
+
+def test_fomc_decision_dates_are_sane_and_sourced():
+    # The constant must exist, be ISO dates, ascending, and cover the live year.
+    dates = mc.FOMC_DECISION_DATES
+    assert len(dates) >= 16                                  # ≥2 years × 8 meetings
+    parsed = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+    assert parsed == sorted(parsed)                          # chronological
+    assert any(d.year == 2026 for d in parsed)               # current year present
+    assert "2026-06-17" in dates                             # the June-2026 decision day
+
+
+def test_fomc_event_in_window_is_tier1_today(monkeypatch):
+    # ET window 'today' = a real decision day → one tier-1 FOMC event for that day.
+    monkeypatch.setattr(mc, "_today_et", lambda: datetime.date(2026, 6, 17))
+    ev = mc._fomc_events(14)
+    assert [e["date"] for e in ev] == ["2026-06-17"]
+    assert ev[0]["kind"] == "fomc" and ev[0]["tier"] == 1
+    assert ev[0]["label"] == "FOMC decision"
+    assert "Federal Reserve" in ev[0]["source"]              # sourced, not invented
+
+
+def test_fomc_event_out_of_window_is_empty(monkeypatch):
+    # No FOMC in the next 5 days (next is weeks out) → empty, never a crash (negative).
+    monkeypatch.setattr(mc, "_today_et", lambda: datetime.date(2026, 6, 20))
+    assert mc._fomc_events(5) == []
+
+
+def test_fomc_window_is_ET_not_UTC(monkeypatch):
+    # Boundary: evening of the decision day, UTC has rolled to the next date but
+    # ET is still the decision day — the event must still show as 'today'.
+    monkeypatch.setattr(mc, "_today_et", lambda: datetime.date(2026, 6, 17))
+    out = mc._fomc_events(14)
+    assert out and out[0]["date"] == "2026-06-17"
+
+
+def test_fred_fomc_padding_rows_are_skipped(monkeypatch):
+    # FRED returns FOMC Press Release padded onto every day + a real CPI row.
+    # The CPI is kept; the FOMC padding is skipped (sourced from the schedule).
+    import sepa.fred
+    monkeypatch.setattr(sepa.fred, "api_key", lambda: "testkey")
+    today = mc.datetime.now(mc.timezone.utc).date()
+    rows = [{"date": str(today), "release_name": "Consumer Price Index"}]
+    for i in range(6):                                       # 6 days of FOMC padding
+        rows.append({"date": str(today + mc.timedelta(days=i)),
+                     "release_name": "FOMC Press Release"})
+
+    class _Resp:
+        status_code = 200
+        def json(self):
+            return {"release_dates": rows}
+
+    monkeypatch.setattr("requests.get", lambda *a, **k: _Resp())
+    out = mc._fred_releases(14)
+    kinds = [e["kind"] for e in out]
+    assert "cpi" in kinds                                    # real release kept
+    assert "fomc" not in kinds                               # FRED padding dropped
+
+
+def test_compute_merges_fomc_with_fred(monkeypatch):
+    # The merged calendar carries BOTH the FRED releases and the schedule FOMC,
+    # date-sorted, with FOMC as the nearest tier-1 mover.
+    monkeypatch.setattr(mc, "_today_et", lambda: datetime.date(2026, 6, 16))
+    monkeypatch.setattr(mc, "_fred_releases", lambda days: [
+        {"date": "2026-06-18", "kind": "cpi", "tier": 1, "label": "CPI", "source": "FRED"}])
+    monkeypatch.setattr(mc, "_earnings_ahead", lambda days: [])
+    mc._CACHE["data"] = None
+    d = mc.compute(14)
+    pairs = [(e["date"], e["kind"]) for e in d["macro"]]
+    assert ("2026-06-17", "fomc") in pairs                   # FOMC injected
+    assert ("2026-06-18", "cpi") in pairs                    # FRED kept
+    assert pairs == sorted(pairs)                            # date-sorted
+    assert d["next_tier1"]["kind"] == "fomc"                 # 6/17 before 6/18

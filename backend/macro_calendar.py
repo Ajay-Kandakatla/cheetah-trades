@@ -47,6 +47,29 @@ TIER_TAXONOMY = {
           "Regional Fed indices", "Trade balance"],
 }
 
+# Authoritative FOMC decision days. The rate decision + statement lands on the
+# LAST day of each two-day meeting. SOURCE: Federal Reserve FOMC calendar
+# (federalreserve.gov/monetarypolicy/fomccalendars.htm), fetched 2026-06-17.
+#
+# Why hardcoded and not from FRED: FRED's "FOMC Press Release" release has NO
+# firm scheduled date — it pads a row onto EVERY day of the realtime window, so
+# (a) it can't tell us the real meeting day and (b) the no-data-padding filter in
+# _fred_releases drops it entirely. The Fed's published schedule is the only
+# reliable source for the actual decision day, so we source it here.
+# ⚠ VERIFY ANNUALLY: extend this list each year when the Fed publishes the next
+# year's calendar (they release it ~1.5 years ahead).
+FOMC_DECISION_DATES = (
+    # 2025
+    "2025-01-29", "2025-03-19", "2025-05-07", "2025-06-18",
+    "2025-07-30", "2025-09-17", "2025-10-29", "2025-12-10",
+    # 2026
+    "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17",
+    "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
+    # 2027
+    "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09",
+    "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08",
+)
+
 # Match FRED release names → (kind, tier, short label). First match wins; order
 # matters (specific before generic). Case-insensitive substring match.
 _RELEASE_TIERS = [
@@ -103,7 +126,7 @@ def _fred_releases(days: int) -> list[dict]:
               "realtime_start": str(today), "realtime_end": str(end),
               "sort_order": "asc", "limit": 1000}
     rows = None
-    for attempt, tmo in enumerate((20, 25)):       # one retry — the endpoint can be slow
+    for attempt, tmo in enumerate((45, 60)):       # one retry — the endpoint is SLOW (often >25s)
         try:
             r = requests.get("https://api.stlouisfed.org/fred/releases/dates",
                              params=params, timeout=tmo)
@@ -126,6 +149,10 @@ def _fred_releases(days: int) -> list[dict]:
         if not meta:
             continue
         kind, tier, label = meta
+        if kind == "fomc":
+            # FOMC has no firm FRED date (padded onto every day) — sourced from
+            # the authoritative Fed schedule in _fomc_events() instead.
+            continue
         dedup = (kind, d)
         if dedup in seen:
             continue
@@ -139,6 +166,27 @@ def _fred_releases(days: int) -> list[dict]:
     date_count = Counter(e["source"] for e in out)
     out = [e for e in out if date_count[e["source"]] <= 3]
     out.sort(key=lambda e: (e["date"], e["tier"]))
+    return out
+
+
+def _fomc_events(days: int) -> list[dict]:
+    """FOMC decision days inside the window, from the authoritative Fed schedule
+    (FOMC_DECISION_DATES) — NOT FRED's padded press-release rows. Always tier 1.
+    FOMC is an ET-scheduled 2pm event, so the window 'today' is ET (matching
+    imminent_events / _today_et) — otherwise the day-of FOMC drops off hours
+    early once UTC rolls past midnight while it's still that day in ET."""
+    today = _today_et()
+    end = today + timedelta(days=days)
+    out = []
+    for d in FOMC_DECISION_DATES:
+        try:
+            dd = datetime.strptime(d, "%Y-%m-%d").date()
+        except Exception:
+            continue
+        if today <= dd <= end:
+            out.append({"date": d, "kind": "fomc", "tier": 1,
+                        "label": "FOMC decision",
+                        "source": "Federal Reserve FOMC calendar"})
     return out
 
 
@@ -198,7 +246,10 @@ def _earnings_ahead(days: int) -> list[dict]:
 
 def compute(days: int = DEFAULT_DAYS) -> dict:
     t0 = time.time()
-    macro = _fred_releases(days)
+    # FRED gives the broad release calendar (CPI/jobs/PCE/ISM/...); the Fed's
+    # published schedule gives the one event FRED can't pin — FOMC. Merge + sort.
+    macro = _fred_releases(days) + _fomc_events(days)
+    macro.sort(key=lambda e: (e["date"], e["tier"]))
     earnings = _earnings_ahead(days)
 
     by_tier = {1: [], 2: [], 3: []}
