@@ -173,10 +173,25 @@ def detect_volume_breakouts(limit: int = 50) -> dict:
         "volume.high_vol_breakout": True,
     })
 
+    # BUYABLE-ONLY (Ajay 2026-06-18: "kill all random breakout push besides the
+    # buyable"). is_buyable isn't on the candidate snapshot, so read it from the
+    # live scan. Only names that pass the strict Minervini buy gate (Stage 2 +
+    # setup + not late-base + liquid) get a breakout alert/push.
+    try:
+        from . import scanner as _sc
+        buyable = {(r.get("symbol") or "").upper(): bool(r.get("is_buyable"))
+                   for r in ((_sc.load_latest() or {}).get("all_results") or [])}
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("breakout buyable-gate: scan load failed (%s) — suppressing all", exc)
+        buyable = {}
+
     fired = 0
     for c in cands:
         ticker = c.get("symbol")
         if not ticker:
+            continue
+        if not buyable.get(ticker.upper()):
+            log.info("volume breakout suppressed (not buyable): %s", ticker)
             continue
         if not _passes_score_floor(c.get("score")):
             log.info("volume breakout suppressed (score %s < %s): %s",

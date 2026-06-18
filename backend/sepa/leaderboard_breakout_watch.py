@@ -74,6 +74,10 @@ def run() -> dict:
     latest = scanner.load_latest() or {}
     live = {r.get("symbol"): r for r in (latest.get("all_results") or [])}
     fresh = fresh_breakouts(set(rankmap), live)
+    # BUYABLE-ONLY (Ajay 2026-06-18: "kill all random breakout push besides the
+    # buyable"). Only push a leaderboard breakout if the name passes the strict
+    # Minervini buy gate (is_buyable) in the live scan.
+    fresh = [b for b in fresh if bool((live.get(b.get("symbol")) or {}).get("is_buyable"))]
 
     today = _today_et()
     new = []
