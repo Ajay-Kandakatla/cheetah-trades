@@ -144,7 +144,28 @@ def main() -> int:
              "the tape (every ~5 min in market hours + EOD)",
     )
 
+    sub.add_parser(
+        "breakout-audit",
+        help="Integrity tripwire — re-derive 'broke out today' from raw bars "
+             "(book p.203) vs the persisted scan; logs + exits nonzero on any "
+             "discrepancy (run post-close after the fast-scan).",
+    )
+
     args = p.parse_args()
+
+    if args.cmd == "breakout-audit":
+        from . import breakout_audit
+        rep = breakout_audit.audit_latest()
+        if not rep.get("ok"):
+            log.warning("breakout-audit: could not run (%s)", rep.get("error"))
+            return 0
+        if rep["clean"]:
+            log.info("breakout-audit CLEAN — %d checked, %d flagged today, all confirmed",
+                     rep["checked"], rep["flagged_today"])
+            return 0
+        log.warning("breakout-audit TRIPWIRE TRIPPED — false_positives=%s false_negatives=%s",
+                    rep["false_positives"][:15], rep["false_negatives"][:15])
+        return 1
 
     if args.cmd == "scan":
         from . import scanner

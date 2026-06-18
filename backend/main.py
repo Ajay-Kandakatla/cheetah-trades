@@ -2419,6 +2419,19 @@ async def sepa_breakout_board(top: int = Query(250, ge=1, le=500),
     return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.board, top, min_count)))
 
 
+@app.get("/sepa/breakout-audit")
+async def sepa_breakout_audit(email: str = Depends(current_user_email)):
+    """Integrity tripwire — independently re-derive 'broke out today' from raw
+    bars (book p.203) for every scanned name and compare to the persisted flag,
+    returning any false-positive / false-negative discrepancies. Owner-only: it
+    loads the whole universe's prices. Also runs daily post-close via cron."""
+    import auth
+    if email not in getattr(auth, "HOUSE_OWNER_EMAILS", set()):
+        return JSONResponse({"error": "owner only"}, status_code=403)
+    from sepa import breakout_audit
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout_audit.audit_latest)))
+
+
 @app.get("/sepa/breakout/{symbol}")
 async def sepa_breakout_symbol(symbol: str):
     """Per-symbol breakout read (count + ACTUAL last/avg volume) — used by the

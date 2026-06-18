@@ -17,6 +17,14 @@
 # UI's broad Full Scan instead of the russell1000 default.
 30     16    *    *    1-5  /usr/local/bin/python -m sepa.cli fast-scan --mode broad
 #
+# Mon-Fri 4:42pm ET — breakout integrity TRIPWIRE. Independently re-derives
+# "broke out today" from raw bars (book p.203: close > prior 21-bar high on
+# >1.5x the 50-day avg volume) for every scanned name and compares to the scan's
+# flag. Logs CLEAN, or WARN + exits nonzero on any false-positive/negative — so
+# the "broke out today" indicator can never silently drift (Ajay invests on it).
+# Runs after the 4:30 fast-scan so it audits today's fresh flags.
+42     16    *    *    1-5  /usr/local/bin/python -m sepa.cli breakout-audit
+#
 # Mon-Fri 4:50pm ET — Pullback-to-MA scanner. Derives the Stage-2 "pullback
 # toward the rising 50-day MA on contracting volume" list from the latest
 # fast-scan (reuses the universe + cached bars — no new provider fetch) and
