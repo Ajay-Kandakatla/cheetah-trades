@@ -86,7 +86,13 @@ type Status = {
   configured: boolean;
   armed: boolean;
   market_open: boolean;
-  account: { equity: number; cash: number; buying_power: number } | null;
+  account: { equity: number; cash: number; buying_power: number; starting_cash?: number } | null;
+  pnl_summary?: {
+    starting_cash: number; equity: number; cash: number; invested: number;
+    market_value: number; unrealized_dollars: number; unrealized_pct: number | null;
+    realized_dollars: number | null; total_pnl_dollars: number | null;
+    total_pnl_pct: number | null; position_count: number;
+  } | null;
   regime: 'normal' | 'difficult';
   streak: { consecutive_losses: number; size_multiplier: number };
   positions: Position[];
@@ -1712,6 +1718,29 @@ export function TradingPage() {
                 <span style={{ color: C.sub }}> · cash {money(status.account.cash, 0)}</span>
               </span>
             )}
+
+            {/* Did we make money? Started-with vs now (Ajay 2026-06-18). */}
+            {status.pnl_summary && status.pnl_summary.total_pnl_dollars != null && (() => {
+              const p = status.pnl_summary!;
+              const up = (p.total_pnl_dollars ?? 0) >= 0;
+              const col = up ? C.green : '#f87171';
+              const sign = up ? '+' : '';
+              return (
+                <span className="mono" style={{ fontSize: '0.78rem' }}
+                      title="All-time P&L since the Auto-Pilot started: equity now vs the cash it began with. Realized = booked on closed trades; unrealized = open positions.">
+                  <span style={{ color: C.sub }}>started {money(p.starting_cash, 0)} → </span>
+                  <b style={{ color: col }}>
+                    {up ? '▲' : '▼'} {sign}{money(p.total_pnl_dollars ?? 0, 0)}
+                    {p.total_pnl_pct != null ? ` (${sign}${p.total_pnl_pct.toFixed(1)}%)` : ''}
+                  </b>
+                  <span style={{ color: C.sub }}>
+                    {' '}all-time
+                    {p.realized_dollars != null ? ` · realized ${money(p.realized_dollars, 0)}` : ''}
+                    {' '}· unrealized {money(p.unrealized_dollars, 0)}
+                  </span>
+                </span>
+              );
+            })()}
 
             {status.regime === 'difficult' ? (
               <Chip color={C.amber} title="Difficult market regime — stops tighten to 5-6%, targets 10-12% — TLSW p.311">

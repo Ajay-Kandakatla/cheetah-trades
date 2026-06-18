@@ -192,6 +192,43 @@ def _notify_autopilot(kind: str, ticker: str, detail: str) -> None:
         log.warning("autopilot push failed (%s %s): %s", kind, ticker, exc)
 
 
+# ── Account P&L summary (Auto-Pilot dashboard) ─────────────────────────────
+
+def pnl_summary(account, positions) -> dict:
+    """Account-level P&L roll-up for the Auto-Pilot dashboard (portfolio-style):
+    what we STARTED with vs equity now, plus invested / unrealized / realized.
+    Ajay 2026-06-18 ("I can't tell if we made money … how much did we enter
+    with"). Pure — derived from the broker account + open positions.
+
+    Identity for the SIM (no deposits/withdrawals):
+        equity = starting_cash + realized + unrealized
+    so realized = total_pnl − unrealized."""
+    acct = account or {}
+    starting = float(acct.get("starting_cash") or 0)
+    equity = float(acct.get("equity") or 0)
+    cash = float(acct.get("cash") or 0)
+    cost_basis = 0.0
+    for p in positions or []:
+        cost_basis += float(p.get("qty") or 0) * float(p.get("avg_entry") or 0)
+    market_value = round(equity - cash, 2)               # authoritative (account equity)
+    unreal = round(market_value - cost_basis, 2)
+    total = round(equity - starting, 2) if starting else None
+    realized = round(total - unreal, 2) if total is not None else None
+    return {
+        "starting_cash": round(starting, 2),
+        "equity": round(equity, 2),
+        "cash": round(cash, 2),
+        "invested": round(cost_basis, 2),
+        "market_value": market_value,
+        "unrealized_dollars": unreal,
+        "unrealized_pct": round(unreal / cost_basis * 100, 2) if cost_basis else None,
+        "realized_dollars": realized,
+        "total_pnl_dollars": total,
+        "total_pnl_pct": round(total / starting * 100, 2) if (starting and total is not None) else None,
+        "position_count": len(positions or []),
+    }
+
+
 # ── Regime (p.311 normal vs difficult) ─────────────────────────────────────
 
 def regime() -> str:
@@ -608,7 +645,8 @@ def status() -> dict:
         acct = broker.account()
         out["account"] = {"equity": float(acct.get("equity") or 0),
                           "cash": float(acct.get("cash") or 0),
-                          "buying_power": float(acct.get("buying_power") or 0)}
+                          "buying_power": float(acct.get("buying_power") or 0),
+                          "starting_cash": float(acct.get("starting_cash") or 0)}
         out["market_open"] = bool(broker.clock().get("is_open"))
         out["regime"] = regime()
         orders = _flatten_orders(broker.open_orders())
@@ -661,6 +699,8 @@ def status() -> dict:
                                      armed=bool(out.get("armed")))
     # Count of OPEN positions with NO resting stop — "real risk uncovered now".
     out["unprotected"] = [p["symbol"] for p in out["positions"] if not p.get("protected")]
+    # Portfolio-style account P&L (started-with vs now) for the dashboard header.
+    out["pnl_summary"] = pnl_summary(out.get("account"), out.get("positions"))
     return out
 
 

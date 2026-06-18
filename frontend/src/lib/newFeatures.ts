@@ -28,6 +28,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'market-gauge-events',  label: 'FOMC & macro events on Market Gauge',  addedAt: '2026-06-17', route: '/market-gauge' },
   { id: 'page-load-monitoring', label: 'Page-load speed monitoring',           addedAt: '2026-06-18' },
   { id: 'breakouts-dynamic-scan', label: 'Update button — fast re-scan on Breakouts', addedAt: '2026-06-18', route: '/breakouts' },
+  { id: 'autopilot-pnl-summary', label: 'Auto-Pilot account P&L — made/lost money since start', addedAt: '2026-06-18', route: '/trading' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */
