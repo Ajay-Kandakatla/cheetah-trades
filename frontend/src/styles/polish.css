@@ -521,12 +521,23 @@ h1, h2, h3, h4, h5, h6,
   left: 0;
   right: auto;
 }
+/* Right-aligned trigger (near the screen's right edge, e.g. the breakouts
+   "What do these columns mean?" ⓘ) — anchor the popover's RIGHT edge to the
+   trigger so it opens LEFTWARD and never runs off-screen, at any width above the
+   mobile sheet breakpoint (Ajay 2026-06-17: it was clipping off the right). */
+.info-button--inline.info-button--align-right .info-button__pop {
+  left: auto;
+  right: 0;
+}
 /* On phones, float it as a near-full-width sheet so a long info body is never
    clipped by a trigger that sits far from the left edge. Breakpoint raised
    560->720 (2026-06-13) to match the app's mobile breakpoint + the InlineInfo /
-   headline / analysis info sheets, so every ⓘ behaves the same on a phone. */
+   headline / analysis info sheets, so every ⓘ behaves the same on a phone.
+   The align-right selector is listed too (equal specificity, later in source)
+   so the full-width sheet still wins on mobile for right-anchored popovers. */
 @media (max-width: 720px) {
-  .info-button--inline .info-button__pop {
+  .info-button--inline .info-button__pop,
+  .info-button--inline.info-button--align-right .info-button__pop {
     position: fixed;
     top: 56px;
     left: 10px;

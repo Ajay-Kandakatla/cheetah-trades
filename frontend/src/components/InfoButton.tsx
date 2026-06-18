@@ -8,9 +8,14 @@ type Props = {
    *  absolute-positioned top-right corner pin. Use this whenever the icon
    *  should sit beside a heading/label rather than float in a container. */
   inline?: boolean;
+  /** Which edge the popover anchors to. 'left' (default) opens RIGHTWARD from
+   *  the trigger — correct for triggers on the LEFT of the screen. Use 'right'
+   *  for a trigger near the RIGHT edge so the popover opens LEFTWARD and doesn't
+   *  run off-screen (the bug Ajay hit on the breakouts column ⓘ, 2026-06-17). */
+  align?: 'left' | 'right';
 };
 
-export function InfoButton({ title, children, inline = false }: Props) {
+export function InfoButton({ title, children, inline = false, align = 'left' }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,7 +36,10 @@ export function InfoButton({ title, children, inline = false }: Props) {
   }, [open]);
 
   return (
-    <div className={`info-button${inline ? ' info-button--inline' : ''}`} ref={ref}>
+    <div
+      className={`info-button${inline ? ' info-button--inline' : ''}${align === 'right' ? ' info-button--align-right' : ''}`}
+      ref={ref}
+    >
       <button
         type="button"
         className="info-button__trigger"

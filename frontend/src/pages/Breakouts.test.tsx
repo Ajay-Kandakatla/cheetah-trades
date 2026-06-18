@@ -61,7 +61,10 @@ describe('BreakoutsPage', () => {
   it('explains every column from the table info icon', () => {
     renderPage();
     // The table-level ⓘ (distinct from the page-title one) opens a per-column legend.
-    fireEvent.click(screen.getByRole('button', { name: /What is Breakout columns\?/i }));
+    const trigger = screen.getByRole('button', { name: /What is Breakout columns\?/i });
+    // It's right-anchored so the popover opens leftward (doesn't clip off-screen).
+    expect(trigger.closest('.info-button')).toHaveClass('info-button--align-right');
+    fireEvent.click(trigger);
     const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
     expect(legend.getByText(/dollar volume traded today/i)).toBeInTheDocument();   // Turnover
     expect(legend.getByText(/none recent/i)).toBeInTheDocument();                  // Last

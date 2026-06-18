@@ -245,7 +245,7 @@ export function BreakoutsPage() {
         <>
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <span style={{ fontSize: '0.7rem', color: 'var(--cm-slate, #94a3b8)' }}>What do these columns mean?</span>
-          <InfoButton inline title="Breakout columns">{ColumnsInfo}</InfoButton>
+          <InfoButton inline align="right" title="Breakout columns">{ColumnsInfo}</InfoButton>
         </div>
         <div
           className="breakouts-scroll"
