@@ -8,15 +8,16 @@ import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } fr
 import { useWhalesFlow } from '../hooks/useWhalesFlow';
 import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
-import { RankTrendChart } from '../components/RankTrendChart';
+const RankTrendChart = lazy(() => import('../components/RankTrendChart').then(m => ({ default: m.RankTrendChart })));
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
 import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
 import { CheetahVerdictPanel } from '../components/CheetahVerdictPanel';
-import { BreakoutHistoryBody } from '../components/BreakoutHistoryModal';
+const BreakoutHistoryBody = lazy(() => import('../components/BreakoutHistoryModal').then(m => ({ default: m.BreakoutHistoryBody })));
 import { NewsReadButton } from '../components/NewsReadButton';
-import { LiveCandlesChart, type ChartInterval } from '../components/LiveCandlesChart';
+import type { ChartInterval } from '../components/LiveCandlesChart';
+const LiveCandlesChart = lazy(() => import('../components/LiveCandlesChart').then(m => ({ default: m.LiveCandlesChart })));
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
 import { LivePriceTag } from '../components/LivePriceTag';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
@@ -52,16 +53,16 @@ import { SepaScoreBar } from '../components/SepaScoreBar';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
-import { StockAnalysisPanel } from '../components/StockAnalysisPanel';
+const StockAnalysisPanel = lazy(() => import('../components/StockAnalysisPanel').then(m => ({ default: m.StockAnalysisPanel })));
 import { CompanyHeadline } from '../components/CompanyHeadline';
-import { ChatterPanel } from '../components/ChatterPanel';
-import { TickerPatternPanel } from '../components/TickerPatternPanel';
-import { ChartAnalysisPanel } from '../components/ChartAnalysisPanel';
+const ChatterPanel = lazy(() => import('../components/ChatterPanel').then(m => ({ default: m.ChatterPanel })));
+const TickerPatternPanel = lazy(() => import('../components/TickerPatternPanel').then(m => ({ default: m.TickerPatternPanel })));
+const ChartAnalysisPanel = lazy(() => import('../components/ChartAnalysisPanel').then(m => ({ default: m.ChartAnalysisPanel })));
 import { PriceAlertModal } from '../components/PriceAlertModal';
 import { TickerAlertPresets } from '../components/TickerAlertPresets';
-import { DependencyGraph } from '../components/DependencyGraph';
+const DependencyGraph = lazy(() => import('../components/DependencyGraph').then(m => ({ default: m.DependencyGraph })));
 import { CompanyAbout } from '../components/CompanyAbout';
-import { GabbarLevels } from '../components/GabbarLevels';
+const GabbarLevels = lazy(() => import('../components/GabbarLevels').then(m => ({ default: m.GabbarLevels })));
 import { useLiveQuote } from '../hooks/useLiveQuote';
 import { CandleAnatomyExplainer } from '../components/CandleAnatomyExplainer';
 import { NodeThesisPanel } from '../components/NodeThesisPanel';
@@ -971,7 +972,7 @@ export function SepaCandidatePage() {
                 </div>
                 <div className="sepa-candidate-page__chart">
                   {chartSource === 'native' ? (
-                    <LiveCandlesChart symbol={symbol} interval={chartInterval} />
+                    <Suspense fallback={null}><LiveCandlesChart symbol={symbol} interval={chartInterval} /></Suspense>
                   ) : (
                     <iframe
                       key={chartReloadKey}
@@ -1045,18 +1046,18 @@ export function SepaCandidatePage() {
                     of the same name — see backend/catalysts/gabbar_levels.py
                     for attribution). Renders inline if the ticker is in
                     the source table, otherwise renders nothing. */}
-                <GabbarLevels symbol={symbol} currentPrice={currentLivePrice} />
+                <Suspense fallback={null}><GabbarLevels symbol={symbol} currentPrice={currentLivePrice} /></Suspense>
 
                 {/* On-demand pattern scanner for THIS ticker (Ajay 2026-06-09)
                     — auto-runs on open, ↻ re-scans on demand. Which pattern it
                     matches / is closest to, or an explicit no-match, plus this
                     chart's own +21-bar record after past confirmations. */}
-                <TickerPatternPanel symbol={symbol} />
+                <Suspense fallback={null}><TickerPatternPanel symbol={symbol} /></Suspense>
 
                 {/* On-demand Sonnet buy-signal read (Ajay 2026-06-11) —
                     a pattern saying CONFIRMED isn't the same as buyable;
                     this answers the actual question with the facts shown. */}
-                <ChartAnalysisPanel symbol={symbol} />
+                <Suspense fallback={null}><ChartAnalysisPanel symbol={symbol} /></Suspense>
 
                 {/* Candle-reading reference — collapsed by default, expand
                     to learn what green/red bodies and wicks actually mean.
@@ -1216,7 +1217,7 @@ export function SepaCandidatePage() {
                   or the price; markers show breakouts, when it became buyable, and
                   stage changes. Daily by default — toggle intraday for the churn.
                 </div>
-                <RankTrendChart symbol={symbol} />
+                <Suspense fallback={null}><RankTrendChart symbol={symbol} /></Suspense>
               </section>
             )}
 
@@ -1429,7 +1430,7 @@ export function SepaCandidatePage() {
                   21-day high on &gt;1.5× average volume — Minervini p.203), and exactly
                   WHERE each one fired on the price chart.
                 </div>
-                <BreakoutHistoryBody symbol={symbol} />
+                <Suspense fallback={null}><BreakoutHistoryBody symbol={symbol} /></Suspense>
               </section>
             )}
 
@@ -1476,7 +1477,7 @@ export function SepaCandidatePage() {
 
                 {/* Fidelity-style multi-panel readout (free-data composite). */}
                 <div className="eyebrow">Multi-source analysis</div>
-                <StockAnalysisPanel symbol={symbol} />
+                <Suspense fallback={null}><StockAnalysisPanel symbol={symbol} /></Suspense>
               </section>
             )}
 
@@ -1634,7 +1635,7 @@ export function SepaCandidatePage() {
                   </InfoButton>
                   <span> — Reddit, StockTwits, and Hacker News for this ticker.</span>
                 </div>
-                <ChatterPanel symbol={symbol} />
+                <Suspense fallback={null}><ChatterPanel symbol={symbol} /></Suspense>
               </section>
             )}
 
@@ -1826,14 +1827,16 @@ function TickerSupplyDemandPanel({ symbol }: { symbol: string }) {
       {sg.edges.length > 0 ? (
         <>
           <div className="eyebrow" style={{ marginTop: 16, marginBottom: 8 }}>{sg.nodes.length} companies · {sg.edges.length} relationships · click any bubble for thesis</div>
-          <DependencyGraph
-            nodes={sg.nodes}
-            edges={sg.edges}
-            height={460}
-            centerTicker={sg.center}
-            onNodeClick={(t) => setDrillTicker(t)}
-            selectedTicker={drillTicker}
-          />
+          <Suspense fallback={<div style={{ minHeight: 460 }} aria-busy="true" />}>
+            <DependencyGraph
+              nodes={sg.nodes}
+              edges={sg.edges}
+              height={460}
+              centerTicker={sg.center}
+              onNodeClick={(t) => setDrillTicker(t)}
+              selectedTicker={drillTicker}
+            />
+          </Suspense>
           <NodeThesisPanel ticker={drillTicker} onClose={() => setDrillTicker(null)} />
         </>
       ) : (
