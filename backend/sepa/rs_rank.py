@@ -102,3 +102,49 @@ def rs_ranks(symbols: list[str],
             continue
         out[sym] = max(1, min(99, int(round(p * 99))))
     return out
+
+
+# ── single-symbol RS for the off-scan detail path (perf, Ajay 2026-06-18) ────
+# The ticker-details endpoint used to re-score the ENTIRE ~3000-name universe on
+# every off-scan (searched) symbol just to rank that one name — ~5s/request. The
+# universe's RS *score* distribution is identical for a whole scan cycle, so we
+# cache it (keyed by the scan's generated_at) and rank the one searched symbol
+# against it. First off-scan request per cycle warms the cache; the rest are
+# instant. Same 1-99 percentile semantics as rs_ranks().
+_UNIVERSE_SCORES: dict = {"key": None, "scores": None}
+
+
+def _universe_scores(universe_symbols, *, cache_key, workers: int = 8) -> Dict[str, float]:
+    if (cache_key is not None and _UNIVERSE_SCORES["key"] == cache_key
+            and _UNIVERSE_SCORES["scores"] is not None):
+        return _UNIVERSE_SCORES["scores"]
+    scores: Dict[str, float] = {}
+    syms = list(universe_symbols)
+    if syms:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            for sym, val in ex.map(_score_one, syms):
+                if val is not None and math.isfinite(val):
+                    scores[sym] = val
+    if cache_key is not None:
+        _UNIVERSE_SCORES["key"] = cache_key
+        _UNIVERSE_SCORES["scores"] = scores
+    return scores
+
+
+def rank_one(symbol: str, universe_symbols: list, *, cache_key=None) -> Optional[int]:
+    """RS rank (1-99) for ONE symbol vs the universe's score distribution —
+    reusing a per-scan cache of the universe scores so we don't re-score the
+    whole universe on every off-scan detail-page request. Returns None when the
+    symbol has insufficient price history. Matches rs_ranks() percentile math:
+    the symbol is ranked among universe-scores + itself, 0-1 → 1-99."""
+    _, my = _score_one(symbol)
+    if my is None or not math.isfinite(my):
+        return None
+    uni = _universe_scores([s for s in universe_symbols if s != symbol], cache_key=cache_key)
+    if not uni:
+        return None
+    all_scores = list(uni.values()) + [my]
+    p = float(pd.Series(all_scores).rank(pct=True).iloc[-1])   # percentile of `my`
+    if math.isnan(p):
+        return None
+    return max(1, min(99, int(round(p * 99))))

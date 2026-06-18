@@ -1884,11 +1884,19 @@ async def sepa_candidate_detail(symbol: str):
     if base is None:
         try:
             from sepa import prices, rs_rank, scanner as sc, research as research_mod
-            await asyncio.to_thread(prices.load_prices, sym, "2y", True)
+            # PERF (Ajay 2026-06-18): use cached prices (cron keeps them warm —
+            # was force=True, a ~2s refetch every load) and rank just THIS symbol
+            # against a per-scan-cached universe-score distribution instead of
+            # re-scoring all ~3000 names per request (was ~5s). rank_one returns
+            # the same 1-99 percentile rs_ranks would; rs_map carries only `sym`,
+            # which is all _analyze_symbol reads.
+            await asyncio.to_thread(prices.load_prices, sym, "2y", False)
             universe_syms = [r["symbol"] for r in (latest.get("all_results") or [])] or [sym]
-            if sym not in universe_syms:
-                universe_syms.append(sym)
-            rs_map = await asyncio.to_thread(rs_rank.rs_ranks, universe_syms)
+            rs_one = await asyncio.to_thread(
+                rs_rank.rank_one, sym, universe_syms,
+                cache_key=latest.get("generated_at"),
+            )
+            rs_map = {sym: rs_one} if rs_one is not None else {}
             analyzed = await asyncio.to_thread(
                 sc._analyze_symbol, sym, rs_map,
                 require_liquidity=False, require_min_adr=0.0,
