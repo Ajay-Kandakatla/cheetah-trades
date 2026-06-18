@@ -56,6 +56,32 @@ const PageInfo = (
   </>
 );
 
+/* Column reference — opened from the ⓘ on the table itself, so the meaning of
+ * every column is one tap away right where the data is (Ajay 2026-06-17). */
+const ColumnsInfo = (
+  <>
+    <p>
+      What each column means. The table sorts by <strong>any</strong> column — tap
+      a header, tap again to flip. Default sort is <strong>Turnover</strong>, highest first.
+    </p>
+    <ul>
+      <li><strong>#</strong> — rank in the current sort.</li>
+      <li><strong>Ticker</strong> — symbol + company. Tap a row to open its detail <em>Breakout</em> tab (where each breakout fired on the chart).</li>
+      <li><strong># breakouts</strong> — how many <em>distinct, volume-confirmed</em> breakouts over the trailing year: a close above the prior 21-day high on &gt;1.5× the 50-day average volume (Minervini p.203). <strong>⚡</strong> = one was today. This is the headline ranking.</li>
+      <li><strong>Last</strong> — how long since its most recent breakout (“today”, “3d ago”). “—” = none recent.</li>
+      <li><strong>Price</strong> — latest close.</li>
+      <li><strong>Δ%</strong> — today’s percent change (green up / red down).</li>
+      <li><strong>Vol %</strong> — today’s volume as a % of its 50-day average. <strong>≥150%</strong> (gold) is the 1.5× volume that confirms a breakout (p.203).</li>
+      <li><strong>Total Vol</strong> — today’s share volume.</li>
+      <li><strong>Turnover</strong> — dollar volume traded today (price × volume) — “where the money is.” The default sort.</li>
+      <li><strong>Stage</strong> — Weinstein/Minervini market stage. <strong>✓ S2</strong> (advancing) is the only buyable stage; S4 (decline) = avoid.</li>
+      <li><strong>→ R1/R2</strong> — which trade-plan target (entry +1R / +2R) it’s marching toward, and the % above price to reach it. “Past R2” = extended.</li>
+      <li><strong>Verdict</strong> — the combined <strong>Minervini buyable-stock</strong> gate + <strong>Bonde sales</strong> test: PASS / PARTIAL / FAIL. Filter by either side with the chips above. <em>“Verdict pending”</em> = the latest scan hasn’t computed it yet.</li>
+    </ul>
+    <p className="mono">Display-only. Not investment advice.</p>
+  </>
+);
+
 const pct = (v?: number | null) => (v != null ? `${v > 0 ? '+' : ''}${v.toFixed(2)}%` : '—');
 
 /* Derived metrics — both computed client-side from fields already in the board
@@ -214,6 +240,11 @@ export function BreakoutsPage() {
       )}
 
       {shown.length > 0 && (
+        <>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--cm-slate, #94a3b8)' }}>What do these columns mean?</span>
+          <InfoButton inline title="Breakout columns">{ColumnsInfo}</InfoButton>
+        </div>
         <div
           className="breakouts-scroll"
           data-testid="breakouts-scroll"
@@ -334,6 +365,7 @@ export function BreakoutsPage() {
             })}
           </div>
         </div>
+        </>
       )}
 
       {!loading && shown.length === 0 && rows.length > 0 && (

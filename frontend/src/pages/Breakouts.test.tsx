@@ -57,6 +57,17 @@ describe('BreakoutsPage', () => {
     expect(within(rows[2]).getByText('AAA')).toBeInTheDocument();
   });
 
+  it('explains every column from the table info icon', () => {
+    renderPage();
+    // The table-level ⓘ (distinct from the page-title one) opens a per-column legend.
+    fireEvent.click(screen.getByRole('button', { name: /What is Breakout columns\?/i }));
+    const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
+    expect(legend.getByText(/dollar volume traded today/i)).toBeInTheDocument();   // Turnover
+    expect(legend.getByText(/none recent/i)).toBeInTheDocument();                  // Last
+    expect(legend.getByText(/buyable-stock/i)).toBeInTheDocument();                // Verdict
+    expect(legend.getByText(/the 1.5× volume that confirms a breakout/i)).toBeInTheDocument(); // Vol %
+  });
+
   it('filters to only the Minervini-failing breakouts', () => {
     renderPage();
     // "Minervini ✗" is both a filter chip (button) and a summary label (div) —

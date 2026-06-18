@@ -30,6 +30,13 @@ volume-confirmed breakout), ranked by **breakout COUNT, highest first**.
   (`days_since_breakout == 0`).
 - Tapping a row → that name's **detail Breakout tab** (where each breakout fired
   on the price chart).
+- **Column reference (ⓘ)** — a *"What do these columns mean?"* info icon sits on
+  the table itself (above it, right-aligned, so it's visible without horizontal
+  scrolling on mobile). It opens a per-column legend covering every column:
+  #, Ticker, # breakouts, Last, Price, Δ%, Vol %, Total Vol, Turnover, Stage,
+  → R1/R2, Verdict — each with the Minervini p.203 cite where relevant. This is
+  separate from the page-title ⓘ (which explains the page concept). Added
+  2026-06-17. Every column header is also click-to-sort.
 
 ## Contract
 
