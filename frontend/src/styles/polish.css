@@ -612,6 +612,23 @@ h1, h2, h3, h4, h5, h6,
 .info-button__body p { margin: 0 0 8px; }
 .info-button__body p:last-child { margin-bottom: 0; }
 .info-button__body strong { color: var(--ink) !important; font-weight: 600; }
+
+/* "What's new" highlights (Ajay 2026-06-18) — a ✨ NEW pill on a freshly shipped
+   feature, and a small ✨ dot on the nav route that owns it. */
+.new-badge {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin-left: 6px; padding: 1px 7px;
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.05em;
+  color: #1a1205;
+  background: linear-gradient(180deg, #ffe487, var(--gold, #c9a227));
+  border-radius: 999px; cursor: pointer; vertical-align: middle;
+  white-space: nowrap; box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.4);
+  animation: new-pulse 2.2s ease-in-out infinite;
+}
+.new-badge:hover { filter: brightness(1.06); }
+.nav-new-dot { margin-left: 5px; font-size: 0.72em; line-height: 1; animation: new-pulse 2.2s ease-in-out infinite; }
+@keyframes new-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .new-badge, .nav-new-dot { animation: none; } }
 .info-button__body ul { margin: 4px 0 8px; padding-left: 18px; }
 .info-button__body li { margin: 2px 0; }
 

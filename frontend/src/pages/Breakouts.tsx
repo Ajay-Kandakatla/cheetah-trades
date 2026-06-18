@@ -20,6 +20,7 @@ import { marchToTarget, stageMeta } from '../lib/breakoutTargets';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
+import { NewBadge } from '../components/NewBadge';
 
 type FilterKey = 'all' | 'today' | 'minervini_pass' | 'minervini_fail' | 'bonde_pass' | 'bonde_fail' | 'both_pass';
 
@@ -184,6 +185,7 @@ export function BreakoutsPage() {
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             🚀 Breakouts
             <InfoButton inline title="Breakouts">{PageInfo}</InfoButton>
+            <NewBadge id="breakouts-beta" label="Beta column + sort by low volatility" />
           </h1>
           <p className="lede">
             Every name that's broken out, ranked by <strong>how often</strong> — highest first.

@@ -6,6 +6,7 @@ import { WatchlistRail } from './components/WatchlistRail';
 import { EngineStalledBanner } from './components/EngineStalledBanner';
 import { ChatWidget } from './components/ChatWidget';
 import { TourLauncher } from './components/TourLauncher';
+import { NewFeatureWatcher } from './components/NewFeatureWatcher';
 import { PortfolioRail } from './components/PortfolioRail';
 import { InstallToHomeScreen, shouldAutoShowInstallPrompt } from './components/InstallToHomeScreen';
 import { ensureServiceWorker } from './lib/pushSubscribe';
@@ -237,6 +238,7 @@ export function App() {
       {/* Floating 🧭 tour launcher (bottom-left) — replays the SiteTour from
           any page. Routes to /sepa and signals the page to start. */}
       <TourLauncher />
+      <NewFeatureWatcher />
       {showInstall && <InstallToHomeScreen onClose={() => setShowInstall(false)} />}
       <main className="main">
         <Suspense fallback={<PageLoader />}>

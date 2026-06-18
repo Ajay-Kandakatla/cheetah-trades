@@ -63,6 +63,16 @@ def _get_db():
             _db.perf_events.create_index("ts_dt", expireAfterSeconds=_TTL_DAYS * 86400)
         except Exception:
             pass
+        # "What's new" — per-user record of which shipped features they've seen.
+        # feature_views is the durable seen-set (no TTL); feature_events is the
+        # analytics log (impressions + first views, TTL'd like the rest).
+        _db.feature_views.create_index(
+            [("user_email", ASCENDING), ("feature", ASCENDING)], unique=True)
+        _db.feature_events.create_index([("ts", DESCENDING)])
+        try:
+            _db.feature_events.create_index("ts_dt", expireAfterSeconds=_TTL_DAYS * 86400)
+        except Exception:
+            pass
         return _db
     except Exception as exc:
         log.warning("analytics.store: mongo unavailable: %s", exc)
@@ -431,6 +441,72 @@ def aggregate_perf(days: int = 14) -> dict:
         log.debug("aggregate_perf: %s", exc)
         return {"routes": [], "metrics": [], "n": 0, "window_days": days, "available": False}
     return _summarize(docs, days)
+
+
+# ---------------------------------------------------------------------------
+# "What's new" feature highlights (Ajay 2026-06-18: highlight each shipped
+# feature until I've viewed it, and log the unviewed ones to analytics).
+# ---------------------------------------------------------------------------
+
+def feature_seen_set(email: str) -> list:
+    """Feature ids this user has already viewed (the highlight is cleared)."""
+    db = _get_db()
+    if db is None or not email:
+        return []
+    try:
+        return [d["feature"] for d in
+                db.feature_views.find({"user_email": email.lower()}, {"feature": 1})]
+    except Exception as exc:                       # noqa: BLE001
+        log.debug("feature_seen_set: %s", exc)
+        return []
+
+
+def mark_feature_seen(email: str, feature: str) -> bool:
+    """Record that the user has viewed a feature (clears its highlight) + log a
+    'viewed' analytics event. Returns True if this was the FIRST view."""
+    db = _get_db()
+    feature = (feature or "").strip()[:60]
+    if db is None or not email or not feature:
+        return False
+    now = _now()
+    now_dt = datetime.now(tz=timezone.utc)
+    try:
+        res = db.feature_views.update_one(
+            {"user_email": email.lower(), "feature": feature},
+            {"$setOnInsert": {"user_email": email.lower(), "feature": feature,
+                              "seen_at": now, "seen_at_dt": now_dt}},
+            upsert=True,
+        )
+        newly = res.upserted_id is not None
+        db.feature_events.insert_one({
+            "user_email": email.lower(), "feature": feature, "kind": "viewed",
+            "newly": newly, "ts": now, "ts_dt": now_dt,
+        })
+        return newly
+    except Exception as exc:                       # noqa: BLE001
+        log.debug("mark_feature_seen: %s", exc)
+        return False
+
+
+def log_feature_impressions(email: str, features: list) -> int:
+    """Log that the user was SHOWN new-feature highlights they haven't opened
+    yet (the 'until I view it, log it' signal). Returns count logged."""
+    db = _get_db()
+    if db is None or not email or not features:
+        return 0
+    now = _now()
+    now_dt = datetime.now(tz=timezone.utc)
+    docs = [{"user_email": email.lower(), "feature": str(f).strip()[:60],
+             "kind": "impression", "ts": now, "ts_dt": now_dt}
+            for f in features[:50] if str(f or "").strip()]
+    if not docs:
+        return 0
+    try:
+        db.feature_events.insert_many(docs, ordered=False)
+        return len(docs)
+    except Exception as exc:                       # noqa: BLE001
+        log.debug("log_feature_impressions: %s", exc)
+        return 0
 
 
 def personal_heatmap(email: str, days: int = 30) -> dict:

@@ -4,6 +4,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
 import { useCurrentUser } from '../hooks/useUser';
 import { useMyMenu, type MenuItem } from '../hooks/useMyMenu';
+import { NavLabel } from './NavLabel';
 import { MarketGaugeBadge } from './MarketGaugeBadge';
 import { openRail } from '../lib/railBus';
 
@@ -219,7 +220,7 @@ export function NavBar() {
                       className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
                       onClick={() => setDrawerOpen(false)}
                     >
-                      {t.label}
+                      <NavLabel item={t} />
                     </NavLink>
                   ))}
                 </>
@@ -234,7 +235,7 @@ export function NavBar() {
                       className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
                       onClick={() => setDrawerOpen(false)}
                     >
-                      {t.label}
+                      <NavLabel item={t} />
                     </NavLink>
                   ))}
                 </>
@@ -252,7 +253,7 @@ export function NavBar() {
                           className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
                           onClick={() => setDrawerOpen(false)}
                         >
-                          {t.label}
+                          <NavLabel item={t} />
                         </NavLink>
                       ))}
                     </Fragment>
@@ -269,7 +270,7 @@ export function NavBar() {
                       className={({ isActive }) => `cm-nav__drawer-link${isActive ? ' is-active' : ''}`}
                       onClick={() => setDrawerOpen(false)}
                     >
-                      {t.label}
+                      <NavLabel item={t} />
                     </NavLink>
                   ))}
                 </>
@@ -311,7 +312,7 @@ export function NavBar() {
             to={t.to}
             className={({ isActive }) => `cm-nav__link${isActive ? ' is-active' : ''}`}
           >
-            {t.label}
+            <NavLabel item={t} />
           </NavLink>
         ))}
 
@@ -335,7 +336,7 @@ export function NavBar() {
                     className={({ isActive }) => `cm-nav__dropdown-link${isActive ? ' is-active' : ''}`}
                     role="menuitem"
                   >
-                    {t.label}
+                    <NavLabel item={t} />
                   </NavLink>
                 ))}
               </div>
@@ -366,7 +367,7 @@ export function NavBar() {
                         className={({ isActive }) => `cm-nav__dropdown-link${isActive ? ' is-active' : ''}`}
                         role="menuitem"
                       >
-                        {t.label}
+                        <NavLabel item={t} />
                       </NavLink>
                     ))}
                   </Fragment>
@@ -409,7 +410,7 @@ export function NavBar() {
                   className={({ isActive }) => `cm-nav__dropdown-link${isActive ? ' is-active' : ''}`}
                   role="menuitem"
                 >
-                  {t.label}
+                  <NavLabel item={t} />
                 </NavLink>
               ))}
               <a

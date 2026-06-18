@@ -106,6 +106,42 @@ async def analytics_perf_summary(
 
 
 # ---------------------------------------------------------------------------
+# "What's new" feature highlights (Ajay 2026-06-18)
+# ---------------------------------------------------------------------------
+@router.get("/features/seen")
+async def features_seen(email: str = Depends(current_user_email)):
+    """Feature ids this user has already viewed (highlight cleared)."""
+    seen = await asyncio.to_thread(store.feature_seen_set, email)
+    return JSONResponse({"seen": seen})
+
+
+@router.post("/features/seen")
+async def features_mark_seen(
+    payload: dict = Body(...),
+    email: str = Depends(current_user_email),
+):
+    """Mark a feature viewed (clears its highlight) + log the first view."""
+    feature = (payload.get("feature") or "").strip()
+    if not feature:
+        return JSONResponse({"ok": False, "reason": "feature required"})
+    newly = await asyncio.to_thread(store.mark_feature_seen, email, feature)
+    return JSONResponse({"ok": True, "newly": newly})
+
+
+@router.post("/features/impression")
+async def features_impression(
+    payload: dict = Body(...),
+    email: str = Depends(current_user_email),
+):
+    """Log new-feature highlights the user was shown but hasn't opened yet."""
+    features = payload.get("features")
+    if not isinstance(features, list):
+        return JSONResponse({"ok": False, "logged": 0})
+    n = await asyncio.to_thread(store.log_feature_impressions, email, features)
+    return JSONResponse({"ok": True, "logged": n})
+
+
+# ---------------------------------------------------------------------------
 # Dashboard (admin)
 # ---------------------------------------------------------------------------
 @router.get("/analytics/dashboard")
