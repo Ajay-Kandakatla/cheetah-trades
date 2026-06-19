@@ -167,6 +167,11 @@ type Analytics = {
     close_confirm?: TriggerStats | null;
     manual?: TriggerStats | null;
   };
+  by_source?: {
+    sim?: TriggerStats | null;
+    paper?: TriggerStats | null;
+    live?: TriggerStats | null;
+  };
   open_risk_dollars: number;
   vs_book: VsBook;
 };
@@ -1137,7 +1142,7 @@ function TriggerRow({ label, s }: { label: string; s?: TriggerStats | null }) {
   );
 }
 
-function AnalyticsView({ a, err }: { a: Analytics | null; err: boolean }) {
+export function AnalyticsView({ a, err }: { a: Analytics | null; err: boolean }) {
   if (!a && err) {
     return <p style={{ fontSize: '0.8rem', color: C.red }}>Can't load analytics — is the api container running?</p>;
   }
@@ -1238,6 +1243,33 @@ function AnalyticsView({ a, err }: { a: Analytics | null; err: boolean }) {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* By venue (sim vs live paper). The headline stats above stay the
+          continuous record across the cutover; this splits it by source. */}
+      <section style={{ marginBottom: '0.5rem' }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>🏟️ By venue · the rodeo continues</div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>
+                <th style={TH}>Venue</th>
+                <th style={TH}>n</th>
+                <th style={TH}>Batting</th>
+                <th style={TH}>Avg gain</th>
+              </tr>
+            </thead>
+            <tbody>
+              <TriggerRow label="SIM (paper)" s={a.by_source?.sim} />
+              <TriggerRow label="Alpaca paper" s={a.by_source?.paper} />
+              {a.by_source?.live ? <TriggerRow label="live" s={a.by_source?.live} /> : null}
+            </tbody>
+          </table>
+        </div>
+        <p style={{ fontSize: '0.72rem', color: C.sub, margin: '6px 0 0' }}>
+          The headline stats are the <b style={{ color: 'inherit' }}>combined</b> record across both venues —
+          the track record carries over from the sim into live paper.
+        </p>
       </section>
 
       <p className="mono" style={{ fontSize: '0.66rem', color: C.sub, marginTop: '1rem' }}>
