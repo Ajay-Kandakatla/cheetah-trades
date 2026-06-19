@@ -183,7 +183,7 @@ def _exit_and_realized(entry: dict, exit_row: dict, entry_price,
     det = exit_row.get("detail") or {}
     kind = exit_row.get("kind")
     leg = det.get("leg")
-    if leg not in ("stop", "take_profit"):
+    if leg not in ("stop", "take_profit", "sim_handover"):
         leg = "flatten"
 
     exit_price = None
@@ -220,7 +220,8 @@ def _exit_and_realized(entry: dict, exit_row: dict, entry_price,
         holding_days = round((xe - ee) / _SECONDS_PER_DAY, 2)
 
     exit_reason = {"stop": "stopped out", "take_profit": "take-profit",
-                   "flatten": "manual flatten"}.get(leg, leg)
+                   "flatten": "manual flatten",
+                   "sim_handover": "SIM paper handover"}.get(leg, leg)
     if kind == "flatten_all":
         exit_reason = "flatten-all (disaster plan)"
 
@@ -449,7 +450,8 @@ def narrate(doc: dict) -> str:
     leg = x.get("leg")
     verb = {"take_profit": "Exited via take-profit",
             "stop": "Stopped out",
-            "flatten": "Manually flattened"}.get(leg, "Closed")
+            "flatten": "Manually flattened",
+            "sim_handover": "Booked at SIM paper handover"}.get(leg, "Closed")
     seg = verb
     if x.get("price") is not None:
         seg += " @ %s" % _fmt_money(x["price"])
