@@ -192,6 +192,55 @@ def _notify_autopilot(kind: str, ticker: str, detail: str) -> None:
         log.warning("autopilot push failed (%s %s): %s", kind, ticker, exc)
 
 
+# ── Account starting baseline (P&L denominator) ────────────────────────────
+
+def _baseline_coll():
+    db = _db()
+    return None if db is None else db.trading_account_baseline
+
+
+def account_starting_cash(acct: dict) -> float:
+    """The "what we started this account with" baseline for the P&L header.
+
+    The SIM reports `starting_cash` on its account directly. A live/paper
+    brokerage account has no such field — its API only knows the equity right
+    now — so the FIRST time we ever see the account we snapshot its equity and
+    persist it (keyed by the account id), then read that snapshot forever after.
+    "started $X -> equity now" then reads as the gain since the engine was
+    connected to this account, which is what the dashboard wants.
+
+    Degrades safely: with no Mongo it returns current equity (P&L shows $0,
+    never a crash). Deleting the persisted doc re-baselines on the next read."""
+    acct = acct or {}
+    sc = acct.get("starting_cash")
+    if sc is not None:
+        try:
+            return float(sc)
+        except (TypeError, ValueError):
+            pass
+    try:
+        equity = float(acct.get("equity") or 0)
+    except (TypeError, ValueError):
+        equity = 0.0
+    key = str(acct.get("account_number") or acct.get("id") or _broker_mode())
+    coll = _baseline_coll()
+    if coll is None:
+        return equity
+    try:
+        doc = coll.find_one({"account_key": key})
+        if doc is not None and doc.get("starting_equity") is not None:
+            return float(doc["starting_equity"])
+        coll.update_one(
+            {"account_key": key},
+            {"$set": {"account_key": key, "starting_equity": equity,
+                      "mode": _broker_mode(), "snapshot_ts": _utc_iso()}},
+            upsert=True)
+        return equity
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("account baseline read/seed failed (%s): %s", key, exc)
+        return equity
+
+
 # ── Account P&L summary (Auto-Pilot dashboard) ─────────────────────────────
 
 def pnl_summary(account, positions) -> dict:
@@ -646,7 +695,7 @@ def status() -> dict:
         out["account"] = {"equity": float(acct.get("equity") or 0),
                           "cash": float(acct.get("cash") or 0),
                           "buying_power": float(acct.get("buying_power") or 0),
-                          "starting_cash": float(acct.get("starting_cash") or 0)}
+                          "starting_cash": account_starting_cash(acct)}
         out["market_open"] = bool(broker.clock().get("is_open"))
         out["regime"] = regime()
         orders = _flatten_orders(broker.open_orders())
