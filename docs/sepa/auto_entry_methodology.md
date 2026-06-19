@@ -183,6 +183,44 @@ plumbing/process trial, not an execution-quality measurement.
 active broker IS the sim) or `python -m trading.broker_sim reset` — drops
 the three collections and restores starting cash.
 
+## 10. SIM → brokerage cutover (Ajay 2026-06-19)
+
+When the engine switches venue from the sim to a paper/live brokerage, three
+accounting seams matter. None of them is a book number; they are about keeping
+the **track record continuous and honest** across the boundary.
+
+**Account P&L baseline (`exit_engine.account_starting_cash`).** The sim reports
+`starting_cash` on its account; a brokerage account does not — its API only
+knows equity *now*. So the first time the engine sees a brokerage account it
+**snapshots equity** and persists it in `trading_account_baseline` (keyed by
+account id), reading that snapshot forever after. The dashboard's "started $X →
+made $Y" header then reads as gain *since the engine connected to this account*.
+Seed it while the account is pristine (right after the cutover) so the baseline
+is the true starting equity. Degrades safely (no Mongo → P&L shows $0, never a
+crash); delete the doc to re-baseline.
+
+**Venue label on every fill.** `entries.enter()` stamps the active broker
+`mode` (`sim`/`paper`/`live`) into the entry ledger row. `journal` surfaces it;
+`analytics.compute()` adds a `by_source` breakdown beside `by_trigger`. The
+headline batting/expectancy stays the **combined** record across the cutover
+(the continuous "rodeo"); `by_source` lets the live-paper accuracy accrue in
+parallel. Fills predating the cutover carry no `mode` and bucket as `sim`.
+
+**Open-position handover (`trading/sim_handover.py`).** The sim's still-open
+paper positions cannot move to the brokerage account. Left alone they linger as
+ghost "open" round-trips marking to live prices forever. `sim_handover.run()`
+books each one **closed at its last simulated mark** — a labelled
+`trade_closed`/`sim_handover` ledger row — so the sim chapter becomes realized
+history and the only open trades going forward are the real brokerage ones.
+Properties: pure journal history (never a broker order; the sim is no longer the
+active venue); does **not** feed the consecutive-loss streak (that reads broker
+fills, not the ledger), so sim results never penalise live-paper sizing; the
+journal recomputes the realized gain against each entry's recorded price (single
+basis); idempotent (a symbol already booked is skipped). Run once after the
+switch: `python -m trading.sim_handover` (`--dry-run` to preview). The handover
+mark is **not** an engine exit signal — it is just "where the sim stood when we
+handed over," and is labelled as such in the journal narrative.
+
 Invariants unchanged: `armed=false` places nothing anywhere (sim included);
 buys only via `entries.enter()`; constants locked in
 `tests/test_trading_contracts.py` (SIM tokens + the factory invariant: no
