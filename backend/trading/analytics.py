@@ -91,6 +91,15 @@ def _trigger_path(trade):
     return p if p in ("intraday", "close_confirm") else "manual"
 
 
+def _source(trade):
+    """sim | paper | live — the venue this fill happened on. Fills predating
+    the Alpaca cutover carry no `mode` (the journal only began stamping it
+    then); every one of those was the sim, so None -> 'sim'."""
+    mode = (trade.get("entry") or {}).get("mode")
+    m = str(mode).lower() if mode else "sim"
+    return m if m in ("sim", "paper", "live") else "sim"
+
+
 def _empty():
     """Zeroed shape returned on empty input (no exceptions, ever)."""
     return {
@@ -100,7 +109,7 @@ def _empty():
         "expectancy_dollars": 0.0, "avg_r": 0.0,
         "total_pnl_dollars": 0.0, "total_pnl_pct_on_risk": 0.0,
         "best": None, "worst": None, "avg_holding_days": 0.0,
-        "equity_curve": [], "by_trigger": {},
+        "equity_curve": [], "by_trigger": {}, "by_source": {},
         "open_risk_dollars": 0.0,
         "vs_book": {
             "target_ratio": TARGET_RATIO, "stretch_ratio": STRETCH_RATIO,
@@ -231,6 +240,18 @@ def compute(trades, open_marks=None) -> dict:
         if s["n"]:
             by_trigger[path] = s
 
+    # By source venue (sim vs live paper). The combined stats above stay the
+    # CONTINUOUS track record across the sim -> paper cutover; this split lets
+    # the dashboard watch the live-paper batting average accrue in parallel.
+    by_source = {}
+    src_buckets = {}
+    for t in trades:
+        src_buckets.setdefault(_source(t), []).append(t)
+    for src, group in src_buckets.items():
+        s = _subset_stats(group)
+        if s["n"]:
+            by_source[src] = s
+
     # half-average-gain stop (p.299), capped 10.
     half_stop = min(round(avg_gain / 2.0, 2), HALF_AVG_GAIN_CAP) if avg_gain > 0 else 0.0
 
@@ -254,6 +275,7 @@ def compute(trades, open_marks=None) -> dict:
         "avg_holding_days": avg_hold,
         "equity_curve": curve,
         "by_trigger": by_trigger,
+        "by_source": by_source,
         "open_risk_dollars": _open_risk(open_marks),
         "vs_book": {
             "target_ratio": TARGET_RATIO,

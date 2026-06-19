@@ -248,6 +248,15 @@ def enter(symbol: str, limit_price: Optional[float] = None,
     qty = ctx["sizing"]["shares"]
     client_order_id = broker.make_client_order_id(sym, "entry")
 
+    # Stamp the venue (sim | paper | live) so the journal/analytics can label
+    # and segment this fill by source (SIM track record vs live paper). Never
+    # block a buy on a mode read — degrade to None (journal treats None as sim,
+    # since every pre-Alpaca fill was the sim).
+    try:
+        broker_mode = broker.mode()
+    except Exception:                              # noqa: BLE001
+        broker_mode = None
+
     try:
         order = broker.submit_bracket(
             sym, qty,
@@ -260,6 +269,7 @@ def enter(symbol: str, limit_price: Optional[float] = None,
 
     detail = {
         "order_id": order.get("id"), "client_order_id": client_order_id,
+        "mode": broker_mode,
         "qty": qty, "price": price, "price_source": ctx["price_source"],
         "limit_price": limit_price, "allocation": ctx["sizing"]["allocation"],
         "equity_used": ctx["equity_used"], "equity_cap": ctx["equity_cap"],
