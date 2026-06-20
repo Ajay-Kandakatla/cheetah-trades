@@ -71,19 +71,19 @@ export function AddHoldingForm({ onAdded }: Props) {
         <span className="eyebrow">Add a holding manually</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.6rem', flexWrap: 'wrap' }}>
-        <label style={labelCol}>
+        <label style={labelCol} htmlFor="ahf-symbol">
           Symbol
-          <input value={symbol} onChange={(e) => setSymbol(e.target.value)} onKeyDown={onEnter}
+          <input id="ahf-symbol" value={symbol} onChange={(e) => setSymbol(e.target.value)} onKeyDown={onEnter}
             placeholder="AAPL" style={{ ...field, width: 90, textTransform: 'uppercase' }} />
         </label>
-        <label style={labelCol}>
+        <label style={labelCol} htmlFor="ahf-shares">
           Shares (how many)
-          <input value={shares} onChange={(e) => setShares(e.target.value)} onKeyDown={onEnter}
+          <input id="ahf-shares" value={shares} onChange={(e) => setShares(e.target.value)} onKeyDown={onEnter}
             inputMode="decimal" placeholder="10" style={{ ...field, width: 110 }} />
         </label>
-        <label style={labelCol}>
+        <label style={labelCol} htmlFor="ahf-price">
           Price / share (how much)
-          <input value={price} onChange={(e) => setPrice(e.target.value)} onKeyDown={onEnter}
+          <input id="ahf-price" value={price} onChange={(e) => setPrice(e.target.value)} onKeyDown={onEnter}
             inputMode="decimal" placeholder="306.50" style={{ ...field, width: 130 }} />
         </label>
         <div style={{ fontSize: '0.72rem', color: '#8b97ad', minWidth: 90 }}>
