@@ -200,6 +200,7 @@ export function ChartReadingGuide() {
                 </h2>
               </div>
               <button onClick={() => setOpen(false)}
+                      aria-label="Close"
                       style={{ background: 'none', border: 0, color: 'var(--cm-slate)', cursor: 'pointer',
                                fontSize: '1.4rem', lineHeight: 1, padding: '8px 10px', margin: '-8px -10px 0 0' }}>×</button>
             </header>
