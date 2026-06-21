@@ -93,7 +93,7 @@ export function PriceAlertModal({
               <div className="sepa-drawer__exchange mono">last ${currentPrice}</div>
             )}
           </div>
-          <button className="sepa-drawer__close" onClick={onClose}>×</button>
+          <button className="sepa-drawer__close" onClick={onClose} aria-label="Close alert modal">×</button>
         </header>
 
         <form className="sepa-alert-form" onSubmit={submit}>
