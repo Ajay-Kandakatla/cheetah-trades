@@ -160,7 +160,13 @@ def _is_setup_ready(tr, stg, bc, liq, entry_setup, *, exhaustion: bool = False) 
         tr.pass_all
         and stg and stg.get("stage") == 2
         and entry_setup is not None
-        and (bc is None or not bc.get("is_avoid_stage"))
+        # Stale cached blobs (fast path) predate is_avoid_stage — fall back to
+        # is_late_stage so an old base-5 row stays EXCLUDED (the old, stricter
+        # gate) until the next full scan refreshes it. Without the fallback,
+        # `not bc.get("is_avoid_stage")` would be `not None` == True and admit
+        # it. Mirrors the contract test's replication.
+        and (bc is None
+             or not bc.get("is_avoid_stage", bc.get("is_late_stage", False)))
         and not exhaustion
         and liq.get("liquid")
     )

@@ -67,6 +67,14 @@ def test_extended_mvp_not_near_base_bottom():
     assert out["near_base_bottom"] is False             # started extended, not off the bottom
 
 
+def test_momentum_boundary_exactly_12_up_days_passes():
+    # Boundary: the gate is >= 12, so exactly 12 of 15 up must qualify.
+    closes, vols = _series(100, 50, 100, n_up=12)
+    out = mvp.compute(_df(closes, vols))
+    assert out["up_days"] == 12
+    assert out["has_mvp"] is True
+
+
 def test_no_mvp_when_flat():
     closes = [100.0] * 70
     vols = [1_000_000] * 70
@@ -119,6 +127,21 @@ def test_base_5_blocked_by_avoid_stage():
     from sepa import scanner as S
     bc = {"base_count": 5, "is_late_stage": True, "is_avoid_stage": True}
     assert S._is_setup_ready(_tr(), _STG2, bc, _LIQ, _SETUP) is False
+
+
+def test_stale_blob_without_avoid_stage_falls_back_to_late_stage():
+    # Fast-path cached blobs predate is_avoid_stage. A base-5 row with only
+    # is_late_stage must STILL be excluded (the old, stricter gate) — not
+    # silently admitted by `not None`. base-4 stale blob also stays excluded
+    # until a fresh scan adds is_avoid_stage.
+    from sepa import scanner as S
+    stale5 = {"base_count": 5, "is_late_stage": True}          # no is_avoid_stage
+    stale4 = {"base_count": 4, "is_late_stage": True}
+    assert S._is_setup_ready(_tr(), _STG2, stale5, _LIQ, _SETUP) is False
+    assert S._is_setup_ready(_tr(), _STG2, stale4, _LIQ, _SETUP) is False
+    # A fresh base-4 blob (is_avoid_stage present + False) IS tradeable again.
+    fresh4 = {"base_count": 4, "is_late_stage": True, "is_avoid_stage": False}
+    assert S._is_setup_ready(_tr(), _STG2, fresh4, _LIQ, _SETUP) is True
 
 
 def test_exhaustion_blocks_setup_ready_and_buyable():
