@@ -39,6 +39,13 @@ def count_bases(df: pd.DataFrame, lookback: int = 504) -> Optional[dict]:
 
     return {
         "base_count": bases,
+        # Book Ch 11 / TTLAC §9 (ttlac.md ~p.200): bases 1-2 best; 3-4 "can also
+        # work, but are later in the cycle and should be treated more as trading
+        # opportunities"; bases 5-6 are "extremely failure prone and should be
+        # viewed as opportunities to sell." So is_late_stage (>=4) drives the
+        # SCORE PENALTY / label, while is_avoid_stage (>=5) is the harder
+        # buy-gate exclusion — base 3-4 stay tradeable (TTLAC §9 p.200).
         "is_early_base": bases <= 2,
         "is_late_stage": bases >= 4,
+        "is_avoid_stage": bases >= 5,
     }

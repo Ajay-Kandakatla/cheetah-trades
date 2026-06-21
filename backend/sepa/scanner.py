@@ -40,6 +40,7 @@ from .progress import ProgressEmitter
 from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
+    mvp as mvp_indicator,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
     group_leadership, buyable_verdict,
@@ -115,19 +116,52 @@ def _determine_setup(vcp_info, pp_info, vol, last_px):
     return entry_setup, base_mult, risk_mult, risk_to_stop_pct
 
 
-def _is_setup_ready(tr, stg, bc, liq, entry_setup) -> bool:
+def _mvp_context(df, bc, sells):
+    """MVP footprint (David Ryan's "ants", TTLAC §1 p.33) + its CONTEXT-dependent
+    read (§9 p.199). Returns (mvp_info, mvp_exhaustion, mvp_read):
+
+      * mvp_info       — sepa.mvp.compute() footprint (or None).
+      * mvp_exhaustion — the SAME footprint read in REVERSE as a SELL signal:
+        an MVP run that is extended from a LATE-STAGE base (is_late_stage, ≥4)
+        OR during a climax/blow-off run (sell_signals climax) is exhaustion,
+        not strength (§9 p.199 "a late-stage exhaustion move versus an
+        early-stage breakout move"). Conservative: blocks the buy.
+      * mvp_read       — "continuation" (bullish) | "exhaustion" (bearish) |
+        None (no MVP footprint) — drives the FE chip colour.
+    """
+    mvp_info = mvp_indicator.compute(df)
+    climax = bool(((sells or {}).get("signals") or {}).get("climax_run_25pct_in_3w"))
+    mvp_exhaustion = bool(
+        mvp_info and mvp_info.get("has_mvp")
+        and (climax or (bc and bc.get("is_late_stage"))))
+    mvp_read = None
+    if mvp_info and mvp_info.get("has_mvp"):
+        mvp_read = "exhaustion" if mvp_exhaustion else "continuation"
+    return mvp_info, mvp_exhaustion, mvp_read
+
+
+def _is_setup_ready(tr, stg, bc, liq, entry_setup, *, exhaustion: bool = False) -> bool:
     """The book buy-now gate MINUS the volume-breakout trigger (pp.79-83, 198):
-    Trend Template + Stage 2 advancing + a setup + not a late-stage base +
-    liquid. A name that is_setup_ready is sitting in a proper base one
-    volume-confirmed breakout away from is_buyable — the "ready, waiting for the
-    trigger" tier. Exposed so the FE 'Breakout: ≤1wk / Any' toggle can relax the
-    strict SAME-DAY breakout requirement (the breakout may have fired earlier in
-    the week, or the user may want the ready set without a trigger gate)."""
+    Trend Template + Stage 2 advancing + a setup + NOT in the avoid-stage base
+    + NOT an MVP/climax exhaustion + liquid.
+
+    Base-stage gate (TTLAC §9, ttlac.md ~p.200): bases 1-2 are best and 3-4
+    "can also work, but are later in the cycle and should be treated more as
+    trading opportunities"; only bases 5-6 are "extremely failure prone and
+    should be viewed as opportunities to sell." So the EXCLUSION uses
+    is_avoid_stage (base ≥5) — base 3-4 stay tradeable (they still take the
+    is_late_stage score penalty). `exhaustion` is the MVP indicator read in
+    reverse (TTLAC §1 p.34 / §9 p.199): an MVP footprint extended from a
+    late-stage base / during a climax is a SELL, never a buy.
+
+    Exposed so the FE 'Breakout: ≤1wk / Any' toggle can relax the strict
+    SAME-DAY breakout requirement."""
     return bool(
         tr.pass_all
         and stg and stg.get("stage") == 2
         and entry_setup is not None
-        and (bc is None or not bc.get("is_late_stage"))
+        and (bc is None or not bc.get("is_avoid_stage"))
+        and not exhaustion
         and liq.get("liquid")
     )
 
@@ -163,7 +197,8 @@ def ext_from_pivot_pct(entry_setup, vol, last_px):
     return None
 
 
-def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None) -> bool:
+def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None, *,
+                mvp=None, exhaustion: bool = False) -> bool:
     """Book buy-now gate (pp.79-83, 198-203): `_is_setup_ready` PLUS a TODAY
     VOLUME-CONFIRMED breakout (high_vol_breakout or pocket_pivot, p.203) that is
     still NEAR the pivot — NOT extended past it (book p.224, added 2026-06-09).
@@ -174,13 +209,21 @@ def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None) -> bool:
     the gate never looked at distance-to-pivot. Now a breakout >BUYABLE_MAX_EXT_PCT
     above the buy reference drops out of the buyable tier (it stays is_candidate /
     setup_ready — watchlist). Pocket pivots form INSIDE the base (at/below the
-    pivot) so they are never extended and pass."""
-    if not _is_setup_ready(tr, stg, bc, liq, entry_setup):
+    pivot) so they are never extended and pass.
+
+    MVP near-base-bottom EXCEPTION (TTLAC §1 p.34): "sometimes a stock will have
+    these MVP characteristics and not be extended. That can occur when the
+    15-day time frame begins near the bottom of a base. In that case, the stock
+    is in position to be bought immediately." So an MVP run whose 15-day window
+    began near the base low (mvp.near_base_bottom) is buyable even past the 3%
+    cap. Exhaustion (MVP from a late-stage base / climax) is never buyable."""
+    if not _is_setup_ready(tr, stg, bc, liq, entry_setup, exhaustion=exhaustion):
         return False
     if not (vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))):
         return False
     ext = ext_from_pivot_pct(entry_setup, vol, last_px)
-    if ext is not None and ext > BUYABLE_MAX_EXT_PCT:
+    near_base_bottom = bool(mvp and mvp.get("has_mvp") and mvp.get("near_base_bottom"))
+    if ext is not None and ext > BUYABLE_MAX_EXT_PCT and not near_base_bottom:
         return False
     return True
 
@@ -370,6 +413,9 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     pp_info = power_play.detect(df)
     bc = base_count.count_bases(df)
     sells = sell_signals.evaluate(df)
+    # MVP indicator (David Ryan's "ants", TTLAC §1 p.33 / §9 p.199) + its
+    # context read (bullish continuation vs late-stage exhaustion sell).
+    mvp_info, mvp_exhaustion, mvp_read = _mvp_context(df, bc, sells)
     # Venky's filter stack (weekly 21-SMA + ATR + ADX). Always returns a
     # nested dict shape so the FE chips can rely on the schema; gates
     # internally set `error` rather than raising.
@@ -427,9 +473,17 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         score += SCORE_WEIGHTS["liquidity_adr"] * 0.4
     if adr_value and adr_value >= 4.0:
         score += SCORE_WEIGHTS["liquidity_adr"] * 0.6
-    # Base count penalty (late stage = exhaustion)
+    # Base count penalty (late stage = exhaustion, base ≥4)
     if bc and bc.get("is_late_stage"):
         score -= 8
+    # MVP indicator read in reverse (TTLAC §9 p.199): an MVP footprint extended
+    # from a late-stage base / during a climax is exhaustion — penalise. An MVP
+    # continuation off an EARLY base is the runner that "continues much higher"
+    # (TTLAC §1 p.33-34) — small bonus.
+    if mvp_exhaustion:
+        score -= 8
+    elif mvp_read == "continuation" and bc and bc.get("is_early_base"):
+        score += 3
     # Institutional-sponsorship demotion (book p.195) — thin names rank below
     # liquid leaders so single-digit/manipulable stocks can't top the list.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
@@ -437,9 +491,11 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # Actionability bonus (book p.203): a name you can BUY today — a volume-
     # confirmed breakout in a Stage-2 setup, not late — outranks one still
     # waiting below its trigger (ranks in-buy-zone above WAIT). 2026-06-01.
-    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px)
+    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px,
+                          mvp=mvp_info, exhaustion=mvp_exhaustion)
     _ext_pct = ext_from_pivot_pct(entry_setup, vol, _last_px)
-    setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup)
+    setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup,
+                                  exhaustion=mvp_exhaustion)
     if buyable:
         score += 4
 
@@ -496,6 +552,11 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "power_play": pp_info,
         "base_count": bc,
         "sell_signals": sells,
+        # David Ryan's MVP indicator (TTLAC §1 p.33 / §9 p.199): the footprint +
+        # its context read ("continuation" bullish | "exhaustion" sell | null).
+        "mvp": mvp_info,
+        "mvp_read": mvp_read,
+        "mvp_exhaustion": mvp_exhaustion,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
         # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as
@@ -984,6 +1045,10 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     vcp_info = blob.get("vcp")
     pp_info = blob.get("power_play")
     bc = blob.get("base_count")
+    # MVP indicator + context read (TTLAC §1 p.33 / §9 p.199). bc comes from the
+    # cached research blob; pre-MVP blobs simply lack is_avoid_stage (degrades to
+    # not-avoid until the next full scan refreshes them).
+    mvp_info, mvp_exhaustion, mvp_read = _mvp_context(df, bc, sells)
     adr_value = blob.get("adr_baseline")
     fundamentals = blob.get("fundamentals")
     moat = blob.get("moat")
@@ -1034,12 +1099,19 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     score += eq_delta
     if bc and bc.get("is_late_stage"):
         score -= 8
+    # MVP reverse/exhaustion penalty + continuation bonus — see full-scan path.
+    if mvp_exhaustion:
+        score -= 8
+    elif mvp_read == "continuation" and bc and bc.get("is_early_base"):
+        score += 3
     # Institutional-sponsorship demotion (book p.195) — see full-scan path.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
     # Actionability bonus (book p.203) — see full-scan path.
-    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px)
+    buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px,
+                          mvp=mvp_info, exhaustion=mvp_exhaustion)
     _ext_pct = ext_from_pivot_pct(entry_setup, vol, _last_px)
-    setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup)
+    setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup,
+                                  exhaustion=mvp_exhaustion)
     if buyable:
         score += 4
     score = max(0.0, min(score, 100.0))
@@ -1088,6 +1160,11 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "power_play": pp_info,
         "base_count": bc,
         "sell_signals": sells,
+        # David Ryan's MVP indicator (TTLAC §1 p.33 / §9 p.199): the footprint +
+        # its context read ("continuation" bullish | "exhaustion" sell | null).
+        "mvp": mvp_info,
+        "mvp_read": mvp_read,
+        "mvp_exhaustion": mvp_exhaustion,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
         # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as

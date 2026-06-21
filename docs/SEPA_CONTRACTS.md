@@ -9,8 +9,12 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.1 (2026-05-31) — added §5b `is_buyable` volume-confirmed-breakout
-pillar (book p.203) + §4 institutional-sponsorship rank demotion (book p.195).
+**Version:** 1.2 (2026-06-19) — MVP indicator (TTLAC §1 p.33, §9b) + base-stage
+buy gate: §5b clause 4 now excludes `is_avoid_stage` (base ≥5) not `is_late_stage`
+(bases 3–4 tradeable, TTLAC §9 p.200); new clause 8 `mvp_exhaustion` blocks; MVP
+near-base-bottom exception to the 3% cap (§1 p.34); §3 adds `mvp`/`is_avoid_stage`.
+Prior: 1.1 (2026-05-31) — §5b `is_buyable` volume-confirmed-breakout pillar
+(book p.203) + §4 institutional-sponsorship rank demotion (book p.195).
 Prior: 1.0 (2026-05-24).
 **Anchor commit:** locked at the SHA of the first commit that adds this doc.
 
@@ -119,8 +123,18 @@ CandidateRow = {
     "base_count": {                           # which base #
         "base_count":     int,                # 1, 2, 3, ...
         "is_early_base":  bool,               # ≤ 2 = good
-        "is_late_stage":  bool,               # ≥ 4 = penalty
+        "is_late_stage":  bool,               # ≥ 4 = score penalty / label
+        "is_avoid_stage": bool,               # ≥ 5 = buy-gate exclusion (TTLAC §9)
     },
+    "mvp": {                                  # MVP indicator (TTLAC §1 p.33); null if n/a
+        "has_mvp":          bool,             # up 12/15 + vol +25% + price +20% (15d)
+        "up_days":          int,
+        "price_pct":        float,
+        "volume_pct":       float,
+        "near_base_bottom": bool,             # window began near base low (buy exception)
+    },
+    "mvp_read": "continuation" | "exhaustion" | None,  # bullish | sell | n/a
+    "mvp_exhaustion": bool,                   # MVP reverse/sell read (blocks buy gate)
     "entry_setup": {                          # null when no VCP and no Power Play
         "type":   "VCP" | "POWER_PLAY",
         "pivot":  float,
@@ -326,7 +340,11 @@ A row is `is_buyable: True` if and only if ALL of:
 1. `trend.pass_all == True`
 2. `stage.stage == 2` (Weinstein Stage 2 advancing)
 3. `entry_setup is not None` (VCP or Power Play present)
-4. `base_count` is None OR `base_count.is_late_stage == False` (≤3 bases)
+4. `base_count` is None OR `base_count.is_avoid_stage == False` (bases ≤ 4 —
+   **changed 2026-06-19**, was `is_late_stage` / ≤3). TTLAC §9 ~p.200: bases 3–4
+   "can also work … treated more as trading opportunities"; only bases 5–6 are
+   "extremely failure prone." Bases 3–4 stay buyable (still take the
+   `is_late_stage` score penalty).
 5. `liquidity.liquid == True`
 6. **`volume.high_vol_breakout OR volume.pocket_pivot`** — a VOLUME-CONFIRMED
    breakout (**added 2026-05-31**).
@@ -336,6 +354,14 @@ A row is `is_buyable: True` if and only if ALL of:
    stable base-high pivot), else `volume.recent_high` (the 21-bar breakout high)
    for a bare breakout. `None` reference ⇒ clause passes (degrades to the prior
    behavior). Pocket pivots form inside the base (≤ reference) so they always pass.
+   **MVP near-base-bottom exception (2026-06-19, TTLAC §1 p.34):** an MVP run whose
+   15-day window began near the base low (`mvp.has_mvp AND mvp.near_base_bottom`)
+   is buyable even past the 3% cap — "in position to be bought immediately."
+8. **NOT MVP exhaustion** — `mvp_exhaustion == False` (**added 2026-06-19**). The
+   MVP indicator read in reverse (TTLAC §9 p.199): an MVP footprint extended from a
+   late-stage base / during a climax run is a SELL, never a buy. Closes the
+   "buy/sell disagree" hole where a blow-off top (no 15-bar base ⇒ `base_count`
+   reads base 1) used to pass the buy gate. See `docs/sepa/mvp_methodology.md`.
 
 > Book p.224 verbatim: *"You want to buy as close to the pivot point as possible
 > without chasing the stock up more than a few percentage points."* The book gives
@@ -746,6 +772,35 @@ Code location: `backend/sepa/base_count.py`:
 - `is_early_base = base_count <= 2` ← book p. 81 "Bases 1 and 2"
 - `is_late_stage = base_count >= 4` ← book p. 81 "a fourth or fifth base...
   definitely in its late stages." Triggers -8 score penalty in scanner.
+- `is_avoid_stage = base_count >= 5` ← **TTLAC §9 ~p.200** *"bases 3 and 4 can
+  also work, but are later in the cycle … Bases 5 or 6 are extremely failure
+  prone and should be viewed as opportunities to sell."* (**added 2026-06-19**.)
+  This — NOT `is_late_stage` — is the **buy-gate exclusion** (§5b clause 4): bases
+  3–4 stay tradeable. The `is_late_stage` (≥4) label/penalty is unchanged.
+
+> **Honesty (TTLAC §9 audit, 2026-06-19):** this detector is a pragmatic
+> 50-day-high heuristic, not a parsed base structure. It UNDER-counts climactic
+> blow-off rallies (which never form a 15-bar consolidation, so they read as base
+> 1). The MVP exhaustion gate (`mvp_exhaustion`, §5b clause 8) is the safety net
+> that blocks buying those. Full base-count refactor + P/E-expansion confirmation
+> are deferred. See `docs/sepa/mvp_methodology.md`.
+
+---
+
+## 9b. MVP indicator — LOCKED (TTLAC §1 p.33 / §9 p.199)
+
+David Ryan's MVP / "ants" continuation footprint over the trailing 15 days, with
+the reverse/sell read in late stage. Constants LOCKED in
+`test_mvp_constants_locked`; full methodology in `docs/sepa/mvp_methodology.md`.
+
+- `MVP_UP_DAYS_MIN = 12` (up 12 of 15 days) ← TTLAC §1 p.33
+- `MVP_PRICE_PCT_MIN = 20.0` (+20% over 15 days) ← TTLAC §1 p.33
+- `MVP_VOLUME_PCT_MIN = 25.0` (+25% volume over the window) ← TTLAC §1 p.33
+- `MVP_WINDOW = 15`
+
+Row fields: `mvp` (footprint + `near_base_bottom`), `mvp_read`
+(`continuation` | `exhaustion` | null), `mvp_exhaustion` (blocks the buy gate).
+Score: exhaustion −8; continuation off an early base +3.
 
 ---
 

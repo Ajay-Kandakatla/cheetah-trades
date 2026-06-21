@@ -77,7 +77,9 @@ EXPECTED_TREND_KEYS = {
 # §3 — required nested keys in `stage`
 EXPECTED_STAGE_KEYS = {"stage", "label", "slope_up", "dist_200_pct"}
 
-# §3 — required nested keys in `base_count`
+# §3 — required nested keys in `base_count`. is_avoid_stage is additive
+# (TTLAC §9, 2026-06-19): asserted by VALUE when present so older cached scans
+# that predate it still pass.
 EXPECTED_BASE_COUNT_KEYS = {"base_count", "is_early_base", "is_late_stage"}
 
 # §3 — required nested keys in `volume`
@@ -629,9 +631,14 @@ def test_base_count_nested_shape(scan_payload):
             continue
         missing = EXPECTED_BASE_COUNT_KEYS - set(bc.keys())
         assert not missing, f"{row['symbol']}: base_count missing {missing}"
-        # is_late_stage = base_count >= 4 (contract §9)
+        # is_late_stage = base_count >= 4 (contract §9 — score penalty/label).
+        # is_avoid_stage = base_count >= 5 (TTLAC §9 ~p.200 "bases 5 or 6 are
+        # extremely failure prone" — the buy-gate exclusion; bases 3-4 stay
+        # tradeable). is_early_base = base_count <= 2.
         assert bc["is_late_stage"] == (bc["base_count"] >= 4)
         assert bc["is_early_base"] == (bc["base_count"] <= 2)
+        if "is_avoid_stage" in bc:                  # additive, fresh scans only
+            assert bc["is_avoid_stage"] == (bc["base_count"] >= 5)
 
 
 def test_volume_nested_shape(scan_payload):
@@ -711,14 +718,25 @@ def test_is_buyable_gate_logic(scan_payload):
         # correct is_buyable=False even with every other pillar green. Older cached
         # rows that predate the field default to in-zone (no behavior change).
         in_buy_zone = bool(row.get("is_in_buy_zone", True))
+        bc = row.get("base_count") or {}
+        # Buy-gate exclusion is now is_avoid_stage (base >=5); bases 3-4 stay
+        # tradeable (TTLAC §9 ~p.200). Older cached rows lack is_avoid_stage ->
+        # fall back to is_late_stage so the test still holds on pre-MVP scans.
+        avoid = bool(bc.get("is_avoid_stage", bc.get("is_late_stage", False))) if row.get("base_count") else False
+        # MVP exhaustion (TTLAC §9 p.199) blocks; a near-base-bottom MVP run
+        # (§1 p.34) is buyable even past the 3% cap.
+        exhaustion = bool(row.get("mvp_exhaustion", False))
+        mvp = row.get("mvp") or {}
+        near_bottom = bool(mvp.get("has_mvp") and mvp.get("near_base_bottom"))
         expected = bool(
             row["trend"]["pass_all"]
             and row["stage"] and row["stage"].get("stage") == 2
             and row["entry_setup"] is not None
-            and (row["base_count"] is None or not row["base_count"]["is_late_stage"])
+            and not avoid
+            and not exhaustion
             and row["liquidity"]["liquid"]
             and vol_breakout
-            and in_buy_zone
+            and (in_buy_zone or near_bottom)
         )
         assert row["is_buyable"] == expected, (
             f"{row['symbol']}: is_buyable gate drift. expected={expected}, "
@@ -728,6 +746,24 @@ def test_is_buyable_gate_logic(scan_payload):
             f"late_base={row['base_count'] and row['base_count']['is_late_stage']}, "
             f"liquid={row['liquidity']['liquid']}"
         )
+
+
+def test_mvp_constants_locked():
+    """David Ryan's MVP indicator ("ants") — TTLAC §1 ebook p.33: up 12 of 15
+    days, volume +25%, price +20% over the 15-day window. These are BOOK numbers
+    (docs/sepa/mvp_methodology.md) — Rule #4 (page-cited doc + sign-off) for any
+    change. Locked at runtime AND in source text."""
+    from sepa import mvp
+    assert mvp.MVP_WINDOW == 15
+    assert mvp.MVP_UP_DAYS_MIN == 12
+    assert mvp.MVP_PRICE_PCT_MIN == 20.0
+    assert mvp.MVP_VOLUME_PCT_MIN == 25.0
+    src = open(os.path.join(os.path.dirname(__file__), "..", "sepa", "mvp.py"),
+               encoding="utf-8").read()
+    for tok in ("MVP_WINDOW = 15", "MVP_UP_DAYS_MIN = 12",
+                "MVP_PRICE_PCT_MIN = 20.0", "MVP_VOLUME_PCT_MIN = 25.0"):
+        assert tok in src, f"MVP constant drifted: `{tok}` not in sepa/mvp.py"
+    assert "p.33" in src, "MVP page cite (TTLAC §1 p.33) stripped from sepa/mvp.py"
 
 
 def test_sponsorship_penalty_tiers_locked():
