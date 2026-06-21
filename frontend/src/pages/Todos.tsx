@@ -304,7 +304,7 @@ function AddBar({ onAdd, defaultWorkspace }: {
           onChange={(e) => setText(e.target.value)}
           onFocus={onExpand}
         />
-        <button type="submit" className="todos-add__send" disabled={!text.trim()} title="Add">
+        <button type="submit" className="todos-add__send" disabled={!text.trim()} title="Add" aria-label="Add task">
           +
         </button>
       </div>
@@ -589,8 +589,8 @@ function TodoRow({ todo, onToggle, onRemove, onUpdate, onRunAi }: {
       </div>
       {!editing && (
         <div className="todo-row__actions">
-          <button onClick={() => setEditing(true)} className="todo-action" title="Edit">✎</button>
-          <button onClick={() => onRemove(todo._id)} className="todo-action todo-action--danger" title="Delete">✕</button>
+          <button onClick={() => setEditing(true)} className="todo-action" title="Edit" aria-label="Edit task">✎</button>
+          <button onClick={() => onRemove(todo._id)} className="todo-action todo-action--danger" title="Delete" aria-label="Delete task">✕</button>
         </div>
       )}
     </li>
