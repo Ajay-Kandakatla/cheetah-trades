@@ -211,7 +211,13 @@ export type SepaCandidate = {
     volume_drying?: boolean;
   };
   power_play?: { is_power_play: boolean; pivot_buy_price: number; suggested_stop: number };
-  base_count?: { base_count: number; is_early_base: boolean; is_late_stage: boolean };
+  base_count?: { base_count: number; is_early_base: boolean; is_late_stage: boolean; is_avoid_stage?: boolean };
+  /** David Ryan's MVP indicator (TTLAC §1 p.33 / §9 p.199) — 15-day
+   *  momentum/volume/price continuation footprint + its context read. */
+  mvp?: { has_mvp: boolean; up_days: number; price_pct: number; volume_pct: number;
+          near_base_bottom: boolean } | null;
+  mvp_read?: 'continuation' | 'exhaustion' | null;
+  mvp_exhaustion?: boolean;
   entry_setup: { type: string; pivot: number; stop: number } | null;
   /** Comprehensive trade plan — entry/stop/target/levels, computed for
    *  every analyzed ticker (not just those with VCP base). See

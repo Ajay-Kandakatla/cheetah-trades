@@ -29,6 +29,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'page-load-monitoring', label: 'Page-load speed monitoring',           addedAt: '2026-06-18' },
   { id: 'breakouts-dynamic-scan', label: 'Update button — fast re-scan on Breakouts', addedAt: '2026-06-18', route: '/breakouts' },
   { id: 'autopilot-pnl-summary', label: 'Auto-Pilot account P&L — made/lost money since start', addedAt: '2026-06-18', route: '/trading' },
+  { id: 'mvp-indicator', label: 'MVP indicator — runner vs late-stage exhaustion (Champion book)', addedAt: '2026-06-19', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

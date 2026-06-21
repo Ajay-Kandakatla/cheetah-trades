@@ -9,6 +9,7 @@ import type { WhalesFlowRow } from '../hooks/useWhalesFlow';
 import type { Whales13DRow } from '../hooks/useWhales13DFlow';
 import { SepaScoreBar } from './SepaScoreBar';
 import { SepaTrendDots } from './SepaTrendDots';
+import { MvpChip } from './MvpChip';
 import { PriceAlertModal } from './PriceAlertModal';
 import { WatchlistButton } from './WatchlistButton';
 import { useQuote } from '../hooks/useWatchlist';
@@ -488,6 +489,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
                 late · base #{row.base_count?.base_count ?? '?'}
               </span>
             )}
+            <MvpChip row={row} />
             {row.is_etf && (
               <span
                 className="sepa-tag sepa-tag--etf"
