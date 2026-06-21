@@ -69,18 +69,19 @@ export function WatchlistSection({ onSelect }: Props) {
       </header>
 
       <div className="cm-watchlist__controls">
-        <label className="cm-watchlist__field">
+        <label htmlFor="watchlist-search" className="cm-watchlist__field">
           <span className="eyebrow">Search</span>
           <input
+            id="watchlist-search"
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Ticker or company"
           />
         </label>
-        <label className="cm-watchlist__field">
+        <label htmlFor="watchlist-sector" className="cm-watchlist__field">
           <span className="eyebrow">Sector</span>
-          <select value={sector} onChange={(e) => setSector(e.target.value)}>
+          <select id="watchlist-sector" value={sector} onChange={(e) => setSector(e.target.value)}>
             {SECTORS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
