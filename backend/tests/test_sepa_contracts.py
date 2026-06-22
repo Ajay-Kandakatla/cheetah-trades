@@ -792,6 +792,11 @@ def test_is_buyable_gate_logic(scan_payload):
         exhaustion = bool(row.get("mvp_exhaustion", False))
         mvp = row.get("mvp") or {}
         near_bottom = bool(mvp.get("has_mvp") and mvp.get("near_base_bottom"))
+        # Distribution block (2026-06-21): institutions selling into the breakout/
+        # run (a churn breakout or climax distribution, TTLAC p.188) drops
+        # is_buyable — the name stays a candidate/watchlist. Older cached rows lack
+        # the field -> default False (no behavior change on pre-2026-06-21 scans).
+        selling = bool(row.get("distribution_selling", False))
         expected = bool(
             row["trend"]["pass_all"]
             and row["stage"] and row["stage"].get("stage") == 2
@@ -801,6 +806,7 @@ def test_is_buyable_gate_logic(scan_payload):
             and row["liquidity"]["liquid"]
             and vol_breakout
             and (in_buy_zone or near_bottom)
+            and not selling
         )
         assert row["is_buyable"] == expected, (
             f"{row['symbol']}: is_buyable gate drift. expected={expected}, "
