@@ -16,7 +16,33 @@ import { API } from '../lib/apiBase';
 import { fmtVol } from './BreakoutStats';
 
 type SeriesPt = { date: string; close: number; volume: number };
-type Marker = { date: string; close: number; volume: number; vol_ratio?: number | null };
+/** "Whose hands fired this breakout?" — institutional accumulation vs churn
+ *  (Minervini, Think & Trade Like a Champion p.186). volume.breakout_footprint. */
+type Footprint = {
+  hands: 'heavy_institutional' | 'institutional' | 'light' | 'suspect';
+  strength: number;            // 0-100
+  close_location: number;      // -1 (closed at low) .. +1 (closed at high)
+  vol_ratio?: number | null;
+  up_days: number;
+  down_days: number;
+  up_down_vol_ratio?: number | null;
+  big_block: boolean;
+};
+type Marker = {
+  date: string; close: number; volume: number;
+  vol_ratio?: number | null;
+  footprint?: Footprint | null;
+};
+type Emerging = {
+  emerging: boolean;
+  distance_to_high_pct?: number;
+  pivot_price?: number;
+  cmf?: number | null;
+  up_down_vol_ratio?: number | null;
+  pocket_pivot?: boolean;
+  hands?: 'institutional' | 'light';
+  strength?: number;
+};
 type History = {
   ok: boolean;
   symbol: string;
@@ -26,7 +52,35 @@ type History = {
   avg_vol_50?: number | null;
   series: SeriesPt[];
   breakouts: Marker[];
+  emerging?: Emerging | null;
 };
+
+/** hands → colour + glyph + label, shared by the chart markers and the list. */
+const HANDS_META: Record<Footprint['hands'], { color: string; glyph: string; label: string }> = {
+  heavy_institutional: { color: '#10b981', glyph: '🟢', label: 'Heavy institutional accumulation' },
+  institutional:       { color: '#34d399', glyph: '🟢', label: 'Institutional accumulation' },
+  light:               { color: '#94a3b8', glyph: '⚪', label: 'Light — low-conviction breakout' },
+  suspect:             { color: '#f59e0b', glyph: '🟠', label: 'Suspect — churn (weak close on heavy volume)' },
+};
+const handsMeta = (h?: Footprint['hands'] | null) =>
+  (h && HANDS_META[h]) || { color: '#10b981', glyph: '🟢', label: 'Volume-confirmed breakout' };
+
+/** Multi-line native-hover text for a breakout marker — the "who" read. */
+function markerTitle(m: Marker): string {
+  const lines = [`${fmtDate(m.date)} · $${m.close.toFixed(2)}`];
+  const fp = m.footprint;
+  if (fp) {
+    const loc = fp.close_location > 0.33 ? 'closed near the high'
+      : fp.close_location < 0 ? 'closed in the lower half (gave it back)'
+      : 'closed mid-range';
+    lines.push(`${fp.vol_ratio ? `${fp.vol_ratio}× volume · ` : ''}${loc}`);
+    lines.push(`${fp.up_days} up / ${fp.down_days} down days into it`);
+    lines.push(`→ ${handsMeta(fp.hands).label} (${fp.strength}/100)`);
+  } else if (m.vol_ratio) {
+    lines.push(`${m.vol_ratio}× volume`);
+  }
+  return lines.join('\n');
+}
 
 const fmtDate = (d: string) => {
   const p = d.split('-');
@@ -65,20 +119,35 @@ function Chart({ h }: { h: History }) {
       <text x={PL - 5} y={y(hi) + 3} textAnchor="end" fontSize="9" fill="var(--cm-slate,#8595ad)">${hi.toFixed(hi < 20 ? 1 : 0)}</text>
       <text x={PL - 5} y={y(lo) + 3} textAnchor="end" fontSize="9" fill="var(--cm-slate,#8595ad)">${lo.toFixed(lo < 20 ? 1 : 0)}</text>
 
-      {/* vertical guide at each breakout */}
-      {marks.map((m, k) => (
-        <line key={`g${k}`} x1={x(m.i)} y1={PT} x2={x(m.i)} y2={PT + ih}
-              stroke="rgba(16,185,129,0.22)" strokeWidth="1" />
-      ))}
+      {/* vertical guide at each breakout, tinted by whose hands fired it */}
+      {marks.map((m, k) => {
+        const col = handsMeta(m.b.footprint?.hands).color;
+        return (
+          <line key={`g${k}`} x1={x(m.i)} y1={PT} x2={x(m.i)} y2={PT + ih}
+                stroke={col} strokeOpacity={0.18} strokeWidth="1" />
+        );
+      })}
       {/* close line */}
       <path d={line} fill="none" stroke="#cbd5e1" strokeWidth="1.5" />
-      {/* breakout markers */}
-      {marks.map((m, k) => (
-        <circle key={`m${k}`} cx={x(m.i)} cy={y(m.b.close)} r="3.6"
-                fill="#10b981" stroke="#0b1220" strokeWidth="0.6">
-          <title>{`${fmtDate(m.b.date)} · $${m.b.close.toFixed(2)}${m.b.vol_ratio ? ` · ${m.b.vol_ratio}× vol` : ''}`}</title>
+      {/* breakout markers — colour = whose hands (institutional vs churn) */}
+      {marks.map((m, k) => {
+        const meta = handsMeta(m.b.footprint?.hands);
+        const heavy = m.b.footprint?.hands === 'heavy_institutional';
+        return (
+          <circle key={`m${k}`} cx={x(m.i)} cy={y(m.b.close)} r={heavy ? 4.4 : 3.6}
+                  fill={meta.color} stroke="#0b1220" strokeWidth="0.6">
+            <title>{markerTitle(m.b)}</title>
+          </circle>
+        );
+      })}
+      {/* emerging breakout — a hollow dashed ring pinned to the LAST bar,
+          "setting up now" (the forward read), with whose hands are building it */}
+      {h.emerging?.emerging && (
+        <circle cx={x(n - 1)} cy={y(data[n - 1].close)} r="6"
+                fill="none" stroke="#38bdf8" strokeWidth="1.6" strokeDasharray="2.5 2">
+          <title>{`Emerging breakout — setting up now\n${h.emerging.distance_to_high_pct}% under the $${h.emerging.pivot_price} pivot\n→ ${h.emerging.hands === 'institutional' ? 'institutional hands building' : 'light accumulation'}${h.emerging.pocket_pivot ? ' · pocket pivot' : ''}`}</title>
         </circle>
-      ))}
+      )}
       <text x={x(0)} y={H - 8} textAnchor="start" fontSize="9" fill="var(--cm-slate,#8595ad)">{fmtDate(data[0].date)}</text>
       <text x={x(n - 1)} y={H - 8} textAnchor="end" fontSize="9" fill="var(--cm-slate,#8595ad)">{fmtDate(data[n - 1].date)}</text>
     </svg>
@@ -127,30 +196,74 @@ export function BreakoutHistoryBody({ symbol }: { symbol: string }) {
 
       {state === 'ready' && h && (
         <>
-          <p style={{ fontSize: '0.74rem', color: '#9aa8c8', margin: '0.5rem 0 0.75rem', lineHeight: 1.5 }}>
-            Each 🟢 marks where a <strong>volume-confirmed breakout</strong> fired — a close above the
-            prior 21-day high on more than 1.5× average volume (Minervini,
-            <em> Trade Like a Stock Market Wizard</em> p.203).
+          <p style={{ fontSize: '0.74rem', color: '#9aa8c8', margin: '0.5rem 0 0.5rem', lineHeight: 1.5 }}>
+            Each marker is a <strong>volume-confirmed breakout</strong> — a close above the prior
+            21-day high on more than 1.5× average volume (<em>Trade Like a Stock Market Wizard</em>
+            p.203). <strong>Colour = whose hands fired it:</strong> a real breakout is institutions
+            accumulating; a weak close on heavy volume is churn (<em>Think &amp; Trade Like a
+            Champion</em> p.186). Hover any point for the read.
           </p>
+
+          {/* who's-behind-it legend */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 0.9rem', fontSize: '0.66rem',
+                        color: '#9aa8c8', margin: '0 0 0.6rem' }}>
+            {(['heavy_institutional', 'institutional', 'light', 'suspect'] as const).map((k) => (
+              <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: HANDS_META[k].color,
+                               display: 'inline-block' }} />
+                {HANDS_META[k].label.replace(/ —.*/, '')}
+              </span>
+            ))}
+            {h.emerging?.emerging && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1.6px dashed #38bdf8',
+                               display: 'inline-block' }} />
+                Emerging (setting up)
+              </span>
+            )}
+          </div>
+
           <Chart h={h} />
+
+          {/* emerging callout — the forward "who's loading it now" read */}
+          {h.emerging?.emerging && (
+            <div style={{ marginTop: '0.7rem', padding: '0.5rem 0.7rem', borderRadius: 8,
+                          border: '1px solid rgba(56,189,248,0.4)', background: 'rgba(56,189,248,0.08)',
+                          fontSize: '0.74rem', color: '#cfe8ff', lineHeight: 1.5 }}>
+              ⏳ <strong>Emerging breakout — setting up now.</strong> Coiling{' '}
+              {h.emerging.distance_to_high_pct}% under the ${h.emerging.pivot_price} pivot with{' '}
+              {h.emerging.hands === 'institutional' ? 'institutional hands building' : 'light accumulation'}
+              {h.emerging.cmf != null ? ` (CMF ${h.emerging.cmf > 0 ? '+' : ''}${h.emerging.cmf})` : ''}
+              {h.emerging.pocket_pivot ? ' · pocket pivot fired' : ''}. Not a breakout yet — a watch,
+              not a buy (VCP/pivot, <em>TLSW</em> Ch.7).
+            </div>
+          )}
 
           {h.breakouts && h.breakouts.length > 0 ? (
             <div style={{ marginTop: '0.9rem' }}>
               <div className="eyebrow" style={{ fontSize: '0.62rem', marginBottom: 4 }}>
-                Each breakout (newest first)
+                Each breakout (newest first) — who fired it
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {h.breakouts.slice().reverse().map((b, i) => (
-                  <div key={i} className="mono"
-                       style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem',
-                                fontSize: '0.74rem', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <span style={{ color: '#10b981' }}>🟢 {fmtDate(b.date)}</span>
-                    <span style={{ color: '#cfcfd4' }}>${b.close.toFixed(2)}</span>
-                    <span style={{ color: '#9aa8c8' }}>
-                      {fmtVol(b.volume)} sh{b.vol_ratio ? ` · ${b.vol_ratio}×` : ''}
-                    </span>
-                  </div>
-                ))}
+                {h.breakouts.slice().reverse().map((b, i) => {
+                  const meta = handsMeta(b.footprint?.hands);
+                  return (
+                    <div key={i} className="mono"
+                         style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', alignItems: 'center',
+                                  fontSize: '0.74rem', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <span style={{ color: meta.color, minWidth: 78 }}>{meta.glyph} {fmtDate(b.date)}</span>
+                      <span style={{ color: '#cfcfd4' }}>${b.close.toFixed(2)}</span>
+                      <span style={{ color: meta.color, flex: 1, textAlign: 'right',
+                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            title={`${b.footprint?.strength ?? ''}${b.footprint ? '/100' : ''}`}>
+                        {meta.label.replace(/ \(.*\)/, '').replace(/ —.*/, b.footprint?.hands === 'suspect' ? ' — churn' : '')}
+                      </span>
+                      <span style={{ color: '#9aa8c8', minWidth: 92, textAlign: 'right' }}>
+                        {fmtVol(b.volume)}{b.vol_ratio ? ` · ${b.vol_ratio}×` : ''}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (

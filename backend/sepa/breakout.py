@@ -174,7 +174,12 @@ def history_for_symbol(symbol: str) -> dict:
 
         {ok, symbol, last_close, breakout_count, window_bars, avg_vol_50,
          series:    [{date, close, volume}, ...],   # oldest -> newest
-         breakouts: [{date, close, volume, vol_ratio}, ...]}
+         breakouts: [{date, close, volume, vol_ratio, footprint}, ...],
+         emerging:  {emerging, distance_to_high_pct, pivot_price, hands, ...}}
+
+    Each breakout marker now carries a ``footprint`` (volume.breakout_footprint)
+    answering "whose hands fired it?" — institutional accumulation vs churn
+    (TTLAC p.186) — and ``emerging`` flags a breakout SETTING UP right now.
 
     Display-only. Soft-fails to {ok: False, symbol}."""
     sym = (symbol or "").upper().strip()
@@ -202,6 +207,9 @@ def history_for_symbol(symbol: str) -> dict:
             "avg_vol_50":     vol.get("avg_vol_50"),
             "series":         series,
             "breakouts":      volume.breakout_points(df),
+            # Forward read — a breakout SETTING UP now + whose hands (book p.203
+            # pivot / VCP). {"emerging": False} when nothing is coiling.
+            "emerging":       volume.emerging_breakout(df),
         }
     except Exception as exc:                           # noqa: BLE001
         log.debug("breakout.history_for_symbol(%s) failed: %s", sym, exc)

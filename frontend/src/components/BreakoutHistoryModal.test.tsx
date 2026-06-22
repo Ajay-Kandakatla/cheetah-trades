@@ -55,6 +55,59 @@ describe('BreakoutHistoryModal', () => {
   });
 });
 
+// ── "Whose hands?" footprint + emerging breakout (Ajay 2026-06-21) ───────────
+const HISTORY_FP = {
+  ...HISTORY,
+  breakouts: [
+    { date: '2025-01-05', close: 84, volume: 9_900_000, vol_ratio: 2.2,
+      footprint: { hands: 'institutional', strength: 64, close_location: 0.7,
+                   vol_ratio: 2.2, up_days: 6, down_days: 4, up_down_vol_ratio: 1.8, big_block: true } },
+    { date: '2025-02-08', close: 119, volume: 12_000_000, vol_ratio: 3.1,
+      footprint: { hands: 'heavy_institutional', strength: 81, close_location: 0.6,
+                   vol_ratio: 3.1, up_days: 7, down_days: 3, up_down_vol_ratio: 2.4, big_block: true } },
+    { date: '2025-02-27', close: 137, volume: 15_000_000, vol_ratio: 5.5,
+      footprint: { hands: 'suspect', strength: 48, close_location: -0.5,
+                   vol_ratio: 5.5, up_days: 6, down_days: 4, up_down_vol_ratio: 0.9, big_block: false } },
+  ],
+  emerging: { emerging: true, distance_to_high_pct: 1.4, pivot_price: 145.0,
+              cmf: 0.18, up_down_vol_ratio: 1.7, pocket_pivot: true, hands: 'institutional', strength: 80 },
+};
+
+describe('BreakoutHistoryModal — whose hands / emerging', () => {
+  it('colours each breakout by its footprint and labels churn', async () => {
+    vi.stubGlobal('fetch', okFetch(HISTORY_FP));
+    render(<BreakoutHistoryModal symbol="ROKU" onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/3 volume-confirmed breakouts/i)).toBeInTheDocument());
+    // the suspect break is labelled as churn (appears in both the list + hover title)
+    expect(screen.getAllByText(/Suspect — churn/).length).toBeGreaterThan(0);
+    // and its marker is rendered amber (not the institutional green)
+    const fills = [...document.querySelectorAll('circle')].map((c) => c.getAttribute('fill'));
+    expect(fills).toContain('#f59e0b');   // suspect
+    expect(fills).toContain('#34d399');   // institutional
+  });
+
+  it('shows the emerging "setting up now" callout + dashed ring (forward read)', async () => {
+    vi.stubGlobal('fetch', okFetch(HISTORY_FP));
+    render(<BreakoutHistoryModal symbol="ROKU" onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getAllByText(/Emerging breakout — setting up now/i).length).toBeGreaterThan(0));
+    expect(screen.getAllByText(/1\.4% under the \$145/).length).toBeGreaterThan(0);
+    // the hollow dashed emerging ring
+    const dashed = [...document.querySelectorAll('circle')].some(
+      (c) => c.getAttribute('stroke') === '#38bdf8' && c.getAttribute('fill') === 'none');
+    expect(dashed).toBe(true);
+  });
+
+  it('omits the emerging callout when nothing is setting up (negative)', async () => {
+    vi.stubGlobal('fetch', okFetch({ ...HISTORY_FP, emerging: { emerging: false } }));
+    render(<BreakoutHistoryModal symbol="ROKU" onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/3 volume-confirmed breakouts/i)).toBeInTheDocument());
+    expect(screen.queryByText(/Emerging breakout/i)).not.toBeInTheDocument();
+  });
+});
+
 // The shared body powers the SEPA detail page's Breakout tab (no modal chrome).
 describe('BreakoutHistoryBody (Breakout tab)', () => {
   it('renders the count + markers inline', async () => {

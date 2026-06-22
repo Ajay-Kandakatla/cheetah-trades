@@ -84,6 +84,20 @@ VOL_SPARK_BARS              = 20
 # old trigger-happy 4 so it catches persistence, not normal pullbacks.
 DIST_DAYS_BACKSTOP          = 8
 
+# ── "Whose hands fired this breakout?" footprint (TTLAC Ch.9 p.186) ───────────
+# Minervini: a genuine breakout is institutions ACCUMULATING — "strong
+# professional hands" absorbing supply on heavy volume with the close held near
+# the high; a breakout that closes WEAK on heavy volume is suspect "churn"
+# (p.188, "elevated volume without much price progress"). We read the breakout
+# bar + its run-up to classify the hands behind it. Display-only; never scores.
+BREAKOUT_RUNUP              = 10     # run-up window — "6 to 10 days of accelerated advance" (p.187)
+BREAKOUT_CHURN_LOC         = 0.0    # close in the LOWER half of the bar's range on heavy vol = churn/suspect (p.188)
+BREAKOUT_HEAVY_STRENGTH    = 70     # footprint strength ≥ this (and a big block) = heavy institutional
+BREAKOUT_INST_STRENGTH     = 45     # footprint strength ≥ this = institutional
+# Forward read — a breakout SETTING UP: a name coiling within this % BELOW its
+# prior 21-bar high with accumulation building (VCP/pivot, TLSW Ch.7 + p.203).
+EMERGING_NEAR_HIGH_PCT     = 3.0
+
 
 def _safe_float(x) -> Optional[float]:
     try:
@@ -288,6 +302,143 @@ def _date_str(idx) -> str:
         return str(idx)[:10]
 
 
+def breakout_footprint(df: pd.DataFrame, pos: int,
+                       runup: int = BREAKOUT_RUNUP) -> Optional[dict]:
+    """Whose hands fired the breakout at integer bar ``pos``?
+
+    Minervini (TTLAC p.186): a real breakout is institutions ACCUMULATING —
+    strong hands absorbing supply on heavy volume with the close pinned near the
+    high. A breakout that closes WEAK (lower half of the range) on heavy volume
+    is suspect "churn" — supply meeting the demand (p.188). We read three book
+    tells at/around the breakout bar:
+
+      * close LOCATION in the bar's range  -> buyers vs sellers in control at the
+        close (the accumulation-day "upper half" test, p.76 / Ch.10);
+      * VOLUME vs the 50-day average       -> how heavy the institutional block;
+      * UP vs DOWN volume over the run-up  -> sustained accumulation, plus a
+        pocket-pivot "big block" check (today's vol > any down-day vol).
+
+    Returns ``{close_location, vol_ratio, up_days, down_days, up_down_vol_ratio,
+    big_block, strength (0-100), hands}`` where ``hands`` ∈ {heavy_institutional,
+    institutional, light, suspect}. Display-only; never feeds the score. ``None``
+    on any problem."""
+    try:
+        n = len(df)
+        if df is None or pos < 1 or pos >= n:
+            return None
+        h = float(df["high"].iloc[pos]); l = float(df["low"].iloc[pos])
+        c = float(df["close"].iloc[pos]); vol = float(df["volume"].iloc[pos])
+        rng = h - l
+        close_loc = (((c - l) - (h - c)) / rng) if rng > 0 else 0.0   # -1..+1
+        lo50 = max(0, pos - 49)
+        avg50 = float(df["volume"].iloc[lo50:pos + 1].mean())
+        vol_ratio = (vol / avg50) if avg50 and avg50 > 0 else None
+        # Run-up: up vs down days + the volume that traded on each.
+        wstart = max(1, pos - runup + 1)
+        closes = df["close"].values
+        vols = df["volume"].values
+        up_days = down_days = 0
+        up_vol = down_vol = 0.0
+        max_down_vol = 0.0
+        for p in range(wstart, pos + 1):
+            v = float(vols[p])
+            if closes[p] > closes[p - 1]:
+                up_days += 1; up_vol += v
+            elif closes[p] < closes[p - 1]:
+                down_days += 1; down_vol += v
+                if v > max_down_vol:
+                    max_down_vol = v
+        up_down_ratio = (up_vol / down_vol) if down_vol > 0 else None
+        big_block = bool(vol > max_down_vol) if max_down_vol > 0 else True
+        # Strength 0-100 — weight volume heaviest, then close location, then the
+        # up/down balance. None-as-strong for the no-down-volume run-up.
+        v_comp = min(1.0, max(0.0, (vol_ratio - 1.0) / 2.0)) if vol_ratio else 0.0
+        loc_comp = min(1.0, max(0.0, (close_loc + 1.0) / 2.0))
+        ud = up_down_ratio if up_down_ratio is not None else 2.0
+        ud_comp = min(1.0, max(0.0, ud / 2.0))
+        strength = int(round(100 * (0.40 * v_comp + 0.35 * loc_comp + 0.25 * ud_comp)))
+        if vol_ratio and vol_ratio >= 1.5 and close_loc < BREAKOUT_CHURN_LOC:
+            hands = "suspect"                          # heavy vol, weak close = churn (p.188)
+        elif strength >= BREAKOUT_HEAVY_STRENGTH and big_block:
+            hands = "heavy_institutional"
+        elif strength >= BREAKOUT_INST_STRENGTH:
+            hands = "institutional"
+        else:
+            hands = "light"
+        return {
+            "close_location":    round(close_loc, 2),
+            "vol_ratio":         round(vol_ratio, 2) if vol_ratio else None,
+            "up_days":           up_days,
+            "down_days":         down_days,
+            "up_down_vol_ratio": round(up_down_ratio, 2) if up_down_ratio is not None else None,
+            "big_block":         big_block,
+            "strength":          strength,
+            "hands":             hands,
+        }
+    except Exception:
+        return None
+
+
+def emerging_breakout(df: pd.DataFrame,
+                      near_pct: float = EMERGING_NEAR_HIGH_PCT,
+                      runup: int = BREAKOUT_RUNUP) -> dict:
+    """Forward read — is a breakout SETTING UP right now, and whose hands are
+    building it?
+
+    Not a breakout yet: a name coiling within ``near_pct`` BELOW its prior 21-bar
+    high (the pivot, book p.203) with accumulation building underneath — the VCP
+    /pivot setup (TLSW Ch.7) where volume dries in the base and a pocket pivot
+    signals institutions stepping in just before the breakout. We require the
+    price to be close to the pivot AND at least one accumulation tell (CMF > 0,
+    up/down volume ≥ the accumulation threshold, or a pocket pivot).
+
+    Returns ``{emerging, distance_to_high_pct, pivot_price, cmf,
+    up_down_vol_ratio, pocket_pivot, hands, strength}``; ``{emerging: False}``
+    when nothing is setting up. Display-only; a prediction, never a score."""
+    try:
+        if df is None or len(df) < 60:
+            return {"emerging": False}
+        c = df["close"].astype(float)
+        last = float(c.iloc[-1])
+        prior_high_21 = float(c.iloc[-22:-1].max())          # prior 21 bars, excl. today
+        if prior_high_21 <= 0 or last >= prior_high_21:      # already broke out → not "emerging"
+            return {"emerging": False}
+        dist_pct = (prior_high_21 - last) / prior_high_21 * 100.0
+        if dist_pct > near_pct:
+            return {"emerging": False}
+        cmf = _chaikin_money_flow(df, 20).get("cmf")
+        pp = bool(_pocket_pivot(df).get("is_pocket_pivot"))
+        n = len(df)
+        wstart = max(1, n - runup)
+        closes = c.values
+        vols = df["volume"].values
+        up_vol = sum(float(vols[p]) for p in range(wstart, n) if closes[p] > closes[p - 1])
+        down_vol = sum(float(vols[p]) for p in range(wstart, n) if closes[p] < closes[p - 1])
+        udr = (up_vol / down_vol) if down_vol > 0 else None
+        accumulating = ((cmf is not None and cmf > 0)
+                        or (udr is not None and udr >= ACCUM_RATIO_THRESHOLD)
+                        or pp)
+        if not accumulating:
+            return {"emerging": False}
+        loc_comp = min(1.0, max(0.0, ((cmf or 0.0) + 0.30) / 0.60))
+        ud = udr if udr is not None else 2.0
+        ud_comp = min(1.0, max(0.0, ud / 2.0))
+        strength = int(round(100 * (0.45 * loc_comp + 0.35 * ud_comp + 0.20 * (1.0 if pp else 0.0))))
+        hands = "institutional" if (strength >= BREAKOUT_INST_STRENGTH or pp) else "light"
+        return {
+            "emerging":             True,
+            "distance_to_high_pct": round(dist_pct, 2),
+            "pivot_price":          round(prior_high_21, 4),
+            "cmf":                  round(cmf, 3) if cmf is not None else None,
+            "up_down_vol_ratio":    round(udr, 2) if udr is not None else None,
+            "pocket_pivot":         pp,
+            "hands":                hands,
+            "strength":             strength,
+        }
+    except Exception:
+        return {"emerging": False}
+
+
 def breakout_points(df: pd.DataFrame,
                     lookback: int = BREAKOUT_COUNT_LOOKBACK) -> list:
     """The distinct volume-confirmed breakout START bars over the trailing
@@ -309,20 +460,23 @@ def breakout_points(df: pd.DataFrame,
         v = df["volume"].astype(float)
         vol_avg50 = v.rolling(50).mean()
         prior_high_21 = c.rolling(21).max().shift(1)
-        bo = ((vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)).fillna(False)
-        win = bo.iloc[-lookback:]
+        bo = ((vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)).fillna(False).values
+        n = len(df)
+        start = max(0, n - lookback)
         prev = False
-        for idx, fired in win.items():
-            f = bool(fired)
+        for p in range(start, n):
+            f = bool(bo[p])
             if f and not prev:                 # rising edge = one breakout START
-                av = vol_avg50.loc[idx]
-                vi = v.loc[idx]
-                ratio = (float(vi) / float(av)) if (av and av > 0) else None
+                av = float(vol_avg50.iloc[p])
+                vi = float(v.iloc[p])
+                ratio = (vi / av) if av > 0 else None
                 out.append({
-                    "date":      _date_str(idx),
-                    "close":     round(float(c.loc[idx]), 4),
+                    "date":      _date_str(df.index[p]),
+                    "close":     round(float(c.iloc[p]), 4),
                     "volume":    int(vi),
                     "vol_ratio": round(ratio, 2) if ratio else None,
+                    # WHO fired it — institutional accumulation vs churn (p.186).
+                    "footprint": breakout_footprint(df, p),
                 })
             prev = f
     except Exception:

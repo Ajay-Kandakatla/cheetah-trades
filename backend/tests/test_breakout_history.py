@@ -78,3 +78,117 @@ def test_history_for_symbol_soft_fails_without_prices(monkeypatch):
     assert out["ok"] is False
     assert out["symbol"] == "NODATA"
     assert "series" not in out                 # nothing fabricated
+
+
+# ── "Whose hands fired the breakout?" footprint (TTLAC p.186) ─────────────────
+# Real OHLCV (the flat _make_df has no intrabar range, so close-location can't
+# be read). We build a 6-day up run-up into a volume-confirmed breakout and vary
+# only the close LOCATION in the breakout bar — institutional (close near high)
+# vs suspect churn (close near low on heavy volume, p.188).
+
+def _df_from(close, high, low, vol):
+    n = len(close)
+    idx = pd.date_range("2025-01-01", periods=n, freq="D")
+    return pd.DataFrame(
+        {"open": np.asarray(close, float), "high": np.asarray(high, float),
+         "low": np.asarray(low, float), "close": np.asarray(close, float),
+         "volume": np.asarray(vol, float)}, index=idx)
+
+
+def _breakout_df(close_loc="high", n=130, bo=120):
+    close = np.full(n, 100.0); high = np.full(n, 100.5)
+    low = np.full(n, 99.5); vol = np.full(n, 1_000_000.0)
+    for k, p in enumerate(range(bo - 6, bo)):          # 6 up days into the break
+        close[p] = 100.0 + (k + 1) * 0.4
+        high[p] = close[p] + 0.3; low[p] = close[p] - 0.3
+        vol[p] = 1_300_000.0
+    close[bo] = 112.0; vol[bo] = 3_000_000.0           # clears prior high on 3× vol
+    if close_loc == "high":
+        high[bo] = 112.5; low[bo] = 105.0              # close pinned near the high
+    else:
+        high[bo] = 118.0; low[bo] = 111.5              # close near the low (churn)
+    return _df_from(close, high, low, vol)
+
+
+def test_marker_carries_footprint_with_expected_keys():
+    pts = volume.breakout_points(_breakout_df("high"))
+    assert pts and pts[-1]["footprint"] is not None
+    fp = pts[-1]["footprint"]
+    assert {"close_location", "vol_ratio", "up_days", "down_days",
+            "up_down_vol_ratio", "big_block", "strength", "hands"} <= set(fp)
+
+
+def test_footprint_reads_institutional_on_strong_close_heavy_volume():
+    fp = volume.breakout_points(_breakout_df("high"))[-1]["footprint"]
+    assert fp["hands"] in ("institutional", "heavy_institutional")
+    assert fp["close_location"] > 0.5          # close held near the high
+    assert fp["strength"] >= volume.BREAKOUT_INST_STRENGTH
+    assert fp["up_days"] >= 5                   # the accumulation run-up
+
+
+def test_footprint_reads_suspect_on_weak_close_heavy_volume():
+    """Heavy volume but the close gives back the day — Minervini's churn tell
+    (p.188): supply is meeting the demand, not a clean institutional break."""
+    fp = volume.breakout_points(_breakout_df("low"))[-1]["footprint"]
+    assert fp["hands"] == "suspect"
+    assert fp["close_location"] < 0            # closed in the lower half
+    assert fp["vol_ratio"] and fp["vol_ratio"] >= 1.5
+
+
+def test_footprint_none_on_out_of_range_position():
+    df = _breakout_df("high")
+    assert volume.breakout_footprint(df, 0) is None       # no prior bar
+    assert volume.breakout_footprint(df, len(df)) is None  # past the end
+
+
+# ── Emerging breakout — the forward "setting up + whose hands" read ───────────
+
+def _coil_df(last_close, near_low=False, n=130, pivot=105.0, pivot_pos=109):
+    close = np.full(n, 100.0); high = np.full(n, 100.5)
+    low = np.full(n, 99.5); vol = np.full(n, 1_000_000.0)
+    close[pivot_pos] = pivot; high[pivot_pos] = pivot + 0.5
+    low[pivot_pos] = pivot - 0.5; vol[pivot_pos] = 1_500_000.0
+    for p in range(n - 20, n):                 # coil the last 20 bars
+        close[p] = last_close
+        if near_low:                            # close near the low → CMF < 0
+            high[p] = last_close + 0.8; low[p] = last_close - 0.2
+        else:                                   # close near the high → CMF > 0
+            high[p] = last_close + 0.2; low[p] = last_close - 0.8
+        vol[p] = 1_400_000.0
+    return _df_from(close, high, low, vol)
+
+
+def test_emerging_true_when_coiling_under_high_with_accumulation():
+    em = volume.emerging_breakout(_coil_df(103.5))         # 1.4% under the 105 pivot
+    assert em["emerging"] is True
+    assert em["distance_to_high_pct"] <= volume.EMERGING_NEAR_HIGH_PCT
+    assert em["pivot_price"] == 105.0
+    assert em["hands"] in ("institutional", "light")
+    assert em["cmf"] is not None and em["cmf"] > 0
+
+
+def test_emerging_false_when_already_extended_above_high():
+    assert volume.emerging_breakout(_coil_df(106.0))["emerging"] is False
+
+
+def test_emerging_false_when_far_below_the_pivot():
+    assert volume.emerging_breakout(_coil_df(100.0))["emerging"] is False   # ~4.8% under
+
+
+def test_emerging_false_without_accumulation():
+    """Near the pivot but closing weak (no buying pressure) → not setting up."""
+    assert volume.emerging_breakout(_coil_df(103.5, near_low=True))["emerging"] is False
+
+
+def test_emerging_false_on_short_history():
+    n = 40                                      # < 60 bars → no read, never a crash
+    df = _df_from(np.full(n, 100.0), np.full(n, 100.5),
+                  np.full(n, 99.5), np.full(n, 1_000_000.0))
+    assert volume.emerging_breakout(df)["emerging"] is False
+
+
+def test_history_for_symbol_includes_emerging(monkeypatch):
+    monkeypatch.setattr("sepa.prices.load_prices", lambda s: _coil_df(103.5))
+    out = breakout.history_for_symbol("COIL")
+    assert out["ok"] is True
+    assert out["emerging"]["emerging"] is True

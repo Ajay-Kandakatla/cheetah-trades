@@ -188,6 +188,19 @@ def test_setup_ready_is_buyable_minus_breakout():
     assert V.BREAKOUT_RECENCY_LOOKBACK >= 5
 
 
+def test_breakout_footprint_constants_locked():
+    """Breakout-footprint "whose hands?" thresholds are book-derived (TTLAC
+    pp.186-188) — lock them so the display read can't silently drift. Run-up
+    window = "6 to 10 days of accelerated advance" (p.187); the churn cut is a
+    close in the LOWER half on heavy volume (p.188); the emerging coil sits just
+    under the prior-high pivot (p.203). Display-only — never a score input."""
+    from sepa import volume as V
+    assert 6 <= V.BREAKOUT_RUNUP <= 10                 # p.187 accelerated-advance window
+    assert V.BREAKOUT_CHURN_LOC == 0.0                 # lower-half close = churn (p.188)
+    assert V.BREAKOUT_HEAVY_STRENGTH > V.BREAKOUT_INST_STRENGTH   # heavy ⊃ institutional
+    assert 0 < V.EMERGING_NEAR_HIGH_PCT <= 5           # coil within a few % of the pivot (p.203)
+
+
 def test_buyable_rejects_extended_past_pivot():
     """is_buyable must drop a volume-breakout that ran too far past the pivot
     (book p.224 — don't chase more than a few percentage points). User-approved
