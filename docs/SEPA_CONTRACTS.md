@@ -9,10 +9,14 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.2 (2026-06-19) — MVP indicator (TTLAC §1 p.33, §9b) + base-stage
-buy gate: §5b clause 4 now excludes `is_avoid_stage` (base ≥5) not `is_late_stage`
-(bases 3–4 tradeable, TTLAC §9 p.200); new clause 8 `mvp_exhaustion` blocks; MVP
-near-base-bottom exception to the 3% cap (§1 p.34); §3 adds `mvp`/`is_avoid_stage`.
+**Version:** 1.2.1 (2026-06-19) — `mvp_exhaustion` is now late-stage-gated:
+`is_late_stage (≥4) AND (has_mvp OR climax)` (TTLAC §9 p.199 "late-stage
+exhaustion vs early-stage breakout"). Catches late-stage price climaxes the
+up-day count misses (MRVL); stops flagging early-base MVP/climax as a sell (the
+§9 caveat). Prior 1.2 (2026-06-19) — MVP indicator (TTLAC §1 p.33, §9b) +
+base-stage buy gate: §5b clause 4 excludes `is_avoid_stage` (base ≥5) not
+`is_late_stage` (bases 3–4 tradeable, TTLAC §9 p.200); clause 8 `mvp_exhaustion`;
+MVP near-base-bottom exception (§1 p.34); §3 adds `mvp`/`is_avoid_stage`.
 Prior: 1.1 (2026-05-31) — §5b `is_buyable` volume-confirmed-breakout pillar
 (book p.203) + §4 institutional-sponsorship rank demotion (book p.195).
 Prior: 1.0 (2026-05-24).
@@ -357,11 +361,15 @@ A row is `is_buyable: True` if and only if ALL of:
    **MVP near-base-bottom exception (2026-06-19, TTLAC §1 p.34):** an MVP run whose
    15-day window began near the base low (`mvp.has_mvp AND mvp.near_base_bottom`)
    is buyable even past the 3% cap — "in position to be bought immediately."
-8. **NOT MVP exhaustion** — `mvp_exhaustion == False` (**added 2026-06-19**). The
-   MVP indicator read in reverse (TTLAC §9 p.199): an MVP footprint extended from a
-   late-stage base / during a climax run is a SELL, never a buy. Closes the
-   "buy/sell disagree" hole where a blow-off top (no 15-bar base ⇒ `base_count`
-   reads base 1) used to pass the buy gate. See `docs/sepa/mvp_methodology.md`.
+8. **NOT MVP exhaustion** — `mvp_exhaustion == False` (**added 2026-06-19**).
+   `mvp_exhaustion = is_late_stage (base ≥4) AND (has_mvp OR climax)` — the TTLAC
+   §9 p.199 "late-stage exhaustion move versus an early-stage breakout move" read.
+   A late-stage base showing the full MVP footprint OR a pure price climax
+   (`sell_signals.climax_run_25pct_in_3w`) is a SELL, never a buy — the climax leg
+   blocks a late-stage blow-off the up-day count alone misses (e.g. MRVL base 4,
+   +52%/3wk, 10/15 up). From an early/mid base (≤3) the same action is bullish (§9
+   caveat), so it is NOT blocked here (the extension cap still governs it). See
+   `docs/sepa/mvp_methodology.md`.
 
 > Book p.224 verbatim: *"You want to buy as close to the pivot point as possible
 > without chasing the stock up more than a few percentage points."* The book gives

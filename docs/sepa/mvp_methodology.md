@@ -47,11 +47,21 @@ The same footprint is read **oppositely** depending on stage (decided in
 
 - **Continuation (bullish).** From an early/mid-stage base it marks a runner that
   "continued much higher" (the GOOGL 2004 +625%/40-month example, §1 p.33).
-- **Exhaustion (bearish / sell).** "used to be a sell signal when a stock is
-  extended from a late stage base … to sell when you have 70 percent more up days
-  than down days … a late-stage exhaustion move versus an early-stage breakout
-  move." — TTLAC §9 p.199. We flag `mvp_exhaustion` when `has_mvp` AND
-  (`base_count.is_late_stage` (≥4) OR a `sell_signals` climax run).
+- **Exhaustion (bearish / sell).** TTLAC §9 p.199 is explicit that this is a
+  **late-stage-only** read: "a late-stage exhaustion move versus an early-stage
+  breakout move," and "if the type of action … occurs from an early stage base …
+  these actions are a **bullish** signal." So:
+
+      mvp_exhaustion = is_late_stage (base ≥4) AND (has_mvp OR climax)
+
+  A late-stage base showing **either** the full MVP footprint **or** a pure price
+  climax (`sell_signals.climax_run_25pct_in_3w`). The climax leg catches a
+  late-stage blow-off the 12/15 up-day count alone misses — e.g. MRVL: base 4,
+  +52% in 3 weeks, only 10/15 up days → no full MVP, yet a blow-off. From an
+  **early/mid base (≤3)** the same action is NOT a sell (the §9 caveat) — it
+  stays buyable, governed only by the extension cap. *(Fixed 2026-06-19: the
+  first cut flagged early-base MVP+climax as exhaustion — contradicting the §9
+  caveat — and missed late-stage climaxes lacking the full up-day count.)*
 
 `mvp_read` = `"continuation"` | `"exhaustion"` | `null` drives the card chip.
 
