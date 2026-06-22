@@ -12,14 +12,14 @@ from sepa import top_picks, scanner
 
 
 def _row(sym, score, *, buyable=False, ready=False, dsb=None,
-         conviction=None, distribution_selling=False):
+         conviction=None, distribution_selling=False, setup_type="VCP"):
     return {
         "symbol": sym, "score": score, "conviction": conviction,
         "is_buyable": buyable, "setup_ready": ready,
         "distribution_selling": distribution_selling,
         "volume": {"days_since_breakout": dsb},
         "trend": {"passed": 8}, "rs_rank": 90,
-        "entry_setup": {"pivot": 100.0, "stop": 92.0},
+        "entry_setup": {"type": setup_type, "pivot": 100.0, "stop": 92.0},
         "entry_exit": {"decision": "ENTER", "entry": {"zone_lo": 100.0}},
     }
 
@@ -83,3 +83,26 @@ def test_empty_when_no_scan(monkeypatch):
     monkeypatch.setattr(scanner, "load_latest", lambda: None)
     out = top_picks.top_picks(3)
     assert out["picks"] == []
+
+
+def test_bare_breakout_excluded_from_top_picks(monkeypatch):
+    # 2026-06-22: a top pick must come from a REAL BASE (VCP / Power Play /
+    # pocket pivot). A bare BREAKOUT (no detected base) is excluded even when
+    # buyable with the highest conviction — the "non-VCP" names stay off the
+    # premium shortlist.
+    rows = [
+        _row("BARE", 99, buyable=True, dsb=0, conviction=95, setup_type="BREAKOUT"),
+        _row("VCP1", 80, buyable=True, dsb=0, conviction=70, setup_type="VCP"),
+        _row("PP1",  75, buyable=True, dsb=0, conviction=60, setup_type="POWER_PLAY"),
+    ]
+    monkeypatch.setattr(scanner, "load_latest", lambda: _scan(rows))
+    syms = [p["symbol"] for p in top_picks.top_picks(3)["picks"]]
+    assert "BARE" not in syms
+    assert syms == ["VCP1", "PP1"]    # bare breakout dropped despite top conviction
+
+
+def test_pocket_pivot_counts_as_a_base(monkeypatch):
+    """A pocket pivot is an in-base institutional buy → counts as a real base."""
+    rows = [_row("PKT", 85, buyable=True, dsb=0, conviction=80, setup_type="POCKET_PIVOT")]
+    monkeypatch.setattr(scanner, "load_latest", lambda: _scan(rows))
+    assert [p["symbol"] for p in top_picks.top_picks(3)["picks"]] == ["PKT"]

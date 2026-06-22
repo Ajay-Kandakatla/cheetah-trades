@@ -18,6 +18,7 @@ import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoa
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useSort, type SortDir } from '../lib/useSort';
 import { marchToTarget, stageMeta } from '../lib/breakoutTargets';
+import { isBaseSetup } from '../lib/baseSetup';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
@@ -166,6 +167,9 @@ function Stat({ n, label, tone }: { n: number; label: string; tone?: string }) {
 export function BreakoutsPage() {
   const { rows, summary, scanTs, loading, error, reload } = useBreakoutBoard(250, 1);
   const [filter, setFilter] = useState<FilterKey>('all');
+  // Base-only is ON by default (Ajay 2026-06-22): hide bare breakouts that have
+  // no detected base; keep VCP / Power Play / pocket pivot. Toggle off to widen.
+  const [baseOnly, setBaseOnly] = useState(true);
 
   // Dynamic re-scan (Ajay 2026-06-18). "Refresh" just re-pulls the latest scan
   // (instant, reuses what the cron / other pages already scanned). "Update" runs
@@ -180,8 +184,8 @@ export function BreakoutsPage() {
 
   const shown = useMemo(() => {
     const f = FILTERS.find((x) => x.key === filter) ?? FILTERS[0];
-    return rows.filter(f.match);
-  }, [rows, filter]);
+    return rows.filter(f.match).filter((r) => !baseOnly || isBaseSetup(r.setup_type));
+  }, [rows, filter, baseOnly]);
 
   // Client-side sort over the filtered list. Default (Ajay 2026-06-22):
   // CONVICTION — Enter-eligible (is_buyable) names first, then by the momentum-
@@ -282,6 +286,19 @@ export function BreakoutsPage() {
             {f.label}
           </button>
         ))}
+        {/* Base-only toggle (Ajay 2026-06-22) — ANDs with the filter above; ON by
+            default so bare breakouts (no base) are hidden. */}
+        <button
+          className={`sepa-chip ${baseOnly ? 'is-active' : ''}`}
+          title="Show only real-base breakouts (VCP / Power Play / pocket pivot) and hide bare breakouts that have no detected base (Minervini pp.198-205). On by default — tap to show all."
+          onClick={() => setBaseOnly((b) => !b)}
+          style={{
+            cursor: 'pointer', fontSize: '0.74rem',
+            ...(baseOnly ? { borderColor: 'var(--gold, #c9a227)', color: 'var(--gold, #c9a227)', fontWeight: 700 } : {}),
+          }}
+        >
+          🧱 Base only
+        </button>
       </div>
 
       {error && <p className="sepa-err">Couldn't load breakouts: {error}</p>}

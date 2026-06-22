@@ -24,6 +24,7 @@ import { SepaTrendProvider } from '../components/SepaTrendContext';
 // the WhalesFlowModal uses for the per-fund ⭐⭐⭐ badge.
 import { getFundTier } from '../lib/fundTiers';
 import { isMomentumLeader } from '../lib/momentumLeader';
+import { isBaseSetup } from '../lib/baseSetup';
 // Political-disclosure flag lookup for 🏛️ POTUS Family + 🇺🇸 US Gov filters.
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -207,7 +208,14 @@ function passesSepaFilters(
   const { earningsMap, whalesFlow } = deps;
 
   // Tier (Buy/Strong Buy) filter removed 2026-06-21 — rely on Enter/Watch.
-  if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
+  // Setup gate. 'BASE' (the default, Ajay 2026-06-22) keeps real-base setups
+  // (VCP / Power Play / pocket pivot) and hides bare breakouts with no base;
+  // 'VCP'/'POWER_PLAY' match exactly; 'ALL' shows everything.
+  if (filters.setup === 'BASE') {
+    if (!isBaseSetup(r.entry_setup?.type)) return false;
+  } else if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) {
+    return false;
+  }
   // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
   // gate (is_buyable, pp.79-83/198-203) per user 2026-06-02 ("enter = buyable
   // at all cost"); Wait/Watch match the entry_exit.decision banner the card
@@ -452,7 +460,7 @@ export function SepaPage() {
     // Trade Like a Stock Market Wizard pp.79-83/198-203). On days when nothing is
     // buyable the empty state offers one tap to the qualifier watchlist. Widen the
     // 🟢 decision chip (Enter→All) to see the full list.
-    rating: 'ALL', setup: 'ALL', decision: 'ENTER', breakoutWindow: 'TODAY',
+    rating: 'ALL', setup: 'BASE', decision: 'ENTER', breakoutWindow: 'TODAY',
     tightPivotOnly: false, buyZoneOnly: false, nearPivotOnly: false,
     salesStrongOnly: false, rsMin: 70, search: '', showAll: true,
     dmEligibleOnly: false, type: 'all', pioneerOnly: false, stage: 'ALL',
@@ -512,14 +520,17 @@ export function SepaPage() {
   const [filters, setFilters] = useState<SepaFilters>(() => {
     if (typeof window === 'undefined') return FILTER_DEFAULTS;
     try {
-      const raw = localStorage.getItem('sepa_filters_v2');
+      // v3 (Ajay 2026-06-22): bumped so the new 'Base only' setup default
+      // (hide bare breakouts) actually applies — a one-time reset to the
+      // current defaults rather than inheriting a stale persisted setup='ALL'.
+      const raw = localStorage.getItem('sepa_filters_v3');
       if (!raw) return FILTER_DEFAULTS;
       return { ...FILTER_DEFAULTS, ...JSON.parse(raw) };
     } catch { return FILTER_DEFAULTS; }
   });
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('sepa_filters_v2', JSON.stringify(filters));
+    localStorage.setItem('sepa_filters_v3', JSON.stringify(filters));
   }, [filters]);
 
   // Phase 2 — setup-category tab strip. "all" is the default (existing

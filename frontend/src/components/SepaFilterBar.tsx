@@ -41,7 +41,7 @@ const FilterInfo = (
 
 export type SepaFilters = {
   rating: Rating | 'ALL';
-  setup: 'ALL' | 'VCP' | 'POWER_PLAY';
+  setup: 'ALL' | 'BASE' | 'VCP' | 'POWER_PLAY';
   /** Timed-entry decision gate — mirrors the ENTER/WAIT/WATCH banner the
    *  card already shows (`entry_exit.decision`, backend/sepa/entry_exit.py).
    *  'ALL' = no gate. 'ENTER' = breakout actionable now; 'WAIT' = valid base,
@@ -286,18 +286,19 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             ≤5% pivot (pp.198/202). */}
         <div className="sepa-filterbar__cat-group">
           <span className="sepa-filterbar__cat-label" title="The base structure — Volatility Contraction Pattern / Power Play (book pp.197-205).">🧱 Setup</span>
-          {(['ALL', 'VCP', 'POWER_PLAY'] as const).map((s) => (
+          {(['BASE', 'ALL', 'VCP', 'POWER_PLAY'] as const).map((s) => (
             <button
               key={s}
               className={`sepa-chip ${filters.setup === s ? 'is-active' : ''} ${s === 'ALL' ? 'sepa-chip--passive' : ''}`}
               onClick={() => set('setup', filters.setup === s ? 'ALL' : s)}
               title={
+                s === 'BASE' ? 'DEFAULT — show only real-base setups (VCP, Power Play, pocket pivot) and hide bare breakouts that have no base (Minervini pp.198-205). Tap "Any setup" to widen.' :
                 s === 'VCP' ? 'Show only names whose entry setup is a Volatility Contraction Pattern. Tap again to turn off.' :
                 s === 'POWER_PLAY' ? 'Show only Power Play (high-tight-flag) setups. Tap again to turn off.' :
-                'No setup filter — show every candidate regardless of setup.'
+                'No setup filter — show every candidate, including bare breakouts with no base.'
               }
             >
-              {s === 'ALL' ? 'Any setup' : s === 'POWER_PLAY' ? 'Power Play' : s}
+              {s === 'ALL' ? 'Any setup' : s === 'POWER_PLAY' ? 'Power Play' : s === 'BASE' ? '🧱 Base only' : s}
             </button>
           ))}
           <button

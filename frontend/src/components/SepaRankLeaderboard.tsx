@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
+import { isBaseSetup } from '../lib/baseSetup';
 import { MacroRiskBadge, MacroMarketStrip, type MacroRisk, type MacroMarket } from './MacroRiskBadge';
 import { Heatmap, type HeatTile } from './Heatmap';
 import { MarketContextStrip } from './MarketContextStrip';
@@ -29,6 +30,8 @@ type Leader = {
   /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py) — the
    *  default sort. Climax/exhaustion names are suppressed to the bottom. */
   conviction?: number | null;
+  /** Entry-setup type — drives the 'Base only' toggle (hide bare breakouts). */
+  setup_type?: string | null;
   rs_rank?: number | null;
   best_rank: number;
   worst_rank: number;
@@ -137,6 +140,9 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('conviction');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  // Base-only is ON by default (Ajay 2026-06-22): hide names whose current setup
+  // is a bare breakout with no base; keep VCP / Power Play / pocket pivot.
+  const [baseOnly, setBaseOnly] = useState(true);
 
   // Live: initial load + poll every REFRESH_MS. A failed refresh keeps the last
   // good data and flags "stale" rather than blanking the board.
@@ -162,14 +168,15 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
     const get = sortKey === 'pattern'
       ? (l: Leader) => patternRank(verdicts.get(l.symbol.toUpperCase()))
       : SORTS.find((s) => s.key === sortKey)!.get;
-    return [...(data?.leaders ?? [])].sort((a, b) => {
+    const pool = (data?.leaders ?? []).filter((l) => !baseOnly || isBaseSetup(l.setup_type));
+    return [...pool].sort((a, b) => {
       const av = get(a), bv = get(b);
       if (av == null && bv == null) return 0;
       if (av == null) return 1;                       // nulls last
       if (bv == null) return -1;
       return sortDir === 'asc' ? av - bv : bv - av;
     });
-  }, [data, sortKey, sortDir, verdicts]);
+  }, [data, sortKey, sortDir, verdicts, baseOnly]);
 
   // Leaderboard heatmap (Leaderboard page only): live day-change colour, score size.
   const liveQuotes = useLivePortfolio(heatmap ? rows.map((r) => r.symbol) : []);
@@ -263,6 +270,13 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
             </button>
           );
         })}
+        {/* Base-only toggle (Ajay 2026-06-22) — ON by default; hides names whose
+            current setup is a bare breakout with no base. */}
+        <button className={`rank-lb__sortchip${baseOnly ? ' is-on' : ''}`}
+          title="Show only names whose current setup is a real base (VCP / Power Play / pocket pivot); hide bare breakouts. On by default — tap to show all."
+          onClick={() => setBaseOnly((b) => !b)}>
+          🧱 Base only
+        </button>
       </div>
 
       <div className="rank-lb__list">

@@ -47,6 +47,7 @@ const row = (symbol: string, count: number, mPass: boolean, bPass: boolean | nul
   symbol, name: `${symbol} Inc`, breakout_count: count, days_since_breakout: 0,
   high_vol_breakout: true, broke_out_today: true, last_close: 100, day_change_pct: 1.2,
   rs_rank: 90, stage: 2, beta, is_etf: false, is_buyable: buyable, setup_ready: buyable,
+  setup_type: 'VCP',
   buy_verdict: verdict(mPass, bPass) as any,
 });
 
@@ -124,7 +125,7 @@ describe('BreakoutsPage', () => {
       symbol: sym, name: `${sym} Inc`, breakout_count: 3, days_since_breakout: 0,
       high_vol_breakout: true, broke_out_today: true, last_close: 100, last_vol: 2_000_000,
       avg_vol_50: 1_000_000, day_change_pct: 1, rs_rank: 90, stage: 2, is_etf: false,
-      is_buyable: buyable, setup_ready: buyable, conviction: conv,
+      is_buyable: buyable, setup_ready: buyable, conviction: conv, setup_type: 'VCP',
       buy_verdict: verdict(true, true) as any,
     });
     mockState.rows = [
@@ -159,6 +160,20 @@ describe('BreakoutsPage', () => {
     const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
     expect(within(rows[0]).getByText('LEAD')).toBeInTheDocument();
     expect(within(rows[1]).getByText('AMAT')).toBeInTheDocument();
+  });
+
+  it('hides bare-breakout (non-base) names by default; "Base only" toggle reveals them (Ajay 2026-06-22)', () => {
+    mockState.rows = [
+      { ...row('VCPNAME', 5, true, true), setup_type: 'VCP' },
+      { ...row('BAREBO', 9, true, true), setup_type: 'BREAKOUT' },   // bare breakout, no base
+    ];
+    renderPage();
+    // default: Base only ON → VCP shown, bare breakout hidden
+    expect(screen.getByText('VCPNAME')).toBeInTheDocument();
+    expect(screen.queryByText('BAREBO')).not.toBeInTheDocument();
+    // toggle Base only OFF → the bare breakout appears
+    fireEvent.click(screen.getByRole('button', { name: /Base only/i }));
+    expect(screen.getByText('BAREBO')).toBeInTheDocument();
   });
 
   it('explains every column from the table info icon', () => {
@@ -236,7 +251,7 @@ type VOpts = { count: number; price: number | null; vol: number | null; avg: num
 const vrow = (symbol: string, o: VOpts): BreakoutBoardRow => ({
   symbol, name: `${symbol} Inc`, breakout_count: o.count, days_since_breakout: 0,
   high_vol_breakout: true, broke_out_today: true, last_close: o.price, last_vol: o.vol,
-  avg_vol_50: o.avg, day_change_pct: o.chg, rs_rank: 90, stage: 2, is_etf: false,
+  avg_vol_50: o.avg, day_change_pct: o.chg, rs_rank: 90, stage: 2, is_etf: false, setup_type: 'VCP',
   buy_verdict: verdict(true, true) as any,
 });
 
@@ -337,7 +352,7 @@ type SOpts = { stage: number | null; price: number | null; r1: number | null; r2
 const srow = (symbol: string, o: SOpts): BreakoutBoardRow => ({
   symbol, name: `${symbol} Inc`, breakout_count: 3, days_since_breakout: 0,
   high_vol_breakout: true, broke_out_today: true, last_close: o.price, last_vol: 1_000_000,
-  avg_vol_50: 1_000_000, day_change_pct: 1.0, rs_rank: 90, stage: o.stage,
+  avg_vol_50: 1_000_000, day_change_pct: 1.0, rs_rank: 90, stage: o.stage, setup_type: 'VCP',
   stage_label: o.stage != null ? `Stage ${o.stage}` : null, r1: o.r1, r2: o.r2,
   is_etf: false, buy_verdict: verdict(true, true) as any,
 });

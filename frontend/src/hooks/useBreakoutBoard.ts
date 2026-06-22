@@ -37,6 +37,9 @@ export type BreakoutBoardRow = {
   /** Institutions selling into the breakout (churn/climax distribution) — its
    *  own held-out-of-Enter reason, distinct from `setup_note`. */
   distribution_selling?: boolean;
+  /** Entry-setup type (VCP / POWER_PLAY / POCKET_PIVOT / BREAKOUT) — drives the
+   *  'Base only' filter that hides bare breakouts with no detected base. */
+  setup_type?: string | null;
   /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py) — the new
    *  default sort for the board. Climax names suppressed to the bottom. */
   conviction?: number | null;

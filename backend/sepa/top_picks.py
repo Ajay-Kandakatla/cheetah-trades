@@ -117,6 +117,16 @@ def _pick(row: dict, status: str) -> dict:
     }
 
 
+# Real-base setups (Ajay 2026-06-22): a top pick must come from a detected base —
+# VCP / Power Play / pocket pivot — never a bare BREAKOUT with no base. Hides the
+# "non-VCP" names from the premium shortlist.
+BASE_SETUP_TYPES = ("VCP", "POWER_PLAY", "POCKET_PIVOT")
+
+
+def _is_base(row: dict) -> bool:
+    return ((row.get("entry_setup") or {}).get("type")) in BASE_SETUP_TYPES
+
+
 def top_picks(n: int = 3) -> dict:
     """Top `n` actionable SEPA buys from the latest scan. Always returns the
     schema (empty list if no scan yet)."""
@@ -126,8 +136,9 @@ def top_picks(n: int = 3) -> dict:
     # Rank within actionability tier by CONVICTION (momentum + dried volume +
     # demand, sepa.conviction) instead of raw score — the names with the most
     # return potential lead each tier (Ajay 2026-06-22). Tier still comes first
-    # so a name breaking out TODAY outranks an in-base pocket pivot.
-    buyable = [r for r in rows if r.get("is_buyable")]
+    # so a name breaking out TODAY outranks an in-base pocket pivot. Only REAL
+    # BASE setups qualify — a bare breakout (no base) is never a top pick.
+    buyable = [r for r in rows if r.get("is_buyable") and _is_base(r)]
     buyable.sort(key=lambda r: (_tier(r), -(r.get("conviction") or 0)))
     picks = [_pick(r, "buyable") for r in buyable[:n]]
 
@@ -138,7 +149,7 @@ def top_picks(n: int = 3) -> dict:
         have = {p["symbol"] for p in picks}
         ready = [r for r in rows
                  if r.get("setup_ready") and not r.get("is_buyable")
-                 and not r.get("distribution_selling")
+                 and not r.get("distribution_selling") and _is_base(r)
                  and r.get("symbol") not in have]
         ready.sort(key=lambda r: -(r.get("conviction") or 0))
         picks += [_pick(r, "ready") for r in ready[: n - len(picks)]]

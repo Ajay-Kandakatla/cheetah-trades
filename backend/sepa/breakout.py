@@ -142,6 +142,10 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             # just the Trend-Template qualifier (buy_verdict.minervini).
             "is_buyable":      bool(r.get("is_buyable")),
             "setup_ready":     bool(r.get("setup_ready")),
+            # Entry-setup type (VCP / POWER_PLAY / POCKET_PIVOT / BREAKOUT) so the
+            # board can filter to real-base setups, hiding bare breakouts that have
+            # no detected base (Ajay 2026-06-22).
+            "setup_type":      (r.get("entry_setup") or {}).get("type"),
             # Why a SETUP row isn't buyable — "extended, wait for a pullback"
             # (Ajay 2026-06-22). None for clean setups; distribution shown via
             # distribution_selling below.

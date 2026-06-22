@@ -176,6 +176,9 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
             "group_size":          cur.get("group_size"),
             "group_leader_symbol": cur.get("group_leader_symbol"),
             "drop_reason":   _drop_reason(stage, dist_days, accum) if dropped else None,
+            # Entry-setup type (VCP / POWER_PLAY / POCKET_PIVOT / BREAKOUT) so the
+            # board can filter to real-base setups (Ajay 2026-06-22).
+            "setup_type":    (cur.get("entry_setup") or {}).get("type"),
             # Coiling (pre-breakout spring) + near first R-target (Ajay 2026-06-03)
             "coiling":       coiling,
             "near_r1":       near_r1,
