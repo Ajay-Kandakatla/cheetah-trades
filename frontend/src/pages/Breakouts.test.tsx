@@ -43,10 +43,11 @@ const verdict = (mPass: boolean, bPass: boolean | null) => ({
 });
 
 const row = (symbol: string, count: number, mPass: boolean, bPass: boolean | null,
-            beta: number | null = 1.0): BreakoutBoardRow => ({
+            beta: number | null = 1.0, buyable = false): BreakoutBoardRow => ({
   symbol, name: `${symbol} Inc`, breakout_count: count, days_since_breakout: 0,
   high_vol_breakout: true, broke_out_today: true, last_close: 100, day_change_pct: 1.2,
-  rs_rank: 90, stage: 2, beta, is_etf: false, buy_verdict: verdict(mPass, bPass) as any,
+  rs_rank: 90, stage: 2, beta, is_etf: false, is_buyable: buyable, setup_ready: buyable,
+  buy_verdict: verdict(mPass, bPass) as any,
 });
 
 const renderPage = () => render(<MemoryRouter><BreakoutsPage /></MemoryRouter>);
@@ -54,11 +55,11 @@ const renderPage = () => render(<MemoryRouter><BreakoutsPage /></MemoryRouter>);
 beforeEach(() => {
   mockState = {
     rows: [
-      row('BBB', 9, true, true),    // both pass
+      row('BBB', 9, true, true, 1.0, true),  // both pass + BUYABLE
       row('CCC', 5, true, false),   // Minervini pass, Bonde fail
       row('AAA', 2, false, true),   // Minervini fail, Bonde pass
     ],
-    summary: { total: 3, broke_out_today: 3, minervini_pass: 2, minervini_fail: 1, bonde_pass: 2, bonde_fail: 1, both_pass: 1 },
+    summary: { total: 3, broke_out_today: 3, buyable: 1, minervini_pass: 2, minervini_fail: 1, bonde_pass: 2, bonde_fail: 1, both_pass: 1 },
     loading: false, error: null,
   };
   scanStart.mockClear();
@@ -88,6 +89,17 @@ describe('BreakoutsPage', () => {
     expect(within(rows[0]).getByText('BBB')).toBeInTheDocument();
     expect(within(rows[0]).getByText('9')).toBeInTheDocument();
     expect(within(rows[2]).getByText('AAA')).toBeInTheDocument();
+  });
+
+  it('badges the buyable row and the "Buyable now" filter narrows to it', () => {
+    renderPage();
+    // BBB is the only is_buyable row → it carries the 🎯 BUYABLE badge.
+    expect(screen.getByText(/BUYABLE/)).toBeInTheDocument();
+    // The buyable stat counts 1.
+    fireEvent.click(screen.getByRole('button', { name: /🎯 Buyable now/i }));
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByText('BBB')).toBeInTheDocument();
   });
 
   it('explains every column from the table info icon', () => {
@@ -145,7 +157,7 @@ describe('BreakoutsPage', () => {
   });
 
   it('shows an empty state when there are no breakouts (negative)', () => {
-    mockState = { rows: [], summary: { total: 0, broke_out_today: 0, minervini_pass: 0, minervini_fail: 0, bonde_pass: 0, bonde_fail: 0, both_pass: 0 }, loading: false, error: null };
+    mockState = { rows: [], summary: { total: 0, broke_out_today: 0, buyable: 0, minervini_pass: 0, minervini_fail: 0, bonde_pass: 0, bonde_fail: 0, both_pass: 0 }, loading: false, error: null };
     renderPage();
     expect(screen.getByText(/No breakouts in the latest scan/i)).toBeInTheDocument();
   });
@@ -182,7 +194,7 @@ describe('BreakoutsPage — turnover / volume columns + sorting', () => {
         vrow('HIGH', { count: 2, price: 100, vol: 5_000_000, avg: 1_000_000, chg: 3.5 }), // $500.0M, 500%
         vrow('LOW', { count: 5, price: 10, vol: 1_000_000, avg: 4_000_000, chg: -2.0 }),  // $10.0M, 25%
       ],
-      summary: { total: 3, broke_out_today: 3, minervini_pass: 3, minervini_fail: 0, bonde_pass: 3, bonde_fail: 0, both_pass: 3 },
+      summary: { total: 3, broke_out_today: 3, buyable: 0, minervini_pass: 3, minervini_fail: 0, bonde_pass: 3, bonde_fail: 0, both_pass: 3 },
       loading: false, error: null,
     };
   });
@@ -240,7 +252,7 @@ describe('BreakoutsPage — turnover / volume columns + sorting', () => {
         vrow('GOOD', { count: 3, price: 40, vol: 3_000_000, avg: 1_500_000, chg: 1.1 }),
         { ...vrow('NULL', { count: 3, price: null, vol: null, avg: null, chg: null }), broke_out_today: false, days_since_breakout: null },
       ],
-      summary: { total: 2, broke_out_today: 1, minervini_pass: 2, minervini_fail: 0, bonde_pass: 2, bonde_fail: 0, both_pass: 2 },
+      summary: { total: 2, broke_out_today: 1, buyable: 0, minervini_pass: 2, minervini_fail: 0, bonde_pass: 2, bonde_fail: 0, both_pass: 2 },
       loading: false, error: null,
     };
     renderPage();
@@ -278,7 +290,7 @@ describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
         srow('MID',   { stage: 4, price: 112, r1: 110, r2: 120 }),  // cleared R1 → R2
         srow('PAST',  { stage: 1, price: 130, r1: 110, r2: 120 }),  // past R2
       ],
-      summary: { total: 3, broke_out_today: 3, minervini_pass: 3, minervini_fail: 0, bonde_pass: 3, bonde_fail: 0, both_pass: 3 },
+      summary: { total: 3, broke_out_today: 3, buyable: 0, minervini_pass: 3, minervini_fail: 0, bonde_pass: 3, bonde_fail: 0, both_pass: 3 },
       loading: false, error: null,
     };
   });

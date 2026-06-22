@@ -103,6 +103,12 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             "r2":              targets.get("r2"),
             "industry":        r.get("industry"),
             "is_etf":          bool(r.get("is_etf")),
+            # Strict Minervini buy-now gate (scanner._is_buyable, pp.79-83/198-203)
+            # + the setup-ready tier — lifted straight from the scan row so the
+            # Breakouts page shows the SAME `is_buyable` the SEPA scan does, not
+            # just the Trend-Template qualifier (buy_verdict.minervini).
+            "is_buyable":      bool(r.get("is_buyable")),
+            "setup_ready":     bool(r.get("setup_ready")),
             "buy_verdict":     _verdict_for(r),
         })
     # Highest breakout count first; RS then symbol break ties deterministically.
@@ -131,6 +137,7 @@ def board(top: int = 250, min_count: int = 1) -> dict:
     summary = {
         "total":           len(rows),
         "broke_out_today": sum(1 for x in rows if x["broke_out_today"]),
+        "buyable":         sum(1 for x in rows if x.get("is_buyable")),
         "minervini_pass":  sum(1 for x in rows if _mp(x) is True),
         "minervini_fail":  sum(1 for x in rows if _mp(x) is False),
         "bonde_pass":      sum(1 for x in rows if _bp(x) is True),

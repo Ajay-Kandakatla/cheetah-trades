@@ -26,12 +26,17 @@ export type BreakoutBoardRow = {
   r2?: number | null;
   industry?: string | null;
   is_etf?: boolean;
+  /** Strict Minervini buy-now gate (scanner._is_buyable) — the SAME gate the
+   *  SEPA scan's 🟢 Enter uses, not just the Trend-Template qualifier. */
+  is_buyable?: boolean;
+  setup_ready?: boolean;
   buy_verdict?: BuyVerdict | null;
 };
 
 export type BreakoutBoardSummary = {
   total: number;
   broke_out_today: number;
+  buyable: number;
   minervini_pass: number;
   minervini_fail: number;
   bonde_pass: number;
@@ -49,7 +54,7 @@ type Board = {
 };
 
 const EMPTY_SUMMARY: BreakoutBoardSummary = {
-  total: 0, broke_out_today: 0, minervini_pass: 0, minervini_fail: 0,
+  total: 0, broke_out_today: 0, buyable: 0, minervini_pass: 0, minervini_fail: 0,
   bonde_pass: 0, bonde_fail: 0, both_pass: 0,
 };
 

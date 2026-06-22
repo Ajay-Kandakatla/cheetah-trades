@@ -18,7 +18,7 @@ from sepa import breakout
 
 
 def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50,
-         r1=110.0, r2=120.0):
+         r1=110.0, r2=120.0, buyable=False, setup_ready=False):
     """A scan row with a breakout count + a pre-baked buy_verdict (we test the
     BOARD's ranking/summary, not the verdict logic — that has its own tests)."""
     verdict = {
@@ -35,6 +35,8 @@ def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50,
         "day_change_pct": 1.0,
         "stage": {"stage": 2, "label": "Stage 2"},
         "is_etf": False,
+        "is_buyable": buyable,
+        "setup_ready": setup_ready,
         "volume": {
             "breakout_count": count,
             "breakout_window_bars": 252,
@@ -75,6 +77,22 @@ def test_carries_verdict_and_broke_out_today(monkeypatch):
     assert r["broke_out_today"] is True
     assert r["buy_verdict"]["both_pass"] is True
     assert r["buy_verdict"]["minervini"]["passed"] is True
+
+
+def test_board_carries_is_buyable_and_counts_it(monkeypatch):
+    """The board lifts the strict is_buyable / setup_ready gate from the scan row
+    (same gate as the SEPA scan), and the summary counts the buyable names."""
+    _patch_scan(monkeypatch, [
+        _row("AAA", 5, buyable=True, setup_ready=True),
+        _row("BBB", 4, buyable=False, setup_ready=True),
+        _row("CCC", 3, buyable=False, setup_ready=False),
+    ])
+    out = breakout.board()
+    by = {r["symbol"]: r for r in out["rows"]}
+    assert by["AAA"]["is_buyable"] is True and by["AAA"]["setup_ready"] is True
+    assert by["BBB"]["is_buyable"] is False and by["BBB"]["setup_ready"] is True
+    assert by["CCC"]["is_buyable"] is False and by["CCC"]["setup_ready"] is False
+    assert out["summary"]["buyable"] == 1                # only AAA clears the gate
 
 
 def test_summary_counts_the_pass_fail_mix(monkeypatch):

@@ -23,7 +23,7 @@ import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
 import { NewBadge } from '../components/NewBadge';
 
-type FilterKey = 'all' | 'today' | 'minervini_pass' | 'minervini_fail' | 'bonde_pass' | 'bonde_fail' | 'both_pass';
+type FilterKey = 'all' | 'today' | 'buyable' | 'minervini_pass' | 'minervini_fail' | 'bonde_pass' | 'bonde_fail' | 'both_pass';
 
 const mPass = (r: BreakoutBoardRow) => r.buy_verdict?.minervini?.passed === true;
 const mFail = (r: BreakoutBoardRow) => r.buy_verdict?.minervini?.passed === false;
@@ -33,6 +33,7 @@ const bFail = (r: BreakoutBoardRow) => r.buy_verdict?.bonde?.passed === false;
 const FILTERS: { key: FilterKey; label: string; tip: string; match: (r: BreakoutBoardRow) => boolean }[] = [
   { key: 'all',            label: 'All breakouts',  tip: 'Every name with ≥1 volume-confirmed breakout, ranked by count.', match: () => true },
   { key: 'today',          label: '⚡ Broke out today', tip: 'Cleared its pivot on volume TODAY (days since breakout = 0).', match: (r) => r.broke_out_today },
+  { key: 'buyable',        label: '🎯 Buyable now', tip: 'Clears the strict Minervini buy-now gate (is_buyable, pp.79-83/198-203): Stage 2 + a setup + not avoid-stage (base ≥5) + not exhausted + a volume-confirmed breakout, in the buy zone. The SAME gate as the SEPA scan\'s 🟢 Enter — not just the Trend-Template qualifier.', match: (r) => r.is_buyable === true },
   { key: 'both_pass',      label: '🟢 Minervini + Bonde', tip: 'Both frameworks agree — Minervini buyable-stock gate AND Bonde sales both pass.', match: (r) => r.buy_verdict?.both_pass === true },
   { key: 'minervini_pass', label: 'Minervini ✓',    tip: 'Passes Minervini\'s Trend-Template qualifier (p.79).', match: mPass },
   { key: 'minervini_fail', label: 'Minervini ✗',    tip: 'Breaking out but NOT a Minervini qualifier — broke out from a non-Stage-2 / non-template structure.', match: mFail },
@@ -250,6 +251,7 @@ export function BreakoutsPage() {
         }}>
           <Stat n={summary.total} label="breakouts" />
           <Stat n={summary.broke_out_today} label="today" tone="#eab308" />
+          <Stat n={summary.buyable} label="🎯 buyable" tone="#10b981" />
           <Stat n={summary.both_pass} label="M + Bonde" tone="#10b981" />
           <Stat n={summary.minervini_pass} label="Minervini ✓" tone="#34d399" />
           <Stat n={summary.minervini_fail} label="Minervini ✗" tone="#f87171" />
@@ -333,7 +335,20 @@ export function BreakoutsPage() {
                 >
                   <span style={{ width: 36, color: 'var(--cm-slate)', fontWeight: 700 }}>{i + 1}</span>
                   <span style={{ ...colTicker, display: 'flex', flexDirection: 'column' }}>
-                    <strong className="mono">{r.symbol}</strong>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <strong className="mono">{r.symbol}</strong>
+                      {r.is_buyable ? (
+                        <span title="Buyable now — clears the strict Minervini buy gate (is_buyable), same as the SEPA scan's 🟢 Enter"
+                          style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981',
+                            border: '1px solid rgba(16,185,129,0.45)', background: 'rgba(16,185,129,0.12)',
+                            borderRadius: 5, padding: '0 4px', whiteSpace: 'nowrap' }}>🎯 BUYABLE</span>
+                      ) : r.setup_ready ? (
+                        <span title="Set up, waiting for the trigger (setup_ready) — one volume-confirmed breakout away from buyable"
+                          style={{ fontSize: '0.6rem', fontWeight: 700, color: '#eab308',
+                            border: '1px solid rgba(234,179,8,0.4)', background: 'rgba(234,179,8,0.10)',
+                            borderRadius: 5, padding: '0 4px', whiteSpace: 'nowrap' }}>SETUP</span>
+                      ) : null}
+                    </span>
                     {r.name && <span style={{ fontSize: '0.66rem', color: 'var(--cm-slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{r.name}</span>}
                   </span>
                   <span style={colCount}>
