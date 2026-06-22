@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode, type ComponentType } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './components/NavBar';
+import { MarketDayBorder } from './components/MarketDayBorder';
 import { BreakoutAlertBanner } from './components/BreakoutAlertBanner';
 import { WatchlistRail } from './components/WatchlistRail';
 import { EngineStalledBanner } from './components/EngineStalledBanner';
@@ -223,6 +224,9 @@ export function App() {
   return (
     <PageContextProvider>
     <div className="app">
+      {/* App-wide market-day frame — red on a risk-off day, green when
+          constructive, gray otherwise (Ajay 2026-06-22). */}
+      <MarketDayBorder />
       <NavBar />
       <EngineStalledBanner />
       <BreakoutAlertBanner />
