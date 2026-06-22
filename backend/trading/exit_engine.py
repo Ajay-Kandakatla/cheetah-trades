@@ -285,14 +285,21 @@ def regime() -> str:
 
     sepa.market_gauge.get_gauge() returns a dict whose `state` is one of
     'constructive' | 'caution' | 'risk_off' (score 0-100, cutoffs 67/34).
-    Conservative mapping: ONLY an explicit 'risk_off' verdict -> 'difficult';
-    'caution', 'constructive', a missing doc, or any error -> 'normal'.
+
+    A NON-constructive tape runs the book's difficult-market playbook (p.311):
+    BOTH 'risk_off' AND 'caution' -> 'difficult' (Ajay 2026-06-22). 'difficult'
+    tightens the stop band (7-8% -> 5-6%) and takes smaller profits (15-20% ->
+    10-12%) via risk_rules.regime_bands — Minervini downshifts in a tough market
+    instead of trading it like a clean uptrend, and the 1-min tick means a later
+    re-entry on a constructive turn is never missed. Only 'constructive' (or a
+    missing doc / any error) -> 'normal'. Stops can only TIGHTEN under
+    'difficult', never widen (p.308-309) — strictly more conservative.
     Lazy import — market_gauge pulls pandas; the engine must work without it.
     """
     try:
         from sepa.market_gauge import get_gauge
         state = str((get_gauge(prefer_persisted=True) or {}).get("state") or "").lower()
-        if state == "risk_off":
+        if state in ("risk_off", "caution"):
             return "difficult"
     except Exception as exc:                       # noqa: BLE001
         log.debug("regime: gauge unavailable (%s) -> normal", exc)

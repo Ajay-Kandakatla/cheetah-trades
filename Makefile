@@ -45,7 +45,7 @@ contracts-sales:               ## Sales Confidence score contracts (docs/sepa/sa
 
 contracts-trading:             ## Auto-Pilot risk contracts (docs/sepa/risk_management_methodology.md + SEPA_CONTRACTS.md 11f). Stdlib-only — runs on the HOST python, no docker.
 	@echo "→ Auto-Pilot risk contracts (backend/trading/risk_rules.py + engine)"
-	@cd backend && (test -x .venv/bin/python && .venv/bin/python -m pytest tests/test_risk_rules.py tests/test_trading_contracts.py tests/test_trading_engine.py -q --tb=short || python3 -m pytest tests/test_risk_rules.py tests/test_trading_contracts.py tests/test_trading_engine.py -q --tb=short)
+	@cd backend && (test -x .venv/bin/python && .venv/bin/python -m pytest tests/test_risk_rules.py tests/test_trading_contracts.py tests/test_trading_engine.py tests/test_caution_regime.py -q --tb=short || python3 -m pytest tests/test_risk_rules.py tests/test_trading_contracts.py tests/test_trading_engine.py tests/test_caution_regime.py -q --tb=short)
 
 contracts-kell:                ## Run the Kell scanner contracts regression test (docs/KELL_CONTRACTS.md).
 	@echo "→ Kell contracts (docs/KELL_CONTRACTS.md)"

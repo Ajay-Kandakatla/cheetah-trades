@@ -99,3 +99,23 @@ Verbatim anchors:
   markets fill where they fill (p.302–303 slippage rule: that's accepted).
 - The half-average-gain stop (p.299) needs ≥20 closed trades; until then the
   engine uses the p.311 band default of 7%.
+
+## Caution market → difficult-regime downshift (2026-06-22)
+
+`exit_engine.regime()` maps the Market Gauge state onto the book's two regimes.
+A **non-constructive** tape now runs the p.311 difficult-market playbook — BOTH
+`risk_off` AND `caution` → `'difficult'`; only `constructive` (or a missing
+gauge / error) → `'normal'`. Under `'difficult'` (`risk_rules.regime_bands`):
+
+- **Stop tightens**: 7-8% band → **5-6%** (default 6%). Stops can only tighten,
+  never widen (p.308-309), so this is strictly more conservative.
+- **Profit target shrinks**: 15-20% → **10-12%** (still ≥ 2:1, p.301).
+
+Rationale (Minervini p.311): in a tough/choppy market, gains are smaller and the
+batting average lower, so cut losses shorter and settle for smaller profits.
+Standing tighter on a caution day costs nothing here because the engine ticks
+every minute — a later re-entry on a constructive turn is never missed
+(TLSW p.288, "you don't have to involve yourself in every market movement").
+Position-size reduction (the other half of p.311) is NOT yet wired — `position_size`
+ignores the regime; the tighter stop already cuts per-trade risk (25% × 6% =
+1.5% vs 1.75%). Locked: `tests/test_caution_regime.py`.
