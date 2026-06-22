@@ -17,6 +17,8 @@ import { useOwnedPosition } from '../hooks/useOwnedPositions';
 import { TradePlanInline } from './TradePlanInline';
 import { StopsPanel } from './StopsPanel';
 import { EntryExitPlanBlock } from './EntryExitPlanBlock';
+import { PositionSignal } from './PositionSignal';
+import { resolveOwnedEntry } from '../lib/ownedEntry';
 import { PivotMeter } from './PivotMeter';
 import { pivotTiming } from '../lib/pivotTiming';
 // Multi-day volume-trend mini histogram — the accumulation/distribution
@@ -623,6 +625,26 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           <BuyVerdictChip row={row} />
         </div>
       )}
+
+      {/* Hold/sell verdict for YOUR position (Ajay 2026-06-22) — only when you
+          own this name. The same Minervini Ch.12-13 read the Portfolio page
+          uses (PositionSignal → /sepa/position-lens): HOLD / TIGHTEN / TRIM /
+          SELL with the R-multiple, the entry-anchored stop and the R-target
+          ladder. Non-owned cards render nothing (owned is null). */}
+      {(() => {
+        const ownedEntry = resolveOwnedEntry(owned);
+        return ownedEntry ? (
+          <div style={{ padding: '0.4rem 0.2rem 0' }}>
+            <div className="eyebrow" style={{ marginBottom: 3 }}>You own this — hold or sell?</div>
+            <PositionSignal
+              symbol={row.symbol}
+              entry={ownedEntry}
+              shares={owned?.quantity ?? null}
+              stop={owned?.stop ?? null}
+            />
+          </div>
+        ) : null;
+      })()}
 
       {/* Pattern row — ALWAYS present, fixed position under the header so
           the verdict is evident on every card: the pattern it matches, the
