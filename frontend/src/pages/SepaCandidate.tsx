@@ -48,7 +48,6 @@ import { SepaSignalChips } from '../components/SepaSignalChips';
 import { StopsPanel } from '../components/StopsPanel';
 import { EntryExitPlanBlock } from '../components/EntryExitPlanBlock';
 import { pivotTiming } from '../lib/pivotTiming';
-import { PositionLens } from '../components/PositionLens';
 import { SepaScoreBar } from '../components/SepaScoreBar';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
@@ -918,17 +917,19 @@ export function SepaCandidatePage() {
 
       {data && (
         <>
-          {/* Position Lens — promoted ABOVE the tabs because if the user
-              already owns this stock, "should I sell today?" is the very
-              first question to answer. Tabs below are for deeper analysis.
-              Hidden behind a thin section header so it doesn't dominate
-              when the user is researching a fresh buy. */}
-          <section className="sepa-candidate-page__position">
-            <div className="eyebrow">
-              Position Lens — Hold or Sell <strong>{symbol}</strong>?
-            </div>
-            <PositionLens symbol={symbol} />
-          </section>
+          {/* Page-level instruction banner (Ajay 2026-06-22) — replaces the
+              Position Lens here. Sits ABOVE the tab bar so the "how to read
+              this page" guidance shows on EVERY tab, not just one. The hold/
+              sell evaluator lives on the Portfolio page (where you hold real
+              positions); this research page is for the buy decision. */}
+          <div className="sepa-tab-help">
+            <strong>{symbol}</strong> — the full Minervini SEPA read. The chips above are the
+            scorecard: <strong>Trend Template</strong> (8 criteria, p.79), market stage,
+            RS rank, your <strong>VCP / Power-Play</strong> setup, ADR and distribution days.
+            Each tab below opens one lens — chart, setup, the buy/sell{' '}
+            <strong>analysis</strong> verdict, trend, breakout history, ranking, fundamentals
+            and more; every tab explains itself at the top.
+          </div>
 
           <nav className="sepa-tabs" role="tablist">
             {(['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
