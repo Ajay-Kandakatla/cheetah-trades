@@ -266,6 +266,24 @@ def test_climax_distribution_blocks_enter_and_conviction():
     assert c["suppressed"] is True
 
 
+def test_position_lens_stop_anchored_to_entry():
+    """§13 (2026-06-22): the hold/sell verdict's auto stop is ANCHORED TO ENTRY
+    and never widened on a loser (Minervini pp.295, 308-309, 311). A trade-plan
+    stop below the entry × 0.93 line must NOT loosen the cut line — otherwise a
+    breached entry stop hides behind a HOLD (the ARM bug)."""
+    from sepa.position_lens import _resolve_stop
+    entry = 445.43
+    entry_stop = round(entry * 0.93, 2)                # 7% from entry = $414.25
+    # underwater holder: a lower trade-plan stop is ignored, stays at entry stop
+    assert _resolve_stop(entry, 382.39, None) == (entry_stop, "entry_7pct")
+    # never looser than the entry stop on the auto path
+    for plan in (None, 1.0, entry_stop):
+        assert _resolve_stop(entry, plan, None)[0] >= entry_stop
+    # a trail risen ABOVE the entry stop (winner) is allowed; user stop is honored
+    assert _resolve_stop(100.0, 185.0, None) == (185.0, "trade_plan_trail")
+    assert _resolve_stop(100.0, 90.0, 95.0) == (95.0, "user")
+
+
 def test_climax_distribution_clean_run_not_flagged():
     """REGRESSION guard at the contract layer: a clean all-up climax must NOT
     read 'distribution' (only 'climax_extended'). Mirrors the unit regression so

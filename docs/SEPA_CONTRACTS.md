@@ -9,7 +9,12 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.4.0 (2026-06-22) — §9d: **conviction rank** (`sepa.conviction`,
+**Version:** 1.5.0 (2026-06-22) — §13: the **hold/sell verdict stop is anchored to
+your ENTRY**, never widened on a loser (`position_lens._resolve_stop`, Minervini
+pp.295/308-309/311). Auto stop = max(entry × 0.93, trade-plan stop); the old code
+used the trade-plan stop alone (≈7% below the *current* price), so a breached entry
+stop hid behind HOLD for an underwater holder (the ARM bug). Prior 1.4.0 (2026-06-22)
+— §9d: **conviction rank** (`sepa.conviction`,
 momentum-led, TLSW p.34/79) is the new default sort on the SEPA page, Leaderboard
 and Breakouts board ("most return potential" = volume + dried volume + momentum);
 `CONVICTION_WEIGHTS` locked 0.35/0.30/0.25/0.10. The climax/distribution gate now
@@ -1190,6 +1195,30 @@ stocks to get into" — Ajay 2026-06-12).
   failure-isolated. 60s in-process cache; every value NaN-guarded.
 - Behavioral tests: `backend/tests/test_racing.py` (leg boundaries, ladder
   math, +3.0% inclusivity, clamping, NaN safety, sort, cache TTL).
+
+---
+
+## 13. Hold/sell verdict — stop anchored to entry (2026-06-22)
+
+`position_lens._resolve_stop(entry, plan_stop, user_stop)` sets the stop the
+hold/sell verdict (PositionSignal → `/sepa/position-lens`) measures against. The
+protective stop is **anchored to your ENTRY** and only ever **raised**, never
+widened on a loser (Minervini **pp.295, 308-309, 311**):
+
+- `user_stop` → honored (the holder's explicit line), source `user`.
+- else if `plan_stop > entry × 0.93` (a winner whose trail rose above the entry
+  stop) → the trail, source `trade_plan_trail`.
+- else → `entry × 0.93` (the 7% floor), source `entry_7pct`.
+
+i.e. the auto stop = **max(entry 7% stop, trade-plan stop)** — never looser than
+7% from entry. The `minervini_7pct` row field always carries `entry × 0.93`.
+
+**Bug fixed:** the old code used `plan_stop` alone (≈7% below the *current* price),
+so for an underwater holder a **breached entry stop hid behind a HOLD** (ARM: entry
+$445.43 → stop $414.25 breached at $404.69, but the displayed stop was $382.39).
+The verdict stays **deterministic + auditable** — the brain writes the explanation,
+never the verdict. Locked: `tests/test_position_lens_stop.py` +
+`tests/test_sepa_contracts.py::test_position_lens_stop_anchored_to_entry`.
 
 ---
 

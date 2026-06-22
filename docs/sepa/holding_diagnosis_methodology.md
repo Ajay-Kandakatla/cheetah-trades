@@ -124,3 +124,32 @@ partial-profit passages; EXIT pulls the 50/200-day violation rules).
   → one cited teaching point → what to watch), `max_tokens` 400→240.
 - The write-up is cached per holding (`portfolio_diagnosis` Mongo); an existing
   holding shows its old write-up until **↻ Re-run** (force=true) or cache expiry.
+
+## Stop is anchored to YOUR ENTRY, never widened (2026-06-22)
+
+`position_lens._resolve_stop(entry, plan_stop, user_stop)` sets the stop the
+hold/sell verdict measures against. The protective stop is **anchored to your
+entry** — 7% below it (`entry × 0.93`, **p.311**) — and is only ever **raised**
+as the stock advances, **never widened on a loser** (**pp.308-309**; "you sell on
+a signal," **p.295**):
+
+| Input | Stop used | Source |
+|---|---|---|
+| user supplied a stop | that stop (their explicit line) | `user` |
+| auto, trail risen **above** entry stop (winner) | the trade-plan / trail stop | `trade_plan_trail` |
+| auto, otherwise | `entry × 0.93` (the 7% floor) | `entry_7pct` |
+
+i.e. the auto stop = **max(entry 7% stop, trade-plan stop)**.
+
+**The bug this fixed.** The old code used the trade-plan stop *alone* — ≈7% below
+the **current** price. For a holder who is underwater that sits **below** the entry
+stop, so the cut line was re-derived from the falling price and a **breached entry
+stop hid behind a HOLD verdict**. ARM held at **$445.43** (entry stop **$414.25**)
+read **✓ HOLD** at **$404.69** because the displayed stop was **$382.39** (7% below
+the falling price, ≈14% below entry). Anchoring to entry flips it to a breached
+stop → **SELL** — the book's actual rule.
+
+This keeps the verdict **deterministic and auditable** (the brain writes the
+*explanation*, never the verdict). Behavioral + regression:
+`tests/test_position_lens_stop.py`; contract:
+`tests/test_sepa_contracts.py::test_position_lens_stop_anchored_to_entry`.

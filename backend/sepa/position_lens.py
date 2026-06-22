@@ -98,6 +98,33 @@ def _market_posture() -> dict:
             "safe_to_long": safe_to_long, "breadth_red_pct": breadth, "drivers": drivers}
 
 
+def _resolve_stop(entry: float, plan_stop, user_stop) -> tuple:
+    """The protective stop for a HELD position — ANCHORED TO ENTRY, raised never
+    widened (Minervini pp.295, 308-309, 311). Returns ``(stop_price, source)``.
+
+    The stop you measure a hold/sell verdict against is set from your ENTRY at a
+    7% cut line (entry × 0.93, p.311) and is only ever RAISED as the stock
+    advances — never WIDENED on a loser (p.308-309). So:
+
+      * ``user_stop``        — honored as the holder's explicit line in the sand.
+      * else ``max(entry_stop, plan_stop)`` — the entry 7% stop is the FLOOR; the
+        trade-plan / structure stop only takes over once it has risen ABOVE the
+        entry stop (a position in profit whose trail has tightened upward).
+
+    THE BUG THIS FIXES (Ajay 2026-06-22): the old code used ``plan_stop`` alone.
+    For a holder who is underwater, the trade-plan stop (≈7% below the *current*
+    price) sits BELOW the entry stop — a widened stop that re-derives the cut line
+    from the falling price and hides a breached ENTRY stop behind a HOLD verdict
+    (ARM: entry $445.43 → entry stop $414.25 breached, but plan_stop $382.39 read
+    HOLD). Anchoring to entry makes the verdict honor the book's stop."""
+    entry_stop = round(float(entry) * 0.93, 2)        # 7% below ENTRY (p.311)
+    if user_stop and float(user_stop) > 0:
+        return float(user_stop), "user"
+    if plan_stop and float(plan_stop) > entry_stop:   # trail has risen above the entry stop
+        return float(plan_stop), "trade_plan_trail"
+    return entry_stop, "entry_7pct"                    # never looser than 7% from entry
+
+
 def evaluate(symbol: str, entry: float, *,
              shares: Optional[float] = None,
              user_stop: Optional[float] = None) -> dict:
@@ -149,17 +176,8 @@ def evaluate(symbol: str, entry: float, *,
     # --- Stop resolution -----------------------------------------------------
     trade_plan = base.get("trade_plan") or {}
     plan_stop = ((trade_plan.get("stop") or {}).get("recommended"))
-    minervini_stop = round(entry * 0.93, 2)   # 7% hard cap
-    stop_used = (
-        float(user_stop) if user_stop and user_stop > 0
-        else float(plan_stop) if plan_stop
-        else minervini_stop
-    )
-    stop_source = (
-        "user" if user_stop else
-        "trade_plan" if plan_stop else
-        "minervini_7pct"
-    )
+    minervini_stop = round(entry * 0.93, 2)   # 7% below ENTRY (p.311) — surfaced as minervini_7pct
+    stop_used, stop_source = _resolve_stop(entry, plan_stop, user_stop)
 
     # --- Re-run sell-signal evaluator with this position's entry + stop ------
     # We call sell_signals.evaluate directly via the price file so it sees
