@@ -102,6 +102,23 @@ describe('BreakoutsPage', () => {
     expect(within(rows[0]).getByText('BBB')).toBeInTheDocument();
   });
 
+  it('explicitly says "wait for pullback" on a SETUP that ran past the pivot (Ajay 2026-06-22)', () => {
+    mockState = {
+      rows: [
+        { ...row('ARM', 7, true, true), is_buyable: false, setup_ready: true,
+          setup_note: { kind: 'extended', ext_pct: 4.9, pivot: 418.88 } },
+      ],
+      summary: { total: 1, broke_out_today: 1, buyable: 0, minervini_pass: 1, minervini_fail: 0, bonde_pass: 1, bonde_fail: 0, both_pass: 1 },
+      loading: false, error: null,
+    };
+    renderPage();
+    expect(screen.getByText(/EXTENDED \+4\.9%/)).toBeInTheDocument();
+    expect(screen.getByText(/wait for pullback/i)).toBeInTheDocument();
+    expect(screen.getByText(/→ \$418\.88/)).toBeInTheDocument();   // the pivot to wait for
+    // it is NOT shown as a plain BUYABLE/SETUP — the extended note replaces it
+    expect(screen.queryByText(/🎯 BUYABLE/)).not.toBeInTheDocument();
+  });
+
   it('defaults to BUYABLE-FIRST, then keeps TURNOVER as the secondary', () => {
     const mk = (sym: string, vol: number, buyable: boolean): BreakoutBoardRow => ({
       symbol: sym, name: `${sym} Inc`, breakout_count: 3, days_since_breakout: 0,

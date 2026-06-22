@@ -30,6 +30,12 @@ export type BreakoutBoardRow = {
    *  SEPA scan's 🟢 Enter uses, not just the Trend-Template qualifier. */
   is_buyable?: boolean;
   setup_ready?: boolean;
+  /** Why a SETUP row isn't buyable. `extended` = the breakout closed >3% past
+   *  the pivot it cleared (too far to chase, TLSW p.224) → wait for a pullback. */
+  setup_note?: { kind: 'extended'; ext_pct: number; pivot: number | null } | null;
+  /** Institutions selling into the breakout (churn/climax distribution) — its
+   *  own held-out-of-Enter reason, distinct from `setup_note`. */
+  distribution_selling?: boolean;
   buy_verdict?: BuyVerdict | null;
 };
 

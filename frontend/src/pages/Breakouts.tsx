@@ -346,6 +346,13 @@ export function BreakoutsPage() {
                           style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981',
                             border: '1px solid rgba(16,185,129,0.45)', background: 'rgba(16,185,129,0.12)',
                             borderRadius: 5, padding: '0 4px', whiteSpace: 'nowrap' }}>🎯 BUYABLE</span>
+                      ) : r.setup_ready && r.setup_note?.kind === 'extended' ? (
+                        <span title={`Broke out, but closed +${r.setup_note.ext_pct}% past the ${r.setup_note.pivot != null ? `$${r.setup_note.pivot} ` : ''}pivot — too far to chase (Minervini, TLSW p.224). Held out of the buy tier; wait for a pullback toward the pivot before entering.`}
+                          style={{ fontSize: '0.6rem', fontWeight: 800, color: '#f59e0b',
+                            border: '1px solid rgba(245,158,11,0.5)', background: 'rgba(245,158,11,0.12)',
+                            borderRadius: 5, padding: '0 4px', whiteSpace: 'nowrap' }}>
+                          ⏸ EXTENDED +{r.setup_note.ext_pct}% · wait for pullback{r.setup_note.pivot != null ? ` → $${r.setup_note.pivot}` : ''}
+                        </span>
                       ) : r.setup_ready ? (
                         <span title="Set up, waiting for the trigger (setup_ready) — one volume-confirmed breakout away from buyable"
                           style={{ fontSize: '0.6rem', fontWeight: 700, color: '#eab308',

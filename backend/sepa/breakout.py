@@ -35,6 +35,39 @@ def _row(symbol: Optional[str], vol: Optional[dict],
     }
 
 
+def _setup_note(r: dict) -> Optional[dict]:
+    """Why a SETUP-but-not-buyable row is held out of the buy tier — so the page
+    can say "extended, wait for a pullback" instead of a bare SETUP badge
+    (Ajay 2026-06-22: "explicitly say wait for the pullback since it's past the
+    pivot").
+
+    EXTENDED case: a volume-confirmed breakout that closed more than
+    ``scanner.BUYABLE_MAX_EXT_PCT`` past the pivot it cleared is too far to chase
+    (Minervini, TLSW p.224) — ``_is_buyable`` drops it, and the disciplined play is
+    to wait for a pullback toward the pivot. Reuses the SAME extension function +
+    threshold as the gate, so the note fires for exactly the names dropped for
+    extension. Returns ``{"kind": "extended", "ext_pct", "pivot"}`` or None.
+    Distribution (institutions selling) is its own read — surfaced via
+    ``distribution_selling`` — so it's excluded here."""
+    if not (r.get("setup_ready") and not r.get("is_buyable")):
+        return None
+    if r.get("distribution_selling"):
+        return None
+    try:
+        from sepa import scanner
+        ext = scanner.ext_from_pivot_pct(r.get("entry_setup") or {},
+                                         r.get("volume") or {}, r.get("last_close"))
+        cap = scanner.BUYABLE_MAX_EXT_PCT
+    except Exception:                                   # noqa: BLE001
+        return None
+    if ext is None or ext <= cap:
+        return None
+    vol = r.get("volume") or {}
+    pivot = vol.get("recent_high") or (r.get("entry_setup") or {}).get("pivot")
+    return {"kind": "extended", "ext_pct": round(float(ext), 1),
+            "pivot": round(float(pivot), 2) if pivot else None}
+
+
 def leaders(top: int = 30) -> dict:
     """Top names by breakout count from the latest scan — the Leaderboard board."""
     from sepa import scanner
@@ -109,6 +142,11 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             # just the Trend-Template qualifier (buy_verdict.minervini).
             "is_buyable":      bool(r.get("is_buyable")),
             "setup_ready":     bool(r.get("setup_ready")),
+            # Why a SETUP row isn't buyable — "extended, wait for a pullback"
+            # (Ajay 2026-06-22). None for clean setups; distribution shown via
+            # distribution_selling below.
+            "setup_note":      _setup_note(r),
+            "distribution_selling": bool(r.get("distribution_selling")),
             "buy_verdict":     _verdict_for(r),
         })
     # Highest breakout count first; RS then symbol break ties deterministically.

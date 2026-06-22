@@ -95,6 +95,51 @@ def test_board_carries_is_buyable_and_counts_it(monkeypatch):
     assert out["summary"]["buyable"] == 1                # only AAA clears the gate
 
 
+def test_setup_note_flags_extended_breakout(monkeypatch):
+    """A setup-ready-but-not-buyable row whose breakout ran past the pivot gets an
+    'extended → wait for pullback' note (Ajay 2026-06-22: "explicitly say wait for
+    the pullback since it's past the pivot"). Same extension fn + threshold as the
+    buy gate, so it fires for exactly the names is_buyable dropped for extension."""
+    from sepa import scanner
+    monkeypatch.setattr(scanner, "ext_from_pivot_pct", lambda es, vol, px: 4.9)
+    monkeypatch.setattr(scanner, "BUYABLE_MAX_EXT_PCT", 3.0)
+    row = _row("ARM", 5, buyable=False, setup_ready=True)
+    row["entry_setup"] = {"pivot": 100.0}
+    row["volume"]["recent_high"] = 95.0
+    _patch_scan(monkeypatch, [row])
+    r = breakout.board()["rows"][0]
+    assert r["setup_note"] == {"kind": "extended", "ext_pct": 4.9, "pivot": 95.0}
+
+
+def test_setup_note_none_for_buyable_or_near_pivot(monkeypatch):
+    """No note for a buyable name, nor for a setup still within the chase cap
+    (ext ≤ BUYABLE_MAX_EXT_PCT) — only a genuinely extended one (negatives)."""
+    from sepa import scanner
+    monkeypatch.setattr(scanner, "ext_from_pivot_pct", lambda es, vol, px: 1.0)
+    monkeypatch.setattr(scanner, "BUYABLE_MAX_EXT_PCT", 3.0)
+    rb = _row("AAA", 5, buyable=True, setup_ready=True);  rb["entry_setup"] = {}; rb["volume"]["recent_high"] = 100.0
+    rn = _row("BBB", 4, buyable=False, setup_ready=True); rn["entry_setup"] = {}; rn["volume"]["recent_high"] = 100.0
+    _patch_scan(monkeypatch, [rb, rn])
+    by = {x["symbol"]: x for x in breakout.board()["rows"]}
+    assert by["AAA"]["setup_note"] is None     # buyable → no note
+    assert by["BBB"]["setup_note"] is None     # within the chase cap → no note
+
+
+def test_setup_note_skips_distribution_names(monkeypatch):
+    """Distribution (institutions selling) is its OWN held-out reason — even if the
+    name is also extended, the 'wait for pullback' note must not mask it."""
+    from sepa import scanner
+    monkeypatch.setattr(scanner, "ext_from_pivot_pct", lambda es, vol, px: 9.0)
+    monkeypatch.setattr(scanner, "BUYABLE_MAX_EXT_PCT", 3.0)
+    row = _row("VSH", 5, buyable=False, setup_ready=True)
+    row["distribution_selling"] = True
+    row["entry_setup"] = {}; row["volume"]["recent_high"] = 100.0
+    _patch_scan(monkeypatch, [row])
+    r = breakout.board()["rows"][0]
+    assert r["setup_note"] is None
+    assert r["distribution_selling"] is True
+
+
 def test_summary_counts_the_pass_fail_mix(monkeypatch):
     _patch_scan(monkeypatch, [
         _row("AAA", 8, today=True, m_pass=True,  b_pass=True),    # both pass

@@ -849,6 +849,18 @@ the gate is locked in `test_distribution_gate.py` + `test_distribution_blocks_bu
   exhaustion-gap tells (TTLAC pp.187-188). REGRESSION-guarded so a clean all-up
   run reads `climax_extended`, never `distribution`.
 
+### Breakout-board `setup_note` — "extended, wait for a pullback" (2026-06-22)
+
+`breakout.board()` rows carry `setup_note` explaining WHY a SETUP row isn't
+buyable, so the Breakouts page can say *"extended +X% past the $Y pivot — wait
+for a pullback"* instead of a bare SETUP badge (Ajay 2026-06-22). It reuses the
+SAME `scanner.ext_from_pivot_pct` + `BUYABLE_MAX_EXT_PCT` (3%) the gate uses, so
+it fires for exactly the names `is_buyable` dropped for extension (TLSW p.224 —
+don't chase >a few % past the pivot). `{"kind": "extended", ext_pct, pivot}` or
+`None`. Distribution names (`distribution_selling`) are excluded — that's their
+own held-out reason. Display-only; no score/gate change. Locked in
+`test_breakout_board.py::test_setup_note_*`.
+
 ---
 
 ## 10. Liquidity floor + ADR — LOCKED
