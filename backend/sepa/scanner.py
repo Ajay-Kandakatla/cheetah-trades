@@ -40,7 +40,7 @@ from .progress import ProgressEmitter
 from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
-    mvp as mvp_indicator,
+    mvp as mvp_indicator, climax_distribution,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
     group_leadership, buyable_verdict,
@@ -149,6 +149,44 @@ def _mvp_context(df, bc, sells):
     return mvp_info, mvp_exhaustion, mvp_read
 
 
+def _distribution_context(df, bc):
+    """Are big institutions SELLING into this name's breakout/run? (TTLAC p.188:
+    "the heavy volume comes on a down day → large investors liquidating … on the
+    way up.") Two tells, computed from the price tape:
+
+      * a CLIMAX-top distribution (sepa.climax_distribution): a +25% climax run
+        with heavy-volume down days / churning, and
+      * a CHURN breakout: the most-recent volume-confirmed breakout closed WEAK
+        on heavy volume (its footprint reads ``suspect`` — supply meeting the
+        demand, not a clean institutional break, p.188).
+
+    Returns ``(is_selling, reason, climax_blob)``. ``is_selling`` BLOCKS the buy
+    gate (a name institutions are unloading is not a buy, Ajay 2026-06-21). The
+    climax blob is surfaced on the row for the SEPA-details indicator."""
+    try:
+        climax = climax_distribution.detect(df, bc)
+    except Exception:                                   # noqa: BLE001
+        climax = {"read": "none", "is_distribution": False}
+    selling = bool(climax.get("is_distribution"))
+    reason = "climax-top distribution (heavy selling into the run)" if selling else None
+    try:
+        pts = volume.breakout_points(df) or []
+        if pts:
+            fp = pts[-1].get("footprint") or {}
+            loc = fp.get("close_location")
+            # GATE is stricter than the display "suspect": only a CLEAR churn —
+            # close in the lower THIRD on heavy volume — blocks the buy tier, so
+            # ordinary intraday fades (and big net-positive moves that closed off
+            # the high) stay buyable. Tuned 2026-06-21 against the live list.
+            if (fp.get("hands") == "suspect" and loc is not None
+                    and loc <= volume.BREAKOUT_GATE_CHURN_LOC):
+                selling = True
+                reason = reason or "churn breakout — weak close on heavy volume (supply meeting demand)"
+    except Exception:                                   # noqa: BLE001
+        pass
+    return selling, reason, climax
+
+
 def _is_setup_ready(tr, stg, bc, liq, entry_setup, *, exhaustion: bool = False) -> bool:
     """The book buy-now gate MINUS the volume-breakout trigger (pp.79-83, 198):
     Trend Template + Stage 2 advancing + a setup + NOT in the avoid-stage base
@@ -213,7 +251,7 @@ def ext_from_pivot_pct(entry_setup, vol, last_px):
 
 
 def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None, *,
-                mvp=None, exhaustion: bool = False) -> bool:
+                mvp=None, exhaustion: bool = False, distribution: bool = False) -> bool:
     """Book buy-now gate (pp.79-83, 198-203): `_is_setup_ready` PLUS a TODAY
     VOLUME-CONFIRMED breakout (high_vol_breakout or pocket_pivot, p.203) that is
     still NEAR the pivot — NOT extended past it (book p.224, added 2026-06-09).
@@ -233,6 +271,11 @@ def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None, *,
     began near the base low (mvp.near_base_bottom) is buyable even past the 3%
     cap. Exhaustion (MVP from a late-stage base / climax) is never buyable."""
     if not _is_setup_ready(tr, stg, bc, liq, entry_setup, exhaustion=exhaustion):
+        return False
+    # Institutions selling into the breakout/run (climax distribution or a churn
+    # breakout, TTLAC p.188) → not a buy (Ajay 2026-06-21). Stays setup_ready /
+    # is_candidate (watchlist) — only the strict Enter tier excludes it.
+    if distribution:
         return False
     if not (vol and (vol.get("high_vol_breakout") or vol.get("pocket_pivot"))):
         return False
@@ -503,11 +546,16 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     # liquid leaders so single-digit/manipulable stocks can't top the list.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
 
+    # Are big institutions SELLING into the breakout/run? (climax distribution
+    # or a churn breakout, TTLAC p.188) — blocks the buy gate (Ajay 2026-06-21).
+    dist_selling, dist_reason, climax_dist = _distribution_context(df, bc)
+
     # Actionability bonus (book p.203): a name you can BUY today — a volume-
     # confirmed breakout in a Stage-2 setup, not late — outranks one still
     # waiting below its trigger (ranks in-buy-zone above WAIT). 2026-06-01.
     buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px,
-                          mvp=mvp_info, exhaustion=mvp_exhaustion)
+                          mvp=mvp_info, exhaustion=mvp_exhaustion,
+                          distribution=dist_selling)
     _ext_pct = ext_from_pivot_pct(entry_setup, vol, _last_px)
     setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup,
                                   exhaustion=mvp_exhaustion)
@@ -572,6 +620,12 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "mvp": mvp_info,
         "mvp_read": mvp_read,
         "mvp_exhaustion": mvp_exhaustion,
+        # Climax-top institutional distribution (TTLAC p.186-188) — read for the
+        # SEPA-details indicator + the gate. `distribution_selling` blocks the
+        # buy tier; `distribution_reason` says why (climax vs churn breakout).
+        "climax_distribution": climax_dist,
+        "distribution_selling": dist_selling,
+        "distribution_reason": dist_reason,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
         # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as
@@ -1121,9 +1175,12 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         score += 3
     # Institutional-sponsorship demotion (book p.195) — see full-scan path.
     score -= _sponsorship_penalty(liq.get("avg_dollar_vol"))
+    # Institutions selling into the breakout/run? (see full-scan path.)
+    dist_selling, dist_reason, climax_dist = _distribution_context(df, bc)
     # Actionability bonus (book p.203) — see full-scan path.
     buyable = _is_buyable(tr, stg, bc, liq, vol, entry_setup, _last_px,
-                          mvp=mvp_info, exhaustion=mvp_exhaustion)
+                          mvp=mvp_info, exhaustion=mvp_exhaustion,
+                          distribution=dist_selling)
     _ext_pct = ext_from_pivot_pct(entry_setup, vol, _last_px)
     setup_ready = _is_setup_ready(tr, stg, bc, liq, entry_setup,
                                   exhaustion=mvp_exhaustion)
@@ -1180,6 +1237,12 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "mvp": mvp_info,
         "mvp_read": mvp_read,
         "mvp_exhaustion": mvp_exhaustion,
+        # Climax-top institutional distribution (TTLAC p.186-188) — read for the
+        # SEPA-details indicator + the gate. `distribution_selling` blocks the
+        # buy tier; `distribution_reason` says why (climax vs churn breakout).
+        "climax_distribution": climax_dist,
+        "distribution_selling": dist_selling,
+        "distribution_reason": dist_reason,
         "entry_setup": entry_setup,
         "trade_plan":  trade_plan,
         # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as

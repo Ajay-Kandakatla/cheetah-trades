@@ -9,7 +9,12 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.2.1 (2026-06-19) — `mvp_exhaustion` is now late-stage-gated:
+**Version:** 1.3.0 (2026-06-21) — §5b clause 9: `distribution_selling` blocks
+`is_buyable`. A name institutions are SELLING (climax-top distribution OR a churn
+breakout that closed in the lower third on heavy volume, TTLAC p.188) is held out
+of the Enter tier but stays `setup_ready`/`is_candidate` (watchlist). Row adds
+`climax_distribution` / `distribution_selling` / `distribution_reason`; §9c reads
+now gate Enter (not display-only). Prior 1.2.1 (2026-06-19) — `mvp_exhaustion` is now late-stage-gated:
 `is_late_stage (≥4) AND (has_mvp OR climax)` (TTLAC §9 p.199 "late-stage
 exhaustion vs early-stage breakout"). Catches late-stage price climaxes the
 up-day count misses (MRVL); stops flagging early-base MVP/climax as a sell (the
@@ -370,6 +375,17 @@ A row is `is_buyable: True` if and only if ALL of:
    +52%/3wk, 10/15 up). From an early/mid base (≤3) the same action is bullish (§9
    caveat), so it is NOT blocked here (the extension cap still governs it). See
    `docs/sepa/mvp_methodology.md`.
+9. **NOT institutions-selling** — `distribution_selling == False` (**added
+   2026-06-21**, Ajay: "if big institutions are selling, block this from coming
+   up in the buy list"). `scanner._distribution_context` sets it when EITHER a
+   climax-top distribution is active (`climax_distribution.is_distribution`) OR
+   the most-recent volume-confirmed breakout is a clear **churn** — closed in the
+   lower THIRD (`volume.BREAKOUT_GATE_CHURN_LOC = -0.30`) on heavy volume (TTLAC
+   p.188, "heavy volume on a down day → large investors liquidating"). Stricter
+   than the chart's lower-half "suspect" warning, so ordinary intraday fades and
+   big net-positive moves stay buyable. The name stays `setup_ready` /
+   `is_candidate` (watchlist) — only the strict Enter tier excludes it. See
+   `docs/sepa/climax_distribution_methodology.md` → "Gating".
 
 > Book p.224 verbatim: *"You want to buy as close to the pivot point as possible
 > without chasing the stock up more than a few percentage points."* The book gives
@@ -812,13 +828,15 @@ Score: exhaustion −8; continuation off an early base +3.
 
 ---
 
-## 9c. Breakout footprint + climax distribution — DISPLAY-ONLY (2026-06-21)
+## 9c. Breakout footprint + climax distribution (2026-06-21)
 
-Two paired "whose hands?" reads on `GET /sepa/breakout/{symbol}/history`. Both
-are **read-only — they never feed the SEPA score or any buy/sell gate**. Page
-cites in `docs/sepa/breakout_footprint_methodology.md` +
+Two paired "whose hands?" reads. They **never feed the SEPA score** (ranking
+unchanged), but as of 2026-06-21 they **gate the Enter tier** — see §5b clause 9
+(`distribution_selling` blocks `is_buyable`; the name stays a candidate/watch).
+Page cites in `docs/sepa/breakout_footprint_methodology.md` +
 `docs/sepa/climax_distribution_methodology.md`; constants locked in
-`test_breakout_footprint_constants_locked` + `test_climax_distribution_constants_locked`.
+`test_breakout_footprint_constants_locked` + `test_climax_distribution_constants_locked`;
+the gate is locked in `test_distribution_gate.py` + `test_distribution_blocks_buyable` below.
 
 - **`breakouts[].footprint`** (`sepa.volume.breakout_footprint`) — who fired each
   breakout: `hands` ∈ {`heavy_institutional`, `institutional`, `light`,

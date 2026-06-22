@@ -188,6 +188,23 @@ def test_setup_ready_is_buyable_minus_breakout():
     assert V.BREAKOUT_RECENCY_LOOKBACK >= 5
 
 
+def test_distribution_blocks_buyable():
+    """§5b clause 9 (2026-06-21): a name institutions are SELLING is held out of
+    the Enter tier. `distribution=True` blocks is_buyable even with everything
+    else passing; setup_ready (watchlist) is unaffected. The gate threshold is
+    stricter than the chart's display "suspect" warning (TTLAC p.188)."""
+    from types import SimpleNamespace
+    from sepa.scanner import _is_buyable, _is_setup_ready
+    from sepa import volume as V2
+    tr = SimpleNamespace(pass_all=True)
+    es = {"type": "VCP", "pivot": 100, "stop": 93}
+    stg, liq, vol = {"stage": 2}, {"liquid": True}, {"high_vol_breakout": True}
+    assert _is_buyable(tr, stg, None, liq, vol, es) is True                       # baseline
+    assert _is_buyable(tr, stg, None, liq, vol, es, distribution=True) is False   # blocked
+    assert _is_setup_ready(tr, stg, None, liq, es) is True                        # watch kept
+    assert V2.BREAKOUT_GATE_CHURN_LOC < V2.BREAKOUT_CHURN_LOC                      # gate stricter
+
+
 def test_breakout_footprint_constants_locked():
     """Breakout-footprint "whose hands?" thresholds are book-derived (TTLAC
     pp.186-188) — lock them so the display read can't silently drift. Run-up

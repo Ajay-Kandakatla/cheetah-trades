@@ -1446,6 +1446,26 @@ export function SepaCandidatePage() {
                   gate, the sales-confidence detail, then the multi-panel readout.
                 </div>
 
+                {/* Institutions-selling indicator (Ajay 2026-06-21) — when the
+                    tape shows distribution (climax-top or a churn breakout,
+                    TTLAC p.186-188) the name is HELD OUT of the Enter/buy tier.
+                    Leads the verdict so the "why not buyable" is obvious. */}
+                {base?.distribution_selling && (
+                  <div style={{ marginBottom: '1rem', padding: '0.6rem 0.85rem', borderRadius: 8,
+                                border: '1px solid rgba(244,63,94,0.5)', background: 'rgba(244,63,94,0.10)' }}>
+                    <div style={{ color: '#f43f5e', fontWeight: 700, fontSize: '0.9rem' }}>
+                      🔴 Big institutions are selling — held out of Enter
+                    </div>
+                    <div style={{ color: '#cdd5e3', fontSize: '0.78rem', marginTop: 3, lineHeight: 1.5 }}>
+                      {base.distribution_reason || 'Distribution detected on the recent tape.'} You'd be
+                      buying as the big money sells into it, so this name stays on the watchlist but is
+                      kept out of the buy/Enter tier (Minervini, <em>Think &amp; Trade Like a Champion</em> p.186-188).
+                      {base.climax_distribution?.in_climax && base.climax_distribution?.climax_gain_pct != null
+                        ? ` Climax run +${base.climax_distribution.climax_gain_pct}%.` : ''}
+                    </div>
+                  </div>
+                )}
+
                 {/* Composite Minervini SEPA + Bonde/Stockbee buy-&-sell verdict —
                     leads the tab (Ajay 2026-06-16). Frontend synthesis over the
                     fields the scan already carries (trend, volume, sell_signals,

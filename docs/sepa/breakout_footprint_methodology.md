@@ -4,7 +4,12 @@
 **Surfaced:** `GET /sepa/breakout/{symbol}/history` → each marker's `footprint`
 plus a top-level `emerging`; rendered on the Breakout-history chart + the SEPA
 detail page's Breakout tab (`BreakoutHistoryModal.tsx`).
-**Display-only — never feeds the SEPA score or any gate.**
+**Never feeds the SEPA score.** As of 2026-06-21 the `suspect` (churn) read DOES
+feed the buy gate: a most-recent breakout that closed in the lower THIRD
+(`BREAKOUT_GATE_CHURN_LOC = -0.30`, stricter than the lower-half display warning)
+on heavy volume blocks `is_buyable` — institutions are selling into it. See
+`climax_distribution_methodology.md` → "Gating". Everything else here (hands
+colours, the emerging read) remains display-only.
 
 ## Why
 A volume-confirmed breakout (close above the prior 21-bar high on >1.5× the

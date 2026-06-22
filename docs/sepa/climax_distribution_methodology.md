@@ -1,10 +1,26 @@
 # Climax-top institutional distribution — "selling on the way up"
 
 **Module:** `backend/sepa/climax_distribution.py` (`detect`)
-**Surfaced:** `GET /sepa/breakout/{symbol}/history` → `climax_distribution`;
-rendered as the red/amber panel atop the Breakout-history chart + the SEPA detail
-page's Breakout tab (`BreakoutHistoryModal.tsx`).
-**Read only — never feeds the SEPA score or any buy gate.**
+**Surfaced:** the scan row (`climax_distribution`, `distribution_selling`,
+`distribution_reason`) + `GET /sepa/breakout/{symbol}/history`; rendered as the
+red/amber panel atop the Breakout-history chart, the Breakout tab, and a "🔴 big
+institutions are selling — held out of Enter" banner on the SEPA details page.
+**Gates the Enter tier (2026-06-21):** an active climax-top distribution blocks
+`is_buyable` (see "Gating" below). It does NOT feed the composite *score*
+(ranking/sorting unchanged) and the name stays `setup_ready`/`is_candidate`
+(watchlist) — only the strict buy/Enter tier excludes it.
+
+## Gating
+`scanner._distribution_context(df, bc)` returns `is_selling` when EITHER this
+module's `is_distribution` is true (a +25% climax run with heavy-volume selling
+tells) OR the most-recent volume-confirmed breakout is a clear **churn** — its
+footprint closed in the lower THIRD (`volume.BREAKOUT_GATE_CHURN_LOC = -0.30`) on
+heavy volume (stricter than the chart's "suspect" warning at the lower half, so
+ordinary intraday fades and big net-positive moves stay buyable). `_is_buyable`
+takes `distribution=is_selling` and returns False when set (Ajay 2026-06-21: "if
+big institutions are selling, block this from coming up in the buy list"). Live
+impact at ship: 11 of 108 buyable names held out (LRCX, VSH, … — all churn
+breakouts; none from the climax leg).
 
 ## Why
 Ajay (2026-06-21): *"on the climax run the volume momentum and bulk purchase by

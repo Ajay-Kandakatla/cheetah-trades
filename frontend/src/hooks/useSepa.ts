@@ -218,6 +218,17 @@ export type SepaCandidate = {
           near_base_bottom: boolean } | null;
   mvp_read?: 'continuation' | 'exhaustion' | null;
   mvp_exhaustion?: boolean;
+  /** Climax-top institutional distribution (TTLAC p.186-188) — who's SELLING
+   *  the run. `distribution_selling` BLOCKS the Enter/buy tier (the name still
+   *  shows as a candidate/watch); `distribution_reason` says why. */
+  climax_distribution?: {
+    read: 'distribution_underway' | 'climax_extended' | 'none';
+    is_distribution: boolean; in_climax: boolean;
+    climax_gain_pct?: number | null; up_day_ratio?: number | null;
+    tells?: Record<string, boolean>; note?: string | null;
+  } | null;
+  distribution_selling?: boolean;
+  distribution_reason?: string | null;
   entry_setup: { type: string; pivot: number; stop: number } | null;
   /** Comprehensive trade plan — entry/stop/target/levels, computed for
    *  every analyzed ticker (not just those with VCP base). See

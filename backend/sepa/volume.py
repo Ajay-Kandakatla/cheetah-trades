@@ -91,7 +91,8 @@ DIST_DAYS_BACKSTOP          = 8
 # (p.188, "elevated volume without much price progress"). We read the breakout
 # bar + its run-up to classify the hands behind it. Display-only; never scores.
 BREAKOUT_RUNUP              = 10     # run-up window — "6 to 10 days of accelerated advance" (p.187)
-BREAKOUT_CHURN_LOC         = 0.0    # close in the LOWER half of the bar's range on heavy vol = churn/suspect (p.188)
+BREAKOUT_CHURN_LOC         = 0.0    # DISPLAY: close in the LOWER half on heavy vol = churn/suspect warning (p.188)
+BREAKOUT_GATE_CHURN_LOC    = -0.30  # GATE (stricter): close in the lower THIRD = clear churn → blocks the buy tier
 BREAKOUT_HEAVY_STRENGTH    = 70     # footprint strength ≥ this (and a big block) = heavy institutional
 BREAKOUT_INST_STRENGTH     = 45     # footprint strength ≥ this = institutional
 # Forward read — a breakout SETTING UP: a name coiling within this % BELOW its
