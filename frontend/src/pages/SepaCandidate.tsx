@@ -272,9 +272,9 @@ const PivotFrameworkInfo = (
       50-day average, p.&nbsp;203), within about 1–2% of it.
     </p>
     <ul>
-      <li><strong>Buy zone</strong> — pivot up to ~2.5% above. Past that = extended, don't chase.</li>
+      <li><strong>Entry zone</strong> — pivot up to ~2.5% above. Past that = extended, don't chase.</li>
       <li><strong>Stop</strong> — ~7–8% below entry; cut losses fast (Ch.&nbsp;10–11).</li>
-      <li><strong>No trigger, no buy</strong> — below the pivot, or above it on light volume → wait.</li>
+      <li><strong>No trigger, no entry</strong> — below the pivot, or above it on light volume → wait.</li>
     </ul>
     <p>
       The gauge shows where price sits (stop · pivot · buy-zone), today's volume vs
@@ -1070,9 +1070,9 @@ export function SepaCandidatePage() {
             {tab === 'setup' && (
               <section>
                 <div className="sepa-tab-help">
-                  <strong>Setup</strong> — buy point (<strong>pivot</strong>), exit (<strong>stop</strong>),
+                  <strong>Setup</strong> — entry point (<strong>pivot</strong>), exit (<strong>stop</strong>),
                   and a position-sizing calculator. (Position Lens is at the top of the page —
-                  use this tab for the buy-side trade plan.)
+                  use this tab for the entry-side trade plan.)
                 </div>
 
                 {/* Why-buy thesis + "what's moving the rank" — the SAME summary
@@ -1214,7 +1214,7 @@ export function SepaCandidatePage() {
                 <div className="sepa-tab-help">
                   <strong>Ranking</strong> — how {symbol} has moved through the SEPA
                   ranking over time (rank #1 = top). Overlay the score that drives it
-                  or the price; markers show breakouts, when it became buyable, and
+                  or the price; markers show breakouts, when it became enter-ready, and
                   stage changes. Daily by default — toggle intraday for the churn.
                 </div>
                 <Suspense fallback={null}><RankTrendChart symbol={symbol} /></Suspense>
@@ -1441,8 +1441,8 @@ export function SepaCandidatePage() {
                   combining <strong>Minervini's</strong> SEPA Trend Template (price/MA stack, RS,
                   pivot breakout) with <strong>Pradeep Bonde's</strong> Stockbee playbook (Episodic
                   Pivot, 4% breakout, momentum burst, group leadership — and the anti-thesis
-                  <em> sell</em> signals). A full <strong>BUY</strong> needs both; any sell signal or
-                  broken trend forces <strong>AVOID</strong>. Below it: the buyable/sales fundamental
+                  <em> sell</em> signals). A full <strong>ENTER</strong> needs both; any sell signal or
+                  broken trend forces <strong>AVOID</strong>. Below it: the entry/sales fundamental
                   gate, the sales-confidence detail, then the multi-panel readout.
                 </div>
 
@@ -1462,7 +1462,7 @@ export function SepaCandidatePage() {
                     beneath the composite verdict, not a competing headline. */}
                 {base?.buy_verdict && (
                   <div style={{ marginBottom: '1rem' }}>
-                    <div className="eyebrow">Fundamental gate — buyable qualifier + sales</div>
+                    <div className="eyebrow">Fundamental gate — entry qualifier + sales</div>
                     <BuyVerdictPanel verdict={base.buy_verdict} />
                   </div>
                 )}

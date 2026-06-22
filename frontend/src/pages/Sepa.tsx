@@ -93,12 +93,12 @@ const TopPicksInfo = (
       filters.
     </p>
     <p>
-      Ranked first by <strong>rating tier</strong> (Strong Buy → Buy → Watch →
-      Neutral → Avoid), then by <strong>composite score</strong> (0-100). The
+      Ranked by <strong>composite score</strong> (0-100). The
       composite blends Trend Template strength, Relative Strength rank, base
       quality, fundamentals (Capital, Annual earnings, Numbers, New highs,
       Supply/demand, Leader, Institutional sponsorship — together CANSLIM),
-      and any near-term catalyst.
+      and any near-term catalyst. The actionable call is the
+      <strong> Enter / Wait / Watch</strong> entry signal on each card.
     </p>
     <p>Click a card to see the full breakdown for that ticker.</p>
   </>
@@ -115,7 +115,7 @@ const ResultsInfo = (
       </li>
       <li>
         <strong>Stage</strong> — 1 Basing, 2 Advancing, 3 Topping, 4 Declining.
-        Only Stage 2 is a buy candidate.
+        Only Stage 2 is an entry candidate.
       </li>
       <li>
         <strong>Trend Template criteria</strong> — how many of the eight rules pass.
@@ -206,8 +206,7 @@ function passesSepaFilters(
 ): boolean {
   const { earningsMap, whalesFlow } = deps;
 
-  const rating = r.rating ?? defaultRating(r.score);
-  if (filters.rating !== 'ALL' && rating !== filters.rating) return false;
+  // Tier (Buy/Strong Buy) filter removed 2026-06-21 — rely on Enter/Watch.
   if (filters.setup !== 'ALL' && r.entry_setup?.type !== filters.setup) return false;
   // Timed-entry decision gate. "Enter" binds to the STRICT book buyable
   // gate (is_buyable, pp.79-83/198-203) per user 2026-06-02 ("enter = buyable
@@ -1242,12 +1241,12 @@ export function SepaPage() {
           <div className="sepa-empty-card">
             {filters.decision === 'ENTER' ? (
               <>
-                <div className="eyebrow">🎯 Nothing buyable right now</div>
+                <div className="eyebrow">🎯 Nothing to enter right now</div>
                 <p>
-                  No name in the <strong>{source.length}</strong> scanned is in a
-                  buyable breakout today by Minervini's strict gate (Stage 2 + base
+                  No name in the <strong>{source.length}</strong> scanned clears the
+                  Enter gate today by Minervini's strict rule (Stage 2 + base
                   + a same-day volume-confirmed breakout). That's normal — most days
-                  there's nothing to buy. The watchlist below passed the Trend
+                  there's nothing to enter. The watchlist below passed the Trend
                   Template and is worth tracking for when one fires.
                 </p>
                 <button

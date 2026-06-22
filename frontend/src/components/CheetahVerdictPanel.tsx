@@ -56,7 +56,8 @@ function Pillar({ fw, cite }: { fw: FrameworkResult; cite: string }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {fw.verdict}
+          {/* Display label only — relabel buy→enter (Ajay 2026-06-21). */}
+          {fw.verdict === 'buy' ? 'enter' : fw.verdict}
         </span>
       </div>
       <div style={{ marginTop: '0.6rem', borderTop: '1px solid var(--rule, #2a2a2a)', paddingTop: '0.5rem' }}>
@@ -108,7 +109,7 @@ export function CheetahVerdictPanel({
             {v.label}
           </span>
           <span style={{ fontSize: '0.7rem', color: 'var(--cm-slate, #94a3b8)' }}>
-            Minervini SEPA + Pradeep Bonde (Stockbee) — buy &amp; sell
+            Minervini SEPA + Pradeep Bonde (Stockbee) — entry &amp; sell
           </span>
         </div>
         <div style={{ fontSize: '0.85rem', color: 'var(--ink-muted, #cbd5e1)', marginTop: 8 }}>{v.why}</div>
@@ -121,7 +122,7 @@ export function CheetahVerdictPanel({
       </div>
 
       <div style={{ fontSize: '0.64rem', color: 'var(--cm-slate, #94a3b8)', marginTop: '0.6rem', lineHeight: 1.5 }}>
-        A full <strong style={{ color: '#10b981' }}>BUY</strong> needs both frameworks to confirm; any anti-thesis sell
+        A full <strong style={{ color: '#10b981' }}>ENTER</strong> needs both frameworks to confirm; any anti-thesis sell
         signal (or broken trend) forces <strong style={{ color: '#f87171' }}>AVOID</strong>. See{' '}
         <code>docs/sepa/trade_verdict_methodology.md</code>.
       </div>

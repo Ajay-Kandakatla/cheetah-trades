@@ -131,7 +131,7 @@ export function SepaHero({ data, scanning, onScan }: Props) {
           <div className="sepa-stat__num">{data?.candidate_count ?? 0}</div>
           <div className="sepa-stat__label">candidates</div>
           <div className="sepa-stat__sub mono" title="Trend Template + Stage 2 + VCP/PowerPlay + early base + liquid">
-            buyable now
+            ready to enter
           </div>
         </div>
         <div className="sepa-stat">

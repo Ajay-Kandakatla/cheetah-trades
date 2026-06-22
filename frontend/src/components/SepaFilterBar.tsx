@@ -6,14 +6,16 @@ const FilterInfo = (
     <p>Narrow the candidate list down to what you actually want to trade.</p>
     <p>
       The bar is grouped left→right in <strong>Minervini's order of priority</strong>:
-      Tier → Trend &amp; Stage (the qualifier) → Setup → Entry timing → Volume →
+      Trend &amp; Stage (the qualifier) → Setup → Entry timing → Volume →
       Smart money → Catalyst → Overlays → Type.
     </p>
     <ul>
       <li>
-        <strong>Rating tier</strong> — Strong Buy, Buy, Watch. Tier comes from the
-        composite score (0-100): Strong Buy ≥ 85, Buy ≥ 70, Watch ≥ 60. (The score
-        is an app synthesis layered on Minervini's gates — not a book formula.)
+        <strong>Entry timing</strong> — the actionable verdict: <strong>Enter</strong>
+        (clears the book entry gate now), <strong>Wait</strong> (setup forming), or
+        <strong>Watch</strong>. Rank quality with the composite <strong>score</strong>
+        (0-100) via the Sort menu — an app synthesis layered on Minervini's gates,
+        not a book formula.
       </li>
       <li>
         <strong>Setup type</strong> — <strong>Volatility Contraction Pattern (VCP)</strong>
@@ -172,25 +174,23 @@ type Props = {
   shown: number;
 };
 
-const RATINGS: Array<Rating | 'ALL'> = ['ALL', 'STRONG_BUY', 'BUY', 'WATCH'];
-
 const STAGE_OPTS = [
   { v: 'ALL' as const, label: 'Any stage', tip: 'No stage filter — all four stages mixed in the list.' },
-  { v: 2 as const,     label: 'S2 Advance', tip: 'Stage 2 only — Weinstein/Minervini buy zone (price > 50 > 150 > 200 MA, 200 rising).' },
+  { v: 2 as const,     label: 'S2 Advance', tip: 'Stage 2 only — Weinstein/Minervini entry zone (price > 50 > 150 > 200 MA, 200 rising).' },
   { v: 3 as const,     label: 'S3 Topping', tip: 'Stage 3 only — distribution phase. 50-day rolled, price lost 50, still above 200. Sell-prep / tighten stops.' },
   { v: 4 as const,     label: 'S4 Decline', tip: 'Stage 4 only — confirmed downtrend (price < 50 < 150 < 200 MA, 200 falling). Sell longs / short candidate.' },
-  { v: 1 as const,     label: 'S1 Basing', tip: 'Stage 1 only — sideways accumulation after a downtrend. Pre-buy zone; not yet trending.' },
+  { v: 1 as const,     label: 'S1 Basing', tip: 'Stage 1 only — sideways accumulation after a downtrend. Pre-entry zone; not yet trending.' },
 ];
 
 const DECISION_OPTS = [
   { v: 'ALL' as const,        label: 'Any signal', tip: 'No entry-timing gate — show every decision state (Enter, Wait, Watch, Avoid).' },
-  { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'BUYABLE NOW — the strict Minervini gate (pp.79-83/198-203): Trend Template + Stage 2 + a setup + not late-stage + liquid + a VOLUME-CONFIRMED breakout (high-volume breakout or pocket pivot). The real "you may buy this today" list, so on a quiet day it can be short — by design.' },
+  { v: 'ENTER' as const,      label: '🟢 Enter',    tip: 'ENTER NOW — the strict Minervini gate (pp.79-83/198-203): Trend Template + Stage 2 + a setup + not late-stage + liquid + a VOLUME-CONFIRMED breakout (high-volume breakout or pocket pivot). The real "you may enter this today" list, so on a quiet day it can be short — by design.' },
   { v: 'WAIT' as const,       label: '🟡 Wait',     tip: 'Valid base, but the pivot has not triggered yet — Minervini\'s "wait for the breakout" state (p.203). Most VCP bases live here. Tap a card\'s WAIT banner for the trigger price + distance + valid-through date.' },
   { v: 'HOLD_WATCH' as const, label: '⚪ Watch',    tip: 'On the radar — passes trend/RS but has no setup trigger. Keep watching for a base to form.' },
 ];
 
 const BREAKOUT_OPTS = [
-  { v: 'TODAY' as const, label: 'Today', tip: 'Strict Minervini buy point (p.203): Enter = a VOLUME-CONFIRMED breakout TODAY (the is_buyable gate). The shortest, most disciplined list.' },
+  { v: 'TODAY' as const, label: 'Today', tip: 'Strict Minervini entry point (p.203): Enter = a VOLUME-CONFIRMED breakout TODAY (the strict book gate). The shortest, most disciplined list.' },
   { v: 'WEEK' as const,  label: '≤1wk',  tip: 'Relax Enter to names that broke out on volume within the last ~5 trading days AND are still set up — you can buy in the days following a breakout while it holds above the pivot.' },
   { v: 'ANY' as const,   label: 'Any',   tip: 'Drop the breakout trigger entirely: Enter = setup-ready (Trend Template + Stage 2 + base + not-late + liquid). The "ready to go, no trigger required" view.' },
 ];
@@ -218,7 +218,6 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
   // glows amber, plus the RS slider / ticker search when engaged. Added
   // 2026-05-30 — user: "very confusing when this filter is on."
   const activeCount = [
-    filters.rating !== 'ALL',
     filters.setup !== 'ALL',
     (filters.decision ?? 'ALL') !== 'ALL',
     (filters.breakoutWindow ?? 'TODAY') !== 'TODAY',
@@ -259,21 +258,9 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           controls row below. */}
       <div className="sepa-filterbar__group">
 
-        {/* 🏅 TIER — the composite verdict. The 0-100 score is an app synthesis
-            layered on the Minervini gates, not a book formula — but it's the
-            headline filter people reach for first. */}
-        <div className="sepa-filterbar__cat-group">
-          <span className="sepa-filterbar__cat-label" title="The app's composite score tier (a ranking layered on Minervini's gates).">🏅 Tier</span>
-          {RATINGS.map((r) => (
-            <button
-              key={r}
-              className={`sepa-chip ${filters.rating === r ? 'is-active' : ''} ${r === 'ALL' ? 'sepa-chip--passive' : ''}`}
-              onClick={() => set('rating', r)}
-            >
-              {r === 'ALL' ? 'All' : r.replace('_', ' ').toLowerCase()}
-            </button>
-          ))}
-        </div>
+        {/* TIER filter removed 2026-06-21 (Ajay: rely on Enter/Watch, drop the
+            Buy/Strong-Buy tier). The composite score still ranks names via the
+            Sort menu; the actionable verdict is the Entry-timing Enter signal. */}
 
         {/* 📈 TREND & STAGE — Minervini's qualifier (p.79): a Stage-2 advance
             (Weinstein 4-stage). RS≥70, the 8th Trend Template gate, is the
@@ -329,9 +316,9 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           <button
             className={`sepa-chip ${filters.buyZoneOnly ? 'is-active' : ''}`}
             onClick={() => set('buyZoneOnly', !filters.buyZoneOnly)}
-            title="In the buy zone now — at/through the pivot and within the +5% buy zone (not extended, not a non-Stage-2 false break). Buyable today on the book's cross-the-pivot rule (p.203)."
+            title="In the entry zone now — at/through the pivot and within the +5% entry zone (not extended, not a non-Stage-2 false break). Enter today on the book's cross-the-pivot rule (p.203)."
           >
-            ● In buy zone
+            ● In enter zone
           </button>
         </div>
 
@@ -561,7 +548,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           value={filters.sortBy}
           onChange={(e) => set('sortBy', e.target.value as SepaFilters['sortBy'])}
         >
-          <option value="most_buyable">Sort: 🎯 Most buyable (Enter · VCP)</option>
+          <option value="most_buyable">Sort: 🎯 Most ready to Enter (VCP)</option>
           <option value="sales_confidence">Sort: 📈 Sales confidence (Bonde)</option>
           <option value="score">Sort: Score</option>
           <option value="closest_trigger">Sort: ⚡ Closest to trigger</option>

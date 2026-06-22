@@ -65,7 +65,7 @@ const TONE: Record<Verdict, string> = {
   insufficient: '#94a3b8',
 };
 const LABEL: Record<Verdict, string> = {
-  buy: 'BUY',
+  buy: 'ENTER',          // Ajay 2026-06-21: rely on Enter/Watch — display label only (verdict value stays 'buy')
   watch: 'WATCH',
   avoid: 'AVOID',
   insufficient: 'NO DATA',

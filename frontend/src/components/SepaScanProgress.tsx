@@ -147,7 +147,8 @@ export function SepaScanProgress(props: ScanStreamState) {
                   <span className="mono sepa-progress__hit-score">{Math.round(c.score)}</span>
                   {c.rating && (
                     <span className={`sepa-progress__hit-rating sepa-progress__hit-rating--${c.rating.toLowerCase()}`}>
-                      {c.rating.replace('_', ' ')}
+                      {/* Ajay 2026-06-21: rely on Enter/Watch — relabel Buy→Enter. */}
+                      {c.rating.replace('_', ' ').replace('BUY', 'ENTER')}
                     </span>
                   )}
                   {c.rs_rank != null && (

@@ -896,7 +896,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             <span
               className="mono"
               title={
-                `Pivot $${setup.pivot} = buy point. Stop $${setup.stop} = exit. ` +
+                `Pivot $${setup.pivot} = entry point. Stop $${setup.stop} = exit. ` +
                 `Risk = (pivot − stop) / pivot × 100 = ${riskPct.toFixed(1)}%.\n\n` +
                 `⚠️ Evaluate stop at CLOSE (3:00 PM CT / 4:00 PM ET).\n` +
                 `Pre-close intraday touches are noise; a CLOSE below the stop is the ` +

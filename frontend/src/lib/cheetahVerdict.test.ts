@@ -45,6 +45,8 @@ describe('computeCheetahVerdict — composite gate', () => {
     expect(v.minervini.verdict).toBe('buy');
     expect(v.bonde.verdict).toBe('buy');
     expect(v.why).toMatch(/both frameworks/i);
+    // Display label is ENTER, not BUY (Ajay 2026-06-21) — value stays 'buy'.
+    expect(v.label).toBe('ENTER');
   });
 
   it('EDGE: Minervini passes but a Bonde anti-thesis sell fires → NOT buy', () => {
