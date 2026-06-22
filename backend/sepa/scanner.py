@@ -121,22 +121,31 @@ def _mvp_context(df, bc, sells):
     read (§9 p.199). Returns (mvp_info, mvp_exhaustion, mvp_read):
 
       * mvp_info       — sepa.mvp.compute() footprint (or None).
-      * mvp_exhaustion — the SAME footprint read in REVERSE as a SELL signal:
-        an MVP run that is extended from a LATE-STAGE base (is_late_stage, ≥4)
-        OR during a climax/blow-off run (sell_signals climax) is exhaustion,
-        not strength (§9 p.199 "a late-stage exhaustion move versus an
-        early-stage breakout move"). Conservative: blocks the buy.
-      * mvp_read       — "continuation" (bullish) | "exhaustion" (bearish) |
-        None (no MVP footprint) — drives the FE chip colour.
+      * mvp_exhaustion — the SELL/blow-off read. TTLAC §9 p.199 is explicit that
+        this is a LATE-STAGE phenomenon: "a late-stage exhaustion move versus an
+        early-stage breakout move," and "if the type of action ... occurs from an
+        early stage base ... these actions are a BULLISH signal." So exhaustion =
+        a LATE-STAGE base (is_late_stage, ≥4) showing EITHER the full MVP
+        footprint OR a pure price CLIMAX (sell_signals climax). The climax leg
+        catches a late-stage blow-off the MVP up-day count alone misses (e.g.
+        MRVL: base 4, +52% in 3 weeks, but only 10/15 up days → no full MVP).
+        From an early/mid base (≤3) the same action is NOT a sell (the book's
+        early-stage caveat) — it stays buyable, governed by the extension cap.
+      * mvp_read       — "exhaustion" (bearish, any late-stage MVP/climax) |
+        "continuation" (bullish, early/mid-base MVP footprint) | None — drives
+        the FE chip colour.
     """
     mvp_info = mvp_indicator.compute(df)
     climax = bool(((sells or {}).get("signals") or {}).get("climax_run_25pct_in_3w"))
-    mvp_exhaustion = bool(
-        mvp_info and mvp_info.get("has_mvp")
-        and (climax or (bc and bc.get("is_late_stage"))))
-    mvp_read = None
-    if mvp_info and mvp_info.get("has_mvp"):
-        mvp_read = "exhaustion" if mvp_exhaustion else "continuation"
+    has_mvp = bool(mvp_info and mvp_info.get("has_mvp"))
+    late = bool(bc and bc.get("is_late_stage"))
+    mvp_exhaustion = late and (has_mvp or climax)
+    if mvp_exhaustion:
+        mvp_read = "exhaustion"
+    elif has_mvp:
+        mvp_read = "continuation"
+    else:
+        mvp_read = None
     return mvp_info, mvp_exhaustion, mvp_read
 
 

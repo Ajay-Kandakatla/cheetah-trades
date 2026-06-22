@@ -28,6 +28,10 @@ def _df(closes, vols, lows=None):
                          "low": lows, "close": closes, "volume": vols})
 
 
+def _sells(climax=False):
+    return {"signals": {"climax_run_25pct_in_3w": bool(climax)}}
+
+
 # 15 daily deltas summing to +25 with `n_up` of them positive (ends at 125 from 100).
 def _window_path(start, n_up=13):
     n_down = 15 - n_up
@@ -170,3 +174,43 @@ def test_in_zone_breakout_still_buyable_without_mvp():
     bc = {"base_count": 3, "is_late_stage": False, "is_avoid_stage": False}
     # base 3, breakout 2% past pivot (in zone), no MVP -> buyable (base 3 tradeable).
     assert S._is_buyable(_tr(), _STG2, bc, _LIQ, _VOL_BREAKOUT, _SETUP, 102.0) is True
+
+
+# ── _mvp_context: late-stage-gated exhaustion (TTLAC §9 p.199) ───────────────
+
+_BC_LATE = {"base_count": 4, "is_late_stage": True, "is_avoid_stage": False}
+_BC_AVOID = {"base_count": 5, "is_late_stage": True, "is_avoid_stage": True}
+_BC_EARLY = {"base_count": 2, "is_late_stage": False, "is_avoid_stage": False}
+_FLAT = ([100.0] * 70, [1_000_000] * 70)            # no MVP footprint
+
+
+def test_context_late_stage_climax_without_mvp_is_exhaustion():
+    # MRVL case: late-stage base + price climax, but NOT the full 12/15 MVP
+    # footprint — the climax leg must still flag exhaustion (the blow-off the
+    # up-day count alone misses).
+    from sepa import scanner as S
+    _, exh, read = S._mvp_context(_df(*_FLAT), _BC_LATE, _sells(climax=True))
+    assert exh is True and read == "exhaustion"
+
+
+def test_context_early_base_mvp_climax_is_continuation_not_sell():
+    # TTLAC §9 p.199 caveat: the SAME action from an EARLY base "is a bullish
+    # signal," never a sell. AMAT case (base 2 MVP + climax) must NOT be exhaustion.
+    from sepa import scanner as S
+    closes, vols = _series(100, 50, 100, n_up=13)
+    mi, exh, read = S._mvp_context(_df(closes, vols), _BC_EARLY, _sells(climax=True))
+    assert mi["has_mvp"] is True
+    assert exh is False and read == "continuation"
+
+
+def test_context_late_stage_mvp_is_exhaustion():
+    from sepa import scanner as S
+    closes, vols = _series(100, 50, 100, n_up=13)
+    _, exh, read = S._mvp_context(_df(closes, vols), _BC_AVOID, _sells(climax=False))
+    assert exh is True and read == "exhaustion"
+
+
+def test_context_no_footprint_no_climax_is_none():
+    from sepa import scanner as S
+    _, exh, read = S._mvp_context(_df(*_FLAT), _BC_LATE, _sells(climax=False))
+    assert exh is False and read is None
