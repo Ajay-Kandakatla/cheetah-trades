@@ -102,6 +102,27 @@ describe('BreakoutsPage', () => {
     expect(within(rows[0]).getByText('BBB')).toBeInTheDocument();
   });
 
+  it('defaults to BUYABLE-FIRST, then keeps TURNOVER as the secondary', () => {
+    const mk = (sym: string, vol: number, buyable: boolean): BreakoutBoardRow => ({
+      symbol: sym, name: `${sym} Inc`, breakout_count: 3, days_since_breakout: 0,
+      high_vol_breakout: true, broke_out_today: true, last_close: 100, last_vol: vol,
+      avg_vol_50: 1_000_000, day_change_pct: 1, rs_rank: 90, stage: 2, is_etf: false,
+      is_buyable: buyable, setup_ready: buyable, buy_verdict: verdict(true, true) as any,
+    });
+    mockState.rows = [
+      mk('BIGNB', 9_000_000, false),  // BIGGEST $ volume ($900M) but NOT buyable
+      mk('BUYLO', 1_000_000, true),   // buyable, $100M
+      mk('BUYHI', 5_000_000, true),   // buyable, $500M
+    ];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    // Buyable first, turnover-ordered within: BUYHI ($500M) > BUYLO ($100M);
+    // the non-buyable BIGNB sinks to last DESPITE the biggest dollar volume.
+    expect(within(rows[0]).getByText('BUYHI')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('BUYLO')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('BIGNB')).toBeInTheDocument();
+  });
+
   it('explains every column from the table info icon', () => {
     renderPage();
     // The table-level ⓘ (distinct from the page-title one) opens a per-column legend.
@@ -214,8 +235,11 @@ describe('BreakoutsPage — turnover / volume columns + sorting', () => {
     expect(screen.getByText('25%')).toBeInTheDocument();
   });
 
-  it('defaults to turnover descending (highest dollar volume first)', () => {
+  it('sorts by turnover descending when the Turnover header is clicked', () => {
+    // (Default is now BUYABLE-FIRST — none of these are buyable, so clicking
+    //  Turnover gives the dollar-volume order.)
     renderPage();
+    fireEvent.click(turnoverHeader());
     const rows = dataRows();
     expect(within(rows[0]).getByText('HIGH')).toBeInTheDocument();  // $500M
     expect(within(rows[1]).getByText('MID')).toBeInTheDocument();   // $100M
@@ -225,7 +249,8 @@ describe('BreakoutsPage — turnover / volume columns + sorting', () => {
 
   it('toggles the turnover sort direction on each header click (desc → asc → desc)', () => {
     renderPage();
-    expect(turnoverHeader().textContent).toContain('▼');          // desc default
+    fireEvent.click(turnoverHeader());                            // activate turnover desc
+    expect(turnoverHeader().textContent).toContain('▼');
     expect(within(dataRows()[0]).getByText('HIGH')).toBeInTheDocument();
 
     fireEvent.click(turnoverHeader());                            // → asc

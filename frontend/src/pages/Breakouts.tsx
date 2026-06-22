@@ -183,9 +183,12 @@ export function BreakoutsPage() {
     return rows.filter(f.match);
   }, [rows, filter]);
 
-  // Client-side sort over the filtered list. Default: turnover (dollar volume)
-  // descending — the most-actionable "where's the money" view. Every column is
-  // sortable via its header (Ajay 2026-06-16).
+  // Client-side sort over the filtered list. Default (Ajay 2026-06-19):
+  // BUYABLE FIRST, then TURNOVER — buyable adds a primary tier ON TOP of the
+  // existing turnover (dollar-volume) default, which is KEPT as the secondary so
+  // within each group it's still the "where's the money" order. Composite key =
+  // is_buyable*1e15 + turnover (1e15 dominates any real dollar volume yet stays
+  // exact under 2^53). Every column is still sortable via its header.
   const sort = useSort<BreakoutBoardRow>(shown, {
     ticker: (r) => r.symbol,
     count: (r) => r.breakout_count,
@@ -198,7 +201,8 @@ export function BreakoutsPage() {
     stage: (r) => r.stage,
     beta: (r) => r.beta,
     march: (r) => marchToTarget(r.last_close, r.r1, r.r2).pct,
-  }, 'turnover', 'desc');
+    buyable: (r) => (r.is_buyable ? 1e15 : 0) + (turnoverOf(r) || 0),
+  }, 'buyable', 'desc');
 
   return (
     <div className="sepa-page">
