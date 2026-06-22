@@ -153,6 +153,7 @@ export type SepaFilters = {
    *  actual trend, not chop). 0 = off. */
   adxMin: number;
   sortBy:
+    | 'conviction'
     | 'score' | 'rs' | 'symbol' | 'closest_trigger' | 'most_buyable' | 'sales_confidence'
     | 'day_change' | 'day_change_abs'
     | 'dm_12m' | 'dm_6m' | 'dm_3m' | 'dm_1m' | 'dm_score'
@@ -548,6 +549,11 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           value={filters.sortBy}
           onChange={(e) => set('sortBy', e.target.value as SepaFilters['sortBy'])}
         >
+          {/* Momentum-led conviction rank (volume + dried volume + momentum,
+              backend sepa/conviction.py, TLSW p.34/79). Default sort: the names
+              with the most return potential first, Enter-eligible on top, climax
+              names suppressed to the bottom (Ajay 2026-06-22). */}
+          <option value="conviction">Sort: 🏆 Conviction (most return potential)</option>
           <option value="most_buyable">Sort: 🎯 Most ready to Enter (VCP)</option>
           <option value="sales_confidence">Sort: 📈 Sales confidence (Bonde)</option>
           <option value="score">Sort: Score</option>

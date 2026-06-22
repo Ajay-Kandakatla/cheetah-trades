@@ -26,6 +26,9 @@ type Leader = {
   name?: string | null;
   current_rank: number;
   current_score?: number | null;
+  /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py) — the
+   *  default sort. Climax/exhaustion names are suppressed to the bottom. */
+  conviction?: number | null;
   rs_rank?: number | null;
   best_rank: number;
   worst_rank: number;
@@ -111,8 +114,11 @@ const FLAG: Record<Leader['flag'], { label: string; color: string }> = {
   steady:       { label: 'Steady', color: '#38bdf8' },
 };
 
-type SortKey = 'current_rank' | 'best_rank' | 'rank_range' | 'current_score' | 'persistence_pct' | 'pattern';
+type SortKey = 'conviction' | 'current_rank' | 'best_rank' | 'rank_range' | 'current_score' | 'persistence_pct' | 'pattern';
 const SORTS: { key: SortKey; label: string; dir: 'asc' | 'desc'; get: (l: Leader) => number | null }[] = [
+  // Momentum-led conviction rank (volume + dried volume + momentum, backend
+  // sepa/conviction.py) — the default. Climax names sink (Ajay 2026-06-22).
+  { key: 'conviction',      label: '🏆 Conviction', dir: 'desc', get: (l) => l.conviction ?? null },
   { key: 'current_rank',    label: 'Rank',    dir: 'asc',  get: (l) => l.current_rank },
   { key: 'best_rank',       label: 'Best',    dir: 'asc',  get: (l) => l.best_rank },
   { key: 'rank_range',      label: 'Swing',   dir: 'desc', get: (l) => l.rank_range },
@@ -129,7 +135,7 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
   const [data, setData] = useState<Resp | null>(null);
   const [stale, setStale] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>('persistence_pct');
+  const [sortKey, setSortKey] = useState<SortKey>('conviction');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Live: initial load + poll every REFRESH_MS. A failed refresh keeps the last
@@ -277,7 +283,11 @@ export function SepaRankLeaderboard({ n = 12, heatmap = false }: { n?: number; h
                 {l.coiling && <span className="rank-lb__coil" title="Coiling — tight VCP base + volume drying, primed to break out (book pp.198-205)"> 🌀 Coiling</span>}
                 {l.near_r1 && <span className="rank-lb__r1" title={`Approaching its first target${l.r1_price ? ' · R1 $' + l.r1_price : ''}`}> 🎯 near R1{l.dist_to_r1_pct != null ? ` (${l.dist_to_r1_pct > 0 ? '+' : ''}${l.dist_to_r1_pct}%)` : ''}</span>}
                 <span className="rank-lb__metrics">
-                  {l.current_score != null && <>score <b>{l.current_score}</b></>}
+                  {l.conviction != null && (
+                    <span title="Conviction rank — volume + dried volume + momentum (TLSW p.34/79). Climax/exhaustion names are suppressed to the bottom."
+                      style={{ color: l.conviction >= 70 ? '#10b981' : l.conviction < 30 ? '#94a3b8' : undefined }}>🏆 <b>{Math.round(l.conviction)}</b></span>
+                  )}
+                  {l.current_score != null && <>{l.conviction != null ? ' · ' : ''}score <b>{l.current_score}</b></>}
                   {l.rs_rank != null && <> · RS {l.rs_rank}</>}
                   {l.volume != null && (
                     <> · vol {fmtVol(l.volume)}{l.vol_x != null && <span style={{ color: l.vol_x >= 1.5 ? '#10b981' : undefined }}> ×{l.vol_x}</span>}</>

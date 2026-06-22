@@ -138,6 +138,11 @@ def aggregate(runs: list[dict], live: dict, n: int) -> list[dict]:
             "name":          cur.get("name"),
             "current_rank":  ranks[0],            # newest run
             "current_score": a["scores"][0],
+            # Momentum-led conviction rank (sepa.conviction) from the live row —
+            # the new default sort for the board (Ajay 2026-06-22). A climax /
+            # exhaustion name is suppressed there, so it sinks here too.
+            "conviction":      cur.get("conviction"),
+            "conviction_detail": cur.get("conviction_detail"),
             "rs_rank":       cur.get("rs_rank"),
             "best_rank":     best,
             "worst_rank":    worst,

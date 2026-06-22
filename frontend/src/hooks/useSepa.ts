@@ -112,6 +112,19 @@ export type EntryExitPlan = {
   as_of: string | null;
 };
 
+/** Conviction rank breakdown (backend sepa/conviction.py). Each leg is 0-100;
+ *  `conviction` = weighted blend (momentum .35 / coil .30 / demand .25 /
+ *  reward_risk .10). `suppressed` = climax-top distribution or MVP exhaustion
+ *  crushed the score (a sell, not a buy). `lead` = the leg carrying the rank. */
+export type ConvictionDetail = {
+  conviction: number;
+  legs: { momentum: number; coil: number; demand: number; reward_risk: number };
+  suppressed: boolean;
+  suppress_reason: string | null;
+  lead: 'momentum' | 'coil' | 'demand' | 'reward_risk';
+  weights: { momentum: number; coil: number; demand: number; reward_risk: number };
+};
+
 export type SepaCandidate = {
   symbol: string;
   name?: string | null;
@@ -329,6 +342,11 @@ export type SepaCandidate = {
    *  tier. Combined with `volume.days_since_breakout` it powers the FE
    *  'Breakout: ≤1wk / Any' Enter toggle. See backend/sepa/scanner._is_setup_ready. */
   setup_ready?: boolean;
+  /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py, TLSW
+   *  p.34/79) — "most return potential." The default list sort. A climax /
+   *  exhaustion name is suppressed to the bottom. */
+  conviction?: number | null;
+  conviction_detail?: ConvictionDetail | null;
   /** Distance from entry to the suggested stop, in %. Present when a setup
    *  with a stop exists. */
   risk_to_stop_pct?: number | null;

@@ -502,9 +502,11 @@ export function SepaPage() {
     weekly21SmaPass: false,
     atrPctMax: 0,
     adxMin: 0,
-    // Default after-scan ordering — surface the most buyable (Enter + VCP)
-    // names at the top (user 2026-06-02). Pick "Sort: Score" to revert.
-    sortBy: 'most_buyable',
+    // Default after-scan ordering — rank by CONVICTION (volume + dried volume +
+    // momentum, backend sepa/conviction.py): Enter-eligible names with the most
+    // return potential at the top, climax names suppressed to the bottom (Ajay
+    // 2026-06-22). Pick "Sort: 🎯 Most ready to Enter" or "Score" to revert.
+    sortBy: 'conviction',
   };
   const earningsMap = useEarningsMap();
   const [filters, setFilters] = useState<SepaFilters>(() => {
@@ -646,6 +648,17 @@ export function SepaPage() {
         if (aLate !== bLate) return aLate - bLate; // early (0) before late (1)
       }
 
+      // "Conviction (most return potential)" — the default. Enter-eligible
+      // (is_buyable) names float to the top, then by the momentum-led conviction
+      // rank (volume + dried volume + momentum, backend sepa/conviction.py).
+      // A climax-top distribution name is already suppressed in the conviction
+      // number, so it sinks here. 2026-06-22.
+      if (filters.sortBy === 'conviction') {
+        const ab = a.is_buyable ? 1 : 0;
+        const bb = b.is_buyable ? 1 : 0;
+        if (ab !== bb) return bb - ab;
+        return (b.conviction ?? -1) - (a.conviction ?? -1);
+      }
       if (filters.sortBy === 'symbol') return a.symbol.localeCompare(b.symbol);
       if (filters.sortBy === 'rs') return (b.rs_rank ?? 0) - (a.rs_rank ?? 0);
       // "Closest to trigger" — floats names nearest their pivot buy point (and

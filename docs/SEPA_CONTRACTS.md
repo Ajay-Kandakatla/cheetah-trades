@@ -9,7 +9,15 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.3.0 (2026-06-21) — §5b clause 9: `distribution_selling` blocks
+**Version:** 1.4.0 (2026-06-22) — §9d: **conviction rank** (`sepa.conviction`,
+momentum-led, TLSW p.34/79) is the new default sort on the SEPA page, Leaderboard
+and Breakouts board ("most return potential" = volume + dried volume + momentum);
+`CONVICTION_WEIGHTS` locked 0.35/0.30/0.25/0.10. The climax/distribution gate now
+also drives **ENTER**: `entry_exit._decide` returns AVOID for a climax-top
+distribution at any stage (AMAT-class) and HOLD_WATCH for a churn breakout —
+"same logic for buyable OR enter." Climax/exhaustion names have conviction
+suppressed and are excluded from Top Picks. Prior 1.3.0 (2026-06-21) — §5b clause 9:
+`distribution_selling` blocks
 `is_buyable`. A name institutions are SELLING (climax-top distribution OR a churn
 breakout that closed in the lower third on heavy volume, TTLAC p.188) is held out
 of the Enter tier but stays `setup_ready`/`is_candidate` (watchlist). Row adds
@@ -860,6 +868,52 @@ don't chase >a few % past the pivot). `{"kind": "extended", ext_pct, pivot}` or
 `None`. Distribution names (`distribution_selling`) are excluded — that's their
 own held-out reason. Display-only; no score/gate change. Locked in
 `test_breakout_board.py::test_setup_note_*`.
+
+---
+
+## 9d. Conviction rank + climax-aware ENTER (2026-06-22)
+
+**Conviction rank** (`backend/sepa/conviction.py`) — a 0–100 number that ranks the
+SEPA page, the Leaderboard and the Breakouts board by "most return potential" from
+the three signals Ajay named (volume + dried volume + momentum) plus a
+reward:risk closer. **Momentum-led** per the book's SEPA ranking (TLSW p.34 SEPA
+ranking, p.79 RS leadership). It is the new **default sort** on all three surfaces;
+the prior sorts stay as options. Full derivation + page cites in
+`docs/sepa/conviction_methodology.md`.
+
+`CONVICTION_WEIGHTS` (LOCKED, `test_conviction_weights_locked`):
+
+| Leg | Weight | Inputs | Book |
+|---|---|---|---|
+| momentum | **0.35** | `rs_rank`, `dual_momentum.abs_mom_pass`, `beats_spy` | TLSW p.34/79/96/111, Ch.9 |
+| coil | **0.30** | `vcp.tightness`, `volume.vol_dryup`, `vcp.has_base` | TLSW p.198/203/206/226 |
+| demand | **0.25** | `accumulation_strength`, `cmf_signal`, `up_down_vol_ratio`, breakout/pocket-pivot | TLSW p.203 |
+| reward_risk | **0.10** | `risk_to_stop_pct`, `ext_from_pivot_pct` | TLSW p.224 |
+
+Momentum is the heaviest leg by contract (`w["momentum"] == max(w.values())`).
+Row carries `conviction` (sort key) + `conviction_detail` (legs, `lead`,
+`suppressed`, `suppress_reason`, `weights`).
+
+**Suppression** — a climax-top distribution (`climax_distribution.is_distribution`,
+TTLAC pp.186-188) or an MVP exhaustion (`mvp_exhaustion`, §9 p.199) is a SELL, not
+a buy: conviction × `SUPPRESS_MULT (0.15)`, `suppressed: true`. So a climax name
+sinks to the bottom of every list regardless of its raw RS.
+
+**Climax-aware ENTER verdict** (the "same logic for buyable OR enter" fix) —
+`entry_exit._decide` now consults the climax/distribution gate at **every stage**,
+not just Stage 3/4:
+
+- `climax_distribution.is_distribution` → **AVOID** (red) — "sell into strength,
+  don't initiate" (TTLAC pp.186-188). A Stage-2 climax (AMAT-class, +37% with 70%
+  up days) reads AVOID, never ENTER.
+- `distribution_selling` without climax (a churn breakout) → **HOLD_WATCH** (amber)
+  — the weaker tell; Watch, not Avoid.
+
+Locked in `test_sepa_contracts.py::test_conviction_weights_locked` +
+`::test_climax_distribution_blocks_enter_and_conviction`, behavioral coverage in
+`test_sepa_conviction.py` and `test_entry_decision_stage2.py`. **Top Picks**
+ranks within tier by `conviction` and excludes `distribution_selling` from the
+backfill (`test_top_picks.py`).
 
 ---
 

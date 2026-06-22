@@ -34,6 +34,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'breakout-footprint', label: "Breakout chart: who's behind each breakout (institutional vs churn) + emerging setups", addedAt: '2026-06-21', route: '/sepa' },
   { id: 'climax-distribution', label: 'Climax-top distribution: when institutions are selling the run into retail buying', addedAt: '2026-06-21', route: '/sepa' },
   { id: 'distribution-blocks-enter', label: 'Distribution now blocks Enter — names institutions are selling are held out of the buy tier', addedAt: '2026-06-21', route: '/sepa' },
+  { id: 'conviction-rank', label: '🏆 Conviction rank — lists now sort by return potential (volume + dried volume + momentum); climax runs sink', addedAt: '2026-06-22', route: '/sepa' },
+  { id: 'conviction-rank-breakouts', label: '🏆 Conviction column + sort on the Breakouts board', addedAt: '2026-06-22', route: '/breakouts' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

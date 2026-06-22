@@ -147,6 +147,15 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             # distribution_selling below.
             "setup_note":      _setup_note(r),
             "distribution_selling": bool(r.get("distribution_selling")),
+            # Momentum-led conviction rank (sepa.conviction) — the new default
+            # sort key for the board (Ajay 2026-06-22). conviction_detail carries
+            # the legs + climax suppression for the hover tooltip.
+            "conviction":      r.get("conviction"),
+            "conviction_detail": r.get("conviction_detail"),
+            # Climax-aware ENTER/WATCH/AVOID verdict — so a climax breakout
+            # (AMAT-class) reads AVOID on the board, not a buy.
+            "decision":        (r.get("entry_exit") or {}).get("decision"),
+            "decision_color":  (r.get("entry_exit") or {}).get("decision_color"),
             "buy_verdict":     _verdict_for(r),
         })
     # Highest breakout count first; RS then symbol break ties deterministically.

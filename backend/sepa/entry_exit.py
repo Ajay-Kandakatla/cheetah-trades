@@ -158,6 +158,8 @@ def build_entry_exit(
     venky: Optional[dict] = None,
     earnings_date: Optional[str] = None,   # "YYYY-MM-DD" if known
     setup_ready: Optional[bool] = None,    # scanner._is_setup_ready (Stage 2 + Trend Template)
+    distribution_selling: Optional[bool] = None,  # scanner._distribution_context gate (climax OR churn)
+    climax_distribution: Optional[dict] = None,   # sepa.climax_distribution.detect() blob
     now: Optional[datetime] = None,
 ) -> dict:
     """Compute the timed entry/exit plan + decision verdict for one ticker.
@@ -194,6 +196,12 @@ def build_entry_exit(
             atr_pct = _atr_pct_from_df(df)
         distributing = _is_distributing(vol)
         vol_ok = _volume_confirmed(vol)
+        # Climax-top institutional distribution (TTLAC pp.186-188) is a strictly
+        # stronger sell tell than the generic `distributing` volume read — a
+        # +25-50% blow-off where big blocks are being unloaded into the run.
+        # `distribution_selling` also covers a churn breakout (suspect close on
+        # heavy volume). Both must block the green ENTER banner (Ajay 2026-06-22).
+        is_climax = bool((climax_distribution or {}).get("is_distribution"))
 
         # ── Earnings blackout ─────────────────────────────────────────
         earnings_in_days = None
@@ -388,6 +396,7 @@ def build_entry_exit(
             earnings_in_days=earnings_in_days, adx=adx, vol_ok=vol_ok,
             pivot=pivot, zone_lo=zone_lo, zone_hi=zone_hi,
             missed=missed, setup_ready=setup_ready,
+            distribution_selling=bool(distribution_selling), is_climax=is_climax,
         )
 
         # ── Timeline strip (chronological events) ─────────────────────
@@ -437,7 +446,7 @@ def build_entry_exit(
 
 def _decide(*, stage_num, distributing, entry_status, earnings_block,
             earnings_in_days, adx, vol_ok, pivot, zone_lo, zone_hi, missed,
-            setup_ready=None) -> tuple:
+            setup_ready=None, distribution_selling=False, is_climax=False) -> tuple:
     """Adjudicate the one-line verdict. Order = precedence."""
     # Book buyable-eligibility (Trade Like a Stock Market Wizard, pp.39-71 stage
     # analysis; pp.79-83 Trend Template): Minervini buys ONLY a confirmed Stage 2
@@ -455,6 +464,25 @@ def _decide(*, stage_num, distributing, entry_status, earnings_block,
                 "Stage 4 decline — trend is broken. Exit / stand aside.")
     if distributing and stage_num == 3:
         return ("AVOID", "red", "Topping + distribution — supply is hitting. Wait.")
+
+    # 1b. Climax-top distribution overrides the buy path at ANY stage (TTLAC
+    #     pp.186-188, §9 "When to Sell"). A climax / blow-off top is where big
+    #     institutions unload large blocks into the run — they "need buyers to
+    #     absorb" the supply, so the late crowd becomes the weak-handed buyer.
+    #     Minervini's instruction is to sell aggressively into strength, NOT to
+    #     initiate. So a Stage-2 climax (AMAT-class, +37% with 70% up days) must
+    #     read AVOID, never ENTER — it re-qualifies only after a fresh base
+    #     forms (TLSW p.82, Stryker). A churn breakout (suspect close on heavy
+    #     volume) is the weaker tell — Watch, not Avoid (Ajay 2026-06-22).
+    if is_climax:
+        return ("AVOID", "red",
+                "Climax-top distribution — institutions selling into the run "
+                "(TTLAC p.186-188). Don't initiate; this is a place to sell into "
+                "strength, not buy. Re-qualifies only after a fresh base.")
+    if distribution_selling:
+        return ("HOLD_WATCH", "amber",
+                "Churn breakout — weak close on heavy volume (supply meeting "
+                "demand). Not a clean entry; watch for a tighter setup.")
 
     # 2. Earnings blackout — don't enter naked into IV crush
     if earnings_block:

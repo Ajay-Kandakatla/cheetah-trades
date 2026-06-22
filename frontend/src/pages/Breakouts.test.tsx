@@ -119,25 +119,46 @@ describe('BreakoutsPage', () => {
     expect(screen.queryByText(/🎯 BUYABLE/)).not.toBeInTheDocument();
   });
 
-  it('defaults to BUYABLE-FIRST, then keeps TURNOVER as the secondary', () => {
-    const mk = (sym: string, vol: number, buyable: boolean): BreakoutBoardRow => ({
+  it('defaults to CONVICTION — Enter-eligible first, then conviction desc (Ajay 2026-06-22)', () => {
+    const mk = (sym: string, conv: number, buyable: boolean): BreakoutBoardRow => ({
       symbol: sym, name: `${sym} Inc`, breakout_count: 3, days_since_breakout: 0,
-      high_vol_breakout: true, broke_out_today: true, last_close: 100, last_vol: vol,
+      high_vol_breakout: true, broke_out_today: true, last_close: 100, last_vol: 2_000_000,
       avg_vol_50: 1_000_000, day_change_pct: 1, rs_rank: 90, stage: 2, is_etf: false,
-      is_buyable: buyable, setup_ready: buyable, buy_verdict: verdict(true, true) as any,
+      is_buyable: buyable, setup_ready: buyable, conviction: conv,
+      buy_verdict: verdict(true, true) as any,
     });
     mockState.rows = [
-      mk('BIGNB', 9_000_000, false),  // BIGGEST $ volume ($900M) but NOT buyable
-      mk('BUYLO', 1_000_000, true),   // buyable, $100M
-      mk('BUYHI', 5_000_000, true),   // buyable, $500M
+      mk('HICONVNB', 99, false),  // HIGHEST conviction but NOT buyable
+      mk('BUYLO', 60, true),      // buyable, lower conviction
+      mk('BUYHI', 85, true),      // buyable, higher conviction
     ];
     renderPage();
     const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
-    // Buyable first, turnover-ordered within: BUYHI ($500M) > BUYLO ($100M);
-    // the non-buyable BIGNB sinks to last DESPITE the biggest dollar volume.
+    // Enter-eligible (is_buyable) first, conviction-ordered within: BUYHI(85) >
+    // BUYLO(60); the non-buyable HICONVNB sinks to last DESPITE the highest conviction.
     expect(within(rows[0]).getByText('BUYHI')).toBeInTheDocument();
     expect(within(rows[1]).getByText('BUYLO')).toBeInTheDocument();
-    expect(within(rows[2]).getByText('BIGNB')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('HICONVNB')).toBeInTheDocument();
+  });
+
+  it('renders the Conviction column; a suppressed climax breakout sorts below a clean leader (Ajay 2026-06-22)', () => {
+    mockState.rows = [
+      { ...row('AMAT', 7, true, true, 1.0, false), conviction: 12, decision: 'AVOID',
+        conviction_detail: { conviction: 12, legs: { momentum: 90, coil: 20, demand: 10, reward_risk: 10 },
+          suppressed: true, suppress_reason: 'climax-top distribution (TTLAC p.186-188)',
+          lead: 'momentum', weights: { momentum: 0.35, coil: 0.30, demand: 0.25, reward_risk: 0.10 } } },
+      { ...row('LEAD', 5, true, true, 1.0, true), conviction: 88, decision: 'ENTER' },
+    ];
+    renderPage();
+    // The Conv. column header + both numbers render.
+    expect(screen.getByRole('button', { name: /Conv\./ })).toBeInTheDocument();
+    expect(screen.getByText('88')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+    // Despite AMAT's HIGHER breakout count (7 vs 5), the clean buyable leader sorts
+    // first under the conviction default — the suppressed climax sinks.
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).getByText('LEAD')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('AMAT')).toBeInTheDocument();
   });
 
   it('explains every column from the table info icon', () => {

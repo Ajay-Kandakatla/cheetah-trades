@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';
 import type { BuyVerdict } from '../components/BuyVerdictChip';
+import type { ConvictionDetail, EntryExitDecision } from './useSepa';
 
 export type BreakoutBoardRow = {
   symbol: string;
@@ -36,6 +37,14 @@ export type BreakoutBoardRow = {
   /** Institutions selling into the breakout (churn/climax distribution) — its
    *  own held-out-of-Enter reason, distinct from `setup_note`. */
   distribution_selling?: boolean;
+  /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py) — the new
+   *  default sort for the board. Climax names suppressed to the bottom. */
+  conviction?: number | null;
+  conviction_detail?: ConvictionDetail | null;
+  /** Climax-aware ENTER/WATCH/AVOID verdict (entry_exit) — a climax breakout
+   *  reads AVOID here, not a buy. */
+  decision?: EntryExitDecision | null;
+  decision_color?: string | null;
   buy_verdict?: BuyVerdict | null;
 };
 

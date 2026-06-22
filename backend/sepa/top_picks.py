@@ -97,6 +97,10 @@ def _pick(row: dict, status: str) -> dict:
         "symbol":      row.get("symbol"),
         "name":        row.get("name"),
         "score":       row.get("score"),
+        # Momentum-led conviction rank (sepa.conviction, TLSW p.34/79) — the
+        # "most return potential" number the within-tier order now uses.
+        "conviction":  row.get("conviction"),
+        "conviction_detail": row.get("conviction_detail"),
         "rating":      row.get("rating"),
         "rs_rank":     row.get("rs_rank"),
         "last_close":  row.get("last_close"),
@@ -119,17 +123,24 @@ def top_picks(n: int = 3) -> dict:
     scan = scanner.load_latest() or {}
     rows = scan.get("candidates") or scan.get("all_results") or []
 
+    # Rank within actionability tier by CONVICTION (momentum + dried volume +
+    # demand, sepa.conviction) instead of raw score — the names with the most
+    # return potential lead each tier (Ajay 2026-06-22). Tier still comes first
+    # so a name breaking out TODAY outranks an in-base pocket pivot.
     buyable = [r for r in rows if r.get("is_buyable")]
-    buyable.sort(key=lambda r: (_tier(r), -(r.get("score") or 0)))
+    buyable.sort(key=lambda r: (_tier(r), -(r.get("conviction") or 0)))
     picks = [_pick(r, "buyable") for r in buyable[:n]]
 
-    # Backfill with setup_ready (one trigger away) when buyable is thin.
+    # Backfill with setup_ready (one trigger away) when buyable is thin — but a
+    # climax-top distribution / churn name is a SELL, never a top pick (TTLAC
+    # pp.186-188), so it is excluded here the way it is excluded from is_buyable.
     if len(picks) < n:
         have = {p["symbol"] for p in picks}
         ready = [r for r in rows
                  if r.get("setup_ready") and not r.get("is_buyable")
+                 and not r.get("distribution_selling")
                  and r.get("symbol") not in have]
-        ready.sort(key=lambda r: -(r.get("score") or 0))
+        ready.sort(key=lambda r: -(r.get("conviction") or 0))
         picks += [_pick(r, "ready") for r in ready[: n - len(picks)]]
 
     return {

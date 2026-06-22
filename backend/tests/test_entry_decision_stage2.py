@@ -24,7 +24,8 @@ def _plan(pivot=100.0, lo=100.0, hi=102.5, stop=93.0):
     }
 
 
-def _ee(*, stage_num, setup_ready, last_close=101.0, vol=None):
+def _ee(*, stage_num, setup_ready, last_close=101.0, vol=None,
+        distribution_selling=None, climax_distribution=None):
     """Build an entry_exit verdict for a name sitting IN the buy zone with the
     given stage + setup_ready. df=None ⇒ ADX None ⇒ chop check skipped, so the
     stage gate is what decides between ENTER and WAIT."""
@@ -35,6 +36,8 @@ def _ee(*, stage_num, setup_ready, last_close=101.0, vol=None):
         stage={"stage": stage_num},
         vol=vol if vol is not None else {"high_vol_breakout": True},
         setup_ready=setup_ready,
+        distribution_selling=distribution_selling,
+        climax_distribution=climax_distribution,
     )
 
 
@@ -85,5 +88,39 @@ def test_stage2_standalone_fallback_enters():
     """Standalone fallback (setup_ready=None) still greenlights a genuine Stage 2
     breakout via the stage==2 path — the gate doesn't over-block."""
     d = _ee(stage_num=2, setup_ready=None)
+    assert d["decision"] == "ENTER"
+    assert d["decision_color"] == "green"
+
+
+def test_stage2_climax_distribution_avoids_not_enters():
+    """REGRESSION (AMAT 2026-06-22): a Stage-2 name in the zone on volume that is a
+    climax-top distribution (institutions selling into a +37% run, TTLAC
+    pp.186-188) must read AVOID, not ENTER — Minervini calls a climax a SELL
+    signal, "sell aggressively into strength," never a buy. The is_buyable gate
+    already blocked it; the ENTER banner now matches."""
+    d = _ee(stage_num=2, setup_ready=True,
+            distribution_selling=True,
+            climax_distribution={"is_distribution": True})
+    assert d["decision"] == "AVOID"
+    assert d["decision_color"] == "red"
+    assert "climax" in d["decision_reason"].lower()
+
+
+def test_stage2_churn_breakout_holds_watch_not_enters():
+    """A churn breakout (suspect weak close on heavy volume) is the weaker
+    distribution tell — Watch, not Avoid (consistent with the suspect-breakout
+    call), and never ENTER (Ajay 2026-06-22)."""
+    d = _ee(stage_num=2, setup_ready=True,
+            distribution_selling=True,
+            climax_distribution={"is_distribution": False})
+    assert d["decision"] == "HOLD_WATCH"
+    assert d["decision"] != "ENTER"
+
+
+def test_stage2_clean_no_distribution_still_enters():
+    """NEGATIVE control: with the new climax params absent / False, a clean Stage-2
+    breakout is unaffected — still ENTER (the gate doesn't over-block)."""
+    d = _ee(stage_num=2, setup_ready=True,
+            distribution_selling=False, climax_distribution={"is_distribution": False})
     assert d["decision"] == "ENTER"
     assert d["decision_color"] == "green"

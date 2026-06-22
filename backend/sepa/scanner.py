@@ -43,7 +43,7 @@ from . import (
     mvp as mvp_indicator, climax_distribution,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
-    group_leadership, buyable_verdict,
+    group_leadership, buyable_verdict, conviction,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -284,6 +284,22 @@ def _is_buyable(tr, stg, bc, liq, vol, entry_setup, last_px=None, *,
     if ext is not None and ext > BUYABLE_MAX_EXT_PCT and not near_base_bottom:
         return False
     return True
+
+
+def _attach_conviction(row: dict) -> dict:
+    """Attach the conviction rank (sepa.conviction, momentum-led, TLSW p.34/79)
+    to a finished scan row. `conviction` (0-100) is the top-level sort key for the
+    SEPA page / Leaderboard / Breakouts board; `conviction_detail` carries the
+    legs + climax/exhaustion suppression for the FE tooltip (Ajay 2026-06-22)."""
+    try:
+        c = conviction.score(row)
+        row["conviction"] = c["conviction"]
+        row["conviction_detail"] = c
+    except Exception as exc:
+        log.debug("conviction failed for %s: %s", row.get("symbol"), exc)
+        row["conviction"] = None
+        row["conviction_detail"] = None
+    return row
 
 
 # Composite score weights — each component contributes up to N points; total = 100.
@@ -597,12 +613,17 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
             stage=stg,
             vol=vol,
             setup_ready=setup_ready,
+            # Climax-top distribution blocks the green ENTER banner the same way
+            # it blocks is_buyable — a Stage-2 climax (AMAT-class) reads AVOID,
+            # not ENTER (TTLAC pp.186-188; Ajay 2026-06-22).
+            distribution_selling=dist_selling,
+            climax_distribution=climax_dist,
         )
     except Exception as exc:
         log.debug("entry_exit failed for %s: %s", symbol, exc)
         entry_exit_plan = None
 
-    return {
+    return _attach_conviction({
         "symbol": symbol,
         "name": company_names.name_for(symbol),
         "score": round(score, 1),
@@ -681,7 +702,7 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "ext_from_pivot_pct": _ext_pct,
         "is_in_buy_zone": (_ext_pct is None or _ext_pct <= BUYABLE_MAX_EXT_PCT),
         "risk_to_stop_pct": risk_to_stop_pct,
-    }
+    })
 
 
 def scan_universe(symbols: Optional[List[str]] = None,
@@ -1214,12 +1235,17 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
             stage=stg,
             vol=vol,
             setup_ready=setup_ready,
+            # Climax-top distribution blocks the green ENTER banner the same way
+            # it blocks is_buyable — a Stage-2 climax (AMAT-class) reads AVOID,
+            # not ENTER (TTLAC pp.186-188; Ajay 2026-06-22).
+            distribution_selling=dist_selling,
+            climax_distribution=climax_dist,
         )
     except Exception as exc:
         log.debug("entry_exit failed for %s (fast scan): %s", symbol, exc)
         entry_exit_plan = None
 
-    return {
+    return _attach_conviction({
         "symbol": symbol,
         "name": blob.get("name") or company_names.name_for(symbol),
         "score": round(score, 1),
@@ -1277,7 +1303,7 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "is_in_buy_zone": (_ext_pct is None or _ext_pct <= BUYABLE_MAX_EXT_PCT),
         "risk_to_stop_pct": risk_to_stop_pct,
         "from_cache": True,
-    }
+    })
 
 
 def scan_universe_fast(symbols: Optional[List[str]] = None,

@@ -183,12 +183,13 @@ export function BreakoutsPage() {
     return rows.filter(f.match);
   }, [rows, filter]);
 
-  // Client-side sort over the filtered list. Default (Ajay 2026-06-19):
-  // BUYABLE FIRST, then TURNOVER — buyable adds a primary tier ON TOP of the
-  // existing turnover (dollar-volume) default, which is KEPT as the secondary so
-  // within each group it's still the "where's the money" order. Composite key =
-  // is_buyable*1e15 + turnover (1e15 dominates any real dollar volume yet stays
-  // exact under 2^53). Every column is still sortable via its header.
+  // Client-side sort over the filtered list. Default (Ajay 2026-06-22):
+  // CONVICTION — Enter-eligible (is_buyable) names first, then by the momentum-
+  // led conviction rank (volume + dried volume + momentum, backend
+  // sepa/conviction.py). Climax names are suppressed in the conviction number so
+  // they sink. Composite key = is_buyable*1e9 + conviction (1e9 dominates a
+  // 0-100 conviction yet stays exact under 2^53). The prior buyable+turnover
+  // sort is KEPT as a column. Every column is still sortable via its header.
   const sort = useSort<BreakoutBoardRow>(shown, {
     ticker: (r) => r.symbol,
     count: (r) => r.breakout_count,
@@ -202,7 +203,8 @@ export function BreakoutsPage() {
     beta: (r) => r.beta,
     march: (r) => marchToTarget(r.last_close, r.r1, r.r2).pct,
     buyable: (r) => (r.is_buyable ? 1e15 : 0) + (turnoverOf(r) || 0),
-  }, 'buyable', 'desc');
+    conviction: (r) => (r.is_buyable ? 1e9 : 0) + (r.conviction ?? 0),
+  }, 'conviction', 'desc');
 
   return (
     <div className="sepa-page">
@@ -314,6 +316,7 @@ export function BreakoutsPage() {
             <div className="breakouts-row breakouts-row--head" role="row" style={headRow}>
               <span style={{ width: 36 }}>#</span>
               <Th label="Ticker" k="ticker" style={colTicker} preferred="asc" sort={sort} />
+              <Th label="Conv." k="conviction" style={colConviction} align="right" sort={sort} />
               <Th label="# breakouts" k="count" style={colCount} sort={sort} />
               <Th label="Last" k="last" style={colLast} preferred="asc" sort={sort} />
               <Th label="Price" k="price" style={colPrice} align="right" sort={sort} />
@@ -361,6 +364,25 @@ export function BreakoutsPage() {
                       ) : null}
                     </span>
                     {r.name && <span style={{ fontSize: '0.66rem', color: 'var(--cm-slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{r.name}</span>}
+                  </span>
+                  <span
+                    className="mono"
+                    style={colConviction}
+                    title={
+                      r.conviction_detail
+                        ? (r.conviction_detail.suppressed
+                            ? `Conviction suppressed — ${r.conviction_detail.suppress_reason}`
+                            : `Conviction ${r.conviction} · led by ${r.conviction_detail.lead} — momentum ${r.conviction_detail.legs.momentum} / coil ${r.conviction_detail.legs.coil} / demand ${r.conviction_detail.legs.demand} / R:R ${r.conviction_detail.legs.reward_risk}. Volume + dried volume + momentum (TLSW p.34/79).`)
+                        : 'Momentum-led conviction rank — volume + dried volume + momentum (TLSW p.34/79)'
+                    }
+                  >
+                    {r.conviction != null ? (
+                      <span style={{ fontWeight: 800, color: r.conviction_detail?.suppressed ? '#f87171' : r.is_buyable ? '#10b981' : 'var(--ink, #eee)' }}>
+                        {Math.round(r.conviction)}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--cm-slate)' }}>—</span>
+                    )}
                   </span>
                   <span style={colCount}>
                     <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{r.breakout_count}</span>
@@ -488,6 +510,7 @@ const dataRow: CSSProperties = {
 };
 const colTicker: CSSProperties = { flex: '1 1 120px', minWidth: 110 };
 const colCount: CSSProperties = { width: 96, textAlign: 'left' };
+const colConviction: CSSProperties = { width: 64, textAlign: 'right' };
 const colLast: CSSProperties = { width: 68 };
 const colPrice: CSSProperties = { width: 76, textAlign: 'right' };
 const colChg: CSSProperties = { width: 70, textAlign: 'right' };

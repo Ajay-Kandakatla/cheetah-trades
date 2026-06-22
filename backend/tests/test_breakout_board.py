@@ -18,7 +18,8 @@ from sepa import breakout
 
 
 def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50,
-         r1=110.0, r2=120.0, buyable=False, setup_ready=False):
+         r1=110.0, r2=120.0, buyable=False, setup_ready=False,
+         conviction=None, decision=None):
     """A scan row with a breakout count + a pre-baked buy_verdict (we test the
     BOARD's ranking/summary, not the verdict logic — that has its own tests)."""
     verdict = {
@@ -37,6 +38,8 @@ def _row(symbol, count, *, today=False, m_pass=False, b_pass=None, rs=50,
         "is_etf": False,
         "is_buyable": buyable,
         "setup_ready": setup_ready,
+        "conviction": conviction,
+        "entry_exit": {"decision": decision, "decision_color": None} if decision else None,
         "volume": {
             "breakout_count": count,
             "breakout_window_bars": 252,
@@ -250,3 +253,29 @@ def test_board_attaches_beta(monkeypatch):
 def test_board_beta_none_when_unavailable(monkeypatch):
     _patch_scan(monkeypatch, [_row("AAA", 5)])                   # default betas → {}
     assert breakout.board()["rows"][0]["beta"] is None           # never a crash
+
+
+# ── Conviction rank + climax-aware decision on the board (2026-06-22) ─────────
+
+def test_board_carries_conviction_and_decision(monkeypatch):
+    """The board lifts the conviction rank + the climax-aware ENTER/WATCH/AVOID
+    verdict off the scan row so the Breakouts page can sort by conviction and
+    show a climax breakout as AVOID, not a buy."""
+    _patch_scan(monkeypatch, [
+        _row("LEAD", 5, conviction=88.0, decision="ENTER"),
+        _row("AMAT", 7, conviction=12.0, decision="AVOID"),   # climax: high count, low conviction
+    ])
+    rows = {r["symbol"]: r for r in breakout.board()["rows"]}
+    assert rows["LEAD"]["conviction"] == 88.0
+    assert rows["AMAT"]["conviction"] == 12.0
+    assert rows["LEAD"]["decision"] == "ENTER"
+    assert rows["AMAT"]["decision"] == "AVOID"
+
+
+def test_board_conviction_none_on_old_blob(monkeypatch):
+    """A pre-conviction cached row carries conviction=None / decision=None — the
+    board must not crash (graceful .get)."""
+    _patch_scan(monkeypatch, [_row("OLD", 4)])               # no conviction/decision passed
+    r = breakout.board()["rows"][0]
+    assert r["conviction"] is None
+    assert r["decision"] is None

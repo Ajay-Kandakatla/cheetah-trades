@@ -24,6 +24,9 @@ type Pick = {
   symbol: string;
   name?: string | null;
   score?: number | null;
+  /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py) — the
+   *  within-tier order now uses this ("most return potential"). */
+  conviction?: number | null;
   rating?: string | null;
   rs_rank?: number | null;
   status: 'buyable' | 'ready';
@@ -147,6 +150,13 @@ export function SepaTopPicks({ n = 3 }: { n?: number }) {
                 <div className="top-pick__row">
                   <span className="top-pick__sym">{p.symbol}<WatchlistButton ticker={p.symbol} /><AutoPilotButton symbol={p.symbol} /><TickerName symbol={p.symbol} name={p.name} width={20} /></span>
                   <span className="top-pick__score mono">{p.score ?? '—'}</span>
+                  {p.conviction != null && (
+                    <span className="mono"
+                      title="Conviction — volume + dried volume + momentum (TLSW p.34/79); the within-tier order ranks by this."
+                      style={{ fontSize: '0.68rem', fontWeight: 800, color: p.conviction >= 70 ? '#10b981' : p.conviction < 30 ? '#94a3b8' : '#eab308' }}>
+                      🏆 {Math.round(p.conviction)}
+                    </span>
+                  )}
                   <span className="top-pick__badge" style={{ color: s.color, borderColor: s.color }}>
                     {s.label}
                   </span>

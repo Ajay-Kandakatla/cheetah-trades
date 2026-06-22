@@ -231,6 +231,41 @@ def test_climax_distribution_constants_locked():
     assert CDx.HEAVY_VOL_MULT >= 1.5                   # heavy = above-average institutional vol
 
 
+def test_conviction_weights_locked():
+    """§9d (2026-06-22): the conviction rank is MOMENTUM-LED per the book's SEPA
+    ranking (TLSW p.34 SEPA ranking, p.79 RS leadership) — momentum is the
+    heaviest leg, ahead of the VCP coil / volume dry-up and the demand
+    confirmation, with reward:risk as the closer. Lock the weights so the 'most
+    return potential' order can't silently drift."""
+    from sepa import conviction
+    assert conviction.CONVICTION_WEIGHTS == {
+        "momentum": 0.35, "coil": 0.30, "demand": 0.25, "reward_risk": 0.10,
+    }
+    assert round(sum(conviction.CONVICTION_WEIGHTS.values()), 9) == 1.0
+    w = conviction.CONVICTION_WEIGHTS
+    assert w["momentum"] == max(w.values())            # leadership-led, not coil/demand-led
+
+
+def test_climax_distribution_blocks_enter_and_conviction():
+    """§5b + entry_exit (AMAT 2026-06-22): a climax-top distribution name is a
+    SELL (TTLAC pp.186-188). It must (a) read AVOID, not ENTER, on the entry_exit
+    verdict even in Stage 2, and (b) have its conviction suppressed to the
+    bottom. Locks the 'same logic for buyable OR enter' fix."""
+    from sepa.entry_exit import build_entry_exit
+    from sepa import conviction
+    plan = {"entries": {"aggressive": 100.0}, "buy_zone": {"lo": 100.0, "hi": 102.5},
+            "stop": {"recommended": 93.0, "recommended_label": "base low"},
+            "targets": {"r1": 110.0}}
+    ee = build_entry_exit(last_close=101.0, trade_plan=plan, df=None,
+                          stage={"stage": 2}, vol={"high_vol_breakout": True},
+                          setup_ready=True, distribution_selling=True,
+                          climax_distribution={"is_distribution": True})
+    assert ee["decision"] == "AVOID"                   # was ENTER before the fix
+    c = conviction.score({"rs_rank": 97, "distribution_selling": True,
+                          "climax_distribution": {"is_distribution": True}})
+    assert c["suppressed"] is True
+
+
 def test_climax_distribution_clean_run_not_flagged():
     """REGRESSION guard at the contract layer: a clean all-up climax must NOT
     read 'distribution' (only 'climax_extended'). Mirrors the unit regression so
