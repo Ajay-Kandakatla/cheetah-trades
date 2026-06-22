@@ -32,6 +32,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'mvp-indicator', label: 'MVP indicator — runner vs late-stage exhaustion (Champion book)', addedAt: '2026-06-19', route: '/sepa' },
   { id: 'breakouts-buyable', label: '🎯 Buyable filter + badge on the Breakouts page', addedAt: '2026-06-19', route: '/breakouts' },
   { id: 'breakout-footprint', label: "Breakout chart: who's behind each breakout (institutional vs churn) + emerging setups", addedAt: '2026-06-21', route: '/sepa' },
+  { id: 'climax-distribution', label: 'Climax-top distribution: when institutions are selling the run into retail buying', addedAt: '2026-06-21', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

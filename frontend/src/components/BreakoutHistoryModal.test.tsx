@@ -108,6 +108,51 @@ describe('BreakoutHistoryModal — whose hands / emerging', () => {
   });
 });
 
+// ── Climax-top distribution panel (Ajay 2026-06-21: "track the concept") ─────
+describe('BreakoutHistoryModal — climax distribution', () => {
+  it('shows the red "distribution underway" warning + the fired tells', async () => {
+    vi.stubGlobal('fetch', okFetch({
+      ...HISTORY,
+      climax_distribution: {
+        read: 'distribution_underway', is_distribution: true, in_climax: true,
+        climax_gain_pct: 51.6, up_day_ratio: 0.7, severity: 2,
+        tells: { heavy_volume_down_day: true, churning: false, exhaustion_gap: true },
+        note: 'Climax run +52% — institutions distributing into it.',
+      },
+    }));
+    render(<BreakoutHistoryModal symbol="MRVL" onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/Climax distribution underway/i)).toBeInTheDocument());
+    expect(screen.getByText(/Heavy volume on a down day/i)).toBeInTheDocument();
+    expect(screen.getByText(/Exhaustion gap/i)).toBeInTheDocument();
+    // a tell that didn't fire is not shown
+    expect(screen.queryByText(/Churning/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the amber "climax extended" watch (no distribution tell)', async () => {
+    vi.stubGlobal('fetch', okFetch({
+      ...HISTORY,
+      climax_distribution: {
+        read: 'climax_extended', is_distribution: false, in_climax: true,
+        climax_gain_pct: 40.5, up_day_ratio: 0.7, severity: 0, tells: {},
+        note: 'Climax run +41% — extended/exhaustion risk.',
+      },
+    }));
+    render(<BreakoutHistoryModal symbol="WDC" onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/Climax extended — exhaustion risk/i)).toBeInTheDocument());
+    expect(screen.queryByText(/distribution underway/i)).not.toBeInTheDocument();
+  });
+
+  it('omits the panel when not climaxing (negative)', async () => {
+    vi.stubGlobal('fetch', okFetch({ ...HISTORY, climax_distribution: { read: 'none', is_distribution: false, in_climax: false } }));
+    render(<BreakoutHistoryModal symbol="ROKU" onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByText(/3 volume-confirmed breakouts/i)).toBeInTheDocument());
+    expect(screen.queryByText(/Climax/i)).not.toBeInTheDocument();
+  });
+});
+
 // The shared body powers the SEPA detail page's Breakout tab (no modal chrome).
 describe('BreakoutHistoryBody (Breakout tab)', () => {
   it('renders the count + markers inline', async () => {

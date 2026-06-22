@@ -812,6 +812,27 @@ Score: exhaustion −8; continuation off an early base +3.
 
 ---
 
+## 9c. Breakout footprint + climax distribution — DISPLAY-ONLY (2026-06-21)
+
+Two paired "whose hands?" reads on `GET /sepa/breakout/{symbol}/history`. Both
+are **read-only — they never feed the SEPA score or any buy/sell gate**. Page
+cites in `docs/sepa/breakout_footprint_methodology.md` +
+`docs/sepa/climax_distribution_methodology.md`; constants locked in
+`test_breakout_footprint_constants_locked` + `test_climax_distribution_constants_locked`.
+
+- **`breakouts[].footprint`** (`sepa.volume.breakout_footprint`) — who fired each
+  breakout: `hands` ∈ {`heavy_institutional`, `institutional`, `light`,
+  `suspect`} from close-location + volume + the up/down run-up (TTLAC p.186;
+  churn p.188). `emerging` (`sepa.volume.emerging_breakout`) flags a breakout
+  setting up under the pivot (p.203 / VCP) — a watch, not a buy.
+- **`climax_distribution`** (`sepa.climax_distribution.detect`) — who's SELLING a
+  climax run: `read` ∈ {`distribution_underway`, `climax_extended`, `none`} from
+  the climax gain, up-day dominance, and the heavy-down-day / churn / reversal /
+  exhaustion-gap tells (TTLAC pp.187-188). REGRESSION-guarded so a clean all-up
+  run reads `climax_extended`, never `distribution`.
+
+---
+
 ## 10. Liquidity floor + ADR — LOCKED
 
 `backend/sepa/adr.py`:

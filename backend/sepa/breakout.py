@@ -198,6 +198,14 @@ def history_for_symbol(symbol: str) -> dict:
             for idx, prow in window.iterrows()
         ]
         vol = volume.analyze(df) or {}
+        # Climax-top institutional-distribution read (TTLAC p.186-188) — the
+        # mirror of the accumulation footprint: who's SELLING the run.
+        try:
+            from sepa import climax_distribution, base_count
+            bc = base_count.count_bases(df)
+            climax = climax_distribution.detect(df, bc)
+        except Exception:
+            climax = None
         return {
             "ok":             True,
             "symbol":         sym,
@@ -210,6 +218,9 @@ def history_for_symbol(symbol: str) -> dict:
             # Forward read — a breakout SETTING UP now + whose hands (book p.203
             # pivot / VCP). {"emerging": False} when nothing is coiling.
             "emerging":       volume.emerging_breakout(df),
+            # Climax-top distribution — institutions selling into the run
+            # (TTLAC p.186-188). {"read": "none"} when not climaxing.
+            "climax_distribution": climax,
         }
     except Exception as exc:                           # noqa: BLE001
         log.debug("breakout.history_for_symbol(%s) failed: %s", sym, exc)

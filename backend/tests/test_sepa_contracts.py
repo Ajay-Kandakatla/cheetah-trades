@@ -201,6 +201,40 @@ def test_breakout_footprint_constants_locked():
     assert 0 < V.EMERGING_NEAR_HIGH_PCT <= 5           # coil within a few % of the pivot (p.203)
 
 
+def test_climax_distribution_constants_locked():
+    """Climax-top distribution thresholds are book-derived (TTLAC pp.187-188) —
+    lock them so the sell read can't silently drift. Climax = +25-50% in 1-3
+    weeks; up-day dominance ≥70% over a 7-15 day window; heavy = >1.5× the 50-day
+    average. Read only — never a buy gate or score input."""
+    from sepa import climax_distribution as CDx
+    assert CDx.CLIMAX_GAIN_MIN == 25.0                 # p.187 "+25 to 50 percent or more"
+    assert 10 <= CDx.CLIMAX_WINDOW <= 15               # "one to three weeks"
+    assert CDx.UP_DAY_RATIO_MIN == 0.70                # p.187 "70 percent or more up days"
+    assert 7 <= CDx.UP_DAY_WINDOW <= 15                # "7- to 15-day period"
+    assert CDx.HEAVY_VOL_MULT >= 1.5                   # heavy = above-average institutional vol
+
+
+def test_climax_distribution_clean_run_not_flagged():
+    """REGRESSION guard at the contract layer: a clean all-up climax must NOT
+    read 'distribution' (only 'climax_extended'). Mirrors the unit regression so
+    a future edit to detect() that over-fires is caught here too."""
+    import numpy as np
+    import pandas as pd
+    from sepa import climax_distribution as CDx
+    n = 130
+    close = np.full(n, 100.0); high = np.full(n, 100.5)
+    low = np.full(n, 99.5); vol = np.full(n, 1_000_000.0); openp = np.full(n, 100.0)
+    step = (135.0 - 100.0) / 15
+    for k, p in enumerate(range(n - 15, n)):
+        px = 100.0 + step * (k + 1)
+        close[p] = px; high[p] = px + 0.4; low[p] = px - 0.4
+        openp[p] = px - step * 0.5; vol[p] = 1_200_000.0
+    df = pd.DataFrame({"open": openp, "high": high, "low": low, "close": close, "volume": vol},
+                      index=pd.date_range("2025-01-01", periods=n, freq="D"))
+    out = CDx.detect(df)
+    assert out["in_climax"] is True and out["is_distribution"] is False
+
+
 def test_buyable_rejects_extended_past_pivot():
     """is_buyable must drop a volume-breakout that ran too far past the pivot
     (book p.224 — don't chase more than a few percentage points). User-approved

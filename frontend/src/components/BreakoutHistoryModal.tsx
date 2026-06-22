@@ -43,6 +43,20 @@ type Emerging = {
   hands?: 'institutional' | 'light';
   strength?: number;
 };
+/** Climax-top institutional distribution — "who's SELLING the run" (Minervini,
+ *  Think & Trade Like a Champion pp.186-188). sepa.climax_distribution.detect. */
+type ClimaxDistribution = {
+  read: 'distribution_underway' | 'climax_extended' | 'none';
+  is_distribution: boolean;
+  in_climax: boolean;
+  climax_gain_pct?: number | null;
+  up_day_ratio?: number | null;
+  up_day_dominant?: boolean;
+  severity?: number;
+  late_stage?: boolean;
+  tells?: Record<string, boolean>;
+  note?: string | null;
+};
 type History = {
   ok: boolean;
   symbol: string;
@@ -53,6 +67,16 @@ type History = {
   series: SeriesPt[];
   breakouts: Marker[];
   emerging?: Emerging | null;
+  climax_distribution?: ClimaxDistribution | null;
+};
+
+/** climax-distribution tell → human label (book pp.187-188). */
+const CLIMAX_TELL_LABELS: Record<string, string> = {
+  heavy_volume_down_day: 'Heavy volume on a down day',
+  largest_volume_down_in_move: 'Biggest-volume day of the run was DOWN',
+  churning: 'Churning — heavy volume, no progress',
+  high_volume_reversal: 'High-volume reversal',
+  exhaustion_gap: 'Exhaustion gap',
 };
 
 /** hands → colour + glyph + label, shared by the chart markers and the list. */
@@ -154,6 +178,41 @@ function Chart({ h }: { h: History }) {
   );
 }
 
+/* Climax-top distribution warning — who's SELLING the run (book pp.186-188).
+   Renders only when the name is climaxing; red = institutions distributing,
+   amber = extended/exhaustion-risk watch. */
+function ClimaxPanel({ cd }: { cd: ClimaxDistribution }) {
+  if (!cd || cd.read === 'none') return null;
+  const dist = cd.read === 'distribution_underway';
+  const accent = dist ? '#f43f5e' : '#f59e0b';
+  const bg = dist ? 'rgba(244,63,94,0.10)' : 'rgba(245,158,11,0.08)';
+  const fired = Object.entries(cd.tells || {}).filter(([, v]) => v).map(([k]) => k);
+  return (
+    <div style={{ margin: '0.5rem 0 0.25rem', padding: '0.55rem 0.75rem', borderRadius: 8,
+                  border: `1px solid ${accent}66`, background: bg, fontSize: '0.76rem', lineHeight: 1.5 }}>
+      <div style={{ color: accent, fontWeight: 600 }}>
+        {dist ? '🔴 Climax distribution underway — sell into strength'
+              : '🟠 Climax extended — exhaustion risk'}
+      </div>
+      {cd.note && <div style={{ color: '#cdd5e3', marginTop: 2 }}>{cd.note}</div>}
+      {fired.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+          {fired.map((k) => (
+            <span key={k} style={{ fontSize: '0.64rem', padding: '1px 6px', borderRadius: 999,
+                                   border: `1px solid ${accent}55`, color: accent }}>
+              {CLIMAX_TELL_LABELS[k] || k}
+            </span>
+          ))}
+        </div>
+      )}
+      <div style={{ color: '#8595ad', fontSize: '0.64rem', marginTop: 6 }}>
+        Institutions liquidate big blocks into the retail demand on the way up (Minervini,{' '}
+        <em>Think &amp; Trade Like a Champion</em> pp.186-188). A read, not a score input.
+      </div>
+    </div>
+  );
+}
+
 /* The fetch + chart + list — shared by the modal (chip drill) AND the SEPA
    detail page's Breakout tab. */
 export function BreakoutHistoryBody({ symbol }: { symbol: string }) {
@@ -184,6 +243,9 @@ export function BreakoutHistoryBody({ symbol }: { symbol: string }) {
       <h3 style={{ margin: '0.15rem 0 0', fontSize: '1.05rem' }}>
         🚀 {symbol} — {count} volume-confirmed breakout{count === 1 ? '' : 's'}
       </h3>
+
+      {/* climax-top distribution warning — who's SELLING the run (pp.186-188) */}
+      {state === 'ready' && h?.climax_distribution && <ClimaxPanel cd={h.climax_distribution} />}
 
       {state === 'loading' && (
         <p className="mono" style={{ opacity: 0.7, fontSize: '0.8rem', marginTop: '1rem' }}>…loading breakout history</p>
