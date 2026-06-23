@@ -40,3 +40,16 @@ def test_leaderboard_is_tagged_and_version_bumped():
     entry = next(e for e in store.FEATURE_CATALOG if e["id"] == "leaderboard")
     assert entry.get("added_in") == 2
     assert store.CATALOG_VERSION >= 2
+
+
+def test_breakouts_is_default_on_for_all_users():
+    """Ajay 2026-06-23: the Breakouts page is the default landing for non-owners,
+    so it must be granted to everyone by default (not owner-only). A default
+    non-owner user (no saved nav) gets it."""
+    entry = next(e for e in store.FEATURE_CATALOG if e["id"] == "breakouts")
+    assert entry["default"] is True
+    assert "breakouts" in store.DEFAULT_FEATURES
+    # A non-owner default user (no customization) gets it.
+    eff = store.effective_features(store.DEFAULT_FEATURES, is_owner=False,
+                                   seen_version=store.CATALOG_VERSION)
+    assert "breakouts" in eff

@@ -124,8 +124,10 @@ FEATURE_CATALOG: list[dict] = [
     # Breakouts (2026-06-16): dedicated breakout tracker — every name that's
     # broken out, ranked by breakout COUNT (highest first), each carrying the
     # Minervini+Bonde buy_verdict so passing-vs-not is visible at a glance,
-    # all organized around breakouts. Display-only. Owner-on via added_in/VERSION.
-    {"id": "breakouts",     "label": "🚀 Breakouts",        "group": "daily",     "default": False, "added_in": 15},
+    # all organized around breakouts. Display-only. DEFAULT ON for everyone
+    # (Ajay 2026-06-23: "make breakout page default for all other users") — it's
+    # the front door for non-owners; SmartLanding lands them here.
+    {"id": "breakouts",     "label": "🚀 Breakouts",        "group": "daily",     "default": True, "added_in": 15},
     # Research (2026-06-04): bullish-vs-bearish pattern mining + the insider
     # thesis. A living analysis page Ajay wants to keep using. Owner-on default.
     {"id": "research",      "label": "Research",            "group": "daily",     "default": False, "added_in": 3},

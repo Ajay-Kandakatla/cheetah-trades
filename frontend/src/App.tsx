@@ -183,14 +183,15 @@ function SmartLanding() {
   // Wait for BOTH so we know is_admin before redirecting (else Ajay would flash
   // to the wrong page before the admin flag resolves).
   if (!f.loaded || !menuLoaded) return <PageLoader />;
-  // SEPA is the default landing for everyone going forward (2026-06-12, Ajay:
-  // "make the SEPA page the default homepage instead of Morning brief") — the
-  // scanner is the app's front door. Morning brief / portfolio chain below it.
+  // Landing order. The owner (admin) still lands on SEPA — the scanner is his
+  // front door (2026-06-12). Everyone ELSE lands on the Breakouts page first
+  // (Ajay 2026-06-23: "make breakout page default for all other users"); it's
+  // granted to all users by default now (access/store breakouts default:True).
   // First accessible feature in the list wins; fallbacks chain down before
   // bailing into a 404.
   const PREFERRED_ORDER = menu.is_admin
     ? ['sepa', 'portfolio', 'morning', 'leaderboard', 'todos', 'notifications']
-    : ['sepa', 'morning', 'food', 'kids', 'todos', 'notifications', 'glossary'];
+    : ['breakouts', 'sepa', 'morning', 'food', 'kids', 'todos', 'notifications', 'glossary'];
   for (const id of PREFERRED_ORDER) {
     if (f.features.has(id)) return <Navigate to={`/${id}`} replace />;
   }
