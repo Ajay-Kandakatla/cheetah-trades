@@ -39,6 +39,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'cheat-tag', label: '🃏 Cheat tag — the earliest entry (TTLAC), shown in a red market when there are no breakouts', addedAt: '2026-06-22', route: '/sepa' },
   { id: 'breakouts-fresh-only', label: '🌱 Fresh only — hide extended (→R2/Past R2) names, keep the board to fresh breakouts', addedAt: '2026-06-23', route: '/breakouts' },
   { id: 'sepa-global', label: '🌍 SEPA Global — a simple, beginner-friendly version of the scanner (same Minervini rules)', addedAt: '2026-06-23', route: '/sepa-global' },
+  { id: 'leveraged-badge', label: '⚠️ Leveraged-ETF flag (2x/3x) now shows on every list — they’re not Minervini stock setups', addedAt: '2026-06-23', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

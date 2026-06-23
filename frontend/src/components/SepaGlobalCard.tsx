@@ -3,6 +3,7 @@
  * "sell if" stop with the % at risk (risk-first, Minervini), and a simple
  * strength label. Pure presentational — takes a GlobalCard (see lib/sepaGlobal). */
 import type { GlobalCard } from '../lib/sepaGlobal';
+import { LeveragedBadge } from './LeveragedBadge';
 
 const TONE: Record<GlobalCard['tone'], string> = {
   green: 'var(--positive, #10b981)',
@@ -42,6 +43,7 @@ export function SepaGlobalCard({ card, onClick }: { card: GlobalCard; onClick?: 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
         <div style={{ minWidth: 0 }}>
           <span style={{ fontWeight: 800, fontSize: '1.02rem' }}>{card.symbol}</span>
+          <LeveragedBadge symbol={card.symbol} name={card.name} compact />
           {card.name && (
             <span style={{ color: 'var(--cm-slate, #94a3b8)', marginLeft: 6, fontSize: '0.82rem' }}>
               {card.name}

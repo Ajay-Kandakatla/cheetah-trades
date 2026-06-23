@@ -74,6 +74,7 @@ import { SepaPatternRow } from './SepaPatternChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { isMomentumLeader, MOMENTUM_LEADER_TOOLTIP } from '../lib/momentumLeader';
 import { isCheatVisible, CHEAT_TOOLTIP } from '../lib/cheat';
+import { LeveragedBadge } from './LeveragedBadge';
 // Δ score + Δ rank trend chips — pure FE, reads SepaTrendContext for
 // the historical maps. Added 2026-05-28 in response to user request to
 // track when "points drop" and maintain a separate ranking trend.
@@ -389,6 +390,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             >
               <strong>{row.symbol}</strong>
             </Link>
+            <LeveragedBadge symbol={row.symbol} name={row.name} compact />
             <WatchlistButton ticker={row.symbol} />
             {owned && (
               <span className="sepa-owned"

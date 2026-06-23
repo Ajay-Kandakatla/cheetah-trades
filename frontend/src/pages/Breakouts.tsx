@@ -18,6 +18,7 @@ import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoa
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useSort, type SortDir } from '../lib/useSort';
 import { marchToTarget, stageMeta, isExtendedToR2 } from '../lib/breakoutTargets';
+import { LeveragedBadge } from '../components/LeveragedBadge';
 import { isBaseSetup } from '../lib/baseSetup';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
@@ -384,6 +385,7 @@ export function BreakoutsPage() {
                   <span style={{ ...colTicker, display: 'flex', flexDirection: 'column' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <strong className="mono">{r.symbol}</strong>
+                      <LeveragedBadge symbol={r.symbol} name={r.name} compact />
                       {r.is_buyable ? (
                         <span title="Buyable now — clears the strict Minervini buy gate (is_buyable), same as the SEPA scan's 🟢 Enter"
                           style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981',

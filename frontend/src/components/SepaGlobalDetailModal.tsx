@@ -3,6 +3,7 @@
  * and a "why it's strong" read (leadership, trend, volume) — the important
  * details a beginner needs, without the admin page's jargon. */
 import type { GlobalDetail } from '../lib/sepaGlobal';
+import { LeveragedBadge } from './LeveragedBadge';
 
 const TONE: Record<GlobalDetail['tone'], string> = {
   green: 'var(--positive, #10b981)',
@@ -41,7 +42,10 @@ export function SepaGlobalDetailModal({ detail, onClose }: { detail: GlobalDetai
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '1.15rem' }}>{detail.symbol}</div>
+            <div style={{ fontWeight: 800, fontSize: '1.15rem' }}>
+              {detail.symbol}
+              <LeveragedBadge symbol={detail.symbol} name={detail.name} />
+            </div>
             {detail.name && <div style={{ color: 'var(--cm-slate, #94a3b8)', fontSize: '0.85rem' }}>{detail.name}</div>}
           </div>
           <div style={{ textAlign: 'right' }}>
