@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom';
 import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoard';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useSort, type SortDir } from '../lib/useSort';
-import { marchToTarget, stageMeta } from '../lib/breakoutTargets';
+import { marchToTarget, stageMeta, isExtendedToR2 } from '../lib/breakoutTargets';
 import { isBaseSetup } from '../lib/baseSetup';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
@@ -66,7 +66,8 @@ const ColumnsInfo = (
   <>
     <p>
       What each column means. The table sorts by <strong>any</strong> column — tap
-      a header, tap again to flip. Default sort is <strong>Turnover</strong>, highest first.
+      a header, tap again to flip. Default sort is <strong>Conviction</strong> (same
+      as the SEPA page) — buyable names first, then by return potential.
     </p>
     <ul>
       <li><strong>#</strong> — rank in the current sort.</li>
@@ -77,7 +78,8 @@ const ColumnsInfo = (
       <li><strong>Δ%</strong> — today’s percent change (green up / red down).</li>
       <li><strong>Vol %</strong> — today’s volume as a % of its 50-day average. <strong>≥150%</strong> (gold) is the 1.5× volume that confirms a breakout (p.203).</li>
       <li><strong>Total Vol</strong> — today’s share volume.</li>
-      <li><strong>Turnover</strong> — dollar volume traded today (price × volume) — “where the money is.” The default sort.</li>
+      <li><strong>Conv.</strong> — the momentum-led conviction rank (volume + dried volume + momentum). <strong>The default sort</strong>, matching the SEPA page: buyable names first, then highest conviction.</li>
+      <li><strong>Turnover</strong> — dollar volume traded today (price × volume) — “where the money is.”</li>
       <li><strong>Stage</strong> — Weinstein/Minervini market stage. <strong>✓ S2</strong> (advancing) is the only buyable stage; S4 (decline) = avoid.</li>
       <li><strong>Beta</strong> — 1-year daily volatility vs the market (SPY). <strong>&lt;1</strong> (green) = calmer than the market / lower-volatility; <strong>&gt;1.3</strong> (red) = jumpier. Tap the header to <strong>sort low-volatility first</strong>.</li>
       <li><strong>→ R1/R2</strong> — which trade-plan target (entry +1R / +2R) it’s marching toward, and the % above price to reach it. “Past R2” = extended.</li>
@@ -170,6 +172,10 @@ export function BreakoutsPage() {
   // Base-only is ON by default (Ajay 2026-06-22): hide bare breakouts that have
   // no detected base; keep VCP / Power Play / pocket pivot. Toggle off to widen.
   const [baseOnly, setBaseOnly] = useState(true);
+  // Fresh-only is ON by default (Ajay 2026-06-23, "do not show me the ones with
+  // r2"): hide names that have already cleared R1 and are marching to / past R2
+  // — extended, no longer a fresh breakout. Keeps the board breakout-focused.
+  const [freshOnly, setFreshOnly] = useState(true);
 
   // Dynamic re-scan (Ajay 2026-06-18). "Refresh" just re-pulls the latest scan
   // (instant, reuses what the cron / other pages already scanned). "Update" runs
@@ -184,8 +190,11 @@ export function BreakoutsPage() {
 
   const shown = useMemo(() => {
     const f = FILTERS.find((x) => x.key === filter) ?? FILTERS[0];
-    return rows.filter(f.match).filter((r) => !baseOnly || isBaseSetup(r.setup_type));
-  }, [rows, filter, baseOnly]);
+    return rows
+      .filter(f.match)
+      .filter((r) => !baseOnly || isBaseSetup(r.setup_type))
+      .filter((r) => !freshOnly || !isExtendedToR2(r.last_close, r.r1, r.r2));
+  }, [rows, filter, baseOnly, freshOnly]);
 
   // Client-side sort over the filtered list. Default (Ajay 2026-06-22):
   // CONVICTION — Enter-eligible (is_buyable) names first, then by the momentum-
@@ -298,6 +307,20 @@ export function BreakoutsPage() {
           }}
         >
           🧱 Base only
+        </button>
+        {/* Fresh-only toggle (Ajay 2026-06-23) — hide names already marching to /
+            past R2 (extended); keep the board to fresh, near-entry breakouts. ON
+            by default. */}
+        <button
+          className={`sepa-chip ${freshOnly ? 'is-active' : ''}`}
+          title="Hide names that have already cleared their 1st target (→ R2 / Past R2) — extended, no longer a fresh breakout. On by default — tap to show extended names too."
+          onClick={() => setFreshOnly((b) => !b)}
+          style={{
+            cursor: 'pointer', fontSize: '0.74rem',
+            ...(freshOnly ? { borderColor: 'var(--gold, #c9a227)', color: 'var(--gold, #c9a227)', fontWeight: 700 } : {}),
+          }}
+        >
+          🌱 Fresh only
         </button>
       </div>
 

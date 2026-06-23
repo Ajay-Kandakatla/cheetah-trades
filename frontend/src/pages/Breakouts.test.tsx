@@ -359,6 +359,10 @@ const srow = (symbol: string, o: SOpts): BreakoutBoardRow => ({
 
 const marchHeader = () => screen.getByRole('button', { name: /R1\/R2/ });
 const stageHeader = () => screen.getByRole('button', { name: /Stage/ });
+const freshToggle = () => screen.getByRole('button', { name: /Fresh only/ });
+/** "Fresh only" is ON by default and hides →R2 / Past R2 rows; tests that need
+ *  the extended rows visible click it off after rendering. */
+const showExtended = () => fireEvent.click(freshToggle());
 
 describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
   beforeEach(() => {
@@ -373,8 +377,20 @@ describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
     };
   });
 
+  it('hides →R2 / Past R2 by default (fresh only), shows them when toggled off', () => {
+    renderPage();
+    // Default ON: only the fresh →R1 name (BELOW) is shown.
+    expect(screen.getByText('BELOW')).toBeInTheDocument();
+    expect(screen.queryByText('MID')).not.toBeInTheDocument();    // → R2, hidden
+    expect(screen.queryByText('PAST')).not.toBeInTheDocument();   // past R2, hidden
+    showExtended();
+    expect(screen.getByText('MID')).toBeInTheDocument();
+    expect(screen.getByText('PAST')).toBeInTheDocument();
+  });
+
   it('renders the Stage column — ✓ S2 highlighted, S4 / S1 plain', () => {
     renderPage();
+    showExtended();
     expect(screen.getByText('✓ S2')).toBeInTheDocument();    // Stage 2 = buyable
     expect(screen.getByText('S4')).toBeInTheDocument();      // Stage 4 = avoid
     expect(screen.getByText('S1')).toBeInTheDocument();
@@ -382,6 +398,7 @@ describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
 
   it('renders the marching-toward column for each branch (→ R1 / → R2 / Past R2)', () => {
     renderPage();
+    showExtended();
     expect(screen.getByText(/→ R1 \+10\.00%/)).toBeInTheDocument();   // below R1
     expect(screen.getByText(/→ R2/)).toBeInTheDocument();             // between R1/R2
     expect(screen.getByText(/Past R2/)).toBeInTheDocument();          // extended
@@ -389,6 +406,7 @@ describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
 
   it('sorts by distance-to-target ascending when → R1/R2 header is clicked', () => {
     renderPage();
+    showExtended();
     fireEvent.click(marchHeader());                          // preferred asc
     expect(marchHeader().textContent).toContain('▲');
     const rows = dataRows();
@@ -400,6 +418,7 @@ describe('BreakoutsPage — Stage + → R1/R2 columns', () => {
 
   it('sorts by Stage when the Stage header is clicked', () => {
     renderPage();
+    showExtended();
     fireEvent.click(stageHeader());                          // desc default → highest stage first
     expect(stageHeader().textContent).toContain('▼');
     const rows = dataRows();

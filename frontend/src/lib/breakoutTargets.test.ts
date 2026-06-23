@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { marchToTarget, stageMeta } from './breakoutTargets';
+import { marchToTarget, stageMeta, isExtendedToR2 } from './breakoutTargets';
 
 /* "Marching toward R1 / R2" — distance from current price to the next trade-plan
    target (Ajay 2026-06-16: "if they are s2 and if they marching towards r1 or
@@ -57,6 +57,26 @@ describe('marchToTarget', () => {
     expect(m.pct).toBeNull();
     expect(m.toR1Pct).toBeNull();
     expect(m.toR2Pct).toBeNull();
+  });
+});
+
+describe('isExtendedToR2 (the Breakouts "fresh only" filter)', () => {
+  it('is false for a fresh breakout still below R1', () => {
+    expect(isExtendedToR2(100, 110, 120)).toBe(false);   // → R1
+  });
+  it('is true once price has cleared R1 (marching to R2)', () => {
+    expect(isExtendedToR2(115, 110, 120)).toBe(true);    // → R2
+  });
+  it('is true when price is at or past R2 (extended)', () => {
+    expect(isExtendedToR2(125, 110, 120)).toBe(true);    // past R2
+    expect(isExtendedToR2(120, 110, 120)).toBe(true);    // exactly R2
+  });
+  it('is false when the row has no R1/R2 targets (still a fresh breakout)', () => {
+    expect(isExtendedToR2(100, null, null)).toBe(false);
+  });
+  it('is false when price is missing (negative)', () => {
+    expect(isExtendedToR2(null, 110, 120)).toBe(false);
+    expect(isExtendedToR2(0, 110, 120)).toBe(false);
   });
 });
 

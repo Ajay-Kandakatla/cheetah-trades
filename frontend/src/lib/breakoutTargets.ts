@@ -52,6 +52,20 @@ export function marchToTarget(
   return { ...NONE, toR1Pct, toR2Pct };
 }
 
+/** True when the name has already cleared its first target (R1) and is marching
+ *  to — or past — R2: extended, no longer a fresh breakout. The Breakouts
+ *  "fresh only" filter hides these to keep the board breakout-focused (Ajay
+ *  2026-06-23, "do not show me the ones with r2"). A row with no R1/R2 data
+ *  (state 'none') is NOT extended — it stays visible. */
+export function isExtendedToR2(
+  price?: number | null,
+  r1?: number | null,
+  r2?: number | null,
+): boolean {
+  const s = marchToTarget(price, r1, r2).state;
+  return s === 'to_r2' || s === 'past_r2';
+}
+
 /* Stage tone/label for the breakouts table — Stan Weinstein / Minervini stage
  * analysis. Stage 2 (the advancing phase) is the only buyable stage (TLSW
  * "must be in Stage 2"); Stage 4 (decline) is avoid; 1/3 are muted. */
