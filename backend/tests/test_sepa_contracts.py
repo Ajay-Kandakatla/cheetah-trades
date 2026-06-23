@@ -246,6 +246,38 @@ def test_conviction_weights_locked():
     assert w["momentum"] == max(w.values())            # leadership-led, not coil/demand-led
 
 
+def test_cheat_tag_thresholds_locked_to_ttlac_section_7():
+    """3-C cheat tag (2026-06-22, TTLAC §7): every threshold is a BOOK number —
+    >=25% prior advance (p.133), a 10-40% base off the high (p.119/p.133), the
+    10-day volume below the 50-day (p.226). Lock them so the 'earliest entry'
+    can't silently drift, and confirm the detector fires on a canonical cheat
+    and rejects a name that already broke out (the cheat is PRE-breakout)."""
+    from sepa import cheat
+    assert cheat.CHEAT_MIN_PRIOR_ADVANCE_PCT == 25.0
+    assert cheat.CHEAT_BASE_MIN_PCT == 10.0
+    assert cheat.CHEAT_BASE_MAX_PCT == 40.0
+    assert cheat.CHEAT_VOL_DRYUP_MAX == 1.0
+    base = {"is_candidate": True, "is_buyable": False,
+            "trend": {"pct_above_low": 60.0, "pct_below_high": 18.0},
+            "volume": {"vol_dryup": 0.7},
+            "vcp": {"has_base": True, "good_contraction_count": 2}}
+    assert cheat.detect(base)["is_cheat"] is True
+    assert cheat.detect({**base, "is_buyable": True})["is_cheat"] is False   # graduated
+    assert cheat.detect({**base, "is_candidate": False})["is_cheat"] is False
+
+
+def test_scanner_attaches_cheat_tag_to_rows():
+    """Both scan paths must stamp `cheat_setup` / `cheat_detail` on every row
+    (via _attach_cheat inside _attach_conviction) — otherwise the FE chip has
+    nothing to read. INFORMATIONAL only; never wired to the trading engine."""
+    scanner_src = os.path.join(os.path.dirname(__file__), "..", "sepa", "scanner.py")
+    with open(scanner_src, encoding="utf-8") as fh:
+        src = fh.read()
+    assert "def _attach_cheat" in src
+    assert "cheat," in src                         # imported from the sepa package
+    assert 'row["cheat_setup"]' in src
+
+
 def test_climax_distribution_blocks_enter_and_conviction():
     """§5b + entry_exit (AMAT 2026-06-22): a climax-top distribution name is a
     SELL (TTLAC pp.186-188). It must (a) read AVOID, not ENTER, on the entry_exit

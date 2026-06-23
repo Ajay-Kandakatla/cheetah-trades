@@ -9,7 +9,18 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.6.0 (2026-06-22) — the **Auto-Pilot intraday entry gate projects
+**Version:** 1.7.0 (2026-06-22) — **3-C cheat tag on qualifiers**
+(`sepa.cheat`, TTLAC §7). Tags a qualifier forming the cup-completion cheat —
+Minervini's earliest/aggressive entry — by book thresholds only (≥25% prior
+advance p.133; a 10–40% base off the high p.119/p.133; 10-day volume below the
+50-day p.226; a tight VCP coil p.132/134; NOT yet buyable, the cheat is
+pre-breakout p.132). Rows carry `cheat_setup`/`cheat_detail`; the FE shows the
+chip ONLY in a red (risk_off) regime with `buyable_count == 0`, the book's exact
+use case (cheats form during corrections; leaders bottom first, p.123/p.133).
+INFORMATIONAL only — the deterministic engine never reads it. Doc:
+`docs/sepa/cheat_methodology.md`; locks: `test_cheat.py` +
+`test_sepa_contracts.py` (thresholds + scanner attaches the tag). Prior 1.6.0
+(2026-06-22) — the **Auto-Pilot intraday entry gate projects
 today's volume on the intraday CURVE, not a flat ÷ session-elapsed**
 (`sepa.intraday_volume`, TLSW p.229 "Extrapolating Volume Intraday"; the 1.5×
 bar is unchanged, p.203). Intraday volume is front-loaded, so the old linear
