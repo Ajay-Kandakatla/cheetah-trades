@@ -36,6 +36,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'distribution-blocks-enter', label: 'Distribution now blocks Enter — names institutions are selling are held out of the buy tier', addedAt: '2026-06-21', route: '/sepa' },
   { id: 'conviction-rank', label: '🏆 Conviction rank — lists now sort by return potential (volume + dried volume + momentum); climax runs sink', addedAt: '2026-06-22', route: '/sepa' },
   { id: 'conviction-rank-breakouts', label: '🏆 Conviction column + sort on the Breakouts board', addedAt: '2026-06-22', route: '/breakouts' },
+  { id: 'breakouts-fresh-only', label: '🌱 Fresh only — hide extended (→R2/Past R2) names, keep the board to fresh breakouts', addedAt: '2026-06-23', route: '/breakouts' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */
