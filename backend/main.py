@@ -1945,6 +1945,20 @@ async def sepa_candidate_detail(symbol: str):
     # in one of its derived numeric fields (likely a per-share metric
     # divided by zero shares for a recent IPO / spin-off). Cleaner to
     # convert NaN→null universally than to chase down every division.
+    # Delisted / halted detection: a known ticker whose daily bars stopped
+    # printing (KALV after the Chiesi acquisition) has no live price and no
+    # chart — TradingView shows "symbol doesn't exist" and our candles come up
+    # empty. Flag it so the detail page shows a clean "no live data" state
+    # instead of broken charts (Ajay 2026-06-23). Uses the same is_stale guard
+    # the scan uses; prices are already cached (cron / the fallback above).
+    stale_data = False
+    try:
+        from sepa import prices as _prices
+        _df = await asyncio.to_thread(_prices.load_prices, sym)
+        stale_data = bool(_prices.is_stale(_df))
+    except Exception as exc:                     # never let detection 500 the page
+        log.debug("stale-data check failed for %s: %s", sym, exc)
+
     payload = _clean_json_floats({
         "symbol": sym,
         "profile": profile,
@@ -1953,6 +1967,9 @@ async def sepa_candidate_detail(symbol: str):
         "insider": insider,
         "ipo_age": ipo,
         "smart_money": smart_money,
+        "stale_data": stale_data,
+        "stale_reason": ("No recent price data — this stock looks delisted or "
+                         "acquired, so live charts won't load." if stale_data else None),
     })
     return JSONResponse(payload)
 

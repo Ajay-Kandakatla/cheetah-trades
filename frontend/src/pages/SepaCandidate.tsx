@@ -19,6 +19,7 @@ import { NewsReadButton } from '../components/NewsReadButton';
 import type { ChartInterval } from '../components/LiveCandlesChart';
 const LiveCandlesChart = lazy(() => import('../components/LiveCandlesChart').then(m => ({ default: m.LiveCandlesChart })));
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
+import { DelistedBanner } from '../components/DelistedBanner';
 import { LivePriceTag } from '../components/LivePriceTag';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
@@ -949,6 +950,9 @@ export function SepaCandidatePage() {
           <div className="sepa-candidate-page__body">
             {tab === 'chart' && (
               <section>
+                {data?.stale_data && (
+                  <DelistedBanner symbol={symbol} reason={data?.stale_reason} />
+                )}
                 <div className="sepa-tab-help" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <strong>Chart</strong>
                   <span className="livechart-toggle">
@@ -972,7 +976,11 @@ export function SepaCandidatePage() {
                   </span>
                 </div>
                 <div className="sepa-candidate-page__chart">
-                  {chartSource === 'native' ? (
+                  {data?.stale_data ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 220, padding: '1rem', textAlign: 'center', color: 'var(--cm-slate)' }}>
+                      No live chart for {symbol} — it has no recent price data (likely delisted or acquired).
+                    </div>
+                  ) : chartSource === 'native' ? (
                     <Suspense fallback={null}><LiveCandlesChart symbol={symbol} interval={chartInterval} /></Suspense>
                   ) : (
                     <iframe
