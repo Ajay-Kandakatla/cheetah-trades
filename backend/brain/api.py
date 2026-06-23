@@ -64,7 +64,11 @@ def ask_impl(question: str, history: Optional[List[dict]] = None,
     distilled = _distill(question)
     if distilled and distilled != question.strip().lower():
         queries.append(distilled)
-    rows = retriever.search_multi(queries, k=10)
+    # Balanced retrieval: BM25 top-k WITH a per-book floor, so both TLSW and
+    # TTLAC are consulted whenever both carry relevant material — a strongly
+    # one-book question never silently drops the other book from the passages
+    # the persona reasons over (Ajay's "verify both books" requirement).
+    rows = retriever.search_balanced(queries, k=10)
 
     if not rows and not retriever.status()["chunks"]:
         # Empty corpus: answer deterministically, never bill the LLM.

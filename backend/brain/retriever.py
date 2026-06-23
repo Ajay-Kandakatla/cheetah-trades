@@ -243,6 +243,49 @@ def search_multi(queries: List[str], k: int = 8,
     return rows[:k]
 
 
+BOTH_BOOKS = ("tlsw", "ttlac")
+
+
+def search_balanced(queries: List[str], k: int = 10, min_per_book: int = 3,
+                    books=BOTH_BOOKS) -> List[dict]:
+    """`search_multi`, but with a per-book FLOOR so every book actually gets
+    consulted. Each book in ``books`` that has any relevant (positive-score,
+    non-index) chunk is guaranteed at least ``min(min_per_book, available)``
+    chunks in the result — so a question that scores heavily on ONE book can
+    never crowd the OTHER book entirely out of the grounding set the persona
+    reasons over (the "verify BOTH books on every question" guarantee).
+
+    A book with NO matching chunk is never forced in — the floor only applies
+    where the book has real material, so we never inject off-topic passages.
+    The global best chunks are always kept; the floor only ever displaces the
+    LOWEST-scoring chunks of an over-represented book. Result is best-score
+    ordered and capped at ``k``. Empty when the corpus isn't ingested.
+
+    Why this and not just k-per-book: a plain union dilutes strong single-book
+    answers (relative strength is mostly TLSW; the cheat/3-C is mostly TTLAC).
+    The floor is a SAFETY NET for total dropout, not an equal-weight mandate —
+    BM25 still decides the bulk of the slots."""
+    if not _ensure_loaded():
+        return []
+    by_id: Dict[str, dict] = {r["chunk_id"]: r for r in search_multi(queries, k)}
+    floor_ids: set = set()
+    for b in books:
+        for r in search_multi(queries, max(1, min_per_book), book=b):
+            by_id.setdefault(r["chunk_id"], r)
+            floor_ids.add(r["chunk_id"])           # book HAS material -> protect it
+    rows = sorted(by_id.values(),
+                  key=lambda r: (-r["score"], r.get("chunk_id") or ""))
+    if len(rows) <= k:
+        return rows
+    # Over k: keep the floor chunks (the both-book guarantee), then fill the
+    # remaining slots with the best non-floor chunks — back to k, score order.
+    floor_rows = [r for r in rows if r["chunk_id"] in floor_ids]
+    rest = [r for r in rows if r["chunk_id"] not in floor_ids]
+    keep = {r["chunk_id"] for r in floor_rows[:k]}
+    keep |= {r["chunk_id"] for r in rest[:max(0, k - len(floor_rows))]}
+    return [r for r in rows if r["chunk_id"] in keep]
+
+
 def status() -> dict:
     """{chunks, books: {tlsw, ttlac}, corpus_version} — for /brain/status."""
     loaded = _ensure_loaded()

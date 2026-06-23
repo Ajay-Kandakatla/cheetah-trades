@@ -162,6 +162,83 @@ def test_search_multi_unions_distinct_hits(primed):
     assert "tlsw-218-0" in ids and "ttlac-87-0" in ids
 
 
+# ── both-book floor (search_balanced) ────────────────────────────────────────
+
+# A lopsided corpus: the word "cheat" is dense in TTLAC (its 3-C / cheat
+# chapter) and barely present in TLSW, so a cheat query's BM25 top-k is all
+# TTLAC — the real-corpus failure where "climax top / selling into strength"
+# returned 0 TLSW chunks. "earnings growth quarterly" is the mirror: TLSW-only
+# vocabulary that TTLAC's cheat chunks don't match at all.
+BAL_DOCS = (
+    [{"chunk_id": f"ttlac-{100 + i}-0", "book": "ttlac", "pdf_page": 100 + i,
+      "printed_page": None, "chapter": 7,
+      "text": "Cheat entry: cheat plateau, cheat shakeout, cheat pivot."}
+     for i in range(6)]
+    + [{"chunk_id": "tlsw-243-0", "book": "tlsw", "pdf_page": 243,
+        "printed_page": 228, "chapter": 10,
+        "text": "Cirrus Logic emerged through its pivot at the breakout."},
+       {"chunk_id": "tlsw-300-0", "book": "tlsw", "pdf_page": 300,
+        "printed_page": 285, "chapter": 12,
+        "text": "Earnings growth and quarterly acceleration drive fundamentals."}]
+)
+
+
+@pytest.fixture
+def primed_lopsided(monkeypatch):
+    retriever.prime(BAL_DOCS, version=1)
+    monkeypatch.setattr(retriever, "_current_version", lambda: 1)
+    yield
+    retriever.prime([], None)
+
+
+def test_balanced_floors_in_the_crowded_out_book(primed_lopsided):
+    """The defect: a TTLAC-heavy query's plain top-k is ALL TTLAC, so TLSW —
+    which has a real cheat/pivot chunk — never reaches the persona. The floor
+    guarantees that one TLSW chunk a seat."""
+    q = "cheat plateau shakeout pivot entry"
+    plain = retriever.search_multi([q], k=4)
+    assert {r["book"] for r in plain} == {"ttlac"}, "precondition: TLSW crowded out"
+
+    bal = retriever.search_balanced([q], k=4, min_per_book=1)
+    assert "tlsw-243-0" in {r["chunk_id"] for r in bal}      # the floor did its job
+    assert {r["book"] for r in bal} == {"tlsw", "ttlac"}     # BOTH books present
+    assert len(bal) <= 4                                     # still capped at k
+
+
+def test_balanced_does_not_force_a_book_with_no_match(primed_lopsided):
+    """NEGATIVE: the floor is a safety net, not an equal-weight mandate. A
+    TLSW-only query (no TTLAC chunk scores at all) must NOT drag in off-topic
+    TTLAC passages — that would inject junk the persona could miscite."""
+    q = "earnings growth quarterly acceleration"
+    bal = retriever.search_balanced([q], k=6, min_per_book=3)
+    assert bal and {r["book"] for r in bal} == {"tlsw"}      # no TTLAC forced in
+    assert "ttlac-100-0" not in {r["chunk_id"] for r in bal}
+
+
+def test_balanced_keeps_the_global_best_first(primed_lopsided):
+    """The floor only ever displaces an over-represented book's WEAKEST
+    chunks — the top BM25 hit is never sacrificed and stays rank 1."""
+    q = "cheat plateau shakeout pivot entry"
+    top = retriever.search_multi([q], k=1)[0]["chunk_id"]
+    bal = retriever.search_balanced([q], k=4, min_per_book=1)
+    assert bal[0]["chunk_id"] == top
+    scores = [r["score"] for r in bal]
+    assert scores == sorted(scores, reverse=True)           # best-score order
+
+
+def test_balanced_respects_k_even_when_both_floors_fire(primed_lopsided):
+    q = "cheat plateau shakeout pivot entry earnings growth quarterly"
+    bal = retriever.search_balanced([q], k=3, min_per_book=2)
+    assert len(bal) <= 3
+    ids = [r["chunk_id"] for r in bal]
+    assert len(ids) == len(set(ids))                        # no dupes
+
+
+def test_balanced_unavailable_corpus_returns_empty(monkeypatch):
+    monkeypatch.setattr(retriever, "_current_version", lambda: None)
+    assert retriever.search_balanced(["stop loss"]) == []
+
+
 # ── index/TOC exclusion ──────────────────────────────────────────────────────
 
 # REGRESSION (real corpus): for "volatility contraction pattern pivot" the

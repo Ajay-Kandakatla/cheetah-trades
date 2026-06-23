@@ -137,6 +137,47 @@ def test_llm_failure_becomes_502(primed, monkeypatch):
     assert "boom" in exc.value.detail
 
 
+def _lopsided_docs():
+    """11 TTLAC 'cheat' chunks dominate any cheat query; ONE TLSW chunk also
+    speaks to it but scores lower — so under a plain top-10 it is crowded out
+    entirely (the real-corpus 'all one book' dropout)."""
+    docs = [{"chunk_id": f"ttlac-{100 + i}-0", "book": "ttlac",
+             "pdf_page": 100 + i, "printed_page": None, "chapter": 7,
+             "text": "The cheat is an early entry; cheat plateau, cheat "
+                     "shakeout, cheat pivot."}
+            for i in range(11)]
+    docs.append({"chunk_id": "tlsw-243-0", "book": "tlsw", "pdf_page": 243,
+                 "printed_page": 228, "chapter": 10,
+                 "text": "Cirrus Logic formed a 3C pivot point cheat at the "
+                         "breakout."})
+    return docs
+
+
+@pytest.fixture
+def primed_lopsided(monkeypatch):
+    retriever.prime(_lopsided_docs(), version=1)
+    monkeypatch.setattr(retriever, "_current_version", lambda: 1)
+    yield
+    retriever.prime([], None)
+
+
+def test_ask_consults_both_books_when_one_would_crowd_out_the_other(
+        primed_lopsided, fake_llm):
+    """REGRESSION (real corpus): a query like 'climax top / selling into
+    strength' returned 0 TLSW chunks in the live brain — TTLAC filled all 10
+    slots. ask_impl now routes through the per-book floor, so the relevant
+    TLSW chunk reaches both the prompt the persona reads AND the citation
+    chips Ajay sees — both books verified."""
+    plain = retriever.search_multi(["cheat plateau shakeout pivot"], k=10)
+    assert {r["book"] for r in plain} == {"ttlac"}, \
+        "precondition: TLSW is crowded out of the plain top-10"
+
+    out = brain_api.ask_impl("Tell me about the cheat plateau shakeout pivot")
+    assert "[TLSW p.228]" in fake_llm["prompt"]              # reached the model
+    assert "TLSW p.228" in out["citations"]                 # reached the chips
+    assert any(c.startswith("TTLAC") for c in out["citations"])   # both books
+
+
 def test_distill_drops_stopwords_and_dupes():
     d = brain_api._distill("What does the book say about the stop loss stop?")
     toks = d.split()

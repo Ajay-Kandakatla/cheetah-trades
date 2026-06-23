@@ -82,6 +82,21 @@ prints `index_chunks` so a re-ingest can be sanity-checked at a glance.
 - `search(query, k, book)` and `search_multi(queries, k)` — the ask path
   searches both the raw question AND a distilled-keyword variant, unions
   by `chunk_id` keeping each chunk's best score.
+- **`search_balanced(queries, k, min_per_book=3)` — the both-book floor.**
+  The `/brain/ask` path retrieves through this, *not* raw `search_multi`.
+  Plain top-k is a single global ranking, so a question whose vocabulary
+  lives mostly in one book can take **all** k slots and drop the other book
+  entirely — on the live corpus *"climax top / selling into strength"*
+  returned 0 TLSW chunks (all 10 were TTLAC), even though TLSW devotes a
+  chapter to selling into strength. `search_balanced` guarantees every book
+  with **any** relevant (positive-score, non-index) chunk at least
+  `min(min_per_book, available)` seats, so **both books are consulted on
+  every question**. It is a safety net, not an equal-weight mandate: a book
+  with **no** matching chunk is never forced in (no off-topic passages to
+  miscite), the global best chunks are always kept, and the floor only ever
+  displaces an over-represented book's lowest-scoring chunks. Result stays
+  capped at `k` and best-score ordered. This is Ajay's "verify both books
+  when I ask a question" requirement, made deterministic.
 - **Index/TOC chunks never surface**: any chunk tagged `is_index` at
   ingest is filtered out of search results regardless of score (an index
   page *locates* content, it isn't content — and citing "TLSW p.330" at
@@ -183,10 +198,14 @@ next search.
   cite strings for both books, book filter, `search_multi` dedupe,
   index-chunk exclusion (REGRESSION: index pages outranked TLSW p.198
   for the VCP query; raw-BM25 sanity check proves the filter does real
-  work), untagged legacy chunks still searchable.
+  work), untagged legacy chunks still searchable, **both-book floor**
+  (`search_balanced`: floors in the crowded-out book, does NOT force a
+  no-match book, keeps the global best first, respects `k`).
 - `tests/test_brain_ask.py` — prompt assembly (passages + cites +
   persona system), history clipping, empty-corpus short-circuit (no LLM
-  call), citation shape, LLM-error → 502.
+  call), citation shape, LLM-error → 502, **both-book floor at the ask
+  layer** (REGRESSION: a one-book-dominant query still lands the other
+  book's chunk in both the prompt and the citation chips).
 - `tests/test_brain_contracts.py` — persona source-guard, **engine
   boundary lock**, chart-analysis soft-fail, citation validation,
   import-lightness (pandas/numpy/pymongo blocked).
