@@ -7,8 +7,10 @@
 import { useMemo, useState } from 'react';
 import { useSepaScan } from '../hooks/useSepa';
 import type { SepaCandidate } from '../hooks/useSepa';
-import { toGlobalCard, filterForTab, type GlobalTab } from '../lib/sepaGlobal';
+import { useLivePrices } from '../hooks/useLivePrices';
+import { toGlobalCard, toGlobalDetail, filterForTab, type GlobalTab } from '../lib/sepaGlobal';
 import { SepaGlobalCard } from '../components/SepaGlobalCard';
+import { SepaGlobalDetailModal } from '../components/SepaGlobalDetailModal';
 import { InfoButton } from '../components/InfoButton';
 
 const TABS: { key: GlobalTab; label: string; hint: string }[] = [
@@ -40,10 +42,13 @@ const HowItWorks = (
 
 export function SepaGlobalPage() {
   const { data, loading, scanning, refetch } = useSepaScan();
+  const livePrices = useLivePrices();
   const [tab, setTab] = useState<GlobalTab>('leaders');
   const [q, setQ] = useState('');
+  const [selected, setSelected] = useState<SepaCandidate | null>(null);
 
   const candidates = (data?.candidates as SepaCandidate[] | undefined) ?? [];
+  const liveFor = (sym: string) => livePrices[sym.toUpperCase()];
 
   const counts = useMemo(() => ({
     buy: filterForTab(candidates, 'buy').length,
@@ -51,16 +56,16 @@ export function SepaGlobalPage() {
     leaders: filterForTab(candidates, 'leaders').length,
   }), [candidates]);
 
-  const cards = useMemo(() => {
-    let rows = filterForTab(candidates, tab);
+  const rows = useMemo(() => {
+    let r = filterForTab(candidates, tab);
     const needle = q.trim().toUpperCase();
     if (needle) {
-      rows = rows.filter(
-        (r) => r.symbol.toUpperCase().includes(needle) ||
-               (r.name ?? '').toUpperCase().includes(needle),
+      r = r.filter(
+        (x) => x.symbol.toUpperCase().includes(needle) ||
+               (x.name ?? '').toUpperCase().includes(needle),
       );
     }
-    return rows.map(toGlobalCard);
+    return r;
   }, [candidates, tab, q]);
 
   const safeToLong = data?.market_context?.safe_to_long;
@@ -127,7 +132,7 @@ export function SepaGlobalPage() {
         <p style={{ color: 'var(--cm-slate, #94a3b8)' }}>Loading the latest scan…</p>
       )}
 
-      {!loading && cards.length === 0 && (
+      {!loading && rows.length === 0 && (
         <div style={{ color: 'var(--cm-slate, #94a3b8)', padding: '1rem 0' }}>
           {tab === 'buy' ? (
             <p>
@@ -142,10 +147,21 @@ export function SepaGlobalPage() {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-        {cards.map((c) => (
-          <SepaGlobalCard key={c.symbol} card={c} />
+        {rows.map((r) => (
+          <SepaGlobalCard
+            key={r.symbol}
+            card={toGlobalCard(r, liveFor(r.symbol))}
+            onClick={() => setSelected(r)}
+          />
         ))}
       </div>
+
+      {selected && (
+        <SepaGlobalDetailModal
+          detail={toGlobalDetail(selected, liveFor(selected.symbol))}
+          onClose={() => setSelected(null)}
+        />
+      )}
 
       <div style={{ marginTop: '1rem', display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <button className="sepa-chip" onClick={() => refetch?.()} disabled={scanning}

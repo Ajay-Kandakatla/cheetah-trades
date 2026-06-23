@@ -14,11 +14,17 @@ export type GlobalTab = 'buy' | 'watch' | 'leaders';
 export type GlobalVerdict = 'buy' | 'watch' | 'avoid' | 'leader';
 export type Strength = 'High' | 'Medium' | 'Low';
 
+/** Minimal live-quote shape (a subset of LivePrice) — when present it overrides
+ *  the scan's stale close so the card shows a current price. */
+export type LiveQuote = { price?: number | null; change_pct?: number | null };
+
 export type GlobalCard = {
   symbol: string;
   name: string | null;
   price: number | null;
   dayChangePct: number | null;
+  /** True when `price` came from a live quote (not the scan's last close). */
+  isLive: boolean;
   verdict: GlobalVerdict;
   verdictLabel: string;
   /** Traffic-light tone key the page maps to a colour. */
@@ -32,8 +38,26 @@ export type GlobalCard = {
   strength: Strength;
 };
 
+/** The extra plain-English detail shown in the click-through modal. */
+export type GlobalDetail = GlobalCard & {
+  /** Profit targets in plain terms ("First target $X, +Y%"). */
+  targets: { label: string; price: number; pct: number | null }[];
+  /** "You risk N% to aim for ~M%" reward-to-risk, when known. */
+  rewardRisk: number | null;
+  /** "Stronger than N% of all stocks" (relative strength), when known. */
+  leadership: number | null;
+  /** Plain trend sentence. */
+  trendText: string;
+  /** Plain volume sentence, or null. */
+  volumeText: string | null;
+};
+
 function num(x: unknown): number | null {
   return typeof x === 'number' && Number.isFinite(x) ? x : null;
+}
+
+function liveOf(live?: LiveQuote): LiveQuote | undefined {
+  return live && num(live.price) != null ? live : undefined;
 }
 
 /** A name institutions are selling — a SELL in the book, never a buy
@@ -59,8 +83,10 @@ export function strengthOf(row: SepaCandidate): Strength {
 
 /** The plain-English verdict + everything the card shows. Same gates as the
  *  admin SEPA page, relabelled — never a new signal. */
-export function toGlobalCard(row: SepaCandidate): GlobalCard {
-  const price = num(row.last_close) ?? num(row.trend?.price);
+export function toGlobalCard(row: SepaCandidate, live?: LiveQuote): GlobalCard {
+  const lq = liveOf(live);
+  const price = lq ? num(lq.price) : num(row.last_close) ?? num(row.trend?.price);
+  const dayChangePct = lq && lq.change_pct != null ? num(lq.change_pct) : num(row.day_change_pct);
   const plan = row.trade_plan;
   const ee = row.entry_exit;
 
@@ -113,7 +139,8 @@ export function toGlobalCard(row: SepaCandidate): GlobalCard {
     symbol: row.symbol,
     name: row.name ?? null,
     price,
-    dayChangePct: num(row.day_change_pct),
+    dayChangePct,
+    isLive: !!lq,
     verdict,
     verdictLabel,
     tone,
@@ -122,6 +149,45 @@ export function toGlobalCard(row: SepaCandidate): GlobalCard {
     sellIf,
     riskPct: riskPct == null ? null : Math.round(riskPct * 10) / 10,
     strength: strengthOf(row),
+  };
+}
+
+function pct(from: number | null, to: number | null): number | null {
+  if (from == null || to == null || from <= 0) return null;
+  return Math.round(((to - from) / from) * 1000) / 10;
+}
+
+/** The richer, still-plain detail for the click-through modal. Adds profit
+ *  targets, reward-to-risk, relative-strength leadership, and plain trend +
+ *  volume sentences — the "important details" without the admin-page jargon. */
+export function toGlobalDetail(row: SepaCandidate, live?: LiveQuote): GlobalDetail {
+  const base = toGlobalCard(row, live);
+  const buyRef = base.buyZone?.lo ?? base.price;
+  const t = row.trade_plan?.targets;
+
+  const targets: GlobalDetail['targets'] = [];
+  if (num(t?.r1 ?? null) != null) targets.push({ label: 'First target', price: t!.r1 as number, pct: pct(buyRef, t!.r1) });
+  if (num(t?.r2 ?? null) != null) targets.push({ label: 'Second target', price: t!.r2 as number, pct: pct(buyRef, t!.r2) });
+
+  const rr = num(t?.reward_to_risk ?? null);
+
+  const vol = row.volume;
+  let volumeText: string | null = null;
+  if (vol?.accumulation_strength === 'strong' || vol?.accumulation_strength === 'accumulating') {
+    volumeText = 'Big investors look to be accumulating it (buying volume is strong).';
+  } else if (vol?.is_drying_up) {
+    volumeText = 'Volume is drying up — the stock is coiling quietly before a possible move.';
+  }
+
+  return {
+    ...base,
+    targets,
+    rewardRisk: rr,
+    leadership: num(row.rs_rank),
+    trendText: row.trend?.pass_all
+      ? 'In a confirmed up-trend — trading above its key moving averages.'
+      : 'A strong stock, but the up-trend isn’t fully confirmed yet.',
+    volumeText,
   };
 }
 

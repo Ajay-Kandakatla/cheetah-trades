@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { SepaGlobalCard } from './SepaGlobalCard';
 import type { GlobalCard } from '../lib/sepaGlobal';
 
 function card(o: Partial<GlobalCard>): GlobalCard {
   return {
-    symbol: 'TST', name: 'Test Co', price: 100, dayChangePct: 1.5,
+    symbol: 'TST', name: 'Test Co', price: 100, dayChangePct: 1.5, isLive: false,
     verdict: 'buy', verdictLabel: 'Buy zone', tone: 'green',
     reason: 'Confirmed breakout.', buyZone: { lo: 100, hi: 103 },
     sellIf: 93, riskPct: 7, strength: 'High', ...o,
@@ -36,5 +36,20 @@ describe('SepaGlobalCard', () => {
   it('renders a missing price as a dash', () => {
     render(<SepaGlobalCard card={card({ price: null, dayChangePct: null })} />);
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('fires onClick (tap for details) and is a keyboard-focusable button', () => {
+    const onClick = vi.fn();
+    render(<SepaGlobalCard card={card({})} onClick={onClick} />);
+    const el = screen.getByRole('button');
+    fireEvent.click(el);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(el, { key: 'Enter' });
+    expect(onClick).toHaveBeenCalledTimes(2);
+  });
+
+  it('is not a button when no onClick is given (glance only)', () => {
+    render(<SepaGlobalCard card={card({})} />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

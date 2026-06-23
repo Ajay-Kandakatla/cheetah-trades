@@ -44,6 +44,22 @@ Avoid is checked **first**, so a climax/distribution name can never read "buy"
 - **Educational framing:** a "How it works" explainer + an explicit
   *"educational only — not financial advice"* note (this is a public page, so
   the disclaimer belongs here, unlike the owner's `/chat` agent).
+- **Live prices (2026-06-23):** each card overlays the live quote
+  (`useLivePrices`) over the scan's last close, with a green LIVE dot — so the
+  page reads current even when the scan is a little old. `toGlobalCard(row,
+  live)` does the override (`isLive` flag); a malformed/absent quote falls back
+  to the scan close.
+- **Click → details modal (2026-06-23):** tapping a card opens a plain-English
+  detail modal (`SepaGlobalDetailModal`, fed by `toGlobalDetail`) — NOT the
+  admin `/sepa/:symbol` page (gated + jargon-heavy). It adds the profit
+  **targets** (+% from the buy point), **reward-to-risk**, a relative-strength
+  **leadership** line, and plain **trend** + **volume** sentences — the
+  "important details" without sending a beginner into the power tool.
+
+> Data-hygiene note (2026-06-23): a delisted name (KALV) was surfacing here
+> because the FAST scan path (`scanner._hot_recompute`) skipped the `is_stale`
+> guard the full path has. Fixed at the scanner; SEPA Global shows whatever the
+> scan's `is_buyable`/`is_candidate` say, so the fix flows straight through.
 
 ## Tests
 

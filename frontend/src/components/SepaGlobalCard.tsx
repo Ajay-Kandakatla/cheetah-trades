@@ -15,12 +15,17 @@ function money(n: number | null): string {
   return n == null ? '—' : `$${n.toFixed(2)}`;
 }
 
-export function SepaGlobalCard({ card }: { card: GlobalCard }) {
+export function SepaGlobalCard({ card, onClick }: { card: GlobalCard; onClick?: () => void }) {
   const tone = TONE[card.tone];
   const chg = card.dayChangePct;
   return (
     <div
       data-testid="global-card"
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      title={onClick ? 'Tap for the details' : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       style={{
         border: '1px solid var(--cm-border, #2a2f3a)',
         borderLeft: `4px solid ${tone}`,
@@ -30,6 +35,7 @@ export function SepaGlobalCard({ card }: { card: GlobalCard }) {
         flexDirection: 'column',
         gap: '0.4rem',
         background: 'var(--cm-card, #161a22)',
+        cursor: onClick ? 'pointer' : undefined,
       }}
     >
       {/* Row 1: ticker + name ............ price + day change */}
@@ -43,6 +49,15 @@ export function SepaGlobalCard({ card }: { card: GlobalCard }) {
           )}
         </div>
         <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+          {card.isLive && (
+            <span
+              title="Live price"
+              style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--positive, #10b981)', marginRight: 5, verticalAlign: 'middle',
+              }}
+            />
+          )}
           <span style={{ fontWeight: 700 }}>{money(card.price)}</span>
           {chg != null && (
             <span

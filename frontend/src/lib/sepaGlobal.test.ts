@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  toGlobalCard, strengthOf, isAvoid, filterForTab, byConviction,
+  toGlobalCard, toGlobalDetail, strengthOf, isAvoid, filterForTab, byConviction,
 } from './sepaGlobal';
 import type { SepaCandidate } from '../hooks/useSepa';
 
@@ -80,6 +80,59 @@ describe('risk math (negative / fallbacks)', () => {
     const c = toGlobalCard({ symbol: 'X' } as any);
     expect(c.verdict).toBe('leader');
     expect(c.price).toBeNull();
+  });
+});
+
+describe('live price override', () => {
+  it('uses the live quote over the scan close and flags isLive', () => {
+    const c = toGlobalCard(row({ last_close: 100, day_change_pct: 1 }), { price: 104.2, change_pct: 4.2 });
+    expect(c.price).toBe(104.2);
+    expect(c.dayChangePct).toBe(4.2);
+    expect(c.isLive).toBe(true);
+  });
+  it('falls back to the scan close when no live quote (isLive false)', () => {
+    const c = toGlobalCard(row({ last_close: 100 }));
+    expect(c.price).toBe(100);
+    expect(c.isLive).toBe(false);
+  });
+  it('ignores a malformed live quote (no usable price)', () => {
+    const c = toGlobalCard(row({ last_close: 100 }), { price: null });
+    expect(c.price).toBe(100);
+    expect(c.isLive).toBe(false);
+  });
+});
+
+describe('toGlobalDetail — the click-through detail', () => {
+  const r = row({
+    is_buyable: true, rs_rank: 92, conviction: 80,
+    trend: { pass_all: true } as any,
+    volume: { is_drying_up: true } as any,
+    trade_plan: {
+      buy_zone: { lo: 100, hi: 103 }, stop: { recommended: 93, risk_pct: 7 },
+      targets: { r1: 110, r2: 121, reward_to_risk: 2.5 },
+    } as any,
+  });
+
+  it('adds plain targets with % gain from the buy reference', () => {
+    const d = toGlobalDetail(r);
+    expect(d.targets).toEqual([
+      { label: 'First target', price: 110, pct: 10 },   // (110-100)/100
+      { label: 'Second target', price: 121, pct: 21 },
+    ]);
+  });
+  it('carries reward:risk, leadership, trend and volume sentences', () => {
+    const d = toGlobalDetail(r);
+    expect(d.rewardRisk).toBe(2.5);
+    expect(d.leadership).toBe(92);
+    expect(d.trendText).toMatch(/confirmed up-trend/i);
+    expect(d.volumeText).toMatch(/drying up/i);
+  });
+  it('degrades cleanly with no plan / no volume (negative)', () => {
+    const d = toGlobalDetail(row({ is_buyable: false }));
+    expect(d.targets).toEqual([]);
+    expect(d.rewardRisk).toBeNull();
+    expect(d.volumeText).toBeNull();
+    expect(d.trendText).toMatch(/isn’t fully confirmed/i);
   });
 });
 
