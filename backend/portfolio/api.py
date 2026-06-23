@@ -206,6 +206,14 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
       - user-typed entry/stop/target/notes → R-multiple math fields
     """
     from portfolio import plaid_store
+    from .snapshots import day_change_from_baseline, prior_values
+
+    # Each position's value at YESTERDAY's close (from portfolio.snapshots).
+    # Today's change is measured from this baseline — falling back to COST for a
+    # position with no prior-day snapshot (opened today) — so a same-day buy
+    # never reads the market's full close-to-close dip (MUU -24% vs -1.5% real,
+    # Ajay 2026-06-23). Without this the page showed the raw quote day_change_pct.
+    prior_map = prior_values(owner_email)
 
     holdings = plaid_response.get("holdings") or []
     securities = plaid_response.get("securities") or []
@@ -261,6 +269,14 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
             reward = current_price - entry
             r_multiple = reward / risk
 
+        # Honest "today's change": from yesterday's snapshot if held, else from
+        # cost (opened today). Fall back to the raw quote close-to-close only
+        # when we have no baseline at all (no snapshot AND no cost basis).
+        prior_val = prior_map.get((symbol, h.get("account_id") or "default"))
+        day_dollars, day_pct = day_change_from_baseline(current_value, cost_basis or 0, prior_val)
+        if day_pct is None:
+            day_pct = live.get("day_change_pct")
+
         rows.append({
             "symbol":         symbol,
             "name":           name,
@@ -273,7 +289,9 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
             "current_value":  current_value,
             "pl_dollars":     pl_dollars,
             "pl_pct":         pl_pct,
-            "day_change_pct": live.get("day_change_pct"),
+            "day_change_pct": day_pct,
+            "day_dollars":    day_dollars,
+            "today_basis":    "prior_close" if prior_val is not None else "cost",
             "entry":          entry,
             "stop":           stop,
             "target":         target,
@@ -338,6 +356,14 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
             reward = current_price - entry
             r_multiple = reward / risk
 
+        # Honest "today's change" — same baseline rule as the Plaid path. The
+        # snapshot key matches store.list_holdings' account label, so held
+        # positions get an exact close-to-close read once a snapshot exists.
+        prior_val = prior_map.get((sym, h.get("account") or "default"))
+        day_dollars, day_pct = day_change_from_baseline(current_value, cost_basis or 0, prior_val)
+        if day_pct is None:
+            day_pct = live.get("day_change_pct")
+
         rows.append({
             "symbol":         sym,
             "name":           (h.get("notes") or "")[:120],
@@ -350,7 +376,9 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
             "current_value":  current_value,
             "pl_dollars":     pl_dollars,
             "pl_pct":         pl_pct,
-            "day_change_pct": live.get("day_change_pct"),
+            "day_change_pct": day_pct,
+            "day_dollars":    day_dollars,
+            "today_basis":    "prior_close" if prior_val is not None else "cost",
             "entry":          entry,
             "stop":           stop,
             "target":         target,

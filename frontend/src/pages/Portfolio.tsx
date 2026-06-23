@@ -33,6 +33,7 @@ import { HoldingDiagnosis } from '../components/HoldingDiagnosis';
 import { BreakoutStats } from '../components/BreakoutStats';
 import { MarketPulsePanel } from '../components/MarketPulsePanel';
 import { API } from '../lib/apiBase';
+import { honestDayPct } from '../lib/portfolioDay';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { Heatmap, type HeatTile } from '../components/Heatmap';
@@ -106,6 +107,23 @@ export default function PortfolioPage() {
     return { price, value, pl, plPct, isLive: q?.last_price != null };
   };
 
+  // Honest, real-time "today %" for the Day-% sort + heatmap. A position opened
+  // today (today_basis === 'cost') is measured from COST against the live price
+  // — NOT the quote's close-to-close, which would count a market drop that
+  // happened before you bought (the MUU −24% heatmap bug, Ajay 2026-06-23). A
+  // held position (today_basis === 'prior_close') uses the live close-to-close.
+  const dayPctFor = (r: HoldingRow): number | null => {
+    const q = live.get((r.symbol || '').toUpperCase());
+    return honestDayPct({
+      today_basis: r.today_basis,
+      livePrice: q?.last_price ?? r.current_price,
+      quantity: r.quantity,
+      costBasis: r.cost_basis,
+      liveDayPct: q?.day_pct ?? null,
+      backendDayPct: r.day_change_pct,
+    });
+  };
+
   const removeHolding = async (sym: string) => {
     if (!sym || !window.confirm(`Remove ${sym} from your positions?`)) return;
     try {
@@ -132,7 +150,7 @@ export default function PortfolioPage() {
         case 'value':   return lv.value ?? null;
         case 'pl':      return lv.pl ?? null;
         case 'plpct':   return lv.plPct ?? null;
-        case 'day':     return live.get((r.symbol || '').toUpperCase())?.day_pct ?? r.day_change_pct ?? null;
+        case 'day':     return dayPctFor(r);
         case 'symbol':  return r.symbol || '';
         case 'pattern': return patternRank(verdicts.get((r.symbol || '').toUpperCase()));
         default:        return null;
@@ -171,7 +189,7 @@ export default function PortfolioPage() {
     const lv = liveView(r);
     const pct = heatMode === 'pnl'
       ? (lv.plPct ?? null)
-      : (live.get((r.symbol || '').toUpperCase())?.day_pct ?? r.day_change_pct);
+      : dayPctFor(r);
     return {
       symbol: r.symbol,
       value: Math.max(0, lv.value ?? r.current_value ?? 0),

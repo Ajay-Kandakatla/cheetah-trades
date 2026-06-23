@@ -42,6 +42,11 @@ export type HoldingRow = {
   pl_dollars: number | null;
   pl_pct: number | null;
   day_change_pct: number | null;
+  day_dollars?: number | null;
+  // Baseline the backend used for today's change: 'prior_close' (held — exact
+  // close-to-close) or 'cost' (opened today — measured from what you paid, so a
+  // same-day buy doesn't read the market's pre-purchase dip). See Portfolio Day%.
+  today_basis?: 'prior_close' | 'cost';
   entry: number | null;
   stop: number | null;
   target: number | null;
