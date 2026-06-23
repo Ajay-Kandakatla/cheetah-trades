@@ -57,6 +57,7 @@ function lazyWithReload<T extends ComponentType<any>>(
 }
 const LiveStream                  = lazyWithReload(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
 const SepaPage                    = lazyWithReload(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
+const SepaGlobalPage              = lazyWithReload(() => import('./pages/SepaGlobal').then(m => ({ default: m.SepaGlobalPage })));
 const SepaV2Page                  = lazyWithReload(() => import('./pages/SepaV2').then(m => ({ default: m.SepaV2Page })));
 const SepaCandidatePage           = lazyWithReload(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
 const DualMomentumPage            = lazyWithReload(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
@@ -267,6 +268,7 @@ export function App() {
             <Route path="/overnight"      element={<FeatureRoute feature="overnight"><OvernightPage /></FeatureRoute>} />
             <Route path="/live"           element={<FeatureRoute feature="live"><LiveStream /></FeatureRoute>} />
             <Route path="/sepa"           element={<FeatureRoute feature="sepa"><SepaPage /></FeatureRoute>} />
+            <Route path="/sepa-global"    element={<FeatureRoute feature="sepa-global"><SepaGlobalPage /></FeatureRoute>} />
             <Route path="/sepa-v2"        element={<FeatureRoute feature="sepa"><SepaV2Page /></FeatureRoute>} />
             <Route path="/sepa/:symbol"   element={<FeatureRoute feature="sepa"><SepaCandidatePage /></FeatureRoute>} />
             <Route path="/dual-momentum"  element={<FeatureRoute feature="dual-momentum"><DualMomentumPage /></FeatureRoute>} />

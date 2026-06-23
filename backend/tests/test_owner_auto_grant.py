@@ -53,3 +53,17 @@ def test_breakouts_is_default_on_for_all_users():
     eff = store.effective_features(store.DEFAULT_FEATURES, is_owner=False,
                                    seen_version=store.CATALOG_VERSION)
     assert "breakouts" in eff
+
+
+def test_sepa_global_is_default_on_for_all_users():
+    """Ajay 2026-06-23: SEPA Global is the beginner scanner for everyone, so it
+    must be granted by default (the full `sepa` page stays owner-only)."""
+    entry = next(e for e in store.FEATURE_CATALOG if e["id"] == "sepa-global")
+    assert entry["default"] is True
+    assert "sepa-global" in store.DEFAULT_FEATURES
+    # The full admin SEPA page is NOT broadly granted.
+    sepa = next(e for e in store.FEATURE_CATALOG if e["id"] == "sepa")
+    assert sepa["default"] is False
+    eff = store.effective_features(store.DEFAULT_FEATURES, is_owner=False,
+                                   seen_version=store.CATALOG_VERSION)
+    assert "sepa-global" in eff and "sepa" not in eff

@@ -99,6 +99,10 @@ FEATURE_CATALOG: list[dict] = [
     # methodology/setup screens. Nav order follows THIS list (ids are stable,
     # so reordering here is safe and never orphans a saved access set).
     {"id": "sepa",          "label": "SEPA",                "group": "scanner",   "default": False},
+    # SEPA Global (Ajay 2026-06-23): the SAME Minervini scan, dumbed down — a
+    # minimal, jargon-free scanner for friends with little trading experience
+    # (admin's /sepa stays the full power tool). Default ON for everyone.
+    {"id": "sepa-global",   "label": "🌍 SEPA Global",      "group": "scanner",   "default": True, "added_in": 16},
     {"id": "pullback-ma",   "label": "Pullback to MA",      "group": "scanner",   "default": False, "added_in": 4},
     {"id": "dual-momentum", "label": "Dual Momentum",       "group": "scanner",   "default": False},
     {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "scanner", "default": False},
@@ -225,7 +229,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 15
+CATALOG_VERSION = 16
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 
