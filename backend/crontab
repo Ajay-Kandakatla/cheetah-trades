@@ -116,6 +116,12 @@
 # market/sector) so the user knows which names need a news check.
 40     16    *    *    1-5  /usr/local/bin/python -c "from portfolio.alerts import run_drop_attribution_default as f; f()"
 #
+# Portfolio daily snapshot — 4:42pm ET weekdays, after the close. Records each
+# holding's value so "today's change" is an exact close-to-close read tomorrow
+# (a same-day buy reads from cost until a prior snapshot exists). See
+# portfolio/snapshots.py.
+42     16    *    *    1-5  /usr/local/bin/python -c "from portfolio.snapshots import record_all as f; f()"
+#
 # Hourly VCP watcher — every hour during market hours. Runs a fast scan,
 # diffs against the previous run, and fires WhatsApp + browser notifications
 # only on NEWLY discovered VCP setups (avoids spamming on the same names).

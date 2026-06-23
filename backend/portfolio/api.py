@@ -57,12 +57,23 @@ def _require_portfolio_access(email: str) -> str:
     return e
 
 
-def _rollup(holdings: list[dict], quote_map: dict[str, dict]) -> dict:
+def _rollup(holdings: list[dict], quote_map: dict[str, dict],
+            prior_map: Optional[dict] = None) -> dict:
     """Compute per-row + total $ values from holdings + live quotes.
+
+    ``prior_map`` maps (ticker, account) -> the position's value at YESTERDAY's
+    close (from portfolio.snapshots). Today's change is measured from that
+    baseline, falling back to COST basis when there's no prior-day snapshot — a
+    position opened today is measured from what you paid, never the market's
+    close-to-close (which would count a drop that happened before you bought).
+    Fixes a same-day buy reading the full market dip (MUU -20% vs -1.5% real,
+    Ajay 2026-06-23).
 
     Returned shape feeds both the dedicated /portfolio page and the
     morning-brief Holdings card.
     """
+    from .snapshots import day_change_from_baseline
+    prior_map = prior_map or {}
     rows = []
     total_value = 0.0
     total_cost = 0.0
@@ -75,7 +86,8 @@ def _rollup(holdings: list[dict], quote_map: dict[str, dict]) -> dict:
         cur_value = (shares * last) if (last is not None) else None
         pl_dollars = (cur_value - cost) if (cur_value is not None) else None
         pl_pct = ((cur_value / cost - 1) * 100) if (cur_value is not None and cost > 0) else None
-        day_dollars = (shares * (q.get("day_change") or 0)) if last is not None else None
+        prior_val = prior_map.get((t, h.get("account") or "default"))
+        day_dollars, day_pct = day_change_from_baseline(cur_value, cost, prior_val)
         rows.append({
             "ticker":         t,
             "shares":         shares,
@@ -86,8 +98,10 @@ def _rollup(holdings: list[dict], quote_map: dict[str, dict]) -> dict:
             "current_value":  None if cur_value is None else round(cur_value, 2),
             "pl_dollars":     None if pl_dollars is None else round(pl_dollars, 2),
             "pl_pct":         None if pl_pct is None else round(pl_pct, 2),
-            "day_change_pct": q.get("day_change_pct"),
+            "day_change_pct": None if day_pct is None else round(day_pct, 2),
             "day_dollars":    None if day_dollars is None else round(day_dollars, 2),
+            # "prior_close" once a snapshot exists, else "cost" (opened today).
+            "today_basis":    "prior_close" if prior_val is not None else "cost",
             "account":        h.get("account"),
             "tags":           h.get("tags") or [],
         })
@@ -122,7 +136,9 @@ def build_summary(user_email: str) -> dict:
     if not holdings:
         return {"available": False, "count": 0, "rows": []}
     quote_map = quotes.fetch_quotes([h["ticker"] for h in holdings])
-    summary = _rollup(holdings, quote_map)
+    from . import snapshots
+    prior_map = snapshots.prior_values(user_email)   # yesterday's close values
+    summary = _rollup(holdings, quote_map, prior_map)
     summary["available"] = True
     return summary
 
