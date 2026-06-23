@@ -43,7 +43,7 @@ from . import (
     mvp as mvp_indicator, climax_distribution,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
-    group_leadership, buyable_verdict, conviction,
+    group_leadership, buyable_verdict, conviction, cheat,
 )
 from .universe import load_universe
 from .catalyst import catalyst_for
@@ -299,6 +299,23 @@ def _attach_conviction(row: dict) -> dict:
         log.debug("conviction failed for %s: %s", row.get("symbol"), exc)
         row["conviction"] = None
         row["conviction_detail"] = None
+    return _attach_cheat(row)
+
+
+def _attach_cheat(row: dict) -> dict:
+    """Attach the 3-C cheat tag (sepa.cheat, TTLAC §7) to a finished scan row.
+    `cheat_setup` (bool) is True only for a qualifier forming the cheat;
+    `cheat_detail` carries the measured off-high / volume / shakeout read for
+    the FE chip + tooltip. The FE shows the chip ONLY in a red regime with no
+    buyable pivots — this just computes the pattern (Ajay 2026-06-22)."""
+    try:
+        c = cheat.detect(row)
+        row["cheat_setup"] = c["is_cheat"]
+        row["cheat_detail"] = c
+    except Exception as exc:
+        log.debug("cheat detect failed for %s: %s", row.get("symbol"), exc)
+        row["cheat_setup"] = False
+        row["cheat_detail"] = None
     return row
 
 

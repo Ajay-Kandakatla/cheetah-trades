@@ -73,6 +73,7 @@ import { useAnalystMap } from '../hooks/useAnalystMap';
 import { SepaPatternRow } from './SepaPatternChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { isMomentumLeader, MOMENTUM_LEADER_TOOLTIP } from '../lib/momentumLeader';
+import { isCheatVisible, CHEAT_TOOLTIP } from '../lib/cheat';
 // Δ score + Δ rank trend chips — pure FE, reads SepaTrendContext for
 // the historical maps. Added 2026-05-28 in response to user request to
 // track when "points drop" and maintain a separate ranking trend.
@@ -138,6 +139,10 @@ type Props = {
    *  trigger / stop / target / R:R for the active setup kind. Pass
    *  undefined (default) to preserve the existing card chrome unchanged. */
   setupOverlay?: ReactNode;
+  /** True when the page-level cheat regime is open (red market + no buyable
+   *  pivots). The 3-C cheat chip renders only when this AND row.cheat_setup
+   *  hold — see src/lib/cheat.ts (TTLAC §7). */
+  cheatRegime?: boolean;
   onSelect: (e?: React.MouseEvent) => void;
 };
 
@@ -146,7 +151,7 @@ type Props = {
  * Shows: rating + score, trend dots, RS, setup pill, pivot/stop with risk %,
  * stage badge, volume/late-base flags.
  */
-export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice, setupOverlay, onSelect }: Props) {
+export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice, setupOverlay, cheatRegime, onSelect }: Props) {
   const [alertOpen, setAlertOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
   const [moatOpen,  setMoatOpen]  = useState(false);
@@ -465,6 +470,22 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
               symbol={row.symbol}
               onOpenDrill={() => setOpenSignal('political_disclosure')}
             />
+            {/* 🃏 3-C cheat chip (TTLAC §7) — the earliest, aggressive entry.
+                Shown ONLY in a red regime with no buyable pivots (cheatRegime),
+                the book's use case: leaders bottom first in a correction.
+                Informational, tooltip-only — the engine never trades it. */}
+            {isCheatVisible(row.cheat_setup, cheatRegime) && (
+              <span
+                className="sepa-tag sepa-tag--warn"
+                title={`${CHEAT_TOOLTIP}${
+                  row.cheat_detail?.reasons?.length
+                    ? '\n\n' + row.cheat_detail.reasons.join('\n')
+                    : ''
+                }`}
+              >
+                🃏 cheat{row.cheat_detail?.shakeout ? ' · shakeout' : ''}
+              </span>
+            )}
             {/* ⚠ ER chip — earnings within 7 days. Renders null otherwise;
                 click opens EarningsWhispers (stopPropagation inside). */}
             <EarningsChip symbol={row.symbol} info={earningsMap.get(row.symbol.toUpperCase())} />

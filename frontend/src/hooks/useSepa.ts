@@ -125,6 +125,21 @@ export type ConvictionDetail = {
   weights: { momentum: number; coil: number; demand: number; reward_risk: number };
 };
 
+/** 3-C cheat tag (backend sepa/cheat.py, TTLAC §7). `is_cheat` true only for a
+ *  qualifier forming the cup-completion cheat (the earliest, pre-breakout entry).
+ *  The FE shows the chip only in a red regime with no buyable pivots — see
+ *  src/lib/cheat.ts. */
+export type CheatDetail = {
+  is_cheat: boolean;
+  off_high_pct: number | null;
+  pct_above_low: number | null;
+  vol_dryup: number | null;
+  good_contractions: number;
+  shakeout: boolean;
+  reasons: string[];
+  cite: string;
+};
+
 export type SepaCandidate = {
   symbol: string;
   name?: string | null;
@@ -347,6 +362,10 @@ export type SepaCandidate = {
    *  exhaustion name is suppressed to the bottom. */
   conviction?: number | null;
   conviction_detail?: ConvictionDetail | null;
+  /** 3-C cheat tag (TTLAC §7). `cheat_setup` true for a qualifier forming the
+   *  cup-completion cheat; the chip shows only in a red regime with no pivots. */
+  cheat_setup?: boolean | null;
+  cheat_detail?: CheatDetail | null;
   /** Distance from entry to the suggested stop, in %. Present when a setup
    *  with a stop exists. */
   risk_to_stop_pct?: number | null;

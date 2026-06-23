@@ -36,6 +36,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'distribution-blocks-enter', label: 'Distribution now blocks Enter — names institutions are selling are held out of the buy tier', addedAt: '2026-06-21', route: '/sepa' },
   { id: 'conviction-rank', label: '🏆 Conviction rank — lists now sort by return potential (volume + dried volume + momentum); climax runs sink', addedAt: '2026-06-22', route: '/sepa' },
   { id: 'conviction-rank-breakouts', label: '🏆 Conviction column + sort on the Breakouts board', addedAt: '2026-06-22', route: '/breakouts' },
+  { id: 'cheat-tag', label: '🃏 Cheat tag — the earliest entry (TTLAC), shown in a red market when there are no breakouts', addedAt: '2026-06-22', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

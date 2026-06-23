@@ -25,6 +25,8 @@ import { SepaTrendProvider } from '../components/SepaTrendContext';
 import { getFundTier } from '../lib/fundTiers';
 import { isMomentumLeader } from '../lib/momentumLeader';
 import { isBaseSetup } from '../lib/baseSetup';
+import { isCheatRegime } from '../lib/cheat';
+import { useMarketGauge } from '../hooks/useMarketGauge';
 // Political-disclosure flag lookup for 🏛️ POTUS Family + 🇺🇸 US Gov filters.
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -570,6 +572,15 @@ export function SepaPage() {
   }, [filters.showAll, hasFull, data?.all_results]);
   const source: SepaCandidate[] =
     (filters.showAll ? (data?.all_results ?? data?.candidates) : data?.candidates) ?? [];
+
+  // 3-C cheat chip gate (TTLAC §7): show the cheat tag ONLY in a red (risk_off)
+  // market with NO buyable pivots — the book's use case (leaders bottom first in
+  // a correction). buyable_count is over the candidate set, independent of the
+  // current display filters. See src/lib/cheat.ts.
+  const cheatGauge = useMarketGauge();
+  const buyablePivotCount =
+    ((data?.candidates as SepaCandidate[]) ?? []).filter((c) => c.is_buyable).length;
+  const cheatRegime = isCheatRegime(cheatGauge?.state, buyablePivotCount);
 
   // True cold load — no scan data yet AND a fetch is in flight. Drives the
   // card-grid skeleton instead of a false "Nothing matches" flash before the
@@ -1314,6 +1325,7 @@ export function SepaPage() {
                   whalesFlow={whalesFlow.get(r.symbol.toUpperCase())}
                   whales13d={whales13d.get(r.symbol.toUpperCase())}
                   livePrice={livePrices[r.symbol.toUpperCase()]}
+                  cheatRegime={cheatRegime}
                   onSelect={(e) => openSymbol(r.symbol, e)}
                 />
               ))}
@@ -1369,6 +1381,7 @@ export function SepaPage() {
                   whalesFlow={whalesFlow.get(r.symbol.toUpperCase())}
                   whales13d={whales13d.get(r.symbol.toUpperCase())}
                   livePrice={livePrices[r.symbol.toUpperCase()]}
+                  cheatRegime={cheatRegime}
                   onSelect={(e) => openSymbol(r.symbol, e)}
                 />
               ))}
@@ -1413,6 +1426,7 @@ export function SepaPage() {
                       whales13d={whales13d.get(sym)}
                       livePrice={livePrices[sym]}
                       setupOverlay={<SetupOverlayStrip setup={setup} />}
+                      cheatRegime={cheatRegime}
                       onSelect={(e) => openSymbol(candidate.symbol, e)}
                     />
                   );
