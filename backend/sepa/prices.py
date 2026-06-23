@@ -328,36 +328,49 @@ def _is_scale_glitch(new_close, prev_close) -> bool:
     return r >= _SCALE_GLITCH_RATIO or r <= 1.0 / _SCALE_GLITCH_RATIO
 
 
-# A symbol whose newest daily bar is older than this many CALENDAR days is
-# treated as delisted / halted / renamed (no live data) and excluded from the
-# scan. ~10 trading days; the gap between an active name (last bar 0-3 days old)
-# and a delisted one (months) is huge, so this sits comfortably clear of
-# weekend / holiday / transient-patch-gap noise.
-STALE_MAX_CALENDAR_DAYS = 14
+# Staleness is judged primarily in TRADING days (market sessions missed), not
+# calendar days. A delisted/halted name that stopped ~12 calendar days ago is
+# ~8 market sessions stale — but 12 < 14, so the old calendar-only guard let it
+# leak onto the scan / Breakouts board with a frozen, weeks-old "breakout" (KALV,
+# Chiesi M&A 2026-06; CFLT before it). The trading-day gate catches it while
+# staying clear of normal weekend / holiday gaps (a name is at most 1-2 sessions
+# behind even after the longest holiday stretch). The calendar value is kept as
+# an outer ceiling.
+STALE_MAX_TRADING_DAYS = 6        # > 6 missed market sessions = stale
+STALE_MAX_CALENDAR_DAYS = 14      # outer ceiling (kept for the sane-bounds lock)
 
 
 def is_stale(
     df: Optional[pd.DataFrame],
     asof: Optional[pd.Timestamp] = None,
     max_days: int = STALE_MAX_CALENDAR_DAYS,
+    max_trading_days: int = STALE_MAX_TRADING_DAYS,
 ) -> bool:
-    """True when the newest bar is older than ``max_days`` calendar days — the
-    symbol has stopped printing daily bars (delisted, halted, renamed, or a
-    persistent data gap). Such a name has no live price and no chart, and must
-    not surface in the scan or the buyable tier: a frozen last bar can read as a
-    pocket pivot / breakout and leak into is_buyable (see CFLT, last bar
-    2026-03-16 — an M&A volume spike that scored buyable months after delisting).
-    ``asof`` defaults to today (ET). Conservative: returns False on any error so
-    a parsing hiccup never silently empties the scan."""
+    """True when the newest bar is more than ``max_trading_days`` MARKET SESSIONS
+    old (or past the ``max_days`` calendar ceiling) — the symbol has stopped
+    printing daily bars (delisted, halted, renamed, or a persistent data gap).
+    Such a name has no live price and no chart, and must not surface in the scan
+    or the buyable tier: a frozen last bar reads as a pocket pivot / breakout and
+    leaks into is_buyable and the Breakouts board (KALV, last real bar ~12
+    calendar / ~8 trading days back after the Chiesi acquisition — fresh under
+    the old 14-calendar guard, stale under the 6-trading-day one; CFLT before
+    it). ``asof`` defaults to today (ET). Conservative: returns False on any
+    error so a parsing hiccup never silently empties the scan."""
     if df is None or len(df) == 0:
         return True
     try:
-        last_ts = pd.Timestamp(df.index[-1])
+        last_ts = pd.Timestamp(df.index[-1]).normalize()
         if asof is None:
             asof = pd.Timestamp.now(tz="America/New_York").tz_localize(None).normalize()
         else:
-            asof = pd.Timestamp(asof)
-        return (asof - last_ts).days > max_days
+            asof = pd.Timestamp(asof).normalize()
+        cal_gap = (asof - last_ts).days
+        if cal_gap <= 0:
+            return False                       # current / future bar — fresh
+        # Market sessions between the last bar and asof (Mon-Fri; holidays
+        # over-count harmlessly, well within the 6-session margin).
+        trading_gap = max(0, len(pd.bdate_range(last_ts, asof)) - 1)
+        return trading_gap > max_trading_days or cal_gap > max_days
     except Exception:
         return False
 

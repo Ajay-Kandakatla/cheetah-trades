@@ -91,14 +91,28 @@ def test_is_stale_delisted():
 
 
 def test_is_stale_within_window_is_fresh():
-    df = _df_last_dated("2026-05-26")          # ~7 calendar days back
+    df = _df_last_dated("2026-05-26")          # 5 market sessions back
     assert prices.is_stale(df, asof=pd.Timestamp("2026-06-02")) is False
 
 
-def test_is_stale_boundary_14_days():
-    base = pd.Timestamp("2026-06-02")
-    assert prices.is_stale(_df_last_dated("2026-05-19"), asof=base) is False   # exactly 14 → keep
-    assert prices.is_stale(_df_last_dated("2026-05-18"), asof=base) is True    # 15 → stale
+def test_is_stale_trading_day_boundary():
+    """The guard is TRADING-day based (STALE_MAX_TRADING_DAYS = 6): 6 missed
+    market sessions is still fresh, 7 is stale. Dates chosen clear of market
+    holidays so the session count is unambiguous."""
+    base = pd.Timestamp("2026-03-16")                                  # Monday
+    assert prices.is_stale(_df_last_dated("2026-03-06"), asof=base) is False   # 6 sessions
+    assert prices.is_stale(_df_last_dated("2026-03-05"), asof=base) is True    # 7 sessions
+
+
+def test_is_stale_kalv_under_calendar_ceiling_but_stale_by_sessions():
+    """REGRESSION (KALV, Chiesi M&A 2026-06): last real bar ~12 calendar / ~8
+    trading days back. That is FRESH under the old 14-calendar guard (which let
+    its weeks-old frozen 'breakout' ride onto the Breakouts board) but STALE
+    under the trading-day gate. This is the exact leak the user reported."""
+    base = pd.Timestamp("2026-06-22")
+    df = _df_last_dated("2026-06-10")
+    assert (base - df.index[-1]).days < prices.STALE_MAX_CALENDAR_DAYS  # 12 < 14 (old guard passed it)
+    assert prices.is_stale(df, asof=base) is True                      # now excluded
 
 
 def test_is_stale_empty_is_stale():
@@ -108,3 +122,5 @@ def test_is_stale_empty_is_stale():
 
 def test_stale_constant_sane():
     assert 7 <= prices.STALE_MAX_CALENDAR_DAYS <= 30
+    assert 3 <= prices.STALE_MAX_TRADING_DAYS <= 10
+    assert prices.STALE_MAX_TRADING_DAYS < prices.STALE_MAX_CALENDAR_DAYS
