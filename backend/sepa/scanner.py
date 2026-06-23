@@ -1099,6 +1099,15 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     liquidity / ADR / IPO age / company name. We only re-run trend template,
     stage classifier, today's volume, and the entry-setup match.
     """
+    # Same staleness guard as the full path (_analyze_symbol): a delisted /
+    # halted name with frozen daily bars must NOT be recomputed into the scan —
+    # its last frozen bar reads as a breakout and leaks into is_buyable / the
+    # Breakouts board / SEPA Global (KALV, last bar 2026-06-10 after the Chiesi
+    # acquisition; CFLT before it). The FAST path skipped this, so KALV survived
+    # an Update-button / cron re-scan even after the calendar→trading-day fix.
+    if prices.is_stale(df):
+        return None
+
     liq = blob.get("liquidity") or {}
     if not liq.get("liquid"):
         return None

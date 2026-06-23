@@ -120,6 +120,17 @@ def test_is_stale_empty_is_stale():
     assert prices.is_stale(None) is True
 
 
+def test_hot_recompute_drops_stale_symbol():
+    """REGRESSION (KALV, 2026-06-23): the FAST scan path (_hot_recompute, used by
+    the Breakouts 'Update' button + cron) skipped the staleness guard that the
+    full _analyze_symbol path has, so a delisted name with frozen bars kept
+    re-appearing as is_buyable after every fast re-scan. is_stale short-circuits
+    the recompute before any work — a months-old frame returns None."""
+    from sepa import scanner
+    stale = _df_last_dated("2026-03-16")      # months old — delisted/halted
+    assert scanner._hot_recompute("DEAD", stale, {}, {"liquidity": {"liquid": True}}) is None
+
+
 def test_stale_constant_sane():
     assert 7 <= prices.STALE_MAX_CALENDAR_DAYS <= 30
     assert 3 <= prices.STALE_MAX_TRADING_DAYS <= 10
