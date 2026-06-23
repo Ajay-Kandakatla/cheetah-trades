@@ -184,15 +184,16 @@ function SmartLanding() {
   // Wait for BOTH so we know is_admin before redirecting (else Ajay would flash
   // to the wrong page before the admin flag resolves).
   if (!f.loaded || !menuLoaded) return <PageLoader />;
-  // Landing order. The owner (admin) still lands on SEPA — the scanner is his
-  // front door (2026-06-12). Everyone ELSE lands on the Breakouts page first
-  // (Ajay 2026-06-23: "make breakout page default for all other users"); it's
-  // granted to all users by default now (access/store breakouts default:True).
-  // First accessible feature in the list wins; fallbacks chain down before
-  // bailing into a 404.
+  // Landing order. EVERYONE lands on SEPA Global first (Ajay 2026-06-23: "make
+  // SEPA global default landing page to everyone") — the beginner-friendly
+  // scanner is the universal front door now; it's granted to all by default
+  // (access/store sepa-global default:True), so admin and friends alike resolve
+  // it. The owner can still open the full /sepa or /breakouts from the menu;
+  // those stay next in the admin chain. First accessible feature wins; the
+  // fallbacks chain down before bailing into a 404.
   const PREFERRED_ORDER = menu.is_admin
-    ? ['sepa', 'portfolio', 'morning', 'leaderboard', 'todos', 'notifications']
-    : ['breakouts', 'sepa', 'morning', 'food', 'kids', 'todos', 'notifications', 'glossary'];
+    ? ['sepa-global', 'sepa', 'portfolio', 'morning', 'leaderboard', 'todos', 'notifications']
+    : ['sepa-global', 'breakouts', 'sepa', 'morning', 'food', 'kids', 'todos', 'notifications', 'glossary'];
   for (const id of PREFERRED_ORDER) {
     if (f.features.has(id)) return <Navigate to={`/${id}`} replace />;
   }
