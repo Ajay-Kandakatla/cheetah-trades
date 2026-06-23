@@ -1,38 +1,60 @@
-/* MarketDayBorder — an app-wide colored frame keyed to the Pounce Market Gauge
-   (Ajay 2026-06-22): RED on a risk-off market day, GREEN when constructive
-   (a positive day), GRAY otherwise (caution / normal / still loading). A fixed,
-   click-through frame so the day's read is visible on every page regardless of
-   scroll. Same gauge that drives the engine's regime (constructive/caution/
-   risk_off, cutoffs 67/34). */
+/* MarketDayBorder — an app-wide colored frame for the day's market posture.
+   A fixed, click-through frame so the read is visible on every page.
+
+   Ajay 2026-06-23: RED must show in a CONFIRMED CORRECTION, not only when the
+   0-100 gauge score drops below the risk-off cutoff. The blended gauge score
+   lags — it sat at 59 ("caution") while the IBD/Minervini regime was already
+   "market in correction" (distribution overload + downtrend, "sit out new
+   buys") and the portfolio was -8.7%. So the border is now REGIME-led (the
+   realtime trend read, useMarketRegime), with the gauge's risk_off score as an
+   extra red trigger:
+
+     market_in_correction  OR  gauge risk_off   → RED   (defensive — sit out)
+     uptrend_under_pressure                      → AMBER (warning)
+     confirmed_uptrend  (or gauge constructive)  → GREEN (offense)
+     unknown / loading                           → GRAY                          */
 import { useMarketGauge, type GaugeState } from '../hooks/useMarketGauge';
+import { useMarketRegime, type RegimeLabel } from '../hooks/useMarketRegime';
 
-const COLOR: Record<GaugeState, string> = {
-  risk_off:     '#ef4444',   // red  — risk-off / red market day
-  constructive: '#10b981',   // green — constructive / a little positive
-  caution:      '#6b7280',   // gray — caution / normal day
-};
+const RED = '#ef4444';
+const AMBER = '#f59e0b';
+const GREEN = '#10b981';
+const GRAY = '#6b7280';
 
-/** Border colour for a gauge state. Gray is the neutral default (caution,
- *  unknown, or still loading). Exported for testing. */
-export function marketBorderColor(state?: GaugeState | null): string {
-  return (state && COLOR[state]) || '#6b7280';
+/** Border colour for the day. REGIME-led so a confirmed correction flashes red
+ *  even when the lagging gauge score is still in the 'caution' band; the gauge's
+ *  own risk_off verdict is an additional red trigger. Exported for testing. */
+export function marketBorderColor(
+  regime?: RegimeLabel | null,
+  gaugeState?: GaugeState | null,
+): string {
+  if (regime === 'market_in_correction' || gaugeState === 'risk_off') return RED;
+  if (regime === 'uptrend_under_pressure') return AMBER;
+  if (regime === 'confirmed_uptrend') return GREEN;
+  if (gaugeState === 'constructive') return GREEN;   // fallback before regime loads
+  return GRAY;
 }
 
-function stateLabel(state?: GaugeState | null): string {
-  return state === 'risk_off' ? 'Risk-off market day'
-    : state === 'constructive' ? 'Constructive market day'
-    : state === 'caution' ? 'Caution market day'
-    : 'Market';
+function dayLabel(regime?: RegimeLabel | null, gaugeState?: GaugeState | null): string {
+  if (regime === 'market_in_correction' || gaugeState === 'risk_off')
+    return 'Market in correction — defensive, sit out new buys';
+  if (regime === 'uptrend_under_pressure') return 'Uptrend under pressure — caution';
+  if (regime === 'confirmed_uptrend') return 'Confirmed uptrend';
+  if (gaugeState === 'constructive') return 'Constructive market';
+  return 'Market';
 }
 
 export function MarketDayBorder() {
   const gauge = useMarketGauge();
-  const color = marketBorderColor(gauge?.state);
+  const { data: regime } = useMarketRegime();
+  const color = marketBorderColor(regime?.label, gauge?.state);
+  const title = dayLabel(regime?.label, gauge?.state)
+    + (gauge ? ` — gauge ${gauge.score}` : '');
   return (
     <div
       aria-hidden="true"
       data-testid="market-day-border"
-      title={gauge ? `${stateLabel(gauge.state)} — gauge ${gauge.score}` : undefined}
+      title={title}
       style={{
         position: 'fixed',
         inset: 0,
