@@ -176,6 +176,8 @@ AUTO_ENTRY_PATH = os.path.join(os.path.dirname(__file__), "..",
                                "trading", "auto_entry.py")
 SCANNER_PATH = os.path.join(os.path.dirname(__file__), "..",
                             "sepa", "scanner.py")
+LIVE_GATE_PATH = os.path.join(os.path.dirname(__file__), "..",
+                              "sepa", "live_gate.py")
 
 ENGINE_PARAM_TOKENS = [
     "MAX_AUTO_ENTRIES_PER_DAY = 2",
@@ -230,6 +232,38 @@ def test_extension_cap_mirrors_scanner_buy_zone():
         "MAX_EXTENSION_PCT mirrors it and must move WITH it (owner sign-off)."
     )
     assert "MAX_EXTENSION_PCT = 3.0" in _auto_entry_source()
+
+
+# ── intraday volume projection: curve-aware, conservative (TLSW p.229) ──────
+
+def test_intraday_volume_projection_is_curve_aware_and_conservative():
+    """The engine's intraday RelVol gate must read a CURVE-AWARE projection
+    (TLSW p.229), never the naive today_vol/session_fraction that bought CGNX
+    on a faded opening pop. Two locks: (1) the curve is conservative
+    (>= the elapsed fraction across the morning, so it never over-credits a
+    hot open); (2) live_gate sources the projection from sepa.intraday_volume
+    and no longer divides by the raw fraction. Changing the curve shape is an
+    owner decision (docs/sepa/intraday_volume_methodology.md), never silent."""
+    from sepa import intraday_volume as iv
+    # (1) conservatism — the property the whole fix rests on.
+    for f in (0.05, 0.10, 0.20, 0.30, 0.50):
+        assert iv.expected_session_volume_fraction(f) >= f
+    assert iv.expected_session_volume_fraction(1.0) == 1.0
+    # a hot open reads BELOW the linear projection (CGNX 0.20x-by-frac-0.10).
+    avg = 1_000_000.0
+    curve = iv.projected_relvol(0.20 * avg, avg, 0.10)
+    linear = round((0.20 * avg / 0.10) / avg, 2)
+    assert curve < linear and curve < 1.5 <= linear
+
+    # (2) live_gate wires it in, and the old linear form is gone.
+    with open(LIVE_GATE_PATH, encoding="utf-8") as fh:
+        lg = fh.read()
+    assert "intraday_volume" in lg, (
+        "sepa/live_gate.py must source projected RelVol from "
+        "sepa.intraday_volume (TLSW p.229), not a flat ÷ session fraction.")
+    assert "(today_vol / frac) / avg50" not in lg, (
+        "the naive LINEAR projection is back in live_gate.py — that is the "
+        "CGNX bug (over-credits a hot open). Use intraday_volume.")
 
 
 def test_auto_entry_never_submits_to_broker_directly():

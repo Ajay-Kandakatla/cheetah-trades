@@ -9,7 +9,17 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.5.0 (2026-06-22) — §13: the **hold/sell verdict stop is anchored to
+**Version:** 1.6.0 (2026-06-22) — the **Auto-Pilot intraday entry gate projects
+today's volume on the intraday CURVE, not a flat ÷ session-elapsed**
+(`sepa.intraday_volume`, TLSW p.229 "Extrapolating Volume Intraday"; the 1.5×
+bar is unchanged, p.203). Intraday volume is front-loaded, so the old linear
+projection over-credited a hot open — it bought CGNX at ~2× projected RelVol at
+~10am, then it faded to 0.72× by the close. The curve is conservative-by-design
+(`expected_session_volume_fraction(f) ≥ f`), so it can only make the gate
+harder, and converges to the true RelVol at the close. Doc:
+`docs/sepa/intraday_volume_methodology.md`; lock:
+`test_trading_contracts.py::test_intraday_volume_projection_is_curve_aware_and_conservative`.
+Prior 1.5.0 (2026-06-22) — §13: the **hold/sell verdict stop is anchored to
 your ENTRY**, never widened on a loser (`position_lens._resolve_stop`, Minervini
 pp.295/308-309/311). Auto stop = max(entry × 0.93, trade-plan stop); the old code
 used the trade-plan stop alone (≈7% below the *current* price), so a breached entry

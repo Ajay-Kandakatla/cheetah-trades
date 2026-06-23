@@ -15,10 +15,12 @@ the latest scan's rs_rank, since RS doesn't move intraday.
 
 Volume: the cached daily dry-up picture (10d/50d) is left untouched (slow-
 moving, honest). The LIVE relative volume is computed separately and
-honestly — today's cumulative volume projected to a full session
-(÷ fraction elapsed) vs the 50-day average — and labelled with how far
-through the session we are, so a partial-day figure is never passed off as
-a full-day 2.3x.
+honestly — today's cumulative volume projected to a full session vs the
+50-day average — and labelled with how far through the session we are, so a
+partial-day figure is never passed off as a full-day 2.3x. The projection is
+CURVE-AWARE (sepa.intraday_volume, TLSW p.229): intraday volume is front-
+loaded, so a naive ÷ fraction-elapsed over-projects a hot open. See
+docs/sepa/intraday_volume_methodology.md.
 
 Cache-only + one live-quote call; no 2y refetch. GET /sepa/live-gate/{sym}.
 """
@@ -142,7 +144,12 @@ def live_gate(symbol: str) -> dict:
                 "flips_at_price": round(lo * 1.30, 2),
             }
 
-    # live relative volume — projected to a full session, honestly labelled
+    # live relative volume — projected to a full session, honestly labelled.
+    # Projection is CURVE-AWARE (intraday_volume, TLSW p.229): intraday volume
+    # is front-loaded, so a naive today_vol/frac over-credits a hot open (the
+    # CGNX failed breakout, 2026-06-22). The curve is conservative-by-design —
+    # never reads higher than the old linear projection in the morning.
+    from . import intraday_volume
     vol = None
     try:
         vol = volume.analyze(df)  # cached daily dry-up picture (unpatched)
@@ -150,9 +157,7 @@ def live_gate(symbol: str) -> dict:
         vol = None
     avg50 = (vol or {}).get("avg_vol_50")
     frac = session_fraction()
-    proj_relvol = None
-    if today_vol and avg50 and frac > 0:
-        proj_relvol = round((today_vol / frac) / avg50, 2)
+    proj_relvol = intraday_volume.projected_relvol(today_vol, avg50, frac)
 
     return {
         "ok": True, "live": True, "symbol": sym,
@@ -174,14 +179,18 @@ def live_gate(symbol: str) -> dict:
         "volume_live": {
             "today_volume": today_vol,
             "session_pct": round(frac * 100),
+            "expected_vol_pct": round(
+                intraday_volume.expected_session_volume_fraction(frac) * 100),
             "avg_vol_50": avg50,
             "projected_relvol": proj_relvol,
+            "projection_model": "intraday_curve",   # TLSW p.229 (not linear)
             "is_drying_up": (vol or {}).get("is_drying_up"),
             "vol_dryup": (vol or {}).get("vol_dryup"),
         },
         "rs_rank": rs_rank,
         "note": ("Trend Template recomputed against the LIVE price (same "
                  "book checks; MAs/52w-low from cache move negligibly "
-                 "intraday). Projected RelVol = today's pace ÷ session "
-                 "elapsed vs the 50-day average."),
+                 "intraday). Projected RelVol uses the intraday volume CURVE "
+                 "(front-loaded mornings, TLSW p.229), not a flat ÷ session "
+                 "elapsed — so a hot open isn't read as a full-day surge."),
     }
