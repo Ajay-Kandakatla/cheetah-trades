@@ -1,5 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { marketPosture } from './MarketPostureBanner';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render } from '@testing-library/react';
+import { marketPosture, MarketPostureBanner } from './MarketPostureBanner';
+
+/* Hooks + router are mocked so we can render the pill standalone. The render
+   tests below lock Bug-2's fix (2026-06-23): the pill used to be
+   position:fixed and floated OVER the nav bar (desktop) and OVER scrolled
+   content (mobile). It now lives in-flow inside the nav's flex layout, so it
+   must NOT carry fixed/absolute positioning that would re-create the overlap. */
+vi.mock('../hooks/useMarketGauge', () => ({
+  useMarketGauge: () => ({ state: 'caution', score: 59 }),
+}));
+vi.mock('../hooks/useMarketRegime', () => ({
+  useMarketRegime: () => ({ data: { label: 'market_in_correction' } }),
+}));
+vi.mock('react-router-dom', () => ({ useNavigate: () => () => {} }));
+
+afterEach(() => { vi.clearAllMocks(); });
 
 describe('marketPosture — regime-led top banner', () => {
   it('reads RED "Market in correction" in a confirmed correction', () => {
@@ -30,5 +46,26 @@ describe('marketPosture — regime-led top banner', () => {
   it('hides (null) while nothing is known yet — no pill on load', () => {
     expect(marketPosture(null, null)).toBeNull();
     expect(marketPosture(undefined, undefined)).toBeNull();
+  });
+});
+
+describe('MarketPostureBanner — in-flow nav pill (no overlap)', () => {
+  it('renders the posture pill with the nav-chrome class', () => {
+    const { container } = render(<MarketPostureBanner />);
+    const pill = container.querySelector('.cm-posture-pill') as HTMLElement;
+    expect(pill).not.toBeNull();
+    expect(pill.textContent).toContain('Market in correction');
+    expect(pill.textContent).toContain('59');
+  });
+
+  it('REGRESSION (Bug 2): is NOT fixed/absolute — so it cannot overlap nav or content', () => {
+    const { container } = render(<MarketPostureBanner />);
+    const pill = container.querySelector('.cm-posture-pill') as HTMLElement;
+    // The old bug was position:fixed; top:8; z-index:9100 floating over the page.
+    // An in-flow pill has static/normal positioning and no viewport pinning.
+    expect(pill.style.position).not.toBe('fixed');
+    expect(pill.style.position).not.toBe('absolute');
+    expect(pill.style.zIndex).toBe('');   // no stacking-context escape
+    expect(pill.style.top).toBe('');
   });
 });

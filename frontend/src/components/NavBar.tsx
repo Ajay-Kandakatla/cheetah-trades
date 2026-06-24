@@ -6,6 +6,7 @@ import { useCurrentUser } from '../hooks/useUser';
 import { useMyMenu, type MenuItem } from '../hooks/useMyMenu';
 import { NavLabel } from './NavLabel';
 import { MarketGaugeBadge } from './MarketGaugeBadge';
+import { MarketPostureBanner } from './MarketPostureBanner';
 import { openRail } from '../lib/railBus';
 
 /* ==========================================================================
@@ -169,6 +170,7 @@ export function NavBar() {
         </div>
 
         <div className="cm-nav__mobile-actions">
+          <MarketPostureBanner />
           {hasGauge && <MarketGaugeBadge compact />}
           {hasPortfolio && (
             <button
@@ -379,6 +381,7 @@ export function NavBar() {
       </nav>
 
       <div className="cm-nav__meta">
+        <MarketPostureBanner />
         {hasGauge && <MarketGaugeBadge />}
         <span className="cm-nav__meta-date mono">{TODAY}</span>
         <ThemeToggle />

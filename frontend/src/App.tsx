@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState, type ReactNode, type ComponentType
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './components/NavBar';
 import { MarketDayBorder } from './components/MarketDayBorder';
-import { MarketPostureBanner } from './components/MarketPostureBanner';
 import { BreakoutAlertBanner } from './components/BreakoutAlertBanner';
 import { WatchlistRail } from './components/WatchlistRail';
 import { EngineStalledBanner } from './components/EngineStalledBanner';
@@ -231,9 +230,9 @@ export function App() {
       {/* App-wide market-day frame — red on a risk-off day, green when
           constructive, gray otherwise (Ajay 2026-06-22). */}
       <MarketDayBorder />
-      {/* Small top-center posture pill — explicit market read on every page
-          (Ajay 2026-06-23), same regime-led colours as the border. */}
-      <MarketPostureBanner />
+      {/* Posture pill (explicit market read on every page, Ajay 2026-06-23)
+          now lives INSIDE the nav bar's flex layout — see NavBar. It used to
+          float here as position:fixed and overlapped the nav/content. */}
       <NavBar />
       <EngineStalledBanner />
       <BreakoutAlertBanner />

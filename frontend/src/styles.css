@@ -2064,7 +2064,11 @@ tr:last-child td { border-bottom: none; }
   .sepa-page { padding: 0 12px 3rem; box-sizing: border-box; }
 
   /* Page title block: shrink the giant serif headline that was 2.4rem */
-  .sepa-page__title { margin: 0.5rem 0 0.75rem; }
+  /* Stack the header text above any action buttons on phones — otherwise the
+     buttons (Rescan/Refresh/Update) share the flex row and starve the
+     flex-basis:0 text wrapper down to ~60px, breaking the .lede one word per
+     line. Column + stretch gives the text wrapper full width. (2026-06-23) */
+  .sepa-page__title { margin: 0.5rem 0 0.75rem; flex-direction: column; align-items: stretch; }
   .sepa-page__h1 { font-size: 1.55rem; line-height: 1.1; }
   .sepa-page__title .lede { font-size: 0.88rem; }
 

@@ -43,14 +43,13 @@ export function MarketPostureBanner() {
   return (
     <button
       type="button"
+      className="cm-posture-pill"
       onClick={() => navigate('/market-gauge')}
       title={`${p.label}${gauge ? ` — market gauge ${gauge.score}` : ''}. Tap for the full read.`}
       style={{
-        position: 'fixed',
-        top: 8,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9100,                 // above the border (9000), below modals
+        // In-flow nav chrome (2026-06-23) — previously position:fixed which
+        // floated over the nav links on desktop and over scrolled content on
+        // mobile. Living inside the nav's flex layout, it never overlaps.
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
