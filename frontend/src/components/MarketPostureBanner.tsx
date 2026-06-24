@@ -1,9 +1,12 @@
-/* MarketPostureBanner — a small, persistent top-center pill showing the day's
- * market posture, so the defensive/offensive read is explicit (not only the
- * MarketDayBorder colour). Same regime-led logic as the border: red in a
- * confirmed correction, amber when the uptrend is under pressure, green in a
- * confirmed uptrend. Click-through to the Market Gauge page (Ajay 2026-06-23,
- * "small top banner in the top center, like Portfolio and watchlist"). */
+/* MarketPostureBanner — a small inline label INSIDE the nav bar (see NavBar)
+ * naming the day's market posture. Taps through to the Market Gauge page.
+ *
+ * Ajay 2026-06-23 (v2): it used to float as a position:fixed top-center pill
+ * and overlapped the nav (desktop) and scrolled content (mobile). It now lives
+ * in the nav's flex layout and only renders in the DEFENSIVE regime ("Market
+ * in correction") — the red glow border (MarketDayBorder) carries the signal,
+ * and bull / pressure markets stay clean. The pure marketPosture() helper still
+ * returns all tones (amber/green) for tests; the component gates to red. */
 import { useNavigate } from 'react-router-dom';
 import { useMarketGauge, type GaugeState } from '../hooks/useMarketGauge';
 import { useMarketRegime, type RegimeLabel } from '../hooks/useMarketRegime';
@@ -38,6 +41,10 @@ export function MarketPostureBanner() {
 
   const p = marketPosture(regime?.label, gauge?.state);
   if (!p) return null;
+  // Ajay 2026-06-23 (v2): show the inline nav label ONLY in the defensive
+  // regime — the red glow (MarketDayBorder) carries the signal, and bull /
+  // pressure markets stay clean (no banner). Red is the defensive tone.
+  if (p.tone !== 'red') return null;
 
   const fg = TONE_FG[p.tone];
   return (

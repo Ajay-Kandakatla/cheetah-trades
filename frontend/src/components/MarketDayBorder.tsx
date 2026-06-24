@@ -1,18 +1,22 @@
-/* MarketDayBorder — an app-wide colored frame for the day's market posture.
-   A fixed, click-through frame so the read is visible on every page.
+/* MarketDayBorder — an app-wide DEFENSIVE-regime glow for the day's market
+   posture. A fixed, click-through overlay so the read is visible on every page.
 
-   Ajay 2026-06-23: RED must show in a CONFIRMED CORRECTION, not only when the
-   0-100 gauge score drops below the risk-off cutoff. The blended gauge score
-   lags — it sat at 59 ("caution") while the IBD/Minervini regime was already
-   "market in correction" (distribution overload + downtrend, "sit out new
-   buys") and the portfolio was -8.7%. So the border is now REGIME-led (the
-   realtime trend read, useMarketRegime), with the gauge's risk_off score as an
-   extra red trigger:
+   Ajay 2026-06-23 (v2): the old hard `3px solid` frame's top edge cut across
+   the nav bar and looked like a banner overlapping it. Replaced with a soft
+   red INNER GLOW (box-shadow inset) + a hairline red border so it reads as a
+   gentle "red border" around the viewport without slicing the nav. And it now
+   only shows in the DEFENSIVE regime — in a normal/bull market there is no
+   glow at all, keeping the chrome clean. The small posture label lives inline
+   in the nav (see MarketPostureBanner); this glow carries the heavy signal.
 
-     market_in_correction  OR  gauge risk_off   → RED   (defensive — sit out)
-     uptrend_under_pressure                      → AMBER (warning)
-     confirmed_uptrend  (or gauge constructive)  → GREEN (offense)
-     unknown / loading                           → GRAY                          */
+   RED (defensive) is REGIME-led — it must show in a CONFIRMED CORRECTION, not
+   only when the lagging 0-100 gauge dips below risk-off. The gauge sat at 59
+   ("caution") while the regime was already "market in correction" and the
+   portfolio was -8.7%, so regime drives it and the gauge's risk_off verdict is
+   an extra red trigger:
+
+     market_in_correction  OR  gauge risk_off   → RED glow (defensive — sit out)
+     everything else (pressure / uptrend / loading) → no glow (clean)            */
 import { useMarketGauge, type GaugeState } from '../hooks/useMarketGauge';
 import { useMarketRegime, type RegimeLabel } from '../hooks/useMarketRegime';
 
@@ -48,20 +52,31 @@ export function MarketDayBorder() {
   const gauge = useMarketGauge();
   const { data: regime } = useMarketRegime();
   const color = marketBorderColor(regime?.label, gauge?.state);
+
+  // Only the DEFENSIVE (red) regime glows — clean chrome in pressure / uptrend
+  // / loading. (No dedicated glow token exists; --negative is the muted P&L
+  // red, so we use the established regime red #ef4444 = rgb(239,68,68).)
+  if (color !== RED) return null;
+
   const title = dayLabel(regime?.label, gauge?.state)
     + (gauge ? ` — gauge ${gauge.score}` : '');
   return (
     <div
       aria-hidden="true"
       data-testid="market-day-border"
+      className="cm-regime-glow"
       title={title}
       style={{
         position: 'fixed',
         inset: 0,
         pointerEvents: 'none',      // click-through — never blocks the app
         zIndex: 9000,               // above content, below modals
-        border: `3px solid ${color}`,
-        transition: 'border-color 0.5s ease',
+        // Soft inner glow + hairline border — a "red border" feel that doesn't
+        // slice the nav like the old 3px solid frame did.
+        border: '1px solid rgba(239, 68, 68, 0.5)',
+        boxShadow:
+          'inset 0 0 24px rgba(239, 68, 68, 0.38), inset 0 0 64px rgba(239, 68, 68, 0.16)',
+        transition: 'box-shadow 0.5s ease, border-color 0.5s ease',
       }}
     />
   );
