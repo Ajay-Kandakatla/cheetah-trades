@@ -42,12 +42,14 @@ export function CompanyAbout({ symbol, collapsed = true }: Props) {
         </div>
       </header>
 
-      <p className="company-about__summary">{shown}</p>
+      <p id="company-about-desc" className="company-about__summary">{shown}</p>
 
       {isLong && (
         <button type="button"
                 className="company-about__toggle"
-                onClick={() => setExpanded(!expanded)}>
+                onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}
+                aria-controls="company-about-desc">
           {expanded ? '▴ Show less' : '▾ Show more'}
         </button>
       )}
