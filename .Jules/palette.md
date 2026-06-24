@@ -1,0 +1,1 @@
+## 2026-06-20 - Add ARIA labels to close buttons\n**Learning:** Some icon-only buttons like the Close (`×`) buttons lack `aria-label`, rendering them inaccessible for screen readers. Fixing these is a quick and high-impact accessibility win.\n**Action:** Always verify if close icons (`×`) and similar buttons in modals have the necessary `aria-label="Close"`.
