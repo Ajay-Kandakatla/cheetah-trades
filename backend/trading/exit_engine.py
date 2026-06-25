@@ -112,6 +112,7 @@ def get_config() -> dict:
         "last_tick_iso": doc.get("last_tick_iso"),
         "last_not_configured_day": doc.get("last_not_configured_day"),
         "last_auto_entry_disabled_day": doc.get("last_auto_entry_disabled_day"),
+        "last_errors": list(doc.get("last_errors") or []),  # last tick's failures, surfaced on the dashboard
         "updated_at": doc.get("updated_at"),
     }
 
@@ -348,6 +349,73 @@ def _find_target(orders, symbol: str) -> Optional[dict]:
     return None
 
 
+# Statuses where a stop will ACTUALLY fire when its price is hit. This is
+# STRICTER than broker.OPEN_STATUSES (which counts "held"): Alpaca can leave a
+# bracket stop-loss leg stuck in "held" so it never triggers even when price
+# reaches it (known Alpaca bug, confirmed 2026-06-24) — a "held" stop is NOT
+# protection, so it must not count here.
+_STOP_LIVE_STATUSES = {"new", "accepted", "partially_filled"}
+
+
+def _find_working_stop(orders, symbol: str) -> Optional[dict]:
+    """A protective sell-stop that will genuinely fire if hit (status in
+    _STOP_LIVE_STATUSES). Returns None when the only stop is stuck/"held" —
+    that's the case the watchdog must cover."""
+    for o in orders:
+        if ((o.get("symbol") or "").upper() == symbol
+                and (o.get("side") or "").lower() == "sell"
+                and _order_type(o) in ("stop", "stop_limit")
+                and (o.get("status") or "").lower() in _STOP_LIVE_STATUSES):
+            return o
+    return None
+
+
+def _effective_stop(symbol: str, avg_entry: float, reg: str,
+                    stop_order: Optional[dict] = None) -> Optional[float]:
+    """The protective stop price the engine is COMMITTED to, for the watchdog +
+    the dashboard. Prefers a visible resting stop's price, else the original
+    stop from the entry ledger row, else the regime initial stop recomputed
+    from entry (pp.301-302/311). None only when nothing is computable."""
+    if stop_order is not None:
+        try:
+            sp = float(stop_order.get("stop_price") or 0)
+            if sp > 0:
+                return sp
+        except (TypeError, ValueError):
+            pass
+    led = _initial_stop_from_ledger(symbol)
+    if led:
+        try:
+            return float(led)
+        except (TypeError, ValueError):
+            pass
+    try:
+        return float(risk_rules.initial_stop(float(avg_entry), reg).stop_price)
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
+def _force_exit(symbol: str, orders) -> dict:
+    """Cancel symbol's working orders + market-close the position NOW. The
+    watchdog's hands — caller must already be armed. ``broker.close_position``
+    errors propagate so the caller can alert; cancel errors are collected."""
+    sym = (symbol or "").upper()
+    canceled, cancel_errors = 0, []
+    for o in orders or []:
+        if (o.get("symbol") or "").upper() != sym:
+            continue
+        oid = o.get("id")
+        if not oid:
+            continue
+        try:
+            broker.cancel_order(oid)
+            canceled += 1
+        except BrokerError as exc:
+            cancel_errors.append(str(exc))
+    broker.close_position(sym)
+    return {"canceled": canceled, "cancel_errors": cancel_errors, "closed": True}
+
+
 def _initial_stop_from_ledger(symbol: str) -> Optional[float]:
     """The ORIGINAL initial stop price for symbol, from the ledger row written
     at entry/adopt time (p.308: the breakeven trigger uses the INITIAL risk,
@@ -392,8 +460,8 @@ def _entry_price_from_ledger(symbol: str) -> Optional[float]:
 def tick(force: bool = False) -> dict:
     summary = {"ok": True, "forced": bool(force), "market_open": None,
                "armed": False, "regime": None, "positions": 0,
-               "adopted": 0, "ratcheted": 0, "dry_run_rows": 0,
-               "streak_events": 0, "errors": []}
+               "adopted": 0, "ratcheted": 0, "watchdog_exits": 0,
+               "dry_run_rows": 0, "streak_events": 0, "errors": []}
 
     # (0) sim matching engine — duck-called when the active broker has one
     # (the sim broker fills pending orders against Massive quotes here; a
@@ -458,6 +526,42 @@ def tick(force: bool = False) -> dict:
             continue                       # engine manages whole-share longs only
 
         stop_order = _find_stop(open_orders, sym)
+        working_stop = _find_working_stop(open_orders, sym)
+
+        # (d0) WATCHDOG — the engine's own backstop. A broker stop can silently
+        # fail to fire (Alpaca leaves bracket stop-loss legs stuck in "held";
+        # confirmed 2026-06-24), so we never trust the broker alone. If NO
+        # genuinely-working stop rests AND price has reached/breached the
+        # committed stop, the engine SELLS AT MARKET this tick (pp.301-302: sell
+        # the moment the stop is hit, no exceptions). When a real working stop
+        # rests, we leave it to the broker (avoids double-selling / slippage).
+        eff_stop = _effective_stop(sym, avg_entry, reg, working_stop)
+        if working_stop is None and eff_stop and last > 0 and last <= eff_stop:
+            detail = {"qty": qty, "avg_entry": avg_entry, "last": last,
+                      "stop": round(eff_stop, 2), "regime": reg,
+                      "reason": "price hit stop with no working broker stop"}
+            if armed:
+                try:
+                    detail.update(_force_exit(sym, open_orders))
+                    ledger("watchdog_exit", symbol=sym, detail=detail,
+                           dry_run=False, cite="p.301-302")
+                    summary["watchdog_exits"] += 1
+                    _notify_autopilot(
+                        "position_alert", sym,
+                        "%s sold at market ~%.2f — stop %.2f hit and no working broker "
+                        "stop fired (engine backstop)" % (sym, last, eff_stop))
+                except BrokerError as exc:
+                    summary["errors"].append("watchdog %s: %s" % (sym, exc))
+                    _notify_autopilot(
+                        "position_alert", sym,
+                        "%s hit its stop %.2f but the engine could NOT exit (%s) — "
+                        "act manually" % (sym, eff_stop, exc))
+            else:
+                ledger("watchdog_exit", symbol=sym,
+                       detail={**detail, "note": "disarmed — dry run, nothing sent"},
+                       dry_run=True, cite="p.301-302")
+                summary["dry_run_rows"] += 1
+            continue                       # exiting this position; skip adopt/ratchet
 
         if stop_order is None:
             # adopt-and-protect (pp.301-302: a stop must always be resting)
@@ -602,7 +706,8 @@ def tick(force: bool = False) -> dict:
 
     update_config(consecutive_losses=losses,
                   processed_order_ids=processed_ids[-PROCESSED_IDS_KEEP:],
-                  last_tick_iso=tick_started_iso)
+                  last_tick_iso=tick_started_iso,
+                  last_errors=list(summary["errors"])[-20:])  # surfaced on the dashboard
     summary["streak"] = {"consecutive_losses": losses,
                          "size_multiplier": risk_rules.size_multiplier(losses)}
 
@@ -713,7 +818,11 @@ def status() -> dict:
             last = float(pos.get("current_price") or 0)
             upl_pct = round((last / avg_entry - 1) * 100, 2) if (avg_entry and last) else None
 
-            so = _find_stop(orders, sym)
+            # A genuinely-working broker stop (fires if hit) vs any visible
+            # stop (may be a stuck "held" leg). Only the former is real broker
+            # protection; the rest is covered by the watchdog.
+            working = _find_working_stop(orders, sym)
+            so = working if working is not None else _find_stop(orders, sym)
             stop = None
             if so is not None:
                 try:
@@ -723,7 +832,21 @@ def status() -> dict:
                 stop = {"price": sp,
                         "pct_below_entry": round((1 - sp / avg_entry) * 100, 2) if avg_entry else None,
                         "order_id": so.get("id"),
+                        "working": working is not None,
                         "at_breakeven": bool(avg_entry and sp >= avg_entry)}
+
+            # The stop the engine ENFORCES via the watchdog even when no working
+            # broker stop rests (the Alpaca "held"-leg backstop). Always shown so
+            # the dashboard reads "Stop 157.25 · engine-enforced" instead of a
+            # bare "UNPROTECTED" scare when the broker leg is stuck.
+            eff = _effective_stop(sym, avg_entry, out["regime"], working)
+            watchdog_stop = round(eff, 2) if eff else None
+            if working is not None:
+                stop_status = "working"          # live broker stop resting
+            elif watchdog_stop and cfg["armed"]:
+                stop_status = "watchdog"         # engine-enforced backstop
+            else:
+                stop_status = "none"             # truly uncovered
 
             to = _find_target(orders, sym)
             target = None
@@ -742,8 +865,12 @@ def status() -> dict:
             out["positions"].append({
                 "symbol": sym, "qty": qty, "avg_entry": avg_entry,
                 "last": last, "upl_pct": upl_pct, "stop": stop,
+                "watchdog_stop": watchdog_stop, "stop_status": stop_status,
                 "target": target, "breakeven_trigger": bt,
-                "protected": stop is not None,
+                # Covered = a working broker stop OR the engine watchdog enforces
+                # one. Only "none" (no working stop and nothing to enforce) is
+                # truly uncovered.
+                "protected": stop_status != "none",
             })
     except Exception as exc:                       # noqa: BLE001 — BrokerError is pre-scrubbed
         out["error"] = str(exc)
@@ -753,6 +880,9 @@ def status() -> dict:
     out["engine"] = _engine_liveness(cfg.get("last_tick_iso"),
                                      market_open=bool(out.get("market_open")),
                                      armed=bool(out.get("armed")))
+    # Last tick's failures, surfaced so a swallowed adopt/watchdog error is
+    # LOUD on the dashboard instead of dying in an in-memory summary.
+    out["engine"]["last_errors"] = cfg.get("last_errors") or []
     # Count of OPEN positions with NO resting stop — "real risk uncovered now".
     out["unprotected"] = [p["symbol"] for p in out["positions"] if not p.get("protected")]
     # Portfolio-style account P&L (started-with vs now) for the dashboard header.

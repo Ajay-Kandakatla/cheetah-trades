@@ -331,6 +331,92 @@ def test_ratchet_no_loop_when_avg_entry_has_subcent_precision(env):
         "ratchet loop: re-replaced an at-breakeven stop: %r" % (broker.calls,))
 
 
+# ── Watchdog: the engine's own backstop when the broker stop won't fire ──────
+# Alpaca can leave a bracket stop-loss leg stuck in "held" so it never triggers
+# even when price reaches it (confirmed 2026-06-24). The watchdog force-exits
+# at market when price breaches the committed stop and NO genuinely-working
+# broker stop rests — so protection never depends on the broker alone (p.301-302).
+
+def _held_stop_order(symbol, stop_price, qty, oid="held-stop-1"):
+    """A bracket stop-loss leg stuck in Alpaca's "held" state — present, priced,
+    but NOT working (won't fire). The watchdog must treat it as no protection."""
+    return {"id": oid, "symbol": symbol, "qty": str(qty), "side": "sell",
+            "type": "stop", "status": "held", "order_class": "bracket",
+            "stop_price": str(stop_price), "limit_price": None, "legs": None}
+
+
+def test_watchdog_exits_at_market_when_stop_breached_and_no_working_stop(env):
+    """Armed, no working stop, last (92) at/below the committed stop (93 = 7%
+    initial in normal regime) -> the engine SELLS AT MARKET this tick and does
+    NOT instead try to adopt a stop."""
+    broker, db = env(positions=[_position("AAA", 100, 100.0, 92.0)])
+    summary = EE.tick()
+
+    closes = _calls(broker, "close_position")
+    assert closes == [{"symbol": "AAA"}], broker.calls
+    assert not _calls(broker, "submit_stop"), "adopted instead of exiting"
+    assert summary["watchdog_exits"] == 1
+    rows = [r for r in db.trade_ledger.rows if r["kind"] == "watchdog_exit"]
+    assert len(rows) == 1 and rows[0]["dry_run"] is False
+    assert rows[0]["cite"] == "p.301-302"
+    assert rows[0]["detail"]["stop"] == 93.0
+
+
+def test_watchdog_treats_a_held_bracket_stop_as_no_protection(env):
+    """The core Alpaca-bug regression: a "held" stop leg exists at the broker but
+    won't fire. With price below it, the watchdog must STILL exit (held != working)."""
+    broker, _ = env(positions=[_position("AAA", 100, 100.0, 92.0)],
+                    orders=[_held_stop_order("AAA", 93.0, 100)])
+    summary = EE.tick()
+    assert _calls(broker, "close_position") == [{"symbol": "AAA"}], broker.calls
+    assert summary["watchdog_exits"] == 1
+
+
+def test_watchdog_does_not_fire_when_a_working_stop_rests(env):
+    """A genuinely-working broker stop is trusted (avoids double-selling /
+    slippage): price below it -> the engine does NOT market-close."""
+    broker, _ = env(positions=[_position("AAA", 100, 100.0, 92.0)],
+                    orders=[_stop_order("AAA", 93.0, 100)])
+    EE.tick()
+    assert not _calls(broker, "close_position"), broker.calls
+
+
+def test_watchdog_does_not_fire_above_the_stop(env):
+    """Price (95) above the stop (93) -> no exit; adopt-and-protect runs as usual."""
+    broker, _ = env(positions=[_position("AAA", 100, 100.0, 95.0)])
+    EE.tick()
+    assert not _calls(broker, "close_position"), broker.calls
+    assert len(_calls(broker, "submit_stop")) == 1   # normal adopt path
+
+
+def test_watchdog_disarmed_places_nothing_and_logs_one_dry_run(env):
+    """Disarmed master gate holds for the watchdog too: a breach writes a single
+    dry_run watchdog_exit row and touches the broker zero times."""
+    broker, db = env(positions=[_position("AAA", 100, 100.0, 92.0)], armed=False)
+    summary = EE.tick()
+    assert broker.calls == [], broker.calls
+    dry = [r for r in db.trade_ledger.rows
+           if r.get("dry_run") and r["kind"] == "watchdog_exit"]
+    assert len(dry) == 1
+    assert summary["dry_run_rows"] >= 1 and summary["watchdog_exits"] == 0
+
+
+def test_watchdog_close_failure_is_surfaced_not_swallowed(monkeypatch, env):
+    """If the market-close itself fails, the error must be LOUD: in the tick
+    summary AND persisted to config.last_errors for the dashboard — never a
+    silent swallow like the old adopt path."""
+    broker, db = env(positions=[_position("AAA", 100, 100.0, 92.0)])
+
+    def boom(symbol):
+        raise BrokerError("alpaca close rejected")
+    monkeypatch.setattr(broker, "close_position", boom)
+
+    summary = EE.tick()
+    assert any("watchdog AAA" in e for e in summary["errors"]), summary["errors"]
+    assert summary["watchdog_exits"] == 0
+    assert any("watchdog AAA" in e for e in (EE.get_config().get("last_errors") or []))
+
+
 # ── Entries: refusal checks (every reason cited) ─────────────────────────────
 
 def _enter_blocked(symbol, price, **kw):

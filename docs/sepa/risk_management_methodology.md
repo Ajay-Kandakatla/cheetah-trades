@@ -119,3 +119,49 @@ every minute — a later re-entry on a constructive turn is never missed
 Position-size reduction (the other half of p.311) is NOT yet wired — `position_size`
 ignores the regime; the tighter stop already cuts per-trade risk (25% × 6% =
 1.5% vs 1.75%). Locked: `tests/test_caution_regime.py`.
+
+## Stop watchdog — the engine never trusts the broker stop alone (2026-06-24)
+
+p.301–302 demands a stop **always resting** and a sale **the moment it's hit**.
+We discovered that resting the stop at the broker is not sufficient: Alpaca can
+leave a **bracket stop-loss leg stuck in `held`** after the entry fills, so it
+never triggers even when price reaches it (a known Alpaca bug — confirmed in
+their own community forums, 2026-06-24). The take-profit leg activates normally,
+so a position ends up with an upside target but a **dead downside stop**, and the
+old code couldn't see it: `open_orders()` queries `status=open`, which excludes
+`held`, so the reconciler reported "UNPROTECTED" and its adopt-protect retry
+failed silently (the held leg + working target reserve the share qty → the new
+stop is rejected → the error was swallowed).
+
+The fix does **not** change any stop math (`risk_rules.py` is untouched). It
+makes the *enforcement* of the existing p.301–302 rule robust:
+
+1. **Watchdog (the guarantee).** Each tick, for every open position, the engine
+   computes the **committed stop** (`_effective_stop`: a live stop's price → the
+   ledger's entry stop → `initial_stop()` recomputed). If price has reached/
+   breached it **and no genuinely-working broker stop rests**, the engine
+   **sells at market itself** (`watchdog_exit`, cite p.301–302). When a real
+   working stop *does* rest, the broker is trusted (no double-sell). Disarmed →
+   dry-run row only, as everywhere else.
+2. **`held` is not protection.** `_find_working_stop` counts only genuinely-
+   firing statuses (`new`/`accepted`/`partially_filled`), **not** `held` — so a
+   stuck leg no longer masquerades as a resting stop.
+3. **Failures are loud.** A swallowed adopt/watchdog error now persists to
+   `trading_config.last_errors` and surfaces on the dashboard + an owner
+   `position_alert` push — never a silent miss again.
+4. **Honest status.** Each position reports `stop_status`: `working` (live broker
+   stop), `watchdog` (engine-enforced backstop, shows the enforced price), or
+   `none` (truly uncovered). The page reads "Stop 157.25 · engine" instead of a
+   false "UNPROTECTED" scare.
+
+**Limit (stated, not hidden):** the watchdog acts on the tick cadence
+(market-hours, ~1 min), so it carries the same intra-tick slippage and overnight-
+gap exposure as any stop (a stuck broker stop wouldn't fire overnight either).
+A follow-up will additionally *replace* stuck `held` legs with standalone
+working stops at the broker for intra-tick coverage; until then the watchdog is
+the backstop. Terminology on the page is now **Stop / Exit** (was
+Protection/Flatten), Ajay 2026-06-24.
+
+Locked: `tests/test_trading_engine.py` (watchdog: fires on breach armed; held
+leg ≠ protection; trusts a working stop; not above the stop; disarmed dry-run;
+close-failure surfaced) + `frontend/src/lib/autopilotStop.test.ts` (badge wording).

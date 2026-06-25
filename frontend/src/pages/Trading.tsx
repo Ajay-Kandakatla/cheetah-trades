@@ -21,6 +21,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { stopStatusView } from '../lib/autopilotStop';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 
@@ -34,9 +35,17 @@ type StopInfo = {
   pct_below_entry: number;
   order_id: string;
   at_breakeven: boolean;
+  working?: boolean;   // a genuinely-live broker stop (vs a stuck "held" leg)
 } | null;
 
 type TargetInfo = { price: number; order_id: string } | null;
+
+// How the position's downside stop is enforced:
+//   'working'  — a live stop order rests at the broker
+//   'watchdog' — no live broker stop; the engine market-exits if price breaches
+//                the committed stop (covers Alpaca's stuck "held" bracket legs)
+//   'none'     — truly uncovered (no stop and nothing to enforce)
+type StopStatus = 'working' | 'watchdog' | 'none';
 
 type Position = {
   symbol: string;
@@ -45,6 +54,8 @@ type Position = {
   last: number;
   upl_pct: number;
   stop: StopInfo;
+  watchdog_stop?: number | null;   // stop price the engine enforces via the watchdog
+  stop_status?: StopStatus;
   target: TargetInfo;
   breakeven_trigger: number;
   protected: boolean;
@@ -107,8 +118,9 @@ type Status = {
     tick_age_sec: number | null;
     stale_after_sec: number;
     stale: boolean;
+    last_errors?: string[];   // last tick's failures, surfaced loud on the page
   } | null;
-  // Symbols of open positions with no resting stop ("real risk uncovered now").
+  // Symbols of open positions with NO stop at all ("real risk uncovered now").
   unprotected?: string[];
 };
 
@@ -438,11 +450,11 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
           )}
           {positions.length > 0 && (
             <button onClick={onFlattenAll}
-                    title="Disaster plan — cancel every open order and close every position at market."
+                    title="Disaster plan — cancel every open order and sell every position at market."
                     style={{ background: 'transparent', color: C.red,
                              border: `1px solid ${C.red}55`, borderRadius: 7, padding: '3px 10px',
                              fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
-              Flatten ALL
+              Exit all
             </button>
           )}
         </span>
@@ -465,7 +477,7 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                 <th style={TH}>Stop</th>
                 <th style={TH}>Target</th>
                 <th style={TH}>→ breakeven</th>
-                <th style={TH}>Protection</th>
+                <th style={TH}>Stop status</th>
                 <th style={TH} />
               </tr>
             </thead>
@@ -485,41 +497,50 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                       {up ? '▲' : '▼'} {pctf(Math.abs(p.upl_pct), 2)}
                     </td>
                     <td className="mono" style={TD}>
-                      {p.stop ? (
-                        <>
-                          {money(p.stop.price)}
-                          <span style={{ color: C.sub, fontSize: '0.68rem' }}> ({pctf(p.stop.pct_below_entry)} below)</span>
-                          {p.stop.at_breakeven && (
-                            <span title="Stop has been ratcheted up to entry — worst case is now a scratch."
-                                  style={{ marginLeft: 5, color: C.green, fontWeight: 700, fontSize: '0.7rem' }}>
-                              BE ✓
-                            </span>
-                          )}
-                        </>
-                      ) : <span style={{ color: C.sub }}>—</span>}
+                      {(() => {
+                        const sp = p.stop?.price ?? p.watchdog_stop ?? null;
+                        if (sp == null) return <span style={{ color: C.sub }}>—</span>;
+                        return (
+                          <>
+                            {money(sp)}
+                            {p.stop?.pct_below_entry != null && (
+                              <span style={{ color: C.sub, fontSize: '0.68rem' }}> ({pctf(p.stop.pct_below_entry)} below)</span>
+                            )}
+                            {p.stop?.at_breakeven && (
+                              <span title="Stop ratcheted up to entry — worst case is now a scratch."
+                                    style={{ marginLeft: 5, color: C.green, fontWeight: 700, fontSize: '0.7rem' }}>
+                                BE ✓
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="mono" style={TD}>{p.target ? money(p.target.price) : <span style={{ color: C.sub }}>—</span>}</td>
                     <td style={TD}><BreakevenBar p={p} /></td>
                     <td style={TD}>
-                      {p.protected ? (
-                        <span title="A live stop order is working on the full size — the position is protected."
-                              style={{ color: C.green, fontSize: '0.76rem', fontWeight: 700 }}>🛡 protected</span>
-                      ) : (
-                        <span title="No working stop covers this position — the engine should adopt-protect it on its next pass. If it persists, flatten manually."
-                              style={{ color: C.red, fontSize: '0.72rem', fontWeight: 700,
-                                       border: `1px solid ${C.red}55`, background: `${C.red}14`,
-                                       borderRadius: 5, padding: '1px 6px' }}>
-                          UNPROTECTED
-                        </span>
-                      )}
+                      {(() => {
+                        const v = stopStatusView(p);
+                        const color = v.tone === 'good' ? C.green : v.tone === 'warn' ? C.amber : C.red;
+                        const boxed = v.kind !== 'working';
+                        return (
+                          <span title={v.tooltip}
+                                style={{ color, fontSize: v.kind === 'working' ? '0.76rem' : '0.72rem',
+                                         fontWeight: 700,
+                                         ...(boxed ? { border: `1px solid ${color}55`, background: `${color}14`,
+                                                       borderRadius: 5, padding: '1px 6px' } : {}) }}>
+                            {v.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={TD}>
                       <button onClick={() => onFlatten(p.symbol)}
-                              title={`Cancel ${p.symbol} orders and close the position at market.`}
+                              title={`Cancel ${p.symbol} orders and sell the position at market.`}
                               style={{ background: 'transparent', color: C.red, border: `1px solid ${C.red}55`,
                                        borderRadius: 6, padding: '2px 9px', fontSize: '0.72rem',
                                        fontWeight: 700, cursor: 'pointer' }}>
-                        Flatten
+                        Exit
                       </button>
                     </td>
                   </tr>
@@ -1825,10 +1846,22 @@ export function TradingPage() {
                           color: C.red, fontSize: '0.82rem', fontWeight: 700 }}>
               <span style={{ fontSize: '1.05rem' }}>⚠</span>
               <span>
-                {status.unprotected.length} position{status.unprotected.length > 1 ? 's' : ''} UNPROTECTED —
-                no resting stop on {status.unprotected.join(', ')}. Real risk is uncovered right now; set a
-                stop or flatten.
+                {status.unprotected.length} position{status.unprotected.length > 1 ? 's' : ''} with no stop —
+                nothing covers {status.unprotected.join(', ')} on the downside. Real risk is uncovered right
+                now; set a stop or exit.
               </span>
+            </div>
+          )}
+
+          {/* Loud engine failures — a swallowed adopt/watchdog error used to die
+              in an in-memory tick summary; now the last tick's failures surface
+              here so a broken stop placement can't hide (2026-06-24). */}
+          {status.engine?.last_errors && status.engine.last_errors.length > 0 && (
+            <div role="alert" style={{ background: `${C.amber}14`, border: `1px solid ${C.amber}66`,
+                          borderRadius: 8, padding: '0.55rem 0.8rem', margin: '0.4rem 0 0.2rem',
+                          color: C.amber, fontSize: '0.78rem' }}>
+              <strong>Engine had {status.engine.last_errors.length} issue{status.engine.last_errors.length > 1 ? 's' : ''} last tick:</strong>{' '}
+              {status.engine.last_errors.slice(0, 4).join(' · ')}
             </div>
           )}
 
@@ -1873,24 +1906,24 @@ export function TradingPage() {
       )}
 
       {confirm?.kind === 'flatten' && status && (
-        <ConfirmDialog title={`Flatten ${confirm.symbol}?`} color={C.red}
-                       confirmLabel={`Flatten ${confirm.symbol}`} busy={busy}
+        <ConfirmDialog title={`Exit ${confirm.symbol}?`} color={C.red}
+                       confirmLabel={`Exit ${confirm.symbol}`} busy={busy}
                        onConfirm={() => run(() => postJson(`/trading/flatten/${encodeURIComponent(confirm.symbol)}`))}
                        onCancel={() => setConfirm(null)}>
           <p style={{ margin: 0 }}>
-            Cancels every open <b>{confirm.symbol}</b> order and closes the position at market in the{' '}
+            Cancels every open <b>{confirm.symbol}</b> order and sells the position at market in the{' '}
             <b>{status.mode}</b> account. This cannot be undone.
           </p>
         </ConfirmDialog>
       )}
 
       {confirm?.kind === 'flatten-all' && status && (
-        <ConfirmDialog title="Flatten EVERYTHING?" color={C.red}
-                       confirmLabel="Yes — flatten all" busy={busy}
+        <ConfirmDialog title="Exit EVERYTHING?" color={C.red}
+                       confirmLabel="Yes — exit all" busy={busy}
                        onConfirm={() => run(() => postJson('/trading/flatten-all?confirm=yes'))}
                        onCancel={() => setConfirm(null)}>
           <p style={{ margin: '0 0 6px' }}>
-            Disaster plan: cancels <b>all</b> open orders and closes <b>every</b> engine position at market
+            Disaster plan: cancels <b>all</b> open orders and sells <b>every</b> engine position at market
             in the <b>{status.mode}</b> account.
           </p>
           <p style={{ margin: 0, color: C.sub }}>Use when something is wrong and you want to be flat NOW.</p>
