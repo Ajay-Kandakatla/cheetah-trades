@@ -31,6 +31,7 @@ export function WatchlistButton({ ticker, size = 'sm' }: Props) {
       type="button"
       className={`wl-btn wl-btn--${size} ${onList ? 'is-active' : ''} ${status ? `is-${status}` : ''}`}
       onClick={onClick}
+      aria-pressed={onList}
       aria-label={onList ? `Remove ${t} from watchlist` : `Add ${t} to watchlist`}
       title={onList
         ? `On watchlist (${status ?? 'unknown'}) — click to remove`
