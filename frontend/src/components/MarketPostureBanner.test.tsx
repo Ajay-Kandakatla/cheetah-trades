@@ -72,6 +72,15 @@ describe('MarketPostureBanner — in-flow nav pill (no overlap)', () => {
     expect(pill.style.top).toBe('');
   });
 
+  it('placement="bottom" (mobile): floats fixed at the BOTTOM, never the top — so it cannot crowd the hamburger', () => {
+    const { container } = render(<MarketPostureBanner placement="bottom" />);
+    const pill = container.querySelector('.cm-posture-pill--bottom') as HTMLElement;
+    expect(pill).not.toBeNull();
+    expect(pill.style.position).toBe('fixed');
+    expect(pill.style.bottom).not.toBe('');   // pinned to the bottom
+    expect(pill.style.top).toBe('');          // NOT the top (where the nav/hamburger live)
+  });
+
   it('v2: stays hidden (null) in a bull regime — clean chrome, no banner', () => {
     regimeRet = { data: { label: 'confirmed_uptrend' } };
     gaugeRet = { state: 'constructive', score: 72 };

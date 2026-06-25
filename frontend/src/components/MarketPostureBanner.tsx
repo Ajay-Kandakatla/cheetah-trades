@@ -34,7 +34,14 @@ export function marketPosture(
   return null;
 }
 
-export function MarketPostureBanner() {
+export function MarketPostureBanner({ placement = 'inline' }: {
+  // 'inline'  — sits in the nav's flex layout (desktop).
+  // 'bottom'  — fixed pill at the bottom-center of the screen. On a narrow
+  //   phone the "Market in correction" label was wide enough to shove the
+  //   hamburger off the nav row (Ajay 2026-06-25), so mobile floats it at the
+  //   bottom instead — out of the nav entirely.
+  placement?: 'inline' | 'bottom';
+} = {}) {
   const gauge = useMarketGauge();
   const { data: regime } = useMarketRegime();
   const navigate = useNavigate();
@@ -47,16 +54,28 @@ export function MarketPostureBanner() {
   if (p.tone !== 'red') return null;
 
   const fg = TONE_FG[p.tone];
+  const bottomStyle = placement === 'bottom'
+    ? {
+        position: 'fixed' as const,
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 120,                 // above page content, below the nav drawer (199/200)
+        boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+      }
+    : {};
   return (
     <button
       type="button"
-      className="cm-posture-pill"
+      className={`cm-posture-pill${placement === 'bottom' ? ' cm-posture-pill--bottom' : ''}`}
       onClick={() => navigate('/market-gauge')}
       title={`${p.label}${gauge ? ` — market gauge ${gauge.score}` : ''}. Tap for the full read.`}
       style={{
+        ...bottomStyle,
         // In-flow nav chrome (2026-06-23) — previously position:fixed which
         // floated over the nav links on desktop and over scrolled content on
-        // mobile. Living inside the nav's flex layout, it never overlaps.
+        // mobile. Living inside the nav's flex layout, it never overlaps
+        // (desktop / 'inline'). Mobile uses placement='bottom' (above).
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,

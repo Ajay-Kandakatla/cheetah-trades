@@ -163,6 +163,7 @@ export function NavBar() {
 
   if (isMobile) {
     return (
+      <>
       <header className="cm-nav cm-nav--mobile">
         <div className="cm-nav__brand">
           <div className="cm-nav__wordmark">Pounce</div>
@@ -170,7 +171,6 @@ export function NavBar() {
         </div>
 
         <div className="cm-nav__mobile-actions">
-          <MarketPostureBanner />
           {hasGauge && <MarketGaugeBadge compact />}
           {hasPortfolio && (
             <button
@@ -294,6 +294,10 @@ export function NavBar() {
           </>
         )}
       </header>
+      {/* Market-correction posture floats at the BOTTOM on mobile so its wide
+          label never crowds the hamburger out of the top nav row (2026-06-25). */}
+      <MarketPostureBanner placement="bottom" />
+      </>
     );
   }
 
