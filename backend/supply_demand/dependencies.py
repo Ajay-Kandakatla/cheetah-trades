@@ -87,6 +87,9 @@ NODES: list[Node] = [
     {"ticker": "VST",   "name": "Vistra",                  "sector": "Utilities",      "sub_sector": "Independent power"},
     {"ticker": "CEG",   "name": "Constellation Energy",    "sector": "Utilities",      "sub_sector": "Nuclear power"},
     {"ticker": "NRG",   "name": "NRG Energy",              "sector": "Utilities",      "sub_sector": "Power retail"},
+    {"ticker": "TLN",   "name": "Talen Energy",            "sector": "Utilities",      "sub_sector": "Nuclear/Independent power"},
+    {"ticker": "OKLO",  "name": "Oklo",                    "sector": "Utilities",      "sub_sector": "Advanced nuclear / SMR"},
+    {"ticker": "NEE",   "name": "NextEra Energy",          "sector": "Utilities",      "sub_sector": "Nuclear / Utility-IPP"},
     # Healthcare + Pharma
     {"ticker": "LLY",   "name": "Eli Lilly",               "sector": "Healthcare",     "sub_sector": "GLP-1/biopharma"},
     {"ticker": "PFE",   "name": "Pfizer",                  "sector": "Healthcare",     "sub_sector": "Pharma"},
@@ -211,12 +214,26 @@ EDGES: list[Edge] = [
      "evidence": "Vistra Comanche Peak nuclear fuel from Cameco supply"},
     {"source": "CEG",  "target": "CCJ",  "relation": "supplier_of",  "strength": 0.5,
      "evidence": "Constellation Clinton/Calvert Cliffs nuclear fuel sourcing"},
-    {"source": "MSFT", "target": "CEG",  "relation": "customer_of",  "strength": 0.7,
-     "evidence": "MSFT-Constellation 20-year PPA reactivating Three Mile Island Unit 1 (Sep 2024)"},
+    {"source": "MSFT", "target": "CEG",  "relation": "customer_of",  "strength": 1.0,
+     "evidence": "Constellation restarting Three Mile Island Unit 1 (Crane Clean Energy Center), 835 MW, 20-yr PPA sole-sourced to Microsoft for AI (CNBC + CEG 8-K, 2024)"},
     {"source": "MSFT", "target": "VST",  "relation": "customer_of",  "strength": 0.4,
      "evidence": "MSFT power purchase deal with Vistra for AI data center demand"},
     {"source": "GOOGL","target": "VST",  "relation": "customer_of",  "strength": 0.3,
      "evidence": "Google AI data center power agreements (industry reports)"},
+    # Big Tech ↔ nuclear PPAs/offtakes (deep-research verified 2026-06-25, sourced).
+    {"source": "META", "target": "CEG",  "relation": "customer_of",  "strength": 0.7,
+     "evidence": "Meta 20-yr PPA for full output of Constellation's Clinton Clean Energy Center, ~1,121 MW, Illinois (Constellation PR, 2025)"},
+    {"source": "META", "target": "VST",  "relation": "customer_of",  "strength": 0.7,
+     "evidence": "Meta 20-yr PPAs with Vistra (Perry + Davis-Besse + Beaver Valley uprates), 2,609 MW in PJM (Vistra IR, 2026)"},
+    {"source": "META", "target": "OKLO", "relation": "customer_of",  "strength": 0.4,
+     "evidence": "Meta offtake for ~1.2 GW from Oklo Aurora campus, Pike County OH, first phase ~2030 (Oklo PR, 2026)"},
+    {"source": "AMZN", "target": "TLN",  "relation": "customer_of",  "strength": 0.7,
+     "evidence": "AWS-Talen PPA, 1,920 MW from Susquehanna nuclear plant (PA) through 2042 + SMR options (Talen IR, 2025)"},
+    {"source": "GOOGL","target": "NEE",  "relation": "customer_of",  "strength": 0.7,
+     "evidence": "Google 25-yr PPA underpinning NextEra restart of 615 MW Duane Arnold nuclear plant, Iowa (NextEra 8-K, 2025)"},
+    # Private nuclear counterparties (no ticker → not graph nodes): MSFT↔Helion
+    # (fusion PPA), Meta↔TerraPower (Natrium SMRs), AMZN↔X-energy (Xe-100 SMRs),
+    # GOOGL↔Kairos Power (molten-salt SMRs) + Elementl, OKLO↔Centrus/LEU (HALEU fuel).
 
     # === Healthcare CDMOs + biopharma ===
     {"source": "LLY",  "target": "NVO",  "relation": "competitor_of","strength": 0.9,

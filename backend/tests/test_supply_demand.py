@@ -214,3 +214,17 @@ def test_energy_power_nuclear_sectors_present():
     ge = p["gap_economics"]
     assert ge["demand_usd_bn"] > ge["supply_usd_bn"]         # supply-constrained gap
     assert ge["sources"], "sector economics must be sourced, not invented"
+
+
+# ── Dependency graph: Big Tech ↔ nuclear tie-ups (deep-research 2026-06-25) ────
+def test_bigtech_nuclear_edges_wired_and_no_dangling():
+    from supply_demand import dependencies as D
+    nodes = {n["ticker"] for n in D.NODES}
+    assert {"TLN", "OKLO", "NEE"} <= nodes                       # new nuclear nodes
+    pairs = {(e["source"], e["target"]) for e in D.EDGES}
+    for tie in [("META", "CEG"), ("META", "VST"), ("META", "OKLO"),
+                ("AMZN", "TLN"), ("GOOGL", "NEE"), ("MSFT", "CEG")]:
+        assert tie in pairs, tie
+    # Every edge endpoint must be a real node (no dangling references).
+    for e in D.EDGES:
+        assert e["source"] in nodes and e["target"] in nodes, e
