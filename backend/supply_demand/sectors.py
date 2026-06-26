@@ -26,6 +26,9 @@ class Sector(TypedDict, total=False):
     sp_tickers: list[str]
     thesis: str
     gap_economics: dict
+    # Tradeable ETFs to play this theme — broad first, leveraged (2x/3x) last.
+    # The "ETFs we can leverage" surface (Ajay 2026-06-25).
+    leverage_etfs: list[str]
 
 
 SECTORS: list[Sector] = [
@@ -49,6 +52,7 @@ SECTORS: list[Sector] = [
             "as_of": "2024-Q4",
             "sources": ["NVDA 10-K FY25", "TSMC Q4'24 earnings", "Gartner WW Semi forecast"],
         },
+        "leverage_etfs": ["SMH", "SOXL", "NVDL"],
     },
     {
         "id": "memory_hbm",
@@ -175,6 +179,7 @@ SECTORS: list[Sector] = [
             "as_of": "2024-Q4",
             "sources": ["WNA", "UxC", "Cameco Q4'24"],
         },
+        "leverage_etfs": ["URA", "URNM", "NLR", "NUKZ"],
     },
     {
         "id": "power_grid",
@@ -196,6 +201,7 @@ SECTORS: list[Sector] = [
             "as_of": "2026-Q2",
             "sources": ["EIA Electric Power Monthly", "EPRI 'Powering Intelligence' 2024", "Grid Strategies 'Strategic Industries Surging' 2024", "FERC interconnection queue data"],
         },
+        "leverage_etfs": ["XLU", "GRID", "AIPO"],
     },
     {
         "id": "steel",
@@ -364,6 +370,62 @@ SECTORS: list[Sector] = [
             "as_of": "2024-Q4",
             "sources": ["ISRG Q4'24 earnings", "ABB/FANUC reports", "International Federation of Robotics"],
         },
+    },
+    # ── AI ecosystem build-out — the dependency sectors behind the chips (2026-06-25) ──
+    {
+        "id": "datacenter_water_cooling",
+        "label": "Data-Center Water & Cooling",
+        "narrative": "AI racks (GB200/Blackwell) need direct liquid cooling + huge volumes of cooling water — the thermal/water layer of the AI build-out.",
+        "etf": "PHO",
+        "commodity": "",
+        "keywords": ["liquid cooling", "direct-to-chip", "data center water", "immersion cooling", "CDU", "chiller", "cooling water shortage"],
+        "sp_tickers": ["VRT", "ECL", "XYL", "AWK", "TT", "NVT", "PNR", "SPXC", "MOD", "IR"],
+        "thesis": "Demand outruns supply: liquid-cooling content per rack is rising 5-10x with Blackwell, and data-center water draw is straining local utilities. Vertiv/Trane/Modine backlogs are multi-year.",
+        "leverage_etfs": ["PHO", "CGW", "FIW"],
+    },
+    {
+        "id": "grid_equipment",
+        "label": "Grid & Electrical Equipment",
+        "narrative": "Transformers, switchgear, and gas turbines — the physical hardware to deliver power to AI data centers. The bottleneck behind the power gap.",
+        "etf": "GRID",
+        "commodity": "",
+        "keywords": ["transformer shortage", "gas turbine backlog", "switchgear", "grid interconnection", "electrical equipment", "data center power delivery"],
+        "sp_tickers": ["GEV", "ETN", "PWR", "EMR", "ROK", "NVT", "POWL", "AES"],
+        "thesis": "Large-power transformers 2+ yr lead, gas-turbine slots sold out to ~2028, ~2.6 TW stuck in interconnection queues. The hardware to deliver power is tighter than the fuel.",
+        "leverage_etfs": ["GRID", "PAVE"],
+    },
+    {
+        "id": "ai_software",
+        "label": "AI Software & Platforms",
+        "narrative": "The software layer monetizing AI — hyperscale cloud, enterprise AI apps, data + orchestration platforms.",
+        "etf": "IGV",
+        "commodity": "",
+        "keywords": ["enterprise AI", "AI agents", "Copilot", "Agentforce", "AI software", "inference revenue"],
+        "sp_tickers": ["MSFT", "GOOGL", "AMZN", "ORCL", "NOW", "CRM", "SNOW", "PLTR", "AI", "PATH"],
+        "thesis": "Exposure to AI monetization moving from infrastructure to application/agent revenue. Not a supply gap — a demand/adoption play.",
+        "leverage_etfs": ["IGV", "WCLD", "AIQ"],
+    },
+    {
+        "id": "datacenter_reits",
+        "label": "Data-Center REITs & Infra",
+        "narrative": "The physical real estate + towers housing AI compute — capacity is leased out years forward.",
+        "etf": "DTCR",
+        "commodity": "",
+        "keywords": ["data center REIT", "colocation", "hyperscale lease", "power availability", "tower"],
+        "sp_tickers": ["EQIX", "DLR", "AMT", "CCI", "SBAC", "IRM", "CRWV"],
+        "thesis": "Vacancy near zero in key markets; pre-leasing years out. The binding constraint is power availability at the site, not real estate.",
+        "leverage_etfs": ["DTCR", "SRVR"],
+    },
+    {
+        "id": "optical_interconnect",
+        "label": "AI Networking & Optical",
+        "narrative": "The optics and switching that link tens of thousands of GPUs into one cluster — scaling faster than the GPUs themselves.",
+        "etf": "",
+        "commodity": "",
+        "keywords": ["optical transceiver", "800G", "1.6T", "co-packaged optics", "InfiniBand", "Ethernet AI fabric", "structured cabling"],
+        "sp_tickers": ["ANET", "AVGO", "MRVL", "COMM", "CIEN", "JNPR", "MCHP", "GLW"],
+        "thesis": "Optical content per AI cluster compounds with scale-up/scale-out; transceiver + switch demand grows faster than server count. No clean pure-play ETF.",
+        "leverage_etfs": [],
     },
 ]
 

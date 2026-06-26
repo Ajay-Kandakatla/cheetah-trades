@@ -228,3 +228,24 @@ def test_bigtech_nuclear_edges_wired_and_no_dangling():
     # Every edge endpoint must be a real node (no dangling references).
     for e in D.EDGES:
         assert e["source"] in nodes and e["target"] in nodes, e
+
+
+# ── AI-ecosystem sectors + ETFs + dependency chain (deep-research 2026-06-25) ──
+def test_ai_ecosystem_sectors_and_leverage_etfs():
+    from supply_demand import sectors as S
+    ids = {s["id"] for s in S.SECTORS}
+    assert {"datacenter_water_cooling", "grid_equipment", "ai_software",
+            "datacenter_reits", "optical_interconnect"} <= ids
+    assert S.SECTOR_BY_ID["ai_chips"]["leverage_etfs"][0] == "SMH"
+    assert "URNM" in S.SECTOR_BY_ID["uranium"]["leverage_etfs"]
+    assert S.SECTOR_BY_ID["datacenter_water_cooling"]["etf"] == "PHO"
+    for sid in ("datacenter_water_cooling", "ai_software"):     # ≤10 per the ask
+        assert len(S.SECTOR_BY_ID[sid]["sp_tickers"]) <= 10
+
+
+def test_ai_ecosystem_dependency_chain_wired():
+    from supply_demand import dependencies as D
+    nodes = {n["ticker"] for n in D.NODES}
+    assert {"VRT", "GEV", "CRWV", "AWK", "XYL", "COMM", "NOW", "LEU"} <= nodes
+    pairs = {(e["source"], e["target"]) for e in D.EDGES}
+    assert ("CRWV", "NVDA") in pairs and ("VRT", "NVDA") in pairs and ("LEU", "OKLO") in pairs
