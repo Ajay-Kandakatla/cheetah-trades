@@ -35,6 +35,7 @@ import {
   scanOneSymbolOptions,
   type SoirRow,
 } from '../hooks/useOptionsPulse';
+import { netDirection } from '../lib/optionsDirection';
 
 /** Compact pill — same visual vocabulary as the SignalChips above so
  *  the user reads them as one connected concept. */
@@ -249,6 +250,29 @@ export function OptionsFlowPanel({ symbol }: { symbol: string }) {
           </span>
         )}
       </div>
+
+      {/* Plain bull/bear read of the STOCK (trend + fundamentals) — distinct
+          from the contrarian SOIR signal above, which is often NEUTRAL ("no
+          contrarian edge") even when the stock is clearly trending. */}
+      {(() => {
+        const nd = netDirection(row);
+        return (
+          <div style={{ margin: '-0.2rem 0 0.7rem' }}>
+            <span
+              style={{
+                ...PILL, padding: '0.25rem 0.7rem',
+                background: `${nd.color}1a`, borderColor: `${nd.color}55`, color: nd.color,
+              }}
+              title="The stock's own directional posture (SEPA trend + fundamental score). This is NOT the contrarian options signal above — it answers 'is the stock itself bullish or bearish?'"
+            >
+              {nd.icon} {nd.label} stock
+            </span>
+            <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: 'var(--cm-slate)' }}>
+              {nd.why}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* OI / Vol / IV stat tiles. Tooltips explain the framework. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.6rem' }}>
