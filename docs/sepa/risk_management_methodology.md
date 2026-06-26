@@ -165,3 +165,40 @@ Protection/Flatten), Ajay 2026-06-24.
 Locked: `tests/test_trading_engine.py` (watchdog: fires on breach armed; held
 leg ≠ protection; trusts a working stop; not above the stop; disarmed dry-run;
 close-failure surfaced) + `frontend/src/lib/autopilotStop.test.ts` (badge wording).
+
+## Active sell discipline — auto-exit on distribution / stage-breakdown (2026-06-25)
+
+The watchdog protects the downside *stop*. This adds Minervini's *active* sell
+signals so the engine exits a deteriorating leader without waiting for the stop —
+read every tick (≤1 min, market hours) from the latest SEPA scan row for each
+held name (`trading.sell_discipline.evaluate`, pure + cited; the triggers all map
+to fields the scanner already computes — `sell_signals.py`, `stage.py`,
+`volume.py`, `climax_distribution.py`, `mvp.py`).
+
+Runs in `tick()` as step **(d1)** — after the watchdog (a hit stop is
+unconditional) and before adopt/ratchet (don't protect a name being exited).
+Armed → cancel orders + `close_position` + cited `distribution_exit` ledger row +
+owner `position_alert` push; disarmed → dry-run row only. Deduped once per
+symbol/day/kind (`_fired_today`) so an alert can't re-fire every minute.
+
+**Ajay 2026-06-25 chose AGGRESSIVE** ("sell stage 3 also"): **every**
+topping/distribution/exhaustion signal auto-sells at market, not just the
+decisive breaks. Triggers (each keeps its own cite in the ledger):
+
+- close below the **200-day MA** — Stage 2→4 trend break (TLSW p.74-75)
+- **Stage 4** decline AND ≥3% below the **50-day MA** (TLSW p.73-75)
+- **Stage 3** topping with distribution (`accumulation_strength=='distributing'`
+  / CMF outflow / volume-disagreement) (TLSW p.72,86; TTLAC §9 ebook p.161)
+- **climax / blow-off** top (`climax_distribution.is_distribution`) (TLSW p.82,296)
+- **MVP exhaustion** on an extended stock (TTLAC §9 ebook p.166)
+
+The softer book-faithful reading (Stage 3 / climax / MVP = *alert / sell into
+strength*, auto-sell only Stage 4 / 200-DMA) is one line away — flip a trigger's
+`action` back to `'alert'`; the tick already handles that path. Limits: signals
+are a daily classification, so action is same-day-once, market-hours only; the
+deferred tells (3 lower lows, P/E expansion, earnings miss, down-day-on-surge as
+a standalone) need scanner fields that don't exist yet — listed in the design
+spec, not wired. Locked: `tests/test_trading_engine.py` (evaluate: decisive
+breaks + topping signals auto-sell, clean=hold, decisive trumps warning; tick:
+auto-sell armed, disarmed dry-run, once-per-day dedup, clean name still gets a
+stop).

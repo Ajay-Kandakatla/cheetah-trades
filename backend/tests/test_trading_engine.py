@@ -213,6 +213,9 @@ def env(monkeypatch):
         monkeypatch.setattr(EN, "_db", lambda: db)   # entries' own binding
         monkeypatch.setattr(EE, "regime", lambda: "normal")
         monkeypatch.setattr(EN, "regime", lambda: "normal")
+        # Default: no distribution signal (don't touch the real SEPA scanner).
+        # Sell-discipline tests override this with a canned scan row.
+        monkeypatch.setattr(EE, "_distribution_read", lambda sym: None)
         stub = types.ModuleType("sepa.earnings_watch")
         if earnings_days is None:
             stub.next_event = lambda s: None
@@ -415,6 +418,75 @@ def test_watchdog_close_failure_is_surfaced_not_swallowed(monkeypatch, env):
     assert any("watchdog AAA" in e for e in summary["errors"]), summary["errors"]
     assert summary["watchdog_exits"] == 0
     assert any("watchdog AAA" in e for e in (EE.get_config().get("last_errors") or []))
+
+
+# ── Sell discipline: distribution / stage-breakdown auto-exit (2026-06-25) ────
+# Ajay chose AGGRESSIVE: any topping/distribution/exhaustion signal on a held
+# name → auto-sell at market (sell_discipline.evaluate). Runs in the tick after
+# the watchdog, before adopt. Dedup once per symbol/day/kind.
+from trading import sell_discipline as SD
+
+_STAGE3_DIST = {"stage": {"stage": 3}, "volume": {"accumulation_strength": "distributing"}}
+
+
+def test_evaluate_decisive_breaks_are_auto_sell():
+    assert SD.evaluate({"sell_signals": {"signals": {"close_below_200ma": True}}}, 50)["action"] == "auto_sell"
+    assert SD.evaluate({"stage": {"stage": 4}, "trend": {"ma50": 100}}, 95)["action"] == "auto_sell"  # >=3% below
+    assert SD.evaluate({"stage": {"stage": 4}, "trend": {"ma50": 100}}, 98) is None                   # only 2% below
+
+
+def test_evaluate_topping_signals_are_auto_sell_in_aggressive_mode():
+    assert SD.evaluate(_STAGE3_DIST, 100)["action"] == "auto_sell"
+    assert SD.evaluate({"climax_distribution": {"is_distribution": True}}, 100)["action"] == "auto_sell"
+    assert SD.evaluate({"mvp_exhaustion": True}, 100)["action"] == "auto_sell"
+
+
+def test_evaluate_clean_or_missing_is_none():
+    assert SD.evaluate({"stage": {"stage": 2}, "volume": {"accumulation_strength": "accumulating"}}, 100) is None
+    assert SD.evaluate(None, 100) is None
+
+
+def test_evaluate_decisive_break_trumps_a_topping_warning():
+    # Stage 3 AND a 200DMA break → the decisive 200DMA verdict wins (checked first).
+    v = SD.evaluate({**_STAGE3_DIST, "sell_signals": {"signals": {"close_below_200ma": True}}}, 50)
+    assert "200-day" in v["reason"]
+
+
+def test_distribution_auto_sells_a_held_topper_when_armed(env, monkeypatch):
+    broker, db = env(positions=[_position("AAA", 10, 100.0, 100.0)])   # last 100 > 93 stop → watchdog quiet
+    monkeypatch.setattr(EE, "_distribution_read", lambda sym: _STAGE3_DIST)
+    summary = EE.tick()
+    assert _calls(broker, "close_position") == [{"symbol": "AAA"}], broker.calls
+    assert not _calls(broker, "submit_stop"), "adopted a stop on a name it should exit"
+    assert summary["distribution_exits"] == 1
+    rows = [r for r in db.trade_ledger.rows if r["kind"] == "distribution_exit"]
+    assert len(rows) == 1 and rows[0]["dry_run"] is False and "p.72" in (rows[0]["cite"] or "")
+
+
+def test_distribution_disarmed_is_dry_run_only(env, monkeypatch):
+    broker, db = env(positions=[_position("AAA", 10, 100.0, 100.0)], armed=False)
+    monkeypatch.setattr(EE, "_distribution_read", lambda sym: _STAGE3_DIST)
+    summary = EE.tick()
+    assert broker.calls == [], broker.calls
+    dry = [r for r in db.trade_ledger.rows if r.get("dry_run") and r["kind"] == "distribution_exit"]
+    assert len(dry) == 1 and summary["distribution_exits"] == 0
+
+
+def test_distribution_fires_at_most_once_per_day(env, monkeypatch):
+    broker, _ = env(positions=[_position("AAA", 10, 100.0, 100.0)])
+    monkeypatch.setattr(EE, "_distribution_read", lambda sym: _STAGE3_DIST)
+    monkeypatch.setattr(EE, "_fired_today", lambda kind, sym: True)   # already sold/alerted today
+    EE.tick()
+    assert not _calls(broker, "close_position"), broker.calls
+
+
+def test_clean_name_is_not_sold_and_still_gets_its_stop(env, monkeypatch):
+    broker, _ = env(positions=[_position("AAA", 10, 100.0, 100.0)])
+    monkeypatch.setattr(EE, "_distribution_read",
+                        lambda sym: {"stage": {"stage": 2}, "volume": {"accumulation_strength": "accumulating"}})
+    EE.tick()
+    assert not _calls(broker, "close_position")
+    assert len(_calls(broker, "submit_stop")) == 1   # normal adopt-and-protect still runs
 
 
 # ── Entries: refusal checks (every reason cited) ─────────────────────────────

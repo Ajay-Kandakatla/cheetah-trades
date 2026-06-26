@@ -395,6 +395,40 @@ def _effective_stop(symbol: str, avg_entry: float, reg: str,
         return None
 
 
+def _distribution_read(symbol: str) -> Optional[dict]:
+    """Latest SEPA scan row (stage + sell-signals + volume + climax + mvp) for a
+    held symbol, or None. Lazy + fenced: sepa.scanner pulls pandas and the engine
+    must work without it, so any failure degrades to "no sell signal" rather than
+    breaking the reconciler."""
+    try:
+        from sepa import scanner as _sc
+        latest = _sc.load_latest() or {}
+        rows = (latest.get("results") or latest.get("candidates")
+                or latest.get("rows") or [])
+        for r in rows:
+            if (r.get("symbol") or "").upper() == symbol.upper():
+                return r
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("distribution read failed for %s: %s", symbol, exc)
+    return None
+
+
+def _fired_today(kind: str, symbol: str) -> bool:
+    """True if a ledger row of ``kind`` for ``symbol`` already exists today (ET).
+    Fires each distribution alert/exit at most once per name per day instead of
+    every minute. ts is stamped UTC but equals the ET calendar day during US
+    market hours (the only window the tick runs), so the ^YYYY-MM-DD prefix holds."""
+    db = _db()
+    if db is None:
+        return False
+    try:
+        return db.trade_ledger.find_one(
+            {"kind": kind, "symbol": (symbol or "").upper(),
+             "ts": {"$regex": "^" + _et_day()}}) is not None
+    except Exception:                                  # noqa: BLE001
+        return False
+
+
 def _force_exit(symbol: str, orders) -> dict:
     """Cancel symbol's working orders + market-close the position NOW. The
     watchdog's hands — caller must already be armed. ``broker.close_position``
@@ -461,6 +495,7 @@ def tick(force: bool = False) -> dict:
     summary = {"ok": True, "forced": bool(force), "market_open": None,
                "armed": False, "regime": None, "positions": 0,
                "adopted": 0, "ratcheted": 0, "watchdog_exits": 0,
+               "distribution_exits": 0, "distribution_alerts": 0,
                "dry_run_rows": 0, "streak_events": 0, "errors": []}
 
     # (0) sim matching engine — duck-called when the active broker has one
@@ -562,6 +597,43 @@ def tick(force: bool = False) -> dict:
                        dry_run=True, cite="p.301-302")
                 summary["dry_run_rows"] += 1
             continue                       # exiting this position; skip adopt/ratchet
+
+        # (d1) DISTRIBUTION / STAGE-BREAKDOWN sell discipline (Ajay 2026-06-25).
+        # Read the latest SEPA stage + sell-signals for this held name and act on
+        # the Minervini sell rules (trading.sell_discipline). Runs AFTER the
+        # watchdog (a hit stop is unconditional) and BEFORE adopt/ratchet (don't
+        # protect a name we're exiting). Aggressive mode: any topping/distribution
+        # /exhaustion signal -> auto-sell at market. Dedup once per symbol/day/kind.
+        from trading import sell_discipline as _sd
+        verdict = _sd.evaluate(_distribution_read(sym), last)
+        if verdict and not _fired_today(verdict["kind"], sym):
+            ddetail = {"qty": qty, "avg_entry": avg_entry, "last": last,
+                       "reason": verdict["reason"]}
+            if verdict["action"] == "auto_sell":
+                if armed:
+                    try:
+                        ddetail.update(_force_exit(sym, open_orders))
+                        ledger(verdict["kind"], symbol=sym, detail=ddetail,
+                               dry_run=False, cite=verdict["cite"])
+                        summary["distribution_exits"] += 1
+                        _notify_autopilot("position_alert", sym,
+                            "%s SOLD at market ~%.2f — %s" % (sym, last, verdict["reason"]))
+                    except BrokerError as exc:
+                        summary["errors"].append("distribution_exit %s: %s" % (sym, exc))
+                        _notify_autopilot("position_alert", sym,
+                            "%s flashed a SELL (%s) but the engine could NOT exit "
+                            "(%s) — act manually" % (sym, verdict["reason"], exc))
+                else:
+                    ledger(verdict["kind"], symbol=sym,
+                           detail={**ddetail, "note": "disarmed — dry run, nothing sent"},
+                           dry_run=True, cite=verdict["cite"])
+                    summary["dry_run_rows"] += 1
+                continue                   # exiting this name; skip adopt/ratchet
+            else:                          # 'alert' — warn only, keep protecting it
+                ledger(verdict["kind"], symbol=sym, detail=ddetail,
+                       dry_run=False, cite=verdict["cite"])
+                summary["distribution_alerts"] += 1
+                _notify_autopilot("position_alert", sym, "%s — %s." % (sym, verdict["reason"]))
 
         if stop_order is None:
             # adopt-and-protect (pp.301-302: a stop must always be resting)
