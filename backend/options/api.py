@@ -38,6 +38,23 @@ async def get_market_bias():
     return await asyncio.to_thread(bias_mod.market_bias)
 
 
+@router.get("/options/opex/{symbol}")
+async def get_opex(symbol: str):
+    """OpEx mechanics for one ticker — nearest expiration (+ type/DTE), the
+    max-pain magnet strike, and a dealer-gamma pinning/amplifying read with the
+    call/put gamma walls. Powers the options-flow tab OpEx panel.
+
+    A tendency into expiration, not a guarantee; the gamma sign is a heuristic
+    most reliable on index/ETF and weakest on single-name leaders."""
+    import asyncio
+    from . import opex as opex_mod
+    out = await asyncio.to_thread(opex_mod.compute_opex, symbol.upper())
+    if not out:
+        return {"symbol": symbol.upper(), "found": False,
+                "message": "No options chain for this ticker (illiquid or no listed options)."}
+    return {"found": True, **out}
+
+
 @router.get("/options/soir")
 async def get_soir_scan(
     signal: Optional[str] = Query(None, description="Filter to BULLISH | BEARISH | WATCH | NEUTRAL"),

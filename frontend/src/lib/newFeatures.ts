@@ -46,6 +46,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'autopilot-analysis-column', label: '🐆 Analysis column on Auto-Pilot — the Cheetah Verdict (Minervini + Bonde) on every engine position', addedAt: '2026-06-26', route: '/trading' },
   { id: 'portfolio-buy-verdict', label: '🐆 Buy verdict on each Portfolio holding — the ENTER/WATCH/AVOID read + criteria, at a glance', addedAt: '2026-06-26', route: '/portfolio' },
   { id: 'autopilot-pnl-simple', label: '💰 Simpler Auto-Pilot P&L — started vs now total (what we gained together), realized/unrealized in the tooltip', addedAt: '2026-06-26', route: '/trading' },
+  { id: 'opex-gamma-panel', label: '🧲 OpEx panel — next expiration + max-pain magnet + dealer-gamma (pin vs amplify) on the options-flow tab', addedAt: '2026-06-26', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

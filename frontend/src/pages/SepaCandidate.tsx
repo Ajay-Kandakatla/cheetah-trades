@@ -74,6 +74,7 @@ import type { TickerContext } from '../hooks/useSupplyDemand';
 // the multi-ticker /options page.
 import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
 import { TomorrowBiasBlock } from '../components/TomorrowBias';
+import { OpExPanel } from '../components/OpExPanel';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { useOwnedPosition } from '../hooks/useOwnedPositions';
@@ -1684,6 +1685,7 @@ export function SepaCandidatePage() {
                 </div>
                 <TomorrowBiasBlock symbol={symbol} />
                 <OptionsFlowPanel symbol={symbol} />
+                <OpExPanel symbol={symbol} />
               </section>
             )}
 
