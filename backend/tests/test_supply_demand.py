@@ -200,3 +200,17 @@ def test_zone_source_is_the_locked_vcp_detector():
     import sepa.vcp as vcp
     assert Z.vcp_mod is vcp                           # not a reimplementation
     assert callable(vcp.detect)
+
+
+# ── Sector curation: energy + nuclear + the AI-grid power sector (2026-06-25) ──
+def test_energy_power_nuclear_sectors_present():
+    from supply_demand import sectors as S
+    ids = {s["id"] for s in S.SECTORS}
+    # Oil & gas (energy) + uranium (nuclear) already existed; power_grid is new.
+    assert {"oil_gas", "uranium", "power_grid"} <= ids, ids
+    p = S.SECTOR_BY_ID["power_grid"]
+    assert p["etf"] == "XLU"
+    assert {"CEG", "VST", "NRG"} <= set(p["sp_tickers"])      # nuclear/gas utilities
+    ge = p["gap_economics"]
+    assert ge["demand_usd_bn"] > ge["supply_usd_bn"]         # supply-constrained gap
+    assert ge["sources"], "sector economics must be sourced, not invented"
