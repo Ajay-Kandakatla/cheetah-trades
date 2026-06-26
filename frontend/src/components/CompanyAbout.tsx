@@ -47,7 +47,8 @@ export function CompanyAbout({ symbol, collapsed = true }: Props) {
       {isLong && (
         <button type="button"
                 className="company-about__toggle"
-                onClick={() => setExpanded(!expanded)}>
+                onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}>
           {expanded ? '▴ Show less' : '▾ Show more'}
         </button>
       )}
