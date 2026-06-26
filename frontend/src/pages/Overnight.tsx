@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
+import { MarketBiasPanel } from '../components/TomorrowBias';
 import { OvernightPanel } from '../components/OvernightPanel';
 import { OptionsPulseSummary } from '../components/OptionsPulseSummary';
 import { SupplyDemandSummary } from '../components/SupplyDemandSummary';
@@ -23,6 +24,11 @@ export function OvernightPage() {
           </p>
         </div>
       </header>
+
+      {/* Market-level Tomorrow Bias — SPY/QQQ extended-hours gap (the ES/NQ
+          proxy) + VIX + regime → one lean for the next session. Sits up top so
+          the gap list below reads in the context of the overall tape. */}
+      <MarketBiasPanel />
 
       <section className="overnight-controls">
         <div className="overnight-controls__group">

@@ -8,9 +8,34 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from . import soir as soir_mod
 from . import scanner as soir_scanner
+from . import tomorrow_bias as bias_mod
 
 log = logging.getLogger("options.api")
 router = APIRouter(tags=["options"])
+
+
+@router.get("/options/bias/{symbol}")
+async def get_tomorrow_bias(symbol: str):
+    """Per-ticker Tomorrow Bias — overnight/after-hours move + options flow +
+    market backdrop → a single LEAN_UP / LEAN_DOWN / NEUTRAL for the next open,
+    with a confluence-gated confidence. Powers the options-flow tab block.
+
+    Computed on-demand: reads the cached SOIR snapshot (no fresh chain pull),
+    the latest extended-hours bars, and the cached market backdrop. Degrades to
+    NEUTRAL ("react at the open") when there's no extended-hours move yet.
+    """
+    import asyncio
+    out = await asyncio.to_thread(bias_mod.compute_bias, symbol.upper())
+    return out
+
+
+@router.get("/options/market-bias")
+async def get_market_bias():
+    """Market-level Tomorrow Bias — SPY/QQQ extended-hours gap (the ES/NQ proxy)
+    + VIX + regime → one market lean for the next session. Powers the Overnight
+    page panel. Cached ~3 min via the shared backdrop."""
+    import asyncio
+    return await asyncio.to_thread(bias_mod.market_bias)
 
 
 @router.get("/options/soir")

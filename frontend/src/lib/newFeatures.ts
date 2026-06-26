@@ -40,6 +40,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'breakouts-fresh-only', label: '🌱 Fresh only — hide extended (→R2/Past R2) names, keep the board to fresh breakouts', addedAt: '2026-06-23', route: '/breakouts' },
   { id: 'sepa-global', label: '🌍 SEPA Global — a simple, beginner-friendly version of the scanner (same Minervini rules)', addedAt: '2026-06-23', route: '/sepa-global' },
   { id: 'leveraged-badge', label: '⚠️ Leveraged-ETF flag (2x/3x) now shows on every list — they’re not Minervini stock setups', addedAt: '2026-06-23', route: '/sepa' },
+  { id: 'tomorrow-bias-options', label: '🌙 Tomorrow bias — overnight/after-hours + options flow → a next-open lean on every ticker’s options-flow tab', addedAt: '2026-06-26', route: '/sepa' },
+  { id: 'market-tomorrow-bias', label: '🌙 Market Tomorrow Bias — SPY/QQQ overnight gap + VIX + regime → one lean for the next session', addedAt: '2026-06-26', route: '/overnight' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

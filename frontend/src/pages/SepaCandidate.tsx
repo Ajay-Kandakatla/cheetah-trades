@@ -73,6 +73,7 @@ import type { TickerContext } from '../hooks/useSupplyDemand';
 // options crowd is doing on the ticker they're researching, not just on
 // the multi-ticker /options page.
 import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
+import { TomorrowBiasBlock } from '../components/TomorrowBias';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { useOwnedPosition } from '../hooks/useOwnedPositions';
@@ -1681,6 +1682,7 @@ export function SepaCandidatePage() {
                   on-demand — backed by Massive Options Advanced, the scan
                   returns in ~1s (down from ~30s on the yfinance fallback).
                 </div>
+                <TomorrowBiasBlock symbol={symbol} />
                 <OptionsFlowPanel symbol={symbol} />
               </section>
             )}
