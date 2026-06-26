@@ -249,3 +249,15 @@ def test_ai_ecosystem_dependency_chain_wired():
     assert {"VRT", "GEV", "CRWV", "AWK", "XYL", "COMM", "NOW", "LEU"} <= nodes
     pairs = {(e["source"], e["target"]) for e in D.EDGES}
     assert ("CRWV", "NVDA") in pairs and ("VRT", "NVDA") in pairs and ("LEU", "OKLO") in pairs
+
+
+# ── Breakout AI-sector tagging/priority (Ajay 2026-06-25) ─────────────────────
+def test_ai_sector_tagging_for_breakout_priority():
+    from supply_demand import sectors as S
+    f = S.ai_sector_for_ticker
+    assert f("NVDA")["id"] == "ai_chips" and f("NVDA")["rank"] == 0
+    assert f("CCJ")["id"] == "uranium"
+    assert f("VRT")["id"] == "datacenter_water_cooling"   # cooling, not Power (roster cleaned)
+    assert f("GEV")["id"] == "grid_equipment"
+    assert f("ANET")["id"] == "optical_interconnect"
+    assert f("AAPL") is None and f("WMT") is None          # non-AI → no tag, sorts last

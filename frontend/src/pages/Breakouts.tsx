@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import { useBreakoutBoard, type BreakoutBoardRow } from '../hooks/useBreakoutBoard';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { useSort, type SortDir } from '../lib/useSort';
+import { aiSectorSortValue } from '../lib/breakoutSort';
 import { marchToTarget, stageMeta, isExtendedToR2 } from '../lib/breakoutTargets';
 import { LeveragedBadge } from '../components/LeveragedBadge';
 import { isBaseSetup } from '../lib/baseSetup';
@@ -132,6 +133,15 @@ const fmtVolPct = (v: number | null): string => (v != null ? `${Math.round(v)}%`
 
 type Sorter = { toggle: (k: string, p?: SortDir) => void; arrow: (k: string) => string; key: string };
 
+/* Short AI-ecosystem sector chips (Ajay 2026-06-25: breakout list leads with
+ * AI-sector winners). Maps backend ai_sector_id → emoji + short label. */
+const AI_SECTOR_CHIP: Record<string, string> = {
+  ai_chips: '🔌 Chips', memory_hbm: '🔌 Memory', uranium: '⚛️ Nuclear',
+  power_grid: '⚡ Power', oil_gas: '🛢 Energy', datacenter_water_cooling: '💧 Cooling',
+  grid_equipment: '🔧 Grid', ai_software: '💻 Software', datacenter_reits: '🏢 DC REIT',
+  optical_interconnect: '🔗 Optical',
+};
+
 /* Sortable header cell — click to sort, click again to flip (delegates to
  * useSort). Active column is gold so the current sort is obvious. */
 function Th({ label, k, style, align = 'left', preferred = 'desc', sort }: {
@@ -218,7 +228,11 @@ export function BreakoutsPage() {
     march: (r) => marchToTarget(r.last_close, r.r1, r.r2).pct,
     buyable: (r) => (r.is_buyable ? 1e15 : 0) + (turnoverOf(r) || 0),
     conviction: (r) => (r.is_buyable ? 1e9 : 0) + (r.conviction ?? 0),
-  }, 'conviction', 'desc');
+    // AI-sector priority (Ajay 2026-06-25): AI-ecosystem winners first — by
+    // sector rank (chips→energy/nuclear→water-cooling→grid→software→…), then
+    // buyable + conviction within. Non-AI names sink below. See lib/breakoutSort.
+    sector: aiSectorSortValue,
+  }, 'sector', 'desc');
 
   return (
     <div className="sepa-page">
@@ -386,6 +400,14 @@ export function BreakoutsPage() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <strong className="mono">{r.symbol}</strong>
                       <LeveragedBadge symbol={r.symbol} name={r.name} compact />
+                      {r.ai_sector_id && (
+                        <span title={`AI-ecosystem sector: ${r.ai_sector}${r.ai_sector_etf ? ` · ETF ${r.ai_sector_etf}` : ''} — these lead the breakout list`}
+                          style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--gold,#c9a227)',
+                            border: '1px solid rgba(201,162,39,0.5)', background: 'rgba(201,162,39,0.12)',
+                            borderRadius: 5, padding: '0 4px', whiteSpace: 'nowrap' }}>
+                          {AI_SECTOR_CHIP[r.ai_sector_id] ?? r.ai_sector}
+                        </span>
+                      )}
                       {r.is_buyable ? (
                         <span title="Buyable now — clears the strict Minervini buy gate (is_buyable), same as the SEPA scan's 🟢 Enter"
                           style={{ fontSize: '0.6rem', fontWeight: 800, color: '#10b981',

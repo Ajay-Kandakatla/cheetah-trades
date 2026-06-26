@@ -26,6 +26,13 @@ export type BreakoutBoardRow = {
   r1?: number | null;                 // trade-plan R-multiple targets (entry +1R / +2R)
   r2?: number | null;
   industry?: string | null;
+  /** AI-ecosystem sector tag + priority (backend supply_demand.sectors) — Ajay
+   *  wants breakout lists led by AI-sector winners (chips/energy/water-cooling/…).
+   *  ai_sector_rank: 0 = highest priority; null = not an AI-ecosystem name. */
+  ai_sector?: string | null;
+  ai_sector_id?: string | null;
+  ai_sector_etf?: string | null;
+  ai_sector_rank?: number | null;
   is_etf?: boolean;
   /** Strict Minervini buy-now gate (scanner._is_buyable) — the SAME gate the
    *  SEPA scan's 🟢 Enter uses, not just the Trend-Template qualifier. */

@@ -179,6 +179,20 @@ def board(top: int = 250, min_count: int = 1) -> dict:
     for x in rows:
         x["beta"] = _betas.get(x["symbol"])
 
+    # AI-ecosystem sector tag + priority rank (Ajay 2026-06-25: breakout lists
+    # lead with AI-sector winners — chips/energy/nuclear/water-cooling/grid/…).
+    # Lazy + fenced: a sector-map failure must never blank the board.
+    try:
+        from supply_demand.sectors import ai_sector_for_ticker
+        for x in rows:
+            ais = ai_sector_for_ticker(x["symbol"])
+            x["ai_sector"] = ais["label"] if ais else None
+            x["ai_sector_id"] = ais["id"] if ais else None
+            x["ai_sector_etf"] = ais["etf"] if ais else None
+            x["ai_sector_rank"] = ais["rank"] if ais else None
+    except Exception as exc:                            # noqa: BLE001
+        log.debug("board: ai-sector tag failed: %s", exc)
+
     def _mp(x):
         return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")
 

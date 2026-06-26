@@ -188,7 +188,7 @@ SECTORS: list[Sector] = [
         "etf": "XLU",
         "commodity": "",
         "keywords": ["data center power demand", "AI electricity demand", "interconnection queue", "grid capacity", "gas turbine shortage", "transformer shortage", "nuclear PPA", "baseload power", "SMR"],
-        "sp_tickers": ["CEG", "VST", "NRG", "GEV", "ETN", "PWR", "VRT", "D", "SO", "NEE"],
+        "sp_tickers": ["CEG", "VST", "NRG", "AES", "D", "SO", "NEE"],
         "thesis": "Structural demand surge (data centers ~4%→9% of US power by 2030) vs a supply chain that can't add dispatchable capacity fast — gas-turbine slots sold out to ~2028, large transformers 2+ yr lead, ~2.6 TW stuck in interconnection queues. Nuclear (see 'uranium') + gas are the baseload feeders; grid gear is the binding constraint. Power is the new bottleneck behind AI chips.",
         "gap_economics": {
             "demand_usd_bn": 500,
@@ -437,3 +437,26 @@ def sectors_for_ticker(ticker: str) -> list[Sector]:
     """Sectors that include this ticker in their sp_tickers roster."""
     t = ticker.upper()
     return [s for s in SECTORS if t in (s.get("sp_tickers") or [])]
+
+
+# AI-ecosystem sectors in PRIORITY order (Ajay 2026-06-25: breakout lists lead
+# with AI-sector winners — chips → energy/nuclear → water/cooling → grid →
+# software → infra/optical). Lower rank = higher priority.
+AI_SECTOR_PRIORITY: list[str] = [
+    "ai_chips", "memory_hbm",
+    "uranium", "power_grid", "oil_gas",
+    "datacenter_water_cooling", "grid_equipment",
+    "ai_software", "datacenter_reits", "optical_interconnect",
+]
+
+
+def ai_sector_for_ticker(ticker: str):
+    """The highest-priority AI-ecosystem sector this ticker belongs to, or None.
+    Used to rank/tag breakout lists so AI-theme leaders sort to the top.
+    Returns {id, label, etf, rank} (rank = index in AI_SECTOR_PRIORITY)."""
+    t = (ticker or "").upper().strip()
+    for rank, sid in enumerate(AI_SECTOR_PRIORITY):
+        s = SECTOR_BY_ID.get(sid)
+        if s and t in (s.get("sp_tickers") or []):
+            return {"id": sid, "label": s["label"], "etf": s.get("etf") or "", "rank": rank}
+    return None
