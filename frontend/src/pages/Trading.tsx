@@ -842,6 +842,9 @@ function AutoEntryCard({ auto, mode, onChanged }: {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Collapsed by default — the portfolio leads now; the buyable list tucks
+  // away below it and expands on demand (Ajay 2026-06-26).
+  const [expanded, setExpanded] = useState(false);
 
   const [editingCap, setEditingCap] = useState(false);
   const [capDraft, setCapDraft] = useState('');
@@ -926,8 +929,19 @@ function AutoEntryCard({ auto, mode, onChanged }: {
             auto entries are off — exits stay automatic regardless.
           </span>
         )}
+        <button onClick={() => setExpanded((e) => !e)}
+                title={expanded ? 'Collapse the buyable list' : 'Show the buyable list + equity cap'}
+                style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6,
+                         background: 'transparent', color: C.muted, border: '1px solid var(--hairline,#2a2a2a)',
+                         borderRadius: 8, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700,
+                         cursor: 'pointer' }}>
+          {candidates.length} buyable {expanded ? '▾' : '▸'}
+        </button>
       </div>
 
+      {err && <div style={{ fontSize: '0.72rem', color: C.red, marginTop: 5, fontWeight: 700 }}>⛔ {err}</div>}
+
+      {expanded && (<>
       {/* Equity cap row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
         <span style={{ fontSize: '0.72rem', color: C.sub }}>equity cap</span>
@@ -967,7 +981,6 @@ function AutoEntryCard({ auto, mode, onChanged }: {
         )}
       </div>
       {capErr && <div style={{ fontSize: '0.72rem', color: C.red, marginTop: 5, fontWeight: 700 }}>⛔ {capErr}</div>}
-      {err && <div style={{ fontSize: '0.72rem', color: C.red, marginTop: 5, fontWeight: 700 }}>⛔ {err}</div>}
 
       {/* Candidates — why did/didn't it buy each one */}
       <div style={{ marginTop: 12 }}>
@@ -1030,6 +1043,7 @@ function AutoEntryCard({ auto, mode, onChanged }: {
           </div>
         )}
       </div>
+      </>)}
 
       {confirming && (
         <ConfirmDialog title="Enable auto entries?"
@@ -1846,11 +1860,6 @@ export function TradingPage() {
             </div>
           )}
 
-          {/* c. Auto-Entry — toggle, equity cap, daily counter, candidate checks */}
-          {status.auto_entry && (
-            <AutoEntryCard auto={status.auto_entry} mode={status.mode} onChanged={refresh} />
-          )}
-
           {/* UNPROTECTED page alarm (2026-06-13) — promoted out of a single
               scroll-off-right table cell. An open position with no resting stop
               is the one state that means "real risk uncovered NOW"; it gets a
@@ -1881,14 +1890,19 @@ export function TradingPage() {
             </div>
           )}
 
-          {/* d. Positions */}
+          {/* c. Positions (portfolio) — now ABOVE the buyable list (Ajay 2026-06-26) */}
           <PositionsTable positions={status.positions || []}
                           simMode={sim}
                           onFlatten={(symbol) => setConfirm({ kind: 'flatten', symbol })}
                           onFlattenAll={() => setConfirm({ kind: 'flatten-all' })}
                           onSimReset={() => setConfirm({ kind: 'sim-reset' })} />
 
-          {/* d. Enter card */}
+          {/* d. Auto-Entry / buyable list — collapsible, tucked below the portfolio */}
+          {status.auto_entry && (
+            <AutoEntryCard auto={status.auto_entry} mode={status.mode} onChanged={refresh} />
+          )}
+
+          {/* e. Enter card */}
           <EnterCard armed={status.armed} mode={status.mode} onPlaced={refresh} />
 
           {/* e. Ledger */}
