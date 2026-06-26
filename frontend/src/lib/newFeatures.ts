@@ -43,6 +43,9 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'tomorrow-bias-options', label: '🌙 Tomorrow bias — overnight/after-hours + options flow → a next-open lean on every ticker’s options-flow tab', addedAt: '2026-06-26', route: '/sepa' },
   { id: 'market-tomorrow-bias', label: '🌙 Market Tomorrow Bias — SPY/QQQ overnight gap + VIX + regime → one lean for the next session', addedAt: '2026-06-26', route: '/overnight' },
   { id: 'options-net-direction', label: '📈 Bull/Bear stock tag on the options-flow tab — plain direction next to the contrarian SOIR signal', addedAt: '2026-06-26', route: '/sepa' },
+  { id: 'autopilot-analysis-column', label: '🐆 Analysis column on Auto-Pilot — the Cheetah Verdict (Minervini + Bonde) on every engine position', addedAt: '2026-06-26', route: '/trading' },
+  { id: 'portfolio-buy-verdict', label: '🐆 Buy verdict on each Portfolio holding — the ENTER/WATCH/AVOID read + criteria, at a glance', addedAt: '2026-06-26', route: '/portfolio' },
+  { id: 'autopilot-pnl-simple', label: '💰 Simpler Auto-Pilot P&L — started vs now total (what we gained together), realized/unrealized in the tooltip', addedAt: '2026-06-26', route: '/trading' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

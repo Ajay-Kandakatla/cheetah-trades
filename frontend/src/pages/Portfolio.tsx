@@ -15,6 +15,8 @@ import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
 import { PatternChips } from '../components/PatternChips';
+import { BuyVerdictChip } from '../components/BuyVerdictChip';
+import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
 import { EarningsChip } from '../components/EarningsChip';
 import { useEarningsMap } from '../hooks/useEarningsMap';
 import { AnalystPulseChip } from '../components/AnalystPulseChip';
@@ -82,6 +84,9 @@ export default function PortfolioPage() {
   const { data, loading, error, refresh, updatedAt } = useHoldings(true);
   const rows: HoldingRow[] = data?.rows ?? [];
   const { verdicts } = usePatternVerdicts();
+  // Cheetah Verdict (Minervini SEPA + Bonde) — the same buy read the Analysis
+  // tab shows, so each holding carries its buy verdict + criteria (Ajay 2026-06-26).
+  const { verdicts: buyVerdicts } = useBuyVerdicts(useMemo(() => rows.map((r) => r.symbol), [rows]));
   const earningsMap = useEarningsMap();   // ⚠ ER chip on each holding row
   // 📊 Analyst Pulse — bulk map for the holdings; one modal instance for
   // the whole page, opened with the clicked symbol.
@@ -322,6 +327,10 @@ export default function PortfolioPage() {
                     </span>
                   )}
                   <PatternChips v={verdicts.get((r.symbol || '').toUpperCase())} />
+                  {(() => {
+                    const bv = buyVerdicts.get((r.symbol || '').toUpperCase());
+                    return bv ? <BuyVerdictChip row={{ buy_verdict: bv, is_etf: bv.is_etf }} compact /> : null;
+                  })()}
                   <EarningsChip symbol={r.symbol} info={earningsMap.get((r.symbol || '').toUpperCase())} />
                   <AnalystPulseChip
                     symbol={r.symbol}

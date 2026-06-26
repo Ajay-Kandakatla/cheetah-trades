@@ -18,12 +18,15 @@
  * mode "sim" = built-in simulated broker (fills from the app's own live
  * quotes, no external account, always configured); "paper"/"live" = Alpaca.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { stopStatusView } from '../lib/autopilotStop';
+import { summarizePnl } from '../lib/autopilotPnl';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
+import { BuyVerdictChip } from '../components/BuyVerdictChip';
+import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', blue: '#38bdf8', violet: '#a78bfa', muted: '#94a3b8', sub: '#8a93a6' };
 
@@ -434,6 +437,10 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
   onFlattenAll: () => void;
   onSimReset: () => void;
 }) {
+  // Same Cheetah Verdict (Minervini SEPA + Bonde) the Analysis tab shows, per
+  // held name — so the user can see the buy read on every engine position.
+  const symbols = useMemo(() => positions.map((p) => p.symbol), [positions]);
+  const { verdicts } = useBuyVerdicts(symbols);
   return (
     <section style={{ marginTop: '1rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -470,6 +477,7 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
             <thead>
               <tr>
                 <th style={TH}>Symbol</th>
+                <th style={TH} title="The Analysis-tab Cheetah Verdict — Minervini SEPA + Bonde buy read for this name.">Analysis</th>
                 <th style={TH}>Qty</th>
                 <th style={TH}>Avg entry</th>
                 <th style={TH}>Last</th>
@@ -489,6 +497,14 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                     <td style={TD}>
                       <TickerLink ticker={p.symbol} fromLabel="Auto-Pilot" showWatchlist={false}
                                   style={{ fontWeight: 700, color: 'inherit', textDecoration: 'none' }} />
+                    </td>
+                    <td style={TD}>
+                      {(() => {
+                        const v = verdicts.get((p.symbol || '').toUpperCase());
+                        if (v === undefined) return <span style={{ color: C.sub, fontSize: '0.72rem' }}>…</span>;
+                        if (v === null) return <span style={{ color: C.sub, fontSize: '0.72rem' }} title="Not in today's scan — open the ticker to analyze.">—</span>;
+                        return <BuyVerdictChip row={{ buy_verdict: v, is_etf: v.is_etf }} compact />;
+                      })()}
                     </td>
                     <td className="mono" style={TD}>{p.qty}</td>
                     <td className="mono" style={TD}>{money(p.avg_entry)}</td>
@@ -1772,25 +1788,25 @@ export function TradingPage() {
               </span>
             )}
 
-            {/* Did we make money? Started-with vs now (Ajay 2026-06-18). */}
+            {/* Simple "started → now": the portfolio total vs the cash it began
+                with, and what we gained together (Ajay 2026-06-26 — "just show
+                100k vs 100138"). Realized/unrealized moved to the hover detail. */}
             {status.pnl_summary && status.pnl_summary.total_pnl_dollars != null && (() => {
               const p = status.pnl_summary!;
-              const up = (p.total_pnl_dollars ?? 0) >= 0;
-              const col = up ? C.green : '#f87171';
-              const sign = up ? '+' : '';
+              const v = summarizePnl(p);
+              const col = v.up ? C.green : '#f87171';
+              const sign = v.up ? '+' : '−';
+              const detail = `Started ${money(v.startingCash, 0)} → now ${money(v.now, 0)}.`
+                + (p.realized_dollars != null ? ` Realized ${money(p.realized_dollars, 0)} on closed trades;` : '')
+                + ` unrealized ${money(p.unrealized_dollars ?? 0, 0)} on open positions.`;
               return (
-                <span className="mono" style={{ fontSize: '0.78rem' }}
-                      title="All-time P&L since the Auto-Pilot started: equity now vs the cash it began with. Realized = booked on closed trades; unrealized = open positions.">
-                  <span style={{ color: C.sub }}>started {money(p.starting_cash, 0)} → </span>
-                  <b style={{ color: col }}>
-                    {up ? '▲' : '▼'} {sign}{money(p.total_pnl_dollars ?? 0, 0)}
-                    {p.total_pnl_pct != null ? ` (${sign}${p.total_pnl_pct.toFixed(1)}%)` : ''}
+                <span className="mono" style={{ fontSize: '0.78rem' }} title={detail}>
+                  <span style={{ color: C.sub }}>started {money(v.startingCash, 0)} → now </span>
+                  <b style={{ color: '#e5e7eb' }}>{money(v.now, 0)}</b>
+                  <b style={{ color: col, marginLeft: 6 }}>
+                    {v.up ? '▲' : '▼'} {sign}{money(Math.abs(v.gain), 0)}
+                    {v.pct != null ? ` (${sign}${Math.abs(v.pct).toFixed(1)}%)` : ''}
                   </b>
-                  <span style={{ color: C.sub }}>
-                    {' '}all-time
-                    {p.realized_dollars != null ? ` · realized ${money(p.realized_dollars, 0)}` : ''}
-                    {' '}· unrealized {money(p.unrealized_dollars, 0)}
-                  </span>
                 </span>
               );
             })()}

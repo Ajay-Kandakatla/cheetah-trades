@@ -1974,6 +1974,77 @@ async def sepa_candidate_detail(symbol: str):
     return JSONResponse(payload)
 
 
+def _analyze_for_verdict(sym: str, latest: dict):
+    """Minimal on-demand analyze for the batch-verdict endpoint — the same
+    rank_one + _analyze_symbol path the candidate page uses, but side-effect
+    free (no persist / research). Returns the analyzed row or None."""
+    try:
+        from sepa import prices, rs_rank, scanner as sc
+        prices.load_prices(sym, "2y", False)
+        universe = [r["symbol"] for r in (latest.get("all_results") or [])] or [sym]
+        rs_one = rs_rank.rank_one(sym, universe, cache_key=latest.get("generated_at"))
+        rs_map = {sym: rs_one} if rs_one is not None else {}
+        return sc._analyze_symbol(sym, rs_map, require_liquidity=False, require_min_adr=0.0)
+    except Exception as exc:
+        log.warning("verdict analyze %s failed: %s", sym, exc)
+        return None
+
+
+@app.get("/sepa/verdicts")
+async def sepa_verdicts(symbols: str, analyze: bool = True):
+    """Batch Cheetah-Verdict (Minervini SEPA + Bonde) for a set of symbols —
+    powers the Auto-Pilot positions table and the Portfolio cards so the user
+    sees the same buy verdict the Analysis tab shows, per holding.
+
+    Cache-first (instant for universe names); a bounded on-demand analyze fills
+    held names not in today's scan. Returns {symbol: slim_verdict | null}.
+    """
+    from sepa.verdict_batch import parse_symbols, slim_verdict
+    syms = parse_symbols(symbols)
+    latest = sepa_scanner.load_latest() or {}
+    by_sym = {c["symbol"]: c for c in (latest.get("all_results") or []) if c.get("symbol")}
+
+    out: dict = {}
+    misses: list[str] = []
+    for s in syms:
+        if s in by_sym:
+            out[s] = slim_verdict(by_sym[s])
+        else:
+            misses.append(s)
+
+    analyzed_n = 0
+    if analyze and misses:
+        capped = misses[:10]                      # bound the on-demand cost
+        # Pre-warm the shared universe-score cache ONCE so the concurrent
+        # analyzes below all hit it warm. Otherwise, on a cold container each
+        # miss re-scores the whole ~3000-name universe in parallel (thundering
+        # herd). Cheap no-op when already warm (keyed by the scan's generated_at).
+        try:
+            from sepa import rs_rank
+            warm_universe = [r["symbol"] for r in (latest.get("all_results") or [])] or capped
+            await asyncio.to_thread(rs_rank._universe_scores, warm_universe,
+                                    cache_key=latest.get("generated_at"))
+        except Exception as exc:
+            log.debug("verdict pre-warm failed: %s", exc)
+        rows = await asyncio.gather(*[
+            asyncio.to_thread(_analyze_for_verdict, s, latest) for s in capped
+        ])
+        for s, row in zip(capped, rows):
+            out[s] = slim_verdict(row)
+        analyzed_n = len(capped)
+        for s in misses[10:]:
+            out[s] = None
+    else:
+        for s in misses:
+            out[s] = None
+
+    return JSONResponse(_clean_json_floats({
+        "verdicts": out,
+        "as_of": latest.get("generated_at"),
+        "analyzed_misses": analyzed_n,
+    }))
+
+
 @app.get("/sepa/dual-momentum")
 async def sepa_dual_momentum_get(
     top_n: int = Query(15, ge=1, le=50),
