@@ -81,6 +81,9 @@ export function PriceAlertModal({
     >
       <div
         className="sepa-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Set price alert for ${symbol}`}
         style={{ maxWidth: 460, width: '100%', height: '100%', overflow: 'auto' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
@@ -93,7 +96,7 @@ export function PriceAlertModal({
               <div className="sepa-drawer__exchange mono">last ${currentPrice}</div>
             )}
           </div>
-          <button className="sepa-drawer__close" onClick={onClose}>×</button>
+          <button className="sepa-drawer__close" onClick={onClose} aria-label="Close">×</button>
         </header>
 
         <form className="sepa-alert-form" onSubmit={submit}>
