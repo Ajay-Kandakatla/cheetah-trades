@@ -84,16 +84,19 @@ export function PriceAlertModal({
         style={{ maxWidth: 460, width: '100%', height: '100%', overflow: 'auto' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alert-modal-title"
       >
         <header className="sepa-drawer__head">
           <div>
             <div className="eyebrow">Set alert</div>
-            <h2>{symbol}</h2>
+            <h2 id="alert-modal-title">{symbol}</h2>
             {currentPrice != null && (
               <div className="sepa-drawer__exchange mono">last ${currentPrice}</div>
             )}
           </div>
-          <button className="sepa-drawer__close" onClick={onClose}>×</button>
+          <button className="sepa-drawer__close" onClick={onClose} aria-label="Close">×</button>
         </header>
 
         <form className="sepa-alert-form" onSubmit={submit}>
