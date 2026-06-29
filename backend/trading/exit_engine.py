@@ -86,6 +86,17 @@ def _et_day() -> str:
 
 # ── trading_config (single doc) + trade_ledger ─────────────────────────────
 
+def _auto_entry_default() -> bool:
+    """Auto-entry default: ON in paper/sim, OFF in live (Ajay 2026-06-26 —
+    "default on, it's paper anyway"). Live stays opt-in so a real account never
+    auto-buys by default; arming (the master switch) is still required in EVERY
+    mode, so a default-on auto-entry still places no order until armed."""
+    try:
+        return _broker_mode() != "live"
+    except Exception:                              # noqa: BLE001
+        return False                               # fail safe → off
+
+
 def get_config() -> dict:
     doc = None
     db = _db()
@@ -104,8 +115,12 @@ def get_config() -> dict:
     except (TypeError, ValueError):
         equity_cap = _cap_default
     return {
-        "armed": bool(doc.get("armed", False)),          # default DISARMED
-        "auto_entry": bool(doc.get("auto_entry", False)),  # default OFF
+        "armed": bool(doc.get("armed", False)),          # default DISARMED (master switch)
+        # Default ON in paper/sim, OFF in live. Respect an explicit stored value
+        # (once toggled) either way; only fall back to the mode-aware default
+        # when the key was never set. Arming still gates every actual order.
+        "auto_entry": (bool(doc["auto_entry"]) if "auto_entry" in doc
+                       else _auto_entry_default()),
         "equity_cap": equity_cap,       # "assume you have 5k" sizing ceiling
         "consecutive_losses": int(doc.get("consecutive_losses") or 0),
         "processed_order_ids": list(doc.get("processed_order_ids") or []),
