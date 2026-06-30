@@ -41,12 +41,14 @@ sign-off, not a book page.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Optional
 
 from trading import entries
 from trading import risk_rules
 from trading.broker import get_broker
-from trading.exit_engine import _db, _et_day, _utc_iso, get_config, ledger, update_config
+from trading.exit_engine import (
+    _broker_mode, _db, _et_day, _utc_iso, get_config, ledger, update_config)
 
 broker = get_broker()    # module-level so tests can monkeypatch AE.broker
 
@@ -264,6 +266,32 @@ def _check(checks: dict, name: str, ok: bool, value=None) -> bool:
     return bool(ok)
 
 
+def _never_auto_stop() -> bool:
+    """Paper/sim: never auto-STOP entries on the daily cap or a risk-off gauge —
+    let the engine cycle entries+exits continuously until the user disarms or
+    turns auto-entry off (Ajay 2026-06-26: 'never stop auto entry and exit until
+    I say so, for paper'). Live keeps BOTH guardrails.
+
+    This lifts only the time/regime auto-stops. Every per-order safety still
+    applies in EVERY mode: MAX_POSITIONS capacity, a resting stop, never-average-
+    up, the earnings shield, and the per-name pivot/RelVol trigger — so the
+    engine keeps cycling but never trades incorrectly."""
+    try:
+        return _broker_mode() != "live"
+    except Exception:                              # noqa: BLE001
+        return False                               # fail safe → keep the cap
+
+
+def entry_cap(never_stop: bool) -> float:
+    """Per-day auto-entry ceiling: unlimited in paper/sim, the book cap in live."""
+    return math.inf if never_stop else float(MAX_AUTO_ENTRIES_PER_DAY)
+
+
+def gauge_allows(never_stop: bool, gauge: str) -> bool:
+    """Risk-off gauge halts new entries in live; in paper/sim it does not stop them."""
+    return bool(never_stop) or gauge != "risk_off"
+
+
 def _ledger_disabled_once(cfg: dict, gate: dict) -> bool:
     """One auto_entry_disabled ledger row per ET day max (no tick spam)."""
     today = _et_day()
@@ -324,6 +352,10 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     pos_count = len(positions)
     entries_today = _entries_today(day)
     gauge = _gauge_state()
+    # Paper/sim: lift the daily cap + the risk-off halt so the engine never
+    # auto-stops cycling; live keeps both. Per-order gates are untouched.
+    never_stop = _never_auto_stop()
+    cap_limit = entry_cap(never_stop)
 
     # Cheap-first pass (no quotes needed) — survivors get ONE batched quote.
     survivors = []
@@ -339,8 +371,9 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         ok &= _check(checks, "position_slots",
                      pos_count < risk_rules.MAX_POSITIONS, pos_count)
         ok &= _check(checks, "daily_cap",
-                     entries_today < MAX_AUTO_ENTRIES_PER_DAY, entries_today)
-        ok &= _check(checks, "gauge_not_risk_off", gauge != "risk_off", gauge)
+                     entries_today < cap_limit, entries_today)
+        ok &= _check(checks, "gauge_not_risk_off",
+                     gauge_allows(never_stop, gauge), gauge)
         edays = _earnings_days(sym)
         ok &= _check(checks, "earnings_shield",
                      edays is None or edays > entries.EARNINGS_SHIELD_DAYS, edays)
@@ -369,7 +402,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         # Re-check the MUTABLE caps — entries placed earlier in THIS tick
         # consume daily-cap and position slots after the cheap pass ran.
         cap_ok = _check(checks, "daily_cap",
-                        entries_today < MAX_AUTO_ENTRIES_PER_DAY, entries_today)
+                        entries_today < cap_limit, entries_today)
         slot_ok = _check(checks, "position_slots",
                          pos_count < risk_rules.MAX_POSITIONS, pos_count)
         if not (cap_ok and slot_ok):
