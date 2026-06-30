@@ -18,6 +18,7 @@ function Chart({ data }: { data: Row[] }) {
   const W = 640, H = 180, PL = 30, PR = 14, PT = 12, PB = 22;
   const iw = W - PL - PR, ih = H - PT - PB;
   const n = data.length;
+  const [hover, setHover] = useState<number | null>(null);
   const x = (i: number) => PL + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
   const y = (s: number) => PT + (1 - Math.max(0, Math.min(100, s)) / 100) * ih;
   const line = data.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(d.score).toFixed(1)}`).join(' ');
@@ -37,10 +38,32 @@ function Chart({ data }: { data: Row[] }) {
       <text x={PL - 4} y={y(100) + 8} textAnchor="end" fontSize="9" fill="var(--cm-slate,#8595ad)">100</text>
       <text x={PL - 4} y={y(0)} textAnchor="end" fontSize="9" fill="var(--cm-slate,#8595ad)">0</text>
       <path d={line} fill="none" stroke={bandColor(last.score)} strokeWidth="2" />
-      {data.map((d, i) => (
-        <circle key={i} cx={x(i)} cy={y(d.score)} r={i === n - 1 ? 3.5 : 2} fill={bandColor(d.score)} />
-      ))}
-      <text x={x(n - 1)} y={y(last.score) - 7} textAnchor="middle" fontSize="11" fontWeight={700} fill={bandColor(last.score)}>{last.score}</text>
+      {data.map((d, i) => {
+        const cx = x(i), cy = y(d.score), isHover = hover === i;
+        return (
+          <g key={i}>
+            <circle cx={cx} cy={cy} r={isHover ? 4.5 : i === n - 1 ? 3.5 : 2} fill={bandColor(d.score)} />
+            {/* invisible larger hit target so each dot is easy to hover / tap */}
+            <circle cx={cx} cy={cy} r={11} fill="transparent" style={{ cursor: 'pointer' }}
+                    onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
+                    onClick={() => setHover((h) => (h === i ? null : i))}>
+              <title>{`${fmtDate(d.date_et)} · score ${d.score}${d.state ? ` · ${d.state}` : ''}`}</title>
+            </circle>
+          </g>
+        );
+      })}
+      {/* score label — always on the last point, and on whichever dot is hovered */}
+      {hover !== n - 1 && (
+        <text x={x(n - 1)} y={y(last.score) - 7} textAnchor="middle" fontSize="11" fontWeight={700} fill={bandColor(last.score)}>{last.score}</text>
+      )}
+      {hover != null && (() => {
+        const d = data[hover], cx = x(hover), cy = y(d.score);
+        const below = cy - 14 < PT;          // near the top → drop the label below the dot
+        return (
+          <text x={cx} y={below ? cy + 15 : cy - 7} textAnchor="middle" fontSize="11"
+                fontWeight={700} fill={bandColor(d.score)} pointerEvents="none">{d.score}</text>
+        );
+      })()}
       <text x={x(0)} y={H - 6} textAnchor="start" fontSize="9" fill="var(--cm-slate,#8595ad)">{fmtDate(data[0].date_et)}</text>
       <text x={x(n - 1)} y={H - 6} textAnchor="end" fontSize="9" fill="var(--cm-slate,#8595ad)">{fmtDate(last.date_et)}</text>
     </svg>
