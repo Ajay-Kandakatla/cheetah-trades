@@ -1,0 +1,1 @@
+## 2024-11-20 - Icon-Only Close Buttons\n**Learning:** Several modal components (like PriceAlertModal) use an icon-only '×' button for closing, which is not accessible to screen readers.\n**Action:** Add `aria-label="Close"` to these buttons.
