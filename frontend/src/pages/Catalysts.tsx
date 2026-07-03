@@ -506,7 +506,7 @@ function DeepDivePanel({ ticker, onClose }: { ticker: string; onClose: () => voi
               </div>
             )}
           </div>
-          <button className="ntp-close" onClick={onClose}>×</button>
+          <button className="ntp-close" onClick={onClose} aria-label="Close">×</button>
         </header>
 
         <div className="ntp-body">
