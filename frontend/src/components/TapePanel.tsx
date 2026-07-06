@@ -9,6 +9,7 @@
  * Honest by design: tick rule ≈75-80% of the quote rule; no Level-2 feed so
  * no bookmap; the accuracy strip shows OUR measured record, not the WhatsApp
  * group's 70%. Reads /orderflow/{sym}; Scan POSTs a fresh compute. */
+import { useEffect, useRef } from 'react';
 import { useOrderflow } from '../hooks/useOrderflow';
 import { InfoButton } from './InfoButton';
 import {
@@ -69,6 +70,17 @@ const SIDE_CHIP: Record<string, { label: string; color: string }> = {
 
 export function TapePanel({ symbol }: { symbol: string }) {
   const { data, loading, scanning, scan, accuracy } = useOrderflow(symbol);
+
+  // First visit for a ticker → scan automatically, nobody hunts for a button
+  // (Ajay 2026-07-06: "How do I scan this?"). Once per symbol per mount, so a
+  // failed scan (found:false) shows its message instead of looping.
+  const autoScanned = useRef<string | null>(null);
+  useEffect(() => {
+    if (data && !data.found && !scanning && autoScanned.current !== symbol) {
+      autoScanned.current = symbol;
+      scan();
+    }
+  }, [data, scanning, scan, symbol]);
 
   if (loading && !data) {
     return <section style={CARD}><Eyebrow /><p className="sepa-empty">Loading tape snapshot…</p></section>;
