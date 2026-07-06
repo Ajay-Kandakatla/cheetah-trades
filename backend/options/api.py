@@ -95,17 +95,67 @@ async def get_soir_scan(
     }
 
 
+SOIR_STALE_HOURS = 24
+
+
+def _soir_row_is_stale(row: dict, now=None) -> bool:
+    """True when the snapshot is older than SOIR_STALE_HOURS (or undated).
+
+    Self-healing hook (2026-07-06): names outside every scan universe — the
+    UI watchlist lives client-side, so the nightly cron can't see it — used
+    to serve 5-week-old SOIR forever (AMBA/CRWV). Viewing a ticker now
+    freshens it in the background."""
+    from datetime import datetime, timedelta
+    ts = row.get("scanned_at") or row.get("as_of")
+    if ts is None:
+        return True
+    if isinstance(ts, str):
+        try:
+            ts = datetime.fromisoformat(ts.replace("Z", ""))
+        except Exception:
+            return True
+    now = now or datetime.utcnow()
+    try:
+        return (now - ts) > timedelta(hours=SOIR_STALE_HOURS)
+    except Exception:
+        return True
+
+
+def _background_scan_one(sym: str) -> None:
+    try:
+        sepa_record = None
+        try:
+            from sepa import scanner as sepa_scanner
+            latest = sepa_scanner.load_latest() or {}
+            sepa_record = next((c for c in (latest.get("all_results") or [])
+                                if c.get("symbol") == sym), None)
+        except Exception:
+            pass
+        snap = soir_mod.compute_for_symbol(sym, sepa_record)
+        if snap:
+            soir_mod.save_latest([snap])
+            log.info("soir self-heal: refreshed stale snapshot for %s", sym)
+    except Exception as exc:
+        log.warning("soir self-heal failed for %s: %s", sym, exc)
+
+
 @router.get("/options/soir/{symbol}")
-async def get_soir_for_symbol(symbol: str):
-    """SOIR snapshot + Schaeffer signal for a single ticker. Returns the
-    most recent cached snapshot — does NOT refetch chains (yfinance is
-    too slow for on-demand). For a fresh value use POST refresh.
+async def get_soir_for_symbol(symbol: str, background_tasks: BackgroundTasks):
+    """SOIR snapshot + Schaeffer signal for a single ticker. Serves the most
+    recent cached snapshot instantly; when that snapshot is older than 24h
+    (ticker outside the nightly universe), a background refresh is kicked so
+    the NEXT view is fresh — `refreshing: true` flags it.
     """
-    rows = soir_mod.load_latest(symbol=symbol.upper())
+    sym = symbol.upper()
+    rows = soir_mod.load_latest(symbol=sym)
     if not rows:
-        return {"symbol": symbol.upper(), "found": False,
+        return {"symbol": sym, "found": False,
                 "message": "No SOIR data yet for this ticker — wait for next scan."}
-    return {"symbol": symbol.upper(), "found": True, **rows[0]}
+    row = rows[0]
+    refreshing = _soir_row_is_stale(row)
+    if refreshing:
+        background_tasks.add_task(_background_scan_one, sym)
+    return {"symbol": sym, "found": True, "refreshing": refreshing, **row}
 
 
 @router.post("/options/soir/refresh")
@@ -196,6 +246,18 @@ async def scan_one(symbol: str):
                            "likely illiquid, ADR with thin options, or invalid symbol."}
     soir_mod.save_latest([snap])
     return {"symbol": sym, "found": True, **snap}
+
+
+@router.get("/options/gex-history/{symbol}")
+async def get_gex_history(symbol: str, days: int = Query(90, ge=1, le=365)):
+    """Daily dealer-GEX ledger for one ticker (regime, net GEX, max-pain vs
+    spot, walls) — recorded by the 17:50 ET cron so 'did GEX flag this move?'
+    can be answered from data instead of a post-move guess."""
+    from . import gex_history
+    rows = gex_history.series(symbol.upper(), days=days)
+    return {"symbol": symbol.upper(), "days": days, "rows": rows,
+            "note": ("Recording began 2026-07-06 — the series fills in one "
+                     "row per trading day from here.")}
 
 
 # ---------------------------------------------------------------------------

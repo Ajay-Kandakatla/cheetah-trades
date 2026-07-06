@@ -93,6 +93,13 @@
 # so Monday morning's brief has a complete options-pulse picture.
 0      21    *    *    0    /usr/local/bin/python -m options.scanner russell1000
 #
+# Dealer-GEX daily snapshot — 5:50pm ET weekdays, after the 5:30 SOIR scan
+# has fresh signals. One slim row per (portfolio + watchlist + SOIR
+# bullish/watch + top-SEPA) name into gex_history, never pruned — so
+# "did GEX flag this move?" is answerable from data (2026-07-06: today's
+# watchlist pop could only be GEX-read live, post-move).
+50     17    *    *    1-5  /usr/local/bin/python -m options.gex_history
+#
 # Daily 7pm ET — pre-warm SC 13D/G filings cache for every candidate in
 # the latest scan. EDGAR is fast (~0.3 sec/ticker) so this is cheap;
 # without it the 📜 13D chip never renders on cards because the bulk

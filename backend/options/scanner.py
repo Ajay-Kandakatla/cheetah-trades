@@ -59,6 +59,25 @@ CORE_TICKERS = [
 ]
 
 
+def _always_include_symbols() -> list[str]:
+    """Portfolio holdings (all users) + the SEPA file-watchlist. Best-effort:
+    each source degrades to empty on failure, never blocks the scan."""
+    out: list[str] = []
+    try:
+        from portfolio.store import _get_db
+        db = _get_db()
+        if db is not None:
+            out.extend(db.portfolio_holdings.distinct("ticker"))
+    except Exception as exc:
+        log.debug("portfolio symbols skipped: %s", exc)
+    try:
+        from sepa import scanner as sepa_scanner
+        out.extend((x.get("symbol") or "") for x in sepa_scanner.load_watchlist())
+    except Exception as exc:
+        log.debug("sepa file-watchlist skipped: %s", exc)
+    return [t.upper() for t in out if t and t.strip()]
+
+
 def _build_universe(mode: Optional[str] = None,
                     max_size: int = DEFAULT_MAX_UNIVERSE) -> list[tuple[str, Optional[dict]]]:
     """Assemble (symbol, sepa_record_or_None) pairs to scan.
@@ -109,6 +128,16 @@ def _build_universe(mode: Optional[str] = None,
                 universe.append((t, rec))
     except Exception as exc:
         log.debug("watchlist universe skipped: %s", exc)
+
+    # 2b. Names the user actually OWNS or WATCHES — these must never go
+    # stale regardless of universe mode (2026-07-06: AMBA/CRWV sat on
+    # 5-week-old SOIR because they're outside russell1000 and outside the
+    # competitor watchlist; their pop showed 79-88 pct put-crowding that the
+    # nightly sweep never refreshed).
+    for t in _always_include_symbols():
+        if t not in seen:
+            seen.add(t)
+            universe.append((t, sepa_record_by_symbol.get(t)))
 
     # 3. Universe-mode bulk add (russell1000 by default for full SEPA parity)
     try:
