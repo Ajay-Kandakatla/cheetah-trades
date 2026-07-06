@@ -746,6 +746,12 @@ app.include_router(catalysts_router)
 from options.api import router as options_router  # noqa: E402
 app.include_router(options_router)
 
+# Order flow ("Tape") — per-ticker raw-print analytics (delta, big prints,
+# bursts, volume profile) + the deterministic BUY/WAIT/AVOID checklist with
+# its forward accuracy ledger. Powers the ticker page's Tape tab.
+from orderflow.api import router as orderflow_router  # noqa: E402
+app.include_router(orderflow_router)
+
 # Short-volume foundation (2026-05-24). Shared by SEPA scorer, whales
 # chip, and accumulation/distribution classifier — exposes /short/{symbol}
 # debug endpoint and the time-series for sparkline rendering.

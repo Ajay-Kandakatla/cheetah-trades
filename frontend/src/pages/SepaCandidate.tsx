@@ -75,6 +75,7 @@ import type { TickerContext } from '../hooks/useSupplyDemand';
 import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
 import { TomorrowBiasBlock } from '../components/TomorrowBias';
 import { OpExPanel } from '../components/OpExPanel';
+import { TapePanel } from '../components/TapePanel';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
 import { useOwnedPosition } from '../hooks/useOwnedPositions';
@@ -144,17 +145,18 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'analysis' | 'trend' | 'breakout' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'chatter' | 'supply' | 'options';
+type Tab = 'chart' | 'setup' | 'analysis' | 'trend' | 'breakout' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'chatter' | 'supply' | 'options' | 'tape';
 
 // The active tab lives in the URL (?tab=insider) so it survives reload, back/
 // forward, and deep-links from cards — instead of always snapping to 'chart'.
 // We also accept the legacy #hash deep-links some chips still emit.
 // 'analysis' moved up to 3rd (Ajay 2026-06-16: "move the analysis tab closer")
 // and now leads with the Minervini+Bonde buy verdict and folds in the Sales tab.
-const TABS: Tab[] = ['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
+const TABS: Tab[] = ['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'tape', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
 const HASH_TO_TAB: Record<string, Tab> = {
   chart: 'chart', setup: 'setup', trend: 'trend', breakout: 'breakout', ranking: 'ranking',
   fundamentals: 'fundamentals', analysis: 'analysis', options: 'options',
+  tape: 'tape', orderflow: 'tape',
   catalyst: 'catalyst', insider: 'insider', smartmoney: 'smartmoney',
   chatter: 'chatter', supply: 'supply',
   // legacy hashes that don't map 1:1 to a tab → nearest sensible tab.
@@ -935,13 +937,13 @@ export function SepaCandidatePage() {
           </div>
 
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
+            {(['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'tape', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
               <button
                 key={t}
                 role="tab"
                 className={`sepa-tab ${tab === t ? 'is-active' : ''}`}
                 onClick={() => setTab(t)}
-              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'ranking' ? '📈 ranking' : t === 'analysis' ? '✅ analysis' : t === 'breakout' ? '🚀 breakout' : t}</button>
+              >{t === 'smartmoney' ? 'smart money' : t === 'supply' ? 'supply / demand' : t === 'options' ? '📊 options flow' : t === 'tape' ? '🧾 tape' : t === 'ranking' ? '📈 ranking' : t === 'analysis' ? '✅ analysis' : t === 'breakout' ? '🚀 breakout' : t}</button>
             ))}
           </nav>
 
@@ -1686,6 +1688,23 @@ export function SepaCandidatePage() {
                 <TomorrowBiasBlock symbol={symbol} />
                 <OptionsFlowPanel symbol={symbol} />
                 <OpExPanel symbol={symbol} />
+              </section>
+            )}
+
+            {tab === 'tape' && (
+              <section>
+                <div className="sepa-tab-help">
+                  <strong>Tape · order flow</strong> — the session's raw prints, classified
+                  buyer- vs seller-aggressive: cumulative <em>delta</em> (who's in control),
+                  <em> big prints</em> (institutional blocks), <em>trade-flash</em> urgency
+                  bursts, the session <em>volume profile</em> (the honest bookmap substitute —
+                  traded volume, not spoofable resting orders), intraday EMAs, supply/demand
+                  zones and dealer-gamma context — rolled into one deterministic
+                  BUY / WAIT / AVOID checklist, gated on your daily SEPA trend. Every ⓘ
+                  explains its concept; every verdict is logged and graded so the hit rate
+                  shown is <em>ours, measured</em>.
+                </div>
+                <TapePanel symbol={symbol} />
               </section>
             )}
 

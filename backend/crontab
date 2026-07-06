@@ -446,6 +446,13 @@
 # "are our patterns accurate?" record Ajay asked for 2026-06-10.
 20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
 #
+# Order-flow ledger resolver — 5:10 PM ET weekdays, after the 4:30 fast-scan
+# has today's close in the price cache. Grades every Tape verdict (BUY/WAIT/
+# AVOID) against the T+1/T+5 closes and feeds GET /orderflow/ledger/accuracy
+# — the measured record behind the Tape tab ("70% in a WhatsApp group" gets
+# verified here, not assumed).
+10     17    *    *    1-5  /usr/local/bin/python -m orderflow.history
+#
 # Analyst Pulse — 5:25 PM ET weekdays. Refreshes analyst price targets, EPS
 # estimate-revision trends (TLSW p.124-125: the ±5% revision read + the
 # 30-day trending-higher windows) and 90d broker actions (yfinance) for the
