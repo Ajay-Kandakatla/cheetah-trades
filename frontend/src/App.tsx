@@ -100,6 +100,7 @@ const TinyPage                    = lazyWithReload(() => import('./pages/Tiny'))
 const SetupsPage                  = lazyWithReload(() => import('./pages/Setups'));
 const KellPage                    = lazyWithReload(() => import('./pages/Kell').then(m => ({ default: m.KellPage })));
 const LearnPage                   = lazyWithReload(() => import('./pages/Learn'));
+const LearningPathPage            = lazyWithReload(() => import('./pages/LearningPath'));
 const VolleyballPage              = lazyWithReload(() => import('./pages/Volleyball'));
 const OptionsPulsePage            = lazyWithReload(() => import('./pages/OptionsPulse'));
 const OptionsPulseMethodologyPage = lazyWithReload(() => import('./pages/OptionsPulseMethodology'));
@@ -307,6 +308,7 @@ export function App() {
             <Route path="/setups"         element={<FeatureRoute feature="setups"><SetupsPage /></FeatureRoute>} />
             <Route path="/kell"           element={<FeatureRoute feature="kell"><KellPage /></FeatureRoute>} />
             <Route path="/learn"          element={<FeatureRoute feature="learn"><LearnPage /></FeatureRoute>} />
+            <Route path="/learning"       element={<FeatureRoute feature="learning"><LearningPathPage /></FeatureRoute>} />
             <Route path="/volleyball"     element={<FeatureRoute feature="volleyball"><VolleyballPage /></FeatureRoute>} />
             <Route path="/options"        element={<FeatureRoute feature="options"><OptionsPulsePage /></FeatureRoute>} />
             <Route path="/options/methodology" element={<FeatureRoute feature="options"><OptionsPulseMethodologyPage /></FeatureRoute>} />

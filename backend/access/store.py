@@ -197,6 +197,12 @@ FEATURE_CATALOG: list[dict] = [
     # Usage heatmap — personal analytics: which pages/features Ajay uses
     # heavily + a weekday×hour heatmap. Owner-on via added_in/VERSION.
     {"id": "usage",         "label": "Usage Heatmap",       "group": "account",   "default": False, "added_in": 6},
+    # Ajay's Learning Path (2026-06-23): a personal, curriculum-ordered study
+    # page — the DOM/order-flow → SMC → options-vol → synthesis reading list,
+    # with embedded videos + papers. OWNER-ONLY in the catalog, and further
+    # narrowed to ADMIN-ONLY in the nav (see build_menu) since it's Ajay's own
+    # study surface, not shared with co-owners. Owner-on via added_in/VERSION.
+    {"id": "learning",      "label": "📚 Learning Path",    "group": "account",   "default": False, "added_in": 17},
     # Personal fitness — volleyball training module tuned to Ajay's
     # injury profile. Default OFF for friends (it's personal); owners
     # get it via the universal owner-feature bypass in store.py.
@@ -229,7 +235,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 16
+CATALOG_VERSION = 17
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 
@@ -411,6 +417,13 @@ def build_menu(email: str) -> dict:
     for entry in FEATURE_CATALOG:
         fid = entry["id"]
         if fid not in features:
+            continue
+
+        # Ajay's Learning Path is his personal study surface. Owner auto-grant
+        # gives the feature (and thus URL access) to both house owners, but the
+        # nav LINK is admin-only (Ajay) — co-owners don't get it cluttering their
+        # menu. Everything else stays purely feature-gated.
+        if fid == "learning" and not is_admin:
             continue
 
         group = entry["group"]
