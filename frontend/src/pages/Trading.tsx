@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { stopStatusView } from '../lib/autopilotStop';
-import { rowTotals, summarizePnl, tableTotals } from '../lib/autopilotPnl';
+import { cashOut, rowTotals, summarizePnl, tableTotals } from '../lib/autopilotPnl';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
@@ -430,9 +430,11 @@ const TD: React.CSSProperties = {
   verticalAlign: 'middle', whiteSpace: 'nowrap',
 };
 
-function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimReset }: {
+function PositionsTable({ positions, simMode, cash, equity, onFlatten, onFlattenAll, onSimReset }: {
   positions: Position[];
   simMode: boolean;
+  cash?: number | null;
+  equity?: number | null;
   onFlatten: (symbol: string) => void;
   onFlattenAll: () => void;
   onSimReset: () => void;
@@ -605,6 +607,26 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                       {t.pct != null ? `${t.pnl >= 0 ? '▲' : '▼'} ${pctf(Math.abs(t.pct), 2)}` : '—'}
                     </td>
                     <td style={TOT} colSpan={5} />
+                  </tr>
+                );
+              })()}
+              {(() => {
+                const co = cashOut(cash, equity);
+                if (!co) return null;
+                const CASH_TD: React.CSSProperties = { ...TD, color: C.sub };
+                return (
+                  <tr>
+                    <td style={{ ...CASH_TD, fontWeight: 700 }} colSpan={6}
+                        title="Account cash the engine has NOT put into any position — dry powder.">
+                      💵 CASH · not entered
+                    </td>
+                    <td className="mono" style={{ ...CASH_TD, fontWeight: 700 }}>{money(co.cash, 0)}</td>
+                    <td style={CASH_TD} colSpan={2}>
+                      {co.pctOfEquity != null && (
+                        <span style={{ fontSize: '0.7rem' }}>{pctf(co.pctOfEquity, 1)} of the account sitting out</span>
+                      )}
+                    </td>
+                    <td style={CASH_TD} colSpan={5} />
                   </tr>
                 );
               })()}
@@ -1939,6 +1961,8 @@ export function TradingPage() {
           {/* c. Positions (portfolio) — now ABOVE the buyable list (Ajay 2026-06-26) */}
           <PositionsTable positions={status.positions || []}
                           simMode={sim}
+                          cash={status.account?.cash}
+                          equity={status.account?.equity}
                           onFlatten={(symbol) => setConfirm({ kind: 'flatten', symbol })}
                           onFlattenAll={() => setConfirm({ kind: 'flatten-all' })}
                           onSimReset={() => setConfirm({ kind: 'sim-reset' })} />

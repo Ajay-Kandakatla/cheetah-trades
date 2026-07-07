@@ -52,6 +52,16 @@ export type TableTotals = {
   nTotal: number;      // all rows (nPriced < nTotal ⇒ some rows lack prices)
 };
 
+/** Cash sitting out of the market, as dollars + share of the account
+ * (Ajay 2026-07-06: "how much cash we have not entered"). */
+export function cashOut(cash?: number | null, equity?: number | null): { cash: number; pctOfEquity: number | null } | null {
+  if (cash == null) return null;              // Number(null) is 0 — don't render a fake $0
+  const c = Number(cash);
+  if (!isFinite(c) || c < 0) return null;
+  const e = Number(equity);
+  return { cash: c, pctOfEquity: isFinite(e) && e > 0 ? (c / e) * 100 : null };
+}
+
 export function tableTotals(rows: PositionLike[]): TableTotals {
   let cost = 0, value = 0, nPriced = 0;
   for (const r of rows) {

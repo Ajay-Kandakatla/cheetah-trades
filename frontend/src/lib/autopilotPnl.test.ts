@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rowTotals, summarizePnl, tableTotals } from './autopilotPnl';
+import { cashOut, rowTotals, summarizePnl, tableTotals } from './autopilotPnl';
 
 describe('summarizePnl — started → now', () => {
   it('reports now (equity) and the gain together', () => {
@@ -82,5 +82,29 @@ describe('tableTotals — the last-row sum of pluses and minuses', () => {
     expect(t.cost).toBe(0);
     expect(t.pnl).toBe(0);
     expect(t.pct).toBeNull();
+  });
+});
+
+describe('cashOut — cash not entered', () => {
+  it('reports dollars and share of the account', () => {
+    const c = cashOut(38000, 100138);
+    expect(c).not.toBeNull();
+    expect(c!.cash).toBe(38000);
+    expect(c!.pctOfEquity).toBeCloseTo(37.95, 1);
+  });
+
+  it('all-in account reads zero cleanly', () => {
+    const c = cashOut(0, 100000);
+    expect(c!.cash).toBe(0);
+    expect(c!.pctOfEquity).toBe(0);
+  });
+
+  it('missing/garbage cash hides the row; missing equity keeps dollars', () => {
+    expect(cashOut(null, 100000)).toBeNull();
+    expect(cashOut(undefined, 100000)).toBeNull();
+    expect(cashOut(-5, 100000)).toBeNull();       // negative cash = margin oddity, don't render
+    const c = cashOut(5000, null);
+    expect(c!.cash).toBe(5000);
+    expect(c!.pctOfEquity).toBeNull();
   });
 });
