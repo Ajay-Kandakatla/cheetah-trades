@@ -1,0 +1,3 @@
+## 2024-05-20 - [ARIA properties for Expand/Collapse content]
+**Learning:** Found that basic text truncation toggles (like "Show more" / "Show less" buttons) were lacking screen reader state visibility. The `aria-expanded` property needs to dynamically reflect the `expanded` state, and `aria-controls` needs to point to the `id` of the controlled element so that screen reader users know exactly what content the button changes.
+**Action:** Use `aria-expanded={isExpanded}` and `aria-controls="element-id"` on all text expansion toggle buttons going forward to ensure screen reader users have equal context to visual users.
