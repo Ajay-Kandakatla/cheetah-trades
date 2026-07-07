@@ -28,6 +28,22 @@ type Phase = {
   sources: Source[];
 };
 
+/** Prerequisites — foundational topics the study plan assumes you already have.
+ *  Rendered before Week 1. Each is one card (one progress item) that can carry a
+ *  short researched blurb, an optional high-confidence video embed, an optional
+ *  formula callout, curated links, and a YouTube search fallback. These fill the
+ *  three gaps called out at the bottom of the plan. */
+type Prereq = {
+  id: string;
+  badge: string;
+  title: string;
+  blurb: string;
+  videoId?: string;
+  formula?: string;
+  links: { url: string; label: string }[];
+  searchQuery?: string;
+};
+
 /** The arXiv annotation is a full paragraph in the original — preserved verbatim
  *  and rendered as prose under the source card rather than a one-line note. */
 const ARXIV_PARAGRAPH =
@@ -161,12 +177,55 @@ const PHASES: Phase[] = [
   },
 ];
 
+const PREREQS: Prereq[] = [
+  {
+    id: 'prereq-market-structure',
+    badge: 'A',
+    title: 'Market structure basics — BOS & CHoCH',
+    blurb:
+      'The Week 3–5 SMC videos assume you can already read structure. BOS (Break of Structure) = trend continuation — price closes beyond the prior swing in the trend direction. CHoCH (Change of Character) = the first sign of reversal — price breaks the swing that created the last BOS. Wicks don’t count; you need a body close.',
+    videoId: 'U5DTamH28N0',
+    links: [
+      { url: 'https://dailypriceaction.com/blog/smc-market-structure/', label: 'SMC Market Structure: BoS & CHoCH made simple' },
+      { url: 'https://www.mindmathmoney.com/articles/break-of-structure-change-of-character-explained', label: 'BOS vs CHoCH explained (Mind Math Money)' },
+    ],
+  },
+  {
+    id: 'prereq-risk-sizing',
+    badge: 'B',
+    title: 'Risk management & position sizing',
+    blurb:
+      'Nothing in the main list covers this — and it’s what actually determines survival. Cap risk at 1–2% of equity per trade: even 10 losses in a row only draws you down ~10–20%, a recoverable setback. Position size falls out of your stop distance, not your conviction.',
+    formula: 'Risk $ = Account × risk%   →   Shares = Risk $ ÷ (Entry − Stop)\n\ne.g. $10,000 × 2% = $200 risk ; stop $2 below entry → 100 shares',
+    links: [
+      { url: 'https://www.britannica.com/money/calculating-position-size', label: 'Calculating position size (Britannica Money)' },
+      { url: 'https://www.chartguys.com/articles/position-sizing', label: 'Position sizing for risk management (Chart Guys)' },
+      { url: 'https://www.amazon.com/s?k=Van+Tharp+Trade+Your+Way+to+Financial+Freedom', label: 'Book — Van Tharp, Trade Your Way to Financial Freedom' },
+    ],
+    searchQuery: 'position sizing how much to risk per trade explained',
+  },
+  {
+    id: 'prereq-backtesting',
+    badge: 'C',
+    title: 'Backtesting methodology (statistical validation)',
+    blurb:
+      'So “deterministic” means statistically validated, not just rule-based. The trap is backtest overfitting: try enough parameter combinations and a great-looking backtest is almost guaranteed — and under memory effects it produces negative out-of-sample returns, not zero. Report how many configurations you tried, hold out data, and walk-forward.',
+    links: [
+      { url: 'https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2308659', label: 'Pseudo-Mathematics & Financial Charlatanism — backtest overfitting (Bailey, Borwein, López de Prado, Zhu · AMS 2014)' },
+      { url: 'https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf', label: 'The Probability of Backtest Overfitting (PDF)' },
+    ],
+    searchQuery: 'backtesting methodology walk-forward out-of-sample overfitting',
+  },
+];
+
 const LS_KEY = 'learning-path-progress';
 
-function loadProgress(): Record<number, boolean> {
+type Progress = Record<string, boolean>;
+
+function loadProgress(): Progress {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    return raw ? (JSON.parse(raw) as Record<number, boolean>) : {};
+    return raw ? (JSON.parse(raw) as Progress) : {};
   } catch {
     return {};
   }
@@ -191,6 +250,53 @@ function FrameEmbed({ url, title }: { url: string; title: string }) {
     <div className="lp-embed lp-embed--doc">
       <iframe src={url} title={title} loading="lazy" />
     </div>
+  );
+}
+
+function PrereqCard({
+  p,
+  done,
+  onToggle,
+}: {
+  p: Prereq;
+  done: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <article className={`lp-source lp-prereq${done ? ' lp-source--done' : ''}`}>
+      <div className="lp-source__head">
+        <span className="lp-source__num lp-prereq__badge mono">{p.badge}</span>
+        <div className="lp-source__title">{p.title}</div>
+        <label className="lp-source__check" title="Mark complete">
+          <input type="checkbox" checked={done} onChange={() => onToggle(p.id)} />
+          <span>{done ? 'Done' : 'Mark complete'}</span>
+        </label>
+      </div>
+
+      <p className="lp-source__note">{p.blurb}</p>
+
+      {p.formula && <pre className="lp-formula mono">{p.formula}</pre>}
+
+      {p.videoId && <YouTubeEmbed videoId={p.videoId} title={p.title} />}
+
+      <div className="lp-linkrow">
+        {p.links.map((l) => (
+          <a key={l.url} className="lp-btn lp-btn--ghost" href={l.url} target="_blank" rel="noreferrer noopener">
+            {l.label} ↗
+          </a>
+        ))}
+        {p.searchQuery && (
+          <a
+            className="lp-btn lp-btn--ghost"
+            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(p.searchQuery)}`}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            Search this on YouTube ↗
+          </a>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -253,15 +359,15 @@ function SourceCard({
 }
 
 export default function LearningPathPage() {
-  const [progress, setProgress] = useState<Record<number, boolean>>({});
+  const [progress, setProgress] = useState<Progress>({});
 
   useEffect(() => {
     setProgress(loadProgress());
   }, []);
 
-  const toggle = useCallback((n: number) => {
+  const toggle = useCallback((key: string | number) => {
     setProgress((prev) => {
-      const next = { ...prev, [n]: !prev[n] };
+      const next = { ...prev, [key]: !prev[key] };
       try {
         localStorage.setItem(LS_KEY, JSON.stringify(next));
       } catch {
@@ -271,7 +377,7 @@ export default function LearningPathPage() {
     });
   }, []);
 
-  const total = PHASES.reduce((a, p) => a + p.sources.length, 0);
+  const total = PREREQS.length + PHASES.reduce((a, p) => a + p.sources.length, 0);
   const doneCount = Object.values(progress).filter(Boolean).length;
 
   return (
@@ -294,6 +400,22 @@ export default function LearningPathPage() {
           </span>
         </div>
       </div>
+
+      <section className="lp-phase lp-prereqs">
+        <div className="lp-phase__head">
+          <span className="lp-phase__week lp-prereqs__week mono">Prerequisites</span>
+          <h2 className="lp-phase__heading">Foundations to have before Week 1</h2>
+        </div>
+        <p className="lp-prose lp-prereqs__intro">
+          These fill the three gaps flagged at the bottom of the plan &mdash; the study order
+          quietly assumes them. Get comfortable here first, then start the phases.
+        </p>
+        <div className="lp-phase__sources">
+          {PREREQS.map((p) => (
+            <PrereqCard key={p.id} p={p} done={!!progress[p.id]} onToggle={toggle} />
+          ))}
+        </div>
+      </section>
 
       {PHASES.map((phase) => (
         <section key={phase.id} className="lp-phase">
@@ -406,6 +528,20 @@ function PageStyles() {
       .lp-tip__mark { flex: none; font-size: var(--fs-eyebrow); letter-spacing: var(--tracking-eyebrow);
         text-transform: uppercase; font-weight: 700; color: var(--gold-strong); padding-top: 3px; }
       .lp-tip p { margin: 0; font-size: var(--fs-body); color: var(--ink-muted); line-height: var(--lh-normal); }
+
+      /* Prerequisites — visually marked as foundations (tinted, gold rail). */
+      .lp-prereqs { margin-top: var(--s-6); }
+      .lp-prereqs__week { color: var(--bg); background: var(--gold); }
+      .lp-prereqs__intro { margin-top: 0; margin-bottom: var(--s-4); }
+      .lp-prereq { border-left: 3px solid var(--gold); }
+      .lp-prereq__badge { color: var(--bg); background: var(--gold); border-color: var(--gold); }
+
+      .lp-formula { margin: var(--s-4) 0 0; padding: var(--s-3) var(--s-4); white-space: pre-wrap;
+        font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--ink);
+        background: var(--bg-sunken); border: 1px solid var(--hairline); border-radius: var(--r-2); overflow-x: auto; }
+
+      .lp-linkrow { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); margin-top: var(--s-4); }
+      .lp-linkrow .lp-btn { margin-top: 0; }
 
       @media (max-width: 640px) {
         .lp-source__note { padding-left: 0; }

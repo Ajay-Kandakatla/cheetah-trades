@@ -44,12 +44,27 @@ describe('LearningPath', () => {
     expect(screen.getByText(/Market mechanics/i)).toBeInTheDocument();
   });
 
-  it('renders all 14 numbered sources with a progress counter starting at 0/14', () => {
+  it('renders 3 prerequisites + 14 numbered sources with a counter starting at 0/17', () => {
     render(<LearningPathPage />);
-    // 14 "Mark complete" checkboxes — one per source
+    // 3 prereq + 14 source "Mark complete" checkboxes
     const checks = screen.getAllByRole('checkbox');
-    expect(checks).toHaveLength(14);
-    expect(screen.getByText('0/14 complete')).toBeInTheDocument();
+    expect(checks).toHaveLength(17);
+    expect(screen.getByText('0/17 complete')).toBeInTheDocument();
+  });
+
+  it('renders the Prerequisites section covering the three notebook gaps', () => {
+    render(<LearningPathPage />);
+    expect(screen.getByText('Prerequisites')).toBeInTheDocument();
+    // exact titles — /Backtesting methodology/ loosely would also match the
+    // verbatim gaps paragraph, so match the full prereq card titles instead.
+    expect(screen.getByText('Market structure basics — BOS & CHoCH')).toBeInTheDocument();
+    expect(screen.getByText('Risk management & position sizing')).toBeInTheDocument();
+    expect(screen.getByText('Backtesting methodology (statistical validation)')).toBeInTheDocument();
+    // the position-sizing formula callout renders
+    expect(screen.getByText(/Shares = Risk \$ ÷ \(Entry − Stop\)/i)).toBeInTheDocument();
+    // the backtest-overfitting paper is linked (the "gem" source)
+    const paper = screen.getByText(/Pseudo-Mathematics & Financial Charlatanism/i).closest('a') as HTMLAnchorElement;
+    expect(paper.href).toContain('abstract_id=2308659');
   });
 
   it('embeds the two high-confidence YouTube videos by exact video id', () => {
@@ -57,6 +72,8 @@ describe('LearningPath', () => {
     const iframes = Array.from(container.querySelectorAll('iframe')).map((f) => f.getAttribute('src') || '');
     expect(iframes).toContain('https://www.youtube.com/embed/qWN-VanDkT8');
     expect(iframes).toContain('https://www.youtube.com/embed/GvJzspRHqCU');
+    // prerequisite: market-structure BOS/CHoCH video
+    expect(iframes).toContain('https://www.youtube.com/embed/U5DTamH28N0');
     // arXiv PDF + Wikipedia are also embedded
     expect(iframes).toContain('https://arxiv.org/pdf/1011.6402');
     expect(iframes).toContain('https://en.wikipedia.org/wiki/Algorithmic_trading');
@@ -73,7 +90,9 @@ describe('LearningPath', () => {
 
   it('preserves the gaps paragraph and the NotebookLM tip verbatim', () => {
     render(<LearningPathPage />);
-    expect(screen.getByText(/what actually determines survival/i)).toBeInTheDocument();
+    // fragment unique to the verbatim gaps paragraph (the prereq blurbs echo
+    // some of its wording, so pick text that only appears there)
+    expect(screen.getByText(/worth adding as sources: something on/i)).toBeInTheDocument();
     expect(screen.getByText(/recall testing beats re-watching/i)).toBeInTheDocument();
     expect(screen.getByText(/order flow imbalance/i)).toBeInTheDocument();
   });
@@ -81,16 +100,19 @@ describe('LearningPath', () => {
   it('toggles progress and persists it to localStorage', () => {
     render(<LearningPathPage />);
     const checks = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    // first checkbox is prerequisite A (market structure), keyed by its string id
     expect(checks[0].checked).toBe(false);
     fireEvent.click(checks[0]);
     expect(checks[0].checked).toBe(true);
-    expect(screen.getByText('1/14 complete')).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('learning-path-progress') || '{}')).toEqual({ '1': true });
+    expect(screen.getByText('1/17 complete')).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('learning-path-progress') || '{}')).toEqual({
+      'prereq-market-structure': true,
+    });
   });
 
-  it('does not crash and shows 0/14 when localStorage holds corrupt JSON (negative)', () => {
+  it('does not crash and shows 0/17 when localStorage holds corrupt JSON (negative)', () => {
     localStorage.setItem('learning-path-progress', '{not valid json');
     render(<LearningPathPage />);
-    expect(screen.getByText('0/14 complete')).toBeInTheDocument();
+    expect(screen.getByText('0/17 complete')).toBeInTheDocument();
   });
 });
