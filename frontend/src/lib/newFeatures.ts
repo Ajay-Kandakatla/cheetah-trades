@@ -49,6 +49,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'opex-gamma-panel', label: '🧲 OpEx panel — next expiration + max-pain magnet + dealer-gamma (pin vs amplify) on the options-flow tab', addedAt: '2026-06-26', route: '/sepa' },
   { id: 'tape-order-flow', label: '🧾 Tape tab — order flow on every ticker: delta, big prints, trade flashes, volume profile + a deterministic BUY/WAIT/AVOID checklist with its own measured track record', addedAt: '2026-07-06', route: '/sepa' },
   { id: 'learning-path', label: '📚 Learning Path — your phased study plan (order flow → SMC → options vol → synthesis) with embedded videos + papers', addedAt: '2026-07-06', route: '/learning' },
+  { id: 'autopilot-position-totals', label: '💵 Cost / Now / ± columns on Auto-Pilot positions + a TOTAL row summing the pluses and minuses', addedAt: '2026-07-06', route: '/trading' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

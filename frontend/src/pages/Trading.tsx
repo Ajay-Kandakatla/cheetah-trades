@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { stopStatusView } from '../lib/autopilotStop';
-import { summarizePnl } from '../lib/autopilotPnl';
+import { rowTotals, summarizePnl, tableTotals } from '../lib/autopilotPnl';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
@@ -481,6 +481,9 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                 <th style={TH}>Qty</th>
                 <th style={TH}>Avg entry</th>
                 <th style={TH}>Last</th>
+                <th style={TH} title="What this position cost — qty × avg entry.">Cost $</th>
+                <th style={TH} title="What it's worth right now — qty × last.">Now $</th>
+                <th style={TH} title="Now − cost, in dollars.">± $</th>
                 <th style={TH}>P&amp;L %</th>
                 <th style={TH}>Stop</th>
                 <th style={TH}>Target</th>
@@ -509,6 +512,19 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                     <td className="mono" style={TD}>{p.qty}</td>
                     <td className="mono" style={TD}>{money(p.avg_entry)}</td>
                     <td className="mono" style={TD}>{money(p.last)}</td>
+                    {(() => {
+                      const t = rowTotals(p);
+                      const pnlColor = t.pnl == null ? C.sub : t.pnl >= 0 ? C.green : C.red;
+                      return (
+                        <>
+                          <td className="mono" style={TD}>{t.cost != null ? money(t.cost, 0) : '—'}</td>
+                          <td className="mono" style={TD}>{t.value != null ? money(t.value, 0) : '—'}</td>
+                          <td className="mono" style={{ ...TD, color: pnlColor, fontWeight: 700 }}>
+                            {t.pnl != null ? `${t.pnl >= 0 ? '+' : '−'}${money(Math.abs(t.pnl), 0)}` : '—'}
+                          </td>
+                        </>
+                      );
+                    })()}
                     <td className="mono" style={{ ...TD, color: up ? C.green : C.red, fontWeight: 700 }}>
                       {up ? '▲' : '▼'} {pctf(Math.abs(p.upl_pct), 2)}
                     </td>
@@ -563,6 +579,36 @@ function PositionsTable({ positions, simMode, onFlatten, onFlattenAll, onSimRese
                 );
               })}
             </tbody>
+            <tfoot>
+              {(() => {
+                const t = tableTotals(positions);
+                const color = t.pnl >= 0 ? C.green : C.red;
+                const TOT: React.CSSProperties = { ...TD, borderTop: `2px solid var(--hairline,#2a2a2a)`, fontWeight: 800 };
+                return (
+                  <tr>
+                    <td style={TOT}>TOTAL</td>
+                    <td style={TOT} colSpan={2}>
+                      {t.nPriced < t.nTotal && (
+                        <span style={{ color: C.sub, fontSize: '0.68rem', fontWeight: 400 }}>
+                          {t.nTotal - t.nPriced} row{t.nTotal - t.nPriced === 1 ? '' : 's'} missing prices — excluded
+                        </span>
+                      )}
+                    </td>
+                    <td style={TOT} />
+                    <td style={TOT} />
+                    <td className="mono" style={TOT}>{money(t.cost, 0)}</td>
+                    <td className="mono" style={TOT}>{money(t.value, 0)}</td>
+                    <td className="mono" style={{ ...TOT, color }}>
+                      {t.pnl >= 0 ? '+' : '−'}{money(Math.abs(t.pnl), 0)}
+                    </td>
+                    <td className="mono" style={{ ...TOT, color }}>
+                      {t.pct != null ? `${t.pnl >= 0 ? '▲' : '▼'} ${pctf(Math.abs(t.pct), 2)}` : '—'}
+                    </td>
+                    <td style={TOT} colSpan={5} />
+                  </tr>
+                );
+              })()}
+            </tfoot>
           </table>
         </div>
       )}
