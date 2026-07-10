@@ -145,7 +145,7 @@ export function GiantsRotationModal({ symbol, onClose }: { symbol: string; onClo
               )}
             </h2>
           </div>
-          <button onClick={onClose} className="mono"
+          <button onClick={onClose} className="mono" aria-label="Close"
                   style={{ background: 'transparent', border: '1px solid var(--rule,#333)',
                            borderRadius: 6, cursor: 'pointer', padding: '8px 14px', color: 'inherit' }}>
             ✕
