@@ -187,6 +187,9 @@ ENGINE_PARAM_TOKENS = [
     # 3% house value 2026-06-09) — cross-locked against the scanner below.
     "MAX_EXTENSION_PCT = 3.0",
     "DEFAULT_EQUITY_CAP = 5000.0",
+    # Volume-projection trust floor (TLSW p.229 concept; 60-min house value,
+    # Ajay sign-off 2026-07-09 after the 9:31-entry failure autopsy).
+    "VOL_CONFIRM_MIN_FRAC = round(60.0 / 390.0, 4)",
 ]
 
 
@@ -216,7 +219,11 @@ def test_auto_entry_params_importable_and_equal():
     assert ae.FIRST_HALF_FRACTION == 0.5
     assert ae.MAX_EXTENSION_PCT == 3.0
     assert ae.DEFAULT_EQUITY_CAP == 5000.0
-    assert ae.AUTO_MIN_SCORE == 70.0
+    # 70 -> 85 raised 2026-07-09 (failure autopsy: no winner scored under 87,
+    # no loser over 84; n=6 HYPOTHESIS — config `auto_min_score` overrides
+    # live so it can be tuned as the sample grows).
+    assert ae.AUTO_MIN_SCORE == 85.0
+    assert ae.VOL_CONFIRM_MIN_FRAC == round(60.0 / 390.0, 4)
 
 
 def test_extension_cap_mirrors_scanner_buy_zone():

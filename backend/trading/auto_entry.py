@@ -59,6 +59,17 @@ MAX_AUTO_ENTRIES_PER_DAY = 2
 # Projected full-session relative volume floor for the INTRADAY path
 # (sepa.live_gate projects today's pace vs the 50-day average).
 AUTO_RELVOL_MIN = 1.5
+# Volume-projection TRUST FLOOR (added 2026-07-09 after the failure autopsy).
+# TLSW p.229 ("Extrapolating Volume Intraday") demonstrates the projection
+# "two hours into the trading day" — minutes into the open the denominator is
+# so small that ANY opening print projects as huge RelVol, which is exactly
+# how 12 of 18 auto-entries fired at 9:30-9:32 and 4 of 6 closed trades
+# stopped out. Before this fraction of the session has elapsed, a PROJECTED
+# RelVol cannot trigger the intraday path; ACTUAL volume already >= the floor
+# (vs the FULL 50-day average) can trigger at any time — a true monster open
+# proves itself without projection. 60 min is a house value anchored to the
+# p.229 concept (the book demonstrates 2h; it mandates no minimum).
+VOL_CONFIRM_MIN_FRAC = round(60.0 / 390.0, 4)   # 0.1538 of the 390-min session
 # The first observed pivot-clear must land in the first half of the session
 # (session_fraction <= this) for the intraday path; later clears wait for
 # the close-confirmation path.
@@ -72,12 +83,18 @@ MAX_EXTENSION_PCT = 3.0
 # "assume you have 5k" — sizing equity is min(Alpaca equity, this cap) for
 # ALL entries (Alpaca paper accounts default to $100k).
 DEFAULT_EQUITY_CAP = 5000.0
-# Funnel score floor (the scanner's BUY tier starts at 70) — owner choice.
-AUTO_MIN_SCORE = 70.0
+# Funnel score floor — owner choice, raised 70 -> 85 (Ajay 2026-07-09) after
+# the failure autopsy: winners scored 87-94, no loser scored above 84, and
+# the two lowest-scored entries ever taken (62.2, 60.7) both stopped out.
+# n=6 — a HYPOTHESIS being enforced, not a proven law; the `auto_min_score`
+# config key overrides it live (data write, no deploy) so it can be tuned
+# as the sample grows.
+AUTO_MIN_SCORE = 85.0
 
 FUNNEL_CITE = ("funnel: scanner is_buyable (trend template p.79 + stage 2 + "
-               "pivot + volume breakout, ext cap p.224) + score>=70; risk math "
-               "pp.291-315 via entries/risk_rules")
+               "pivot + volume breakout, ext cap p.224) + score floor "
+               "(default 85, cfg auto_min_score) + p.229 volume gate; risk "
+               "math pp.291-315 via entries/risk_rules")
 
 
 # ── Lazy sepa seams (each one monkeypatchable in tests) ─────────────────────
@@ -119,17 +136,53 @@ def _session_fraction() -> float:
         return 0.0
 
 
-def _projected_relvol(symbol: str) -> Optional[float]:
-    """Projected full-session RelVol from sepa.live_gate — called ONLY for
-    names that already passed every cheap check (it reloads daily prices)."""
+def _volume_live(symbol: str) -> dict:
+    """volume_live block from sepa.live_gate (projected_relvol, today_volume,
+    avg_vol_50) — called ONLY for names that already passed every cheap check
+    (it reloads daily prices)."""
     try:
         from sepa.live_gate import live_gate
         out = live_gate(symbol) or {}
-        rv = (out.get("volume_live") or {}).get("projected_relvol")
-        return float(rv) if rv is not None else None
+        return out.get("volume_live") or {}
     except Exception as exc:                       # noqa: BLE001
-        log.debug("auto_entry: live_gate relvol failed %s: %s", symbol, exc)
-        return None
+        log.debug("auto_entry: live_gate volume failed %s: %s", symbol, exc)
+        return {}
+
+
+def volume_confirmed(frac: float, vol_live: dict) -> tuple:
+    """The TLSW p.229 volume gate for the intraday path. Pure — unit-tested.
+
+    PASS when either:
+      a. ACTUAL today's volume already >= AUTO_RELVOL_MIN x the full 50-day
+         average — the tape has proven itself, any time of day; or
+      b. the session is past VOL_CONFIRM_MIN_FRAC AND the projected
+         full-session RelVol >= AUTO_RELVOL_MIN — the p.229 extrapolation,
+         trusted only once enough tape exists to extrapolate FROM.
+
+    Missing volume data fails CLOSED (no buy on unknown volume).
+    Returns (ok, detail-dict-for-the-checks-snapshot)."""
+    proj = vol_live.get("projected_relvol")
+    today = vol_live.get("today_volume")
+    avg50 = vol_live.get("avg_vol_50")
+    actual = None
+    try:
+        if today and avg50 and float(avg50) > 0:
+            actual = round(float(today) / float(avg50), 2)
+    except (TypeError, ValueError):
+        actual = None
+    detail = {"projected_relvol": proj, "actual_relvol": actual,
+              "session_frac": round(float(frac), 4),
+              "min_frac": VOL_CONFIRM_MIN_FRAC}
+    if actual is not None and actual >= AUTO_RELVOL_MIN:
+        detail["basis"] = "actual"
+        return True, detail
+    if float(frac) >= VOL_CONFIRM_MIN_FRAC and proj is not None \
+            and float(proj) >= AUTO_RELVOL_MIN:
+        detail["basis"] = "projected"
+        return True, detail
+    detail["basis"] = ("too_early_to_project"
+                       if float(frac) < VOL_CONFIRM_MIN_FRAC else "insufficient_volume")
+    return False, detail
 
 
 def _gauge_state() -> str:
@@ -223,7 +276,16 @@ def _today_snapshots(day: str) -> list:
 
 # ── Funnel + trigger pieces ─────────────────────────────────────────────────
 
-def _candidates() -> list:
+def _min_score(cfg: Optional[dict] = None) -> float:
+    """Score floor: `auto_min_score` config override, else AUTO_MIN_SCORE."""
+    try:
+        v = (cfg or {}).get("auto_min_score")
+        return float(v) if v is not None else AUTO_MIN_SCORE
+    except (TypeError, ValueError):
+        return AUTO_MIN_SCORE
+
+
+def _candidates(min_score: float = AUTO_MIN_SCORE) -> list:
     """Latest-scan rows passing the funnel, score desc."""
     out = []
     for r in _latest_scan_rows():
@@ -232,7 +294,7 @@ def _candidates() -> list:
                 continue
             score = float(r.get("score") or 0)
             pivot = (r.get("entry_setup") or {}).get("pivot")
-            if score < AUTO_MIN_SCORE or not pivot or float(pivot) <= 0:
+            if score < min_score or not pivot or float(pivot) <= 0:
                 continue
             sym = (r.get("symbol") or "").strip().upper()
             if sym:
@@ -337,7 +399,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         return out
     out["ran"] = True
 
-    cands = _candidates()
+    cands = _candidates(min_score=_min_score(cfg))
     if not cands:
         out["reason"] = "no_candidates"
         return out
@@ -438,14 +500,17 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         path = None
         relvol = None
         if above and not extended:
-            # path a — intraday: first-half clear + projected RelVol floor
+            # path a — intraday: first-half clear + the p.229 volume gate
+            # (projection trusted only past VOL_CONFIRM_MIN_FRAC; actual
+            # volume >= floor passes any time; missing data fails closed).
             first_half = (cleared_frac is not None
                           and cleared_frac <= FIRST_HALF_FRACTION)
             _check(checks, "cleared_first_half", first_half, cleared_frac)
             if first_half:
-                relvol = _projected_relvol(sym)
-                if _check(checks, "relvol", relvol is not None
-                          and relvol >= AUTO_RELVOL_MIN, relvol):
+                vol_live = _volume_live(sym)
+                ok_vol, vol_detail = volume_confirmed(frac, vol_live)
+                relvol = vol_detail.get("projected_relvol")
+                if _check(checks, "volume_confirmed", ok_vol, vol_detail):
                     path = "intraday"
             # path b — close-confirmation: prior close already above pivot
             if path is None:
@@ -528,4 +593,5 @@ def status_block(cfg: Optional[dict] = None) -> dict:
             "equity_cap": cfg.get("equity_cap"),
             "entries_today": _entries_today(day),
             "max_per_day": MAX_AUTO_ENTRIES_PER_DAY,
+            "min_score": _min_score(cfg),
             "candidates": _today_snapshots(day)}

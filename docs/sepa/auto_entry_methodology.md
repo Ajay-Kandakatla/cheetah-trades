@@ -56,9 +56,17 @@ For each candidate, cheapest checks first:
      first half of the session (`session_fraction ≤ FIRST_HALF_FRACTION`;
      the fraction is persisted as `cleared_at_frac` per symbol + ET day so a
      late-day clear can never retro-qualify);
-   - projected full-session relative volume ≥ `AUTO_RELVOL_MIN`
-     (`sepa.live_gate` — today's pace ÷ session elapsed vs the 50-day
-     average; computed only for names that passed every cheap check);
+   - the **volume gate** (TLSW p.229 "Extrapolating Volume Intraday",
+     reworked 2026-07-09 after the failure autopsy):
+     - PASS if **actual** today's volume already ≥ `AUTO_RELVOL_MIN` × the
+       full 50-day average — the tape proved itself, any time of day; or
+     - PASS if session elapsed ≥ `VOL_CONFIRM_MIN_FRAC` AND the **projected**
+       full-session RelVol (`sepa.live_gate` intraday curve) ≥
+       `AUTO_RELVOL_MIN` — the p.229 extrapolation, trusted only once there
+       is tape to extrapolate FROM. Minutes into the open the denominator is
+       near zero and ANY opening print projects as huge RelVol — the hole
+       that fired 12 of 18 entries at 9:30-9:32 (4 of 6 closed trades
+       stopped out). Missing volume data **fails closed**.
    - live ≤ pivot × (1 + `MAX_EXTENSION_PCT`/100) — not chasing (p.224).
 
    **b. Close-confirmation** — if not entered intraday: the **previous
@@ -98,9 +106,24 @@ deliberate signed-off decision:
 | `FIRST_HALF_FRACTION` | 0.5 | First observed pivot clear must land in the first half of the session | Owner choice — no book equivalent |
 | `MAX_EXTENSION_PCT` | 3.0 | Buy-zone ceiling above the pivot | **Mirrors `sepa.scanner.BUYABLE_MAX_EXT_PCT`** — book p.224 gives the concept ("without chasing … more than a few percentage points") but no number; 3% is the user-approved (2026-06-09) house value. Cross-locked with the scanner token in the contract test |
 | `DEFAULT_EQUITY_CAP` | 5000.0 | Sizing-equity ceiling (trading_config.equity_cap default) | Owner instruction verbatim: "assume you have 5k" |
+| `VOL_CONFIRM_MIN_FRAC` | 60/390 ≈ 0.1538 | Minimum session elapsed before a **projected** RelVol may trigger the intraday path (actual volume ≥ floor passes any time) | TLSW p.229 demonstrates the extrapolation "two hours into the trading day"; the book mandates no minimum — 60 min is the house value (Ajay sign-off 2026-07-09, failure autopsy) |
 
-(`AUTO_MIN_SCORE = 70.0`, the funnel score floor, is likewise an owner choice
-matching the scanner's BUY rating tier.)
+(`AUTO_MIN_SCORE = 85.0`, the funnel score floor, is likewise an owner
+choice — raised from 70 on 2026-07-09 after the failure autopsy: winners
+scored 87–94, no loser above 84, the two lowest-scored entries ever taken
+both stopped out. n=6, so this is a **hypothesis being enforced**, reviewed
+as the sample grows; the `auto_min_score` trading-config key overrides it
+live without a deploy.)
+
+### 2026-07-09 failure-autopsy changes, summarized
+
+Multi-agent autopsy of the first 6 closed engine trades (4 stops, 2 targets):
+zero losers gapped through their stop (exits worked); every loss was an
+idiosyncratic intraday grind with SPY flat/up; distribution-day counts did
+NOT discriminate (the best winner had the most); the score did (see above);
+and 12 of 18 entries had fired within 2 minutes of the open on
+meaningless volume projections. Hence: the p.229 projection trust floor +
+the score floor. Verified adversarially before shipping.
 
 ## 5. The equity cap
 

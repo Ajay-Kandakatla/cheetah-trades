@@ -459,6 +459,28 @@ def _record_snapshot(snap: dict) -> None:
         log.warning("record_snapshot %s: %s", snap.get("symbol"), exc)
 
 
+def _record_signal(symbol: str, signal: Optional[str], pct: Optional[float]) -> None:
+    """Stamp today's soir_history row with the CLASSIFIED signal + percentile.
+
+    Added 2026-07-09: the Auto-Pilot failure autopsy could only reconstruct
+    the raw SOIR ratio historically — IRM's pre-drop put-buying spike
+    (0.46→0.94) was visible but the classified signal wasn't stored, so
+    "did SOIR warn us before the drop?" wasn't answerable from data. Runs as
+    a second update AFTER _record_snapshot + _classify because _percentile()
+    ranks against soir_history including today's raw row — writing the
+    signal earlier would change that semantics."""
+    db = _get_db()
+    if db is None:
+        return
+    try:
+        db.soir_history.update_one(
+            {"symbol": symbol, "date": _today_iso()},
+            {"$set": {"signal": signal, "soir_percentile": pct}},
+        )
+    except Exception as exc:
+        log.warning("record_signal %s: %s", symbol, exc)
+
+
 def _percentile(symbol: str, current_soir: float) -> Optional[float]:
     """Return the percentile rank of `current_soir` in the trailing 52w
     of stored history for this symbol. None if < 30 days of history.
@@ -651,6 +673,7 @@ def compute_for_symbol(symbol: str, sepa_record: Optional[dict] = None,
     trend = _trend_pillar(sepa_record)
     sepa_score = (sepa_record or {}).get("score")
     signal = _classify(pct, trend, sepa_score)
+    _record_signal(snap["symbol"], signal.get("signal"), pct)
 
     # Reuse SEPA's trade plan when available — same numbers across pages.
     # When a ticker isn't in the SEPA scan (or SEPA didn't produce a plan),

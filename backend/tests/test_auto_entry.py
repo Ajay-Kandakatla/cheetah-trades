@@ -143,7 +143,12 @@ def env(monkeypatch):
     def build(rows=(), quotes=None, positions=(), armed=True, auto=True,
               equity=100_000.0, equity_cap=100_000.0, frac=0.3,
               relvols=None, gauge="constructive", earnings_days=None,
-              market_open=True, enter_result=None, enter_raises=None):
+              market_open=True, enter_result=None, enter_raises=None,
+              never_stop=False):
+        # never_stop pinned FALSE by default: this suite tests the LIVE
+        # guardrails (daily cap, risk-off halt). The paper-mode lift is
+        # covered by tests/test_autoentry_never_stop.py. Without the pin the
+        # fake broker resolves to sim mode and the cap silently lifts.
         fake = FakeBroker(positions, equity, market_open)
         db = FakeDB(armed=armed, auto=auto, equity_cap=equity_cap)
         enter_calls = []
@@ -170,9 +175,13 @@ def env(monkeypatch):
                             lambda syms: {s: dict(quotes[s])
                                           for s in syms if s in (quotes or {})})
         monkeypatch.setattr(AE, "_session_fraction", lambda: frac)
-        monkeypatch.setattr(AE, "_projected_relvol",
-                            lambda sym: (relvols or {}).get(sym))
+        # relvols map -> the new _volume_live seam (projected only; tests
+        # exercising the ACTUAL-volume fast path build their own dict).
+        monkeypatch.setattr(AE, "_volume_live",
+                            lambda sym: {"projected_relvol": (relvols or {}).get(sym),
+                                         "today_volume": None, "avg_vol_50": None})
         monkeypatch.setattr(AE, "_gauge_state", lambda: gauge)
+        monkeypatch.setattr(AE, "_never_auto_stop", lambda: never_stop)
         monkeypatch.setattr(AE, "_earnings_days",
                             lambda sym: earnings_days)
         pushes = []
@@ -225,7 +234,7 @@ def test_intraday_path_fires_once_with_structural_stop(env):
     assert det["pivot"] == 100.0 and det["live"] == 101.0
     assert det["relvol"] == 1.6
     assert det["cleared_at_frac"] == pytest.approx(0.3)
-    assert "is_buyable" in rows[0]["cite"] and "score>=70" in rows[0]["cite"]
+    assert "is_buyable" in rows[0]["cite"] and "score floor" in rows[0]["cite"]
     assert pushes and pushes[0][0] == "auto_entry" and pushes[0][1] == "AAA"
 
 
@@ -266,8 +275,25 @@ def test_relvol_below_min_skips(env):
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
-    assert checks["relvol"]["pass"] is False
-    assert checks["relvol"]["value"] == 1.2
+    assert checks["volume_confirmed"]["pass"] is False
+    assert checks["volume_confirmed"]["value"]["projected_relvol"] == 1.2
+    assert checks["volume_confirmed"]["value"]["basis"] == "insufficient_volume"
+
+
+def test_projection_untrusted_at_open_skips(env):
+    """REGRESSION (2026-07-09 autopsy): at 9:31 (frac 0.003) even a monster
+    PROJECTED RelVol must not trigger — the projection has no tape to stand
+    on. This is the hole that let 12 of 18 entries fire in the first two
+    minutes. Close-confirm stays available (prev close below pivot here)."""
+    _, db, enter_calls, _ = env(
+        rows=[_row("AAA", pivot=100.0)],
+        quotes={"AAA": {"price": 101.0, "prev_day_close": 98.0}},
+        frac=0.003, relvols={"AAA": 9.9})
+    AE.run()
+    assert enter_calls == []
+    checks = _state(db, "AAA")["last_eval"]["checks"]
+    assert checks["volume_confirmed"]["pass"] is False
+    assert checks["volume_confirmed"]["value"]["basis"] == "too_early_to_project"
 
 
 def test_extended_past_cap_skips_both_paths(env):
@@ -307,7 +333,7 @@ def test_close_confirm_enters_next_morning(env):
 def test_daily_cap_two_entries_third_skipped(env):
     """Three triggering candidates, MAX_AUTO_ENTRIES_PER_DAY = 2 -> the two
     highest-score names enter, the third is skipped on the daily_cap check."""
-    rows = [_row("AAA", score=90), _row("BBB", score=85), _row("CCC", score=80)]
+    rows = [_row("AAA", score=90), _row("BBB", score=88), _row("CCC", score=86)]
     quotes = {s: {"price": 101.0, "prev_day_close": 102.0}
               for s in ("AAA", "BBB", "CCC")}
     _, db, enter_calls, _ = env(rows=rows, quotes=quotes, frac=0.3,
@@ -465,10 +491,10 @@ def test_market_closed_noops(env):
 def test_funnel_drops_non_buyable_low_score_and_no_pivot(env):
     rows = [
         _row("NOB", buyable=False),                       # not buyable
-        _row("LOW", score=65.0),                          # score < 70
+        _row("LOW", score=84.9),                          # score < 85 floor
         {"symbol": "NOP", "score": 90, "is_buyable": True,
          "entry_setup": {"type": "VCP", "stop": 95.0}},   # no pivot
-        _row("YES", score=75.0),
+        _row("YES", score=85.0),                          # exactly at the floor
     ]
     quotes = {s: {"price": 101.0, "prev_day_close": 102.0}
               for s in ("NOB", "LOW", "NOP", "YES")}

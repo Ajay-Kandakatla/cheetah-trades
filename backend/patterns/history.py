@@ -192,24 +192,50 @@ def _grade_candle(df: pd.DataFrame, obs: dict) -> Optional[dict]:
     return {"outcome": "hit" if hit else "miss", "fwd_5_pct": round(float(fwd), 2)}
 
 
+def backfill_fwd21(df: pd.DataFrame, obs: dict) -> Optional[float]:
+    """+21-bar return for an ALREADY-resolved pattern observation. Pure.
+
+    BUG FIX 2026-07-09: _grade_pattern sets fwd_21_pct only when the full
+    21-bar window existed AT GRADING TIME — but most confirmations resolve
+    (target/stop hit) within days, so the field stayed null forever
+    (0 of 199 resolved docs had it). This computes it once the window has
+    since completed; resolve_pending() backfills nightly."""
+    try:
+        k = _obs_index(df, obs["et_date"])
+    except Exception:
+        return None
+    if k is None or k + PATTERN_HORIZON >= len(df):
+        return None                            # window still incomplete
+    closes = df["close"].to_numpy(dtype=float)
+    entry = float(obs.get("obs_close") or closes[k])
+    if entry <= 0:
+        return None
+    return round((closes[k + PATTERN_HORIZON] / entry - 1) * 100, 2)
+
+
 def resolve_pending(limit: int = 2000) -> dict:
     """Grade unresolved observations against the price cache. Run daily after
-    the post-close fast-scan so today's bar is in the frames."""
+    the post-close fast-scan so today's bar is in the frames. Also backfills
+    fwd_21_pct on already-resolved pattern docs whose 21-bar window has since
+    completed (see backfill_fwd21)."""
     coll = _coll()
     if coll is None:
         return {"ok": False, "reason": "no mongo"}
     from sepa import prices
-    n_resolved = n_checked = 0
+    n_resolved = n_checked = n_backfilled = 0
     frames: dict = {}
-    for obs in coll.find({"resolved": False}).limit(limit):
-        n_checked += 1
-        sym = obs["symbol"]
+
+    def _frame(sym: str):
         if sym not in frames:
             try:
                 frames[sym] = prices.load_prices(sym)
             except Exception:
                 frames[sym] = None
-        df = frames[sym]
+        return frames[sym]
+
+    for obs in coll.find({"resolved": False}).limit(limit):
+        n_checked += 1
+        df = _frame(obs["symbol"])
         if df is None or len(df) < 30:
             continue
         try:
@@ -224,8 +250,26 @@ def resolve_pending(limit: int = 2000) -> dict:
                         {"$set": {**res, "resolved": True,
                                   "resolved_at": int(time.time())}})
         n_resolved += 1
-    log.info("pattern ledger resolve: %d/%d resolved", n_resolved, n_checked)
-    return {"ok": True, "checked": n_checked, "resolved": n_resolved}
+
+    for obs in coll.find({"resolved": True, "kind": "pattern",
+                          "fwd_21_pct": None}).limit(limit):
+        df = _frame(obs["symbol"])
+        if df is None or len(df) < 30:
+            continue
+        try:
+            fwd = backfill_fwd21(df, obs)
+        except Exception as exc:
+            log.debug("fwd21 backfill failed %s: %s", obs["_id"], exc)
+            continue
+        if fwd is None:
+            continue
+        coll.update_one({"_id": obs["_id"]}, {"$set": {"fwd_21_pct": fwd}})
+        n_backfilled += 1
+
+    log.info("pattern ledger resolve: %d/%d resolved, %d fwd21 backfilled",
+             n_resolved, n_checked, n_backfilled)
+    return {"ok": True, "checked": n_checked, "resolved": n_resolved,
+            "fwd21_backfilled": n_backfilled}
 
 
 # ── 3. ACCURACY ──────────────────────────────────────────────────────────────
