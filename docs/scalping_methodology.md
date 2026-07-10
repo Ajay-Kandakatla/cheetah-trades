@@ -268,6 +268,14 @@ handle mandatory and ≥1 week (HANDLE_MIN_BARS 5) "in the upper half of the cup
 cited), 8% minimum depth, U-shape operationalized as low-in-the-middle-70%
 plus ≥3 bars within 5% of the low (his "U-shaped, not V-shaped" has no formula),
 stop under the HANDLE low (the cup low invalidates far too late).
+Since 2026-07-10 every CWH record carries his page's post-breakout reality
+verbatim (CWH_POST_BREAKOUT_STAT: throwback 62%; "47% of the cup with handle
+patterns dropped substantially within two months of the breakout"; 23% rise no
+more than 15% before dropping) — see the forward-ledger audit below. NOTE
+(re-verified 2026-07-10): cup.html says "price rises into the start of the cup,
+but I don't pay much attention to this guideline" — so NO prior-rise gate can
+be hung on Bulkowski; an O'Neil-style ≥30%-prior-uptrend gate stays out until
+the HTMMIS source is on hand (Rule #1).
 
 ## Daily candle reads (patterns/candles_daily.py) — context, never signals
 Named formations (hammer, shooting star, southern doji, bullish/bearish
@@ -279,6 +287,49 @@ record on candlesticks as standalone predictors is NULL (Marshall, Young & Rose
 2006; Horton 2009; Fock 2005). The last-bar read is the same descriptive
 supply/demand arithmetic as the 5-min tape layer (body %, wicks, CLV, volume
 ratio) — "who won the bar", never "what happens next".
+
+Shooting star — REPORTING gate since 2026-07-10: the read fires only when the
+close sits within the lowest THIRD of the trailing yearly (252-bar) high-low
+range, with ≥200 bars of history to place that low honestly (YEARLY_BARS /
+YEARLY_MIN_BARS / YEARLY_LOW_FRAC in candles_daily.py). Source: his page
+(re-verified verbatim 2026-07-10) rates the formation "near random" (59%,
+overall rank 55/103), says it "looks better than it performs", and puts its
+only useful bucket at price "within a third of the yearly low" as part of
+upward retracements in downtrends. Our forward ledger without the gate agreed:
+34.7% direction-hit over n=326 — exactly the qualifier universe's
+unconditional 5-bar down-rate (~35%), i.e. zero signal fired near highs on
+Stage-2 names. Same family as the trend gate: context is part of the
+definition. The structurally identical bar high in the range still shows in
+the last-bar anatomy — descriptive, undirectional.
+
+## Forward-ledger audit 2026-07-10 (pattern_observations, 2026-06-10 → 07-09)
+The ledger's own verdicts, and what they changed:
+- **shooting_star 34.7% (n=326)** vs bearish_engulfing 62.4% (n=237), hammer
+  60.9% (n=46), bullish_engulfing 73.8% (n=42): the ledger reproduces
+  Bulkowski's rankings almost exactly (engulfing rank 5/103 keeps a real edge
+  even against Stage-2 upward drift; the "near random" star and hammer land on
+  the universe's base rates). → the reporting gate above. The bearish-engulfing
+  read is untouched — it earned the ⚠️ chip.
+- **cup_with_handle 35.3% target-before-stop (n=17, 6W/11L)** is NOT a broken
+  detector: forming cups went on to confirm 61% (51/83), the geometry is
+  faithful to cup.html, and 15/17 confirmations were Stage 2. It is (a) the
+  harshest bracket of the four — its stop (handle low) sits a median 9.4% from
+  entry vs ~20.7% for double/triple bottom (pattern low), while its target is
+  the farthest (12.9% vs 11.9%); a driftless random walk would score ~42% on
+  CWH's bracket and ~64% on the double bottom's, so the raw hit-%s were never
+  comparable; and (b) the source's own disclosed lesson reproduced ("47%
+  dropped substantially within two months"; stop-outs hit at median bar 6 —
+  the throwback window; his throwback rate 62%). At n=17 the 6 wins sit ~0.6σ
+  below the bracket-implied 42% — noise, not evidence. → no detector change;
+  CWH records now carry the caveat; accuracy() now reports
+  median_target_dist_pct / median_stop_dist_pct / expectancy_pct (gross avg
+  win% − avg loss% per decided trade) so patterns are compared on expectancy,
+  never raw hit-%. Double bottom's 78.3% reads great partly because its stop
+  is ~20% away — wider than any stop actually traded here (TLSW risk rules).
+- Deliberately NOT done: O'Neil prior-uptrend / breakout-volume gates on the
+  cup (await the HTMMIS source per Rule #1 — Bulkowski explicitly downplays
+  prior rise); any change to CWH stop/target factors (trade-plan decision,
+  Ajay's call); demoting the hammer (60.9% ≈ base rate but n=46 — watch).
 
 ## Rejected (and why)
 - **Rounding bottom** — Bulkowski himself says find it on WEEKLY charts; any

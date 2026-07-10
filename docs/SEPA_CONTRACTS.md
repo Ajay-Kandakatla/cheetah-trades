@@ -9,7 +9,10 @@ truth for what "not broken" means. The companion regression test at
 If you change anything in this doc, you are changing trading logic. Bump the
 version below and get explicit sign-off before merging.
 
-**Version:** 1.7.0 (2026-06-22) — **3-C cheat tag on qualifiers**
+**Version:** 1.8.0 (2026-07-10, lands with branch
+`feat/patterns-audit-2026-07-10` — merging IS the sign-off) — **pattern
+verdict layer: shooting-star reporting gate + ledger comparability** (§14).
+Previous: 1.7.0 (2026-06-22) — **3-C cheat tag on qualifiers**
 (`sepa.cheat`, TTLAC §7). Tags a qualifier forming the cup-completion cheat —
 Minervini's earliest/aggressive entry — by book thresholds only (≥25% prior
 advance p.133; a 10–40% base off the high p.119/p.133; 10-day volume below the
@@ -1334,3 +1337,45 @@ momentum burst, group leadership, and the anti-thesis **sell** signals).
 - The pre-existing backend `buy_verdict` (Minervini buyable qualifier p.79 +
   Bonde *sales* test) is retained beneath the composite as the **fundamental
   gate** detail.
+
+## 14. Pattern verdict layer — shooting-star reporting gate + ledger comparability (2026-07-10)
+
+Forward-ledger audit of `pattern_observations` (2026-06-10 → 2026-07-09,
+n=1,194 docs; full findings in `docs/scalping_methodology.md` → "Forward-ledger
+audit 2026-07-10"). Both sources re-verified verbatim against thepatternsite.com
+on 2026-07-10 (cup.html, ShootingStar.html). INFORMATIONAL layer — nothing here
+feeds `is_candidate`/`is_buyable` or the deterministic engine.
+
+- **Shooting star reporting gate** (`patterns/candles_daily.py`): the
+  `bearish_warning` read fires ONLY when the close sits within the lowest
+  third of the trailing yearly high-low range (`YEARLY_BARS=252`,
+  `YEARLY_MIN_BARS=200`, `YEARLY_LOW_FRAC=1/3`), per Bulkowski's own bucket
+  ("near random" 59% overall, rank 55/103; earns its keep "within a third of
+  the yearly low"). Our ledger without the gate: 34.7% direction-hit, n=326 =
+  the qualifier universe's unconditional 5-bar down-rate. Guards:
+  `test_candles_daily.py::test_shooting_star_high_in_yearly_range_is_silent`
+  (the regression), `::test_shooting_star_fires_near_yearly_low`,
+  `::test_yearly_low_gate_constants_locked`.
+- **Bearish engulfing is deliberately UNgated** — it measured a real edge in
+  the same hostile universe (62.4%, n=237; his rank 5/103). Guard:
+  `::test_bearish_engulfing_near_highs_still_fires`.
+- **Cup-with-handle detector formulas UNCHANGED** (geometry faithful to
+  cup.html; forming→confirm 61%, 51/83). Its 35.3% target-before-stop (n=17)
+  is bracket geometry (median stop 9.4% from entry vs ~20.7% for double/triple
+  bottom) + the page's own disclosed lesson ("47% … dropped substantially
+  within two months"; throwback 62%) — carried verbatim on every CWH record as
+  `stat` (`CWH_POST_BREAKOUT_STAT` in `patterns/detector.py`) and surfaced in
+  the SEPA chip tooltip. Guards: `test_patterns.py::test_cup_with_handle_confirmed`,
+  `::test_cited_constants_locked`, `SepaPatternChip.test.tsx`.
+- **Accuracy comparability** (`patterns/history.py::accuracy()`): confirmed
+  rows now report `median_target_dist_pct`, `median_stop_dist_pct`,
+  `expectancy_pct` (gross avg win% − avg loss% per DECIDED trade, no costs)
+  and `conventions.bracket_note`. Contract: `target_before_stop_pct` must
+  never be compared across patterns without the distances — a driftless random
+  walk scores ~42% on the cup's bracket vs ~64% on the double bottom's. Guard:
+  `test_pattern_history.py::test_accuracy_aggregates`.
+- **Explicitly deferred (Rule #1):** O'Neil prior-uptrend (≥30%) and
+  breakout-volume gates on the cup await the HTMMIS source PDF — Bulkowski
+  himself downplays prior rise ("I don't pay much attention to this
+  guideline", cup.html). Any change to CWH stop/target conventions is a
+  trade-plan decision — Ajay's call.
