@@ -179,6 +179,10 @@ def test_cup_with_handle_confirmed():
     expect = p["neckline"] + detector.CWH_TARGET_FACTOR * (p["neckline"] - p["pattern_low"])
     assert abs(p["target"] - round(expect, 2)) < 0.02
     assert p["stop"] > p["pattern_low"]            # stop under the HANDLE low, not the cup low
+    # cup.html's own post-breakout reality travels with the record (2026-07-10
+    # audit): the chip may not sell the breakout without the throwback caveat.
+    assert "47% of the cup with handle" in p["stat"]
+    assert "throwback 62%" in p["stat"]
     assert res["historical_confirms"]
 
 
@@ -204,3 +208,6 @@ def test_cited_constants_locked():
     assert detector.HANDLE_MIN_BARS == 5           # handle "1 week minimum"
     assert set(detector.DETECTORS) == {"double_bottom", "inverse_head_shoulders",
                                        "triple_bottom", "cup_with_handle"}
+    # cup.html post-breakout quotes (re-verified 2026-07-10) — verbatim or gone.
+    assert "47% of the cup with handle" in detector.CWH_POST_BREAKOUT_STAT
+    assert "throwback 62%" in detector.CWH_POST_BREAKOUT_STAT

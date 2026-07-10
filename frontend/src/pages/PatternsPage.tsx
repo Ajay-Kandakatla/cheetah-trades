@@ -34,6 +34,8 @@ type AccConfirmed = {
   n: number; target_before_stop_pct?: number | null; stop_first_pct?: number | null;
   neither_pct?: number | null; pct_positive_21d?: number | null; median_fwd_21d_pct?: number | null;
   buyable_n?: number; buyable_target_before_stop_pct?: number | null;
+  median_target_dist_pct?: number | null; median_stop_dist_pct?: number | null;
+  expectancy_pct?: number | null;
 };
 type AccForming = { n: number; went_on_to_confirm_pct?: number | null; stopped_first_pct?: number | null; expired_pct?: number | null };
 type Accuracy = {
@@ -228,7 +230,13 @@ export function PatternsPage() {
               <b>{PATTERN_LABEL[k] || k}</b>:
               {v.confirmed && v.confirmed.n > 0 && (
                 <> confirmed n={v.confirmed.n} · <b style={{ color: (v.confirmed.target_before_stop_pct ?? 0) >= 50 ? C.green : C.amber }}>
-                  {v.confirmed.target_before_stop_pct ?? '—'}%</b> hit target before stop ·
+                  {v.confirmed.target_before_stop_pct ?? '—'}%</b>{' '}
+                  <span title={`Races THIS pattern's own bracket — median target ${v.confirmed.median_target_dist_pct ?? '—'}% away vs stop ${v.confirmed.median_stop_dist_pct ?? '—'}% away. Stop distances differ ~2x across patterns, so never compare this % across patterns raw.`}>
+                    hit target before stop (tgt {v.confirmed.median_target_dist_pct ?? '—'}% / stop {v.confirmed.median_stop_dist_pct ?? '—'}% away)
+                  </span>
+                  {v.confirmed.expectancy_pct != null && <> · <b style={{ color: v.confirmed.expectancy_pct > 0 ? C.green : C.red }}
+                    title="Gross expectancy per decided trade: avg win% minus avg loss%, no costs — the cross-pattern comparable number">
+                    {v.confirmed.expectancy_pct > 0 ? '+' : ''}{v.confirmed.expectancy_pct}%/trade</b></>} ·
                   {' '}{v.confirmed.pct_positive_21d ?? '—'}% positive +21d
                   {v.confirmed.median_fwd_21d_pct != null && <> · median {v.confirmed.median_fwd_21d_pct > 0 ? '+' : ''}{v.confirmed.median_fwd_21d_pct}%</>}
                   {(v.confirmed.buyable_n ?? 0) > 0 && <> · <span title="The subset that ALSO cleared the full Minervini buy gate when flagged">⭐ buyable subset: {v.confirmed.buyable_target_before_stop_pct ?? '—'}% (n={v.confirmed.buyable_n})</span></>}

@@ -277,6 +277,10 @@ def _pct(part: int, whole: int) -> Optional[float]:
     return round(part / whole * 100, 1) if whole else None
 
 
+def _median(xs: list) -> Optional[float]:
+    return round(sorted(xs)[len(xs) // 2], 2) if xs else None
+
+
 def accuracy() -> dict:
     """The live record, aggregated — the answer to "are our patterns accurate?"
     computed from what the system actually flagged, day by day."""
@@ -296,13 +300,25 @@ def accuracy() -> dict:
             slot = patterns.setdefault(obs["pattern"], {}).setdefault(obs["status"], {
                 "n": 0, "target_first": 0, "stop_first": 0, "neither": 0,
                 "confirmed": 0, "stopped": 0, "expired": 0, "fwd": [], "buyable_n": 0,
-                "buyable_target_first": 0})
+                "buyable_target_first": 0, "tgt_d": [], "stp_d": [],
+                "win": [], "loss": []})
             slot["n"] += 1
             o = obs.get("outcome")
             if o in slot:
                 slot[o] += 1
             if obs.get("fwd_21_pct") is not None:
                 slot["fwd"].append(obs["fwd_21_pct"])
+            # Bracket geometry (2026-07-10 audit): each pattern races its OWN
+            # target/stop distances, so the raw hit-% is meaningless without
+            # them — collect the distances and the realized win/loss sizes.
+            e, t, sp = obs.get("obs_close"), obs.get("target"), obs.get("stop")
+            if e and t and sp and float(e) > 0:
+                slot["tgt_d"].append((float(t) / float(e) - 1) * 100)
+                slot["stp_d"].append((1 - float(sp) / float(e)) * 100)
+                if o == "target_first":
+                    slot["win"].append((float(t) / float(e) - 1) * 100)
+                elif o == "stop_first":
+                    slot["loss"].append((1 - float(sp) / float(e)) * 100)
             if obs.get("is_buyable"):
                 slot["buyable_n"] += 1
                 if o == "target_first":
@@ -322,6 +338,7 @@ def accuracy() -> dict:
             fwd = sorted(s["fwd"])
             row = {"n": s["n"]}
             if status == "confirmed":
+                decided = s["target_first"] + s["stop_first"]
                 row.update({
                     "target_before_stop_pct": _pct(s["target_first"], s["n"]),
                     "stop_first_pct": _pct(s["stop_first"], s["n"]),
@@ -330,6 +347,11 @@ def accuracy() -> dict:
                     "median_fwd_21d_pct": fwd[len(fwd) // 2] if fwd else None,
                     "buyable_n": s["buyable_n"],
                     "buyable_target_before_stop_pct": _pct(s["buyable_target_first"], s["buyable_n"]),
+                    # Bracket context — read the hit-% THROUGH these, never raw.
+                    "median_target_dist_pct": _median(s["tgt_d"]),
+                    "median_stop_dist_pct": _median(s["stp_d"]),
+                    "expectancy_pct": round((sum(s["win"]) - sum(s["loss"])) / decided, 2)
+                    if decided else None,
                 })
             else:
                 row.update({
@@ -350,6 +372,13 @@ def accuracy() -> dict:
             "pattern_horizon_bars": PATTERN_HORIZON, "candle_horizon_bars": CANDLE_HORIZON,
             "entry": "close on the day the system flagged it",
             "tie_break": "a bar touching target AND stop counts as the stop (pessimistic)",
+            "bracket_note": (
+                "target_before_stop_pct races each pattern's OWN bracket, and stop "
+                "distances differ ~2x across patterns (a double bottom's stop is the "
+                "pattern low, ~20% below entry; a cup's is the handle low, ~9%) — "
+                "never compare the raw % across patterns. Read expectancy_pct (gross "
+                "avg win% minus avg loss% per decided trade) with the median "
+                "target/stop distances next to it."),
         },
         "disclaimer": (
             "OUR live forward record: every pattern/candle the verdict scan flagged, "

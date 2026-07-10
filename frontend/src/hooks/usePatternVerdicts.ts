@@ -10,7 +10,7 @@ export type PatternMatch = {
   symbol?: string; pattern: string; status: 'confirmed' | 'forming';
   neckline: number; pattern_low: number; target: number; stop: number; last_close: number;
   confirmed_date?: string; bars_since_confirm?: number; ext_past_confirm_pct?: number;
-  to_confirm_pct?: number;
+  to_confirm_pct?: number; stat?: string;
 };
 export type PatternFormation = { name: string; date: string; read: string; note: string; stat?: string };
 export type PatternSepa = {

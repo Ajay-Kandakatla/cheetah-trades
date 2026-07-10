@@ -146,10 +146,12 @@ def test_accuracy_aggregates(monkeypatch):
     fake.docs = {
         "a": {"_id": "a", "kind": "pattern", "pattern": "double_bottom", "status": "confirmed",
               "et_date": "2026-06-01", "resolved": True, "outcome": "target_first",
-              "fwd_21_pct": 6.0, "is_buyable": True},
+              "fwd_21_pct": 6.0, "is_buyable": True,
+              "obs_close": 100.0, "target": 110.0, "stop": 95.0},
         "b": {"_id": "b", "kind": "pattern", "pattern": "double_bottom", "status": "confirmed",
               "et_date": "2026-06-02", "resolved": True, "outcome": "stop_first",
-              "fwd_21_pct": -4.0, "is_buyable": False},
+              "fwd_21_pct": -4.0, "is_buyable": False,
+              "obs_close": 100.0, "target": 108.0, "stop": 90.0},
         "c": {"_id": "c", "kind": "pattern", "pattern": "cup_with_handle", "status": "forming",
               "et_date": "2026-06-03", "resolved": True, "outcome": "confirmed"},
         "d": {"_id": "d", "kind": "candle", "formation": "hammer",
@@ -162,7 +164,16 @@ def test_accuracy_aggregates(monkeypatch):
     assert db["n"] == 2
     assert db["target_before_stop_pct"] == 50.0
     assert db["buyable_n"] == 1 and db["buyable_target_before_stop_pct"] == 100.0
-    assert acc["patterns"]["cup_with_handle"]["forming"]["went_on_to_confirm_pct"] == 100.0
+    # Bracket-context fields (2026-07-10 audit): distances + gross expectancy
+    # per decided trade — the numbers that make hit-% comparable across patterns.
+    # a: tgt 10% / stp 5% away, won +10; b: tgt 8% / stp 10% away, lost −10.
+    assert db["median_target_dist_pct"] == 10.0
+    assert db["median_stop_dist_pct"] == 10.0
+    assert db["expectancy_pct"] == 0.0             # (+10 − 10) / 2 decided
+    assert "never compare the raw %" in acc["conventions"]["bracket_note"]
+    forming = acc["patterns"]["cup_with_handle"]["forming"]
+    assert forming["went_on_to_confirm_pct"] == 100.0
+    assert "expectancy_pct" not in forming         # forming rows race no bracket
     assert acc["candles"]["hammer"]["direction_hit_pct"] == 100.0
     assert acc["pending"] == 1
     assert "not a promise" in acc["disclaimer"]

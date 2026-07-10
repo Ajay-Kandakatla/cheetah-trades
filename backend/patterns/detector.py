@@ -54,6 +54,16 @@ CUP_LOW_POS = (0.15, 0.85)  # CONVENTION — cup low must sit in the middle of t
 HANDLE_MIN_BARS = 5         # CITED — handle "1 week minimum with no maximum"
 CWH_TARGET_FACTOR = 0.61    # CITED — measure rule multiplies the height by his 61% target-hit rate
 
+# Post-breakout reality from the SAME page (cup.html, re-verified 2026-07-10),
+# carried on every CWH record the way candle reads carry theirs — because the
+# breakout stats look better than the trade. Our forward ledger reproduced his
+# warning (2026-07-10 audit: 11 of 17 confirmed CWH hit the handle stop first,
+# median 6 bars in — the throwback window).
+CWH_POST_BREAKOUT_STAT = (
+    "Bulkowski (cup.html): throwback 62% · “47% of the cup with handle patterns "
+    "dropped substantially within two months of the breakout” · 23% rise no more "
+    "than 15% before dropping. Expect the pullback — don't chase the breakout bar.")
+
 
 def swing_points(df: pd.DataFrame, window: int = SWING_WINDOW) -> tuple:
     """(lows, highs) — lists of (iloc_index, price) strict local extrema."""
@@ -407,6 +417,7 @@ def cup_with_handle(df: pd.DataFrame, **kw) -> dict:
                 rec["rims"] = [{"date": _date(df, i), "price": round(left_rim, 2)},
                                {"date": _date(df, j), "price": round(right_rim, 2)}]
                 rec["handle_low"] = round(float(handle_lows.min()), 2)
+                rec["stat"] = CWH_POST_BREAKOUT_STAT
                 out["fresh"].append(rec)
     out["historical_confirms"] = _dedupe_confirms(out["historical_confirms"])
     out["fresh"].sort(key=lambda r: (0 if r["status"] == "confirmed" else 1,
