@@ -113,3 +113,79 @@ def test_stats_only_from_verified_set():
         assert "%" in cd.BULKOWSKI_CANDLE[name]
     assert "near random" in cd.BULKOWSKI_CANDLE["shooting_star"]
     assert "lasting reversal" in cd.BULKOWSKI_CANDLE["bearish_engulfing"]
+
+
+# ── Shooting-star reporting gate (2026-07-10 forward-ledger audit) ───────────
+# Bulkowski (ShootingStar.html, re-verified 2026-07-10): "near random" overall;
+# earns its keep only "within a third of the yearly low". Our ledger without
+# the gate: 34.7% direction-hit over n=326 = the qualifier universe's base
+# 5-bar down-rate — zero signal near highs on Stage-2 names.
+
+def _star_bar(bars):
+    """Append a structural shooting star: tall upper wick ≥2× body, tiny
+    lower shadow, small-but-not-doji body."""
+    last = bars[-1][3]
+    bars.append((last, last + 3.0, last - 0.05, last + 0.6))
+    return bars
+
+
+def _stage2_advance():
+    """~a year rising 50 → ~111, steeper final leg so the 10-bar trend gate
+    reads 'up' at the last bar — the shape of every Stage-2 qualifier in the
+    n=326 sample."""
+    bars = _uptrend(220, start=50.0, step=0.25)    # 50 → 105
+    bars += _uptrend(12, start=bars[-1][3], step=0.5)   # ≥4% over the last 10 bars
+    return bars
+
+
+def test_shooting_star_fires_near_yearly_low():
+    # ~a year drifting 100 → 40 (defines the yearly range), then a +5% 10-bar
+    # bounce OFF the low — his "upward retracement near the yearly low" context.
+    bars = _downtrend(240, start=100.0, step=0.25)
+    bars += _uptrend(10, start=40.0, step=0.2)
+    res = cd.read_daily(_frame(_star_bar(bars)))
+    f = next((x for x in res["formations"] if x["name"] == "shooting_star"), None)
+    assert f is not None, "star near the yearly low is the ONE place it reports"
+    assert f["read"] == "bearish_warning"
+    assert "near random" in f["stat"]              # his deflating verdict travels with it
+
+
+def test_shooting_star_high_in_yearly_range_is_silent():
+    """THE audit regression: the same structural star near the yearly HIGH in a
+    steady advance (every Stage-2 qualifier, i.e. the n=326 sample) must stay
+    silent — up there it graded at the universe's base rate, pure noise."""
+    bars = _stage2_advance()                       # close at the top of the range
+    res = cd.read_daily(_frame(_star_bar(bars)))
+    assert res["trend"] == "up"                    # the trend gate is NOT what silences it
+    assert "shooting_star" not in [f["name"] for f in res["formations"]]
+    assert res["last_bar"] is not None             # the bar anatomy still shows who won
+
+
+def test_shooting_star_needs_a_year_of_history():
+    # Same near-the-low shape but only ~40 bars of history: the yearly low
+    # cannot be placed honestly, so the read stays silent (burden of proof
+    # is on the signal, not the gate).
+    bars = _downtrend(30, start=100.0, step=2.0)
+    bars += _uptrend(10, start=40.0, step=0.2)
+    res = cd.read_daily(_frame(_star_bar(bars)))
+    assert "shooting_star" not in [f["name"] for f in res["formations"]]
+
+
+def test_bearish_engulfing_near_highs_still_fires():
+    """Negative guard: the gate is shooting-star-specific. Bearish engulfing
+    measured a real edge in the same universe (62.4% n=237; Bulkowski rank
+    5/103) and must keep firing near highs."""
+    bars = _stage2_advance()
+    o_prev, c_prev = bars[-1][0], bars[-1][3]      # last green body
+    bars.append((c_prev + 0.4, c_prev + 0.6, o_prev - 0.6, o_prev - 0.5))
+    res = cd.read_daily(_frame(bars))
+    assert "bearish_engulfing" in [f["name"] for f in res["formations"]]
+
+
+def test_yearly_low_gate_constants_locked():
+    """Source-guard: the gate quotes his bucket verbatim and the constants
+    can't drift without a doc update."""
+    assert "yearly low" in cd.BULKOWSKI_CANDLE["shooting_star"]
+    assert cd.YEARLY_BARS == 252
+    assert cd.YEARLY_MIN_BARS == 200
+    assert abs(cd.YEARLY_LOW_FRAC - 1.0 / 3.0) < 1e-9   # "within a third of the yearly low"

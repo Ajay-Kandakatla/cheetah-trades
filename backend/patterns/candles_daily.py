@@ -33,6 +33,18 @@ RECENT_BARS = 1              # formations only count on the MOST RECENT bar (Aja
                              # in-the-moment reads, ≤24h — a hammer from 3 days ago is history)
 VOL_AVG_BARS = 50            # last-bar volume vs this average = participation read
 
+# Shooting-star REPORTING gate (2026-07-10 forward-ledger audit). His page
+# (ShootingStar.html, re-verified verbatim 2026-07-10) calls the formation
+# "near random" overall and says it "looks better than it performs"; his
+# best-performance bucket is price "within a third of the yearly low". Our own
+# ledger agreed emphatically: 34.7% direction-hit over n=326 — indistinguishable
+# from the qualifier universe's unconditional 5-bar down-rate (~35%), i.e. ZERO
+# signal when it fires near highs on Stage-2 momentum names. Same family as the
+# trend gate: context is part of the definition, not an optimization.
+YEARLY_BARS = 252            # trailing window that defines the "yearly" range
+YEARLY_MIN_BARS = 200        # need most of a year of history to place the low honestly
+YEARLY_LOW_FRAC = 1.0 / 3.0  # "within a third of the yearly low" (cited)
+
 # Bulkowski's measured reversal frequencies — VERIFIED VERBATIM against
 # thepatternsite.com (adversarial pass 2026-06-09; see scalping_methodology.md).
 # Quoted as "acts as a reversal X% of the time" — a frequency of direction in
@@ -42,7 +54,10 @@ BULKOWSKI_CANDLE = {
     "hammer": ("Bulkowski: bullish reversal 60% of the time "
                "(reversal rank 26/103; overall performance rank 65/103)"),
     "shooting_star": ("Bulkowski: bearish reversal 59% of the time — he calls that "
-                      "“near random” (overall performance rank 55/103)"),
+                      "“near random” (overall performance rank 55/103); it earns its "
+                      "keep only “within a third of the yearly low”, the only place "
+                      "this app reports it (our ledger measured 34.7% direction-hit "
+                      "over n=326 without that gate)"),
     "doji": ("Bulkowski (southern doji): bullish reversal just 52% of the time — "
              "a coin flip (overall performance rank 78/103)"),
     "bullish_engulfing": ("Bulkowski: bullish reversal 63% of the time, BUT overall "
@@ -74,6 +89,20 @@ def _trend(closes: np.ndarray, end: int) -> str:
     return "flat"
 
 
+def _near_yearly_low(df: pd.DataFrame, i: int) -> bool:
+    """Close at bar i sits within the lowest third of the trailing yearly
+    high-low range (Bulkowski's best-performance bucket for the shooting star).
+    Insufficient history (< YEARLY_MIN_BARS) returns False — the burden of
+    proof is on the signal, not on the gate."""
+    if i + 1 < YEARLY_MIN_BARS:
+        return False
+    lo = float(df["low"].iloc[max(0, i + 1 - YEARLY_BARS): i + 1].min())
+    hi = float(df["high"].iloc[max(0, i + 1 - YEARLY_BARS): i + 1].max())
+    if hi <= lo:
+        return False
+    return (float(df["close"].iloc[i]) - lo) / (hi - lo) <= YEARLY_LOW_FRAC
+
+
 def _bar(df: pd.DataFrame, i: int) -> Optional[dict]:
     row = df.iloc[i]
     a = anatomy(float(row["open"]), float(row["high"]), float(row["low"]), float(row["close"]))
@@ -97,13 +126,17 @@ def _formations_at(df: pd.DataFrame, i: int, closes: np.ndarray) -> list:
                              f"{a['body_pct']:.0%} after a decline — sellers pushed it down "
                              "intraday and lost the bar")})
 
-    # Shooting star — upper wick ≥2× body, little lower shadow, after a rise.
+    # Shooting star — upper wick ≥2× body, little lower shadow, after a rise,
+    # AND near the yearly low (see YEARLY_* above): everywhere else our ledger
+    # measured it at the universe's base rate — noise, not a read. A wick-y bar
+    # high in a Stage-2 advance still shows up in the last-bar anatomy.
     if (trend == "up" and a["upper_wick_dominant"]
-            and a["lower_wick_pct"] <= SMALL_WICK_PCT and not a["is_doji"]):
+            and a["lower_wick_pct"] <= SMALL_WICK_PCT and not a["is_doji"]
+            and _near_yearly_low(df, i)):
         out.append({"name": "shooting_star", "date": date, "read": "bearish_warning",
                     "note": (f"Upper wick {a['upper_wick_pct']:.0%} of the bar vs body "
-                             f"{a['body_pct']:.0%} after a rise — buyers pushed it up "
-                             "intraday and lost the bar")})
+                             f"{a['body_pct']:.0%} after a rise off the yearly low — "
+                             "buyers pushed it up intraday and lost the bar")})
 
     # Doji — open ≈ close. Indecision, NOT a reversal call (Horton 2009).
     if a["is_doji"]:
