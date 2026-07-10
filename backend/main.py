@@ -2513,6 +2513,17 @@ async def sepa_breakout_board(top: int = Query(250, ge=1, le=500),
     return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.board, top, min_count)))
 
 
+@app.get("/sepa/breakout-breadth")
+async def sepa_breakout_breadth(days: int = Query(30, ge=5, le=60)):
+    """Breakout breadth — daily count of volume-confirmed breakouts + the
+    graded follow-through/failure record and the book's exposure read
+    (TLSW p.164/p.303/p.307; TTLAC §5-§7). EXPOSURE GUIDANCE ONLY — never an
+    entry gate (TLSW p.165), never consumed by the scanner / auto-entry /
+    Market Gauge score. Powers the Breakouts page breadth strip."""
+    from sepa import breakout_breadth
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout_breadth.summary, days)))
+
+
 @app.get("/sepa/breakout-audit")
 async def sepa_breakout_audit(email: str = Depends(current_user_email)):
     """Integrity tripwire — independently re-derive 'broke out today' from raw

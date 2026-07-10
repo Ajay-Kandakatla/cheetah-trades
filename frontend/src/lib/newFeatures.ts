@@ -50,6 +50,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'tape-order-flow', label: '🧾 Tape tab — order flow on every ticker: delta, big prints, trade flashes, volume profile + a deterministic BUY/WAIT/AVOID checklist with its own measured track record', addedAt: '2026-07-06', route: '/sepa' },
   { id: 'learning-path', label: '📚 Learning Path — your phased study plan (order flow → SMC → options vol → synthesis) with embedded videos + papers', addedAt: '2026-07-06', route: '/learning' },
   { id: 'autopilot-position-totals', label: '💵 Cost / Now / ± columns on Auto-Pilot positions + a TOTAL row summing the pluses and minuses + cash not entered', addedAt: '2026-07-06', route: '/trading' },
+  { id: 'breakout-breadth', label: '🌡️ Breakout Breadth strip — breakouts/day + follow-through vs failure rate + the book\'s exposure read (sizes positions, never gates entries)', addedAt: '2026-07-10', route: '/breakouts' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

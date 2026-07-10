@@ -20,6 +20,7 @@ import { useSort, type SortDir } from '../lib/useSort';
 import { aiSectorSortValue } from '../lib/breakoutSort';
 import { marchToTarget, stageMeta, isExtendedToR2 } from '../lib/breakoutTargets';
 import { LeveragedBadge } from '../components/LeveragedBadge';
+import { BreakoutBreadthStrip } from '../components/BreakoutBreadthStrip';
 import { isBaseSetup } from '../lib/baseSetup';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
@@ -275,6 +276,10 @@ export function BreakoutsPage() {
           </button>
         </div>
       </div>
+
+      {/* Breakout breadth — the book's market thermometer (exposure guidance
+          only, never an entry gate — TLSW p.164/165/303/307) */}
+      <BreakoutBreadthStrip />
 
       {/* Summary mix — the "some pass, some don't" read at a glance */}
       {summary && (

@@ -453,6 +453,14 @@
 # "are our patterns accurate?" record Ajay asked for 2026-06-10.
 20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
 #
+# Breakout breadth rollup — 5:12 PM ET weekdays, after the 4:30 fast-scan has
+# stamped today's days_since_breakout==0 snapshots and the price cache has
+# today's close. Counts the day's volume-confirmed breakouts + grades the
+# older ones (followed_through / failed / stalled vs the level they broke,
+# 5-bar house window) -> GET /sepa/breakout-breadth. Exposure guidance only
+# (TLSW p.164/303/307) — never an entry gate (p.165), feeds no score.
+12     17    *    *    1-5  /usr/local/bin/python -m sepa.breakout_breadth
+#
 # Order-flow ledger resolver — 5:10 PM ET weekdays, after the 4:30 fast-scan
 # has today's close in the price cache. Grades every Tape verdict (BUY/WAIT/
 # AVOID) against the T+1/T+5 closes and feeds GET /orderflow/ledger/accuracy
