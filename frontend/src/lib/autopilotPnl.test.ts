@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cashOut, rowTotals, summarizePnl, tableTotals } from './autopilotPnl';
+import { cashOut, rowTotals, statusErrKind, summarizePnl, tableTotals } from './autopilotPnl';
 
 describe('summarizePnl — started → now', () => {
   it('reports now (equity) and the gain together', () => {
@@ -106,5 +106,18 @@ describe('cashOut — cash not entered', () => {
     const c = cashOut(5000, null);
     expect(c!.cash).toBe(5000);
     expect(c!.pctOfEquity).toBeNull();
+  });
+});
+
+describe('statusErrKind — 401 is a session problem, not a dead engine', () => {
+  it('auth for 401/403', () => {
+    expect(statusErrKind('401')).toBe('auth');
+    expect(statusErrKind('403')).toBe('auth');
+  });
+  it('down for 5xx, network junk, and missing messages', () => {
+    expect(statusErrKind('500')).toBe('down');
+    expect(statusErrKind('Failed to fetch')).toBe('down');
+    expect(statusErrKind(undefined)).toBe('down');
+    expect(statusErrKind(null)).toBe('down');
   });
 });

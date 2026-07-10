@@ -76,3 +76,15 @@ export function tableTotals(rows: PositionLike[]): TableTotals {
   return { cost, value, pnl, pct: cost > 0 ? (pnl / cost) * 100 : null,
            nPriced, nTotal: rows.length };
 }
+
+/* Engine-status error classification (2026-07-10: a 401 rendered as "is the
+ * api container running?" and sent the user debugging a healthy container).
+ * The fetch rejects with the HTTP status as the Error message; anything
+ * non-HTTP (network failure, timeout) has no parseable code -> 'down'. */
+
+export type StatusErrKind = 'auth' | 'down';
+
+export function statusErrKind(message?: string | null): StatusErrKind {
+  const code = Number(message);
+  return code === 401 || code === 403 ? 'auth' : 'down';
+}

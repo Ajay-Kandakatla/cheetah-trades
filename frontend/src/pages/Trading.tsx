@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { stopStatusView } from '../lib/autopilotStop';
-import { cashOut, rowTotals, summarizePnl, tableTotals } from '../lib/autopilotPnl';
+import { cashOut, rowTotals, statusErrKind, summarizePnl, tableTotals, type StatusErrKind } from '../lib/autopilotPnl';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
@@ -1627,7 +1627,7 @@ const VIEWS: { key: View; label: string }[] = [
 
 export function TradingPage() {
   const [status, setStatus] = useState<Status | null>(null);
-  const [statusErr, setStatusErr] = useState(false);
+  const [statusErr, setStatusErr] = useState<false | StatusErrKind>(false);
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
@@ -1667,11 +1667,16 @@ export function TradingPage() {
   useEffect(() => {
     let alive = true;
     const tick = () => {
-      fetch(`${API}/trading/status`)
+      fetch(`${API}/trading/status`, { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((j) => { if (alive) { setStatus(j); setStatusErr(false); } })
-        .catch(() => { if (alive) setStatusErr(true); });
-      fetch(`${API}/trading/ledger?limit=100`)
+        .catch((e) => {
+          // 401/403 = the SESSION is the problem, not the engine — saying
+          // "is the api container running?" for an auth miss sent Ajay
+          // debugging the wrong thing (2026-07-10 screenshot).
+          if (alive) setStatusErr(statusErrKind(e?.message));
+        });
+      fetch(`${API}/trading/ledger?limit=100`, { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => { if (alive && j && Array.isArray(j.rows)) setLedger(j.rows); })
         .catch(() => { /* silent — status.ledger_tail is the fallback */ });
@@ -1780,7 +1785,9 @@ export function TradingPage() {
       {view === 'dashboard' && <>
       {statusErr && !status && (
         <p style={{ fontSize: '0.8rem', color: C.red }}>
-          Can't reach the trading engine — is the api container running?
+          {statusErr === 'auth'
+            ? 'Not signed in for the engine (owner-gated) — refresh the page or sign in again; the engine itself is fine.'
+            : "Can't reach the trading engine — is the api container running?"}
         </p>
       )}
       {!status && !statusErr && <p style={{ fontSize: '0.8rem', color: C.sub }}>Loading engine status…</p>}
