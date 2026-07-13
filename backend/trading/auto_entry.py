@@ -62,17 +62,19 @@ MAX_AUTO_ENTRIES_PER_DAY = 2
 # Projected full-session relative volume floor for the INTRADAY path
 # (sepa.live_gate projects today's pace vs the 50-day average).
 AUTO_RELVOL_MIN = 1.5
-# Volume-projection TRUST FLOOR (added 2026-07-09 after the failure autopsy).
-# TLSW p.229 ("Extrapolating Volume Intraday") demonstrates the projection
-# "two hours into the trading day" — minutes into the open the denominator is
-# so small that ANY opening print projects as huge RelVol, which is exactly
-# how 12 of 18 auto-entries fired at 9:30-9:32 and 4 of 6 closed trades
-# stopped out. Before this fraction of the session has elapsed, a PROJECTED
-# RelVol cannot trigger the intraday path; ACTUAL volume already >= the floor
-# (vs the FULL 50-day average) can trigger at any time — a true monster open
-# proves itself without projection. 60 min is a house value anchored to the
-# p.229 concept (the book demonstrates 2h; it mandates no minimum).
-VOL_CONFIRM_MIN_FRAC = round(60.0 / 390.0, 4)   # 0.1538 of the 390-min session
+# Volume-projection TRUST FLOOR (added 2026-07-09 after the failure autopsy;
+# raised 60 -> 120 min 2026-07-12, Ajay: "first 1 hour of the day the market
+# is still volatile"). TLSW p.229 ("Extrapolating Volume Intraday")
+# demonstrates the projection "two hours into the trading day" — minutes into
+# the open the denominator is so small that ANY opening print projects as
+# huge RelVol, which is exactly how 12 of 18 auto-entries fired at 9:30-9:32
+# and 4 of 6 closed trades stopped out. Before this fraction of the session
+# has elapsed, a PROJECTED RelVol cannot trigger the intraday path; ACTUAL
+# volume already >= the floor (vs the FULL 50-day average) can trigger at any
+# time — a true monster open proves itself without projection. 120 min now
+# MATCHES the book's own demonstration (honesty note: the book demonstrates
+# 2h, it does not mandate a minimum — the floor itself stays an owner rule).
+VOL_CONFIRM_MIN_FRAC = round(120.0 / 390.0, 4)  # 0.3077 of the 390-min session
 # The first observed pivot-clear must land in the first half of the session
 # (session_fraction <= this) for the intraday path; later clears wait for
 # the close-confirmation path.

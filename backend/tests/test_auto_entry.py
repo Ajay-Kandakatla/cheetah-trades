@@ -149,7 +149,7 @@ def env(monkeypatch):
     """Wire auto_entry's seams; returns (fake_broker, fake_db, enter_calls)."""
 
     def build(rows=(), quotes=None, positions=(), armed=True, auto=True,
-              equity=100_000.0, equity_cap=100_000.0, frac=0.3,
+              equity=100_000.0, equity_cap=100_000.0, frac=0.35,
               relvols=None, gauge="constructive", earnings_days=None,
               market_open=True, enter_result=None, enter_raises=None,
               never_stop=False, scan_meta=None, daily_bars=None):
@@ -235,7 +235,7 @@ def test_intraday_path_fires_once_with_structural_stop(env):
     _, db, enter_calls, pushes = env(
         rows=[_row("AAA", pivot=100.0, stop=95.0)],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 98.0}},
-        frac=0.3, relvols={"AAA": 1.6})
+        frac=0.35, relvols={"AAA": 1.6})
     out = AE.run()
 
     assert out["ran"] is True
@@ -253,7 +253,7 @@ def test_intraday_path_fires_once_with_structural_stop(env):
     assert det["path"] == "intraday"
     assert det["pivot"] == 100.0 and det["live"] == 101.0
     assert det["relvol"] == 1.6
-    assert det["cleared_at_frac"] == pytest.approx(0.3)
+    assert det["cleared_at_frac"] == pytest.approx(0.35)
     assert "is_buyable" in rows[0]["cite"] and "score floor" in rows[0]["cite"]
     assert pushes and pushes[0][0] == "auto_entry" and pushes[0][1] == "AAA"
 
@@ -264,7 +264,7 @@ def test_structural_stop_wider_than_band_default_is_ignored(env):
     _, _, enter_calls, _ = env(
         rows=[_row("AAA", pivot=100.0, stop=89.0)],   # 11.9% below live 101
         quotes={"AAA": {"price": 101.0, "prev_day_close": 98.0}},
-        frac=0.3, relvols={"AAA": 1.6})
+        frac=0.35, relvols={"AAA": 1.6})
     AE.run()
     assert len(enter_calls) == 1
     assert enter_calls[0]["stop_pct"] is None
@@ -291,7 +291,7 @@ def test_relvol_below_min_skips(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA", pivot=100.0)],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 98.0}},
-        frac=0.3, relvols={"AAA": 1.2})
+        frac=0.35, relvols={"AAA": 1.2})
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
@@ -324,7 +324,7 @@ def test_extended_past_cap_skips_both_paths(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA", pivot=100.0)],
         quotes={"AAA": {"price": live, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 3.0})
+        frac=0.35, relvols={"AAA": 3.0})
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
@@ -356,7 +356,7 @@ def test_daily_cap_two_entries_third_skipped(env):
     rows = [_row("AAA", score=90), _row("BBB", score=88), _row("CCC", score=86)]
     quotes = {s: {"price": 101.0, "prev_day_close": 102.0}
               for s in ("AAA", "BBB", "CCC")}
-    _, db, enter_calls, _ = env(rows=rows, quotes=quotes, frac=0.3,
+    _, db, enter_calls, _ = env(rows=rows, quotes=quotes, frac=0.35,
                                 relvols={s: 2.0 for s in quotes})
     out = AE.run()
     assert [c["symbol"] for c in enter_calls] == ["AAA", "BBB"]
@@ -372,7 +372,7 @@ def test_max_positions_held_skips(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")], positions=held,
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
@@ -386,7 +386,7 @@ def test_already_held_symbol_is_an_add_candidate_needing_a_higher_pivot(env):
         rows=[_row("AAA", pivot=100.0)],
         positions=[_position("AAA", avg_entry=100.0)],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
@@ -398,7 +398,7 @@ def test_earnings_within_shield_skips(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")], earnings_days=3,
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
@@ -412,7 +412,7 @@ def test_gauge_risk_off_skips(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")], gauge="risk_off",
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     AE.run()
     assert enter_calls == []
     checks = _state(db, "AAA")["last_eval"]["checks"]
@@ -425,7 +425,7 @@ def test_attempted_today_dedupes_second_tick(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     AE.run()
     AE.run()
     assert len(enter_calls) == 1, enter_calls
@@ -439,7 +439,7 @@ def test_unexpected_enter_error_ledgered_once_and_not_retried(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0},
+        frac=0.35, relvols={"AAA": 2.0},
         enter_raises=RuntimeError("connection reset mid-submit"))
     out1 = AE.run()
     out2 = AE.run()
@@ -460,7 +460,7 @@ def test_triggered_but_vetoed_by_entries_ledgers_blocked_once(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0},
+        frac=0.35, relvols={"AAA": 2.0},
         enter_raises=ValueError("portfolio full: 5/5 positions (p.312)"))
     AE.run()
     AE.run()
@@ -479,7 +479,7 @@ def test_disabled_flag_noops_with_single_daily_ledger_row(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")], auto=False,
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     out1 = AE.run()
     out2 = AE.run()
     assert out1["ran"] is False and out2["ran"] is False
@@ -494,7 +494,7 @@ def test_disarmed_places_no_orders(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")], armed=False,
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     out = AE.run()
     assert out["ran"] is False
     assert enter_calls == []
@@ -505,7 +505,7 @@ def test_market_closed_noops(env):
     _, _, enter_calls, _ = env(
         rows=[_row("AAA")], market_open=False,
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     out = AE.run()
     assert out["ran"] is False and enter_calls == []
 
@@ -522,7 +522,7 @@ def test_funnel_drops_non_buyable_low_score_and_no_pivot(env):
     ]
     quotes = {s: {"price": 101.0, "prev_day_close": 102.0}
               for s in ("NOB", "LOW", "NOP", "YES")}
-    _, _, enter_calls, _ = env(rows=rows, quotes=quotes, frac=0.3,
+    _, _, enter_calls, _ = env(rows=rows, quotes=quotes, frac=0.35,
                                relvols={s: 2.0 for s in quotes})
     AE.run()
     assert [c["symbol"] for c in enter_calls] == ["YES"]
@@ -562,7 +562,7 @@ def test_status_block_shape_and_snapshots(env):
     _, db, _, _ = env(
         rows=[_row("AAA")],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0}, equity_cap=5_000.0)
+        frac=0.35, relvols={"AAA": 2.0}, equity_cap=5_000.0)
     AE.run()
     blk = AE.status_block()
     assert blk["enabled"] is True
@@ -602,7 +602,7 @@ def test_rs_floor_blocks_entry_end_to_end(env):
     _, db, enter_calls, _ = env(
         rows=[_row("WEAK", rs_rank=76)],
         quotes={"WEAK": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"WEAK": 2.0})
+        frac=0.35, relvols={"WEAK": 2.0})
     out = AE.run()
     assert out["reason"] == "no_candidates"
     assert enter_calls == []
@@ -653,7 +653,7 @@ def test_untrusted_scan_sits_out_and_ledgers_once(env):
     _, db, enter_calls, _ = env(
         rows=[_row("AAA")],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0},
+        frac=0.35, relvols={"AAA": 2.0},
         scan_meta={"generated_at": _epoch(2026, 1, 2), "universe_size": 3000})
     out1 = AE.run()
     out2 = AE.run()
@@ -665,7 +665,7 @@ def test_untrusted_scan_sits_out_and_ledgers_once(env):
 def test_status_block_carries_rules_min_rs_and_scan(env):
     env(rows=[_row("AAA")],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     blk = AE.status_block()
     assert blk["min_rs"] == AE.AUTO_MIN_RS == 80.0
     assert blk["scan"]["trusted"] is True
@@ -732,7 +732,7 @@ def test_leaky_pivot_blocks_intraday_but_not_close_confirm(env):
     _, db, enter_calls, _ = env(
         rows=[_row("LKY")],
         quotes={"LKY": {"price": 101.0, "prev_day_close": 99.0}},
-        frac=0.3, relvols={"LKY": 2.0}, daily_bars=leak)
+        frac=0.35, relvols={"LKY": 2.0}, daily_bars=leak)
     out = AE.run()
     assert out["entered"] == [] and enter_calls == []
     checks = _state(db, "LKY")["last_eval"]["checks"]
@@ -742,7 +742,7 @@ def test_leaky_pivot_blocks_intraday_but_not_close_confirm(env):
     _, db2, enter_calls2, _ = env(
         rows=[_row("LKY")],
         quotes={"LKY": {"price": 101.0, "prev_day_close": 100.5}},
-        frac=0.3, relvols={"LKY": 0.2}, daily_bars=leak)
+        frac=0.35, relvols={"LKY": 0.2}, daily_bars=leak)
     out2 = AE.run()
     assert out2["entered"] == ["LKY"]
     assert _state(db2, "LKY")["path"] == "close_confirm"
@@ -792,7 +792,7 @@ def test_pyramid_add_fires_top_up_with_its_own_ledger_kind(env):
         rows=[_row("AAA", pivot=110.0, stop=104.0)],
         positions=[_position("AAA", qty=12, avg_entry=100.0, last=111.0)],
         quotes={"AAA": {"price": 111.0, "prev_day_close": 108.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     out = AE.run()
     assert out["entered"] == ["AAA"]
     assert enter_calls[0]["top_up"] is True
@@ -814,7 +814,7 @@ def test_pyramid_add_ignores_position_slots_but_respects_daily_cap(env):
         positions=positions,
         quotes={"NEW": {"price": 101.0, "prev_day_close": 102.0},
                 "AAA": {"price": 111.0, "prev_day_close": 108.0}},
-        frac=0.3, relvols={"NEW": 2.0, "AAA": 2.0})
+        frac=0.35, relvols={"NEW": 2.0, "AAA": 2.0})
     out = AE.run()
     assert out["entered"] == ["AAA"]
     assert enter_calls[0]["symbol"] == "AAA" and enter_calls[0]["top_up"] is True
@@ -826,7 +826,7 @@ def test_pyramiding_config_off_skips_adds(env):
         rows=[_row("AAA", pivot=110.0)],
         positions=[_position("AAA", avg_entry=100.0)],
         quotes={"AAA": {"price": 111.0, "prev_day_close": 108.0}},
-        frac=0.3, relvols={"AAA": 2.0})
+        frac=0.35, relvols={"AAA": 2.0})
     db.trading_config.rows[0]["pyramiding"] = False
     out = AE.run()
     assert out["entered"] == [] and enter_calls == []

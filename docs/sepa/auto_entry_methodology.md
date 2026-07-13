@@ -138,7 +138,7 @@ deliberate signed-off decision:
 | `FIRST_HALF_FRACTION` | 0.5 | First observed pivot clear must land in the first half of the session | Owner choice — no book equivalent |
 | `MAX_EXTENSION_PCT` | 3.0 | Buy-zone ceiling above the pivot | **Mirrors `sepa.scanner.BUYABLE_MAX_EXT_PCT`** — book p.224 gives the concept ("without chasing … more than a few percentage points") but no number; 3% is the user-approved (2026-06-09) house value. Cross-locked with the scanner token in the contract test |
 | `DEFAULT_EQUITY_CAP` | 5000.0 | Sizing-equity ceiling (trading_config.equity_cap default) | Owner instruction verbatim: "assume you have 5k" |
-| `VOL_CONFIRM_MIN_FRAC` | 60/390 ≈ 0.1538 | Minimum session elapsed before a **projected** RelVol may trigger the intraday path (actual volume ≥ floor passes any time) | TLSW p.229 demonstrates the extrapolation "two hours into the trading day"; the book mandates no minimum — 60 min is the house value (Ajay sign-off 2026-07-09, failure autopsy) |
+| `VOL_CONFIRM_MIN_FRAC` | 120/390 ≈ 0.3077 | Minimum session elapsed before a **projected** RelVol may trigger the intraday path (actual volume ≥ floor passes any time) | TLSW p.229 demonstrates the extrapolation "two hours into the trading day" — the floor now matches the book's own demo (raised 60→120 min, Ajay sign-off 2026-07-12: "first 1 hour of the day the market is still volatile"; the book mandates no minimum, so the floor itself remains an owner rule; initial 60-min value: 2026-07-09 failure autopsy) |
 
 (`AUTO_MIN_SCORE = 85.0`, the funnel score floor, is likewise an owner
 choice — raised from 70 on 2026-07-09 after the failure autopsy: winners

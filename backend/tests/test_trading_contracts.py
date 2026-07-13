@@ -187,9 +187,9 @@ ENGINE_PARAM_TOKENS = [
     # 3% house value 2026-06-09) — cross-locked against the scanner below.
     "MAX_EXTENSION_PCT = 3.0",
     "DEFAULT_EQUITY_CAP = 5000.0",
-    # Volume-projection trust floor (TLSW p.229 concept; 60-min house value,
-    # Ajay sign-off 2026-07-09 after the 9:31-entry failure autopsy).
-    "VOL_CONFIRM_MIN_FRAC = round(60.0 / 390.0, 4)",
+    # Volume-projection trust floor (TLSW p.229; raised 60 -> 120 min with
+    # Ajay sign-off 2026-07-12 to match the book's own 2-hour demonstration).
+    "VOL_CONFIRM_MIN_FRAC = round(120.0 / 390.0, 4)",
     # Funnel RS floor (TLSW p.79 criterion 8: "no less than 70, and preferably
     # in the 80s or 90s" — floor sits at the book's preferred band; Ajay
     # sign-off 2026-07-12 after the low-RS audit: winners RS 87+, three of
@@ -243,7 +243,7 @@ def test_auto_entry_params_importable_and_equal():
     # no loser over 84; n=6 HYPOTHESIS — config `auto_min_score` overrides
     # live so it can be tuned as the sample grows).
     assert ae.AUTO_MIN_SCORE == 85.0
-    assert ae.VOL_CONFIRM_MIN_FRAC == round(60.0 / 390.0, 4)
+    assert ae.VOL_CONFIRM_MIN_FRAC == round(120.0 / 390.0, 4)
     assert ae.AUTO_MIN_RS == 80.0
     assert ae.MIN_RS_UNIVERSE == 500
 
