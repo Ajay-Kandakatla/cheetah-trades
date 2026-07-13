@@ -357,6 +357,12 @@ export type SepaCandidate = {
    *  tier. Combined with `volume.days_since_breakout` it powers the FE
    *  'Breakout: ≤1wk / Any' Enter toggle. See backend/sepa/scanner._is_setup_ready. */
   setup_ready?: boolean;
+  /** Leaky-pivot read (backend sepa/pivot_leakage.py — Minervini X 2026:
+   *  right-side volatility "often starts as pivot leakage"). The SAME rule
+   *  the Auto-Pilot intraday trigger enforces. leaky=true → the pivot keeps
+   *  getting poked above and closing back below; wait for it to quiet down.
+   *  Null on rows without a setup or from scans predating the field. */
+  pivot_leakage?: { leaky: boolean; leaks: number; last_leak_bars_ago: number | null } | null;
   /** Momentum-led conviction rank 0-100 (backend sepa/conviction.py, TLSW
    *  p.34/79) — "most return potential." The default list sort. A climax /
    *  exhaustion name is suppressed to the bottom. */

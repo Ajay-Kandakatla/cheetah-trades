@@ -199,8 +199,14 @@ ENGINE_PARAM_TOKENS = [
     # universe, so small manual scans distort it (EIX read 64-75 across
     # same-day runs); the engine only trades market-sized scans.
     "MIN_RS_UNIVERSE = 500",
-    # Leaky-pivot suppressor (Minervini X 2026 "pivot leakage"; owner
-    # numbers, Ajay sign-off 2026-07-12).
+]
+
+# Leaky-pivot suppressor constants live in sepa/pivot_leakage.py (shared
+# with the scanner so the SEPA pages stamp the IDENTICAL read; Minervini X
+# 2026 "pivot leakage"; owner numbers, Ajay sign-off 2026-07-12).
+PIVOT_LEAKAGE_PATH = os.path.join(os.path.dirname(__file__), "..",
+                                  "sepa", "pivot_leakage.py")
+PIVOT_LEAK_TOKENS = [
     "PIVOT_LEAK_LOOKBACK = 10",
     "PIVOT_LEAK_MAX = 2",
     "PIVOT_LEAK_COOLOFF_DAYS = 5",
@@ -311,13 +317,23 @@ def test_progressive_governor_locked_and_min_composed():
 
 
 def test_leaky_pivot_cited_and_intraday_only():
-    """The leak suppressor must keep its X-post anchor, stay wired into the
-    INTRADAY path only (a full close above the pivot IS the volatility
-    subsiding -> close-confirm stays exempt), and fail OPEN on missing bars
-    (it is a veto heuristic, not a required book gate)."""
+    """The leak suppressor must keep its X-post anchor, its owner numbers,
+    stay wired into the INTRADAY path only (a full close above the pivot IS
+    the volatility subsiding -> close-confirm stays exempt), fail OPEN on
+    missing bars, and stay a SINGLE shared implementation — the engine and
+    the SEPA scanner must read the identical rule."""
+    with open(PIVOT_LEAKAGE_PATH, encoding="utf-8") as fh:
+        leak_src = fh.read()
+    assert "pivot leakage" in leak_src, (
+        "the Minervini X 'pivot leakage' anchor left sepa/pivot_leakage.py")
+    for token in PIVOT_LEAK_TOKENS:
+        assert token in leak_src, (
+            "leak parameter drifted: `%s` not in sepa/pivot_leakage.py "
+            "(owner numbers — Ajay sign-off required)" % token)
     src = _auto_entry_source()
-    assert "pivot leakage" in src, (
-        "the Minervini X 'pivot leakage' anchor left trading/auto_entry.py")
+    assert "from sepa.pivot_leakage import" in src, (
+        "auto_entry no longer imports the SHARED leak module — engine and "
+        "scanner reads would drift apart")
     assert 'checks, "pivot_not_leaky"' in src, (
         "pivot_leaky is no longer wired into run()'s intraday path")
     from trading import auto_entry as ae

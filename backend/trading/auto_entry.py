@@ -111,21 +111,17 @@ AUTO_MIN_RS = 80.0
 # day (weekday-walk; holidays self-heal because the 16:30 fast-scan cron runs
 # Mon-Fri regardless). Both fail CLOSED — a stale/small scan sits out.
 MIN_RS_UNIVERSE = 500
-# Leaky-pivot suppressor (added 2026-07-12). Minervini on X, 2026 (primary
-# source, NOT a book page): "the dominant theme is right-side volatility —
-# which often starts as pivot leakage ... for truly low-risk buy points to
-# emerge, that volatility needs to subside. Patience is key. Let the setups
-# come to you." https://x.com/markminervini/status/2029213943428698253
-# Mechanization (owner numbers): a pivot that was POKED above intraday but
-# CLOSED back below on >= PIVOT_LEAK_MAX of the last PIVOT_LEAK_LOOKBACK
-# completed bars, with the latest leak within PIVOT_LEAK_COOLOFF_DAYS bars,
-# is "leaky" — the INTRADAY path is suppressed until the leaks age out.
-# The close-confirmation path is exempt (a full close above the pivot IS
-# the volatility subsiding). Missing bar data fails OPEN (this is a veto
-# heuristic layered on top of the required book gates, not a book gate).
-PIVOT_LEAK_LOOKBACK = 10
-PIVOT_LEAK_MAX = 2
-PIVOT_LEAK_COOLOFF_DAYS = 5
+# Leaky-pivot suppressor (added 2026-07-12; MOVED to sepa/pivot_leakage.py
+# the same day so the SEPA scanner can stamp the identical read on scan
+# rows for the Global + general pages). Minervini on X, 2026: "pivot
+# leakage" — see the shared module for the full quote, mechanization, and
+# the fail-OPEN rationale. The INTRADAY path is suppressed on a leaky
+# pivot; the close-confirmation path is exempt (a full close above the
+# pivot IS the volatility subsiding). sepa.pivot_leakage is STDLIB-ONLY,
+# so this module-level import keeps auto_entry pandas-free.
+from sepa.pivot_leakage import (                   # noqa: E402
+    PIVOT_LEAK_COOLOFF_DAYS, PIVOT_LEAK_LOOKBACK, PIVOT_LEAK_MAX,
+    pivot_leaky)
 
 FUNNEL_CITE = ("funnel: scanner is_buyable (trend template p.79 + stage 2 + "
                "pivot + volume breakout, ext cap p.224) + score floor "
@@ -304,40 +300,6 @@ def _recent_daily_bars(symbol: str, n: int = PIVOT_LEAK_LOOKBACK) -> dict:
     except Exception as exc:                       # noqa: BLE001
         log.debug("auto_entry: daily bars failed %s: %s", symbol, exc)
         return {}
-
-
-def pivot_leaky(highs, closes, pivot) -> tuple:
-    """The pure leaky-pivot read (bars oldest -> newest). A LEAK is a
-    completed bar whose high poked above the pivot but whose close fell
-    back below it. Suppressed when >= PIVOT_LEAK_MAX leaks exist in the
-    window AND the most recent one is <= PIVOT_LEAK_COOLOFF_DAYS bars ago.
-    Missing/garbage data -> not suppressed (fail open; see constant note).
-    Returns (suppressed, detail-dict-for-the-checks-snapshot)."""
-    detail = {"leaks": 0, "last_leak_bars_ago": None,
-              "lookback": PIVOT_LEAK_LOOKBACK, "max": PIVOT_LEAK_MAX,
-              "cooloff": PIVOT_LEAK_COOLOFF_DAYS}
-    try:
-        pivot = float(pivot)
-        pairs = list(zip(list(highs or []), list(closes or [])))
-    except (TypeError, ValueError):
-        return False, detail
-    if pivot <= 0 or not pairs:
-        return False, detail
-    leaks = 0
-    last_ago = None
-    n = len(pairs)
-    for i, (hi, cl) in enumerate(pairs[-PIVOT_LEAK_LOOKBACK:]):
-        try:
-            if float(hi) > pivot and float(cl) < pivot:
-                leaks += 1
-                last_ago = min(n, PIVOT_LEAK_LOOKBACK) - i
-        except (TypeError, ValueError):
-            continue
-    detail["leaks"] = leaks
-    detail["last_leak_bars_ago"] = last_ago
-    suppressed = bool(leaks >= PIVOT_LEAK_MAX and last_ago is not None
-                      and last_ago <= PIVOT_LEAK_COOLOFF_DAYS)
-    return suppressed, detail
 
 
 def _gauge_state() -> str:

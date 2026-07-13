@@ -29,6 +29,8 @@ import { VolumeTrend } from './VolumeTrend';
 import { BreakoutStats } from './BreakoutStats';
 import { FloatTurnover } from './FloatTurnover';
 import { BuyVerdictChip } from './BuyVerdictChip';
+// Leaky-pivot chip (Minervini X 2026 "pivot leakage") — pure logic in lib.
+import { leakChip } from '../lib/pivotLeak';
 // Shared chip strip — renders the volume-driven signals (strong/accumulating/
 // distributing, pocket pivot, hi-vol breakout, money outflow, dist days) with
 // drill-in click behavior. Lives here and on the /sepa/{symbol} detail page so
@@ -713,6 +715,24 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', padding: '0.35rem 0.2rem 0' }}>
         <BreakoutStats vol={row.volume} symbol={row.symbol} />
         <FloatTurnover symbol={row.symbol} lastVol={row.volume?.last_vol} />
+        {(() => {
+          /* Leaky pivot (Minervini X 2026) — same rule Auto-Pilot enforces;
+             shown only where it changes the decision (buyable/setup-ready). */
+          const leak = leakChip(row.pivot_leakage, {
+            buyable: row.is_buyable === true,
+            setupReady: row.setup_ready === true,
+          });
+          return leak ? (
+            <span
+              title={leak.title}
+              style={{ fontSize: '0.66rem', padding: '2px 7px', borderRadius: 999,
+                       border: '1px solid #f59e0b66', color: '#f59e0b',
+                       whiteSpace: 'nowrap', cursor: 'help' }}
+            >
+              {leak.label}
+            </span>
+          ) : null;
+        })()}
       </div>
 
       {row.entry_exit && (

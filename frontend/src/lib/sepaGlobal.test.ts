@@ -170,3 +170,37 @@ describe('filterForTab + byConviction', () => {
     expect(sorted.indexOf('BUYLO')).toBeLessThan(sorted.indexOf('WATCH'));
   });
 });
+
+describe('leaky pivot — Buy now demotes to Watch (Minervini X 2026)', () => {
+  const leaky = { leaky: true, leaks: 2, last_leak_bars_ago: 2 };
+  const quiet = { leaky: false, leaks: 1, last_leak_bars_ago: 7 };
+
+  it('a leaky buyable reads Watch with a hold-above reason', () => {
+    const c = toGlobalCard(row({ is_buyable: true, pivot_leakage: leaky, conviction: 80 }));
+    expect(c.verdict).toBe('watch');
+    expect(c.tone).toBe('amber');
+    expect(c.reason).toMatch(/slipping back|HOLDS/);
+  });
+
+  it('a quiet-pivot buyable still reads Buy zone; missing field too (old scans)', () => {
+    expect(toGlobalCard(row({ is_buyable: true, pivot_leakage: quiet })).verdict).toBe('buy');
+    expect(toGlobalCard(row({ is_buyable: true })).verdict).toBe('buy');
+    expect(toGlobalCard(row({ is_buyable: true, pivot_leakage: null })).verdict).toBe('buy');
+  });
+
+  it('avoid still outranks the leak demotion', () => {
+    const c = toGlobalCard(row({ is_buyable: true, pivot_leakage: leaky, distribution_selling: true }));
+    expect(c.verdict).toBe('avoid');
+  });
+
+  it('filterForTab moves leaky buyables from buy to watch', () => {
+    const rows = [
+      row({ symbol: 'HOLD', is_buyable: true, is_candidate: true, conviction: 90 }),
+      row({ symbol: 'LEAK', is_buyable: true, is_candidate: true, pivot_leakage: leaky, conviction: 95 }),
+      row({ symbol: 'BASE', setup_ready: true, is_candidate: true, conviction: 50 }),
+    ];
+    expect(filterForTab(rows, 'buy').map((r) => r.symbol)).toEqual(['HOLD']);
+    expect(filterForTab(rows, 'watch').map((r) => r.symbol)).toEqual(['LEAK', 'BASE']);
+    expect(filterForTab(rows, 'leaders')).toHaveLength(3);
+  });
+});

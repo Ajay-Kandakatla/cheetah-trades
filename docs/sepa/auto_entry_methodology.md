@@ -217,7 +217,15 @@ read as `progressive: {basis, net_pct, gains, …}`. The
 accepts a boolean, `null` resets) disables it live. Unreadable ledger reads
 as unproven → pilot (fail conservative).
 
-### Leaky-pivot suppressor (`trading/auto_entry.pivot_leaky`)
+### Leaky-pivot suppressor (`sepa/pivot_leakage.py`, shared)
+
+> Moved to `sepa/pivot_leakage.py` (stdlib-only) the same day so the
+> SCANNER stamps the identical read on every scan row as `pivot_leakage`
+> — SEPA Global demotes a leaky "Buy now" to Watch (plain-English reason),
+> the general SEPA card shows a 🚱 chip on affected buyable/setup-ready
+> names, and the engine imports the same function (a single rule, three
+> surfaces, zero drift — locked in `test_leaky_pivot_cited_and_intraday_only`
+> + `test_pivot_leakage.py`).
 
 Primary source — [Minervini on X, 2026](https://x.com/markminervini/status/2029213943428698253):
 

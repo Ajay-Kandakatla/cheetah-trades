@@ -40,7 +40,7 @@ from .progress import ProgressEmitter
 from . import (
     prices, trend_template, rs_rank, stage, volume, vcp,
     base_count, market_context, power_play, ipo_age, sell_signals, risk,
-    mvp as mvp_indicator, climax_distribution,
+    mvp as mvp_indicator, climax_distribution, pivot_leakage,
     adr, canslim, company_names, research as research_mod,
     dual_momentum as dm, etf_info, pioneers, venky_filters,
     group_leadership, buyable_verdict, conviction, cheat,
@@ -665,6 +665,12 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "distribution_selling": dist_selling,
         "distribution_reason": dist_reason,
         "entry_setup": entry_setup,
+        # Leaky-pivot read (sepa/pivot_leakage.py — Minervini X 2026, the
+        # SAME shared rule the Auto-Pilot intraday trigger enforces),
+        # stamped on every row with a setup so SEPA Global can demote a
+        # leaky "Buy now" to Watch and the general page can flag it.
+        "pivot_leakage": (pivot_leakage.leakage_block(
+            df, (entry_setup or {}).get("pivot")) if entry_setup else None),
         "trade_plan":  trade_plan,
         # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as
         # optional toggle chips on the SEPA filter bar (added 2026-05-29).
@@ -1296,6 +1302,12 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
         "distribution_selling": dist_selling,
         "distribution_reason": dist_reason,
         "entry_setup": entry_setup,
+        # Leaky-pivot read (sepa/pivot_leakage.py — Minervini X 2026, the
+        # SAME shared rule the Auto-Pilot intraday trigger enforces),
+        # stamped on every row with a setup so SEPA Global can demote a
+        # leaky "Buy now" to Watch and the general page can flag it.
+        "pivot_leakage": (pivot_leakage.leakage_block(
+            df, (entry_setup or {}).get("pivot")) if entry_setup else None),
         "trade_plan":  trade_plan,
         # Venky's filter stack — weekly 21-SMA + ATR + ADX. Surfaced as
         # optional toggle chips on the SEPA filter bar (added 2026-05-29).

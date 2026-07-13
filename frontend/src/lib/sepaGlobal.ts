@@ -60,6 +60,14 @@ function liveOf(live?: LiveQuote): LiveQuote | undefined {
   return live && num(live.price) != null ? live : undefined;
 }
 
+/** A pivot that keeps getting poked above and closing back below (backend
+ *  sepa/pivot_leakage.py — Minervini X 2026 "pivot leakage"). The SAME rule
+ *  the Auto-Pilot engine enforces on its intraday trigger; here it demotes a
+ *  would-be "Buy now" to Watch. Missing field (old scans) reads not-leaky. */
+export function isLeakyPivot(row: SepaCandidate): boolean {
+  return row.pivot_leakage?.leaky === true;
+}
+
 /** A name institutions are selling — a SELL in the book, never a buy
  *  (climax-top distribution / churn breakout, TTLAC pp.186-188). Mirrors the
  *  scanner's own gate so the verdict can never say "buy" on one. */
@@ -118,6 +126,12 @@ export function toGlobalCard(row: SepaCandidate, live?: LiveQuote): GlobalCard {
     verdictLabel = 'Avoid';
     tone = 'red';
     reason = 'Big investors look to be selling into the run — stay away for now.';
+  } else if (row.is_buyable && isLeakyPivot(row)) {
+    // Leaky pivot: broke out, but keeps slipping back below the buy point.
+    verdict = 'watch';
+    verdictLabel = 'Watch';
+    tone = 'amber';
+    reason = 'It keeps poking above the buy point and slipping back — wait for a day that HOLDS above it.';
   } else if (row.is_buyable) {
     verdict = 'buy';
     verdictLabel = 'Buy zone';
@@ -201,15 +215,17 @@ export function byConviction(a: SepaCandidate, b: SepaCandidate): number {
 }
 
 /** The three minimal tabs map to the scanner's own gates:
- *   buy     → is_buyable (a confirmed breakout, ready now)
- *   watch   → setup_ready but not yet triggered
+ *   buy     → is_buyable AND the pivot isn't leaky (ready now, holding)
+ *   watch   → setup_ready but not yet triggered, PLUS leaky-pivot breakouts
+ *             (they read "wait for it to hold", not "buy today")
  *   leaders → every Trend-Template qualifier (the watch-the-best list) */
 export function filterForTab(rows: SepaCandidate[], tab: GlobalTab): SepaCandidate[] {
   const base =
     tab === 'buy'
-      ? rows.filter((r) => r.is_buyable === true)
+      ? rows.filter((r) => r.is_buyable === true && !isLeakyPivot(r))
       : tab === 'watch'
-      ? rows.filter((r) => r.setup_ready === true && r.is_buyable !== true)
+      ? rows.filter((r) => (r.setup_ready === true && r.is_buyable !== true) ||
+                           (r.is_buyable === true && isLeakyPivot(r)))
       : rows.filter((r) => r.is_candidate === true);
   return [...base].sort(byConviction);
 }
