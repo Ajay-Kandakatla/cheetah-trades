@@ -1210,6 +1210,7 @@ Funnel — LOCKED (`test_trading_contracts.py` engine-params block):
 | Timing | first pivot-clear in first half of session, else close-confirm next morning | owner rule (hybrid trigger) |
 | **Leaky pivot** | ≥2 failed pokes above the pivot in last 10 bars (latest ≤5 ago) → intraday path suppressed; close-confirm exempt; missing bars fail OPEN | **Minervini X 2026 "pivot leakage"** (owner numbers, 2026-07-12) |
 | **Progressive exposure** | ALL entries pilot-sized 0.5× until last 5 closed trades net positive; `min()`-composes with p.304 streak in `risk_rules.position_size`; cfg `progressive_exposure` | **TLSW pp.307-308 pilot buys** + Minervini X "last 4 or 5 stocks" (2026-07-12) |
+| **Pyramid adds** | held name buyable again at a pivot ABOVE avg cost → same trigger gates → `entries.enter(top_up=True)` completes to full size, never past the p.312 ceiling; own slot, consumes daily cap; ledger `auto_pyramid`; cfg `pyramiding` | **TTLAC §3 "Add and Reduce" + §5 scale-up; TLSW pp.307-308** (2026-07-12; §3 constant-$-risk stop raise deferred) |
 
 `GET /trading/status → auto_entry.rules` serves this table as data
 (`rules_list()`); the Trading-page ⓘ panel renders it verbatim so the UI

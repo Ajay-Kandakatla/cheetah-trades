@@ -79,8 +79,15 @@ def _live_price(symbol: str):
 
 def _evaluate(symbol: str, limit_price: Optional[float] = None,
               stop_pct: Optional[float] = None,
-              allow_earnings: bool = False):
-    """Run every entry check WITHOUT raising. Returns (blocked, ctx)."""
+              allow_earnings: bool = False,
+              top_up: bool = False):
+    """Run every entry check WITHOUT raising. Returns (blocked, ctx).
+
+    top_up=True is the PYRAMID path (TTLAC §3 Add and Reduce / §5 scale-up,
+    TLSW pp.307-308): size = full-position shares MINUS shares already held,
+    so an add can only ever complete the position toward the same p.312
+    25%-of-equity ceiling — never past it. Requires an existing position;
+    never-average-down (pp.304-305) still applies on top."""
     symbol = (symbol or "").strip().upper()
     blocked = []
     ctx = {"symbol": symbol, "price": None, "price_source": None,
@@ -184,8 +191,34 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
                   "multiplier": min(
                       risk_rules.size_multiplier(cfg["consecutive_losses"]),
                       prog_mult)}
+    # Pyramid top-up (TTLAC §3/§5): the add completes the position to the
+    # SAME full-size allocation — full shares minus what's already held.
+    # A position already at (or past) full size adds 0 -> blocked. Note the
+    # progressive governor composes here for free: while the account is
+    # unproven, "full" IS the pilot size, so a pilot can only top up AFTER
+    # the last-5 read turns positive — exactly §5's "on the heels of wins".
+    if top_up:
+        if held is None:
+            blocked.append("top-up requested but no %s position is held"
+                           % (symbol or "?"))
+        else:
+            try:
+                held_qty = int(float(held.get("qty") or 0))
+            except (TypeError, ValueError):
+                held_qty = 0
+            full_shares = int(sizing["shares"])
+            add_shares = max(0, full_shares - held_qty)
+            if price:
+                sizing = {"shares": add_shares,
+                          "allocation": round(add_shares * price, 2),
+                          "multiplier": sizing["multiplier"]}
+            if add_shares <= 0:
+                blocked.append("already at full size — %d held vs %d full "
+                               "(p.312 ceiling; adds only complete the "
+                               "position, never exceed it)"
+                               % (held_qty, full_shares))
     ctx["sizing"] = sizing
-    if sizing["shares"] <= 0:
+    if sizing["shares"] <= 0 and not top_up:
         blocked.append("position size is 0 shares (equity used %.2f of %.2f, "
                        "cap %s, multiplier %.2f after %d consecutive losses "
                        "— p.304/p.312)"
@@ -244,11 +277,16 @@ def preview(symbol: str, price: Optional[float] = None,
 
 def enter(symbol: str, limit_price: Optional[float] = None,
           stop_pct: Optional[float] = None,
-          allow_earnings: bool = False) -> dict:
+          allow_earnings: bool = False,
+          top_up: bool = False) -> dict:
     """Place the bracket entry. Raises ValueError(reason) on any failed
-    check; the API maps that to 400 {detail}."""
+    check; the API maps that to 400 {detail}. top_up=True is the pyramid
+    add (see _evaluate) — the bracket covers ONLY the added shares; its own
+    stop/target legs protect the tranche, and the p.308 breakeven ratchet
+    keeps operating on the whole position via the exit engine."""
     blocked, ctx = _evaluate(symbol, limit_price=limit_price,
-                             stop_pct=stop_pct, allow_earnings=allow_earnings)
+                             stop_pct=stop_pct, allow_earnings=allow_earnings,
+                             top_up=top_up)
     if blocked:
         raise ValueError("; ".join(blocked))
 
@@ -294,6 +332,7 @@ def enter(symbol: str, limit_price: Optional[float] = None,
         "equity_risk_pct": ctx["equity_risk_pct"],
         "regime": ctx["regime"], "earnings": ctx["earnings"],
         "allow_earnings": bool(allow_earnings),
+        "top_up": bool(top_up),
     }
     ledger("entry", symbol=sym, detail=detail, dry_run=False,
            cite="stop p.299/301/311; target p.301/311; size p.312; "

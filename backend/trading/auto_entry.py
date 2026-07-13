@@ -130,6 +130,13 @@ FUNNEL_CITE = ("funnel: scanner is_buyable (trend template p.79 + stage 2 + "
                "p.229 volume gate + fresh market-sized scan; risk "
                "math pp.291-315 via entries/risk_rules")
 
+PYRAMID_CITE = ("pyramid add: held name reads is_buyable again at a NEW "
+                "pivot above avg cost -> top up to full size (TTLAC section 3 "
+                "'Add and Reduce' + section 5 scale-up; TLSW pp.307-308 "
+                "'pilot buys ... larger positions should be added'); same "
+                "trigger gates as entries; p.312 ceiling never exceeded; "
+                "cfg pyramiding")
+
 
 # ── Lazy sepa seams (each one monkeypatchable in tests) ─────────────────────
 
@@ -411,6 +418,13 @@ def _min_rs(cfg: Optional[dict] = None) -> float:
         return AUTO_MIN_RS
 
 
+def _pyramiding_enabled(cfg: Optional[dict] = None) -> bool:
+    """Pyramid adds (TTLAC §3/§5, TLSW pp.307-308): `pyramiding` config key,
+    default ON; only an explicit stored False turns it off."""
+    v = (cfg or {}).get("pyramiding")
+    return True if v is None else bool(v)
+
+
 def _candidates(min_score: float = AUTO_MIN_SCORE,
                 min_rs: float = AUTO_MIN_RS) -> list:
     """Latest-scan rows passing the funnel, score desc. A row with no
@@ -555,7 +569,6 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         out["ok"] = False
         out["errors"].append("positions: %s" % exc)
         return out
-    held = {(p.get("symbol") or "").upper() for p in positions}
     pos_count = len(positions)
     entries_today = _entries_today(day)
     gauge = _gauge_state()
@@ -564,19 +577,42 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     never_stop = _never_auto_stop()
     cap_limit = entry_cap(never_stop)
 
+    held_map = {(p.get("symbol") or "").upper(): p for p in positions}
+
     # Cheap-first pass (no quotes needed) — survivors get ONE batched quote.
+    # A HELD symbol that reads is_buyable again is a PYRAMID candidate
+    # (TTLAC §3 Add and Reduce / §5 scale-up, TLSW pp.307-308): instead of
+    # being skipped it goes through the SAME trigger machinery and, if it
+    # fires, tops the position up to full size via entries.enter(top_up=True).
+    # Adds require the fresh pivot ABOVE our average cost ("profits finance
+    # additional risk") and don't consume a position slot (same slot).
     survivors = []
     for row in cands:
         sym = (row.get("symbol") or "").upper()
         out["evaluated"] += 1
         st = _get_state(sym, day)
         checks = {}
-        ok = _check(checks, "not_already_held", sym not in held, sym in held)
+        is_add = sym in held_map
+        avg_cost = None
+        if is_add:
+            try:
+                avg_cost = float(held_map[sym].get("avg_entry_price") or 0)
+            except (TypeError, ValueError):
+                avg_cost = 0.0
+            pivot_raw = (row.get("entry_setup") or {}).get("pivot")
+            ok = _check(checks, "pyramiding_enabled",
+                        _pyramiding_enabled(cfg), bool(_pyramiding_enabled(cfg)))
+            ok &= _check(checks, "add_pivot_above_cost",
+                         bool(avg_cost and pivot_raw
+                              and float(pivot_raw) > avg_cost),
+                         {"pivot": pivot_raw, "avg_cost": avg_cost})
+        else:
+            ok = _check(checks, "not_already_held", True, False)
+            ok &= _check(checks, "position_slots",
+                         pos_count < risk_rules.MAX_POSITIONS, pos_count)
         ok &= _check(checks, "not_attempted_today",
                      not (st.get("entered") or st.get("attempted")),
                      bool(st.get("entered") or st.get("attempted")))
-        ok &= _check(checks, "position_slots",
-                     pos_count < risk_rules.MAX_POSITIONS, pos_count)
         ok &= _check(checks, "daily_cap",
                      entries_today < cap_limit, entries_today)
         ok &= _check(checks, "gauge_not_risk_off",
@@ -585,7 +621,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         ok &= _check(checks, "earnings_shield",
                      edays is None or edays > entries.EARNINGS_SHIELD_DAYS, edays)
         if ok:
-            survivors.append((row, checks))
+            survivors.append((row, checks, is_add))
         elif not (st.get("entered") or st.get("attempted")):
             # Snapshot the skip — but NEVER overwrite a terminal snapshot
             # (entered / blocked / error): once attempted, the trigger-time
@@ -595,10 +631,10 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                                   "pivot": (row.get("entry_setup") or {}).get("pivot"),
                                   "checks": checks, "result": "skipped"})
 
-    quotes = _bulk_live([(r.get("symbol") or "").upper() for r, _ in survivors])
+    quotes = _bulk_live([(r.get("symbol") or "").upper() for r, _, _ in survivors])
     frac = _session_fraction()
 
-    for row, checks in survivors:
+    for row, checks, is_add in survivors:
         sym = (row.get("symbol") or "").upper()
         pivot = float((row.get("entry_setup") or {}).get("pivot"))
         q = quotes.get(sym) or {}
@@ -608,10 +644,12 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
 
         # Re-check the MUTABLE caps — entries placed earlier in THIS tick
         # consume daily-cap and position slots after the cheap pass ran.
+        # An add re-uses its own slot, so only the daily cap applies.
         cap_ok = _check(checks, "daily_cap",
                         entries_today < cap_limit, entries_today)
-        slot_ok = _check(checks, "position_slots",
-                         pos_count < risk_rules.MAX_POSITIONS, pos_count)
+        slot_ok = is_add or _check(checks, "position_slots",
+                                   pos_count < risk_rules.MAX_POSITIONS,
+                                   pos_count)
         if not (cap_ok and slot_ok):
             _set_state(sym, day,
                        last_eval={"ts": _utc_iso(), "score": row.get("score"),
@@ -683,26 +721,29 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         # NO earnings override in auto mode).
         trigger = {"path": path, "pivot": pivot, "live": live,
                    "relvol": relvol, "cleared_at_frac": cleared_frac,
-                   "prev_day_close": prev_close}
+                   "prev_day_close": prev_close, "add": bool(is_add)}
         stop_req = _structural_stop_pct(row, live)
         _set_state(sym, day, attempted=True)
         try:
             res = entries.enter(sym, limit_price=None, stop_pct=stop_req,
-                                allow_earnings=False)
+                                allow_earnings=False, top_up=is_add)
             entries_today += 1
-            pos_count += 1
+            if not is_add:
+                pos_count += 1
             result = "entered"
             out["entered"].append(sym)
             detail = dict(trigger)
             detail.update({"score": row.get("score"),
                            "stop_pct_requested": stop_req, "order": res})
-            ledger("auto_entry", symbol=sym, detail=detail, dry_run=False,
-                   cite=FUNNEL_CITE)
+            kind = "auto_pyramid" if is_add else "auto_entry"
+            ledger(kind, symbol=sym, detail=detail, dry_run=False,
+                   cite=(PYRAMID_CITE if is_add else FUNNEL_CITE))
             _set_state(sym, day, entered=True,
                        path=path)
-            _notify("auto_entry", sym,
-                    "Auto-entry %s (%s): %d sh, pivot %.2f, live %.2f"
-                    % (sym, path, (res or {}).get("shares") or 0, pivot, live))
+            _notify(kind, sym,
+                    "%s %s (%s): %d sh, pivot %.2f, live %.2f"
+                    % ("Pyramid add" if is_add else "Auto-entry", sym, path,
+                       (res or {}).get("shares") or 0, pivot, live))
         except ValueError as exc:
             # Otherwise-triggered but vetoed by the entry path — ledger the
             # first veto of the day per symbol (dry_run-style), not every tick.
@@ -798,6 +839,13 @@ def rules_list(cfg: Optional[dict] = None) -> list:
          "source": "TLSW pp.307-308 pilot buys + Minervini on X: 'are "
                    "your last 4 or 5 stocks profitable on balance' "
                    "(cfg progressive_exposure)"},
+        {"rule": "Pyramid adds — a held name that sets up AGAIN at a new "
+                 "pivot above our cost gets topped up to full size through "
+                 "the same trigger gates; adds only complete the position, "
+                 "never exceed the 25% ceiling, never average down",
+         "value": "top-up to full at the next valid buy point",
+         "source": "TTLAC §3 'Add and Reduce' + §5 scale-up; TLSW "
+                   "pp.307-308 (cfg pyramiding)"},
         {"rule": "No entries within a week of earnings, never average down, "
                  "never more than %d positions, at most %d auto-buys a day "
                  "in live mode (paper cycles freely), risk-off Market Gauge "
@@ -824,6 +872,7 @@ def status_block(cfg: Optional[dict] = None) -> dict:
             "max_per_day": MAX_AUTO_ENTRIES_PER_DAY,
             "min_score": _min_score(cfg),
             "min_rs": _min_rs(cfg),
+            "pyramiding": _pyramiding_enabled(cfg),
             "scan": dict(scan_detail, trusted=trusted),
             "rules": rules_list(cfg),
             "candidates": _today_snapshots(day)}

@@ -316,6 +316,25 @@ def test_progressive_governor_locked_and_min_composed():
         "with the p.304 streak — the two must never multiply")
 
 
+def test_pyramid_add_cited_and_bounded():
+    """Pyramid adds (TTLAC §3 Add and Reduce / §5 scale-up, TLSW pp.307-308)
+    must stay: wired through entries.enter(top_up=...) (the ONLY buy path),
+    sized as complete-to-full-NEVER-exceed (p.312 ceiling), and cited."""
+    src = _auto_entry_source()
+    assert "top_up=is_add" in src, (
+        "run() no longer routes adds through entries.enter(top_up=...) — "
+        "pyramid buys must use the single gated buy path")
+    assert "Add and Reduce" in src and "pp.307-308" in src, (
+        "the TTLAC/TLSW pyramid anchors left trading/auto_entry.py")
+    entries_path = os.path.join(os.path.dirname(__file__), "..",
+                                "trading", "entries.py")
+    with open(entries_path, encoding="utf-8") as fh:
+        en_src = fh.read()
+    assert "add_shares = max(0, full_shares - held_qty)" in en_src, (
+        "top-up sizing changed shape — adds must COMPLETE the position "
+        "toward the p.312 ceiling, never exceed it")
+
+
 def test_leaky_pivot_cited_and_intraday_only():
     """The leak suppressor must keep its X-post anchor, its owner numbers,
     stay wired into the INTRADAY path only (a full close above the pivot IS

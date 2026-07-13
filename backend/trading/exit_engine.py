@@ -134,6 +134,7 @@ def get_config() -> dict:
         "auto_min_score": doc.get("auto_min_score"),
         "auto_min_rs": doc.get("auto_min_rs"),
         "progressive_exposure": doc.get("progressive_exposure"),
+        "pyramiding": doc.get("pyramiding"),
         "last_errors": list(doc.get("last_errors") or []),  # last tick's failures, surfaced on the dashboard
         "updated_at": doc.get("updated_at"),
     }

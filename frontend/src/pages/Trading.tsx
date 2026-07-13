@@ -315,9 +315,11 @@ const KIND_COLOR: Record<string, string> = {
   blocked:           C.red,
   error:             C.red,
   auto_entry:          C.green,
+  auto_pyramid:        C.violet,
   auto_entry_blocked:  C.amber,
   auto_entry_disabled: C.muted,
   auto_entry_error:    C.red,
+  auto_entry_skipped_scan: C.amber,
 };
 
 function KindChip({ kind }: { kind?: string | null }) {
@@ -1564,6 +1566,7 @@ function TradesList({ j }: { j: Journal }) {
 
 const DECISION_COLOR: Record<string, string> = {
   auto_entry:         C.green,
+  auto_pyramid:       C.violet,
   auto_entry_blocked: C.amber,
   disabled:           C.muted,
   error:              C.red,

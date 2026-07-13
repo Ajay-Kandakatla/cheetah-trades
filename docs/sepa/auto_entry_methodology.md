@@ -244,6 +244,53 @@ veto heuristic layered on top of the required book gates (trend, stage,
 setup, volume), not a book gate itself, so a price-cache hiccup must not
 block otherwise-valid entries.
 
+## 4c. Pyramid adds — top up to full at the next valid buy point (2026-07-12)
+
+Book anchors, verbatim:
+
+> **TTLAC §3, "Adding Exposure Without Adding Risk" (the Add and Reduce,
+> Figure 3-5):** "I buy 1,000 shares of a stock at $16.50 and set a stop at
+> $15.50 … The stock then rallies and sets a new buy point. I then add an
+> additional 1,000 shares as the stock moves through the new buy point at
+> $17.50 … What I'm doing is letting my profits finance additional risk."
+>
+> **TTLAC §5:** "I usually start off with a quarter position … On the heels
+> of each win, I double my position size until I'm trading full-size
+> positions. I scale up on winners and scale back on losers."
+>
+> **TLSW pp.307-308:** "start off with 'pilot buys' … if they work out,
+> larger positions should be added to the portfolio soon thereafter."
+
+Mechanization: a **held** name that reads `is_buyable` again in the current
+trusted scan is no longer skipped — it becomes an **add candidate** and runs
+through the SAME trigger machinery as a new entry (live > pivot, ≤ 3%
+extension, first-half clear + volume gate + leak-free intraday, or
+close-confirm), plus:
+
+- `add_pivot_above_cost` — the fresh pivot must sit **above our average
+  cost** (§3: the new buy point is higher; profits finance the added risk).
+  Never-average-down (pp.304-305) re-applies inside `entries` on top.
+- **Top-up sizing** (`entries.enter(top_up=True)`) — the add is
+  `full-position shares − shares held`: it **completes** the position
+  toward the p.312 25% ceiling and can never exceed it. A position already
+  at full size is vetoed ("already at full size").
+- **Progressive compose** — while the account is unproven, "full" IS the
+  pilot size, so a pilot can only top up after the last-5 read turns
+  positive: §5's "on the heels of each win", with zero extra machinery.
+- Adds **re-use their own position slot** (no MAX_POSITIONS consumption)
+  but **do consume the daily cap** (conservative pace), ledger as
+  **`auto_pyramid`** (violet on the page), and stamp `top_up: true` on the
+  entry ledger row.
+- `pyramiding` config key (default **ON**; boolean/`null` via
+  `POST /trading/config`) turns adds off live.
+
+**Deferred (documented, not built):** §3's constant-dollar-risk stop raise
+(after an add, lift the stop on the ENTIRE position so total $ risk stays
+put). V1 places the add as its own bracket — its stop/target legs protect
+the tranche and the p.308 breakeven ratchet keeps operating — because
+rewriting resting stops on a live position belongs to the exit engine and
+needs its own Rule #4 round.
+
 ### 2026-07-09 failure-autopsy changes, summarized
 
 Multi-agent autopsy of the first 6 closed engine trades (4 stops, 2 targets):

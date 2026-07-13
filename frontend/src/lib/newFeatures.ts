@@ -54,6 +54,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'autopilot-rules-rs-floor', label: '📜 Auto-Pilot rules ⓘ — every rule the engine enforces, served by the engine itself; plus a new RS ≥ 80 floor (p.79 "80s or 90s") and a scan-trust gate (fresh + market-sized scans only)', addedAt: '2026-07-12', route: '/trading' },
   { id: 'autopilot-pilot-and-leaky-pivot', label: '🛫 Pilot-size entries (half size until the last 5 trades prove out, per Minervini\'s progressive exposure) + leaky-pivot suppressor (skip pivots that keep poking above and failing)', addedAt: '2026-07-12', route: '/trading' },
   { id: 'sepa-leaky-pivot', label: '🚱 Leaky pivots on the scanner — SEPA Global moves them from "Buy now" to Watch, and SEPA cards flag them, using the exact rule Auto-Pilot enforces', addedAt: '2026-07-12', route: '/sepa' },
+  { id: 'autopilot-pyramiding', label: '🏗️ Pyramid adds — Auto-Pilot tops a winning position up to full size when it sets up again at a higher pivot (TTLAC "Add and Reduce"); violet auto_pyramid rows in the ledger', addedAt: '2026-07-12', route: '/trading' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

@@ -162,10 +162,11 @@ def env(monkeypatch):
         enter_calls = []
 
         def fake_enter(symbol, limit_price=None, stop_pct=None,
-                       allow_earnings=False):
+                       allow_earnings=False, top_up=False):
             enter_calls.append({"symbol": symbol, "limit_price": limit_price,
                                 "stop_pct": stop_pct,
-                                "allow_earnings": allow_earnings})
+                                "allow_earnings": allow_earnings,
+                                "top_up": top_up})
             if enter_raises:
                 raise enter_raises
             return enter_result or {"order_id": "o-%d" % len(enter_calls),
@@ -378,14 +379,18 @@ def test_max_positions_held_skips(env):
     assert checks["position_slots"]["pass"] is False
 
 
-def test_already_held_symbol_skips(env):
+def test_already_held_symbol_is_an_add_candidate_needing_a_higher_pivot(env):
+    """A held name is no longer auto-skipped (pyramiding, TTLAC §3/§5) —
+    but with the fresh pivot NOT above our avg cost it must still not buy."""
     _, db, enter_calls, _ = env(
-        rows=[_row("AAA")], positions=[_position("AAA")],
+        rows=[_row("AAA", pivot=100.0)],
+        positions=[_position("AAA", avg_entry=100.0)],
         quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
         frac=0.3, relvols={"AAA": 2.0})
     AE.run()
     assert enter_calls == []
-    assert _state(db, "AAA")["last_eval"]["checks"]["not_already_held"]["pass"] is False
+    checks = _state(db, "AAA")["last_eval"]["checks"]
+    assert checks["add_pivot_above_cost"]["pass"] is False
 
 
 def test_earnings_within_shield_skips(env):
@@ -776,3 +781,96 @@ def test_progressive_off_keeps_legacy_full_size(env):
     assert out["size_multiplier"] == 1.0
     assert out["shares"] == 25
     assert out["progressive"] == {"enabled": False}
+
+
+# ── Pyramid adds (TTLAC §3 Add and Reduce / §5 + TLSW pp.307-308) ────────────
+
+def test_pyramid_add_fires_top_up_with_its_own_ledger_kind(env):
+    """Held name reads is_buyable again at a NEW pivot above cost -> the
+    engine tops up via entries.enter(top_up=True) and ledgers auto_pyramid."""
+    _, db, enter_calls, pushes = env(
+        rows=[_row("AAA", pivot=110.0, stop=104.0)],
+        positions=[_position("AAA", qty=12, avg_entry=100.0, last=111.0)],
+        quotes={"AAA": {"price": 111.0, "prev_day_close": 108.0}},
+        frac=0.3, relvols={"AAA": 2.0})
+    out = AE.run()
+    assert out["entered"] == ["AAA"]
+    assert enter_calls[0]["top_up"] is True
+    rows = _kind_rows(db, "auto_pyramid")
+    assert len(rows) == 1
+    assert rows[0]["detail"]["add"] is True
+    assert "Add and Reduce" in rows[0]["cite"]
+    assert _kind_rows(db, "auto_entry") == []
+    assert pushes and pushes[0][0] == "auto_pyramid"
+
+
+def test_pyramid_add_ignores_position_slots_but_respects_daily_cap(env):
+    """5/5 positions full: a NEW name is blocked on slots, but an ADD on a
+    held name re-uses its own slot and still fires."""
+    positions = [_position(s, avg_entry=100.0) for s in
+                 ("AAA", "BBB", "CCC", "DDD", "EEE")]
+    _, db, enter_calls, _ = env(
+        rows=[_row("NEW", pivot=100.0), _row("AAA", pivot=110.0)],
+        positions=positions,
+        quotes={"NEW": {"price": 101.0, "prev_day_close": 102.0},
+                "AAA": {"price": 111.0, "prev_day_close": 108.0}},
+        frac=0.3, relvols={"NEW": 2.0, "AAA": 2.0})
+    out = AE.run()
+    assert out["entered"] == ["AAA"]
+    assert enter_calls[0]["symbol"] == "AAA" and enter_calls[0]["top_up"] is True
+    assert _state(db, "NEW")["last_eval"]["checks"]["position_slots"]["pass"] is False
+
+
+def test_pyramiding_config_off_skips_adds(env):
+    _, db, enter_calls, _ = env(
+        rows=[_row("AAA", pivot=110.0)],
+        positions=[_position("AAA", avg_entry=100.0)],
+        quotes={"AAA": {"price": 111.0, "prev_day_close": 108.0}},
+        frac=0.3, relvols={"AAA": 2.0})
+    db.trading_config.rows[0]["pyramiding"] = False
+    out = AE.run()
+    assert out["entered"] == [] and enter_calls == []
+    checks = _state(db, "AAA")["last_eval"]["checks"]
+    assert checks["pyramiding_enabled"]["pass"] is False
+
+
+def test_top_up_sizing_completes_to_full_and_never_exceeds(env):
+    """Real entries._evaluate math: full at $55 on a $5k cap = 22 shares;
+    holding 12 -> add 10. Holding 30 (past full) -> blocked, adds 0."""
+    env(equity=100_000.0, equity_cap=5_000.0,
+        positions=[_position("CAP", qty=12, avg_entry=50.0, last=55.0)])
+    blocked, ctx = EN._evaluate("CAP", limit_price=55.0, top_up=True)
+    assert not blocked
+    assert ctx["sizing"]["shares"] == 10          # 22 full - 12 held
+    assert ctx["sizing"]["allocation"] == 550.0
+
+    env(equity=100_000.0, equity_cap=5_000.0,
+        positions=[_position("CAP", qty=30, avg_entry=50.0, last=55.0)])
+    blocked, ctx = EN._evaluate("CAP", limit_price=55.0, top_up=True)
+    assert any("already at full size" in b for b in blocked)
+    assert ctx["sizing"]["shares"] == 0
+
+
+def test_top_up_without_a_position_is_blocked(env):
+    env(equity=100_000.0, equity_cap=5_000.0)
+    blocked, _ = EN._evaluate("GHOST", limit_price=55.0, top_up=True)
+    assert any("no GHOST position is held" in b for b in blocked)
+
+
+def test_top_up_composes_with_progressive_scale_up(env):
+    """Unproven account: 'full' IS the pilot size, so a pilot-sized holding
+    cannot top up. Once the last-5 read turns positive, full doubles and
+    the SAME position becomes addable — TTLAC §5's 'on the heels of wins'."""
+    _, db, _, _ = env(equity=100_000.0, equity_cap=5_000.0,
+                      positions=[_position("CAP", qty=11, avg_entry=50.0, last=55.0)])
+    db.trading_config.rows[0]["progressive_exposure"] = True
+    blocked, _ = EN._evaluate("CAP", limit_price=55.0, top_up=True)
+    assert any("already at full size" in b for b in blocked)
+
+    for i, g in enumerate([4.0, 6.0, -2.0, 8.0, 1.0]):
+        db.trade_ledger.insert_one(
+            {"kind": "trade_closed", "epoch": i + 1, "dry_run": False,
+             "detail": {"gain_pct": g}})
+    blocked, ctx = EN._evaluate("CAP", limit_price=55.0, top_up=True)
+    assert not blocked
+    assert ctx["sizing"]["shares"] == 11          # 22 full - 11 held

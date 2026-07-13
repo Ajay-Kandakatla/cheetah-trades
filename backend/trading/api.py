@@ -113,19 +113,20 @@ async def trading_config(payload: dict = Body(...),
             raise HTTPException(400, "%s must be between %g and %g"
                                 % (floor_key, lo, hi))
         updates[floor_key] = val
-    if "progressive_exposure" in payload:
-        raw = payload.get("progressive_exposure")
+    for bool_key in ("progressive_exposure", "pyramiding"):
+        if bool_key not in payload:
+            continue
+        raw = payload.get(bool_key)
         if raw is None:
-            updates["progressive_exposure"] = None   # reset -> default ON
+            updates[bool_key] = None                 # reset -> default ON
         elif isinstance(raw, bool):
-            updates["progressive_exposure"] = raw
+            updates[bool_key] = raw
         else:
-            raise HTTPException(400, "progressive_exposure must be a "
-                                     "boolean or null")
+            raise HTTPException(400, "%s must be a boolean or null" % bool_key)
     if not updates:
         raise HTTPException(400, "nothing to update — send equity_cap, "
-                                 "auto_min_score, auto_min_rs, and/or "
-                                 "progressive_exposure")
+                                 "auto_min_score, auto_min_rs, "
+                                 "progressive_exposure, and/or pyramiding")
     from trading import exit_engine
 
     def work():
