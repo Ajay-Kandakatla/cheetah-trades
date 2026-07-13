@@ -199,6 +199,11 @@ ENGINE_PARAM_TOKENS = [
     # universe, so small manual scans distort it (EIX read 64-75 across
     # same-day runs); the engine only trades market-sized scans.
     "MIN_RS_UNIVERSE = 500",
+    # Leaky-pivot suppressor (Minervini X 2026 "pivot leakage"; owner
+    # numbers, Ajay sign-off 2026-07-12).
+    "PIVOT_LEAK_LOOKBACK = 10",
+    "PIVOT_LEAK_MAX = 2",
+    "PIVOT_LEAK_COOLOFF_DAYS = 5",
 ]
 
 
@@ -271,10 +276,53 @@ def test_config_whitelist_passes_floor_overrides_through():
     with open(eng_path, encoding="utf-8") as fh:
         eng_src = fh.read()
     for key in ("auto_min_score", "auto_min_rs",
-                "last_auto_entry_scan_warn_day"):
+                "last_auto_entry_scan_warn_day", "progressive_exposure"):
         assert '"%s": doc.get("%s")' % (key, key) in eng_src, (
             "exit_engine.get_config() no longer passes `%s` through its "
             "whitelist — the live override dies silently again" % key)
+
+
+# ── Progressive-exposure governor + leaky pivot (X-anchored, 2026-07-12) ─────
+
+def test_progressive_governor_locked_and_min_composed():
+    """Pilot sizing (TLSW pp.307-308 + Minervini's standing X rule) must keep
+    its owner numbers, stay anchored to its sources, and compose with the
+    p.304 streak multiplier via min() — never multiplication."""
+    from trading import progressive as pg
+    assert pg.PROGRESSIVE_WINDOW == 5
+    assert pg.PROGRESSIVE_MIN_TRADES == 3
+    assert pg.PILOT_MULTIPLIER == 0.5
+    prog_path = os.path.join(os.path.dirname(__file__), "..",
+                             "trading", "progressive.py")
+    with open(prog_path, encoding="utf-8") as fh:
+        src = fh.read()
+    assert "pilot buys" in src and "pp.307-308" in src, (
+        "the TLSW pilot-buys anchor left trading/progressive.py")
+    assert "last 4 or 5 stocks" in src, (
+        "the Minervini X 'last 4 or 5 stocks' quote left "
+        "trading/progressive.py — the rule must keep its primary source")
+    rr_path = os.path.join(os.path.dirname(__file__), "..",
+                           "trading", "risk_rules.py")
+    with open(rr_path, encoding="utf-8") as fh:
+        rr_src = fh.read()
+    assert "mult = min(mult, extra)" in rr_src, (
+        "position_size no longer min()-composes the progressive governor "
+        "with the p.304 streak — the two must never multiply")
+
+
+def test_leaky_pivot_cited_and_intraday_only():
+    """The leak suppressor must keep its X-post anchor, stay wired into the
+    INTRADAY path only (a full close above the pivot IS the volatility
+    subsiding -> close-confirm stays exempt), and fail OPEN on missing bars
+    (it is a veto heuristic, not a required book gate)."""
+    src = _auto_entry_source()
+    assert "pivot leakage" in src, (
+        "the Minervini X 'pivot leakage' anchor left trading/auto_entry.py")
+    assert 'checks, "pivot_not_leaky"' in src, (
+        "pivot_leaky is no longer wired into run()'s intraday path")
+    from trading import auto_entry as ae
+    assert ae.pivot_leaky(None, None, 100.0)[0] is False, (
+        "pivot_leaky must fail OPEN on missing data")
 
 
 def test_extension_cap_mirrors_scanner_buy_zone():

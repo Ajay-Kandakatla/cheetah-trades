@@ -178,6 +178,64 @@ overrides now pass through the whitelist (regression-locked in
 `test_trading_contracts.py`), and `POST /trading/config` accepts
 `auto_min_score` / `auto_min_rs` (number to set, `null` to reset).
 
+## 4b. X-anchored entry rules (2026-07-12 research sweep)
+
+Two rules added from **Minervini's own recent public statements** (primary
+source: his X posts, found in the 2026-07-12 internet research Ajay asked
+for). Honesty note: the CONCEPTS trace to him verbatim (one also has a book
+anchor); the NUMBERS are owner choices, locked in the contract tests like
+every other engine parameter.
+
+### Progressive-exposure governor (`trading/progressive.py`)
+
+Book anchor — TLSW pp.307-308, verbatim:
+
+> "You should start off with 'pilot buys' by initiating smaller positions
+> than normal; if they work out, larger positions should be added to the
+> portfolio soon thereafter. … If you're not profitable at 25 percent or 50
+> percent invested, why move up to 75 percent or 100 percent invested or
+> use margin? Wait for confirmation and require that at least a few trades
+> work out before getting more aggressive. Conversely, if your trades are
+> not working as expected, cut back."
+
+Recent restatements (his X account):
+[the standing "last 4 or 5 stocks" rule](https://x.com/markminervini/status/1331694910899179524)
+— *"are your last 4 or 5 stocks profitable on balance. If no, then you have
+no business increasing your exposure"* — and a
+[January 2025 dated ledger](https://x.com/markminervini/status/1884705597402059074)
+showing pilot → quarter/half → full builds across two weeks.
+
+Mechanization: **every entry (manual + auto — both flow through
+`entries.enter`) sizes at `PILOT_MULTIPLIER` (0.5×)** unless the last
+`PROGRESSIVE_WINDOW` (5) closed trades are profitable **on balance** (net
+`gain_pct` > 0) — then full size. Fewer than `PROGRESSIVE_MIN_TRADES` (3)
+closed trades = unproven = pilot. Composes with the p.304 streak governor
+**via `min()` inside `risk_rules.position_size`** — the most conservative
+governor wins; the two never multiply. `GET /trading/preview` surfaces the
+read as `progressive: {basis, net_pct, gains, …}`. The
+`progressive_exposure` config key (default **ON**; `POST /trading/config`
+accepts a boolean, `null` resets) disables it live. Unreadable ledger reads
+as unproven → pilot (fail conservative).
+
+### Leaky-pivot suppressor (`trading/auto_entry.pivot_leaky`)
+
+Primary source — [Minervini on X, 2026](https://x.com/markminervini/status/2029213943428698253):
+
+> "…the dominant theme is right-side volatility — which often starts as
+> pivot leakage… for truly low-risk buy points to emerge, that volatility
+> needs to subside. Patience is key. Let the setups come to you."
+
+Mechanization: a **leak** = a completed daily bar whose high poked above
+the pivot but whose close fell back below it. When ≥ `PIVOT_LEAK_MAX` (2)
+leaks exist in the last `PIVOT_LEAK_LOOKBACK` (10) completed bars AND the
+latest is ≤ `PIVOT_LEAK_COOLOFF_DAYS` (5) bars ago, the **intraday path is
+suppressed** (`pivot_not_leaky` check in the per-symbol snapshot). The
+**close-confirmation path is exempt** — a full close above the pivot IS the
+volatility subsiding. Missing/garbage bar data **fails OPEN**: this is a
+veto heuristic layered on top of the required book gates (trend, stage,
+setup, volume), not a book gate itself, so a price-cache hiccup must not
+block otherwise-valid entries.
+
 ### 2026-07-09 failure-autopsy changes, summarized
 
 Multi-agent autopsy of the first 6 closed engine trades (4 stops, 2 targets):

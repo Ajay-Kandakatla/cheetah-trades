@@ -110,6 +110,10 @@ class FakeDB:
             # p.312 sizing math (25% of 100k = 500 sh at $50) stays visible.
             # The cap's own behavior is locked in tests/test_auto_entry.py.
             "equity_cap": 100_000.0,
+            # progressive_exposure pinned OFF: legacy sizing expectations
+            # (500 sh full size) predate the pilot governor, which is owned
+            # by tests/test_progressive.py.
+            "progressive_exposure": False,
         }])
         self.trade_ledger = FakeColl()
         self.auto_entry_state = FakeColl()

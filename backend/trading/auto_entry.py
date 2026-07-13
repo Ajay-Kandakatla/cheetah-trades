@@ -111,6 +111,21 @@ AUTO_MIN_RS = 80.0
 # day (weekday-walk; holidays self-heal because the 16:30 fast-scan cron runs
 # Mon-Fri regardless). Both fail CLOSED — a stale/small scan sits out.
 MIN_RS_UNIVERSE = 500
+# Leaky-pivot suppressor (added 2026-07-12). Minervini on X, 2026 (primary
+# source, NOT a book page): "the dominant theme is right-side volatility —
+# which often starts as pivot leakage ... for truly low-risk buy points to
+# emerge, that volatility needs to subside. Patience is key. Let the setups
+# come to you." https://x.com/markminervini/status/2029213943428698253
+# Mechanization (owner numbers): a pivot that was POKED above intraday but
+# CLOSED back below on >= PIVOT_LEAK_MAX of the last PIVOT_LEAK_LOOKBACK
+# completed bars, with the latest leak within PIVOT_LEAK_COOLOFF_DAYS bars,
+# is "leaky" — the INTRADAY path is suppressed until the leaks age out.
+# The close-confirmation path is exempt (a full close above the pivot IS
+# the volatility subsiding). Missing bar data fails OPEN (this is a veto
+# heuristic layered on top of the required book gates, not a book gate).
+PIVOT_LEAK_LOOKBACK = 10
+PIVOT_LEAK_MAX = 2
+PIVOT_LEAK_COOLOFF_DAYS = 5
 
 FUNNEL_CITE = ("funnel: scanner is_buyable (trend template p.79 + stage 2 + "
                "pivot + volume breakout, ext cap p.224) + score floor "
@@ -263,6 +278,66 @@ def volume_confirmed(frac: float, vol_live: dict) -> tuple:
     detail["basis"] = ("too_early_to_project"
                        if float(frac) < VOL_CONFIRM_MIN_FRAC else "insufficient_volume")
     return False, detail
+
+
+def _recent_daily_bars(symbol: str, n: int = PIVOT_LEAK_LOOKBACK) -> dict:
+    """Last `n` COMPLETED daily bars (today's bar excluded if present) for
+    the leaky-pivot read. {} / empty lists when prices are unavailable —
+    pivot_leaky fails open on that. Called ONLY for names that already
+    passed every cheap check AND the volume gate (at most a handful/tick)."""
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from sepa.prices import load_prices
+        df = load_prices(symbol)
+        if df is None or len(df) == 0:
+            return {}
+        today = datetime.now(ZoneInfo("America/New_York")).date()
+        try:
+            if df.index[-1].date() >= today:
+                df = df.iloc[:-1]
+        except (AttributeError, TypeError):
+            pass
+        tail = df.iloc[-n:]
+        return {"highs": [float(v) for v in tail["high"]],
+                "closes": [float(v) for v in tail["close"]]}
+    except Exception as exc:                       # noqa: BLE001
+        log.debug("auto_entry: daily bars failed %s: %s", symbol, exc)
+        return {}
+
+
+def pivot_leaky(highs, closes, pivot) -> tuple:
+    """The pure leaky-pivot read (bars oldest -> newest). A LEAK is a
+    completed bar whose high poked above the pivot but whose close fell
+    back below it. Suppressed when >= PIVOT_LEAK_MAX leaks exist in the
+    window AND the most recent one is <= PIVOT_LEAK_COOLOFF_DAYS bars ago.
+    Missing/garbage data -> not suppressed (fail open; see constant note).
+    Returns (suppressed, detail-dict-for-the-checks-snapshot)."""
+    detail = {"leaks": 0, "last_leak_bars_ago": None,
+              "lookback": PIVOT_LEAK_LOOKBACK, "max": PIVOT_LEAK_MAX,
+              "cooloff": PIVOT_LEAK_COOLOFF_DAYS}
+    try:
+        pivot = float(pivot)
+        pairs = list(zip(list(highs or []), list(closes or [])))
+    except (TypeError, ValueError):
+        return False, detail
+    if pivot <= 0 or not pairs:
+        return False, detail
+    leaks = 0
+    last_ago = None
+    n = len(pairs)
+    for i, (hi, cl) in enumerate(pairs[-PIVOT_LEAK_LOOKBACK:]):
+        try:
+            if float(hi) > pivot and float(cl) < pivot:
+                leaks += 1
+                last_ago = min(n, PIVOT_LEAK_LOOKBACK) - i
+        except (TypeError, ValueError):
+            continue
+    detail["leaks"] = leaks
+    detail["last_leak_bars_ago"] = last_ago
+    suppressed = bool(leaks >= PIVOT_LEAK_MAX and last_ago is not None
+                      and last_ago <= PIVOT_LEAK_COOLOFF_DAYS)
+    return suppressed, detail
 
 
 def _gauge_state() -> str:
@@ -619,7 +694,14 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                 ok_vol, vol_detail = volume_confirmed(frac, vol_live)
                 relvol = vol_detail.get("projected_relvol")
                 if _check(checks, "volume_confirmed", ok_vol, vol_detail):
-                    path = "intraday"
+                    # Leaky-pivot suppressor (X-anchored, see constants) —
+                    # intraday only; close-confirm below is exempt.
+                    bars = _recent_daily_bars(sym)
+                    leaky, leak_detail = pivot_leaky(
+                        bars.get("highs"), bars.get("closes"), pivot)
+                    if _check(checks, "pivot_not_leaky", not leaky,
+                              leak_detail):
+                        path = "intraday"
             # path b — close-confirmation: prior close already above pivot
             if path is None:
                 cc = bool(prev_close) and float(prev_close) > pivot
@@ -737,6 +819,23 @@ def rules_list(cfg: Optional[dict] = None) -> list:
                  "engine sits out (RS ranks from small scans are distorted)",
          "value": ">= %d names, <= 1 trading day old" % MIN_RS_UNIVERSE,
          "source": "owner rule 2026-07-12"},
+        {"rule": "Leaky pivots wait — a pivot poked above but closed back "
+                 "below %d+ times in the last %d days (latest within %d) is "
+                 "skipped for same-day entry until the leaks age out; a "
+                 "full close above the pivot clears it"
+                 % (PIVOT_LEAK_MAX, PIVOT_LEAK_LOOKBACK,
+                    PIVOT_LEAK_COOLOFF_DAYS),
+         "value": "right side must be quiet",
+         "source": "Minervini on X, 2026: volatility 'often starts as "
+                   "pivot leakage'"},
+        {"rule": "Progressive exposure — every buy is pilot-sized (half) "
+                 "until the last 5 closed trades are profitable on "
+                 "balance; then full size. Composes with the losing-streak "
+                 "governor (the stricter one wins)",
+         "value": "pilot 0.5x -> 1.0x when proven",
+         "source": "TLSW pp.307-308 pilot buys + Minervini on X: 'are "
+                   "your last 4 or 5 stocks profitable on balance' "
+                   "(cfg progressive_exposure)"},
         {"rule": "No entries within a week of earnings, never average down, "
                  "never more than %d positions, at most %d auto-buys a day "
                  "in live mode (paper cycles freely), risk-off Market Gauge "

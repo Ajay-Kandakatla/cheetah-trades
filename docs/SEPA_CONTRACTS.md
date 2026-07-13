@@ -1208,6 +1208,8 @@ Funnel — LOCKED (`test_trading_contracts.py` engine-params block):
 | **Scan trust** | fresh (today or prev trading day) AND `universe_size ≥ MIN_RS_UNIVERSE = 500` | owner rule 2026-07-12 — `rs_rank` is universe-relative; small/stale scans sit out (`untrusted_scan`) |
 | Volume gate | actual ≥ 1.5× avg50 anytime; projection trusted only after 60 min | TLSW p.229 |
 | Timing | first pivot-clear in first half of session, else close-confirm next morning | owner rule (hybrid trigger) |
+| **Leaky pivot** | ≥2 failed pokes above the pivot in last 10 bars (latest ≤5 ago) → intraday path suppressed; close-confirm exempt; missing bars fail OPEN | **Minervini X 2026 "pivot leakage"** (owner numbers, 2026-07-12) |
+| **Progressive exposure** | ALL entries pilot-sized 0.5× until last 5 closed trades net positive; `min()`-composes with p.304 streak in `risk_rules.position_size`; cfg `progressive_exposure` | **TLSW pp.307-308 pilot buys** + Minervini X "last 4 or 5 stocks" (2026-07-12) |
 
 `GET /trading/status → auto_entry.rules` serves this table as data
 (`rules_list()`); the Trading-page ⓘ panel renders it verbatim so the UI

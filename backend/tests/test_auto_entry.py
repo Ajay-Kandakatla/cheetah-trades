@@ -85,11 +85,15 @@ class FakeColl:
 
 
 class FakeDB:
-    def __init__(self, armed=True, auto=True, losses=0, equity_cap=100_000.0):
+    def __init__(self, armed=True, auto=True, losses=0, equity_cap=100_000.0,
+                 progressive=False):
+        # progressive_exposure pinned OFF by default: this suite's sizing
+        # expectations predate the pilot governor (tests/test_progressive.py
+        # owns that behavior; the end-to-end pilot test flips it on).
         self.trading_config = FakeColl([{
             "_id": "config", "armed": armed, "auto_entry": auto,
             "consecutive_losses": losses, "processed_order_ids": [],
-            "equity_cap": equity_cap,
+            "equity_cap": equity_cap, "progressive_exposure": progressive,
         }])
         self.trade_ledger = FakeColl()
         self.auto_entry_state = FakeColl()
@@ -148,7 +152,7 @@ def env(monkeypatch):
               equity=100_000.0, equity_cap=100_000.0, frac=0.3,
               relvols=None, gauge="constructive", earnings_days=None,
               market_open=True, enter_result=None, enter_raises=None,
-              never_stop=False, scan_meta=None):
+              never_stop=False, scan_meta=None, daily_bars=None):
         # never_stop pinned FALSE by default: this suite tests the LIVE
         # guardrails (daily cap, risk-off halt). The paper-mode lift is
         # covered by tests/test_autoentry_never_stop.py. Without the pin the
@@ -191,6 +195,11 @@ def env(monkeypatch):
                             lambda sym: {"projected_relvol": (relvols or {}).get(sym),
                                          "today_volume": None, "avg_vol_50": None})
         monkeypatch.setattr(AE, "_gauge_state", lambda: gauge)
+        # No leaks by default ({} -> pivot_leaky fails open); leak behavior
+        # is exercised explicitly via the daily_bars param.
+        bars = daily_bars if daily_bars is not None else {}
+        monkeypatch.setattr(AE, "_recent_daily_bars",
+                            lambda sym, n=AE.PIVOT_LEAK_LOOKBACK: dict(bars))
         monkeypatch.setattr(AE, "_never_auto_stop", lambda: never_stop)
         monkeypatch.setattr(AE, "_earnings_days",
                             lambda sym: earnings_days)
@@ -662,3 +671,108 @@ def test_status_block_carries_rules_min_rs_and_scan(env):
     assert "80s or 90s" in joined
     assert "p.229" in joined
     assert "pp.291-315" in joined
+
+
+# ── Leaky-pivot suppressor (Minervini X 2026 "pivot leakage", 2026-07-12) ────
+
+def _bars(pivot=100.0, leak_days=(), n=10):
+    """Build n bars (oldest->newest). leak_days = bars-ago values (1 = most
+    recent completed bar) that poked above the pivot but closed below."""
+    highs, closes = [], []
+    for ago in range(n, 0, -1):
+        if ago in leak_days:
+            highs.append(pivot + 1.0)
+            closes.append(pivot - 1.0)
+        else:
+            highs.append(pivot - 2.0)
+            closes.append(pivot - 3.0)
+    return {"highs": highs, "closes": closes}
+
+
+def test_pivot_leaky_two_recent_leaks_suppress():
+    b = _bars(leak_days={2, 4})
+    leaky, det = AE.pivot_leaky(b["highs"], b["closes"], 100.0)
+    assert leaky is True
+    assert det["leaks"] == 2 and det["last_leak_bars_ago"] == 2
+
+
+def test_pivot_leaky_single_leak_or_stale_leaks_allowed():
+    one = _bars(leak_days={2})
+    leaky, det = AE.pivot_leaky(one["highs"], one["closes"], 100.0)
+    assert leaky is False and det["leaks"] == 1
+
+    stale = _bars(leak_days={7, 9})
+    leaky, det = AE.pivot_leaky(stale["highs"], stale["closes"], 100.0)
+    assert leaky is False
+    assert det["leaks"] == 2 and det["last_leak_bars_ago"] == 7
+
+
+def test_pivot_leaky_close_above_pivot_is_not_a_leak():
+    b = _bars(leak_days={2, 3})
+    b["closes"][-2] = 101.5    # bar 2 ago actually HELD above the pivot
+    leaky, det = AE.pivot_leaky(b["highs"], b["closes"], 100.0)
+    assert leaky is False and det["leaks"] == 1
+
+
+def test_pivot_leaky_missing_or_garbage_data_fails_open():
+    assert AE.pivot_leaky(None, None, 100.0)[0] is False
+    assert AE.pivot_leaky([], [], 100.0)[0] is False
+    assert AE.pivot_leaky([101, "x"], [99, None], 100.0)[0] is False
+    assert AE.pivot_leaky([101, 102], [99, 98], None)[0] is False
+    assert AE.pivot_leaky([101, 102], [99, 98], 0)[0] is False
+
+
+def test_leaky_pivot_blocks_intraday_but_not_close_confirm(env):
+    leak = _bars(leak_days={1, 3})
+    _, db, enter_calls, _ = env(
+        rows=[_row("LKY")],
+        quotes={"LKY": {"price": 101.0, "prev_day_close": 99.0}},
+        frac=0.3, relvols={"LKY": 2.0}, daily_bars=leak)
+    out = AE.run()
+    assert out["entered"] == [] and enter_calls == []
+    checks = _state(db, "LKY")["last_eval"]["checks"]
+    assert checks["pivot_not_leaky"]["pass"] is False
+    assert checks["pivot_not_leaky"]["value"]["leaks"] == 2
+
+    _, db2, enter_calls2, _ = env(
+        rows=[_row("LKY")],
+        quotes={"LKY": {"price": 101.0, "prev_day_close": 100.5}},
+        frac=0.3, relvols={"LKY": 0.2}, daily_bars=leak)
+    out2 = AE.run()
+    assert out2["entered"] == ["LKY"]
+    assert _state(db2, "LKY")["path"] == "close_confirm"
+
+
+# ── Progressive exposure through the REAL entries.preview wiring ─────────────
+
+def test_pilot_sizing_flows_through_entries_preview(env):
+    """Empty ledger (unproven) + progressive ON -> half-size pilot via the
+    same real preview math the equity-cap tests use; seeding a profitable
+    last-5 restores full size. FakeDB pins progressive OFF for the rest of
+    the suite, so this test flips the stored flag itself."""
+    _, db, _, _ = env(equity=100_000.0, equity_cap=5_000.0)
+    db.trading_config.rows[0]["progressive_exposure"] = True
+
+    out = EN.preview("CAP", price=50.0)
+    assert out["size_multiplier"] == 0.5
+    assert out["shares"] == 12                     # floor(25 * 0.5)
+    assert out["progressive"]["basis"] == "unproven"
+
+    for i, g in enumerate([4.0, 6.0, -2.0, 8.0, 1.0]):
+        db.trade_ledger.insert_one(
+            {"kind": "trade_closed", "epoch": i + 1, "dry_run": False,
+             "detail": {"gain_pct": g}})
+    out = EN.preview("CAP", price=50.0)
+    assert out["size_multiplier"] == 1.0
+    assert out["shares"] == 25
+    assert out["progressive"]["basis"].endswith("positive_on_balance")
+
+
+def test_progressive_off_keeps_legacy_full_size(env):
+    """The suite's FakeDB default (progressive_exposure=False) must keep
+    the pre-governor sizing — guards the kill-switch end to end."""
+    env(equity=100_000.0, equity_cap=5_000.0)
+    out = EN.preview("CAP", price=50.0)
+    assert out["size_multiplier"] == 1.0
+    assert out["shares"] == 25
+    assert out["progressive"] == {"enabled": False}

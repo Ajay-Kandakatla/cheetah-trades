@@ -6,8 +6,9 @@ GET  /trading/status                engine + account + per-position protection
 POST /trading/arm?armed=true|false  master switch (admin)
 POST /trading/auto-entry?enabled=true|false  auto-entry flag (admin)
 POST /trading/config                JSON {equity_cap?, auto_min_score?,
-                                    auto_min_rs?} — sizing ceiling + funnel
-                                    floors (admin; null resets a floor)
+                                    auto_min_rs?, progressive_exposure?} —
+                                    sizing ceiling + funnel floors + pilot
+                                    governor (admin; null resets to default)
 GET  /trading/preview               pure entry math, NO order
 POST /trading/enter                 bracket entry (admin; the ONLY buy path)
 POST /trading/flatten/{symbol}      cancel orders + close position (admin)
@@ -112,9 +113,19 @@ async def trading_config(payload: dict = Body(...),
             raise HTTPException(400, "%s must be between %g and %g"
                                 % (floor_key, lo, hi))
         updates[floor_key] = val
+    if "progressive_exposure" in payload:
+        raw = payload.get("progressive_exposure")
+        if raw is None:
+            updates["progressive_exposure"] = None   # reset -> default ON
+        elif isinstance(raw, bool):
+            updates["progressive_exposure"] = raw
+        else:
+            raise HTTPException(400, "progressive_exposure must be a "
+                                     "boolean or null")
     if not updates:
         raise HTTPException(400, "nothing to update — send equity_cap, "
-                                 "auto_min_score, and/or auto_min_rs")
+                                 "auto_min_score, auto_min_rs, and/or "
+                                 "progressive_exposure")
     from trading import exit_engine
 
     def work():

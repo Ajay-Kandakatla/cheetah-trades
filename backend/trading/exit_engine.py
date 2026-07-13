@@ -133,6 +133,7 @@ def get_config() -> dict:
         # override — found in the 2026-07-12 low-RS audit.
         "auto_min_score": doc.get("auto_min_score"),
         "auto_min_rs": doc.get("auto_min_rs"),
+        "progressive_exposure": doc.get("progressive_exposure"),
         "last_errors": list(doc.get("last_errors") or []),  # last tick's failures, surfaced on the dashboard
         "updated_at": doc.get("updated_at"),
     }

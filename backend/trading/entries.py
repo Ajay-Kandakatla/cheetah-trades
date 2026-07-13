@@ -168,12 +168,22 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
         cap = 0.0
     ctx["equity_cap"] = cap or None
     ctx["equity_used"] = min(ctx["equity"], cap) if cap > 0 else ctx["equity"]
+    # Progressive-exposure governor (TLSW pp.307-308 pilot buys; see
+    # trading/progressive.py) — pilot-size until the last few closed trades
+    # are profitable on balance. min()-composes with the p.304 streak
+    # multiplier inside position_size.
+    from trading import progressive
+    prog_mult, prog_detail = progressive.multiplier(_db(), cfg)
+    ctx["progressive"] = prog_detail
     if price:
         sizing = risk_rules.position_size(ctx["equity_used"], price,
-                                          cfg["consecutive_losses"])
+                                          cfg["consecutive_losses"],
+                                          extra_multiplier=prog_mult)
     else:
         sizing = {"shares": 0, "allocation": 0.0,
-                  "multiplier": risk_rules.size_multiplier(cfg["consecutive_losses"])}
+                  "multiplier": min(
+                      risk_rules.size_multiplier(cfg["consecutive_losses"]),
+                      prog_mult)}
     ctx["sizing"] = sizing
     if sizing["shares"] <= 0:
         blocked.append("position size is 0 shares (equity used %.2f of %.2f, "
@@ -217,6 +227,7 @@ def preview(symbol: str, price: Optional[float] = None,
         "shares": sizing["shares"],
         "allocation": sizing["allocation"],
         "size_multiplier": sizing["multiplier"],
+        "progressive": ctx.get("progressive"),
         "equity_used": ctx["equity_used"],
         "equity_cap": ctx["equity_cap"],
         "stop": ({"stop_pct": plan.stop_pct, "stop_price": plan.stop_price,

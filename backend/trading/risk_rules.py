@@ -173,13 +173,27 @@ def size_multiplier(consecutive_losses: int) -> float:
 
 
 def position_size(equity: float, entry_price: float,
-                  consecutive_losses: int = 0) -> dict:
+                  consecutive_losses: int = 0,
+                  extra_multiplier: float = 1.0) -> dict:
     """p.312 — 25% of equity per position (optimal for a 2:1 trader),
     scaled down by the p.304 losing-streak multiplier. Whole shares only
-    (Alpaca bracket orders don't take fractional qty)."""
+    (Alpaca bracket orders don't take fractional qty).
+
+    `extra_multiplier` is the progressive-exposure governor
+    (trading/progressive.py, TLSW pp.307-308 pilot buys — added 2026-07-12).
+    It composes via min(): the MOST CONSERVATIVE governor wins, the two
+    never multiply into a number neither rule owns. Out-of-range values
+    degrade to 1.0 (no effect) — this function's book math is unchanged
+    when the param is omitted."""
     if equity <= 0 or entry_price <= 0:
         return {"shares": 0, "allocation": 0.0, "multiplier": 1.0}
     mult = size_multiplier(consecutive_losses)
+    try:
+        extra = float(extra_multiplier)
+    except (TypeError, ValueError):
+        extra = 1.0
+    if 0.0 < extra <= 1.0:
+        mult = min(mult, extra)
     alloc = equity * MAX_POSITION_FRACTION * mult
     shares = int(math.floor(alloc / entry_price))
     return {"shares": shares,
