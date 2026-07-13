@@ -2,7 +2,9 @@
 
 Locks trading/auto_entry.py (docs/sepa/auto_entry_methodology.md):
 
-  Funnel    latest-scan rows with is_buyable + score >= 70 + entry_setup.pivot.
+  Funnel    latest-scan rows with is_buyable + score >= AUTO_MIN_SCORE +
+            rs_rank >= AUTO_MIN_RS (p.79 "80s or 90s") + entry_setup.pivot,
+            read only from a TRUSTED scan (fresh + market-sized universe).
   Trigger   hybrid: (a) INTRADAY first-half pivot clear + projected RelVol >=
             AUTO_RELVOL_MIN + within MAX_EXTENSION_PCT of the pivot;
             (b) CLOSE-CONFIRM prev_day_close > pivot next morning.
@@ -131,8 +133,10 @@ def _position(symbol, qty=10, avg_entry=100.0, last=110.0):
             "avg_entry_price": str(avg_entry), "current_price": str(last)}
 
 
-def _row(symbol="AAA", score=85.0, pivot=100.0, stop=95.0, buyable=True):
+def _row(symbol="AAA", score=85.0, pivot=100.0, stop=95.0, buyable=True,
+         rs_rank=90):
     return {"symbol": symbol, "score": score, "is_buyable": buyable,
+            "rs_rank": rs_rank,
             "entry_setup": {"type": "VCP", "pivot": pivot, "stop": stop}}
 
 
@@ -144,7 +148,7 @@ def env(monkeypatch):
               equity=100_000.0, equity_cap=100_000.0, frac=0.3,
               relvols=None, gauge="constructive", earnings_days=None,
               market_open=True, enter_result=None, enter_raises=None,
-              never_stop=False):
+              never_stop=False, scan_meta=None):
         # never_stop pinned FALSE by default: this suite tests the LIVE
         # guardrails (daily cap, risk-off halt). The paper-mode lift is
         # covered by tests/test_autoentry_never_stop.py. Without the pin the
@@ -171,6 +175,12 @@ def env(monkeypatch):
         monkeypatch.setattr(EN, "broker", fake)
         monkeypatch.setattr(EN, "regime", lambda: "normal")
         monkeypatch.setattr(AE, "_latest_scan_rows", lambda: list(rows))
+        # Trusted scan by default — freshness/universe behavior is exercised
+        # explicitly by the scan-trust tests via the scan_meta param.
+        import time as _time
+        meta = scan_meta if scan_meta is not None else {
+            "generated_at": _time.time(), "universe_size": 3000}
+        monkeypatch.setattr(AE, "_scan_meta", lambda: dict(meta))
         monkeypatch.setattr(AE, "_bulk_live",
                             lambda syms: {s: dict(quotes[s])
                                           for s in syms if s in (quotes or {})})
@@ -549,3 +559,106 @@ def test_status_block_shape_and_snapshots(env):
     assert len(snaps) == 1 and snaps[0]["symbol"] == "AAA"
     assert snaps[0]["last_eval"]["result"] == "entered"
     assert "checks" in snaps[0]["last_eval"]
+
+
+# ── RS floor (TLSW p.79 criterion 8, 2026-07-12 low-RS audit) ────────────────
+
+def test_rs_below_floor_is_filtered_and_at_floor_passes(env):
+    env(rows=[_row("LOW", rs_rank=79), _row("EDGE", rs_rank=80),
+              _row("HIGH", rs_rank=95)])
+    syms = [r["symbol"] for r in AE._candidates()]
+    assert "LOW" not in syms
+    assert syms == ["EDGE", "HIGH"] or set(syms) == {"EDGE", "HIGH"}
+
+
+def test_missing_rs_rank_fails_closed(env):
+    env(rows=[_row("NORS", rs_rank=None)])
+    assert AE._candidates() == []
+
+
+def test_auto_min_rs_config_override(env):
+    _, db, _, _ = env(rows=[_row("MID", rs_rank=75)])
+    assert AE._candidates(min_rs=AE._min_rs()) == []
+    EE.update_config(auto_min_rs=70)
+    cands = AE._candidates(min_rs=AE._min_rs(EE.get_config()))
+    assert [r["symbol"] for r in cands] == ["MID"]
+
+
+def test_rs_floor_blocks_entry_end_to_end(env):
+    _, db, enter_calls, _ = env(
+        rows=[_row("WEAK", rs_rank=76)],
+        quotes={"WEAK": {"price": 101.0, "prev_day_close": 102.0}},
+        frac=0.3, relvols={"WEAK": 2.0})
+    out = AE.run()
+    assert out["reason"] == "no_candidates"
+    assert enter_calls == []
+
+
+# ── Scan trust (freshness + universe size, 2026-07-12) ──────────────────────
+
+def _epoch(y, m, d, hour=16):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return datetime(y, m, d, hour, tzinfo=ZoneInfo("America/New_York")).timestamp()
+
+
+def test_scan_trusted_fresh_and_sized():
+    from datetime import date
+    ok, det = AE.scan_trusted(
+        {"generated_at": _epoch(2026, 7, 10), "universe_size": 3685},
+        today=date(2026, 7, 13))
+    assert ok and det["fresh"] and det["sized"]
+
+
+def test_scan_trusted_friday_scan_ok_monday_but_not_tuesday():
+    from datetime import date
+    meta = {"generated_at": _epoch(2026, 7, 10), "universe_size": 3000}
+    ok_mon, _ = AE.scan_trusted(meta, today=date(2026, 7, 13))
+    ok_tue, det = AE.scan_trusted(meta, today=date(2026, 7, 14))
+    assert ok_mon is True
+    assert ok_tue is False and det["fresh"] is False
+
+
+def test_scan_trusted_small_universe_fails():
+    from datetime import date
+    ok, det = AE.scan_trusted(
+        {"generated_at": _epoch(2026, 7, 13), "universe_size": 120},
+        today=date(2026, 7, 13))
+    assert ok is False and det["sized"] is False and det["fresh"] is True
+
+
+def test_scan_trusted_missing_meta_fails_closed():
+    from datetime import date
+    for meta in ({}, None, {"generated_at": None, "universe_size": None},
+                 {"generated_at": "junk", "universe_size": "junk"}):
+        ok, _ = AE.scan_trusted(meta, today=date(2026, 7, 13))
+        assert ok is False
+
+
+def test_untrusted_scan_sits_out_and_ledgers_once(env):
+    _, db, enter_calls, _ = env(
+        rows=[_row("AAA")],
+        quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
+        frac=0.3, relvols={"AAA": 2.0},
+        scan_meta={"generated_at": _epoch(2026, 1, 2), "universe_size": 3000})
+    out1 = AE.run()
+    out2 = AE.run()
+    assert out1["reason"] == out2["reason"] == "untrusted_scan"
+    assert enter_calls == []
+    assert len(_kind_rows(db, "auto_entry_skipped_scan")) == 1
+
+
+def test_status_block_carries_rules_min_rs_and_scan(env):
+    env(rows=[_row("AAA")],
+        quotes={"AAA": {"price": 101.0, "prev_day_close": 102.0}},
+        frac=0.3, relvols={"AAA": 2.0})
+    blk = AE.status_block()
+    assert blk["min_rs"] == AE.AUTO_MIN_RS == 80.0
+    assert blk["scan"]["trusted"] is True
+    rules = blk["rules"]
+    assert isinstance(rules, list) and len(rules) >= 8
+    assert all({"rule", "value", "source"} <= set(r) for r in rules)
+    joined = " ".join(r["rule"] + r["source"] for r in rules)
+    assert "80s or 90s" in joined
+    assert "p.229" in joined
+    assert "pp.291-315" in joined

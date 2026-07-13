@@ -31,10 +31,42 @@ uses (`sepa.scanner.load_latest()`, the file-persisted
 — filtered to:
 
 - `is_buyable == true` (the scanner's strict book gate, see table above),
-- `score >= 70` (the scanner's BUY rating tier — owner choice, §4),
+- `score >= AUTO_MIN_SCORE` (85 default — owner choice, §4; `auto_min_score`
+  config override),
+- `rs_rank >= AUTO_MIN_RS` (80 default; `auto_min_rs` config override) —
+  TLSW **p.79, Trend Template criterion 8**, verbatim:
+
+  > "The relative strength ranking (as reported in Investor's Business
+  > Daily) is no less than 70, and preferably in the 80s or 90s, which will
+  > generally be the case with the better selections."
+
+  The scanner's `is_buyable` already enforces the hard 70 floor inside
+  `trend.pass_all`; the engine's own floor sits at the book's *preferred*
+  band because an unattended engine should only take "the better
+  selections". A row with **no `rs_rank` at all fails closed**. See the
+  2026-07-12 audit below for the evidence.
 - `entry_setup.pivot` present (VCP / Power-Play base-high pivot),
 
 sorted by `score` descending.
+
+**Scan trust (2026-07-12):** before any candidate is considered, the scan
+itself must pass `scan_trusted()`:
+
+- **Fresh** — the scan's ET date is today or the previous trading day
+  (weekday-walk; the book's evening-scan → next-day-pivot routine, never
+  older). A dead scanner cron can no longer leave the engine trading
+  last week's setups.
+- **Sized** — `universe_size >= MIN_RS_UNIVERSE` (500). `rs_rank` is a
+  percentile **within the scanned universe** (`sepa.rs_rank.rs_ranks`), so a
+  small manual scan (curated mode) that overwrites `latest.json` produces
+  distorted ranks — EIX read RS 64–75 across same-day runs depending on the
+  scan's pool. Only market-sized scans (the 16:30 `--mode broad` cron writes
+  ~3,700 names) are tradeable.
+
+Both fail **closed**: an untrusted scan means the engine sits out
+(`reason: untrusted_scan`, one `auto_entry_skipped_scan` ledger row per ET
+day, and `status.auto_entry.scan.trusted=false` renders a ⏸ banner on the
+Trading page).
 
 ## 3. The hybrid trigger
 
@@ -115,6 +147,37 @@ both stopped out. n=6, so this is a **hypothesis being enforced**, reviewed
 as the sample grows; the `auto_min_score` trading-config key overrides it
 live without a deploy.)
 
+Two more (2026-07-12 low-RS audit):
+
+| Constant | Value | What it is | Provenance |
+|---|---|---|---|
+| `AUTO_MIN_RS` | 80.0 | Funnel RS-rank floor (`auto_min_rs` override; missing `rs_rank` fails closed) | **TLSW p.79 criterion 8** gives the 70 floor and the "preferably in the 80s or 90s" preference; setting the engine's floor AT the preferred band is the owner-tightening (Ajay sign-off 2026-07-12) |
+| `MIN_RS_UNIVERSE` | 500 | Minimum scanned-universe size for `rs_rank` to be trusted | Owner rule — `rs_rank` is universe-relative (IBD ranks vs the whole market; we approximate with the broad ~3,700-name scan); no book equivalent |
+
+### 2026-07-12 low-RS audit changes, summarized
+
+Ajay observed the engine picking weak stocks and narrowed it to RS. The
+audit of all 18 auto-entries against `candidate_snapshots` confirmed it:
+
+- **Both closed winners were RS 87+** (ARM 98 → +15.0%, ILMN 87 → +12.0%).
+- **Three of the four closed losers were RS ≤ 82** (UFPT 76 → −8.5%,
+  IRM 79 → −6.1%, CACC 82 → −6.0%; NESR 95 → −7.1% is the counterexample).
+- **7 of 18 entries went in below RS 80**, and EIX entered with same-day
+  snapshots reading RS 64–75 — sub-book-floor readings caused by
+  universe-relative rank variance across scan runs, plus scan staleness
+  (the engine trades whatever `latest.json` last said, with no age check).
+
+Hence the three fixes: the RS-80 floor, the scan freshness gate, and the
+universe-size gate. Same honesty note as the score floor: n=6 closed
+trades is a **hypothesis being enforced**, tunable live via `auto_min_rs`.
+
+The audit also found and fixed a real bug: `exit_engine.get_config()`
+whitelists its return keys and was **stripping `auto_min_score`** — the
+documented live override never actually reached the engine. Both floor
+overrides now pass through the whitelist (regression-locked in
+`test_trading_contracts.py`), and `POST /trading/config` accepts
+`auto_min_score` / `auto_min_rs` (number to set, `null` to reset).
+
 ### 2026-07-09 failure-autopsy changes, summarized
 
 Multi-agent autopsy of the first 6 closed engine trades (4 stops, 2 targets):
@@ -153,18 +216,32 @@ the cap is what makes the $5k trial real. `GET /trading/preview` surfaces
 ## 7. API surface (all admin-gated, GETs included — /trading house rule)
 
 - `POST /trading/auto-entry?enabled=true|false` — flip the flag.
-- `POST /trading/config` — `{"equity_cap": float}` (100..100000).
+- `POST /trading/config` — any subset of `{"equity_cap": float (100..100000),
+  "auto_min_score": float|null (0..100), "auto_min_rs": float|null (1..99)}`;
+  `null` resets a floor to its code default.
 - `GET /trading/status` — gains `auto_entry: {enabled, equity_cap,
-  entries_today, max_per_day, candidates: [per-symbol last_eval snapshots]}`.
+  entries_today, max_per_day, min_score, min_rs,
+  scan: {trusted, scan_date, universe_size, fresh, sized, min_universe},
+  rules: [{rule, value, source}], candidates: [per-symbol last_eval
+  snapshots]}`. `rules` is built by `rules_list()` from the live
+  constants/config — the Trading page ⓘ panel renders it verbatim, so the
+  page can never drift from what the code enforces.
 
 ## 8. Tests
 
 - `tests/test_auto_entry.py` — behavioral: both trigger paths, every veto,
   structural-stop pass-through, daily cap (including same-tick slot
-  consumption), dedupe, disabled/disarmed no-ops, equity-cap sizing math.
+  consumption), dedupe, disabled/disarmed no-ops, equity-cap sizing math,
+  the RS floor (below/at/missing + config override), scan trust (fresh /
+  stale / small / missing-meta fail-closed + the sit-out ledger row), and
+  the status-block rules payload.
 - `tests/test_trading_contracts.py` — "engine params" source locks for the
-  five constants, the scanner mirror cross-lock, and the
-  no-direct-broker-order invariant.
+  constants (now including `AUTO_MIN_RS` + `MIN_RS_UNIVERSE`), the scanner
+  mirror cross-lock, the p.79 cite + fail-closed RS check shape, the
+  scan_trusted-wired-into-run() lock, the get_config whitelist pass-through
+  regression, and the no-direct-broker-order invariant.
+- `frontend/src/lib/autopilotRules.test.ts` — the ⓘ panel's cleaning +
+  scan-warning copy, including garbage-payload negatives.
 
 ## 9. Built-in SIM broker (paper trading without an external account)
 

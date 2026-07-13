@@ -23,6 +23,7 @@ import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { stopStatusView } from '../lib/autopilotStop';
 import { cashOut, rowTotals, statusErrKind, summarizePnl, tableTotals, type StatusErrKind } from '../lib/autopilotPnl';
+import { cleanRules, scanWarning, type EngineRule, type ScanTrust } from '../lib/autopilotRules';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
@@ -88,6 +89,12 @@ type AutoEntryInfo = {
   equity_cap: number;
   entries_today: number;
   max_per_day: number;
+  min_score?: number;
+  min_rs?: number;
+  // Engine-served rules + scan-trust read (2026-07-12) — optional so the
+  // page keeps working against an API that predates them.
+  rules?: EngineRule[] | null;
+  scan?: ScanTrust | null;
   candidates: AutoEntryCandidate[];
 };
 
@@ -964,6 +971,8 @@ function AutoEntryCard({ auto, mode, onChanged }: {
 
   const candidates = auto.candidates ?? [];
   const atCap = auto.entries_today >= auto.max_per_day;
+  const rules = cleanRules(auto.rules);
+  const scanWarn = scanWarning(auto.scan);
   const ATH: React.CSSProperties = { ...TH, fontSize: '0.7rem' };
 
   return (
@@ -992,6 +1001,30 @@ function AutoEntryCard({ auto, mode, onChanged }: {
           <span style={{ color: C.sub }}> / {auto.max_per_day}</span>
         </span>
 
+        {rules.length > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: C.sub }}>
+            rules
+            <InfoButton inline title="Entry rules — what the engine enforces">
+              <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+                <p style={{ margin: '0 0 8px', color: C.sub }}>
+                  Served live by the engine itself, so this list can’t drift from the code.
+                </p>
+                <ol style={{ margin: 0, paddingLeft: '1.1rem', display: 'grid', gap: 8 }}>
+                  {rules.map((r, i) => (
+                    <li key={i}>
+                      {r.rule}
+                      {r.value && (<>{' — '}<b className="mono">{r.value}</b></>)}
+                      {r.source && (
+                        <div style={{ fontSize: '0.68rem', color: C.sub }}>{r.source}</div>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </InfoButton>
+          </span>
+        )}
+
         {!auto.enabled && (
           <span style={{ fontSize: '0.7rem', color: C.sub }}>
             auto entries are off — exits stay automatic regardless.
@@ -1008,6 +1041,12 @@ function AutoEntryCard({ auto, mode, onChanged }: {
       </div>
 
       {err && <div style={{ fontSize: '0.72rem', color: C.red, marginTop: 5, fontWeight: 700 }}>⛔ {err}</div>}
+
+      {scanWarn && (
+        <div style={{ fontSize: '0.72rem', color: C.amber, marginTop: 5, fontWeight: 700 }}>
+          ⏸ {scanWarn}
+        </div>
+      )}
 
       {expanded && (<>
       {/* Equity cap row */}

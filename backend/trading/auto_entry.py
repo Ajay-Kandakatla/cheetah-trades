@@ -3,10 +3,13 @@
 Candidate funnel (the book lives in the SCANNER, not here):
   sepa.scanner latest scan rows where is_buyable == True (Trend Template p.79
   + Stage 2 + VCP/Power-Play pivot + volume-confirmed breakout, not extended
-  past the pivot p.224) AND score >= AUTO_MIN_SCORE AND entry_setup.pivot
-  exists. Sorted by score desc. Risk math (stop/target/size/streak) is NOT
-  re-derived here either — every buy flows through trading.entries.enter(),
-  which uses trading/risk_rules.py (TLSW pp.291-315, page-cited, FROZEN).
+  past the pivot p.224) AND score >= AUTO_MIN_SCORE AND rs_rank >= AUTO_MIN_RS
+  (p.79 criterion 8: "preferably in the 80s or 90s") AND entry_setup.pivot
+  exists — all read from a TRUSTED scan only (fresh + market-sized universe,
+  see scan_trusted). Sorted by score desc. Risk math (stop/target/size/streak)
+  is NOT re-derived here either — every buy flows through
+  trading.entries.enter(), which uses trading/risk_rules.py (TLSW pp.291-315,
+  page-cited, FROZEN).
 
 Hybrid trigger, two paths per symbol:
   a. INTRADAY        live > pivot, AND the FIRST tick we ever observed
@@ -90,10 +93,30 @@ DEFAULT_EQUITY_CAP = 5000.0
 # config key overrides it live (data write, no deploy) so it can be tuned
 # as the sample grows.
 AUTO_MIN_SCORE = 85.0
+# Funnel RS floor (added 2026-07-12 after the low-RS audit). Trend Template
+# criterion 8 (TLSW p.79): RS "no less than 70, and preferably in the 80s or
+# 90s, which will generally be the case with the better selections." The
+# scanner's is_buyable enforces the hard 70 floor; an UNATTENDED engine should
+# only take the better selections, so its own floor sits at the book's
+# preferred band. Evidence (18 auto-entries, 6 closed): both winners were RS
+# 87+ (ARM 98 +15%, ILMN 87 +12%); three of four losers were RS <= 82 (UFPT 76
+# -8.5%, IRM 79 -6.1%, CACC 82 -6.0%). Small n — the `auto_min_rs` config key
+# overrides it live (data write, no deploy). Missing rs_rank fails CLOSED.
+AUTO_MIN_RS = 80.0
+# Scan-trust guards (added 2026-07-12). rs_rank is a PERCENTILE WITHIN THE
+# SCANNED UNIVERSE (sepa.rs_rank.rs_ranks) — a small manual scan (curated
+# mode, ~dozens of names) that overwrites latest.json produces distorted
+# ranks (EIX read 64-75 across same-day runs). The engine only trades a scan
+# that covered a market-sized pool AND is from today or the previous trading
+# day (weekday-walk; holidays self-heal because the 16:30 fast-scan cron runs
+# Mon-Fri regardless). Both fail CLOSED — a stale/small scan sits out.
+MIN_RS_UNIVERSE = 500
 
 FUNNEL_CITE = ("funnel: scanner is_buyable (trend template p.79 + stage 2 + "
                "pivot + volume breakout, ext cap p.224) + score floor "
-               "(default 85, cfg auto_min_score) + p.229 volume gate; risk "
+               "(default 85, cfg auto_min_score) + RS floor (default 80, "
+               "p.79 'preferably in the 80s or 90s', cfg auto_min_rs) + "
+               "p.229 volume gate + fresh market-sized scan; risk "
                "math pp.291-315 via entries/risk_rules")
 
 
@@ -111,6 +134,63 @@ def _latest_scan_rows() -> list:
     except Exception as exc:                       # noqa: BLE001
         log.warning("auto_entry: latest scan unavailable: %s", exc)
         return []
+
+
+def _scan_meta() -> dict:
+    """generated_at (epoch) + universe_size of the scan the funnel reads —
+    same latest.json _latest_scan_rows loads. Missing file/keys -> {} (the
+    trust gate fails closed on it)."""
+    try:
+        from sepa import scanner
+        latest = scanner.load_latest() or {}
+        return {"generated_at": latest.get("generated_at"),
+                "universe_size": latest.get("universe_size")}
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("auto_entry: scan meta unavailable: %s", exc)
+        return {}
+
+
+def _prev_trading_day(day):
+    """Previous weekday (holiday-naive — see MIN_RS_UNIVERSE comment)."""
+    from datetime import timedelta
+    d = day - timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
+def scan_trusted(meta: dict, today=None) -> tuple:
+    """Both scan-trust guards as one pure, unit-tested read.
+
+    FRESH:  the scan's ET date is today or the previous trading day —
+            the book's evening-scan -> next-day-pivot routine, never older.
+    SIZED:  universe_size >= MIN_RS_UNIVERSE so the universe-relative
+            rs_rank percentile approximates a market rank.
+
+    Missing generated_at / universe_size fails CLOSED (no trades on a scan
+    we cannot date or size). Returns (ok, detail-dict for status/ledger)."""
+    from datetime import datetime, date
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    today = today or datetime.now(et).date()
+    gen = (meta or {}).get("generated_at")
+    size = (meta or {}).get("universe_size")
+    scan_day = None
+    try:
+        if gen:
+            scan_day = datetime.fromtimestamp(float(gen), et).date()
+    except (TypeError, ValueError, OSError):
+        scan_day = None
+    fresh = scan_day is not None and scan_day >= _prev_trading_day(today)
+    sized = False
+    try:
+        sized = size is not None and int(size) >= MIN_RS_UNIVERSE
+    except (TypeError, ValueError):
+        sized = False
+    detail = {"scan_date": scan_day.isoformat() if scan_day else None,
+              "universe_size": size, "fresh": bool(fresh),
+              "sized": bool(sized), "min_universe": MIN_RS_UNIVERSE}
+    return bool(fresh and sized), detail
 
 
 def _bulk_live(symbols: list) -> dict:
@@ -285,16 +365,30 @@ def _min_score(cfg: Optional[dict] = None) -> float:
         return AUTO_MIN_SCORE
 
 
-def _candidates(min_score: float = AUTO_MIN_SCORE) -> list:
-    """Latest-scan rows passing the funnel, score desc."""
+def _min_rs(cfg: Optional[dict] = None) -> float:
+    """RS floor: `auto_min_rs` config override, else AUTO_MIN_RS."""
+    try:
+        v = (cfg or {}).get("auto_min_rs")
+        return float(v) if v is not None else AUTO_MIN_RS
+    except (TypeError, ValueError):
+        return AUTO_MIN_RS
+
+
+def _candidates(min_score: float = AUTO_MIN_SCORE,
+                min_rs: float = AUTO_MIN_RS) -> list:
+    """Latest-scan rows passing the funnel, score desc. A row with no
+    rs_rank at all is skipped (fail closed), same as rs below the floor."""
     out = []
     for r in _latest_scan_rows():
         try:
             if not r.get("is_buyable"):
                 continue
             score = float(r.get("score") or 0)
+            rs = r.get("rs_rank")
             pivot = (r.get("entry_setup") or {}).get("pivot")
             if score < min_score or not pivot or float(pivot) <= 0:
+                continue
+            if rs is None or float(rs) < min_rs:
                 continue
             sym = (r.get("symbol") or "").strip().upper()
             if sym:
@@ -399,7 +493,21 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         return out
     out["ran"] = True
 
-    cands = _candidates(min_score=_min_score(cfg))
+    # Scan-trust gate — never trade a stale scan or small-universe RS ranks.
+    trusted, scan_detail = scan_trusted(_scan_meta())
+    out["scan"] = scan_detail
+    if not trusted:
+        out["reason"] = "untrusted_scan"
+        if cfg.get("last_auto_entry_scan_warn_day") != day:
+            ledger("auto_entry_skipped_scan",
+                   detail=dict(scan_detail,
+                               hint="scan is stale or covered too few names "
+                                    "for a trustworthy RS rank — engine sits "
+                                    "out until the next broad scan"))
+            update_config(last_auto_entry_scan_warn_day=day)
+        return out
+
+    cands = _candidates(min_score=_min_score(cfg), min_rs=_min_rs(cfg))
     if not cands:
         out["reason"] = "no_candidates"
         return out
@@ -586,12 +694,75 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
 
 # ── Status block (rides in GET /trading/status) ─────────────────────────────
 
+def rules_list(cfg: Optional[dict] = None) -> list:
+    """Every rule the engine enforces, as data — the FE ⓘ panel renders THIS
+    list, so the page can never drift from what the code actually does
+    (Ajay 2026-07-12: 'create a list of rules as info on the page'). Values
+    are read live from config/constants; `source` is the book page or the
+    owner-rule honesty note."""
+    cfg = cfg or get_config()
+    return [
+        {"rule": "Only scanner-buyable setups: all 8 Trend Template checks, "
+                 "Stage 2, a VCP/Power-Play base with a pivot, and a same-day "
+                 "volume-confirmed breakout",
+         "value": "is_buyable",
+         "source": "TLSW pp.79-83, 198-203"},
+        {"rule": "RS rank floor — the book demands at least 70 and prefers "
+                 "'the 80s or 90s'; the engine only takes the preferred band",
+         "value": "RS >= %g" % _min_rs(cfg),
+         "source": "TLSW p.79 criterion 8 (floor is owner-tightened; "
+                   "cfg auto_min_rs)"},
+        {"rule": "SEPA score floor — winners scored 87-94, no loser above 84 "
+                 "in the July 2026 autopsy",
+         "value": "score >= %g" % _min_score(cfg),
+         "source": "owner rule 2026-07-09 (cfg auto_min_score)"},
+        {"rule": "Buy zone — never chase more than a few percent past the "
+                 "pivot",
+         "value": "<= %g%% above pivot" % MAX_EXTENSION_PCT,
+         "source": "TLSW p.224 (3% is the owner-approved number)"},
+        {"rule": "Same-day entries only when the pivot first cleared in the "
+                 "first half of the session; later clears wait for next "
+                 "morning's close-confirmation",
+         "value": "clear <= %g of session" % FIRST_HALF_FRACTION,
+         "source": "owner rule (hybrid trigger)"},
+        {"rule": "Volume gate — projected full-day RelVol counts only after "
+                 "the first hour (early projections lie); ACTUAL volume "
+                 "already >= the floor triggers any time; missing volume "
+                 "data never buys",
+         "value": "RelVol >= %gx (projection trusted after %d min)"
+                  % (AUTO_RELVOL_MIN, round(VOL_CONFIRM_MIN_FRAC * 390)),
+         "source": "TLSW p.229 volume extrapolation"},
+        {"rule": "Scan trust — the scan must be from today or the previous "
+                 "trading day AND cover a market-sized universe, or the "
+                 "engine sits out (RS ranks from small scans are distorted)",
+         "value": ">= %d names, <= 1 trading day old" % MIN_RS_UNIVERSE,
+         "source": "owner rule 2026-07-12"},
+        {"rule": "No entries within a week of earnings, never average down, "
+                 "never more than %d positions, at most %d auto-buys a day "
+                 "in live mode (paper cycles freely), risk-off Market Gauge "
+                 "halts live entries" % (risk_rules.MAX_POSITIONS,
+                                         MAX_AUTO_ENTRIES_PER_DAY),
+         "value": "earnings shield %dd" % entries.EARNINGS_SHIELD_DAYS,
+         "source": "house safety rails"},
+        {"rule": "Every buy flows through the same sized-and-stopped path: "
+                 "default stop %g%% below entry, structural stop honored "
+                 "when tighter, size halves after %d straight losses"
+                 % (risk_rules.DEFAULT_STOP_PCT, risk_rules.STREAK_HALVE_AFTER),
+         "value": "risk_rules FROZEN",
+         "source": "TLSW pp.291-315, p.304"},
+    ]
+
+
 def status_block(cfg: Optional[dict] = None) -> dict:
     cfg = cfg or get_config()
     day = _et_day()
+    trusted, scan_detail = scan_trusted(_scan_meta())
     return {"enabled": bool(cfg.get("auto_entry")),
             "equity_cap": cfg.get("equity_cap"),
             "entries_today": _entries_today(day),
             "max_per_day": MAX_AUTO_ENTRIES_PER_DAY,
             "min_score": _min_score(cfg),
+            "min_rs": _min_rs(cfg),
+            "scan": dict(scan_detail, trusted=trusted),
+            "rules": rules_list(cfg),
             "candidates": _today_snapshots(day)}

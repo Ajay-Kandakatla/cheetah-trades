@@ -1190,6 +1190,31 @@ sign-off process apply.
   in practice (the liquidity floor keeps sub-dollar names out); fix needs
   sign-off per Rule #4.
 
+### 11f-bis. Auto-Entry funnel (2026-06-12; RS floor + scan trust 2026-07-12)
+
+Invariant 1 above was superseded on 2026-06-12 by **auto-entry**
+(`trading/auto_entry.py`, full spec `docs/sepa/auto_entry_methodology.md`):
+the engine may buy Ajay's own SEPA picks, but ONLY through
+`entries.enter()` (armed gate, sizing, never-average-down and the earnings
+shield all re-apply; contract-tested no-direct-broker-order invariant).
+
+Funnel — LOCKED (`test_trading_contracts.py` engine-params block):
+
+| Gate | Value | Provenance |
+|---|---|---|
+| `is_buyable` scan rows only | — | Trend Template p.79 + Stage 2 + pivot + volume breakout + ≤3% extension (p.224) |
+| Score floor | `AUTO_MIN_SCORE = 85` (`auto_min_score` override) | owner rule 2026-07-09, failure autopsy |
+| **RS floor** | `AUTO_MIN_RS = 80`, missing `rs_rank` fails closed (`auto_min_rs` override) | **p.79 criterion 8: floor 70, "preferably in the 80s or 90s"** — engine floor sits at the preferred band (owner sign-off 2026-07-12; winners RS 87+, 3 of 4 losers ≤ 82) |
+| **Scan trust** | fresh (today or prev trading day) AND `universe_size ≥ MIN_RS_UNIVERSE = 500` | owner rule 2026-07-12 — `rs_rank` is universe-relative; small/stale scans sit out (`untrusted_scan`) |
+| Volume gate | actual ≥ 1.5× avg50 anytime; projection trusted only after 60 min | TLSW p.229 |
+| Timing | first pivot-clear in first half of session, else close-confirm next morning | owner rule (hybrid trigger) |
+
+`GET /trading/status → auto_entry.rules` serves this table as data
+(`rules_list()`); the Trading-page ⓘ panel renders it verbatim so the UI
+cannot drift from the code. Also fixed 2026-07-12: `get_config()`'s
+whitelist silently stripped `auto_min_score`/`auto_min_rs` — overrides now
+pass through (regression-locked).
+
 ---
 
 ## 11g. Racing to R1/R2 board (2026-06-12)

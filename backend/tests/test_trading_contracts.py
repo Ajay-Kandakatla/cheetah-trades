@@ -190,6 +190,15 @@ ENGINE_PARAM_TOKENS = [
     # Volume-projection trust floor (TLSW p.229 concept; 60-min house value,
     # Ajay sign-off 2026-07-09 after the 9:31-entry failure autopsy).
     "VOL_CONFIRM_MIN_FRAC = round(60.0 / 390.0, 4)",
+    # Funnel RS floor (TLSW p.79 criterion 8: "no less than 70, and preferably
+    # in the 80s or 90s" — floor sits at the book's preferred band; Ajay
+    # sign-off 2026-07-12 after the low-RS audit: winners RS 87+, three of
+    # four losers RS <= 82).
+    "AUTO_MIN_RS = 80.0",
+    # Scan-trust universe floor — rs_rank is a percentile WITHIN the scanned
+    # universe, so small manual scans distort it (EIX read 64-75 across
+    # same-day runs); the engine only trades market-sized scans.
+    "MIN_RS_UNIVERSE = 500",
 ]
 
 
@@ -224,6 +233,48 @@ def test_auto_entry_params_importable_and_equal():
     # live so it can be tuned as the sample grows).
     assert ae.AUTO_MIN_SCORE == 85.0
     assert ae.VOL_CONFIRM_MIN_FRAC == round(60.0 / 390.0, 4)
+    assert ae.AUTO_MIN_RS == 80.0
+    assert ae.MIN_RS_UNIVERSE == 500
+
+
+def test_rs_floor_cited_and_fails_closed_in_source():
+    """The RS floor must stay anchored to TLSW p.79 criterion 8 wording AND
+    keep its fail-closed shape (a row with NO rs_rank is never tradeable).
+    The 2026-07-12 audit found the engine buying RS 66-79 names — both
+    winners were RS 87+, so the floor sits at the book's preferred band."""
+    src = _auto_entry_source()
+    assert "80s or 90s" in src, (
+        "the p.79 'preferably in the 80s or 90s' anchor left "
+        "trading/auto_entry.py — the RS floor must keep its book cite")
+    assert "rs is None or float(rs) < min_rs" in src, (
+        "the fail-closed RS check changed shape — missing rs_rank MUST "
+        "still be excluded (fail closed), never admitted")
+
+
+def test_scan_trust_gate_locked_in_source():
+    """scan_trusted() must stay wired into run() (never trade a stale or
+    small-universe scan) and both floors must fail CLOSED on missing meta."""
+    src = _auto_entry_source()
+    assert "scan_trusted(_scan_meta())" in src, (
+        "run() no longer consults scan_trusted — the engine would trade "
+        "stale/small scans again (the EIX RS-66 hole)")
+    assert 'out["reason"] = "untrusted_scan"' in src
+
+
+def test_config_whitelist_passes_floor_overrides_through():
+    """REGRESSION (2026-07-12 audit): exit_engine.get_config() whitelists its
+    return keys and used to STRIP auto_min_score — the documented live
+    override silently never reached the engine. Both floor overrides must
+    survive the whitelist now."""
+    eng_path = os.path.join(os.path.dirname(__file__), "..",
+                            "trading", "exit_engine.py")
+    with open(eng_path, encoding="utf-8") as fh:
+        eng_src = fh.read()
+    for key in ("auto_min_score", "auto_min_rs",
+                "last_auto_entry_scan_warn_day"):
+        assert '"%s": doc.get("%s")' % (key, key) in eng_src, (
+            "exit_engine.get_config() no longer passes `%s` through its "
+            "whitelist — the live override dies silently again" % key)
 
 
 def test_extension_cap_mirrors_scanner_buy_zone():

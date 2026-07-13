@@ -5,7 +5,9 @@ GET  /trading/status                engine + account + per-position protection
                                     entries_today, per-candidate last_eval)
 POST /trading/arm?armed=true|false  master switch (admin)
 POST /trading/auto-entry?enabled=true|false  auto-entry flag (admin)
-POST /trading/config                JSON {equity_cap} — sizing ceiling (admin)
+POST /trading/config                JSON {equity_cap?, auto_min_score?,
+                                    auto_min_rs?} — sizing ceiling + funnel
+                                    floors (admin; null resets a floor)
 GET  /trading/preview               pure entry math, NO order
 POST /trading/enter                 bracket entry (admin; the ONLY buy path)
 POST /trading/flatten/{symbol}      cancel orders + close position (admin)
@@ -79,23 +81,47 @@ EQUITY_CAP_MIN, EQUITY_CAP_MAX = 100.0, 100_000.0
 @router.post("/config")
 async def trading_config(payload: dict = Body(...),
                          email: str = Depends(current_user_email)):
+    """Owner-tunable engine knobs. Accepts any subset of: equity_cap,
+    auto_min_score (funnel score floor), auto_min_rs (funnel RS floor,
+    TLSW p.79 'preferably in the 80s or 90s'). An explicit null resets a
+    floor to its code default."""
     _require_admin(email)
-    if "equity_cap" not in payload:
-        raise HTTPException(400, "equity_cap required")
-    try:
-        cap = float(payload.get("equity_cap"))
-    except (TypeError, ValueError):
-        raise HTTPException(400, "equity_cap must be a number")
-    if not (EQUITY_CAP_MIN <= cap <= EQUITY_CAP_MAX):
-        raise HTTPException(400, "equity_cap must be between %d and %d"
-                            % (EQUITY_CAP_MIN, EQUITY_CAP_MAX))
+    updates = {}
+    if "equity_cap" in payload:
+        try:
+            cap = float(payload.get("equity_cap"))
+        except (TypeError, ValueError):
+            raise HTTPException(400, "equity_cap must be a number")
+        if not (EQUITY_CAP_MIN <= cap <= EQUITY_CAP_MAX):
+            raise HTTPException(400, "equity_cap must be between %d and %d"
+                                % (EQUITY_CAP_MIN, EQUITY_CAP_MAX))
+        updates["equity_cap"] = cap
+    for floor_key, lo, hi in (("auto_min_score", 0.0, 100.0),
+                              ("auto_min_rs", 1.0, 99.0)):
+        if floor_key not in payload:
+            continue
+        raw = payload.get(floor_key)
+        if raw is None:
+            updates[floor_key] = None      # reset to the code default
+            continue
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "%s must be a number or null" % floor_key)
+        if not (lo <= val <= hi):
+            raise HTTPException(400, "%s must be between %g and %g"
+                                % (floor_key, lo, hi))
+        updates[floor_key] = val
+    if not updates:
+        raise HTTPException(400, "nothing to update — send equity_cap, "
+                                 "auto_min_score, and/or auto_min_rs")
     from trading import exit_engine
 
     def work():
-        exit_engine.update_config(equity_cap=cap)
+        exit_engine.update_config(**updates)
         exit_engine.ledger("config_update",
-                           detail={"equity_cap": cap, "by": email})
-        return {"equity_cap": cap}
+                           detail=dict(updates, by=email))
+        return updates
 
     return JSONResponse(await asyncio.to_thread(work))
 

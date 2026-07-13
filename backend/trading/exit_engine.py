@@ -127,6 +127,12 @@ def get_config() -> dict:
         "last_tick_iso": doc.get("last_tick_iso"),
         "last_not_configured_day": doc.get("last_not_configured_day"),
         "last_auto_entry_disabled_day": doc.get("last_auto_entry_disabled_day"),
+        "last_auto_entry_scan_warn_day": doc.get("last_auto_entry_scan_warn_day"),
+        # Funnel floor overrides (data write, no deploy). This whitelist used
+        # to STRIP them, which silently killed the documented auto_min_score
+        # override — found in the 2026-07-12 low-RS audit.
+        "auto_min_score": doc.get("auto_min_score"),
+        "auto_min_rs": doc.get("auto_min_rs"),
         "last_errors": list(doc.get("last_errors") or []),  # last tick's failures, surfaced on the dashboard
         "updated_at": doc.get("updated_at"),
     }

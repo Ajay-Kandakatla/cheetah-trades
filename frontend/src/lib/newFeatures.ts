@@ -51,6 +51,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'learning-path', label: '📚 Learning Path — your phased study plan (order flow → SMC → options vol → synthesis) with embedded videos + papers', addedAt: '2026-07-06', route: '/learning' },
   { id: 'autopilot-position-totals', label: '💵 Cost / Now / ± columns on Auto-Pilot positions + a TOTAL row summing the pluses and minuses + cash not entered', addedAt: '2026-07-06', route: '/trading' },
   { id: 'breakout-breadth', label: '🌡️ Breakout Breadth strip — breakouts/day + follow-through vs failure rate + the book\'s exposure read (sizes positions, never gates entries)', addedAt: '2026-07-10', route: '/breakouts' },
+  { id: 'autopilot-rules-rs-floor', label: '📜 Auto-Pilot rules ⓘ — every rule the engine enforces, served by the engine itself; plus a new RS ≥ 80 floor (p.79 "80s or 90s") and a scan-trust gate (fresh + market-sized scans only)', addedAt: '2026-07-12', route: '/trading' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */
