@@ -248,6 +248,26 @@ async def scan_one(symbol: str):
     return {"symbol": sym, "found": True, **snap}
 
 
+@router.get("/options/gex-board")
+async def get_gex_board():
+    """Cross-sectional GEX board (2026-07-17): the latest nightly snapshot's
+    universe bucketed 🟢 bullish / 🔴 bearish / mixed on the dealer-gamma
+    regime + the zero-gamma flip, each row carrying its key nodes (call wall,
+    put wall, flip, magnet) + net GEX/VEX dollars. Pure Mongo read — the
+    17:50 ET cron (or POST refresh) populates it."""
+    from . import gex_history
+    return await asyncio.to_thread(gex_history.board)
+
+
+@router.post("/options/gex-board/refresh")
+async def refresh_gex_board():
+    """On-demand re-snapshot of the GEX universe (same job the 17:50 cron
+    runs — portfolio + watchlists + SOIR bullish/watch + top SEPA). Threaded;
+    ~1-2 min for the ~200-name universe. Returns the run summary."""
+    from . import gex_history
+    return await asyncio.to_thread(gex_history.run)
+
+
 @router.get("/options/gex-history/{symbol}")
 async def get_gex_history(symbol: str, days: int = Query(90, ge=1, le=365)):
     """Daily dealer-GEX ledger for one ticker (regime, net GEX, max-pain vs

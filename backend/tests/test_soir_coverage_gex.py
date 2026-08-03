@@ -110,3 +110,74 @@ def test_slim_row_missing_gamma_still_keeps_max_pain():
            "max_pain": {"max_pain_strike": 48, "pct_from_spot": -4.0}}
     row = slim_row("abc", out, "2026-07-06")
     assert row["regime"] is None and row["max_pain"] == 48
+
+
+# ── GEX board (2026-07-17): bucket + slim_row flip/vex fields ────────────────
+
+def test_slim_row_carries_flip_and_vex_none_safe():
+    from options.gex_history import slim_row
+    full = slim_row("mu", {
+        "spot": 100.0, "gex_reliability": "single_name",
+        "expiration_date": "2026-07-24",
+        "gamma": {"regime": "pinning", "net_gex_dollars": 1e8,
+                  "call_wall": 110.0, "put_wall": 90.0,
+                  "flip_strike": 96.5, "magnet_strike": 100.0},
+        "max_pain": {"max_pain_strike": 100.0, "pct_from_spot": 0.0},
+        "vex": {"net_vex_dollars": 2e7, "read": "falling IV = dealer buying (vanna tailwind)"},
+    }, "2026-07-17")
+    assert full["flip_strike"] == 96.5 and full["magnet"] == 100.0
+    assert full["net_vex_dollars"] == 2e7 and "tailwind" in full["vex_read"]
+
+    legacy = slim_row("mu", {
+        "spot": 100.0, "gamma": {"regime": "pinning", "net_gex_dollars": 1e8},
+        "max_pain": {},
+    }, "2026-07-17")
+    assert legacy["flip_strike"] is None and legacy["net_vex_dollars"] is None
+
+
+def test_board_bucket_rules():
+    from options.gex_history import board_bucket
+    assert board_bucket({"regime": "pinning", "spot": 100, "flip_strike": 95}) == "bullish"
+    assert board_bucket({"regime": "pinning", "spot": 100, "flip_strike": None}) == "bullish"
+    assert board_bucket({"regime": "amplifying", "spot": 100, "flip_strike": 105}) == "bearish"
+    assert board_bucket({"regime": "amplifying", "spot": 100, "flip_strike": None}) == "bearish"
+    assert board_bucket({"regime": "pinning", "spot": 100, "flip_strike": 105}) == "mixed"
+    assert board_bucket({"regime": "amplifying", "spot": 100, "flip_strike": 95}) == "mixed"
+    assert board_bucket({"regime": None, "spot": None, "flip_strike": None}) == "mixed"
+
+
+def test_board_reads_latest_date_and_sorts_by_abs_gex(monkeypatch):
+    from options import gex_history as GH
+
+    class FakeColl:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def distinct(self, field):
+            return sorted({r[field] for r in self.rows})
+
+        def find(self, q, proj=None):
+            return [dict(r) for r in self.rows if r["date_et"] == q["date_et"]]
+
+    rows = [
+        {"symbol": "OLD", "date_et": "2026-07-16", "regime": "pinning",
+         "spot": 50, "flip_strike": None, "net_gex_dollars": 1e9},
+        {"symbol": "BIG", "date_et": "2026-07-17", "regime": "pinning",
+         "spot": 100, "flip_strike": 95.0, "net_gex_dollars": 5e8},
+        {"symbol": "SML", "date_et": "2026-07-17", "regime": "pinning",
+         "spot": 100, "flip_strike": 95.0, "net_gex_dollars": 1e8},
+        {"symbol": "BEAR", "date_et": "2026-07-17", "regime": "amplifying",
+         "spot": 100, "flip_strike": 110.0, "net_gex_dollars": -9e8},
+        {"symbol": "NOFLIP", "date_et": "2026-07-17", "regime": "pinning",
+         "spot": 100, "flip_strike": None, "net_gex_dollars": 2e8},
+    ]
+    monkeypatch.setattr(GH, "_coll", lambda: FakeColl(rows))
+    b = GH.board()
+    assert b["as_of_date"] == "2026-07-17"
+    assert [r["symbol"] for r in b["bullish"]] == ["BIG", "NOFLIP", "SML"]
+    assert [r["symbol"] for r in b["bearish"]] == ["BEAR"]
+    assert b["counts"] == {"bullish": 3, "bearish": 1, "mixed": 0}
+    assert "1 of 4" in (b["note"] or "")
+
+    monkeypatch.setattr(GH, "_coll", lambda: None)
+    assert GH.board()["note"] == "mongo unavailable"

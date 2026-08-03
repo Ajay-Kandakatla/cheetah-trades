@@ -60,9 +60,71 @@ def slim_row(sym: str, opex_out: Optional[dict], et_date: str) -> Optional[dict]
         "mp_pct_from_spot": mp.get("pct_from_spot"),
         "put_wall": g.get("put_wall"),
         "call_wall": g.get("call_wall"),
+        # Flip + VEX (2026-07-17, GEX board): None-safe — rows from before
+        # the fields existed simply read None and the board buckets them
+        # on regime alone.
+        "flip_strike": g.get("flip_strike"),
+        "magnet": g.get("magnet_strike"),
+        "net_vex_dollars": (opex_out.get("vex") or {}).get("net_vex_dollars"),
+        "vex_read": (opex_out.get("vex") or {}).get("read"),
         "reliability": opex_out.get("gex_reliability"),
         "expiration_date": opex_out.get("expiration_date"),
         "recorded_at": int(time.time()),
+    }
+
+
+def board_bucket(row: dict) -> str:
+    """Bullish / bearish / mixed for the GEX board. Pure — unit-tested.
+
+    bullish: dealers net LONG gamma (pinning) AND spot at/above the flip
+             (or no flip mapped) — dips get bought, moves dampened.
+    bearish: dealers net SHORT gamma (amplifying) AND spot below the flip
+             (or no flip mapped) — weakness gets amplified.
+    mixed:   regime and flip disagree (e.g. pinning but spot below flip) —
+             the board shows these last, smallest claim."""
+    regime = (row.get("regime") or "").lower()
+    spot = row.get("spot")
+    flip = row.get("flip_strike")
+    above = flip is None or (spot is not None and spot >= flip)
+    if regime == "pinning" and above:
+        return "bullish"
+    if regime == "amplifying" and not above:
+        return "bearish"
+    if regime == "amplifying" and flip is None:
+        return "bearish"
+    return "mixed"
+
+
+def board(days_back: int = 5) -> dict:
+    """The cross-sectional GEX board: latest ledger date's rows bucketed
+    bullish / bearish / mixed, each bucket sorted by |net GEX| descending.
+    Falls back through the last `days_back` dates so a missed cron never
+    blanks the page. {} DB -> empty board with a reason."""
+    coll = _coll()
+    empty = {"as_of_date": None, "bullish": [], "bearish": [], "mixed": [],
+             "counts": {"bullish": 0, "bearish": 0, "mixed": 0},
+             "note": None}
+    if coll is None:
+        return dict(empty, note="mongo unavailable")
+    dates = sorted(coll.distinct("date_et"), reverse=True)[:days_back]
+    if not dates:
+        return dict(empty, note="no GEX snapshots yet — run options.gex_history")
+    latest = dates[0]
+    rows = list(coll.find({"date_et": latest}, {"_id": 0}))
+    out = {"bullish": [], "bearish": [], "mixed": []}
+    for r in rows:
+        out[board_bucket(r)].append(r)
+    for bucket in out.values():
+        bucket.sort(key=lambda r: abs(r.get("net_gex_dollars") or 0),
+                    reverse=True)
+    missing_flip = sum(1 for r in rows if r.get("flip_strike") is None)
+    return {
+        "as_of_date": latest,
+        **out,
+        "counts": {k: len(v) for k, v in out.items()},
+        "note": ("%d of %d rows predate the flip field (bucketed on regime "
+                 "alone — tonight's 17:50 snapshot fills them in)"
+                 % (missing_flip, len(rows)) if missing_flip else None),
     }
 
 
@@ -104,21 +166,30 @@ def snapshot_universe() -> list:
     return seen[:MAX_UNIVERSE]
 
 
-def run() -> dict:
-    """One daily sweep: compute_opex per universe name, upsert slim rows."""
+def run(workers: int = 8) -> dict:
+    """One daily sweep: compute_opex per universe name, upsert slim rows.
+    Threaded (2026-07-17) so the board's on-demand refresh finishes in ~20s
+    instead of minutes; the scanner already runs 20 workers on the options
+    key, so 8 is well inside the budget."""
     coll = _coll()
     if coll is None:
         return {"ok": False, "reason": "no mongo"}
+    from concurrent.futures import ThreadPoolExecutor
     from options import opex
     d = _et_date()
     syms = snapshot_universe()
     n_ok = n_fail = 0
-    for sym in syms:
+
+    def _one(sym):
         try:
-            row = slim_row(sym, opex.compute_opex(sym), d)
-        except Exception as exc:
+            return sym, slim_row(sym, opex.compute_opex(sym), d)
+        except Exception as exc:                   # noqa: BLE001
             log.debug("gex snapshot failed %s: %s", sym, exc)
-            row = None
+            return sym, None
+
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+        results = list(ex.map(_one, syms))
+    for sym, row in results:
         if row is None:
             n_fail += 1
             continue

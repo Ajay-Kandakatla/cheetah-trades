@@ -5,9 +5,11 @@
  * jargon, and just three filters. Reads the SAME /sepa/scan feed (useSepaScan);
  * the simplification is all presentation (lib/sepaGlobal). */
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSepaScan } from '../hooks/useSepa';
 import type { SepaCandidate } from '../hooks/useSepa';
 import { useLivePrices } from '../hooks/useLivePrices';
+import { useMyFeatures } from '../hooks/useMyFeatures';
 import { toGlobalCard, toGlobalDetail, filterForTab, type GlobalTab } from '../lib/sepaGlobal';
 import { SepaGlobalCard } from '../components/SepaGlobalCard';
 import { SepaGlobalDetailModal } from '../components/SepaGlobalDetailModal';
@@ -43,6 +45,13 @@ const HowItWorks = (
 export function SepaGlobalPage() {
   const { data, loading, scanning, refetch } = useSepaScan();
   const livePrices = useLivePrices();
+  const navigate = useNavigate();
+  // Full-SEPA users jump straight to the ticker detail page (Ajay 2026-07-17:
+  // "take me to individual tickers instead of opening up a small modal");
+  // Global-only friends keep the simple modal — the /sepa/:symbol route is
+  // feature-gated and would bounce them to the landing page.
+  const { features } = useMyFeatures();
+  const hasFullSepa = features.has('sepa');
   const [tab, setTab] = useState<GlobalTab>('leaders');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<SepaCandidate | null>(null);
@@ -151,7 +160,9 @@ export function SepaGlobalPage() {
           <SepaGlobalCard
             key={r.symbol}
             card={toGlobalCard(r, liveFor(r.symbol))}
-            onClick={() => setSelected(r)}
+            onClick={() => (hasFullSepa
+              ? navigate(`/sepa/${encodeURIComponent(r.symbol)}`)
+              : setSelected(r))}
           />
         ))}
       </div>

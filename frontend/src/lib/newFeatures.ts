@@ -55,6 +55,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'autopilot-pilot-and-leaky-pivot', label: '🛫 Pilot-size entries (half size until the last 5 trades prove out, per Minervini\'s progressive exposure) + leaky-pivot suppressor (skip pivots that keep poking above and failing)', addedAt: '2026-07-12', route: '/trading' },
   { id: 'sepa-leaky-pivot', label: '🚱 Leaky pivots on the scanner — SEPA Global moves them from "Buy now" to Watch, and SEPA cards flag them, using the exact rule Auto-Pilot enforces', addedAt: '2026-07-12', route: '/sepa' },
   { id: 'autopilot-pyramiding', label: '🏗️ Pyramid adds — Auto-Pilot tops a winning position up to full size when it sets up again at a higher pivot (TTLAC "Add and Reduce"); violet auto_pyramid rows in the ledger', addedAt: '2026-07-12', route: '/trading' },
+  { id: 'gex-board', label: '🧲 GEX Board — bullish vs bearish stocks by dealer gamma, each with its key nodes (flip, call/put walls, magnet) + net GEX/VEX off the options key', addedAt: '2026-07-17', route: '/gex-board' },
+  { id: 'gex-setup-lens', label: '🎯 Options lens on the Setup tab — GEX + VEX best-case read per stock (does dealer hedging help or fight this setup?)', addedAt: '2026-07-17', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

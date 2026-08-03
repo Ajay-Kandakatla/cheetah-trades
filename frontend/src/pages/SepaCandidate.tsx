@@ -75,6 +75,8 @@ import type { TickerContext } from '../hooks/useSupplyDemand';
 import { OptionsFlowPanel } from '../components/OptionsFlowPanel';
 import { TomorrowBiasBlock } from '../components/TomorrowBias';
 import { OpExPanel } from '../components/OpExPanel';
+// GEX+VEX best-case lens for the Setup tab (Ajay 2026-07-17).
+import { GexSetupLens } from '../components/GexSetupLens';
 import { TapePanel } from '../components/TapePanel';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
@@ -1087,6 +1089,12 @@ export function SepaCandidatePage() {
                   and a position-sizing calculator. (Position Lens is at the top of the page —
                   use this tab for the entry-side trade plan.)
                 </div>
+
+                {/* GEX + VEX best-case read (Ajay 2026-07-17) — dealer-gamma
+                    color on the entry plan: does hedging flow help this setup
+                    (pinning above flip) or fight it? Renders nothing when the
+                    name has no options chain. */}
+                <GexSetupLens symbol={symbol} />
 
                 {/* Why-buy thesis + "what's moving the rank" — the SAME summary
                     block the leaderboard / SEPA list card shows at the bottom of

@@ -149,14 +149,155 @@ def net_gex_and_walls(rows: list[dict], spot: Optional[float]) -> Optional[dict]
     # dominant magnet = largest absolute per-strike gamma concentration
     magnet = max(per_strike, key=lambda k: abs(per_strike[k]), default=None)
 
+    # Gamma FLIP (zero-gamma level, added 2026-07-17): walk strikes ascending
+    # accumulating per-strike net gamma; the flip is where the running sum
+    # changes sign, linearly interpolated between the bracketing strikes.
+    # Below the flip dealers are net short gamma (moves get amplified); above
+    # it net long (moves get dampened). No crossing -> None (profile is
+    # one-sided; the regime field already says which side).
+    flip = None
+    strikes_sorted = sorted(per_strike)
+    cum = 0.0
+    prev_cum = 0.0
+    for i, k in enumerate(strikes_sorted):
+        prev_cum = cum
+        cum += per_strike[k]
+        if i > 0 and prev_cum != 0 and (prev_cum < 0) != (cum < 0):
+            k_prev = strikes_sorted[i - 1]
+            frac = abs(prev_cum) / (abs(prev_cum) + abs(per_strike[k]))
+            flip = round(k_prev + frac * (k - k_prev), 2)
+            break
+
+    # Top gamma nodes (the "key nodes" for the board/setup lens): largest
+    # |dealer gamma| strikes, dollar-scaled like net_gex_dollars.
+    top_nodes = [
+        {"strike": k, "gex_dollars": round(per_strike[k] * scale, 0)}
+        for k in sorted(per_strike, key=lambda s: abs(per_strike[s]),
+                        reverse=True)[:6]
+    ]
+
     return {
         "net_gex_dollars": round(net, 0),
         "regime": "pinning" if net > 0 else "amplifying",
         "call_wall": call_wall,
         "put_wall": put_wall,
         "magnet_strike": magnet,
+        "flip_strike": flip,
+        "top_nodes": top_nodes,
         "oi_coverage_pct": round(100 * covered_oi / total_oi, 1) if total_oi else 0.0,
     }
+
+
+def _bs_vanna(spot: float, strike: float, iv: float, dte_days: int) -> Optional[float]:
+    """Black-Scholes vanna (dDelta/dVol, per 1.00 of vol, r≈0). Same for calls
+    and puts under BS. Massive's snapshot has no vanna field, so this is ALWAYS
+    derived from implied_volatility — VEX is one more modelling step removed
+    from the tape than GEX and should be read with matching humility.
+    Returns None on degenerate inputs."""
+    try:
+        t = max(dte_days, 1) / 365.0
+        if spot <= 0 or strike <= 0 or iv <= 0:
+            return None
+        sig = iv if iv < 5 else iv / 100.0   # accept fraction or percent
+        rt = sig * math.sqrt(t)
+        d1 = (math.log(spot / strike) + 0.5 * sig * sig * t) / rt
+        d2 = d1 - rt
+        nprime = math.exp(-0.5 * d1 * d1) / math.sqrt(2 * math.pi)
+        return -nprime * d2 / sig
+    except Exception:
+        return None
+
+
+def net_vex(rows: list[dict], spot: Optional[float]) -> Optional[dict]:
+    """Dealer VANNA exposure ("VEX") for one expiry.
+
+    rows: [{strike, type ('call'|'put'), vanna (float|None), oi (int)}].
+
+    NAMING HONESTY: retail tools disagree on what "VEX" means (some say vega
+    exposure). Here VEX = net dealer VANNA — how much dealer DELTA moves when
+    IV moves — the GEXBot/SpotGamma-style usage, because that's the one with a
+    tradeable mechanic: with net vanna POSITIVE, FALLING IV forces dealers to
+    BUY stock (the "vanna tailwind" behind calm grind-up rallies); NEGATIVE
+    means falling IV forces dealer SELLING. Sign rule mirrors net_gex_and_walls
+    (call=+, put=−, the same blind dealer-book heuristic — same caveats).
+    Scale: $ of dealer delta per 1 vol-point change. None when spot/all vanna
+    missing."""
+    if not spot or spot <= 0:
+        return None
+    scale = CONTRACT_MULTIPLIER * 0.01 * spot
+    total = 0.0
+    covered_oi = 0
+    total_oi = 0
+    for r in rows:
+        oi = r.get("oi") or 0
+        total_oi += oi
+        v = r.get("vanna")
+        if v is None:
+            continue
+        covered_oi += oi
+        sign = 1.0 if r.get("type") == "call" else -1.0   # mirror the GEX rule
+        total += sign * float(v) * oi
+    if not covered_oi:
+        return None
+    dollars = round(total * scale, 0)
+    return {
+        "net_vex_dollars": dollars,
+        "read": ("falling IV = dealer buying (vanna tailwind)" if dollars > 0
+                 else "falling IV = dealer selling (vanna headwind)" if dollars < 0
+                 else "vanna flat"),
+        "oi_coverage_pct": round(100 * covered_oi / total_oi, 1) if total_oi else 0.0,
+    }
+
+
+def best_case(spot: Optional[float], gamma: Optional[dict],
+              vex: Optional[dict]) -> Optional[dict]:
+    """The plain-English 'best case' read for the Setup tab (Ajay 2026-07-17:
+    "show me what is the best case possibility in the setup"). Pure — derives
+    everything from the gamma/vex blocks; never invents levels. None when
+    there's no gamma read at all."""
+    if not spot or not gamma:
+        return None
+    flip = gamma.get("flip_strike")
+    cw = gamma.get("call_wall")
+    pw = gamma.get("put_wall")
+    net = gamma.get("net_gex_dollars") or 0
+
+    def _pct(level):
+        return round((level / spot - 1) * 100, 1) if level else None
+
+    above_flip = flip is None or spot >= flip
+    if net > 0 and above_flip:
+        bias = "bullish"
+        headline = "Dealers are pinning — they buy dips here."
+        path = (f"Best case: grind up toward the call wall ${cw:g} "
+                f"({_pct(cw):+g}%)." if cw else
+                "Best case: steady grind higher — no call wall overhead in "
+                "this expiry.")
+        risk = (f"Loses the flip at ${flip:g} ({_pct(flip):+g}%) and dealer "
+                f"hedging starts AMPLIFYING moves instead." if flip else
+                (f"Put wall ${pw:g} ({_pct(pw):+g}%) is the downside "
+                 f"shelf." if pw else "No mapped downside shelf this expiry."))
+    elif net <= 0 and not above_flip:
+        bias = "bearish"
+        headline = "Dealers are amplifying — they sell weakness here."
+        path = (f"Best case: reclaim the flip at ${flip:g} ({_pct(flip):+g}%) "
+                f"— above it dealer hedging flips supportive"
+                + (f", opening the call wall ${cw:g} ({_pct(cw):+g}%)." if cw
+                   else "."))
+        risk = (f"Below the put wall ${pw:g} ({_pct(pw):+g}%) hedging "
+                f"pressure accelerates the slide." if pw else
+                "No put wall below — air pocket if selling picks up.")
+    else:
+        bias = "mixed"
+        headline = "Gamma is split — regime and flip disagree."
+        path = (f"Best case: hold above the flip ${flip:g} ({_pct(flip):+g}%) "
+                f"until the profile turns one-sided." if flip else
+                "Best case: wait for a one-sided gamma profile.")
+        risk = "Reads are weakest in this state — lean on the SEPA setup."
+
+    vanna_note = (vex or {}).get("read")
+    return {"bias": bias, "headline": headline, "path": path, "risk": risk,
+            "vanna_note": vanna_note}
 
 
 def _bs_gamma(spot: float, strike: float, iv: float, dte_days: int) -> Optional[float]:
@@ -255,10 +396,15 @@ def compute_opex(symbol: str) -> Optional[dict]:
         if g is None:                       # BS fallback from IV
             g = _bs_gamma(spot or 0, float(k), c.get("implied_volatility") or 0,
                           cls["days_to_expiry"])
-        gex_rows.append({"strike": k, "type": typ, "gamma": g, "oi": int(oi)})
+        # Vanna is never in the snapshot — always BS-derived from IV.
+        vn = _bs_vanna(spot or 0, float(k), c.get("implied_volatility") or 0,
+                       cls["days_to_expiry"])
+        gex_rows.append({"strike": k, "type": typ, "gamma": g, "vanna": vn,
+                         "oi": int(oi)})
 
     mp = max_pain(call_oi, put_oi, spot)
     gex = net_gex_and_walls(gex_rows, spot)
+    vex = net_vex(gex_rows, spot)
 
     return {
         "symbol": sym,
@@ -266,6 +412,8 @@ def compute_opex(symbol: str) -> Optional[dict]:
         **cls,
         "max_pain": mp,
         "gamma": gex,
+        "vex": vex,
+        "best_case": best_case(spot, gex, vex),
         "gex_reliability": "index" if sym in INDEX_LIKE else "single_name",
         "as_of": datetime.now(timezone.utc).isoformat(),
         "note": ("A tendency into expiration, not a guarantee — confirm with the "

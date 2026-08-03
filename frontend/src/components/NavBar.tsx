@@ -56,7 +56,7 @@ const TOOLS_SUBGROUP: Record<string, string> = {
   'day-trading': 'Screeners', scalping: 'Screeners', patterns: 'Screeners', 'supply-demand': 'Screeners',
   'demand-zones': 'Zones', zones: 'Zones',
   live: 'Tape', chatter: 'Tape', 'chatter-india': 'Tape',
-  'market-gauge': 'Signals', catalysts: 'Signals', options: 'Signals', track: 'Signals', pankaj: 'Signals',
+  'market-gauge': 'Signals', catalysts: 'Signals', options: 'Signals', 'gex-board': 'Signals', track: 'Signals', pankaj: 'Signals',
   food: 'Life', kids: 'Life', volleyball: 'Life', house: 'Life',
 };
 const SUBGROUP_ORDER = ['Trade', 'Screeners', 'Zones', 'Tape', 'Signals', 'Life', 'More'];

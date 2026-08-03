@@ -104,6 +104,7 @@ const LearningPathPage            = lazyWithReload(() => import('./pages/Learnin
 const VolleyballPage              = lazyWithReload(() => import('./pages/Volleyball'));
 const OptionsPulsePage            = lazyWithReload(() => import('./pages/OptionsPulse'));
 const OptionsPulseMethodologyPage = lazyWithReload(() => import('./pages/OptionsPulseMethodology'));
+const GexBoardPage                = lazyWithReload(() => import('./pages/GexBoard').then(m => ({ default: m.GexBoardPage })));
 const HousePage                   = lazyWithReload(() => import('./pages/House'));
 const FoodPage                    = lazyWithReload(() => import('./pages/Food'));
 const KidsPage                    = lazyWithReload(() => import('./pages/Kids'));
@@ -312,6 +313,7 @@ export function App() {
             <Route path="/volleyball"     element={<FeatureRoute feature="volleyball"><VolleyballPage /></FeatureRoute>} />
             <Route path="/options"        element={<FeatureRoute feature="options"><OptionsPulsePage /></FeatureRoute>} />
             <Route path="/options/methodology" element={<FeatureRoute feature="options"><OptionsPulseMethodologyPage /></FeatureRoute>} />
+            <Route path="/gex-board"      element={<FeatureRoute feature="gex-board"><GexBoardPage /></FeatureRoute>} />
             <Route path="/house"          element={<FeatureRoute feature="house"><HousePage /></FeatureRoute>} />
             <Route path="/food"           element={<FeatureRoute feature="food"><FoodPage /></FeatureRoute>} />
             <Route path="/kids"           element={<FeatureRoute feature="kids"><KidsPage /></FeatureRoute>} />
