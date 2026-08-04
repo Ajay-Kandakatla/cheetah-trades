@@ -162,6 +162,8 @@ def test_board_reads_latest_date_and_sorts_by_abs_gex(monkeypatch):
     rows = [
         {"symbol": "OLD", "date_et": "2026-07-16", "regime": "pinning",
          "spot": 50, "flip_strike": None, "net_gex_dollars": 1e9},
+        {"symbol": "LEGACY", "date_et": "2026-07-17", "regime": "pinning",
+         "spot": 100, "net_gex_dollars": 3e8},
         {"symbol": "BIG", "date_et": "2026-07-17", "regime": "pinning",
          "spot": 100, "flip_strike": 95.0, "net_gex_dollars": 5e8},
         {"symbol": "SML", "date_et": "2026-07-17", "regime": "pinning",
@@ -174,10 +176,12 @@ def test_board_reads_latest_date_and_sorts_by_abs_gex(monkeypatch):
     monkeypatch.setattr(GH, "_coll", lambda: FakeColl(rows))
     b = GH.board()
     assert b["as_of_date"] == "2026-07-17"
-    assert [r["symbol"] for r in b["bullish"]] == ["BIG", "NOFLIP", "SML"]
+    assert [r["symbol"] for r in b["bullish"]] == ["BIG", "LEGACY", "NOFLIP", "SML"]
     assert [r["symbol"] for r in b["bearish"]] == ["BEAR"]
-    assert b["counts"] == {"bullish": 3, "bearish": 1, "mixed": 0}
-    assert "1 of 4" in (b["note"] or "")
+    assert b["counts"] == {"bullish": 4, "bearish": 1, "mixed": 0}
+    # Only LEGACY (key absent) counts as legacy — NOFLIP's explicit None is a
+    # legitimate one-sided profile, not a stale row.
+    assert "1 of 5" in (b["note"] or "")
 
     monkeypatch.setattr(GH, "_coll", lambda: None)
     assert GH.board()["note"] == "mongo unavailable"

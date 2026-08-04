@@ -117,14 +117,16 @@ def board(days_back: int = 5) -> dict:
     for bucket in out.values():
         bucket.sort(key=lambda r: abs(r.get("net_gex_dollars") or 0),
                     reverse=True)
-    missing_flip = sum(1 for r in rows if r.get("flip_strike") is None)
+    # Legacy = the KEY is absent (pre-2026-08 rows). A PRESENT None means a
+    # one-sided gamma profile — legitimate, not stale (MU-style all-negative).
+    legacy = sum(1 for r in rows if "flip_strike" not in r)
     return {
         "as_of_date": latest,
         **out,
         "counts": {k: len(v) for k, v in out.items()},
         "note": ("%d of %d rows predate the flip field (bucketed on regime "
-                 "alone — tonight's 17:50 snapshot fills them in)"
-                 % (missing_flip, len(rows)) if missing_flip else None),
+                 "alone — the next snapshot fills them in)"
+                 % (legacy, len(rows)) if legacy else None),
     }
 
 
