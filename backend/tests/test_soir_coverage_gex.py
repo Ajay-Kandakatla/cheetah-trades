@@ -185,3 +185,52 @@ def test_board_reads_latest_date_and_sorts_by_abs_gex(monkeypatch):
 
     monkeypatch.setattr(GH, "_coll", lambda: None)
     assert GH.board()["note"] == "mongo unavailable"
+
+
+# ── Board universe: movers + add-ticker (2026-08-03 PLTR/SNAP gap) ───────────
+
+def test_top_movers_threshold_ordering_and_garbage():
+    from options.gex_history import top_movers
+    rows = [
+        {"symbol": "UP9", "day_change_pct": 9.0},
+        {"symbol": "DN12", "day_change_pct": -12.0},
+        {"symbol": "FLAT", "day_change_pct": 1.0},
+        {"symbol": "EDGE", "day_change_pct": 4.0},
+        {"symbol": "JUNK", "day_change_pct": "n/a"},
+        {"symbol": "", "day_change_pct": 8.0},
+        {"symbol": "NONE", "day_change_pct": None},
+    ]
+    assert top_movers(rows) == ["DN12", "UP9", "EDGE"]
+    assert top_movers(rows, n=1) == ["DN12"]
+    assert top_movers([]) == []
+    assert top_movers(None) == []
+
+
+def test_add_symbol_upserts_todays_row_with_bucket(monkeypatch):
+    from options import gex_history as GH
+
+    class FakeColl:
+        def __init__(self):
+            self.upserts = []
+
+        def update_one(self, q, update, upsert=False):
+            self.upserts.append((q, update["$set"]))
+
+    coll = FakeColl()
+    monkeypatch.setattr(GH, "_coll", lambda: coll)
+    monkeypatch.setattr(GH, "_et_date", lambda: "2026-08-03")
+    import options.opex as OP
+    monkeypatch.setattr(OP, "compute_opex", lambda s: {
+        "spot": 100.0, "gex_reliability": "single_name",
+        "expiration_date": "2026-08-07",
+        "gamma": {"regime": "pinning", "net_gex_dollars": 1e8,
+                  "flip_strike": 95.0},
+        "max_pain": {}, "vex": {"net_vex_dollars": 1e6, "read": "x"},
+    })
+    row = GH.add_symbol(" pltr ")
+    assert row["symbol"] == "PLTR" and row["bucket"] == "bullish"
+    assert coll.upserts[0][0] == {"_id": "PLTR:2026-08-03"}
+
+    monkeypatch.setattr(OP, "compute_opex", lambda s: None)
+    assert GH.add_symbol("ZZZX") is None
+    assert GH.add_symbol("") is None

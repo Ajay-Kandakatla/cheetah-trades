@@ -103,8 +103,20 @@ function Column({ title, tone, rows }: { title: string; tone: string; rows: Boar
 }
 
 export function GexBoardPage() {
-  const { data, loading, refreshing, err, refresh } = useGexBoard();
+  const { data, loading, refreshing, err, refresh, addSymbol } = useGexBoard();
   const [showMixed, setShowMixed] = useState(false);
+  const [addDraft, setAddDraft] = useState('');
+  const [addBusy, setAddBusy] = useState(false);
+  const [addErr, setAddErr] = useState<string | null>(null);
+
+  const submitAdd = async () => {
+    if (!addDraft.trim() || addBusy) return;
+    setAddBusy(true);
+    const e = await addSymbol(addDraft);
+    setAddErr(e);
+    if (!e) setAddDraft('');
+    setAddBusy(false);
+  };
 
   return (
     <div className="sepa-page" style={{ maxWidth: 1080, margin: '0 auto' }}>
@@ -131,6 +143,26 @@ export function GexBoardPage() {
             as of {data.as_of_date} (nightly 17:50 ET snapshot)
           </span>
         )}
+        {/* Add-ticker (Ajay 2026-08-03: PLTR/SNAP earnings movers weren't in
+            the tracked universe) — one chain pull, joins today's board. */}
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', marginLeft: 'auto' }}>
+          <input
+            value={addDraft}
+            onChange={(e) => setAddDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void submitAdd(); }}
+            placeholder="add ticker…"
+            aria-label="Add ticker to the GEX board"
+            style={{ width: 110, padding: '0.25rem 0.55rem', borderRadius: 8,
+                     border: '1px solid var(--cm-border, #2a2f3a)',
+                     background: 'var(--cm-card, #161a22)', color: 'inherit',
+                     fontSize: '0.78rem' }}
+          />
+          <button className="sepa-chip" onClick={() => void submitAdd()}
+                  disabled={addBusy} style={{ cursor: 'pointer' }}>
+            {addBusy ? '…' : '+ add'}
+          </button>
+        </span>
+        {addErr && <span style={{ fontSize: '0.72rem', color: 'var(--negative, #f87171)' }}>{addErr}</span>}
         {err && <span style={{ fontSize: '0.72rem', color: 'var(--negative, #f87171)' }}>⛔ {err}</span>}
       </div>
 

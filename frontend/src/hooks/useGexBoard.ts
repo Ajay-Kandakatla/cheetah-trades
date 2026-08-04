@@ -42,5 +42,22 @@ export function useGexBoard() {
     }
   }, [fetchBoard]);
 
-  return { data, loading, refreshing, err, refresh };
+  /** Add one ticker on demand (earnings movers the universe doesn't track
+   *  yet). Returns an error string for inline display, or null on success. */
+  const addSymbol = useCallback(async (symbol: string): Promise<string | null> => {
+    const sym = symbol.trim().toUpperCase();
+    if (!sym) return 'enter a ticker';
+    try {
+      const r = await fetch(`${API}/options/gex-board/add/${encodeURIComponent(sym)}`,
+                            { method: 'POST' });
+      if (r.status === 404) return `${sym}: no options chain found`;
+      if (!r.ok) throw new Error(String(r.status));
+      await fetchBoard();
+      return null;
+    } catch (e: any) {
+      return String(e?.message ?? e);
+    }
+  }, [fetchBoard]);
+
+  return { data, loading, refreshing, err, refresh, addSymbol };
 }

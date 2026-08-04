@@ -260,6 +260,21 @@ async def get_gex_board():
     return await asyncio.to_thread(gex_history.board)
 
 
+@router.post("/options/gex-board/add/{symbol}")
+async def add_gex_board_symbol(symbol: str):
+    """Add ONE ticker to today's board on demand (earnings movers the
+    tracked universe doesn't know yet — Ajay 2026-08-03 PLTR/SNAP). One
+    Massive chain pull (~1s); 404 when the name has no options chain."""
+    import asyncio
+    from . import gex_history
+    row = await asyncio.to_thread(gex_history.add_symbol, symbol)
+    if row is None:
+        raise HTTPException(404, "no options chain for %s — illiquid, "
+                                 "invalid, or Massive has no data"
+                                 % symbol.upper())
+    return row
+
+
 @router.post("/options/gex-board/refresh")
 async def refresh_gex_board():
     """On-demand re-snapshot of the GEX universe (same job the 17:50 cron

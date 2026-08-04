@@ -163,9 +163,56 @@ def snapshot_universe() -> list:
         cands = sorted((latest.get("candidates") or []),
                        key=lambda c: -(c.get("score") or 0))
         _add(c.get("symbol") for c in cands[:TOP_SEPA_N])
+        # Top day movers (2026-08-03, Ajay: "Why PLTR and SNAP are not in the
+        # list they had earnings today") — earnings gappers and other big
+        # movers join the universe even when no other tracker owns them.
+        # Regular-session moves only; a post-close earnings pop shows up in
+        # the NEXT session's scan, or immediately via the board's add-ticker.
+        _add(top_movers(latest.get("all_results") or []))
     except Exception as exc:
         log.debug("gex universe: sepa top skipped: %s", exc)
     return seen[:MAX_UNIVERSE]
+
+
+MOVER_MIN_ABS_PCT = 4.0
+MOVER_TOP_N = 25
+
+
+def top_movers(rows: list, n: int = MOVER_TOP_N,
+               min_abs_pct: float = MOVER_MIN_ABS_PCT) -> list:
+    """Symbols of the biggest |day-change| rows (>= min_abs_pct), largest
+    first. Pure — unit-tested. Garbage day_change values are skipped."""
+    scored = []
+    for r in rows or []:
+        try:
+            chg = abs(float(r.get("day_change_pct")))
+        except (TypeError, ValueError):
+            continue
+        sym = (r.get("symbol") or "").upper().strip()
+        if sym and chg >= min_abs_pct:
+            scored.append((chg, sym))
+    scored.sort(reverse=True)
+    return [s for _, s in scored[:n]]
+
+
+def add_symbol(symbol: str) -> Optional[dict]:
+    """Compute + upsert ONE symbol into today's board (the board page's
+    add-ticker box; also how an after-hours earnings name gets on the board
+    before any scan sees the move). Returns the stored row + its bucket, or
+    None when Massive has no chain."""
+    coll = _coll()
+    if coll is None:
+        return None
+    from options import opex
+    sym = (symbol or "").upper().strip()
+    if not sym:
+        return None
+    d = _et_date()
+    row = slim_row(sym, opex.compute_opex(sym), d)
+    if row is None:
+        return None
+    coll.update_one({"_id": f"{sym}:{d}"}, {"$set": row}, upsert=True)
+    return dict(row, bucket=board_bucket(row))
 
 
 def run(workers: int = 8) -> dict:
