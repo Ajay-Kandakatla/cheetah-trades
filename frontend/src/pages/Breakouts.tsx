@@ -342,6 +342,29 @@ export function BreakoutsPage() {
         >
           🌱 Fresh only
         </button>
+        {/* Explicit sort selector (Ajay 2026-08-03: "sort option volume") —
+            same state as the clickable column headers, just discoverable.
+            Volume options lead since that was the ask. */}
+        <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center',
+                        gap: 6, fontSize: '0.72rem', color: 'var(--cm-slate, #94a3b8)' }}>
+          Sort
+          <select
+            aria-label="Sort breakouts"
+            value={sort.key}
+            onChange={(e) => sort.toggle(e.target.value, 'desc')}
+            style={{ padding: '0.22rem 0.5rem', borderRadius: 8, fontSize: '0.74rem',
+                     border: '1px solid var(--cm-border, #2a2f3a)',
+                     background: 'var(--cm-card, #161a22)', color: 'inherit' }}
+          >
+            <option value="sector">🤖 AI sectors (default)</option>
+            <option value="volume">📊 Today's volume</option>
+            <option value="volpct">📈 Volume vs normal (×)</option>
+            <option value="turnover">💵 $ turnover</option>
+            <option value="conviction">🏆 Conviction</option>
+            <option value="count">🔁 Breakout count</option>
+            <option value="change">⚡ % change today</option>
+          </select>
+        </label>
       </div>
 
       {error && <p className="sepa-err">Couldn't load breakouts: {error}</p>}
