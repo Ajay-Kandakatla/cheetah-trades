@@ -21,7 +21,7 @@ import { aiSectorSortValue } from '../lib/breakoutSort';
 import { marchToTarget, stageMeta, isExtendedToR2 } from '../lib/breakoutTargets';
 import { LeveragedBadge } from '../components/LeveragedBadge';
 import { BreakoutBreadthStrip } from '../components/BreakoutBreadthStrip';
-import { isBaseSetup } from '../lib/baseSetup';
+import { isBaseSetup, setupBadge } from '../lib/baseSetup';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
@@ -428,6 +428,19 @@ export function BreakoutsPage() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <strong className="mono">{r.symbol}</strong>
                       <LeveragedBadge symbol={r.symbol} name={r.name} compact />
+                      {(() => {
+                        /* Setup badge (Ajay 2026-08-03: "show if something
+                           had a vcp") — 📐 VCP / ⚡ PP / 🎯 pocket pivot. */
+                        const sb = setupBadge(r.setup_type);
+                        return sb ? (
+                          <span title={sb.title}
+                            style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--cm-cyan, #38bdf8)',
+                              border: '1px solid rgba(56,189,248,0.45)', background: 'rgba(56,189,248,0.10)',
+                              borderRadius: 5, padding: '0 4px', whiteSpace: 'nowrap', cursor: 'help' }}>
+                            {sb.icon} {sb.label}
+                          </span>
+                        ) : null;
+                      })()}
                       {r.ai_sector_id && (
                         <span title={`AI-ecosystem sector: ${r.ai_sector}${r.ai_sector_etf ? ` · ETF ${r.ai_sector_etf}` : ''} — these lead the breakout list`}
                           style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--gold,#c9a227)',

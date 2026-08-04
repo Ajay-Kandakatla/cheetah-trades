@@ -57,6 +57,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'autopilot-pyramiding', label: '🏗️ Pyramid adds — Auto-Pilot tops a winning position up to full size when it sets up again at a higher pivot (TTLAC "Add and Reduce"); violet auto_pyramid rows in the ledger', addedAt: '2026-07-12', route: '/trading' },
   { id: 'gex-board', label: '🧲 GEX Board — bullish vs bearish stocks by dealer gamma, each with its key nodes (flip, call/put walls, magnet) + net GEX/VEX off the options key', addedAt: '2026-07-17', route: '/gex-board' },
   { id: 'gex-setup-lens', label: '🎯 Options lens on the Setup tab — GEX + VEX best-case read per stock (does dealer hedging help or fight this setup?)', addedAt: '2026-07-17', route: '/sepa' },
+  { id: 'breakouts-sort-vcp-churn', label: '🚀 Breakouts: Sort dropdown (volume options lead), 📐 VCP/setup badges on every row, and spike-and-dump days no longer count as breakouts (the GSAT fix)', addedAt: '2026-08-03', route: '/breakouts' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */
