@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { TickerCell } from '../components/TickerCell';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useUser';
@@ -8,12 +8,13 @@ import { HoldingsCard } from '../components/HoldingsCard';
 import { useMorningBrief } from '../hooks/useMorningBrief';
 import type { Verdict, OverallAction } from '../hooks/useMorningBrief';
 import { useLiveSignals, useWatchlist, usePaperTrading } from '../hooks/useDayTrading';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 // Below-fold panels — defer-loaded so the trading verdict (above-fold)
 // renders FIRST, then these mount once the user has the stock data they
 // came for. Each is its own chunk via React.lazy.
-const OvernightPanel       = lazy(() => import('../components/OvernightPanel').then(m => ({ default: m.OvernightPanel })));
-const SupplyDemandSummary  = lazy(() => import('../components/SupplyDemandSummary').then(m => ({ default: m.SupplyDemandSummary })));
+const OvernightPanel       = lazyWithReload(() => import('../components/OvernightPanel').then(m => ({ default: m.OvernightPanel })));
+const SupplyDemandSummary  = lazyWithReload(() => import('../components/SupplyDemandSummary').then(m => ({ default: m.SupplyDemandSummary })));
 
 const VERDICT_COPY: Record<Verdict, { label: string; mood: 'good'|'warn'|'bad' }> = {
   favorable:  { label: 'GO',      mood: 'good' },

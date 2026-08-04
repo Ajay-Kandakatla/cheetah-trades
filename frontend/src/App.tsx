@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode, type ComponentType } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './components/NavBar';
 import { MarketDayBorder } from './components/MarketDayBorder';
@@ -29,32 +29,10 @@ import { PageContextProvider } from './hooks/usePageContext';
    React.lazy expects a default export.
    ========================================================================== */
 
-/* Stale-chunk self-heal. After a frontend redeploy, a long-open tab is still
-   running an OLD bundle whose lazy chunk hashes no longer exist on the server
-   (e.g. /assets/Portfolio-<oldhash>.js). The next route navigation then throws
-   "Failed to fetch dynamically imported module" and the page goes blank.
-   lazyWithReload catches that and reloads ONCE to pull the fresh index.html +
-   chunk map (index.html is no-cache in nginx, so the reload gets the new build).
-   A 10s sessionStorage guard prevents a reload loop if the chunk is genuinely
-   missing (a truly broken deploy → surface the error instead of looping). */
-function lazyWithReload<T extends ComponentType<any>>(
-  factory: () => Promise<{ default: T }>,
-) {
-  return lazy(async () => {
-    try {
-      return await factory();
-    } catch (err) {
-      const KEY = 'chunkReloadTs';
-      const last = Number(sessionStorage.getItem(KEY) || '0');
-      if (Date.now() - last > 10_000) {
-        sessionStorage.setItem(KEY, String(Date.now()));
-        window.location.reload();
-        return new Promise<{ default: T }>(() => {}); // hang until reload swaps the page
-      }
-      throw err; // reloaded moments ago and still failing → real error
-    }
-  });
-}
+/* Stale-chunk self-heal — moved to lib/lazyWithReload.ts (2026-08-03) so
+   component-level lazy imports (SepaCandidate's panels, card modals, ...) get
+   the same one-shot reload guard as routes. House rule: never raw React.lazy. */
+import { lazyWithReload } from './lib/lazyWithReload';
 const LiveStream                  = lazyWithReload(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
 const SepaPage                    = lazyWithReload(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
 const SepaGlobalPage              = lazyWithReload(() => import('./pages/SepaGlobal').then(m => ({ default: m.SepaGlobalPage })));

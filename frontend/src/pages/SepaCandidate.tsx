@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
 // Supply/demand + flow chips — ported from the SEPA list card so the
@@ -8,16 +8,16 @@ import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } fr
 import { useWhalesFlow } from '../hooks/useWhalesFlow';
 import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { SepaConvictionChip, computeConviction } from '../components/SepaConvictionChip';
-const RankTrendChart = lazy(() => import('../components/RankTrendChart').then(m => ({ default: m.RankTrendChart })));
+const RankTrendChart = lazyWithReload(() => import('../components/RankTrendChart').then(m => ({ default: m.RankTrendChart })));
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
 import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
 import { CheetahVerdictPanel } from '../components/CheetahVerdictPanel';
-const BreakoutHistoryBody = lazy(() => import('../components/BreakoutHistoryModal').then(m => ({ default: m.BreakoutHistoryBody })));
+const BreakoutHistoryBody = lazyWithReload(() => import('../components/BreakoutHistoryModal').then(m => ({ default: m.BreakoutHistoryBody })));
 import { NewsReadButton } from '../components/NewsReadButton';
 import type { ChartInterval } from '../components/LiveCandlesChart';
-const LiveCandlesChart = lazy(() => import('../components/LiveCandlesChart').then(m => ({ default: m.LiveCandlesChart })));
+const LiveCandlesChart = lazyWithReload(() => import('../components/LiveCandlesChart').then(m => ({ default: m.LiveCandlesChart })));
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
 import { DelistedBanner } from '../components/DelistedBanner';
 import { LivePriceTag } from '../components/LivePriceTag';
@@ -25,16 +25,16 @@ import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
 import type { SignalKind } from '../components/SignalDrillModal';
-const WhalesFlowModal = lazy(() =>
+const WhalesFlowModal = lazyWithReload(() =>
   import('../components/WhalesFlowModal').then(m => ({ default: m.WhalesFlowModal })),
 );
-const Whales13DModal = lazy(() =>
+const Whales13DModal = lazyWithReload(() =>
   import('../components/Whales13DModal').then(m => ({ default: m.Whales13DModal })),
 );
-const MacroContextModal = lazy(() =>
+const MacroContextModal = lazyWithReload(() =>
   import('../components/MacroContextModal').then(m => ({ default: m.MacroContextModal })),
 );
-const SignalDrillModal = lazy(() =>
+const SignalDrillModal = lazyWithReload(() =>
   import('../components/SignalDrillModal').then(m => ({ default: m.SignalDrillModal })),
 );
 import { ageHuman } from '../lib/swrCache';
@@ -53,16 +53,16 @@ import { SepaScoreBar } from '../components/SepaScoreBar';
 import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
-const StockAnalysisPanel = lazy(() => import('../components/StockAnalysisPanel').then(m => ({ default: m.StockAnalysisPanel })));
+const StockAnalysisPanel = lazyWithReload(() => import('../components/StockAnalysisPanel').then(m => ({ default: m.StockAnalysisPanel })));
 import { CompanyHeadline } from '../components/CompanyHeadline';
-const ChatterPanel = lazy(() => import('../components/ChatterPanel').then(m => ({ default: m.ChatterPanel })));
-const TickerPatternPanel = lazy(() => import('../components/TickerPatternPanel').then(m => ({ default: m.TickerPatternPanel })));
-const ChartAnalysisPanel = lazy(() => import('../components/ChartAnalysisPanel').then(m => ({ default: m.ChartAnalysisPanel })));
+const ChatterPanel = lazyWithReload(() => import('../components/ChatterPanel').then(m => ({ default: m.ChatterPanel })));
+const TickerPatternPanel = lazyWithReload(() => import('../components/TickerPatternPanel').then(m => ({ default: m.TickerPatternPanel })));
+const ChartAnalysisPanel = lazyWithReload(() => import('../components/ChartAnalysisPanel').then(m => ({ default: m.ChartAnalysisPanel })));
 import { PriceAlertModal } from '../components/PriceAlertModal';
 import { TickerAlertPresets } from '../components/TickerAlertPresets';
-const DependencyGraph = lazy(() => import('../components/DependencyGraph').then(m => ({ default: m.DependencyGraph })));
+const DependencyGraph = lazyWithReload(() => import('../components/DependencyGraph').then(m => ({ default: m.DependencyGraph })));
 import { CompanyAbout } from '../components/CompanyAbout';
-const GabbarLevels = lazy(() => import('../components/GabbarLevels').then(m => ({ default: m.GabbarLevels })));
+const GabbarLevels = lazyWithReload(() => import('../components/GabbarLevels').then(m => ({ default: m.GabbarLevels })));
 import { useLiveQuote } from '../hooks/useLiveQuote';
 import { CandleAnatomyExplainer } from '../components/CandleAnatomyExplainer';
 import { NodeThesisPanel } from '../components/NodeThesisPanel';
@@ -268,6 +268,7 @@ function tvSymbolFor(symbol: string, exchange?: string): string {
 }
 
 import { usePageContext } from '../hooks/usePageContext';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 const PivotFrameworkInfo = (
   <>

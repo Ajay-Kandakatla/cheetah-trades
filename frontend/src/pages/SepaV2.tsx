@@ -12,7 +12,7 @@
  *     days still show ~230 watchlist names.
  *   - Clicking any ticker → existing /sepa/:symbol detail page (unchanged).
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SepaCandidate, Rating, SepaScan } from '../hooks/useSepa';
 import { API } from '../lib/apiBase';
@@ -26,9 +26,10 @@ import { SepaFilterBar, type SepaFilters } from '../components/SepaFilterBar';
 import { SepaSetupTabs, TAB_TO_KIND, type SepaTab } from '../components/SepaSetupTabs';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 // Lazy — the analyst drill only loads when a 📊 chip is tapped.
-const AnalystPulseModal = lazy(() =>
+const AnalystPulseModal = lazyWithReload(() =>
   import('../components/AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
 );
 

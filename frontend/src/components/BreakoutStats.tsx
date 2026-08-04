@@ -17,11 +17,12 @@
        breakout_count (the localStorage `sepa.scan` snapshot the page hydrates
        from synchronously) — the card self-heals instead of silently hiding.
    Renders nothing until it has a breakout_count. */
-import { lazy, Suspense, useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Suspense, useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { API } from '../lib/apiBase';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 // Lazy so the chart modal isn't in the SEPA list's critical bundle.
-const BreakoutHistoryModal = lazy(() =>
+const BreakoutHistoryModal = lazyWithReload(() =>
   import('./BreakoutHistoryModal').then((m) => ({ default: m.BreakoutHistoryModal })),
 );
 

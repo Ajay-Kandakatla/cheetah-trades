@@ -21,11 +21,12 @@
  *
  *  All chips share one modal-state slot — only one open at a time.
  */
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import type { SepaCandidate } from '../hooks/useSepa';
 import type { SignalKind } from './SignalDrillModal';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
-const SignalDrillModal = lazy(() =>
+const SignalDrillModal = lazyWithReload(() =>
   import('./SignalDrillModal').then((m) => ({ default: m.SignalDrillModal })),
 );
 

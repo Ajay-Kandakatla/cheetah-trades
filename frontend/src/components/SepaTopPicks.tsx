@@ -2,7 +2,7 @@
    Reads GET /sepa/top-picks (top actionable buys from the LATEST scan), so it
    refreshes whenever a scan runs. Ranks fresh breakouts first (see backend
    sepa/top_picks.py). Fails quiet — never breaks the portfolio page. */
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { WatchlistButton } from './WatchlistButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -14,9 +14,10 @@ import { EarningsChip } from './EarningsChip';
 import { useEarningsMap } from '../hooks/useEarningsMap';
 import { AnalystPulseChip } from './AnalystPulseChip';
 import { useAnalystMap } from '../hooks/useAnalystMap';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 // Lazy — the analyst drill only loads when a 📊 chip is tapped.
-const AnalystPulseModal = lazy(() =>
+const AnalystPulseModal = lazyWithReload(() =>
   import('./AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
 );
 

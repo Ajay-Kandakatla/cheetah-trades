@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, type ReactNode } from 'react';
+import { Suspense, useState, useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 // Lazy — modal payload + per-ticker fetch only when the user clicks.
 // Keeps the list-view bundle slim since most users won't tap every
@@ -85,40 +85,41 @@ import { useSepaTrend } from './SepaTrendContext';
 
 // Lazy — the moat-peers modal pulls a real API call and isn't needed
 // until the user actually taps the chip, so don't bloat the card chunk.
-const MoatPeersModal = lazy(() =>
+const MoatPeersModal = lazyWithReload(() =>
   import('./MoatPeersModal').then(m => ({ default: m.MoatPeersModal })),
 );
-const ProductLaunchesChip = lazy(() =>
+const ProductLaunchesChip = lazyWithReload(() =>
   import('./ProductLaunchesChip').then(m => ({ default: m.ProductLaunchesChip })),
 );
-const TickerAlertPresets = lazy(() =>
+const TickerAlertPresets = lazyWithReload(() =>
   import('./TickerAlertPresets').then(m => ({ default: m.TickerAlertPresets })),
 );
-const WhalesFlowModal = lazy(() =>
+const WhalesFlowModal = lazyWithReload(() =>
   import('./WhalesFlowModal').then(m => ({ default: m.WhalesFlowModal })),
 );
-const Whales13DModal = lazy(() =>
+const Whales13DModal = lazyWithReload(() =>
   import('./Whales13DModal').then(m => ({ default: m.Whales13DModal })),
 );
-const MacroContextModal = lazy(() =>
+const MacroContextModal = lazyWithReload(() =>
   import('./MacroContextModal').then(m => ({ default: m.MacroContextModal })),
 );
 // Drill-in for clickable signal chips (hi-vol breakout, pocket pivot,
 // accumulation strength, money outflow, distribution-day warning).
 // Lazy because the spec map is ~400 lines and only loads when the
 // user actually taps a chip.
-const SignalDrillModal = lazy(() =>
+const SignalDrillModal = lazyWithReload(() =>
   import('./SignalDrillModal').then(m => ({ default: m.SignalDrillModal })),
 );
 // Analyst Pulse drill — targets bar + revisions table + actions +
 // surprise. Lazy: only loads when the user taps the 📊 chip.
-const AnalystPulseModal = lazy(() =>
+const AnalystPulseModal = lazyWithReload(() =>
   import('./AnalystPulseModal').then(m => ({ default: m.AnalystPulseModal })),
 );
 import type { SignalKind } from './SignalDrillModal';
 import type { LivePrice } from '../hooks/useLivePrices';
 import { getMarketSession, pickDisplayPrice } from '../lib/marketSession';
 import { SessionBadge } from './SessionBadge';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 type Props = {
   row: SepaCandidate;

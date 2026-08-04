@@ -10,7 +10,7 @@
  * page. Holdings come from /portfolio/holdings (manual rows); add via the form,
  * remove via the 🗑. Backend untouched.
  */
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InfoButton } from '../components/InfoButton';
 import { usePatternVerdicts, patternRank } from '../hooks/usePatternVerdicts';
@@ -23,9 +23,9 @@ import { AnalystPulseChip } from '../components/AnalystPulseChip';
 import { useAnalystMap } from '../hooks/useAnalystMap';
 
 // Lazy — the analyst drill only loads when a 📊 chip is tapped.
-const ChartAnalysisPanel = lazy(() =>
+const ChartAnalysisPanel = lazyWithReload(() =>
   import('../components/ChartAnalysisPanel').then((m) => ({ default: m.ChartAnalysisPanel })));
-const AnalystPulseModal = lazy(() =>
+const AnalystPulseModal = lazyWithReload(() =>
   import('../components/AnalystPulseModal').then((m) => ({ default: m.AnalystPulseModal })),
 );
 import { PatternAccuracyMonthly } from '../components/PatternAccuracyMonthly';
@@ -44,6 +44,7 @@ import { MarketContextStrip } from '../components/MarketContextStrip';
 import { FullScanModal } from '../components/FullScanModal';
 import { HoldingsSkeleton } from '../components/Skeletons';
 import { TrackedSection } from '../components/TrackedSection';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
 const PageInfo = (
   <>
