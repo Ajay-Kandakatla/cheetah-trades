@@ -255,6 +255,7 @@ async def get_gex_board():
     regime + the zero-gamma flip, each row carrying its key nodes (call wall,
     put wall, flip, magnet) + net GEX/VEX dollars. Pure Mongo read — the
     17:50 ET cron (or POST refresh) populates it."""
+    import asyncio
     from . import gex_history
     return await asyncio.to_thread(gex_history.board)
 
@@ -263,7 +264,8 @@ async def get_gex_board():
 async def refresh_gex_board():
     """On-demand re-snapshot of the GEX universe (same job the 17:50 cron
     runs — portfolio + watchlists + SOIR bullish/watch + top SEPA). Threaded;
-    ~1-2 min for the ~200-name universe. Returns the run summary."""
+    ~30-60s for the ~200-name universe. Returns the run summary."""
+    import asyncio
     from . import gex_history
     return await asyncio.to_thread(gex_history.run)
 
