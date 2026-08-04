@@ -8,8 +8,24 @@ stock"). Display-only; never feeds the scanner score (locked by
 ## What a "breakout" is (book p.203)
 
 A bar is a **volume-confirmed breakout** when its **close exceeds the prior
-21-bar high** AND its **volume is > 1.5× the trailing 50-day average**. This is
-the same gate the strict `is_buyable` path uses (Minervini, *Trade Like a Stock
+21-bar high** AND its **volume is > 1.5× the trailing 50-day average** AND —
+added 2026-08-03 — **the close HELD the upper half of the day's range**
+(`close_location ≥ BREAKOUT_CHURN_LOC`, the −1..+1 scale).
+
+> **Why the held-close clause (GSAT regression, Ajay 2026-08-03: "heavy sell
+> off is being tracked as breakout"):** GSAT 2026-03-25 closed +10.3% above
+> its prior high on 4× volume — but 7 points off the session high, deep in
+> the lower half of the range: an institution selling into the spike. TTLAC
+> p.188 calls this churn ("elevated volume without much price progress").
+> Previously such days were counted AND boarded (with only a "suspect"
+> footprint flag); now they are excluded from the count, the recency read,
+> and the chart markers entirely. One shared series
+> (`volume.breakout_series`) drives all three so they can never disagree.
+> The SAME-DAY `is_buyable` trigger keeps its own stricter churn handling
+> via the distribution gate — unchanged.
+
+This is
+the same close-above-high + volume gate the strict `is_buyable` path uses (Minervini, *Trade Like a Stock
 Market Wizard*, p.203) — we just count it across history instead of only
 checking the last bar.
 

@@ -126,13 +126,14 @@ def test_footprint_reads_institutional_on_strong_close_heavy_volume():
     assert fp["up_days"] >= 5                   # the accumulation run-up
 
 
-def test_footprint_reads_suspect_on_weak_close_heavy_volume():
-    """Heavy volume but the close gives back the day — Minervini's churn tell
-    (p.188): supply is meeting the demand, not a clean institutional break."""
-    fp = volume.breakout_points(_breakout_df("low"))[-1]["footprint"]
-    assert fp["hands"] == "suspect"
-    assert fp["close_location"] < 0            # closed in the lower half
-    assert fp["vol_ratio"] and fp["vol_ratio"] >= 1.5
+def test_churned_weak_close_is_no_longer_a_breakout_point():
+    """CONTRACT FLIP (2026-08-03, GSAT regression — Ajay: "heavy sell off is
+    being tracked as breakout"): heavy volume with the close given back into
+    the LOWER half of the range is churn (p.188) and now produces NO breakout
+    point at all — previously it was boarded with a 'suspect' footprint,
+    which still read as a breakout on the page. Exclusion is the fix; the
+    suspect-hands footprint read remains for upper-half closes."""
+    assert volume.breakout_points(_breakout_df("low")) == []
 
 
 def test_footprint_none_on_out_of_range_position():

@@ -440,8 +440,41 @@ def emerging_breakout(df: pd.DataFrame,
         return {"emerging": False}
 
 
+def breakout_series(df: pd.DataFrame, include_churned: bool = False) -> "pd.Series":
+    """The p.203 breakout-day series used for COUNTING, recency, and chart
+    markers: volume > 1.5× the 50-day average AND close above the prior
+    21-bar close-high AND the close HELD — close_location ≥
+    ``BREAKOUT_CHURN_LOC`` (upper half of the day's range, −1..+1 scale).
+
+    The held-close clause (added 2026-08-03, GSAT regression) is TTLAC p.188:
+    heavy volume with the close dumped into the LOWER half of the range is
+    churn — institutions selling into the spike — not a breakout. GSAT
+    2026-03-25 (+10% but closed 7 points off the high on 4× volume) and
+    2026-04-01 (closed in the bottom fifth on 2.2×) were being counted and
+    boarded as breakouts. The SAME-DAY is_buyable trigger keeps its own
+    stricter churn handling via the distribution gate — this only fixes the
+    display/count/board series. A flat bar (high == low) counts as held."""
+    c = df["close"].astype(float)
+    v = df["volume"].astype(float)
+    h = df["high"].astype(float)
+    l = df["low"].astype(float)
+    vol_avg50 = v.rolling(50).mean()
+    prior_high_21 = c.rolling(21).max().shift(1)
+    base = (vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)
+    if include_churned:
+        # GATE view (scanner._distribution_context): the churned candidate
+        # must stay VISIBLE so its footprint can veto the buy tier — hiding
+        # it here would let a churn breakout sail through is_buyable.
+        return base.fillna(False)
+    rng = h - l
+    close_loc = ((c - l) - (h - c)) / rng.where(rng > 0)
+    held = (close_loc >= BREAKOUT_CHURN_LOC) | (rng <= 0)
+    return (base & held).fillna(False)
+
+
 def breakout_points(df: pd.DataFrame,
-                    lookback: int = BREAKOUT_COUNT_LOOKBACK) -> list:
+                    lookback: int = BREAKOUT_COUNT_LOOKBACK,
+                    include_churned: bool = False) -> list:
     """The distinct volume-confirmed breakout START bars over the trailing
     ``lookback`` bars — the rising edges of the SAME bo_series ``analyze()``
     counts as ``breakout_count`` (book p.203: a close above the prior 21-bar
@@ -460,8 +493,7 @@ def breakout_points(df: pd.DataFrame,
         c = df["close"].astype(float)
         v = df["volume"].astype(float)
         vol_avg50 = v.rolling(50).mean()
-        prior_high_21 = c.rolling(21).max().shift(1)
-        bo = ((vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)).fillna(False).values
+        bo = breakout_series(df, include_churned=include_churned).values
         n = len(df)
         start = max(0, n - lookback)
         prev = False
@@ -559,16 +591,16 @@ def analyze(df: pd.DataFrame) -> Optional[dict]:
     # the trailing window, so the FE can admit a name whose volume-confirmed
     # breakout fired earlier in the week (not just on the last bar). A bar is a
     # breakout if its volume > 1.5× the trailing 50-day average AND its close
-    # exceeds the highest close of the prior 21 bars. days_since_breakout = bars
+    # exceeds the highest close of the prior 21 bars AND the close HELD in the
+    # upper half of the day's range (breakout_series — churned spike-and-dump
+    # days are excluded, TTLAC p.188/GSAT). days_since_breakout = bars
     # since the most recent such bar within BREAKOUT_RECENCY_LOOKBACK (0 = today,
     # None = none in window). At the last bar this matches `breakout` exactly.
     days_since_breakout = None
     breakout_count = None
     breakout_window_bars = 0
     try:
-        vol_avg50 = v.rolling(50).mean()
-        prior_high_21 = c.rolling(21).max().shift(1)
-        bo_series = ((vol_avg50 > 0) & (v > 1.5 * vol_avg50) & (c > prior_high_21)).fillna(False)
+        bo_series = breakout_series(df)
         window = bo_series.iloc[-BREAKOUT_RECENCY_LOOKBACK:]
         for k, fired in enumerate(reversed(list(window.values))):
             if bool(fired):

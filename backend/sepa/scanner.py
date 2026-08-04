@@ -170,7 +170,9 @@ def _distribution_context(df, bc):
     selling = bool(climax.get("is_distribution"))
     reason = "climax-top distribution (heavy selling into the run)" if selling else None
     try:
-        pts = volume.breakout_points(df) or []
+        # include_churned: the gate must SEE the churned candidate to veto it
+        # (display/count exclude churn since 2026-08-03 — GSAT fix).
+        pts = volume.breakout_points(df, include_churned=True) or []
         if pts:
             fp = pts[-1].get("footprint") or {}
             loc = fp.get("close_location")
