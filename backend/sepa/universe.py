@@ -83,6 +83,24 @@ def _read_cached(name: str) -> list[str] | None:
     return [ln.strip().upper() for ln in path.read_text().splitlines() if ln.strip()]
 
 
+def _read_cached_stale(name: str) -> list[str] | None:
+    """Read a cached list IGNORING the TTL. Only for use as a last-resort
+    fallback when the live fetch fails — an out-of-date real index beats a
+    fresh list of the wrong universe. Returns None if no file exists."""
+    path = _cache_path(name)
+    if not path.exists():
+        return None
+    syms = [ln.strip().upper() for ln in path.read_text().splitlines() if ln.strip()]
+    return syms or None
+
+
+def _cache_age_days(name: str) -> float | None:
+    path = _cache_path(name)
+    if not path.exists():
+        return None
+    return (time.time() - path.stat().st_mtime) / 86400.0
+
+
 def _write_cached(name: str, syms: list[str]) -> None:
     _cache_path(name).write_text("\n".join(syms))
 
@@ -92,6 +110,16 @@ def fetch_sp500() -> list[str]:
 
     Source: Wikipedia's `List_of_S%26P_500_companies` article, which exposes a
     plain HTML table that pandas.read_html can parse.
+
+    STALE-CACHE FALLBACK (2026-08-13): Wikipedia now answers 403 to the
+    container's user-agent, so the live fetch fails every time. The old code
+    then returned `UNIVERSE` — the 158-name curated list, which is NOT the
+    S&P 500 (it is mega-caps + momentum movers). Any caller asking for "S&P
+    500 only" silently got 158 wrong names. An EXPIRED cache of the real 503
+    constituents beats a fresh list of the wrong universe: index membership
+    turns over only a few names a quarter, so a stale snapshot is ~99%
+    accurate, while the curated list is a different universe entirely.
+    Order is therefore: fresh fetch → stale cache → curated.
     """
     cached = _read_cached("sp500")
     if cached:
@@ -112,6 +140,11 @@ def fetch_sp500() -> list[str]:
         log.info("universe: fetched %d S&P 500 components", len(out))
         return out
     except Exception as exc:
+        stale = _read_cached_stale("sp500")
+        if stale:
+            log.warning("universe: S&P 500 fetch failed (%s) — using STALE cached "
+                        "list (%d names, %.0fd old)", exc, len(stale), _cache_age_days("sp500") or 0)
+            return stale
         log.warning("universe: S&P 500 fetch failed (%s) — falling back to curated", exc)
         return list(UNIVERSE)
 

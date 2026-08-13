@@ -36,13 +36,13 @@ DISCLAIMER = ("Price-structure zones — a configured, pragmatic read of where "
               "— not a buy signal and not advice.")
 
 
-def _local_extrema(df: pd.DataFrame):
+def _local_extrema(df: pd.DataFrame, swing_window: Optional[int] = None):
     """Raw swing highs (on `high`) + lows (on `low`). NOT collapsed — every touch
     counts toward a band's strength."""
     h = df["high"].values
     l = df["low"].values
     n = len(df)
-    w = SWING_WINDOW
+    w = SWING_WINDOW if swing_window is None else int(swing_window)
     highs, lows = [], []
     for i in range(w, n - w):
         if h[i] >= h[i - w:i].max() and h[i] >= h[i + 1:i + 1 + w].max():
@@ -52,13 +52,15 @@ def _local_extrema(df: pd.DataFrame):
     return highs, lows
 
 
-def _make_zone(df: pd.DataFrame, cluster, kind: str) -> dict:
+def _make_zone(df: pd.DataFrame, cluster, kind: str,
+               half_width_pct: Optional[float] = None) -> dict:
     prices = [p for p, _ in cluster]
     idxs = [i for _, i in cluster]
     lo, hi = min(prices), max(prices)
     mid = sum(prices) / len(prices)
+    hwp = ZONE_HALF_WIDTH_PCT if half_width_pct is None else float(half_width_pct)
     if hi <= lo:                                   # single-swing band → give it width
-        hw = mid * ZONE_HALF_WIDTH_PCT / 100.0
+        hw = mid * hwp / 100.0
         lo, hi = mid - hw, mid + hw
     vol = float(df["volume"].iloc[idxs].sum()) if "volume" in df else 0.0
     bars_since = int(len(df) - 1 - max(idxs))
@@ -73,17 +75,20 @@ def _make_zone(df: pd.DataFrame, cluster, kind: str) -> dict:
     }
 
 
-def _cluster(df: pd.DataFrame, idxs, price_col: str, kind: str):
+def _cluster(df: pd.DataFrame, idxs, price_col: str, kind: str,
+             merge_pct: Optional[float] = None,
+             half_width_pct: Optional[float] = None):
     """Greedy price-clustering of swing points into bands."""
+    mp = ZONE_MERGE_PCT if merge_pct is None else float(merge_pct)
     pts = sorted((float(df[price_col].iloc[i]), i) for i in idxs)
     zones, cur = [], []
     for price, i in pts:
-        if cur and (price - cur[0][0]) / cur[0][0] * 100.0 > ZONE_MERGE_PCT:
-            zones.append(_make_zone(df, cur, kind))
+        if cur and (price - cur[0][0]) / cur[0][0] * 100.0 > mp:
+            zones.append(_make_zone(df, cur, kind, half_width_pct))
             cur = []
         cur.append((price, i))
     if cur:
-        zones.append(_make_zone(df, cur, kind))
+        zones.append(_make_zone(df, cur, kind, half_width_pct))
     return zones
 
 
@@ -131,16 +136,27 @@ def _verdict(px, res, sup, in_zone):
                       else "Mid-range — no clearly defined band directly above/below right now.")}
 
 
-def compute(df: pd.DataFrame, last_price: Optional[float] = None) -> Optional[dict]:
+def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
+            swing_window: Optional[int] = None,
+            merge_pct: Optional[float] = None,
+            half_width_pct: Optional[float] = None) -> Optional[dict]:
+    """Supply/demand bands for one frame.
+
+    The three geometry knobs default to this module's constants, so every
+    existing caller (the /zones page, orderflow.signals) is byte-for-byte
+    unaffected. `demand_reentry` passes WIDER values because a tradeable zone
+    is a band you can place a stop under, not a 1%-wide line — see
+    docs/supply_demand/demand_reentry_methodology.md.
+    """
     if df is None or len(df) < 60 or "high" not in df or "low" not in df:
         return None
     df = df.iloc[-LOOKBACK_BARS:].reset_index(drop=True)
     if last_price is None:
         last_price = float(df["close"].iloc[-1])
 
-    highs, lows = _local_extrema(df)
-    supply = _cluster(df, highs, "high", "supply")     # resistance from swing highs
-    demand = _cluster(df, lows, "low", "demand")       # support from swing lows
+    highs, lows = _local_extrema(df, swing_window)
+    supply = _cluster(df, highs, "high", "supply", merge_pct, half_width_pct)
+    demand = _cluster(df, lows, "low", "demand", merge_pct, half_width_pct)
     allz = supply + demand
     if not allz:
         return None
@@ -169,15 +185,22 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None) -> Optional[di
         "nearest_resistance": nearest_res,
         "nearest_support": nearest_sup,
         "verdict": _verdict(last_price, nearest_res, nearest_sup, in_zone),
-        "params": {"lookback": LOOKBACK_BARS, "swing_window": SWING_WINDOW,
-                   "merge_pct": ZONE_MERGE_PCT, "near_pct": NEAR_PCT,
+        "params": {"lookback": LOOKBACK_BARS,
+                   "swing_window": SWING_WINDOW if swing_window is None else int(swing_window),
+                   "merge_pct": ZONE_MERGE_PCT if merge_pct is None else float(merge_pct),
+                   "half_width_pct": (ZONE_HALF_WIDTH_PCT if half_width_pct is None
+                                      else float(half_width_pct)),
+                   "near_pct": NEAR_PCT,
                    "clear_runway_pct": CLEAR_RUNWAY_PCT},
         "disclaimer": DISCLAIMER,
     }
 
 
-def for_symbol(symbol: str, last_price: Optional[float] = None) -> dict:
-    """Load 2y of bars and compute the zones for one ticker (on-demand)."""
+def for_symbol(symbol: str, last_price: Optional[float] = None, **geom) -> dict:
+    """Load 2y of bars and compute the zones for one ticker (on-demand).
+
+    `**geom` forwards the optional swing_window / merge_pct / half_width_pct
+    knobs of `compute`; omitting them keeps the historical defaults."""
     sym = (symbol or "").upper().strip()
     if not sym:
         return {"symbol": sym, "error": "missing symbol"}
@@ -185,7 +208,7 @@ def for_symbol(symbol: str, last_price: Optional[float] = None) -> dict:
     df = prices.load_prices(sym, period="2y")
     if df is None or len(df) < 60:
         return {"symbol": sym, "error": "no / insufficient price data"}
-    out = compute(df, last_price=last_price)
+    out = compute(df, last_price=last_price, **geom)
     if out is None:
         return {"symbol": sym, "error": "no swing structure found"}
     out["symbol"] = sym

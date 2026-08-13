@@ -17,9 +17,55 @@ from . import equity_premium as equity_premium_mod
 from . import stock_supply_demand as stocks_mod
 from . import demand_zones as zones_mod
 from . import price_zones as price_zones_mod
+from . import demand_reentry as reentry_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
+
+
+@router.get("/supply-demand/demand-reentry")
+async def get_demand_reentry(
+    limit: int = Query(60, ge=1, le=500),
+    force: bool = Query(False, description="bypass the 3h cache and rescan"),
+):
+    """S&P 500 names that have pulled back DOWN into a tested demand band while
+    the uptrend is still intact ("entering back into demand").
+
+    A *transition* read, not a snapshot: the name must have traded at least
+    `min_rise_above_pct` ABOVE the band top inside the lookback window and be
+    back inside it now, on a band tested >= `min_touches` times, with the
+    Minervini trend template still passing >= `min_trend_checks` of 8 (no
+    falling knives). Each row carries a trade plan — entry band, stop under the
+    floor, target at the nearest overhead supply — plus the reasons it
+    qualified, so the list is auditable.
+
+    Configured price-structure method (NOT a book method) — decision-support
+    only, not a buy signal and not advice.
+    See backend/supply_demand/demand_reentry.py.
+    """
+    import asyncio
+    return await asyncio.to_thread(reentry_mod.scan, force, limit)
+
+
+@router.post("/supply-demand/demand-reentry/scan")
+async def post_demand_reentry_scan(limit: int = Query(60, ge=1, le=500)):
+    """Force a fresh S&P 500 demand-zone re-entry scan (the page's Scan button).
+    Bypasses the 3h cache; takes a few minutes cold."""
+    import asyncio
+    return await asyncio.to_thread(reentry_mod.scan, True, limit)
+
+
+@router.get("/supply-demand/zone-map/{symbol}")
+async def get_zone_map(symbol: str):
+    """One ticker's supply/demand bands + close series + entry/stop/target plan
+    — everything the individual-stock zone chart draws. Works for any symbol,
+    including names that are NOT re-entry candidates (price sitting in overhead
+    supply still gets its bands and a plan drawn)."""
+    import asyncio
+    out = await asyncio.to_thread(reentry_mod.analyze_symbol, symbol, True)
+    if not out:
+        return {"symbol": (symbol or "").upper(), "error": "no / insufficient price data"}
+    return out
 
 
 @router.get("/supply-demand/price-zones/{symbol}")

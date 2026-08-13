@@ -77,6 +77,7 @@ import { TomorrowBiasBlock } from '../components/TomorrowBias';
 import { OpExPanel } from '../components/OpExPanel';
 // GEX+VEX best-case lens for the Setup tab (Ajay 2026-07-17).
 import { GexSetupLens } from '../components/GexSetupLens';
+import { ZoneMap } from '../components/ZoneMap';
 import { TapePanel } from '../components/TapePanel';
 import { API } from '../lib/apiBase';
 import { leveragedEtfInfo } from '../lib/leveragedEtf';
@@ -1090,6 +1091,12 @@ export function SepaCandidatePage() {
                   and a position-sizing calculator. (Position Lens is at the top of the page —
                   use this tab for the entry-side trade plan.)
                 </div>
+
+                {/* Supply/demand zones DRAWN, with entry + exit written on the
+                    bands (Ajay 2026-08-13, from a hand-marked SNDK chart).
+                    Red = overhead supply, green = demand; the entry band is
+                    outlined BUY and the stop/target are dashed rules. */}
+                <ZoneMap symbol={symbol} />
 
                 {/* GEX + VEX best-case read (Ajay 2026-07-17) — dealer-gamma
                     color on the entry plan: does hedging flow help this setup

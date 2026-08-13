@@ -5,11 +5,12 @@ import { DependencyGraph } from '../components/DependencyGraph';
 import { NodeThesisPanel } from '../components/NodeThesisPanel';
 import { MoneyFlowLeaderboard } from '../components/MoneyFlowLeaderboard';
 import { StockSupplyDemandPanel } from '../components/StockSupplyDemandPanel';
+import { DemandReentryPanel } from '../components/DemandReentryPanel';
 import { useSupplyDemandGraph, useSectors, useMarketFlow, useEquityPremium } from '../hooks/useSupplyDemand';
 import type { SectorPayload, FlowTicker, EquityTag } from '../hooks/useSupplyDemand';
 import { useSepaScan } from '../hooks/useSepa';
 
-type Tab = 'stocks' | 'graph' | 'sectors' | 'equity';
+type Tab = 'stocks' | 'reentry' | 'graph' | 'sectors' | 'equity';
 
 /* Mega-cap tickers — when "highlight tradeable names only" mode is on,
    these get their SEPA gold ring stripped even if they're on the list.
@@ -93,6 +94,10 @@ export function SupplyDemandPage() {
                 onClick={() => setTab('stocks')}>
           📊 Stocks (Supply / Demand)
         </button>
+        <button type="button" className={`sd-tab ${tab === 'reentry' ? 'is-active' : ''}`}
+                onClick={() => setTab('reentry')}>
+          🟢 Back in Demand
+        </button>
         <button type="button" className={`sd-tab ${tab === 'graph' ? 'is-active' : ''}`}
                 onClick={() => setTab('graph')}>
           Dependency Graph
@@ -108,6 +113,8 @@ export function SupplyDemandPage() {
       </div>
 
       {tab === 'stocks' && <StockSupplyDemandPanel />}
+
+      {tab === 'reentry' && <DemandReentryPanel />}
 
       {tab === 'equity' && <EquityPremiumPanel onClickTicker={(t) => setSelectedTicker(t)} />}
 
