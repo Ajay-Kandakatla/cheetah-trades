@@ -14,10 +14,10 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  bandLabel, bandWidthPct, chartDomain, level, money, planLine, reentryReason,
-  rrBand, visibleBands,
+  bandLabel, bandWidthPct, chartDomain, layoutLabels, level, money, planLine,
+  reentryReason, rrBand, visibleBands,
 } from '../lib/zonePlan';
-import type { ZoneMapPayload } from '../lib/zonePlan';
+import type { LabelItem, ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
 
 
@@ -56,7 +56,7 @@ export function ZoneMap({ symbol }: { symbol: string }) {
     return <div className="sepa-tab-help" style={{ opacity: 0.7 }}>Not enough history to draw zones.</div>;
   }
 
-  const W = 720, H = 300, PL = 8, PR = 96, PT = 12, PB = 22;
+  const W = 760, H = 300, PL = 8, PR = 142, PT = 12, PB = 22;
   const iw = W - PL - PR, ih = H - PT - PB;
   const closes = series.map((d) => d.close);
   const plan = data.plan;
@@ -81,6 +81,34 @@ export function ZoneMap({ symbol }: { symbol: string }) {
   /* A band is "the entry band" only when the plan actually points at it. */
   const isEntryBand = (lo: number, hi: number) =>
     !!ez && Math.abs(lo - Math.max(ez.lo, domain.lo)) < 0.01 && Math.abs(hi - Math.min(ez.hi, domain.hi)) < 0.01;
+
+  /* Every right-hand label, with the plan (BUY/STOP/TARGET/NOW) at priority 2
+     so a crowded band label yields to it rather than overprinting. */
+  const rawLabels: LabelItem[] = [
+    ...supply.map((z) => ({
+      y: y(z.hi) + 10, text: `SUPPLY ${bandLabel(z)}`, color: SUPPLY, priority: 1,
+    })),
+    ...demand.map((z) => {
+      const entry = isEntryBand(z.lo, z.hi);
+      return {
+        y: y(z.hi) + 10,
+        // "tested" is spelled out in the reason line below; keeping the chart
+        // label short stops it clipping on 4-digit prices (SNDK).
+        text: entry ? `BUY ${bandLabel(z)} · ${z.touches}×` : `DEMAND ${bandLabel(z)}`,
+        color: DEMAND,
+        bold: entry,
+        priority: entry ? 2 : 1,
+      };
+    }),
+    ...(plan && plan.stop > domain.lo && plan.stop < domain.hi
+      ? [{ y: y(plan.stop) + 3, text: `STOP ${level(plan.stop)}`, color: SUPPLY, bold: true, priority: 2 }]
+      : []),
+    ...(plan?.target != null && plan.target > domain.lo && plan.target < domain.hi
+      ? [{ y: y(plan.target) + 3, text: `TARGET ${level(plan.target)}`, color: DEMAND, bold: true, priority: 2 }]
+      : []),
+    { y: y(data.last_price) + 3, text: `NOW ${level(data.last_price)}`, color: '#e2e8f0', bold: true, priority: 2 },
+  ];
+  const labels = layoutLabels(rawLabels, { minGap: 11, top: PT + 4, bottom: PT + ih });
 
   return (
     <div style={{ marginBottom: '1rem' }}>
@@ -111,9 +139,6 @@ export function ZoneMap({ symbol }: { symbol: string }) {
             <rect x={PL} y={y(z.hi)} width={iw} height={Math.max(1, y(z.lo) - y(z.hi))}
                   fill={SUPPLY} fillOpacity={0.10} />
             <line x1={PL} y1={y(z.hi)} x2={PL + iw} y2={y(z.hi)} stroke={SUPPLY} strokeOpacity={0.45} strokeWidth={1} />
-            <text x={PL + iw + 6} y={y(z.hi) + 10} fontSize="9" fill={SUPPLY} opacity={0.95}>
-              SUPPLY {bandLabel(z)}
-            </text>
           </g>
         ))}
 
@@ -125,36 +150,18 @@ export function ZoneMap({ symbol }: { symbol: string }) {
               <rect x={PL} y={y(z.hi)} width={iw} height={Math.max(1, y(z.lo) - y(z.hi))}
                     fill={DEMAND} fillOpacity={entry ? 0.22 : 0.10}
                     stroke={entry ? DEMAND : 'none'} strokeWidth={entry ? 1.5 : 0} />
-              <text x={PL + iw + 6} y={y(z.hi) + 10} fontSize="9" fill={DEMAND} opacity={0.95}>
-                {entry ? 'BUY ' : 'DEMAND '}{bandLabel(z)}
-              </text>
-              {entry && (
-                <text x={PL + iw + 6} y={y(z.hi) + 21} fontSize="8" fill="var(--cm-slate,#8595ad)">
-                  {z.touches}× tested
-                </text>
-              )}
             </g>
           );
         })}
 
         {/* ── the exits: stop under the band, target at first overhead supply ── */}
         {plan && plan.stop > domain.lo && plan.stop < domain.hi && (
-          <g>
-            <line x1={PL} y1={y(plan.stop)} x2={PL + iw} y2={y(plan.stop)}
-                  stroke={SUPPLY} strokeWidth={1.5} strokeDasharray="5 3" />
-            <text x={PL + iw + 6} y={y(plan.stop) + 3} fontSize="9" fill={SUPPLY} fontWeight={600}>
-              STOP {level(plan.stop)}
-            </text>
-          </g>
+          <line x1={PL} y1={y(plan.stop)} x2={PL + iw} y2={y(plan.stop)}
+                stroke={SUPPLY} strokeWidth={1.5} strokeDasharray="5 3" />
         )}
         {plan?.target != null && plan.target > domain.lo && plan.target < domain.hi && (
-          <g>
-            <line x1={PL} y1={y(plan.target)} x2={PL + iw} y2={y(plan.target)}
-                  stroke={DEMAND} strokeWidth={1.5} strokeDasharray="5 3" />
-            <text x={PL + iw + 6} y={y(plan.target) + 3} fontSize="9" fill={DEMAND} fontWeight={600}>
-              TARGET {level(plan.target)}
-            </text>
-          </g>
+          <line x1={PL} y1={y(plan.target)} x2={PL + iw} y2={y(plan.target)}
+                stroke={DEMAND} strokeWidth={1.5} strokeDasharray="5 3" />
         )}
 
         {/* ── price ── */}
@@ -162,9 +169,17 @@ export function ZoneMap({ symbol }: { symbol: string }) {
         <circle cx={x(series.length - 1)} cy={y(data.last_price)} r={3.2} fill="#e2e8f0" />
         <line x1={PL} y1={y(data.last_price)} x2={PL + iw} y2={y(data.last_price)}
               stroke="#cbd5e1" strokeOpacity={0.35} strokeDasharray="2 4" />
-        <text x={PL + iw + 6} y={y(data.last_price) + 3} fontSize="9" fill="#e2e8f0" fontWeight={600}>
-          NOW {money(data.last_price)}
-        </text>
+
+        {/* ── right-hand labels, de-collided in one pass. Price / entry / stop
+             routinely land within 2% of each other, which stacked them into an
+             unreadable blob before `layoutLabels`. ── */}
+        {labels.map((l, k) => (
+          <text key={`l${k}`} x={PL + iw + 6} y={l.y} fontSize="9"
+                fill={l.color} fontWeight={l.bold ? 600 : 400}
+                opacity={l.bold ? 1 : 0.9}>
+            {l.text}
+          </text>
+        ))}
       </svg>
 
       {/* ── the plan, written out ── */}

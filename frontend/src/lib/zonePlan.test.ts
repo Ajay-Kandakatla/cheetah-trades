@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  bandLabel, bandWidthPct, chartDomain, freshnessLabel, level, money,
+  bandLabel, bandWidthPct, chartDomain, freshnessLabel, layoutLabels, level, money,
   planLine, reentryReason, rrBand, visibleBands,
 } from './zonePlan';
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
@@ -176,5 +176,51 @@ describe('bandLabel', () => {
   });
   it('is quiet when there is no band', () => {
     expect(bandLabel(null)).toBe('—');
+  });
+  it('shows cents when a thin band would render as "$230–$230"', () => {
+    expect(bandLabel(zone({ lo: 230.09, hi: 230.2 }))).toBe('$230.09–$230.20');
+  });
+});
+
+describe('layoutLabels — the plan must stay readable when levels crowd', () => {
+  const L = (y: number, text: string, priority = 1) =>
+    ({ y, text, color: '#fff', priority });
+
+  it('separates labels that would overlap', () => {
+    const out = layoutLabels([L(100, 'a', 2), L(102, 'b', 2), L(104, 'c', 2)], { minGap: 11 });
+    for (let i = 1; i < out.length; i += 1) {
+      expect(Math.abs(out[i].y - out[i - 1].y)).toBeGreaterThanOrEqual(11);
+    }
+  });
+
+  it('keeps every high-priority plan label even in a pile-up', () => {
+    // BUY / STOP / TARGET / NOW landing on the same pixel — none may be dropped.
+    const out = layoutLabels(
+      [L(100, 'BUY', 2), L(100, 'STOP', 2), L(100, 'TARGET', 2), L(100, 'NOW', 2)],
+      { minGap: 11 },
+    );
+    expect(out.map((o) => o.text).sort()).toEqual(['BUY', 'NOW', 'STOP', 'TARGET']);
+  });
+
+  it('drops a colliding band label rather than printing it over the plan', () => {
+    const out = layoutLabels(
+      [L(100, 'STOP', 2), L(100, 'DEMAND', 1)],
+      { minGap: 11, maxShift: 4 },
+    );
+    expect(out.map((o) => o.text)).toEqual(['STOP']);
+  });
+
+  it('returns labels sorted top-to-bottom', () => {
+    const out = layoutLabels([L(200, 'low', 2), L(40, 'high', 2)], { minGap: 11 });
+    expect(out.map((o) => o.text)).toEqual(['high', 'low']);
+  });
+
+  it('respects the drawing bounds', () => {
+    const out = layoutLabels([L(0, 'a', 1), L(2, 'b', 1)], { minGap: 11, top: 20, bottom: 200 });
+    out.forEach((o) => expect(o.y).toBeGreaterThanOrEqual(20));
+  });
+
+  it('handles an empty list', () => {
+    expect(layoutLabels([], {})).toEqual([]);
   });
 });

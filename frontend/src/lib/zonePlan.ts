@@ -65,10 +65,15 @@ export function level(v: number | null | undefined): string {
   return `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/** "$335–$344" — the band as a price range. */
+/** "$335–$344" — the band as a price range.
+ *
+ *  Falls back to cents when both ends round to the same string: a very thin
+ *  band otherwise renders as "$230–$230", which reads as a rendering bug
+ *  rather than as the (real, but narrow) band it is. */
 export function bandLabel(z: Zone | null | undefined): string {
   if (!z) return '—';
-  return `${money(z.lo)}–${money(z.hi)}`;
+  const lo = money(z.lo), hi = money(z.hi);
+  return lo === hi ? `${level(z.lo)}–${level(z.hi)}` : `${lo}–${hi}`;
 }
 
 /** How wide the band is, in % of its floor. Zones thinner than ~1% are lines,
@@ -150,6 +155,55 @@ export function chartDomain(
   }
   const pad = ((hi - lo) || hi || 1) * (padPct / 100);
   return { lo: lo - pad, hi: hi + pad };
+}
+
+export type LabelItem = {
+  /** Ideal vertical position, in SVG user units. */
+  y: number;
+  text: string;
+  color: string;
+  bold?: boolean;
+  /** Higher wins a collision. BUY/STOP/TARGET/NOW are 2; band labels are 1. */
+  priority: number;
+};
+
+/** Stack the right-hand labels so they never overlap.
+ *
+ * When price, the entry band and the stop sit within a couple of percent of
+ * each other — exactly the case this feature is built for — their labels land
+ * on the same pixels and become unreadable. High-priority labels (the plan:
+ * BUY / STOP / TARGET / NOW) keep their position and push others away; a
+ * low-priority band label that cannot find a free slot within `maxShift` is
+ * DROPPED rather than drawn on top of the plan.
+ */
+export function layoutLabels(
+  items: LabelItem[],
+  opts: { minGap?: number; top?: number; bottom?: number; maxShift?: number } = {},
+): LabelItem[] {
+  const minGap = opts.minGap ?? 11;
+  const top = opts.top ?? 0;
+  const bottom = opts.bottom ?? Number.POSITIVE_INFINITY;
+  const maxShift = opts.maxShift ?? 26;
+
+  const ordered = [...items].sort((a, b) => (b.priority - a.priority) || (a.y - b.y));
+  const placed: LabelItem[] = [];
+
+  const clashes = (y: number) =>
+    y < top || y > bottom || placed.some((p) => Math.abs(p.y - y) < minGap);
+
+  for (const item of ordered) {
+    let y: number | null = null;
+    for (let shift = 0; shift <= maxShift; shift += 1) {
+      if (!clashes(item.y + shift)) { y = item.y + shift; break; }
+      if (shift && !clashes(item.y - shift)) { y = item.y - shift; break; }
+    }
+    if (y == null) {
+      if (item.priority >= 2) y = item.y;   // never drop the plan
+      else continue;                        // drop a colliding band label
+    }
+    placed.push({ ...item, y });
+  }
+  return placed.sort((a, b) => a.y - b.y);
 }
 
 /** Keep only bands that intersect the visible domain, clipped to it, so we
