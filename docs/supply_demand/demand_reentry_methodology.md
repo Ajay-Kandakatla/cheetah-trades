@@ -91,12 +91,67 @@ universe. Anything asking for "S&P 500 only" silently scanned 158 mega-caps.
 The on-disk cache held the real **503 constituents** but was 76 days old, past
 the 30-day TTL, so it was ignored.
 
-New order: **fresh fetch → stale cache → curated.** An expired snapshot of the
-real index (membership turns over a few names a quarter) beats a fresh list of
-the wrong universe. If we ever *do* fall through to curated, the payload sets
-`universe_is_sp500: false` and the page renders a warning — it must never
-quietly claim "S&P 500" over the wrong names
-(`test_scan_reports_when_the_universe_is_not_actually_sp500`).
+### Root cause of the 403 (found 2026-08-13, same day)
+
+`pandas.read_html(url)` **fetches the page itself**, via urllib, with urllib's
+default `User-Agent`. Wikipedia blocks that agent. Measured inside the api
+container:
+
+| User-Agent | Result |
+|---|---|
+| urllib default (what `pd.read_html(url)` sends) | **HTTP 403**, 126-byte error page |
+| `cheetah-market-app/1.0 (+https://pounce…)` | **HTTP 200**, 568 KB article |
+| a browser UA string | HTTP 200 |
+
+So it was never a hard block — just UA filtering. The fix is `_read_html_ua()`:
+fetch with `requests` + a descriptive UA (per Wikimedia's UA policy), then hand
+pandas the *already-fetched markup*. **Never pass a URL to `pd.read_html`** —
+`test_sp500_never_hands_a_bare_url_to_pandas` locks that.
+
+Two other candidate sources were measured and rejected:
+
+- **Massive API** — has no index-constituents endpoint (404 on every path), and
+  `I:SPX` returns `NOT_ENTITLED` on the stocks key anyway.
+- **iShares IVV holdings CSV** — returns the 2.2 MB Cloudflare/JS disclaimer
+  interstitial, not CSV, exactly like the IWB/IWV URLs already documented in
+  `universe.py`. The Russell fetchers only work because they parse a
+  **manually downloaded** `.xls`; there is no working automated iShares path to
+  mirror.
+
+### Resolve order
+
+**fresh cache → Wikipedia (UA'd) → datahub CSV mirror → stale cache → curated.**
+
+- `datahub` is `datasets/s-and-p-500-companies` on GitHub raw. Honest caveat:
+  it is *derived from the same Wikipedia table*, so it is not an independent
+  source of truth — but it is an independent **delivery path**, which is the
+  exact failure mode that took Wikipedia out.
+- A live source only wins if it also passes a **count sanity gate**
+  (`_EXPECTED_COUNTS`: sp500 450–530, sp400 350–430). A parse that "succeeds"
+  into 12 names is rejected and not cached, so a reshaped table degrades to the
+  stale snapshot instead of silently truncating the scan.
+- The expired snapshot of the real index still beats a fresh list of the wrong
+  universe. Curated is the true last resort.
+
+`fetch_sp400()` had the same 403 and the same 76-day-old cache; it now shares
+the ladder, but falls back to `[]` and **never** to curated — leaking large-caps
+into the mid-cap layer of a union would corrupt `broad`.
+
+### Reporting which list was used
+
+`universe.last_source(name)` records how each list resolved
+(`cache` / `wikipedia` / `datahub` / `stale-cache` / `curated` / `empty`).
+
+- Falling through to curated sets `universe_is_sp500: false` and the page
+  renders a red warning — it must never quietly claim "S&P 500" over the wrong
+  names (`test_scan_reports_when_the_universe_is_not_actually_sp500`).
+- **A stale cache is the silent case, and it is the one that actually bit.**
+  It holds the *real* constituents, so `universe_is_sp500` stays `true` and the
+  warning above never fires — the list sat 76 days out of date with nothing on
+  the page saying so. `universe_stale_days` now reports the age, and
+  `DemandReentryPanel` shows a muted note that escalates past 120 days
+  (`test_scan_reports_how_stale_the_constituent_list_is`,
+  `DemandReentryPanel.test.tsx`).
 
 ## Surfaces
 

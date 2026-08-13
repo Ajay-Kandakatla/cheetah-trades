@@ -279,11 +279,17 @@ def _rank_key(r: dict):
 def scan(force: bool = False, limit: Optional[int] = None) -> dict:
     """Scan the S&P 500 for demand-zone re-entries. Cached `_CACHE_TTL_SEC`.
 
-    Universe is `sepa.universe.fetch_sp500()` — which as of 2026-08-13 falls
-    back to a STALE-but-real cached constituent list when Wikipedia 403s,
-    rather than to the 158-name curated list (a different universe entirely).
-    `universe_note` reports which list was actually used so the page can't
-    quietly claim "S&P 500" over the wrong names.
+    Universe is `sepa.universe.fetch_sp500()`, which resolves fresh cache →
+    Wikipedia → datahub mirror → STALE cache → curated. `universe_note`
+    reports which list was actually used so the page can't quietly claim
+    "S&P 500" over the wrong names.
+
+    Staleness is reported too (2026-08-13). The curated fallthrough is loud —
+    `universe_is_sp500` goes False and the UI warns — but a stale cache is
+    silent by construction: it holds the real constituents, just frozen at
+    the day the live fetch broke. Between 2026-05-29 and 2026-08-13 that list
+    aged 76 days with nothing on the page saying so. `universe_stale_days`
+    closes that hole.
     """
     if not force:
         c = _cache.get("data")
@@ -294,8 +300,31 @@ def scan(force: bool = False, limit: Optional[int] = None) -> dict:
     syms = universe_mod.fetch_sp500()
     curated_n = len(getattr(universe_mod, "UNIVERSE", []) or [])
     looks_curated = len(syms) == curated_n
-    universe_note = ("S&P 500 unavailable — scanned the curated list instead"
-                     if looks_curated else f"S&P 500 constituents ({len(syms)} names)")
+
+    # Provenance from the fetcher. Only trusted when it describes the list we
+    # actually got back (n matches) — a stale record from an earlier resolve,
+    # or a test double standing in for fetch_sp500, must not mislabel it.
+    src = None
+    try:
+        rec = universe_mod.last_source("sp500")
+        if rec and rec.get("n") == len(syms):
+            src = rec
+    except Exception:
+        src = None
+
+    stale_days = None
+    if src and src.get("source") == "stale-cache":
+        stale_days = int(round(src.get("age_days") or 0))
+
+    if looks_curated or (src and src.get("source") == "curated"):
+        looks_curated = True
+        universe_note = "S&P 500 unavailable — scanned the curated list instead"
+    elif stale_days is not None:
+        universe_note = (f"S&P 500 constituents ({len(syms)} names) from a "
+                         f"{stale_days}-day-old cached list — the live "
+                         f"constituent fetch is failing")
+    else:
+        universe_note = f"S&P 500 constituents ({len(syms)} names)"
 
     rows, scanned, errors = [], 0, 0
     for sym in syms:
@@ -323,6 +352,10 @@ def scan(force: bool = False, limit: Optional[int] = None) -> dict:
         "universe": len(syms),
         "universe_note": universe_note,
         "universe_is_sp500": not looks_curated,
+        # None when the constituent list is fresh; an age in days when it came
+        # from an expired cache (real names, but no longer tracking adds/drops).
+        "universe_stale_days": stale_days,
+        "universe_source": (src or {}).get("source"),
         "errors": errors,
         "took_sec": round(time.time() - t0, 1),
         "as_of": datetime.now(timezone.utc).isoformat(),

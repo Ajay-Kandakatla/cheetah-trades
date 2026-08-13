@@ -163,6 +163,157 @@ def test_price_zones_compute_accepts_geometry_without_changing_defaults():
 
 
 # ── universe contract — "S&P 500 only" must mean the S&P 500 ──────────────────
+def _isolate_cache(tmp_path, monkeypatch, U):
+    """Point the universe cache at tmp_path and clear source provenance."""
+    monkeypatch.setattr(U, "UNIV_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(U, "_cache_path", lambda name: tmp_path / f"{name}.txt")
+    U._LAST_SOURCE.clear()
+
+
+def _dead(monkeypatch, U):
+    """Make every live network loader fail, hermetically."""
+    def boom(*a, **k):
+        raise RuntimeError("403 Forbidden")
+    monkeypatch.setattr(U, "_read_html_ua", boom)
+    monkeypatch.setattr(U, "_fetch_text", boom)
+
+
+def _expire(tmp_path, U, name):
+    import os
+    import time as _t
+    old = _t.time() - (U.UNIV_CACHE_TTL_SEC + 86_400)
+    os.utime(tmp_path / f"{name}.txt", (old, old))
+
+
+def test_sp500_fetch_sends_a_real_user_agent(monkeypatch):
+    """ROOT CAUSE (2026-08-13): `pandas.read_html(url)` fetches with the
+    default urllib UA, and Wikipedia 403s that — verified in-container, where
+    the default UA got 126 bytes of error page and a descriptive UA got the
+    full 568 KB article. Every HTML fetch must therefore carry a real,
+    non-empty, non-python-default User-Agent."""
+    from sepa import universe as U
+
+    seen = {}
+
+    class _Resp:
+        text = "<html><body><table><tr><th>Symbol</th></tr></table></body></html>"
+        def raise_for_status(self): pass
+
+    import requests
+    def fake_get(url, timeout=None, headers=None):
+        seen["headers"] = headers or {}
+        return _Resp()
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    U._fetch_text("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")
+    ua = seen["headers"].get("User-Agent", "")
+    assert ua, "no User-Agent sent — this is exactly what Wikipedia 403s"
+    assert "python" not in ua.lower() and "urllib" not in ua.lower()
+
+
+def test_sp500_never_hands_a_bare_url_to_pandas(monkeypatch):
+    """NEGATIVE / regression lock: if anyone reverts to `pd.read_html(url)`,
+    pandas does the fetching with the default UA and the 403 returns. pandas
+    must only ever be given already-fetched markup."""
+    from sepa import universe as U
+
+    import pandas as pd
+    captured = {}
+    monkeypatch.setattr(U, "_fetch_text", lambda url, **k: "<table></table>")
+    monkeypatch.setattr(pd, "read_html", lambda src, *a, **k: captured.setdefault("src", src) or [])
+
+    U._read_html_ua("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")
+    assert not isinstance(captured["src"], str), \
+        "pandas was handed a URL/string — it will fetch it itself and get 403'd"
+
+
+def test_sp500_falls_through_to_the_datahub_mirror_when_wikipedia_dies(tmp_path, monkeypatch):
+    """Wikipedia is one delivery path. When it 403s again, the GitHub-raw CSV
+    mirror must keep the list FRESH rather than dropping to the stale cache."""
+    from sepa import universe as U
+    _isolate_cache(tmp_path, monkeypatch, U)
+
+    def boom(*a, **k):
+        raise RuntimeError("403 Forbidden")
+    monkeypatch.setattr(U, "_read_html_ua", boom)
+    rows = "Symbol,Security\n" + "\n".join(f"SYM{i},Co {i}" for i in range(503))
+    monkeypatch.setattr(U, "_fetch_text", lambda url, **k: rows)
+
+    out = U.fetch_sp500()
+    assert len(out) == 503
+    assert U.last_source("sp500")["source"] == "datahub"
+    # …and it must be cached, so the next call doesn't re-hit the network.
+    assert (tmp_path / "sp500.txt").exists()
+
+
+def test_sp500_rejects_a_truncated_parse_and_keeps_the_stale_cache(tmp_path, monkeypatch):
+    """NEGATIVE: a source that parses "successfully" into 12 names (column
+    renamed, interstitial page with a stray table) must NOT be cached and must
+    NOT be served as the S&P 500. A real 503-name snapshot outranks it even
+    when expired."""
+    from sepa import universe as U
+    _isolate_cache(tmp_path, monkeypatch, U)
+
+    real = [f"SYM{i}" for i in range(503)]
+    (tmp_path / "sp500.txt").write_text("\n".join(real))
+    _expire(tmp_path, U, "sp500")
+
+    monkeypatch.setattr(U, "_sp500_from_wikipedia", lambda: ["AAPL", "MSFT", "NVDA"])
+    monkeypatch.setattr(U, "_sp500_from_datahub", lambda: ["AAPL", "MSFT", "NVDA"])
+
+    out = U.fetch_sp500()
+    assert len(out) == 503
+    assert U.last_source("sp500")["source"] == "stale-cache"
+    # the 3-name garbage must not have overwritten the good cache
+    assert len((tmp_path / "sp500.txt").read_text().splitlines()) == 503
+
+
+def test_sp500_prefers_a_fresh_fetch_over_the_stale_cache(tmp_path, monkeypatch):
+    """The whole point of the fix: with the UA in place the live fetch works
+    again, so a stale cache must be REPLACED, not preferred."""
+    from sepa import universe as U
+    _isolate_cache(tmp_path, monkeypatch, U)
+
+    (tmp_path / "sp500.txt").write_text("\n".join(f"OLD{i}" for i in range(503)))
+    _expire(tmp_path, U, "sp500")
+    monkeypatch.setattr(U, "_sp500_from_wikipedia", lambda: [f"NEW{i}" for i in range(503)])
+
+    out = U.fetch_sp500()
+    assert out[0] == "NEW0"
+    assert U.last_source("sp500")["source"] == "wikipedia"
+    assert (tmp_path / "sp500.txt").read_text().startswith("NEW0")
+
+
+def test_sp400_falls_back_to_stale_cache_and_never_to_curated(tmp_path, monkeypatch):
+    """sp400.txt aged out alongside sp500.txt (both frozen 2026-05-29). It
+    gets the same stale-cache rescue — but NEVER the curated fallback: curated
+    is large-caps, and leaking those into the mid-cap layer of a union would
+    silently corrupt `broad`."""
+    from sepa import universe as U
+    _isolate_cache(tmp_path, monkeypatch, U)
+
+    real = [f"MID{i}" for i in range(400)]
+    (tmp_path / "sp400.txt").write_text("\n".join(real))
+    _expire(tmp_path, U, "sp400")
+    _dead(monkeypatch, U)
+
+    out = U.fetch_sp400()
+    assert len(out) == 400
+    assert out != list(U.UNIVERSE)
+    assert U.last_source("sp400")["source"] == "stale-cache"
+
+
+def test_sp400_returns_empty_not_curated_when_there_is_no_cache(tmp_path, monkeypatch):
+    """NEGATIVE: with no cache at all, the mid-cap layer must vanish rather
+    than substitute mega-caps."""
+    from sepa import universe as U
+    _isolate_cache(tmp_path, monkeypatch, U)
+    _dead(monkeypatch, U)
+
+    assert U.fetch_sp400() == []
+    assert U.last_source("sp400")["source"] == "empty"
+
+
 def test_sp500_falls_back_to_stale_cache_not_the_curated_list(tmp_path, monkeypatch):
     """REGRESSION (2026-08-13): Wikipedia answers 403, and the old fallback
     returned the 158-name curated momentum list. Scanning that and calling it
@@ -178,12 +329,14 @@ def test_sp500_falls_back_to_stale_cache_not_the_curated_list(tmp_path, monkeypa
     old = _t.time() - (U.UNIV_CACHE_TTL_SEC + 86_400)
     os.utime(tmp_path / "sp500.txt", (old, old))
 
-    import pandas as pd
-    monkeypatch.setattr(pd, "read_html", lambda *a, **k: (_ for _ in ()).throw(Exception("403")))
+    # Kill every live loader (Wikipedia + the datahub mirror) at the network
+    # seam, so the test is hermetic and doesn't depend on either being up.
+    _dead(monkeypatch, U)
 
     out = U.fetch_sp500()
     assert len(out) == 503
     assert out != list(U.UNIVERSE)
+    assert U.last_source("sp500")["source"] == "stale-cache"
 
 
 def test_scan_reports_when_the_universe_is_not_actually_sp500(monkeypatch):
@@ -244,3 +397,55 @@ def test_scan_survives_a_symbol_that_raises(monkeypatch):
     out = dr.scan(force=True)
     assert out["errors"] == 1
     assert [r["symbol"] for r in out["rows"]] == ["GOOD"]
+
+
+def test_scan_reports_how_stale_the_constituent_list_is(monkeypatch):
+    """THE SILENT-DEGRADE HOLE (2026-08-13): falling through to curated is
+    loud (`universe_is_sp500` goes False), but a stale cache holds the REAL
+    constituents and so looked identical to a fresh list at the call site.
+    It sat 76 days out of date with nothing on the page saying so."""
+    from sepa import universe as U
+
+    syms = [f"S{i}" for i in range(503)]
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: syms)
+    monkeypatch.setattr(dr.universe_mod, "last_source",
+                        lambda name: {"source": "stale-cache", "n": 503, "age_days": 76.4})
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    assert out["universe_is_sp500"] is True      # still the real names…
+    assert out["universe_stale_days"] == 76      # …but 76 days frozen
+    assert out["universe_source"] == "stale-cache"
+    assert "76-day-old" in out["universe_note"]
+
+
+def test_scan_reports_no_staleness_when_the_list_is_fresh(monkeypatch):
+    """NEGATIVE: a fresh list must not raise a false staleness warning."""
+    syms = [f"S{i}" for i in range(503)]
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: syms)
+    monkeypatch.setattr(dr.universe_mod, "last_source",
+                        lambda name: {"source": "wikipedia", "n": 503, "age_days": 0.0})
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    assert out["universe_stale_days"] is None
+    assert out["universe_source"] == "wikipedia"
+    assert "old" not in out["universe_note"]
+
+
+def test_scan_ignores_a_provenance_record_that_does_not_match(monkeypatch):
+    """NEGATIVE: `last_source` is module-global and can be left over from an
+    earlier resolve (or from a test double standing in for fetch_sp500). If it
+    doesn't describe the list we actually got back, it must be ignored rather
+    than mislabel the scan."""
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA", "BBB"])
+    monkeypatch.setattr(dr.universe_mod, "last_source",
+                        lambda name: {"source": "stale-cache", "n": 503, "age_days": 99.0})
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    assert out["universe_stale_days"] is None
+    assert out["universe_source"] is None

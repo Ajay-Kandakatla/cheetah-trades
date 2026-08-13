@@ -4,8 +4,9 @@ Three modes, selected via the `SEPA_UNIVERSE_MODE` env var or argument:
 
   - "curated"  (default) — the hand-picked ~130-name list below. Fast scans,
                            biased toward growth-friendly sectors.
-  - "sp500"    — full S&P 500 (~500 names) fetched from Wikipedia and cached
-                 30 days under ~/.cheetah/universe/sp500.txt.
+  - "sp500"    — full S&P 500 (~503 names) fetched from Wikipedia (with an
+                 explicit User-Agent — see fetch_sp500) or the datahub CSV
+                 mirror, cached 30 days under ~/.cheetah/universe/sp500.txt.
   - "russell1000" — Russell 1000 holdings (~1000 names) fetched from iShares
                     IWB ETF holdings CSV. Cached 30 days.
   - "russell3000" — Russell 3000 holdings (~3000 names) fetched from iShares
@@ -105,88 +106,242 @@ def _write_cached(name: str, syms: list[str]) -> None:
     _cache_path(name).write_text("\n".join(syms))
 
 
+# ---------------------------------------------------------------------------
+# HTTP with an explicit User-Agent (2026-08-13)
+# ---------------------------------------------------------------------------
+# Wikipedia answers HTTP 403 to the default urllib/pandas user-agent — which
+# is what `pandas.read_html(url)` sends when you hand it a URL, because pandas
+# fetches the page itself via urllib. Verified inside the api container:
+#
+#   default urllib UA                 -> HTTP 403  (126 bytes, error page)
+#   any descriptive/browser UA        -> HTTP 200  (568 KB, the real article)
+#
+# So we never let pandas do the fetching. We fetch with `requests` + a
+# descriptive UA (Wikimedia's UA policy asks for an identifiable agent with a
+# contact URL) and hand pandas the HTML text. Same trick applies to any other
+# HTML/CSV source that filters on UA.
+_HTTP_UA = "cheetah-market-app/1.0 (+https://pounce.ajaykandakatla.dev)"
+
+
+def _fetch_text(url: str, *, timeout: int = 20) -> str:
+    """GET `url` with our descriptive User-Agent; raise on non-2xx."""
+    import requests
+    resp = requests.get(url, timeout=timeout, headers={"User-Agent": _HTTP_UA})
+    resp.raise_for_status()
+    return resp.text
+
+
+def _read_html_ua(url: str, *, timeout: int = 20):
+    """`pandas.read_html`, but over HTML we fetched ourselves with a real UA.
+
+    Never pass a URL straight to pandas.read_html — it fetches with the
+    default urllib UA and Wikipedia 403s that.
+    """
+    import io
+    import pandas as pd
+    return pd.read_html(io.StringIO(_fetch_text(url, timeout=timeout)))
+
+
+# --- source provenance ------------------------------------------------------
+# Which source each list actually came from on the last resolve, so callers
+# can tell "the real, fresh index" from "a 76-day-old snapshot" from "the
+# wrong universe entirely". Without this, a stale list looks identical to a
+# fresh one at the call site and degrades silently — exactly the failure this
+# module hit between 2026-05-29 and 2026-08-13.
+_LAST_SOURCE: dict[str, dict] = {}
+
+
+def _record(name: str, source: str, syms: list[str], *,
+            age_days: float | None = None) -> list[str]:
+    _LAST_SOURCE[name] = {"source": source, "n": len(syms), "age_days": age_days}
+    return syms
+
+
+def last_source(name: str) -> dict | None:
+    """How `name` was resolved on its last fetch, or None if never fetched.
+
+    Returns ``{"source": str, "n": int, "age_days": float | None}`` where
+    source is one of: ``cache`` (fresh, within TTL), ``wikipedia``,
+    ``datahub``, ``stale-cache`` (expired but real), ``curated`` (WRONG
+    universe — last-resort only), ``empty``.
+    """
+    rec = _LAST_SOURCE.get(name)
+    return dict(rec) if rec else None
+
+
+def is_stale(name: str) -> bool:
+    """True when `name` last resolved to an expired cache — a real index
+    snapshot, but one that has stopped tracking membership changes."""
+    rec = _LAST_SOURCE.get(name)
+    return bool(rec and rec["source"] == "stale-cache")
+
+
+# --- constituent-count sanity gates -----------------------------------------
+# A parse that silently returns 12 names (table shape changed, column renamed,
+# an interstitial page that happens to contain a table) must NOT be cached and
+# must NOT be served as "the S&P 500". Falling through to a stale-but-real
+# snapshot is strictly better than scanning a truncated list. Bounds are wide
+# enough to survive normal index drift — the S&P 500 carries ~503 share
+# classes (a few issuers have two), the S&P 400 ~400.
+_EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
+    "sp500": (450, 530),
+    "sp400": (350, 430),
+}
+
+
+def _count_ok(name: str, syms: list[str]) -> bool:
+    lo, hi = _EXPECTED_COUNTS.get(name, (1, 10**9))
+    if lo <= len(syms) <= hi:
+        return True
+    log.warning("universe: %s parse returned %d names, outside the sane range "
+                "%d-%d — rejecting this source", name, len(syms), lo, hi)
+    return False
+
+
+def _dedup_symbols(raw) -> list[str]:
+    """Uppercase, dot→dash (BRK.B → BRK-B), drop blanks/NaN, dedup in order."""
+    seen, out = set(), []
+    for s in raw:
+        sym = str(s).strip().replace(".", "-").upper()
+        if not sym or sym == "NAN" or sym in seen:
+            continue
+        seen.add(sym)
+        out.append(sym)
+    return out
+
+
+# Independent-transport mirror of the same S&P 500 constituent table, served
+# as a plain CSV from GitHub raw by the `datasets` org. Honest caveat: this is
+# DERIVED from the same Wikipedia table, so it is not an independent *source
+# of truth* — but it is an independent *delivery path*, which is precisely the
+# failure mode that took Wikipedia out (UA filtering at the edge). If
+# Wikipedia blocks or reshapes its table again, this keeps the list fresh.
+_DATAHUB_SP500_URL = (
+    "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/"
+    "main/data/constituents.csv"
+)
+
+
+def _sp500_from_wikipedia() -> list[str]:
+    tables = _read_html_ua("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")
+    return _dedup_symbols(tables[0]["Symbol"].tolist())
+
+
+def _sp500_from_datahub() -> list[str]:
+    import csv
+    import io
+    rows = csv.DictReader(io.StringIO(_fetch_text(_DATAHUB_SP500_URL)))
+    return _dedup_symbols(r.get("Symbol", "") for r in rows)
+
+
+def _sp400_from_wikipedia() -> list[str]:
+    tables = _read_html_ua("https://en.wikipedia.org/wiki/List_of_S%26P_400_companies")
+    # The constituents table isn't always tables[0] on this page — find the
+    # one that actually has a Symbol/Ticker column.
+    for tb in tables:
+        col = next((c for c in tb.columns
+                    if str(c).lower() in ("symbol", "ticker")), None)
+        if col is not None:
+            return _dedup_symbols(tb[col].tolist())
+    return []
+
+
+def _resolve_index(name: str, loaders: list[tuple[str, object]],
+                   *, on_exhausted: str) -> list[str]:
+    """Shared resolve ladder for the S&P constituent lists.
+
+        fresh cache → each live loader in order → stale cache → last resort
+
+    A live loader only wins if it parses AND passes the count sanity gate;
+    otherwise we keep walking. Every outcome is recorded via `_record` so
+    callers can see whether they got the real, fresh index or a fallback.
+
+    `on_exhausted` is "curated" (return the curated list — WRONG universe,
+    sp500's historical behaviour, kept only so a scan still runs) or "empty".
+    """
+    cached = _read_cached(name)
+    if cached:
+        return _record(name, "cache", cached, age_days=_cache_age_days(name))
+
+    failures: list[str] = []
+    for label, loader in loaders:
+        try:
+            out = loader()
+        except Exception as exc:
+            failures.append(f"{label}: {exc}")
+            continue
+        if out and _count_ok(name, out):
+            _write_cached(name, out)
+            log.info("universe: fetched %d %s components from %s",
+                     len(out), name, label)
+            return _record(name, label, out, age_days=0.0)
+        failures.append(f"{label}: rejected ({len(out)} names)")
+
+    why = "; ".join(failures) or "no loaders"
+    stale = _read_cached_stale(name)
+    if stale:
+        age = _cache_age_days(name) or 0.0
+        log.warning("universe: %s live fetch failed (%s) — using STALE cached "
+                    "list (%d names, %.0fd old)", name, why, len(stale), age)
+        return _record(name, "stale-cache", stale, age_days=age)
+
+    if on_exhausted == "curated":
+        log.warning("universe: %s fetch failed (%s) and no cache exists — "
+                    "falling back to the CURATED list, which is NOT %s",
+                    name, why, name)
+        return _record(name, "curated", list(UNIVERSE))
+    log.warning("universe: %s fetch failed (%s) and no cache exists — "
+                "skipping this layer", name, why)
+    return _record(name, "empty", [])
+
+
 def fetch_sp500() -> list[str]:
     """Return S&P 500 components, cached 30 days.
 
-    Source: Wikipedia's `List_of_S%26P_500_companies` article, which exposes a
-    plain HTML table that pandas.read_html can parse.
+    Resolve order: fresh cache → Wikipedia → datahub CSV mirror → stale
+    cache → curated.
 
-    STALE-CACHE FALLBACK (2026-08-13): Wikipedia now answers 403 to the
-    container's user-agent, so the live fetch fails every time. The old code
-    then returned `UNIVERSE` — the 158-name curated list, which is NOT the
-    S&P 500 (it is mega-caps + momentum movers). Any caller asking for "S&P
-    500 only" silently got 158 wrong names. An EXPIRED cache of the real 503
-    constituents beats a fresh list of the wrong universe: index membership
-    turns over only a few names a quarter, so a stale snapshot is ~99%
-    accurate, while the curated list is a different universe entirely.
-    Order is therefore: fresh fetch → stale cache → curated.
+    WIKIPEDIA 403 (2026-08-13): Wikipedia rejects the default urllib UA that
+    `pandas.read_html(url)` sends, so the live fetch failed on every call and
+    the cache aged out. The fix is `_read_html_ua` — fetch with requests + a
+    descriptive User-Agent, then parse. Verified in-container: default UA
+    403s, descriptive UA returns the full article.
+
+    Two layers of protection remain behind that, because a scan that claims
+    "S&P 500" while holding some other list is wrong data, not degraded data:
+
+      - `datahub` is a second delivery path for the same table (GitHub raw
+        CSV), so a repeat of the UA block doesn't re-freeze the list.
+      - the STALE cache beats the curated list. Index membership turns over
+        only a few names a quarter, so an expired snapshot is ~99% right,
+        while the 158-name curated list is a different universe entirely
+        (mega-caps + momentum movers). Curated is the true last resort and
+        is reported as such via `last_source("sp500")`.
     """
-    cached = _read_cached("sp500")
-    if cached:
-        return cached
-    try:
-        import pandas as pd
-        tables = pd.read_html(
-            "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-        )
-        syms = [str(s).replace(".", "-").upper() for s in tables[0]["Symbol"].tolist()]
-        # de-dup and drop blanks
-        seen, out = set(), []
-        for s in syms:
-            if s and s not in seen:
-                seen.add(s)
-                out.append(s)
-        _write_cached("sp500", out)
-        log.info("universe: fetched %d S&P 500 components", len(out))
-        return out
-    except Exception as exc:
-        stale = _read_cached_stale("sp500")
-        if stale:
-            log.warning("universe: S&P 500 fetch failed (%s) — using STALE cached "
-                        "list (%d names, %.0fd old)", exc, len(stale), _cache_age_days("sp500") or 0)
-            return stale
-        log.warning("universe: S&P 500 fetch failed (%s) — falling back to curated", exc)
-        return list(UNIVERSE)
+    return _resolve_index(
+        "sp500",
+        [("wikipedia", _sp500_from_wikipedia), ("datahub", _sp500_from_datahub)],
+        on_exhausted="curated",
+    )
 
 
 def fetch_sp400() -> list[str]:
     """Return S&P 400 MidCap components, cached 30 days.
 
-    Mirror of fetch_sp500 against Wikipedia's S&P 400 list. These names are
-    almost all already inside the Russell 3000, so this is belt-and-suspenders
-    coverage — it just guarantees mid-caps even if the iShares snapshot is
-    stale. Returns [] (not curated) on failure so it can't pollute a union
-    with large-caps. Also referenced by the russell* network fallback paths
-    (previously called but never defined — a latent NameError).
+    Mirror of fetch_sp500 against Wikipedia's S&P 400 list, and it hit the
+    same 403 (sp400.txt had aged to 76 days alongside sp500.txt) — so it goes
+    through the same UA'd fetch.
+
+    These names are almost all already inside the Russell 3000, so this is
+    belt-and-suspenders coverage. It falls back to the stale cache but NEVER
+    to curated: returning large-caps here would pollute the mid-cap layer of
+    a union, so the last resort is [].
     """
-    cached = _read_cached("sp400")
-    if cached:
-        return cached
-    try:
-        import pandas as pd
-        tables = pd.read_html(
-            "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies"
-        )
-        # Find the table that actually has a Symbol/Ticker column — the
-        # constituents table isn't always tables[0] on this page.
-        syms: list[str] = []
-        for tb in tables:
-            col = next((c for c in tb.columns if str(c).lower() in ("symbol", "ticker")), None)
-            if col is not None:
-                syms = [str(s).replace(".", "-").upper() for s in tb[col].tolist()]
-                break
-        seen, out = set(), []
-        for s in syms:
-            if s and s != "NAN" and s not in seen:
-                seen.add(s)
-                out.append(s)
-        if out:
-            _write_cached("sp400", out)
-            log.info("universe: fetched %d S&P 400 MidCap components", len(out))
-        return out
-    except Exception as exc:
-        log.warning("universe: S&P 400 fetch failed (%s) — skipping mid-cap layer", exc)
-        return []
+    return _resolve_index(
+        "sp400",
+        [("wikipedia", _sp400_from_wikipedia)],
+        on_exhausted="empty",
+    )
 
 
 # ============================================================================

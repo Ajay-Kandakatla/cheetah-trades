@@ -24,11 +24,24 @@ type Payload = {
   universe: number;
   universe_note: string;
   universe_is_sp500: boolean;
+  /* Age in days when the constituent list came from an expired cache, else
+   * null. `universe_is_sp500` only catches the loud failure (fell through to
+   * the curated list); a stale cache holds the REAL constituents and so was
+   * indistinguishable from a fresh list — it sat 76 days out of date without
+   * a word on the page. See STALE_DAYS_WARN below. */
+  universe_stale_days: number | null;
+  universe_source: string | null;
   took_sec: number;
   as_of: string;
   cached: boolean;
   disclaimer: string;
 };
+
+/* Days of cache staleness past which the notice goes from muted to loud.
+ * The cache TTL is 30 days, so any staleness at all already means the live
+ * fetch is broken — but the S&P turns over only a few names a quarter, so a
+ * month or two adrift is a footnote, not an alarm. Two quarters is an alarm. */
+const STALE_DAYS_LOUD = 120;
 
 export function DemandReentryPanel() {
   const [data, setData] = useState<Payload | null>(null);
@@ -86,6 +99,32 @@ export function DemandReentryPanel() {
         <div className="sepa-err" style={{ marginBottom: '0.6rem' }}>
           ⚠️ {data.universe_note} — this is NOT the S&P 500. Results below cover the
           curated list instead.
+        </div>
+      )}
+
+      {/* Stale-but-real constituents. Different failure from the one above and
+        * it needs a different volume: these ARE the S&P 500, just frozen on the
+        * day the live fetch broke, so the list is ~99% right and the scan is
+        * still worth reading. Muted note by default; escalates past
+        * STALE_DAYS_LOUD, where enough quarterly index turnover has stacked up
+        * to actually miss names. */}
+      {data && data.universe_is_sp500 && data.universe_stale_days != null && (
+        <div
+          className={data.universe_stale_days > STALE_DAYS_LOUD ? 'sepa-err' : undefined}
+          style={{
+            marginBottom: '0.6rem',
+            fontSize: '0.74rem',
+            ...(data.universe_stale_days > STALE_DAYS_LOUD ? {} : {
+              color: 'var(--cm-slate)',
+              border: '1px solid var(--cm-border, #2a3244)',
+              borderRadius: '6px',
+              padding: '0.45rem 0.6rem',
+            }),
+          }}
+        >
+          🕰️ Constituent list is <strong>{data.universe_stale_days} days old</strong> — the
+          live S&P 500 fetch is failing, so this is the last good snapshot. Real
+          constituents, but index adds/drops since then are missed.
         </div>
       )}
 
