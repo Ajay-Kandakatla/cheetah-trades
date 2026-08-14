@@ -622,3 +622,23 @@ def test_universe_key_tolerates_a_non_string(monkeypatch):
     assert dr._universe_key("") == dr.DEFAULT_UNIVERSE
     assert dr._universe_key("  SP500  ") == "sp500"
     assert dr._universe_key("nonsense") == dr.DEFAULT_UNIVERSE
+
+
+def test_scan_coerces_a_non_bool_force(monkeypatch):
+    """REGRESSION (2026-08-14): FastAPI Query(...) defaults resolve at request
+    time, so a direct call passed the Query OBJECT as `force`. It is truthy, so
+    `if not force` never fired and every in-container call recomputed the whole
+    universe instead of serving the 3h cache — which is also what made the cold
+    path look far slower than it was."""
+    class Weird:
+        pass
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA"])
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
+    monkeypatch.setattr(dr, "_attach_venues", lambda rows, **k: None)
+    dr._cache.clear()
+
+    first = dr.scan(force=True, universe="sp500")
+    assert first["cached"] is False
+    second = dr.scan(force=Weird(), universe="sp500")   # must NOT be read as force
+    assert second["cached"] is True

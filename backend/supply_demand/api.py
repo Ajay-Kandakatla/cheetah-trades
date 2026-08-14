@@ -48,7 +48,12 @@ async def get_demand_reentry(
     See backend/supply_demand/demand_reentry.py.
     """
     import asyncio
-    return await asyncio.to_thread(reentry_mod.scan, force, limit, universe)
+    # Never block the request on a cold pass — a full sp1500 scan is minutes
+    # and Cloudflare cuts at ~100s (the 524 of 2026-08-14). `force` still runs
+    # inline for the Scan button, which the UI shows a spinner for.
+    if force is True:
+        return await asyncio.to_thread(reentry_mod.scan, True, limit, universe)
+    return await asyncio.to_thread(reentry_mod.cached_or_warm, universe, limit)
 
 
 @router.post("/supply-demand/demand-reentry/scan")

@@ -98,9 +98,27 @@ LIQ_OK_USD    = 10_000_000.0   # comfortably tradeable in retail size
 LIQ_THIN_USD  =  2_000_000.0   # tradeable only in small size, wider spreads
 # Below LIQ_THIN_USD the spread and slippage swamp a 2R edge -> not tradeable.
 
-# Dark-pool detail is pulled from the day's tape, which costs a fetch per name,
-# so only the top rows by R:R get it — those are the only ones worth acting on.
+# Dark-pool + retail detail costs a TAPE and an NBBO fetch per name, so only
+# the top rows by R:R get it — those are the only ones worth acting on.
 VENUE_DETAIL_TOP_N = 15
+
+# Hard wall-clock budget for that enrichment, and how many names to fetch at
+# once. Both added 2026-08-14 after a live 524: adding the retail NBBO pull
+# doubled the per-row cost and the cold sp1500 request ran past 600s, well
+# beyond Cloudflare's ~100s gateway timeout. The board itself scans in ~7s —
+# it was never the scan that was slow.
+#
+# Enrichment is now best-effort: whatever finishes inside the budget is
+# attached, the rest of the rows simply have no venue/retail detail and the UI
+# already renders that as "—" with a tooltip saying no tape was pulled. A
+# board that loads without the extra columns beats a board that times out.
+VENUE_BUDGET_SEC = 25.0
+VENUE_WORKERS = 6
+
+# NBBO is only needed to SIGN retail prints, not to reconstruct the session, so
+# the quote pull is capped well below the classifier's default. A partial NBBO
+# still signs the prints it covers and `retail.identify` reports coverage.
+VENUE_QUOTE_PAGES = 4
 
 # How far ABOVE price a demand band may sit and still be the entry band. Covers
 # price resting a hair under a floor it has been trading in (VRT, 4 cents);
@@ -139,6 +157,62 @@ def _session_fraction(now_et=None) -> float:
 
 _CACHE_TTL_SEC = 3 * 60 * 60
 _cache: dict = {}
+
+# Universes currently being computed in the background, so a burst of page
+# loads kicks off one job rather than one per request.
+_warming: set = set()
+_warm_lock = __import__("threading").Lock()
+
+
+def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
+    """Serve the cache, or start a background compute and say so — never block.
+
+    A cold sp1500 pass is ~3 MINUTES (1,500 price frames, then a tape + NBBO
+    fetch per enriched row). Cloudflare cuts the connection at ~100s, which is
+    the 524 Ajay hit on 2026-08-14 after sp1500 became the default landing tab.
+    No amount of tuning makes a 3-minute job survive a 100-second gateway, so
+    the request path stops trying: it returns what it has, kicks the work into
+    a thread, and the page polls. The 16:55 cron warm means this is usually a
+    cache hit anyway.
+    """
+    import threading
+    ukey = _universe_key(universe)
+    c = _cache.get(ukey)
+    if c and (time.time() - c["ts"]) < _CACHE_TTL_SEC:
+        return {**_apply_limit(c["data"], limit), "cached": True, "warming": False}
+
+    with _warm_lock:
+        already = ukey in _warming
+        if not already:
+            _warming.add(ukey)
+
+    if not already:
+        def _work():
+            try:
+                scan(force=True, limit=None, universe=ukey)
+            except Exception as exc:
+                log.warning("demand-reentry: background warm failed for %s: %s", ukey, exc)
+            finally:
+                with _warm_lock:
+                    _warming.discard(ukey)
+        threading.Thread(target=_work, name=f"warm-{ukey}", daemon=True).start()
+
+    label = UNIVERSES.get(ukey, (ukey,))[0]
+    return {"rows": [], "n": 0, "scanned": 0, "universe": 0,
+            "universe_key": ukey, "universe_label": label,
+            "universe_note": f"{label} — first scan running",
+            "universe_is_sp500": True, "universe_stale_days": None,
+            "universe_source": None, "universe_choices":
+                [{"key": k, "label": v[0]} for k, v in UNIVERSES.items()],
+            "errors": 0, "took_sec": 0, "cached": False, "warming": True,
+            "as_of": datetime.now(timezone.utc).isoformat(),
+            "disclaimer": DISCLAIMER}
+
+
+def _apply_limit(data: dict, limit: Optional[int]) -> dict:
+    if not limit:
+        return data
+    return {**data, "rows": data.get("rows", [])[:int(limit)]}
 
 DISCLAIMER = (
     "Demand-zone re-entry is a configured, pragmatic price-structure read (NOT a "
@@ -517,67 +591,102 @@ def _venue_rating(dark_pct: Optional[float]) -> Optional[str]:
     return "light"
 
 
-def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N) -> None:
-    """Add today's venue mix to the top `top_n` rows by R:R, in place."""
+def _enrich_one(r: dict, tape_mod, quotes_mod, darkpool, retail_mod, _d):
+    """Fetch one row's tape + NBBO and build its venue/retail blocks.
+
+    Returns (venues, retail, block_list, total_shares, tape_is_today) or None.
+    Pure I/O per row so the caller can run these concurrently.
+    """
+    tape_is_today = True
+    try:
+        trades = tape_mod.fetch_trades(r["symbol"], _d.today())
+        if trades is None or trades.empty:
+            tape_is_today = False
+            trades = tape_mod.fetch_trades(r["symbol"], _d.today() - timedelta(days=1))
+        if trades is None or trades.empty:
+            return None
+        v = darkpool.split_venues(trades)
+        block_list = darkpool.dark_blocks(trades)
+    except Exception as exc:
+        log.debug("demand-reentry: venue fetch failed for %s: %s", r["symbol"], exc)
+        return None
+
+    retail_block = {"available": False}
+    try:
+        nbbo = (quotes_mod.fetch_quotes(r["symbol"], _d.today(),
+                                        max_pages=VENUE_QUOTE_PAGES)
+                if tape_is_today else None)
+        rt = retail_mod.identify(trades, nbbo)
+        retail_block = {**rt, "divergence": retail_mod.divergence(rt, block_list)}
+    except Exception as exc:
+        log.debug("demand-reentry: retail read failed for %s: %s", r["symbol"], exc)
+
+    return {
+        "venues": {**v, "blocks": len(block_list),
+                   "rating": _venue_rating(v.get("dark_pct"))},
+        "retail": retail_block,
+        "total_shares": v.get("total_shares") or 0,
+        "tape_is_today": tape_is_today,
+    }
+
+
+def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N,
+                   budget_sec: float = VENUE_BUDGET_SEC) -> None:
+    """Attach venue + retail detail to the top `top_n` rows by R:R, in place.
+
+    Concurrent and time-boxed. Rows that do not finish inside the budget are
+    left without detail rather than holding up the whole response.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from datetime import date as _d
     from orderflow import darkpool, quotes as quotes_mod, retail as retail_mod, tape as tape_mod
 
-    ranked = sorted(rows, key=lambda r: -((r.get("plan") or {}).get("rr") or 0))
-    for r in ranked[:top_n]:
-        tape_is_today = True
-        try:
-            trades = tape_mod.fetch_trades(r["symbol"], _d.today())
-            if trades is None or trades.empty:
-                tape_is_today = False
-                trades = tape_mod.fetch_trades(r["symbol"], _d.today() - timedelta(days=1))
-            v = darkpool.split_venues(trades) if trades is not None else {"available": False}
-            # Keep the LIST — `divergence` needs the blocks themselves. Only the
-            # payload carries the count. Conflating the two silently broke the
-            # retail read on every row that HAD blocks (len() on an int), which
-            # is the opposite of the rows you would notice.
-            block_list = darkpool.dark_blocks(trades) if trades is not None else []
-        except Exception as exc:
-            log.debug("demand-reentry: venue fetch failed for %s: %s", r["symbol"], exc)
-            v, block_list = {"available": False}, []
-        r["venues"] = {**v, "blocks": len(block_list),
-                       "rating": _venue_rating(v.get("dark_pct"))}
+    ranked = sorted(rows, key=lambda r: -((r.get("plan") or {}).get("rr") or 0))[:top_n]
+    if not ranked:
+        return
 
-        # Retail flow on the same tape. NBBO is what makes the SIGN usable —
-        # sub-penny signing mis-signs 28% of trades (Barber et al. 2024), so
-        # without quotes we report counts and no direction.
-        try:
-            nbbo = quotes_mod.fetch_quotes(r["symbol"], _d.today()) if tape_is_today else None
-            rt = retail_mod.identify(trades, nbbo)
-            r["retail"] = {**rt, "divergence": retail_mod.divergence(rt, block_list)}
-        except Exception as exc:
-            log.debug("demand-reentry: retail read failed for %s: %s", r["symbol"], exc)
-            r["retail"] = {"available": False}
+    t0 = time.time()
+    done = 0
+    with ThreadPoolExecutor(max_workers=VENUE_WORKERS) as pool:
+        futures = {pool.submit(_enrich_one, r, tape_mod, quotes_mod,
+                               darkpool, retail_mod, _d): r for r in ranked}
+        for fut in as_completed(futures, timeout=budget_sec + 5):
+            r = futures[fut]
+            if time.time() - t0 > budget_sec:
+                break
+            try:
+                got = fut.result(timeout=0.1)
+            except Exception:
+                got = None
+            if not got:
+                continue
+            r["venues"] = got["venues"]
+            r["retail"] = got["retail"]
+            done += 1
 
-        # Live tape gives an ACCURATE today-volume for these rows, so fill in
-        # the RVOL that _liquidity had to leave pending. Same fetch, no extra
-        # cost. Projected to a full session when the day is still running.
-        L = r.get("liquidity") or {}
-        avg = L.get("avg_vol_50") or 0
-        total = v.get("total_shares") or 0
-        if avg > 0 and total > 0:
-            # The fraction must follow the TAPE's day, not the daily bar's.
-            # CENX had a complete prior-session bar (rvol_partial False) but
-            # the tape was today's 80 minutes, so it went un-prorated and read
-            # 0.10 against names that were prorated — not comparable.
-            frac = _session_fraction() if tape_is_today else 1.0
-            if frac <= 0:
-                frac = 1.0
-            if frac >= RVOL_MIN_FRACTION:
-                rv = round(total / (avg * frac), 2)
-                L.update({
-                    "today_vol": int(total),
-                    "today_dollar_vol": int(total * (L.get("last_close") or 0)),
-                    "rvol": rv, "today_source": "tape",
-                    "rvol_state": ("surging" if rv >= RVOL_SURGE else
-                                   "active" if rv >= RVOL_ACTIVE else
-                                   "quiet" if rv >= RVOL_QUIET else "dead"),
-                })
-                r["liquidity"] = L
+            # Live tape gives an ACCURATE today-volume, so fill in the RVOL
+            # that _liquidity had to leave pending. The session fraction must
+            # follow the TAPE's day, not the daily bar's.
+            L = r.get("liquidity") or {}
+            avg = L.get("avg_vol_50") or 0
+            total = got["total_shares"]
+            if avg > 0 and total > 0:
+                frac = _session_fraction() if got["tape_is_today"] else 1.0
+                if frac <= 0:
+                    frac = 1.0
+                if frac >= RVOL_MIN_FRACTION:
+                    rv = round(total / (avg * frac), 2)
+                    L.update({
+                        "today_vol": int(total),
+                        "today_dollar_vol": int(total * (L.get("last_close") or 0)),
+                        "rvol": rv, "today_source": "tape",
+                        "rvol_state": ("surging" if rv >= RVOL_SURGE else
+                                       "active" if rv >= RVOL_ACTIVE else
+                                       "quiet" if rv >= RVOL_QUIET else "dead"),
+                    })
+                    r["liquidity"] = L
+    log.info("demand-reentry: enriched %d/%d rows in %.1fs (budget %.0fs)",
+             done, len(ranked), time.time() - t0, budget_sec)
 
 
 def _rank_key(r: dict):
@@ -679,6 +788,15 @@ def scan(force: bool = False, limit: Optional[int] = None,
     closes that hole.
     """
     ukey = _universe_key(universe)
+    # Same FastAPI trap as the universe key: Query(...) defaults resolve at
+    # REQUEST time, so a direct call gets the Query OBJECT — which is truthy,
+    # so `if not force` never fired and every in-container call silently
+    # recomputed instead of using the cache. Coerce to real bools/ints.
+    force = force is True
+    try:
+        limit = int(limit) if limit is not None else None
+    except (TypeError, ValueError):
+        limit = None
     if not force:
         c = _cache.get(ukey)
         if c and (time.time() - c["ts"]) < _CACHE_TTL_SEC:
@@ -764,6 +882,7 @@ def scan(force: bool = False, limit: Optional[int] = None,
         },
         "disclaimer": DISCLAIMER,
         "cached": False,
+        "warming": False,
     }
     _cache[ukey] = {"ts": time.time(), "data": data}
     log.info("demand-reentry: %d hits from %d scanned (%s) in %.1fs",

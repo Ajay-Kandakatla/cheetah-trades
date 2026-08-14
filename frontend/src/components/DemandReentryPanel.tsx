@@ -40,6 +40,10 @@ type Payload = {
   took_sec: number;
   as_of: string;
   cached: boolean;
+  /* True while a cold scan runs in the background. A full sp1500 pass is ~2-3
+   * minutes and the gateway cuts at ~100s, so the API returns immediately and
+   * we poll instead of holding the request open. */
+  warming?: boolean;
   disclaimer: string;
 };
 
@@ -101,6 +105,14 @@ export function DemandReentryPanel() {
   }, [universe]);
 
   useEffect(() => { load(false); }, [load]);
+
+  /* Poll while a background scan is running. Stops as soon as rows arrive, and
+   * on unmount, so switching tabs never leaves a timer behind. */
+  useEffect(() => {
+    if (!data?.warming) return undefined;
+    const t = setInterval(() => { load(false); }, 10_000);
+    return () => clearInterval(t);
+  }, [data?.warming, load]);
 
   const busy = loading || scanning;
 
@@ -177,14 +189,15 @@ export function DemandReentryPanel() {
 
       {err && <div className="sepa-err">Scan failed: {err}</div>}
 
-      {busy && !data && (
+      {(busy && !data) || data?.warming ? (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
-          Scanning for demand-zone re-entries… the first cold pass takes
-          a few minutes (cached 3h after).
+          {data?.warming
+            ? `Scanning ${data.universe_label ?? 'the universe'} in the background — this page will fill in by itself (usually 2-3 minutes on a cold start, instant after).`
+            : 'Scanning for demand-zone re-entries…'}
         </div>
-      )}
+      ) : null}
 
-      {data && data.rows.length === 0 && !busy && (
+      {data && data.rows.length === 0 && !busy && !data.warming && (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
           Nothing is pulling back into demand right now across {data.scanned}{' '}
           {data.universe_label ?? 'S&P 500'} names. That is a real answer, not an empty list — press Scan after the close
