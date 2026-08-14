@@ -84,3 +84,48 @@ which is why it looked like partial coverage rather than a bug.
 
 Costs nothing extra — reuses the tape and NBBO already fetched for the venue
 split and the quote-rule delta.
+
+## Does it predict anything? — first measurement (2026-08-14)
+
+`orderflow/retail_backtest.py`, 60 S&P 500 names, 8 trading days, **475
+symbol-day observations**, 88 minutes of fetching. Retail flow identified from
+each day's COMPLETE tape and signed on the midpoint; return measured from that
+day's close forward.
+
+**Cross-sectional spread — most-retail-buying quintile minus most-retail-selling:**
+
+| horizon | raw spread | demeaned by day | rank corr |
+|---|---|---|---|
+| 1 day | +0.81% | **+0.76%** | 0.063 |
+| 3 days | +1.56% | **+1.54%** | 0.047 |
+| 5 days | +2.44% | **+2.24%** | 0.081 |
+
+The effect **survives demeaning within each day**, so it is cross-sectional,
+not market beta — and the sign matches BJZZ's published finding (retail
+imbalance positively predicts short-horizon returns), not the folk "retail is
+dumb money" prior.
+
+### Why it is NOT yet tradeable
+
+| | |
+|---|---|
+| Distinct days | **8** — the effective sample, not 475. Same-day forward returns are heavily cross-correlated. |
+| Days with a positive spread | 6/8 at 1d and 3d, **5/8 at 5d**. Binomial p ≈ 0.15 — not significant. |
+| Concentration | The 5-day mean (+2.15%) drops to **+0.70%** with the two best days (2026-07-29, 2026-08-05) removed. Two-thirds of it is two sessions. |
+| Rank correlation | 0.05–0.08 — near zero. The effect lives in the tails, not across the distribution. |
+
+The automated verdict returns **"no usable signal"** because it requires
+|rho| ≥ 0.1. Given the size of the quintile spreads that threshold is arguably
+harsh — but its caution turns out to be right for a reason it did not know:
+a low rank correlation means tail-driven, and the day-level breakdown shows
+exactly that fragility.
+
+**Verdict: promising, not established. Do not size on it.** This is the first
+measurement all week that did not come back flat, which is precisely when it is
+easiest to fool yourself.
+
+### What would settle it
+
+60+ trading days, which is ~11 hours of fetching at the current rate — an
+overnight cron job, not an interactive run. Until then it is a hypothesis with
+one encouraging look.
