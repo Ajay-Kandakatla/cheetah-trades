@@ -481,6 +481,21 @@ UNIVERSES = {
 DEFAULT_UNIVERSE = "sp1500"
 
 
+def _universe_key(key) -> str:
+    """Normalise a universe argument to a known key.
+
+    Deliberately tolerant of non-strings: FastAPI resolves `Query(...)`
+    defaults at REQUEST time, so a handler called directly — which is how these
+    endpoints get smoke-tested in the container — receives the Query object
+    itself and `(key or DEFAULT).lower()` blew up on it. Anything unrecognised
+    lands on the default rather than raising.
+    """
+    if not isinstance(key, str) or not key.strip():
+        return DEFAULT_UNIVERSE
+    k = key.strip().lower()
+    return k if k in UNIVERSES else DEFAULT_UNIVERSE
+
+
 def _resolve_universe(key: str):
     """(symbols, label, provenance, stale_days, key) for a universe.
 
@@ -490,9 +505,7 @@ def _resolve_universe(key: str):
     test double standing in for a fetcher — must never mislabel this scan.
     Multi-layer universes (sp1500) report their WORST layer's staleness.
     """
-    k = (key or DEFAULT_UNIVERSE).lower()
-    if k not in UNIVERSES:
-        k = DEFAULT_UNIVERSE
+    k = _universe_key(key)
     label = UNIVERSES[k][0]
     parts = ["sp500", "sp400", "sp600"] if k == "sp1500" else [k]
 
@@ -540,9 +553,7 @@ def scan(force: bool = False, limit: Optional[int] = None,
     aged 76 days with nothing on the page saying so. `universe_stale_days`
     closes that hole.
     """
-    ukey = (universe or DEFAULT_UNIVERSE).lower()
-    if ukey not in UNIVERSES:
-        ukey = DEFAULT_UNIVERSE
+    ukey = _universe_key(universe)
     if not force:
         c = _cache.get(ukey)
         if c and (time.time() - c["ts"]) < _CACHE_TTL_SEC:

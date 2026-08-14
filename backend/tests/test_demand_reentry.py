@@ -608,3 +608,17 @@ def test_trade_plan_still_accepts_a_single_resistance_band():
     """Back-compat: the older call passed one band, not a list."""
     p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0, "hi": 122.0})
     assert p["target"] == 120.0
+
+
+def test_universe_key_tolerates_a_non_string(monkeypatch):
+    """REGRESSION (2026-08-14): FastAPI resolves Query(...) defaults at request
+    time, so calling a handler directly hands `scan` the Query OBJECT and
+    `(universe or DEFAULT).lower()` raised AttributeError. HTTP was fine; the
+    in-container smoke check was not. Anything unusable falls back."""
+    class Weird:                       # stands in for fastapi.Query
+        pass
+    assert dr._universe_key(Weird()) == dr.DEFAULT_UNIVERSE
+    assert dr._universe_key(None) == dr.DEFAULT_UNIVERSE
+    assert dr._universe_key("") == dr.DEFAULT_UNIVERSE
+    assert dr._universe_key("  SP500  ") == "sp500"
+    assert dr._universe_key("nonsense") == dr.DEFAULT_UNIVERSE
