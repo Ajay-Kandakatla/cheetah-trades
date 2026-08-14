@@ -27,7 +27,7 @@ router = APIRouter(tags=["supply-demand"])
 async def get_demand_reentry(
     limit: int = Query(60, ge=1, le=500),
     force: bool = Query(False, description="bypass the 3h cache and rescan"),
-    universe: str = Query("sp500", description="sp500 | sp1500 | sp400 | sp600"),
+    universe: str = Query("sp1500", description="sp1500 (default) | sp500 | sp400 | sp600"),
 ):
     """Names that have pulled back DOWN into a tested demand band while the
     structure still holds ("entering back into demand").
@@ -54,7 +54,7 @@ async def get_demand_reentry(
 @router.post("/supply-demand/demand-reentry/scan")
 async def post_demand_reentry_scan(
     limit: int = Query(60, ge=1, le=500),
-    universe: str = Query("sp500", description="sp500 | sp1500 | sp400 | sp600"),
+    universe: str = Query("sp1500", description="sp1500 (default) | sp500 | sp400 | sp600"),
 ):
     """Force a fresh demand-zone re-entry scan (the page's Scan button).
     Bypasses the 3h cache. sp1500 covers ~1,500 names."""

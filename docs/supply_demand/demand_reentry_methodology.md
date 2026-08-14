@@ -255,3 +255,25 @@ wholesaler internalisation and the tape cannot separate them, so the copy says
 **First run (S&P 1500, 52 hits, 33.9 s):** every one of the top 12 by R:R came
 back `ok` or `deep` — none were untradeable. HOOD printed **49.9%** off-exchange
 (heavy, 15 blocks); LNN printed 19.6% with **zero** blocks.
+
+
+## Defaults (2026-08-14)
+
+_Ajay: "make the in demand page a default tab to load on S/D page.. and make it
+default scan 1500."_
+
+- `/supply-demand` now lands on **🟢 Back in Demand**, and that tab leads the
+  row (a default tab sitting second reads like a mistake).
+- **`DEFAULT_UNIVERSE = "sp1500"`**, on the API query default and the page's
+  own selector. The S&P 500 alone surfaced ~3 names at a tradeable R:R; the
+  full 1500 surfaces ~12.
+- A **cron warm at 16:55 ET weekdays** keeps that default instant. The scan is
+  ~7 s, but venue detail on the top rows costs a tape fetch each (~35 s total)
+  and the cache is only 3 h — without the warm, the first view after an expiry
+  pays the whole wait. It runs after the 16:50 pullback-scan, so the price
+  cache is already hot.
+
+Note for future edits: six tests exercise the single-layer sp500 path
+(provenance, staleness, curated fallback, per-symbol errors). They now pass
+`universe="sp500"` explicitly, because a bare `scan()` resolves three layers
+and would call fetchers those tests do not stub.

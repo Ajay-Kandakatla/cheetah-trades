@@ -26,7 +26,9 @@ const MEGACAP_EXCLUDE = new Set([
 ]);
 
 export function SupplyDemandPage() {
-  const [tab, setTab] = useState<Tab>('stocks');
+  // Back in Demand is the landing tab (Ajay 2026-08-14) — it is the only
+  // surface here with an actionable, R:R-sorted list, so it leads.
+  const [tab, setTab] = useState<Tab>('reentry');
   const [enrichNews, setEnrichNews] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   const [showFlow, setShowFlow] = useState(true);
@@ -90,13 +92,13 @@ export function SupplyDemandPage() {
 
       {/* Tab switcher */}
       <div className="sd-tabs">
-        <button type="button" className={`sd-tab ${tab === 'stocks' ? 'is-active' : ''}`}
-                onClick={() => setTab('stocks')}>
-          📊 Stocks (Supply / Demand)
-        </button>
         <button type="button" className={`sd-tab ${tab === 'reentry' ? 'is-active' : ''}`}
                 onClick={() => setTab('reentry')}>
           🟢 Back in Demand
+        </button>
+        <button type="button" className={`sd-tab ${tab === 'stocks' ? 'is-active' : ''}`}
+                onClick={() => setTab('stocks')}>
+          📊 Stocks (Supply / Demand)
         </button>
         <button type="button" className={`sd-tab ${tab === 'graph' ? 'is-active' : ''}`}
                 onClick={() => setTab('graph')}>

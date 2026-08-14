@@ -339,6 +339,11 @@ def test_sp500_falls_back_to_stale_cache_not_the_curated_list(tmp_path, monkeypa
     assert U.last_source("sp500")["source"] == "stale-cache"
 
 
+# The six tests below exercise the SINGLE-LAYER sp500 path — provenance,
+# staleness, curated fallback, per-symbol error handling. They pass
+# universe="sp500" explicitly so they keep testing that path after the default
+# moved to sp1500 (2026-08-14); a bare scan() would now resolve three layers
+# and call fetchers these tests do not stub.
 def test_scan_reports_when_the_universe_is_not_actually_sp500(monkeypatch):
     """If we ever DO fall through to curated, the payload must say so — the
     page must never silently claim 'S&P 500' over the wrong names."""
@@ -348,7 +353,7 @@ def test_scan_reports_when_the_universe_is_not_actually_sp500(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
-    out = dr.scan(force=True)
+    out = dr.scan(force=True, universe="sp500")
     assert out["universe_is_sp500"] is False
     assert "curated" in out["universe_note"].lower()
 
@@ -358,7 +363,7 @@ def test_scan_marks_a_real_sp500_universe_as_such(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
-    out = dr.scan(force=True)
+    out = dr.scan(force=True, universe="sp500")
     assert out["universe_is_sp500"] is True
     assert out["universe"] == 503
 
@@ -420,7 +425,7 @@ def test_scan_survives_a_symbol_that_raises(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", boom)
     dr._cache.clear()
 
-    out = dr.scan(force=True)
+    out = dr.scan(force=True, universe="sp500")
     assert out["errors"] == 1
     assert [r["symbol"] for r in out["rows"]] == ["GOOD"]
 
@@ -439,7 +444,7 @@ def test_scan_reports_how_stale_the_constituent_list_is(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
-    out = dr.scan(force=True)
+    out = dr.scan(force=True, universe="sp500")
     assert out["universe_is_sp500"] is True      # still the real names…
     assert out["universe_stale_days"] == 76      # …but 76 days frozen
     assert out["universe_source"] == "stale-cache"
@@ -455,7 +460,7 @@ def test_scan_reports_no_staleness_when_the_list_is_fresh(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
-    out = dr.scan(force=True)
+    out = dr.scan(force=True, universe="sp500")
     assert out["universe_stale_days"] is None
     assert out["universe_source"] == "wikipedia"
     assert "old" not in out["universe_note"]
@@ -472,7 +477,7 @@ def test_scan_ignores_a_provenance_record_that_does_not_match(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
-    out = dr.scan(force=True)
+    out = dr.scan(force=True, universe="sp500")
     assert out["universe_stale_days"] is None
     assert out["universe_source"] is None
 
@@ -501,10 +506,21 @@ def test_sp600_never_falls_back_to_the_curated_list(tmp_path, monkeypatch):
     assert U.last_source("sp600")["source"] == "empty"
 
 
-def test_unknown_universe_key_falls_back_to_sp500(monkeypatch):
+def test_unknown_universe_key_falls_back_to_the_default(monkeypatch):
+    """Whatever DEFAULT_UNIVERSE is, a bogus key must land on it rather than
+    raising or scanning nothing. (Default became sp1500 on 2026-08-14.)"""
     monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA"])
-    syms, label, prov, stale, key = dr._resolve_universe("not-a-universe")
-    assert key == "sp500" and syms == ["AAA"]
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["BBB"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["CCC"])
+    _, _, _, _, key = dr._resolve_universe("not-a-universe")
+    assert key == dr.DEFAULT_UNIVERSE
+    assert key in dr.UNIVERSES
+
+
+def test_default_universe_is_the_full_sp1500():
+    """Ajay 2026-08-14: "make it default scan 1500". The S&P 500 alone
+    surfaced ~3 names at a tradeable R:R; the full 1500 surfaces ~12."""
+    assert dr.DEFAULT_UNIVERSE == "sp1500"
 
 
 def test_multi_layer_universe_reports_its_worst_staleness(monkeypatch):

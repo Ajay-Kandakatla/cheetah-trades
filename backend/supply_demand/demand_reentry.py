@@ -475,7 +475,10 @@ UNIVERSES = {
     "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
     "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),
 }
-DEFAULT_UNIVERSE = "sp500"
+# Default universe. sp1500 since 2026-08-14 (Ajay: "make it default scan
+# 1500") — the S&P 500 alone surfaced ~3 names at a tradeable R:R, the full
+# 1500 surfaces ~12. Warmed by cron so the page load is instant, see crontab.
+DEFAULT_UNIVERSE = "sp1500"
 
 
 def _resolve_universe(key: str):

@@ -60,7 +60,7 @@ const UNIVERSES: { key: string; label: string }[] = [
 ];
 
 export function DemandReentryPanel() {
-  const [universe, setUniverse] = useState<string>('sp500');
+  const [universe, setUniverse] = useState<string>('sp1500');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);

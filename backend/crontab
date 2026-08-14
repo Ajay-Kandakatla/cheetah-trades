@@ -32,6 +32,14 @@
 # close is already in the cache. Book: Minervini pp.72, 79, 237-238.
 50     16    *    *    1-5  /usr/local/bin/python -m sepa.cli pullback-scan
 #
+# Mon-Fri 4:55pm ET — warm the Back in Demand board for the DEFAULT universe
+# (S&P 1500, ~1,500 names). Added 2026-08-14 when that became the landing tab
+# on /supply-demand: the scan itself is fast (~7s) but the venue detail on the
+# top rows costs a tape fetch each (~35s total), and the in-process cache is
+# only 3h. Without this the first page view after a cache expiry eats the whole
+# wait. Runs after the 4:50 pullback-scan so the price cache is already warm.
+55     16    *    *    1-5  /usr/local/bin/python -c "from supply_demand import demand_reentry as d; r=d.scan(force=True); print('demand-reentry warm:', r['n'], 'hits from', r['scanned'], 'in', r['took_sec'], 's')"
+#
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
 #
