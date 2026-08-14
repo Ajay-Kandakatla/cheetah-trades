@@ -170,8 +170,10 @@ export function DemandReentryPanel() {
                       fell from +{r.fell_from_pct}%
                     </span>
                   )}
-                  <span className="mono" style={{ fontSize: '0.7rem', opacity: 0.7, marginLeft: 'auto' }}>
-                    trend {r.trend_passed ?? '—'}/8
+                  <span className="mono" title="Swing-low direction + 50-day slope — the falling-knife guard that replaced the Minervini trend template."
+                        style={{ fontSize: '0.7rem', opacity: 0.7, marginLeft: 'auto' }}>
+                    lows {r.structure?.trend ?? '—'}
+                    {r.structure?.ma50_rising != null && ` · 50d ${r.structure.ma50_rising ? '↑' : '↓'}`}
                   </span>
                 </div>
                 <div className="mono" style={{ fontSize: '0.74rem', marginTop: '0.3rem' }}>

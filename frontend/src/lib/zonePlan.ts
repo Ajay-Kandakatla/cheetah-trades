@@ -40,7 +40,11 @@ export type ZoneMapPayload = {
   is_reentry: boolean;
   fell_from_pct: number | null;
   bars_since_above: number | null;
-  trend_passed: number | null;
+  /* Falling-knife guard — replaced the Minervini trend template 2026-08-13.
+   * `structure.trend` is the direction of the swing lows. */
+  structure?: { trend: 'rising' | 'falling' | 'unclear'; swing_lows: number[];
+                last_two: number[] | null; ma50_rising?: boolean | null };
+  is_knife?: boolean;
   trend_ok: boolean;
   zone_quality_ok: boolean;
   entry_zone: Zone | null;
@@ -120,8 +124,10 @@ export function planLine(plan: Plan | null | undefined): string {
 export function reentryReason(p: ZoneMapPayload): string {
   if (!p.entry_zone) return 'No demand band under price.';
   if (!p.in_demand_band) return `Price is above the ${bandLabel(p.entry_zone)} band, not in it.`;
-  if (!p.trend_ok) {
-    return `In the band, but the trend template only passes ${p.trend_passed ?? 0}/8 — pullback in a weak trend.`;
+  if (!p.trend_ok || p.is_knife) {
+    const lows = p.structure?.last_two;
+    const detail = lows ? ` (${lows[0]} → ${lows[1]})` : '';
+    return `In the band, but the swing lows are stepping DOWN${detail} with a falling 50-day — falling knife, not a demand zone.`;
   }
   if (!p.zone_quality_ok) {
     return `In the band, but it is only tested ${p.entry_zone.touches}× (weak support).`;

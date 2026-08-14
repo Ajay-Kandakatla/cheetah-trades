@@ -363,6 +363,32 @@ def test_scan_marks_a_real_sp500_universe_as_such(monkeypatch):
     assert out["universe"] == 503
 
 
+def test_falling_knife_is_excluded_even_with_a_clean_reentry(monkeypatch):
+    """REGRESSION (2026-08-13): the Minervini trend template passed CIEN at 7/8
+    while its swing lows read 424 -> 404 -> 359 -> 323 and its 50-day was
+    falling. Three of that day's four board names were knives. The guard is now
+    swing-lows + 50-day slope, and it must veto the whole re-entry."""
+    from supply_demand import sd_liquidity as liq
+
+    falling = {"trend": "falling", "swing_lows": [424, 404, 359, 323],
+               "last_two": [359, 323]}
+    assert liq.is_falling_knife(falling, 330.0, ma50=340.0, ma50_prior=380.0) is True
+    # one shakeout low inside an uptrend must NOT disqualify: both must agree
+    assert liq.is_falling_knife(falling, 330.0, ma50=380.0, ma50_prior=340.0) is False
+    rising = {"trend": "rising", "swing_lows": [300, 320], "last_two": [300, 320]}
+    assert liq.is_falling_knife(rising, 330.0, ma50=340.0, ma50_prior=380.0) is False
+
+
+def test_module_no_longer_imports_the_minervini_trend_template():
+    """Ajay 2026-08-13: "Oh ignore the minervini for this please in the S/D."
+    Supply/demand is a separate strategy; this coupling must not come back."""
+    import inspect
+    from supply_demand import demand_reentry as _dr
+    src = inspect.getsource(_dr)
+    assert "trend_template" not in src
+    assert "MIN_TREND_CHECKS" not in src
+
+
 def test_scan_only_keeps_reentry_hits_and_ranks_freshest_first(monkeypatch):
     rows = {
         "AAA": {"is_reentry": True, "bars_since_above": 5,

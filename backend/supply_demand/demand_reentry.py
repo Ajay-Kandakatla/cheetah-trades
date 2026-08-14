@@ -13,10 +13,11 @@ sitting inside a band for months is not "entering back in"; a name that ran
 +18% above the band and has now returned to it is.
 
 METHOD NOTE — this is a PRAGMATIC price-structure read, **not** a named book
-methodology. Every threshold below is a CONFIGURED house value. The one
-exception is the trend gate, which reuses the contract-locked Minervini trend
-template (`sepa.trend_template`) rather than inventing a trend rule, and the
-stop sanity cap, which reuses `trading.risk_rules.ABS_MAX_STOP_PCT`.
+methodology, and as of 2026-08-13 it is deliberately INDEPENDENT of the
+Minervini/SEPA stack (Ajay: "The Supply demand are outside of this strategy…
+Oh ignore the minervini for this please"). Every threshold below is a
+CONFIGURED house value. The only borrowed number left is the stop sanity cap,
+`trading.risk_rules.ABS_MAX_STOP_PCT`.
 Decision-support only — NOT a buy signal and NOT financial advice.
 
 WHY THE BANDS ARE WIDER HERE
@@ -29,11 +30,27 @@ tradeable zone is a band you can put a stop underneath, so this module passes
 wider geometry (merge 4.0%, half-width 1.75%, swing window 5) via the optional
 knobs on `price_zones.compute`. Defaults elsewhere are untouched.
 
-WHY THE TREND GATE
-------------------
+THE FALLING-KNIFE GUARD (replaced the Minervini trend gate, 2026-08-13)
+----------------------------------------------------------------------
 A pullback into support inside a DOWNtrend is a falling knife, not a demand
-zone. Gating on the Minervini trend template (>= MIN_TREND_CHECKS of 8) cut the
-measured candidate pool roughly in half and removed the utility-drift names.
+zone — so a guard is needed. It used to be "Minervini trend template >= 6 of
+8". That gate is gone, for two reasons:
+
+  1. Ajay is running supply/demand as a SEPARATE strategy and asked for the
+     Minervini coupling out.
+  2. It did not actually do the job. The template leans on long-term moving
+     averages, which roll over late. On 2026-08-13 it passed CIEN at 7/8 while
+     CIEN's swing lows read 424 -> 404 -> 359 -> 323, its 50-day was falling,
+     and its big prints ran 7:1 to the sell side. Three of the four names on
+     that day's board (CIEN, VRT, CAT) were falling knives that the template
+     waved through.
+
+The replacement is `sd_liquidity.is_falling_knife`: swing lows stepping DOWN
+**and** a falling 50-day average. Both must agree, so one shakeout low inside
+an uptrend does not disqualify a zone. Measured in the 2026-08-13 walk-forward
+backtest (`sd_backtest.py`), this filter improved expectancy in every single
+target/hold configuration tested, and the knives-only cohort was the worst
+performer in all of them.
 
 Spec + measured tuning notes: docs/supply_demand/demand_reentry_methodology.md
 """
@@ -46,7 +63,8 @@ from typing import Optional
 
 import pandas as pd
 
-from sepa import prices, trend_template, universe as universe_mod, company_names
+from sepa import prices, universe as universe_mod, company_names
+from . import sd_liquidity as liq
 from . import price_zones
 
 log = logging.getLogger("supply_demand.demand_reentry")
@@ -61,12 +79,15 @@ REENTRY_LOOKBACK_BARS = 40    # window in which price must have been above the b
 MIN_RISE_ABOVE_PCT    = 5.0   # it must have traded >= this % above the band top
 MIN_TOUCHES           = 2     # the band must have been tested at least twice
 MIN_ZONE_STRENGTH     = 40.0  # 0-100 price_zones strength (tests + volume)
-MIN_TREND_CHECKS      = 6     # of trend_template's 8 Stage-2 criteria
+# Falling-knife guard. NOT Minervini — see the module docstring. Swing lows
+# stepping down AND a falling 50-day average.
+STRUCTURE_SWING_WINDOW = 5
+MA_SLOPE_LOOKBACK      = 10
 
 # Stop sits this far under the band floor (room for a wick through support).
 STOP_BUFFER_PCT = 1.5
 
-MIN_BARS = 220                # trend_template needs ~1y; 220 is its own floor
+MIN_BARS = 220                # ~1y of bars for the structure read
 
 _CACHE_TTL_SEC = 3 * 60 * 60
 _cache: dict = {}
@@ -218,9 +239,20 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
     demand = zones.get("demand_zones") or []
     supply = zones.get("supply_zones") or []
 
-    tr = trend_template.evaluate(sym, df)
-    trend_passed = tr.passed if tr else None
-    trend_ok = bool(tr and tr.passed >= MIN_TREND_CHECKS)
+    # Falling-knife guard (replaced the Minervini trend template 2026-08-13 —
+    # see the module docstring for why, and for the CIEN case that forced it).
+    closes, lows_s = df["close"], df["low"]
+    structure = liq.structure_read(closes.tolist(), lows_s.tolist(),
+                                   swing_window=STRUCTURE_SWING_WINDOW)
+    ma50 = closes.rolling(50).mean()
+    _ma_now = float(ma50.iloc[-1]) if pd.notna(ma50.iloc[-1]) else None
+    _ma_prior = (float(ma50.iloc[-(MA_SLOPE_LOOKBACK + 1)])
+                 if len(ma50) > MA_SLOPE_LOOKBACK and pd.notna(ma50.iloc[-(MA_SLOPE_LOOKBACK + 1)])
+                 else None)
+    is_knife = liq.is_falling_knife(structure, last_price, _ma_now, _ma_prior)
+    structure["ma50_rising"] = (None if _ma_now is None or _ma_prior is None
+                                else bool(_ma_now > _ma_prior))
+    trend_ok = not is_knife
 
     entry_zone = _pick_entry_zone(last_price, demand)
     closes = [float(c) for c in df["close"].tolist()]
@@ -253,7 +285,8 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
         "fell_from_pct": band["fell_from_pct"],
         "bars_since_above": band["bars_since_above"],
         # Why it did / didn't qualify — surfaced so the list is auditable.
-        "trend_passed": trend_passed,
+        "structure": structure,
+        "is_knife": is_knife,
         "trend_ok": trend_ok,
         "zone_quality_ok": quality_ok,
         "entry_zone": entry_zone,
@@ -365,7 +398,8 @@ def scan(force: bool = False, limit: Optional[int] = None) -> dict:
             "reentry_lookback_bars": REENTRY_LOOKBACK_BARS,
             "min_rise_above_pct": MIN_RISE_ABOVE_PCT,
             "min_touches": MIN_TOUCHES, "min_zone_strength": MIN_ZONE_STRENGTH,
-            "min_trend_checks": MIN_TREND_CHECKS,
+            "structure_swing_window": STRUCTURE_SWING_WINDOW,
+            "ma_slope_lookback": MA_SLOPE_LOOKBACK,
             "stop_buffer_pct": STOP_BUFFER_PCT,
         },
         "disclaimer": DISCLAIMER,

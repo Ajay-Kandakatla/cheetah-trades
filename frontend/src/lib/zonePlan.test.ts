@@ -98,7 +98,8 @@ describe('reentryReason — why a name did or did not qualify', () => {
     symbol: 'X', last_price: 103, supply_zones: [], demand_zones: [],
     nearest_resistance: null, nearest_support: null,
     in_demand_band: true, is_reentry: true, fell_from_pct: 12,
-    bars_since_above: 1, trend_passed: 7, trend_ok: true,
+    bars_since_above: 1, trend_ok: true, is_knife: false,
+    structure: { trend: 'rising', swing_lows: [90, 95], last_two: [90, 95], ma50_rising: true },
     zone_quality_ok: true, entry_zone: zone(), plan: plan(), ...over,
   });
 
@@ -109,9 +110,14 @@ describe('reentryReason — why a name did or did not qualify', () => {
     expect(s).toContain('back in yesterday');
   });
 
-  it('calls out a weak trend rather than showing it as a buy', () => {
-    expect(reentryReason(base({ trend_ok: false, trend_passed: 3 })))
-      .toContain('3/8');
+  it('calls out a falling knife rather than showing it as a buy', () => {
+    // The CIEN case: swing lows stepping down while it still looked fine.
+    const s = reentryReason(base({
+      trend_ok: false, is_knife: true,
+      structure: { trend: 'falling', swing_lows: [359, 323], last_two: [359, 323], ma50_rising: false },
+    }));
+    expect(s).toContain('falling knife');
+    expect(s).toContain('359');
   });
 
   it('calls out an untested band', () => {
