@@ -186,6 +186,7 @@ def is_stale(name: str) -> bool:
 _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     "sp500": (450, 530),
     "sp400": (350, 430),
+    "sp600": (540, 650),
 }
 
 
@@ -238,6 +239,16 @@ def _sp400_from_wikipedia() -> list[str]:
     tables = _read_html_ua("https://en.wikipedia.org/wiki/List_of_S%26P_400_companies")
     # The constituents table isn't always tables[0] on this page — find the
     # one that actually has a Symbol/Ticker column.
+    for tb in tables:
+        col = next((c for c in tb.columns
+                    if str(c).lower() in ("symbol", "ticker")), None)
+        if col is not None:
+            return _dedup_symbols(tb[col].tolist())
+    return []
+
+
+def _sp600_from_wikipedia() -> list[str]:
+    tables = _read_html_ua("https://en.wikipedia.org/wiki/List_of_S%26P_600_companies")
     for tb in tables:
         col = next((c for c in tb.columns
                     if str(c).lower() in ("symbol", "ticker")), None)
@@ -342,6 +353,42 @@ def fetch_sp400() -> list[str]:
         [("wikipedia", _sp400_from_wikipedia)],
         on_exhausted="empty",
     )
+
+
+def fetch_sp600() -> list[str]:
+    """Return S&P 600 SmallCap components, cached 30 days.
+
+    Added 2026-08-13 (Ajay: "expand the scan to best companies beyond S and p
+    500 increase in to 1000 others"). S&P 400 + S&P 600 together are ~1,000
+    names OUTSIDE the S&P 500, and unlike a raw Russell slice they clear S&P's
+    index-committee bar — including a positive-earnings requirement — so
+    "best companies beyond the S&P 500" is a fair description of them.
+
+    Same ladder and the same never-fall-back-to-curated rule as sp400: a
+    large-cap list leaking into the small-cap layer would corrupt any union.
+    """
+    return _resolve_index(
+        "sp600",
+        [("wikipedia", _sp600_from_wikipedia)],
+        on_exhausted="empty",
+    )
+
+
+def fetch_sp1500() -> list[str]:
+    """S&P Composite 1500 = S&P 500 + S&P 400 MidCap + S&P 600 SmallCap.
+
+    Deduped, order-stable (large -> mid -> small). Layers that fail resolve to
+    [] rather than to curated, so a partial outage shrinks the universe instead
+    of silently mixing in the wrong names — `last_source` reports each layer.
+    """
+    out: list[str] = []
+    seen: set[str] = set()
+    for part in (fetch_sp500(), fetch_sp400(), fetch_sp600()):
+        for sym in part:
+            if sym and sym not in seen:
+                seen.add(sym)
+                out.append(sym)
+    return out
 
 
 # ============================================================================

@@ -172,3 +172,43 @@ Caching: 3h in-process, `force=True` on the Scan button.
 Not a buy signal, and it feeds **no** scanner score and **no** Auto-Pilot gate.
 It is a structural "where would I buy this, and where am I wrong" read. The
 strict `is_buyable` gate still decides buyable-now.
+
+
+## Universe expansion — beyond the S&P 500 (2026-08-13)
+
+_Ajay: "expand the scan to best companies beyond S and p 500 increase in to
+1000 others."_
+
+The page now takes a `universe` parameter:
+
+| Key | Names | What it is |
+|---|---|---|
+| `sp500` (default) | ~503 | S&P 500 |
+| **`sp1500`** | **~1,506** | S&P 500 + 400 MidCap + 600 SmallCap |
+| `sp400` | ~400 | MidCap only |
+| `sp600` | ~603 | SmallCap only |
+
+**Why S&P 400+600 and not a Russell slice.** They add ~1,000 names *outside*
+the S&P 500 that still clear S&P's index-committee bar — including a
+positive-earnings requirement. A raw Russell 1000/3000 slice is a
+capitalisation cut with no quality screen, and overlaps the S&P 500 heavily.
+"Best companies beyond the S&P 500" is a fair description of the mid/small
+S&P indices; it is not a fair description of Russell.
+
+`fetch_sp600` was added alongside the existing `fetch_sp500`/`fetch_sp400`,
+sharing the same resolve ladder (fresh cache → Wikipedia with a real UA →
+stale cache → last resort) and the same count sanity gate (540–650).
+Like sp400 it falls back to `[]`, **never** to the curated list: leaking
+large-caps into the small-cap layer would corrupt the union.
+
+`fetch_sp1500` unions the three, deduped and order-stable (large → mid →
+small). Each layer resolves independently, so one failing layer **shrinks** the
+universe rather than silently mixing in wrong names, and the payload reports
+per-layer provenance plus the WORST layer's staleness.
+
+Each universe is cached separately — a single slot would have served an sp500
+result to an sp1500 request for up to 3 hours
+(`test_each_universe_is_cached_separately`).
+
+**First run (2026-08-13):** 1,506 names, 1,482 scanned, **6.7 s**, 40 hits, of
+which 7 cleared R:R ≥ 1.5 — the only cohort that backtested positive.

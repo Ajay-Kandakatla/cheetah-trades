@@ -24,6 +24,9 @@ type Payload = {
   universe: number;
   universe_note: string;
   universe_is_sp500: boolean;
+  universe_key?: string;
+  universe_label?: string;
+  universe_choices?: { key: string; label: string }[];
   /* Age in days when the constituent list came from an expired cache, else
    * null. `universe_is_sp500` only catches the loud failure (fell through to
    * the curated list); a stale cache holds the REAL constituents and so was
@@ -43,7 +46,18 @@ type Payload = {
  * month or two adrift is a footnote, not an alarm. Two quarters is an alarm. */
 const STALE_DAYS_LOUD = 120;
 
+/* Universe options. sp1500 is the "beyond the S&P 500" ask (Ajay 2026-08-13):
+ * S&P 400 MidCap + 600 SmallCap add ~1,000 names that still clear S&P's
+ * index-committee bar, which a raw Russell slice does not. */
+const UNIVERSES: { key: string; label: string }[] = [
+  { key: 'sp500',  label: 'S&P 500' },
+  { key: 'sp1500', label: 'S&P 1500 (+1,000 mid & small)' },
+  { key: 'sp400',  label: 'S&P 400 MidCap' },
+  { key: 'sp600',  label: 'S&P 600 SmallCap' },
+];
+
 export function DemandReentryPanel() {
+  const [universe, setUniverse] = useState<string>('sp500');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -53,11 +67,12 @@ export function DemandReentryPanel() {
     force ? setScanning(true) : setLoading(true);
     setErr(null);
     try {
+      const u = `universe=${encodeURIComponent(universe)}`;
       const r = force
-        ? await fetch(`${API}/supply-demand/demand-reentry/scan`, {
+        ? await fetch(`${API}/supply-demand/demand-reentry/scan?${u}`, {
             method: 'POST', credentials: 'include',
           })
-        : await fetch(`${API}/supply-demand/demand-reentry`, { credentials: 'include' });
+        : await fetch(`${API}/supply-demand/demand-reentry?${u}`, { credentials: 'include' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setData(await r.json());
     } catch (e) {
@@ -66,7 +81,7 @@ export function DemandReentryPanel() {
       setLoading(false);
       setScanning(false);
     }
-  }, []);
+  }, [universe]);
 
   useEffect(() => { load(false); }, [load]);
 
@@ -83,8 +98,16 @@ export function DemandReentryPanel() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', margin: '0.6rem 0' }}>
+        <select value={universe} onChange={(e) => setUniverse(e.target.value)}
+                disabled={busy} className="sepa-select"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}
+                aria-label="Scan universe">
+          {(data?.universe_choices ?? UNIVERSES).map((u) => (
+            <option key={u.key} value={u.key}>{u.label}</option>
+          ))}
+        </select>
         <button className="sepa-btn" onClick={() => load(true)} disabled={busy}>
-          {scanning ? 'Scanning S&P 500…' : '🔄 Scan S&P 500'}
+          {scanning ? 'Scanning…' : '🔄 Scan'}
         </button>
         {data && (
           <span className="mono" style={{ fontSize: '0.72rem', opacity: 0.75 }}>
@@ -132,15 +155,15 @@ export function DemandReentryPanel() {
 
       {busy && !data && (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
-          Scanning the S&P 500 for demand-zone re-entries… the first cold pass takes
+          Scanning for demand-zone re-entries… the first cold pass takes
           a few minutes (cached 3h after).
         </div>
       )}
 
       {data && data.rows.length === 0 && !busy && (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
-          Nothing is pulling back into demand right now across {data.scanned} S&P 500
-          names. That is a real answer, not an empty list — press Scan after the close
+          Nothing is pulling back into demand right now across {data.scanned}{' '}
+          {data.universe_label ?? 'S&P 500'} names. That is a real answer, not an empty list — press Scan after the close
           to re-check.
         </div>
       )}

@@ -309,7 +309,64 @@ def _rank_key(r: dict):
             -(r.get("fell_from_pct") or 0))
 
 
-def scan(force: bool = False, limit: Optional[int] = None) -> dict:
+# Universe choices offered on the page. sp1500 is the "beyond the S&P 500"
+# ask (Ajay 2026-08-13): S&P 400 MidCap + S&P 600 SmallCap add ~1,000 names
+# that still clear S&P's index-committee bar (incl. positive earnings), which
+# a raw Russell slice does not.
+UNIVERSES = {
+    "sp500":  ("S&P 500", lambda: universe_mod.fetch_sp500()),
+    "sp1500": ("S&P 1500 (500 + 400 mid + 600 small)", lambda: universe_mod.fetch_sp1500()),
+    "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
+    "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),
+}
+DEFAULT_UNIVERSE = "sp500"
+
+
+def _resolve_universe(key: str):
+    """(symbols, label, provenance, stale_days, key) for a universe.
+
+    Each LAYER is fetched and validated independently: a `last_source` record
+    is only trusted when its `n` matches the list that layer actually returned.
+    The record is module-global, so a leftover from an earlier resolve — or a
+    test double standing in for a fetcher — must never mislabel this scan.
+    Multi-layer universes (sp1500) report their WORST layer's staleness.
+    """
+    k = (key or DEFAULT_UNIVERSE).lower()
+    if k not in UNIVERSES:
+        k = DEFAULT_UNIVERSE
+    label = UNIVERSES[k][0]
+    parts = ["sp500", "sp400", "sp600"] if k == "sp1500" else [k]
+
+    syms: list[str] = []
+    seen: set[str] = set()
+    prov: dict[str, Optional[dict]] = {}
+    for part in parts:
+        try:
+            got = UNIVERSES[part][1]() or []
+        except Exception as exc:
+            log.warning("demand-reentry: universe layer %s failed: %s", part, exc)
+            got = []
+        rec = None
+        try:
+            r = universe_mod.last_source(part)
+            if r and r.get("n") == len(got):
+                rec = r
+        except Exception:
+            rec = None
+        prov[part] = rec
+        for sym in got:
+            if sym and sym not in seen:
+                seen.add(sym)
+                syms.append(sym)
+
+    stale_ages = [(v or {}).get("age_days") or 0.0 for v in prov.values()
+                  if v and v.get("source") == "stale-cache"]
+    stale = int(round(max(stale_ages))) if stale_ages else None
+    return syms, label, prov, stale, k
+
+
+def scan(force: bool = False, limit: Optional[int] = None,
+         universe: str = DEFAULT_UNIVERSE) -> dict:
     """Scan the S&P 500 for demand-zone re-entries. Cached `_CACHE_TTL_SEC`.
 
     Universe is `sepa.universe.fetch_sp500()`, which resolves fresh cache →
@@ -324,40 +381,32 @@ def scan(force: bool = False, limit: Optional[int] = None) -> dict:
     aged 76 days with nothing on the page saying so. `universe_stale_days`
     closes that hole.
     """
+    ukey = (universe or DEFAULT_UNIVERSE).lower()
+    if ukey not in UNIVERSES:
+        ukey = DEFAULT_UNIVERSE
     if not force:
-        c = _cache.get("data")
+        c = _cache.get(ukey)
         if c and (time.time() - c["ts"]) < _CACHE_TTL_SEC:
             return {**c["data"], "cached": True}
 
     t0 = time.time()
-    syms = universe_mod.fetch_sp500()
+    syms, ulabel, uprov, ustale, ukey = _resolve_universe(ukey)
+    # Provenance across every layer of the chosen universe. A record is only
+    # trusted when it describes the list we actually got back — a stale record
+    # from an earlier resolve, or a test double standing in for a fetcher,
+    # must not mislabel it. sp1500 reports its WORST layer.
     curated_n = len(getattr(universe_mod, "UNIVERSE", []) or [])
-    looks_curated = len(syms) == curated_n
+    sources = [v.get("source") for v in uprov.values() if v]
+    looks_curated = ("curated" in sources) or (len(syms) == curated_n and len(uprov) == 1)
 
-    # Provenance from the fetcher. Only trusted when it describes the list we
-    # actually got back (n matches) — a stale record from an earlier resolve,
-    # or a test double standing in for fetch_sp500, must not mislabel it.
-    src = None
-    try:
-        rec = universe_mod.last_source("sp500")
-        if rec and rec.get("n") == len(syms):
-            src = rec
-    except Exception:
-        src = None
-
-    stale_days = None
-    if src and src.get("source") == "stale-cache":
-        stale_days = int(round(src.get("age_days") or 0))
-
-    if looks_curated or (src and src.get("source") == "curated"):
-        looks_curated = True
-        universe_note = "S&P 500 unavailable — scanned the curated list instead"
-    elif stale_days is not None:
-        universe_note = (f"S&P 500 constituents ({len(syms)} names) from a "
-                         f"{stale_days}-day-old cached list — the live "
+    if looks_curated:
+        universe_note = f"{ulabel} unavailable — scanned the curated list instead"
+    elif ustale is not None:
+        universe_note = (f"{ulabel} ({len(syms)} names) from a "
+                         f"{int(ustale)}-day-old cached list — the live "
                          f"constituent fetch is failing")
     else:
-        universe_note = f"S&P 500 constituents ({len(syms)} names)"
+        universe_note = f"{ulabel} ({len(syms)} names)"
 
     rows, scanned, errors = [], 0, 0
     for sym in syms:
@@ -384,11 +433,22 @@ def scan(force: bool = False, limit: Optional[int] = None) -> dict:
         "scanned": scanned,
         "universe": len(syms),
         "universe_note": universe_note,
+        "universe_key": ukey,
+        "universe_label": ulabel,
+        "universe_sources": uprov,
+        "universe_choices": [{"key": k, "label": v[0]} for k, v in UNIVERSES.items()],
         "universe_is_sp500": not looks_curated,
         # None when the constituent list is fresh; an age in days when it came
         # from an expired cache (real names, but no longer tracking adds/drops).
-        "universe_stale_days": stale_days,
-        "universe_source": (src or {}).get("source"),
+        # None when every layer is fresh; the OLDEST layer's age in days when
+        # any came from an expired cache (real names, but no longer tracking
+        # adds/drops). Multi-layer universes report their worst layer.
+        "universe_stale_days": ustale,
+        # Single-layer universes report the bare source; sp1500 reports each
+        # layer, since they can resolve differently from one another.
+        "universe_source": (
+            (uprov.get(ukey) or {}).get("source") if len(uprov) == 1
+            else ", ".join(f"{k}:{(v or {}).get('source')}" for k, v in uprov.items())),
         "errors": errors,
         "took_sec": round(time.time() - t0, 1),
         "as_of": datetime.now(timezone.utc).isoformat(),
@@ -405,7 +465,7 @@ def scan(force: bool = False, limit: Optional[int] = None) -> dict:
         "disclaimer": DISCLAIMER,
         "cached": False,
     }
-    _cache["data"] = {"ts": time.time(), "data": data}
+    _cache[ukey] = {"ts": time.time(), "data": data}
     log.info("demand-reentry: %d hits from %d scanned (%s) in %.1fs",
              len(rows), scanned, universe_note, data["took_sec"])
     return data

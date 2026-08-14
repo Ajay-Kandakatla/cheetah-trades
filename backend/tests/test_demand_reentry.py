@@ -475,3 +475,76 @@ def test_scan_ignores_a_provenance_record_that_does_not_match(monkeypatch):
     out = dr.scan(force=True)
     assert out["universe_stale_days"] is None
     assert out["universe_source"] is None
+
+
+# ── universe expansion (2026-08-13) ──────────────────────────────────────────
+def test_sp1500_is_the_union_of_the_three_layers_deduped(monkeypatch):
+    """Ajay: "expand the scan to best companies beyond S and p 500 increase in
+    to 1000 others". S&P 400 + 600 add ~1,000 index-quality names."""
+    from sepa import universe as U
+    monkeypatch.setattr(U, "fetch_sp500", lambda: ["A", "B"])
+    monkeypatch.setattr(U, "fetch_sp400", lambda: ["B", "C"])     # B overlaps
+    monkeypatch.setattr(U, "fetch_sp600", lambda: ["D"])
+    out = U.fetch_sp1500()
+    assert out == ["A", "B", "C", "D"]                            # order-stable, deduped
+
+
+def test_sp600_never_falls_back_to_the_curated_list(tmp_path, monkeypatch):
+    """A large-cap list leaking into the small-cap layer would corrupt any
+    union, so the last resort for sp600 is [] — same rule as sp400."""
+    from sepa import universe as U
+    monkeypatch.setattr(U, "_cache_path", lambda name: tmp_path / f"{name}.txt")
+    monkeypatch.setattr(U, "_read_html_ua",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("403")))
+    U._LAST_SOURCE.clear()
+    assert U.fetch_sp600() == []
+    assert U.last_source("sp600")["source"] == "empty"
+
+
+def test_unknown_universe_key_falls_back_to_sp500(monkeypatch):
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA"])
+    syms, label, prov, stale, key = dr._resolve_universe("not-a-universe")
+    assert key == "sp500" and syms == ["AAA"]
+
+
+def test_multi_layer_universe_reports_its_worst_staleness(monkeypatch):
+    """sp1500 resolves three lists independently; one stale layer must surface,
+    not be averaged away by two fresh ones."""
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+    src = {"sp500": {"source": "cache", "n": 1, "age_days": 0.0},
+           "sp400": {"source": "stale-cache", "n": 1, "age_days": 91.0},
+           "sp600": {"source": "wikipedia", "n": 1, "age_days": 0.0}}
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: src.get(name))
+    _, _, prov, stale, key = dr._resolve_universe("sp1500")
+    assert key == "sp1500" and stale == 91
+    assert set(prov) == {"sp500", "sp400", "sp600"}
+
+
+def test_a_failing_layer_shrinks_the_universe_instead_of_polluting_it(monkeypatch):
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A", "B"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400",
+                        lambda: (_ for _ in ()).throw(RuntimeError("down")))
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+    syms, _, _, _, _ = dr._resolve_universe("sp1500")
+    assert syms == ["A", "B", "C"]        # sp400 contributes nothing, no crash
+
+
+def test_each_universe_is_cached_separately(monkeypatch):
+    """REGRESSION: a single cache slot would serve an sp500 result to an
+    sp1500 request (and vice versa) for up to 3 hours."""
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
+    dr._cache.clear()
+
+    small = dr.scan(force=True, universe="sp500")
+    big = dr.scan(force=True, universe="sp1500")
+    assert small["universe"] == 1 and big["universe"] == 3
+    # both now cached, and must not cross-serve
+    assert dr.scan(universe="sp500")["universe"] == 1
+    assert dr.scan(universe="sp1500")["universe"] == 3

@@ -27,32 +27,39 @@ router = APIRouter(tags=["supply-demand"])
 async def get_demand_reentry(
     limit: int = Query(60, ge=1, le=500),
     force: bool = Query(False, description="bypass the 3h cache and rescan"),
+    universe: str = Query("sp500", description="sp500 | sp1500 | sp400 | sp600"),
 ):
-    """S&P 500 names that have pulled back DOWN into a tested demand band while
-    the uptrend is still intact ("entering back into demand").
+    """Names that have pulled back DOWN into a tested demand band while the
+    structure still holds ("entering back into demand").
 
     A *transition* read, not a snapshot: the name must have traded at least
     `min_rise_above_pct` ABOVE the band top inside the lookback window and be
-    back inside it now, on a band tested >= `min_touches` times, with the
-    Minervini trend template still passing >= `min_trend_checks` of 8 (no
-    falling knives). Each row carries a trade plan — entry band, stop under the
-    floor, target at the nearest overhead supply — plus the reasons it
+    back inside it now, on a band tested >= `min_touches` times, and must pass
+    the falling-knife guard (swing lows stepping down AND a falling 50-day
+    disqualifies it). Each row carries a trade plan — entry band, stop under
+    the floor, target at the nearest overhead supply — plus the reasons it
     qualified, so the list is auditable.
 
-    Configured price-structure method (NOT a book method) — decision-support
-    only, not a buy signal and not advice.
+    `universe`: sp500 (default) | sp1500 | sp400 | sp600. sp1500 adds the
+    ~1,000 S&P MidCap + SmallCap names beyond the S&P 500 (2026-08-13).
+
+    Independent of the Minervini/SEPA stack. Configured price-structure method
+    (NOT a book method) — decision-support only, not a buy signal, not advice.
     See backend/supply_demand/demand_reentry.py.
     """
     import asyncio
-    return await asyncio.to_thread(reentry_mod.scan, force, limit)
+    return await asyncio.to_thread(reentry_mod.scan, force, limit, universe)
 
 
 @router.post("/supply-demand/demand-reentry/scan")
-async def post_demand_reentry_scan(limit: int = Query(60, ge=1, le=500)):
-    """Force a fresh S&P 500 demand-zone re-entry scan (the page's Scan button).
-    Bypasses the 3h cache; takes a few minutes cold."""
+async def post_demand_reentry_scan(
+    limit: int = Query(60, ge=1, le=500),
+    universe: str = Query("sp500", description="sp500 | sp1500 | sp400 | sp600"),
+):
+    """Force a fresh demand-zone re-entry scan (the page's Scan button).
+    Bypasses the 3h cache. sp1500 covers ~1,500 names."""
     import asyncio
-    return await asyncio.to_thread(reentry_mod.scan, True, limit)
+    return await asyncio.to_thread(reentry_mod.scan, True, limit, universe)
 
 
 @router.get("/supply-demand/zone-map/{symbol}")
