@@ -113,7 +113,11 @@ def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
     df = pd.DataFrame(rows)
     ts_col = "sip_timestamp" if "sip_timestamp" in df.columns else "participant_timestamp"
     df["ts_utc"] = pd.to_datetime(df[ts_col], unit="ns", utc=True)
-    df = df[["ts_utc", "price", "size"]].dropna().sort_values("ts_utc").set_index("ts_utc")
+    # `exchange` is kept (2026-08-13) so orderflow.darkpool can split lit vs
+    # FINRA-TRF (off-exchange) volume. Purely additive — every existing
+    # consumer selects the columns it needs.
+    keep = ["ts_utc", "price", "size"] + (["exchange"] if "exchange" in df.columns else [])
+    df = df[keep].dropna(subset=["ts_utc", "price", "size"]).sort_values("ts_utc").set_index("ts_utc")
     df = df[(df["price"] > 0) & (df["size"] > 0)]
     df.attrs["truncated"] = truncated
     return df if len(df) else None
@@ -269,14 +273,43 @@ def volume_profile(bars_1min: pd.DataFrame) -> Optional[dict]:
             "value_area_pct": int(VALUE_AREA_PCT * 100)}
 
 
-def analyze_tape(trades: pd.DataFrame) -> dict:
-    """Sided tape → the full order-flow read (delta + prints + bursts)."""
+def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) -> dict:
+    """Sided tape → the full order-flow read (delta + prints + bursts).
+
+    `quotes` (NBBO, from orderflow.quotes.fetch_quotes) upgrades classification
+    from the tick rule to the quote rule (Lee-Ready). Omitted or too sparse →
+    the tick rule stands and `classification` says so. The tick-rule sides are
+    always computed: they are the documented fallback for prints that land at
+    the midpoint or outside the quote window, and they give us the agreement
+    figure that quantifies the upgrade.
+    """
+    from . import darkpool, quotes as quotes_mod
+
     df = trades.copy()
-    df["side"] = tick_rule_sides(df["price"].tolist())
+    tick_sides = tick_rule_sides(df["price"].tolist())
+
+    qr = quotes_mod.quote_rule_sides(df, quotes, fallback_sides=tick_sides)
+    df["side"] = qr["sides"] if qr["method"] != "none" else tick_sides
+
+    classification = {
+        "method": qr["method"],                    # quote | mixed | tick | none
+        "coverage_pct": qr["coverage_pct"],
+        "trustworthy": qr["trustworthy"],
+        "n_quote_classified": qr["n_quote_classified"],
+        "n_at_mid": qr["n_at_mid"],
+        "n_fallback": qr["n_fallback"],
+        "tick_agreement_pct": quotes_mod.agreement(tick_sides, qr["sides"]),
+    }
+
+    venues = darkpool.split_venues(df)
     return {
         "delta": delta_summary(df),
         "big_prints": find_big_prints(df),
         "bursts": find_bursts(df),
+        "classification": classification,
+        "venues": {**venues, "read": darkpool.read(venues),
+                   "blocks": darkpool.dark_blocks(df),
+                   "disclaimer": darkpool.DISCLAIMER},
         "truncated": bool(trades.attrs.get("truncated", False)),
         "last_price": round(float(df["price"].iloc[-1]), 2),
     }

@@ -1,19 +1,24 @@
 /* TapePanel — order-flow analytics for one ticker (the Tape tab).
  *
- * Raw prints → buy/sell tick-rule classification → cumulative delta, big
+ * Raw prints → buy/sell classification against the real NBBO (Lee-Ready
+ * quote rule) → cumulative delta, big
  * prints, trade-flash bursts, session volume profile (the honest bookmap
  * substitute), intraday EMAs, zones + GEX context — and the deterministic
  * BUY / WAIT / AVOID checklist. Every concept carries an ⓘ explainer
  * (Ajay 2026-07-06: "I do not entirely understand what these are").
  *
- * Honest by design: tick rule ≈75-80% of the quote rule; no Level-2 feed so
- * no bookmap; the accuracy strip shows OUR measured record, not the WhatsApp
- * group's 70%. Reads /orderflow/{sym}; Scan POSTs a fresh compute. */
+ * Honest by design: sides come from the quote rule where NBBO coverage allows
+ * and say so when they don't; there is no Level-2 feed on our subscription so
+ * no bookmap — the volume profile and the off-exchange print table are the
+ * honest substitutes; the accuracy strip shows OUR measured record, not the
+ * WhatsApp group's 70%. Reads /orderflow/{sym}; Scan POSTs a fresh compute. */
 import { useEffect, useRef } from 'react';
 import { useOrderflow } from '../hooks/useOrderflow';
 import { InfoButton } from './InfoButton';
 import {
-  accuracyLine, deltaTone, fmtDollars, fmtShares, sparklinePoints, verdictView,
+  accuracyLine, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares,
+  fmtSharesAbs,
+  sparklinePoints, verdictView,
 } from '../lib/orderflow';
 import type { TapeData } from '../lib/orderflow';
 
@@ -113,6 +118,9 @@ export function TapePanel({ symbol }: { symbol: string }) {
   const prints = d.tape?.big_prints;
   const bursts = d.tape?.bursts ?? [];
   const accLine = accuracyLine(accuracy);
+  const cls = classificationView(d.tape?.classification);
+  const venues = d.tape?.venues;
+  const dark = darkShareView(venues?.dark_pct, venues?.is_heavy);
 
   return (
     <section style={CARD}>
@@ -167,11 +175,21 @@ export function TapePanel({ symbol }: { symbol: string }) {
             <p><strong>Delta = buy volume − sell volume.</strong> Every print is classified
               buyer-aggressive (lifted the offer) or seller-aggressive (hit the bid). Big positive
               delta = buyers doing the chasing; big negative = sellers.</p>
-            <p>We classify with the <strong>tick rule</strong> (uptick = buy, downtick = sell) —
-              the full quote-rule feed is 5-10× heavier. It agrees with the quote rule ~75-80% of
-              the time, so treat delta as a strong estimate, not an exact count.</p>
+            <p>We classify against the <strong>real NBBO quote</strong> (Lee-Ready): a print at or
+              above the ask is a buyer lifting the offer; at or below the bid is a seller hitting
+              the bid. Prints sitting exactly at the midpoint fall back to the tick rule.</p>
+            <p>This replaced the old tick-rule estimate on 2026-08-13. They disagree more than you'd
+              think — on CIEN that day the tick rule matched the quote rule on only <strong>76%</strong> of
+              prints and understated net selling by <strong>2.3×</strong>.</p>
             <p><strong>Last 30 min</strong> matters most — it's who's in control <em>right now</em>.</p>
           </InfoButton>
+          {cls && (
+            <span title={cls.title}
+              style={{ marginLeft: 4, fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999,
+                background: `${cls.color}22`, color: cls.color, fontWeight: 600, cursor: 'help' }}>
+              {cls.label}
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.4rem' }}>
           <Tile label="Session delta" value={fmtShares(delta?.delta)} color={tone.color}
@@ -188,6 +206,65 @@ export function TapePanel({ symbol }: { symbol: string }) {
           </p>
         )}
       </div>
+
+      {/* ── Where it printed: lit vs off-exchange ───────────────────────── */}
+      {venues?.available && (
+        <div style={{ marginTop: '0.9rem' }}>
+          <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            Where it printed · off-exchange
+            <InfoButton title="Dark pools & off-exchange volume" inline align="left">
+              <p>Every US trade reports to either a <strong>lit exchange</strong> (NYSE, Nasdaq…)
+                or a <strong>FINRA facility</strong> — the off-exchange bucket. That covers dark
+                pools (institutional crossing networks) and wholesaler internalization (retail
+                flow bought by market makers).</p>
+              <p><strong>The tape cannot tell those two apart</strong>, so this is a venue fact,
+                not proof of who traded. What leans institutional is <em>size</em>: retail
+                internalization is small, so a 40,000-share off-exchange block is not retail.</p>
+              <p>Why it matters: there is no order book to read here — no L2 feed exists on our
+                subscription, and even with one, resting orders cancel and stops are invisible
+                until they fire. An executed print is a fact; this shows where the facts landed.</p>
+            </InfoButton>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.4rem' }}>
+            <Tile label="Off-exchange" value={dark.label} color={dark.color}
+              sub={`${fmtSharesAbs(venues.dark_shares)} of ${fmtSharesAbs(venues.total_shares)}`} />
+            <Tile label="Lit exchanges" value={venues.dark_pct != null ? `${(100 - venues.dark_pct).toFixed(1)}%` : '—'}
+              sub={fmtSharesAbs(venues.lit_shares)} />
+            <Tile label="Dark blocks" value={String(venues.blocks?.length ?? 0)}
+              sub="≥10k sh or ≥$200k, off-exchange" />
+          </div>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--cm-slate)' }}>
+            {venues.read}
+          </p>
+          {venues.blocks && venues.blocks.length > 0 && (
+            <div style={{ overflowX: 'auto', marginTop: '0.4rem' }}>
+              <table className="mono" style={{ fontSize: '0.74rem', borderCollapse: 'collapse', minWidth: 360 }}>
+                <thead>
+                  <tr style={{ color: 'var(--cm-slate)', textAlign: 'left' }}>
+                    <th style={{ padding: '2px 10px 2px 0' }}>Time</th>
+                    <th style={{ padding: '2px 10px 2px 0' }}>Price</th>
+                    <th style={{ padding: '2px 10px 2px 0' }}>Size</th>
+                    <th style={{ padding: '2px 0' }}>$</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {venues.blocks.slice(0, 8).map((b, i) => (
+                    <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <td style={{ padding: '2px 10px 2px 0' }}>{b.time}</td>
+                      <td style={{ padding: '2px 10px 2px 0' }}>${b.price.toFixed(2)}</td>
+                      <td style={{ padding: '2px 10px 2px 0' }}>{fmtSharesAbs(b.size)}</td>
+                      <td style={{ padding: '2px 0', color: '#a78bfa' }}>{fmtDollars(b.dollars)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p style={{ margin: '0.3rem 0 0', fontSize: '0.66rem', opacity: 0.55 }}>
+            {venues.disclaimer}
+          </p>
+        </div>
+      )}
 
       {/* ── Big prints ──────────────────────────────────────────────────── */}
       <div style={{ marginTop: '0.9rem' }}>

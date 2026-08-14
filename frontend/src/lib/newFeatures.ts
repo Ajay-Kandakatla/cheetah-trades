@@ -60,6 +60,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'breakouts-sort-vcp-churn', label: '🚀 Breakouts: Sort dropdown (volume options lead), 📐 VCP/setup badges on every row, and spike-and-dump days no longer count as breakouts (the GSAT fix)', addedAt: '2026-08-03', route: '/breakouts' },
   { id: 'demand-reentry-scan', label: '🟢 Back in Demand — scan the S&P 500 for names that pulled back INTO a demand zone they had left (with a Scan button), each with buy band / stop / target', addedAt: '2026-08-13', route: '/supply-demand' },
   { id: 'zone-map-setup-tab', label: '📉 Supply/demand zones drawn on every stock — red supply, green demand, with BUY band, STOP and TARGET written on the chart (Setup tab)', addedAt: '2026-08-13', route: '/sepa' },
+  { id: 'quote-rule-delta', label: '🎯 Delta now classified against the real NBBO quote (Lee-Ready), not the tick-rule estimate — on CIEN the old way understated net selling by 2× (Tape tab)', addedAt: '2026-08-13', route: '/sepa' },
+  { id: 'dark-pool-prints', label: '🟣 Where it printed — lit vs off-exchange (dark pool) volume split + the largest off-exchange blocks, on every ticker\'s Tape tab', addedAt: '2026-08-13', route: '/sepa' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

@@ -30,6 +30,27 @@ export type TapeData = {
       prints: { time_et: string; price: number; size: number; dollars: number; side: string }[];
     };
     bursts: { time_et: string; side: string; dollars: number; volume: number; n_trades: number; price: number }[];
+    /* How each print was assigned a side. `quote` = Lee-Ready against the real
+     * NBBO; `tick` = the old uptick/downtick approximation; `mixed` = quote
+     * coverage too thin to headline. Added 2026-08-13. */
+    classification?: {
+      method: 'quote' | 'mixed' | 'tick' | 'none';
+      coverage_pct: number;
+      trustworthy: boolean;
+      n_quote_classified: number;
+      n_at_mid: number;
+      n_fallback: number;
+      tick_agreement_pct: number | null;
+    };
+    /* Where the volume PRINTED — lit exchange vs FINRA TRF (off-exchange). */
+    venues?: {
+      available: boolean;
+      dark_shares: number; lit_shares: number; total_shares: number;
+      dark_pct: number | null; dark_trades: number; is_heavy: boolean;
+      read: string;
+      blocks: { time: string; price: number; size: number; dollars: number }[];
+      disclaimer: string;
+    };
     truncated: boolean;
   };
   profile?: {
@@ -71,6 +92,55 @@ export function fmtShares(n?: number | null): string {
   if (a >= 1e6) return `${sign}${(a / 1e6).toFixed(1)}M sh`;
   if (a >= 1e3) return `${sign}${(a / 1e3).toFixed(0)}K sh`;
   return `${sign}${a.toFixed(0)} sh`;
+}
+
+/** How delta was computed, for the badge next to it. The distinction matters:
+ *  measured on CIEN 2026-08-13 the tick rule agreed with the quote rule on only
+ *  76% of prints and understated net selling by 2.3x. */
+export type Classification = NonNullable<NonNullable<TapeData['tape']>['classification']>;
+
+export function classificationView(c?: Partial<Classification>):
+  { label: string; color: string; title: string } {
+  if (!c || c.method === 'none') {
+    return { label: 'unclassified', color: '#8595ad', title: 'No prints to classify.' };
+  }
+  if (c.method === 'quote') {
+    return {
+      label: 'quote rule',
+      color: '#10b981',
+      title: `Each print classified against the real NBBO (Lee-Ready): at/above the ask = buyer-aggressive, at/below the bid = seller-aggressive. ${c.coverage_pct}% of prints classified this way; the rest sat exactly at the midpoint and fall back to the tick rule.`
+        + (c.tick_agreement_pct != null
+          ? ` The old tick rule agrees with it on only ${c.tick_agreement_pct}% of prints.` : ''),
+    };
+  }
+  if (c.method === 'mixed') {
+    return {
+      label: `mixed ${c.coverage_pct}%`,
+      color: '#d97706',
+      title: `Only ${c.coverage_pct}% of prints could be matched to a quote, so this is part quote-rule, part tick-rule. Treat the delta as an estimate.`,
+    };
+  }
+  return {
+    label: 'tick rule',
+    color: '#d97706',
+    title: 'No NBBO available for this session — sides inferred from uptick/downtick, which agrees with the quote rule only ~75-80% of the time.',
+  };
+}
+
+/** Off-exchange share, coloured by how unusual it is. */
+export function darkShareView(pct: number | null | undefined, isHeavy?: boolean):
+  { label: string; color: string } {
+  if (pct == null) return { label: '—', color: '#8595ad' };
+  return { label: `${pct}%`, color: isHeavy ? '#a78bfa' : '#cbd5e1' };
+}
+
+/** Unsigned share count. `fmtShares` is the DELTA formatter and prepends a
+ *  sign; a plain volume ("1.5M of 3.8M shares traded off-exchange") is not a
+ *  signed quantity and reading "+1.5M sh" there implies a direction it doesn't
+ *  have. Use this for volumes and print sizes. */
+export function fmtSharesAbs(n?: number | null): string {
+  if (n == null || isNaN(n)) return '—';
+  return fmtShares(Math.abs(n)).replace(/^[+−]/, '');
 }
 
 export function deltaTone(delta: number): { color: string; word: string } {

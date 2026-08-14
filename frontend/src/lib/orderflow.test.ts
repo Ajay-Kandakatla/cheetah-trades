@@ -1,8 +1,6 @@
 /* Tape (order-flow) presentation helpers — pure-logic tests incl. negatives. */
 import { describe, expect, it } from 'vitest';
-import {
-  accuracyLine, deltaTone, fmtDollars, fmtShares, sparklinePoints, verdictView,
-} from './orderflow';
+import { accuracyLine, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares, fmtSharesAbs, sparklinePoints, verdictView } from './orderflow';
 
 describe('verdictView', () => {
   it('maps the three verdicts to distinct tones', () => {
@@ -77,5 +75,59 @@ describe('accuracyLine', () => {
     expect(small).toContain('small n');
     const big = accuracyLine({ verdicts: { BUY: { n: 45, hit_1d_pct: 71.1 } } })!;
     expect(big).not.toContain('small n');
+  });
+});
+
+describe('classificationView — delta must say how it was computed', () => {
+  it('labels a real quote-rule run and quantifies how wrong the tick rule was', () => {
+    const v = classificationView({
+      method: 'quote', coverage_pct: 83.3, trustworthy: true, tick_agreement_pct: 76.4,
+    });
+    expect(v.label).toBe('quote rule');
+    expect(v.title).toContain('83.3%');
+    expect(v.title).toContain('76.4%');
+  });
+
+  it('warns when quote coverage is too thin to headline', () => {
+    const v = classificationView({ method: 'mixed', coverage_pct: 41, trustworthy: false, tick_agreement_pct: null });
+    expect(v.label).toContain('41');
+    expect(v.color).toBe('#d97706');
+  });
+
+  it('says plainly when it fell back to the tick rule', () => {
+    const v = classificationView({ method: 'tick', coverage_pct: 0, trustworthy: false, tick_agreement_pct: null });
+    expect(v.label).toBe('tick rule');
+    expect(v.title).toContain('75-80%');
+  });
+
+  it('is quiet when there is nothing to classify', () => {
+    expect(classificationView(undefined).label).toBe('unclassified');
+    expect(classificationView({ method: 'none' } as never).label).toBe('unclassified');
+  });
+});
+
+describe('darkShareView', () => {
+  it('highlights an unusually dark session', () => {
+    expect(darkShareView(62, true)).toEqual({ label: '62%', color: '#a78bfa' });
+  });
+  it('stays neutral on a normal mix', () => {
+    expect(darkShareView(39.1, false).label).toBe('39.1%');
+    expect(darkShareView(39.1, false).color).toBe('#cbd5e1');
+  });
+  it('is quiet when venue data is unavailable', () => {
+    expect(darkShareView(null).label).toBe('—');
+    expect(darkShareView(undefined).label).toBe('—');
+  });
+});
+
+describe('fmtSharesAbs — volumes are not signed quantities', () => {
+  it('drops the sign fmtShares adds for deltas', () => {
+    expect(fmtShares(1_500_000)).toBe('+1.5M sh');
+    expect(fmtSharesAbs(1_500_000)).toBe('1.5M sh');
+    expect(fmtSharesAbs(-1_500_000)).toBe('1.5M sh');
+  });
+  it('stays quiet on missing values', () => {
+    expect(fmtSharesAbs(null)).toBe('—');
+    expect(fmtSharesAbs(undefined)).toBe('—');
   });
 });

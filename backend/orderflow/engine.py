@@ -76,7 +76,18 @@ def compute(symbol: str) -> Optional[dict]:
     if trades is None or not len(trades):
         return None
 
-    tape_read = tape.analyze_tape(trades)
+    # NBBO for the same session upgrades side-classification from the tick rule
+    # to the quote rule (Lee-Ready). Best-effort: a failed or partial pull
+    # degrades to the tick rule and is reported in `classification`, never
+    # silently. See orderflow/quotes.py.
+    nbbo = None
+    try:
+        from . import quotes as quotes_mod
+        nbbo = quotes_mod.fetch_quotes(sym, day)
+    except Exception as exc:
+        log.debug("nbbo fetch failed for %s: %s", sym, exc)
+
+    tape_read = tape.analyze_tape(trades, quotes=nbbo)
     last_price = tape_read["last_price"]
 
     bars = None
