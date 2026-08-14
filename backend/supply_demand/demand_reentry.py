@@ -413,7 +413,7 @@ def _session_venues(symbol: str) -> dict:
     """Today's (or the prior session's) venue split + large off-exchange
     blocks, each with the price it printed at."""
     from datetime import date as _d
-    from orderflow import darkpool, tape as tape_mod
+    from orderflow import darkpool, quotes as quotes_mod, retail as retail_mod, tape as tape_mod
 
     out = {"available": False, "blocks": [], "rating": None}
     try:
@@ -520,7 +520,7 @@ def _venue_rating(dark_pct: Optional[float]) -> Optional[str]:
 def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N) -> None:
     """Add today's venue mix to the top `top_n` rows by R:R, in place."""
     from datetime import date as _d
-    from orderflow import darkpool, tape as tape_mod
+    from orderflow import darkpool, quotes as quotes_mod, retail as retail_mod, tape as tape_mod
 
     ranked = sorted(rows, key=lambda r: -((r.get("plan") or {}).get("rr") or 0))
     for r in ranked[:top_n]:
@@ -531,12 +531,27 @@ def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N) -> None:
                 tape_is_today = False
                 trades = tape_mod.fetch_trades(r["symbol"], _d.today() - timedelta(days=1))
             v = darkpool.split_venues(trades) if trades is not None else {"available": False}
-            blocks = len(darkpool.dark_blocks(trades)) if trades is not None else 0
+            # Keep the LIST — `divergence` needs the blocks themselves. Only the
+            # payload carries the count. Conflating the two silently broke the
+            # retail read on every row that HAD blocks (len() on an int), which
+            # is the opposite of the rows you would notice.
+            block_list = darkpool.dark_blocks(trades) if trades is not None else []
         except Exception as exc:
             log.debug("demand-reentry: venue fetch failed for %s: %s", r["symbol"], exc)
-            v, blocks = {"available": False}, 0
-        r["venues"] = {**v, "blocks": blocks,
+            v, block_list = {"available": False}, []
+        r["venues"] = {**v, "blocks": len(block_list),
                        "rating": _venue_rating(v.get("dark_pct"))}
+
+        # Retail flow on the same tape. NBBO is what makes the SIGN usable —
+        # sub-penny signing mis-signs 28% of trades (Barber et al. 2024), so
+        # without quotes we report counts and no direction.
+        try:
+            nbbo = quotes_mod.fetch_quotes(r["symbol"], _d.today()) if tape_is_today else None
+            rt = retail_mod.identify(trades, nbbo)
+            r["retail"] = {**rt, "divergence": retail_mod.divergence(rt, block_list)}
+        except Exception as exc:
+            log.debug("demand-reentry: retail read failed for %s: %s", r["symbol"], exc)
+            r["retail"] = {"available": False}
 
         # Live tape gives an ACCURATE today-volume for these rows, so fill in
         # the RVOL that _liquidity had to leave pending. Same fetch, no extra

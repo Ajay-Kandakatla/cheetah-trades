@@ -233,3 +233,62 @@ def test_analyze_tape_without_quotes_still_works_and_flags_tick():
     assert out["classification"]["method"] == "tick"
     assert out["classification"]["trustworthy"] is False
     assert out["delta"]["n_trades"] == 2
+
+
+# ── retail flow (BJZZ + the Barber midpoint correction) ──────────────────────
+def test_subpenny_detection_excludes_penny_and_half_penny_prints():
+    from orderflow import retail
+    assert retail.is_subpenny(10.0034) is True
+    assert retail.is_subpenny(10.0071) is True
+    assert retail.is_subpenny(10.00) is False      # on the penny
+    assert retail.is_subpenny(10.005) is False     # half cent
+    assert retail.is_subpenny(0) is False
+
+
+def test_retail_is_signed_on_the_midpoint_not_the_subpenny_direction():
+    """Barber et al. (2024) validated the original sub-penny signing against
+    85,000 known retail trades: it mis-signs 28%. Measured on SWKS 2026-08-14
+    the two methods disagreed on DIRECTION (-8.1% vs +15.7%)."""
+    from orderflow import retail
+    # price ABOVE the midpoint -> retail buy, regardless of the sub-penny digit
+    trades = _trades([(100, 10.0034, 500, 4)])
+    quotes = _quotes([(50, 10.00, 10.006)])        # mid 10.003
+    out = retail.identify(trades, quotes)
+    assert out["signed"] is True
+    assert out["buy_shares"] == 500 and out["sell_shares"] == 0
+
+
+def test_retail_refuses_to_sign_without_nbbo():
+    """An unsigned count is honest; a wrongly-signed one is worse than none."""
+    from orderflow import retail
+    out = retail.identify(_trades([(100, 10.0034, 500, 4)]), None)
+    assert out["available"] is True
+    assert out["signed"] is False
+    assert out["imbalance_pct"] is None
+    assert "unsigned" in out["read"].lower()
+
+
+def test_lit_exchange_subpenny_is_not_retail():
+    """The method is off-exchange AND sub-penny. A lit print is not wholesaler
+    internalisation whatever its price."""
+    from orderflow import retail
+    out = retail.identify(_trades([(100, 10.0034, 500, 10)]), None)
+    assert out["retail_trades"] == 0
+
+
+def test_divergence_takes_the_block_LIST_not_a_count():
+    """REGRESSION 2026-08-14: the caller passed len(blocks) and divergence did
+    len() on an int, so the retail read silently died on every row that HAD
+    blocks — precisely the interesting rows."""
+    from orderflow import retail
+    rt = {"signed": True, "lean": "buying"}
+    d = retail.divergence(rt, [{"dollars": 5_000_000}, {"dollars": 3_000_000}])
+    assert d["block_count"] == 2 and d["block_dollars"] == 8_000_000
+    assert retail.divergence(rt, []) is None
+    assert retail.divergence({"signed": False}, [{"dollars": 1}]) is None
+
+
+def test_divergence_never_claims_to_know_the_block_side():
+    from orderflow import retail
+    d = retail.divergence({"signed": True, "lean": "selling"}, [{"dollars": 1e6}])
+    assert "not knowable" in d["note"]

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { TickerLink } from './TickerLink';
 import {
   bandLabel, blockCount, breakEvenWinPct, freshnessLabel, liquidityView, money, planLine,
-  rrBand, venueView, volLabel,
+  retailView, rrBand, venueView, volLabel,
 } from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
@@ -59,8 +59,22 @@ const UNIVERSES: { key: string; label: string }[] = [
   { key: 'sp600',  label: 'S&P 600 SmallCap' },
 ];
 
+/* Sort keys. R:R leads because it is the only cohort that backtested positive.
+ * Retail COUNT is deliberately not offered: a heavily traded name has more
+ * retail prints whatever else is true, so it would mostly re-sort by volume.
+ * Imbalance (direction) and participation (% of volume) carry information. */
+const SORTS: { key: string; label: string }[] = [
+  { key: 'rr',       label: '🎯 R:R (default)' },
+  { key: 'retailimb',label: '🧍 Retail imbalance' },
+  { key: 'retailpct',label: '🧍 Retail % of volume' },
+  { key: 'dark',     label: '🟣 Off-exchange %' },
+  { key: 'rvol',     label: '📊 Relative volume' },
+  { key: 'fresh',    label: '🕐 Freshest re-entry' },
+];
+
 export function DemandReentryPanel() {
   const [universe, setUniverse] = useState<string>('sp1500');
+  const [sortKey, setSortKey] = useState<string>('rr');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -110,6 +124,11 @@ export function DemandReentryPanel() {
           {(data?.universe_choices ?? UNIVERSES).map((u) => (
             <option key={u.key} value={u.key}>{u.label}</option>
           ))}
+        </select>
+        <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}
+                className="sepa-select" aria-label="Sort by"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}>
+          {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
         <button className="sepa-btn" onClick={() => load(true)} disabled={busy}>
           {scanning ? 'Scanning…' : '🔄 Scan'}
@@ -175,11 +194,22 @@ export function DemandReentryPanel() {
 
       {data && data.rows.length > 0 && (
         <div style={{ display: 'grid', gap: '0.5rem' }}>
-          {data.rows.map((r) => {
+          {[...data.rows].sort((a, b) => {
+            const n = (v: number | null | undefined, d = -Infinity) => (v == null ? d : v);
+            switch (sortKey) {
+              case 'retailimb': return n(b.retail?.imbalance_pct) - n(a.retail?.imbalance_pct);
+              case 'retailpct': return n(b.retail?.retail_pct_of_volume) - n(a.retail?.retail_pct_of_volume);
+              case 'dark':      return n(b.venues?.dark_pct) - n(a.venues?.dark_pct);
+              case 'rvol':      return n(b.liquidity?.rvol) - n(a.liquidity?.rvol);
+              case 'fresh':     return n(a.bars_since_above, Infinity) - n(b.bars_since_above, Infinity);
+              default:          return n(b.plan?.rr) - n(a.plan?.rr);
+            }
+          }).map((r) => {
             const rr = rrBand(r.plan?.rr);
             const be = r.breakeven_win_pct ?? breakEvenWinPct(r.plan?.rr);
             const liq = liquidityView(r.liquidity);
             const ven = venueView(r.venues);
+            const ret = retailView(r.retail);
             return (
               <div key={r.symbol} style={{
                 padding: '0.6rem 0.75rem', borderRadius: 10,
@@ -221,6 +251,12 @@ export function DemandReentryPanel() {
                   <span title={`Average 50-day dollar volume. ${liq.warn ? 'Thin tape — the spread can eat the edge before the setup works.' : 'Enough tape to get filled.'}`}>
                     liq <strong style={{ color: liq.color }}>{liq.label}</strong>
                     <span style={{ opacity: 0.7 }}> {volLabel(r.liquidity?.avg_dollar_vol_50)}</span>
+                  </span>
+                  <span title={ret.title}>
+                    retail <strong style={{ color: ret.color }}>{ret.label}</strong>
+                    {r.retail?.divergence && (
+                      <span title={r.retail.divergence.note} style={{ cursor: 'help' }}> ⚡</span>
+                    )}
                   </span>
                   <span title={ven.title}>
                     dark <strong style={{ color: ven.color }}>{ven.label}</strong>

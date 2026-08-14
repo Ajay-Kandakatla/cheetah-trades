@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, planLine, reentryReason, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
+import { bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, planLine, reentryReason, retailView, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
 
 const zone = (over: Partial<Zone> = {}): Zone => ({
@@ -284,5 +284,32 @@ describe('venueView — never claims institutional intent', () => {
     // Only the top rows by R:R get a tape pull — absence of data is not 0%.
     expect(venueView(null).label).toBe('—');
     expect(venueView(null).title).toContain('only the top rows');
+  });
+});
+
+describe('retailView — never present unsigned as balanced', () => {
+  it('colours a buying lean green and a selling lean red', () => {
+    expect(retailView({ available: true, signed: true, imbalance_pct: 53.7, lean: 'buying' }).color).toBe('#22c55e');
+    expect(retailView({ available: true, signed: true, imbalance_pct: -16.4, lean: 'selling' }).color).toBe('#ef4444');
+  });
+
+  it('states the method and its known error rate in the tooltip', () => {
+    const v = retailView({ available: true, signed: true, imbalance_pct: 10, lean: 'buying', read: 'Retail is BUYING.' });
+    expect(v.title).toContain('sub-penny');
+    expect(v.title).toContain('28%');       // the Barber mis-signing rate
+    expect(v.title).toContain('sample, not a census');
+  });
+
+  it('shows an UNSIGNED read as unknown, not as balanced', () => {
+    // "we could not sign these" is not "retail is balanced" — the whole point
+    // of the Barber correction is that a wrong sign is worse than no sign.
+    const v = retailView({ available: true, signed: false, retail_pct_of_volume: 9.1 });
+    expect(v.color).toBe('#8595ad');
+    expect(v.label).toBe('9.1%');
+  });
+
+  it('explains the dash rather than implying zero retail', () => {
+    expect(retailView(null).label).toBe('—');
+    expect(retailView(null).title).toContain('only the top rows');
   });
 });

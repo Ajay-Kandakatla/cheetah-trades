@@ -52,6 +52,7 @@ export type ZoneMapPayload = {
   resolution?: 'fine' | 'swing' | null;
   liquidity?: Liquidity | null;
   venues?: Venues | null;
+  retail?: Retail | null;
   breakeven_win_pct?: number | null;
   series?: { date: string; close: number }[];
   error?: string;
@@ -169,6 +170,14 @@ export function chartDomain(
 
 export type Liquidity = {
   avg_vol_50: number | null; avg_dollar_vol_50: number | null;
+  /* Today's figures. Mid-session these come from the LIVE TAPE, not the daily
+   * bar — the bar is a stale snapshot (measured 1.5-2.6x understated). Rows
+   * without a tape pull report today_source 'pending' and no rvol. */
+  today_vol?: number | null; today_dollar_vol?: number | null;
+  rvol?: number | null;
+  rvol_state?: 'surging' | 'active' | 'quiet' | 'dead' | null;
+  rvol_partial?: boolean; today_source?: 'tape' | 'daily_bar' | 'pending' | null;
+  session_pct?: number | null; last_close?: number | null;
   tier: 'deep' | 'ok' | 'thin' | 'illiquid' | null; tradeable: boolean | null;
 };
 
@@ -244,6 +253,37 @@ export function venueView(v: Venues | null | undefined):
   if (v.rating === 'heavy') return { label: `${v.dark_pct}%`, color: '#a78bfa', title: `Unusually dark. ${base}` };
   if (v.rating === 'light') return { label: `${v.dark_pct}%`, color: '#8595ad', title: `Lightly dark. ${base}` };
   return { label: `${v.dark_pct}%`, color: '#cbd5e1', title: base };
+}
+
+export type Retail = {
+  available?: boolean; signed?: boolean;
+  retail_trades?: number; retail_shares?: number;
+  retail_pct_of_volume?: number | null;
+  imbalance_pct?: number | null;
+  lean?: 'buying' | 'selling' | 'balanced' | null;
+  read?: string; disclaimer?: string;
+  divergence?: { retail_lean: string; block_count: number; block_dollars: number; note: string } | null;
+};
+
+/** Retail lean, coloured. Unsigned reads are shown as unknown rather than
+ *  neutral — "we could not sign these" is not "retail is balanced". */
+export function retailView(r: Retail | null | undefined):
+  { label: string; color: string; title: string } {
+  if (!r?.available) {
+    return { label: '—', color: '#8595ad',
+             title: 'No tape pulled for this row (only the top rows by R:R get retail detail).' };
+  }
+  if (!r.signed || r.imbalance_pct == null) {
+    return { label: `${r.retail_pct_of_volume ?? '—'}%`, color: '#8595ad',
+             title: r.read || 'Retail prints identified but unsigned — no NBBO for this session.' };
+  }
+  const base = `${r.read ?? ''} Identified by sub-penny price improvement on off-exchange prints `
+    + '(Boehmer et al. 2021) and signed on the quote midpoint (Barber et al. 2024 — the original '
+    + 'sub-penny signing mis-signs 28% of trades). Catches roughly a third of retail activity, so '
+    + 'it is a sample, not a census.';
+  if (r.lean === 'buying') return { label: `+${r.imbalance_pct}%`, color: '#22c55e', title: base };
+  if (r.lean === 'selling') return { label: `${r.imbalance_pct}%`, color: '#ef4444', title: base };
+  return { label: `${r.imbalance_pct}%`, color: '#cbd5e1', title: base };
 }
 
 export type LabelItem = {

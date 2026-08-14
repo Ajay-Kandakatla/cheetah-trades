@@ -283,7 +283,7 @@ def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) ->
     the midpoint or outside the quote window, and they give us the agreement
     figure that quantifies the upgrade.
     """
-    from . import darkpool, quotes as quotes_mod
+    from . import darkpool, quotes as quotes_mod, retail as retail_mod
 
     df = trades.copy()
     tick_sides = tick_rule_sides(df["price"].tolist())
@@ -302,14 +302,20 @@ def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) ->
     }
 
     venues = darkpool.split_venues(df)
+    blocks = darkpool.dark_blocks(df)
+    # Retail flow: sub-penny off-exchange prints, signed on the quote midpoint.
+    # Needs the SAME quotes the classifier uses, so it costs nothing extra.
+    retail_read = retail_mod.identify(df, quotes)
     return {
         "delta": delta_summary(df),
         "big_prints": find_big_prints(df),
         "bursts": find_bursts(df),
         "classification": classification,
         "venues": {**venues, "read": darkpool.read(venues),
-                   "blocks": darkpool.dark_blocks(df),
+                   "blocks": blocks,
                    "disclaimer": darkpool.DISCLAIMER},
+        "retail": {**retail_read,
+                   "divergence": retail_mod.divergence(retail_read, blocks)},
         "truncated": bool(trades.attrs.get("truncated", False)),
         "last_price": round(float(df["price"].iloc[-1]), 2),
     }
