@@ -548,3 +548,47 @@ def test_each_universe_is_cached_separately(monkeypatch):
     # both now cached, and must not cross-serve
     assert dr.scan(universe="sp500")["universe"] == 1
     assert dr.scan(universe="sp1500")["universe"] == 3
+
+
+def test_entry_zone_does_not_fall_off_a_cliff_four_cents_below_a_band():
+    """REGRESSION (VRT, 2026-08-13): price $287.07 against a $287.11-293.88
+    band — four cents under the floor, so the band did not count as "inside"
+    and the picker fell through to the next band down at $159-163, 45% away.
+    The resulting plan quoted a 45.5% stop and a target at the current price."""
+    zones = [{"lo": 287.11, "hi": 293.88, "strength": 80},
+             {"lo": 159.0, "hi": 163.0, "strength": 50},
+             {"lo": 148.0, "hi": 149.0, "strength": 40}]
+    assert dr._pick_entry_zone(287.07, zones)["lo"] == 287.11
+
+
+def test_entry_zone_still_prefers_a_band_at_or_below_price():
+    """The near-miss tolerance must not start preferring overhead bands when a
+    perfectly good one sits just under price."""
+    zones = [{"lo": 101.0, "hi": 103.0, "strength": 90},   # just ABOVE
+             {"lo": 97.0, "hi": 99.5, "strength": 50}]     # just BELOW
+    assert dr._pick_entry_zone(100.0, zones)["lo"] == 97.0
+
+
+def test_entry_zone_rejects_a_band_beyond_the_near_miss_tolerance():
+    """Price 5% under the only band is a breakdown, not an approach."""
+    assert dr._pick_entry_zone(273.0, [{"lo": 287.11, "hi": 293.88, "strength": 80}]) is None
+
+
+def test_target_is_never_inside_or_below_the_entry_band():
+    """REGRESSION (VRT, 2026-08-13): the target came from
+    `nearest_resistance` = "first band above SPOT". With price four cents under
+    its own entry band, that band was the nearest thing above, so the plan
+    targeted its own floor — a 0.01R trade."""
+    zone = {"lo": 287.11, "hi": 293.88, "touches": 3, "strength": 80}
+    supply = [{"lo": 287.11, "hi": 293.88}, {"lo": 277.0, "hi": 282.0},
+              {"lo": 305.0, "hi": 310.0}]
+    p = dr.trade_plan(287.07, zone, supply)
+    assert p["target"] == 305.0                 # NOT 287.11, NOT 277.0
+    assert p["target"] > zone["hi"]
+    assert p["rr"] and p["rr"] > 1
+
+
+def test_trade_plan_still_accepts_a_single_resistance_band():
+    """Back-compat: the older call passed one band, not a list."""
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0, "hi": 122.0})
+    assert p["target"] == 120.0

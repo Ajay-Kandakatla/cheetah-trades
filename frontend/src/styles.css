@@ -2006,12 +2006,24 @@ tr:last-child td { border-bottom: none; }
 .sepa-drawer__sym { margin: 0.25rem 0 0.6rem; font: 700 2rem var(--serif, serif); }
 .sepa-drawer__loading { padding: 2rem; text-align: center; }
 
-/* Tabs */
-.sepa-tabs { display: flex; border-bottom: 1px solid var(--rule, var(--hairline)); padding: 0 0.6rem; gap: 2px; }
+/* Tabs
+   Scrolls horizontally on DESKTOP too (2026-08-13). There are 14 tabs; without
+   this the flex row squeezed them until labels broke mid-phrase ("SMART /
+   MONEY", "SUPPLY / / DEMAND") and the last tab rendered outside the panel's
+   right border. Mobile already scrolled — this makes the desktop behave the
+   same instead of overflowing. */
+.sepa-tabs {
+  display: flex; border-bottom: 1px solid var(--rule, var(--hairline));
+  padding: 0 0.6rem; gap: 2px;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
 .sepa-tab {
   background: none; border: none; padding: 0.7rem 0.9rem; font: inherit;
   font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
   cursor: pointer; color: var(--cm-slate); border-bottom: 2px solid transparent;
+  white-space: nowrap;   /* never break a label mid-phrase */
+  flex-shrink: 0;        /* never squeeze a tab to force a fit */
 }
 .sepa-tab.is-active { color: #111; border-bottom-color: #111; font-weight: 700; }
 .sepa-tab:hover { color: #111; }

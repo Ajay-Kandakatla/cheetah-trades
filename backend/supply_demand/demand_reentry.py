@@ -102,6 +102,11 @@ LIQ_THIN_USD  =  2_000_000.0   # tradeable only in small size, wider spreads
 # so only the top rows by R:R get it — those are the only ones worth acting on.
 VENUE_DETAIL_TOP_N = 15
 
+# How far ABOVE price a demand band may sit and still be the entry band. Covers
+# price resting a hair under a floor it has been trading in (VRT, 4 cents);
+# anything further means price has broken below the band, not approached it.
+ENTRY_ABOVE_TOL_PCT = 1.5
+
 _CACHE_TTL_SEC = 3 * 60 * 60
 _cache: dict = {}
 
@@ -153,15 +158,23 @@ def reentry_read(closes: list[float], zone_hi: float, zone_lo: float,
 
 
 def trade_plan(last_price: float, entry_zone: Optional[dict],
-               resistance: Optional[dict],
-               stop_buffer_pct: float = STOP_BUFFER_PCT) -> Optional[dict]:
+               resistance, stop_buffer_pct: float = STOP_BUFFER_PCT) -> Optional[dict]:
     """Entry / stop / target for a demand-zone play. PURE.
 
     entry area = the demand band itself (buy into support, not through it)
     stop       = `stop_buffer_pct` under the band floor — the level that says
                  "demand failed", so the reason for the trade is gone
-    target     = the LOW of the nearest overhead supply band: the first place
-                 sellers are known to be waiting, not a hoped-for extension
+    target     = the LOW of the first supply band ABOVE THE ENTRY BAND'S TOP:
+                 the first place sellers are known to be waiting, not a
+                 hoped-for extension.
+
+                 Measured against the band top, NOT against spot (fixed
+                 2026-08-13). `price_zones.nearest_resistance` means "first
+                 band above the current price", and when price sits just under
+                 its own entry band that band IS the nearest thing above —
+                 so VRT at $287.07 got a $287.11 "target", i.e. its own floor,
+                 for a 0.01R plan. Locked by
+                 `test_target_is_never_inside_or_below_the_entry_band`.
 
     `risk_exceeds_max` flags a stop wider than the house/book hard cap
     (`trading.risk_rules.ABS_MAX_STOP_PCT`, the p.299/p.301 cap) — such a plan
@@ -177,10 +190,15 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     stop = round(lo * (1.0 - stop_buffer_pct / 100.0), 2)
     risk_pct = round((last_price - stop) / last_price * 100.0, 1) if last_price else None
 
+    # `resistance` accepts a single band (legacy) or the full supply-zone list.
+    # Either way the target must clear the ENTRY BAND's top, not merely spot.
+    cands = resistance if isinstance(resistance, list) else ([resistance] if resistance else [])
+    above = [z for z in cands
+             if z and z.get("lo") and float(z["lo"]) > max(hi, last_price)]
     target = None
     reward_pct = None
-    if resistance and resistance.get("lo") and resistance["lo"] > last_price:
-        target = round(float(resistance["lo"]), 2)
+    if above:
+        target = round(float(min(above, key=lambda z: z["lo"])["lo"]), 2)
         reward_pct = round((target - last_price) / last_price * 100.0, 1)
 
     rr = None
@@ -207,13 +225,42 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
 
 
 def _pick_entry_zone(last_price: float, demand_zones: list[dict]) -> Optional[dict]:
-    """The band price is INSIDE, else the nearest band below (where you'd want
-    to buy). None when there is no demand structure under price."""
-    inside = [z for z in demand_zones if z.get("lo", 0) <= last_price <= z.get("hi", 0)]
+    """The band price is INSIDE, else the band NEAREST to price.
+
+    Nearest by distance, not "nearest strictly below" — that older rule had a
+    cliff edge. VRT on 2026-08-13 traded at $287.07 against a demand band of
+    $287.11-293.88: four cents below the floor, so the band did not count as
+    "inside", and the picker fell through to the next band down at
+    $159-163 — 45% away. The plan that came out quoted a 45.5% stop and a
+    target at the current price. A band four cents away is the band you mean.
+
+    A band ABOVE price is eligible only within `ENTRY_ABOVE_TOL_PCT` — enough
+    to catch that four-cent near-miss, nowhere near enough to return a band
+    far overhead. Price well below every demand band is a BREAKDOWN, and the
+    honest answer there is None, not "buy 60% higher"
+    (`test_entry_zone_is_none_when_there_is_no_demand_below`).
+    """
+    if not demand_zones:
+        return None
+
+    def distance(z: dict) -> float:
+        lo, hi = z.get("lo") or 0.0, z.get("hi") or 0.0
+        if lo <= last_price <= hi:
+            return 0.0
+        return (lo - last_price) if last_price < lo else (last_price - hi)
+
+    inside = [z for z in demand_zones if distance(z) == 0.0]
     if inside:
         return max(inside, key=lambda z: z.get("strength") or 0)
-    below = [z for z in demand_zones if z.get("hi", 0) < last_price]
-    return max(below, key=lambda z: z["hi"]) if below else None
+
+    tol = last_price * ENTRY_ABOVE_TOL_PCT / 100.0
+    eligible = [z for z in demand_zones
+                if (z.get("hi") or 0) <= last_price or distance(z) <= tol]
+    if not eligible:
+        return None
+    # 0 = at/below price (buyable on a pullback), 1 = the near-miss above it.
+    return min(eligible,
+               key=lambda z: (distance(z), 0 if (z.get("hi") or 0) <= last_price else 1))
 
 
 def _series_for_chart(df: pd.DataFrame, bars: int = 180) -> list[dict]:
@@ -281,7 +328,18 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
                       and (entry_zone.get("touches") or 0) >= MIN_TOUCHES
                       and (entry_zone.get("strength") or 0) >= MIN_ZONE_STRENGTH)
 
-    plan = trade_plan(last_price, entry_zone, zones.get("nearest_resistance"))
+    # Target candidates: `nearest_resistance` FIRST, because price_zones
+    # computes it over every band while `supply_zones`/`demand_zones` are
+    # truncated to the strongest four per side — the true first objective is
+    # often not in those lists. KLAC's real target ($230.89) was missing from
+    # them, so a supply-list-only search jumped to $302, an implausible 11.8R.
+    # Band origin is irrelevant here: price_zones keeps it for colour only,
+    # since broken support acts as resistance. The entry band excludes itself
+    # via the `lo > band top` rule inside trade_plan.
+    plan = trade_plan(last_price, entry_zone,
+                      [zones.get("nearest_resistance")]
+                      + (zones.get("supply_zones") or [])
+                      + (zones.get("demand_zones") or []))
 
     rec = {
         "symbol": sym,
@@ -312,7 +370,34 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
     }
     if with_series:
         rec["series"] = _series_for_chart(df)
+        # Detail view only: today's off-exchange prints, so the zone chart can
+        # mark WHERE big size changed hands relative to the bands. Ajay
+        # 2026-08-13: "Add the darkpool and order block details in to the
+        # SEPA/Details tab". Best-effort — a failed tape pull just omits it.
+        rec["venues"] = _session_venues(sym)
     return rec
+
+
+def _session_venues(symbol: str) -> dict:
+    """Today's (or the prior session's) venue split + large off-exchange
+    blocks, each with the price it printed at."""
+    from datetime import date as _d
+    from orderflow import darkpool, tape as tape_mod
+
+    out = {"available": False, "blocks": [], "rating": None}
+    try:
+        trades = tape_mod.fetch_trades(symbol, _d.today())
+        if trades is None or trades.empty:
+            trades = tape_mod.fetch_trades(symbol, _d.today() - timedelta(days=1))
+        if trades is None or trades.empty:
+            return out
+        v = darkpool.split_venues(trades)
+        blocks = darkpool.dark_blocks(trades, top=12)
+        return {**v, "blocks": blocks, "rating": _venue_rating(v.get("dark_pct")),
+                "read": darkpool.read(v), "disclaimer": darkpool.DISCLAIMER}
+    except Exception as exc:
+        log.debug("zone-map: venue pull failed for %s: %s", symbol, exc)
+        return out
 
 
 def _liquidity(df) -> dict:

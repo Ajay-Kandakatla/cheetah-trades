@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TickerLink } from './TickerLink';
 import {
-  bandLabel, breakEvenWinPct, freshnessLabel, liquidityView, money, planLine,
+  bandLabel, blockCount, breakEvenWinPct, freshnessLabel, liquidityView, money, planLine,
   rrBand, venueView, volLabel,
 } from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
@@ -224,8 +224,8 @@ export function DemandReentryPanel() {
                   </span>
                   <span title={ven.title}>
                     dark <strong style={{ color: ven.color }}>{ven.label}</strong>
-                    {r.venues?.blocks != null && (
-                      <span style={{ opacity: 0.7 }}> · {r.venues.blocks} blk</span>
+                    {blockCount(r.venues) != null && (
+                      <span style={{ opacity: 0.7 }}> · {blockCount(r.venues)} blk</span>
                     )}
                   </span>
                   <span style={{ opacity: 0.7 }}>

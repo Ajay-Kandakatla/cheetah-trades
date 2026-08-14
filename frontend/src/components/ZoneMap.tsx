@@ -14,8 +14,8 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  bandLabel, bandWidthPct, chartDomain, layoutLabels, level, money, planLine,
-  reentryReason, rrBand, visibleBands,
+  bandLabel, bandWidthPct, blockList, blocksInBand, chartDomain, layoutLabels,
+  level, money, planLine, reentryReason, rrBand, venueView, visibleBands,
 } from '../lib/zonePlan';
 import type { LabelItem, ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
@@ -23,6 +23,7 @@ import { API } from '../lib/apiBase';
 
 const SUPPLY = '#ef4444';
 const DEMAND = '#22c55e';
+const DARK = '#a78bfa';   // off-exchange blocks
 
 export function ZoneMap({ symbol }: { symbol: string }) {
   const [data, setData] = useState<ZoneMapPayload | null>(null);
@@ -77,6 +78,10 @@ export function ZoneMap({ symbol }: { symbol: string }) {
 
   const ez = data.entry_zone;
   const rr = rrBand(plan?.rr);
+  const blocks = blockList(data.venues);
+  const ven = venueView(data.venues);
+  const inBand = blocksInBand(blocks, ez);
+  const maxBlock = Math.max(1, ...blocks.map((b) => b.dollars));
 
   /* A band is "the entry band" only when the plan actually points at it. */
   const isEntryBand = (lo: number, hi: number) =>
@@ -164,6 +169,21 @@ export function ZoneMap({ symbol }: { symbol: string }) {
                 stroke={DEMAND} strokeWidth={1.5} strokeDasharray="5 3" />
         )}
 
+        {/* ── off-exchange blocks, plotted at the price they printed at.
+             Radius scales with notional, so a $18M print reads differently
+             from a $1M one. These are WHERE size changed hands away from the
+             lit book — the point of overlaying them on the bands. ── */}
+        {blocks.map((b, k) => {
+          if (b.price <= domain.lo || b.price >= domain.hi) return null;
+          const r = 2.2 + 3.6 * Math.sqrt(b.dollars / maxBlock);
+          return (
+            <circle key={`b${k}`} cx={PL + iw - 6 - (k % 5) * 9} cy={y(b.price)} r={r}
+                    fill={DARK} fillOpacity={0.55} stroke={DARK} strokeOpacity={0.9}>
+              <title>{`${b.time} · ${b.size.toLocaleString()} sh @ $${b.price} · $${(b.dollars / 1e6).toFixed(1)}M off-exchange`}</title>
+            </circle>
+          );
+        })}
+
         {/* ── price ── */}
         <path d={line} fill="none" stroke="#cbd5e1" strokeWidth={1.6} />
         <circle cx={x(series.length - 1)} cy={y(data.last_price)} r={3.2} fill="#e2e8f0" />
@@ -208,6 +228,66 @@ export function ZoneMap({ symbol }: { symbol: string }) {
           volume) — not a book method, not a buy signal, not advice.
         </div>
       </div>
+
+      {/* ── Off-exchange blocks: where big size actually printed ─────────── */}
+      {data.venues?.available && (
+        <div style={{ marginTop: '0.6rem', padding: '0.55rem 0.75rem', borderRadius: 8,
+                      background: 'rgba(167,139,250,0.07)', fontSize: '0.76rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <strong>🟣 Off-exchange blocks</strong>
+            <span title={ven.title} className="mono"
+                  style={{ color: ven.color, fontWeight: 600, cursor: 'help' }}>
+              {ven.label} of volume
+            </span>
+            {inBand.length > 0 && (
+              <span style={{ fontSize: '0.68rem', padding: '1px 7px', borderRadius: 999,
+                             background: 'rgba(167,139,250,0.18)', color: DARK, fontWeight: 600 }}>
+                {inBand.length} inside the buy band
+              </span>
+            )}
+          </div>
+          {blocks.length === 0 ? (
+            <div style={{ opacity: 0.75, marginTop: '0.25rem' }}>
+              No large off-exchange prints in this session.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto', marginTop: '0.35rem' }}>
+              <table className="mono" style={{ fontSize: '0.72rem', borderCollapse: 'collapse', minWidth: 340 }}>
+                <thead>
+                  <tr style={{ color: 'var(--cm-slate)', textAlign: 'left' }}>
+                    <th style={{ padding: '2px 10px 2px 0' }}>Time</th>
+                    <th style={{ padding: '2px 10px 2px 0' }}>Price</th>
+                    <th style={{ padding: '2px 10px 2px 0' }}>Size</th>
+                    <th style={{ padding: '2px 10px 2px 0' }}>$</th>
+                    <th style={{ padding: '2px 0' }}>Where</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blocks.slice(0, 8).map((b, i) => {
+                    const within = !!ez && b.price >= ez.lo && b.price <= ez.hi;
+                    return (
+                      <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <td style={{ padding: '2px 10px 2px 0' }}>{b.time}</td>
+                        <td style={{ padding: '2px 10px 2px 0' }}>{level(b.price)}</td>
+                        <td style={{ padding: '2px 10px 2px 0' }}>{b.size.toLocaleString()}</td>
+                        <td style={{ padding: '2px 10px 2px 0', color: DARK }}>
+                          ${(b.dollars / 1e6).toFixed(1)}M
+                        </td>
+                        <td style={{ padding: '2px 0', color: within ? DEMAND : 'var(--cm-slate)' }}>
+                          {within ? 'in buy band' : ''}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{ marginTop: '0.3rem', fontSize: '0.66rem', opacity: 0.55 }}>
+            {data.venues.disclaimer}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

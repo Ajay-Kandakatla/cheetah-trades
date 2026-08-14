@@ -171,10 +171,35 @@ export type Liquidity = {
   tier: 'deep' | 'ok' | 'thin' | 'illiquid' | null; tradeable: boolean | null;
 };
 
+export type DarkBlock = { time: string; price: number; size: number; dollars: number };
+
 export type Venues = {
-  available?: boolean; dark_pct?: number | null; blocks?: number | null;
+  available?: boolean; dark_pct?: number | null;
+  /** Board rows carry a COUNT; the detail view carries the blocks themselves. */
+  blocks?: number | DarkBlock[] | null;
   rating?: 'heavy' | 'normal' | 'light' | null;
+  read?: string; disclaimer?: string;
+  dark_shares?: number; total_shares?: number; dark_trades?: number;
 };
+
+/** Block COUNT, whatever shape the payload used. The board sends a number
+ *  (cheap); the detail view sends the blocks themselves. */
+export function blockCount(v: Venues | null | undefined): number | null {
+  if (!v || v.blocks == null) return null;
+  return Array.isArray(v.blocks) ? v.blocks.length : v.blocks;
+}
+
+/** Blocks as a list, whatever shape the payload used. */
+export function blockList(v: Venues | null | undefined): DarkBlock[] {
+  return Array.isArray(v?.blocks) ? (v!.blocks as DarkBlock[]) : [];
+}
+
+/** Blocks that printed INSIDE a band — the ones that say something about
+ *  that level specifically, rather than about the session in general. */
+export function blocksInBand(blocks: DarkBlock[], z: Zone | null | undefined): DarkBlock[] {
+  if (!z) return [];
+  return blocks.filter((b) => b.price >= z.lo && b.price <= z.hi);
+}
 
 /** Break-even win rate for a given R:R — the number that makes R:R concrete.
  *  At 3.8R you can be wrong 4 times in 5; at 0.03R you'd need to be right 97%
@@ -212,7 +237,7 @@ export function venueView(v: Venues | null | undefined):
     return { label: '—', color: '#8595ad',
              title: 'No tape pulled for this row (only the top rows by R:R get venue detail).' };
   }
-  const blocks = v.blocks ?? 0;
+  const blocks = Array.isArray(v.blocks) ? v.blocks.length : (v.blocks ?? 0);
   const base = `${v.dark_pct}% of volume printed off-exchange; ${blocks} large off-exchange block${blocks === 1 ? '' : 's'}. `
     + 'Mixes dark-pool crossing with retail internalisation — a venue fact, not proof of who traded.';
   if (v.rating === 'heavy') return { label: `${v.dark_pct}%`, color: '#a78bfa', title: `Unusually dark. ${base}` };
