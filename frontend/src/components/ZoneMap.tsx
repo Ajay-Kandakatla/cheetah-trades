@@ -224,8 +224,10 @@ export function ZoneMap({ symbol }: { symbol: string }) {
         )}
         <div style={{ marginTop: '0.25rem', opacity: 0.75 }}>{reentryReason(data)}</div>
         <div style={{ marginTop: '0.3rem', fontSize: '0.68rem', opacity: 0.55 }}>
-          Bands are a configured price-structure read (swing clusters weighted by tests +
-          volume) — not a book method, not a buy signal, not advice.
+          {data.resolution === 'swing' ? 'Swing' : 'Fine'} bands — swing clusters weighted by
+          tests + volume. The Tape tab uses the finer setting for intraday reads, so the same
+          stock can show slightly different band edges there; it is a zoom level, not a
+          disagreement. Configured price-structure read — not a book method, not advice.
         </div>
       </div>
 

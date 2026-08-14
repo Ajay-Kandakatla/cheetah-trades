@@ -141,7 +141,14 @@ def zone_read(symbol: str, last_price: Optional[float]) -> dict:
         return {"pass": entry_read == "favorable", "caution": entry_read == "caution",
                 "state": v.get("state"), "detail": v.get("label") or "no zone read",
                 "nearest_support": (z.get("nearest_support") or {}).get("hi"),
-                "nearest_resistance": (z.get("nearest_resistance") or {}).get("lo")}
+                "nearest_resistance": (z.get("nearest_resistance") or {}).get("lo"),
+                # Which band RESOLUTION produced this read. The Tape tab uses
+                # fine bands (intraday decisions); Back in Demand uses coarse
+                # ones (multi-day holds), so the same stock can legitimately
+                # show different band edges on the two surfaces. Saying which
+                # is which stops that reading as a contradiction — Ajay spotted
+                # it on DTE 2026-08-14.
+                "resolution": z.get("resolution")}
     except Exception as exc:
         log.debug("zone_read failed for %s: %s", symbol, exc)
         return {"pass": False, "caution": False, "state": None,

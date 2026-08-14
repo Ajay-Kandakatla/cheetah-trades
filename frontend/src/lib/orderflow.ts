@@ -61,7 +61,7 @@ export type TapeData = {
     intraday: { pass: boolean; ema9: number | null; ema21: number | null; detail: string };
     daily: { pass: boolean; detail: string; source: string };
   };
-  zone?: { state?: string | null; detail: string; nearest_support?: number | null; nearest_resistance?: number | null };
+  zone?: { state?: string | null; detail: string; nearest_support?: number | null; nearest_resistance?: number | null; resolution?: 'fine' | 'swing' | null };
   gex?: { regime?: string; net_gex_dollars?: number; max_pain_strike?: number; expiration_date?: string; reliability?: string } | null;
   message?: string;
 };

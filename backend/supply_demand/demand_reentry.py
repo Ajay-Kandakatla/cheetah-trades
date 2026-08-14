@@ -107,6 +107,36 @@ VENUE_DETAIL_TOP_N = 15
 # anything further means price has broken below the band, not approached it.
 ENTRY_ABOVE_TOL_PCT = 1.5
 
+# Relative volume (today / 50-day average) bands.
+RVOL_SURGE  = 2.0
+RVOL_ACTIVE = 1.2
+RVOL_QUIET  = 0.6
+
+# Regular session length, and the earliest fraction at which a projection is
+# worth showing. Before this the sample is too small — opening prints alone
+# can imply a 5x day.
+SESSION_MINUTES = 390          # 09:30-16:00 ET
+RVOL_MIN_FRACTION = 0.08       # ~30 minutes in
+
+
+def _session_fraction(now_et=None) -> float:
+    """How much of the regular session has elapsed, 0..1.
+
+    Raw RVOL is a trap mid-session. Measured 2026-08-14 at 10:50 ET (80 of 390
+    minutes), every name on the board read "dead" at RVOL 0.01-0.10 — not
+    because volume was absent but because the day was 20% old. Worse, the
+    frames were INCONSISTENT: some names' last bar was the prior COMPLETE
+    session, others' was today's partial one, so the column compared different
+    things across rows. Projecting to a full session makes them comparable.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    now = now_et or datetime.now(ZoneInfo("America/New_York"))
+    mins = (now.hour - 9) * 60 + now.minute - 30
+    if mins <= 0:
+        return 0.0
+    return min(1.0, mins / SESSION_MINUTES)
+
 _CACHE_TTL_SEC = 3 * 60 * 60
 _cache: dict = {}
 
@@ -366,6 +396,7 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
         "breakeven_win_pct": (round(100.0 / (1.0 + plan["rr"]), 1)
                               if plan and plan.get("rr") and plan["rr"] > 0 else None),
         "params": zones.get("params"),
+        "resolution": zones.get("resolution"),
         "disclaimer": DISCLAIMER,
     }
     if with_series:
@@ -401,25 +432,76 @@ def _session_venues(symbol: str) -> dict:
 
 
 def _liquidity(df) -> dict:
-    """Average 50-day share + dollar volume, and whether it is worth trading.
+    """CAN you trade it (50-day average) and IS anything happening right now
+    (today's volume vs that average).
 
-    Dollar volume is the honest liquidity proxy we can compute for free from
-    bars already in hand. It is NOT a spread measurement — a $5 stock at $3M/day
-    will still cost you more to cross than the tier alone implies."""
+    Ajay 2026-08-14 asked whether the board carried "current volume of trade".
+    It did not — only the 50-day average, which says a name is tradeable in
+    general but nothing about today. A perfect zone on dead volume and a
+    perfect zone on 3x volume are different situations, and RVOL is the
+    standard way to tell them apart. Both come free from bars already loaded.
+
+    Dollar volume is NOT a spread measurement — a $5 stock at $3M/day still
+    costs more to cross than its tier implies."""
     out = {"avg_vol_50": None, "avg_dollar_vol_50": None,
-           "tier": None, "tradeable": None}
+           "today_vol": None, "today_dollar_vol": None, "rvol": None,
+           "rvol_state": None, "tier": None, "tradeable": None}
     try:
         tail = df.iloc[-50:]
         vol = float(tail["volume"].mean())
         dollars = float((tail["close"] * tail["volume"]).mean())
+        today_v = float(df["volume"].iloc[-1])
+        today_c = float(df["close"].iloc[-1])
     except Exception:
         return out
     if not vol or vol <= 0:
         return out
+
     tier = ("deep" if dollars >= LIQ_DEEP_USD else
             "ok" if dollars >= LIQ_OK_USD else
             "thin" if dollars >= LIQ_THIN_USD else "illiquid")
+    # Is the last bar TODAY's (and therefore possibly partial), or a complete
+    # prior session? Only the former needs projecting.
+    partial, frac = False, 1.0
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        et = ZoneInfo("America/New_York")
+        last_day = df.index[-1]
+        last_day = last_day.date() if hasattr(last_day, "date") else None
+        if last_day and last_day == datetime.now(et).date():
+            frac = _session_fraction()
+            partial = 0.0 < frac < 1.0
+    except Exception:
+        partial, frac = False, 1.0
+
+    # The daily bar for TODAY is a stale snapshot, not a live total. Measured
+    # 2026-08-14 at 10:52 ET: live tape showed 1.5-2.6x the volume the daily
+    # bar carried (SWKS 890k vs 348k). Any RVOL off that bar understates by
+    # whatever the cache lag happens to be — a different amount per name, so
+    # the column would not even be internally comparable.
+    #
+    # So mid-session we publish NO rvol here. `_attach_venues` overwrites it
+    # for the top rows using the live tape it already fetches for the venue
+    # split; everything else honestly reports "pending".
+    rvol, source = None, "daily_bar"
+    if partial:
+        source = "pending"
+    elif vol > 0:
+        rvol = round(today_v / vol, 2)
+
+    state = None
+    if rvol is not None:
+        state = ("surging" if rvol >= RVOL_SURGE else
+                 "active" if rvol >= RVOL_ACTIVE else
+                 "quiet" if rvol >= RVOL_QUIET else "dead")
     return {"avg_vol_50": int(vol), "avg_dollar_vol_50": int(dollars),
+            "today_vol": (None if partial else int(today_v)),
+            "today_dollar_vol": (None if partial else int(today_v * today_c)),
+            "rvol": rvol, "rvol_state": state,
+            "rvol_partial": partial, "today_source": source,
+            "session_pct": round(frac * 100) if partial else 100,
+            "last_close": round(today_c, 2),
             "tier": tier, "tradeable": tier != "illiquid"}
 
 
@@ -442,9 +524,11 @@ def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N) -> None:
 
     ranked = sorted(rows, key=lambda r: -((r.get("plan") or {}).get("rr") or 0))
     for r in ranked[:top_n]:
+        tape_is_today = True
         try:
             trades = tape_mod.fetch_trades(r["symbol"], _d.today())
             if trades is None or trades.empty:
+                tape_is_today = False
                 trades = tape_mod.fetch_trades(r["symbol"], _d.today() - timedelta(days=1))
             v = darkpool.split_venues(trades) if trades is not None else {"available": False}
             blocks = len(darkpool.dark_blocks(trades)) if trades is not None else 0
@@ -453,6 +537,32 @@ def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N) -> None:
             v, blocks = {"available": False}, 0
         r["venues"] = {**v, "blocks": blocks,
                        "rating": _venue_rating(v.get("dark_pct"))}
+
+        # Live tape gives an ACCURATE today-volume for these rows, so fill in
+        # the RVOL that _liquidity had to leave pending. Same fetch, no extra
+        # cost. Projected to a full session when the day is still running.
+        L = r.get("liquidity") or {}
+        avg = L.get("avg_vol_50") or 0
+        total = v.get("total_shares") or 0
+        if avg > 0 and total > 0:
+            # The fraction must follow the TAPE's day, not the daily bar's.
+            # CENX had a complete prior-session bar (rvol_partial False) but
+            # the tape was today's 80 minutes, so it went un-prorated and read
+            # 0.10 against names that were prorated — not comparable.
+            frac = _session_fraction() if tape_is_today else 1.0
+            if frac <= 0:
+                frac = 1.0
+            if frac >= RVOL_MIN_FRACTION:
+                rv = round(total / (avg * frac), 2)
+                L.update({
+                    "today_vol": int(total),
+                    "today_dollar_vol": int(total * (L.get("last_close") or 0)),
+                    "rvol": rv, "today_source": "tape",
+                    "rvol_state": ("surging" if rv >= RVOL_SURGE else
+                                   "active" if rv >= RVOL_ACTIVE else
+                                   "quiet" if rv >= RVOL_QUIET else "dead"),
+                })
+                r["liquidity"] = L
 
 
 def _rank_key(r: dict):

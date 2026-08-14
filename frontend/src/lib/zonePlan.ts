@@ -49,6 +49,7 @@ export type ZoneMapPayload = {
   zone_quality_ok: boolean;
   entry_zone: Zone | null;
   plan: Plan | null;
+  resolution?: 'fine' | 'swing' | null;
   liquidity?: Liquidity | null;
   venues?: Venues | null;
   breakeven_win_pct?: number | null;

@@ -71,3 +71,22 @@ def test_disclaimer_and_params_present():
 def test_too_little_history_returns_none():
     short = _sawtooth(cycles=1).iloc[:30]
     assert pz.compute(short) is None
+
+
+def test_resolution_is_reported_so_two_surfaces_cannot_look_contradictory():
+    """Ajay 2026-08-14 spotted DTE showing different demand bands on the Tape
+    tab (fine geometry) and Back in Demand (coarse). They are the same
+    structure at two zoom levels, but nothing on screen said so."""
+    import pandas as pd
+    n = 260
+    base = [100 + (i % 7) for i in range(n)]
+    df = pd.DataFrame({
+        "open": base, "close": base,
+        "high": [b + 1.5 for b in base], "low": [b - 1.5 for b in base],
+        "volume": [10_000] * n,
+    })
+    fine = pz.compute(df)
+    coarse = pz.compute(df, merge_pct=4.0, half_width_pct=1.75, swing_window=5)
+    assert fine["resolution"] == "fine"
+    assert coarse["resolution"] == "swing"
+    assert fine["params"]["merge_pct"] < coarse["params"]["merge_pct"]

@@ -185,6 +185,13 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
         "nearest_resistance": nearest_res,
         "nearest_support": nearest_sup,
         "verdict": _verdict(last_price, nearest_res, nearest_sup, in_zone),
+        # Which RESOLUTION produced these bands. Two surfaces legitimately use
+        # different geometry — the Tape tab wants fine bands for an intraday
+        # read, demand_reentry wants coarse ones for a multi-day hold — and
+        # without saying so they look like they disagree about the same stock.
+        # DTE 2026-08-14: fine gave 141.42-143.87 + 138.49-140.37; coarse
+        # merged them into 139.61-143.87. Same structure, different zoom.
+        "resolution": ("fine" if (merge_pct or ZONE_MERGE_PCT) <= 2.0 else "swing"),
         "params": {"lookback": LOOKBACK_BARS,
                    "swing_window": SWING_WINDOW if swing_window is None else int(swing_window),
                    "merge_pct": ZONE_MERGE_PCT if merge_pct is None else float(merge_pct),
