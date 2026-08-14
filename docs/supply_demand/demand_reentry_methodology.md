@@ -212,3 +212,46 @@ result to an sp1500 request for up to 3 hours
 
 **First run (2026-08-13):** 1,506 names, 1,482 scanned, **6.7 s**, 40 hits, of
 which 7 cleared R:R ≥ 1.5 — the only cohort that backtested positive.
+
+
+## Sorted by R:R, with liquidity + venue columns (2026-08-13)
+
+_Ajay: "Sort the list by [R:R] … Also Dark pool rating. Give me some indication
+of the Volume and entry becuz if there are no order flow or book map or volume
+no point buying."_
+
+**Sort is now R:R descending.** The walk-forward backtest found R:R ≥ 1.5 was
+the only cohort with positive expectancy, so the number that decides whether a
+row is worth reading leads the list. Ties break on freshness.
+
+Each row also carries:
+
+| Field | Meaning |
+|---|---|
+| `breakeven_win_pct` | `100 / (1 + R)` — the win rate needed just to break even. 4R → 20%; 1R → 50%; 0.03R → **97%**. |
+| `liquidity.avg_dollar_vol_50` | average 50-day dollar volume |
+| `liquidity.tier` | `deep` ≥ $50M · `ok` ≥ $10M · `thin` ≥ $2M · `illiquid` below |
+| `venues.dark_pct` / `.blocks` / `.rating` | off-exchange share, large off-exchange block count, `heavy` ≥45% · `normal` ≥30% · `light` |
+
+**Why liquidity is a first-class column.** A 4R setup on tape too thin to cross
+is not a trade — the spread alone can exceed the edge, and the backtest models
+only 2bp/side, which small caps will not honour. Rows below the `thin`
+threshold get an amber border rather than the usual green.
+
+**Dollar volume is not a spread measurement.** It is the honest proxy computable
+for free from bars already in hand. A $5 stock at $3M/day still costs more to
+cross than its tier implies.
+
+**Venue detail is top-N only.** It costs one tape fetch per name
+(`VENUE_DETAIL_TOP_N = 15`), so only the rows worth acting on get it. A dash in
+the dark column means *no tape was pulled*, *not* 0% off-exchange — the UI
+tooltip says so explicitly, locked by
+`zonePlan.test.ts › explains the dash rather than implying zero dark volume`.
+
+The off-exchange bucket still mixes dark-pool crossing with retail
+wholesaler internalisation and the tape cannot separate them, so the copy says
+"printed off-exchange" and never "institutional accumulation".
+
+**First run (S&P 1500, 52 hits, 33.9 s):** every one of the top 12 by R:R came
+back `ok` or `deep` — none were untradeable. HOOD printed **49.9%** off-exchange
+(heavy, 15 blocks); LNN printed 19.6% with **zero** blocks.

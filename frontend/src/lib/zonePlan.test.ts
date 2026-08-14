@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  bandLabel, bandWidthPct, chartDomain, freshnessLabel, layoutLabels, level, money,
-  planLine, reentryReason, rrBand, visibleBands,
-} from './zonePlan';
+import { bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, planLine, reentryReason, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
 
 const zone = (over: Partial<Zone> = {}): Zone => ({
@@ -228,5 +225,64 @@ describe('layoutLabels — the plan must stay readable when levels crowd', () =>
 
   it('handles an empty list', () => {
     expect(layoutLabels([], {})).toEqual([]);
+  });
+});
+
+describe('breakEvenWinPct — makes R:R concrete', () => {
+  it('computes the win rate needed just to break even', () => {
+    expect(breakEvenWinPct(4)).toBe(20);
+    expect(breakEvenWinPct(1)).toBe(50);
+    expect(breakEvenWinPct(0.5)).toBe(67);
+    // HRL's 0.03R: you would need to be right 97% of the time.
+    expect(breakEvenWinPct(0.03)).toBe(97);
+  });
+  it('is null when there is no usable R:R', () => {
+    expect(breakEvenWinPct(null)).toBeNull();
+    expect(breakEvenWinPct(0)).toBeNull();
+    expect(breakEvenWinPct(-1)).toBeNull();
+  });
+});
+
+describe('liquidityView — a fill you cannot get is not a trade', () => {
+  const L = (tier: 'deep'|'ok'|'thin'|'illiquid') =>
+    ({ avg_vol_50: 1, avg_dollar_vol_50: 1, tier, tradeable: tier !== 'illiquid' });
+  it('warns only on tape too thin to trade', () => {
+    expect(liquidityView(L('deep')).warn).toBe(false);
+    expect(liquidityView(L('ok')).warn).toBe(false);
+    expect(liquidityView(L('thin')).warn).toBe(true);
+    expect(liquidityView(L('illiquid')).warn).toBe(true);
+  });
+  it('is quiet when liquidity is unknown', () => {
+    expect(liquidityView(null).label).toBe('—');
+    expect(liquidityView(undefined).warn).toBe(false);
+  });
+});
+
+describe('volLabel', () => {
+  it('scales to B / M / K per day', () => {
+    expect(volLabel(3_075_500_000)).toBe('$3.1B/day');
+    expect(volLabel(19_700_000)).toBe('$20M/day');
+    expect(volLabel(450_000)).toBe('$450K/day');
+  });
+  it('is quiet when unknown', () => {
+    expect(volLabel(null)).toBe('—');
+  });
+});
+
+describe('venueView — never claims institutional intent', () => {
+  it('flags an unusually dark session', () => {
+    const v = venueView({ dark_pct: 49.9, blocks: 15, rating: 'heavy' });
+    expect(v.label).toBe('49.9%');
+    expect(v.title).toContain('Unusually dark');
+  });
+  it('states the mixed-bucket caveat on every reading', () => {
+    const v = venueView({ dark_pct: 33, blocks: 4, rating: 'normal' });
+    expect(v.title).toContain('internalisation');
+    expect(v.title.toLowerCase()).not.toContain('smart money');
+  });
+  it('explains the dash rather than implying zero dark volume', () => {
+    // Only the top rows by R:R get a tape pull — absence of data is not 0%.
+    expect(venueView(null).label).toBe('—');
+    expect(venueView(null).title).toContain('only the top rows');
   });
 });

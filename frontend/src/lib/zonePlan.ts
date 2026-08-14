@@ -49,6 +49,9 @@ export type ZoneMapPayload = {
   zone_quality_ok: boolean;
   entry_zone: Zone | null;
   plan: Plan | null;
+  liquidity?: Liquidity | null;
+  venues?: Venues | null;
+  breakeven_win_pct?: number | null;
   series?: { date: string; close: number }[];
   error?: string;
 };
@@ -161,6 +164,60 @@ export function chartDomain(
   }
   const pad = ((hi - lo) || hi || 1) * (padPct / 100);
   return { lo: lo - pad, hi: hi + pad };
+}
+
+export type Liquidity = {
+  avg_vol_50: number | null; avg_dollar_vol_50: number | null;
+  tier: 'deep' | 'ok' | 'thin' | 'illiquid' | null; tradeable: boolean | null;
+};
+
+export type Venues = {
+  available?: boolean; dark_pct?: number | null; blocks?: number | null;
+  rating?: 'heavy' | 'normal' | 'light' | null;
+};
+
+/** Break-even win rate for a given R:R — the number that makes R:R concrete.
+ *  At 3.8R you can be wrong 4 times in 5; at 0.03R you'd need to be right 97%
+ *  of the time. Ajay 2026-08-13 asked for this on every row. */
+export function breakEvenWinPct(rr: number | null | undefined): number | null {
+  if (rr == null || !Number.isFinite(rr) || rr <= 0) return null;
+  return Number((100 / (1 + rr)).toFixed(0));
+}
+
+/** Compact dollar volume: 3075500000 -> "$3.1B/day". */
+export function volLabel(dollars: number | null | undefined): string {
+  if (dollars == null || !Number.isFinite(dollars)) return '—';
+  if (dollars >= 1e9) return `$${(dollars / 1e9).toFixed(1)}B/day`;
+  if (dollars >= 1e6) return `$${(dollars / 1e6).toFixed(0)}M/day`;
+  return `$${(dollars / 1e3).toFixed(0)}K/day`;
+}
+
+/** Can you actually get filled here? A great R:R on untradeable tape is not a
+ *  trade — the spread eats the edge before the setup gets a chance. */
+export function liquidityView(l: Liquidity | null | undefined):
+  { label: string; color: string; warn: boolean } {
+  const tier = l?.tier;
+  if (!tier) return { label: '—', color: '#8595ad', warn: false };
+  if (tier === 'deep') return { label: 'deep', color: '#22c55e', warn: false };
+  if (tier === 'ok') return { label: 'ok', color: '#cbd5e1', warn: false };
+  if (tier === 'thin') return { label: 'thin', color: '#d97706', warn: true };
+  return { label: 'illiquid', color: '#ef4444', warn: true };
+}
+
+/** Off-exchange share. Venue fact, NOT proof of institutional intent — the
+ *  bucket mixes dark-pool crossing with retail internalisation. */
+export function venueView(v: Venues | null | undefined):
+  { label: string; color: string; title: string } {
+  if (!v || v.dark_pct == null) {
+    return { label: '—', color: '#8595ad',
+             title: 'No tape pulled for this row (only the top rows by R:R get venue detail).' };
+  }
+  const blocks = v.blocks ?? 0;
+  const base = `${v.dark_pct}% of volume printed off-exchange; ${blocks} large off-exchange block${blocks === 1 ? '' : 's'}. `
+    + 'Mixes dark-pool crossing with retail internalisation — a venue fact, not proof of who traded.';
+  if (v.rating === 'heavy') return { label: `${v.dark_pct}%`, color: '#a78bfa', title: `Unusually dark. ${base}` };
+  if (v.rating === 'light') return { label: `${v.dark_pct}%`, color: '#8595ad', title: `Lightly dark. ${base}` };
+  return { label: `${v.dark_pct}%`, color: '#cbd5e1', title: base };
 }
 
 export type LabelItem = {

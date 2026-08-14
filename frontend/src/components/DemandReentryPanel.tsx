@@ -12,7 +12,10 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { TickerLink } from './TickerLink';
-import { bandLabel, freshnessLabel, money, planLine, rrBand } from '../lib/zonePlan';
+import {
+  bandLabel, breakEvenWinPct, freshnessLabel, liquidityView, money, planLine,
+  rrBand, venueView, volLabel,
+} from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
 
@@ -91,10 +94,12 @@ export function DemandReentryPanel() {
     <section className="sd-section">
       <div className="sepa-tab-help">
         <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
-        back <em>into</em> a demand band they had already left, while the trend still
-        holds. Sitting in a band forever is not a re-entry; leaving and returning is.
-        Each row shows where to buy, where the idea is wrong (stop), and the first
-        place sellers are waiting (target).
+        back <em>into</em> a demand band they had already left, while the structure
+        still holds. Sorted by <strong>R:R</strong> — the backtest found R:R ≥ 1.5 was
+        the only cohort with positive expectancy, so the top of this list is the only
+        part worth reading. <strong>Liq</strong> is average daily dollar volume (a great
+        R:R you can't get filled in is not a trade) and <strong>dark</strong> is the
+        share that printed off-exchange.
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', margin: '0.6rem 0' }}>
@@ -172,11 +177,14 @@ export function DemandReentryPanel() {
         <div style={{ display: 'grid', gap: '0.5rem' }}>
           {data.rows.map((r) => {
             const rr = rrBand(r.plan?.rr);
+            const be = r.breakeven_win_pct ?? breakEvenWinPct(r.plan?.rr);
+            const liq = liquidityView(r.liquidity);
+            const ven = venueView(r.venues);
             return (
               <div key={r.symbol} style={{
                 padding: '0.6rem 0.75rem', borderRadius: 10,
                 background: 'rgba(148,163,184,0.07)',
-                borderLeft: '3px solid #22c55e',
+                borderLeft: `3px solid ${liq.warn ? '#d97706' : '#22c55e'}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <TickerLink ticker={r.symbol} fromLabel="Back in Demand" />
@@ -202,8 +210,27 @@ export function DemandReentryPanel() {
                 <div className="mono" style={{ fontSize: '0.74rem', marginTop: '0.3rem' }}>
                   {planLine(r.plan)}
                 </div>
-                <div style={{ fontSize: '0.7rem', opacity: 0.75, marginTop: '0.15rem' }}>
-                  Band {bandLabel(r.entry_zone)} · {r.entry_zone?.touches ?? 0}× tested · {rr.label}
+                <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap',
+                              fontSize: '0.7rem', opacity: 0.85, marginTop: '0.25rem' }}>
+                  <span title="Reward divided by risk, and the win rate you'd need just to break even at it.">
+                    <strong style={{ color: rr.tone === 'good' ? '#22c55e' : rr.tone === 'poor' ? '#ef4444' : 'inherit' }}>
+                      {rr.label}
+                    </strong>
+                    {be != null && <span style={{ opacity: 0.75 }}> · need {be}% wins</span>}
+                  </span>
+                  <span title={`Average 50-day dollar volume. ${liq.warn ? 'Thin tape — the spread can eat the edge before the setup works.' : 'Enough tape to get filled.'}`}>
+                    liq <strong style={{ color: liq.color }}>{liq.label}</strong>
+                    <span style={{ opacity: 0.7 }}> {volLabel(r.liquidity?.avg_dollar_vol_50)}</span>
+                  </span>
+                  <span title={ven.title}>
+                    dark <strong style={{ color: ven.color }}>{ven.label}</strong>
+                    {r.venues?.blocks != null && (
+                      <span style={{ opacity: 0.7 }}> · {r.venues.blocks} blk</span>
+                    )}
+                  </span>
+                  <span style={{ opacity: 0.7 }}>
+                    band {bandLabel(r.entry_zone)} · {r.entry_zone?.touches ?? 0}×
+                  </span>
                 </div>
               </div>
             );

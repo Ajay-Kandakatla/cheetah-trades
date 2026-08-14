@@ -58,7 +58,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import pandas as pd
@@ -88,6 +88,19 @@ MA_SLOPE_LOOKBACK      = 10
 STOP_BUFFER_PCT = 1.5
 
 MIN_BARS = 220                # ~1y of bars for the structure read
+
+# ── Liquidity tiers (avg 50-day dollar volume) ───────────────────────────────
+# Ajay 2026-08-13: "if there are no order flow or book map or volume no point
+# buying". A great R:R on a name you cannot get filled in is not a trade — and
+# on thin tape the spread alone can exceed the edge. House values.
+LIQ_DEEP_USD  = 50_000_000.0   # institutional-grade tape
+LIQ_OK_USD    = 10_000_000.0   # comfortably tradeable in retail size
+LIQ_THIN_USD  =  2_000_000.0   # tradeable only in small size, wider spreads
+# Below LIQ_THIN_USD the spread and slippage swamp a 2R edge -> not tradeable.
+
+# Dark-pool detail is pulled from the day's tape, which costs a fetch per name,
+# so only the top rows by R:R get it — those are the only ones worth acting on.
+VENUE_DETAIL_TOP_N = 15
 
 _CACHE_TTL_SEC = 3 * 60 * 60
 _cache: dict = {}
@@ -291,12 +304,70 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
         "zone_quality_ok": quality_ok,
         "entry_zone": entry_zone,
         "plan": plan,
+        "liquidity": _liquidity(df),
+        "breakeven_win_pct": (round(100.0 / (1.0 + plan["rr"]), 1)
+                              if plan and plan.get("rr") and plan["rr"] > 0 else None),
         "params": zones.get("params"),
         "disclaimer": DISCLAIMER,
     }
     if with_series:
         rec["series"] = _series_for_chart(df)
     return rec
+
+
+def _liquidity(df) -> dict:
+    """Average 50-day share + dollar volume, and whether it is worth trading.
+
+    Dollar volume is the honest liquidity proxy we can compute for free from
+    bars already in hand. It is NOT a spread measurement — a $5 stock at $3M/day
+    will still cost you more to cross than the tier alone implies."""
+    out = {"avg_vol_50": None, "avg_dollar_vol_50": None,
+           "tier": None, "tradeable": None}
+    try:
+        tail = df.iloc[-50:]
+        vol = float(tail["volume"].mean())
+        dollars = float((tail["close"] * tail["volume"]).mean())
+    except Exception:
+        return out
+    if not vol or vol <= 0:
+        return out
+    tier = ("deep" if dollars >= LIQ_DEEP_USD else
+            "ok" if dollars >= LIQ_OK_USD else
+            "thin" if dollars >= LIQ_THIN_USD else "illiquid")
+    return {"avg_vol_50": int(vol), "avg_dollar_vol_50": int(dollars),
+            "tier": tier, "tradeable": tier != "illiquid"}
+
+
+def _venue_rating(dark_pct: Optional[float]) -> Optional[str]:
+    """Plain label for off-exchange share. Venue fact, not intent — the bucket
+    mixes dark-pool crossing with retail internalisation (see orderflow.darkpool)."""
+    if dark_pct is None:
+        return None
+    if dark_pct >= 45.0:
+        return "heavy"
+    if dark_pct >= 30.0:
+        return "normal"
+    return "light"
+
+
+def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N) -> None:
+    """Add today's venue mix to the top `top_n` rows by R:R, in place."""
+    from datetime import date as _d
+    from orderflow import darkpool, tape as tape_mod
+
+    ranked = sorted(rows, key=lambda r: -((r.get("plan") or {}).get("rr") or 0))
+    for r in ranked[:top_n]:
+        try:
+            trades = tape_mod.fetch_trades(r["symbol"], _d.today())
+            if trades is None or trades.empty:
+                trades = tape_mod.fetch_trades(r["symbol"], _d.today() - timedelta(days=1))
+            v = darkpool.split_venues(trades) if trades is not None else {"available": False}
+            blocks = len(darkpool.dark_blocks(trades)) if trades is not None else 0
+        except Exception as exc:
+            log.debug("demand-reentry: venue fetch failed for %s: %s", r["symbol"], exc)
+            v, blocks = {"available": False}, 0
+        r["venues"] = {**v, "blocks": blocks,
+                       "rating": _venue_rating(v.get("dark_pct"))}
 
 
 def _rank_key(r: dict):
@@ -423,9 +494,14 @@ def scan(force: bool = False, limit: Optional[int] = None,
             rec.pop("series", None)
             rows.append(rec)
 
-    rows.sort(key=_rank_key)
+    # Sorted by R:R descending (2026-08-13). The backtest found R:R >= 1.5 was
+    # the ONLY cohort with positive expectancy, so the number that decides
+    # whether a row is worth reading leads the list. Ties break on freshness.
+    rows.sort(key=lambda r: (-((r.get("plan") or {}).get("rr") or 0.0), _rank_key(r)))
     if limit:
         rows = rows[:int(limit)]
+
+    _attach_venues(rows)
 
     data = {
         "rows": rows,
