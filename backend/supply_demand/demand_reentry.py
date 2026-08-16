@@ -707,11 +707,21 @@ UNIVERSES = {
     "sp500":  ("S&P 500", lambda: universe_mod.fetch_sp500()),
     "sp1500": ("S&P 1500 (500 + 400 mid + 600 small)", lambda: universe_mod.fetch_sp1500()),
     # sp1500 + the build-out themes the indices structurally cannot hold —
-    # quantum, SMR nuclear, robotics, the ADR/pre-profit AI semis (Ajay
-    # 2026-08-15). See sepa.universe.THEME_UNIVERSE for why they are absent.
-    "sp1500_plus": ("S&P 1500 + themes (quantum · nuclear · robotics · AI semis)",
-                    lambda: universe_mod.fetch_sp1500()),
-    "themes": ("Themes only (quantum · nuclear · robotics · AI semis)",
+    # space, quantum, SMR nuclear, robotics, optical, the ADR/pre-profit AI
+    # semis (Ajay 2026-08-15). See sepa.universe.THEME_UNIVERSE for why they
+    # are absent from every S&P and Russell tier.
+    #
+    # BUG FIXED 2026-08-16: this lambda was `fetch_sp1500()` — the same list as
+    # the plain sp1500 entry. The label promised "+ themes" and the universe
+    # delivered none of the ones the S&P tiers exclude, so 34 of 82 theme names
+    # (ASTS, IONQ, ARM, CRDO, LUNR, AAOI …) were never scanned on the page whose
+    # own dropdown said they were.
+    "sp1500_plus": ("S&P 1500 + themes (space · quantum · nuclear · robotics · "
+                    "optical · AI semis)",
+                    lambda: list(dict.fromkeys(universe_mod.fetch_sp1500()
+                                               + universe_mod.fetch_themes()))),
+    "themes": ("Themes only (space · quantum · nuclear · robotics · optical · "
+               "AI semis)",
                lambda: universe_mod.fetch_themes()),
     "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
     "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),

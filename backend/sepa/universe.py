@@ -19,6 +19,7 @@ or set SEPA_UNIVERSE to a comma-separated override.
 """
 from __future__ import annotations
 
+import functools
 import logging
 import os
 from massive_keys import stocks_key
@@ -318,16 +319,41 @@ def is_stale(name: str) -> bool:
 # snapshot is strictly better than scanning a truncated list. Bounds are wide
 # enough to survive normal index drift — the S&P 500 carries ~503 share
 # classes (a few issuers have two), the S&P 400 ~400.
+# Sane size band per list. Ajay 2026-08-16: "add a count checks for returned
+# values for all the tickers API like Russel 3000 and S&P 500 as well."
+#
+# Every band below is anchored on a MEASURED count taken 2026-08-16 (shown in
+# the comment), widened to absorb legitimate index churn and dual-class adds.
+# A list that lands outside its band is not a smaller universe — it is a parse
+# that silently changed meaning, which is exactly how the scan came to run on
+# 158 names while reporting "S&P 1500".
 _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
-    "sp500": (450, 530),
-    "sp400": (350, 430),
-    "sp600": (540, 650),
+    "sp500": (450, 530),          # measured 503
+    "sp400": (350, 430),          # measured 400
+    "sp600": (540, 650),          # measured 603
     # The Nasdaq-100 holds 100 companies but slightly more SYMBOLS, because a
     # few constituents have two share classes in the index (GOOG/GOOGL,
     # FOX/FOXA). Range, not equality, so a legitimate dual-class add does not
     # look like a parse failure.
-    "nasdaq100": (95, 115),
+    "nasdaq100": (95, 115),       # measured 102
+    "sp1500": (1350, 1700),       # measured 1506 (500+400+600 layered)
+    "russell1000": (900, 1150),   # measured 1001
+    # Deliberately floored ABOVE the ~1030-name clean fallback (curated ∪ sp500
+    # ∪ sp400). If the iShares file is missing we fall back to a list that is a
+    # perfectly good universe but is NOT the Russell 3000 — and the whole point
+    # of this band is to say so out loud rather than mislabel it.
+    "russell3000": (1800, 3200),  # measured 2559
+    # microcap is an optional layer (IWC holdings file); absent is legitimate,
+    # so there is no lower bound — only an upper one to catch a bad parse.
+    "microcap": (0, 2500),        # measured 1278
+    "etf": (150, 600),            # measured 373
+    "themes": (20, 300),          # measured 82, hand-curated
+    "broad": (1800, 6000),        # measured 3707
+    "massive": (3000, 7000),      # ~5300 per the fetcher's own docstring
 }
+
+# Last observed size per list, for the health check. name -> dict.
+LAST_COUNTS: dict[str, dict] = {}
 
 
 def _count_ok(name: str, syms: list[str]) -> bool:
@@ -337,6 +363,68 @@ def _count_ok(name: str, syms: list[str]) -> bool:
     log.warning("universe: %s parse returned %d names, outside the sane range "
                 "%d-%d — rejecting this source", name, len(syms), lo, hi)
     return False
+
+
+def _record_count(name: str, syms: list[str]) -> list[str]:
+    """Observe a fetcher's result size. Returns `syms` unchanged.
+
+    Distinct from `_count_ok`, which REJECTS a source mid-fallback-chain. This
+    one runs at the boundary, where rejecting would leave the caller with
+    nothing — so it logs loudly and records for `universe_counts()` instead.
+    """
+    n = len(syms or [])
+    lo, hi = _EXPECTED_COUNTS.get(name, (1, 10**9))
+    ok = lo <= n <= hi
+    LAST_COUNTS[name] = {"count": n, "expected": [lo, hi], "ok": ok}
+    if not ok:
+        log.error("universe: %s returned %d names, OUTSIDE the sane range %d-%d "
+                  "— the scan is running on the wrong universe", name, n, lo, hi)
+    return syms
+
+
+def _count_guarded(name: str, fn):
+    """Wrap a public fetcher so every return path is size-checked at source.
+
+    Applied by name after the definitions rather than at each `return`: these
+    fetchers have up to six exit points each (cache hit, local file, network,
+    mirror, stale cache, clean fallback) and guarding one of them is how the
+    fallback paths escaped the check in the first place.
+    """
+    @functools.wraps(fn)
+    def inner(*args, **kwargs):
+        return _record_count(name, fn(*args, **kwargs))
+    return inner
+
+
+def universe_counts(names: list[str] | None = None) -> dict:
+    """Call each list fetcher and report its size against its sane band.
+
+    Used by the health audit and safe to call ad hoc — every fetcher is disk
+    cached for 30 days, so this is cheap after the first pass.
+    """
+    import collections
+    fetchers: "collections.OrderedDict[str, object]" = collections.OrderedDict((
+        ("sp500", fetch_sp500), ("sp400", fetch_sp400), ("sp600", fetch_sp600),
+        ("nasdaq100", fetch_nasdaq100), ("sp1500", fetch_sp1500),
+        ("russell1000", fetch_russell1000), ("russell3000", fetch_russell3000),
+        ("microcap", fetch_microcap), ("etf", fetch_etf_universe),
+        ("themes", fetch_themes), ("broad", fetch_broad),
+    ))
+    out: dict = {}
+    for name, fn in fetchers.items():
+        if names and name not in names:
+            continue
+        lo, hi = _EXPECTED_COUNTS.get(name, (1, 10**9))
+        try:
+            n = len(fn())
+            out[name] = {"count": n, "expected": [lo, hi], "ok": lo <= n <= hi,
+                         "age_days": _cache_age_days(name)}
+        except Exception as exc:
+            out[name] = {"count": None, "expected": [lo, hi], "ok": False,
+                         "error": f"{type(exc).__name__}: {exc}"[:160]}
+    out["_failing"] = sorted(k for k, v in out.items()
+                             if isinstance(v, dict) and not v.get("ok"))
+    return out
 
 
 def _dedup_symbols(raw) -> list[str]:
@@ -1203,24 +1291,45 @@ def fetch_broad() -> list[str]:
 # path in load_universe: the user picks any combination and we union + dedup
 # (overlaps removed). Defined here, after every fetcher, so the direct
 # function references resolve.
+# Named aliases that expand to a set of components. Keep the membership here,
+# next to the component map, so a page that offers "S&P 1500 + themes" cannot
+# drift from what that phrase actually resolves to.
+_UNIVERSE_ALIASES: dict[str, tuple[str, ...]] = {
+    "sp1500_plus": ("sp1500", "curated", "themes"),
+}
+
+
+# The one place a component name maps to a fetcher. `load_universe` resolves
+# single keys through the SAME map, so a name that works in a comma-separated
+# multi-select cannot silently fail as a standalone mode — which is precisely
+# how "sp1500" resolved to the curated 158.
+_COMPONENT_FETCHERS: dict = {
+    "curated":     lambda: list(UNIVERSE),
+    "sp500":       lambda: fetch_sp500(),
+    "sp400":       lambda: fetch_sp400(),
+    # sp600/sp1500 existed as fetchers but were absent from this map, so
+    # SEPA_UNIVERSE_MODE="curated,sp1500" silently resolved to the curated
+    # ~158 names with only a log line. Registered 2026-08-15.
+    "sp600":       lambda: fetch_sp600(),
+    "sp1500":      lambda: fetch_sp1500(),
+    "nasdaq100":   lambda: fetch_nasdaq100(),
+    "themes":      lambda: fetch_themes(),
+    "russell1000": lambda: fetch_russell1000(),
+    "russell3000": lambda: fetch_russell3000(),
+    "micro":       lambda: fetch_microcap(),
+    "microcap":    lambda: fetch_microcap(),
+    "etf":         lambda: fetch_etf_universe(),
+    "etfs":        lambda: fetch_etf_universe(),
+    "broad":       lambda: fetch_broad(),
+}
+
+# Late-bound via lambdas above so the _count_guarded wrappers installed at the
+# bottom of this module are the ones actually called.
+_KNOWN_COMPONENTS = frozenset(_COMPONENT_FETCHERS)
+
+
 def _fetch_component(name: str) -> list[str]:
-    fetchers = {
-        "curated":     lambda: list(UNIVERSE),
-        "sp500":       fetch_sp500,
-        "sp400":       fetch_sp400,
-        # sp600/sp1500 existed as fetchers but were absent from this map, so
-        # SEPA_UNIVERSE_MODE="curated,sp1500" silently resolved to the curated
-        # ~158 names with only a log line. Registered 2026-08-15.
-        "sp600":       fetch_sp600,
-        "sp1500":      fetch_sp1500,
-        "themes":      fetch_themes,
-        "russell1000": fetch_russell1000,
-        "russell3000": fetch_russell3000,
-        "micro":       fetch_microcap,
-        "microcap":    fetch_microcap,
-        "etf":         fetch_etf_universe,
-        "etfs":        fetch_etf_universe,
-    }
+    fetchers = _COMPONENT_FETCHERS
     fn = fetchers.get(name)
     if fn is None:
         log.warning("universe: unknown component '%s' — skipping", name)
@@ -1276,17 +1385,15 @@ def load_universe(mode: str | None = None) -> list[str]:
                  selected, len(dict.fromkeys(combined)))
         return _with_benchmarks(combined)
 
-    if selected == "sp500":
-        return _with_benchmarks(fetch_sp500())
-    if selected == "russell1000":
-        return _with_benchmarks(fetch_russell1000())
-    if selected == "russell3000":
-        return _with_benchmarks(fetch_russell3000())
-    if selected in ("broad", "russell3000_etf", "max"):
-        # Russell 3000 ∪ micro-caps (IWC if present) ∪ broad ETF list.
-        # The widest net — equities + ETFs together. SEPA's liquidity gate
-        # handles the small-cap / thin-ETF noise floor downstream.
-        return _with_benchmarks(fetch_broad())
+    # sp500 / russell1000 / russell3000 / broad used to have their own explicit
+    # branches here, duplicating _COMPONENT_FETCHERS. That duplication IS the
+    # bug this function shipped: the branch list and the component map drifted,
+    # and every key present in one but not the other (sp1500, sp400, sp600,
+    # nasdaq100, themes) fell through to curated. One map now, one lookup.
+    if selected in ("russell3000_etf", "max"):
+        # Widest net — Russell 3000 ∪ micro-caps ∪ broad ETF list. SEPA's
+        # liquidity gate handles the small-cap / thin-ETF noise floor.
+        selected = "broad"
     if selected == "all_us":
         # All active US common stocks via Massive (~5,300 names). Scans
         # take 8-10 minutes with the bulk-snapshot pre-warm — SEPA's
@@ -1296,6 +1403,32 @@ def load_universe(mode: str | None = None) -> list[str]:
         # Curated ∪ S&P 500 (curated wins on ordering)
         merged = list(dict.fromkeys(list(UNIVERSE) + fetch_sp500()))
         return _with_benchmarks(merged)
+
+    # Named aliases that expand to a component set. `sp1500_plus` is the Chart
+    # Maps and demand-reentry default, and it MUST include the themes — the
+    # whole reason the rosters exist is that the S&P tiers structurally cannot
+    # hold them.
+    if selected in _UNIVERSE_ALIASES:
+        parts = _UNIVERSE_ALIASES[selected]
+        combined = []
+        for part in parts:
+            combined.extend(_fetch_component(part))
+        log.info("universe: alias %s -> [%s] -> %d unique (pre-benchmark)",
+                 selected, ",".join(parts), len(dict.fromkeys(combined)))
+        return _with_benchmarks(combined)
+
+    # Any single component name we actually know how to fetch. Before
+    # 2026-08-16 this branch did not exist: `sp1500`, `sp400`, `sp600`,
+    # `nasdaq100` and `themes` all fell through to the curated 158 SILENTLY,
+    # identical to what a garbage key returned, so /supply-demand ran a
+    # 158-name scan while its own UI said "S&P 1500".
+    if selected in _KNOWN_COMPONENTS:
+        return _with_benchmarks(_fetch_component(selected))
+
+    if selected != "curated":
+        log.error("universe: unknown mode %r — falling back to the curated %d "
+                  "names. This is NOT the universe that was asked for.",
+                  selected, len(UNIVERSE))
     return _with_benchmarks(list(dict.fromkeys(UNIVERSE)))
 
 
@@ -1306,6 +1439,33 @@ def _with_benchmarks(syms: list[str]) -> list[str]:
         if b not in out:
             out.append(b)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Size guards, installed last so every fetcher is defined.
+#
+# Ajay 2026-08-16: "add a count checks for returned values for all the tickers
+# API like Russel 3000 and S&P 500 as well."
+#
+# `_count_ok` already guarded the four lists that route through
+# `_resolve_with_fallbacks`. Everything else — Russell 1000/3000, sp1500,
+# microcap, ETFs, broad — had bespoke cache/fallback chains with up to six exit
+# points each and no check on any of them. Wrapping by name covers every path,
+# including the stale-cache and clean-fallback returns that are exactly where a
+# list quietly becomes a different universe.
+# ---------------------------------------------------------------------------
+fetch_sp500 = _count_guarded("sp500", fetch_sp500)
+fetch_sp400 = _count_guarded("sp400", fetch_sp400)
+fetch_sp600 = _count_guarded("sp600", fetch_sp600)
+fetch_nasdaq100 = _count_guarded("nasdaq100", fetch_nasdaq100)
+fetch_sp1500 = _count_guarded("sp1500", fetch_sp1500)
+fetch_russell1000 = _count_guarded("russell1000", fetch_russell1000)
+fetch_russell3000 = _count_guarded("russell3000", fetch_russell3000)
+fetch_microcap = _count_guarded("microcap", fetch_microcap)
+fetch_etf_universe = _count_guarded("etf", fetch_etf_universe)
+fetch_themes = _count_guarded("themes", fetch_themes)
+fetch_broad = _count_guarded("broad", fetch_broad)
+fetch_massive_universe = _count_guarded("massive", fetch_massive_universe)
 
 
 BENCHMARK = "SPY"

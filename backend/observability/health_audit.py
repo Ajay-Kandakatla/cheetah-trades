@@ -243,10 +243,44 @@ def check_13f_quarter_current():
         return _fail("13f_quarter_current", "data", WARN, f"check error: {exc}")
 
 
+def check_universe_counts():
+    """Is every ticker list still the size it should be?
+
+    Ajay 2026-08-16: "May be add a count checks for returned values for all the
+    tickers API like Russel 3000 and S&P 500 as well."
+
+    This is the check that would have caught the bug that prompted it:
+    `load_universe("sp1500_plus")` silently returned the curated 158 names, so
+    /supply-demand ran a 158-name scan while its UI said "S&P 1500". Nothing
+    errored — the list was simply a different list.
+
+    WARN, never CRITICAL. A source going stale means a narrower scan, not a
+    wrong trade, and Ajay's push keep-set is deliberately three kinds.
+    """
+    try:
+        from sepa import universe as U
+        res = U.universe_counts()
+        failing = res.get("_failing") or []
+        n = len([k for k in res if k != "_failing"])
+        if failing:
+            detail = ", ".join(
+                f"{k}={res[k].get('count')} (want {res[k]['expected'][0]}-"
+                f"{res[k]['expected'][1]})" for k in failing)
+            return _fail("universe_counts", "data", WARN,
+                         f"{len(failing)}/{n} ticker lists outside their sane "
+                         f"range: {detail}", len(failing))
+        return _ok("universe_counts", "data",
+                   f"all {n} ticker lists within their sane range", 0)
+    except Exception as exc:
+        return _fail("universe_counts", "data", WARN,
+                     f"universe count check failed: {exc}", None)
+
+
 CHECKS = [
     check_mongo, check_scan_fresh, check_scan_nonempty, check_price_cache,
     check_market_gauge, check_macro_risk, check_pullback_artifact,
     check_log_errors, check_disk, check_13f_quarter_current,
+    check_universe_counts,
 ]
 
 
