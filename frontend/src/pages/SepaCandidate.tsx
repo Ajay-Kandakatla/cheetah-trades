@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
+import { resolveBack } from '../lib/navSource';
 // Supply/demand + flow chips — ported from the SEPA list card so the
 // single-ticker research view has the same 🐋 whales / 📋 SEC / conviction /
 // political / 🌍 macro / insider+valuation surface (user 2026-05-30:
@@ -304,13 +305,10 @@ export function SepaCandidatePage() {
   // Source-tracking: when a caller passes navigate('/sepa/X', { state: { from, label } })
   // we render a contextual "← Back to Catalysts" button. Otherwise nav(-1)
   // works via browser history for the generic case.
+  // `backSource` is resolved below, once searchParams exists — the source also
+  // rides in ?from= so it survives a tab switch (which replaces the history
+  // entry and drops state) and a reload. See lib/navSource.ts.
   const navState = (location.state as { from?: string; label?: string } | null) || null;
-  const handleBack = () => {
-    if (navState?.from) navigate(navState.from);
-    else if (window.history.length > 1) navigate(-1);
-    else navigate('/sepa');
-  };
-  const backLabel = navState?.label ? `← Back to ${navState.label}` : '← Back';
   // SWR-backed detail fetch — page renders cached data instantly while
   // revalidating in the background. Navigating MU → AAPL → MU brings the
   // cached MU view back without a flash of "Loading…".
@@ -332,6 +330,13 @@ export function SepaCandidatePage() {
   // 'chart'. Switching tabs rewrites ?tab= in place (replace, no history spam)
   // so a reload or a shared link lands on the same tab.
   const [searchParams, setSearchParams] = useSearchParams();
+  const backSource = resolveBack(navState, searchParams.get('from'));
+  const handleBack = () => {
+    if (backSource) navigate(backSource.path);
+    else if (window.history.length > 1) navigate(-1);
+    else navigate('/sepa');
+  };
+  const backLabel = backSource ? `← Back to ${backSource.label}` : '← Back';
   const tabParam = searchParams.get('tab');
   const hashKey = (location.hash || '').replace(/^#/, '').toLowerCase();
   const tab: Tab = TABS.includes(tabParam as Tab)
@@ -342,7 +347,9 @@ export function SepaCandidatePage() {
       const next = new URLSearchParams(prev);
       next.set('tab', t);
       return next;
-    }, { replace: true });
+      // `state` must be passed explicitly: setSearchParams drops it otherwise,
+      // which used to make the first tab click forget the calling page.
+    }, { replace: true, state: location.state });
   };
   const [added, setAdded] = useState(false);
   const [rescanState, setRescanState] = useState<'idle' | 'running' | 'error'>('idle');
@@ -553,10 +560,14 @@ export function SepaCandidatePage() {
   }, [setup, accountSize, riskPct]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && navigate('/sepa');
+    // Escape is the keyboard twin of the back button, so it honours the
+    // calling page too rather than always dumping the user on the scanner.
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleBack(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate]);
+    // Depend on the resolved target, not on handleBack — otherwise the listener
+    // keeps the first render's closure and Escape goes somewhere stale.
+  }, [navigate, backSource?.path, backSource?.label]);
 
   const rMultiples = useMemo(() => {
     if (!setup) return null;
@@ -576,7 +587,7 @@ export function SepaCandidatePage() {
           type="button"
           className="sepa-btn sepa-candidate-page__back"
           onClick={handleBack}
-          title={navState?.from ? `Return to ${navState.label || navState.from}` : 'Go back'}
+          title={backSource ? `Return to ${backSource.label}` : 'Go back'}
         >
           {backLabel}
         </button>

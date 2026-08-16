@@ -18,6 +18,7 @@ import {
   themeLabel, toneColor, xFor, yFor,
   type CmTile,
 } from '../lib/chartMaps';
+import { withSource } from '../lib/navSource';
 
 const W = 620;
 const PAD_R = 62;          // right gutter for the price labels
@@ -46,7 +47,7 @@ export const PatternChart = memo(function PatternChart(
 
   return (
     <Link
-      to={tile.href}
+      to={withSource(tile.href, 'chart-maps')}
       state={{ from: '/chart-maps', label: 'Chart Maps' }}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
       aria-label={`${tile.symbol} — open SEPA detail`}

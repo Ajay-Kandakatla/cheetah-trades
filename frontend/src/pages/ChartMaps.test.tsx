@@ -92,7 +92,7 @@ describe('ChartMaps', () => {
     draw();
     expect(await screen.findByText('AVGO')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /AVGO — open SEPA detail/ }))
-      .toHaveAttribute('href', '/sepa/AVGO?tab=setup');
+      .toHaveAttribute('href', '/sepa/AVGO?tab=setup&from=chart-maps');
     expect(screen.getByText(/tightens 23%/)).toBeInTheDocument();
   });
 

@@ -54,7 +54,19 @@ describe('PatternChart', () => {
   it('is a link to the ticker SEPA detail page', () => {
     draw(TILE);
     const link = screen.getByRole('link', { name: /IONQ — open SEPA detail/ });
-    expect(link).toHaveAttribute('href', '/sepa/IONQ?tab=setup');
+    const url = new URL(link.getAttribute('href')!, 'http://x');
+    expect(url.pathname).toBe('/sepa/IONQ');
+    expect(url.searchParams.get('tab')).toBe('setup');
+  });
+
+  // Ajay 2026-08-16: back from the detail page was dumping him on the scanner.
+  // The tile stamps its origin into the URL, not just router state, because the
+  // detail page's tab switch replaces the history entry and drops state.
+  it('stamps the calling page into the link so Back returns to Chart Maps', () => {
+    draw(TILE);
+    const link = screen.getByRole('link', { name: /IONQ — open SEPA detail/ });
+    const url = new URL(link.getAttribute('href')!, 'http://x');
+    expect(url.searchParams.get('from')).toBe('chart-maps');
   });
 
   it('writes the plan levels onto the chart', () => {
