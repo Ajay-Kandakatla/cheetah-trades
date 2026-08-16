@@ -457,3 +457,150 @@ def test_num_rejects_nan_and_inf():
     assert B._num(None) is None
     assert B._num("abc") is None
     assert B._num("3.5") == 3.5
+
+
+# ===========================================================================
+# Strong-VCP gates — the Minervini criteria, each with its source
+#
+# Ajay 2026-08-16, seeing AVGO on the Strong VCP board: "our SEPA VCP has a
+# problem.. We are not differentiating between Institution selling vs not
+# selling.. Its not stage 2 now. Make sure it also has a base formed not
+# institutions selling."
+#
+# He was right. The original filter asked two questions (is the setup named
+# VCP, is the base tight) and AVGO passed both while failing nearly everything
+# the book requires. Measured against the live scan: of 265 names passing the
+# old filter, 209 failed the trend template, 23 were late-stage bases, 11 were
+# not Stage 2, 5 were distributing — 17 actually qualified.
+# ===========================================================================
+def _qualified_row(**over):
+    """A row that passes every gate. Tests override ONE field at a time so a
+    failure names the gate that broke."""
+    row = {
+        "symbol": "GOOD",
+        "entry_setup": {"type": "VCP", "pivot": 100.0, "stop": 94.0},
+        "vcp": {"tightness": 85, "tightness_band": "tight",
+                "base_high": 99.0, "base_low": 80.0, "base_bars": 45,
+                "n_contractions": 3, "pivot_buy_price": 100.0,
+                "suggested_stop": 94.0, "tightness_drivers": ["tightens 25%->4%"]},
+        "is_candidate": True,
+        "rs_rank": 92,
+        "stage": {"stage": 2, "label": "Advancing"},
+        "base_count": {"base_count": 2, "is_late_stage": False, "is_avoid_stage": False},
+        "volume": {"up_down_vol_ratio": 1.6, "up_days_on_avg_vol": 14,
+                   "dn_days_on_avg_vol": 7, "accumulation_strength": "accumulating"},
+        "distribution": None,
+    }
+    row.update(over)
+    return row
+
+
+def test_a_fully_qualified_vcp_passes():
+    assert B.strong_vcp_reject(_qualified_row()) is None
+    assert B._is_strong_vcp(_qualified_row()) is True
+
+
+def test_trend_template_is_the_first_gate():
+    """"Stocks must first meet my Trend Template to be considered a potential
+    SEPA candidate" — TLSW p.34."""
+    r = _qualified_row(is_candidate=False)
+    assert "trend template" in B.strong_vcp_reject(r)
+
+
+def test_rs_below_70_is_rejected_and_named():
+    """"The relative strength (RS) ranking ... is no less than 70, but
+    preferably in the 90s" — TTLAC §6 (ebook p.106) crit. 7; TLSW p.79."""
+    assert "RS 43" in B.strong_vcp_reject(_qualified_row(rs_rank=43))
+    assert B.strong_vcp_reject(_qualified_row(rs_rank=70)) is None      # at the floor
+    assert B.strong_vcp_reject(_qualified_row(rs_rank=69)) is not None
+
+
+def test_only_stage_2_qualifies():
+    """"Stage 2 - Advancing phase: accumulation / Stage 3 - Topping phase:
+    distribution" — TLSW p.66, TTLAC §6 (ebook p.104). Institutions selling IS
+    Stage 3 by definition."""
+    for stage in (1, 3, 4):
+        rej = B.strong_vcp_reject(_qualified_row(stage={"stage": stage}))
+        assert rej and "not Stage 2" in rej
+
+
+def test_late_stage_bases_are_rejected():
+    """"By the time a fourth or fifth base occurs ... definitely in its late
+    stages. By this point, abrupt base failures" — TLSW p.81."""
+    r = _qualified_row(base_count={"base_count": 6, "is_late_stage": True,
+                                   "is_avoid_stage": True})
+    assert "late-stage base #6" in B.strong_vcp_reject(r)
+    # a 2nd base is fine
+    assert B.strong_vcp_reject(_qualified_row()) is None
+
+
+def test_institutional_SELLING_is_rejected_even_when_the_label_says_neutral():
+    """THE GAP AJAY POINTED AT. Stage 2 requires "more up days and up weeks on
+    above-average volume than down days and down weeks" (TLSW p.71-72), but the
+    coarse accumulation_strength label only says "distributing" at a ratio
+    <= 0.70. AVGO's 0.91 reads "neutral" while failing the book's own test, so
+    the ratio and the day counts are checked DIRECTLY."""
+    r = _qualified_row(volume={"up_down_vol_ratio": 0.91,
+                               "up_days_on_avg_vol": 10,
+                               "dn_days_on_avg_vol": 11,
+                               "accumulation_strength": "neutral"})
+    rej = B.strong_vcp_reject(r)
+    assert rej and "0.91" in rej and "distribution" in rej
+
+
+def test_more_down_days_than_up_days_is_rejected():
+    """Caught even when the volume RATIO scrapes over 1.0."""
+    r = _qualified_row(volume={"up_down_vol_ratio": 1.05,
+                               "up_days_on_avg_vol": 8,
+                               "dn_days_on_avg_vol": 12,
+                               "accumulation_strength": "neutral"})
+    assert "more down days" in B.strong_vcp_reject(r)
+
+
+def test_an_explicit_distribution_flag_is_rejected():
+    assert B.strong_vcp_reject(_qualified_row(distribution={"days": 5})) is not None
+    r = _qualified_row(volume={"up_down_vol_ratio": 1.5, "up_days_on_avg_vol": 12,
+                               "dn_days_on_avg_vol": 6,
+                               "accumulation_strength": "distributing"})
+    assert "distributing" in B.strong_vcp_reject(r)
+
+
+def test_a_loose_base_is_still_rejected():
+    """The original two gates still apply — they were necessary, just not
+    sufficient."""
+    r = _qualified_row(vcp={"tightness": 40})
+    assert "not tight enough" in B.strong_vcp_reject(r)
+    assert B.strong_vcp_reject(_qualified_row(entry_setup={"type": "BREAKOUT"})) \
+        == "no VCP setup"
+
+
+def test_REGRESSION_the_exact_AVGO_row_is_rejected():
+    """The row that put AVGO on the board on 2026-08-16, verbatim from the
+    live scan. It passed the old filter on tightness 85 alone."""
+    avgo = {
+        "symbol": "AVGO",
+        "entry_setup": {"type": "VCP", "pivot": 396.81, "stop": 370.32},
+        "vcp": {"tightness": 85, "tightness_band": "tight",
+                "base_high": 481.57, "base_low": 360.45, "base_bars": 50},
+        "is_candidate": False, "is_buyable": False, "setup_ready": False,
+        "rs_rank": 43,
+        "stage": {"stage": 2, "label": "Advancing", "dist_200_pct": 6.44},
+        "base_count": {"base_count": 6, "is_late_stage": True, "is_avoid_stage": True},
+        "volume": {"up_down_vol_ratio": 0.91, "up_days_on_avg_vol": 10,
+                   "dn_days_on_avg_vol": 11, "accumulation": False,
+                   "accumulation_strength": "neutral", "vol_dryup": 0.69},
+        "distribution": None,
+    }
+    assert B._is_strong_vcp(avgo) is False
+    # and it must fail for a REASON, not by accident
+    assert B.strong_vcp_reject(avgo)
+
+
+def test_gates_survive_the_null_shapes_the_scan_really_emits():
+    """A row missing stage/base_count/volume entirely must not crash — those
+    blocks are absent on names the scanner could not fully analyse."""
+    bare = {"symbol": "X", "entry_setup": {"type": "VCP"},
+            "vcp": {"tightness": 90}, "is_candidate": True, "rs_rank": 95}
+    assert B.strong_vcp_reject(bare) is None          # nothing to reject on
+    assert B.strong_vcp_reject({"symbol": "Y", "entry_setup": None,
+                                "vcp": None}) == "no VCP setup"

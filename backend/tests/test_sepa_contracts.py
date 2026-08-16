@@ -1168,3 +1168,73 @@ def test_racing_board_locked(monkeypatch):
     assert row["r1"] == row["pivot"] + risk == 107.0
     assert row["r2"] == row["pivot"] + 2 * risk == 114.0
     monkeypatch.setitem(racing._CACHE, "payload", None)  # don't leak the probe
+
+
+# ---------------------------------------------------------------------------
+# Chart Maps "Strong VCP" gates — SOURCE GUARD (Rule #4)
+#
+# Ajay 2026-08-16: "our SEPA VCP has a problem.. We are not differentiating
+# between Institution selling vs not selling.. Make sure it also has a base
+# formed not institutions selling. Make sure it qualifies other Minervinis
+# principles look at AVGO now, its breaking a bunch of rules of Minervini."
+#
+# These constants come from the books, not from tuning. Changing one changes
+# which charts Ajay studies as "correct" VCP examples, so it must be a
+# deliberate edit that also updates docs/sepa/chart_maps_vcp_gates.md.
+# ---------------------------------------------------------------------------
+def test_chart_maps_vcp_gate_constants_locked():
+    from chart_maps import board as B
+
+    # "The relative strength (RS) ranking ... is no less than 70, but preferably
+    # in the 90s" — TTLAC §6 (ebook p.106) criterion 7; TLSW p.79.
+    assert B.MIN_RS_RANK == 70
+
+    # Stage 2 requires "more up days and up weeks on above-average volume than
+    # down days and down weeks on above-average volume" — TLSW p.71-72. Below
+    # 1.0 is the opposite: institutions distributing into the base.
+    assert B.MIN_UP_DOWN_VOL_RATIO == 1.0
+
+    # vcp.py bands tightness tight >= 70 / developing 40-69 / early < 40.
+    assert B.STRONG_TIGHTNESS == 70
+
+
+def test_chart_maps_vcp_enforces_every_book_gate():
+    """Each gate must actually reject. A refactor that drops one silently would
+    put AVGO-class charts back on the study board."""
+    from chart_maps import board as B
+
+    base = {
+        "symbol": "T", "entry_setup": {"type": "VCP"},
+        "vcp": {"tightness": 85}, "is_candidate": True, "rs_rank": 92,
+        "stage": {"stage": 2},
+        "base_count": {"base_count": 2, "is_late_stage": False,
+                       "is_avoid_stage": False},
+        "volume": {"up_down_vol_ratio": 1.5, "up_days_on_avg_vol": 12,
+                   "dn_days_on_avg_vol": 6, "accumulation_strength": "accumulating"},
+        "distribution": None,
+    }
+    assert B.strong_vcp_reject(base) is None, "the control row must qualify"
+
+    for field, bad in (
+        ("is_candidate", False),                                  # TLSW p.34
+        ("rs_rank", 43),                                          # TTLAC p.106
+        ("stage", {"stage": 3}),                                  # TLSW p.66
+        ("base_count", {"base_count": 6, "is_avoid_stage": True}),  # TLSW p.81
+        ("volume", {"up_down_vol_ratio": 0.91, "up_days_on_avg_vol": 10,
+                    "dn_days_on_avg_vol": 11,
+                    "accumulation_strength": "neutral"}),          # TLSW p.71-72
+    ):
+        row = dict(base)
+        row[field] = bad
+        assert B.strong_vcp_reject(row) is not None, \
+            f"gate on {field} no longer rejects — a book criterion was dropped"
+
+
+def test_chart_maps_vcp_gates_are_documented():
+    """Rule #4: a book-derived gate ships with a methodology doc that cites it."""
+    from pathlib import Path
+    doc = Path(__file__).resolve().parents[2] / "docs" / "sepa" / "chart_maps_vcp_gates.md"
+    assert doc.exists(), "docs/sepa/chart_maps_vcp_gates.md is missing"
+    text = doc.read_text()
+    for cite in ("p.34", "p.66", "p.79", "p.81", "p.71-72", "p.106"):
+        assert cite in text, f"methodology doc does not cite {cite}"

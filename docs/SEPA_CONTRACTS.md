@@ -1407,3 +1407,49 @@ feeds `is_candidate`/`is_buyable` or the deterministic engine.
   himself downplays prior rise ("I don't pay much attention to this
   guideline", cup.html). Any change to CWH stop/target conventions is a
   trade-plan decision — Ajay's call.
+
+---
+
+## Chart Maps — "Strong VCP" study board (2026-08-16)
+
+Ajay flagged AVGO on this board: *"our SEPA VCP has a problem.. We are not
+differentiating between Institution selling vs not selling.. Its not stage 2
+now."* The original filter asked only two questions — setup type is `VCP` and
+`vcp.tightness >= 70` — and AVGO passed both on tightness 85 while failing
+almost every other criterion (`is_candidate` False, RS 43, base #6
+`is_avoid_stage`, up/down volume 0.91, 11 down days vs 10 up on above-average
+volume). Of 265 names passing the old filter, only **17** survive the corrected
+gates: 209 failed the trend template, 23 were late-stage bases, 11 were not
+Stage 2, 5 were distributing.
+
+**Contract** (`chart_maps/board.py::strong_vcp_reject`, returns the reason or
+`None`):
+
+1. `entry_setup.type == "VCP"` and `vcp.tightness >= STRONG_TIGHTNESS` (70) —
+   contractions "correct less and less … on successively lower volume", TTLAC
+   §6 (ebook p.110); dry-up TLSW p.226.
+2. `is_candidate` — the Trend Template comes FIRST, TLSW p.34 (template p.79).
+3. `rs_rank >= MIN_RS_RANK` (70) — "no less than 70, but preferably in the 90s",
+   TTLAC §6 (ebook p.106) crit. 7; TLSW p.79. Carried separately so a rejection
+   can NAME it.
+4. `stage.stage == 2` — Stage 2 is accumulation, Stage 3 is distribution
+   (TLSW p.66; TTLAC §6 ebook p.104). Institutions selling IS Stage 3.
+5. `not base_count.is_avoid_stage / is_late_stage` — "by the time a fourth or
+   fifth base occurs … abrupt base failures", TLSW p.81.
+6. `volume.up_down_vol_ratio >= MIN_UP_DOWN_VOL_RATIO` (1.0) AND
+   `dn_days_on_avg_vol <= up_days_on_avg_vol` AND not `distributing` —
+   TLSW p.71-72 verbatim. Checked DIRECTLY because `accumulation_strength`
+   only reads "distributing" at ratio <= 0.70, so AVGO's 0.91 said "neutral".
+
+Guards: `test_sepa_contracts.py::test_chart_maps_vcp_gate_constants_locked`,
+`::test_chart_maps_vcp_enforces_every_book_gate`,
+`::test_chart_maps_vcp_gates_are_documented`. Regression:
+`test_chart_maps.py::test_REGRESSION_the_exact_AVGO_row_is_rejected`.
+Methodology: `docs/sepa/chart_maps_vcp_gates.md`.
+
+**Open, NOT changed:** `sepa/stage.py` downgrades Stage 2 → 3 only on
+`accumulation_strength == "distributing"` or `cmf_signal == "outflow"`, so AVGO
+stays Stage 2 despite failing p.71-72's own up-days-vs-down-days test. Adding
+`dn_days_on_avg_vol > up_days_on_avg_vol` to that downgrade would align it with
+the book — but `stage.py` feeds Auto-Pilot's entry gate, so it changes what the
+engine buys with real money. Ajay's call, not a side effect.

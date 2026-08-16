@@ -49,6 +49,19 @@ LIMIT_MAX = 60
 # top band plus the scanner independently naming VCP as the entry setup.
 STRONG_TIGHTNESS = 70
 
+# "The relative strength (RS) ranking ... is no less than 70, but preferably in
+# the 90s" — TTLAC §6 (ebook p.106) criterion 7; TLSW p.79. The trend template
+# already enforces this, but it is carried separately so a rejection can NAME
+# it: RS 43 is why AVGO was on this board and should not have been.
+MIN_RS_RANK = 70
+
+# Stage 2 requires "more up days and up weeks on above-average volume than down
+# days and down weeks on above-average volume" (TLSW p.71-72). A ratio below 1
+# means the opposite — institutions distributing into the base. Checked here
+# directly because `accumulation_strength` only says "distributing" at <= 0.70,
+# so AVGO's 0.91 reads "neutral" while failing the book's own test.
+MIN_UP_DOWN_VOL_RATIO = 1.0
+
 # Winners: the ledger races the measure-rule target against the stop over 21
 # bars (patterns/history.py::_grade_pattern). Both touched on one bar counts
 # as the stop, so `target_first` is already the pessimistic reading.
@@ -221,19 +234,95 @@ def _attach_bars(tiles: list[dict], days: int) -> None:
 # ---------------------------------------------------------------------------
 # tab 1 — strong VCP
 # ---------------------------------------------------------------------------
-def _is_strong_vcp(row: dict) -> bool:
-    """VCP named as the entry setup AND the base actually tight.
+def strong_vcp_reject(row: dict) -> Optional[str]:
+    """Why this chart is NOT a Minervini VCP setup, or None if it qualifies.
 
-    Both halves matter: `entry_setup.type` is the scanner's own read of what
-    this chart IS, while tightness says the contractions have converged.
-    Either alone admits charts that do not teach the pattern.
+    Returns the REASON rather than a bool so the rejection is inspectable and
+    testable — "AVGO fails on rs_rank" beats "AVGO returned False".
+
+    WHY THIS GOT STRICTER (Ajay 2026-08-16, looking at AVGO on the board):
+    "our SEPA VCP has a problem.. We are not differentiating between Institution
+    selling vs not selling.. Its not stage 2 now. Make sure it also has a base
+    formed not institutions selling."
+
+    He was right. The first version asked only two questions — is the setup
+    named VCP, and is the base tight — and AVGO passed both while failing
+    almost everything the book actually requires:
+
+        is_candidate    False   (trend template not met)
+        rs_rank         43      (book wants >= 70, "preferably in the 90s")
+        base_count      6       (is_avoid_stage True)
+        up/down vol     0.91    (more volume on down days than up)
+        accumulation    False
+
+    THE GATES, each with its source
+    -------------------------------
+    1. Trend Template FIRST. "Stocks must first meet my Trend Template to be
+       considered a potential SEPA candidate" — TLSW p.34. That is exactly what
+       `is_candidate` encodes (trend.pass_all AND liquidity.liquid, p.79).
+    2. RS >= 70. "The relative strength (RS) ranking ... is no less than 70, but
+       preferably in the 90s" — TTLAC §6 (ebook p.106) criterion 7; TLSW p.79.
+       Carried explicitly as well as via the template, because it is the single
+       criterion AVGO failed and it must be visible in the reject reason.
+    3. Stage 2 only. "Stage 2 - Advancing phase: accumulation / Stage 3 -
+       Topping phase: distribution" — TLSW p.66, TTLAC §6 (ebook p.104).
+       Institutions selling IS Stage 3 by definition.
+    4. Not a late-stage base. "By the time a fourth or fifth base occurs ... the
+       trend is ... definitely in its late stages. By this point, abrupt base
+       failures" — TLSW p.81. `base_count.is_avoid_stage` encodes it.
+    5. Not under distribution. Stage 2 requires "more up days and up weeks on
+       above-average volume than down days and down weeks on above-average
+       volume" — TLSW p.71-72. Checked DIRECTLY here, because the coarse
+       `accumulation_strength` label reads "neutral" at AVGO's 0.91 ratio.
+    6. The base is tight. Contractions "correct less and less from left to
+       right on successively lower volume" — TTLAC §6 (ebook p.110).
     """
     setup = row.get("entry_setup") or {}
     if (setup.get("type") or "").upper() != "VCP":
-        return False
+        return "no VCP setup"
+
     vcp = row.get("vcp") or {}
     t = _num(vcp.get("tightness"))
-    return t is not None and t >= STRONG_TIGHTNESS
+    if t is None or t < STRONG_TIGHTNESS:
+        return f"base not tight enough (tightness {t if t is not None else '—'})"
+
+    # 1 — the template gate, the book's own step one
+    if not row.get("is_candidate"):
+        return "fails the trend template (not a SEPA qualifier)"
+
+    # 2 — RS floor, stated explicitly
+    rs = _num(row.get("rs_rank"))
+    if rs is not None and rs < MIN_RS_RANK:
+        return f"RS {int(rs)} below {MIN_RS_RANK}"
+
+    # 3 — Stage 2 only
+    stage = (row.get("stage") or {}).get("stage")
+    if stage is not None and int(stage) != 2:
+        return f"stage {stage}, not Stage 2 (advancing/accumulation)"
+
+    # 4 — base count
+    bc = row.get("base_count") or {}
+    if bc.get("is_avoid_stage") or bc.get("is_late_stage"):
+        return f"late-stage base #{bc.get('base_count')}"
+
+    # 5 — institutions must not be net sellers
+    vol = row.get("volume") or {}
+    ratio = _num(vol.get("up_down_vol_ratio"))
+    if ratio is not None and ratio < MIN_UP_DOWN_VOL_RATIO:
+        return f"distribution: up/down volume {ratio:.2f}"
+    up_d, dn_d = vol.get("up_days_on_avg_vol"), vol.get("dn_days_on_avg_vol")
+    if isinstance(up_d, int) and isinstance(dn_d, int) and dn_d > up_d:
+        return f"more down days on volume than up ({dn_d} vs {up_d})"
+    if (vol.get("accumulation_strength") or "").lower() == "distributing":
+        return "volume tape is distributing"
+    if row.get("distribution"):
+        return "flagged under distribution"
+
+    return None
+
+
+def _is_strong_vcp(row: dict) -> bool:
+    return strong_vcp_reject(row) is None
 
 
 def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
