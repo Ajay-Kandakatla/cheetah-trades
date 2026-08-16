@@ -84,6 +84,7 @@ const OptionsPulsePage            = lazyWithReload(() => import('./pages/Options
 const OptionsPulseMethodologyPage = lazyWithReload(() => import('./pages/OptionsPulseMethodology'));
 const GexBoardPage                = lazyWithReload(() => import('./pages/GexBoard').then(m => ({ default: m.GexBoardPage })));
 const ChartMapsPage               = lazyWithReload(() => import('./pages/ChartMaps').then(m => ({ default: m.ChartMaps })));
+const RotationPage               = lazyWithReload(() => import('./pages/Rotation').then(m => ({ default: m.Rotation })));
 const HousePage                   = lazyWithReload(() => import('./pages/House'));
 const FoodPage                    = lazyWithReload(() => import('./pages/Food'));
 const KidsPage                    = lazyWithReload(() => import('./pages/Kids'));
@@ -294,6 +295,8 @@ export function App() {
             <Route path="/options/methodology" element={<FeatureRoute feature="options"><OptionsPulseMethodologyPage /></FeatureRoute>} />
             <Route path="/gex-board"      element={<FeatureRoute feature="gex-board"><GexBoardPage /></FeatureRoute>} />
             <Route path="/chart-maps"     element={<FeatureRoute feature="chart-maps"><ChartMapsPage /></FeatureRoute>} />
+
+            <Route path="/rotation"       element={<FeatureRoute feature="rotation"><RotationPage /></FeatureRoute>} />
             <Route path="/house"          element={<FeatureRoute feature="house"><HousePage /></FeatureRoute>} />
             <Route path="/food"           element={<FeatureRoute feature="food"><FoodPage /></FeatureRoute>} />
             <Route path="/kids"           element={<FeatureRoute feature="kids"><KidsPage /></FeatureRoute>} />

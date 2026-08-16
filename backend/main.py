@@ -721,6 +721,9 @@ app.include_router(supply_demand_router)
 from chart_maps.api import router as chart_maps_router  # noqa: E402
 app.include_router(chart_maps_router)
 
+from rotation.api import router as rotation_router  # noqa: E402
+app.include_router(rotation_router)
+
 # Giants module — full per-fund 13F portfolios from SEC EDGAR: "where the
 # giants are buying" aggregate leaderboard + per-symbol money rotation.
 from giants.api import router as giants_router  # noqa: E402

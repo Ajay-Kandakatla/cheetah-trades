@@ -125,10 +125,30 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # thin to chart: LAZR $18M, ATS $5M, KRNT $4M, INVZ $2M ($0.37 a share).
     "robotics":  ["SERV", "RR", "SYM", "TER", "ROK", "PATH", "ISRG",
                   "CGNX", "MBLY", "OUST", "EMR", "AME", "NDSN", "HON", "TSLA"],
-    # Power, cooling and the racks themselves.
-    "ai_infra":  ["VRT", "MOD", "APLD", "CRWV", "NBIS", "SMCI", "ANET", "ETN",
-                  "PWR", "GEV", "NVT", "HUBB", "POWL", "AAON", "CLS", "FLEX"],
+    # Power FOR AI — the compute hosts whose real constraint is megawatts, plus
+    # the generation sold to them. Ajay 2026-08-16: "energy is super important
+    # now with AI lot of folks are investing in to Nuclear and Hyperscalers that
+    # are power efficient like green energy like IREN for example."
+    #
+    # APLD/CRWV/NBIS moved here from ai_infra: they are power-constrained
+    # datacenter operators, not rack hardware. BE/FSLR/NXT are the generation
+    # side of the same trade. Residential solar (ENPH/RUN/ARRY/SEDG, -39% to
+    # -58% since June) is a DIFFERENT thesis and is deliberately not here.
+    "ai_power":  ["IREN", "CIFR", "CORZ", "WULF", "APLD", "CRWV", "NBIS",
+                  "HUT", "RIOT", "MARA", "BTDR", "GLXY", "BE", "FSLR", "NXT"],
     "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG"],
+    # Traditional energy. Added 2026-08-16 because the rotation measurement put
+    # it first on base formation (45.5% VCP rate, 2.0x the market) and refiners
+    # at +39.6% median since June. Excluded as DEAD tickers whose last bar
+    # predates the window and would read as a flat 0%: MRO (last bar
+    # 2024-11-21, acquired by COP), HES (2025-07-17, acquired by CVX),
+    # CTRA (2026-05-06).
+    "energy":    ["DK", "MPC", "VLO", "PSX", "LNG", "OKE", "COP", "XOM", "CVX",
+                  "TRGP", "EOG", "FANG", "KMI", "WMB", "OXY", "DVN", "SLB",
+                  "BKR", "PR"],
+    # Racks, cooling, transmission hardware.
+    "ai_infra":  ["VRT", "MOD", "SMCI", "ANET", "ETN", "PWR", "GEV", "NVT",
+                  "HUBB", "POWL", "AAON", "CLS", "FLEX"],
 }
 
 # Ordering BETWEEN themes, most-wanted first — Ajay's stated priority, then the
@@ -139,10 +159,15 @@ THEME_PRIORITY: dict[str, int] = {
     "space":     0,
     "quantum":   1,
     "ai_semis":  2,
-    "optical":   3,
-    "robotics":  4,
-    "ai_infra":  5,
-    "nuclear":   6,
+    # The power thesis, kept together and ranked right behind Ajay's stated
+    # three: AI is megawatt-constrained, so the compute hosts, the reactors and
+    # the barrels are one story, not three.
+    "ai_power":  3,
+    "nuclear":   4,
+    "energy":    5,
+    "optical":   6,
+    "robotics":  7,
+    "ai_infra":  8,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of

@@ -144,6 +144,7 @@ FEATURE_CATALOG: list[dict] = [
     # top-level slot, and Research moved down to make room rather than the bar
     # growing. Owner-on via added_in/VERSION.
     {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "daily",     "default": False, "added_in": 19},
+    {"id": "rotation",      "label": "🔄 Rotation",         "group": "daily",     "default": False, "added_in": 20},
     # Research (2026-06-04): bullish-vs-bearish pattern mining + the insider
     # thesis. Demoted from the primary bar to Tools on 2026-08-16 at Ajay's
     # request — still a page he uses, just not one that needs a header slot.
@@ -253,7 +254,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 19
+CATALOG_VERSION = 20
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

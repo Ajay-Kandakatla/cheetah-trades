@@ -104,8 +104,12 @@ def test_priority_is_the_order_ajay_asked_for():
     """Space, then Quantum, then Semis — his words, in his order. Then the
     bottlenecks he expects next: optical, robotics, infra, nuclear."""
     order = sorted(U.THEME_PRIORITY, key=lambda k: U.THEME_PRIORITY[k])
-    assert order == ["space", "quantum", "ai_semis", "optical",
-                     "robotics", "ai_infra", "nuclear"]
+    # ai_power / nuclear / energy sit together right behind Ajay's stated
+    # three: AI is megawatt-constrained, so the compute hosts, the reactors
+    # and the barrels are one story (2026-08-16: "energy is super important
+    # now with AI").
+    assert order == ["space", "quantum", "ai_semis", "ai_power", "nuclear",
+                     "energy", "optical", "robotics", "ai_infra"]
 
 
 def test_every_roster_has_a_priority():
@@ -114,8 +118,9 @@ def test_every_roster_has_a_priority():
 
 def test_theme_rank_orders_themes_and_puts_untagged_last():
     assert U.theme_rank("space") < U.theme_rank("quantum") < U.theme_rank("ai_semis")
-    assert U.theme_rank("ai_semis") < U.theme_rank("optical") < U.theme_rank("robotics")
-    assert U.theme_rank("robotics") < U.theme_rank("nuclear")
+    assert U.theme_rank("ai_semis") < U.theme_rank("ai_power") < U.theme_rank("energy")
+    assert U.theme_rank("energy") < U.theme_rank("optical") < U.theme_rank("robotics")
+    assert U.theme_rank("robotics") < U.theme_rank("ai_infra")
     # Untagged sorts behind every theme — that is the whole point of the board.
     for theme in U.THEME_PRIORITY:
         assert U.theme_rank(theme) < U.theme_rank(None)

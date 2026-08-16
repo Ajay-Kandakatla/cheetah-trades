@@ -68,6 +68,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'sd-knife-guard', label: '🔪 Back in Demand now filters falling knives (swing lows stepping down + falling 50-day) instead of the Minervini template — CIEN/VRT/CAT dropped off', addedAt: '2026-08-13', route: '/supply-demand' },
   { id: 'dark-pool-prints', label: '🟣 Where it printed — lit vs off-exchange (dark pool) volume split + the largest off-exchange blocks, on every ticker\'s Tape tab', addedAt: '2026-08-13', route: '/sepa' },
   { id: 'chart-maps', label: '🗺️ Chart Maps — a charts-only study board: strong VCP bases, pullbacks back into demand, and past setups from your own ledger that hit target before their stop. Every chart clicks through to the ticker.', addedAt: '2026-08-15', route: '/chart-maps' },
+  { id: 'rotation-tracker', label: 'Sector Rotation — where money left and went, vs equal-weight', addedAt: '2026-08-16', route: '/rotation' },
+  { id: 'themes-power-energy', label: 'New rosters: AI power (IREN, CRWV) + energy, with space/quantum/semis priority', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'chart-maps-themes', label: '⚛ Quantum / nuclear / robotics / AI-semis names now scanned — IONQ, OKLO, SMR, ARM, ALAB, CRDO and 15 more that the S&P indices structurally cannot hold', addedAt: '2026-08-15', route: '/chart-maps' },
 ];
 

@@ -10850,3 +10850,57 @@ a.tk-link:hover   { color: inherit; }
 
 .cm-foot { margin-top: 1rem; font-size: 0.74rem; color: var(--cm-slate, #8595ad); }
 .cm-disclaimer { margin-top: 0.3rem; font-size: 0.68rem; opacity: 0.85; line-height: 1.45; max-width: 80ch; }
+
+/* ── Sector Rotation (/rotation) ─────────────────────────────────────────────
+   Two relative columns carry the page; absolute move and breadth are secondary
+   and deliberately dimmer so the eye lands on "vs equal-weight" first. */
+.rot-page { padding: 0 0 3rem; }
+.rot-head { display: flex; flex-wrap: wrap; gap: .75rem 1rem;
+            align-items: center; justify-content: space-between; }
+.rot-head h2 { display: flex; align-items: center; gap: .4rem; margin: .2rem 0; }
+.rot-controls { display: flex; flex-wrap: wrap; gap: .4rem; }
+.rot-controls .is-active { border-color: var(--accent, #6ea8fe); font-weight: 600; }
+
+.rot-summary { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem;
+               margin: .9rem 0 1.4rem; padding: .7rem .9rem;
+               border: 1px solid var(--border, #2a2f3a); border-radius: 8px; }
+.rot-summary > div { display: flex; flex-direction: column; gap: .15rem; }
+.rot-label { font-size: .72rem; opacity: .65; text-transform: uppercase;
+             letter-spacing: .04em; }
+
+.rot-section { margin: 1.6rem 0; }
+.rot-section h3 { margin: 0 0 .2rem; }
+.rot-note { margin: 0 0 .6rem; font-size: .82rem; opacity: .7; }
+.rot-foot { margin-top: 1.5rem; font-size: .78rem; opacity: .6; }
+
+/* Wide tables scroll inside their own box; the page body never scrolls sideways. */
+.rot-scroll { overflow-x: auto; }
+.rot-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+.rot-table th, .rot-table td { padding: .5rem .6rem; text-align: right;
+                               border-bottom: 1px solid var(--border, #2a2f3a); }
+.rot-table th:first-child, .rot-table td:first-child { text-align: left; }
+.rot-table th { font-size: .74rem; opacity: .7; font-weight: 600;
+                text-transform: uppercase; letter-spacing: .03em; }
+.rot-name b { font-weight: 600; }
+.rot-n { display: block; font-size: .72rem; opacity: .55; }
+.rot-dropped { color: var(--negative, #ef4444); opacity: .85; }
+.rot-gap { font-size: .74rem; opacity: .75; margin-top: .15rem; }
+
+.rot-up { color: var(--positive, #22c55e); }
+.rot-down { color: var(--negative, #ef4444); }
+.rot-flat { opacity: .6; }
+.rot-abs { opacity: .6; }
+
+.rot-stance, .rot-turn { margin-left: .4rem; padding: .05rem .4rem;
+                         border-radius: 999px; font-size: .68rem;
+                         text-transform: uppercase; letter-spacing: .03em; }
+.rot-stance { border: 1px solid var(--border, #2a2f3a); opacity: .75; }
+.rot-turn-up { background: color-mix(in srgb, var(--positive, #22c55e) 20%, transparent);
+               color: var(--positive, #22c55e); }
+.rot-turn-down { background: color-mix(in srgb, var(--negative, #ef4444) 20%, transparent);
+                 color: var(--negative, #ef4444); }
+
+@media (max-width: 640px) {
+  .rot-summary { gap: .5rem 1rem; }
+  .rot-table th, .rot-table td { padding: .45rem .4rem; font-size: .86rem; }
+}
