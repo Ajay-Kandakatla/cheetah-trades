@@ -69,6 +69,61 @@ UNIVERSE: list[str] = [
 
 
 # ---------------------------------------------------------------------------
+# Theme rosters — the 2025-26 build-out names the S&P indices cannot hold.
+#
+# Ajay 2026-08-15: "make sure the new companies like Quantum based and Power
+# based and robotics based and then Semis all are considered."
+#
+# WHY THIS EXISTS AS A SEPARATE LIST. S&P's index committee requires positive
+# GAAP earnings and US domicile, so no quantum name is in any S&P tier, OKLO /
+# SMR / NNE are pre-revenue, and ARM is a UK-domiciled ADR — structurally
+# excluded from every S&P *and* Russell list. Measured 2026-08-15: sp1500
+# resolves to 1,506 names and misses 12 of the 22 theme tickers Ajay named.
+# That is not a bug in the fetchers to be fixed; it is what an index IS. So
+# the names arrive by hand, tagged with the theme that earned them a slot.
+#
+# These are riskier than the index layers by construction — pre-profit, thin,
+# high-beta. Nothing here bypasses a gate: they enter the same trend, knife and
+# liquidity filters as every other name. This list only decides who gets LOOKED
+# at, never who passes.
+# ---------------------------------------------------------------------------
+THEME_UNIVERSE: dict[str, list[str]] = {
+    "quantum":   ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ"],
+    "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG"],
+    "robotics":  ["SERV", "RR", "SYM", "TER", "ROK", "PATH", "ISRG"],
+    "ai_semis":  ["ARM", "ALAB", "CRDO", "NVDA", "AVGO", "AMD", "MU", "MRVL",
+                  "TSM", "LRCX", "AMAT", "KLAC"],
+    "ai_infra":  ["VRT", "MOD", "APLD", "CRWV", "NBIS", "SMCI", "ANET", "ETN",
+                  "PWR", "GEV"],
+}
+
+# Reverse map, built once — a linear scan over five rosters per ticker is fine
+# for a card and wasteful for a 1,500-row board.
+THEME_BY_TICKER: dict[str, str] = {
+    t: theme for theme, names in THEME_UNIVERSE.items() for t in names
+}
+
+
+def theme_for(symbol: str) -> str | None:
+    """Which build-out theme a ticker belongs to, or None. PURE."""
+    if not isinstance(symbol, str):
+        return None
+    return THEME_BY_TICKER.get(symbol.strip().upper())
+
+
+def fetch_themes() -> list[str]:
+    """Every theme name, deduped, order-stable. No network — hand-curated."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for names in THEME_UNIVERSE.values():
+        for t in names:
+            if t not in seen:
+                seen.add(t)
+                out.append(t)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Remote-list fetchers (cached to disk for 30 days)
 # ---------------------------------------------------------------------------
 def _cache_path(name: str) -> Path:
@@ -1012,6 +1067,12 @@ def _fetch_component(name: str) -> list[str]:
         "curated":     lambda: list(UNIVERSE),
         "sp500":       fetch_sp500,
         "sp400":       fetch_sp400,
+        # sp600/sp1500 existed as fetchers but were absent from this map, so
+        # SEPA_UNIVERSE_MODE="curated,sp1500" silently resolved to the curated
+        # ~158 names with only a log line. Registered 2026-08-15.
+        "sp600":       fetch_sp600,
+        "sp1500":      fetch_sp1500,
+        "themes":      fetch_themes,
         "russell1000": fetch_russell1000,
         "russell3000": fetch_russell3000,
         "micro":       fetch_microcap,

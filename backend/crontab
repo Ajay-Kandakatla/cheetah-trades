@@ -38,7 +38,21 @@
 # top rows costs a tape fetch each (~35s total), and the in-process cache is
 # only 3h. Without this the first page view after a cache expiry eats the whole
 # wait. Runs after the 4:50 pullback-scan so the price cache is already warm.
-55     16    *    *    1-5  /usr/local/bin/python -c "from supply_demand import demand_reentry as d; r=d.scan(force=True); print('demand-reentry warm:', r['n'], 'hits from', r['scanned'], 'in', r['took_sec'], 's')"
+#
+# OVER HTTP, NOT AS AN IMPORT (fixed 2026-08-15). demand_reentry's cache is a
+# process-local dict, so `python -c "...d.scan()"` in THIS container warmed a
+# cache that nothing ever reads and died with the process — the api container
+# still cold-started on the first page view. Calling the endpoint makes the
+# API warm its OWN memory. It answers instantly with warming:true and fills in
+# a background thread, so the short timeout here is correct, not a truncation.
+# X-User-Email satisfies require_auth_middleware; this port is internal to the
+# compose network and never published.
+55     16    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm sp1500: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=sp1500&limit=1'
+#
+# Mon-Fri 4:57pm ET — same warm for the Chart Maps universe (S&P 1500 + the
+# quantum / nuclear / robotics / AI-semis theme names the indices structurally
+# cannot hold). Separate cache key from sp1500, so it needs its own trigger.
+57     16    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm sp1500_plus: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=sp1500_plus&limit=1'
 #
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief

@@ -103,6 +103,12 @@ FEATURE_CATALOG: list[dict] = [
     # minimal, jargon-free scanner for friends with little trading experience
     # (admin's /sepa stays the full power tool). Default ON for everyone.
     {"id": "sepa-global",   "label": "🌍 SEPA Global",      "group": "scanner",   "default": True, "added_in": 16},
+    # Chart Maps (Ajay 2026-08-15): "I need just maps that you are pulling
+    # show… look at patterns and learn them day by day." A charts-only study
+    # board over three existing sources — strong VCP bases, demand-zone
+    # pullbacks, and past pattern winners from our own graded ledger. Every
+    # tile clicks through to the SEPA detail. Owner-on via added_in/VERSION.
+    {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "scanner",   "default": False, "added_in": 19},
     {"id": "pullback-ma",   "label": "Pullback to MA",      "group": "scanner",   "default": False, "added_in": 4},
     {"id": "dual-momentum", "label": "Dual Momentum",       "group": "scanner",   "default": False},
     {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "scanner", "default": False},
@@ -240,7 +246,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 18
+CATALOG_VERSION = 19
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

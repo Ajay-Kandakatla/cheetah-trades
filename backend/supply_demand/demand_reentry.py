@@ -706,6 +706,13 @@ def _rank_key(r: dict):
 UNIVERSES = {
     "sp500":  ("S&P 500", lambda: universe_mod.fetch_sp500()),
     "sp1500": ("S&P 1500 (500 + 400 mid + 600 small)", lambda: universe_mod.fetch_sp1500()),
+    # sp1500 + the build-out themes the indices structurally cannot hold —
+    # quantum, SMR nuclear, robotics, the ADR/pre-profit AI semis (Ajay
+    # 2026-08-15). See sepa.universe.THEME_UNIVERSE for why they are absent.
+    "sp1500_plus": ("S&P 1500 + themes (quantum · nuclear · robotics · AI semis)",
+                    lambda: universe_mod.fetch_sp1500()),
+    "themes": ("Themes only (quantum · nuclear · robotics · AI semis)",
+               lambda: universe_mod.fetch_themes()),
     "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
     "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),
 }
@@ -741,7 +748,11 @@ def _resolve_universe(key: str):
     """
     k = _universe_key(key)
     label = UNIVERSES[k][0]
-    parts = ["sp500", "sp400", "sp600"] if k == "sp1500" else [k]
+    _COMPOSITE = {
+        "sp1500":      ["sp500", "sp400", "sp600"],
+        "sp1500_plus": ["sp500", "sp400", "sp600", "themes"],
+    }
+    parts = _COMPOSITE.get(k, [k])
 
     syms: list[str] = []
     seen: set[str] = set()

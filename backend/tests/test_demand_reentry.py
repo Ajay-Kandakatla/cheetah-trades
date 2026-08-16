@@ -642,3 +642,86 @@ def test_scan_coerces_a_non_bool_force(monkeypatch):
     assert first["cached"] is False
     second = dr.scan(force=Weird(), universe="sp500")   # must NOT be read as force
     assert second["cached"] is True
+
+
+# ---------------------------------------------------------------------------
+# Theme universe (Ajay 2026-08-15: "make sure the new companies like Quantum
+# based and Power based and robotics based and then Semis all are considered")
+# ---------------------------------------------------------------------------
+def test_sp1500_plus_layers_the_themes_on_top_of_the_index(monkeypatch):
+    """The S&P tiers require positive earnings and US domicile, so no quantum
+    name — and none of OKLO / SMR / NNE / ARM — can be in sp1500. sp1500_plus
+    is the union that puts them in front of the scanner."""
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_themes", lambda: ["IONQ", "OKLO"])
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+
+    syms, _, prov, _, key = dr._resolve_universe("sp1500_plus")
+    assert key == "sp1500_plus"
+    assert syms == ["A", "B", "C", "IONQ", "OKLO"]
+    assert set(prov) == {"sp500", "sp400", "sp600", "themes"}
+
+
+def test_sp1500_plus_dedupes_a_theme_name_already_in_the_index(monkeypatch):
+    """NVDA and VST are in BOTH the index and a theme roster. A duplicate would
+    scan the name twice and could show it on the board twice."""
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["NVDA", "A"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: [])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: [])
+    monkeypatch.setattr(dr.universe_mod, "fetch_themes", lambda: ["NVDA", "IONQ"])
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+
+    syms, _, _, _, _ = dr._resolve_universe("sp1500_plus")
+    assert syms == ["NVDA", "A", "IONQ"]
+    assert len(syms) == len(set(syms))
+
+
+def test_plain_sp1500_is_unchanged_by_the_themes(monkeypatch):
+    """REGRESSION: sp1500 is the existing default for /supply-demand. Adding a
+    composite key must not quietly widen it for every existing caller."""
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_themes", lambda: ["IONQ"])
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+
+    syms, _, prov, _, key = dr._resolve_universe("sp1500")
+    assert key == "sp1500" and syms == ["A", "B", "C"]
+    assert "themes" not in prov
+    assert dr.DEFAULT_UNIVERSE == "sp1500"
+
+
+def test_a_failing_theme_layer_does_not_take_the_board_down(monkeypatch):
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: [])
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: [])
+    monkeypatch.setattr(dr.universe_mod, "fetch_themes",
+                        lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+
+    syms, _, _, _, _ = dr._resolve_universe("sp1500_plus")
+    assert syms == ["A"]
+
+
+def test_theme_rosters_actually_contain_the_names_ajay_asked_for():
+    """The point of the list. If someone prunes it, this fails loudly."""
+    from sepa import universe as U
+    names = set(U.fetch_themes())
+    for t in ("IONQ", "RGTI", "QBTS", "QUBT",      # quantum
+              "OKLO", "SMR", "NNE",                 # power / nuclear
+              "SERV", "RR", "SYM",                  # robotics
+              "ARM", "ALAB", "CRDO"):               # semis outside the indices
+        assert t in names, f"{t} dropped out of the theme rosters"
+    assert len(names) == len(set(names)), "theme rosters emit a duplicate"
+
+
+def test_theme_lookup_is_total_and_never_raises():
+    from sepa import universe as U
+    assert U.theme_for("IONQ") == "quantum"
+    assert U.theme_for("  ionq ") == "quantum"
+    assert U.theme_for("KO") is None
+    assert U.theme_for("") is None
+    assert U.theme_for(None) is None
+    assert U.theme_for(123) is None

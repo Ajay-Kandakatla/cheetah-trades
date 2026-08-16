@@ -10739,3 +10739,114 @@ a.tk-link:hover   { color: inherit; }
 .nr__recheck { background: none; border: 1px solid var(--rule, #333); color: var(--cm-slate, #8595ad); border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.72rem; cursor: pointer; }
 .nr__disc { font-size: 0.64rem; color: var(--cm-slate, #8595ad); opacity: 0.8; }
 .nr__err { color: var(--negative, #f87171); font-size: 0.78rem; }
+
+/* ── Chart Maps (/chart-maps) — charts-only pattern study board ───────────── */
+.cm-page { padding: 0.9rem 1rem 2rem; max-width: 1500px; margin: 0 auto; }
+.cm-head { margin-bottom: 0.6rem; }
+.cm-title { font-size: 1.25rem; margin: 0; display: flex; align-items: center; gap: 0.4rem; }
+.cm-sub { margin: 0.2rem 0 0; font-size: 0.82rem; color: var(--cm-slate, #8595ad); }
+
+/* Tabs scroll rather than wrap — the SEPA tab row overflowed its container on
+ * narrow screens (Ajay 2026-08-14) and this row must not repeat it. */
+.cm-tabs {
+  display: flex; gap: 0.35rem; margin: 0.7rem 0 0.4rem;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--rule, #2a2f3a); padding-bottom: 0.35rem;
+}
+.cm-tab {
+  white-space: nowrap; flex-shrink: 0; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: 8px;
+  padding: 0.35rem 0.75rem; font-size: 0.86rem; font-weight: 600;
+  color: var(--cm-slate, #8595ad);
+}
+.cm-tab:hover { color: var(--ink, #e7e7e7); }
+.cm-tab-on {
+  color: var(--ink, #e7e7e7); background: var(--bg-raised, #181c24);
+  border-color: var(--rule, #2a2f3a);
+}
+.cm-blurb {
+  margin: 0.2rem 0 0.6rem; font-size: 0.8rem; color: var(--cm-slate, #8595ad);
+  line-height: 1.5; max-width: 78ch;
+}
+
+.cm-controls { display: flex; gap: 0.7rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.7rem; }
+.cm-ctl { font-size: 0.76rem; color: var(--cm-slate, #8595ad); display: inline-flex; align-items: center; gap: 0.35rem; }
+.cm-ctl select {
+  background: var(--bg-raised, #181c24); color: var(--ink, #e7e7e7);
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 6px;
+  padding: 0.22rem 0.4rem; font-size: 0.76rem;
+}
+.cm-ctl-check { cursor: pointer; }
+.cm-refresh {
+  background: none; border: 1px solid var(--rule, #2a2f3a); border-radius: 6px;
+  color: var(--cm-slate, #8595ad); padding: 0.25rem 0.6rem; font-size: 0.76rem; cursor: pointer;
+}
+.cm-refresh:hover { color: var(--ink, #e7e7e7); }
+
+.cm-note {
+  font-size: 0.82rem; color: var(--cm-slate, #8595ad); padding: 0.7rem 0.9rem;
+  border: 1px dashed var(--rule, #2a2f3a); border-radius: 10px; margin-bottom: 0.8rem;
+  line-height: 1.5;
+}
+.cm-note-err { color: var(--negative, #f87171); border-color: currentColor; }
+
+/* the measured record behind the Past Winners tab */
+.cm-record {
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 10px;
+  padding: 0.6rem 0.8rem; margin-bottom: 0.9rem; background: var(--cm-card, #161a22);
+}
+.cm-record-head { font-size: 0.82rem; color: var(--ink, #e7e7e7); line-height: 1.5; }
+.cm-record-rows { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0.4rem; }
+.cm-record-row {
+  display: inline-flex; align-items: baseline; gap: 0.45rem; cursor: pointer;
+  background: var(--bg-raised, #181c24); border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 999px; padding: 0.22rem 0.65rem; font-size: 0.74rem;
+  color: var(--cm-slate, #8595ad);
+}
+.cm-record-row:hover { color: var(--ink, #e7e7e7); }
+.cm-record-on { border-color: var(--accent, #c2ef50); color: var(--ink, #e7e7e7); }
+.cm-record-name { font-weight: 700; color: var(--ink, #e7e7e7); }
+.cm-record-caveat { font-size: 0.7rem; color: var(--cm-slate, #8595ad); opacity: 0.85; line-height: 1.45; }
+
+.cm-grid {
+  display: grid; gap: 0.8rem;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+}
+@media (max-width: 640px) { .cm-grid { grid-template-columns: 1fr; } }
+
+.cm-tile {
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 12px;
+  background: var(--cm-card, #161a22); padding: 0.6rem 0.7rem 0.55rem;
+  transition: border-color 0.12s ease;
+}
+.cm-tile:hover { border-color: var(--accent, #c2ef50); }
+.cm-tile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap; }
+.cm-tile-id { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; }
+.cm-tile-id b { font-size: 0.95rem; color: var(--ink, #e7e7e7); }
+.cm-tile-name {
+  font-size: 0.7rem; color: var(--cm-slate, #8595ad);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 20ch;
+}
+.cm-tile-badges { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.cm-badge {
+  font-size: 0.63rem; font-weight: 700; border-radius: 999px;
+  padding: 0.08rem 0.4rem; border: 1px solid currentColor; white-space: nowrap;
+}
+.cm-badge-good { color: #10b981; background: rgba(16,185,129,0.10); }
+.cm-badge-warn { color: #f59e0b; background: rgba(245,158,11,0.10); }
+.cm-badge-muted { color: #8595ad; background: rgba(133,149,173,0.10); }
+.cm-badge-theme { color: #a78bfa; background: rgba(167,139,250,0.12); }
+
+.cm-svg {
+  width: 100%; display: block; border-radius: 8px;
+  background: var(--bg-sunken, #0f1115); border: 1px solid var(--rule, #2a2f3a);
+}
+.cm-tile-why { font-size: 0.75rem; color: var(--cm-slate, #8595ad); margin: 0.4rem 0 0.3rem; line-height: 1.4; }
+.cm-tile-stats { display: flex; flex-wrap: wrap; gap: 0.5rem 0.85rem; }
+.cm-stat { display: inline-flex; align-items: baseline; gap: 0.25rem; font-size: 0.72rem; }
+.cm-stat-k { color: var(--cm-slate, #8595ad); }
+.cm-stat-v { color: var(--ink, #e7e7e7); font-weight: 600; }
+.cm-stat-last { margin-left: auto; }
+
+.cm-foot { margin-top: 1rem; font-size: 0.74rem; color: var(--cm-slate, #8595ad); }
+.cm-disclaimer { margin-top: 0.3rem; font-size: 0.68rem; opacity: 0.85; line-height: 1.45; max-width: 80ch; }

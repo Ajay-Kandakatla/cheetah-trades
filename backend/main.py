@@ -715,6 +715,12 @@ app.include_router(overnight_router)
 from supply_demand.api import router as supply_demand_router  # noqa: E402
 app.include_router(supply_demand_router)
 
+# Chart Maps — charts-only study board (strong VCPs, demand-zone pullbacks,
+# past pattern winners). Read-only: composes the scan cache, the demand board
+# cache and the pattern ledger; never kicks off a scan of its own.
+from chart_maps.api import router as chart_maps_router  # noqa: E402
+app.include_router(chart_maps_router)
+
 # Giants module — full per-fund 13F portfolios from SEC EDGAR: "where the
 # giants are buying" aggregate leaderboard + per-symbol money rotation.
 from giants.api import router as giants_router  # noqa: E402
