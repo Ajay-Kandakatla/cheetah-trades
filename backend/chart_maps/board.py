@@ -174,10 +174,24 @@ def _href(symbol: str, tab: str) -> str:
     return f"/sepa/{symbol.upper()}?tab={tab}"
 
 
+def _theme_rank(theme: Optional[str]) -> int:
+    try:
+        from sepa import universe as U
+        return U.theme_rank(theme)
+    except Exception:
+        return 0 if theme else 99
+
+
 def _sort_key(tile: dict, themes_first: bool):
     """Theme names lead when asked (Ajay's standing rule that any board leads
-    with the AI-ecosystem winners), then the tab's own metric descending."""
-    rank = 0 if (themes_first and tile.get("theme")) else 1
+    with the AI-ecosystem winners), ordered BETWEEN themes by his stated
+    priority — space, quantum, semis, optical, robotics, infra, nuclear — then
+    the tab's own metric descending.
+
+    Before 2026-08-16 this was binary (theme / no theme), so the board could
+    answer "is this a theme name?" but never "which theme leads?".
+    """
+    rank = _theme_rank(tile.get("theme")) if themes_first else 1
     return (rank, -(tile.get("_score") or 0.0))
 
 
@@ -185,6 +199,40 @@ def _sort_key(tile: dict, themes_first: bool):
 # out to be missing or too short to chart.
 BAR_BUFFER = 6
 BAR_WORKERS = 8
+
+# Most tiles any single theme may occupy on one board.
+#
+# Ordering alone is not enough once the rosters are this big: space + quantum +
+# ai_semis is 33 names, so on a strong day for one theme the top-priority
+# roster could take all 24 slots and Ajay would never see the optical or
+# robotics setups he explicitly asked to watch. The cap keeps the board a
+# STUDY surface — a spread of what is working — rather than a single-sector
+# feed. Priority still decides who leads and who gets cut when slots run out.
+MAX_PER_THEME = 6
+
+
+def _spread(tiles: list[dict], limit: int) -> list[dict]:
+    """Apply MAX_PER_THEME, keeping overflow as a tail in case slots remain.
+
+    Overflow is not discarded: if the capped set cannot fill `limit` (a quiet
+    day, or one theme is the only thing setting up), the best of the overflow
+    is appended in rank order rather than showing a half-empty board. PURE.
+    """
+    kept: list[dict] = []
+    spill: list[dict] = []
+    seen: dict[str, int] = {}
+    for t in tiles:
+        theme = t.get("theme")
+        if not theme:
+            kept.append(t)
+            continue
+        n = seen.get(theme, 0)
+        if n < MAX_PER_THEME:
+            seen[theme] = n + 1
+            kept.append(t)
+        else:
+            spill.append(t)
+    return kept + spill
 
 
 def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int) -> list[dict]:
@@ -196,6 +244,8 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int) -> lis
     the work at `limit + BAR_BUFFER` frames regardless of how many matched.
     """
     tiles.sort(key=lambda t: _sort_key(t, themes_first))
+    if themes_first:
+        tiles = _spread(tiles, limit)
     short = tiles[:limit + BAR_BUFFER]
     _attach_bars(short, days)
     out = [t for t in short if t.get("bars")][:limit]

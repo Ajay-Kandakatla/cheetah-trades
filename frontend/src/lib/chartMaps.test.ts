@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   barDomain, barWidth, boardQuery, clipBands, isThinSample, lineLabels,
-  markerIndex, monthTicks, parseTab, recordLine, sepaHref, themeLabel,
+  markerIndex, monthTicks, parseTab, recordLine, sepaHref, THEME_LABEL, themeLabel,
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
 } from './chartMaps';
@@ -311,5 +311,43 @@ describe('toneColor', () => {
     const colors = tones.map(toneColor);
     expect(new Set(colors).size).toBe(4);
     colors.forEach((c) => expect(c).toContain('var(--'));
+  });
+});
+
+describe('themeLabel', () => {
+  // Ajay 2026-08-16: "give priority to Space technology, Quantum, Semis" and
+  // "Fiber optics, and Robotic components". A backend roster with no label here
+  // renders as a raw key like "ai_semis" on the tile badge.
+  const BACKEND_THEMES = [
+    'space', 'quantum', 'ai_semis', 'optical', 'robotics', 'ai_infra', 'nuclear',
+  ];
+
+  it('labels every theme the backend can emit', () => {
+    BACKEND_THEMES.forEach((t) => {
+      expect(THEME_LABEL[t], `no label for ${t}`).toBeTruthy();
+      expect(themeLabel(t)).toBe(THEME_LABEL[t]);
+    });
+  });
+
+  it('lists the themes in the backend priority order', () => {
+    // Legend order and tile order should tell the same story.
+    expect(Object.keys(THEME_LABEL)).toEqual(BACKEND_THEMES);
+  });
+
+  it('carries the two Ajay named specifically', () => {
+    expect(themeLabel('space')).toContain('Space');
+    expect(themeLabel('optical')).toContain('Optical');
+  });
+
+  // --- negatives ---
+
+  it('falls back to a readable key rather than rendering a raw slug', () => {
+    expect(themeLabel('some_new_theme')).toBe('some new theme');
+  });
+
+  it('returns null for no theme, so the badge is omitted entirely', () => {
+    expect(themeLabel(null)).toBeNull();
+    expect(themeLabel(undefined)).toBeNull();
+    expect(themeLabel('')).toBeNull();
   });
 });

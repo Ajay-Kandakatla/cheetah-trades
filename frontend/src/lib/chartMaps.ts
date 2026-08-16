@@ -236,12 +236,17 @@ export function markerIndex(bars: CmBar[], date: string): number {
 
 /* ── formatting ───────────────────────────────────────────────────────────── */
 
+/* Order here mirrors backend THEME_PRIORITY (sepa/universe.py) — Ajay's stated
+ * priority, most-wanted first. The board already sorts by it; keeping the same
+ * order here means the legend and the tiles tell the same story. */
 export const THEME_LABEL: Record<string, string> = {
+  space: '🛰 Space',
   quantum: '⚛ Quantum',
-  nuclear: '☢ Nuclear',
-  robotics: '🦾 Robotics',
   ai_semis: '🔲 AI semis',
+  optical: '💡 Optical',
+  robotics: '🦾 Robotics',
   ai_infra: '⚡ AI infra',
+  nuclear: '☢ Nuclear',
 };
 
 export function themeLabel(theme: string | null | undefined): string | null {

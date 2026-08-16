@@ -87,21 +87,94 @@ UNIVERSE: list[str] = [
 # liquidity filters as every other name. This list only decides who gets LOOKED
 # at, never who passes.
 # ---------------------------------------------------------------------------
+# Ajay 2026-08-16: "I do want us to give priority to Space technology, Quantum,
+# Semis" and "Fiber optics, and Robotic components or any potential bottlenecks
+# for AI that are going to be the next big thing.. after Semis and HBM."
+#
+# Every ticker below was probed against our own price feed before it was added
+# (260 daily bars + 50-day dollar volume). Nothing here is from memory or a
+# list off the internet. Names that resolved but are too thin to chart or trade
+# were dropped on purpose, and the floor is noted per roster.
 THEME_UNIVERSE: dict[str, list[str]] = {
+    # Space technology — launch, satellites, imagery, satcom. Deliberately NOT
+    # the defence primes (LMT/NOC/RTX/BA): they are conglomerates where space is
+    # a segment, so tagging them "space" would put a defence budget story at the
+    # top of the board. Dropped: SPCE ($3.32), MNTS ($4.84) — broken businesses;
+    # SPIR ($17M/day) — too thin to chart honestly; ATRO/TDG/HEI — aerostructures
+    # and aftermarket parts, not space technology.
+    "space":     ["RKLB", "ASTS", "LUNR", "RDW", "PL", "BKSY",
+                  "IRDM", "GSAT", "SATS", "VSAT"],
     "quantum":   ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ"],
-    "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG"],
-    "robotics":  ["SERV", "RR", "SYM", "TER", "ROK", "PATH", "ISRG"],
+    # Semis incl. the HBM/storage layer Ajay named. MU is the HBM name; SNDK,
+    # WDC and STX are the AI-storage bottleneck; ONTO/NVMI/CAMT are the
+    # metrology tools that gate HBM stacking yield.
     "ai_semis":  ["ARM", "ALAB", "CRDO", "NVDA", "AVGO", "AMD", "MU", "MRVL",
-                  "TSM", "LRCX", "AMAT", "KLAC"],
+                  "TSM", "LRCX", "AMAT", "KLAC",
+                  "SNDK", "WDC", "STX", "ONTO", "NVMI", "CAMT"],
+    # Fibre optics / optical interconnect — the bottleneck once compute is no
+    # longer the constraint. Transceivers and lasers (COHR/LITE/AAOI/FN/POET),
+    # optical networking (CIEN/MTSI), the fibre and glass itself (GLW), and the
+    # connectors that carry it (APH/TEL). Contract manufacturers went to
+    # ai_infra instead — they assemble the racks, they do not make the optics.
+    "optical":   ["COHR", "LITE", "AAOI", "CIEN", "FN", "GLW", "MTSI", "POET",
+                  "APH", "TEL"],
+    # Robotic components / physical AI. Beyond the platform names: machine
+    # vision (CGNX), perception (MBLY, OUST), motion and precision dispensing
+    # (EMR, AME, NDSN, HON), and TSLA for humanoid/physical AI. Dropped as too
+    # thin to chart: LAZR $18M, ATS $5M, KRNT $4M, INVZ $2M ($0.37 a share).
+    "robotics":  ["SERV", "RR", "SYM", "TER", "ROK", "PATH", "ISRG",
+                  "CGNX", "MBLY", "OUST", "EMR", "AME", "NDSN", "HON", "TSLA"],
+    # Power, cooling and the racks themselves.
     "ai_infra":  ["VRT", "MOD", "APLD", "CRWV", "NBIS", "SMCI", "ANET", "ETN",
-                  "PWR", "GEV"],
+                  "PWR", "GEV", "NVT", "HUBB", "POWL", "AAON", "CLS", "FLEX"],
+    "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG"],
 }
 
-# Reverse map, built once — a linear scan over five rosters per ticker is fine
+# Ordering BETWEEN themes, most-wanted first — Ajay's stated priority, then the
+# bottlenecks he expects to matter next. Before this, every theme scored the
+# same and the board could only answer "theme or not", never "which theme".
+# A theme missing from this map sorts last but still ahead of untagged names.
+THEME_PRIORITY: dict[str, int] = {
+    "space":     0,
+    "quantum":   1,
+    "ai_semis":  2,
+    "optical":   3,
+    "robotics":  4,
+    "ai_infra":  5,
+    "nuclear":   6,
+}
+
+# Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of
+# every untagged name, which is what UNTAGGED_RANK guarantees.
+UNKNOWN_THEME_RANK = 50
+UNTAGGED_RANK = 99
+
+# Reverse map, built once — a linear scan over the rosters per ticker is fine
 # for a card and wasteful for a 1,500-row board.
+#
+# A ticker must live in exactly ONE roster: this dict is last-wins, so a
+# duplicate would silently retag the name and change its priority. NVDA is the
+# obvious temptation (it is the physical-AI platform as much as it is a semi) —
+# it stays in ai_semis. `_assert_themes_disjoint()` below makes the rule fail
+# loudly at import instead of quietly at sort time.
 THEME_BY_TICKER: dict[str, str] = {
     t: theme for theme, names in THEME_UNIVERSE.items() for t in names
 }
+
+
+def _assert_themes_disjoint() -> None:
+    seen: dict[str, str] = {}
+    dupes: list[str] = []
+    for theme, names in THEME_UNIVERSE.items():
+        for t in names:
+            if t in seen:
+                dupes.append(f"{t} in both {seen[t]} and {theme}")
+            seen[t] = theme
+    if dupes:
+        raise ValueError("THEME_UNIVERSE tickers must be unique: " + "; ".join(dupes))
+
+
+_assert_themes_disjoint()
 
 
 def theme_for(symbol: str) -> str | None:
@@ -109,6 +182,13 @@ def theme_for(symbol: str) -> str | None:
     if not isinstance(symbol, str):
         return None
     return THEME_BY_TICKER.get(symbol.strip().upper())
+
+
+def theme_rank(theme: str | None) -> int:
+    """Sort rank for a theme — lower leads. Untagged names sort last. PURE."""
+    if not theme:
+        return UNTAGGED_RANK
+    return THEME_PRIORITY.get(theme, UNKNOWN_THEME_RANK)
 
 
 def fetch_themes() -> list[str]:
