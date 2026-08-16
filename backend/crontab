@@ -602,6 +602,40 @@
 # Logs the report; the same check also rides along in every health-audit run as
 # a WARN, so it shows on /health without ever pushing the phone.
 20     8     1    *  *     /usr/local/bin/python -m observability.period_freshness
+#
+# ============================================================================
+# Keeping the data current (Ajay 2026-08-16: "we have too keep updating")
+# ============================================================================
+# 13F institutional holders — bulk warm, Sundays 6:00am ET.
+#
+# whales_cache had NO warmer at all until now: warm_whales_13d.py's docstring
+# says "Mirror of warm_whales.py" but that file was never written, so holder
+# data was only ever fetched when someone opened a ticker's modal. Measured
+# 2026-08-16: 1,377 of 1,379 cached entries were past their TTL and 32 of a
+# 40-ticker sample were a full quarter behind the provider.
+#
+# Weekly, not nightly: 13F data changes exactly four times a year, so --stale-only
+# skips anything already on the current quarter and the run costs seconds most
+# weeks. The full sweep measured 2,611 tickers in 128s at 4 workers.
+0      6     *    *  0     /usr/local/bin/python -m sepa.warm_whales --workers 4
+#
+# Index membership — refresh + diff, Sundays 6:30am ET.
+#
+# universe.py caches constituent lists for 30 DAYS and keeps no history, so an
+# S&P 500 add could take a month to enter the scan and nothing recorded that it
+# was new. This expires each cache, refetches, and stores the adds/drops
+# (universe_changes). Sunday so a Monday-effective index change is already in
+# before the week opens. Read it at GET /universe/changes.
+30     6     *    *  0     /usr/local/bin/python -m sepa.universe_changes
+#
+# Accumulation change alerts — Sundays 7:00am ET, AFTER the 6:00am warm so it
+# compares fresh 13F data (Ajay 2026-08-16: "give me updated and notification as
+# Accumulations change as money moving I need a comparison").
+#
+# Scoped to holdings + watchlist, and idempotent per (symbol, quarter), so a
+# given quarter's move is announced ONCE — not re-announced every Sunday for
+# three months. Expect a handful of pushes per quarter, batched into one message.
+0      7     *    *  0     /usr/local/bin/python -m supply_demand.accumulation_changes
 
 #
 # ============================================================================

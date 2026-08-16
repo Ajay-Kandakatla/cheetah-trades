@@ -321,6 +321,13 @@ def default_prefs() -> dict:
         "position_alert": True,       # stop / target hit on Lifeboard positions
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
+        # Institutional 13F flow changed quarter-over-quarter on a name Ajay
+        # holds or watches (Ajay 2026-08-16: "give me updated and notification
+        # as Accumulations change as money moving I need a comparison"). This
+        # is a 4th kind on a deliberately-small keep-set; it stays tolerable
+        # because 13F rolls quarterly and the scope is holdings + watchlist —
+        # a handful per quarter, batched into ONE consolidated push.
+        "accumulation_change": True,
         "todo_daily_digest": True,    # 7 AM ET daily summary push
         # macbook_deal removed 2026-05-15 along with the lifeboard module.
         # Existing user docs may still have the key on them — pymongo

@@ -925,6 +925,24 @@ async def health() -> dict:
     }
 
 
+@app.get("/universe/changes")
+async def universe_changes(days: int = Query(90, ge=1, le=730),
+                           limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Recent index membership changes — who joined or left the S&P 500 / 400 /
+    600, the Nasdaq-100, and the Russell 1000 / 3000.
+
+    Ajay 2026-08-16: "Latest tickers as they change like getting added to SP 500
+    or Russel 3000 and Nasdaq." Written by the Sunday `sepa.universe_changes`
+    cron; this only reads. An index add is a liquidity event (forced index-fund
+    buying), NOT a setup — see docs/sepa/universe_changes.md."""
+    from sepa import universe_changes as uc
+    d = days if isinstance(days, int) else 90
+    n = limit if isinstance(limit, int) else 50
+    rows = await asyncio.to_thread(uc.recent, d, n)
+    return {"days": d, "n": len(rows), "changes": rows,
+            "tracked": list(uc.TRACKED)}
+
+
 @app.get("/health/engine")
 async def health_engine() -> dict:
     """Alert-engine freshness for the UI 'paused' banner. Tells the frontend

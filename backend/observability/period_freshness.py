@@ -178,19 +178,82 @@ def audit_whales_cache(today: Optional[date] = None,
     }
 
 
+def audit_collection_age(coll_name: str, ts_field: str, max_age_days: float,
+                         label: str, today: Optional[date] = None) -> dict:
+    """Generic 'has anything landed here lately?' check for event-driven feeds.
+
+    13D/G and the EDGAR 13F filing log are NOT quarterly — a 13D lands whenever
+    someone crosses 5%, and 13F-HRs arrive in bursts around each deadline. So
+    the right question for them is arrival recency, not which quarter they name.
+    """
+    from datetime import datetime, timedelta, timezone
+    try:
+        from sepa import history
+        db = history._get_db()
+    except Exception as exc:
+        return {"ok": False, "name": label, "reason": f"mongo unavailable: {exc}"}
+    if db is None:
+        return {"ok": False, "name": label, "reason": "mongo unavailable"}
+
+    try:
+        newest = db[coll_name].find_one({}, sort=[(ts_field, -1)])
+        total = db[coll_name].estimated_document_count()
+    except Exception as exc:
+        return {"ok": False, "name": label, "reason": f"read failed: {exc}"}
+    if not newest:
+        return {"ok": False, "name": label, "n": 0,
+                "reason": f"{coll_name} is empty"}
+
+    ts = newest.get(ts_field)
+    if hasattr(ts, "timestamp"):
+        age_days = (datetime.now(timezone.utc) - ts.replace(tzinfo=ts.tzinfo or timezone.utc)).days
+    else:
+        try:
+            age_days = (datetime.now(timezone.utc)
+                        - datetime.fromtimestamp(float(ts), timezone.utc)).days
+        except (TypeError, ValueError):
+            return {"ok": False, "name": label,
+                    "reason": f"unreadable {ts_field} on the newest row"}
+
+    ok = age_days <= max_age_days
+    return {"ok": ok, "name": label, "n": total, "age_days": age_days,
+            "max_age_days": max_age_days,
+            "detail": (f"newest row is {age_days}d old ({total} total)" if ok else
+                       f"nothing new in {age_days} days (limit {max_age_days}) — "
+                       f"{total} rows total, the feed may be dead")}
+
+
 def report(today: Optional[date] = None) -> dict:
-    """Every quarterly-cadence source, in one payload. One entry today; the
-    shape is a list so 13D/G and fund-flow sources can join without a new
-    endpoint."""
+    """Every dated source we depend on, in one payload.
+
+    Two DIFFERENT questions live here on purpose:
+      * quarterly sources (13F holders) — is the reported PERIOD current?
+      * event-driven feeds (13D/G, EDGAR 13F-HR log) — has anything ARRIVED
+        lately? Asking "which quarter" of a 13D is meaningless; asking "how old
+        is the newest row" of a 13F holder cache is what missed the Q2 roll.
+    """
     today = today or date.today()
-    checks = [dict(audit_whales_cache(today), name="13f_institutional_holders")]
+    checks = [
+        dict(audit_whales_cache(today), name="13f_institutional_holders"),
+        # 13F-HR filings pulled from EDGAR by giants.refresh (17:35 weekdays).
+        # They arrive in bursts around each 45-day deadline, so ~50 days of
+        # silence is normal between quarters; 120 means the puller is dead.
+        audit_collection_age("giants_13f_filings", "fetched_at", 120,
+                             "13f_edgar_filings", today),
+        # SC 13D/G — an activist or 5% crossing. Event-driven and genuinely
+        # sporadic, but a 60-day gap across the whole universe means the warm
+        # cron stopped rather than that nobody crossed 5%.
+        audit_collection_age("whales13d_cache", "cached_at", 60,
+                             "13dg_filings", today),
+    ]
     return {
         "generated_on": today.isoformat(),
         "all_ok": all(c.get("ok") for c in checks),
         "checks": checks,
         "note": ("Quarterly sources lag by design — SEC Rule 13f-1 allows 45 days "
                  "after quarter end, and the data provider ingests after that. "
-                 "This flags a source that has NOT rolled well past its deadline."),
+                 "This flags a source that has NOT rolled well past its deadline, "
+                 "or an event-driven feed that has gone silent."),
     }
 
 

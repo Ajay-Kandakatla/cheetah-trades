@@ -242,6 +242,11 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     "sp500": (450, 530),
     "sp400": (350, 430),
     "sp600": (540, 650),
+    # The Nasdaq-100 holds 100 companies but slightly more SYMBOLS, because a
+    # few constituents have two share classes in the index (GOOG/GOOGL,
+    # FOX/FOXA). Range, not equality, so a legitimate dual-class add does not
+    # look like a parse failure.
+    "nasdaq100": (95, 115),
 }
 
 
@@ -425,6 +430,54 @@ def fetch_sp600() -> list[str]:
     return _resolve_index(
         "sp600",
         [("wikipedia", _sp600_from_wikipedia)],
+        on_exhausted="empty",
+    )
+
+
+def _nasdaq100_from_wikipedia() -> list[str]:
+    """Nasdaq-100 constituents.
+
+    NOTE the URL: the components table lives on the SEPARATE
+    "List_of_NASDAQ-100_companies" page, not on the "Nasdaq-100" article — that
+    one now carries only index history (milestones, yearly closes) and links
+    out. Verified 2026-08-16: the article yields 0 tickers, the list page
+    yields 102 across columns Ticker / Company / ICB Industry / ICB Subsector.
+
+    The components table is identified by carrying BOTH a ticker column and a
+    company/industry column, which the navbox and history tables do not.
+    """
+    tables = _read_html_ua("https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies")
+    best: list[str] = []
+    for tb in tables:
+        cols = {str(c).lower() for c in tb.columns}
+        tick = next((c for c in tb.columns
+                     if str(c).lower() in ("symbol", "ticker")), None)
+        if tick is None:
+            continue
+        if not any(k in c for c in cols
+                   for k in ("company", "name", "industry", "sector")):
+            continue
+        syms = _dedup_symbols(tb[tick].tolist())
+        if len(syms) > len(best):
+            best = syms
+    return best
+
+
+def fetch_nasdaq100() -> list[str]:
+    """Nasdaq-100 — the large-cap non-financial Nasdaq names.
+
+    Added 2026-08-16 (Ajay: "Latest tickers as they change like getting added
+    to SP 500 or Russel 3000 and Nasdaq"). Nasdaq was the one index family the
+    app tracked nowhere: the S&P ladders cover the NYSE/Nasdaq blend by market
+    cap and the Russell lists are broad-market, but neither tells you when a
+    name JOINS the Nasdaq-100 — which is its own liquidity and flow event.
+
+    Never falls back to curated: a large-cap growth list leaking in as
+    "Nasdaq-100" would corrupt any membership diff built on top of it.
+    """
+    return _resolve_index(
+        "nasdaq100",
+        [("wikipedia", _nasdaq100_from_wikipedia)],
         on_exhausted="empty",
     )
 

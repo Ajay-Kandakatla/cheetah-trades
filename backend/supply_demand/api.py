@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
 
 from . import dependencies as deps
 from . import sectors as sec
@@ -65,6 +66,31 @@ async def post_demand_reentry_scan(
     Bypasses the 3h cache. sp1500 covers ~1,500 names."""
     import asyncio
     return await asyncio.to_thread(reentry_mod.scan, True, limit, universe)
+
+
+@router.get("/supply-demand/accumulation-changes")
+async def accumulation_changes(limit: int = Query(50, ge=1, le=200)):
+    """Quarter-over-quarter institutional flow changes already detected.
+
+    Ajay 2026-08-16: "give me updated and notification as Accumulations change
+    as money moving I need a comparison." Written by the Sunday sweep; this
+    only reads. 13F lags up to 45 days — context for a setup, never a trigger."""
+    import asyncio
+    from . import accumulation_changes as acc
+    n = limit if isinstance(limit, int) else 50
+    rows = await asyncio.to_thread(acc.recent, n)
+    return JSONResponse({"n": len(rows), "changes": rows,
+                         "min_usd": acc.MIN_NET_CHANGE_USD,
+                         "min_pct": acc.MIN_NET_CHANGE_PCT})
+
+
+@router.get("/supply-demand/accumulation-changes/{symbol}")
+async def accumulation_change_for(symbol: str):
+    """The live quarter-over-quarter comparison for one ticker — money in/out,
+    new buyers, exits, each scoped to a single filing quarter."""
+    import asyncio
+    from . import accumulation_changes as acc
+    return JSONResponse(await asyncio.to_thread(acc.for_symbol, symbol))
 
 
 @router.get("/supply-demand/zone-map/{symbol}")
