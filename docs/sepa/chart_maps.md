@@ -169,6 +169,11 @@ Measured warm: **0.23s** for 24 VCP tiles, **0.15s** for 24 winners.
 - `frontend/src/lib/chartMaps.test.ts` — 44 tests on geometry and formatting.
 - `frontend/src/components/PatternChart.test.tsx` — 11 render tests, including
   that a tile with no bars renders nothing and an off-window marker is skipped.
+- `frontend/src/pages/ChartMaps.test.tsx` — 10 page tests whose fixtures are
+  copied from the REAL endpoint response, so they double as a contract test: a
+  renamed field in `board.py` fails here instead of silently rendering blank
+  tiles. Locks that the winners tab always shows its stop-first losses and that
+  the demand tab says "scanning" rather than "nothing matched" while warming.
 
 ---
 
