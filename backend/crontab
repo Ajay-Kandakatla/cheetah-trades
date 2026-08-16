@@ -654,3 +654,18 @@
 # other market-hours job in this file) just bounds invocations — ticks before
 # 9:30 or after 16:00 no-op on the clock check.
 *      9-16  *    *    1-5  /usr/local/bin/python -m trading.exit_engine tick
+
+# ── Sector rotation snapshot ─────────────────────────────────────────────────
+# Ajay 2026-08-16: "add a rule to also track sector rotations time to time and
+# make sure few other sectors that wallstreet rotates in to historically. Like
+# safe haves vs in general."
+#
+# Warms the /rotation cache after the close so the page is instant, and leaves
+# the measurement in the api log. OVER HTTP, not as an import: the tracker's
+# cache is in-process, so `python -m` in the cron container would warm a cache
+# the api server never sees — the same mistake the demand-reentry warm made
+# before 2026-08-15.
+#
+# Weekdays 17:10 CT, after the 16:55/16:57 demand warms have finished so the
+# price cache is already hot.
+10     17    *    *    1-5  curl -sS -m 300 -o /dev/null -w 'rotation warm: HTTP %{http_code} in %{time_total}s\n' -H 'X-User-Email: cron@internal' 'http://api:8000/rotation?start=2026-06-01&refresh=true'

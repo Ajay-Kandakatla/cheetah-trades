@@ -30,6 +30,9 @@ async def chart_maps(
     themes_first: bool = Query(True,
                                description="lead with quantum/nuclear/robotics/AI-semis names"),
     pattern: Optional[str] = Query(None, description="winners tab only — filter to one pattern"),
+    source: str = Query("pattern", description="winners tab only — pattern | zone"),
+    minervini_only: bool = Query(False,
+                                 description="winners tab only — SEPA qualifiers at the time"),
 ):
     """Chart-ready tiles for one tab.
 
@@ -44,7 +47,9 @@ async def chart_maps(
             tab=tab if isinstance(tab, str) else "vcp",
             limit=limit if isinstance(limit, int) else board_mod.LIMIT_DEFAULT,
             days=days if isinstance(days, int) else board_mod.BARS_DEFAULT,
-            universe=universe if isinstance(universe, str) else "sp1500_plus",
+            source=source if isinstance(source, str) else "pattern",
+        minervini_only=minervini_only if isinstance(minervini_only, bool) else False,
+        universe=universe if isinstance(universe, str) else "sp1500_plus",
             themes_first=themes_first if isinstance(themes_first, bool) else True,
             pattern=pattern if isinstance(pattern, str) else None,
         )

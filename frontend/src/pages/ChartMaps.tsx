@@ -23,7 +23,8 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
-  CM_TABS, TAB_META, boardQuery, isThinSample, parseTab, recordLine,
+  CM_TABS, TAB_META, WINNER_SOURCES, boardQuery, isThinSample, parseSource,
+  parseTab, recordLine,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 
@@ -64,6 +65,8 @@ export function ChartMaps() {
   const [params, setParams] = useSearchParams();
   const tab = parseTab(params.get('tab'));
   const pattern = params.get('pattern');
+  const source = parseSource(params.get('source'));
+  const minerviniOnly = params.get('minervini') === 'true';
   const [universe, setUniverse] = useState('sp1500_plus');
   const [themesFirst, setThemesFirst] = useState(true);
   const [data, setData] = useState<CmBoard | null>(null);
@@ -73,7 +76,8 @@ export function ChartMaps() {
 
   const load = useCallback(async () => {
     setErr(null);
-    const q = boardQuery({ tab, limit: 24, universe, themesFirst, pattern });
+    const q = boardQuery({ tab, limit: 24, universe, themesFirst, pattern,
+                           source, minerviniOnly });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -85,7 +89,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, universe, themesFirst, pattern]);
+  }, [tab, universe, themesFirst, pattern, source, minerviniOnly]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -153,7 +157,36 @@ export function ChartMaps() {
             Themes first (quantum · nuclear · robotics · AI semis)
           </label>
         )}
-        {tab === 'winners' && data?.patterns?.length ? (
+        {tab === 'winners' && (
+          <label className="cm-ctl">
+            Source
+            <select value={source} onChange={(e) => setParams((p) => {
+              const n = new URLSearchParams(p);
+              n.set('tab', 'winners');
+              n.set('source', e.target.value);
+              // A chart-pattern name means nothing for a demand zone.
+              if (e.target.value === 'zone') { n.delete('pattern'); n.delete('minervini'); }
+              return n;
+            }, { replace: true })}>
+              {WINNER_SOURCES.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {tab === 'winners' && source === 'pattern' && (
+          <label className="cm-ctl cm-ctl-check">
+            <input type="checkbox" checked={minerviniOnly}
+                   onChange={(e) => setParams((p) => {
+                     const n = new URLSearchParams(p);
+                     n.set('tab', 'winners');
+                     if (e.target.checked) n.set('minervini', 'true'); else n.delete('minervini');
+                     return n;
+                   }, { replace: true })} />
+            SEPA qualifiers only
+          </label>
+        )}
+        {tab === 'winners' && source === 'pattern' && data?.patterns?.length ? (
           <label className="cm-ctl">
             Pattern
             <select value={pattern || ''} onChange={(e) => setPattern(e.target.value || null)}>

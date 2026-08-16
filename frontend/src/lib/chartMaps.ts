@@ -95,16 +95,37 @@ export function sepaHref(symbol: string, tab: 'setup' | 'supply' | 'breakout' = 
   return `/sepa/${encodeURIComponent((symbol || '').toUpperCase())}?tab=${tab}`;
 }
 
+/** Which ledger the Past Winners tab reads. Ajay 2026-08-16: "In the past
+ *  winners tab I wanna see the deman zones that were successful as well." */
+export type WinnerSource = 'pattern' | 'zone';
+
+export const WINNER_SOURCES: { key: WinnerSource; label: string }[] = [
+  { key: 'pattern', label: 'Chart patterns' },
+  { key: 'zone', label: 'Demand zones' },
+];
+
+export function parseSource(v: string | null | undefined): WinnerSource {
+  return v === 'zone' ? 'zone' : 'pattern';
+}
+
 export function boardQuery(p: {
   tab: CmTab; limit?: number; days?: number;
   universe?: string; themesFirst?: boolean; pattern?: string | null;
+  source?: WinnerSource; minerviniOnly?: boolean;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   if (p.tab === 'zones' && p.universe) q.set('universe', p.universe);
   if (p.themesFirst === false) q.set('themes_first', 'false');
-  if (p.tab === 'winners' && p.pattern) q.set('pattern', p.pattern);
+  // Winners-only params. `pattern` is meaningless for the zone ledger — zone
+  // re-entries have no chart-pattern name — so it is dropped there rather than
+  // sent and silently ignored.
+  if (p.tab === 'winners' && p.source === 'zone') q.set('source', 'zone');
+  if (p.tab === 'winners' && p.source !== 'zone' && p.pattern) q.set('pattern', p.pattern);
+  if (p.tab === 'winners' && p.source !== 'zone' && p.minerviniOnly) {
+    q.set('minervini_only', 'true');
+  }
   return q.toString();
 }
 

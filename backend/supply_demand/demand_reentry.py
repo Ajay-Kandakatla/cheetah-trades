@@ -392,6 +392,33 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
     if not sym:
         return None
     df = prices.load_prices(sym, period="2y")
+    rec = decide_from_frame(df, sym)
+    if rec is None:
+        return None
+
+    if with_series:
+        rec["series"] = _series_for_chart(df)
+        # Detail view only: today's off-exchange prints, so the zone chart can
+        # mark WHERE big size changed hands relative to the bands. Ajay
+        # 2026-08-13: "Add the darkpool and order block details in to the
+        # SEPA/Details tab". Best-effort — a failed tape pull just omits it.
+        rec["venues"] = _session_venues(sym)
+    return rec
+
+
+def decide_from_frame(df, sym: str):
+    """The zone + re-entry + trade-plan decision for ONE price frame.
+
+    Extracted from `analyze_symbol` 2026-08-16 so the walk-forward backtest
+    (`zone_backtest.py`) can score the SAME rule the live board runs, on a
+    truncated frame, instead of a reimplementation that quietly drifts from it.
+    `test_zone_backtest.py::test_backtest_and_live_agree_on_the_same_frame`
+    pins that they stay identical.
+
+    PURE with respect to the frame: reads `df` and nothing else. No network,
+    no clock, no cache — which is what makes it safe to call once per historical
+    decision day.
+    """
     if df is None or len(df) < MIN_BARS:
         return None
 
@@ -473,13 +500,7 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
         "resolution": zones.get("resolution"),
         "disclaimer": DISCLAIMER,
     }
-    if with_series:
-        rec["series"] = _series_for_chart(df)
-        # Detail view only: today's off-exchange prints, so the zone chart can
-        # mark WHERE big size changed hands relative to the bands. Ajay
-        # 2026-08-13: "Add the darkpool and order block details in to the
-        # SEPA/Details tab". Best-effort — a failed tape pull just omits it.
-        rec["venues"] = _session_venues(sym)
+    return rec
     return rec
 
 

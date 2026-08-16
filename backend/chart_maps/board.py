@@ -559,8 +559,111 @@ def _pattern_label(p: str) -> str:
     return (p or "").replace("_", " ").title()
 
 
+def zone_winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90) -> dict:
+    """Demand-zone re-entries that reached target before stop.
+
+    Ajay 2026-08-16: "In the past winners tab I wanna see the deman zones that
+    were successful as well please."
+
+    Source is the walk-forward backtest ledger written by
+    `supply_demand.zone_backtest` (kind='zone', backtested=True), NOT live
+    observations — there were none, the outcome was never recorded before now.
+    Every row is a no-lookahead score: the decision saw bars only up to its own
+    day, entry is the NEXT session's open, and a bar containing both stop and
+    target counts as a loss.
+
+    HONESTY: the same-bar wins are excluded here. 135 of 694 backtested trades
+    hit their target on the entry bar itself because the first supply band sat
+    a fraction above entry — those charts teach nothing about a re-entry, they
+    just show a target that was never far away.
+    """
+    from patterns import history
+
+    coll = history._coll()
+    if coll is None:
+        return {"tiles": [], "note": "zone ledger unavailable"}
+
+    try:
+        rows = list(coll.find({"kind": "zone",
+                               "outcome": {"$in": [WIN_OUTCOME, LOSS_OUTCOME]}},
+                              {"_id": 0}))
+    except Exception as exc:
+        log.warning("chart-maps: zone winners query failed: %s", exc)
+        return {"tiles": [], "note": "zone ledger unavailable"}
+
+    usable = [o for o in rows if (o.get("bars_to_outcome") or 0) > 0]
+    wins = [o for o in usable if o.get("outcome") == WIN_OUTCOME]
+    losses = [o for o in usable if o.get("outcome") == LOSS_OUTCOME]
+    wins.sort(key=lambda o: str(o.get("et_date") or ""), reverse=True)
+
+    tiles = []
+    for i, o in enumerate(wins):
+        sym = (o.get("symbol") or "").upper()
+        confirm = str(o.get("confirmed_date") or o.get("et_date") or "")[:10]
+        if not sym or not confirm:
+            continue
+        lo, hi = _num(o.get("zone_lo")), _num(o.get("zone_hi"))
+        entry, tgt, stp = (_num(o.get("entry_open")), _num(o.get("target")),
+                           _num(o.get("stop")))
+
+        bands = []
+        if lo is not None and hi is not None and hi > lo:
+            bands.append({"kind": "demand", "lo": lo, "hi": hi, "label": "demand"})
+        lines = []
+        for v, label, t in ((entry, "BUY", "buy"), (stp, "STOP", "stop"),
+                            (tgt, "TARGET", "target")):
+            if v is not None:
+                lines.append({"price": v, "label": label, "tone": t})
+
+        bto = o.get("bars_to_outcome")
+        net = _num(o.get("net_pct"))
+        rr = _num(o.get("rr"))
+        stats = [{"k": "Entered", "v": confirm},
+                 {"k": "Bars to target", "v": str(bto) if bto is not None else "—"},
+                 {"k": "Net", "v": f"+{net:.1f}%" if net is not None else "—"},
+                 {"k": "Planned R:R", "v": f"{rr:.1f}" if rr is not None else "—"}]
+        fell = _num(o.get("fell_from_pct"))
+        if fell is not None:
+            stats.append({"k": "Fell from", "v": f"{fell:.0f}%"})
+
+        tiles.append({
+            "symbol": sym,
+            "name": _name_for(sym),
+            "href": _href(sym, "supply"),
+            "bars": [],
+            "_bars": {"around": confirm,
+                      "pad_after": int(bto or 21) + 12},
+            "bands": bands,
+            "lines": lines,
+            "markers": [{"date": confirm, "label": "entry", "kind": "confirm"}],
+            "stats": stats,
+            "why": (f"came back into demand, hit target in {bto} bars"
+                    if bto is not None else "came back into demand, hit target"),
+            "theme": _theme(sym),
+            "badges": [{"text": "Target hit", "tone": "good"},
+                       {"text": "Backtested", "tone": "muted"}],
+            "_score": float(len(wins) - i),
+        })
+
+    n = len(usable)
+    return {
+        "tiles": _finish(tiles, limit, themes_first=False, days=days),
+        "record": {
+            "overall": {"wins": len(wins), "losses": len(losses), "n": n,
+                        "win_pct": round(100.0 * len(wins) / n, 1) if n else None},
+            "caveat": ("Walk-forward backtest, not live observations. Universe is "
+                       "TODAY's liquid names, so delisted tickers are absent and "
+                       "this number is biased UPWARD. Same-bar wins are excluded "
+                       "from the charts. Read expectancy, not win rate — the live "
+                       "board applies no minimum R:R, so trivially close targets "
+                       "raise the win rate while paying nothing."),
+        },
+    }
+
+
 def winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90,
-                 pattern: Optional[str] = None) -> dict:
+                 pattern: Optional[str] = None,
+                 minervini_only: bool = False) -> dict:
     """Past setups that reached their measure-rule target before their stop.
 
     HONESTY RULES BAKED IN HERE
@@ -596,6 +699,12 @@ def winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90,
         return t is not None and c is not None and c >= t
 
     usable = [o for o in raced if not _already_past(o)]
+    # Ajay 2026-08-16: "Also the Minervini one that have been successfull to
+    # learn and memorize charts." The ledger records is_candidate at OBSERVATION
+    # time, so this is what the trend template said then — not a hindsight
+    # relabel from today's scan.
+    if minervini_only:
+        usable = [o for o in usable if o.get("is_candidate")]
     wins = [o for o in usable if o.get("outcome") == WIN_OUTCOME]
     losses = [o for o in usable if o.get("outcome") == LOSS_OUTCOME]
     wins.sort(key=lambda o: str(o.get("et_date") or ""), reverse=True)
@@ -641,7 +750,11 @@ def winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90,
                     f"{bto} bars" if bto is not None
                     else f"{_pattern_label(o.get('pattern'))} — reached target"),
             "theme": _theme(sym),
-            "badges": [{"text": "Target hit", "tone": "good"}],
+            "badges": ([{"text": "Target hit", "tone": "good"}]
+                       + ([{"text": "SEPA qualifier", "tone": "info"}]
+                          if o.get("is_candidate") else [])
+                       + ([{"text": "Buyable then", "tone": "good"}]
+                          if o.get("is_buyable") else [])),
             "pattern": o.get("pattern"),
             # Already sorted newest-first; a descending score preserves that
             # order through _finish's shared sort.
@@ -684,16 +797,29 @@ def _winner_record(usable: list, wins: list, losses: list) -> dict:
 # ---------------------------------------------------------------------------
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "sp1500_plus", themes_first: bool = True,
-          pattern: Optional[str] = None) -> dict:
-    """One tab's tiles. Never scans; reads caches and the pattern ledger."""
+          pattern: Optional[str] = None, source: str = "pattern",
+          minervini_only: bool = False) -> dict:
+    """One tab's tiles. Never scans; reads caches and the pattern ledger.
+
+    `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
+    chart-pattern ledger, "zone" is the demand-zone re-entry backtest.
+    `minervini_only` narrows the pattern winners to those that were SEPA
+    qualifiers at observation time.
+    """
     t = tab if tab in TABS else TABS[0]
     limit = max(1, min(int(limit or LIMIT_DEFAULT), LIMIT_MAX))
     days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
+    src = source if source in ("pattern", "zone") else "pattern"
 
     if t == "zones":
         out = zone_tiles(limit, days, universe, themes_first)
     elif t == "winners":
-        out = winner_tiles(limit, days=min(days, 120), pattern=pattern)
+        if src == "zone":
+            out = zone_winner_tiles(limit, days=min(days, 120))
+        else:
+            out = winner_tiles(limit, days=min(days, 120), pattern=pattern,
+                               minervini_only=bool(minervini_only))
+        out["source"] = src
     else:
         out = vcp_tiles(limit, days, themes_first)
 
