@@ -1043,17 +1043,25 @@ def fetch_broad() -> list[str]:
     # asked to preserve. Both fall back gracefully (sp500→curated, sp400→[]).
     sp500 = fetch_sp500()
     sp400 = fetch_sp400()
+    # Build-out themes, for the same reason curated is here: the quantum /
+    # SMR-nuclear / robotics names are pre-profit and several are foreign ADRs,
+    # so they are in no S&P tier and the US-domiciled-only Russell holdings miss
+    # the ADRs too. Measured 2026-08-15: 40 of the 42 theme names already
+    # arrived via curated ∪ russell1000, but ARQQ and SYM reached NO layer, so
+    # the Strong VCP board could never show them. Unioning the rosters closes
+    # that without touching SEPA_UNIVERSE_MODE.
+    themes = fetch_themes()
     equities = fetch_russell3000()
     micro = fetch_microcap()
     etfs = fetch_etf_universe()
     merged = list(dict.fromkeys(
-        curated + sp500 + sp400 + equities + micro + etfs
+        curated + themes + sp500 + sp400 + equities + micro + etfs
     ))
     log.info(
-        "universe: broad mode = %d curated + %d sp500 + %d sp400 + %d R3000 "
-        "+ %d micro + %d ETF -> %d unique",
-        len(curated), len(sp500), len(sp400), len(equities), len(micro),
-        len(etfs), len(merged),
+        "universe: broad mode = %d curated + %d themes + %d sp500 + %d sp400 "
+        "+ %d R3000 + %d micro + %d ETF -> %d unique",
+        len(curated), len(themes), len(sp500), len(sp400), len(equities),
+        len(micro), len(etfs), len(merged),
     )
     return merged
 

@@ -725,3 +725,40 @@ def test_theme_lookup_is_total_and_never_raises():
     assert U.theme_for("") is None
     assert U.theme_for(None) is None
     assert U.theme_for(123) is None
+
+
+def test_broad_universe_includes_the_theme_rosters(monkeypatch):
+    """Ajay 2026-08-15: "make sure the new companies ... all are considered."
+
+    The nightly fast-scan runs `--mode broad`, which feeds the Strong VCP
+    board. Measured 2026-08-15: 40 of 42 theme names already arrived via
+    curated + russell1000, but ARQQ and SYM reached NO layer, so those two
+    could never appear. Broad must union the rosters explicitly.
+    """
+    from sepa import universe as U
+    monkeypatch.setattr(U, "fetch_sp500", lambda: ["SPX1"])
+    monkeypatch.setattr(U, "fetch_sp400", lambda: ["MID1"])
+    monkeypatch.setattr(U, "fetch_russell3000", lambda: ["R1"])
+    monkeypatch.setattr(U, "fetch_microcap", lambda: [])
+    monkeypatch.setattr(U, "fetch_etf_universe", lambda: ["SPY"])
+
+    broad = set(U.fetch_broad())
+    for t in U.fetch_themes():
+        assert t in broad, f"{t} is in no broad-mode layer"
+    # and the pre-existing layers are untouched
+    assert {"SPX1", "MID1", "R1", "SPY"} <= broad
+
+
+def test_broad_universe_has_no_duplicates(monkeypatch):
+    """NVDA is in curated AND ai_semis AND sp500. A duplicate means the
+    scanner analyses the same name several times per run."""
+    from sepa import universe as U
+    monkeypatch.setattr(U, "fetch_sp500", lambda: ["NVDA", "SPX1"])
+    monkeypatch.setattr(U, "fetch_sp400", lambda: [])
+    monkeypatch.setattr(U, "fetch_russell3000", lambda: ["NVDA"])
+    monkeypatch.setattr(U, "fetch_microcap", lambda: [])
+    monkeypatch.setattr(U, "fetch_etf_universe", lambda: [])
+
+    broad = U.fetch_broad()
+    assert len(broad) == len(set(broad))
+    assert broad.count("NVDA") == 1

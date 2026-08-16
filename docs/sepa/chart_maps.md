@@ -118,6 +118,14 @@ New universe keys:
   **1,525** names, deduped) and `themes`. `DEFAULT_UNIVERSE` stays `sp1500` so
   no existing caller widens silently.
 
+**Coverage of the two boards.** The demand tab scans `sp1500_plus`, so all 42
+theme names are in. The Strong VCP tab reads the nightly SEPA scan instead,
+whose universe is `--mode broad`; measured 2026-08-15, 40 of the 42 already
+arrived via curated ∪ russell1000, but **ARQQ and SYM reached no layer at all**.
+`fetch_broad()` now unions the rosters explicitly, so both boards see the same
+names without touching `SEPA_UNIVERSE_MODE`. The new names appear on the VCP
+board after the next nightly fast-scan.
+
 **Ordering.** `themes_first=true` (the default) leads with theme names, then the
 tab's own metric — Ajay's standing rule that a board leads with the AI-ecosystem
 winners. The page has a checkbox to turn it off.
