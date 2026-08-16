@@ -281,3 +281,112 @@ def test_recorded_rows_are_marked_backtested():
         DR.decide_from_frame = orig
     assert obs and all(o["backtested"] is True for o in obs)
     assert all(o["kind"] == ZB.LEDGER_KIND for o in obs)
+
+
+# --------------------------------------------------------------------------
+# The gap-through-level defect
+#
+# Found 2026-08-16 by adversarial review OF THIS FILE's subject. walk_forward
+# started scanning at the entry bar without checking the entry price was still
+# between stop and target, so a name that gapped overnight through a level was
+# booked out AT that level — a price it never traded at after entry.
+#
+# 56 of 694 trades (8.1%) were mis-signed and contributed +83.6pp against a
+# whole-sample P&L of +23.5pp: MORE THAN THE ENTIRE RESULT.
+# --------------------------------------------------------------------------
+def test_gapping_below_the_stop_is_void_not_a_loss():
+    """SNDK 2026-07-27: plan stop 1258.17, next open 1173.60. It was scored
+    stop_first at net +7.166% — a loss that made seven percent."""
+    rows = flat(6)
+    rows[1] = ("2020-01-02", 1173.60, 1200.0, 1160.0, 1180.0)
+    df = frame(rows)
+    res = ZB.walk_forward(df, entry_idx=1, stop=1258.17, target=1485.02)
+    assert res["outcome"] == ZB.OUTCOME_GAPPED
+    assert res["gapped_through"] == "stop"
+    assert res["net_pct"] is None, "a voided trade must not carry a P&L"
+
+
+def test_gapping_above_the_target_is_void_not_a_win():
+    rows = flat(6)
+    rows[1] = ("2020-01-02", 224.15, 230.0, 220.0, 226.0)
+    df = frame(rows)
+    res = ZB.walk_forward(df, entry_idx=1, stop=212.96, target=222.33)
+    assert res["outcome"] == ZB.OUTCOME_GAPPED
+    assert res["gapped_through"] == "target"
+
+
+def test_a_normal_entry_between_the_levels_still_scores():
+    """Negative of the guard: it must not void ordinary trades."""
+    rows = flat(6)
+    rows[1] = ("2020-01-02", 100.0, 101.0, 99.0, 100.0)
+    rows[3] = ("2020-01-06", 100.0, 112.0, 99.0, 111.0)
+    df = frame(rows)
+    res = ZB.walk_forward(df, entry_idx=1, stop=90.0, target=110.0)
+    assert res["outcome"] == ZB.OUTCOME_WIN
+
+
+def test_gapped_trades_are_excluded_from_the_raced_denominator():
+    obs = [{"outcome": ZB.OUTCOME_WIN, "net_pct": 3.0, "bars_to_outcome": 4},
+           {"outcome": ZB.OUTCOME_LOSS, "net_pct": -2.0, "bars_to_outcome": 2},
+           {"outcome": ZB.OUTCOME_GAPPED, "net_pct": None, "bars_to_outcome": 0}]
+    s = ZB.summarize(obs)
+    assert s["gapped"] == 1
+    assert s["raced"] == 2, "a voided trade must not enter the win-rate denominator"
+    assert s["win_pct"] == pytest.approx(50.0)
+
+
+# --------------------------------------------------------------------------
+# The benchmark — the column that separates skill from a bull market
+# --------------------------------------------------------------------------
+def test_benchmark_return_covers_the_same_holding_window():
+    bench = frame([("2020-01-01", 100.0, 100.0, 100.0, 100.0),
+                   ("2020-01-02", 100.0, 100.0, 100.0, 102.0),
+                   ("2020-01-03", 102.0, 102.0, 102.0, 104.0),
+                   ("2020-01-06", 104.0, 104.0, 104.0, 110.0)])
+    # Enter on 01-02's open (100), hold 2 bars -> close of 01-06 (110).
+    assert ZB.benchmark_return(bench, "2020-01-02", 2) == pytest.approx(10.0)
+
+
+def test_benchmark_return_on_a_same_bar_trade_is_that_bars_move():
+    bench = frame([("2020-01-01", 100.0, 100.0, 100.0, 100.0),
+                   ("2020-01-02", 100.0, 105.0, 100.0, 104.0)])
+    assert ZB.benchmark_return(bench, "2020-01-02", 0) == pytest.approx(4.0)
+
+
+def test_benchmark_return_is_none_rather_than_zero_when_unavailable():
+    """Negative: a missing benchmark must not silently become 0% and turn every
+    raw return into 'excess'."""
+    assert ZB.benchmark_return(None, "2020-01-02", 5) is None
+    assert ZB.benchmark_return(frame(flat(3)), "", 5) is None
+    assert ZB.benchmark_return(frame(flat(3)), "2099-01-01", 5) is None
+
+
+def test_excess_is_raw_minus_benchmark_and_only_where_both_exist():
+    obs = [{"outcome": ZB.OUTCOME_WIN, "net_pct": 3.0, "bench_pct": 1.0, "bars_to_outcome": 4},
+           {"outcome": ZB.OUTCOME_LOSS, "net_pct": -2.0, "bench_pct": -1.0, "bars_to_outcome": 2},
+           # No benchmark -> must be skipped, not treated as 0.
+           {"outcome": ZB.OUTCOME_WIN, "net_pct": 9.0, "bench_pct": None, "bars_to_outcome": 1}]
+    s = ZB.summarize(obs)
+    assert s["excess_vs_spy_pct"] == pytest.approx(0.5)   # mean of (+2, -1)
+    assert s["beat_spy_pct"] == pytest.approx(50.0)
+
+
+def test_a_bull_market_does_not_become_edge():
+    """The whole point. Every trade up 5% while the index was up 5% is zero
+    excess, however good the raw expectancy looks."""
+    obs = [{"outcome": ZB.OUTCOME_WIN, "net_pct": 5.0, "bench_pct": 5.0,
+            "bars_to_outcome": 3} for _ in range(20)]
+    s = ZB.summarize(obs)
+    assert s["expectancy_pct"] == pytest.approx(5.0)
+    assert s["excess_vs_spy_pct"] == pytest.approx(0.0)
+    assert s["beat_spy_pct"] == pytest.approx(0.0)
+
+
+def test_the_period_argument_is_reported_not_trusted():
+    """sepa.prices.load_prices serves a cached frame and IGNORES period, so
+    period='5y' silently returned 500 bars (~13 months). The payload must
+    report the real decision-day span so that cannot masquerade again."""
+    import inspect
+    src = inspect.getsource(ZB.run)
+    assert '"period_requested"' in src
+    assert '"decision_days"' in src

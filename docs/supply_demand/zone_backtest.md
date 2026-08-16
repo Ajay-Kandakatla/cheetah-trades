@@ -2,7 +2,7 @@
 
 **Code:** `backend/supply_demand/zone_backtest.py` ·
 **Shared rule:** `backend/supply_demand/demand_reentry.py::decide_from_frame` ·
-**Tests:** `backend/tests/test_zone_backtest.py` (23)
+**Tests:** `backend/tests/test_zone_backtest.py` (33)
 
 > Ajay 2026-08-16: *"I want you to look at data historically and tell me if buy
 > zones worked.. Record further if you want but I want you to back test and
@@ -10,33 +10,65 @@
 
 ## The result
 
-300 most-liquid names, 5 years of daily bars, **694 recorded re-entries**, 686 of
-them raced to a target or a stop.
+**Corrected 2026-08-16** after adversarial review broke three of the first
+version's claims. What is below is the corrected run; what was wrong is recorded
+at the bottom, because a backtest whose errors are hidden is worth less than none.
 
-| Cohort | n | raced | win % | **expectancy** | avg win | avg loss | median R:R | same-bar wins |
-|---|---|---|---|---|---|---|---|---|
-| **All zone re-entries** | 694 | 686 | 48.7% | **+0.02%** | +2.55% | −2.39% | 1.14 | 135 |
-| Planned R:R ≥ 1 | 379 | 374 | 35.0% | +0.07% | +4.34% | −2.23% | 1.96 | 33 |
-| Planned R:R ≥ 2 | 184 | 180 | 26.1% | +0.11% | +6.14% | −2.02% | 2.97 | 11 |
-| **Planned R:R ≥ 3** | 90 | 86 | 23.3% | **+0.71%** | +8.75% | −1.72% | 3.92 | 3 |
-| Zone strength ≥ 60 | 452 | 445 | 47.2% | **−0.15%** | +2.43% | −2.46% | 1.03 | 92 |
-| Fell ≥ 10% from band top | 352 | 348 | 43.1% | +0.02% | +2.90% | −2.17% | 1.40 | 69 |
+**2,011 liquid names, 5,371 recorded re-entries, 4,976 raced, 339 voided.**
+Decision days span **2025-07-07 → 2026-08-13** — thirteen months, not five years.
 
-**Read expectancy, not win rate.** The board applies no minimum R:R, so a target
-sitting a fraction above entry wins nearly every time and pays nearly nothing —
-**135 of 694 trades hit their target on the entry bar itself.** That lifts win
-rate without lifting the account.
+| Cohort | n | raced | win % | expectancy | **excess vs SPY** | beat SPY |
+|---|---|---|---|---|---|---|
+| **All zone re-entries** | 5,371 | 4,976 | 51.0% | +0.19% | **−0.035%** | 49.1% |
+| Planned R:R ≥ 1 | 3,064 | 2,887 | 39.7% | +0.30% | +0.023% | 40.8% |
+| Planned R:R ≥ 2 | 1,504 | 1,395 | 31.9% | +0.40% | +0.081% | 34.2% |
+| Planned R:R ≥ 3 | 762 | 694 | 24.9% | +0.45% | +0.095% | 28.0% |
+| Zone strength ≥ 60 | 3,381 | 3,144 | 51.7% | +0.15% | −0.085% | 49.6% |
+| Fell ≥ 10% from band top | 2,727 | 2,484 | 46.5% | +0.16% | −0.023% | 45.7% |
 
-Two findings stand out:
+**The verdict: no edge.** The raw +0.19% per trade is real, but SPY returned
++0.22% over the identical holding windows. Excess is **−0.035%**, and only
+**49.1% of trades beat the index** — a coin flip. The rule bought market beta
+during a 25% bull run.
 
-1. **The rule as gated has no edge.** +0.02% per trade is indistinguishable from
-   zero, and that is *before* correcting for survivorship, which biases it
-   upward.
-2. **Zone strength is anti-predictive at the top end.** Raising the strength
-   filter to 60 makes expectancy **negative** (−0.15%), while the live board
-   *requires* ≥ 40. Whether that is a strength effect or the R:R effect in
-   disguise — high-strength zones may systematically have closer targets — is
-   under separate verification.
+The R:R cohorts lift raw expectancy and their excess is still ~zero: +0.023% /
++0.081% / +0.095%, and **fewer than half** of even the R:R ≥ 1 trades beat SPY
+(40.8%). Higher R:R buys a better raw number by holding longer in a rising
+market, not by picking better.
+
+## Three claims from the first version that were wrong
+
+1. **"5 years of daily bars."** `sepa.prices.load_prices` serves a cached frame
+   and **ignores `period`** — measured, `1y` / `5y` / `10y` / `max` all return
+   the identical 500 bars. It is a **13-month, single-regime** test. `run()` now
+   reports `period_requested` and the real `decision_days` span so this cannot
+   masquerade again.
+
+2. **"Only R:R ≥ 3 shows edge (+0.71%)."** That was n=86 with a confidence
+   interval spanning zero, on an arbitrary top-300-by-dollar-volume slice.
+   On the full universe R:R ≥ 3 is +0.45% raw and +0.095% excess — the same
+   ~zero as every other cohort.
+
+3. **"Zone strength is anti-predictive."** A bad comparison: a subset measured
+   against the whole sample rather than against its complement. On the full
+   universe strength ≥ 60 is +0.15% and strength < 60 is +0.23% — overlapping,
+   and the sign of the 300-name result flips. Zone strength is **inert**. The
+   `≥ 40` floor stays; nothing here justifies changing it.
+
+## The scoring defect this review found
+
+`walk_forward` began scanning at the entry bar without checking the entry price
+was still between the stop and the target. A name that **gapped overnight
+through a level** satisfied `low <= stop` on bar one and was booked out **at**
+that level — a price it never traded at after entry.
+
+Measured on the 694-trade run: **56 mis-signed (8.1%), contributing +83.6pp
+against a whole-sample P&L of +23.5pp** — more than the entire result. Real case:
+SNDK 2026-07-27, plan stop 1258.17, next open **1173.60**, scored `stop_first`
+at net **+7.166%**. A loss that made seven percent.
+
+Such trades are now `outcome="gapped"`: void, carrying no P&L, excluded from the
+raced denominator. 339 of 5,371 on the corrected run.
 
 ## One rule, not two
 

@@ -78,6 +78,10 @@ OUTCOME_WIN = "target_first"
 OUTCOME_LOSS = "stop_first"
 OUTCOME_OPEN = "open"
 OUTCOME_TIMEOUT = "expired"
+# The next session opened beyond the stop or the target, so the plan never
+# existed at a tradeable price. Voided, not scored either way — see
+# `walk_forward`.
+OUTCOME_GAPPED = "gapped"
 
 
 def _upto(df, i: int):
@@ -105,6 +109,24 @@ def walk_forward(df, entry_idx: int, stop: float, target: float,
     entry = float(df["open"].iloc[entry_idx])
     if not entry or entry <= 0:
         return {"outcome": OUTCOME_OPEN, "bars": 0, "exit": None, "net_pct": None}
+
+    # THE PLAN MUST STILL EXIST AT THE OPEN.
+    #
+    # Found 2026-08-16 by adversarial review of this very file. The loop below
+    # starts at the entry bar, so a name that gapped overnight THROUGH a level
+    # satisfied `lo <= stop` (or `hi >= target`) on bar one and was booked out
+    # AT that level — a price it never traded at after entry.
+    #
+    # The damage was not marginal. 56 of 694 trades (8.1%) were mis-signed, and
+    # they contributed +83.6pp against a whole-sample P&L of +23.5pp — more than
+    # the entire result. SNDK 2026-07-27: plan stop 1258.17, next open 1173.60,
+    # scored "stop_first" at net +7.166%. A loss that made seven percent.
+    #
+    # If price opened past a level you never got the entry, so the trade is
+    # VOID: not a win, not a loss, and excluded from the raced denominator.
+    if entry <= stop or entry >= target:
+        return {"outcome": OUTCOME_GAPPED, "bars": 0, "exit": None,
+                "net_pct": None, "gapped_through": "stop" if entry <= stop else "target"}
 
     hi_col, lo_col = df["high"], df["low"]
     last = min(len(df) - 1, entry_idx + max_hold)
@@ -135,6 +157,38 @@ def walk_forward(df, entry_idx: int, stop: float, target: float,
             "net_pct": _net(entry, close), "max_gain_pct": round(max_gain, 2)}
 
 
+BENCHMARK = "SPY"
+
+
+def benchmark_return(bench_df, start_date: str, bars_held: int) -> Optional[float]:
+    """SPY's return over the SAME window this trade was held. PURE.
+
+    The single most important thing missing from the first version of this
+    backtest. A dip-buying rule run through a 25% bull market produces positive
+    raw returns whether or not the rule has any skill — the question is not
+    "did it make money", it is "did it beat owning the same days".
+    """
+    if bench_df is None or len(bench_df) == 0 or not start_date:
+        return None
+    try:
+        dates = bench_df.index.strftime("%Y-%m-%d")
+    except Exception:
+        return None
+    idx = None
+    for k, d in enumerate(dates):
+        if d >= start_date:
+            idx = k
+            break
+    if idx is None or idx >= len(bench_df):
+        return None
+    end = min(len(bench_df) - 1, idx + max(0, int(bars_held)))
+    a = float(bench_df["open"].iloc[idx])
+    b = float(bench_df["close"].iloc[end])
+    if a <= 0:
+        return None
+    return round((b / a - 1.0) * 100.0, 3)
+
+
 def _date_at(df, i: int) -> str:
     try:
         return str(df.index[i])[:10]
@@ -143,7 +197,7 @@ def _date_at(df, i: int) -> str:
 
 
 def observations_for(symbol: str, df, stride: int = DEFAULT_STRIDE,
-                     max_hold: int = MAX_HOLD_BARS) -> list:
+                     max_hold: int = MAX_HOLD_BARS, bench_df=None) -> list:
     """Every recorded zone re-entry for one symbol, scored. PURE given `df`.
 
     Returns ledger-shaped dicts so `record()` can insert them unchanged.
@@ -198,7 +252,9 @@ def observations_for(symbol: str, df, stride: int = DEFAULT_STRIDE,
             "net_pct": res.get("net_pct"),
             "max_gain_pct": res.get("max_gain_pct"),
             "ambiguous_bar": bool(res.get("ambiguous_bar")),
+            "bench_pct": benchmark_return(bench_df, _date_at(df, i + 1), res["bars"]),
             "resolved": res["outcome"] in (OUTCOME_WIN, OUTCOME_LOSS),
+            "gapped_through": res.get("gapped_through"),
             "backtested": True,
         })
     return out
@@ -211,6 +267,7 @@ def summarize(obs: list, label: str = "all") -> dict:
     losses = [o for o in obs if o.get("outcome") == OUTCOME_LOSS]
     opens = [o for o in obs if o.get("outcome") == OUTCOME_OPEN]
     timeouts = [o for o in obs if o.get("outcome") == OUTCOME_TIMEOUT]
+    gapped = [o for o in obs if o.get("outcome") == OUTCOME_GAPPED]
     raced = len(wins) + len(losses)
 
     def _avg(rows, key):
@@ -219,12 +276,22 @@ def summarize(obs: list, label: str = "all") -> dict:
 
     win_pct = round(100.0 * len(wins) / raced, 1) if raced else None
     aw, al = _avg(wins, "net_pct"), _avg(losses, "net_pct")
-    expectancy = None
-    if raced and aw is not None and al is not None:
-        p = len(wins) / raced
-        expectancy = round(p * aw + (1 - p) * al, 2)
+    # Mean net over every raced trade. Mathematically identical to
+    # p*avg_win + (1-p)*avg_loss, but it survives a cohort with no losses (or
+    # no wins), where the two-term form divides by a missing average and
+    # reports None for a perfectly well-defined number.
+    _raced_nets = [o.get("net_pct") for o in (wins + losses)
+                   if isinstance(o.get("net_pct"), (int, float))]
+    expectancy = (round(sum(_raced_nets) / len(_raced_nets), 2)
+                  if _raced_nets else None)
 
     same_bar = sum(1 for o in wins if o.get("bars_to_outcome") == 0)
+    # Excess over holding the index for the identical days. THE number.
+    excess = [round(o["net_pct"] - o["bench_pct"], 3)
+              for o in (wins + losses)
+              if isinstance(o.get("net_pct"), (int, float))
+              and isinstance(o.get("bench_pct"), (int, float))]
+    beat = sum(1 for e in excess if e > 0)
     return {
         "label": label,
         "n": len(obs),
@@ -233,6 +300,9 @@ def summarize(obs: list, label: str = "all") -> dict:
         "losses": len(losses),
         "open": len(opens),
         "expired": len(timeouts),
+        # Opened beyond stop or target — the plan never existed at a tradeable
+        # price. Never scored as either outcome.
+        "gapped": len(gapped),
         "win_pct": win_pct,
         "avg_win_pct": aw,
         "avg_loss_pct": al,
@@ -240,6 +310,11 @@ def summarize(obs: list, label: str = "all") -> dict:
         # entry "wins" almost every time and pays almost nothing, so win rate
         # rises while the account does not. Expectancy prices that correctly.
         "expectancy_pct": expectancy,
+        # Raw expectancy minus what SPY did over the same holding windows. A
+        # dip-buying rule in a bull market shows positive raw returns with or
+        # without skill; this is the only column that separates the two.
+        "excess_vs_spy_pct": (round(sum(excess) / len(excess), 3) if excess else None),
+        "beat_spy_pct": _pct_of(beat, len(excess)),
         "median_rr": _median_of(obs, "rr"),
         "median_bars_to_win": (sorted(o["bars_to_outcome"] for o in wins)[len(wins) // 2]
                                if wins else None),
@@ -306,6 +381,12 @@ def run(symbols: Optional[list] = None, limit: Optional[int] = 300,
     syms = [s.upper() for s in (symbols or _universe(limit))]
     log.info("zone-backtest: %d symbols, period=%s stride=%d", len(syms), period, stride)
 
+    try:
+        bench_df = prices.load_prices(BENCHMARK, period=period)
+    except Exception as exc:
+        log.warning("zone-backtest: benchmark load failed: %s", exc)
+        bench_df = None
+
     def one(sym):
         try:
             df = prices.load_prices(sym, period=period)
@@ -313,7 +394,8 @@ def run(symbols: Optional[list] = None, limit: Optional[int] = 300,
             log.debug("zone-backtest: prices %s failed: %s", sym, exc)
             return []
         try:
-            return observations_for(sym, df, stride=stride, max_hold=max_hold)
+            return observations_for(sym, df, stride=stride, max_hold=max_hold,
+                                    bench_df=bench_df)
         except Exception as exc:
             log.debug("zone-backtest: %s failed: %s", sym, exc)
             return []
@@ -328,8 +410,17 @@ def run(symbols: Optional[list] = None, limit: Optional[int] = 300,
 
     strong = [o for o in obs if (o.get("zone_strength") or 0) >= 60]
     deep = [o for o in obs if (o.get("fell_from_pct") or 0) >= 10]
+    dates = sorted(o["et_date"] for o in obs if o.get("et_date"))
     return {
         "symbols": len(syms),
+        # `period` is REPORTED, not trusted: sepa.prices.load_prices serves a
+        # cached frame and ignores it, so period="5y" silently returns whatever
+        # the cache holds (measured 2026-08-16: 500 bars for every value). The
+        # decision-day span below is what actually happened.
+        "period_requested": period,
+        "decision_days": {"first": dates[0] if dates else None,
+                          "last": dates[-1] if dates else None,
+                          "n": len(dates)},
         "period": period,
         "stride": stride,
         "max_hold_bars": max_hold,
