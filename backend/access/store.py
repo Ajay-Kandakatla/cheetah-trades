@@ -103,12 +103,6 @@ FEATURE_CATALOG: list[dict] = [
     # minimal, jargon-free scanner for friends with little trading experience
     # (admin's /sepa stays the full power tool). Default ON for everyone.
     {"id": "sepa-global",   "label": "🌍 SEPA Global",      "group": "scanner",   "default": True, "added_in": 16},
-    # Chart Maps (Ajay 2026-08-15): "I need just maps that you are pulling
-    # show… look at patterns and learn them day by day." A charts-only study
-    # board over three existing sources — strong VCP bases, demand-zone
-    # pullbacks, and past pattern winners from our own graded ledger. Every
-    # tile clicks through to the SEPA detail. Owner-on via added_in/VERSION.
-    {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "scanner",   "default": False, "added_in": 19},
     {"id": "pullback-ma",   "label": "Pullback to MA",      "group": "scanner",   "default": False, "added_in": 4},
     {"id": "dual-momentum", "label": "Dual Momentum",       "group": "scanner",   "default": False},
     {"id": "setups",        "label": "Setups (PEG/ORB/Inside)", "group": "scanner", "default": False},
@@ -138,9 +132,22 @@ FEATURE_CATALOG: list[dict] = [
     # (Ajay 2026-06-23: "make breakout page default for all other users") — it's
     # the front door for non-owners; SmartLanding lands them here.
     {"id": "breakouts",     "label": "🚀 Breakouts",        "group": "daily",     "default": True, "added_in": 15},
+    # Chart Maps (Ajay 2026-08-15): "I need just maps that you are pulling
+    # show… look at patterns and learn them day by day." A charts-only study
+    # board over three existing sources — strong VCP bases, demand-zone
+    # pullbacks, and past pattern winners from our own graded ledger. Every
+    # tile clicks through to the SEPA detail.
+    #
+    # PRIMARY, not "scanner" (Ajay 2026-08-16: "add the chart map to the header
+    # menu.. remove the research and add it to Tools"). It is a daily-use
+    # surface — the whole point is looking at charts day by day — so it earns a
+    # top-level slot, and Research moved down to make room rather than the bar
+    # growing. Owner-on via added_in/VERSION.
+    {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "daily",     "default": False, "added_in": 19},
     # Research (2026-06-04): bullish-vs-bearish pattern mining + the insider
-    # thesis. A living analysis page Ajay wants to keep using. Owner-on default.
-    {"id": "research",      "label": "Research",            "group": "daily",     "default": False, "added_in": 3},
+    # thesis. Demoted from the primary bar to Tools on 2026-08-16 at Ajay's
+    # request — still a page he uses, just not one that needs a header slot.
+    {"id": "research",      "label": "Research",            "group": "tools",     "default": False, "added_in": 3},
     # Market Gauge (2026-06-05): our own book-grounded general-market health read
     # (0-100 + Constructive/Caution/Risk-Off + a Minervini exposure band). The
     # score also renders top-right on every page. Owner-on via added_in/VERSION.

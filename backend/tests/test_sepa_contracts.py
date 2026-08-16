@@ -1230,10 +1230,30 @@ def test_chart_maps_vcp_enforces_every_book_gate():
             f"gate on {field} no longer rejects — a book criterion was dropped"
 
 
+def _find_docs_dir():
+    """Locate the repo docs/ tree, or None.
+
+    The pre-commit hook runs this suite INSIDE the api container, where only
+    backend/ is mounted (as /app) and docs/ does not exist. Walking up for it
+    keeps the guard real wherever the repo is checked out, and lets it skip —
+    rather than fail — in the container, which cannot see the file either way.
+    """
+    from pathlib import Path
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        cand = parent / "docs" / "sepa"
+        if cand.is_dir():
+            return cand
+    return None
+
+
 def test_chart_maps_vcp_gates_are_documented():
     """Rule #4: a book-derived gate ships with a methodology doc that cites it."""
-    from pathlib import Path
-    doc = Path(__file__).resolve().parents[2] / "docs" / "sepa" / "chart_maps_vcp_gates.md"
+    import pytest
+    docs = _find_docs_dir()
+    if docs is None:
+        pytest.skip("docs/ not mounted (running inside the api container)")
+    doc = docs / "chart_maps_vcp_gates.md"
     assert doc.exists(), "docs/sepa/chart_maps_vcp_gates.md is missing"
     text = doc.read_text()
     for cite in ("p.34", "p.66", "p.79", "p.81", "p.71-72", "p.106"):

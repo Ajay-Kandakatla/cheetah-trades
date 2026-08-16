@@ -57,6 +57,10 @@ const TOOLS_SUBGROUP: Record<string, string> = {
   'demand-zones': 'Zones', zones: 'Zones',
   live: 'Tape', chatter: 'Tape', 'chatter-india': 'Tape',
   'market-gauge': 'Signals', catalysts: 'Signals', options: 'Signals', 'gex-board': 'Signals', track: 'Signals', pankaj: 'Signals',
+  // Research moved out of the primary bar 2026-08-16 to make room for Chart
+  // Maps. Without an entry here it would drop into the catch-all 'More'
+  // bucket; it is analysis, so it sits with the other Signals pages.
+  research: 'Signals',
   food: 'Life', kids: 'Life', volleyball: 'Life', house: 'Life',
 };
 const SUBGROUP_ORDER = ['Trade', 'Screeners', 'Zones', 'Tape', 'Signals', 'Life', 'More'];
