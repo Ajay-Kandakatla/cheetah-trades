@@ -216,10 +216,37 @@ def check_disk():
         return _fail("disk", "infra", WARN, f"check error: {exc}")
 
 
+def check_13f_quarter_current():
+    """Is the institutional-holder data still reporting a quarter that is long
+    past its SEC deadline?
+
+    Deliberately NOT an age check. The 13F cache refreshes every 24h, so
+    `cached_at` is always fresh while the CONTENT sits a quarter behind — on
+    2026-08-16 the APGE payload was minutes old and still said Q1 2026. Only a
+    cadence check catches that (Ajay: "The accumulations are dated now").
+
+    WARN, never CRITICAL: a provider lagging a quarter is worth seeing on the
+    monthly sweep, not worth a push.
+    """
+    try:
+        from . import period_freshness as pf
+        res = pf.audit_whales_cache()
+        if not res.get("ok") and res.get("reason"):
+            return _fail("13f_quarter_current", "data", WARN,
+                         res["reason"], res.get("expected_quarter"))
+        if not res.get("ok"):
+            return _fail("13f_quarter_current", "data", WARN,
+                         res.get("detail", ""), res.get("rolled_pct"))
+        return _ok("13f_quarter_current", "data",
+                   res.get("detail", ""), res.get("rolled_pct"))
+    except Exception as exc:
+        return _fail("13f_quarter_current", "data", WARN, f"check error: {exc}")
+
+
 CHECKS = [
     check_mongo, check_scan_fresh, check_scan_nonempty, check_price_cache,
     check_market_gauge, check_macro_risk, check_pullback_artifact,
-    check_log_errors, check_disk,
+    check_log_errors, check_disk, check_13f_quarter_current,
 ]
 
 

@@ -589,6 +589,19 @@
 # day floor; with the weekday heartbeats it guarantees a Healthchecks ping at
 # least every ~2 days (set the check's period accordingly).
 10     8     */2  *  *     /usr/local/bin/python -m sepa.cli health-audit --digest
+#
+# MONTHLY period-cadence sweep — 1st of the month, 8:20am ET. Ajay 2026-08-16
+# ("Make a rule to check for updated date.. Monthly") after the APGE 13F modal
+# still read "As of Q1 2026" two days past the Q2 deadline.
+#
+# This asks a question none of the checks above can. Everything else measures
+# how OLD a file is; the 13F cache refreshes every 24h, so it is always fresh
+# while the CONTENT inside it sits a whole quarter behind. Only comparing the
+# reported quarter against the SEC's own 45-day deadline catches that.
+#
+# Logs the report; the same check also rides along in every health-audit run as
+# a WARN, so it shows on /health without ever pushing the phone.
+20     8     1    *  *     /usr/local/bin/python -m observability.period_freshness
 
 #
 # ============================================================================
