@@ -182,6 +182,27 @@ def _theme_rank(theme: Optional[str]) -> int:
         return 0 if theme else 99
 
 
+# Chart window bounds for a zone tile. 130 = the non-Retina legibility limit
+# (measured: candle gap falls under one device pixel past 127 bars at DPR 1);
+# 252 = one trading year, just inside the Retina limit of 255.
+ZONE_BARS_MIN = 130
+ZONE_BARS_MAX = 252
+# Padding so the oldest defining swing is not flush against the left edge.
+ZONE_BARS_PAD = 15
+
+
+def _zone_window(zone: Optional[dict]) -> int:
+    """Bars needed to show the structure that defines this band. PURE.
+
+    Falls back to the board default when a zone carries no `oldest_touch_bars`
+    — an older cached payload, or a band built before the field existed.
+    """
+    oldest = _num((zone or {}).get("oldest_touch_bars"))
+    if oldest is None:
+        return BARS_DEFAULT
+    return int(min(ZONE_BARS_MAX, max(ZONE_BARS_MIN, int(oldest) + ZONE_BARS_PAD)))
+
+
 def _sort_key(tile: dict, themes_first: bool):
     """Theme names lead when asked (Ajay's standing rule that any board leads
     with the AI-ecosystem winners), ordered BETWEEN themes by his stated
@@ -520,6 +541,16 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "name": r.get("name") or _name_for(sym),
             "href": _href(sym, "supply"),
             "bars": [],
+            # Per-TILE window, not the board default. Zones are computed over
+            # 252 bars while the board charted 130, so a band could be drawn
+            # with every touch that defines it off-screen — measured
+            # 2026-08-16, and Ajay studies these charts to learn the pattern.
+            # Reach back far enough to show the oldest defining swing, clamped
+            # so a legible chart is never traded away: 130 is the floor (the
+            # non-Retina legibility limit) and 252 the ceiling (the Retina one,
+            # measured at 255). Median lands ~156 rather than a flat 252, which
+            # is why this costs ~52KB instead of ~248KB on a 24-tile board.
+            "_bars": {"days": _zone_window(zone)},
             "bands": bands,
             "lines": lines,
             "markers": [],
@@ -815,9 +846,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = zone_tiles(limit, days, universe, themes_first)
     elif t == "winners":
         if src == "zone":
-            out = zone_winner_tiles(limit, days=min(days, 120))
+            out = zone_winner_tiles(limit, days=min(days, 90))
         else:
-            out = winner_tiles(limit, days=min(days, 120), pattern=pattern,
+            out = winner_tiles(limit, days=min(days, 90), pattern=pattern,
                                minervini_only=bool(minervini_only))
         out["source"] = src
     else:

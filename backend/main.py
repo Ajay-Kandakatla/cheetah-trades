@@ -566,6 +566,16 @@ app = FastAPI(title="Market Stream", lifespan=lifespan)
 #
 #   Tailscale assigns devices in 100.64.0.0/10 — first octet is always 100,
 #   second octet 64–127. The regex below covers that range.
+# Compress JSON responses. The chart-maps board ships ~295KB raw for 24 tiles
+# and ~347KB once zone tiles size their own window; gzip takes that to ~88KB.
+# Cloudflare normally compresses at the edge, but /chart-maps is auth-gated and
+# the Content-Encoding could not be observed through it (measured 2026-08-16),
+# so this makes the win unconditional rather than dependent on the edge.
+# minimum_size skips the many small payloads where the header costs more than
+# it saves.
+from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=(

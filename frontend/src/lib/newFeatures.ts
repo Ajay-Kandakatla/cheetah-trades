@@ -69,6 +69,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'dark-pool-prints', label: '🟣 Where it printed — lit vs off-exchange (dark pool) volume split + the largest off-exchange blocks, on every ticker\'s Tape tab', addedAt: '2026-08-13', route: '/sepa' },
   { id: 'chart-maps', label: '🗺️ Chart Maps — a charts-only study board: strong VCP bases, pullbacks back into demand, and past setups from your own ledger that hit target before their stop. Every chart clicks through to the ticker.', addedAt: '2026-08-15', route: '/chart-maps' },
   { id: 'rotation-tracker', label: 'Sector Rotation — where money left and went, vs equal-weight', addedAt: '2026-08-16', route: '/rotation' },
+  { id: 'zone-winners', label: '🏆 Past Winners now has a Demand zones source — 5 years of backtested zone re-entries', addedAt: '2026-08-16', route: '/chart-maps' },
+  { id: 'chart-window', label: 'Chart window control (6m / 9m / 1y) + demand-zone charts now reach back to the touches that made the zone', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'themes-power-energy', label: 'New rosters: AI power (IREN, CRWV) + energy, with space/quantum/semis priority', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'chart-maps-themes', label: '⚛ Quantum / nuclear / robotics / AI-semis names now scanned — IONQ, OKLO, SMR, ARM, ALAB, CRDO and 15 more that the S&P indices structurally cannot hold', addedAt: '2026-08-15', route: '/chart-maps' },
 ];

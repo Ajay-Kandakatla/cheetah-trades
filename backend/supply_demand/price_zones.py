@@ -64,6 +64,14 @@ def _make_zone(df: pd.DataFrame, cluster, kind: str,
         lo, hi = mid - hw, mid + hw
     vol = float(df["volume"].iloc[idxs].sum()) if "volume" in df else 0.0
     bars_since = int(len(df) - 1 - max(idxs))
+    # Age of the OLDEST swing in the cluster, i.e. how far back a chart must
+    # reach to show the structure that makes this a band at all. Added
+    # 2026-08-16: zones are computed over 252 bars but the study board charted
+    # 130, so a band could be drawn with every one of its defining touches
+    # off-screen — Ajay studies these to learn the pattern, and a band with no
+    # visible reason is worse than none. Purely additive; nothing reads it as a
+    # gate. See docs/sepa/chart_timeframes.md.
+    oldest = int(len(df) - 1 - min(idxs))
     return {
         "kind": kind,                              # "supply" | "demand"
         "lo": round(float(lo), 2),
@@ -72,6 +80,7 @@ def _make_zone(df: pd.DataFrame, cluster, kind: str,
         "touches": len(idxs),
         "volume": int(vol),
         "bars_since_test": bars_since,
+        "oldest_touch_bars": oldest,
     }
 
 

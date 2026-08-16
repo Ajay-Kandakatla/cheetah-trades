@@ -215,3 +215,50 @@ def test_untagged_names_are_never_capped():
 
 def test_spread_on_an_empty_board_is_empty():
     assert board._spread([], limit=24) == []
+
+
+# --------------------------------------------------------------------------
+# Chart windows — how far back each tab reaches
+#
+# Ajay 2026-08-16: "please research what is the best timeframe to be used for
+# the charts? I wonder if its has to use like 1 year or 6 months for the zone."
+#
+# Measured answer: not one number. Zones are computed over 252 bars but were
+# charted over 130, so a band could be drawn with every defining touch
+# off-screen. VCP is the opposite — widening HURTS it, because a base band is
+# drawn full-width and a 61-bar base would visually claim a full year.
+# --------------------------------------------------------------------------
+def test_zone_window_reaches_back_to_the_oldest_defining_touch():
+    assert board._zone_window({"oldest_touch_bars": 200}) == 215   # +15 padding
+
+
+def test_zone_window_never_goes_below_the_legibility_floor():
+    """130 bars is the non-Retina limit: past ~127 the gap between candles
+    falls under one device pixel at DPR 1."""
+    assert board._zone_window({"oldest_touch_bars": 5}) == board.ZONE_BARS_MIN
+    assert board.ZONE_BARS_MIN == 130
+
+
+def test_zone_window_never_exceeds_the_retina_ceiling():
+    """252 bars is one trading year and sits just inside the measured Retina
+    ceiling of 255. A chart nobody can read teaches nothing."""
+    assert board._zone_window({"oldest_touch_bars": 900}) == board.ZONE_BARS_MAX
+    assert board.ZONE_BARS_MAX == 252
+
+
+def test_zone_window_falls_back_when_the_field_is_absent():
+    """Negative: an older cached payload, or a band built before
+    oldest_touch_bars existed, must not crash or size to zero."""
+    for bad in ({}, None, {"oldest_touch_bars": None},
+                {"oldest_touch_bars": "not a number"}):
+        assert board._zone_window(bad) == board.BARS_DEFAULT
+
+
+def test_price_zones_emits_the_age_of_the_oldest_touch():
+    """The field the window is derived from. Additive — nothing gates on it."""
+    import inspect
+    from supply_demand import price_zones
+    src = inspect.getsource(price_zones)
+    assert '"oldest_touch_bars"' in src
+    # And it must be the OLDEST swing, not the newest (that is bars_since_test).
+    assert "min(idxs)" in src and "max(idxs)" in src

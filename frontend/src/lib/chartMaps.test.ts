@@ -9,7 +9,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   barDomain, barWidth, boardQuery, clipBands, isThinSample, lineLabels,
-  markerIndex, monthTicks, parseTab, recordLine, sepaHref, THEME_LABEL, themeLabel,
+  markerIndex, monthTicks, parseSource, parseTab, recordLine, sepaHref,
+  THEME_LABEL, themeLabel, WINNER_SOURCES,
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
 } from './chartMaps';
@@ -349,5 +350,56 @@ describe('themeLabel', () => {
     expect(themeLabel(null)).toBeNull();
     expect(themeLabel(undefined)).toBeNull();
     expect(themeLabel('')).toBeNull();
+  });
+});
+
+describe('boardQuery — chart window + winners source', () => {
+  // Ajay 2026-08-16: "please research what is the best timeframe to be used for
+  // the charts?" Measured: per-tab, and per-TILE for zones. The page only sends
+  // `days` when he overrides the default.
+  it('omits days unless explicitly chosen', () => {
+    expect(boardQuery({ tab: 'vcp' })).toBe('tab=vcp');
+    expect(boardQuery({ tab: 'vcp', days: 252 })).toBe('tab=vcp&days=252');
+  });
+
+  it('sends the winners source only for the zone ledger', () => {
+    expect(boardQuery({ tab: 'winners', source: 'pattern' })).toBe('tab=winners');
+    expect(boardQuery({ tab: 'winners', source: 'zone' })).toBe('tab=winners&source=zone');
+  });
+
+  it('drops the pattern filter on the zone ledger', () => {
+    // A demand-zone re-entry has no chart-pattern name; sending one would be
+    // silently ignored by the backend, which hides the mistake.
+    expect(boardQuery({ tab: 'winners', source: 'zone', pattern: 'cup_with_handle' }))
+      .toBe('tab=winners&source=zone');
+    expect(boardQuery({ tab: 'winners', source: 'pattern', pattern: 'cup_with_handle' }))
+      .toBe('tab=winners&pattern=cup_with_handle');
+  });
+
+  it('sends minervini_only only for the pattern ledger', () => {
+    expect(boardQuery({ tab: 'winners', source: 'pattern', minerviniOnly: true }))
+      .toBe('tab=winners&minervini_only=true');
+    expect(boardQuery({ tab: 'winners', source: 'zone', minerviniOnly: true }))
+      .toBe('tab=winners&source=zone');
+  });
+
+  it('never sends winners params on another tab', () => {
+    expect(boardQuery({ tab: 'zones', source: 'zone', pattern: 'x', minerviniOnly: true }))
+      .toBe('tab=zones');
+  });
+});
+
+describe('parseSource', () => {
+  it('defaults to the pattern ledger', () => {
+    expect(parseSource(null)).toBe('pattern');
+    expect(parseSource(undefined)).toBe('pattern');
+    expect(parseSource('')).toBe('pattern');
+    expect(parseSource('nonsense')).toBe('pattern');
+  });
+  it('recognises the zone ledger', () => {
+    expect(parseSource('zone')).toBe('zone');
+  });
+  it('lists both sources for the picker', () => {
+    expect(WINNER_SOURCES.map((s) => s.key)).toEqual(['pattern', 'zone']);
   });
 });

@@ -66,6 +66,11 @@ export function ChartMaps() {
   const tab = parseTab(params.get('tab'));
   const pattern = params.get('pattern');
   const source = parseSource(params.get('source'));
+  // Chart window. Per-tab defaults live on the backend; this only widens the
+  // VCP/zones view when Ajay wants more context. Measured legibility ceiling is
+  // 255 bars on a Retina display and 127 on a non-Retina one, so 252 is the top
+  // option — see docs/sepa/chart_timeframes.md.
+  const days = Number(params.get('days')) || undefined;
   const minerviniOnly = params.get('minervini') === 'true';
   const [universe, setUniverse] = useState('sp1500_plus');
   const [themesFirst, setThemesFirst] = useState(true);
@@ -76,7 +81,7 @@ export function ChartMaps() {
 
   const load = useCallback(async () => {
     setErr(null);
-    const q = boardQuery({ tab, limit: 24, universe, themesFirst, pattern,
+    const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
                            source, minerviniOnly });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
@@ -89,7 +94,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, universe, themesFirst, pattern, source, minerviniOnly]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -155,6 +160,21 @@ export function ChartMaps() {
             <input type="checkbox" checked={themesFirst}
                    onChange={(e) => setThemesFirst(e.target.checked)} />
             Themes first (quantum · nuclear · robotics · AI semis)
+          </label>
+        )}
+        {tab !== 'winners' && (
+          <label className="cm-ctl">
+            Window
+            <select value={String(days || '')} onChange={(e) => setParams((p) => {
+              const n = new URLSearchParams(p);
+              if (e.target.value) n.set('days', e.target.value); else n.delete('days');
+              return n;
+            }, { replace: true })}>
+              <option value="">Default</option>
+              <option value="130">6 months</option>
+              <option value="180">9 months</option>
+              <option value="252">1 year</option>
+            </select>
           </label>
         )}
         {tab === 'winners' && (
