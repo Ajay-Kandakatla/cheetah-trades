@@ -807,8 +807,13 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     if data.get("warming"):
         # Deliberately non-blocking: the board warms in a background thread and
         # the page polls. Never wait here (see the 2026-08-14 524).
+        # Same live counter the Back in Demand tab shows. Both tabs read the
+        # SAME demand_reentry cache, so they are watching one scan — showing it
+        # in one place and a static sentence in the other is what made Ajay ask
+        # whether the two pages were even being updated together (2026-08-17).
         return {"tiles": [], "warming": True,
                 "universe_key": data.get("universe_key") or universe,
+                "progress": data.get("progress"),
                 "note": "scanning for demand-zone pullbacks…"}
 
     rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]

@@ -10,6 +10,7 @@
  * NOT advice — a study surface over scans that already exist.
  */
 import { layoutLabels, type LabelItem } from './zonePlan';
+import type { DemandScanProgress } from './demandScanProgress';
 
 export type CmTab = 'vcp' | 'zones' | 'winners';
 export const CM_TABS: CmTab[] = ['vcp', 'zones', 'winners'];
@@ -83,6 +84,10 @@ export type CmBoard = {
   disclaimer?: string;
   note?: string;
   warming?: boolean;
+  /* The demand tab's live scan counter. Same scan the Back in Demand tab on
+   * /supply-demand watches — both tabs read one demand_reentry cache, so they
+   * must show one progress reading (Ajay 2026-08-17). */
+  progress?: DemandScanProgress | null;
   matched?: number;
   scanned?: number;
   universe_key?: string;

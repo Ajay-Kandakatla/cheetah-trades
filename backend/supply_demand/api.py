@@ -57,6 +57,27 @@ async def get_demand_reentry(
     return await asyncio.to_thread(reentry_mod.cached_or_warm, universe, limit)
 
 
+@router.get("/supply-demand/demand-reentry/progress")
+async def get_demand_reentry_progress(
+    universe: str = Query("sp1500", description="sp1500 (default) | sp500 | sp400 | sp600"),
+):
+    """What the Back in Demand scan for `universe` is doing RIGHT NOW.
+
+    Ajay 2026-08-17: *"I am looking at this and its hard to tell if its scanning
+    or now"*. The board's own counters (`n`, `scanned`) only exist in the final
+    payload, so for the ~2-3 minutes of a cold sp1500 pass the page could only
+    show a static sentence — indistinguishable from a hang.
+
+    Deliberately NOT the SEPA scan stream: that watches `/sepa/scan/stream`, a
+    different scan over a different universe. This board runs its own pass.
+
+    Cheap enough to poll every second or two — it reads one dict and takes no
+    lock, so a progress poll can never slow the scan it is watching. Phases:
+    idle → universe → scanning → enriching → done (or failed).
+    """
+    return reentry_mod.progress_for(universe)
+
+
 @router.post("/supply-demand/demand-reentry/scan")
 async def post_demand_reentry_scan(
     limit: int = Query(60, ge=1, le=500),

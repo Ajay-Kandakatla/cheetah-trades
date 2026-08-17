@@ -139,10 +139,15 @@ describe('ChartMaps', () => {
   });
 
   it('says it is still scanning rather than "nothing matched" while warming', async () => {
+    // The static sentence became a live panel (Ajay 2026-08-17: "its hard to
+    // tell if its scanning or now"), and it must show even before the first
+    // progress poll lands — the board's own `warming` flag drives it, so a
+    // silent gap here is the exact regression to guard against.
     draw();
     fireEvent.click(screen.getByRole('tab', { name: 'Back in Demand' }));
 
-    expect(await screen.findByText(/Scanning sp1500_plus/)).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(screen.getByText(/Scanning|Loading the/)).toBeInTheDocument();
     expect(screen.queryByText(/Nothing matched/i)).not.toBeInTheDocument();
   });
 

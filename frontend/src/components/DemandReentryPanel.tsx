@@ -18,6 +18,9 @@ import {
 } from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
+import { DemandScanProgress } from './DemandScanProgress';
+import type { DemandScanProgress as DemandScanProgressPayload } from '../lib/demandScanProgress';
+import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 
 
 type Payload = {
@@ -44,6 +47,9 @@ type Payload = {
    * minutes and the gateway cuts at ~100s, so the API returns immediately and
    * we poll instead of holding the request open. */
   warming?: boolean;
+  /* Live counter carried on the warming payload, so the board poll alone shows
+   * a moving number even before the faster progress poll lands. */
+  progress?: DemandScanProgressPayload | null;
   disclaimer: string;
 };
 
@@ -115,6 +121,12 @@ export function DemandReentryPanel() {
   }, [data?.warming, load]);
 
   const busy = loading || scanning;
+
+  /* The live counter. Ajay 2026-08-17: "its hard to tell if its scanning or
+   * now". Runs whenever work is in flight — the background warm (`warming`) or
+   * the inline Scan button, which holds its request open and so would otherwise
+   * show nothing at all for the whole pass. */
+  const progress = useDemandScanProgress(universe, Boolean(data?.warming) || scanning);
 
   return (
     <section className="sd-section">
@@ -189,11 +201,21 @@ export function DemandReentryPanel() {
 
       {err && <div className="sepa-err">Scan failed: {err}</div>}
 
-      {(busy && !data) || data?.warming ? (
+      {/* The live scan. Replaces the static sentence that read the same whether
+        * the scan was 3% through or had died three minutes ago. */}
+      {(Boolean(data?.warming) || scanning) && (
+        <DemandScanProgress
+          progress={progress ?? data?.progress}
+          running
+          universeLabel={data?.universe_label
+            ?? (data?.universe_choices ?? UNIVERSES).find((u) => u.key === universe)?.label}
+        />
+      )}
+
+      {/* Fallback for the first render, before the first poll lands. */}
+      {busy && !data && !progress ? (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
-          {data?.warming
-            ? `Scanning ${data.universe_label ?? 'the universe'} in the background — this page will fill in by itself (usually 2-3 minutes on a cold start, instant after).`
-            : 'Scanning for demand-zone re-entries…'}
+          Scanning for demand-zone re-entries…
         </div>
       ) : null}
 

@@ -29,6 +29,8 @@ import {
 } from '../lib/chartMaps';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
+import { DemandScanProgress } from '../components/DemandScanProgress';
+import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 
 const UNIVERSES = [
   { key: 'sp1500_plus', label: 'S&P 1500 + themes' },
@@ -133,6 +135,13 @@ export function ChartMaps() {
     pollRef.current = window.setInterval(() => { void load(); }, 10_000);
     return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
   }, [data?.warming, load]);
+
+  /* The demand scan's live counter, polled faster than the board itself. The
+   * board key is the universe the SERVER resolved (`universe_key`), not the
+   * dropdown value — the demand board maps sp1500_plus onto its own key and
+   * asking for progress under the wrong one returns a permanent idle. */
+  const demandProgress = useDemandScanProgress(
+    data?.universe_key || universe, Boolean(data?.warming));
 
   const setTab = (t: CmTab) => {
     const next = new URLSearchParams(params);
@@ -321,12 +330,20 @@ export function ChartMaps() {
 
       {err ? <div className="cm-note cm-note-err">Couldn't load the board — {err}</div> : null}
 
+      {/* The demand tab's own scan. NOT the SEPA stream above it — that one
+        * feeds the VCP tab. Both this and the Back in Demand tab on
+        * /supply-demand read one demand_reentry cache, so they watch the same
+        * job and now show the same counter (Ajay 2026-08-17: "Are you updating
+        * both pages when supply demand is getting updated"). */}
       {data?.warming ? (
-        <div className="cm-note">
-          Scanning {data.universe_key || universe} for demand-zone pullbacks — this
-          takes a couple of minutes on a cold cache. The charts appear here as soon
-          as it lands; you don't need to refresh.
-        </div>
+        <>
+          <DemandScanProgress progress={demandProgress ?? data.progress}
+                              universeLabel={data.universe_key || universe}
+                              running />
+          <p className="cm-note">
+            The charts appear here as soon as it lands; you don't need to refresh.
+          </p>
+        </>
       ) : null}
 
       {data?.sort_unavailable && (

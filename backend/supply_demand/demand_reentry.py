@@ -209,6 +209,79 @@ _cache: dict = {}
 _warming: set = set()
 _warm_lock = __import__("threading").Lock()
 
+# ── Live scan progress ────────────────────────────────────────────────────────
+# Ajay 2026-08-17, looking at the Back in Demand tab mid-scan: *"I am looking at
+# this and its hard to tell if its scanning or now"*. The page said
+# "0 in demand · 0/0 scanned" for three minutes — the counters only exist in the
+# FINAL payload, so until the scan finished there was nothing to show and the
+# static "scanning in the background…" line was indistinguishable from a hang.
+#
+# The Chart Maps progress panel could not be reused: that one watches
+# `/sepa/scan/stream`, a DIFFERENT scan. This board runs its own pass, so it
+# needs its own counter.
+#
+# Deliberately a plain dict of immutable snapshots rather than a mutated one:
+# the writer builds a fresh dict and swaps the reference, which is atomic in
+# CPython, so a reader can never observe a half-updated record. No lock is taken
+# on the read path — a progress read must never be able to block a scan.
+_progress: dict = {}
+
+PROGRESS_PHASES = ("universe", "scanning", "enriching", "done", "failed")
+
+
+def _publish_progress(ukey: str, phase: str, **fields) -> None:
+    """Swap in a fresh progress snapshot for `ukey`. Never raises."""
+    try:
+        prev = _progress.get(ukey) or {}
+        snap = {**prev, "universe_key": ukey, "phase": phase,
+                "updated_at": time.time(), **fields}
+        _progress[ukey] = snap
+    except Exception:                                    # pragma: no cover
+        pass
+
+
+def progress_for(universe: str) -> dict:
+    """What the running scan for `universe` is doing right now. PURE-ish read.
+
+    Always answers, even when nothing is running — `phase: "idle"` — so the page
+    has one shape to render instead of branching on presence.
+
+    `eta_sec` is projected from the elapsed rate rather than a fixed per-symbol
+    cost: a warm price cache runs an order of magnitude faster than a cold one,
+    so any constant here would be wrong on one of the two paths.
+    """
+    ukey = _universe_key(universe)
+    snap = _progress.get(ukey)
+    idle = {"universe_key": ukey, "phase": "idle", "running": False,
+            "current": 0, "total": 0, "hits": 0, "symbol": None,
+            "elapsed_sec": None, "eta_sec": None, "pct": None}
+    if not snap:
+        return idle
+
+    # Defensive on the READ side too, not just the write side. This runs on the
+    # request path against a dict another thread is writing, so a bad field must
+    # degrade to "no number" rather than 500 the endpoint the user is staring at
+    # precisely because they cannot tell whether anything is happening.
+    def _n(key, default=0):
+        v = snap.get(key)
+        try:
+            return type(default)(v) if v is not None else default
+        except (TypeError, ValueError):
+            return default
+
+    cur, total = _n("current"), _n("total")
+    started = _n("started_at", 0.0) or None
+    elapsed = round(time.time() - started, 1) if started else None
+    eta = None
+    if elapsed and cur > 0 and total > cur:
+        eta = round(elapsed / cur * (total - cur), 1)
+    return {**snap,
+            "current": cur, "total": total, "hits": _n("hits"),
+            "running": snap.get("phase") in ("universe", "scanning", "enriching"),
+            "elapsed_sec": elapsed,
+            "eta_sec": eta,
+            "pct": round(100.0 * cur / total, 1) if total else None}
+
 
 def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
     """Serve the cache, or start a background compute and say so — never block.
@@ -238,6 +311,10 @@ def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
                 scan(force=True, limit=None, universe=ukey)
             except Exception as exc:
                 log.warning("demand-reentry: background warm failed for %s: %s", ukey, exc)
+                # Without this the bar freezes wherever it died and the page
+                # says "scanning" forever — the exact failure Ajay reported,
+                # reintroduced by the thing meant to fix it.
+                _publish_progress(ukey, "failed", symbol=None, error=str(exc)[:200])
             finally:
                 with _warm_lock:
                     _warming.discard(ukey)
@@ -251,6 +328,9 @@ def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
             "universe_source": None, "universe_choices":
                 [{"key": k, "label": v[0]} for k, v in UNIVERSES.items()],
             "errors": 0, "took_sec": 0, "cached": False, "warming": True,
+            # Carried on the warming payload as well as the dedicated endpoint,
+            # so a page that only polls the board still gets a moving number.
+            "progress": progress_for(ukey),
             "as_of": datetime.now(timezone.utc).isoformat(),
             "disclaimer": DISCLAIMER}
 
@@ -1081,6 +1161,11 @@ def scan(force: bool = False, limit: Optional[int] = None,
             return {**c["data"], "cached": True}
 
     t0 = time.time()
+    # Published BEFORE the constituent fetch: resolving sp1500 means three
+    # network calls and can itself take seconds, and a page that shows nothing
+    # during them looks hung for exactly the reason Ajay reported.
+    _publish_progress(ukey, "universe", started_at=t0, current=0, total=0,
+                      hits=0, errors=0, symbol=None, universe_label=None)
     syms, ulabel, uprov, ustale, ukey = _resolve_universe(ukey)
     # Provenance across every layer of the chosen universe. A record is only
     # trusted when it describes the list we actually got back — a stale record
@@ -1100,19 +1185,26 @@ def scan(force: bool = False, limit: Optional[int] = None,
         universe_note = f"{ulabel} ({len(syms)} names)"
 
     rows, scanned, errors = [], 0, 0
-    for sym in syms:
+    total = len(syms)
+    _publish_progress(ukey, "scanning", started_at=t0, current=0, total=total,
+                      hits=0, errors=0, symbol=None, universe_label=ulabel)
+    for i, sym in enumerate(syms, 1):
         try:
             rec = analyze_symbol(sym)
         except Exception as exc:
             errors += 1
             log.debug("demand-reentry: %s failed: %s", sym, exc)
-            continue
-        if not rec:
-            continue
-        scanned += 1
-        if rec["is_reentry"]:
-            rec.pop("series", None)
-            rows.append(rec)
+            rec = None
+        if rec:
+            scanned += 1
+            if rec["is_reentry"]:
+                rec.pop("series", None)
+                rows.append(rec)
+        # Every symbol, not every Nth: the writer builds one small dict and
+        # swaps a reference, which costs far less than the price frame that
+        # was just analysed. Sampling would only make the bar stutter.
+        _publish_progress(ukey, "scanning", current=i, symbol=sym,
+                          hits=len(rows), errors=errors, scanned=scanned)
 
     # Sorted by R:R descending (2026-08-13). The backtest found R:R >= 1.5 was
     # the ONLY cohort with positive expectancy, so the number that decides
@@ -1121,6 +1213,11 @@ def scan(force: bool = False, limit: Optional[int] = None,
     if limit:
         rows = rows[:int(limit)]
 
+    # The tape + NBBO pull for the top rows is time-boxed at VENUE_BUDGET_SEC
+    # but still the last thing between the user and a board, so it gets its own
+    # phase rather than sitting inside a bar that already reads 100%.
+    _publish_progress(ukey, "enriching", current=total, total=total,
+                      hits=len(rows), symbol=None)
     _attach_venues(rows)
 
     data = {
@@ -1163,6 +1260,9 @@ def scan(force: bool = False, limit: Optional[int] = None,
         "warming": False,
     }
     _cache[ukey] = {"ts": time.time(), "data": data}
+    _publish_progress(ukey, "done", current=total, total=total, hits=len(rows),
+                      errors=errors, scanned=scanned, symbol=None,
+                      took_sec=data["took_sec"])
     log.info("demand-reentry: %d hits from %d scanned (%s) in %.1fs",
              len(rows), scanned, universe_note, data["took_sec"])
     return data

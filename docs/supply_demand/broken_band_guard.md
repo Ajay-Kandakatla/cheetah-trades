@@ -96,8 +96,21 @@ actually closed:
 | AEP | 3d ago | 0.73% |
 | VMC | 1d ago | 0.15% |
 
-SWKS was reading as "back in demand" 18% below the band it had supposedly
-returned to.
+Read that column carefully: it is the **deepest close below the floor since price
+last left the band**, not where the stock trades today. SWKS is the extreme case
+and worth spelling out, because "18%" invites the wrong reading —
+
+```
+2026-06-26  broke the 68.98–71.56 band
+2026-07-14  bottomed at a 56.58 close      ← 17.98% under the floor
+2026-08-14  back to 69.62, inside the band ← +23% off the low
+```
+
+It is not sitting 18% underwater. It **fell 18% through the band and has rallied
+all the way back into it** — which is exactly why the old code liked it and why
+the guard is the right call anyway. A band that failed by 18% and has been
+reclaimed on the fourth day is a level price is fighting over, and
+`price_zones` independently reads that overlap as **AT_SUPPLY**.
 
 NBIX itself is not in the cached S&P 500 constituent list, so it reaches the
 board through the sp1500 layer; on its own frame it now reads

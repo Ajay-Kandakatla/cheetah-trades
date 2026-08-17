@@ -15,6 +15,7 @@ price cache. The regression tests lock the two bugs found while building this:
      geometry and must NOT mutate the shared module defaults.
 """
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -1240,3 +1241,194 @@ def test_the_snapshot_module_is_NOT_given_history():
     src = inspect.getsource(pz)
     assert "broke_below" not in src
     assert "DEMAND_BROKEN" not in src
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LIVE SCAN PROGRESS  (Ajay 2026-08-17)
+#
+#   "Are you updating both pages when supply demand is getting updated I am
+#    looking at this and its hard to tell if its scanning or now"
+#
+# The board's counters (`n`, `scanned`) only exist in the FINAL payload, so for
+# the ~2-3 minutes of a cold sp1500 pass the page showed "0 in demand · 0/0
+# scanned" under a static sentence — indistinguishable from a hung request.
+# Spec: docs/supply_demand/scan_progress.md
+# ═════════════════════════════════════════════════════════════════════════════
+
+@pytest.fixture(autouse=False)
+def clean_progress():
+    dr._progress.clear()
+    yield
+    dr._progress.clear()
+
+
+def test_progress_answers_even_when_nothing_is_running():
+    """One shape to render, always. A page that has to branch on presence is a
+    page that renders nothing on the first paint."""
+    dr._progress.pop("sp500", None)
+    out = dr.progress_for("sp500")
+    assert out["phase"] == "idle"
+    assert out["running"] is False
+    assert out["current"] == 0 and out["total"] == 0
+    assert out["pct"] is None and out["eta_sec"] is None
+
+
+def test_progress_reports_the_running_ticker_and_a_live_hit_count():
+    dr._publish_progress("sp500", "scanning", started_at=time.time() - 10,
+                         current=250, total=500, hits=7, symbol="NVDA")
+    out = dr.progress_for("sp500")
+    assert out["phase"] == "scanning" and out["running"] is True
+    assert (out["current"], out["total"], out["hits"]) == (250, 500, 7)
+    assert out["symbol"] == "NVDA"
+    assert out["pct"] == 50.0
+
+
+def test_the_eta_is_projected_from_the_measured_rate_not_a_constant():
+    """A warm price cache runs an order of magnitude faster than a cold one, so
+    any fixed per-symbol cost would be wrong on one of the two paths."""
+    dr._publish_progress("sp500", "scanning", started_at=time.time() - 20.0,
+                         current=100, total=500, hits=1, symbol="A")
+    out = dr.progress_for("sp500")
+    # 20s bought 100 names; 400 left -> ~80s.
+    assert 70 <= out["eta_sec"] <= 90
+
+
+def test_no_eta_before_the_first_symbol_finishes():
+    """Dividing by a zero count would either crash or print a fabricated wait."""
+    dr._publish_progress("sp500", "scanning", started_at=time.time(),
+                         current=0, total=500, hits=0)
+    assert dr.progress_for("sp500")["eta_sec"] is None
+
+
+def test_no_percentage_until_the_universe_size_is_known():
+    """Resolving sp1500 is three network calls. 0% during them reads as stuck."""
+    dr._publish_progress("sp1500", "universe", started_at=time.time(),
+                         current=0, total=0, hits=0)
+    out = dr.progress_for("sp1500")
+    assert out["phase"] == "universe"
+    assert out["pct"] is None
+    assert out["running"] is True
+
+
+def test_each_universe_keeps_its_own_counter():
+    """Two tabs can warm two universes at once; one shared counter would show
+    each of them the other's progress."""
+    dr._publish_progress("sp500", "scanning", current=10, total=500, hits=1)
+    dr._publish_progress("sp600", "scanning", current=400, total=600, hits=9)
+    assert dr.progress_for("sp500")["current"] == 10
+    assert dr.progress_for("sp600")["current"] == 400
+
+
+def test_a_snapshot_is_swapped_wholesale_never_mutated_in_place():
+    """The scan thread writes while the request thread reads, with no lock on
+    the read path. Swapping a fresh dict is atomic in CPython; mutating a shared
+    one would let a reader see a half-updated record."""
+    dr._publish_progress("sp500", "scanning", current=1, total=500)
+    first = dr._progress["sp500"]
+    dr._publish_progress("sp500", "scanning", current=2)
+    assert dr._progress["sp500"] is not first, "the snapshot was mutated in place"
+    assert first["current"] == 1, "the old snapshot was written through"
+
+
+def test_publishing_carries_prior_fields_forward():
+    """The per-symbol publish only sends what changed; total and started_at must
+    survive or the bar loses its denominator mid-scan."""
+    dr._publish_progress("sp500", "scanning", started_at=123.0, total=500,
+                         universe_label="S&P 500")
+    dr._publish_progress("sp500", "scanning", current=7, symbol="AAPL")
+    out = dr.progress_for("sp500")
+    assert out["total"] == 500
+    assert out["universe_label"] == "S&P 500"
+    assert out["current"] == 7
+
+
+def test_publishing_never_raises_on_junk():
+    """It runs inside the scan loop. A progress bug must never kill a scan."""
+    dr._publish_progress("sp500", "scanning", current=object())
+    dr.progress_for("sp500")          # must not raise
+
+
+def test_a_failed_scan_is_reported_not_left_frozen():
+    """Otherwise the bar stops at 47% and the page says 'scanning' forever —
+    the exact complaint, reintroduced by the fix for it."""
+    dr._publish_progress("sp500", "failed", current=200, total=500, error="boom")
+    out = dr.progress_for("sp500")
+    assert out["phase"] == "failed"
+    assert out["running"] is False
+    assert out["error"] == "boom"
+
+
+def test_done_is_not_running():
+    dr._publish_progress("sp500", "done", current=500, total=500, hits=9)
+    out = dr.progress_for("sp500")
+    assert out["running"] is False
+    assert out["pct"] == 100.0
+
+
+def test_progress_resolves_the_universe_key_the_same_way_the_scan_does():
+    """Asking under an unresolved alias must not return a permanent idle."""
+    for alias in ("sp500", "SP500", " sp500 "):
+        assert dr.progress_for(alias)["universe_key"] == dr._universe_key("sp500")
+
+
+# --- the real loop, end to end ---
+def test_a_real_scan_publishes_universe_then_scanning_then_done(monkeypatch):
+    """Behavioural. The phases must actually fire in order from `scan()` — the
+    unit tests above only prove the publisher works if something calls it."""
+    seen = []
+    real = dr._publish_progress
+
+    def spy(ukey, phase, **f):
+        seen.append(phase)
+        real(ukey, phase, **f)
+
+    monkeypatch.setattr(dr, "_publish_progress", spy)
+    monkeypatch.setattr(dr, "_resolve_universe",
+                        lambda k: (["AAA", "BBB"], "Test", {}, None, "sp500"))
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s: None)
+    monkeypatch.setattr(dr, "_attach_venues", lambda rows, **kw: None)
+
+    dr.scan(force=True, universe="sp500")
+    assert seen[0] == "universe"
+    assert "scanning" in seen
+    assert seen[-1] == "done"
+    # One publish per symbol, so the bar moves rather than jumping.
+    assert seen.count("scanning") >= 3        # the opener + one per symbol
+    assert dr.progress_for("sp500")["total"] == 2
+
+
+def test_a_symbol_that_throws_still_advances_the_bar(monkeypatch):
+    """A universe with a few bad tickers must not stall the counter — that reads
+    as a hang, which is the thing being fixed."""
+    monkeypatch.setattr(dr, "_resolve_universe",
+                        lambda k: (["AAA", "BBB", "CCC"], "Test", {}, None, "sp500"))
+
+    def boom(sym):
+        raise RuntimeError("no prices")
+
+    monkeypatch.setattr(dr, "analyze_symbol", boom)
+    monkeypatch.setattr(dr, "_attach_venues", lambda rows, **kw: None)
+    dr.scan(force=True, universe="sp500")
+    out = dr.progress_for("sp500")
+    assert out["current"] == 3, "the bar must reach the end even when every name fails"
+    assert out["errors"] == 3
+    assert out["phase"] == "done"
+
+
+def test_the_warming_payload_carries_the_counter():
+    """So a page polling only the board still gets a moving number."""
+    import inspect
+    src = inspect.getsource(dr.cached_or_warm)
+    assert '"progress": progress_for(ukey)' in src
+
+
+def test_chart_maps_shows_the_SAME_counter_not_its_own():
+    """Both tabs read one demand_reentry cache, so they are watching ONE job.
+    Two independently-derived readings of one scan is how the two pages start
+    disagreeing — which is what Ajay was asking about."""
+    import inspect
+    from chart_maps import board
+    src = inspect.getsource(board.zone_tiles)
+    assert 'D.cached_or_warm(' in src, "chart-maps must read the shared cache"
+    assert '"progress": data.get("progress")' in src, \
+        "chart-maps must forward the shared counter, never compute its own"
