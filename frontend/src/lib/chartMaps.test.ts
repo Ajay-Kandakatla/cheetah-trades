@@ -13,7 +13,7 @@ import {
   THEME_LABEL, themeLabel, WINNER_SOURCES,
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
-  DEFAULT_SORT, parseSort,
+  DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -89,9 +89,13 @@ describe('boardQuery', () => {
       .toBe('tab=winners&pattern=cup_with_handle');
   });
 
-  it('only sends themes_first when it is turned OFF (the non-default)', () => {
-    expect(boardQuery({ tab: 'vcp', themesFirst: true })).toBe('tab=vcp');
-    expect(boardQuery({ tab: 'vcp', themesFirst: false })).toBe('tab=vcp&themes_first=false');
+  it('only sends themes_first when it differs from the shared default', () => {
+    // The default flipped to OFF on 2026-08-17 ("Remove default themes
+    // checked"), so the parameter now rides along when it is turned ON.
+    expect(THEMES_FIRST_DEFAULT).toBe(false);
+    expect(boardQuery({ tab: 'vcp', themesFirst: false })).toBe('tab=vcp');
+    expect(boardQuery({ tab: 'vcp', themesFirst: true })).toBe('tab=vcp&themes_first=true');
+    expect(boardQuery({ tab: 'vcp' })).toBe('tab=vcp');
   });
 });
 

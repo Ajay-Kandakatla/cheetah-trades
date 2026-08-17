@@ -165,3 +165,58 @@ whenever he wants it.
 | Missing metric sorts last, never first | `test_a_tile_with_NO_value_sorts_LAST_not_first` |
 | Every offered sort has a comparator | `test_every_offered_sort_actually_orders` (parametrised off `SORTS`) |
 | Winners tabs offer no sort they cannot answer | `test_the_winners_tabs_offer_no_sort_because_they_have_no_volume` |
+
+
+---
+
+## Update 2026-08-17 — the declutter, and what "turnover" was
+
+> *"Remove default themes checked and AI sector from drop down… Volume instead
+> or turn over. What is turn over is it average volume?"*
+
+**No — turnover was never average volume.** The dropdown carried three
+volume-ish entries across two different units:
+
+| key | was labelled | what it actually is | example (SWKS) |
+|---|---|---|---|
+| `volume` | 📈 Today's volume | today's **shares** | 3.8M |
+| `turnover` | 💵 $ turnover | today's **dollars** (shares x price) | $265M |
+| `avg_turnover` | 🏦 Liquidity (avg $ vol) | **50-day average** dollars/day | $370M |
+
+One ambiguous word spanning all that is why the question had to be asked. The
+fix is subtraction plus units in the labels:
+
+* **`turnover` removed.** It ranks nearly the same names as today's volume,
+  differing only by share price, so it was the least informative of the three.
+* **`volume` → "📈 Volume today (shares)"**.
+* **`avg_turnover` → "🏦 Avg daily volume ($)"**. Kept: it is the number behind
+  the liquidity floor he asked for the same morning, and `passes_liquidity`
+  reads its key.
+
+### "AI sectors" was two claims wearing one hat
+
+`theme` was both `DEFAULT_SORT` **and** a dropdown entry labelled
+"🤖 AI sectors (default)". Those are different things:
+
+* the **theme lead** is the *Themes first* checkbox
+* the **default order** is the tab's own score — base tightness on VCP, R:R on
+  Back in Demand
+
+Splitting them (`DEFAULT_SORT = "default"`, labelled "⭐ Best setup first") is
+what allows `THEMES_FIRST_DEFAULT = False` without deleting the concept of a
+default order. The checkbox still turns the AI-ecosystem lead back on in one
+click.
+
+This is narrower than the standing "breakout lists lead with AI sectors" rule:
+/chart-maps is a study surface, not a breakout list, and the forced lead was also
+reshuffling the per-theme spread cap underneath every other control on the page.
+
+| Decision | Guard |
+|---|---|
+| No label says "turnover" | `test_the_word_TURNOVER_is_gone_from_every_dropdown_label` |
+| Both volume sorts state their unit | `test_the_two_surviving_volume_sorts_state_their_UNIT` |
+| Today's $ volume is not offered, but the metric survives | `test_todays_dollar_volume_is_no_longer_OFFERED_as_a_sort` |
+| AI sectors is not a dropdown entry | `test_AI_sectors_is_not_a_dropdown_ENTRY_any_more` |
+| Themes do not lead by default | `test_themes_no_longer_lead_by_DEFAULT` |
+| Every entry point honours that default | `test_every_board_entry_point_honours_that_default` |
+| The checkbox still works | `test_the_checkbox_can_still_turn_the_theme_lead_back_ON` |

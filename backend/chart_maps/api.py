@@ -27,8 +27,9 @@ async def chart_maps(
     universe: str = Query("sp1500_plus",
                           description="zones tab only — sp1500_plus (default) | "
                                       "sp1500 | sp500 | themes"),
-    themes_first: bool = Query(True,
-                               description="lead with quantum/nuclear/robotics/AI-semis names"),
+    themes_first: bool = Query(board_mod.THEMES_FIRST_DEFAULT,
+                               description="lead with quantum/nuclear/robotics/AI-semis "
+                                           "names — OFF by default since 2026-08-17"),
     pattern: Optional[str] = Query(None, description="winners tab only — filter to one pattern"),
     source: str = Query("pattern", description="winners tab only — pattern | zone"),
     minervini_only: bool = Query(False,
@@ -60,7 +61,7 @@ async def chart_maps(
             source=source if isinstance(source, str) else "pattern",
         minervini_only=minervini_only if isinstance(minervini_only, bool) else False,
         universe=universe if isinstance(universe, str) else "sp1500_plus",
-            themes_first=themes_first if isinstance(themes_first, bool) else True,
+            themes_first=themes_first if isinstance(themes_first, bool) else board_mod.THEMES_FIRST_DEFAULT,
             pattern=pattern if isinstance(pattern, str) else None,
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
             min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,

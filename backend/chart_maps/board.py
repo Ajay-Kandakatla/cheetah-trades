@@ -355,15 +355,31 @@ def tile_metrics(row: dict) -> dict:
 # the three that make it HIS dropdown rather than a generic one; they need the
 # tape pull below. The trailing four have no equivalent there but come free from
 # the scan row, so they are offered rather than withheld.
+# Ajay 2026-08-17, on this dropdown:
+#   "Remove default themes checked and AI sector from drop down… Volume instead
+#    or turn over. What is turn over is it average volume?"
+#
+# THE WORD "TURNOVER" IS GONE FROM THIS DROPDOWN. It never meant average volume:
+#   volume        today's SHARES traded          3.8M
+#   turnover      today's DOLLARS traded         $265M   (shares x price)
+#   avg_turnover  50-day average DOLLARS/day     $370M
+# Three volume-ish entries with two different units and one ambiguous label is
+# what made the question necessary. `turnover` is dropped — it ranks nearly the
+# same names as today's volume, differing only by price — and the survivors say
+# their unit in the label.
+#
+# `avg_turnover` STAYS despite carrying the word internally: it is the number
+# behind the liquidity floor he asked for earlier the same day ("we want to make
+# that average turn over is high for these"), and its key is referenced by
+# `passes_liquidity`. Only its label changes.
 SORTS: dict[str, str] = {
-    "theme": "🤖 AI sectors (default)",
+    "default": "⭐ Best setup first",
     "retailimb": "🧍 Retail imbalance",
     "retailpct": "🧍 Retail % of volume",
     "dark": "🟣 Off-exchange %",
     "rvol": "📊 Relative volume",
-    "volume": "📈 Today's volume",
-    "turnover": "💵 $ turnover",
-    "avg_turnover": "🏦 Liquidity (avg $ vol)",
+    "volume": "📈 Volume today (shares)",
+    "avg_turnover": "🏦 Avg daily volume ($)",
     "conviction": "🏆 Conviction",
     "rs": "⚡ RS rank",
 }
@@ -373,7 +389,26 @@ SORTS: dict[str, str] = {
 # that silently returns the default order — which is what happens on the demand
 # page today, where only the top 15 rows are ever enriched.
 TAPE_SORTS = ("retailimb", "retailpct", "dark")
-DEFAULT_SORT = "theme"
+
+# The non-explicit ordering: the tab's own score (base tightness for VCP, R:R
+# for demand), optionally led by theme when `themes_first` is on.
+#
+# It used to be the key "theme", labelled "🤖 AI sectors (default)" — which was
+# two claims in one entry. The theme lead is the CHECKBOX; this is the ordering
+# that applies when no metric is chosen. Separating them is what lets the
+# checkbox default OFF (Ajay 2026-08-17: "Remove default themes checked and AI
+# sector from drop down") without also removing the concept of a default order.
+DEFAULT_SORT = "default"
+
+# Themes no longer lead by DEFAULT — Ajay 2026-08-17: "Remove default themes
+# checked". The checkbox stays, so the AI-ecosystem lead is one click away; it
+# is simply no longer imposed on a board he opens to study whatever is working.
+#
+# Note this is narrower than his standing "breakout lists lead with AI sectors"
+# rule: /chart-maps is a study surface, not a breakout list, and the ranking it
+# forced was also silently reshuffling the per-theme spread cap underneath every
+# other control on the page.
+THEMES_FIRST_DEFAULT = False
 
 
 # Tape enrichment budget. Mirrors demand_reentry's own numbers so the two
@@ -708,7 +743,7 @@ def _is_strong_vcp(row: dict) -> bool:
 
 
 def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-              themes_first: bool = True, min_tightness: int = STRONG_TIGHTNESS,
+              themes_first: bool = THEMES_FIRST_DEFAULT, min_tightness: int = STRONG_TIGHTNESS,
               sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
     from sepa import scanner
 
@@ -799,7 +834,7 @@ def _vcp_badges(row: dict) -> list[dict]:
 # tab 2 — pullbacks into demand
 # ---------------------------------------------------------------------------
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-               universe: str = "sp1500_plus", themes_first: bool = True,
+               universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
                sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
     from supply_demand import demand_reentry as D
 
@@ -1151,7 +1186,7 @@ def _winner_record(usable: list, wins: list, losses: list) -> dict:
 # dispatch
 # ---------------------------------------------------------------------------
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-          universe: str = "sp1500_plus", themes_first: bool = True,
+          universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER) -> dict:

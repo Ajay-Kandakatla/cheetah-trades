@@ -132,9 +132,18 @@ export function parseSource(v: string | null | undefined): WinnerSource {
   return v === 'zone' ? 'zone' : 'pattern';
 }
 
-/** Matches board.DEFAULT_SORT. Kept out of the query string when unchanged so
- *  a shared URL stays short and the default stays the default. */
-export const DEFAULT_SORT = 'theme';
+/** Matches board.DEFAULT_SORT — the tab's own score (base tightness for VCP,
+ *  R:R for demand), NOT a metric. Kept out of the query string when unchanged so
+ *  a shared URL stays short and the default stays the default.
+ *
+ *  Was 'theme' / "🤖 AI sectors (default)" until 2026-08-17, which bundled two
+ *  claims into one entry: the theme LEAD is the checkbox, this is the ordering
+ *  used when no metric is chosen. Ajay: "Remove default themes checked and AI
+ *  sector from drop down". */
+export const DEFAULT_SORT = 'default';
+
+/** Matches board.THEMES_FIRST_DEFAULT. The AI-ecosystem lead is now opt-in. */
+export const THEMES_FIRST_DEFAULT = false;
 
 /** Matches board.DEFAULT_MIN_TIER — "comfortably tradeable in retail size"
  *  ($10M/day). Ajay 2026-08-17: "we want to make that average turn over is high
@@ -169,7 +178,13 @@ export function boardQuery(p: {
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   if (p.tab === 'zones' && p.universe) q.set('universe', p.universe);
-  if (p.themesFirst === false) q.set('themes_first', 'false');
+  // Only sent when it differs from the shared default, so the common URL stays
+  // clean. That default flipped to OFF on 2026-08-17, so this now sends `true`
+  // rather than `false` — keeping it on `false` would have put the parameter on
+  // every request while silently never sending the one that changes anything.
+  if (p.themesFirst !== undefined && p.themesFirst !== THEMES_FIRST_DEFAULT) {
+    q.set('themes_first', String(p.themesFirst));
+  }
   // Sent to the BACKEND on purpose. board._finish ranks and caps before it
   // fetches bars for only the tiles it will show, so sorting in the browser
   // would reorder the ~24 tiles theme priority already chose — "highest

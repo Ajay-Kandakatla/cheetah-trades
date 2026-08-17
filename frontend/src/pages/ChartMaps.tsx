@@ -23,7 +23,8 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
-  CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, WINNER_SOURCES, boardQuery,
+  CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
+  WINNER_SOURCES, boardQuery,
   isThinSample, parseSort, parseSource, parseTab, parseTier, recordLine,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
@@ -79,7 +80,7 @@ export function ChartMaps() {
   const sort = parseSort(params.get('sort'));
   const minTier = parseTier(params.get('min_tier'));
   const [universe, setUniverse] = useState('sp1500_plus');
-  const [themesFirst, setThemesFirst] = useState(true);
+  const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);

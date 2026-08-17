@@ -689,12 +689,16 @@ def test_metrics_never_return_nan():
 
 # --- the ordering itself ---
 def test_an_explicit_metric_REPLACES_the_theme_ranking():
-    """Picking "Today's volume" and still getting space names first would not be
+    """Picking "Volume today" and still getting space names first would not be
     a volume sort."""
-    tiles = [_tile("SPACE", theme="space", volume=1),
-             _tile("PLAIN", theme=None, volume=999)]
+    # Scores differ so the default branch has something to order by — with both
+    # at 0 the comparison is a stable-sort tie and proves nothing either way.
+    tiles = [_tile("SPACE", theme="space", volume=1, score=1),
+             _tile("PLAIN", theme=None, volume=999, score=5)]
     assert _order(tiles, "volume") == ["PLAIN", "SPACE"]
-    assert _order(tiles, "theme")[0] == "SPACE"
+    # The theme lead is the CHECKBOX now, not a dropdown entry.
+    assert _order(tiles, B.DEFAULT_SORT, themes_first=True)[0] == "SPACE"
+    assert _order(tiles, B.DEFAULT_SORT, themes_first=False)[0] == "PLAIN"
 
 
 def test_the_default_leaves_the_board_exactly_as_it_was():
@@ -834,6 +838,61 @@ def test_the_dropdown_mirrors_the_back_in_demand_one():
     make it HIS dropdown are retail imbalance, retail % and off-exchange %."""
     for key in ("retailimb", "retailpct", "dark", "rvol"):
         assert key in B.SORTS, f"{key} missing — this is the demand dropdown"
+
+
+# ── the 2026-08-17 declutter ──────────────────────────────────────────────────
+#   "Remove default themes checked and AI sector from drop down… Volume instead
+#    or turn over. What is turn over is it average volume?"
+
+def test_the_word_TURNOVER_is_gone_from_every_dropdown_label():
+    """It never meant average volume — it was today's DOLLARS traded, sitting in
+    a list next to today's SHARES and a 50-day dollar average. One ambiguous
+    word across three different units is what prompted the question."""
+    for key, label in B.SORTS.items():
+        assert "turnover" not in label.lower(), f"{key} still says turnover: {label}"
+
+
+def test_the_two_surviving_volume_sorts_state_their_UNIT():
+    """Shares vs dollars is the whole distinction; a label that omits it is the
+    same trap under a new name."""
+    assert "shares" in B.SORTS["volume"].lower()
+    assert "$" in B.SORTS["avg_turnover"]
+
+
+def test_todays_dollar_volume_is_no_longer_OFFERED_as_a_sort():
+    assert "turnover" not in B.SORTS
+    # …but the metric itself survives: it is what `volume` would rank if price
+    # were flat, and removing it would silently change nothing except make the
+    # distinction impossible to explain.
+    assert "turnover" in B.tile_metrics({"liquidity": {"today_dollar_vol": 1.0}})
+
+
+def test_AI_sectors_is_not_a_dropdown_ENTRY_any_more():
+    """It bundled two claims into one option: the theme LEAD (a checkbox) and
+    the ordering used when no metric is picked (the default)."""
+    assert "theme" not in B.SORTS
+    assert B.DEFAULT_SORT == "default"
+    assert "AI sector" not in B.SORTS[B.DEFAULT_SORT]
+
+
+def test_themes_no_longer_lead_by_DEFAULT():
+    assert B.THEMES_FIRST_DEFAULT is False
+
+
+def test_every_board_entry_point_honours_that_default():
+    """Three signatures take themes_first; one left at True would put the old
+    behaviour back on whichever tab called it."""
+    import inspect
+    for fn in (B.board, B.zone_tiles):
+        default = inspect.signature(fn).parameters["themes_first"].default
+        assert default is B.THEMES_FIRST_DEFAULT, f"{fn.__name__} still leads with themes"
+
+
+def test_the_checkbox_can_still_turn_the_theme_lead_back_ON():
+    """Removed as a DEFAULT, not as a capability — his standing AI-sector
+    preference is one click away."""
+    tiles = [_tile("PLAIN", theme=None, score=99), _tile("SPACE", theme="space", score=1)]
+    assert _order(tiles, B.DEFAULT_SORT, themes_first=True)[0] == "SPACE"
 
 
 def test_the_tape_sorts_are_named_so_the_pull_can_be_conditional():
