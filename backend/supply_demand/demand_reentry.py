@@ -1293,6 +1293,32 @@ def scan(force: bool = False, limit: Optional[int] = None,
     # the ONLY cohort with positive expectancy, so the number that decides
     # whether a row is worth reading leads the list. Ties break on freshness.
     rows.sort(key=lambda r: (-((r.get("plan") or {}).get("rr") or 0.0), _rank_key(r)))
+
+    # Record the FULL qualifying list before anything trims it (Ajay 2026-08-17:
+    # "Can you maintain history of our In deman page please… Want you to track
+    # it"). Two things must happen here and not two lines below:
+    #   * `limit` — the 4:55pm cron warms with limit=1, so recording after the
+    #     slice would write a one-name board every single evening.
+    #   * the R:R floor, which is applied at READ time by `cached_or_warm`. The
+    #     ledger stores `rr` per episode, so the floor stays a question you can
+    #     ask of history rather than a filter baked into it.
+    # Never allowed to break the board: a Mongo outage must cost the record,
+    # not the page.
+    try:
+        from . import demand_history
+        demand_history.record_board({**{k: v for k, v in (
+            ("universe_key", ukey), ("universe_label", ulabel),
+            ("scanned", scanned), ("universe", len(syms)))},
+            "rows": rows, "params": {
+                "swing_window": SWING_WINDOW, "merge_pct": MERGE_PCT,
+                "half_width_pct": HALF_WIDTH_PCT,
+                "min_rise_above_pct": MIN_RISE_ABOVE_PCT,
+                "min_touches": MIN_TOUCHES,
+                "min_zone_strength": MIN_ZONE_STRENGTH,
+                "stop_buffer_pct": STOP_BUFFER_PCT}})
+    except Exception as exc:
+        log.warning("demand-reentry: history record failed: %s", exc)
+
     if limit:
         rows = rows[:int(limit)]
 

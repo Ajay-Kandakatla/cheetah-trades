@@ -100,6 +100,42 @@ async def post_demand_reentry_scan(
     return reentry_mod._apply_limit(reentry_mod._apply_rr_floor(data, min_rr), limit)
 
 
+@router.get("/supply-demand/demand-reentry/history")
+async def get_demand_reentry_history(
+    universe: Optional[str] = Query(None, description="sp1500 | sp500 | … ; omit for all"),
+    symbol: Optional[str] = Query(None, description="one name's episodes instead of the board"),
+    runs: int = Query(30, ge=1, le=200, description="how many past boards to return"),
+    min_rr: Optional[float] = Query(None, ge=0, le=10,
+                                    description="re-slice the aggregate by R:R floor"),
+):
+    """The live track record of the Back in Demand board.
+
+    Ajay 2026-08-17: *"Can you maintain history of our In deman page please… I
+    saw CIEN you recommended is bouncing out of the zone now… Want you to track
+    it"*.
+
+    Three views in one payload: `accuracy` (did it work), `runs` (what the
+    board said each day, with entered/dropped churn), and — when `symbol` is
+    given — that name's own episodes.
+
+    Distinct from `zone_backtest`, which re-derives the past from today's
+    universe and is re-run whenever the rule changes. This is what the page
+    ACTUALLY published, graded at the next session's open against a plan frozen
+    at first sight, so it starts at the day recording began and cannot be
+    rewritten by a later tweak to the rule.
+
+    Read `excess_vs_spy_pct`, not `win_pct`: a dip-buying board in a rising
+    tape shows profits with or without skill. Small n early.
+    """
+    import asyncio
+    from . import demand_history as dh
+    out = await asyncio.to_thread(dh.accuracy, universe, min_rr)
+    out["runs"] = (await asyncio.to_thread(dh.runs, universe, runs)).get("runs", [])
+    if symbol:
+        out["symbol_history"] = await asyncio.to_thread(dh.for_symbol, symbol, universe)
+    return out
+
+
 @router.get("/supply-demand/accumulation-changes")
 async def accumulation_changes(limit: int = Query(50, ge=1, le=200)):
     """Quarter-over-quarter institutional flow changes already detected.

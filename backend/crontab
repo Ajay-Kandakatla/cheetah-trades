@@ -475,6 +475,20 @@
 # "are our patterns accurate?" record Ajay asked for 2026-06-10.
 20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
 #
+# Back in Demand ledger resolver — 5:40 PM ET weekdays (Ajay 2026-08-17: "Can
+# you maintain history of our In deman page please… Want you to track it").
+# Grades open episodes: target before stop within 60 bars, entered at the
+# session AFTER the board published, plan frozen at first sight, plus SPY over
+# the same window. Feeds GET /supply-demand/demand-reentry/history.
+#
+# The RECORDING half needs no cron — `demand_reentry.scan()` writes the run and
+# its episodes itself, so the 4:55/4:57 warms above already capture the board.
+# This is only the grading pass, and it runs AS AN IMPORT rather than over HTTP
+# (unlike those warms): it touches Mongo and the shared price cache, neither of
+# which lives in the api process. 5:40 leaves the warms 40 minutes, which is
+# ~10x their measured cost.
+40     17    *    *    1-5  /usr/local/bin/python -m supply_demand.demand_history resolve
+#
 # Breakout breadth rollup — 5:12 PM ET weekdays, after the 4:30 fast-scan has
 # stamped today's days_since_breakout==0 snapshots and the price cache has
 # today's close. Counts the day's volume-confirmed breakouts + grades the

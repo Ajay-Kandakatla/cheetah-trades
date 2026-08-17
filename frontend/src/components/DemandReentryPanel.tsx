@@ -12,6 +12,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { TickerLink } from './TickerLink';
+import { DemandTrackRecord } from './DemandTrackRecord';
 import {
   bandLabel, blockCount, breakEvenWinPct, freshnessLabel, level, liquidityView, money,
   planLine, retailView, rrBand, venueView, volLabel,
@@ -286,7 +287,8 @@ export function DemandReentryPanel() {
                 borderLeft: `3px solid ${liq.warn ? '#d97706' : '#22c55e'}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <TickerLink ticker={r.symbol} fromLabel="Back in Demand" />
+                  <TickerLink ticker={r.symbol} fromLabel="Back in Demand"
+                          tab="setup" fromKey="supply-demand" />
                   <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{r.name}</span>
                   <span className="mono" style={{ fontSize: '0.74rem' }}>{money(r.last_price)}</span>
                   <span style={{
@@ -353,6 +355,8 @@ export function DemandReentryPanel() {
           })}
         </div>
       )}
+
+      <DemandTrackRecord universe={universe} />
 
       {data && (
         <p style={{ fontSize: '0.68rem', opacity: 0.55, marginTop: '0.7rem' }}>

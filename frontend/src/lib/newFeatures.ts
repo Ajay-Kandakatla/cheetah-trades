@@ -82,6 +82,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'zone-chart-candles', label: '🕯️ Zone chart rebuilt — real candlesticks + volume, and hover any day for its open / high / low / close / % change / volume. Zones now track zoom and pan (Setup tab)', addedAt: '2026-08-16', route: '/sepa' },
   { id: 'symbol-renames', label: '↪️ Renamed tickers now follow the company — SATS reads as ECHO and SQ as XYZ, with history joined across the change (SQ had been showing dead for 576 days)', addedAt: '2026-08-16', route: '/sepa' },
   { id: 'rotation-backtest', label: '🧪 Sector Rotation now shows whether acting on it pays — 116 monthly rebalances back to 2016: buying the top 3 sectors LOST to just holding all 11', addedAt: '2026-08-16', route: '/rotation' },
+  { id: 'demand-track-record', label: '📒 Back in Demand now keeps its own history — every board is recorded, each name graded at the next open against the plan frozen when it first appeared, with excess-vs-SPY and a day-by-day entered/dropped log. Not the backtest: this is what the page actually said', addedAt: '2026-08-17', route: '/supply-demand' },
+  { id: 'setup-tab-direct', label: '🎯 Chart Maps zone tiles and Back in Demand rows now open straight on the Setup tab — the plan, not the chart you were already looking at', addedAt: '2026-08-17', route: '/supply-demand' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */
