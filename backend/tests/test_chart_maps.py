@@ -161,7 +161,9 @@ def test_vcp_tab_builds_tiles_with_base_band_and_plan_lines(prices, scan_stub):
     prices["AAA"] = _frame(200)
     scan_stub["all_results"] = [_vcp_row("AAA")]
 
-    out = B.board("vcp", limit=5)
+    # min_tier="any": asserts tile SHAPE, not liquidity. The synthetic rows
+    # carry no liquidity block, which the default floor correctly rejects.
+    out = B.board("vcp", limit=5, min_tier="any")
     assert out["tab"] == "vcp"
     assert out["count"] == 1
     t = out["tiles"][0]
@@ -226,10 +228,11 @@ def test_themes_lead_when_asked_and_not_when_not(prices, scan_stub, monkeypatch)
     # AAA scores higher, IONQ carries a theme
     scan_stub["all_results"] = [_vcp_row("AAA", tightness=95), _vcp_row("IONQ", tightness=71)]
 
-    lead = B.board("vcp", limit=5, themes_first=True)["tiles"][0]["symbol"]
+    lead = B.board("vcp", limit=5, themes_first=True, min_tier="any")["tiles"][0]["symbol"]
     assert lead == "IONQ"
 
-    lead_metric = B.board("vcp", limit=5, themes_first=False)["tiles"][0]["symbol"]
+    lead_metric = B.board("vcp", limit=5, themes_first=False,
+                          min_tier="any")["tiles"][0]["symbol"]
     assert lead_metric == "AAA"
 
 
@@ -270,7 +273,7 @@ def test_zones_tab_draws_the_band_and_the_whole_plan(prices, reentry_stub):
     prices["AAA"] = _frame(200)
     reentry_stub["rows"] = [_reentry_row("AAA")]
 
-    out = B.board("zones", limit=5)
+    out = B.board("zones", limit=5, min_tier="any")
     t = out["tiles"][0]
     assert t["href"] == "/sepa/AAA?tab=supply"
     assert {b["kind"] for b in t["bands"]} == {"demand", "supply"}
@@ -282,7 +285,7 @@ def test_zones_tab_returns_warming_instead_of_blocking(prices, reentry_stub):
     """A cold 1,500-name pass outlives Cloudflare's ~100s cut. The board must
     answer immediately and let the page poll — the 2026-08-14 524."""
     reentry_stub["warming"] = True
-    out = B.board("zones")
+    out = B.board("zones", min_tier="any")
     assert out["warming"] is True
     assert out["count"] == 0
 
@@ -301,7 +304,7 @@ def test_zones_tab_tolerates_a_null_plan(prices, reentry_stub):
     row["plan"] = None
     row["breakeven_win_pct"] = None
     reentry_stub["rows"] = [row]
-    out = B.board("zones")
+    out = B.board("zones", min_tier="any")
     assert out["count"] == 1
     assert out["tiles"][0]["lines"] == []
 
@@ -621,7 +624,8 @@ def _tile(sym, theme=None, score=0.0, **metrics):
     return {"symbol": sym, "theme": theme, "_score": score,
             "_m": {k: metrics.get(k) for k in
                    ("volume", "rvol", "turnover", "avg_turnover",
-                    "conviction", "rs", "change")}}
+                    "conviction", "rs", "change", "dark", "retailimb",
+                    "retailpct")}}
 
 
 def _order(tiles, sort, themes_first=True):
@@ -671,7 +675,8 @@ def test_turnover_is_derived_only_when_the_producer_omitted_it():
 def test_metrics_survive_a_row_with_nothing_in_it():
     m = B.tile_metrics({})
     assert set(m) == {"volume", "rvol", "turnover", "avg_turnover",
-                      "conviction", "rs", "change"}
+                      "conviction", "rs", "change", "dark", "retailimb",
+                      "retailpct"}
     assert all(v is None for v in m.values())
     assert B.tile_metrics(None)["volume"] is None
 
@@ -697,9 +702,10 @@ def test_the_default_leaves_the_board_exactly_as_it_was():
     assert _order(tiles, B.DEFAULT_SORT) == ["A", "B"]
 
 
-@pytest.mark.parametrize("key", ["volume", "rvol", "turnover", "avg_turnover",
-                                 "conviction", "rs", "change"])
+@pytest.mark.parametrize("key", [k for k in B.SORTS if k != B.DEFAULT_SORT])
 def test_every_offered_sort_actually_orders(key):
+    """Parametrised off SORTS itself: a key added to the dropdown without a
+    working comparator would otherwise ship untested."""
     tiles = [_tile("LO", **{key: 1.0}), _tile("HI", **{key: 100.0})]
     assert _order(tiles, key) == ["HI", "LO"]
 
@@ -755,3 +761,99 @@ def test_every_advertised_sort_is_a_real_key():
 def test_the_private_metrics_never_reach_the_client():
     import inspect
     assert '"_m"' in inspect.getsource(B._finish)
+
+
+# ===========================================================================
+# The liquidity floor — Ajay 2026-08-17
+# ===========================================================================
+# "we want to make that average turn over is high for these". He was right to
+# ask. The board inherits SEPA's gate, and that gate is an OR (sepa/adr.py:45):
+# avg_dollar_vol >= $20M OR avg_shares >= 200k. Measured on the live board, 7 of
+# 17 strong-VCP names passed on SHARES ONLY -- ANTX at $1.5M/day is "illiquid"
+# on the Back in Demand page's own scale.
+def test_the_tier_scale_is_imported_from_the_demand_page_not_redeclared():
+    """Two boards that grade the same stock differently is the bug this whole
+    change exists to fix."""
+    from supply_demand import demand_reentry as D
+    assert B.LIQ_DEEP_USD == D.LIQ_DEEP_USD
+    assert B.LIQ_OK_USD == D.LIQ_OK_USD
+    assert B.LIQ_THIN_USD == D.LIQ_THIN_USD
+
+
+@pytest.mark.parametrize("dollars,tier", [
+    (532_000_000, "deep"), (50_000_000, "deep"),
+    (43_600_000, "ok"), (10_000_000, "ok"),
+    (8_500_000, "thin"), (2_000_000, "thin"),
+    (1_500_000, "illiquid"), (0, "illiquid"),
+])
+def test_tier_boundaries(dollars, tier):
+    assert B.liquidity_tier(dollars) == tier
+
+
+def test_the_real_ANTX_case_is_illiquid():
+    """$1.5M/day. It was on the board because SEPA's shares-only branch let it
+    through, and nothing downstream looked at dollars."""
+    assert B.liquidity_tier(1_500_000) == "illiquid"
+
+
+def test_the_default_floor_admits_the_liquid_names_and_drops_the_thin_ones():
+    for d in (532_000_000, 43_600_000, 15_400_000):
+        assert B.passes_liquidity(d, B.DEFAULT_MIN_TIER)
+    for d in (8_500_000, 4_100_000, 1_500_000):
+        assert not B.passes_liquidity(d, B.DEFAULT_MIN_TIER)
+
+
+def test_any_disables_the_floor_entirely():
+    assert B.passes_liquidity(1_500_000, "any")
+    assert B.passes_liquidity(None, "any")
+
+
+# --- negatives ---
+def test_an_UNKNOWN_turnover_FAILS_a_real_floor():
+    """Letting it through means the one name whose liquidity we could not
+    measure is the one that shows up unfiltered. That is exactly backwards."""
+    assert not B.passes_liquidity(None, "ok")
+    assert not B.passes_liquidity(float("nan"), "ok")
+    assert B.liquidity_tier(None) is None
+
+
+def test_an_unknown_tier_name_falls_back_to_the_default_floor():
+    assert not B.passes_liquidity(1_500_000, "not-a-tier")
+
+
+def test_the_deep_floor_is_stricter_than_the_default():
+    assert B.passes_liquidity(15_000_000, "ok")
+    assert not B.passes_liquidity(15_000_000, "deep")
+
+
+# ===========================================================================
+# The tape sorts
+# ===========================================================================
+def test_the_dropdown_mirrors_the_back_in_demand_one():
+    """He asked for "exactly what you did in the other place". The three that
+    make it HIS dropdown are retail imbalance, retail % and off-exchange %."""
+    for key in ("retailimb", "retailpct", "dark", "rvol"):
+        assert key in B.SORTS, f"{key} missing — this is the demand dropdown"
+
+
+def test_the_tape_sorts_are_named_so_the_pull_can_be_conditional():
+    assert set(B.TAPE_SORTS) == {"retailimb", "retailpct", "dark"}
+
+
+def test_tile_metrics_reads_the_venue_and_retail_blocks():
+    m = B.tile_metrics({
+        "venues": {"dark_pct": 16.3},
+        "retail": {"retail_pct_of_volume": 2.3, "imbalance_pct": None},
+    })
+    assert m["dark"] == 16.3
+    assert m["retailpct"] == 2.3
+    assert m["retailimb"] is None, "unsigned retail must stay None, not 0"
+
+
+def test_a_row_with_no_tape_has_null_tape_metrics():
+    m = B.tile_metrics({"liquidity": {"avg_dollar_vol": 5e7}})
+    assert m["dark"] is None and m["retailimb"] is None and m["retailpct"] is None
+
+
+def test_attach_tape_on_nothing_is_zero_not_an_error():
+    assert B.attach_tape([]) == 0

@@ -610,9 +610,10 @@ def _session_venues(symbol: str) -> dict:
 
     out = {"available": False, "blocks": [], "rating": None}
     try:
-        trades = tape_mod.fetch_trades(symbol, _d.today())
-        if trades is None or trades.empty:
-            trades = tape_mod.fetch_trades(symbol, _d.today() - timedelta(days=1))
+        # The most recent day that actually PRINTED, not "yesterday" — a
+        # one-calendar-day fallback lands on Sunday every Monday pre-open and
+        # returned nothing all weekend (measured 2026-08-17).
+        trades, _tape_day = tape_mod.last_session_trades(symbol)
         if trades is None or trades.empty:
             return out
         v = darkpool.split_venues(trades)
@@ -716,14 +717,15 @@ def _enrich_one(r: dict, tape_mod, quotes_mod, darkpool, retail_mod, _d):
     Returns (venues, retail, block_list, total_shares, tape_is_today) or None.
     Pure I/O per row so the caller can run these concurrently.
     """
-    tape_is_today = True
     try:
-        trades = tape_mod.fetch_trades(r["symbol"], _d.today())
-        if trades is None or trades.empty:
-            tape_is_today = False
-            trades = tape_mod.fetch_trades(r["symbol"], _d.today() - timedelta(days=1))
+        # Walk back to the last session that printed. The old one-calendar-day
+        # fallback meant this returned None for every row all weekend and every
+        # Monday pre-open, so the dark-pool and retail SORTS on the board ranked
+        # a column of nulls and quietly gave back the default order.
+        trades, tape_day = tape_mod.last_session_trades(r["symbol"])
         if trades is None or trades.empty:
             return None
+        tape_is_today = tape_day == _d.today()
         v = darkpool.split_venues(trades)
         block_list = darkpool.dark_blocks(trades)
     except Exception as exc:

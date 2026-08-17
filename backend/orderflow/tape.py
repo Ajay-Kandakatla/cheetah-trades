@@ -319,3 +319,48 @@ def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) ->
         "truncated": bool(trades.attrs.get("truncated", False)),
         "last_price": round(float(df["price"].iloc[-1]), 2),
     }
+
+
+# ---------------------------------------------------------------------------
+# Most recent session with prints
+# ---------------------------------------------------------------------------
+# Found 2026-08-17 (a Monday, pre-open) while adding dark-pool sorts to Chart
+# Maps: every consumer walked back exactly ONE CALENDAR DAY when today was
+# empty. On a Monday morning that lands on Sunday, and on Saturday it lands on
+# Friday-the-week-before only by luck — so all weekend and every pre-open
+# Monday, the Back in Demand board's off-exchange and retail columns came back
+# empty and its dark-pool sorts silently ranked a column of nulls.
+#
+# Measured that morning: USB returned 0 rows for Aug 17 (Mon, pre-open), Aug 16
+# (Sun) and Aug 15 (Sat), and 53,075 rows for Aug 14 (Fri) — dark 16.3% of
+# 9.9M shares. The data was always there; nobody was asking for the right day.
+#
+# Walking back by TRADING days rather than calendar days also skips holidays
+# for free, because a holiday simply returns no prints and the walk continues.
+
+# How far back to look. 5 covers a long weekend plus a holiday either side.
+MAX_TAPE_LOOKBACK_DAYS = 5
+
+
+def last_session_trades(symbol: str, max_back: int = MAX_TAPE_LOOKBACK_DAYS):
+    """Trades for the most recent day that actually printed, and which day.
+
+    Returns ``(DataFrame, date)`` or ``(None, None)``. Weekends are skipped
+    without a request; anything else is asked for, so a holiday costs one empty
+    call and the walk continues.
+    """
+    from datetime import date as _date, timedelta as _td
+
+    today = _date.today()
+    for back in range(0, max_back + 1):
+        day = today - _td(days=back)
+        if day.weekday() >= 5:                    # Sat/Sun never print
+            continue
+        try:
+            df = fetch_trades(symbol, day)
+        except Exception as exc:
+            log.debug("last_session_trades: %s %s failed: %s", symbol, day, exc)
+            continue
+        if df is not None and not df.empty:
+            return df, day
+    return None, None

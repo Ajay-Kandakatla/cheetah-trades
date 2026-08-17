@@ -23,8 +23,8 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
-  CM_TABS, DEFAULT_SORT, TAB_META, WINNER_SOURCES, boardQuery, isThinSample,
-  parseSort, parseSource, parseTab, recordLine,
+  CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, WINNER_SOURCES, boardQuery,
+  isThinSample, parseSort, parseSource, parseTab, parseTier, recordLine,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
@@ -75,6 +75,7 @@ export function ChartMaps() {
   const days = Number(params.get('days')) || undefined;
   const minerviniOnly = params.get('minervini') === 'true';
   const sort = parseSort(params.get('sort'));
+  const minTier = parseTier(params.get('min_tier'));
   const [universe, setUniverse] = useState('sp1500_plus');
   const [themesFirst, setThemesFirst] = useState(true);
   const [data, setData] = useState<CmBoard | null>(null);
@@ -96,7 +97,7 @@ export function ChartMaps() {
   const load = useCallback(async () => {
     setErr(null);
     const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
-                           source, minerviniOnly, sort });
+                           source, minerviniOnly, sort, minTier });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -108,7 +109,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -221,6 +222,25 @@ export function ChartMaps() {
             </select>
           </label>
         )}
+        {tab !== 'winners' && (data?.tiers || []).length > 0 && (
+          <label className="cm-ctl">
+            Liquidity
+            <select
+              aria-label="Minimum average daily turnover"
+              value={minTier}
+              onChange={(e) => setParams((p) => {
+                const n = new URLSearchParams(p);
+                if (e.target.value === DEFAULT_MIN_TIER) n.delete('min_tier');
+                else n.set('min_tier', e.target.value);
+                return n;
+              }, { replace: true })}
+            >
+              {(data?.tiers || []).map((o) => (
+                <option key={o.key} value={o.key}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {tab !== 'winners' && (
           <button type="button" className="cm-rescan"
                   disabled={stream.scanning}
@@ -309,6 +329,22 @@ export function ChartMaps() {
         </div>
       ) : null}
 
+      {data?.sort_unavailable && (
+        <p className="cm-note cm-note-warn">⚠️ {data.sort_unavailable}</p>
+      )}
+      {!!data?.dropped_thin && (
+        <p className="cm-note">
+          {data.dropped_thin} name{data.dropped_thin === 1 ? '' : 's'} hidden below the
+          liquidity floor — thin tape, so the base is not tradeable at size.
+        </p>
+      )}
+      {!!data?.tape_pool && (
+        <p className="cm-note">
+          Tape pulled for {data.tape_enriched} of the top {data.tape_pool} by
+          the default ranking — off-exchange and retail need an intraday tape, so
+          this ranks that pool, not the whole scan.
+        </p>
+      )}
       {(stream.scanning || stream.phase === 'done' || stream.error) && (
         <div className="cm-progress">
           <SepaScanProgress {...stream} />

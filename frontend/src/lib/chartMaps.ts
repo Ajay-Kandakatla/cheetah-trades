@@ -66,6 +66,19 @@ export type CmBoard = {
    *  volume, so the backend answers `theme` there and sends an empty `sorts`. */
   sort?: string;
   sorts?: CmSort[];
+  /** Liquidity floor by 50-day average $ volume, same tiers as Back in Demand. */
+  min_tier?: string;
+  tiers?: CmSort[];
+  /** How many names the floor removed. Shown so a shrunken board is explained
+   *  rather than just smaller. */
+  dropped_thin?: number;
+  /** Sorts that need an intraday tape pull, and how far it got. */
+  tape_sorts?: string[];
+  tape_pool?: number;
+  tape_enriched?: number;
+  /** Set when the chosen sort's column came back empty for every row — the
+   *  board is showing its default order and says so. */
+  sort_unavailable?: string | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;
@@ -118,6 +131,17 @@ export function parseSource(v: string | null | undefined): WinnerSource {
  *  a shared URL stays short and the default stays the default. */
 export const DEFAULT_SORT = 'theme';
 
+/** Matches board.DEFAULT_MIN_TIER — "comfortably tradeable in retail size"
+ *  ($10M/day). Ajay 2026-08-17: "we want to make that average turn over is high
+ *  for these". A study board that teaches the shape of a $1.5M/day base is
+ *  teaching a pattern he cannot actually trade. */
+export const DEFAULT_MIN_TIER = 'ok';
+
+export function parseTier(raw: string | null | undefined): string {
+  const v = (raw || '').trim();
+  return v || DEFAULT_MIN_TIER;
+}
+
 /** A sort the backend actually offers, or the default. The board advertises its
  *  own options, so a key retired server-side degrades instead of 404ing. */
 export function parseSort(raw: string | null | undefined,
@@ -134,6 +158,7 @@ export function boardQuery(p: {
   tab: CmTab; limit?: number; days?: number;
   universe?: string; themesFirst?: boolean; pattern?: string | null;
   source?: WinnerSource; minerviniOnly?: boolean; sort?: string;
+  minTier?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   if (p.limit) q.set('limit', String(p.limit));
@@ -145,6 +170,7 @@ export function boardQuery(p: {
   // would reorder the ~24 tiles theme priority already chose — "highest
   // volume" would silently mean "highest volume among those 24".
   if (p.sort && p.sort !== DEFAULT_SORT) q.set('sort', p.sort);
+  if (p.minTier && p.minTier !== DEFAULT_MIN_TIER) q.set('min_tier', p.minTier);
   // Winners-only params. `pattern` is meaningless for the zone ledger — zone
   // re-entries have no chart-pattern name — so it is dropped there rather than
   // sent and silently ignored.

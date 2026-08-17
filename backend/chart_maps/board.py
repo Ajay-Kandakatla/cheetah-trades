@@ -229,6 +229,71 @@ def _f(v) -> Optional[float]:
     return f if f == f else None
 
 
+# ---------------------------------------------------------------------------
+# Liquidity — Ajay 2026-08-17: "we want to make that average turn over is high
+# for these"
+# ---------------------------------------------------------------------------
+# He was right to ask. The board inherits the SEPA scanner's gate, and that gate
+# is an OR (sepa/adr.py:45):
+#
+#     liquid = avg_dollar_vol >= $20M  OR  avg_shares >= 200,000
+#
+# The shares branch is there so a genuinely tradeable small-cap is not excluded
+# for having a low price. But it also admits names that are nowhere near
+# institutional turnover. Measured on the live board, 2026-08-17 — 7 of the 17
+# strong-VCP names passed on SHARES ONLY:
+#
+#     ANTX  $1.5M/day     BOLD $4.1M     WEST $5.4M     EGBN $8.5M
+#     DIN  $11.2M         UHAL $15.0M    CADL $15.4M
+#
+# On the Back in Demand page's own scale ANTX is "illiquid" and three more are
+# "thin" — so the same stock was reading differently on two of his surfaces.
+#
+# The thresholds are IMPORTED, not re-declared, so the two boards can never
+# drift apart again.
+try:
+    from supply_demand.demand_reentry import (LIQ_DEEP_USD, LIQ_OK_USD,
+                                              LIQ_THIN_USD)
+except Exception:                                   # pragma: no cover
+    LIQ_DEEP_USD, LIQ_OK_USD, LIQ_THIN_USD = 50_000_000.0, 10_000_000.0, 2_000_000.0
+
+LIQ_TIERS = {"deep": LIQ_DEEP_USD, "ok": LIQ_OK_USD, "thin": LIQ_THIN_USD,
+             "any": 0.0}
+
+# Default floor. "ok" = $10M/day, the demand page's "comfortably tradeable in
+# retail size". Deliberately not "any": a study board that teaches him the shape
+# of a $1.5M/day base is teaching him a pattern he cannot actually trade.
+DEFAULT_MIN_TIER = "ok"
+
+
+def liquidity_tier(avg_dollar_vol: Optional[float]) -> Optional[str]:
+    """Which tier this turnover sits in. PURE. Same scale as Back in Demand."""
+    d = _f(avg_dollar_vol)
+    if d is None:
+        return None
+    if d >= LIQ_DEEP_USD:
+        return "deep"
+    if d >= LIQ_OK_USD:
+        return "ok"
+    if d >= LIQ_THIN_USD:
+        return "thin"
+    return "illiquid"
+
+
+def passes_liquidity(avg_dollar_vol: Optional[float], min_tier: str) -> bool:
+    """Does this name clear the floor? PURE.
+
+    An UNKNOWN turnover fails any real floor. The alternative — letting it
+    through — means the one name whose liquidity we could not measure is the one
+    that shows up unfiltered, which is exactly backwards.
+    """
+    floor = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER])
+    if floor <= 0:
+        return True
+    d = _f(avg_dollar_vol)
+    return d is not None and d >= floor
+
+
 def tile_metrics(row: dict) -> dict:
     """Sortable numbers for one row, from either row shape. PURE.
 
@@ -258,6 +323,13 @@ def tile_metrics(row: dict) -> dict:
         if px:
             today_dollar = today_vol * px
 
+    # Retail + off-exchange come from an intraday TAPE pull, never from a daily
+    # bar, so they are only present once `attach_tape` has run. Reading them
+    # here (rather than in a second extractor) keeps one definition of every
+    # sortable number.
+    ven = row.get("venues") or {}
+    ret = row.get("retail") or {}
+
     return {
         "volume": today_vol,
         "rvol": rvol,
@@ -268,22 +340,103 @@ def tile_metrics(row: dict) -> dict:
                          else row.get("conviction")),
         "rs": _f(row.get("rs_rank")),
         "change": _f(row.get("day_change_pct")),
+        # Same three the Back in Demand dropdown offers, same field names.
+        "dark": _f(ven.get("dark_pct")),
+        "retailimb": _f(ret.get("imbalance_pct")),
+        "retailpct": _f(ret.get("retail_pct_of_volume")),
     }
 
 
 # Dropdown options, in the order they are offered. `theme` is the default and
 # keeps the board's existing behaviour exactly.
+# Mirrors the Back in Demand dropdown (DemandReentryPanel.tsx SORTS) so the two
+# surfaces mean the same thing by the same word — Ajay 2026-08-17: "exactly what
+# you did in the other place". Retail imbalance, retail % and off-exchange % are
+# the three that make it HIS dropdown rather than a generic one; they need the
+# tape pull below. The trailing four have no equivalent there but come free from
+# the scan row, so they are offered rather than withheld.
 SORTS: dict[str, str] = {
     "theme": "🤖 AI sectors (default)",
-    "volume": "📊 Today's volume",
-    "rvol": "📈 Volume vs normal (×)",
+    "retailimb": "🧍 Retail imbalance",
+    "retailpct": "🧍 Retail % of volume",
+    "dark": "🟣 Off-exchange %",
+    "rvol": "📊 Relative volume",
+    "volume": "📈 Today's volume",
     "turnover": "💵 $ turnover",
     "avg_turnover": "🏦 Liquidity (avg $ vol)",
     "conviction": "🏆 Conviction",
     "rs": "⚡ RS rank",
-    "change": "🌡️ % change today",
 }
+
+# Sorts that cannot be answered from a daily bar. Choosing one triggers the tape
+# pull; without it the column is null for every row and the "sort" is a no-op
+# that silently returns the default order — which is what happens on the demand
+# page today, where only the top 15 rows are ever enriched.
+TAPE_SORTS = ("retailimb", "retailpct", "dark")
 DEFAULT_SORT = "theme"
+
+
+# Tape enrichment budget. Mirrors demand_reentry's own numbers so the two
+# surfaces cost the same per row; the board only ever enriches the tiles it is
+# about to show, which is far fewer than the demand page's 15-of-hundreds.
+TAPE_BUDGET_SEC = 25.0
+TAPE_WORKERS = 6
+# How deep to enrich before re-sorting on a tape metric, as a multiple of the
+# page size. 3x24 = 72 tape pulls at 6 workers inside a 25s budget.
+TAPE_POOL_MULT = 3
+
+
+def attach_tape(rows: list, budget_sec: float = TAPE_BUDGET_SEC) -> int:
+    """Pull each row's intraday tape for venue + retail detail, in place.
+
+    Returns how many rows actually got data.
+
+    This is the ONLY way to answer "retail imbalance" or "off-exchange %" — a
+    daily bar carries one consolidated volume number and no venue breakdown at
+    all. `sepa.scanner` rows have no `venues`/`retail` key whatsoever (checked
+    2026-08-17), so without this the three tape sorts would rank a column that
+    is null for every row and silently return the default order.
+
+    Concurrent and time-boxed, reusing demand_reentry's own worker so the two
+    surfaces cannot disagree about what "retail" or "dark" means. Rows that miss
+    the budget are left without detail rather than holding up the response —
+    they sort last, and the caller reports the count so the UI can say so.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from datetime import date as _d
+    import time as _time
+
+    if not rows:
+        return 0
+    try:
+        from orderflow import darkpool, quotes as quotes_mod, retail as retail_mod, tape as tape_mod
+        from supply_demand.demand_reentry import _enrich_one
+    except Exception as exc:
+        log.warning("chart-maps: tape enrichment unavailable: %s", exc)
+        return 0
+
+    t0 = _time.time()
+    done = 0
+    try:
+        with ThreadPoolExecutor(max_workers=TAPE_WORKERS) as pool:
+            futures = {pool.submit(_enrich_one, r, tape_mod, quotes_mod,
+                                   darkpool, retail_mod, _d): r for r in rows}
+            for fut in as_completed(futures, timeout=budget_sec + 5):
+                if _time.time() - t0 > budget_sec:
+                    break
+                row = futures[fut]
+                try:
+                    got = fut.result()
+                except Exception:
+                    continue
+                if not got:
+                    continue
+                row["venues"] = got.get("venues") or {}
+                row["retail"] = got.get("retail") or {}
+                done += 1
+    except Exception as exc:
+        log.debug("chart-maps: tape enrichment ended early: %s", exc)
+    return done
 
 
 def _sort_key(tile: dict, themes_first: bool, sort: str = DEFAULT_SORT):
@@ -349,7 +502,8 @@ def _spread(tiles: list[dict], limit: int) -> list[dict]:
 
 
 def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
-            sort: str = DEFAULT_SORT) -> list[dict]:
+            sort: str = DEFAULT_SORT,
+            min_tier: str = DEFAULT_MIN_TIER) -> tuple[list[dict], dict]:
     """Rank on metadata, THEN load bars for only the tiles that will be shown.
 
     Ordering matters for latency, not just tidiness. Ranking after fetching
@@ -358,13 +512,64 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
     the work at `limit + BAR_BUFFER` frames regardless of how many matched.
     """
     explicit = sort != DEFAULT_SORT and sort in SORTS
+
+    # 1 — the liquidity floor, before anything else. Ajay 2026-08-17: "we want
+    # to make that average turn over is high for these". Dropping here rather
+    # than filtering the finished board means the limit is filled with names
+    # that CLEAR the floor instead of leaving gaps where thin names were cut.
+    kept = [t for t in tiles if passes_liquidity((t.get("_m") or {}).get("avg_turnover"),
+                                                 min_tier)]
+    dropped_thin = len(tiles) - len(kept)
+    tiles = kept
+
     tiles.sort(key=lambda t: _sort_key(t, themes_first, sort))
-    # The per-theme cap keeps the board a SPREAD, which is the right default for
-    # a study surface. But it fights an explicit ranking: capping a volume sort
-    # would silently drop the 7th-highest-volume name for being in a popular
-    # theme, and the board would no longer be the thing the dropdown says it is.
+
+    # 2 — the tape pull, for the three sorts a daily bar cannot answer.
+    #
+    # Enriching every match is not affordable (one tape + NBBO fetch per symbol,
+    # hundreds of matches). So the pool is the top TAPE_POOL_MULT * limit by the
+    # ORDINARY ranking, enriched, then re-sorted by the tape metric. That is a
+    # real limit and it is the same one the demand page has — it enriches its
+    # top 15 by R:R — but it must be SAID rather than implied, so the count goes
+    # back to the caller and onto the page.
+    tape_pool = 0
+    tape_enriched = 0
+    sort_unavailable = None
+    if sort in TAPE_SORTS:
+        pool = tiles[:min(len(tiles), max(limit, limit * TAPE_POOL_MULT))]
+        tape_pool = len(pool)
+        tape_enriched = attach_tape(pool)
+        for t in pool:
+            t["_m"] = tile_metrics(t)          # re-read now that venues/retail exist
+        pool.sort(key=lambda t: _sort_key(t, themes_first, sort))
+        tiles = pool + tiles[len(pool):]
+
+        # Did the chosen column actually come back with anything? "Retail
+        # imbalance" cannot be answered outside a live session at all: signing a
+        # retail print buy-vs-sell needs the NBBO, and orderflow.retail refuses
+        # to guess — "Retail prints identified but unsigned; sub-penny signing
+        # mis-signs 28% of trades". Measured off-session on USB: dark_pct 16.3
+        # and retail_pct 2.3 both present, imbalance_pct null.
+        #
+        # A sort over an all-null column returns the default order, which looks
+        # like a working sort and is not one. Say so instead.
+        have = sum(1 for t in pool if (t.get("_m") or {}).get(sort) is not None)
+        if not have:
+            sort_unavailable = (
+                "Retail buys and sells cannot be told apart without live NBBO "
+                "quotes, so this ranking is unavailable outside market hours — "
+                "the board is showing its default order."
+                if sort == "retailimb" else
+                "No data for this ranking in the last session — the board is "
+                "showing its default order.")
+
+    # 3 — the per-theme cap keeps the board a SPREAD, which is the right default
+    # for a study surface. But it fights an explicit ranking: capping a volume
+    # sort would silently drop the 7th-highest-volume name for being in a
+    # popular theme, and the board would no longer be what the dropdown says.
     if themes_first and not explicit:
         tiles = _spread(tiles, limit)
+
     short = tiles[:limit + BAR_BUFFER]
     _attach_bars(short, days)
     out = [t for t in short if t.get("bars")][:limit]
@@ -372,7 +577,14 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
         t.pop("_score", None)
         t.pop("_bars", None)
         t.pop("_m", None)
-    return out
+        t.pop("venues", None)
+        t.pop("retail", None)
+    # Returned, not stashed on the function: `board()` runs inside
+    # asyncio.to_thread and two concurrent requests would clobber a module-level
+    # slot, handing one caller the other's counts.
+    return out, {"dropped_thin": dropped_thin, "min_tier": min_tier,
+                 "tape_pool": tape_pool, "tape_enriched": tape_enriched,
+                 "sort_unavailable": sort_unavailable}
 
 
 def _attach_bars(tiles: list[dict], days: int) -> None:
@@ -497,7 +709,7 @@ def _is_strong_vcp(row: dict) -> bool:
 
 def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
               themes_first: bool = True, min_tightness: int = STRONG_TIGHTNESS,
-              sort: str = DEFAULT_SORT) -> dict:
+              sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
     from sepa import scanner
 
     scan = scanner.load_latest()
@@ -560,7 +772,8 @@ def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "_score": tight or 0.0,
             "_m": tile_metrics(r),
         })
-    return {"tiles": _finish(tiles, limit, themes_first, days, sort),
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    return {"tiles": out, **meta,
             "matched": len(picked),
             "scanned": len(rows),
             "scan_generated_at": scan.get("generated_at")}
@@ -587,7 +800,7 @@ def _vcp_badges(row: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                universe: str = "sp1500_plus", themes_first: bool = True,
-               sort: str = DEFAULT_SORT) -> dict:
+               sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
     from supply_demand import demand_reentry as D
 
     data = D.cached_or_warm(universe, limit=LIMIT_MAX)
@@ -663,7 +876,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "_score": rr or 0.0,
             "_m": tile_metrics(r),
         })
-    return {"tiles": _finish(tiles, limit, themes_first, days, sort),
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    return {"tiles": out, **meta,
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -781,7 +995,8 @@ def zone_winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90) -> dict:
 
     n = len(usable)
     return {
-        "tiles": _finish(tiles, limit, themes_first=False, days=days),
+        "tiles": _finish(tiles, limit, themes_first=False, days=days,
+                         min_tier="any")[0],
         "record": {
             "overall": {"wins": len(wins), "losses": len(losses), "n": n,
                         "win_pct": round(100.0 * len(wins) / n, 1) if n else None},
@@ -895,7 +1110,8 @@ def winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90,
             "_score": float(len(wins) - i),
         })
 
-    return {"tiles": _finish(tiles, limit, themes_first=False, days=days),
+    return {"tiles": _finish(tiles, limit, themes_first=False, days=days,
+                             min_tier="any")[0],
             "record": _winner_record(usable, wins, losses),
             "excluded_already_past_target": len(raced) - len(usable),
             "patterns": sorted({o.get("pattern") for o in usable if o.get("pattern")})}
@@ -932,7 +1148,8 @@ def _winner_record(usable: list, wins: list, losses: list) -> dict:
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "sp1500_plus", themes_first: bool = True,
           pattern: Optional[str] = None, source: str = "pattern",
-          minervini_only: bool = False, sort: str = DEFAULT_SORT) -> dict:
+          minervini_only: bool = False, sort: str = DEFAULT_SORT,
+          min_tier: str = DEFAULT_MIN_TIER) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -947,9 +1164,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # An unknown sort falls back to the default rather than erroring: a stale
     # bookmark should show the board, not a 422.
     srt = sort if sort in SORTS else DEFAULT_SORT
+    tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
     if t == "zones":
-        out = zone_tiles(limit, days, universe, themes_first, srt)
+        out = zone_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "winners":
         if src == "zone":
             out = zone_winner_tiles(limit, days=min(days, 90))
@@ -958,7 +1176,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                                minervini_only=bool(minervini_only))
         out["source"] = src
     else:
-        out = vcp_tiles(limit, days, themes_first, sort=srt)
+        out = vcp_tiles(limit, days, themes_first, sort=srt, min_tier=tier)
 
     out["tab"] = t
     out["count"] = len(out.get("tiles") or [])
@@ -968,5 +1186,15 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     out["sort"] = DEFAULT_SORT if t == "winners" else srt
     out["sorts"] = [] if t == "winners" else [{"key": k, "label": v}
                                               for k, v in SORTS.items()]
+    # The winners tabs read a ledger and are not liquidity-filtered — saying
+    # "any" there is honest; pretending a floor applied would not be.
+    out["min_tier"] = "any" if t == "winners" else tier
+    out["tiers"] = [] if t == "winners" else [
+        {"key": "deep", "label": f"Deep · ≥${int(LIQ_DEEP_USD/1e6)}M/day"},
+        {"key": "ok", "label": f"Tradeable · ≥${int(LIQ_OK_USD/1e6)}M/day"},
+        {"key": "thin", "label": f"Thin · ≥${int(LIQ_THIN_USD/1e6)}M/day"},
+        {"key": "any", "label": "No floor (shows illiquid names)"},
+    ]
+    out["tape_sorts"] = list(TAPE_SORTS)
     out["disclaimer"] = DISCLAIMER
     return out

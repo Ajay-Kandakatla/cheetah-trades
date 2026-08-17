@@ -33,6 +33,11 @@ async def chart_maps(
     source: str = Query("pattern", description="winners tab only — pattern | zone"),
     minervini_only: bool = Query(False,
                                  description="winners tab only — SEPA qualifiers at the time"),
+    min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
+                          description="liquidity floor by 50-day avg $ volume: "
+                                      "deep (>=$50M) | ok (>=$10M, default) | "
+                                      "thin (>=$2M) | any. Same scale as the "
+                                      "Back in Demand tiers."),
     sort: str = Query(board_mod.DEFAULT_SORT,
                       description="theme (default) | volume | rvol | turnover | "
                                   "avg_turnover | conviction | rs | change. Applied "
@@ -58,6 +63,7 @@ async def chart_maps(
             themes_first=themes_first if isinstance(themes_first, bool) else True,
             pattern=pattern if isinstance(pattern, str) else None,
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
+            min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

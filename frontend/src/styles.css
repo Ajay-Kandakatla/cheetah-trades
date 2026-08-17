@@ -10985,3 +10985,9 @@ a.tk-link:hover   { color: inherit; }
   font-size: 0.72rem;
   color: var(--cm-slate, #94a3b8);
 }
+.cm-note {
+  margin: 0.35rem 0 0.6rem;
+  font-size: 0.74rem;
+  color: var(--cm-slate, #94a3b8);
+}
+.cm-note-warn { color: var(--warn, #fbbf24); }
