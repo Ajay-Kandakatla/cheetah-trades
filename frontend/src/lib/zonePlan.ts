@@ -15,6 +15,9 @@ export type Zone = {
   lo: number; hi: number; mid: number;
   touches: number; volume: number;
   bars_since_test: number;
+  /** Bars back to the OLDEST swing in the cluster. The chart window is sized
+   *  from this so a band's own defining touches are never off the left edge. */
+  oldest_touch_bars?: number;
   strength: number;
   in_price?: boolean;
 };
@@ -54,7 +57,10 @@ export type ZoneMapPayload = {
   venues?: Venues | null;
   retail?: Retail | null;
   breakeven_win_pct?: number | null;
-  series?: { date: string; close: number }[];
+  /** o/h/l/volume added 2026-08-16 for the candlestick chart; a payload cached
+   *  before that carries date + close only. See lib/zoneChart.ts. */
+  series?: { date: string; open?: number | null; high?: number | null;
+             low?: number | null; close: number; volume?: number | null }[];
   error?: string;
 };
 

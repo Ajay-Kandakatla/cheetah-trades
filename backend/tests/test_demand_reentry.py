@@ -831,3 +831,115 @@ def test_the_bands_themselves_are_untouched_by_the_gate():
     src = inspect.getsource(dr._pick_entry_zone)
     assert "demand_zones" in src
     assert "return None" in src
+
+
+# ---------------------------------------------------------------------------
+# The Setup-tab chart series — Ajay 2026-08-16
+# ---------------------------------------------------------------------------
+# Two asks in one message: "is there any way we can use trading view charts? ...
+# I wanna be able to hover on the pricing" and "can you also add volume please".
+# The series was `{date, close}` only, so neither a candle nor a volume bar
+# could be drawn. It also carried a fixed 180 bars while zones are computed over
+# 252 (price_zones.LOOKBACK_BARS), which put a band's own defining touches off
+# the left edge of the chart that was supposed to justify it.
+def _ohlc_frame(n=300, start=100.0):
+    pd = pytest.importorskip("pandas")
+    idx = pd.bdate_range("2024-01-01", periods=n)
+    close = [start + i * 0.1 for i in range(n)]
+    return pd.DataFrame({
+        "open":   [c - 0.5 for c in close],
+        "high":   [c + 1.0 for c in close],
+        "low":    [c - 1.0 for c in close],
+        "close":  close,
+        "volume": [1_000_000 + i for i in range(n)],
+    }, index=idx)
+
+
+def test_series_carries_ohlc_and_volume():
+    """A candlestick chart needs open/high/low and a volume histogram needs
+    volume. The payload had neither."""
+    out = dr._series_for_chart(_ohlc_frame(), 10)
+    assert len(out) == 10
+    bar = out[-1]
+    assert set(bar) == {"date", "open", "high", "low", "close", "volume"}
+    assert bar["high"] >= bar["close"] >= bar["low"]
+    assert isinstance(bar["volume"], int), "volume is a count, not a price"
+
+
+def test_close_is_still_present_so_nothing_downstream_breaks():
+    out = dr._series_for_chart(_ohlc_frame(), 5)
+    assert all(isinstance(b["close"], float) for b in out)
+
+
+def test_volume_is_not_rounded_to_cents():
+    pd = pytest.importorskip("pandas")
+    df = _ohlc_frame(3)
+    df.loc[df.index[-1], "volume"] = 531_156
+    assert dr._series_for_chart(df, 1)[0]["volume"] == 531_156
+
+
+def test_a_bar_missing_ohl_degenerates_to_a_doji_rather_than_vanishing():
+    """A hole would shift every later bar and silently mis-place the bands
+    against the price. A flat candle is visibly odd; a shifted chart is not."""
+    pd = pytest.importorskip("pandas")
+    df = _ohlc_frame(4)
+    for col in ("open", "high", "low"):
+        df.loc[df.index[-1], col] = float("nan")
+    out = dr._series_for_chart(df, 4)
+    assert len(out) == 4
+    last = out[-1]
+    assert last["open"] == last["high"] == last["low"] == last["close"]
+
+
+def test_a_bar_with_no_close_is_dropped():
+    pd = pytest.importorskip("pandas")
+    df = _ohlc_frame(4)
+    df.loc[df.index[-1], "close"] = float("nan")
+    assert len(dr._series_for_chart(df, 4)) == 3
+
+
+def test_missing_volume_is_null_not_zero():
+    """A zero column reads as 'nobody traded', which a missing field does not
+    support."""
+    pd = pytest.importorskip("pandas")
+    df = _ohlc_frame(3)
+    df.loc[df.index[-1], "volume"] = float("nan")
+    assert dr._series_for_chart(df, 1)[0]["volume"] is None
+
+
+# --- the window ---
+def test_the_window_reaches_back_past_the_bands_oldest_touch():
+    """A band whose oldest defining swing is 200 bars back was drawn on a
+    180-bar chart, so it appeared to rest on nothing."""
+    assert dr.series_window({"oldest_touch_bars": 200}) == 215
+
+
+def test_the_window_never_drops_below_the_legibility_floor():
+    assert dr.series_window({"oldest_touch_bars": 3}) == dr.SERIES_BARS_MIN
+
+
+def test_the_window_never_exceeds_one_trading_year():
+    assert dr.series_window({"oldest_touch_bars": 900}) == dr.SERIES_BARS_MAX
+
+
+def test_the_window_matches_the_chart_maps_rule():
+    """The Setup tab and the /chart-maps tiles must frame the same band the
+    same way, or the two surfaces disagree about the same stock."""
+    from chart_maps import board
+    for oldest in (0, 50, 120, 200, 300):
+        assert dr.series_window({"oldest_touch_bars": oldest}) == \
+            board._zone_window({"oldest_touch_bars": oldest})
+
+
+# --- negatives ---
+def test_a_zone_without_the_field_falls_back_to_the_default():
+    """Older cached payloads have no oldest_touch_bars."""
+    assert dr.series_window({}) == dr.SERIES_BARS_DEFAULT
+    assert dr.series_window(None) == dr.SERIES_BARS_DEFAULT
+    assert dr.series_window({"oldest_touch_bars": None}) == dr.SERIES_BARS_DEFAULT
+    assert dr.series_window({"oldest_touch_bars": "junk"}) == dr.SERIES_BARS_DEFAULT
+
+
+def test_asking_for_more_bars_than_exist_is_not_an_error():
+    out = dr._series_for_chart(_ohlc_frame(20), 250)
+    assert len(out) == 20

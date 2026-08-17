@@ -10911,3 +10911,48 @@ a.tk-link:hover   { color: inherit; }
                border-left: 3px solid var(--negative, #ef4444);
                background: color-mix(in srgb, var(--negative, #ef4444) 7%, transparent);
                border-radius: 4px; }
+
+/* ── Zone chart (lightweight-charts) ─────────────────────────────────────────
+   Ajay 2026-08-16: "I wanna be able to hover on the pricing" + "can you also
+   add volume please". The readout sits ABOVE the canvas rather than floating
+   over it: a tooltip that follows the cursor covers the candles you are trying
+   to read, and on a band chart it lands on the band. */
+.zonechart {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  padding: 0.4rem 0.5rem 0.5rem;
+  background: rgba(148, 163, 184, 0.03);
+}
+.zonechart__canvas {
+  width: 100%;
+  min-height: 260px;
+}
+.zonechart__hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.85rem;
+  align-items: baseline;
+  min-height: 1.35rem;              /* reserve it, so hovering never reflows */
+  font-size: 0.72rem;
+  padding: 0.3rem 0.15rem 0.1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  color: var(--cm-slate, #94a3b8);
+}
+.zonechart__hud-date { font-weight: 600; color: var(--fg, #e2e8f0); }
+.zonechart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.8rem;
+  align-items: center;
+  font-size: 0.66rem;
+  opacity: 0.7;
+  padding: 0.1rem 0.15rem 0;
+}
+.zonechart__legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.zonechart__legend i {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  opacity: 0.5;
+  display: inline-block;
+}

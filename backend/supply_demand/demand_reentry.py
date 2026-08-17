@@ -406,8 +406,39 @@ def _pick_entry_zone(last_price: float, demand_zones: list[dict]) -> Optional[di
     return best
 
 
-def _series_for_chart(df: pd.DataFrame, bars: int = 180) -> list[dict]:
-    """Compact close series the FE draws the bands against."""
+# Chart window bounds, matching chart_maps.board so the Setup tab and the
+# chart-maps tiles frame the same band the same way.
+SERIES_BARS_MIN = 130
+SERIES_BARS_MAX = 252
+SERIES_BARS_PAD = 15
+# Used when no entry band is in play and there is nothing to frame.
+SERIES_BARS_DEFAULT = 180
+
+
+def series_window(zone: Optional[dict]) -> int:
+    """Bars needed to show the swings that DEFINE this band. PURE.
+
+    Zones are computed over 252 bars (``price_zones.LOOKBACK_BARS``) while this
+    series was hardcoded to 180, so any band whose oldest defining touch sat
+    between 181 and 252 bars back was drawn with its own evidence off the left
+    edge — the band appeared to rest on nothing. Same rule as
+    ``chart_maps.board._zone_window``.
+    """
+    oldest = (zone or {}).get("oldest_touch_bars")
+    try:
+        oldest = int(oldest)
+    except (TypeError, ValueError):
+        return SERIES_BARS_DEFAULT
+    return int(min(SERIES_BARS_MAX, max(SERIES_BARS_MIN, oldest + SERIES_BARS_PAD)))
+
+
+def _series_for_chart(df: pd.DataFrame, bars: int = SERIES_BARS_DEFAULT) -> list[dict]:
+    """OHLCV series the FE draws the bands against.
+
+    Ajay 2026-08-16: *"can you also add volume please"*, on the Setup-tab zone
+    chart. `close` is kept alongside o/h/l/v so nothing that already reads this
+    payload has to change.
+    """
     tail = df.iloc[-bars:]
     out = []
     for idx, row in tail.iterrows():
@@ -416,7 +447,31 @@ def _series_for_chart(df: pd.DataFrame, bars: int = 180) -> list[dict]:
             ds = pd.Timestamp(d).strftime("%Y-%m-%d")
         except Exception:
             ds = str(d)[:10]
-        out.append({"date": ds, "close": round(float(row["close"]), 2)})
+
+        def _f(key):
+            """float(row[key]) or None — NaN counts as missing."""
+            try:
+                v = float(row[key])
+            except (KeyError, TypeError, ValueError):
+                return None
+            return v if v == v else None
+
+        close = _f("close")
+        if close is None:
+            continue                      # a bar with no close is not a bar
+        vol = _f("volume")
+        out.append({
+            "date": ds,
+            # A missing o/h/l degenerates to a doji at the close rather than
+            # dropping the bar — a hole in the series would shift every bar
+            # after it and silently mis-place the bands.
+            "open": round(_f("open") or close, 2),
+            "high": round(_f("high") or close, 2),
+            "low": round(_f("low") or close, 2),
+            "close": round(close, 2),
+            # Volume is a count, not a price — never rounded to 2dp.
+            "volume": None if vol is None else int(vol),
+        })
     return out
 
 
@@ -436,7 +491,11 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
         return None
 
     if with_series:
-        rec["series"] = _series_for_chart(df)
+        # Frame the window around the band being traded, so the swings that
+        # DEFINE it are on screen. Falls back to the entry zone, then the
+        # nearest support, then the default.
+        rec["series"] = _series_for_chart(
+            df, series_window(rec.get("entry_zone") or rec.get("nearest_support")))
         # Detail view only: today's off-exchange prints, so the zone chart can
         # mark WHERE big size changed hands relative to the bands. Ajay
         # 2026-08-13: "Add the darkpool and order block details in to the
