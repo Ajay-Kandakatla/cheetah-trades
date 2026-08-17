@@ -669,3 +669,18 @@
 # Weekdays 17:10 CT, after the 16:55/16:57 demand warms have finished so the
 # price cache is already hot.
 10     17    *    *    1-5  curl -sS -m 300 -o /dev/null -w 'rotation warm: HTTP %{http_code} in %{time_total}s\n' -H 'X-User-Email: cron@internal' 'http://api:8000/rotation?start=2026-06-01&refresh=true'
+
+# ── Symbol liveness — has anything stopped printing bars? ────────────────────
+# Ajay 2026-08-16: "look at this issue with SATS stocks". The app said SATS was
+# delisted while it traded at $91.89 (EchoStar renamed to ECHO). Fixing that
+# turned up the real gap: Block renamed SQ to XYZ in January 2025 and NOTHING
+# NOTICED FOR 576 DAYS.
+#
+# Every other check asks how old a cache FILE is, and SQ's price document
+# refreshed perfectly every day — with the same dead bars in it. This asks the
+# question that was missing: when did each symbol's newest bar actually print?
+#
+# Cache reads only, no fetching, so it costs nothing. WARN only — it never
+# pushes (the phone keep-set is three kinds and this is not one of them).
+# Weekly, Saturdays 07:40, when nothing else is running.
+40     7     *    *    6    /usr/local/bin/python -m observability.symbol_liveness

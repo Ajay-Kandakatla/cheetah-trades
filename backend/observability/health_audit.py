@@ -276,11 +276,43 @@ def check_universe_counts():
                      f"universe count check failed: {exc}", None)
 
 
+def check_symbol_liveness():
+    """Has any symbol we cover stopped printing bars?
+
+    Ajay 2026-08-16: "look at this issue with SATS stocks" — the page said SATS
+    was delisted while it traded at $91.89 (EchoStar had renamed to ECHO).
+
+    check_price_cache above asks how OLD the cache is, and it was right every
+    day: SQ's price document refreshed on schedule for 576 days with the same
+    dead bars inside it. This asks when each symbol's newest bar actually
+    printed, which is the only question that catches a rename.
+
+    WARN, never CRITICAL. A dead ticker narrows the scan; it does not place a
+    trade, and the push keep-set is deliberately three kinds.
+    """
+    try:
+        from . import symbol_liveness as sl
+        res = sl.scan()
+        n = res.get("stopped") or 0
+        if res.get("renames_regressed"):
+            return _fail("symbol_liveness", "data", WARN, res.get("detail", ""), n)
+        if not res.get("ok"):
+            names = ", ".join(r["symbol"] for r in (res.get("symbols") or [])[:8])
+            return _fail("symbol_liveness", "data", WARN,
+                         f"{n} symbols have stopped printing bars: {names}"
+                         f"{' …' if n > 8 else ''}", n)
+        return _ok("symbol_liveness", "data",
+                   f"all {res.get('fresh', 0)} symbols printing bars", 0)
+    except Exception as exc:
+        return _fail("symbol_liveness", "data", WARN,
+                     f"symbol liveness check failed: {exc}", None)
+
+
 CHECKS = [
     check_mongo, check_scan_fresh, check_scan_nonempty, check_price_cache,
     check_market_gauge, check_macro_risk, check_pullback_artifact,
     check_log_errors, check_disk, check_13f_quarter_current,
-    check_universe_counts,
+    check_universe_counts, check_symbol_liveness,
 ]
 
 

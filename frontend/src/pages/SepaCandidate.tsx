@@ -970,7 +970,8 @@ export function SepaCandidatePage() {
             {tab === 'chart' && (
               <section>
                 {data?.stale_data && (
-                  <DelistedBanner symbol={symbol} reason={data?.stale_reason} />
+                  <DelistedBanner symbol={symbol} reason={data?.stale_reason}
+                                  renamedTo={data?.renamed_to} />
                 )}
                 <div className="sepa-tab-help" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <strong>Chart</strong>
@@ -997,7 +998,9 @@ export function SepaCandidatePage() {
                 <div className="sepa-candidate-page__chart">
                   {data?.stale_data ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 220, padding: '1rem', textAlign: 'center', color: 'var(--cm-slate)' }}>
-                      No live chart for {symbol} — it has no recent price data (likely delisted or acquired).
+                      {data?.renamed_to
+                        ? `${symbol} trades as ${data.renamed_to} now — open ${data.renamed_to} for its live chart.`
+                        : `No live chart for ${symbol} — our provider has returned no bars${data?.stale_last_bar ? ` since ${data.stale_last_bar}` : ''}.`}
                     </div>
                   ) : chartSource === 'native' ? (
                     <Suspense fallback={null}><LiveCandlesChart symbol={symbol} interval={chartInterval} /></Suspense>

@@ -1995,12 +1995,34 @@ async def sepa_candidate_detail(symbol: str):
     # instead of broken charts (Ajay 2026-06-23). Uses the same is_stale guard
     # the scan uses; prices are already cached (cron / the fallback above).
     stale_data = False
+    last_bar = None
     try:
         from sepa import prices as _prices
         _df = await asyncio.to_thread(_prices.load_prices, sym)
         stale_data = bool(_prices.is_stale(_df))
+        if _df is not None and len(_df):
+            last_bar = str(_df.index[-1])[:10]
     except Exception as exc:                     # never let detection 500 the page
         log.debug("stale-data check failed for %s: %s", sym, exc)
+
+    # Ajay 2026-08-16: this said "SATS looks delisted or acquired" while SATS
+    # traded at $91.89 — EchoStar had renamed to ECHO and our series simply
+    # stopped. Say what we actually observed (data stops on a date) and list
+    # the possible causes; do not assert a corporate action we have not
+    # verified. See sepa/symbols.py.
+    from sepa import symbols as _symbols
+    renamed = _symbols.rename_of(sym)
+    if not stale_data:
+        stale_reason = None
+    elif renamed:
+        stale_reason = (f"{sym} now trades as {renamed['to']} (since "
+                        f"{renamed['effective']}). Charts follow the new symbol.")
+    else:
+        since = f" since {last_bar}" if last_bar else ""
+        stale_reason = (f"Our price provider has returned no bars{since}. That "
+                        "usually means the symbol was delisted, acquired or "
+                        "renamed — but it can also be a data gap, so check "
+                        "before acting on it.")
 
     payload = _clean_json_floats({
         "symbol": sym,
@@ -2011,8 +2033,9 @@ async def sepa_candidate_detail(symbol: str):
         "ipo_age": ipo,
         "smart_money": smart_money,
         "stale_data": stale_data,
-        "stale_reason": ("No recent price data — this stock looks delisted or "
-                         "acquired, so live charts won't load." if stale_data else None),
+        "stale_last_bar": last_bar,
+        "renamed_to": (renamed or {}).get("to"),
+        "stale_reason": stale_reason,
     })
     return JSONResponse(payload)
 

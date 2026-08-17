@@ -22,6 +22,8 @@ from typing import Optional
 
 import pandas as pd
 
+from . import symbols
+
 log = logging.getLogger("sepa.prices")
 
 
@@ -154,10 +156,13 @@ def _parquet_put(symbol: str, df: pd.DataFrame) -> None:
 # ---------------------------------------------------------------------------
 def _fetch_yfinance(symbol: str, period: str) -> Optional[pd.DataFrame]:
     import yfinance as yf
+    # Yahoo spells class shares BRK-B. See sepa/symbols.py — a wrong spelling
+    # returns "no data", which downstream is indistinguishable from "delisted".
+    tick = symbols.for_yahoo(symbol)
     try:
-        df = yf.Ticker(symbol).history(period=period, auto_adjust=False)
+        df = yf.Ticker(tick).history(period=period, auto_adjust=False)
     except Exception as exc:
-        log.warning("yfinance fetch failed for %s: %s", symbol, exc)
+        log.warning("yfinance fetch failed for %s: %s", tick, exc)
         return None
     if df is None or df.empty:
         return None
@@ -174,8 +179,12 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
     days = PERIOD_DAYS.get(period, 730)
     to_date = pd.Timestamp.utcnow().normalize()
     from_date = to_date - pd.Timedelta(days=days)
+    # Massive spells class shares BRK.B and returns NOTHING for BRK-B, which
+    # silently pushed every class share onto the yfinance fallback. See
+    # sepa/symbols.py for the measured evidence.
+    tick = symbols.for_massive(symbol)
     url = (
-        f"https://api.massive.com/v2/aggs/ticker/{symbol.upper()}"
+        f"https://api.massive.com/v2/aggs/ticker/{tick}"
         f"/range/1/day/{from_date.date()}/{to_date.date()}"
     )
     try:
@@ -185,7 +194,7 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
             timeout=15,
         )
         if r.status_code == 429:
-            log.warning("massive rate-limited on %s", symbol)
+            log.warning("massive rate-limited on %s", tick)
             time.sleep(2)
             r = requests.get(
                 url,
@@ -193,7 +202,7 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
                 timeout=15,
             )
         if r.status_code != 200:
-            log.warning("massive %s -> HTTP %s: %s", symbol, r.status_code, r.text[:200])
+            log.warning("massive %s -> HTTP %s: %s", tick, r.status_code, r.text[:200])
             return None
         results = (r.json() or {}).get("results") or []
     except Exception as exc:
@@ -228,9 +237,13 @@ def last_trade_price(symbol: str) -> Optional[float]:
     import requests
     key = stocks_key()
     if key:
+        # Resolve first: asking for the pre-rename symbol returns the last trade
+        # from before the rename, which is a real price from a real session and
+        # therefore passes every sanity check while being weeks out of date.
+        tick = symbols.for_massive(symbols.resolve(symbol))
         try:
             r = requests.get(
-                f"https://api.massive.com/v2/last/trade/{symbol.upper()}",
+                f"https://api.massive.com/v2/last/trade/{tick}",
                 params={"apiKey": key},
                 timeout=5,
             )
@@ -249,7 +262,7 @@ def last_trade_price(symbol: str) -> Optional[float]:
     return None
 
 
-def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
+def _fetch_one(symbol: str, period: str) -> Optional[pd.DataFrame]:
     provider = os.getenv("PRICE_PROVIDER", "massive").lower()
     if provider == "massive":
         df = _fetch_massive(symbol, period)
@@ -258,6 +271,78 @@ def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
         log.info("massive returned nothing for %s — falling back to yfinance", symbol)
         return _fetch_yfinance(symbol, period)
     return _fetch_yfinance(symbol, period)
+
+
+# A rename splice is REFUSED when the boundary price jumps by more than this
+# ratio. A rename is a relabelling — the price does not move because of it. A
+# large jump means something else happened on that date (a reverse split, a
+# spin-off, or a wrong entry in RENAMES), and inventing a continuous series
+# across it would fabricate a chart Ajay sizes positions against. Refusing costs
+# a short history; splicing wrongly costs a fake one.
+SPLICE_MAX_JUMP_RATIO = 1.35
+# Boundary sessions must be adjacent. More than this many calendar days between
+# the last old bar and the first new one means the symbol was dark in between,
+# which is not a clean relabelling.
+SPLICE_MAX_GAP_DAYS = 10
+
+
+def splice_history(old_df: Optional[pd.DataFrame], new_df: Optional[pd.DataFrame],
+                   label: str = "") -> Optional[pd.DataFrame]:
+    """Old bars before the rename + new bars after it, as one series. PURE.
+
+    Massive only carries ~37 bars under ECHO, which is far too short for a
+    200-day average — the continuity is the whole point, not a nicety. Returns
+    ``new_df`` unchanged whenever the join would not be honest.
+    """
+    if new_df is None or len(new_df) == 0:
+        return old_df
+    if old_df is None or len(old_df) == 0:
+        return new_df
+
+    first_new = new_df.index[0]
+    head = old_df[old_df.index < first_new]
+    if len(head) == 0:
+        return new_df
+
+    gap_days = (pd.Timestamp(first_new) - pd.Timestamp(head.index[-1])).days
+    if gap_days > SPLICE_MAX_GAP_DAYS:
+        log.warning("splice %s: %d-day hole at the boundary — not splicing",
+                    label, gap_days)
+        return new_df
+
+    prev_close = float(head["close"].iloc[-1])
+    next_open = float(new_df["open"].iloc[0])
+    if prev_close > 0 and next_open > 0:
+        ratio = max(next_open / prev_close, prev_close / next_open)
+        if ratio > SPLICE_MAX_JUMP_RATIO:
+            log.warning("splice %s: %.2fx price jump at the boundary "
+                        "(%.2f -> %.2f) — not splicing", label, ratio,
+                        prev_close, next_open)
+            return new_df
+
+    out = pd.concat([head, new_df])
+    return out[~out.index.duplicated(keep="last")].sort_index()
+
+
+def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
+    """Fetch under the symbol that trades today, splicing in any former name.
+
+    EchoStar renamed SATS -> ECHO on 2026-06-24. Asking either provider for
+    SATS returns a series that simply stops that day, which ``is_stale`` reads —
+    correctly, on the data it was given — as "this stopped trading", and the UI
+    then tells Ajay the company was acquired. It was trading at $91.89.
+    """
+    live = symbols.resolve(symbol)
+    df = _fetch_one(live, period)
+
+    olds = symbols.former_names(live)
+    if not olds:
+        return df
+
+    for old in olds:
+        prior = _fetch_one(old, period)
+        df = splice_history(prior, df, label=f"{old}->{live}")
+    return df
 
 
 # ---------------------------------------------------------------------------
@@ -407,12 +492,17 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
 _SNAP_CHUNK = 250  # Massive allows up to 250 tickers per snapshot call
 
 
-def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
+def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
     """Fetch today's OHLCV snapshot for up to N tickers in one Massive call.
 
     Massive endpoint: GET /v2/snapshot/locale/us/markets/stocks/tickers
     Returns {SYMBOL: {open, high, low, close, volume, vwap, date, change_pct}}
     Missing or errored symbols are simply absent from the dict.
+
+    Keys come back in OUR spelling, not Massive's. The request goes out as
+    BRK.B / ECHO and the response is mapped back to BRK-B / SATS, so a caller
+    that asked for a symbol always finds that symbol in the result — a live
+    quote silently filed under a name nobody asked for is the same as no quote.
     """
     key = stocks_key()
     if not key:
@@ -422,13 +512,21 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
     except ImportError:
         return {}
 
+    # {massive spelling -> what the caller asked for}
+    asked: dict[str, str] = {}
+    for s in syms:
+        canon = (s or "").strip().upper()
+        if canon:
+            asked.setdefault(symbols.for_massive(symbols.resolve(canon)), canon)
+    wire = list(asked)
+
     result: dict[str, dict] = {}
-    chunks = [symbols[i : i + _SNAP_CHUNK] for i in range(0, len(symbols), _SNAP_CHUNK)]
+    chunks = [wire[i : i + _SNAP_CHUNK] for i in range(0, len(wire), _SNAP_CHUNK)]
     for chunk in chunks:
         try:
             r = _req.get(
                 "https://api.massive.com/v2/snapshot/locale/us/markets/stocks/tickers",
-                params={"tickers": ",".join(s.upper() for s in chunk), "apiKey": key},
+                params={"tickers": ",".join(chunk), "apiKey": key},
                 timeout=15,
             )
             if r.status_code != 200:
@@ -436,6 +534,7 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
                 continue
             for item in (r.json() or {}).get("tickers") or []:
                 sym = (item.get("ticker") or "").upper()
+                sym = asked.get(sym, sym)
                 if not sym:
                     continue
                 day = item.get("day") or {}
@@ -486,11 +585,11 @@ def bulk_snapshot(symbols: list[str]) -> dict[str, dict]:
         except Exception as exc:
             log.warning("bulk_snapshot: chunk failed: %s", _scrub_key(exc))
 
-    log.info("bulk_snapshot: fetched %d/%d symbols", len(result), len(symbols))
+    log.info("bulk_snapshot: fetched %d/%d symbols", len(result), len(wire))
     return result
 
 
-def patch_latest_closes(symbols: list[str]) -> dict:
+def patch_latest_closes(syms: list[str]) -> dict:
     """Append today's close to every already-cached symbol using bulk snapshot.
 
     Instead of re-downloading 2 years of history when the 20h TTL expires,
@@ -503,7 +602,7 @@ def patch_latest_closes(symbols: list[str]) -> dict:
 
     Returns stats dict: {patched, already_current, no_cache, total_snapshot}
     """
-    snaps = bulk_snapshot(symbols)
+    snaps = bulk_snapshot(syms)
     if not snaps:
         return {"patched": 0, "already_current": 0, "no_cache": 0, "total_snapshot": 0}
 
@@ -729,7 +828,7 @@ def purge_weekend_bars() -> dict:
     return {"symbols_scanned": scanned, "symbols_fixed": fixed, "bars_removed": removed}
 
 
-def bulk_live_prices(symbols: list[str]) -> dict[str, dict]:
+def bulk_live_prices(syms: list[str]) -> dict[str, dict]:
     """Real-time last prices for the given symbols.
 
     Returns {SYMBOL: {price, change_pct, volume, last_trade_price,
@@ -741,7 +840,7 @@ def bulk_live_prices(symbols: list[str]) -> dict[str, dict]:
     and after-hours prints with a session badge. Display-only — SEPA
     scoring still uses the regular-session close.
     """
-    snaps = bulk_snapshot(symbols)
+    snaps = bulk_snapshot(syms)
     return {
         sym: {
             "price":            bar.get("close"),
