@@ -125,6 +125,31 @@ VENUE_QUOTE_PAGES = 4
 # anything further means price has broken below the band, not approached it.
 ENTRY_ABOVE_TOL_PCT = 1.5
 
+# How far BELOW price a demand band may sit and still be an ENTRY rather than
+# just distant support.
+#
+# Ajay 2026-08-16, looking at the ELVN Setup tab: "For the SEPA list why are the
+# zones all messed up?" ELVN was trading at $58.82 and the page drew
+# BUY $24.89-$25.29 with a STOP at $24.52 — a buy zone 57% below spot. The plan
+# was internally inconsistent: entry_low/high came from the band while
+# entry_ref, risk_pct and rr were all computed from SPOT, giving risk_pct 58.3%
+# and rr 0.07 against a target ($61.23) taken from resistance just above spot.
+#
+# The tolerance is the house max stop (`trading.risk_rules.ABS_MAX_STOP_PCT`,
+# the p.299/p.301 cap) rather than a new invented number: if getting to the band
+# costs more than the most you would ever risk on a trade, it is not an entry
+# you can place today. It is support, and the band still draws as DEMAND —
+# only the BUY/STOP lines go away.
+#
+# This cannot affect the Back in Demand board: `is_reentry` requires price to be
+# INSIDE the band, which is distance zero.
+def _entry_below_tol_pct() -> float:
+    try:
+        from trading.risk_rules import ABS_MAX_STOP_PCT
+        return float(ABS_MAX_STOP_PCT)
+    except Exception:
+        return 10.0
+
 # Relative volume (today / 50-day average) bands.
 RVOL_SURGE  = 2.0
 RVOL_ACTIVE = 1.2
@@ -363,8 +388,22 @@ def _pick_entry_zone(last_price: float, demand_zones: list[dict]) -> Optional[di
     if not eligible:
         return None
     # 0 = at/below price (buyable on a pullback), 1 = the near-miss above it.
-    return min(eligible,
+    best = min(eligible,
                key=lambda z: (distance(z), 0 if (z.get("hi") or 0) <= last_price else 1))
+
+    # Price extended far above even the nearest band: support, not an entry.
+    #
+    # Measured against the prospective STOP, not the band top, so the gate uses
+    # the same number the plan would carry. SYRE showed why: at $103.63 with a
+    # band at $90.75-93.99 the band top is 9.3% away (inside a 10% tolerance)
+    # while the stop under the band floor is 13.7% away — the plan would have
+    # survived a band-distance gate carrying a risk the house cap forbids.
+    if (best.get("hi") or 0) < last_price:
+        lo = best.get("lo") or 0.0
+        stop = lo * (1.0 - STOP_BUFFER_PCT / 100.0)
+        if last_price > 0 and (last_price - stop) / last_price * 100.0 > _entry_below_tol_pct():
+            return None
+    return best
 
 
 def _series_for_chart(df: pd.DataFrame, bars: int = 180) -> list[dict]:

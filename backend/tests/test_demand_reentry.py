@@ -122,9 +122,18 @@ def test_entry_zone_prefers_the_band_price_is_inside():
 
 
 def test_entry_zone_falls_back_to_the_nearest_band_below():
-    """Above every band → the plan still points at where you'd want to buy."""
-    zones = [{"lo": 80, "hi": 85, "strength": 50}, {"lo": 60, "hi": 65, "strength": 99}]
-    assert dr._pick_entry_zone(103, zones)["hi"] == 85
+    """Above every band → the NEAREST one wins, not the strongest.
+
+    INTENT CHANGED 2026-08-16. This used to assert that a price above every band
+    still returned one, on the reasoning that "the plan still points at where
+    you'd want to buy". Ajay found what that produces in practice: ELVN at
+    $58.82 drawing BUY $24.89-$25.29. A band you would have to fall 20%+ to
+    reach is support, not an entry, so selection still prefers the nearest band
+    over the stronger far one — but the result is only returned if the plan it
+    implies is inside the house max stop. See the ELVN tests below.
+    """
+    zones = [{"lo": 95, "hi": 99, "strength": 50}, {"lo": 60, "hi": 65, "strength": 99}]
+    assert dr._pick_entry_zone(103, zones)["hi"] == 99, "nearest must beat strongest"
 
 
 def test_entry_zone_is_none_when_there_is_no_demand_below():
@@ -762,3 +771,63 @@ def test_broad_universe_has_no_duplicates(monkeypatch):
     broad = U.fetch_broad()
     assert len(broad) == len(set(broad))
     assert broad.count("NVDA") == 1
+
+
+# ── entry zone must be an ENTRY, not distant support ──────────────────────────
+# Ajay 2026-08-16, on the ELVN Setup tab: "For the SEPA list why are the zones
+# all messed up?"
+#
+# ELVN traded at $58.82 and the page drew BUY $24.89-$25.29, STOP $24.52 — a buy
+# zone 57% below spot. The plan mixed two reference prices: entry_low/high from
+# the band, but entry_ref/risk_pct/rr from SPOT, giving risk_pct 58.3% and
+# rr 0.07 against a target lifted from resistance just above spot.
+def test_a_band_far_below_price_is_support_not_an_entry():
+    """The ELVN case, to the cent."""
+    assert dr._pick_entry_zone(58.82, [{"lo": 24.89, "hi": 25.29, "strength": 45}]) is None
+
+
+def test_the_gate_is_measured_to_the_stop_not_the_band_top():
+    """SYRE showed why. At $103.63 with a band at $90.75-93.99 the band TOP is
+    9.3% away — inside a 10% tolerance — while the stop under the band FLOOR is
+    13.7% away. A band-distance gate would have passed a plan carrying a risk
+    the house cap forbids."""
+    band = {"lo": 90.75, "hi": 93.99, "strength": 60}
+    assert (103.63 - band["hi"]) / 103.63 * 100 < 10.0      # band top looks fine
+    assert dr._pick_entry_zone(103.63, [band]) is None       # the stop does not
+
+
+def test_a_band_within_the_stop_cap_is_still_an_entry():
+    """Negative: the guard must not eat legitimate pullback entries. PNC at
+    $256.97 against a band at $242.29-250.93 is a 7.1% plan — inside the cap."""
+    band = {"lo": 242.29, "hi": 250.93, "strength": 60}
+    assert dr._pick_entry_zone(256.97, [band]) == band
+
+
+def test_price_inside_the_band_is_never_gated():
+    """The Back in Demand board requires price INSIDE the band, so this guard
+    can never remove a row from it."""
+    band = {"lo": 68.98, "hi": 71.56, "strength": 65}
+    assert dr._pick_entry_zone(69.62, [band]) == band
+
+
+def test_the_near_miss_above_price_still_works():
+    """Regression on the VRT four-cent case the ABOVE tolerance exists for —
+    the new BELOW tolerance must not disturb it."""
+    band = {"lo": 287.11, "hi": 293.88, "strength": 70}
+    assert dr._pick_entry_zone(287.07, [band]) == band
+
+
+def test_the_tolerance_is_the_house_max_stop_not_a_new_number():
+    """Anchored to the p.299/p.301 cap rather than an invented constant, so it
+    moves with the risk rules instead of drifting from them."""
+    from trading.risk_rules import ABS_MAX_STOP_PCT
+    assert dr._entry_below_tol_pct() == float(ABS_MAX_STOP_PCT)
+
+
+def test_the_bands_themselves_are_untouched_by_the_gate():
+    """Only the BUY/STOP lines go away. The demand bands are read from
+    `demand_zones`, which the entry picker never filters."""
+    import inspect
+    src = inspect.getsource(dr._pick_entry_zone)
+    assert "demand_zones" in src
+    assert "return None" in src
