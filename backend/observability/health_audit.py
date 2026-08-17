@@ -33,7 +33,7 @@ try:
 except Exception:
     _ET = None
 
-from .logsetup import LOG_DIR, LOG_PATH, install_file_handler
+from .logsetup import LOG_DIR, LOG_PATH, install_file_handler, install_redaction
 
 log = logging.getLogger("observability.health_audit")
 
@@ -429,6 +429,7 @@ def _maybe_alert(audit: dict, crit: list, digest: bool) -> None:
 def run_audit(alert: bool = True, digest: bool = False) -> dict:
     """Run the full check battery (the loop), aggregate, log, persist, alert."""
     install_file_handler()
+    install_redaction()
     t0 = time.time()
     results: list = []
     for chk in CHECKS:

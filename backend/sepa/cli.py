@@ -21,7 +21,9 @@ log = logging.getLogger("sepa.cli")
 # Persist cron logs to the shared rotating file so silent failures leave a trail.
 try:
     from observability.logsetup import install_file_handler as _install_file_handler
+    from observability.logsetup import install_redaction as _install_redaction
     _install_file_handler()
+    _install_redaction()
 except Exception:
     pass
 

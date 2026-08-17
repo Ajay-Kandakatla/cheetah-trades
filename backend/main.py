@@ -89,7 +89,11 @@ TICK_WINDOW = int(os.getenv("TICK_WINDOW", "64"))  # ticks kept per symbol for i
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 try:
     from observability.logsetup import install_file_handler as _install_file_handler
+    from observability.logsetup import install_redaction as _install_redaction
     _install_file_handler()
+    # httpx logs every request URL at INFO and Finnhub takes its key as a query
+    # param — that put the key in cheetah.log 493 times before this landed.
+    _install_redaction()
 except Exception:
     pass
 log = logging.getLogger("market_stream")
@@ -284,9 +288,10 @@ async def _rest_fetch_once(sym: str) -> None:
     if _rest_client is None:
         _rest_client = httpx.AsyncClient(timeout=10)
     try:
+        from sepa import symbols as _sym
         resp = await _rest_client.get(
             "https://finnhub.io/api/v1/quote",
-            params={"symbol": sym, "token": FINNHUB_API_KEY},
+            params={"symbol": _sym.resolve(sym), "token": FINNHUB_API_KEY},
         )
         if resp.status_code == 200:
             d = resp.json()
@@ -391,10 +396,11 @@ async def finnhub_rest_poller() -> None:
             # Only REST-poll a bounded slice (WS streams live prices for the
             # rest); throttle each call + back off hard on a 429 so we stay
             # under Finnhub's free-tier rate limit instead of flooding it.
+            from sepa import symbols as _fh_sym
             for sym in list(tracked_symbols)[:FINNHUB_REST_MAX_SYMBOLS]:
                 resp = await client.get(
                     "https://finnhub.io/api/v1/quote",
-                    params={"symbol": sym, "token": FINNHUB_API_KEY},
+                    params={"symbol": _fh_sym.resolve(sym), "token": FINNHUB_API_KEY},
                 )
                 if resp.status_code == 429:
                     log.warning("Finnhub REST 429 — backing off %ss", FINNHUB_REST_BACKOFF_SEC)
@@ -1740,9 +1746,13 @@ async def _company_profile(sym: str) -> dict:
     if _rest_client is None:
         _rest_client = httpx.AsyncClient(timeout=10)
     try:
+        # Finnhub keys profiles by the LIVE ticker: profile2?symbol=SQ returns
+        # {} while XYZ returns "Block Inc". The cache stays keyed by what the
+        # caller asked for. See sepa/symbols.py.
+        from sepa import symbols as _sym
         r = await _rest_client.get(
             "https://finnhub.io/api/v1/stock/profile2",
-            params={"symbol": sym, "token": FINNHUB_API_KEY},
+            params={"symbol": _sym.resolve(sym), "token": FINNHUB_API_KEY},
         )
         if r.status_code == 200:
             d = r.json() or {}
