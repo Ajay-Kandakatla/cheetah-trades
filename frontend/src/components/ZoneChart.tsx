@@ -43,6 +43,11 @@ export function ZoneChart({ data, height = 340 }:
   const chartRef = useRef<IChartApi | null>(null);
   const bandsRef = useRef<ZoneBandsPrimitive | null>(null);
   const [hover, setHover] = useState<HoverRow | null>(null);
+  /* Ajay 2026-08-17: "Can you make these charts to be full screened or
+   * something, The zones are hard to figure out properly". A 340px pane over a
+   * year of bars puts several bands within a few pixels of each other, so the
+   * fix is vertical room, not a redraw. */
+  const [full, setFull] = useState(false);
 
   const series = (data.series || []) as SeriesBar[];
   const candles = toCandles(series);
@@ -54,7 +59,23 @@ export function ZoneChart({ data, height = 340 }:
 
   // Re-keyed on the payload's own identity so a refresh rebuilds cleanly rather
   // than mutating a chart mid-zoom.
-  const key = `${data.symbol}:${candles.length}:${candles[candles.length - 1]?.time ?? ''}`;
+  //`full` is part of the key: the overlay is a different DOM box, so the chart
+  // is rebuilt into it rather than resized across a remount it never saw.
+  const key = `${data.symbol}:${candles.length}:${candles[candles.length - 1]?.time ?? ''}:${full ? 'F' : 'n'}`;
+
+  // Escape closes, and the page behind is scroll-locked so a stray wheel does
+  // not move the article under the overlay while the chart eats the gesture.
+  useEffect(() => {
+    if (!full) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [full]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -141,15 +162,27 @@ export function ZoneChart({ data, height = 340 }:
       bandsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, height]);
+  }, [key, height, full]);
 
   if (candles.length < 2) {
     return <div className="sepa-tab-help" style={{ opacity: 0.7 }}>Not enough history to draw zones.</div>;
   }
 
-  return (
-    <div className="zonechart">
-      <div ref={wrapRef} className="zonechart__canvas" style={{ height }} />
+  const body = (
+    <div className={`zonechart${full ? ' zonechart--full' : ''}`}>
+      <div className="zonechart__bar">
+        <span className="zonechart__title mono">
+          {data.symbol}{data.name ? ` · ${data.name}` : ''}
+        </span>
+        <button type="button" className="zonechart__expand"
+                onClick={() => setFull((v) => !v)}
+                aria-label={full ? 'Exit full screen' : 'Expand chart to full screen'}
+                title={full ? 'Exit full screen (Esc)' : 'Expand — more room between the bands'}>
+          {full ? '✕ Close' : '⤢ Expand'}
+        </button>
+      </div>
+      <div ref={wrapRef} className="zonechart__canvas"
+           style={{ height: full ? undefined : height }} />
       <div className="zonechart__hud mono" aria-live="off">
         {hover ? (
           <>
@@ -174,7 +207,21 @@ export function ZoneChart({ data, height = 340 }:
         <span><i style={{ background: NEUTRAL }} /> now</span>
         {!ohlc && <span style={{ opacity: 0.6 }}>· line only (older cached payload)</span>}
         {!withVol && <span style={{ opacity: 0.6 }}>· no volume in this payload</span>}
+        {full && <span style={{ opacity: 0.6 }}>· Esc to close</span>}
       </div>
+    </div>
+  );
+
+  // Rendered in place normally; as a fixed overlay when expanded. Deliberately
+  // NOT the browser Fullscreen API: that hides the HUD's own styling context on
+  // some platforms and cannot be entered without a user gesture chain, and an
+  // overlay keeps the hover readout and legend where they already are.
+  if (!full) return body;
+  return (
+    <div className="zonechart__backdrop" role="dialog" aria-modal="true"
+         aria-label={`${data.symbol} supply and demand zones, full screen`}
+         onClick={(e) => { if (e.target === e.currentTarget) setFull(false); }}>
+      {body}
     </div>
   );
 }
