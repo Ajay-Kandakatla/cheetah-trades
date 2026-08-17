@@ -8,8 +8,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  THIN_GROUP_N, WINDOWS, boardQuery, etfGapLine, isThinGroup, pct, pp,
-  riskStance, tone, turned, type RotRow,
+  THIN_GROUP_N, WINDOWS, backtestVerdict, boardQuery, etfGapLine, isEdgeSayable,
+  isThinGroup, pct, pp, riskStance, tone, turned, type RotRow,
 } from './rotation';
 
 const row = (o: Partial<RotRow>): RotRow => ({
@@ -171,5 +171,69 @@ describe('WINDOWS', () => {
   });
   it('every preset is a valid ISO date', () => {
     WINDOWS.forEach((w) => expect(w.key).toMatch(/^\d{4}-\d{2}-\d{2}$/));
+  });
+});
+
+describe('backtestVerdict — the evidence beside the table', () => {
+  // Real numbers from the 2026-08-16 run: 116 monthly rebalances back to 2016.
+  const REAL = {
+    span: { first: '2016-11-21', last: '2026-07-06', n_rebalances: 116 },
+    params: { lookback: 63, rebalance: 21, top_k: 3 },
+    summary: {
+      n: 116, strategy_total_pct: 158.22, rsp_total_pct: 155.42,
+      all_sectors_total_pct: 163.23, mean_excess_per_period_pct: -0.013,
+      excess_ci95: [-0.549, 0.522] as [number, number],
+      beat_rsp_pct: 51.7, avg_turnover: 0.43,
+    },
+  };
+
+  it('says the ranking lost to doing nothing', () => {
+    const v = backtestVerdict(REAL)!;
+    expect(v).toContain('116 monthly rebalances');
+    expect(v).toContain('the ranking lost to doing nothing');
+    expect(v).toContain('52% of months');
+  });
+
+  it('says the excess is not distinguishable from zero', () => {
+    expect(backtestVerdict(REAL)).toContain('not distinguishable from zero');
+  });
+
+  it('drops that clause when the interval actually excludes zero', () => {
+    const edge = { ...REAL, summary: { ...REAL.summary, excess_ci95: [0.2, 0.8] as [number, number] } };
+    expect(backtestVerdict(edge)).not.toContain('not distinguishable');
+  });
+
+  it('drops the lost-to-nothing clause when the rule actually wins', () => {
+    const won = { ...REAL, summary: { ...REAL.summary, all_sectors_total_pct: 100 } };
+    expect(backtestVerdict(won)).not.toContain('lost to doing nothing');
+  });
+
+  // --- negatives ---
+  it('renders nothing rather than a half-sentence on missing data', () => {
+    expect(backtestVerdict(null)).toBeNull();
+    expect(backtestVerdict(undefined)).toBeNull();
+    expect(backtestVerdict({ ...REAL, summary: { ...REAL.summary, n: 0 } })).toBeNull();
+    expect(backtestVerdict({ ...REAL, summary: { ...REAL.summary, strategy_total_pct: null } }))
+      .toBeNull();
+  });
+});
+
+describe('isEdgeSayable', () => {
+  const s = (ci: any) => ({ n: 1, strategy_total_pct: 1, rsp_total_pct: 1,
+    all_sectors_total_pct: 1, mean_excess_per_period_pct: 0,
+    excess_ci95: ci, beat_rsp_pct: 50, avg_turnover: 0 });
+
+  it('is false when the interval straddles zero — the real case', () => {
+    expect(isEdgeSayable(s([-0.549, 0.522]))).toBe(false);
+  });
+  it('is true only when the interval clears zero', () => {
+    expect(isEdgeSayable(s([0.2, 0.8]))).toBe(true);
+    expect(isEdgeSayable(s([-0.8, -0.2]))).toBe(true);
+  });
+  it('is false for missing or malformed intervals', () => {
+    expect(isEdgeSayable(s(null))).toBe(false);
+    expect(isEdgeSayable(s([0]))).toBe(false);
+    expect(isEdgeSayable(s([NaN, 1]))).toBe(false);
+    expect(isEdgeSayable(null)).toBe(false);
   });
 });

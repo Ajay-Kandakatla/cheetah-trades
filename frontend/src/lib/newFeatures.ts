@@ -73,6 +73,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'chart-window', label: 'Chart window control (6m / 9m / 1y) + demand-zone charts now reach back to the touches that made the zone', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'themes-power-energy', label: 'New rosters: AI power (IREN, CRWV) + energy, with space/quantum/semis priority', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'chart-maps-themes', label: '⚛ Quantum / nuclear / robotics / AI-semis names now scanned — IONQ, OKLO, SMR, ARM, ALAB, CRDO and 15 more that the S&P indices structurally cannot hold', addedAt: '2026-08-15', route: '/chart-maps' },
+  { id: 'rotation-backtest', label: '🧪 Sector Rotation now shows whether acting on it pays — 116 monthly rebalances back to 2016: buying the top 3 sectors LOST to just holding all 11', addedAt: '2026-08-16', route: '/rotation' },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

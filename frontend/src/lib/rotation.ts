@@ -120,3 +120,53 @@ export const WINDOWS = [
   { key: '2026-01-01', label: 'Year to date' },
   { key: '2026-07-16', label: 'Last month' },
 ];
+
+
+/* ── Does acting on this actually pay? ────────────────────────────────────────
+ * Ajay 2026-08-16: "Yes also back test and add the rotation tracker".
+ *
+ * The answer is no, and it belongs ON the page. A ranked table of sectors reads
+ * as a shopping list unless the evidence sits next to it. */
+
+export type RotBacktest = {
+  span: { first: string | null; last: string | null; n_rebalances: number };
+  params: { lookback: number; rebalance: number; top_k: number };
+  summary: {
+    n: number;
+    strategy_total_pct: number | null;
+    rsp_total_pct: number | null;
+    all_sectors_total_pct: number | null;
+    mean_excess_per_period_pct: number | null;
+    excess_ci95: [number, number] | null;
+    beat_rsp_pct: number | null;
+    avg_turnover: number | null;
+  };
+  by_year?: { year: string; strategy_pct: number | null; rsp_pct: number | null; excess_pct: number }[];
+  error?: string;
+};
+
+/** Does the interval exclude zero? If not, a compounded total that beats the
+ *  benchmark is a sample, not an edge. */
+export function isEdgeSayable(s: RotBacktest['summary'] | null | undefined): boolean {
+  const ci = s?.excess_ci95;
+  if (!ci || ci.length !== 2) return false;
+  const [lo, hi] = ci;
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return false;
+  return lo > 0 || hi < 0;
+}
+
+/** One honest sentence for the page banner. */
+export function backtestVerdict(b: RotBacktest | null | undefined): string | null {
+  const s = b?.summary;
+  if (!s || !s.n) return null;
+  const strat = s.strategy_total_pct;
+  const all = s.all_sectors_total_pct;
+  const beat = s.beat_rsp_pct;
+  if (strat == null || all == null || beat == null) return null;
+  const lost = all > strat;
+  return `Tested over ${s.n} monthly rebalances: buying the top ${b?.params?.top_k ?? 3} `
+    + `returned ${strat.toFixed(0)}% versus ${all.toFixed(0)}% for simply holding all 11 sectors`
+    + `${lost ? ' — the ranking lost to doing nothing' : ''}. `
+    + `It beat equal-weight in ${beat.toFixed(0)}% of months`
+    + `${isEdgeSayable(s) ? '.' : ', and the excess is not distinguishable from zero.'}`;
+}

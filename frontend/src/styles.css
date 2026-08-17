@@ -10904,3 +10904,10 @@ a.tk-link:hover   { color: inherit; }
   .rot-summary { gap: .5rem 1rem; }
   .rot-table th, .rot-table td { padding: .45rem .4rem; font-size: .86rem; }
 }
+
+/* The backtest verdict. Deliberately prominent rather than a footnote — a
+   ranked sector table reads as a shopping list without it. */
+.rot-verdict { margin: 1.5rem 0 .5rem; padding: .7rem .9rem; font-size: .86rem;
+               border-left: 3px solid var(--negative, #ef4444);
+               background: color-mix(in srgb, var(--negative, #ef4444) 7%, transparent);
+               border-radius: 4px; }

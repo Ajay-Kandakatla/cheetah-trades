@@ -13,6 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
+from . import backtest as B
 from . import tracker as T
 
 log = logging.getLogger("rotation.api")
@@ -69,4 +70,39 @@ async def rotation(
             status_code=503)
 
     _cache[key] = {"ts": time.time(), "data": data}
+    return JSONResponse({**data, "cached": False})
+
+
+# The backtest is a ~5s full-history refetch, so it is cached hard. The answer
+# moves on the scale of months, not minutes.
+_BT_TTL_SEC = 12 * 60 * 60
+_bt_cache: dict = {}
+
+
+@router.get("/rotation/backtest")
+async def rotation_backtest(refresh: bool = Query(False)):
+    """Does rotating into the leading sectors actually pay?
+
+    Measured 2026-08-16 over 116 monthly rebalances back to 2016: top-3 rotation
+    158.22%, RSP 155.42%, holding all 11 sectors 163.23%. Mean excess -0.013%
+    per period with a 95% interval of [-0.549, +0.522].
+
+    Served next to the tracker on purpose. The tracker describes what already
+    moved; this is the evidence that acting on that description does not beat
+    owning the market, so the page can say so rather than implying a signal it
+    does not have.
+    """
+    hit = _bt_cache.get("v")
+    if hit and not (refresh is True) and (time.time() - hit["ts"]) < _BT_TTL_SEC:
+        return JSONResponse({**hit["data"], "cached": True})
+    try:
+        data = B.run()
+        # Per-period rows are debugging detail and dominate the payload; the
+        # page reads the summary and the year table.
+        data.pop("periods", None)
+    except Exception as exc:
+        log.warning("rotation: backtest failed: %s", exc)
+        return JSONResponse({"error": f"{type(exc).__name__}: {exc}"[:200]},
+                            status_code=503)
+    _bt_cache["v"] = {"ts": time.time(), "data": data}
     return JSONResponse({**data, "cached": False})

@@ -15,8 +15,8 @@ import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { InfoButton } from '../components/InfoButton';
 import {
-  WINDOWS, boardQuery, etfGapLine, isThinGroup, pct, pp, riskStance, tone,
-  turned, type RotBoard, type RotRow,
+  WINDOWS, backtestVerdict, boardQuery, etfGapLine, isThinGroup, pct, pp,
+  riskStance, tone, turned, type RotBacktest, type RotBoard, type RotRow,
 } from '../lib/rotation';
 
 const HowItWorks = (
@@ -107,6 +107,9 @@ export function Rotation() {
   const [data, setData] = useState<RotBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  // Loaded separately and lazily — it is a ~5s full-history refetch on the
+  // backend and the board must not wait on it.
+  const [bt, setBt] = useState<RotBacktest | null>(null);
 
   const load = useCallback(async (refresh = false) => {
     setErr(null);
@@ -126,6 +129,15 @@ export function Rotation() {
   }, [start]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    let dead = false;
+    fetch(`${API}/rotation/backtest`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (!dead && j && !j.error) setBt(j); })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, []);
 
   const stance = data ? riskStance(data.stance) : null;
 
@@ -190,6 +202,11 @@ export function Rotation() {
           <Table title="Safe havens" rows={data.havens}
                  note="Where money historically hides. Equal-weight S&P is the 0.0 line by definition." />
 
+          {backtestVerdict(bt) ? (
+            <p className="rot-verdict">
+              <b>Does acting on this pay?</b> {backtestVerdict(bt)}
+            </p>
+          ) : null}
           {data.note ? <p className="rot-foot">{data.note}</p> : null}
         </>
       ) : null}
