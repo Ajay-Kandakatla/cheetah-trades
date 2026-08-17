@@ -34,6 +34,34 @@ from . import detector
 
 log = logging.getLogger("patterns.history")
 
+# ── What this ledger is a record OF ──────────────────────────────────────────
+# Ajay 2026-08-17, asking for Back in Demand history. Building it surfaced that
+# `zone_backtest.record()` writes SIMULATED trades into this same collection —
+# 5,371 of them, 74% of every row here — and nothing in this module filtered
+# them. Three measured consequences, all live before this fix:
+#
+#   1. `accuracy()` bucketed every zone row into `candles[None]`, publishing a
+#      fake formation with n=4,976 and direction_hit_pct 0.0 next to hammer's
+#      real n=125. The candle table was 80% simulated rows by count.
+#   2. `resolve_pending()` had no zone branch, so zone rows fell through to
+#      `_grade_candle`, raised KeyError('read'), and were swallowed by a blanket
+#      except — 395 stuck pending forever, inflating the pending counter.
+#   3. `since` reported 2025-07-07 (the BACKTEST's earliest decision day) while
+#      the earliest LIVE row is 2026-06-10. The page claimed 13 months of
+#      track record over ~2 months of real observations.
+#
+# This ledger answers "what did the system flag, and what happened next". A
+# backtested trade was never flagged in real time, so it is not an observation
+# and it never belongs in these numbers. `zone_backtest` keeps writing here —
+# that is deliberate, it is the same shape and the same grading vocabulary — but
+# every READ path filters it out, in ONE place so a new reader cannot forget.
+LIVE_ONLY = {"backtested": {"$ne": True}}
+
+# Kinds this module knows how to grade. Anything else is left alone rather than
+# guessed at: `_grade_candle` was the silent default and it is why zone rows
+# raised KeyError on every pass.
+GRADABLE_KINDS = ("pattern", "candle")
+
 PATTERN_HORIZON = detector.VALIDATION_HORIZON   # 21 bars — same convention as self-validation
 CANDLE_HORIZON = 5                              # CONVENTION — candle reads are short-lived
 
@@ -222,7 +250,7 @@ def resolve_pending(limit: int = 2000) -> dict:
     if coll is None:
         return {"ok": False, "reason": "no mongo"}
     from sepa import prices
-    n_resolved = n_checked = n_backfilled = 0
+    n_resolved = n_checked = n_backfilled = n_skipped = 0
     frames: dict = {}
 
     def _frame(sym: str):
@@ -233,13 +261,20 @@ def resolve_pending(limit: int = 2000) -> dict:
                 frames[sym] = None
         return frames[sym]
 
-    for obs in coll.find({"resolved": False}).limit(limit):
+    for obs in coll.find({"resolved": False, **LIVE_ONLY}).limit(limit):
         n_checked += 1
         df = _frame(obs["symbol"])
         if df is None or len(df) < 30:
             continue
+        kind = obs.get("kind")
+        if kind not in GRADABLE_KINDS:
+            # Was: anything-not-pattern fell through to _grade_candle. A kind
+            # this module cannot grade must be skipped loudly, not mis-graded
+            # into a swallowed exception.
+            n_skipped += 1
+            continue
         try:
-            res = _grade_pattern(df, obs) if obs.get("kind") == "pattern" \
+            res = _grade_pattern(df, obs) if kind == "pattern" \
                 else _grade_candle(df, obs)
         except Exception as exc:
             log.debug("grade failed %s: %s", obs["_id"], exc)
@@ -269,7 +304,10 @@ def resolve_pending(limit: int = 2000) -> dict:
     log.info("pattern ledger resolve: %d/%d resolved, %d fwd21 backfilled",
              n_resolved, n_checked, n_backfilled)
     return {"ok": True, "checked": n_checked, "resolved": n_resolved,
-            "fwd21_backfilled": n_backfilled}
+            "fwd21_backfilled": n_backfilled,
+            # Kinds this module cannot grade. Reported rather than swallowed:
+            # a silently-skipped row looks identical to a healthy one.
+            "skipped_ungradable": n_skipped}
 
 
 # ── 3. ACCURACY ──────────────────────────────────────────────────────────────
@@ -291,11 +329,15 @@ def accuracy() -> dict:
     candles: dict = {}
     pending = 0
     earliest = None
-    for obs in coll.find({}):
+    for obs in coll.find(LIVE_ONLY):
         if not obs.get("resolved"):
             pending += 1
             continue
         earliest = min(earliest or obs["et_date"], obs["et_date"])
+        if obs.get("kind") not in GRADABLE_KINDS:
+            # Was the implicit `else` into `candles`, which is how 4,976 zone
+            # rows became a formation called `None` with a 0.0% hit rate.
+            continue
         if obs.get("kind") == "pattern":
             slot = patterns.setdefault(obs["pattern"], {}).setdefault(obs["status"], {
                 "n": 0, "target_first": 0, "stop_first": 0, "neither": 0,
@@ -418,7 +460,7 @@ def compute_monthly() -> list:
     if coll is None:
         return []
     months: dict = {}
-    for obs in coll.find({"resolved": True}):
+    for obs in coll.find({"resolved": True, **LIVE_ONLY}):
         m = (obs.get("et_date") or "")[:7]
         if len(m) != 7:
             continue
