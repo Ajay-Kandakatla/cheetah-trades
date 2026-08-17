@@ -275,7 +275,11 @@ def test_zones_tab_draws_the_band_and_the_whole_plan(prices, reentry_stub):
 
     out = B.board("zones", limit=5, min_tier="any")
     t = out["tiles"][0]
-    assert t["href"] == "/sepa/AAA?tab=supply"
+    # Setup, not Supply (Ajay 2026-08-17). The tile already DRAWS the zones; the
+    # thing he cannot see from the tile is the plan, so that is where the click
+    # goes. `test_a_resolved_winner_tile_still_opens_the_supply_tab` is the
+    # other half of this pair — the retrospective tiles must NOT follow.
+    assert t["href"] == "/sepa/AAA?tab=setup"
     assert {b["kind"] for b in t["bands"]} == {"demand", "supply"}
     assert [l["label"] for l in t["lines"]] == ["BUY", "STOP", "TARGET"]
     assert {s["k"] for s in t["stats"]} >= {"R:R", "Break-even", "Liquidity"}
@@ -362,6 +366,27 @@ def test_winners_tab_charts_the_confirmation_and_its_levels(prices, ledger):
     assert t["markers"][0]["date"] == day
     assert {l["label"] for l in t["lines"]} == {"BREAKOUT", "TARGET", "STOP"}
     assert day in [b["t"] for b in t["bars"]]
+
+
+def test_a_resolved_zone_winner_tile_still_opens_the_SUPPLY_tab(prices, ledger):
+    """The other half of the 2026-08-17 setup-tab change, and the reason it was
+    not a blanket find-and-replace. A LIVE zone tile links to the setup tab
+    because the plan is actionable today. A winner tile draws a bounce that
+    finished weeks ago — today's setup describes a different chart than the one
+    on the tile, so sending the click there would be a non-sequitur."""
+    df = _frame(200)
+    prices["AAA"] = df
+    day = df.index[120].strftime("%Y-%m-%d")
+    # Hand-built rather than via `_obs`: zone rows carry no `status`, which is
+    # exactly what the ledger query matches on.
+    ledger.append({"kind": "zone", "outcome": "target_first", "symbol": "AAA",
+                   "et_date": day, "confirmed_date": day, "bars_to_outcome": 7,
+                   "zone_lo": 14.0, "zone_hi": 15.0, "entry_open": 15.0,
+                   "target": 18.0, "stop": 13.5, "net_pct": 20.0, "rr": 2.0})
+
+    out = B.board("winners", limit=5, source="zone")
+    assert out["tiles"], "fixture produced no zone-winner tile"
+    assert out["tiles"][0]["href"] == "/sepa/AAA?tab=supply"
 
 
 def test_winners_tab_reports_the_losses_next_to_the_wins(prices, ledger):

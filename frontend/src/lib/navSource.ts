@@ -23,6 +23,11 @@ export type NavSource = { path: string; label: string };
  *  bounce a user to an arbitrary path. */
 export const NAV_SOURCES: Record<string, NavSource> = {
   'chart-maps': { path: '/chart-maps', label: 'Chart Maps' },
+  // Ajay 2026-08-17: "Take me to the setup tab direct from chart maps and
+  // demand zone page". The Back in Demand panel already passed router state,
+  // which is enough for the back button UNTIL the first tab click replaces the
+  // history entry and drops it — exactly the bug this module exists to fix.
+  'supply-demand': { path: '/supply-demand', label: 'Supply & Demand' },
 };
 
 /** Append `from=<key>` to a detail href, preserving any query it already has

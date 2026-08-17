@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import type { CSSProperties, ReactNode, MouseEvent } from 'react';
 import { WatchlistButton } from './WatchlistButton';
 import { TickerPrice } from './TickerPrice';
+import { NAV_SOURCES } from '../lib/navSource';
 
 type Props = {
   ticker: string;
@@ -19,6 +20,12 @@ type Props = {
   showWatchlist?: boolean;
   /** Set to true to render a small price tag next to the ticker. */
   showPrice?: boolean;
+  /** Land on a specific tab instead of the default chart tab, e.g. 'setup'.
+   *  Rides in the URL as `?tab=`, so it survives reload and Cmd-click. */
+  tab?: string;
+  /** A `NAV_SOURCES` key, written as `?from=` so the destination's back button
+   *  still works after a tab click drops the router state. */
+  fromKey?: string;
 };
 
 /**
@@ -36,9 +43,16 @@ type Props = {
  */
 export function TickerLink({
   ticker, fromLabel, className, style, title, children, onPlainClick,
-  showWatchlist = true, showPrice = false,
+  showWatchlist = true, showPrice = false, tab, fromKey,
 }: Props) {
   const location = useLocation();
+  // Built as a real query string rather than router state: state is dropped by
+  // the destination's own `setSearchParams(..., {replace: true})` on the first
+  // tab click, and never existed at all for a Cmd-clicked or bookmarked link.
+  const qs = new URLSearchParams();
+  if (tab) qs.set('tab', tab);
+  if (fromKey && NAV_SOURCES[fromKey]) qs.set('from', fromKey);
+  const to = `/sepa/${encodeURIComponent(ticker)}${qs.size ? `?${qs}` : ''}`;
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     // Modifier keys (Cmd/Ctrl/Shift) → let the browser handle (new tab/window).
     // Middle-click is button=1 — also let browser handle.
@@ -48,7 +62,7 @@ export function TickerLink({
 
   const link = (
     <Link
-      to={`/sepa/${encodeURIComponent(ticker)}`}
+      to={to}
       state={{
         from: location.pathname + location.search,
         label: fromLabel,

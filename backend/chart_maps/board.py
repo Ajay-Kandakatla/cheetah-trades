@@ -894,7 +894,14 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tiles.append({
             "symbol": sym,
             "name": r.get("name") or _name_for(sym),
-            "href": _href(sym, "supply"),
+            # Setup, not Supply (Ajay 2026-08-17: "Take me to the setup tab
+            # direct from chart maps and demand zone page"). These tiles are the
+            # LIVE Back in Demand board, so the actionable read is the plan —
+            # entry band, stop, target — not the zone inventory he just looked
+            # at on the tile itself. `zone_winner_tiles` below keeps `supply`:
+            # those depict a RESOLVED historical bounce, where today's setup
+            # describes a different chart than the one drawn.
+            "href": _href(sym, "setup"),
             "bars": [],
             # Per-TILE window, not the board default. Zones are computed over
             # 252 bars while the board charted 130, so a band could be drawn
