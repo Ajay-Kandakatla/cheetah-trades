@@ -27,6 +27,7 @@ import time
 from typing import Optional
 
 import httpx
+from . import symbols
 
 log = logging.getLogger("sepa.stock_analysis")
 
@@ -169,7 +170,7 @@ def fundamental_panel(symbol: str) -> dict:
     """
     try:
         import yfinance as yf
-        info = yf.Ticker(symbol).info or {}
+        info = symbols.yf_ticker(symbol).info or {}
     except Exception as exc:
         log.warning("yfinance fundamentals failed for %s: %s", symbol, exc)
         return _empty_fundamentals()
@@ -491,7 +492,7 @@ def esg_panel(symbol: str) -> dict:
     """
     try:
         import yfinance as yf
-        df = yf.Ticker(symbol).sustainability
+        df = symbols.yf_ticker(symbol).sustainability
     except Exception as exc:
         log.warning("yfinance ESG failed for %s: %s", symbol, exc)
         return {"available": False}

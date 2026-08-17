@@ -30,6 +30,7 @@ import pandas as pd
 
 from .prices import load_prices
 from .trend_template import evaluate as eval_trend
+from . import symbols
 
 log = logging.getLogger("sepa.market_regime")
 
@@ -184,7 +185,7 @@ def _stress_score(vix_symbol: str = "^VIX") -> dict:
         # yfinance fallback when massive doesn't carry indices
         try:
             import yfinance as yf
-            t = yf.Ticker(vix_symbol)
+            t = symbols.yf_ticker(vix_symbol)
             hist = t.history(period="1y")
             if hist.empty:
                 return {"vix": None, "percentile": None, "score": 50, "reason": "no data"}

@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 
 from learning import observations
+from sepa import symbols
 
 log = logging.getLogger("learning.resolver")
 
@@ -25,7 +26,7 @@ def _fetch_actual_price(ticker: str, ts_at_or_after: int) -> Optional[float]:
         start = (start_dt - timedelta(days=1)).strftime("%Y-%m-%d")
         end = (start_dt + timedelta(days=7)).strftime("%Y-%m-%d")
 
-        t = yf.Ticker(ticker)
+        t = symbols.yf_ticker(ticker)
         hist = t.history(start=start, end=end, auto_adjust=False)
         if hist.empty:
             return None

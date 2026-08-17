@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import requests
+from sepa import symbols
 
 log = logging.getLogger("catalysts.premarket")
 
@@ -167,7 +168,7 @@ def _fetch_premarket_quote(ticker: str) -> Optional[dict]:
     # Fallback: yfinance (covers extended hours via fast_info)
     try:
         import yfinance as yf
-        tk = yf.Ticker(ticker)
+        tk = symbols.yf_ticker(ticker)
         fi = tk.fast_info
         last = float(getattr(fi, "last_price", 0) or 0)
         prev = float(getattr(fi, "previous_close", 0) or 0)
@@ -225,7 +226,7 @@ def scan_premarket(
     def _enrich(q):
         try:
             import yfinance as yf
-            tk = yf.Ticker(q["ticker"])
+            tk = symbols.yf_ticker(q["ticker"])
             fi = tk.fast_info
             cap = None
             try: cap = float(getattr(fi, "market_cap", 0) or 0) or None

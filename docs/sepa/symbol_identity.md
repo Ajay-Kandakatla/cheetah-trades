@@ -12,7 +12,7 @@ wrong about a second stock for **576 days**.
 
 Code: `backend/sepa/symbols.py`, `backend/sepa/prices.py` (`_fetch`,
 `splice_history`), `backend/observability/symbol_liveness.py`.
-Tests: `backend/tests/test_symbols.py` (30),
+Tests: `backend/tests/test_symbols.py` (36),
 `backend/tests/test_symbol_liveness.py` (18),
 `frontend/src/components/DelistedBanner.test.tsx` (8).
 
@@ -116,6 +116,33 @@ that do not exist.
 This composes with the existing `_CLASS_SHARE_REMAP` in `universe.py`, which
 maps the raw iShares form to ours: `BRKB` → `BRK-B` → `BRK.B`.
 
+### Every yfinance call site, not just the price one
+
+Minutes after the rename fix deployed, the api log said:
+
+```
+ERROR HTTP Error 404: No fundamentals data found for symbol: SQ
+```
+
+The price path resolved renames. **Thirty-one other call sites across 28 files**
+still handed Yahoo the retired ticker, so Block kept its chart and lost its
+profile, fundamentals, catalysts, earnings date and analyst ratings — each of
+which renders as "this company has no data", the same wrong story the banner
+was telling.
+
+`symbols.yf_ticker(sym)` now wraps `yf.Ticker(for_yahoo(resolve(sym)))`, and
+every call site goes through it. Index symbols (`^VIX`, `^GSPC`) and unrenamed
+tickers pass through untouched, so it is safe to apply blanket.
+
+**`sepa/prices.py` is the one deliberate exception** — its splice has to fetch
+the OLD symbol on purpose, and resolving there would silently drop every
+pre-rename bar. `test_no_module_calls_yf_Ticker_directly` enforces the rule and
+`test_prices_keeps_its_direct_call_on_purpose` stops someone "fixing" the
+exception.
+
+Verified: `symbols.yf_ticker("SQ").info` returns **Block, Inc. · Technology ·
+10,205 employees**, where the raw symbol 404'd.
+
 ### The banner says what we observed
 
 | | |
@@ -211,3 +238,6 @@ SATS and SQ are gone from the list. The remaining four are genuinely dead —
 | A broken splice reads as a regression | `test_a_symbol_already_in_RENAMES_is_flagged_as_a_regression` |
 | Counts stay truthful when the listing is capped | `test_the_symbol_list_is_capped_so_the_report_stays_readable` |
 | The banner never asserts a corporate action | `DelistedBanner.test.tsx` → "reports missing DATA" |
+| No module calls `yf.Ticker` directly again | `test_no_module_calls_yf_Ticker_directly` |
+| …except prices.py, on purpose | `test_prices_keeps_its_direct_call_on_purpose` |
+| Index symbols survive the blanket helper | `test_yf_ticker_passes_index_symbols_through_untouched` |

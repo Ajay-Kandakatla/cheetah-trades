@@ -21,6 +21,7 @@ import os
 from massive_keys import options_key
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from sepa import symbols
 
 log = logging.getLogger("options.soir")
 
@@ -296,7 +297,7 @@ def _fetch_chain_yfinance(symbol: str) -> Optional[dict]:
         return None
 
     try:
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
 
         # fast_info is ~10x faster than info — skips the company profile
         # pull. We only need the price for ATM detection + EM %.

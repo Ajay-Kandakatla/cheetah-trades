@@ -33,6 +33,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Optional
+from sepa import symbols
 
 log = logging.getLogger("supply_demand.equity_premium")
 
@@ -138,7 +139,7 @@ def _fetch_one(ticker: str) -> Optional[dict]:
     """Pull yfinance fundamentals + compute equity premium signals."""
     try:
         import yfinance as yf
-        tk = yf.Ticker(ticker)
+        tk = symbols.yf_ticker(ticker)
         info = tk.info or {}
     except Exception as exc:
         log.debug("equity_premium fetch failed for %s: %s", ticker, exc)

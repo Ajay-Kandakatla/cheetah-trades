@@ -25,6 +25,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, List, Optional
+from . import symbols
 
 log = logging.getLogger("sepa.earnings_watch")
 
@@ -69,7 +70,7 @@ def _fetch_next(symbol: str) -> Optional[dict]:
     right before its post-earnings rip)."""
     try:
         import yfinance as yf
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
         today = _today_et().date()
         # Preferred: get_earnings_dates — exact timestamps, estimates included.
         try:

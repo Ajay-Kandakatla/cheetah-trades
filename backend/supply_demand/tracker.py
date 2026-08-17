@@ -23,6 +23,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from .sectors import SECTORS, SECTOR_BY_ID
+from sepa import symbols
 
 log = logging.getLogger("supply_demand.tracker")
 
@@ -100,7 +101,7 @@ def _fetch_etf_metrics(ticker: str) -> Optional[dict]:
         return None
     try:
         import yfinance as yf
-        t = yf.Ticker(ticker)
+        t = symbols.yf_ticker(ticker)
         hist = t.history(period="6mo", interval="1d")
         if hist is None or hist.empty:
             return None

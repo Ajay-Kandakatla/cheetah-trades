@@ -51,6 +51,7 @@ import threading
 import time
 from datetime import timedelta
 from typing import Dict, List, Optional
+from . import symbols
 
 log = logging.getLogger("sepa.analyst_pulse")
 
@@ -145,7 +146,7 @@ def fetch_one(symbol: str) -> dict:
     errors: List[str] = []
     try:
         import yfinance as yf
-        t = yf.Ticker(sym)
+        t = symbols.yf_ticker(sym)
     except Exception as exc:
         doc["error"] = "yfinance: %s" % exc
         return doc

@@ -14,6 +14,7 @@ import logging
 from typing import Optional
 
 from watchlist import store
+from sepa import symbols
 
 log = logging.getLogger("watchlist.research")
 
@@ -23,7 +24,7 @@ PEER_LIMIT = 5  # how many competitors to auto-add per primary ticker
 def _yfinance_info(ticker: str) -> dict:
     try:
         import yfinance as yf
-        t = yf.Ticker(ticker)
+        t = symbols.yf_ticker(ticker)
         info = t.info or {}
         # Pull the most recent close as a fallback if regularMarketPrice missing
         try:
@@ -127,7 +128,7 @@ def _industry_peers(db, ticker: str, industry: Optional[str], limit: int) -> lis
             if len(peers) >= limit:
                 break
             try:
-                t = yf.Ticker(sym)
+                t = symbols.yf_ticker(sym)
                 info = t.info or {}
                 if info.get("industry") == industry:
                     peers.append(sym)

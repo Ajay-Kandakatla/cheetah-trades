@@ -18,6 +18,7 @@ import logging
 import os
 import time
 from typing import Optional
+from . import symbols
 
 log = logging.getLogger("sepa.etf_info")
 
@@ -112,7 +113,7 @@ def etf_data_for(symbol: str) -> Optional[dict]:
         return None
 
     try:
-        t = yf.Ticker(sym)
+        t = symbols.yf_ticker(sym)
         info = t.info or {}
     except Exception as exc:
         log.debug("etf_info: yfinance lookup failed for %s: %s", sym, exc)

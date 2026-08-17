@@ -19,6 +19,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Iterable
+from . import symbols
 
 log = logging.getLogger("sepa.company_names")
 
@@ -88,7 +89,7 @@ def _fetch_yfinance(symbol: str) -> Optional[str]:
     """Best-effort fetch of the long company name via yfinance."""
     try:
         import yfinance as yf
-        info = yf.Ticker(symbol).info or {}
+        info = symbols.yf_ticker(symbol).info or {}
         # longName is the official 'Apple Inc.', shortName is 'Apple Inc'
         name = info.get("longName") or info.get("shortName") or info.get("displayName")
         if name and isinstance(name, str):

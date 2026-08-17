@@ -142,5 +142,29 @@ def _reclass(symbol: str, sep: str) -> str:
     return s
 
 
+def yf_ticker(symbol: str):
+    """``yfinance.Ticker`` for the symbol that trades TODAY, spelled Yahoo's way.
+
+    Ajay 2026-08-16, from the deploy log right after the rename fix shipped::
+
+        ERROR HTTP Error 404: No fundamentals data found for symbol: SQ
+
+    The price path resolves renames; thirty-odd other call sites were still
+    handing Yahoo the retired ticker, so a renamed company kept its chart and
+    lost its profile, fundamentals, catalysts, earnings date and analyst
+    ratings. Every one of those reads as "this company has no data", which is
+    the same wrong story the delisted banner was telling.
+
+    Use this instead of ``yf.Ticker`` anywhere the symbol came from a user, a
+    watchlist or a scan. ``sepa.prices`` deliberately does NOT: its splice has
+    to fetch the OLD symbol on purpose.
+
+    Index symbols (``^VIX``) and anything not in ``RENAMES`` pass through
+    untouched, so this is safe to apply blanket.
+    """
+    import yfinance as yf
+    return yf.Ticker(for_yahoo(resolve(symbol)))
+
+
 __all__ = ["RENAMES", "resolve", "former_names", "rename_of", "for_massive",
-           "for_yahoo"]
+           "for_yahoo", "yf_ticker"]

@@ -24,6 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 import requests
+from sepa import symbols
 
 log = logging.getLogger("catalysts.scanner")
 
@@ -112,7 +113,7 @@ def _enrich_with_yfinance(c: dict) -> dict:
     """
     try:
         import yfinance as yf
-        tk = yf.Ticker(c["ticker"])
+        tk = symbols.yf_ticker(c["ticker"])
         fi = tk.fast_info
 
         cap = None

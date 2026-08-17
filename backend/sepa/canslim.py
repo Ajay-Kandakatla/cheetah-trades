@@ -42,6 +42,7 @@ from typing import Optional
 
 from sepa import sales
 from sepa import earnings_quality
+from . import symbols
 
 log = logging.getLogger("sepa.canslim")
 
@@ -323,7 +324,7 @@ def _from_yfinance(symbol: str) -> dict:
     and as the fallback when hybrid's Massive call fails."""
     try:
         import yfinance as yf
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
     except Exception as exc:
         log.warning("yfinance import failed: %s", exc)
         return _empty()
@@ -436,7 +437,7 @@ def _inst_ownership_yfinance(symbol: str) -> Optional[float]:
     income data. Stays cheap when called per-symbol in the scanner pool."""
     try:
         import yfinance as yf
-        return _inst_ownership_yf(yf.Ticker(symbol))
+        return _inst_ownership_yf(symbols.yf_ticker(symbol))
     except Exception as exc:
         log.debug("inst ownership lookup failed for %s: %s", symbol, exc)
         return None
@@ -455,7 +456,7 @@ def _receivables_yfinance(symbol: str) -> Optional[list]:
     """
     try:
         import yfinance as yf
-        bs = yf.Ticker(symbol).quarterly_balance_sheet
+        bs = symbols.yf_ticker(symbol).quarterly_balance_sheet
         if bs is None or getattr(bs, "empty", True):
             return None
         # yfinance columns are dates ordered newest-first; row label varies.

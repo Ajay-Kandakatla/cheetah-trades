@@ -23,6 +23,7 @@ import logging
 import os
 from datetime import datetime, timezone
 from typing import Optional
+from sepa import symbols
 
 log = logging.getLogger("supply_demand.whales")
 
@@ -151,7 +152,7 @@ def _fetch_yfinance_holders(ticker: str) -> dict:
     """
     try:
         import yfinance as yf
-        t = yf.Ticker(ticker)
+        t = symbols.yf_ticker(ticker)
 
         institutional = []
         mutual = []

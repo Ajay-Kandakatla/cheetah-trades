@@ -229,3 +229,90 @@ def test_new_series_starting_before_the_old_one_keeps_only_the_new():
     old = frame(["2026-07-01"], [100.0])
     new = frame(["2026-06-24"], [101.0], opens=[101.0])
     assert len(P.splice_history(old, new, "x")) == 1
+
+
+# ---------------------------------------------------------------------------
+# yf_ticker — the OTHER thirty call sites
+# ---------------------------------------------------------------------------
+# Ajay 2026-08-16, from the deploy log minutes after the rename fix shipped:
+#
+#     ERROR HTTP Error 404: No fundamentals data found for symbol: SQ
+#
+# The price path resolved renames. Thirty-one other call sites still handed
+# Yahoo the retired ticker, so Block kept its chart and lost its profile,
+# fundamentals, catalysts, earnings date and analyst ratings — every one of
+# which reads as "this company has no data", the same wrong story the delisted
+# banner was telling.
+def test_yf_ticker_resolves_the_rename():
+    yf = pytest.importorskip("yfinance")
+    assert S.yf_ticker("SQ").ticker == "XYZ"
+    assert S.yf_ticker("SATS").ticker == "ECHO"
+
+
+def test_yf_ticker_leaves_an_ordinary_symbol_alone():
+    pytest.importorskip("yfinance")
+    assert S.yf_ticker("NVDA").ticker == "NVDA"
+
+
+def test_yf_ticker_uses_yahoos_class_share_spelling():
+    pytest.importorskip("yfinance")
+    assert S.yf_ticker("BRK.B").ticker == "BRK-B"
+    assert S.yf_ticker("BRK-B").ticker == "BRK-B"
+
+
+def test_yf_ticker_passes_index_symbols_through_untouched():
+    """^VIX and friends must survive a blanket application of this helper."""
+    pytest.importorskip("yfinance")
+    assert S.yf_ticker("^VIX").ticker == "^VIX"
+    assert S.yf_ticker("^GSPC").ticker == "^GSPC"
+
+
+# --- the source guard ---
+def _backend_root():
+    """Walk up for the backend package. tests/ sits at a different depth inside
+    the api container than in the repo, and hardcoding parents[1] broke a
+    pre-commit hook once already."""
+    here = Path(__file__).resolve()
+    for cand in [here.parent] + list(here.parents):
+        if (cand / "sepa" / "symbols.py").exists():
+            return cand
+    return None
+
+
+def test_no_module_calls_yf_Ticker_directly():
+    """Every call site must go through yf_ticker so a rename can never again
+    take out a company's fundamentals while its chart keeps working.
+
+    sepa/prices.py is the one exception, and it is deliberate: the rename
+    splice has to fetch the OLD symbol on purpose.
+    """
+    root = _backend_root()
+    if root is None:
+        pytest.skip("backend root not found (running outside the repo layout)")
+
+    allowed = {root / "sepa" / "prices.py", root / "sepa" / "symbols.py"}
+    offenders = []
+    for path in root.rglob("*.py"):
+        parts = set(path.parts)
+        if ".venv" in parts or "tests" in parts or path in allowed:
+            continue
+        try:
+            src = path.read_text()
+        except Exception:
+            continue
+        if "yf.Ticker(" in src:
+            offenders.append(str(path.relative_to(root)))
+
+    assert not offenders, (
+        "these call yf.Ticker directly and will 404 on a renamed ticker — "
+        "use sepa.symbols.yf_ticker instead: " + ", ".join(sorted(offenders)))
+
+
+def test_prices_keeps_its_direct_call_on_purpose():
+    """The guard above must not be 'fixed' by routing prices.py through the
+    resolver — the splice fetches the OLD symbol by design, and resolving it
+    would silently drop every pre-rename bar."""
+    root = _backend_root()
+    if root is None:
+        pytest.skip("backend root not found")
+    assert "yf.Ticker(" in (root / "sepa" / "prices.py").read_text()

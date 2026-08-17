@@ -36,6 +36,7 @@ from . import history as history_mod
 from . import predictions as predictions_mod
 from . import frenzy as frenzy_mod
 from . import halts as halts_mod
+from sepa import symbols
 
 log = logging.getLogger("catalysts.api")
 router = APIRouter(tags=["catalysts"])
@@ -457,7 +458,7 @@ async def deep_dive(ticker: str, with_gemma: bool = Query(True)):
     # Build a minimal candidate from yfinance/Massive
     try:
         import yfinance as yf
-        tk = yf.Ticker(t)
+        tk = symbols.yf_ticker(t)
         fi = tk.fast_info
         last = float(getattr(fi, "last_price", 0) or 0)
         prev = float(getattr(fi, "previous_close", 0) or 0)

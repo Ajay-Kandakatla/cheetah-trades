@@ -25,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
+from sepa import symbols
 
 log = logging.getLogger("catalysts.calendar")
 
@@ -92,7 +93,7 @@ def _next_earnings(ticker: str) -> Optional[dict]:
     """Pull next earnings date from yfinance Ticker.calendar."""
     try:
         import yfinance as yf
-        tk = yf.Ticker(ticker)
+        tk = symbols.yf_ticker(ticker)
         cal = tk.calendar
         if not cal:
             return None

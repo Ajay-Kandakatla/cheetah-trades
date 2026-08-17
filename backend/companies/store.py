@@ -5,6 +5,7 @@ import logging
 import os
 from datetime import datetime, timezone
 from typing import Optional
+from sepa import symbols
 
 log = logging.getLogger("companies.store")
 
@@ -36,7 +37,7 @@ def _now() -> int:
 def _fetch_from_yfinance(symbol: str) -> Optional[dict]:
     try:
         import yfinance as yf
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
         info = t.info or {}
         if not info:
             return None

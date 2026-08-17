@@ -28,6 +28,7 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from . import symbols
 
 log = logging.getLogger("sepa.volume_movers")
 
@@ -49,7 +50,7 @@ def _shares_coll():
 def _fetch_shares_yf(symbol: str):
     try:
         import yfinance as yf
-        info = yf.Ticker(symbol).info or {}
+        info = symbols.yf_ticker(symbol).info or {}
         so = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
         fl = info.get("floatShares")
         mc = info.get("marketCap")

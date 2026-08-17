@@ -45,6 +45,7 @@ from __future__ import annotations
 import logging
 import math
 from typing import Optional
+from . import symbols
 
 log = logging.getLogger("sepa.moat")
 
@@ -70,7 +71,7 @@ def compute_moat(symbol: str) -> Optional[dict]:
     """
     try:
         import yfinance as yf
-        info = yf.Ticker(symbol).info or {}
+        info = symbols.yf_ticker(symbol).info or {}
     except Exception as exc:
         log.warning("moat: yfinance failed for %s: %s", symbol, exc)
         return None

@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import requests
+from sepa import symbols
 
 log = logging.getLogger("supply_demand.flow")
 
@@ -184,7 +185,7 @@ def _fetch_yfinance_fallback(tickers: list[str]) -> dict[str, dict]:
 
         def _one(t):
             try:
-                tk = yf.Ticker(t)
+                tk = symbols.yf_ticker(t)
                 fi = tk.fast_info
                 last = fi.last_price
                 prev = fi.previous_close

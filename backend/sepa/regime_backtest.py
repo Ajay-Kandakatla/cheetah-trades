@@ -26,6 +26,7 @@ import pandas as pd
 
 from .market_regime import regime_for_date
 from .prices import load_prices
+from . import symbols
 
 log = logging.getLogger("sepa.regime_backtest")
 
@@ -34,7 +35,7 @@ def _load_vix() -> Optional[pd.DataFrame]:
     """yfinance fallback for VIX history (massive doesn't carry indices)."""
     try:
         import yfinance as yf
-        t = yf.Ticker("^VIX")
+        t = symbols.yf_ticker("^VIX")
         df = t.history(period="max")
         if df.empty:
             return None
@@ -52,7 +53,7 @@ def _load_index(symbol: str) -> Optional[pd.DataFrame]:
     long history. The 2y default in load_prices isn't enough for backtest."""
     try:
         import yfinance as yf
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
         df = t.history(period="max")
         if df.empty:
             df = load_prices(symbol, period="10y")

@@ -30,6 +30,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from . import store, universe
+from sepa import symbols
 
 log = logging.getLogger("setups.episodic_pivot")
 
@@ -134,7 +135,7 @@ def _classify_catalyst(symbol: str, days_ago: int) -> str:
     try:
         import yfinance as yf
         import pandas as pd
-        tk = yf.Ticker(symbol)
+        tk = symbols.yf_ticker(symbol)
         df = tk.earnings_dates
         if df is None or df.empty:
             return "unknown"

@@ -42,6 +42,7 @@ import logging
 from typing import Optional
 
 from . import store, universe
+from sepa import symbols
 
 log = logging.getLogger("setups.peg")
 
@@ -159,7 +160,7 @@ def _maybe_tag_earnings(symbol: str, days_ago: int) -> Optional[str]:
     try:
         # yfinance is already a dep; use the recent earnings_dates DF.
         import yfinance as yf
-        tk = yf.Ticker(symbol)
+        tk = symbols.yf_ticker(symbol)
         df = tk.earnings_dates
         if df is None or df.empty:
             return None

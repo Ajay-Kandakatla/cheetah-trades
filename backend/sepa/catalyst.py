@@ -24,6 +24,7 @@ import httpx
 import yfinance as yf
 
 from .providers import FINNHUB_API_KEY, has_polygon, POLYGON_API_KEY
+from . import symbols
 
 log = logging.getLogger("sepa.catalyst")
 
@@ -162,7 +163,7 @@ def _fetch_yfinance_extras(symbol: str) -> dict:
     out: dict = {"last_surprise_pct": None, "up_revisions_30d": 0,
                  "down_revisions_30d": 0}
     try:
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
         try:
             earns = t.earnings_history  # new yfinance
         except Exception:

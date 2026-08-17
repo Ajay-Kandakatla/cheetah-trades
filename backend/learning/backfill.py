@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from learning import observations, calibrator
+from sepa import symbols
 
 log = logging.getLogger("learning.backfill")
 
@@ -25,7 +26,7 @@ def _fetch_close_window(ticker: str, start_date: str, end_date: str):
     """Pull historical OHLC between two dates (inclusive). Returns {date_str: close}."""
     try:
         import yfinance as yf
-        t = yf.Ticker(ticker)
+        t = symbols.yf_ticker(ticker)
         # Pad each end so the start/end dates are included in yfinance's
         # half-open [start, end) interval.
         s = datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=2)

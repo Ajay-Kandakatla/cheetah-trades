@@ -41,6 +41,7 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from sepa import symbols
 
 log = logging.getLogger("supply_demand.accumulation")
 
@@ -207,7 +208,7 @@ def get_accumulation_scores(tickers: list[str], force: bool = False) -> dict:
         if len(tickers) == 1:
             t = tickers[0]
             try:
-                df = yf.Ticker(t).history(period="15d", interval="1d", auto_adjust=True)
+                df = symbols.yf_ticker(t).history(period="15d", interval="1d", auto_adjust=True)
                 if df is not None and not df.empty:
                     score = _compute_score(df)
                     if score:

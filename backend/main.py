@@ -3150,7 +3150,7 @@ async def learning_market_history(days: int = Query(60, ge=1, le=365),
     end = datetime.now(tz=timezone.utc)
     start = end - timedelta(days=days + 5)
     try:
-        t = yf.Ticker(symbol)
+        t = symbols.yf_ticker(symbol)
         hist = t.history(start=start.strftime("%Y-%m-%d"),
                          end=end.strftime("%Y-%m-%d"),
                          auto_adjust=False)
@@ -4817,7 +4817,7 @@ async def quote_ticker(ticker: str):
     def _yfinance_fetch() -> dict:
         try:
             import yfinance as yf
-            t = yf.Ticker(ticker)
+            t = symbols.yf_ticker(ticker)
             fi = t.fast_info
             last = fi.get("last_price") or fi.get("lastPrice")
             prev = fi.get("previous_close") or fi.get("previousClose")
