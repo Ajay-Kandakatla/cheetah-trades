@@ -13,6 +13,7 @@ import {
   THEME_LABEL, themeLabel, WINNER_SOURCES,
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
+  DEFAULT_SORT, parseSort,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -401,5 +402,68 @@ describe('parseSource', () => {
   });
   it('lists both sources for the picker', () => {
     expect(WINNER_SOURCES.map((s) => s.key)).toEqual(['pattern', 'zone']);
+  });
+});
+
+/* ── The sort dropdown ────────────────────────────────────────────────────────
+ * Ajay 2026-08-17: "such as volume sort and you gave a dedicated dropdown can
+ * you add them".
+ *
+ * The load-bearing decision is that the sort goes to the BACKEND. board._finish
+ * ranks and caps before fetching bars for only the tiles it will show, so
+ * sorting in the browser would reorder the ~24 tiles theme priority already
+ * chose — "highest volume" would quietly mean "highest volume among those 24". */
+describe('boardQuery — sort', () => {
+  it('sends an explicit sort to the backend', () => {
+    expect(boardQuery({ tab: 'vcp', sort: 'volume' })).toContain('sort=volume');
+  });
+
+  it('omits the DEFAULT sort so a shared URL stays clean', () => {
+    expect(boardQuery({ tab: 'vcp', sort: DEFAULT_SORT })).not.toContain('sort=');
+  });
+
+  it('omits it entirely when unset', () => {
+    expect(boardQuery({ tab: 'vcp' })).not.toContain('sort=');
+  });
+
+  it('rides alongside the other params', () => {
+    const q = boardQuery({ tab: 'zones', universe: 'sp500', days: 252, sort: 'rvol' });
+    expect(q).toContain('tab=zones');
+    expect(q).toContain('universe=sp500');
+    expect(q).toContain('days=252');
+    expect(q).toContain('sort=rvol');
+  });
+});
+
+describe('parseSort', () => {
+  const OFFERED = [{ key: 'theme', label: 'x' }, { key: 'volume', label: 'y' }];
+
+  it('takes a sort the board actually offers', () => {
+    expect(parseSort('volume', OFFERED)).toBe('volume');
+  });
+
+  it('falls back when the board no longer offers it', () => {
+    // A bookmark from before a key was retired must show the board, not break.
+    expect(parseSort('turnover', OFFERED)).toBe(DEFAULT_SORT);
+  });
+
+  it('accepts anything when the board has not said what it offers yet', () => {
+    // First render, before the payload lands — otherwise the URL's sort would
+    // be discarded and the first fetch would silently use the default.
+    expect(parseSort('turnover')).toBe('turnover');
+  });
+
+  // --- negatives ---
+  it('defaults on empty, null and whitespace', () => {
+    expect(parseSort(null)).toBe(DEFAULT_SORT);
+    expect(parseSort(undefined)).toBe(DEFAULT_SORT);
+    expect(parseSort('')).toBe(DEFAULT_SORT);
+    expect(parseSort('   ')).toBe(DEFAULT_SORT);
+  });
+
+  it('treats an EMPTY offer list as "not told yet", not as "nothing offered"', () => {
+    // Same case as the missing list: the board has not answered. Discarding the
+    // URL's sort here would make the first fetch quietly use the default.
+    expect(parseSort('volume', [])).toBe('volume');
   });
 });

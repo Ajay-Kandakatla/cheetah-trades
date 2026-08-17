@@ -57,9 +57,15 @@ export type CmPatternRecord = {
   wins: number; losses: number; n: number; win_pct: number | null;
 };
 
+export type CmSort = { key: string; label: string };
+
 export type CmBoard = {
   tab: CmTab;
   count: number;
+  /** The sort actually applied. The winners tabs read a ledger with no live
+   *  volume, so the backend answers `theme` there and sends an empty `sorts`. */
+  sort?: string;
+  sorts?: CmSort[];
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;
@@ -108,16 +114,37 @@ export function parseSource(v: string | null | undefined): WinnerSource {
   return v === 'zone' ? 'zone' : 'pattern';
 }
 
+/** Matches board.DEFAULT_SORT. Kept out of the query string when unchanged so
+ *  a shared URL stays short and the default stays the default. */
+export const DEFAULT_SORT = 'theme';
+
+/** A sort the backend actually offers, or the default. The board advertises its
+ *  own options, so a key retired server-side degrades instead of 404ing. */
+export function parseSort(raw: string | null | undefined,
+                          offered?: CmSort[] | null): string {
+  const v = (raw || '').trim();
+  if (!v) return DEFAULT_SORT;
+  if (offered && offered.length) {
+    return offered.some((o) => o.key === v) ? v : DEFAULT_SORT;
+  }
+  return v;
+}
+
 export function boardQuery(p: {
   tab: CmTab; limit?: number; days?: number;
   universe?: string; themesFirst?: boolean; pattern?: string | null;
-  source?: WinnerSource; minerviniOnly?: boolean;
+  source?: WinnerSource; minerviniOnly?: boolean; sort?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   if (p.tab === 'zones' && p.universe) q.set('universe', p.universe);
   if (p.themesFirst === false) q.set('themes_first', 'false');
+  // Sent to the BACKEND on purpose. board._finish ranks and caps before it
+  // fetches bars for only the tiles it will show, so sorting in the browser
+  // would reorder the ~24 tiles theme priority already chose — "highest
+  // volume" would silently mean "highest volume among those 24".
+  if (p.sort && p.sort !== DEFAULT_SORT) q.set('sort', p.sort);
   // Winners-only params. `pattern` is meaningless for the zone ledger — zone
   // re-entries have no chart-pattern name — so it is dropped there rather than
   // sent and silently ignored.

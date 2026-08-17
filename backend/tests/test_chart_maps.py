@@ -604,3 +604,154 @@ def test_gates_survive_the_null_shapes_the_scan_really_emits():
     assert B.strong_vcp_reject(bare) is None          # nothing to reject on
     assert B.strong_vcp_reject({"symbol": "Y", "entry_setup": None,
                                 "vcp": None}) == "no VCP setup"
+
+
+# ===========================================================================
+# The sort dropdown — Ajay 2026-08-17
+# ===========================================================================
+# "in the chart maps do you have the same logic as In demand page from supply
+# demand such as volume sort and you gave a dedicated dropdown can you add them"
+#
+# The one thing that makes this feature honest is WHERE the sort runs. `_finish`
+# ranks, applies MAX_PER_THEME, and only then loads bars for `limit +
+# BAR_BUFFER` tiles. A client-side dropdown would reorder the tiles theme
+# priority already picked, so "highest volume" would mean "highest volume among
+# the ~24 the theme ranking happened to choose". Same label, different claim.
+def _tile(sym, theme=None, score=0.0, **metrics):
+    return {"symbol": sym, "theme": theme, "_score": score,
+            "_m": {k: metrics.get(k) for k in
+                   ("volume", "rvol", "turnover", "avg_turnover",
+                    "conviction", "rs", "change")}}
+
+
+def _order(tiles, sort, themes_first=True):
+    return [t["symbol"] for t in
+            sorted(tiles, key=lambda t: B._sort_key(t, themes_first, sort))]
+
+
+# --- tile_metrics: two producers, two spellings ---
+def test_metrics_read_the_sepa_scan_row_shape():
+    """sepa.scanner rows spell it liquidity.avg_dollar_vol."""
+    m = B.tile_metrics({
+        "liquidity": {"avg_dollar_vol": 28_981_000_822.0},
+        "volume": {"last_vol": 75_324_819, "avg_vol_50": 137_007_562},
+        "rs_rank": 91, "day_change_pct": 2.4,
+    })
+    assert m["avg_turnover"] == 28_981_000_822.0
+    assert m["volume"] == 75_324_819
+    assert m["rvol"] == pytest.approx(0.5498, abs=1e-3)
+    assert m["rs"] == 91
+
+
+def test_metrics_read_the_demand_reentry_row_shape():
+    """demand_reentry rows spell it liquidity.avg_dollar_vol_50 — the same
+    number under a different key. Reading both here keeps the callers dumb."""
+    m = B.tile_metrics({"liquidity": {
+        "avg_dollar_vol_50": 51_000_000, "today_vol": 4_690_419,
+        "avg_vol_50": 3_000_000, "rvol": 1.56, "today_dollar_vol": 306_800_000,
+    }})
+    assert m["avg_turnover"] == 51_000_000
+    assert m["turnover"] == 306_800_000
+    assert m["rvol"] == 1.56
+
+
+def test_the_producers_rvol_wins_over_a_derived_one():
+    """demand_reentry SUPPRESSES rvol mid-session rather than comparing a part
+    day against a full one. Recomputing it here would undo that judgement."""
+    m = B.tile_metrics({"liquidity": {"rvol": 0.4, "today_vol": 900,
+                                      "avg_vol_50": 100}})
+    assert m["rvol"] == 0.4, "must not be the 9.0 the raw fields imply"
+
+
+def test_turnover_is_derived_only_when_the_producer_omitted_it():
+    m = B.tile_metrics({"volume": {"last_vol": 1_000}, "last_close": 42.0})
+    assert m["turnover"] == 42_000
+
+
+def test_metrics_survive_a_row_with_nothing_in_it():
+    m = B.tile_metrics({})
+    assert set(m) == {"volume", "rvol", "turnover", "avg_turnover",
+                      "conviction", "rs", "change"}
+    assert all(v is None for v in m.values())
+    assert B.tile_metrics(None)["volume"] is None
+
+
+def test_metrics_never_return_nan():
+    m = B.tile_metrics({"rs_rank": float("nan"),
+                        "liquidity": {"avg_dollar_vol": float("nan")}})
+    assert m["rs"] is None and m["avg_turnover"] is None
+
+
+# --- the ordering itself ---
+def test_an_explicit_metric_REPLACES_the_theme_ranking():
+    """Picking "Today's volume" and still getting space names first would not be
+    a volume sort."""
+    tiles = [_tile("SPACE", theme="space", volume=1),
+             _tile("PLAIN", theme=None, volume=999)]
+    assert _order(tiles, "volume") == ["PLAIN", "SPACE"]
+    assert _order(tiles, "theme")[0] == "SPACE"
+
+
+def test_the_default_leaves_the_board_exactly_as_it_was():
+    tiles = [_tile("B", theme=None, score=5), _tile("A", theme="space", score=1)]
+    assert _order(tiles, B.DEFAULT_SORT) == ["A", "B"]
+
+
+@pytest.mark.parametrize("key", ["volume", "rvol", "turnover", "avg_turnover",
+                                 "conviction", "rs", "change"])
+def test_every_offered_sort_actually_orders(key):
+    tiles = [_tile("LO", **{key: 1.0}), _tile("HI", **{key: 100.0})]
+    assert _order(tiles, key) == ["HI", "LO"]
+
+
+def test_the_tabs_own_score_breaks_ties_so_the_order_is_stable():
+    tiles = [_tile("LOW", volume=50, score=1), _tile("HIGH", volume=50, score=9)]
+    assert _order(tiles, "volume") == ["HIGH", "LOW"]
+
+
+# --- negatives: where a sort would lie ---
+def test_a_tile_with_NO_value_sorts_LAST_not_first():
+    """Missing data must never masquerade as a top result — a name with no
+    volume reading is not the quietest name, it is an unknown one."""
+    tiles = [_tile("UNKNOWN", volume=None), _tile("QUIET", volume=1)]
+    assert _order(tiles, "volume") == ["QUIET", "UNKNOWN"]
+
+
+def test_a_zero_still_beats_a_missing_value():
+    tiles = [_tile("UNKNOWN", volume=None), _tile("ZERO", volume=0.0)]
+    assert _order(tiles, "volume") == ["ZERO", "UNKNOWN"]
+
+
+def test_an_unknown_sort_key_falls_back_to_the_default():
+    """A stale bookmark should show the board, not reorder it randomly."""
+    tiles = [_tile("B", theme=None, score=5), _tile("A", theme="space", score=1)]
+    assert _order(tiles, "not-a-sort") == _order(tiles, B.DEFAULT_SORT)
+
+
+def test_the_per_theme_cap_does_not_apply_to_an_explicit_sort():
+    """MAX_PER_THEME keeps the DEFAULT board a spread. Under a volume sort it
+    would silently drop the 7th-highest-volume name for being in a popular
+    theme, and the board would stop being what the dropdown says it is."""
+    import inspect
+    src = inspect.getsource(B._finish)
+    assert "not explicit" in src
+
+
+def test_the_winners_tabs_offer_no_sort_because_they_have_no_volume():
+    """The ledger has no live volume. Offering a control that silently does
+    nothing is worse than not offering it."""
+    import inspect
+    src = inspect.getsource(B.board)
+    assert '"sorts"' in src and 'winners' in src
+
+
+def test_every_advertised_sort_is_a_real_key():
+    for key in B.SORTS:
+        if key == B.DEFAULT_SORT:
+            continue
+        assert key in B.tile_metrics({}), f"{key} is offered but never computed"
+
+
+def test_the_private_metrics_never_reach_the_client():
+    import inspect
+    assert '"_m"' in inspect.getsource(B._finish)

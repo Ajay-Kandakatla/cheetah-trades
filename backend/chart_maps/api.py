@@ -33,6 +33,11 @@ async def chart_maps(
     source: str = Query("pattern", description="winners tab only — pattern | zone"),
     minervini_only: bool = Query(False,
                                  description="winners tab only — SEPA qualifiers at the time"),
+    sort: str = Query(board_mod.DEFAULT_SORT,
+                      description="theme (default) | volume | rvol | turnover | "
+                                  "avg_turnover | conviction | rs | change. Applied "
+                                  "BEFORE the per-theme cap and the bar fetch, so it "
+                                  "ranks every match rather than reordering the page."),
 ):
     """Chart-ready tiles for one tab.
 
@@ -52,6 +57,7 @@ async def chart_maps(
         universe=universe if isinstance(universe, str) else "sp1500_plus",
             themes_first=themes_first if isinstance(themes_first, bool) else True,
             pattern=pattern if isinstance(pattern, str) else None,
+            sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

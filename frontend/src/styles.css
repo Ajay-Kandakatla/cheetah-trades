@@ -10956,3 +10956,32 @@ a.tk-link:hover   { color: inherit; }
   opacity: 0.5;
   display: inline-block;
 }
+
+/* ── Chart Maps: sort + live scan progress ───────────────────────────────────
+   Ajay 2026-08-17: "such as volume sort and you gave a dedicated dropdown can
+   you add them also can you give realtime ticker scan progress like other tabs
+   in SEPA". */
+.cm-rescan {
+  padding: 0.22rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  border: 1px solid var(--cm-border, #2a2f3a);
+  background: var(--cm-card, #161a22);
+  color: inherit;
+  cursor: pointer;
+}
+.cm-rescan:hover:not(:disabled) { border-color: var(--accent, #38bdf8); }
+.cm-rescan:disabled { opacity: 0.55; cursor: default; }
+
+.cm-progress {
+  margin: 0.5rem 0 0.9rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--cm-border, #2a2f3a);
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.04);
+}
+.cm-progress-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: var(--cm-slate, #94a3b8);
+}

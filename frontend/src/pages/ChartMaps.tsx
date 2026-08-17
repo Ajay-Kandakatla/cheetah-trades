@@ -23,10 +23,12 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
-  CM_TABS, TAB_META, WINNER_SOURCES, boardQuery, isThinSample, parseSource,
-  parseTab, recordLine,
+  CM_TABS, DEFAULT_SORT, TAB_META, WINNER_SOURCES, boardQuery, isThinSample,
+  parseSort, parseSource, parseTab, recordLine,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
+import { useSepaScanStream } from '../hooks/useSepaScanStream';
+import { SepaScanProgress } from '../components/SepaScanProgress';
 
 const UNIVERSES = [
   { key: 'sp1500_plus', label: 'S&P 1500 + themes' },
@@ -72,6 +74,7 @@ export function ChartMaps() {
   // option — see docs/sepa/chart_timeframes.md.
   const days = Number(params.get('days')) || undefined;
   const minerviniOnly = params.get('minervini') === 'true';
+  const sort = parseSort(params.get('sort'));
   const [universe, setUniverse] = useState('sp1500_plus');
   const [themesFirst, setThemesFirst] = useState(true);
   const [data, setData] = useState<CmBoard | null>(null);
@@ -79,10 +82,21 @@ export function ChartMaps() {
   const [err, setErr] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
 
+  /* Live scan progress. Ajay 2026-08-17: "can you give realtime ticker scan
+   * progress like other tabs in SEPA".
+   *
+   * This board never scans on its own — it reads `scanner.load_latest()` and
+   * the demand cache. So the honest wiring is not a fake progress bar over a
+   * board fetch: it is the SAME SEPA scan stream the other tabs watch, started
+   * from here, with the board reloading when it lands. Same hook, same
+   * component, same events — nothing re-implemented. */
+  const stream = useSepaScanStream();
+  const wasScanning = useRef(false);
+
   const load = useCallback(async () => {
     setErr(null);
     const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
-                           source, minerviniOnly });
+                           source, minerviniOnly, sort });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -94,9 +108,20 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
+
+  // A finished scan rewrites the file this board reads, so pull it again. Edge-
+  // triggered on the scanning->done transition, not on `phase === 'done'`,
+  // which would refetch on every render once the scan ended.
+  useEffect(() => {
+    if (stream.scanning) { wasScanning.current = true; return; }
+    if (wasScanning.current) {
+      wasScanning.current = false;
+      void load();
+    }
+  }, [stream.scanning, load]);
 
   // The demand board warms in a background thread on the server and answers
   // instantly with warming:true rather than holding the connection open (a
@@ -176,6 +201,32 @@ export function ChartMaps() {
               <option value="252">1 year</option>
             </select>
           </label>
+        )}
+        {tab !== 'winners' && (data?.sorts || []).length > 0 && (
+          <label className="cm-ctl">
+            Sort
+            <select
+              aria-label="Sort the board"
+              value={sort}
+              onChange={(e) => setParams((p) => {
+                const n = new URLSearchParams(p);
+                if (e.target.value === DEFAULT_SORT) n.delete('sort');
+                else n.set('sort', e.target.value);
+                return n;
+              }, { replace: true })}
+            >
+              {(data?.sorts || []).map((o) => (
+                <option key={o.key} value={o.key}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {tab !== 'winners' && (
+          <button type="button" className="cm-rescan"
+                  disabled={stream.scanning}
+                  onClick={() => stream.start({ fast: true })}>
+            {stream.scanning ? 'Scanning…' : '↻ Re-scan'}
+          </button>
         )}
         {tab === 'winners' && (
           <label className="cm-ctl">
@@ -257,6 +308,17 @@ export function ChartMaps() {
           as it lands; you don't need to refresh.
         </div>
       ) : null}
+
+      {(stream.scanning || stream.phase === 'done' || stream.error) && (
+        <div className="cm-progress">
+          <SepaScanProgress {...stream} />
+          {stream.phase === 'done' && (
+            <p className="cm-progress-note">
+              Scan finished — the board below has been reloaded from it.
+            </p>
+          )}
+        </div>
+      )}
 
       {loading && !tiles.length ? <div className="cm-note">Loading charts…</div> : null}
 

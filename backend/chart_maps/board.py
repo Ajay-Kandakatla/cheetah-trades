@@ -203,7 +203,90 @@ def _zone_window(zone: Optional[dict]) -> int:
     return int(min(ZONE_BARS_MAX, max(ZONE_BARS_MIN, int(oldest) + ZONE_BARS_PAD)))
 
 
-def _sort_key(tile: dict, themes_first: bool):
+# ---------------------------------------------------------------------------
+# Sort — Ajay 2026-08-17: "the same logic as In demand page from supply demand
+# such as volume sort and you gave a dedicated dropdown can you add them"
+# ---------------------------------------------------------------------------
+# WHY THIS IS A BACKEND PARAM AND NOT A CLIENT-SIDE RE-SORT
+#
+# The Breakouts page sorts rows it already holds, which is honest there — it
+# holds every breakout. This board does not. `_finish` ranks, applies
+# MAX_PER_THEME, and then loads price bars for only `limit + BAR_BUFFER` tiles,
+# because loading frames for all 265 matches to display 24 took minutes on a
+# cold cache. So a dropdown that re-ordered what is on screen would sort the 24
+# tiles THEME PRIORITY already chose — "highest volume" would mean "highest
+# volume among the names the theme ranking happened to pick", which reads
+# identically and means something else entirely.
+#
+# Sorting here, before the cut, is the only version of this feature that
+# answers the question the label asks.
+
+def _f(v) -> Optional[float]:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f else None
+
+
+def tile_metrics(row: dict) -> dict:
+    """Sortable numbers for one row, from either row shape. PURE.
+
+    Two producers feed this board: SEPA scan rows (`sepa.scanner`) and
+    demand-reentry rows (`supply_demand.demand_reentry`). They spell liquidity
+    differently — `liquidity.avg_dollar_vol` vs `liquidity.avg_dollar_vol_50` —
+    so both spellings are read rather than making the callers normalise.
+    """
+    row = row or {}
+    liq = row.get("liquidity") or {}
+    vol = row.get("volume") or {}
+
+    avg_dollar = _f(liq.get("avg_dollar_vol")) or _f(liq.get("avg_dollar_vol_50"))
+    today_vol = _f(liq.get("today_vol")) or _f(vol.get("last_vol"))
+    avg_vol = _f(liq.get("avg_vol_50")) or _f(vol.get("avg_vol_50"))
+
+    # rvol: prefer the one the producer computed (it knows whether the session
+    # is partial and suppresses the number rather than publishing a fraction of
+    # a day against a full one). Only derive when it did not.
+    rvol = _f(liq.get("rvol"))
+    if rvol is None and today_vol and avg_vol and avg_vol > 0:
+        rvol = today_vol / avg_vol
+
+    today_dollar = _f(liq.get("today_dollar_vol"))
+    if today_dollar is None and today_vol is not None:
+        px = _f(row.get("last_close")) or _f(row.get("last_price"))
+        if px:
+            today_dollar = today_vol * px
+
+    return {
+        "volume": today_vol,
+        "rvol": rvol,
+        "turnover": today_dollar,
+        "avg_turnover": avg_dollar,
+        "conviction": _f((row.get("conviction") or {}).get("score")
+                         if isinstance(row.get("conviction"), dict)
+                         else row.get("conviction")),
+        "rs": _f(row.get("rs_rank")),
+        "change": _f(row.get("day_change_pct")),
+    }
+
+
+# Dropdown options, in the order they are offered. `theme` is the default and
+# keeps the board's existing behaviour exactly.
+SORTS: dict[str, str] = {
+    "theme": "🤖 AI sectors (default)",
+    "volume": "📊 Today's volume",
+    "rvol": "📈 Volume vs normal (×)",
+    "turnover": "💵 $ turnover",
+    "avg_turnover": "🏦 Liquidity (avg $ vol)",
+    "conviction": "🏆 Conviction",
+    "rs": "⚡ RS rank",
+    "change": "🌡️ % change today",
+}
+DEFAULT_SORT = "theme"
+
+
+def _sort_key(tile: dict, themes_first: bool, sort: str = DEFAULT_SORT):
     """Theme names lead when asked (Ajay's standing rule that any board leads
     with the AI-ecosystem winners), ordered BETWEEN themes by his stated
     priority — space, quantum, semis, optical, robotics, infra, nuclear — then
@@ -211,9 +294,18 @@ def _sort_key(tile: dict, themes_first: bool):
 
     Before 2026-08-16 this was binary (theme / no theme), so the board could
     answer "is this a theme name?" but never "which theme leads?".
+
+    An explicit metric REPLACES the theme ranking rather than tie-breaking
+    inside it — picking "Today's volume" and still getting space names first
+    would not be a volume sort. A tile with no value for the chosen metric goes
+    last, never first: missing data must not masquerade as a top result. The
+    tab's own score breaks ties so the order stays stable.
     """
+    if sort != DEFAULT_SORT and sort in SORTS:
+        v = (tile.get("_m") or {}).get(sort)
+        return (0 if v is not None else 1, -(v or 0.0), -(tile.get("_score") or 0.0))
     rank = _theme_rank(tile.get("theme")) if themes_first else 1
-    return (rank, -(tile.get("_score") or 0.0))
+    return (rank, -(tile.get("_score") or 0.0), 0.0)
 
 
 # Spare tiles fetched beyond `limit`, to cover symbols whose price frame turns
@@ -256,7 +348,8 @@ def _spread(tiles: list[dict], limit: int) -> list[dict]:
     return kept + spill
 
 
-def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int) -> list[dict]:
+def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
+            sort: str = DEFAULT_SORT) -> list[dict]:
     """Rank on metadata, THEN load bars for only the tiles that will be shown.
 
     Ordering matters for latency, not just tidiness. Ranking after fetching
@@ -264,8 +357,13 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int) -> lis
     cold price cache that is minutes, and minutes is a 524. Sorting first caps
     the work at `limit + BAR_BUFFER` frames regardless of how many matched.
     """
-    tiles.sort(key=lambda t: _sort_key(t, themes_first))
-    if themes_first:
+    explicit = sort != DEFAULT_SORT and sort in SORTS
+    tiles.sort(key=lambda t: _sort_key(t, themes_first, sort))
+    # The per-theme cap keeps the board a SPREAD, which is the right default for
+    # a study surface. But it fights an explicit ranking: capping a volume sort
+    # would silently drop the 7th-highest-volume name for being in a popular
+    # theme, and the board would no longer be the thing the dropdown says it is.
+    if themes_first and not explicit:
         tiles = _spread(tiles, limit)
     short = tiles[:limit + BAR_BUFFER]
     _attach_bars(short, days)
@@ -273,6 +371,7 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int) -> lis
     for t in out:
         t.pop("_score", None)
         t.pop("_bars", None)
+        t.pop("_m", None)
     return out
 
 
@@ -397,7 +496,8 @@ def _is_strong_vcp(row: dict) -> bool:
 
 
 def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-              themes_first: bool = True, min_tightness: int = STRONG_TIGHTNESS) -> dict:
+              themes_first: bool = True, min_tightness: int = STRONG_TIGHTNESS,
+              sort: str = DEFAULT_SORT) -> dict:
     from sepa import scanner
 
     scan = scanner.load_latest()
@@ -458,8 +558,9 @@ def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "theme": _theme(sym),
             "badges": _vcp_badges(r),
             "_score": tight or 0.0,
+            "_m": tile_metrics(r),
         })
-    return {"tiles": _finish(tiles, limit, themes_first, days),
+    return {"tiles": _finish(tiles, limit, themes_first, days, sort),
             "matched": len(picked),
             "scanned": len(rows),
             "scan_generated_at": scan.get("generated_at")}
@@ -485,7 +586,8 @@ def _vcp_badges(row: dict) -> list[dict]:
 # tab 2 — pullbacks into demand
 # ---------------------------------------------------------------------------
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-               universe: str = "sp1500_plus", themes_first: bool = True) -> dict:
+               universe: str = "sp1500_plus", themes_first: bool = True,
+               sort: str = DEFAULT_SORT) -> dict:
     from supply_demand import demand_reentry as D
 
     data = D.cached_or_warm(universe, limit=LIMIT_MAX)
@@ -559,8 +661,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "theme": _theme(sym),
             "badges": _zone_badges(r),
             "_score": rr or 0.0,
+            "_m": tile_metrics(r),
         })
-    return {"tiles": _finish(tiles, limit, themes_first, days),
+    return {"tiles": _finish(tiles, limit, themes_first, days, sort),
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -829,7 +932,7 @@ def _winner_record(usable: list, wins: list, losses: list) -> dict:
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "sp1500_plus", themes_first: bool = True,
           pattern: Optional[str] = None, source: str = "pattern",
-          minervini_only: bool = False) -> dict:
+          minervini_only: bool = False, sort: str = DEFAULT_SORT) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -841,9 +944,12 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     limit = max(1, min(int(limit or LIMIT_DEFAULT), LIMIT_MAX))
     days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
     src = source if source in ("pattern", "zone") else "pattern"
+    # An unknown sort falls back to the default rather than erroring: a stale
+    # bookmark should show the board, not a 422.
+    srt = sort if sort in SORTS else DEFAULT_SORT
 
     if t == "zones":
-        out = zone_tiles(limit, days, universe, themes_first)
+        out = zone_tiles(limit, days, universe, themes_first, srt)
     elif t == "winners":
         if src == "zone":
             out = zone_winner_tiles(limit, days=min(days, 90))
@@ -852,9 +958,15 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                                minervini_only=bool(minervini_only))
         out["source"] = src
     else:
-        out = vcp_tiles(limit, days, themes_first)
+        out = vcp_tiles(limit, days, themes_first, sort=srt)
 
     out["tab"] = t
     out["count"] = len(out.get("tiles") or [])
+    # The winners tabs read a ledger, not a scan, so they carry no live volume
+    # to sort by. Say so rather than offering a control that silently does
+    # nothing.
+    out["sort"] = DEFAULT_SORT if t == "winners" else srt
+    out["sorts"] = [] if t == "winners" else [{"key": k, "label": v}
+                                              for k, v in SORTS.items()]
     out["disclaimer"] = DISCLAIMER
     return out
