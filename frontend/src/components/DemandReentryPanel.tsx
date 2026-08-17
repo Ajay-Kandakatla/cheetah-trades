@@ -50,6 +50,12 @@ type Payload = {
   /* Live counter carried on the warming payload, so the board poll alone shows
    * a moving number even before the faster progress poll lands. */
   progress?: DemandScanProgressPayload | null;
+  /* Reward:risk floor applied to this payload, and how many rows it removed.
+   * Ajay 2026-08-17 chose this over the three "buyers in control" candidates,
+   * all of which failed measurement. */
+  min_rr?: number;
+  min_rr_default?: number;
+  dropped_low_rr?: number;
   disclaimer: string;
 };
 
@@ -82,9 +88,23 @@ const SORTS: { key: string; label: string }[] = [
   { key: 'fresh',    label: '🕐 Freshest re-entry' },
 ];
 
+/* Reward:risk floor. 1.0 is the house default and it is NOT the backtest's best
+ * cell — 1.25 measured better (exSPY -0.003% vs -0.101%), but excess-vs-SPY is
+ * NOT monotone across the sweep, so the peak of a nine-cell search is a fitted
+ * number, not a measured one. 1.0 is what "never risk more than the first
+ * objective pays" implies, and that claim needs no backtest.
+ * See docs/supply_demand/rr_floor.md. */
+const RR_FLOORS: { key: string; label: string }[] = [
+  { key: '0',    label: '🎯 R:R floor — none' },
+  { key: '1',    label: '🎯 R:R ≥ 1 (default)' },
+  { key: '1.5',  label: '🎯 R:R ≥ 1.5' },
+  { key: '2',    label: '🎯 R:R ≥ 2' },
+];
+
 export function DemandReentryPanel() {
   const [universe, setUniverse] = useState<string>('sp1500');
   const [sortKey, setSortKey] = useState<string>('rr');
+  const [minRr, setMinRr] = useState<string>('1');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -94,7 +114,7 @@ export function DemandReentryPanel() {
     force ? setScanning(true) : setLoading(true);
     setErr(null);
     try {
-      const u = `universe=${encodeURIComponent(universe)}`;
+      const u = `universe=${encodeURIComponent(universe)}&min_rr=${encodeURIComponent(minRr)}`;
       const r = force
         ? await fetch(`${API}/supply-demand/demand-reentry/scan?${u}`, {
             method: 'POST', credentials: 'include',
@@ -108,7 +128,7 @@ export function DemandReentryPanel() {
       setLoading(false);
       setScanning(false);
     }
-  }, [universe]);
+  }, [universe, minRr]);
 
   useEffect(() => { load(false); }, [load]);
 
@@ -133,9 +153,12 @@ export function DemandReentryPanel() {
       <div className="sepa-tab-help">
         <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
         back <em>into</em> a demand band they had already left, while the structure
-        still holds. Sorted by <strong>R:R</strong> — the backtest found R:R ≥ 1.5 was
-        the only cohort with positive expectancy, so the top of this list is the only
-        part worth reading. <strong>Liq</strong> is average daily dollar volume (a great
+        still holds. Sorted by <strong>R:R</strong>, with a floor on it: measured over
+        737 walk-forward trades, <strong>36% of this board's wins hit target on the
+        entry bar itself at a median 0.45R</strong> — plans whose objective was already
+        inside the entry day's range. The floor removes those. It does <em>not</em>
+        make the rule beat SPY (it doesn't, on 13.5 months of data); it removes bad
+        trade construction. <strong>Liq</strong> is average daily dollar volume (a great
         R:R you can't get filled in is not a trade) and <strong>dark</strong> is the
         share that printed off-exchange.
       </div>
@@ -154,12 +177,23 @@ export function DemandReentryPanel() {
                 style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}>
           {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
+        <select value={minRr} onChange={(e) => setMinRr(e.target.value)}
+                disabled={busy} className="sepa-select" aria-label="Reward:risk floor"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}
+                title="A plan that risks more than its first objective pays is not a trade. 36% of this board's backtested wins hit target on the ENTRY bar at a median 0.45R — this removes those.">
+          {RR_FLOORS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+        </select>
         <button className="sepa-btn" onClick={() => load(true)} disabled={busy}>
           {scanning ? 'Scanning…' : '🔄 Scan'}
         </button>
         {data && (
           <span className="mono" style={{ fontSize: '0.72rem', opacity: 0.75 }}>
             {data.n} in demand · {data.scanned}/{data.universe} scanned
+            {!!data.dropped_low_rr && (
+              <span title={`Removed by the R:R ≥ ${data.min_rr} floor. A plan that risks more than its first objective pays is not a trade.`}>
+                {' '}· {data.dropped_low_rr} below R:R {data.min_rr}
+              </span>
+            )}
             {data.took_sec ? ` · ${data.took_sec}s` : ''}
             {data.cached ? ' · cached' : ''}
           </span>

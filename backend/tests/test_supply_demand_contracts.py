@@ -153,3 +153,41 @@ def test_chart_maps_imports_the_tier_scale_rather_than_redeclaring_it():
     assert board.LIQ_DEEP_USD is dr.LIQ_DEEP_USD
     assert board.LIQ_OK_USD is dr.LIQ_OK_USD
     assert board.LIQ_THIN_USD is dr.LIQ_THIN_USD
+
+
+# ── the reward:risk floor (2026-08-17) ────────────────────────────────────────
+def test_rr_floor_constant_locked():
+    assert dr.MIN_RR_DEFAULT == 1.0
+
+
+def test_the_floor_filters_the_BOARD_and_never_the_structural_read():
+    """Two different questions, two different fields. `is_reentry` = did price
+    come back into a band it had left with the trend intact. The R:R floor = is
+    the resulting PLAN worth taking. Folding the second into the first would
+    also blind the walk-forward to the unfiltered cohort — which is where the
+    measurement that justifies the floor came from."""
+    src = inspect.getsource(dr.decide_from_frame)
+    assert "meets_rr_floor" not in src and "min_rr" not in src
+
+
+def test_the_floor_runs_at_read_time_not_inside_the_scan():
+    """Otherwise the 3-hour cache holds one row set PER FLOOR VALUE, and moving
+    the dropdown costs a fresh 3-minute universe pass."""
+    assert "_apply_rr_floor" not in inspect.getsource(dr.scan)
+    assert "_apply_rr_floor" in inspect.getsource(dr.cached_or_warm)
+
+
+def test_an_unknown_reward_risk_FAILS_a_real_floor():
+    """Consistent with the chart-maps liquidity tier: the one we could not
+    measure must not be the one that shows up unfiltered."""
+    assert dr.meets_rr_floor({"rr": None}, 1.0) is False
+    assert dr.meets_rr_floor(None, 1.0) is False
+
+
+def test_the_documented_default_is_not_the_backtests_best_cell():
+    """A guard against a future 'optimisation'. 1.25 measured better on the
+    737-observation sample; it is not the default because excess-vs-SPY is NOT
+    monotone across the sweep, making the peak a fitted number rather than a
+    measured one. If someone changes this to 1.25 they must also change this
+    test, and this docstring is the reason they should not."""
+    assert dr.MIN_RR_DEFAULT != 1.25

@@ -1432,3 +1432,135 @@ def test_chart_maps_shows_the_SAME_counter_not_its_own():
     assert 'D.cached_or_warm(' in src, "chart-maps must read the shared cache"
     assert '"progress": data.get("progress")' in src, \
         "chart-maps must forward the shared counter, never compute its own"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# THE REWARD:RISK FLOOR  (Ajay 2026-08-17)
+#
+# Chosen AFTER three "buyers in control" candidates were designed and measured
+# and all three failed (joint family-wise p = 0.76, holdouts failing in opposite
+# directions, 0.4% agreement between them). The measured defect they all missed:
+#
+#   36% of this board's backtested wins (131 of 363) resolved on the ENTRY BAR,
+#   median planned R:R 0.45 — the "target" was already inside the entry day's
+#   range. Strip them and the whole rule reads exp -0.29%, exSPY -0.586%.
+#
+# Spec: docs/supply_demand/rr_floor.md
+# ═════════════════════════════════════════════════════════════════════════════
+
+def test_a_plan_that_pays_less_than_it_risks_fails_the_floor():
+    """The behavioural case, and the whole justification in one line: DUK on the
+    2026-08-14 board offered 0.16R — risking six dollars to make one."""
+    assert dr.meets_rr_floor({"rr": 0.16}) is False
+    assert dr.meets_rr_floor({"rr": 1.85}) is True
+
+
+def test_the_floor_is_INCLUSIVE_at_its_own_value():
+    assert dr.meets_rr_floor({"rr": 1.0}, 1.0) is True
+    assert dr.meets_rr_floor({"rr": 0.999}, 1.0) is False
+
+
+def test_an_UNCOMPUTABLE_rr_fails_a_real_floor():
+    """`rr` is None when no supply band sits above the entry band, so there is
+    no first objective to measure. The backtest SKIPS those rows entirely — so
+    there is no evidence they work either way, and letting them through would
+    make the one we could not measure the one that shows up unfiltered. Same
+    rule the chart-maps liquidity tier uses for an unknown turnover."""
+    assert dr.meets_rr_floor({"rr": None}) is False
+    assert dr.meets_rr_floor({}) is False
+    assert dr.meets_rr_floor(None) is False
+
+
+def test_a_floor_of_zero_is_OFF_and_passes_everything():
+    for plan in ({"rr": 0.01}, {"rr": None}, {}, None):
+        assert dr.meets_rr_floor(plan, 0) is True
+
+
+def test_a_bool_is_not_a_reward_risk_ratio():
+    """`True >= 1.0` is True in Python. A bool reaching this field means an
+    upstream bug, and silently scoring it as a 1.0R plan would hide it."""
+    assert dr.meets_rr_floor({"rr": True}) is False
+
+
+def test_the_floor_default_is_the_TRADE_CONSTRUCTION_line_not_the_fitted_peak():
+    """1.25 was the best exSPY cell in the sweep (-0.003% vs 1.0's -0.101%).
+    It is deliberately NOT the default: exSPY is NOT monotone across the sweep
+    (it falls at 0.75, 1.50, 2.00 and 3.00), so the peak of a nine-cell search
+    is a fitted number. Picking it would be exactly the in-sample fitting that
+    disqualified the three buyers-in-control candidates — and applying a
+    stricter standard to those than to this would be dishonest.
+
+    1.0 is what "never risk more than the first objective pays" implies, and
+    that claim needs no backtest at all."""
+    assert dr.MIN_RR_DEFAULT == 1.0
+
+
+# --- the payload filter ---
+def _row(rr):
+    return {"symbol": "X", "plan": ({"rr": rr} if rr is not None else None)}
+
+
+def test_the_filter_reports_what_it_removed_rather_than_just_shrinking():
+    data = {"rows": [_row(1.85), _row(0.16), _row(0.71), _row(2.4)], "n": 4}
+    out = dr._apply_rr_floor(data, 1.0)
+    assert [r["plan"]["rr"] for r in out["rows"]] == [1.85, 2.4]
+    assert out["n"] == 2
+    assert out["dropped_low_rr"] == 2
+    assert out["min_rr"] == 1.0
+    assert out["min_rr_default"] == dr.MIN_RR_DEFAULT
+
+
+def test_min_rr_None_means_APPLY_THE_DEFAULT_not_no_floor():
+    """A caller that omits the parameter must get the house behaviour, or the
+    default silently stops applying the moment anyone forgets to pass it."""
+    data = {"rows": [_row(1.85), _row(0.16)], "n": 2}
+    assert dr._apply_rr_floor(data, None)["dropped_low_rr"] == 1
+
+
+def test_a_floor_of_zero_leaves_every_row_and_says_so():
+    data = {"rows": [_row(0.16), _row(None)], "n": 2}
+    out = dr._apply_rr_floor(data, 0)
+    assert len(out["rows"]) == 2
+    assert out["min_rr"] == 0.0 and out["dropped_low_rr"] == 0
+
+
+def test_the_floor_never_reorders_the_rows_it_keeps():
+    """The board is sorted by R:R before this runs; a filter that resorted would
+    silently change which row leads."""
+    data = {"rows": [_row(3.0), _row(0.2), _row(1.2), _row(0.9), _row(2.0)]}
+    out = dr._apply_rr_floor(data, 1.0)
+    assert [r["plan"]["rr"] for r in out["rows"]] == [3.0, 1.2, 2.0]
+
+
+def test_the_filter_is_applied_at_READ_time_so_the_cache_is_not_fragmented():
+    """One 3-hour cache entry per universe, not one per floor value — and
+    changing the floor on the page must be instant, not a fresh 3-minute pass."""
+    import inspect
+    scan_src = inspect.getsource(dr.scan)
+    assert "_apply_rr_floor" not in scan_src, \
+        "the floor must not run inside scan(), or the cache holds a filtered set"
+    assert "_apply_rr_floor" in inspect.getsource(dr.cached_or_warm)
+
+
+def test_the_floor_does_not_touch_is_reentry():
+    """`is_reentry` answers the STRUCTURAL question — did price come back into a
+    band it had left, with the trend intact. R:R is a fact about the PLAN. Mixing
+    them would make one field mean two things AND would stop the walk-forward
+    from measuring the unfiltered cohort, which is where the 0.45R finding came
+    from in the first place."""
+    import inspect
+    assert "min_rr" not in inspect.getsource(dr.decide_from_frame)
+    assert "meets_rr_floor" not in inspect.getsource(dr.decide_from_frame)
+
+
+def test_an_empty_board_survives_the_filter():
+    out = dr._apply_rr_floor({"rows": [], "n": 0}, 1.0)
+    assert out["rows"] == [] and out["dropped_low_rr"] == 0
+
+
+def test_a_warming_payload_carries_the_floor_fields():
+    """The page renders them unconditionally; a missing key is a crash."""
+    import inspect
+    src = inspect.getsource(dr.cached_or_warm)
+    for key in ('"min_rr"', '"min_rr_default"', '"dropped_low_rr"'):
+        assert key in src, f"warming payload is missing {key}"

@@ -283,7 +283,8 @@ def progress_for(universe: str) -> dict:
             "pct": round(100.0 * cur / total, 1) if total else None}
 
 
-def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
+def cached_or_warm(universe: str, limit: Optional[int] = None,
+                   min_rr: Optional[float] = None) -> dict:
     """Serve the cache, or start a background compute and say so — never block.
 
     A cold sp1500 pass is ~3 MINUTES (1,500 price frames, then a tape + NBBO
@@ -298,7 +299,8 @@ def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
     ukey = _universe_key(universe)
     c = _cache.get(ukey)
     if c and (time.time() - c["ts"]) < _CACHE_TTL_SEC:
-        return {**_apply_limit(c["data"], limit), "cached": True, "warming": False}
+        return {**_apply_limit(_apply_rr_floor(c["data"], min_rr), limit),
+                "cached": True, "warming": False}
 
     with _warm_lock:
         already = ukey in _warming
@@ -328,11 +330,92 @@ def cached_or_warm(universe: str, limit: Optional[int] = None) -> dict:
             "universe_source": None, "universe_choices":
                 [{"key": k, "label": v[0]} for k, v in UNIVERSES.items()],
             "errors": 0, "took_sec": 0, "cached": False, "warming": True,
+            "min_rr": (MIN_RR_DEFAULT if min_rr is None else float(min_rr)),
+            "min_rr_default": MIN_RR_DEFAULT, "dropped_low_rr": 0,
             # Carried on the warming payload as well as the dedicated endpoint,
             # so a page that only polls the board still gets a moving number.
             "progress": progress_for(ukey),
             "as_of": datetime.now(timezone.utc).isoformat(),
             "disclaimer": DISCLAIMER}
+
+
+# ── The reward:risk floor ────────────────────────────────────────────────────
+# Ajay 2026-08-17, after three "buyers in control" candidates were measured and
+# all three failed: he picked the R:R floor instead.
+#
+# WHY 1.0, AND WHY IT IS **NOT** THE BACKTEST'S BEST CELL
+# ------------------------------------------------------
+# Measured on 737 walk-forward observations (300 S&P names by dollar volume,
+# decision days 2025-07-08 → 2026-08-14 — 13.5 months, NOT the 5y the harness
+# reports, because load_prices serves a ~500-bar cache):
+#
+#   floor   raced  win%   exp%    exSPY%   medRR   wins resolved on the ENTRY bar
+#   none      680  53.4   +0.02   -0.219    0.94   131  (36% of all wins!)
+#   >=1.00    326  39.9   +0.17   -0.101    1.87    27
+#   >=1.25    257  37.4   +0.29   -0.003    2.18    16
+#   >=1.50    215  32.6   +0.15   -0.247    2.35    12
+#   >=2.50     95  31.6   +0.62   +0.034    3.26     3
+#
+# 1.25 is the best exSPY cell. It is deliberately NOT the default, because
+# **exSPY is not monotone** — it falls at 0.75, 1.50, 2.00 and 3.00, four of
+# eight steps going the wrong way. Picking the peak of a nine-cell sweep is the
+# same in-sample fitting that disqualified the three buyers-in-control
+# candidates, and it would be dishonest to apply a stricter standard to those
+# than to this.
+#
+# What IS monotone is the column that describes the actual defect: wins that
+# resolve on the ENTRY bar, 131 → 59 → 37 → 27 → 16 → 12 → 9 → 8 → 3 → 2. Those
+# are plans whose "target" already sat inside the entry day's range — median
+# planned R:R **0.45**. Strip them from the unfiltered board and the whole rule
+# reads exp -0.29%, exSPY -0.586%. The board's headline +0.02% is carried by
+# 0.45R hops.
+#
+# So the floor is justified by TRADE CONSTRUCTION, not by a fitted optimum:
+# a plan that risks more than its first objective pays is not a trade, whatever
+# a 13.5-month sample says. 1.0 is the line that claim implies. It is a house
+# value, it is configurable, and `min_rr=0` turns it off.
+#
+# HONEST LIMIT: no floor makes this board beat SPY on this sample. The
+# unfiltered rule is exSPY -0.219% and the best cell reaches -0.003%. The floor
+# removes bad trade CONSTRUCTION; it does not turn the rule into an edge.
+MIN_RR_DEFAULT = 1.0
+
+
+def meets_rr_floor(plan: Optional[dict], min_rr: float = MIN_RR_DEFAULT) -> bool:
+    """Does this plan's reward:risk clear the floor? PURE.
+
+    An UNCOMPUTABLE R:R fails a real floor — same rule as the chart-maps
+    liquidity tier. `rr` is None when no supply band sits above the entry band,
+    so there is no first objective to measure against; the backtest skips those
+    rows entirely, which means there is no evidence they work either way.
+    Letting them through would make "the one we could not measure" the one that
+    shows up unfiltered.
+
+    A floor of 0 (or less) is OFF and passes everything, including None.
+    """
+    if not min_rr or min_rr <= 0:
+        return True
+    rr = (plan or {}).get("rr")
+    return isinstance(rr, (int, float)) and not isinstance(rr, bool) and rr >= min_rr
+
+
+def _apply_rr_floor(data: dict, min_rr: Optional[float]) -> dict:
+    """Filter a scan payload by the R:R floor, reporting what it removed.
+
+    Applied at READ time, never inside `scan`, so the 3-hour cache holds ONE row
+    set per universe instead of one per floor value — and so changing the floor
+    on the page is instant rather than a fresh 3-minute pass.
+    """
+    floor = MIN_RR_DEFAULT if min_rr is None else float(min_rr)
+    rows = data.get("rows") or []
+    if floor <= 0:
+        return {**data, "min_rr": 0.0, "dropped_low_rr": 0,
+                "min_rr_default": MIN_RR_DEFAULT}
+    kept = [r for r in rows if meets_rr_floor(r.get("plan"), floor)]
+    return {**data, "rows": kept, "n": len(kept),
+            "min_rr": floor,
+            "min_rr_default": MIN_RR_DEFAULT,
+            "dropped_low_rr": len(rows) - len(kept)}
 
 
 def _apply_limit(data: dict, limit: Optional[int]) -> dict:

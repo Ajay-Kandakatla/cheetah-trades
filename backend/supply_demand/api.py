@@ -29,6 +29,9 @@ async def get_demand_reentry(
     limit: int = Query(60, ge=1, le=500),
     force: bool = Query(False, description="bypass the 3h cache and rescan"),
     universe: str = Query("sp1500", description="sp1500 (default) | sp500 | sp400 | sp600"),
+    min_rr: Optional[float] = Query(None, ge=0, le=10,
+                                    description="reward:risk floor; 0 = off, "
+                                                "omit for the house default (1.0)"),
 ):
     """Names that have pulled back DOWN into a tested demand band while the
     structure still holds ("entering back into demand").
@@ -53,8 +56,10 @@ async def get_demand_reentry(
     # and Cloudflare cuts at ~100s (the 524 of 2026-08-14). `force` still runs
     # inline for the Scan button, which the UI shows a spinner for.
     if force is True:
-        return await asyncio.to_thread(reentry_mod.scan, True, limit, universe)
-    return await asyncio.to_thread(reentry_mod.cached_or_warm, universe, limit)
+        data = await asyncio.to_thread(reentry_mod.scan, True, None, universe)
+        return reentry_mod._apply_limit(
+            reentry_mod._apply_rr_floor(data, min_rr), limit)
+    return await asyncio.to_thread(reentry_mod.cached_or_warm, universe, limit, min_rr)
 
 
 @router.get("/supply-demand/demand-reentry/progress")
@@ -82,11 +87,17 @@ async def get_demand_reentry_progress(
 async def post_demand_reentry_scan(
     limit: int = Query(60, ge=1, le=500),
     universe: str = Query("sp1500", description="sp1500 (default) | sp500 | sp400 | sp600"),
+    min_rr: Optional[float] = Query(None, ge=0, le=10,
+                                    description="reward:risk floor; 0 = off"),
 ):
     """Force a fresh demand-zone re-entry scan (the page's Scan button).
     Bypasses the 3h cache. sp1500 covers ~1,500 names."""
     import asyncio
-    return await asyncio.to_thread(reentry_mod.scan, True, limit, universe)
+    # The floor is applied AFTER the scan, never inside it: `limit` must cut the
+    # list that already cleared the floor, or a strict floor returns a short page
+    # while qualifying rows sit just past the limit.
+    data = await asyncio.to_thread(reentry_mod.scan, True, None, universe)
+    return reentry_mod._apply_limit(reentry_mod._apply_rr_floor(data, min_rr), limit)
 
 
 @router.get("/supply-demand/accumulation-changes")
