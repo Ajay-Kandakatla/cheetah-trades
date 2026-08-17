@@ -29,6 +29,13 @@ export type Plan = {
   rr: number | null;
   risk_exceeds_max: boolean;
   max_stop_pct: number;
+  /** Has the market already traded through this stop in the last
+   *  `stop_hit_lookback_bars` sessions? **null means NOT CHECKED** (an older
+   *  cached payload), which is not the same claim as false. */
+  stop_recently_hit?: boolean | null;
+  bars_since_stop_hit?: number | null;
+  lowest_low_pct_below_stop?: number | null;
+  stop_hit_lookback_bars?: number;
 };
 
 export type ZoneMapPayload = {
@@ -43,6 +50,12 @@ export type ZoneMapPayload = {
   is_reentry: boolean;
   fell_from_pct: number | null;
   bars_since_above: number | null;
+  /** Has a bar CLOSED below the band floor since price was last above the band?
+   *  (Ajay 2026-08-17, on NBIX.) A broken band is reported even though it is the
+   *  reason the row was refused, so the page can say why. */
+  zone_broken?: boolean;
+  bars_since_zone_break?: number | null;
+  lowest_close_pct_below_zone?: number | null;
   /* Falling-knife guard — replaced the Minervini trend template 2026-08-13.
    * `structure.trend` is the direction of the swing lows. */
   structure?: { trend: 'rising' | 'falling' | 'unclear'; swing_lows: number[];
@@ -117,9 +130,20 @@ export function freshnessLabel(barsSinceAbove: number | null | undefined): strin
   return `back in ${barsSinceAbove} days ago`;
 }
 
-/** The one-line trade plan the zone chart writes onto the bands. */
-export function planLine(plan: Plan | null | undefined): string {
+/** The one-line trade plan the zone chart writes onto the bands.
+ *
+ *  `zoneBroken` demotes it from a plan to a range. Ajay 2026-08-17, on NBIX:
+ *  *"We fell below the demand zone but you still say buy in one place"* — the
+ *  band had been closed under two sessions earlier and this line still opened
+ *  with "Buy". Support that failed is a level to watch, not a level to lean on.
+ */
+export function planLine(plan: Plan | null | undefined,
+                         zoneBroken = false): string {
   if (!plan) return 'No demand band below price — no defined entry here.';
+  if (zoneBroken) {
+    return `Zone BROKEN — ${level(plan.entry_low)}–${level(plan.entry_high)} `
+      + 'failed on a close below the floor. No entry here until it is reclaimed.';
+  }
   const parts = [`Buy ${level(plan.entry_low)}–${level(plan.entry_high)}`];
   parts.push(`Stop ${level(plan.stop)}${plan.risk_pct != null ? ` (−${plan.risk_pct}%)` : ''}`);
   if (plan.target != null) {
@@ -142,6 +166,16 @@ export function reentryReason(p: ZoneMapPayload): string {
   }
   if (!p.zone_quality_ok) {
     return `In the band, but it is only tested ${p.entry_zone.touches}× (weak support).`;
+  }
+  if (p.zone_broken) {
+    const depth = p.lowest_close_pct_below_zone != null
+      ? ` (closed ${p.lowest_close_pct_below_zone}% under it)` : '';
+    const when = p.bars_since_zone_break === 0 ? 'today'
+      : p.bars_since_zone_break === 1 ? 'yesterday'
+      : p.bars_since_zone_break != null ? `${p.bars_since_zone_break} days ago` : 'recently';
+    return `Back inside the band, but it BROKE first — a close below ${level(p.entry_zone.lo)} `
+      + `${when}${depth}. Bouncing back over a floor does not un-break it; this is a level `
+      + 'being fought over, not support to lean on.';
   }
   if (p.is_reentry) {
     const fell = p.fell_from_pct != null ? ` after running +${p.fell_from_pct}% above it` : '';

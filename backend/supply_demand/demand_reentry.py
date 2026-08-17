@@ -52,6 +52,14 @@ backtest (`sd_backtest.py`), this filter improved expectancy in every single
 target/hold configuration tested, and the knives-only cohort was the worst
 performer in all of them.
 
+THE BROKEN-BAND GUARD (2026-08-17)
+---------------------------------
+A band price CLOSED below and then bounced back into is not support, and a
+re-entry into it is not a buy. On the S&P 500 board the day it was added, 8 of
+17 rows were broken bands — SWKS was reading "back in demand" 18% under the band
+it had supposedly returned to. See `reentry_read`, and
+docs/supply_demand/broken_band_guard.md for the NBIX case that forced it.
+
 Spec + measured tuning notes: docs/supply_demand/demand_reentry_methodology.md
 """
 from __future__ import annotations
@@ -86,6 +94,19 @@ MA_SLOPE_LOOKBACK      = 10
 
 # Stop sits this far under the band floor (room for a wick through support).
 STOP_BUFFER_PCT = 1.5
+
+# How far back a proposed stop is checked against the bars that already traded.
+# Ajay 2026-08-17, on NBIX: the board offered a $150.25 stop on the same morning
+# the stock printed a $148.78 low. A stop the market has already run is not a
+# stop; the plan it belongs to was stopped out before it was quoted.
+#
+# Two trading weeks is a CONFIGURED house value, and the window matters in both
+# directions: a stop taken out three months ago against a band that has been
+# rebuilt and retested since is stale news, while one taken out in the last few
+# sessions describes the structure being traded right now. Unlike the broken-band
+# guard this only WARNS — the level is a fact about the plan, not about the zone,
+# and Ajay may still want the name on the board with the caveat attached.
+STOP_HIT_LOOKBACK_BARS = 10
 
 MIN_BARS = 220                # ~1y of bars for the structure read
 
@@ -260,12 +281,39 @@ def reentry_read(closes: list[float], zone_hi: float, zone_lo: float,
     """Did price leave this band above and come back into it? PURE.
 
     Returns is_reentry plus the supporting evidence: how far above the band top
-    it got (`fell_from_pct`) and how many bars ago it was last above
-    (`bars_since_above`). Requires price to be INSIDE the band now — a name
-    below the floor has broken support, which is the opposite of this signal.
+    it got (`fell_from_pct`), how many bars ago it was last above
+    (`bars_since_above`), and whether the band has since been BROKEN.
+
+    Requires price to be INSIDE the band now — a name below the floor has
+    broken support, which is the opposite of this signal.
+
+    THE BROKEN-BAND GUARD (Ajay 2026-08-17, on NBIX)
+    -----------------------------------------------
+    That last sentence was the stated intent and the code did not implement it.
+    `in_band` tested only the LAST price, so a name that fell through the floor,
+    CLOSED below it, and bounced back the next day read as a clean re-entry::
+
+        2026-08-12  close 156.49                 in band
+        2026-08-13  close 150.82   <- below the 152.54 floor
+        2026-08-14  close 152.72                 back inside
+
+    The board showed "back in demand · support is right here · entry favorable"
+    and offered Buy $152.54-155.30 with a $150.25 stop — a stop the market had
+    already traded through that same morning (low $148.78).
+
+    A close beneath the floor is the market rejecting that support. Bouncing
+    back above it the next session does not un-break it; it makes the band a
+    LEVEL price is fighting over, not a floor to lean on. So the break is
+    reported and `is_reentry` is refused.
+
+    Only CLOSES count, deliberately. Intraday wicks through a band are how
+    demand zones get tested in the first place — failing on a wick would reject
+    the healthy case this signal exists to find.
     """
     out = {"is_reentry": False, "fell_from_pct": None,
-           "bars_since_above": None, "in_band": False}
+           "bars_since_above": None, "in_band": False,
+           "broke_below": False, "bars_since_break": None,
+           "lowest_close_pct_below": None}
     if not closes or not zone_hi or not zone_lo or zone_hi <= zone_lo:
         return out
     out["in_band"] = bool(zone_lo <= last_price <= zone_hi)
@@ -282,12 +330,27 @@ def reentry_read(closes: list[float], zone_hi: float, zone_lo: float,
     above_idx = [i for i, c in enumerate(window) if c > zone_hi]
     if above_idx:
         out["bars_since_above"] = int(len(window) - 1 - above_idx[-1])
-    out["is_reentry"] = bool(rise >= min_rise_pct and above_idx)
+
+    # Has any bar CLOSED beneath the floor since price was last above the band?
+    # Scoped to after the last visit above on purpose: a close below the floor
+    # from before the run-up is old structure, already priced in by the fact
+    # that price then rose 5%+ through the whole band.
+    start = (above_idx[-1] + 1) if above_idx else 0
+    below = [(i, c) for i, c in enumerate(window[start:], start) if c < zone_lo]
+    if below:
+        out["broke_below"] = True
+        out["bars_since_break"] = int(len(window) - 1 - below[-1][0])
+        worst = min(c for _i, c in below)
+        out["lowest_close_pct_below"] = round((1.0 - worst / zone_lo) * 100.0, 2)
+
+    out["is_reentry"] = bool(rise >= min_rise_pct and above_idx
+                             and not out["broke_below"])
     return out
 
 
 def trade_plan(last_price: float, entry_zone: Optional[dict],
-               resistance, stop_buffer_pct: float = STOP_BUFFER_PCT) -> Optional[dict]:
+               resistance, stop_buffer_pct: float = STOP_BUFFER_PCT,
+               recent_lows: Optional[list[float]] = None) -> Optional[dict]:
     """Entry / stop / target for a demand-zone play. PURE.
 
     entry area = the demand band itself (buy into support, not through it)
@@ -308,6 +371,14 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     `risk_exceeds_max` flags a stop wider than the house/book hard cap
     (`trading.risk_rules.ABS_MAX_STOP_PCT`, the p.299/p.301 cap) — such a plan
     is not sized down here, it is flagged so the UI can say "too wide".
+
+    `stop_recently_hit` flags a stop the market has ALREADY run inside
+    `STOP_HIT_LOOKBACK_BARS` (Ajay 2026-08-17, on NBIX: stop $150.25 quoted the
+    same session the stock printed a $148.78 low). Unlike the zone break this
+    only annotates the plan — pass `recent_lows` (daily LOWS, oldest first,
+    including today's) to enable it. With no lows the field is **None**, not
+    False: "not checked" and "checked, clean" are different claims and the UI
+    must not render the first as the second.
     """
     if not last_price or not entry_zone:
         return None
@@ -339,6 +410,23 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     except Exception:
         _MAX = 10.0
 
+    # Has the market already traded through this stop? LOWS, not closes: a stop
+    # is an intraday order, so a wick that reaches it fills it. This is the exact
+    # mirror image of the broken-band rule above, which ignores wicks on purpose
+    # — the two questions are different. "Did support fail?" is answered by where
+    # buyers finished the day. "Would I still be in this trade?" is answered by
+    # the worst price that printed.
+    hit, bars_since_hit, worst_below = None, None, None
+    if recent_lows is not None:
+        lows = [float(x) for x in recent_lows[-int(STOP_HIT_LOOKBACK_BARS):]
+                if x is not None and float(x) == float(x)]
+        idx = [i for i, low in enumerate(lows) if low < stop]
+        hit = bool(idx)
+        if idx:
+            bars_since_hit = int(len(lows) - 1 - idx[-1])
+            worst = min(lows[i] for i in idx)
+            worst_below = round((1.0 - worst / stop) * 100.0, 2)
+
     return {
         "entry_low": round(float(lo), 2),
         "entry_high": round(float(hi), 2),
@@ -350,6 +438,11 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
         "rr": rr,
         "risk_exceeds_max": bool(risk_pct is not None and risk_pct > _MAX),
         "max_stop_pct": _MAX,
+        # None = not checked (no lows passed). False = checked and clean.
+        "stop_recently_hit": hit,
+        "bars_since_stop_hit": bars_since_hit,
+        "lowest_low_pct_below_stop": worst_below,
+        "stop_hit_lookback_bars": STOP_HIT_LOOKBACK_BARS,
     }
 
 
@@ -504,6 +597,40 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
     return rec
 
 
+def _verdict_after_break(verdict: Optional[dict], entry_zone: Optional[dict],
+                         band: dict) -> Optional[dict]:
+    """Downgrade a "support is right here" verdict on a band that just broke. PURE.
+
+    `price_zones._verdict` is a SNAPSHOT — it answers "where is price relative to
+    the bands *today*", and for price inside a demand band the honest snapshot
+    answer is AT_DEMAND / favorable. It has no history, so it cannot know the
+    band failed two sessions ago, and giving it history would make every /zones
+    read depend on the re-entry rules.
+
+    So the transition module does the downgrade, which is the same split the
+    module docstring describes. Ajay 2026-08-17, on NBIX: *"We fell below the
+    demand zone but you still say buy in one place"* — the chart drew the break
+    and this verdict still read 🟢 favorable underneath it.
+
+    Only AT_DEMAND is touched. AT_SUPPLY and the rest never claimed support.
+    """
+    if not verdict or not band.get("broke_below"):
+        return verdict
+    if verdict.get("state") != "AT_DEMAND":
+        return verdict
+    lo = (entry_zone or {}).get("lo")
+    depth = band.get("lowest_close_pct_below")
+    return {**verdict,
+            "state": "DEMAND_BROKEN",
+            "entry_read": "caution",
+            "support_pct": None,
+            "label": ("Back inside a demand band that BROKE first"
+                      + (f" — a close below ${lo}" if lo else "")
+                      + (f", {depth}% under it" if depth is not None else "")
+                      + ". Reclaiming a floor does not un-break it; treat this as a "
+                        "level being fought over, not as support.")}
+
+
 def decide_from_frame(df, sym: str):
     """The zone + re-entry + trade-plan decision for ONE price frame.
 
@@ -551,7 +678,9 @@ def decide_from_frame(df, sym: str):
         band = reentry_read(closes, entry_zone["hi"], entry_zone["lo"], last_price)
     else:
         band = {"is_reentry": False, "fell_from_pct": None,
-                "bars_since_above": None, "in_band": False}
+                "bars_since_above": None, "in_band": False,
+                "broke_below": False, "bars_since_break": None,
+                "lowest_close_pct_below": None}
 
     quality_ok = bool(entry_zone
                       and (entry_zone.get("touches") or 0) >= MIN_TOUCHES
@@ -568,7 +697,8 @@ def decide_from_frame(df, sym: str):
     plan = trade_plan(last_price, entry_zone,
                       [zones.get("nearest_resistance")]
                       + (zones.get("supply_zones") or [])
-                      + (zones.get("demand_zones") or []))
+                      + (zones.get("demand_zones") or []),
+                      recent_lows=[float(x) for x in lows_s.tolist()])
 
     rec = {
         "symbol": sym,
@@ -578,12 +708,18 @@ def decide_from_frame(df, sym: str):
         "demand_zones": demand,
         "nearest_resistance": zones.get("nearest_resistance"),
         "nearest_support": zones.get("nearest_support"),
-        "verdict": zones.get("verdict"),
+        "verdict": _verdict_after_break(zones.get("verdict"), entry_zone, band),
         # The re-entry read.
         "in_demand_band": band["in_band"],
         "is_reentry": bool(band["is_reentry"] and trend_ok and quality_ok),
         "fell_from_pct": band["fell_from_pct"],
         "bars_since_above": band["bars_since_above"],
+        # The broken-band evidence (Ajay 2026-08-17, NBIX). Surfaced even when
+        # it is the reason the row was refused, so the Setup tab can say WHY a
+        # name sitting inside its band is not a buy.
+        "zone_broken": band["broke_below"],
+        "bars_since_zone_break": band["bars_since_break"],
+        "lowest_close_pct_below_zone": band["lowest_close_pct_below"],
         # Why it did / didn't qualify — surfaced so the list is auditable.
         "structure": structure,
         "is_knife": is_knife,

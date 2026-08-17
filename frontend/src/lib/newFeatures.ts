@@ -70,6 +70,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'chart-maps', label: '🗺️ Chart Maps — a charts-only study board: strong VCP bases, pullbacks back into demand, and past setups from your own ledger that hit target before their stop. Every chart clicks through to the ticker.', addedAt: '2026-08-15', route: '/chart-maps' },
   { id: 'rotation-tracker', label: 'Sector Rotation — where money left and went, vs equal-weight', addedAt: '2026-08-16', route: '/rotation' },
   { id: 'zone-winners', label: '🏆 Past Winners now has a Demand zones source — 5 years of backtested zone re-entries', addedAt: '2026-08-16', route: '/chart-maps' },
+  { id: 'broken-band-guard', label: '🚫 A demand zone that BROKE is no longer a buy — a close below the floor drops the name (8 of 17 S&P 500 rows came off, SWKS was 18% under its band), the chart says BROKEN instead of BUY, and a stop the market already ran gets flagged', addedAt: '2026-08-17', route: '/supply-demand' },
   { id: 'chart-window', label: 'Chart window control (6m / 9m / 1y) + demand-zone charts now reach back to the touches that made the zone', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'themes-power-energy', label: 'New rosters: AI power (IREN, CRWV) + energy, with space/quantum/semis priority', addedAt: '2026-08-16', route: '/chart-maps' },
   { id: 'chart-maps-themes', label: '⚛ Quantum / nuclear / robotics / AI-semis names now scanned — IONQ, OKLO, SMR, ARM, ALAB, CRDO and 15 more that the S&P indices structurally cannot hold', addedAt: '2026-08-15', route: '/chart-maps' },

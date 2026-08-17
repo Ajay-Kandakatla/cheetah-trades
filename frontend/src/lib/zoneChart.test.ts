@@ -8,8 +8,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  VOL_DOWN, VOL_UP, bandsFor, blockRadius, hasOhlc, hasVolume, hoverRow,
-  planLines, toCandles, toVolumeBars, vol, type SeriesBar,
+  DEMAND, NEUTRAL, VOL_DOWN, VOL_UP, bandsFor, blockRadius, hasOhlc, hasVolume,
+  hoverRow, planLines, toCandles, toVolumeBars, vol, type SeriesBar,
 } from './zoneChart';
 import type { Zone } from './zonePlan';
 
@@ -210,11 +210,20 @@ describe('planLines', () => {
             risk_exceeds_max: false, max_stop_pct: 10 },
   };
 
-  it('draws both edges of the buy band, the stop, the target and now', () => {
+  it('draws ONE buy line carrying the whole band, the stop, the target and now', () => {
+    // Ajay 2026-08-17: "There are two different buys in the NBIX stock one on
+    // chart". Two lines each labelled `BUY $x` at different prices read as two
+    // competing entries. One label, one range.
     const l = planLines(data);
     expect(l.map((x) => x.title)).toEqual([
-      'BUY $40.11', 'BUY $39.02', 'STOP $38.68', 'TARGET $43.36', 'NOW $42.12',
+      'BUY $39.02–$40.11', 'STOP $38.68', 'TARGET $43.36', 'NOW $42.12',
     ]);
+  });
+
+  it('anchors the buy line at the band TOP, away from the stop label', () => {
+    // The floor sits ~1.5% above the stop; both axis labels would land on the
+    // same pixels and neither would be readable.
+    expect(planLines(data).find((x) => x.title.startsWith('BUY'))!.price).toBe(40.11);
   });
 
   it('always keeps cents — these are numbers he types into a broker', () => {
@@ -307,5 +316,92 @@ describe('blockRadius', () => {
   it('is zero rather than NaN for junk', () => {
     expect(blockRadius(1, 0)).toBe(0);
     expect(blockRadius(NaN, 10)).toBe(0);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THE BROKEN BAND — Ajay 2026-08-17, on NBIX:
+ *   "There are two different buys in the NBIX stock one on chart, We fell
+ *    below the demand zone but you still say buy in one place."
+ * Spec: docs/supply_demand/broken_band_guard.md
+ * ═══════════════════════════════════════════════════════════════════════════ */
+describe('a band that BROKE never says BUY', () => {
+  const ez = zone({ lo: 152.54, hi: 155.3 });
+  const nbix = {
+    entry_zone: ez,
+    last_price: 152.72,
+    plan: { entry_low: 152.54, entry_high: 155.3, entry_ref: 152.72, stop: 150.25,
+            risk_pct: 1.6, target: 157.67, reward_pct: 3.2, rr: 2.0,
+            risk_exceeds_max: false, max_stop_pct: 10 },
+  };
+
+  it('relabels the buy line BROKEN', () => {
+    const l = planLines({ ...nbix, zone_broken: true });
+    expect(l.map((x) => x.title)).toEqual([
+      'BROKEN $152.54–$155.30', 'STOP $150.25', 'TARGET $157.67', 'NOW $152.72',
+    ]);
+    expect(l.some((x) => x.title.includes('BUY'))).toBe(false);
+  });
+
+  it('drains the buy colour out of the line so it does not read as green light', () => {
+    const broken = planLines({ ...nbix, zone_broken: true })[0];
+    const live = planLines(nbix)[0];
+    expect(live.color).toBe(DEMAND);
+    expect(broken.color).toBe(NEUTRAL);
+    expect(broken.dashed).toBe(true);
+  });
+
+  it('stops highlighting it as the ENTRY band on the chart', () => {
+    // isEntry is what gives a band the strong fill and the outline on both
+    // edges — the visual claim "this is the plan".
+    const b = bandsFor({ supply_zones: [], demand_zones: [ez], entry_zone: ez,
+                         zone_broken: true });
+    expect(b).toHaveLength(1);
+    expect(b[0].isEntry).toBe(false);
+  });
+
+  it('still DRAWS the band — it is still a demand band, just a broken one', () => {
+    const b = bandsFor({ supply_zones: [], demand_zones: [ez], entry_zone: ez,
+                         zone_broken: true });
+    expect(b[0]).toMatchObject({ lo: 152.54, hi: 155.3, kind: 'demand' });
+  });
+
+  // --- negatives: absence of the flag must not be read as a break ---
+  it('an older payload with no zone_broken field draws the normal BUY line', () => {
+    expect(planLines(nbix)[0].title).toBe('BUY $152.54–$155.30');
+    expect(bandsFor({ supply_zones: [], demand_zones: [ez], entry_zone: ez })[0].isEntry)
+      .toBe(true);
+  });
+
+  it('only a literal true breaks it — undefined and false do not', () => {
+    for (const v of [undefined, false]) {
+      expect(planLines({ ...nbix, zone_broken: v })[0].title).toBe('BUY $152.54–$155.30');
+    }
+  });
+});
+
+describe('a stop the market already ran', () => {
+  const base = {
+    entry_zone: zone({ lo: 152.54, hi: 155.3 }),
+    last_price: 152.72,
+    plan: { entry_low: 152.54, entry_high: 155.3, entry_ref: 152.72, stop: 150.25,
+            risk_pct: 1.6, target: null, reward_pct: null, rr: null,
+            risk_exceeds_max: false, max_stop_pct: 10 },
+  };
+
+  it('says STOP HIT — labelling it STOP implies it is still ahead of price', () => {
+    const l = planLines({ ...base,
+      plan: { ...base.plan, stop_recently_hit: true, bars_since_stop_hit: 0 } });
+    expect(l.find((x) => x.title.includes('150.25'))!.title).toBe('STOP HIT $150.25');
+  });
+
+  it('leaves a clean stop alone', () => {
+    const l = planLines({ ...base, plan: { ...base.plan, stop_recently_hit: false } });
+    expect(l.find((x) => x.title.includes('150.25'))!.title).toBe('STOP $150.25');
+  });
+
+  it('treats "not checked" (null) as not hit — it is not evidence of a hit', () => {
+    const l = planLines({ ...base, plan: { ...base.plan, stop_recently_hit: null } });
+    expect(l.find((x) => x.title.includes('150.25'))!.title).toBe('STOP $150.25');
   });
 });

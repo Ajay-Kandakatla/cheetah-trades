@@ -22,13 +22,20 @@ A **transition**, not a snapshot:
    `REENTRY_LOOKBACK_BARS` sessions (it *left*, then came back), and
 3. the band is real support — **≥ `MIN_TOUCHES` tests** and
    **≥ `MIN_ZONE_STRENGTH`** strength, and
-4. the **trend still holds** — `sepa.trend_template` passes ≥ `MIN_TREND_CHECKS`
-   of 8.
+4. the **trend still holds** — not a falling knife
+   (`sd_liquidity.is_falling_knife`: swing lows stepping down **and** a falling
+   50-day. This replaced the `sepa.trend_template` ≥ `MIN_TREND_CHECKS` gate on
+   2026-08-13 — see the module docstring for the CIEN case that forced it), and
+5. the band is **not broken** — no bar has CLOSED below its floor since price
+   was last above it (added 2026-08-17;
+   **docs/supply_demand/broken_band_guard.md**).
 
 A name that has simply sat inside a band for months is **not** "entering back
 in" and is excluded (`test_not_a_reentry_when_price_never_left_the_band`). A
 name **below** the band has broken support — the opposite signal — and is also
-excluded (`test_not_a_reentry_when_price_is_below_the_band`).
+excluded (`test_not_a_reentry_when_price_is_below_the_band`), as is one that
+closed below the floor and bounced back inside
+(`test_a_close_below_the_floor_disqualifies_the_reentry`).
 
 ## Parameters (all house values)
 
@@ -41,8 +48,9 @@ excluded (`test_not_a_reentry_when_price_is_below_the_band`).
 | `MIN_RISE_ABOVE_PCT` | 5.0 | how far above the band it must have traded |
 | `MIN_TOUCHES` | 2 | an untested band is not support |
 | `MIN_ZONE_STRENGTH` | 40 | 0–100, tests + volume at the band |
-| `MIN_TREND_CHECKS` | 6 of 8 | no falling knives |
+| `STRUCTURE_SWING_WINDOW` / `MA_SLOPE_LOOKBACK` | 5 / 10 | the falling-knife guard (replaced `MIN_TREND_CHECKS` 6-of-8) |
 | `STOP_BUFFER_PCT` | 1.5 | stop sits under the floor, not on it |
+| `STOP_HIT_LOOKBACK_BARS` | 10 | how far back a proposed stop is checked against bars that already traded (warns, never gates) |
 
 ### Why the bands are WIDER here than on the /zones page
 

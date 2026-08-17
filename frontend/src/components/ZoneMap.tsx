@@ -98,8 +98,10 @@ export function ZoneMap({ symbol }: { symbol: string }) {
         marginTop: '0.5rem', padding: '0.55rem 0.75rem', borderRadius: 8,
         background: 'rgba(148,163,184,0.08)', fontSize: '0.78rem', lineHeight: 1.5,
       }}>
-        <div className="mono" style={{ fontWeight: 600 }}>{planLine(plan)}</div>
-        {plan && (
+        <div className="mono" style={{ fontWeight: 600 }}>
+          {planLine(plan, data.zone_broken)}
+        </div>
+        {plan && !data.zone_broken && (
           <div style={{ marginTop: '0.2rem', opacity: 0.85 }}>
             Reward:risk <strong style={{
               color: rr.tone === 'good' ? DEMAND : rr.tone === 'poor' ? SUPPLY : 'inherit',
@@ -107,10 +109,24 @@ export function ZoneMap({ symbol }: { symbol: string }) {
             {ez && bandWidthPct(ez) != null && <> · entry band {bandWidthPct(ez)}% wide</>}
           </div>
         )}
-        {plan?.risk_exceeds_max && (
+        {plan?.risk_exceeds_max && !data.zone_broken && (
           <div style={{ marginTop: '0.2rem', color: SUPPLY }}>
             ⚠️ Stop is {plan.risk_pct}% away — wider than the {plan.max_stop_pct}% hard cap.
             The band is too far below to defend from here.
+          </div>
+        )}
+        {/* A stop the market has already run. Separate from the broken-band
+            message on purpose: the band can hold on a closing basis while the
+            wick underneath it still took out the stop this plan proposes. */}
+        {plan?.stop_recently_hit && (
+          <div style={{ marginTop: '0.2rem', color: SUPPLY }}>
+            ⚠️ {level(plan.stop)} stop already traded through
+            {plan.bars_since_stop_hit === 0 ? ' today'
+              : plan.bars_since_stop_hit === 1 ? ' yesterday'
+              : plan.bars_since_stop_hit != null ? ` ${plan.bars_since_stop_hit} days ago` : ''}
+            {plan.lowest_low_pct_below_stop != null
+              && ` (low was ${plan.lowest_low_pct_below_stop}% under it)`}.
+            This plan was stopped out before it was quoted.
           </div>
         )}
         <div style={{ marginTop: '0.25rem', opacity: 0.75 }}>{reentryReason(data)}</div>

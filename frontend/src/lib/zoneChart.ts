@@ -160,25 +160,46 @@ export type PriceLineSpec = {
 
 const lvl = (v: number) => `$${v.toFixed(2)}`;
 
-/** BUY band edges, STOP, TARGET and NOW as labelled price lines.
+/** The BUY band, STOP, TARGET and NOW as labelled price lines.
  *
  *  These are the levels he would type into a broker, so they carry cents
  *  regardless of the stock's price — `money()` rounds $98.50 to "$99", which
  *  would be a different order.
+ *
+ *  ONE buy line, not two (Ajay 2026-08-17: *"There are two different buys in the
+ *  NBIX stock one on chart"*). Labelling both band edges `BUY $x` printed two
+ *  different prices under the same word, which reads as two competing entries
+ *  rather than one range. The band's own outline already shows both edges — the
+ *  price line exists for its axis LABEL, and one label carries the whole range.
+ *
+ *  A BROKEN band never says BUY. Same for a stop the market has already run:
+ *  labelling it `STOP` implies it is still ahead of price.
  */
-export function planLines(data: Pick<ZoneMapPayload, 'plan' | 'entry_zone' | 'last_price'>
+export function planLines(data: Pick<ZoneMapPayload,
+                                     'plan' | 'entry_zone' | 'last_price' | 'zone_broken'>
                           | null | undefined): PriceLineSpec[] {
   if (!data) return [];
   const plan: Plan | null = data.plan ?? null;
   const out: PriceLineSpec[] = [];
+  const broken = data.zone_broken === true;
 
   const ez = data.entry_zone;
   if (ez && ok(ez.lo) && ok(ez.hi)) {
-    out.push({ price: ez.hi, color: DEMAND, title: `BUY ${lvl(ez.hi)}`, dashed: false, bold: true });
-    out.push({ price: ez.lo, color: DEMAND, title: `BUY ${lvl(ez.lo)}`, dashed: false, bold: true });
+    // Anchored at the band TOP, not the floor: the floor sits ~1.5% from the
+    // stop and the two axis labels would land on the same pixels.
+    out.push({
+      price: ez.hi,
+      color: broken ? NEUTRAL : DEMAND,
+      title: `${broken ? 'BROKEN' : 'BUY'} ${lvl(ez.lo)}–${lvl(ez.hi)}`,
+      dashed: broken,
+      bold: true,
+    });
   }
   if (plan && ok(plan.stop)) {
-    out.push({ price: plan.stop, color: SUPPLY, title: `STOP ${lvl(plan.stop)}`, dashed: true, bold: true });
+    const hit = plan.stop_recently_hit === true;
+    out.push({ price: plan.stop, color: SUPPLY,
+               title: `${hit ? 'STOP HIT' : 'STOP'} ${lvl(plan.stop)}`,
+               dashed: true, bold: true });
   }
   if (plan && ok(plan.target)) {
     out.push({ price: plan.target as number, color: DEMAND,
@@ -212,12 +233,18 @@ function sameBand(z: Zone, ez: Zone | null | undefined): boolean {
 
 /** Every band worth drawing, entry band marked. Zero-height and non-finite
  *  bands are dropped — they render as a hairline that reads like a price level
- *  rather than a zone. */
+ *  rather than a zone.
+ *
+ *  A BROKEN band is not marked as the entry band. `isEntry` is what gives a band
+ *  the strong fill and the outline on both edges — the visual claim "this is the
+ *  plan". It still draws as demand, because it still is one; it just stops being
+ *  advertised. The `BROKEN $lo–$hi` price line from `planLines` names it.
+ */
 export function bandsFor(data: Pick<ZoneMapPayload,
-                                    'supply_zones' | 'demand_zones' | 'entry_zone'>
+                                    'supply_zones' | 'demand_zones' | 'entry_zone' | 'zone_broken'>
                          | null | undefined): BandSpec[] {
   if (!data) return [];
-  const ez = data.entry_zone;
+  const ez = data.zone_broken === true ? null : data.entry_zone;
   const take = (zones: Zone[] | undefined, kind: 'supply' | 'demand'): BandSpec[] =>
     (zones || [])
       .filter((z) => z && ok(z.lo) && ok(z.hi) && z.hi > z.lo)

@@ -13,8 +13,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TickerLink } from './TickerLink';
 import {
-  bandLabel, blockCount, breakEvenWinPct, freshnessLabel, liquidityView, money, planLine,
-  retailView, rrBand, venueView, volLabel,
+  bandLabel, blockCount, breakEvenWinPct, freshnessLabel, level, liquidityView, money,
+  planLine, retailView, rrBand, venueView, volLabel,
 } from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
@@ -251,8 +251,19 @@ export function DemandReentryPanel() {
                   </span>
                 </div>
                 <div className="mono" style={{ fontSize: '0.74rem', marginTop: '0.3rem' }}>
-                  {planLine(r.plan)}
+                  {planLine(r.plan, r.zone_broken)}
                 </div>
+                {/* A row here has already passed the broken-band guard, so this
+                    only fires when the band held on a closing basis and the wick
+                    under it still ran the stop. Ajay 2026-08-17, NBIX. */}
+                {r.plan?.stop_recently_hit && (
+                  <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '0.2rem' }}>
+                    ⚠️ stop {level(r.plan.stop)} already traded through
+                    {r.plan.bars_since_stop_hit === 0 ? ' today'
+                      : r.plan.bars_since_stop_hit === 1 ? ' yesterday'
+                      : r.plan.bars_since_stop_hit != null ? ` ${r.plan.bars_since_stop_hit}d ago` : ''}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap',
                               fontSize: '0.7rem', opacity: 0.85, marginTop: '0.25rem' }}>
                   <span title="Reward divided by risk, and the win rate you'd need just to break even at it.">

@@ -943,3 +943,300 @@ def test_a_zone_without_the_field_falls_back_to_the_default():
 def test_asking_for_more_bars_than_exist_is_not_an_error():
     out = dr._series_for_chart(_ohlc_frame(20), 250)
     assert len(out) == 20
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# THE BROKEN-BAND GUARD  (Ajay 2026-08-17, on NBIX)
+#
+#   "There are two different buys in the NBIX stock one on chart, We fell below
+#    the demand zone but you still say buy in one place."
+#
+# `reentry_read`'s docstring already said "a name below the floor has broken
+# support, which is the opposite of this signal" — but `in_band` only tested the
+# LAST price, so a name that fell through the floor, CLOSED under it, and bounced
+# back the next session read as a clean re-entry. Spec:
+#   docs/supply_demand/broken_band_guard.md
+# ═════════════════════════════════════════════════════════════════════════════
+
+def test_a_close_below_the_floor_disqualifies_the_reentry():
+    """The behavioural case. Ran to 120, fell back through the 100 floor and
+    CLOSED at 96, then bounced to 103 — inside the band again, but the band
+    failed on the way there."""
+    out = dr.reentry_read([100, 110, 120, 96, 103], zone_hi=106, zone_lo=100,
+                          last_price=103)
+    assert out["in_band"] is True, "price really is inside the band"
+    assert out["broke_below"] is True
+    assert out["is_reentry"] is False, "a band that broke is not a buy"
+
+
+def test_the_break_evidence_is_reported_even_though_the_row_is_refused():
+    """The page has to be able to say WHY a name sitting in its band is not a
+    buy — a bare False sends him back to the chart to work it out."""
+    out = dr.reentry_read([100, 110, 120, 96, 103], zone_hi=106, zone_lo=100,
+                          last_price=103)
+    assert out["bars_since_break"] == 1, "broke yesterday, back inside today"
+    assert out["lowest_close_pct_below"] == 4.0, "96 is 4% under the 100 floor"
+
+
+def test_bars_since_break_counts_from_the_LAST_break_not_the_first():
+    out = dr.reentry_read([100, 120, 95, 103, 97, 103], zone_hi=106, zone_lo=100,
+                          last_price=103)
+    assert out["bars_since_break"] == 1
+
+
+def test_the_deepest_close_is_reported_not_the_most_recent_one():
+    """How badly it failed is the useful number; the last break may be shallow."""
+    out = dr.reentry_read([100, 120, 90, 99, 103], zone_hi=106, zone_lo=100,
+                          last_price=103)
+    assert out["lowest_close_pct_below"] == 10.0
+
+
+def test_a_break_from_BEFORE_the_run_up_is_old_structure_and_still_qualifies():
+    """Scoping matters. A close under the floor, then a 20% run above the whole
+    band, then a pullback into it is the healthy case this signal exists to
+    find — the market already answered that old break by rallying through it."""
+    out = dr.reentry_read([95, 100, 120, 103], zone_hi=106, zone_lo=100,
+                          last_price=103)
+    assert out["broke_below"] is False
+    assert out["is_reentry"] is True
+
+
+def test_a_close_exactly_ON_the_floor_is_not_a_break():
+    """A test of support IS the band working. Strictly below, or the guard
+    rejects every zone that ever got tested — which is all of them."""
+    out = dr.reentry_read([100, 120, 100.0, 103], zone_hi=106, zone_lo=100,
+                          last_price=103)
+    assert out["broke_below"] is False
+    assert out["is_reentry"] is True
+
+
+def test_the_guard_reads_CLOSES_so_an_intraday_wick_does_not_disqualify():
+    """Deliberate. Wicking through a band is how demand zones get tested in the
+    first place; failing on a wick rejects the healthy case. `reentry_read`
+    takes closes only — this pins that the caller never starts handing it lows.
+    (The mirror-image rule, `stop_recently_hit`, DOES read lows: see below.)"""
+    import inspect
+    src = inspect.getsource(dr.decide_from_frame)
+    assert 'reentry_read(closes,' in src, "reentry_read must be fed closes"
+    assert 'reentry_read(lows' not in src
+
+
+def test_the_break_fields_exist_on_every_return_path():
+    """The FE reads these keys unconditionally; a missing key is a crash, and a
+    short-circuit return is exactly where one goes missing."""
+    keys = {"broke_below", "bars_since_break", "lowest_close_pct_below"}
+    for out in (dr.reentry_read([], 106, 100, 103),          # no closes
+                dr.reentry_read([100, 110], 0, 0, 103),      # degenerate band
+                dr.reentry_read([100, 110], 100, 106, 103),  # inverted band
+                dr.reentry_read([100, 110], 106, 100, 999),  # not in band
+                dr.reentry_read([100, 110, 120, 103], 106, 100, 103)):  # clean
+        assert keys <= set(out), f"missing break keys: {keys - set(out)}"
+
+
+def test_the_break_defaults_to_False_not_None_when_it_was_checked():
+    """False = checked and clean. The UI branches on it, so it must not be
+    falsy-by-absence."""
+    out = dr.reentry_read([100, 110, 120, 103], 106, 100, 103)
+    assert out["broke_below"] is False
+    assert out["bars_since_break"] is None
+    assert out["lowest_close_pct_below"] is None
+
+
+def test_a_break_outside_the_lookback_window_is_not_counted():
+    """Same window the rest of the read uses — a break 200 bars ago against a
+    band that has been retested since is not today's structure."""
+    closes = [80] + [120] * 5 + [103] * 40
+    out = dr.reentry_read(closes, 106, 100, 103, lookback=40)
+    assert out["broke_below"] is False
+
+
+# ── the real NBIX bars — the regression ──────────────────────────────────────
+def test_the_real_NBIX_case_is_refused():
+    """NBIX, 2026-08-14, on the live board. Entry band $152.54-155.30
+    (3x tested, strength 45), plan Buy $152.54-155.30 / Stop $150.25 / 2.0R,
+    verdict AT_DEMAND "support is right here", entry read FAVORABLE:
+
+        2026-08-12  close 156.49                 above the band
+        2026-08-13  close 150.82   <- CLOSED below the 152.54 floor
+        2026-08-14  close 152.72                 back inside
+
+    It bounced back over the floor, so `in_band` was true and every other gate
+    passed. The band had already failed."""
+    closes = [140.0, 150.0, 163.5, 158.0, 156.49, 150.82, 152.72]
+    out = dr.reentry_read(closes, zone_hi=155.30, zone_lo=152.54, last_price=152.72)
+    assert out["in_band"] is True
+    assert out["fell_from_pct"] == 5.3, "it really did run 5%+ above the band"
+    assert out["broke_below"] is True
+    assert out["bars_since_break"] == 1
+    assert out["lowest_close_pct_below"] == 1.13
+    assert out["is_reentry"] is False, "NBIX must not read as back-in-demand"
+
+
+def test_NBIX_would_still_have_qualified_without_the_break():
+    """Proves the guard is what refused it, not some other gate that was
+    already failing — otherwise this regression test would pass for the wrong
+    reason and go on passing if the guard were deleted."""
+    closes = [140.0, 150.0, 163.5, 158.0, 156.49, 153.90, 152.72]
+    out = dr.reentry_read(closes, zone_hi=155.30, zone_lo=152.54, last_price=152.72)
+    assert out["is_reentry"] is True
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# THE ALREADY-RUN STOP  (same NBIX report)
+#
+# The board offered a $150.25 stop on the morning NBIX printed a $148.78 low.
+# A stop the market has already traded through is not a stop — the plan it
+# belongs to was stopped out before it was quoted. WARNS, does not gate.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def test_a_low_under_the_proposed_stop_is_flagged():
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=[102.0, 101.0, 97.0, 102.5])
+    assert p["stop"] == 98.5
+    assert p["stop_recently_hit"] is True
+    assert p["bars_since_stop_hit"] == 1
+    assert p["lowest_low_pct_below_stop"] == 1.52
+
+
+def test_the_stop_check_reads_LOWS_not_closes():
+    """A stop is a resting order: a wick that reaches it fills it. This is the
+    exact opposite of the broken-band rule, which ignores wicks on purpose —
+    'did support fail?' and 'would I still be in this trade?' are different
+    questions with different evidence."""
+    # Every CLOSE is comfortably above the 98.5 stop; one LOW is not.
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=[103.0, 97.0, 104.0])
+    assert p["stop_recently_hit"] is True
+
+
+def test_an_UNCHECKED_stop_reports_None_not_False():
+    """None = 'not checked' (an older cached payload, or a caller with no bar
+    history). False = 'checked and clean'. Rendering the first as the second
+    puts a green tick on a plan nobody verified."""
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0})
+    assert p["stop_recently_hit"] is None
+    assert p["bars_since_stop_hit"] is None
+    assert p["lowest_low_pct_below_stop"] is None
+
+
+def test_a_clean_stop_reports_False_with_no_depth():
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=[101.0, 100.5, 102.0])
+    assert p["stop_recently_hit"] is False
+    assert p["bars_since_stop_hit"] is None
+    assert p["lowest_low_pct_below_stop"] is None
+
+
+def test_a_low_exactly_AT_the_stop_is_not_a_hit():
+    """Strictly below. A stop order at $98.50 is not guaranteed a fill on a
+    $98.50 print, and claiming it was is the kind of detail that makes him stop
+    trusting the column."""
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=[98.5, 99.0])
+    assert p["stop_recently_hit"] is False
+
+
+def test_an_OLD_stop_hit_falls_out_of_the_window():
+    """A stop run three months ago, against a band that has been rebuilt and
+    retested since, is stale news."""
+    lows = [50.0] + [102.0] * dr.STOP_HIT_LOOKBACK_BARS
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=lows)
+    assert p["stop_recently_hit"] is False
+    assert p["stop_hit_lookback_bars"] == dr.STOP_HIT_LOOKBACK_BARS
+
+
+def test_bars_since_stop_hit_is_measured_from_the_LAST_bar_given():
+    """The lows list is oldest-first and includes today, so 0 means today."""
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=[102.0, 102.0, 97.0])
+    assert p["bars_since_stop_hit"] == 0
+
+
+def test_junk_lows_do_not_crash_or_fabricate_a_hit():
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                      recent_lows=[None, float("nan"), 102.0])
+    assert p["stop_recently_hit"] is False
+    p2 = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                       recent_lows=[])
+    assert p2["stop_recently_hit"] is False
+
+
+def test_the_real_NBIX_stop_was_already_run():
+    """Stop $150.25 quoted the same session NBIX printed a $148.78 low."""
+    p = dr.trade_plan(152.72, {"lo": 152.54, "hi": 155.30}, {"lo": 165.0},
+                      recent_lows=[158.0, 155.0, 149.90, 148.78])
+    assert p["stop"] == 150.25
+    assert p["stop_recently_hit"] is True
+    assert p["bars_since_stop_hit"] == 0, "run today"
+    assert p["lowest_low_pct_below_stop"] == 0.98
+
+
+def test_the_stop_check_never_changes_the_stop_itself():
+    """It annotates the plan. Widening a stop because it was hit would be the
+    single worst thing this code could do."""
+    clean = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0})
+    hit = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
+                        recent_lows=[90.0])
+    for k in ("stop", "entry_low", "entry_high", "target", "rr", "risk_pct"):
+        assert clean[k] == hit[k], f"{k} moved because the stop was hit"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# THE VERDICT DOWNGRADE — "you still say buy in one place"
+# ═════════════════════════════════════════════════════════════════════════════
+
+BROKE = {"broke_below": True, "lowest_close_pct_below": 1.13}
+CLEAN = {"broke_below": False, "lowest_close_pct_below": None}
+AT_DEMAND = {"state": "AT_DEMAND", "entry_read": "favorable",
+             "support_pct": 0.0, "label": "In a demand zone — support is right here."}
+
+
+def test_a_broken_band_stops_reading_as_favorable():
+    out = dr._verdict_after_break(AT_DEMAND, {"lo": 152.54, "hi": 155.30}, BROKE)
+    assert out["state"] == "DEMAND_BROKEN"
+    assert out["entry_read"] == "caution"
+    assert "support is right here" not in out["label"]
+    assert "BROKE" in out["label"]
+
+
+def test_the_downgraded_verdict_stops_claiming_support_is_underfoot():
+    """support_pct 0.0 means 'support is exactly here'. On a broken band that
+    is the claim being withdrawn."""
+    out = dr._verdict_after_break(AT_DEMAND, {"lo": 152.54, "hi": 155.30}, BROKE)
+    assert out["support_pct"] is None
+
+
+def test_an_unbroken_band_is_returned_untouched():
+    out = dr._verdict_after_break(AT_DEMAND, {"lo": 100.0, "hi": 106.0}, CLEAN)
+    assert out is AT_DEMAND
+
+
+def test_only_AT_DEMAND_is_downgraded():
+    """The other states never claimed support, so rewriting them would be
+    inventing a reading the snapshot module never made."""
+    at_supply = {"state": "AT_SUPPLY", "entry_read": "caution", "label": "x"}
+    assert dr._verdict_after_break(at_supply, {"lo": 1.0, "hi": 2.0}, BROKE) is at_supply
+
+
+def test_a_missing_verdict_stays_missing():
+    assert dr._verdict_after_break(None, {"lo": 1.0, "hi": 2.0}, BROKE) is None
+    assert dr._verdict_after_break(None, None, CLEAN) is None
+
+
+def test_the_downgrade_keeps_the_rest_of_the_verdict():
+    """resistance_pct and friends are still true — only the support claim
+    changed."""
+    v = {**AT_DEMAND, "resistance_pct": 4.2}
+    out = dr._verdict_after_break(v, {"lo": 152.54, "hi": 155.30}, BROKE)
+    assert out["resistance_pct"] == 4.2
+
+
+def test_the_snapshot_module_is_NOT_given_history():
+    """The split is the point: price_zones answers 'where is price now', this
+    module answers the transition question. If the break check ever migrates
+    into price_zones, every /zones read starts depending on the re-entry rules."""
+    import inspect
+    src = inspect.getsource(pz)
+    assert "broke_below" not in src
+    assert "DEMAND_BROKEN" not in src

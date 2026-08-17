@@ -313,3 +313,102 @@ describe('retailView — never present unsigned as balanced', () => {
     expect(retailView(null).title).toContain('only the top rows');
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THE BROKEN BAND — Ajay 2026-08-17, on NBIX:
+ *   "We fell below the demand zone but you still say buy in one place."
+ * Spec: docs/supply_demand/broken_band_guard.md
+ * ═══════════════════════════════════════════════════════════════════════════ */
+describe('planLine on a band that broke', () => {
+  it('does not open with "Buy"', () => {
+    const s = planLine(plan({ entry_low: 152.54, entry_high: 155.3 }), true);
+    expect(s.startsWith('Buy')).toBe(false);
+    expect(s).toContain('BROKEN');
+  });
+
+  it('still names the range, so he can see which level failed', () => {
+    const s = planLine(plan({ entry_low: 152.54, entry_high: 155.3 }), true);
+    expect(s).toContain('$152.54');
+    expect(s).toContain('$155.30');
+  });
+
+  it('drops the stop and target — there is no plan to quote', () => {
+    const s = planLine(plan({ stop: 150.25, target: 157.67 }), true);
+    expect(s).not.toContain('150.25');
+    expect(s).not.toContain('157.67');
+  });
+
+  it('is unchanged when the band is intact', () => {
+    expect(planLine(plan())).toBe(planLine(plan(), false));
+    expect(planLine(plan())).toContain('Buy');
+  });
+
+  it('still reports no band at all ahead of the break check', () => {
+    expect(planLine(null, true)).toContain('No demand band');
+  });
+});
+
+describe('reentryReason on a band that broke', () => {
+  const nbix = (over: Partial<ZoneMapPayload> = {}): ZoneMapPayload => ({
+    symbol: 'NBIX', last_price: 152.72, supply_zones: [], demand_zones: [],
+    nearest_resistance: null, nearest_support: null,
+    in_demand_band: true, is_reentry: false, fell_from_pct: 5.3,
+    bars_since_above: 2, trend_ok: true, is_knife: false,
+    structure: { trend: 'rising', swing_lows: [140, 150], last_two: [140, 150], ma50_rising: true },
+    zone_quality_ok: true, entry_zone: zone({ lo: 152.54, hi: 155.3 }),
+    plan: plan({ entry_low: 152.54, entry_high: 155.3, stop: 150.25 }),
+    zone_broken: true, bars_since_zone_break: 1, lowest_close_pct_below_zone: 1.13,
+    ...over,
+  });
+
+  it('says the band BROKE, names the floor and how deep it closed under', () => {
+    const s = reentryReason(nbix());
+    expect(s).toContain('BROKE');
+    expect(s).toContain('$152.54');
+    expect(s).toContain('1.13%');
+    expect(s).toContain('yesterday');
+  });
+
+  it('never falls through to the "not a re-entry" catch-all, which says nothing', () => {
+    expect(reentryReason(nbix())).not.toContain('never left it');
+  });
+
+  it('reads today / N days ago from the freshness of the break', () => {
+    expect(reentryReason(nbix({ bars_since_zone_break: 0 }))).toContain('today');
+    expect(reentryReason(nbix({ bars_since_zone_break: 4 }))).toContain('4 days ago');
+    expect(reentryReason(nbix({ bars_since_zone_break: null }))).toContain('recently');
+  });
+
+  it('omits the depth rather than printing null%', () => {
+    const s = reentryReason(nbix({ lowest_close_pct_below_zone: null }));
+    expect(s).toContain('BROKE');
+    expect(s).not.toContain('null');
+  });
+
+  // --- ordering: the earlier gates still win ---
+  it('a falling knife is still reported as a falling knife first', () => {
+    // Knife is the more fundamental read: the break is a symptom of it.
+    const s = reentryReason(nbix({
+      trend_ok: false, is_knife: true,
+      structure: { trend: 'falling', swing_lows: [180, 160], last_two: [180, 160], ma50_rising: false },
+    }));
+    expect(s).toContain('falling knife');
+  });
+
+  it('price above the band is still reported as above the band', () => {
+    expect(reentryReason(nbix({ in_demand_band: false }))).toContain('not in it');
+  });
+
+  // --- negatives ---
+  it('an intact band is unaffected', () => {
+    const s = reentryReason(nbix({ zone_broken: false, is_reentry: true }));
+    expect(s).not.toContain('BROKE');
+    expect(s).toContain('Pulled back');
+  });
+
+  it('an older payload with no zone_broken field is unaffected', () => {
+    const p = nbix({ is_reentry: true });
+    delete p.zone_broken;
+    expect(reentryReason(p)).not.toContain('BROKE');
+  });
+});
