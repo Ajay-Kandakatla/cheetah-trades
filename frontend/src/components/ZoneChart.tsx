@@ -28,10 +28,12 @@ import {
   type IChartApi, type ISeriesApi, type MouseEventParams, type Time,
 } from 'lightweight-charts';
 import {
-  DEMAND, NEUTRAL, SUPPLY, bandsFor, hasOhlc, hasVolume, hoverRow, planLines,
-  toCandles, toVolumeBars, type Candle, type HoverRow, type SeriesBar,
+  DEMAND, NEUTRAL, SUPPLY, TARGET_C, bandsFor, gutterBars, hasOhlc, hasVolume,
+  hoverRow, planGutterPx, planLines, toCandles, toVolumeBars,
+  type Candle, type HoverRow, type SeriesBar,
 } from '../lib/zoneChart';
 import { ZoneBandsPrimitive } from './zoneBandsPrimitive';
+import { PlanLabelsPrimitive } from './planLabelsPrimitive';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 
 const UP = '#22c55e';
@@ -42,6 +44,7 @@ export function ZoneChart({ data, height = 340 }:
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const bandsRef = useRef<ZoneBandsPrimitive | null>(null);
+  const labelsRef = useRef<PlanLabelsPrimitive | null>(null);
   const [hover, setHover] = useState<HoverRow | null>(null);
   /* Ajay 2026-08-17: "Can you make these charts to be full screened or
    * something, The zones are hard to figure out properly". A 340px pane over a
@@ -101,17 +104,32 @@ export function ZoneChart({ data, height = 340 }:
       const s = chart.addCandlestickSeries({
         upColor: UP, downColor: DOWN, borderVisible: false,
         wickUpColor: UP, wickDownColor: DOWN,
+        // The series draws its OWN last-price rule AND its own axis chip by
+        // default, both duplicating our NOW line exactly — two rules at one
+        // price and two chips reading 64.40, verified in the browser. Ours is
+        // the one that says which it is. Two flags, because `priceLineVisible`
+        // only removes the rule; the chip is `lastValueVisible`.
+        priceLineVisible: false, lastValueVisible: false,
       });
       s.setData(candles);
       price = s;
     } else {
-      const s = chart.addLineSeries({ color: '#cbd5e1', lineWidth: 2 });
+      const s = chart.addLineSeries({ color: '#cbd5e1', lineWidth: 2,
+                                      priceLineVisible: false,
+                                      lastValueVisible: false });
       s.setData(candles.map((c) => ({ time: c.time as Time, value: c.close })));
       price = s;
     }
 
     if (withVol) {
-      const vol = chart.addHistogramSeries({ priceScaleId: '', priceFormat: { type: 'volume' } });
+      const vol = chart.addHistogramSeries({
+        priceScaleId: '', priceFormat: { type: 'volume' },
+        // Volume's own last-value chip and its dotted rule across the whole
+        // pane are pure noise on a price chart: the chip lands in the same
+        // stack as the plan's prices reading "9.78M", and the line crosses the
+        // bands. The HUD already reports volume for the hovered bar.
+        priceLineVisible: false, lastValueVisible: false,
+      });
       vol.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
       vol.setData(volumes);
     }
@@ -127,12 +145,32 @@ export function ZoneChart({ data, height = 340 }:
         color: l.color,
         lineWidth: l.bold ? 2 : 1,
         lineStyle: l.dashed ? LineStyle.Dashed : LineStyle.Solid,
+        // LOAD-BEARING once the pane title is gone: the axis chip becomes the
+        // only place the library still prints this price.
         axisLabelVisible: true,
-        title: l.title,
+        // The clumsy box. v4 hard-codes its placement, and `showPaneLabel =
+        // options.title !== ''` in the library is exactly this switch — an
+        // empty title removes the plate and nothing else. PlanLabelsPrimitive
+        // redraws it, de-clumped, in the gutter reserved below.
+        title: '',
       });
     }
 
-    chart.timeScale().fitContent();
+    // Plates on top of the candles, and a blank right margin for them to sit
+    // in. `fitContent()` puts the newest candle flush against the axis, which
+    // is why every plate landed on the tape; `rightOffset` is added by
+    // fitContent itself, so the two compose rather than fight.
+    const labels = new PlanLabelsPrimitive(lines);
+    price.attachPrimitive(labels);
+    labelsRef.current = labels;
+
+    const applyGutter = () => {
+      const w = el.clientWidth || 0;
+      const bars = gutterBars(candles.length, w, planGutterPx(lines, w));
+      chart.applyOptions({ timeScale: { rightOffset: bars } });
+      chart.timeScale().fitContent();
+    };
+    applyGutter();
     chartRef.current = chart;
 
     // The hover readout. `param.time` is absent when the pointer leaves the
@@ -150,7 +188,11 @@ export function ZoneChart({ data, height = 340 }:
     chart.subscribeCrosshairMove(onMove);
 
     const ro = new ResizeObserver(() => {
-      if (el) chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+      if (!el) return;
+      chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+      // The gutter is a fraction of the width, so it has to be recomputed —
+      // a margin sized for 900px leaves a plate hanging off a 400px pane.
+      applyGutter();
     });
     ro.observe(el);
 
@@ -160,6 +202,7 @@ export function ZoneChart({ data, height = 340 }:
       chart.remove();
       chartRef.current = null;
       bandsRef.current = null;
+      labelsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, height, full]);
@@ -204,6 +247,7 @@ export function ZoneChart({ data, height = 340 }:
         <span><i style={{ background: SUPPLY }} /> supply</span>
         <span><i style={{ background: DEMAND }} /> demand</span>
         <span><i style={{ background: DEMAND, outline: `1px solid ${DEMAND}` }} /> buy band</span>
+        <span><i style={{ background: TARGET_C }} /> target</span>
         <span><i style={{ background: NEUTRAL }} /> now</span>
         {!ohlc && <span style={{ opacity: 0.6 }}>· line only (older cached payload)</span>}
         {!withVol && <span style={{ opacity: 0.6 }}>· no volume in this payload</span>}

@@ -149,6 +149,14 @@ export function hoverRow(bar: Candle | null | undefined,
 export const SUPPLY = '#ef4444';
 export const DEMAND = '#22c55e';
 export const NEUTRAL = '#cbd5e1';
+/* TARGET used to be drawn in DEMAND, the same green as the BUY band. Two
+ * levels, one colour: on the axis chips — where the price survives even when a
+ * label is displaced or dropped — the entry and the objective were literally
+ * indistinguishable. Colour is the only identity a chip has, so it has to be
+ * unique per level. Sky-400, already an accent elsewhere in this app. */
+export const TARGET_C = '#38bdf8';
+
+export type PlanLineKind = 'buy' | 'stop' | 'target' | 'now';
 
 export type PriceLineSpec = {
   price: number;
@@ -156,6 +164,12 @@ export type PriceLineSpec = {
   title: string;
   dashed: boolean;
   bold: boolean;
+  /** What the level IS. Never sniff the title for this — it already reads
+   *  BROKEN and STOP HIT, so `title.startsWith('STOP')` is wrong on arrival. */
+  kind: PlanLineKind;
+  /** Lower survives first when the pane cannot hold every plate. The stop
+   *  outranks everything: it is the number that caps the loss. */
+  priority: number;
 };
 
 const lvl = (v: number) => `$${v.toFixed(2)}`;
@@ -193,23 +207,73 @@ export function planLines(data: Pick<ZoneMapPayload,
       title: `${broken ? 'BROKEN' : 'BUY'} ${lvl(ez.lo)}–${lvl(ez.hi)}`,
       dashed: broken,
       bold: true,
+      kind: 'buy',
+      priority: 1,
     });
   }
   if (plan && ok(plan.stop)) {
     const hit = plan.stop_recently_hit === true;
     out.push({ price: plan.stop, color: SUPPLY,
                title: `${hit ? 'STOP HIT' : 'STOP'} ${lvl(plan.stop)}`,
-               dashed: true, bold: true });
+               dashed: true, bold: true, kind: 'stop', priority: 0 });
   }
   if (plan && ok(plan.target)) {
-    out.push({ price: plan.target as number, color: DEMAND,
-               title: `TARGET ${lvl(plan.target as number)}`, dashed: true, bold: true });
+    out.push({ price: plan.target as number, color: TARGET_C,
+               title: `TARGET ${lvl(plan.target as number)}`, dashed: true, bold: true,
+               kind: 'target', priority: 2 });
   }
   if (ok(data.last_price)) {
+    // Last to survive a short pane, and deliberately so: the newest candle and
+    // the axis chip both already say where price is. It is the one plate whose
+    // loss costs nothing.
     out.push({ price: data.last_price, color: NEUTRAL,
-               title: `NOW ${lvl(data.last_price)}`, dashed: true, bold: false });
+               title: `NOW ${lvl(data.last_price)}`, dashed: true, bold: false,
+               kind: 'now', priority: 3 });
   }
   return out;
+}
+
+/* ── the blank gutter the plates sit in ──────────────────────────────────── */
+
+/** Roughly the advance width of one 11px monospace glyph, in CSS pixels.
+ *  Approximate on purpose: this only sizes the BLANK MARGIN, and the plate
+ *  itself is measured for real with `ctx.measureText`. An estimate that is a
+ *  few pixels generous costs a few pixels of chart; measuring here would mean
+ *  a canvas in a pure module. */
+export const PLAN_CHAR_W = 6.7;
+// Plate padding (2x6), the gap to the price axis (6), and clearance so the
+// plate's left edge never touches the newest candle — the whole point of the
+// margin. Generous by a few pixels on purpose: the estimate must never come out
+// UNDER the width the renderer actually measures.
+const PLATE_PAD_PX = 12 + 6 + 10;
+
+/** How wide a blank right margin the widest plate needs, in CSS pixels.
+ *
+ *  Capped at a third of the pane: on a narrow tile a long title like
+ *  `BUY $1,485.00–$1,514.00` would otherwise eat the chart to pay for its own
+ *  label, and a plate overhanging a few candles beats a chart with no candles.
+ */
+export function planGutterPx(lines: PriceLineSpec[] | null | undefined,
+                             paneWidth: number): number {
+  if (!lines || !lines.length || !(paneWidth > 0)) return 0;
+  const widest = Math.max(...lines.map((l) => (l?.title || '').length));
+  const want = Math.ceil(widest * PLAN_CHAR_W) + PLATE_PAD_PX;
+  return Math.max(0, Math.min(want, Math.floor(paneWidth / 3)));
+}
+
+/** That margin expressed in BARS, which is the only unit the time scale takes.
+ *
+ *  `rightOffset` appends empty bar slots after the last candle, and
+ *  `fitContent()` honours it — verified in the library source, where
+ *  `_internal_fitContent` calls `setVisibleRange(first, last + rightOffset)`.
+ *  So the two compose, and the fix does not have to replace `fitContent`.
+ *
+ *  Solving b / (n + b) = g / w for b gives b = n·g / (w − g).
+ */
+export function gutterBars(barCount: number, paneWidth: number,
+                           gutterPx: number): number {
+  if (!(barCount > 0) || !(gutterPx > 0) || !(paneWidth > gutterPx)) return 0;
+  return Math.ceil((barCount * gutterPx) / (paneWidth - gutterPx));
 }
 
 /* ── the bands, as the primitive wants them ──────────────────────────────── */

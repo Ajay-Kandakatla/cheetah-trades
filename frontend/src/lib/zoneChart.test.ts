@@ -8,8 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  DEMAND, NEUTRAL, VOL_DOWN, VOL_UP, bandsFor, blockRadius, hasOhlc, hasVolume,
-  hoverRow, planLines, toCandles, toVolumeBars, vol, type SeriesBar,
+  DEMAND, NEUTRAL, VOL_DOWN, VOL_UP, bandsFor, blockRadius, gutterBars, hasOhlc, hasVolume, hoverRow, planGutterPx, planLines, toCandles, toVolumeBars, type SeriesBar, vol,
 } from './zoneChart';
 import type { Zone } from './zonePlan';
 
@@ -403,5 +402,111 @@ describe('a stop the market already ran', () => {
   it('treats "not checked" (null) as not hit — it is not evidence of a hit', () => {
     const l = planLines({ ...base, plan: { ...base.plan, stop_recently_hit: null } });
     expect(l.find((x) => x.title.includes('150.25'))!.title).toBe('STOP $150.25');
+  });
+});
+
+/* ── the plan labels moved off the candles (Ajay 2026-08-17) ─────────────── */
+
+describe('every plan level is identifiable on its own', () => {
+  const data = {
+    entry_zone: zone({ lo: 64.41, hi: 66.08 }),
+    last_price: 64.40,
+    plan: { entry_low: 64.41, entry_high: 66.08, entry_ref: 66.08, stop: 63.44,
+            risk_pct: 4.0, target: 70.88, reward_pct: 7.3, rr: 1.8,
+            risk_exceeds_max: false, max_stop_pct: 10, stop_recently_hit: true,
+            bars_since_stop_hit: 0, lowest_low_pct_below_stop: 1.2,
+            stop_hit_lookback_bars: 10 },
+  } as never;
+
+  it('gives TARGET a colour of its own, not the BUY band green', () => {
+    // The axis chip is colour + number and nothing else, so two levels sharing
+    // a colour are indistinguishable there — and the chip is what survives when
+    // a plate is displaced or dropped.
+    const l = planLines(data);
+    const buy = l.find((x) => x.kind === 'buy')!;
+    const target = l.find((x) => x.kind === 'target')!;
+    expect(target.color).not.toBe(buy.color);
+    expect(new Set(l.map((x) => x.color)).size).toBe(l.length);
+  });
+
+  it('tags each line with WHAT it is rather than leaving the title to be parsed', () => {
+    // `title.startsWith('STOP')` is wrong on arrival: the titles already read
+    // "STOP HIT" and "BROKEN".
+    expect(planLines(data).map((x) => x.kind).sort())
+      .toEqual(['buy', 'now', 'stop', 'target']);
+  });
+
+  it('ranks the stop first to survive and NOW last', () => {
+    // When a short pane cannot hold four plates, the stop is the number that
+    // caps the loss; NOW is already on the axis and on the newest candle.
+    const byKind = Object.fromEntries(planLines(data).map((x) => [x.kind, x.priority]));
+    expect(byKind.stop).toBeLessThan(byKind.buy);
+    expect(byKind.now).toBeGreaterThan(byKind.target);
+  });
+
+  it('always states the price inside the label text', () => {
+    // A displaced plate must not need its y read to know what it means.
+    for (const l of planLines(data)) expect(l.title).toMatch(/\$\d/);
+  });
+});
+
+describe('planGutterPx', () => {
+  const spec = (title: string) =>
+    ({ price: 1, color: '#fff', title, dashed: false, bold: false,
+       kind: 'buy', priority: 1 }) as never;
+
+  it('reserves more room for a longer label', () => {
+    const narrow = planGutterPx([spec('NOW $9.10')], 900);
+    const wide = planGutterPx([spec('BUY $1,485.00-$1,514.00')], 900);
+    expect(wide).toBeGreaterThan(narrow);
+  });
+
+  it('sizes to the WIDEST label, not the last one', () => {
+    expect(planGutterPx([spec('BUY $1,485.00-$1,514.00'), spec('NOW $9.10')], 900))
+      .toBe(planGutterPx([spec('BUY $1,485.00-$1,514.00')], 900));
+  });
+
+  it('never eats more than a third of the pane', () => {
+    // A plate overhanging a few candles beats a chart with no candles left.
+    expect(planGutterPx([spec('BUY $1,485.00-$1,514.00')], 240))
+      .toBeLessThanOrEqual(80);
+  });
+
+  // --- negatives ---
+  it('reserves nothing when there is nothing to label', () => {
+    expect(planGutterPx([], 900)).toBe(0);
+    expect(planGutterPx(null, 900)).toBe(0);
+    expect(planGutterPx(undefined, 900)).toBe(0);
+  });
+
+  it('reserves nothing before the pane has been measured', () => {
+    expect(planGutterPx([spec('NOW $9.10')], 0)).toBe(0);
+    expect(planGutterPx([spec('NOW $9.10')], -5)).toBe(0);
+  });
+});
+
+describe('gutterBars', () => {
+  it('converts a pixel margin into the bar slots the time scale wants', () => {
+    // b / (n + b) = g / w. 100 bars, 600px pane, 60px gutter -> ~11 bars.
+    const b = gutterBars(100, 600, 60);
+    expect(b).toBeGreaterThan(0);
+    expect(Math.abs(60 / 600 - b / (100 + b))).toBeLessThan(0.02);
+  });
+
+  it('asks for more bars as the margin grows', () => {
+    expect(gutterBars(100, 600, 120)).toBeGreaterThan(gutterBars(100, 600, 60));
+  });
+
+  // --- negatives ---
+  it('asks for nothing rather than infinity when the gutter swallows the pane', () => {
+    // w - g <= 0 would divide by zero or go negative and blank the chart.
+    expect(gutterBars(100, 60, 60)).toBe(0);
+    expect(gutterBars(100, 40, 60)).toBe(0);
+  });
+
+  it('asks for nothing with no bars or no gutter', () => {
+    expect(gutterBars(0, 600, 60)).toBe(0);
+    expect(gutterBars(100, 600, 0)).toBe(0);
+    expect(gutterBars(100, 600, -10)).toBe(0);
   });
 });

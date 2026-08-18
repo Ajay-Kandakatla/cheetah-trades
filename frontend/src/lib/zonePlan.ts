@@ -344,6 +344,14 @@ export type LabelItem = {
  * BUY / STOP / TARGET / NOW) keep their position and push others away; a
  * low-priority band label that cannot find a free slot within `maxShift` is
  * DROPPED rather than drawn on top of the plan.
+ *
+ * SCOPE: the hand-rolled SVG surface only (chartMaps.ts:291). Because every
+ * plan label is priority 2, they all "keep their position" — so this function
+ * does NOT stop two plan labels from landing on each other. That is fine for a
+ * 130px tile and was wrong for the full chart, where BUY/NOW/STOP piled up
+ * (Ajay 2026-08-17). The canvas chart uses `labelLayout.layoutPlanLabels`,
+ * which guarantees no overlap instead. Keep them separate: they answer
+ * different questions and merging them would regress one of the two surfaces.
  */
 export function layoutLabels(
   items: LabelItem[],
