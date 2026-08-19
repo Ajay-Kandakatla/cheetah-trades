@@ -191,7 +191,10 @@ export function ChartMaps() {
             </select>
           </label>
         )}
-        {tab !== 'winners' && (
+        {/* Not on Earnings: that board's order is "which group, then how much
+            money traded", and a theme re-shuffle would misdescribe it. Same
+            reason the backend returns empty sorts/tiers for the tab. */}
+        {tab !== 'winners' && tab !== 'earnings' && (
           <label className="cm-ctl cm-ctl-check">
             <input type="checkbox" checked={themesFirst}
                    onChange={(e) => setThemesFirst(e.target.checked)} />

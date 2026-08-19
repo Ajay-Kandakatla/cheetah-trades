@@ -14,6 +14,7 @@ import {
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
+  CM_TABS, TAB_META,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -469,5 +470,52 @@ describe('parseSort', () => {
     // Same case as the missing list: the board has not answered. Discarding the
     // URL's sort here would make the first fetch quietly use the default.
     expect(parseSort('volume', [])).toBe('volume');
+  });
+});
+
+// ── Earnings Flow tab (Ajay 2026-08-19) ──────────────────────────────────────
+describe('the Earnings Flow tab', () => {
+  it('is registered and sits next to the other live boards', () => {
+    // Between Back in Demand and Past Winners: the three live/decision boards
+    // read left to right, and the retrospective one stays last.
+    expect(CM_TABS).toEqual(['vcp', 'zones', 'earnings', 'winners']);
+    expect(parseTab('earnings')).toBe('earnings');
+  });
+
+  it('has copy that states the two halves AND that the print may be pending', () => {
+    // He asked to ride pre-earnings momentum. The tab must say out loud that
+    // an amber tile has a binary event still ahead of it — that is the ATEX
+    // lesson, and burying it in a tooltip would be the same mistake.
+    const blurb = TAB_META.earnings.blurb;
+    expect(TAB_META.earnings.label).toBe('Earnings Flow');
+    expect(blurb).toMatch(/today/i);
+    expect(blurb).toMatch(/not happened yet/i);
+  });
+
+  it('an unknown tab still falls back rather than 404ing a bookmark', () => {
+    expect(parseTab('earnigs')).toBe('vcp');
+    expect(parseTab(null)).toBe('vcp');
+  });
+});
+
+describe('the prior-close reference line', () => {
+  it('renders in the muted tone, not as a plan level', () => {
+    // It is context for the gap, not a price to act on. Giving it buy/stop
+    // colouring would put a fourth "level" on a chart that has three.
+    expect(toneColor('neutral')).toBe(toneColor('now'));
+    expect(toneColor('neutral')).not.toBe(toneColor('buy'));
+  });
+
+  it('yields to the plan lines when labels collide', () => {
+    const d = { lo: 100, hi: 120 };
+    const out = lineLabels([
+      { price: 110, label: 'PRIOR CLOSE', tone: 'neutral' },
+      { price: 110.2, label: 'BUY', tone: 'buy' },
+    ], d, 200);
+    const buy = out.find((l) => l.text === 'BUY')!;
+    const prior = out.find((l) => l.text === 'PRIOR CLOSE')!;
+    // BUY is pinned to its true y; the reference is the one that moves.
+    expect(Math.abs(buy.y - yFor(110.2, d, 200, 8))).toBeLessThan(0.01);
+    expect(prior.y).not.toBe(buy.y);
   });
 });

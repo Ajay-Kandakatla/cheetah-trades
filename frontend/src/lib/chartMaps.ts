@@ -12,8 +12,8 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'zones' | 'winners';
-export const CM_TABS: CmTab[] = ['vcp', 'zones', 'winners'];
+export type CmTab = 'vcp' | 'zones' | 'winners' | 'earnings';
+export const CM_TABS: CmTab[] = ['vcp', 'zones', 'earnings', 'winners'];
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   vcp: {
@@ -24,6 +24,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     label: 'Back in Demand',
     blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on.',
   },
+  earnings: {
+    label: 'Earnings Flow',
+    blurb: "Today only. Names that reported today and were BOUGHT — big volume, closing near the day's high — plus names reporting after today's close that institutions are already accumulating into. Amber badge means the print has not happened yet.",
+  },
   winners: {
     label: 'Past Winners',
     blurb: 'Setups from your own ledger that reached their measure-rule target before their stop. The dotted line is the confirmation bar — study what the base looked like BEFORE it.',
@@ -32,7 +36,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
 
 export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: number };
 export type CmBand = { kind: 'base' | 'demand' | 'supply'; lo: number; hi: number; label?: string };
-export type CmLineTone = 'buy' | 'stop' | 'target' | 'now';
+export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral';
 export type CmLine = { price: number; label: string; tone: CmLineTone };
 export type CmMarker = { date: string; label?: string; kind?: string };
 export type CmStat = { k: string; v: string };
@@ -272,7 +276,13 @@ export function clipBands(bands: CmBand[], d: Domain): CmBand[] {
   return out;
 }
 
-const TONE_PRIORITY: Record<CmLineTone, number> = { buy: 3, stop: 3, target: 2, now: 2 };
+// HIGHER wins: layoutLabels sorts descending and pins anything >= 2 to its
+// exact y. `neutral` is the earnings tiles' prior-close reference, so it sits
+// at 1 — it may be nudged or dropped when the plan lines need the pixels,
+// which is right, because the gap it marks is already written in the stats.
+const TONE_PRIORITY: Record<CmLineTone, number> = {
+  buy: 3, stop: 3, target: 2, now: 2, neutral: 1,
+};
 
 /** Right-edge labels for the plan lines, de-collided. Reuses zonePlan's
  *  layoutLabels so the two chart surfaces cannot drift apart. */

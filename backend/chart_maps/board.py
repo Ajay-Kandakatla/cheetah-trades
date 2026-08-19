@@ -37,7 +37,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "zones", "winners")
+TABS = ("vcp", "zones", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -1192,6 +1192,129 @@ def _winner_record(usable: list, wins: list, losses: list) -> dict:
 # ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
+
+def earnings_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT) -> dict:
+    """Institutional volume around TODAY's earnings print.
+
+    Ajay 2026-08-19: *"I need a tracker on the Chart maps page a new tab..
+    Where it tracks earnings that had huge instituonal volume. Like BULL for
+    example and TGT"*.
+
+    Detection lives in `chart_maps/earnings.py`, which reuses the existing
+    earnings stack (`sepa/earnings_watch` for the calendar, the shared
+    `earnings_picks.reaction_read` to anchor the reaction bar) rather than
+    standing up a second one. This function only turns rows into tiles.
+
+    REACTED tiles come first, then UPCOMING. Grouped rather than interleaved by
+    size: a name whose numbers are out and one carrying a binary event tonight
+    are different decisions, and sorting them together would make him read
+    every badge to tell which is which.
+    """
+    from . import earnings as E
+
+    try:
+        data = E.scan()
+    except Exception as exc:
+        log.warning("chart-maps: earnings scan failed: %s", exc)
+        return {"tiles": [], "note": "earnings data unavailable"}
+
+    tiles = []
+    groups = [(E.REACTED, data.get("reacted") or []),
+              (E.UPCOMING, data.get("upcoming") or [])]
+    rank = 0
+    for phase, rows in groups:
+        for r in rows:
+            sym = (r.get("symbol") or "").upper()
+            if not sym:
+                continue
+            rank += 1
+            gap = _num(r.get("gap_pct"))
+            chg = _num(r.get("change_pct"))
+            loc = _num(r.get("close_loc"))
+            vr = _num(r.get("vol_ratio"))
+            dv = _num(r.get("dollar_vol"))
+
+            stats = [
+                {"k": "Volume", "v": f"{vr:.1f}x" if vr is not None else "—"},
+                {"k": "$ traded", "v": _usd_short(dv)},
+                {"k": "Day", "v": f"{chg:+.1f}%" if chg is not None else "—"},
+                # The discriminator. 1.00 = closed on the high.
+                {"k": "Close in range", "v": f"{loc:.2f}" if loc is not None else "—"},
+            ]
+            if gap is not None:
+                stats.append({"k": "Gap", "v": f"{gap:+.1f}%"})
+            sp = _num(r.get("surprise_pct"))
+            if sp is not None:
+                stats.append({"k": "EPS surprise", "v": f"{sp:+.0f}%"})
+
+            if phase == E.REACTED:
+                badges = [{"text": "Reported today", "tone": "good"}]
+                # A gap DOWN that closed near the high is the TGT signature and
+                # the most informative thing on the tile — institutions did not
+                # just buy, they bought what everyone else was selling.
+                if gap is not None and gap < -0.5:
+                    badges.append({"text": "Bought the gap down", "tone": "good"})
+                why = (f"reported today, {chg:+.1f}% on {vr:.1f}x volume, "
+                       f"closed at {loc:.2f} of its range"
+                       if None not in (chg, vr, loc) else "institutional buying on the report")
+            else:
+                badges = [{"text": "Reports " + (r.get("reports_in") or "today"),
+                           "tone": "warn"}]
+                why = (f"{chg:+.1f}% on {vr:.1f}x volume INTO a print that lands "
+                       f"{r.get('reports_in') or 'today'}"
+                       if None not in (chg, vr) else "accumulation into the print")
+
+            tiles.append({
+                "symbol": sym,
+                "name": _name_for(sym),
+                # Setup tab, matching the zone tiles (Ajay 2026-08-17).
+                "href": _href(sym, "setup"),
+                "bars": [],
+                "bands": [],
+                "lines": ([{"price": _num(r.get("prev_close")), "label": "PRIOR CLOSE",
+                            "tone": "neutral"}]
+                          if _num(r.get("prev_close")) is not None else []),
+                "markers": [{"date": r.get("date"), "label": "earnings",
+                             "kind": "confirm"}] if r.get("date") else [],
+                "stats": stats,
+                "why": why,
+                "theme": _theme(sym),
+                "badges": badges,
+                "phase": phase,
+                "_score": float(1000 - rank),
+            })
+
+    short = tiles[:limit + BAR_BUFFER]
+    _attach_bars(short, days)
+    out = [t for t in short if t.get("bars")][:limit]
+    for t in out:
+        t.pop("_score", None)
+        t.pop("_bars", None)
+    return {
+        "tiles": out,
+        "as_of": data.get("as_of"),
+        "criteria": data.get("criteria"),
+        "counts": {"reacted": len(data.get("reacted") or []),
+                   "upcoming": len(data.get("upcoming") or []),
+                   "calendar_names": data.get("calendar_names")},
+        "note": ("Same-day only: names that reported today, and names reporting "
+                 "after today's close that institutions are buying into. "
+                 "Buying only — distribution is not shown."),
+    }
+
+
+def _usd_short(v) -> str:
+    """$1.5B / $281M. Whole units — a dollar-volume figure carrying cents is
+    false precision on a number that moves by millions between prints."""
+    n = _num(v)
+    if n is None:
+        return "—"
+    if n >= 1e9:
+        return f"${n / 1e9:.1f}B"
+    if n >= 1e6:
+        return f"${n / 1e6:.0f}M"
+    return f"${n / 1e3:.0f}K"
+
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
@@ -1213,7 +1336,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     srt = sort if sort in SORTS else DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
-    if t == "zones":
+    if t == "earnings":
+        out = earnings_tiles(limit, days)
+    elif t == "zones":
         out = zone_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "winners":
         if src == "zone":
@@ -1230,13 +1355,14 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # The winners tabs read a ledger, not a scan, so they carry no live volume
     # to sort by. Say so rather than offering a control that silently does
     # nothing.
-    out["sort"] = DEFAULT_SORT if t == "winners" else srt
-    out["sorts"] = [] if t == "winners" else [{"key": k, "label": v}
+    _fixed = t in ("winners", "earnings")
+    out["sort"] = DEFAULT_SORT if _fixed else srt
+    out["sorts"] = [] if _fixed else [{"key": k, "label": v}
                                               for k, v in SORTS.items()]
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
-    out["min_tier"] = "any" if t == "winners" else tier
-    out["tiers"] = [] if t == "winners" else [
+    out["min_tier"] = "any" if _fixed else tier
+    out["tiers"] = [] if _fixed else [
         {"key": "deep", "label": f"Deep · ≥${int(LIQ_DEEP_USD/1e6)}M/day"},
         {"key": "ok", "label": f"Tradeable · ≥${int(LIQ_OK_USD/1e6)}M/day"},
         {"key": "thin", "label": f"Thin · ≥${int(LIQ_THIN_USD/1e6)}M/day"},
