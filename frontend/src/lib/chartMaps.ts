@@ -436,6 +436,127 @@ export function dropCollidingTicks(
   return ticks.filter((t) => !labels.some((l) => Math.abs(l.y - t.y) < minGap));
 }
 
+/* ── right gutter + hover readout (2026-08-19) ────────────────────────────────
+ * Ajay, with a screenshot: the META tile rendered "overhead 553" and
+ * "support 527." — both cut off at the SVG's right edge. PAD_R was a fixed 62
+ * units in a 620-unit viewBox, and "overhead 553.67" needs ~78. The tab that
+ * exposed it is the one where the label IS the answer.
+ *
+ * And: "can you give me same features like hover over prices at the level".
+ */
+
+/** Approximate advance width of a string, in viewBox units, without measuring.
+ *
+ * getComputedTextLength needs a laid-out DOM node, which the geometry layer
+ * deliberately does not have — every number on this chart comes from a pure
+ * function so it can be tested. Per-class advances for a UI sans are close
+ * enough for a gutter that gets clamped anyway.
+ */
+export function textWidth(text: string, fontSize: number): number {
+  let em = 0;
+  for (const ch of text || '') {
+    // DIGITS FIRST. UI sans faces ship tabular figures by default — every
+    // digit carries the same advance so columns of numbers line up — so '1'
+    // is NOT a narrow glyph here. Lumping it in with 'il!' under-measured
+    // every label holding a 1, which is most stock prices, and let
+    // "overhead 151.87" overflow the gutter it had just been widened for.
+    if (ch >= '0' && ch <= '9') em += 0.55;
+    else if (ch === ' ') em += 0.28;
+    else if ('.,:;\'`|'.includes(ch)) em += 0.28;
+    else if ('il!'.includes(ch)) em += 0.30;
+    else if ('mwMW'.includes(ch)) em += 0.85;
+    else if (ch >= 'A' && ch <= 'Z') em += 0.66;
+    else em += 0.55;
+  }
+  return em * fontSize;
+}
+
+export const GUTTER_MIN = 56;
+export const GUTTER_MAX = 118;
+
+/** Width the right gutter needs so no label is clipped.
+ *
+ * Dynamic rather than a constant: a board tile labelled "BUY 152.30" should not
+ * pay for the Support tab's "overhead 553.67". Clamped at both ends so one
+ * pathological label cannot eat the plot.
+ */
+export function gutterWidth(
+  texts: string[], fontSize = 9.5, pad = 12,
+): number {
+  // `pad` is real breathing room, not decoration. `textWidth` is an ESTIMATE —
+  // the actual face, its kerning and the user's zoom all move the true advance
+  // — so the margin has to absorb being wrong by a few percent. At pad 8 a
+  // deliberately cruder estimate already overflowed the viewBox by 0.4 units,
+  // which is exactly the clipped label this function exists to prevent.
+  const widest = (texts || []).reduce(
+    (m, t) => Math.max(m, textWidth(t, fontSize)), 0);
+  return Math.min(GUTTER_MAX, Math.max(GUTTER_MIN, Math.ceil(widest + pad)));
+}
+
+/** Inverse of `yFor` — the price at a pixel row. Used by the hover crosshair. */
+export function priceAt(y: number, d: Domain, height: number, padY = 8): number {
+  const usable = height - 2 * padY || 1;
+  const t = 1 - (y - padY) / usable;
+  return d.lo + t * (d.hi - d.lo);
+}
+
+/** Inverse of `xFor` — which bar sits under a pixel column, clamped to the
+ *  series so a cursor in the gutter still reads the last bar rather than
+ *  falling off the end. */
+export function barIndexAt(
+  x: number, n: number, width: number, padR: number,
+): number {
+  if (!n) return -1;
+  const w = Math.max(width - padR, 1);
+  const bw = w / n;
+  return Math.min(n - 1, Math.max(0, Math.floor(x / bw)));
+}
+
+/** The band a price falls inside, if any. Hovering a zone should name it —
+ *  that is the "hover over prices at the level" ask. */
+export function bandAt(price: number, bands: CmBand[]): CmBand | null {
+  if (!Number.isFinite(price)) return null;
+  for (const b of bands || []) {
+    const lo = Math.min(b.lo, b.hi);
+    const hi = Math.max(b.lo, b.hi);
+    if (price >= lo && price <= hi) return b;
+  }
+  return null;
+}
+
+/** Compact volume — 12.4M, 903K. A raw 18011648 in a tooltip is unreadable. */
+export function shortVol(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v) || v < 0) return '—';
+  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${Math.round(v / 1e3)}K`;
+  return String(Math.round(v));
+}
+
+/** Keep a tooltip box inside the chart, flipping it rather than clipping it.
+ *  A readout that runs off the right edge is the same defect as the labels
+ *  this change was opened to fix. */
+export function tooltipPos(
+  x: number, y: number, boxW: number, boxH: number,
+  width: number, height: number, gap = 10,
+): { x: number; y: number } {
+  const px = x + gap + boxW > width ? Math.max(2, x - gap - boxW) : x + gap;
+  const py = Math.min(Math.max(2, y - boxH / 2), Math.max(2, height - boxH - 2));
+  return { x: px, y: py };
+}
+
+/** The lines of the hover readout for one bar. Pure so the text is testable. */
+export function hoverLines(bar: CmBar | null | undefined): string[] {
+  if (!bar) return [];
+  const f = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '—');
+  return [
+    bar.t,
+    `O ${f(bar.o)}   H ${f(bar.h)}`,
+    `L ${f(bar.l)}   C ${f(bar.c)}`,
+    `Vol ${shortVol(bar.v)}`,
+  ];
+}
+
 export function toneColor(tone: CmLineTone): string {
   if (tone === 'buy') return 'var(--positive, #22c55e)';
   if (tone === 'stop') return 'var(--negative, #ef4444)';

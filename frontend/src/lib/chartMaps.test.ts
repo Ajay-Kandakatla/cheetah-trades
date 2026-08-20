@@ -16,6 +16,8 @@ import {
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
   CM_TABS, TAB_META, isBoardTab,
   dropCollidingTicks, priceTicks, tickDecimals,
+  GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
+  priceAt, shortVol, textWidth, tooltipPos,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -662,5 +664,155 @@ describe('dropCollidingTicks — the plan labels win', () => {
     // which is worse than not drawing it: the scale would be lying.
     const out = dropCollidingTicks(ticks, [{ y: 20 }, { y: 60 }, { y: 100 }]);
     expect(out).toEqual([]);
+  });
+});
+
+
+// ── the right gutter (Ajay's META screenshot, 2026-08-19) ────────────────────
+describe('gutterWidth', () => {
+  it('REGRESSION: fits the label that was being clipped', () => {
+    // The META tile rendered "overhead 553" and "support 527." — cut off at the
+    // SVG's right edge, because PAD_R was a fixed 62 units in a 620 viewBox.
+    const need = textWidth('overhead 553.67', 9.5);
+    expect(need).toBeGreaterThan(62);                 // the old constant failed
+    expect(gutterWidth(['overhead 553.67', 'support 527.64', 'now'], 9.5))
+      .toBeGreaterThanOrEqual(need);
+  });
+
+  it('does not make a short-label tile pay for a long-label one', () => {
+    const short = gutterWidth(['152.30', 'now'], 9.5);
+    const long = gutterWidth(['overhead 553.67'], 9.5);
+    expect(short).toBeLessThan(long);
+  });
+
+  it('is clamped at both ends so one bad label cannot eat the plot', () => {
+    expect(gutterWidth([], 9.5)).toBe(GUTTER_MIN);
+    expect(gutterWidth(['x'.repeat(400)], 9.5)).toBe(GUTTER_MAX);
+    expect(gutterWidth(undefined as any, 9.5)).toBe(GUTTER_MIN);
+  });
+
+  it('treats every DIGIT as the same width — UI faces are tabular', () => {
+    // '1' is not a narrow glyph in a tabular face. Treating it as one
+    // under-measured "overhead 151.87" and let it overflow the gutter.
+    expect(textWidth('111.11', 9.5)).toBeCloseTo(textWidth('555.55', 9.5), 6);
+    expect(textWidth('1', 9.5)).toBeCloseTo(textWidth('8', 9.5), 6);
+  });
+
+  it('REGRESSION: a price full of 1s still fits the gutter it sized', () => {
+    for (const label of ['overhead 151.87', 'support 111.11', 'now 1111.11']) {
+      const g = gutterWidth([label], 9.5);
+      // x starts at plotW + 4; the label must end inside the 620 viewBox.
+      expect((620 - g) + 4 + textWidth(label, 9.5)).toBeLessThanOrEqual(620);
+    }
+  });
+
+  it('textWidth grows with length and with font size', () => {
+    expect(textWidth('1234567890', 10)).toBeGreaterThan(textWidth('123', 10));
+    expect(textWidth('abc', 20)).toBeGreaterThan(textWidth('abc', 10));
+    expect(textWidth('', 10)).toBe(0);
+    expect(textWidth(null as any, 10)).toBe(0);
+  });
+});
+
+// ── hover readout ("hover over prices at the level") ─────────────────────────
+describe('priceAt', () => {
+  const d = { lo: 100, hi: 200 };
+
+  it('is the exact inverse of yFor', () => {
+    for (const p of [100, 123.45, 150, 199.99, 200]) {
+      expect(priceAt(yFor(p, d, 300, 8), d, 300, 8)).toBeCloseTo(p, 6);
+    }
+  });
+
+  it('reads higher prices nearer the TOP of the chart', () => {
+    expect(priceAt(20, d, 300)).toBeGreaterThan(priceAt(280, d, 300));
+  });
+});
+
+describe('barIndexAt', () => {
+  it('maps the left edge to the first bar and the right to the last', () => {
+    expect(barIndexAt(0, 50, 620, 62)).toBe(0);
+    expect(barIndexAt(620 - 62 - 0.01, 50, 620, 62)).toBe(49);
+  });
+
+  it('clamps rather than running off the end', () => {
+    // The cursor can sit in the gutter; it should still read the last bar.
+    expect(barIndexAt(9999, 50, 620, 62)).toBe(49);
+    expect(barIndexAt(-40, 50, 620, 62)).toBe(0);
+  });
+
+  it('answers -1 for an empty series instead of NaN', () => {
+    expect(barIndexAt(100, 0, 620, 62)).toBe(-1);
+  });
+});
+
+describe('bandAt', () => {
+  const bands: any = [
+    { kind: 'demand', lo: 100, hi: 110 },
+    { kind: 'supply', lo: 150, hi: 160 },
+  ];
+
+  it('names the band the cursor is inside, including its edges', () => {
+    expect(bandAt(105, bands)?.kind).toBe('demand');
+    expect(bandAt(100, bands)?.kind).toBe('demand');
+    expect(bandAt(160, bands)?.kind).toBe('supply');
+  });
+
+  it('is null between bands and for junk', () => {
+    expect(bandAt(130, bands)).toBeNull();
+    expect(bandAt(NaN, bands)).toBeNull();
+    expect(bandAt(105, [])).toBeNull();
+    expect(bandAt(105, undefined as any)).toBeNull();
+  });
+
+  it('tolerates an inverted band rather than silently missing it', () => {
+    expect(bandAt(105, [{ kind: 'demand', lo: 110, hi: 100 }] as any)).toBeTruthy();
+  });
+});
+
+describe('tooltipPos', () => {
+  it('flips to the left rather than running off the right edge', () => {
+    // Clipping the readout would be the same defect the gutter fix addressed.
+    const t = tooltipPos(540, 100, 104, 50, 560, 300);
+    expect(t.x + 104).toBeLessThanOrEqual(560);
+  });
+
+  it('stays inside the top and bottom', () => {
+    expect(tooltipPos(100, 0, 104, 50, 560, 300).y).toBeGreaterThanOrEqual(0);
+    expect(tooltipPos(100, 300, 104, 50, 560, 300).y + 50).toBeLessThanOrEqual(300);
+  });
+
+  it('sits to the RIGHT of the cursor when there is room', () => {
+    expect(tooltipPos(100, 150, 104, 50, 560, 300).x).toBeGreaterThan(100);
+  });
+});
+
+describe('hoverLines + shortVol', () => {
+  const bar = { t: '2026-08-19', o: 540.1, h: 548.22, l: 536.4, c: 539.89, v: 18011648 };
+
+  it('reads date, OHLC and volume', () => {
+    const out = hoverLines(bar as any);
+    expect(out[0]).toBe('2026-08-19');
+    expect(out.join(' ')).toContain('540.10');
+    expect(out.join(' ')).toContain('C 539.89');
+    expect(out.join(' ')).toContain('18.0M');
+  });
+
+  it('answers empty for no bar rather than a row of dashes', () => {
+    expect(hoverLines(null)).toEqual([]);
+    expect(hoverLines(undefined)).toEqual([]);
+  });
+
+  it('never prints a raw eight-figure volume', () => {
+    expect(shortVol(18011648)).toBe('18.0M');
+    expect(shortVol(903_000)).toBe('903K');
+    expect(shortVol(2_400_000_000)).toBe('2.4B');
+    expect(shortVol(42)).toBe('42');
+  });
+
+  it('degrades on missing or impossible volume', () => {
+    expect(shortVol(null)).toBe('—');
+    expect(shortVol(NaN)).toBe('—');
+    expect(shortVol(-5)).toBe('—');
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
 import type { CmBar, CmTile } from '../lib/chartMaps';
@@ -117,5 +117,101 @@ describe('PatternChart', () => {
     draw({ ...TILE, bands: [], badges: [], theme: null, name: null });
     expect(screen.getByText('IONQ')).toBeInTheDocument();
     expect(screen.queryByText('IonQ Inc')).not.toBeInTheDocument();
+  });
+});
+
+/* ── hover readout (Ajay 2026-08-19: "hover over prices at the level") ──────
+ *
+ * jsdom gives every element a zero-size bounding rect, and the handler bails on
+ * that (a zero-width box would divide by zero and put the crosshair at NaN). So
+ * the rect is stubbed to the real rendered aspect: 620 x 190 viewBox units. */
+function hoverAt(container: HTMLElement, xFrac: number, yFrac: number) {
+  const svg = container.querySelector('svg')!;
+  svg.getBoundingClientRect = () => ({
+    left: 0, top: 0, width: 620, height: 190,
+    right: 620, bottom: 190, x: 0, y: 0, toJSON: () => ({}),
+  }) as DOMRect;
+  fireEvent.mouseMove(svg, { clientX: 620 * xFrac, clientY: 190 * yFrac });
+  return svg;
+}
+
+describe('hover readout', () => {
+  it('draws nothing extra until the pointer is actually over the chart', () => {
+    const { container } = draw(TILE);
+    // No crosshair, no readout — the 24-tile board must stay static at rest.
+    expect(container.querySelectorAll('rect[rx="4"]').length).toBe(0);
+  });
+
+  it('shows a price for the row under the cursor', () => {
+    const { container } = draw(TILE);
+    hoverAt(container, 0.5, 0.5);
+    const texts = Array.from(container.querySelectorAll('svg text'))
+      .map((t) => t.textContent || '');
+    // Mid-chart on a 10.0 -> 13.9 series: a two-decimal price in that range.
+    const prices = texts.filter((t) => /^\d+\.\d{2}$/.test(t)).map(Number);
+    expect(prices.length).toBeGreaterThan(0);
+    expect(Math.max(...prices)).toBeGreaterThan(9);
+    expect(Math.min(...prices)).toBeLessThan(20);
+  });
+
+  it('reads the OHLC of the bar under the cursor', () => {
+    const { container } = draw(TILE);
+    hoverAt(container, 0.5, 0.5);
+    const all = container.textContent || '';
+    expect(all).toMatch(/O \d+\.\d{2}\s+H \d+\.\d{2}/);
+    expect(all).toMatch(/L \d+\.\d{2}\s+C \d+\.\d{2}/);
+    expect(all).toContain('Vol');
+  });
+
+  it('names the band when the cursor is standing inside one', () => {
+    const { container } = draw(TILE);
+    // The base band is 10.2-12.0 and the series runs 10.0-13.9, so the lower
+    // third of the chart is inside it.
+    hoverAt(container, 0.5, 0.86);
+    expect(container.textContent).toContain('base 61d');
+  });
+
+  it('clears everything on mouse leave', () => {
+    const { container } = draw(TILE);
+    const svg = hoverAt(container, 0.5, 0.5);
+    expect(container.textContent).toContain('Vol');
+    fireEvent.mouseLeave(svg);
+    expect(container.textContent).not.toContain('Vol');
+  });
+
+  it('never emits NaN when the rect has no size (jsdom / hidden tab)', () => {
+    const { container } = draw(TILE);
+    const svg = container.querySelector('svg')!;
+    fireEvent.mouseMove(svg, { clientX: 100, clientY: 50 });   // rect is 0x0
+    expect(container.innerHTML).not.toContain('NaN');
+  });
+
+  it('a band carries a native title so a resting pointer still names it', () => {
+    const { container } = draw(TILE);
+    const title = container.querySelector('rect > title');
+    expect(title?.textContent).toContain('base 61d');
+  });
+});
+
+/* ── the right gutter must fit its labels (META screenshot, 2026-08-19) ────── */
+describe('label clipping', () => {
+  it('REGRESSION: a long plan label is not cut off at the SVG edge', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <PatternChart tile={{
+          ...TILE,
+          lines: [{ price: 12.4, label: 'overhead 553.67', tone: 'target' },
+                  { price: 11.1, label: 'support 527.64', tone: 'buy' }],
+        }} height={320} />
+      </MemoryRouter>);
+    const svg = container.querySelector('svg')!;
+    const vbW = Number(svg.getAttribute('viewBox')!.split(' ')[2]);
+    for (const t of Array.from(svg.querySelectorAll('text'))) {
+      const x = Number(t.getAttribute('x'));
+      const txt = t.textContent || '';
+      if (!txt.includes('overhead') && !txt.includes('support')) continue;
+      // 0.55em average advance is the same estimate gutterWidth uses.
+      expect(x + txt.length * 0.55 * 9.5).toBeLessThanOrEqual(vbW);
+    }
   });
 });
