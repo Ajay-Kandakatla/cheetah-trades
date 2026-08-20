@@ -315,6 +315,127 @@ export function lineLabels(
   return layoutLabels(items, { minGap: 10, top: 6, bottom: height - 4, maxShift: 22 });
 }
 
+/* ── price axis (2026-08-19) ──────────────────────────────────────────────────
+ * Ajay: "can you add the #s to these graphs please?"
+ *
+ * Until now the ONLY numbers on a tile were the plan-line labels. A demand band
+ * could be drawn as a green box with no way to read what price it sat at —
+ * which is most of the point on the Support Levels tab, where the band IS the
+ * answer.
+ *
+ * The axis goes in the SAME right gutter the plan labels already use, never
+ * over the candles. Ajay 2026-08-18: "they are all clumsy and its hard to look
+ * at the bars" — that complaint was about text on the price action, and this
+ * must not re-create it.
+ */
+
+/** Steps a human reads without thinking, per decade. */
+const STEP_MULTS = [1, 2, 2.5, 5];
+
+/** Pick the step whose tick count lands closest to `target`.
+ *
+ * The naive `niceStep(span / target)` rounds UP through a 5→10 gap, which on a
+ * real chart is the difference between a usable scale and a broken one: META
+ * over a year spans ~$300, `300/5 = 60` rounds to 100, and the axis came back
+ * 600 / 700 / 800 — while price was at 539, so every tick sat above the entire
+ * lower half of the chart (measured 2026-08-19). Searching the ladder either
+ * side of the estimate picks 50 instead, and the scale covers the candles.
+ *
+ * Ties go to the LARGER step: fewer gridlines for the same coverage.
+ */
+function chooseStep(span: number, target: number): number {
+  if (!Number.isFinite(span) || span <= 0) return 1;
+  const exp = Math.floor(Math.log10(span / Math.max(target, 1)));
+  let best = Math.pow(10, exp);
+  let bestScore = Infinity;
+  for (const e of [exp - 1, exp, exp + 1]) {
+    for (const m of STEP_MULTS) {
+      const step = m * Math.pow(10, e);
+      if (!Number.isFinite(step) || step <= 0) continue;
+      const count = Math.floor(span / step);
+      if (count < 2 || count > MAX_TICKS) continue;
+      const score = Math.abs(count - target);
+      if (score < bestScore || (score === bestScore && step > best)) {
+        best = step;
+        bestScore = score;
+      }
+    }
+  }
+  return best;
+}
+
+/** Ceiling on gridlines. Past this the chart is graph paper, not a chart. */
+const MAX_TICKS = 10;
+
+/** Roughly how many ticks to aim for. Six rather than four because some are
+ *  spent on collisions with the plan labels — BRKR at the 1-month zoom lost two
+ *  of four that way and the scale stopped being readable. */
+const TARGET_TICKS = 6;
+
+/** Decimals needed to print the step EXACTLY, capped at 2.
+ *
+ * Not derived from the step's magnitude — that was wrong, and wrong in the way
+ * that matters. `-floor(log10(2.5))` is 0, so a 2.5 step printed BRKR's
+ * gridlines at 52.5 and 57.5 as "53" and "58" (measured 2026-08-19): the number
+ * claimed a price the line was not drawn at. An axis that misreports its own
+ * position is worse than no axis, because a stop gets placed off it.
+ *
+ * So: the smallest decimal count that represents the step without rounding.
+ * 50 → 0, 2.5 → 1, 0.25 → 2.
+ */
+export function tickDecimals(step: number): number {
+  if (!Number.isFinite(step) || step <= 0) return 2;
+  for (let d = 0; d <= 2; d++) {
+    const scaled = step * Math.pow(10, d);
+    if (Math.abs(scaled - Math.round(scaled)) < 1e-9) return d;
+  }
+  return 2;
+}
+
+export type PriceTick = { price: number; y: number; text: string };
+
+/** Horizontal price ticks across the visible domain.
+ *
+ * Stepping by index rather than accumulating `p += step` keeps float error out
+ * of the label text — otherwise a 0.1 step prints "1.3000000000000003".
+ */
+export function priceTicks(
+  d: Domain, height: number, padY = 8, target = TARGET_TICKS,
+): PriceTick[] {
+  const span = d.hi - d.lo;
+  if (!Number.isFinite(span) || span <= 0 || !Number.isFinite(height)) return [];
+  const step = chooseStep(span, target);
+  const dp = tickDecimals(step);
+  const first = Math.ceil(d.lo / step) * step;
+  const out: PriceTick[] = [];
+  for (let i = 0; i <= MAX_TICKS * 2; i++) {
+    const price = first + i * step;
+    if (price > d.hi) break;
+    const y = yFor(price, d, height, padY);
+    // Keep the top and bottom labels off the chart's own edges, where they
+    // would sit half-clipped or collide with the month row.
+    if (y < padY + 2 || y > height - padY - 2) continue;
+    out.push({ price, y, text: price.toFixed(dp) });
+  }
+  return out;
+}
+
+/** Which ticks may print their NUMBER. The gridline is always drawn.
+ *
+ * The plan labels win the text: buy / stop / target / now are the decision
+ * numbers, and they are more precise than the round tick they sit next to. But
+ * suppressing the whole tick left visible holes in an evenly spaced grid —
+ * BRKR kept 2 of 4 — which reads as a rendering bug rather than as deference.
+ * So the LINE stays and only the number yields; at that height there is still a
+ * number on screen, just a better one.
+ */
+export function dropCollidingTicks(
+  ticks: PriceTick[], labels: { y: number }[], minGap = 11,
+): PriceTick[] {
+  if (!labels?.length) return ticks;
+  return ticks.filter((t) => !labels.some((l) => Math.abs(l.y - t.y) < minGap));
+}
+
 export function toneColor(tone: CmLineTone): string {
   if (tone === 'buy') return 'var(--positive, #22c55e)';
   if (tone === 'stop') return 'var(--negative, #ef4444)';

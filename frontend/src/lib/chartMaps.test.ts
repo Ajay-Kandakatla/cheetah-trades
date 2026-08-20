@@ -15,6 +15,7 @@ import {
   type CmBar, type CmBand, type CmLine,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
   CM_TABS, TAB_META, isBoardTab,
+  dropCollidingTicks, priceTicks, tickDecimals,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -551,5 +552,115 @@ describe('the Support Levels tab', () => {
   it('a typo in the tab name still lands on a real board', () => {
     expect(parseTab('suport')).toBe('vcp');
     expect(parseTab('SUPPORT')).toBe('support');
+  });
+});
+
+
+// ── the price axis (Ajay 2026-08-19: "add the #s to these graphs") ───────────
+describe('priceTicks', () => {
+  const d = { lo: 100, hi: 200 };
+
+  it('produces round numbers a human reads without thinking', () => {
+    const t = priceTicks(d, 200).map((x) => x.price);
+    expect(t.length).toBeGreaterThan(2);
+    // Every tick is a clean multiple of the chosen step, not 103.7 / 124.4.
+    const step = t[1] - t[0];
+    for (const p of t) expect(Math.abs(p / step - Math.round(p / step))).toBeLessThan(1e-9);
+    expect([1, 2, 2.5, 5, 10, 20, 25, 50].some((n) => Math.abs(step - n) < 1e-9)).toBe(true);
+  });
+
+  it('keeps every tick inside the domain', () => {
+    for (const t of priceTicks(d, 200)) {
+      expect(t.price).toBeGreaterThanOrEqual(d.lo);
+      expect(t.price).toBeLessThanOrEqual(d.hi);
+    }
+  });
+
+  it('keeps every tick off the top and bottom edges', () => {
+    // A label at y=0 is half-clipped; one at y=H collides with the month row.
+    const H = 200, padY = 10;
+    for (const t of priceTicks(d, H, padY)) {
+      expect(t.y).toBeGreaterThan(padY);
+      expect(t.y).toBeLessThan(H - padY);
+    }
+  });
+
+  it('uses exactly the decimals the STEP needs, not the price magnitude', () => {
+    expect(tickDecimals(50)).toBe(0);
+    expect(tickDecimals(2)).toBe(0);
+    expect(tickDecimals(2.5)).toBe(1);      // the one that was broken
+    expect(tickDecimals(0.5)).toBe(1);
+    expect(tickDecimals(0.25)).toBe(2);
+    expect(tickDecimals(0.05)).toBe(2);
+  });
+
+  it('REGRESSION: a tick label always states the price its line is drawn at', () => {
+    // A 2.5 step used to print BRKR's 52.5 and 57.5 gridlines as "53" and "58".
+    // An axis that misreports its own position gets a stop placed off it.
+    for (const d of [{ lo: 48.6, hi: 65.3 }, { lo: 520, hi: 791 },
+                     { lo: 1.02, hi: 1.31 }, { lo: 131.7, hi: 170.8 }]) {
+      for (const t of priceTicks(d, 320)) {
+        expect(Number(t.text)).toBeCloseTo(t.price, 6);
+      }
+    }
+  });
+
+  it('handles a penny stock and a four-figure index without changing code', () => {
+    const penny = priceTicks({ lo: 1.02, hi: 1.31 }, 200);
+    const index = priceTicks({ lo: 4100, hi: 4900 }, 200);
+    expect(penny.length).toBeGreaterThan(1);
+    expect(index.length).toBeGreaterThan(1);
+    expect(penny[0].text).toMatch(/^\d+\.\d+$/);       // decimals kept
+    expect(index[0].text).toMatch(/^\d+$/);             // decimals dropped
+  });
+
+  it('never accumulates float error into the label text', () => {
+    // p += step across 40 iterations is how you get "132.99999999999997".
+    for (const t of priceTicks({ lo: 0.1, hi: 3.1 }, 300)) {
+      expect(t.text.length).toBeLessThan(7);
+    }
+  });
+
+  /* negatives */
+  it('answers empty for a degenerate or impossible domain', () => {
+    expect(priceTicks({ lo: 100, hi: 100 }, 200)).toEqual([]);
+    expect(priceTicks({ lo: 200, hi: 100 }, 200)).toEqual([]);
+    expect(priceTicks({ lo: NaN, hi: 200 }, 200)).toEqual([]);
+    expect(priceTicks({ lo: 100, hi: Infinity }, 200)).toEqual([]);
+    expect(priceTicks({ lo: 100, hi: 200 }, NaN)).toEqual([]);
+  });
+
+  it('is bounded — a pathological domain cannot emit thousands of ticks', () => {
+    expect(priceTicks({ lo: 0, hi: 1e9 }, 200).length).toBeLessThanOrEqual(40);
+  });
+});
+
+describe('dropCollidingTicks — the plan labels win', () => {
+  const ticks = [
+    { price: 100, y: 20, text: '100' },
+    { price: 110, y: 60, text: '110' },
+    { price: 120, y: 100, text: '120' },
+  ];
+
+  it('removes a tick that would print on top of a plan label', () => {
+    // BUY / STOP / TARGET / NOW are the decision numbers; the scale is context.
+    const out = dropCollidingTicks(ticks, [{ y: 62 }]);
+    expect(out.map((t) => t.price)).toEqual([100, 120]);
+  });
+
+  it('keeps ticks that clear the label', () => {
+    expect(dropCollidingTicks(ticks, [{ y: 200 }]).length).toBe(3);
+  });
+
+  it('is a no-op when there are no plan labels', () => {
+    expect(dropCollidingTicks(ticks, [])).toEqual(ticks);
+    expect(dropCollidingTicks(ticks, undefined as any)).toEqual(ticks);
+  });
+
+  it('drops rather than nudges — a gap reads as "a label is here"', () => {
+    // Moving the tick would put a round number at a y that is not its price,
+    // which is worse than not drawing it: the scale would be lying.
+    const out = dropCollidingTicks(ticks, [{ y: 20 }, { y: 60 }, { y: 100 }]);
+    expect(out).toEqual([]);
   });
 });

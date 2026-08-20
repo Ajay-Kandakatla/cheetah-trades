@@ -14,8 +14,8 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  barDomain, barWidth, clipBands, lineLabels, markerIndex, monthTicks,
-  themeLabel, toneColor, xFor, yFor,
+  barDomain, barWidth, clipBands, dropCollidingTicks, lineLabels, markerIndex,
+  monthTicks, priceTicks, themeLabel, toneColor, xFor, yFor,
   type CmTile,
 } from '../lib/chartMaps';
 import { withSource } from '../lib/navSource';
@@ -42,6 +42,11 @@ export const PatternChart = memo(function PatternChart(
   const labels = lineLabels(tile.lines || [], domain, H, PAD_Y);
   const bw = barWidth(bars.length, W, PAD_R);
   const ticks = monthTicks(bars);
+  // Axis ticks are computed AFTER the plan labels and yield to them: the
+  // plan numbers are the decision, the scale is context.
+  const axis = priceTicks(domain, H, PAD_Y);
+  // Every tick draws its LINE; only the non-colliding ones draw a NUMBER.
+  const axisText = dropCollidingTicks(axis, labels);
   const theme = themeLabel(tile.theme);
   const last = bars[bars.length - 1];
 
@@ -68,6 +73,18 @@ export const PatternChart = memo(function PatternChart(
 
         <svg viewBox={`0 0 ${W} ${H}`} className="cm-svg" role="img"
              aria-label={`${tile.symbol} daily chart, ${bars.length} bars`}>
+          {/* price scale — drawn FIRST so bands, candles and plan lines all sit
+              on top of it. Numbers live in the right gutter, never over the
+              price action. */}
+          {axis.map((t) => (
+            <line key={`ax-${t.price}`} x1={0} y1={t.y} x2={W - PAD_R} y2={t.y}
+                  stroke="var(--rule, #2a2f3a)" strokeWidth={0.6} opacity={0.55} />
+          ))}
+          {axisText.map((t) => (
+            <text key={`axt-${t.price}`} x={W - PAD_R + 4} y={t.y + 3} fontSize="9"
+                  fill="var(--text-muted, #7c869b)">{t.text}</text>
+          ))}
+
           {/* price bands (base / demand / supply) */}
           {bands.map((b, i) => {
             const yTop = yFor(b.hi, domain, H, PAD_Y);
