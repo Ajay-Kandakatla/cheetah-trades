@@ -90,3 +90,86 @@ def test_resolution_is_reported_so_two_surfaces_cannot_look_contradictory():
     assert fine["resolution"] == "fine"
     assert coarse["resolution"] == "swing"
     assert fine["params"]["merge_pct"] < coarse["params"]["merge_pct"]
+
+
+# ── the lookback knob (2026-08-19, Support Levels tab) ────────────────────────
+def test_the_default_lookback_is_unchanged_and_still_gated_at_60_bars():
+    """Every pre-existing caller passes no window. If this floor moves, the
+    /zones page, orderflow.signals and both backtests change silently."""
+    assert pz.LOOKBACK_BARS == 252
+    assert pz.MIN_BARS == 60
+    assert pz.compute(SAW.iloc[:59]) is None
+    assert pz.compute(SAW.iloc[:60]) is not None
+
+
+def test_a_short_window_is_reachable_only_when_it_is_ASKED_for():
+    """21 bars cannot clear the 60-bar default gate — that is the point of the
+    gate. Passing `lookback_bars` is the explicit request that relaxes it."""
+    frame = SAW.iloc[:40]
+    assert pz.compute(frame.iloc[:21]) is None                   # default floor
+    out = pz.compute(SAW, lookback_bars=21, swing_window=2)      # asked for
+    assert out is not None
+    assert out["params"]["lookback"] == 21
+
+
+def test_a_frame_below_the_absolute_floor_returns_None_at_any_window():
+    assert pz.compute(SAW.iloc[:8], lookback_bars=21, swing_window=2) is None
+
+
+def _vees(low, high, leg, cycles):
+    """A V-repeating series whose local minima land at `low`. Unlike SAW this is
+    built per-test so the exact bar count is known, which is what the floor
+    tests need."""
+    seq = []
+    for _ in range(cycles):
+        seq += list(np.linspace(high, low, leg, endpoint=False))
+        seq += list(np.linspace(low, high, leg, endpoint=False))
+    c = pd.Series(seq, dtype=float)
+    return pd.DataFrame({"open": c, "high": c, "low": c, "close": c,
+                         "volume": pd.Series(np.ones(len(c)) * 1_000_000)})
+
+
+def test_the_floor_scales_with_the_swing_window():
+    """`_local_extrema` scans range(w, n-w) and compares w bars either side, so
+    a frame of 2w+2 has nowhere to put a swing at all. A fixed floor would let a
+    wide swing window through to return an empty band list instead of None."""
+    frame = _vees(100.0, 110.0, 4, 20)                 # a swing every 4 bars
+    assert pz.compute(frame, lookback_bars=12, swing_window=5) is None   # 2*5+3=13
+    assert pz.compute(frame, lookback_bars=13, swing_window=5) is not None
+
+
+def test_the_window_actually_narrows_what_is_seen():
+    """The whole feature: a short read must not report structure that only
+    exists further back than it looked."""
+    old = list(np.linspace(90.0, 80.0, 10)) + list(np.linspace(80.0, 90.0, 10))
+    recent = ([100.0, 104.0] * 5) + list(np.linspace(104.0, 100.0, 5)) \
+        + list(np.linspace(100.0, 106.0, 10))
+    c = pd.Series(([95.0] * 40) + (old * 4) + recent, dtype=float)
+    df = pd.DataFrame({"open": c, "high": c, "low": c, "close": c,
+                       "volume": pd.Series(np.ones(len(c)) * 1_000_000)})
+
+    wide = pz.compute(df, lookback_bars=252, swing_window=2)
+    narrow = pz.compute(df, lookback_bars=21, swing_window=2)
+    assert wide["params"]["lookback"] == 252
+    assert narrow["params"]["lookback"] == 21
+
+    # The 80 floor is 80+ bars back. The wide read must find it; the narrow one
+    # must not be able to see it at all.
+    assert any(z["mid"] < 85 for z in wide["demand_zones"]), wide["demand_zones"]
+    assert not any(z["mid"] < 85 for z in narrow["demand_zones"]), \
+        f"a 21-bar read reported a band from 80+ bars back: {narrow['demand_zones']}"
+
+
+def test_the_lookback_is_a_per_call_argument_and_never_a_global_mutation():
+    before = (pz.LOOKBACK_BARS, pz.SWING_WINDOW, pz.MIN_BARS, pz.MIN_BARS_ABS)
+    pz.compute(SAW, lookback_bars=21, swing_window=2)
+    assert (pz.LOOKBACK_BARS, pz.SWING_WINDOW, pz.MIN_BARS,
+            pz.MIN_BARS_ABS) == before
+
+
+def test_params_report_the_EFFECTIVE_window_not_the_module_default():
+    """The payload is what the Support tab labels its chart with. Reporting 252
+    while reading 63 would put the wrong zoom on screen."""
+    for lb in (21, 63, 126, 252):
+        out = pz.compute(SAW, lookback_bars=lb, swing_window=2)
+        assert out["params"]["lookback"] == lb

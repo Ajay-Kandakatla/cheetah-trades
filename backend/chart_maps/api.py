@@ -14,6 +14,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from . import board as board_mod
+from . import support as support_mod
 
 log = logging.getLogger("chart_maps.api")
 router = APIRouter(tags=["chart-maps"])
@@ -65,6 +66,34 @@ async def chart_maps(
             pattern=pattern if isinstance(pattern, str) else None,
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
             min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
+        )
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.get("/chart-maps/support")
+async def chart_maps_support(
+    symbol: str = Query("", description="any US ticker — the tab searches "
+                                        "/symbol-search for it"),
+    window: str = Query(support_mod.DEFAULT_WINDOW,
+                        description="zoom the structure is read at: "
+                                    "1m | 3m | 6m | 1y"),
+):
+    """Support + overhead levels for ONE ticker at one zoom.
+
+    Unlike the board tabs this computes on request — there is no universe pass
+    behind it, just `price_zones` over a 2y frame, so it answers in the time of
+    one price load.
+
+    Both arguments are coerced inside the module for the same reason `board()`
+    coerces its own: these handlers get called directly in the container for
+    smoke tests, and a direct call receives the `Query` OBJECT, which is truthy
+    and has no `.lower()`.
+    """
+    def _run():
+        return support_mod.for_symbol(
+            symbol if isinstance(symbol, str) else "",
+            window if isinstance(window, str) else support_mod.DEFAULT_WINDOW,
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

@@ -10808,6 +10808,66 @@ a.tk-link:hover   { color: inherit; }
 .cm-record-name { font-weight: 700; color: var(--ink, #e7e7e7); }
 .cm-record-caveat { font-size: 0.7rem; color: var(--cm-slate, #8595ad); opacity: 0.85; line-height: 1.45; }
 
+/* ── Support Levels tab (Chart Maps) ────────────────────────────────────────
+   Not a board: a search box, a zoom dropdown, one chart and two tables. The
+   controls reuse .cm-ctl so the zoom select is the same control as the board
+   tabs' sorts. */
+.sl-panel { display: block; }
+.sl-controls {
+  display: flex; gap: 0.9rem; flex-wrap: wrap; align-items: center;
+  margin-bottom: 0.9rem;
+}
+.sl-search { flex: 1 1 320px; min-width: 240px; max-width: 520px; }
+
+.sl-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.25rem;
+}
+.sl-sym { font-size: 1.1rem; color: var(--ink, #e7e7e7); margin: 0; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.sl-name { font-size: 0.76rem; font-weight: 400; color: var(--cm-slate, #8595ad); }
+.sl-meta { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.74rem; color: var(--cm-slate, #8595ad); }
+.sl-zoom {
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 999px;
+  padding: 0.12rem 0.55rem; color: var(--ink, #e7e7e7);
+}
+.sl-headline { font-size: 0.85rem; color: var(--ink, #e7e7e7); line-height: 1.5; margin: 0 0 0.7rem; }
+.sl-chart { margin-bottom: 1rem; }
+
+.sl-tables {
+  display: grid; gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  margin-bottom: 0.8rem;
+}
+.sl-table-wrap {
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 10px;
+  background: var(--cm-card, #161a22); padding: 0.6rem 0.75rem 0.5rem;
+  /* A level table must never force the page sideways on a phone. */
+  overflow-x: auto;
+}
+.sl-table-title { font-size: 0.78rem; color: var(--ink, #e7e7e7); margin: 0 0 0.45rem; font-weight: 700; }
+.sl-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.sl-table th {
+  text-align: left; font-weight: 500; color: var(--cm-slate, #8595ad);
+  padding: 0.2rem 0.45rem 0.35rem 0; border-bottom: 1px solid var(--rule, #2a2f3a);
+  white-space: nowrap;
+}
+.sl-table td { padding: 0.3rem 0.45rem 0.3rem 0; color: var(--cm-slate, #8595ad); white-space: nowrap; }
+.sl-band { color: var(--ink, #e7e7e7); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sl-dist { font-variant-numeric: tabular-nums; }
+/* A recently-tested level is the one worth leaning on, so it is the only row
+   that gets ink. The dot repeats the claim for anyone who cannot see the tint. */
+.sl-row-recent .sl-band { color: var(--accent, #c2ef50); }
+.sl-dot { color: var(--accent, #c2ef50); margin-right: 0.3rem; font-size: 0.6rem; }
+/* A single-touch level is real information and weak evidence, so it is
+   printed at lower contrast rather than hidden or coloured like a warning. */
+.sl-row-untested .sl-band { color: var(--cm-slate, #8595ad); font-weight: 500; }
+.sl-legend {
+  font-size: 0.7rem; color: var(--cm-slate, #8595ad); line-height: 1.5;
+  margin: 0 0 0.7rem;
+}
+.sl-legend em { font-style: normal; color: var(--ink, #e7e7e7); }
+.sl-empty { font-size: 0.76rem; color: var(--cm-slate, #8595ad); line-height: 1.5; margin: 0.2rem 0 0.3rem; }
+
 .cm-grid {
   display: grid; gap: 0.8rem;
   grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));

@@ -12,8 +12,18 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'zones' | 'winners' | 'earnings';
-export const CM_TABS: CmTab[] = ['vcp', 'zones', 'earnings', 'winners'];
+export type CmTab = 'vcp' | 'zones' | 'support' | 'winners' | 'earnings';
+// `support` sits next to `zones` because it is the same structure at a
+// different zoom — but it is the only tab that is NOT a board: it takes a
+// ticker and computes, so the page skips its board fetch there entirely.
+export const CM_TABS: CmTab[] = ['vcp', 'zones', 'support', 'earnings', 'winners'];
+
+/** Tabs driven by a scan. `support` answers one ticker on request, so the
+ *  board loader, the sort/tier controls and the tile grid are all skipped for
+ *  it — asking /chart-maps for an unknown tab silently returns the VCP board. */
+export function isBoardTab(t: CmTab): boolean {
+  return t !== 'support';
+}
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   vcp: {
@@ -27,6 +37,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   earnings: {
     label: 'Earnings Flow',
     blurb: "Today only. Names that reported today and were BOUGHT — big volume, closing near the day's high — plus names reporting after today's close that institutions are already accumulating into. Amber badge means the print has not happened yet.",
+  },
+  support: {
+    label: 'Support Levels',
+    blurb: 'Any ticker, on demand. The zoom changes the answer on purpose — a 1-month read finds the level this week\'s trade is standing on, a 1-year read finds the structural floor. Green bands are support below, red overhead; a ● marks a level price has actually tested recently.',
   },
   winners: {
     label: 'Past Winners',

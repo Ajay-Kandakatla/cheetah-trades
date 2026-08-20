@@ -24,10 +24,12 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
-  WINNER_SOURCES, boardQuery,
+  WINNER_SOURCES, boardQuery, isBoardTab,
   isThinSample, parseSort, parseSource, parseTab, parseTier, recordLine,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
+import { SupportLevels } from '../components/SupportLevels';
+import { normalizeSymbol, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
@@ -50,6 +52,13 @@ const HowItWorks = (
         base, the solid line the pivot, the dashed line the suggested stop.</li>
       <li><strong>🟢 Back in Demand</strong> — price left a demand zone and has
         come back into it. Band is the zone; BUY / STOP / TARGET are the plan.</li>
+      <li><strong>📏 Support Levels</strong> — the only tab that is not a board.
+        Search any ticker and pick a zoom. The same clustering rule runs over a
+        1-month, 3-month, 6-month or 1-year frame, and the answers differ on
+        purpose: a short read finds the level this week's trade is standing on,
+        a long one finds the structural floor. A ● marks a level price has
+        actually tested inside the last month — untested year-old structure and
+        last week's floor are both support and are not the same claim.</li>
       <li><strong>🏆 Past Winners</strong> — recorded setups that touched their
         measure-rule target <em>before</em> their stop, within 21 bars. The
         dotted vertical is the confirmation bar: study the base to the LEFT of
@@ -79,6 +88,10 @@ export function ChartMaps() {
   const minerviniOnly = params.get('minervini') === 'true';
   const sort = parseSort(params.get('sort'));
   const minTier = parseTier(params.get('min_tier'));
+  /* Support tab. Both live in the URL so a level read is shareable and a
+   * refresh does not drop you back on an empty search box. */
+  const supportSymbol = normalizeSymbol(params.get('symbol'));
+  const supportWindow = parseWindow(params.get('window'));
   const [universe, setUniverse] = useState('sp1500_plus');
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
@@ -99,6 +112,10 @@ export function ChartMaps() {
 
   const load = useCallback(async () => {
     setErr(null);
+    // `/chart-maps` answers an unknown `tab` with the VCP board rather than a
+    // 404, so fetching it for the Support tab would quietly draw the wrong
+    // charts under the right heading.
+    if (!isBoardTab(tab)) { setData(null); setLoading(false); return; }
     const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier });
     try {
@@ -158,6 +175,25 @@ export function ChartMaps() {
     setParams(next, { replace: true });
   };
 
+  /* Support tab. Written to the URL, not to component state, so the read is
+   * shareable and survives a refresh — the same reason `pattern` lives there.
+   * Not `replace: true` for the symbol: looking up four tickers in a row should
+   * leave four back-button steps, which is how you compare them. */
+  const setSupportSymbol = (sym: string) => {
+    const next = new URLSearchParams(params);
+    next.set('tab', 'support');
+    const s = normalizeSymbol(sym);
+    if (s) next.set('symbol', s); else next.delete('symbol');
+    setParams(next);
+  };
+
+  const setSupportWindow = (w: string) => {
+    const next = new URLSearchParams(params);
+    next.set('tab', 'support');
+    next.set('window', w);
+    setParams(next, { replace: true });
+  };
+
   const tiles = data?.tiles || [];
 
   return (
@@ -182,6 +218,14 @@ export function ChartMaps() {
 
       <p className="cm-blurb">{TAB_META[tab].blurb}</p>
 
+      {/* The one tab that is not a board. Everything below — the sort/tier
+        * controls, the scan progress, the tile grid, the footer counts —
+        * describes a universe pass that this tab does not run. */}
+      {!isBoardTab(tab) ? (
+        <SupportLevels symbol={supportSymbol} window={supportWindow}
+                       onSymbol={setSupportSymbol} onWindow={setSupportWindow} />
+      ) : (
+      <>
       <div className="cm-controls">
         {tab === 'zones' && (
           <label className="cm-ctl">
@@ -397,6 +441,8 @@ export function ChartMaps() {
           {data?.disclaimer ? <div className="cm-disclaimer">{data.disclaimer}</div> : null}
         </div>
       ) : null}
+      </>
+      )}
     </div>
   );
 }

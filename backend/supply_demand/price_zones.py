@@ -31,6 +31,19 @@ CLEAR_RUNWAY_PCT     = 8.0    # nearest overhead supply beyond this % = clear ru
 NO_SUPPORT_PCT       = 6.0    # nearest support farther than this below = "no support to lean on"
 MAX_ZONES_PER_SIDE   = 4      # surface the strongest N supply + N demand bands
 
+# Frame floors. MIN_BARS is the historical gate and stays exactly where it was
+# for every caller that does not ask for a custom window — moving it would
+# silently change the /zones page, orderflow.signals and the two backtests.
+#
+# A caller that DOES pass `lookback_bars` is explicitly asking for a shorter
+# zoom (the Support Levels tab offers 1 month = 21 bars), so the floor becomes
+# the only one that means anything at that size: enough bars for a swing to
+# exist at all. `_local_extrema` scans range(w, n - w) and each candidate is
+# compared against w bars either side, so 2w + 3 is the smallest frame that can
+# produce a swing with a bar to spare on each end.
+MIN_BARS             = 60     # default-window floor — unchanged since 2026-06-09
+MIN_BARS_ABS         = 12     # hard floor for a custom window, at any resolution
+
 DISCLAIMER = ("Price-structure zones — a configured, pragmatic read of where "
               "supply/demand showed up (NOT a book method). Decision-support only "
               "— not a buy signal and not advice.")
@@ -148,18 +161,35 @@ def _verdict(px, res, sup, in_zone):
 def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
             swing_window: Optional[int] = None,
             merge_pct: Optional[float] = None,
-            half_width_pct: Optional[float] = None) -> Optional[dict]:
+            half_width_pct: Optional[float] = None,
+            lookback_bars: Optional[int] = None) -> Optional[dict]:
     """Supply/demand bands for one frame.
 
-    The three geometry knobs default to this module's constants, so every
-    existing caller (the /zones page, orderflow.signals) is byte-for-byte
-    unaffected. `demand_reentry` passes WIDER values because a tradeable zone
-    is a band you can place a stop under, not a 1%-wide line — see
+    The four knobs default to this module's constants, so every existing caller
+    (the /zones page, orderflow.signals) is byte-for-byte unaffected.
+    `demand_reentry` passes WIDER geometry because a tradeable zone is a band
+    you can place a stop under, not a 1%-wide line — see
     docs/supply_demand/demand_reentry_methodology.md.
+
+    `lookback_bars` is the ZOOM: how far back the structure is read from.
+    `chart_maps.support` drives it from a dropdown so the same rule can answer
+    "where is support on a 1-month chart" and "…on a 1-year chart" — two
+    genuinely different questions for a swing entry vs a position stop. It is a
+    per-call argument, never a module mutation: see
+    `test_price_zones_defaults_are_untouched_by_this_module`.
+
+    NOTE the floor moves with it (MIN_BARS / MIN_BARS_ABS above). A 21-bar frame
+    cannot clear the 60-bar default gate, and silently returning None for the
+    shortest dropdown option would have looked like "no structure found".
     """
-    if df is None or len(df) < 60 or "high" not in df or "low" not in df:
+    if df is None or "high" not in df or "low" not in df:
         return None
-    df = df.iloc[-LOOKBACK_BARS:].reset_index(drop=True)
+    w = SWING_WINDOW if swing_window is None else int(swing_window)
+    lb = LOOKBACK_BARS if lookback_bars is None else max(1, int(lookback_bars))
+    need = MIN_BARS if lookback_bars is None else max(MIN_BARS_ABS, 2 * w + 3)
+    df = df.iloc[-lb:].reset_index(drop=True)
+    if len(df) < need:
+        return None
     if last_price is None:
         last_price = float(df["close"].iloc[-1])
 
@@ -201,8 +231,8 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
         # DTE 2026-08-14: fine gave 141.42-143.87 + 138.49-140.37; coarse
         # merged them into 139.61-143.87. Same structure, different zoom.
         "resolution": ("fine" if (merge_pct or ZONE_MERGE_PCT) <= 2.0 else "swing"),
-        "params": {"lookback": LOOKBACK_BARS,
-                   "swing_window": SWING_WINDOW if swing_window is None else int(swing_window),
+        "params": {"lookback": lb,
+                   "swing_window": w,
                    "merge_pct": ZONE_MERGE_PCT if merge_pct is None else float(merge_pct),
                    "half_width_pct": (ZONE_HALF_WIDTH_PCT if half_width_pct is None
                                       else float(half_width_pct)),

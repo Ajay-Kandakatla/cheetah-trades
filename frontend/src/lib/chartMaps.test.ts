@@ -14,7 +14,7 @@ import {
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
-  CM_TABS, TAB_META,
+  CM_TABS, TAB_META, isBoardTab,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -478,7 +478,7 @@ describe('the Earnings Flow tab', () => {
   it('is registered and sits next to the other live boards', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
-    expect(CM_TABS).toEqual(['vcp', 'zones', 'earnings', 'winners']);
+    expect(CM_TABS).toEqual(['vcp', 'zones', 'support', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -517,5 +517,39 @@ describe('the prior-close reference line', () => {
     // BUY is pinned to its true y; the reference is the one that moves.
     expect(Math.abs(buy.y - yFor(110.2, d, 200, 8))).toBeLessThan(0.01);
     expect(prior.y).not.toBe(buy.y);
+  });
+});
+
+
+// ── Support Levels tab (Ajay 2026-08-19) ─────────────────────────────────────
+describe('the Support Levels tab', () => {
+  it('sits next to Back in Demand — same structure, different zoom', () => {
+    expect(CM_TABS.indexOf('support')).toBe(CM_TABS.indexOf('zones') + 1);
+    expect(parseTab('support')).toBe('support');
+  });
+
+  it('is the ONLY tab that is not driven by a board fetch', () => {
+    // `/chart-maps` answers an unknown tab with the VCP board rather than a
+    // 404, so a board fetch here would quietly draw the wrong charts under the
+    // right heading. This is the flag the page branches on.
+    expect(isBoardTab('support')).toBe(false);
+    for (const t of CM_TABS.filter((x) => x !== 'support')) {
+      expect(isBoardTab(t)).toBe(true);
+    }
+  });
+
+  it('says out loud that the zoom changes the answer', () => {
+    // The tab is worthless if a user reads 1M and 6M as two attempts at one
+    // number rather than two different questions.
+    const blurb = TAB_META.support.blurb;
+    expect(TAB_META.support.label).toBe('Support Levels');
+    expect(blurb).toMatch(/1-month/i);
+    expect(blurb).toMatch(/1-year/i);
+    expect(blurb).toMatch(/structural floor/i);
+  });
+
+  it('a typo in the tab name still lands on a real board', () => {
+    expect(parseTab('suport')).toBe('vcp');
+    expect(parseTab('SUPPORT')).toBe('support');
   });
 });
