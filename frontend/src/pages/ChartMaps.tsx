@@ -52,6 +52,14 @@ const HowItWorks = (
         base, the solid line the pivot, the dashed line the suggested stop.</li>
       <li><strong>🟢 Back in Demand</strong> — price left a demand zone and has
         come back into it. Band is the zone; BUY / STOP / TARGET are the plan.</li>
+      <li><strong>🚧 Into Supply</strong> — Back in Demand upside down. Names
+        that have rallied into a tested ceiling, or sit within 3% under one.
+        There is no BUY / STOP / TARGET on these tiles because there is no
+        trade being proposed: it is a caution flag. The number that matters is
+        <em>Room up:down</em> — room to the ceiling divided by room to the next
+        support. Under 1.00 you are buying with more air beneath you than
+        above. It rides the same scan as Back in Demand, so both tabs always
+        describe the same moment.</li>
       <li><strong>📏 Support Levels</strong> — the only tab that is not a board.
         Search any ticker and pick a zoom. The same clustering rule runs over a
         1-month, 3-month, 6-month or 1-year frame, and the answers differ on
@@ -227,7 +235,7 @@ export function ChartMaps() {
       ) : (
       <>
       <div className="cm-controls">
-        {tab === 'zones' && (
+        {(tab === 'zones' || tab === 'supply') && (
           <label className="cm-ctl">
             Universe
             <select value={universe} onChange={(e) => setUniverse(e.target.value)}>

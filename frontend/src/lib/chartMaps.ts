@@ -12,11 +12,13 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'zones' | 'support' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'zones' | 'supply' | 'support' | 'winners' | 'earnings';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
-export const CM_TABS: CmTab[] = ['vcp', 'zones', 'support', 'earnings', 'winners'];
+// `supply` sits directly after `zones`: it is the same scan read the other
+// way up, and the pair is only useful side by side.
+export const CM_TABS: CmTab[] = ['vcp', 'zones', 'supply', 'support', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -37,6 +39,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   earnings: {
     label: 'Earnings Flow',
     blurb: "Today only. Names that reported today and were BOUGHT — big volume, closing near the day's high — plus names reporting after today's close that institutions are already accumulating into. Amber badge means the print has not happened yet.",
+  },
+  supply: {
+    label: 'Into Supply',
+    blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above.',
   },
   support: {
     label: 'Support Levels',
@@ -195,7 +201,11 @@ export function boardQuery(p: {
   const q = new URLSearchParams({ tab: p.tab });
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
-  if (p.tab === 'zones' && p.universe) q.set('universe', p.universe);
+  // Both demand boards read ONE demand_reentry cache, so the universe
+  // choice governs both or the two tabs would describe different scans.
+  if ((p.tab === 'zones' || p.tab === 'supply') && p.universe) {
+    q.set('universe', p.universe);
+  }
   // Only sent when it differs from the shared default, so the common URL stays
   // clean. That default flipped to OFF on 2026-08-17, so this now sends `true`
   // rather than `false` — keeping it on `false` would have put the parameter on

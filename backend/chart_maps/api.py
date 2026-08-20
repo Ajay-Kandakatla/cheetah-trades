@@ -22,11 +22,11 @@ router = APIRouter(tags=["chart-maps"])
 
 @router.get("/chart-maps")
 async def chart_maps(
-    tab: str = Query("vcp", description="vcp | zones | earnings | winners"),
+    tab: str = Query("vcp", description="vcp | zones | supply | earnings | winners"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("sp1500_plus",
-                          description="zones tab only — sp1500_plus (default) | "
+                          description="zones + supply tabs — sp1500_plus (default) | "
                                       "sp1500 | sp500 | themes"),
     themes_first: bool = Query(board_mod.THEMES_FIRST_DEFAULT,
                                description="lead with quantum/nuclear/robotics/AI-semis "

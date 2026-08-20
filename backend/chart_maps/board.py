@@ -37,7 +37,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "zones", "winners", "earnings")
+TABS = ("vcp", "zones", "supply", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -833,6 +833,145 @@ def _vcp_badges(row: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # tab 2 — pullbacks into demand
 # ---------------------------------------------------------------------------
+def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                 universe: str = "sp1500_plus",
+                 themes_first: bool = THEMES_FIRST_DEFAULT,
+                 sort: str = DEFAULT_SORT,
+                 min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """Into Supply — the inverse of the demand board.
+
+    Ajay 2026-08-20: "Now in inversely give me a tab that are in or about to be
+    in supply zones please..."
+
+    Reads `supply_rows` from the SAME `demand_reentry` cache the demand tab
+    reads. There is no second scan and no second cache: `scan()` evaluates both
+    predicates over one record in one loop, so the two tabs cannot disagree
+    about a name's bands, and this tab costs a page load rather than three
+    minutes. See `supply_demand/into_supply.py`.
+
+    NO PLAN LINES. The demand tiles draw BUY / STOP / TARGET because there is a
+    trade to describe. There is no trade here — this is a caution flag on a name
+    running into a lid — and drawing a plan would invent one. The lines are the
+    two structural levels and the price between them.
+    """
+    from supply_demand import demand_reentry as D
+
+    data = D.cached_or_warm(universe, limit=LIMIT_MAX)
+    if data.get("warming"):
+        return {"tiles": [], "warming": True,
+                "universe_key": data.get("universe_key") or universe,
+                "progress": data.get("progress"),
+                "note": "scanning for names running into overhead supply…"}
+
+    # Already ordered by `into_supply.sort_key` inside the scan.
+    rows = list(data.get("supply_rows") or [])
+    tiles = []
+    for rank, r in enumerate(rows):
+        sym = (r.get("symbol") or "").upper()
+        sup = r.get("supply") or {}
+        ceiling = sup.get("ceiling") or {}
+        if not sym or not ceiling:
+            continue
+
+        last = _num(r.get("last_price"))
+        c_lo, c_hi = _num(ceiling.get("lo")), _num(ceiling.get("hi"))
+        floor = sup.get("support_below") or {}
+        f_lo, f_hi = _num(floor.get("lo")), _num(floor.get("hi"))
+
+        bands = []
+        if c_lo is not None and c_hi is not None:
+            bands.append({"kind": "supply", "lo": c_lo, "hi": c_hi,
+                          "label": "ceiling"})
+        if f_lo is not None and f_hi is not None:
+            bands.append({"kind": "demand", "lo": f_lo, "hi": f_hi,
+                          "label": "support"})
+
+        # `neutral` for the levels and `now` for price: none of these is a BUY,
+        # a STOP or a TARGET, and borrowing those tones would dress a caution
+        # flag up as a plan.
+        lines = []
+        if c_lo is not None:
+            lines.append({"price": c_lo, "label": f"ceiling {c_lo:.2f}",
+                          "tone": "target"})
+        if last is not None:
+            lines.append({"price": last, "label": "now", "tone": "now"})
+        if f_hi is not None:
+            lines.append({"price": f_hi, "label": f"support {f_hi:.2f}",
+                          "tone": "neutral"})
+
+        dist = _num(sup.get("distance_pct"))
+        down = _num(sup.get("downside_pct"))
+        ratio = _num(sup.get("room_ratio"))
+        liq = r.get("liquidity") or {}
+        stats = [
+            {"k": "To ceiling", "v": ("at it" if dist is not None and dist <= 0.05
+                                      else f"{dist:.1f}%" if dist is not None else "—")},
+            {"k": "To support", "v": f"{down:.1f}%" if down is not None else "—"},
+            {"k": "Room up:down", "v": f"{ratio:.2f}" if ratio is not None else "—"},
+            {"k": "Ceiling tested", "v": (f"{ceiling.get('touches')}x"
+                                          if ceiling.get("touches") else "—")},
+            {"k": "Liquidity", "v": (liq.get("tier") or "—")},
+        ]
+
+        run = _num(sup.get("run_up_pct"))
+        inside = sup.get("state") == "AT_CEILING"
+        why = (
+            (f"inside overhead supply ${c_lo:.2f}–${c_hi:.2f}" if inside
+             else f"{dist:.1f}% under overhead supply ${c_lo:.2f}–${c_hi:.2f}")
+            + (f", {ceiling.get('touches')}x tested" if ceiling.get("touches") else "")
+            + (f" · rallied {run:.0f}% into it" if run is not None else "")
+            + (f" · next support {down:.1f}% below" if down is not None else "")
+        )
+
+        badges = []
+        if inside:
+            badges.append({"text": "At the lid", "tone": "warn"})
+        if ratio is not None and ratio < 1.0:
+            badges.append({"text": "More room down", "tone": "warn"})
+        if sup.get("ceiling_bars_since_test") is not None and \
+                sup["ceiling_bars_since_test"] <= 21:
+            badges.append({"text": "Tested recently", "tone": "muted"})
+
+        tiles.append({
+            "symbol": sym,
+            "name": r.get("name") or _name_for(sym),
+            # Supply, not Setup. The actionable read here IS the zone
+            # inventory — there is no plan tab answer to send him to.
+            "href": _href(sym, "supply"),
+            "bars": [],
+            "_bars": {"days": _zone_window(ceiling)},
+            "bands": bands,
+            "lines": lines,
+            "markers": [],
+            "stats": stats,
+            "why": why,
+            "theme": _theme(sym),
+            "badges": badges,
+            # `_finish` ranks by `_score` DESCENDING. Deriving it from the
+            # POSITION in the already-sorted list reproduces
+            # `into_supply.sort_key` exactly, without inventing weights to
+            # squash a four-part ordering into one number — there stays exactly
+            # one definition of "most urgent", and it lives in that function.
+            "_score": float(len(rows) - rank),
+            "_m": tile_metrics(r),
+        })
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    return {"tiles": out, **meta,
+            "matched": len(rows),
+            "universe_key": data.get("universe_key"),
+            "universe_label": data.get("universe_label"),
+            "scanned": data.get("scanned"),
+            "generated_at": data.get("as_of"),
+            "note": (None if rows else
+                     "Nothing is sitting under a tested ceiling right now."),
+            "disclaimer": _supply_disclaimer()}
+
+
+def _supply_disclaimer() -> str:
+    from supply_demand import into_supply as I
+    return I.DISCLAIMER
+
+
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
                sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
@@ -1340,6 +1479,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = earnings_tiles(limit, days)
     elif t == "zones":
         out = zone_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "supply":
+        out = supply_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "winners":
         if src == "zone":
             out = zone_winner_tiles(limit, days=min(days, 90))
@@ -1369,5 +1510,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         {"key": "any", "label": "No floor (shows illiquid names)"},
     ]
     out["tape_sorts"] = list(TAPE_SORTS)
-    out["disclaimer"] = DISCLAIMER
+    # A tab that states its OWN limits keeps them. The Into Supply board is a
+    # caution flag, not a study board, and the generic line would have
+    # overwritten the sentence that says it is not a short signal.
+    out["disclaimer"] = out.get("disclaimer") or DISCLAIMER
     return out

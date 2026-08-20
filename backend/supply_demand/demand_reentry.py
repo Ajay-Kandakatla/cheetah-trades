@@ -323,7 +323,8 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
         threading.Thread(target=_work, name=f"warm-{ukey}", daemon=True).start()
 
     label = UNIVERSES.get(ukey, (ukey,))[0]
-    return {"rows": [], "n": 0, "scanned": 0, "universe": 0,
+    return {"rows": [], "n": 0, "supply_rows": [], "supply_n": 0,
+            "scanned": 0, "universe": 0,
             "universe_key": ukey, "universe_label": label,
             "universe_note": f"{label} — first scan running",
             "universe_is_sp500": True, "universe_stale_days": None,
@@ -897,7 +898,20 @@ def decide_from_frame(df, sym: str):
         "resolution": zones.get("resolution"),
         "disclaimer": DISCLAIMER,
     }
-    return rec
+    # The INVERSE read (Ajay 2026-08-20): is this name running into a ceiling?
+    # Attached here rather than in a second pass because every band it needs
+    # was just computed above — see into_supply's header. Imported locally to
+    # keep the module-level import graph acyclic (into_supply imports the
+    # thresholds from THIS module, so one scale governs both boards).
+    #
+    # Wrapped: the demand board is what Ajay trades from every day, and a
+    # defect in the newer, secondary read must never be able to take it down.
+    try:
+        from . import into_supply as _isup
+        rec["supply"] = _isup.read_from_frame(df, rec)
+    except Exception as exc:                                  # pragma: no cover
+        log.debug("into-supply: %s failed: %s", sym, exc)
+        rec["supply"] = None
     return rec
 
 
@@ -1267,7 +1281,9 @@ def scan(force: bool = False, limit: Optional[int] = None,
     else:
         universe_note = f"{ulabel} ({len(syms)} names)"
 
+    from . import into_supply as _into_supply
     rows, scanned, errors = [], 0, 0
+    supply_rows: list = []          # the inverse board, same pass
     total = len(syms)
     _publish_progress(ukey, "scanning", started_at=t0, current=0, total=total,
                       hits=0, errors=0, symbol=None, universe_label=ulabel)
@@ -1283,6 +1299,16 @@ def scan(force: bool = False, limit: Optional[int] = None,
             if rec["is_reentry"]:
                 rec.pop("series", None)
                 rows.append(rec)
+            # Second predicate, same record, same loop — no extra price load.
+            # Guarded for the same reason the read itself is: this must not be
+            # able to abort a demand scan.
+            try:
+                if _into_supply.qualifies(rec):
+                    r2 = dict(rec)
+                    r2.pop("series", None)
+                    supply_rows.append(r2)
+            except Exception as exc:                          # pragma: no cover
+                log.debug("into-supply: collecting %s failed: %s", sym, exc)
         # Every symbol, not every Nth: the writer builds one small dict and
         # swaps a reference, which costs far less than the price frame that
         # was just analysed. Sampling would only make the bar stutter.
@@ -1293,6 +1319,13 @@ def scan(force: bool = False, limit: Optional[int] = None,
     # the ONLY cohort with positive expectancy, so the number that decides
     # whether a row is worth reading leads the list. Ties break on freshness.
     rows.sort(key=lambda r: (-((r.get("plan") or {}).get("rr") or 0.0), _rank_key(r)))
+    # Nearest lid first. Sorted separately and by a different key on purpose:
+    # the demand board ranks by the quality of a PLAN, this one by urgency —
+    # how close the ceiling already is.
+    try:
+        supply_rows.sort(key=_into_supply.sort_key)
+    except Exception as exc:                                  # pragma: no cover
+        log.debug("into-supply: sort failed: %s", exc)
 
     # Record the FULL qualifying list before anything trims it (Ajay 2026-08-17:
     # "Can you maintain history of our In deman page please… Want you to track
@@ -1332,6 +1365,11 @@ def scan(force: bool = False, limit: Optional[int] = None,
     data = {
         "rows": rows,
         "n": len(rows),
+        # The inverse board, from the same pass. A separate key so every
+        # existing consumer of `rows` — the page, the R:R floor, the limit, the
+        # history ledger — is untouched by construction.
+        "supply_rows": supply_rows,
+        "supply_n": len(supply_rows),
         "scanned": scanned,
         "universe": len(syms),
         "universe_note": universe_note,

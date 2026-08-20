@@ -481,7 +481,8 @@ describe('the Earnings Flow tab', () => {
   it('is registered and sits next to the other live boards', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
-    expect(CM_TABS).toEqual(['vcp', 'zones', 'support', 'earnings', 'winners']);
+    expect(CM_TABS).toEqual(
+      ['vcp', 'zones', 'supply', 'support', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -526,8 +527,13 @@ describe('the prior-close reference line', () => {
 
 // ── Support Levels tab (Ajay 2026-08-19) ─────────────────────────────────────
 describe('the Support Levels tab', () => {
-  it('sits next to Back in Demand — same structure, different zoom', () => {
-    expect(CM_TABS.indexOf('support')).toBe(CM_TABS.indexOf('zones') + 1);
+  it('sits inside the supply/demand cluster, not off on its own', () => {
+    // It used to be pinned directly after `zones`; `supply` now sits between
+    // them, which is right — the two BOARDS belong adjacent and the per-ticker
+    // tool follows them. What must hold is that all three stay contiguous.
+    const i = CM_TABS.indexOf('support');
+    expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
+      .toEqual(['zones', 'supply', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
@@ -814,5 +820,44 @@ describe('hoverLines + shortVol', () => {
     expect(shortVol(null)).toBe('—');
     expect(shortVol(NaN)).toBe('—');
     expect(shortVol(-5)).toBe('—');
+  });
+});
+
+
+// ── Into Supply tab (Ajay 2026-08-20) ────────────────────────────────────────
+describe('the Into Supply tab', () => {
+  it('sits directly after Back in Demand — the pair is only useful together', () => {
+    expect(CM_TABS.indexOf('supply')).toBe(CM_TABS.indexOf('zones') + 1);
+    expect(parseTab('supply')).toBe('supply');
+  });
+
+  it('is a BOARD, unlike the per-ticker Support Levels tab next to it', () => {
+    // Two adjacent tabs both about supply/demand; only one takes a ticker.
+    expect(isBoardTab('supply')).toBe(true);
+    expect(isBoardTab('support')).toBe(false);
+  });
+
+  it('sends the universe, because both demand boards read ONE cache', () => {
+    // If only `zones` sent it, the two tabs would silently describe different
+    // scans of different universes while claiming to share a pass.
+    expect(boardQuery({ tab: 'supply', universe: 'sp500' })).toContain('universe=sp500');
+    expect(boardQuery({ tab: 'zones', universe: 'sp500' })).toContain('universe=sp500');
+    expect(boardQuery({ tab: 'vcp', universe: 'sp500' })).not.toContain('universe');
+  });
+
+  it('says out loud that it is NOT a short list', () => {
+    // He trades long. A tab of names running into resistance reads as a short
+    // screen unless it says otherwise in the copy he actually sees.
+    const blurb = TAB_META.supply.blurb;
+    expect(TAB_META.supply.label).toBe('Into Supply');
+    expect(blurb).toMatch(/not a short list/i);
+    expect(blurb).toMatch(/inverse of Back in Demand/i);
+    expect(blurb).toMatch(/room up:down/i);
+  });
+
+  it('does not collide with the Support Levels tab it sits beside', () => {
+    expect(TAB_META.supply.label).not.toBe(TAB_META.support.label);
+    expect(parseTab('supply')).toBe('supply');
+    expect(parseTab('support')).toBe('support');
   });
 });
