@@ -92,6 +92,14 @@ describe('formatting', () => {
     expect(distanceLabel(lvl({ distance_pct: 3.1 }), 'overhead')).toBe('+3.1%');
   });
 
+  it('says "at price" instead of a rounded-to-zero percentage', () => {
+    // DHI's overhead was 0.01% above price on 2026-08-19. "+0.0%" reads as a
+    // broken number; the level being AT price is the point of the row.
+    expect(distanceLabel(lvl({ distance_pct: 0.01 }), 'overhead')).toBe('at price');
+    expect(distanceLabel(lvl({ distance_pct: 0.03 }))).toBe('at price');
+    expect(distanceLabel(lvl({ distance_pct: 0.2 }))).toBe('0.2% below');
+  });
+
   it('a negative support distance says ABOVE rather than "-0.4% below"', () => {
     expect(distanceLabel(lvl({ distance_pct: -0.4 }))).toBe('0.4% above');
   });

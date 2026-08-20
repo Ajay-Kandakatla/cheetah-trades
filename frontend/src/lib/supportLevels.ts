@@ -117,6 +117,10 @@ export function distanceLabel(
 ): string {
   if (!lv || lv.distance_pct == null || !Number.isFinite(lv.distance_pct)) return '—';
   const d = lv.distance_pct;
+  // Under a rounding step from price, "+0.0%" reads as a formatting bug when
+  // what it means is that the level is HERE — DHI's overhead sat 0.01% above
+  // price on 2026-08-19, which is the whole reason that read mattered.
+  if (Math.abs(d) < 0.05) return 'at price';
   if (side === 'overhead') return `+${d.toFixed(1)}%`;
   // A "support" whose distance came back negative is price already inside or
   // under it. Saying "-0.4% below" is nonsense; say where price actually is.
