@@ -54,6 +54,20 @@
 # cannot hold). Separate cache key from sp1500, so it needs its own trigger.
 57     16    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm sp1500_plus: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=sp1500_plus&limit=1'
 #
+# Mon-Fri 4:59pm ET — QQQ (Nasdaq-100). Ajay 2026-08-20: "I want QQQ stocks and
+# SPY stocks and Nasdaq stocks." Only 102 names, so this is quick; it gets its
+# own trigger because every universe is a separate cache key.
+59     16    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm qqq: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=qqq&limit=1'
+#
+# Mon-Fri 5:02pm ET — SPY (S&P 500).
+2      17    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm sp500: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=sp500&limit=1'
+#
+# Mon-Fri 5:05pm ET — the whole Nasdaq listing (~3,335 names by primary
+# exchange). LAST of the warms on purpose: it is roughly twice the sp1500 pass,
+# so it runs after the universes Ajay opens first are already cached, and it
+# borrows their warm price cache instead of competing with it.
+5      17    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm nasdaq: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=nasdaq&limit=1'
+#
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
 #

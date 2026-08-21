@@ -35,11 +35,22 @@ import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 
+/* Fallback only. The board answers `universe_choices` from
+ * demand_reentry.UNIVERSES, and the select prefers that — so adding a universe
+ * server-side does not need a frontend deploy. This list exists for the first
+ * paint and for a board that failed to load.
+ *
+ * Ajay 2026-08-20: "I want QQQ stocks and SPY stocks and Nasdaq stocks."
+ * QQQ and SPY are ETFs, so what he means is the index each tracks. Both are
+ * labelled with the ticker he thinks in — a dropdown that only ever said
+ * "S&P 500" never made it obvious that was SPY. */
 const UNIVERSES = [
-  { key: 'sp1500_plus', label: 'S&P 1500 + themes' },
+  { key: 'sp500', label: 'SPY · S&P 500' },
+  { key: 'qqq', label: 'QQQ · Nasdaq-100' },
+  { key: 'nasdaq', label: 'Nasdaq · all listed' },
   { key: 'sp1500', label: 'S&P 1500' },
+  { key: 'sp1500_plus', label: 'S&P 1500 + themes' },
   { key: 'themes', label: 'Themes only' },
-  { key: 'sp500', label: 'S&P 500' },
 ];
 
 const HowItWorks = (
@@ -239,7 +250,9 @@ export function ChartMaps() {
           <label className="cm-ctl">
             Universe
             <select value={universe} onChange={(e) => setUniverse(e.target.value)}>
-              {UNIVERSES.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
+              {(data?.universe_choices ?? UNIVERSES).map((u) => (
+                <option key={u.key} value={u.key}>{u.label}</option>
+              ))}
             </select>
           </label>
         )}

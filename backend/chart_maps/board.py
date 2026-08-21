@@ -960,6 +960,9 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
+            # The universes the server actually offers, so the tab's
+            # dropdown cannot drift from demand_reentry.UNIVERSES.
+            "universe_choices": data.get("universe_choices"),
             "scanned": data.get("scanned"),
             "generated_at": data.get("as_of"),
             "note": (None if rows else
@@ -1067,6 +1070,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
+            # The universes the server actually offers, so the tab's
+            # dropdown cannot drift from demand_reentry.UNIVERSES.
+            "universe_choices": data.get("universe_choices"),
             "scanned": data.get("scanned"),
             "generated_at": data.get("generated_at")}
 

@@ -116,6 +116,9 @@ export type CmBoard = {
   scanned?: number;
   universe_key?: string;
   universe_label?: string;
+  /** The universes the SERVER offers. Preferred over the frontend's
+   *  fallback list so adding one backend-side needs no FE deploy. */
+  universe_choices?: { key: string; label: string }[];
   generated_at?: string | number | null;
   scan_generated_at?: string | number | null;
   patterns?: string[];

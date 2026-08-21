@@ -1137,8 +1137,26 @@ def _rank_key(r: dict):
 # ask (Ajay 2026-08-13): S&P 400 MidCap + S&P 600 SmallCap add ~1,000 names
 # that still clear S&P's index-committee bar (incl. positive earnings), which
 # a raw Russell slice does not.
+# Ajay 2026-08-20: "Here is what I want instead of themes, I want QQQ stocks
+# and SPY stocks and Nasdaq stocks."
+#
+# QQQ and SPY are ETFs, so what he is asking for is the INDEX each one tracks:
+# QQQ = Nasdaq-100, SPY = S&P 500. Both are labelled with the ticker he thinks
+# in, because "S&P 500" and "SPY" being the same list was not obvious from a
+# dropdown that only ever said the former.
+#
+# The theme entries are KEPT and moved to the bottom rather than deleted. They
+# are not a slice of an index, they are the names no index holds — IONQ, OKLO,
+# SMR and QBTS are NYSE-listed and in no S&P tier, so `nasdaq` does not carry
+# them either and removing these entries would silently drop them from every
+# board. Deleting them is a one-line change whenever he wants it.
 UNIVERSES = {
-    "sp500":  ("S&P 500", lambda: universe_mod.fetch_sp500()),
+    "sp500":  ("SPY · S&P 500", lambda: universe_mod.fetch_sp500()),
+    "qqq":    ("QQQ · Nasdaq-100", lambda: universe_mod.fetch_nasdaq100()),
+    # The whole Nasdaq listing, by PRIMARY exchange (MIC XNAS). Far larger than
+    # the other choices — the liquidity floor still applies at read time, so the
+    # BOARD stays tradeable, but the scan itself is longer. Warmed by cron.
+    "nasdaq": ("Nasdaq · all listed", lambda: universe_mod.fetch_nasdaq_listed()),
     "sp1500": ("S&P 1500 (500 + 400 mid + 600 small)", lambda: universe_mod.fetch_sp1500()),
     # sp1500 + the build-out themes the indices structurally cannot hold —
     # space, quantum, SMR nuclear, robotics, optical, the ADR/pre-profit AI
@@ -1154,11 +1172,13 @@ UNIVERSES = {
                     "optical · AI semis)",
                     lambda: list(dict.fromkeys(universe_mod.fetch_sp1500()
                                                + universe_mod.fetch_themes()))),
+    "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
+    "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),
+    # Last on purpose — see the note above the dict. Kept because no index
+    # carries these names, not because the slice is a favourite.
     "themes": ("Themes only (space · quantum · nuclear · robotics · optical · "
                "AI semis)",
                lambda: universe_mod.fetch_themes()),
-    "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
-    "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),
 }
 # Default universe. sp1500 since 2026-08-14 (Ajay: "make it default scan
 # 1500") — the S&P 500 alone surfaced ~3 names at a tradeable R:R, the full

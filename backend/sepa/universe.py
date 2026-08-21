@@ -361,6 +361,11 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     # FOX/FOXA). Range, not equality, so a legitimate dual-class add does not
     # look like a parse failure.
     "nasdaq100": (95, 115),       # measured 102
+    # Every Nasdaq PRIMARY listing among active US common stocks. Wide band:
+    # this tracks real listings and delistings, and the whole point of the
+    # guard is to catch the exchange filter silently matching nothing (0) or
+    # nothing at all (the full 5,300 major-exchange list leaking through).
+    "nasdaq_listed": (1500, 4500),
     "sp1500": (1350, 1700),       # measured 1506 (500+400+600 layered)
     "russell1000": (900, 1150),   # measured 1001
     # Deliberately floored ABOVE the ~1030-name clean fallback (curated ∪ sp500
@@ -792,7 +797,15 @@ def _normalize_ishares_ticker(raw: str) -> str | None:
     return s
 
 
-def fetch_massive_universe(limit: int | None = None) -> list[str]:
+# MIC codes. XNAS is Nasdaq's primary-listing code — the thing that makes a
+# stock "a Nasdaq stock" rather than merely quoted there.
+MIC_NASDAQ = "XNAS"
+MAJOR_EXCHANGES = frozenset({"XNYS", "XNAS", "ARCX", "BATS", "XASE"})
+
+
+def fetch_massive_universe(limit: int | None = None,
+                           keep_exchanges: frozenset = MAJOR_EXCHANGES,
+                           cache_name: str = "massive_universe") -> list[str]:
     """Return all active US common stocks via Massive's reference endpoint.
 
     Used as a fallback when iShares blocks CSV downloads (their site
@@ -805,7 +818,6 @@ def fetch_massive_universe(limit: int | None = None) -> list[str]:
         limit: optional cap on number of tickers returned (preserves
                alphabetical order from Massive). None returns the full list.
     """
-    cache_name = "massive_universe"
     cached = _read_cached(cache_name)
     if cached:
         return cached[:limit] if limit else cached
@@ -851,9 +863,15 @@ def fetch_massive_universe(limit: int | None = None) -> list[str]:
                 # suffixes like ABC.U, ABC.W). Allow [A-Z][A-Z0-9-]{0,9}.
                 if not _re.match(r"^[A-Z][A-Z0-9\-]{0,9}$", t):
                     continue
-                # Keep only major exchanges; drop OTC/PINK.
+                # Keep only the requested exchanges; drop OTC/PINK.
                 exch = (entry.get("primary_exchange") or "").upper()
-                if exch and exch not in {"XNYS", "XNAS", "ARCX", "BATS", "XASE"}:
+                if exch and exch not in keep_exchanges:
+                    continue
+                # A blank primary_exchange cannot be proven to be on the
+                # requested venue, so a SPECIFIC request drops it while the
+                # broad "major exchanges" request keeps it — unchanged
+                # behaviour for every existing caller.
+                if not exch and keep_exchanges != MAJOR_EXCHANGES:
                     continue
                 all_tickers.append(t)
             next_url = data.get("next_url")
@@ -867,7 +885,7 @@ def fetch_massive_universe(limit: int | None = None) -> list[str]:
         if not out:
             return []
         _write_cached(cache_name, out)
-        log.info("universe: Massive universe cached — %d active US common stocks", len(out))
+        log.info("universe: %s cached — %d active US common stocks", cache_name, len(out))
         return out[:limit] if limit else out
     except Exception as exc:
         log.warning("universe: Massive universe fetch failed (%s)", exc)
@@ -1016,6 +1034,31 @@ def _load_ishares_local_xls(path: Path, *, source_label: str) -> list[str]:
         n_dropped_non_equity, n_dropped_shape, age_days,
     )
     return out
+
+
+def fetch_nasdaq_listed(limit: int | None = None) -> list[str]:
+    """Every active US common stock whose PRIMARY listing is Nasdaq.
+
+    Ajay 2026-08-20: "I want QQQ stocks and SPY stocks and Nasdaq stocks."
+
+    QQQ is the Nasdaq-100 (`fetch_nasdaq100`, 102 symbols) and SPY is the
+    S&P 500 (`fetch_sp500`, 503). This is the third thing he asked for and the
+    only one that did not already exist: the whole Nasdaq listing.
+
+    It costs no new data source. `primary_exchange` already arrives on every
+    row of the Massive reference endpoint and was already being read — it was
+    just used to DROP OTC and then thrown away. This keeps `XNAS` instead, so
+    the list comes from the same fetch, the same paging and the same cache
+    machinery as `fetch_massive_universe`, cached separately.
+
+    PRIMARY listing, deliberately. A stock is "a Nasdaq stock" because Nasdaq
+    is where it is listed, not because it can be traded there — nearly
+    everything can. Anything looser would return most of the market and the
+    word would stop meaning anything.
+    """
+    return fetch_massive_universe(limit=limit,
+                                  keep_exchanges=frozenset({MIC_NASDAQ}),
+                                  cache_name="nasdaq_listed")
 
 
 def fetch_russell1000() -> list[str]:
@@ -1338,6 +1381,11 @@ _COMPONENT_FETCHERS: dict = {
     "sp600":       lambda: fetch_sp600(),
     "sp1500":      lambda: fetch_sp1500(),
     "nasdaq100":   lambda: fetch_nasdaq100(),
+    # Keyed `nasdaq_listed` to match its size band and its guard name — a
+    # component with no band in _EXPECTED_COUNTS silently gets (1, 1e9),
+    # i.e. no guard at all, which `test_every_component_has_a_size_band`
+    # exists to catch. It caught this one.
+    "nasdaq_listed": lambda: fetch_nasdaq_listed(),
     "themes":      lambda: fetch_themes(),
     "russell1000": lambda: fetch_russell1000(),
     "russell3000": lambda: fetch_russell3000(),
@@ -1491,6 +1539,7 @@ fetch_etf_universe = _count_guarded("etf", fetch_etf_universe)
 fetch_themes = _count_guarded("themes", fetch_themes)
 fetch_broad = _count_guarded("broad", fetch_broad)
 fetch_massive_universe = _count_guarded("massive", fetch_massive_universe)
+fetch_nasdaq_listed = _count_guarded("nasdaq_listed", fetch_nasdaq_listed)
 
 
 BENCHMARK = "SPY"
