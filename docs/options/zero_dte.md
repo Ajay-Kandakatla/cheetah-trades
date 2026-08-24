@@ -97,12 +97,72 @@ ranking by volume, and
 | `MAX_SPREAD_PCT` | 25.0 | refuses a contract costing a quarter of premium to cross |
 | `MIN_DAY_VOLUME` | 500 | it has to have actually traded today |
 | `MIN_BID` | 0.01 | a contract with no bid cannot be exited — a hard floor, not a preference |
+| `MIN_ASK` | 0.20 | 20 ticks — see §3b, added after it shipped missing |
 | `FLIP_RELEVANT_SIGMAS` | 1.0 | see §5 |
 
 The delta band's floor is set **by the observed spread curve**, not by a theory
 of moneyness. That is the only evidence available, and it is stated rather than
 dressed up. `test_every_house_threshold_is_declared_in_ONE_place` fails if one
 of these gets forked into a second definition.
+
+## 3b. The floor that was missing, and the board that proved it
+
+The first ship had no minimum premium, and the live board immediately led with
+this:
+
+> **AMZN 262.5 call — bid 0.05 / ask 0.06 — reading "0.07x"**
+
+Six ticks. It "doubles" on a **one-cent uptick**. Every floor passed it: delta
+0.3328 sat mid-band, the spread was 18.2% against a 25% cap, and it had traded
+90,278 contracts.
+
+The failure was structural, not a mis-set threshold elsewhere:
+
+```
+double_move_pct = premium / (delta x spot)
+```
+
+falls as premium falls. **Ranking the board on it promotes the cheapest contract
+on the tape, every time.** That is precisely the selection `pick_contract`
+refuses to make *within* a chain — *"not the cheapest ... both of those select
+for the strikes that expire worthless"* — and with no premium floor the board
+reintroduced it *across* chains. The module contradicted its own docstring.
+
+It is also the regime where the arithmetic stops meaning anything. At six ticks
+the delta-linear double IS a single tick, so tick granularity decides the
+outcome rather than the underlying.
+
+`MIN_ASK = 0.20` is 20 ticks at the penny tick that applies below $3.00, so one
+tick of slippage costs at most 5% of the position. Same board, after:
+
+| | before | after |
+|---|---|---|
+| leader | AMZN 0.06 — **6 ticks** — 0.07x | QQQ put 0.58 — 58 ticks — 0.38x |
+| 2nd | QQQ call 0.10 — 10 ticks — 0.07x | SPY put 0.37 — 37 ticks — 0.38x |
+| 3rd | QQQ put 0.58 — 0.40x | TSLA call 1.89 — 189 ticks — 0.46x |
+| names with a contract | 5 of 13 | 3 of 13 |
+
+The floor is **deliberately inert for most of the session** — an ATM 0DTE with
+hours left is worth dollars, not cents — so it bites only once contracts have
+decayed into tick noise, which is exactly when they stop being rankable. That
+last claim is reasoning, not measurement: there is no intraday option history
+here to measure it with.
+
+Pinned by `test_REGRESSION_a_six_tick_option_is_refused_however_good_it_looks`,
+which asserts the contract clears every *other* floor before asserting it is
+refused, and by `test_the_floor_bites_cheapness_NOT_low_volatility`, which keeps
+TSLA's legitimate 1.89 suggestion on the board.
+
+## 3c. The dead deep-link
+
+The tiles first shipped pointing at `/sepa/<SYM>?tab=zero_dte`. That tab does not
+exist in `SepaCandidate.tsx`'s `TABS`, so every tile click **silently fell back
+to the chart tab** while every other Chart Maps board deep-links somewhere real
+(`setup`, `supply`, `breakout`). They now point at the SEPA detail page's own
+`options` tab, which exists and is the topically right landing spot.
+
+`test_the_href_lands_on_a_tab_that_EXISTS` reads the real frontend source, so
+the two cannot drift apart again.
 
 ## 4. `moves_needed` — the only figure comparable across names
 
@@ -118,6 +178,10 @@ of these gets forked into a second definition.
 SPY and NVDA differ 12x in raw percent and only 2.6x in sigmas. Ranking the
 board on the raw figure would put the lowest-volatility name first **every
 single day**, for a reason that has nothing to do with the trade being better.
+
+**This is also what made the missing premium floor dangerous** — see §3b. A
+metric that is inverse to premium ranks tick-noise first, so the floor and the
+ranking are one design, not two.
 
 `expected_move_pct` is one session of ATM implied vol — `IV / sqrt(252)` — taken
 from the strike nearest spot and averaged across the call and the put so one
@@ -222,6 +286,10 @@ hence the banner, and `with_contract` vs `with_chain` stated side by side.
 | Excursion and close are separate | `test_the_excursion_and_the_CLOSE_are_recorded_separately` |
 | Never named `outcome` | `test_the_ledger_field_is_named_move_outcome_and_never_plain_outcome` |
 | No win rate without the caveat | `test_accuracy_cannot_report_a_win_rate_without_the_caveat` |
+| Tick-noise cannot lead the board | `test_REGRESSION_a_six_tick_option_is_refused_however_good_it_looks` |
+| The premium floor is what refuses it | `test_the_premium_floor_is_what_refuses_it_not_some_other_gate` |
+| Real contracts still survive it | `test_the_floor_bites_cheapness_NOT_low_volatility` |
+| The deep-link lands somewhere real | `test_the_href_lands_on_a_tab_that_EXISTS` |
 | No claimed backtest | `test_the_module_never_claims_a_backtest_it_cannot_run` |
 | Pure functions stay network-free | `test_the_pure_functions_take_no_network` |
 

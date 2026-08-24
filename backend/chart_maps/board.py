@@ -1094,7 +1094,13 @@ def zero_dte_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tiles.append({
             "symbol": sym,
             "name": _name_for(sym),
-            "href": _href(sym, "zero_dte"),
+            # The SEPA detail page's own options tab — a tab that EXISTS.
+            # This first shipped as _href(sym, "zero_dte"), which is not in
+            # SepaCandidate's TABS, so every tile silently fell back to the
+            # chart tab. Every other board deep-links somewhere real (setup,
+            # supply, breakout); this now does too, and `options` is the
+            # topically right landing spot for an options tile.
+            "href": _href(sym, "options"),
             "bands": bands,
             "lines": lines,
             "stats": stats,

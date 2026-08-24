@@ -174,3 +174,131 @@ describe('ChartMaps', () => {
     expect(await screen.findByText(/Nothing matched on this tab/)).toBeInTheDocument();
   });
 });
+
+// ── 0DTE tab (Ajay 2026-08-24) ───────────────────────────────────────────────
+// Payload copied from the REAL endpoint (GET /chart-maps?tab=zero_dte on the
+// live API, 2026-08-24 after the close), so this doubles as a contract test on
+// the two fields no other tab has: `session` and `with_contract`.
+const ZERO_DTE_BOARD = {
+  tab: 'zero_dte',
+  count: 2,
+  matched: 13,
+  expiry: '2026-08-24',
+  with_chain: 13,
+  with_contract: 3,
+  session: {
+    state: 'post',
+    actionable: false,
+    label: "After the close on expiry day — these contracts have settled. Strikes still listed are pennies with wide spreads; this is the day's record, not a live board.",
+  },
+  disclaimer: '0DTE is same-day-expiry options. Every threshold here is a house value with NO measured edge behind it — there is no intraday option history to backtest against.',
+  tiles: [
+    {
+      symbol: 'QQQ',
+      name: 'Invesco QQQ Trust',
+      href: '/sepa/QQQ?tab=options',
+      bars: Array.from({ length: 30 }, (_, i) => ({
+        t: `2026-08-${String(i + 1).padStart(2, '0')}`,
+        o: 700 + i, h: 705 + i, l: 698 + i, c: 703 + i, v: 4e7,
+      })),
+      bands: [{ kind: 'neutral', lo: 706, hi: 713, label: 'gamma walls' }],
+      lines: [{ price: 706.5, label: 'now', tone: 'now' },
+              { price: 707, label: 'put 707', tone: 'neutral' }],
+      markers: [],
+      stats: [
+        { k: 'Expected move', v: '±0.45%' },
+        { k: 'Call', v: '—' },
+        { k: 'Put', v: '707 · 0.38x' },
+        { k: 'Theta/day', v: '611% of premium' },
+        { k: 'Spread', v: '10%' },
+      ],
+      why: "needs 0.38x today's expected move to double · dealers AMPLIFY · expected ±0.45% · theta 611%/day",
+      badges: [{ text: 'Amplifying', tone: 'good' },
+               { text: 'Theta > 2x premium', tone: 'warn' }],
+    },
+    {
+      symbol: 'AAPL',
+      name: 'Apple Inc.',
+      href: '/sepa/AAPL?tab=options',
+      bars: Array.from({ length: 30 }, (_, i) => ({
+        t: `2026-08-${String(i + 1).padStart(2, '0')}`,
+        o: 310 + i, h: 312 + i, l: 308 + i, c: 311 + i, v: 5e7,
+      })),
+      bands: [],
+      lines: [{ price: 310.7, label: 'now', tone: 'now' }],
+      markers: [],
+      stats: [
+        { k: 'Expected move', v: '±0.76%' },
+        { k: 'Call', v: '—' },
+        { k: 'Put', v: '—' },
+        { k: 'Theta/day', v: '—' },
+        { k: 'Spread', v: '—' },
+      ],
+      why: 'nothing clears the spread and delta floors · dealers AMPLIFY · expected ±0.76%',
+      badges: [{ text: 'Nothing tradeable', tone: 'muted' }],
+    },
+  ],
+};
+
+describe('ChartMaps — the 0DTE tab', () => {
+  const openTab = async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, zero_dte: ZERO_DTE_BOARD }));
+    draw();
+    fireEvent.click(await screen.findByRole('tab', { name: /0DTE Options/i }));
+  };
+
+  it('tells the reader the board is NOT live before showing a single tile', async () => {
+    // After the close the chain has settled. A thin board is correct then, but
+    // without this banner it reads as broken.
+    await openTab();
+    expect(await screen.findByText('Not live')).toBeInTheDocument();
+    expect(screen.getByText(/these contracts have settled/i)).toBeInTheDocument();
+  });
+
+  it('states how few names actually carry a tradeable contract', async () => {
+    // The gap between with_chain and with_contract is where the cost floors
+    // bite — the honest headline, not a footnote.
+    await openTab();
+    expect(await screen.findByText(/3 of 13 names have a contract/i)).toBeInTheDocument();
+    expect(screen.getByText(/expiry 2026-08-24/i)).toBeInTheDocument();
+  });
+
+  it('renders the cost stats, including theta as a share of premium', async () => {
+    await openTab();
+    expect(await screen.findByText('707 · 0.38x')).toBeInTheDocument();
+    expect(screen.getByText('611% of premium')).toBeInTheDocument();
+    expect(screen.getByText('±0.45%')).toBeInTheDocument();
+  });
+
+  it('deep-links each tile to a SEPA tab that actually exists', async () => {
+    // Shipped once pointing at ?tab=zero_dte, which SepaCandidate does not
+    // define — every click silently fell back to the chart tab.
+    await openTab();
+    const link = await screen.findByRole('link', { name: /QQQ — open SEPA detail/ });
+    const url = new URL(link.getAttribute('href')!, 'http://x');
+    expect(url.pathname).toBe('/sepa/QQQ');
+    expect(url.searchParams.get('tab')).toBe('options');
+  });
+
+  it('shows a name with nothing tradeable rather than hiding it', async () => {
+    // Absence is information: AAPL has a chain and nothing worth buying on it.
+    await openTab();
+    expect(await screen.findByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('Nothing tradeable')).toBeInTheDocument();
+    expect(screen.getByText(/nothing clears the spread and delta floors/i)).toBeInTheDocument();
+  });
+
+  it('keeps the no-measured-edge disclaimer on screen', async () => {
+    await openTab();
+    expect(await screen.findByText(/NO measured edge/i)).toBeInTheDocument();
+  });
+
+  it('offers no sort or liquidity control — there is nothing to sort by', async () => {
+    // It reads live option chains, not the equity scan. A control that did
+    // nothing would be worse than none.
+    await openTab();
+    await screen.findByText('Not live');
+    expect(screen.queryByLabelText(/Sort/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Liquidity/i)).not.toBeInTheDocument();
+  });
+});

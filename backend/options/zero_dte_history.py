@@ -177,7 +177,7 @@ def record_board(data: dict, et_date: Optional[str] = None) -> dict:
         return {"ok": False, "reason": str(exc), "calls": 0}
 
     coll = db[CALLS_COLL]
-    n = 0
+    n = fresh = 0
     for row in rows:
         for side in ("call", "put"):
             doc = _call_doc(row, side, d)
@@ -186,12 +186,18 @@ def record_board(data: dict, et_date: Optional[str] = None) -> dict:
             try:
                 # $setOnInsert, not replace: the frozen snapshot must survive a
                 # re-run later in the same session.
-                coll.update_one({"_id": doc["_id"]}, {"$setOnInsert": doc},
-                                upsert=True)
+                r = coll.update_one({"_id": doc["_id"]}, {"$setOnInsert": doc},
+                                    upsert=True)
                 n += 1
+                if r.upserted_id is not None:
+                    fresh += 1
             except Exception as exc:
                 log.debug("0DTE history: call write failed: %s", exc)
-    return {"ok": True, "calls": n, "et_date": d}
+    # `calls` counts rows CONSIDERED, `new` counts rows actually inserted. The
+    # board is designed to be re-run through the session, so on the second pass
+    # `calls` stays flat while `new` goes to zero — reporting only the first
+    # would read as "recorded 5 suggestions" on a run that recorded none.
+    return {"ok": True, "calls": n, "new": fresh, "et_date": d}
 
 
 def _bar_for(df, d: str) -> Optional[dict]:
@@ -344,7 +350,13 @@ def accuracy(side: Optional[str] = None, regime: Optional[str] = None,
         "double_move_hit": dbl,
         "breakeven_only": be,
         "no_move": none,
-        "double_move_pct": _pct(dbl, n),
+        # Named `..._hit_pct`, NOT `double_move_pct`. A stored row already uses
+        # `double_move_pct` for the move the underlying must MAKE (NVDA: 0.701).
+        # Reusing that key here for a HIT RATE (100.0) would put two
+        # incompatible meanings and two incompatible scales on one name inside
+        # one module — and anyone joining the ledger to this summary would get
+        # a silently wrong answer rather than an error.
+        "double_move_hit_pct": _pct(dbl, n),
         "reached_breakeven_pct": _pct(dbl + be, n),
         # The number that survives path blindness, and the one to trust.
         "held_to_close_pct": _pct(held, n),

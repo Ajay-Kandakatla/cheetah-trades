@@ -96,6 +96,32 @@ MIN_DAY_VOLUME = 500      # it has to have actually traded today
 # A 0DTE contract with no bid cannot be exited. Not a preference — a hard floor.
 MIN_BID = 0.01
 
+# Minimum ASK, in dollars. Twenty cents is twenty ticks at the penny tick that
+# applies below $3.00, so one tick of slippage costs at most 5% of the position.
+#
+# This floor was MISSING on the first ship and the board immediately proved why.
+# Live, 2026-08-24: the top row was an AMZN 262.5 call at bid 0.05 / ask 0.06 —
+# six ticks — reading "0.07x", because a six-tick option doubles on a ONE-CENT
+# uptick. Every other floor passed it: delta 0.3328 sat mid-band, the spread was
+# 18.2% against a 25% cap, and it had traded 90,278 contracts.
+#
+# The failure is structural, not a bad threshold elsewhere. `double_move_pct` is
+# premium / (delta x spot), so it falls as premium falls: ranking the board on
+# it promotes the cheapest contract on the tape, every time. That is exactly the
+# selection `pick_contract` refuses to make within a chain — "not the cheapest
+# ... both of those select for the strikes that expire worthless" — and without
+# this floor the board reintroduced it across chains.
+#
+# It is also the regime where the arithmetic stops meaning anything: at six
+# ticks the delta-linear double IS a single tick, and tick granularity, not the
+# underlying, decides the outcome.
+#
+# Deliberately inert for most of the session. An ATM 0DTE with hours left is
+# worth dollars, not cents, so this bites only once contracts have decayed into
+# tick noise — which is precisely when they stop being rankable. That reasoning
+# is not measured: there is no intraday option history here to measure it with.
+MIN_ASK = 0.20
+
 # A gamma flip further than this many expected session moves away is in the
 # tail, not on the board. One sigma: the underlying reaching it today is
 # already the ~16% case, and beyond that it is not a level, it is trivia.
@@ -191,10 +217,12 @@ def contract_metrics(c: dict, spot: Optional[float]) -> Optional[dict]:
 def is_tradeable(m: Optional[dict]) -> bool:
     """Does this contract clear the house floors? PURE.
 
-    A contract failing this is not shown as a suggestion. It may still exist on
-    the chain and be wildly traded — the 765 call above did 828,288 contracts at
-    a 66% spread — which is exactly why the floor is applied rather than trusting
-    volume as a proxy for tradeability.
+    A contract failing this is not shown as a suggestion. Two different rows on
+    one day proved why volume cannot stand in for tradeability:
+
+    * SPY's 765 call did 828,288 contracts at a 66% spread — refused on spread.
+    * AMZN's 262.5 call did 90,278 contracts at a SIX-TICK premium and passed
+      every other floor — refused on `MIN_ASK`, which exists because of it.
     """
     if not m:
         return False
@@ -204,10 +232,14 @@ def is_tradeable(m: Optional[dict]) -> bool:
     b = m.get("bid")
     if d is None or sp is None or b is None:
         return False
+    a = m.get("ask")
+    if a is None:
+        return False
     return bool(
         MIN_DELTA <= abs(d) <= MAX_DELTA
         and sp <= MAX_SPREAD_PCT
         and b >= MIN_BID
+        and a >= MIN_ASK
         and (v or 0) >= MIN_DAY_VOLUME
     )
 

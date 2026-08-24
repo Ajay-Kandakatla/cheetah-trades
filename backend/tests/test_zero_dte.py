@@ -18,7 +18,8 @@ import sys
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+_HERE = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(_HERE, ".."))
 
 from options import zero_dte as Z            # noqa: E402
 from options import zero_dte_history as H    # noqa: E402
@@ -113,6 +114,62 @@ def test_an_untraded_strike_is_refused_however_tight_the_quote():
     assert Z.is_tradeable(m) is False
 
 
+def test_REGRESSION_a_six_tick_option_is_refused_however_good_it_looks():
+    """The bug that shipped on 2026-08-24 and led the live board.
+
+    AMZN 262.5 call, bid 0.05 / ask 0.06, delta 0.3328, 90,278 contracts traded.
+    It cleared EVERY other floor — mid-band delta, 18.2% spread against a 25%
+    cap, deep volume — and ranked #1 at "0.07x", because a six-tick option
+    doubles on a one-cent uptick.
+    """
+    m = Z.contract_metrics(mk(262.5, 0.05, 0.06, 0.3328, vol=90_278), 262.0)
+    assert MIN_DELTA_OK(m) and m["spread_pct"] < Z.MAX_SPREAD_PCT
+    assert m["day_volume"] > Z.MIN_DAY_VOLUME
+    assert Z.is_tradeable(m) is False        # refused on premium alone
+
+
+def MIN_DELTA_OK(m):
+    return Z.MIN_DELTA <= abs(m["delta"]) <= Z.MAX_DELTA
+
+
+def test_the_premium_floor_is_what_refuses_it_not_some_other_gate():
+    """Pinning WHY it is refused. If a future edit loosens MIN_ASK, this fails
+    rather than the board quietly promoting tick-noise again."""
+    cheap = Z.contract_metrics(mk(262.5, 0.05, 0.06, 0.3328, vol=90_278), 262.0)
+    dear = Z.contract_metrics(mk(262.5, 0.95, 1.00, 0.3328, vol=90_278), 262.0)
+    assert Z.is_tradeable(cheap) is False
+    assert Z.is_tradeable(dear) is True       # identical but for the premium
+
+
+def test_a_contract_at_exactly_the_premium_floor_is_allowed():
+    """A floor excludes what is BELOW it. An off-by-one here would silently
+    shrink an already-thin board."""
+    m = Z.contract_metrics(mk(100, 0.19, Z.MIN_ASK, 0.35), 100.0)
+    assert m["ask"] == Z.MIN_ASK
+    assert Z.is_tradeable(m) is True
+
+
+def test_the_floor_bites_cheapness_NOT_low_volatility():
+    """TSLA's 1.89 suggestion must survive — the floor targets tick-noise, not
+    expensive names. Refusing it would gut the board it exists to protect."""
+    m = Z.contract_metrics(mk(347.5, 1.53, 1.89, 0.5925, vol=12_781), 348.66)
+    assert Z.is_tradeable(m) is True
+
+
+def test_the_board_can_no_longer_be_LED_by_the_cheapest_contract():
+    """The structural version of the bug. `double_move_pct` is
+    premium/(delta*spot), so it falls as premium falls — ranking on it promotes
+    the cheapest contract on the tape every time. The floor is what stops that
+    reaching the board at all."""
+    chain = [mk(262.5, 0.05, 0.06, 0.3328, vol=90_278),      # the offender
+             mk(263, 0.95, 1.00, 0.3400, vol=50_000)]
+    m = [x for x in (Z.contract_metrics(c, 262.0) for c in chain) if x]
+    # The cheap one genuinely scores "better" on the raw metric...
+    assert m[0]["double_move_pct"] < m[1]["double_move_pct"]
+    # ...and is still not what gets suggested.
+    assert Z.pick_contract(m, "call")["ask"] == 1.00
+
+
 def test_is_tradeable_on_None_is_False_not_an_exception():
     assert Z.is_tradeable(None) is False
 
@@ -144,6 +201,26 @@ def test_nothing_clearing_the_floors_returns_None_not_the_least_bad_row():
     contract at all. None is the honest answer; a 200%-spread penny is not."""
     m = [Z.contract_metrics(mk(105, 0.00, 0.01, 0.02), 100.0)]
     assert Z.pick_contract([x for x in m if x], "call") is None
+
+
+def test_the_href_lands_on_a_tab_that_EXISTS():
+    """Shipped once pointing at ?tab=zero_dte, which is not in SepaCandidate's
+    TABS — every tile silently fell back to the chart tab. Read from the real
+    frontend source so the two cannot drift apart again."""
+    tsx = os.path.join(_HERE, "..", "..", "frontend", "src", "pages",
+                       "SepaCandidate.tsx")
+    if not os.path.exists(tsx):                    # backend-only checkout
+        pytest.skip("frontend not present")
+    with open(tsx) as fh:
+        src = fh.read()
+    marker = "const TABS: Tab[] = ["
+    i = src.index(marker) + len(marker)      # past the `Tab[]` brackets
+    tabs = src[i:src.index("]", i)]
+    from chart_maps import board as B
+    href = B._href("NVDA", "options")
+    assert "tab=options" in href
+    assert "'options'" in tabs
+    assert "'zero_dte'" not in tabs                 # the tab that never existed
 
 
 def test_the_picker_never_returns_the_other_side():
@@ -516,7 +593,8 @@ def test_every_house_threshold_is_declared_in_ONE_place():
     Supply imports every threshold from the demand scan for the same reason."""
     code = _code("zero_dte.py")
     for const in ("MIN_DELTA", "MAX_DELTA", "TARGET_DELTA", "MAX_SPREAD_PCT",
-                  "MIN_DAY_VOLUME", "MIN_BID", "FLIP_RELEVANT_SIGMAS"):
+                  "MIN_DAY_VOLUME", "MIN_BID", "MIN_ASK",
+                  "FLIP_RELEVANT_SIGMAS"):
         assert code.count(f"{const} =") == 1, const
 
 
