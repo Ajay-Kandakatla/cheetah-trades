@@ -37,7 +37,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "zones", "supply", "winners", "earnings")
+TABS = ("vcp", "zones", "supply", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -970,6 +970,161 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "disclaimer": _supply_disclaimer()}
 
 
+def zero_dte_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                   symbols: Optional[list] = None, **_ignored) -> dict:
+    """0DTE — same-day expiry calls and puts, under a gamma-regime banner.
+
+    Ajay 2026-08-24: *"a new tab for ODTE type of options calls... put two
+    categories... this will require a lot of accuracy and much better data like
+    order book"*. He then chose calls/puts as the two categories inside a
+    pinned/unpinned banner, with a suggested strike recorded to a ledger.
+
+    Two structural departures from every other tab, both deliberate:
+
+    * **It does not read the demand scan.** Every other board slices one cached
+      equity pass. This one reads live option chains, because a 0DTE quote is
+      stale in seconds and there is nothing in the daily cache that prices one.
+    * **NO PLAN LINES, and no BUY tone anywhere.** The lines are strikes, walls
+      and the pin — structure, not a trade. `supply_tiles` made the same call
+      for the same reason: drawing an entry would invent one.
+
+    The banner is per-symbol rather than global. Measured 2026-08-24, the same
+    session had AMZN/GOOGL/META/MSFT pinned while SPY/QQQ/NVDA/TSLA amplified —
+    one banner over the board would have been wrong for half of it.
+    """
+    from options import zero_dte as Z
+
+    data = Z.board(symbols=symbols)
+    rows = list(data.get("rows") or [])
+    tiles = []
+    for rank, r in enumerate(rows):
+        sym = (r.get("symbol") or "").upper()
+        spot = _num(r.get("spot"))
+        if not sym or spot is None:
+            continue
+        reg = r.get("regime") or {}
+        call, put = r.get("call"), r.get("put")
+
+        # The wall-to-wall range as a band: where dealer hedging is expected to
+        # contain the tape. `neutral` because it is a range, not a zone anyone
+        # is buying or selling into.
+        bands = []
+        cw, pw = _num(reg.get("call_wall")), _num(reg.get("put_wall"))
+        if cw is not None and pw is not None and pw < cw:
+            bands.append({"kind": "neutral", "lo": pw, "hi": cw,
+                          "label": "gamma walls"})
+
+        lines = [{"price": spot, "label": "now", "tone": "now"}]
+        if call and _num(call.get("strike")) is not None:
+            k = _num(call.get("strike"))
+            lines.append({"price": k, "label": f"call {k:g}", "tone": "target"})
+        if put and _num(put.get("strike")) is not None:
+            k = _num(put.get("strike"))
+            lines.append({"price": k, "label": f"put {k:g}", "tone": "neutral"})
+        mp = _num(r.get("max_pain"))
+        # A tied pin is not a pin — opex flags when the runner-up lands within
+        # 1% of the minimum, and drawing a magnet the OI grid does not support
+        # would be the most confident-looking line on the chart.
+        if mp is not None and not r.get("max_pain_tie"):
+            lines.append({"price": mp, "label": f"pin {mp:g}", "tone": "neutral"})
+
+        em = _num(r.get("expected_move_pct"))
+
+        def _leg(c):
+            """One side, in the two numbers that decide it."""
+            if not c:
+                return "—"
+            mn = _num(c.get("moves_needed"))
+            return (f"{c.get('strike'):g} · {mn:g}x" if mn is not None
+                    else f"{c.get('strike'):g}")
+
+        # Worst theta across the two suggested legs. The headline risk on a
+        # 0DTE is not the spread, it is that theta routinely exceeds the whole
+        # premium — measured at 787% on SPY's own suggestion, 2026-08-24.
+        burns = [_num((c or {}).get("theta_burn_pct")) for c in (call, put)]
+        burns = [b for b in burns if b is not None]
+        worst_burn = max(burns) if burns else None
+        spreads = [_num((c or {}).get("spread_pct")) for c in (call, put)]
+        spreads = [x for x in spreads if x is not None]
+
+        stats = [
+            {"k": "Expected move", "v": f"±{em:.2f}%" if em is not None else "—"},
+            {"k": "Call", "v": _leg(call)},
+            {"k": "Put", "v": _leg(put)},
+            {"k": "Theta/day", "v": (f"{worst_burn:.0f}% of premium"
+                                     if worst_burn is not None else "—")},
+            {"k": "Spread", "v": (f"{min(spreads):.0f}–{max(spreads):.0f}%"
+                                  if len(spreads) > 1 else
+                                  f"{spreads[0]:.0f}%" if spreads else "—")},
+        ]
+
+        pinned = reg.get("regime") == "PINNED"
+        best = None
+        for c in (call, put):
+            v = _num((c or {}).get("moves_needed"))
+            if v is not None and (best is None or v < best):
+                best = v
+        why = (
+            (f"needs {best:g}x today's expected move to double"
+             if best is not None else "nothing clears the spread and delta floors")
+            + (f" · dealers {'PIN' if pinned else 'AMPLIFY'}"
+               if reg.get("regime") != "UNKNOWN" else "")
+            + (f" · expected ±{em:.2f}%" if em is not None else "")
+            + (f" · theta {worst_burn:.0f}%/day" if worst_burn is not None else "")
+        )
+
+        badges = []
+        if reg.get("regime") == "PINNED":
+            # A pin is the WARNING here, not the good news. This board is for
+            # someone buying premium, and suppression is the thing that kills it.
+            badges.append({"text": "Pinned", "tone": "warn"})
+        elif reg.get("regime") == "AMPLIFYING":
+            badges.append({"text": "Amplifying", "tone": "good"})
+        if reg.get("fragile"):
+            badges.append({"text": "Gamma unsettled", "tone": "muted"})
+        if worst_burn is not None and worst_burn >= 200:
+            badges.append({"text": "Theta > 2x premium", "tone": "warn"})
+        if not call and not put:
+            badges.append({"text": "Nothing tradeable", "tone": "muted"})
+        if r.get("gex_reliability") == "single_name":
+            # opex's own caveat, carried rather than dropped: the blind sign
+            # rule can invert on single-name momentum leaders.
+            badges.append({"text": "Single-name gamma", "tone": "muted"})
+
+        tiles.append({
+            "symbol": sym,
+            "name": _name_for(sym),
+            "href": _href(sym, "zero_dte"),
+            "bands": bands,
+            "lines": lines,
+            "stats": stats,
+            "why": why,
+            "badges": badges,
+            "zero_dte": r,
+            # Position, not a weighted score — one definition of "least work
+            # required", the same discipline `supply_tiles` uses.
+            "_score": float(len(rows) - rank),
+        })
+
+    # `min_tier="any"` explicitly. The floor reads `_m.avg_turnover`, which
+    # these tiles do not carry — every row would fail it on MISSING data rather
+    # than on being thin. It would also be meaningless here: a name only has a
+    # daily expiry because it is already among the most liquid on the tape.
+    out, meta = _finish(tiles, limit, False, days, sort=DEFAULT_SORT,
+                        min_tier="any")
+    return {"tiles": out, **meta,
+            "matched": len(rows),
+            "expiry": data.get("expiry"),
+            "session": data.get("session"),
+            "with_chain": data.get("with_chain"),
+            "with_contract": data.get("with_contract"),
+            "cached_age_sec": data.get("cached_age_sec"),
+            "generated_at": data.get("as_of"),
+            "note": (None if rows else
+                     "No same-day expiries found for any name on the list."),
+            "disclaimer": data.get("disclaimer")}
+
+
 def _supply_disclaimer() -> str:
     from supply_demand import into_supply as I
     return I.DISCLAIMER
@@ -1487,6 +1642,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = zone_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "zero_dte":
+        out = zero_dte_tiles(limit, days)
     elif t == "winners":
         if src == "zone":
             out = zone_winner_tiles(limit, days=min(days, 90))
@@ -1502,7 +1659,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # The winners tabs read a ledger, not a scan, so they carry no live volume
     # to sort by. Say so rather than offering a control that silently does
     # nothing.
-    _fixed = t in ("winners", "earnings")
+    # 0DTE joins the ledger tabs here: it reads live option chains, not the
+    # equity scan, so there is no share volume to sort by and no dollar-volume
+    # floor to apply. Offering either control would be a switch that does
+    # nothing — the same reason `winners` and `earnings` are fixed.
+    _fixed = t in ("winners", "earnings", "zero_dte")
     out["sort"] = DEFAULT_SORT if _fixed else srt
     out["sorts"] = [] if _fixed else [{"key": k, "label": v}
                                               for k, v in SORTS.items()]

@@ -482,7 +482,7 @@ describe('the Earnings Flow tab', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
     expect(CM_TABS).toEqual(
-      ['vcp', 'zones', 'supply', 'support', 'earnings', 'winners']);
+      ['vcp', 'zones', 'supply', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -859,5 +859,50 @@ describe('the Into Supply tab', () => {
     expect(TAB_META.supply.label).not.toBe(TAB_META.support.label);
     expect(parseTab('supply')).toBe('supply');
     expect(parseTab('support')).toBe('support');
+  });
+});
+
+// ── 0DTE tab (Ajay 2026-08-24) ───────────────────────────────────────────────
+describe('the 0DTE tab', () => {
+  it('is registered after the structure tabs and before the ledger ones', () => {
+    // It is the only tab reading LIVE option chains rather than a cached equity
+    // scan, so it deliberately does not sit adjacent to the boards it could be
+    // mistaken for.
+    expect(CM_TABS.indexOf('zero_dte')).toBeGreaterThan(CM_TABS.indexOf('support'));
+    expect(CM_TABS.indexOf('zero_dte')).toBeLessThan(CM_TABS.indexOf('winners'));
+    expect(parseTab('zero_dte')).toBe('zero_dte');
+  });
+
+  it('is a board tab, so the page fetches it like the others', () => {
+    // Unlike `support`, which takes a ticker and computes on request.
+    expect(isBoardTab('zero_dte')).toBe(true);
+  });
+
+  it('explains the sigma figure, because a raw percentage is not comparable', () => {
+    // SPY needed 0.06% and TSLA 0.94% on 2026-08-24. Without the scale those
+    // two numbers invite exactly the wrong conclusion.
+    const b = TAB_META.zero_dte.blurb;
+    expect(b).toMatch(/expected move/i);
+    expect(b).toMatch(/SPY/);
+    expect(b).toMatch(/TSLA/);
+  });
+
+  it('says a pin is the thing working AGAINST a premium buyer', () => {
+    // A pin is good news to a seller. This board is for a buyer, and the copy
+    // must not borrow the seller's reading of it.
+    const b = TAB_META.zero_dte.blurb;
+    expect(b).toMatch(/PINNED/);
+    expect(b).toMatch(/suppress|fighting/i);
+    expect(b).toMatch(/AMPLIFYING/);
+  });
+
+  it('states the theta reality and that nothing here is backtested', () => {
+    // The two facts that make this different from every other tab. Measured:
+    // theta ran 787% of premium on SPY's own suggestion.
+    const b = TAB_META.zero_dte.blurb;
+    expect(b).toMatch(/theta/i);
+    expect(b).toMatch(/exceeds the entire premium/i);
+    expect(b).toMatch(/no intraday option history/i);
+    expect(b).toMatch(/recorded and graded/i);
   });
 });

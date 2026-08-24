@@ -10769,6 +10769,24 @@ a.tk-link:hover   { color: inherit; }
   line-height: 1.5; max-width: 78ch;
 }
 
+/* 0DTE session banner. Amber when the board is NOT live — after the close on
+ * expiry day the chain has settled and every number is a record rather than a
+ * quote, which the reader has to know before reading a single tile. */
+.cm-session {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.45rem;
+  margin: 0 0 0.7rem; padding: 0.5rem 0.7rem; border-radius: 8px;
+  font-size: 0.78rem; line-height: 1.5;
+  background: var(--bg-raised, #181c24);
+  border-left: 3px solid var(--cm-slate, #8595ad);
+  color: var(--cm-slate, #8595ad);
+}
+.cm-session strong { color: var(--ink, #e7e7e7); font-weight: 600; }
+.cm-session-counts { flex-basis: 100%; opacity: 0.85; }
+.cm-session-open, .cm-session-power { border-left-color: var(--positive, #22c55e); }
+.cm-session-post, .cm-session-pre, .cm-session-closed {
+  border-left-color: var(--warn, #f59e0b);
+}
+
 .cm-controls { display: flex; gap: 0.7rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.7rem; }
 .cm-ctl { font-size: 0.76rem; color: var(--cm-slate, #8595ad); display: inline-flex; align-items: center; gap: 0.35rem; }
 .cm-ctl select {

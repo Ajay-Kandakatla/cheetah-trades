@@ -215,3 +215,48 @@ describe('label clipping', () => {
     }
   });
 });
+
+// ── 0DTE gamma walls (Ajay 2026-08-24) ───────────────────────────────────────
+describe('the neutral band', () => {
+  const walls: CmTile = {
+    ...TILE,
+    bands: [{ kind: 'neutral', lo: 11.5, hi: 12.5, label: 'gamma walls' }],
+    lines: [{ price: 12.0, label: 'now', tone: 'now' }],
+  };
+
+  it('draws a range that is neither a floor nor a lid', () => {
+    // The 0DTE gamma walls bracket where dealer hedging is expected to contain
+    // the tape. Reusing `demand` (green) or `supply` (red) would give the band
+    // a direction it does not have.
+    const { container } = draw(walls);
+    const rects = Array.from(container.querySelectorAll('rect[fill]'));
+    const muted = rects.filter((r) =>
+      (r.getAttribute('fill') || '').includes('--text-muted'));
+    expect(muted.length).toBeGreaterThan(0);
+  });
+
+  it('never paints it with the support or overhead colour', () => {
+    // Targets the BAND rect specifically — the ones spanning the full plot and
+    // carrying a <title>. A blanket rect[fill] sweep also catches the candles,
+    // which are legitimately green and red.
+    const { container } = draw(walls);
+    const bandFills = Array.from(container.querySelectorAll('rect[x="0"]'))
+      .filter((r) => r.querySelector('title'))
+      .map((r) => r.getAttribute('fill') || '');
+    expect(bandFills.length).toBeGreaterThan(0);
+    expect(bandFills.some((f) => f.includes('--positive'))).toBe(false);
+    expect(bandFills.some((f) => f.includes('--negative'))).toBe(false);
+  });
+
+  it('labels it by its own name rather than falling back to the kind', () => {
+    draw(walls);
+    expect(screen.getByText(/gamma walls/)).toBeInTheDocument();
+  });
+
+  it('falls back to "Range" when the band carries no label', () => {
+    // A raw `neutral` leaking into the UI would read as a bug.
+    draw({ ...walls, bands: [{ kind: 'neutral', lo: 11.5, hi: 12.5 }] });
+    expect(screen.getByText(/Range/)).toBeInTheDocument();
+    expect(screen.queryByText(/neutral/)).not.toBeInTheDocument();
+  });
+});

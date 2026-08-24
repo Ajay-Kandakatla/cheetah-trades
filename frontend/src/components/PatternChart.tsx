@@ -29,10 +29,13 @@ const BAND_FILL: Record<string, string> = {
   base: 'var(--positive, #22c55e)',
   demand: 'var(--positive, #22c55e)',
   supply: 'var(--negative, #ef4444)',
+  // Neither a floor nor a lid — the 0DTE gamma walls bracket a RANGE, and
+  // painting it green or red would give it a direction it does not have.
+  neutral: 'var(--text-muted, #94a3b8)',
 };
 
 const BAND_NAME: Record<string, string> = {
-  base: 'Base', demand: 'Support', supply: 'Overhead',
+  base: 'Base', demand: 'Support', supply: 'Overhead', neutral: 'Range',
 };
 
 export const PatternChart = memo(function PatternChart(

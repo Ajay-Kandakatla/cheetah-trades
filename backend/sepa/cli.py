@@ -153,6 +153,19 @@ def main() -> int:
              "discrepancy (run post-close after the fast-scan).",
     )
 
+    sub.add_parser(
+        "zero-dte-record",
+        help="Record today's 0DTE board to the ledger. Run DURING the session, "
+             "not after it: the suggestion has to be frozen while the chain is "
+             "live, and grading is already blind to the intraday path.",
+    )
+
+    sub.add_parser(
+        "zero-dte-resolve",
+        help="Grade recorded 0DTE suggestions against the day's bar "
+             "(post-close, once the price cache holds it).",
+    )
+
     args = p.parse_args()
 
     if args.cmd == "breakout-audit":
@@ -373,6 +386,21 @@ def main() -> int:
         from scalping import paper
         r = paper.resolve_open()
         log.info("SCALPING-PAPER resolve: %s", r)
+        return 0
+
+    if args.cmd == "zero-dte-record":
+        from options import zero_dte, zero_dte_history
+        board = zero_dte.board(fresh=True)
+        r = zero_dte_history.record_board(board)
+        log.info("0DTE record: %s (session=%s, %s/%s tradeable)", r,
+                 (board.get("session") or {}).get("state"),
+                 board.get("with_contract"), board.get("with_chain"))
+        return 0
+
+    if args.cmd == "zero-dte-resolve":
+        from options import zero_dte_history
+        r = zero_dte_history.resolve_open()
+        log.info("0DTE resolve: %s", r)
         return 0
 
     return 1

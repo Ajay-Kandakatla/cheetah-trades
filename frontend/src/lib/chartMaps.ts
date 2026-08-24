@@ -12,13 +12,16 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'zones' | 'supply' | 'support' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'zones' | 'supply' | 'support' | 'zero_dte' | 'winners' | 'earnings';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
 // `supply` sits directly after `zones`: it is the same scan read the other
 // way up, and the pair is only useful side by side.
-export const CM_TABS: CmTab[] = ['vcp', 'zones', 'supply', 'support', 'earnings', 'winners'];
+// `zero_dte` sits after the structure tabs and before the ledger ones: it is
+// the only tab reading LIVE option chains rather than a cached equity scan,
+// so it is deliberately not adjacent to the boards it can be confused with.
+export const CM_TABS: CmTab[] = ['vcp', 'zones', 'supply', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -48,6 +51,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     label: 'Support Levels',
     blurb: 'Any ticker, on demand. The zoom changes the answer on purpose — a 1-month read finds the level this week\'s trade is standing on, a 1-year read finds the structural floor. Green bands are support below, red overhead; a ● marks a level price has actually tested recently.',
   },
+  zero_dte: {
+    label: '0DTE Options',
+    blurb: 'Same-day expiry, calls and puts. "0.4x" means the underlying needs four tenths of today\'s expected move for the contract to double — the only figure comparable across names, since a 1% day is a crash in SPY and a Tuesday in TSLA. Read the badge first: PINNED means dealers suppress movement and you are fighting them, AMPLIFYING means they push it along. Theta on a 0DTE routinely exceeds the entire premium in a day. Every suggestion here is recorded and graded, because nothing about it has been backtested — there is no intraday option history to backtest against.',
+  },
   winners: {
     label: 'Past Winners',
     blurb: 'Setups from your own ledger that reached their measure-rule target before their stop. The dotted line is the confirmation bar — study what the base looked like BEFORE it.',
@@ -55,7 +62,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
 };
 
 export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: number };
-export type CmBand = { kind: 'base' | 'demand' | 'supply'; lo: number; hi: number; label?: string };
+// `neutral` is a range that is neither a floor nor a lid — the 0DTE gamma
+// walls, which bracket where dealer hedging is expected to contain the tape.
+// Colouring it green or red would imply a direction it does not have.
+export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral'; lo: number; hi: number; label?: string };
 export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral';
 export type CmLine = { price: number; label: string; tone: CmLineTone };
 export type CmMarker = { date: string; label?: string; kind?: string };
@@ -97,6 +107,17 @@ export type CmBoard = {
   /** How many names the floor removed. Shown so a shrunken board is explained
    *  rather than just smaller. */
   dropped_thin?: number;
+  /** 0DTE only — the same-day expiry these chains are read from. */
+  expiry?: string;
+  /** 0DTE only — where in the trading day this read happened. After the close
+   *  on expiry day the chain has SETTLED, and a board that is nearly empty is
+   *  correct rather than broken. The banner says which. */
+  session?: { state: string; label: string; actionable: boolean } | null;
+  /** 0DTE only — names with a same-day chain, and how many of those carry any
+   *  contract clearing the cost floors. The gap between them is the point. */
+  with_chain?: number;
+  with_contract?: number;
+  cached_age_sec?: number;
   /** Sorts that need an intraday tape pull, and how far it got. */
   tape_sorts?: string[];
   tape_pool?: number;

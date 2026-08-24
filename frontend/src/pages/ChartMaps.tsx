@@ -245,6 +245,27 @@ export function ChartMaps() {
                        onSymbol={setSupportSymbol} onWindow={setSupportWindow} />
       ) : (
       <>
+      {/* 0DTE only. Two facts a reader needs BEFORE the tiles, because either
+        * one changes what the board means:
+        *   - the session: after the close on expiry day the chain has settled,
+        *     so a near-empty board is correct rather than broken;
+        *   - the gap between names with a chain and names with anything
+        *     tradeable, which is where the cost floors actually bite. */}
+      {tab === 'zero_dte' && data?.session && (
+        <div className={`cm-session cm-session-${data.session.state}`}
+             role="status">
+          <strong>{data.session.actionable ? 'Live' : 'Not live'}</strong>
+          <span>{data.session.label}</span>
+          {typeof data.with_chain === 'number' && (
+            <span className="cm-session-counts">
+              {data.with_contract ?? 0} of {data.with_chain} names have a
+              contract clearing the spread, delta and volume floors
+              {data.expiry ? ` · expiry ${data.expiry}` : ''}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="cm-controls">
         {(tab === 'zones' || tab === 'supply') && (
           <label className="cm-ctl">

@@ -68,6 +68,24 @@
 # borrows their warm price cache instead of competing with it.
 5      17    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm nasdaq: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=nasdaq&limit=1'
 #
+# ── 0DTE ledger (Ajay 2026-08-24) ────────────────────────────────────────────
+# Recorded DURING the session, deliberately. A 0DTE suggestion frozen after the
+# close is worthless twice over: the chain has settled to pennies, and grading
+# already reads the daily bar's high/low with no idea WHEN in the day the
+# excursion happened. 10:00am is 30 minutes past the open — clear of the
+# opening auction's spreads, with a full session still ahead to be graded
+# against. This is the only path to a measured track record for this board;
+# there is no intraday option history to backtest it from.
+#
+# Mon-Fri 10:00am ET.
+0      10    *    *    1-5  /usr/local/bin/python -m sepa.cli zero-dte-record
+#
+# Mon-Fri 5:10pm ET — grade the day's recorded suggestions. After the demand
+# warms above, so the price cache already holds today's bar. A name whose bar
+# has not printed stays OPEN and is picked up tomorrow rather than graded a
+# loss (SPY and QQQ were a refresh behind on 2026-08-24 and correctly waited).
+10     17    *    *    1-5  /usr/local/bin/python -m sepa.cli zero-dte-resolve
+#
 # Mon-Fri 8:30am ET — morning brief is built from the latest scan.
 30     8     *    *    1-5  /usr/local/bin/python -m sepa.cli brief
 #
