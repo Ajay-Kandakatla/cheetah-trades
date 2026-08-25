@@ -80,3 +80,37 @@ describe('resolveBack', () => {
     }
   });
 });
+
+// ── sourceKeyFor (Ajay 2026-08-24: "back button from supply demand ... goes
+//    to sepa always") ─────────────────────────────────────────────────────────
+import { sourceKeyFor } from './navSource';
+
+describe('sourceKeyFor', () => {
+  it('recognises the page a link is rendered on', () => {
+    expect(sourceKeyFor('/supply-demand')).toBe('supply-demand');
+    expect(sourceKeyFor('/chart-maps')).toBe('chart-maps');
+    expect(sourceKeyFor('/demand-zones')).toBe('demand-zones');
+  });
+
+  it('matches a sub-path but not a lookalike prefix', () => {
+    // '/supply-demand/foo' is still the page; '/supply-demandX' is not.
+    expect(sourceKeyFor('/supply-demand/detail')).toBe('supply-demand');
+    expect(sourceKeyFor('/supply-demandX')).toBeNull();
+  });
+
+  it('returns null for pages that never registered', () => {
+    // A null key means the link carries no ?from= — same behaviour as before
+    // this change, for every unregistered page.
+    expect(sourceKeyFor('/sepa/NVDA')).toBeNull();
+    expect(sourceKeyFor('/')).toBeNull();
+    expect(sourceKeyFor('')).toBeNull();
+    expect(sourceKeyFor(null)).toBeNull();
+  });
+
+  it('feeds resolveBack: a fresh tab with ONLY the derived param finds its way home', () => {
+    // The reported bug: Cmd-click from Supply & Demand opens a tab with no
+    // router state and no history. The derived ?from= must be enough by itself.
+    const key = sourceKeyFor('/supply-demand')!;
+    expect(resolveBack(null, key)).toEqual({ path: '/supply-demand', label: 'Supply & Demand' });
+  });
+});

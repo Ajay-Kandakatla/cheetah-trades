@@ -10,6 +10,7 @@
  */
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { withSource } from '../lib/navSource';
 import { InfoButton } from '../components/InfoButton';
 import { useDemandZones, type DemandZoneRow, type DepthClass } from '../hooks/useDemandZones';
 
@@ -189,7 +190,11 @@ export function DemandZonesPage() {
               return (
                 <div key={row.symbol} className={`dz-card ${row.in_zone ? 'dz-card--in' : ''}`}>
                   <div className="dz-card__head">
-                    <Link to={`/sepa/${row.symbol}`} className="dz-sym">{row.symbol}</Link>
+                    <Link
+                  to={withSource(`/sepa/${row.symbol}`, 'demand-zones')}
+                  state={{ from: '/demand-zones', label: 'Demand Zones' }}
+                  className="dz-sym"
+                >{row.symbol}</Link>
                     <span className="dz-name">{row.name}</span>
                     <span className="dz-src" title={sm.label}>{sm.icon}</span>
                     {row.pulled_back && (

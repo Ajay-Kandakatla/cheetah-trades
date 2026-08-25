@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import type { CSSProperties, ReactNode, MouseEvent } from 'react';
 import { WatchlistButton } from './WatchlistButton';
 import { TickerPrice } from './TickerPrice';
-import { NAV_SOURCES } from '../lib/navSource';
+import { NAV_SOURCES, sourceKeyFor, withSource } from '../lib/navSource';
 
 type Props = {
   ticker: string;
@@ -51,7 +51,16 @@ export function TickerLink({
   // tab click, and never existed at all for a Cmd-clicked or bookmarked link.
   const qs = new URLSearchParams();
   if (tab) qs.set('tab', tab);
-  if (fromKey && NAV_SOURCES[fromKey]) qs.set('from', fromKey);
+  // The durable source signal. Explicit fromKey wins; otherwise it is derived
+  // from where this link is RENDERED. Derived rather than opt-in because the
+  // opt-in version was forgotten on most Supply & Demand links, and a link
+  // opened in a fresh tab (Cmd-click / middle-click) has no router state and
+  // no history — without ?from= its back button hard-falls to /sepa
+  // (Ajay 2026-08-24: "it goes to sepa always").
+  const effectiveKey = fromKey && NAV_SOURCES[fromKey]
+    ? fromKey
+    : sourceKeyFor(location.pathname);
+  if (effectiveKey) qs.set('from', effectiveKey);
   const to = `/sepa/${encodeURIComponent(ticker)}${qs.size ? `?${qs}` : ''}`;
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     // Modifier keys (Cmd/Ctrl/Shift) → let the browser handle (new tab/window).
@@ -107,7 +116,10 @@ export function openTickerWithModifier(
   ticker: string,
   fromLabel?: string,
 ) {
-  const url = `/sepa/${encodeURIComponent(ticker)}`;
+  // Same derivation as the component: the new-tab branch below starts with no
+  // state and no history, so ?from= is the ONLY thing its back button can use.
+  const url = withSource(`/sepa/${encodeURIComponent(ticker)}`,
+                         sourceKeyFor(location.pathname) || '');
   if (e && (e.metaKey || e.ctrlKey || e.shiftKey || (e as any).button === 1)) {
     window.open(url, '_blank', 'noopener,noreferrer');
     return;

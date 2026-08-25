@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { FlowSnapshot } from '../hooks/useSupplyDemand';
 import type { MouseEvent } from 'react';
+import { sourceKeyFor, withSource } from '../lib/navSource';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { getMarketSession, pickDisplayPrice } from '../lib/marketSession';
 import { SessionBadge } from './SessionBadge';
@@ -30,14 +31,19 @@ export function MoneyFlowLeaderboard({ flow, onTickerClick }: Props) {
     : 'previous';
 
   const handleClick = (t: string, e?: MouseEvent) => {
+    // ?from= on BOTH branches. The new-tab branch has no router state and no
+    // history, so without it the destination's back button hard-falls to
+    // /sepa — the exact "goes to sepa always" Ajay reported from this page.
+    const url = withSource(`/sepa/${encodeURIComponent(t)}`,
+                           sourceKeyFor(location.pathname) || '');
     // Cmd / Ctrl / Shift / middle-click → always open in a new tab,
     // regardless of whether onTickerClick is set
     if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) {
-      window.open(`/sepa/${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
+      window.open(url, '_blank', 'noopener,noreferrer');
       return;
     }
     if (onTickerClick) onTickerClick(t);
-    else nav(`/sepa/${t}`, {
+    else nav(url, {
       state: { from: location.pathname + location.search, label: fromLabel },
     });
   };

@@ -28,7 +28,37 @@ export const NAV_SOURCES: Record<string, NavSource> = {
   // which is enough for the back button UNTIL the first tab click replaces the
   // history entry and drops it — exactly the bug this module exists to fix.
   'supply-demand': { path: '/supply-demand', label: 'Supply & Demand' },
+  // Ajay 2026-08-24: "back button from supply demand doesnt take me to same
+  // page ... it goes to sepa always". The zones list page is part of the same
+  // family and had the same raw-Link problem.
+  'demand-zones': { path: '/demand-zones', label: 'Demand Zones' },
 };
+
+/** The registry, read backwards: which source key does a pathname belong to?
+ *
+ *  This exists because the durable `?from=` signal was OPT-IN per callsite,
+ *  and callsites forgot. Router state covers a plain click, but a Cmd-click,
+ *  middle-click or `window.open` starts a fresh tab with NO state and NO
+ *  history — the detail page's back button then falls through to its hard
+ *  `/sepa` default, which is exactly the bug Ajay hit from Supply & Demand.
+ *  Deriving the key from where the link is RENDERED makes the durable signal
+ *  automatic for every registered page instead of a per-link chore.
+ *
+ *  Prefix match, longest first, so '/supply-demand/anything' still resolves
+ *  and a future '/demand-zones-x' route cannot be claimed by '/demand-zones'. */
+export function sourceKeyFor(pathname: string | null | undefined): string | null {
+  const p = (pathname || '').split('?')[0];
+  let best: string | null = null;
+  let bestLen = 0;
+  for (const [key, src] of Object.entries(NAV_SOURCES)) {
+    if (src.path.length <= bestLen) continue;
+    if (p === src.path || p.startsWith(src.path + '/')) {
+      best = key;
+      bestLen = src.path.length;
+    }
+  }
+  return best;
+}
 
 /** Append `from=<key>` to a detail href, preserving any query it already has
  *  (the chart-map tiles ship `?tab=setup` / `?tab=supply`). Unknown keys are

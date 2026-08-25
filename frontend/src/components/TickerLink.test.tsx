@@ -68,3 +68,36 @@ describe('TickerLink href', () => {
       'href', '/sepa/MOS?tab=setup&from=supply-demand');
   });
 });
+
+// ── derived ?from= (Ajay 2026-08-24: "back button from supply demand doesnt
+//    take me to same page ... it goes to sepa always") ───────────────────────
+// A link opened in a fresh tab has no router state and no history, so the
+// destination's back button can only read ?from=. It used to be opt-in per
+// callsite and most Supply & Demand links forgot it; now it derives from the
+// page the link is rendered on.
+const hrefAt = (path: string, ui: React.ReactElement) => {
+  render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>);
+  return screen.getByRole('link').getAttribute('href') || '';
+};
+
+describe('TickerLink derived source', () => {
+  it('a link rendered on Supply & Demand carries ?from= without being asked', () => {
+    expect(hrefAt('/supply-demand', <TickerLink ticker="CR" />))
+      .toBe('/sepa/CR?from=supply-demand');
+  });
+
+  it('the derived key never overrides an explicit one', () => {
+    expect(hrefAt('/supply-demand', <TickerLink ticker="CR" fromKey="chart-maps" />))
+      .toBe('/sepa/CR?from=chart-maps');
+  });
+
+  it('an unregistered page still produces a bare link', () => {
+    // Every page outside the registry keeps its old behaviour exactly.
+    expect(hrefAt('/portfolio', <TickerLink ticker="CR" />)).toBe('/sepa/CR');
+  });
+
+  it('tab and derived source ride together', () => {
+    expect(hrefAt('/demand-zones', <TickerLink ticker="CR" tab="setup" />))
+      .toBe('/sepa/CR?tab=setup&from=demand-zones');
+  });
+});
