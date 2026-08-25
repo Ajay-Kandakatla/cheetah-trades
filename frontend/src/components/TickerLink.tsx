@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import type { CSSProperties, ReactNode, MouseEvent } from 'react';
 import { WatchlistButton } from './WatchlistButton';
 import { TickerPrice } from './TickerPrice';
-import { NAV_SOURCES, sourceKeyFor, withSource } from '../lib/navSource';
+import { NAV_SOURCES, sanitizeSourceQuery, sourceKeyFor, withSource } from '../lib/navSource';
 
 type Props = {
   ticker: string;
@@ -61,6 +61,12 @@ export function TickerLink({
     ? fromKey
     : sourceKeyFor(location.pathname);
   if (effectiveKey) qs.set('from', effectiveKey);
+  // The source page's own query rides along (from_q) so the new-tab branch —
+  // no state, no history — can come back to the same TAB, not just the same
+  // page (Ajay 2026-08-25: "back button do not take me to the same place in
+  // these tabs").
+  const carryQ = sanitizeSourceQuery(location.search);
+  if (effectiveKey && carryQ) qs.set('from_q', carryQ);
   const to = `/sepa/${encodeURIComponent(ticker)}${qs.size ? `?${qs}` : ''}`;
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     // Modifier keys (Cmd/Ctrl/Shift) → let the browser handle (new tab/window).
@@ -119,7 +125,8 @@ export function openTickerWithModifier(
   // Same derivation as the component: the new-tab branch below starts with no
   // state and no history, so ?from= is the ONLY thing its back button can use.
   const url = withSource(`/sepa/${encodeURIComponent(ticker)}`,
-                         sourceKeyFor(location.pathname) || '');
+                         sourceKeyFor(location.pathname) || '',
+                         location.search);
   if (e && (e.metaKey || e.ctrlKey || e.shiftKey || (e as any).button === 1)) {
     window.open(url, '_blank', 'noopener,noreferrer');
     return;

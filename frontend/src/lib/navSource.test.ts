@@ -114,3 +114,51 @@ describe('sourceKeyFor', () => {
     expect(resolveBack(null, key)).toEqual({ path: '/supply-demand', label: 'Supply & Demand' });
   });
 });
+
+describe('from_q — the back target keeps the source page STATE (2026-08-25)', () => {
+  // Two new Chart Maps tabs shipped and the bug resurfaced one level deeper:
+  // ?from=chart-maps got him back to the PAGE but not the TAB — /chart-maps
+  // ?tab=gabbar returned as bare /chart-maps, i.e. Strong VCP.
+  it('withSource carries the source query as from_q', () => {
+    const url = withSource('/sepa/ARR?tab=setup', 'chart-maps', '?tab=deep_demand&sort=rs');
+    const q = new URLSearchParams(url.split('?')[1]);
+    expect(q.get('from')).toBe('chart-maps');
+    expect(q.get('from_q')).toBe('tab=deep_demand&sort=rs');
+    expect(q.get('tab')).toBe('setup');
+  });
+
+  it('strips from/from_q out of the carried query — no recursion', () => {
+    const url = withSource('/sepa/X', 'chart-maps', '?tab=gabbar&from=evil&from_q=nested');
+    const q = new URLSearchParams(url.split('?')[1]);
+    expect(q.get('from_q')).toBe('tab=gabbar');
+  });
+
+  it('omits from_q entirely for an empty or missing source query', () => {
+    for (const s of [undefined, '', '?']) {
+      const url = withSource('/sepa/X', 'chart-maps', s);
+      expect(url).not.toContain('from_q');
+    }
+  });
+
+  it('resolveBack appends the carried query to the REGISTRY path only', () => {
+    const back = resolveBack(null, 'chart-maps', 'tab=gabbar');
+    expect(back).toEqual({ path: '/chart-maps?tab=gabbar', label: 'Chart Maps' });
+  });
+
+  it('resolveBack without from_q behaves exactly as before', () => {
+    expect(resolveBack(null, 'chart-maps', null)).toEqual(NAV_SOURCES['chart-maps']);
+  });
+
+  it('a hostile from_q cannot escape the query position', () => {
+    // Anything path-like is re-serialized as query data, never a new path.
+    const back = resolveBack(null, 'chart-maps', '/evil.example/phish?x=1');
+    expect(back!.path.startsWith('/chart-maps?')).toBe(true);
+    expect(back!.path).not.toContain('//');
+  });
+
+  it('state still wins over from/from_q, carrying its own full path', () => {
+    const back = resolveBack({ from: '/chart-maps?tab=deep_demand', label: 'Chart Maps' },
+                             'supply-demand', 'other=1');
+    expect(back!.path).toBe('/chart-maps?tab=deep_demand');
+  });
+});

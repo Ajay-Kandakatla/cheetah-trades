@@ -9,7 +9,7 @@
  * Educational, not advice.
  */
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { withSource } from '../lib/navSource';
 import { InfoButton } from '../components/InfoButton';
 import { useDemandZones, type DemandZoneRow, type DepthClass } from '../hooks/useDemandZones';
@@ -117,6 +117,7 @@ function StatusBadge({ row }: { row: DemandZoneRow }) {
 type SortKey = 'default' | 'distance' | 'depth' | 'demand_score';
 
 export function DemandZonesPage() {
+  const location = useLocation();
   const { data, loading, error } = useDemandZones();
   const [sort, setSort] = useState<SortKey>('default');
   const [showNoBase, setShowNoBase] = useState(false);
@@ -191,7 +192,7 @@ export function DemandZonesPage() {
                 <div key={row.symbol} className={`dz-card ${row.in_zone ? 'dz-card--in' : ''}`}>
                   <div className="dz-card__head">
                     <Link
-                  to={withSource(`/sepa/${row.symbol}`, 'demand-zones')}
+                  to={withSource(`/sepa/${row.symbol}`, 'demand-zones', location.search)}
                   state={{ from: '/demand-zones', label: 'Demand Zones' }}
                   className="dz-sym"
                 >{row.symbol}</Link>

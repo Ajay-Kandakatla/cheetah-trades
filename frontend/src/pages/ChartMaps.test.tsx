@@ -338,3 +338,21 @@ describe('background auto-refresh', () => {
     }
   });
 });
+
+describe('tile links carry the tab back (2026-08-25)', () => {
+  it('a tile clicked from a non-default tab returns to THAT tab', async () => {
+    // Render the page on ?tab=vcp with an explicit extra param and check the
+    // tile href carries from_q — the durable half of the round trip (the
+    // state half is covered by navSource.test.ts resolveBack precedence).
+    render(
+      <MemoryRouter initialEntries={['/chart-maps?tab=vcp&sort=rs']}>
+        <ChartMaps />
+      </MemoryRouter>,
+    );
+    const link = await screen.findByRole('link', { name: /AVGO — open SEPA detail/ });
+    const href = link.getAttribute('href') || '';
+    const q = new URLSearchParams(href.split('?')[1]);
+    expect(q.get('from')).toBe('chart-maps');
+    expect(q.get('from_q')).toBe('tab=vcp&sort=rs');
+  });
+});
