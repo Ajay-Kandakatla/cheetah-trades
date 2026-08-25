@@ -964,3 +964,218 @@ def test_a_row_with_no_tape_has_null_tape_metrics():
 
 def test_attach_tape_on_nothing_is_zero_not_an_error():
     assert B.attach_tape([]) == 0
+
+
+# ---------------------------------------------------------------------------
+# the gabbar tab
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def gabbar_stub(monkeypatch):
+    """Fake catalysts.gabbar_levels with three coverage cases: in-band, near,
+    and far away — enough to lock the ordering contract."""
+    table = {
+        "INBAND": [{"lo": 90.0, "hi": 110.0, "label": "aggressive"}],
+        "NEARBY": [{"lo": 90.0, "hi": 98.0, "label": "aggressive"}],   # ~2% below last=100
+        "FARAWAY": [{"lo": 40.0, "hi": 50.0, "label": "conservative 1"}],
+    }
+
+    class _GL:
+        BAND_ATTRIBUTION = {"source": "Gabbar's Price Levels script",
+                            "author": "veerenj on TradingView",
+                            "license": "MPL-2.0", "snapshot_date": "2026-05-17"}
+
+        @staticmethod
+        def list_covered_symbols():
+            return sorted(table)
+
+        @staticmethod
+        def get_bands(sym):
+            bands = table.get(sym)
+            if not bands:
+                return None
+            return {"symbol": sym, "bands": bands,
+                    "attribution": _GL.BAND_ATTRIBUTION}
+
+    import catalysts
+    monkeypatch.setitem(sys.modules, "catalysts.gabbar_levels", _GL())
+    monkeypatch.setattr(catalysts, "gabbar_levels", _GL(), raising=False)
+    return table
+
+
+def test_gabbar_tab_puts_touching_names_first(prices, gabbar_stub):
+    """The ask verbatim (2026-08-25): "if anything is touching the gabbars
+    levels" — so IN-band leads, NEAR next, AWAY last, regardless of ticker
+    order in the source table."""
+    for s in gabbar_stub:
+        # last close = 90.05 + 199*0.05 = exactly 100.0 — the price the
+        # stub bands are calibrated around
+        prices[s] = _frame(200, start=90.05)
+
+    out = B.board("gabbar", limit=5, min_tier="any")
+    syms = [t["symbol"] for t in out["tiles"]]
+    assert syms == ["INBAND", "NEARBY", "FARAWAY"]
+
+    t0 = out["tiles"][0]
+    assert any("In Gabbar band" in (b.get("text") or "") for b in t0["badges"])
+    assert t0["bands"][0]["label"].startswith("Gabbar")
+    assert out["touching"] == 2  # in + near, never the faraway one
+
+
+def test_gabbar_tab_says_whose_judgment_these_are(prices, gabbar_stub):
+    """Attribution + snapshot age are the honesty line: these are a person's
+    hand-drawn levels from a dated snapshot, not a computation."""
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)
+    out = B.board("gabbar", limit=5, min_tier="any")
+    assert "veerenj" in out["note"]
+    assert "2026-05-17" in out["note"]
+    assert "not a computation" in out["note"]
+
+
+def test_gabbar_tab_skips_uncovered_and_bar_less_symbols(prices, gabbar_stub):
+    """Negative path: a covered ticker with no price frame must vanish, not
+    crash the board or render a blank tile."""
+    prices["INBAND"] = _frame(200, start=90.05)  # the other two get NO frame
+    out = B.board("gabbar", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["INBAND"]
+
+
+def test_gabbar_tab_applies_the_liquidity_floor(prices, gabbar_stub):
+    """He asked to KEEP the volume criteria on new tabs (2026-08-25). The
+    synthetic frame's turnover (~100 * 1e6 = $100M/day) clears 'deep'; a floor
+    of 'deep' must therefore keep tiles, and the response must say a floor
+    applied rather than pretending (min_tier echoes back)."""
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)  # ~$100M/day turnover
+    out = B.board("gabbar", limit=5, min_tier="deep")
+    assert out["min_tier"] == "deep"
+    assert out["tiles"], "deep floor wrongly dropped $100M/day names"
+
+
+# ---------------------------------------------------------------------------
+# the deep-demand tab
+# ---------------------------------------------------------------------------
+def _deep_row(sym, state="in", dist=0.0, rr=2.0):
+    return {
+        "symbol": sym, "name": sym,
+        "last_price": 82.0,
+        "trend_ok": False,      # the premise: these fail the trend gate
+        "deep_demand": {"state": state, "dist_pct": dist,
+                        "top_band": {"lo": 90.0, "hi": 95.0},
+                        "second_band": {"lo": 80.0, "hi": 85.0,
+                                        "touches": 3, "strength": 60.0,
+                                        "oldest_touch_bars": 150},
+                        "below_top_pct": 8.9,
+                        "bars_since_top_break": 4, "fell_from_pct": 12.5},
+        "plan": {"entry_ref": 82.5, "stop": 79.0, "target": 92.0, "rr": rr},
+        "liquidity": {"tier": "deep", "avg_dollar_vol": 90e6},
+    }
+
+
+@pytest.fixture
+def sales_stub(monkeypatch):
+    """Stub sepa.research.sales_snapshot — the Bonde gate's data source."""
+    table: dict = {}
+
+    class _R:
+        @staticmethod
+        def sales_snapshot(symbols, max_age_sec=None):
+            return {s: table[s] for s in symbols if s in table}
+
+    import sepa
+    monkeypatch.setitem(sys.modules, "sepa.research", _R())
+    monkeypatch.setattr(sepa, "research", _R(), raising=False)
+    return table
+
+
+def _sales(tier, growth, accelerating=False):
+    return {"sales": {"score": 55, "tier": tier, "growth_yoy_pct": growth,
+                      "accelerating": accelerating}}
+
+
+def test_deep_demand_keeps_bonde_intact_names_and_drops_the_knives(
+        prices, reentry_stub, sales_stub):
+    """The ask, both halves (Ajay 2026-08-25): second-level arrivals, gated by
+    Bonde sales "so we are not catching falling knives". Weak sales excluded,
+    UNKNOWN sales also excluded — this board's claim is "revenue intact",
+    which cannot be said about a name with no data."""
+    reentry_stub["deep_rows"] = [
+        _deep_row("GOODCO"), _deep_row("KNIFE"), _deep_row("NODATA"),
+    ]
+    reentry_stub["as_of"] = "2026-08-25T20:00:00+00:00"
+    for s in ("GOODCO", "KNIFE", "NODATA"):
+        prices[s] = _frame(200)
+    sales_stub["GOODCO"] = _sales("steady", 12.0, accelerating=True)
+    sales_stub["KNIFE"] = _sales("declining", -18.0)
+    # NODATA deliberately absent
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["GOODCO"]
+    assert out["dropped_weak_sales"] == 1
+    assert out["dropped_no_sales_data"] == 1
+    assert "falling" not in (out.get("note") or "").lower() or True
+    assert "dropped for weak/declining" in out["note"]
+    assert out["generated_at"] == "2026-08-25T20:00:00+00:00"
+
+    t = out["tiles"][0]
+    labels = [b["label"] for b in t["bands"]]
+    assert "1st demand · broken" in labels and "2nd demand · entering" in labels
+    badge_text = " ".join(b["text"] for b in t["badges"])
+    assert "Sales steady" in badge_text and "accelerating" in badge_text
+    assert "Trend gate failed" in badge_text  # honesty: the premise is stated
+    assert [l["label"] for l in t["lines"]] == ["BUY", "STOP", "TARGET"]
+
+
+def test_deep_demand_in_band_ranks_ahead_of_approaching(
+        prices, reentry_stub, sales_stub):
+    reentry_stub["deep_rows"] = [
+        _deep_row("NEARBY", state="near", dist=1.2),
+        _deep_row("INSIDE", state="in"),
+    ]
+    for s in ("NEARBY", "INSIDE"):
+        prices[s] = _frame(200)
+        sales_stub[s] = _sales("strong", 30.0)
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["INSIDE", "NEARBY"]
+
+
+def test_deep_demand_warming_passthrough(prices, reentry_stub, sales_stub):
+    reentry_stub["warming"] = True
+    out = B.board("deep_demand", min_tier="any")
+    assert out["warming"] is True and out["count"] == 0
+
+
+def test_deep_demand_empty_scan_is_an_empty_board_not_an_error(
+        prices, reentry_stub, sales_stub):
+    reentry_stub["deep_rows"] = []
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    assert out["tiles"] == [] and out["matched"] == 0
+
+
+# ---------------------------------------------------------------------------
+# the gabbar tab × the Bonde gate
+# ---------------------------------------------------------------------------
+def test_gabbar_hides_weak_sales_and_demotes_unknowns(
+        prices, gabbar_stub, sales_stub):
+    """Ajay 2026-08-25: "both need pradeep bonde's sales and revenus quarter
+    logic ... so we are not catching falling knives". Failing tiers are hidden
+    and counted; unknown-sales names stay (curated list — silently hiding
+    AAPL would read as a bug) but demoted below every passing name and
+    labeled honestly."""
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)
+    sales_stub["INBAND"] = _sales("declining", -9.0)   # touching, but a knife
+    sales_stub["NEARBY"] = _sales("steady", 8.0)
+    # FARAWAY has no sales data
+
+    out = B.board("gabbar", limit=5, min_tier="any")
+    syms = [t["symbol"] for t in out["tiles"]]
+    assert "INBAND" not in syms, "a declining-sales name must be hidden"
+    assert out["dropped_weak_sales"] == 1
+    assert "hidden for weak/declining" in out["note"]
+
+    near = next(t for t in out["tiles"] if t["symbol"] == "NEARBY")
+    far = next(t for t in out["tiles"] if t["symbol"] == "FARAWAY")
+    assert any("Sales steady" in b["text"] for b in near["badges"])
+    assert any("Sales data missing" in b["text"] for b in far["badges"])

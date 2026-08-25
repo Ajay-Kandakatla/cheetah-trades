@@ -37,7 +37,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "zones", "supply", "zero_dte", "winners", "earnings")
+TABS = ("vcp", "zones", "supply", "deep_demand", "gabbar", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -1653,6 +1653,303 @@ def _usd_short(v) -> str:
         return f"${n / 1e6:.0f}M"
     return f"${n / 1e3:.0f}K"
 
+# Bonde sales tiers that clear the falling-knife gate on the Deep Demand and
+# Gabbar boards (Ajay 2026-08-25: "both need pradeep bonde's sales and revenus
+# quarter logic ... so we are not catching falling knives"). The tier names and
+# the 5% floor behind "steady" are sepa/sales.py's — Bonde's own documented
+# floor ("I take 5%"), contract-locked there. This tuple only SELECTS tiers;
+# it must never redefine a threshold.
+BONDE_PASS_TIERS = ("steady", "strong", "explosive")
+
+
+def _bonde_gate(snap: Optional[dict]) -> tuple[str, Optional[dict]]:
+    """("pass"|"fail"|"unknown", sales_block) for one symbol's sales snapshot."""
+    sales = (snap or {}).get("sales") or None
+    if not sales or sales.get("score") is None:
+        return "unknown", sales
+    return ("pass" if sales.get("tier") in BONDE_PASS_TIERS else "fail"), sales
+
+
+def _sales_badge(sales: dict) -> dict:
+    g = _f(sales.get("growth_yoy_pct"))
+    accel = " · accelerating" if sales.get("accelerating") else ""
+    return {"text": f"🟢 Sales {sales.get('tier')} {g:+.0f}%{accel}" if g is not None
+            else f"🟢 Sales {sales.get('tier')}", "tone": "good"}
+
+
+def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                      universe: str = "sp1500_plus",
+                      themes_first: bool = THEMES_FIRST_DEFAULT,
+                      sort: str = DEFAULT_SORT,
+                      min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """Deep Demand: broke the FIRST demand band, entering the SECOND — and
+    Bonde sales say the business didn't break with the price.
+
+    Ajay 2026-08-25: "stocks entering second level of demand zone from the top
+    but sales are intact ... penalized stocks that actually have good revenue
+    but market does not realize it."
+
+    Price half comes from the demand scan's `deep_rows` (computed in-scan
+    because these names usually fail trend_ok and never reach `rows` —
+    supply_demand/deep_demand.py). Sales half joins the weekly research cache
+    at read time. The gate here is STRICT both ways: failing Bonde's floor
+    excludes, and UNKNOWN sales also exclude — this board's whole claim is
+    "the revenue is intact", which cannot be said about a name with no data.
+    Both exclusion counts ride on the payload; a thin board explains itself.
+    """
+    from supply_demand import demand_reentry as D
+    from sepa import research
+
+    data = D.cached_or_warm(universe, limit=LIMIT_MAX)
+    if data.get("warming"):
+        return {"tiles": [], "warming": True,
+                "universe_key": data.get("universe_key") or universe,
+                "progress": data.get("progress"),
+                "note": "scanning for second-level demand arrivals…"}
+
+    rows = data.get("deep_rows") or []
+    snaps = research.sales_snapshot([r.get("symbol") for r in rows if r.get("symbol")])
+    flash_syms = _flash_symbols()
+
+    tiles, dropped_weak, dropped_unknown = [], 0, 0
+    for r in rows:
+        sym = (r.get("symbol") or "").upper()
+        d = r.get("deep_demand") or {}
+        if not sym or not d:
+            continue
+        state, sales = _bonde_gate(snaps.get(sym))
+        if state == "fail":
+            dropped_weak += 1
+            continue
+        if state == "unknown":
+            dropped_unknown += 1
+            continue
+
+        top, second = d.get("top_band") or {}, d.get("second_band") or {}
+        bands = []
+        if _num(top.get("lo")) is not None:
+            bands.append({"kind": "supply", "lo": _num(top.get("lo")),
+                          "hi": _num(top.get("hi")),
+                          "label": "1st demand · broken"})
+        if _num(second.get("lo")) is not None:
+            bands.append({"kind": "demand", "lo": _num(second.get("lo")),
+                          "hi": _num(second.get("hi")),
+                          "label": "2nd demand · entering"})
+
+        lines = []
+        plan = r.get("plan") or {}
+        for key, label, tone in (("entry_ref", "BUY", "buy"),
+                                 ("stop", "STOP", "stop"),
+                                 ("target", "TARGET", "target")):
+            pv = _num(plan.get(key))
+            if pv is not None:
+                lines.append({"price": pv, "label": label, "tone": tone})
+
+        g = _f((sales or {}).get("growth_yoy_pct"))
+        below = _f(d.get("below_top_pct"))
+        arriving = ("inside the 2nd band" if d.get("state") == "in"
+                    else f"{d.get('dist_pct'):.1f}% above the 2nd band")
+        why = (f"broke its 1st demand band ({below:.0f}% below it), now "
+               f"{arriving} — sales {'+' if (g or 0) >= 0 else ''}{g:.0f}% YoY "
+               f"say the business didn't break with the price"
+               if below is not None and g is not None else
+               "second-level demand arrival with Bonde-intact sales")
+
+        badges = [{"text": ("🩹 In 2nd demand band" if d.get("state") == "in"
+                             else "🩹 Entering 2nd band"), "tone": "warn"}]
+        if sales:
+            badges.append(_sales_badge(sales))
+        if not r.get("trend_ok", True):
+            badges.append({"text": "⚠ Trend gate failed — that's the premise",
+                           "tone": "muted"})
+        if sym in flash_syms:
+            badges.append({"text": "⚡ Tape burst at zone", "tone": "good"})
+
+        liq = r.get("liquidity") or {}
+        stats = [{"k": "Sales YoY", "v": f"{g:+.0f}%" if g is not None else "—"},
+                 {"k": "Below 1st", "v": f"{below:.0f}%" if below is not None else "—"},
+                 {"k": "2nd band", "v": (f"{_num(second.get('lo')):g}–{_num(second.get('hi')):g}"
+                                          if _num(second.get('lo')) is not None else "—")},
+                 {"k": "Liquidity", "v": (liq.get("tier") or "—")}]
+
+        in_band_lead = 1000.0 if d.get("state") == "in" else 0.0
+        tiles.append({
+            "symbol": sym,
+            "name": r.get("name") or _name_for(sym),
+            "href": _href(sym, "setup"),
+            "bars": [],
+            "_bars": {"days": _zone_window(second) if second else days},
+            "bands": bands,
+            "lines": lines,
+            "markers": [],
+            "stats": stats,
+            "why": why,
+            "theme": _theme(sym),
+            "badges": badges,
+            "_score": in_band_lead + (g or 0.0),
+            "_m": tile_metrics(r),
+        })
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    return {"tiles": out, **meta,
+            "matched": len(rows),
+            "dropped_weak_sales": dropped_weak,
+            "dropped_no_sales_data": dropped_unknown,
+            "deep_n": data.get("deep_n"),
+            "universe_key": data.get("universe_key"),
+            "universe_label": data.get("universe_label"),
+            "universe_choices": data.get("universe_choices"),
+            "scanned": data.get("scanned"),
+            "note": (f"Names that broke their highest demand band and are arriving at the "
+                     f"second — kept only when Bonde sales tiers (steady/strong/explosive, "
+                     f"his 5% YoY floor) say the business is intact. This scan: "
+                     f"{len(rows)} arrivals, {dropped_weak} dropped for weak/declining "
+                     f"sales, {dropped_unknown} dropped for no sales data. These fail the "
+                     f"trend gate BY DESIGN — size and stop accordingly."),
+            "generated_at": data.get("as_of")}
+
+
+def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                 themes_first: bool = THEMES_FIRST_DEFAULT,
+                 sort: str = DEFAULT_SORT,
+                 min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """Gabbar's Price Levels board (Ajay 2026-08-25: "create a tab for gabbars
+    price level and if anything is touching the gabbars levels").
+
+    The bands are veerenj's hand-curated buy zones, already mirrored in
+    catalysts/gabbar_levels.py for the SEPA candidate page. This board turns
+    the per-ticker lookup inside out: all 66 covered names, TOUCHING first.
+
+    * "Touching" reuses price_zones.NEAR_PCT — one scale for "at a level"
+      across the whole app (the same constant Trade Flash gates on).
+    * The bands are a snapshot of the author's judgment, not a computation.
+      The snapshot date rides on the board note because a 3-month-old level
+      on a moved stock is an opinion about a different chart.
+    * Liquidity floor works like every scan tab: avg $ turnover is computed
+      from the same cached daily frame the tile is drawn from.
+    """
+    from catalysts import gabbar_levels as GL
+    from supply_demand.price_zones import NEAR_PCT
+    from sepa import research
+
+    covered = GL.list_covered_symbols()
+    snaps = research.sales_snapshot(covered)
+    flash_syms = _flash_symbols()
+    tiles, dropped_weak = [], 0
+    for sym in covered:
+        payload = GL.get_bands(sym)
+        if not payload or not payload.get("bands"):
+            continue
+        # The falling-knife gate (Ajay 2026-08-25: "both need pradeep bonde's
+        # sales and revenus quarter logic"). Weak/declining sales EXCLUDE — a
+        # hand-drawn level under a shrinking business is exactly the knife.
+        # Unknown sales stay but are demoted and say so: this is a curated
+        # 66-name list, and silently hiding AAPL because a weekly cache blob
+        # was missing would read as a bug, not a filter.
+        gate, sales = _bonde_gate(snaps.get(sym))
+        if gate == "fail":
+            dropped_weak += 1
+            continue
+        bars = bars_for(sym, days=60)
+        if not bars:
+            continue
+        last = _f(bars[-1].get("c"))
+        if not last:
+            continue
+        tail = bars[-50:]
+        avg_turnover = sum((b.get("c") or 0) * (b.get("v") or 0) for b in tail) / max(1, len(tail))
+
+        # Nearest band by edge distance; inside any band wins outright.
+        state, best_label, best_dist = None, None, None
+        for b in payload["bands"]:
+            lo, hi = _f(b.get("lo")), _f(b.get("hi"))
+            if lo is None or hi is None:
+                continue
+            if lo <= last <= hi:
+                state, best_label, best_dist = "in", b.get("label"), 0.0
+                break
+            edge = lo if last < lo else hi
+            dist = abs(last - edge) / last * 100.0
+            if best_dist is None or dist < best_dist:
+                best_label, best_dist = b.get("label"), dist
+        if best_dist is None:
+            continue
+        if state != "in":
+            state = "near" if best_dist <= NEAR_PCT else "away"
+
+        bands = [{"kind": "demand", "lo": float(b["lo"]), "hi": float(b["hi"]),
+                  "label": f"Gabbar · {b.get('label') or 'band'}"}
+                 for b in payload["bands"]]
+
+        above = last > max(float(b["hi"]) for b in payload["bands"])
+        if state == "in":
+            why = f"inside Gabbar's {best_label} band right now"
+        elif state == "near":
+            why = f"{best_dist:.1f}% from Gabbar's {best_label} band"
+        else:
+            side = "above" if above else "past"
+            why = f"{best_dist:.0f}% {side} the nearest Gabbar band ({best_label})"
+
+        badges = []
+        if state == "in":
+            badges.append({"text": "🎯 In Gabbar band", "tone": "good"})
+        elif state == "near":
+            badges.append({"text": f"🎯 {best_dist:.1f}% from band", "tone": "warn"})
+        if gate == "pass" and sales:
+            badges.append(_sales_badge(sales))
+        elif gate == "unknown":
+            badges.append({"text": "❔ Sales data missing", "tone": "muted"})
+        if sym in flash_syms:
+            badges.append({"text": "⚡ Tape burst at zone", "tone": "good"})
+
+        # Touching sorts first, then by proximity. 1000-scale keeps IN ahead
+        # of every NEAR ahead of every AWAY regardless of raw distances; an
+        # unknown-sales name ranks after every Bonde-passing one in its state.
+        rank = {"in": 2000.0, "near": 1000.0}.get(state, 0.0) - best_dist
+        if gate == "unknown":
+            rank -= 500.0
+
+        tiles.append({
+            "symbol": sym,
+            "name": _name_for(sym),
+            "href": _href(sym, "setup"),
+            "bars": [],
+            "_bars": {"days": days},
+            "bands": bands,
+            "lines": [],
+            "markers": [],
+            "stats": [
+                {"k": "Level", "v": str(best_label or "—")},
+                {"k": "Dist", "v": ("in band" if state == "in" else f"{best_dist:.1f}%")},
+                {"k": "Bands", "v": str(len(payload["bands"]))},
+                {"k": "Avg $/day", "v": _usd_short(avg_turnover)},
+            ],
+            "why": why,
+            "theme": _theme(sym),
+            "badges": badges,
+            "_score": rank,
+            "_m": {**tile_metrics({"liquidity": {"avg_dollar_vol": avg_turnover},
+                                   "last_close": last})},
+        })
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    touching = sum(1 for t in tiles
+                   if any((b.get("text") or "").startswith("🎯") for b in t.get("badges") or []))
+    attr = GL.BAND_ATTRIBUTION
+    return {"tiles": out, **meta,
+            "matched": len(tiles),
+            "touching": touching,
+            "dropped_weak_sales": dropped_weak,
+            "note": (f"Hand-curated buy zones from {attr.get('source')} "
+                     f"({attr.get('author')}, {attr.get('license')}), snapshot "
+                     f"{attr.get('snapshot_date')} — the author's judgment, not a "
+                     f"computation, and levels this old describe the chart as it "
+                     f"was then. Touching names sort first. Bonde sales gate: "
+                     f"{dropped_weak} covered name(s) hidden for weak/declining "
+                     f"sales — a level under a shrinking business is the knife."),
+            "generated_at": None}
+
+
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
@@ -1680,6 +1977,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = zone_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "deep_demand":
+        out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "gabbar":
+        out = gabbar_tiles(limit, days, themes_first, srt, tier)
     elif t == "zero_dte":
         out = zero_dte_tiles(limit, days)
     elif t == "winners":
