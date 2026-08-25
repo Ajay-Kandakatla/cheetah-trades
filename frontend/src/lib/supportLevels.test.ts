@@ -242,3 +242,40 @@ describe('tested vs single-touch — found in the live smoke test 2026-08-19', (
     expect(testedCount(null)).toBe(0);
   });
 });
+
+// ── the overlay window (Ajay 2026-08-25) ─────────────────────────────────────
+describe('overlay window', () => {
+  it('parseWindow accepts "all" once the server offers it', () => {
+    expect(parseWindow('all')).toBe('all');           // FALLBACK now carries it
+    expect(parseWindow(' ALL ')).toBe('all');
+  });
+
+  it('evidenceLabel leads with agreement on overlay rows', () => {
+    const lv = {
+      lo: 223.31, hi: 230.5, mid: 226.9, origin: 'supply' as const,
+      touches: 3, strength: 0, bars_since_test: 4, oldest_touch_bars: null,
+      recent: true, tested: true, distance_pct: 8.5,
+      windows: ['1m', '3m', '6m', '1y'], agree: 4,
+    };
+    expect(evidenceLabel(lv)).toBe('4 windows agree (1m, 3m, 6m, 1y) · 3 touches');
+  });
+
+  it('a one-window level is called out as the caveat it is', () => {
+    const lv = {
+      lo: 179.31, hi: 179.72, mid: 179.5, origin: 'demand' as const,
+      touches: 1, strength: 0, bars_since_test: null, oldest_touch_bars: null,
+      recent: false, tested: false, distance_pct: 12.7,
+      windows: ['1y'], agree: 1,
+    };
+    expect(evidenceLabel(lv)).toBe('one window only (1y) · 1 touch · single low');
+  });
+
+  it('rows without overlay fields keep the exact old label', () => {
+    const lv = {
+      lo: 99, hi: 101, mid: 100, origin: 'demand' as const,
+      touches: 3, strength: 50, bars_since_test: 2, oldest_touch_bars: 40,
+      recent: true, tested: true, distance_pct: 1.0,
+    };
+    expect(evidenceLabel(lv)).toBe('3 touches');
+  });
+});

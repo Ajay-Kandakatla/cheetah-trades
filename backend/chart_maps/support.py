@@ -106,8 +106,19 @@ MAX_LEVELS = 6
 DISCLAIMER = pz.DISCLAIMER
 
 
+# The overlay pseudo-window (Ajay 2026-08-25: "where can I see the overlapping
+# Demand zones?" after the CR study). Not a zoom — ALL zooms at once, clustered.
+OVERLAY_KEY = "all"
+
+# Bands whose midpoints sit within this % of each other are the same level seen
+# through different windows. The same 2% the CR overlay study used; tighter
+# than price_zones.ZONE_MERGE_PCT-at-4% territory would double-merge, looser
+# would split genuine agreement.
+CLUSTER_PCT = 2.0
+
+
 def window_keys() -> list[str]:
-    return [w["key"] for w in SUPPORT_WINDOWS]
+    return [w["key"] for w in SUPPORT_WINDOWS] + [OVERLAY_KEY]
 
 
 def parse_window(raw) -> str:
@@ -182,6 +193,177 @@ def _dedupe(zones: list[dict]) -> list[dict]:
         seen.add(key)
         out.append(z)
     return out
+
+
+def cluster_bands(tagged: list[dict], last_price: float) -> list[dict]:
+    """Cluster bands from DIFFERENT windows into agreed levels. PURE.
+
+    `tagged` rows are price_zones bands with a `window` key added. Bands whose
+    midpoints land within CLUSTER_PCT of each other are one level seen through
+    different zooms — and the count of DISTINCT windows agreeing is the signal.
+    Measured on CR (2026-08-24): the two four-window clusters were the level
+    price stood on and the ceiling above it; every single-window band was an
+    artifact of that window.
+
+    What is deliberately NOT merged across windows:
+      * `strength` — relative within its own window, meaningless across zooms
+        (the same CR band scored 58 at 1y and 100 at 6m). The cluster carries
+        no strength at all rather than a lying one.
+      * touches — the MAX is kept, because the longest window sees the full
+        count and the short window's smaller number is truncation, not
+        disagreement.
+    """
+    order = {w["key"]: i for i, w in enumerate(SUPPORT_WINDOWS)}
+    rows = sorted((b for b in tagged
+                   if b.get("lo") is not None and b.get("hi") is not None),
+                  key=lambda b: (float(b["lo"]) + float(b["hi"])) / 2.0)
+    clusters: list[dict] = []
+    for b in rows:
+        mid = (float(b["lo"]) + float(b["hi"])) / 2.0
+        if clusters and mid <= clusters[-1]["_last_mid"] * (1 + CLUSTER_PCT / 100.0):
+            c = clusters[-1]
+            c["members"].append(b)
+            c["_last_mid"] = mid
+        else:
+            clusters.append({"_last_mid": mid, "members": [b]})
+
+    out = []
+    for c in clusters:
+        m = c["members"]
+        lo = min(float(x["lo"]) for x in m)
+        hi = max(float(x["hi"]) for x in m)
+        wins = sorted({x["window"] for x in m}, key=lambda k: order.get(k, 99))
+        touches = max(int(x.get("touches") or 0) for x in m)
+        bars_since = [x.get("bars_since_test") for x in m
+                      if x.get("bars_since_test") is not None]
+        side = ("in" if lo <= last_price <= hi
+                else "below" if hi < last_price else "above")
+        out.append({
+            "lo": round(lo, 2), "hi": round(hi, 2),
+            "mid": round((lo + hi) / 2.0, 2),
+            "windows": wins,
+            "agree": len(wins),
+            "touches": touches,
+            "tested": touches >= MIN_TOUCHES_TESTED,
+            "bars_since_test": min(bars_since) if bars_since else None,
+            "recent": bool(bars_since and min(bars_since) <= RECENT_BARS),
+            "side": side,
+            "distance_pct": (0.0 if side == "in"
+                             else _pct_below(last_price, hi) if side == "below"
+                             else _pct_above(last_price, lo)),
+            # Kept for the FE type; an overlay row has no single origin.
+            "origin": "demand" if side != "above" else "supply",
+            "strength": None,
+            "oldest_touch_bars": None,
+        })
+    # Strongest agreement first, then nearest — the reading order of the table.
+    out.sort(key=lambda c: (-c["agree"], abs(c["distance_pct"] or 0.0)))
+    return out
+
+
+def overlay_for_symbol(sym: str, base: dict) -> dict:
+    """All zooms at once: each window's bands computed independently, then
+    clustered by agreement. The chart draws only clusters TWO OR MORE windows
+    agree on — drawing all ~20 raw bands is the solid-block chart the label
+    cap already exists to prevent, and agreement is the point of the view."""
+    from sepa import prices
+
+    try:
+        df = prices.load_prices(sym, period="2y")
+    except Exception:                                          # pragma: no cover
+        df = None
+    if df is None or not len(df):
+        return {**base, "error": f"No price data for {sym}."}
+
+    tagged: list[dict] = []
+    per_window: list[dict] = []
+    last_price = None
+    for w in SUPPORT_WINDOWS:
+        z = pz.compute(df, swing_window=w["swing_window"], lookback_bars=w["bars"])
+        if z is None:
+            per_window.append({"key": w["key"], "bands": 0})
+            continue
+        last_price = float(z["last_price"])
+        pool = _dedupe(list(z.get("demand_zones") or [])
+                       + list(z.get("supply_zones") or [])
+                       + [z.get("nearest_support"), z.get("nearest_resistance")])
+        for b in pool:
+            tagged.append({**b, "window": w["key"]})
+        per_window.append({"key": w["key"], "bands": len(pool)})
+    if last_price is None or not tagged:
+        return {**base, "error": f"No swing structure for {sym} in any window."}
+
+    clusters = cluster_bands(tagged, last_price)
+    agreed = [c for c in clusters if c["agree"] >= 2]
+    supports = [c for c in clusters if c["side"] == "below"][:MAX_LEVELS]
+    overhead = [c for c in clusters if c["side"] == "above"][:MAX_LEVELS]
+    inside = next((c for c in clusters if c["side"] == "in"), None)
+
+    bands = []
+    if inside and inside["agree"] >= 2:
+        bands.append({"kind": "demand", "lo": inside["lo"], "hi": inside["hi"],
+                      "label": f"here · {inside['agree']} windows"})
+    for c in agreed:
+        if c["side"] == "below":
+            bands.append({"kind": "demand", "lo": c["lo"], "hi": c["hi"],
+                          "label": f"{c['agree']}w"})
+        elif c["side"] == "above":
+            bands.append({"kind": "supply", "lo": c["lo"], "hi": c["hi"],
+                          "label": f"{c['agree']}w"})
+    bands = bands[:7]
+
+    lines = [{"price": round(last_price, 2), "label": "now", "tone": "now"}]
+    if supports:
+        lines.append({"price": supports[0]["hi"],
+                      "label": f"support {supports[0]['hi']}", "tone": "buy"})
+    if overhead:
+        lines.append({"price": overhead[0]["lo"],
+                      "label": f"overhead {overhead[0]['lo']}", "tone": "target"})
+
+    bars_used = min(len(df), SUPPORT_WINDOWS[-1]["bars"])
+    best = clusters[0] if clusters else None
+    tile = {
+        "symbol": sym,
+        "name": board_mod._name_for(sym),
+        "href": board_mod._href(sym, "supply"),
+        "bars": board_mod.bars_for(sym, days=bars_used),
+        "bands": bands,
+        "lines": lines,
+        "markers": [],
+        "stats": [
+            {"k": "zoom", "v": "all windows"},
+            {"k": "levels", "v": str(len(clusters))},
+            {"k": "agreed 2+", "v": str(len(agreed))},
+            {"k": "best agreement", "v": (f"{best['agree']} windows"
+                                          if best else "—")},
+        ],
+        "why": (f"{len(agreed)} levels confirmed by 2+ windows out of "
+                f"{len(clusters)} found — agreement is the signal; a level "
+                f"only one zoom can see is usually an artifact of that zoom"),
+        "theme": board_mod._theme(sym),
+        "badges": [],
+    }
+
+    return {
+        **base,
+        "name": tile["name"],
+        "last_price": last_price,
+        "bars_used": bars_used,
+        "short_history": None,
+        "tile": tile,
+        "supports": supports,
+        "overhead": overhead,
+        "standing_in": inside,
+        "levels_capped": len(clusters) > len(supports) + len(overhead) + (1 if inside else 0),
+        "per_window": per_window,
+        "verdict": None,
+        "params": {"cluster_pct": CLUSTER_PCT},
+        "note": ("Every zoom computed independently, then clustered: bands "
+                 "within 2% of each other are one level seen through different "
+                 "windows. The chart draws only levels TWO OR MORE windows "
+                 "agree on. Strength is not shown here — it is relative within "
+                 "a single window and does not compare across zooms."),
+    }
 
 
 def levels_from_zones(zones: dict, last_price: float) -> dict:
@@ -297,17 +479,22 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
     """
     sym = (symbol if isinstance(symbol, str) else "").upper().strip()
     spec = window_spec(window)
+    overlay = parse_window(window) == OVERLAY_KEY
     base = {
         "symbol": sym,
-        "window": spec["key"],
-        "window_label": spec["label"],
-        "windows": [{"key": w["key"], "label": w["label"], "bars": w["bars"]}
-                    for w in SUPPORT_WINDOWS],
+        "window": OVERLAY_KEY if overlay else spec["key"],
+        "window_label": "All windows · overlay" if overlay else spec["label"],
+        "windows": ([{"key": w["key"], "label": w["label"], "bars": w["bars"]}
+                     for w in SUPPORT_WINDOWS]
+                    + [{"key": OVERLAY_KEY, "label": "All windows · overlay",
+                        "bars": 0}]),
         "recent_bars": RECENT_BARS,
         "disclaimer": DISCLAIMER,
     }
     if not sym:
         return {**base, "error": "Type a ticker to see its support levels."}
+    if overlay:
+        return overlay_for_symbol(sym, base)
 
     try:
         from sepa import prices

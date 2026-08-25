@@ -35,6 +35,11 @@ export type SupportLevel = {
    *  never presented as a floor. */
   tested: boolean;
   distance_pct: number | null;
+  /** Overlay mode only — which zooms found this level, and how many agree.
+   *  Agreement is the signal: a level only one window can see is usually an
+   *  artifact of that window. */
+  windows?: string[];
+  agree?: number;
 };
 
 export type SupportPayload = {
@@ -69,6 +74,8 @@ export const FALLBACK_WINDOWS: SupportWindow[] = [
   { key: '3m', label: '3 months', bars: 63 },
   { key: '6m', label: '6 months', bars: 126 },
   { key: '1y', label: '1 year', bars: 252 },
+  // The overlay pseudo-window: every zoom at once, clustered by agreement.
+  { key: 'all', label: 'All windows · overlay', bars: 0 },
 ];
 
 /** Matches backend support.DEFAULT_WINDOW. */
@@ -148,6 +155,16 @@ export function evidenceLabel(lv: SupportLevel | null | undefined): string {
   if (!lv) return '—';
   const t = lv.touches ?? 0;
   const touches = t === 1 ? '1 touch' : `${t} touches`;
+  // Overlay rows lead with agreement — it outranks everything else on the row.
+  // "one window only" is spelled out because in this view that IS the caveat.
+  if (lv.agree != null && lv.windows?.length) {
+    const who = lv.windows.join(', ');
+    const head = lv.agree >= 2
+      ? `${lv.agree} windows agree (${who})`
+      : `one window only (${who})`;
+    const weakO = lv.tested ? '' : ' · single low';
+    return `${head} · ${touches}${weakO}`;
+  }
   const polarity = lv.origin === 'supply' ? ' · was resistance' : '';
   // Spelled out rather than left to be inferred from "1". This is the level a
   // stop goes under, and the difference between a floor and a bar is the whole

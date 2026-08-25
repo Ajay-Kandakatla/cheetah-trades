@@ -302,7 +302,10 @@ def test_the_tile_carries_every_key_the_shared_contract_promises(loaded):
 def test_an_empty_symbol_answers_with_the_dropdown_still_populated():
     out = S.for_symbol("", "3m")
     assert "error" in out
-    assert len(out["windows"]) == len(S.SUPPORT_WINDOWS)
+    # The dropdown carries every real window PLUS the overlay pseudo-window
+    # (added 2026-08-25) — a miss must still offer every way out.
+    assert len(out["windows"]) == len(S.SUPPORT_WINDOWS) + 1
+    assert out["windows"][-1]["key"] == S.OVERLAY_KEY
 
 
 def test_a_non_string_symbol_does_not_raise():
@@ -501,3 +504,88 @@ def test_the_stats_separate_RECENCY_from_EVIDENCE(loaded):
     stats = {s["k"]: s["v"] for s in S.for_symbol("TEST", "6m")["tile"]["stats"]}
     assert "touched in last month" in stats
     assert "turned at more than once" in stats
+
+
+# ── the overlay window (Ajay 2026-08-25: "where can I see the overlapping
+#    Demand zones?") ─────────────────────────────────────────────────────────
+support = S
+
+
+def test_cluster_bands_counts_DISTINCT_windows_not_bands():
+    """Two bands from the SAME window are one voice, not two. Agreement means
+    independent zooms seeing the same level."""
+    tagged = [
+        {"lo": 99.0, "hi": 101.0, "touches": 2, "window": "1y"},
+        {"lo": 99.5, "hi": 100.5, "touches": 1, "window": "1y"},   # same window
+        {"lo": 99.2, "hi": 100.8, "touches": 1, "window": "3m"},
+    ]
+    c = support.cluster_bands(tagged, 110.0)
+    assert len(c) == 1
+    assert c[0]["agree"] == 2                     # 1y + 3m, not 3
+    assert c[0]["windows"] == ["3m", "1y"]        # short → long, dropdown order
+
+
+def test_bands_further_apart_than_the_cluster_width_stay_separate():
+    tagged = [{"lo": 100.0, "hi": 101.0, "touches": 2, "window": "1y"},
+              {"lo": 106.0, "hi": 107.0, "touches": 2, "window": "3m"}]
+    c = support.cluster_bands(tagged, 120.0)
+    assert len(c) == 2
+    assert all(x["agree"] == 1 for x in c)
+
+
+def test_touches_keep_the_MAX_because_short_windows_truncate_the_count():
+    """The 5x on CR's $173 floor only exists at the zooms long enough to see all
+    five touches; a 3m window reporting 1 is truncation, not disagreement."""
+    tagged = [{"lo": 173.6, "hi": 176.0, "touches": 5, "window": "1y"},
+              {"lo": 174.2, "hi": 176.3, "touches": 1, "window": "6m"}]
+    c = support.cluster_bands(tagged, 206.0)
+    assert c[0]["touches"] == 5
+    assert c[0]["tested"] is True
+
+
+def test_strength_is_REFUSED_on_cluster_rows():
+    """Strength is relative within its own window (CR's $223 band scored 58 at
+    1y and 100 at 6m — same band). A cluster carrying either number would be
+    lying; it carries none."""
+    tagged = [{"lo": 99.0, "hi": 101.0, "touches": 2, "strength": 100.0,
+               "window": "6m"},
+              {"lo": 99.2, "hi": 100.8, "touches": 3, "strength": 58.0,
+               "window": "1y"}]
+    c = support.cluster_bands(tagged, 110.0)
+    assert c[0]["strength"] is None
+
+
+def test_clusters_rank_by_agreement_first_then_distance():
+    tagged = [
+        {"lo": 90.0, "hi": 91.0, "touches": 2, "window": "1y"},      # near, 1 win
+        {"lo": 70.0, "hi": 71.0, "touches": 2, "window": "1y"},      # far, 3 wins
+        {"lo": 70.2, "hi": 70.9, "touches": 1, "window": "6m"},
+        {"lo": 70.1, "hi": 71.1, "touches": 1, "window": "3m"},
+    ]
+    c = support.cluster_bands(tagged, 100.0)
+    assert c[0]["agree"] == 3                     # agreement outranks nearness
+    assert c[0]["lo"] == 70.0
+
+
+def test_sides_split_by_position_and_standing_in_is_detected():
+    tagged = [{"lo": 95.0, "hi": 98.0, "touches": 2, "window": "1y"},
+              {"lo": 99.0, "hi": 101.0, "touches": 2, "window": "1y"},
+              {"lo": 104.0, "hi": 106.0, "touches": 2, "window": "1y"}]
+    c = support.cluster_bands(tagged, 100.0)
+    sides = {x["lo"]: x["side"] for x in c}
+    assert sides[95.0] == "below" and sides[99.0] == "in" and sides[104.0] == "above"
+    assert next(x for x in c if x["side"] == "in")["distance_pct"] == 0.0
+
+
+def test_empty_and_garbage_band_lists_cluster_to_nothing():
+    assert support.cluster_bands([], 100.0) == []
+    assert support.cluster_bands([{"lo": None, "hi": 101.0, "window": "1y"}],
+                                 100.0) == []
+
+
+def test_the_dropdown_now_offers_the_overlay_and_parse_accepts_it():
+    assert support.OVERLAY_KEY in support.window_keys()
+    assert support.parse_window("all") == "all"
+    assert support.parse_window("ALL ") == "all"
+    # And unknown values still degrade to the default, never to the overlay.
+    assert support.parse_window("everything") == support.DEFAULT_WINDOW
