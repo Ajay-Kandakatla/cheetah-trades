@@ -25,7 +25,8 @@ import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
   WINNER_SOURCES, boardQuery, isBoardTab,
-  isThinSample, parseSort, parseSource, parseTab, parseTier, recordLine,
+  dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
+  recordLine, scanStamp,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
@@ -179,6 +180,15 @@ export function ChartMaps() {
    * asking for progress under the wrong one returns a permanent idle. */
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming));
+
+  /* Freshness line under the toolbar — see the render-site comment. Recomputed
+   * per render; the board refetches on every scan/refresh so a live "now" is
+   * at most one poll interval stale. */
+  const stampPart = scanStamp(data?.generated_at ?? data?.scan_generated_at, Date.now());
+  const throughPart = dataThrough(data?.tiles);
+  const freshness = !data?.warming && (stampPart || throughPart)
+    ? [stampPart, throughPart].filter(Boolean).join(' \u00b7 ')
+    : null;
 
   const setTab = (t: CmTab) => {
     const next = new URLSearchParams(params);
@@ -391,6 +401,16 @@ export function ChartMaps() {
           ↻ Refresh
         </button>
       </div>
+
+      {/* When this board was actually computed, and how new its bars are.
+        * Ajay 2026-08-25: the same tiles two days running (a weekend plus one
+        * flat session) read as "is this even updating?" — the board was fresh,
+        * but carried no way to prove it. Wall-clock alone isn't enough: a scan
+        * run five minutes ago over week-old bars is still stale, so the bar
+        * date rides along. No timestamp from the server → no stamp; a made-up
+        * "just now" would be the same false reassurance in the other
+        * direction. */}
+      {freshness ? <div className="cm-scanstamp">{freshness}</div> : null}
 
       {tab === 'winners' && data?.record ? (
         <div className="cm-record">

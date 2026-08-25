@@ -22,6 +22,7 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  { id: 'board-scan-stamp',     label: 'Chart Maps: scan-time + data-through stamp', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'breakouts',            label: 'Breakouts page',                      addedAt: '2026-06-16', route: '/breakouts' },
   { id: 'breakouts-columns',    label: 'Column guide on the Breakouts table', addedAt: '2026-06-17', route: '/breakouts' },
   { id: 'breakouts-beta',       label: 'Beta column + sort by low volatility', addedAt: '2026-06-17', route: '/breakouts' },

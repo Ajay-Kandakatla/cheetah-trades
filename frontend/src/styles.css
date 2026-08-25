@@ -10817,6 +10817,9 @@ a.tk-link:hover   { color: inherit; }
   color: var(--cm-slate, #8595ad); padding: 0.25rem 0.6rem; font-size: 0.76rem; cursor: pointer;
 }
 .cm-refresh:hover { color: var(--ink, #e7e7e7); }
+/* Freshness stamp — "Scanned 4m ago · data through Aug 25". Muted on purpose:
+ * it's proof-of-life, not content (Ajay 2026-08-25). */
+.cm-scanstamp { font-size: 0.72rem; color: var(--cm-slate, #8595ad); opacity: 0.85; padding: 0 0.15rem; }
 
 .cm-note {
   font-size: 0.82rem; color: var(--cm-slate, #8595ad); padding: 0.7rem 0.9rem;

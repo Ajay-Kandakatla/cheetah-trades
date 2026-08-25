@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  dataThrough, parseScanTs, scanStamp,
   barDomain, barWidth, boardQuery, clipBands, isThinSample, lineLabels,
   markerIndex, monthTicks, parseSource, parseTab, recordLine, sepaHref,
   THEME_LABEL, themeLabel, WINNER_SOURCES,
@@ -904,5 +905,63 @@ describe('the 0DTE tab', () => {
     expect(b).toMatch(/exceeds the entire premium/i);
     expect(b).toMatch(/no intraday option history/i);
     expect(b).toMatch(/recorded and graded/i);
+  });
+});
+
+describe('scan freshness — parseScanTs / scanStamp / dataThrough', () => {
+  // Why these exist: 2026-08-25, the same tiles two days running (a weekend
+  // plus one flat session) read as "is this even updating?". The board was
+  // fresh but carried no proof. The stamp is that proof — and it must refuse
+  // to fake one when the server sent nothing.
+  const NOW = Date.parse('2026-08-25T15:00:00Z');
+
+  it('parses the demand cache ISO as_of', () => {
+    expect(parseScanTs('2026-08-25T14:56:00Z')).toBe(Date.parse('2026-08-25T14:56:00Z'));
+  });
+
+  it('parses epoch seconds AND epoch ms to the same instant', () => {
+    const ms = Date.parse('2026-08-25T14:00:00Z');
+    expect(parseScanTs(ms)).toBe(ms);
+    expect(parseScanTs(ms / 1000)).toBe(ms);
+  });
+
+  it('refuses garbage: null, empty, non-date text, NaN, zero', () => {
+    for (const bad of [null, undefined, '', 'not a date', NaN, 0, -5]) {
+      expect(parseScanTs(bad as never)).toBeNull();
+    }
+  });
+
+  it('renders just now, minutes, hours, days at the right boundaries', () => {
+    expect(scanStamp(NOW - 30_000, NOW)).toBe('Scanned just now');
+    expect(scanStamp(NOW - 4 * 60_000, NOW)).toBe('Scanned 4m ago');
+    expect(scanStamp(NOW - 3 * 3600_000, NOW)).toBe('Scanned 3h ago');
+    expect(scanStamp(NOW - 2 * 86400_000, NOW)).toBe('Scanned 2d ago');
+  });
+
+  it('clamps a future timestamp (clock skew) to just now instead of lying', () => {
+    expect(scanStamp(NOW + 600_000, NOW)).toBe('Scanned just now');
+  });
+
+  it('renders NOTHING when the server sent no timestamp — no fake reassurance', () => {
+    expect(scanStamp(null, NOW)).toBeNull();
+    expect(scanStamp(undefined, NOW)).toBeNull();
+  });
+
+  const bar = (t: string) => ({ t, o: 1, h: 1, l: 1, c: 1, v: 1 });
+
+  it('data-through is the NEWEST last bar across tiles, not the first tile', () => {
+    const tiles = [
+      { bars: [bar('2026-08-21'), bar('2026-08-24')] },
+      { bars: [bar('2026-08-25')] },
+      { bars: [] },
+    ];
+    expect(dataThrough(tiles)).toBe('data through Aug 25');
+  });
+
+  it('answers null for no tiles, barless tiles, and malformed dates', () => {
+    expect(dataThrough(null)).toBeNull();
+    expect(dataThrough([])).toBeNull();
+    expect(dataThrough([{ bars: [] }, {}])).toBeNull();
+    expect(dataThrough([{ bars: [bar('garbage')] }])).toBeNull();
   });
 });

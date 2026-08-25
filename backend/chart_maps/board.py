@@ -1262,7 +1262,12 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # dropdown cannot drift from demand_reentry.UNIVERSES.
             "universe_choices": data.get("universe_choices"),
             "scanned": data.get("scanned"),
-            "generated_at": data.get("generated_at")}
+            # demand_reentry stamps its payload "as_of", not "generated_at" —
+            # reading the wrong key here sent generated_at:null on every zones
+            # response, which is why the board could never say when it scanned
+            # (Ajay 2026-08-25: "I am lil skeptical this is working becuz I
+            # have been seeing these from 2 days").
+            "generated_at": data.get("as_of")}
 
 
 def _zone_badges(r: dict) -> list[dict]:

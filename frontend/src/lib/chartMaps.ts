@@ -666,3 +666,52 @@ export const MIN_SAMPLE = 20;
 export function isThinSample(n: number | null | undefined): boolean {
   return !n || n < MIN_SAMPLE;
 }
+
+/* ── scan freshness ───────────────────────────────────────────────────────── */
+
+/** Parse a backend scan timestamp — ISO string (demand `as_of`) or epoch
+ *  seconds/ms (older caches) — to epoch ms, or null. */
+export function parseScanTs(raw: string | number | null | undefined): number | null {
+  if (raw == null) return null;
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw) || raw <= 0) return null;
+    return raw < 1e12 ? raw * 1000 : raw;
+  }
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** "Scanned just now" / "Scanned 4m ago" / "Scanned 3h ago" / "Scanned 2d ago".
+ *  Null when the backend sent no timestamp — the stamp then simply doesn't
+ *  render; a made-up "just now" is exactly the false reassurance this exists
+ *  to prevent (Ajay 2026-08-25: same tiles two days running looked stale, and
+ *  the board carried nothing that could prove otherwise). */
+export function scanStamp(raw: string | number | null | undefined, nowMs: number): string | null {
+  const ts = parseScanTs(raw);
+  if (ts == null) return null;
+  const sec = Math.max(0, (nowMs - ts) / 1000); // clock skew → clamp, not lie
+  if (sec < 90) return 'Scanned just now';
+  const min = Math.round(sec / 60);
+  if (min < 90) return `Scanned ${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 36) return `Scanned ${hr}h ago`;
+  return `Scanned ${Math.round(hr / 24)}d ago`;
+}
+
+/** "data through Aug 25" — the newest bar date any tile on the board carries.
+ *  This is the half a wall-clock stamp can't answer: a scan run five minutes
+ *  ago over week-old bars is still stale. Null when no tile has bars. */
+export function dataThrough(tiles: { bars?: CmBar[] }[] | null | undefined): string | null {
+  let best = '';
+  for (const t of tiles || []) {
+    const last = t.bars?.[t.bars.length - 1];
+    if (last?.t && last.t > best) best = last.t;
+  }
+  if (!best) return null;
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const m = Number(best.slice(5, 7));
+  const d = Number(best.slice(8, 10));
+  if (!(m >= 1 && m <= 12) || !d) return null;
+  return `data through ${MON[m - 1]} ${d}`;
+}

@@ -285,6 +285,29 @@ def test_zones_tab_draws_the_band_and_the_whole_plan(prices, reentry_stub):
     assert {s["k"] for s in t["stats"]} >= {"R:R", "Break-even", "Liquidity"}
 
 
+def test_zones_tab_surfaces_the_scan_timestamp(prices, reentry_stub):
+    """demand_reentry stamps its payload `as_of`; the zones tab must pass that
+    through as `generated_at`. It read the wrong key until 2026-08-25, so the
+    board answered generated_at:null forever and the page could never say when
+    it last scanned — which is why a two-day-sticky board looked broken rather
+    than merely patient (Ajay: "I am lil skeptical this is working")."""
+    prices["AAA"] = _frame(200)
+    reentry_stub["rows"] = [_reentry_row("AAA")]
+    reentry_stub["as_of"] = "2026-08-25T14:31:07+00:00"
+
+    out = B.board("zones", limit=5, min_tier="any")
+    assert out["generated_at"] == "2026-08-25T14:31:07+00:00"
+
+
+def test_zones_tab_timestamp_is_null_not_missing_when_cache_has_none(prices, reentry_stub):
+    prices["AAA"] = _frame(200)
+    reentry_stub["rows"] = [_reentry_row("AAA")]
+    reentry_stub.pop("as_of", None)
+
+    out = B.board("zones", limit=5, min_tier="any")
+    assert "generated_at" in out and out["generated_at"] is None
+
+
 def test_zones_tab_returns_warming_instead_of_blocking(prices, reentry_stub):
     """A cold 1,500-name pass outlives Cloudflare's ~100s cut. The board must
     answer immediately and let the page poll — the 2026-08-14 524."""
