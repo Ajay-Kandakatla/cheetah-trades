@@ -430,25 +430,39 @@ def _refresh_spy_baseline() -> Optional[float]:
 
 def _analyze_symbol(symbol: str, rs_map: dict, *,
                     require_liquidity: bool = True,
-                    require_min_adr: float = 0.0) -> Optional[dict]:
-    df = prices.load_prices(symbol)
-    if df is None or len(df) < 220:
+                    require_min_adr: float = 0.0,
+                    skips: Optional[dict] = None) -> Optional[dict]:
+    # Every early None used to be indistinguishable from "never scanned" in
+    # the persisted payload (69 of 1,746 names unaccounted for, audit
+    # 2026-08-25). `skips` records symbol -> reason so the scan can fold them
+    # into permanent_failures. Single-key dict writes are atomic under the
+    # GIL, so the thread-pooled callers can share one dict.
+    def _skip(reason: str):
+        if skips is not None:
+            skips[symbol] = reason
         return None
+
+    df = prices.load_prices(symbol)
+    if df is None or len(df) == 0:
+        return _skip("no price data")
+    if len(df) < 220:
+        return _skip(f"insufficient history ({len(df)} bars < 220)")
     # ── Staleness floor (delisted / halted / renamed) ────────────────────
     # No bar in the last ~10 trading days = no live data, no chart, and a
     # frozen last bar that can fake a breakout (see CFLT). Drop it entirely.
     if prices.is_stale(df):
-        return None
+        return _skip(f"stale — last bar {df.index[-1].date()}")
 
     # ── Liquidity floor (institutional-grade) ────────────────────────────
     liq = adr.liquidity_check(df)
     if require_liquidity and not liq["liquid"]:
-        return None  # cookstock-style floor: skip thinly traded names
+        # cookstock-style floor: skip thinly traded names
+        return _skip("below institutional liquidity floor")
 
     # ── ADR (volatility quality) ─────────────────────────────────────────
     adr_value = adr.adr_pct(df, period=20)
     if require_min_adr and adr_value is not None and adr_value < require_min_adr:
-        return None
+        return _skip(f"ADR {adr_value:.1f}% below required {require_min_adr}%")
 
     # ── Day change (last close vs prior close, %) ────────────────────────
     # Used for the "Sort: Day %" filter and the daily-mover badge on cards.
@@ -490,7 +504,7 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
 
     tr = trend_template.evaluate(symbol, df)
     if tr is None:
-        return None
+        return _skip("trend template unavailable")
     rs = rs_map.get(symbol)
     # Re-apply RS gate
     tr.checks["rs_rank_at_least_70"] = bool(rs and rs >= 70)
@@ -730,6 +744,44 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
     })
 
 
+_BENCHMARKS = ("SPY", "QQQ", "IWM")
+
+
+def _absorb_skips(permanent_failures: List[dict], skips: dict,
+                  results: List[dict],
+                  excluded_benchmarks=()) -> List[dict]:
+    """Fold silently-skipped symbols into permanent_failures. Mutates the list.
+
+    A symbol whose analysis returned None without raising used to vanish from
+    the persisted payload entirely — 69 of 1,746 universe names were
+    unaccounted for in latest.json (audit 2026-08-25), and a health audit had
+    no way to tell a dead ticker from a liquidity drop. Every skip now lands
+    in permanent_failures with its reason and ``"skipped": True`` so
+    universe_size reconciles against all_results exactly.
+
+    A symbol that recovered on retry (present in results) or already has a
+    failure entry keeps its existing record — skips never overwrite.
+    """
+    got = {r.get("symbol") for r in results}
+    seen = {f.get("symbol") for f in permanent_failures}
+    for b in excluded_benchmarks:
+        if b not in seen:
+            permanent_failures.append({
+                "symbol": b, "attempt": 0, "skipped": True,
+                "error": "benchmark ETF — excluded from scan by design",
+            })
+            seen.add(b)
+    for sym in sorted(skips):
+        if sym in got or sym in seen:
+            continue
+        permanent_failures.append({
+            "symbol": sym, "attempt": 1, "skipped": True,
+            "error": skips[sym],
+        })
+        seen.add(sym)
+    return permanent_failures
+
+
 def scan_universe(symbols: Optional[List[str]] = None,
                   with_catalyst: bool = False,
                   persist: bool = True,
@@ -748,7 +800,9 @@ def scan_universe(symbols: Optional[List[str]] = None,
     t0 = time.time()
     symbols = symbols or load_universe()
     # Exclude benchmarks from candidate list
-    work = [s for s in symbols if s not in {"SPY", "QQQ", "IWM"}]
+    work = [s for s in symbols if s not in set(_BENCHMARKS)]
+    benchmarks_excluded = [s for s in symbols if s in set(_BENCHMARKS)]
+    skips: dict = {}   # symbol -> why it produced no row (see _absorb_skips)
 
     _emit("phase", phase="loading_universe", total=len(work))
 
@@ -796,7 +850,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
     # Switched from ex.map() to as_completed() so progress events fire on
     # actual completion order (which symbol just finished), not submission order.
     with ThreadPoolExecutor(max_workers=_SCAN_WORKERS) as ex:
-        futures = {ex.submit(_analyze_symbol, s, rs_map): s for s in work}
+        futures = {ex.submit(_analyze_symbol, s, rs_map, skips=skips): s
+                   for s in work}
         completed = 0
         for fut in as_completed(futures):
             sym = futures[fut]
@@ -839,7 +894,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
         time.sleep(0.5)  # tiny settle for transient yfinance rate-limits
 
         with ThreadPoolExecutor(max_workers=_SCAN_RETRY_WORKERS) as ex:
-            retry_futures = {ex.submit(_analyze_symbol, s, rs_map): s for s in retry_targets}
+            retry_futures = {ex.submit(_analyze_symbol, s, rs_map, skips=skips): s
+                             for s in retry_targets}
             retry_done = 0
             for fut in as_completed(retry_futures):
                 sym = retry_futures[fut]
@@ -999,6 +1055,12 @@ def scan_universe(symbols: Optional[List[str]] = None,
     # docs/sepa/buyable_verdict_methodology.md.
     buyable_verdict.annotate(results)
 
+    # Snapshot BEFORE folding skips in — recovered_count means "failed then
+    # succeeded on retry", which skip records are not.
+    recovered_count = len(failures) - len(permanent_failures)
+    _absorb_skips(permanent_failures, skips, results,
+                  excluded_benchmarks=benchmarks_excluded)
+
     payload = {
         "generated_at": int(time.time()),
         "duration_sec": round(time.time() - t0, 2),
@@ -1017,7 +1079,7 @@ def scan_universe(symbols: Optional[List[str]] = None,
         "all_results": results,
         "retry_count": len(failures),
         "permanent_failures": permanent_failures,
-        "recovered_count": len(failures) - len(permanent_failures),
+        "recovered_count": recovered_count,
         # Candidates whose broad insider sweep was deferred to a post-scan
         # background task (empty unless defer_insider_sweep=True). The scan
         # endpoint kicks off the sweep + SSE push from this list.
@@ -1100,13 +1162,19 @@ def scan_universe(symbols: Optional[List[str]] = None,
     return payload
 
 
-def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
+def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict,
+                   skips: Optional[dict] = None) -> Optional[dict]:
     """Re-evaluate the price-derived layers using cached research as scaffolding.
 
     The research blob supplies VCP / Power Play / base count / fundamentals /
     liquidity / ADR / IPO age / company name. We only re-run trend template,
     stage classifier, today's volume, and the entry-setup match.
     """
+    def _skip(reason: str):
+        if skips is not None:
+            skips[symbol] = reason
+        return None
+
     # Same staleness guard as the full path (_analyze_symbol): a delisted /
     # halted name with frozen daily bars must NOT be recomputed into the scan —
     # its last frozen bar reads as a breakout and leaks into is_buyable / the
@@ -1114,15 +1182,15 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict) -> Optional[dict]:
     # acquisition; CFLT before it). The FAST path skipped this, so KALV survived
     # an Update-button / cron re-scan even after the calendar→trading-day fix.
     if prices.is_stale(df):
-        return None
+        return _skip(f"stale — last bar {df.index[-1].date()}")
 
     liq = blob.get("liquidity") or {}
     if not liq.get("liquid"):
-        return None
+        return _skip("below institutional liquidity floor (cached research)")
 
     tr = trend_template.evaluate(symbol, df)
     if tr is None:
-        return None
+        return _skip("trend template unavailable")
     rs = rs_map.get(symbol)
     tr.checks["rs_rank_at_least_70"] = bool(rs and rs >= 70)
     tr.pass_all = all(tr.checks.values())
@@ -1372,7 +1440,9 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
 
     t0 = time.time()
     symbols = symbols or load_universe(universe_mode)
-    work = [s for s in symbols if s not in {"SPY", "QQQ", "IWM"}]
+    work = [s for s in symbols if s not in set(_BENCHMARKS)]
+    benchmarks_excluded = [s for s in symbols if s in set(_BENCHMARKS)]
+    skips: dict = {}   # symbol -> why it produced no row (see _absorb_skips)
 
     _emit("phase", phase="loading_universe", total=len(work),
           mode=universe_mode or "default")
@@ -1408,14 +1478,20 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         if blob is None:
             missing.append(symbol)
             if fallback_when_missing:
-                return _analyze_symbol(symbol, rs_map)
+                return _analyze_symbol(symbol, rs_map, skips=skips)
+            skips[symbol] = "no cached research (fallback disabled)"
             return None
         df = prices.load_prices(symbol)
-        if df is None or len(df) < 220:
+        if df is None or len(df) == 0:
+            skips[symbol] = "no price data"
+            return None
+        if len(df) < 220:
+            skips[symbol] = f"insufficient history ({len(df)} bars < 220)"
             return None
         if prices.is_stale(df):   # delisted/halted — see _analyze_symbol
+            skips[symbol] = f"stale — last bar {df.index[-1].date()}"
             return None
-        return _hot_recompute(symbol, df, rs_map, blob)
+        return _hot_recompute(symbol, df, rs_map, blob, skips=skips)
 
     failures: List[dict] = []
     with ThreadPoolExecutor(max_workers=_SCAN_WORKERS) as ex:
@@ -1508,6 +1584,12 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
     _emit("phase", phase="market_context")
     mkt = market_context.market_state()
 
+    # Snapshot BEFORE folding skips in — recovered_count means "failed then
+    # succeeded on retry", which skip records are not.
+    recovered_count = len(failures) - len(permanent_failures)
+    _absorb_skips(permanent_failures, skips, results,
+                  excluded_benchmarks=benchmarks_excluded)
+
     payload = {
         "generated_at": int(time.time()),
         "duration_sec": round(time.time() - t0, 2),
@@ -1526,7 +1608,7 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         "all_results": results,
         "retry_count": len(failures),
         "permanent_failures": permanent_failures,
-        "recovered_count": len(failures) - len(permanent_failures),
+        "recovered_count": recovered_count,
     }
     if persist:
         _emit("phase", phase="writing")

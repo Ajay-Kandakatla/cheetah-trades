@@ -55,6 +55,18 @@ RENAMES: dict[str, tuple[str, str, str]] = {
            "Block, Inc. SQ last bar 2025-01-17 close 86.96; XYZ first bar "
            "2025-01-21 open 88.06 (2025-01-20 was MLK Day). Consecutive "
            "sessions, no split."),
+    "DOOO": ("DOO", "2025-12-08",
+             "BRP Inc. DOOO last bar 2025-12-05 close 76.66; DOO first bar "
+             "2025-12-08 open 81.67. Consecutive sessions (Fri->Mon), +6.5% "
+             "overnight, no split. Massive reference 2026-08-25: DOO active "
+             "on XNAS as 'BRP Inc. Common Subordinate Voting Shares'; DOOO "
+             "NOT_FOUND."),
+    "IAC": ("PPLI", "2026-06-04",
+            "IAC renamed to People Inc. IAC last bar 2026-06-03 close 42.24; "
+            "PPLI first bar 2026-06-04 open 42.72. Consecutive sessions, "
+            "+1.1% overnight, no split. Massive reference 2026-08-25: PPLI "
+            "active on XNAS as 'People Incorporated Common Stock'; IAC "
+            "NOT_FOUND."),
 }
 
 # Reverse index, built once. A current symbol can have more than one former name
@@ -97,6 +109,58 @@ def rename_of(symbol: str) -> Optional[dict]:
     new, eff, why = entry
     return {"from": symbol.strip().upper(), "to": new, "effective": eff,
             "evidence": why}
+
+
+# ---------------------------------------------------------------------------
+# Delistings — names that no longer trade ANYWHERE, under ANY spelling
+# ---------------------------------------------------------------------------
+# {SYMBOL: evidence}. Curated for the same reason RENAMES is: a wrong removal
+# hides a live company, so every entry carries what was checked and when. A
+# delisting is NOT a rename — there is no successor series to splice, so the
+# symbol simply leaves the universe. If a successor is later discovered, move
+# the entry to RENAMES with boundary-bar evidence.
+#
+# All verified 2026-08-25 against Massive: reference lookup NOT_FOUND (both
+# spellings for class shares), zero daily aggs 2026-08-08..2026-08-25, and an
+# active-listings name search that found no successor. Most carry the classic
+# deal-close signature: price pinned at the deal level for days, then a final
+# session on a multiple of average volume.
+DELISTED: dict[str, str] = {
+    "SMAR": "Smartsheet. Last bar 2025-01-21, pinned $56.4x for days, final "
+            "session 6x volume — take-private close. Sat dead in the universe "
+            "for 19 months (the SQ lesson, again).",
+    "CFLT": "Confluent. Last bar 2026-03-16, pinned ~$30.7, final session "
+            "~4x volume — acquisition close.",
+    "CWEN-A": "Clearway Energy Class A. Last bar 2026-04-30. NOT_FOUND as "
+              "CWEN-A and CWEN.A; CWEN (Class C) remains active on XNYS — "
+              "the A class was retired, not renamed.",
+    "MASI": "Masimo. Last bar 2026-06-09, pinned $179.9x, final session 3x "
+            "volume — acquisition close.",
+    "BLD": "TopBuild. Last bar 2026-06-30 after a two-day -15% slide; no "
+           "successor listing found by name search.",
+    "JHG": "Janus Henderson Group. Last bar 2026-06-30, pinned $51.9x, final "
+           "session 3x volume — acquisition close (only ETF products carry "
+           "the Janus Henderson name now).",
+    "NSA": "National Storage Affiliates. Last bar 2026-07-21, final session "
+           "13x volume — acquisition close.",
+    "EA": "Electronic Arts. Last bar 2026-08-04, pinned $209.9x, final "
+          "session 10x volume — take-private close.",
+    "AVB": "AvalonBay Communities. Last bar 2026-08-14; reference NOT_FOUND, "
+           "no successor by name search. No deal-close pin — likely a "
+           "stock-for-stock merger; revisit if a successor surfaces.",
+    "GFRR": "Never in the universe — a ghost in Massive's movers snapshot "
+            "that erred the catalysts cron every 5 minutes. Reference "
+            "NOT_FOUND, zero aggs, Yahoo 404s the quote.",
+}
+
+
+def is_delisted(symbol: str) -> bool:
+    """True when the symbol is a verified dead listing. PURE.
+
+    Checks the symbol AS GIVEN (canonicalized), not resolve()d: a renamed
+    symbol (IAC) is not delisted — it trades on as PPLI.
+    """
+    return (symbol or "").strip().upper() in DELISTED
 
 
 # ---------------------------------------------------------------------------
@@ -166,5 +230,5 @@ def yf_ticker(symbol: str):
     return yf.Ticker(for_yahoo(resolve(symbol)))
 
 
-__all__ = ["RENAMES", "resolve", "former_names", "rename_of", "for_massive",
-           "for_yahoo", "yf_ticker"]
+__all__ = ["RENAMES", "DELISTED", "resolve", "former_names", "rename_of",
+           "is_delisted", "for_massive", "for_yahoo", "yf_ticker"]

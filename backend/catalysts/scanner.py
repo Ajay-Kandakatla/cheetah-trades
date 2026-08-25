@@ -197,6 +197,14 @@ def scan(
         n = _normalize_snapshot(snap)
         if n is None:
             continue
+        # Massive's movers snapshot can serve a ghost — a ticker its own
+        # reference API no longer knows (GFRR: reference NOT_FOUND, zero
+        # aggs, Yahoo 404). Each ghost re-enters every 5-min cron run and
+        # ERRORs the yfinance enrich, forever. Verified fates only — the
+        # curated list lives in sepa.symbols.DELISTED with evidence.
+        if symbols.is_delisted(n["ticker"]):
+            log.debug("dropping delisted ghost from movers: %s", n["ticker"])
+            continue
         if abs(n["change_pct"]) < min_abs_change_pct:
             continue
         normalized.append(n)

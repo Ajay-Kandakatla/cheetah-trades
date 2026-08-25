@@ -40,13 +40,14 @@ UNIVERSE: list[str] = [
     "CRDO", "ALAB", "ANET", "CRWV", "NBIS",
     # Software / cloud
     "CRM", "NOW", "SNOW", "DDOG", "NET", "CRWD", "PANW", "ZS", "MDB", "PLTR",
-    "SHOP", "TEAM", "WDAY", "HUBS", "CFLT", "SMAR", "TOST",
+    # CFLT + SMAR removed 2026-08-25 — both delisted (see sepa.symbols.DELISTED)
+    "SHOP", "TEAM", "WDAY", "HUBS", "TOST",
     # Consumer growth
     "ABNB", "UBER", "DASH", "BKNG", "CMG", "LULU", "DECK", "COST", "WMT",
     # Health / biotech leaders
     "LLY", "UNH", "ISRG", "VRTX", "REGN", "BMRN", "RMD", "BSX",
     # Fintech / payments
-    "V", "MA", "PYPL", "AXP", "COIN", "HOOD", "SQ", "SOFI", "NU", "MELI",
+    "V", "MA", "PYPL", "AXP", "COIN", "HOOD", "XYZ", "SOFI", "NU", "MELI",
     # Energy / industrials / materials
     "CEG", "VST", "GEV", "ETN", "PH", "CAT", "DE", "FSLR", "ENPH",
     # China ADR growth
@@ -54,7 +55,7 @@ UNIVERSE: list[str] = [
     # Canada (US-listed) — Canadian companies are excluded from the US Russell
     # indices, so they only reach the scan via this curated list.
     "BB", "AEM", "BMO", "BN", "BNS", "BTE", "CCJ", "CM", "CNI", "CNQ",
-    "CP", "CVE", "DOOO", "ENB", "FNV", "GIB", "IMO", "KGC", "LSPD", "MFC",
+    "CP", "CVE", "DOO", "ENB", "FNV", "GIB", "IMO", "KGC", "LSPD", "MFC",
     "NTR", "OGI", "OTEX", "RY", "SLF", "SU", "TD", "TECK", "TLRY", "TRI",
     "TRP", "WCN", "WPM",
     # Foreign tech / semis (US-listed ADRs) — ASML / TSM / ARM are above.
@@ -1514,9 +1515,31 @@ def load_universe(mode: str | None = None) -> list[str]:
     return _with_benchmarks(list(dict.fromkeys(UNIVERSE)))
 
 
+def _resolve_fates(syms: list[str]) -> list[str]:
+    """Map renamed tickers to their live symbol, drop verified delistings.
+
+    Every load_universe path funnels through here (via _with_benchmarks), which
+    matters because most components are 30-day-cached fetches: a rename or
+    delisting sits in those caches long after the fact (SMAR was dead in the
+    universe for 19 months). Applying sepa.symbols at the chokepoint heals
+    every path — cached, fetched, curated, env-var — the day the curated map
+    learns the fate. Also dedups old+new pairs (IAC and PPLI were both
+    present; resolve() collapses them to one PPLI).
+    """
+    from . import symbols as S
+    out, seen = [], set()
+    for s in syms:
+        cur = S.resolve(s)
+        if S.is_delisted(cur) or cur in seen:
+            continue
+        seen.add(cur)
+        out.append(cur)
+    return out
+
+
 def _with_benchmarks(syms: list[str]) -> list[str]:
-    """Append SPY/QQQ/IWM if not already in the list (for RS math)."""
-    out = list(dict.fromkeys(syms))
+    """Resolve symbol fates, then append SPY/QQQ/IWM (for RS math)."""
+    out = _resolve_fates(syms)
     for b in ("SPY", "QQQ", "IWM"):
         if b not in out:
             out.append(b)

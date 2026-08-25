@@ -316,3 +316,70 @@ def test_prices_keeps_its_direct_call_on_purpose():
     if root is None:
         pytest.skip("backend root not found")
     assert "yf.Ticker(" in (root / "sepa" / "prices.py").read_text()
+
+
+# ---------------------------------------------------------------------------
+# 2026-08-25 symbol-fates audit — renames + verified delistings
+# ---------------------------------------------------------------------------
+def test_the_dooo_case_resolves_to_doo():
+    """BRP Inc renamed DOOO -> DOO (first DOO session 2025-12-08). The old
+    ticker sat stale in the universe for 8+ months before the audit caught it."""
+    assert S.resolve("DOOO") == "DOO"
+    assert S.former_names("DOO") == ["DOOO"]
+
+
+def test_the_iac_case_resolves_to_ppli():
+    """IAC renamed to People Inc (PPLI, first session 2026-06-04). Both IAC
+    and PPLI were in the universe at once — resolve() is what collapses them."""
+    assert S.resolve("IAC") == "PPLI"
+    assert S.former_names("PPLI") == ["IAC"]
+
+
+def test_every_rename_entry_carries_evidence():
+    """A RENAMES entry without evidence is a guess, and a wrong guess splices
+    another company's history into a chart real money is sized against."""
+    import re
+    for old, (new, effective, why) in S.RENAMES.items():
+        assert old != new
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", effective), (old, effective)
+        assert len(why) > 40, f"{old}: evidence too thin to audit"
+
+
+def test_delisted_names_are_flagged():
+    for dead in ("SMAR", "CFLT", "CWEN-A", "MASI", "BLD", "JHG", "NSA",
+                 "EA", "AVB", "GFRR"):
+        assert S.is_delisted(dead), dead
+
+
+def test_delisted_is_case_and_whitespace_proof():
+    assert S.is_delisted(" smar ")
+
+
+def test_live_names_are_not_delisted():
+    """NEGATIVE: the audit verified these ALIVE at the provider on 2026-08-25 —
+    flagging them dead would silently shrink the scan."""
+    for alive in ("NVDA", "SMP", "FISV", "P", "Q", "BF-A", "LEN-B",
+                  "FWONA", "GLIBA", "CWEN"):
+        assert not S.is_delisted(alive), alive
+
+
+def test_renamed_is_not_delisted():
+    """NEGATIVE: a renamed symbol trades on — it must never read as dead."""
+    for old in S.RENAMES:
+        assert not S.is_delisted(old), old
+
+
+def test_delisted_handles_empty_input():
+    assert not S.is_delisted("")
+    assert not S.is_delisted(None)
+
+
+def test_no_symbol_is_both_renamed_and_delisted():
+    """The two maps are mutually exclusive by definition: a rename has a
+    successor series, a delisting has none."""
+    overlap = set(S.RENAMES) & set(S.DELISTED)
+    assert not overlap, overlap
+    # ...and no rename TARGET is delisted either (that would be a chain a
+    # human needs to collapse into a single honest entry).
+    targets = {new for new, _, _ in S.RENAMES.values()}
+    assert not targets & set(S.DELISTED)

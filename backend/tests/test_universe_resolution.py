@@ -326,3 +326,51 @@ def test_full_alias_only_names_known_components(fake_lists):
     assert U._UNIVERSE_ALIASES["full"] == ("russell1000", "sp1500", "curated", "themes")
     for part in U._UNIVERSE_ALIASES["full"]:
         assert part in U._KNOWN_COMPONENTS, f"alias names unknown component {part}"
+
+
+# ---------------------------------------------------------------------------
+# Symbol fates at the universe chokepoint (2026-08-25)
+#
+# Most components are 30-day-cached fetches, so a rename or delisting sits in
+# the cached lists long after the fact — SMAR was dead in the universe for 19
+# months. _resolve_fates() runs inside _with_benchmarks(), which every
+# load_universe path funnels through, so the caches never need to be right.
+# ---------------------------------------------------------------------------
+def test_resolve_fates_maps_renames_to_the_live_symbol():
+    assert U._resolve_fates(["DOOO"]) == ["DOO"]
+    assert U._resolve_fates(["IAC"]) == ["PPLI"]
+
+
+def test_resolve_fates_dedups_old_and_new_when_both_present():
+    """IAC and PPLI were BOTH in the universe (the fetched list carried the
+    new name, the cache still carried the old) — one company, one slot."""
+    assert U._resolve_fates(["IAC", "PPLI"]) == ["PPLI"]
+    assert U._resolve_fates(["PPLI", "IAC"]) == ["PPLI"]
+
+
+def test_resolve_fates_drops_verified_delistings():
+    out = U._resolve_fates(["SMAR", "CFLT", "EA", "AVB", "CWEN-A", "NVDA"])
+    assert out == ["NVDA"]
+
+
+def test_resolve_fates_leaves_ordinary_symbols_untouched_in_order():
+    """NEGATIVE: fate resolution must not reorder or rewrite live names."""
+    syms = ["NVDA", "BF-A", "SMP", "FISV", "P", "Q"]
+    assert U._resolve_fates(syms) == syms
+
+
+def test_with_benchmarks_applies_fates_before_appending_anchors():
+    out = U._with_benchmarks(["IAC", "EA", "NVDA"])
+    assert out == ["PPLI", "NVDA", "SPY", "QQQ", "IWM"]
+
+
+def test_env_var_universe_cannot_resurrect_a_dead_ticker(monkeypatch):
+    """Every load_universe path goes through the chokepoint — including the
+    SEPA_UNIVERSE literal override."""
+    monkeypatch.setenv("SEPA_UNIVERSE", "SMAR,NVDA,DOOO")
+    monkeypatch.delenv("SEPA_UNIVERSE_FILE", raising=False)
+    out = U.load_universe()
+    assert "SMAR" not in out
+    assert "DOOO" not in out
+    assert "DOO" in out
+    assert "NVDA" in out

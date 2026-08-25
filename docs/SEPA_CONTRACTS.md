@@ -102,12 +102,24 @@ Returns the latest scan results. Top-level shape:
   "candidate_count":    "int",
   "retry_count":        "int",
   "recovered_count":    "int",
-  "permanent_failures": "list[{symbol: str, error: str}]",
+  "permanent_failures": "list[{symbol: str, error: str, attempt: int, skipped?: true}]",
   "candidates":         "list[CandidateRow]   — is_candidate=true subset",
   "all_results":        "list[CandidateRow]   — full universe",
   "market_context":     "dict | null          — informational, may evolve"
 }
 ```
+
+**`permanent_failures` accounting (2026-08-25).** Every universe symbol that
+produced no `all_results` row appears here — errors AND deliberate skips, so
+`universe_size` reconciles against `all_results` exactly (69 of 1,746 names
+used to vanish without a trace). Entries with `"skipped": true` are not
+failures: the `error` string carries the reason — `no price data`,
+`insufficient history (N bars < 220)`, `stale — last bar YYYY-MM-DD`,
+`below institutional liquidity floor`, `trend template unavailable`,
+`no cached research (fallback disabled)`, or
+`benchmark ETF — excluded from scan by design` (`attempt: 0`).
+`recovered_count` still means "failed then succeeded on retry" and never
+counts skip records.
 
 Both `candidates` and `all_results` arrays contain `CandidateRow` objects with
 the schema in §3.
