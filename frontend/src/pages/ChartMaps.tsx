@@ -36,6 +36,10 @@ import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 
+/** Background refetch cadence for a left-open tab. Slower than the 10s
+ *  warming poll on purpose — this is drift correction, not live data. */
+const BOARD_REFRESH_MS = 5 * 60_000;
+
 /* Fallback only. The board answers `universe_choices` from
  * demand_reentry.UNIVERSES, and the select prefers that — so adding a universe
  * server-side does not need a frontend deploy. This list exists for the first
@@ -173,6 +177,20 @@ export function ChartMaps() {
     pollRef.current = window.setInterval(() => { void load(); }, 10_000);
     return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
   }, [data?.warming, load]);
+
+  /* A left-open tab is how this board actually gets used — and until
+   * 2026-08-25 it NEVER refetched on its own: the zones tab froze at its
+   * 10:57 reload and disagreed with the server for an hour while fresh scans
+   * landed ("UI is not updating with what you are saying"). Slow clock,
+   * visible-tab only, no spinner. The re-render this forces is also what
+   * keeps the freshness stamp's "Scanned Xm ago" ticking instead of frozen
+   * at whatever it said when the tab was last touched. */
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      if (!document.hidden) void load();
+    }, BOARD_REFRESH_MS);
+    return () => window.clearInterval(t);
+  }, [load]);
 
   /* The demand scan's live counter, polled faster than the board itself. The
    * board key is the universe the SERVER resolved (`universe_key`), not the

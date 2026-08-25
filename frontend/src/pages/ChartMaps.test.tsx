@@ -302,3 +302,39 @@ describe('ChartMaps — the 0DTE tab', () => {
     expect(screen.queryByLabelText(/Liquidity/i)).not.toBeInTheDocument();
   });
 });
+
+describe('background auto-refresh', () => {
+  // Why: 2026-08-25 — a tab left open since ~10:57 kept showing that reload's
+  // board while fresh scans landed server-side; there was NO code path that
+  // ever refetched an idle tab. The interval is the fix; the hidden-tab guard
+  // keeps a backgrounded browser from burning the API for nobody.
+  it('refetches the board on the slow clock while the tab is visible', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      draw();
+      expect(await screen.findByText('AVGO')).toBeInTheDocument();
+      const before = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 100);
+      const after = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+      expect(after).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does NOT refetch while the tab is hidden', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const spy = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    try {
+      draw();
+      expect(await screen.findByText('AVGO')).toBeInTheDocument();
+      const before = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 100);
+      const after = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+      expect(after).toBe(before);
+    } finally {
+      spy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+});
