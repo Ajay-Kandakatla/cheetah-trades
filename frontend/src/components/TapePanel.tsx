@@ -16,7 +16,7 @@ import { useEffect, useRef } from 'react';
 import { useOrderflow } from '../hooks/useOrderflow';
 import { InfoButton } from './InfoButton';
 import {
-  accuracyLine, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares,
+  accuracyLine, binDelta, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares,
   fmtSharesAbs,
   sparklinePoints, verdictView,
 } from '../lib/orderflow';
@@ -63,6 +63,35 @@ function DeltaSparkline({ series }: { series: [string, number][] }) {
       <path d={line} fill="none" stroke={color} strokeWidth="1.8" />
       <circle cx={x(pts.length - 1)} cy={y(last)} r={3} fill={color} />
       <text x={W - P} y={y(last) - 6} textAnchor="end" fontSize="10" fontWeight={700} fill={color}>{fmtShares(last)}</text>
+    </svg>
+  );
+}
+
+function DeltaBars({ series }: { series: [string, number][] }) {
+  /* Big delta PER CANDLE — who won each minute, not the running total.
+   * (Ajay 2026-08-24: "which side is actually winning the battle and
+   * controlling momentum inside a specific candle".) The cumulative line above
+   * answers "who has won the session so far"; this answers "who is winning
+   * RIGHT HERE" — a level being defended shows as green bars printing into
+   * red tape, which the cumulative line smooths away. */
+  const bars = binDelta(series);
+  if (bars.length < 2) return null;
+  const W = 620, H = 64, P = 6;
+  const hi = Math.max(1, ...bars.map((v) => Math.abs(v)));
+  const bw = (W - 2 * P) / bars.length;
+  const y0 = H / 2;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img"
+         aria-label="Net buys minus sells per minute"
+         style={{ display: 'block', marginTop: '0.15rem' }}>
+      <line x1={P} y1={y0} x2={W - P} y2={y0} stroke="var(--hairline,#2a2a2a)" />
+      {bars.map((v, i) => {
+        const h = (Math.abs(v) / hi) * (H / 2 - P);
+        if (h < 0.5) return null;
+        return <rect key={i} x={P + i * bw + 0.5} width={Math.max(bw - 1, 1)}
+                     y={v >= 0 ? y0 - h : y0} height={h}
+                     fill={v >= 0 ? 'rgba(16,185,129,0.75)' : 'rgba(239,68,68,0.75)'} />;
+      })}
     </svg>
   );
 }
@@ -200,6 +229,7 @@ export function TapePanel({ symbol }: { symbol: string }) {
           <Tile label="Sell volume" value={fmtShares(delta ? -Math.abs(delta.sell_volume) : null)} color="#ef4444" />
         </div>
         {delta?.series && <DeltaSparkline series={delta.series} />}
+        {delta?.per_minute && <DeltaBars series={delta.per_minute} />}
         {d.tape?.truncated && (
           <p style={{ margin: '0.25rem 0 0', fontSize: '0.68rem', color: '#f59e0b' }}>
             ⚠️ Very heavy tape — analysis covers the first 1.2M prints of the session.

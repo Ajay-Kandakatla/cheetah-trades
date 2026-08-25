@@ -23,6 +23,9 @@ export type TapeData = {
       buy_volume: number; sell_volume: number; delta: number;
       delta_pct_of_volume: number; classified_pct: number;
       late_delta: number; late_window_min: number;
+      /** Net buys − sells INSIDE each minute — the per-candle Big Delta.
+       *  Optional: snapshots written before 2026-08-24 predate the field. */
+      per_minute?: [string, number][];
       series: [string, number][]; n_trades: number;
     };
     big_prints: {
@@ -157,6 +160,24 @@ export function sparklinePoints(series: [string, number][], max = 240): number[]
   const out: number[] = [];
   for (let i = 0; i < max; i++) out.push(vals[Math.min(vals.length - 1, Math.floor(i * step))]);
   out[out.length - 1] = vals[vals.length - 1]; // always end on the true final value
+  return out;
+}
+
+/** Bin a per-minute signed series down to at most `max` bars by SUMMING each
+ *  bin — never by sampling. Sampling (what `sparklinePoints` does, correctly,
+ *  for the cumulative LINE) would silently drop whole minutes here, and a
+ *  dropped +80k-share minute changes who won the session. Summing preserves
+ *  the total: the bars always add back up to the session delta. */
+export function binDelta(series: [string, number][], max = 130): number[] {
+  const vals = (series ?? []).map((p) => p[1]).filter((v) => Number.isFinite(v));
+  if (vals.length <= max) return vals;
+  const per = Math.ceil(vals.length / max);
+  const out: number[] = [];
+  for (let i = 0; i < vals.length; i += per) {
+    let acc = 0;
+    for (let j = i; j < Math.min(i + per, vals.length); j++) acc += vals[j];
+    out.push(acc);
+  }
   return out;
 }
 

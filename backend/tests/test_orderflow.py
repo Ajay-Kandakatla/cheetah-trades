@@ -68,6 +68,33 @@ def test_delta_buyers_in_control():
     assert d["series"][-1][1] == 950
 
 
+def test_per_minute_delta_is_the_pre_cumsum_series():
+    """Big delta PER CANDLE (Ajay 2026-08-24: "which side is actually winning
+    ... inside a specific candle"). The per-minute series must be the exact
+    first-difference of the cumulative one — computed once, not twice."""
+    rows = [(10.0, 100)] + [(10.0 + 0.01 * i, 200) for i in range(1, 6)] + [(10.04, 50)]
+    # Spread the tape across three minutes so per-minute != cumulative.
+    d = delta_summary(_sided(_tape(rows, step_ms=45_000)))
+    assert d["per_minute"], "per-minute delta series must not be empty"
+    # Summing the minutes reproduces the session delta exactly.
+    assert sum(v for _, v in d["per_minute"]) == d["delta"]
+    # And cum(per_minute) == series, point for point.
+    run = 0
+    for (ts_pm, v), (ts_cum, c) in zip(d["per_minute"], d["series"]):
+        run += v
+        assert ts_pm == ts_cum
+        assert run == c
+
+
+def test_per_minute_delta_single_minute_tape_is_one_bar():
+    """A tape entirely inside one minute yields one per-minute bar equal to the
+    session delta — not an empty list and not a fabricated zero-padded one."""
+    rows = [(10.0, 100), (10.01, 200), (10.0, 50)]
+    d = delta_summary(_sided(_tape(rows)))
+    assert len(d["per_minute"]) == 1
+    assert d["per_minute"][0][1] == d["delta"]
+
+
 def test_delta_unknown_side_volume_excluded_but_counted():
     d = delta_summary(_sided(_tape([(10.0, 500), (10.0, 500)])))
     assert d["delta"] == 0

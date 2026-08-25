@@ -161,6 +161,12 @@ def delta_summary(df: pd.DataFrame) -> dict:
     per_min = per_min[per_min.index >= df.index.min().floor("1min")]
     cum = per_min.cumsum()
     series = [[ts.isoformat(), int(v)] for ts, v in cum.items() if not math.isnan(v)]
+    # The PRE-cumsum series — net buys minus sells inside each minute. This is
+    # the "big delta per candle" read (Ajay 2026-08-24: "which side is actually
+    # winning the battle ... inside a specific candle"); it was computed here
+    # all along and discarded on the way to the cumulative line.
+    per_minute = [[ts.isoformat(), int(v)] for ts, v in per_min.items()
+                  if not math.isnan(v)]
 
     cutoff = df.index.max() - timedelta(minutes=LATE_WINDOW_MIN)
     late = df[df.index >= cutoff]
@@ -176,6 +182,7 @@ def delta_summary(df: pd.DataFrame) -> dict:
         "late_delta": late_delta,
         "late_window_min": LATE_WINDOW_MIN,
         "series": series,
+        "per_minute": per_minute,
         "n_trades": int(len(df)),
     }
 

@@ -131,3 +131,41 @@ describe('fmtSharesAbs — volumes are not signed quantities', () => {
     expect(fmtSharesAbs(undefined)).toBe('—');
   });
 });
+
+// ── binDelta (Big Delta per candle, Ajay 2026-08-24) ─────────────────────────
+import { binDelta } from './orderflow';
+
+describe('binDelta', () => {
+  const mk = (vals: number[]): [string, number][] =>
+    vals.map((v, i) => [`2026-08-24T14:${String(i).padStart(2, '0')}:00`, v]);
+
+  it('passes a short series through untouched', () => {
+    expect(binDelta(mk([5, -3, 8]), 130)).toEqual([5, -3, 8]);
+  });
+
+  it('bins by SUMMING, so the total delta is preserved exactly', () => {
+    const vals = Array.from({ length: 390 }, (_, i) => (i % 2 ? 100 : -60));
+    const total = vals.reduce((a, b) => a + b, 0);
+    const bars = binDelta(mk(vals), 130);
+    expect(bars.length).toBeLessThanOrEqual(130);
+    expect(bars.reduce((a, b) => a + b, 0)).toBe(total);
+  });
+
+  it('a single dominant minute survives binning rather than being sampled away', () => {
+    // 389 quiet minutes and one +80,000 spike: sampling could drop it entirely;
+    // summing cannot — some bar must carry it.
+    const vals = Array(390).fill(10);
+    vals[200] = 80_000;
+    const bars = binDelta(mk(vals), 130);
+    expect(Math.max(...bars)).toBeGreaterThanOrEqual(80_000);
+  });
+
+  it('ignores non-finite values instead of poisoning a bin', () => {
+    expect(binDelta(mk([5, NaN as unknown as number, 7]), 130)).toEqual([5, 7]);
+  });
+
+  it('handles an empty or missing series', () => {
+    expect(binDelta([], 130)).toEqual([]);
+    expect(binDelta(undefined as unknown as [string, number][], 130)).toEqual([]);
+  });
+});
