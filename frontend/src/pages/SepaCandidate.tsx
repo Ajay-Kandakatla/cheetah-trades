@@ -330,7 +330,8 @@ export function SepaCandidatePage() {
   // 'chart'. Switching tabs rewrites ?tab= in place (replace, no history spam)
   // so a reload or a shared link lands on the same tab.
   const [searchParams, setSearchParams] = useSearchParams();
-  const backSource = resolveBack(navState, searchParams.get('from'));
+  const backSource = resolveBack(navState, searchParams.get('from'),
+                                 searchParams.get('from_q'));
   const handleBack = () => {
     if (backSource) navigate(backSource.path);
     else if (window.history.length > 1) navigate(-1);

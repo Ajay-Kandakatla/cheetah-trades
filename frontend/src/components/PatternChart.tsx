@@ -12,14 +12,14 @@
  * All geometry lives in lib/chartMaps.ts. This file only draws.
  */
 import { memo, useCallback, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, dropCollidingTicks,
   gutterWidth, hoverLines, lineLabels, markerIndex, monthTicks, priceAt,
   priceTicks, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmTile,
 } from '../lib/chartMaps';
-import { withSource } from '../lib/navSource';
+import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 
 const W = 620;
 const PAD_Y = 10;
@@ -41,6 +41,7 @@ const BAND_NAME: Record<string, string> = {
 export const PatternChart = memo(function PatternChart(
   { tile, height = 190 }: { tile: CmTile; height?: number },
 ) {
+  const location = useLocation();
   const bars = tile.bars || [];
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
@@ -98,10 +99,17 @@ export const PatternChart = memo(function PatternChart(
                  TIP_W, TIP_H, plotW, H)
     : null;
 
+  // State carries the page's search too — resolveBack prefers state, and a
+  // bare '/chart-maps' here was why even a PLAIN click lost the tab
+  // (Ajay 2026-08-25: "back button do not take me to the same place in these
+  // tabs"). The ?from/from_q pair covers the no-state new-tab branch.
+  const carryQ = sanitizeSourceQuery(location.search);
+  const backTarget = carryQ ? `/chart-maps?${carryQ}` : '/chart-maps';
+
   return (
     <Link
-      to={withSource(tile.href, 'chart-maps')}
-      state={{ from: '/chart-maps', label: 'Chart Maps' }}
+      to={withSource(tile.href, 'chart-maps', location.search)}
+      state={{ from: backTarget, label: 'Chart Maps' }}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
       aria-label={`${tile.symbol} — open SEPA detail`}
     >

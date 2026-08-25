@@ -60,14 +60,34 @@ export function sourceKeyFor(pathname: string | null | undefined): string | null
   return best;
 }
 
+/** The source page's own query, filtered so it can be trusted on the way
+ *  back: `from`/`from_q` are stripped (no recursion), and re-serializing
+ *  through URLSearchParams means nothing that isn't a query survives — the
+ *  value can only ever be appended after `<registry path>?`. */
+export function sanitizeSourceQuery(search: string | null | undefined): string {
+  if (!search) return '';
+  const q = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  q.delete('from');
+  q.delete('from_q');
+  return q.toString();
+}
+
 /** Append `from=<key>` to a detail href, preserving any query it already has
  *  (the chart-map tiles ship `?tab=setup` / `?tab=supply`). Unknown keys are
- *  dropped rather than written, so the param can always be trusted on read. */
-export function withSource(href: string, key: string): string {
+ *  dropped rather than written, so the param can always be trusted on read.
+ *
+ *  `sourceSearch` is the SOURCE page's location.search. Without it the back
+ *  target loses the page's own state — Ajay 2026-08-25, the day two new
+ *  Chart Maps tabs shipped: "The back button do not take me to the same
+ *  place in these tabs" — /chart-maps?tab=gabbar came back as /chart-maps,
+ *  i.e. the VCP tab. */
+export function withSource(href: string, key: string, sourceSearch?: string): string {
   if (!href || !NAV_SOURCES[key]) return href;
   const [path, query = ''] = href.split('?');
   const params = new URLSearchParams(query);
   params.set('from', key);
+  const carry = sanitizeSourceQuery(sourceSearch);
+  if (carry) params.set('from_q', carry);
   return `${path}?${params.toString()}`;
 }
 
@@ -77,8 +97,13 @@ export function withSource(href: string, key: string): string {
 export function resolveBack(
   state: { from?: string; label?: string } | null | undefined,
   fromParam: string | null | undefined,
+  fromQuery?: string | null,
 ): NavSource | null {
   if (state?.from) return { path: state.from, label: state.label || 'Back' };
-  if (fromParam && NAV_SOURCES[fromParam]) return NAV_SOURCES[fromParam];
+  if (fromParam && NAV_SOURCES[fromParam]) {
+    const src = NAV_SOURCES[fromParam];
+    const carry = sanitizeSourceQuery(fromQuery);
+    return carry ? { path: `${src.path}?${carry}`, label: src.label } : src;
+  }
   return null;
 }

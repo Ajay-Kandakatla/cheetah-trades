@@ -35,7 +35,8 @@ export function MoneyFlowLeaderboard({ flow, onTickerClick }: Props) {
     // history, so without it the destination's back button hard-falls to
     // /sepa — the exact "goes to sepa always" Ajay reported from this page.
     const url = withSource(`/sepa/${encodeURIComponent(t)}`,
-                           sourceKeyFor(location.pathname) || '');
+                           sourceKeyFor(location.pathname) || '',
+                           location.search);
     // Cmd / Ctrl / Shift / middle-click → always open in a new tab,
     // regardless of whether onTickerClick is set
     if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) {
