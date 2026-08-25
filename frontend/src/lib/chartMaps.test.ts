@@ -483,7 +483,7 @@ describe('the Earnings Flow tab', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
     expect(CM_TABS).toEqual(
-      ['vcp', 'zones', 'supply', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -529,12 +529,13 @@ describe('the prior-close reference line', () => {
 // ── Support Levels tab (Ajay 2026-08-19) ─────────────────────────────────────
 describe('the Support Levels tab', () => {
   it('sits inside the supply/demand cluster, not off on its own', () => {
-    // It used to be pinned directly after `zones`; `supply` now sits between
-    // them, which is right — the two BOARDS belong adjacent and the per-ticker
-    // tool follows them. What must hold is that all three stay contiguous.
+    // The zone-structure cluster grew twice (2026-08-25: Deep Demand, then
+    // Gabbar Levels — both level-boards carrying the Bonde sales gate). What
+    // must hold is unchanged in spirit: every board reading zone structure
+    // stays contiguous, and the per-ticker tool closes the cluster.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'supply', 'support']);
+      .toEqual(['zones', 'supply', 'deep_demand', 'gabbar', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
@@ -963,5 +964,45 @@ describe('scan freshness — parseScanTs / scanStamp / dataThrough', () => {
     expect(dataThrough([])).toBeNull();
     expect(dataThrough([{ bars: [] }, {}])).toBeNull();
     expect(dataThrough([{ bars: [bar('garbage')] }])).toBeNull();
+  });
+});
+
+describe('the Deep Demand tab', () => {
+  it('is registered inside the zone cluster and parses', () => {
+    expect(CM_TABS.includes('deep_demand')).toBe(true);
+    expect(parseTab('deep_demand')).toBe('deep_demand');
+    expect(isBoardTab('deep_demand')).toBe(true);
+  });
+
+  it('states both halves of the screen AND the trend-gate honesty line', () => {
+    // Ajay 2026-08-25: "penalized stocks that actually have good revenue but
+    // market does not realize it" + "so we are not catching falling knives".
+    // The copy must carry the gate's NAME and floor (it is Bonde's number,
+    // not ours) and say these names fail the trend gate on purpose.
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).toMatch(/second/i);
+    expect(b).toMatch(/Bonde/);
+    expect(b).toMatch(/5% YoY floor/);
+    expect(b).toMatch(/falling knife/i);
+    expect(b).toMatch(/fail the trend gate by design/i);
+  });
+});
+
+describe('the Gabbar Levels tab', () => {
+  it('is registered next to Deep Demand and parses', () => {
+    expect(CM_TABS.includes('gabbar')).toBe(true);
+    expect(parseTab('gabbar')).toBe('gabbar');
+    expect(isBoardTab('gabbar')).toBe(true);
+  });
+
+  it('attributes the levels, admits they are judgment, and names the gate', () => {
+    // These are a person's hand-drawn bands from a dated snapshot. The copy
+    // must say whose, that it is not a computation, and that the same Bonde
+    // gate hides declining-sales names.
+    const b = TAB_META.gabbar.blurb;
+    expect(b).toMatch(/veerenj/);
+    expect(b).toMatch(/not a computation/i);
+    expect(b).toMatch(/Bonde/);
+    expect(b).toMatch(/snapshot date/i);
   });
 });

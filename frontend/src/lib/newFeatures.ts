@@ -22,6 +22,8 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  { id: 'deep-demand-tab',      label: 'Deep Demand tab — 2nd-level arrivals, Bonde sales gate', addedAt: '2026-08-25', route: '/chart-maps' },
+  { id: 'gabbar-levels-tab',    label: "Gabbar Levels tab — curated bands, touching first",       addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'board-scan-stamp',     label: 'Chart Maps: scan-time + data-through stamp', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'breakouts',            label: 'Breakouts page',                      addedAt: '2026-06-16', route: '/breakouts' },
   { id: 'breakouts-columns',    label: 'Column guide on the Breakouts table', addedAt: '2026-06-17', route: '/breakouts' },

@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'zones' | 'supply' | 'support' | 'zero_dte' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'support' | 'zero_dte' | 'winners' | 'earnings';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -21,7 +21,10 @@ export type CmTab = 'vcp' | 'zones' | 'supply' | 'support' | 'zero_dte' | 'winne
 // `zero_dte` sits after the structure tabs and before the ledger ones: it is
 // the only tab reading LIVE option chains rather than a cached equity scan,
 // so it is deliberately not adjacent to the boards it can be confused with.
-export const CM_TABS: CmTab[] = ['vcp', 'zones', 'supply', 'support', 'zero_dte', 'earnings', 'winners'];
+// `deep_demand` follows `supply` — it is the darkest read of the same zone
+// structure: the first band already failed. `gabbar` follows it as the other
+// levels-plus-sales board; both carry the Bonde sales gate.
+export const CM_TABS: CmTab[] = ['vcp', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -46,6 +49,14 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   supply: {
     label: 'Into Supply',
     blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above.',
+  },
+  deep_demand: {
+    label: 'Deep Demand',
+    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered.',
+  },
+  gabbar: {
+    label: 'Gabbar Levels',
+    blurb: 'Hand-curated buy zones from Gabbar\'s Price Levels (veerenj on TradingView) — expert judgment stored as numbers, not a computation. Names touching or within 3% of a band sort first. The same Bonde sales gate applies: a covered name with declining revenue is hidden, because a hand-drawn level under a shrinking business is exactly the knife. Check the snapshot date in the note — old levels describe an old chart.',
   },
   support: {
     label: 'Support Levels',
