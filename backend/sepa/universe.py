@@ -1364,6 +1364,15 @@ def fetch_broad() -> list[str]:
 # drift from what that phrase actually resolves to.
 _UNIVERSE_ALIASES: dict[str, tuple[str, ...]] = {
     "sp1500_plus": ("sp1500", "curated", "themes"),
+    # The SEPA scan's own net (Ajay 2026-08-25: "for our demand and supply all
+    # the chart maps i would like the full universe scan which includes SP1500
+    # too"). russell1000 alone was the mode until then, which structurally
+    # misses every S&P 600 small cap — the demand board scanned 1,551 names
+    # while the scanner feeding the SEPA page and Strong VCP tab saw 1,001.
+    # Union, not replacement: Russell keeps the not-yet-in-S&P large caps
+    # (recent IPOs), sp1500 adds the small-cap tier, curated + themes carry
+    # the pre-profit / ADR names no index will hold.
+    "full": ("russell1000", "sp1500", "curated", "themes"),
 }
 
 

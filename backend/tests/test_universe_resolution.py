@@ -311,3 +311,18 @@ def test_themes_sort_LAST_so_the_index_choices_lead():
     assert keys[-1] == "themes"
     assert keys.index("sp500") < keys.index("sp1500")
     assert keys.index("qqq") < keys.index("sp1500")
+
+
+def test_full_is_russell1000_union_sp1500_plus_curated_plus_themes(fake_lists):
+    """'full' exists so the scanner's net matches the demand board's (Ajay
+    2026-08-25). Every layer must survive the union — losing sp1500 here would
+    silently shrink the SEPA page back to the 1,001-name scan."""
+    got = set(U.load_universe("full"))
+    for part in ("russell1000", "sp1500", "curated", "themes"):
+        assert set(fake_lists[part]) <= got, f"'full' dropped {part}"
+
+
+def test_full_alias_only_names_known_components(fake_lists):
+    assert U._UNIVERSE_ALIASES["full"] == ("russell1000", "sp1500", "curated", "themes")
+    for part in U._UNIVERSE_ALIASES["full"]:
+        assert part in U._KNOWN_COMPONENTS, f"alias names unknown component {part}"
