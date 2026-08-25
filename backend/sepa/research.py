@@ -102,6 +102,40 @@ def get_all_research(max_age_sec: int = CACHE_TTL_SEC) -> dict[str, dict]:
         return {}
 
 
+def sales_snapshot(symbols: list[str],
+                   max_age_sec: int = CACHE_TTL_SEC) -> dict[str, dict]:
+    """Bonde sales block + revenue YoY for a set of symbols, one Mongo query.
+
+    Feeds the Deep Demand and Gabbar Levels boards' falling-knife gate (Ajay
+    2026-08-25: "both need pradeep bonde's sales and revenus quarter logic").
+    Projection keeps the read tiny — the full research blob is ~everything.
+    Returns {} on any failure; the boards treat a missing symbol as "sales
+    unknown", never as a pass.
+    """
+    coll = _get_cache()
+    if coll is None or not symbols:
+        return {}
+    cutoff = time.time() - max_age_sec
+    try:
+        out: dict[str, dict] = {}
+        for doc in coll.find(
+                {"symbol": {"$in": [s.upper() for s in symbols]},
+                 "cached_at": {"$gte": cutoff}},
+                {"symbol": 1, "cached_at": 1,
+                 "fundamentals.sales": 1,
+                 "fundamentals.rev_growth_q_pct": 1}):
+            f = doc.get("fundamentals") or {}
+            out[doc["symbol"]] = {
+                "sales": f.get("sales"),
+                "rev_growth_q_pct": f.get("rev_growth_q_pct"),
+                "cached_at": doc.get("cached_at"),
+            }
+        return out
+    except Exception as exc:
+        log.warning("research sales_snapshot failed: %s", exc)
+        return {}
+
+
 def _put_research(symbol: str, payload: dict) -> None:
     coll = _get_cache()
     if coll is None:

@@ -327,6 +327,7 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
 
     label = UNIVERSES.get(ukey, (ukey,))[0]
     return {"rows": [], "n": 0, "supply_rows": [], "supply_n": 0,
+            "deep_rows": [], "deep_n": 0,
             "scanned": 0, "universe": 0,
             "universe_key": ukey, "universe_label": label,
             "universe_note": f"{label} — first scan running",
@@ -875,6 +876,14 @@ def decide_from_frame(df, sym: str):
         "demand_zones": demand,
         "nearest_resistance": zones.get("nearest_resistance"),
         "nearest_support": zones.get("nearest_support"),
+        # Break evidence for the HIGHEST surfaced demand band, only when price
+        # is below it. The per-band lists carry touch ages, not break history,
+        # and `zone_broken` above describes the ENTRY band — which for a name
+        # in its second-level band is a different band entirely. Computed here
+        # because `closes` exists here; deep_demand.read() consumes it.
+        "top_band_read": (reentry_read(closes, demand[0]["hi"], demand[0]["lo"],
+                                       last_price)
+                          if demand and last_price < demand[0]["lo"] else None),
         "verdict": _verdict_after_break(zones.get("verdict"), entry_zone, band),
         # The re-entry read.
         "in_demand_band": band["in_band"],
@@ -1327,8 +1336,10 @@ def scan(force: bool = False, limit: Optional[int] = None,
         universe_note = f"{ulabel} ({len(syms)} names)"
 
     from . import into_supply as _into_supply
+    from . import deep_demand as _deep
     rows, scanned, errors = [], 0, 0
     supply_rows: list = []          # the inverse board, same pass
+    deep_rows: list = []            # second-level arrivals, same pass
     total = len(syms)
     _publish_progress(ukey, "scanning", started_at=t0, current=0, total=total,
                       hits=0, errors=0, symbol=None, universe_label=ulabel)
@@ -1354,6 +1365,18 @@ def scan(force: bool = False, limit: Optional[int] = None,
                     supply_rows.append(r2)
             except Exception as exc:                          # pragma: no cover
                 log.debug("into-supply: collecting %s failed: %s", sym, exc)
+            # Third predicate, same record, same loop. Trend-gate-independent
+            # on purpose: the penalized names this screen exists for are
+            # exactly the ones is_reentry refuses (Ajay 2026-08-25).
+            try:
+                d3 = _deep.read(rec)
+                if d3:
+                    r3 = dict(rec)
+                    r3.pop("series", None)
+                    r3["deep_demand"] = d3
+                    deep_rows.append(r3)
+            except Exception as exc:                          # pragma: no cover
+                log.debug("deep-demand: collecting %s failed: %s", sym, exc)
         # Every symbol, not every Nth: the writer builds one small dict and
         # swaps a reference, which costs far less than the price frame that
         # was just analysed. Sampling would only make the bar stutter.
@@ -1371,6 +1394,15 @@ def scan(force: bool = False, limit: Optional[int] = None,
         supply_rows.sort(key=_into_supply.sort_key)
     except Exception as exc:                                  # pragma: no cover
         log.debug("into-supply: sort failed: %s", exc)
+    # Deep-demand: in-band first, then closest to arriving. Capped AFTER the
+    # sort so a bad-breadth day keeps the best-ranked names; the pre-cap count
+    # rides on the payload so a capped day says so instead of looking complete.
+    deep_total = len(deep_rows)
+    try:
+        deep_rows.sort(key=_deep.sort_key)
+    except Exception as exc:                                  # pragma: no cover
+        log.debug("deep-demand: sort failed: %s", exc)
+    deep_rows = deep_rows[:_deep.MAX_ROWS]
 
     # Record the FULL qualifying list before anything trims it (Ajay 2026-08-17:
     # "Can you maintain history of our In deman page please… Want you to track
@@ -1410,6 +1442,10 @@ def scan(force: bool = False, limit: Optional[int] = None,
     data = {
         "rows": rows,
         "n": len(rows),
+        # Second-level arrivals, same pass, same isolation rationale as
+        # supply_rows below: a separate key touches no existing consumer.
+        "deep_rows": deep_rows,
+        "deep_n": deep_total,
         # The inverse board, from the same pass. A separate key so every
         # existing consumer of `rows` — the page, the R:R floor, the limit, the
         # history ledger — is untouched by construction.

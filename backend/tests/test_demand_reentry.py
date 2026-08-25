@@ -1617,3 +1617,64 @@ def test_attach_venues_still_enriches_when_nothing_hangs(monkeypatch):
     rows = [_venue_row("AAA"), _venue_row("BBB")]
     dr._attach_venues(rows, top_n=2, budget_sec=5)
     assert all(r.get("venues") for r in rows)
+
+
+# ---------------------------------------------------------------------------
+# deep_rows — second-level arrivals survive the scan even when trend fails
+# ---------------------------------------------------------------------------
+def test_scan_collects_deep_rows_that_is_reentry_refuses(monkeypatch):
+    """The whole reason deep-demand lives IN the scan (2026-08-25): a name
+    that broke its first band is usually a knife, fails trend_ok, and never
+    reaches `rows` — but must reach `deep_rows`."""
+    def _bands():
+        return [{"kind": "demand", "lo": 90.0, "hi": 95.0, "mid": 92.5,
+                 "touches": 3, "strength": 70.0},
+                {"kind": "demand", "lo": 80.0, "hi": 85.0, "mid": 82.5,
+                 "touches": 3, "strength": 60.0}]
+
+    rows = {
+        # In its second band, trend gate failed → deep_rows only.
+        "KNIFE": {"is_reentry": False, "last_price": 82.0,
+                  "demand_zones": _bands(), "bars_since_above": 2,
+                  "entry_zone": {"strength": 60}, "fell_from_pct": 15},
+        # Ordinary reentry, first band holding → rows only.
+        "CALM": {"is_reentry": True, "last_price": 92.0,
+                 "demand_zones": _bands(), "bars_since_above": 3,
+                 "entry_zone": {"strength": 90}, "fell_from_pct": 8},
+    }
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: list(rows))
+    monkeypatch.setattr(dr, "analyze_symbol",
+                        lambda s, with_series=False: {**rows[s], "symbol": s})
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    assert [r["symbol"] for r in out["rows"]] == ["CALM"]
+    assert [r["symbol"] for r in out["deep_rows"]] == ["KNIFE"]
+    assert out["deep_n"] == 1
+    d = out["deep_rows"][0]["deep_demand"]
+    assert d["state"] == "in" and d["second_band"]["lo"] == 80.0
+
+
+def test_scan_deep_rows_capped_but_count_honest(monkeypatch):
+    """No silent caps: a bad-breadth day trims deep_rows to MAX_ROWS but
+    deep_n reports how many actually qualified."""
+    from supply_demand import deep_demand as DD
+    n = DD.MAX_ROWS + 7
+    syms = [f"S{i:03d}" for i in range(n)]
+
+    def fake(s, with_series=False):
+        return {"symbol": s, "is_reentry": False, "last_price": 82.0,
+                "demand_zones": [
+                    {"kind": "demand", "lo": 90.0, "hi": 95.0, "mid": 92.5,
+                     "touches": 3, "strength": 70.0},
+                    {"kind": "demand", "lo": 80.0, "hi": 85.0, "mid": 82.5,
+                     "touches": 3, "strength": 60.0}],
+                "entry_zone": {"strength": 60}}
+
+    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: syms)
+    monkeypatch.setattr(dr, "analyze_symbol", fake)
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    assert len(out["deep_rows"]) == DD.MAX_ROWS
+    assert out["deep_n"] == n
