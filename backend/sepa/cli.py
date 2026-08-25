@@ -397,6 +397,16 @@ def main() -> int:
     if args.cmd == "trade-flash-watch":
         from orderflow import trade_flash
         r = trade_flash.run_watch()
+        # A quiet tape produces zero events, so the events collection cannot
+        # prove this job ran — the heartbeat is that proof. Same plumbing as
+        # the alerts engine; read by health_audit.check_trade_flash_heartbeat
+        # (2026-08-25: the pullback scan sat silently broken for 96h and the
+        # ask was "make sure all scans are successful").
+        try:
+            from observability import engine_heartbeat
+            engine_heartbeat.beat("trade_flash")
+        except Exception:
+            pass
         log.info("TRADE-FLASH watch: %s", r)
         return 0
 

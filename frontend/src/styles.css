@@ -11148,3 +11148,64 @@ a.tk-link:hover   { color: inherit; }
   color: var(--cm-slate, #94a3b8);
 }
 .cm-note-warn { color: var(--warn, #fbbf24); }
+
+/* ── Scan health (/health page + nav chip, Ajay 2026-08-25) ─────────────── */
+.sh-page { max-width: 900px; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
+.sh-head h1 { font-size: 1.3rem; margin: 0 0 0.3rem; }
+.sh-sub { color: var(--cm-slate, #8595ad); font-size: 0.85rem; max-width: 62ch; }
+.sh-summary {
+  display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 10px;
+  padding: 0.7rem 0.9rem; margin: 1rem 0;
+}
+.sh-summary--ok { border-color: rgba(34, 197, 94, 0.45); }
+.sh-summary--warn { border-color: rgba(234, 179, 8, 0.55); }
+.sh-summary--critical { border-color: rgba(239, 68, 68, 0.6); }
+.sh-summary__label { font-size: 1.05rem; font-weight: 700; }
+.sh-summary--ok .sh-summary__label { color: var(--positive, #22c55e); }
+.sh-summary--warn .sh-summary__label { color: #eab308; }
+.sh-summary--critical .sh-summary__label { color: var(--negative, #ef4444); }
+.sh-summary__counts { color: var(--ink, #e7e7e7); font-size: 0.85rem; }
+.sh-summary__age { color: var(--cm-slate, #8595ad); font-size: 0.78rem; }
+.sh-run {
+  margin-left: auto; background: none; cursor: pointer;
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 6px;
+  color: var(--cm-slate, #8595ad); padding: 0.3rem 0.7rem; font-size: 0.78rem;
+}
+.sh-run:hover { color: var(--ink, #e7e7e7); }
+.sh-rows { display: flex; flex-direction: column; gap: 0.35rem; }
+.sh-row {
+  display: grid; grid-template-columns: 5.2rem 11rem 5.5rem 1fr;
+  gap: 0.6rem; align-items: baseline;
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 8px;
+  padding: 0.45rem 0.7rem; font-size: 0.82rem;
+}
+@media (max-width: 640px) {
+  .sh-row { grid-template-columns: 4.6rem 1fr; }
+  .sh-cat { display: none; }
+  .sh-detail { grid-column: 1 / -1; }
+}
+.sh-row.sh-warn { border-color: rgba(234, 179, 8, 0.5); }
+.sh-row.sh-critical { border-color: rgba(239, 68, 68, 0.55); }
+.sh-chip {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+  border-radius: 5px; padding: 0.1rem 0.4rem; text-align: center;
+}
+.sh-chip.sh-ok { color: var(--positive, #22c55e); background: rgba(34, 197, 94, 0.12); }
+.sh-chip.sh-warn { color: #eab308; background: rgba(234, 179, 8, 0.14); }
+.sh-chip.sh-critical { color: var(--negative, #ef4444); background: rgba(239, 68, 68, 0.14); }
+.sh-name { color: var(--ink, #e7e7e7); }
+.sh-cat { color: var(--cm-slate, #8595ad); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.sh-detail { color: var(--cm-slate, #8595ad); overflow-wrap: anywhere; }
+.sh-err { color: var(--negative, #ef4444); font-size: 0.85rem; margin: 0.6rem 0; }
+.sh-empty { color: var(--cm-slate, #8595ad); font-size: 0.85rem; padding: 1rem 0; }
+.sh-navchip {
+  font-size: 0.72rem; font-weight: 600; text-decoration: none;
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 999px;
+  padding: 0.18rem 0.55rem; white-space: nowrap;
+}
+.sh-navchip--ok { color: var(--positive, #22c55e); border-color: rgba(34, 197, 94, 0.4); }
+.sh-navchip--warn { color: #eab308; border-color: rgba(234, 179, 8, 0.55); }
+.sh-navchip--critical { color: var(--negative, #ef4444); border-color: rgba(239, 68, 68, 0.6); }
+.sh-navchip--unknown { color: var(--cm-slate, #8595ad); }
+.sh-navchip--compact { padding: 0.14rem 0.45rem; }

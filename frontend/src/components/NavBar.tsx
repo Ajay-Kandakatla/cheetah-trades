@@ -6,6 +6,7 @@ import { useCurrentUser } from '../hooks/useUser';
 import { useMyMenu, type MenuItem } from '../hooks/useMyMenu';
 import { NavLabel } from './NavLabel';
 import { MarketGaugeBadge } from './MarketGaugeBadge';
+import { ScanHealthChip } from './ScanHealthChip';
 import { MarketPostureBanner } from './MarketPostureBanner';
 import { openRail } from '../lib/railBus';
 
@@ -176,6 +177,7 @@ export function NavBar() {
 
         <div className="cm-nav__mobile-actions">
           {hasGauge && <MarketGaugeBadge compact />}
+          <ScanHealthChip compact />
           {hasPortfolio && (
             <button
               type="button"
@@ -391,6 +393,8 @@ export function NavBar() {
       <div className="cm-nav__meta">
         <MarketPostureBanner />
         {hasGauge && <MarketGaugeBadge />}
+        {/* Are-all-scans-OK count (Ajay 2026-08-25) — links to /health. */}
+        <ScanHealthChip />
         <span className="cm-nav__meta-date mono">{TODAY}</span>
         <ThemeToggle />
         {/* Bell + dropdown of the last 8 unified notifications (pushes

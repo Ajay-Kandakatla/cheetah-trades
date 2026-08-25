@@ -40,6 +40,7 @@ const SepaV2Page                  = lazyWithReload(() => import('./pages/SepaV2'
 const SepaCandidatePage           = lazyWithReload(() => import('./pages/SepaCandidate').then(m => ({ default: m.SepaCandidatePage })));
 const DualMomentumPage            = lazyWithReload(() => import('./pages/DualMomentum').then(m => ({ default: m.DualMomentumPage })));
 const PullbackMaPage              = lazyWithReload(() => import('./pages/PullbackMa').then(m => ({ default: m.PullbackMaPage })));
+const ScanHealthPage              = lazyWithReload(() => import('./pages/ScanHealth').then(m => ({ default: m.ScanHealth })));
 const MarketGaugePage             = lazyWithReload(() => import('./pages/MarketGauge').then(m => ({ default: m.MarketGaugePage })));
 const UsagePage                   = lazyWithReload(() => import('./pages/UsagePage').then(m => ({ default: m.UsagePage })));
 const LongTermPage                = lazyWithReload(() => import('./pages/LongTermPage').then(m => ({ default: m.LongTermPage })));
@@ -259,6 +260,11 @@ export function App() {
             <Route path="/sepa/:symbol"   element={<FeatureRoute feature="sepa"><SepaCandidatePage /></FeatureRoute>} />
             <Route path="/dual-momentum"  element={<FeatureRoute feature="dual-momentum"><DualMomentumPage /></FeatureRoute>} />
             <Route path="/pullback-ma"    element={<FeatureRoute feature="pullback-ma"><PullbackMaPage /></FeatureRoute>} />
+            {/* Scan health (Ajay 2026-08-25). The health push's tap target
+                has ALWAYS routed here; this route existing fixes that dead
+                link. Not feature-gated: knowing the scans are alive is table
+                stakes for every signed-in user. */}
+            <Route path="/health"         element={<ScanHealthPage />} />
             <Route path="/market-gauge"   element={<FeatureRoute feature="market-gauge"><MarketGaugePage /></FeatureRoute>} />
             <Route path="/usage"          element={<FeatureRoute feature="usage"><UsagePage /></FeatureRoute>} />
             <Route path="/longterm"       element={<FeatureRoute feature="longterm"><LongTermPage /></FeatureRoute>} />

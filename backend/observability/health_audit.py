@@ -23,7 +23,7 @@ import logging
 import os
 import time
 from collections import deque
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -308,11 +308,129 @@ def check_symbol_liveness():
                      f"symbol liveness check failed: {exc}", None)
 
 
+def _mongo_db():
+    from sepa import history
+    return history._get_db()
+
+
+def check_demand_scan_fresh():
+    """The demand/supply/deep boards' scan actually ran today.
+
+    Ajay 2026-08-25: "This had happened before where some scans failed
+    silently." The demand cache is api-process memory this audit can't read,
+    but every scan also writes per-day rows to the demand_history collection —
+    that write is the evidence. WARN, not CRITICAL: the boards self-warm on
+    the next page visit, so a missed cron is degradation, not an outage.
+    """
+    try:
+        db = _mongo_db()
+        if db is None:
+            return _fail("demand_scan", "data", WARN, "Mongo unavailable")
+        et = _now_et()
+        # Weekend/Monday-premarket: Friday's run is the newest expectation.
+        lookback = 4 if et.weekday() in (5, 6, 0) else 2
+        days = [(et.date() - timedelta(days=i)).isoformat() for i in range(lookback)]
+        n = db.demand_board_runs.count_documents({"et_date": {"$in": days}})
+        if n == 0:
+            return _fail("demand_scan", "data", WARN,
+                         f"no demand-board runs recorded for {days} — the "
+                         f"demand scan may be silently down", 0)
+        return _ok("demand_scan", "data", f"{n} run(s) recorded over {days}", n)
+    except Exception as exc:
+        return _fail("demand_scan", "data", WARN, f"check error: {exc}")
+
+
+def check_trade_flash_heartbeat():
+    """The 5-minute trade-flash watch is actually ticking during the session.
+
+    A quiet tape legitimately produces ZERO events, so the events collection
+    cannot prove the job ran — the cli stamps an engine_heartbeat instead
+    (same plumbing the alerts engine uses) and this reads it. Outside market
+    hours the check passes vacuously.
+    """
+    try:
+        et = _now_et()
+        in_session = (et.weekday() < 5
+                      and (et.hour, et.minute) >= (9, 45)
+                      and et.hour < 16)
+        if not in_session:
+            return _ok("trade_flash", "engine", "market closed — not expected to tick")
+        db = _mongo_db()
+        if db is None:
+            return _fail("trade_flash", "engine", WARN, "Mongo unavailable")
+        doc = db.engine_heartbeat.find_one({"name": "trade_flash"})
+        if not doc or not doc.get("ts"):
+            return _fail("trade_flash", "engine", WARN,
+                         "no trade-flash heartbeat ever recorded")
+        age_min = (time.time() - float(doc["ts"])) / 60.0
+        if age_min > 20:
+            return _fail("trade_flash", "engine", WARN,
+                         f"trade-flash watch last ticked {age_min:.0f}m ago "
+                         f"(runs every 5m in session)", round(age_min, 1))
+        return _ok("trade_flash", "engine", f"ticked {age_min:.0f}m ago",
+                   round(age_min, 1))
+    except Exception as exc:
+        return _fail("trade_flash", "engine", WARN, f"check error: {exc}")
+
+
+def check_zero_dte_ledger():
+    """The 0DTE board's ledger froze a run this morning (weekdays)."""
+    try:
+        et = _now_et()
+        if et.weekday() >= 5:
+            return _ok("zero_dte_ledger", "data", "weekend — no run expected")
+        if (et.hour, et.minute) < (10, 15):
+            return _ok("zero_dte_ledger", "data", "before the 10:00 record run")
+        db = _mongo_db()
+        if db is None:
+            return _fail("zero_dte_ledger", "data", WARN, "Mongo unavailable")
+        doc = db.zero_dte_runs.find_one({"et_date": et.date().isoformat()})
+        if not doc:
+            return _fail("zero_dte_ledger", "data", WARN,
+                         f"no 0DTE run recorded for {et.date()} (10:00 cron)")
+        return _ok("zero_dte_ledger", "data", f"recorded for {et.date()}")
+    except Exception as exc:
+        return _fail("zero_dte_ledger", "data", WARN, f"check error: {exc}")
+
+
+def check_research_cache_age():
+    """The weekly Bonde-fundamentals research refresh is not falling behind.
+
+    Feeds the Deep Demand and Gabbar sales gates. Cron: Sunday 20:00 ET,
+    TTL 8 days — WARN once the bulk of the cache is older than the TTL
+    would ever allow after a healthy Sunday run.
+    """
+    try:
+        from sepa import research
+        st = research.status()
+        if not st.get("available"):
+            return _fail("research_cache", "data", WARN,
+                         f"research cache unavailable: {st.get('reason')}")
+        total, fresh = st.get("total") or 0, st.get("fresh") or 0
+        if total == 0:
+            return _fail("research_cache", "data", WARN, "research cache empty")
+        pct = fresh / total * 100.0
+        if pct < 60.0:
+            return _fail("research_cache", "data", WARN,
+                         f"only {fresh}/{total} blobs fresh ({pct:.0f}%) — "
+                         f"Sunday research-refresh may be failing",
+                         round(pct, 1))
+        return _ok("research_cache", "data", f"{fresh}/{total} fresh ({pct:.0f}%)",
+                   round(pct, 1))
+    except Exception as exc:
+        return _fail("research_cache", "data", WARN, f"check error: {exc}")
+
+
 CHECKS = [
     check_mongo, check_scan_fresh, check_scan_nonempty, check_price_cache,
     check_market_gauge, check_macro_risk, check_pullback_artifact,
     check_log_errors, check_disk, check_13f_quarter_current,
     check_universe_counts, check_symbol_liveness,
+    # The scans that could fail with no visible trace before 2026-08-25 —
+    # added the day the pullback artifact was found 96h stale with the audit
+    # WARNing into a void (Ajay: "some scans failed silently").
+    check_demand_scan_fresh, check_trade_flash_heartbeat,
+    check_zero_dte_ledger, check_research_cache_age,
 ]
 
 
