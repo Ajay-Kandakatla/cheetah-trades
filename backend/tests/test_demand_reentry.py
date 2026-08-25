@@ -1564,3 +1564,56 @@ def test_a_warming_payload_carries_the_floor_fields():
     src = inspect.getsource(dr.cached_or_warm)
     for key in ('"min_rr"', '"min_rr_default"', '"dropped_low_rr"'):
         assert key in src, f"warming payload is missing {key}"
+
+
+# ---------------------------------------------------------------------------
+# venue enrichment must DEGRADE on a hung fetch, never kill the scan
+# ---------------------------------------------------------------------------
+def _venue_row(sym, rr=3.0):
+    return {"symbol": sym, "plan": {"rr": rr}, "liquidity": {}}
+
+
+def test_attach_venues_survives_a_hung_future(monkeypatch):
+    """as_completed(timeout=...) RAISES concurrent.futures.TimeoutError at the
+    deadline; it does not just stop iterating. Before 2026-08-25 that exception
+    escaped _attach_venues and killed the whole 1,500-name scan it was
+    decorating — the warm thread logged "background warm failed for sp1500:
+    1 (of 15) futures unfinished" every ~90s and the board said "Scanning…"
+    forever (trigger: the shared Massive key at max_connections, one fetch
+    hung). Detail is decoration; the scan landing is the product."""
+    import threading
+
+    release = threading.Event()
+
+    def fake_enrich(r, *a, **k):
+        if r["symbol"] == "HUNG":
+            release.wait(10)  # far past the test's budget+slack
+            return None
+        return {"venues": {"rating": "A"}, "retail": None,
+                "total_shares": 0, "tape_is_today": False}
+
+    monkeypatch.setattr(dr, "_enrich_one", fake_enrich)
+    monkeypatch.setattr(dr, "_VENUE_SLACK_SEC", 0.3)
+
+    rows = [_venue_row("HUNG", rr=9.9), _venue_row("AAA"), _venue_row("BBB")]
+    t0 = time.time()
+    dr._attach_venues(rows, top_n=3, budget_sec=0.3)  # must NOT raise
+    took = time.time() - t0
+    release.set()  # let the worker thread die
+
+    assert took < 5, f"_attach_venues blocked {took:.1f}s on the hung future"
+    got = {r["symbol"] for r in rows if r.get("venues")}
+    assert got == {"AAA", "BBB"}
+    assert not rows[0].get("venues"), "the hung row must simply lack detail"
+
+
+def test_attach_venues_still_enriches_when_nothing_hangs(monkeypatch):
+    """The except-path fix must not change the happy path."""
+    def fake_enrich(r, *a, **k):
+        return {"venues": {"rating": "B"}, "retail": None,
+                "total_shares": 0, "tape_is_today": False}
+
+    monkeypatch.setattr(dr, "_enrich_one", fake_enrich)
+    rows = [_venue_row("AAA"), _venue_row("BBB")]
+    dr._attach_venues(rows, top_n=2, budget_sec=5)
+    assert all(r.get("venues") for r in rows)

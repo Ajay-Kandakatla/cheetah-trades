@@ -134,6 +134,9 @@ VENUE_DETAIL_TOP_N = 15
 # already renders that as "—" with a tooltip saying no tape was pulled. A
 # board that loads without the extra columns beats a board that times out.
 VENUE_BUDGET_SEC = 25.0
+# Grace past the budget before as_completed gives up entirely. A knob so the
+# hung-future regression test does not have to wait five real seconds.
+_VENUE_SLACK_SEC = 5.0
 VENUE_WORKERS = 6
 
 # NBBO is only needed to SIGN retail prints, not to reconstruct the session, so
@@ -1072,6 +1075,7 @@ def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N,
     left without detail rather than holding up the whole response.
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import TimeoutError as FuturesTimeout
     from datetime import date as _d
     from orderflow import darkpool, quotes as quotes_mod, retail as retail_mod, tape as tape_mod
 
@@ -1081,10 +1085,13 @@ def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N,
 
     t0 = time.time()
     done = 0
-    with ThreadPoolExecutor(max_workers=VENUE_WORKERS) as pool:
+    # NOT a `with` block: pool.__exit__ is shutdown(wait=True), which would
+    # sit on the very future whose hang we are defending against below.
+    pool = ThreadPoolExecutor(max_workers=VENUE_WORKERS)
+    try:
         futures = {pool.submit(_enrich_one, r, tape_mod, quotes_mod,
                                darkpool, retail_mod, _d): r for r in ranked}
-        for fut in as_completed(futures, timeout=budget_sec + 5):
+        for fut in as_completed(futures, timeout=budget_sec + _VENUE_SLACK_SEC):
             r = futures[fut]
             if time.time() - t0 > budget_sec:
                 break
@@ -1119,6 +1126,24 @@ def _attach_venues(rows: list, top_n: int = VENUE_DETAIL_TOP_N,
                                        "quiet" if rv >= RVOL_QUIET else "dead"),
                     })
                     r["liquidity"] = L
+    except FuturesTimeout:
+        # `as_completed(timeout=...)` RAISES at the deadline — it does not just
+        # stop iterating. Uncaught, one hung fetch escaped this function and
+        # killed the entire 1,500-name scan it was decorating, so the warm
+        # thread threw everything away and restarted: "background warm failed
+        # for sp1500: 1 (of 15) futures unfinished", every ~90s, board saying
+        # "Scanning…" forever — the 2026-08-25 morning the Massive key (shared
+        # with his friend) hit max_connections. Detail on a few rows is
+        # decoration; the scan landing is the product.
+        left = sum(1 for f in futures if not f.done())
+        log.warning("demand-reentry: venue enrichment timed out with %d/%d "
+                    "unfinished — continuing without their detail",
+                    left, len(ranked))
+    finally:
+        # Not the pool's context manager: shutdown(wait=True) would sit on the
+        # hung future. cancel_futures kills the queued ones; the running one
+        # finishes in the background and its result is discarded.
+        pool.shutdown(wait=False, cancel_futures=True)
     log.info("demand-reentry: enriched %d/%d rows in %.1fs (budget %.0fs)",
              done, len(ranked), time.time() - t0, budget_sec)
 
