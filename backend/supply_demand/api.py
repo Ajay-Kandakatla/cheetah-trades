@@ -136,6 +136,15 @@ async def get_demand_reentry_history(
     return out
 
 
+@router.get("/supply-demand/trade-flash")
+async def trade_flash_today():
+    """Today's zone-tied tape bursts (Ajay 2026-08-24: Trade Flash "with in the
+    Demand Zone tabs"). Read-only view over what the cron watch recorded —
+    serving it never triggers a scan or a tape fetch."""
+    from orderflow import trade_flash
+    return trade_flash.today_events()
+
+
 @router.get("/supply-demand/accumulation-changes")
 async def accumulation_changes(limit: int = Query(50, ge=1, le=200)):
     """Quarter-over-quarter institutional flow changes already detected.

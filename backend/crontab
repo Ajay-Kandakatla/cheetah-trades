@@ -68,6 +68,14 @@
 # borrows their warm price cache instead of competing with it.
 5      17    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm nasdaq: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=nasdaq&limit=1'
 #
+# ── Trade Flash (Ajay 2026-08-24) ────────────────────────────────────────────
+# Zone-tied tape bursts on the demand/supply board names, pushed to his phone
+# (kind trade_flash, owner-scoped). Every 5 min in RTH; the module itself
+# refuses to run outside 9:32-16:00 ET, so the wide cron window is harmless.
+# Tail-only tape fetches (~1 request/name/poll) keep this light on the shared
+# key.
+2-57/5 9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli trade-flash-watch
+#
 # ── 0DTE ledger (Ajay 2026-08-24) ────────────────────────────────────────────
 # Recorded DURING the session, deliberately. A 0DTE suggestion frozen after the
 # close is worthless twice over: the chain has settled to pennies, and grading

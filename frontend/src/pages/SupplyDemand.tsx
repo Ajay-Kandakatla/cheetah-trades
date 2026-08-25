@@ -6,6 +6,7 @@ import { NodeThesisPanel } from '../components/NodeThesisPanel';
 import { MoneyFlowLeaderboard } from '../components/MoneyFlowLeaderboard';
 import { StockSupplyDemandPanel } from '../components/StockSupplyDemandPanel';
 import { DemandReentryPanel } from '../components/DemandReentryPanel';
+import { TradeFlashStrip } from '../components/TradeFlashStrip';
 import { useSupplyDemandGraph, useSectors, useMarketFlow, useEquityPremium } from '../hooks/useSupplyDemand';
 import type { SectorPayload, FlowTicker, EquityTag } from '../hooks/useSupplyDemand';
 import { useSepaScan } from '../hooks/useSepa';
@@ -116,7 +117,12 @@ export function SupplyDemandPage() {
 
       {tab === 'stocks' && <StockSupplyDemandPanel />}
 
-      {tab === 'reentry' && <DemandReentryPanel />}
+      {tab === 'reentry' && (
+        <>
+          <TradeFlashStrip />
+          <DemandReentryPanel />
+        </>
+      )}
 
       {tab === 'equity' && <EquityPremiumPanel onClickTicker={(t) => setSelectedTicker(t)} />}
 

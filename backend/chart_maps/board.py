@@ -833,6 +833,20 @@ def _vcp_badges(row: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # tab 2 — pullbacks into demand
 # ---------------------------------------------------------------------------
+def _flash_symbols() -> set:
+    """Symbols with a zone-tied tape burst TODAY (orderflow/trade_flash).
+
+    Failure-isolated: the zone boards must render identically if the flash
+    collection is cold, missing, or Mongo is down — a badge is decoration on
+    the board, never a dependency of it.
+    """
+    try:
+        from orderflow import trade_flash
+        return set(trade_flash.today_events().get("symbols") or [])
+    except Exception:
+        return set()
+
+
 def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  universe: str = "sp1500_plus",
                  themes_first: bool = THEMES_FIRST_DEFAULT,
@@ -865,6 +879,7 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
     # Already ordered by `into_supply.sort_key` inside the scan.
     rows = list(data.get("supply_rows") or [])
+    flash_syms = _flash_symbols()
     tiles = []
     for rank, r in enumerate(rows):
         sym = (r.get("symbol") or "").upper()
@@ -931,6 +946,11 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         if sup.get("ceiling_bars_since_test") is not None and \
                 sup["ceiling_bars_since_test"] <= 21:
             badges.append({"text": "Tested recently", "tone": "muted"})
+        if sym in flash_syms:
+            # A burst AT a supply ceiling: sell burst = the lid being defended,
+            # buy burst = someone paying up into it. Either way he wants to see
+            # it (Trade Flash, 2026-08-24) — the side lives in the flash strip.
+            badges.append({"text": "⚡ Tape burst at zone", "tone": "warn"})
 
         tiles.append({
             "symbol": sym,
@@ -1155,6 +1175,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 "note": "scanning for demand-zone pullbacks…"}
 
     rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
+    flash_syms = _flash_symbols()
     tiles = []
     for r in rows:
         sym = (r.get("symbol") or "").upper()
@@ -1222,7 +1243,13 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": stats,
             "why": why,
             "theme": _theme(sym),
-            "badges": _zone_badges(r),
+            "badges": _zone_badges(r) + (
+                # ⚡ Trade Flash (Ajay 2026-08-24): a >= $250k one-sided burst
+                # printed in/near this name's zone TODAY — the tape trigger his
+                # zone entries were missing. Badge only; the detail lives in
+                # the Tape tab and the Supply & Demand flash strip.
+                [{"text": "⚡ Tape burst at zone", "tone": "good"}]
+                if sym in flash_syms else []),
             "_score": rr or 0.0,
             "_m": tile_metrics(r),
         })

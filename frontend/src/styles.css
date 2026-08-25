@@ -10787,6 +10787,23 @@ a.tk-link:hover   { color: inherit; }
   border-left-color: var(--warn, #f59e0b);
 }
 
+/* Trade Flash strip — today's zone-tied tape bursts on Supply & Demand.
+ * Quiet by design: the component renders nothing at all on a quiet tape. */
+.tf-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  margin: 0 0 0.8rem; padding: 0.55rem 0.75rem; border-radius: 10px;
+  background: rgba(148,163,184,0.07); font-size: 0.78rem;
+}
+.tf-strip__title { font-weight: 600; color: var(--ink, #e7e7e7); margin-right: 0.25rem; }
+.tf-chip {
+  display: inline-flex; align-items: baseline; gap: 0.4rem;
+  padding: 2px 9px; border-radius: 999px; border: 1px solid transparent;
+}
+.tf-chip--buy  { background: rgba(34,197,94,0.12);  border-color: rgba(34,197,94,0.35); }
+.tf-chip--sell { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); }
+.tf-chip__detail { color: var(--cm-slate, #8595ad); font-size: 0.72rem; }
+.tf-strip__more { color: var(--cm-slate, #8595ad); font-size: 0.72rem; }
+
 .cm-controls { display: flex; gap: 0.7rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.7rem; }
 .cm-ctl { font-size: 0.76rem; color: var(--cm-slate, #8595ad); display: inline-flex; align-items: center; gap: 0.35rem; }
 .cm-ctl select {

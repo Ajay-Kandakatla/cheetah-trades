@@ -154,6 +154,12 @@ def main() -> int:
     )
 
     sub.add_parser(
+        "trade-flash-watch",
+        help="Poll the demand/supply-board names for zone-tied tape bursts and "
+             "push new ones (RTH only; one consolidated push per cycle).",
+    )
+
+    sub.add_parser(
         "zero-dte-record",
         help="Record today's 0DTE board to the ledger. Run DURING the session, "
              "not after it: the suggestion has to be frozen while the chain is "
@@ -386,6 +392,12 @@ def main() -> int:
         from scalping import paper
         r = paper.resolve_open()
         log.info("SCALPING-PAPER resolve: %s", r)
+        return 0
+
+    if args.cmd == "trade-flash-watch":
+        from orderflow import trade_flash
+        r = trade_flash.run_watch()
+        log.info("TRADE-FLASH watch: %s", r)
         return 0
 
     if args.cmd == "zero-dte-record":

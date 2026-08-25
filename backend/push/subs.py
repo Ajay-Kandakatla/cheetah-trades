@@ -328,6 +328,16 @@ def default_prefs() -> dict:
         # because 13F rolls quarterly and the scope is holdings + watchlist —
         # a handful per quarter, batched into ONE consolidated push.
         "accumulation_change": True,
+        # ── Trade Flash — a >= $250k, >=75% one-sided 10s burst printing IN or
+        # NEAR a zone on the demand/supply boards (orderflow/trade_flash.py).
+        # 5th phone kind, added on Ajay's explicit ask 2026-08-24 ("push
+        # notification I can also get it on my phone"). Owner-scoped at the
+        # SENDER (send_to_user) — this pref existing for everyone is harmless
+        # because nobody else is ever targeted. MUST be in this dict: a kind
+        # missing from default_prefs silently drops for every device (the
+        # 2026-06-24 chokepoint), which would make the cron look healthy while
+        # his phone stays dark.
+        "trade_flash": True,
         "todo_daily_digest": True,    # 7 AM ET daily summary push
         # macbook_deal removed 2026-05-15 along with the lifeboard module.
         # Existing user docs may still have the key on them — pymongo
