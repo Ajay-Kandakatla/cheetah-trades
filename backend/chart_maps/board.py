@@ -1903,6 +1903,11 @@ def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         stg = r.get("stage") or {}
         if stg.get("stage") not in (3, 4):
             continue
+        # No ETFs: the first live board surfaced LABD — a 3x INVERSE fund —
+        # as a "short". Wrappers track baskets; stage/distribution reads on
+        # them describe the basket, not an institutional exit.
+        if r.get("is_etf"):
+            continue
         vol = r.get("volume") or {}
         sell = r.get("sell_signals") or {}
         sig = sell.get("signals") or {}
@@ -1948,14 +1953,23 @@ def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         if isinstance(bc, (int, float)) and bc >= 4:
             evidence.append((f"🏗 Base #{int(bc)} — late stage", "muted"))
 
-        if len(evidence) < 2:
+        # Three independent reads, not two: at two, a cautious tape put more
+        # than HALF the 1,673-name universe on the board (measured 1,054 on
+        # 2026-08-25) — a list that size is a market comment, not a short
+        # list. "Aggressively" was the ask.
+        if len(evidence) < 3:
             continue
 
         rs = _f(r.get("rs_rank"))
+        # Stage 3 outranks stage 4 at equal evidence: HIS ask is the TOPPING
+        # stage, and Minervini's short trigger (TTLAC §6) fires at the fresh
+        # 200-day break — an RS-1 name a year into Stage 4 is a corpse, not
+        # a setup. RS weakness stays as a mild tiebreak only.
         score = (len(evidence) * 10.0
                  + (clim.get("severity") or 0) * 3.0
                  + (sell.get("severity") or 0) * 2.0
-                 + ((100.0 - rs) / 10.0 if rs is not None else 0.0))
+                 + (8.0 if stg.get("stage") == 3 else 0.0)
+                 + ((100.0 - rs) / 20.0 if rs is not None else 0.0))
 
         trend = r.get("trend") or {}
         lines = []

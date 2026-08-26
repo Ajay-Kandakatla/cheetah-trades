@@ -1288,12 +1288,14 @@ def test_topping_keeps_stage3_with_evidence_and_refuses_stage2(
         _topping_row("ONEREAD", dist_days=2, accum_days=2, cmf=0.02,
                      cmf_signal="neutral", strength="neutral", ratio=1.1,
                      largest_1d=True),
+        # Ugly reads but it's a wrapper — the LABD lesson
+        {**_topping_row("INVETF", stage=4, below_200=True), "is_etf": True},
     ]
-    for s in ("TOPPY", "STILLUP", "ONEREAD"):
+    for s in ("TOPPY", "STILLUP", "ONEREAD", "INVETF"):
         prices[s] = _frame(200)
 
     out = B.board("topping", limit=5, min_tier="any")
-    assert [t["symbol"] for t in out["tiles"]] == ["TOPPY"]
+    assert [t["symbol"] for t in out["tiles"]] == ["TOPPY"]  # no S2, no 1-read, no ETF
     t = out["tiles"][0]
     txt = " ".join(b["text"] for b in t["badges"])
     assert "S3 Topping" in txt
