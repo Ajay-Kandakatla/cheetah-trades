@@ -78,8 +78,11 @@ def test_the_default_window_is_one_of_the_offered_ones():
 
 
 def test_an_unknown_window_falls_back_and_never_raises():
-    for junk in ("", "  ", "5y", "monthly", None, 7, object()):
+    for junk in ("", "  ", "10y", "monthly", None, 7, object()):
         assert S.parse_window(junk) == S.DEFAULT_WINDOW
+    # "5y" graduated from junk to a real window on 2026-08-25 ("select
+    # support level ... by up to 5 years") — it must parse, not fall back.
+    assert S.parse_window("5y") == "5y"
 
 
 def test_window_parsing_is_case_and_space_insensitive():
@@ -589,3 +592,60 @@ def test_the_dropdown_now_offers_the_overlay_and_parse_accepts_it():
     assert support.parse_window("ALL ") == "all"
     # And unknown values still degrade to the default, never to the overlay.
     assert support.parse_window("everything") == support.DEFAULT_WINDOW
+
+
+# ── the 5-year window's deep fetch (2026-08-25) ─────────────────────────────
+def _bars_df(n):
+    import pandas as pd
+    idx = pd.bdate_range("2020-01-01", periods=n)
+    close = [50 + 0.01 * i for i in range(n)]
+    return pd.DataFrame({"open": close, "high": [c + 1 for c in close],
+                         "low": [c - 1 for c in close], "close": close,
+                         "volume": [1_000_000] * n}, index=idx)
+
+
+def test_5y_window_reaches_past_the_2y_cache(monkeypatch):
+    """The shared price cache returns its ~2y frame regardless of the period
+    argument, so the 5y zoom must fetch deep — and must NOT write the deep
+    frame back into the shared cache."""
+    from sepa import prices as prices_mod
+    calls = []
+    monkeypatch.setattr(prices_mod, "load_prices",
+                        lambda sym, period="2y", force=False: _bars_df(500))
+    monkeypatch.setattr(prices_mod, "_fetch_massive",
+                        lambda sym, period: calls.append((sym, period)) or _bars_df(1300))
+    S._deep_cache.clear()
+
+    df, have = S._frame_for("CR", 1260)
+    assert have == 1300 and calls == [("CR", "5y")]
+    # Second call: served from the module's own cache, no refetch.
+    S._frame_for("CR", 1260)
+    assert len(calls) == 1
+
+
+def test_5y_degrades_to_the_shared_frame_when_deep_fetch_fails(monkeypatch):
+    """A failed deep fetch answers with the 2y frame — and the single-window
+    path already reports bars_used/short so a 2-year chart is never silently
+    labelled '5 years'."""
+    from sepa import prices as prices_mod
+    monkeypatch.setattr(prices_mod, "load_prices",
+                        lambda sym, period="2y", force=False: _bars_df(500))
+    def boom(sym, period):
+        raise RuntimeError("provider down")
+    monkeypatch.setattr(prices_mod, "_fetch_massive", boom)
+    S._deep_cache.clear()
+
+    df, have = S._frame_for("CR", 1260)
+    assert have == 500 and df is not None
+
+
+def test_short_windows_never_trigger_a_deep_fetch(monkeypatch):
+    from sepa import prices as prices_mod
+    monkeypatch.setattr(prices_mod, "load_prices",
+                        lambda sym, period="2y", force=False: _bars_df(500))
+    def forbidden(sym, period):
+        raise AssertionError("deep fetch fired for a short window")
+    monkeypatch.setattr(prices_mod, "_fetch_massive", forbidden)
+    S._deep_cache.clear()
+    df, have = S._frame_for("CR", 252)
+    assert have == 500

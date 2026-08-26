@@ -18,7 +18,8 @@ function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
 
 describe('parseWindow', () => {
   it('falls back to the default on junk rather than throwing', () => {
-    for (const junk of ['', '  ', '5y', 'monthly', null, undefined]) {
+    // '5y' left this list on 2026-08-25 — it is a real window now.
+    for (const junk of ['', '  ', '10y', 'monthly', null, undefined]) {
       expect(parseWindow(junk)).toBe(DEFAULT_WINDOW);
     }
   });

@@ -74,6 +74,7 @@ export const FALLBACK_WINDOWS: SupportWindow[] = [
   { key: '3m', label: '3 months', bars: 63 },
   { key: '6m', label: '6 months', bars: 126 },
   { key: '1y', label: '1 year', bars: 252 },
+  { key: '5y', label: '5 years', bars: 1260 },
   // The overlay pseudo-window: every zoom at once, clustered by agreement.
   { key: 'all', label: 'All windows · overlay', bars: 0 },
 ];

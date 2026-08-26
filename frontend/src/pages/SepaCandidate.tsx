@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
 import { resolveBack } from '../lib/navSource';
+import { SupportLevels } from '../components/SupportLevels';
+import { DEFAULT_WINDOW } from '../lib/supportLevels';
 // Supply/demand + flow chips — ported from the SEPA list card so the
 // single-ticker research view has the same 🐋 whales / 📋 SEC / conviction /
 // political / 🌍 macro / insider+valuation surface (user 2026-05-30:
@@ -326,6 +328,8 @@ export function SepaCandidatePage() {
   const [plan, setPlan] = useState<any>(null);
   const [accountSize, setAccountSize] = useState(100000);
   const [riskPct, setRiskPct] = useState(1);
+  // Zoom for the price supply/demand panel on the supply tab (2026-08-25).
+  const [supportWin, setSupportWin] = useState(DEFAULT_WINDOW);
   // Active tab is derived from the URL: ?tab= wins, then a legacy #hash, else
   // 'chart'. Switching tabs rewrites ?tab= in place (replace, no history spam)
   // so a reload or a shared link lands on the same tab.
@@ -1741,7 +1745,25 @@ export function SepaCandidatePage() {
 
             {tab === 'supply' && (
               <section>
+                {/* Price supply/demand FIRST — Ajay 2026-08-25: "modify or
+                    select support level in the individual ticket by up to 5
+                    years". Same component as Chart Maps → Support Levels
+                    (zoom dropdown incl. 5y + the all-windows overlay); the
+                    ticker box doubles as a jump to another name's levels. */}
                 <div className="sepa-tab-help">
+                  <strong>Price supply / demand levels</strong> — where this
+                  stock's own tape has repeatedly turned. Change the zoom: a
+                  1-month read finds this week's shelf, the 5-year read finds
+                  the structural floors, and the overlay shows where multiple
+                  zooms agree.
+                </div>
+                <SupportLevels
+                  symbol={symbol}
+                  window={supportWin}
+                  onSymbol={(s) => navigate(`/sepa/${encodeURIComponent(s)}?tab=supply`)}
+                  onWindow={setSupportWin}
+                />
+                <div className="sepa-tab-help" style={{ marginTop: '1.2rem' }}>
                   <strong>Supply / Demand context</strong> — who this company
                   depends on, who depends on it, and which global sector
                   supply/demand cycles drive its results. Hover edges for

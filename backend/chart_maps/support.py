@@ -66,6 +66,10 @@ SUPPORT_WINDOWS: tuple[dict, ...] = (
     {"key": "3m", "label": "3 months", "bars": 63,  "swing_window": 3},
     {"key": "6m", "label": "6 months", "bars": 126, "swing_window": 4},
     {"key": "1y", "label": "1 year",   "bars": 252, "swing_window": 4},
+    # Ajay 2026-08-25: "select support level ... by up to 5 years". Wider
+    # swing window on purpose — at this zoom only structural pivots matter;
+    # a 2-bar swing five years ago is noise, not a level.
+    {"key": "5y", "label": "5 years",  "bars": 1260, "swing_window": 5},
 )
 
 # 3 months is the middle of what was asked for and the horizon a swing stop
@@ -115,6 +119,47 @@ OVERLAY_KEY = "all"
 # than price_zones.ZONE_MERGE_PCT-at-4% territory would double-merge, looser
 # would split genuine agreement.
 CLUSTER_PCT = 2.0
+
+
+# ── deep history (the 5y window) ─────────────────────────────────────────────
+# prices.load_prices returns the CACHED ~2y frame regardless of the period
+# argument on a cache hit, so the 5y zoom fetches its own frame straight from
+# the provider and keeps it in a small module cache. Never written back into
+# the shared price cache: everything downstream of it is sized for ~2y frames.
+_DEEP_TTL_SEC = 6 * 3600
+_deep_cache: dict = {}
+
+
+def _frame_for(sym: str, need_bars: int):
+    """(df, bars_available) — the shared 2y frame, or a deep 5y fetch when the
+    window needs more than the shared frame holds. Degrades to the shared
+    frame on a failed deep fetch — the caller reports the shortfall rather
+    than silently drawing a 2-year chart under a 5-year label."""
+    import time as _t
+    from sepa import prices
+
+    try:
+        df = prices.load_prices(sym, period="2y")
+    except Exception:                                          # pragma: no cover
+        df = None
+    have = len(df) if df is not None else 0
+    if need_bars <= have:
+        return df, have
+
+    key = sym.upper()
+    hit = _deep_cache.get(key)
+    if hit and (_t.time() - hit[0]) < _DEEP_TTL_SEC:
+        deep = hit[1]
+    else:
+        try:
+            deep = prices._fetch_massive(key, "5y")
+        except Exception:
+            deep = None
+        if deep is not None and len(deep):
+            _deep_cache[key] = (_t.time(), deep)
+    if deep is not None and len(deep) > have:
+        return deep, len(deep)
+    return df, have
 
 
 def window_keys() -> list[str]:
@@ -268,10 +313,7 @@ def overlay_for_symbol(sym: str, base: dict) -> dict:
     cap already exists to prevent, and agreement is the point of the view."""
     from sepa import prices
 
-    try:
-        df = prices.load_prices(sym, period="2y")
-    except Exception:                                          # pragma: no cover
-        df = None
+    df, have = _frame_for(sym, max(w["bars"] for w in SUPPORT_WINDOWS))
     if df is None or not len(df):
         return {**base, "error": f"No price data for {sym}."}
 
@@ -497,8 +539,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
         return overlay_for_symbol(sym, base)
 
     try:
-        from sepa import prices
-        df = prices.load_prices(sym, period="2y")
+        df, _have = _frame_for(sym, spec["bars"])
     except Exception as exc:                                  # pragma: no cover
         log.debug("support: prices %s failed: %s", sym, exc)
         return {**base, "error": f"No price data for {sym}."}
