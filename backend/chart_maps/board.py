@@ -37,7 +37,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "zones", "supply", "deep_demand", "gabbar", "zero_dte", "winners", "earnings")
+TABS = ("vcp", "topping", "zones", "supply", "deep_demand", "gabbar", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -833,6 +833,17 @@ def _vcp_badges(row: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # tab 2 — pullbacks into demand
 # ---------------------------------------------------------------------------
+def _flash_sell_symbols() -> set:
+    """Symbols with a SELL-side zone burst today — institutional selling
+    evidence for the topping board. Same failure isolation as _flash_symbols."""
+    try:
+        from orderflow import trade_flash
+        evs = trade_flash.today_events().get("events") or []
+        return {e["symbol"] for e in evs if e.get("side") == "sell"}
+    except Exception:
+        return set()
+
+
 def _flash_symbols() -> set:
     """Symbols with a zone-tied tape burst TODAY (orderflow/trade_flash).
 
@@ -1844,6 +1855,183 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": data.get("as_of")}
 
 
+def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                  themes_first: bool = THEMES_FIRST_DEFAULT,
+                  sort: str = DEFAULT_SORT,
+                  min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """S3 Topping / short candidates — aggressive distribution, book-cited.
+
+    Ajay 2026-08-25: "for shorting I need ones which recently got heavy
+    institutional selling and in S3 topping stage. Our flow and distribution
+    is occurring aggressively. Add any other indicators that are in the book."
+
+    A pure SLICE of the SEPA scan file — every read below already exists on
+    the row, each from a book-cited module (verified against the brain RAG,
+    both books, 2026-08-25):
+
+      * stage 3 "Topping" / 4 "Decline"        — sepa/stage.py, TLSW pp.73-76
+      * more down days on above-avg volume     — sepa/volume.py, TLSW p.76
+      * CMF outflow zone                       — sepa/volume.py thresholds
+      * largest 1-day/1-week drop since Stage 2— sepa/sell_signals.py, TLSW p.90
+      * below 50-day on heavy vol / below 200  — sell_signals; TLSW p.75,
+                                                 TTLAC §6 (200-day break is
+                                                 Minervini's own short trigger)
+      * climax / churn / heavy-vol down day /
+        high-vol reversal / exhaustion gap     — sepa/climax_distribution.py,
+                                                 TTLAC §9 pp.186-188
+      * late-stage base count (4th/5th)        — row.base_count, TLSW pp.81-82
+
+    Gate: stage in (3, 4) AND at least TWO independent distribution
+    evidences. Ranked by how aggressively the selling reads (evidence count,
+    then climax + sell-signal severity, then RS weakness). Declining Bonde
+    sales appear as a CONFIRMING badge only — fundamentals lag at tops.
+    NOT an inverted buy list: nothing here is backtested, and the note says
+    so out loud.
+    """
+    from sepa import scanner
+    from sepa import research
+    from sepa.volume import DIST_RATIO_THRESHOLD
+
+    latest = scanner.load_latest()
+    if not latest:
+        return {"tiles": [], "note": "no scan yet — run a SEPA scan first"}
+    rows = latest.get("all_results") or []
+    sell_flash = _flash_sell_symbols()
+
+    picked = []
+    for r in rows:
+        stg = r.get("stage") or {}
+        if stg.get("stage") not in (3, 4):
+            continue
+        vol = r.get("volume") or {}
+        sell = r.get("sell_signals") or {}
+        sig = sell.get("signals") or {}
+        clim = r.get("climax_distribution") or {}
+        tells = clim.get("tells") or {}
+
+        evidence = []   # (badge_text, tone)
+        dn, up = vol.get("dn_days_on_avg_vol"), vol.get("up_days_on_avg_vol")
+        ratio = _f(vol.get("up_down_vol_ratio"))
+        if (vol.get("accumulation_strength") == "distributing"
+                or (ratio is not None and ratio <= DIST_RATIO_THRESHOLD)):
+            evidence.append((f"📉 {dn}↓ vs {up}↑ days on above-avg volume", "warn"))
+        cmf = _f(vol.get("cmf_20"))
+        if vol.get("cmf_signal") == "outflow":
+            evidence.append((f"🔻 Outflow — CMF {cmf:+.2f}" if cmf is not None
+                             else "🔻 Outflow", "warn"))
+        dd, ad = vol.get("distribution_days_25") or 0, vol.get("accumulation_days_25") or 0
+        if dd - ad >= 3:
+            evidence.append((f"📉 {dd} distribution vs {ad} accumulation days", "warn"))
+        if sig.get("largest_1d_decline_since_stage2") or sig.get("largest_1w_decline_since_stage2"):
+            span = "1-day" if sig.get("largest_1d_decline_since_stage2") else "1-week"
+            evidence.append((f"💥 Largest {span} drop since the Stage 2 advance", "warn"))
+        if sig.get("close_below_50ma_on_high_vol"):
+            evidence.append(("⬇ Closed below the 50-day on heavy volume", "warn"))
+        if sig.get("close_below_200ma"):
+            evidence.append(("⬇ Below the 200-day — Minervini's own short trigger", "warn"))
+        if r.get("distribution_selling"):
+            why_d = (r.get("distribution_reason") or "selling into strength")
+            evidence.append((f"🏦 {why_d}", "warn"))
+        if clim.get("in_climax") or sig.get("climax_run_25pct_in_3w"):
+            g = _f(clim.get("climax_gain_pct")) or _f(sell.get("climax_15d_gain_pct"))
+            evidence.append((f"🔺 Climax run {g:+.0f}% in 3 weeks" if g is not None
+                             else "🔺 Climax run", "warn"))
+        if tells.get("churning"):
+            evidence.append(("🌀 Churning — heavy volume, no progress", "warn"))
+        if tells.get("heavy_volume_down_day") or tells.get("largest_volume_down_in_move"):
+            evidence.append(("⚠ Heaviest volume landed on a DOWN day", "warn"))
+        if tells.get("high_volume_reversal"):
+            evidence.append(("↩ High-volume reversal", "warn"))
+        if tells.get("exhaustion_gap"):
+            evidence.append(("⛽ Exhaustion gap", "warn"))
+        bc = r.get("base_count")
+        if isinstance(bc, (int, float)) and bc >= 4:
+            evidence.append((f"🏗 Base #{int(bc)} — late stage", "muted"))
+
+        if len(evidence) < 2:
+            continue
+
+        rs = _f(r.get("rs_rank"))
+        score = (len(evidence) * 10.0
+                 + (clim.get("severity") or 0) * 3.0
+                 + (sell.get("severity") or 0) * 2.0
+                 + ((100.0 - rs) / 10.0 if rs is not None else 0.0))
+
+        trend = r.get("trend") or {}
+        lines = []
+        for key, label, tone in (("ma200", "200d", "stop"), ("ma50", "50d", "neutral")):
+            mv = _f(trend.get(key))
+            if mv is not None:
+                lines.append({"price": mv, "label": label, "tone": tone})
+
+        badges = [{"text": ("S4 Decline" if stg.get("stage") == 4 else
+                            ("S3 Topping · volume disagreement"
+                             if stg.get("volume_disagreement") else "S3 Topping")),
+                   "tone": "warn"}]
+        badges += [{"text": t, "tone": tone} for t, tone in evidence[:5]]
+        if len(evidence) > 5:
+            # The cap keeps tiles readable; the count keeps it honest — a name
+            # with 8 tells must not LOOK like a name with 5.
+            badges.append({"text": f"+{len(evidence) - 5} more tells", "tone": "muted"})
+        if sym_in_flash := (r.get("symbol") in sell_flash):
+            badges.append({"text": "⚡ Sell burst at zone today", "tone": "warn"})
+
+        picked.append({
+            "symbol": (r.get("symbol") or "").upper(),
+            "name": r.get("name"),
+            "href": _href((r.get("symbol") or "").upper(), "setup"),
+            "bars": [],
+            "_bars": {"days": days},
+            "bands": [],
+            "lines": lines,
+            "markers": [],
+            "stats": [
+                {"k": "Stage", "v": stg.get("label") or "—"},
+                {"k": "Dist days", "v": f"{dd}↓ / {ad}↑"},
+                {"k": "CMF", "v": f"{cmf:+.2f}" if cmf is not None else "—"},
+                {"k": "RS", "v": f"{rs:.0f}" if rs is not None else "—"},
+            ],
+            "why": (f"{len(evidence)} distribution tells — " +
+                    "; ".join(t for t, _ in evidence[:3])),
+            "theme": _theme((r.get("symbol") or "").upper()),
+            "badges": badges,
+            "_score": score,
+            "_m": tile_metrics(r),
+        })
+
+    # Bonde inverse — declining sales CONFIRM a short read (badge only;
+    # fundamentals lag at tops, so never a gate).
+    try:
+        snaps = research.sales_snapshot([t["symbol"] for t in picked])
+        for t in picked:
+            gate, sales = _bonde_gate(snaps.get(t["symbol"]))
+            if gate == "fail" and sales:
+                gs = _f(sales.get("growth_yoy_pct"))
+                t["badges"].append({"text": (f"📉 Sales {sales.get('tier')} "
+                                              f"{gs:+.0f}%" if gs is not None
+                                              else f"📉 Sales {sales.get('tier')}"),
+                                    "tone": "warn"})
+                t["_score"] += 5.0
+    except Exception:
+        pass
+
+    out, meta = _finish(picked, limit, themes_first, days, sort, min_tier)
+    return {"tiles": out, **meta,
+            "matched": len(picked),
+            "note": ("Stage 3 topping / Stage 4 decline with at least two independent "
+                     "distribution reads, ranked by how aggressive the selling is. "
+                     "Every tell is the book's own: stage characteristics TLSW "
+                     "pp.73-76; down-days-on-volume p.76; largest drop since the "
+                     "Stage 2 advance p.90; climax/churn/reversal TTLAC §9 "
+                     "pp.186-188 (ebook); the 200-day break close-on-low is "
+                     "Minervini's own Stage 4 short trigger, TTLAC §6. Declining "
+                     "Bonde sales shown as confirmation only — fundamentals LAG at "
+                     "tops. NOT an inverted buy list: none of this is backtested, "
+                     "shorting risk is unlimited, and squeezes do not care about "
+                     "chart stages — size accordingly."),
+            "scan_generated_at": latest.get("generated_at")}
+
+
 def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  themes_first: bool = THEMES_FIRST_DEFAULT,
                  sort: str = DEFAULT_SORT,
@@ -2012,6 +2200,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = zone_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "topping":
+        out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "gabbar":

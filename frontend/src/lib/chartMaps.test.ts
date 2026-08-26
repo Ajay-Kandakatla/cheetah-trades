@@ -483,7 +483,7 @@ describe('the Earnings Flow tab', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
     expect(CM_TABS).toEqual(
-      ['vcp', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -1015,5 +1015,29 @@ describe('the Gabbar Levels tab', () => {
     expect(b).toMatch(/not a computation/i);
     expect(b).toMatch(/Bonde/);
     expect(b).toMatch(/snapshot date/i);
+  });
+});
+
+describe('the S3 Topping tab', () => {
+  it('is registered beside VCP (same scan file, short side) and parses', () => {
+    expect(CM_TABS[CM_TABS.indexOf('vcp') + 1]).toBe('topping');
+    expect(parseTab('topping')).toBe('topping');
+    expect(isBoardTab('topping')).toBe(true);
+  });
+
+  it('cites the books, names the trigger, and states the risk plainly', () => {
+    // Ajay 2026-08-25: shorts need "S3 topping stage" + aggressive
+    // distribution "and any other indicators that are in the book". The copy
+    // must carry the page cites (they came from the RAG, both books), call
+    // the 200-day break what it is, and never read as an inverted buy list.
+    const b = TAB_META.topping.blurb;
+    expect(b).toMatch(/Stage 3 topping/i);
+    expect(b).toMatch(/TLSW pp\.73-76/);
+    expect(b).toMatch(/p\.90/);
+    expect(b).toMatch(/TTLAC §9/);
+    expect(b).toMatch(/200-day/);
+    expect(b).toMatch(/fundamentals lag at tops/i);
+    expect(b).toMatch(/not.*backtested|Nothing here is backtested/i);
+    expect(b).toMatch(/unlimited/);
   });
 });

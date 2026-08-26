@@ -1228,3 +1228,121 @@ def test_deep_demand_missing_inflow_reads_neutral_not_bullish(
     txt = " ".join(b["text"] for b in out["tiles"][0]["badges"])
     assert "Money flowing in" not in txt and "Still distributing" not in txt
     assert out["flow_counts"] == {"inflow": 0, "neutral": 1, "distribution": 0}
+
+
+# ---------------------------------------------------------------------------
+# the topping / short-candidates tab
+# ---------------------------------------------------------------------------
+def _topping_row(sym, stage=3, dist_days=9, accum_days=2, cmf=-0.15,
+                 cmf_signal="outflow", strength="distributing", ratio=0.5,
+                 below_200=False, largest_1d=False, base_count=2,
+                 clim_sev=0, tells=None, rs=25):
+    return {
+        "symbol": sym, "name": sym, "last_close": 50.0, "rs_rank": rs,
+        "base_count": base_count,
+        "stage": {"stage": stage,
+                  "label": {3: "Topping", 4: "Decline"}.get(stage, "Advancing"),
+                  "slope_up": False, "dist_200_pct": 1.0},
+        "volume": {"accumulation_strength": strength, "cmf_signal": cmf_signal,
+                   "cmf_20": cmf, "up_down_vol_ratio": ratio,
+                   "distribution_days_25": dist_days,
+                   "accumulation_days_25": accum_days,
+                   "dn_days_on_avg_vol": 8, "up_days_on_avg_vol": 2},
+        "sell_signals": {"severity": 1, "climax_15d_gain_pct": 4.0,
+                         "signals": {"largest_1d_decline_since_stage2": largest_1d,
+                                     "largest_1w_decline_since_stage2": False,
+                                     "close_below_50ma_on_high_vol": False,
+                                     "close_below_200ma": below_200,
+                                     "climax_run_25pct_in_3w": False}},
+        "climax_distribution": {"is_distribution": False, "in_climax": False,
+                                "severity": clim_sev, "tells": tells or {}},
+        "trend": {"ma50": 52.0, "ma200": 55.0},
+        "liquidity": {"avg_dollar_vol": 90e6},
+    }
+
+
+@pytest.fixture
+def topping_scan(monkeypatch):
+    payload = {"all_results": [], "generated_at": 1787690000}
+
+    class _Scanner:
+        @staticmethod
+        def load_latest():
+            return payload
+
+    monkeypatch.setitem(sys.modules, "sepa.scanner", _Scanner())
+    import sepa
+    monkeypatch.setattr(sepa, "scanner", _Scanner(), raising=False)
+    return payload
+
+
+def test_topping_keeps_stage3_with_evidence_and_refuses_stage2(
+        prices, topping_scan, sales_stub):
+    """Ajay 2026-08-25: 'ones which recently got heavy institutional selling
+    and in S3 topping stage'. Stage 2 names never appear no matter how ugly
+    their volume; a Stage 3 name needs >= 2 independent distribution reads."""
+    topping_scan["all_results"] = [
+        _topping_row("TOPPY"),
+        _topping_row("STILLUP", stage=2),
+        # Stage 3 but only ONE evidence — clean volume otherwise
+        _topping_row("ONEREAD", dist_days=2, accum_days=2, cmf=0.02,
+                     cmf_signal="neutral", strength="neutral", ratio=1.1,
+                     largest_1d=True),
+    ]
+    for s in ("TOPPY", "STILLUP", "ONEREAD"):
+        prices[s] = _frame(200)
+
+    out = B.board("topping", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["TOPPY"]
+    t = out["tiles"][0]
+    txt = " ".join(b["text"] for b in t["badges"])
+    assert "S3 Topping" in txt
+    assert "days on above-avg volume" in txt
+    assert "Outflow — CMF -0.15" in txt
+    stats = {s["k"]: s["v"] for s in t["stats"]}
+    assert stats["Stage"] == "Topping" and stats["Dist days"] == "9\u2193 / 2\u2191"
+
+
+def test_topping_ranks_the_most_aggressive_selling_first(
+        prices, topping_scan, sales_stub):
+    topping_scan["all_results"] = [
+        _topping_row("MILD"),
+        _topping_row("UGLY", stage=4, below_200=True, largest_1d=True,
+                     clim_sev=3, base_count=5,
+                     tells={"churning": True, "heavy_volume_down_day": True}),
+    ]
+    for s in ("MILD", "UGLY"):
+        prices[s] = _frame(200)
+
+    out = B.board("topping", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["UGLY", "MILD"]
+    txt = " ".join(b["text"] for b in out["tiles"][0]["badges"])
+    assert "S4 Decline" in txt and "200-day" in txt
+    assert "+3 more tells" in txt  # 8 evidences, cap of 5, counted not hidden
+
+
+def test_topping_declining_sales_confirm_but_never_gate(
+        prices, topping_scan, sales_stub):
+    """Fundamentals LAG at tops — a name with no sales data must still show;
+    declining sales add a confirming badge."""
+    topping_scan["all_results"] = [
+        _topping_row("KNOWN"), _topping_row("UNKNOWN"),
+    ]
+    for s in ("KNOWN", "UNKNOWN"):
+        prices[s] = _frame(200)
+    sales_stub["KNOWN"] = _sales("declining", -12.0)
+
+    out = B.board("topping", limit=5, min_tier="any")
+    syms = {t["symbol"] for t in out["tiles"]}
+    assert syms == {"KNOWN", "UNKNOWN"}
+    known = next(t for t in out["tiles"] if t["symbol"] == "KNOWN")
+    assert any("Sales declining" in b["text"] for b in known["badges"])
+
+
+def test_topping_note_carries_the_cites_and_the_risk_line(
+        prices, topping_scan, sales_stub):
+    topping_scan["all_results"] = []
+    out = B.board("topping", min_tier="any")
+    for phrase in ("TLSW", "p.90", "TTLAC", "200-day", "not", "backtested"):
+        assert phrase.lower() in out["note"].lower(), phrase
+    assert "unlimited" in out["note"]

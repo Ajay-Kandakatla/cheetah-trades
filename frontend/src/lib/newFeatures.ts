@@ -22,6 +22,7 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  { id: 'topping-shorts-tab',   label: 'S3 Topping · Shorts tab — book-cited distribution reads', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'scan-health',          label: 'Scan health — every scan audited, counted in the nav', addedAt: '2026-08-25', route: '/health' },
   { id: 'deep-demand-tab',      label: 'Deep Demand tab — 2nd-level arrivals, Bonde sales gate', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'gabbar-levels-tab',    label: "Gabbar Levels tab — curated bands, touching first",       addedAt: '2026-08-25', route: '/chart-maps' },

@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'support' | 'zero_dte' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'support' | 'zero_dte' | 'winners' | 'earnings';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -24,7 +24,9 @@ export type CmTab = 'vcp' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'sup
 // `deep_demand` follows `supply` — it is the darkest read of the same zone
 // structure: the first band already failed. `gabbar` follows it as the other
 // levels-plus-sales board; both carry the Bonde sales gate.
-export const CM_TABS: CmTab[] = ['vcp', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners'];
+// `topping` sits beside `vcp` — both are slices of the same SEPA scan file,
+// one long-side, one short-side.
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -49,6 +51,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   supply: {
     label: 'Into Supply',
     blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above.',
+  },
+  topping: {
+    label: 'S3 Topping · Shorts',
+    blurb: 'The short-side slice of the SEPA scan: Stage 3 topping or Stage 4 decline (TLSW pp.73-76) with at least two independent distribution reads — more down days on above-average volume (p.76), CMF outflow, the largest drop since the Stage 2 advance (p.90), a close below the 50-day on heavy volume, climax runs, churning and high-volume reversals (TTLAC §9). Below the 200-day is Minervini\'s own Stage 4 short trigger (TTLAC §6). Ranked by how aggressive the selling reads; declining Bonde sales shown as confirmation only, because fundamentals lag at tops. Nothing here is backtested and shorting risk is unlimited — this is a study list, not an inverted buy button.',
   },
   deep_demand: {
     label: 'Deep Demand',
