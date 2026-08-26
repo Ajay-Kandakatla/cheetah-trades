@@ -1785,7 +1785,7 @@ def _usd_short(v) -> str:
 # the 5% floor behind "steady" are sepa/sales.py's — Bonde's own documented
 # floor ("I take 5%"), contract-locked there. This tuple only SELECTS tiers;
 # it must never redefine a threshold.
-BONDE_PASS_TIERS = ("steady", "strong", "explosive")
+from sepa.sales import BONDE_PASS_TIERS  # one definition — sepa/sales.py
 
 
 def _bonde_gate(snap: Optional[dict]) -> tuple[str, Optional[dict]]:

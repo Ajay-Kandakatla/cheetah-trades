@@ -36,6 +36,12 @@ SALES_PREFERRED_PCT = 25.0  # his preferred
 SALES_EXPLOSIVE_PCT = 100.0  # his "Sales 100% plus" category
 
 
+# The falling-knife gate's pass set (Deep Demand / Gabbar boards, and the
+# portfolio knife watch): only tiers with a growing top line pass. Bonde's
+# 5 / 25 / 100 percent tier anchors are computed below in `compute`.
+BONDE_PASS_TIERS = ("steady", "strong", "explosive")
+
+
 def _yoy(series: List[Optional[float]], i: int) -> Optional[float]:
     """YoY revenue growth % for quarter index ``i``: series[i] vs series[i+4]
     (the same quarter a year earlier). ``series`` is newest-first quarterly
