@@ -158,7 +158,7 @@ describe('ChartMaps', () => {
 
     await waitFor(() => {
       const urls = (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
-      expect(urls.some((u: string) => u.includes('tab=zones') && u.includes('universe=sp1500_plus'))).toBe(true);
+      expect(urls.some((u: string) => u.includes('tab=zones') && u.includes('universe=full'))).toBe(true);
     });
   });
 

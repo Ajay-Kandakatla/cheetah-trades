@@ -703,6 +703,7 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
         t.pop("_score", None)
         t.pop("_bars", None)
         t.pop("_m", None)
+        t.pop("_flow", None)
         t.pop("venues", None)
         t.pop("retail", None)
     # Returned, not stashed on the function: `board()` runs inside
@@ -950,7 +951,7 @@ def _flash_symbols() -> set:
 
 
 def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-                 universe: str = "sp1500_plus",
+                 universe: str = "full",
                  themes_first: bool = THEMES_FIRST_DEFAULT,
                  sort: str = DEFAULT_SORT,
                  min_tier: str = DEFAULT_MIN_TIER) -> dict:
@@ -1266,7 +1267,7 @@ def _supply_disclaimer() -> str:
 
 
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-               universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
+               universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
                sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
     from supply_demand import demand_reentry as D
 
@@ -1352,6 +1353,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": stats,
             "why": why,
             "theme": _theme(sym),
+            "_flow": r.get("inflow"),
             "badges": _zone_badges(r)
                 + ([fb] if (fb := _flow_badge(r.get("inflow"))) else [])
                 + (
@@ -1364,6 +1366,19 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "_score": rr or 0.0,
             "_m": tile_metrics(r),
         })
+    # Cheetahs first (Ajay 2026-08-25: "fix the ranking of these Cheetahs on
+    # top"). Default order = money flow, then how fast the share supply turns,
+    # then his R:R within each bucket. Velocity needs the reference lookup, so
+    # the whole matched set (<= LIMIT_MAX rows, process-cached) is enriched
+    # BEFORE ranking — an explicit dropdown sort still overrides all of this.
+    attach_velocity(tiles)
+    for t in tiles:
+        f = {"inflow": 2.0, None: 1.0, "neutral": 1.0,
+             "distribution": 0.0}.get(((t.get("_flow") or {}).get("state")), 1.0)
+        v = (t.get("_m") or {}).get("velocity")
+        vlead = (2.0 if v is not None and v >= VELOCITY_FAST_PCT else
+                 0.0 if v is not None and v <= VELOCITY_SLOW_PCT else 1.0)
+        t["_score"] = f * 10000.0 + vlead * 1000.0 + (t.get("_score") or 0.0)
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     return {"tiles": out, **meta,
             "matched": len(rows),
@@ -1806,7 +1821,7 @@ def _flow_badge(inflow: Optional[dict]) -> Optional[dict]:
 
 
 def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-                      universe: str = "sp1500_plus",
+                      universe: str = "full",
                       themes_first: bool = THEMES_FIRST_DEFAULT,
                       sort: str = DEFAULT_SORT,
                       min_tier: str = DEFAULT_MIN_TIER) -> dict:
@@ -2231,6 +2246,34 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         if state != "in":
             state = "near" if best_dist <= NEAR_PCT else "away"
 
+        # Conservative entries (Ajay 2026-08-25: "In gabbars levels can you
+        # show me conservative entries please"). The author labels each band
+        # "aggressive" (shallowest) or "conservative N" (deeper discounts);
+        # the nearest-band read above is label-blind, so a name camped at its
+        # deep level looked identical to one at its chase level. Track the
+        # nearest CONSERVATIVE band separately so the tile can say which one
+        # the price is actually offering.
+        def _is_cons(label) -> bool:
+            return str(label or "").startswith("conservative")
+
+        cons_state, cons_dist, cons_lo, cons_hi = None, None, None, None
+        for b in payload["bands"]:
+            if not _is_cons(b.get("label")):
+                continue
+            lo, hi = _f(b.get("lo")), _f(b.get("hi"))
+            if lo is None or hi is None:
+                continue
+            if lo <= last <= hi:
+                cons_state, cons_dist, cons_lo, cons_hi = "in", 0.0, lo, hi
+                break
+            edge = lo if last < lo else hi
+            d = abs(last - edge) / last * 100.0
+            if cons_dist is None or d < cons_dist:
+                cons_dist, cons_lo, cons_hi = d, lo, hi
+        if cons_dist is not None and cons_state != "in":
+            cons_state = "near" if cons_dist <= NEAR_PCT else "away"
+        at_conservative = _is_cons(best_label) and state in ("in", "near")
+
         bands = [{"kind": "demand", "lo": float(b["lo"]), "hi": float(b["hi"]),
                   "label": f"Gabbar · {b.get('label') or 'band'}"}
                  for b in payload["bands"]]
@@ -2245,10 +2288,13 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             why = f"{best_dist:.0f}% {side} the nearest Gabbar band ({best_label})"
 
         badges = []
+        icon = "🛡️" if _is_cons(best_label) else "🎯"
         if state == "in":
-            badges.append({"text": "🎯 In Gabbar band", "tone": "good"})
+            badges.append({"text": f"{icon} In Gabbar band ({best_label})",
+                           "tone": "good"})
         elif state == "near":
-            badges.append({"text": f"🎯 {best_dist:.1f}% from band", "tone": "warn"})
+            badges.append({"text": f"{icon} {best_dist:.1f}% from {best_label}",
+                           "tone": "warn"})
         if gate == "pass" and sales:
             badges.append(_sales_badge(sales))
         elif gate == "unknown":
@@ -2260,6 +2306,11 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         # of every NEAR ahead of every AWAY regardless of raw distances; an
         # unknown-sales name ranks after every Bonde-passing one in its state.
         rank = {"in": 2000.0, "near": 1000.0}.get(state, 0.0) - best_dist
+        # A conservative-band touch is the deeper discount — it leads its
+        # state group. +250 stays inside the 1000-per-state bucket, so a
+        # conservative NEAR can never outrank an aggressive IN.
+        if at_conservative:
+            rank += 250.0
         if gate == "unknown":
             rank -= 500.0
 
@@ -2275,7 +2326,9 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": [
                 {"k": "Level", "v": str(best_label or "—")},
                 {"k": "Dist", "v": ("in band" if state == "in" else f"{best_dist:.1f}%")},
-                {"k": "Bands", "v": str(len(payload["bands"]))},
+                {"k": "Conserv.", "v": ("—" if cons_dist is None else
+                                        "in band" if cons_state == "in" else
+                                        f"{cons_lo:g}–{cons_hi:g} · {cons_dist:.1f}%")},
                 {"k": "Avg $/day", "v": _usd_short(avg_turnover)},
             ],
             "why": why,
@@ -2288,24 +2341,30 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     touching = sum(1 for t in tiles
-                   if any((b.get("text") or "").startswith("🎯") for b in t.get("badges") or []))
+                   if any((b.get("text") or "").startswith(("🎯", "🛡️"))
+                          for b in t.get("badges") or []))
+    cons_touching = sum(1 for t in tiles
+                        if any((b.get("text") or "").startswith("🛡️")
+                               for b in t.get("badges") or []))
     attr = GL.BAND_ATTRIBUTION
     return {"tiles": out, **meta,
             "matched": len(tiles),
             "touching": touching,
+            "conservative_touching": cons_touching,
             "dropped_weak_sales": dropped_weak,
             "note": (f"Hand-curated buy zones from {attr.get('source')} "
                      f"({attr.get('author')}, {attr.get('license')}), snapshot "
                      f"{attr.get('snapshot_date')} — the author's judgment, not a "
                      f"computation, and levels this old describe the chart as it "
-                     f"was then. Touching names sort first. Bonde sales gate: "
+                     f"was then. Touching names sort first; 🛡️ marks a name at its CONSERVATIVE (deeper "
+                     f"discount) band, which leads its group. Bonde sales gate: "
                      f"{dropped_weak} covered name(s) hidden for weak/declining "
                      f"sales — a level under a shrinking business is the knife."),
             "generated_at": None}
 
 
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
-          universe: str = "sp1500_plus", themes_first: bool = THEMES_FIRST_DEFAULT,
+          universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER) -> dict:

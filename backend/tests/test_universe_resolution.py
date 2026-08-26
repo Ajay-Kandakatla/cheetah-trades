@@ -231,29 +231,26 @@ def test_universe_counts_survives_a_throwing_fetcher(monkeypatch):
     assert "iShares 403" in got["russell3000"]["error"]
 
 
-# ── QQQ / SPY / Nasdaq (Ajay 2026-08-20) ─────────────────────────────────────
-def test_the_three_universes_Ajay_asked_for_are_all_offered():
-    """"I want QQQ stocks and SPY stocks and Nasdaq stocks." QQQ and SPY are
-    ETFs, so what he means is the index each tracks."""
+# ── ONE universe (Ajay 2026-08-25: "Remove all these themes and just do
+# default universe scan"). The 2026-08-20 QQQ/SPY/Nasdaq dropdown lived here
+# until it grew six themed choices; it is gone, and every legacy key folds
+# into the SEPA `full` alias.
+def test_the_demand_board_offers_exactly_one_universe():
     from supply_demand import demand_reentry as dr
-    for key in ("qqq", "sp500", "nasdaq"):
-        assert key in dr.UNIVERSES, f"{key} missing from the dropdown"
+    assert set(dr.UNIVERSES) == {"full"}
+    assert dr.DEFAULT_UNIVERSE == "full"
+    label = dr.UNIVERSES["full"][0]
+    assert "Russell" in label and "S&P" in label
 
 
-def test_the_labels_name_the_TICKER_he_thinks_in():
-    """A dropdown that only ever said "S&P 500" never made it obvious that was
-    the same list as SPY — which is why he asked for SPY as if it were new."""
+def test_every_legacy_dropdown_key_still_resolves():
+    """Old bookmarks, cron lines and cached history carry qqq / sp500 /
+    sp1500_plus / themes in their URLs. Each must land on the one scan, not
+    404 or raise."""
     from supply_demand import demand_reentry as dr
-    assert "SPY" in dr.UNIVERSES["sp500"][0]
-    assert "QQQ" in dr.UNIVERSES["qqq"][0]
-    assert "Nasdaq" in dr.UNIVERSES["nasdaq"][0]
-
-
-def test_qqq_resolves_to_the_nasdaq_100_not_something_broader():
-    from supply_demand import demand_reentry as dr
-    import inspect
-    src = inspect.getsource(dr)
-    assert '"qqq":    ("QQQ · Nasdaq-100", lambda: universe_mod.fetch_nasdaq100())' in src
+    for key in ("qqq", "sp500", "nasdaq", "sp1500", "sp1500_plus", "themes",
+                "sp400", "sp600"):
+        assert dr._universe_key(key) == "full", f"{key} no longer resolves"
 
 
 def test_nasdaq_is_PRIMARY_listing_not_merely_tradeable_there():
@@ -286,31 +283,20 @@ def test_fetch_massive_universe_defaults_are_byte_for_byte_unchanged():
     assert U.MAJOR_EXCHANGES == frozenset({"XNYS", "XNAS", "ARCX", "BATS", "XASE"})
 
 
-def test_the_two_nasdaq_universes_are_not_the_same_list():
-    """QQQ is 100-odd names; the listing is thousands. If someone points one at
-    the other the dropdown grows a duplicate that looks like a choice."""
-    from supply_demand import demand_reentry as dr
-    assert dr.UNIVERSES["qqq"][0] != dr.UNIVERSES["nasdaq"][0]
+def test_the_two_nasdaq_lists_stay_distinguishable():
+    """QQQ is 100-odd names; the listing is thousands. The guard bands must
+    keep them apart even with the dropdown gone — fetch_nasdaq100 still feeds
+    other pages."""
     n100_lo, n100_hi = U._EXPECTED_COUNTS["nasdaq100"]
     nl_lo, _ = U._EXPECTED_COUNTS["nasdaq_listed"]
     assert nl_lo > n100_hi
 
 
-def test_themes_are_KEPT_because_no_index_carries_those_names():
-    """IONQ, OKLO, SMR and QBTS are NYSE-listed and in no S&P tier, so `nasdaq`
-    does not carry them either — measured 2026-08-20. Deleting the theme
-    entries would silently drop them from every board."""
-    from supply_demand import demand_reentry as dr
-    assert "themes" in dr.UNIVERSES
-    assert "sp1500_plus" in dr.UNIVERSES
-
-
-def test_themes_sort_LAST_so_the_index_choices_lead():
-    from supply_demand import demand_reentry as dr
-    keys = list(dr.UNIVERSES)
-    assert keys[-1] == "themes"
-    assert keys.index("sp500") < keys.index("sp1500")
-    assert keys.index("qqq") < keys.index("sp1500")
+def test_the_theme_names_survive_the_dropdown_removal():
+    """IONQ, OKLO, SMR and QBTS are NYSE-listed and in no S&P tier — measured
+    2026-08-20. Removing the themed dropdown choices must not drop them from
+    the boards: the `full` alias has to carry the themes layer itself."""
+    assert "themes" in U._UNIVERSE_ALIASES["full"]
 
 
 def test_full_is_russell1000_union_sp1500_plus_curated_plus_themes(fake_lists):

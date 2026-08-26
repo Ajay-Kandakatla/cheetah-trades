@@ -66,15 +66,12 @@ type Payload = {
  * month or two adrift is a footnote, not an alarm. Two quarters is an alarm. */
 const STALE_DAYS_LOUD = 120;
 
-/* Universe options. sp1500 is the "beyond the S&P 500" ask (Ajay 2026-08-13):
- * S&P 400 MidCap + 600 SmallCap add ~1,000 names that still clear S&P's
- * index-committee bar, which a raw Russell slice does not. */
-const UNIVERSES: { key: string; label: string }[] = [
-  { key: 'sp500',  label: 'S&P 500' },
-  { key: 'sp1500', label: 'S&P 1500 (+1,000 mid & small)' },
-  { key: 'sp400',  label: 'S&P 400 MidCap' },
-  { key: 'sp600',  label: 'S&P 600 SmallCap' },
-];
+/* One universe (Ajay 2026-08-25: "Remove all these themes and just do
+ * default universe scan"). The picker went with it — the server folds every
+ * legacy key (sp500, sp1500, ...) into the SEPA `full` alias, so old
+ * bookmarked URLs still resolve to this same scan. */
+const UNIVERSE = 'full';
+const UNIVERSE_LABEL = 'Full universe (Russell 1000 ∪ S&P 1500 ∪ themes)';
 
 /* Sort keys. R:R leads because it is the only cohort that backtested positive.
  * Retail COUNT is deliberately not offered: a heavily traded name has more
@@ -103,7 +100,7 @@ const RR_FLOORS: { key: string; label: string }[] = [
 ];
 
 export function DemandReentryPanel() {
-  const [universe, setUniverse] = useState<string>('sp1500');
+  const universe = UNIVERSE;
   const [sortKey, setSortKey] = useState<string>('rr');
   const [minRr, setMinRr] = useState<string>('1');
   const [data, setData] = useState<Payload | null>(null);
@@ -165,14 +162,6 @@ export function DemandReentryPanel() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', margin: '0.6rem 0' }}>
-        <select value={universe} onChange={(e) => setUniverse(e.target.value)}
-                disabled={busy} className="sepa-select"
-                style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}
-                aria-label="Scan universe">
-          {(data?.universe_choices ?? UNIVERSES).map((u) => (
-            <option key={u.key} value={u.key}>{u.label}</option>
-          ))}
-        </select>
         <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}
                 className="sepa-select" aria-label="Sort by"
                 style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}>
@@ -203,8 +192,8 @@ export function DemandReentryPanel() {
 
       {data && !data.universe_is_sp500 && (
         <div className="sepa-err" style={{ marginBottom: '0.6rem' }}>
-          ⚠️ {data.universe_note} — this is NOT the S&P 500. Results below cover the
-          curated list instead.
+          ⚠️ {data.universe_note} — this is NOT the full universe. Results below
+          cover the curated fallback list instead.
         </div>
       )}
 
@@ -242,8 +231,7 @@ export function DemandReentryPanel() {
         <DemandScanProgress
           progress={progress ?? data?.progress}
           running
-          universeLabel={data?.universe_label
-            ?? (data?.universe_choices ?? UNIVERSES).find((u) => u.key === universe)?.label}
+          universeLabel={data?.universe_label ?? UNIVERSE_LABEL}
         />
       )}
 

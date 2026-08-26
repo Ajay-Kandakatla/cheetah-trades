@@ -40,23 +40,11 @@ import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
  *  warming poll on purpose — this is drift correction, not live data. */
 const BOARD_REFRESH_MS = 5 * 60_000;
 
-/* Fallback only. The board answers `universe_choices` from
- * demand_reentry.UNIVERSES, and the select prefers that — so adding a universe
- * server-side does not need a frontend deploy. This list exists for the first
- * paint and for a board that failed to load.
- *
- * Ajay 2026-08-20: "I want QQQ stocks and SPY stocks and Nasdaq stocks."
- * QQQ and SPY are ETFs, so what he means is the index each tracks. Both are
- * labelled with the ticker he thinks in — a dropdown that only ever said
- * "S&P 500" never made it obvious that was SPY. */
-const UNIVERSES = [
-  { key: 'sp500', label: 'SPY · S&P 500' },
-  { key: 'qqq', label: 'QQQ · Nasdaq-100' },
-  { key: 'nasdaq', label: 'Nasdaq · all listed' },
-  { key: 'sp1500', label: 'S&P 1500' },
-  { key: 'sp1500_plus', label: 'S&P 1500 + themes' },
-  { key: 'themes', label: 'Themes only' },
-];
+/* One universe (Ajay 2026-08-25: "Remove all these themes and just do
+ * default universe scan"). The picker is gone with it — the server collapses
+ * every legacy key to the SEPA `full` alias, so old bookmarked URLs still
+ * resolve. */
+const UNIVERSE = 'full';
 
 const HowItWorks = (
   <>
@@ -116,7 +104,7 @@ export function ChartMaps() {
    * refresh does not drop you back on an empty search box. */
   const supportSymbol = normalizeSymbol(params.get('symbol'));
   const supportWindow = parseWindow(params.get('window'));
-  const [universe, setUniverse] = useState('sp1500_plus');
+  const universe = UNIVERSE;
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -193,9 +181,9 @@ export function ChartMaps() {
   }, [load]);
 
   /* The demand scan's live counter, polled faster than the board itself. The
-   * board key is the universe the SERVER resolved (`universe_key`), not the
-   * dropdown value — the demand board maps sp1500_plus onto its own key and
-   * asking for progress under the wrong one returns a permanent idle. */
+   * board key is the universe the SERVER resolved (`universe_key`) — asking
+   * for progress under a key the server didn't scan returns a permanent
+   * idle. */
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming));
 
@@ -295,16 +283,6 @@ export function ChartMaps() {
       )}
 
       <div className="cm-controls">
-        {(tab === 'zones' || tab === 'supply') && (
-          <label className="cm-ctl">
-            Universe
-            <select value={universe} onChange={(e) => setUniverse(e.target.value)}>
-              {(data?.universe_choices ?? UNIVERSES).map((u) => (
-                <option key={u.key} value={u.key}>{u.label}</option>
-              ))}
-            </select>
-          </label>
-        )}
         {/* Not on Earnings: that board's order is "which group, then how much
             money traded", and a theme re-shuffle would misdescribe it. Same
             reason the backend returns empty sorts/tiers for the tab. */}

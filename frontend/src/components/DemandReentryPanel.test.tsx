@@ -53,7 +53,7 @@ describe('DemandReentryPanel — universe provenance', () => {
 
     await waitFor(() => expect(screen.getByText(/503 scanned/)).toBeInTheDocument());
     // NEGATIVE: neither banner may fire on the happy path.
-    expect(screen.queryByText(/NOT the S&P 500/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NOT the full universe/)).not.toBeInTheDocument();
     expect(screen.queryByText(/days old/)).not.toBeInTheDocument();
   });
 
@@ -68,7 +68,7 @@ describe('DemandReentryPanel — universe provenance', () => {
     render(<DemandReentryPanel />);
 
     await waitFor(() =>
-      expect(screen.getByText(/NOT the S&P 500/)).toBeInTheDocument());
+      expect(screen.getByText(/NOT the full universe/)).toBeInTheDocument());
   });
 
   it('reports a stale-but-real constituent list with its age', async () => {
@@ -86,7 +86,7 @@ describe('DemandReentryPanel — universe provenance', () => {
       expect(screen.getByText(/76 days old/)).toBeInTheDocument());
     expect(screen.getByText(/live S&P 500 fetch is failing/)).toBeInTheDocument();
     // It must NOT masquerade as the wrong-universe error — different failure.
-    expect(screen.queryByText(/NOT the S&P 500/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NOT the full universe/)).not.toBeInTheDocument();
   });
 
   it('keeps a mildly stale list muted and escalates a badly stale one', async () => {

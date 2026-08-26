@@ -62,7 +62,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   gabbar: {
     label: 'Gabbar Levels',
-    blurb: 'Hand-curated buy zones from Gabbar\'s Price Levels (veerenj on TradingView) — expert judgment stored as numbers, not a computation. Names touching or within 3% of a band sort first. The same Bonde sales gate applies: a covered name with declining revenue is hidden, because a hand-drawn level under a shrinking business is exactly the knife. Check the snapshot date in the note — old levels describe an old chart.',
+    blurb: 'Hand-curated buy zones from Gabbar\'s Price Levels (veerenj on TradingView) — expert judgment stored as numbers, not a computation. Names touching or within 3% of a band sort first, and 🛡️ marks one at its CONSERVATIVE band — the author\'s deeper discount level — which leads its group over an aggressive-band touch; each tile\'s Conserv. stat shows where that deeper entry sits. The same Bonde sales gate applies: a covered name with declining revenue is hidden, because a hand-drawn level under a shrinking business is exactly the knife. Check the snapshot date in the note — old levels describe an old chart.',
   },
   support: {
     label: 'Support Levels',

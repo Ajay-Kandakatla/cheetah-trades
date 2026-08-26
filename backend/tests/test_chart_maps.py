@@ -1040,6 +1040,62 @@ def test_gabbar_tab_skips_uncovered_and_bar_less_symbols(prices, gabbar_stub):
     assert [t["symbol"] for t in out["tiles"]] == ["INBAND"]
 
 
+def test_gabbar_conservative_entries_are_marked_and_lead_their_group(prices, gabbar_stub):
+    """Ajay 2026-08-25: "In gabbars levels can you show me conservative
+    entries please." A name sitting in its CONSERVATIVE band (the author's
+    deeper discount level) must carry the 🛡️ badge and outrank a name in its
+    aggressive band — same state, better price."""
+    gabbar_stub.clear()
+    gabbar_stub.update({
+        "AGGR": [{"lo": 90.0, "hi": 110.0, "label": "aggressive"},
+                 {"lo": 60.0, "hi": 70.0, "label": "conservative 1"}],
+        "CONS": [{"lo": 140.0, "hi": 160.0, "label": "aggressive"},
+                 {"lo": 90.0, "hi": 110.0, "label": "conservative 1"}],
+    })
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)   # last = 100.0, inside 90-110
+
+    out = B.board("gabbar", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["CONS", "AGGR"]
+    cons, aggr = out["tiles"]
+    assert any((b["text"] or "").startswith("🛡️ In Gabbar band") for b in cons["badges"])
+    assert any((b["text"] or "").startswith("🎯 In Gabbar band") for b in aggr["badges"])
+    assert out["conservative_touching"] == 1
+    assert out["touching"] == 2
+    assert "🛡️" in out["note"]
+
+
+def test_gabbar_conservative_stat_names_the_band_or_says_dash(prices, gabbar_stub):
+    """Every tile answers "where is MY conservative entry" without a hover —
+    range + distance when one exists, an honest — when the author drew none.
+    NEGATIVE: a conservative NEAR must never outrank an aggressive IN (the
+    +250 boost has to stay inside its state bucket)."""
+    gabbar_stub.clear()
+    gabbar_stub.update({
+        "HASCONS": [{"lo": 140.0, "hi": 160.0, "label": "aggressive"},
+                    {"lo": 60.0, "hi": 80.0, "label": "conservative 1"}],
+        "NOCONS": [{"lo": 90.0, "hi": 110.0, "label": "aggressive"}],
+        "NEARCONS": [{"lo": 140.0, "hi": 160.0, "label": "aggressive"},
+                     {"lo": 90.0, "hi": 98.0, "label": "conservative 1"}],
+    })
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)   # last = 100.0
+
+    out = B.board("gabbar", limit=5, min_tier="any")
+    by = {t["symbol"]: t for t in out["tiles"]}
+
+    def stat(t, k):
+        return next(s["v"] for s in t["stats"] if s["k"] == k)
+
+    assert stat(by["HASCONS"], "Conserv.") == "60–80 · 20.0%"
+    assert stat(by["NOCONS"], "Conserv.") == "—"
+    # NEARCONS: ~2% under the conservative band's top → near, 🛡️ shield
+    assert stat(by["NEARCONS"], "Conserv.").endswith("2.0%")
+    assert any((b["text"] or "").startswith("🛡️") for b in by["NEARCONS"]["badges"])
+    # In-band beats near-band even when near is the conservative one.
+    assert [t["symbol"] for t in out["tiles"]][0] == "NOCONS"
+
+
 def test_gabbar_tab_applies_the_liquidity_floor(prices, gabbar_stub):
     """He asked to KEEP the volume criteria on new tabs (2026-08-25). The
     synthetic frame's turnover (~100 * 1e6 = $100M/day) clears 'deep'; a floor
@@ -1413,3 +1469,27 @@ def test_zone_tiles_carry_the_flow_badge_when_the_row_has_a_verdict(
     assert "Money flowing in — CMF +0.12" in by["FLOWIN"]
     assert "Still distributing — CMF -0.20" in by["SOLD"]
     assert "flowing" not in by["OLDCACHE"] and "distributing" not in by["OLDCACHE"]
+
+
+def test_zones_default_rank_puts_cheetahs_over_elephants(
+        prices, reentry_stub, monkeypatch):
+    """Ajay 2026-08-25: "fix the ranking of these Cheetahs on top". A lower-R:R
+    name with money flowing in and fast share turnover must outrank the
+    AVGO-shape: prettier R:R, but distributing into a heavy float."""
+    import short_interest.client as sic
+    monkeypatch.setattr(sic, "_shares_outstanding",
+                        lambda s: {"CHEETA": 100_000_000,
+                                   "ELEFNT": 4_600_000_000}.get(s))
+    lo = _reentry_row("CHEETA", rr=3.0)
+    lo["inflow"] = {"state": "inflow", "cmf_20": 0.12}
+    lo["liquidity"] = {"tier": "deep", "avg_dollar_vol": 90e6, "avg_vol_50": 3_000_000}
+    hi = _reentry_row("ELEFNT", rr=6.0)
+    hi["inflow"] = {"state": "distribution", "cmf_20": -0.22}
+    hi["liquidity"] = {"tier": "deep", "avg_dollar_vol": 900e6, "avg_vol_50": 18_000_000}
+    reentry_stub["rows"] = [hi, lo]
+    for s in ("CHEETA", "ELEFNT"):
+        prices[s] = _frame(200)
+
+    out = B.board("zones", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["CHEETA", "ELEFNT"]
+    assert "_flow" not in out["tiles"][0], "private key leaked to the client"

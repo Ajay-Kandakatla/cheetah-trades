@@ -26,6 +26,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'topping-shorts-tab',   label: 'S3 Topping · Shorts tab — book-cited distribution reads', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'scan-health',          label: 'Scan health — every scan audited, counted in the nav', addedAt: '2026-08-25', route: '/health' },
   { id: 'deep-demand-tab',      label: 'Deep Demand tab — 2nd-level arrivals, Bonde sales gate', addedAt: '2026-08-25', route: '/chart-maps' },
+  { id: 'zones-cheetah-rank-full-universe', label: 'Demand zones: 🐆 cheetah composite rank (flow × float velocity × R:R) + ONE full-universe scan (~1,750 names), theme picker retired', addedAt: '2026-08-25', route: '/chart-maps' },
+  { id: 'gabbar-conservative-entries', label: 'Gabbar tab: 🛡️ conservative entries — deeper-band touches marked, ranked first, Conserv. stat per tile', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'gabbar-levels-tab',    label: "Gabbar Levels tab — curated bands, touching first",       addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'board-scan-stamp',     label: 'Chart Maps: scan-time + data-through stamp', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'breakouts',            label: 'Breakouts page',                      addedAt: '2026-06-16', route: '/breakouts' },

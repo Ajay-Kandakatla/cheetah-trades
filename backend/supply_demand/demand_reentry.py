@@ -1185,39 +1185,20 @@ def _rank_key(r: dict):
 # them either and removing these entries would silently drop them from every
 # board. Deleting them is a one-line change whenever he wants it.
 UNIVERSES = {
-    "sp500":  ("SPY · S&P 500", lambda: universe_mod.fetch_sp500()),
-    "qqq":    ("QQQ · Nasdaq-100", lambda: universe_mod.fetch_nasdaq100()),
-    # The whole Nasdaq listing, by PRIMARY exchange (MIC XNAS). Far larger than
-    # the other choices — the liquidity floor still applies at read time, so the
-    # BOARD stays tradeable, but the scan itself is longer. Warmed by cron.
-    "nasdaq": ("Nasdaq · all listed", lambda: universe_mod.fetch_nasdaq_listed()),
-    "sp1500": ("S&P 1500 (500 + 400 mid + 600 small)", lambda: universe_mod.fetch_sp1500()),
-    # sp1500 + the build-out themes the indices structurally cannot hold —
-    # space, quantum, SMR nuclear, robotics, optical, the ADR/pre-profit AI
-    # semis (Ajay 2026-08-15). See sepa.universe.THEME_UNIVERSE for why they
-    # are absent from every S&P and Russell tier.
-    #
-    # BUG FIXED 2026-08-16: this lambda was `fetch_sp1500()` — the same list as
-    # the plain sp1500 entry. The label promised "+ themes" and the universe
-    # delivered none of the ones the S&P tiers exclude, so 34 of 82 theme names
-    # (ASTS, IONQ, ARM, CRDO, LUNR, AAOI …) were never scanned on the page whose
-    # own dropdown said they were.
-    "sp1500_plus": ("S&P 1500 + themes (space · quantum · nuclear · robotics · "
-                    "optical · AI semis)",
-                    lambda: list(dict.fromkeys(universe_mod.fetch_sp1500()
-                                               + universe_mod.fetch_themes()))),
-    "sp400":  ("S&P 400 MidCap", lambda: universe_mod.fetch_sp400()),
-    "sp600":  ("S&P 600 SmallCap", lambda: universe_mod.fetch_sp600()),
-    # Last on purpose — see the note above the dict. Kept because no index
-    # carries these names, not because the slice is a favourite.
-    "themes": ("Themes only (space · quantum · nuclear · robotics · optical · "
-               "AI semis)",
-               lambda: universe_mod.fetch_themes()),
+    # ONE universe (Ajay 2026-08-25: "Remove all these themes and just do
+    # default universe scan" + "I need full universe scanned for this").
+    # Same `full` alias the SEPA scanner runs — Russell 1000 ∪ S&P 1500 ∪
+    # curated ∪ themes, ONE definition in sepa/universe.py so the two engines
+    # can never fish different waters again. Legacy keys (sp1500_plus, qqq,
+    # sp500, ...) normalise here via _universe_key's default, so old
+    # bookmarks, cron lines and cached history keep working.
+    "full": ("Full universe (Russell 1000 ∪ S&P 1500 ∪ themes)",
+             lambda: universe_mod.load_universe("full")),
 }
-# Default universe. sp1500 since 2026-08-14 (Ajay: "make it default scan
-# 1500") — the S&P 500 alone surfaced ~3 names at a tradeable R:R, the full
-# 1500 surfaces ~12. Warmed by cron so the page load is instant, see crontab.
-DEFAULT_UNIVERSE = "sp1500"
+# The one universe (2026-08-25). History: sp500 → sp1500 (2026-08-14, "make
+# it default scan 1500") → the SEPA `full` alias (~1,750 names). Warmed by
+# cron so the page load is instant, see crontab.
+DEFAULT_UNIVERSE = "full"
 
 
 def _universe_key(key) -> str:
@@ -1246,11 +1227,7 @@ def _resolve_universe(key: str):
     """
     k = _universe_key(key)
     label = UNIVERSES[k][0]
-    _COMPOSITE = {
-        "sp1500":      ["sp500", "sp400", "sp600"],
-        "sp1500_plus": ["sp500", "sp400", "sp600", "themes"],
-    }
-    parts = _COMPOSITE.get(k, [k])
+    parts = [k]
 
     syms: list[str] = []
     seen: set[str] = set()
@@ -1282,12 +1259,12 @@ def _resolve_universe(key: str):
 
 def scan(force: bool = False, limit: Optional[int] = None,
          universe: str = DEFAULT_UNIVERSE) -> dict:
-    """Scan the S&P 500 for demand-zone re-entries. Cached `_CACHE_TTL_SEC`.
+    """Scan the full universe for demand-zone re-entries. Cached `_CACHE_TTL_SEC`.
 
-    Universe is `sepa.universe.fetch_sp500()`, which resolves fresh cache →
-    Wikipedia → datahub mirror → STALE cache → curated. `universe_note`
-    reports which list was actually used so the page can't quietly claim
-    "S&P 500" over the wrong names.
+    Universe is `sepa.universe.load_universe("full")` — the same alias the
+    SEPA scanner runs — and each layer inside it resolves fresh cache → live
+    fetch → STALE cache → curated. `universe_note` reports which list was
+    actually used so the page can't quietly claim more than it scanned.
 
     Staleness is reported too (2026-08-13). The curated fallthrough is loud —
     `universe_is_sp500` goes False and the UI warns — but a stale cache is

@@ -359,7 +359,7 @@ def test_scan_reports_when_the_universe_is_not_actually_sp500(monkeypatch):
     page must never silently claim 'S&P 500' over the wrong names."""
     from sepa import universe as U
 
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: list(U.UNIVERSE))
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: list(U.UNIVERSE))
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
@@ -369,7 +369,7 @@ def test_scan_reports_when_the_universe_is_not_actually_sp500(monkeypatch):
 
 
 def test_scan_marks_a_real_sp500_universe_as_such(monkeypatch):
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: [f"S{i}" for i in range(503)])
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: [f"S{i}" for i in range(503)])
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
@@ -413,7 +413,7 @@ def test_scan_only_keeps_reentry_hits_and_ranks_freshest_first(monkeypatch):
         "CCC": {"is_reentry": False, "bars_since_above": 0,
                 "entry_zone": {"strength": 99}, "fell_from_pct": 30},
     }
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: list(rows))
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: list(rows))
     monkeypatch.setattr(dr, "analyze_symbol",
                         lambda s, with_series=False: {**rows[s], "symbol": s})
     dr._cache.clear()
@@ -431,7 +431,7 @@ def test_scan_survives_a_symbol_that_raises(monkeypatch):
         return {"symbol": sym, "is_reentry": True, "bars_since_above": 1,
                 "entry_zone": {"strength": 80}, "fell_from_pct": 9}
 
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["GOOD", "BAD"])
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: ["GOOD", "BAD"])
     monkeypatch.setattr(dr, "analyze_symbol", boom)
     dr._cache.clear()
 
@@ -448,7 +448,7 @@ def test_scan_reports_how_stale_the_constituent_list_is(monkeypatch):
     from sepa import universe as U
 
     syms = [f"S{i}" for i in range(503)]
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: syms)
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: syms)
     monkeypatch.setattr(dr.universe_mod, "last_source",
                         lambda name: {"source": "stale-cache", "n": 503, "age_days": 76.4})
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
@@ -464,7 +464,7 @@ def test_scan_reports_how_stale_the_constituent_list_is(monkeypatch):
 def test_scan_reports_no_staleness_when_the_list_is_fresh(monkeypatch):
     """NEGATIVE: a fresh list must not raise a false staleness warning."""
     syms = [f"S{i}" for i in range(503)]
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: syms)
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: syms)
     monkeypatch.setattr(dr.universe_mod, "last_source",
                         lambda name: {"source": "wikipedia", "n": 503, "age_days": 0.0})
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
@@ -478,10 +478,10 @@ def test_scan_reports_no_staleness_when_the_list_is_fresh(monkeypatch):
 
 def test_scan_ignores_a_provenance_record_that_does_not_match(monkeypatch):
     """NEGATIVE: `last_source` is module-global and can be left over from an
-    earlier resolve (or from a test double standing in for fetch_sp500). If it
+    earlier resolve (or from a test double standing in for the loader). If it
     doesn't describe the list we actually got back, it must be ignored rather
     than mislabel the scan."""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA", "BBB"])
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: ["AAA", "BBB"])
     monkeypatch.setattr(dr.universe_mod, "last_source",
                         lambda name: {"source": "stale-cache", "n": 503, "age_days": 99.0})
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
@@ -518,62 +518,63 @@ def test_sp600_never_falls_back_to_the_curated_list(tmp_path, monkeypatch):
 
 def test_unknown_universe_key_falls_back_to_the_default(monkeypatch):
     """Whatever DEFAULT_UNIVERSE is, a bogus key must land on it rather than
-    raising or scanning nothing. (Default became sp1500 on 2026-08-14.)"""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["BBB"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["CCC"])
+    raising or scanning nothing. (Default became the SEPA `full` alias on
+    2026-08-25.)"""
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: ["AAA"])
     _, _, _, _, key = dr._resolve_universe("not-a-universe")
     assert key == dr.DEFAULT_UNIVERSE
     assert key in dr.UNIVERSES
 
 
-def test_default_universe_is_the_full_sp1500():
-    """Ajay 2026-08-14: "make it default scan 1500". The S&P 500 alone
-    surfaced ~3 names at a tradeable R:R; the full 1500 surfaces ~12."""
-    assert dr.DEFAULT_UNIVERSE == "sp1500"
+def test_default_universe_is_the_sepa_full_alias():
+    """Ajay 2026-08-25: "Remove all these themes and just do default universe
+    scan" + "I need full universe scanned for this". One universe, the same
+    `full` alias the SEPA scanner runs, so the two engines can never fish
+    different waters again."""
+    assert dr.DEFAULT_UNIVERSE == "full"
+    assert set(dr.UNIVERSES) == {"full"}
 
 
-def test_multi_layer_universe_reports_its_worst_staleness(monkeypatch):
-    """sp1500 resolves three lists independently; one stale layer must surface,
-    not be averaged away by two fresh ones."""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
-    src = {"sp500": {"source": "cache", "n": 1, "age_days": 0.0},
-           "sp400": {"source": "stale-cache", "n": 1, "age_days": 91.0},
-           "sp600": {"source": "wikipedia", "n": 1, "age_days": 0.0}}
-    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: src.get(name))
+def test_universe_staleness_still_surfaces_through_the_full_alias(monkeypatch):
+    """The layering moved into sepa/universe.load_universe("full") on
+    2026-08-25, but a frozen constituent list must STILL stamp the payload —
+    that was the 76-day silent hole of 2026-08-13."""
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: ["A", "B"])
+    monkeypatch.setattr(dr.universe_mod, "last_source",
+                        lambda name: {"source": "stale-cache", "n": 2, "age_days": 91.0})
     _, _, prov, stale, key = dr._resolve_universe("sp1500")
-    assert key == "sp1500" and stale == 91
-    assert set(prov) == {"sp500", "sp400", "sp600"}
+    assert key == "full" and stale == 91
+    assert set(prov) == {"full"}
 
 
-def test_a_failing_layer_shrinks_the_universe_instead_of_polluting_it(monkeypatch):
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A", "B"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400",
-                        lambda: (_ for _ in ()).throw(RuntimeError("down")))
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+def test_a_failing_loader_yields_an_empty_universe_not_a_crash(monkeypatch):
+    monkeypatch.setattr(dr.universe_mod, "load_universe",
+                        lambda mode=None: (_ for _ in ()).throw(RuntimeError("down")))
     monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
-    syms, _, _, _, _ = dr._resolve_universe("sp1500")
-    assert syms == ["A", "B", "C"]        # sp400 contributes nothing, no crash
+    syms, _, _, _, _ = dr._resolve_universe("full")
+    assert syms == []                     # empty and loud upstream, not a 500
 
 
-def test_each_universe_is_cached_separately(monkeypatch):
-    """REGRESSION: a single cache slot would serve an sp500 result to an
-    sp1500 request (and vice versa) for up to 3 hours."""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
+def test_legacy_universe_keys_share_the_one_full_cache(monkeypatch):
+    """FLIP of the 2026-08-14 per-universe-cache regression: with ONE universe
+    (2026-08-25), every legacy key — sp500 bookmarks, sp1500 cron lines,
+    qqq history — must land on the SAME cached scan, not warm five."""
+    calls = {"n": 0}
+
+    def load(mode=None):
+        calls["n"] += 1
+        return ["A", "B", "C"]
+
+    monkeypatch.setattr(dr.universe_mod, "load_universe", load)
     monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     dr._cache.clear()
 
-    small = dr.scan(force=True, universe="sp500")
-    big = dr.scan(force=True, universe="sp1500")
-    assert small["universe"] == 1 and big["universe"] == 3
-    # both now cached, and must not cross-serve
-    assert dr.scan(universe="sp500")["universe"] == 1
-    assert dr.scan(universe="sp1500")["universe"] == 3
+    first = dr.scan(force=True, universe="sp500")
+    assert first["universe"] == 3 and first["cached"] is False
+    assert dr.scan(universe="sp1500")["cached"] is True
+    assert dr.scan(universe="sp1500_plus")["cached"] is True
+    assert calls["n"] == 1, "a legacy key re-resolved the universe"
 
 
 def test_entry_zone_does_not_fall_off_a_cliff_four_cents_below_a_band():
@@ -630,7 +631,8 @@ def test_universe_key_tolerates_a_non_string(monkeypatch):
     assert dr._universe_key(Weird()) == dr.DEFAULT_UNIVERSE
     assert dr._universe_key(None) == dr.DEFAULT_UNIVERSE
     assert dr._universe_key("") == dr.DEFAULT_UNIVERSE
-    assert dr._universe_key("  SP500  ") == "sp500"
+    assert dr._universe_key("  FULL  ") == "full"
+    assert dr._universe_key("sp500") == dr.DEFAULT_UNIVERSE   # legacy keys collapse
     assert dr._universe_key("nonsense") == dr.DEFAULT_UNIVERSE
 
 
@@ -642,7 +644,7 @@ def test_scan_coerces_a_non_bool_force(monkeypatch):
     path look far slower than it was."""
     class Weird:
         pass
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["AAA"])
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: ["AAA"])
     monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
     monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
     monkeypatch.setattr(dr, "_attach_venues", lambda rows, **k: None)
@@ -658,61 +660,23 @@ def test_scan_coerces_a_non_bool_force(monkeypatch):
 # Theme universe (Ajay 2026-08-15: "make sure the new companies like Quantum
 # based and Power based and robotics based and then Semis all are considered")
 # ---------------------------------------------------------------------------
-def test_sp1500_plus_layers_the_themes_on_top_of_the_index(monkeypatch):
-    """The S&P tiers require positive earnings and US domicile, so no quantum
-    name — and none of OKLO / SMR / NNE / ARM — can be in sp1500. sp1500_plus
-    is the union that puts them in front of the scanner."""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_themes", lambda: ["IONQ", "OKLO"])
-    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+def test_legacy_alias_resolves_through_the_sepa_full_loader(monkeypatch):
+    """sp1500_plus / qqq / sp500 lived in a demand-side composite map until
+    2026-08-25. They now normalise to the SEPA `full` alias so both engines
+    fish the same waters; the union/dedupe itself is tested where it lives,
+    in test_universe_resolution.py."""
+    seen = {}
 
+    def load(mode=None):
+        seen["mode"] = mode
+        return ["A", "IONQ"]
+
+    monkeypatch.setattr(dr.universe_mod, "load_universe", load)
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
     syms, _, prov, _, key = dr._resolve_universe("sp1500_plus")
-    assert key == "sp1500_plus"
-    assert syms == ["A", "B", "C", "IONQ", "OKLO"]
-    assert set(prov) == {"sp500", "sp400", "sp600", "themes"}
-
-
-def test_sp1500_plus_dedupes_a_theme_name_already_in_the_index(monkeypatch):
-    """NVDA and VST are in BOTH the index and a theme roster. A duplicate would
-    scan the name twice and could show it on the board twice."""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["NVDA", "A"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: [])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: [])
-    monkeypatch.setattr(dr.universe_mod, "fetch_themes", lambda: ["NVDA", "IONQ"])
-    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
-
-    syms, _, _, _, _ = dr._resolve_universe("sp1500_plus")
-    assert syms == ["NVDA", "A", "IONQ"]
-    assert len(syms) == len(set(syms))
-
-
-def test_plain_sp1500_is_unchanged_by_the_themes(monkeypatch):
-    """REGRESSION: sp1500 is the existing default for /supply-demand. Adding a
-    composite key must not quietly widen it for every existing caller."""
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: ["B"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: ["C"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_themes", lambda: ["IONQ"])
-    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
-
-    syms, _, prov, _, key = dr._resolve_universe("sp1500")
-    assert key == "sp1500" and syms == ["A", "B", "C"]
-    assert "themes" not in prov
-    assert dr.DEFAULT_UNIVERSE == "sp1500"
-
-
-def test_a_failing_theme_layer_does_not_take_the_board_down(monkeypatch):
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: ["A"])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp400", lambda: [])
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp600", lambda: [])
-    monkeypatch.setattr(dr.universe_mod, "fetch_themes",
-                        lambda: (_ for _ in ()).throw(RuntimeError("boom")))
-    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
-
-    syms, _, _, _, _ = dr._resolve_universe("sp1500_plus")
-    assert syms == ["A"]
+    assert key == "full" and syms == ["A", "IONQ"]
+    assert seen["mode"] == "full"
+    assert set(prov) == {"full"}
 
 
 def test_theme_rosters_actually_contain_the_names_ajay_asked_for():
@@ -1265,8 +1229,8 @@ def clean_progress():
 def test_progress_answers_even_when_nothing_is_running():
     """One shape to render, always. A page that has to branch on presence is a
     page that renders nothing on the first paint."""
-    dr._progress.pop("sp500", None)
-    out = dr.progress_for("sp500")
+    dr._progress.pop("full", None)
+    out = dr.progress_for("full")
     assert out["phase"] == "idle"
     assert out["running"] is False
     assert out["current"] == 0 and out["total"] == 0
@@ -1274,9 +1238,9 @@ def test_progress_answers_even_when_nothing_is_running():
 
 
 def test_progress_reports_the_running_ticker_and_a_live_hit_count():
-    dr._publish_progress("sp500", "scanning", started_at=time.time() - 10,
+    dr._publish_progress("full", "scanning", started_at=time.time() - 10,
                          current=250, total=500, hits=7, symbol="NVDA")
-    out = dr.progress_for("sp500")
+    out = dr.progress_for("full")
     assert out["phase"] == "scanning" and out["running"] is True
     assert (out["current"], out["total"], out["hits"]) == (250, 500, 7)
     assert out["symbol"] == "NVDA"
@@ -1286,57 +1250,56 @@ def test_progress_reports_the_running_ticker_and_a_live_hit_count():
 def test_the_eta_is_projected_from_the_measured_rate_not_a_constant():
     """A warm price cache runs an order of magnitude faster than a cold one, so
     any fixed per-symbol cost would be wrong on one of the two paths."""
-    dr._publish_progress("sp500", "scanning", started_at=time.time() - 20.0,
+    dr._publish_progress("full", "scanning", started_at=time.time() - 20.0,
                          current=100, total=500, hits=1, symbol="A")
-    out = dr.progress_for("sp500")
+    out = dr.progress_for("full")
     # 20s bought 100 names; 400 left -> ~80s.
     assert 70 <= out["eta_sec"] <= 90
 
 
 def test_no_eta_before_the_first_symbol_finishes():
     """Dividing by a zero count would either crash or print a fabricated wait."""
-    dr._publish_progress("sp500", "scanning", started_at=time.time(),
+    dr._publish_progress("full", "scanning", started_at=time.time(),
                          current=0, total=500, hits=0)
-    assert dr.progress_for("sp500")["eta_sec"] is None
+    assert dr.progress_for("full")["eta_sec"] is None
 
 
 def test_no_percentage_until_the_universe_size_is_known():
     """Resolving sp1500 is three network calls. 0% during them reads as stuck."""
-    dr._publish_progress("sp1500", "universe", started_at=time.time(),
+    dr._publish_progress("full", "universe", started_at=time.time(),
                          current=0, total=0, hits=0)
-    out = dr.progress_for("sp1500")
+    out = dr.progress_for("full")
     assert out["phase"] == "universe"
     assert out["pct"] is None
     assert out["running"] is True
 
 
-def test_each_universe_keeps_its_own_counter():
-    """Two tabs can warm two universes at once; one shared counter would show
-    each of them the other's progress."""
-    dr._publish_progress("sp500", "scanning", current=10, total=500, hits=1)
-    dr._publish_progress("sp600", "scanning", current=400, total=600, hits=9)
+def test_every_legacy_alias_reads_the_one_counter():
+    """One universe (2026-08-25) means one scan job. A tab polling under an
+    old bookmark key must see the live counter, not a parallel idle."""
+    dr._publish_progress("full", "scanning", current=10, total=500, hits=1)
     assert dr.progress_for("sp500")["current"] == 10
-    assert dr.progress_for("sp600")["current"] == 400
+    assert dr.progress_for("sp1500_plus")["current"] == 10
 
 
 def test_a_snapshot_is_swapped_wholesale_never_mutated_in_place():
     """The scan thread writes while the request thread reads, with no lock on
     the read path. Swapping a fresh dict is atomic in CPython; mutating a shared
     one would let a reader see a half-updated record."""
-    dr._publish_progress("sp500", "scanning", current=1, total=500)
-    first = dr._progress["sp500"]
-    dr._publish_progress("sp500", "scanning", current=2)
-    assert dr._progress["sp500"] is not first, "the snapshot was mutated in place"
+    dr._publish_progress("full", "scanning", current=1, total=500)
+    first = dr._progress["full"]
+    dr._publish_progress("full", "scanning", current=2)
+    assert dr._progress["full"] is not first, "the snapshot was mutated in place"
     assert first["current"] == 1, "the old snapshot was written through"
 
 
 def test_publishing_carries_prior_fields_forward():
     """The per-symbol publish only sends what changed; total and started_at must
     survive or the bar loses its denominator mid-scan."""
-    dr._publish_progress("sp500", "scanning", started_at=123.0, total=500,
+    dr._publish_progress("full", "scanning", started_at=123.0, total=500,
                          universe_label="S&P 500")
-    dr._publish_progress("sp500", "scanning", current=7, symbol="AAPL")
-    out = dr.progress_for("sp500")
+    dr._publish_progress("full", "scanning", current=7, symbol="AAPL")
+    out = dr.progress_for("full")
     assert out["total"] == 500
     assert out["universe_label"] == "S&P 500"
     assert out["current"] == 7
@@ -1344,30 +1307,30 @@ def test_publishing_carries_prior_fields_forward():
 
 def test_publishing_never_raises_on_junk():
     """It runs inside the scan loop. A progress bug must never kill a scan."""
-    dr._publish_progress("sp500", "scanning", current=object())
-    dr.progress_for("sp500")          # must not raise
+    dr._publish_progress("full", "scanning", current=object())
+    dr.progress_for("full")          # must not raise
 
 
 def test_a_failed_scan_is_reported_not_left_frozen():
     """Otherwise the bar stops at 47% and the page says 'scanning' forever —
     the exact complaint, reintroduced by the fix for it."""
-    dr._publish_progress("sp500", "failed", current=200, total=500, error="boom")
-    out = dr.progress_for("sp500")
+    dr._publish_progress("full", "failed", current=200, total=500, error="boom")
+    out = dr.progress_for("full")
     assert out["phase"] == "failed"
     assert out["running"] is False
     assert out["error"] == "boom"
 
 
 def test_done_is_not_running():
-    dr._publish_progress("sp500", "done", current=500, total=500, hits=9)
-    out = dr.progress_for("sp500")
+    dr._publish_progress("full", "done", current=500, total=500, hits=9)
+    out = dr.progress_for("full")
     assert out["running"] is False
     assert out["pct"] == 100.0
 
 
 def test_progress_resolves_the_universe_key_the_same_way_the_scan_does():
     """Asking under an unresolved alias must not return a permanent idle."""
-    for alias in ("sp500", "SP500", " sp500 "):
+    for alias in ("full", "FULL", " full ", "sp500"):
         assert dr.progress_for(alias)["universe_key"] == dr._universe_key("sp500")
 
 
@@ -1384,7 +1347,7 @@ def test_a_real_scan_publishes_universe_then_scanning_then_done(monkeypatch):
 
     monkeypatch.setattr(dr, "_publish_progress", spy)
     monkeypatch.setattr(dr, "_resolve_universe",
-                        lambda k: (["AAA", "BBB"], "Test", {}, None, "sp500"))
+                        lambda k: (["AAA", "BBB"], "Test", {}, None, "full"))
     monkeypatch.setattr(dr, "analyze_symbol", lambda s: None)
     monkeypatch.setattr(dr, "_attach_venues", lambda rows, **kw: None)
 
@@ -1394,14 +1357,14 @@ def test_a_real_scan_publishes_universe_then_scanning_then_done(monkeypatch):
     assert seen[-1] == "done"
     # One publish per symbol, so the bar moves rather than jumping.
     assert seen.count("scanning") >= 3        # the opener + one per symbol
-    assert dr.progress_for("sp500")["total"] == 2
+    assert dr.progress_for("full")["total"] == 2
 
 
 def test_a_symbol_that_throws_still_advances_the_bar(monkeypatch):
     """A universe with a few bad tickers must not stall the counter — that reads
     as a hang, which is the thing being fixed."""
     monkeypatch.setattr(dr, "_resolve_universe",
-                        lambda k: (["AAA", "BBB", "CCC"], "Test", {}, None, "sp500"))
+                        lambda k: (["AAA", "BBB", "CCC"], "Test", {}, None, "full"))
 
     def boom(sym):
         raise RuntimeError("no prices")
@@ -1409,7 +1372,7 @@ def test_a_symbol_that_throws_still_advances_the_bar(monkeypatch):
     monkeypatch.setattr(dr, "analyze_symbol", boom)
     monkeypatch.setattr(dr, "_attach_venues", lambda rows, **kw: None)
     dr.scan(force=True, universe="sp500")
-    out = dr.progress_for("sp500")
+    out = dr.progress_for("full")
     assert out["current"] == 3, "the bar must reach the end even when every name fails"
     assert out["errors"] == 3
     assert out["phase"] == "done"
@@ -1642,7 +1605,7 @@ def test_scan_collects_deep_rows_that_is_reentry_refuses(monkeypatch):
                  "demand_zones": _bands(), "bars_since_above": 3,
                  "entry_zone": {"strength": 90}, "fell_from_pct": 8},
     }
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: list(rows))
+    monkeypatch.setattr(dr.universe_mod, "load_universe", lambda mode=None: list(rows))
     monkeypatch.setattr(dr, "analyze_symbol",
                         lambda s, with_series=False: {**rows[s], "symbol": s})
     # No real price frames for fake symbols — the inflow block must degrade
