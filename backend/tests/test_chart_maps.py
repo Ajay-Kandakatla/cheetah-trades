@@ -1055,12 +1055,12 @@ def test_gabbar_tab_applies_the_liquidity_floor(prices, gabbar_stub):
 # ---------------------------------------------------------------------------
 # the deep-demand tab
 # ---------------------------------------------------------------------------
-def _deep_row(sym, state="in", dist=0.0, rr=2.0):
+def _deep_row(sym, state="in", dist=0.0, rr=2.0, inflow=None):
     return {
         "symbol": sym, "name": sym,
         "last_price": 82.0,
         "trend_ok": False,      # the premise: these fail the trend gate
-        "deep_demand": {"state": state, "dist_pct": dist,
+        "deep_demand": {"inflow": inflow, "state": state, "dist_pct": dist,
                         "top_band": {"lo": 90.0, "hi": 95.0},
                         "second_band": {"lo": 80.0, "hi": 85.0,
                                         "touches": 3, "strength": 60.0,
@@ -1179,3 +1179,52 @@ def test_gabbar_hides_weak_sales_and_demotes_unknowns(
     far = next(t for t in out["tiles"] if t["symbol"] == "FARAWAY")
     assert any("Sales steady" in b["text"] for b in near["badges"])
     assert any("Sales data missing" in b["text"] for b in far["badges"])
+
+
+def test_deep_demand_inflow_names_lead_and_wear_the_flow_badge(
+        prices, reentry_stub, sales_stub):
+    """Ajay 2026-08-25: "we are looking for bullish momentum stocks and inflow
+    signals for these". Inflow beats in-band: a near-band name with money
+    flowing in outranks an in-band name still being sold, and every state is
+    said out loud on the tile and counted in the note."""
+    flow_in = {"state": "inflow", "cmf_20": 0.14, "accum_days_25": 9,
+               "dist_days_25": 4, "pocket_pivot": True}
+    flow_out = {"state": "distribution", "cmf_20": -0.18, "accum_days_25": 2,
+                "dist_days_25": 9, "pocket_pivot": False}
+    reentry_stub["deep_rows"] = [
+        _deep_row("SOLDOFF", state="in", inflow=flow_out),
+        _deep_row("COILING", state="near", dist=1.0, inflow=flow_in),
+    ]
+    for s in ("SOLDOFF", "COILING"):
+        prices[s] = _frame(200)
+        sales_stub[s] = _sales("steady", 12.0)
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["COILING", "SOLDOFF"]
+
+    coil = out["tiles"][0]
+    txt = " ".join(b["text"] for b in coil["badges"])
+    assert "Money flowing in" in txt and "CMF +0.14" in txt and "9↑/4↓" in txt
+    assert "Pocket pivot" in txt
+    sold_txt = " ".join(b["text"] for b in out["tiles"][1]["badges"])
+    assert "Still distributing" in sold_txt and "CMF -0.18" in sold_txt
+
+    assert out["flow_counts"] == {"inflow": 1, "neutral": 0, "distribution": 1}
+    assert "1 flowing in" in out["note"] and "1 still distributing" in out["note"]
+    stats = {s["k"]: s["v"] for s in coil["stats"]}
+    assert stats["Flow"] == "CMF +0.14"
+    assert stats["Vol days"] == "9\u2191 / 4\u2193"
+
+
+def test_deep_demand_missing_inflow_reads_neutral_not_bullish(
+        prices, reentry_stub, sales_stub):
+    """Older cached rows have no inflow block — they must count as neutral
+    and carry NO flow badge, never a green one."""
+    reentry_stub["deep_rows"] = [_deep_row("NODATAFLOW", inflow=None)]
+    prices["NODATAFLOW"] = _frame(200)
+    sales_stub["NODATAFLOW"] = _sales("steady", 10.0)
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    txt = " ".join(b["text"] for b in out["tiles"][0]["badges"])
+    assert "Money flowing in" not in txt and "Still distributing" not in txt
+    assert out["flow_counts"] == {"inflow": 0, "neutral": 1, "distribution": 0}

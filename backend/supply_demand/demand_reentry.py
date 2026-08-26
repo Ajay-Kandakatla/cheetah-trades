@@ -1371,6 +1371,19 @@ def scan(force: bool = False, limit: Optional[int] = None,
             try:
                 d3 = _deep.read(rec)
                 if d3:
+                    # The inflow verdict rides on the scan row (Ajay
+                    # 2026-08-25: "we are looking for bullish momentum stocks
+                    # and inflow signals for these"). volume.analyze is the
+                    # canonical read (CMF, accum/dist day counts, p.71-76);
+                    # the frame is already in the price cache from the pass
+                    # that produced `rec`, so this is a warm re-read, not a
+                    # second fetch. Only for deep hits — ~150 names, not 1,500.
+                    try:
+                        from sepa import volume as _vol
+                        d3["inflow"] = _deep.inflow_read(
+                            _vol.analyze(prices.load_prices(sym)))
+                    except Exception:
+                        d3["inflow"] = None
                     r3 = dict(rec)
                     r3.pop("series", None)
                     r3["deep_demand"] = d3

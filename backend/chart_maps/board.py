@@ -1757,6 +1757,24 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
         badges = [{"text": ("🩹 In 2nd demand band" if d.get("state") == "in"
                              else "🩹 Entering 2nd band"), "tone": "warn"}]
+        # The flow verdict (Ajay 2026-08-25: "bullish momentum stocks and
+        # inflow signals"). States and numbers come from sepa/volume via
+        # deep_demand.inflow_read — never re-derived here.
+        flow = d.get("inflow") or {}
+        f_state = flow.get("state")
+        f_cmf = _f(flow.get("cmf_20"))
+        if f_state == "inflow":
+            badges.append({"text": (f"💰 Money flowing in — CMF {f_cmf:+.2f} · "
+                                     f"{flow.get('accum_days_25', 0)}↑/"
+                                     f"{flow.get('dist_days_25', 0)}↓ days"
+                                     if f_cmf is not None else "💰 Money flowing in"),
+                           "tone": "good"})
+        elif f_state == "distribution":
+            badges.append({"text": (f"🔻 Still distributing — CMF {f_cmf:+.2f}"
+                                     if f_cmf is not None else "🔻 Still distributing"),
+                           "tone": "warn"})
+        if flow.get("pocket_pivot"):
+            badges.append({"text": "⚡ Pocket pivot", "tone": "good"})
         if sales:
             badges.append(_sales_badge(sales))
         if not r.get("trend_ok", True):
@@ -1767,11 +1785,13 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
         liq = r.get("liquidity") or {}
         stats = [{"k": "Sales YoY", "v": f"{g:+.0f}%" if g is not None else "—"},
-                 {"k": "Below 1st", "v": f"{below:.0f}%" if below is not None else "—"},
-                 {"k": "2nd band", "v": (f"{_num(second.get('lo')):g}–{_num(second.get('hi')):g}"
-                                          if _num(second.get('lo')) is not None else "—")},
+                 {"k": "Flow", "v": (f"CMF {f_cmf:+.2f}" if f_cmf is not None else "—")},
+                 {"k": "Vol days", "v": (f"{flow.get('accum_days_25')}↑ / "
+                                          f"{flow.get('dist_days_25')}↓"
+                                          if flow.get("accum_days_25") is not None else "—")},
                  {"k": "Liquidity", "v": (liq.get("tier") or "—")}]
 
+        flow_lead = {"inflow": 4000.0, "neutral": 2000.0}.get(f_state or "neutral", 0.0)
         in_band_lead = 1000.0 if d.get("state") == "in" else 0.0
         tiles.append({
             "symbol": sym,
@@ -1786,13 +1806,23 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "why": why,
             "theme": _theme(sym),
             "badges": badges,
-            "_score": in_band_lead + (g or 0.0),
+            "_score": flow_lead + in_band_lead + (g or 0.0),
             "_m": tile_metrics(r),
         })
 
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    flow_counts = {"inflow": 0, "neutral": 0, "distribution": 0}
+    for t in tiles:
+        st = next((b for b in t.get("badges") or [] if "Money flowing in" in b["text"]), None)
+        if st:
+            flow_counts["inflow"] += 1
+        elif any("Still distributing" in b["text"] for b in t.get("badges") or []):
+            flow_counts["distribution"] += 1
+        else:
+            flow_counts["neutral"] += 1
     return {"tiles": out, **meta,
             "matched": len(rows),
+            "flow_counts": flow_counts,
             "dropped_weak_sales": dropped_weak,
             "dropped_no_sales_data": dropped_unknown,
             "deep_n": data.get("deep_n"),
@@ -1804,8 +1834,13 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"second — kept only when Bonde sales tiers (steady/strong/explosive, "
                      f"his 5% YoY floor) say the business is intact. This scan: "
                      f"{len(rows)} arrivals, {dropped_weak} dropped for weak/declining "
-                     f"sales, {dropped_unknown} dropped for no sales data. These fail the "
-                     f"trend gate BY DESIGN — size and stop accordingly."),
+                     f"sales, {dropped_unknown} dropped for no sales data. Money flow "
+                     f"(CMF-20 + up/down volume days, Minervini p.71-76 counts): "
+                     f"{flow_counts['inflow']} flowing in · {flow_counts['neutral']} neutral · "
+                     f"{flow_counts['distribution']} still distributing — inflow names sort "
+                     f"first, because a broken first band means sellers already had their "
+                     f"turn. These fail the trend gate BY DESIGN — size and stop "
+                     f"accordingly."),
             "generated_at": data.get("as_of")}
 
 

@@ -107,3 +107,49 @@ def test_garbage_records_return_none_not_raise():
     assert DD.read({}) is None
     assert DD.read({"last_price": None, "demand_zones": [_band(1, 2), _band(0, 1)]}) is None
     assert DD.read(_rec(82.0, [{"lo": None, "hi": None}, _band(80, 85)])) is None
+
+
+# ── inflow_read — classification only, thresholds imported ──────────────────
+# Ajay 2026-08-25: "they are very bearish from institutions and retailer we
+# are looking for bullish momentum stocks and inflow signals for these."
+def _vol(cmf=None, acc=0, dist=0, pp=False, net=None):
+    return {"cmf_20": cmf, "accumulation_days_25": acc,
+            "distribution_days_25": dist, "pocket_pivot": pp,
+            "net_dollar_vol_50": net}
+
+
+def test_inflow_at_the_modules_own_cmf_zone():
+    from sepa.volume import CMF_INFLOW_THRESHOLD, CMF_OUTFLOW_THRESHOLD
+    assert DD.inflow_read(_vol(cmf=CMF_INFLOW_THRESHOLD))["state"] == "inflow"
+    assert DD.inflow_read(_vol(cmf=CMF_OUTFLOW_THRESHOLD))["state"] == "distribution"
+
+
+def test_weak_positive_cmf_needs_the_day_count_on_its_side():
+    # +0.05 is inside the neutral CMF zone — accumulation days break the tie.
+    assert DD.inflow_read(_vol(cmf=0.05, acc=9, dist=4))["state"] == "inflow"
+    assert DD.inflow_read(_vol(cmf=0.05, acc=3, dist=8))["state"] == "neutral"
+    assert DD.inflow_read(_vol(cmf=-0.05, acc=3, dist=8))["state"] == "distribution"
+    assert DD.inflow_read(_vol(cmf=-0.05, acc=8, dist=3))["state"] == "neutral"
+
+
+def test_missing_cmf_is_neutral_never_a_signal():
+    r = DD.inflow_read(_vol(cmf=None, acc=10, dist=0))
+    assert r["state"] == "neutral" and r["cmf_20"] is None
+
+
+def test_inflow_read_of_nothing_is_none():
+    assert DD.inflow_read(None) is None
+    assert DD.inflow_read({}) is None
+
+
+def test_sort_puts_inflow_ahead_of_in_band_distribution():
+    """A near-band name with money flowing in outranks an in-band name still
+    being sold — the flow verdict leads the sort on purpose."""
+    def row(state, band_state):
+        return {"deep_demand": {"state": band_state, "dist_pct": 1.0,
+                                "second_band": {"strength": 50},
+                                "inflow": {"state": state}}}
+    rows = [row("distribution", "in"), row("inflow", "near"), row("neutral", "in")]
+    rows.sort(key=DD.sort_key)
+    assert [r["deep_demand"]["inflow"]["state"] for r in rows] == [
+        "inflow", "neutral", "distribution"]

@@ -986,6 +986,17 @@ describe('the Deep Demand tab', () => {
     expect(b).toMatch(/falling knife/i);
     expect(b).toMatch(/fail the trend gate by design/i);
   });
+
+  it('teaches the inflow layer — what 💰 and 🔻 mean and how they rank', () => {
+    // Ajay 2026-08-25: "very bearish from institutions and retailer we are
+    // looking for bullish momentum stocks and inflow signals for these."
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).toMatch(/money flowing back in/i);
+    expect(b).toMatch(/CMF-20/);
+    expect(b).toMatch(/volume-day counts/i);
+    expect(b).toMatch(/sort first/i);
+    expect(b).toMatch(/sellers are still in control/i);
+  });
 });
 
 describe('the Gabbar Levels tab', () => {

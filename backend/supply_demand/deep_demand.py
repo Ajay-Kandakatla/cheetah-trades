@@ -97,9 +97,62 @@ def read(rec: dict) -> Optional[dict]:
     }
 
 
+def inflow_read(vol: Optional[dict]) -> Optional[dict]:
+    """Distill sepa/volume.analyze() into the deep-demand inflow verdict.
+
+    Ajay 2026-08-25: "they are very bearish from institutions and retailer —
+    we are looking for bullish momentum stocks and inflow signals for these."
+    A name that broke its first band IS under distribution almost by
+    definition; the question this answers is whether money has STARTED
+    flowing back in while price sits at the second band.
+
+    Every threshold is sepa/volume.py's own (CMF ±0.10 zones tuned 2026-05-21
+    against a 977-name sample; accumulation/distribution day counts per
+    Minervini p.71-76, count-of-days not sum-of-volume). This function only
+    CLASSIFIES — it must never re-derive a number.
+
+      inflow        — CMF-20 at/above the module's inflow zone, or positive
+                      CMF with more accumulation than distribution days
+      distribution  — the mirror image
+      neutral       — everything else, including a missing CMF (thin data
+                      must never read as either signal)
+    """
+    if not vol:
+        return None
+    from sepa.volume import CMF_INFLOW_THRESHOLD, CMF_OUTFLOW_THRESHOLD
+    cmf = vol.get("cmf_20")
+    acc = vol.get("accumulation_days_25") or 0
+    dist = vol.get("distribution_days_25") or 0
+    if cmf is None:
+        state = "neutral"
+    elif cmf >= CMF_INFLOW_THRESHOLD or (cmf > 0 and acc > dist):
+        state = "inflow"
+    elif cmf <= CMF_OUTFLOW_THRESHOLD or (cmf < 0 and dist > acc):
+        state = "distribution"
+    else:
+        state = "neutral"
+    return {
+        "state": state,
+        "cmf_20": cmf,
+        "accum_days_25": acc,
+        "dist_days_25": dist,
+        "net_dollar_vol_50": vol.get("net_dollar_vol_50"),
+        # TLSW-cited momentum footprint at lows — the strongest single
+        # "buyers are back" bar there is (volume.py _pocket_pivot).
+        "pocket_pivot": bool(vol.get("pocket_pivot")),
+    }
+
+
+_STATE_RANK = {"inflow": 0, "neutral": 1, "distribution": 2}
+
+
 def sort_key(row: dict):
-    """IN-band first, then closest to arriving, then the stronger second band."""
+    """Inflow first (the whole point of the screen — Ajay 2026-08-25), then
+    IN-band before approaching, then closest to arriving, then the stronger
+    second band. A near-band name with money flowing in outranks an in-band
+    name still being sold."""
     d = row.get("deep_demand") or {}
+    flow = _STATE_RANK.get((d.get("inflow") or {}).get("state") or "neutral", 1)
     in_band = 0 if d.get("state") == "in" else 1
-    return (in_band, d.get("dist_pct") or 0.0,
+    return (flow, in_band, d.get("dist_pct") or 0.0,
             -((d.get("second_band") or {}).get("strength") or 0.0))

@@ -1645,6 +1645,9 @@ def test_scan_collects_deep_rows_that_is_reentry_refuses(monkeypatch):
     monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: list(rows))
     monkeypatch.setattr(dr, "analyze_symbol",
                         lambda s, with_series=False: {**rows[s], "symbol": s})
+    # No real price frames for fake symbols — the inflow block must degrade
+    # to None, not reach for the network.
+    monkeypatch.setattr(dr.prices, "load_prices", lambda s: None)
     dr._cache.clear()
 
     out = dr.scan(force=True)
@@ -1671,10 +1674,67 @@ def test_scan_deep_rows_capped_but_count_honest(monkeypatch):
                      "touches": 3, "strength": 60.0}],
                 "entry_zone": {"strength": 60}}
 
-    monkeypatch.setattr(dr.universe_mod, "fetch_sp500", lambda: syms)
+    monkeypatch.setattr(dr, "_resolve_universe",
+                        lambda k: (syms, "S&P 500", {}, None, "sp500"))
     monkeypatch.setattr(dr, "analyze_symbol", fake)
+    monkeypatch.setattr(dr.prices, "load_prices", lambda s: None)
     dr._cache.clear()
 
     out = dr.scan(force=True)
     assert len(out["deep_rows"]) == DD.MAX_ROWS
     assert out["deep_n"] == n
+
+
+def test_scan_attaches_the_inflow_verdict_to_deep_rows(monkeypatch):
+    """The flow read rides the scan row (Ajay 2026-08-25) — computed from the
+    canonical sepa/volume.analyze, and a failure there degrades to
+    inflow=None, never a crashed scan."""
+    from sepa import volume as vol_mod
+    from sepa import prices as prices_mod
+
+    def fake(s, with_series=False):
+        return {"symbol": s, "is_reentry": False, "last_price": 82.0,
+                "demand_zones": [
+                    {"kind": "demand", "lo": 90.0, "hi": 95.0, "mid": 92.5,
+                     "touches": 3, "strength": 70.0},
+                    {"kind": "demand", "lo": 80.0, "hi": 85.0, "mid": 82.5,
+                     "touches": 3, "strength": 60.0}],
+                "entry_zone": {"strength": 60}}
+
+    monkeypatch.setattr(dr, "_resolve_universe",
+                        lambda k: (["GOODF", "BADF"], "S&P 500", {}, None, "sp500"))
+    monkeypatch.setattr(dr, "analyze_symbol", fake)
+    monkeypatch.setattr(prices_mod, "load_prices", lambda s: object())
+    monkeypatch.setattr(vol_mod, "analyze", lambda df: {
+        "cmf_20": 0.2, "accumulation_days_25": 8, "distribution_days_25": 2,
+        "pocket_pivot": False, "net_dollar_vol_50": 5e8})
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    infl = out["deep_rows"][0]["deep_demand"]["inflow"]
+    assert infl["state"] == "inflow" and infl["cmf_20"] == 0.2
+
+
+def test_scan_deep_rows_survive_a_crashing_volume_read(monkeypatch):
+    from sepa import prices as prices_mod
+
+    def fake(s, with_series=False):
+        return {"symbol": s, "is_reentry": False, "last_price": 82.0,
+                "demand_zones": [
+                    {"kind": "demand", "lo": 90.0, "hi": 95.0, "mid": 92.5,
+                     "touches": 3, "strength": 70.0},
+                    {"kind": "demand", "lo": 80.0, "hi": 85.0, "mid": 82.5,
+                     "touches": 3, "strength": 60.0}],
+                "entry_zone": {"strength": 60}}
+
+    def boom(s):
+        raise RuntimeError("no frame")
+
+    monkeypatch.setattr(dr, "_resolve_universe",
+                        lambda k: (["X"], "S&P 500", {}, None, "sp500"))
+    monkeypatch.setattr(dr, "analyze_symbol", fake)
+    monkeypatch.setattr(prices_mod, "load_prices", boom)
+    dr._cache.clear()
+
+    out = dr.scan(force=True)
+    assert out["deep_rows"][0]["deep_demand"]["inflow"] is None
