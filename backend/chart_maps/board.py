@@ -2190,7 +2190,8 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  themes_first: bool = THEMES_FIRST_DEFAULT,
                  sort: str = DEFAULT_SORT,
                  min_tier: str = DEFAULT_MIN_TIER,
-                 level: str = "all") -> dict:
+                 level: str = "all",
+                 touching_only: bool = True) -> dict:
     """Gabbar's Price Levels board (Ajay 2026-08-25: "create a tab for gabbars
     price level and if anything is touching the gabbars levels").
 
@@ -2218,6 +2219,7 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     snaps = research.sales_snapshot(covered)
     flash_syms = _flash_symbols()
     tiles, dropped_weak, without_level = [], 0, 0
+    away_hidden = 0
     for sym in covered:
         payload = GL.get_bands(sym)
         if not payload or not payload.get("bands"):
@@ -2292,6 +2294,15 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             d = abs(last - edge) / last * 100.0
             if cons_dist is None or d < cons_dist:
                 cons_dist, cons_lo, cons_hi = d, lo, hi
+        # The tab's question is "is anything AT his levels" (Ajay 2026-08-26:
+        # "Why are these scans showing me stocks that are not touching gabbars
+        # pricing levels?"). Default answer: only in/near names — a mostly
+        # empty board is the honest reading, not a bug. touching_only=False
+        # brings back the full distance ladder for shopping deeper entries.
+        if touching_only is not False and state == "away":
+            away_hidden += 1
+            continue
+
         if cons_dist is not None and cons_state != "in":
             cons_state = "near" if cons_dist <= NEAR_PCT else "away"
         # The +250 group boost only means something in "all" mode — under a
@@ -2381,6 +2392,8 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "level": lens,
             "level_choices": list(GABBAR_LEVELS),
             "without_level": without_level,
+            "touching_only": touching_only is not False,
+            "away_hidden": away_hidden,
             "note": (f"Hand-curated buy zones from {attr.get('source')} "
                      f"({attr.get('author')}, {attr.get('license')}), snapshot "
                      f"{attr.get('snapshot_date')} — the author's judgment, not a "
@@ -2391,7 +2404,11 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"sales — a level under a shrinking business is the knife."
                      + (f" Lens: {lens} — distances measure that band type only; "
                         f"{without_level} covered name(s) have no such band and "
-                        f"are hidden." if lens != "all" else "")),
+                        f"are hidden." if lens != "all" else "")
+                     + (f" Touching only: {away_hidden} covered name(s) more "
+                        f"than {NEAR_PCT:g}% from every band are hidden — untick "
+                        f"to see the full distance ladder."
+                        if touching_only is not False and away_hidden else "")),
             "generated_at": None}
 
 
@@ -2399,7 +2416,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
-          min_tier: str = DEFAULT_MIN_TIER, level: str = "all") -> dict:
+          min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
+          touching_only: bool = True) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -2428,7 +2446,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "gabbar":
         out = gabbar_tiles(limit, days, themes_first, srt, tier,
-                           level=level if isinstance(level, str) else "all")
+                           level=level if isinstance(level, str) else "all",
+                           touching_only=touching_only is not False)
     elif t == "zero_dte":
         out = zero_dte_tiles(limit, days)
     elif t == "winners":

@@ -58,12 +58,17 @@ def test_thin_history_is_recorded_with_the_bar_count(monkeypatch):
 
 
 def test_stale_series_is_recorded_with_the_last_bar_date(monkeypatch):
+    # bdate_range snaps a weekend end-date back to Friday, so the expected
+    # date must come from the FRAME, not from `today - 60d` — the raw form
+    # failed every day that offset landed on a weekend (first seen
+    # 2026-08-26, when it hit Saturday 06-27).
     frozen = date.today() - timedelta(days=60)
-    monkeypatch.setattr(sc.prices, "load_prices", lambda s: _df(300, frozen))
+    frame = _df(300, frozen)
+    monkeypatch.setattr(sc.prices, "load_prices", lambda s: frame)
     skips = {}
     assert sc._analyze_symbol("HALTED", {}, skips=skips) is None
     assert skips["HALTED"].startswith("stale — last bar ")
-    assert frozen.isoformat() in skips["HALTED"]
+    assert frame.index[-1].date().isoformat() in skips["HALTED"]
 
 
 def test_liquidity_floor_is_recorded(monkeypatch):

@@ -156,6 +156,8 @@ export type CmBoard = {
   level?: string;
   level_choices?: string[];
   without_level?: number;
+  touching_only?: boolean;
+  away_hidden?: number;
   scanned?: number;
   universe_key?: string;
   universe_label?: string;
@@ -242,7 +244,7 @@ export function boardQuery(p: {
   tab: CmTab; limit?: number; days?: number;
   universe?: string; themesFirst?: boolean; pattern?: string | null;
   source?: WinnerSource; minerviniOnly?: boolean; sort?: string;
-  minTier?: string; gabbarLevel?: string;
+  minTier?: string; gabbarLevel?: string; gabbarTouchingOnly?: boolean;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   if (p.limit) q.set('limit', String(p.limit));
@@ -256,6 +258,11 @@ export function boardQuery(p: {
   // 'all' is the server default and would just noise up the common URL.
   if (p.tab === 'gabbar' && p.gabbarLevel && p.gabbarLevel !== 'all') {
     q.set('level', p.gabbarLevel);
+  }
+  // Touching-only is the server default (2026-08-26) — only the opt-OUT rides
+  // on the URL, so the common request stays clean.
+  if (p.tab === 'gabbar' && p.gabbarTouchingOnly === false) {
+    q.set('touching_only', 'false');
   }
   // Only sent when it differs from the shared default, so the common URL stays
   // clean. That default flipped to OFF on 2026-08-17, so this now sends `true`

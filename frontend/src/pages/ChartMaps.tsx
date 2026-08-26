@@ -106,6 +106,7 @@ export function ChartMaps() {
   const supportWindow = parseWindow(params.get('window'));
   const universe = UNIVERSE;
   const [gabbarLevel, setGabbarLevel] = useState('all');
+  const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(true);
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +131,8 @@ export function ChartMaps() {
     // charts under the right heading.
     if (!isBoardTab(tab)) { setData(null); setLoading(false); return; }
     const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
-                           source, minerviniOnly, sort, minTier, gabbarLevel });
+                           source, minerviniOnly, sort, minTier, gabbarLevel,
+                           gabbarTouchingOnly });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -142,7 +144,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -293,6 +295,14 @@ export function ChartMaps() {
               <option value="conservative 1">🛡️ Conservative 1</option>
               <option value="conservative 2">🛡️ Conservative 2</option>
             </select>
+          </label>
+        )}
+        {tab === 'gabbar' && (
+          <label className="cm-ctl cm-ctl-check"
+                 title="On (default): only names inside or within 3% of a measured band — the board answers 'is anything AT his levels'. Off: every covered name, ranked by distance, for shopping where the deeper entries sit.">
+            <input type="checkbox" checked={gabbarTouchingOnly}
+                   onChange={(e) => setGabbarTouchingOnly(e.target.checked)} />
+            Touching only (≤3%)
           </label>
         )}
         {/* Not on Earnings: that board's order is "which group, then how much

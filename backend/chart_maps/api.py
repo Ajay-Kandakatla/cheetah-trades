@@ -34,6 +34,11 @@ async def chart_maps(
                        description="gabbar tab only — measure against one band "
                                    "type: all (default) | aggressive | "
                                    "conservative 1 | conservative 2"),
+    touching_only: bool = Query(True,
+                                description="gabbar tab only — hide names more "
+                                            "than NEAR_PCT from every measured "
+                                            "band (default). false = the full "
+                                            "distance ladder."),
     themes_first: bool = Query(board_mod.THEMES_FIRST_DEFAULT,
                                description="lead with quantum/nuclear/robotics/AI-semis "
                                            "names — OFF by default since 2026-08-17"),
@@ -73,6 +78,7 @@ async def chart_maps(
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
             min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
             level=level if isinstance(level, str) else "all",
+            touching_only=touching_only if isinstance(touching_only, bool) else True,
         )
 
     return JSONResponse(await asyncio.to_thread(_run))
