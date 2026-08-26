@@ -99,6 +99,42 @@ def test_grade_confirmed_target_first():
     assert res["bars_to_outcome"] is not None
 
 
+def test_grade_confirmed_bars_to_resolution_target_bar_3():
+    # entry bar k (close 101); bars k+1/k+2 rise but stay under target 110
+    # (highs 102.5, 104.5); bar k+3 closes 111 → high 111.5 touches target.
+    # bars_to_resolution is 1-based from entry → 3.
+    df = _df(list(np.linspace(100, 101, 30)) + [102.0, 104.0, 111.0] + [111.0] * 5)
+    obs = {"et_date": df.index[29].strftime("%Y-%m-%d"), "status": "confirmed",
+           "obs_close": 101.0, "target": 110.0, "stop": 95.0, "neckline": 100.0}
+    res = history._grade_pattern(df, obs)
+    assert res["outcome"] == "target_first"
+    assert res["bars_to_resolution"] == 3
+    assert res["bars_to_outcome"] == 3           # same number, both stamped
+
+
+def test_grade_confirmed_bars_to_resolution_stop_bar_2():
+    # bar k+1 dips to low 99.5 (above stop 95); bar k+2 closes 94 → low 93.5
+    # touches the stop → bars_to_resolution 2.
+    df = _df(list(np.linspace(100, 101, 30)) + [100.0, 94.0] + [94.0] * 5)
+    obs = {"et_date": df.index[29].strftime("%Y-%m-%d"), "status": "confirmed",
+           "obs_close": 101.0, "target": 110.0, "stop": 95.0, "neckline": 100.0}
+    res = history._grade_pattern(df, obs)
+    assert res["outcome"] == "stop_first"
+    assert res["bars_to_resolution"] == 2
+
+
+def test_grade_confirmed_neither_has_null_bars_to_resolution():
+    # NEGATIVE: full 21-bar window, nothing ever touches target or stop →
+    # outcome "neither" and bars_to_resolution must be null, not 0 or 21.
+    df = _df(list(np.linspace(100, 101, 30)) + [101.0] * 25)
+    obs = {"et_date": df.index[29].strftime("%Y-%m-%d"), "status": "confirmed",
+           "obs_close": 101.0, "target": 110.0, "stop": 95.0, "neckline": 100.0}
+    res = history._grade_pattern(df, obs)
+    assert res["outcome"] == "neither"
+    assert res["bars_to_resolution"] is None
+    assert res["bars_to_outcome"] is None
+
+
 def test_grade_confirmed_stop_wins_ambiguity():
     # one violent bar whose range touches BOTH target and stop → stop (pessimistic)
     closes = list(np.linspace(100, 101, 30)) + [101.0] * 25
@@ -170,10 +206,47 @@ def test_accuracy_aggregates(monkeypatch):
     assert db["median_target_dist_pct"] == 10.0
     assert db["median_stop_dist_pct"] == 10.0
     assert db["expectancy_pct"] == 0.0             # (+10 − 10) / 2 decided
+    # NEGATIVE: these docs predate any time-to-resolution field entirely —
+    # the API must tolerate its absence, never KeyError, medians just null.
+    assert db["median_bars_to_target"] is None
+    assert db["median_bars_to_stop"] is None
     assert "never compare the raw %" in acc["conventions"]["bracket_note"]
+    assert "never compare the medians across patterns raw" in acc["conventions"]["bars_note"]
     forming = acc["patterns"]["cup_with_handle"]["forming"]
     assert forming["went_on_to_confirm_pct"] == 100.0
     assert "expectancy_pct" not in forming         # forming rows race no bracket
+    assert "median_bars_to_target" not in forming  # forming rows race no bracket
     assert acc["candles"]["hammer"]["direction_hit_pct"] == 100.0
     assert acc["pending"] == 1
     assert "not a promise" in acc["disclaimer"]
+
+
+def test_accuracy_median_bars_mixes_new_and_legacy_docs(monkeypatch):
+    # Newly graded docs carry bars_to_resolution; docs graded before the field
+    # existed carry only bars_to_outcome (stamped at THEIR grading time) and
+    # feed the median read-only — no doc is ever rewritten. A doc with neither
+    # field, and a "neither" outcome with null bars, are skipped silently.
+    fake = _coll_with_limit(FakeColl())
+    monkeypatch.setattr(history, "_coll", lambda: fake)
+    base = {"kind": "pattern", "pattern": "double_bottom", "status": "confirmed",
+            "resolved": True}
+    fake.docs = {
+        "new": {"_id": "new", **base, "et_date": "2026-08-20",
+                "outcome": "target_first", "bars_to_resolution": 3,
+                "bars_to_outcome": 3},
+        "legacy": {"_id": "legacy", **base, "et_date": "2026-06-15",
+                   "outcome": "target_first", "bars_to_outcome": 8},
+        "ancient": {"_id": "ancient", **base, "et_date": "2026-06-10",
+                    "outcome": "target_first"},           # no bars field at all
+        "stopped": {"_id": "stopped", **base, "et_date": "2026-08-21",
+                    "outcome": "stop_first", "bars_to_resolution": 5},
+        "flat": {"_id": "flat", **base, "et_date": "2026-08-22",
+                 "outcome": "neither", "bars_to_resolution": None},
+    }
+    acc = history.accuracy()
+    db = acc["patterns"]["double_bottom"]["confirmed"]
+    assert db["n"] == 5
+    # target medians over [3 (new), 8 (legacy fallback)]; ancient skipped
+    assert db["median_bars_to_target"] == 8.0      # upper-median convention
+    assert db["median_bars_to_stop"] == 5.0
+    assert "bars_to_resolution = 1-based" in acc["conventions"]["bars_note"]

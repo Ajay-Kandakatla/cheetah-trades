@@ -1420,6 +1420,30 @@ feeds `is_candidate`/`is_buyable` or the deterministic engine.
   guideline", cup.html). Any change to CWH stop/target conventions is a
   trade-plan decision — Ajay's call.
 
+### 14a. Time-to-resolution (2026-08-26)
+
+`patterns/history.py::_grade_pattern` stamps `bars_to_resolution` on newly
+graded confirmed observations: the 1-based bar count from entry (the flag-day
+close) to the first target/stop touch, null when the 21-bar window expired
+with neither. It duplicates the grader's original `bars_to_outcome` under the
+explicit name the accuracy API aggregates. `accuracy()` confirmed rows add
+`median_bars_to_target` / `median_bars_to_stop` plus `conventions.bars_note`.
+
+- **Append-only contract holds:** historical graded docs are NEVER rewritten
+  or re-graded. The medians read a doc's own grading-time `bars_to_outcome`
+  as a fallback (all 251 live resolved confirmed docs carried it as of
+  2026-08-26, verified in Mongo); docs with neither field are skipped and the
+  medians degrade to null — the API tolerates absence everywhere.
+- **Comparability caveat inherited:** the medians race each pattern's OWN
+  bracket (§14) — a nearer target resolves in fewer bars by construction, so
+  the medians are never compared across patterns raw, and small n means noisy
+  medians. Said out loud in `conventions.bars_note`.
+- Guards: `test_pattern_history.py::test_grade_confirmed_bars_to_resolution_target_bar_3`,
+  `::test_grade_confirmed_bars_to_resolution_stop_bar_2`,
+  `::test_grade_confirmed_neither_has_null_bars_to_resolution` (negative),
+  `::test_accuracy_median_bars_mixes_new_and_legacy_docs`, and the absence
+  tolerance asserts in `::test_accuracy_aggregates`.
+
 ---
 
 ## Chart Maps — "Strong VCP" study board (2026-08-16)

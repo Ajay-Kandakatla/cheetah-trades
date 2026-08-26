@@ -188,6 +188,13 @@ def _grade_pattern(df: pd.DataFrame, obs: dict) -> Optional[dict]:
             outcome = "neither"
         res = {"outcome": outcome,
                "bars_to_outcome": (hit_bar - k) if hit_bar else None,
+               # bars_to_resolution: 1-based bar count from entry to the first
+               # target/stop touch; null when the window expired with neither.
+               # Same value as bars_to_outcome — the explicit name the accuracy
+               # API aggregates. Stamped at grading time only: already-graded
+               # docs are never rewritten (accuracy() falls back to their own
+               # bars_to_outcome, stamped when THEY were graded).
+               "bars_to_resolution": (hit_bar - k) if hit_bar else None,
                "fwd_21_pct": round((closes[k + PATTERN_HORIZON] / entry - 1) * 100, 2)
                if full_window else None,
                "max_gain_pct": round((highs[k + 1: end + 1].max() / entry - 1) * 100, 2)
@@ -343,7 +350,7 @@ def accuracy() -> dict:
                 "n": 0, "target_first": 0, "stop_first": 0, "neither": 0,
                 "confirmed": 0, "stopped": 0, "expired": 0, "fwd": [], "buyable_n": 0,
                 "buyable_target_first": 0, "tgt_d": [], "stp_d": [],
-                "win": [], "loss": []})
+                "win": [], "loss": [], "tgt_bars": [], "stp_bars": []})
             slot["n"] += 1
             o = obs.get("outcome")
             if o in slot:
@@ -361,6 +368,18 @@ def accuracy() -> dict:
                     slot["win"].append((float(t) / float(e) - 1) * 100)
                 elif o == "stop_first":
                     slot["loss"].append((1 - float(sp) / float(e)) * 100)
+            # Time-to-resolution: bars_to_resolution on newly graded docs;
+            # older docs carry the same number as bars_to_outcome (stamped by
+            # their own grading pass) — read-only fallback, never a recompute.
+            # Docs with neither field are simply skipped.
+            b = obs.get("bars_to_resolution")
+            if b is None:
+                b = obs.get("bars_to_outcome")
+            if b is not None:
+                if o == "target_first":
+                    slot["tgt_bars"].append(float(b))
+                elif o == "stop_first":
+                    slot["stp_bars"].append(float(b))
             if obs.get("is_buyable"):
                 slot["buyable_n"] += 1
                 if o == "target_first":
@@ -392,6 +411,8 @@ def accuracy() -> dict:
                     # Bracket context — read the hit-% THROUGH these, never raw.
                     "median_target_dist_pct": _median(s["tgt_d"]),
                     "median_stop_dist_pct": _median(s["stp_d"]),
+                    "median_bars_to_target": _median(s["tgt_bars"]),
+                    "median_bars_to_stop": _median(s["stp_bars"]),
                     "expectancy_pct": round((sum(s["win"]) - sum(s["loss"])) / decided, 2)
                     if decided else None,
                 })
@@ -421,6 +442,17 @@ def accuracy() -> dict:
                 "never compare the raw % across patterns. Read expectancy_pct (gross "
                 "avg win% minus avg loss% per decided trade) with the median "
                 "target/stop distances next to it."),
+            "bars_note": (
+                "bars_to_resolution = 1-based bar count from entry (the flag-day "
+                "close) to the first target/stop touch; null when the 21-bar window "
+                "expired with neither. Stamped at grading time on newly graded "
+                "observations only — historical docs are never rewritten (their own "
+                "grading-time bars_to_outcome feeds the medians where present). "
+                "median_bars_to_target / median_bars_to_stop carry the SAME "
+                "cross-pattern caveat as the raw hit-%: brackets differ ~2x, so a "
+                "nearer target resolves in fewer bars by construction — never "
+                "compare the medians across patterns raw, and small n means noisy "
+                "medians."),
         },
         "disclaimer": (
             "OUR live forward record: every pattern/candle the verdict scan flagged, "
