@@ -616,7 +616,7 @@ def test_5y_window_reaches_past_the_2y_cache(monkeypatch):
                         lambda sym, period: calls.append((sym, period)) or _bars_df(1300))
     S._deep_cache.clear()
 
-    df, have = S._frame_for("CR", 1260)
+    df, have, _as_of = S._frame_for("CR", 1260)
     assert have == 1300 and calls == [("CR", "5y")]
     # Second call: served from the module's own cache, no refetch.
     S._frame_for("CR", 1260)
@@ -635,7 +635,7 @@ def test_5y_degrades_to_the_shared_frame_when_deep_fetch_fails(monkeypatch):
     monkeypatch.setattr(prices_mod, "_fetch_massive", boom)
     S._deep_cache.clear()
 
-    df, have = S._frame_for("CR", 1260)
+    df, have, _as_of = S._frame_for("CR", 1260)
     assert have == 500 and df is not None
 
 
@@ -647,5 +647,60 @@ def test_short_windows_never_trigger_a_deep_fetch(monkeypatch):
         raise AssertionError("deep fetch fired for a short window")
     monkeypatch.setattr(prices_mod, "_fetch_massive", forbidden)
     S._deep_cache.clear()
-    df, have = S._frame_for("CR", 252)
+    df, have, _as_of = S._frame_for("CR", 252)
     assert have == 500
+
+
+# ---------------------------------------------------------------------------
+# freshness stamp (Ajay 2026-08-26: INTU's frozen partial bar drew a candle
+# below his stop while the live tape said $345 — the chart must SAY when its
+# data left the provider)
+# ---------------------------------------------------------------------------
+def test_payload_carries_as_of_and_data_through(monkeypatch):
+    from sepa import prices as prices_mod
+    frame = _bars_df(300)
+    monkeypatch.setattr(prices_mod, "load_prices",
+                        lambda sym, period="2y", force=False: frame)
+    monkeypatch.setattr(S, "_shared_frame_as_of", lambda sym: 1787760000.0)
+    S._deep_cache.clear()
+
+    out = S.for_symbol("CR", window="6m")
+    assert out["as_of"] == 1787760000.0
+    assert out["data_through"] == frame.index[-1].date().isoformat()
+
+
+def test_a_missing_cache_mtime_stamps_nothing_never_now(monkeypatch):
+    """NEGATIVE: no provable fetch time -> as_of None. Stamping now() would
+    recreate the exact lie the stamp exists to prevent."""
+    import time
+    from sepa import prices as prices_mod
+    frame = _bars_df(300)
+    monkeypatch.setattr(prices_mod, "load_prices",
+                        lambda sym, period="2y", force=False: frame)
+    monkeypatch.setattr(S, "_shared_frame_as_of", lambda sym: None)
+    S._deep_cache.clear()
+
+    before = time.time()
+    out = S.for_symbol("CR", window="6m")
+    assert out["as_of"] is None
+    assert not any(isinstance(v, float) and v >= before
+                   for k, v in out.items() if k == "as_of")
+    # data_through still answers — the bar date needs no fetch clock.
+    assert out["data_through"] == frame.index[-1].date().isoformat()
+
+
+def test_overlay_payload_is_stamped_too(monkeypatch):
+    from sepa import prices as prices_mod
+    frame = _bars_df(300)
+    monkeypatch.setattr(prices_mod, "load_prices",
+                        lambda sym, period="2y", force=False: frame)
+    monkeypatch.setattr(S, "_shared_frame_as_of", lambda sym: 1787760000.0)
+    monkeypatch.setattr(prices_mod, "_fetch_massive",
+                        lambda sym, period: (_ for _ in ()).throw(RuntimeError("no")))
+    S._deep_cache.clear()
+
+    out = S.for_symbol("CR", window="all")
+    assert out.get("error") is None or "as_of" in out
+    if out.get("error") is None:
+        assert out["as_of"] == 1787760000.0
+        assert out["data_through"] == frame.index[-1].date().isoformat()

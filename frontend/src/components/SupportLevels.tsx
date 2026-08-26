@@ -25,8 +25,8 @@ import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
 import {
   FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLabel, headline,
-  normalizeSymbol, parseWindow, recencyLabel, recentCount, shortHistoryNote,
-  supportQuery, testedCount,
+  normalizeSymbol, parseWindow, priceAsOf, recencyLabel, recentCount,
+  shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
 
@@ -193,6 +193,10 @@ export function SupportLevels({ symbol, window: win, onSymbol, onWindow }: Props
             you can see rather than a floor that has held. Bands are where the
             turns clustered; a stop goes under the low, not at the midpoint.
           </p>
+          {(() => {
+            const stamp = priceAsOf(data.as_of, data.data_through, Date.now());
+            return stamp ? <p className="cm-note sl-asof">{stamp}</p> : null;
+          })()}
           {data.note ? <p className="cm-note">{data.note}</p> : null}
           {data.disclaimer ? (
             <div className="cm-disclaimer">{data.disclaimer}</div>

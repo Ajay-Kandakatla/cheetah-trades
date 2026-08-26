@@ -42,6 +42,31 @@ export type SupportLevel = {
   agree?: number;
 };
 
+/** "Prices as of 2h ago · bars through Aug 26" — the honesty line under the
+ *  chart. Each half renders independently; BOTH missing -> null (render
+ *  nothing rather than fabricate — same rule as the boards' scan stamp). */
+export function priceAsOf(asOf: number | null | undefined,
+                          dataThrough: string | null | undefined,
+                          nowMs: number): string | null {
+  const parts: string[] = [];
+  if (asOf != null && Number.isFinite(asOf) && asOf > 0) {
+    const sec = Math.max(0, nowMs / 1000 - asOf);   // clock skew -> clamp, not lie
+    const min = Math.round(sec / 60);
+    const age = sec < 90 ? 'just now'
+      : min < 90 ? `${min}m ago`
+      : min < 36 * 60 ? `${Math.round(min / 60)}h ago`
+      : `${Math.round(min / 1440)}d ago`;
+    parts.push(`Prices fetched ${age}`);
+  }
+  if (dataThrough) {
+    const d = new Date(`${dataThrough}T12:00:00Z`);
+    if (!Number.isNaN(d.getTime())) {
+      parts.push(`bars through ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`);
+    }
+  }
+  return parts.length ? parts.join(' · ') : null;
+}
+
 export type SupportPayload = {
   symbol: string;
   name?: string | null;
@@ -54,6 +79,12 @@ export type SupportPayload = {
   /** Set when the frame could not cover the window asked for — a recent IPO.
    *  The label still says what was asked; this says what was read. */
   short_history?: { have: number; asked: number } | null;
+  /** Freshness stamp (2026-08-26, after INTU's frozen partial bar read as a
+   *  blown stop): `as_of` = epoch seconds the data left the PROVIDER (parquet
+   *  mtime / deep-fetch time) — null when unprovable, never fabricated;
+   *  `data_through` = ISO date of the newest bar in the frame. */
+  as_of?: number | null;
+  data_through?: string | null;
   tile?: CmTile;
   supports?: SupportLevel[];
   overhead?: SupportLevel[];

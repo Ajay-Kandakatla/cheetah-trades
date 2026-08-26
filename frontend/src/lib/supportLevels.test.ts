@@ -4,6 +4,7 @@ import {
   headline, money, normalizeSymbol, parseWindow, recencyLabel, recentCount,
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
+  priceAsOf,
 } from './supportLevels';
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
@@ -278,5 +279,33 @@ describe('overlay window', () => {
       recent: true, tested: true, distance_pct: 1.0,
     };
     expect(evidenceLabel(lv)).toBe('3 touches');
+  });
+});
+
+
+describe('priceAsOf', () => {
+  const NOW = Date.parse('2026-08-26T18:00:00Z');
+
+  it('renders both halves when both are known', () => {
+    expect(priceAsOf(NOW / 1000 - 2 * 3600, '2026-08-26', NOW))
+      .toBe('Prices fetched 2h ago · bars through Aug 26');
+  });
+
+  it('renders each half alone', () => {
+    expect(priceAsOf(NOW / 1000 - 300, null, NOW)).toBe('Prices fetched 5m ago');
+    expect(priceAsOf(null, '2026-08-25', NOW)).toBe('bars through Aug 25');
+  });
+
+  it('renders NOTHING when nothing is provable — never a fabricated stamp', () => {
+    // The INTU lesson (2026-08-26): a chart that cannot say when its data
+    // left the provider must say nothing, not imply "now".
+    for (const [asOf, through] of [[null, null], [undefined, undefined],
+                                   [0, ''], [-5, 'not-a-date'], [NaN, null]] as const) {
+      expect(priceAsOf(asOf as never, through as never, NOW)).toBeNull();
+    }
+  });
+
+  it('clamps clock skew instead of inventing a negative age', () => {
+    expect(priceAsOf(NOW / 1000 + 600, null, NOW)).toBe('Prices fetched just now');
   });
 });

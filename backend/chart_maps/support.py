@@ -130,11 +130,27 @@ _DEEP_TTL_SEC = 6 * 3600
 _deep_cache: dict = {}
 
 
+def _shared_frame_as_of(sym: str) -> Optional[float]:
+    """Epoch when the shared price cache last pulled `sym` from the provider
+    (the parquet file's mtime), or None. None means "don't stamp" — a
+    fabricated freshness stamp is the exact lie this exists to prevent
+    (Ajay 2026-08-26: INTU's frozen partial bar read as a blown stop)."""
+    import os
+    from sepa import prices
+    try:
+        path = str(prices._cache_path(sym))
+        return os.path.getmtime(path) if os.path.exists(path) else None
+    except Exception:                                          # pragma: no cover
+        return None
+
+
 def _frame_for(sym: str, need_bars: int):
-    """(df, bars_available) — the shared 2y frame, or a deep 5y fetch when the
-    window needs more than the shared frame holds. Degrades to the shared
-    frame on a failed deep fetch — the caller reports the shortfall rather
-    than silently drawing a 2-year chart under a 5-year label."""
+    """(df, bars_available, as_of_epoch) — the shared 2y frame, or a deep 5y
+    fetch when the window needs more than the shared frame holds. Degrades to
+    the shared frame on a failed deep fetch — the caller reports the
+    shortfall rather than silently drawing a 2-year chart under a 5-year
+    label. `as_of_epoch` is when the data left the PROVIDER (shared frame:
+    parquet mtime; deep frame: its fetch time), or None — never now()."""
     import time as _t
     from sepa import prices
 
@@ -144,22 +160,24 @@ def _frame_for(sym: str, need_bars: int):
         df = None
     have = len(df) if df is not None else 0
     if need_bars <= have:
-        return df, have
+        return df, have, _shared_frame_as_of(sym)
 
     key = sym.upper()
+    deep_as_of = None
     hit = _deep_cache.get(key)
     if hit and (_t.time() - hit[0]) < _DEEP_TTL_SEC:
-        deep = hit[1]
+        deep_as_of, deep = hit
     else:
         try:
             deep = prices._fetch_massive(key, "5y")
         except Exception:
             deep = None
         if deep is not None and len(deep):
-            _deep_cache[key] = (_t.time(), deep)
+            deep_as_of = _t.time()
+            _deep_cache[key] = (deep_as_of, deep)
     if deep is not None and len(deep) > have:
-        return deep, len(deep)
-    return df, have
+        return deep, len(deep), deep_as_of
+    return df, have, _shared_frame_as_of(sym)
 
 
 def window_keys() -> list[str]:
@@ -179,6 +197,15 @@ def window_spec(key: str) -> dict:
         if w["key"] == k:
             return w
     return SUPPORT_WINDOWS[1]                       # unreachable; keeps mypy calm
+
+
+def _last_bar_date(df) -> Optional[str]:
+    """ISO date of the frame's newest bar, or None. The other half of the
+    stamp: a fetch five minutes ago over week-old bars is still stale."""
+    try:
+        return df.index[-1].date().isoformat()
+    except Exception:                                          # pragma: no cover
+        return None
 
 
 def _pct_below(last_price: float, level_hi: float) -> Optional[float]:
@@ -313,9 +340,10 @@ def overlay_for_symbol(sym: str, base: dict) -> dict:
     cap already exists to prevent, and agreement is the point of the view."""
     from sepa import prices
 
-    df, have = _frame_for(sym, max(w["bars"] for w in SUPPORT_WINDOWS))
+    df, have, as_of = _frame_for(sym, max(w["bars"] for w in SUPPORT_WINDOWS))
     if df is None or not len(df):
         return {**base, "error": f"No price data for {sym}."}
+    base = {**base, "as_of": as_of, "data_through": _last_bar_date(df)}
 
     tagged: list[dict] = []
     per_window: list[dict] = []
@@ -539,13 +567,14 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
         return overlay_for_symbol(sym, base)
 
     try:
-        df, _have = _frame_for(sym, spec["bars"])
+        df, _have, as_of = _frame_for(sym, spec["bars"])
     except Exception as exc:                                  # pragma: no cover
         log.debug("support: prices %s failed: %s", sym, exc)
         return {**base, "error": f"No price data for {sym}."}
 
     if df is None or not len(df):
         return {**base, "error": f"No price data for {sym}."}
+    base = {**base, "as_of": as_of, "data_through": _last_bar_date(df)}
 
     # A frame SHORTER than the window asked for still computes — `.iloc[-126:]`
     # on 30 bars is 30 bars — and would then be labelled "6 months" on screen.
