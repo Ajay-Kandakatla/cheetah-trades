@@ -1300,6 +1300,36 @@ def test_gabbar_hides_weak_sales_and_demotes_unknowns(
     assert any("Sales data missing" in b["text"] for b in far["badges"])
 
 
+def test_deep_demand_board_ranks_the_hottest_cmf_first(
+        prices, reentry_stub, sales_stub):
+    """Ajay 2026-08-26: "rank these by highest CMF on the top ... the one
+    that have explosiveness". Board mirror of deep_demand.sort_key: within
+    the inflow group CMF magnitude leads; in-band and even explosive sales
+    only break ties. NEGATIVE: a distribution name never jumps a group on
+    the size of its (negative) CMF, and a huge sales number cannot outrank
+    a hotter CMF."""
+    hot = {"state": "inflow", "cmf_20": 0.31, "accum_days_25": 8,
+           "dist_days_25": 3, "pocket_pivot": False}
+    mild = {"state": "inflow", "cmf_20": 0.12, "accum_days_25": 7,
+            "dist_days_25": 4, "pocket_pivot": False}
+    sold = {"state": "distribution", "cmf_20": -0.45, "accum_days_25": 1,
+            "dist_days_25": 11, "pocket_pivot": False}
+    reentry_stub["deep_rows"] = [
+        _deep_row("MILDIN", state="in", dist=0.0, inflow=mild),     # in band
+        _deep_row("HOTNEAR", state="near", dist=2.0, inflow=hot),   # 2% out
+        _deep_row("SOLD", state="in", dist=0.0, inflow=sold),
+    ]
+    sales_stub["MILDIN"] = _sales("explosive", 180.0)   # huge sales, mild CMF
+    sales_stub["HOTNEAR"] = _sales("steady", 9.0)
+    sales_stub["SOLD"] = _sales("steady", 12.0)
+    for s in ("MILDIN", "HOTNEAR", "SOLD"):
+        prices[s] = _frame(200, start=90.05)
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    syms = [t["symbol"] for t in out["tiles"]]
+    assert syms == ["HOTNEAR", "MILDIN", "SOLD"]
+
+
 def test_deep_demand_inflow_names_lead_and_wear_the_flow_badge(
         prices, reentry_stub, sales_stub):
     """Ajay 2026-08-25: "we are looking for bullish momentum stocks and inflow

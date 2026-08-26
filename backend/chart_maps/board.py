@@ -1934,8 +1934,16 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                           if flow.get("accum_days_25") is not None else "—")},
                  {"k": "Liquidity", "v": (liq.get("tier") or "—")}]
 
-        flow_lead = {"inflow": 4000.0, "neutral": 2000.0}.get(f_state or "neutral", 0.0)
-        in_band_lead = 1000.0 if d.get("state") == "in" else 0.0
+        # Rank bands: flow state first, then WITHIN the inflow group the
+        # strongest CMF (Ajay 2026-08-26: "rank these by highest CMF on the
+        # top? I want to tackle the one that have explosiveness"). Bands are
+        # 50k apart so no CMF reading (±10k max) can jump a group; in-band
+        # (100) and sales growth (capped, ×0.05 → ≤20) only break CMF ties.
+        flow_lead = {"inflow": 100000.0, "neutral": 50000.0}.get(f_state or "neutral", 0.0)
+        cmf_lead = (f_cmf * 10000.0
+                    if f_state == "inflow" and f_cmf is not None else 0.0)
+        in_band_lead = 100.0 if d.get("state") == "in" else 0.0
+        sales_tb = min(max(g or 0.0, -100.0), 400.0) * 0.05
         tiles.append({
             "symbol": sym,
             "name": r.get("name") or _name_for(sym),
@@ -1949,7 +1957,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "why": why,
             "theme": _theme(sym),
             "badges": badges,
-            "_score": flow_lead + in_band_lead + (g or 0.0),
+            "_score": flow_lead + cmf_lead + in_band_lead + sales_tb,
             "_m": tile_metrics(r),
         })
 

@@ -147,12 +147,21 @@ _STATE_RANK = {"inflow": 0, "neutral": 1, "distribution": 2}
 
 
 def sort_key(row: dict):
-    """Inflow first (the whole point of the screen — Ajay 2026-08-25), then
-    IN-band before approaching, then closest to arriving, then the stronger
-    second band. A near-band name with money flowing in outranks an in-band
-    name still being sold."""
+    """Inflow first (the whole point of the screen — Ajay 2026-08-25), and
+    WITHIN the inflow group the strongest CMF leads (Ajay 2026-08-26: "rank
+    these by highest CMF on the top? I want to tackle the one that have
+    explosiveness") — the most aggressively accumulated name is the one to
+    tackle first, even 2% out of the band. Geometry (in-band, then distance,
+    then band strength) breaks ties and orders the neutral/distribution
+    groups, where CMF magnitude means nothing worth ranking on: a missing
+    CMF is neutral, and a big NEGATIVE CMF ranking a distribution name over
+    a mildly-sold one would reward the wrong thing."""
     d = row.get("deep_demand") or {}
-    flow = _STATE_RANK.get((d.get("inflow") or {}).get("state") or "neutral", 1)
+    inflow = d.get("inflow") or {}
+    flow = _STATE_RANK.get(inflow.get("state") or "neutral", 1)
+    cmf = inflow.get("cmf_20")
+    # Only the inflow group ranks on CMF; None sorts after every real reading.
+    cmf_rank = -cmf if (flow == 0 and isinstance(cmf, (int, float))) else 0.0
     in_band = 0 if d.get("state") == "in" else 1
-    return (flow, in_band, d.get("dist_pct") or 0.0,
+    return (flow, cmf_rank, in_band, d.get("dist_pct") or 0.0,
             -((d.get("second_band") or {}).get("strength") or 0.0))

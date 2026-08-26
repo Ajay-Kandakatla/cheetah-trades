@@ -58,7 +58,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   deep_demand: {
     label: 'Deep Demand',
-    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and those sort first; 🔻 means sellers are still in control, shown so you know why it ranks last.',
+    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and those sort first — ranked by CMF intensity within the group (hottest money flow on top, 2026-08-26), with in-band position and sales growth breaking ties; 🔻 means sellers are still in control, shown so you know why it ranks last.',
   },
   gabbar: {
     label: 'Gabbar Levels',

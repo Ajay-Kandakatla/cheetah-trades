@@ -142,6 +142,43 @@ def test_inflow_read_of_nothing_is_none():
     assert DD.inflow_read({}) is None
 
 
+def test_within_the_inflow_group_the_strongest_cmf_leads():
+    """Ajay 2026-08-26: "rank these by highest CMF on the top? I want to
+    tackle the one that have explosiveness." A CMF +0.30 name still 2% out
+    of the band outranks a CMF +0.12 name already inside it — geometry only
+    breaks CMF ties now."""
+    def row(cmf, band_state, dist):
+        return {"deep_demand": {"state": band_state, "dist_pct": dist,
+                                "second_band": {"strength": 50},
+                                "inflow": {"state": "inflow", "cmf_20": cmf}}}
+    hot_near = row(0.30, "near", 2.0)
+    mild_in = row(0.12, "in", 0.0)
+    rows = [mild_in, hot_near]
+    rows.sort(key=DD.sort_key)
+    assert [r["deep_demand"]["inflow"]["cmf_20"] for r in rows] == [0.30, 0.12]
+
+
+def test_cmf_never_reorders_the_neutral_or_distribution_groups():
+    """NEGATIVE: a big NEGATIVE CMF must not rank a heavily-sold name above a
+    mildly-sold one — outside the inflow group geometry still rules, and a
+    missing CMF inside the inflow group sorts after every real reading."""
+    def row(state, cmf, band_state, dist):
+        return {"deep_demand": {"state": band_state, "dist_pct": dist,
+                                "second_band": {"strength": 50},
+                                "inflow": {"state": state, "cmf_20": cmf}}}
+    heavy_sold_near = row("distribution", -0.40, "near", 2.0)
+    mild_sold_in = row("distribution", -0.11, "in", 0.0)
+    rows = [heavy_sold_near, mild_sold_in]
+    rows.sort(key=DD.sort_key)
+    assert rows[0]["deep_demand"]["state"] == "in"      # geometry, not |CMF|
+
+    no_cmf_in = row("inflow", None, "in", 0.0)
+    weak_cmf_near = row("inflow", 0.05, "near", 2.5)
+    rows2 = [no_cmf_in, weak_cmf_near]
+    rows2.sort(key=DD.sort_key)
+    assert rows2[0]["deep_demand"]["inflow"]["cmf_20"] == 0.05
+
+
 def test_sort_puts_inflow_ahead_of_in_band_distribution():
     """A near-band name with money flowing in outranks an in-band name still
     being sold — the flow verdict leads the sort on purpose."""

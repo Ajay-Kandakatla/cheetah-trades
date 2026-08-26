@@ -27,6 +27,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'scan-health',          label: 'Scan health — every scan audited, counted in the nav', addedAt: '2026-08-25', route: '/health' },
   { id: 'deep-demand-tab',      label: 'Deep Demand tab — 2nd-level arrivals, Bonde sales gate', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'zones-cheetah-rank-full-universe', label: 'Demand zones: 🐆 cheetah composite rank (flow × float velocity × R:R) + ONE full-universe scan (~1,750 names), theme picker retired', addedAt: '2026-08-25', route: '/chart-maps' },
+  { id: 'deep-demand-cmf-rank', label: 'Deep Demand: hottest CMF on top — inflow names now rank by money-flow intensity, geometry and sales break ties', addedAt: '2026-08-26', route: '/chart-maps' },
   { id: 'gabbar-touching-only', label: 'Gabbar tab: touching-only by default — names >3% from every band are hidden and counted; untick for the full distance ladder', addedAt: '2026-08-26', route: '/chart-maps' },
   { id: 'gabbar-level-lens', label: 'Gabbar tab: Level toggle — measure the board against All / \ud83c\udfaf Aggressive / \ud83d\udee1\ufe0f Conservative 1 / Conservative 2 bands', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'gabbar-conservative-entries', label: 'Gabbar tab: 🛡️ conservative entries — deeper-band touches marked, ranked first, Conserv. stat per tile', addedAt: '2026-08-25', route: '/chart-maps' },
