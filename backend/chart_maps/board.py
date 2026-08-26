@@ -2178,10 +2178,19 @@ def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "scan_generated_at": latest.get("generated_at")}
 
 
+# Band-type lens for the gabbar tab (Ajay 2026-08-25: "may be a switch of
+# select toggle for conservative 1 conservative 2 and aggressive"). "all"
+# keeps the nearest-band read; a specific label re-measures every name
+# against ONLY that band type, so "who is at their conservative 2 level"
+# is one click, not a scan of the Conserv. stats.
+GABBAR_LEVELS = ("all", "aggressive", "conservative 1", "conservative 2")
+
+
 def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  themes_first: bool = THEMES_FIRST_DEFAULT,
                  sort: str = DEFAULT_SORT,
-                 min_tier: str = DEFAULT_MIN_TIER) -> dict:
+                 min_tier: str = DEFAULT_MIN_TIER,
+                 level: str = "all") -> dict:
     """Gabbar's Price Levels board (Ajay 2026-08-25: "create a tab for gabbars
     price level and if anything is touching the gabbars levels").
 
@@ -2201,10 +2210,14 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     from supply_demand.price_zones import NEAR_PCT
     from sepa import research
 
+    lens = level if isinstance(level, str) and level.strip().lower() in GABBAR_LEVELS \
+        else "all"
+    lens = lens.strip().lower() if isinstance(lens, str) else "all"
+
     covered = GL.list_covered_symbols()
     snaps = research.sales_snapshot(covered)
     flash_syms = _flash_symbols()
-    tiles, dropped_weak = [], 0
+    tiles, dropped_weak, without_level = [], 0, 0
     for sym in covered:
         payload = GL.get_bands(sym)
         if not payload or not payload.get("bands"):
@@ -2229,8 +2242,17 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         avg_turnover = sum((b.get("c") or 0) * (b.get("v") or 0) for b in tail) / max(1, len(tail))
 
         # Nearest band by edge distance; inside any band wins outright.
+        # Under a lens, only bands of the chosen label are measured — a name
+        # the author never drew that band for is dropped (and counted), not
+        # shown with a fabricated distance.
+        read_bands = payload["bands"] if lens == "all" else [
+            b for b in payload["bands"]
+            if str(b.get("label") or "").strip().lower() == lens]
+        if not read_bands:
+            without_level += 1
+            continue
         state, best_label, best_dist = None, None, None
-        for b in payload["bands"]:
+        for b in read_bands:
             lo, hi = _f(b.get("lo")), _f(b.get("hi"))
             if lo is None or hi is None:
                 continue
@@ -2272,13 +2294,17 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 cons_dist, cons_lo, cons_hi = d, lo, hi
         if cons_dist is not None and cons_state != "in":
             cons_state = "near" if cons_dist <= NEAR_PCT else "away"
-        at_conservative = _is_cons(best_label) and state in ("in", "near")
+        # The +250 group boost only means something in "all" mode — under a
+        # lens every measured band shares one label and the boost would be a
+        # constant offset.
+        at_conservative = (lens == "all" and _is_cons(best_label)
+                           and state in ("in", "near"))
 
         bands = [{"kind": "demand", "lo": float(b["lo"]), "hi": float(b["hi"]),
                   "label": f"Gabbar · {b.get('label') or 'band'}"}
                  for b in payload["bands"]]
 
-        above = last > max(float(b["hi"]) for b in payload["bands"])
+        above = last > max(float(b["hi"]) for b in read_bands)
         if state == "in":
             why = f"inside Gabbar's {best_label} band right now"
         elif state == "near":
@@ -2352,6 +2378,9 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "touching": touching,
             "conservative_touching": cons_touching,
             "dropped_weak_sales": dropped_weak,
+            "level": lens,
+            "level_choices": list(GABBAR_LEVELS),
+            "without_level": without_level,
             "note": (f"Hand-curated buy zones from {attr.get('source')} "
                      f"({attr.get('author')}, {attr.get('license')}), snapshot "
                      f"{attr.get('snapshot_date')} — the author's judgment, not a "
@@ -2359,7 +2388,10 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"was then. Touching names sort first; 🛡️ marks a name at its CONSERVATIVE (deeper "
                      f"discount) band, which leads its group. Bonde sales gate: "
                      f"{dropped_weak} covered name(s) hidden for weak/declining "
-                     f"sales — a level under a shrinking business is the knife."),
+                     f"sales — a level under a shrinking business is the knife."
+                     + (f" Lens: {lens} — distances measure that band type only; "
+                        f"{without_level} covered name(s) have no such band and "
+                        f"are hidden." if lens != "all" else "")),
             "generated_at": None}
 
 
@@ -2367,7 +2399,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
-          min_tier: str = DEFAULT_MIN_TIER) -> dict:
+          min_tier: str = DEFAULT_MIN_TIER, level: str = "all") -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -2395,7 +2427,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "gabbar":
-        out = gabbar_tiles(limit, days, themes_first, srt, tier)
+        out = gabbar_tiles(limit, days, themes_first, srt, tier,
+                           level=level if isinstance(level, str) else "all")
     elif t == "zero_dte":
         out = zero_dte_tiles(limit, days)
     elif t == "winners":

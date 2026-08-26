@@ -105,6 +105,7 @@ export function ChartMaps() {
   const supportSymbol = normalizeSymbol(params.get('symbol'));
   const supportWindow = parseWindow(params.get('window'));
   const universe = UNIVERSE;
+  const [gabbarLevel, setGabbarLevel] = useState('all');
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +130,7 @@ export function ChartMaps() {
     // charts under the right heading.
     if (!isBoardTab(tab)) { setData(null); setLoading(false); return; }
     const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
-                           source, minerviniOnly, sort, minTier });
+                           source, minerviniOnly, sort, minTier, gabbarLevel });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -141,7 +142,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -283,6 +284,17 @@ export function ChartMaps() {
       )}
 
       <div className="cm-controls">
+        {tab === 'gabbar' && (
+          <label className="cm-ctl" title="Measure every covered name against one of Gabbar's band types. Aggressive is his shallowest buy zone; conservative 1 and 2 sit progressively deeper. Names he drew no such band for drop off the board under a lens.">
+            Level
+            <select value={gabbarLevel} onChange={(e) => setGabbarLevel(e.target.value)}>
+              <option value="all">All bands</option>
+              <option value="aggressive">🎯 Aggressive</option>
+              <option value="conservative 1">🛡️ Conservative 1</option>
+              <option value="conservative 2">🛡️ Conservative 2</option>
+            </select>
+          </label>
+        )}
         {/* Not on Earnings: that board's order is "which group, then how much
             money traded", and a theme re-shuffle would misdescribe it. Same
             reason the backend returns empty sorts/tiers for the tab. */}

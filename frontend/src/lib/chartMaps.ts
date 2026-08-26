@@ -151,6 +151,11 @@ export type CmBoard = {
    * must show one progress reading (Ajay 2026-08-17). */
   progress?: DemandScanProgress | null;
   matched?: number;
+  /** gabbar tab: the band-type lens the server measured against, its menu,
+   *  and how many covered names had no band of that type. */
+  level?: string;
+  level_choices?: string[];
+  without_level?: number;
   scanned?: number;
   universe_key?: string;
   universe_label?: string;
@@ -237,7 +242,7 @@ export function boardQuery(p: {
   tab: CmTab; limit?: number; days?: number;
   universe?: string; themesFirst?: boolean; pattern?: string | null;
   source?: WinnerSource; minerviniOnly?: boolean; sort?: string;
-  minTier?: string;
+  minTier?: string; gabbarLevel?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   if (p.limit) q.set('limit', String(p.limit));
@@ -246,6 +251,11 @@ export function boardQuery(p: {
   // choice governs both or the two tabs would describe different scans.
   if ((p.tab === 'zones' || p.tab === 'supply') && p.universe) {
     q.set('universe', p.universe);
+  }
+  // Gabbar band-type lens (2026-08-25). Only sent when it narrows something —
+  // 'all' is the server default and would just noise up the common URL.
+  if (p.tab === 'gabbar' && p.gabbarLevel && p.gabbarLevel !== 'all') {
+    q.set('level', p.gabbarLevel);
   }
   // Only sent when it differs from the shared default, so the common URL stays
   // clean. That default flipped to OFF on 2026-08-17, so this now sends `true`

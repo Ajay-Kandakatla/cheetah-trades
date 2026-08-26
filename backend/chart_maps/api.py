@@ -25,9 +25,15 @@ async def chart_maps(
     tab: str = Query("vcp", description="vcp | topping | zones | supply | deep_demand | gabbar | zero_dte | earnings | winners"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
-    universe: str = Query("sp1500_plus",
-                          description="zones + supply tabs — sp1500_plus (default) | "
-                                      "sp1500 | sp500 | themes"),
+    universe: str = Query("full",
+                          description="zones + supply tabs — one universe since "
+                                      "2026-08-25: the SEPA `full` alias. Legacy "
+                                      "keys (sp1500_plus, sp500, qqq, ...) fold "
+                                      "into it server-side."),
+    level: str = Query("all",
+                       description="gabbar tab only — measure against one band "
+                                   "type: all (default) | aggressive | "
+                                   "conservative 1 | conservative 2"),
     themes_first: bool = Query(board_mod.THEMES_FIRST_DEFAULT,
                                description="lead with quantum/nuclear/robotics/AI-semis "
                                            "names — OFF by default since 2026-08-17"),
@@ -66,6 +72,7 @@ async def chart_maps(
             pattern=pattern if isinstance(pattern, str) else None,
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
             min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
+            level=level if isinstance(level, str) else "all",
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

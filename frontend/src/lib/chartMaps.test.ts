@@ -88,6 +88,16 @@ describe('boardQuery', () => {
     expect(boardQuery({ tab: 'zones', universe: 'sp500' })).toBe('tab=zones&universe=sp500');
   });
 
+  it('sends the gabbar band lens only on the gabbar tab and only when it narrows', () => {
+    // "may be a switch of select toggle for conservative 1 conservative 2 and
+    // agrresive" (2026-08-25). 'all' is the server default — sending it would
+    // just split the cache key for identical boards.
+    expect(boardQuery({ tab: 'gabbar', gabbarLevel: 'conservative 1' }))
+      .toBe('tab=gabbar&level=conservative+1');
+    expect(boardQuery({ tab: 'gabbar', gabbarLevel: 'all' })).toBe('tab=gabbar');
+    expect(boardQuery({ tab: 'vcp', gabbarLevel: 'conservative 1' })).toBe('tab=vcp');
+  });
+
   it('sends pattern only on the winners tab', () => {
     expect(boardQuery({ tab: 'zones', pattern: 'cup_with_handle' })).toBe('tab=zones');
     expect(boardQuery({ tab: 'winners', pattern: 'cup_with_handle' }))

@@ -1096,6 +1096,46 @@ def test_gabbar_conservative_stat_names_the_band_or_says_dash(prices, gabbar_stu
     assert [t["symbol"] for t in out["tiles"]][0] == "NOCONS"
 
 
+def test_gabbar_level_lens_measures_only_the_chosen_band_type(prices, gabbar_stub):
+    """Ajay 2026-08-25: "may be a switch of select toggle for conservative 1
+    conservative 2 and agrresive". Under the lens a name is ranked by its
+    distance to THAT band type, and a name the author drew no such band for
+    is dropped and counted — never shown with a fabricated distance."""
+    gabbar_stub.clear()
+    gabbar_stub.update({
+        "DEEP": [{"lo": 140.0, "hi": 160.0, "label": "aggressive"},
+                 {"lo": 90.0, "hi": 110.0, "label": "conservative 1"}],
+        "SHALLOW": [{"lo": 90.0, "hi": 110.0, "label": "aggressive"},
+                    {"lo": 40.0, "hi": 60.0, "label": "conservative 1"}],
+        "AGGONLY": [{"lo": 90.0, "hi": 110.0, "label": "aggressive"}],
+    })
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)   # last = 100.0
+
+    out = B.board("gabbar", limit=5, min_tier="any", level="conservative 1")
+    assert out["level"] == "conservative 1"
+    assert "all" in out["level_choices"]
+    syms = [t["symbol"] for t in out["tiles"]]
+    assert syms == ["DEEP", "SHALLOW"]        # in its cons-1 band, then 40% away
+    assert "AGGONLY" not in syms
+    assert out["without_level"] == 1
+    deep = out["tiles"][0]
+    assert any((b["text"] or "").startswith("🛡️ In Gabbar band (conservative 1)")
+               for b in deep["badges"])
+
+
+def test_gabbar_level_lens_falls_back_to_all_on_junk(prices, gabbar_stub):
+    """NEGATIVE: a stale bookmark with level=nonsense (or a Query object from
+    a direct call) must show the whole board, not 422 or an empty page."""
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)
+    out = B.board("gabbar", limit=5, min_tier="any", level="nonsense")
+    assert out["level"] == "all"
+    assert len(out["tiles"]) == 3
+    out2 = B.board("gabbar", limit=5, min_tier="any", level=object())
+    assert out2["level"] == "all"
+
+
 def test_gabbar_tab_applies_the_liquidity_floor(prices, gabbar_stub):
     """He asked to KEEP the volume criteria on new tabs (2026-08-25). The
     synthetic frame's turnover (~100 * 1e6 = $100M/day) clears 'deep'; a floor
