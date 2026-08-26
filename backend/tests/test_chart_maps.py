@@ -1392,3 +1392,24 @@ def test_attach_velocity_survives_a_dead_reference_feed(monkeypatch):
     tiles = [_vel_tile("X", avg_shares=1_000_000)]
     assert B.attach_velocity(tiles) == 0
     assert tiles[0]["_m"]["velocity"] is None
+
+
+def test_zone_tiles_carry_the_flow_badge_when_the_row_has_a_verdict(
+        prices, reentry_stub):
+    """Ajay 2026-08-25: 'bake in CMF flow logic in to this one too'. Inflow
+    and distribution earn a badge on Back in Demand; neutral or missing
+    (older cached rows) render NOTHING — no fake reads."""
+    r1 = _reentry_row("FLOWIN")
+    r1["inflow"] = {"state": "inflow", "cmf_20": 0.12}
+    r2 = _reentry_row("SOLD")
+    r2["inflow"] = {"state": "distribution", "cmf_20": -0.2}
+    r3 = _reentry_row("OLDCACHE")          # no inflow key at all
+    reentry_stub["rows"] = [r1, r2, r3]
+    for s in ("FLOWIN", "SOLD", "OLDCACHE"):
+        prices[s] = _frame(200)
+
+    out = B.board("zones", limit=5, min_tier="any")
+    by = {t["symbol"]: " ".join(b["text"] for b in t["badges"]) for t in out["tiles"]}
+    assert "Money flowing in — CMF +0.12" in by["FLOWIN"]
+    assert "Still distributing — CMF -0.20" in by["SOLD"]
+    assert "flowing" not in by["OLDCACHE"] and "distributing" not in by["OLDCACHE"]

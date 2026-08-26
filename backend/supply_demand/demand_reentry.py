@@ -1353,6 +1353,16 @@ def scan(force: bool = False, limit: Optional[int] = None,
         if rec:
             scanned += 1
             if rec["is_reentry"]:
+                # Same flow verdict the deep board carries (Ajay 2026-08-25:
+                # "bake in CMF flow logic in to this one too") — the canonical
+                # volume read over the already-warm frame, ~60 hits per scan.
+                try:
+                    from sepa import volume as _vol2
+                    from . import deep_demand as _deep2
+                    rec["inflow"] = _deep2.inflow_read(
+                        _vol2.analyze(prices.load_prices(sym)))
+                except Exception:
+                    rec["inflow"] = None
                 rec.pop("series", None)
                 rows.append(rec)
             # Second predicate, same record, same loop — no extra price load.
@@ -1361,6 +1371,14 @@ def scan(force: bool = False, limit: Optional[int] = None,
             try:
                 if _into_supply.qualifies(rec):
                     r2 = dict(rec)
+                    if "inflow" not in r2:
+                        try:
+                            from sepa import volume as _vol2
+                            from . import deep_demand as _deep2
+                            r2["inflow"] = _deep2.inflow_read(
+                                _vol2.analyze(prices.load_prices(sym)))
+                        except Exception:
+                            r2["inflow"] = None
                     r2.pop("series", None)
                     supply_rows.append(r2)
             except Exception as exc:                          # pragma: no cover

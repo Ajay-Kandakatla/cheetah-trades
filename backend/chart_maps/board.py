@@ -1041,6 +1041,13 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         )
 
         badges = []
+        # His own observation (2026-08-25): "some of supply ones are actually
+        # bullish and accumulating" — now the tile says which. Money flowing
+        # IN at a ceiling is pressure to break it; distribution at a ceiling
+        # is the lid holding.
+        fb = _flow_badge(r.get("inflow"))
+        if fb:
+            badges.append(fb)
         if inside:
             badges.append({"text": "At the lid", "tone": "warn"})
         if ratio is not None and ratio < 1.0:
@@ -1345,7 +1352,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": stats,
             "why": why,
             "theme": _theme(sym),
-            "badges": _zone_badges(r) + (
+            "badges": _zone_badges(r)
+                + ([fb] if (fb := _flow_badge(r.get("inflow"))) else [])
+                + (
                 # ⚡ Trade Flash (Ajay 2026-08-24): a >= $250k one-sided burst
                 # printed in/near this name's zone TODAY — the tape trigger his
                 # zone entries were missing. Badge only; the detail lives in
@@ -1777,6 +1786,23 @@ def _sales_badge(sales: dict) -> dict:
     accel = " · accelerating" if sales.get("accelerating") else ""
     return {"text": f"🟢 Sales {sales.get('tier')} {g:+.0f}%{accel}" if g is not None
             else f"🟢 Sales {sales.get('tier')}", "tone": "good"}
+
+
+def _flow_badge(inflow: Optional[dict]) -> Optional[dict]:
+    """The Deep Demand flow verdict as one badge, for any board whose rows
+    carry it (Ajay 2026-08-25: "bake in CMF flow logic in to this one too").
+    Neutral and missing render NOTHING — only a verdict earns pixels."""
+    f = inflow or {}
+    cmf = _f(f.get("cmf_20"))
+    if f.get("state") == "inflow":
+        return {"text": (f"💰 Money flowing in — CMF {cmf:+.2f}"
+                         if cmf is not None else "💰 Money flowing in"),
+                "tone": "good"}
+    if f.get("state") == "distribution":
+        return {"text": (f"🔻 Still distributing — CMF {cmf:+.2f}"
+                         if cmf is not None else "🔻 Still distributing"),
+                "tone": "warn"}
+    return None
 
 
 def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
