@@ -704,3 +704,30 @@ def test_overlay_payload_is_stamped_too(monkeypatch):
     if out.get("error") is None:
         assert out["as_of"] == 1787760000.0
         assert out["data_through"] == frame.index[-1].date().isoformat()
+
+
+def test_as_of_prefers_the_mongo_cached_at_over_parquet_mtime(monkeypatch):
+    """Measured 2026-08-26 on INTU: the parquet fallback file was 2.2 days
+    old while the Mongo layer (the one load_prices actually serves, tail
+    bumped by the intraday patcher) was minutes fresh — the parquet mtime
+    would understate freshness by days."""
+    from sepa import prices as prices_mod
+
+    class _Coll:
+        @staticmethod
+        def find_one(q, proj=None):
+            return {"cached_at": 1787770000}
+
+    monkeypatch.setattr(prices_mod, "_get_mongo", lambda: _Coll())
+    assert S._shared_frame_as_of("INTU") == 1787770000.0
+
+
+def test_as_of_falls_back_to_parquet_then_none(monkeypatch, tmp_path):
+    from sepa import prices as prices_mod
+    monkeypatch.setattr(prices_mod, "_get_mongo", lambda: None)
+    f = tmp_path / "INTU.parquet"
+    f.write_bytes(b"x")
+    monkeypatch.setattr(prices_mod, "_cache_path", lambda s: f)
+    assert S._shared_frame_as_of("INTU") == f.stat().st_mtime
+    monkeypatch.setattr(prices_mod, "_cache_path", lambda s: tmp_path / "nope.parquet")
+    assert S._shared_frame_as_of("INTU") is None

@@ -131,12 +131,26 @@ _deep_cache: dict = {}
 
 
 def _shared_frame_as_of(sym: str) -> Optional[float]:
-    """Epoch when the shared price cache last pulled `sym` from the provider
-    (the parquet file's mtime), or None. None means "don't stamp" — a
-    fabricated freshness stamp is the exact lie this exists to prevent
-    (Ajay 2026-08-26: INTU's frozen partial bar read as a blown stop)."""
+    """Epoch when the shared price cache last pulled `sym` from the provider,
+    or None. Primary source is the Mongo price_cache doc's `cached_at` —
+    the intraday patcher bumps it every time it refreshes the tail, so it
+    tracks the layer load_prices actually serves. The parquet file's mtime
+    is the fallback layer only: it understates freshness by days when Mongo
+    is doing the work (measured on INTU 2026-08-26: parquet 2.2d old under
+    a minutes-fresh Mongo tail). None means "don't stamp" — a fabricated
+    stamp is the exact lie this exists to prevent."""
     import os
     from sepa import prices
+    try:
+        coll = prices._get_mongo()
+        if coll is not None:
+            doc = coll.find_one({"symbol": sym.upper()},
+                                {"cached_at": 1, "_id": 0})
+            ts = (doc or {}).get("cached_at")
+            if ts:
+                return float(ts)
+    except Exception:                                          # pragma: no cover
+        pass
     try:
         path = str(prices._cache_path(sym))
         return os.path.getmtime(path) if os.path.exists(path) else None
