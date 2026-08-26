@@ -335,6 +335,13 @@ def tile_metrics(row: dict) -> dict:
         "rvol": rvol,
         "turnover": today_dollar,
         "avg_turnover": avg_dollar,
+        # Average SHARE volume — attach_velocity divides it by shares
+        # outstanding. Kept separate from avg_turnover (dollars).
+        "avg_shares": avg_vol,
+        # % of shares outstanding traded on an average day. Filled by
+        # attach_velocity (needs a per-symbol reference lookup); None until
+        # then, and a None column triggers the honest sort_unavailable note.
+        "velocity": None,
         "conviction": _f((row.get("conviction") or {}).get("score")
                          if isinstance(row.get("conviction"), dict)
                          else row.get("conviction")),
@@ -380,6 +387,7 @@ SORTS: dict[str, str] = {
     "rvol": "📊 Relative volume",
     "volume": "📈 Volume today (shares)",
     "avg_turnover": "🏦 Avg daily volume ($)",
+    "velocity": "🐆 % of shares traded/day",
     "conviction": "🏆 Conviction",
     "rs": "⚡ RS rank",
 }
@@ -419,6 +427,72 @@ TAPE_WORKERS = 6
 # How deep to enrich before re-sorting on a tape metric, as a multiple of the
 # page size. 3x24 = 72 tape pulls at 6 workers inside a 25s budget.
 TAPE_POOL_MULT = 3
+
+
+# Descriptive velocity bands, NOT book thresholds — a label for how fast the
+# share supply turns over. AVGO trades ~0.3%/day of a 4-billion-share supply:
+# every dollar of demand meets an ocean of stock, which is why it cannot "run
+# like a cheetah" no matter how pretty the zone (Ajay 2026-08-25). The floor
+# and the R:R rank never measured this; now the tile says it.
+VELOCITY_FAST_PCT = 2.0
+VELOCITY_SLOW_PCT = 0.5
+VELOCITY_BUDGET_SEC = 3.0
+VELOCITY_WORKERS = 8
+
+
+def attach_velocity(tiles: list, budget_sec: float = VELOCITY_BUDGET_SEC) -> int:
+    """Fill _m['velocity'] (% of shares outstanding traded on an average day).
+
+    Share counts come from short_interest.client._shares_outstanding — the
+    one existing source, Massive reference, process-cached, and honestly
+    labelled OUTSTANDING (a true free float is not in the feed). Time-boxed
+    and failure-isolated like attach_tape: a missing count leaves velocity
+    None, never sinks a board.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import TimeoutError as _FT
+    from short_interest.client import _shares_outstanding
+
+    todo = [t for t in tiles
+            if (t.get("_m") or {}).get("velocity") is None
+            and (t.get("_m") or {}).get("avg_shares")]
+    if not todo:
+        return 0
+    done = 0
+    pool = ThreadPoolExecutor(max_workers=VELOCITY_WORKERS)
+    try:
+        futs = {pool.submit(_shares_outstanding, t["symbol"]): t for t in todo}
+        for fut in as_completed(futs, timeout=budget_sec):
+            t = futs[fut]
+            try:
+                shares = fut.result(timeout=0.1)
+            except Exception:
+                continue
+            avg = (t.get("_m") or {}).get("avg_shares")
+            if shares and avg:
+                t["_m"]["velocity"] = round(avg / shares * 100.0, 2)
+                done += 1
+    except _FT:
+        pass                       # the rest stay None — degrade, don't block
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    return done
+
+
+def _velocity_decor(tiles: list) -> None:
+    """Stat + badge from a filled velocity. Only names with a number get a
+    row — '—' on every gabbar/ledger tile would be noise, not honesty."""
+    for t in tiles:
+        v = (t.get("_m") or {}).get("velocity")
+        if v is None:
+            continue
+        t.setdefault("stats", []).append({"k": "Float/day", "v": f"{v:.2f}%"})
+        if v >= VELOCITY_FAST_PCT:
+            t.setdefault("badges", []).append(
+                {"text": f"🐆 Fast supply — {v:.1f}%/day", "tone": "good"})
+        elif v <= VELOCITY_SLOW_PCT:
+            t.setdefault("badges", []).append(
+                {"text": f"🐘 Heavy supply — {v:.2f}%/day of shares", "tone": "muted"})
 
 
 def attach_tape(rows: list, budget_sec: float = TAPE_BUDGET_SEC) -> int:
@@ -598,6 +672,18 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
                 "No data for this ranking in the last session — the board is "
                 "showing its default order.")
 
+    # 2b — the velocity sort needs the per-symbol share count, which is a
+    # reference lookup, not a scan field. Same pool discipline as the tape
+    # sorts, same honest fallback when the column comes back empty.
+    if sort == "velocity":
+        pool = tiles[:min(len(tiles), max(limit, limit * TAPE_POOL_MULT))]
+        attach_velocity(pool)
+        pool.sort(key=lambda t: _sort_key(t, themes_first, sort))
+        tiles = pool + tiles[len(pool):]
+        if not any((t.get("_m") or {}).get("velocity") is not None for t in pool):
+            sort_unavailable = ("Share counts unavailable right now — the board "
+                                "is showing its default order.")
+
     # 3 — the per-theme cap keeps the board a SPREAD, which is the right default
     # for a study surface. But it fights an explicit ranking: capping a volume
     # sort would silently drop the 7th-highest-volume name for being in a
@@ -608,6 +694,11 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
     short = tiles[:limit + BAR_BUFFER]
     _attach_bars(short, days)
     out = [t for t in short if t.get("bars")][:limit]
+    # Velocity stat + 🐆/🐘 badge on every SHOWN tile that has the inputs —
+    # the "can it actually run" read (Ajay 2026-08-25, AVGO). Only ~24 cached
+    # lookups; a cold miss inside the budget just leaves the tile undecorated.
+    attach_velocity(out)
+    _velocity_decor(out)
     for t in out:
         t.pop("_score", None)
         t.pop("_bars", None)

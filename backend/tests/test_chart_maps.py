@@ -673,7 +673,7 @@ def _tile(sym, theme=None, score=0.0, **metrics):
             "_m": {k: metrics.get(k) for k in
                    ("volume", "rvol", "turnover", "avg_turnover",
                     "conviction", "rs", "change", "dark", "retailimb",
-                    "retailpct")}}
+                    "retailpct", "velocity", "avg_shares")}}
 
 
 def _order(tiles, sort, themes_first=True):
@@ -724,7 +724,7 @@ def test_metrics_survive_a_row_with_nothing_in_it():
     m = B.tile_metrics({})
     assert set(m) == {"volume", "rvol", "turnover", "avg_turnover",
                       "conviction", "rs", "change", "dark", "retailimb",
-                      "retailpct"}
+                      "retailpct", "velocity", "avg_shares"}
     assert all(v is None for v in m.values())
     assert B.tile_metrics(None)["volume"] is None
 
@@ -1348,3 +1348,47 @@ def test_topping_note_carries_the_cites_and_the_risk_line(
     for phrase in ("TLSW", "p.90", "TTLAC", "200-day", "not", "backtested"):
         assert phrase.lower() in out["note"].lower(), phrase
     assert "unlimited" in out["note"]
+
+
+# ---------------------------------------------------------------------------
+# float velocity — "can it actually run" (Ajay 2026-08-25, the AVGO question)
+# ---------------------------------------------------------------------------
+def _vel_tile(sym, avg_shares=None, velocity=None):
+    return {"symbol": sym, "stats": [], "badges": [],
+            "_m": {"avg_shares": avg_shares, "velocity": velocity}}
+
+
+def test_attach_velocity_fills_from_shares_outstanding(monkeypatch):
+    import short_interest.client as sic
+    monkeypatch.setattr(sic, "_shares_outstanding",
+                        lambda s: {"NIMBLE": 100_000_000, "AVGO": 4_600_000_000}.get(s))
+    tiles = [_vel_tile("NIMBLE", avg_shares=3_000_000),
+             _vel_tile("AVGO", avg_shares=18_000_000)]
+    n = B.attach_velocity(tiles)
+    assert n == 2
+    assert tiles[0]["_m"]["velocity"] == 3.0      # 3M / 100M
+    assert tiles[1]["_m"]["velocity"] == 0.39     # 18M / 4.6B — the elephant
+
+
+def test_velocity_decor_badges_the_extremes_and_skips_the_unknown():
+    tiles = [_vel_tile("NIMBLE", velocity=3.0),
+             _vel_tile("AVGO", velocity=0.39),
+             _vel_tile("MID", velocity=1.1),
+             _vel_tile("NODATA")]
+    B._velocity_decor(tiles)
+    txt = lambda t: " ".join(b["text"] for b in t["badges"])
+    assert "🐆 Fast supply — 3.0%/day" in txt(tiles[0])
+    assert "🐘 Heavy supply — 0.39%/day" in txt(tiles[1])
+    assert tiles[2]["badges"] == []               # mid-band: stat only, no badge
+    assert {s["k"] for s in tiles[2]["stats"]} == {"Float/day"}
+    assert tiles[3]["badges"] == [] and tiles[3]["stats"] == []
+
+
+def test_attach_velocity_survives_a_dead_reference_feed(monkeypatch):
+    import short_interest.client as sic
+    def boom(s):
+        raise RuntimeError("reference down")
+    monkeypatch.setattr(sic, "_shares_outstanding", boom)
+    tiles = [_vel_tile("X", avg_shares=1_000_000)]
+    assert B.attach_velocity(tiles) == 0
+    assert tiles[0]["_m"]["velocity"] is None
