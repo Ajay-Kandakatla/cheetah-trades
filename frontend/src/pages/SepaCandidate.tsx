@@ -158,7 +158,9 @@ type Tab = 'chart' | 'setup' | 'analysis' | 'trend' | 'breakout' | 'ranking' | '
 // We also accept the legacy #hash deep-links some chips still emit.
 // 'analysis' moved up to 3rd (Ajay 2026-06-16: "move the analysis tab closer")
 // and now leads with the Minervini+Bonde buy verdict and folds in the Sales tab.
-const TABS: Tab[] = ['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'tape', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'];
+// supply sits beside analysis (Ajay 2026-08-25) — since the price
+// supply/demand levels moved onto that tab it reads as analysis, not appendix.
+const TABS: Tab[] = ['chart', 'setup', 'analysis', 'supply', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'tape', 'catalyst', 'insider', 'smartmoney', 'chatter'];
 const HASH_TO_TAB: Record<string, Tab> = {
   chart: 'chart', setup: 'setup', trend: 'trend', breakout: 'breakout', ranking: 'ranking',
   fundamentals: 'fundamentals', analysis: 'analysis', options: 'options',
@@ -957,7 +959,7 @@ export function SepaCandidatePage() {
           </div>
 
           <nav className="sepa-tabs" role="tablist">
-            {(['chart', 'setup', 'analysis', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'tape', 'catalyst', 'insider', 'smartmoney', 'chatter', 'supply'] as Tab[]).map((t) => (
+            {TABS.map((t) => (
               <button
                 key={t}
                 role="tab"
