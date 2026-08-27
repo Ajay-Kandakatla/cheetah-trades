@@ -20,6 +20,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from chart_maps import board as B  # noqa: E402
+# Pre-cache the REAL into_supply before any test stubs sys.modules
+# ["supply_demand.demand_reentry"]: into_supply imports constants from it at
+# ITS import time, and the supply tab imports into_supply lazily — a stubbed
+# demand_reentry without the constants would break that import mid-test.
+import supply_demand.into_supply  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------
@@ -964,6 +969,120 @@ def test_a_row_with_no_tape_has_null_tape_metrics():
 
 def test_attach_tape_on_nothing_is_zero_not_an_error():
     assert B.attach_tape([]) == 0
+
+
+# ---------------------------------------------------------------------------
+# 🧲 GEX chips on the demand-zone tabs (Ajay 2026-08-27)
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def gex_stub(monkeypatch):
+    """Fake options.gex_history for the boards' decoration join. Keeps the
+    REAL board_bucket so the chip verdict can never drift from the GEX Board
+    page's bucketing (the whole point of reusing it)."""
+    from options.gex_history import board_bucket as real_bucket
+    table: dict = {}
+
+    class _GH:
+        board_bucket = staticmethod(real_bucket)
+
+        @staticmethod
+        def snapshot_for(symbols, max_age_days=7):
+            return {s: table[s] for s in (symbols or []) if s in table}
+
+    import options
+    monkeypatch.setitem(sys.modules, "options.gex_history", _GH())
+    monkeypatch.setattr(options, "gex_history", _GH(), raising=False)
+    return table
+
+
+def _gex_row(regime="pinning", spot=100.0, flip=90.0, put_wall=None,
+             call_wall=None, date_et="2026-08-26"):
+    return {"symbol": "X", "date_et": date_et, "spot": spot, "regime": regime,
+            "flip_strike": flip, "put_wall": put_wall, "call_wall": call_wall,
+            "net_gex_dollars": 4.2e6}
+
+
+def test_zones_gex_chip_says_helps_and_flags_the_wall_on_the_band(
+        prices, reentry_stub, gex_stub):
+    """Bullish bucket (pinning, spot above flip) → "dips get bought" chip;
+    put wall INSIDE the drawn demand band → the confluence chip. Payload
+    says whose close the chips describe."""
+    reentry_stub["rows"] = [_reentry_row("GEXY", rr=2.0)]
+    prices["GEXY"] = _frame(200, start=90.05)
+    zone = reentry_stub["rows"][0]["entry_zone"]
+    gex_stub["GEXY"] = _gex_row(regime="pinning", spot=100.0, flip=90.0,
+                                put_wall=(zone["lo"] + zone["hi"]) / 2)
+
+    out = B.board("zones", limit=5, min_tier="any")
+    t = next(t for t in out["tiles"] if t["symbol"] == "GEXY")
+    texts = [b["text"] for b in t["badges"]]
+    assert any("🧲 Gamma helps" in x for x in texts)
+    assert any(x.startswith("🛡️ Put wall") and "at zone" in x for x in texts)
+    assert out["gex_as_of"] == "2026-08-26"
+
+
+def test_gex_chip_negative_cases_render_nothing(prices, reentry_stub, gex_stub):
+    """NEGATIVE: an uncovered symbol, a mixed bucket, and a far-away wall all
+    render NO gex pixels — only a verdict earns them, and most full-universe
+    names are legitimately outside the ~200-name snapshot."""
+    reentry_stub["rows"] = [_reentry_row("NOGEX", rr=2.0),
+                            _reentry_row("MIXED", rr=1.9),
+                            _reentry_row("FARWALL", rr=1.8)]
+    for s in ("NOGEX", "MIXED", "FARWALL"):
+        prices[s] = _frame(200, start=90.05)
+    # MIXED: pinning but spot BELOW the flip — board_bucket calls it mixed.
+    gex_stub["MIXED"] = _gex_row(regime="pinning", spot=100.0, flip=120.0)
+    # FARWALL: bullish, but the put wall is nowhere near the drawn band.
+    gex_stub["FARWALL"] = _gex_row(regime="pinning", spot=100.0, flip=90.0,
+                                   put_wall=40.0)
+
+    out = B.board("zones", limit=5, min_tier="any")
+    by = {t["symbol"]: [b["text"] for b in t["badges"]] for t in out["tiles"]}
+    assert not any("🧲" in x or "🛡️" in x for x in by["NOGEX"])
+    assert not any("🧲" in x or "🛡️" in x for x in by["MIXED"])
+    assert any("🧲 Gamma helps" in x for x in by["FARWALL"])
+    assert not any("🛡️" in x for x in by["FARWALL"])
+
+
+def test_supply_gex_chip_warns_and_flags_the_call_wall_at_the_lid(
+        prices, reentry_stub, gex_stub):
+    """Bearish bucket (amplifying, spot below flip) → the knife warning; call
+    wall on the supply band → "at lid" confluence. Supply tiles read the
+    CALL wall, never the put wall."""
+    row = {"symbol": "LIDX", "last_price": 100.0,
+           "supply": {"ceiling": {"lo": 104.0, "hi": 108.0},
+                      "support_below": {"lo": 80.0, "hi": 85.0},
+                      "distance_pct": 4.0},
+           "liquidity": {"tier": "deep", "avg_dollar_vol": 9e7}}
+    reentry_stub["supply_rows"] = [row]
+    prices["LIDX"] = _frame(200, start=90.05)
+    gex_stub["LIDX"] = _gex_row(regime="amplifying", spot=100.0, flip=120.0,
+                                call_wall=106.0, put_wall=40.0)
+
+    out = B.board("supply", limit=5, min_tier="any")
+    t = next(t for t in out["tiles"] if t["symbol"] == "LIDX")
+    texts = [b["text"] for b in t["badges"]]
+    assert any("🧲 Gamma hurts" in x for x in texts)
+    assert any(x.startswith("🧱 Call wall") and "at lid" in x for x in texts)
+    assert not any("🛡️" in x for x in texts)
+
+
+def test_deep_demand_gex_chip_never_corrupts_flow_counts(
+        prices, reentry_stub, sales_stub, gex_stub):
+    """The flow_counts summary string-matches badge text across tiles — the
+    gex chip's wording must never collide with it."""
+    flow_in = {"state": "inflow", "cmf_20": 0.14, "accum_days_25": 9,
+               "dist_days_25": 4, "pocket_pivot": False}
+    reentry_stub["deep_rows"] = [_deep_row("DGEX", state="in", inflow=flow_in)]
+    sales_stub["DGEX"] = _sales("steady", 9.0)
+    prices["DGEX"] = _frame(200, start=90.05)
+    gex_stub["DGEX"] = _gex_row(regime="pinning", spot=100.0, flip=90.0)
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    t = next(t for t in out["tiles"] if t["symbol"] == "DGEX")
+    assert any("🧲 Gamma helps" in b["text"] for b in t["badges"])
+    assert out["flow_counts"]["inflow"] == 1
+    assert out["gex_as_of"] == "2026-08-26"
 
 
 # ---------------------------------------------------------------------------

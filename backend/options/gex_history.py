@@ -254,6 +254,39 @@ def run(workers: int = 8) -> dict:
             "universe": len(syms)}
 
 
+def snapshot_for(symbols: list, max_age_days: int = 7) -> dict:
+    """{symbol: latest slim row} for a set of symbols, one aggregation.
+
+    Feeds the demand-zone boards' 🧲 chips (Ajay 2026-08-27: "add the gex
+    chips to the demand zone tabs"). Latest row PER SYMBOL — a name that
+    missed yesterday's 17:50 snapshot still answers with its last one —
+    capped at `max_age_days` calendar days so a delisted or long-dropped
+    name never wears a stale regime. Rows are POST-CLOSE snapshots (the
+    standing lookahead rule): a date-D row describes D's close, so a board
+    viewed on D+1 intraday is reading yesterday's dealer book, and says so
+    via the date the caller surfaces. Returns {} on any failure — chips
+    are decoration, never worth an error."""
+    from datetime import date, timedelta
+
+    coll = _coll()
+    syms = sorted({str(s).upper() for s in (symbols or []) if s})
+    if coll is None or not syms:
+        return {}
+    floor = (date.today() - timedelta(days=max_age_days)).isoformat()
+    try:
+        rows = coll.aggregate([
+            {"$match": {"symbol": {"$in": syms}, "date_et": {"$gte": floor}}},
+            {"$sort": {"symbol": 1, "date_et": -1}},
+            {"$group": {"_id": "$symbol", "row": {"$first": "$$ROOT"}}},
+            {"$replaceRoot": {"newRoot": "$row"}},
+            {"$project": {"_id": 0}},
+        ])
+        return {r["symbol"]: r for r in rows if r.get("symbol")}
+    except Exception as exc:
+        log.warning("gex snapshot_for failed: %s", exc)
+        return {}
+
+
 def series(symbol: str, days: int = 90) -> list:
     """Stored daily rows for one symbol, oldest→newest."""
     coll = _coll()

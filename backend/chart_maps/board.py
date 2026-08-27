@@ -1086,7 +1086,9 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "_m": tile_metrics(r),
         })
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    gex_as_of = _gex_decor(out, "supply")
     return {"tiles": out, **meta,
+            "gex_as_of": gex_as_of,
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -1380,7 +1382,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  0.0 if v is not None and v <= VELOCITY_SLOW_PCT else 1.0)
         t["_score"] = f * 10000.0 + vlead * 1000.0 + (t.get("_score") or 0.0)
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    gex_as_of = _gex_decor(out, "demand")
     return {"tiles": out, **meta,
+            "gex_as_of": gex_as_of,
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -1803,6 +1807,71 @@ def _sales_badge(sales: dict) -> dict:
             else f"🟢 Sales {sales.get('tier')}", "tone": "good"}
 
 
+def _gex_decor(tiles: list, wall_kind: str) -> Optional[str]:
+    """🧲 dealer-gamma chips on shown tiles (Ajay 2026-08-27: "add the gex
+    chips to the demand zone tabs"). Decoration only, applied AFTER _finish
+    so ranking never depends on it, and only over the shown slice (~24
+    symbols — the topping-tab model).
+
+    The verdict is gex_history.board_bucket — the SAME pure read the GEX
+    Board page buckets with, so the two surfaces can never disagree:
+    bullish → dips get bought (good for a zone entry), bearish → moves get
+    amplified (the knife warning), mixed → NO badge: only a verdict earns
+    pixels. Coverage is the nightly ~200-name snapshot universe, so most
+    full-universe tiles legitimately carry nothing.
+
+    Wall confluence is the demand-zone-specific read: the put wall sitting
+    ON the drawn demand band (call wall on a supply lid) means dealer
+    hedging defends the same shelf the chart found — flagged within
+    _GEX_WALL_PCT of the band edges.
+
+    Rows are POST-CLOSE snapshots; returns the newest date_et seen so the
+    payload can say whose close the chips describe. Never raises."""
+    try:
+        from options import gex_history as GH
+        snaps = GH.snapshot_for([t.get("symbol") for t in tiles])
+        if not snaps:
+            return None
+        as_of = None
+        for t in tiles:
+            row = snaps.get(t.get("symbol"))
+            if not row:
+                continue
+            as_of = max(as_of or "", row.get("date_et") or "")
+            bucket = GH.board_bucket(row)
+            if bucket == "bullish":
+                t.setdefault("badges", []).append(
+                    {"text": "🧲 Gamma helps — dips get bought", "tone": "good"})
+            elif bucket == "bearish":
+                t.setdefault("badges", []).append(
+                    {"text": "🧲 Gamma hurts — moves amplified", "tone": "warn"})
+            wall = _f(row.get("put_wall" if wall_kind == "demand" else "call_wall"))
+            if wall is None:
+                continue
+            for b in t.get("bands") or []:
+                if b.get("kind") != wall_kind:
+                    continue
+                lo, hi = _f(b.get("lo")), _f(b.get("hi"))
+                if lo is None or hi is None:
+                    continue
+                if lo * (1 - _GEX_WALL_PCT / 100) <= wall <= hi * (1 + _GEX_WALL_PCT / 100):
+                    t.setdefault("badges", []).append(
+                        {"text": (f"🛡️ Put wall ${wall:g} at zone"
+                                  if wall_kind == "demand"
+                                  else f"🧱 Call wall ${wall:g} at lid"),
+                         "tone": "good"})
+                    break
+        return as_of or None
+    except Exception as exc:                       # decoration never breaks a board
+        log.warning("chart-maps: gex decor failed: %s", exc)
+        return None
+
+
+# Wall-on-band tolerance, % beyond the band edges. 2% mirrors CLUSTER_PCT's
+# "same level seen twice" scale in chart_maps/support.py.
+_GEX_WALL_PCT = 2.0
+
+
 def _flow_badge(inflow: Optional[dict]) -> Optional[dict]:
     """The Deep Demand flow verdict as one badge, for any board whose rows
     carry it (Ajay 2026-08-25: "bake in CMF flow logic in to this one too").
@@ -1962,6 +2031,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         })
 
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    gex_as_of = _gex_decor(out, "demand")
     flow_counts = {"inflow": 0, "neutral": 0, "distribution": 0}
     for t in tiles:
         st = next((b for b in t.get("badges") or [] if "Money flowing in" in b["text"]), None)
@@ -1973,6 +2043,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             flow_counts["neutral"] += 1
     return {"tiles": out, **meta,
             "matched": len(rows),
+            "gex_as_of": gex_as_of,
             "flow_counts": flow_counts,
             "dropped_weak_sales": dropped_weak,
             "dropped_no_sales_data": dropped_unknown,

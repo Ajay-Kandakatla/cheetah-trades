@@ -27,6 +27,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'scan-health',          label: 'Scan health — every scan audited, counted in the nav', addedAt: '2026-08-25', route: '/health' },
   { id: 'deep-demand-tab',      label: 'Deep Demand tab — 2nd-level arrivals, Bonde sales gate', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'zones-cheetah-rank-full-universe', label: 'Demand zones: 🐆 cheetah composite rank (flow × float velocity × R:R) + ONE full-universe scan (~1,750 names), theme picker retired', addedAt: '2026-08-25', route: '/chart-maps' },
+  { id: 'gex-chips-demand-tabs', label: '\ud83e\uddf2 GEX chips on the demand-zone tabs \u2014 dealer gamma helps/hurts + put/call wall sitting on your band, from the nightly snapshot', addedAt: '2026-08-27', route: '/chart-maps' },
   { id: 'ticker-chart-asof-stamp', label: 'Ticker chart: "Prices fetched Xm ago · bars through <date>" stamp — a stale snapshot can never read as live again', addedAt: '2026-08-26', route: '/chart-maps' },
   { id: 'deep-demand-cmf-rank', label: 'Deep Demand: hottest CMF on top — inflow names now rank by money-flow intensity, geometry and sales break ties', addedAt: '2026-08-26', route: '/chart-maps' },
   { id: 'gabbar-touching-only', label: 'Gabbar tab: touching-only by default — names >3% from every band are hidden and counted; untick for the full distance ladder', addedAt: '2026-08-26', route: '/chart-maps' },

@@ -42,7 +42,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   zones: {
     label: 'Back in Demand',
-    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on.',
+    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   earnings: {
     label: 'Earnings Flow',
@@ -50,7 +50,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   supply: {
     label: 'Into Supply',
-    blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above.',
+    blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   topping: {
     label: 'S3 Topping · Shorts',
@@ -58,7 +58,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   deep_demand: {
     label: 'Deep Demand',
-    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and those sort first — ranked by CMF intensity within the group (hottest money flow on top, 2026-08-26), with in-band position and sales growth breaking ties; 🔻 means sellers are still in control, shown so you know why it ranks last.',
+    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and those sort first — ranked by CMF intensity within the group (hottest money flow on top, 2026-08-26), with in-band position and sales growth breaking ties; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   gabbar: {
     label: 'Gabbar Levels',
