@@ -98,15 +98,14 @@ describe('boardQuery', () => {
     expect(boardQuery({ tab: 'vcp', gabbarLevel: 'conservative 1' })).toBe('tab=vcp');
   });
 
-  it('sends the gabbar touching opt-out only when the box is unticked', () => {
-    // Touching-only became the server default on 2026-08-26 ("Why are these
-    // scans showing me stocks that are not touching gabbars pricing
-    // levels?") — only the opt-OUT rides on the URL.
-    expect(boardQuery({ tab: 'gabbar', gabbarTouchingOnly: true })).toBe('tab=gabbar');
+  it('sends the gabbar touching opt-in only when the box is ticked', () => {
+    // Flipped 2026-08-27 ("just show me all of them there"): the full ladder
+    // is the server default — only the NARROWING value rides on the URL.
+    expect(boardQuery({ tab: 'gabbar', gabbarTouchingOnly: false })).toBe('tab=gabbar');
     expect(boardQuery({ tab: 'gabbar' })).toBe('tab=gabbar');
-    expect(boardQuery({ tab: 'gabbar', gabbarTouchingOnly: false }))
-      .toBe('tab=gabbar&touching_only=false');
-    expect(boardQuery({ tab: 'vcp', gabbarTouchingOnly: false })).toBe('tab=vcp');
+    expect(boardQuery({ tab: 'gabbar', gabbarTouchingOnly: true }))
+      .toBe('tab=gabbar&touching_only=true');
+    expect(boardQuery({ tab: 'vcp', gabbarTouchingOnly: true })).toBe('tab=vcp');
   });
 
   it('sends pattern only on the winners tab', () => {

@@ -106,7 +106,7 @@ export function ChartMaps() {
   const supportWindow = parseWindow(params.get('window'));
   const universe = UNIVERSE;
   const [gabbarLevel, setGabbarLevel] = useState('all');
-  const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(true);
+  const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(false);
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +130,8 @@ export function ChartMaps() {
     // 404, so fetching it for the Support tab would quietly draw the wrong
     // charts under the right heading.
     if (!isBoardTab(tab)) { setData(null); setLoading(false); return; }
-    const q = boardQuery({ tab, limit: 24, days, universe, themesFirst, pattern,
+    const q = boardQuery({ tab, limit: tab === 'gabbar' ? 80 : 24, days,
+                           universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
                            gabbarTouchingOnly });
     try {

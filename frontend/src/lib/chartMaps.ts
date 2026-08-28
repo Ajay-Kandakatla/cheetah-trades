@@ -259,10 +259,10 @@ export function boardQuery(p: {
   if (p.tab === 'gabbar' && p.gabbarLevel && p.gabbarLevel !== 'all') {
     q.set('level', p.gabbarLevel);
   }
-  // Touching-only is the server default (2026-08-26) — only the opt-OUT rides
-  // on the URL, so the common request stays clean.
-  if (p.tab === 'gabbar' && p.gabbarTouchingOnly === false) {
-    q.set('touching_only', 'false');
+  // Touching-only became the opt-IN (2026-08-27: "just show me all of them
+  // there") — only the narrowing value rides on the URL.
+  if (p.tab === 'gabbar' && p.gabbarTouchingOnly === true) {
+    q.set('touching_only', 'true');
   }
   // Only sent when it differs from the shared default, so the common URL stays
   // clean. That default flipped to OFF on 2026-08-17, so this now sends `true`

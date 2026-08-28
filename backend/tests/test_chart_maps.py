@@ -1135,23 +1135,23 @@ def test_gabbar_tab_puts_touching_names_first(prices, gabbar_stub):
 
     out = B.board("gabbar", limit=5, min_tier="any")
     syms = [t["symbol"] for t in out["tiles"]]
-    # Default is touching-only (Ajay 2026-08-26: "Why are these scans showing
-    # me stocks that are not touching gabbars pricing levels?") — the faraway
-    # name is hidden and counted, not ranked last.
-    assert syms == ["INBAND", "NEARBY"]
-    assert out["touching_only"] is True
-    assert out["away_hidden"] == 1
-    assert "hidden" in out["note"]
+    # Default is the FULL ladder again (flipped 2026-08-27: "can you just
+    # show me all of them there? And just rank them by whcih where one are
+    # in the zones") — every covered name, in-band first, away ranked last.
+    assert syms == ["INBAND", "NEARBY", "FARAWAY"]
+    assert out["touching_only"] is False
+    assert out["away_hidden"] == 0
 
     t0 = out["tiles"][0]
     assert any("In Gabbar band" in (b.get("text") or "") for b in t0["badges"])
     assert t0["bands"][0]["label"].startswith("Gabbar")
     assert out["touching"] == 2  # in + near, never the faraway one
 
-    # The full distance ladder is one untick away, unchanged in order.
-    ladder = B.board("gabbar", limit=5, min_tier="any", touching_only=False)
-    assert [t["symbol"] for t in ladder["tiles"]] == ["INBAND", "NEARBY", "FARAWAY"]
-    assert ladder["away_hidden"] == 0
+    # Touching-only is the opt-in narrow view (the 2026-08-26 ask).
+    narrow = B.board("gabbar", limit=5, min_tier="any", touching_only=True)
+    assert [t["symbol"] for t in narrow["tiles"]] == ["INBAND", "NEARBY"]
+    assert narrow["away_hidden"] == 1
+    assert "hidden" in narrow["note"]
 
 
 def test_gabbar_tab_says_whose_judgment_these_are(prices, gabbar_stub):
@@ -1214,7 +1214,7 @@ def test_gabbar_conservative_stat_names_the_band_or_says_dash(prices, gabbar_stu
     for s in gabbar_stub:
         prices[s] = _frame(200, start=90.05)   # last = 100.0
 
-    out = B.board("gabbar", limit=5, min_tier="any", touching_only=False)
+    out = B.board("gabbar", limit=5, min_tier="any")
     by = {t["symbol"]: t for t in out["tiles"]}
 
     def stat(t, k):
@@ -1249,16 +1249,15 @@ def test_gabbar_level_lens_measures_only_the_chosen_band_type(prices, gabbar_stu
     assert out["level"] == "conservative 1"
     assert "all" in out["level_choices"]
     syms = [t["symbol"] for t in out["tiles"]]
-    assert syms == ["DEEP"]                   # only the name IN its cons-1 band
-    assert out["away_hidden"] == 1            # SHALLOW is 40% away — hidden
+    assert syms == ["DEEP", "SHALLOW"]        # full ladder by default (08-27)
     assert "AGGONLY" not in syms
     assert out["without_level"] == 1
 
-    # Untick touching-only for the shopping ladder: distance order, all names
-    # that HAVE the band.
-    ladder = B.board("gabbar", limit=5, min_tier="any", level="conservative 1",
-                     touching_only=False)
-    assert [t["symbol"] for t in ladder["tiles"]] == ["DEEP", "SHALLOW"]
+    # Tick touching-only to narrow the lens to at-the-band names only.
+    narrow = B.board("gabbar", limit=5, min_tier="any", level="conservative 1",
+                     touching_only=True)
+    assert [t["symbol"] for t in narrow["tiles"]] == ["DEEP"]
+    assert narrow["away_hidden"] == 1
     deep = out["tiles"][0]
     assert any((b["text"] or "").startswith("🛡️ In Gabbar band (conservative 1)")
                for b in deep["badges"])
@@ -1269,16 +1268,16 @@ def test_gabbar_level_lens_falls_back_to_all_on_junk(prices, gabbar_stub):
     a direct call) must show the whole board, not 422 or an empty page."""
     for s in gabbar_stub:
         prices[s] = _frame(200, start=90.05)
-    out = B.board("gabbar", limit=5, min_tier="any", level="nonsense",
-                  touching_only=False)
+    out = B.board("gabbar", limit=5, min_tier="any", level="nonsense")
     assert out["level"] == "all"
     assert len(out["tiles"]) == 3
     out2 = B.board("gabbar", limit=5, min_tier="any", level=object())
     assert out2["level"] == "all"
     # A junk touching_only (the FastAPI direct-call Query object) must read
-    # as the default True, never crash or flip the filter off.
+    # as the default (False, full ladder) — never crash, never narrow.
     out3 = B.board("gabbar", limit=5, min_tier="any", touching_only=object())
-    assert out3["touching_only"] is True
+    assert out3["touching_only"] is False
+    assert len(out3["tiles"]) == 3
 
 
 def test_gabbar_tab_applies_the_liquidity_floor(prices, gabbar_stub):
@@ -1410,7 +1409,7 @@ def test_gabbar_hides_weak_sales_and_demotes_unknowns(
     sales_stub["NEARBY"] = _sales("steady", 8.0)
     # FARAWAY has no sales data
 
-    out = B.board("gabbar", limit=5, min_tier="any", touching_only=False)
+    out = B.board("gabbar", limit=5, min_tier="any")
     syms = [t["symbol"] for t in out["tiles"]]
     assert "INBAND" not in syms, "a declining-sales name must be hidden"
     assert out["dropped_weak_sales"] == 1
