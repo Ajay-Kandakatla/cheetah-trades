@@ -19,8 +19,9 @@ Noise rules (the same discipline as every other push here)
 ----------------------------------------------------------
 * Kind = ``pivot_alert`` — "price at a buy zone" is exactly that kind's
   meaning, and the standing 2026-06-24 keep-set gains NO new kinds.
-* Bonde gate: declining/weak-sales names never page (the falling-knife
-  rule the boards enforce); unknown sales fire but say so — VOO has no
+* Bonde read: NOTHING is suppressed (Ajay 2026-08-27, "dont suppress
+  show with a chip") — declining/weak-sales names page WITH the knife
+  warning in the message; unknown sales fire but say so — VOO has no
   quarterly revenue and it is still his curated level.
 * Dedup is per band, not per day-of-noise: touching the aggressive band
   at 10:00 and the conservative 1 band at 14:00 are two different facts.
@@ -87,11 +88,13 @@ def band_proximity(last: float, bands: list) -> list:
 
 
 def should_alert(hit: dict, sales: Optional[dict]) -> tuple:
-    """(fire, note) for one band hit. Bonde-failing names never page —
-    the board's falling-knife rule, applied to the phone."""
+    """(fire, note) for one band hit. NOTHING is suppressed (Ajay
+    2026-08-27: "dont suppress show with a chip") — a Bonde-failing name
+    still pages, carrying the knife warning in the message itself, and an
+    unknown one says it is unknown. He decides; the label travels."""
     tier = (sales or {}).get("tier")
     if sales and sales.get("score") is not None and tier in ("declining", "weak"):
-        return False, f"suppressed — sales {tier}"
+        return True, f" · ⚠️ sales {tier} — knife risk"
     note = "" if sales and sales.get("score") is not None else " · sales unknown"
     return True, note
 
@@ -148,8 +151,8 @@ def check_once(*, push: bool = True, force: bool = False) -> dict:
             fire, note = should_alert(hit, (snaps.get(sym) or {}).get("sales"))
             rec = {**hit, "ticker": sym, "price": float(last)}
             hits.append(rec)
-            if not fire:
-                suppressed += 1
+            if not fire:                       # unreachable since 08-27; kept
+                suppressed += 1                    # so a future rule has a seat
                 continue
             if not push or _already_sent(db, sym, hit["idx"], date_key):
                 continue

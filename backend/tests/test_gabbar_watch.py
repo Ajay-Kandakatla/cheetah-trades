@@ -1,8 +1,9 @@
 """Gabbar live watcher (catalysts/gabbar_watch.py).
 
 Ajay 2026-08-27: "I missed the Adobe today ... can you do something about
-that so I don't miss." A push that fires wrong is worse than the miss —
-every suppression rule here is a NEGATIVE test.
+that so I don't miss." + 2026-08-27 revision: "dont suppress show with a
+chip" — nothing is suppressed; the tests lock that the WARNING travels
+with every page instead.
 """
 import sys
 from datetime import datetime
@@ -57,12 +58,16 @@ def test_garbage_bands_and_prices_never_crash():
     assert GW.band_proximity(100.0, None) == []
 
 
-# ── suppression: NEGATIVES, the knife rule on the phone ─────────────────────
-def test_declining_or_weak_sales_never_page():
+# ── labeling: nothing suppressed, the warning travels ───────────────────────
+def test_declining_or_weak_sales_page_with_the_knife_warning():
+    """REVISED 2026-08-27 ("dont suppress show with a chip"): a weak-sales
+    name still pages, and the message itself carries the warning — the
+    label travels, he decides."""
     hit = {"state": "in", "dist_pct": 0.0}
     for tier in ("declining", "weak"):
         fire, note = GW.should_alert(hit, {"tier": tier, "score": 40})
-        assert fire is False and tier in note
+        assert fire is True
+        assert tier in note and "knife" in note
 
 
 def test_passing_tiers_page_clean_and_unknown_pages_labeled():

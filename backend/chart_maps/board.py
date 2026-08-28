@@ -2305,16 +2305,15 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         payload = GL.get_bands(sym)
         if not payload or not payload.get("bands"):
             continue
-        # The falling-knife gate (Ajay 2026-08-25: "both need pradeep bonde's
-        # sales and revenus quarter logic"). Weak/declining sales EXCLUDE — a
-        # hand-drawn level under a shrinking business is exactly the knife.
-        # Unknown sales stay but are demoted and say so: this is a curated
-        # 66-name list, and silently hiding AAPL because a weekly cache blob
-        # was missing would read as a bug, not a filter.
+        # Bonde read (Ajay 2026-08-25 "pradeep bonde's sales and revenus
+        # quarter logic", REVISED 2026-08-27: "dont suppress show with a
+        # chip"). Weak/declining sales no longer hide a hand-drawn level —
+        # they wear the 📉 warn chip (same vocabulary as the topping tab)
+        # and rank LAST in their state group, below even unknown-sales
+        # names. The knife warning is on the tile instead of in a count.
         gate, sales = _bonde_gate(snaps.get(sym))
         if gate == "fail":
             dropped_weak += 1
-            continue
         bars = bars_for(sym, days=60)
         if not bars:
             continue
@@ -2415,6 +2414,12 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                            "tone": "warn"})
         if gate == "pass" and sales:
             badges.append(_sales_badge(sales))
+        elif gate == "fail" and sales:
+            gs = _f(sales.get("growth_yoy_pct"))
+            badges.append({"text": (f"📉 Sales {sales.get('tier')} {gs:+.0f}%"
+                                     if gs is not None
+                                     else f"📉 Sales {sales.get('tier')}"),
+                           "tone": "warn"})
         elif gate == "unknown":
             badges.append({"text": "❔ Sales data missing", "tone": "muted"})
         if sym in flash_syms:
@@ -2431,6 +2436,8 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             rank += 250.0
         if gate == "unknown":
             rank -= 500.0
+        elif gate == "fail":
+            rank -= 800.0            # visible, chipped, and last in its group
 
         tiles.append({
             "symbol": sym,
@@ -2471,7 +2478,7 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "matched": len(tiles),
             "touching": touching,
             "conservative_touching": cons_touching,
-            "dropped_weak_sales": dropped_weak,
+            "weak_sales_flagged": dropped_weak,
             "level": lens,
             "level_choices": list(GABBAR_LEVELS),
             "without_level": without_level,
@@ -2482,9 +2489,10 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"{attr.get('snapshot_date')} — the author's judgment, not a "
                      f"computation, and levels this old describe the chart as it "
                      f"was then. Touching names sort first; 🛡️ marks a name at its CONSERVATIVE (deeper "
-                     f"discount) band, which leads its group. Bonde sales gate: "
-                     f"{dropped_weak} covered name(s) hidden for weak/declining "
-                     f"sales — a level under a shrinking business is the knife."
+                     f"discount) band, which leads its group. Bonde sales read: "
+                     f"{dropped_weak} covered name(s) wear the 📉 weak/declining "
+                     f"chip and rank last — a level under a shrinking business "
+                     f"is the knife, so it is flagged, not hidden."
                      + (f" Lens: {lens} — distances measure that band type only; "
                         f"{without_level} covered name(s) have no such band and "
                         f"are hidden." if lens != "all" else "")

@@ -1411,14 +1411,24 @@ def test_gabbar_hides_weak_sales_and_demotes_unknowns(
 
     out = B.board("gabbar", limit=5, min_tier="any")
     syms = [t["symbol"] for t in out["tiles"]]
-    assert "INBAND" not in syms, "a declining-sales name must be hidden"
-    assert out["dropped_weak_sales"] == 1
-    assert "hidden for weak/declining" in out["note"]
+    # REVISED 2026-08-27 ("dont suppress show with a chip"): the declining
+    # name STAYS, wears the 📉 warn chip, and ranks last in its state group
+    # — below even the unknown-sales name.
+    assert "INBAND" in syms
+    inband = next(t for t in out["tiles"] if t["symbol"] == "INBAND")
+    assert any(b["text"].startswith("📉 Sales declining") and b["tone"] == "warn"
+               for b in inband["badges"])
+    assert out["weak_sales_flagged"] == 1
+    assert "flagged, not hidden" in out["note"]
 
     near = next(t for t in out["tiles"] if t["symbol"] == "NEARBY")
     far = next(t for t in out["tiles"] if t["symbol"] == "FARAWAY")
     assert any("Sales steady" in b["text"] for b in near["badges"])
     assert any("Sales data missing" in b["text"] for b in far["badges"])
+    # In-band but declining still beats NOTHING — it just sits after every
+    # passing/unknown name in the same state bucket. INBAND (in, -800) vs
+    # NEARBY (near, pass): 2000-800=1200 > 1000 — state still dominates.
+    assert syms.index("INBAND") < syms.index("FARAWAY")
 
 
 def test_deep_demand_board_ranks_the_hottest_cmf_first(
