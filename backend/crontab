@@ -166,6 +166,14 @@
 # market/sector) so the user knows which names need a news check.
 40     16    *    *    1-5  /usr/local/bin/python -c "from portfolio.alerts import run_drop_attribution_default as f; f()"
 #
+# Gabbar level watch — every 10 min in RTH (Ajay 2026-08-27: "I missed the
+# Adobe today ... can you do something about that so I don't miss"). Pushes
+# pivot_alert (standing keep-set, no new kinds) when a covered name is inside
+# or within 1% of one of veerenj's bands; Bonde declining/weak sales never
+# page; one push per (ticker, band, day). Module refuses to run outside
+# 9:32-16:00 ET, so the wide window is harmless.
+6-56/10 9-16 *    *    1-5  /usr/local/bin/python -m catalysts.gabbar_watch
+#
 # Falling-knife watch — 4:45pm ET weekdays (Ajay 2026-08-26: "add a cron job
 # to track these and let me know if there are any falling knives"). Two-sided
 # gate: Bonde sales tier broken AND price being sold (CMF outflow /
