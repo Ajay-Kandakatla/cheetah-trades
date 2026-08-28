@@ -2463,7 +2463,9 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                         if any((b.get("text") or "").startswith("🛡️")
                                for b in t.get("badges") or []))
     attr = GL.BAND_ATTRIBUTION
+    tracked_stubs = list(getattr(GL, "TRACKED_NO_LEVELS", ()) or ())
     return {"tiles": out, **meta,
+            "tracked_no_levels": tracked_stubs,
             "matched": len(tiles),
             "touching": touching,
             "conservative_touching": cons_touching,
@@ -2487,7 +2489,12 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      + (f" Touching only: {away_hidden} covered name(s) more "
                         f"than {NEAR_PCT:g}% from every band are hidden — untick "
                         f"to see the full distance ladder."
-                        if touching_only is not False and away_hidden else "")),
+                        if touching_only is not False and away_hidden else "")
+                     + (f" The author also tracks {len(tracked_stubs)} names "
+                        f"with NO levels drawn yet ({', '.join(tracked_stubs[:5])}, "
+                        f"…) — they sit as empty stubs in his script and cannot "
+                        f"appear here until he draws them."
+                        if tracked_stubs else "")),
             "generated_at": None}
 
 

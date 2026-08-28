@@ -1098,10 +1098,13 @@ def gabbar_stub(monkeypatch):
         "FARAWAY": [{"lo": 40.0, "hi": 50.0, "label": "conservative 1"}],
     }
 
+    from catalysts.gabbar_levels import TRACKED_NO_LEVELS as _REAL_STUBS
+
     class _GL:
         BAND_ATTRIBUTION = {"source": "Gabbar's Price Levels script",
                             "author": "veerenj on TradingView",
                             "license": "MPL-2.0", "snapshot_date": "2026-05-17"}
+        TRACKED_NO_LEVELS = _REAL_STUBS
 
         @staticmethod
         def list_covered_symbols():
@@ -1705,3 +1708,18 @@ def test_zones_default_rank_puts_cheetahs_over_elephants(
     out = B.board("zones", limit=5, min_tier="any")
     assert [t["symbol"] for t in out["tiles"]] == ["CHEETA", "ELEFNT"]
     assert "_flow" not in out["tiles"][0], "private key leaked to the client"
+
+
+def test_gabbar_names_the_authors_levelless_stubs(prices, gabbar_stub):
+    """Ajay 2026-08-27 pasted the author's own 79-name tracking list asking
+    why NVDA & co. weren't showing — 13 of them are commented-out EMPTY
+    stubs in the Pine source. The board must answer that itself: the stub
+    list rides on the payload and the note says they cannot appear."""
+    for s in gabbar_stub:
+        prices[s] = _frame(200, start=90.05)
+    out = B.board("gabbar", limit=5, min_tier="any")
+    assert "NVDA" in out["tracked_no_levels"]
+    assert len(out["tracked_no_levels"]) == 13
+    assert "NO levels drawn yet" in out["note"]
+    # And none of the stubs ever renders as a tile — there is nothing to draw.
+    assert not set(t["symbol"] for t in out["tiles"]) & set(out["tracked_no_levels"])

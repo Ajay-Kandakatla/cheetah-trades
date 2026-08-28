@@ -28,8 +28,23 @@ BAND_ATTRIBUTION = {
     "license":        "MPL-2.0",
     "url":            "https://www.tradingview.com/script/hcLOuzBX-Gabbar-s-Price-Levels-script/",
     # Snapshot date — update when the table is re-pulled from the Pine source.
+    # Last VERIFIED against the live script 2026-08-27: 66/66 names,
+    # byte-identical values, zero drift.
     "snapshot_date":  "2026-05-17",
 }
+
+
+# Tickers the author LISTS as tracked but has drawn NO levels for yet — they
+# sit commented out in his Pine source as empty stubs ("i'm adding few every
+# now and then", veerenj, May 2026). Kept here so the board can answer
+# "gabbar has levels for NVDA, why isn't it showing?" with the truth: he
+# doesn't, yet. Re-check these first on the next snapshot refresh.
+# (Ajay asked exactly this on 2026-08-27 with the author's own 79-name
+# comment list — 66 have levels, these 13 are stubs.)
+TRACKED_NO_LEVELS = (
+    "ACN", "ADBE", "ASML", "CELH", "DHR", "LMT", "MNST",
+    "MU", "NVDA", "ORCL", "PYPL", "TROW", "TSM",
+)
 
 
 def _pair(*nums: float) -> list[tuple[float, float]]:
