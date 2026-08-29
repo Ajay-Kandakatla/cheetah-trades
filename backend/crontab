@@ -174,6 +174,11 @@
 # 9:32-16:00 ET, so the wide window is harmless.
 6-56/10 9-16 *    *    1-5  /usr/local/bin/python -m catalysts.gabbar_watch
 #
+# TTM-revenue warm for the Under Value tab — Sunday 10:30pm ET, after the
+# 9pm weekly research refresh, so Monday's board has revenue dollars for
+# every strong/explosive-sales candidate without board-time fetching.
+30     22    *    *    0    /usr/local/bin/python -c "from sepa import research, rev_ttm, universe; snaps = research.sales_snapshot(universe.load_universe('full')); cands = [s for s, v in snaps.items() if ((v or {}).get('sales') or {}).get('tier') in ('strong', 'explosive')]; print(rev_ttm.warm(cands))"
+#
 # Falling-knife watch — 4:45pm ET weekdays (Ajay 2026-08-26: "add a cron job
 # to track these and let me know if there are any falling knives"). Two-sided
 # gate: Bonde sales tier broken AND price being sold (CMF outflow /

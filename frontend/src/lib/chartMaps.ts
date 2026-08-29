@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'support' | 'zero_dte' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -26,7 +26,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'ga
 // levels-plus-sales board; both carry the Bonde sales gate.
 // `topping` sits beside `vcp` — both are slices of the same SEPA scan file,
 // one long-side, one short-side.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -59,6 +59,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   deep_demand: {
     label: 'Deep Demand',
     blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and those sort first — ranked by CMF intensity within the group (hottest money flow on top, 2026-08-26), with in-band position and sales growth breaking ties; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+  },
+  undervalue: {
+    label: 'Under Value',
+    blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name — nothing here is estimated.',
   },
   gabbar: {
     label: 'Gabbar Levels',

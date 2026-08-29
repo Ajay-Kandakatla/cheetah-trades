@@ -504,7 +504,7 @@ describe('the Earnings Flow tab', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -556,7 +556,7 @@ describe('the Support Levels tab', () => {
     // stays contiguous, and the per-ticker tool closes the cluster.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'supply', 'deep_demand', 'gabbar', 'support']);
+      .toEqual(['zones', 'supply', 'deep_demand', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 

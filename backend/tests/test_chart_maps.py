@@ -972,6 +972,71 @@ def test_attach_tape_on_nothing_is_zero_not_an_error():
 
 
 # ---------------------------------------------------------------------------
+# 💎 the Under Value tab (Ajay 2026-08-28)
+# ---------------------------------------------------------------------------
+def test_psg_needs_every_input_or_answers_none():
+    """A fabricated valuation is worse than none: any missing/nonsense input
+    → None, never a guess."""
+    assert B.psg_ratio(745e6, 62.8e6, 108.9) == pytest.approx(0.109, abs=0.001)
+    for bad in ((None, 62e6, 100), (745e6, None, 100), (745e6, 62e6, None),
+                (0, 62e6, 100), (745e6, 0, 100), (745e6, 62e6, 0),
+                (745e6, 62e6, -20), ("x", 62e6, 100)):
+        assert B.psg_ratio(*bad) is None, bad
+
+
+def test_undervalue_board_keeps_lagging_growers_and_counts_exclusions(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """The LPTH archetype passes; a grower already priced for it is counted
+    out; missing revenue or share data EXCLUDES with a count, never an
+    estimated ratio; weak-sales names never reach the valuation step."""
+    import sys as _sys
+
+    from sepa import universe as _uni
+    monkeypatch.setattr(_uni, "load_universe",
+                        lambda mode=None: ["CHEAP", "RICH", "NOREV",
+                                           "NOSHARES", "WEAK"])
+    sales_stub["CHEAP"] = _sales("explosive", 108.9)
+    sales_stub["RICH"] = _sales("explosive", 100.0)
+    sales_stub["NOREV"] = _sales("strong", 60.0)
+    sales_stub["NOSHARES"] = _sales("strong", 40.0)
+    sales_stub["WEAK"] = _sales("weak", 3.0)
+
+    class _Rev:
+        TTL_SEC = 1
+        @staticmethod
+        def bulk(symbols, fill_missing=True):
+            return {"CHEAP": 62.8e6, "RICH": 50e6, "NOSHARES": 80e6}
+
+    monkeypatch.setitem(_sys.modules, "sepa.rev_ttm", _Rev())
+
+    class _SI:
+        @staticmethod
+        def _shares_outstanding(sym):
+            return {"CHEAP": 7_450_000, "RICH": 50_000_000,
+                    "NOREV": 1_000_000}.get(sym)
+
+    import short_interest
+    monkeypatch.setattr(short_interest, "client", _SI(), raising=False)
+
+    for s in ("CHEAP", "RICH", "NOREV", "NOSHARES", "WEAK"):
+        prices[s] = _frame(200, start=90.05)   # last close = 100.0
+
+    out = B.board("undervalue", limit=5, min_tier="any")
+    syms = [t["symbol"] for t in out["tiles"]]
+    # CHEAP: cap 7.45M sh x $100 = $745M / $62.8M = 11.9x / 108.9 = 0.109 ✓
+    # RICH: 50M sh x $100 = $5B / $50M = 100x / 100 = 1.0 — priced for it
+    assert syms == ["CHEAP"]
+    assert out["priced_for_growth"] == 1
+    assert out["no_rev_data"] == 1          # NOREV
+    assert out["no_shares_data"] == 1       # NOSHARES
+    t0 = out["tiles"][0]
+    assert any("💎" in b["text"] for b in t0["badges"])
+    stats = {s["k"]: s["v"] for s in t0["stats"]}
+    assert stats["PSG"] == "0.109" and stats["Rev YoY"] == "+109%"
+    assert "LPTH" in out["note"]
+
+
+# ---------------------------------------------------------------------------
 # 🧲 GEX chips on the demand-zone tabs (Ajay 2026-08-27)
 # ---------------------------------------------------------------------------
 @pytest.fixture

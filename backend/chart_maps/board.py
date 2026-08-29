@@ -37,7 +37,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "topping", "zones", "supply", "deep_demand", "gabbar", "zero_dte", "winners", "earnings")
+TABS = ("vcp", "topping", "zones", "supply", "deep_demand", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -2267,6 +2267,171 @@ def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 GABBAR_LEVELS = ("all", "aggressive", "conservative 1", "conservative 2")
 
 
+# Under Value gate (Ajay 2026-08-28: "undervalued stocks whose sales are
+# incredible but their comparitive stock value is less.. Like Light path as
+# an example"). PSG = price-to-sales DIVIDED BY revenue growth — a
+# sales-based PEG. Calibrated on his archetype: LPTH at ~11.9x sales with
+# +109% growth = PSG 0.11, so the bar sits at 0.15. Bonde tier must be
+# strong (>=25%) or explosive (>=100%) first — "incredible sales" is the
+# premise, cheapness alone is a value trap.
+UNDERVALUE_MAX_PSG = 0.15
+UNDERVALUE_TIERS = ("strong", "explosive")
+UNDERVALUE_MAX_CANDIDATES = 120
+
+
+def psg_ratio(mkt_cap, rev_ttm, growth_yoy_pct):
+    """Price/sales over growth. None whenever an input is missing or
+    nonsensical — a fabricated valuation is worse than none."""
+    try:
+        mkt_cap = float(mkt_cap)
+        rev_ttm = float(rev_ttm)
+        growth = float(growth_yoy_pct)
+    except (TypeError, ValueError):
+        return None
+    if mkt_cap <= 0 or rev_ttm <= 0 or growth <= 0:
+        return None
+    return (mkt_cap / rev_ttm) / growth
+
+
+def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                     themes_first: bool = THEMES_FIRST_DEFAULT,
+                     sort: str = DEFAULT_SORT,
+                     min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """Under Value board: explosive sales, lagging price tag.
+
+    Screen: Bonde tier strong/explosive across the whole universe (weekly
+    research cache, one query) → top UNDERVALUE_MAX_CANDIDATES by growth →
+    market cap (shares outstanding × last close) and TTM revenue (rev_ttm
+    Mongo cache, time-boxed fills) → keep PSG <= UNDERVALUE_MAX_PSG.
+    Missing shares or revenue EXCLUDES with a count — never a made-up
+    ratio. Zones computed per finalist from the shared price frame, so the
+    tab is "supply demand zones for the undervalued" exactly as asked.
+    """
+    from sepa import prices, research, rev_ttm as rev_mod
+    from sepa import universe as universe_mod
+    from supply_demand import price_zones as pz
+
+    try:
+        universe = universe_mod.load_universe("full")
+    except Exception:
+        universe = []
+    snaps = {}
+    try:
+        snaps = research.sales_snapshot(universe)
+    except Exception as exc:
+        log.warning("undervalue: sales snapshot failed: %s", exc)
+
+    cands = []
+    for sym, snap in snaps.items():
+        sales = (snap or {}).get("sales") or {}
+        if sales.get("tier") in UNDERVALUE_TIERS and sales.get("growth_yoy_pct"):
+            cands.append((sym, sales))
+    cands.sort(key=lambda t: -(t[1].get("growth_yoy_pct") or 0.0))
+    cands = cands[:UNDERVALUE_MAX_CANDIDATES]
+
+    revs = rev_mod.bulk([s for s, _ in cands])
+
+    from short_interest import client as si_client
+    flash_syms = _flash_symbols()
+    tiles, no_rev, no_shares, too_rich = [], 0, 0, 0
+    for sym, sales in cands:
+        rev = revs.get(sym)
+        if not rev:
+            no_rev += 1
+            continue
+        try:
+            shares = si_client._shares_outstanding(sym)
+        except Exception:
+            shares = None
+        if not shares:
+            no_shares += 1
+            continue
+        df = None
+        try:
+            df = prices.load_prices(sym)
+        except Exception:
+            pass
+        if df is None or not len(df):
+            continue
+        last = float(df["close"].iloc[-1])
+        mkt_cap = shares * last
+        ratio = psg_ratio(mkt_cap, rev, sales.get("growth_yoy_pct"))
+        if ratio is None:
+            continue
+        if ratio > UNDERVALUE_MAX_PSG:
+            too_rich += 1
+            continue
+
+        zones = None
+        try:
+            zones = pz.compute(df)
+        except Exception:
+            zones = None
+        bands = []
+        for b in ((zones or {}).get("demand_zones") or [])[:2]:
+            bands.append({"kind": "demand", "lo": float(b["lo"]),
+                          "hi": float(b["hi"]), "label": "demand"})
+        for b in ((zones or {}).get("supply_zones") or [])[:2]:
+            bands.append({"kind": "supply", "lo": float(b["lo"]),
+                          "hi": float(b["hi"]), "label": "supply"})
+
+        ps = mkt_cap / rev
+        g = sales.get("growth_yoy_pct")
+        tail = df["close"].iloc[-min(len(df), 50):]
+        avg_turnover = float((df["close"] * df["volume"])
+                             .iloc[-min(len(df), 50):].mean())
+        badges = [
+            {"text": f"💎 {ps:.1f}x sales vs +{g:.0f}% growth", "tone": "good"},
+            _sales_badge(sales),
+        ]
+        if sym in flash_syms:
+            badges.append({"text": "⚡ Tape burst at zone", "tone": "good"})
+        tiles.append({
+            "symbol": sym,
+            "name": _name_for(sym),
+            "href": _href(sym, "analysis"),
+            "bars": [],
+            "_bars": {"days": days},
+            "bands": bands,
+            "lines": [{"price": last, "label": "now", "tone": "now"}],
+            "markers": [],
+            "stats": [
+                {"k": "P/S", "v": f"{ps:.1f}x"},
+                {"k": "Rev YoY", "v": f"+{g:.0f}%"},
+                {"k": "PSG", "v": f"{ratio:.3f}"},
+                {"k": "Mkt cap", "v": _usd_short(mkt_cap)},
+            ],
+            "why": (f"{g:+.0f}% revenue growth priced at {ps:.1f}x sales "
+                    f"(PSG {ratio:.2f}) — the market hasn't re-rated it yet"),
+            "theme": _theme(sym),
+            "badges": badges,
+            "_score": -ratio * 1000.0,          # cheapest-for-growth first
+            "_m": tile_metrics({"liquidity": {"avg_dollar_vol": avg_turnover},
+                                "last_close": last}),
+        })
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    gex_as_of = _gex_decor(out, "demand")
+    return {"tiles": out, **meta,
+            "matched": len(tiles),
+            "gex_as_of": gex_as_of,
+            "screened": len(cands),
+            "no_rev_data": no_rev,
+            "no_shares_data": no_shares,
+            "priced_for_growth": too_rich,
+            "note": (f"Bonde strong/explosive sales across the whole universe "
+                     f"({len(cands)} screened), kept only when the price tag "
+                     f"LAGS the growth: price-to-sales ÷ revenue growth (PSG) "
+                     f"≤ {UNDERVALUE_MAX_PSG:g} — calibrated on LPTH (~12x "
+                     f"sales at +109% = 0.11). {too_rich} growers already "
+                     f"priced for it; {no_rev} lacked a revenue figure and "
+                     f"{no_shares} a share count — excluded, never estimated. "
+                     f"Backlog and contracts are not machine-readable, so "
+                     f"check the story before the chart. Cheapest-for-growth "
+                     f"ranks first."),
+            "generated_at": None}
+
+
 def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  themes_first: bool = THEMES_FIRST_DEFAULT,
                  sort: str = DEFAULT_SORT,
@@ -2540,6 +2705,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "undervalue":
+        out = undervalue_tiles(limit, days, themes_first, srt, tier)
     elif t == "gabbar":
         out = gabbar_tiles(limit, days, themes_first, srt, tier,
                            level=level if isinstance(level, str) else "all",
