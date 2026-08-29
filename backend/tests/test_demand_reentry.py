@@ -27,6 +27,20 @@ from supply_demand import price_zones as pz
 
 
 # ── reentry_read — the transition test ────────────────────────────────────────
+# Captured at file-import time, BEFORE the autouse fixture below nulls it —
+# the roster-integrity test reads this.
+_REAL_PINNED_ETFS = dr.PINNED_ETFS
+
+
+@pytest.fixture(autouse=True)
+def _no_pinned_etfs(monkeypatch):
+    """Neutralise the pinned-ETF tail (GLD/SLV + the AI-infra roster,
+    2026-08-28) for the legacy scan tests: they assert exact universe
+    sizes/symbol lists against stubbed loaders and predate the pin. Tests
+    ABOUT the pin re-enable it explicitly."""
+    monkeypatch.setattr(dr, "PINNED_ETFS", ())
+
+
 def test_reentry_true_when_price_left_the_band_and_came_back():
     """Ran to 120 (well above the 106 band top), now back at 103 inside it."""
     out = dr.reentry_read([100, 110, 120, 105], zone_hi=106, zone_lo=100, last_price=103)
@@ -660,6 +674,60 @@ def test_scan_coerces_a_non_bool_force(monkeypatch):
 # Theme universe (Ajay 2026-08-15: "make sure the new companies like Quantum
 # based and Power based and robotics based and then Semis all are considered")
 # ---------------------------------------------------------------------------
+def test_pinned_etfs_ride_the_demand_universe_with_their_own_seat(monkeypatch):
+    """Ajay 2026-08-28: "add gold and silve ... with their supply demand
+    zones" + SPY/QQQ/TQQQ/SOXL and the AI-infra roster. Pinned ETFs are
+    appended AFTER the loader, deduped, and carry a "pinned" provenance
+    record so nothing mistakes them for index constituents."""
+    monkeypatch.setattr(dr, "PINNED_ETFS", ("GLD", "SLV"))
+    monkeypatch.setattr(dr.universe_mod, "load_universe",
+                        lambda mode=None: ["A", "GLD"])   # GLD already present
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+    syms, _, prov, _, key = dr._resolve_universe("full")
+    assert syms == ["A", "GLD", "SLV"]                    # deduped, order kept
+    assert prov["pinned"] == {"source": "pinned", "n": 1}  # only SLV was new
+
+
+def test_the_roster_is_liquidity_screened_and_clean():
+    """The real PINNED_ETFS roster: his explicit asks present, the known
+    dead/thin tickers absent, no dupes, all uppercase. FIVG died twice
+    (→SIXG→UFOX) and SRVR loses to DTCR on every timeframe — resurrecting
+    either would mean someone pasted an old list over the vetted one."""
+    real = _REAL_PINNED_ETFS
+    for must in ("GLD", "SLV", "SPY", "QQQ", "TQQQ", "SOXL", "QTUM", "REMX",
+                 "LYTE", "KOID", "IBIT", "NUKZ", "AIPO", "DRAM"):
+        assert must in real, f"{must} fell off the roster"
+    for dead in ("FIVG", "SRVR", "HUMN", "BOAT", "IVEP", "NCLD"):
+        assert dead not in real, f"{dead} is dead/thin and must stay out"
+    assert len(real) == len(set(real))
+    assert all(s == s.upper() and s.strip() == s for s in real)
+
+
+def test_pinned_etfs_never_reach_the_sepa_universe_alias():
+    """The one-definition rule holds for STOCKS: sepa/universe.py's `full`
+    alias must NOT grow ETFs — the fundamental scanner never sees them."""
+    from sepa import universe as U
+    assert "pinned" not in U._UNIVERSE_ALIASES.get("full", ())
+    import inspect
+    assert "PINNED_ETFS" not in inspect.getsource(U)
+
+
+def test_curated_fallthrough_detection_survives_the_pin(monkeypatch):
+    """REGRESSION GUARD: looks_curated used a bare length equality; the
+    pinned tail would have shifted it by len(PINNED_ETFS) and silently
+    broken the loud fallthrough warning."""
+    from sepa import universe as U
+    monkeypatch.setattr(dr, "PINNED_ETFS", ("GLD", "SLV"))
+    monkeypatch.setattr(dr.universe_mod, "load_universe",
+                        lambda mode=None: list(U.UNIVERSE))
+    monkeypatch.setattr(dr.universe_mod, "last_source", lambda name: None)
+    monkeypatch.setattr(dr, "analyze_symbol", lambda s, with_series=False: None)
+    dr._cache.clear()
+    out = dr.scan(force=True, universe="full")
+    assert out["universe_is_sp500"] is False
+    assert "curated" in out["universe_note"]
+
+
 def test_legacy_alias_resolves_through_the_sepa_full_loader(monkeypatch):
     """sp1500_plus / qqq / sp500 lived in a demand-side composite map until
     2026-08-25. They now normalise to the SEPA `full` alias so both engines

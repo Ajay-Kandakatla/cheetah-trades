@@ -1200,6 +1200,47 @@ UNIVERSES = {
 # cron so the page load is instant, see crontab.
 DEFAULT_UNIVERSE = "full"
 
+# Pinned to the DEMAND universe only (Ajay 2026-08-28, three asks in one
+# afternoon: gold+silver "with their supply demand zones"; "keep SPY, QQQ,
+# TQQQ, SOXL on the priority list ... optical fibre, Quantum, Energy, rare
+# earth mineral ... anything else related to AI infra structure"; "the ones
+# Trump has been announcing and some robotic ETFs"). ETFs have no
+# sales/earnings, so they are NOT added to sepa/universe's `full` alias —
+# the SEPA fundamental scanner never sees them and the one-definition rule
+# stays true for stocks. Own provenance seat ("pinned") keeps the
+# curated-fallthrough heuristic honest.
+#
+# Every ticker liquidity-verified 2026-08-28 (web-researched, official
+# issuer/AUM sources): all $300M+ AUM or better except LYTE (3 weeks old,
+# $357M, 2-3M sh/day). Deliberately EXCLUDED as dead/thin/shells: FIVG
+# (ticker dead → UFOX), SRVR (bleeding, DTCR beats it), HUMN ($47M), BOAT
+# ($79M), IVEP/NCLD/COOL/CGPT/SMRF/RACK/TCAI (young or tiny). TQQQ/SOXL
+# are 3x levered — the frontend leveraged-ETF guardrail chip flags them.
+PINNED_ETFS = (
+    # havens + his index/leveraged priority list
+    "GLD", "SLV", "SPY", "QQQ", "TQQQ", "SOXL",
+    # semis + memory (DRAM: $1B AUM in 10 days, Apr-2026 launch)
+    "SMH", "SOXX", "DRAM",
+    # quantum ($5B AUM)
+    "QTUM",
+    # nuclear / energy dominance (NUKZ = new-build stack; FCG/XOP = gas/E&P)
+    "URA", "NLR", "NUKZ", "XLE", "FCG", "XOP",
+    # AI power + grid buildout (AIPO $946M first-mover)
+    "GRID", "AIPO",
+    # critical minerals / copper (REMX tripled on 2026 executive actions)
+    "REMX", "COPX",
+    # data-center + AI software
+    "DTCR", "AIQ", "IGV",
+    # robotics + humanoid (KOID $6.3B — biggest robotics ETF, period)
+    "BOTZ", "ROBO", "ARKQ", "KOID",
+    # photonics / optical (his LYTE)
+    "LYTE",
+    # defense + onshoring + crypto policy (ITA/PPA/SHLD; AIRR; IBIT)
+    "ITA", "PPA", "SHLD", "AIRR", "IBIT",
+    # water/cooling proxy
+    "PHO",
+)
+
 
 def _universe_key(key) -> str:
     """Normalise a universe argument to a known key.
@@ -1251,6 +1292,15 @@ def _resolve_universe(key: str):
                 seen.add(sym)
                 syms.append(sym)
 
+    n_pinned = 0
+    for sym in PINNED_ETFS:
+        if sym and sym not in seen:
+            seen.add(sym)
+            syms.append(sym)
+            n_pinned += 1
+    if n_pinned:
+        prov["pinned"] = {"source": "pinned", "n": n_pinned}
+
     stale_ages = [(v or {}).get("age_days") or 0.0 for v in prov.values()
                   if v and v.get("source") == "stale-cache"]
     stale = int(round(max(stale_ages))) if stale_ages else None
@@ -1301,7 +1351,10 @@ def scan(force: bool = False, limit: Optional[int] = None,
     # must not mislabel it. sp1500 reports its WORST layer.
     curated_n = len(getattr(universe_mod, "UNIVERSE", []) or [])
     sources = [v.get("source") for v in uprov.values() if v]
-    looks_curated = ("curated" in sources) or (len(syms) == curated_n and len(uprov) == 1)
+    pinned_n = int((uprov.get("pinned") or {}).get("n") or 0)
+    looks_curated = ("curated" in sources) or (
+        len(syms) == curated_n + pinned_n
+        and len([k for k in uprov if k != "pinned"]) == 1)
 
     if looks_curated:
         universe_note = f"{ulabel} unavailable — scanned the curated list instead"
