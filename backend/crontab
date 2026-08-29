@@ -740,3 +740,12 @@
 # pushes (the phone keep-set is three kinds and this is not one of them).
 # Weekly, Saturdays 07:40, when nothing else is running.
 40     7     *    *    6    /usr/local/bin/python -m observability.symbol_liveness
+
+# ── Desk: daily pre-market trader report (Ajay 2026-08-28) ──────────────────
+# 8:40am ET weekdays — after the 19:10 earnings-calendar refresh (prior
+# evening) and inside the pre-market quote window, before the open. Builds
+# the regime verdict + scored book from the latest SEPA scan, grades
+# yesterday's book (the journal loop), stores desk_reports, pushes ONE
+# todo_reminder (scheduled kind — the 2026-06-24 keep-set gains no new
+# kinds). LLM prose degrades to deterministic text if the API is down.
+40     8     *    *    1-5  /usr/local/bin/python -m desk.report

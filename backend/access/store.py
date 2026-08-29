@@ -145,6 +145,9 @@ FEATURE_CATALOG: list[dict] = [
     # growing. Owner-on via added_in/VERSION.
     {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "daily",     "default": False, "added_in": 19},
     {"id": "rotation",      "label": "🔄 Rotation",         "group": "daily",     "default": False, "added_in": 20},
+    # Desk (2026-08-28): the daily pre-market trader-persona report — regime
+    # verdict, scored book, cut list, carried-forward journal. Cron-built.
+    {"id": "desk",          "label": "🧠 Desk",             "group": "daily",     "default": False, "added_in": 21},
     # Research (2026-06-04): bullish-vs-bearish pattern mining + the insider
     # thesis. Demoted from the primary bar to Tools on 2026-08-16 at Ajay's
     # request — still a page he uses, just not one that needs a header slot.
@@ -254,7 +257,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 20
+CATALOG_VERSION = 21
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

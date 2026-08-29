@@ -722,6 +722,8 @@ app.include_router(patterns_router)
 # Morning brief — synthesizes regime + day-trade + swing into one answer.
 from morning.brief import router as morning_router  # noqa: E402
 app.include_router(morning_router)
+from desk.api import router as desk_router  # noqa: E402
+app.include_router(desk_router)
 
 # Overnight tracker — premarket gappers + catalyst attachment.
 from overnight.api import router as overnight_router  # noqa: E402
