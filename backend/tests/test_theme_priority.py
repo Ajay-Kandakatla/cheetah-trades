@@ -108,8 +108,11 @@ def test_priority_is_the_order_ajay_asked_for():
     # three: AI is megawatt-constrained, so the compute hosts, the reactors
     # and the barrels are one story (2026-08-16: "energy is super important
     # now with AI").
+    # defense + rare_earth appended 2026-08-28 ("the ones Trump has been
+    # announcing" + rare earth minerals) — behind the AI build-out story.
     assert order == ["space", "quantum", "ai_semis", "ai_power", "nuclear",
-                     "energy", "optical", "robotics", "ai_infra"]
+                     "energy", "optical", "robotics", "ai_infra",
+                     "defense", "rare_earth"]
 
 
 def test_every_roster_has_a_priority():

@@ -351,6 +351,7 @@ describe('themeLabel', () => {
   // renders as a raw key like "ai_semis" on the tile badge.
   const BACKEND_THEMES = [
     'space', 'quantum', 'ai_semis', 'optical', 'robotics', 'ai_infra', 'nuclear',
+    'defense', 'rare_earth',
   ];
 
   it('labels every theme the backend can emit', () => {

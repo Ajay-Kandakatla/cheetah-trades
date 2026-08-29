@@ -675,6 +675,8 @@ export const THEME_LABEL: Record<string, string> = {
   robotics: '🦾 Robotics',
   ai_infra: '⚡ AI infra',
   nuclear: '☢ Nuclear',
+  defense: '🎖 Defense',
+  rare_earth: '⛏ Rare earth',
 };
 
 export function themeLabel(theme: string | null | undefined): string | null {

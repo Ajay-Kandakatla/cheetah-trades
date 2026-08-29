@@ -759,6 +759,30 @@ def test_theme_rosters_actually_contain_the_names_ajay_asked_for():
     assert len(names) == len(set(names)), "theme rosters emit a duplicate"
 
 
+def test_traction_smallcaps_joined_the_rosters_2026_08_28():
+    """Ajay: "Companies like Fermi, Indi Semis and Light path, UI path, oust
+    ... research this list and add it to Universe please. but categorize
+    them or add a chip." His five resolve to a theme, the
+    outside-every-index adds now reach `full` via the themes layer, and the
+    two new policy themes exist with priorities."""
+    from sepa import universe as U
+    for sym, theme in (("FRMI", "ai_power"), ("INDI", "robotics"),
+                       ("LPTH", "optical"), ("PATH", "robotics"),
+                       ("OUST", "robotics"),
+                       ("ONDS", "defense"), ("RCAT", "defense"),
+                       ("KTOS", "defense"), ("UUUU", "rare_earth"),
+                       ("MP", "rare_earth"), ("VOYG", "space"),
+                       ("AMBA", "robotics"), ("VIAV", "optical"),
+                       ("UCTT", "ai_semis"), ("MIR", "nuclear")):
+        assert U.theme_for(sym) == theme, f"{sym} != {theme}"
+    names = set(U.fetch_themes())
+    for outside_index in ("INDI", "LPTH", "ONDS", "RCAT", "VOYG",
+                          "USAR", "UUUU", "METC", "AMBA", "ALNT"):
+        assert outside_index in names, f"{outside_index} not reaching full"
+    assert U.THEME_PRIORITY["defense"] > U.THEME_PRIORITY["ai_infra"]
+    assert U.THEME_PRIORITY["rare_earth"] > U.THEME_PRIORITY["defense"]
+
+
 def test_theme_lookup_is_total_and_never_raises():
     from sepa import universe as U
     assert U.theme_for("IONQ") == "quantum"

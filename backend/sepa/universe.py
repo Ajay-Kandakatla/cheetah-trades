@@ -105,27 +105,44 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # SPIR ($17M/day) — too thin to chart honestly; ATRO/TDG/HEI — aerostructures
     # and aftermarket parts, not space technology.
     "space":     ["RKLB", "ASTS", "LUNR", "RDW", "PL", "BKSY",
-                  "IRDM", "GSAT", "SATS", "VSAT"],
+                  "IRDM", "GSAT", "SATS", "VSAT",
+                  # VOYG 2026-08-28: record bookings + Starlab; +54% in the
+                  # early-Aug space rally
+                  "VOYG"],
     "quantum":   ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ"],
     # Semis incl. the HBM/storage layer Ajay named. MU is the HBM name; SNDK,
     # WDC and STX are the AI-storage bottleneck; ONTO/NVMI/CAMT are the
     # metrology tools that gate HBM stacking yield.
     "ai_semis":  ["ARM", "ALAB", "CRDO", "NVDA", "AVGO", "AMD", "MU", "MRVL",
                   "TSM", "LRCX", "AMAT", "KLAC",
-                  "SNDK", "WDC", "STX", "ONTO", "NVMI", "CAMT"],
+                  "SNDK", "WDC", "STX", "ONTO", "NVMI", "CAMT",
+                  # semicap suppliers riding the AI-WFE upcycle (2026-08-28:
+                  # UCTT +191% YTD, ICHR +242% 1yr, FORM cryo/test for both
+                  # semis AND quantum, MKSI lasers/vacuum)
+                  "UCTT", "ICHR", "FORM", "MKSI"],
     # Fibre optics / optical interconnect — the bottleneck once compute is no
     # longer the constraint. Transceivers and lasers (COHR/LITE/AAOI/FN/POET),
     # optical networking (CIEN/MTSI), the fibre and glass itself (GLW), and the
     # connectors that carry it (APH/TEL). Contract manufacturers went to
     # ai_infra instead — they assemble the racks, they do not make the optics.
+    # LPTH added 2026-08-28 (Ajay named it; +109% rev, $97.8M defense-optics
+    # backlog, Russell 2000 only — outside every index layer we scan). VIAV
+    # was already in the universe via sp400 but untagged (+149% YTD on AI-DC
+    # optical test).
     "optical":   ["COHR", "LITE", "AAOI", "CIEN", "FN", "GLW", "MTSI", "POET",
-                  "APH", "TEL"],
+                  "APH", "TEL", "LPTH", "VIAV"],
     # Robotic components / physical AI. Beyond the platform names: machine
     # vision (CGNX), perception (MBLY, OUST), motion and precision dispensing
     # (EMR, AME, NDSN, HON), and TSLA for humanoid/physical AI. Dropped as too
     # thin to chart: LAZR $18M, ATS $5M, KRNT $4M, INVZ $2M ($0.37 a share).
     "robotics":  ["SERV", "RR", "SYM", "TER", "ROK", "PATH", "ISRG",
-                  "CGNX", "MBLY", "OUST", "EMR", "AME", "NDSN", "HON", "TSLA"],
+                  "CGNX", "MBLY", "OUST", "EMR", "AME", "NDSN", "HON", "TSLA",
+                  # 2026-08-28: INDI (Ajay named it — ADAS radar/vision semis,
+                  # the MBLY precedent; Russell 2000 only), AMBA (edge-AI
+                  # vision, 15+ robotics design wins), ALNT (motion, 1.31x
+                  # book-to-bill — thinnest add, ~$10M/day), NOVT (precision
+                  # motion for humanoids)
+                  "INDI", "AMBA", "ALNT", "NOVT"],
     # Power FOR AI — the compute hosts whose real constraint is megawatts, plus
     # the generation sold to them. Ajay 2026-08-16: "energy is super important
     # now with AI lot of folks are investing in to Nuclear and Hyperscalers that
@@ -136,8 +153,15 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # side of the same trade. Residential solar (ENPH/RUN/ARRY/SEDG, -39% to
     # -58% since June) is a DIFFERENT thesis and is deliberately not here.
     "ai_power":  ["IREN", "CIFR", "CORZ", "WULF", "APLD", "CRWV", "NBIS",
-                  "HUT", "RIOT", "MARA", "BTDR", "GLXY", "BE", "FSLR", "NXT"],
-    "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG"],
+                  "HUT", "RIOT", "MARA", "BTDR", "GLXY", "BE", "FSLR", "NXT",
+                  # 2026-08-28: AGX (gas-plant EPC, $2.8B backlog for AI load),
+                  # FRMI (Ajay named it — Amarillo 17GW AI campus; pre-revenue,
+                  # $5 vs $37 high — the tag is a category, not an endorsement)
+                  "AGX", "FRMI"],
+    "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG",
+                  # MIR 2026-08-28: radiation detection — picks-and-shovels on
+                  # every SMR/restart, net income +145%
+                  "MIR"],
     # Traditional energy. Added 2026-08-16 because the rotation measurement put
     # it first on base formation (45.5% VCP rate, 2.0x the market) and refiners
     # at +39.6% median since June. Excluded as DEAD tickers whose last bar
@@ -149,7 +173,21 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   "BKR", "PR"],
     # Racks, cooling, transmission hardware.
     "ai_infra":  ["VRT", "MOD", "SMCI", "ANET", "ETN", "PWR", "GEV", "NVT",
-                  "HUBB", "POWL", "AAON", "CLS", "FLEX"],
+                  "HUBB", "POWL", "AAON", "CLS", "FLEX",
+                  # 2026-08-28 buildout suppliers: SPXC (DC cooling +23%), AZZ
+                  # (grid coatings), VICR (800VDC rack power, +274% 1yr), DY
+                  # (fiber/DC construction, +38% rev), PENG (AI/HPC clusters)
+                  "SPXC", "AZZ", "VICR", "DY", "PENG"],
+    # Defense tech / drones (Ajay 2026-08-28: "the ones Trump has been
+    # announcing" — the $150B shipbuilding/Golden Dome/drone cycle). Small/mid
+    # caps with 2026 contract traction, not the primes: ONDS 13x rev + $757M
+    # backlog, RCAT +520% rev on Army SRR, BBAI $282M backlog, KRMN $1.3B
+    # backlog, KTOS (CCA jets — nearly large-cap but the category anchor).
+    "defense":   ["ONDS", "RCAT", "BBAI", "KTOS", "KRMN"],
+    # Rare earth / critical minerals (the 2026 Section 232 + July EO trade):
+    # MP the anchor, USAR mine-to-magnet, UUUU first US heavy-REE production
+    # (Mar 2026), METC Brook Mine optionality on met-coal revenue.
+    "rare_earth": ["MP", "USAR", "UUUU", "METC"],
 }
 
 # Ordering BETWEEN themes, most-wanted first — Ajay's stated priority, then the
@@ -169,6 +207,8 @@ THEME_PRIORITY: dict[str, int] = {
     "optical":   6,
     "robotics":  7,
     "ai_infra":  8,
+    "defense":   9,
+    "rare_earth": 10,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of

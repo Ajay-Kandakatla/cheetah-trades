@@ -27,6 +27,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'scan-health',          label: 'Scan health — every scan audited, counted in the nav', addedAt: '2026-08-25', route: '/health' },
   { id: 'deep-demand-tab',      label: 'Deep Demand tab — 2nd-level arrivals, Bonde sales gate', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'zones-cheetah-rank-full-universe', label: 'Demand zones: 🐆 cheetah composite rank (flow × float velocity × R:R) + ONE full-universe scan (~1,750 names), theme picker retired', addedAt: '2026-08-25', route: '/chart-maps' },
+  { id: 'smallcap-traction-themes', label: '\ud83c\udf31 27 traction small/mid caps join the universe \u2014 LPTH, INDI, ONDS, RCAT, UUUU, AMBA \u2026 + two new theme chips: \ud83c\udf96 Defense and \u26cf Rare earth', addedAt: '2026-08-28', route: '/chart-maps' },
   { id: 'demand-pinned-etf-roster', label: '\ud83e\udd47 34 pinned ETFs in the demand-zone scan \u2014 GLD/SLV, SPY/QQQ/TQQQ/SOXL, quantum, nuclear, rare earth, AI-infra, robotics, defense \u2014 all liquidity-vetted', addedAt: '2026-08-28', route: '/chart-maps' },
   { id: 'gabbar-watch-alerts', label: '\ud83c\udfaf Gabbar level alerts \u2014 phone push when a covered name is inside or within 1% of a band (RTH, Bonde-gated, one per band per day)', addedAt: '2026-08-27', route: '/chart-maps' },
   { id: 'gex-chips-demand-tabs', label: '\ud83e\uddf2 GEX chips on the demand-zone tabs \u2014 dealer gamma helps/hurts + put/call wall sitting on your band, from the nightly snapshot', addedAt: '2026-08-27', route: '/chart-maps' },
