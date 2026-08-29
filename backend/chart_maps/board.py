@@ -2277,11 +2277,18 @@ GABBAR_LEVELS = ("all", "aggressive", "conservative 1", "conservative 2")
 UNDERVALUE_MAX_PSG = 0.15
 UNDERVALUE_TIERS = ("strong", "explosive")
 UNDERVALUE_MAX_CANDIDATES = 120
+# Base-effect guard: a company going from ~zero revenue to something posts
+# +250,000% "growth" and any P/S — even JOBY's 59x — divides down to a
+# PSG of ~0. That is a lottery ticket, not a mispriced grower. Growth is
+# CAPPED here for the ratio, so past this point cheapness must come from
+# the P/S side. LPTH (+109%) sits far below the cap and is untouched.
+UNDERVALUE_GROWTH_CAP_PCT = 300.0
 
 
 def psg_ratio(mkt_cap, rev_ttm, growth_yoy_pct):
-    """Price/sales over growth. None whenever an input is missing or
-    nonsensical — a fabricated valuation is worse than none."""
+    """Price/sales over growth (growth capped at UNDERVALUE_GROWTH_CAP_PCT).
+    None whenever an input is missing or nonsensical — a fabricated
+    valuation is worse than none."""
     try:
         mkt_cap = float(mkt_cap)
         rev_ttm = float(rev_ttm)
@@ -2290,7 +2297,7 @@ def psg_ratio(mkt_cap, rev_ttm, growth_yoy_pct):
         return None
     if mkt_cap <= 0 or rev_ttm <= 0 or growth <= 0:
         return None
-    return (mkt_cap / rev_ttm) / growth
+    return (mkt_cap / rev_ttm) / min(growth, UNDERVALUE_GROWTH_CAP_PCT)
 
 
 def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,

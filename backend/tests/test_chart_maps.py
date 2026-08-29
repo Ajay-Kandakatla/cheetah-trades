@@ -984,6 +984,21 @@ def test_psg_needs_every_input_or_answers_none():
         assert B.psg_ratio(*bad) is None, bad
 
 
+def test_psg_growth_is_capped_so_base_effects_cannot_buy_cheapness():
+    """JOBY case: +257,493% off a near-zero revenue base divided ANY P/S —
+    even 59x sales — down to a PSG of ~0 and ranked it #1 undervalued.
+    Past UNDERVALUE_GROWTH_CAP_PCT the denominator freezes, so cheapness
+    must come from the price side; LPTH-scale growth is untouched."""
+    cap = B.UNDERVALUE_GROWTH_CAP_PCT
+    joby = B.psg_ratio(6.9e9, 116e6, 257493.0)
+    assert joby == pytest.approx((6.9e9 / 116e6) / cap)
+    assert joby > B.UNDERVALUE_MAX_PSG, "59x sales must not screen as cheap"
+    assert B.psg_ratio(745e6, 62.8e6, 108.9) == pytest.approx(0.109, abs=0.001)
+    at_cap = B.psg_ratio(1e9, 1e8, cap)
+    beyond = B.psg_ratio(1e9, 1e8, cap * 100)
+    assert at_cap == pytest.approx(beyond), "growth beyond the cap is inert"
+
+
 def test_undervalue_board_keeps_lagging_growers_and_counts_exclusions(
         prices, monkeypatch, sales_stub, gex_stub):
     """The LPTH archetype passes; a grower already priced for it is counted
