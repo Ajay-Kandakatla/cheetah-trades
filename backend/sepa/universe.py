@@ -108,7 +108,10 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   "IRDM", "GSAT", "SATS", "VSAT",
                   # VOYG 2026-08-28: record bookings + Starlab; +54% in the
                   # early-Aug space rally
-                  "VOYG"],
+                  "VOYG",
+                  # FLY 2026-08-28 (more-like-LPTH sweep): +659% rev, $1.5B
+                  # backlog, below IPO price — lumpiest name on the roster
+                  "FLY"],
     "quantum":   ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ"],
     # Semis incl. the HBM/storage layer Ajay named. MU is the HBM name; SNDK,
     # WDC and STX are the AI-storage bottleneck; ONTO/NVMI/CAMT are the
@@ -157,7 +160,11 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   # 2026-08-28: AGX (gas-plant EPC, $2.8B backlog for AI load),
                   # FRMI (Ajay named it — Amarillo 17GW AI campus; pre-revenue,
                   # $5 vs $37 high — the tag is a category, not an endorsement)
-                  "AGX", "FRMI"],
+                  "AGX", "FRMI",
+                  # 2026-08-28 more-like-LPTH sweep — storage/grid names whose
+                  # backlog dwarfs the cap: EOSE +351% rev/$807M backlog,
+                  # FLNC $6.4B backlog at 0.76x sales, AMSC backlog +40%
+                  "EOSE", "FLNC", "AMSC"],
     "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG",
                   # MIR 2026-08-28: radiation detection — picks-and-shovels on
                   # every SMR/restart, net income +145%
@@ -170,20 +177,29 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # CTRA (2026-05-06).
     "energy":    ["DK", "MPC", "VLO", "PSX", "LNG", "OKE", "COP", "XOM", "CVX",
                   "TRGP", "EOG", "FANG", "KMI", "WMB", "OXY", "DVN", "SLB",
-                  "BKR", "PR"],
+                  "BKR", "PR",
+                  # MTRX 2026-08-28 (more-like-LPTH sweep): LNG/ammonia tank
+                  # EPC, backlog ~2x the cap, inflecting losses -> profit
+                  "MTRX"],
     # Racks, cooling, transmission hardware.
     "ai_infra":  ["VRT", "MOD", "SMCI", "ANET", "ETN", "PWR", "GEV", "NVT",
                   "HUBB", "POWL", "AAON", "CLS", "FLEX",
                   # 2026-08-28 buildout suppliers: SPXC (DC cooling +23%), AZZ
                   # (grid coatings), VICR (800VDC rack power, +274% 1yr), DY
                   # (fiber/DC construction, +38% rev), PENG (AI/HPC clusters)
-                  "SPXC", "AZZ", "VICR", "DY", "PENG"],
+                  "SPXC", "AZZ", "VICR", "DY", "PENG",
+                  # 2026-08-28 more-like-LPTH sweep: CECO (DC air/thermal,
+                  # $1.8B backlog), SANM (bought AMD's ZT rack manufacturing,
+                  # +70-102% quarters at ~14x earnings)
+                  "CECO", "SANM"],
     # Defense tech / drones (Ajay 2026-08-28: "the ones Trump has been
     # announcing" — the $150B shipbuilding/Golden Dome/drone cycle). Small/mid
     # caps with 2026 contract traction, not the primes: ONDS 13x rev + $757M
     # backlog, RCAT +520% rev on Army SRR, BBAI $282M backlog, KRMN $1.3B
     # backlog, KTOS (CCA jets — nearly large-cap but the category anchor).
-    "defense":   ["ONDS", "RCAT", "BBAI", "KTOS", "KRMN"],
+    # LASR 2026-08-28: directed-energy lasers (HELSI-2, JLWS ~$607M ceiling),
+    # A&D revenue +41% while the stock halved.
+    "defense":   ["ONDS", "RCAT", "BBAI", "KTOS", "KRMN", "LASR"],
     # Rare earth / critical minerals (the 2026 Section 232 + July EO trade):
     # MP the anchor, USAR mine-to-magnet, UUUU first US heavy-REE production
     # (Mar 2026), METC Brook Mine optionality on met-coal revenue.
