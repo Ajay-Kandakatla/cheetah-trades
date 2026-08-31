@@ -234,9 +234,19 @@ export function ChartMaps() {
     setParams(next, { replace: true });
   };
 
-  const setSupportTf = (t: string) => {
+  /** BOTH halves of the chart view in ONE URL write.
+   *
+   *  Ajay 2026-08-29: "now the charts do not let me use yearly and monthly".
+   *  Cause: the window and timeframe setters each built a fresh
+   *  URLSearchParams from the SAME `params` snapshot, so calling them back to
+   *  back in one handler meant the second silently discarded the first —
+   *  picking "Daily · 1 year" set window=1y while the old tf=15m survived,
+   *  and the chart stayed intraday. One setter, one write, no lost half.
+   */
+  const setSupportView = (w: string, t: string) => {
     const next = new URLSearchParams(params);
     next.set('tab', 'support');
+    next.set('window', w);
     // Daily is the default, so it leaves the URL clean — a shared link of an
     // untouched tab looks exactly like it did before the dropdown existed.
     if (t && t !== 'daily') next.set('tf', t); else next.delete('tf');
@@ -273,7 +283,7 @@ export function ChartMaps() {
       {!isBoardTab(tab) ? (
         <SupportLevels symbol={supportSymbol} window={supportWindow} tf={supportTf}
                        onSymbol={setSupportSymbol} onWindow={setSupportWindow}
-                          onTf={setSupportTf} />
+                          onView={setSupportView} />
       ) : (
       <>
       {/* 0DTE only. Two facts a reader needs BEFORE the tiles, because either

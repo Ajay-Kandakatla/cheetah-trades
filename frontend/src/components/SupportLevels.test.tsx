@@ -57,6 +57,7 @@ function mockFetch(payload: any, ok = true) {
 }
 
 const noop = () => {};
+const noop2 = () => {};
 
 beforeEach(() => vi.restoreAllMocks());
 afterEach(() => vi.unstubAllGlobals());
@@ -127,20 +128,23 @@ describe('SupportLevels', () => {
     expect(opts).toContain('15 min · today from the open');
   });
 
-  it('reports BOTH halves of the chosen view upward rather than owning it', async () => {
+  it('reports BOTH halves of the view in ONE call, never two', async () => {
+    /* Ajay 2026-08-29: "now the charts do not let me use yearly and monthly".
+     * Two setters each rebuilt the URL from the same snapshot, so the second
+     * dropped the first and a Daily pick left the chart intraday. */
     mockFetch(PAYLOAD);
-    const onWindow = vi.fn();
-    const onTf = vi.fn();
+    const onView = vi.fn();
     const { container } = render(
-      <SupportLevels symbol="DHI" window="3m" tf="daily"
-                     onSymbol={noop} onWindow={onWindow} onTf={onTf} />);
+      <SupportLevels symbol="DHI" window="3m" tf="15m"
+                     onSymbol={noop} onWindow={noop} onView={onView} />);
     await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
-    fireEvent.change(container.querySelector('select')!, { target: { value: 'daily:6m' } });
-    expect(onWindow).toHaveBeenCalledWith('6m');
-    expect(onTf).toHaveBeenCalledWith('daily');
+
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'daily:1y' } });
+    expect(onView).toHaveBeenCalledTimes(1);
+    expect(onView).toHaveBeenCalledWith('1y', 'daily');
 
     fireEvent.change(container.querySelector('select')!, { target: { value: '15m_open' } });
-    expect(onTf).toHaveBeenCalledWith('15m_open');
+    expect(onView).toHaveBeenLastCalledWith('1m', '15m_open');
   });
 
   it('refetches when the window changes', async () => {
@@ -278,7 +282,7 @@ describe('SupportLevels — Smart Money setups', () => {
   it('tells the sweep → BOS → order block story with both entry styles', async () => {
     mockFetch(SMC_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="15m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/Smart Money setups/i)).toBeTruthy());
     expect(screen.getByText(/was swept 10 bars ago/)).toBeTruthy();
     expect(screen.getByText('aggressive')).toBeTruthy();
@@ -289,7 +293,7 @@ describe('SupportLevels — Smart Money setups', () => {
   it('flags a stop inside the noise instead of selling the 23R', async () => {
     mockFetch(SMC_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="15m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/23.62R/)).toBeTruthy());
     expect(screen.getByText(/⚠️ noise/)).toBeTruthy();
     expect(screen.getByText(/arithmetic, not a plan/i)).toBeTruthy();
@@ -298,7 +302,7 @@ describe('SupportLevels — Smart Money setups', () => {
   it('states that SMC has no cited source', async () => {
     mockFetch(SMC_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="15m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() =>
       expect(screen.getByText(/No canonical text in the library/i)).toBeTruthy());
   });
@@ -308,7 +312,7 @@ describe('SupportLevels — market mood and the buy signal', () => {
   it('shows the action, the mood and the plan that justifies it', async () => {
     mockFetch(SIGNAL_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/🟢 BUY/)).toBeTruthy());
     expect(screen.getAllByText(/bullish/).length).toBeGreaterThan(0);
     expect(screen.getByText(/1.74% risk/)).toBeTruthy();
@@ -329,7 +333,7 @@ describe('SupportLevels — market mood and the buy signal', () => {
       },
     });
     render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/⏸ WAIT/)).toBeTruthy());
     expect(screen.getByText(/below the 25 floor/)).toBeTruthy();
     expect(screen.getByText(/not within 1.5%/)).toBeTruthy();
@@ -341,7 +345,7 @@ describe('SupportLevels — market mood and the buy signal', () => {
       mood: { ...SIGNAL_PAYLOAD.mood, unavailable: ['vwap (intraday frames only)'] },
     });
     render(<SupportLevels symbol="NVDA" window="3m" tf="daily"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/Not scored:/)).toBeTruthy());
     expect(screen.getByText(/never a neutral-positive/)).toBeTruthy();
   });
@@ -352,7 +356,7 @@ describe('SupportLevels — timeframe, computed levels and patterns', () => {
     mockFetch(TF_PAYLOAD);
     const { container } = render(
       <SupportLevels symbol="NVDA" window="3m" tf="60m"
-                     onSymbol={noop} onWindow={noop} onTf={noop} />);
+                     onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/Support below/i)).toBeTruthy());
     // A URL written before the controls merged still resolves to one entry.
     expect((container.querySelector('select') as HTMLSelectElement).value).toBe('60m');
@@ -361,7 +365,7 @@ describe('SupportLevels — timeframe, computed levels and patterns', () => {
   it('sends the timeframe to the API', async () => {
     const spy = mockFetch(TF_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(spy).toHaveBeenCalled());
     expect(String(spy.mock.calls[0][0])).toContain('tf=60m');
   });
@@ -369,7 +373,7 @@ describe('SupportLevels — timeframe, computed levels and patterns', () => {
   it('shows a computed entry, stop and R for every band', async () => {
     mockFetch(TF_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/Entry & stop, computed/i)).toBeTruthy());
     expect(screen.getByText('$217.27')).toBeTruthy();
     expect(screen.getByText('$213.49')).toBeTruthy();
@@ -382,7 +386,7 @@ describe('SupportLevels — timeframe, computed levels and patterns', () => {
   it('never lets an hourly shape borrow the daily statistics', async () => {
     mockFetch(TF_PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/Cup with handle/i)).toBeTruthy());
     expect(screen.getByText(/do not transfer to this timeframe/i)).toBeTruthy();
     // an uncited shape says so
@@ -394,9 +398,35 @@ describe('SupportLevels — timeframe, computed levels and patterns', () => {
   it('renders cleanly when the backend sends no timeframe extras at all', async () => {
     mockFetch(PAYLOAD);
     render(<SupportLevels symbol="NVDA" window="3m" tf="daily"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText(/Support below/i)).toBeTruthy());
     expect(screen.queryByText(/Entry & stop, computed/i)).toBeNull();
     expect(screen.queryByText(/Opening range/i)).toBeNull();
+  });
+});
+
+describe('SupportLevels — the chip names the chart actually on screen', () => {
+  it('shows the timeframe on an intraday view, not the daily zoom label', async () => {
+    /* It read "6 months" over a 15-minute chart before the merge. */
+    mockFetch({
+      ...TF_PAYLOAD, window_label: '6 months', timeframe_label: '15 min',
+      zoom_applies: false, chart_span: '260 x 15 min bars',
+    });
+    const { container } = render(
+      <SupportLevels symbol="INDI" window="6m" tf="15m"
+                     onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(container.querySelector('.sl-zoom')).toBeTruthy());
+    // Scope to the CHIP: "6 months" legitimately exists as a dropdown option.
+    expect(container.querySelector('.sl-zoom')!.textContent).toContain('15 min');
+    expect(container.querySelector('.sl-zoom')!.textContent).not.toContain('6 months');
+  });
+
+  it('keeps the zoom label on a daily view', async () => {
+    mockFetch({ ...PAYLOAD, window_label: '6 months', zoom_applies: true });
+    const { container } = render(
+      <SupportLevels symbol="DHI" window="6m" tf="daily"
+                     onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(container.querySelector('.sl-zoom')).toBeTruthy());
+    expect(container.querySelector('.sl-zoom')!.textContent).toContain('6 months');
   });
 });

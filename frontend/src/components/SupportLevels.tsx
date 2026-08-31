@@ -39,7 +39,10 @@ type Props = {
   tf?: string;
   onSymbol: (sym: string) => void;
   onWindow: (win: string) => void;
-  onTf?: (tf: string) => void;
+  /** Sets the window AND timeframe in one write. Two separate setters each
+   *  rebuilt the URL from the same snapshot, so the second dropped the
+   *  first — which is why picking a Daily view left the chart intraday. */
+  onView?: (win: string, tf: string) => void;
 };
 
 function LevelRow({ lv, side }: { lv: SupportLevel; side: 'support' | 'overhead' }) {
@@ -84,7 +87,7 @@ function LevelTable({ title, levels, side, empty }: {
 }
 
 export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
-                               onTf }: Props) {
+                               onView }: Props) {
   const [data, setData] = useState<SupportPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -139,10 +142,10 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
           <select value={viewKeyFor(win, tf || 'daily')}
                   onChange={(e) => {
                     const v = viewFor(e.target.value);
-                    // Order matters: set the timeframe first so a single
-                    // refetch sees both halves of the new view.
-                    if (onTf) onTf(v.tf);
-                    onWindow(v.window);
+                    // ONE write. Two setters would each rebuild the URL from
+                    // the same snapshot and the second would drop the first.
+                    if (onView) onView(v.window, v.tf);
+                    else onWindow(v.window);
                   }}>
             {(['Daily', 'Intraday'] as const).map((g) => (
               <optgroup key={g} label={g}>
@@ -178,7 +181,13 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               {data.name ? <span className="sl-name">{data.name}</span> : null}
             </h2>
             <div className="sl-meta">
-              <span className="sl-zoom">{data.window_label}</span>
+              {/* The chip must name the chart on screen. It read "6 months" over a
+    15-minute chart before the controls merged (Ajay 2026-08-29). */}
+            <span className="sl-zoom">
+              {data.zoom_applies === false
+                ? (data.timeframe_label || data.chart_span)
+                : data.window_label}
+            </span>
               <span className="sl-recent">
                 {recentCount(supports)} of {supports.length} touched in the last{' '}
                 {data.recent_bars} sessions
