@@ -67,6 +67,11 @@ export type SessionRow = {
   tf_label?: string;
   bars: number;
   unavailable: string[];
+  /** The row reshaped as a chart tile (chart_maps CmTile) so this tab renders
+   *  through the SAME PatternChart the Demand boards use (Ajay 2026-08-31:
+   *  "make this view like Demand view"). Null when the frame had no bars —
+   *  the grid shows a text card naming the reason instead. */
+  tile?: any | null;
 };
 
 export type SessionPayload = {

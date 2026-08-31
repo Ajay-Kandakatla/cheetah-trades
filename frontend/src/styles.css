@@ -11289,15 +11289,6 @@ a.tk-link:hover   { color: inherit; }
   color: var(--cm-slate, #8595ad); opacity: 0.85; max-width: 78ch;
 }
 
-.sb-rows { display: flex; flex-direction: column; }
-.sb-row {
-  display: grid; align-items: baseline; gap: 0.55rem;
-  grid-template-columns:
-    4.6rem minmax(0, 1fr) 9.5rem 11rem minmax(0, 2fr) 3.6rem 6.5rem;
-  padding: 0.42rem 0.2rem; font-size: 0.8rem;
-  border-bottom: 1px solid var(--rule, #2a2f3a);
-}
-.sb-row:hover { background: var(--bg-raised, #181c24); }
 .sb-sym {
   cursor: pointer; background: none; border: none; padding: 0; text-align: left;
   font-weight: 700; font-size: 0.85rem; color: var(--ink, #e7e7e7);
@@ -11308,22 +11299,14 @@ a.tk-link:hover   { color: inherit; }
   text-overflow: ellipsis; white-space: nowrap;
 }
 .sb-bias { font-weight: 600; white-space: nowrap; }
-.sb-mood { font-style: normal; opacity: 0.75; font-weight: 500; }
-.sb-orb { color: var(--cm-slate, #8595ad); white-space: nowrap; }
-.sb-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .sb-chip { font-style: normal; font-size: 0.72rem; font-weight: 600; }
 .sb-chip-muted { color: var(--cm-slate, #8595ad); font-weight: 400; }
-.sb-score {
-  text-align: right; font-variant-numeric: tabular-nums;
-  color: var(--ink, #e7e7e7); font-weight: 600;
-}
-.sb-src { color: var(--cm-slate, #8595ad); font-size: 0.72rem; text-align: right; }
 
-/* Below the column rhythm's useful width the grid stops helping and starts
-   truncating; stack instead of shrinking every column past legibility. */
-@media (max-width: 900px) {
-  .sb-row { grid-template-columns: 4.6rem minmax(0, 1fr) 3.6rem; row-gap: 0.25rem; }
-  .sb-name, .sb-src { display: none; }
-  .sb-bias, .sb-orb { grid-column: 2 / 4; }
-  .sb-chips { grid-column: 1 / 4; }
+/* Session tab fallback card — a name whose intraday frame had no bars still
+   shows in the grid, naming the reason (dropping it would misreport coverage). */
+.sb-nodata {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;
+  padding: 0.8rem; border: 1px solid var(--rule, #2a2f3a); border-radius: 10px;
+  background: var(--bg-raised, #181c24); font-size: 0.8rem; min-height: 120px;
+  justify-content: center;
 }

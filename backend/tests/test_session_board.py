@@ -248,3 +248,80 @@ def test_best_grade_is_none_when_no_setup_carries_one(monkeypatch):
                                                 "label": "15 min"}))
     out = SB.read_symbol("X", None, tf="15m")
     assert out["smc"] is None or (out["smc"] or {}).get("best_grade") is None
+
+
+# ── the chart tile (Ajay 2026-08-31: "make this view like Demand view") ────
+def _row_for_tile(**over):
+    base = {
+        "symbol": "TEST", "name": "Test Co", "sources": ["demand"],
+        "theme": None, "band": {"kind": "demand", "lo": 99.0, "hi": 101.0,
+                                "mid": 100.0},
+        "at_band": True,
+        "mood": {"score": 40.0, "label": "leaning bullish"},
+        "orb": {"lo": 99.5, "hi": 100.5, "mid": 100.0, "minutes": 15,
+                "bars": 15, "session": "2026-08-31", "complete": True},
+        "orb_state": "above",
+        "fair_value_gaps": [], "session_gaps": [],
+        "smc": {"setups": [], "count": 0, "best_grade": None},
+        "signal": {"action": "BUY",
+                   "trade": {"entry": 100.0, "stop": 98.5, "target1": 103.0}},
+        "bias": "bullish", "session_score": 80.0,
+    }
+    base.update(over)
+    return base
+
+
+def test_the_tile_carries_the_boards_shape():
+    """Bars, bands, lines, stats, badges — the exact keys PatternChart reads.
+    The tab renders through the SAME component as the Demand boards, so a
+    missing key here is a blank tile there."""
+    df = _minutes(120)
+    t = SB._tile(_row_for_tile(), df)
+    assert t is not None
+    for key in ("symbol", "name", "href", "bars", "bands", "lines",
+                "markers", "stats", "why", "badges"):
+        assert key in t, key
+    assert len(t["bars"]) <= SB.TILE_BARS and len(t["bars"]) > 0
+    kinds = [b["kind"] for b in t["bands"]]
+    assert "demand" in kinds          # the daily band that listed the name
+    assert "neutral" in kinds         # the opening range, a RANGE not a side
+    labels = [ln["label"] for ln in t["lines"]]
+    assert labels == ["BUY", "STOP", "TARGET"]
+    assert {s["k"] for s in t["stats"]} == {"Mood", "ORB", "SMC", "Score"}
+    assert t["href"].endswith("symbol=TEST")
+
+
+def test_a_forming_opening_range_is_labelled_forming_on_the_tile():
+    df = _minutes(120)
+    t = SB._tile(_row_for_tile(
+        orb={"lo": 99.5, "hi": 100.5, "mid": 100.0, "minutes": 15,
+             "bars": 2, "session": "2026-08-31", "complete": False,
+             "bars_needed": 13}), df)
+    orb_band = next(b for b in t["bands"] if b["kind"] == "neutral")
+    assert "forming" in orb_band["label"]
+    orb_stat = next(s for s in t["stats"] if s["k"] == "ORB")
+    assert orb_stat["v"] == "forming 2/15m"
+
+
+def test_no_bars_means_no_tile_never_an_empty_chart():
+    assert SB._tile(_row_for_tile(), None) is None
+    import pandas as pd
+    assert SB._tile(_row_for_tile(), pd.DataFrame()) is None
+
+
+def test_the_tile_never_draws_two_competing_entries():
+    """The band-anchored BUY wins over the SMC leg; both at once would put two
+    entries and two stops on one small tile."""
+    df = _minutes(120)
+    smc = {"setups": [{"order_block": {"lo": 98.0, "hi": 99.0},
+                       "entries": {"aggressive": 99.0}, "stop": 97.5,
+                       "target": 102.0, "score": 70}],
+           "count": 1, "best_grade": 70}
+    t = SB._tile(_row_for_tile(smc=smc), df)
+    labels = [ln["label"] for ln in t["lines"]]
+    assert labels == ["BUY", "STOP", "TARGET"]          # signal's, not SMC's
+    # ...but with NO band-anchored trade, the SMC leg draws instead.
+    t2 = SB._tile(_row_for_tile(smc=smc, signal={"action": "WAIT"}), df)
+    labels2 = [ln["label"] for ln in t2["lines"]]
+    assert labels2 == ["SMC BUY", "STOP", "TARGET"]
+    assert any(b["kind"] == "order_block" for b in t2["bands"])

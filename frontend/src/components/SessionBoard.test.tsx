@@ -1,6 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+
+// PatternChart links each tile to its drill-in via useLocation, so the grid
+// needs a router in tests exactly as the board pages do.
+const render = (ui: React.ReactElement) =>
+  rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 import SessionBoard from './SessionBoard';
+
+const tile = (symbol: string, over: any = {}) => ({
+  symbol, name: symbol, href: `/chart-maps?tab=support&symbol=${symbol}`,
+  bars: Array.from({ length: 20 }, (_, i) => ({
+    t: `2026-08-31 ${String(9 + Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`,
+    o: 100 + i * 0.1, h: 100.2 + i * 0.1, l: 99.8 + i * 0.1, c: 100.1 + i * 0.1, v: 1000,
+  })),
+  bands: [{ kind: 'demand', lo: 99, hi: 101, label: 'daily band' }],
+  lines: [], markers: [],
+  stats: [{ k: 'Mood', v: '+52' }, { k: 'ORB', v: 'inside' },
+          { k: 'SMC', v: '72' }, { k: 'Score', v: '92' }],
+  why: 'leaning bullish · inside the opening range',
+  theme: null,
+  badges: [{ text: '▲ bullish', tone: 'good' }],
+  ...over,
+});
 
 const payload = (over: any = {}) => ({
   rows: [
@@ -15,6 +37,7 @@ const payload = (over: any = {}) => ({
       smc: { setups: [], count: 1, best_grade: 72 },
       signal: { action: 'BUY' }, bias: 'bullish', session_score: 92,
       session: '2026-08-31', tf: '15m', bars: 260, unavailable: [],
+      tile: tile('VRSK'),
     },
     {
       symbol: 'ACMR', name: 'ACM Research', sources: ['demand'], last_price: 20,
@@ -27,6 +50,12 @@ const payload = (over: any = {}) => ({
       smc: { setups: [], count: 0, best_grade: null },
       signal: { action: 'SELL' }, bias: 'bearish', session_score: -60,
       session: '2026-08-31', tf: '15m', bars: 260, unavailable: [],
+      tile: tile('ACMR', {
+        stats: [{ k: 'Mood', v: '-60' }, { k: 'ORB', v: 'forming 2/15m' },
+                { k: 'SMC', v: '—' }, { k: 'Score', v: '-60' }],
+        badges: [{ text: '▼ bearish', tone: 'warn' }],
+        why: 'bearish · opening range forming',
+      }),
     },
   ],
   count: 2, unreadable: 0, tf: '15m', session: '2026-08-31', live: true,
@@ -42,26 +71,31 @@ describe('SessionBoard', () => {
   beforeEach(() => { vi.stubGlobal('fetch', mockFetch(payload())); });
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  it('renders a row per name with its bias and score', async () => {
+  it('renders a chart tile per name, the way the Demand boards do', async () => {
+    // Ajay 2026-08-31: "make this view like Demand view". Tiles come through
+    // the same PatternChart the boards use, inside the same cm-grid.
     const { container } = render(<SessionBoard />);
-    await waitFor(() => expect(screen.getByText('VRSK')).toBeTruthy());
-    expect(screen.getByText('ACMR')).toBeTruthy();
-    // Scoped to the score column: the mood readout prints the same digits, and
-    // a bare getByText would pass on the wrong element.
-    const scores = Array.from(container.querySelectorAll('.sb-score'))
-      .map((n) => n.textContent);
-    expect(scores).toEqual(['92', '-60']);
-    const biases = Array.from(container.querySelectorAll('.sb-bias'))
-      .map((n) => n.textContent);
-    expect(biases[0]).toContain('Bullish');
-    expect(biases[1]).toContain('Bearish');
+    await waitFor(() => expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('ACMR').length).toBeGreaterThan(0);
+    expect(container.querySelector('.cm-grid')).toBeTruthy();
+    expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
+    expect(container.textContent).toContain('▲ bullish');
+    expect(container.textContent).toContain('▼ bearish');
   });
 
   it('shows a forming opening range as forming, not as a breakout', async () => {
     const { container } = render(<SessionBoard />);
-    await waitFor(() => expect(screen.getByText('ACMR')).toBeTruthy());
-    expect(container.textContent).toContain('range forming (2/15m)');
-    expect(container.textContent).toContain('above the 15m range');  // the complete one
+    await waitFor(() => expect(screen.getAllByText('ACMR').length).toBeGreaterThan(0));
+    expect(container.textContent).toContain('forming 2/15m');
+  });
+
+  it('never claims the market is closed while still loading', async () => {
+    // The first build showed "Market is closed — this is the last completed
+    // session" as its loading state, at 09:40 on a Monday (his screenshot).
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})));
+    const { container } = render(<SessionBoard />);
+    expect(container.textContent).toContain('loading…');
+    expect(container.textContent).not.toContain('Market is closed');
   });
 
   it('says LAST SESSION when the market is closed', async () => {
@@ -96,15 +130,15 @@ describe('SessionBoard', () => {
     })));
     const { container } = render(<SessionBoard />);
     await waitFor(() => expect(screen.getByText('THIN')).toBeTruthy());
+    // No tile => a text card naming the reason, still inside the grid.
+    expect(container.querySelector('.sb-nodata')).toBeTruthy();
     expect(container.textContent).toContain('no intraday bars');
     expect(container.textContent).toContain('No read');
-    // a null score renders as a dash, never as 0
-    expect(container.textContent).toContain('—');
   });
 
   it('carries the not-advice line', async () => {
     const { container } = render(<SessionBoard />);
-    await waitFor(() => expect(screen.getByText('VRSK')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0));
     expect(container.textContent).toContain('not investment advice');
   });
 });

@@ -84,6 +84,25 @@ mood score (-100..+100)
 dropping them would make a thin-data day look like a calm one, and `null` must
 never render as `0`, which is a real neutral reading.
 
+## Rendered like the Demand boards (2026-08-31, same day)
+
+Ajay, on the first rows-only build: *"Can you make this view like Demand view
+please with similar information"*. Each row now also carries `tile` — the row
+reshaped into the boards' CmTile — and the tab renders a `cm-grid` of the SAME
+`PatternChart` the Demand tabs use. On the chart: the daily band (green), the
+opening range (neutral — a range has no side, same rule as the 0DTE gamma
+walls; labelled "forming" until complete), this session's FVGs (blue/amber),
+the best SMC order block (purple), and BUY/STOP/TARGET lines from the
+band-anchored signal, else the best SMC leg — never both, two entries on one
+tile is unreadable. Stats: Mood / ORB / SMC grade / Score. A name with no
+intraday bars shows as a text card naming the reason, because dropping it
+would misreport coverage.
+
+Also fixed from the same screenshot: the loading state claimed "Market is
+closed — this is the last completed session" before any data had arrived, at
+09:40 on a Monday. Loading and warming banners are now neutral; only a real
+payload may make session claims.
+
 ## Cost and refresh
 
 One 1-minute fetch per symbol per pass, reused for both the resampled frame and

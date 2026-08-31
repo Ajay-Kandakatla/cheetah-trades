@@ -52,6 +52,7 @@ CACHE_TTL_SEC = 180          # intraday: stale fast, but not once per keystroke
 WORKERS = 8                  # 10 drew Massive read timeouts on 2026-08-31
 MAX_SYMBOLS = 140            # backstop; the union runs ~99 today
 ANALYSIS_TFS = ("15m", "60m")
+TILE_BARS = 56               # ~2 sessions on 15m, ~8 on hourly — board-tile legibility
 DEFAULT_TF = "15m"
 
 # `session_score` weights — CONVENTION, this app's ranking, not a book method.
@@ -121,6 +122,141 @@ def _band_from_tile(tile: dict) -> Optional[dict]:
                 return {"kind": "demand", "lo": float(lo), "hi": float(hi),
                         "mid": round((float(lo) + float(hi)) / 2.0, 4)}
     return None
+
+
+# ── the chart tile ─────────────────────────────────────────────────────────
+def _tile(row: dict, df) -> Optional[dict]:
+    """The row as a chart tile in the boards' shape (chart_maps CmTile).
+
+    Ajay 2026-08-31, on the first rows-only build: "Can you make this view like
+    Demand view please with similar information". The Demand tabs draw a candle
+    chart with the qualifying geometry on it; this draws the SAME tile from the
+    intraday frame — daily band, opening range, this session's gaps, the best
+    SMC order block, and the trade lines where a signal or setup carries them —
+    so the two tabs read as one surface, rendered by the same PatternChart.
+
+    Everything drawn here is already on the row; this function only reshapes.
+    Returns None when there are no bars — the FE falls back to a text card
+    naming the reason rather than an empty chart frame.
+    """
+    if df is None or getattr(df, "empty", True):
+        return None
+    try:
+        from chart_maps.support import _frame_bars
+        bars = _frame_bars(df.tail(TILE_BARS))
+    except Exception as exc:                                # pragma: no cover
+        log.warning("session_board: tile bars for %s failed: %s",
+                    row.get("symbol"), exc)
+        return None
+    if not bars:
+        return None
+
+    bands: list = []
+    band = row.get("band")
+    if band:
+        bands.append({"kind": "demand", "lo": band["lo"], "hi": band["hi"],
+                      "label": "daily band"})
+    orb = row.get("orb") or {}
+    if orb.get("lo") is not None and orb.get("hi") is not None:
+        # `neutral` on purpose: the opening range is a RANGE until price takes
+        # a side — the same reason the 0DTE gamma walls are neutral.
+        bands.append({"kind": "neutral", "lo": orb["lo"], "hi": orb["hi"],
+                      "label": ("opening range" if orb.get("complete")
+                                else "opening range (forming)")})
+    gaps = row.get("session_gaps") or (row.get("fair_value_gaps") or [])[:2]
+    for g in gaps[:2]:
+        kind = "fvg_demand" if g.get("kind") == "demand" else "fvg_supply"
+        bands.append({"kind": kind, "lo": g["lo"], "hi": g["hi"], "label": "FVG"})
+
+    best = None
+    for st in ((row.get("smc") or {}).get("setups") or []):
+        best = st
+        break
+    if best:
+        ob = best.get("order_block") or {}
+        if ob.get("lo") is not None and ob.get("hi") is not None:
+            bands.append({"kind": "order_block", "lo": ob["lo"], "hi": ob["hi"],
+                          "label": "order block"})
+
+    # Trade lines: the band-anchored signal first (it is the tab's own BUY),
+    # else the best SMC setup's aggressive leg. Never both — two entries and
+    # two stops on one small tile is how a chart stops being readable.
+    lines: list = []
+    trade = (row.get("signal") or {}).get("trade") or {}
+    if trade.get("entry") is not None:
+        lines.append({"price": trade["entry"], "label": "BUY", "tone": "buy"})
+        if trade.get("stop") is not None:
+            lines.append({"price": trade["stop"], "label": "STOP", "tone": "stop"})
+        if trade.get("target1") is not None:
+            lines.append({"price": trade["target1"], "label": "TARGET",
+                          "tone": "target"})
+    elif best:
+        entries = best.get("entries") or {}
+        if entries.get("aggressive") is not None:
+            lines.append({"price": entries["aggressive"], "label": "SMC BUY",
+                          "tone": "buy"})
+        if best.get("stop") is not None:
+            lines.append({"price": best["stop"], "label": "STOP", "tone": "stop"})
+        if best.get("target") is not None:
+            lines.append({"price": best["target"], "label": "TARGET",
+                          "tone": "target"})
+
+    m = row.get("mood") or {}
+    ms = m.get("score")
+    smc = row.get("smc") or {}
+    state = row.get("orb_state")
+    orb_v = ("—" if not orb else
+             (f"forming {orb.get('bars', 0)}/{orb.get('minutes', 0)}m"
+              if orb.get("complete") is False else (state or "set")))
+    score = row.get("session_score")
+    stats = [
+        {"k": "Mood", "v": (f"{ms:+.0f}" if isinstance(ms, (int, float)) else "—")},
+        {"k": "ORB", "v": orb_v},
+        {"k": "SMC", "v": (str(smc.get("best_grade"))
+                           if smc.get("best_grade") is not None else "—")},
+        {"k": "Score", "v": (f"{score:.0f}" if isinstance(score, (int, float))
+                             else "—")},
+    ]
+
+    bias = row.get("bias") or "unknown"
+    badges = []
+    if bias == "bullish":
+        badges.append({"text": "▲ bullish", "tone": "good"})
+    elif bias == "bearish":
+        badges.append({"text": "▼ bearish", "tone": "warn"})
+    action = (row.get("signal") or {}).get("action")
+    if action in ("BUY", "SELL"):
+        badges.append({"text": action, "tone": "good" if action == "BUY" else "warn"})
+    if row.get("at_band"):
+        badges.append({"text": "at the daily band", "tone": "good"})
+    if row.get("session_gaps"):
+        badges.append({"text": "gap this session", "tone": "good"})
+    for src_tag in (row.get("sources") or []):
+        badges.append({"text": "Deep Demand" if src_tag == "deep" else "Back in Demand",
+                       "tone": "muted"})
+
+    label = (m.get("label") or "no mood read")
+    parts = [label]
+    if orb:
+        parts.append("opening range forming" if orb.get("complete") is False
+                     else f"{state or 'inside'} the opening range")
+    if row.get("at_band"):
+        parts.append("sitting at the daily band that listed it")
+    why = " · ".join(parts)
+
+    return {
+        "symbol": row["symbol"],
+        "name": row.get("name") or row["symbol"],
+        "href": f"/chart-maps?tab=support&symbol={row['symbol']}",
+        "bars": bars,
+        "bands": bands,
+        "lines": lines,
+        "markers": [],
+        "stats": stats,
+        "why": why,
+        "theme": row.get("theme"),
+        "badges": badges,
+    }
 
 
 # ── one symbol ─────────────────────────────────────────────────────────────
@@ -207,6 +343,7 @@ def read_symbol(sym: str, band: Optional[dict] = None, *,
 
     out["bias"] = _bias(out)
     out["session_score"] = _session_score(out)
+    out["tile"] = _tile(out, df)
     return out
 
 

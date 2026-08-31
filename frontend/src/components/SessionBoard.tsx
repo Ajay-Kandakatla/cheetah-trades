@@ -14,9 +14,9 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
+import { PatternChart } from './PatternChart';
 import {
-  BIAS_META, BIAS_ORDER, biasTally, filterRows, orbLabel, reasonChips,
-  sessionLabel, sourceLabel,
+  BIAS_META, BIAS_ORDER, biasTally, filterRows, sessionLabel,
 } from '../lib/sessionBoard';
 import type { Bias, SessionPayload, SessionRow } from '../lib/sessionBoard';
 
@@ -65,16 +65,28 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   const shown = useMemo(() => filterRows(rows, bias, atBandOnly, setupsOnly),
                         [rows, bias, atBandOnly, setupsOnly]);
 
-  const liveClass = data?.live ? 'cm-session cm-session-open' : 'cm-session cm-session-closed';
+  // Three states, three banners. Before the payload arrives we know NOTHING
+  // about the session, and the first build claimed "Market is closed" during
+  // load — at 09:40 on a Monday (Ajay's screenshot, 2026-08-31). Loading and
+  // warming are neutral; only a real payload gets to make claims.
+  const pending = !data || data.warming;
+  const liveClass = pending ? 'cm-session'
+    : data.live ? 'cm-session cm-session-open' : 'cm-session cm-session-closed';
 
   return (
     <div className="sb">
       <div className={liveClass}>
-        <strong>{data ? sessionLabel(data) : 'loading…'}</strong>
+        <strong>
+          {!data ? 'loading…' : data.warming && !data.count ? 'reading the session…'
+            : sessionLabel(data)}
+        </strong>
         <span>
-          {data?.live
-            ? 'Reading the session as it runs.'
-            : 'Market is closed — this is the last completed session.'}
+          {!data ? ''
+            : data.warming && !data.count
+              ? 'First pass across the demand boards — a cold read takes a couple of minutes.'
+              : data.live
+                ? 'Reading the session as it runs.'
+                : 'Market is closed — this is the last completed session.'}
         </span>
         {!!rows.length && (
           <span className="cm-session-counts">
@@ -137,8 +149,14 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
         </p>
       )}
 
-      <div className="sb-rows">
-        {shown.map((r) => <Row key={r.symbol} row={r} onPick={onPick} />)}
+      {/* Same grid, same tile renderer as the Demand boards (Ajay 2026-08-31:
+        * "make this view like Demand view"). A row whose frame had no bars
+        * still shows — as a text card naming the reason — because dropping it
+        * would misreport coverage. */}
+      <div className="cm-grid">
+        {shown.map((r) => r.tile
+          ? <PatternChart key={r.symbol} tile={r.tile} />
+          : <NoDataCard key={r.symbol} row={r} onPick={onPick} />)}
       </div>
 
       {!!data?.disclaimer && <p className="sb-disc">{data.disclaimer}</p>}
@@ -146,38 +164,21 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   );
 }
 
-function Row({ row, onPick }: { row: SessionRow; onPick?: (s: string) => void }) {
+function NoDataCard({ row, onPick }: { row: SessionRow; onPick?: (s: string) => void }) {
   const meta = BIAS_META[row.bias] || BIAS_META.unknown;
-  const chips = reasonChips(row);
-  const mood = row.mood?.score;
   return (
-    <div className="sb-row">
+    <div className="sb-nodata">
       <button type="button" className="sb-sym" onClick={() => onPick?.(row.symbol)}
               title="Open this name on the Support Levels tab">
         {row.symbol}
       </button>
       <span className="sb-name">{row.name || ''}</span>
-
       <span className="sb-bias" style={{ color: toneColor(meta.tone) }}>
         {meta.dot} {meta.label}
-        {typeof mood === 'number' && <em className="sb-mood"> {mood > 0 ? '+' : ''}{mood}</em>}
       </span>
-
-      <span className="sb-orb">{orbLabel(row.orb, row.orb_state)}</span>
-
-      <span className="sb-chips">
-        {chips.map((c, i) => (
-          <em key={i} className="sb-chip" style={{ color: toneColor(c.tone) }}>{c.text}</em>
-        ))}
-        {!!row.unavailable?.length && (
-          <em className="sb-chip sb-chip-muted">{row.unavailable[0]}</em>
-        )}
+      <span className="sb-chip sb-chip-muted">
+        {row.unavailable?.[0] || 'no intraday bars'}
       </span>
-
-      <span className="sb-score">
-        {row.session_score == null ? '—' : row.session_score}
-      </span>
-      <span className="sb-src">{sourceLabel(row.sources)}</span>
     </div>
   );
 }
