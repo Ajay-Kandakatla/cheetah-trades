@@ -12,6 +12,7 @@ import { FearGreedGauge } from '../components/FearGreedGauge';
 import { GaugeTrend } from '../components/GaugeTrend';
 import { MacroIndicators } from '../components/MacroIndicators';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
+import HotSectors from '../components/HotSectors';
 
 const PageInfo = (
   <>
@@ -85,6 +86,11 @@ export function MarketGaugePage() {
           </p>
         </div>
       </div>
+
+      {/* Where money flowed in the last month — the gauge says HOW MUCH
+        * exposure, this strip says WHERE (Ajay 2026-08-31: "I need this
+        * component market guage tab too"). Same component as Chart Maps. */}
+      <HotSectors />
 
       {!g ? (
         <p className="mono" style={{ opacity: 0.7 }}>…reading the tape</p>

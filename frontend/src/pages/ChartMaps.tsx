@@ -31,6 +31,7 @@ import {
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
 import SessionBoard from '../components/SessionBoard';
+import HotSectors from '../components/HotSectors';
 import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -275,6 +276,11 @@ export function ChartMaps() {
         </h1>
         <p className="cm-sub">Just the charts. One shape per tab — learn it by looking.</p>
       </div>
+
+      {/* Where money flowed in the last month — above the tabs so every
+        * board is read against the same rotation backdrop (Ajay 2026-08-31:
+        * "make sure this scan you did today to be on top of the chart maps"). */}
+      <HotSectors />
 
       <div className="cm-tabs" role="tablist">
         {CM_TABS.map((t) => (

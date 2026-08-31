@@ -73,6 +73,49 @@ async def rotation(
     return JSONResponse({**data, "cached": False})
 
 
+@router.get("/rotation/hot")
+async def rotation_hot(refresh: bool = Query(False)):
+    """The hot ends only — for the strip on Chart Maps and the Market Gauge.
+
+    Ajay 2026-08-31: "make sure this scan you did today to be on top of the
+    chart maps or some section where it says Hot sectors" + "I need this
+    component market guage tab too". Same 30-minute cache as /rotation (same
+    key), a fraction of the payload: the two pages poll this on every visit,
+    and shipping them the full member tables would be weight without signal.
+    """
+    key = (DEFAULT_START, 20_000_000.0, 10.0)
+    hit = _cache.get(key)
+    if (refresh is True) or not hit or (time.time() - hit["ts"]) >= _CACHE_TTL_SEC:
+        try:
+            data = T.build(start=DEFAULT_START)
+        except Exception as exc:
+            log.warning("rotation: hot build failed: %s", exc)
+            return JSONResponse({"error": f"{type(exc).__name__}: {exc}"[:200]},
+                                status_code=503)
+        _cache[key] = {"ts": time.time(), "data": data}
+        hit = _cache[key]
+
+    d = hit["data"]
+
+    def _slim(r):
+        return {k: r.get(k) for k in
+                ("group", "sector", "tier", "index", "n", "rel_21d",
+                 "rel_window", "rel_63d", "pct_positive")}
+
+    hot = d.get("hot") or {}
+    return JSONResponse({
+        "as_of": d.get("as_of"),
+        "start": d.get("start"),
+        "benchmark": (d.get("benchmark") or {}).get("symbol"),
+        "in": [_slim(r) for r in (hot.get("in") or [])],
+        "out": [_slim(r) for r in (hot.get("out") or [])],
+        "ranked_by": hot.get("ranked_by"),
+        "stance": d.get("stance"),
+        "note": d.get("note"),
+        "cached": bool(time.time() - hit["ts"] > 1),
+    })
+
+
 # The backtest is a ~5s full-history refetch, so it is cached hard. The answer
 # moves on the scale of months, not minutes.
 _BT_TTL_SEC = 12 * 60 * 60

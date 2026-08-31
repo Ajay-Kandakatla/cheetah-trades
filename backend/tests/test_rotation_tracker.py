@@ -223,3 +223,59 @@ def test_a_theme_row_has_no_stance():
     claim we have not measured."""
     frames = {"A": bars([("2026-05-29", 100.0), (FRESH, 110.0)])}
     assert T.group_row("space", ["A"], frames, "2026-06-01", FRESH)["stance"] is None
+
+
+# ── sector × cap-tier cohorts (Ajay 2026-08-31: "Like Health care small caps
+# or something please feel free to reinvent the wheel") ─────────────────────
+def test_cohorts_intersect_sector_with_index_membership():
+    sectors = {"Healthcare": [f"H{i}" for i in range(20)],
+               "Technology": [f"T{i}" for i in range(20)]}
+    tiers = {"large": {f"H{i}" for i in range(10)} | {f"T{i}" for i in range(20)},
+             "small": {f"H{i}" for i in range(10, 20)}}
+    out = T._cohort_members(sectors, tiers)
+    labels = {c["label"]: c for c in out}
+    assert "Healthcare · large caps" in labels
+    assert "Healthcare · small caps" in labels
+    assert "Technology · large caps" in labels
+    # Technology has no small-cap members — the cohort must not exist at all.
+    assert "Technology · small caps" not in labels
+    assert set(labels["Healthcare · small caps"]["members"]) == {
+        f"H{i}" for i in range(10, 20)}
+    assert labels["Healthcare · small caps"]["index"] == "S&P 600"
+
+
+def test_a_cohort_below_the_member_floor_is_dropped_not_shown():
+    """A median over 3 names is noise wearing a number."""
+    sectors = {"Energy": [f"E{i}" for i in range(T.MIN_COHORT_N - 1)]}
+    tiers = {"large": {f"E{i}" for i in range(T.MIN_COHORT_N - 1)}}
+    assert T._cohort_members(sectors, tiers) == []
+
+
+def test_cohorts_tier_before_sampling_and_sample_deterministically():
+    """Tiering after the sector stride would starve small-cap cohorts by
+    whichever names the stride happened to keep. And the sample must be a
+    stride, never random — the same request twice returns the same numbers."""
+    pool = [f"S{i:03d}" for i in range(100)]
+    sectors = {"Industrials": pool}
+    tiers = {"small": set(pool)}
+    a = T._cohort_members(sectors, tiers)
+    b = T._cohort_members(sectors, tiers)
+    assert a == b
+    assert len(a[0]["members"]) == T.COHORT_SAMPLE
+    assert a[0]["members"] == sorted(a[0]["members"])  # stride keeps order
+
+
+def test_missing_tier_lists_mean_no_cohorts_never_a_crash():
+    assert T._cohort_members({"Tech": ["A", "B"]}, {}) == []
+
+
+def test_the_hot_ends_rank_by_rel_21d_and_skip_unrankable_rows():
+    """"Right now" is a 21-day question. A row whose 21d could not be computed
+    must not sort as hottest — None is not a number."""
+    rows = [
+        {"group": "A", "rel_21d": 4.0}, {"group": "B", "rel_21d": -6.0},
+        {"group": "C", "rel_21d": None}, {"group": "D", "rel_21d": 1.0},
+    ]
+    ranked = sorted((r for r in rows if r.get("rel_21d") is not None),
+                    key=lambda r: -r["rel_21d"])
+    assert [r["group"] for r in ranked] == ["A", "D", "B"]

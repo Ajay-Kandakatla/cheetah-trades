@@ -11330,3 +11330,33 @@ a.tk-link:hover   { color: inherit; }
 .cm-phase-hint {
   font-size: 0.74rem; color: var(--cm-slate, #8595ad); margin-left: 0.3rem;
 }
+
+/* Hot sectors strip (Ajay 2026-08-31) — Chart Maps top + Market Gauge. */
+.hs {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.45rem 0.75rem;
+  margin: 0 0 0.7rem; padding: 0.5rem 0.7rem; border-radius: 8px;
+  background: var(--bg-raised, #181c24);
+  border: 1px solid var(--rule, #2a2f3a);
+  font-size: 0.76rem; line-height: 1.5;
+}
+.hs-head { font-weight: 700; color: var(--ink, #e7e7e7); white-space: nowrap; }
+.hs-sub {
+  font-style: normal; font-weight: 400; color: var(--cm-slate, #8595ad);
+  margin-left: 0.45rem;
+}
+.hs-group { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; }
+.hs-tag {
+  font-style: normal; font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.hs-tag-in { color: var(--cm-green, #22c55e); }
+.hs-tag-out { color: var(--cm-red, #dc2626); }
+.hs-chip {
+  border-radius: 999px; padding: 0.1rem 0.55rem; font-weight: 600;
+  background: var(--bg, #0f1115); border: 1px solid var(--rule, #2a2f3a);
+  white-space: nowrap;
+}
+.hs-chip-in { color: var(--cm-green, #22c55e); }
+.hs-chip-out { color: var(--cm-red, #dc2626); }
+.hs-more { margin-left: auto; color: var(--cm-slate, #8595ad); white-space: nowrap; }
+.hs-more:hover { color: var(--ink, #e7e7e7); }

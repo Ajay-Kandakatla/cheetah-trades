@@ -100,6 +100,62 @@ SECTOR_ETF = {
     "Real Estate": "XLRE", "Communication Services": "XLC",
 }
 
+# ── Cap-tier cohorts (Ajay 2026-08-31) ──────────────────────────────────────
+# "Feel free to categorize more sectors in a similar faction.. Like Health care
+# small caps or something please feel free to reinvent the wheel."
+#
+# Tier = S&P index membership, NOT a computed market cap: the S&P committee
+# already maintains the large/mid/small split (500/400/600), the lists are
+# cached 30 days in sepa.universe, and membership costs zero API calls — where
+# a shares-outstanding × price cap would cost one Massive reference call per
+# name per process. The label says which index so the tier is auditable.
+CAP_TIERS = (("large", "S&P 500"), ("mid", "S&P 400"), ("small", "S&P 600"))
+
+# A median over a handful of names is noise wearing a number. Cohorts with
+# fewer kept members than this are dropped and counted, not shown.
+MIN_COHORT_N = 8
+
+# Per-cohort sample cap — same deterministic stride as the sector grid.
+COHORT_SAMPLE = 25
+
+
+def _tier_sets() -> dict:
+    """{tier: set(symbols)} from the cached index lists. {} on any failure —
+    cohorts then simply do not render, the sector grid is untouched."""
+    try:
+        from sepa import universe as U
+        return {"large": {s.upper() for s in (U.fetch_sp500() or [])},
+                "mid": {s.upper() for s in (U.fetch_sp400() or [])},
+                "small": {s.upper() for s in (U.fetch_sp600() or [])}}
+    except Exception as exc:                                # pragma: no cover
+        log.warning("rotation: tier lists unavailable: %s", exc)
+        return {}
+
+
+def _cohort_members(sectors: dict, tiers: dict,
+                    sample: int = COHORT_SAMPLE) -> list:
+    """[(label, sector, tier, members)] — sector × cap-tier intersections.
+
+    Tiering happens BEFORE sampling, on the full sector membership: sampling
+    first and tiering after would leave small-cap cohorts starved by whichever
+    names the sector stride happened to pick.
+    """
+    out = []
+    for sec, syms in sectors.items():
+        pool = sorted({s.upper() for s in syms})
+        for tier, index_name in CAP_TIERS:
+            members = [s for s in pool if s in (tiers.get(tier) or ())]
+            if len(members) < MIN_COHORT_N:
+                continue
+            if len(members) > sample:
+                step = len(members) / sample
+                members = [members[int(i * step)] for i in range(sample)]
+            label = f"{sec} · {tier} caps"
+            out.append({"label": label, "sector": sec, "tier": tier,
+                        "index": index_name, "members": members})
+    return out
+
+
 # Safe-haven proxies tracked outside the sector grid. Ajay: "make sure few other
 # sectors that wallstreet rotates in to historically. Like safe haves."
 HAVEN_PROXY = {
@@ -313,10 +369,17 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
 
     themes = {k: list(v) for k, v in U.THEME_UNIVERSE.items()}
 
+    # Sector × cap-tier cohorts (2026-08-31). Tiered from the FULL sector
+    # membership before any sampling, so small-cap cohorts are not starved by
+    # the sector stride.
+    cohorts = _cohort_members(sectors, _tier_sets())
+
     wanted = {BENCHMARK, BENCHMARK_FALLBACK}
     wanted |= set(SECTOR_ETF.values()) | set(HAVEN_PROXY.values())
     for group in list(trimmed.values()) + list(themes.values()):
         wanted |= set(group)
+    for c in cohorts:
+        wanted |= set(c["members"])
     frames = _load(wanted)
 
     freshest = max((_last_date(b) for b in frames.values() if b), default="")
@@ -342,8 +405,14 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
     haven_rows = _relativize(
         [group_row(label, [sym], frames, start, freshest)
          for label, sym in HAVEN_PROXY.items()], bench)
+    cohort_rows = _relativize(
+        [{**group_row(c["label"], c["members"], frames, start, freshest),
+          "sector": c["sector"], "tier": c["tier"], "index": c["index"]}
+         for c in cohorts], bench)
+    # A cohort can shrink below the floor AFTER dead tickers drop out.
+    cohort_rows = [r for r in cohort_rows if (r.get("n") or 0) >= MIN_COHORT_N]
 
-    for rows in (sector_rows, theme_rows, haven_rows):
+    for rows in (sector_rows, theme_rows, haven_rows, cohort_rows):
         rows.sort(key=lambda r: (r.get("rel_window") is None,
                                  -(r.get("rel_window") or 0)))
 
@@ -352,6 +421,18 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
                 if r.get("stance") == kind and r.get("rel_window") is not None]
         return _median(vals)
 
+    # The "hot" ends, ranked by the LAST MONTH (rel_21d) rather than the full
+    # window — "where is the money flowing RIGHT NOW" is a 21-day question,
+    # while the tables stay sorted by the window like everything else. Only
+    # cohorts with a computable 21d rank; a None must not sort as hottest.
+    ranked = sorted((r for r in cohort_rows if r.get("rel_21d") is not None),
+                    key=lambda r: -r["rel_21d"])
+    hot = {
+        "in": ranked[:5],
+        "out": list(reversed(ranked[-5:])) if len(ranked) > 5 else [],
+        "ranked_by": "rel_21d",
+    }
+
     return {
         "start": start,
         "as_of": freshest,
@@ -359,6 +440,8 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "sectors": sector_rows,
         "themes": theme_rows,
         "havens": haven_rows,
+        "cohorts": cohort_rows,
+        "hot": hot,
         # Ajay's "safe havens vs in general" read, as a single number each.
         "stance": {"defensive": _stance("defensive"),
                    "cyclical": _stance("cyclical"),
