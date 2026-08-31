@@ -346,3 +346,57 @@ re-confirmed rather than "fixed":
   them. Searching only the drawn lists is what gave KLAC an implausible 11.8R.
 
 *Decision-support only. Not investment advice.*
+
+---
+
+## Reaching vs already reached (2026-08-31)
+
+Ajay: *"What I am seeing in Demand zones and Deep Demand zones are already
+reached Demand zones and bouncing.. I need the ones that are about to reach
+and catch them"*, then *"Be the UX expert and find a way to show me both and
+give me toggle reaching vs already reached."*
+
+Both demand boards now carry a segmented toggle — **Already reached** (default,
+the historical behaviour) vs **Approaching** — URL-backed as `phase=approaching`.
+
+### Back in Demand: a fourth in-scan predicate
+
+`approaching_read` (pure, `demand_reentry.py`) qualifies a scan record when:
+
+* price is strictly **above** the entry band's top (inside = reached board's
+  territory; below = breakdown),
+* the band top is within `APPROACH_NEAR_PCT` (5%) below price,
+* price has **fallen** ≥ `APPROACH_MIN_DRIFT_PCT` (0.5%) over the last
+  `APPROACH_DRIFT_BARS` (5) sessions — the load-bearing half. Distance alone
+  cannot tell an approach from a departure: a name 3% above its band that
+  bounced yesterday sits at the same distance as one falling into it, and
+  showing it as "about to reach" would put the bounce he already missed on the
+  catch-it-early board (`test_a_name_rising_away_from_the_band_is_departing…`),
+* the **same quality bar** as the reached board (MIN_TOUCHES,
+  MIN_ZONE_STRENGTH) and the falling-knife guard — a weaker standard here
+  would make the toggle a knife catalogue,
+* with no close series the answer is None: "could not measure the drift" must
+  never render as "approaching".
+
+Captured in the same scan loop as `deep_rows`/`supply_rows` (fourth predicate,
+zero extra price loads), served as `approaching_rows` on the payload.
+
+**Ranking**: nearest band first, harder drift breaking ties. The cheetah
+composite (flow × velocity × R:R) deliberately does **not** apply — the
+approach board's question is *which band gets hit first*, and a strong-flow
+name 4.8% out ranking above a neutral one 0.3% out would answer a different
+question than the toggle promises. The R:R floor is also not applied to this
+list: `rr` at spot describes a fill the board's whole premise says has not
+happened yet.
+
+### Deep Demand: a filter along an existing line
+
+`deep_demand.read` already classified every row `in` (inside the second band)
+vs `near` (falling toward it within NEAR_PCT), and the old board interleaved
+them. The toggle splits along that existing line — reached = `in`,
+approaching = `near`. A filter, not a new predicate: nothing about what
+qualifies changed, and the second band's label says which moment it shows
+("entering" vs "approaching"). Three tests that locked the mixed board were
+updated to the split contract, per phase.
+
+*Decision-support only. Not investment advice.*

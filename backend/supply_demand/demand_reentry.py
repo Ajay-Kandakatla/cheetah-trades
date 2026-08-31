@@ -149,6 +149,20 @@ VENUE_QUOTE_PAGES = 4
 # anything further means price has broken below the band, not approached it.
 ENTRY_ABOVE_TOL_PCT = 1.5
 
+# ── "Approaching" (Ajay 2026-08-31) ──────────────────────────────────────────
+# "What I am seeing in Demand zones and Deep Demand zones are already reached
+#  Demand zones and bouncing.. I need the ones that are about to reach and
+#  catch them..."
+#
+# The reached board answers "price is back INSIDE a tested band". This asks the
+# question one step earlier: price is still ABOVE the band, close, and FALLING
+# toward it. Both halves matter — distance alone cannot tell an approach from a
+# departure, because a name 3% above its band that bounced yesterday is LEAVING.
+# The drift test is what separates them.
+APPROACH_NEAR_PCT = 5.0        # band top within this % below price
+APPROACH_DRIFT_BARS = 5        # sessions the direction is measured over
+APPROACH_MIN_DRIFT_PCT = 0.5   # must have FALLEN at least this % over those bars
+
 # How far BELOW price a demand band may sit and still be an ENTRY rather than
 # just distant support.
 #
@@ -328,6 +342,7 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
     label = UNIVERSES.get(ukey, (ukey,))[0]
     return {"rows": [], "n": 0, "supply_rows": [], "supply_n": 0,
             "deep_rows": [], "deep_n": 0,
+            "approaching_rows": [], "approaching_n": 0,
             "scanned": 0, "universe": 0,
             "universe_key": ukey, "universe_label": label,
             "universe_note": f"{label} — first scan running",
@@ -644,6 +659,62 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
         "bars_since_stop_hit": bars_since_hit,
         "lowest_low_pct_below_stop": worst_below,
         "stop_hit_lookback_bars": STOP_HIT_LOOKBACK_BARS,
+    }
+
+
+def approaching_read(rec: dict, closes: Optional[list] = None,
+                     near_pct: float = APPROACH_NEAR_PCT,
+                     drift_bars: int = APPROACH_DRIFT_BARS,
+                     min_drift_pct: float = APPROACH_MIN_DRIFT_PCT) -> Optional[dict]:
+    """Is this scan record falling TOWARD its tested demand band? PURE.
+
+    Qualifies when ALL of:
+      * price is strictly ABOVE the entry band's top (inside is the reached
+        board's territory; below is a breakdown)
+      * the band top is within `near_pct` below price
+      * price has FALLEN at least `min_drift_pct` over the last `drift_bars`
+        sessions — the half that distinguishes an approach from a departure.
+        Without it a name that bounced off this band YESTERDAY and is rising
+        away would show as "about to reach" at the same 3% distance.
+      * the band passes the SAME quality bar as the reached board
+        (MIN_TOUCHES / MIN_ZONE_STRENGTH) and the falling-knife guard passes —
+        an approach board with a weaker standard than the arrival board would
+        just be a knife catalogue.
+
+    `closes` is the recent close series (oldest first). With no series the
+    drift cannot be measured and the answer is None — "could not tell" must
+    not render as "approaching".
+    """
+    ez = rec.get("entry_zone")
+    last = rec.get("last_price")
+    if not ez or last is None or not rec.get("trend_ok"):
+        return None
+    hi, lo = ez.get("hi"), ez.get("lo")
+    if hi is None or lo is None or last <= hi:
+        return None                        # inside or below: not an approach
+    if (ez.get("touches") or 0) < MIN_TOUCHES:
+        return None
+    if (ez.get("strength") or 0) < MIN_ZONE_STRENGTH:
+        return None
+    dist_pct = (last - hi) / last * 100.0
+    if dist_pct > near_pct:
+        return None
+    if not closes or len(closes) <= drift_bars:
+        return None
+    try:
+        ref = float(closes[-(drift_bars + 1)])
+        drift_pct = (float(closes[-1]) - ref) / ref * 100.0
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    if drift_pct > -float(min_drift_pct):
+        return None                        # flat or rising = departing
+    return {
+        "state": "approaching",
+        "dist_pct": round(dist_pct, 2),
+        "drift_pct": round(drift_pct, 2),
+        "drift_bars": int(drift_bars),
+        "band": {"lo": lo, "hi": hi,
+                 "touches": ez.get("touches"), "strength": ez.get("strength")},
     }
 
 
@@ -1403,6 +1474,7 @@ def scan(force: bool = False, limit: Optional[int] = None,
     rows, scanned, errors = [], 0, 0
     supply_rows: list = []          # the inverse board, same pass
     deep_rows: list = []            # second-level arrivals, same pass
+    approaching_rows: list = []     # falling TOWARD a band, same pass (2026-08-31)
     total = len(syms)
     _publish_progress(ukey, "scanning", started_at=t0, current=0, total=total,
                       hits=0, errors=0, symbol=None, universe_label=ulabel)
@@ -1446,6 +1518,28 @@ def scan(force: bool = False, limit: Optional[int] = None,
                     supply_rows.append(r2)
             except Exception as exc:                          # pragma: no cover
                 log.debug("into-supply: collecting %s failed: %s", sym, exc)
+            # Fourth predicate, same record, same loop (Ajay 2026-08-31:
+            # "I need the ones that are about to reach and catch them"). The
+            # closes come off the series the chart already carries — read
+            # BEFORE the pops below, no extra price load.
+            try:
+                _closes = [b.get("close") for b in (rec.get("series") or [])
+                           if b.get("close") is not None]
+                a4 = approaching_read(rec, _closes)
+                if a4:
+                    r4 = dict(rec)
+                    r4.pop("series", None)
+                    r4["approaching"] = a4
+                    try:
+                        from sepa import volume as _vol4
+                        from . import deep_demand as _deep4
+                        r4["inflow"] = _deep4.inflow_read(
+                            _vol4.analyze(prices.load_prices(sym)))
+                    except Exception:
+                        r4["inflow"] = None
+                    approaching_rows.append(r4)
+            except Exception as exc:                          # pragma: no cover
+                log.debug("approaching: collecting %s failed: %s", sym, exc)
             # Third predicate, same record, same loop. Trend-gate-independent
             # on purpose: the penalized names this screen exists for are
             # exactly the ones is_reentry refuses (Ajay 2026-08-25).
@@ -1497,6 +1591,11 @@ def scan(force: bool = False, limit: Optional[int] = None,
     except Exception as exc:                                  # pragma: no cover
         log.debug("deep-demand: sort failed: %s", exc)
     deep_rows = deep_rows[:_deep.MAX_ROWS]
+    # Approaching: closest to arrival first — this board's urgency IS the
+    # distance. Ties break on how hard it is falling (faster drift first).
+    approaching_rows.sort(key=lambda r: (
+        (r.get("approaching") or {}).get("dist_pct") or 99.0,
+        (r.get("approaching") or {}).get("drift_pct") or 0.0))
 
     # Record the FULL qualifying list before anything trims it (Ajay 2026-08-17:
     # "Can you maintain history of our In deman page please… Want you to track
@@ -1540,6 +1639,11 @@ def scan(force: bool = False, limit: Optional[int] = None,
         # supply_rows below: a separate key touches no existing consumer.
         "deep_rows": deep_rows,
         "deep_n": deep_total,
+        # Names falling TOWARD a tested band, same pass (Ajay 2026-08-31:
+        # "the ones that are about to reach"). Separate key, same isolation
+        # rationale: no existing consumer of `rows` changes by construction.
+        "approaching_rows": approaching_rows,
+        "approaching_n": len(approaching_rows),
         # The inverse board, from the same pass. A separate key so every
         # existing consumer of `rows` — the page, the R:R floor, the limit, the
         # history ledger — is untouched by construction.

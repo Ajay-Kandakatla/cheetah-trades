@@ -107,6 +107,16 @@ export function ChartMaps() {
   const supportWindow = parseWindow(params.get('window'));
   const supportTf = parseTf(params.get('tf'));
   const universe = UNIVERSE;
+  /* Reaching vs already reached (Ajay 2026-08-31: "give me toggle reaching vs
+   * already reached"). URL-backed so a refresh or a shared link keeps the
+   * moment being looked at; only the non-default value is written. */
+  const phase = params.get('phase') === 'approaching' ? 'approaching' : 'reached';
+  const setPhase = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === 'approaching') next.set('phase', 'approaching');
+    else next.delete('phase');
+    setParams(next, { replace: true });
+  };
   const [gabbarLevel, setGabbarLevel] = useState('all');
   const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(false);
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
@@ -135,7 +145,7 @@ export function ChartMaps() {
     const q = boardQuery({ tab, limit: tab === 'gabbar' ? 80 : 24, days,
                            universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
-                           gabbarTouchingOnly });
+                           gabbarTouchingOnly, phase });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -147,7 +157,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -277,6 +287,29 @@ export function ChartMaps() {
       </div>
 
       <p className="cm-blurb">{TAB_META[tab].blurb}</p>
+
+      {/* Reaching vs already reached — only the two demand boards have the two
+        * moments. Segmented, not a checkbox: the two states are a choice of
+        * WHICH list, not an on/off refinement of one list. */}
+      {(tab === 'zones' || tab === 'deep_demand') && (
+        <div className="cm-phase" role="tablist" aria-label="Zone phase">
+          <button type="button" role="tab" aria-selected={phase === 'reached'}
+                  className={`cm-phase-btn${phase === 'reached' ? ' cm-phase-on' : ''}`}
+                  onClick={() => setPhase('reached')}>
+            ✅ Already reached
+          </button>
+          <button type="button" role="tab" aria-selected={phase === 'approaching'}
+                  className={`cm-phase-btn${phase === 'approaching' ? ' cm-phase-on' : ''}`}
+                  onClick={() => setPhase('approaching')}>
+            🎯 Approaching
+          </button>
+          <span className="cm-phase-hint">
+            {phase === 'approaching'
+              ? 'Still above the band, close, and falling toward it — set the order before it arrives. Closest first.'
+              : 'Back inside a tested band and holding.'}
+          </span>
+        </div>
+      )}
 
       {/* The one tab that is not a board. Everything below — the sort/tier
         * controls, the scan progress, the tile grid, the footer counts —

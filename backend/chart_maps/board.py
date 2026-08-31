@@ -1272,7 +1272,14 @@ def _supply_disclaimer() -> str:
 
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
-               sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER) -> dict:
+               sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER,
+               phase: str = "reached") -> dict:
+    # One board, two moments (Ajay 2026-08-31: "find a way to show me both
+    # and give me toggle reaching vs already reached"). `reached` is the
+    # historical board — price back INSIDE a tested band. `approaching` is the
+    # same scan's fourth predicate — price still ABOVE the band, close, and
+    # FALLING toward it — so the order can be set BEFORE the arrival instead
+    # of read about afterward. Same cache, zero extra scan cost.
     from supply_demand import demand_reentry as D
 
     data = D.cached_or_warm(universe, limit=LIMIT_MAX)
@@ -1288,7 +1295,10 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 "progress": data.get("progress"),
                 "note": "scanning for demand-zone pullbacks…"}
 
-    rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
+    if phase == "approaching":
+        rows = data.get("approaching_rows") or []
+    else:
+        rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
     flash_syms = _flash_symbols()
     tiles = []
     for r in rows:
@@ -1325,9 +1335,14 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                         if r.get("bars_since_above") is not None else "—")}]
 
         fell = _num(r.get("fell_from_pct"))
-        why = ((r.get("verdict") or {}).get("entry_read")
-               or (f"pulled back {fell:.0f}% into a demand zone it had left"
-                   if fell is not None else "back inside a demand zone"))
+        appr = r.get("approaching") if phase == "approaching" else None
+        if appr:
+            why = (f"falling toward a tested band — {appr['dist_pct']}% above it, "
+                   f"down {abs(appr['drift_pct']):.1f}% in {appr['drift_bars']} sessions")
+        else:
+            why = ((r.get("verdict") or {}).get("entry_read")
+                   or (f"pulled back {fell:.0f}% into a demand zone it had left"
+                       if fell is not None else "back inside a demand zone"))
 
         tiles.append({
             "symbol": sym,
@@ -1358,7 +1373,12 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "why": why,
             "theme": _theme(sym),
             "_flow": r.get("inflow"),
-            "badges": _zone_badges(r)
+            "badges": (([
+                # The approach board's own facts lead: how far, how fast.
+                {"text": f"\u2192 {appr['dist_pct']}% above the band", "tone": "warn"},
+                {"text": f"\u2193 {abs(appr['drift_pct']):.1f}% / {appr['drift_bars']}d",
+                 "tone": "muted"}] if appr else [])
+                + _zone_badges(r))
                 + ([fb] if (fb := _flow_badge(r.get("inflow"))) else [])
                 + (
                 # ⚡ Trade Flash (Ajay 2026-08-24): a >= $250k one-sided burst
@@ -1367,7 +1387,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 # the Tape tab and the Supply & Demand flash strip.
                 [{"text": "⚡ Tape burst at zone", "tone": "good"}]
                 if sym in flash_syms else []),
-            "_score": rr or 0.0,
+            # Approaching ranks by urgency: nearest band first. The reached
+            # board keeps ranking by the quality of the plan (R:R).
+            "_score": ((-appr["dist_pct"]) if appr else (rr or 0.0)),
             "_m": tile_metrics(r),
         })
     # Cheetahs first (Ajay 2026-08-25: "fix the ranking of these Cheetahs on
@@ -1376,17 +1398,24 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     # the whole matched set (<= LIMIT_MAX rows, process-cached) is enriched
     # BEFORE ranking — an explicit dropdown sort still overrides all of this.
     attach_velocity(tiles)
-    for t in tiles:
-        f = {"inflow": 2.0, None: 1.0, "neutral": 1.0,
-             "distribution": 0.0}.get(((t.get("_flow") or {}).get("state")), 1.0)
-        v = (t.get("_m") or {}).get("velocity")
-        vlead = (2.0 if v is not None and v >= VELOCITY_FAST_PCT else
-                 0.0 if v is not None and v <= VELOCITY_SLOW_PCT else 1.0)
-        t["_score"] = f * 10000.0 + vlead * 1000.0 + (t.get("_score") or 0.0)
+    if phase != "approaching":
+        # Cheetah composite (flow × velocity × R:R) ranks the REACHED board.
+        # The approaching board must NOT take it: its whole question is "which
+        # band gets hit first", and a strong-flow name 4.8% out ranking above
+        # a neutral one 0.3% out would answer a different question than the
+        # toggle promises.
+        for t in tiles:
+            f = {"inflow": 2.0, None: 1.0, "neutral": 1.0,
+                 "distribution": 0.0}.get(((t.get("_flow") or {}).get("state")), 1.0)
+            v = (t.get("_m") or {}).get("velocity")
+            vlead = (2.0 if v is not None and v >= VELOCITY_FAST_PCT else
+                     0.0 if v is not None and v <= VELOCITY_SLOW_PCT else 1.0)
+            t["_score"] = f * 10000.0 + vlead * 1000.0 + (t.get("_score") or 0.0)
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "demand")
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
+            "phase": ("approaching" if phase == "approaching" else "reached"),
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -1895,7 +1924,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                       universe: str = "full",
                       themes_first: bool = THEMES_FIRST_DEFAULT,
                       sort: str = DEFAULT_SORT,
-                      min_tier: str = DEFAULT_MIN_TIER) -> dict:
+                      min_tier: str = DEFAULT_MIN_TIER,
+                      phase: str = "reached") -> dict:
     """Deep Demand: broke the FIRST demand band, entering the SECOND — and
     Bonde sales say the business didn't break with the price.
 
@@ -1922,6 +1952,14 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 "note": "scanning for second-level demand arrivals…"}
 
     rows = data.get("deep_rows") or []
+    # The toggle (Ajay 2026-08-31). deep_demand.read already classifies every
+    # row "in" (inside the second band) vs "near" (falling toward it within
+    # NEAR_PCT), and the old board mixed the two. The toggle splits along that
+    # existing line: reached = in, approaching = near. A filter, not a new
+    # predicate — nothing about what qualifies changed.
+    want_state = "near" if phase == "approaching" else "in"
+    rows = [r for r in rows
+            if ((r.get("deep_demand") or {}).get("state") == want_state)]
     snaps = research.sales_snapshot([r.get("symbol") for r in rows if r.get("symbol")])
     flash_syms = _flash_symbols()
 
@@ -1948,7 +1986,9 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         if _num(second.get("lo")) is not None:
             bands.append({"kind": "demand", "lo": _num(second.get("lo")),
                           "hi": _num(second.get("hi")),
-                          "label": "2nd demand · entering"})
+                          "label": ("2nd demand · approaching"
+                                    if phase == "approaching"
+                                    else "2nd demand · entering")})
 
         lines = []
         plan = r.get("plan") or {}
@@ -2044,6 +2084,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         else:
             flow_counts["neutral"] += 1
     return {"tiles": out, **meta,
+            "phase": ("approaching" if phase == "approaching" else "reached"),
             "matched": len(rows),
             "gex_as_of": gex_as_of,
             "flow_counts": flow_counts,
@@ -2685,7 +2726,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
-          touching_only: bool = False) -> dict:
+          touching_only: bool = False, phase: str = "reached") -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -2705,13 +2746,15 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     if t == "earnings":
         out = earnings_tiles(limit, days)
     elif t == "zones":
-        out = zone_tiles(limit, days, universe, themes_first, srt, tier)
+        out = zone_tiles(limit, days, universe, themes_first, srt, tier,
+                         phase=phase)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
-        out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier)
+        out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier,
+                                phase=phase)
     elif t == "undervalue":
         out = undervalue_tiles(limit, days, themes_first, srt, tier)
     elif t == "gabbar":

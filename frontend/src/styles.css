@@ -11310,3 +11310,23 @@ a.tk-link:hover   { color: inherit; }
   background: var(--bg-raised, #181c24); font-size: 0.8rem; min-height: 120px;
   justify-content: center;
 }
+
+/* Reaching vs reached toggle on the demand boards (Ajay 2026-08-31). */
+.cm-phase {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  margin: 0 0 0.6rem;
+}
+.cm-phase-btn {
+  cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  background: none; color: var(--cm-slate, #8595ad);
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 999px;
+  padding: 0.28rem 0.85rem;
+}
+.cm-phase-btn:hover { color: var(--ink, #e7e7e7); }
+.cm-phase-on {
+  color: var(--ink, #e7e7e7); background: var(--bg-raised, #181c24);
+  border-color: var(--cm-green, #22c55e);
+}
+.cm-phase-hint {
+  font-size: 0.74rem; color: var(--cm-slate, #8595ad); margin-left: 0.3rem;
+}

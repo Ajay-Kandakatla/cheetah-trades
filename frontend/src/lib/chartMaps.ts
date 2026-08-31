@@ -259,8 +259,14 @@ export function boardQuery(p: {
   universe?: string; themesFirst?: boolean; pattern?: string | null;
   source?: WinnerSource; minerviniOnly?: boolean; sort?: string;
   minTier?: string; gabbarLevel?: string; gabbarTouchingOnly?: boolean;
+  phase?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
+  // Reaching vs already reached (Ajay 2026-08-31). Only the two demand boards
+  // have the two moments, and only the non-default rides on the URL.
+  if ((p.tab === 'zones' || p.tab === 'deep_demand') && p.phase === 'approaching') {
+    q.set('phase', 'approaching');
+  }
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe

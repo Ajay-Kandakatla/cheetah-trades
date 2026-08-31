@@ -356,3 +356,33 @@ describe('tile links carry the tab back (2026-08-25)', () => {
     expect(q.get('from_q')).toBe('tab=vcp&sort=rs');
   });
 });
+
+/* ── reaching vs already reached (Ajay 2026-08-31) ─────────────────────────── */
+describe('the phase toggle', () => {
+  it('shows on the two demand boards and nowhere else', async () => {
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByRole('tab', { name: /Approaching/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Already reached/ })).toBeInTheDocument();
+
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=vcp']}><ChartMaps /></MemoryRouter>);
+    // VCP has one moment only — no toggle.
+    expect(screen.getAllByRole('tab', { name: /Approaching/ })).toHaveLength(1); // only the zones render above
+  });
+
+  it('sends phase=approaching to the board and writes it to the URL', async () => {
+    const fetchSpy = vi.mocked(fetch as any);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones&phase=approaching']}><ChartMaps /></MemoryRouter>);
+    await screen.findAllByRole('tab', { name: /Approaching/ });
+    const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) => u.includes('tab=zones') && u.includes('phase=approaching')))
+      .toBe(true);
+  });
+
+  it('the default sends no phase param at all', async () => {
+    const fetchSpy = vi.mocked(fetch as any);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    await screen.findAllByRole('tab', { name: /Already reached/ });
+    const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) => u.includes('tab=zones') && !u.includes('phase='))).toBe(true);
+  });
+});

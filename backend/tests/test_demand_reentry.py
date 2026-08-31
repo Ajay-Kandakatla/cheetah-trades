@@ -1858,3 +1858,71 @@ def test_thin_flag_does_not_change_which_rows_the_floor_keeps():
                      "thin_across_band": True}}
     kept = dr._apply_rr_floor({"rows": [thin]}, 1.0)
     assert kept["rows"] == [thin]
+
+
+# ---------------------------------------------------------------------------
+# Approaching (Ajay 2026-08-31: "I need the ones that are about to reach and
+# catch them" + "give me toggle reaching vs already reached").
+# ---------------------------------------------------------------------------
+
+def _appr_rec(last=103.0, hi=100.0, lo=98.0, touches=3, strength=60.0,
+              trend_ok=True):
+    return {"last_price": last, "trend_ok": trend_ok,
+            "entry_zone": {"lo": lo, "hi": hi,
+                           "touches": touches, "strength": strength}}
+
+
+def _falling(n=30, start=110.0, end=103.0):
+    step = (end - start) / (n - 1)
+    return [start + i * step for i in range(n)]
+
+
+def test_approaching_qualifies_a_name_falling_toward_a_tested_band():
+    out = dr.approaching_read(_appr_rec(), _falling())
+    assert out is not None
+    assert out["state"] == "approaching"
+    assert 0 < out["dist_pct"] <= dr.APPROACH_NEAR_PCT
+    assert out["drift_pct"] < 0
+
+
+def test_a_name_rising_away_from_the_band_is_departing_not_approaching():
+    """THE test this feature stands on. Distance alone cannot tell the two
+    apart: a name 3% above its band that bounced yesterday sits at the same
+    distance as one falling into it — and showing it as "about to reach"
+    would put the bounce he already missed on the catch-it-early board."""
+    rising = list(reversed(_falling()))          # same prices, upward
+    assert dr.approaching_read(_appr_rec(), rising) is None
+
+
+def test_flat_drift_is_not_an_approach_either():
+    flat = [103.0] * 30
+    assert dr.approaching_read(_appr_rec(), flat) is None
+
+
+def test_inside_or_below_the_band_is_not_approaching():
+    # inside → the reached board's territory
+    assert dr.approaching_read(_appr_rec(last=99.0), _falling(end=99.0)) is None
+    # below → a breakdown, nobody's entry
+    assert dr.approaching_read(_appr_rec(last=97.0), _falling(end=97.0)) is None
+
+
+def test_too_far_above_the_band_is_watchlist_not_approach():
+    assert dr.approaching_read(_appr_rec(last=110.0, hi=100.0),
+                               _falling(start=115.0, end=110.0)) is None
+
+
+def test_approaching_holds_the_same_quality_bar_as_the_reached_board():
+    """A weaker standard here would make the toggle a knife catalogue."""
+    assert dr.approaching_read(_appr_rec(touches=dr.MIN_TOUCHES - 1),
+                               _falling()) is None
+    assert dr.approaching_read(_appr_rec(strength=dr.MIN_ZONE_STRENGTH - 1),
+                               _falling()) is None
+    assert dr.approaching_read(_appr_rec(trend_ok=False), _falling()) is None
+
+
+def test_no_close_series_means_none_not_a_guess():
+    """"Could not measure the drift" must never render as "approaching"."""
+    assert dr.approaching_read(_appr_rec(), None) is None
+    assert dr.approaching_read(_appr_rec(), []) is None
+    assert dr.approaching_read(_appr_rec(),
+                               [103.0] * dr.APPROACH_DRIFT_BARS) is None

@@ -34,6 +34,13 @@ async def chart_maps(
                        description="gabbar tab only — measure against one band "
                                    "type: all (default) | aggressive | "
                                    "conservative 1 | conservative 2"),
+    phase: str = Query("reached",
+                       description="zones + deep_demand tabs — reached "
+                                   "(default: price back inside the band) | "
+                                   "approaching (price still above it, close, "
+                                   "and falling toward it). Ajay 2026-08-31: "
+                                   "'I need the ones that are about to reach "
+                                   "and catch them'."),
     touching_only: bool = Query(False,
                                 description="gabbar tab only — true hides names "
                                             "more than NEAR_PCT from every "

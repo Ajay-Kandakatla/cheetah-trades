@@ -1446,8 +1446,12 @@ def test_deep_demand_keeps_bonde_intact_names_and_drops_the_knives(
     assert [l["label"] for l in t["lines"]] == ["BUY", "STOP", "TARGET"]
 
 
-def test_deep_demand_in_band_ranks_ahead_of_approaching(
+def test_deep_demand_default_is_reached_and_near_lives_behind_the_toggle(
         prices, reentry_stub, sales_stub):
+    """SUPERSEDES the mixed board (Ajay 2026-08-31: "give me toggle reaching
+    vs already reached"). The old board interleaved in-band and near rows;
+    now the default shows only arrivals and `phase=approaching` shows only
+    the near ones — the split follows deep_demand.read's existing state."""
     reentry_stub["deep_rows"] = [
         _deep_row("NEARBY", state="near", dist=1.2),
         _deep_row("INSIDE", state="in"),
@@ -1457,7 +1461,11 @@ def test_deep_demand_in_band_ranks_ahead_of_approaching(
         sales_stub[s] = _sales("strong", 30.0)
 
     out = B.board("deep_demand", limit=5, min_tier="any")
-    assert [t["symbol"] for t in out["tiles"]] == ["INSIDE", "NEARBY"]
+    assert [t["symbol"] for t in out["tiles"]] == ["INSIDE"]
+    out2 = B.board("deep_demand", limit=5, min_tier="any", phase="approaching")
+    assert [t["symbol"] for t in out2["tiles"]] == ["NEARBY"]
+    labels = [b["label"] for b in out2["tiles"][0]["bands"]]
+    assert "2nd demand · approaching" in labels
 
 
 def test_deep_demand_warming_passthrough(prices, reentry_stub, sales_stub):
@@ -1536,9 +1544,12 @@ def test_deep_demand_board_ranks_the_hottest_cmf_first(
     for s in ("MILDIN", "HOTNEAR", "SOLD"):
         prices[s] = _frame(200, start=90.05)
 
+    # 2026-08-31: near rows moved behind the approaching toggle, so the
+    # intensity ranking is asserted per phase rather than across the mix.
     out = B.board("deep_demand", limit=5, min_tier="any")
-    syms = [t["symbol"] for t in out["tiles"]]
-    assert syms == ["HOTNEAR", "MILDIN", "SOLD"]
+    assert [t["symbol"] for t in out["tiles"]] == ["MILDIN", "SOLD"]
+    out2 = B.board("deep_demand", limit=5, min_tier="any", phase="approaching")
+    assert [t["symbol"] for t in out2["tiles"]] == ["HOTNEAR"]
 
 
 def test_deep_demand_inflow_names_lead_and_wear_the_flow_badge(
@@ -1559,18 +1570,27 @@ def test_deep_demand_inflow_names_lead_and_wear_the_flow_badge(
         prices[s] = _frame(200)
         sales_stub[s] = _sales("steady", 12.0)
 
-    out = B.board("deep_demand", limit=5, min_tier="any")
-    assert [t["symbol"] for t in out["tiles"]] == ["COILING", "SOLDOFF"]
+    # 2026-08-31: COILING is a "near" row, which now lives on the
+    # approaching side of the toggle; each phase still leads with inflow.
+    out_r = B.board("deep_demand", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out_r["tiles"]] == ["SOLDOFF"]
+    out = B.board("deep_demand", limit=5, min_tier="any", phase="approaching")
+    assert [t["symbol"] for t in out["tiles"]] == ["COILING"]
 
     coil = out["tiles"][0]
     txt = " ".join(b["text"] for b in coil["badges"])
     assert "Money flowing in" in txt and "CMF +0.14" in txt and "9↑/4↓" in txt
     assert "Pocket pivot" in txt
-    sold_txt = " ".join(b["text"] for b in out["tiles"][1]["badges"])
+    sold_txt = " ".join(b["text"] for b in out_r["tiles"][0]["badges"])
     assert "Still distributing" in sold_txt and "CMF -0.18" in sold_txt
 
-    assert out["flow_counts"] == {"inflow": 1, "neutral": 0, "distribution": 1}
-    assert "1 flowing in" in out["note"] and "1 still distributing" in out["note"]
+    # flow_counts describe what is ON the shown board — per phase since the
+    # 2026-08-31 toggle split the two moments.
+    assert out["flow_counts"] == {"inflow": 1, "neutral": 0, "distribution": 0}
+    assert out_r["flow_counts"] == {"inflow": 0, "neutral": 0, "distribution": 1}
+    # The note tallies the shown phase: distribution lives on the reached side.
+    assert "1 flowing in" in out["note"]
+    assert "1 still distributing" in out_r["note"]
     stats = {s["k"]: s["v"] for s in coil["stats"]}
     assert stats["Flow"] == "CMF +0.14"
     assert stats["Vol days"] == "9\u2191 / 4\u2193"
@@ -1812,3 +1832,63 @@ def test_gabbar_names_the_authors_levelless_stubs(prices, gabbar_stub):
     assert "NO levels drawn yet" in out["note"]
     # And none of the stubs ever renders as a tile — there is nothing to draw.
     assert not set(t["symbol"] for t in out["tiles"]) & set(out["tracked_no_levels"])
+
+
+# ── reaching vs already reached (Ajay 2026-08-31) ──────────────────────────
+def _appr_row(sym, dist=2.9, drift=-3.1, flow=None, rr=1.2):
+    return {"symbol": sym, "name": sym, "is_reentry": False,
+            "last_price": 103.0, "trend_ok": True,
+            "entry_zone": {"lo": 98.0, "hi": 100.0, "touches": 3,
+                           "strength": 60.0, "oldest_touch_bars": 120},
+            "approaching": {"state": "approaching", "dist_pct": dist,
+                            "drift_pct": drift, "drift_bars": 5,
+                            "band": {"lo": 98.0, "hi": 100.0}},
+            "inflow": ({"state": flow, "cmf_20": 0.1, "accum_days_25": 5,
+                        "dist_days_25": 3, "pocket_pivot": False}
+                       if flow else None),
+            "plan": {"entry_ref": 103.0, "stop": 97.0, "target": 110.0,
+                     "rr": rr},
+            "supply_zones": [], "demand_zones": [],
+            "verdict": {"entry_read": "caution"}}
+
+
+def test_zone_tiles_phase_reads_the_approaching_rows(prices, reentry_stub):
+    """phase='approaching' serves approaching_rows; the default serves the
+    reached rows untouched — the toggle must never mix the two moments."""
+    reentry_stub["rows"] = [{
+        "symbol": "AAA", "name": "AAA", "is_reentry": True,
+        "last_price": 100.0,
+        "entry_zone": {"lo": 98.0, "hi": 100.5, "touches": 3,
+                       "strength": 60.0, "oldest_touch_bars": 120},
+        "plan": {"entry_ref": 100.0, "stop": 97.0, "target": 110.0, "rr": 3.0},
+        "supply_zones": [], "demand_zones": [],
+        "verdict": {"entry_read": "favorable"}}]
+    reentry_stub["approaching_rows"] = [_appr_row("BBB")]
+    for sym in ("AAA", "BBB"):
+        prices[sym] = _frame(200, start=95.0)
+
+    out_r = B.board("zones", limit=10, min_tier="any")
+    assert out_r["phase"] == "reached"
+    assert [t["symbol"] for t in out_r["tiles"]] == ["AAA"]
+
+    out_a = B.board("zones", limit=10, min_tier="any", phase="approaching")
+    assert out_a["phase"] == "approaching"
+    assert [t["symbol"] for t in out_a["tiles"]] == ["BBB"]
+    tile = out_a["tiles"][0]
+    assert any("above the band" in b["text"] for b in tile["badges"])
+    assert "falling toward" in tile["why"]
+
+
+def test_approaching_board_ranks_by_proximity_not_cheetah_flow(
+        prices, reentry_stub):
+    """A strong-flow name 4.8% out must not outrank a neutral one 0.3% out —
+    the approach board's question is WHICH BAND GETS HIT FIRST."""
+    reentry_stub["approaching_rows"] = [
+        _appr_row("FARFLOW", dist=4.8, flow="inflow", rr=3.0),
+        _appr_row("CLOSE", dist=0.3, flow="neutral", rr=1.1),
+    ]
+    for sym in ("FARFLOW", "CLOSE"):
+        prices[sym] = _frame(200, start=95.0)
+
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching")
+    assert [t["symbol"] for t in out["tiles"]] == ["CLOSE", "FARFLOW"]
