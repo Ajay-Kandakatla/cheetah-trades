@@ -288,3 +288,31 @@ def test_uncited_patterns_never_claim_a_citation_on_any_timeframe():
             if p["kind"] == "flat_top":
                 assert p["cited"] is False
                 assert p["stats_transfer"] is False
+
+
+
+# ── the per-ticker zone drill-in (Ajay 2026-08-29: "not on scans, but on
+# demand in the support levels to figure out entries") ─────────────────────
+def test_the_scan_boards_do_not_take_a_timeframe():
+    """Ajay 2026-08-29 course-correction. The board answers 'which names',
+    which is a daily structural question; the timeframe belongs on the
+    per-ticker surfaces where an entry is actually chosen. A dropdown on
+    the scan tabs would also cost an intraday fetch per tile per refresh."""
+    import inspect
+
+    from chart_maps import board as B
+    src_board = inspect.getsource(B.board)
+    assert "tf" not in inspect.signature(B.board).parameters
+    assert "_timeframe_decor" not in src_board
+
+
+def test_zone_map_overlays_the_timeframe_without_touching_the_daily_read():
+    """The individual ticker's supply/demand tab keeps its daily re-entry
+    answer underneath; the chosen timeframe rides alongside it."""
+    import inspect
+
+    from supply_demand import api as sd_api
+    src_api = inspect.getsource(sd_api.get_zone_map)
+    assert "tf_bands" in src_api and "trade_levels" in src_api
+    # The daily analyze_symbol result is still what the body is built from.
+    assert "analyze_symbol" in src_api

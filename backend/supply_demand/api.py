@@ -18,6 +18,7 @@ from . import equity_premium as equity_premium_mod
 from . import stock_supply_demand as stocks_mod
 from . import demand_zones as zones_mod
 from . import price_zones as price_zones_mod
+from . import timeframes as tf_mod
 from . import demand_reentry as reentry_mod
 
 log = logging.getLogger("supply_demand.api")
@@ -171,7 +172,11 @@ async def accumulation_change_for(symbol: str):
 
 
 @router.get("/supply-demand/zone-map/{symbol}")
-async def get_zone_map(symbol: str):
+async def get_zone_map(
+    symbol: str,
+    tf: str = Query("daily", description="bar timeframe the bands are read "
+                                         "on: daily | 60m | 15m"),
+):
     """One ticker's supply/demand bands + close series + entry/stop/target plan
     — everything the individual-stock zone chart draws. Works for any symbol,
     including names that are NOT re-entry candidates (price sitting in overhead
@@ -180,6 +185,28 @@ async def get_zone_map(symbol: str):
     out = await asyncio.to_thread(reentry_mod.analyze_symbol, symbol, True)
     if not out:
         return {"symbol": (symbol or "").upper(), "error": "no / insufficient price data"}
+    # Timeframe overlay (Ajay 2026-08-29: "also the supply demand tab in
+    # individual ticker"). The daily re-entry read is unchanged underneath;
+    # the chosen timeframe's bands, gaps, opening range and computed
+    # entry/stop ride alongside it.
+    out["timeframes"] = tf_mod.tf_options()
+    key = tf_mod.parse_tf(tf if isinstance(tf, str) else "daily")
+    out["timeframe"] = key
+    out["timeframe_label"] = tf_mod.tf_spec(key)["label"]
+    try:
+        zoned = await asyncio.to_thread(
+            price_zones_mod.for_symbol, symbol, None, key)
+        if not zoned.get("error"):
+            out["tf_bands"] = [
+                {"kind": z.get("kind"), "lo": z.get("lo"), "hi": z.get("hi")}
+                for z in (list(zoned.get("demand_zones") or [])
+                          + list(zoned.get("supply_zones") or []))]
+            for k in ("trade_levels", "fair_value_gaps", "opening_range", "atr"):
+                out[k] = zoned.get(k)
+        else:
+            out["tf_error"] = zoned["error"]
+    except Exception as exc:                                # pragma: no cover
+        log.warning("zone-map: timeframe overlay for %s failed: %s", symbol, exc)
     return out
 
 

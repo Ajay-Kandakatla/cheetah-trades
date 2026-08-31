@@ -25,6 +25,7 @@ import {
 } from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
+import { FALLBACK_TIMEFRAMES } from '../lib/supportLevels';
 import { ZoneChart } from './ZoneChart';
 
 
@@ -36,17 +37,21 @@ export function ZoneMap({ symbol }: { symbol: string }) {
   const [data, setData] = useState<ZoneMapPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  // Timeframe the bands are read on (Ajay 2026-08-29: "also the supply
+  // demand tab in individual ticker"). Daily keeps the historical URL.
+  const [tf, setTf] = useState('daily');
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setErr(null);
-    fetch(`${API}/supply-demand/zone-map/${encodeURIComponent(symbol)}`, { credentials: 'include' })
+    const qs = tf && tf !== 'daily' ? `?tf=${encodeURIComponent(tf)}` : '';
+    fetch(`${API}/supply-demand/zone-map/${encodeURIComponent(symbol)}${qs}`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((j) => { if (alive) { setData(j); setLoading(false); } })
       .catch((e) => { if (alive) { setErr(String(e.message || e)); setLoading(false); } });
     return () => { alive = false; };
-  }, [symbol]);
+  }, [symbol, tf]);
 
   if (loading) {
     return <div className="sepa-tab-help" style={{ opacity: 0.7 }}>Mapping supply / demand zones…</div>;
@@ -71,6 +76,9 @@ export function ZoneMap({ symbol }: { symbol: string }) {
   const ven = venueView(data.venues);
   const inBand = blocksInBand(blocks, ez);
 
+  const tfLevels = (data.trade_levels || []).filter((t: any) => t.trade);
+  const orb = data.opening_range;
+
   return (
     <div style={{ marginBottom: '1rem' }}>
       <div style={{
@@ -78,6 +86,16 @@ export function ZoneMap({ symbol }: { symbol: string }) {
         flexWrap: 'wrap', marginBottom: '0.35rem',
       }}>
         <strong style={{ fontSize: '0.9rem' }}>Supply / demand zones</strong>
+        <label className="cm-ctl" style={{ marginLeft: 'auto' }}
+               title="Which bars the bands are read from. Daily is the structural floor; the intraday charts show the level this session's trade is standing on.">
+          Timeframe
+          <select value={tf} onChange={(e) => setTf(e.target.value)}>
+            {(data.timeframes?.length ? data.timeframes : FALLBACK_TIMEFRAMES)
+              .map((t: any) => (
+                <option key={t.key} value={t.key}>{t.label}</option>
+              ))}
+          </select>
+        </label>
         <span className="mono" style={{ fontSize: '0.72rem', opacity: 0.75 }}>
           {money(data.last_price)} now
         </span>
@@ -90,6 +108,46 @@ export function ZoneMap({ symbol }: { symbol: string }) {
           </span>
         )}
       </div>
+      {tfLevels.length > 0 ? (
+        <div className="sl-trades">
+          <h4>Entry &amp; stop on {data.timeframe_label || 'these'} bars</h4>
+          <div className="sl-scroll">
+            <table className="sl-table">
+              <thead>
+                <tr><th>Band</th><th>What</th><th>Side</th><th>Entry</th>
+                    <th>Stop</th><th>Target 1</th><th>R:R</th></tr>
+              </thead>
+              <tbody>
+                {tfLevels.map((t: any, i: number) => (
+                  <tr key={`${t.source}-${t.lo}-${i}`}>
+                    <td>${Number(t.lo).toFixed(2)}–${Number(t.hi).toFixed(2)}</td>
+                    <td>{t.source === 'fvg' ? 'Fair value gap' : 'Swing band'}</td>
+                    <td>{t.trade.side}</td>
+                    <td>${Number(t.trade.entry).toFixed(2)}</td>
+                    <td>${Number(t.trade.stop).toFixed(2)}</td>
+                    <td>${Number(t.trade.target1).toFixed(2)}
+                      <span className="sl-basis"> {t.trade.target_basis}</span></td>
+                    <td>{t.trade.rr != null ? `${t.trade.rr}R` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {orb ? (
+            <p className="cm-note">
+              Opening range ({orb.minutes}m, {orb.session}):{' '}
+              ${orb.lo.toFixed(2)}–${orb.hi.toFixed(2)}.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {data.tf_error ? (
+        <p className="cm-note cm-note-warn">
+          {data.timeframe_label} bands unavailable — {data.tf_error}. The daily
+          read below is unchanged.
+        </p>
+      ) : null}
+
 
       <ZoneChart data={data} />
 

@@ -39,6 +39,17 @@ export type Plan = {
 };
 
 export type ZoneMapPayload = {
+  /** Timeframe overlay (2026-08-29). The daily re-entry read underneath is
+   *  unchanged; these ride alongside it. */
+  timeframe?: string;
+  timeframe_label?: string;
+  timeframes?: { key: string; label: string; span?: string }[];
+  tf_bands?: { kind?: string; lo?: number; hi?: number }[];
+  trade_levels?: any[];
+  fair_value_gaps?: any[];
+  opening_range?: { lo: number; hi: number; minutes: number; session: string } | null;
+  atr?: number | null;
+  tf_error?: string;
   symbol: string;
   name?: string;
   last_price: number;
