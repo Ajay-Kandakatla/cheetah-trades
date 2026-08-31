@@ -183,7 +183,8 @@ def _account(owner: str) -> dict:
     """Live account value from holdings — the sizing denominator. The
     knife-watch verdicts ride along so the report opens with whether
     anything he OWNS is broken before pitching anything new."""
-    out = {"value": None, "holdings": [], "knives": []}
+    out = {"value": None, "holdings": [], "knives": [],
+           "cash": None, "positions_value": None}
     try:
         from portfolio import store
         from portfolio.quotes import fetch_quotes
@@ -201,7 +202,16 @@ def _account(owner: str) -> dict:
                                     "shares": h.get("shares"),
                                     "last": last, "value": val,
                                     "day_change_pct": q.get("day_change_pct")})
-        out["value"] = round(total, 2) if total else None
+        out["positions_value"] = round(total, 2) if total else None
+        # Cash rides on top (2026-08-31). His book went to ~86% cash after the
+        # Friday selloff and the old holdings-only value sized every idea off
+        # a seventh of the real account. None = cash not tracked, and then the
+        # value falls back to positions alone — labelled by cash staying None
+        # so the report can say which denominator it used.
+        cash = store.get_cash(owner)
+        out["cash"] = cash
+        total_eq = total + (cash or 0.0)
+        out["value"] = round(total_eq, 2) if total_eq else None
     except Exception as exc:
         log.warning("desk: account read failed: %s", exc)
     try:

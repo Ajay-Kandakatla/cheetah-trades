@@ -153,6 +153,45 @@ def list_hidden(user_email: str) -> set:
         return set()
 
 
+# ---------------------------------------------------------------------------
+# Cash (2026-08-31) — the settled money-market balance, set by hand like every
+# holding ("This is my portfolio now": $107k account, two small positions).
+# Without it every sizing denominator was the HOLDINGS value alone, and a
+# mostly-cash account sized trades off a seventh of its real equity. One doc
+# per user in ``portfolio_cash``; a data write, never a sync.
+# ---------------------------------------------------------------------------
+def set_cash(user_email: str, amount: float) -> dict:
+    db = _get_db()
+    if db is None:
+        return {"ok": False}
+    db.portfolio_cash.update_one(
+        {"user_email": user_email.lower()},
+        {"$set": {"user_email": user_email.lower(),
+                  "amount": float(amount), "updated_at": _now()}},
+        upsert=True,
+    )
+    return {"ok": True, "amount": float(amount)}
+
+
+def get_cash(user_email: str) -> Optional[float]:
+    """The stored cash balance, or None when never set. None is not 0.0 —
+    "not tracked" and "fully invested" are different claims, and a consumer
+    must know which it is holding before it divides by anything."""
+    db = _get_db()
+    if db is None:
+        return None
+    try:
+        doc = db.portfolio_cash.find_one({"user_email": user_email.lower()})
+    except Exception:
+        return None
+    if not doc or doc.get("amount") is None:
+        return None
+    try:
+        return float(doc["amount"])
+    except (TypeError, ValueError):
+        return None
+
+
 def list_holdings(user_email: str) -> list[dict]:
     db = _get_db()
     if db is None:

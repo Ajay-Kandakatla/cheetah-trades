@@ -237,3 +237,58 @@ def test_push_kind_is_todo_reminder_no_new_kinds():
 def test_report_min_bar_is_seventy():
     assert S.REPORT_MIN == 70.0, \
         "the persona reports only names scoring >= 70"
+
+
+# ── cash in the sizing denominator (2026-08-31) ────────────────────────────
+def _stub_portfolio(monkeypatch, holdings, cash, quotes):
+    """Stub the portfolio package in sys.modules. The real package __init__
+    imports its FastAPI router, whose `str | None` annotations cannot even be
+    IMPORTED on the py3.9 test venv (Rule #6 quirk) — prod runs 3.11. The stub
+    also stands in for knife_watch, which _account degrades behind try/except."""
+    import sys
+    import types
+
+    pkg = types.ModuleType("portfolio")
+    store = types.ModuleType("portfolio.store")
+    store.list_holdings = lambda o: holdings
+    store.get_cash = lambda o: cash
+    qmod = types.ModuleType("portfolio.quotes")
+    qmod.fetch_quotes = lambda ts: quotes
+    pkg.store, pkg.quotes = store, qmod
+    for name, mod in (("portfolio", pkg), ("portfolio.store", store),
+                      ("portfolio.quotes", qmod)):
+        monkeypatch.setitem(sys.modules, name, mod)
+
+
+def test_account_value_is_cash_plus_positions(monkeypatch):
+    """Ajay went ~86% cash after the Friday selloff ($107k account, ~$15k in
+    two names). The holdings-only value would size every idea off a seventh
+    of the real account — 0.75% risk of $15k is a $112 stop budget on a $107k
+    book."""
+    from desk import report as R
+
+    _stub_portfolio(monkeypatch,
+                    holdings=[{"ticker": "VRSK", "shares": 51.444},
+                              {"ticker": "ACN", "shares": 26.242}],
+                    cash=92072.63,
+                    quotes={"VRSK": {"last": 194.0}, "ACN": {"last": 190.0}})
+    out = R._account("ajaykandakatla@gmail.com")
+    positions = 51.444 * 194.0 + 26.242 * 190.0
+    assert out["cash"] == 92072.63
+    assert out["positions_value"] == round(positions, 2)
+    assert out["value"] == round(positions + 92072.63, 2)
+
+
+def test_untracked_cash_falls_back_to_positions_and_says_so(monkeypatch):
+    """None = not tracked, which must not read as $0 of cash. The value falls
+    back to positions alone and `cash` stays None so the report can name the
+    denominator it used."""
+    from desk import report as R
+
+    _stub_portfolio(monkeypatch,
+                    holdings=[{"ticker": "ACN", "shares": 10.0}],
+                    cash=None,
+                    quotes={"ACN": {"last": 190.0}})
+    out = R._account("ajaykandakatla@gmail.com")
+    assert out["cash"] is None
+    assert out["value"] == 1900.0
