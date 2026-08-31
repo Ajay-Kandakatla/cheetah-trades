@@ -5,6 +5,7 @@ import {
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
   priceAsOf,
+  CHART_VIEWS, DEFAULT_VIEW, viewFor, viewKeyFor,
 } from './supportLevels';
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
@@ -307,5 +308,38 @@ describe('priceAsOf', () => {
 
   it('clamps clock skew instead of inventing a negative age', () => {
     expect(priceAsOf(NOW / 1000 + 600, null, NOW)).toBe('Prices fetched just now');
+  });
+});
+
+/* ── One control, no invalid combinations (Ajay 2026-08-29) ─────────────── */
+describe('CHART_VIEWS — the merged chart control', () => {
+  it('every option is a valid (window, tf) pair', () => {
+    for (const v of CHART_VIEWS) {
+      expect(v.window).toBeTruthy();
+      expect(v.tf).toBeTruthy();
+      // an intraday view must not advertise a daily zoom in its label
+      if (v.tf !== 'daily') expect(v.group).toBe('Intraday');
+      else expect(v.group).toBe('Daily');
+    }
+  });
+
+  it('round-trips a window+tf pair back to exactly one entry', () => {
+    expect(viewKeyFor('3m', 'daily')).toBe('daily:3m');
+    expect(viewKeyFor('1y', 'daily')).toBe('daily:1y');
+    expect(viewKeyFor('1m', '60m')).toBe('60m');
+    expect(viewKeyFor('3m', '15m_open')).toBe('15m_open');
+    // an unknown pair degrades to the default rather than blanking the control
+    expect(viewKeyFor('99y', 'daily')).toBe(DEFAULT_VIEW);
+    expect(viewKeyFor('3m', 'weekly')).toBe('daily:3m');
+  });
+
+  it('viewFor never returns undefined', () => {
+    expect(viewFor('15m').tf).toBe('15m');
+    expect(viewFor('nonsense').key).toBe(DEFAULT_VIEW);
+  });
+
+  it('has no two entries resolving to the same pair', () => {
+    const pairs = CHART_VIEWS.map((v) => `${v.window}|${v.tf}`);
+    expect(new Set(pairs).size).toBe(pairs.length);
   });
 });

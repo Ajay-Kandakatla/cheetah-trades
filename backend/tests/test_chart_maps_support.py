@@ -275,7 +275,13 @@ def test_the_tile_charts_exactly_the_window_that_was_analysed(loaded):
 def test_only_the_two_decision_levels_get_a_written_label(loaded):
     """Ajay 2026-08-18 on the zone charts: "they are all clumsy and its hard to
     look at the bars". Eight labelled bands is that same chart again."""
-    labels = [ln["label"] for ln in S.for_symbol("TEST", "6m")["tile"]["lines"]]
+    lines = S.for_symbol("TEST", "6m")["tile"]["lines"]
+    # The rule is about WRITTEN labels. The 2026-08-29 SMC overlay adds lines
+    # for the BOS, the swept level and the opening range, but they are marked
+    # `quiet` and the renderer draws them without text — so the chart still
+    # carries at most three pieces of writing, which is what the complaint
+    # was about.
+    labels = [ln["label"] for ln in lines if not ln.get("quiet")]
     assert len(labels) <= 3
     assert "now" in labels
 
@@ -289,7 +295,11 @@ def test_the_chart_never_draws_more_than_three_boxes_a_side(loaded):
 def test_the_tile_uses_only_the_kinds_and_tones_the_renderer_knows(loaded):
     tile = S.for_symbol("TEST", "6m")["tile"]
     for b in tile["bands"]:
-        assert b["kind"] in ("base", "demand", "supply"), b
+        assert b["kind"] in ("base", "demand", "supply",
+                             # SMC overlay kinds (2026-08-29). Deliberately
+                             # their own colours: an imbalance and a footprint
+                             # are not the same evidence as a tested swing.
+                             "fvg_demand", "fvg_supply", "order_block"), b
     for ln in tile["lines"]:
         assert ln["tone"] in ("buy", "stop", "target", "now", "neutral"), ln
 

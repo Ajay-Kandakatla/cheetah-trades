@@ -557,6 +557,131 @@ def _why(levels: dict, zones: dict, spec: dict) -> str:
     return head or f"No band below price in the last {spec['label']}."
 
 
+def _frame_bars(df) -> list:
+    """Candles straight from the analysed intraday frame.
+
+    Timestamps carry HH:MM, unlike the daily helper's date-only stamps —
+    without the time, every bar in a session would share one label and the
+    chart's own axis would collapse them into one candle.
+    """
+    bars = []
+    try:
+        for ts, row in df.iterrows():
+            bars.append({
+                "t": ts.strftime("%Y-%m-%d %H:%M"),
+                "o": round(float(row["open"]), 4),
+                "h": round(float(row["high"]), 4),
+                "l": round(float(row["low"]), 4),
+                "c": round(float(row["close"]), 4),
+                "v": float(row.get("volume") or 0.0),
+            })
+    except Exception as exc:                                # pragma: no cover
+        log.warning("support: intraday bars failed: %s", exc)
+    return bars
+
+
+def trend_read(df, mood_read: Optional[dict]) -> dict:
+    """Bullish / bearish on THIS timeframe, said in one word.
+
+    Ajay 2026-08-29: "also trend if its bullish or bearish from the trend".
+    The mood score already contains a trend component, but a number between
+    -100 and 100 does not answer "is this thing going up" — so the direction
+    is stated on its own, from the three facts that decide it.
+    """
+    out = {"direction": "unknown", "label": "unknown", "why": [],
+           "ema20": None, "ema50": None}
+    try:
+        closes = df["close"].astype(float)
+        if len(closes) < 50:
+            out["why"].append("needs 50 bars to read a trend")
+            return out
+        e20 = float(closes.ewm(span=20, adjust=False).mean().iloc[-1])
+        e50 = float(closes.ewm(span=50, adjust=False).mean().iloc[-1])
+        last = float(closes.iloc[-1])
+    except Exception:
+        return out
+
+    out["ema20"], out["ema50"] = round(e20, 2), round(e50, 2)
+    above20, above50, stacked = last > e20, last > e50, e20 > e50
+    votes = sum((above20, above50, stacked))
+    out["direction"] = "bullish" if votes >= 2 else "bearish"
+    out["label"] = {3: "bullish", 2: "leaning bullish",
+                    1: "leaning bearish", 0: "bearish"}[votes]
+    out["why"] = [
+        f"price {'above' if above20 else 'below'} EMA20 ({e20:.2f})",
+        f"price {'above' if above50 else 'below'} EMA50 ({e50:.2f})",
+        f"EMA20 {'above' if stacked else 'below'} EMA50",
+    ]
+    if mood_read and mood_read.get("score") is not None:
+        out["mood_agrees"] = (
+            (out["direction"] == "bullish" and mood_read["score"] > 0)
+            or (out["direction"] == "bearish" and mood_read["score"] < 0))
+    return out
+
+
+def _draw_overlay(tile: dict, gaps: list, smc_read: Optional[dict],
+                  orb: Optional[dict], last_price: float) -> dict:
+    """Put the FVGs, order blocks, BOS and swept levels ON THE CHART.
+
+    Ajay 2026-08-29: "do you actually draw these out on the map?" — they
+    were tables only, which meant reading a level in one place and hunting
+    for it in another.
+
+    Deliberately capped. Every band is ink, and a chart carrying nine
+    overlapping boxes answers nothing; the nearest two of each kind are the
+    ones a decision touches. Counts of drawn-vs-found ride back so the tab
+    can say "2 of 5" rather than quietly hiding three.
+    """
+    bands = list(tile.get("bands") or [])
+    lines = list(tile.get("lines") or [])
+    drawn = {"fvg": 0, "order_block": 0, "bos": 0, "sweep": 0, "orb": 0}
+
+    def _near(z):
+        try:
+            return abs((float(z["hi"]) + float(z["lo"])) / 2 - last_price)
+        except (KeyError, TypeError, ValueError):
+            return float("inf")
+
+    for g in sorted(gaps or [], key=_near)[:2]:
+        bands.append({"kind": "fvg_demand" if g.get("kind") == "demand"
+                              else "fvg_supply",
+                      "lo": g["lo"], "hi": g["hi"],
+                      "label": f"FVG {g.get('fill_pct', 0):g}% filled"})
+        drawn["fvg"] += 1
+
+    obs = ((smc_read or {}).get("order_blocks") or [])
+    for o in sorted(obs, key=_near)[:2]:
+        bands.append({"kind": "order_block", "lo": o["lo"], "hi": o["hi"],
+                      "label": f"Order block {o.get('displacement_atr')}x ATR"})
+        drawn["order_block"] += 1
+
+    brks = ((smc_read or {}).get("breaks") or [])
+    if brks:
+        b = brks[0]
+        lines.append({"price": b["level"],
+                      "label": f"{b['kind']} {b['level']:.2f}", "quiet": True,
+                      "tone": "target" if b["direction"] == "bullish" else "stop"})
+        drawn["bos"] += 1
+    sweeps = ((smc_read or {}).get("sweeps") or [])
+    if sweeps:
+        s = sweeps[0]
+        lines.append({"price": s["level"], "quiet": True,
+                      "label": f"swept {s['level']:.2f}", "tone": "neutral"})
+        drawn["sweep"] += 1
+    if orb:
+        lines.append({"price": orb["hi"], "label": f"ORB hi {orb['hi']:.2f}",
+                      "tone": "neutral", "quiet": True})
+        lines.append({"price": orb["lo"], "label": f"ORB lo {orb['lo']:.2f}",
+                      "tone": "neutral", "quiet": True})
+        drawn["orb"] = 2
+
+    tile["bands"] = bands
+    tile["lines"] = lines
+    return {"drawn": drawn,
+            "found": {"fvg": len(gaps or []), "order_block": len(obs),
+                      "bos": len(brks), "sweep": len(sweeps)}}
+
+
 def _record_signal(sym: str, tf_key: str, sig: dict,
                    last_price: Optional[float]) -> None:
     """Log every BUY/SELL to the forward-measurement ledger.
@@ -749,11 +874,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "symbol": sym,
         "name": board_mod._name_for(sym),
         "href": board_mod._href(sym, "supply"),
-        # The chart shows EXACTLY the analysed window. Drawing more would put
-        # bars on screen that had no vote in the bands; drawing fewer would
-        # hide a band's own defining touches, which is the failure
-        # `oldest_touch_bars` was added to catch (price_zones, 2026-08-16).
-        "bars": board_mod.bars_for(sym, days=bars_used),
+        # The chart draws the SAME bars the levels were read from. Ajay
+        # 2026-08-29 ("why is one hour showing Monthly?"): board_mod.bars_for
+        # ALWAYS loads DAILY candles, so an intraday timeframe computed its
+        # levels on 15m/60m bars and then painted them over a year of daily
+        # ones — the picture and the numbers were two different charts.
+        "bars": (_frame_bars(df.tail(bars_used)) if intraday
+                 else board_mod.bars_for(sym, days=bars_used)),
         "bands": _bands(levels),
         "lines": _lines(levels, last_price),
         "markers": [],
@@ -762,15 +889,20 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "theme": board_mod._theme(sym),
         "badges": [],
     }
+    overlay = _draw_overlay(tile, gaps, smc_read, orb, last_price)
+    trend = trend_read(df.tail(budget), mood_read)
+    # On an intraday timeframe the Zoom dropdown's DAILY bar-counts do not
+    # apply, and leaving "1 month" sitting over a 15-minute chart is what
+    # made the tab look wrong. State the real span instead.
+    chart_span = (f"{len(tile['bars'])} x {tf_spec_['label']} bars"
+                  if intraday else spec["label"])
 
     return {
         **base,
         "name": tile["name"],
         "last_price": last_price,
         "bars_used": bars_used,
-        # Set when the frame could not cover the window. The label still says
-        # what was ASKED for; this says what was actually read.
-        "short_history": ({"have": bars_used, "asked": spec["bars"]}
+        "short_history": ({"have": bars_used, "asked": budget}
                           if short else None),
         "tile": tile,
         **levels,
@@ -784,6 +916,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "mood": mood_read,
         "signal": sig,
         "smc": smc_read,
+        "trend_read": trend,
+        "overlay": overlay,
+        "chart_span": chart_span,
+        "zoom_applies": not intraday,
         "note": ("Levels are read from this window only. A wider zoom finds the "
                  "structural floor; a tighter one finds the level this week's "
                  "trade is standing on."),

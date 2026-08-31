@@ -11253,3 +11253,10 @@ a.tk-link:hover   { color: inherit; }
 .sl-smc-live { color: var(--positive, #23c552); font-weight: 700; font-size: 0.85rem; }
 .sl-smc-story { margin: 0.35rem 0 0.5rem; opacity: 0.9; }
 .sl-row-warn td { background: color-mix(in srgb, var(--warn, #e8a33d) 10%, transparent); }
+
+/* Trend read + disabled zoom (2026-08-29). */
+.sl-trend { margin: 0.4rem 0; }
+.sl-trend .pos { color: var(--positive, #23c552); }
+.sl-trend .neg { color: var(--negative, #e5484d); }
+.cm-ctl-off { opacity: 0.5; }
+.cm-ctl-off select { cursor: not-allowed; }

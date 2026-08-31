@@ -110,23 +110,37 @@ describe('SupportLevels', () => {
     expect(screen.getByText(/not a tested floor/)).toBeTruthy();
   });
 
-  it('offers the windows the SERVER sent, not a hardcoded list', async () => {
+  it('offers ONE chart control whose every option is a valid pair', async () => {
+    /* Ajay 2026-08-29: two dropdowns could contradict each other — Zoom
+     * counts DAILY bars, so "1 month" + "15 min" meant nothing and the
+     * chart looked broken. One list; no invalid combination reachable. */
     mockFetch(PAYLOAD);
     const { container } = render(
       <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
     await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    expect(container.querySelectorAll('select').length).toBe(1);
+    const groups = Array.from(container.querySelectorAll('optgroup'))
+      .map((g) => g.getAttribute('label'));
+    expect(groups).toEqual(['Daily', 'Intraday']);
     const opts = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
-    expect(opts).toEqual(['1 month', '3 months', '6 months']);   // no 1 year
+    expect(opts).toContain('1 month');
+    expect(opts).toContain('15 min · today from the open');
   });
 
-  it('reports the chosen window upward rather than owning it', async () => {
+  it('reports BOTH halves of the chosen view upward rather than owning it', async () => {
     mockFetch(PAYLOAD);
     const onWindow = vi.fn();
+    const onTf = vi.fn();
     const { container } = render(
-      <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={onWindow} />);
+      <SupportLevels symbol="DHI" window="3m" tf="daily"
+                     onSymbol={noop} onWindow={onWindow} onTf={onTf} />);
     await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
-    fireEvent.change(container.querySelector('select')!, { target: { value: '6m' } });
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'daily:6m' } });
     expect(onWindow).toHaveBeenCalledWith('6m');
+    expect(onTf).toHaveBeenCalledWith('daily');
+
+    fireEvent.change(container.querySelector('select')!, { target: { value: '15m_open' } });
+    expect(onTf).toHaveBeenCalledWith('15m_open');
   });
 
   it('refetches when the window changes', async () => {
@@ -334,30 +348,22 @@ describe('SupportLevels — market mood and the buy signal', () => {
 });
 
 describe('SupportLevels — timeframe, computed levels and patterns', () => {
-  it('renders the timeframe dropdown only when the page can handle the change', async () => {
+  it('preselects the entry matching the current window and timeframe', async () => {
     mockFetch(TF_PAYLOAD);
-    const { unmount } = render(
-      <SupportLevels symbol="NVDA" window="3m" onSymbol={noop} onWindow={noop} />);
+    const { container } = render(
+      <SupportLevels symbol="NVDA" window="3m" tf="60m"
+                     onSymbol={noop} onWindow={noop} onTf={noop} />);
     await waitFor(() => expect(screen.getByText(/Support below/i)).toBeTruthy());
-    expect(screen.queryByText('Timeframe')).toBeNull();
-    unmount();
-
-    mockFetch(TF_PAYLOAD);
-    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={noop} />);
-    await waitFor(() => expect(screen.getByText('Timeframe')).toBeTruthy());
+    // A URL written before the controls merged still resolves to one entry.
+    expect((container.querySelector('select') as HTMLSelectElement).value).toBe('60m');
   });
 
-  it('sends the timeframe to the API and reports the choice back', async () => {
+  it('sends the timeframe to the API', async () => {
     const spy = mockFetch(TF_PAYLOAD);
-    const onTf = vi.fn();
     render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
-                          onSymbol={noop} onWindow={noop} onTf={onTf} />);
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
     await waitFor(() => expect(spy).toHaveBeenCalled());
     expect(String(spy.mock.calls[0][0])).toContain('tf=60m');
-    const select = screen.getByText('Timeframe').querySelector('select')!;
-    fireEvent.change(select, { target: { value: '15m' } });
-    expect(onTf).toHaveBeenCalledWith('15m');
   });
 
   it('shows a computed entry, stop and R for every band', async () => {

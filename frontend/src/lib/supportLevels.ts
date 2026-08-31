@@ -84,6 +84,15 @@ export type SupportPayload = {
   mood?: MoodRead;
   signal?: TradeSignal;
   smc?: SmcRead;
+  trend_read?: {
+    direction?: string; label?: string; why?: string[];
+    ema20?: number | null; ema50?: number | null; mood_agrees?: boolean;
+  } | null;
+  overlay?: { drawn?: Record<string, number>; found?: Record<string, number> } | null;
+  /** What the chart is ACTUALLY showing — the Zoom label is daily-bar
+   *  counts and does not apply on an intraday timeframe. */
+  chart_span?: string;
+  zoom_applies?: boolean;
   bullish_patterns?: {
     patterns?: BullishPattern[];
     stats_transfer?: boolean;
@@ -168,9 +177,65 @@ export const FALLBACK_TIMEFRAMES: Timeframe[] = [
   { key: 'daily', label: 'Daily', span: '1 year of daily bars' },
   { key: '60m', label: '1 hour', span: '~47 sessions of hourly bars' },
   { key: '15m', label: '15 min', span: '~10 sessions of 15-minute bars' },
+  { key: '15m_open', label: '15 min · from the open',
+    span: "today's session only, from 09:30 ET" },
 ];
 
 export const DEFAULT_TF = 'daily';
+
+/* ── One control instead of two (Ajay 2026-08-29) ──────────────────────────
+ * "The 15 mins chart is also so confusing ... why Am I seeing from past
+ * months? ... you need to make some decisions as a UX expert."
+ *
+ * He was right, and the root cause was two dropdowns that could contradict
+ * each other: Zoom counts DAILY bars, so "1 month" + "15 min" is not a
+ * narrower 15-minute chart, it is a combination with no meaning. A control
+ * that can be set to nonsense will be, and then the chart looks broken.
+ *
+ * So the two collapse into ONE list of views a person would actually ask
+ * for. Every entry is a valid pair; no invalid combination is reachable.
+ * The wire format keeps `window` and `tf` separate — the backend contract
+ * does not change, only the way the choice is offered. */
+export type ChartView = {
+  key: string; label: string; group: 'Daily' | 'Intraday';
+  window: string; tf: string; hint?: string;
+};
+
+export const CHART_VIEWS: ChartView[] = [
+  { key: 'daily:1m', label: '1 month', group: 'Daily', window: '1m', tf: 'daily',
+    hint: 'the level this week\'s trade is standing on' },
+  { key: 'daily:3m', label: '3 months', group: 'Daily', window: '3m', tf: 'daily' },
+  { key: 'daily:6m', label: '6 months', group: 'Daily', window: '6m', tf: 'daily' },
+  { key: 'daily:1y', label: '1 year', group: 'Daily', window: '1y', tf: 'daily' },
+  { key: 'daily:5y', label: '5 years', group: 'Daily', window: '5y', tf: 'daily',
+    hint: 'the structural floor' },
+  { key: 'daily:all', label: 'All windows · overlay', group: 'Daily',
+    window: 'all', tf: 'daily' },
+  { key: '60m', label: '1 hour · ~47 sessions', group: 'Intraday',
+    window: '3m', tf: '60m' },
+  { key: '15m', label: '15 min · ~10 sessions', group: 'Intraday',
+    window: '1m', tf: '15m' },
+  { key: '15m_open', label: '15 min · today from the open', group: 'Intraday',
+    window: '1m', tf: '15m_open', hint: 'this session only, from 09:30 ET' },
+];
+
+export const DEFAULT_VIEW = 'daily:3m';
+
+/** Resolve a (window, tf) pair back to the single control's value, so a
+ *  shared URL written before this change still selects the right entry. */
+export function viewKeyFor(window: string, tf: string): string {
+  const t = parseTf(tf);
+  if (t !== 'daily') {
+    return CHART_VIEWS.find((v) => v.tf === t)?.key || DEFAULT_VIEW;
+  }
+  return CHART_VIEWS.find((v) => v.tf === 'daily' && v.window === window)?.key
+    || DEFAULT_VIEW;
+}
+
+export function viewFor(key: string): ChartView {
+  return CHART_VIEWS.find((v) => v.key === key)
+    || CHART_VIEWS.find((v) => v.key === DEFAULT_VIEW)!;
+}
 
 export function parseTf(
   raw: string | null | undefined,

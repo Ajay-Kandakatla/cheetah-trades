@@ -24,9 +24,9 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
 import {
-  FALLBACK_TIMEFRAMES, FALLBACK_WINDOWS, bandLabel, distanceLabel,
-  evidenceLabel, headline, money, parseTf, sourceLabel,
-  normalizeSymbol, parseWindow, priceAsOf, recencyLabel, recentCount,
+  bandLabel, distanceLabel,
+  CHART_VIEWS, evidenceLabel, headline, money, sourceLabel, viewFor, viewKeyFor,
+  normalizeSymbol, priceAsOf, recencyLabel, recentCount,
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
@@ -111,14 +111,14 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
 
   // The server's own list once it lands, so retiring a window backend-side does
   // not need a frontend deploy.
-  const windows = data?.windows?.length ? data.windows : FALLBACK_WINDOWS;
-  const timeframes = data?.timeframes?.length ? data.timeframes : FALLBACK_TIMEFRAMES;
   const tradeLevels = data?.trade_levels || [];
   const orb = data?.opening_range || null;
   const bullish = data?.bullish_patterns || null;
   const mood = data?.mood || null;
   const sig = data?.signal || null;
   const smc = data?.smc || null;
+  const trend = data?.trend_read || null;
+  const overlay = data?.overlay || null;
   const sym = normalizeSymbol(symbol);
   const supports = data?.supports || [];
   const overhead = data?.overhead || [];
@@ -133,26 +133,26 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             onAdd={(s) => onSymbol(normalizeSymbol(s))}
           />
         </div>
-        <label className="cm-ctl">
-          Zoom
-          <select value={parseWindow(win, windows)}
-                  onChange={(e) => onWindow(e.target.value)}>
-            {windows.map((w) => (
-              <option key={w.key} value={w.key}>{w.label}</option>
+        <label className="cm-ctl"
+               title="Which chart the levels are read from. Every option is a valid pair — a daily zoom and an intraday timeframe cannot be combined into something meaningless.">
+          Chart
+          <select value={viewKeyFor(win, tf || 'daily')}
+                  onChange={(e) => {
+                    const v = viewFor(e.target.value);
+                    // Order matters: set the timeframe first so a single
+                    // refetch sees both halves of the new view.
+                    if (onTf) onTf(v.tf);
+                    onWindow(v.window);
+                  }}>
+            {(['Daily', 'Intraday'] as const).map((g) => (
+              <optgroup key={g} label={g}>
+                {CHART_VIEWS.filter((v) => v.group === g).map((v) => (
+                  <option key={v.key} value={v.key}>{v.label}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
-        {onTf && (
-          <label className="cm-ctl" title="Which bars the structure is read from">
-            Timeframe
-            <select value={parseTf(tf, timeframes)}
-                    onChange={(e) => onTf(e.target.value)}>
-              {timeframes.map((t) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
-              ))}
-            </select>
-          </label>
-        )}
       </div>
 
       {!sym ? (
@@ -192,9 +192,40 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
           <p className="sl-headline">{headline(data)}</p>
           {shortNote ? <p className="cm-note cm-note-warn">{shortNote}</p> : null}
 
+          {trend && trend.direction !== 'unknown' ? (
+            <p className="sl-trend">
+              Trend on this timeframe:{' '}
+              <strong className={trend.direction === 'bullish' ? 'pos' : 'neg'}>
+                {trend.direction === 'bullish' ? '▲' : '▼'} {trend.label}
+              </strong>
+              <span className="sl-basis"> — {(trend.why || []).join(' · ')}</span>
+              {trend.mood_agrees === false && (
+                <span className="sl-basis"> · mood disagrees with the trend</span>
+              )}
+            </p>
+          ) : trend ? (
+            <p className="cm-note">
+              Trend: {(trend.why || []).join(' · ') || 'not enough bars'}.
+            </p>
+          ) : null}
+
           <div className="sl-chart">
             <PatternChart tile={data.tile} height={320} />
           </div>
+          <p className="cm-note">
+            Chart shows <strong>{data.chart_span || data.window_label}</strong>
+            {overlay?.drawn ? (
+              <> · drawn: {Object.entries(overlay.drawn)
+                .filter(([, v]) => v > 0)
+                .map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`)
+                .join(', ') || 'levels only'}</>
+            ) : null}
+            {overlay?.found && overlay?.drawn
+              && Object.keys(overlay.found).some(
+                (k) => (overlay.found?.[k] || 0) > (overlay.drawn?.[k] || 0))
+              ? ' · nearest two of each kind only — more exist than are drawn'
+              : null}
+          </p>
 
           <div className="sl-tables">
             <LevelTable title="Support below" levels={supports} side="support"

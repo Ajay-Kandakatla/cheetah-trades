@@ -32,10 +32,19 @@ const BAND_FILL: Record<string, string> = {
   // Neither a floor nor a lid — the 0DTE gamma walls bracket a RANGE, and
   // painting it green or red would give it a direction it does not have.
   neutral: 'var(--text-muted, #94a3b8)',
+  // Smart-Money overlays (2026-08-29). Deliberately NOT the same green/red
+  // as the swing bands: a fair value gap is an imbalance and an order block
+  // is a footprint, and painting them in the support/overhead colours would
+  // claim they are the same kind of evidence.
+  fvg_demand: 'var(--info, #38bdf8)',
+  fvg_supply: 'var(--warn, #e8a33d)',
+  order_block: 'var(--accent, #a78bfa)',
 };
 
 const BAND_NAME: Record<string, string> = {
   base: 'Base', demand: 'Support', supply: 'Overhead', neutral: 'Range',
+  fvg_demand: 'Fair value gap', fvg_supply: 'Fair value gap',
+  order_block: 'Order block',
 };
 
 export const PatternChart = memo(function PatternChart(

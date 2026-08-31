@@ -36,6 +36,7 @@ log = logging.getLogger("supply_demand.timeframes")
 DAILY = "daily"
 H1 = "60m"
 M15 = "15m"
+M15_OPEN = "15m_open"
 
 # `bars` is what the zone engine reads; `days` is the calendar fetch span.
 # swing_window shrinks intraday on purpose — a 3-bar swing on a 15m chart
@@ -55,6 +56,13 @@ TIMEFRAMES: tuple[dict, ...] = (
     {"key": M15, "label": "15 min", "bars": 260, "days": 15,
      "swing_window": 2, "span": "~10 sessions of 15-minute bars",
      "orb_minutes": 15},
+    # Ajay 2026-08-29: "can you create 15 mins from Market open time
+    # please?" — TODAY only, anchored at 09:30 ET. A session view: the
+    # levels that matter are the ones this session built, so the frame
+    # deliberately forgets everything before the bell.
+    {"key": M15_OPEN, "label": "15 min · from the open", "bars": 26,
+     "days": 1, "swing_window": 2,
+     "span": "today's session only, from 09:30 ET", "orb_minutes": 15},
 )
 
 DEFAULT_TF = DAILY
@@ -63,7 +71,9 @@ _BY_KEY = {t["key"]: t for t in TIMEFRAMES}
 # Aliases so a URL can say what a human would type.
 _ALIAS = {"1d": DAILY, "d": DAILY, "day": DAILY, "1day": DAILY,
           "1h": H1, "h": H1, "hour": H1, "hourly": H1, "60min": H1,
-          "15": M15, "15min": M15, "m15": M15, "15m": M15}
+          "15": M15, "15min": M15, "m15": M15, "15m": M15,
+          "open": M15_OPEN, "session": M15_OPEN, "15m_open": M15_OPEN,
+          "15open": M15_OPEN}
 
 
 def parse_tf(raw) -> str:
@@ -173,6 +183,24 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
     if df is None or df.empty:
         meta["reason"] = "resample produced no bars"
         return None, meta
+
+    if key == M15_OPEN:
+        # Keep only the most recent SESSION. Before the first bell of a new
+        # day that is yesterday's session, which is the honest answer —
+        # inventing an empty frame for a day that has not opened would be
+        # worse than showing the one that just closed, and the label says
+        # which day it is.
+        try:
+            import pandas as pd
+            idx = df.index
+            et = (idx.tz_localize("UTC") if idx.tz is None
+                  else idx).tz_convert("America/New_York")
+            days = pd.Series(et.date, index=idx)
+            session = days.max()
+            df = df[days == session]
+            meta["session"] = str(session)
+        except Exception as exc:                            # pragma: no cover
+            log.warning("timeframes: session slice failed: %s", exc)
     df = df.tail(want)
     meta.update({"bars": len(df), "available": True,
                  "source": f"1-minute bars resampled to {spec['label']}, RTH only",

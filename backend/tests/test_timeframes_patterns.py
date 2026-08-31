@@ -49,7 +49,7 @@ def test_parse_tf_accepts_what_a_human_types_and_falls_back_to_daily():
 
 def test_tf_options_carry_a_label_and_a_real_span():
     opts = TF.tf_options()
-    assert [o["key"] for o in opts] == [TF.DAILY, TF.H1, TF.M15]
+    assert [o["key"] for o in opts] == [TF.DAILY, TF.H1, TF.M15, TF.M15_OPEN]
     for o in opts:
         assert o["label"] and o["span"] and o["bars"] > 0
 
@@ -574,3 +574,76 @@ def test_smc_degrades_on_junk_instead_of_raising():
         assert smc.structure_breaks(bad) == []
         assert smc.order_blocks(bad) == []
         assert smc.find_setups(bad) == []
+
+
+# ── the chart must draw the bars the levels came from (Ajay's screenshot) ──
+def test_intraday_bars_carry_a_time_or_a_session_collapses_to_one_candle():
+    import pandas as pd
+
+    from chart_maps import support as S
+    idx = pd.date_range("2026-08-28 13:45", periods=4, freq="15min")
+    df = pd.DataFrame({"open": [1, 2, 3, 4], "high": [2, 3, 4, 5],
+                       "low": [0.5, 1.5, 2.5, 3.5], "close": [1.5, 2.5, 3.5, 4.5],
+                       "volume": [10] * 4}, index=idx)
+    bars = S._frame_bars(df)
+    assert len(bars) == 4
+    assert bars[0]["t"] == "2026-08-28 13:45"
+    assert len({b["t"] for b in bars}) == 4, \
+        "date-only stamps would collapse a whole session into one candle"
+
+
+def test_the_session_timeframe_keeps_only_one_day():
+    from supply_demand import timeframes as TF
+    spec = TF.tf_spec(TF.M15_OPEN)
+    assert spec["days"] == 1 and spec["bars"] <= 27      # 6.5h / 15m = 26
+    assert "09:30" in spec["span"]
+    for alias in ("open", "session", "15m_open"):
+        assert TF.parse_tf(alias) == TF.M15_OPEN, alias
+
+
+def test_overlay_draws_the_smc_objects_and_reports_what_it_capped():
+    """Ajay 2026-08-29: "do you actually draw these out on the map?" — they
+    have to reach the tile's bands/lines, not just a table."""
+    from chart_maps import support as S
+    tile = {"bands": [{"kind": "demand", "lo": 90, "hi": 92}], "lines": []}
+    gaps = [{"kind": "demand", "lo": 95, "hi": 96, "fill_pct": 0},
+            {"kind": "demand", "lo": 80, "hi": 81, "fill_pct": 10},
+            {"kind": "supply", "lo": 130, "hi": 131, "fill_pct": 0}]
+    smc = {"order_blocks": [{"lo": 97, "hi": 98, "displacement_atr": 2.1}],
+           "breaks": [{"kind": "CHoCH", "direction": "bullish", "level": 105}],
+           "sweeps": [{"side": "sell_side", "level": 89}]}
+    orb = {"lo": 99, "hi": 101, "minutes": 15, "session": "2026-08-28"}
+    out = S._draw_overlay(tile, gaps, smc, orb, 100.0)
+
+    kinds = [b["kind"] for b in tile["bands"]]
+    assert "fvg_demand" in kinds and "order_block" in kinds
+    assert "demand" in kinds, "the original swing bands survive"
+    labels = [l["label"] for l in tile["lines"]]
+    assert any("CHoCH" in l for l in labels)
+    assert any("swept" in l for l in labels)
+    assert any("ORB" in l for l in labels)
+    # capped at the nearest two, and it SAYS three were found
+    assert out["drawn"]["fvg"] == 2 and out["found"]["fvg"] == 3
+
+
+def test_overlay_survives_missing_pieces():
+    from chart_maps import support as S
+    tile = {"bands": [], "lines": []}
+    out = S._draw_overlay(tile, [], None, None, 100.0)
+    assert out["drawn"] == {"fvg": 0, "order_block": 0, "bos": 0,
+                            "sweep": 0, "orb": 0}
+    assert tile["bands"] == [] and tile["lines"] == []
+
+
+def test_trend_says_bullish_or_bearish_and_refuses_on_a_short_frame():
+    from chart_maps import support as S
+    up = _frame([(100 + i, 101 + i, 99 + i, 100.5 + i) for i in range(80)])
+    down = _frame([(200 - i, 201 - i, 199 - i, 199.5 - i) for i in range(80)])
+    assert S.trend_read(up, None)["direction"] == "bullish"
+    assert S.trend_read(down, None)["direction"] == "bearish"
+    short = S.trend_read(_frame([(1, 2, 0.5, 1)] * 20), None)
+    assert short["direction"] == "unknown"
+    assert "50 bars" in short["why"][0]
+    # disagreement with mood is stated, not silently averaged away
+    dis = S.trend_read(up, {"score": -40})
+    assert dis["mood_agrees"] is False
