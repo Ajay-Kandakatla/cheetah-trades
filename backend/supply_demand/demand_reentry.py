@@ -1028,6 +1028,15 @@ def decide_from_frame(df, sym: str):
     except Exception as exc:                                  # pragma: no cover
         log.debug("into-supply: %s failed: %s", sym, exc)
         rec["supply"] = None
+    # Falling toward the band, not yet in it (Ajay 2026-08-31). Computed HERE
+    # and not in the scan loop because this is the only place the close series
+    # is guaranteed to exist: the scan calls analyze_symbol(with_series=False),
+    # and the first build read rec["series"] there — a key that path never
+    # attaches — so the predicate honestly refused all ~1,750 names and the
+    # approaching board deployed empty. Locked by
+    # test_decide_from_frame_attaches_the_approaching_read.
+    rec["approaching"] = approaching_read(rec, closes)
+
     return rec
 
 
@@ -1519,13 +1528,10 @@ def scan(force: bool = False, limit: Optional[int] = None,
             except Exception as exc:                          # pragma: no cover
                 log.debug("into-supply: collecting %s failed: %s", sym, exc)
             # Fourth predicate, same record, same loop (Ajay 2026-08-31:
-            # "I need the ones that are about to reach and catch them"). The
-            # closes come off the series the chart already carries — read
-            # BEFORE the pops below, no extra price load.
+            # "I need the ones that are about to reach and catch them").
+            # decide_from_frame attached the read; this only collects it.
             try:
-                _closes = [b.get("close") for b in (rec.get("series") or [])
-                           if b.get("close") is not None]
-                a4 = approaching_read(rec, _closes)
+                a4 = rec.get("approaching")
                 if a4:
                     r4 = dict(rec)
                     r4.pop("series", None)

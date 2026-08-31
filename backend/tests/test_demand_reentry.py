@@ -1926,3 +1926,48 @@ def test_no_close_series_means_none_not_a_guess():
     assert dr.approaching_read(_appr_rec(), []) is None
     assert dr.approaching_read(_appr_rec(),
                                [103.0] * dr.APPROACH_DRIFT_BARS) is None
+
+
+def test_decide_from_frame_attaches_the_approaching_read():
+    """END-TO-END lock for the 2026-08-31 empty-board bug. The pure predicate
+    was fully tested and the board deployed empty anyway, because the scan
+    loop fed it a close series from rec["series"] — a key the scan path never
+    attaches (analyze_symbol runs with_series=False there). Only a test that
+    walks a real frame through decide_from_frame proves the wiring."""
+    import numpy as np
+    import pandas as pd
+
+    # A year of bars that carves a tested band ~95-96, holds a modest uptrend
+    # above it, and ends with a MILD dip to ~3% above the band. Mild on
+    # purpose: an early draft used a straight 17% twelve-bar plunge and the
+    # knife guard refused it — correctly. A relentless smooth decline IS a
+    # knife by the guard's own standard; the orderly pullback below is the
+    # shape the toggle exists to catch.
+    px = np.concatenate([
+        np.linspace(100, 96, 40),    # first test of the zone
+        np.linspace(96, 112, 60),    # rally away
+        np.linspace(112, 97, 30),    # second test
+        np.linspace(97, 104, 100),   # steady rally (50-day rising)
+        np.linspace(104, 99, 10),    # the approach: mild dip toward the band
+    ])
+    n = len(px)
+    df = pd.DataFrame({
+        "open": px, "high": px * 1.01, "low": px * 0.99, "close": px,
+        "volume": [2_000_000] * n,
+    }, index=pd.bdate_range("2025-08-01", periods=n))
+
+    rec = dr.decide_from_frame(df, "APPR")
+    assert rec is not None
+    assert "approaching" in rec, "decide_from_frame must attach the read"
+    a = rec["approaching"]
+    assert a is not None, (
+        f"the canonical approach shape must fire: entry_zone="
+    f"{rec.get('entry_zone')}, last={rec.get('last_price')}, "
+        f"trend_ok={rec.get('trend_ok')}")
+    assert a["state"] == "approaching"
+    assert a["drift_pct"] < 0
+    assert 0 < a["dist_pct"] <= dr.APPROACH_NEAR_PCT
+    # And a name sitting INSIDE its band must never carry an approach read.
+    rec2 = dr.decide_from_frame(df.iloc[:130], "INBAND")
+    if rec2 is not None and rec2.get("in_demand_band"):
+        assert rec2.get("approaching") is None
