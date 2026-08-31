@@ -430,3 +430,19 @@ describe('SupportLevels — the chip names the chart actually on screen', () => 
     expect(container.querySelector('.sl-zoom')!.textContent).toContain('6 months');
   });
 });
+
+/* ── the intraday pick must carry BOTH halves (Ajay 2026-08-31) ──────────── */
+describe('intraday selection round-trip', () => {
+  it('selecting "15 min · today from the open" reports window AND tf', async () => {
+    // The other half of this regression — that the TICKER page actually passes
+    // tf/onView — is pinned in scripts/contracts.mjs, where reading a page's
+    // source belongs.
+    const onView = vi.fn();
+    render(<SupportLevels symbol="ACN" window="1m" tf="daily" onSymbol={noop}
+                          onWindow={noop} onView={onView} />);
+    const sel = await screen.findByTitle(/Which chart the levels are read from/i)
+      .then((label) => label.querySelector('select')!);
+    fireEvent.change(sel, { target: { value: '15m_open' } });
+    expect(onView).toHaveBeenCalledWith('1m', '15m_open');
+  });
+});

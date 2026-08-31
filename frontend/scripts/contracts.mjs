@@ -18,6 +18,28 @@ const read = (rel) => readFileSync(join(FRONTEND_ROOT, rel), 'utf8');
 
 const CONTRACTS = [
   {
+    name: 'ticker page passes BOTH halves of the chart view to SupportLevels',
+    file: 'src/pages/SepaCandidate.tsx',
+    // The component's onChange falls back to onWindow(v.window) when onView is
+    // absent, silently dropping the tf half — so "15 min · today from the
+    // open" snapped straight back to "1 month" on the ticker page (Ajay
+    // 2026-08-31, on ACN). A render test cannot catch a MISSING prop on a
+    // different page, so the mount itself is pinned here.
+    checks: (src) => {
+      const errs = [];
+      const i = src.indexOf('<SupportLevels');
+      if (i < 0) return ['SupportLevels mount missing from SepaCandidate'];
+      const tag = src.slice(i, src.indexOf('/>', i));
+      if (!/\btf=\{/.test(tag)) {
+        errs.push('SupportLevels mount lacks tf= — intraday picks cannot render as selected');
+      }
+      if (!/\bonView=\{/.test(tag)) {
+        errs.push('SupportLevels mount lacks onView= — the fallback drops the tf half of every intraday pick');
+      }
+      return errs;
+    },
+  },
+  {
     name: 'breakout-alert banner caps the visible alert count',
     file: 'src/components/BreakoutAlertBanner.tsx',
     // On a broad down day the scanner fires dozens of stage-breakdown alerts.

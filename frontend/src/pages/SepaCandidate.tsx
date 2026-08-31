@@ -332,6 +332,13 @@ export function SepaCandidatePage() {
   const [riskPct, setRiskPct] = useState(1);
   // Zoom for the price supply/demand panel on the supply tab (2026-08-25).
   const [supportWin, setSupportWin] = useState(DEFAULT_WINDOW);
+  /* The chart's timeframe. Without this the ticker page dropped the tf half
+   * of every Intraday pick — onView was never passed, the component fell back
+   * to onWindow(v.window) alone, and "15 min · today from the open" snapped
+   * straight back to "1 month" (Ajay 2026-08-31, on ACN: "unble to select the
+   * 15 min session from Open"). Plain state, not URL — this page's own zoom
+   * was already plain state. */
+  const [supportTf, setSupportTf] = useState('daily');
   // Active tab is derived from the URL: ?tab= wins, then a legacy #hash, else
   // 'chart'. Switching tabs rewrites ?tab= in place (replace, no history spam)
   // so a reload or a shared link lands on the same tab.
@@ -1762,8 +1769,10 @@ export function SepaCandidatePage() {
                 <SupportLevels
                   symbol={symbol}
                   window={supportWin}
+                  tf={supportTf}
                   onSymbol={(s) => navigate(`/sepa/${encodeURIComponent(s)}?tab=supply`)}
                   onWindow={setSupportWin}
+                  onView={(w, t) => { setSupportWin(w); setSupportTf(t); }}
                 />
                 <div className="sepa-tab-help" style={{ marginTop: '1.2rem' }}>
                   <strong>Supply / Demand context</strong> — who this company
