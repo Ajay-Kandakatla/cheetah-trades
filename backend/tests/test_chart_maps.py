@@ -1892,3 +1892,18 @@ def test_approaching_board_ranks_by_proximity_not_cheetah_flow(
 
     out = B.board("zones", limit=10, min_tier="any", phase="approaching")
     assert [t["symbol"] for t in out["tiles"]] == ["CLOSE", "FARFLOW"]
+
+
+def test_the_route_actually_forwards_the_phase_param():
+    """Source guard. The first build declared phase as a Query param and never
+    passed it to board() — the toggle deployed as a no-op that served the
+    reached board under an approaching URL. A param the route accepts but
+    drops is worse than one it rejects."""
+    import inspect
+
+    from chart_maps import api as cm_api
+    src = inspect.getsource(cm_api.chart_maps)
+    assert "phase: str = Query(" in src or "phase" in str(
+        inspect.signature(cm_api.chart_maps).parameters)
+    assert "phase=phase" in src, (
+        "chart_maps route accepts `phase` but never forwards it to board()")
