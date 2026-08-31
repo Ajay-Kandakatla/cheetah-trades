@@ -201,6 +201,52 @@ def _fill_pct(lo: float, hi: float, kind: str, later_highs: list,
 
 
 # ── Opening Range ──────────────────────────────────────────────────────────
+def opening_range_from_bars(df, minutes: int = 15) -> Optional[dict]:
+    """The most recent session's opening range from a 1-MINUTE frame. PURE.
+
+    Split out of `opening_range` 2026-08-31 so a caller that already holds the
+    minute bars does not pay for a second fetch. The session board reads ~99
+    symbols per refresh; calling the fetching version there would have doubled
+    the provider load for data already in hand.
+
+    `minutes` is a count of 1-minute BARS, so a halted or thin name whose first
+    15 minutes contain 9 prints gets a 9-bar range and says `bars: 9` — the
+    window is wall-clock in intent, bar-count in fact, and the payload reports
+    which it got.
+    """
+    if df is None or getattr(df, "empty", True):
+        return None
+    try:
+        import pandas as pd
+        et = df.index.tz_localize("UTC").tz_convert("America/New_York") \
+            if df.index.tz is None else df.index.tz_convert("America/New_York")
+        dates = pd.Series(et.date, index=df.index)
+        session_day = dates.max()
+        day = df[dates == session_day]
+        if day.empty:
+            return None
+        want = max(1, int(minutes))
+        window = day.iloc[:want]
+        hi, lo = float(window["high"].max()), float(window["low"].min())
+        if hi <= lo:
+            return None
+        # A range built from fewer bars than the window asked for is still
+        # FORMING. Verified live 2026-08-31 at 09:31 ET: one minute had
+        # printed and the payload was calling a single bar's high/low "the
+        # 15-minute opening range". It is real information — it is the first
+        # minute — but it is not yet the level Crabel's premise is about, and
+        # a caller must be able to tell the difference before it ranks on it.
+        complete = len(window) >= want
+        return {"kind": "opening_range", "lo": round(lo, 4),
+                "hi": round(hi, 4), "mid": round((lo + hi) / 2.0, 4),
+                "minutes": want, "session": str(session_day),
+                "bars": len(window), "complete": complete,
+                "bars_needed": max(0, want - len(window)), "source": "orb"}
+    except Exception as exc:
+        log.warning("patterns: opening range from bars failed: %s", exc)
+        return None
+
+
 def opening_range(symbol: str, minutes: int = 15) -> Optional[dict]:
     """The most recent session's opening range from 1-minute bars.
 
@@ -218,25 +264,30 @@ def opening_range(symbol: str, minutes: int = 15) -> Optional[dict]:
                                  include_afterhours=False)
         if df is None or df.empty:
             return None
-        et = df.index.tz_localize("UTC").tz_convert("America/New_York") \
-            if df.index.tz is None else df.index.tz_convert("America/New_York")
-        import pandas as pd
-        dates = pd.Series(et.date, index=df.index)
-        session_day = dates.max()
-        day = df[dates == session_day]
-        if day.empty:
-            return None
-        window = day.iloc[:max(1, int(minutes))]
-        hi, lo = float(window["high"].max()), float(window["low"].min())
-        if hi <= lo:
-            return None
-        return {"kind": "opening_range", "lo": round(lo, 4),
-                "hi": round(hi, 4), "mid": round((lo + hi) / 2.0, 4),
-                "minutes": int(minutes), "session": str(session_day),
-                "bars": len(window), "source": "orb"}
+        return opening_range_from_bars(df, minutes)
     except Exception as exc:
         log.warning("patterns: opening range for %s failed: %s", symbol, exc)
         return None
+
+
+def orb_state(orb: Optional[dict], last_price: Optional[float]) -> Optional[str]:
+    """Where price stands vs the opening range: above | below | inside.
+
+    Crabel's premise is that the opening range is the session's first agreed
+    value; which side of it price holds is the whole read. None when either
+    input is missing, because "we could not tell" must not render as "inside".
+    """
+    if not orb or last_price is None:
+        return None
+    try:
+        px, lo, hi = float(last_price), float(orb["lo"]), float(orb["hi"])
+    except (TypeError, ValueError, KeyError):
+        return None
+    if px > hi:
+        return "above"
+    if px < lo:
+        return "below"
+    return "inside"
 
 
 # ── Dynamic entry / stop ───────────────────────────────────────────────────

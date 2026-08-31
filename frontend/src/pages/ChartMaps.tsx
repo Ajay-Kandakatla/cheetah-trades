@@ -30,6 +30,7 @@ import {
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
+import SessionBoard from '../components/SessionBoard';
 import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -280,7 +281,17 @@ export function ChartMaps() {
       {/* The one tab that is not a board. Everything below — the sort/tier
         * controls, the scan progress, the tile grid, the footer counts —
         * describes a universe pass that this tab does not run. */}
-      {!isBoardTab(tab) ? (
+      {tab === 'session' ? (
+        /* Reads the SAME two demand boards, asked a different question. Picking
+         * a row hands the symbol to the Support tab, which is where the drill-in
+         * (bands, SMC cards, chart) already lives — one place per job. */
+        <SessionBoard onPick={(sym) => {
+          const next = new URLSearchParams(params);
+          next.set('tab', 'support');
+          next.set('symbol', sym);
+          setParams(next, { replace: true });
+        }} />
+      ) : !isBoardTab(tab) ? (
         <SupportLevels symbol={supportSymbol} window={supportWindow} tf={supportTf}
                        onSymbol={setSupportSymbol} onWindow={setSupportWindow}
                           onView={setSupportView} />

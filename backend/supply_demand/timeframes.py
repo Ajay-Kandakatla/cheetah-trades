@@ -120,8 +120,35 @@ def resample_ohlcv(df, rule: str):
     return out.dropna(subset=["open", "high", "low", "close"])
 
 
+def intraday_raw(symbol: str, tf: str = M15):
+    """The 1-minute bars `frame_for` would fetch for `tf`, or None.
+
+    Exposed 2026-08-31 so a caller needing BOTH the resampled frame and the raw
+    minutes (the session board wants the frame for structure and the raw for
+    the opening range) pays for one fetch instead of two. Fetching twice was
+    doubling today's live requests per symbol and drawing Massive read timeouts
+    at 10 workers.
+    """
+    spec = tf_spec(tf)
+    if spec["key"] == DAILY:
+        return None
+    try:
+        from daytrading.data import load_intraday_range
+    except Exception as exc:                                # pragma: no cover
+        log.warning("timeframes: daytrading.data unavailable: %s", exc)
+        return None
+    end = date.today()
+    start = end - timedelta(days=int(spec["days"]) + 4)      # weekend padding
+    try:
+        return load_intraday_range(symbol, start, end, include_premarket=False,
+                                   include_afterhours=False)
+    except Exception as exc:
+        log.warning("timeframes: intraday fetch for %s failed: %s", symbol, exc)
+        return None
+
+
 def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
-              bars: Optional[int] = None) -> tuple:
+              bars: Optional[int] = None, raw=None) -> tuple:
     """(df, meta) for one symbol at one timeframe.
 
     df is a DataFrame indexed by timestamp with open/high/low/close[/volume],
@@ -156,23 +183,11 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
                      "source": "daily bars", "as_of": as_of})
         return df, meta
 
-    # Intraday: fetch 1-minute bars over the calendar span, then resample.
-    try:
-        from daytrading.data import load_intraday_range
-    except Exception as exc:                                # pragma: no cover
-        log.warning("timeframes: daytrading.data unavailable: %s", exc)
-        meta["reason"] = "intraday loader unavailable"
-        return None, meta
-
-    end = date.today()
-    start = end - timedelta(days=int(spec["days"]) + 4)     # weekend padding
-    try:
-        raw = load_intraday_range(sym, start, end, include_premarket=False,
-                                  include_afterhours=False)
-    except Exception as exc:
-        log.warning("timeframes: intraday fetch for %s failed: %s", sym, exc)
-        meta["reason"] = f"intraday fetch failed: {exc}"
-        return None, meta
+    # Intraday: 1-minute bars over the calendar span, then resample. `raw` lets
+    # a caller hand in bars it already holds (see `intraday_raw`) so the fetch
+    # is not paid for twice.
+    if raw is None:
+        raw = intraday_raw(sym, key)
     if raw is None or raw.empty:
         meta["reason"] = ("no intraday bars — Massive serves minute data for "
                           "liquid US equities only")

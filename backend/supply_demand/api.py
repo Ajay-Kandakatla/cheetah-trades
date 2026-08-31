@@ -20,9 +20,72 @@ from . import demand_zones as zones_mod
 from . import price_zones as price_zones_mod
 from . import timeframes as tf_mod
 from . import demand_reentry as reentry_mod
+from . import session_board as session_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
+
+
+@router.get("/supply-demand/session-board")
+async def get_session_board(
+    tf: str = Query("15m", description="analysis timeframe: 15m (default) | 60m"),
+    universe: str = Query("full", description="same universe key the demand boards use"),
+    orb_minutes: int = Query(15, ge=1, le=120,
+                             description="opening-range window in 1-minute bars"),
+    limit: int = Query(session_mod.MAX_SYMBOLS, ge=1, le=300),
+    force: bool = Query(False, description="bypass the 3-minute cache and re-read"),
+):
+    """ORB / fair-value gaps / SMC / market mood for every name already on the
+    Back in Demand and Deep Demand boards.
+
+    Ajay 2026-08-31: *"a tab for ORB/ FVG/ Bullish sentiment or bearish for all
+    the onces in demand zone. and deep demand zones ... I will use this tab
+    after market open to figure out market sentiment."*
+
+    The daily boards answer WHICH NAMES. This answers whether the session is
+    confirming the daily band that listed them: mood on intraday bars, where
+    price sits against the opening range, unfilled imbalances (with the ones
+    left by THIS session called out separately), and the complete
+    sweep -> BOS -> order-block -> FVG sequence where one exists.
+
+    Never blocks (Cloudflare 524, 2026-08-14): a cold pass warms in a thread
+    and this returns `warming: true`. Poll `/session-board/progress`.
+
+    Out of session it shows the LAST session and says so via `live: false` —
+    the read is still the honest one, it is just not today's.
+    """
+    if force:
+        import asyncio
+        return await asyncio.to_thread(session_mod.scan, universe, tf,
+                                       limit=limit, orb_minutes=orb_minutes)
+    return session_mod.cached_or_warm(universe, tf, limit=limit,
+                                      orb_minutes=orb_minutes)
+
+
+@router.get("/supply-demand/session-board/progress")
+async def get_session_board_progress(
+    tf: str = Query("15m"),
+    universe: str = Query("full"),
+):
+    """Live counter for a warming session pass. `phase: idle` when nothing runs."""
+    return session_mod.progress_for(universe, tf)
+
+
+@router.get("/supply-demand/session-board/{symbol}")
+async def get_session_board_symbol(
+    symbol: str,
+    tf: str = Query("15m"),
+    orb_minutes: int = Query(15, ge=1, le=120),
+):
+    """One name's session read — the same row the board renders.
+
+    Exists so the drill-in and the board can never disagree: both call
+    `session_board.read_symbol`.
+    """
+    import asyncio
+    return await asyncio.to_thread(session_mod.read_symbol,
+                                   symbol.upper(), None, tf=tf,
+                                   orb_minutes=orb_minutes)
 
 
 @router.get("/supply-demand/demand-reentry")

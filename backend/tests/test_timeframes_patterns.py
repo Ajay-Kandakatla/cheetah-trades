@@ -419,7 +419,17 @@ def test_signal_watch_session_gate_and_push_kind():
     assert SW.in_session(datetime(2026, 8, 29, 11, 0, tzinfo=et)) is False   # Sat
     assert SW.in_session(datetime(2026, 8, 28, 9, 20, tzinfo=et)) is False   # pre
     assert SW.in_session(datetime(2026, 8, 28, 10, 0, tzinfo=et)) is True
-    out = SW.check_once()
+    # The gate is asserted against a STUBBED clock. Reading the real one made
+    # this test pass only outside market hours: on 2026-08-31 at 09:31 ET it
+    # went past the gate into the live path and died on an unrelated py3.9
+    # pydantic annotation. A test whose result depends on when the suite runs
+    # is not testing the thing it names.
+    real = SW.in_session
+    try:
+        SW.in_session = lambda *a, **k: False
+        out = SW.check_once()
+    finally:
+        SW.in_session = real
     assert out["ran"] is False and "RTH" in out["reason"]
     import inspect
     src = inspect.getsource(SW)

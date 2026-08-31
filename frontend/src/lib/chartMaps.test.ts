@@ -504,7 +504,7 @@ describe('the Earnings Flow tab', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -554,18 +554,27 @@ describe('the Support Levels tab', () => {
     // Gabbar Levels — both level-boards carrying the Bonde sales gate). What
     // must hold is unchanged in spirit: every board reading zone structure
     // stays contiguous, and the per-ticker tool closes the cluster.
+    // 2026-08-31: `session` joined the cluster directly after `deep_demand`,
+    // because it READS that tab and Back in Demand — it is the same names asked
+    // whether the session is confirming their daily band.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'supply', 'deep_demand', 'gabbar', 'undervalue', 'support']);
+      .toEqual(['zones', 'supply', 'deep_demand', 'session', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is the ONLY tab that is not driven by a board fetch', () => {
+  it('is one of exactly two tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
-    expect(isBoardTab('support')).toBe(false);
-    for (const t of CM_TABS.filter((x) => x !== 'support')) {
+    //
+    // 2026-08-31: `session` is the second such tab. It has its own endpoint
+    // (/supply-demand/session-board) and its own row renderer, so the tile
+    // grid and the sort/tier controls are skipped for it too. The list is
+    // spelled out rather than filtered so a THIRD one cannot join silently.
+    const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
+    expect(nonBoard).toEqual(['session', 'support']);
+    for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
   });

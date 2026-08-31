@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -26,13 +26,19 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'ga
 // levels-plus-sales board; both carry the Bonde sales gate.
 // `topping` sits beside `vcp` — both are slices of the same SEPA scan file,
 // one long-side, one short-side.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+// `session` sits right after `deep_demand` because it READS those two tabs:
+// it is the same names asked a different question (is the session confirming
+// the daily band?), so it belongs beside its own inputs.
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
  *  it — asking /chart-maps for an unknown tab silently returns the VCP board. */
 export function isBoardTab(t: CmTab): boolean {
-  return t !== 'support';
+  // `session` joins `support` as a non-board tab: it has its own endpoint
+  // (/supply-demand/session-board) and its own row renderer, so the tile grid
+  // and the sort/tier controls are skipped for it too.
+  return t !== 'support' && t !== 'session';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -63,6 +69,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   undervalue: {
     label: 'Under Value',
     blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name — nothing here is estimated.',
+  },
+  session: {
+    label: 'Session',
+    blurb: 'After the open, for entries. Every name on Back in Demand and Deep Demand, re-read on intraday bars: market mood (bullish / bearish), where price sits against the opening range, unfilled fair-value gaps with the ones left by THIS session called out, and the complete Smart-Money sequence (liquidity sweep \u2192 BOS \u2192 order block \u2192 FVG) where one exists. The daily boards pick the names; this says whether the session is confirming the daily band that listed them \u2014 "at the daily band" plus a completed setup is the entry this tab exists to find. Mood, gaps and the SMC sequence are convention, not book methods, and the ranking is this app\'s own; the opening range says "forming" until its full window has printed. Not advice.',
   },
   gabbar: {
     label: 'Gabbar Levels',
