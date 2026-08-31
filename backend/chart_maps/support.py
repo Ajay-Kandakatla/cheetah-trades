@@ -557,6 +557,39 @@ def _why(levels: dict, zones: dict, spec: dict) -> str:
     return head or f"No band below price in the last {spec['label']}."
 
 
+def _record_signal(sym: str, tf_key: str, sig: dict,
+                   last_price: Optional[float]) -> None:
+    """Log every BUY/SELL to the forward-measurement ledger.
+
+    This is the honest answer to "how does GainzAlgo figure it out": its
+    source is protected and its accuracy is a marketing number, so rather
+    than guess at their formula we measure OURS. `learning.observations`
+    resolves each row against real forward prices, which turns a signal
+    into something with a hit rate he owns.
+
+    Deduped per (symbol, timeframe, bar) — the tab refetches on every
+    keystroke and a ledger full of the same call would corrupt the rate.
+    """
+    try:
+        import time
+
+        from learning import observations as obs
+        horizon = {"15m": 6, "60m": 24}.get(tf_key, 72)
+        obs.record_observation(
+            source=f"mood_signal:{tf_key}",
+            ticker=sym,
+            ts=int(time.time()),
+            direction="up" if sig.get("action") == "BUY" else "down",
+            baseline_price=last_price,
+            horizon_hours=horizon,
+            predicted_pct=float((sig.get("trade") or {}).get("rr") or 0) or 0.0,
+            prediction_id=f"{sym}:{tf_key}:{sig.get('action')}:"
+                          f"{(sig.get('level') or {}).get('lo')}",
+        )
+    except Exception as exc:                                # pragma: no cover
+        log.debug("support: signal ledger write failed: %s", exc)
+
+
 def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                tf: str = TF_DEFAULT) -> dict:
     """Support levels for one ticker at one zoom, on one timeframe.
@@ -671,6 +704,21 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # bullish patterns on an hourly chart ... Cup handle or Inverse head and
     # shoulder or Flat top"). Cited shapes keep their citation; every
     # non-daily record is stamped stats_transfer=False.
+    # Market mood + buy/sell signal on THIS timeframe (Ajay 2026-08-29:
+    # "market sentiment ... to figure out market mood and sentiments for
+    # entries. Also give me a buy signal"). Computed on CLOSED bars only —
+    # a signal that can change after he acts on it is worse than none.
+    try:
+        from supply_demand import mood as mood_mod
+        mood_read = mood_mod.mood(df.tail(budget))
+        sig = mood_mod.signal(df.tail(budget), zone_bands + gaps, mood_read,
+                              last_price=last_price, atr_value=atr_value)
+        if sig.get("action") in ("BUY", "SELL"):
+            _record_signal(sym, tf_key, sig, last_price)
+    except Exception as exc:                                # pragma: no cover
+        log.warning("support: mood/signal for %s failed: %s", sym, exc)
+        mood_read, sig = None, None
+
     try:
         from patterns import timeframe as pat_tf
         # Same window the bands were read from — a pattern found in bars the
@@ -716,6 +764,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "opening_range": orb,
         "trade_levels": traded,
         "bullish_patterns": bullish,
+        "mood": mood_read,
+        "signal": sig,
         "note": ("Levels are read from this window only. A wider zoom finds the "
                  "structural floor; a tighter one finds the level this week's "
                  "trade is standing on."),

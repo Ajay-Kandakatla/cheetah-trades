@@ -221,6 +221,67 @@ const TF_PAYLOAD: any = {
   },
 };
 
+/* ── Market mood + buy/sell signal (Ajay 2026-08-29) ────────────────────── */
+const SIGNAL_PAYLOAD: any = {
+  ...TF_PAYLOAD,
+  mood: {
+    score: 42.5, label: 'bullish', rsi: 58.2, bars: 329,
+    components: { trend: 25, momentum: 3.3, pressure: 6.2, vwap: 4, location: 4, structure: 0 },
+    unavailable: [],
+  },
+  signal: {
+    action: 'BUY', mood: 42.5, mood_label: 'bullish',
+    reasons: ['mood 42.5 (bullish)', 'price just above a swing demand band 214.5–217.27'],
+    blockers: [],
+    level: { lo: 214.5, hi: 217.27, where: 'just above', distance_pct: 0.1 },
+    trade: { entry: 217.27, stop: 213.49, target1: 224.83, rr: 2.0, risk_pct: 1.74 },
+    no_repaint: true,
+  },
+};
+
+describe('SupportLevels — market mood and the buy signal', () => {
+  it('shows the action, the mood and the plan that justifies it', async () => {
+    mockFetch(SIGNAL_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/🟢 BUY/)).toBeTruthy());
+    expect(screen.getAllByText(/bullish/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/1.74% risk/)).toBeTruthy();
+    // the component breakdown is visible so he can argue with the score
+    expect(screen.getByText(/trend/)).toBeTruthy();
+    // the no-repaint property is stated, not implied
+    expect(screen.getByText(/never repaints/i)).toBeTruthy();
+  });
+
+  it('a WAIT states what is blocking it rather than showing nothing', async () => {
+    mockFetch({
+      ...SIGNAL_PAYLOAD,
+      signal: {
+        action: 'WAIT', mood: 8, mood_label: 'neutral', reasons: [],
+        blockers: ['mood 8 below the 25 floor (neutral)',
+                   'price is not within 1.5% of a demand band'],
+        level: null, trade: null, no_repaint: true,
+      },
+    });
+    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/⏸ WAIT/)).toBeTruthy());
+    expect(screen.getByText(/below the 25 floor/)).toBeTruthy();
+    expect(screen.getByText(/not within 1.5%/)).toBeTruthy();
+  });
+
+  it('names the unscored components instead of reading them as neutral', async () => {
+    mockFetch({
+      ...SIGNAL_PAYLOAD,
+      mood: { ...SIGNAL_PAYLOAD.mood, unavailable: ['vwap (intraday frames only)'] },
+    });
+    render(<SupportLevels symbol="NVDA" window="3m" tf="daily"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/Not scored:/)).toBeTruthy());
+    expect(screen.getByText(/never a neutral-positive/)).toBeTruthy();
+  });
+});
+
 describe('SupportLevels — timeframe, computed levels and patterns', () => {
   it('renders the timeframe dropdown only when the page can handle the change', async () => {
     mockFetch(TF_PAYLOAD);

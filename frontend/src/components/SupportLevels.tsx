@@ -116,6 +116,8 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   const tradeLevels = data?.trade_levels || [];
   const orb = data?.opening_range || null;
   const bullish = data?.bullish_patterns || null;
+  const mood = data?.mood || null;
+  const sig = data?.signal || null;
   const sym = normalizeSymbol(symbol);
   const supports = data?.supports || [];
   const overhead = data?.overhead || [];
@@ -200,6 +202,61 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             <LevelTable title="Overhead" levels={overhead} side="overhead"
                         empty="Nothing overhead in this window — clear above." />
           </div>
+
+          {(sig || mood) ? (
+            <div className="sl-signal">
+              <div className="sl-signal-head">
+                <span className={`sl-action sl-action-${(sig?.action || 'WAIT').toLowerCase()}`}>
+                  {sig?.action === 'BUY' ? '🟢 BUY'
+                    : sig?.action === 'SELL' ? '🔴 SELL' : '⏸ WAIT'}
+                </span>
+                {mood ? (
+                  <span className="sl-mood">
+                    Mood <strong>{mood.score}</strong> · {mood.label}
+                    {mood.rsi != null && <> · RSI {mood.rsi}</>}
+                  </span>
+                ) : null}
+              </div>
+              {sig?.trade ? (
+                <p className="sl-signal-plan">
+                  Entry {money(sig.trade.entry)} · stop {money(sig.trade.stop)}{' '}
+                  ({sig.trade.risk_pct}% risk) · target {money(sig.trade.target1)}{' '}
+                  ({sig.trade.rr}R)
+                </p>
+              ) : null}
+              {(sig?.reasons || []).length > 0 ? (
+                <ul className="sl-why">
+                  {(sig?.reasons || []).map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              ) : null}
+              {(sig?.blockers || []).length > 0 ? (
+                <ul className="sl-why sl-why-block">
+                  {(sig?.blockers || []).map((b, i) => <li key={i}>{b}</li>)}
+                </ul>
+              ) : null}
+              {mood?.components ? (
+                <div className="sl-mood-bars">
+                  {Object.entries(mood.components).map(([k, v]) => (
+                    <span key={k} className="sl-mood-chip" title={`${k}: ${v}`}>
+                      {k} <strong className={v >= 0 ? 'pos' : 'neg'}>
+                        {v > 0 ? `+${v}` : v}</strong>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {(mood?.unavailable || []).length > 0 ? (
+                <p className="cm-note">
+                  Not scored: {(mood?.unavailable || []).join(' · ')} — a missing
+                  input scores zero, never a neutral-positive.
+                </p>
+              ) : null}
+              <p className="cm-note">
+                Computed on CLOSED bars only, so it never repaints. Every BUY/SELL
+                is written to the forward ledger and scored against real prices —
+                the hit rate is measured from your tape, not claimed.
+              </p>
+            </div>
+          ) : null}
 
           {tradeLevels.length > 0 ? (
             <div className="sl-trades">

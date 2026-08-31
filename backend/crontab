@@ -749,3 +749,12 @@
 # todo_reminder (scheduled kind — the 2026-06-24 keep-set gains no new
 # kinds). LLM prose degrades to deterministic text if the API is down.
 40     8     *    *    1-5  /usr/local/bin/python -m desk.report
+
+# ── Continuous buy/sell signal monitor (Ajay 2026-08-29) ────────────────────
+# Every 15 min during RTH. Watches holdings + current demand candidates on
+# 15m and hourly bars; pushes ONE pivot_alert per (ticker, tf, action, day).
+# BUY only on names he does NOT hold, SELL only on names he does — the other
+# two combinations are not decisions he can act on. Signals are computed on
+# CLOSED bars (no repainting) and every one is written to the forward ledger
+# so the hit rate is measured from his own tape, not a vendor's marketing.
+5-50/15 9-15 * * 1-5  /usr/local/bin/python -m catalysts.signal_watch

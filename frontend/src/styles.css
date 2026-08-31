@@ -11224,3 +11224,21 @@ a.tk-link:hover   { color: inherit; }
 .sl-basis { opacity: 0.6; font-size: 0.85em; }
 .sl-patterns ul { margin: 0; padding-left: 1.1rem; }
 .sl-patterns li { margin: 0.2rem 0; }
+
+/* Mood + buy/sell signal on the Support tab (2026-08-29). */
+.sl-signal { margin: 1rem 0; padding: 0.7rem 0.9rem; border-radius: var(--r-2, 8px);
+             border: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+.sl-signal-head { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+.sl-action { font-weight: 800; font-size: 1.05rem; }
+.sl-action-buy { color: var(--positive, #23c552); }
+.sl-action-sell { color: var(--negative, #e5484d); }
+.sl-action-wait { opacity: 0.7; }
+.sl-mood { opacity: 0.9; }
+.sl-signal-plan { margin: 0.4rem 0; font-variant-numeric: tabular-nums; }
+.sl-why { margin: 0.3rem 0; padding-left: 1.1rem; }
+.sl-why-block { opacity: 0.75; }
+.sl-mood-bars { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0.2rem; }
+.sl-mood-chip { font-size: 0.78rem; padding: 0.1rem 0.45rem; border-radius: var(--r-2, 6px);
+                background: color-mix(in srgb, currentColor 8%, transparent); }
+.sl-mood-chip .pos { color: var(--positive, #23c552); }
+.sl-mood-chip .neg { color: var(--negative, #e5484d); }

@@ -81,6 +81,8 @@ export type SupportPayload = {
   fair_value_gaps?: TradeLevel[];
   opening_range?: { lo: number; hi: number; minutes: number; session: string } | null;
   trade_levels?: TradeLevel[];
+  mood?: MoodRead;
+  signal?: TradeSignal;
   bullish_patterns?: {
     patterns?: BullishPattern[];
     stats_transfer?: boolean;
@@ -192,6 +194,30 @@ export type TradeLevel = {
     distance_pct?: number; buffer_basis?: string;
   } | null;
 };
+
+export type MoodRead = {
+  score?: number;
+  label?: string;
+  components?: Record<string, number>;
+  unavailable?: string[];
+  rsi?: number;
+  vwap?: number;
+  bars?: number;
+} | null;
+
+export type TradeSignal = {
+  action?: 'BUY' | 'SELL' | 'WAIT';
+  mood?: number;
+  mood_label?: string;
+  reasons?: string[];
+  blockers?: string[];
+  level?: { lo?: number; hi?: number; where?: string; distance_pct?: number } | null;
+  trade?: {
+    entry?: number; stop?: number; target1?: number; rr?: number | null;
+    risk_pct?: number; target_basis?: string;
+  } | null;
+  no_repaint?: boolean;
+} | null;
 
 export type BullishPattern = {
   kind?: string;

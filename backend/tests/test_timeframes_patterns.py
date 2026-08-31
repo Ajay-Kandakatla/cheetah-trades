@@ -316,3 +316,151 @@ def test_zone_map_overlays_the_timeframe_without_touching_the_daily_read():
     assert "tf_bands" in src_api and "trade_levels" in src_api
     # The daily analyze_symbol result is still what the body is built from.
     assert "analyze_symbol" in src_api
+
+
+# ── market mood + buy signal (Ajay 2026-08-29) ─────────────────────────────
+def _trending_frame(n=80, up=True, freq="15min"):
+    rows = []
+    for i in range(n):
+        base = 100 + (i * 0.4 if up else -i * 0.4)
+        rows.append((base, base + 0.6, base - 0.6, base + (0.3 if up else -0.3)))
+    return _frame(rows, freq=freq)
+
+
+def test_mood_reads_bullish_on_an_advance_and_bearish_on_a_decline():
+    from supply_demand import mood as M
+    up = M.mood(_trending_frame(up=True))
+    down = M.mood(_trending_frame(up=False))
+    assert up["score"] > 0 and "bull" in up["label"]
+    assert down["score"] < 0 and "bear" in down["label"]
+    assert set(up["components"]) == {"trend", "momentum", "pressure", "vwap",
+                                     "location", "structure"}
+
+
+def test_mood_drops_the_forming_bar_so_a_signal_never_repaints():
+    """The one GainzAlgo claim worth copying is no-repainting, and it is a
+    property, not a feature: the last bar is still being written."""
+    from supply_demand import mood as M
+    df = _trending_frame()
+    assert M.mood(df)["bars"] == len(df) - 1
+    assert M.mood(df, closed_only=False)["bars"] == len(df)
+
+
+def test_a_missing_component_scores_zero_and_is_named_never_assumed_neutral():
+    from supply_demand import mood as M
+    m = M.mood(_trending_frame(freq="D"))          # daily frame → no VWAP
+    assert m["components"]["vwap"] == 0.0
+    assert any("vwap" in u for u in m["unavailable"])
+
+
+def test_mood_degrades_on_junk_rather_than_guessing():
+    from supply_demand import mood as M
+    for bad in (None, _frame([(1, 1, 1, 1)] * 2)):
+        out = M.mood(bad)
+        assert out["label"] == "unavailable" and out["score"] == 0.0
+
+
+def test_a_buy_needs_BOTH_a_mood_and_a_level():
+    """Mood alone is a weather report: without a band there is no stop, and
+    without a stop there is no position size."""
+    from supply_demand import mood as M
+    df = _trending_frame(up=True)
+    last = float(df["close"].iloc[-2])
+    band = {"kind": "demand", "lo": last * 0.99, "hi": last * 0.999,
+            "source": "swing"}
+    good = M.signal(df, [band], last_price=last, atr_value=1.0)
+    assert good["action"] == "BUY"
+    assert good["trade"]["stop"] < good["trade"]["entry"]
+    assert good["no_repaint"] is True
+    # same constructive mood, no band anywhere near → no trade
+    far = M.signal(df, [{"kind": "demand", "lo": last * 0.5, "hi": last * 0.55}],
+                   last_price=last, atr_value=1.0)
+    assert far["action"] == "WAIT"
+    assert any("demand band" in b for b in far["blockers"])
+    # a band right there but a bearish mood → still no trade
+    down = _trending_frame(up=False)
+    dlast = float(down["close"].iloc[-2])
+    bear = M.signal(down, [{"kind": "demand", "lo": dlast * 0.99,
+                            "hi": dlast * 0.999}],
+                    last_price=dlast, atr_value=1.0)
+    assert bear["action"] != "BUY"
+    # A decisively bearish mood resolves to SELL, and the reasons a BUY did
+    # not fire move to buy_blockers (they would read as sell doubts here).
+    reasons_not_to_buy = bear["blockers"] + bear.get("buy_blockers", [])
+    assert any("mood" in b for b in reasons_not_to_buy)
+
+
+def test_signal_never_fires_without_a_stop():
+    from supply_demand import mood as M
+    df = _trending_frame(up=True)
+    last = float(df["close"].iloc[-2])
+    broken = {"kind": "demand", "lo": last * 1.5, "hi": last * 0.5}  # inverted
+    out = M.signal(df, [broken], last_price=last, atr_value=1.0)
+    assert out["action"] != "BUY" or out["trade"] is not None
+
+
+def test_watch_pushes_only_the_actionable_half_of_each_signal():
+    """A BUY on something already held is not a decision; a SELL on
+    something not held is noise."""
+    from catalysts import signal_watch as SW
+    assert SW.should_push("BUY", False) == (True, "")
+    assert SW.should_push("BUY", True)[0] is False
+    assert SW.should_push("SELL", True) == (True, "")
+    assert SW.should_push("SELL", False)[0] is False
+    assert SW.should_push("WAIT", False)[0] is False
+
+
+def test_signal_watch_session_gate_and_push_kind():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from catalysts import signal_watch as SW
+    et = ZoneInfo("America/New_York")
+    assert SW.in_session(datetime(2026, 8, 29, 11, 0, tzinfo=et)) is False   # Sat
+    assert SW.in_session(datetime(2026, 8, 28, 9, 20, tzinfo=et)) is False   # pre
+    assert SW.in_session(datetime(2026, 8, 28, 10, 0, tzinfo=et)) is True
+    out = SW.check_once()
+    assert out["ran"] is False and "RTH" in out["reason"]
+    import inspect
+    src = inspect.getsource(SW)
+    assert 'kind="pivot_alert"' in src, "the keep-set gains no new kinds"
+    assert "signal_alert" not in src
+
+
+def test_every_signal_is_written_to_the_forward_ledger():
+    """The honest answer to 'how does GainzAlgo figure it out': we cannot
+    know, so we measure OURS against real forward prices."""
+    import inspect
+
+    from catalysts import signal_watch as SW
+    from chart_maps import support as S
+    assert "record_observation" in inspect.getsource(SW)
+    assert "record_observation" in inspect.getsource(S._record_signal)
+
+
+def test_vwap_scores_on_intraday_frames_where_the_index_is_naive_utc():
+    """Regression: the intraday cache indexes bars in NAIVE UTC, and reading
+    that as 'no timezone, no VWAP' silently zeroed a 15-point component on
+    exactly the timeframes VWAP exists for."""
+    import pandas as pd
+
+    from supply_demand import mood as M
+    idx = pd.date_range("2026-08-28 13:30", periods=60, freq="15min")  # naive
+    df = pd.DataFrame({"open": range(60), "high": range(1, 61),
+                       "low": range(-1, 59), "close": range(60),
+                       "volume": [1000] * 60}, index=idx)
+    assert M._vwap(df) is not None
+    # A daily frame must still decline: a multi-year VWAP is not a level.
+    daily = _frame([(10, 11, 9, 10)] * 60)
+    assert M._vwap(daily) is None
+
+
+def test_a_sell_does_not_carry_the_reasons_a_buy_did_not_fire():
+    from supply_demand import mood as M
+    down = _trending_frame(up=False)
+    last = float(down["close"].iloc[-2])
+    out = M.signal(down, [{"kind": "demand", "lo": last * 0.5, "hi": last * 0.55}],
+                   last_price=last, atr_value=1.0)
+    assert out["action"] == "SELL"
+    assert out["blockers"] == [], "buy blockers must not read as sell doubts"
+    assert out["buy_blockers"], "they are kept, just under their own key"
