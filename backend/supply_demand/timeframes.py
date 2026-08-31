@@ -1,0 +1,180 @@
+"""Multi-timeframe frames for the zone engine.
+
+Ajay 2026-08-29: "can do this in Daily, Market hourly, 15 mins time charts
+... For supply and demand zone".
+
+Every zone surface in this app reads DAILY bars. The same swing-cluster
+rule run on 15-minute or hourly bars answers a different question — where
+is the level *this session's* trade is standing on — and that is the one
+an intraday entry needs. Nothing about the zone methodology changes here;
+only the frame it reads.
+
+Sources (both already in the app, no new provider):
+  * daily  — sepa.prices.load_prices (Massive daily, parquet/Mongo cached)
+  * 60m/15m — daytrading.data.load_intraday_range (Massive 1-minute bars,
+    Mongo-cached per completed day) resampled with a right-closed,
+    right-labelled OHLCV aggregation so a bar is stamped at the time it
+    CLOSES, which is when its high/low become tradeable facts.
+
+Session policy for intraday frames: RTH only. Pre-market prints are thin
+and gappy, and a swing low made on 400 shares at 07:12 is not a level
+anyone defended — including it would manufacture zones out of noise.
+
+Bar budgets are per timeframe, not shared: 15m RTH has 26 bars a day, 60m
+has 7 (the last one is a half hour), so "60 bars of structure" is 2.5
+sessions on the 15m and 9 on the hourly. The dropdown labels state the
+real calendar span so the zoom is never ambiguous.
+"""
+from __future__ import annotations
+
+import logging
+from datetime import date, timedelta
+from typing import Optional
+
+log = logging.getLogger("supply_demand.timeframes")
+
+DAILY = "daily"
+H1 = "60m"
+M15 = "15m"
+
+# `bars` is what the zone engine reads; `days` is the calendar fetch span.
+# swing_window shrinks intraday on purpose — a 3-bar swing on a 15m chart
+# is 45 minutes, which is already a real intraday pivot; the daily default
+# of 4-5 would find two levels a session and call the chart structureless.
+TIMEFRAMES: tuple[dict, ...] = (
+    {"key": DAILY, "label": "Daily", "bars": 252, "days": 0,
+     "swing_window": 4, "span": "1 year of daily bars",
+     "orb_minutes": 30},
+    # 330 bars ≈ 47 sessions ≈ 9 weeks — deliberately wide enough that
+    # Bulkowski's minimum cup ("7 weeks" = 245 hourly bars) can actually
+    # form. A shorter budget would make the cup detector silently barren
+    # on this timeframe and look like a bug.
+    {"key": H1, "label": "1 hour", "bars": 330, "days": 70,
+     "swing_window": 3, "span": "~47 sessions of hourly bars",
+     "orb_minutes": 60},
+    {"key": M15, "label": "15 min", "bars": 260, "days": 15,
+     "swing_window": 2, "span": "~10 sessions of 15-minute bars",
+     "orb_minutes": 15},
+)
+
+DEFAULT_TF = DAILY
+_BY_KEY = {t["key"]: t for t in TIMEFRAMES}
+
+# Aliases so a URL can say what a human would type.
+_ALIAS = {"1d": DAILY, "d": DAILY, "day": DAILY, "1day": DAILY,
+          "1h": H1, "h": H1, "hour": H1, "hourly": H1, "60min": H1,
+          "15": M15, "15min": M15, "m15": M15, "15m": M15}
+
+
+def parse_tf(raw) -> str:
+    """Any user-supplied timeframe → a supported key. Unknown → daily: the
+    surfaces all worked on daily before this module existed, so that is the
+    one fallback that cannot surprise anyone."""
+    if not isinstance(raw, str):
+        return DEFAULT_TF
+    k = raw.strip().lower()
+    if k in _BY_KEY:
+        return k
+    return _ALIAS.get(k, DEFAULT_TF)
+
+
+def tf_spec(key: str) -> dict:
+    return _BY_KEY[parse_tf(key)]
+
+
+def tf_options() -> list:
+    """Dropdown payload for the FE."""
+    return [{"key": t["key"], "label": t["label"], "span": t["span"],
+             "bars": t["bars"]} for t in TIMEFRAMES]
+
+
+def resample_ohlcv(df, rule: str):
+    """1-minute bars → `rule` bars, stamped at the time the bar CLOSES.
+
+    LEFT-closed, RIGHT-labelled: the bar stamped 09:45 holds the minutes
+    09:30-09:44. Closing the interval on the right instead looks equivalent
+    and is not — it puts the session's opening minute in a bucket of its
+    own, so every session would start with a one-minute bar wearing a
+    15-minute label, and that orphan is exactly the kind of fake extreme
+    the swing and gap detectors would treat as structure.
+
+    Empty buckets (lunch lulls, halts, the overnight gap between sessions)
+    are dropped rather than forward filled — a bar that never traded is not
+    a bar, and painting one would invent a level nobody defended."""
+    if df is None or df.empty:
+        return None
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
+    if "volume" in df.columns:
+        agg["volume"] = "sum"
+    out = df.resample(rule, label="right", closed="left").agg(agg)
+    return out.dropna(subset=["open", "high", "low", "close"])
+
+
+def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
+              bars: Optional[int] = None) -> tuple:
+    """(df, meta) for one symbol at one timeframe.
+
+    df is a DataFrame indexed by timestamp with open/high/low/close[/volume],
+    trimmed to the timeframe's bar budget. meta always answers, even on a
+    miss, so the caller can keep rendering its controls:
+      {tf, label, span, bars, available, source, as_of, reason}
+    """
+    spec = tf_spec(tf)
+    key = spec["key"]
+    want = int(bars or spec["bars"])
+    meta = {"tf": key, "label": spec["label"], "span": spec["span"],
+            "bars": 0, "available": False, "source": None, "as_of": None,
+            "swing_window": spec["swing_window"], "reason": None}
+    sym = (symbol or "").upper().strip()
+    if not sym:
+        meta["reason"] = "no symbol"
+        return None, meta
+
+    if key == DAILY:
+        try:
+            from chart_maps.support import _frame_for as daily_frame
+            df, have, as_of = daily_frame(sym, want)
+        except Exception as exc:
+            log.warning("timeframes: daily frame for %s failed: %s", sym, exc)
+            meta["reason"] = "daily bars unavailable"
+            return None, meta
+        if df is None or not have:
+            meta["reason"] = "no daily bars"
+            return None, meta
+        df = df.tail(want)
+        meta.update({"bars": len(df), "available": True,
+                     "source": "daily bars", "as_of": as_of})
+        return df, meta
+
+    # Intraday: fetch 1-minute bars over the calendar span, then resample.
+    try:
+        from daytrading.data import load_intraday_range
+    except Exception as exc:                                # pragma: no cover
+        log.warning("timeframes: daytrading.data unavailable: %s", exc)
+        meta["reason"] = "intraday loader unavailable"
+        return None, meta
+
+    end = date.today()
+    start = end - timedelta(days=int(spec["days"]) + 4)     # weekend padding
+    try:
+        raw = load_intraday_range(sym, start, end, include_premarket=False,
+                                  include_afterhours=False)
+    except Exception as exc:
+        log.warning("timeframes: intraday fetch for %s failed: %s", sym, exc)
+        meta["reason"] = f"intraday fetch failed: {exc}"
+        return None, meta
+    if raw is None or raw.empty:
+        meta["reason"] = ("no intraday bars — Massive serves minute data for "
+                          "liquid US equities only")
+        return None, meta
+
+    rule = "60min" if key == H1 else "15min"
+    df = resample_ohlcv(raw, rule)
+    if df is None or df.empty:
+        meta["reason"] = "resample produced no bars"
+        return None, meta
+    df = df.tail(want)
+    meta.update({"bars": len(df), "available": True,
+                 "source": f"1-minute bars resampled to {spec['label']}, RTH only",
+                 "as_of": str(df.index[-1])})
+    return df, meta

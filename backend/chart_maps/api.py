@@ -92,6 +92,9 @@ async def chart_maps_support(
     window: str = Query(support_mod.DEFAULT_WINDOW,
                         description="zoom the structure is read at: "
                                     "1m | 3m | 6m | 1y"),
+    tf: str = Query(support_mod.TF_DEFAULT,
+                    description="bar timeframe the structure is read on: "
+                                "daily | 60m | 15m"),
 ):
     """Support + overhead levels for ONE ticker at one zoom.
 
@@ -108,6 +111,7 @@ async def chart_maps_support(
         return support_mod.for_symbol(
             symbol if isinstance(symbol, str) else "",
             window if isinstance(window, str) else support_mod.DEFAULT_WINDOW,
+            tf if isinstance(tf, str) else support_mod.TF_DEFAULT,
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

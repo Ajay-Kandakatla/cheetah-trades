@@ -11209,3 +11209,18 @@ a.tk-link:hover   { color: inherit; }
 .sh-navchip--critical { color: var(--negative, #ef4444); border-color: rgba(239, 68, 68, 0.6); }
 .sh-navchip--unknown { color: var(--cm-slate, #8595ad); }
 .sh-navchip--compact { padding: 0.14rem 0.45rem; }
+
+/* Support tab — computed entry/stop, ORB and pattern blocks (2026-08-29).
+   Ajay asked for the trade the band implies, not just the band. */
+.sl-trades, .sl-patterns { margin: 1.2rem 0; }
+.sl-trades h4, .sl-patterns h4 { margin: 0 0 0.5rem; font-size: 1rem; }
+.sl-scroll { overflow-x: auto; }
+.sl-trades .sl-table { width: 100%; border-collapse: collapse;
+                       font-variant-numeric: tabular-nums; }
+.sl-trades .sl-table th, .sl-trades .sl-table td {
+  text-align: left; padding: 0.35rem 0.6rem; white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.sl-trades .sl-table th { font-weight: 600; opacity: 0.75; }
+.sl-basis { opacity: 0.6; font-size: 0.85em; }
+.sl-patterns ul { margin: 0; padding-left: 1.1rem; }
+.sl-patterns li { margin: 0.2rem 0; }

@@ -242,20 +242,70 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
     }
 
 
-def for_symbol(symbol: str, last_price: Optional[float] = None, **geom) -> dict:
-    """Load 2y of bars and compute the zones for one ticker (on-demand).
+def for_symbol(symbol: str, last_price: Optional[float] = None,
+               tf: Optional[str] = None, **geom) -> dict:
+    """Load bars and compute the zones for one ticker (on-demand).
 
     `**geom` forwards the optional swing_window / merge_pct / half_width_pct
-    knobs of `compute`; omitting them keeps the historical defaults."""
+    knobs of `compute`; omitting them keeps the historical defaults.
+
+    `tf` (Ajay 2026-08-29) reads the structure off hourly or 15-minute bars
+    instead of daily. Omitted or "daily" is the historical path, byte for
+    byte — the intraday branch is additive and cannot change what the
+    existing callers see. Every intraday answer also carries its Fair Value
+    Gaps, the session opening range, and the entry/stop each band implies.
+    """
     sym = (symbol or "").upper().strip()
     if not sym:
         return {"symbol": sym, "error": "missing symbol"}
-    from sepa import prices
-    df = prices.load_prices(sym, period="2y")
-    if df is None or len(df) < 60:
-        return {"symbol": sym, "error": "no / insufficient price data"}
+    from supply_demand import timeframes as tf_mod
+    tf_key = tf_mod.parse_tf(tf) if tf else tf_mod.DAILY
+    tf_meta = None
+
+    if tf_key == tf_mod.DAILY:
+        from sepa import prices
+        df = prices.load_prices(sym, period="2y")
+        if df is None or len(df) < 60:
+            return {"symbol": sym, "error": "no / insufficient price data",
+                    "timeframe": tf_key, "timeframes": tf_mod.tf_options()}
+    else:
+        df, tf_meta = tf_mod.frame_for(sym, tf_key)
+        if df is None or len(df) < 30:
+            return {"symbol": sym, "timeframe": tf_key,
+                    "timeframes": tf_mod.tf_options(),
+                    "timeframe_meta": tf_meta,
+                    "error": ((tf_meta or {}).get("reason")
+                              or "no / insufficient intraday data")}
+        geom.setdefault("swing_window", tf_mod.tf_spec(tf_key)["swing_window"])
+        geom.setdefault("lookback_bars", len(df))
+
     out = compute(df, last_price=last_price, **geom)
     if out is None:
-        return {"symbol": sym, "error": "no swing structure found"}
+        return {"symbol": sym, "error": "no swing structure found",
+                "timeframe": tf_key, "timeframes": tf_mod.tf_options()}
     out["symbol"] = sym
+    out["timeframe"] = tf_key
+    out["timeframe_label"] = tf_mod.tf_spec(tf_key)["label"]
+    out["timeframes"] = tf_mod.tf_options()
+    if tf_meta:
+        out["timeframe_meta"] = tf_meta
+
+    # ORB / FVG / dynamic entry-stop ride along on every answer.
+    try:
+        from supply_demand import patterns as pat_mod
+        lp = float(out.get("last_price") or df["close"].iloc[-1])
+        atr_value = pat_mod.atr(df)
+        gaps = pat_mod.fair_value_gaps(df, lp)
+        bands = [{"kind": z.get("kind"), "lo": z.get("lo"), "hi": z.get("hi"),
+                  "source": "swing", "touches": z.get("touches")}
+                 for z in (list(out.get("demand_zones") or [])
+                           + list(out.get("supply_zones") or []))
+                 if z.get("lo") and z.get("hi")]
+        out["atr"] = round(atr_value, 4) if atr_value else None
+        out["fair_value_gaps"] = gaps
+        out["opening_range"] = pat_mod.opening_range(
+            sym, tf_mod.tf_spec(tf_key)["orb_minutes"])
+        out["trade_levels"] = pat_mod.attach_levels(bands + gaps, lp, atr_value)
+    except Exception as exc:                                # pragma: no cover
+        log.warning("price_zones: pattern overlay for %s failed: %s", sym, exc)
     return out

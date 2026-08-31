@@ -24,7 +24,8 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
 import {
-  FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLabel, headline,
+  FALLBACK_TIMEFRAMES, FALLBACK_WINDOWS, bandLabel, distanceLabel,
+  evidenceLabel, headline, money, parseTf, sourceLabel,
   normalizeSymbol, parseWindow, priceAsOf, recencyLabel, recentCount,
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
@@ -33,8 +34,12 @@ import {
 type Props = {
   symbol: string;
   window: string;
+  /** Bar timeframe (Ajay 2026-08-29). Optional so existing callers that
+   *  only pass a zoom keep the daily behaviour they had. */
+  tf?: string;
   onSymbol: (sym: string) => void;
   onWindow: (win: string) => void;
+  onTf?: (tf: string) => void;
 };
 
 function LevelRow({ lv, side }: { lv: SupportLevel; side: 'support' | 'overhead' }) {
@@ -78,7 +83,8 @@ function LevelTable({ title, levels, side, empty }: {
   );
 }
 
-export function SupportLevels({ symbol, window: win, onSymbol, onWindow }: Props) {
+export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
+                               onTf }: Props) {
   const [data, setData] = useState<SupportPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -89,7 +95,8 @@ export function SupportLevels({ symbol, window: win, onSymbol, onWindow }: Props
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch(`${API}/chart-maps/support?${supportQuery({ symbol: sym, window: win })}`,
+      const r = await fetch(
+        `${API}/chart-maps/support?${supportQuery({ symbol: sym, window: win, tf })}`,
         { credentials: 'include', cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setData(await r.json());
@@ -98,13 +105,17 @@ export function SupportLevels({ symbol, window: win, onSymbol, onWindow }: Props
     } finally {
       setLoading(false);
     }
-  }, [symbol, win]);
+  }, [symbol, win, tf]);
 
   useEffect(() => { void load(); }, [load]);
 
   // The server's own list once it lands, so retiring a window backend-side does
   // not need a frontend deploy.
   const windows = data?.windows?.length ? data.windows : FALLBACK_WINDOWS;
+  const timeframes = data?.timeframes?.length ? data.timeframes : FALLBACK_TIMEFRAMES;
+  const tradeLevels = data?.trade_levels || [];
+  const orb = data?.opening_range || null;
+  const bullish = data?.bullish_patterns || null;
   const sym = normalizeSymbol(symbol);
   const supports = data?.supports || [];
   const overhead = data?.overhead || [];
@@ -128,6 +139,17 @@ export function SupportLevels({ symbol, window: win, onSymbol, onWindow }: Props
             ))}
           </select>
         </label>
+        {onTf && (
+          <label className="cm-ctl" title="Which bars the structure is read from">
+            Timeframe
+            <select value={parseTf(tf, timeframes)}
+                    onChange={(e) => onTf(e.target.value)}>
+              {timeframes.map((t) => (
+                <option key={t.key} value={t.key}>{t.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {!sym ? (
@@ -178,6 +200,85 @@ export function SupportLevels({ symbol, window: win, onSymbol, onWindow }: Props
             <LevelTable title="Overhead" levels={overhead} side="overhead"
                         empty="Nothing overhead in this window — clear above." />
           </div>
+
+          {tradeLevels.length > 0 ? (
+            <div className="sl-trades">
+              <h4>Entry &amp; stop, computed per band</h4>
+              <div className="sl-scroll">
+                <table className="sl-table">
+                  <thead>
+                    <tr>
+                      <th>Band</th><th>What</th><th>Side</th><th>Entry</th>
+                      <th>Stop</th><th>Target 1</th><th>R:R</th><th>Risk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tradeLevels.filter((t) => t.trade).map((t, i) => (
+                      <tr key={`${t.source}-${t.lo}-${i}`}>
+                        <td>{money(t.lo)}–{money(t.hi)}</td>
+                        <td>{sourceLabel(t)}</td>
+                        <td>{t.trade?.side}</td>
+                        <td>{money(t.trade?.entry)}</td>
+                        <td>{money(t.trade?.stop)}</td>
+                        <td>
+                          {money(t.trade?.target1)}
+                          <span className="sl-basis"> {t.trade?.target_basis}</span>
+                        </td>
+                        <td>{t.trade?.rr != null ? `${t.trade.rr}R` : '—'}</td>
+                        <td>{t.trade?.risk_pct != null ? `${t.trade.risk_pct}%` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="cm-note">
+                Entry is the edge price reaches first; the stop sits beyond the
+                far edge by {data.atr ? `${(data.atr).toFixed(2)} ATR-scaled` : 'a'}
+                {' '}buffer, because a stop resting exactly on a visible level is
+                the liquidity that gets taken. Size off the stop distance, not
+                off conviction.
+              </p>
+            </div>
+          ) : null}
+
+          {orb ? (
+            <p className="cm-note">
+              <strong>Opening range</strong> ({orb.minutes}m, {orb.session}):{' '}
+              {money(orb.lo)}–{money(orb.hi)}. Above it buyers won the session's
+              first auction; below it sellers did.
+            </p>
+          ) : null}
+
+          {bullish && (bullish.patterns || []).length > 0 ? (
+            <div className="sl-patterns">
+              <h4>Bullish patterns on this timeframe</h4>
+              <ul>
+                {(bullish.patterns || []).map((p, i) => (
+                  <li key={`${p.kind}-${i}`}>
+                    <strong>{p.label || p.kind}</strong>
+                    {p.confirmed ? ' · confirmed' : ' · forming'}
+                    {p.entry != null && (
+                      <> · entry {money(p.entry)} · stop {money(p.stop)}
+                        {p.target != null && <> · target {money(p.target)}</>}</>
+                    )}
+                    {!p.cited && <span className="sl-basis"> · no cited source</span>}
+                  </li>
+                ))}
+              </ul>
+              {bullish.stats_transfer === false ? (
+                <p className="cm-note cm-note-warn">
+                  Shape only — Bulkowski&apos;s hit rates and throwback stats were
+                  measured on DAILY bars and do not transfer to this timeframe.
+                </p>
+              ) : null}
+              {(bullish.out_of_range || []).length > 0 ? (
+                <p className="cm-note">
+                  Out of range on this timeframe (needs more bars than the window
+                  holds): {(bullish.out_of_range || []).join(', ').replace(/_/g, ' ')}.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           {data.levels_capped ? (
             <p className="cm-note">

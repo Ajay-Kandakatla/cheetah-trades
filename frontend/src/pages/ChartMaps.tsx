@@ -30,7 +30,7 @@ import {
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
-import { normalizeSymbol, parseWindow } from '../lib/supportLevels';
+import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
@@ -104,6 +104,7 @@ export function ChartMaps() {
    * refresh does not drop you back on an empty search box. */
   const supportSymbol = normalizeSymbol(params.get('symbol'));
   const supportWindow = parseWindow(params.get('window'));
+  const supportTf = parseTf(params.get('tf'));
   const universe = UNIVERSE;
   const [gabbarLevel, setGabbarLevel] = useState('all');
   const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(false);
@@ -233,6 +234,15 @@ export function ChartMaps() {
     setParams(next, { replace: true });
   };
 
+  const setSupportTf = (t: string) => {
+    const next = new URLSearchParams(params);
+    next.set('tab', 'support');
+    // Daily is the default, so it leaves the URL clean — a shared link of an
+    // untouched tab looks exactly like it did before the dropdown existed.
+    if (t && t !== 'daily') next.set('tf', t); else next.delete('tf');
+    setParams(next, { replace: true });
+  };
+
   const tiles = data?.tiles || [];
 
   return (
@@ -261,8 +271,9 @@ export function ChartMaps() {
         * controls, the scan progress, the tile grid, the footer counts —
         * describes a universe pass that this tab does not run. */}
       {!isBoardTab(tab) ? (
-        <SupportLevels symbol={supportSymbol} window={supportWindow}
-                       onSymbol={setSupportSymbol} onWindow={setSupportWindow} />
+        <SupportLevels symbol={supportSymbol} window={supportWindow} tf={supportTf}
+                       onSymbol={setSupportSymbol} onWindow={setSupportWindow}
+                          onTf={setSupportTf} />
       ) : (
       <>
       {/* 0DTE only. Two facts a reader needs BEFORE the tiles, because either

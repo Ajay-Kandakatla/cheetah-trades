@@ -183,3 +183,102 @@ describe('SupportLevels', () => {
     expect(container.textContent).not.toContain('NaN');
   });
 });
+
+/* ── Timeframe dropdown, computed entry/stop, ORB, patterns (2026-08-29) ──
+ * Ajay: "ORB and Fair value gap ... in Daily, Market hourly, 15 mins ...
+ * Give me stop loss and Entry calculated dynamically" + bullish patterns.
+ * The negatives matter most: a shape found on hourly bars must never wear
+ * Bulkowski's daily hit rates. */
+const TF_PAYLOAD: any = {
+  ...PAYLOAD,
+  timeframe: '60m',
+  timeframe_label: '1 hour',
+  timeframes: [
+    { key: 'daily', label: 'Daily' },
+    { key: '60m', label: '1 hour' },
+    { key: '15m', label: '15 min' },
+  ],
+  atr: 4.04,
+  opening_range: { lo: 223.22, hi: 229.26, minutes: 60, session: '2026-08-28' },
+  fair_value_gaps: [{ kind: 'demand', lo: 213.6, hi: 216.8, source: 'fvg', fill_pct: 0 }],
+  trade_levels: [
+    { kind: 'demand', lo: 214.5, hi: 217.27, source: 'swing', touches: 3,
+      trade: { side: 'long', entry: 217.27, stop: 213.49, target1: 224.83,
+               target_basis: 'next supply band', rr: 2.0, risk_pct: 1.74 } },
+    { kind: 'demand', lo: 213.6, hi: 216.8, source: 'fvg', fill_pct: 0,
+      trade: { side: 'long', entry: 216.8, stop: 211.88, target1: 226.55,
+               target_basis: '2R measured', rr: 1.98, risk_pct: 2.27 } },
+  ],
+  bullish_patterns: {
+    patterns: [
+      { kind: 'cup_with_handle', label: 'Cup with handle', confirmed: true,
+        cited: true, stats_transfer: false, entry: 220.1, stop: 210.0, target: 236.0 },
+      { kind: 'flat_top', label: 'Flat top (ascending triangle)', confirmed: false,
+        cited: false, stats_transfer: false, entry: 219.0, stop: 212.0, target: 226.0 },
+    ],
+    stats_transfer: false,
+    out_of_range: ['triple_bottom'],
+  },
+};
+
+describe('SupportLevels — timeframe, computed levels and patterns', () => {
+  it('renders the timeframe dropdown only when the page can handle the change', async () => {
+    mockFetch(TF_PAYLOAD);
+    const { unmount } = render(
+      <SupportLevels symbol="NVDA" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByText(/Support below/i)).toBeTruthy());
+    expect(screen.queryByText('Timeframe')).toBeNull();
+    unmount();
+
+    mockFetch(TF_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText('Timeframe')).toBeTruthy());
+  });
+
+  it('sends the timeframe to the API and reports the choice back', async () => {
+    const spy = mockFetch(TF_PAYLOAD);
+    const onTf = vi.fn();
+    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
+                          onSymbol={noop} onWindow={noop} onTf={onTf} />);
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(String(spy.mock.calls[0][0])).toContain('tf=60m');
+    const select = screen.getByText('Timeframe').querySelector('select')!;
+    fireEvent.change(select, { target: { value: '15m' } });
+    expect(onTf).toHaveBeenCalledWith('15m');
+  });
+
+  it('shows a computed entry, stop and R for every band', async () => {
+    mockFetch(TF_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/Entry & stop, computed/i)).toBeTruthy());
+    expect(screen.getByText('$217.27')).toBeTruthy();
+    expect(screen.getByText('$213.49')).toBeTruthy();
+    expect(screen.getByText('2R')).toBeTruthy();
+    // the FVG band is labelled as one, not passed off as a swing level
+    expect(screen.getByText(/Fair value gap/i)).toBeTruthy();
+    expect(screen.getByText(/Opening range/i)).toBeTruthy();
+  });
+
+  it('never lets an hourly shape borrow the daily statistics', async () => {
+    mockFetch(TF_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="60m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/Cup with handle/i)).toBeTruthy());
+    expect(screen.getByText(/do not transfer to this timeframe/i)).toBeTruthy();
+    // an uncited shape says so
+    expect(screen.getByText(/no cited source/i)).toBeTruthy();
+    // patterns the bar budget cannot reach are named, not silently missing
+    expect(screen.getByText(/triple bottom/i)).toBeTruthy();
+  });
+
+  it('renders cleanly when the backend sends no timeframe extras at all', async () => {
+    mockFetch(PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="daily"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/Support below/i)).toBeTruthy());
+    expect(screen.queryByText(/Entry & stop, computed/i)).toBeNull();
+    expect(screen.queryByText(/Opening range/i)).toBeNull();
+  });
+});

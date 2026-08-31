@@ -52,7 +52,9 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from supply_demand import patterns as pat_mod
 from supply_demand import price_zones as pz
+from supply_demand import timeframes as tf_mod
 
 from . import board as board_mod
 
@@ -112,6 +114,8 @@ DISCLAIMER = pz.DISCLAIMER
 
 # The overlay pseudo-window (Ajay 2026-08-25: "where can I see the overlapping
 # Demand zones?" after the CR study). Not a zoom — ALL zooms at once, clustered.
+TF_DEFAULT = tf_mod.DEFAULT_TF
+
 OVERLAY_KEY = "all"
 
 # Bands whose midpoints sit within this % of each other are the same level seen
@@ -553,8 +557,16 @@ def _why(levels: dict, zones: dict, spec: dict) -> str:
     return head or f"No band below price in the last {spec['label']}."
 
 
-def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
-    """Support levels for one ticker at one zoom.
+def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
+               tf: str = TF_DEFAULT) -> dict:
+    """Support levels for one ticker at one zoom, on one timeframe.
+
+    `tf` (Ajay 2026-08-29) selects the BARS the structure is read from —
+    daily, hourly or 15-minute. The zoom (`window`) and the timeframe are
+    independent questions: the window says how far back to look, the
+    timeframe says how finely. On an intraday timeframe the window's daily
+    bar budget is meaningless, so the timeframe's own budget is used and
+    the label says which span was actually read.
 
     Always answers a dict. A bad symbol, a thin frame or a structureless window
     come back as `{'error': …}` with the dropdown still populated, because the
@@ -573,6 +585,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
                     + [{"key": OVERLAY_KEY, "label": "All windows · overlay",
                         "bars": 0}]),
         "recent_bars": RECENT_BARS,
+        # Ajay 2026-08-29: the second dropdown. Present on every response,
+        # errors included — the tab must keep rendering its controls so the
+        # next move (change the timeframe) is available after a miss.
+        "timeframe": tf_mod.parse_tf(tf),
+        "timeframe_label": tf_mod.tf_spec(tf)["label"],
+        "timeframes": tf_mod.tf_options(),
         "disclaimer": DISCLAIMER,
     }
     if not sym:
@@ -580,8 +598,19 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
     if overlay:
         return overlay_for_symbol(sym, base)
 
+    tf_key = tf_mod.parse_tf(tf)
+    intraday = tf_key != tf_mod.DAILY
     try:
-        df, _have, as_of = _frame_for(sym, spec["bars"])
+        if intraday:
+            df, tf_meta = tf_mod.frame_for(sym, tf_key)
+            as_of = tf_meta.get("as_of")
+            base = {**base, "timeframe_meta": tf_meta}
+            if df is None:
+                return {**base, "error": (
+                    f"No {tf_meta['label']} bars for {sym} — "
+                    f"{tf_meta.get('reason') or 'intraday data unavailable'}.")}
+        else:
+            df, _have, as_of = _frame_for(sym, spec["bars"])
     except Exception as exc:                                  # pragma: no cover
         log.debug("support: prices %s failed: %s", sym, exc)
         return {**base, "error": f"No price data for {sym}."}
@@ -594,25 +623,62 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
     # on 30 bars is 30 bars — and would then be labelled "6 months" on screen.
     # A recent IPO is the ordinary case, and refusing it is worse than answering
     # it, so the truncation is reported rather than hidden or fatal.
-    bars_used = min(len(df), spec["bars"])
-    short = bars_used < spec["bars"]
+    tf_spec_ = tf_mod.tf_spec(tf_key)
+    budget = tf_spec_["bars"] if intraday else spec["bars"]
+    swing = tf_spec_["swing_window"] if intraday else spec["swing_window"]
+    bars_used = min(len(df), budget)
+    short = bars_used < budget
 
-    zones = pz.compute(df,
-                       swing_window=spec["swing_window"],
-                       lookback_bars=spec["bars"])
+    zones = pz.compute(df, swing_window=swing, lookback_bars=budget)
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
+        scope = tf_spec_["label"] if intraday else spec["label"]
         if short:
             return {**base, "bars_used": bars_used,
                     "error": f"{sym} has only {bars_used} bars of history — "
-                             f"too few to read a {spec['label']} window."}
+                             f"too few to read a {scope} window."}
         return {**base, "bars_used": bars_used,
-                "error": f"No swing structure for {sym} over {spec['label']} "
+                "error": f"No swing structure for {sym} over {scope} "
                          f"— try a longer window."}
 
     last_price = float(zones["last_price"])
     levels = levels_from_zones(zones, last_price)
+
+    # Fair Value Gaps, the opening range, and the entry/stop each band
+    # implies (Ajay 2026-08-29). Every one of these degrades to empty
+    # rather than raising: a level surface must keep answering.
+    atr_value = pat_mod.atr(df)
+    gaps = pat_mod.fair_value_gaps(df, last_price)
+    orb = pat_mod.opening_range(sym, tf_spec_["orb_minutes"])
+    # POSITION is the side, not origin — the same rule levels_from_zones
+    # uses: a level below price is bought, one above is sold into,
+    # whatever the band used to be.
+    zone_bands = (
+        [{"kind": "demand", "lo": z.get("lo"), "hi": z.get("hi"),
+          "source": "swing", "origin": z.get("origin"),
+          "touches": z.get("touches"), "tested": z.get("tested")}
+         for z in (levels.get("supports") or [])
+         if z.get("lo") and z.get("hi")]
+        + [{"kind": "supply", "lo": z.get("lo"), "hi": z.get("hi"),
+            "source": "swing", "origin": z.get("origin"),
+            "touches": z.get("touches"), "tested": z.get("tested")}
+           for z in (levels.get("overhead") or [])
+           if z.get("lo") and z.get("hi")])
+    traded = pat_mod.attach_levels(zone_bands + gaps, last_price, atr_value)
+
+    # Bullish chart patterns on THIS timeframe (Ajay 2026-08-29: "any other
+    # bullish patterns on an hourly chart ... Cup handle or Inverse head and
+    # shoulder or Flat top"). Cited shapes keep their citation; every
+    # non-daily record is stamped stats_transfer=False.
+    try:
+        from patterns import timeframe as pat_tf
+        # Same window the bands were read from — a pattern found in bars the
+        # zoom excludes would contradict the levels drawn beside it.
+        bullish = pat_tf.scan(sym, tf_key, df=df.tail(budget))
+    except Exception as exc:                                # pragma: no cover
+        log.warning("support: pattern scan for %s failed: %s", sym, exc)
+        bullish = None
 
     tile = {
         "symbol": sym,
@@ -645,6 +711,11 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW) -> dict:
         **levels,
         "verdict": zones.get("verdict"),
         "params": zones.get("params"),
+        "atr": round(atr_value, 4) if atr_value else None,
+        "fair_value_gaps": gaps,
+        "opening_range": orb,
+        "trade_levels": traded,
+        "bullish_patterns": bullish,
         "note": ("Levels are read from this window only. A wider zoom finds the "
                  "structural floor; a tighter one finds the level this week's "
                  "trade is standing on."),

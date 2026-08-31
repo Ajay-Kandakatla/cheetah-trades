@@ -184,7 +184,11 @@ async def get_zone_map(symbol: str):
 
 
 @router.get("/supply-demand/price-zones/{symbol}")
-async def get_price_zones(symbol: str):
+async def get_price_zones(
+    symbol: str,
+    tf: str = Query("daily", description="bar timeframe the structure is "
+                                         "read on: daily | 60m | 15m"),
+):
     """On-demand per-ticker supply/demand price zones + an entry read. Swing-high
     clusters = overhead supply (resistance), swing-low clusters = demand (support),
     weighted by tests + volume; reports nearest resistance/support vs the live
@@ -192,7 +196,9 @@ async def get_price_zones(symbol: str):
     price-structure method (NOT a book method); decision-support only, not advice.
     See backend/supply_demand/price_zones.py."""
     import asyncio
-    return await asyncio.to_thread(price_zones_mod.for_symbol, symbol)
+    return await asyncio.to_thread(
+        price_zones_mod.for_symbol, symbol, None,
+        tf if isinstance(tf, str) else "daily")
 
 
 @router.get("/supply-demand/stocks")

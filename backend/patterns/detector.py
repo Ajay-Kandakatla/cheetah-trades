@@ -212,13 +212,14 @@ def inverse_head_shoulders(df: pd.DataFrame, **kw) -> dict:
     """
     head_depth = kw.get("head_depth_pct", HEAD_DEPTH_PCT)
     sh_tol = kw.get("shoulder_tol_pct", SHOULDER_TOL_PCT)
+    sw = int(kw.get("swing_window", SWING_WINDOW))
     out: dict = {"fresh": [], "historical_confirms": []}
-    if df is None or len(df) < 4 * SWING_WINDOW + 10:
+    if df is None or len(df) < 4 * sw + 10:
         return out
     closes = df["close"].to_numpy(dtype=float)
     highs = df["high"].to_numpy(dtype=float)
     last_close = float(closes[-1])
-    swing_lows, _ = swing_points(df)
+    swing_lows, _ = swing_points(df, sw)
     n = len(df)
     seen = set()
 
@@ -347,14 +348,18 @@ def cup_with_handle(df: pd.DataFrame, **kw) -> dict:
     lip to lowest valley) × 61% added to the breakout price.
     """
     rim_tol = kw.get("rim_tol_pct", RIM_TOL_PCT)
+    cup_min = int(kw.get("cup_min_bars", CUP_MIN_BARS))
+    cup_max = int(kw.get("cup_max_bars", CUP_MAX_BARS))
+    handle_min = int(kw.get("handle_min_bars", HANDLE_MIN_BARS))
+    sw = int(kw.get("swing_window", SWING_WINDOW))
     out: dict = {"fresh": [], "historical_confirms": []}
-    if df is None or len(df) < CUP_MIN_BARS + HANDLE_MIN_BARS + 2 * SWING_WINDOW:
+    if df is None or len(df) < cup_min + handle_min + 2 * sw:
         return out
     closes = df["close"].to_numpy(dtype=float)
     highs = df["high"].to_numpy(dtype=float)
     lows_arr = df["low"].to_numpy(dtype=float)
     last_close = float(closes[-1])
-    _, swing_highs = swing_points(df)
+    _, swing_highs = swing_points(df, sw)
     n = len(df)
     seen = set()
 
@@ -363,9 +368,9 @@ def cup_with_handle(df: pd.DataFrame, **kw) -> dict:
         for b in range(a + 1, len(swing_highs)):
             j, right_rim = swing_highs[b]
             span = j - i
-            if span < CUP_MIN_BARS:
+            if span < cup_min:
                 continue
-            if span > CUP_MAX_BARS:
+            if span > cup_max:
                 break
             rim_avg = (left_rim + right_rim) / 2.0
             if abs(left_rim - right_rim) / rim_avg * 100 > rim_tol:
@@ -386,11 +391,11 @@ def cup_with_handle(df: pd.DataFrame, **kw) -> dict:
             if int((inner_lows <= cup_low * 1.05).sum()) < CUP_U_SHAPE_BARS:
                 continue
             # Handle: everything after the right rim must hold the upper half
-            # of the cup ("forming in the upper half") for ≥ HANDLE_MIN_BARS.
+            # of the cup ("forming in the upper half") for ≥ handle_min.
             half_level = right_rim - 0.5 * (right_rim - cup_low)
-            c = _confirm_index(closes, j + HANDLE_MIN_BARS - 1, right_rim)
+            c = _confirm_index(closes, j + handle_min - 1, right_rim)
             handle_end = c if c is not None else n
-            if handle_end - (j + 1) < HANDLE_MIN_BARS:
+            if handle_end - (j + 1) < handle_min:
                 continue                                 # no handle yet — still just a cup
             handle_lows = lows_arr[j + 1: handle_end]
             if handle_lows.size == 0 or float(handle_lows.min()) < half_level:

@@ -73,6 +73,20 @@ export type SupportPayload = {
   window: string;
   window_label: string;
   windows: SupportWindow[];
+  timeframe?: string;
+  timeframe_label?: string;
+  timeframes?: Timeframe[];
+  timeframe_meta?: { bars?: number; source?: string; reason?: string | null } | null;
+  atr?: number | null;
+  fair_value_gaps?: TradeLevel[];
+  opening_range?: { lo: number; hi: number; minutes: number; session: string } | null;
+  trade_levels?: TradeLevel[];
+  bullish_patterns?: {
+    patterns?: BullishPattern[];
+    stats_transfer?: boolean;
+    out_of_range?: string[];
+    note?: string | null;
+  } | null;
   recent_bars: number;
   last_price?: number;
   bars_used?: number;
@@ -130,10 +144,75 @@ export function normalizeSymbol(raw: string | null | undefined): string {
   return (raw || '').toUpperCase().replace(/[^A-Z0-9.\-]/g, '').slice(0, 12);
 }
 
-export function supportQuery(p: { symbol: string; window: string }): string {
+export function supportQuery(
+  p: { symbol: string; window: string; tf?: string },
+): string {
   const q = new URLSearchParams({ symbol: normalizeSymbol(p.symbol) });
   if (p.window && p.window !== DEFAULT_WINDOW) q.set('window', p.window);
+  // Omitted when daily so the URL of an untouched tab is unchanged — the
+  // surface answered on daily bars before the timeframe dropdown existed.
+  if (p.tf && p.tf !== DEFAULT_TF) q.set('tf', p.tf);
   return q.toString();
+}
+
+/* ── timeframe (Ajay 2026-08-29) ───────────────────────────────────────────
+ * The SECOND dropdown, and a different question from the zoom: the window
+ * says how far back to look, the timeframe says how finely. Mirrors backend
+ * supply_demand/timeframes.TIMEFRAMES. */
+export type Timeframe = { key: string; label: string; span?: string; bars?: number };
+
+export const FALLBACK_TIMEFRAMES: Timeframe[] = [
+  { key: 'daily', label: 'Daily', span: '1 year of daily bars' },
+  { key: '60m', label: '1 hour', span: '~47 sessions of hourly bars' },
+  { key: '15m', label: '15 min', span: '~10 sessions of 15-minute bars' },
+];
+
+export const DEFAULT_TF = 'daily';
+
+export function parseTf(
+  raw: string | null | undefined,
+  offered: Timeframe[] = FALLBACK_TIMEFRAMES,
+): string {
+  const v = (raw || '').trim().toLowerCase();
+  if (!v) return DEFAULT_TF;
+  return offered.some((t) => t.key === v) ? v : DEFAULT_TF;
+}
+
+/** One band with the trade its geometry implies. */
+export type TradeLevel = {
+  kind?: string;
+  lo?: number;
+  hi?: number;
+  source?: string;
+  touches?: number | null;
+  fill_pct?: number;
+  trade?: {
+    side?: string; entry?: number; stop?: number; target1?: number;
+    target_basis?: string; rr?: number | null; risk_pct?: number;
+    distance_pct?: number; buffer_basis?: string;
+  } | null;
+};
+
+export type BullishPattern = {
+  kind?: string;
+  label?: string;
+  confirmed?: boolean;
+  cited?: boolean;
+  entry?: number;
+  stop?: number;
+  target?: number;
+  stats_transfer?: boolean;
+  stats_caveat?: string;
+  distance_pct?: number;
+};
+
+/** Human label for a band row: where it came from and what it is. */
+export function sourceLabel(t: TradeLevel): string {
+  if (t.source === 'fvg') {
+    return t.fill_pct ? `Fair value gap · ${t.fill_pct}% filled` : 'Fair value gap';
+  }
+  if (t.touches && t.touches > 1) return `Swing band · ${t.touches} touches`;
+  return 'Swing band';
 }
 
 /* ── formatting ───────────────────────────────────────────────────────────── */
