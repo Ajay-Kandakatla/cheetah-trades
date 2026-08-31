@@ -144,3 +144,76 @@ bar leaves no gap, nonsense geometry returns no stop rather than a fabricated
 one, and an hourly shape can never claim daily statistics.
 
 *Decision-support only. Not investment advice.*
+
+---
+
+# Smart Money Concepts: sweeps, BOS/CHoCH, order blocks
+
+Added 2026-08-29. Ajay supplied Brad Goh's mechanical five-step model:
+identify liquidity → wait for the sweep → mark the order block → mark the FVG
+→ execute on mitigation.
+
+## Source status
+
+**No canonical text.** SMC is community-taught (ICT lineage; Brad Goh is a
+YouTube educator). Unlike the trend template (Minervini, page-cited) or the cup
+(Bulkowski, verbatim), nothing in the library backs these definitions. Every
+threshold in `supply_demand/smc.py` is labelled CONVENTION and every record
+carries `cited: false`.
+
+That is a reason to **measure** it, not skip it. Setups are written to
+`learning.observations` and resolved against real forward prices, so
+"does sweep→BOS→OB actually pay on my names" becomes a number rather than a
+video claim.
+
+## Definitions as implemented
+
+**Liquidity** rests where stops rest: above swing highs (buy-side), below swing
+lows (sell-side).
+
+**Liquidity sweep** — price trades THROUGH a prior swing extreme and closes back
+on the original side. The wick took the stops; the close says the move was not
+accepted. *A close beyond the level is a breakout, not a sweep, and the two mean
+opposite things* — so the close is the entire test. Locked by
+`test_a_sweep_needs_the_close_back_inside_or_it_is_a_breakout`.
+
+**BOS vs CHoCH** — both are a CLOSE beyond the most recent opposing swing. BOS
+continues the prior leg; CHoCH reverses it. After a sweep the CHoCH is the one
+that matters, because a sweep is a reversal premise. `grade()` pays +15 for it.
+
+**Order block** — the last opposing candle before the displacement (last down
+candle before an up-move). The displacement must exceed
+`MIN_DISPLACEMENT_ATR` = 1.2× ATR: without an impulse it is a red candle, not an
+institutional footprint.
+
+**FVG** — the three-bar imbalance inside the displacement, used to refine the
+entry inside the block (step 4).
+
+## The two entries, and the trap in the second one
+
+| Style | Entry | Why |
+|---|---|---|
+| aggressive | order block's proximal edge | fills more often, wider stop |
+| conservative | the FVG inside the block | deeper, better R, fills less often |
+| aggressive_tight | same entry, stop beyond the sweep wick | Brad Goh's refinement note |
+
+Each leg reports its **own** risk and R, because a blended number would hide the
+trade-off the choice exists for.
+
+**Noise floor.** A deeper entry against the same stop produces a huge R
+arithmetically — the synthetic fixture yields 23.62R on the conservative leg.
+A stop closer than `MIN_STOP_ATR` = 0.5 ATR is inside the bar-to-bar noise of
+the timeframe: it gets taken out by wiggle, not by the idea being wrong. Such
+legs are flagged `too_tight` with a warning, and the R is still shown — hiding
+it would be its own dishonesty. Same lesson as the Desk's ASH row (2026-08-28).
+
+## Quality over quantity
+
+The model's own rule, made operational: `grade()` scores 0-100 (CHoCH +15,
+displacement ≥2 ATR +15, FVG present +12, fresh sweep +10, mitigated +8) and
+`find_setups` returns nothing when any step is missing. Measured 2026-08-29 on
+live bars: AMD produced 3 setups on 15m and 1 on hourly; AVGO and KTOS had all
+four primitives but **zero** complete sequences. That asymmetry is the filter
+working.
+
+*Decision-support only. Not investment advice.*

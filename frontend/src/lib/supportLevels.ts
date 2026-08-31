@@ -83,6 +83,7 @@ export type SupportPayload = {
   trade_levels?: TradeLevel[];
   mood?: MoodRead;
   signal?: TradeSignal;
+  smc?: SmcRead;
   bullish_patterns?: {
     patterns?: BullishPattern[];
     stats_transfer?: boolean;
@@ -217,6 +218,31 @@ export type TradeSignal = {
     risk_pct?: number; target_basis?: string;
   } | null;
   no_repaint?: boolean;
+} | null;
+
+export type SmcSetup = {
+  direction?: string;
+  score?: number;
+  narrative?: string;
+  mitigated?: boolean;
+  cited?: boolean;
+  entries?: { aggressive?: number; conservative?: number };
+  legs?: Record<string, { entry?: number; stop?: number; risk_pct?: number;
+                          rr?: number; too_tight?: boolean; warning?: string }>;
+  stop?: number; stop_tight?: number; target?: number; distance_pct?: number;
+  sweep?: { side?: string; level?: number; bars_ago?: number };
+  break?: { kind?: string; direction?: string; level?: number };
+  order_block?: { lo?: number; hi?: number; displacement_atr?: number };
+  fvg?: { lo?: number; hi?: number } | null;
+};
+
+export type SmcRead = {
+  setups?: SmcSetup[];
+  sweeps?: { side?: string; level?: number; bars_ago?: number }[];
+  breaks?: { kind?: string; direction?: string; level?: number; bars_ago?: number }[];
+  order_blocks?: { kind?: string; lo?: number; hi?: number; displacement_atr?: number }[];
+  cited?: boolean;
+  note?: string;
 } | null;
 
 export type BullishPattern = {

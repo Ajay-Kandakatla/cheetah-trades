@@ -118,6 +118,7 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   const bullish = data?.bullish_patterns || null;
   const mood = data?.mood || null;
   const sig = data?.signal || null;
+  const smc = data?.smc || null;
   const sym = normalizeSymbol(symbol);
   const supports = data?.supports || [];
   const overhead = data?.overhead || [];
@@ -255,6 +256,57 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
                 is written to the forward ledger and scored against real prices —
                 the hit rate is measured from your tape, not claimed.
               </p>
+            </div>
+          ) : null}
+
+          {smc && (smc.setups || []).length > 0 ? (
+            <div className="sl-smc">
+              <h4>Smart Money setups — sweep → BOS → order block → FVG</h4>
+              {(smc.setups || []).map((s, i) => (
+                <div className="sl-smc-card" key={i}>
+                  <div className="sl-smc-head">
+                    <span className="sl-smc-score">{s.score}</span>
+                    <span>{s.direction === 'bullish' ? '🟢 long' : '🔴 short'}</span>
+                    {s.mitigated
+                      ? <span className="sl-smc-live">price is at the zone</span>
+                      : <span className="sl-basis">
+                          {s.distance_pct != null ? `${s.distance_pct}% away` : ''}
+                        </span>}
+                  </div>
+                  <p className="sl-smc-story">{s.narrative}</p>
+                  <div className="sl-scroll">
+                    <table className="sl-table">
+                      <thead>
+                        <tr><th>Entry style</th><th>Entry</th><th>Stop</th>
+                            <th>Risk</th><th>R:R</th></tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(s.legs || {}).map(([k, lg]) => (
+                          <tr key={k} className={lg.too_tight ? 'sl-row-warn' : ''}>
+                            <td>{k.replace(/_/g, ' ')}</td>
+                            <td>{money(lg.entry)}</td>
+                            <td>{money(lg.stop)}</td>
+                            <td>{lg.risk_pct}%</td>
+                            <td>
+                              {lg.rr}R
+                              {lg.too_tight && (
+                                <span className="sl-basis" title={lg.warning}> ⚠️ noise</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {Object.values(s.legs || {}).some((lg) => lg.too_tight) ? (
+                    <p className="cm-note cm-note-warn">
+                      A flagged leg&apos;s stop sits inside this timeframe&apos;s
+                      noise — the R is arithmetic, not a plan.
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+              <p className="cm-note">{smc.note}</p>
             </div>
           ) : null}
 

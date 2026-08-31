@@ -11242,3 +11242,14 @@ a.tk-link:hover   { color: inherit; }
                 background: color-mix(in srgb, currentColor 8%, transparent); }
 .sl-mood-chip .pos { color: var(--positive, #23c552); }
 .sl-mood-chip .neg { color: var(--negative, #e5484d); }
+
+/* Smart Money Concepts setups on the Support tab (2026-08-29). */
+.sl-smc { margin: 1.1rem 0; }
+.sl-smc h4 { margin: 0 0 0.5rem; font-size: 1rem; }
+.sl-smc-card { padding: 0.6rem 0.8rem; margin: 0.5rem 0; border-radius: var(--r-2, 8px);
+               border: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.sl-smc-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.sl-smc-score { font-weight: 800; font-size: 1.05rem; }
+.sl-smc-live { color: var(--positive, #23c552); font-weight: 700; font-size: 0.85rem; }
+.sl-smc-story { margin: 0.35rem 0 0.5rem; opacity: 0.9; }
+.sl-row-warn td { background: color-mix(in srgb, var(--warn, #e8a33d) 10%, transparent); }

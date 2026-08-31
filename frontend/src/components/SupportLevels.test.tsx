@@ -239,6 +239,57 @@ const SIGNAL_PAYLOAD: any = {
   },
 };
 
+/* ── Smart Money setups (Ajay 2026-08-29, Brad Goh's model) ─────────────── */
+const SMC_PAYLOAD: any = {
+  ...TF_PAYLOAD,
+  smc: {
+    cited: false,
+    note: 'Smart Money Concepts — community-taught. No canonical text in the library.',
+    setups: [{
+      direction: 'bullish', score: 80, mitigated: true, cited: false,
+      narrative: 'sell-side liquidity at 99.00 was swept 10 bars ago and rejected, then a CHoCH closed above 101.00.',
+      entries: { aggressive: 100.5, conservative: 96.0 },
+      legs: {
+        aggressive: { entry: 100.5, stop: 95.38, risk_pct: 5.1, rr: 2.0 },
+        conservative: { entry: 96.0, stop: 95.38, risk_pct: 0.65, rr: 23.62,
+                        too_tight: true, warning: 'stop is 0.20 ATR from entry — inside noise' },
+      },
+      stop: 95.38, stop_tight: 95.38, target: 110.75, distance_pct: -0.2,
+    }],
+    sweeps: [], breaks: [], order_blocks: [],
+  },
+};
+
+describe('SupportLevels — Smart Money setups', () => {
+  it('tells the sweep → BOS → order block story with both entry styles', async () => {
+    mockFetch(SMC_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="15m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/Smart Money setups/i)).toBeTruthy());
+    expect(screen.getByText(/was swept 10 bars ago/)).toBeTruthy();
+    expect(screen.getByText('aggressive')).toBeTruthy();
+    expect(screen.getByText('conservative')).toBeTruthy();
+    expect(screen.getByText(/price is at the zone/)).toBeTruthy();
+  });
+
+  it('flags a stop inside the noise instead of selling the 23R', async () => {
+    mockFetch(SMC_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="15m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() => expect(screen.getByText(/23.62R/)).toBeTruthy());
+    expect(screen.getByText(/⚠️ noise/)).toBeTruthy();
+    expect(screen.getByText(/arithmetic, not a plan/i)).toBeTruthy();
+  });
+
+  it('states that SMC has no cited source', async () => {
+    mockFetch(SMC_PAYLOAD);
+    render(<SupportLevels symbol="NVDA" window="3m" tf="15m"
+                          onSymbol={noop} onWindow={noop} onTf={noop} />);
+    await waitFor(() =>
+      expect(screen.getByText(/No canonical text in the library/i)).toBeTruthy());
+  });
+});
+
 describe('SupportLevels — market mood and the buy signal', () => {
   it('shows the action, the mood and the plan that justifies it', async () => {
     mockFetch(SIGNAL_PAYLOAD);

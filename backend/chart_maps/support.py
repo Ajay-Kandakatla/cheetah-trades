@@ -719,6 +719,23 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         log.warning("support: mood/signal for %s failed: %s", sym, exc)
         mood_read, sig = None, None
 
+    # Smart Money Concepts: sweep -> BOS/CHoCH -> order block -> FVG, and
+    # the mitigation entry (Ajay 2026-08-29, Brad Goh's five-step model).
+    try:
+        from supply_demand import smc as smc_mod
+        smc_setups = smc_mod.find_setups(df.tail(budget), last_price=last_price)
+        smc_read = {
+            "setups": smc_setups,
+            "sweeps": smc_mod.liquidity_sweeps(df.tail(budget))[:4],
+            "breaks": smc_mod.structure_breaks(df.tail(budget))[:4],
+            "order_blocks": smc_mod.order_blocks(df.tail(budget))[:4],
+            "cited": smc_mod.CITED,
+            "note": smc_mod.SOURCE_NOTE,
+        }
+    except Exception as exc:                                # pragma: no cover
+        log.warning("support: smc for %s failed: %s", sym, exc)
+        smc_read = None
+
     try:
         from patterns import timeframe as pat_tf
         # Same window the bands were read from — a pattern found in bars the
@@ -766,6 +783,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "bullish_patterns": bullish,
         "mood": mood_read,
         "signal": sig,
+        "smc": smc_read,
         "note": ("Levels are read from this window only. A wider zoom finds the "
                  "structural floor; a tighter one finds the level this week's "
                  "trade is standing on."),

@@ -464,3 +464,113 @@ def test_a_sell_does_not_carry_the_reasons_a_buy_did_not_fire():
     assert out["action"] == "SELL"
     assert out["blockers"] == [], "buy blockers must not read as sell doubts"
     assert out["buy_blockers"], "they are kept, just under their own key"
+
+
+# ── Smart Money Concepts: sweep → BOS → order block → FVG ─────────────────
+def _smc_frame():
+    """40 flat bars (swing low ~99), a sweep candle that wicks to 96 and
+    closes back down, then a 4-bar displacement up through structure."""
+    rows = [(100, 101, 99, 100.2)] * 40
+    rows += [(100, 100.5, 99.5, 100)] * 5
+    rows += [(100.4, 100.5, 96.0, 99.2)]          # the sweep + order block
+    rows += [(99.3, 106, 99.2, 105.5)] * 4        # displacement
+    rows += [(105.5, 106, 104.5, 105)] * 6
+    return _frame(rows, freq="15min")
+
+
+def test_a_sweep_needs_the_close_back_inside_or_it_is_a_breakout():
+    """The close is the whole test: through-and-close-beyond is a breakout,
+    through-and-close-back is a trap. They mean opposite things."""
+    from supply_demand import smc
+    sweeps = smc.liquidity_sweeps(_smc_frame())
+    assert sweeps and sweeps[0]["side"] == "sell_side"
+    assert sweeps[0]["wick"] < sweeps[0]["level"] < sweeps[0]["close"]
+
+    # same wick, but it CLOSES below the level → breakout, not a sweep
+    rows = [(100, 101, 99, 100.2)] * 40 + [(100, 100.5, 99.5, 100)] * 5
+    rows += [(100.4, 100.5, 96.0, 96.5)]
+    rows += [(96.5, 97, 95, 95.5)] * 4
+    broke = smc.liquidity_sweeps(_frame(rows, freq="15min"))
+    assert not [s for s in broke if s["side"] == "sell_side"
+                and s["level"] >= 99.0 and s["bars_ago"] <= 6]
+
+
+def test_bos_and_choch_are_distinguished_by_the_prior_trend():
+    from supply_demand import smc
+    breaks = smc.structure_breaks(_smc_frame())
+    assert breaks
+    kinds = {b["kind"] for b in breaks}
+    assert kinds <= {"BOS", "CHoCH"}
+    bull = [b for b in breaks if b["direction"] == "bullish"]
+    assert bull, "the displacement closes above prior structure"
+
+
+def test_order_block_is_the_last_opposing_candle_before_displacement():
+    from supply_demand import smc
+    obs = smc.order_blocks(_smc_frame(), direction="bullish")
+    assert obs
+    ob = obs[0]
+    assert ob["kind"] == "bullish"
+    assert ob["close"] < ob["open"], "the block is a DOWN candle"
+    assert ob["displacement_atr"] >= smc.MIN_DISPLACEMENT_ATR
+
+
+def test_no_displacement_means_no_order_block():
+    """Without an impulse it is just a red candle, not an institutional
+    footprint."""
+    from supply_demand import smc
+    flat = _frame([(100, 100.4, 99.6, 100)] * 60, freq="15min")
+    assert smc.order_blocks(flat, direction="bullish") == []
+
+
+def test_the_five_step_model_requires_every_step():
+    from supply_demand import smc
+    full = smc.find_setups(_smc_frame())
+    assert len(full) == 1
+    s = full[0]
+    assert s["sweep"] and s["break"] and s["order_block"]
+    assert s["entries"]["aggressive"] and s["entries"]["conservative"]
+    assert s["stop"] < s["entries"]["aggressive"]
+    assert s["score"] > 0 and s["cited"] is False
+
+    # a sweep with no following structure break is NOT a setup
+    rows = [(100, 101, 99, 100.2)] * 40 + [(100, 100.5, 99.5, 100)] * 5
+    rows += [(100.4, 100.5, 96.0, 99.2)] + [(99.2, 100, 99, 99.5)] * 8
+    assert smc.find_setups(_frame(rows, freq="15min")) == []
+
+
+def test_conservative_entry_is_deeper_and_therefore_a_better_R():
+    """The whole reason to wait for the refined entry."""
+    from supply_demand import smc
+    s = smc.find_setups(_smc_frame())[0]
+    legs = s["legs"]
+    assert legs["conservative"]["entry"] < legs["aggressive"]["entry"]
+    assert legs["conservative"]["rr"] > legs["aggressive"]["rr"]
+
+
+def test_a_stop_inside_the_noise_is_flagged_not_sold_as_a_huge_R():
+    """Same lesson as the Desk's ASH row: a tiny stop inflates R without
+    improving the trade, and an unflagged 20R would be a lie by arithmetic."""
+    from supply_demand import smc
+    s = smc.find_setups(_smc_frame())[0]
+    tight = [lg for lg in s["legs"].values() if lg.get("too_tight")]
+    assert tight, "a sub-0.5-ATR stop must be flagged"
+    assert all("noise" in lg["warning"] for lg in tight)
+    assert all(lg["rr"] for lg in tight), "the number is still shown, not hidden"
+
+
+def test_smc_never_claims_a_citation_it_does_not_have():
+    from supply_demand import smc
+    assert smc.CITED is False
+    assert "no canonical text" in smc.SOURCE_NOTE.lower()
+    for s in smc.find_setups(_smc_frame()):
+        assert s["cited"] is False
+
+
+def test_smc_degrades_on_junk_instead_of_raising():
+    from supply_demand import smc
+    for bad in (None, _frame([(1, 1, 1, 1)] * 3)):
+        assert smc.liquidity_sweeps(bad) == []
+        assert smc.structure_breaks(bad) == []
+        assert smc.order_blocks(bad) == []
+        assert smc.find_setups(bad) == []
