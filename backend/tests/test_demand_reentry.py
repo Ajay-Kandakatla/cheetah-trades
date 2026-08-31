@@ -2080,3 +2080,68 @@ def test_decide_from_frame_attaches_the_ob_read_too():
     rec = dr.decide_from_frame(df, "OBAP")
     assert rec is not None
     assert "approaching_ob" in rec
+
+
+# ---------------------------------------------------------------------------
+# IN the order block (Ajay 2026-08-31: "hit the 'In the orderblock' to see all
+# the stocks").
+# ---------------------------------------------------------------------------
+
+def _in_ob_frame(camped=False, failed=False):
+    """A frame whose price has JUST arrived inside the order block."""
+    import numpy as np
+    import pandas as pd
+
+    rows = []
+    base = 100.0
+    for _ in range(140):
+        rows.append((base, base + 0.3, base - 0.3, base + 0.05))
+    rows.append((100.0, 100.2, 98.4, 98.5))          # the block
+    rows.append((98.6, 112.0, 98.5, 111.5))          # the displacement
+    if camped:
+        # Falls into the block QUICKLY, then sits inside it for three weeks —
+        # the first touch is ancient history by the last bar.
+        drift = np.concatenate([np.linspace(111.0, 99.5, 6),
+                                np.full(15, 99.5)])
+    else:
+        drift = np.linspace(111.0, 99.5, 12)         # arriving NOW
+    for i, c in enumerate(drift):
+        close = c
+        if failed and i == len(drift) - 2:
+            close = 97.9                              # CLOSES through the floor
+        rows.append((c + 0.3, c + 0.5, c - 0.4, close))
+    df = pd.DataFrame({
+        "open": [r[0] for r in rows], "high": [r[1] for r in rows],
+        "low": [r[2] for r in rows], "close": [r[3] for r in rows],
+        "volume": [1_500_000] * len(rows),
+    }, index=pd.bdate_range("2026-01-01", periods=len(rows)))
+    return df
+
+
+def test_price_just_arrived_in_a_fresh_block_qualifies():
+    df = _in_ob_frame()
+    out = dr.in_ob_read(_ob_rec(df), df)
+    assert out is not None and out["state"] == "in_ob"
+    blk = out["block"]
+    assert blk["lo"] <= float(df["close"].iloc[-1]) <= blk["hi"]
+    assert out["cited"] is False
+    t = out["trade"]
+    assert t and t["stop"] < blk["lo"]
+
+
+def test_a_name_camped_in_its_block_for_weeks_is_not_arriving():
+    """The first touch happened long ago — the bounce this board exists to
+    catch either happened or failed; either way it is not news."""
+    df = _in_ob_frame(camped=True)
+    assert dr.in_ob_read(_ob_rec(df), df) is None
+
+
+def test_a_close_through_the_floor_is_a_failed_block_not_a_test():
+    df = _in_ob_frame(failed=True)
+    assert dr.in_ob_read(_ob_rec(df), df) is None
+
+
+def test_in_ob_respects_the_knife_guard_and_missing_frame():
+    df = _in_ob_frame()
+    assert dr.in_ob_read(_ob_rec(df, trend_ok=False), df) is None
+    assert dr.in_ob_read(_ob_rec(df), None) is None

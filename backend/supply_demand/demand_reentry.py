@@ -169,6 +169,11 @@ APPROACH_MIN_DRIFT_PCT = 0.5   # must have FALLEN at least this % over those bar
 # last down candle before a >=1.2 ATR up-displacement, daily bars) instead of
 # a swing-cluster band. CONVENTION, like everything SMC: no canonical text.
 OB_APPROACH_MAX_AGE_BARS = 90  # daily bars; older blocks are stale structure
+# "In the order block" (Ajay 2026-08-31: "hit the 'In the orderblock' to see
+# all the stocks"): the arrival must be RECENT — the first touch began within
+# this many bars. A name that has sat in/under its block for weeks is not
+# "in the order block", it is a block that failed to bounce. CONVENTION.
+OB_FIRST_TOUCH_BARS = 5
 
 # How far BELOW price a demand band may sit and still be an ENTRY rather than
 # just distant support.
@@ -351,6 +356,7 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
             "deep_rows": [], "deep_n": 0,
             "approaching_rows": [], "approaching_n": 0,
             "approaching_ob_rows": [], "approaching_ob_n": 0,
+            "in_ob_rows": [], "in_ob_n": 0,
             "scanned": 0, "universe": 0,
             "universe_key": ukey, "universe_label": label,
             "universe_note": f"{label} — first scan running",
@@ -810,6 +816,84 @@ def approaching_ob_read(rec: dict, df, closes: Optional[list] = None,
     }
 
 
+def in_ob_read(rec: dict, df,
+               max_age_bars: int = OB_APPROACH_MAX_AGE_BARS,
+               first_touch_bars: int = OB_FIRST_TOUCH_BARS) -> Optional[dict]:
+    """Is price INSIDE a bullish order block on its FIRST touch? PURE.
+
+    The reached-side mate of `approaching_ob_read` — same block detector, the
+    moment after arrival instead of the moment before. Qualifies when:
+
+      * price sits inside the block (lo <= last <= hi),
+      * the block is young enough (`max_age_bars`),
+      * the visit is FRESH: the first bar whose low entered the block is
+        within the last `first_touch_bars` bars. A name that has camped in or
+        under its block for weeks is not "in the order block" — it is a block
+        that already failed to produce the bounce this board exists to catch,
+      * no bar has CLOSED below the block floor since the visit began — a
+        close through the floor is the block failing, not being tested,
+      * the falling-knife guard passes.
+
+    Trade geometry from patterns.trade_levels on the block (long from support
+    while the floor holds). CONVENTION, cited: false, like everything SMC.
+    """
+    last = rec.get("last_price")
+    if df is None or last is None or not rec.get("trend_ok"):
+        return None
+    try:
+        from supply_demand import smc as smc_mod
+        blocks = smc_mod.order_blocks(df, direction="bullish",
+                                      lookback=max_age_bars + 5)
+        lows = df["low"].to_numpy(dtype=float)
+        closes_arr = df["close"].to_numpy(dtype=float)
+    except Exception:
+        return None
+    n = len(lows)
+
+    best = None
+    for b in blocks:
+        if b.get("bars_ago", 10 ** 9) > max_age_bars:
+            continue
+        lo_b, hi_b = b.get("lo"), b.get("hi")
+        if lo_b is None or hi_b is None:
+            continue
+        if not (float(lo_b) <= float(last) <= float(hi_b)):
+            continue
+        start = int(b["idx"]) + 2              # skip the displacement bar
+        if start >= n:
+            continue
+        touched = [j for j in range(start, n) if lows[j] <= float(hi_b)]
+        if not touched:
+            continue                            # inside on stale data? skip
+        first = touched[0]
+        if (n - 1 - first) >= first_touch_bars:
+            continue                            # camped, not arriving
+        if any(closes_arr[j] < float(lo_b) for j in range(first, n)):
+            continue                            # closed through the floor
+        if best is None or float(hi_b) > best["hi"]:
+            best = b
+    if best is None:
+        return None
+
+    try:
+        from supply_demand import patterns as pat_mod
+        trade = pat_mod.trade_levels(best, last, pat_mod.atr(df),
+                                     opposing=rec.get("nearest_resistance"))
+    except Exception:
+        trade = None
+
+    return {
+        "state": "in_ob",
+        "block": {"lo": round(best["lo"], 4), "hi": round(best["hi"], 4),
+                  "bars_ago": best.get("bars_ago"),
+                  "displacement_atr": best.get("displacement_atr")},
+        "depth_pct": round((best["hi"] - float(last))
+                           / max(best["hi"] - best["lo"], 1e-9) * 100.0, 1),
+        "trade": trade,
+        "cited": False,
+    }
+
+
 def _pick_entry_zone(last_price: float, demand_zones: list[dict]) -> Optional[dict]:
     """The band price is INSIDE, else the band NEAREST to price.
 
@@ -1131,6 +1215,7 @@ def decide_from_frame(df, sym: str):
     # The order-block flavour of the same question (Ajay 2026-08-31). Computed
     # here for the same reason: this is where the frame and closes exist.
     rec["approaching_ob"] = approaching_ob_read(rec, df, closes)
+    rec["in_ob"] = in_ob_read(rec, df)
 
     return rec
 
@@ -1580,6 +1665,7 @@ def scan(force: bool = False, limit: Optional[int] = None,
     deep_rows: list = []            # second-level arrivals, same pass
     approaching_rows: list = []     # falling TOWARD a band, same pass (2026-08-31)
     approaching_ob_rows: list = []  # falling toward a fresh ORDER BLOCK (2026-08-31)
+    in_ob_rows: list = []           # INSIDE a fresh order block, first touch (2026-08-31)
     total = len(syms)
     _publish_progress(ukey, "scanning", started_at=t0, current=0, total=total,
                       hits=0, errors=0, symbol=None, universe_label=ulabel)
@@ -1626,6 +1712,14 @@ def scan(force: bool = False, limit: Optional[int] = None,
             # Fourth predicate, same record, same loop (Ajay 2026-08-31:
             # "I need the ones that are about to reach and catch them").
             # decide_from_frame attached the read; this only collects it.
+            try:
+                a6 = rec.get("in_ob")
+                if a6:
+                    r6 = dict(rec)
+                    r6.pop("series", None)
+                    in_ob_rows.append(r6)
+            except Exception as exc:                          # pragma: no cover
+                log.debug("in-ob: collecting %s failed: %s", sym, exc)
             try:
                 a5 = rec.get("approaching_ob")
                 if a5:
@@ -1709,6 +1803,10 @@ def scan(force: bool = False, limit: Optional[int] = None,
     approaching_ob_rows.sort(key=lambda r: (
         (r.get("approaching_ob") or {}).get("dist_pct") or 99.0,
         (r.get("approaching_ob") or {}).get("drift_pct") or 0.0))
+    # In-the-block: youngest block first — the freshest institutional
+    # footprint is the one whose first test is most informative.
+    in_ob_rows.sort(key=lambda r: (
+        ((r.get("in_ob") or {}).get("block") or {}).get("bars_ago") or 999))
 
     # Record the FULL qualifying list before anything trims it (Ajay 2026-08-17:
     # "Can you maintain history of our In deman page please… Want you to track
@@ -1759,6 +1857,8 @@ def scan(force: bool = False, limit: Optional[int] = None,
         "approaching_n": len(approaching_rows),
         "approaching_ob_rows": approaching_ob_rows,
         "approaching_ob_n": len(approaching_ob_rows),
+        "in_ob_rows": in_ob_rows,
+        "in_ob_n": len(in_ob_rows),
         # The inverse board, from the same pass. A separate key so every
         # existing consumer of `rows` — the page, the R:R floor, the limit, the
         # history ledger — is untouched by construction.

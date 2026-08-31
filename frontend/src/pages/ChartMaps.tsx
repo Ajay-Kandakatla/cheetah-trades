@@ -111,12 +111,19 @@ export function ChartMaps() {
   /* Reaching vs already reached (Ajay 2026-08-31: "give me toggle reaching vs
    * already reached"). URL-backed so a refresh or a shared link keeps the
    * moment being looked at; only the non-default value is written. */
-  const phase = params.get('phase') === 'approaching' ? 'approaching' : 'reached';
+  const LENS_TABS = tab === 'undervalue' || tab === 'gabbar';
+  const rawPhase = params.get('phase');
+  // Demand boards have two moments (default reached); the lens tabs have
+  // three (default All — their population is a screen the lens narrows).
+  const phase = rawPhase === 'approaching' ? 'approaching'
+    : rawPhase === 'reached' ? 'reached'
+    : LENS_TABS ? 'all' : 'reached';
   const target = params.get('target') === 'order_block' ? 'order_block' : 'zone';
   const setPhase = (v: string) => {
     const next = new URLSearchParams(params);
     if (v === 'approaching') next.set('phase', 'approaching');
-    else { next.delete('phase'); next.delete('target'); }
+    else if (v === 'reached' && LENS_TABS) next.set('phase', 'reached');
+    else next.delete('phase');
     setParams(next, { replace: true });
   };
   const setTarget = (v: string) => {
@@ -304,8 +311,15 @@ export function ChartMaps() {
       {/* Reaching vs already reached — only the two demand boards have the two
         * moments. Segmented, not a checkbox: the two states are a choice of
         * WHICH list, not an on/off refinement of one list. */}
-      {(tab === 'zones' || tab === 'deep_demand') && (
+      {(tab === 'zones' || tab === 'deep_demand' || LENS_TABS) && (
         <div className="cm-phase" role="tablist" aria-label="Zone phase">
+          {LENS_TABS && (
+            <button type="button" role="tab" aria-selected={phase === 'all'}
+                    className={`cm-phase-btn${phase === 'all' ? ' cm-phase-on' : ''}`}
+                    onClick={() => setPhase('all')}>
+              All
+            </button>
+          )}
           <button type="button" role="tab" aria-selected={phase === 'reached'}
                   className={`cm-phase-btn${phase === 'reached' ? ' cm-phase-on' : ''}`}
                   onClick={() => setPhase('reached')}>
@@ -319,12 +333,17 @@ export function ChartMaps() {
           <span className="cm-phase-hint">
             {phase === 'approaching'
               ? 'Still above the level, close, and falling toward it — set the order before it arrives. Closest first.'
+              : phase === 'all'
+              ? 'The full screen; the other two narrow it to names at or nearing their level.'
+              : tab === 'zones' && target === 'order_block'
+              ? 'Inside a fresh order block on its first touch — youngest block first.'
               : 'Back inside a tested band and holding.'}
           </span>
-          {/* Which LEVEL the approach is measured to (Ajay 2026-08-31:
-            * "Approaching order block vs Approaching Demand Zone"). Zones tab
-            * only — Deep Demand's second band IS its level. */}
-          {tab === 'zones' && phase === 'approaching' && (
+          {/* Which LEVEL the moment is measured to (Ajay 2026-08-31). Zones
+            * tab only, BOTH phases — reached+order block = in the block on
+            * its first touch. Deep Demand's second band IS its level, and the
+            * lens tabs measure to their own screens' bands. */}
+          {tab === 'zones' && (
             <span className="cm-phase-sub" role="tablist" aria-label="Approach target">
               <button type="button" role="tab" aria-selected={target === 'zone'}
                       className={`cm-phase-btn${target === 'zone' ? ' cm-phase-on' : ''}`}

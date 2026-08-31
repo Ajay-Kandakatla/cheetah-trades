@@ -262,15 +262,20 @@ export function boardQuery(p: {
   phase?: string; target?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
-  // Reaching vs already reached (Ajay 2026-08-31). Only the two demand boards
-  // have the two moments, and only the non-default rides on the URL.
+  // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
+  // the tabs possible"). Demand boards: default reached, only 'approaching'
+  // rides on the URL. Lens tabs (undervalue, gabbar): default ALL, so both
+  // explicit phases ride. Zones alone takes the level flavour (order_block),
+  // on either phase — reached+order_block = IN the block on first touch.
   if ((p.tab === 'zones' || p.tab === 'deep_demand') && p.phase === 'approaching') {
     q.set('phase', 'approaching');
-    // Zone vs order-block flavour (Ajay 2026-08-31) — zones tab only, and only
-    // meaningful while approaching; the non-default alone rides on the URL.
-    if (p.tab === 'zones' && p.target === 'order_block') {
-      q.set('target', 'order_block');
-    }
+  }
+  if ((p.tab === 'undervalue' || p.tab === 'gabbar')
+      && (p.phase === 'approaching' || p.phase === 'reached')) {
+    q.set('phase', p.phase);
+  }
+  if (p.tab === 'zones' && p.target === 'order_block') {
+    q.set('target', 'order_block');
   }
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));

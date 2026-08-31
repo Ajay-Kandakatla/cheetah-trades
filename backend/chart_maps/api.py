@@ -34,7 +34,7 @@ async def chart_maps(
                        description="gabbar tab only — measure against one band "
                                    "type: all (default) | aggressive | "
                                    "conservative 1 | conservative 2"),
-    phase: str = Query("reached",
+    phase: str = Query("",
                        description="zones + deep_demand tabs — reached "
                                    "(default: price back inside the band) | "
                                    "approaching (price still above it, close, "
@@ -93,7 +93,7 @@ async def chart_maps(
             min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
             level=level if isinstance(level, str) else "all",
             touching_only=touching_only if isinstance(touching_only, bool) else False,
-            phase=phase if isinstance(phase, str) else "reached",
+            phase=phase if isinstance(phase, str) else "",
             target=target if isinstance(target, str) else "zone",
         )
 

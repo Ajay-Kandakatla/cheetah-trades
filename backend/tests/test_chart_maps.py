@@ -1955,6 +1955,49 @@ def test_approaching_target_switches_between_zone_and_order_block(
     assert any("uncited" in b["text"] for b in tile["badges"])
     assert "order block" in tile["why"]
 
-    # target is meaningless outside the approaching phase — reached ignores it
+    # SUPERSEDED same day ("hit the 'In the orderblock' to see all the
+    # stocks"): reached + order_block now serves names INSIDE a fresh block on
+    # first touch — the 2x2's fourth cell, asserted in the dedicated test.
     out_r = B.board("zones", limit=10, min_tier="any", target="order_block")
-    assert out_r["phase"] == "reached" and out_r["target"] == "zone"
+    assert out_r["phase"] == "reached" and out_r["target"] == "order_block"
+
+
+def test_reached_order_block_serves_names_inside_fresh_blocks(
+        prices, reentry_stub):
+    """The 2x2's fourth cell: phase=reached + target=order_block = IN the
+    block on its first touch, youngest block first, with the block's trade."""
+    in_row = {
+        "symbol": "INBLK", "name": "INBLK", "is_reentry": False,
+        "last_price": 99.5, "trend_ok": True,
+        "entry_zone": {"lo": 90.0, "hi": 92.0, "touches": 3, "strength": 60.0,
+                       "oldest_touch_bars": 120},
+        "in_ob": {"state": "in_ob", "depth_pct": 39.0,
+                  "block": {"lo": 98.4, "hi": 100.2, "bars_ago": 14,
+                            "displacement_atr": 3.2},
+                  "trade": {"entry": 100.2, "stop": 97.9, "target1": 104.8,
+                            "rr": 2.0},
+                  "cited": False},
+        "plan": {"entry_ref": 92.0, "stop": 89.0, "target": 110.0, "rr": 3.0},
+        "supply_zones": [], "demand_zones": [], "verdict": {}}
+    reentry_stub["rows"] = []
+    reentry_stub["in_ob_rows"] = [in_row]
+    prices["INBLK"] = _frame(200, start=95.0)
+
+    out = B.board("zones", limit=10, min_tier="any", target="order_block")
+    assert out["phase"] == "reached" and out["target"] == "order_block"
+    assert [t["symbol"] for t in out["tiles"]] == ["INBLK"]
+    tile = out["tiles"][0]
+    assert any("in the order block" in b["text"] for b in tile["badges"])
+    assert any(b["kind"] == "order_block" for b in tile["bands"])
+    buy = next(l for l in tile["lines"] if l["label"] == "BUY")
+    assert buy["price"] == 100.2
+    assert "first touch" in tile["why"]
+
+
+def test_lens_tabs_default_all_while_demand_boards_default_reached():
+    """One empty-string route default, two meanings — an old URL with no phase
+    param must render every tab's historical board byte for byte."""
+    import inspect
+    src = inspect.getsource(B.board)
+    assert 'phase=(phase or "reached")' in src   # zones + deep
+    assert 'phase=(phase or "all")' in src       # undervalue + gabbar

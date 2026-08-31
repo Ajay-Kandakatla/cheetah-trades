@@ -389,7 +389,7 @@ describe('the phase toggle', () => {
 
 /* ── approaching: zone vs order block (Ajay 2026-08-31) ────────────────────── */
 describe('the approach-target switch', () => {
-  it('appears only on zones + approaching, and sends target=order_block', async () => {
+  it('appears on both phases of zones, and sends target=order_block', async () => {
     const fetchSpy = vi.mocked(fetch as any);
     render(<MemoryRouter
       initialEntries={['/chart-maps?tab=zones&phase=approaching&target=order_block']}>
@@ -401,11 +401,29 @@ describe('the approach-target switch', () => {
       u.includes('phase=approaching') && u.includes('target=order_block'))).toBe(true);
   });
 
-  it('is absent on the reached phase — target is meaningless there', async () => {
-    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}>
+  it('reached + Order block = IN the block, and still sends the target', async () => {
+    // Superseded same day: "hit the 'In the orderblock' to see all the
+    // stocks" — the switch now lives on BOTH phases.
+    const fetchSpy = vi.mocked(fetch as any);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones&target=order_block']}>
       <ChartMaps /></MemoryRouter>);
-    await screen.findAllByRole('tab', { name: /Already reached/ });
-    expect(screen.queryByRole('tab', { name: 'Order block' })).toBeNull();
+    expect(await screen.findByRole('tab', { name: 'Order block' })).toBeInTheDocument();
+    const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) =>
+      u.includes('tab=zones') && u.includes('target=order_block')
+      && !u.includes('phase='))).toBe(true);
+  });
+
+  it('lens tabs get the three-state phase toggle, default All', async () => {
+    const fetchSpy = vi.mocked(fetch as any);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=undervalue']}>
+      <ChartMaps /></MemoryRouter>);
+    expect(await screen.findByRole('tab', { name: 'All' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Already reached/ })).toBeInTheDocument();
+    // default All sends NO phase param — the historical board byte for byte
+    const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) =>
+      u.includes('tab=undervalue') && !u.includes('phase='))).toBe(true);
   });
 
   it('is absent on deep_demand even while approaching — its second band IS the level', async () => {

@@ -1295,13 +1295,17 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 "progress": data.get("progress"),
                 "note": "scanning for demand-zone pullbacks…"}
 
+    # A 2x2 since 2026-08-31 ("hit the 'In the orderblock' to see all the
+    # stocks"): the PHASE gives the moment (approaching | reached), the TARGET
+    # gives the level (demand band | fresh SMC order block).
     if phase == "approaching":
-        # Two flavours of "about to reach" (Ajay 2026-08-31: "Approaching
-        # order block vs Approaching Demand Zone"): the swing-cluster band, or
-        # a fresh SMC order block. Different level, same near/drift standards.
         rows = (data.get("approaching_ob_rows")
                 if target == "order_block"
                 else data.get("approaching_rows")) or []
+    elif target == "order_block":
+        # Reached, order-block flavour: INSIDE a fresh block on its first
+        # touch. Youngest block first — the scan pre-sorts.
+        rows = data.get("in_ob_rows") or []
     else:
         rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
     flash_syms = _flash_symbols()
@@ -1313,8 +1317,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         plan = r.get("plan") or {}
         zone = r.get("entry_zone") or {}
 
-        _ob = (r.get("approaching_ob")
-               if phase == "approaching" and target == "order_block" else None)
+        _ob = (None if target != "order_block"
+               else r.get("approaching_ob") if phase == "approaching"
+               else r.get("in_ob"))
 
         bands = []
         z_lo, z_hi = _num(zone.get("lo")), _num(zone.get("hi"))
@@ -1365,9 +1370,17 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         fell = _num(r.get("fell_from_pct"))
         appr_ob = (r.get("approaching_ob")
                    if phase == "approaching" and target == "order_block" else None)
+        in_ob = (r.get("in_ob")
+                 if phase != "approaching" and target == "order_block" else None)
         appr = (r.get("approaching")
                 if phase == "approaching" and target != "order_block" else None)
-        if appr_ob:
+        if in_ob:
+            blk = in_ob.get("block") or {}
+            why = (f"inside a fresh order block on its first touch — "
+                   f"{in_ob.get('depth_pct')}% deep into the last down candle "
+                   f"before a {blk.get('displacement_atr')}×ATR impulse "
+                   f"{blk.get('bars_ago')} bars ago")
+        elif appr_ob:
             blk = appr_ob.get("block") or {}
             why = (f"falling toward a fresh order block — {appr_ob['dist_pct']}% "
                    f"above it, down {abs(appr_ob['drift_pct']):.1f}% in "
@@ -1422,6 +1435,11 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 {"text": f"\u2193 {abs(appr_ob['drift_pct']):.1f}% / {appr_ob['drift_bars']}d",
                  "tone": "muted"},
                 {"text": "SMC \u00b7 uncited", "tone": "muted"}] if appr_ob else [])
+                + ([
+                {"text": "\u25c9 in the order block", "tone": "good"},
+                {"text": f"{(in_ob.get('block') or {}).get('bars_ago')} bars old",
+                 "tone": "muted"},
+                {"text": "SMC \u00b7 uncited", "tone": "muted"}] if in_ob else [])
                 + _zone_badges(r))
                 + ([fb] if (fb := _flow_badge(r.get("inflow"))) else [])
                 + (
@@ -1435,6 +1453,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # board keeps ranking by the quality of the plan (R:R).
             "_score": ((-appr["dist_pct"]) if appr
                        else (-appr_ob["dist_pct"]) if appr_ob
+                       # youngest block first, mirroring the scan's pre-sort
+                       else (-(((in_ob.get("block") or {}).get("bars_ago"))
+                               or 999)) if in_ob
                        else (rr or 0.0)),
             "_m": tile_metrics(r),
         })
@@ -1444,7 +1465,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     # the whole matched set (<= LIMIT_MAX rows, process-cached) is enriched
     # BEFORE ranking — an explicit dropdown sort still overrides all of this.
     attach_velocity(tiles)
-    if phase != "approaching":
+    if phase != "approaching" and target != "order_block":
         # Cheetah composite (flow × velocity × R:R) ranks the REACHED board.
         # The approaching board must NOT take it: its whole question is "which
         # band gets hit first", and a strong-flow name 4.8% out ranking above
@@ -1462,8 +1483,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
-            "target": ("order_block" if (phase == "approaching"
-                                         and target == "order_block") else "zone"),
+            "target": ("order_block" if target == "order_block" else "zone"),
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -2389,10 +2409,51 @@ def psg_ratio(mkt_cap, rev_ttm, growth_yoy_pct):
     return (mkt_cap / rev_ttm) / min(growth, UNDERVALUE_GROWTH_CAP_PCT)
 
 
+def _uv_band_state(zones, df, last):
+    """(state, dist_pct) for the Under Value phase lens. PURE-ish.
+
+    state: "in" (inside a demand band) | "near" (within APPROACH_NEAR_PCT
+    above one AND falling per the demand scan's drift test) | "away" | None
+    (no zones computed). The near test reuses demand_reentry's constants —
+    one definition of "approaching" across every tab.
+    """
+    from supply_demand import demand_reentry as _dr
+
+    if not zones:
+        return None, None
+    try:
+        lp = float(last)
+    except (TypeError, ValueError):
+        return None, None
+    demand = zones.get("demand_zones") or []
+    for z in demand:
+        lo, hi = z.get("lo"), z.get("hi")
+        if lo is not None and hi is not None and lo <= lp <= hi:
+            return "in", 0.0
+    tops = [z.get("hi") for z in demand
+            if z.get("hi") is not None and z["hi"] < lp]
+    if not tops:
+        return "away", None
+    hi = max(tops)
+    dist = (lp - hi) / lp * 100.0
+    if dist > _dr.APPROACH_NEAR_PCT:
+        return "away", round(dist, 2)
+    try:
+        closes = df["close"].tolist()
+        ref = float(closes[-(_dr.APPROACH_DRIFT_BARS + 1)])
+        drift = (float(closes[-1]) - ref) / ref * 100.0
+    except Exception:
+        return "away", round(dist, 2)
+    if drift > -float(_dr.APPROACH_MIN_DRIFT_PCT):
+        return "away", round(dist, 2)          # close, but rising = departing
+    return "near", round(dist, 2)
+
+
 def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      themes_first: bool = THEMES_FIRST_DEFAULT,
                      sort: str = DEFAULT_SORT,
-                     min_tier: str = DEFAULT_MIN_TIER) -> dict:
+                     min_tier: str = DEFAULT_MIN_TIER,
+                     phase: str = "all") -> dict:
     """Under Value board: explosive sales, lagging price tag.
 
     Screen: Bonde tier strong/explosive across the whole universe (weekly
@@ -2476,10 +2537,27 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tail = df["close"].iloc[-min(len(df), 50):]
         avg_turnover = float((df["close"] * df["volume"])
                              .iloc[-min(len(df), 50):].mean())
+        # Phase lens (Ajay 2026-08-31: "I need it in all the tabs possible").
+        # A FILTER here, not a population switch: this board's population is a
+        # valuation screen, and the default ("all") is the historical board
+        # byte for byte. reached = inside a demand band; approaching = within
+        # the demand scan's own near/drift standards above one. Same constants
+        # imported so the tabs can never disagree on what "approaching" means.
+        band_state, band_dist = _uv_band_state(zones, df, last)
+        if phase == "reached" and band_state != "in":
+            continue
+        if phase == "approaching" and band_state != "near":
+            continue
+
         badges = [
             {"text": f"💎 {ps:.1f}x sales vs +{g:.0f}% growth", "tone": "good"},
             _sales_badge(sales),
         ]
+        if phase != "all" and band_state == "in":
+            badges.insert(0, {"text": "\u25c9 in the demand band", "tone": "good"})
+        elif phase != "all" and band_state == "near" and band_dist is not None:
+            badges.insert(0, {"text": f"\u2192 {band_dist}% above the band",
+                              "tone": "warn"})
         if sym in flash_syms:
             badges.append({"text": "⚡ Tape burst at zone", "tone": "good"})
         tiles.append({
@@ -2509,6 +2587,7 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "demand")
     return {"tiles": out, **meta,
+            "phase": (phase if phase in ("reached", "approaching") else "all"),
             "matched": len(tiles),
             "gex_as_of": gex_as_of,
             "screened": len(cands),
@@ -2533,7 +2612,8 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  sort: str = DEFAULT_SORT,
                  min_tier: str = DEFAULT_MIN_TIER,
                  level: str = "all",
-                 touching_only: bool = False) -> dict:
+                 touching_only: bool = False,
+                 phase: str = "all") -> dict:
     """Gabbar's Price Levels board (Ajay 2026-08-25: "create a tab for gabbars
     price level and if anything is touching the gabbars levels").
 
@@ -2643,6 +2723,15 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         if touching_only is True and state == "away":
             away_hidden += 1
             continue
+        # Phase lens (Ajay 2026-08-31: "I need it in all the tabs possible").
+        # The board already classifies every name in/near/away against the
+        # hand-drawn bands, so the lens filters a state that exists — reached =
+        # inside a band, approaching = near one. Default "all" keeps the
+        # historical distance ladder byte for byte.
+        if phase == "reached" and state != "in":
+            continue
+        if phase == "approaching" and state != "near":
+            continue
 
         if cons_dist is not None and cons_state != "in":
             cons_state = "near" if cons_dist <= NEAR_PCT else "away"
@@ -2735,6 +2824,7 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     attr = GL.BAND_ATTRIBUTION
     tracked_stubs = list(getattr(GL, "TRACKED_NO_LEVELS", ()) or ())
     return {"tiles": out, **meta,
+            "phase": (phase if phase in ("reached", "approaching") else "all"),
             "tracked_no_levels": tracked_stubs,
             "matched": len(tiles),
             "touching": touching,
@@ -2774,7 +2864,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
-          touching_only: bool = False, phase: str = "reached",
+          touching_only: bool = False, phase: str = "",
           target: str = "zone") -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
@@ -2795,21 +2885,28 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     if t == "earnings":
         out = earnings_tiles(limit, days)
     elif t == "zones":
+        # Phase normalisation: the demand boards' default moment is "reached"
+        # (their population IS the reached set), while the lens tabs below
+        # default to "all" (their population is a screen the lens narrows).
+        # An empty phase means "the tab's own default" so URLs from before any
+        # of this behave identically on every tab.
         out = zone_tiles(limit, days, universe, themes_first, srt, tier,
-                         phase=phase, target=target)
+                         phase=(phase or "reached"), target=target)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier,
-                                phase=phase)
+                                phase=(phase or "reached"))
     elif t == "undervalue":
-        out = undervalue_tiles(limit, days, themes_first, srt, tier)
+        out = undervalue_tiles(limit, days, themes_first, srt, tier,
+                               phase=(phase or "all"))
     elif t == "gabbar":
         out = gabbar_tiles(limit, days, themes_first, srt, tier,
                            level=level if isinstance(level, str) else "all",
-                           touching_only=touching_only is True)
+                           touching_only=touching_only is True,
+                           phase=(phase or "all"))
     elif t == "zero_dte":
         out = zero_dte_tiles(limit, days)
     elif t == "winners":

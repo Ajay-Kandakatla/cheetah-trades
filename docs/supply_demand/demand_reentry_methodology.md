@@ -430,3 +430,33 @@ trade, never the zone plan's. Computed inside `decide_from_frame` alongside
 the zone read (same wiring lock — the empty-board bug must not be repeatable),
 served as `approaching_ob_rows`, ranked closest-first. Deep Demand takes no
 switch: its second band IS its level.
+
+### The 2×2, and the phase lens on every tab possible (2026-08-31, same day)
+
+Ajay: *"hit the 'In the orderblock' to see all the stocks"* + *"I need it in
+all the tabs possible to implement"*.
+
+**Back in Demand is now a 2×2**: the PHASE gives the moment, the TARGET the
+level. `phase=reached & target=order_block` = price INSIDE a fresh bullish
+block on its **first touch** (`in_ob_read`): the first bar whose low entered
+the block is within `OB_FIRST_TOUCH_BARS` (5) — a name camped in its block for
+weeks is a block that already failed to bounce, not an arrival — and no close
+below the floor since the visit began (a close through the floor is the block
+failing, not being tested). Youngest block first. Same knife guard, same
+`cited: false`.
+
+**Every other tab, honestly:**
+
+| Tab | What it gets | Why |
+|---|---|---|
+| Back in Demand | full 2×2 | its rows carry both levels |
+| Deep Demand | phase only | its second band IS its level; its names fail the trend gate the OB reads require, so an OB switch would render empty |
+| Under Value | 3-state phase lens (All default) | a FILTER on its valuation screen: reached = inside a demand band, approaching = the demand scan's own near/drift constants (imported — one definition of "approaching" everywhere) |
+| Gabbar Levels | 3-state phase lens (All default) | filters the in/near/away state it already computes against the hand-drawn bands |
+| Into Supply | nothing | it IS an approaching board by construction — rallying into the lid |
+| VCP / Topping / Session / 0DTE / Earnings / Winners / Support | nothing | their levels are pivots, chains, ledgers or on-demand reads — "approaching a demand zone" is not their question |
+
+Route plumbing: the `phase` Query default became `""` = "the tab's own
+default" — reached for the demand boards, All for the lens tabs — so every
+pre-existing URL renders byte for byte. Locked by
+`test_lens_tabs_default_all_while_demand_boards_default_reached`.
