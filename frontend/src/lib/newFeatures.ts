@@ -22,6 +22,7 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  { id: 'buy-band-1r-ceiling', label: '\u{1F3AF} Buy bands now stop where the trade does \u2014 the zone card quoted a whole band but measured R:R at spot only; it now quotes the slice that still pays 1R (QBTS: $16.92\u2013$17.41 was really $16.92\u2013$17.05). Also fixed: the setup scanners\u2019 sit-out-bear-markets gate had never once fired', addedAt: '2026-08-31', route: '/chart-maps' },
   { id: 'ticker-support-5y',    label: '5-year zoom + levels panel on the ticker page',           addedAt: '2026-08-25', route: '/sepa' },
   { id: 'topping-shorts-tab',   label: 'S3 Topping · Shorts tab — book-cited distribution reads', addedAt: '2026-08-25', route: '/chart-maps' },
   { id: 'scan-health',          label: 'Scan health — every scan audited, counted in the nav', addedAt: '2026-08-25', route: '/health' },

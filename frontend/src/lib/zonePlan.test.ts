@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, planLine, reentryReason, retailView, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
+import { bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, oneRCeiling, planLine, reentryReason, retailView, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
 
 const zone = (over: Partial<Zone> = {}): Zone => ({
@@ -410,5 +410,60 @@ describe('reentryReason on a band that broke', () => {
     const p = nbix({ is_reentry: true });
     delete p.zone_broken;
     expect(reentryReason(p)).not.toContain('BROKE');
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * R:R across the entry band (Ajay 2026-08-31: "there is a problem with setup
+ * tab and Supply demand tab.. Can you make sure logic is intact").
+ *
+ * `rr` is measured at spot; the card instructs a band. QBTS advertised 1.34R
+ * and paid 0.01R at the top of its own buy range.
+ * ------------------------------------------------------------------------ */
+describe('oneRCeiling + thin-band plan line', () => {
+  const qbts: Plan = {
+    entry_low: 16.92, entry_high: 17.41, entry_ref: 16.99,
+    stop: 16.67, risk_pct: 1.9,
+    target: 17.42, reward_pct: 2.5, rr: 1.34,
+    rr_at_entry_high: 0.01, thin_across_band: true, thin_band_rr: 1.0,
+    risk_exceeds_max: false, max_stop_pct: 10,
+  };
+
+  it('solves for the highest entry that still pays 1R', () => {
+    // (17.42 + 16.67) / 2 = 17.045
+    expect(oneRCeiling(qbts)).toBe(17.05);
+  });
+
+  it('quotes the buyable slice, not the full band, when the target is close', () => {
+    const line = planLine(qbts);
+    expect(line).toContain('Buy $16.92–$17.05');
+    expect(line).not.toContain('Buy $16.92–$17.41');
+    expect(line).toContain('above $17.05 this stops being 1R');
+  });
+
+  it('leaves a healthy plan completely alone', () => {
+    const ok: Plan = { ...qbts, target: 22.0, rr: 3.1,
+                       rr_at_entry_high: 2.4, thin_across_band: false };
+    const line = planLine(ok);
+    expect(line).toContain('Buy $16.92–$17.41');
+    expect(line).not.toContain('stops being 1R');
+  });
+
+  it('says so when no part of the band is buyable', () => {
+    // target below the band floor => ceiling under entry_low
+    const dead: Plan = { ...qbts, target: 16.9, rr_at_entry_high: -0.7 };
+    const line = planLine(dead);
+    expect(line).toContain('no 1R fill anywhere in it');
+  });
+
+  it('returns null rather than a number when there is no target', () => {
+    expect(oneRCeiling({ ...qbts, target: null })).toBeNull();
+    expect(oneRCeiling(null)).toBeNull();
+    expect(oneRCeiling(undefined)).toBeNull();
+  });
+
+  it('a broken zone still refuses to say Buy at all', () => {
+    expect(planLine(qbts, true)).toContain('Zone BROKEN');
+    expect(planLine(qbts, true)).not.toContain('Buy');
   });
 });

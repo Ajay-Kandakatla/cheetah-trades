@@ -76,6 +76,19 @@ def get_sepa_candidates(top_n: int = 30) -> list[dict]:
     return rows[:top_n]
 
 
+# The three labels `sepa.market_regime._label_from_score` can emit, mapped to
+# "may the setup scanners produce long setups today?". Explicit, because the
+# substring heuristic below got this wrong for years: "uptrend" is a substring
+# of "uptrend_under_pressure", so the mixed state matched the BULL branch by
+# accident rather than by decision. It still resolves to True — cracks forming
+# is not a bear — but now it says so on purpose.
+_REGIME_ALLOWS_LONGS = {
+    "confirmed_uptrend":     True,
+    "uptrend_under_pressure": True,
+    "market_in_correction":  False,
+}
+
+
 def is_bull_regime() -> Optional[bool]:
     """Return True if the market regime is bullish, False if bearish,
     None if we can't determine (treat as 'cautious — go ahead').
@@ -85,13 +98,24 @@ def is_bull_regime() -> Optional[bool]:
     zero setups. The result of `False` is intentional: a clear signal
     on the dashboard that "no setups today because regime is bearish",
     not a silent empty list.
+
+    FIXED 2026-08-31. This imported `sepa.market_regime.classify_regime`, a
+    function that has never existed in that module — the public entry point is
+    `regime()`. The ImportError was swallowed by the bare `except` below and the
+    gate returned None ("can't determine, go ahead") on EVERY call, so the
+    sit-out-bears rule had never once fired. Locked by
+    `test_is_bull_regime_calls_a_function_that_actually_exists`.
+
+    `regime()` emits no `safe_to_long` key today; that branch is kept because it
+    is the field this SHOULD key off if the regime module ever publishes it, and
+    it must win over any label guess.
     """
     try:
-        from sepa.market_regime import classify_regime
+        from sepa.market_regime import regime
     except Exception:
         return None
     try:
-        r = classify_regime()
+        r = regime()
         if not isinstance(r, dict):
             return None
         label = (r.get("label") or "").lower()
@@ -100,11 +124,15 @@ def is_bull_regime() -> Optional[bool]:
             return True
         if safe is False:
             return False
-        # Heuristic fallback if safe_to_long isn't set
-        if "bull" in label or "uptrend" in label or "confirmed" in label:
-            return True
+        if label in _REGIME_ALLOWS_LONGS:
+            return _REGIME_ALLOWS_LONGS[label]
+        # Unknown label: guess, but test the BEAR words first. A label like
+        # "uptrend_under_pressure" contains both families of word, and the
+        # cautious read has to win when we are guessing.
         if "bear" in label or "downtrend" in label or "correction" in label:
             return False
+        if "bull" in label or "uptrend" in label or "confirmed" in label:
+            return True
         return None
     except Exception as exc:
         log.warning("is_bull_regime check failed: %s", exc)

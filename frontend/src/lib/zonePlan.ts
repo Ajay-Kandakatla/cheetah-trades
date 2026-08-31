@@ -27,6 +27,15 @@ export type Plan = {
   stop: number; risk_pct: number | null;
   target: number | null; reward_pct: number | null;
   rr: number | null;
+  /** R:R if filled at `entry_high` instead of `entry_ref`. The card tells Ajay
+   *  to buy a BAND, but `rr` is measured at spot only; on 2026-08-31 those
+   *  disagreed on 41 of 96 live rows (QBTS: 1.34R at spot, 0.01R at the band
+   *  top). **null = no target, so not computable** — not "fine". */
+  rr_at_entry_high?: number | null;
+  /** rr_at_entry_high < thin_band_rr: the reward is gone before the entry
+   *  range ends. Reported, never used to drop the row. */
+  thin_across_band?: boolean;
+  thin_band_rr?: number;
   risk_exceeds_max: boolean;
   max_stop_pct: number;
   /** Has the market already traded through this stop in the last
@@ -155,14 +164,41 @@ export function planLine(plan: Plan | null | undefined,
     return `Zone BROKEN — ${level(plan.entry_low)}–${level(plan.entry_high)} `
       + 'failed on a close below the floor. No entry here until it is reclaimed.';
   }
-  const parts = [`Buy ${level(plan.entry_low)}–${level(plan.entry_high)}`];
+  // Where in the band does the trade still pay 1R? Solving
+  //   (target - p) / (p - stop) = 1   ->   p = (target + stop) / 2
+  // Above that price the first objective pays less than the stop risks, so
+  // quoting the full band as "Buy" is quoting prices that are not a trade.
+  // QBTS 2026-08-31: band 16.92-17.41, target 17.42, stop 16.67 -> the trade
+  // dies at 17.05, i.e. three quarters of the advertised band was unbuyable.
+  const ceil = oneRCeiling(plan);
+  const hi = (plan.thin_across_band && ceil != null && ceil > plan.entry_low)
+    ? ceil : plan.entry_high;
+  const parts = [`Buy ${level(plan.entry_low)}–${level(hi)}`];
   parts.push(`Stop ${level(plan.stop)}${plan.risk_pct != null ? ` (−${plan.risk_pct}%)` : ''}`);
   if (plan.target != null) {
     parts.push(`Target ${level(plan.target)}${plan.reward_pct != null ? ` (+${plan.reward_pct}%)` : ''}`);
   } else {
     parts.push('Target — none (no overhead supply in range)');
   }
+  if (plan.thin_across_band) {
+    parts.push(ceil != null && ceil > plan.entry_low
+      ? `above ${level(ceil)} this stops being 1R`
+      : 'target too close to the band — no 1R fill anywhere in it');
+  }
   return parts.join(' · ');
+}
+
+/** Highest entry price at which the first objective still pays 1R.
+ *
+ *  `rr` on the card is measured at `entry_ref` (spot) but the card instructs a
+ *  BAND, so a fill anywhere above spot buys less than advertised. Returns null
+ *  when there is no target to measure against — "not computable" is not "fine".
+ */
+export function oneRCeiling(plan: Plan | null | undefined): number | null {
+  if (!plan || plan.target == null || !Number.isFinite(plan.target)) return null;
+  if (!Number.isFinite(plan.stop)) return null;
+  const p = (plan.target + plan.stop) / 2;
+  return Number.isFinite(p) ? Number(p.toFixed(2)) : null;
 }
 
 /** Plain-English why-this-qualified (or didn't). Keeps the list auditable

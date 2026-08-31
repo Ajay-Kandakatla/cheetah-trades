@@ -285,3 +285,64 @@ Note for future edits: six tests exercise the single-layer sp500 path
 (provenance, staleness, curated fallback, per-symbol errors). They now pass
 `universe="sp500"` explicitly, because a bare `scan()` resolves three layers
 and would call fetchers those tests do not stub.
+
+---
+
+## R:R is measured at spot, but the card instructs a band (2026-08-31)
+
+Ajay: *"there is a problem with setup tab and Supply demand tab.. Can you make
+sure logic is intact"*.
+
+`trade_plan` reports `rr` at `entry_ref`, which is spot. The card renders
+`Buy $entry_low–$entry_high`. Those are different trades whenever the first
+objective sits close above the band, and on the live board that day they
+disagreed on **41 of 96 rows** — every one of which passed the 1.0R floor at
+spot and failed it at the top of its own buy range.
+
+The worst was QBTS:
+
+| | |
+|---|---|
+| entry band | $16.92 – $17.41 |
+| stop | $16.67 |
+| target | $17.42 |
+| R:R at spot ($16.99) | **1.34R** — passes the floor |
+| R:R at the band top ($17.41) | **0.01R** |
+
+This is the VRT defect of 2026-08-13 in a new costume. That fix required the
+target to clear the entry band's top (`lo > max(hi, last_price)`); it did not
+require it to clear by anything worth trading, so a band sitting one cent above
+still produces a plan whose reward is spent before the entry range ends.
+
+### What changed
+
+* `plan.rr_at_entry_high` — R:R at the worst fill the plan permits. **`None`
+  when there is no target**, because "not computable" and "measured, fine" are
+  different claims.
+* `plan.thin_across_band` — true when that number is under `THIN_BAND_RR` (1.0,
+  the same number as the floor: the claim is "this stops being a trade", not a
+  second opinion on how good one is).
+* `zonePlan.oneRCeiling(plan)` — the highest entry that still pays 1R, from
+  `(target + stop) / 2`. When a plan is thin, `planLine` quotes **that** as the
+  top of the buy range instead of the band top, and appends *"above $X this
+  stops being 1R"*. QBTS's advertised band shrinks from `$16.92–$17.41` to
+  `$16.92–$17.05` — three quarters of it was never buyable.
+
+### What deliberately did NOT change
+
+The R:R floor still gates on `rr`. Enforcing the band-top number would drop 43%
+of the board overnight; that is Ajay's call, not a side effect of adding an
+annotation. `test_thin_flag_does_not_change_which_rows_the_floor_keeps` locks
+this.
+
+Also unchanged, and **not** bugs — both are documented decisions that this audit
+re-confirmed rather than "fixed":
+
+* **The target may be a demand-kind band.** `price_zones.nearest_resistance` is
+  the first band of any origin above price, because broken support acts as
+  resistance. Origin is kept for colour only.
+* **The target may not appear in the drawn zone lists.** Those are truncated to
+  the strongest four per side; `nearest_resistance` is computed over all of
+  them. Searching only the drawn lists is what gave KLAC an implausible 11.8R.
+
+*Decision-support only. Not investment advice.*

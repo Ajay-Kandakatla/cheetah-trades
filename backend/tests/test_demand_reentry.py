@@ -1793,3 +1793,68 @@ def test_scan_deep_rows_survive_a_crashing_volume_read(monkeypatch):
 
     out = dr.scan(force=True)
     assert out["deep_rows"][0]["deep_demand"]["inflow"] is None
+
+
+# ---------------------------------------------------------------------------
+# R:R across the entry BAND, not just at spot (Ajay 2026-08-31).
+#
+# The card says "Buy $16.92-$17.41" but `rr` was measured only at `entry_ref`
+# (spot). On the live board that day the two disagreed on 41 of 96 rows.
+# ---------------------------------------------------------------------------
+
+def test_rr_at_entry_high_is_measured_at_the_worst_permitted_fill():
+    """R:R filled at the top of the band, which the plan explicitly permits."""
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0})
+    # stop sits under 100, so the band top is the worst entry the plan allows.
+    assert p["rr_at_entry_high"] == round(
+        (p["target"] - p["entry_high"]) / (p["entry_high"] - p["stop"]), 2)
+    assert p["rr_at_entry_high"] < p["rr"], (
+        "buying higher against the same stop and target must be worse")
+
+
+def test_qbts_the_target_one_cent_above_the_entry_band_is_flagged():
+    """QBTS 2026-08-31: 1.34R at spot, 0.01R at the top of its own entry band.
+
+    The 2026-08-13 VRT fix stopped a target landing INSIDE the entry band. It
+    did not stop one landing a cent above it, which produces the same defect:
+    the reward is spent before the entry range ends. The plan is still returned
+    — Ajay decides — but it must not present 1.34R without saying that the
+    number holds only at the bottom of the band.
+    """
+    p = dr.trade_plan(16.99, {"lo": 16.92, "hi": 17.41}, {"lo": 17.42})
+    assert p["rr"] >= 1.0                      # passes the floor at spot
+    assert p["rr_at_entry_high"] < 0.1         # and is worthless at the top
+    assert p["thin_across_band"] is True
+
+
+def test_a_genuinely_wide_target_is_not_flagged_thin():
+    """The negative: a real first objective must not trip the flag."""
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 140.0})
+    assert p["thin_across_band"] is False
+    assert p["rr_at_entry_high"] >= dr.THIN_BAND_RR
+
+
+def test_no_target_means_not_computable_not_fine():
+    """No supply above => no first objective => the flag must not read False.
+
+    "We could not measure this" and "we measured it and it is fine" are
+    different claims; rendering the first as the second is how an unmeasured
+    plan gets to look safe.
+    """
+    p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, None)
+    assert p["target"] is None
+    assert p["rr_at_entry_high"] is None
+    assert p["thin_across_band"] is False   # flag is off, but rr_* says why
+
+
+def test_thin_flag_does_not_change_which_rows_the_floor_keeps():
+    """Reported, not enforced.
+
+    The floor still gates on `rr`. Flipping the band-top number must not
+    silently drop rows from a board Ajay reads every morning — that is his call
+    to make, not a side effect of adding an annotation.
+    """
+    thin = {"plan": {"rr": 1.4, "rr_at_entry_high": 0.01,
+                     "thin_across_band": True}}
+    kept = dr._apply_rr_floor({"rows": [thin]}, 1.0)
+    assert kept["rows"] == [thin]

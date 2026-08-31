@@ -88,6 +88,10 @@ def test_the_plan_payload_shape_is_stable():
         "target", "reward_pct", "rr", "risk_exceeds_max", "max_stop_pct",
         "stop_recently_hit", "bars_since_stop_hit", "lowest_low_pct_below_stop",
         "stop_hit_lookback_bars",
+        # 2026-08-31: `rr` is measured at spot but the card instructs a BAND.
+        # These report R:R at the worst fill the plan permits. See
+        # docs/supply_demand/demand_reentry_methodology.md.
+        "rr_at_entry_high", "thin_across_band", "thin_band_rr",
     }
 
 

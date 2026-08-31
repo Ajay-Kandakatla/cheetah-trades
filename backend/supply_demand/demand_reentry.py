@@ -385,6 +385,12 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
 # removes bad trade CONSTRUCTION; it does not turn the rule into an edge.
 MIN_RR_DEFAULT = 1.0
 
+# Below this, the plan's reward is gone before its own entry band ends: filling
+# at `entry_high` buys less than 1R of upside. Same number as the floor on
+# purpose — the claim is "this stops being a trade", not a second opinion about
+# how good a trade is.
+THIN_BAND_RR = 1.0
+
 
 def meets_rr_floor(plan: Optional[dict], min_rr: float = MIN_RR_DEFAULT) -> bool:
     """Does this plan's reward:risk clear the floor? PURE.
@@ -573,6 +579,27 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     if target is not None and last_price > stop:
         rr = round((target - last_price) / (last_price - stop), 2)
 
+    # R:R at the WORST fill the plan permits — the top of the entry band.
+    #
+    # `rr` above is measured at `entry_ref` (= spot), but the UI does not tell
+    # Ajay to buy at spot, it tells him to buy a BAND ("Buy $16.92-$17.41").
+    # Those are different trades, and on 2026-08-31 they disagreed on 41 of 96
+    # live rows: QBTS advertised 1.34R at spot and paid 0.01R at the top of its
+    # own entry band, because the first objective sat one cent above it.
+    #
+    # This is the VRT/2026-08-13 defect wearing a different hat. That fix made
+    # the target clear the band top (`lo > max(hi, last_price)`); it did not
+    # require it to clear by anything worth trading, so an adjacent band still
+    # produces a plan whose reward is spent before the entry range ends.
+    #
+    # Reported, not enforced: the R:R floor still gates on `rr` so the board
+    # Ajay reads today does not silently lose 43% of its rows. `thin_across_band`
+    # is the honest annotation that lets the card say which half of the band is
+    # actually worth filling.
+    rr_at_entry_high = None
+    if target is not None and hi > stop:
+        rr_at_entry_high = round((target - hi) / (hi - stop), 2)
+
     try:
         from trading.risk_rules import ABS_MAX_STOP_PCT as _MAX
     except Exception:
@@ -604,6 +631,12 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
         "target": target,
         "reward_pct": reward_pct,
         "rr": rr,
+        # R:R if filled at `entry_high` instead of `entry_ref`. None when there
+        # is no target to measure against — "not computable" is not "fine".
+        "rr_at_entry_high": rr_at_entry_high,
+        "thin_across_band": bool(rr_at_entry_high is not None
+                                 and rr_at_entry_high < THIN_BAND_RR),
+        "thin_band_rr": THIN_BAND_RR,
         "risk_exceeds_max": bool(risk_pct is not None and risk_pct > _MAX),
         "max_stop_pct": _MAX,
         # None = not checked (no lows passed). False = checked and clean.

@@ -370,7 +370,7 @@
 # Each runs against the latest SEPA candidate list and produces concrete
 # trigger/stop/target rows in Mongo. See backend/setups/{kind}.py for the
 # setup definitions. All three short-circuit to a no-op when
-# sepa.market_regime.classify_regime() returns a bearish label — the user
+# sepa.market_regime.regime() returns a bearish label — the user
 # explicitly chose to sit out bears.
 #
 # PEG (Power Earnings Gap)  — nightly at 6:30 PM ET Mon-Fri. After the
