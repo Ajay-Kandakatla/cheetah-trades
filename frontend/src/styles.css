@@ -11360,3 +11360,11 @@ a.tk-link:hover   { color: inherit; }
 .hs-chip-out { color: var(--cm-red, #dc2626); }
 .hs-more { margin-left: auto; color: var(--cm-slate, #8595ad); white-space: nowrap; }
 .hs-more:hover { color: var(--ink, #e7e7e7); }
+
+/* Approach-target sub-toggle (zone vs order block), inside the phase row. */
+.cm-phase-sub {
+  display: inline-flex; gap: 0.3rem; margin-left: 0.6rem;
+  padding-left: 0.75rem; border-left: 1px solid var(--rule, #2a2f3a);
+}
+.cm-phase-sub .cm-phase-btn { font-size: 0.74rem; padding: 0.2rem 0.65rem; }
+.cm-phase-sub .cm-phase-on { border-color: var(--accent, #a78bfa); }

@@ -386,3 +386,32 @@ describe('the phase toggle', () => {
     expect(urls.some((u: string) => u.includes('tab=zones') && !u.includes('phase='))).toBe(true);
   });
 });
+
+/* ── approaching: zone vs order block (Ajay 2026-08-31) ────────────────────── */
+describe('the approach-target switch', () => {
+  it('appears only on zones + approaching, and sends target=order_block', async () => {
+    const fetchSpy = vi.mocked(fetch as any);
+    render(<MemoryRouter
+      initialEntries={['/chart-maps?tab=zones&phase=approaching&target=order_block']}>
+      <ChartMaps /></MemoryRouter>);
+    expect(await screen.findByRole('tab', { name: 'Order block' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Demand zone' })).toBeInTheDocument();
+    const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) =>
+      u.includes('phase=approaching') && u.includes('target=order_block'))).toBe(true);
+  });
+
+  it('is absent on the reached phase — target is meaningless there', async () => {
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}>
+      <ChartMaps /></MemoryRouter>);
+    await screen.findAllByRole('tab', { name: /Already reached/ });
+    expect(screen.queryByRole('tab', { name: 'Order block' })).toBeNull();
+  });
+
+  it('is absent on deep_demand even while approaching — its second band IS the level', async () => {
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=deep_demand&phase=approaching']}>
+      <ChartMaps /></MemoryRouter>);
+    await screen.findAllByRole('tab', { name: /Approaching/ });
+    expect(screen.queryByRole('tab', { name: 'Order block' })).toBeNull();
+  });
+});

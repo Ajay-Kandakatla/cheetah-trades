@@ -41,6 +41,12 @@ async def chart_maps(
                                    "and falling toward it). Ajay 2026-08-31: "
                                    "'I need the ones that are about to reach "
                                    "and catch them'."),
+    target: str = Query("zone",
+                        description="zones tab, approaching phase only — which "
+                                    "level the approach is measured to: zone "
+                                    "(default, the tested demand band) | "
+                                    "order_block (a fresh SMC order block; "
+                                    "uncited convention)."),
     touching_only: bool = Query(False,
                                 description="gabbar tab only — true hides names "
                                             "more than NEAR_PCT from every "
@@ -88,6 +94,7 @@ async def chart_maps(
             level=level if isinstance(level, str) else "all",
             touching_only=touching_only if isinstance(touching_only, bool) else False,
             phase=phase if isinstance(phase, str) else "reached",
+            target=target if isinstance(target, str) else "zone",
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

@@ -1907,3 +1907,54 @@ def test_the_route_actually_forwards_the_phase_param():
         inspect.signature(cm_api.chart_maps).parameters)
     assert "phase=phase" in src, (
         "chart_maps route accepts `phase` but never forwards it to board()")
+    # Same trap, next param (2026-08-31, an hour later): `target` must be
+    # forwarded too, or the order-block toggle ships as the same no-op.
+    assert "target=target" in src, (
+        "chart_maps route accepts `target` but never forwards it to board()")
+
+
+def test_approaching_target_switches_between_zone_and_order_block(
+        prices, reentry_stub):
+    """target=order_block serves the OB rows with the OB's OWN trade lines and
+    the block drawn — never the zone plan's prices on an order-block tile."""
+    ob_row = {
+        "symbol": "OBAP", "name": "OBAP", "is_reentry": False,
+        "last_price": 103.0, "trend_ok": True,
+        "entry_zone": {"lo": 90.0, "hi": 92.0, "touches": 3, "strength": 60.0,
+                       "oldest_touch_bars": 120},
+        "approaching_ob": {
+            "state": "approaching_ob", "dist_pct": 2.4, "drift_pct": -2.9,
+            "drift_bars": 5,
+            "block": {"lo": 98.4, "hi": 100.2, "bars_ago": 20,
+                      "displacement_atr": 3.1},
+            "trade": {"entry": 100.2, "stop": 97.9, "target1": 104.8,
+                      "rr": 2.0},
+            "cited": False},
+        "plan": {"entry_ref": 92.0, "stop": 89.0, "target": 110.0, "rr": 3.0},
+        "supply_zones": [], "demand_zones": [], "verdict": {}}
+    reentry_stub["approaching_rows"] = [_appr_row("ZONEAP")]
+    reentry_stub["approaching_ob_rows"] = [ob_row]
+    for sym in ("ZONEAP", "OBAP"):
+        prices[sym] = _frame(200, start=95.0)
+
+    out_z = B.board("zones", limit=10, min_tier="any", phase="approaching")
+    assert out_z["target"] == "zone"
+    assert [t["symbol"] for t in out_z["tiles"]] == ["ZONEAP"]
+
+    out_ob = B.board("zones", limit=10, min_tier="any", phase="approaching",
+                     target="order_block")
+    assert out_ob["target"] == "order_block"
+    assert [t["symbol"] for t in out_ob["tiles"]] == ["OBAP"]
+    tile = out_ob["tiles"][0]
+    kinds = [b["kind"] for b in tile["bands"]]
+    assert "order_block" in kinds
+    # the OB trade, not the zone plan
+    buy = next(l for l in tile["lines"] if l["label"] == "BUY")
+    assert buy["price"] == 100.2
+    assert any("above the order block" in b["text"] for b in tile["badges"])
+    assert any("uncited" in b["text"] for b in tile["badges"])
+    assert "order block" in tile["why"]
+
+    # target is meaningless outside the approaching phase — reached ignores it
+    out_r = B.board("zones", limit=10, min_tier="any", target="order_block")
+    assert out_r["phase"] == "reached" and out_r["target"] == "zone"

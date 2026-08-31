@@ -112,10 +112,17 @@ export function ChartMaps() {
    * already reached"). URL-backed so a refresh or a shared link keeps the
    * moment being looked at; only the non-default value is written. */
   const phase = params.get('phase') === 'approaching' ? 'approaching' : 'reached';
+  const target = params.get('target') === 'order_block' ? 'order_block' : 'zone';
   const setPhase = (v: string) => {
     const next = new URLSearchParams(params);
     if (v === 'approaching') next.set('phase', 'approaching');
-    else next.delete('phase');
+    else { next.delete('phase'); next.delete('target'); }
+    setParams(next, { replace: true });
+  };
+  const setTarget = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === 'order_block') next.set('target', 'order_block');
+    else next.delete('target');
     setParams(next, { replace: true });
   };
   const [gabbarLevel, setGabbarLevel] = useState('all');
@@ -146,7 +153,7 @@ export function ChartMaps() {
     const q = boardQuery({ tab, limit: tab === 'gabbar' ? 80 : 24, days,
                            universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
-                           gabbarTouchingOnly, phase });
+                           gabbarTouchingOnly, phase, target });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -158,7 +165,7 @@ export function ChartMaps() {
     } finally {
       setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -311,9 +318,26 @@ export function ChartMaps() {
           </button>
           <span className="cm-phase-hint">
             {phase === 'approaching'
-              ? 'Still above the band, close, and falling toward it — set the order before it arrives. Closest first.'
+              ? 'Still above the level, close, and falling toward it — set the order before it arrives. Closest first.'
               : 'Back inside a tested band and holding.'}
           </span>
+          {/* Which LEVEL the approach is measured to (Ajay 2026-08-31:
+            * "Approaching order block vs Approaching Demand Zone"). Zones tab
+            * only — Deep Demand's second band IS its level. */}
+          {tab === 'zones' && phase === 'approaching' && (
+            <span className="cm-phase-sub" role="tablist" aria-label="Approach target">
+              <button type="button" role="tab" aria-selected={target === 'zone'}
+                      className={`cm-phase-btn${target === 'zone' ? ' cm-phase-on' : ''}`}
+                      onClick={() => setTarget('zone')}>
+                Demand zone
+              </button>
+              <button type="button" role="tab" aria-selected={target === 'order_block'}
+                      className={`cm-phase-btn${target === 'order_block' ? ' cm-phase-on' : ''}`}
+                      onClick={() => setTarget('order_block')}>
+                Order block
+              </button>
+            </span>
+          )}
         </div>
       )}
 

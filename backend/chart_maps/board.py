@@ -1273,7 +1273,7 @@ def _supply_disclaimer() -> str:
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
                sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER,
-               phase: str = "reached") -> dict:
+               phase: str = "reached", target: str = "zone") -> dict:
     # One board, two moments (Ajay 2026-08-31: "find a way to show me both
     # and give me toggle reaching vs already reached"). `reached` is the
     # historical board — price back INSIDE a tested band. `approaching` is the
@@ -1296,7 +1296,12 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 "note": "scanning for demand-zone pullbacks…"}
 
     if phase == "approaching":
-        rows = data.get("approaching_rows") or []
+        # Two flavours of "about to reach" (Ajay 2026-08-31: "Approaching
+        # order block vs Approaching Demand Zone"): the swing-cluster band, or
+        # a fresh SMC order block. Different level, same near/drift standards.
+        rows = (data.get("approaching_ob_rows")
+                if target == "order_block"
+                else data.get("approaching_rows")) or []
     else:
         rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
     flash_syms = _flash_symbols()
@@ -1308,22 +1313,45 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         plan = r.get("plan") or {}
         zone = r.get("entry_zone") or {}
 
+        _ob = (r.get("approaching_ob")
+               if phase == "approaching" and target == "order_block" else None)
+
         bands = []
         z_lo, z_hi = _num(zone.get("lo")), _num(zone.get("hi"))
         if z_lo is not None and z_hi is not None:
             bands.append({"kind": "demand", "lo": z_lo, "hi": z_hi, "label": "demand"})
+        if _ob:
+            blk = _ob.get("block") or {}
+            b_lo, b_hi = _num(blk.get("lo")), _num(blk.get("hi"))
+            if b_lo is not None and b_hi is not None:
+                # The level this flavour is ABOUT — drawn in the SMC purple the
+                # other surfaces already use, never in the band green: an order
+                # block is a footprint, not the same kind of evidence.
+                bands.append({"kind": "order_block", "lo": b_lo, "hi": b_hi,
+                              "label": "order block"})
         for s in (r.get("supply_zones") or [])[:2]:
             s_lo, s_hi = _num(s.get("lo")), _num(s.get("hi"))
             if s_lo is not None and s_hi is not None:
                 bands.append({"kind": "supply", "lo": s_lo, "hi": s_hi, "label": "supply"})
 
         lines = []
-        for key, label, tone in (("entry_ref", "BUY", "buy"),
-                                 ("stop", "STOP", "stop"),
-                                 ("target", "TARGET", "target")):
-            p = _num(plan.get(key))
-            if p is not None:
-                lines.append({"price": p, "label": label, "tone": tone})
+        if _ob and (_ob.get("trade") or {}).get("entry") is not None:
+            # The order-block trade, not the zone plan — drawing the zone's BUY
+            # on an order-block tile would price the wrong level.
+            t = _ob["trade"]
+            lines.append({"price": t["entry"], "label": "BUY", "tone": "buy"})
+            if t.get("stop") is not None:
+                lines.append({"price": t["stop"], "label": "STOP", "tone": "stop"})
+            if t.get("target1") is not None:
+                lines.append({"price": t["target1"], "label": "TARGET",
+                              "tone": "target"})
+        else:
+            for key, label, tone in (("entry_ref", "BUY", "buy"),
+                                     ("stop", "STOP", "stop"),
+                                     ("target", "TARGET", "target")):
+                p = _num(plan.get(key))
+                if p is not None:
+                    lines.append({"price": p, "label": label, "tone": tone})
 
         rr = _num(plan.get("rr"))
         be = _num(r.get("breakeven_win_pct"))
@@ -1335,8 +1363,18 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                         if r.get("bars_since_above") is not None else "—")}]
 
         fell = _num(r.get("fell_from_pct"))
-        appr = r.get("approaching") if phase == "approaching" else None
-        if appr:
+        appr_ob = (r.get("approaching_ob")
+                   if phase == "approaching" and target == "order_block" else None)
+        appr = (r.get("approaching")
+                if phase == "approaching" and target != "order_block" else None)
+        if appr_ob:
+            blk = appr_ob.get("block") or {}
+            why = (f"falling toward a fresh order block — {appr_ob['dist_pct']}% "
+                   f"above it, down {abs(appr_ob['drift_pct']):.1f}% in "
+                   f"{appr_ob['drift_bars']} sessions; the block is the last down "
+                   f"candle before a {blk.get('displacement_atr')}×ATR impulse "
+                   f"{blk.get('bars_ago')} bars ago")
+        elif appr:
             why = (f"falling toward a tested band — {appr['dist_pct']}% above it, "
                    f"down {abs(appr['drift_pct']):.1f}% in {appr['drift_bars']} sessions")
         else:
@@ -1378,6 +1416,12 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 {"text": f"\u2192 {appr['dist_pct']}% above the band", "tone": "warn"},
                 {"text": f"\u2193 {abs(appr['drift_pct']):.1f}% / {appr['drift_bars']}d",
                  "tone": "muted"}] if appr else [])
+                + ([
+                {"text": f"\u2192 {appr_ob['dist_pct']}% above the order block",
+                 "tone": "warn"},
+                {"text": f"\u2193 {abs(appr_ob['drift_pct']):.1f}% / {appr_ob['drift_bars']}d",
+                 "tone": "muted"},
+                {"text": "SMC \u00b7 uncited", "tone": "muted"}] if appr_ob else [])
                 + _zone_badges(r))
                 + ([fb] if (fb := _flow_badge(r.get("inflow"))) else [])
                 + (
@@ -1389,7 +1433,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 if sym in flash_syms else []),
             # Approaching ranks by urgency: nearest band first. The reached
             # board keeps ranking by the quality of the plan (R:R).
-            "_score": ((-appr["dist_pct"]) if appr else (rr or 0.0)),
+            "_score": ((-appr["dist_pct"]) if appr
+                       else (-appr_ob["dist_pct"]) if appr_ob
+                       else (rr or 0.0)),
             "_m": tile_metrics(r),
         })
     # Cheetahs first (Ajay 2026-08-25: "fix the ranking of these Cheetahs on
@@ -1416,6 +1462,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
+            "target": ("order_block" if (phase == "approaching"
+                                         and target == "order_block") else "zone"),
             "matched": len(rows),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
@@ -2726,7 +2774,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
-          touching_only: bool = False, phase: str = "reached") -> dict:
+          touching_only: bool = False, phase: str = "reached",
+          target: str = "zone") -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -2747,7 +2796,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = earnings_tiles(limit, days)
     elif t == "zones":
         out = zone_tiles(limit, days, universe, themes_first, srt, tier,
-                         phase=phase)
+                         phase=phase, target=target)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "topping":

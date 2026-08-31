@@ -400,3 +400,33 @@ qualifies changed, and the second band's label says which moment it shows
 updated to the split contract, per phase.
 
 *Decision-support only. Not investment advice.*
+
+### Approaching order blocks (2026-08-31, same day)
+
+Ajay: *"Now find stocks closer to orderblocks. Now that we have orderblocks in
+there from charts.. Add another switch to distinguish.. Approaching order
+block vs Approaching Demand Zone."*
+
+The Approaching phase on Back in Demand gains a target switch: **Demand zone**
+(default, the tested swing-cluster band) vs **Order block** (`target=
+order_block`). Same near (5%) / drift (−0.5%/5d) / knife standards; the LEVEL
+differs — `approaching_ob_read` finds the nearest **fresh bullish order
+block** below price on the DAILY frame (`smc.order_blocks`: last down candle
+before a ≥1.2×ATR up-impulse). Two rules of its own:
+
+* **Fresh only** — no bar's low has re-entered the block since it formed
+  (checked from two bars after the block, so the displacement bar is not a
+  visit). A mitigated block already had its first touch; listing it as "about
+  to be reached" would describe an event that already happened. Locked by
+  `test_a_mitigated_block_is_spent_and_never_listed`.
+* **Age-capped** at `OB_APPROACH_MAX_AGE_BARS` = 90 daily bars — CONVENTION,
+  like all SMC numbers here; every payload carries `cited: false` and the tile
+  wears an "SMC · uncited" badge.
+
+Trade geometry comes from `patterns.trade_levels` on the block itself (entry
+at the top, ATR-buffered stop under the bottom, nearest overhead band as
+target 1) — the tile draws the block in the SMC purple and prices the BLOCK's
+trade, never the zone plan's. Computed inside `decide_from_frame` alongside
+the zone read (same wiring lock — the empty-board bug must not be repeatable),
+served as `approaching_ob_rows`, ranked closest-first. Deep Demand takes no
+switch: its second band IS its level.

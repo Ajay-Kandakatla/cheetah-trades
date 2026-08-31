@@ -1971,3 +1971,112 @@ def test_decide_from_frame_attaches_the_approaching_read():
     rec2 = dr.decide_from_frame(df.iloc[:130], "INBAND")
     if rec2 is not None and rec2.get("in_demand_band"):
         assert rec2.get("approaching") is None
+
+
+# ---------------------------------------------------------------------------
+# Approaching ORDER BLOCKS (Ajay 2026-08-31: "find stocks closer to
+# orderblocks .. Approaching order block vs Approaching Demand Zone").
+# ---------------------------------------------------------------------------
+
+def _ob_frame(mitigate=False, age_bars=20, n_pad=140):
+    """A frame with ONE clean bullish order block: a down candle followed by a
+    big up-displacement, then a drift back down toward (never into) the block
+    — unless `mitigate`, which sends one later low back inside it."""
+    import numpy as np
+    import pandas as pd
+
+    rows = []
+    base = 100.0
+    for _ in range(n_pad):                          # quiet preamble, tiny range
+        rows.append((base, base + 0.3, base - 0.3, base + 0.05))
+    # the order block: a down candle 100 -> 98.5
+    rows.append((100.0, 100.2, 98.4, 98.5))
+    # the displacement: a huge up candle (>= 1.2 ATR by construction)
+    rows.append((98.6, 112.0, 98.5, 111.5))
+    # drift above the block, ending ~2.4% above its top, falling
+    drift = np.linspace(111.0, 102.7, age_bars - 1)
+    for i, c in enumerate(drift):
+        lo = c - 0.4
+        if mitigate and i == 3:
+            lo = 99.9                               # trades back INTO the block
+        rows.append((c + 0.3, c + 0.5, lo, c))
+    px = rows
+    df = pd.DataFrame({
+        "open": [r[0] for r in px], "high": [r[1] for r in px],
+        "low": [r[2] for r in px], "close": [r[3] for r in px],
+        "volume": [1_500_000] * len(px),
+    }, index=pd.bdate_range("2026-01-01", periods=len(px)))
+    return df
+
+
+def _ob_rec(df, trend_ok=True):
+    return {"last_price": float(df["close"].iloc[-1]), "trend_ok": trend_ok,
+            "nearest_resistance": None}
+
+
+def test_a_fresh_order_block_below_falling_price_qualifies():
+    df = _ob_frame()
+    out = dr.approaching_ob_read(_ob_rec(df), df, df["close"].tolist())
+    assert out is not None
+    assert out["state"] == "approaching_ob"
+    assert 0 < out["dist_pct"] <= dr.APPROACH_NEAR_PCT
+    assert out["drift_pct"] < 0
+    assert out["cited"] is False
+    blk = out["block"]
+    assert blk["hi"] == 100.2 and blk["lo"] == 98.4
+    # trade geometry comes off the block itself
+    t = out["trade"]
+    assert t and t["entry"] == blk["hi"] and t["stop"] < blk["lo"]
+
+
+def test_a_mitigated_block_is_spent_and_never_listed():
+    """THE negative this flavour stands on. A block price already traded back
+    into has had its first touch — listing it as 'about to be reached' would
+    describe an event that already happened."""
+    df = _ob_frame(mitigate=True)
+    assert dr.approaching_ob_read(_ob_rec(df), df, df["close"].tolist()) is None
+
+
+def test_a_months_old_block_is_stale_structure():
+    df = _ob_frame(age_bars=dr.OB_APPROACH_MAX_AGE_BARS + 30)
+    assert dr.approaching_ob_read(_ob_rec(df), df, df["close"].tolist()) is None
+
+
+def test_rising_away_from_the_block_is_departing():
+    df = _ob_frame()
+    rising = sorted(df["close"].tolist())            # same closes, upward
+    assert dr.approaching_ob_read(_ob_rec(df), df, rising) is None
+
+
+def test_the_knife_guard_applies_to_order_blocks_too():
+    df = _ob_frame()
+    assert dr.approaching_ob_read(_ob_rec(df, trend_ok=False), df,
+                                  df["close"].tolist()) is None
+
+
+def test_no_frame_or_no_closes_is_none_not_a_guess():
+    df = _ob_frame()
+    assert dr.approaching_ob_read(_ob_rec(df), None, df["close"].tolist()) is None
+    assert dr.approaching_ob_read(_ob_rec(df), df, None) is None
+    assert dr.approaching_ob_read(_ob_rec(df), df, [100.0] * 3) is None
+
+
+def test_decide_from_frame_attaches_the_ob_read_too():
+    """Same wiring lock as the zone flavour — the empty-board bug must not be
+    repeatable on the second predicate. Uses the zone test's frame because the
+    OB fixture's flat preamble carves no zones and decide_from_frame answers
+    None before any predicate runs; what is locked here is the KEY, wired
+    where the frame and closes exist."""
+    import numpy as np
+    import pandas as pd
+
+    px = np.concatenate([
+        np.linspace(100, 96, 40), np.linspace(96, 112, 60),
+        np.linspace(112, 97, 30), np.linspace(97, 104, 100),
+        np.linspace(104, 99, 10)])
+    df = pd.DataFrame({"open": px, "high": px * 1.01, "low": px * 0.99,
+                       "close": px, "volume": [2_000_000] * len(px)},
+                      index=pd.bdate_range("2025-08-01", periods=len(px)))
+    rec = dr.decide_from_frame(df, "OBAP")
+    assert rec is not None
+    assert "approaching_ob" in rec
