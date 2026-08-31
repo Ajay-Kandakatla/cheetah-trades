@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
+import OverlayLegend from './OverlayLegend';
+import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import {
   BIAS_META, BIAS_ORDER, biasTally, filterRows, sessionLabel,
 } from '../lib/sessionBoard';
@@ -34,6 +36,15 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   const [atBandOnly, setAtBandOnly] = useState(false);
   const [setupsOnly, setSetupsOnly] = useState(false);
   const [data, setData] = useState<SessionPayload | null>(null);
+  const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
+  const toggleOverlay = (key: string) => {
+    setHiddenOverlays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      saveHidden(next);
+      return next;
+    });
+  };
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const timer = useRef<number | null>(null);
@@ -153,9 +164,12 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
         * "make this view like Demand view"). A row whose frame had no bars
         * still shows — as a text card naming the reason — because dropping it
         * would misreport coverage. */}
+      <OverlayLegend
+        present={presentGroups(shown.map((r) => r.tile).filter(Boolean))}
+        hidden={hiddenOverlays} onToggle={toggleOverlay} />
       <div className="cm-grid">
         {shown.map((r) => r.tile
-          ? <PatternChart key={r.symbol} tile={r.tile} />
+          ? <PatternChart key={r.symbol} tile={filterTile(r.tile, hiddenOverlays)} tvTf="15m" />
           : <NoDataCard key={r.symbol} row={r} onPick={onPick} />)}
       </div>
 

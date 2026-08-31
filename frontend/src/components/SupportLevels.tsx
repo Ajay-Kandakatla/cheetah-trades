@@ -23,6 +23,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
+import OverlayLegend from './OverlayLegend';
+import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import {
   bandLabel, distanceLabel,
   CHART_VIEWS, evidenceLabel, headline, money, sourceLabel, viewFor, viewKeyFor,
@@ -30,6 +32,7 @@ import {
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
+import { tvChartUrl } from '../lib/tvChart';
 
 type Props = {
   symbol: string;
@@ -89,6 +92,17 @@ function LevelTable({ title, levels, side, empty }: {
 export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
                                onView }: Props) {
   const [data, setData] = useState<SupportPayload | null>(null);
+  // The chart ledger — same families, same localStorage key as the boards,
+  // so hiding order blocks here hides them everywhere.
+  const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
+  const toggleOverlay = (key: string) => {
+    setHiddenOverlays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      saveHidden(next);
+      return next;
+    });
+  };
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -195,6 +209,11 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               <span className="sl-recent">
                 {testedCount(supports)} of {supports.length} turned at more than once
               </span>
+              <a className="cm-tv" href={tvChartUrl(data.symbol, tf)}
+                 target="_blank" rel="noreferrer"
+                 title={`Open ${data.symbol} in TradingView`}>
+                TV ↗
+              </a>
             </div>
           </div>
 
@@ -218,8 +237,10 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             </p>
           ) : null}
 
+          <OverlayLegend present={presentGroups([data.tile])}
+                         hidden={hiddenOverlays} onToggle={toggleOverlay} />
           <div className="sl-chart">
-            <PatternChart tile={data.tile} height={320} />
+            <PatternChart tile={filterTile(data.tile, hiddenOverlays)} height={320} />
           </div>
           <p className="cm-note">
             Chart shows <strong>{data.chart_span || data.window_label}</strong>

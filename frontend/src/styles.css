@@ -11368,3 +11368,44 @@ a.tk-link:hover   { color: inherit; }
 }
 .cm-phase-sub .cm-phase-btn { font-size: 0.74rem; padding: 0.2rem 0.65rem; }
 .cm-phase-sub .cm-phase-on { border-color: var(--accent, #a78bfa); }
+
+/* Chart overlay ledger (Ajay 2026-08-31) — legend entries that are switches. */
+.olg {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem;
+  margin: 0 0 0.6rem; font-size: 0.76rem; color: var(--cm-slate, #8595ad);
+}
+.olg-head {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: 0.68rem; color: var(--cm-slate, #8595ad);
+}
+.olg-item {
+  display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+  white-space: nowrap;
+}
+.olg-item input { accent-color: var(--cm-green, #22c55e); }
+.olg-swatch {
+  width: 0.85rem; height: 0.55rem; border-radius: 2px; display: inline-block;
+  opacity: 0.85;
+}
+.olg-reset {
+  cursor: pointer; background: none; border: none; padding: 0;
+  color: var(--cm-slate, #8595ad); text-decoration: underline;
+  font-size: 0.72rem;
+}
+.olg-reset:hover { color: var(--ink, #e7e7e7); }
+
+/* TV link-out — one small button per chart, same chrome as a badge */
+.cm-tv {
+  border: 1px solid var(--rule, #2a2f3a);
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.cm-tv:hover { color: var(--ink, #e7e7e7); border-color: var(--text-muted, #94a3b8); }

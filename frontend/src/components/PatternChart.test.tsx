@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
@@ -258,5 +258,28 @@ describe('the neutral band', () => {
     draw({ ...walls, bands: [{ kind: 'neutral', lo: 11.5, hi: 12.5 }] });
     expect(screen.getByText(/Range/)).toBeInTheDocument();
     expect(screen.queryByText(/neutral/)).not.toBeInTheDocument();
+  });
+});
+
+describe('the TV link-out', () => {
+  // The Charting Library application was refused (auth-gated site), so the
+  // pre-configured chart is a LINK to tradingview.com — never an embed.
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('every tile carries a TV button that opens WITHOUT following the tile link', () => {
+    const open = vi.fn();
+    vi.stubGlobal('open', open);
+    draw(TILE);
+    fireEvent.click(screen.getByRole('button', { name: /IONQ in TradingView/ }));
+    expect(open).toHaveBeenCalledWith(
+      'https://www.tradingview.com/chart/?symbol=IONQ&interval=D', '_blank', 'noopener');
+  });
+
+  it('a session tile preconfigures the 15-minute interval', () => {
+    const open = vi.fn();
+    vi.stubGlobal('open', open);
+    render(<MemoryRouter><PatternChart tile={TILE} tvTf="15m" /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /IONQ in TradingView/ }));
+    expect(open.mock.calls[0][0]).toContain('interval=15');
   });
 });

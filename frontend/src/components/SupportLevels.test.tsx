@@ -91,6 +91,19 @@ describe('SupportLevels', () => {
     expect(screen.getByText('+2.9%')).toBeTruthy();
   });
 
+  it('links a pre-configured TradingView chart carrying the CURRENT timeframe', async () => {
+    // A link-out, never an embed — the Charting Library application was
+    // refused (auth-gated site, 2026-08-16).
+    mockFetch(PAYLOAD);
+    render(<SupportLevels symbol="DHI" window="1d" tf="15m"
+                          onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByText('TV ↗')).toBeTruthy());
+    const a = screen.getByText('TV ↗') as HTMLAnchorElement;
+    expect(a.getAttribute('href'))
+      .toBe('https://www.tradingview.com/chart/?symbol=DHI&interval=15');
+    expect(a.getAttribute('target')).toBe('_blank');
+  });
+
   it('counts recency and evidence SEPARATELY — neither implies the other', async () => {
     // One support is recent-and-tested, the other is stale-and-tested. A single
     // "1 of 2" would let a level touched yesterday once read as a held floor.

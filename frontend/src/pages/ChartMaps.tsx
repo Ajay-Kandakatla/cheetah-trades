@@ -17,7 +17,7 @@
  * patterns — their stop brackets differ ~2x, which is the exact comparison the
  * 2026-07-10 pattern audit found broken.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
@@ -32,6 +32,8 @@ import {
 import { SupportLevels } from '../components/SupportLevels';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
+import OverlayLegend from '../components/OverlayLegend';
+import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -279,7 +281,24 @@ export function ChartMaps() {
     setParams(next, { replace: true });
   };
 
-  const tiles = data?.tiles || [];
+  const rawTiles = data?.tiles || [];
+  /* The chart ledger (Ajay 2026-08-31: "Chart feel so clumsy can you give me
+   * a ledger and some check boxes to toggle these off"). Hidden families are
+   * a per-browser convenience (localStorage), filtered client-side so a
+   * toggle never refetches a board. */
+  const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
+  const toggleOverlay = (key: string) => {
+    setHiddenOverlays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      saveHidden(next);
+      return next;
+    });
+  };
+  const overlayGroups = useMemo(() => presentGroups(rawTiles), [rawTiles]);
+  const tiles = useMemo(
+    () => rawTiles.map((t) => filterTile(t, hiddenOverlays)),
+    [rawTiles, hiddenOverlays]);
 
   return (
     <div className="cm-page">
@@ -624,6 +643,8 @@ export function ChartMaps() {
         </div>
       ) : null}
 
+      <OverlayLegend present={overlayGroups} hidden={hiddenOverlays}
+                     onToggle={toggleOverlay} />
       <div className="cm-grid">
         {tiles.map((t) => <PatternChart key={`${t.symbol}-${t.href}`} tile={t} />)}
       </div>

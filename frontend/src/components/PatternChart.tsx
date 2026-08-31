@@ -20,6 +20,7 @@ import {
   type CmTile,
 } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
+import { openTvChart } from '../lib/tvChart';
 
 const W = 620;
 const PAD_Y = 10;
@@ -48,7 +49,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190 }: { tile: CmTile; height?: number },
+  { tile, height = 190, tvTf }: { tile: CmTile; height?: number; tvTf?: string },
 ) {
   const location = useLocation();
   const bars = tile.bars || [];
@@ -133,6 +134,12 @@ export const PatternChart = memo(function PatternChart(
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}
+            <button type="button" className="cm-tv"
+                    title={`Open ${tile.symbol} in TradingView`}
+                    aria-label={`Open ${tile.symbol} in TradingView`}
+                    onClick={(e) => openTvChart(e, tile.symbol, tvTf)}>
+              TV ↗
+            </button>
           </div>
         </div>
 
