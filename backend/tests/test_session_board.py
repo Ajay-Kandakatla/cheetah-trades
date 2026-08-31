@@ -220,3 +220,31 @@ def test_out_of_session_the_board_labels_the_session_it_is_showing():
     p = SB.progress_for("full", "15m")
     assert p["phase"] in ("idle", "reading", "warming_source", "error")
     assert p["tf"] == "15m"
+
+
+# ── the SMC grade key ──────────────────────────────────────────────────────
+def test_the_smc_grade_is_read_from_the_key_find_setups_actually_writes():
+    """Source guard. `find_setups` stamps quality under "score"; the first
+    build of this board read "grade" and every chip rendered `- 0`, claiming a
+    worst-possible grade for sequences that had graded 60+. A behavioural test
+    on live data would not have caught it — 0 is a legal grade."""
+    import inspect
+
+    from supply_demand import smc as smc_mod
+    src = inspect.getsource(smc_mod.find_setups)
+    assert 'setup["score"]' in src, "find_setups no longer writes 'score'"
+
+    board_src = inspect.getsource(SB.read_symbol)
+    assert 's.get("score")' in board_src
+    assert 's.get("grade")' not in board_src
+
+
+def test_best_grade_is_none_when_no_setup_carries_one(monkeypatch):
+    """None ("no graded setup") must not render as 0 ("graded worst")."""
+    monkeypatch.setattr(TF, "intraday_raw", lambda *a, **k: None)
+    monkeypatch.setattr(TF, "frame_for",
+                        lambda *a, **k: (None, {"available": False,
+                                                "reason": "no bars", "bars": 0,
+                                                "label": "15 min"}))
+    out = SB.read_symbol("X", None, tf="15m")
+    assert out["smc"] is None or (out["smc"] or {}).get("best_grade") is None

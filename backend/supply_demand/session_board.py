@@ -184,10 +184,17 @@ def read_symbol(sym: str, band: Optional[dict] = None, *,
     out["session_gaps"] = [g for g in gaps if _is_session_gap(g, out["session"])][:4]
 
     setups = smc_mod.find_setups(df, last_price=last, direction="bullish")
+    # `find_setups` stamps the graded quality under "score", NOT "grade".
+    # Reading the wrong key returned 0 for every setup on 2026-08-31 — a chip
+    # reading "SMC setup - 0" says the sequence graded worst-possible when it
+    # had actually graded 60+. None when a setup carries no score at all;
+    # zero is a real grade and must not stand in for a missing one.
+    grades = [s.get("score") for s in setups
+              if isinstance(s.get("score"), (int, float))]
     out["smc"] = {
         "setups": setups[:2],
         "count": len(setups),
-        "best_grade": max((s.get("grade") or 0 for s in setups), default=None),
+        "best_grade": max(grades) if grades else None,
         "cited": getattr(smc_mod, "CITED", False),
     }
 
