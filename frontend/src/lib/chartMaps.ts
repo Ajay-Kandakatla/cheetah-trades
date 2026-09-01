@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -29,7 +29,9 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'se
 // `session` sits right after `deep_demand` because it READS those two tabs:
 // it is the same names asked a different question (is the session confirming
 // the daily band?), so it belongs beside its own inputs.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+// `signals` sits beside `session` — both are intraday reads; session asks
+// the demand boards' names, signals asks whatever tickers Ajay typed.
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -38,10 +40,14 @@ export function isBoardTab(t: CmTab): boolean {
   // `session` joins `support` as a non-board tab: it has its own endpoint
   // (/supply-demand/session-board) and its own row renderer, so the tile grid
   // and the sort/tier controls are skipped for it too.
-  return t !== 'support' && t !== 'session' && t !== 'overnight';
+  return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  signals: {
+    label: '\u26A1 Signals',
+    blurb: 'Your own tickers on 1-minute candles with BUY / SELL tags \u2014 opening-range breaks, liquidity sweeps and BOS/CHoCH structure composed into the five-step entry (stop at the trap wick, 2R target). Closed bars only; signals never repaint. Same board as the Signal Lab page.',
+  },
   vcp: {
     label: 'Strong VCP',
     blurb: 'Bases whose contractions have tightened — the volatility squeeze before a breakout. Green box is the base, dashed lines the pivot and the stop.',

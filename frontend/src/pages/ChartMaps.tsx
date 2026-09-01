@@ -30,6 +30,7 @@ import {
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
+import { SignalLabBoard } from '../components/SignalLabBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
@@ -403,6 +404,11 @@ export function ChartMaps() {
           next.set('symbol', sym);
           setParams(next, { replace: true });
         }} />
+      ) : tab === 'signals' ? (
+        /* The Signal Lab's working surface, mounted as a tab (Ajay 2026-09-01:
+         * "add the signals tab inside chart maps"). Same component as the
+         * /signal-lab page — one implementation, one watchlist. */
+        <SignalLabBoard />
       ) : tab === 'overnight' ? (
         /* The Day Trading page's overnight movers scan, mounted here because
          * this is where he starts the day (Ajay 2026-09-01: "I think we need a
