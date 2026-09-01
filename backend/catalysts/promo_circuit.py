@@ -708,3 +708,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
     print(json.dumps(sweep(), indent=2))
+    # Pre-warm the board cache so the page never pays the ~70s first build
+    # (bars + EDGAR for ~150 tickers) interactively.
+    b = build(force=True)
+    print(json.dumps({"board_rows": b.get("n_tickers"),
+                      "board_build_sec": b.get("elapsed_sec")}, indent=2))
