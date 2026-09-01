@@ -11409,3 +11409,8 @@ a.tk-link:hover   { color: inherit; }
   font-family: inherit;
 }
 .cm-tv:hover { color: var(--ink, #e7e7e7); border-color: var(--text-muted, #94a3b8); }
+
+/* Russell inclusion watch */
+.rw__table { margin-top: 14px; }
+.rw__hint { color: var(--text-muted, #94a3b8); font-size: 12.5px; margin: 4px 0 8px; }
+.rw__note { color: var(--text-muted, #94a3b8); font-size: 11.5px; margin-top: 10px; line-height: 1.5; }

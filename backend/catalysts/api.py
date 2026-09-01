@@ -324,6 +324,17 @@ async def get_frenzy_radar():
     return frenzy_mod.build_frenzy_radar()
 
 
+@router.get("/catalysts/russell-watch")
+async def russell_watch(force: bool = Query(False, description="rebuild past the 6h cache")):
+    """Names about to be ADDED to Russell 2000 (index funds must buy) and
+    R2000 names sized for PROMOTION to R1000 (usually net tracker selling).
+    Approximation vs current member cap percentiles — the payload carries
+    its baseline date and method note. Not advice."""
+    import asyncio
+    from . import russell_watch as rw
+    return await asyncio.to_thread(rw.build, force)
+
+
 @router.get("/catalysts/halts")
 async def get_halts(force: bool = Query(False)):
     """Today's NASDAQ trading halts (via free RSS feed).

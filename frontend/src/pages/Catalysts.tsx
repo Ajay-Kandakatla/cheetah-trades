@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
+import { RussellWatch } from '../components/RussellWatch';
 import {
   useCatalystScan,
   useDeepDive,
@@ -23,7 +24,7 @@ import type {
   FrenzyCandidate, FrenzyTier,
 } from '../hooks/useCatalysts';
 
-type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline';
+type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline' | 'russell';
 
 type SortKey = 'composite' | 'change' | 'chatter' | 'evidence' | 'volume_surge';
 
@@ -154,6 +155,13 @@ export function CatalystsPage() {
         </button>
         <button
           type="button"
+          className={`cat-tab ${tab === 'russell' ? 'is-active' : ''}`}
+          onClick={() => setTab('russell')}
+        >
+          🧺 Russell Watch
+        </button>
+        <button
+          type="button"
           className={`cat-tab ${tab === 'timeline' ? 'is-active' : ''}`}
           onClick={() => setTab('timeline')}
         >
@@ -176,6 +184,7 @@ export function CatalystsPage() {
       {tab === 'timeline' && (
         <TimelineView onClickTicker={(t) => setDrillTicker(t)} />
       )}
+      {tab === 'russell' && <RussellWatch />}
 
       {/* Original "Now" content follows — only render when on Now tab */}
       {tab !== 'now' ? null : <>
