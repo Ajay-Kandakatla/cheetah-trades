@@ -58,6 +58,9 @@ def main() -> int:
     s_research.add_argument("--no-canslim", action="store_true",
                             help="Skip CANSLIM fundamentals (saves ~minutes)")
     s_research.add_argument("--workers", type=int, default=6)
+    s_research.add_argument("--only-if-stale", action="store_true",
+                            help="Skip unless the cache is thin or about to "
+                                 "cross the TTL — the nightly catch-up guard")
 
     sub.add_parser("research-status", help="Print research cache freshness")
 
@@ -223,6 +226,12 @@ def main() -> int:
     if args.cmd == "research-refresh":
         from . import research
         from .universe import load_universe
+        if getattr(args, "only_if_stale", False):
+            run, why = research.needs_refresh()
+            if not run:
+                log.info("research-refresh skipped: %s", why)
+                return 0
+            log.info("research-refresh catch-up firing: %s", why)
         syms = args.symbols.split(",") if args.symbols else load_universe(args.mode)
         result = research.refresh_universe(
             syms,

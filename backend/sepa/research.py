@@ -38,7 +38,13 @@ from .ipo_age import age as ipo_age_for
 
 log = logging.getLogger("sepa.research")
 
-CACHE_TTL_SEC = 8 * 24 * 3600
+# 16 days, NOT 8: the refresh is weekly (Sunday 20:00 ET), so an 8-day TTL
+# meant ONE missed Sunday put the entire cache over the cliff the following
+# night — measured 2026-09-01: 3,642 fresh Monday evening, 21 by Tuesday
+# 6am, and every Bonde-gated board (Deep Demand, Gabbar, Under Value) went
+# empty. Fundamentals are quarterly; 16 days stale is a far smaller error
+# than absent, and it leaves a full week of margin after a missed run.
+CACHE_TTL_SEC = 16 * 24 * 3600
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +263,32 @@ def refresh_universe(symbols: list[str], *, max_workers: int = 6,
 # ---------------------------------------------------------------------------
 # Status — for the UI banner
 # ---------------------------------------------------------------------------
+def needs_refresh(min_surviving_frac: float = 0.6,
+                  horizon_sec: int = 48 * 3600) -> tuple[bool, str]:
+    """Whether a catch-up refresh should run. PURE decision over status().
+
+    True when the fraction of blobs that will STILL be fresh `horizon_sec`
+    from now falls under `min_surviving_frac` — i.e. the cache is already
+    thin, or a single old batch is about to cross the TTL (the 2026-09-01
+    cliff: one missed Sunday run emptied every Bonde-gated board
+    overnight). An empty/unavailable cache always wants a refresh.
+    """
+    st = status()
+    if not st.get("available"):
+        return True, "research cache unavailable"
+    total = st.get("total") or 0
+    if total == 0:
+        return True, "research cache empty"
+    fresh = st.get("fresh") or 0
+    expiring = st.get("expiring_48h") or 0
+    surviving = max(0, fresh - expiring)
+    frac = surviving / total
+    if frac < min_surviving_frac:
+        return True, (f"only {surviving}/{total} blobs survive the next "
+                      f"{horizon_sec // 3600}h ({frac:.0%})")
+    return False, f"{surviving}/{total} blobs survive ({frac:.0%}) — healthy"
+
+
 def status() -> dict:
     """Return cache freshness summary for the UI."""
     coll = _get_cache()
@@ -269,6 +301,11 @@ def status() -> dict:
                     "oldest_age_sec": None, "newest_age_sec": None}
         cutoff = time.time() - CACHE_TTL_SEC
         fresh = coll.count_documents({"cached_at": {"$gte": cutoff}})
+        # blobs that are fresh NOW but cross the TTL within 48h — the
+        # predictive read that catches a missed Sunday on Monday morning,
+        # before the boards go dark rather than after
+        expiring = coll.count_documents(
+            {"cached_at": {"$gte": cutoff, "$lt": cutoff + 48 * 3600}})
         oldest = coll.find_one({}, sort=[("cached_at", 1)])
         newest = coll.find_one({}, sort=[("cached_at", -1)])
         now = time.time()
@@ -276,6 +313,7 @@ def status() -> dict:
             "available": True,
             "total": total,
             "fresh": fresh,
+            "expiring_48h": expiring,
             "stale": total - fresh,
             "oldest_age_sec": int(now - (oldest.get("cached_at") or 0)) if oldest else None,
             "newest_age_sec": int(now - (newest.get("cached_at") or 0)) if newest else None,

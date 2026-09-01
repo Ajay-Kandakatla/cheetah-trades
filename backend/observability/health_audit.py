@@ -397,8 +397,9 @@ def check_research_cache_age():
     """The weekly Bonde-fundamentals research refresh is not falling behind.
 
     Feeds the Deep Demand and Gabbar sales gates. Cron: Sunday 20:00 ET,
-    TTL 8 days — WARN once the bulk of the cache is older than the TTL
-    would ever allow after a healthy Sunday run.
+    TTL 16 days — WARN when the fresh fraction is low, AND predictively
+    when most of the fresh set expires within 48h (the 2026-09-01 cliff:
+    a single missed Sunday emptied every Bonde-gated board overnight).
     """
     try:
         from sepa import research
@@ -414,6 +415,19 @@ def check_research_cache_age():
             return _fail("research_cache", "data", WARN,
                          f"only {fresh}/{total} blobs fresh ({pct:.0f}%) — "
                          f"Sunday research-refresh may be failing",
+                         round(pct, 1))
+        # PREDICTIVE: warn while the boards still work. On 2026-09-01 the
+        # whole cache (one Sunday batch) crossed the TTL overnight — the
+        # reactive check was "ok" at Monday's audits and the boards were
+        # empty by Tuesday open. If most of what is fresh dies within 48h,
+        # say so NOW.
+        expiring = st.get("expiring_48h") or 0
+        surviving = fresh - expiring
+        if total and (surviving / total) < 0.5:
+            return _fail("research_cache", "data", WARN,
+                         f"{expiring} of {fresh} fresh blobs expire within 48h "
+                         f"(only {surviving}/{total} survive) — run "
+                         f"research-refresh before the cliff",
                          round(pct, 1))
         return _ok("research_cache", "data", f"{fresh}/{total} fresh ({pct:.0f}%)",
                    round(pct, 1))

@@ -10,6 +10,14 @@
 # and the daily fast-scan can't surface them. (Fixes "ARM only shows on a
 # manual Full Scan", 2026-06-01.)
 0      20    *    *    0    /usr/local/bin/python -m sepa.cli research-refresh --mode broad
+
+# Mon-Sat 8:30pm ET — catch-up guard for the line above. A missed Sunday used
+# to empty every Bonde-gated board 8 days later in ONE night (measured
+# 2026-09-01: 3,642 fresh -> 21 overnight; Deep Demand / Gabbar / Under Value
+# all blank at the open). --only-if-stale makes this a no-op (one log line)
+# while the cache is healthy, and a full refresh the first night it is thin
+# or about to cross the TTL.
+30     20    *    *    1-6  /usr/local/bin/python -m sepa.cli research-refresh --mode broad --only-if-stale
 #
 # Mon-Fri 4:30pm ET — post-close fast scan. Joins cached research with today's
 # prices and rebuilds the candidate list. --mode broad so it scans everything
