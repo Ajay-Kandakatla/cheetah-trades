@@ -668,19 +668,30 @@ export function toneColor(tone: CmLineTone): string {
 export function monthTicks(bars: CmBar[], max = 6): { i: number; label: string }[] {
   const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const ticks: { i: number; label: string }[] = [];
+  const ticks: { i: number; label: string; year: string }[] = [];
   let prev = '';
   bars.forEach((b, i) => {
     const mo = (b.t || '').slice(0, 7);
     if (mo && mo !== prev) {
       prev = mo;
       const m = Number(mo.slice(5, 7));
-      if (m >= 1 && m <= 12) ticks.push({ i, label: MON[m - 1] });
+      if (m >= 1 && m <= 12) ticks.push({ i, label: MON[m - 1], year: mo.slice(0, 4) });
     }
   });
-  if (ticks.length <= max) return ticks;
-  const step = Math.ceil(ticks.length / max);
-  return ticks.filter((_, i) => i % step === 0);
+  const shown = ticks.length <= max
+    ? ticks
+    : ticks.filter((_, i) => i % Math.ceil(ticks.length / max) === 0);
+  // Years on the SHOWN set, decided after thinning: the first tick and every
+  // year change carry theirs ("Aug '25 … Feb '26"). A year-long window reading
+  // "Aug Nov Feb May Aug" left which-Aug-is-which to guesswork (Ajay
+  // 2026-09-01: "add years to the calendar months at the bottom").
+  let prevYear = '';
+  return shown.map((t) => {
+    const label = t.year && t.year !== prevYear
+      ? `${t.label} '${t.year.slice(2)}` : t.label;
+    prevYear = t.year || prevYear;
+    return { i: t.i, label };
+  });
 }
 
 /** Index of a dated marker within the bar window, or -1.

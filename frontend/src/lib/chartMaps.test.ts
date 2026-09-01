@@ -240,9 +240,9 @@ describe('lineLabels', () => {
 });
 
 describe('monthTicks', () => {
-  it('marks the first bar of each month', () => {
+  it('marks the first bar of each month, year on the first tick only', () => {
     expect(monthTicks(BARS)).toEqual([
-      { i: 0, label: 'Jun' }, { i: 2, label: 'Jul' }, { i: 4, label: 'Aug' },
+      { i: 0, label: "Jun '26" }, { i: 2, label: 'Jul' }, { i: 4, label: 'Aug' },
     ]);
   });
 
@@ -252,6 +252,38 @@ describe('monthTicks', () => {
       many.push(bar(`2026-${String(m).padStart(2, '0')}-01`, 1, 1, 1, 1));
     }
     expect(monthTicks(many, 4).length).toBeLessThanOrEqual(4);
+  });
+
+  it('stamps the year again where it changes — a 1y window is unambiguous', () => {
+    // Ajay 2026-09-01: "add years to the calendar months at the bottom" — a
+    // year window read "Aug Nov Feb May Aug" with no way to tell the Augs
+    // apart.
+    const many: CmBar[] = [];
+    for (let m = 8; m <= 12; m += 1) {
+      many.push(bar(`2025-${String(m).padStart(2, '0')}-01`, 1, 1, 1, 1));
+    }
+    for (let m = 1; m <= 8; m += 1) {
+      many.push(bar(`2026-${String(m).padStart(2, '0')}-01`, 1, 1, 1, 1));
+    }
+    const labels = monthTicks(many, 6).map((t) => t.label);
+    expect(labels[0]).toBe("Aug '25");
+    const first26 = labels.find((l) => l.endsWith("'26"));
+    expect(first26).toBeTruthy();
+    expect(labels.filter((l) => l.includes("'25")).length).toBe(1);
+  });
+
+  it('the year is decided on the SHOWN ticks, so thinning cannot hide a change', () => {
+    // Thin 24 months down to 4 ticks: every shown tick lands in a different
+    // year context; the first shown tick of each year must carry its year.
+    const many: CmBar[] = [];
+    for (const y of ['2025', '2026']) {
+      for (let m = 1; m <= 12; m += 1) {
+        many.push(bar(`${y}-${String(m).padStart(2, '0')}-01`, 1, 1, 1, 1));
+      }
+    }
+    const labels = monthTicks(many, 4).map((t) => t.label);
+    expect(labels.filter((l) => l.includes("'25")).length).toBe(1);
+    expect(labels.filter((l) => l.includes("'26")).length).toBe(1);
   });
 
   it('returns nothing for no bars, and skips malformed dates', () => {

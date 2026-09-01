@@ -244,7 +244,11 @@ export const PatternChart = memo(function PatternChart(
 
           {/* month ticks */}
           {ticks.map((t) => (
-            <text key={`tk-${t.i}`} x={xFor(t.i, bars.length, W, padR)} y={H - 2}
+            // A first-of-window "Aug '25" centered on bar 0 would clip at the
+            // left edge — keep every label inside the plot.
+            <text key={`tk-${t.i}`}
+                  x={Math.max(xFor(t.i, bars.length, W, padR), t.label.length * 2.2)}
+                  y={H - 2}
                   fontSize="8.5" fill="var(--text-muted, #7c869b)"
                   textAnchor="middle">{t.label}</text>
           ))}
