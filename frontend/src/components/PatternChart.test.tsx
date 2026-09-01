@@ -283,3 +283,29 @@ describe('the TV link-out', () => {
     expect(open.mock.calls[0][0]).toContain('interval=15');
   });
 });
+
+describe('signal candle tags', () => {
+  // GainzAlgo convention: BUY prints UNDER its candle, SELL above it,
+  // joined by bar time — never an index. Legacy dated markers keep the
+  // gold line so the boards look unchanged.
+  it('draws BUY/SELL tags anchored to their bars', () => {
+    const t = { ...TILE, markers: [
+      { date: bars()[10].t, kind: 'buy', label: 'BUY', price: 11.0 },
+      { date: bars()[20].t, kind: 'sell', label: 'SELL', price: 12.0 },
+      { date: bars()[5].t, label: 'confirmed' },
+    ] };
+    const { container } = draw(t as any);
+    const texts = Array.from(container.querySelectorAll('text')).map((n) => n.textContent);
+    expect(texts).toContain('BUY');
+    expect(texts).toContain('SELL');
+    expect(texts).toContain('confirmed');
+    expect(container.querySelectorAll('rect[rx="2.5"]').length).toBe(2);
+  });
+
+  it('a marker whose bar is outside the window draws nothing', () => {
+    const t = { ...TILE, markers: [{ date: '2000-01-01', kind: 'buy', label: 'BUY', price: 1 }] };
+    const { container } = draw(t as any);
+    expect(Array.from(container.querySelectorAll('text')).map((n) => n.textContent))
+      .not.toContain('BUY');
+  });
+});

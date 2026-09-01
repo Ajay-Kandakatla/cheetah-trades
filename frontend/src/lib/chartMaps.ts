@@ -103,7 +103,7 @@ export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: 
 export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral'; lo: number; hi: number; label?: string };
 export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral';
 export type CmLine = { price: number; label: string; tone: CmLineTone };
-export type CmMarker = { date: string; label?: string; kind?: string };
+export type CmMarker = { date: string; label?: string; kind?: string; price?: number };
 export type CmStat = { k: string; v: string };
 export type CmBadge = { text: string; tone: 'good' | 'warn' | 'muted' };
 

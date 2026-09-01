@@ -185,13 +185,46 @@ export const PatternChart = memo(function PatternChart(
             );
           })}
 
-          {/* dated confirmation marker — joined by DATE, never by index */}
-          {(tile.markers || []).map((m) => {
+          {/* dated confirmation marker — joined by DATE, never by index.
+              buy/sell markers render as candle-anchored tags (the GainzAlgo
+              convention: BUY under the bar, SELL above it); sweep/BOS/ORB
+              markers as small glyphs; anything else keeps the gold line. */}
+          {(tile.markers || []).map((m, mi) => {
             const i = markerIndex(bars, m.date);
             if (i < 0) return null;
             const x = xFor(i, bars.length, W, padR);
+            const bar = bars[i];
+            if (m.kind === 'buy' || m.kind === 'sell') {
+              const buy = m.kind === 'buy';
+              const y = buy
+                ? yFor(bar.l, domain, H, PAD_Y) + 12
+                : yFor(bar.h, domain, H, PAD_Y) - 5;
+              const fill = buy ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)';
+              const wTag = (m.label || '').length * 5.4 + 8;
+              return (
+                <g key={`mk-${m.date}-${mi}`}>
+                  <line x1={x} y1={buy ? y - 10 : y + 3}
+                        x2={x} y2={buy ? y - 4 : y + 8}
+                        stroke={fill} strokeWidth={1.2} />
+                  <rect x={x - wTag / 2} y={buy ? y - 2 : y - 9}
+                        width={wTag} height={11} rx={2.5} fill={fill} opacity={0.92} />
+                  <text x={x} y={buy ? y + 6.5 : y - 0.5} fontSize="8" fontWeight="700"
+                        textAnchor="middle" fill="#0b0e14">{m.label}</text>
+                </g>
+              );
+            }
+            if (m.kind === 'sweep' || m.kind === 'bos' || m.kind === 'choch'
+                || m.kind === 'orb_up' || m.kind === 'orb_dn') {
+              const yG = yFor(bar.h, domain, H, PAD_Y) - 3;
+              return (
+                <text key={`mk-${m.date}-${mi}`} x={x} y={yG} fontSize="7.5"
+                      textAnchor="middle" fill="var(--text-muted, #94a3b8)">
+                  {m.label}
+                </text>
+              );
+            }
             return (
-              <g key={`mk-${m.date}`}>
+              <g key={`mk-${m.date}-${mi}`}>
                 <line x1={x} y1={PAD_Y} x2={x} y2={H - PAD_Y}
                       stroke="var(--gold, #c9a227)" strokeWidth={1} strokeDasharray="3,3"
                       opacity={0.8} />

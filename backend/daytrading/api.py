@@ -17,7 +17,9 @@ import math
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
+from auth import current_user_email
 from fastapi.responses import JSONResponse
 
 from . import backtest as bt_mod
@@ -303,3 +305,33 @@ async def explain(symbol: str):
     except Exception as exc:
         log.exception("LLM explain failed")
         return JSONResponse({"enabled": True, "error": str(exc)}, status_code=500)
+
+
+# ── Signal Lab — Ajay's own tickers, 1-minute BUY/SELL tags ────────────────
+@router.get("/day/signal-lab/board")
+async def signal_lab_board(symbols: str = ""):
+    """One tile per requested symbol: last session's 1-minute candles with
+    ORB / sweep / BOS / composite BUY-SELL events, plus the event feed.
+    Closed bars only — see the payload's method_note."""
+    import asyncio
+    from . import signal_lab as sl
+    syms = [s for s in (symbols or "").split(",") if s.strip()]
+    return await asyncio.to_thread(sl.board, syms)
+
+
+@router.get("/day/signal-lab/watchlist")
+async def signal_lab_watchlist(email: str = Depends(current_user_email)):
+    from . import signal_lab as sl
+    return {"symbols": sl.get_watchlist(email)}
+
+
+@router.post("/day/signal-lab/watchlist/{symbol}")
+async def signal_lab_watch_add(symbol: str, email: str = Depends(current_user_email)):
+    from . import signal_lab as sl
+    return {"symbols": sl.add_symbol(email, symbol)}
+
+
+@router.delete("/day/signal-lab/watchlist/{symbol}")
+async def signal_lab_watch_remove(symbol: str, email: str = Depends(current_user_email)):
+    from . import signal_lab as sl
+    return {"symbols": sl.remove_symbol(email, symbol)}

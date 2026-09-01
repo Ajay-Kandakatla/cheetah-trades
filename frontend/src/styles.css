@@ -11414,3 +11414,26 @@ a.tk-link:hover   { color: inherit; }
 .rw__table { margin-top: 14px; }
 .rw__hint { color: var(--text-muted, #94a3b8); font-size: 12.5px; margin: 4px 0 8px; }
 .rw__note { color: var(--text-muted, #94a3b8); font-size: 11.5px; margin-top: 10px; line-height: 1.5; }
+
+/* Signal Lab */
+.slab-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.slab-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.slab-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 12px; padding: 3px 8px; font-size: 12px; }
+.slab-chip__x { background: none; border: none; color: var(--text-muted, #94a3b8); cursor: pointer;
+  font-size: 13px; padding: 0 2px; }
+.slab-chip__x:hover { color: var(--negative, #ef4444); }
+.slab-meta { margin: 4px 0 10px; }
+.slab-state { font-size: 11px; letter-spacing: 0.4px; color: var(--text-muted, #94a3b8); }
+.slab-state--regular { color: var(--positive, #22c55e); }
+.slab-cell { display: flex; flex-direction: column; gap: 4px; }
+.slab-latest { font-size: 12px; padding: 4px 8px; border-radius: 4px; }
+.slab-latest--buy { background: rgba(34, 197, 94, 0.12); color: var(--positive, #22c55e); }
+.slab-latest--sell { background: rgba(239, 68, 68, 0.12); color: var(--negative, #ef4444); }
+.slab-latest--none { color: var(--text-muted, #94a3b8); }
+.slab-feed { list-style: none; margin: 0; padding: 0; font-size: 11px; }
+.slab-feed__row { display: flex; gap: 6px; align-items: baseline; padding: 1.5px 0;
+  color: var(--text-muted, #94a3b8); }
+.slab-feed__row--buy b { color: var(--positive, #22c55e); }
+.slab-feed__row--sell b { color: var(--negative, #ef4444); }
+.slab-feed__why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

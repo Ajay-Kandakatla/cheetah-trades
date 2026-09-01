@@ -55,6 +55,7 @@ function useIsMobile(): boolean {
 const TOOLS_SUBGROUP: Record<string, string> = {
   trading: 'Trade',
   'day-trading': 'Screeners', scalping: 'Screeners', patterns: 'Screeners', 'supply-demand': 'Screeners',
+  'signal-lab': 'Screeners',
   'demand-zones': 'Zones', zones: 'Zones',
   live: 'Tape', chatter: 'Tape', 'chatter-india': 'Tape',
   'market-gauge': 'Signals', catalysts: 'Signals', options: 'Signals', 'gex-board': 'Signals', track: 'Signals', pankaj: 'Signals',

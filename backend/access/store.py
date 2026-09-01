@@ -165,6 +165,11 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "gex-board",     "label": "🧲 GEX Board",        "group": "tools",     "default": False, "added_in": 18},
     {"id": "track",         "label": "Track",               "group": "tools",     "default": False},
     {"id": "day-trading",   "label": "Day Trading",         "group": "tools",     "default": False},
+    # Signal Lab (2026-09-01): Ajay's own tickers on 1-minute candles with
+    # BUY/SELL tags from the app's ORB + liquidity-sweep + BOS stack (the
+    # five-step composite). GainzAlgo-style presentation, our math, closed
+    # bars only. Owner-on via added_in/VERSION.
+    {"id": "signal-lab",    "label": "⚡ Signal Lab",       "group": "tools",     "default": False, "added_in": 22},
     # Scalping (2026-06-09): Phase-1 DOCUMENTED intraday patterns (Stocks-in-Play
     # ORB / volatility-normalized shock-fade / intraday-momentum regime) with a
     # live spread gate + net-of-cost honesty layer. Sourced from a vetted research
@@ -257,7 +262,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 21
+CATALOG_VERSION = 22
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 
