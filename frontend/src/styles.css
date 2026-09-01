@@ -11415,6 +11415,31 @@ a.tk-link:hover   { color: inherit; }
 .rw__hint { color: var(--text-muted, #94a3b8); font-size: 12.5px; margin: 4px 0 8px; }
 .rw__note { color: var(--text-muted, #94a3b8); font-size: 11.5px; margin-top: 10px; line-height: 1.5; }
 
+/* Promo-circuit watch */
+.pcw__table { margin-top: 14px; }
+.pcw__acct {
+  display: inline-flex; align-items: center;
+  border: 1px solid; border-radius: 999px;
+  padding: 1px 7px; margin: 1px 4px 1px 0;
+  font-size: 11px; white-space: nowrap; cursor: help;
+}
+.pcw__edgar { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.pcw__flag {
+  display: inline-flex; align-items: center; gap: 3px;
+  border-radius: 4px; padding: 1px 6px; font-size: 11px;
+  text-decoration: none; white-space: nowrap;
+}
+.pcw__flag--owner { background: rgba(70, 167, 88, 0.14); color: var(--positive, #46a758); }
+.pcw__flag--shelf { background: rgba(229, 72, 77, 0.14); color: var(--negative, #e5484d); }
+.pcw__roster { margin-top: 18px; }
+.pcw__roster-list { list-style: none; padding: 0; margin: 6px 0 0; }
+.pcw__roster-list li { margin: 4px 0; font-size: 12.5px; line-height: 1.5; }
+.pcw__note { color: var(--ink, #e7e7e7); }
+.pcw__dim { color: var(--text-muted, #94a3b8); font-size: 12px; }
+.pcw__audit { color: var(--text-muted, #94a3b8); font-size: 11.5px; margin: 2px 0 0 12px; font-style: italic; }
+.pcw__sweepbox { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.pcw__sweep-err { color: var(--negative, #e5484d); font-size: 11.5px; max-width: 260px; text-align: right; }
+
 /* Signal Lab */
 .slab-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 .slab-chips { display: flex; flex-wrap: wrap; gap: 6px; }

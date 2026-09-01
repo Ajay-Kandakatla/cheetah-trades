@@ -132,6 +132,7 @@ SIGNAL_WEIGHTS = {
 PENALTY_WEIGHTS = {
     "has_offering":          -30,  # dilution risk — almost always kills setups
     "insider_sell_cluster":  -18,
+    "promo_circuit_tagged":  -15,  # S/A-tier promo account seeded it ≤7d ago
     "pump_distribution_phase": -12,
     "already_extended":      -8,
     "bearish_news":          -10,
@@ -162,7 +163,8 @@ def _extract_signals(c: dict, *,
                      stale_record: Optional[dict] = None,
                      multi_day_appearance: Optional[int] = None,
                      forward_catalyst: Optional[dict] = None,
-                     insider_signal: Optional[dict] = None) -> dict:
+                     insider_signal: Optional[dict] = None,
+                     promo_signal: Optional[dict] = None) -> dict:
     """Return {signals: [...], penalties: [...]} for one candidate."""
     signals: list[dict] = []
     penalties: list[dict] = []
@@ -292,6 +294,22 @@ def _extract_signals(c: dict, *,
             "detail": f"{news['n_bearish']} bearish news, no bullish",
         })
 
+    # Promo tags only penalize tiny floats — the exit-liquidity thesis
+    # doesn't apply to a multi-billion-dollar name an alert account tagged
+    # in passing on a momentum watchlist (review finding 2026-09-01).
+    _cap = c.get("market_cap")
+    if promo_signal and promo_signal.get("handles") and (_cap is None or _cap < 2e9):
+        handles = ", ".join("@" + h for h in promo_signal["handles"][:2])
+        extra = len(promo_signal["handles"]) - 2
+        if extra > 0:
+            handles += f" +{extra}"
+        penalties.append({
+            "type": "promo_circuit_tagged",
+            "weight": PENALTY_WEIGHTS["promo_circuit_tagged"],
+            "detail": (f"Seeded by promo-circuit account(s) {handles} in last 7d "
+                       "— the tag IS the promotion (provenance study 2026-09-01)"),
+        })
+
     if quadrant == "PUMP_RISK" and evidence_score < 10:
         penalties.append({
             "type": "pure_chatter",
@@ -340,6 +358,8 @@ def _synthesize_thesis(c: dict, signals: list[dict], penalties: list[dict]) -> d
         bear_parts.append("recent bearish news flow")
     if "pure_chatter" in pen_by_type:
         bear_parts.append("chatter without evidence (pump signature)")
+    if "promo_circuit_tagged" in pen_by_type:
+        bear_parts.append("promo-circuit account seeded this — exit-liquidity risk")
 
     bull = ("Bull: " + "; ".join(bull_parts) + ".") if bull_parts else None
     bear = ("Bear: " + "; ".join(bear_parts) + ".") if bear_parts else None
@@ -447,6 +467,15 @@ def build_predictions(force: bool = False, max_results: int = 25) -> dict:
     except Exception as exc:
         log.warning("insider lookup failed: %s", exc)
 
+    # Promo-circuit tags (provenance study 2026-09-01: the tag IS the
+    # promotion). Mongo-only read — never fetches StockTwits inline.
+    promo_by_ticker: dict[str, dict] = {}
+    try:
+        from .promo_circuit import tags_for
+        promo_by_ticker = tags_for(tickers)
+    except Exception as exc:
+        log.warning("promo circuit lookup failed: %s", exc)
+
     # 3) Build a prediction record per candidate
     predictions = []
     for c in candidates:
@@ -458,6 +487,7 @@ def build_predictions(force: bool = False, max_results: int = 25) -> dict:
             multi_day_appearance=appearance_counts.get(t),
             forward_catalyst=forward_by_ticker.get(t),
             insider_signal=insider_by_ticker.get(t),
+            promo_signal=promo_by_ticker.get(t),
         )
 
         score = sum(s["weight"] for s in sigs["signals"])

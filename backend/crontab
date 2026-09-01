@@ -242,6 +242,15 @@
 */5    9-15  *    *    1-5  /usr/local/bin/python -m catalysts.volume_alerts
 0,5,10,15,20,25,30 16 * *  1-5  /usr/local/bin/python -m catalysts.volume_alerts
 #
+# Catalysts — promo-circuit sweep (catalysts/promo_circuit.py): pull the
+# roster pump/alert accounts' StockTwits streams and record who is tagging
+# what. ~14 requests per run, well under StockTwits' rate limit. Weekdays
+# every 30 min 7am-7:30pm ET (promo watchlists post premarket AND after the
+# close); weekends every 2 hours — the 8/31 movers were groomed on
+# Saturday/Sunday (SWVL, RDAC; provenance study 2026-09-01).
+*/30   7-19  *    *    1-5  /usr/local/bin/python -m catalysts.promo_circuit
+15     9-21/2 *   *    0,6  /usr/local/bin/python -m catalysts.promo_circuit
+#
 # Catalysts — pre-market sweep at 4am, 6am, 8am, 9:25am ET on weekdays.
 # Pre-warms the /catalysts/premarket cache so the page is instant when
 # you open it before market open.

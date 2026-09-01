@@ -335,6 +335,29 @@ async def russell_watch(force: bool = Query(False, description="rebuild past the
     return await asyncio.to_thread(rw.build, force)
 
 
+@router.get("/catalysts/promo-circuit")
+async def get_promo_circuit(force: bool = Query(False, description="bypass 10min cache")):
+    """Promo-circuit watch — tickers recently tagged by the alert/pump
+    accounts we caught seeding the 8/31-9/1 movers (provenance study
+    2026-09-01). A tag is the PROMOTION, not foresight: SEEDING rows are
+    being loaded right now; RAN/DUMPED rows show how the last campaign
+    ended. Includes the two EDGAR tells (13D/G owner stakes, fresh shelf
+    plumbing). Roster is user-editable in catalysts/promo_circuit.py."""
+    import asyncio
+    from . import promo_circuit as pc
+    return await asyncio.to_thread(pc.build, force)
+
+
+@router.post("/catalysts/promo-circuit/sweep")
+async def trigger_promo_sweep():
+    """Manually sweep the roster accounts' StockTwits streams now.
+    Normally cron does this every 30 min (hourly-ish on weekends — that's
+    when the grooming happens)."""
+    import asyncio
+    from . import promo_circuit as pc
+    return await asyncio.to_thread(pc.sweep)
+
+
 @router.get("/catalysts/halts")
 async def get_halts(force: bool = Query(False)):
     """Today's NASDAQ trading halts (via free RSS feed).

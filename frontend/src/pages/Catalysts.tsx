@@ -3,6 +3,7 @@ import { TickerLink } from '../components/TickerLink';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { RussellWatch } from '../components/RussellWatch';
+import { PromoCircuit } from '../components/PromoCircuit';
 import {
   useCatalystScan,
   useDeepDive,
@@ -24,7 +25,7 @@ import type {
   FrenzyCandidate, FrenzyTier,
 } from '../hooks/useCatalysts';
 
-type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline' | 'russell';
+type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline' | 'russell' | 'promo';
 
 type SortKey = 'composite' | 'change' | 'chatter' | 'evidence' | 'volume_surge';
 
@@ -162,6 +163,13 @@ export function CatalystsPage() {
         </button>
         <button
           type="button"
+          className={`cat-tab ${tab === 'promo' ? 'is-active' : ''}`}
+          onClick={() => setTab('promo')}
+        >
+          🎪 Promo Circuit
+        </button>
+        <button
+          type="button"
           className={`cat-tab ${tab === 'timeline' ? 'is-active' : ''}`}
           onClick={() => setTab('timeline')}
         >
@@ -185,6 +193,7 @@ export function CatalystsPage() {
         <TimelineView onClickTicker={(t) => setDrillTicker(t)} />
       )}
       {tab === 'russell' && <RussellWatch />}
+      {tab === 'promo' && <PromoCircuit />}
 
       {/* Original "Now" content follows — only render when on Now tab */}
       {tab !== 'now' ? null : <>
