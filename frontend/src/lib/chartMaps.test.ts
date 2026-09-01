@@ -537,8 +537,11 @@ describe('the Earnings Flow tab', () => {
     // read left to right, and the retrospective one stays last.
     // 2026-09-01: `overnight` joined after `session` — the day starts with
     // what moved while you slept, then what the session is confirming.
+    // Later 2026-09-01: `signals` sits beside `session` — both are intraday
+    // reads; session asks the demand boards' names, signals asks whatever
+    // tickers Ajay typed into the Signal Lab.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -593,11 +596,11 @@ describe('the Support Levels tab', () => {
     // whether the session is confirming their daily band.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'supply', 'deep_demand', 'session', 'overnight', 'gabbar', 'undervalue', 'support']);
+      .toEqual(['zones', 'supply', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly three tabs not driven by a board fetch', () => {
+  it('is one of exactly four tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -608,8 +611,10 @@ describe('the Support Levels tab', () => {
     // spelled out rather than filtered so ANOTHER one cannot join silently.
     // 2026-09-01: `overnight` is the third — it reads /day/gappers and mounts
     // the Day Trading page's own component, one implementation for both pages.
+    // Later 2026-09-01: `signals` is the fourth — the Signal Lab board
+    // (/day/signal-lab/board), mounted from its own shared component.
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
-    expect(nonBoard).toEqual(['session', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['session', 'signals', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
