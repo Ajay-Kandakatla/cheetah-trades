@@ -271,6 +271,26 @@ def test_tags_for_empty_tickers_no_query():
     assert pc.tags_for([]) == {}
 
 
+def test_prune_shotgun_tags():
+    # REGRESSION (measured 2026-09-01): 274 fake SEEDING rows from
+    # drive-by cashtags. Shotgun accounts keep only repeated tickers;
+    # focused accounts keep everything.
+    shotgun = [{"account": "spray", "ticker": f"T{i}", "n_messages": 1}
+               for i in range(30)]
+    shotgun.append({"account": "spray", "ticker": "REAL", "n_messages": 3})
+    focused = [{"account": "sniper", "ticker": "AAAA", "n_messages": 1}]
+    out = pc.prune_shotgun_tags(shotgun + focused)
+    kept = {(t["account"], t["ticker"]) for t in out}
+    assert ("spray", "REAL") in kept
+    assert ("sniper", "AAAA") in kept
+    assert not any(a == "spray" and t.startswith("T") for a, t in kept)
+
+
+def test_prune_shotgun_keeps_all_below_threshold():
+    tags = [{"account": "few", "ticker": f"T{i}", "n_messages": 1} for i in range(10)]
+    assert len(pc.prune_shotgun_tags(tags)) == 10
+
+
 class _FakeColl:
     def __init__(self, docs):
         self.docs = docs

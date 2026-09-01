@@ -64,6 +64,10 @@ SEEDING_MAX_DAYS = 7              # tag older than this without a run = QUIET
 RAN_MIN_GAIN_PCT = 30.0           # max gain since tag that counts as "it ran"
 DUMPED_DROP_PCT = -40.0           # give-back from post-tag peak = DUMPED
 RETAG_RESET_DAYS = 14             # dormant this long -> new campaign, reset first_tagged_at
+SHOTGUN_DISTINCT_TAGS = 25        # account tagging more tickers than this in the
+                                  # window is a watchlist machine: its one-off
+                                  # mentions are noise, repeats are campaigns
+EDGAR_ROW_CAP = 80                # EDGAR lookups only for the rows that matter
 
 # ---------------------------------------------------------------------------
 # The roster. USER-EDITABLE — same pattern as frontend/src/lib/fundTiers.ts:
@@ -514,6 +518,25 @@ def _as_utc(v) -> Optional[datetime]:
     return None
 
 
+def prune_shotgun_tags(tags: list[dict],
+                       max_distinct: int = SHOTGUN_DISTINCT_TAGS) -> list[dict]:
+    """Pure: drop one-off mentions from shotgun accounts.
+
+    Measured 2026-09-01: ShangVXO ~100 distinct cashtags, XkaliburTrading
+    180/month, PSM 163/month — watchlist machines whose single drive-by
+    mentions (LZB, HZO, DZZ...) buried the board in 274 fake SEEDING rows.
+    An account tagging more than `max_distinct` tickers in the window keeps
+    only tickers it mentioned in >= 2 messages (repetition = campaign);
+    focused accounts keep everything.
+    """
+    per_account: dict[str, int] = {}
+    for t in tags:
+        per_account[t["account"]] = per_account.get(t["account"], 0) + 1
+    return [t for t in tags
+            if per_account[t["account"]] <= max_distinct
+            or (t.get("n_messages") or 0) >= 2]
+
+
 def build(force: bool = False) -> dict:
     """The watchlist board: every ticker tagged by the roster in the last
     TAG_WINDOW_DAYS, with who/when, price-since-tag, status, EDGAR tells."""
@@ -541,11 +564,12 @@ def build(force: bool = False) -> dict:
         except Exception as exc:
             log.warning("promo tags read failed: %s", exc)
 
+    tags = prune_shotgun_tags(
+        [t for t in tags if t.get("account") in PROMO_ACCOUNTS])
+
     # Group by ticker
     by_ticker: dict[str, list[dict]] = {}
     for t in tags:
-        if t.get("account") not in PROMO_ACCOUNTS:
-            continue  # roster shrank since the tag was recorded
         by_ticker.setdefault(t["ticker"], []).append(t)
 
     tickers = sorted(by_ticker.keys())
@@ -580,16 +604,25 @@ def build(force: bool = False) -> dict:
             "days_since_last_tag": round(days_since_last, 1),
             **pa,
             "status": status,
-            "edgar": _edgar_flags(tkr),
+            "edgar": {"owner_stake": None, "shelf": None},
         }
 
-    with ThreadPoolExecutor(max_workers=6) as ex:
+    with ThreadPoolExecutor(max_workers=8) as ex:
         rows = list(ex.map(_row, tickers))
 
     status_rank = {"SEEDING": 0, "RAN": 1, "DUMPED": 2, "QUIET": 3, "UNKNOWN": 4}
     rows.sort(key=lambda r: (status_rank.get(r["status"], 9),
                              TIER_ORDER.get(r["best_tier"], 9),
-                             r["days_since_first_tag"]))
+                             r["days_since_last_tag"]))
+
+    # EDGAR tells only for the rows anyone will act on — a 377-row first
+    # build spent 104s mostly on EDGAR for QUIET noise (measured 2026-09-01).
+    edgar_rows = [r for r in rows[:EDGAR_ROW_CAP]
+                  if r["status"] in ("SEEDING", "RAN", "DUMPED")]
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for r, flags in zip(edgar_rows,
+                            ex.map(lambda r: _edgar_flags(r["ticker"]), edgar_rows)):
+            r["edgar"] = flags
 
     meta_coll = _coll("promo_circuit_meta")
     sweep_meta = None
