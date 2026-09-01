@@ -82,10 +82,12 @@ export function OvernightGappers({ profile, onPick }: {
               <tr>
                 <th><H k="symbol" label="Symbol" dir="asc" /></th>
                 <th className="og__num"><H k="move" label="Move" /></th>
+                <th className="og__num" title="Live extended-hours drift vs the most recent regular close — the actual overnight tape">O/N drift</th>
                 <th className="og__num"><H k="last" label="Last" /></th>
                 <th className="og__num"><H k="adr" label="ADR" /></th>
                 <th className="og__num"><H k="relvol" label="RelVol" /></th>
-                <th className="og__num"><H k="dvol" label="$ Vol" /></th>
+                <th className="og__num" title="50-day AVERAGE daily $ volume — liquidity context, not tonight's tape"><H k="dvol" label="$ Vol avg" /></th>
+                <th className="og__num" title="Actual $ traded in tonight's extended session (top names only)">O/N $ Vol</th>
                 <th className="og__num">PM High</th>
                 <th className="og__num">PM Low</th>
                 <th>Earnings</th>
@@ -119,8 +121,20 @@ export function OvernightGappers({ profile, onPick }: {
                       </Link>
                     </td>
                     <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>
+                      {/* The chip follows the NUMBER: it marks the headline move as
+                          extended-hours ONLY when it is one. SNDK read "+4.4% O/N" on a
+                          night it drifted -1.1% after hours (Ajay 2026-09-01) — that
+                          +4.4% was Monday's regular session. */}
                       {g.direction === 'up' ? '▲' : '▼'} {Math.abs(g.move_pct).toFixed(1)}%
-                      {g.ext_label && <span className="og__extlbl">{g.ext_label}</span>}
+                      {g.move_is_ext && g.ext_label
+                        ? <span className="og__extlbl">{g.ext_label}</span>
+                        : null}
+                    </td>
+                    <td className="og__num mono"
+                        title={g.ext_label ? `${g.ext_label} drift vs last regular close` : undefined}>
+                      {g.ext_move_pct != null && !g.move_is_ext
+                        ? <span className={g.ext_move_pct >= 0 ? 'og__up' : 'og__dn'}>{sgn(g.ext_move_pct)}</span>
+                        : g.move_is_ext ? '=' : '—'}
                     </td>
                     <td className="og__num mono">{g.last != null ? `$${g.last.toFixed(2)}` : '—'}</td>
                     <td className="og__num">
@@ -130,6 +144,7 @@ export function OvernightGappers({ profile, onPick }: {
                     </td>
                     <td className={`og__num ${rvCls}`}>{rv != null ? `${rv.toFixed(1)}×` : '—'}</td>
                     <td className="og__num mono" title="Average daily $ volume (liquidity)">{g.dollar_vol != null ? fmtVol(g.dollar_vol) : '—'}</td>
+                    <td className="og__num mono" title="Actual $ traded in tonight's extended session">{g.on_dollar_vol != null ? fmtVol(g.on_dollar_vol) : '—'}</td>
                     <td className="og__num mono">{g.pm_high != null ? `$${g.pm_high}` : '—'}</td>
                     <td className="og__num mono">{g.pm_low != null ? `$${g.pm_low}` : '—'}</td>
                     <td>

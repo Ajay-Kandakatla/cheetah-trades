@@ -535,8 +535,10 @@ describe('the Earnings Flow tab', () => {
   it('is registered and sits next to the other live boards', () => {
     // Between Back in Demand and Past Winners: the three live/decision boards
     // read left to right, and the retrospective one stays last.
+    // 2026-09-01: `overnight` joined after `session` — the day starts with
+    // what moved while you slept, then what the session is confirming.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -591,11 +593,11 @@ describe('the Support Levels tab', () => {
     // whether the session is confirming their daily band.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'supply', 'deep_demand', 'session', 'gabbar', 'undervalue', 'support']);
+      .toEqual(['zones', 'supply', 'deep_demand', 'session', 'overnight', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly two tabs not driven by a board fetch', () => {
+  it('is one of exactly three tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -603,9 +605,11 @@ describe('the Support Levels tab', () => {
     // 2026-08-31: `session` is the second such tab. It has its own endpoint
     // (/supply-demand/session-board) and its own row renderer, so the tile
     // grid and the sort/tier controls are skipped for it too. The list is
-    // spelled out rather than filtered so a THIRD one cannot join silently.
+    // spelled out rather than filtered so ANOTHER one cannot join silently.
+    // 2026-09-01: `overnight` is the third — it reads /day/gappers and mounts
+    // the Day Trading page's own component, one implementation for both pages.
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
-    expect(nonBoard).toEqual(['session', 'support']);
+    expect(nonBoard).toEqual(['session', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }

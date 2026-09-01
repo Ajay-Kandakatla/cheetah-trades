@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -29,7 +29,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'se
 // `session` sits right after `deep_demand` because it READS those two tabs:
 // it is the same names asked a different question (is the session confirming
 // the daily band?), so it belongs beside its own inputs.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -38,7 +38,7 @@ export function isBoardTab(t: CmTab): boolean {
   // `session` joins `support` as a non-board tab: it has its own endpoint
   // (/supply-demand/session-board) and its own row renderer, so the tile grid
   // and the sort/tier controls are skipped for it too.
-  return t !== 'support' && t !== 'session';
+  return t !== 'support' && t !== 'session' && t !== 'overnight';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -73,6 +73,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   session: {
     label: 'Session',
     blurb: 'After the open, for entries. Every name on Back in Demand and Deep Demand, re-read on intraday bars: market mood (bullish / bearish), where price sits against the opening range, unfilled fair-value gaps with the ones left by THIS session called out, and the complete Smart-Money sequence (liquidity sweep \u2192 BOS \u2192 order block \u2192 FVG) where one exists. The daily boards pick the names; this says whether the session is confirming the daily band that listed them \u2014 "at the daily band" plus a completed setup is the entry this tab exists to find. Mood, gaps and the SMC sequence are convention, not book methods, and the ranking is this app\'s own; the opening range says "forming" until its full window has printed. Not advice.',
+  },
+  overnight: {
+    label: 'Overnight',
+    blurb: 'The overnight movers board, in Chart Maps where the rest of the scan lives. Move = the headline change (chipped PM/AH/O\u2044N only when it IS the extended-hours move); O\u2044N drift = the actual extended-session change vs the last regular close; $ Vol avg = 50-day average liquidity for context; O\u2044N $ Vol = the dollars that actually traded in tonight\u2019s extended session (top names only \u2014 that is the real overnight volume). RelVol \u22651.5\u00d7 = elevated interest, <1\u00d7 = thin tape. Same data as the Day Trading page\u2019s scan. Not advice.',
   },
   gabbar: {
     label: 'Gabbar Levels',

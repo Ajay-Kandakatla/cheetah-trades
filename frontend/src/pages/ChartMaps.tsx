@@ -30,6 +30,7 @@ import {
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
+import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
 import OverlayLegend from '../components/OverlayLegend';
@@ -397,6 +398,18 @@ export function ChartMaps() {
          * a row hands the symbol to the Support tab, which is where the drill-in
          * (bands, SMC cards, chart) already lives — one place per job. */
         <SessionBoard onPick={(sym) => {
+          const next = new URLSearchParams(params);
+          next.set('tab', 'support');
+          next.set('symbol', sym);
+          setParams(next, { replace: true });
+        }} />
+      ) : tab === 'overnight' ? (
+        /* The Day Trading page's overnight movers scan, mounted here because
+         * this is where he starts the day (Ajay 2026-09-01: "I think we need a
+         * page in Chart Maps to show over night volume or move this page
+         * there"). Same component, same endpoint — one implementation. Picking
+         * a row hands the symbol to the Support tab, same as Session. */
+        <OvernightGappers profile="aggressive" onPick={(sym) => {
           const next = new URLSearchParams(params);
           next.set('tab', 'support');
           next.set('symbol', sym);

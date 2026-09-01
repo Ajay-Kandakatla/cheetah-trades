@@ -57,13 +57,61 @@ def _session_now() -> str:
     return "closed"                                # 20:00–04:00 overnight
 
 
+def _et_today():
+    """The current ET calendar date. utcnow().date() is WRONG for the four
+    hours after midnight UTC (20:00-24:00 ET) — it names tomorrow, so every
+    intraday lookup for "today" came back empty exactly when the overnight
+    board is most read."""
+    import pandas as pd
+    return pd.Timestamp.now(tz="America/New_York").date()
+
+
+def _extended_dollar_vol(df, which: str) -> Optional[dict]:
+    """Actual extended-hours volume for the most recent ET date in `df`:
+    which='afterhours' or 'premarket'. Returns {shares, dollars} or None.
+    This is the TRUE overnight tape — the $ Vol column is 50-day average
+    liquidity and reads nothing about tonight."""
+    import pandas as pd
+    if df is None or df.empty or "session" not in df.columns:
+        return None
+    ext = df[df["session"] == which]
+    if ext.empty:
+        return None
+    et_idx = ext.index.tz_localize("UTC").tz_convert("America/New_York")
+    day_mask = pd.Series(et_idx.date, index=ext.index) == et_idx.date.max()
+    bars = ext[day_mask]
+    if bars.empty:
+        return None
+    shares = float(bars["volume"].sum())
+    dollars = float((bars["close"] * bars["volume"]).sum())
+    if shares <= 0:
+        return None
+    return {"shares": int(shares), "dollars": round(dollars, 2)}
+
+
+def _headline_move(session: str, gap, ext):
+    """Which number headlines the row, and whether it IS the extended move.
+    In/around an extended session the live drift headlines; when closed the
+    drift headlines only if it is itself material (>= GAP_MIN_PCT), else the
+    last regular session's gap does — and the chip must NOT say O/N then.
+    Pure, so the SNDK case is lockable: closed, gap +4.4, drift -1.1 ->
+    (+4.4, False)."""
+    if session in ("premarket", "afterhours") and ext is not None:
+        return ext, True
+    if session == "closed" and ext is not None and abs(ext) >= GAP_MIN_PCT:
+        return ext, True
+    return gap, False
+
+
 def _enrich_one(symbol: str) -> tuple[str, dict]:
-    """Premarket H/L + proper 10-day relative volume + earnings-ahead for one
-    name. Best-effort — any piece that fails just stays absent."""
+    """Premarket H/L + proper 10-day relative volume + tonight's extended
+    $ volume + earnings-ahead for one name. Best-effort — any piece that
+    fails just stays absent."""
     out: dict = {}
     try:
         from . import data as data_mod, indicators as ind
-        df = data_mod.load_intraday(symbol, datetime.utcnow().date(), include_premarket=True)
+        df = data_mod.load_intraday(symbol, _et_today(), include_premarket=True,
+                                    include_afterhours=True)
         if df is not None and not df.empty:
             pm = ind.premarket_levels(df)
             if pm:
@@ -72,6 +120,12 @@ def _enrich_one(symbol: str) -> tuple[str, dict]:
             rv = ind.relative_volume(df, lookback_days=10)
             if rv is not None:
                 out["rel_vol_10d"] = round(float(rv), 2)
+            session = _session_now()
+            which = "premarket" if session == "premarket" else "afterhours"
+            ext = _extended_dollar_vol(df, which)
+            if ext:
+                out["on_dollar_vol"] = ext["dollars"]
+                out["on_shares"] = ext["shares"]
     except Exception as exc:
         log.debug("gappers: bar enrich failed %s: %s", symbol, exc)
     try:
@@ -137,13 +191,11 @@ def gappers(profile: str = "aggressive", force: bool = False) -> dict:
             continue
 
         # Headline move: the live extended-hours move when in/around an extended
-        # session, else the last regular session's gap.
-        if session in ("premarket", "afterhours") and ext is not None:
-            move = ext
-        elif session == "closed":
-            move = ext if (ext is not None and abs(ext) >= GAP_MIN_PCT) else gap
-        else:
-            move = gap
+        # session, else the last regular session's gap. The label follows the
+        # NUMBER: an O/N chip on a regular-session move told Ajay SNDK was
+        # "+4.4% overnight" on a night it actually drifted -1.1% after hours
+        # (2026-09-01). ext_move_pct still carries the drift for its own column.
+        move, move_is_ext = _headline_move(session, gap, ext)
 
         vol = snap.get("volume")
         a = avg.get(s)
@@ -154,7 +206,8 @@ def gappers(profile: str = "aggressive", force: bool = False) -> dict:
             "direction": "up" if (move or 0) > 0 else "down",
             "gap_pct": gap,                               # last regular-session move
             "ext_move_pct": ext,                          # live extended-hours move
-            "ext_label": ext_label,                       # PM | AH | O/N | None
+            "ext_label": ext_label,                       # labels ext_move_pct: PM | AH | O/N | None
+            "move_is_ext": move_is_ext,                   # True -> move_pct IS the extended move
             "rel_vol": relvol,                            # snapshot-volume vs 50d avg (rough)
             "last": last,
             "prev_close": prev_close,
