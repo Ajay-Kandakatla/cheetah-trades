@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
 import { resolveBack } from '../lib/navSource';
+import { ipoAgeLabel } from '../lib/ipoAge';
 import { SupportLevels } from '../components/SupportLevels';
 import { DEFAULT_WINDOW } from '../lib/supportLevels';
 // Supply/demand + flow chips — ported from the SEPA list card so the
@@ -1661,12 +1662,8 @@ export function SepaCandidatePage() {
                 {data.insider?.recent_filings && (
                   <InsiderFilingTimeline recent={data.insider.recent_filings} />
                 )}
-                {data.ipo_age && (
-                  <div className="sepa-callout mono">
-                    IPO {data.ipo_age.first_trade_date} · {data.ipo_age.years_since_ipo}y old
-                    {data.ipo_age.is_young && ' · young ✓'}
-                    {data.ipo_age.is_recent_ipo && ' · recent IPO ✓'}
-                  </div>
+                {ipoAgeLabel(data.ipo_age) && (
+                  <div className="sepa-callout mono">{ipoAgeLabel(data.ipo_age)}</div>
                 )}
               </section>
             )}

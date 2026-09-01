@@ -22,6 +22,7 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  { id: 'ipo-age-real-listing-date', label: '\u{1F4C5} Real IPO dates — the candidate page’s IPO line no longer mistakes the price cache’s 2-year edge for a listing (SAIC showed “recent IPO ✓” at 12 years old); it now pulls the true listing date from the profile provider and says nothing when it can’t know', addedAt: '2026-08-31' },
   { id: 'in-orderblock-2x2', label: '\u25C9 In the order block + phase lens everywhere \u2014 Back in Demand is a 2\u00D72 (reached/approaching \u00D7 band/order-block; reached+block = first touch happening now, youngest first), and Under Value + Gabbar gain an All / reached / approaching lens on their own levels', addedAt: '2026-08-31', route: '/chart-maps?tab=zones&target=order_block' },
   { id: 'approaching-order-blocks', label: '\u{1F7EA} Approaching \u2192 Order block \u2014 the Approaching view can now target fresh SMC order blocks (last down candle before a \u22651.2\u00D7ATR impulse, never yet revisited, \u226490 bars old) instead of demand bands \u2014 block drawn in purple with its own entry/stop/target', addedAt: '2026-08-31', route: '/chart-maps?tab=zones&phase=approaching&target=order_block' },
   { id: 'hot-sectors-strip', label: '\u{1F525} Hot sectors \u2014 money in / money out over the last 21 sessions, now as sector \u00D7 cap-tier cohorts (Healthcare small caps, Tech large caps \u2026 32 groups, median member vs RSP), pinned above Chart Maps and on the Market Gauge', addedAt: '2026-08-31', route: '/chart-maps' },
