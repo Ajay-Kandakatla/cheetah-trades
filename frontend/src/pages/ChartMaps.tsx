@@ -153,7 +153,14 @@ export function ChartMaps() {
   const stream = useSepaScanStream();
   const wasScanning = useRef(false);
 
+  /* Whoever asked LAST owns the board. A cold board computes for seconds, a
+   * warm one answers instantly - so flipping tab/phase/target while a slow
+   * request is in flight let the STALE response land last and repaint the
+   * old board under the new toggles (same race Ajay hit on the Support tab
+   * zoom, 2026-08-31). */
+  const boardSeq = useRef(0);
   const load = useCallback(async () => {
+    const my = ++boardSeq.current;
     setErr(null);
     // `/chart-maps` answers an unknown `tab` with the VCP board rather than a
     // 404, so fetching it for the Support tab would quietly draw the wrong
@@ -168,11 +175,14 @@ export function ChartMaps() {
         credentials: 'include', cache: 'no-store',
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setData(await r.json());
+      const payload = await r.json();
+      if (my !== boardSeq.current) return;
+      setData(payload);
     } catch (e: any) {
+      if (my !== boardSeq.current) return;
       setErr(String(e?.message ?? e));
     } finally {
-      setLoading(false);
+      if (my === boardSeq.current) setLoading(false);
     }
   }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target]);
 

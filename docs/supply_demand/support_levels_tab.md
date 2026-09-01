@@ -155,3 +155,18 @@ was previously buried.
   already owns that question, and inventing a second rule here would be a drift
   with no source behind it. The band's low is printed; the stop is the reader's.
 * **Nothing feeds back.** No scan, no alert, no ledger reads this tab.
+
+## Stale-response race (fixed 2026-08-31)
+
+Ajay: "The months at the bottom do not change when I try to change to 1
+year from 6 months." A cold window computes for ~5s (measured on GEV)
+while a warm one answers in ~50ms, so the request you switched AWAY from
+routinely resolved last and repainted the old bars under the new dropdown
+value. Fix: a request sequence counter — whoever asked last owns the
+screen; late responses are dropped, in-flight fetches aborted on switch.
+The same guard now protects the Chart Maps board fetch (tab/phase/target
+flips) and the Session board (a quiet poll could overwrite a timeframe
+switch). A switch over an existing chart also now says "updating the
+view…" instead of looking dead while a cold window computes.
+Regression tests are mutation-verified: removing either guard fails
+SupportLevels.test.tsx / SessionBoard.test.tsx.

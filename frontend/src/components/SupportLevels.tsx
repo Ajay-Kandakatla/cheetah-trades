@@ -19,7 +19,7 @@
  * Ticker search reuses `SymbolSearch` (the /symbol-search typeahead already
  * wired for the watch table) rather than growing a second one.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
@@ -106,25 +106,41 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  /* Whoever asked LAST owns the screen. Without the seq guard, switching
+   * 6 months -> 1 year while the 6m request was still in flight let the
+   * STALE response land last and snap the chart back - dropdown saying
+   * "1 year" over six months of candles (Ajay 2026-08-31: "The months at
+   * the bottom do not change when I try to change to 1 year"). A cold
+   * window computes for ~5s while a warm one answers in ~50ms, so the
+   * out-of-order landing is the COMMON case, not a rarity. */
+  const seq = useRef(0);
+  const load = useCallback(async (signal?: AbortSignal) => {
     const sym = normalizeSymbol(symbol);
+    const my = ++seq.current;
     if (!sym) { setData(null); setErr(null); return; }
     setLoading(true);
     setErr(null);
     try {
       const r = await fetch(
         `${API}/chart-maps/support?${supportQuery({ symbol: sym, window: win, tf })}`,
-        { credentials: 'include', cache: 'no-store' });
+        { credentials: 'include', cache: 'no-store', signal });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setData(await r.json());
+      const payload = await r.json();
+      if (my !== seq.current) return;
+      setData(payload);
     } catch (e: any) {
+      if (my !== seq.current || e?.name === 'AbortError') return;
       setErr(String(e?.message ?? e));
     } finally {
-      setLoading(false);
+      if (my === seq.current) setLoading(false);
     }
   }, [symbol, win, tf]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const ctl = new AbortController();
+    void load(ctl.signal);
+    return () => ctl.abort();
+  }, [load]);
 
   // The server's own list once it lands, so retiring a window backend-side does
   // not need a frontend deploy.
@@ -181,6 +197,10 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
       ) : null}
 
       {loading && !data ? <div className="cm-note">Reading {sym}…</div> : null}
+      {/* A switch with a chart already up gave NO feedback while the new
+          window computed (cold windows take seconds) - the dropdown looked
+          dead. Say what is loading; the old chart stays visible under it. */}
+      {loading && data ? <div className="cm-note">Reading {sym} · updating the view…</div> : null}
       {err ? (
         <div className="cm-note cm-note-err">Couldn't load {sym} — {err}</div>
       ) : null}

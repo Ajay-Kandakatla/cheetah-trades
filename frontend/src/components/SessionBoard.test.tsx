@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 // PatternChart links each tile to its drill-in via useLocation, so the grid
@@ -134,6 +134,31 @@ describe('SessionBoard', () => {
     expect(container.querySelector('.sb-nodata')).toBeTruthy();
     expect(container.textContent).toContain('no intraday bars');
     expect(container.textContent).toContain('No read');
+  });
+
+  it('a stale response never repaints the timeframe you switched away from', async () => {
+    // Same race as the Support-tab zoom (Ajay 2026-08-31): the 15m request
+    // is slow, the user switches to 60m which answers fast, then the old
+    // 15m response lands LAST. Whoever asked last owns the board.
+    let resolve15: any;
+    const p15 = new Promise((r) => { resolve15 = r; });
+    const spy = vi.fn()
+      .mockReturnValueOnce(p15)
+      .mockResolvedValueOnce({ json: () => Promise.resolve(
+        payload({ tf: '60m', session: '2026-08-31' })) } as any);
+    vi.stubGlobal('fetch', spy);
+    const { container } = render(<SessionBoard />);
+    const select = container.querySelector('select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: '60m' } });
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0));
+    const stale = payload({ tf: '15m' });
+    stale.rows = [{ ...stale.rows[0], symbol: 'STALEZZ',
+                    tile: { ...stale.rows[0].tile, symbol: 'STALEZZ' } }];
+    resolve15({ json: () => Promise.resolve(stale) });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(container.textContent).not.toContain('STALEZZ');
+    expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0);
   });
 
   it('carries the not-advice line', async () => {

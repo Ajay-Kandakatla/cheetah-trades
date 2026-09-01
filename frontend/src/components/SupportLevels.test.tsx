@@ -91,6 +91,56 @@ describe('SupportLevels', () => {
     expect(screen.getByText('+2.9%')).toBeTruthy();
   });
 
+  it('a stale slow response NEVER overwrites the view you switched to', async () => {
+    // Ajay 2026-08-31: "The months at the bottom do not change when I try to
+    // change to 1 year from 6 months." A cold window computes for ~5s, a warm
+    // one answers in ~50ms - so the OLD request routinely lands last. Whoever
+    // asked last owns the screen; the mock fetch deliberately ignores the
+    // abort signal so the seq guard is what is under test.
+    let resolve6m: any;
+    let resolve1y: any;
+    const p6 = new Promise((r) => { resolve6m = r; });
+    const p1 = new Promise((r) => { resolve1y = r; });
+    const spy = vi.fn().mockReturnValueOnce(p6).mockReturnValueOnce(p1);
+    vi.stubGlobal('fetch', spy);
+    const { container, rerender } = render(
+      <SupportLevels symbol="DHI" window="6m" onSymbol={noop} onWindow={noop} />);
+    rerender(
+      <SupportLevels symbol="DHI" window="1y" onSymbol={noop} onWindow={noop} />);
+    expect(spy).toHaveBeenCalledTimes(2);
+    resolve1y({ ok: true, status: 200, json: async () => (
+      { ...PAYLOAD, window: '1y', window_label: '1 year' }) });
+    const chip = () => container.querySelector('.sl-zoom')?.textContent;
+    await waitFor(() => expect(chip()).toBe('1 year'));
+    resolve6m({ ok: true, status: 200, json: async () => (
+      { ...PAYLOAD, window: '6m', window_label: 'SIX MONTHS STALE' }) });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(chip()).toBe('1 year');
+  });
+
+  it('says it is updating while a switch computes over an existing chart', async () => {
+    // The old behavior showed NOTHING during a switch (loading note was
+    // gated on !data), so a 5s cold window read as a dead dropdown.
+    let resolveNext: any;
+    const spy = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => PAYLOAD })
+      .mockReturnValueOnce(new Promise((r) => { resolveNext = r; }));
+    vi.stubGlobal('fetch', spy);
+    const { container, rerender } = render(
+      <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    const chip = () => container.querySelector('.sl-zoom')?.textContent;
+    await waitFor(() => expect(chip()).toBe('3 months'));
+    rerender(
+      <SupportLevels symbol="DHI" window="1y" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() =>
+      expect(screen.getByText(/updating the view/)).toBeTruthy());
+    expect(chip()).toBe('3 months');
+    resolveNext({ ok: true, status: 200, json: async () => (
+      { ...PAYLOAD, window: '1y', window_label: '1 year' }) });
+    await waitFor(() => expect(chip()).toBe('1 year'));
+    expect(screen.queryByText(/updating the view/)).toBeNull();
+  });
+
   it('links a pre-configured TradingView chart carrying the CURRENT timeframe', async () => {
     // A link-out, never an embed — the Charting Library application was
     // refused (auth-gated site, 2026-08-16).

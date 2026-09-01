@@ -49,13 +49,25 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   const [loading, setLoading] = useState(true);
   const timer = useRef<number | null>(null);
 
+  /* Whoever asked LAST owns the board - without the guard a QUIET poll
+   * kicked off before a timeframe switch could land after it and repaint
+   * the old timeframe (same stale-response race as the Support tab zoom,
+   * Ajay 2026-08-31). */
+  const seq = useRef(0);
   const load = useCallback((quiet = false) => {
+    const my = ++seq.current;
     if (!quiet) setLoading(true);
     fetch(`${API}/supply-demand/session-board?tf=${encodeURIComponent(tf)}`,
           { credentials: 'include' })
       .then((r) => r.json())
-      .then((d: SessionPayload) => { setData(d); setErr(null); setLoading(false); })
-      .catch((e) => { setErr(String((e as Error).message || e)); setLoading(false); });
+      .then((d: SessionPayload) => {
+        if (my !== seq.current) return;
+        setData(d); setErr(null); setLoading(false);
+      })
+      .catch((e) => {
+        if (my !== seq.current) return;
+        setErr(String((e as Error).message || e)); setLoading(false);
+      });
   }, [tf]);
 
   useEffect(() => { load(); }, [load]);
