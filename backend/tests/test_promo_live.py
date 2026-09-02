@@ -36,7 +36,8 @@ def test_session_from_ts_stale_or_missing_is_closed():
 
 def test_live_rows_prices_only_actionable_statuses(monkeypatch):
     rows = [{"ticker": "AAA", "status": "SEEDING", "best_tier": "A",
-             "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 1.0, "pct_since_tag": 2.0},
+             "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 1.0, "pct_since_tag": 2.0,
+             "base_close": 10.5, "first_tagged_at": "2026-09-01T19:20:00+00:00"},
             {"ticker": "ZZZ", "status": "QUIET", "accounts": []}]
     monkeypatch.setattr(pl, "_board_rows", lambda: [r for r in rows if r["status"] != "QUIET"])
     import sepa.prices as prices
@@ -46,6 +47,9 @@ def test_live_rows_prices_only_actionable_statuses(monkeypatch):
     assert [r["ticker"] for r in out["rows"]] == ["AAA"]
     assert out["rows"][0]["day_pct"] == 10.0 and out["rows"][0]["accounts"] == ["topstockalerts"]
     assert out["rows"][0]["alertable"] is True and out["alert_handles"] == ["topstockalerts"]
+    # live since-tag measures the last print against the board's own base (11 / 10.5)
+    assert out["rows"][0]["pct_since_tag_live"] == 4.8
+    assert out["rows"][0]["first_tagged_at"] == "2026-09-01T19:20:00+00:00"
 
 
 def test_promo_alert_is_a_default_pref():

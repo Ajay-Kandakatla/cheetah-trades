@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PromoCircuit } from './PromoCircuit';
+import { PromoCircuit, tagStamp } from './PromoCircuit';
 
 /* Promo-circuit watch — born 2026-09-01 from the chatter-provenance study.
  * The board is a DO-NOT-CHASE radar: SEEDING rows are being loaded now,
@@ -61,9 +61,9 @@ describe('PromoCircuit', () => {
     draw();
     await waitFor(() => expect(screen.getByText('TINY')).toBeTruthy());
     expect(screen.getAllByText('A·@beppels').length).toBeGreaterThan(0);
-    expect(screen.getByText('2d ago')).toBeTruthy();
+    expect(screen.getByText(/· 2d/)).toBeTruthy();
     expect(screen.getByText('+4.2%')).toBeTruthy();
-    expect(screen.getByText('🌱 SEEDING')).toBeTruthy();
+    expect(screen.getAllByText('🌱 SEEDING').length).toBeGreaterThan(0);
   });
 
   it('splits campaigns that already played into the second table', async () => {
@@ -222,5 +222,32 @@ describe('account chips open the StockTwits profile (Ajay 2026-09-02)', () => {
     }
     const live = Array.from(document.querySelectorAll('a.pcw__acct-link')).map((a) => a.getAttribute('href'));
     expect(live).toContain('https://stocktwits.com/topstockalerts');
+  });
+});
+
+describe('board rows go live (Ajay 2026-09-02: "is this page real time?")', () => {
+  it('shows the tag date/time in ET, today\'s live move, and the live since-tag when a print exists', async () => {
+    mock(payload([row({ first_tagged_at: '2026-09-01T19:20:44Z', last_tagged_at: '2026-09-02T13:05:00Z' } as any)]), true,
+      livePayload([liveRow({ ticker: 'TINY', day_pct: 12.5, pct_since_tag_live: 30.2, session: 'afterhours' })]));
+    const { container } = draw();
+    await waitFor(() => expect(screen.getAllByText('TINY').length).toBe(2));   // board row + live table
+    const seeding = container.querySelectorAll('.pcw__table')[1];              // [0] is the live table
+    const text = seeding.textContent || '';
+    expect(text).toContain('Sep 1 · 3:20p ET');
+    expect(text).toContain('Sep 2 · 9:05a ET');
+    expect(text).toContain('+12.5%');                                          // Today, live
+    expect(text).toContain('+30.2%');                                          // live since-tag replaces the daily 4.0%
+    expect(text).not.toContain('+4.0%');
+    expect(text).toContain('AH');
+  });
+
+  it('falls back to the daily since-tag and a dash for Today when no live print exists', async () => {
+    mock(payload([row()]));                                      // live payload only has LIV1
+    draw();
+    await waitFor(() => expect(screen.getByText('TINY')).toBeTruthy());
+    expect(screen.getByText('+4.0%')).toBeTruthy();
+    expect(tagStamp(null)).toBe('—');
+    expect(tagStamp('garbage')).toBe('—');
+    expect(tagStamp('2026-09-01T19:20:44Z')).toBe('Sep 1 · 3:20p ET');
   });
 });

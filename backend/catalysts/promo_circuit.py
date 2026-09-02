@@ -437,7 +437,7 @@ def price_action_since(bars: Optional[list[dict]], tag_date=None) -> dict:
     Peak/last are computed from forward bars only.
     """
     none_shape = {"pct_since_tag": None, "max_gain_pct": None,
-                  "drop_from_peak_pct": None, "last_close": None}
+                  "drop_from_peak_pct": None, "last_close": None, "base_close": None}
     if not bars:
         return none_shape
     if tag_date is None:
@@ -459,6 +459,7 @@ def price_action_since(bars: Optional[list[dict]], tag_date=None) -> dict:
         "max_gain_pct": round((peak / base - 1) * 100, 1) if peak else None,
         "drop_from_peak_pct": round((last / peak - 1) * 100, 1) if peak else None,
         "last_close": last,
+        "base_close": base,     # the since-tag base, so a LIVE print can be measured against it
     }
 
 
@@ -621,6 +622,7 @@ def build(force: bool = False) -> dict:
             } for r in recs],
             "best_tier": _tier(recs[0]),
             "first_tagged_at": first.isoformat(),
+            "last_tagged_at": max((_as_utc(r.get("last_tagged_at")) or now) for r in recs).isoformat(),
             "days_since_first_tag": round(days_since_first, 1),
             "days_since_last_tag": round(days_since_last, 1),
             **pa,

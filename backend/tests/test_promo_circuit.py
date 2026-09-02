@@ -367,3 +367,20 @@ def test_api_exposes_promo_routes():
     src = (Path(__file__).resolve().parents[1] / "catalysts" / "api.py").read_text()
     assert '"/catalysts/promo-circuit"' in src
     assert '"/catalysts/promo-circuit/sweep"' in src
+
+
+def test_price_action_carries_the_base_close_for_live_reads():
+    from datetime import date, datetime, timezone
+    ms = lambda y, m, d: int(datetime(y, m, d, 20, 0, tzinfo=timezone.utc).timestamp() * 1000)
+    bars = [{"t": ms(2026, 8, 28), "o": 9.8, "h": 10.6, "l": 9.7, "c": 10.5},
+            {"t": ms(2026, 9, 1), "o": 10.6, "h": 12.0, "l": 10.4, "c": 11.5}]
+    pa = pc.price_action_since(bars, tag_date=date(2026, 9, 1))
+    assert pa["base_close"] == 10.5 and pa["pct_since_tag"] == 9.5
+    assert pc.price_action_since([], tag_date=date(2026, 9, 1))["base_close"] is None
+
+
+def test_sweep_cron_is_ten_minutes_on_weekdays():
+    from pathlib import Path
+    crontab = (Path(__file__).resolve().parents[1] / "crontab").read_text()
+    line = [l for l in crontab.splitlines() if "catalysts.promo_circuit" in l and "1-5" in l][0]
+    assert line.startswith("*/10")

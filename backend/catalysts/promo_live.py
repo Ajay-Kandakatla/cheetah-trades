@@ -129,6 +129,7 @@ def live_rows(force: bool = False) -> dict:
         ah_pct = (round((float(last) / float(rth_close) - 1) * 100, 2)
                   if (st["state"] == "afterhours" and last and rth_close) else None)
         handles = [a["handle"] for a in (r.get("accounts") or [])]
+        base = r.get("base_close")
         out.append({
             "ticker": r["ticker"], "status": r["status"], "best_tier": r.get("best_tier"),
             "accounts": handles[:3], "alertable": is_alertable(handles),
@@ -138,6 +139,11 @@ def live_rows(force: bool = False) -> dict:
             "day_pct": day_pct, "ah_pct": ah_pct,
             "session": session_from_ts(q.get("last_trade_ts_ms")),
             "pct_since_tag": r.get("pct_since_tag"),
+            # LIVE since-tag: the last print vs the same base the board uses
+            "pct_since_tag_live": (round((float(last) / float(base) - 1) * 100, 1)
+                                   if (last and base) else None),
+            "first_tagged_at": r.get("first_tagged_at"),
+            "last_tagged_at": r.get("last_tagged_at"),
             "edgar": r.get("edgar"),
         })
     out.sort(key=lambda r: (r["day_pct"] is None, -(r["day_pct"] or 0)))

@@ -21,7 +21,7 @@ type TaggedBy = {
 type EdgarFlag = { form: string; filing_date: string; url?: string | null } | null;
 type Row = {
   ticker: string; accounts: TaggedBy[]; best_tier: 'S' | 'A' | 'B';
-  first_tagged_at: string; days_since_first_tag: number;
+  first_tagged_at: string; last_tagged_at?: string | null; days_since_first_tag: number;
   pct_since_tag: number | null; max_gain_pct: number | null;
   drop_from_peak_pct: number | null; last_close: number | null;
   status: 'SEEDING' | 'RAN' | 'DUMPED' | 'QUIET' | 'UNKNOWN';
@@ -104,7 +104,21 @@ function EdgarChips({ e }: { e: Row['edgar'] }) {
   );
 }
 
-function RowsTable({ title, hint, rows }: { title: string; hint: string; rows: Row[] }) {
+/* "Sep 1 · 3:20p ET" — when the tag actually landed (Ajay 2026-09-02: "show me
+ * when it was tagged with a date"). */
+export function tagStamp(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+  const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+    .replace(' AM', 'a').replace(' PM', 'p');
+  return `${day} · ${t} ET`;
+}
+
+const SESSION_SHORT: Record<string, string> = { premarket: 'PRE', afterhours: 'AH' };
+
+function RowsTable({ title, hint, rows, live }: { title: string; hint: string; rows: Row[]; live?: Record<string, LiveRow> }) {
   return (
     <div className="pcw__table">
       <h3 className="day-section__h">{title}</h3>
@@ -117,25 +131,40 @@ function RowsTable({ title, hint, rows }: { title: string; hint: string; rows: R
             <tr>
               <th>Symbol</th><th>Tagged by</th>
               <th className="og__num">First tag</th>
+              <th className="og__num">Last tag</th>
+              <th className="og__num">Today</th>
               <th className="og__num">Since tag</th>
               <th className="og__num">Peak</th>
               <th>Status</th><th>EDGAR</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.ticker}>
-                <td className="og__sym"><TickerLink ticker={r.ticker} /></td>
-                <td>{r.accounts.map((a) => <AccountChip key={a.handle} a={a} />)}</td>
-                <td className="og__num mono">{r.days_since_first_tag.toFixed(0)}d ago</td>
-                <td className={`og__num mono ${((r.pct_since_tag ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}>
-                  {pct(r.pct_since_tag)}
-                </td>
-                <td className="og__num mono">{pct(r.max_gain_pct)}</td>
-                <td title={STATUS_META[r.status]?.hint}>{STATUS_META[r.status]?.label ?? r.status}</td>
-                <td><EdgarChips e={r.edgar} /></td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const lv = live?.[r.ticker];
+              const since = lv?.pct_since_tag_live ?? r.pct_since_tag;
+              const isLive = lv?.pct_since_tag_live != null;
+              return (
+                <tr key={r.ticker}>
+                  <td className="og__sym"><TickerLink ticker={r.ticker} /></td>
+                  <td>{r.accounts.map((a) => <AccountChip key={a.handle} a={a} />)}</td>
+                  <td className="og__num mono" title={r.first_tagged_at}>
+                    {tagStamp(r.first_tagged_at)}<span className="pcw__dim"> · {r.days_since_first_tag.toFixed(0)}d</span>
+                  </td>
+                  <td className="og__num mono pcw__dim" title={r.last_tagged_at ?? undefined}>{tagStamp(r.last_tagged_at)}</td>
+                  <td className={`og__num mono ${((lv?.day_pct ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
+                      title={lv ? `last $${lv.last?.toFixed(2)} vs prior close $${lv.prev_close?.toFixed(2)}` : 'no live print yet'}>
+                    {lv ? pct(lv.day_pct) : '—'}{lv && SESSION_SHORT[lv.session] ? <span className="pcw__dim"> {SESSION_SHORT[lv.session]}</span> : null}
+                  </td>
+                  <td className={`og__num mono ${((since ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
+                      title={isLive ? `live print vs the pre-tag close · daily close read: ${pct(r.pct_since_tag)}` : 'daily close read'}>
+                    {isLive ? <span className="pcw__livedot">●</span> : null}{pct(since)}
+                  </td>
+                  <td className="og__num mono">{pct(r.max_gain_pct)}</td>
+                  <td title={STATUS_META[r.status]?.hint}>{STATUS_META[r.status]?.label ?? r.status}</td>
+                  <td><EdgarChips e={r.edgar} /></td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -143,14 +172,15 @@ function RowsTable({ title, hint, rows }: { title: string; hint: string; rows: R
   );
 }
 
-type LiveRow = {
+export type LiveRow = {
   ticker: string; status: string; best_tier: 'S' | 'A' | 'B'; accounts: string[];
-  alertable?: boolean;
+  alertable?: boolean; pct_since_tag_live?: number | null;
+  first_tagged_at?: string | null; last_tagged_at?: string | null;
   days_since_last_tag: number | null; last: number | null; prev_close: number | null;
   rth_close?: number | null; day_pct: number | null; ah_pct?: number | null;
   session: string; pct_since_tag: number | null;
 };
-type LivePayload = {
+export type LivePayload = {
   rows: LiveRow[]; n: number; alert_threshold_pct: number; alert_handles?: string[];
   live: { state: string; refresh_sec: number; as_of: string | null }; method_note: string;
 };
@@ -163,7 +193,7 @@ const pctFmt = (v: number | null | undefined, d = 1) =>
 /* ⚡ Live — Ajay 2026-09-02: "Give me a real time page.. with percentage".
  * Every tagged name priced off one snapshot, pre/post market included,
  * sorted by today's move; re-reads every 30s while the tape is open. */
-export function PromoLive() {
+export function usePromoLive() {
   const [data, setData] = useState<LivePayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const seq = useRef(0);
@@ -182,7 +212,10 @@ export function PromoLive() {
     const id = setInterval(load, (refresh || CLOSED_POLL_SEC) * 1000);
     return () => clearInterval(id);
   }, [refresh, load]);
+  return { data, err };
+}
 
+export function PromoLive({ data, err }: { data: LivePayload | null; err: string | null }) {
   if (err && !data) return <div className="cm-note cm-note-warn">Live board unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Pricing the circuit's names…</div>;
   const thr = data.alert_threshold_pct;
@@ -245,6 +278,9 @@ export function PromoLive() {
 
 export function PromoCircuit() {
   const [data, setData] = useState<Payload | null>(null);
+  /* One live fetch (30s while open) feeds the ⚡ table AND the Today / live since-tag cells below. */
+  const live = usePromoLive();
+  const liveBySym = Object.fromEntries((live.data?.rows ?? []).map((r) => [r.ticker, r]));
   const [err, setErr] = useState<string | null>(null);
   /* Sweep failures get their OWN state: a failed "Sweep now" must not
    * blank an already-rendered board (review finding 2026-09-01). */
@@ -299,14 +335,16 @@ export function PromoCircuit() {
         </div>
       </header>
 
-      <PromoLive />
+      <PromoLive data={live.data} err={live.err} />
 
       <RowsTable
+        live={liveBySym}
         title="🌱 Being seeded now"
         hint="Tagged in the last days by the circuit, hasn’t run yet. If it pops on no news, you watched the machine work."
         rows={seeding}
       />
       <RowsTable
+        live={liveBySym}
         title="How the last campaigns ended"
         hint="Tagged names that already ran (≥30% since first tag) or ran and got dumped (gave back ≥40% from the peak)."
         rows={played}

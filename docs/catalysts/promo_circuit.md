@@ -126,3 +126,23 @@ negatives (no signal / empty handles → no penalty; not a hard veto),
 offline behavior, crontab + API source guards.
 `frontend/src/components/PromoCircuit.test.tsx` — SEEDING render, table
 split, EDGAR chips, no-flag dash, empty board + roster, HTTP failure.
+
+## 2026-09-02 pm — the board reads live
+
+Ajay: *"Is this page real time? I do not see realtime update… show me when it
+was tagged with a date."*
+
+- **Sweep every 10 min** on weekdays (was 30): a fresh tag reaches the board
+  within 10 minutes.
+- **Tag stamps:** every row shows *First tag* and *Last tag* as an ET
+  date/time ("Sep 1 · 3:20p ET") next to the day count; rows carry
+  `first_tagged_at` / `last_tagged_at`.
+- **Live cells:** the one live fetch that feeds the ⚡ table (30 s while the
+  tape is open) also feeds a *Today* column (live % vs prior close, PRE/AH
+  badge) and a **live *Since tag*** (`pct_since_tag_live` = last print vs the
+  board's own pre-tag base, `base_close`) on every SEEDING / RAN / DUMPED row —
+  marked with a green dot; the daily-close read stays in the tooltip and is the
+  fallback when nothing has printed.
+- Status (SEEDING → RAN → DUMPED) is still classified on **daily closes** by
+  the sweep, so a name that "blew up" intraday shows the move live but flips
+  status at the next sweep.
