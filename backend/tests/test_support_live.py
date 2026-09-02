@@ -255,3 +255,13 @@ def test_for_symbol_reads_levels_from_the_daily_window_on_the_live_frame():
     assert 'allow_ext=True' in src
     assert '"live": tf_mod.live_state() if ext_frame else None' in src
     assert 'overnight_read(chart_df' in src
+
+
+def test_support_tab_asks_the_engine_for_every_cluster():
+    """REGRESSION 2026-09-02: on a 6-month CRWD the engine's strongest-4 cap
+    dropped the 216–219 and 227 overhead bands the SMC ledger was sweeping;
+    the tab caps by NEAREST itself, so it must see every cluster."""
+    import re
+    src = (Path(__file__).resolve().parents[1] / "chart_maps" / "support.py").read_text()
+    calls = re.findall(r"pz\.compute\((?:[^()]|\([^()]*\))*\)", src)
+    assert calls and all("max_zones=None" in c for c in calls), calls

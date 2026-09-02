@@ -104,7 +104,10 @@ RECENT_BARS = 21
 MIN_TOUCHES_TESTED = 2
 
 # How many levels the table shows per side. `price_zones` already caps its own
-# returned lists at MAX_ZONES_PER_SIDE (4) per ORIGIN, so the practical ceiling
+# returned lists at MAX_ZONES_PER_SIDE (4) per ORIGIN — the 4 STRONGEST, not the
+# nearest, which on a 6-month CRWD dropped the 216–219 and 227 swing highs the
+# SMC ledger was sweeping (2026-09-02). We now ask for EVERY cluster
+# (max_zones=None) and cap by distance ourselves, so the practical ceiling
 # below price is 8 (4 demand + 4 broken supply). Stated in the payload as
 # `levels_capped` so a short list never reads as "that is all there is".
 MAX_LEVELS = 6
@@ -373,7 +376,8 @@ def overlay_for_symbol(sym: str, base: dict) -> dict:
     per_window: list[dict] = []
     last_price = None
     for w in SUPPORT_WINDOWS:
-        z = pz.compute(df, swing_window=w["swing_window"], lookback_bars=w["bars"])
+        z = pz.compute(df, swing_window=w["swing_window"], lookback_bars=w["bars"],
+                   max_zones=None)   # every cluster: this tab caps by NEAREST below
         if z is None:
             per_window.append({"key": w["key"], "bands": 0})
             continue
@@ -941,7 +945,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     bars_used = min(len(df), budget)
     short = bars_used < budget
 
-    zones = pz.compute(df, swing_window=swing, lookback_bars=budget)
+    zones = pz.compute(df, swing_window=swing, lookback_bars=budget, max_zones=None)
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
