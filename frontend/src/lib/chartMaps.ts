@@ -102,7 +102,9 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
 };
 
-export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: number };
+/** `s` marks an extended-hours bar ('pre' | 'ah') on the live frame so the
+ *  chart can shade it; absent on regular-hours and daily bars. */
+export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: number; s?: string };
 // `neutral` is a range that is neither a floor nor a lid — the 0DTE gamma
 // walls, which bracket where dealer hedging is expected to contain the tape.
 // Colouring it green or red would imply a direction it does not have.
@@ -675,6 +677,55 @@ export function toneColor(tone: CmLineTone): string {
 /** Sparse x-axis ticks — first bar of each new month, as {i, label}. A dense
  *  daily axis is unreadable at tile size; month boundaries are what you
  *  actually navigate by. */
+/** Axis ticks for whichever bars these are: intraday bars (HH:MM stamps)
+ *  get session ticks — the date at each new day, 09:30 and 16:00 in between
+ *  — so a two-session live chart reads "Sep 1 · 09:30 · 16:00 · Sep 2 …"
+ *  instead of a single "Sep". Daily bars keep the month ticks. */
+export function timeTicks(bars: CmBar[], max = 8): { i: number; label: string }[] {
+  if (!bars.length || (bars[0].t || '').length <= 10) return monthTicks(bars, max);
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const ticks: { i: number; label: string; major: boolean }[] = [];
+  let prevDay = '';
+  let openTicked = true;
+  bars.forEach((b, i) => {
+    const day = b.t.slice(0, 10);
+    const hm = b.t.slice(11, 16);
+    if (day !== prevDay) {
+      prevDay = day;
+      openTicked = false;
+      const m = Number(day.slice(5, 7)); const d = Number(day.slice(8, 10));
+      ticks.push({ i, label: `${MON[m - 1] || ''} ${d}`, major: true });
+      return;
+    }
+    // Bars are RIGHT-labelled by the resampler, so no bar is ever stamped
+    // exactly 09:30 — the first RTH bar of the day carries 09:35/09:45/10:00.
+    // Tick the first bar at or after the bell instead (and, on the live
+    // frame, the first bar that is not extended-hours).
+    if (!openTicked && hm >= '09:30' && !b.s) {
+      openTicked = true;
+      ticks.push({ i, label: 'open', major: false });
+    } else if (hm === '16:00') {
+      ticks.push({ i, label: '16:00', major: false });
+    }
+  });
+  if (ticks.length <= max) return ticks.map(({ i, label }) => ({ i, label }));
+  const majors = ticks.filter((t) => t.major);
+  const minors = ticks.filter((t) => !t.major);
+  // Day boundaries are thinned too when there are more of them than fit —
+  // a 47-session hourly frame produced 48 labels smeared along the axis
+  // (review 2026-09-02). Minors are dropped first, then majors are stepped.
+  if (majors.length >= max) {
+    const step = Math.ceil(majors.length / max);
+    return majors.filter((_, k) => k % step === 0).map(({ i, label }) => ({ i, label }));
+  }
+  const room = max - majors.length;
+  const step = room > 0 ? Math.ceil(minors.length / room) : 0;
+  const kept = step > 0 ? minors.filter((_, k) => k % step === 0) : [];
+  return [...majors, ...kept].sort((a, b) => a.i - b.i)
+    .map(({ i, label }) => ({ i, label }));
+}
+
 export function monthTicks(bars: CmBar[], max = 6): { i: number; label: string }[] {
   const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

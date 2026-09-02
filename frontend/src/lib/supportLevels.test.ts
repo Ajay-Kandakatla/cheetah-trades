@@ -343,3 +343,46 @@ describe('CHART_VIEWS — the merged chart control', () => {
     expect(new Set(pairs).size).toBe(pairs.length);
   });
 });
+
+/* ── Live frame + overnight read (Ajay 2026-09-02) ────────────────────────── */
+import { overnightLine } from './supportLevels';
+
+describe('overnightLine — the one-line overnight read', () => {
+  it('is empty without a read and says so when nothing printed', () => {
+    expect(overnightLine(null)).toBe('');
+    expect(overnightLine({ bars: 0, note: 'Nothing has printed since the last regular close.' }))
+      .toMatch(/Nothing has printed/);
+  });
+
+  it('names the bounce with its time when a support touch held', () => {
+    const line = overnightLine({
+      bars: 40, low: 198.9, low_at: '2026-09-02 06:45:00-04:00', high: 204.1,
+      high_at: '2026-09-02 08:10:00-04:00', last: 203.2, change_pct: -1.66,
+      touches: [{ side: 'support', lo: 198.8, hi: 201.2, at: '2026-09-02 06:45:00-04:00',
+                  low: 198.9, held: true, broke: false }],
+    });
+    expect(line).toMatch(/bounced off support \$198\.80–\$201\.20 at 06:45 ✓/);
+    expect(line).toMatch(/-1\.66% vs the close/);
+  });
+
+  it('NEGATIVE: a break is called a break, never a bounce', () => {
+    const line = overnightLine({
+      bars: 10, low: 197.0, low_at: 'x 05:00', high: 201.0, high_at: 'x 04:10', last: 197.5,
+      touches: [{ side: 'support', lo: 198.8, hi: 201.2, at: 'x 04:30', held: false, broke: true }],
+    });
+    expect(line).toMatch(/broke support/);
+    expect(line).not.toMatch(/bounced/);
+  });
+
+  it('a clean overnight says no level touched', () => {
+    expect(overnightLine({ bars: 5, low: 205, low_at: 'x 04:05', high: 206, high_at: 'x 05:00', last: 205.5, touches: [] }))
+      .toMatch(/No level touched/);
+  });
+});
+
+describe('CHART_VIEWS — the live frame', () => {
+  it('is an Intraday view that round-trips from its tf', () => {
+    expect(viewFor('5m_live').group).toBe('Intraday');
+    expect(viewKeyFor('1m', '5m_live')).toBe('5m_live');
+  });
+});

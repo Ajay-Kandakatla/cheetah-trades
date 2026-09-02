@@ -1112,3 +1112,47 @@ describe('the S3 Topping tab', () => {
     expect(b).toMatch(/unlimited/);
   });
 });
+
+/* ── timeTicks — intraday session ticks (Ajay 2026-09-02, live frame) ────── */
+import { timeTicks } from './chartMaps';
+
+const mkBar = (t: string) => ({ t, o: 1, h: 1, l: 1, c: 1, v: 0 });
+
+describe('timeTicks', () => {
+  it('falls back to month ticks on daily bars', () => {
+    const ticks = timeTicks([mkBar('2026-08-28'), mkBar('2026-09-01'), mkBar('2026-09-02')]);
+    expect(ticks.map((t) => t.label)).toEqual(["Aug '26", 'Sep']);
+  });
+
+  it('ticks the open on the first RTH bar, since stamps are right-labelled', () => {
+    // REGRESSION (review 2026-09-02): an exact '09:30' match never fired —
+    // the resampler labels [09:30,09:45) as 09:45.
+    const bars = [
+      { ...mkBar('2026-09-01 16:00') },
+      { ...mkBar('2026-09-02 08:00'), s: 'pre' },
+      { ...mkBar('2026-09-02 09:30'), s: 'pre' },   // the [09:25,09:30) bucket
+      { ...mkBar('2026-09-02 09:35') },             // first real RTH bar
+      { ...mkBar('2026-09-02 16:00') },
+    ];
+    expect(timeTicks(bars).map((t) => t.label)).toEqual(['Sep 1', 'Sep 2', 'open', '16:00']);
+  });
+
+  it('REGRESSION: thins day ticks too — a 47-session hourly frame is not 48 labels', () => {
+    const bars: ReturnType<typeof mkBar>[] = [];
+    for (let d = 1; d <= 20; d++) {
+      const day = `2026-09-${String(d).padStart(2, '0')}`;
+      bars.push(mkBar(`${day} 10:00`), mkBar(`${day} 12:00`), mkBar(`${day} 16:00`));
+    }
+    expect(timeTicks(bars, 8).length).toBeLessThanOrEqual(8);
+  });
+
+  it('keeps every day boundary while they still fit', () => {
+    const bars: ReturnType<typeof mkBar>[] = [];
+    for (let d = 1; d <= 6; d++) {
+      bars.push(mkBar(`2026-09-0${d} 08:00`), mkBar(`2026-09-0${d} 09:30`), mkBar(`2026-09-0${d} 16:00`));
+    }
+    const ticks = timeTicks(bars, 8);
+    expect(ticks.length).toBeLessThanOrEqual(8);
+    expect(ticks.filter((t) => /^Sep/.test(t.label)).length).toBe(6);
+  });
+});

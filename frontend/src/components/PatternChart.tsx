@@ -15,7 +15,7 @@ import { memo, useCallback, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, dropCollidingTicks,
-  gutterWidth, hoverLines, lineLabels, markerIndex, monthTicks, priceAt,
+  gutterWidth, hoverLines, lineLabels, markerIndex, priceAt, timeTicks,
   priceTicks, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmTile,
 } from '../lib/chartMaps';
@@ -89,7 +89,15 @@ export const PatternChart = memo(function PatternChart(
   // Every tick draws its LINE; only the non-colliding ones draw a NUMBER.
   const axisText = dropCollidingTicks(axis, labels);
   const bw = barWidth(bars.length, W, padR);
-  const ticks = monthTicks(bars);
+  const ticks = timeTicks(bars);
+  // Extended-hours runs (live frame): consecutive bars flagged pre/ah become
+  // one shaded span each, so the overnight stretch reads at a glance.
+  const extSpans: { from: number; to: number }[] = [];
+  bars.forEach((b, i) => {
+    if (!b.s) return;
+    const last = extSpans[extSpans.length - 1];
+    if (last && last.to === i - 1) last.to = i; else extSpans.push({ from: i, to: i });
+  });
   const theme = themeLabel(tile.theme);
   const last = bars[bars.length - 1];
 
@@ -249,6 +257,17 @@ export const PatternChart = memo(function PatternChart(
               );
             })}
 
+          {/* extended-hours shading (live frame only) */}
+          {extSpans.map((sp) => {
+            const x0 = xFor(sp.from, bars.length, W, padR) - bw / 2;
+            const x1 = xFor(sp.to, bars.length, W, padR) + bw / 2;
+            return (
+              <rect key={`ext-${sp.from}`} className="pc-ext"
+                    x={x0} y={PAD_Y} width={Math.max(x1 - x0, 1)} height={H - 2 * PAD_Y}
+                    fill="var(--ink, #e7e7e7)" opacity={0.06} />
+            );
+          })}
+
           {/* candles */}
           {bars.map((b, i) => {
             const x = xFor(i, bars.length, W, padR);
@@ -257,7 +276,7 @@ export const PatternChart = memo(function PatternChart(
             const yo = yFor(b.o, domain, H, PAD_Y);
             const yc = yFor(b.c, domain, H, PAD_Y);
             return (
-              <g key={b.t} opacity={hIdx >= 0 && hIdx !== i ? 0.82 : 1}>
+              <g key={b.t} opacity={(hIdx >= 0 && hIdx !== i ? 0.82 : 1) * (b.s ? 0.7 : 1)}>
                 <line x1={x} y1={yFor(b.h, domain, H, PAD_Y)}
                       x2={x} y2={yFor(b.l, domain, H, PAD_Y)}
                       stroke={col} strokeWidth={0.9} />

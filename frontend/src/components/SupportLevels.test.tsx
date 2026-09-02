@@ -509,3 +509,45 @@ describe('intraday selection round-trip', () => {
     expect(onView).toHaveBeenCalledWith('1m', '15m_open');
   });
 });
+
+/* ── Live frame: polling + overnight line (Ajay 2026-09-02) ───────────────── */
+describe('live frame', () => {
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+  const LIVE: SupportPayload = {
+    ...PAYLOAD,
+    timeframe: '5m_live',
+    live: { state: 'premarket', refresh_sec: 30, as_of: '2026-09-02 08:00:00 ET' },
+    overnight: {
+      bars: 40, low: 198.9, low_at: '2026-09-02 06:45:00-04:00', high: 204.1,
+      high_at: '2026-09-02 08:10:00-04:00', last: 203.2, change_pct: -1.66,
+      touches: [{ side: 'support', lo: 198.8, hi: 201.2, at: '2026-09-02 06:45:00-04:00',
+                  low: 198.9, held: true, broke: false }],
+    },
+  } as any;
+
+  it('re-reads on the server cadence while the tape is open, and shows the overnight bounce', async () => {
+    vi.useFakeTimers();
+    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => LIVE });
+    vi.stubGlobal('fetch', spy);
+    render(<SupportLevels symbol="DHI" window="1m" tf="5m_live" onSymbol={noop} onWindow={noop} />);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/● LIVE · premarket/)).toBeTruthy();
+    expect(screen.getByText(/bounced off support \$198\.80–\$201\.20 at 06:45/)).toBeTruthy();
+    await vi.advanceTimersByTimeAsync(30_000 + 10);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('NEGATIVE: a closed tape (refresh_sec 0) never polls', async () => {
+    vi.useFakeTimers();
+    const closed = { ...LIVE, live: { state: 'closed', refresh_sec: 0, as_of: 'x' } };
+    const spy = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => closed });
+    vi.stubGlobal('fetch', spy);
+    render(<SupportLevels symbol="DHI" window="1m" tf="5m_live" onSymbol={noop} onWindow={noop} />);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(screen.getByText(/○ CLOSED/)).toBeTruthy();
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});

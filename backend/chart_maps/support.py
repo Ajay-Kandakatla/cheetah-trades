@@ -217,11 +217,17 @@ def window_spec(key: str) -> dict:
     return SUPPORT_WINDOWS[1]                       # unreachable; keeps mypy calm
 
 
-def _last_bar_date(df) -> Optional[str]:
+def _last_bar_date(df, intraday: bool = False) -> Optional[str]:
     """ISO date of the frame's newest bar, or None. The other half of the
     stamp: a fetch five minutes ago over week-old bars is still stale."""
     try:
-        return df.index[-1].date().isoformat()
+        # INTRADAY only: ET, not UTC — the right-labelled 19:55-20:00 ET
+        # after-hours bar is stamped 00:00 UTC the NEXT day, so the live
+        # frame read "bars through <tomorrow>" every evening (review
+        # 2026-09-02). Daily bars are DATES at midnight; converting those
+        # would move every one of them back a day.
+        ts = _et(df.index[-1]) if intraday else df.index[-1]
+        return ts.date().isoformat()
     except Exception:                                          # pragma: no cover
         return None
 
@@ -568,16 +574,133 @@ def _frame_bars(df) -> list:
     try:
         for ts, row in df.iterrows():
             bars.append({
-                "t": ts.strftime("%Y-%m-%d %H:%M"),
+                # ET on the axis. The minute loader indexes in UTC, and a
+                # 13:30 stamp over the opening bar read as a lunch print
+                # (found 2026-09-02 building the live frame).
+                "t": _et(ts).strftime("%Y-%m-%d %H:%M"),
                 "o": round(float(row["open"]), 4),
                 "h": round(float(row["high"]), 4),
                 "l": round(float(row["low"]), 4),
                 "c": round(float(row["close"]), 4),
                 "v": float(row.get("volume") or 0.0),
+                # 'pre' / 'ah' on extended-hours bars so the chart can shade
+                # them; absent on RTH bars (and on every non-live frame).
+                **({"s": _SESSION_FLAG[row["session"]]}
+                   if "session" in df.columns and row.get("session") in _SESSION_FLAG
+                   else {}),
             })
     except Exception as exc:                                # pragma: no cover
         log.warning("support: intraday bars failed: %s", exc)
     return bars
+
+
+_SESSION_FLAG = {"premarket": "pre", "afterhours": "ah"}
+
+
+def _et(ts):
+    """UTC (naive or aware) timestamp → America/New_York."""
+    import pandas as pd
+    t = pd.Timestamp(ts)
+    if t.tzinfo is None:
+        t = t.tz_localize("UTC")
+    return t.tz_convert("America/New_York")
+
+
+def _et_str(ts) -> str:
+    return _et(ts).strftime("%Y-%m-%d %H:%M ET")
+
+
+def overnight_read(df, supports: list, overhead: list) -> Optional[dict]:
+    """Where price went since the last regular close, against the levels.
+
+    Ajay 2026-09-02: "I wanna see where things bounced over night." Pure
+    over the extended-hours bars printed AFTER the most recent RTH bar:
+    the overnight low/high, and every band the overnight tape ENTERED — a
+    bar whose low reached into a support band (or high into an overhead
+    band) — with whether the last overnight close is back outside it
+    ("held") or inside/through it. Thin-tape caveat is stated, never
+    hidden: an overnight touch is a print, not a defended level.
+
+    None when the frame carries no session tags or nothing has printed
+    since the close.
+    """
+    try:
+        if df is None or "session" not in df.columns or not len(df):
+            return None
+        sess = list(df["session"])
+        n = len(sess)
+        # Anchor on the close BEFORE the most recent extended-hours run, not
+        # on the last RTH bar in the frame — otherwise, one minute after
+        # today's open the read discards the whole overnight and claims
+        # "nothing printed" for the rest of the session (review 2026-09-02).
+        i = n - 1
+        while i >= 0 and sess[i] == "rth":      # skip today's RTH run
+            i -= 1
+        end = i + 1                              # first bar of today's RTH run
+        while i >= 0 and sess[i] in ("afterhours", "premarket"):
+            i -= 1                               # walk back over the ext run
+        if i < 0:
+            return None                          # no prior close in the frame
+        after = df.iloc[i + 1:end]
+        after = after[after["session"].isin(("afterhours", "premarket"))]
+        if not len(after):
+            return {"bars": 0, "since": _et_str(df.index[i]),
+                    "note": "Nothing has printed since the last regular close."}
+        lo_i = after["low"].idxmin()
+        hi_i = after["high"].idxmax()
+        last_close = float(after["close"].iloc[-1])
+        rth_close = float(df["close"].iloc[i])
+        touches = []
+        for band, side in ([(b, "support") for b in supports]
+                           + [(b, "overhead") for b in overhead]):
+            b_lo, b_hi = band.get("lo"), band.get("hi")
+            if not b_lo or not b_hi or b_hi < b_lo:
+                continue
+            # OVERLAP, not "an extreme landed inside": a bar that gapped
+            # clean through the band is the event this feature exists for,
+            # and an extreme-only test reported "No level touched" while
+            # price sat 7% under support (review 2026-09-02).
+            hit = after[(after["low"] <= b_hi) & (after["high"] >= b_lo)]
+            # CROSSED: price was on one side of the band at the close and the
+            # overnight tape traded clean past it without ever printing
+            # inside — a gap through, which is the event, not a non-event.
+            if side == "support":
+                crossed = rth_close > b_hi and float(after["low"].min()) < b_lo
+            else:
+                crossed = rth_close < b_lo and float(after["high"].max()) > b_hi
+            if not len(hit) and not crossed:
+                continue
+            if len(hit):
+                first = hit.index[0]
+            elif side == "support":
+                first = after["low"].idxmin()
+            else:
+                first = after["high"].idxmax()
+            rec = {"side": side, "lo": b_lo, "hi": b_hi, "at": _et_str(first),
+                   "gapped": not len(hit)}
+            if side == "support":
+                rec.update({"low": round(float(after["low"].min()), 4),
+                            "held": last_close > b_hi, "broke": last_close < b_lo})
+            else:
+                rec.update({"high": round(float(after["high"].max()), 4),
+                            "held": last_close < b_lo, "broke": last_close > b_hi})
+            touches.append(rec)
+        return {
+            "bars": int(len(after)),
+            "since": _et_str(df.index[i]),
+            "rth_close": round(rth_close, 4),
+            "low": round(float(after["low"].min()), 4), "low_at": _et_str(lo_i),
+            "high": round(float(after["high"].max()), 4), "high_at": _et_str(hi_i),
+            "last": round(last_close, 4),
+            "change_pct": round((last_close / rth_close - 1) * 100, 2) if rth_close else None,
+            "touches": touches,
+            "note": ("Extended-hours prints are thin — a touch here is a print, "
+                     "not a defended level. Structure is read from regular "
+                     "hours only."),
+        }
+    except Exception as exc:                                # pragma: no cover
+        log.warning("support: overnight read failed: %s", exc)
+        return None
 
 
 def trend_read(df, mood_read: Optional[dict]) -> dict:
@@ -748,7 +871,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # next move (change the timeframe) is available after a miss.
         "timeframe": tf_mod.parse_tf(tf),
         "timeframe_label": tf_mod.tf_spec(tf)["label"],
-        "timeframes": tf_mod.tf_options(),
+        "timeframes": tf_mod.tf_options(include_live=True),
         "disclaimer": DISCLAIMER,
     }
     if not sym:
@@ -758,9 +881,16 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
 
     tf_key = tf_mod.parse_tf(tf)
     intraday = tf_key != tf_mod.DAILY
+    live_raw = None
     try:
         if intraday:
-            df, tf_meta = tf_mod.frame_for(sym, tf_key)
+            # allow_ext: this tab draws the pre/post-market bars but reads
+            # its LEVELS from the daily window below — the only place the
+            # extended frame is legitimate.
+            live_raw = (tf_mod.intraday_raw(sym, tf_key)
+                        if tf_mod.tf_spec(tf_key).get("ext_hours") else None)
+            df, tf_meta = tf_mod.frame_for(sym, tf_key, allow_ext=True,
+                                           raw=live_raw)
             as_of = tf_meta.get("as_of")
             base = {**base, "timeframe_meta": tf_meta}
             if df is None:
@@ -775,15 +905,39 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
 
     if df is None or not len(df):
         return {**base, "error": f"No price data for {sym}."}
-    base = {**base, "as_of": as_of, "data_through": _last_bar_date(df)}
+    base = {**base, "as_of": as_of,
+            "data_through": _last_bar_date(df, intraday=intraday)}
+
+    # Live / extended-hours frame (Ajay 2026-09-02: "I wanna see where things
+    # bounced over night"). The CHART draws every 5-minute bar incl. pre/post
+    # market; the LEVELS come from the DAILY frame at the selected window —
+    # the same numbers the daily views print — so an overnight touch is
+    # measured against the zones he already knows, not against 2.5 sessions
+    # of intraday swings (which, after a gap, may hold no level at all).
+    # `chart_df` is what is drawn; `df` from here on is what is analysed.
+    chart_df = df
+    ext_frame = bool(intraday and tf_mod.tf_spec(tf_key).get("ext_hours"))
+    if ext_frame:
+        try:
+            daily_df, _have_d, levels_as_of = _frame_for(sym, spec["bars"])
+        except Exception as exc:                              # pragma: no cover
+            log.debug("support: daily frame for live %s failed: %s", sym, exc)
+            daily_df, levels_as_of = None, None
+        if daily_df is None or not len(daily_df):
+            return {**base, "error": f"No daily price data for {sym} to read levels from."}
+        df = daily_df
+        base = {**base, "levels_as_of": levels_as_of}
 
     # A frame SHORTER than the window asked for still computes — `.iloc[-126:]`
     # on 30 bars is 30 bars — and would then be labelled "6 months" on screen.
     # A recent IPO is the ordinary case, and refusing it is worse than answering
     # it, so the truncation is reported rather than hidden or fatal.
     tf_spec_ = tf_mod.tf_spec(tf_key)
-    budget = tf_spec_["bars"] if intraday else spec["bars"]
-    swing = tf_spec_["swing_window"] if intraday else spec["swing_window"]
+    # The live frame analyses DAILY bars at the window, so it budgets like
+    # the daily views; the other intraday frames budget from their own spec.
+    own_bars = intraday and not ext_frame
+    budget = tf_spec_["bars"] if own_bars else spec["bars"]
+    swing = tf_spec_["swing_window"] if own_bars else spec["swing_window"]
     bars_used = min(len(df), budget)
     short = bars_used < budget
 
@@ -791,7 +945,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
-        scope = tf_spec_["label"] if intraday else spec["label"]
+        scope = tf_spec_["label"] if own_bars else spec["label"]
         if short:
             return {**base, "bars_used": bars_used,
                     "error": f"{sym} has only {bars_used} bars of history — "
@@ -808,7 +962,18 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # rather than raising: a level surface must keep answering.
     atr_value = pat_mod.atr(df)
     gaps = pat_mod.fair_value_gaps(df, last_price)
-    orb = pat_mod.opening_range(sym, tf_spec_["orb_minutes"])
+    # The live frame already holds the minute bars; fetching them again for
+    # the opening range doubled provider load on a 30s poll (review
+    # 2026-09-02 — the same double-fetch intraday_raw's docstring warns of).
+    if ext_frame and live_raw is not None:
+        try:
+            rth_raw = live_raw[live_raw["session"] == "rth"] if "session" in live_raw.columns else live_raw
+            orb = pat_mod.opening_range_from_bars(rth_raw, tf_spec_["orb_minutes"])
+        except Exception as exc:                            # pragma: no cover
+            log.warning("support: orb from bars failed: %s", exc)
+            orb = None
+    else:
+        orb = pat_mod.opening_range(sym, tf_spec_["orb_minutes"])
     # POSITION is the side, not origin — the same rule levels_from_zones
     # uses: a level below price is bought, one above is sold into,
     # whatever the band used to be.
@@ -838,7 +1003,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         mood_read = mood_mod.mood(df.tail(budget))
         sig = mood_mod.signal(df.tail(budget), zone_bands + gaps, mood_read,
                               last_price=last_price, atr_value=atr_value)
-        if sig.get("action") in ("BUY", "SELL"):
+        # The live frame's signal IS the daily signal — recording it again
+        # under a second key would double-count the ledger.
+        if sig.get("action") in ("BUY", "SELL") and not ext_frame:
             _record_signal(sym, tf_key, sig, last_price)
     except Exception as exc:                                # pragma: no cover
         log.warning("support: mood/signal for %s failed: %s", sym, exc)
@@ -865,7 +1032,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         from patterns import timeframe as pat_tf
         # Same window the bands were read from — a pattern found in bars the
         # zoom excludes would contradict the levels drawn beside it.
-        bullish = pat_tf.scan(sym, tf_key, df=df.tail(budget))
+        bullish = pat_tf.scan(sym, "daily" if ext_frame else tf_key,
+                              df=df.tail(budget))
     except Exception as exc:                                # pragma: no cover
         log.warning("support: pattern scan for %s failed: %s", sym, exc)
         bullish = None
@@ -879,7 +1047,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # ALWAYS loads DAILY candles, so an intraday timeframe computed its
         # levels on 15m/60m bars and then painted them over a year of daily
         # ones — the picture and the numbers were two different charts.
-        "bars": (_frame_bars(df.tail(bars_used)) if intraday
+        "bars": (_frame_bars(chart_df.tail(tf_spec_["bars"]) if ext_frame
+                             else df.tail(bars_used)) if intraday
                  else board_mod.bars_for(sym, days=bars_used)),
         "bands": _bands(levels),
         "lines": _lines(levels, last_price),
@@ -894,7 +1063,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # On an intraday timeframe the Zoom dropdown's DAILY bar-counts do not
     # apply, and leaving "1 month" sitting over a 15-minute chart is what
     # made the tab look wrong. State the real span instead.
-    chart_span = (f"{len(tile['bars'])} x {tf_spec_['label']} bars"
+    chart_span = (f"{len(tile['bars'])} x 5-min bars incl. pre/post market · "
+                  f"levels from {spec['label']} of daily bars"
+                  if ext_frame else
+                  f"{len(tile['bars'])} x {tf_spec_['label']} bars"
                   if intraday else spec["label"])
 
     return {
@@ -920,6 +1092,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "overlay": overlay,
         "chart_span": chart_span,
         "zoom_applies": not intraday,
+        # Live chart (Ajay 2026-09-02): poll cadence + the overnight read.
+        # Both None off the live frame so nothing else on the tab changes.
+        "live": tf_mod.live_state() if ext_frame else None,
+        "overnight": (overnight_read(chart_df, levels.get("supports") or [],
+                                     levels.get("overhead") or [])
+                      if ext_frame else None),
         "note": ("Levels are read from this window only. A wider zoom finds the "
                  "structural floor; a tighter one finds the level this week's "
                  "trade is standing on."),

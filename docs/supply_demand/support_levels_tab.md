@@ -170,3 +170,12 @@ switch). A switch over an existing chart also now says "updating the
 view…" instead of looking dead while a cold window computes.
 Regression tests are mutation-verified: removing either guard fails
 SupportLevels.test.tsx / SessionBoard.test.tsx.
+
+## Live view (2026-09-02)
+
+The Chart control's Intraday group gained **"5 min · live · pre/post market"**:
+the overnight tape (shaded) drawn against the 6-month daily levels, a `● LIVE`
+chip with the session state and as-of time, quiet 30-second re-reads while the
+extended session is open, and a one-line 🌙 overnight read ("broke support
+$198.80–$201.20 at 16:30; bounced off support $184.75–$186.98 at 17:35 ✓").
+Method and contracts: `timeframes_orb_fvg.md` → *Live frame*.

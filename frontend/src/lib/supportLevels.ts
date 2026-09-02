@@ -76,7 +76,12 @@ export type SupportPayload = {
   timeframe?: string;
   timeframe_label?: string;
   timeframes?: Timeframe[];
-  timeframe_meta?: { bars?: number; source?: string; reason?: string | null } | null;
+  timeframe_meta?: { bars?: number; source?: string; reason?: string | null;
+    ext_hours?: boolean } | null;
+  /** Live frame only: poll cadence + session state (Ajay 2026-09-02). */
+  live?: { state: string; refresh_sec: number; as_of: string } | null;
+  /** Live frame only: the overnight tape read against the levels. */
+  overnight?: OvernightRead | null;
   atr?: number | null;
   fair_value_gaps?: TradeLevel[];
   opening_range?: { lo: number; hi: number; minutes: number; session: string } | null;
@@ -179,6 +184,8 @@ export const FALLBACK_TIMEFRAMES: Timeframe[] = [
   { key: '15m', label: '15 min', span: '~10 sessions of 15-minute bars' },
   { key: '15m_open', label: '15 min · from the open',
     span: "today's session only, from 09:30 ET" },
+  { key: '5m_live', label: '5 min · live · pre/post market',
+    span: 'last ~2.5 sessions of 5-minute bars incl. pre/post market' },
 ];
 
 export const DEFAULT_TF = 'daily';
@@ -217,6 +224,15 @@ export const CHART_VIEWS: ChartView[] = [
     window: '1m', tf: '15m' },
   { key: '15m_open', label: '15 min · today from the open', group: 'Intraday',
     window: '1m', tf: '15m_open', hint: 'this session only, from 09:30 ET' },
+  // Ajay 2026-09-02: "add live chart please ... I wanna see where things
+  // bounced over night." The one view that draws pre/post-market bars and
+  // refreshes itself while any extended session is open.
+  // Levels come from the 6-month DAILY window (the zones he already knows);
+  // only the tape is intraday — so an overnight touch is measured against a
+  // real floor, not against 2.5 sessions of 5-minute swings.
+  { key: '5m_live', label: '5 min · live · pre/post market', group: 'Intraday',
+    window: '6m', tf: '5m_live',
+    hint: 'last ~2.5 sessions incl. overnight against the 6-month daily levels; refreshes every 30s while the tape is open' },
 ];
 
 export const DEFAULT_VIEW = 'daily:3m';
@@ -244,6 +260,39 @@ export function parseTf(
   const v = (raw || '').trim().toLowerCase();
   if (!v) return DEFAULT_TF;
   return offered.some((t) => t.key === v) ? v : DEFAULT_TF;
+}
+
+export type OvernightTouch = {
+  side: 'support' | 'overhead'; lo: number; hi: number; at: string;
+  low?: number; high?: number; held: boolean; broke: boolean;
+};
+export type OvernightRead = {
+  bars: number; since?: string; rth_close?: number;
+  low?: number; low_at?: string; high?: number; high_at?: string;
+  last?: number; change_pct?: number | null;
+  touches?: OvernightTouch[]; note?: string;
+};
+
+/** One line for the overnight read, in the words a trader would use. */
+export function overnightLine(o: OvernightRead | null | undefined): string {
+  if (!o) return '';
+  if (!o.bars) return o.note || 'Nothing has printed since the last regular close.';
+  const chg = o.change_pct == null ? '' : ` (${o.change_pct >= 0 ? '+' : ''}${o.change_pct.toFixed(2)}% vs the close)`;
+  const head = `Overnight: low ${money(o.low)} at ${clock(o.low_at)}, high ${money(o.high)} at ${clock(o.high_at)}, last ${money(o.last)}${chg}.`;
+  const t = (o.touches || []).map((x) => {
+    const band = `${money(x.lo)}–${money(x.hi)}`;
+    if (x.side === 'support') {
+      return x.broke ? `broke support ${band}` : x.held ? `bounced off support ${band} at ${clock(x.at)} ✓` : `sitting in support ${band}`;
+    }
+    return x.broke ? `cleared overhead ${band}` : x.held ? `rejected at overhead ${band} at ${clock(x.at)}` : `sitting in overhead ${band}`;
+  });
+  return t.length ? `${head} ${t.join('; ')}.` : `${head} No level touched.`;
+}
+
+function clock(ts?: string): string {
+  if (!ts) return '?';
+  const m = ts.match(/(\d{2}):(\d{2})/);
+  return m ? `${m[1]}:${m[2]}` : ts;
 }
 
 /** One band with the trade its geometry implies. */

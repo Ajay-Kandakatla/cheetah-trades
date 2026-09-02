@@ -217,3 +217,26 @@ four primitives but **zero** complete sequences. That asymmetry is the filter
 working.
 
 *Decision-support only. Not investment advice.*
+
+## Live frame — `5m_live` (2026-09-02)
+
+Ajay: *"Can you add live chart please, for supply demand? I wanna see where
+things bounced over night."*
+
+| | |
+|---|---|
+| Bars drawn | last ~2.5 sessions of **5-minute** bars **including pre-market (04:00) and after-hours (to 20:00 ET)**; extended-hours bars carry `s: 'pre' \| 'ah'` and are shaded on the chart |
+| Levels | the **6-month DAILY window** (`window=6m`) — the same zones the daily views print. Not the intraday frame: after a gap, 2.5 sessions of 5-minute swings can hold no level at all (CRDO 2026-09-02, −8% overnight: no support on the intraday frame; on the daily frame it broke 198.8–201.2 and bounced off 184.75–186.98) |
+| Structure/mood/signal/SMC/patterns | computed on the daily frame; the signal is **not** re-recorded under `5m_live` (it is the daily signal) |
+| Refresh | `live.refresh_sec` = 30 while any extended session is open, 0 when closed (`timeframes.live_state`, ET clock, weekdays); the FE polls quietly on that cadence |
+| Overnight read | `overnight` = bars since the last RTH bar: low/high/last with ET times, `change_pct` vs the RTH close, and every daily band the tape ENTERED with `held` / `broke` — stated as a print, not a defended level |
+
+**Session tag through the resample.** `resample_ohlcv` keeps the minute
+loader's `session` column (`first` per bucket). Safe on the 5- and 15-minute
+grids because every boundary (04:00, 09:30, 16:00, 20:00 ET) sits on them;
+the 60-minute frame is RTH-only so it never sees a straddling bucket.
+
+**ET on the axis.** Intraday bar stamps (`_frame_bars`) and every overnight
+time are now America/New_York. They were UTC before — a 13:30 stamp over the
+opening bar read as a lunch print. This applies to the 15m / 60m / 15m-open
+views too.

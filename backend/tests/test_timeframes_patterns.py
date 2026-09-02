@@ -50,6 +50,8 @@ def test_parse_tf_accepts_what_a_human_types_and_falls_back_to_daily():
 def test_tf_options_carry_a_label_and_a_real_span():
     opts = TF.tf_options()
     assert [o["key"] for o in opts] == [TF.DAILY, TF.H1, TF.M15, TF.M15_OPEN]
+    # the live chart frame is opt-in only (it must never feed the zone engine)
+    assert [o["key"] for o in TF.tf_options(include_live=True)][-1] == TF.M5_LIVE
     for o in opts:
         assert o["label"] and o["span"] and o["bars"] > 0
 
@@ -597,7 +599,7 @@ def test_intraday_bars_carry_a_time_or_a_session_collapses_to_one_candle():
                        "volume": [10] * 4}, index=idx)
     bars = S._frame_bars(df)
     assert len(bars) == 4
-    assert bars[0]["t"] == "2026-08-28 13:45"
+    assert bars[0]["t"] == "2026-08-28 09:45"   # ET on the axis (13:45 UTC) since 2026-09-02
     assert len({b["t"] for b in bars}) == 4, \
         "date-only stamps would collapse a whole session into one candle"
 

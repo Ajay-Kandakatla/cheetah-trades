@@ -309,3 +309,20 @@ describe('signal candle tags', () => {
       .not.toContain('BUY');
   });
 });
+
+/* ── Live frame: extended-hours shading (Ajay 2026-09-02) ─────────────────── */
+describe('extended-hours shading', () => {
+  it('shades each run of pre/ah bars once and leaves RTH bars unshaded', () => {
+    const b = bars(12).map((x, i) => ({
+      ...x, t: `2026-09-02 ${String(4 + i).padStart(2, '0')}:00`,
+      ...(i < 3 ? { s: 'pre' } : i >= 9 ? { s: 'ah' } : {}),
+    }));
+    const { container } = draw({ ...TILE, bars: b });
+    expect(container.querySelectorAll('.pc-ext').length).toBe(2);   // one pre run, one ah run
+  });
+
+  it('NEGATIVE: daily bars draw no shading', () => {
+    const { container } = draw(TILE);
+    expect(container.querySelectorAll('.pc-ext').length).toBe(0);
+  });
+});

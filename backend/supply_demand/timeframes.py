@@ -37,6 +37,7 @@ DAILY = "daily"
 H1 = "60m"
 M15 = "15m"
 M15_OPEN = "15m_open"
+M5_LIVE = "5m_live"
 
 # `bars` is what the zone engine reads; `days` is the calendar fetch span.
 # swing_window shrinks intraday on purpose — a 3-bar swing on a 15m chart
@@ -63,6 +64,17 @@ TIMEFRAMES: tuple[dict, ...] = (
     {"key": M15_OPEN, "label": "15 min · from the open", "bars": 26,
      "days": 1, "swing_window": 2,
      "span": "today's session only, from 09:30 ET", "orb_minutes": 15},
+    # Ajay 2026-09-02: "add live chart please, for supply demand? I wanna
+    # see where things bounced over night." The ONE frame that draws
+    # pre-market and after-hours bars (04:00-20:00 ET, the last ~2.5
+    # sessions of 5-minute candles), refreshed every 30s while any
+    # extended session is open. Levels come from the DAILY window (see
+    # chart_maps.support.for_symbol) — the session policy below is about
+    # what a LEVEL is made of, not about what the chart is allowed to show.
+    {"key": M5_LIVE, "label": "5 min · live · pre/post market", "bars": 480,
+     "days": 3, "swing_window": 2, "rule": "5min", "ext_hours": True,
+     "span": "last ~2.5 sessions of 5-minute bars incl. pre/post market",
+     "orb_minutes": 5},
 )
 
 DEFAULT_TF = DAILY
@@ -73,7 +85,9 @@ _ALIAS = {"1d": DAILY, "d": DAILY, "day": DAILY, "1day": DAILY,
           "1h": H1, "h": H1, "hour": H1, "hourly": H1, "60min": H1,
           "15": M15, "15min": M15, "m15": M15, "15m": M15,
           "open": M15_OPEN, "session": M15_OPEN, "15m_open": M15_OPEN,
-          "15open": M15_OPEN}
+          "15open": M15_OPEN,
+          "5m": M5_LIVE, "5min": M5_LIVE, "live": M5_LIVE, "5m_live": M5_LIVE,
+          "5m_ext": M5_LIVE}
 
 
 def parse_tf(raw) -> str:
@@ -92,10 +106,18 @@ def tf_spec(key: str) -> dict:
     return _BY_KEY[parse_tf(key)]
 
 
-def tf_options() -> list:
-    """Dropdown payload for the FE."""
+def tf_options(include_live: bool = False) -> list:
+    """Dropdown payload for the FE.
+
+    `5m_live` is HIDDEN by default: it is a CHART frame whose bars include
+    pre/post market, and the zone engine must never read swings off a
+    07:12 print on 400 shares (module docstring). Only the Support tab —
+    which reads its levels from the DAILY window and uses these bars for
+    drawing alone — asks for it.
+    """
     return [{"key": t["key"], "label": t["label"], "span": t["span"],
-             "bars": t["bars"]} for t in TIMEFRAMES]
+             "bars": t["bars"]} for t in TIMEFRAMES
+            if include_live or not t.get("ext_hours")]
 
 
 def resample_ohlcv(df, rule: str):
@@ -116,6 +138,12 @@ def resample_ohlcv(df, rule: str):
     agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
     if "volume" in df.columns:
         agg["volume"] = "sum"
+    # The per-minute session tag (premarket / rth / afterhours) survives the
+    # resample so the live chart can shade extended hours. Safe because every
+    # session boundary (04:00, 09:30, 16:00, 20:00 ET) sits on a 5- and
+    # 15-minute grid, so no bucket straddles two sessions.
+    if "session" in df.columns:
+        agg["session"] = "first"
     out = df.resample(rule, label="right", closed="left").agg(agg)
     return out.dropna(subset=["open", "high", "low", "close"])
 
@@ -139,16 +167,18 @@ def intraday_raw(symbol: str, tf: str = M15):
         return None
     end = date.today()
     start = end - timedelta(days=int(spec["days"]) + 4)      # weekend padding
+    ext = bool(spec.get("ext_hours"))
     try:
-        return load_intraday_range(symbol, start, end, include_premarket=False,
-                                   include_afterhours=False)
+        return load_intraday_range(symbol, start, end, include_premarket=ext,
+                                   include_afterhours=ext)
     except Exception as exc:
         log.warning("timeframes: intraday fetch for %s failed: %s", symbol, exc)
         return None
 
 
 def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
-              bars: Optional[int] = None, raw=None) -> tuple:
+              bars: Optional[int] = None, raw=None,
+              allow_ext: bool = False) -> tuple:
     """(df, meta) for one symbol at one timeframe.
 
     df is a DataFrame indexed by timestamp with open/high/low/close[/volume],
@@ -186,6 +216,14 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
     # Intraday: 1-minute bars over the calendar span, then resample. `raw` lets
     # a caller hand in bars it already holds (see `intraday_raw`) so the fetch
     # is not paid for twice.
+    if spec.get("ext_hours") and not allow_ext:
+        # Guard rail: an extended-hours frame reaching price_zones would
+        # manufacture zones out of thin overnight prints. The one caller
+        # that legitimately wants these bars (chart_maps.support, for
+        # DRAWING only) passes allow_ext=True.
+        meta["reason"] = ("the live pre/post-market frame is a chart frame, "
+                          "not a structure frame")
+        return None, meta
     if raw is None:
         raw = intraday_raw(sym, key)
     if raw is None or raw.empty:
@@ -193,7 +231,7 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
                           "liquid US equities only")
         return None, meta
 
-    rule = "60min" if key == H1 else "15min"
+    rule = spec.get("rule") or ("60min" if key == H1 else "15min")
     df = resample_ohlcv(raw, rule)
     if df is None or df.empty:
         meta["reason"] = "resample produced no bars"
@@ -218,6 +256,63 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
             log.warning("timeframes: session slice failed: %s", exc)
     df = df.tail(want)
     meta.update({"bars": len(df), "available": True,
-                 "source": f"1-minute bars resampled to {spec['label']}, RTH only",
-                 "as_of": str(df.index[-1])})
+                 "source": (f"1-minute bars resampled to {spec['label']}, "
+                            + ("pre/post market drawn, structure from RTH"
+                               if spec.get("ext_hours") else "RTH only")),
+                 "as_of": str(df.index[-1]),
+                 "ext_hours": bool(spec.get("ext_hours"))})
     return df, meta
+
+
+# --- live session state ------------------------------------------------------
+
+LIVE_REFRESH_SEC = 30
+
+# NYSE half days — 13:00 ET close, extended session ends 17:00 ET.
+HALF_DAYS = {"2026-11-27", "2026-12-24", "2027-11-26", "2027-12-23"}
+
+
+def _is_holiday(et) -> bool:
+    """Full-closure days from the single holiday table the app already keeps
+    (market_hours.reminder). A weekday check alone had the live chart
+    polling Massive every 30s all Labor Day."""
+    try:
+        from market_hours.reminder import ALL_HOLIDAYS
+        return et.strftime("%Y-%m-%d") in ALL_HOLIDAYS
+    except Exception as exc:                                # pragma: no cover
+        log.warning("timeframes: holiday table unavailable: %s", exc)
+        return False
+
+
+def _is_half_day(et) -> bool:
+    return et.strftime("%Y-%m-%d") in HALF_DAYS
+
+
+def live_state(now=None) -> dict:
+    """{state, refresh_sec, as_of} for the live chart's poll loop.
+
+    state ∈ premarket | rth | afterhours | closed (ET clock, weekdays only —
+    the daytrading session constants are the single source of truth).
+    refresh_sec is 0 when nothing can print, so the FE never polls a dead
+    tape.
+    """
+    import pandas as pd
+    ts = pd.Timestamp(now) if now is not None else pd.Timestamp.utcnow()
+    if ts.tzinfo is None:
+        ts = ts.tz_localize("UTC")
+    et = ts.tz_convert("America/New_York")
+    state = "closed"
+    if et.weekday() < 5 and not _is_holiday(et):
+        try:
+            from daytrading.data import _classify_session
+            state = _classify_session(ts)
+        except Exception as exc:                            # pragma: no cover
+            log.warning("timeframes: session classify failed: %s", exc)
+        # Half days (day after Thanksgiving, Christmas Eve): NYSE closes
+        # 13:00 ET and the after-hours session ends 17:00. Polling a dead
+        # tape until 20:00 would burn ~840 provider calls a tab.
+        if state != "closed" and _is_half_day(et) and et.hour >= 17:
+            state = "closed"
+    return {"state": state,
+            "refresh_sec": LIVE_REFRESH_SEC if state != "closed" else 0,
+            "as_of": et.strftime("%Y-%m-%d %H:%M:%S ET")}

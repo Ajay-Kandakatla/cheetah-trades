@@ -28,7 +28,7 @@ import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartO
 import {
   bandLabel, distanceLabel,
   CHART_VIEWS, evidenceLabel, headline, money, sourceLabel, viewFor, viewKeyFor,
-  normalizeSymbol, priceAsOf, recencyLabel, recentCount,
+  normalizeSymbol, overnightLine, priceAsOf, recencyLabel, recentCount,
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
@@ -105,6 +105,8 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   };
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /** A live poll missed but the board on screen is still good. */
+  const [staleNote, setStaleNote] = useState<string | null>(null);
 
   /* Whoever asked LAST owns the screen. Without the seq guard, switching
    * 6 months -> 1 year while the 6m request was still in flight let the
@@ -114,11 +116,18 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
    * window computes for ~5s while a warm one answers in ~50ms, so the
    * out-of-order landing is the COMMON case, not a rarity. */
   const seq = useRef(0);
-  const load = useCallback(async (signal?: AbortSignal) => {
+  /* The last good payload, readable inside `load` without making `load`
+   * depend on `data` — that dependency would rebuild the poll interval on
+   * every tick (review 2026-09-02: interval churn). */
+  const dataRef = useRef<SupportPayload | null>(null);
+  dataRef.current = data;
+  /* `quiet` = a live re-read: no "updating the view…" flash every 30s, the
+   * chart just moves. Errors still surface. */
+  const load = useCallback(async (signal?: AbortSignal, quiet = false) => {
     const sym = normalizeSymbol(symbol);
     const my = ++seq.current;
     if (!sym) { setData(null); setErr(null); return; }
-    setLoading(true);
+    if (!quiet) setLoading(true);
     setErr(null);
     try {
       const r = await fetch(
@@ -127,9 +136,19 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const payload = await r.json();
       if (my !== seq.current) return;
+      // A 30s poll that comes back with an `error` payload (provider blip,
+      // breaker open) must NOT unmount a good board — and must not stop the
+      // loop, which is what happened when live/refresh_sec vanished with it
+      // (review 2026-09-02). Keep the last good read, flag it, retry next tick.
+      if (quiet && payload?.error && dataRef.current && !dataRef.current.error) {
+        setStaleNote(String(payload.error));
+        return;
+      }
+      setStaleNote(null);
       setData(payload);
     } catch (e: any) {
       if (my !== seq.current || e?.name === 'AbortError') return;
+      if (quiet && dataRef.current && !dataRef.current.error) { setStaleNote(String(e?.message ?? e)); return; }
       setErr(String(e?.message ?? e));
     } finally {
       if (my === seq.current) setLoading(false);
@@ -141,6 +160,16 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
     void load(ctl.signal);
     return () => ctl.abort();
   }, [load]);
+
+  /* Live frame (Ajay 2026-09-02): re-read while the tape is open. The
+   * cadence is the SERVER's (0 = closed, don't poll a dead tape); the seq
+   * guard makes a late poll harmless. */
+  const refreshSec = data?.live?.refresh_sec || 0;
+  useEffect(() => {
+    if (!refreshSec) return;
+    const id = setInterval(() => { void load(undefined, true); }, refreshSec * 1000);
+    return () => clearInterval(id);
+  }, [refreshSec, load]);
 
   // The server's own list once it lands, so retiring a window backend-side does
   // not need a frontend deploy.
@@ -222,6 +251,23 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
                 ? (data.timeframe_label || data.chart_span)
                 : data.window_label}
             </span>
+              {data.live ? (<>
+                <span className={`sl-live sl-live-${data.live.state}`}
+                      title={data.live.refresh_sec
+                        ? `Re-reads every ${data.live.refresh_sec}s while the ${data.live.state} session is open`
+                        : 'Extended session closed — nothing can print; showing the last tape'}>
+                  {data.live.refresh_sec ? '● LIVE' : '○ CLOSED'} · {data.live.state}
+                  {' · last bar '}
+                  {(data.tile?.bars?.length
+                    ? data.tile.bars[data.tile.bars.length - 1].t.slice(11)
+                    : '—')}
+                </span>
+                {staleNote ? (
+                  <span className="sl-stale" title={staleNote}>
+                    ⚠ last refresh failed — showing the previous read
+                  </span>
+                ) : null}
+              </>) : null}
               <span className="sl-recent">
                 {recentCount(supports)} of {supports.length} touched in the last{' '}
                 {data.recent_bars} sessions
@@ -276,6 +322,13 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               ? ' · nearest two of each kind only — more exist than are drawn'
               : null}
           </p>
+
+          {data.overnight ? (
+            <p className="sl-overnight" title={data.overnight.note || ''}>
+              🌙 {overnightLine(data.overnight)}
+              <span className="sl-basis"> · extended-hours prints are thin — a touch is a print, not a defended level</span>
+            </p>
+          ) : null}
 
           <div className="sl-tables">
             <LevelTable title="Support below" levels={supports} side="support"
