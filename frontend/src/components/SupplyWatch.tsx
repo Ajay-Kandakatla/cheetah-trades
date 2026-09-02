@@ -13,13 +13,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 
-type Band = { lo: number; hi: number; touches?: number | null };
+type Band = { lo: number; hi: number; touches?: number | null; kind?: 'supply' | 'broken_support' | null };
 export type SupplyRow = {
   symbol: string; shares: number; avg_cost: number | null;
   last: number | null; day_pct: number | null; pl_pct: number | null;
   band: Band | null; next_band: Band | null; support: Band | null;
   atr: number | null; distance_pct: number | null; atr_days: number | null;
-  session?: string | null; zones_error?: string | null;
+  session?: string | null; zones_error?: string | null; room_usd?: number | null;
   state: 'IN_SUPPLY' | 'NEAR' | 'APPROACHING' | 'FAR' | 'CLEAR' | 'UNKNOWN';
   read: string;
 };
@@ -44,7 +44,8 @@ const pct = (v: number | null | undefined) =>
   v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
 const band = (b: Band | null) => (b ? `${money(b.lo)}–${money(b.hi)}` : '—');
 
-export function SupplyWatch() {
+/* One fetch + poll shared by the table and the per-card chips. */
+export function useSupplyWatch() {
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const seq = useRef(0);
@@ -65,9 +66,39 @@ export function SupplyWatch() {
     const id = setInterval(load, (refresh || CLOSED_POLL_SEC) * 1000);
     return () => clearInterval(id);
   }, [refresh, load]);
+  return { data, err };
+}
 
+const bandKind = (b: Band | null | undefined) => (b?.kind === 'broken_support' ? 'overhead' : 'supply');
+
+/* Per-position one-liner for the card: room left to the sell zone, in % and $. */
+export function SupplyChip({ row }: { row: SupplyRow | null | undefined }) {
+  if (!row) return null;
+  const st = STATE[row.state] || STATE.UNKNOWN;
+  if (row.zones_error) return <div className="pf-supply pcw__dim">🎯 sell zones unavailable — retrying</div>;
+  if (row.state === 'CLEAR') return <div className="pf-supply" style={{ color: st.color }}>∅ no overhead in the 1y frame — trail the stop</div>;
+  if (!row.band) return null;
+  const room = row.room_usd != null ? ` / $${Math.round(row.room_usd).toLocaleString()}` : '';
+  return (
+    <div className="pf-supply mono" title={row.read}>
+      <span style={{ color: st.color, fontWeight: 700 }}>{st.label}</span>
+      {' '}{bandKind(row.band)} {band(row.band)}
+      {row.state === 'IN_SUPPLY'
+        ? ' · sell zone reached'
+        : ` · ${row.distance_pct == null ? '—' : row.distance_pct.toFixed(1) + '%'}${room} of room${row.atr_days != null ? ` · ~${row.atr_days.toFixed(0)} ATR-days` : ''}`}
+      {row.next_band ? <span className="pcw__dim"> · then {band(row.next_band)}</span> : null}
+      {row.support ? <span className="pcw__dim"> · support {band(row.support)}</span> : null}
+    </div>
+  );
+}
+
+export function SupplyWatch(props: { data?: Payload | null; err?: string | null } = {}) {
+  const own = useSupplyWatch();
+  const data = props.data !== undefined ? props.data : own.data;
+  const err = props.err !== undefined ? props.err : own.err;
   if (err && !data) return <div className="cm-note cm-note-warn">Supply watch unavailable: {err}</div>;
-  if (!data) return <div className="cm-note">Reading each holding's sell zone…</div>;
+  if (!data || !data.live) return <div className="cm-note">Reading each holding's sell zone…</div>;
+  const rows = data.rows ?? [];
 
   return (
     <section className="day-section sw">
@@ -84,7 +115,7 @@ export function SupplyWatch() {
           {err ? <span className="sl-stale" title={err}> · stale</span> : null}
         </span>
       </header>
-      {data.rows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="day-empty">No holdings yet.</div>
       ) : (
         <table className="og__table sw__table">
@@ -92,12 +123,12 @@ export function SupplyWatch() {
             <tr>
               <th>Symbol</th><th className="og__num">Last</th><th className="og__num">Day</th>
               <th className="og__num">P/L</th><th>Sell zone</th>
-              <th className="og__num">Distance</th><th className="og__num">ATR-days</th>
+              <th className="og__num">Room left</th><th className="og__num">ATR-days</th>
               <th>State</th><th>Read</th>
             </tr>
           </thead>
           <tbody>
-            {data.rows.map((r) => {
+            {rows.map((r) => {
               const st = STATE[r.state] || STATE.UNKNOWN;
               return (
                 <tr key={r.symbol} className={`sw__row sw__row-${r.state.toLowerCase()}`}>
@@ -106,10 +137,10 @@ export function SupplyWatch() {
                   <td className={`og__num mono ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pct(r.day_pct)}</td>
                   <td className={`og__num mono ${(r.pl_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pct(r.pl_pct)}</td>
                   <td className="mono" title={r.band?.touches != null ? `${r.band.touches} touches` : ''}>
-                    {band(r.band)}
+                    {r.band?.kind === 'broken_support' ? <span className="pcw__dim">old support </span> : null}{band(r.band)}
                     {r.next_band ? <span className="pcw__dim"> then {band(r.next_band)}</span> : null}
                   </td>
-                  <td className="og__num mono">{r.distance_pct == null ? '—' : `${r.distance_pct.toFixed(1)}%`}</td>
+                  <td className="og__num mono">{r.distance_pct == null ? '—' : `${r.distance_pct.toFixed(1)}%`}{r.room_usd ? <span className="pcw__dim"> ${Math.round(r.room_usd).toLocaleString()}</span> : null}</td>
                   <td className="og__num mono">{r.atr_days == null ? '—' : r.atr_days.toFixed(0)}</td>
                   <td style={{ color: st.color, whiteSpace: 'nowrap' }}>{st.label}</td>
                   <td className="sw__read">{r.read}</td>

@@ -68,3 +68,22 @@ dedupe-on-terminal-outcome, deep-link payload, `max_zones=None` source guard;
 default byte-identical) ;
 `frontend/src/components/SupplyWatch.test.tsx` (render, closed/no-poll, poll
 cadence, HTTP-error and empty negatives).
+
+## 2026-09-02 pm — sell side on every card, two-stage alerts, overhead
+
+Ajay: *"I need supply and demand info on when to sell... how much run up we
+have left on each. Also alerts if we are really close to supply or overhead."*
+
+- **Overhead ≠ just supply.** `overhead_bands()` = supply bands at/above the
+  print **plus demand bands strictly above it** (broken support = resistance,
+  the engine's own `nearest_resistance` rule). A demand band that *contains*
+  price is support, never overhead. Bands carry `kind: supply | broken_support`.
+- **Room left** = distance to the band bottom in % and in **$** (`room_usd` =
+  (band.lo − live) × shares), so "how much run-up is left" reads in dollars.
+- **Table moved above the position cards; every card gets a `SupplyChip`**
+  line (state · band · room · ATR-days · then-band · support) fed by ONE shared
+  `useSupplyWatch()` fetch.
+- **Two alert stages, each once per (user, symbol, band, ET day):**
+  ⚠️ `NEAR` (≤2% under the band — "set the sell order at $lo", with the $ room
+  left) and 🎯 `IN_SUPPLY` (band reached). The 2% warning no longer swallows
+  the in-band alert (`_alert_key` carries the stage).

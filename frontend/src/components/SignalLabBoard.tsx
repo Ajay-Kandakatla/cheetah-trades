@@ -52,6 +52,7 @@ function saveLocal(syms: string[]) {
 
 export function SignalLabBoard() {
   const [symbols, setSymbols] = useState<string[]>(() => loadLocal());
+  const [held, setHeld] = useState<Set<string>>(new Set());
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,6 +70,9 @@ export function SignalLabBoard() {
         if (Array.isArray(j.symbols) && j.symbols.length) {
           setSymbols(j.symbols); saveLocal(j.symbols);
         }
+        // Held names ride the board by default (Ajay 2026-09-02) — they leave
+        // with the position, not with the × here.
+        if (Array.isArray(j.held)) setHeld(new Set<string>(j.held));
       })
       .catch(() => { /* localStorage list stands */ });
   }, []);
@@ -121,10 +125,12 @@ export function SignalLabBoard() {
         <SymbolSearch onAdd={add} placeholder="Add a ticker to watch — e.g. TSLA, IREN, SNDK" />
         <div className="slab-chips">
           {symbols.map((s) => (
-            <span key={s} className="slab-chip">
-              {s}
-              <button type="button" className="slab-chip__x" aria-label={`Remove ${s}`}
-                      onClick={() => remove(s)}>×</button>
+            <span key={s} className="slab-chip" title={held.has(s) ? 'In your portfolio — rides the board by default' : undefined}>
+              {held.has(s) ? '💼 ' : ''}{s}
+              {held.has(s) ? null : (
+                <button type="button" className="slab-chip__x" aria-label={`Remove ${s}`}
+                        onClick={() => remove(s)}>×</button>
+              )}
             </span>
           ))}
         </div>

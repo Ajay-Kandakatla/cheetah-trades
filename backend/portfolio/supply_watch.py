@@ -27,7 +27,6 @@ log = logging.getLogger("portfolio.supply_watch")
 
 NEAR_PCT = 2.0            # <= this under the band bottom -> NEAR
 APPROACH_PCT = 5.0        # <= this -> APPROACHING
-ALERT_PCT = 1.0           # alert when inside the band or within this of it
 CACHE_TTL_SEC = 30 * 60   # zone half; prices re-derive every call
 ERROR_RETRY_SEC = 120     # a book whose zone engine missed retries this fast
 LIVE_REFRESH_SEC = 60
@@ -62,6 +61,32 @@ def nearest_supply(zones: list, live: float) -> Optional[dict]:
     return min(above, key=lambda z: z["lo"])
 
 
+def overhead_bands(supply: list, demand: list, live: float) -> list:
+    """Everything price meets going UP: supply bands at/above the print plus
+    demand bands strictly above it (broken support turns into resistance —
+    the engine's own nearest_resistance rule). A demand band that CONTAINS
+    price is support, never overhead."""
+    out = [dict(z, kind="supply") for z in (supply or [])
+           if z.get("lo") and z.get("hi") and z["hi"] >= live]
+    out += [dict(z, kind="broken_support") for z in (demand or [])
+            if z.get("lo") and z.get("hi") and z["lo"] > live]
+    return out
+
+
+def _band_kind(z: dict) -> str:
+    return z.get("kind") or "supply"
+
+
+def alert_stage(state: str, distance_pct: Optional[float]) -> Optional[str]:
+    """Two once-a-day-per-band stages: NEAR (≤ NEAR_PCT under the band, the
+    'set your sell order' warning) then IN_SUPPLY (the band is reached)."""
+    if state == "IN_SUPPLY":
+        return "IN_SUPPLY"
+    if distance_pct is not None and 0 <= distance_pct <= NEAR_PCT:
+        return "NEAR"
+    return None
+
+
 def classify(live: float, band: Optional[dict], atr: Optional[float]) -> dict:
     """Pure decision table.
 
@@ -83,8 +108,7 @@ def classify(live: float, band: Optional[dict], atr: Optional[float]) -> dict:
 
 
 def should_alert(state: str, distance_pct: Optional[float]) -> bool:
-    return state == "IN_SUPPLY" or (
-        distance_pct is not None and 0 <= distance_pct <= ALERT_PCT)
+    return alert_stage(state, distance_pct) is not None
 
 
 def _trading_day_et(now: Optional[datetime] = None) -> str:
@@ -103,8 +127,9 @@ def read_for(row: dict) -> str:
         return "No live print yet"
     if s == "IN_SUPPLY":
         return "In the sell zone — trim or sell into it"
+    what = "overhead (old support)" if b.get("kind") == "broken_support" else "supply"
     if s == "NEAR":
-        return f"≤{NEAR_PCT:.0f}% under supply — set the sell order at ${b.get('lo', 0):.2f}"
+        return f"≤{NEAR_PCT:.0f}% under {what} — set the sell order at ${b.get('lo', 0):.2f}"
     if s == "APPROACHING":
         d = row.get("atr_days")
         return (f"~{d:.0f} ATR-days from supply" if d is not None
@@ -167,24 +192,31 @@ def derive(base: dict, quote: dict) -> dict:
     supply = (base.get("_zones") or {}).get("supply") or []
     demand = (base.get("_zones") or {}).get("demand") or []
     atr, avg = base.get("atr"), base.get("avg_cost")
-    band = nearest_supply(supply, live) if (live and not err) else None
+    overhead = overhead_bands(supply, demand, live) if live else []
+    band = nearest_supply(overhead, live) if (live and not err) else None
     cls = (classify(live, band, atr) if (live and not err)
            else {"state": "UNKNOWN", "distance_pct": None, "atr_days": None})
     nxt = None
     if band:
-        higher = [z for z in supply if z.get("lo") and z["lo"] > band["hi"]]
+        higher = [z for z in overhead if z.get("lo") and z["lo"] > band["hi"]]
         nxt = min(higher, key=lambda z: z["lo"]) if higher else None
     support = None
     if live:
+        inside = [z for z in demand if z.get("lo") and z.get("hi") and z["lo"] <= live <= z["hi"]]
         below = [z for z in demand if z.get("hi") and z["hi"] < live]
-        support = max(below, key=lambda z: z["hi"]) if below else None
+        support = (max(inside, key=lambda z: z["hi"]) if inside
+                   else max(below, key=lambda z: z["hi"]) if below else None)
+    shares = float(base.get("shares") or 0)
+    room_usd = (round((band["lo"] - live) * shares, 2) if (band and shares and live < band["lo"])
+                else 0.0 if band else None)
     row = {
         "symbol": base["symbol"], "shares": base.get("shares"), "avg_cost": avg,
         "last": live, "day_pct": quote.get("day_change_pct"),
         "pl_pct": round((live / avg - 1) * 100, 2) if (live and avg) else None,
-        "band": ({"lo": band["lo"], "hi": band["hi"], "touches": band.get("touches")}
-                 if band else None),
-        "next_band": ({"lo": nxt["lo"], "hi": nxt["hi"]} if nxt else None),
+        "band": ({"lo": band["lo"], "hi": band["hi"], "touches": band.get("touches"),
+                  "kind": _band_kind(band)} if band else None),
+        "next_band": ({"lo": nxt["lo"], "hi": nxt["hi"], "kind": _band_kind(nxt)} if nxt else None),
+        "room_usd": room_usd,
         "support": ({"lo": support["lo"], "hi": support["hi"]} if support else None),
         "atr": atr, "session": quote.get("session"), "zones_error": err, **cls,
     }
@@ -223,7 +255,10 @@ METHOD_NOTE = ("Supply = the daily swing-cluster zones above price — same engi
                "— the first price that meets sellers. ATR-days = distance ÷ 14-day "
                "ATR, a pace, not a forecast. Prices are the last trade (pre/after-"
                "market included); the zones refresh every 30 min. Alerts fire once "
-               "per band per trading day on the position_alert channel.")
+               "per band per trading day on the position_alert channel, in two "
+               "stages: ⚠️ within 2% (set the sell order), then 🎯 in the band. "
+               "Overhead also counts old support above price (broken support = "
+               "resistance).")
 
 
 def aggregate_holdings(holdings: list) -> list:
@@ -340,8 +375,8 @@ def build(user_email: str, force: bool = False) -> dict:
 
 # --- alerts ----------------------------------------------------------------
 
-def _alert_key(user_email: str, sym: str, band: dict, day: str) -> str:
-    return f"{user_email.lower()}:{sym}:{band['lo']:.2f}:{day}"
+def _alert_key(user_email: str, sym: str, band: dict, day: str, stage: str = "IN_SUPPLY") -> str:
+    return f"{user_email.lower()}:{sym}:{band['lo']:.2f}:{stage}:{day}"
 
 
 def check_alerts(user_email: Optional[str] = None) -> dict:
@@ -360,9 +395,10 @@ def check_alerts(user_email: Optional[str] = None) -> dict:
     tag = {"premarket": "PRE", "afterhours": "AH"}.get(state["state"], "")
     pushed, fired = 0, []
     for r in payload["rows"]:
-        if not r.get("band") or not should_alert(r["state"], r.get("distance_pct")):
+        stage = alert_stage(r["state"], r.get("distance_pct")) if r.get("band") else None
+        if not stage:
             continue
-        key = _alert_key(owner, r["symbol"], r["band"], day)
+        key = _alert_key(owner, r["symbol"], r["band"], day, stage)
         if coll is not None:
             try:
                 if coll.find_one({"_id": key}):
@@ -371,14 +407,18 @@ def check_alerts(user_email: Optional[str] = None) -> dict:
                 log.warning("supply alert dedupe read failed: %s", exc)
         b = r["band"]
         pl = f" ({r['pl_pct']:+.1f}% P/L)" if r.get("pl_pct") is not None else ""
-        where = ("in SUPPLY" if r["state"] == "IN_SUPPLY"
-                 else f"{r['distance_pct']:.1f}% under SUPPLY")
+        what = "OVERHEAD (old support)" if b.get("kind") == "broken_support" else "SUPPLY"
+        where = (f"in {what}" if stage == "IN_SUPPLY"
+                 else f"{r['distance_pct']:.1f}% under {what}")
         nxt = r.get("next_band")
+        room = (f" · ${r['room_usd']:,.0f} of room left" if r.get("room_usd") else "")
         msg = {
-            "title": f"🎯 {tag + ' · ' if tag else ''}{r['symbol']} {where} "
-                     f"${b['lo']:.2f}–${b['hi']:.2f}{pl}",
-            "body": (f"Live ${r['last']:.2f} · sell zone reached — trim or sell into it"
-                     + (f" · next supply ${nxt['lo']:.2f}–${nxt['hi']:.2f}" if nxt else
+            "title": f"{'🎯' if stage == 'IN_SUPPLY' else '⚠️'} {tag + ' · ' if tag else ''}"
+                     f"{r['symbol']} {where} ${b['lo']:.2f}–${b['hi']:.2f}{pl}",
+            "body": ((f"Live ${r['last']:.2f} · sell zone reached — trim or sell into it"
+                      if stage == "IN_SUPPLY" else
+                      f"Live ${r['last']:.2f}{room} · set the sell order at ${b['lo']:.2f}")
+                     + (f" · next ${nxt['lo']:.2f}–${nxt['hi']:.2f}" if nxt else
                         f" · nothing above this in the {FRAME_NOTE}")),
             "icon": "/icon.svg",
             "tag": f"supply-{r['symbol'].lower()}",
@@ -399,7 +439,7 @@ def check_alerts(user_email: Optional[str] = None) -> dict:
                                 upsert=True)
             except Exception as exc:                        # pragma: no cover
                 log.warning("supply alert dedupe write failed: %s", exc)
-        fired.append({"symbol": r["symbol"], "state": r["state"], "sent": (res or {}).get("sent", 0)})
+        fired.append({"symbol": r["symbol"], "stage": stage, "sent": sent})
     out = {"ok": True, "pushed": pushed, "fired": fired, "session": state["state"]}
     log.info("supply_watch: %s", out)
     return out

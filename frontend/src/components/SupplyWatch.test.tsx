@@ -1,12 +1,12 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { SupplyWatch, type SupplyRow } from './SupplyWatch';
+import { SupplyChip, SupplyWatch, type SupplyRow } from './SupplyWatch';
 
 const row = (over: Partial<SupplyRow>): SupplyRow => ({
   symbol: 'VST', shares: 72.735, avg_cost: 137.49, last: 145.2, day_pct: 1.4, pl_pct: 5.6,
   band: { lo: 146.1, hi: 149.0, touches: 3 }, next_band: { lo: 158, hi: 161, touches: 2 },
-  support: { lo: 131, hi: 133 }, atr: 4.1, distance_pct: 0.62, atr_days: 0.2,
+  support: { lo: 131, hi: 133 }, atr: 4.1, distance_pct: 0.62, atr_days: 0.2, room_usd: 65.46,
   state: 'NEAR', read: '≤2% under supply — set the sell order at $146.10', ...over,
 });
 const payload = (rows: SupplyRow[], refresh = 60) => ({
@@ -97,5 +97,29 @@ describe('SupplyWatch', () => {
     mount();
     await waitFor(() => expect(screen.getByText('PRE')).toBeInTheDocument());
     expect(screen.getByText('AH')).toBeInTheDocument();
+  });
+});
+
+describe('SupplyChip (per-card sell-side read)', () => {
+  it('shows room left in % and $, the band, support and the next band', () => {
+    render(<SupplyChip row={row({})} />);
+    expect(screen.getByText(/⚠ NEAR/)).toBeInTheDocument();
+    const el = screen.getByTitle(/set the sell order/);
+    expect(el.textContent).toContain('supply $146.10–$149.00');
+    expect(el.textContent).toContain('0.6% / $65 of room');
+    expect(el.textContent).toContain('~0 ATR-days');
+    expect(el.textContent).toContain('then $158.00–$161.00');
+    expect(el.textContent).toContain('support $131.00–$133.00');
+  });
+
+  it('labels broken support as overhead, and CLEAR / error / missing rows degrade cleanly', () => {
+    render(<SupplyChip row={row({ band: { lo: 146.1, hi: 149.0, kind: 'broken_support' }, state: 'IN_SUPPLY', distance_pct: 0, room_usd: 0 })} />);
+    expect(screen.getByTitle(/set the sell order/).textContent).toContain('overhead $146.10–$149.00 · sell zone reached');
+    render(<SupplyChip row={row({ state: 'CLEAR', band: null })} />);
+    expect(screen.getByText(/no overhead in the 1y frame/)).toBeInTheDocument();
+    render(<SupplyChip row={row({ zones_error: 'boom' })} />);
+    expect(screen.getByText(/sell zones unavailable/)).toBeInTheDocument();
+    const { container } = render(<SupplyChip row={undefined} />);
+    expect(container.textContent).toBe('');
   });
 });

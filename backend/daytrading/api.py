@@ -319,19 +319,30 @@ async def signal_lab_board(symbols: str = ""):
     return await asyncio.to_thread(sl.board, syms)
 
 
+def _holdings_for(email: str) -> list:
+    """The user's book, so the Signals board carries it by default. A store
+    miss degrades to the plain watchlist — never a failed board."""
+    try:
+        from portfolio import store
+        return store.list_holdings(email) or []
+    except Exception as exc:                                # pragma: no cover
+        log.warning("signal-lab holdings lookup failed: %s", exc)
+        return []
+
+
 @router.get("/day/signal-lab/watchlist")
 async def signal_lab_watchlist(email: str = Depends(current_user_email)):
     from . import signal_lab as sl
-    return {"symbols": sl.get_watchlist(email)}
+    return sl.merge_holdings(sl.get_watchlist(email), _holdings_for(email))
 
 
 @router.post("/day/signal-lab/watchlist/{symbol}")
 async def signal_lab_watch_add(symbol: str, email: str = Depends(current_user_email)):
     from . import signal_lab as sl
-    return {"symbols": sl.add_symbol(email, symbol)}
+    return sl.merge_holdings(sl.add_symbol(email, symbol), _holdings_for(email))
 
 
 @router.delete("/day/signal-lab/watchlist/{symbol}")
 async def signal_lab_watch_remove(symbol: str, email: str = Depends(current_user_email)):
     from . import signal_lab as sl
-    return {"symbols": sl.remove_symbol(email, symbol)}
+    return sl.merge_holdings(sl.remove_symbol(email, symbol), _holdings_for(email))

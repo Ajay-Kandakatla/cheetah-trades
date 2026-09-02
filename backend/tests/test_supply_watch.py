@@ -46,12 +46,27 @@ def test_classify_without_atr_has_no_pace():
     assert sw.classify(100, {"lo": 110, "hi": 112}, None)["atr_days"] is None
 
 
-def test_should_alert_inside_or_within_one_percent_only():
-    assert sw.should_alert("IN_SUPPLY", 0.0)
-    assert sw.should_alert("NEAR", 0.9)
-    assert not sw.should_alert("NEAR", 1.6)          # NEAR but > ALERT_PCT
-    assert not sw.should_alert("FAR", 8.0)
-    assert not sw.should_alert("CLEAR", None)
+def test_alert_stages_near_then_in_band():
+    assert sw.alert_stage("IN_SUPPLY", 0.0) == "IN_SUPPLY"
+    assert sw.alert_stage("NEAR", 0.9) == "NEAR" and sw.alert_stage("NEAR", 2.0) == "NEAR"
+    assert sw.alert_stage("APPROACHING", 2.1) is None
+    assert sw.alert_stage("FAR", 8.0) is None and sw.alert_stage("CLEAR", None) is None
+    assert sw.should_alert("NEAR", 1.6) and not sw.should_alert("FAR", 8.0)
+    # the two stages dedupe separately: the 2% warning does not swallow the in-band alert
+    b = {"lo": 110, "hi": 112}
+    assert sw._alert_key("a@x", "VST", b, "d", "NEAR") != sw._alert_key("a@x", "VST", b, "d", "IN_SUPPLY")
+
+
+def test_overhead_includes_broken_support_above_price_but_not_the_band_price_sits_in():
+    supply = [{"lo": 120, "hi": 123, "touches": 2}]
+    demand = [{"lo": 104, "hi": 106, "touches": 3},     # old support ABOVE price -> overhead
+              {"lo": 99, "hi": 101, "touches": 2},      # price sits in it -> support, not overhead
+              {"lo": 90, "hi": 92, "touches": 1}]
+    over = sw.overhead_bands(supply, demand, 100.0)
+    assert [(z["lo"], z["kind"]) for z in sorted(over, key=lambda z: z["lo"])] == [
+        (104, "broken_support"), (120, "supply")]
+    band = sw.nearest_supply(over, 100.0)
+    assert band["lo"] == 104 and band["kind"] == "broken_support"
 
 
 def test_read_for_states_the_order_price():
@@ -63,9 +78,9 @@ def test_read_for_states_the_order_price():
     assert sw.read_for({"state": "UNKNOWN"}) == "No live print yet"
 
 
-def test_alert_key_is_per_user_symbol_band_day():
+def test_alert_key_is_per_user_symbol_band_stage_day():
     k = sw._alert_key("A@x.com", "VST", {"lo": 145.9, "hi": 148}, "2026-09-02")
-    assert k == "a@x.com:VST:145.90:2026-09-02"
+    assert k == "a@x.com:VST:145.90:IN_SUPPLY:2026-09-02"
 
 
 def test_row_shape_with_stubbed_zones(monkeypatch):
@@ -73,8 +88,9 @@ def test_row_shape_with_stubbed_zones(monkeypatch):
     r = sw._row({"ticker": "vst", "shares": 10, "cost_basis": 1000},
                 {"last": 108.5, "day_change_pct": 1.2})
     assert r["symbol"] == "VST" and r["avg_cost"] == 100 and r["pl_pct"] == 8.5
-    assert r["band"]["lo"] == 110 and r["next_band"]["lo"] == 120
+    assert r["band"]["lo"] == 110 and r["band"]["kind"] == "supply" and r["next_band"]["lo"] == 120
     assert r["support"]["hi"] == 92 and r["state"] == "NEAR"
+    assert r["room_usd"] == round((110 - 108.5) * 10, 2)          # $ of run-up left to the band
 
 
 def test_row_without_live_price_is_unknown_not_a_crash(monkeypatch):
@@ -233,7 +249,7 @@ def test_check_alerts_dedupes_on_delivery_or_no_targets_and_carries_deeplink(mon
     coll = _Coll()
     monkeypatch.setattr(sw, "_coll", lambda name: coll)
     row = {"symbol": "VST", "state": "IN_SUPPLY", "distance_pct": 0.0, "last": 111.0, "pl_pct": 11.0,
-           "band": {"lo": 110, "hi": 112, "touches": 3}, "next_band": None}
+           "band": {"lo": 110, "hi": 112, "touches": 3, "kind": "supply"}, "next_band": None, "room_usd": 0.0}
     monkeypatch.setattr(sw, "build", lambda owner, force=False: {"rows": [row]})
     # nobody targeted (muted / quiet hours / no device): terminal -> dedupe written, no retry storm
     out = sw.check_alerts("o@x.com")
@@ -254,3 +270,28 @@ def test_supply_watch_asks_the_engine_for_every_cluster():
     src = (Path(__file__).resolve().parents[1] / "portfolio" / "supply_watch.py").read_text()
     assert "pz.for_symbol(sym, max_zones=None)" in src          # not the strongest-4 truncation
     assert "last_price=live" not in src                         # never anchor compute() on a live print
+
+
+def test_near_warning_then_in_band_alert_fire_separately(monkeypatch):
+    import types, sys
+    sent = []
+    fake_alerts = types.SimpleNamespace(_resolve_owner=lambda: "o@x.com",
+                                        _send_push=lambda email, msg, kind: (sent.append(msg), {"sent": 1, "total_targets": 1})[1])
+    pkg = types.ModuleType("portfolio"); pkg.__path__ = []; pkg.alerts = fake_alerts
+    monkeypatch.setitem(sys.modules, "portfolio", pkg)
+    monkeypatch.setitem(sys.modules, "portfolio.alerts", fake_alerts)
+    tf = types.SimpleNamespace(live_state=lambda: {"state": "rth", "refresh_sec": 60, "as_of": "x"})
+    sd = types.ModuleType("supply_demand"); sd.__path__ = []; sd.timeframes = tf
+    monkeypatch.setitem(sys.modules, "supply_demand", sd)
+    monkeypatch.setitem(sys.modules, "supply_demand.timeframes", tf)
+    coll = _Coll(); monkeypatch.setattr(sw, "_coll", lambda name: coll)
+    near = {"symbol": "VST", "state": "NEAR", "distance_pct": 1.4, "last": 108.5, "pl_pct": 8.5, "room_usd": 15.0,
+            "band": {"lo": 110, "hi": 112, "touches": 3, "kind": "broken_support"}, "next_band": {"lo": 120, "hi": 123}}
+    rows = [near]
+    monkeypatch.setattr(sw, "build", lambda owner, force=False: {"rows": rows})
+    sw.check_alerts("o@x.com"); sw.check_alerts("o@x.com")
+    assert len(sent) == 1 and sent[0]["title"].startswith("⚠️ VST 1.4% under OVERHEAD (old support) $110.00")
+    assert "$15 of room left" in sent[0]["body"] and "set the sell order at $110.00" in sent[0]["body"]
+    rows[0] = dict(near, state="IN_SUPPLY", distance_pct=0.0, last=111.0, room_usd=0.0)
+    sw.check_alerts("o@x.com"); sw.check_alerts("o@x.com")
+    assert len(sent) == 2 and sent[1]["title"].startswith("🎯 VST in OVERHEAD (old support)")

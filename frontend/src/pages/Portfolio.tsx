@@ -39,7 +39,7 @@ import { honestDayPct } from '../lib/portfolioDay';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { Heatmap, type HeatTile } from '../components/Heatmap';
-import { SupplyWatch } from '../components/SupplyWatch';
+import { SupplyChip, SupplyWatch, useSupplyWatch } from '../components/SupplyWatch';
 import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
 import { MarketContextStrip } from '../components/MarketContextStrip';
 import { FullScanModal } from '../components/FullScanModal';
@@ -99,6 +99,9 @@ export default function PortfolioPage() {
   // The panel only calls the model when ITS button is clicked (cached 10 min).
   const [analyzeSym, setAnalyzeSym] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<HoldSortKey>('default');
+  /* Sell side (Ajay 2026-09-02): room left to supply/overhead per holding. */
+  const supply = useSupplyWatch();
+  const supplyBySym = Object.fromEntries((supply.data?.rows ?? []).map((x) => [x.symbol, x]));
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Live SSE quotes (same stream the chart uses) overlaid on the delayed
@@ -299,6 +302,9 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* Sell side (Ajay 2026-09-02): when does each holding reach supply — above the cards. */}
+      <TrackedSection name="portfolio:supply"><SupplyWatch data={supply.data} err={supply.err} /></TrackedSection>
+
       <div className="portfolio-list">
         {sortedRows.map((r) => {
           // PER-SHARE average cost — `avg_cost` is per share; `cost_basis` is the
@@ -373,6 +379,7 @@ export default function PortfolioPage() {
               </div>
 
               <PositionSignal symbol={r.symbol} entry={entry} shares={r.quantity} stop={r.stop} />
+              <SupplyChip row={supplyBySym[r.symbol]} />
               {/* Breakout count + actual volume (Ajay 2026-06-13) — self-fetches
                   per holding since a held name isn't always in the latest scan. */}
               <div style={{ marginTop: '0.4rem' }}>
@@ -419,9 +426,6 @@ export default function PortfolioPage() {
       {/* Sections wrapped in TrackedSection (Ajay 2026-06-16) — record
           `section:portfolio:*` on scroll-into-view to enable a later
           usage-driven reorder. Layout-neutral. */}
-      {/* Sell side (Ajay 2026-09-02): when does each holding reach supply. */}
-      <TrackedSection name="portfolio:supply"><SupplyWatch /></TrackedSection>
-
       <TrackedSection name="portfolio:add_form"><AddHoldingForm onAdded={refresh} /></TrackedSection>
 
       {/* Buy-discovery widgets removed from Portfolio (2026-06-13 declutter):

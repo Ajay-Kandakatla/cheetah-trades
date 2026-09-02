@@ -11427,6 +11427,7 @@ a.tk-link:hover   { color: inherit; }
 .sl-overnight { margin: 6px 0 10px; font-size: 13px; line-height: 1.5; }
 
 /* Supply watch (Portfolio) */
+.pf-supply { margin-top: 0.35rem; font-size: 12px; }
 .sw__table { margin-top: 10px; }
 .sw__row-in_supply td { background: rgba(229, 72, 77, 0.08); }
 .sw__row-near td { background: rgba(232, 163, 61, 0.07); }

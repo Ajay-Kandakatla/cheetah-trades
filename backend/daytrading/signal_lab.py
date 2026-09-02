@@ -332,3 +332,19 @@ def remove_symbol(email: str, symbol: str) -> list[str]:
     syms = [s for s in get_watchlist(email) if s != sym]
     coll.update_one({"_id": email}, {"$set": {"symbols": syms}}, upsert=True)
     return syms
+
+
+def merge_holdings(watchlist: list, holdings: list) -> dict:
+    """The Signals board carries the user's PORTFOLIO by default (Ajay
+    2026-09-02: "add my portfolio by default to Signals tab in chartmap").
+    Watchlist order first, then any held ticker not already listed. `held`
+    tells the UI which rows come from the book (they cannot be removed here —
+    they leave when the position does)."""
+    seen, out = set(), []
+    for s in list(watchlist or []) + [(h.get("ticker") or "") for h in (holdings or [])]:
+        sym = (s or "").strip().upper()
+        if sym and sym not in seen:
+            seen.add(sym)
+            out.append(sym)
+    held = sorted({(h.get("ticker") or "").strip().upper() for h in (holdings or [])} - {""})
+    return {"symbols": out, "held": held}
