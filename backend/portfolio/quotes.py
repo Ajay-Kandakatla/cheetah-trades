@@ -53,9 +53,9 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
             live = sepa_prices.bulk_live_prices(stale)
             for t, bar in (live or {}).items():
                 last = bar.get("price")
-                if last is None:
+                if not last:                       # pre-open day.c is 0, not a price
                     last = bar.get("last_trade_price")
-                if last is None:
+                if not last:
                     continue
                 prev = bar.get("prev_day_close")
                 last = float(last)

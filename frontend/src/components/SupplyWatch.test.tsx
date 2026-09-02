@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { SupplyWatch, type SupplyRow } from './SupplyWatch';
@@ -12,7 +12,7 @@ const row = (over: Partial<SupplyRow>): SupplyRow => ({
 const payload = (rows: SupplyRow[], refresh = 60) => ({
   rows, n: rows.length, as_of: '2026-09-02T13:00:00Z',
   live: { state: 'premarket', refresh_sec: refresh, as_of: '2026-09-02T09:00:00-04:00' },
-  method_note: 'Supply = the daily swing-cluster zone above price.',
+  method_note: 'Supply = every daily swing-cluster zone above price (1y frame, 252 bars).',
 });
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
@@ -43,14 +43,16 @@ describe('SupplyWatch', () => {
     expect((fetch as any).mock.calls[0][0]).toMatch(/\/portfolio\/supply$/);
   });
 
-  it('shows the closed chip and does not poll when refresh_sec is 0', async () => {
+  it('shows the closed chip and ticks slowly (5 min) when refresh_sec is 0, so it wakes at 04:00 ET', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => payload([row({})], 0) });
     vi.stubGlobal('fetch', f);
     mount();
     await waitFor(() => expect(screen.getByText(/○ CLOSED · premarket/)).toBeInTheDocument());
     await vi.advanceTimersByTimeAsync(90_000);
-    expect(f).toHaveBeenCalledTimes(1);
+    expect(f).toHaveBeenCalledTimes(1);                 // not on the 60s live cadence
+    await vi.advanceTimersByTimeAsync(220_000);
+    expect(f).toHaveBeenCalledTimes(2);                 // one slow tick at 300s
   });
 
   it('polls on the server cadence while live', async () => {
@@ -63,12 +65,37 @@ describe('SupplyWatch', () => {
     expect(f.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('negative: HTTP error renders a note, empty holdings render the empty state', async () => {
+  it('negative: first-load HTTP error renders a note; a later poll failure keeps the table and flags stale', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }));
     mount();
     await waitFor(() => expect(screen.getByText(/Supply watch unavailable: HTTP 500/)).toBeInTheDocument());
+    cleanup();
+    let fail = false;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(fail
+      ? { ok: false, status: 502, json: async () => ({}) }
+      : { ok: true, json: async () => payload([row({})], 60) })));
+    mount();
+    await waitFor(() => expect(screen.getByText('VST')).toBeInTheDocument());
+    fail = true;
+    await vi.advanceTimersByTimeAsync(61_000);
+    await waitFor(() => expect(screen.getByText(/· stale/)).toBeInTheDocument());
+    expect(screen.getByText('VST')).toBeInTheDocument();
+    expect(screen.queryByText(/Supply watch unavailable/)).toBeNull();
+  });
+
+  it('negative: empty holdings render the empty state', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload([]) }));
     mount();
     await waitFor(() => expect(screen.getByText('No holdings yet.')).toBeInTheDocument());
+  });
+
+  it('badges pre-market and after-hours prints', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload([
+      row({ session: 'premarket' }), row({ symbol: 'LEU', session: 'afterhours' }),
+    ]) }));
+    mount();
+    await waitFor(() => expect(screen.getByText('PRE')).toBeInTheDocument());
+    expect(screen.getByText('AH')).toBeInTheDocument();
   });
 });

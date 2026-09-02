@@ -18,10 +18,15 @@ import threading
 import time
 from datetime import datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger("catalysts.promo_live")
 
 PROMO_MOVE_PCT = 8.0
+# Ajay 2026-09-02: "just give me alerts from the topstock alerts only". Alerts
+# fire ONLY on names carrying a tag from these handles; the live table still
+# prices the whole board. User-editable; empty set = every roster handle.
+PROMO_ALERT_HANDLES: frozenset = frozenset({"topstockalerts"})
 LIVE_REFRESH_SEC = 30
 _TTL = 20.0
 _cache: dict = {"at": 0.0, "payload": None}
@@ -55,6 +60,17 @@ def session_from_ts(ts_ms: Optional[float], now=None) -> str:
     except Exception as exc:                                # pragma: no cover
         log.debug("promo_live: session classify failed: %s", exc)
         return "closed"
+
+
+def _trading_day_et(now: Optional[datetime] = None) -> str:
+    """Dedupe day in ET — a 19:02 ET after-hours mover in winter is already
+    tomorrow in UTC (double alert tonight, suppressed alert tomorrow)."""
+    now = now or datetime.now(timezone.utc)
+    return now.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+
+
+def is_alertable(handles: list) -> bool:
+    return (not PROMO_ALERT_HANDLES) or any(h in PROMO_ALERT_HANDLES for h in handles)
 
 
 def alert_gate(day_pct: Optional[float], threshold: float = PROMO_MOVE_PCT) -> Optional[str]:
@@ -95,39 +111,49 @@ def live_rows(force: bool = False) -> dict:
             quotes = prices.bulk_live_prices(syms) or {}
         except Exception as exc:
             log.warning("promo_live: bulk prices failed: %s", exc)
-    out = []
-    for r in rows:
-        q = quotes.get(r["ticker"]) or {}
-        last = q.get("last_trade_price") or q.get("price")
-        prev = q.get("prev_day_close")
-        day_pct = (round((float(last) / float(prev) - 1) * 100, 2)
-                   if last and prev else None)
-        out.append({
-            "ticker": r["ticker"], "status": r["status"], "best_tier": r.get("best_tier"),
-            "accounts": [a["handle"] for a in (r.get("accounts") or [])][:3],
-            "days_since_last_tag": r.get("days_since_last_tag"),
-            "last": float(last) if last else None, "prev_close": float(prev) if prev else None,
-            "day_pct": day_pct,
-            "session": session_from_ts(q.get("last_trade_ts_ms")),
-            "pct_since_tag": r.get("pct_since_tag"),
-            "edgar": r.get("edgar"),
-        })
-    out.sort(key=lambda r: (r["day_pct"] is None, -(r["day_pct"] or 0)))
     try:
         from supply_demand import timeframes as tf_mod
         st = tf_mod.live_state()
     except Exception:                                       # pragma: no cover
         st = {"state": "closed", "refresh_sec": 0, "as_of": None}
+    out = []
+    for r in rows:
+        q = quotes.get(r["ticker"]) or {}
+        last = q.get("last_trade_price") or q.get("price")
+        prev = q.get("prev_day_close")
+        rth_close = q.get("price") or None      # Massive day.c: today's regular close, 0 pre-open
+        day_pct = (round((float(last) / float(prev) - 1) * 100, 2)
+                   if last and prev else None)
+        # After the bell the move that matters is vs TODAY's close, not
+        # yesterday's — an AH dump after an RTH run still reads +% on day_pct.
+        ah_pct = (round((float(last) / float(rth_close) - 1) * 100, 2)
+                  if (st["state"] == "afterhours" and last and rth_close) else None)
+        handles = [a["handle"] for a in (r.get("accounts") or [])]
+        out.append({
+            "ticker": r["ticker"], "status": r["status"], "best_tier": r.get("best_tier"),
+            "accounts": handles[:3], "alertable": is_alertable(handles),
+            "days_since_last_tag": r.get("days_since_last_tag"),
+            "last": float(last) if last else None, "prev_close": float(prev) if prev else None,
+            "rth_close": float(rth_close) if rth_close else None,
+            "day_pct": day_pct, "ah_pct": ah_pct,
+            "session": session_from_ts(q.get("last_trade_ts_ms")),
+            "pct_since_tag": r.get("pct_since_tag"),
+            "edgar": r.get("edgar"),
+        })
+    out.sort(key=lambda r: (r["day_pct"] is None, -(r["day_pct"] or 0)))
     payload = {
         "as_of": datetime.now(timezone.utc).isoformat(), "rows": out, "n": len(out),
         "live": {"state": st["state"], "refresh_sec": LIVE_REFRESH_SEC if st["refresh_sec"] else 0,
                  "as_of": st.get("as_of")},
         "alert_threshold_pct": PROMO_MOVE_PCT,
+        "alert_handles": sorted(PROMO_ALERT_HANDLES),
         "method_note": ("Live prints from the Massive snapshot incl. pre/post market; "
-                        "% is vs the prior regular close. Alerts: |move| ≥ "
-                        f"{PROMO_MOVE_PCT:.0f}% on a roster-tagged name, once per "
-                        "direction per day. The tag is the promotion — this is a "
-                        "do-not-chase radar."),
+                        "% is vs the prior regular close (after the bell, also vs "
+                        "today's close). Alerts: |move| ≥ "
+                        f"{PROMO_MOVE_PCT:.0f}% on a name tagged by "
+                        + (", ".join("@" + h for h in sorted(PROMO_ALERT_HANDLES)) or "any roster account")
+                        + ", once per direction per trading day. The tag is the "
+                        "promotion — this is a do-not-chase radar."),
     }
     with _lock:
         _cache.update(at=time.time(), payload=payload)
@@ -143,43 +169,62 @@ def check_alerts(owner: Optional[str] = None) -> dict:
     if payload["live"]["state"] == "closed":
         return {"ok": True, "skipped": "tape closed", "pushed": 0}
     coll = _coll("promo_alerts")
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = _trading_day_et()
+    state = payload["live"]["state"]
+    tag = {"premarket": "PRE", "afterhours": "AH", "rth": "RTH"}.get(state, "")
     pushed, fired = 0, []
     for r in payload["rows"]:
-        d = alert_gate(r.get("day_pct"))
-        if not d or r.get("session") == "closed":
+        if not r.get("alertable") or r.get("session") == "closed":
             continue
-        key = f"{r['ticker']}:{day}:{d}"
+        # After the bell: the AH move vs today's close is the signal; before
+        # and during: the move vs the prior close.
+        if state == "afterhours":
+            d = alert_gate(r.get("ah_pct"))
+            if not d:
+                continue
+            key = f"{r['ticker']}:{day}:ah:{d}"
+            move = f"{r['ah_pct']:+.1f}% vs close (day {r['day_pct']:+.1f}%)" if r.get("day_pct") is not None else f"{r['ah_pct']:+.1f}% vs close"
+            base_px = r.get("rth_close")
+        else:
+            d = alert_gate(r.get("day_pct"))
+            if not d:
+                continue
+            key = f"{r['ticker']}:{day}:{d}"
+            move = f"{r['day_pct']:+.1f}%"
+            base_px = r.get("prev_close")
         if coll is not None:
             try:
                 if coll.find_one({"_id": key}):
                     continue
             except Exception as exc:                        # pragma: no cover
                 log.warning("promo alert dedupe read failed: %s", exc)
-        tag = {"premarket": "PRE", "afterhours": "AH", "rth": "RTH"}.get(r["session"], "")
         who = ", ".join("@" + h for h in r["accounts"][:2]) or "the circuit"
         age = r.get("days_since_last_tag")
         msg = {
-            "title": f"🎪 {tag} {r['ticker']} {r['day_pct']:+.1f}% — tagged by {who}"
+            "title": f"🎪 {tag} {r['ticker']} {move} — tagged by {who}"
                      + (f" {age:.0f}d ago" if age is not None else ""),
-            "body": (f"${r['last']:.2f} vs close ${r['prev_close']:.2f} · {r['status']} · "
+            "body": (f"${r['last']:.2f} vs ${base_px:.2f} · {r['status']} · "
                      "the tag IS the promotion — do not chase"),
             "icon": "/icon.svg",
             "tag": f"promo-{r['ticker'].lower()}",
-            "data": {"url": "/catalysts", "symbol": r["ticker"], "source": "promo_live"},
+            "url": "/catalysts?tab=promo", "kind": "promo_alert", "ticker": r["ticker"],
+            "data": {"url": "/catalysts?tab=promo", "symbol": r["ticker"], "source": "promo_live"},
         }
-        res = sender.send_to_user(owner, msg, kind="promo_alert")
-        if (res or {}).get("sent", 0) > 0:
+        res = sender.send_to_user(owner, msg, kind="promo_alert") or {}
+        sent, targets = res.get("sent", 0), res.get("total_targets", 0)
+        if sent > 0:
             pushed += 1
-            if coll is not None:
-                try:
-                    coll.update_one({"_id": key}, {"$set": {
-                        "at": datetime.now(timezone.utc), "symbol": r["ticker"],
-                        "day_pct": r["day_pct"], "session": r["session"]}}, upsert=True)
-                except Exception as exc:                    # pragma: no cover
-                    log.warning("promo alert dedupe write failed: %s", exc)
-        fired.append({"symbol": r["ticker"], "day_pct": r["day_pct"],
-                      "session": r["session"], "sent": (res or {}).get("sent", 0)})
+        # Terminal outcomes dedupe (delivered, or nobody targeted: muted pref /
+        # quiet hours / no device) — else every 5-min run re-logs a feed row.
+        if (sent > 0 or targets == 0) and coll is not None:
+            try:
+                coll.update_one({"_id": key}, {"$set": {
+                    "at": datetime.now(timezone.utc), "symbol": r["ticker"],
+                    "move": move, "session": state, "sent": sent, "targets": targets}}, upsert=True)
+            except Exception as exc:                    # pragma: no cover
+                log.warning("promo alert dedupe write failed: %s", exc)
+        fired.append({"symbol": r["ticker"], "move": move,
+                      "session": state, "sent": sent})
     out = {"ok": True, "pushed": pushed, "fired": fired, "session": payload["live"]["state"]}
     log.info("promo_live: %s", out)
     return out

@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
@@ -61,7 +62,12 @@ const QUADRANT_HELP: Record<Quadrant, string> = {
 };
 
 export function CatalystsPage() {
-  const [tab, setTab] = useState<TopTab>('predictions');
+  const TOP_TABS: TopTab[] = ['predictions', 'frenzy', 'now', 'premarket', 'calendar', 'timeline', 'russell', 'promo'];
+  const parseTab = (v: string | null): TopTab => (TOP_TABS.includes(v as TopTab) ? (v as TopTab) : 'predictions');
+  /* Deep links (push taps, ✨ NEW highlights) land on the right tab: /catalysts?tab=promo */
+  const [params, setParams] = useSearchParams();
+  const tab = parseTab(params.get('tab'));
+  const setTab = (t: TopTab) => setParams(t === 'predictions' ? {} : { tab: t });
   const { data, loading, refreshing, forceRefresh } = useCatalystScan(60_000);
   const [quadrantFilter, setQuadrantFilter] = useState<Quadrant | 'ALL'>('ALL');
   const [sortKey, setSortKey] = useState<SortKey>('composite');

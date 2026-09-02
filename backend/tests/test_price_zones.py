@@ -173,3 +173,36 @@ def test_params_report_the_EFFECTIVE_window_not_the_module_default():
     for lb in (21, 63, 126, 252):
         out = pz.compute(SAW, lookback_bars=lb, swing_window=2)
         assert out["params"]["lookback"] == lb
+
+
+def _staircase(n_peaks=8, base=100.0, step=1.05, leg=12):
+    """n distinct swing highs at rising levels (each >3% apart so they never
+    merge), price finishing back at the base: every peak is overhead."""
+    closes = []
+    for k in range(n_peaks):
+        peak = base * (step ** k)
+        closes += list(np.linspace(base, peak, leg, endpoint=False))
+        closes += list(np.linspace(peak, base, leg, endpoint=False))
+    closes = np.array(closes + [base])
+    idx = pd.bdate_range("2025-01-02", periods=len(closes))
+    return pd.DataFrame({"open": closes, "high": closes * 1.002, "low": closes * 0.998,
+                         "close": closes, "volume": np.full(len(closes), 1e6)}, index=idx)
+
+
+def test_max_zones_none_surfaces_every_cluster_and_the_default_is_untouched():
+    """Portfolio supply watch (2026-09-02) needs the FIRST band overhead, which
+    is routinely not among the strongest four the Chart Maps tabs show."""
+    df = _staircase()
+    live = 100.0
+    default = pz.compute(df, last_price=live)
+    every = pz.compute(df, last_price=live, max_zones=None)
+    assert default and every
+    d_sup, e_sup = default["supply_zones"], every["supply_zones"]
+    assert len(d_sup) <= pz.MAX_ZONES_PER_SIDE < len(e_sup)              # 8 peaks, 4 kept by default
+    keys = {(round(z["lo"], 4), round(z["hi"], 4)) for z in e_sup}
+    assert all((round(z["lo"], 4), round(z["hi"], 4)) in keys for z in d_sup)   # superset
+    nearest_all = min(z["lo"] for z in e_sup if z["hi"] >= live)
+    nearest_default = min(z["lo"] for z in d_sup if z["hi"] >= live)
+    assert nearest_all <= nearest_default
+    # the default path is byte-identical to a plain call
+    assert pz.compute(df, last_price=live) == default

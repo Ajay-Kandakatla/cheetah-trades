@@ -34,11 +34,11 @@ const payload = (rows: any[], over: any = {}) => ({
 
 const liveRow = (over: Partial<any> = {}) => ({
   ticker: 'LIV1', status: 'SEEDING', best_tier: 'A', accounts: ['topstockalerts', 'beppels'],
-  days_since_last_tag: 1, last: 1.32, prev_close: 1.2, day_pct: 10.0, session: 'premarket',
-  pct_since_tag: 4.0, ...over,
+  alertable: true, days_since_last_tag: 1, last: 1.32, prev_close: 1.2, rth_close: null,
+  day_pct: 10.0, ah_pct: null, session: 'premarket', pct_since_tag: 4.0, ...over,
 });
 const livePayload = (rows: any[] = [liveRow()], refresh = 30) => ({
-  rows, n: rows.length, alert_threshold_pct: 8,
+  rows, n: rows.length, alert_threshold_pct: 8, alert_handles: ['topstockalerts'],
   live: { state: 'premarket', refresh_sec: refresh, as_of: '2026-09-02T09:00:00-04:00' },
   method_note: 'Live prints incl. pre/post market.',
 });
@@ -74,6 +74,7 @@ describe('PromoCircuit', () => {
     ]));
     const { container } = draw();
     await waitFor(() => expect(screen.getByText('RANX')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('LIV1')).toBeTruthy());   // live table resolves independently
     const tables = container.querySelectorAll('.pcw__table');
     expect(tables.length).toBe(3);           // live movers + seeding + played (no rest table)
     expect(tables[1].textContent).toContain('TINY');
@@ -152,7 +153,7 @@ describe('PromoLive (Ajay 2026-09-02: real-time % + alerts)', () => {
     expect(screen.getByText('AH')).toBeTruthy();
     expect(screen.getByText('RTH')).toBeTruthy();
     expect(screen.getAllByText('@topstockalerts, @beppels').length).toBe(3);
-    expect(screen.getByText(/±8% pushes a 🎪 alert/)).toBeTruthy();
+    expect(screen.getByText(/±8% on a name tagged by @topstockalerts pushes a 🎪 alert/)).toBeTruthy();
     expect(screen.getByText(/● LIVE · premarket/)).toBeTruthy();
     const liveCalls = (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live'));
     expect(liveCalls.length).toBe(1);
@@ -168,14 +169,33 @@ describe('PromoLive (Ajay 2026-09-02: real-time % + alerts)', () => {
     expect(calls).toBeGreaterThanOrEqual(2);
   });
 
-  it('does not poll when the tape is closed (refresh_sec 0)', async () => {
+  it('ticks slowly (5 min) when the tape is closed instead of the 30s cadence', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mock(payload([row()]), true, livePayload([liveRow()], 0));
     draw();
     await waitFor(() => expect(screen.getByText(/○ CLOSED · premarket/)).toBeTruthy());
+    const calls = () => (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live')).length;
     await vi.advanceTimersByTimeAsync(60_000);
-    const calls = (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live')).length;
-    expect(calls).toBe(1);
+    expect(calls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(250_000);
+    expect(calls()).toBe(2);
+  });
+
+  it('flags 🎪 only on alertable names (the @topstockalerts gate) and shows the AH move vs today\'s close', async () => {
+    mock(payload([row()]), true, {
+      ...livePayload([
+        liveRow({ ticker: 'GATED', day_pct: 15.0, alertable: false, accounts: ['ShangVXO'] }),
+        liveRow({ ticker: 'AHDMP', day_pct: 4.0, ah_pct: -11.0, rth_close: 1.5, last: 1.335, session: 'afterhours' }),
+      ]),
+      live: { state: 'afterhours', refresh_sec: 30, as_of: 'x' },
+    });
+    draw();
+    await waitFor(() => expect(screen.getByText('GATED')).toBeTruthy());
+    expect(screen.queryByText('+15.0% 🎪')).toBeNull();
+    expect(screen.getByText('+15.0%')).toBeTruthy();
+    expect(screen.getByText(/\(-11\.0% AH\)/)).toBeTruthy();
+    expect(screen.getByText(/🎪$/)).toBeTruthy();               // the AH dump is the alertable move
+    expect(screen.getByText(/tagged by @topstockalerts pushes/)).toBeTruthy();
   });
 
   it('negative: a failing live endpoint degrades to a note and leaves the board intact', async () => {

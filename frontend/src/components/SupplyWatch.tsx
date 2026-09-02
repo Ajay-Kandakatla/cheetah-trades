@@ -19,6 +19,7 @@ export type SupplyRow = {
   last: number | null; day_pct: number | null; pl_pct: number | null;
   band: Band | null; next_band: Band | null; support: Band | null;
   atr: number | null; distance_pct: number | null; atr_days: number | null;
+  session?: string | null; zones_error?: string | null;
   state: 'IN_SUPPLY' | 'NEAR' | 'APPROACHING' | 'FAR' | 'CLEAR' | 'UNKNOWN';
   read: string;
 };
@@ -37,6 +38,7 @@ const STATE: Record<SupplyRow['state'], { label: string; color: string }> = {
   UNKNOWN:     { label: '?',             color: 'var(--text-muted, #94a3b8)' },
 };
 
+const CLOSED_POLL_SEC = 300;
 const money = (v: number | null | undefined) => (v == null ? '—' : `$${v.toFixed(2)}`);
 const pct = (v: number | null | undefined) =>
   v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
@@ -56,14 +58,15 @@ export function SupplyWatch() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  /* Server cadence while the tape is open; a slow tick while closed so the
+   * panel flips to LIVE at 04:00 ET on its own (and retries after an error). */
   const refresh = data?.live?.refresh_sec || 0;
   useEffect(() => {
-    if (!refresh) return;
-    const id = setInterval(load, refresh * 1000);
+    const id = setInterval(load, (refresh || CLOSED_POLL_SEC) * 1000);
     return () => clearInterval(id);
   }, [refresh, load]);
 
-  if (err) return <div className="cm-note cm-note-warn">Supply watch unavailable: {err}</div>;
+  if (err && !data) return <div className="cm-note cm-note-warn">Supply watch unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Reading each holding's sell zone…</div>;
 
   return (
@@ -78,6 +81,7 @@ export function SupplyWatch() {
         </div>
         <span className={`sl-live sl-live-${data.live.state}`}>
           {data.live.refresh_sec ? '● LIVE' : '○ CLOSED'} · {data.live.state}
+          {err ? <span className="sl-stale" title={err}> · stale</span> : null}
         </span>
       </header>
       {data.rows.length === 0 ? (
@@ -98,7 +102,7 @@ export function SupplyWatch() {
               return (
                 <tr key={r.symbol} className={`sw__row sw__row-${r.state.toLowerCase()}`}>
                   <td className="og__sym"><TickerLink ticker={r.symbol} /></td>
-                  <td className="og__num mono">{money(r.last)}</td>
+                  <td className="og__num mono">{money(r.last)}{r.session === 'premarket' ? <span className="pcw__dim"> PRE</span> : r.session === 'afterhours' ? <span className="pcw__dim"> AH</span> : null}</td>
                   <td className={`og__num mono ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pct(r.day_pct)}</td>
                   <td className={`og__num mono ${(r.pl_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pct(r.pl_pct)}</td>
                   <td className="mono" title={r.band?.touches != null ? `${r.band.touches} touches` : ''}>

@@ -24,7 +24,7 @@ self.addEventListener('push', (event) => {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: payload.tag || 'cheetah',
-    data: { url: payload.url || '/', ...payload },
+    data: { url: payload.url || (payload.data && payload.data.url) || '/', ...payload },
     requireInteraction: payload.kind === 'volume_breakout' || payload.kind === 'rising_momentum',
     vibrate: [200, 100, 200],
   };

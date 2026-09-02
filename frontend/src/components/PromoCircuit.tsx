@@ -141,13 +141,16 @@ function RowsTable({ title, hint, rows }: { title: string; hint: string; rows: R
 
 type LiveRow = {
   ticker: string; status: string; best_tier: 'S' | 'A' | 'B'; accounts: string[];
+  alertable?: boolean;
   days_since_last_tag: number | null; last: number | null; prev_close: number | null;
-  day_pct: number | null; session: string; pct_since_tag: number | null;
+  rth_close?: number | null; day_pct: number | null; ah_pct?: number | null;
+  session: string; pct_since_tag: number | null;
 };
 type LivePayload = {
-  rows: LiveRow[]; n: number; alert_threshold_pct: number;
+  rows: LiveRow[]; n: number; alert_threshold_pct: number; alert_handles?: string[];
   live: { state: string; refresh_sec: number; as_of: string | null }; method_note: string;
 };
+const CLOSED_POLL_SEC = 300;
 
 const SESSION_TAG: Record<string, string> = { premarket: 'PRE', rth: 'RTH', afterhours: 'AH', closed: '—' };
 const pctFmt = (v: number | null | undefined, d = 1) =>
@@ -168,27 +171,32 @@ export function PromoLive() {
       .catch((e) => { if (my === seq.current) setErr(String(e?.message ?? e)); });
   }, []);
   useEffect(() => { load(); }, [load]);
+  /* Server cadence while open; slow tick while closed so it wakes at 04:00 ET
+   * on its own and retries after an error. A failed poll keeps the table. */
   const refresh = data?.live?.refresh_sec || 0;
   useEffect(() => {
-    if (!refresh) return;
-    const id = setInterval(load, refresh * 1000);
+    const id = setInterval(load, (refresh || CLOSED_POLL_SEC) * 1000);
     return () => clearInterval(id);
   }, [refresh, load]);
 
-  if (err) return <div className="cm-note cm-note-warn">Live board unavailable: {err}</div>;
+  if (err && !data) return <div className="cm-note cm-note-warn">Live board unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Pricing the circuit's names…</div>;
   const thr = data.alert_threshold_pct;
+  const who = (data.alert_handles && data.alert_handles.length)
+    ? data.alert_handles.map((h) => '@' + h).join(', ') : 'any roster account';
   return (
     <div className="pcw__table pcw__live">
       <h3 className="day-section__h">
         ⚡ Live movers
         <span className={`sl-live sl-live-${data.live.state}`} style={{ marginLeft: 8 }}>
           {data.live.refresh_sec ? '● LIVE' : '○ CLOSED'} · {data.live.state}
+          {err ? <span className="sl-stale" title={err}> · stale</span> : null}
         </span>
       </h3>
       <p className="rw__hint">
         Every tagged name, priced now (pre/post market included), sorted by today's move.
-        A move of ±{thr.toFixed(0)}% pushes a 🎪 alert to your phone — once per direction per day.
+        A move of ±{thr.toFixed(0)}% on a name tagged by {who} pushes a 🎪 alert — once per direction per trading day
+        (after the bell, measured against today's close).
       </p>
       {data.rows.length === 0 ? (
         <div className="day-empty">Nothing tagged is priced right now.</div>
@@ -203,14 +211,16 @@ export function PromoLive() {
           </thead>
           <tbody>
             {data.rows.map((r) => {
-              const big = r.day_pct != null && Math.abs(r.day_pct) >= thr;
+              const move = data.live.state === 'afterhours' && r.ah_pct != null ? r.ah_pct : r.day_pct;
+              const big = (r.alertable ?? true) && move != null && Math.abs(move) >= thr;
               return (
                 <tr key={r.ticker} className={big ? 'pcw__live-big' : ''}>
                   <td className="og__sym"><TickerLink ticker={r.ticker} /></td>
                   <td className="mono pcw__dim">{SESSION_TAG[r.session] || r.session}</td>
                   <td className="og__num mono">{r.last == null ? '—' : `$${r.last.toFixed(2)}`}</td>
-                  <td className={`og__num mono pcw__pct ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>
-                    {pctFmt(r.day_pct)}{big ? ' 🎪' : ''}
+                  <td className={`og__num mono pcw__pct ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}
+                      title={r.ah_pct != null ? `after-hours ${pctFmt(r.ah_pct)} vs today's close` : undefined}>
+                    {pctFmt(r.day_pct)}{r.ah_pct != null ? <span className="pcw__dim"> ({pctFmt(r.ah_pct)} AH)</span> : null}{big ? ' 🎪' : ''}
                   </td>
                   <td className={`og__num mono ${(r.pct_since_tag ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pctFmt(r.pct_since_tag)}</td>
                   <td className="mono pcw__dim">{r.accounts.map((h) => '@' + h).join(', ')}</td>

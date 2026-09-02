@@ -159,6 +159,7 @@ def _verdict(px, res, sup, in_zone):
 
 
 def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
+            max_zones: Optional[int] = MAX_ZONES_PER_SIDE,
             swing_window: Optional[int] = None,
             merge_pct: Optional[float] = None,
             half_width_pct: Optional[float] = None,
@@ -215,8 +216,12 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
     nearest_sup = below[0] if below else None
     in_zone = next((z for z in allz if z["in_price"]), None)
 
-    supply_top = sorted(supply, key=lambda z: -z["strength"])[:MAX_ZONES_PER_SIDE]
-    demand_top = sorted(demand, key=lambda z: -z["strength"])[:MAX_ZONES_PER_SIDE]
+    # max_zones=None -> EVERY cluster (portfolio supply watch needs the FIRST
+    # band overhead, which is routinely not among the 4 strongest). Default
+    # unchanged so every Chart Maps caller stays byte-identical.
+    _cap = len(allz) if max_zones is None else max_zones
+    supply_top = sorted(supply, key=lambda z: -z["strength"])[:_cap]
+    demand_top = sorted(demand, key=lambda z: -z["strength"])[:_cap]
     return {
         "last_price": round(float(last_price), 2),
         "supply_zones": sorted(supply_top, key=lambda z: -z["mid"]),   # high → low
