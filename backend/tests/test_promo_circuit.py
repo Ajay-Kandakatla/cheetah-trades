@@ -384,3 +384,32 @@ def test_sweep_cron_is_ten_minutes_on_weekdays():
     crontab = (Path(__file__).resolve().parents[1] / "crontab").read_text()
     line = [l for l in crontab.splitlines() if "catalysts.promo_circuit" in l and "1-5" in l][0]
     assert line.startswith("*/10")
+
+
+def test_extract_tags_keeps_every_post_with_time_and_text():
+    msgs = [{"id": 11, "created_at": "2026-09-01T13:23:00Z", "body": "$TLYS watch", "symbols": [{"symbol": "TLYS"}]},
+            {"id": 12, "created_at": "2026-09-02T19:35:00Z", "body": "$TLYS what looked ordinary this morning looks much better now.", "symbols": [{"symbol": "TLYS"}]}]
+    rec = pc.extract_tags("topstockalerts", msgs)["TLYS"]
+    assert [p["id"] for p in rec["posts"]] == [11, 12]
+    assert rec["posts"][1]["body"].startswith("$TLYS what looked ordinary") and rec["posts"][1]["at"].hour == 19
+
+
+def test_sweep_pushes_only_fresh_posts_capped(monkeypatch):
+    calls = []
+
+    class _Coll:
+        def find(self, q): return [{"ticker": "TLYS", "max_msg_id": 11, "first_tagged_at": "2026-09-01T13:23:00+00:00",
+                                    "last_tagged_at": "2026-09-01T13:23:00+00:00", "n_messages": 1}]
+        def update_one(self, q, u, upsert=False): calls.append((q, u))
+        def find_one(self, q): return {}
+    monkeypatch.setattr(pc, "_tags_coll", lambda: _Coll())
+    monkeypatch.setattr(pc, "_coll", lambda name: _Coll())
+    monkeypatch.setattr(pc, "PROMO_ACCOUNTS", {"topstockalerts": {"tier": "A"}})
+    monkeypatch.setattr(pc, "_fetch_user_stream", lambda handle, **kw: [
+        {"id": 11, "created_at": "2026-09-01T13:23:00Z", "body": "old", "symbols": [{"symbol": "TLYS"}]},
+        {"id": 12, "created_at": "2026-09-02T19:35:00Z", "body": "new", "symbols": [{"symbol": "TLYS"}]}])
+    pc.sweep()
+    tag_updates = [u for q, u in calls if q.get("_id") == "topstockalerts:TLYS"]
+    assert tag_updates and "$push" in tag_updates[0]
+    pushed = tag_updates[0]["$push"]["posts"]
+    assert [p["id"] for p in pushed["$each"]] == [12] and pushed["$slice"] == -pc.MAX_POSTS_KEPT

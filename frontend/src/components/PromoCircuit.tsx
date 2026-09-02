@@ -10,9 +10,10 @@
  * Reads /catalysts/promo-circuit; the roster lives in
  * backend/catalysts/promo_circuit.py (user-editable, like fundTiers).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
+import { PromoTagTape } from './PromoTagTape';
 
 type TaggedBy = {
   handle: string; tier: 'S' | 'A' | 'B';
@@ -119,6 +120,9 @@ export function tagStamp(iso: string | null | undefined): string {
 const SESSION_SHORT: Record<string, string> = { premarket: 'PRE', afterhours: 'AH' };
 
 function RowsTable({ title, hint, rows, live }: { title: string; hint: string; rows: Row[]; live?: Record<string, LiveRow> }) {
+  /* One expanded tape at a time per table (Ajay 2026-09-02: "small graph of
+   * price change from the time they said it"). */
+  const [open, setOpen] = useState<string | null>(null);
   return (
     <div className="pcw__table">
       <h3 className="day-section__h">{title}</h3>
@@ -143,9 +147,17 @@ function RowsTable({ title, hint, rows, live }: { title: string; hint: string; r
               const lv = live?.[r.ticker];
               const since = lv?.pct_since_tag_live ?? r.pct_since_tag;
               const isLive = lv?.pct_since_tag_live != null;
+              const isOpen = open === r.ticker;
               return (
-                <tr key={r.ticker}>
-                  <td className="og__sym"><TickerLink ticker={r.ticker} /></td>
+                <Fragment key={r.ticker}>
+                <tr>
+                  <td className="og__sym">
+                    <TickerLink ticker={r.ticker} />
+                    <button type="button" className={`ptt__toggle${isOpen ? ' is-on' : ''}`}
+                            aria-label={`${isOpen ? 'Hide' : 'Show'} tape for ${r.ticker}`}
+                            title="Price path around the tag — before or after the move?"
+                            onClick={() => setOpen(isOpen ? null : r.ticker)}>📈</button>
+                  </td>
                   <td>{r.accounts.map((a) => <AccountChip key={a.handle} a={a} />)}</td>
                   <td className="og__num mono" title={r.first_tagged_at}>
                     {tagStamp(r.first_tagged_at)}<span className="pcw__dim"> · {r.days_since_first_tag.toFixed(0)}d</span>
@@ -163,6 +175,10 @@ function RowsTable({ title, hint, rows, live }: { title: string; hint: string; r
                   <td title={STATUS_META[r.status]?.hint}>{STATUS_META[r.status]?.label ?? r.status}</td>
                   <td><EdgarChips e={r.edgar} /></td>
                 </tr>
+                {isOpen ? (
+                  <tr className="ptt__row"><td colSpan={9}><PromoTagTape ticker={r.ticker} /></td></tr>
+                ) : null}
+                </Fragment>
               );
             })}
           </tbody>

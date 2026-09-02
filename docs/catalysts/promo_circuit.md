@@ -146,3 +146,35 @@ was tagged with a date."*
 - Status (SEEDING → RAN → DUMPED) is still classified on **daily closes** by
   the sweep, so a name that "blew up" intraday shows the move live but flips
   status at the next sweep.
+
+## 2026-09-02 pm — 📈 tag tape: before or after the move?
+
+Ajay: *"Small graph of price change from the time they said it and where the
+price went… did they actually PSA it before the blow up or after?"*
+
+Every board row has a 📈 toggle that opens `PromoTagTape`
+(`GET /catalysts/promo-circuit/tape/{ticker}`, `backend/catalysts/promo_tape.py`):
+5-minute closes incl. pre/post market (shaded) from the session before the
+first tag to now (capped at 6 sessions), a marker at each account's first
+(solid) and last (dashed) post with the price at that bar in the tooltip, and a
+read from `analyze()` (pure, tested):
+
+| verdict | rule (both measured from the price at the first tag) |
+|---|---|
+| BEFORE_THE_MOVE | < 3% in the hour before, ≥ 5% to the peak after |
+| MID_RUN | ≥ 3% in the hour before and ≥ 3% more to the peak |
+| AFTER_THE_MOVE | ≥ 5% in the hour before, < 3% more to the peak |
+| NO_RUN / NO_TAPE_AFTER | neither / nothing printed since the tag |
+
+The sweep keeps first/last per account, not every post, so a chatty account
+shows two markers. In-process cache 60 s.
+
+**Every post is kept (2026-09-02 pm).** Ajay: *"the reason I asked for this
+graph is to find the actual announcement time vs the price action… TLYS
+already went up 15% when they called it."* The sweep now stores each post
+(`posts: [{id, at, body}]`, last 40 per account × ticker, `$push … $slice`);
+the tape marks every one (first solid, later dashed) and lists them under the
+chart with the price at that bar, the move in the hour before, and the peak
+after — so a 9:23p watchlist mention and a 3:35p victory lap read separately.
+`promo_circuit.backfill_posts(days)` fills history once (`$addToSet`, no
+high-water-mark changes).

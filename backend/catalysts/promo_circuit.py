@@ -67,7 +67,8 @@ RETAG_RESET_DAYS = 14             # dormant this long -> new campaign, reset fir
 SHOTGUN_DISTINCT_TAGS = 25        # account tagging more tickers than this in the
                                   # window is a watchlist machine: its one-off
                                   # mentions are noise, repeats are campaigns
-EDGAR_ROW_CAP = 80                # EDGAR lookups only for the rows that matter
+EDGAR_ROW_CAP = 80
+MAX_POSTS_KEPT = 40           # posts kept per account x ticker for the tag tape                # EDGAR lookups only for the rows that matter
 
 # ---------------------------------------------------------------------------
 # The roster. USER-EDITABLE — same pattern as frontend/src/lib/fundTiers.ts:
@@ -272,10 +273,15 @@ def extract_tags(handle: str, messages: list[dict],
             rec = out.setdefault(tkr, {
                 "first_tagged_at": ts, "last_tagged_at": ts,
                 "n_messages": 0, "sample": body[:180], "max_msg_id": mid,
-                "msg_ids": [],
+                "msg_ids": [], "posts": [],
             })
             rec["n_messages"] += 1
             rec["msg_ids"].append(mid)
+            # Every post, not just first/last: the tag tape marks the ACTUAL
+            # announcement times (Ajay 2026-09-02: TLYS was already +15% when
+            # the 3:35p post landed; the 9:23p-the-night-before mention was
+            # a different call).
+            rec["posts"].append({"id": mid, "at": ts, "body": body[:160]})
             if ts < rec["first_tagged_at"]:
                 rec["first_tagged_at"] = ts
             if ts > rec["last_tagged_at"]:
@@ -349,6 +355,7 @@ def sweep() -> dict:
                     if prev_first:
                         first = min(first, prev_first)
                     n_msgs += prev.get("n_messages") or 0
+            fresh_posts = [pp for pp in rec.get("posts") or [] if pp["id"] > prev_max]
             try:
                 coll.update_one(
                     {"_id": f"{handle}:{tkr}"},
@@ -362,7 +369,9 @@ def sweep() -> dict:
                         "sample": rec["sample"],
                         "max_msg_id": max(rec["max_msg_id"], prev_max),
                         "swept_at": now,
-                    }},
+                    },
+                     # keep the last MAX_POSTS_KEPT posts per account x ticker
+                     "$push": {"posts": {"$each": fresh_posts, "$slice": -MAX_POSTS_KEPT}}},
                     upsert=True,
                 )
                 n_new += 1
@@ -745,3 +754,27 @@ if __name__ == "__main__":
     b = build(force=True)
     print(json.dumps({"board_rows": b.get("n_tickers"),
                       "board_build_sec": b.get("elapsed_sec")}, indent=2))
+
+
+def backfill_posts(days: int = 14) -> dict:
+    """One-off: fetch every roster stream back `days` and add each post to
+    its tag record's `posts` (never touching high-water marks or counts).
+    Needed once after 2026-09-02, when the sweep started keeping posts."""
+    coll = _tags_coll()
+    if coll is None:
+        return {"ok": False, "reason": "mongo unavailable"}
+    oldest = datetime.now(timezone.utc) - timedelta(days=days)
+    added, failed = 0, []
+    for handle in PROMO_ACCOUNTS:
+        msgs = _fetch_user_stream(handle, oldest=oldest, max_pages=40)
+        if msgs is None:
+            failed.append(handle)
+            continue
+        for tkr, rec in extract_tags(handle, msgs).items():
+            try:
+                res = coll.update_one({"_id": f"{handle}:{tkr}"},
+                                      {"$addToSet": {"posts": {"$each": rec["posts"]}}})
+                added += int(res.matched_count or 0)
+            except Exception as exc:                        # pragma: no cover
+                log.warning("backfill %s:%s failed: %s", handle, tkr, exc)
+    return {"ok": True, "records_touched": added, "accounts_failed": failed, "days": days}

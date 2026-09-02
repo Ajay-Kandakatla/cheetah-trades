@@ -358,6 +358,16 @@ async def get_promo_live(force: bool = Query(False)):
     return await asyncio.to_thread(promo_live.live_rows, force)
 
 
+@router.get("/catalysts/promo-circuit/tape/{ticker}")
+async def get_promo_tape(ticker: str, force: bool = Query(False)):
+    """5-min tape (pre/post market) around the roster tags on one name plus a
+    before/mid-run/after read. Ajay 2026-09-02: 'did they PSA it before the
+    blow up or after'."""
+    import asyncio
+    from . import promo_tape
+    return await asyncio.to_thread(promo_tape.tape_for, ticker.upper(), force)
+
+
 @router.post("/catalysts/promo-circuit/sweep")
 async def trigger_promo_sweep():
     """Manually sweep the roster accounts' StockTwits streams now.
