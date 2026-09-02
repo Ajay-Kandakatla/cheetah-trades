@@ -189,20 +189,35 @@ def _staircase(n_peaks=8, base=100.0, step=1.05, leg=12):
                          "close": closes, "volume": np.full(len(closes), 1e6)}, index=idx)
 
 
-def test_max_zones_none_surfaces_every_cluster_and_the_default_is_untouched():
-    """Portfolio supply watch (2026-09-02) needs the FIRST band overhead, which
-    is routinely not among the strongest four the Chart Maps tabs show."""
+def test_surfaced_bands_are_the_nearest_not_the_strongest():
+    """2026-09-02: every consumer asks 'what is nearest / what am I in', so the
+    N surfaced bands per side are cut by distance from price. The first band
+    overhead and the band price stands in can never be dropped again."""
     df = _staircase()
     live = 100.0
-    default = pz.compute(df, last_price=live)
+    out = pz.compute(df, last_price=live)
     every = pz.compute(df, last_price=live, max_zones=None)
-    assert default and every
-    d_sup, e_sup = default["supply_zones"], every["supply_zones"]
-    assert len(d_sup) <= pz.MAX_ZONES_PER_SIDE < len(e_sup)              # 8 peaks, 4 kept by default
-    keys = {(round(z["lo"], 4), round(z["hi"], 4)) for z in e_sup}
-    assert all((round(z["lo"], 4), round(z["hi"], 4)) in keys for z in d_sup)   # superset
-    nearest_all = min(z["lo"] for z in e_sup if z["hi"] >= live)
-    nearest_default = min(z["lo"] for z in d_sup if z["hi"] >= live)
-    assert nearest_all <= nearest_default
-    # the default path is byte-identical to a plain call
-    assert pz.compute(df, last_price=live) == default
+    assert out and every
+    sup, all_sup = out["supply_zones"], every["supply_zones"]
+    assert len(sup) <= pz.MAX_ZONES_PER_SIDE < len(all_sup)
+    nearest_all = min((z for z in all_sup if z["hi"] >= live), key=lambda z: z["lo"])
+    assert any(abs(z["lo"] - nearest_all["lo"]) < 1e-9 for z in sup)          # first band overhead is surfaced
+    dists = sorted(pz.band_distance(z, live) for z in all_sup)[:len(sup)]
+    assert sorted(pz.band_distance(z, live) for z in sup) == dists           # exactly the N nearest
+    assert [z["mid"] for z in sup] == sorted((z["mid"] for z in sup), reverse=True)   # still high -> low
+    # a band price is standing in is always kept, whatever its strength
+    inside_px = (all_sup[-1]["lo"] + all_sup[-1]["hi"]) / 2
+    kept = pz.compute(df, last_price=inside_px)["supply_zones"]
+    assert any(z["lo"] <= inside_px <= z["hi"] for z in kept)
+    # the engine's own nearest_resistance agrees with the surfaced list
+    nr = pz.compute(df, last_price=live)["nearest_resistance"]
+    assert nr and any(abs(z["lo"] - nr["lo"]) < 1e-9 for z in sup)
+
+
+def test_band_distance_and_nearest_first():
+    z_in, z_up, z_dn = {"lo": 99, "hi": 101, "strength": 1}, {"lo": 110, "hi": 112, "strength": 90}, {"lo": 90, "hi": 92, "strength": 5}
+    assert pz.band_distance(z_in, 100) == 0.0
+    assert pz.band_distance(z_up, 100) == 10 and pz.band_distance(z_dn, 100) == 8
+    assert [z["lo"] for z in pz.nearest_first([z_up, z_dn, z_in], 100)] == [99, 90, 110]
+    tie_a, tie_b = {"lo": 110, "hi": 112, "strength": 10}, {"lo": 110, "hi": 112, "strength": 80}
+    assert pz.nearest_first([tie_a, tie_b], 100)[0] is tie_b                  # ties -> stronger first

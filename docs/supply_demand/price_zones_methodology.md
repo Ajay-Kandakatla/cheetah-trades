@@ -46,3 +46,16 @@ past structure, nothing to lean on) — so this tool agrees with the `is_buyable
 
 > **Not advice.** A pragmatic structural read of where supply/demand previously
 > traded. Not a buy signal and not personalized financial advice.
+
+## 2026-09-02 — surfaced bands are the NEAREST, not the strongest
+
+`supply_zones` / `demand_zones` used to carry the 4 *strongest* clusters per
+side. Every consumer (Support tab, Portfolio supply watch, demand re-entry's
+entry-zone pick, signal watch, the board tiles) asks "what is nearest / what
+am I standing in", and the strongest-4 cut routinely dropped exactly that
+band: CRWD's 6-month view lost the 216–219 and 227 swing highs its SMC ledger
+was sweeping; UBER's portfolio row missed the band price was inside. The cut
+is now by **distance from price** (`nearest_first`, inside-band first, ties by
+strength), output order still high → low, `strength` still on every band, and
+`max_zones=None` returns every cluster. `nearest_resistance` / `nearest_support`
+were always computed over every band and are unchanged.

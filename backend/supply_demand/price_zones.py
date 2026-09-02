@@ -29,7 +29,7 @@ ZONE_HALF_WIDTH_PCT  = 0.6    # a single-swing band gets this half-width
 NEAR_PCT             = 3.0    # a zone within this % of price = "at" it
 CLEAR_RUNWAY_PCT     = 8.0    # nearest overhead supply beyond this % = clear runway
 NO_SUPPORT_PCT       = 6.0    # nearest support farther than this below = "no support to lean on"
-MAX_ZONES_PER_SIDE   = 4      # surface the strongest N supply + N demand bands
+MAX_ZONES_PER_SIDE   = 4      # surface the N NEAREST supply + N demand bands (was strongest until 2026-09-02)
 
 # Frame floors. MIN_BARS is the historical gate and stays exactly where it was
 # for every caller that does not ask for a custom window — moving it would
@@ -158,6 +158,18 @@ def _verdict(px, res, sup, in_zone):
                       else "Mid-range — no clearly defined band directly above/below right now.")}
 
 
+def band_distance(z: dict, last_price: float) -> float:
+    """0 when price is inside the band, else the gap to its nearest edge."""
+    if z["lo"] <= last_price <= z["hi"]:
+        return 0.0
+    return z["lo"] - last_price if z["lo"] > last_price else last_price - z["hi"]
+
+
+def nearest_first(bands: list, last_price: float) -> list:
+    """Bands ordered by distance from price (inside first); ties by strength."""
+    return sorted(bands, key=lambda z: (band_distance(z, last_price), -z.get("strength", 0)))
+
+
 def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
             max_zones: Optional[int] = MAX_ZONES_PER_SIDE,
             swing_window: Optional[int] = None,
@@ -216,12 +228,16 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
     nearest_sup = below[0] if below else None
     in_zone = next((z for z in allz if z["in_price"]), None)
 
-    # max_zones=None -> EVERY cluster (portfolio supply watch needs the FIRST
-    # band overhead, which is routinely not among the 4 strongest). Default
-    # unchanged so every Chart Maps caller stays byte-identical.
+    # Which N bands per side are SURFACED. Until 2026-09-02 this kept the N
+    # STRONGEST, which routinely dropped the band price meets FIRST (CRWD 6m:
+    # the 216-219 and 227 swing highs the SMC ledger was sweeping; UBER: the
+    # band price was standing in). Every consumer of these lists asks "what is
+    # nearest / what am I in", so the cut is now by DISTANCE from price, the
+    # band price is standing in always kept. `strength` stays on each band for
+    # ranking and display; max_zones=None returns every cluster.
     _cap = len(allz) if max_zones is None else max_zones
-    supply_top = sorted(supply, key=lambda z: -z["strength"])[:_cap]
-    demand_top = sorted(demand, key=lambda z: -z["strength"])[:_cap]
+    supply_top = nearest_first(supply, last_price)[:_cap]
+    demand_top = nearest_first(demand, last_price)[:_cap]
     return {
         "last_price": round(float(last_price), 2),
         "supply_zones": sorted(supply_top, key=lambda z: -z["mid"]),   # high → low

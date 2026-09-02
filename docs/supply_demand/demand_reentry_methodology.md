@@ -342,7 +342,7 @@ re-confirmed rather than "fixed":
   the first band of any origin above price, because broken support acts as
   resistance. Origin is kept for colour only.
 * **The target may not appear in the drawn zone lists.** Those are truncated to
-  the strongest four per side; `nearest_resistance` is computed over all of
+  the four NEAREST per side (the strongest four until 2026-09-02); `nearest_resistance` is computed over all of
   them. Searching only the drawn lists is what gave KLAC an implausible 11.8R.
 
 *Decision-support only. Not investment advice.*
