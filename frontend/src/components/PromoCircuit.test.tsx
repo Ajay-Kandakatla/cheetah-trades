@@ -32,10 +32,23 @@ const payload = (rows: any[], over: any = {}) => ({
   ...over,
 });
 
-function mock(body: any, ok = true) {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok, status: ok ? 200 : 500, json: () => Promise.resolve(body),
-  } as any));
+const liveRow = (over: Partial<any> = {}) => ({
+  ticker: 'LIV1', status: 'SEEDING', best_tier: 'A', accounts: ['topstockalerts', 'beppels'],
+  days_since_last_tag: 1, last: 1.32, prev_close: 1.2, day_pct: 10.0, session: 'premarket',
+  pct_since_tag: 4.0, ...over,
+});
+const livePayload = (rows: any[] = [liveRow()], refresh = 30) => ({
+  rows, n: rows.length, alert_threshold_pct: 8,
+  live: { state: 'premarket', refresh_sec: refresh, as_of: '2026-09-02T09:00:00-04:00' },
+  method_note: 'Live prints incl. pre/post market.',
+});
+
+/* The tab now issues two GETs: the board and the live movers. Route by URL. */
+function mock(body: any, ok = true, live: any = livePayload()) {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any) =>
+    Promise.resolve(String(url).includes('/promo-circuit/live')
+      ? ({ ok: true, status: 200, json: () => Promise.resolve(live) } as any)
+      : ({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) } as any))));
 }
 
 const draw = () => render(<MemoryRouter><PromoCircuit /></MemoryRouter>);
@@ -62,10 +75,10 @@ describe('PromoCircuit', () => {
     const { container } = draw();
     await waitFor(() => expect(screen.getByText('RANX')).toBeTruthy());
     const tables = container.querySelectorAll('.pcw__table');
-    expect(tables.length).toBe(2);           // seeding + played (no rest table)
-    expect(tables[0].textContent).toContain('TINY');
-    expect(tables[1].textContent).toContain('RANX');
-    expect(tables[1].textContent).toContain('DMPD');
+    expect(tables.length).toBe(3);           // live movers + seeding + played (no rest table)
+    expect(tables[1].textContent).toContain('TINY');
+    expect(tables[2].textContent).toContain('RANX');
+    expect(tables[2].textContent).toContain('DMPD');
   });
 
   it('renders both EDGAR tells as chips with dates', async () => {
@@ -105,15 +118,73 @@ describe('PromoCircuit', () => {
   it('REGRESSION: a failed "Sweep now" keeps the rendered board visible', async () => {
     // GET succeeds with a board; the sweep POST then 500s. The rows must
     // stay on screen with a sweep-scoped error, not the unavailable page.
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: any, init?: any) =>
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any, init?: any) =>
       Promise.resolve(init?.method === 'POST'
         ? ({ ok: false, status: 500, json: () => Promise.resolve({}) } as any)
-        : ({ ok: true, status: 200, json: () => Promise.resolve(payload([row()])) } as any))));
+        : String(url).includes('/promo-circuit/live')
+          ? ({ ok: true, status: 200, json: () => Promise.resolve(livePayload()) } as any)
+          : ({ ok: true, status: 200, json: () => Promise.resolve(payload([row()])) } as any))));
     draw();
     await waitFor(() => expect(screen.getByText('TINY')).toBeTruthy());
     fireEvent.click(screen.getByText('↻ Sweep now'));
     await waitFor(() => expect(screen.getByText(/Sweep failed/)).toBeTruthy());
     expect(screen.getByText('TINY')).toBeTruthy();
     expect(screen.queryByText(/Promo circuit unavailable/)).toBeNull();
+  });
+});
+
+describe('PromoLive (Ajay 2026-09-02: real-time % + alerts)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
+
+  it('prices every tagged name with session tag, today %, and flags the alert-size movers', async () => {
+    mock(payload([row()]), true, livePayload([
+      liveRow(),
+      liveRow({ ticker: 'SLOW', day_pct: 2.5, session: 'rth', accounts: ['ShangVXO'] }),
+      liveRow({ ticker: 'DOWN', day_pct: -12.0, session: 'afterhours', last: 0.88, prev_close: 1.0 }),
+      liveRow({ ticker: 'NOPX', day_pct: null, last: null, prev_close: null, session: 'closed' }),
+    ]));
+    draw();
+    await waitFor(() => expect(screen.getByText('⚡ Live movers')).toBeTruthy());
+    expect(screen.getByText('+10.0% 🎪')).toBeTruthy();
+    expect(screen.getByText('-12.0% 🎪')).toBeTruthy();
+    expect(screen.getByText('+2.5%')).toBeTruthy();
+    expect(screen.getByText('PRE')).toBeTruthy();
+    expect(screen.getByText('AH')).toBeTruthy();
+    expect(screen.getByText('RTH')).toBeTruthy();
+    expect(screen.getAllByText('@topstockalerts, @beppels').length).toBe(3);
+    expect(screen.getByText(/±8% pushes a 🎪 alert/)).toBeTruthy();
+    expect(screen.getByText(/● LIVE · premarket/)).toBeTruthy();
+    const liveCalls = (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live'));
+    expect(liveCalls.length).toBe(1);
+  });
+
+  it('polls every refresh_sec while live', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mock(payload([row()]), true, livePayload([liveRow()], 30));
+    draw();
+    await waitFor(() => expect(screen.getByText('+10.0% 🎪')).toBeTruthy());
+    await vi.advanceTimersByTimeAsync(31_000);
+    const calls = (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live')).length;
+    expect(calls).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not poll when the tape is closed (refresh_sec 0)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mock(payload([row()]), true, livePayload([liveRow()], 0));
+    draw();
+    await waitFor(() => expect(screen.getByText(/○ CLOSED · premarket/)).toBeTruthy());
+    await vi.advanceTimersByTimeAsync(60_000);
+    const calls = (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live')).length;
+    expect(calls).toBe(1);
+  });
+
+  it('negative: a failing live endpoint degrades to a note and leaves the board intact', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any) =>
+      Promise.resolve(String(url).includes('/promo-circuit/live')
+        ? ({ ok: false, status: 502, json: () => Promise.resolve({}) } as any)
+        : ({ ok: true, status: 200, json: () => Promise.resolve(payload([row()])) } as any))));
+    draw();
+    await waitFor(() => expect(screen.getByText(/Live board unavailable: HTTP 502/)).toBeTruthy());
+    expect(screen.getByText('TINY')).toBeTruthy();
   });
 });

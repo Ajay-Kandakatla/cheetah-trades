@@ -348,6 +348,16 @@ async def get_promo_circuit(force: bool = Query(False, description="bypass 10min
     return await asyncio.to_thread(pc.build, force)
 
 
+@router.get("/catalysts/promo-circuit/live")
+async def get_promo_live(force: bool = Query(False)):
+    """Real-time % on every SEEDING/RAN/DUMPED promo-tagged name off one
+    Massive snapshot (pre/post market included), sorted by today's move.
+    20s in-process cache. Ajay 2026-09-02."""
+    import asyncio
+    from . import promo_live
+    return await asyncio.to_thread(promo_live.live_rows, force)
+
+
 @router.post("/catalysts/promo-circuit/sweep")
 async def trigger_promo_sweep():
     """Manually sweep the roster accounts' StockTwits streams now.

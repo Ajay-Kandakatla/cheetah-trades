@@ -406,6 +406,17 @@ def _format_holdings_response(owner_email: str, plaid_response: dict,
     }
 
 
+@router.get("/portfolio/supply")
+async def portfolio_supply(force: bool = Query(False, description="bypass the 10-min cache"),
+                           user_email: str = Depends(current_user_email)):
+    """When does each holding reach SUPPLY (the sell zone)? Ajay 2026-09-02.
+    Daily swing-cluster zones above price, distance in % and ATR-days, a
+    state per holding, and the alert channel note. Cached 10 min."""
+    import asyncio
+    from portfolio import supply_watch
+    return JSONResponse(await asyncio.to_thread(supply_watch.build, user_email, force))
+
+
 @router.get("/portfolio/status")
 async def portfolio_status(user_email: str = Depends(current_user_email)):
     """Status check used by the frontend to choose between

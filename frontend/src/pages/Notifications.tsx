@@ -34,6 +34,8 @@ const CATEGORIES: CategoryDef[] = [
     detail: 'At-the-pivot (buyable names only) and approaching-pivot buy-stop alerts from the 5-min market-hours cron. Once per name per kind per day.' },
   { key: 'position_alert', label: 'Portfolio alerts', emoji: '💼', group: 'trading',
     detail: 'Stop / target hit on the positions you hold — the up/down moves on your portfolio that need action.' },
+  { key: 'promo_alert', label: 'Promo-circuit movers', emoji: '🎪', group: 'trading',
+    detail: 'A name tagged by the caught pump accounts moves ±8% vs the prior close — pre-market, regular and after-hours. Once per direction per day. The tag is the promotion: a do-not-chase radar.' },
   { key: 'minervini_flashcards', label: 'Minervini learning', emoji: '🃏', group: 'trading',
     detail: 'Hourly bite-sized lessons (24h schedule): entry rules, risk, sell rules, psychology, review, fundamentals, market structure, trader history, edge math. ~80 cards, ~2-3 week rotation. Quiet-hours pref below mutes overnight delivery.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
@@ -358,7 +360,7 @@ const PRESETS: { id: string; label: string; emoji: string; detail: string; pref:
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
     detail: 'High-signal only: buyable / Enter-zone + portfolio stops.',
     pref: {
-      pivot_alert: true, position_alert: true,
+      pivot_alert: true, position_alert: true, promo_alert: true,
       minervini_flashcards: false, market_hours_reminder: false,
       todo_reminder: false, todo_daily_digest: true,
     },

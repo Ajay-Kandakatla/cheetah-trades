@@ -139,6 +139,92 @@ function RowsTable({ title, hint, rows }: { title: string; hint: string; rows: R
   );
 }
 
+type LiveRow = {
+  ticker: string; status: string; best_tier: 'S' | 'A' | 'B'; accounts: string[];
+  days_since_last_tag: number | null; last: number | null; prev_close: number | null;
+  day_pct: number | null; session: string; pct_since_tag: number | null;
+};
+type LivePayload = {
+  rows: LiveRow[]; n: number; alert_threshold_pct: number;
+  live: { state: string; refresh_sec: number; as_of: string | null }; method_note: string;
+};
+
+const SESSION_TAG: Record<string, string> = { premarket: 'PRE', rth: 'RTH', afterhours: 'AH', closed: '—' };
+const pctFmt = (v: number | null | undefined, d = 1) =>
+  v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(d)}%`;
+
+/* ⚡ Live — Ajay 2026-09-02: "Give me a real time page.. with percentage".
+ * Every tagged name priced off one snapshot, pre/post market included,
+ * sorted by today's move; re-reads every 30s while the tape is open. */
+export function PromoLive() {
+  const [data, setData] = useState<LivePayload | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const seq = useRef(0);
+  const load = useCallback(() => {
+    const my = ++seq.current;
+    fetch(`${API}/catalysts/promo-circuit/live`, { credentials: 'include', cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then((j) => { if (my === seq.current) { setData(j); setErr(null); } })
+      .catch((e) => { if (my === seq.current) setErr(String(e?.message ?? e)); });
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  const refresh = data?.live?.refresh_sec || 0;
+  useEffect(() => {
+    if (!refresh) return;
+    const id = setInterval(load, refresh * 1000);
+    return () => clearInterval(id);
+  }, [refresh, load]);
+
+  if (err) return <div className="cm-note cm-note-warn">Live board unavailable: {err}</div>;
+  if (!data) return <div className="cm-note">Pricing the circuit's names…</div>;
+  const thr = data.alert_threshold_pct;
+  return (
+    <div className="pcw__table pcw__live">
+      <h3 className="day-section__h">
+        ⚡ Live movers
+        <span className={`sl-live sl-live-${data.live.state}`} style={{ marginLeft: 8 }}>
+          {data.live.refresh_sec ? '● LIVE' : '○ CLOSED'} · {data.live.state}
+        </span>
+      </h3>
+      <p className="rw__hint">
+        Every tagged name, priced now (pre/post market included), sorted by today's move.
+        A move of ±{thr.toFixed(0)}% pushes a 🎪 alert to your phone — once per direction per day.
+      </p>
+      {data.rows.length === 0 ? (
+        <div className="day-empty">Nothing tagged is priced right now.</div>
+      ) : (
+        <table className="og__table">
+          <thead>
+            <tr>
+              <th>Symbol</th><th>Session</th><th className="og__num">Last</th>
+              <th className="og__num">Today</th><th className="og__num">Since tag</th>
+              <th>Tagged by</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((r) => {
+              const big = r.day_pct != null && Math.abs(r.day_pct) >= thr;
+              return (
+                <tr key={r.ticker} className={big ? 'pcw__live-big' : ''}>
+                  <td className="og__sym"><TickerLink ticker={r.ticker} /></td>
+                  <td className="mono pcw__dim">{SESSION_TAG[r.session] || r.session}</td>
+                  <td className="og__num mono">{r.last == null ? '—' : `$${r.last.toFixed(2)}`}</td>
+                  <td className={`og__num mono pcw__pct ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>
+                    {pctFmt(r.day_pct)}{big ? ' 🎪' : ''}
+                  </td>
+                  <td className={`og__num mono ${(r.pct_since_tag ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pctFmt(r.pct_since_tag)}</td>
+                  <td className="mono pcw__dim">{r.accounts.map((h) => '@' + h).join(', ')}</td>
+                  <td>{STATUS_META[r.status as Row['status']]?.label ?? r.status}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 export function PromoCircuit() {
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -194,6 +280,8 @@ export function PromoCircuit() {
           {sweepErr && <div className="pcw__sweep-err">Sweep failed: {sweepErr} — showing the last board.</div>}
         </div>
       </header>
+
+      <PromoLive />
 
       <RowsTable
         title="🌱 Being seeded now"

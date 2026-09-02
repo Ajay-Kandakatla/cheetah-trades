@@ -39,6 +39,7 @@ import { honestDayPct } from '../lib/portfolioDay';
 import { useHoldings, type HoldingRow } from '../hooks/usePortfolio';
 import { useLivePortfolio } from '../hooks/useLivePortfolio';
 import { Heatmap, type HeatTile } from '../components/Heatmap';
+import { SupplyWatch } from '../components/SupplyWatch';
 import { PortfolioPostureBanner } from '../components/PortfolioPostureBanner';
 import { MarketContextStrip } from '../components/MarketContextStrip';
 import { FullScanModal } from '../components/FullScanModal';
@@ -418,6 +419,9 @@ export default function PortfolioPage() {
       {/* Sections wrapped in TrackedSection (Ajay 2026-06-16) — record
           `section:portfolio:*` on scroll-into-view to enable a later
           usage-driven reorder. Layout-neutral. */}
+      {/* Sell side (Ajay 2026-09-02): when does each holding reach supply. */}
+      <TrackedSection name="portfolio:supply"><SupplyWatch /></TrackedSection>
+
       <TrackedSection name="portfolio:add_form"><AddHoldingForm onAdded={refresh} /></TrackedSection>
 
       {/* Buy-discovery widgets removed from Portfolio (2026-06-13 declutter):

@@ -11426,6 +11426,15 @@ a.tk-link:hover   { color: inherit; }
 .sl-stale { color: var(--warn, #e8a33d); font-size: 11px; }
 .sl-overnight { margin: 6px 0 10px; font-size: 13px; line-height: 1.5; }
 
+/* Supply watch (Portfolio) */
+.sw__table { margin-top: 10px; }
+.sw__row-in_supply td { background: rgba(229, 72, 77, 0.08); }
+.sw__row-near td { background: rgba(232, 163, 61, 0.07); }
+.sw__read { font-size: 12px; color: var(--text-muted, #94a3b8); }
+.pcw__live { margin-bottom: 18px; }
+.pcw__live-big td { background: rgba(232, 163, 61, 0.08); }
+.pcw__pct { font-weight: 700; }
+
 /* Promo-circuit watch */
 .pcw__table { margin-top: 14px; }
 .pcw__acct {

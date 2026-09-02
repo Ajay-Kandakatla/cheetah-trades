@@ -251,6 +251,13 @@
 */30   7-19  *    *    1-5  /usr/local/bin/python -m catalysts.promo_circuit
 15     9-21/2 *   *    0,6  /usr/local/bin/python -m catalysts.promo_circuit
 #
+# Promo-circuit MOVERS alerts (catalysts/promo_live.py) + portfolio SUPPLY
+# alerts (portfolio/supply_watch.py): every 5 min 04:00-19:55 ET weekdays —
+# pre-market and after-hours included (Ajay 2026-09-02). Both dedupe once
+# per symbol per day and skip when the tape is closed (holiday-aware).
+*/5    4-19  *    *    1-5  /usr/local/bin/python -m catalysts.promo_live
+2-57/5 4-19  *    *    1-5  /usr/local/bin/python -m portfolio.supply_watch
+#
 # Catalysts — pre-market sweep at 4am, 6am, 8am, 9:25am ET on weekdays.
 # Pre-warms the /catalysts/premarket cache so the page is instant when
 # you open it before market open.

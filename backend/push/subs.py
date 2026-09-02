@@ -319,6 +319,11 @@ def default_prefs() -> dict:
         "watchlist_stage_breakdown": True, # same but only for watchlist names
         "price_alert": True,          # user-set price alerts
         "position_alert": True,       # stop / target hit on Lifeboard positions
+        # Promo-circuit mover (catalysts/promo_live.py): a roster-tagged
+        # name moves >= 8% vs the prior close, pre/regular/after hours.
+        # Ajay 2026-09-02: "just give me alerts from the topstock alerts
+        # only.. I need the pre market alerts as well. After hours alerts."
+        "promo_alert": True,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay
