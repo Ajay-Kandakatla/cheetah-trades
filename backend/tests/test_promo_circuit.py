@@ -316,6 +316,23 @@ def test_tags_for_uses_live_roster_tier_not_stored(monkeypatch):
     assert out["AAAA"]["tiers"] == ["S"]
 
 
+def test_tags_for_per_account_penalty_window(monkeypatch):
+    # ShangVXO's pumps land ~10 sessions after the tag (PETZ session 9,
+    # FLYE session 8 — measured 2026-09-02), so his window is 14d while
+    # the default stays 7d.
+    now = datetime.now(timezone.utc)
+    ten_days = now - timedelta(days=10)
+    docs = [
+        {"account": "ShangVXO", "ticker": "AAAA", "last_tagged_at": ten_days},
+        {"account": "beppels", "ticker": "BBBB", "last_tagged_at": ten_days},
+    ]
+    monkeypatch.setattr(pc, "_tags_coll", lambda: _FakeColl(docs))
+    out = pc.tags_for(["AAAA", "BBBB"])
+    assert "AAAA" in out
+    assert "BBBB" not in out
+    assert pc.PROMO_ACCOUNTS["ShangVXO"]["penalty_days"] >= 10
+
+
 class _ErrColl:
     def find(self, *_a, **_k):
         raise RuntimeError("server selection timeout")

@@ -83,13 +83,34 @@ EDGAR_ROW_CAP = 80                # EDGAR lookups only for the rows that matter
 PROMO_ACCOUNTS: dict[str, dict] = {
     "ShangVXO": {
         "tier": "S",
-        "note": "'_ProfessorGamma' tout template",
-        "evidence": "Tagged PETZ 8/19 + FLYE 8/20; both vertical Mon 8/31 on silent tapes",
+        "note": "'_ProfessorGamma' tout template; resurrected account",
+        "evidence": ("PETZ 8/19 + FLYE 8/20 touts -> both vertical Tue 9/1 on "
+                     "silent tapes. Dormant Feb 2014, reborn 2026-08-06 as an "
+                     "SPCX/'_ProfessorGamma' vehicle; staged VMAR with "
+                     "@topstockalerts (his 8/18 tout, TSA's 8/26 victory lap)"),
+        "audit": ("Aug-2026: 870 tags in 27d, 28% not even priceable "
+                  "securities (filler camouflage); real touts 16.5% hit +20% "
+                  "in 5 sessions but 25.7% in 10 — median peak session 4, "
+                  "HALF the hits after session 5, median tout −6.1% by "
+                  "session 10"),
+        # His pumps land ~10 SESSIONS after the tag (PETZ session 9, FLYE
+        # session 8) — the default 7-day penalty window would expire before
+        # the move. Measured 2026-09-02.
+        "penalty_days": 14,
     },
     "topstockalerts": {
         "tier": "A",
         "note": "alert loop, reposts own wins 5-6x",
-        "evidence": "NWGL 'ALERTED @ $0.25' loop from 8/19 into the 98.4M-share resale shelf; SWVL gainer lists all weekend 8/28-30",
+        "evidence": ("NWGL 'ALERTED @ $0.25' loop from 8/19 into the resale "
+                     "shelf; BTCT 'alerted @ $0.54' admitted to be a July-29 "
+                     "call, rebranded same-day with a live claim ladder "
+                     "27%->296%; staged VMAR with @ShangVXO; posted literal "
+                     "'strong pump ahead' (LESL 8/17, GNS 8/19)"),
+        "audit": ("Aug-2026: 1,134 tags in 27d, tagged mid-run (+6% median "
+                  "tag-day move); 25% hit +20% from the close but 19% from "
+                  "the next open (the gap eats the edge) — median red at "
+                  "every entry; even his self-selected alert-brags are "
+                  "−6.4% ten sessions after the public post"),
     },
     "beppels": {
         "tier": "A",
@@ -677,7 +698,14 @@ def tags_for(tickers: list[str], days: int = PENALTY_WINDOW_DAYS) -> dict[str, d
     if coll is None or not tickers:
         return {}
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=days)
+    # Query with the widest window any roster account carries; the
+    # per-account window is enforced below. An account can override the
+    # default via "penalty_days" — ShangVXO's pumps land ~10 sessions after
+    # his tags, so a 7-day window expired right before the move (measured
+    # 2026-09-02: PETZ ran session 9, FLYE session 8).
+    max_days = max([days] + [int(m.get("penalty_days") or 0)
+                             for m in PROMO_ACCOUNTS.values()])
+    cutoff = now - timedelta(days=max_days)
     out: dict[str, dict] = {}
     try:
         # Tier is resolved against the LIVE roster, not the tier stamped on
@@ -689,14 +717,16 @@ def tags_for(tickers: list[str], days: int = PENALTY_WINDOW_DAYS) -> dict[str, d
             acct = PROMO_ACCOUNTS.get(doc.get("account"))
             if not acct or acct.get("tier") not in ("S", "A"):
                 continue
+            ts = _as_utc(doc.get("last_tagged_at"))
+            window = int(acct.get("penalty_days") or days)
+            if not ts or (now - ts) > timedelta(days=window):
+                continue
             t = doc["ticker"]
             rec = out.setdefault(t, {"handles": [], "tiers": [], "days_ago": 0.0})
             rec["handles"].append(doc["account"])
             rec["tiers"].append(acct.get("tier"))
-            ts = _as_utc(doc.get("last_tagged_at"))
-            if ts:
-                rec["days_ago"] = max(rec["days_ago"],
-                                      round((now - ts).total_seconds() / 86400, 1))
+            rec["days_ago"] = max(rec["days_ago"],
+                                  round((now - ts).total_seconds() / 86400, 1))
     except Exception as exc:
         log.warning("promo tags_for failed: %s", exc)
         return {}

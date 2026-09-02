@@ -62,13 +62,16 @@ ride along** for every watched ticker.
    since the first tag and EDGAR flags. Reads Mongo only; StockTwits is
    never fetched inline. `POST /catalysts/promo-circuit/sweep` = manual run.
 4. **Predictions penalty** — `tags_for(tickers)` returns S/A-tier tags from
-   the last 7 days; `predictions._extract_signals` adds
-   `promo_circuit_tagged` (−15, **not** a hard veto, and only when
-   `market_cap` is unknown or < **$2B** — the exit-liquidity thesis doesn't
-   apply to a liquid name tagged in passing) plus a bear-thesis line.
-   B-tier never penalizes. Tier is resolved against the **live roster** at
-   read time, never the tier stamped at sweep time, so roster edits apply
-   to existing tags immediately.
+   the last 7 days (per-account override via `penalty_days`: ShangVXO's is
+   **14d**, because his pumps land ~10 *sessions* after the tag — PETZ ran
+   session 9, FLYE session 8, and 53% of his measured hits peaked after
+   session 5); `predictions._extract_signals` adds `promo_circuit_tagged`
+   (−15, **not** a hard veto, and only when `market_cap` is unknown or <
+   **$2B** — the exit-liquidity thesis doesn't apply to a liquid name
+   tagged in passing) plus a bear-thesis line. B-tier never penalizes.
+   Tier is resolved against the **live roster** at read time, never the
+   tier stamped at sweep time, so roster edits apply to existing tags
+   immediately.
 
 ## Decision tables
 
