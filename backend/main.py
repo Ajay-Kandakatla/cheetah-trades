@@ -1809,9 +1809,12 @@ async def sepa_live_price(symbol: str):
     next to the TradingView embed, which is ~15-min delayed by design
     (anonymous embed) — this keeps the REAL number on screen anyway."""
     from sepa import prices as sepa_prices
+    from sepa.quote_view import quote_view
     live = await asyncio.to_thread(sepa_prices.bulk_live_prices, [symbol.upper()])
-    return JSONResponse({"updated_at": int(time.time()),
-                         **(live.get(symbol.upper()) or {})})
+    q = live.get(symbol.upper()) or {}
+    # `view` = regular close + day change AND the extended-hours print vs the
+    # close, StockTwits-style (Ajay 2026-09-02).
+    return JSONResponse({"updated_at": int(time.time()), **q, "view": quote_view(q)})
 
 
 @app.get("/live/feed-status")

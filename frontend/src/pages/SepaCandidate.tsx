@@ -58,6 +58,7 @@ import { SepaTrendDots } from '../components/SepaTrendDots';
 import { InfoButton } from '../components/InfoButton';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
 const StockAnalysisPanel = lazyWithReload(() => import('../components/StockAnalysisPanel').then(m => ({ default: m.StockAnalysisPanel })));
+import { SessionPrice } from '../components/SessionPrice';
 import { CompanyHeadline } from '../components/CompanyHeadline';
 const ChatterPanel = lazyWithReload(() => import('../components/ChatterPanel').then(m => ({ default: m.ChatterPanel })));
 const TickerPatternPanel = lazyWithReload(() => import('../components/TickerPatternPanel').then(m => ({ default: m.TickerPatternPanel })));
@@ -772,51 +773,10 @@ export function SepaCandidatePage() {
               embedded TradingView iframe below which is ~15 min
               delayed for non-subscribers. Falls back to last_close
               when WS hasn't started streaming yet. */}
-          {(currentLivePrice != null || live?.last_price != null) && (() => {
-            const price = currentLivePrice;
-            // A live tick of 0 (no trade yet / stale feed) is NOT a price — treat
-            // only a positive last_price as live, otherwise fall back to the real
-            // close and its day change instead of rendering $0.00. (NUE 2026-06-03:
-            // feed sent last_price 0, header showed "$0.00 · -0.56% · close".)
-            const isLive = typeof live?.last_price === 'number' && live.last_price > 0;
-            const dayPct = isLive ? live?.day_pct : (data?.day_change_pct ?? null);
-            const prev = data?.last_close;
-            const source = live?._source || '';
-            // Color the delta by direction; gray when no delta info.
-            const deltaColor =
-              dayPct == null ? 'var(--cm-slate)' :
-              dayPct >= 0 ? 'var(--positive)' : 'var(--negative)';
-            return (
-              <div style={{
-                display: 'inline-flex', alignItems: 'baseline', gap: '0.6rem',
-                marginTop: '0.5rem', flexWrap: 'wrap',
-              }}>
-                <span className="mono" style={{ fontSize: '1.6rem', fontWeight: 700 }}>
-                  ${price?.toFixed(2)}
-                </span>
-                {dayPct != null && (
-                  <span className="mono" style={{ color: deltaColor, fontSize: '0.95rem', fontWeight: 600 }}>
-                    {dayPct >= 0 ? '+' : ''}{dayPct.toFixed(2)}%
-                    {prev != null && (
-                      <span style={{ marginLeft: 4, color: 'var(--cm-slate)', fontSize: '0.78rem' }}>
-                        (prev ${prev.toFixed(2)})
-                      </span>
-                    )}
-                  </span>
-                )}
-                <span style={{
-                  fontSize: '0.66rem', padding: '1px 6px',
-                  borderRadius: 3, letterSpacing: '0.04em',
-                  background: isLive ? 'rgba(16,185,129,0.1)' : 'rgba(120,120,120,0.1)',
-                  color:      isLive ? 'var(--positive)' : 'var(--cm-slate)',
-                  border:    `1px solid ${isLive ? 'rgba(16,185,129,0.3)' : 'var(--rule, #555)'}`,
-                  textTransform: 'uppercase',
-                }} title={`Source: ${source || 'fallback'}`}>
-                  {isLive ? '● live' : '◯ close'}
-                </span>
-              </div>
-            );
-          })()}
+          {/* Regular close + day change AND the extended-hours print vs the close
+              (Ajay 2026-09-02: "accurately show the AH and RTH value"). Falls back
+              to the scan's close / day % until the live view answers. */}
+          <SessionPrice symbol={symbol} fallbackClose={currentLivePrice} fallbackPct={data?.day_change_pct ?? null} />
           <CompanyHeadline symbol={symbol} />
         </div>
         <div className="sepa-candidate-page__head-actions">
