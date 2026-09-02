@@ -152,7 +152,7 @@ describe('PromoLive (Ajay 2026-09-02: real-time % + alerts)', () => {
     expect(screen.getByText('PRE')).toBeTruthy();
     expect(screen.getByText('AH')).toBeTruthy();
     expect(screen.getByText('RTH')).toBeTruthy();
-    expect(screen.getAllByText('@topstockalerts, @beppels').length).toBe(3);
+    expect(document.querySelectorAll('a.pcw__acct-link[href$="/beppels"]').length).toBe(3);
     expect(screen.getByText(/±8% on a name tagged by @topstockalerts pushes a 🎪 alert/)).toBeTruthy();
     expect(screen.getByText(/● LIVE · premarket/)).toBeTruthy();
     const liveCalls = (fetch as any).mock.calls.filter((c: any[]) => String(c[0]).includes('/promo-circuit/live'));
@@ -206,5 +206,21 @@ describe('PromoLive (Ajay 2026-09-02: real-time % + alerts)', () => {
     draw();
     await waitFor(() => expect(screen.getByText(/Live board unavailable: HTTP 502/)).toBeTruthy());
     expect(screen.getByText('TINY')).toBeTruthy();
+  });
+});
+
+describe('account chips open the StockTwits profile (Ajay 2026-09-02)', () => {
+  it('every @handle is a link to stocktwits.com/<handle> in a new tab', async () => {
+    mock(payload([row()]));
+    draw();
+    await waitFor(() => expect(screen.getByText('TINY')).toBeTruthy());
+    const chips = Array.from(document.querySelectorAll('a.pcw__acct')) as HTMLAnchorElement[];
+    expect(chips.length).toBeGreaterThan(0);
+    for (const a of chips) {
+      expect(a.getAttribute('href')).toMatch(/^https:\/\/stocktwits\.com\/[A-Za-z0-9_]+$/);
+      expect(a.getAttribute('target')).toBe('_blank');
+    }
+    const live = Array.from(document.querySelectorAll('a.pcw__acct-link')).map((a) => a.getAttribute('href'));
+    expect(live).toContain('https://stocktwits.com/topstockalerts');
   });
 });

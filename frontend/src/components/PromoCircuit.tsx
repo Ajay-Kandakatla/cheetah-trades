@@ -59,16 +59,20 @@ const STATUS_META: Record<Row['status'], { label: string; hint: string }> = {
 const pct = (v: number | null | undefined) =>
   v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
 
+/* StockTwits profile — every handle on this tab is a StockTwits account. */
+export const accountUrl = (handle: string) => `https://stocktwits.com/${encodeURIComponent(handle)}`;
+
 function AccountChip({ a }: { a: TaggedBy }) {
   const c = TIER_COLORS[a.tier] ?? TIER_COLORS.B;
   return (
-    <span
+    <a
       className="pcw__acct mono"
+      href={accountUrl(a.handle)} target="_blank" rel="noreferrer"
       style={{ borderColor: c, color: c }}
-      title={`${TIER_HINTS[a.tier] ?? ''}${a.sample ? `\n“${a.sample}”` : ''}`}
+      title={`${TIER_HINTS[a.tier] ?? ''}${a.sample ? `\n“${a.sample}”` : ''}\nOpen @${a.handle} on StockTwits`}
     >
       {a.tier}·@{a.handle}
-    </span>
+    </a>
   );
 }
 
@@ -223,7 +227,11 @@ export function PromoLive() {
                     {pctFmt(r.day_pct)}{r.ah_pct != null ? <span className="pcw__dim"> ({pctFmt(r.ah_pct)} AH)</span> : null}{big ? ' 🎪' : ''}
                   </td>
                   <td className={`og__num mono ${(r.pct_since_tag ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pctFmt(r.pct_since_tag)}</td>
-                  <td className="mono pcw__dim">{r.accounts.map((h) => '@' + h).join(', ')}</td>
+                  <td className="mono pcw__dim">
+                    {r.accounts.map((h, i) => (
+                      <span key={h}>{i ? ', ' : ''}<a href={accountUrl(h)} target="_blank" rel="noreferrer" className="pcw__acct-link">@{h}</a></span>
+                    ))}
+                  </td>
                   <td>{STATUS_META[r.status as Row['status']]?.label ?? r.status}</td>
                 </tr>
               );

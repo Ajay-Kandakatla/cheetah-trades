@@ -11437,6 +11437,9 @@ a.tk-link:hover   { color: inherit; }
 .pcw__pct { font-weight: 700; }
 
 /* Promo-circuit watch */
+a.pcw__acct { text-decoration: none; }
+a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
+.pcw__acct-link { color: inherit; }
 .pcw__table { margin-top: 14px; }
 .pcw__acct {
   display: inline-flex; align-items: center;
