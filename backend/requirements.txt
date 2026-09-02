@@ -24,6 +24,12 @@ python-multipart>=0.0.9
 # Plaid Investments — used by the /portfolio page's "Connect Brokerage"
 # flow to import broker holdings without storing broker credentials.
 plaid-python>=23.0.0
+# curl_cffi — browser TLS-fingerprint impersonation for stocktwits_client.
+# Cloudflare put a managed challenge on api.stocktwits.com (2026-09) that
+# 403s python-requests/httpx/plain curl AND curl_cffi's Chrome profiles;
+# Safari/Firefox profiles pass. Without it every chatter fetch silently
+# reported 0 StockTwits messages for every symbol.
+curl_cffi==0.13.0
 # Playwright + stealth patches for the lifeboard.playwright_scraper module.
 # stealth defeats most navigator-based bot fingerprinting; Chromium is
 # installed in the Dockerfile after pip install (separate step).

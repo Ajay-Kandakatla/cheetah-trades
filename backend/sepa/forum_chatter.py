@@ -20,7 +20,9 @@ years.
 
 Lane 3 — StockTwits public stream (HTTP)
   api.stocktwits.com/api/2/streams/symbol/{sym}.json — last ~30 messages,
-  user-tagged Bullish/Bearish ratio. No auth, sometimes 403s under load.
+  user-tagged Bullish/Bearish ratio. No auth, but Cloudflare-challenged
+  since 2026-09: fetched through the shared stocktwits_client (Safari TLS
+  impersonation) — plain httpx gets 403 on every symbol.
 
 Lane 4 — Hacker News (Algolia)
   hn.algolia.com search, last 30 days. Catches catalyst stories on tech
@@ -48,6 +50,8 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
+
+import stocktwits_client
 
 from . import reddit_scrape
 
@@ -116,21 +120,21 @@ async def _reddit_momentum(symbol: str) -> dict:
 # StockTwits lane — public stream
 # ---------------------------------------------------------------------------
 async def _stocktwits(symbol: str) -> dict:
-    url = f"https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
-    headers = {"User-Agent": REDDIT_USER_AGENT, "Accept": "application/json"}
+    # Shared impersonation client — Cloudflare challenges plain httpx with a
+    # 403 on every symbol (2026-09-02), which this lane used to swallow as
+    # "http 403". The client is sync (curl_cffi), so run it off-loop.
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(url, headers=headers)
-        if r.status_code != 200:
-            return {"available": False, "reason": f"http {r.status_code}",
-                    "messages": [], "bullish": 0, "bearish": 0, "neutral": 0}
-        data = r.json()
+        res = await asyncio.to_thread(
+            stocktwits_client.fetch_stream, symbol, max_pages=1, timeout=10)
     except Exception as exc:
         log.debug("stocktwits fetch failed for %s: %s", symbol, exc)
         return {"available": False, "reason": "fetch failed",
                 "messages": [], "bullish": 0, "bearish": 0, "neutral": 0}
+    if not res.get("ok"):
+        return {"available": False, "reason": res.get("reason") or "fetch failed",
+                "messages": [], "bullish": 0, "bearish": 0, "neutral": 0}
 
-    raw = data.get("messages") or []
+    raw = res.get("messages") or []
     bullish = bearish = neutral = 0
     out: list[dict] = []
     for m in raw[:30]:

@@ -3,9 +3,12 @@
 For each candidate ticker we measure social activity across two free
 public sources:
 
-  1. Stocktwits — public message stream API for the symbol. No auth, no
-     key required. Gives us last 30 messages with body, sentiment tag,
-     and timestamp. Great for retail-trader chatter velocity.
+  1. Stocktwits — public message stream API for the symbol, via the shared
+     stocktwits_client (Cloudflare TLS-impersonation + pagination). Pages
+     are 30 messages each; we walk up to ST_MAX_PAGES pages so n_24h — and
+     therefore velocity_per_hour — doesn't saturate at 30 msgs (1.25/hr)
+     on frenzy names. Quiet tickers still cost a single request because
+     pagination stops at the 24h cutoff.
 
   2. Reddit — search across high-velocity ticker-discussion subs:
      r/pennystocks, r/wallstreetbets, r/smallstreetbets, r/Biotechplays,
@@ -28,8 +31,9 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from urllib.parse import quote
 
-import httpx
 import requests
+
+import stocktwits_client
 
 log = logging.getLogger("catalysts.chatter")
 
@@ -48,69 +52,64 @@ _HEADERS = {
 
 # --- Stocktwits ---------------------------------------------------------
 
-def _fetch_stocktwits(ticker: str) -> dict:
-    """Public Stocktwits stream. Free, no key. ~60 req/hour rate limit."""
-    url = f"https://api.stocktwits.com/api/2/streams/symbol/{ticker.upper()}.json"
-    try:
-        r = requests.get(url, headers=_HEADERS, timeout=6)
-        if r.status_code != 200:
-            # 404 = no stream for this ticker (fine), 429 = rate limited
-            if r.status_code == 429:
-                log.warning("stocktwits rate limited on %s", ticker)
-            return {"n_messages": 0, "n_24h": 0, "sentiment_pct_bullish": None,
-                    "last_message": None, "blurbs": []}
-        body = r.json() or {}
-        msgs = body.get("messages") or []
+# Pages of 30 walked per ticker. 4 pages → n_24h can reach 120, lifting the
+# velocity ceiling from 1.25/hr to 5/hr and letting chatter_score's
+# "50 msgs/24h ≈ very loud" calibration actually be reachable (it never was
+# with the single-page cap). Pagination stops at the 24h cutoff, so only
+# frenzy names spend more than 1 of the ~200 req/hr unauthenticated budget.
+ST_MAX_PAGES = 4
 
-        now = time.time()
-        cutoff_24h = now - 24 * 3600
 
-        n_24h = 0
-        n_bullish = 0
-        n_bearish = 0
-        blurbs = []
-        last_msg_ts = None
+def _fetch_stocktwits(ticker: str, max_pages: int = ST_MAX_PAGES) -> dict:
+    """Public Stocktwits stream via the shared impersonation client."""
+    now = time.time()
+    cutoff_24h = now - 24 * 3600
 
-        for m in msgs:
-            created = m.get("created_at")
-            ts = None
-            if created:
-                # Stocktwits format: "2024-04-30T12:34:56Z"
-                try:
-                    ts = time.mktime(time.strptime(created.split("Z")[0],
-                                                    "%Y-%m-%dT%H:%M:%S"))
-                except Exception:
-                    ts = None
-            if ts and ts >= cutoff_24h:
-                n_24h += 1
-            sent = (m.get("entities") or {}).get("sentiment") or {}
-            basic = sent.get("basic") if isinstance(sent, dict) else None
-            if basic == "Bullish":
-                n_bullish += 1
-            elif basic == "Bearish":
-                n_bearish += 1
-            body_text = (m.get("body") or "").strip()
-            if len(blurbs) < 3 and body_text:
-                blurbs.append(body_text[:160])
-            if last_msg_ts is None and ts:
-                last_msg_ts = ts
-
-        n_total_with_sent = n_bullish + n_bearish
-        sent_pct = round(n_bullish / n_total_with_sent * 100) if n_total_with_sent else None
-
-        return {
-            "n_messages": len(msgs),
-            "n_24h": n_24h,
-            "sentiment_pct_bullish": sent_pct,
-            "n_bullish": n_bullish,
-            "n_bearish": n_bearish,
-            "last_message_ts": last_msg_ts,
-            "blurbs": blurbs,
-        }
-    except Exception as exc:
-        log.debug("stocktwits fetch failed for %s: %s", ticker, exc)
+    res = stocktwits_client.fetch_stream(
+        ticker, max_pages=max_pages, stop_before_epoch=cutoff_24h, timeout=6)
+    if not res.get("ok"):
+        # The client already logged the reason; keep it machine-readable so
+        # an outage reads as "unavailable", never as "0 chatter".
         return {"n_messages": 0, "n_24h": 0, "sentiment_pct_bullish": None,
-                "blurbs": []}
+                "last_message": None, "blurbs": [],
+                "unavailable_reason": res.get("reason")}
+
+    msgs = res.get("messages") or []
+
+    n_24h = 0
+    n_bullish = 0
+    n_bearish = 0
+    blurbs = []
+    last_msg_ts = None
+
+    for m in msgs:
+        ts = m.get("_epoch")
+        if ts and ts >= cutoff_24h:
+            n_24h += 1
+        sent = (m.get("entities") or {}).get("sentiment") or {}
+        basic = sent.get("basic") if isinstance(sent, dict) else None
+        if basic == "Bullish":
+            n_bullish += 1
+        elif basic == "Bearish":
+            n_bearish += 1
+        body_text = (m.get("body") or "").strip()
+        if len(blurbs) < 3 and body_text:
+            blurbs.append(body_text[:160])
+        if last_msg_ts is None and ts:
+            last_msg_ts = ts
+
+    n_total_with_sent = n_bullish + n_bearish
+    sent_pct = round(n_bullish / n_total_with_sent * 100) if n_total_with_sent else None
+
+    return {
+        "n_messages": len(msgs),
+        "n_24h": n_24h,
+        "sentiment_pct_bullish": sent_pct,
+        "n_bullish": n_bullish,
+        "n_bearish": n_bearish,
+        "last_message_ts": last_msg_ts,
+        "blurbs": blurbs,
+    }
 
 
 # --- Reddit -------------------------------------------------------------
@@ -207,8 +206,9 @@ def get_chatter(ticker: str) -> dict:
 
 
 def get_chatter_batch(tickers: list[str], max_workers: int = 8) -> dict[str, dict]:
-    """Fetch chatter for many tickers in parallel. Stocktwits rate-limits
-    aggressively (~60/hr), so cap workers and accept some misses.
+    """Fetch chatter for many tickers in parallel. Stocktwits allows about
+    200 unauthenticated req/hr/IP and pagination multiplies spend on loud
+    names (up to ST_MAX_PAGES each), so cap workers and accept some misses.
     """
     out: dict[str, dict] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
