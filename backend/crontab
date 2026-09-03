@@ -56,6 +56,10 @@
 # X-User-Email satisfies require_auth_middleware; this port is internal to the
 # compose network and never published.
 55     16    *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm full: HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=full&limit=1'
+# 9:25 ET morning warm (2026-09-03): the in-process cache is 3h, so every
+# morning starts cold and the first demand_alerts pass (9:33) would read
+# warming:true and skip. Warming here means the 9:33 pass sees a filled board.
+25     9     *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm full (am): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=full&limit=1'
 #
 # ── Trade Flash (Ajay 2026-08-24) ────────────────────────────────────────────
 # Zone-tied tape bursts on the demand/supply board names, pushed to his phone
