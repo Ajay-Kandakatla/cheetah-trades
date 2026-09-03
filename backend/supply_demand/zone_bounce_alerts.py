@@ -171,6 +171,74 @@ def print_from_snapshot(snap: dict, now_ts: float, stale_sec: float = STALE_PRIN
     return px, False
 
 
+def fmt_et_clock(ts) -> Optional[str]:
+    """'9:30a' / '2:50p' in ET from a UTC-naive or tz-aware timestamp."""
+    try:
+        import pandas as pd
+        t = pd.Timestamp(ts)
+        t = t.tz_localize("UTC") if t.tzinfo is None else t
+        t = t.tz_convert(ET)
+        return f"{t.hour % 12 or 12}:{t.minute:02d}{'a' if t.hour < 12 else 'p'}"
+    except Exception:
+        return None
+
+
+def low_time_from_bars(df, day_low) -> Optional[str]:
+    """ET clock of the RTH minute bar that printed the day low (Ajay
+    2026-09-03: "It touched demand at 2:50 CDT or something like that").
+    Falls back to the lowest RTH bar when the snapshot low is off by a tick."""
+    try:
+        if df is None or not len(df) or "low" not in df.columns:
+            return None
+        rth = df[df["session"] == "rth"] if "session" in df.columns else df
+        if not len(rth):
+            return None
+        low = float(day_low)
+        hit = rth[rth["low"] <= low + 1e-9]
+        row_ts = hit.index[0] if len(hit) else rth["low"].idxmin()
+        return fmt_et_clock(row_ts)
+    except Exception:
+        return None
+
+
+def _low_time_et(symbol: str, day, day_low) -> Optional[str]:
+    """One minute-bar fetch per FRESH hit (a handful per pass, never the
+    universe). None on any failure — the alert still goes, just without a clock."""
+    try:
+        from daytrading import data as D
+        df = D._fetch_massive_minute(symbol, day, day)
+        return low_time_from_bars(df, day_low)
+    except Exception as exc:
+        log.debug("zone_bounce_alerts: low time for %s failed: %s", symbol, exc)
+        return None
+
+
+def room_for(print_px, bands: list, touched: dict) -> Optional[dict]:
+    """Room to run: % from the print to the FLOOR of the nearest supply band
+    above it, plus the R multiple against a stop under the touched band's
+    floor (Ajay 2026-09-03: "had room to grow 2.2"). None = no supply band
+    overhead in the store = clear runway."""
+    try:
+        px = float(print_px)
+        if px <= 0:
+            return None
+        above = [b for b in bands or []
+                 if str(b.get("kind") or "").lower() == "supply"
+                 and _f(b.get("lo")) is not None and float(b["lo"]) > px]
+        if not above:
+            return None
+        nxt = min(above, key=lambda b: float(b["lo"]))
+        target = float(nxt["lo"])
+        room_pct = (target - px) / px * 100.0
+        stop = _f((touched or {}).get("lo"))
+        risk_pct = (px - stop) / px * 100.0 if stop is not None and stop < px else None
+        rr = round(room_pct / risk_pct, 1) if risk_pct and risk_pct > 0 else None
+        return {"room_pct": round(room_pct, 1), "target": round(target, 2), "rr": rr,
+                "touches": nxt.get("touches")}
+    except Exception:
+        return None
+
+
 def state_key(symbol: str, band: dict, day: str) -> str:
     return f"{symbol}:{float(band['lo']):g}-{float(band['hi']):g}:{day}"
 
@@ -186,6 +254,13 @@ def _band_role(band: dict) -> str:
     return f"demand ({tested})"
 
 
+def _room_txt(room: Optional[dict]) -> str:
+    if not room:
+        return "room: clear runway"
+    rr = f" ({room['rr']:g}R)" if room.get("rr") is not None else ""
+    return f"room +{room['room_pct']:g}% -> ${room['target']:g}{rr}"
+
+
 def single_message(item: dict) -> dict:
     """'🪃 NTAP bounced +6.3% off demand $161.78-167.54'"""
     from supply_demand.demand_alerts import fmt_cap
@@ -194,7 +269,9 @@ def single_message(item: dict) -> dict:
     level = ("support (old resistance)" if str(band.get("kind") or "").lower() == "supply"
              else "demand")
     title = f"🪃 {sym} bounced +{hit['bounce_pct']:.1f}% off {level} {_band_txt(band)}"
-    parts = [f"${px:g} · low ${low:g} -> +${px - low:.1f}",
+    when = f" at {item['low_time']} ET" if item.get("low_time") else ""
+    parts = [f"${px:g} · low ${low:g}{when} -> +${px - low:.1f}",
+             _room_txt(item.get("room")),
              " | ".join(_band_role(b) for b in item["bands"])]
     if hit.get("atr_x") is not None:
         parts.append(f"{hit['atr_x']:g}x ATR")
@@ -219,8 +296,10 @@ def digest_message(items: list) -> dict:
     lines = []
     for it in items[:DIGEST_MAX]:
         role = "broken supply" if str(it["band"].get("kind") or "").lower() == "supply" else "demand"
+        when = f" (low {it['low_time']})" if it.get("low_time") else ""
         lines.append(f"{it['symbol']} ${float(it['print']):g} · +{it['hit']['bounce_pct']:.1f}% "
-                     f"off {_band_txt(it['band'])} ({role}) · {fmt_cap(it.get('cap'))}")
+                     f"off {_band_txt(it['band'])}{when} · {_room_txt(it.get('room'))} · "
+                     f"{role} · {fmt_cap(it.get('cap'))}")
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more")
     url = "/chart-maps?tab=zones"
@@ -275,7 +354,8 @@ def _record(coll, item: dict, now: datetime) -> None:
                                                    "kind": band.get("kind")},
                 "print": item["print"], "day_low": item["day_low"],
                 "bounce_pct": item["hit"]["bounce_pct"], "strong": item["hit"]["strong"],
-                "cap": item.get("cap"), "sent_at": now.isoformat()}}, upsert=True)
+                "cap": item.get("cap"), "low_time": item.get("low_time"),
+                "room": item.get("room"), "sent_at": now.isoformat()}}, upsert=True)
         except Exception as exc:
             log.warning("zone_bounce_alerts: dedupe write failed: %s", exc)
 
@@ -297,7 +377,7 @@ def _band_rank(band: dict, day_low: float) -> tuple:
 def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] = None,
                snapshot: Optional[dict] = None, caps: Optional[dict] = None,
                names: Optional[dict] = None, coll=None, owner: Optional[str] = None,
-               now: Optional[datetime] = None) -> dict:
+               now: Optional[datetime] = None, low_times: Optional[dict] = None) -> dict:
     """One 5-min pass. Every input is injectable for tests; the cron passes
     none. `force` skips the session gate for in-container smoke tests only."""
     now = now or _now_et()
@@ -372,6 +452,7 @@ def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] 
                 "atr14": atr14, "band": touched[0][0], "hit": touched[0][1],
                 "bands": [b for b, _ in touched], "cap": cap, "name": None}
         hits.append(item)
+        hit_row = item                                  # dry runs see the detail too
         from supply_demand.demand_alerts import passes_cap
         if not passes_cap(cap, MIN_CAP_USD):
             if cap is None:
@@ -400,6 +481,12 @@ def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] 
                 item["name"] = company_names.name_for(sym)
             except Exception:
                 item["name"] = None
+        # Detail only for what will be pushed: the touch clock (one minute-bar
+        # read) and the room to the next supply band (from the stored bands).
+        item["low_time"] = (low_times.get(sym) if low_times is not None
+                            else _low_time_et(sym, day, low))
+        item["room"] = room_for(px, doc.get("bands") or [], item["band"])
+        hit_row["low_time"], hit_row["room"] = item["low_time"], item["room"]
         items.append(item)
     strong = sorted((it for it in items if it["hit"]["strong"]),
                     key=lambda it: -it["hit"]["bounce_pct"])

@@ -146,3 +146,16 @@ print(m.build_doc(\"NTAP\", prices.load_prices(\"NTAP\"), datetime.date(2026,9,3
 
 Tests: `backend/tests/test_zone_store.py`, `backend/tests/test_zone_bounce_alerts.py`
 (+ `test_demand_alerts.py` for the payload `kind`).
+
+## Detail added the same afternoon (Ajay: "It touched demand at 2:50 CDT ... had room to grow 2.2")
+
+Every push now carries **when the low printed** (first RTH minute bar at the day low, ET clock —
+one minute-bar read per fresh hit, never the universe; silently omitted on failure) and the
+**room to run**: % from the print to the FLOOR of the nearest supply band above it in the stored
+bands, with the R multiple against a stop under the touched band's floor (`room_for`). No supply
+band overhead → "room: clear runway". Single body: `$171.2 · low $161 at 9:30a ET -> +$10.2 ·
+room +1.6% -> $173.87 (0.3R) · broken supply -> support (tested 1x) · 2.3x ATR · $37.4B · NetApp`;
+digest lines: `AAA $110 · +10.0% off $98-101 (low 2:50p) · room +2.2% -> $112.4 (0.2R) · demand · $2.0B`.
+The Claude relay (`~/clinet-test/cheetah-alert-digest.py`) turns each line into `AAA +10.0% (low 2:50p,
+room 2.2%)`. The alert always means **already bouncing** — it fires only once the print is back above
+the band and ≥ 3% / 1 ATR off the low; it is never a forecast.

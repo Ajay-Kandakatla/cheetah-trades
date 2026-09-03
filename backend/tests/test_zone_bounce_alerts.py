@@ -64,10 +64,11 @@ def _capture(monkeypatch, result=None):
     return sent
 
 
-def _run(store, snapshot, caps, *, coll=None, now=NOW, push=True, names=None):
+def _run(store, snapshot, caps, *, coll=None, now=NOW, push=True, names=None, low_times=None):
     return ZB.check_once(push=push, force=True, store=store, snapshot=snapshot, caps=caps,
                          names=names if names is not None else {}, coll=coll or FakeColl(),
-                         owner="o@x", now=now)
+                         owner="o@x", now=now,
+                         low_times=low_times if low_times is not None else {})   # never the network
 
 
 # ── the pure read: NTAP ──────────────────────────────────────────────────────
@@ -190,7 +191,7 @@ def test_digest_is_strongest_first_capped_at_six_with_a_more_line():
     assert m["title"] == "🪃 Bouncing off demand levels — S7 +6.5% +7 more"
     lines = m["body"].split("\n")
     assert len(lines) == ZB.DIGEST_MAX + 1 and lines[-1] == "+2 more"
-    assert lines[0] == "S7 $107 · +6.5% off $94-96 (demand) · $2.0B"
+    assert lines[0] == "S7 $107 · +6.5% off $94-96 · room: clear runway · demand · $2.0B"
     assert m["kind"] == "zone_bounce_alert" and m["url"] == "/chart-maps?tab=zones"
     assert ZB.digest_message(items[:1])["title"] == "🪃 Bouncing off demand levels — S0 +3.0%"
 
@@ -206,7 +207,7 @@ def test_ntap_2026_09_03_fires_a_single_push_with_the_exact_title_body_url_kind(
     assert len(sent) == 1
     m = sent[0]
     assert m["title"] == "🪃 NTAP bounced +6.3% off support (old resistance) $161.78-167.54"
-    assert m["body"] == ("$171.2 · low $161 -> +$10.2 · broken supply -> support (tested 1x)"
+    assert m["body"] == ("$171.2 · low $161 -> +$10.2 · room +1.6% -> $173.87 (0.3R) · broken supply -> support (tested 1x)"
                          " · 2.3x ATR · $37.4B · NetApp")
     assert m["url"] == "/sepa/NTAP?tab=supply" and m["data"]["url"] == m["url"]
     assert m["kind"] == "zone_bounce_alert" and m["kind_arg"] == "zone_bounce_alert"
@@ -396,3 +397,69 @@ def test_a_digest_item_upgrades_to_one_strong_single_later_never_a_third_push(mo
     n = len(sent)
     _run(store2, {"DOCN": _snap(101.5, 118.0, 110.0)}, {"DOCN": 12e9}, coll=coll2)
     assert len(sent) == n
+
+
+# ── detail: touch clock + room to run (Ajay 2026-09-03: "It touched demand at
+# 2:50 CDT ... And had room to grow 2.2") ──────────────────────────────────────
+def _minute_frame():
+    import pandas as pd
+    idx = pd.to_datetime(["2026-09-03 13:25:00", "2026-09-03 13:30:00", "2026-09-03 13:31:00",
+                          "2026-09-03 18:50:00", "2026-09-03 18:51:00"])   # UTC-naive like the fetcher
+    return pd.DataFrame({"low": [160.0, 161.0, 165.0, 161.0, 166.0],
+                         "session": ["premarket", "rth", "rth", "rth", "rth"]}, index=idx)
+
+
+def test_low_time_is_the_first_rth_bar_at_the_day_low_in_et_clock():
+    assert ZB.low_time_from_bars(_minute_frame(), 161.0) == "9:30a"
+    assert ZB.low_time_from_bars(_minute_frame(), 160.99) == "9:30a", "off by a tick → lowest RTH bar"
+    assert ZB.fmt_et_clock("2026-09-03 18:50:00") == "2:50p"
+    assert ZB.low_time_from_bars(None, 161.0) is None
+    import pandas as pd
+    assert ZB.low_time_from_bars(pd.DataFrame({"low": []}), 161.0) is None
+
+
+def test_room_is_measured_to_the_next_supply_floor_with_an_r_multiple():
+    below_only = [b for b in NTAP_BANDS if not (b["kind"] == "supply" and b["lo"] > 171.2)]   # keep the touched shelf, drop overhead supply
+    bands = below_only + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 30.0}]
+    room = ZB.room_for(171.2, bands, NTAP_SHELF)
+    assert room["target"] == 205.4 and room["room_pct"] == 20.0            # (205.4-171.2)/171.2
+    assert room["rr"] == 3.6                                               # 20.0 / ((171.2-161.78)/171.2 = 5.5)
+    assert ZB.room_for(171.2, below_only, NTAP_SHELF) is None, "no supply overhead = clear runway"
+    real = ZB.room_for(171.2, NTAP_BANDS, NTAP_SHELF)                      # the reclaimed shelf above is overhead at 09:33
+    assert real["target"] == 173.87 and real["room_pct"] == 1.6 and real["rr"] == 0.3
+    assert ZB.room_for(171.2, bands + [{"kind": "supply", "lo": 150.0, "hi": 155.0}], NTAP_SHELF)["target"] == 205.4, \
+        "a supply band BELOW the print is not overhead"
+    assert ZB.room_for(0, bands, NTAP_SHELF) is None
+    assert ZB.room_for(171.2, [{"kind": "supply", "lo": None}], NTAP_SHELF) is None
+    assert ZB._room_txt(None) == "room: clear runway"
+    assert ZB._room_txt(room) == "room +20% -> $205.4 (3.6R)"
+
+
+def test_pushes_carry_the_touch_clock_and_the_room(monkeypatch):
+    sent = _capture(monkeypatch)
+    bands = [b for b in NTAP_BANDS if not (b["kind"] == "supply" and b["lo"] > 171.2)] + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 30.0}]
+    store = {"NTAP": _doc("NTAP", bands, 4.5, 180.77)}
+    out = _run(store, {"NTAP": _snap(161.0, 171.2, 180.77)}, {"NTAP": 37e9},
+               coll=FakeColl(), names={"NTAP": "NetApp"})
+    assert out["pushed"] == 1
+    body = sent[-1]["body"]
+    assert "room +20% -> $205.4 (3.6R)" in body
+    assert "low $161" in body
+    sent.clear()
+    store2 = {"NTAP": _doc("NTAP", bands, 4.5, 180.77)}
+    out2 = ZB.check_once(push=True, force=True, store=store2, snapshot={"NTAP": _snap(161.0, 171.2, 180.77)},
+                         caps={"NTAP": 37e9}, names={"NTAP": "NetApp"}, coll=FakeColl(), owner="o@x",
+                         now=NOW, low_times={"NTAP": "9:30a"})
+    assert out2["pushed"] == 1 and "low $161 at 9:30a ET -> +$10.2" in sent[-1]["body"]
+    assert out2["hits"][0]["low_time"] == "9:30a" and out2["hits"][0]["room"]["rr"] == 3.6
+
+
+def test_digest_lines_carry_clock_and_room_too():
+    items = [{"symbol": "AAA", "print": 110.0, "day_low": 100.0, "band": {"kind": "demand", "lo": 98.0, "hi": 101.0},
+              "hit": {"bounce_pct": 10.0, "strong": False}, "cap": 2e9, "low_time": "2:50p",
+              "room": {"room_pct": 2.2, "target": 112.4, "rr": 0.2}},
+             {"symbol": "BBB", "print": 55.0, "day_low": 50.0, "band": {"kind": "supply", "lo": 49.0, "hi": 50.5},
+              "hit": {"bounce_pct": 10.0, "strong": False}, "cap": 3e9, "low_time": None, "room": None}]
+    m = ZB.digest_message(items)
+    assert "AAA $110 · +10.0% off $98-101 (low 2:50p) · room +2.2% -> $112.4 (0.2R) · demand · $2.0B" in m["body"]
+    assert "BBB $55 · +10.0% off $49-50.5 · room: clear runway · broken supply · $3.0B" in m["body"]
