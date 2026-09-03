@@ -181,7 +181,13 @@ def _num(v) -> Optional[float]:
     return f if f == f and f not in (float("inf"), float("-inf")) else None
 
 
-def _href(symbol: str, tab: str) -> str:
+def _href(symbol: str, tab: str = "supply") -> str:
+    """Tile click target. Default = the Supply / Demand tab (Ajay 2026-09-03:
+    "when ever I click on SEPA I need it to go Supply and Demand tab in all
+    pages") — supersedes the 2026-08-17 "open straight on the Setup tab" ask
+    for the vcp / zones / earnings / deep-demand / topping / gabbar tiles.
+    Purposed deep links (winners → breakout, 0DTE → options, undervalue →
+    analysis) keep their tab."""
     return f"/sepa/{symbol.upper()}?tab={tab}"
 
 
@@ -968,7 +974,7 @@ def vcp_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tiles.append({
             "symbol": sym,
             "name": r.get("name") or _name_for(sym),
-            "href": _href(sym, "setup"),
+            "href": _href(sym, "supply"),
             "bars": [],
             "bands": bands,
             "lines": lines,
@@ -1481,14 +1487,11 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tiles.append({
             "symbol": sym,
             "name": r.get("name") or _name_for(sym),
-            # Setup, not Supply (Ajay 2026-08-17: "Take me to the setup tab
-            # direct from chart maps and demand zone page"). These tiles are the
-            # LIVE Back in Demand board, so the actionable read is the plan —
-            # entry band, stop, target — not the zone inventory he just looked
-            # at on the tile itself. `zone_winner_tiles` below keeps `supply`:
-            # those depict a RESOLVED historical bounce, where today's setup
-            # describes a different chart than the one drawn.
-            "href": _href(sym, "setup"),
+            # Supply / Demand tab (Ajay 2026-09-03 "all pages"); this replaced
+            # the 2026-08-17 Setup default — the Supply tab draws the same bands
+            # at 6 months and carries today's live bar, so the arrival he just
+            # saw on the tile is the first thing on the page.
+            "href": _href(sym, "supply"),
             "bars": [],
             # Per-TILE window, not the board default. Zones are computed over
             # 252 bars while the board charted 130, so a band could be drawn
@@ -1920,7 +1923,7 @@ def earnings_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT) -> dict
                 "symbol": sym,
                 "name": _name_for(sym),
                 # Setup tab, matching the zone tiles (Ajay 2026-08-17).
-                "href": _href(sym, "setup"),
+                "href": _href(sym, "supply"),
                 "bars": [],
                 "bands": [],
                 "lines": ([{"price": _num(r.get("prev_close")), "label": "PRIOR CLOSE",
@@ -2214,7 +2217,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tiles.append({
             "symbol": sym,
             "name": r.get("name") or _name_for(sym),
-            "href": _href(sym, "setup"),
+            "href": _href(sym, "supply"),
             "bars": [],
             "_bars": {"days": _zone_window(second) if second else days},
             "bands": bands,
@@ -2404,7 +2407,7 @@ def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         picked.append({
             "symbol": (r.get("symbol") or "").upper(),
             "name": r.get("name"),
-            "href": _href((r.get("symbol") or "").upper(), "setup"),
+            "href": _href((r.get("symbol") or "").upper(), "supply"),
             "bars": [],
             "_bars": {"days": days},
             "bands": [],
@@ -2881,7 +2884,7 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         tiles.append({
             "symbol": sym,
             "name": _name_for(sym),
-            "href": _href(sym, "setup"),
+            "href": _href(sym, "supply"),
             "bars": [],
             "_bars": {"days": days},
             "bands": bands,

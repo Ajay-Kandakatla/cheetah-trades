@@ -177,7 +177,7 @@ def test_vcp_tab_builds_tiles_with_base_band_and_plan_lines(prices, scan_stub):
     assert out["count"] == 1
     t = out["tiles"][0]
     assert t["symbol"] == "AAA"
-    assert t["href"] == "/sepa/AAA?tab=setup"
+    assert t["href"] == "/sepa/AAA?tab=supply"
     assert t["bars"], "a tile must carry its price series"
     assert [b["kind"] for b in t["bands"]] == ["base"]
     assert {l["label"] for l in t["lines"]} == {"PIVOT", "STOP"}
@@ -284,11 +284,11 @@ def test_zones_tab_draws_the_band_and_the_whole_plan(prices, reentry_stub):
 
     out = B.board("zones", limit=5, min_tier="any")
     t = out["tiles"][0]
-    # Setup, not Supply (Ajay 2026-08-17). The tile already DRAWS the zones; the
-    # thing he cannot see from the tile is the plan, so that is where the click
-    # goes. `test_a_resolved_winner_tile_still_opens_the_supply_tab` is the
-    # other half of this pair — the retrospective tiles must NOT follow.
-    assert t["href"] == "/sepa/AAA?tab=setup"
+    # Supply / Demand tab since 2026-09-03 ("when ever I click on SEPA I need
+    # it to go Supply and Demand tab in all pages") — this superseded the
+    # 2026-08-17 Setup default. `test_a_resolved_winner_tile_still_opens_the_
+    # supply_tab` now agrees with it rather than standing as its negative.
+    assert t["href"] == "/sepa/AAA?tab=supply"
     assert {b["kind"] for b in t["bands"]} == {"demand", "supply"}
     assert [l["label"] for l in t["lines"]] == ["BUY", "STOP", "TARGET"]
     assert {s["k"] for s in t["stats"]} >= {"R:R", "Break-even", "Liquidity"}
@@ -2078,3 +2078,19 @@ def test_deep_demand_gate_measures_from_the_second_band(prices, reentry_stub, sa
     out = B.board("deep_demand", limit=5, min_tier="any")
     assert [t["symbol"] for t in out["tiles"]] == ["DSIT"]
     assert out["dropped_bounced"] == 1 and out["bounce_done_pct"] == 7.0
+
+
+
+# ---------------------------------------------------------------------------
+# tile href default (Ajay 2026-09-03: SEPA clicks land on Supply / Demand)
+# ---------------------------------------------------------------------------
+def test_default_tile_href_is_supply_and_purposed_tabs_stay():
+    assert B._href("aaa") == "/sepa/AAA?tab=supply"
+    assert B._href("AAA", "supply") == "/sepa/AAA?tab=supply"
+    assert B._href("AAA", "options") == "/sepa/AAA?tab=options"
+    import inspect
+    src = inspect.getsource(B)
+    assert '_href(sym, "setup")' not in src, "no tile may open the Setup tab by default any more"
+    assert 'upper(), "setup")' not in src
+    for purposed in ('_href(sym, "breakout")', '_href(sym, "options")'):
+        assert purposed in src, f"{purposed} is a purposed deep link and must stay"
