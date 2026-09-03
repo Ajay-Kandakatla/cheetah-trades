@@ -12,6 +12,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { DemandReentryPanel } from './DemandReentryPanel';
 
 type Overrides = Record<string, unknown>;
@@ -121,5 +122,19 @@ describe('DemandReentryPanel — universe provenance', () => {
 
     await waitFor(() => expect(screen.getByText(/503 scanned/)).toBeInTheDocument());
     expect(screen.queryByText(/days old/)).not.toBeInTheDocument();
+  });
+
+  it('row symbol links open the SEPA page on the Supply / Demand tab (2026-09-03), never the old Setup tab', async () => {
+    const zone = { kind: 'demand', lo: 95, hi: 100, mid: 97.5, touches: 3, strength: 60, in_price: true } as any;
+    mockFetch({ n: 1, rows: [{
+      symbol: 'TJX', name: 'TJX Cos', last_price: 98.5, supply_zones: [], demand_zones: [zone],
+      nearest_resistance: null, nearest_support: zone, in_demand_band: true, is_reentry: true,
+      fell_from_pct: 9.2, bars_since_above: 4, trend_ok: true, zone_quality_ok: true,
+      entry_zone: zone, plan: null,
+    } as any] });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    const link = await waitFor(() => screen.getByRole('link', { name: /TJX/ }));
+    expect(link.getAttribute('href')).toMatch(/\/sepa\/TJX\?.*tab=supply/);
+    expect(link.getAttribute('href')).not.toMatch(/tab=setup/);
   });
 });

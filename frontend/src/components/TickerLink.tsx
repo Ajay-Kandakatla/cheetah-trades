@@ -20,8 +20,10 @@ type Props = {
   showWatchlist?: boolean;
   /** Set to true to render a small price tag next to the ticker. */
   showPrice?: boolean;
-  /** Land on a specific tab instead of the default chart tab, e.g. 'setup'.
-   *  Rides in the URL as `?tab=`, so it survives reload and Cmd-click. */
+  /** Land on a specific tab instead of the default Supply / Demand tab
+   *  (Ajay 2026-09-03: "go Supply and Demand tab in all pages"), e.g.
+   *  'insider'. Rides in the URL as `?tab=`, so it survives reload and
+   *  Cmd-click. Omit it unless the click has a purpose the default misses. */
   tab?: string;
   /** A `NAV_SOURCES` key, written as `?from=` so the destination's back button
    *  still works after a tab click drops the router state. */

@@ -73,7 +73,8 @@ export function sanitizeSourceQuery(search: string | null | undefined): string {
 }
 
 /** Append `from=<key>` to a detail href, preserving any query it already has
- *  (the chart-map tiles ship `?tab=setup` / `?tab=supply`). Unknown keys are
+ *  (the chart-map tiles ship `?tab=supply`, purposed chips `?tab=insider`
+ *  etc.; a bare href lands on Supply / Demand since 2026-09-03). Unknown keys are
  *  dropped rather than written, so the param can always be trusted on read.
  *
  *  `sourceSearch` is the SOURCE page's location.search. Without it the back

@@ -170,6 +170,34 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'SEPA page defaults to the Supply / Demand tab (2026-09-03)',
+    file: 'src/pages/SepaCandidate.tsx',
+    // Ajay 2026-09-03: "when ever I click on SEPA I need it to go Supply and
+    // Demand tab in all pages." The rule lives in lib/sepaTabs.ts
+    // (DEFAULT_TAB = 'supply'); the page must use it and must not regrow the
+    // old `?? 'chart'` fallback beside it.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bresolveSepaTab\b[^}]*\}\s*from\s*'\.\.\/lib\/sepaTabs'/.test(src)) {
+        errs.push("SepaCandidate.tsx no longer imports resolveSepaTab from '../lib/sepaTabs'");
+      }
+      if (src.includes("?? 'chart'")) errs.push("SepaCandidate.tsx has regrown the `?? 'chart'` tab fallback");
+      return errs;
+    },
+  },
+  {
+    name: 'notifications page registers the zone_bounce_alert kind (2026-09-03)',
+    file: 'src/pages/Notifications.tsx',
+    // Same trap as demand_alert: a push kind the page cannot show cannot be
+    // muted, and a muted-by-accident kind is a silent drop
+    // (memory: cheetah_push_silent_drops).
+    checks: (src) => {
+      const errs = [];
+      if (!/key:\s*'zone_bounce_alert'/.test(src)) errs.push("CATEGORIES lacks the zone_bounce_alert kind — it cannot be muted from the page");
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

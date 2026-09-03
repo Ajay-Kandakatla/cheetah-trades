@@ -53,25 +53,54 @@ describe('parseTab', () => {
 });
 
 describe('sepaHref', () => {
-  // SepaCandidate silently falls back to its `chart` tab on an unknown ?tab=,
+  // SepaCandidate silently falls back to Supply / Demand on an unknown ?tab=,
   // so a typo is invisible in the UI. These assertions are the only guard.
+  // (Dead at runtime — tiles take href from the backend — but it states the
+  // same default rule, so it must agree.)
   it('builds the per-tab deep links the tiles use', () => {
     expect(sepaHref('nvda', 'setup')).toBe('/sepa/NVDA?tab=setup');
     expect(sepaHref('AAPL', 'supply')).toBe('/sepa/AAPL?tab=supply');
     expect(sepaHref('MTW', 'breakout')).toBe('/sepa/MTW?tab=breakout');
   });
 
-  it('defaults to the setup tab', () => {
-    expect(sepaHref('AMD')).toBe('/sepa/AMD?tab=setup');
+  it('defaults to the supply / demand tab (Ajay 2026-09-03, was setup)', () => {
+    expect(sepaHref('AMD')).toBe('/sepa/AMD?tab=supply');
+    expect(sepaHref('AMD')).not.toMatch(/tab=setup/);
   });
 
   it('encodes symbols that carry a class suffix', () => {
-    expect(sepaHref('BRK.B')).toBe('/sepa/BRK.B?tab=setup');
-    expect(sepaHref('CWEN-A')).toBe('/sepa/CWEN-A?tab=setup');
+    expect(sepaHref('BRK.B')).toBe('/sepa/BRK.B?tab=supply');
+    expect(sepaHref('CWEN-A')).toBe('/sepa/CWEN-A?tab=supply');
   });
 
   it('survives an empty symbol without throwing', () => {
-    expect(sepaHref('')).toBe('/sepa/?tab=setup');
+    expect(sepaHref('')).toBe('/sepa/?tab=supply');
+  });
+});
+
+describe('TAB_META ordering copy (2026-09-03, proximity-first)', () => {
+  // backend/supply_demand/demand_order.py now ranks approaching names by
+  // distance to the level and lets CMF break ties inside a 0.5% bucket. The
+  // blurbs are the only place the page says so — they must not still claim
+  // the 2026-08-26 CMF-first order.
+  it('Back in Demand says closest first, CMF as tie-break, RR first for the reached board', () => {
+    const b = TAB_META.zones.blurb;
+    expect(b).toMatch(/closest to the level first/i);
+    expect(b).toMatch(/money flow \(CMF\) breaks ties within a 0\.5% distance bucket/i);
+    expect(b).toMatch(/Back in Demand keeps reward:risk first/);
+  });
+
+  it('Deep Demand says in-band first, then nearest, CMF within a bucket', () => {
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).toMatch(/inside the second band first, then the nearest approaching names/);
+    expect(b).toMatch(/within a distance bucket money flow \(CMF\) ranks/);
+    expect(b).toMatch(/supersedes the 2026-08-26 CMF-first order/);
+  });
+
+  // negative: the old claim is gone, not merely joined by the new one.
+  it('no board still claims the hottest money flow ranks on top', () => {
+    expect(TAB_META.deep_demand.blurb).not.toMatch(/hottest money flow on top/);
+    expect(TAB_META.deep_demand.blurb).not.toMatch(/ranked by CMF intensity/);
   });
 });
 
@@ -1065,7 +1094,10 @@ describe('the Deep Demand tab', () => {
     expect(b).toMatch(/money flowing back in/i);
     expect(b).toMatch(/CMF-20/);
     expect(b).toMatch(/volume-day counts/i);
-    expect(b).toMatch(/sort first/i);
+    // 2026-09-03: money flow no longer sorts the board on its own — proximity
+    // does, CMF decides ties within a distance bucket (demand_order.py).
+    expect(b).toMatch(/within a distance bucket money flow \(CMF\) ranks/);
+    expect(b).not.toMatch(/sort first/i);
     expect(b).toMatch(/sellers are still in control/i);
   });
 });

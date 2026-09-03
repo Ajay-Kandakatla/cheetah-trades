@@ -1523,14 +1523,15 @@ def test_gabbar_hides_weak_sales_and_demotes_unknowns(
     assert syms.index("INBAND") < syms.index("FARAWAY")
 
 
-def test_deep_demand_board_ranks_the_hottest_cmf_first(
+def test_deep_demand_board_ranks_closest_first_then_cmf_inside_a_bucket(
         prices, reentry_stub, sales_stub):
-    """Ajay 2026-08-26: "rank these by highest CMF on the top ... the one
-    that have explosiveness". Board mirror of deep_demand.sort_key: within
-    the inflow group CMF magnitude leads; in-band and even explosive sales
-    only break ties. NEGATIVE: a distribution name never jumps a group on
-    the size of its (negative) CMF, and a huge sales number cannot outrank
-    a hotter CMF."""
+    """Ajay 2026-09-03: "keep the closest one to demand zones on the top. Of
+    course CMF inflow too considered." SUPERSEDES the 2026-08-26 CMF-first
+    board (under it NOG, 2.5% out of its band, led 52 in-band names). Inside
+    the band every row shares the distance bucket, so flow then CMF decide:
+    HOTIN over MILDIN over SOLD. NEGATIVE: MILDIN's explosive sales cannot
+    lift it over a hotter CMF — sales GATE (Bonde), they do not rank — and a
+    distribution name never jumps a group on the size of its negative CMF."""
     hot = {"state": "inflow", "cmf_20": 0.31, "accum_days_25": 8,
            "dist_days_25": 3, "pocket_pivot": False}
     mild = {"state": "inflow", "cmf_20": 0.12, "accum_days_25": 7,
@@ -1538,30 +1539,77 @@ def test_deep_demand_board_ranks_the_hottest_cmf_first(
     sold = {"state": "distribution", "cmf_20": -0.45, "accum_days_25": 1,
             "dist_days_25": 11, "pocket_pivot": False}
     reentry_stub["deep_rows"] = [
-        _deep_row("MILDIN", state="in", dist=0.0, inflow=mild),     # in band
-        _deep_row("HOTNEAR", state="near", dist=2.0, inflow=hot),   # 2% out
-        _deep_row("SOLD", state="in", dist=0.0, inflow=sold),
+        _deep_row("MILDIN", state="in", inflow=mild),
+        _deep_row("SOLD", state="in", inflow=sold),
+        _deep_row("HOTIN", state="in", inflow=hot),
     ]
     sales_stub["MILDIN"] = _sales("explosive", 180.0)   # huge sales, mild CMF
-    sales_stub["HOTNEAR"] = _sales("steady", 9.0)
+    sales_stub["HOTIN"] = _sales("steady", 9.0)
     sales_stub["SOLD"] = _sales("steady", 12.0)
-    for s in ("MILDIN", "HOTNEAR", "SOLD"):
-        prices[s] = _frame(200, start=90.05)
+    for s_ in ("MILDIN", "HOTIN", "SOLD"):
+        prices[s_] = _frame(200, start=90.05)
 
-    # 2026-08-31: near rows moved behind the approaching toggle, so the
-    # intensity ranking is asserted per phase rather than across the mix.
+    out = B.board("deep_demand", limit=5, min_tier="any", themes_first=False)
+    assert [t["symbol"] for t in out["tiles"]] == ["HOTIN", "MILDIN", "SOLD"]
+    assert "inside the second band first" in out["note"]
+    assert "inflow names sort first" not in out["note"]
+
+
+def test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """Both halves of the ask on one board. Reached: a name the LIVE print
+    has lifted 0.4% above the band (still inside the 7% gate) falls behind
+    one still inside it, even with the hotter CMF. Approaching: nearest the
+    second band first — 0.35% over 1.2% over 2.9% out — flow only inside a
+    0.5% bucket."""
+    hot = {"state": "inflow", "cmf_20": 0.40}
+    cool = {"state": "neutral", "cmf_20": 0.02}
+    rows = [_deep_row("LIFTED", state="in", inflow=hot),
+            _deep_row("STILLIN", state="in", inflow=cool)]
+    for sym, px in (("N29", 2.9), ("N12", 1.2), ("N035", 0.35)):
+        r = _deep_row(sym, state="near", dist=px, inflow=hot)
+        r["last_price"] = round(85.0 / (1 - px / 100.0), 4)
+        rows.append(r)
+    reentry_stub["deep_rows"] = rows
+    for r in rows:
+        prices[r["symbol"]] = _frame(200, start=90.05)
+        sales_stub[r["symbol"]] = _sales("steady", 9.0)
+    # live: LIFTED now 85.34 (0.4% above the 80-85 band), STILLIN unchanged
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"LIFTED": 85.34})
+
+    out = B.board("deep_demand", limit=5, min_tier="any", themes_first=False)
+    assert [t["symbol"] for t in out["tiles"]] == ["STILLIN", "LIFTED"]
+    out2 = B.board("deep_demand", limit=5, min_tier="any", themes_first=False,
+                   phase="approaching")
+    assert [t["symbol"] for t in out2["tiles"]] == ["N035", "N12", "N29"]
+    assert "nearest the second band first" in out2["note"]
+    assert all("_score" not in t for t in out2["tiles"])
+
+
+def test_deep_demand_tiles_wear_the_flow_badge_from_the_top_level_inflow(
+        prices, reentry_stub, sales_stub):
+    """Since 2026-09-03 the scan copies deep_demand.inflow to the row's
+    top-level `inflow`; the board reads either (demand_order.inflow_of), so
+    a row carrying only the top-level copy still shows its verdict."""
+    r = _deep_row("TOPONLY", state="in", inflow=None)
+    r["inflow"] = {"state": "inflow", "cmf_20": 0.21, "accum_days_25": 8,
+                   "dist_days_25": 2, "pocket_pivot": False}
+    reentry_stub["deep_rows"] = [r]
+    prices["TOPONLY"] = _frame(200, start=90.05)
+    sales_stub["TOPONLY"] = _sales("steady", 9.0)
     out = B.board("deep_demand", limit=5, min_tier="any")
-    assert [t["symbol"] for t in out["tiles"]] == ["MILDIN", "SOLD"]
-    out2 = B.board("deep_demand", limit=5, min_tier="any", phase="approaching")
-    assert [t["symbol"] for t in out2["tiles"]] == ["HOTNEAR"]
+    txt = " ".join(b["text"] for b in out["tiles"][0]["badges"])
+    assert "Money flowing in" in txt and "CMF +0.21" in txt
+    assert out["flow_counts"]["inflow"] == 1
 
 
 def test_deep_demand_inflow_names_lead_and_wear_the_flow_badge(
         prices, reentry_stub, sales_stub):
     """Ajay 2026-08-25: "we are looking for bullish momentum stocks and inflow
-    signals for these". Inflow beats in-band: a near-band name with money
-    flowing in outranks an in-band name still being sold, and every state is
-    said out loud on the tile and counted in the note."""
+    signals for these". Every flow state is said out loud on the tile and
+    counted in the note, per phase. (Flow no longer OUTRANKS distance since
+    2026-09-03 — it ranks inside a distance bucket; the ranking itself is
+    asserted in test_deep_demand_board_ranks_closest_first_then_cmf_inside_a_bucket.)"""
     flow_in = {"state": "inflow", "cmf_20": 0.14, "accum_days_25": 9,
                "dist_days_25": 4, "pocket_pivot": True}
     flow_out = {"state": "distribution", "cmf_20": -0.18, "accum_days_25": 2,
@@ -1839,15 +1887,18 @@ def test_gabbar_names_the_authors_levelless_stubs(prices, gabbar_stub):
 
 
 # ── reaching vs already reached (Ajay 2026-08-31) ──────────────────────────
-def _appr_row(sym, dist=2.9, drift=-3.1, flow=None, rr=1.2):
+def _appr_row(sym, dist=2.9, drift=-3.1, flow=None, rr=1.2, cmf=0.1):
+    # last_price follows `dist` by the scan's own formula ((px - hi) / px),
+    # because since 2026-09-03 the order is read from PRICE vs band, not from
+    # the stored dist_pct — a fixture whose two disagreed would test nothing.
     return {"symbol": sym, "name": sym, "is_reentry": False,
-            "last_price": 103.0, "trend_ok": True,
+            "last_price": round(100.0 / (1 - dist / 100.0), 4), "trend_ok": True,
             "entry_zone": {"lo": 98.0, "hi": 100.0, "touches": 3,
                            "strength": 60.0, "oldest_touch_bars": 120},
             "approaching": {"state": "approaching", "dist_pct": dist,
                             "drift_pct": drift, "drift_bars": 5,
                             "band": {"lo": 98.0, "hi": 100.0}},
-            "inflow": ({"state": flow, "cmf_20": 0.1, "accum_days_25": 5,
+            "inflow": ({"state": flow, "cmf_20": cmf, "accum_days_25": 5,
                         "dist_days_25": 3, "pocket_pivot": False}
                        if flow else None),
             "plan": {"entry_ref": 103.0, "stop": 97.0, "target": 110.0,
@@ -1896,6 +1947,69 @@ def test_approaching_board_ranks_by_proximity_not_cheetah_flow(
 
     out = B.board("zones", limit=10, min_tier="any", phase="approaching")
     assert [t["symbol"] for t in out["tiles"]] == ["CLOSE", "FARFLOW"]
+
+
+def test_approaching_same_bucket_puts_the_inflow_name_first(prices, reentry_stub):
+    """Ajay 2026-09-03: "closest one ... on the top. Of course CMF inflow too
+    considered." 0.08% and 0.26% out are one bucket (0.5%); inside it flow
+    then CMF decide — the worked example's MP/HIMS/EXR. NEGATIVE: a name with
+    NO flow read sorts last in the bucket, never first."""
+    reentry_stub["approaching_rows"] = [
+        _appr_row("EXR", dist=0.08, flow="distribution", cmf=-0.275),
+        _appr_row("NOREAD", dist=0.05, flow=None),
+        _appr_row("HIMS", dist=0.18, flow="neutral", cmf=-0.031),
+        _appr_row("MP", dist=0.26, flow="inflow", cmf=0.159),
+    ]
+    for sym in ("EXR", "NOREAD", "HIMS", "MP"):
+        prices[sym] = _frame(200, start=95.0)
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching",
+                  themes_first=False)
+    assert [t["symbol"] for t in out["tiles"]] == ["MP", "HIMS", "EXR", "NOREAD"]
+    # the badge rides on the same read the rank used
+    assert any("Money flowing in" in b["text"] for b in out["tiles"][0]["badges"])
+
+
+def test_approaching_reranks_on_the_live_print_not_the_scan_price(
+        prices, reentry_stub, monkeypatch):
+    """The scan cache is warmed 9:25 / 16:55; by noon the 2.9%-out name may be
+    0.2% out. The board ranks on the live print (fetched once, shared with
+    the 7% bounce gate) and falls back to the scan price only when the tape
+    has no print for that symbol."""
+    reentry_stub["approaching_rows"] = [_appr_row("WASCLOSE", dist=0.3),
+                                        _appr_row("WASFAR", dist=2.9)]
+    for sym in ("WASCLOSE", "WASFAR"):
+        prices[sym] = _frame(200, start=95.0)
+    calls = []
+
+    def live(syms):
+        calls.append(sorted(syms))
+        return {"WASFAR": 100.2}                  # WASCLOSE: no print → scan px
+    monkeypatch.setattr(B, "_live_last", live)
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching",
+                  themes_first=False)
+    assert [t["symbol"] for t in out["tiles"]] == ["WASFAR", "WASCLOSE"]
+    assert len(calls) == 1, "live prices must be fetched once per board build"
+
+
+def test_approaching_board_score_is_the_position_in_the_shared_key(
+        prices, reentry_stub):
+    """One definition of the order: the tile order must equal
+    demand_order.approaching_key over the same rows (position score, the
+    supply_tiles pattern) — not a second weighted number — with themes off
+    so nothing else can reorder it. `_score` never leaks to the client."""
+    from supply_demand import demand_order as O
+    rows = [_appr_row("D", dist=1.7, flow="neutral", cmf=0.0),
+            _appr_row("A", dist=0.4, flow="distribution", cmf=-0.1),
+            _appr_row("C", dist=0.9, flow="inflow", cmf=0.2),
+            _appr_row("B", dist=0.2, flow="inflow", cmf=0.05)]
+    reentry_stub["approaching_rows"] = rows
+    for r in rows:
+        prices[r["symbol"]] = _frame(200, start=95.0)
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching",
+                  themes_first=False)
+    want = [r["symbol"] for r in sorted(rows, key=O.approaching_key)]
+    assert [t["symbol"] for t in out["tiles"]] == want == ["B", "A", "C", "D"]
+    assert all("_score" not in t for t in out["tiles"])
 
 
 def test_the_route_actually_forwards_the_phase_param():
@@ -1998,6 +2112,45 @@ def test_reached_order_block_serves_names_inside_fresh_blocks(
     assert "first touch" in tile["why"]
 
 
+def _in_ob_row(sym, bars_ago, flow=None, cmf=None, px=99.5):
+    return {"symbol": sym, "name": sym, "is_reentry": False,
+            "last_price": px, "trend_ok": True,
+            "entry_zone": {"lo": 90.0, "hi": 92.0, "touches": 3, "strength": 60.0,
+                           "oldest_touch_bars": 120},
+            "inflow": ({"state": flow, "cmf_20": cmf} if flow else None),
+            "in_ob": {"state": "in_ob", "depth_pct": 39.0,
+                      "block": {"lo": 98.4, "hi": 100.2, "bars_ago": bars_ago,
+                                "displacement_atr": 3.2},
+                      "trade": {"entry": 100.2, "stop": 97.9, "target1": 104.8, "rr": 2.0},
+                      "cited": False},
+            "plan": {"entry_ref": 92.0, "stop": 89.0, "target": 110.0, "rr": 3.0},
+            "supply_zones": [], "demand_zones": [], "verdict": {}}
+
+
+def test_in_the_block_same_age_ranks_by_cmf_and_missing_inflow_last(
+        prices, reentry_stub):
+    """Youngest block still leads (Ajay 2026-08-31). Inside an age tie — 41
+    of 82 live rows were 2 bars old on 2026-09-03 — flow then CMF decide,
+    and a row with no flow read sorts LAST in the tie. The order-block rows
+    now carry `inflow` from the scan, and the tile wears the badge."""
+    reentry_stub["rows"] = []
+    reentry_stub["in_ob_rows"] = [
+        _in_ob_row("NOREAD", 2),
+        _in_ob_row("SOLD", 2, "distribution", -0.2),
+        _in_ob_row("OLDHOT", 20, "inflow", 0.5),
+        _in_ob_row("MILD", 2, "inflow", 0.05),
+        _in_ob_row("HOT", 2, "inflow", 0.3),
+    ]
+    for r in reentry_stub["in_ob_rows"]:
+        prices[r["symbol"]] = _frame(200, start=95.0)
+    out = B.board("zones", limit=10, min_tier="any", target="order_block",
+                  themes_first=False)
+    assert [t["symbol"] for t in out["tiles"]] == ["HOT", "MILD", "SOLD", "NOREAD", "OLDHOT"]
+    assert any("Money flowing in — CMF +0.30" in b["text"] for b in out["tiles"][0]["badges"])
+    assert not any("flowing" in b["text"] or "distributing" in b["text"]
+                   for b in out["tiles"][3]["badges"])
+
+
 def test_lens_tabs_default_all_while_demand_boards_default_reached():
     """One empty-string route default, two meanings — an old URL with no phase
     param must render every tab's historical board byte for byte."""
@@ -2094,3 +2247,19 @@ def test_default_tile_href_is_supply_and_purposed_tabs_stay():
     assert 'upper(), "setup")' not in src
     for purposed in ('_href(sym, "breakout")', '_href(sym, "options")'):
         assert purposed in src, f"{purposed} is a purposed deep link and must stay"
+
+
+def test_approaching_badges_print_the_live_distance_the_ranking_used(prices, reentry_stub, monkeypatch):
+    """The badge must agree with the order (Ajay reads it to predict the
+    ranking): with a fresh print the tile shows the LIVE % above the band; with
+    no print it falls back to the scan's dist_pct."""
+    reentry_stub["approaching_rows"] = [_appr_row("BBB", dist=2.9)]
+    prices["BBB"] = _frame(200, start=95.0)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"BBB": 100.5})   # band hi 100 → 0.5%
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching")
+    tile = out["tiles"][0]
+    assert any(b["text"] == "\u2192 0.5% above the band" for b in tile["badges"]), tile["badges"]
+    assert "0.5% above it" in tile["why"]
+    monkeypatch.setattr(B, "_live_last", lambda syms: {})
+    out2 = B.board("zones", limit=10, min_tier="any", phase="approaching")
+    assert any("2.9% above the band" in b["text"] for b in out2["tiles"][0]["badges"])

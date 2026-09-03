@@ -61,6 +61,17 @@
 # warming:true and skip. Warming here means the 9:33 pass sees a filled board.
 25     9     *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm full (am): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=full&limit=1'
 #
+# Zone store warm (supply_demand/zone_store.py) — 9:20 ET weekdays, five
+# minutes before the demand board warms. Draws EVERY supply + demand band
+# (board geometry, max_zones=None, TODAY's bar dropped) for each $1B+ name
+# in the full universe (~1,124 names, weekly shares cache for the cap) and
+# writes them to Mongo `zone_store` so the 9:33 zone-bounce pass has
+# yesterday's shelves to read the open against. Ajay 2026-09-03 (NTAP):
+# the shelf the low bounced off was a one-touch BROKEN-SUPPLY band the
+# demand board never keeps — hence every band, both kinds. Bars come from
+# the shared price cache; no provider call per symbol. Budget 240s.
+20     9     *    *    1-5  /usr/local/bin/python -m supply_demand.zone_store
+#
 # ── Trade Flash (Ajay 2026-08-24) ────────────────────────────────────────────
 # Zone-tied tape bursts on the demand/supply board names, pushed to his phone
 # (kind trade_flash, owner-scoped). Every 5 min in RTH; the module itself
@@ -195,6 +206,18 @@
 # NEAR (1-3% above, falling) = one digest per pass. Module refuses to run
 # outside 9:32-16:00 ET.
 3-58/5 9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.demand_alerts
+#
+# Zone-BOUNCE alerts (supply_demand/zone_bounce_alerts.py) — every 5 min in
+# RTH, offset from demand_alerts (3-58) and gabbar (6-56/10). Ajay
+# 2026-09-03: "NTAP did hit the demand zone in the morning and bounced back
+# immediately 20 point I am looking for those." Reads today's zone_store
+# bands (9:20 warm above) against bulk_snapshot's day LOW + last trade:
+# touched a demand band or a BROKEN supply shelf (old resistance = support),
+# yesterday closed > 3% above it, print back above the band and >= max(3%,
+# 1 ATR) off the low. STRONG (>= max(5%, 2 ATR)) = own push, max 3 per
+# pass; the rest = ONE digest. Once per (symbol, band, day); cap >= $1B;
+# kind zone_bounce_alert. Module refuses to run outside 9:33-16:00 ET.
+4-59/5 9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.zone_bounce_alerts
 #
 # TTM-revenue warm for the Under Value tab — Sunday 10:30pm ET, after the
 # 9pm weekly research refresh, so Monday's board has revenue dollars for

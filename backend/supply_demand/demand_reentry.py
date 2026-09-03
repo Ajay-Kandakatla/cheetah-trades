@@ -74,6 +74,17 @@ import pandas as pd
 from sepa import prices, universe as universe_mod, company_names
 from . import sd_liquidity as liq
 from . import price_zones
+from . import demand_order as _order
+
+# Time box for the in-scan money-flow read on the order-block lists (in_ob /
+# approaching_ob). Ajay 2026-09-03 ("Of course CMF inflow too considered")
+# made flow a tie-break on every demand board, and until then these two
+# collectors never attached `inflow` (3/82 and 7/83 live rows had one, by
+# accident of also being reentry rows). Each read is volume.analyze over a
+# frame the pass just cached — milliseconds — but ~165 rows on a bad day
+# still get a ceiling so a slow cache can never stretch the 3-minute scan:
+# past the budget the row ships with inflow=None (sorts LAST, never first).
+OB_INFLOW_BUDGET_SEC = 30.0
 
 log = logging.getLogger("supply_demand.demand_reentry")
 
@@ -459,6 +470,11 @@ def _apply_rr_floor(data: dict, min_rr: Optional[float]) -> dict:
 
 
 def _apply_limit(data: dict, limit: Optional[int]) -> dict:
+    """Truncate `rows` BY ORDER — the API default is limit=60, so the sort in
+    `scan` decides which names a caller ever sees. catalysts/signal_watch.py
+    reads the same cache and takes the first N symbols. Only `rows` is
+    trimmed; the deep / approaching / order-block lists ride whole (they are
+    capped in the scan itself)."""
     if not limit:
         return data
     return {**data, "rows": data.get("rows", [])[:int(limit)]}
@@ -1667,6 +1683,29 @@ def scan(force: bool = False, limit: Optional[int] = None,
     approaching_ob_rows: list = []  # falling toward a fresh ORDER BLOCK (2026-08-31)
     in_ob_rows: list = []           # INSIDE a fresh order block, first touch (2026-08-31)
     total = len(syms)
+
+    # Money-flow read for the two order-block lists (2026-09-03), same
+    # deep_demand.inflow_read(volume.analyze(...)) pattern the approaching
+    # collector uses, time-boxed by OB_INFLOW_BUDGET_SEC. Counts are logged
+    # so a budget-capped day is visible in the scan log, not just as a
+    # flow-less board.
+    ob_flow = {"spent": 0.0, "enriched": 0, "skipped": 0}
+
+    def _ob_inflow(sym_: str):
+        if ob_flow["spent"] >= OB_INFLOW_BUDGET_SEC:
+            ob_flow["skipped"] += 1
+            return None
+        t_ = time.time()
+        try:
+            from sepa import volume as _vol_ob
+            out_ = _deep.inflow_read(_vol_ob.analyze(prices.load_prices(sym_)))
+        except Exception:
+            out_ = None
+        ob_flow["spent"] += time.time() - t_
+        if out_ is not None:
+            ob_flow["enriched"] += 1
+        return out_
+
     _publish_progress(ukey, "scanning", started_at=t0, current=0, total=total,
                       hits=0, errors=0, symbol=None, universe_label=ulabel)
     for i, sym in enumerate(syms, 1):
@@ -1717,6 +1756,8 @@ def scan(force: bool = False, limit: Optional[int] = None,
                 if a6:
                     r6 = dict(rec)
                     r6.pop("series", None)
+                    if r6.get("inflow") is None:
+                        r6["inflow"] = _ob_inflow(sym)
                     in_ob_rows.append(r6)
             except Exception as exc:                          # pragma: no cover
                 log.debug("in-ob: collecting %s failed: %s", sym, exc)
@@ -1725,6 +1766,8 @@ def scan(force: bool = False, limit: Optional[int] = None,
                 if a5:
                     r5 = dict(rec)
                     r5.pop("series", None)
+                    if r5.get("inflow") is None:
+                        r5["inflow"] = _ob_inflow(sym)
                     approaching_ob_rows.append(r5)
             except Exception as exc:                          # pragma: no cover
                 log.debug("approaching-ob: collecting %s failed: %s", sym, exc)
@@ -1766,6 +1809,12 @@ def scan(force: bool = False, limit: Optional[int] = None,
                     r3 = dict(rec)
                     r3.pop("series", None)
                     r3["deep_demand"] = d3
+                    # Top-level too (2026-09-03), so every demand board reads
+                    # flow from one place (demand_order.inflow_of) and the
+                    # Chart Maps flow badge renders on deep tiles. The nested
+                    # copy stays for the FE's deep-demand card.
+                    if r3.get("inflow") is None:
+                        r3["inflow"] = d3.get("inflow")
                     deep_rows.append(r3)
             except Exception as exc:                          # pragma: no cover
                 log.debug("deep-demand: collecting %s failed: %s", sym, exc)
@@ -1778,6 +1827,12 @@ def scan(force: bool = False, limit: Optional[int] = None,
     # Sorted by R:R descending (2026-08-13). The backtest found R:R >= 1.5 was
     # the ONLY cohort with positive expectancy, so the number that decides
     # whether a row is worth reading leads the list. Ties break on freshness.
+    # Deliberately NOT the proximity order the other demand lists took on
+    # 2026-09-03: every row here is INSIDE its band, so distance is a constant
+    # (docs/supply_demand/rr_floor.md). ORDER-DEPENDENT CONSUMERS: `_apply_limit`
+    # (the API's default limit=60) truncates this list by position, and
+    # catalysts/signal_watch.py takes its first N symbols — whatever leads here
+    # is what gets watched.
     rows.sort(key=lambda r: (-((r.get("plan") or {}).get("rr") or 0.0), _rank_key(r)))
     # Nearest lid first. Sorted separately and by a different key on purpose:
     # the demand board ranks by the quality of a PLAN, this one by urgency —
@@ -1786,27 +1841,36 @@ def scan(force: bool = False, limit: Optional[int] = None,
         supply_rows.sort(key=_into_supply.sort_key)
     except Exception as exc:                                  # pragma: no cover
         log.debug("into-supply: sort failed: %s", exc)
-    # Deep-demand: in-band first, then closest to arriving. Capped AFTER the
-    # sort so a bad-breadth day keeps the best-ranked names; the pre-cap count
-    # rides on the payload so a capped day says so instead of looking complete.
+    # Deep-demand: closest to the second band first, flow breaks ties (Ajay
+    # 2026-09-03: "keep the closest one to demand zones on the top. Of course
+    # CMF inflow too considered" — demand_order.proximity_key via
+    # deep_demand.sort_key). Capped AFTER the sort, PER STATE (in / near) so
+    # the closest-first order cannot starve the Chart Maps approaching toggle;
+    # the pre-cap count rides on the payload so a capped day says so.
     deep_total = len(deep_rows)
     try:
         deep_rows.sort(key=_deep.sort_key)
     except Exception as exc:                                  # pragma: no cover
         log.debug("deep-demand: sort failed: %s", exc)
-    deep_rows = deep_rows[:_deep.MAX_ROWS]
-    # Approaching: closest to arrival first — this board's urgency IS the
-    # distance. Ties break on how hard it is falling (faster drift first).
-    approaching_rows.sort(key=lambda r: (
-        (r.get("approaching") or {}).get("dist_pct") or 99.0,
-        (r.get("approaching") or {}).get("drift_pct") or 0.0))
-    approaching_ob_rows.sort(key=lambda r: (
-        (r.get("approaching_ob") or {}).get("dist_pct") or 99.0,
-        (r.get("approaching_ob") or {}).get("drift_pct") or 0.0))
-    # In-the-block: youngest block first — the freshest institutional
-    # footprint is the one whose first test is most informative.
-    in_ob_rows.sort(key=lambda r: (
-        ((r.get("in_ob") or {}).get("block") or {}).get("bars_ago") or 999))
+    deep_rows = _deep.cap(deep_rows)
+    # Approaching (zone and order block): closest to arrival first — this
+    # board's urgency IS the distance — in 0.5% buckets so the money-flow read
+    # ranks inside a tie instead of the third decimal of the distance
+    # (2026-09-03); drift (harder fall first) then symbol break what is left.
+    # None-safe by construction: no `or 99.0` default — a missing distance
+    # sorts LAST and a true 0.0 sorts FIRST.
+    approaching_rows.sort(key=_order.approaching_key)
+    approaching_ob_rows.sort(key=_order.approaching_ob_key)
+    # In-the-block: youngest block first (2026-08-31) — the freshest
+    # institutional footprint is the one whose first test is most informative
+    # — then the same proximity/flow key inside an age tie (2026-09-03: 41 of
+    # 82 live rows were 2 bars old and sat in universe order).
+    in_ob_rows.sort(key=_order.in_ob_key)
+    if ob_flow["enriched"] or ob_flow["skipped"]:
+        log.info("demand-reentry: order-block flow reads — %d enriched, %d "
+                 "skipped past the %.0fs budget (%.1fs spent)",
+                 ob_flow["enriched"], ob_flow["skipped"],
+                 OB_INFLOW_BUDGET_SEC, ob_flow["spent"])
 
     # Record the FULL qualifying list before anything trims it (Ajay 2026-08-17:
     # "Can you maintain history of our In deman page please… Want you to track

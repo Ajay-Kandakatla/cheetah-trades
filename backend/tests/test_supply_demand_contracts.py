@@ -195,3 +195,88 @@ def test_the_documented_default_is_not_the_backtests_best_cell():
     measured one. If someone changes this to 1.25 they must also change this
     test, and this docstring is the reason they should not."""
     assert dr.MIN_RR_DEFAULT != 1.25
+
+
+# ── ordering: closest to the level first, flow breaks ties (2026-09-03) ───────
+# Ajay 2026-09-03: "make sure in our other demand and deep demand keep the
+# closest one to demand zones on the top. Of course CMF inflow too considered."
+def test_ordering_constants_locked():
+    from supply_demand import demand_order as O
+    from supply_demand import deep_demand as DD
+    assert O.PROXIMITY_BUCKET_PCT == 0.5          # one tick of noise on a $96 stock
+    assert O.FLOW_RANK == {"inflow": 0, "neutral": 1, "distribution": 2}
+    assert O.FLOW_RANK_MISSING == 3               # missing never outranks a real read
+    assert DD.MAX_IN == 60 and DD.MAX_NEAR == 40  # per-state, measured 2026-09-03
+    assert DD.MAX_ROWS == DD.MAX_IN + DD.MAX_NEAR
+    assert dr.OB_INFLOW_BUDGET_SEC == 30.0
+
+
+def test_demand_order_stays_pure():
+    """Both the scan and Chart Maps call it; the moment it reaches for a scan,
+    a price or the clock the two surfaces stop being one definition."""
+    from supply_demand import demand_order as O
+    src = inspect.getsource(O)
+    for forbidden in ("load_prices", "cached_or_warm", "import time", "datetime",
+                      "requests", "httpx", "from . import", "from supply_demand"):
+        assert forbidden not in src, f"demand_order reaches for {forbidden}"
+
+
+def test_every_non_reached_demand_list_sorts_with_the_shared_key():
+    from supply_demand import deep_demand as DD
+    src = inspect.getsource(dr.scan)
+    assert "approaching_rows.sort(key=_order.approaching_key)" in src
+    assert "approaching_ob_rows.sort(key=_order.approaching_ob_key)" in src
+    assert "in_ob_rows.sort(key=_order.in_ob_key)" in src
+    assert "deep_rows.sort(key=_deep.sort_key)" in src
+    assert "deep_key(row, px=px)" in inspect.getsource(DD.sort_key)
+    assert "_deep.cap(deep_rows)" in src, "deep cap must be per state, not one slice"
+    assert "deep_rows[:_deep.MAX_ROWS]" not in src
+
+
+def test_no_distance_default_can_send_a_true_zero_to_the_back():
+    """`dist_pct or 99.0` ranked a name sitting exactly on its band LAST.
+    None-safety lives inside proximity_key (state 3 = unknown, sorts last)."""
+    for mod in (dr, __import__("supply_demand.demand_order", fromlist=["x"]),
+                __import__("supply_demand.deep_demand", fromlist=["x"])):
+        src = inspect.getsource(mod)
+        assert '("dist_pct") or 99.0' not in src, mod.__name__
+        assert '("bars_ago") or 999' not in src, mod.__name__
+
+
+def test_the_reached_board_keeps_its_measured_rr_order():
+    """Every reached row is INSIDE its band — proximity is a constant there.
+    rows.sort stays R:R-led (docs/supply_demand/rr_floor.md); the limit and
+    signal_watch truncate by that order."""
+    src = inspect.getsource(dr.scan)
+    assert 'rows.sort(key=lambda r: (-((r.get("plan") or {}).get("rr") or 0.0), _rank_key(r)))' in src
+    assert "\n    rows.sort(key=_order" not in src
+    assert "BY ORDER" in inspect.getsource(dr._apply_limit)
+
+
+def test_order_block_collectors_attach_the_flow_read_under_a_budget():
+    src = inspect.getsource(dr.scan)
+    assert src.count('["inflow"] = _ob_inflow(sym)') == 2, "in_ob AND approaching_ob"
+    assert "OB_INFLOW_BUDGET_SEC" in src
+    assert 'r3["inflow"] = d3.get("inflow")' in src, "deep rows expose top-level inflow"
+
+
+def test_chart_maps_reranks_on_the_live_print_with_a_position_score():
+    """Approaching / in-the-block / deep tiles: `_score` is the POSITION in
+    the shared key's order (supply_tiles pattern) — never a second weighted
+    number; the reached zone board keeps R:R + the cheetah composite."""
+    from chart_maps import board
+    z = inspect.getsource(board.zone_tiles)
+    assert "rerank_live(rows, rank_key, live)" in z
+    assert '"_score": (float(len(rows) - rank) if rank_key is not None' in z
+    assert "f * 10000.0 + vlead * 1000.0" in z, "reached composite must stay"
+    assert '-appr["dist_pct"]' not in z and "bars_ago\"))\n" not in z
+    d = inspect.getsource(board.deep_demand_tiles)
+    assert "rerank_live(rows, _order.deep_key, live)" in d
+    assert '"_score": float(len(rows) - rank)' in d
+    for gone in ("flow_lead", "cmf_lead", "in_band_lead", "sales_tb", "inflow names sort"):
+        assert gone not in d, f"deep board still carries the 2026-08-26 weighted score: {gone}"
+    # flow badge reads through inflow_of so OB and deep tiles show it too
+    assert "_flow_badge(_order.inflow_of(r))" in z
+    assert "_order.inflow_of(r) or {}" in d
+    # the live dict is fetched ONCE per board and shared with the bounce gate
+    assert z.count("_live_last(") == 1 and d.count("_live_last(") == 1

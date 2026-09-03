@@ -363,11 +363,11 @@ export function ChartMaps() {
           </button>
           <span className="cm-phase-hint">
             {phase === 'approaching'
-              ? 'Still above the level, close, and falling toward it — set the order before it arrives. Closest first.'
+              ? 'Still above the level, close, and falling toward it — set the order before it arrives. Closest to the level first — money flow breaks ties.'
               : phase === 'all'
               ? 'The full screen; the other two narrow it to names at or nearing their level.'
               : tab === 'zones' && target === 'order_block'
-              ? 'Inside a fresh order block on its first touch — youngest block first.'
+              ? 'Inside a fresh order block on its first touch. Youngest block first — money flow breaks ties.'
               : 'Back inside a tested band and holding.'}
           </span>
           {/* Which LEVEL the moment is measured to (Ajay 2026-08-31). Zones

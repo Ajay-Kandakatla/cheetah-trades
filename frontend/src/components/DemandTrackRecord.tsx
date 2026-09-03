@@ -120,8 +120,10 @@ export function DemandTrackRecord({ universe }: { universe: string }) {
                      style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap',
                               fontSize: '0.72rem', padding: '0.15rem 0' }}>
                   <span style={{ opacity: 0.7, minWidth: '5.5rem' }}>{r.et_date}</span>
+                  {/* tab="supply" on both (was "setup", 2026-08-17): Ajay
+                    * 2026-09-03 — every SEPA click lands on Supply / Demand. */}
                   {(r.entered ?? []).map((s) => (
-                    <TickerLink key={`in-${s}`} ticker={s} tab="setup"
+                    <TickerLink key={`in-${s}`} ticker={s} tab="supply"
                                 fromKey="supply-demand" fromLabel="Back in Demand"
                                 showWatchlist={false}
                                 style={{ color: TONE_COLOR.good }} title="joined the board">
@@ -129,7 +131,7 @@ export function DemandTrackRecord({ universe }: { universe: string }) {
                     </TickerLink>
                   ))}
                   {(r.dropped ?? []).map((s) => (
-                    <TickerLink key={`out-${s}`} ticker={s} tab="setup"
+                    <TickerLink key={`out-${s}`} ticker={s} tab="supply"
                                 fromKey="supply-demand" fromLabel="Back in Demand"
                                 showWatchlist={false}
                                 style={{ color: TONE_COLOR.bad }} title="left the board">

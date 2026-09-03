@@ -1713,15 +1713,20 @@ def test_scan_collects_deep_rows_that_is_reentry_refuses(monkeypatch):
     assert d["state"] == "in" and d["second_band"]["lo"] == 80.0
 
 
-def test_scan_deep_rows_capped_but_count_honest(monkeypatch):
-    """No silent caps: a bad-breadth day trims deep_rows to MAX_ROWS but
-    deep_n reports how many actually qualified."""
+def test_scan_deep_rows_capped_per_state_but_count_honest(monkeypatch):
+    """No silent caps: a bad-breadth day trims deep_rows to MAX_IN in-band +
+    MAX_NEAR near rows (2026-09-03: per state, so the closest-first sort can
+    never empty the Chart Maps approaching toggle) while deep_n reports how
+    many actually qualified. NEGATIVE: the near list survives even when the
+    in-band list alone exceeds the old single cap."""
     from supply_demand import deep_demand as DD
-    n = DD.MAX_ROWS + 7
-    syms = [f"S{i:03d}" for i in range(n)]
+    n_in, n_near = DD.MAX_IN + 27, DD.MAX_NEAR + 5      # 87 in > old 80 cap
+    syms = [f"I{i:03d}" for i in range(n_in)] + [f"N{i:03d}" for i in range(n_near)]
 
     def fake(s, with_series=False):
-        return {"symbol": s, "is_reentry": False, "last_price": 82.0,
+        # 82 = inside the 80-85 second band; 86 = 1.16% above it (near)
+        return {"symbol": s, "is_reentry": False,
+                "last_price": 82.0 if s.startswith("I") else 86.0,
                 "demand_zones": [
                     {"kind": "demand", "lo": 90.0, "hi": 95.0, "mid": 92.5,
                      "touches": 3, "strength": 70.0},
@@ -1736,8 +1741,15 @@ def test_scan_deep_rows_capped_but_count_honest(monkeypatch):
     dr._cache.clear()
 
     out = dr.scan(force=True)
-    assert len(out["deep_rows"]) == DD.MAX_ROWS
-    assert out["deep_n"] == n
+    states = [r["deep_demand"]["state"] for r in out["deep_rows"]]
+    assert states.count("in") == DD.MAX_IN
+    assert states.count("near") == DD.MAX_NEAR
+    assert len(out["deep_rows"]) == DD.MAX_ROWS == DD.MAX_IN + DD.MAX_NEAR
+    assert out["deep_n"] == n_in + n_near
+    # closest first: every in-band row precedes every near row
+    assert states == ["in"] * DD.MAX_IN + ["near"] * DD.MAX_NEAR
+    # 2026-09-03: the flow read is also copied to the top level of deep rows
+    assert all("inflow" in r for r in out["deep_rows"])
 
 
 def test_scan_attaches_the_inflow_verdict_to_deep_rows(monkeypatch):

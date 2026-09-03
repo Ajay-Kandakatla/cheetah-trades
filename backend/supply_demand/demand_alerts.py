@@ -69,6 +69,8 @@ MIN_CAP_USD = 1_000_000_000.0      # "billion or at least bigger than a billion"
 KIND = "demand_alert"
 STATE_COLL = "demand_alert_state"
 DIGEST_MAX = 6                     # names spelled out in one digest body
+MAX_SINGLES_PER_PASS = 4           # first pass after a deploy fired 14 singles at once
+                                   # (2026-09-03 12:48); closest first, the rest ride the digest
 BOARD_LIMIT = 500
 BOARD_TIMEOUT_SEC = 30
 SESSION_OPEN = dtime(9, 32)        # let the opening print settle
@@ -207,20 +209,34 @@ def at_message(item: dict) -> dict:
     body = f"${float(item['last']):g} · {tested} · {fmt_cap(item.get('cap'))}"
     if item.get("name"):
         body += f" · {item['name']}"
+    # "kind" rides in the payload: push/history.py records payload["kind"], so
+    # without it every 🧲 push logged as kind=None (found 2026-09-03).
     return {"title": f"🧲 {sym} {where} {_band_txt(band)}", "body": body,
-            "url": f"/sepa/{sym}?tab=supply", "data": {"url": f"/sepa/{sym}?tab=supply"}}
+            "url": f"/sepa/{sym}?tab=supply", "data": {"url": f"/sepa/{sym}?tab=supply"},
+            "kind": KIND}
 
 
-def digest_message(items: list) -> dict:
+def digest_message(items: list) -> Optional[dict]:
+    """One push for many names. NEAR items ("nearing demand") and any AT items
+    that spilled past MAX_SINGLES_PER_PASS share it; the title says which."""
+    if not items:
+        return None
     items = sorted(items, key=lambda it: it["hit"]["dist_pct"])
     lead = items[0]["symbol"]
-    title = f"🧲 Nearing demand — {lead}" + (f" +{len(items) - 1} more" if len(items) > 1 else "")
-    lines = [f"{it['symbol']} ${float(it['last']):g} · {it['hit']['dist_pct']:g}% above "
-             f"{_band_txt(it['band'])} · {fmt_cap(it.get('cap'))}" for it in items[:DIGEST_MAX]]
+    has_at = any(it["hit"].get("tier") == "at" for it in items)
+    head = "🧲 Demand zone — " if has_at else "🧲 Nearing demand — "
+    title = head + lead + (f" +{len(items) - 1} more" if len(items) > 1 else "")
+    lines = []
+    for it in items[:DIGEST_MAX]:
+        where = ("in demand" if it["hit"].get("state") == "in"
+                 else f"{it['hit']['dist_pct']:g}% above")
+        lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} "
+                     f"{_band_txt(it['band'])} · {fmt_cap(it.get('cap'))}")
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more on the board")
     url = "/chart-maps?tab=zones&phase=approaching"
-    return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url}}
+    return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url},
+            "kind": KIND}
 
 
 # --------------------------------------------------------------------------
@@ -352,13 +368,18 @@ def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] 
                 continue
             item["key"] = key
             (at_items if hit["tier"] == "at" else near_items).append(item)
+    # Closest first; only MAX_SINGLES_PER_PASS ring individually, the rest
+    # join the digest so a first pass (deploy, 9:33 open) is one buzz, not 14.
+    at_items.sort(key=lambda it: it["hit"]["dist_pct"])
+    singles, spill = at_items[:MAX_SINGLES_PER_PASS], at_items[MAX_SINGLES_PER_PASS:]
+    digest = spill + near_items
     pushed = 0
-    if push and (at_items or near_items):
+    if push and (singles or digest):
         from push import sender
         if owner is None:
             from portfolio.alerts import _resolve_owner
             owner = _resolve_owner()
-        for it in at_items:
+        for it in singles:
             try:
                 res = sender.send_to_user(owner, at_message(it), kind=KIND)
             except Exception as exc:
@@ -367,18 +388,19 @@ def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] 
             if _terminal(res):
                 _record(coll, it["key"], it, now)
                 pushed += 1
-        if near_items:
+        if digest:
             try:
-                res = sender.send_to_user(owner, digest_message(near_items), kind=KIND)
+                res = sender.send_to_user(owner, digest_message(digest), kind=KIND)
             except Exception as exc:
                 log.warning("demand_alerts: digest push failed: %s", exc)
                 res = None
             if _terminal(res):
-                for it in near_items:
+                for it in digest:
                     _record(coll, it["key"], it, now)
                 pushed += 1
     return {"ran": True, "date": day, "candidates": len(syms), "hits": hits,
-            "at": len(at_items), "near": len(near_items), "pushed": pushed,
+            "at": len(at_items), "at_singles": len(singles), "near": len(near_items),
+            "pushed": pushed,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev}
 

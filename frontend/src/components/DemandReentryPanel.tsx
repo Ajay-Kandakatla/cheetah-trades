@@ -275,8 +275,11 @@ export function DemandReentryPanel() {
                 borderLeft: `3px solid ${liq.warn ? '#d97706' : '#22c55e'}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {/* tab="supply" (was "setup", 2026-08-17): Ajay 2026-09-03
+                    * wants every SEPA click on Supply / Demand — the band this
+                    * row is standing in is drawn there. */}
                   <TickerLink ticker={r.symbol} fromLabel="Back in Demand"
-                          tab="setup" fromKey="supply-demand" />
+                          tab="supply" fromKey="supply-demand" />
                   <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{r.name}</span>
                   <span className="mono" style={{ fontSize: '0.74rem' }}>{money(r.last_price)}</span>
                   <span style={{

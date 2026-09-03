@@ -2,6 +2,9 @@
  *
  * Ajay 2026-08-17: "Take me to the setup tab cirect from chart maps and demand
  * zone page" + the URL he pasted, /sepa/MOS?tab=setup&from=chart-maps.
+ * (2026-09-03: the page default is now Supply / Demand and those callers stopped
+ * asking for setup — tab="setup" below is just an arbitrary explicit tab; the
+ * component itself never picks a default, see lib/sepaTabs.ts.)
  *
  * Why these are href assertions and not click assertions: the whole point of
  * this component is that the destination lives in a REAL anchor, so Cmd-click,

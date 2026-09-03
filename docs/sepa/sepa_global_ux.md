@@ -61,6 +61,17 @@ Avoid is checked **first**, so a climax/distribution name can never read "buy"
 > guard the full path has. Fixed at the scanner; SEPA Global shows whatever the
 > scan's `is_buyable`/`is_candidate` say, so the fix flows straight through.
 
+> Landing tab (2026-09-03): every click that opens the admin candidate page
+> `/sepa/:symbol` now lands on its **Supply / Demand** tab — Ajay: *"when ever I
+> click on SEPA I need it to go Supply and Demand tab in all pages."* The rule is
+> `frontend/src/lib/sepaTabs.ts` (`DEFAULT_TAB = 'supply'`, `resolveSepaTab`);
+> backend tile hrefs (`chart_maps/board.py _href`) default to supply too. This
+> supersedes the 2026-08-17 Setup deep links from Chart Maps / Back in Demand /
+> Track Record, and the Breakouts row's `?tab=breakout`. Purposed chips keep
+> their tabs (`?tab=insider`, `?tab=fundamentals`, tape, legacy `#volume` →
+> breakout). Cost: each ticker open now also computes `/chart-maps/support`
+> (~1s warm, ~5s the first time on an uncached name) and `/supply-demand/ticker`.
+
 ## Tests
 
 - `frontend/src/lib/sepaGlobal.test.ts` — verdict mapping for every gate,

@@ -207,8 +207,8 @@ def test_the_href_lands_on_a_tab_that_EXISTS():
     """Shipped once pointing at ?tab=zero_dte, which is not in SepaCandidate's
     TABS — every tile silently fell back to the chart tab. Read from the real
     frontend source so the two cannot drift apart again."""
-    tsx = os.path.join(_HERE, "..", "..", "frontend", "src", "pages",
-                       "SepaCandidate.tsx")
+    # TABS moved to lib/sepaTabs.ts on 2026-09-03 (Supply / Demand default).
+    tsx = os.path.join(_HERE, "..", "..", "frontend", "src", "lib", "sepaTabs.ts")
     if not os.path.exists(tsx):                    # backend-only checkout
         pytest.skip("frontend not present")
     with open(tsx) as fh:

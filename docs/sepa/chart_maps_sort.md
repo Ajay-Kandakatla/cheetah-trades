@@ -220,3 +220,61 @@ reshuffling the per-theme spread cap underneath every other control on the page.
 | Themes do not lead by default | `test_themes_no_longer_lead_by_DEFAULT` |
 | Every entry point honours that default | `test_every_board_entry_point_honours_that_default` |
 | The checkbox still works | `test_the_checkbox_can_still_turn_the_theme_lead_back_ON` |
+
+## Update 2026-09-03 — default order per demand tab, read at the live print
+
+> *"make sure in our other demand and deep demand keep the closest one to
+> demand zones on the top. Of course CMF inflow too considered."*
+
+Two things changed on the demand boards. The **order** is now one shared key
+(`supply_demand/demand_order.proximity_key`: inside the band → nearest in 0.5%
+buckets → inflow > neutral > distribution > missing → stronger CMF → exact
+distance; full rationale in `docs/supply_demand/demand_reentry_methodology.md`),
+and it is applied **at read time on the live print** rather than trusting the
+scan's order. The demand scan cache is warmed at 9:25 and 16:55; by mid-session
+the name that was 2% out may be inside the band, and the 7% bounce gate that
+shipped earlier the same day already fetches the live prices for exactly that
+reason — the board now fetches them **once** and reuses them for both the gate
+and the rank, falling back to the scan's `last_price` per symbol when the tape
+has no print.
+
+`_score` on those boards is the **position** in that order (`float(len(rows) -
+rank)`, the supply-tab pattern pinned by `test_into_supply.py`) — one definition
+of the order, not a second weighted number. `_finish` still ranks `_score`
+descending, so *Themes first* (when on) and an explicit dropdown metric override
+it exactly as before.
+
+| Tab / cell | Default order | Read-time | Gate |
+|---|---|---|---|
+| Back in Demand · **reached · zone** | R:R (measured floor), then the cheetah composite flow × velocity × R:R — **unchanged** | none (rows are all inside the band) | 7% bounce |
+| Back in Demand · **approaching · zone** | closest to the band first, flow/CMF inside a 0.5% bucket, drift then symbol | live print | 7% bounce |
+| Back in Demand · **approaching · order block** | same, over the block | live print | 7% bounce |
+| Back in Demand · **reached · order block** ("In the order block") | **youngest block first**, then the proximity key inside an age tie | live print | 7% bounce |
+| Deep Demand · reached | inside the second band first, flow/CMF inside a bucket, stronger band | live print | Bonde sales + 7% bounce |
+| Deep Demand · approaching | nearest the second band first, same tie-breaks | live print | Bonde sales + 7% bounce |
+| Into Supply | nearest lid first (unchanged, `into_supply.sort_key`) | — | — |
+| VCP / Topping / Gabbar / Under Value / others | their own metric (unchanged) | — | — |
+
+The Deep Demand board's weighted score (flow 100k / CMF 10k / in-band 100 /
+sales ×0.05, 2026-08-26) is gone: sales **gate** (Bonde) and are said on the
+badge; they do not rank. The note strings say the order out loud ("inside the
+second band first on the live print, money flow (CMF) ranking within a 0.5%
+distance bucket") instead of "inflow names sort first".
+
+Flow badges now read `demand_order.inflow_of(row)` (top-level `inflow`, else
+`deep_demand.inflow`), so order-block and deep tiles wear the 💰 / 🔻 badge the
+Back-in-Demand tiles already had — the scan attaches `inflow` to those rows
+since the same change.
+
+Order-dependent consumers to remember: the API's default `limit=60` and
+`catalysts/signal_watch.py` both truncate the **reached** `rows` by position;
+neither reads the re-ranked boards.
+
+| Decision | Guard |
+|---|---|
+| Shared key on every non-reached list | `test_every_non_reached_demand_list_sorts_with_the_shared_key` |
+| Position score, live re-rank, reached composite intact | `test_chart_maps_reranks_on_the_live_print_with_a_position_score` |
+| Live prices fetched once per board | `test_approaching_reranks_on_the_live_print_not_the_scan_price` |
+| Board order == the key's order with themes off | `test_approaching_board_score_is_the_position_in_the_shared_key` |
+| Same age → CMF, missing flow last | `test_in_the_block_same_age_ranks_by_cmf_and_missing_inflow_last` |
+| Deep: in before near, nearest near first | `test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase` |

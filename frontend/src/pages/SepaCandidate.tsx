@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
 import { resolveBack } from '../lib/navSource';
+import { TABS, resolveSepaTab, scrollActiveTabIntoView, type Tab } from '../lib/sepaTabs';
 import { ipoAgeLabel } from '../lib/ipoAge';
 import { SupportLevels } from '../components/SupportLevels';
 import { SEPA_SUPPLY_WINDOW } from '../lib/supportLevels';
@@ -153,27 +154,11 @@ const PageInfo = (
   </>
 );
 
-type Tab = 'chart' | 'setup' | 'analysis' | 'trend' | 'breakout' | 'ranking' | 'fundamentals' | 'catalyst' | 'insider' | 'smartmoney' | 'chatter' | 'supply' | 'options' | 'tape';
-
-// The active tab lives in the URL (?tab=insider) so it survives reload, back/
-// forward, and deep-links from cards — instead of always snapping to 'chart'.
-// We also accept the legacy #hash deep-links some chips still emit.
-// 'analysis' moved up to 3rd (Ajay 2026-06-16: "move the analysis tab closer")
-// and now leads with the Minervini+Bonde buy verdict and folds in the Sales tab.
-// supply sits beside analysis (Ajay 2026-08-25) — since the price
-// supply/demand levels moved onto that tab it reads as analysis, not appendix.
-const TABS: Tab[] = ['chart', 'setup', 'analysis', 'supply', 'trend', 'breakout', 'ranking', 'fundamentals', 'options', 'tape', 'catalyst', 'insider', 'smartmoney', 'chatter'];
-const HASH_TO_TAB: Record<string, Tab> = {
-  chart: 'chart', setup: 'setup', trend: 'trend', breakout: 'breakout', ranking: 'ranking',
-  fundamentals: 'fundamentals', analysis: 'analysis', options: 'options',
-  tape: 'tape', orderflow: 'tape',
-  catalyst: 'catalyst', insider: 'insider', smartmoney: 'smartmoney',
-  chatter: 'chatter', supply: 'supply',
-  // legacy hashes that don't map 1:1 to a tab → nearest sensible tab.
-  // 'sales' merged into 'analysis' (Ajay 2026-06-16) — old deep-links redirect.
-  sales: 'analysis',
-  volume: 'breakout', 'dual-momentum': 'ranking',
-};
+// Tab ids, display order, legacy #hash map and the landing-tab rule live in
+// lib/sepaTabs.ts (pure + tested). The active tab lives in the URL (?tab=insider)
+// so it survives reload, back/forward and deep-links from cards; a bare
+// /sepa/:symbol lands on Supply / Demand (Ajay 2026-09-03: "when ever I click
+// on SEPA I need it to go Supply and Demand tab in all pages").
 
 const SmartMoneyInfo = (
   <>
@@ -344,8 +329,9 @@ export function SepaCandidatePage() {
    * was already plain state. */
   const [supportTf, setSupportTf] = useState('daily');
   // Active tab is derived from the URL: ?tab= wins, then a legacy #hash, else
-  // 'chart'. Switching tabs rewrites ?tab= in place (replace, no history spam)
-  // so a reload or a shared link lands on the same tab.
+  // Supply / Demand (resolveSepaTab — the single fallback, 2026-09-03).
+  // Switching tabs rewrites ?tab= in place (replace, no history spam) so a
+  // reload or a shared link lands on the same tab.
   const [searchParams, setSearchParams] = useSearchParams();
   const backSource = resolveBack(navState, searchParams.get('from'),
                                  searchParams.get('from_q'));
@@ -355,11 +341,7 @@ export function SepaCandidatePage() {
     else navigate('/sepa');
   };
   const backLabel = backSource ? `← Back to ${backSource.label}` : '← Back';
-  const tabParam = searchParams.get('tab');
-  const hashKey = (location.hash || '').replace(/^#/, '').toLowerCase();
-  const tab: Tab = TABS.includes(tabParam as Tab)
-    ? (tabParam as Tab)
-    : (HASH_TO_TAB[hashKey] ?? 'chart');
+  const tab: Tab = resolveSepaTab(searchParams.get('tab'), location.hash);
   const setTab = (t: Tab) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -369,6 +351,15 @@ export function SepaCandidatePage() {
       // which used to make the first tab click forget the calling page.
     }, { replace: true, state: location.state });
   };
+  // Phones: the tab strip scrolls sideways and 'supply' is 4th of 14, so a
+  // landing on the Supply / Demand default (2026-09-03) could show the
+  // selected tab off-screen. Bring the active button into view on each
+  // change. Optional-called because jsdom has no scrollIntoView.
+  // The strip mounts only once `data` arrives, so a ref alone would be null on
+  // the cold landing this exists for: a callback ref feeds state, and the
+  // effect re-runs when the nav mounts AND whenever the tab changes.
+  const [tabsEl, setTabsEl] = useState<HTMLElement | null>(null);
+  useEffect(() => { scrollActiveTabIntoView(tabsEl); }, [tabsEl, tab]);
   const [added, setAdded] = useState(false);
   const [rescanState, setRescanState] = useState<'idle' | 'running' | 'error'>('idle');
   const [rescanMsg, setRescanMsg] = useState<string | null>(null);
@@ -460,7 +451,7 @@ export function SepaCandidatePage() {
     setPlan(null);
     setAdded(false);
     // Tab is URL-driven now — navigating to a new symbol without ?tab= lands on
-    // 'chart' automatically; a deep-link with ?tab= is honoured. No reset here.
+    // Supply / Demand (2026-09-03); a deep-link with ?tab= is honoured. No reset here.
     setRescanState('idle');
     setRescanMsg(null);
     setAlertOpen(false);
@@ -928,7 +919,7 @@ export function SepaCandidatePage() {
             and more; every tab explains itself at the top.
           </div>
 
-          <nav className="sepa-tabs" role="tablist">
+          <nav className="sepa-tabs" role="tablist" ref={setTabsEl}>
             {TABS.map((t) => (
               <button
                 key={t}

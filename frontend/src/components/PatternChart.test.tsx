@@ -22,7 +22,7 @@ const bars = (n = 40): CmBar[] =>
 const TILE: CmTile = {
   symbol: 'IONQ',
   name: 'IonQ Inc',
-  href: '/sepa/IONQ?tab=setup',
+  href: '/sepa/IONQ?tab=supply',   // backend _href default since 2026-09-03 (was setup)
   bars: bars(),
   bands: [{ kind: 'base', lo: 10.2, hi: 12.0, label: 'base 61d' }],
   lines: [
@@ -56,7 +56,7 @@ describe('PatternChart', () => {
     const link = screen.getByRole('link', { name: /IONQ — open SEPA detail/ });
     const url = new URL(link.getAttribute('href')!, 'http://x');
     expect(url.pathname).toBe('/sepa/IONQ');
-    expect(url.searchParams.get('tab')).toBe('setup');
+    expect(url.searchParams.get('tab')).toBe('supply');
   });
 
   // Ajay 2026-08-16: back from the detail page was dumping him on the scanner.

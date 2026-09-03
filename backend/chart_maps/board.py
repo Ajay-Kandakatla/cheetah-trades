@@ -35,6 +35,12 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+# One definition of "closest to the level first, money flow breaks ties" for
+# every demand board that is not the reached one (Ajay 2026-09-03). Pure module
+# (no scan imports), so it is safe to import at module load even where the
+# tests stub supply_demand.demand_reentry.
+from supply_demand import demand_order as _order
+
 log = logging.getLogger("chart_maps.board")
 
 TABS = ("vcp", "topping", "zones", "supply", "deep_demand", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
@@ -259,6 +265,35 @@ def drop_bounced(rows: list, ref_hi, live: Optional[dict] = None) -> tuple:
             continue
         kept.append(r)
     return kept, dropped
+
+
+def _live_px(r: dict, live: Optional[dict]):
+    """The price a READ-TIME rank runs on: the live print when the tape has
+    one, else the scan's last_price. Same fallback the bounce gate uses."""
+    px = (live or {}).get((r.get("symbol") or "").upper())
+    return px if px is not None else _num(r.get("last_price"))
+
+
+def _disp_dist(r: dict, live: Optional[dict], read: Optional[dict], level_key: str):
+    """Distance to print on an approaching tile: the LIVE % above the level when
+    a fresh print is known (the same number the ranking used), else the scan's
+    dist_pct. Ajay reads the badge to predict the order, so they must agree."""
+    read = read or {}
+    hi = _num((read.get(level_key) or {}).get("hi"))
+    px = _live_px(r, live)
+    if px is not None and hi is not None and px > 0 and px > hi:
+        return round((px - hi) / px * 100.0, 2)
+    return read.get("dist_pct")
+
+
+def rerank_live(rows: list, key, live: Optional[dict]) -> list:
+    """Ajay 2026-09-03: "keep the closest one to demand zones on the top. Of
+    course CMF inflow too considered." The scan sorted these rows on ITS
+    last_price, and that cache is warmed at 9:25 / 16:55 — by mid-session
+    the name that was 2% out may be inside the band. Re-rank on the live
+    print with the SAME per-board key the scan used (demand_order), so the
+    two surfaces only ever differ by the price they were read at."""
+    return sorted(rows, key=lambda r: key(r, px=_live_px(r, live)))
 
 
 def _theme_rank(theme: Optional[str]) -> int:
@@ -1394,12 +1429,23 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     else:
         rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
     matched = len(rows)
+    live = _live_last([r.get("symbol") for r in rows])     # fetched ONCE, reused
     rows, dropped_bounced = drop_bounced(
-        rows, lambda r: _bounce_ref_hi(r, phase, target),
-        _live_last([r.get("symbol") for r in rows]))
+        rows, lambda r: _bounce_ref_hi(r, phase, target), live)
+    # Read-time order (2026-09-03). Approaching (both targets) and In-the-block
+    # re-rank on the LIVE print with the scan's own key — closest first, flow
+    # inside a 0.5% bucket; in_ob keeps block age as the lead. The REACHED zone
+    # board is untouched: its rows are all inside the band, and it keeps the
+    # measured R:R order plus the cheetah composite below.
+    rank_key = (None if phase != "approaching" and target != "order_block"
+                else _order.in_ob_key if phase != "approaching"
+                else _order.approaching_ob_key if target == "order_block"
+                else _order.approaching_key)
+    if rank_key is not None:
+        rows = rerank_live(rows, rank_key, live)
     flash_syms = _flash_symbols()
     tiles = []
-    for r in rows:
+    for rank, r in enumerate(rows):
         sym = (r.get("symbol") or "").upper()
         if not sym:
             continue
@@ -1471,13 +1517,13 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                    f"{blk.get('bars_ago')} bars ago")
         elif appr_ob:
             blk = appr_ob.get("block") or {}
-            why = (f"falling toward a fresh order block — {appr_ob['dist_pct']}% "
+            why = (f"falling toward a fresh order block — {_disp_dist(r, live, appr_ob, 'block')}% "
                    f"above it, down {abs(appr_ob['drift_pct']):.1f}% in "
                    f"{appr_ob['drift_bars']} sessions; the block is the last down "
                    f"candle before a {blk.get('displacement_atr')}×ATR impulse "
                    f"{blk.get('bars_ago')} bars ago")
         elif appr:
-            why = (f"falling toward a tested band — {appr['dist_pct']}% above it, "
+            why = (f"falling toward a tested band — {_disp_dist(r, live, appr, 'band')}% above it, "
                    f"down {abs(appr['drift_pct']):.1f}% in {appr['drift_bars']} sessions")
         else:
             why = ((r.get("verdict") or {}).get("entry_read")
@@ -1509,14 +1555,14 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": stats,
             "why": why,
             "theme": _theme(sym),
-            "_flow": r.get("inflow"),
+            "_flow": _order.inflow_of(r),
             "badges": (([
                 # The approach board's own facts lead: how far, how fast.
-                {"text": f"\u2192 {appr['dist_pct']}% above the band", "tone": "warn"},
+                {"text": f"\u2192 {_disp_dist(r, live, appr, 'band')}% above the band", "tone": "warn"},
                 {"text": f"\u2193 {abs(appr['drift_pct']):.1f}% / {appr['drift_bars']}d",
                  "tone": "muted"}] if appr else [])
                 + ([
-                {"text": f"\u2192 {appr_ob['dist_pct']}% above the order block",
+                {"text": f"\u2192 {_disp_dist(r, live, appr_ob, 'block')}% above the order block",
                  "tone": "warn"},
                 {"text": f"\u2193 {abs(appr_ob['drift_pct']):.1f}% / {appr_ob['drift_bars']}d",
                  "tone": "muted"},
@@ -1527,7 +1573,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  "tone": "muted"},
                 {"text": "SMC \u00b7 uncited", "tone": "muted"}] if in_ob else [])
                 + _zone_badges(r))
-                + ([fb] if (fb := _flow_badge(r.get("inflow"))) else [])
+                + ([fb] if (fb := _flow_badge(_order.inflow_of(r))) else [])
                 + (
                 # ⚡ Trade Flash (Ajay 2026-08-24): a >= $250k one-sided burst
                 # printed in/near this name's zone TODAY — the tape trigger his
@@ -1535,13 +1581,12 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 # the Tape tab and the Supply & Demand flash strip.
                 [{"text": "⚡ Tape burst at zone", "tone": "good"}]
                 if sym in flash_syms else []),
-            # Approaching ranks by urgency: nearest band first. The reached
-            # board keeps ranking by the quality of the plan (R:R).
-            "_score": ((-appr["dist_pct"]) if appr
-                       else (-appr_ob["dist_pct"]) if appr_ob
-                       # youngest block first, mirroring the scan's pre-sort
-                       else (-(((in_ob.get("block") or {}).get("bars_ago"))
-                               or 999)) if in_ob
+            # Approaching / In-the-block: the score IS the position in the
+            # live re-rank above (`_finish` ranks `_score` DESCENDING) — one
+            # definition of the order, not a second weighted one (the
+            # supply_tiles pattern). The reached board keeps the quality of
+            # the plan (R:R), composited with flow x velocity below.
+            "_score": (float(len(rows) - rank) if rank_key is not None
                        else (rr or 0.0)),
             "_m": tile_metrics(r),
         })
@@ -2116,14 +2161,20 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     want_state = "near" if phase == "approaching" else "in"
     rows = [r for r in rows
             if ((r.get("deep_demand") or {}).get("state") == want_state)]
+    live = _live_last([r.get("symbol") for r in rows])     # fetched ONCE, reused
     rows, dropped_bounced = drop_bounced(
         rows, lambda r: _num(((r.get("deep_demand") or {}).get("second_band") or {}).get("hi")),
-        _live_last([r.get("symbol") for r in rows]))
+        live)
+    # Closest to the second band first on the LIVE print, flow inside a 0.5%
+    # bucket (Ajay 2026-09-03) — the same key the scan sorted with
+    # (deep_demand.sort_key -> demand_order.deep_key), re-read at the live
+    # price. Supersedes the 2026-08-26 CMF-first weighted score.
+    rows = rerank_live(rows, _order.deep_key, live)
     snaps = research.sales_snapshot([r.get("symbol") for r in rows if r.get("symbol")])
     flash_syms = _flash_symbols()
 
     tiles, dropped_weak, dropped_unknown = [], 0, 0
-    for r in rows:
+    for rank, r in enumerate(rows):
         sym = (r.get("symbol") or "").upper()
         d = r.get("deep_demand") or {}
         if not sym or not d:
@@ -2173,7 +2224,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         # The flow verdict (Ajay 2026-08-25: "bullish momentum stocks and
         # inflow signals"). States and numbers come from sepa/volume via
         # deep_demand.inflow_read — never re-derived here.
-        flow = d.get("inflow") or {}
+        flow = _order.inflow_of(r) or {}
         f_state = flow.get("state")
         f_cmf = _f(flow.get("cmf_20"))
         if f_state == "inflow":
@@ -2204,16 +2255,11 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                           if flow.get("accum_days_25") is not None else "—")},
                  {"k": "Liquidity", "v": (liq.get("tier") or "—")}]
 
-        # Rank bands: flow state first, then WITHIN the inflow group the
-        # strongest CMF (Ajay 2026-08-26: "rank these by highest CMF on the
-        # top? I want to tackle the one that have explosiveness"). Bands are
-        # 50k apart so no CMF reading (±10k max) can jump a group; in-band
-        # (100) and sales growth (capped, ×0.05 → ≤20) only break CMF ties.
-        flow_lead = {"inflow": 100000.0, "neutral": 50000.0}.get(f_state or "neutral", 0.0)
-        cmf_lead = (f_cmf * 10000.0
-                    if f_state == "inflow" and f_cmf is not None else 0.0)
-        in_band_lead = 100.0 if d.get("state") == "in" else 0.0
-        sales_tb = min(max(g or 0.0, -100.0), 400.0) * 0.05
+        # The score IS the position in the live re-rank above (`_finish`
+        # ranks `_score` DESCENDING): inside the band, then nearest, flow
+        # and CMF inside a 0.5% bucket. Sales growth no longer ranks — it
+        # GATES (Bonde) and is said on the badge. Replaced the 2026-08-26
+        # weighted flow/CMF/in-band/sales score on 2026-09-03.
         tiles.append({
             "symbol": sym,
             "name": r.get("name") or _name_for(sym),
@@ -2227,7 +2273,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "why": why,
             "theme": _theme(sym),
             "badges": badges,
-            "_score": flow_lead + cmf_lead + in_band_lead + sales_tb,
+            "_score": float(len(rows) - rank),
             "_m": tile_metrics(r),
         })
 
@@ -2262,9 +2308,11 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"sales, {dropped_unknown} dropped for no sales data. Money flow "
                      f"(CMF-20 + up/down volume days, Minervini p.71-76 counts): "
                      f"{flow_counts['inflow']} flowing in · {flow_counts['neutral']} neutral · "
-                     f"{flow_counts['distribution']} still distributing — inflow names sort "
-                     f"first, because a broken first band means sellers already had their "
-                     f"turn. These fail the trend gate BY DESIGN — size and stop "
+                     f"{flow_counts['distribution']} still distributing. Order: "
+                     f"{'nearest the second band first' if phase == 'approaching' else 'inside the second band first'}"
+                     f" on the live print, money flow (CMF) ranking within a 0.5% "
+                     f"distance bucket; names already {BOUNCE_DONE_PCT:.0f}% off the band "
+                     f"are dropped. These fail the trend gate BY DESIGN — size and stop "
                      f"accordingly."),
             "generated_at": data.get("as_of")}
 

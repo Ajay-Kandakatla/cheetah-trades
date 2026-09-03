@@ -460,3 +460,101 @@ Route plumbing: the `phase` Query default became `""` = "the tab's own
 default" — reached for the demand boards, All for the lens tabs — so every
 pre-existing URL renders byte for byte. Locked by
 `test_lens_tabs_default_all_while_demand_boards_default_reached`.
+
+## Ordering — closest to the level first, money flow breaks ties (2026-09-03)
+
+Ajay: *"make sure in our other demand and deep demand keep the closest one to
+demand zones on the top. Of course CMF inflow too considered."*
+
+One key, `supply_demand/demand_order.proximity_key`, now orders every demand
+list **except** the reached Back-in-Demand board. Measured on the 17:22 UTC
+scan that day, the three lists disagreed with the ask in three different ways:
+
+| list | old key | what it did wrong |
+|---|---|---|
+| `deep_rows` | flow group → −CMF → in-band → dist | NOG, **2.53% above** its second band, ranked over 52 names already inside theirs because its CMF (+0.36) was the largest |
+| `approaching_rows` / `approaching_ob_rows` | `dist_pct or 99.0` → drift | raw distance: LECO 0.01% sat over ITRI 0.07% on one tick of noise while the flow read was ignored; a true `0.0` distance sorted **last** |
+| `in_ob_rows` | `bars_ago or 999` | 41 of 82 rows were 2 bars old and sat in universe order |
+
+### The key
+
+```
+( state,            0 inside the band · 1 above · 2 below · 3 unknown
+  bucket,           floor(prox_pct / 0.5)  — distance in 0.5% steps
+  flow rank,        inflow 0 < neutral 1 < distribution 2 < missing 3
+  −CMF-20,          stronger inflow / milder selling first; None → +inf (LAST)
+  prox_pct,         exact distance
+  *tail )           per-board tie-breaks: drift, band strength, symbol
+```
+
+`prox_pct` = (px − hi) / px × 100 above the band, 0 inside, (lo − px) / px × 100
+below it. Below-band sorts **after** above-band: falling through the level is a
+different event from arriving at it.
+
+**`PROXIMITY_BUCKET_PCT = 0.5`** — house value. A raw-distance sort never lets
+CMF speak (two floats are almost never equal); 0.5% on a $96 stock is ~$0.48,
+inside one session's noise, while the CMF spread it yields to (−0.04 vs −0.28)
+is a real difference in who is buying. The bucket edge is a step (0.49% and
+0.51% are different buckets) — documented, tested
+(`test_bucket_boundary_0_49_vs_0_51_is_documented_behaviour`), intended.
+
+Worked example (live rows that day): Deep — COTY inside CMF +0.248 / APPF 0.81%
+out CMF +0.282 / NOG 2.53% out CMF +0.364 → **COTY, APPF, NOG**. Approaching,
+all in bucket 0 — MP 0.26% inflow / HIMS 0.18% neutral −0.031 / ITRI 0.03%
+neutral −0.044 / VLTO 0.11% distribution −0.144 / EXR 0.08% distribution −0.275
+→ **MP, HIMS, ITRI, VLTO, EXR** (raw distance gave the accumulated name last).
+
+### Per list
+
+* **Approaching (zone)** — `approaching_key`: proximity over `approaching.band`,
+  tail = (drift_pct, symbol). The 2026-08-31 "harder fall first" tie-break is
+  kept, but now only breaks an *identical* distance.
+* **Approaching (order block)** — `approaching_ob_key`: the same over
+  `approaching_ob.block`.
+* **In the order block** — `in_ob_key`: block **age still leads** (youngest
+  first, Ajay 2026-08-31), then the proximity key over the block — so inside an
+  age tie flow and CMF decide. Missing age sorts last.
+* **Deep Demand** — `deep_demand.sort_key` → `deep_key`: proximity over the
+  **second** band, tail = (−strength, symbol). **Supersedes** the 2026-08-26
+  *"rank these by highest CMF on the top"* order. A row carrying only the read
+  (no `last_price`) ranks from its own state/dist_pct — same formula.
+* **Back in Demand (`rows`)** — **unchanged**, R:R-first (`rr_floor.md`). Every
+  row is inside its band; proximity is a constant there and cannot rank.
+
+### Flow on every list
+
+The order-block collectors never attached `inflow` (3/82 and 7/83 live rows
+had one, by accident of also being reentry rows). They now run the same
+`deep_demand.inflow_read(volume.analyze(...))` warm re-read the approaching
+collector uses, time-boxed by **`OB_INFLOW_BUDGET_SEC = 30`** (each read is
+milliseconds over a frame the pass just cached; the ceiling exists so a slow
+cache can never stretch the 3-minute scan — past it rows ship `inflow: None`,
+which sorts last, never first; counts are logged). Deep rows also copy
+`deep_demand.inflow` to the top-level `inflow`, so `demand_order.inflow_of`
+reads one place for every board and the Chart Maps flow badge renders on deep
+and order-block tiles.
+
+### Deep cap, per state
+
+Until now one `MAX_ROWS = 80` slice ran after the sort. Closest-first puts
+every in-band row ahead of every near row, so a day with 80+ in-band arrivals
+would have emptied the Chart Maps *approaching* toggle. The cap is now
+**`MAX_IN = 60` + `MAX_NEAR = 40`** (`deep_demand.cap`, order-preserving;
+`MAX_ROWS` is the derived ceiling). Measured 2026-09-03: `deep_n` 242, the
+kept sample 49 in / 31 near (~61/39) → ~148 in / ~94 near, both caps fill.
+`deep_n` still reports the uncapped total.
+
+### Order-dependent consumers
+
+* `_apply_limit` — the API default `limit=60` truncates `rows` **by position**.
+* `catalysts/signal_watch.py` — takes the first N symbols of the cached `rows`.
+* Chart Maps re-ranks the non-reached boards at read time on the **live**
+  print (see `docs/sepa/chart_maps_sort.md`), so the scan order is the order
+  only when the tape is unreachable.
+
+Guards: `test_demand_order.py` (the key), `test_deep_demand.py` (deep key +
+cap), `test_chart_maps.py` (board wiring), `test_supply_demand_contracts.py`
+(source guards: shared key on every non-reached list, no `or 99.0`, `rows.sort`
+still R:R-led, position score on the boards).
+
+*Decision-support only. Configured house ordering, not a book method.*

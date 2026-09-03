@@ -330,6 +330,16 @@ def default_prefs() -> dict:
         # per 5-min pass). Ajay 2026-09-03: "big companies ... coming close
         # to Demand zones."
         "demand_alert": True,
+        # Zone bounce (supply_demand/zone_bounce_alerts.py): a $1B+ name
+        # touched a demand level — or a BROKEN supply shelf now acting as
+        # support — intraday and is already bouncing off it (above the band,
+        # >= max(3%, 1 ATR) off the low, arrivals only). Ajay 2026-09-03:
+        # "NTAP did hit the demand zone in the morning and bounced back
+        # immediately 20 point I am looking for those." Digest-first (one per
+        # 5-min pass; only STRONG bounces, max 3, get their own push) so it
+        # stays tolerable; mutable at /notifications. MUST be here — a kind
+        # missing from default_prefs silently drops for every device.
+        "zone_bounce_alert": True,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

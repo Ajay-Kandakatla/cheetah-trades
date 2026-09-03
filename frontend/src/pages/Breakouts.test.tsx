@@ -443,4 +443,12 @@ describe('BreakoutsPage — table exposes usable horizontal scroll', () => {
     const table = within(scroller).getByRole('table');
     expect(parseInt(table.style.minWidth, 10)).toBeGreaterThanOrEqual(960);
   });
+
+  it('row links open the SEPA page on its default (Supply / Demand) tab, not the breakout lens (2026-09-03)', () => {
+    renderPage();                       // beforeEach rows include AAA
+    const link = screen.getAllByRole('row').find((r) => r.getAttribute('href')?.includes('/sepa/AAA'));
+    expect(link).toBeTruthy();
+    expect(link!.getAttribute('href')).toBe('/sepa/AAA');
+    expect(link!.getAttribute('href')).not.toMatch(/tab=breakout/);
+  });
 });

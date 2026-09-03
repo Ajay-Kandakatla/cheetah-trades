@@ -54,7 +54,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   zones: {
     label: 'Back in Demand',
-    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. Order (2026-09-03): the approaching boards rank closest to the level first; money flow (CMF) breaks ties within a 0.5% distance bucket; Back in Demand keeps reward:risk first. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   earnings: {
     label: 'Earnings Flow',
@@ -70,7 +70,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   deep_demand: {
     label: 'Deep Demand',
-    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and those sort first — ranked by CMF intensity within the group (hottest money flow on top, 2026-08-26), with in-band position and sales growth breaking ties; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03): names inside the second band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   undervalue: {
     label: 'Under Value',
@@ -214,10 +214,14 @@ export function parseTab(raw: string | null | undefined): CmTab {
   return (CM_TABS as string[]).includes(t) ? (t as CmTab) : 'vcp';
 }
 
-/** Deep link to a ticker's SEPA detail page, on the tab that shows the same
- *  geometry the tile drew. SepaCandidate silently falls back to its `chart`
- *  tab on an unknown value, so a typo here is invisible — hence the test. */
-export function sepaHref(symbol: string, tab: 'setup' | 'supply' | 'breakout' = 'setup'): string {
+/** Deep link to a ticker's SEPA detail page. Default 'supply' (Ajay
+ *  2026-09-03: "go Supply and Demand tab in all pages"; was 'setup' since
+ *  2026-08-17). SepaCandidate silently falls back to Supply / Demand on an
+ *  unknown value, so a typo here is invisible — hence the test.
+ *  NOTE: dead at runtime — the live tiles take `href` from the backend
+ *  (chart_maps/board.py _href, also defaulting to supply). Kept as the
+ *  frontend statement of the same rule; tests only. */
+export function sepaHref(symbol: string, tab: 'setup' | 'supply' | 'breakout' = 'supply'): string {
   return `/sepa/${encodeURIComponent((symbol || '').toUpperCase())}?tab=${tab}`;
 }
 

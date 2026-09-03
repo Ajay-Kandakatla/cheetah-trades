@@ -142,51 +142,100 @@ def test_inflow_read_of_nothing_is_none():
     assert DD.inflow_read({}) is None
 
 
-def test_within_the_inflow_group_the_strongest_cmf_leads():
-    """Ajay 2026-08-26: "rank these by highest CMF on the top? I want to
-    tackle the one that have explosiveness." A CMF +0.30 name still 2% out
-    of the band outranks a CMF +0.12 name already inside it — geometry only
-    breaks CMF ties now."""
-    def row(cmf, band_state, dist):
-        return {"deep_demand": {"state": band_state, "dist_pct": dist,
-                                "second_band": {"strength": 50},
-                                "inflow": {"state": "inflow", "cmf_20": cmf}}}
-    hot_near = row(0.30, "near", 2.0)
-    mild_in = row(0.12, "in", 0.0)
-    rows = [mild_in, hot_near]
+# ── ordering, 2026-09-03: closest first, CMF inside a distance bucket ───────
+# Ajay 2026-09-03: "make sure in our other demand and deep demand keep the
+# closest one to demand zones on the top. Of course CMF inflow too considered."
+# SUPERSEDES the 2026-08-26 "highest CMF on the top" order — under it NOG,
+# 2.53% ABOVE its second band, ranked over 52 in-band names (live, that day).
+def _drow(sym, px, cmf=None, state=None, strength=50):
+    """A deep row the way the scan ships it: last_price + second band 80-85;
+    the read's state follows from the price. `state=None` = no inflow read."""
+    inflow = None if state is None else {"state": state, "cmf_20": cmf}
+    return {"symbol": sym, "last_price": px,
+            "deep_demand": {"state": "in" if 80 <= px <= 85 else "near",
+                            "dist_pct": 0.0 if px <= 85 else (px - 85) / px * 100,
+                            "second_band": {"lo": 80.0, "hi": 85.0, "strength": strength},
+                            "inflow": inflow}}
+
+
+def _order(rows):
+    return [r["symbol"] for r in sorted(rows, key=DD.sort_key)]
+
+
+def test_in_band_beats_a_hotter_cmf_that_is_still_outside_the_band():
+    """The worked example (live 2026-09-03): COTY inside CMF +0.248, APPF
+    0.81% out CMF +0.282, NOG 2.53% out CMF +0.364 → COTY, APPF, NOG. The
+    2026-08-26 key gave the reverse."""
+    coty = _drow("COTY", 82.0, 0.248, "inflow")
+    appf = _drow("APPF", 85.0 / (1 - 0.0081), 0.282, "inflow")     # 0.81% above
+    nog = _drow("NOG", 85.0 / (1 - 0.0253), 0.364, "inflow")       # 2.53% above
+    assert _order([nog, appf, coty]) == ["COTY", "APPF", "NOG"]
+
+
+def test_cmf_ranks_only_inside_the_same_distance_bucket():
+    """Two near rows 0.10% and 0.40% out share bucket 0 → the stronger CMF
+    leads. NEGATIVE: at 0.40% vs 0.60% (buckets 0 and 1) distance wins again
+    even though the farther name has the hotter CMF."""
+    a = _drow("A", 85.0 / (1 - 0.0010), 0.05, "inflow")
+    b = _drow("B", 85.0 / (1 - 0.0040), 0.30, "inflow")
+    assert _order([a, b]) == ["B", "A"]
+    c = _drow("C", 85.0 / (1 - 0.0060), 0.40, "inflow")
+    assert _order([c, b]) == ["B", "C"]
+
+
+def test_flow_state_then_cmf_orders_a_bucket_and_missing_sorts_last():
+    """Inside one bucket: inflow > neutral > distribution > no read; within a
+    state the stronger CMF (milder selling) first. NEGATIVE: a heavily-sold
+    name never jumps a milder one on |CMF|, and a row with NO inflow read
+    sorts after every real reading — never first."""
+    rows = [_drow("SOLDHARD", 82.0, -0.40, "distribution"),
+            _drow("NOREAD", 82.0),
+            _drow("NEUT", 82.0, -0.02, "neutral"),
+            _drow("SOLDMILD", 82.0, -0.11, "distribution"),
+            _drow("IN", 82.0, 0.12, "inflow"),
+            _drow("INNOCMF", 82.0, None, "inflow")]
+    assert _order(rows) == ["IN", "INNOCMF", "NEUT", "SOLDMILD", "SOLDHARD", "NOREAD"]
+
+
+def test_a_row_carrying_only_the_read_still_ranks_by_the_same_geometry():
+    """Unit fixtures / older rows may lack last_price — the read's own
+    state/dist_pct (same formula) stands in, so in-before-near still holds
+    and nothing crashes."""
+    in_row = {"deep_demand": {"state": "in", "dist_pct": 0.0,
+                              "second_band": {"strength": 50}}}
+    near = {"deep_demand": {"state": "near", "dist_pct": 1.4,
+                            "second_band": {"strength": 90}}}
+    junk = {"deep_demand": None}
+    rows = [junk, near, in_row]
     rows.sort(key=DD.sort_key)
-    assert [r["deep_demand"]["inflow"]["cmf_20"] for r in rows] == [0.30, 0.12]
+    assert rows[0] is in_row and rows[1] is near and rows[2] is junk
 
 
-def test_cmf_never_reorders_the_neutral_or_distribution_groups():
-    """NEGATIVE: a big NEGATIVE CMF must not rank a heavily-sold name above a
-    mildly-sold one — outside the inflow group geometry still rules, and a
-    missing CMF inside the inflow group sorts after every real reading."""
-    def row(state, cmf, band_state, dist):
-        return {"deep_demand": {"state": band_state, "dist_pct": dist,
-                                "second_band": {"strength": 50},
-                                "inflow": {"state": state, "cmf_20": cmf}}}
-    heavy_sold_near = row("distribution", -0.40, "near", 2.0)
-    mild_sold_in = row("distribution", -0.11, "in", 0.0)
-    rows = [heavy_sold_near, mild_sold_in]
-    rows.sort(key=DD.sort_key)
-    assert rows[0]["deep_demand"]["state"] == "in"      # geometry, not |CMF|
-
-    no_cmf_in = row("inflow", None, "in", 0.0)
-    weak_cmf_near = row("inflow", 0.05, "near", 2.5)
-    rows2 = [no_cmf_in, weak_cmf_near]
-    rows2.sort(key=DD.sort_key)
-    assert rows2[0]["deep_demand"]["inflow"]["cmf_20"] == 0.05
+def test_sort_key_takes_a_live_price_override():
+    """Chart Maps re-ranks on the live print: a name the scan saw 2% out that
+    has since dropped INTO the band now leads the one that was inside and
+    has drifted 1% above it."""
+    was_near = _drow("WASNEAR", 87.0, 0.10, "inflow")
+    was_in = _drow("WASIN", 83.0, 0.30, "inflow")
+    assert _order([was_near, was_in]) == ["WASIN", "WASNEAR"]
+    live = {"WASNEAR": 84.0, "WASIN": 85.9}
+    rows = sorted([was_in, was_near],
+                  key=lambda r: DD.sort_key(r, px=live[r["symbol"]]))
+    assert [r["symbol"] for r in rows] == ["WASNEAR", "WASIN"]
 
 
-def test_sort_puts_inflow_ahead_of_in_band_distribution():
-    """A near-band name with money flowing in outranks an in-band name still
-    being sold — the flow verdict leads the sort on purpose."""
-    def row(state, band_state):
-        return {"deep_demand": {"state": band_state, "dist_pct": 1.0,
-                                "second_band": {"strength": 50},
-                                "inflow": {"state": state}}}
-    rows = [row("distribution", "in"), row("inflow", "near"), row("neutral", "in")]
-    rows.sort(key=DD.sort_key)
-    assert [r["deep_demand"]["inflow"]["state"] for r in rows] == [
-        "inflow", "neutral", "distribution"]
+# ── per-state cap (2026-09-03) ───────────────────────────────────────────────
+def test_cap_trims_in_and_near_separately_preserving_order():
+    """One MAX_ROWS trim after a closest-first sort would fill with in-band
+    rows and empty the Chart Maps approaching toggle. Per-state caps keep
+    both lists; order inside each is untouched."""
+    ins = [_drow(f"I{i}", 82.0) for i in range(DD.MAX_IN + 5)]
+    nears = [_drow(f"N{i}", 86.0) for i in range(DD.MAX_NEAR + 3)]
+    kept = DD.cap(ins + nears)
+    assert sum(1 for r in kept if r["deep_demand"]["state"] == "in") == DD.MAX_IN
+    assert sum(1 for r in kept if r["deep_demand"]["state"] == "near") == DD.MAX_NEAR
+    assert [r["symbol"] for r in kept][:3] == ["I0", "I1", "I2"]
+    assert DD.MAX_ROWS == DD.MAX_IN + DD.MAX_NEAR
+    # NEGATIVE: a short list is never padded or reordered
+    few = [_drow("N1", 86.0), _drow("I1", 82.0)]
+    assert DD.cap(few) == few

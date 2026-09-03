@@ -30,11 +30,39 @@ from .demand_reentry import MIN_TOUCHES, MIN_ZONE_STRENGTH
 
 log = logging.getLogger("supply_demand.deep_demand")
 
-# Payload cap. The scan keeps every qualifying record's small dict; without a
-# cap a bad-breadth day (everything breaking down) could balloon the cached
-# payload. 80 >> the 24-tile board will ever show; the count of qualifiers is
-# still reported so a capped day says so instead of looking complete.
-MAX_ROWS = 80
+# Payload caps, PER STATE (2026-09-03). The scan keeps every qualifying
+# record's small dict; without a cap a bad-breadth day (everything breaking
+# down) could balloon the cached payload. Until 2026-09-03 this was one
+# MAX_ROWS = 80 trim applied after a CMF-first sort, which happened to keep a
+# 49 in / 31 near mix. The sort is now closest-first (in-band before near —
+# demand_order.proximity_key), so a single cap would fill with in-band rows
+# and the Chart Maps "approaching" toggle (state "near") could go EMPTY on a
+# day with 80+ in-band arrivals. Measured 2026-09-03 17:22 UTC: deep_n = 242,
+# ~61/39 in/near in the kept sample → ~148 in / ~94 near — both caps fill.
+# 60 + 40 = 100 > the 24-tile board will ever show; deep_n still reports the
+# uncapped total so a capped day says so instead of looking complete.
+MAX_IN = 60
+MAX_NEAR = 40
+MAX_ROWS = MAX_IN + MAX_NEAR          # the payload ceiling, derived
+
+
+def cap(rows: list) -> list:
+    """Trim an already-sorted deep list to MAX_IN in-band + MAX_NEAR near rows,
+    preserving order. Rows with any other state are kept (there are none by
+    construction; if one appears it should be seen, not silently dropped)."""
+    kept, n_in, n_near = [], 0, 0
+    for r in rows:
+        st = (r.get("deep_demand") or {}).get("state")
+        if st == "in":
+            if n_in >= MAX_IN:
+                continue
+            n_in += 1
+        elif st == "near":
+            if n_near >= MAX_NEAR:
+                continue
+            n_near += 1
+        kept.append(r)
+    return kept
 
 
 def read(rec: dict) -> Optional[dict]:
@@ -143,25 +171,20 @@ def inflow_read(vol: Optional[dict]) -> Optional[dict]:
     }
 
 
-_STATE_RANK = {"inflow": 0, "neutral": 1, "distribution": 2}
+def sort_key(row: dict, px=None):
+    """Closest to the second band first; money flow breaks ties.
 
+    Ajay 2026-09-03: "make sure in our other demand and deep demand keep the
+    closest one to demand zones on the top. Of course CMF inflow too
+    considered." SUPERSEDES the 2026-08-26 "rank these by highest CMF on the
+    top" order, under which NOG — 2.53% ABOVE its second band — ranked over
+    52 names already inside theirs because its CMF was the largest.
 
-def sort_key(row: dict):
-    """Inflow first (the whole point of the screen — Ajay 2026-08-25), and
-    WITHIN the inflow group the strongest CMF leads (Ajay 2026-08-26: "rank
-    these by highest CMF on the top? I want to tackle the one that have
-    explosiveness") — the most aggressively accumulated name is the one to
-    tackle first, even 2% out of the band. Geometry (in-band, then distance,
-    then band strength) breaks ties and orders the neutral/distribution
-    groups, where CMF magnitude means nothing worth ranking on: a missing
-    CMF is neutral, and a big NEGATIVE CMF ranking a distribution name over
-    a mildly-sold one would reward the wrong thing."""
-    d = row.get("deep_demand") or {}
-    inflow = d.get("inflow") or {}
-    flow = _STATE_RANK.get(inflow.get("state") or "neutral", 1)
-    cmf = inflow.get("cmf_20")
-    # Only the inflow group ranks on CMF; None sorts after every real reading.
-    cmf_rank = -cmf if (flow == 0 and isinstance(cmf, (int, float))) else 0.0
-    in_band = 0 if d.get("state") == "in" else 1
-    return (flow, cmf_rank, in_band, d.get("dist_pct") or 0.0,
-            -((d.get("second_band") or {}).get("strength") or 0.0))
+    The order is demand_order.proximity_key (one definition for every demand
+    board): inside the band, then nearest approaching in 0.5% buckets; inside
+    a bucket inflow > neutral > distribution > missing, then the stronger
+    CMF; then the exact distance; then the stronger second band, then symbol.
+    `px` lets Chart Maps rank on the LIVE print instead of the scan price.
+    """
+    from .demand_order import deep_key
+    return deep_key(row, px=px)

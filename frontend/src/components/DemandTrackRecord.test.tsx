@@ -52,13 +52,24 @@ describe('DemandTrackRecord', () => {
     expect(screen.getByText('Never filled')).toBeInTheDocument();
   });
 
-  it('links a churned name straight to its setup tab', async () => {
+  it('links a churned name straight to its supply / demand tab', async () => {
+    // Was ?tab=setup (2026-08-17). Ajay 2026-09-03: "when ever I click on SEPA
+    // I need it to go Supply and Demand tab in all pages."
     await show({ ...graded, runs: [
       { et_date: '2026-08-19', n: 3, entered: ['TJX'], dropped: ['HOOD'] }] });
     fireEvent.click(screen.getByRole('button', { name: /track record/i }));
     expect(screen.getByRole('link', { name: '+TJX' }))
-      .toHaveAttribute('href', '/sepa/TJX?tab=setup&from=supply-demand');
-    expect(screen.getByRole('link', { name: '−HOOD' })).toBeInTheDocument();
+      .toHaveAttribute('href', '/sepa/TJX?tab=supply&from=supply-demand');
+    expect(screen.getByRole('link', { name: '−HOOD' }))
+      .toHaveAttribute('href', '/sepa/HOOD?tab=supply&from=supply-demand');
+  });
+
+  it('never sends a churned name to the old setup tab', async () => {
+    await show({ ...graded, runs: [
+      { et_date: '2026-08-19', n: 3, entered: ['TJX'], dropped: [] }] });
+    fireEvent.click(screen.getByRole('button', { name: /track record/i }));
+    expect(screen.getByRole('link', { name: '+TJX' }).getAttribute('href'))
+      .not.toMatch(/tab=setup/);
   });
 
   // --- negatives ---

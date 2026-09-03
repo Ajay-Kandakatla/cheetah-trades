@@ -161,6 +161,7 @@ def test_at_message_names_the_band_the_tests_and_the_cap():
     assert m["title"] == "🧲 NTAP in demand $180–183.5"
     assert "tested 4x" in m["body"] and "$37.0B" in m["body"] and "NetApp" in m["body"]
     assert m["url"] == "/sepa/NTAP?tab=supply" and m["data"]["url"] == m["url"]
+    assert m["kind"] == "demand_alert", "push/history.py records payload['kind']"
 
 
 def test_digest_sorts_by_distance_and_caps_the_body():
@@ -173,6 +174,7 @@ def test_digest_sorts_by_distance_and_caps_the_body():
     assert len(lines) == DA.DIGEST_MAX + 1 and lines[-1] == "+2 more on the board"
     assert lines[0].startswith("S7 $107 · 1.6% above $90–97 · $2.0B")
     assert m["url"] == "/chart-maps?tab=zones&phase=approaching"
+    assert m["kind"] == "demand_alert", "push/history.py records payload['kind']"
 
 
 # ── check_once end to end ────────────────────────────────────────────────────
@@ -310,3 +312,33 @@ def test_notifications_page_and_prefs_type_know_the_kind():
     assert "demand_alert?: boolean" in prefs
     feats = (ROOT / "frontend/src/lib/newFeatures.ts").read_text()
     assert "id: 'demand-zone-alerts'" in feats
+
+
+def test_at_singles_are_capped_per_pass_and_the_rest_ride_the_digest(monkeypatch):
+    """2026-09-03 12:48: the first pass after a deploy fired 14 singles at
+    once. Closest first, MAX_SINGLES_PER_PASS ring alone, the spill joins the
+    NEAR digest under a 'Demand zone' title — one buzz, every name still named."""
+    sent = _capture(monkeypatch)
+    syms = [f"A{i}" for i in range(6)]
+    board = _board(rows=[(s, _band(100, 110)) for s in syms] + [("NEARX", _band(50, 55))])
+    # A0 inside, A1..A5 0.1%..0.5% above (closest first ordering is testable)
+    live = {s: {"price": 110.0 * (1 + 0.001 * i) if i else 105.0, "change_pct": -0.5,
+                "prev_day_close": 120.0} for i, s in enumerate(syms)}
+    live["NEARX"] = {"price": 56.0, "change_pct": -1.0, "prev_day_close": 60.0}
+    caps = {s: 5e9 for s in syms + ["NEARX"]}
+    coll = FakeColl()
+    out = DA.check_once(board=board, live=live, caps=caps, coll=coll, owner="o@x",
+                        now=IN_SESSION, force=True)
+    assert out["at"] == 6 and out["at_singles"] == DA.MAX_SINGLES_PER_PASS == 4
+    assert out["near"] == 1 and out["pushed"] == 5           # 4 singles + 1 digest
+    singles = [s for s in sent if s["title"].startswith("🧲 A")]
+    assert [s["title"].split()[1] for s in singles] == ["A0", "A1", "A2", "A3"], "closest first"
+    digest = [s for s in sent if "more" in s["title"] or s["title"].startswith("🧲 Demand zone")][0]
+    assert digest["title"] == "🧲 Demand zone — A4 +2 more"
+    assert "A4 $" in digest["body"] and "A5 $" in digest["body"] and "NEARX $56" in digest["body"]
+    assert "0.4% above $100–110" in digest["body"]
+    assert len(coll.docs) == 7, "every name recorded once — no second buzz next pass"
+    assert DA.digest_message([]) is None
+    near_only = DA.digest_message([{"symbol": "N", "last": 56.0, "band": _band(50, 55), "cap": 2e9,
+                                    "hit": {"tier": "near", "state": "falling", "dist_pct": 1.8}}])
+    assert near_only["title"] == "🧲 Nearing demand — N"

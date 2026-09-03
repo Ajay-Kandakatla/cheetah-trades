@@ -418,7 +418,9 @@ export function BreakoutsPage() {
               return (
                 <Link
                   key={r.symbol}
-                  to={`/sepa/${r.symbol}?tab=breakout`}
+                  /* No ?tab= — relies on the page default, Supply / Demand
+                   * (Ajay 2026-09-03: "in all pages"). Was ?tab=breakout. */
+                  to={`/sepa/${r.symbol}`}
                   className="breakouts-row"
                   role="row"
                   style={dataRow}
