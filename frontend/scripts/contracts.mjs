@@ -114,6 +114,36 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'promo board column headers stick until the table ends',
+    file: 'src/styles.css',
+    // Ajay 2026-09-02: "Keep the headers static on scroll until the end of the
+    // table". Two halves, both silent when lost: the sticky rule itself, and the
+    // phone-width `.app` / `.main` overflow — `overflow-x: hidden` turns the
+    // ancestor into a scroll container and every sticky header inside stops
+    // sticking, with no error anywhere.
+    checks: (src) => {
+      const errs = [];
+      const rule = src.match(/\.pcw \.og__table thead th \{[^}]*\}/);
+      if (!rule) return ['sticky header rule for .pcw .og__table thead th is missing'];
+      if (!/position:\s*sticky/.test(rule[0]) || !/top:\s*var\(--sticky-top, 0\)/.test(rule[0])) {
+        errs.push('promo table headers are no longer position: sticky under the phone nav (top: var(--sticky-top, 0))');
+      }
+      const nav = read('src/components/NavBar.tsx');
+      if (!/useStickyTop\(mobileBarRef, isMobile\)/.test(nav) || !/cm-nav--mobile" ref=\{mobileBarRef\}/.test(nav)) {
+        errs.push('NavBar no longer publishes the phone nav height as --sticky-top — headers slide behind it');
+      }
+      if (!/background:\s*var\(--bg\)/.test(rule[0])) {
+        errs.push('sticky promo headers have no page background — rows show through them');
+      }
+      const mq = src.slice(src.indexOf('@media (max-width: 720px)'));
+      const block = mq.slice(0, mq.indexOf('}\n}') + 3).replace(/\/\*[\s\S]*?\*\//g, '');   // comments may name the trap
+      if (/overflow-x:\s*hidden/.test(block)) {
+        errs.push('phone-width .app/.main use overflow-x: hidden — that ancestor scroll container disables sticky headers');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

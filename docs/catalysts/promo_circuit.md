@@ -230,3 +230,17 @@ UNAVAILABLE, live rows attach `room`, budget + warm-only-stale, cron order),
 room cell states, mini tape per row + failure), `PromoTagTape.test.tsx`
 (`miniLayout` geometry, once-per-ticker cache, error), and a source guard for
 the 6-month default.
+
+## 2026-09-02 pm — sticky column headers
+
+Ajay: *"Keep the headers static on scroll until the end of the table."*
+`.pcw .og__table thead th { position: sticky; top: var(--sticky-top, 0) }`
+with the page background and an inset-shadow rule (collapsed borders don't
+travel with a sticky cell). Two traps, both silent: (1) the phone-width
+`.app` / `.main` rules used `overflow-x: hidden`, which makes the ancestor a
+scroll container and disables every sticky descendant — now `overflow-x:
+clip`; (2) the phone nav is itself sticky (`z-index: 100`), so `NavBar`
+publishes its measured height as `--sticky-top` (`hooks/useStickyTop.ts`,
+ResizeObserver) and the headers sit under it. Guarded by
+`scripts/contracts.mjs` ("promo board column headers stick until the table
+ends") and `useStickyTop.test.tsx`.

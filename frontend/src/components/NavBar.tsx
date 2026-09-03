@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, Fragment } from 'react';
+import { useStickyTop } from '../hooks/useStickyTop';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
@@ -166,11 +167,15 @@ export function NavBar() {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, [drawerOpen]);
+  /* Phone nav is sticky (navbar.css) — publish its height as --sticky-top so
+   * sticky table headers sit under it instead of behind it (2026-09-02). */
+  const mobileBarRef = useRef<HTMLElement>(null);
+  useStickyTop(mobileBarRef, isMobile);
 
   if (isMobile) {
     return (
       <>
-      <header className="cm-nav cm-nav--mobile">
+      <header className="cm-nav cm-nav--mobile" ref={mobileBarRef}>
         <div className="cm-nav__brand">
           <div className="cm-nav__wordmark">Pounce</div>
           {currentTab && <div className="cm-nav__current">· {currentTab.label}</div>}
