@@ -294,7 +294,9 @@ shares cache (`sepa.volume_movers`): shares_outstanding × the row's last
 close, the provider's own market_cap when shares are missing, then ≤60
 `shares_for` lookups per build inside 20 s for names the cache never saw.
 `market_cap` rides on the board row and the live row. The FE hides
-`market_cap < $1B` by default (`passesCapFloor`, checkbox above the tables,
+`market_cap < $700M` by default (`MIN_CAP_USD`; it was $1B for one afternoon —
+Ajay 2026-09-03 pm: *"In the PROMO tab I do not want to see anything in less
+then 700 million"*) (`passesCapFloor`, checkbox above the tables,
 remembered in `localStorage pcw.capFloor`), keeps unknown caps visible with
 "cap n/a" (hiding what we cannot size would hide real names), and prints
 the cap under each symbol (red when it is under the floor and the toggle is

@@ -143,9 +143,11 @@ export const symbolUrl = (t: string) => `https://stocktwits.com/symbol/${encodeU
  * on the Supply / Demand tab (Ajay 2026-09-02: "I wanna land on the sepa page
  * with supply tab open"). */
 /* Valuation floor (Ajay 2026-09-03: "filter out any company that its
- * valuation is less than a billion"). Unknown caps stay visible and say so —
- * hiding what we cannot size would hide real names, not just shells. */
-export const MIN_CAP_USD = 1e9;
+ * valuation is less than a billion"; lowered the same afternoon: "In the PROMO
+ * tab I do not want to see anything in less then 700 million"). Unknown caps
+ * stay visible and say so — hiding what we cannot size would hide real names,
+ * not just shells. */
+export const MIN_CAP_USD = 7e8;
 export const passesCapFloor = (cap: number | null | undefined, on: boolean) => !on || cap == null || cap >= MIN_CAP_USD;
 export const fmtCapShort = (v: number | null | undefined) =>
   v == null ? 'cap n/a' : v >= 1e12 ? `$${(v / 1e12).toFixed(1)}T` : v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
@@ -641,7 +643,7 @@ export function PromoCircuit() {
           </p>
           <label className="pcw__capfilter mono">
             <input type="checkbox" checked={capFloor} onChange={(e) => setCapFloor(e.target.checked)} />
-            Hide names under $1B
+            Hide names under $700M
             <span className="pcw__dim"> · {capFloor ? `${hiddenSmall} hidden` : 'showing all'}{unknownCap ? ` · ${unknownCap} cap unknown, kept` : ''}</span>
           </label>
         </div>
