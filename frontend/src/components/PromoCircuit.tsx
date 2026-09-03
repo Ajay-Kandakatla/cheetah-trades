@@ -315,7 +315,7 @@ const SESSION_TAG_ALL: Record<string, string> = { premarket: 'PRE', rth: 'RTH', 
  * scrollbar (which would kill the sticky headers). Times drop the " ET" suffix
  * (the header says ET), the chip list shows two + "+N", Room wraps its band
  * onto a second line, the tape is 100px. */
-export const tagStampShort = (iso: string | null | undefined) => tagStamp(iso).replace(/ ET$/, '');
+export const tagStampShort = (iso: string | null | undefined) => tagStamp(iso).replace(/ ET$/, '').replace(' · ', ' ');   // "Sep 2 7:55p"
 const MAX_CHIPS = 2;
 const pctCompact = (v: number | null | undefined) =>
   v == null ? '—' : `${v >= 0 ? '+' : ''}${Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)}%`;
@@ -354,7 +354,7 @@ function RussellCell({ r }: { r?: RussellJoin | null }) {
     + (r.board === 'promote_r1000' ? ' · promotions are usually NET SELLING by trackers' : '');
   return (
     <td className={`mono pcw__russ ${r.board === 'add_r2000' ? 'is-add' : 'is-promo'}`} title={title}>
-      {board}{e ? <> · <b>{mdy(e.in_index)}</b>{e.lists_published ? <span className="pcw__dim"> list out</span> : null}</> : null}
+      {board}{e ? <span className="pcw__line2"><b>{mdy(e.in_index)}</b>{e.lists_published ? <span className="pcw__dim"> list out</span> : null}</span> : null}
     </td>
   );
 }
@@ -367,7 +367,7 @@ function SalesCell({ s }: { s?: SalesRead | null }) {
   return (
     <td className={`og__num mono pcw__sales ${TIER_CLASS[s.tier] ?? ''}`}
         title={`Bonde sales read: ${s.tier}, latest quarter ${pct(s.growth_yoy_pct)} YoY${s.prior_yoy_pct != null ? `, prior ${pct(s.prior_yoy_pct)}` : ''}${s.accelerating ? ', accelerating' : ''} · score ${s.score ?? '—'} · ${s.source ?? ''}`}>
-      {pctCompact(s.growth_yoy_pct)} <span className="pcw__dim">{s.tier}{s.accelerating ? '↑' : ''}</span>
+      {pctCompact(s.growth_yoy_pct)}<span className="pcw__dim pcw__line2">{s.tier}{s.accelerating ? ' ↑' : ''}</span>
     </td>
   );
 }
@@ -389,7 +389,7 @@ function EightKCell({ k }: { k?: EightK | null }) {
   return (
     <td className="og__num mono pcw__8k"
         title={`${k.form} filed ${k.filing_date}${k.items.length ? ` · items ${k.items.join(', ')}` : ''}${(k.n_14d ?? 0) > 1 ? ` · ${k.n_14d} in 14d` : ''}`}>
-      <a href={k.url ?? undefined} target="_blank" rel="noreferrer">{mdy(k.filing_date)}{k.items.length ? <span className="pcw__dim"> {k.items.join(',')}</span> : null}</a>
+      <a href={k.url ?? undefined} target="_blank" rel="noreferrer">{mdy(k.filing_date)}{k.items.length ? <span className="pcw__dim"> {k.items.slice(0, 2).join(',')}{k.items.length > 2 ? `+${k.items.length - 2}` : ''}</span> : null}</a>
     </td>
   );
 }

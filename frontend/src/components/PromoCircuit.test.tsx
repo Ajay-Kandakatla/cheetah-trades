@@ -234,8 +234,8 @@ describe('board rows go live (Ajay 2026-09-02: "is this page real time?")', () =
     await waitFor(() => expect(screen.getAllByText('TINY').length).toBe(2));   // board row + live table
     const seeding = container.querySelectorAll('.pcw__table')[1];              // [0] is the live table
     const text = seeding.textContent || '';
-    expect(text).toContain('Sep 1 · 3:20p');
-    expect(text).toContain('Sep 2 · 9:05a');
+    expect(text).toContain('Sep 1 3:20p');
+    expect(text).toContain('Sep 2 9:05a');
     expect(text).not.toContain('3:20p ET');                                   // ET lives in the header tooltip now
     expect(text).toContain('+12.5%');                                          // Today, live
     expect(text).toContain('+30.2%');                                          // live since-tag replaces the daily 4.0%
@@ -391,9 +391,9 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     await waitFor(() => expect(screen.getAllByText('TINY').length).toBe(2));
     const rowOf = (t: string) => Array.from(board().querySelectorAll('tbody tr')).find((tr) => tr.textContent?.includes(t))!;
     const tiny = rowOf('TINY');
-    expect(tiny.querySelector('.pcw__russ')!.textContent).toContain('R2K add · Dec 14');
+    expect(tiny.querySelector('.pcw__russ')!.textContent).toBe('R2K addDec 14');                 // date on its own line
     expect(tiny.querySelector('.pcw__russ')!.getAttribute('title')).toContain('Russell 2000 add candidate');
-    expect(tiny.querySelector('.pcw__sales')!.textContent).toContain('+38.2% strong↑');
+    expect(tiny.querySelector('.pcw__sales')!.textContent).toBe('+38.2%strong ↑');              // tier on its own line
     expect(tiny.querySelector('.pcw__cat')!.textContent).toContain('REAL');
     expect(tiny.querySelector('.pcw__cat-top')!.getAttribute('href')).toBe('https://x/n');
     expect(tiny.querySelector('.pcw__8k')!.textContent).toContain('Sep 1');

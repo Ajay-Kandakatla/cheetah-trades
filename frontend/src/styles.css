@@ -11516,7 +11516,7 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .slab-feed__why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Promo board — inline mini tape, room-to-run cell, symbol links (2026-09-02) */
-.ptt__mini { display: inline-flex; align-items: center; min-width: 120px; height: 30px; line-height: 30px; vertical-align: middle; font-size: 11px; }
+.ptt__mini { display: inline-flex; align-items: center; min-width: 100px; height: 30px; line-height: 30px; vertical-align: middle; font-size: 11px; }
 .ptt__mini.is-clickable { cursor: pointer; }
 .ptt__mini.is-clickable:hover svg { background: rgba(255,255,255,0.05); }
 .ptt__mini svg { display: block; border-radius: 3px; background: var(--bg-elev, rgba(255,255,255,0.02)); }
@@ -11614,3 +11614,5 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pcw .og__table.pcw__grid .pcw__sec-roll { display: block; margin-left: 0; width: fit-content; }
 .pcw .og__table.pcw__grid .pcw__cat { max-width: none; }
 .pcw .og__table.pcw__grid .ptt__mini-cell { overflow: visible; }
+
+.pcw__line2 { display: block; font-size: 10px; line-height: 1.1; }
