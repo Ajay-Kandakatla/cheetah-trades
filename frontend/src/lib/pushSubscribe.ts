@@ -160,7 +160,8 @@ async function serverKnownEndpoints(): Promise<Set<string> | null> {
     const r = await fetch(`${API}/push/subscriptions`);
     if (!r.ok) return null;
     const j: any = await r.json();
-    const list: any[] = Array.isArray(j) ? j : (j?.subscriptions || j?.devices || j?.items || []);
+    // backend/main.py push_list_subscriptions answers {rows: [...]} (web + mac kinds).
+    const list: any[] = Array.isArray(j) ? j : (j?.rows || j?.subscriptions || j?.devices || j?.items || []);
     return new Set(list.map((d: any) => d?.endpoint).filter(Boolean));
   } catch {
     return null;

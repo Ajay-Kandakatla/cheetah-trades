@@ -31,7 +31,8 @@ function setup(opts: { permission?: NotificationPermission; local?: any; server?
     if (url.endsWith('/push/public-key')) return { ok: true, json: async () => ({ public_key: KEY }) } as any;
     if (url.endsWith('/push/subscriptions')) {
       if (opts.server === null) return { ok: false, json: async () => ({}) } as any;
-      return { ok: true, json: async () => ({ subscriptions: (opts.server || []).map((e) => ({ endpoint: e })) }) } as any;
+      // the real payload shape: {rows: [{kind, endpoint, ...}]} incl. mac rows without an endpoint
+      return { ok: true, json: async () => ({ rows: [{ kind: 'mac', endpoint: null }, ...(opts.server || []).map((e) => ({ kind: 'web', endpoint: e }))] }) } as any;
     }
     return { ok: true, json: async () => ({ ok: true }) } as any;
   }));
