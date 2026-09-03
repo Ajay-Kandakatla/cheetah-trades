@@ -407,19 +407,134 @@ def test_intraday_volume_projection_is_curve_aware_and_conservative():
         "CGNX bug (over-credits a hot open). Use intraday_volume.")
 
 
+ZONE_EDGE_ENTRY_PATH = os.path.join(os.path.dirname(__file__), "..",
+                                    "trading", "zone_edge_entry.py")
+
+
+def _zone_edge_entry_source():
+    with open(ZONE_EDGE_ENTRY_PATH, encoding="utf-8") as fh:
+        return fh.read()
+
+
 def test_auto_entry_never_submits_to_broker_directly():
-    """Invariant: entries.enter() is the ONLY buy path. auto_entry.py must
-    not contain a single direct broker submit_*/replace/cancel/close call —
-    every order flows through entries.enter so armed / sizing / equity cap /
-    never-average-down / earnings always apply."""
-    src = _auto_entry_source()
-    for forbidden in ("submit_", "replace_order", "cancel_order",
-                      "close_position"):
-        assert forbidden not in src, (
-            f"trading/auto_entry.py contains `{forbidden}` — auto entries "
-            f"must flow through entries.enter(), never the broker directly."
+    """Invariant: entries.enter() is the ONLY buy path. Neither auto_entry.py
+    (Minervini funnel) nor zone_edge_entry.py (Supply & Demand zone-edge
+    funnel) may contain a single direct broker submit_*/replace/cancel/close
+    call — every order flows through entries.enter so armed / sizing /
+    equity cap / never-average-down / earnings always apply."""
+    for name, src in (("auto_entry.py", _auto_entry_source()),
+                      ("zone_edge_entry.py", _zone_edge_entry_source())):
+        for forbidden in ("submit_", "replace_order", "cancel_order",
+                          "close_position"):
+            assert forbidden not in src, (
+                f"trading/{name} contains `{forbidden}` — engine entries "
+                f"must flow through entries.enter(), never the broker directly."
+            )
+        assert "entries.enter(" in src, (
+            f"trading/{name} no longer buys through entries.enter()")
+
+
+# ── Zone-edge entries: OWNER rules for the Supply & Demand strategy ──────────
+# trading/zone_edge_entry.py buys the S&D board's demand arrivals + supply
+# breakouts. There is NO book behind these entry rules (Ajay's playbook,
+# docs/supply_demand/zone_edge_autopilot.md); the risk math is the shared
+# trading/risk_rules.py contract applied by entries.enter. Locked here so a
+# drift is a deliberate owner decision, never a silent tweak.
+
+ZONE_EDGE_TOKENS = [
+    "MAX_ZONE_ENTRIES_PER_DAY = 4",
+    "STOP_BUFFER_PCT = 0.5",
+    "MIN_TOUCHES = 2",
+    "MIN_CAP_USD = 1e9",
+    "SIGNAL_MAX_AGE_SEC = 180",
+    "LAST_ENTRY_ET = dtime(15, 45)",
+    'STATE_COLL = "zone_edge_entry_state"',
+    'RACE_COLL = "execution_race"',
+]
+
+
+def test_zone_edge_entry_params_locked_in_source():
+    src = _zone_edge_entry_source()
+    for token in ZONE_EDGE_TOKENS:
+        assert token in src, (
+            f"zone-edge parameter drifted or was renamed: `{token}` not found "
+            f"in trading/zone_edge_entry.py — owner-chosen S&D knobs "
+            f"(docs/supply_demand/zone_edge_autopilot.md); update doc + tests "
+            f"WITH sign-off, never silently."
         )
-    assert "entries.enter(" in src
+
+
+def test_zone_edge_entry_params_importable_and_equal():
+    from datetime import time as dtime
+    from trading import zone_edge_entry as ze
+    assert ze.MAX_ZONE_ENTRIES_PER_DAY == 4
+    assert ze.STOP_BUFFER_PCT == 0.5
+    assert ze.MIN_TOUCHES == 2
+    assert ze.MIN_CAP_USD == 1e9
+    assert ze.SIGNAL_MAX_AGE_SEC == 180
+    assert ze.LAST_ENTRY_ET == dtime(15, 45)
+    assert ze.STATE_COLL == "zone_edge_entry_state"
+    assert ze.RACE_COLL == "execution_race"
+
+
+def test_zone_edge_entry_cites_no_book_and_defers_risk_to_risk_rules():
+    """The S&D entry rules are OWNER rules: the module must not cite the
+    SEPA books (no TLSW/TTLAC, no page anchors) and must defer every risk
+    number to risk_rules (10% line, 2:1 floor, MAX_POSITIONS) instead of
+    re-deriving it."""
+    import re
+    src = _zone_edge_entry_source()
+    assert "TLSW" not in src and "TTLAC" not in src, (
+        "trading/zone_edge_entry.py cites a SEPA book — the S&D entry rules "
+        "have no book; keep the honesty note, drop the cite")
+    assert re.search(r"\bpp?\.\s?\d", src) is None, (
+        "a page cite crept into trading/zone_edge_entry.py")
+    assert "OWNER RULES" in src
+    for token in ("risk_rules.ABS_MAX_STOP_PCT", "risk_rules.MIN_REWARD_RISK",
+                  "risk_rules.MAX_POSITIONS"):
+        assert token in src, (
+            f"`{token}` no longer read from risk_rules in zone_edge_entry.py "
+            f"— risk numbers must never be re-derived locally")
+    for local in ("= 10.0", "= 2.0\n"):
+        assert local not in src, (
+            f"a local risk constant ({local.strip()}) appeared in "
+            f"zone_edge_entry.py — use risk_rules")
+
+
+def test_zone_edge_entry_wired_fenced_and_configurable():
+    """exit_engine: config key passes the whitelist (default OFF), tick step
+    (h) calls run() inside its own try/except right after (f), status()
+    carries the block; api: POST /trading/config accepts the flag and GET
+    /trading/race exists behind the admin gate."""
+    eng_path = os.path.join(TRADING_DIR, "exit_engine.py")
+    with open(eng_path, encoding="utf-8") as fh:
+        eng = fh.read()
+    assert '"zone_edge_entry": bool(doc.get("zone_edge_entry", False))' in eng, (
+        "get_config() no longer passes zone_edge_entry (default OFF) through")
+    assert '"last_zone_entry_disabled_day": doc.get("last_zone_entry_disabled_day")' in eng
+    hook = ('    try:\n'
+            '        from trading import zone_edge_entry\n'
+            '        summary["zone_edge_entry"] = zone_edge_entry.run(broker=broker,\n'
+            '                                                         cfg=get_config())\n'
+            '    except Exception as exc:')
+    assert hook in eng, (
+        "tick step (h) zone_edge_entry.run is missing or no longer fenced in "
+        "its own try/except — a zone-entry crash could break stop protection")
+    assert eng.index('summary["auto_entry"] = auto_entry.run(') \
+        < eng.index('summary["zone_edge_entry"] = zone_edge_entry.run(') \
+        < eng.index("summary[\"journal\"] = journal.reconcile()"), (
+        "step (h) must run right after (f) auto_entry and before (g) journal")
+    assert 'out["zone_edge_entry"] = zone_edge_entry.status_block(cfg)' in eng
+    api_path = os.path.join(TRADING_DIR, "api.py")
+    with open(api_path, encoding="utf-8") as fh:
+        api = fh.read()
+    assert '"zone_edge_entry" in payload' in api, (
+        "POST /trading/config no longer accepts zone_edge_entry")
+    assert 'updates["zone_edge_entry"] = False' in api, (
+        "zone_edge_entry null must reset to OFF, never ON")
+    assert '@router.get("/race")' in api and "_require_admin(email)" in api.split(
+        '@router.get("/race")')[1].split("@router")[0], (
+        "GET /trading/race missing or not admin-gated")
 
 
 # --- Broker factory + SIM broker invariants ----------------------------------
@@ -447,7 +562,8 @@ def test_engine_modules_use_broker_factory_not_alpaca_directly():
     (BrokerError/OPEN_STATUSES re-exported there). Only broker.py and
     broker_sim.py may name the Alpaca module. Breaking this re-pins the
     engine to one venue and silently disables the sim/paper switch."""
-    for fname in ("exit_engine.py", "entries.py", "auto_entry.py"):
+    for fname in ("exit_engine.py", "entries.py", "auto_entry.py",
+                  "zone_edge_entry.py"):
         with open(os.path.join(TRADING_DIR, fname), encoding="utf-8") as fh:
             src = fh.read()
         assert "broker_alpaca" not in src, (

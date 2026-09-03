@@ -128,6 +128,11 @@ def get_config() -> dict:
         "last_not_configured_day": doc.get("last_not_configured_day"),
         "last_auto_entry_disabled_day": doc.get("last_auto_entry_disabled_day"),
         "last_auto_entry_scan_warn_day": doc.get("last_auto_entry_scan_warn_day"),
+        # Zone-edge (Supply & Demand) entries — trading/zone_edge_entry.py.
+        # Default OFF in EVERY mode (owner opt-in per POST /trading/config);
+        # arming is still required on top, like every other buy path.
+        "zone_edge_entry": bool(doc.get("zone_edge_entry", False)),
+        "last_zone_entry_disabled_day": doc.get("last_zone_entry_disabled_day"),
         # Funnel floor overrides (data write, no deploy). This whitelist used
         # to STRIP them, which silently killed the documented auto_min_score
         # override — found in the 2026-07-12 low-RS audit.
@@ -815,6 +820,18 @@ def tick(force: bool = False) -> dict:
         log.warning("auto_entry run failed: %s", exc)
         summary["errors"].append("auto_entry: %s" % exc)
 
+    # (h) zone-edge entries (Supply & Demand strategy, owner rules; flag
+    # `zone_edge_entry`, default OFF) — same fence as (f): a buy-side crash
+    # can never break stop protection above. Buys still flow ONLY through
+    # entries.enter().
+    try:
+        from trading import zone_edge_entry
+        summary["zone_edge_entry"] = zone_edge_entry.run(broker=broker,
+                                                         cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("zone_edge_entry run failed: %s", exc)
+        summary["errors"].append("zone_edge_entry: %s" % exc)
+
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no
     # trading side effects; fully fenced + lazy-imported so it can NEVER break
@@ -895,6 +912,12 @@ def status() -> dict:
     except Exception as exc:                       # noqa: BLE001
         out["auto_entry"] = {"enabled": bool(cfg.get("auto_entry")),
                              "error": str(exc)}
+    try:
+        from trading import zone_edge_entry
+        out["zone_edge_entry"] = zone_edge_entry.status_block(cfg)
+    except Exception as exc:                       # noqa: BLE001
+        out["zone_edge_entry"] = {"enabled": bool(cfg.get("zone_edge_entry")),
+                                  "error": str(exc)}
     if not out["configured"]:
         return out
     try:

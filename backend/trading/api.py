@@ -6,9 +6,13 @@ GET  /trading/status                engine + account + per-position protection
 POST /trading/arm?armed=true|false  master switch (admin)
 POST /trading/auto-entry?enabled=true|false  auto-entry flag (admin)
 POST /trading/config                JSON {equity_cap?, auto_min_score?,
-                                    auto_min_rs?, progressive_exposure?} —
+                                    auto_min_rs?, progressive_exposure?,
+                                    pyramiding?, zone_edge_entry?} —
                                     sizing ceiling + funnel floors + pilot
-                                    governor (admin; null resets to default)
+                                    governor + the Supply & Demand zone-edge
+                                    entry switch (admin; null resets to default)
+GET  /trading/race?days=5           execution race: engine vs owner per
+                                    zone-edge signal (lags + price gaps)
 GET  /trading/preview               pure entry math, NO order
 POST /trading/enter                 bracket entry (admin; the ONLY buy path)
 POST /trading/flatten/{symbol}      cancel orders + close position (admin)
@@ -123,10 +127,22 @@ async def trading_config(payload: dict = Body(...),
             updates[bool_key] = raw
         else:
             raise HTTPException(400, "%s must be a boolean or null" % bool_key)
+    if "zone_edge_entry" in payload:
+        # Supply & Demand zone-edge entries (trading/zone_edge_entry.py).
+        # Strict boolean like the auto_entry flag; null resets to the
+        # default, which is OFF in every mode. Arming still gates orders.
+        raw = payload.get("zone_edge_entry")
+        if raw is None:
+            updates["zone_edge_entry"] = False       # reset -> default OFF
+        elif isinstance(raw, bool):
+            updates["zone_edge_entry"] = raw
+        else:
+            raise HTTPException(400, "zone_edge_entry must be a boolean or null")
     if not updates:
         raise HTTPException(400, "nothing to update — send equity_cap, "
                                  "auto_min_score, auto_min_rs, "
-                                 "progressive_exposure, and/or pyramiding")
+                                 "progressive_exposure, pyramiding, and/or "
+                                 "zone_edge_entry")
     from trading import exit_engine
 
     def work():
@@ -297,6 +313,20 @@ async def trading_journal(limit: int = 100, decisions: int = 0,
         return out
 
     return JSONResponse(await asyncio.to_thread(work))
+
+
+@router.get("/race")
+async def trading_race(days: int = 5,
+                       email: str = Depends(current_user_email)):
+    """Execution race — engine vs owner, one row per zone-edge signal the
+    engine attempted (blocked attempts included): signal time, engine order
+    / fill, the owner's first view of the ticker page, his manual Portfolio
+    fill, and the lags + price gaps between them. Reconciles first (read-only
+    over every collection but execution_race)."""
+    _require_admin(email)
+    from trading import zone_edge_entry
+    return JSONResponse(await asyncio.to_thread(
+        zone_edge_entry.race_report, max(1, min(int(days or 5), 30))))
 
 
 @router.get("/analytics")

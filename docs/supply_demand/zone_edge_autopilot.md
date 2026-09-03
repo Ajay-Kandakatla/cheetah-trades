@@ -1,0 +1,190 @@
+# Zone-edge Auto-Pilot — `backend/trading/zone_edge_entry.py`
+
+**Ask (Ajay 2026-09-03):** *"by the time the alert reaches me I am late and the
+stock is already bouncing off ... Can you autopilot this and make buys and
+sells tomorrow in RTH? ... We already have an autopilot based on Minervini ...
+Paper trade ... I wanna see the execution time comparison between you and I."*
+
+Decisions he made: arm the **paper** engine with the Minervini `auto_entry`
+flag **OFF** (zone-edge only); trade **both** zone-edge signals (demand
+arrivals + breakouts); his reaction clock = the first time he opens the
+ticker page after the signal **and** his manual Portfolio fill.
+
+---
+
+## 1. Honesty note — what is a book rule and what is not
+
+| Layer | Source | Where it lives |
+|---|---|---|
+| **Entry rules** (which board rows, the requested stop, the room check, the daily cap, the entry window) | **Owner rules** for the Supply & Demand strategy — Ajay's playbook. **No book.** Nothing here is Minervini, and no SEPA page is cited for any of it (`feedback_sepa_book_scope`). | `trading/zone_edge_entry.py` (constants locked in `tests/test_trading_contracts.py`) |
+| **Signal** (the bands, touches, "near / in / broke", arrival, new highs) | Configured price-structure heuristic (`docs/supply_demand/demand_zones_methodology.md`, `session_board.md`) | `supply_demand/zone_edge.py` → Mongo `zone_edge_latest` / `zone_edge_track` |
+| **Risk math** (stop clamp to the absolute 10% line, target ≥ 2:1, 25% sizing, losing-streak multiplier, never average down, earnings shield, MAX_POSITIONS) | The engine-wide risk contract, `trading/risk_rules.py` — **book, FROZEN, unchanged by this feature** | applied by `trading/entries.enter()`, the **only** buy path |
+
+The module only *requests* a stop; `risk_rules` decides. It never places an
+order at the broker itself (contract test greps it for `submit_` /
+`replace_order` / `cancel_order` / `close_position`).
+
+## 2. Signal source (read-only)
+
+`supply_demand/zone_edge.py` runs once a minute in RTH and upserts
+`zone_edge_latest` (`_id: 'latest'`):
+
+```
+{as_of: ET ISO, date: 'YYYY-MM-DD', in_session, counts,
+ breaking:    [row],   # supply side — tier 'near' | 'broke'
+ near_demand: [row]}   # demand side — tier 'near' | 'in', arrival flag
+row = {symbol, name, last, dist_pct, tier, side, role,
+       band:{kind, lo, hi, touches, strength}, cap, new_highs, high_252,
+       pct_to_52w, overhead_bands, arrival, first_seen ('HH:MM' ET), url}
+```
+
+and appends `zone_edge_track` rows `{symbol, date, ts, side, tier, px,
+dist_pct, band}` per listed row per pass. The engine reads both through the
+same Mongo handle `exit_engine` uses and never writes to them.
+
+## 3. Entry rules (owner rules)
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `MAX_ZONE_ENTRIES_PER_DAY` | 4 | zone-edge buys per ET day (counted from `zone_edge_entry_state` successes) |
+| `STOP_BUFFER_PCT` | 0.5 | the requested stop sits this far **under the band floor**: `stop = band.lo × (1 − 0.5%)` |
+| `MIN_TOUCHES` | 2 | band must be proven structure (same floor as the board's pushes) |
+| `MIN_CAP_USD` | 1e9 | "billion or at least bigger than a billion" (mirrors `zone_store.MIN_CAP_USD`) |
+| `SIGNAL_MAX_AGE_SEC` | 180 | a `latest` doc older than this (or from another day, or without a readable `as_of`) is **stale → no entries** |
+| `LAST_ENTRY_ET` | 15:45 | no new entries at/after this; the 15:44 tick is the last |
+
+Candidates per tick, in this order:
+
+1. **Breakouts** — `breaking` rows with `tier == 'broke'` **and** `new_highs`
+   **and** `touches ≥ 2` **and** `cap ≥ $1B`. Stop under the floor of the band
+   just cleared (it becomes support). A **`near` resistance row is never
+   bought** — it is not through yet. Least-extended first.
+2. **Demand arrivals** — `near_demand` rows with `arrival == true`, `tier in
+   ('near','in')`, `touches ≥ 2`, `cap ≥ $1B`. Residents (`arrival` false or
+   missing) are never bought. Closest to the band first (`dist_pct` asc).
+
+Then, per candidate:
+
+- `stop_pct = (last − stop) / last × 100`. `stop_pct > risk_rules.ABS_MAX_STOP_PCT`
+  (10) → **blocked** `stop wider than book max`; `stop_pct ≤ 0` → blocked.
+  Otherwise `stop_pct` is passed to `entries.enter(sym, limit_price=None,
+  stop_pct=…, allow_earnings=False)` as the *requested* stop and risk_rules
+  clamps / sizes / targets from there.
+- **Room sanity** — the nearest **supply** band floor above `last` (from the
+  symbol's `zone_store` doc for the day — **one read per candidate**) must be
+  at least `risk_rules.MIN_REWARD_RISK × stop_pct` (2R) away in %, else
+  **blocked** `room < 2R`. No supply band above = unbounded room = ok. **No
+  zone doc = unknown = blocked** (fails closed). Breakouts to new highs with
+  `overhead_bands == 0` skip the check.
+- Every missing input (no print, no band, unknown touches/cap, unknown
+  overhead) **fails closed**.
+
+Skips that are **not** attempts (nothing recorded, re-evaluated next tick):
+flag off / disarmed / not configured / market closed (one `zone_entry_disabled`
+ledger row per ET day), stale signal (older than 180 s, another day, unreadable
+`as_of`, or stamped more than 180 s in the **future**), at/after 15:45, symbol
+already held (`broker.positions()`), symbol already **bought today under
+another band** (the broker's same-day `client_order_id` would reject it
+anyway), daily cap reached, no position slot (`risk_rules.MAX_POSITIONS`),
+same band already attempted today, a `market closed` veto from `entries`
+(clock flipped mid-tick).
+
+**Attempts** — one per `(symbol, band lo-hi, ET day)`, written to
+`zone_edge_entry_state` **before** `entries.enter` is called. Blocked and
+error attempts are recorded too, so a rejected name is never retried every
+minute.
+
+**The attempt store fails closed.** If today's state rows cannot be read the
+tick sits out (`reason: state_unavailable`); if one band's record cannot be
+read that candidate is skipped; if the attempt record cannot be **written**,
+`entries.enter` is **not** called (a crash mid-enter without a durable record
+would otherwise be retried every minute). Each case lands in the tick's
+`errors[]`, nothing is ordered, and the next tick re-evaluates.
+
+**Once `entries.enter` returns, an order exists.** The `try/except` wraps only
+that call; the bookkeeping after it (ledger, state, race doc, push) each
+swallow their own failures, so a placed order is always recorded as
+`entered` / `ordered` and never relabelled blocked or error. Malformed board
+rows (non-string symbol, band that is not a dict, sections that are not
+lists) are rejected, and a `zone_store` doc whose `bands` is not a list of
+dicts is *unknown room* (blocked) — never a crash out of `run()`.
+
+Ledger kinds: `zone_entry` (side, band, stop_pct, dist_pct, first_seen,
+order id; `dry_run=false`), `zone_entry_blocked` (`dry_run=true`),
+`zone_entry_error` (`dry_run=false`, "verify at the broker whether an order
+exists"), `zone_entry_disabled` (once per day). Push on a buy: owner-only,
+title `🎯 Zone-edge paper buy {SYM} {side}` (the mode word follows the
+broker: paper / sim / LIVE).
+
+Wiring: `exit_engine.tick()` step **(h)**, right after (f) `auto_entry`,
+fenced in its own `try/except` — a zone-entry crash can never break stop
+protection. `GET /trading/status` carries `zone_edge_entry`
+(`enabled, entries_today, max_per_day, last_entry_et, signal{fresh, age_sec,
+reason…}, rules[], attempts[]`).
+
+## 4. The execution race ledger (`execution_race`)
+
+One doc per `(symbol, side, band, ET day)`, `_id = "{SYM}:{side}:{lo}-{hi}:{day}"`,
+written for **every** candidate attempt — blocked ones included, so the race
+still records that the engine saw the signal at signal time.
+
+| Field | Meaning |
+|---|---|
+| `signal_first_seen`, `signal_ts` | the row's `first_seen` (HH:MM ET) and the ET ISO built from `day + first_seen` (`signal_ts_basis: 'first_seen'`; falls back to the doc's `as_of`) |
+| `signal_px` | `row.last` when the engine first saw it |
+| `engine_order_ts`, `engine_order_id`, `engine_client_order_id` | UTC ISO when `entries.enter` returned + the ids from its `entry` ledger row |
+| `engine_fill_ts`, `engine_fill_px` | reconciled from `broker.closed_orders_since` (matched by `client_order_id` / id, filled buys only) — the same read `exit_engine` uses for fills |
+| `user_view_ts`, `user_view_px` | the owner's first `usage_events` row with route `/sepa/{SYM}` (any query string) started after `signal_ts`; px = the `zone_edge_track` print nearest that minute (within 5 min, else `None`) |
+| `user_fill_ts`, `user_fill_px` | the owner's `portfolio_holdings` row for SYM added/updated after `signal_ts`; px = `cost_basis / shares` |
+| `outcome`, `reason` | `ordered` \| `blocked` \| `error` |
+
+`reconcile_race()` runs at the end of every `run()` and on every
+`GET /trading/race`; it touches **only** today's and yesterday's docs and is
+**read-only** over every other collection and the broker.
+
+`GET /trading/race?days=5` → `{rows, summary, days, owner}`. Each row is the doc
+minus `_id` plus `engine_lag_sec`, `engine_fill_lag_sec`, `user_view_lag_sec`,
+`user_fill_lag_sec` (all vs `signal_ts`), `px_base` (engine fill px, else
+signal px), `px_gap_view`, `px_gap_fill`, `px_gap_fill_pct`. Summary: `n`,
+`n_ordered`, `n_engine_filled`, `n_user_viewed`, `n_user_filled`,
+`median_engine_lag_sec`, `median_engine_fill_lag_sec`,
+`median_user_view_lag_sec`, `median_user_fill_lag_sec`,
+`median_px_gap_fill_pct`. JSON-safe (no NaN).
+
+Reading it honestly: `user_view_lag` is the time to *look*, `user_fill_lag`
+the time to *act*; `px_gap_fill_pct > 0` means the manual fill paid more than
+the engine's. A blocked row with a user fill is a signal the engine refused
+and Ajay took — those rows are the ones to argue about.
+
+## 5. Ops recipe (paper)
+
+```
+POST /trading/arm?armed=true
+POST /trading/auto-entry?enabled=false          # Minervini funnel OFF
+POST /trading/config  {"zone_edge_entry": true}  # zone-edge ON
+GET  /trading/status                             # .zone_edge_entry.signal.fresh must be true in RTH
+GET  /trading/race?days=5                        # the comparison
+```
+
+Turn it off with `POST /trading/config {"zone_edge_entry": false}` (or
+`null` — the default is OFF in every mode). Disarming (`/trading/arm?armed=false`)
+stops every buy path at once.
+
+Pre-flight checks the morning of: the 9:20 `zone_store` warm ran (room checks
+fail closed without it), the zone-edge cron is writing `zone_edge_latest`
+every minute (`status.zone_edge_entry.signal.age_sec` under 180), broker mode
+reads `paper`.
+
+## 6. Tests
+
+- `tests/test_zone_edge_entry.py` — gates, every funnel negative, stop/room
+  blocks, skips vs attempts, success/veto/error/market-closed paths,
+  ordering, reconcile + report (lags, medians, NaN safety, window), tick
+  hook fence, status block, config + race routes; review regressions: state
+  read/write failure places no order, post-order bookkeeping failure never
+  relabels a placed order, malformed rows / zone docs never raise or buy,
+  future-dated `as_of` not trusted, same symbol under another band skipped.
+- `tests/test_trading_contracts.py` — constants locked verbatim, no book
+  cites, risk numbers read from `risk_rules` (never re-derived), no direct
+  broker order tokens, factory invariant, tick (h) fenced and ordered,
+  config whitelist, `/race` admin-gated.
