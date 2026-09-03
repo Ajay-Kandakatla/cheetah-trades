@@ -284,8 +284,8 @@ export const COLUMNS: ColDef[] = [
  * fit a 1920-wide screen with the sticky headers intact; narrower windows
  * fall back to the horizontal scroll (useWideTable). */
 export const COL_WIDTHS: Record<string, number> = {
-  symbol: 120, session: 50, last: 70, tagged: 160, first: 120, lastTag: 95, today: 70, since: 75, peak: 60,
-  room: 105, tape: 104, russell: 105, sales: 115, catalyst: 190, eightk: 105, sec: 150, status: 95,
+  symbol: 120, session: 50, last: 70, tagged: 150, first: 135, lastTag: 105, today: 70, since: 75, peak: 58,
+  room: 100, tape: 104, russell: 100, sales: 105, catalyst: 170, eightk: 110, sec: 145, status: 92,
 };
 export function nextSort(cur: SortState, col: ColDef): SortState {
   const first: SortDir = col.sortDefault ?? (col.num ? 'desc' : 'asc');
