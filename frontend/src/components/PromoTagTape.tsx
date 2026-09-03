@@ -182,7 +182,7 @@ export function miniLayout(bars: LiteBar[], tags: Pick<Tag, 'at' | 'which' | 'ti
 
 const pctS = (v: number | null | undefined) => (v == null ? '' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`);
 
-export function MiniTape({ ticker, onOpen }: { ticker: string; onOpen?: () => void }) {
+export function MiniTape({ ticker, onOpen, width = 120 }: { ticker: string; onOpen?: () => void; width?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined');
   const [data, setData] = useState<LitePayload | null>(null);
@@ -202,7 +202,7 @@ export function MiniTape({ ticker, onOpen }: { ticker: string; onOpen?: () => vo
     return () => { live = false; };
   }, [seen, ticker]);
 
-  const W = 120, H = 30;
+  const W = width, H = 30;
   const g = data ? miniLayout(data.bars ?? [], data.tags ?? [], W, H) : null;
   const up = !!g && g.marker != null && g.last.price >= g.marker.price;
   const title = data && g

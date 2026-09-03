@@ -234,8 +234,9 @@ describe('board rows go live (Ajay 2026-09-02: "is this page real time?")', () =
     await waitFor(() => expect(screen.getAllByText('TINY').length).toBe(2));   // board row + live table
     const seeding = container.querySelectorAll('.pcw__table')[1];              // [0] is the live table
     const text = seeding.textContent || '';
-    expect(text).toContain('Sep 1 · 3:20p ET');
-    expect(text).toContain('Sep 2 · 9:05a ET');
+    expect(text).toContain('Sep 1 · 3:20p');
+    expect(text).toContain('Sep 2 · 9:05a');
+    expect(text).not.toContain('3:20p ET');                                   // ET lives in the header tooltip now
     expect(text).toContain('+12.5%');                                          // Today, live
     expect(text).toContain('+30.2%');                                          // live since-tag replaces the daily 4.0%
     expect(text).not.toContain('+4.0%');
@@ -312,7 +313,7 @@ describe('promo board: room to run, links, mini tape, recency order (Ajay 2026-0
     const rowOf = (t: string) => Array.from(board.querySelectorAll('tbody tr')).find((tr) => tr.textContent?.includes(t))!;
     expect(rowOf('TINY').querySelector('.pcw__room.is-room')!.textContent).toContain('+7.2%');
     expect(rowOf('TINY').querySelector('.pcw__room')!.textContent).toContain('$5.51–5.57');
-    expect(rowOf('INBD').querySelector('.pcw__room.is-in')!.textContent).toBe('in band $1.00–1.10');
+    expect(rowOf('INBD').querySelector('.pcw__room.is-in')!.textContent).toBe('in band$1.00–1.10');   // band on its own line
     expect(rowOf('INBD').querySelector('.pcw__room')!.getAttribute('title')).toContain('support it broke');
     expect(rowOf('CLR').querySelector('.pcw__room.is-clear')!.textContent).toBe('clear');
     expect(rowOf('PEND').querySelector('td[title^="zones computing"]')!.textContent).toBe('…');
@@ -378,7 +379,8 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     await waitFor(() => expect(screen.getAllByText('TINY').length).toBe(2));
     const rowOf = (t: string) => Array.from(board().querySelectorAll('tbody tr')).find((tr) => tr.textContent?.includes(t))!;
     const tiny = rowOf('TINY');
-    expect(tiny.querySelector('.pcw__russ')!.textContent).toContain('R2000 add · Dec 14');
+    expect(tiny.querySelector('.pcw__russ')!.textContent).toContain('R2K add · Dec 14');
+    expect(tiny.querySelector('.pcw__russ')!.getAttribute('title')).toContain('Russell 2000 add candidate');
     expect(tiny.querySelector('.pcw__sales')!.textContent).toContain('+38.2% strong ↑');
     expect(tiny.querySelector('.pcw__cat')!.textContent).toContain('REAL');
     expect(tiny.querySelector('.pcw__cat-top')!.getAttribute('href')).toBe('https://x/n');
@@ -433,6 +435,29 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     expect(nextSort({ key: 'peak', dir: 'asc' }, peak)).toBeNull();
     const sym = COLUMNS.find((c) => c.key === 'symbol')!;
     expect(nextSort(null, sym)).toEqual({ key: 'symbol', dir: 'asc' });
+  });
+
+  it('shows two account chips and folds the rest into a +N chip that lists them', async () => {
+    const accounts = ['ShangVXO', 'beppels', 'PSM_EmpowerTrading', 'Swagger_Ape'].map((handle, i) => ({ handle, tier: i ? 'B' : 'S', last_tagged_at: '2026-08-30T09:00:00Z' }));
+    mock(payload([row({ accounts })]), true, livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(1));
+    const cell = board().querySelector('.pcw__tagged')!;
+    expect(cell.querySelectorAll('a.pcw__acct').length).toBe(2);
+    const more = cell.querySelector('.pcw__acct-more')!;
+    expect(more.textContent).toBe('+2');
+    expect(more.getAttribute('title')).toBe('B·@PSM_EmpowerTrading\nB·@Swagger_Ape');
+  });
+
+  it('a table wider than its box trades sticky headers for a horizontal scrollbar', async () => {
+    mock(payload([row()]), true, livePayload([]));
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get() { return this.tagName === 'TABLE' ? 2400 : 0; } });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get() { return 1500; } });
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(1));
+    await waitFor(() => expect(board().classList.contains('is-wide')).toBe(true));
+    delete (HTMLElement.prototype as any).scrollWidth;
+    delete (HTMLElement.prototype as any).clientWidth;
   });
 
   it('live-only rows (no board row yet) render plain handles — no tier claim — and dashes for the board-only columns', async () => {

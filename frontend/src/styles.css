@@ -11590,3 +11590,15 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pcw__8k a { color: var(--text, #e2e8f0); text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.25); white-space: nowrap; }
 .pcw__sec { white-space: nowrap; font-size: 11px; }
 .pcw__sec-roll { color: var(--text-muted, #94a3b8); text-decoration: none; margin-left: 4px; border-bottom: 1px dotted currentColor; }
+
+
+/* Promo board — fit 17 columns (2026-09-03: "The sales column is hidden") */
+.cat-page .pcw { width: calc(100vw - 2.5rem); margin-left: calc(50% - 50vw + 1.25rem); }   /* full-bleed past the 1500px page cap */
+.pcw .og__table th, .pcw .og__table td { padding-left: 0.4rem; padding-right: 0.4rem; }
+.pcw .og__table { font-size: 0.78rem; }
+.pcw__tagged { max-width: 190px; }
+.pcw__acct-more { border: 1px solid var(--muted, #8b8fa3); color: var(--muted, #8b8fa3); border-radius: 3px; padding: 0 4px; font-size: 10px; cursor: default; }
+.pcw__room-band { display: block; font-size: 10px; line-height: 1.1; }
+.pcw__cat { max-width: 200px; }
+.pcw__table.is-wide { overflow-x: auto; }                /* narrow window: columns beat sticky headers */
+.pcw__table.is-wide .og__table thead th, .pcw__table.is-wide > .day-section__h { position: static; }

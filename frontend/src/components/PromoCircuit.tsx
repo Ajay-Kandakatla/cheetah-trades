@@ -10,7 +10,7 @@
  * Reads /catalysts/promo-circuit; the roster lives in
  * backend/catalysts/promo_circuit.py (user-editable, like fundTiers).
  */
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import React, { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { Link } from 'react-router-dom';
@@ -165,11 +165,11 @@ export function RoomCell({ room }: { room?: RoomRead | null }) {
   if (room.state === 'CLEAR') return <td className="og__num mono pcw__room is-clear" title="nothing overhead in the 1-year read — unknown, not unlimited">clear</td>;
   const b = room.band!;
   const kind = b.kind === 'broken_support' ? ' (support it broke)' : '';
-  if (room.state === 'IN_BAND') return <td className="og__num mono pcw__room is-in" title={`inside the band ${band$(b)}${kind} — the sell zone is here`}>in band {band$(b)}</td>;
+  if (room.state === 'IN_BAND') return <td className="og__num mono pcw__room is-in" title={`inside the band ${band$(b)}${kind} — the sell zone is here`}>in band<span className="pcw__room-band">{band$(b)}</span></td>;
   return (
     <td className={`og__num mono pcw__room ${room.state === 'NEAR' ? 'is-near' : 'is-room'}`}
         title={`${room.room_pct?.toFixed(1)}% from the live print to the bottom of ${band$(b)}${kind}`}>
-      +{room.room_pct?.toFixed(1)}% <span className="pcw__dim">→ {band$(b)}</span>
+      +{room.room_pct?.toFixed(1)}%<span className="pcw__dim pcw__room-band">→ {band$(b)}</span>
     </td>
   );
 }
@@ -266,8 +266,8 @@ export const COLUMNS: ColDef[] = [
   { key: 'session', label: 'Session', sort: (r) => r.live?.session ?? null, sortDefault: 'asc' },
   { key: 'last', label: 'Last', num: true, sort: (r) => r.live?.last ?? null },
   { key: 'tagged', label: 'Tagged by' },
-  { key: 'first', label: 'First tag', num: true, sort: (r) => ms(r.first_tagged_at) },
-  { key: 'lastTag', label: 'Last tag', num: true, sort: (r) => ms(r.last_tagged_at) },
+  { key: 'first', label: 'First tag', num: true, title: 'when the first roster post landed (ET) · days since', sort: (r) => ms(r.first_tagged_at) },
+  { key: 'lastTag', label: 'Last tag', num: true, title: 'the latest roster post (ET)', sort: (r) => ms(r.last_tagged_at) },
   { key: 'today', label: 'Today', num: true, sort: (r) => r.live?.day_pct ?? null },
   { key: 'since', label: 'Since tag', num: true, sort: (r) => r.live?.pct_since_tag_live ?? r.pct_since_tag },
   { key: 'peak', label: 'Peak', num: true, sort: (r) => r.max_gain_pct },
@@ -304,13 +304,45 @@ export function sortRows(rows: UnifiedRow[], sort: SortState, fallback: (rows: U
 }
 
 const SESSION_TAG_ALL: Record<string, string> = { premarket: 'PRE', rth: 'RTH', afterhours: 'AH', closed: '—' };
+/* Column-width budget: 17 columns must fit a wide screen without a horizontal
+ * scrollbar (which would kill the sticky headers). Times drop the " ET" suffix
+ * (the header says ET), the chip list shows two + "+N", Room wraps its band
+ * onto a second line, the tape is 100px. */
+export const tagStampShort = (iso: string | null | undefined) => tagStamp(iso).replace(/ ET$/, '');
+const MAX_CHIPS = 2;
+const pctCompact = (v: number | null | undefined) =>
+  v == null ? '—' : `${v >= 0 ? '+' : ''}${Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)}%`;
+
+/* Sticky headers need the page to be the scroller, so the table can never
+ * live in an overflow-x:auto wrapper by default. When it is wider than its
+ * box anyway (a narrow window), trade the sticky header for a horizontal
+ * scrollbar — hidden columns are worse than a scrolling header. */
+function useWideTable(ref: React.RefObject<HTMLDivElement | null>, deps: unknown[]): boolean {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const t = el.querySelector('table');
+      setWide(!!t && t.scrollWidth > el.clientWidth + 2);
+    };
+    measure();
+    const RO = typeof ResizeObserver === 'undefined' ? null : ResizeObserver;
+    const ro = RO ? new RO(() => measure()) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return wide;
+}
 const trunc = (t: string, n: number) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
 
 function RussellCell({ r }: { r?: RussellJoin | null }) {
   if (!r) return <td className="mono pcw__dim">—</td>;
   const e = r.add_event;
-  const board = r.board === 'add_r2000' ? 'R2000 add' : 'R1000 promo';
-  const title = `${board} candidate on the Russell watch (cap screen, board as of ${r.as_of ?? '?'})`
+  const board = r.board === 'add_r2000' ? 'R2K add' : 'R1K promo';
+  const title = `${r.board === 'add_r2000' ? 'Russell 2000 add' : 'Russell 1000 promotion'} candidate on the Russell watch (cap screen, board as of ${r.as_of ?? '?'})`
     + (e ? ` — ${e.label}: rank day ${mdy(e.rank_day)}, preliminary list ${mdy(e.prelim)}, in the index ${mdy(e.in_index)}${e.lists_published ? ' · FTSE\'s list is already out — check it' : ''}` : ' — no add date loaded')
     + (r.board === 'promote_r1000' ? ' · promotions are usually NET SELLING by trackers' : '');
   return (
@@ -328,7 +360,7 @@ function SalesCell({ s }: { s?: SalesRead | null }) {
   return (
     <td className={`og__num mono pcw__sales ${TIER_CLASS[s.tier] ?? ''}`}
         title={`Bonde sales read: ${s.tier}, latest quarter ${pct(s.growth_yoy_pct)} YoY${s.prior_yoy_pct != null ? `, prior ${pct(s.prior_yoy_pct)}` : ''}${s.accelerating ? ', accelerating' : ''} · score ${s.score ?? '—'} · ${s.source ?? ''}`}>
-      {pct(s.growth_yoy_pct)} <span className="pcw__dim">{s.tier}{s.accelerating ? ' ↑' : ''}</span>
+      {pctCompact(s.growth_yoy_pct)} <span className="pcw__dim">{s.tier}{s.accelerating ? '↑' : ''}</span>
     </td>
   );
 }
@@ -341,7 +373,7 @@ function CatalystCell({ c }: { c?: CatalystRead | null }) {
     <td className={`pcw__cat ${CAT_CLASS[c.verdict] ?? ''}`}
         title={`${c.verdict}: ${c.n_48h} headline(s) in 48h · ${c.n_bullish} bullish / ${c.n_bearish} bearish\n${line}`}>
       <span className="pcw__cat-verdict">{c.verdict}</span>
-      {top ? <> <a href={top.url ?? undefined} target="_blank" rel="noreferrer" className={`pcw__cat-top tone-${top.tone}`}>{trunc(top.title, 44)}</a></> : null}
+      {top ? <> <a href={top.url ?? undefined} target="_blank" rel="noreferrer" className={`pcw__cat-top tone-${top.tone}`}>{trunc(top.title, 30)}</a></> : null}
     </td>
   );
 }
@@ -387,13 +419,20 @@ function PromoRowView({ r, isOpen, toggle, thr, isLiveTable }: { r: UnifiedRow; 
         </td>
         <td className="mono pcw__dim">{lv ? (SESSION_TAG_ALL[lv.session] || lv.session) : '—'}</td>
         <td className="og__num mono">{lv?.last != null ? `$${lv.last.toFixed(2)}` : '—'}</td>
-        <td>{r.accounts.map((a) => ('tier' in a
-          ? <AccountChip key={a.handle} a={a} />
-          : <span key={a.handle} className="mono pcw__dim"><a href={accountUrl(a.handle)} target="_blank" rel="noreferrer" className="pcw__acct-link">@{a.handle}</a> </span>))}</td>
-        <td className="og__num mono" title={r.first_tagged_at ?? undefined}>
-          {tagStamp(r.first_tagged_at)}{r.days_since_first_tag != null ? <span className="pcw__dim"> · {r.days_since_first_tag.toFixed(0)}d</span> : null}
+        <td className="pcw__tagged">
+          {r.accounts.slice(0, MAX_CHIPS).map((a) => ('tier' in a
+            ? <AccountChip key={a.handle} a={a} />
+            : <span key={a.handle} className="mono pcw__dim"><a href={accountUrl(a.handle)} target="_blank" rel="noreferrer" className="pcw__acct-link">@{a.handle}</a> </span>))}
+          {r.accounts.length > MAX_CHIPS ? (
+            <span className="pcw__acct pcw__acct-more mono" title={r.accounts.slice(MAX_CHIPS).map((a) => `${'tier' in a ? a.tier + '·' : ''}@${a.handle}`).join('\n')}>
+              +{r.accounts.length - MAX_CHIPS}
+            </span>
+          ) : null}
         </td>
-        <td className="og__num mono pcw__dim" title={r.last_tagged_at ?? undefined}>{tagStamp(r.last_tagged_at)}</td>
+        <td className="og__num mono" title={`${tagStamp(r.first_tagged_at)}${r.days_since_first_tag != null ? ` · ${r.days_since_first_tag.toFixed(1)} days ago` : ''}`}>
+          {tagStampShort(r.first_tagged_at)}{r.days_since_first_tag != null ? <span className="pcw__dim"> · {r.days_since_first_tag.toFixed(0)}d</span> : null}
+        </td>
+        <td className="og__num mono pcw__dim" title={tagStamp(r.last_tagged_at)}>{tagStampShort(r.last_tagged_at)}</td>
         <td className={`og__num mono pcw__pct ${((lv?.day_pct ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
             title={lv ? `last $${lv.last?.toFixed(2)} vs prior close $${lv.prev_close?.toFixed(2)}${lv.ah_pct != null ? ` · after-hours ${pct(lv.ah_pct)} vs today's close` : ''}` : 'no live print yet'}>
           {lv ? pct(lv.day_pct) : '—'}{lv?.ah_pct != null ? <span className="pcw__dim"> ({pct(lv.ah_pct)} AH)</span> : null}{big ? ' 🎪' : ''}
@@ -404,7 +443,7 @@ function PromoRowView({ r, isOpen, toggle, thr, isLiveTable }: { r: UnifiedRow; 
         </td>
         <td className="og__num mono">{pct(r.max_gain_pct)}</td>
         <RoomCell room={lv?.room} />
-        <td className="ptt__mini-cell"><MiniTape ticker={r.ticker} onOpen={toggle} /></td>
+        <td className="ptt__mini-cell"><MiniTape ticker={r.ticker} onOpen={toggle} width={100} /></td>
         <RussellCell r={r.russell} />
         <SalesCell s={r.sales} />
         <CatalystCell c={r.catalyst} />
@@ -429,8 +468,11 @@ export function PromoTable({ title, hint, rows, defaultOrder, className, emptyTe
   const [open, setOpen] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>(null);
   const sorted = sortRows(rows, sort, defaultOrder);
+  const box = useRef<HTMLDivElement>(null);
+  const wide = useWideTable(box, [rows.length]);
   return (
-    <div className={`pcw__table${className ? ` ${className}` : ''}`}>
+    <div ref={box} className={`pcw__table${className ? ` ${className}` : ''}${wide ? ' is-wide' : ''}`}
+         title={wide ? 'Window too narrow for every column — scroll sideways (headers stop sticking while it scrolls)' : undefined}>
       <h3 className="day-section__h">{title}</h3>
       <p className="rw__hint">{hint}</p>
       {rows.length === 0 ? (
