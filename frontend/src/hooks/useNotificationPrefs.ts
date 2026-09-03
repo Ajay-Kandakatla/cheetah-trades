@@ -19,6 +19,7 @@ export type NotificationPrefs = {
   price_alert?: boolean;
   position_alert?: boolean;
   promo_alert?: boolean;
+  demand_alert?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

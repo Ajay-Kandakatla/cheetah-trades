@@ -155,6 +155,21 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'notifications page registers the demand_alert kind (2026-09-03)',
+    file: 'src/pages/Notifications.tsx',
+    // backend/push/subs.py defaults the kind on; a kind the page cannot show
+    // cannot be muted, and a muted-by-accident kind is a silent drop
+    // (memory: cheetah_push_silent_drops). Essentials must keep it on — it is
+    // an enter-zone alert, the preset's whole meaning.
+    checks: (src) => {
+      const errs = [];
+      if (!/key:\s*'demand_alert'/.test(src)) errs.push("CATEGORIES lacks the demand_alert kind — it cannot be muted from the page");
+      const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
+      if (!/demand_alert:\s*true/.test(ess)) errs.push('Essentials preset drops demand_alert');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -22,6 +22,7 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  { id: 'demand-zone-alerts', label: '🧲 Demand-zone alerts — your phone pages the day a $1B+ name from the demand board arrives inside or within 1% of a tested demand band (once per band per day; names already sitting in a band stay on the board, not your phone), plus one digest per 5-min check of names 1–3% above a band and falling. Gabbar-level names now also get a “nearing” push at 3% above a band while falling, not just the 1% touch. Mute either kind at Notifications', addedAt: '2026-09-03', route: '/notifications' },
   { id: 'portfolio-supply-watch', label: '\u{1F3AF} Sell side on the Portfolio page — every holding now shows its next supply / overhead band with the room left in % and $, ATR-days, and support below (table on top + a line on each card); alerts ⚠️ within 2% then 🎯 in the band, once per band per day, pre/after-market included', addedAt: '2026-09-02', route: '/portfolio' },
   { id: 'signals-tab-holdings', label: '\u{1F4CA} Chart Maps → Signals now includes your portfolio by default — every holding rides the signal board alongside your watchlist', addedAt: '2026-09-02', route: '/chart-maps?tab=signals' },
   { id: 'promo-cap-floor', label: '\u{1F4B0} Promo board hides names under $1B by default (toggle above the tables; unknown caps stay and say \u201ccap n/a\u201d) and shows each name\u2019s market cap under its symbol', addedAt: '2026-09-03', route: '/catalysts?tab=promo' },

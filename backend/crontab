@@ -182,6 +182,16 @@
 # 9:32-16:00 ET, so the wide window is harmless.
 6-56/10 9-16 *    *    1-5  /usr/local/bin/python -m catalysts.gabbar_watch
 #
+# Demand-zone approach alerts (supply_demand/demand_alerts.py) — every 5 min
+# in RTH (Ajay 2026-09-03: "other big companies billion or atleast bigger
+# than a billion coming close to Demand zones"). Reads the demand board OVER
+# HTTP (see the 2026-08-15 note above — the api's cache is process-local),
+# re-reads each qualified band against the live print, cap >= $1B, kind
+# demand_alert: AT (inside / <=1% above) = one push per (symbol, band, day);
+# NEAR (1-3% above, falling) = one digest per pass. Module refuses to run
+# outside 9:32-16:00 ET.
+3-58/5 9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.demand_alerts
+#
 # TTM-revenue warm for the Under Value tab — Sunday 10:30pm ET, after the
 # 9pm weekly research refresh, so Monday's board has revenue dollars for
 # every strong/explosive-sales candidate without board-time fetching.

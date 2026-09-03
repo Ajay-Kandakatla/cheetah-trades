@@ -30,6 +30,12 @@ Noise rules (the same discipline as every other push here)
 
 Thresholds
 ----------
+NEAR_PCT = 3.0 (added 2026-09-03, "I need a notifications when Gabbar levels
+are reaching Demand zone") — a second, EARLIER tier: price ABOVE a band,
+within 3% of its top and down on the day pushes "🎯 Nearing a Gabbar level"
+once per (ticker, band, day), separately from the touch below, so the
+heads-up at 10:00 never eats the arrival at 14:00. Above-only + falling on
+purpose: from below is a fade into supply, flat/up is departing.
 APPROACH_PCT = 1.0 — tighter than the boards' 3% NEAR_PCT on purpose: a
 board answers "what should I look at", a phone buzz answers "look NOW",
 and 3% of drift pages far too early.
@@ -45,6 +51,7 @@ log = logging.getLogger("catalysts.gabbar_watch")
 
 ET = ZoneInfo("America/New_York")
 APPROACH_PCT = 1.0
+NEAR_PCT = 3.0        # "nearing" tier: above the band, falling (Ajay 2026-09-03)
 
 
 def _now_et() -> datetime:
@@ -62,10 +69,22 @@ def in_session(now: Optional[datetime] = None) -> bool:
 # --------------------------------------------------------------------------
 # Pure reads — testable without prices, Mongo, or push
 # --------------------------------------------------------------------------
-def band_proximity(last: float, bands: list) -> list:
+def _falling(change_pct) -> bool:
+    try:
+        return change_pct is not None and float(change_pct) < 0
+    except (TypeError, ValueError):
+        return False
+
+
+def band_proximity(last: float, bands: list, change_pct=None) -> list:
     """Every band `last` is at: [{idx, label, lo, hi, state, dist_pct}] for
-    bands where state is "in" or within APPROACH_PCT of an edge. Empty list
-    when price is far from everything — which is almost always."""
+    bands where state is "in", "approaching" (within APPROACH_PCT of an edge,
+    either side) or "near" (ABOVE the band, within NEAR_PCT of its top AND
+    down on the day — Ajay 2026-09-03 "reaching Demand zone"; a flat or
+    rising name at 2% is departing, and from below it is a fade into supply,
+    so neither reads near). Empty list when price is far from everything —
+    which is almost always. `change_pct` None = the near tier cannot be
+    told and stays silent."""
     out = []
     if not last or last <= 0:
         return out
@@ -84,6 +103,9 @@ def band_proximity(last: float, bands: list) -> list:
         if dist <= APPROACH_PCT:
             out.append({"idx": i, "label": label, "lo": lo, "hi": hi,
                         "state": "approaching", "dist_pct": round(dist, 2)})
+        elif last > hi and dist <= NEAR_PCT and _falling(change_pct):
+            out.append({"idx": i, "label": label, "lo": lo, "hi": hi,
+                        "state": "near", "dist_pct": round(dist, 2)})
     return out
 
 
@@ -102,14 +124,22 @@ def should_alert(hit: dict, sales: Optional[dict]) -> tuple:
 # --------------------------------------------------------------------------
 # Wiring
 # --------------------------------------------------------------------------
-def _already_sent(db, ticker: str, band_idx: int, date_key: str) -> bool:
+def _tier_q(tier: str):
+    # Pre-2026-09-03 docs have no tier and were all "at" — they still block
+    # a second "at" push, never a "near" one.
+    return {"$in": ["at", None]} if tier == "at" else tier
+
+
+def _already_sent(db, ticker: str, band_idx: int, date_key: str, tier: str = "at") -> bool:
     return bool(db.gabbar_watch_state.find_one(
-        {"ticker": ticker, "band_idx": band_idx, "date_key": date_key}))
+        {"ticker": ticker, "band_idx": band_idx, "date_key": date_key,
+         "tier": _tier_q(tier)}))
 
 
-def _record_sent(db, ticker: str, band_idx: int, date_key: str, hit: dict) -> None:
+def _record_sent(db, ticker: str, band_idx: int, date_key: str, hit: dict,
+                 tier: str = "at") -> None:
     db.gabbar_watch_state.update_one(
-        {"ticker": ticker, "band_idx": band_idx, "date_key": date_key},
+        {"ticker": ticker, "band_idx": band_idx, "date_key": date_key, "tier": tier},
         {"$set": {"hit": hit, "sent_at": _now_et().isoformat()}}, upsert=True)
 
 
@@ -147,28 +177,33 @@ def check_once(*, push: bool = True, force: bool = False) -> dict:
         payload = GL.get_bands(sym)
         if not last or not payload:
             continue
-        for hit in band_proximity(float(last), payload.get("bands") or []):
+        chg = (live.get(sym) or {}).get("change_pct")
+        for hit in band_proximity(float(last), payload.get("bands") or [], chg):
             fire, note = should_alert(hit, (snaps.get(sym) or {}).get("sales"))
             rec = {**hit, "ticker": sym, "price": float(last)}
             hits.append(rec)
             if not fire:                       # unreachable since 08-27; kept
                 suppressed += 1                    # so a future rule has a seat
                 continue
-            if not push or _already_sent(db, sym, hit["idx"], date_key):
+            tier = "near" if hit["state"] == "near" else "at"
+            if not push or _already_sent(db, sym, hit["idx"], date_key, tier):
                 continue
-            body = (f"{sym} ${float(last):g} "
-                    + ("inside" if hit["state"] == "in"
-                       else f"{hit['dist_pct']:g}% from")
+            where = ("inside" if hit["state"] == "in"
+                     else f"{hit['dist_pct']:g}% above" if tier == "near"
+                     else f"{hit['dist_pct']:g}% from")
+            body = (f"{sym} ${float(last):g} {where}"
                     + f" Gabbar {hit['label']} (${hit['lo']:g}–{hit['hi']:g})"
+                    + (f" · down {abs(float(chg)):g}% today" if tier == "near" else "")
                     + note)
+            title = "🎯 Nearing a Gabbar level" if tier == "near" else "🎯 At a Gabbar level"
             try:
                 from push import sender as _push
                 _push.send_to_user(owner, {
-                    "title": "🎯 At a Gabbar level",
+                    "title": title,
                     "body": body,
                     "data": {"url": "/chart-maps?tab=gabbar"},
                 }, kind="pivot_alert")
-                _record_sent(db, sym, hit["idx"], date_key, rec)
+                _record_sent(db, sym, hit["idx"], date_key, rec, tier)
                 pushed += 1
             except Exception as exc:
                 log.warning("gabbar-watch: push for %s failed: %s", sym, exc)

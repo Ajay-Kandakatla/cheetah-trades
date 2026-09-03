@@ -324,6 +324,12 @@ def default_prefs() -> dict:
         # Ajay 2026-09-02: "just give me alerts from the topstock alerts
         # only.. I need the pre market alerts as well. After hours alerts."
         "promo_alert": True,
+        # Demand-zone approach (supply_demand/demand_alerts.py): a $1B+ name
+        # from the demand board is inside / within 1% of a tested demand band
+        # (one push per band per day) or 1-3% above and falling (one digest
+        # per 5-min pass). Ajay 2026-09-03: "big companies ... coming close
+        # to Demand zones."
+        "demand_alert": True,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

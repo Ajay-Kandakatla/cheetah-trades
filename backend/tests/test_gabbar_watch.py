@@ -103,3 +103,72 @@ def test_push_kind_is_pivot_alert_no_new_kinds():
     src = inspect.getsource(GW)
     assert 'kind="pivot_alert"' in src
     assert "gabbar_alert" not in src
+
+
+# ── the NEAR tier (2026-09-03: "Gabbar levels are reaching Demand zone") ────
+def test_near_tier_is_above_the_band_within_three_percent_and_falling():
+    near = GW.band_proximity(107.0, [_band(95, 105)], change_pct=-0.8)   # 1.87% above
+    assert near and near[0]["state"] == "near" and near[0]["dist_pct"] == 1.87
+    assert GW.band_proximity(107.0, [_band(95, 105)], change_pct=0.5) == [], "rising = departing"
+    assert GW.band_proximity(107.0, [_band(95, 105)], change_pct=0.0) == []
+    assert GW.band_proximity(107.0, [_band(95, 105)]) == [], "unknown day change stays silent"
+    assert GW.band_proximity(93.0, [_band(95, 105)], change_pct=-1.0) == [], "from below is a fade"
+    assert GW.band_proximity(108.5, [_band(95, 105)], change_pct=-1.0) == [], "3.2% is not near"
+
+
+def test_near_never_double_counts_the_one_percent_ring():
+    hits = GW.band_proximity(105.5, [_band(95, 105)], change_pct=-1.0)
+    assert [h["state"] for h in hits] == ["approaching"]
+
+
+class _FakeState:
+    """Enough of a Mongo collection for the tier-aware dedupe: equality and
+    {$in: [..., None]} (None matches a missing field, as in Mongo)."""
+    def __init__(self, docs=None):
+        self.docs = list(docs or [])
+
+    @staticmethod
+    def _match(doc, q):
+        for k, v in q.items():
+            if isinstance(v, dict) and "$in" in v:
+                if doc.get(k) not in v["$in"]:
+                    return False
+            elif doc.get(k) != v:
+                return False
+        return True
+
+    def find_one(self, q):
+        return next((d for d in self.docs if self._match(d, q)), None)
+
+    def update_one(self, q, u, upsert=False):
+        d = self.find_one(q)
+        if d is None:
+            d = dict(q)
+            self.docs.append(d)
+        d.update(u.get("$set", {}))
+
+
+class _FakeDB:
+    def __init__(self, docs=None):
+        self.gabbar_watch_state = _FakeState(docs)
+
+
+def test_near_and_at_dedupe_separately_and_legacy_docs_only_block_at():
+    db = _FakeDB()
+    GW._record_sent(db, "NTAP", 0, "2026-09-03", {"state": "near"}, "near")
+    assert GW._already_sent(db, "NTAP", 0, "2026-09-03", "near") is True
+    assert GW._already_sent(db, "NTAP", 0, "2026-09-03", "at") is False, \
+        "the 10:00 heads-up must not eat the 14:00 arrival"
+    GW._record_sent(db, "NTAP", 0, "2026-09-03", {"state": "in"})
+    assert GW._already_sent(db, "NTAP", 0, "2026-09-03") is True
+    legacy = _FakeDB([{"ticker": "INTU", "band_idx": 1, "date_key": "2026-09-03"}])
+    assert GW._already_sent(legacy, "INTU", 1, "2026-09-03", "at") is True
+    assert GW._already_sent(legacy, "INTU", 1, "2026-09-03", "near") is False
+
+
+def test_near_tier_source_guards():
+    import inspect
+    src = inspect.getsource(GW)
+    assert "NEAR_PCT = 3.0" in src
+    assert "Nearing a Gabbar level" in src
+    assert 'kind="pivot_alert"' in src, "still no new kind for the curated list"

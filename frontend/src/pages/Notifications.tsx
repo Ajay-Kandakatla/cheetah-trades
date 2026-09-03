@@ -36,6 +36,8 @@ const CATEGORIES: CategoryDef[] = [
     detail: 'Stop / target hit on the positions you hold — the up/down moves on your portfolio that need action.' },
   { key: 'promo_alert', label: 'Promo-circuit movers', emoji: '🎪', group: 'trading',
     detail: 'A name tagged by the caught pump accounts moves ±8% vs the prior close — pre-market, regular and after-hours. Once per direction per day. The tag is the promotion: a do-not-chase radar.' },
+  { key: 'demand_alert', label: 'Demand-zone approach', emoji: '🧲', group: 'trading',
+    detail: 'A $1B+ name from the demand board ARRIVES inside, or within 1% of, a tested demand band today (yesterday it closed outside) — one push per band per day — plus one digest per 5-min check of names newly 1–3% above a band and falling. Names that have been sitting in a band are the board\'s business, not a buzz. Gabbar-level names get the same "nearing" tier under Buyable alerts. Unknown market cap is skipped.' },
   { key: 'minervini_flashcards', label: 'Minervini learning', emoji: '🃏', group: 'trading',
     detail: 'Hourly bite-sized lessons (24h schedule): entry rules, risk, sell rules, psychology, review, fundamentals, market structure, trader history, edge math. ~80 cards, ~2-3 week rotation. Quiet-hours pref below mutes overnight delivery.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
@@ -360,7 +362,7 @@ const PRESETS: { id: string; label: string; emoji: string; detail: string; pref:
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
     detail: 'High-signal only: buyable / Enter-zone + portfolio stops.',
     pref: {
-      pivot_alert: true, position_alert: true, promo_alert: true,
+      pivot_alert: true, position_alert: true, promo_alert: true, demand_alert: true,
       minervini_flashcards: false, market_hours_reminder: false,
       todo_reminder: false, todo_daily_digest: true,
     },
