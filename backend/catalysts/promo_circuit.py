@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -586,8 +587,8 @@ _EIGHTK_WINDOW_DAYS = 14
 _SEC_WINDOW_DAYS = 30
 NEWS_CACHE_TTL_SEC = 30 * 60
 SALES_CACHE_TTL_SEC = 7 * 24 * 3600
-SALES_FETCH_CAP = 40             # new provider lookups per build
-SALES_FETCH_BUDGET_SEC = 25.0
+SALES_FETCH_CAP = 12             # new provider lookups per build (Massive only)
+SALES_FETCH_BUDGET_SEC = 15.0    # no new lookup STARTS after this; each is one 8 s-capped GET
 
 
 def sec_flags_from_filings(filings: list[dict], now: Optional[datetime] = None) -> dict:
@@ -743,8 +744,16 @@ def sales_for(tickers: list[str], fetch=None, snapshot=None, coll=None,
         return out
     if fetch is None:
         def fetch(sym):
-            from sepa.canslim import fundamentals_for
-            return (fundamentals_for(sym) or {}).get("sales")
+            # Massive financials ONLY — the hybrid canslim path adds two
+            # yfinance calls per name that stalled a build for minutes
+            # (measured 2026-09-03: a 16-min board). sales.compute is the
+            # same Bonde read the SEPA card uses.
+            from sepa import sales as sales_mod
+            from sepa.canslim import _fetch_massive_financials
+            m = _fetch_massive_financials(sym) or {}
+            if not m.get("rev_q_series"):
+                return None
+            return sales_mod.compute(m.get("rev_q_series"), m.get("q_eps_growth_pct"))
     t0 = time.time()
 
     def _one(sym):
@@ -825,24 +834,70 @@ def prune_shotgun_tags(tags: list[dict],
             or (t.get("n_messages") or 0) >= 2]
 
 
+_REFRESHING = {"on": False}
+_REFRESH_LOCK = threading.Lock()
+
+
+def _kick_refresh() -> bool:
+    """Start ONE background rebuild; False if one is already running."""
+    with _REFRESH_LOCK:
+        if _REFRESHING["on"]:
+            return False
+        _REFRESHING["on"] = True
+
+    def _run():
+        try:
+            _build_now()
+        except Exception as exc:                            # pragma: no cover
+            log.warning("promo board refresh failed: %s", exc)
+        finally:
+            with _REFRESH_LOCK:
+                _REFRESHING["on"] = False
+    threading.Thread(target=_run, daemon=True, name="promo-board").start()
+    return True
+
+
 def build(force: bool = False) -> dict:
     """The watchlist board: every ticker tagged by the roster in the last
-    TAG_WINDOW_DAYS, with who/when, price-since-tag, status, EDGAR tells."""
+    TAG_WINDOW_DAYS, with who/when, price-since-tag, status, the tells.
+
+    Stale-while-revalidate, single flight (2026-09-03): a rebuild is minutes
+    of EDGAR / news / price calls, and serving it synchronously hung the
+    Promo tab for 16 min after hours (three page loads = three concurrent
+    builds = hours). An EXPIRED cache is returned at once with `stale: true`
+    while ONE daemon thread rebuilds; `force` from the UI does the same
+    unless nothing is cached yet — only the very first build ever blocks.
+    The cron calls _build_now() directly and always does the work."""
     cache = _coll("promo_circuit_cache")
     now = datetime.now(timezone.utc)
-    if not force and cache is not None:
+    doc = None
+    if cache is not None:
         try:
             doc = cache.find_one({"_id": "latest"})
-            ts = _as_utc((doc or {}).get("cached_at"))
-            if doc and ts and (now - ts).total_seconds() < _CACHE_TTL_SEC:
-                payload = dict(doc["payload"])
-                payload["cached"] = True
-                payload["cache_age_sec"] = round((now - ts).total_seconds())
-                return payload
         except Exception as exc:
             log.warning("promo cache get failed: %s", exc)
+    ts = _as_utc((doc or {}).get("cached_at"))
+    if doc and ts:
+        age = (now - ts).total_seconds()
+        payload = dict(doc["payload"])
+        payload["cached"] = True
+        payload["cache_age_sec"] = round(age)
+        if age < _CACHE_TTL_SEC and not force:
+            return payload
+        kicked = _kick_refresh()
+        payload["stale"] = age >= _CACHE_TTL_SEC
+        payload["refreshing"] = True
+        payload["stale_note"] = ("rebuilding in the background — reload in a couple of minutes"
+                                 if kicked else "a rebuild is already running — reload in a couple of minutes")
+        return payload
+    return _build_now()
 
+
+def _build_now() -> dict:
+    cache = _coll("promo_circuit_cache")
+    now = datetime.now(timezone.utc)
     t0 = time.time()
+    stage: dict = {}
     coll = _tags_coll()
     cutoff = now - timedelta(days=TAG_WINDOW_DAYS)
     tags: list[dict] = []
@@ -871,8 +926,10 @@ def build(force: bool = False) -> dict:
 
     # Two FREE bulk reads, hoisted out of the per-row pool (sales: one Mongo
     # query + capped provider fill; russell: the cached board, raw).
+    t = time.time()
     sales_by = sales_for(tickers)
     russ_by = russell_for()
+    stage["sales_russell"] = round(time.time() - t, 1)
 
     def _row(tkr: str) -> dict:
         recs = sorted(by_ticker[tkr], key=lambda r: TIER_ORDER.get(_tier(r), 9))
@@ -906,8 +963,10 @@ def build(force: bool = False) -> dict:
             "catalyst": None, "eightk": None, "sec": None,
         }
 
+    t = time.time()
     with ThreadPoolExecutor(max_workers=8) as ex:
         rows = list(ex.map(_row, tickers))
+    stage["rows_prices"] = round(time.time() - t, 1)
 
     status_rank = {"SEEDING": 0, "RAN": 1, "DUMPED": 2, "QUIET": 3, "UNKNOWN": 4}
     rows.sort(key=lambda r: (status_rank.get(r["status"], 9),
@@ -918,10 +977,12 @@ def build(force: bool = False) -> dict:
     # build spent 104s mostly on EDGAR for QUIET noise (measured 2026-09-01).
     edgar_rows = [r for r in rows[:EDGAR_ROW_CAP]
                   if r["status"] in ("SEEDING", "RAN", "DUMPED")]
+    t = time.time()
     with ThreadPoolExecutor(max_workers=6) as ex:
         for r, got in zip(edgar_rows, ex.map(_enrich, edgar_rows)):
             r["edgar"] = got["edgar"]
             r["eightk"], r["sec"], r["catalyst"] = got["eightk"], got["sec"], got["catalyst"]
+    stage["edgar_news"] = round(time.time() - t, 1)
 
     meta_coll = _coll("promo_circuit_meta")
     sweep_meta = None
@@ -954,9 +1015,13 @@ def build(force: bool = False) -> dict:
             "Roster is user-editable in backend/catalysts/promo_circuit.py."
         ),
         "elapsed_sec": round(time.time() - t0, 1),
+        "stage_sec": stage,
         "cached": False,
         "cache_age_sec": 0,
     }
+    if time.time() - t0 > 120:
+        log.warning("promo board build took %.0fs (stages %s) — over the 10-min cron cadence budget",
+                    time.time() - t0, stage)
     if cache is not None:
         try:
             cache.update_one({"_id": "latest"},
@@ -1018,7 +1083,7 @@ if __name__ == "__main__":
     print(json.dumps(sweep(), indent=2))
     # Pre-warm the board cache so the page never pays the ~70s first build
     # (bars + EDGAR for ~150 tickers) interactively.
-    b = build(force=True)
+    b = _build_now()          # the cron always does the work; build() would only kick a daemon thread and exit
     print(json.dumps({"board_rows": b.get("n_tickers"),
                       "board_build_sec": b.get("elapsed_sec")}, indent=2))
 

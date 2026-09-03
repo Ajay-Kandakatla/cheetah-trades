@@ -533,3 +533,57 @@ def test_build_row_carries_the_five_tells_and_one_edgar_fetch_feeds_three(monkey
     assert calls == [("TINY", 30)]                              # ONE fetch
     assert b["edgar"]["owner_stake"]["form"] == "SC 13G" and b["eightk"]["items"] == ["8.01"]
     assert b["sec"]["forms"] == ["SC 13G"]
+
+
+# ── stale-while-revalidate, single flight (2026-09-03: the 16-min board hang) ─
+def _cache_doc(age_sec, payload=None):
+    from datetime import datetime as _d, timedelta as _td, timezone as _z
+    return {"_id": "latest", "cached_at": _d.now(_z.utc) - _td(seconds=age_sec),
+            "payload": payload or {"rows": [], "as_of": "x"}}
+
+
+class _CacheColl:
+    def __init__(self, doc): self.doc = doc
+    def find_one(self, q): return self.doc
+    def update_one(self, *a, **k): pass
+
+
+def test_build_serves_fresh_cache_and_never_blocks_on_a_stale_one(monkeypatch):
+    started = []
+    monkeypatch.setattr(pc, "_coll", lambda name: _CacheColl(_cache_doc(30)))
+    monkeypatch.setattr(pc, "_build_now", lambda: started.append("sync") or {"rows": []})
+    class T:
+        def __init__(self, target=None, **kw): self.target = target
+        def start(self): started.append("thread")
+    monkeypatch.setattr(pc.threading, "Thread", T)
+    pc._REFRESHING["on"] = False
+    out = pc.build()
+    assert out["cached"] is True and "stale" not in out and started == []
+    # expired: stale copy back at once, ONE background rebuild kicked
+    monkeypatch.setattr(pc, "_coll", lambda name: _CacheColl(_cache_doc(pc._CACHE_TTL_SEC + 5)))
+    out = pc.build()
+    assert out["stale"] is True and out["refreshing"] is True and started == ["thread"]
+    assert pc._REFRESHING["on"] is True                      # the fake thread never ran → still flagged
+    out2 = pc.build()                                        # a second caller does not start another
+    assert started == ["thread"] and "already running" in out2["stale_note"]
+    # force from the UI with a cache present → same non-blocking path
+    out3 = pc.build(force=True)
+    assert out3["refreshing"] is True and started == ["thread"]
+    pc._REFRESHING["on"] = False
+    # nothing cached at all → the only case that builds inline
+    monkeypatch.setattr(pc, "_coll", lambda name: _CacheColl(None))
+    assert pc.build() == {"rows": []} and started == ["thread", "sync"]
+
+
+def test_cron_entry_builds_inline_not_via_the_daemon_thread():
+    import inspect
+    src = inspect.getsource(pc)
+    main = src[src.index('if __name__ == "__main__"'):]
+    assert "_build_now()" in main and "build(force=True)" not in main
+
+
+def test_sales_fill_is_massive_only_and_capped():
+    import inspect
+    src = inspect.getsource(pc.sales_for)
+    assert "_fetch_massive_financials" in src and "fundamentals_for" not in src
+    assert pc.SALES_FETCH_CAP <= 12 and pc.SALES_FETCH_BUDGET_SEC <= 15
