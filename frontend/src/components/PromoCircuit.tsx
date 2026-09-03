@@ -32,6 +32,8 @@ export type EightK = { form: string; filing_date: string; url?: string | null; i
 export type SecRollup = { n_30d: number; forms: string[]; latest: { form: string; filing_date: string; url?: string | null }; n_form4: number; has_offering: boolean };
 type Tells = { russell?: RussellJoin | null; sales?: SalesRead | null; catalyst?: CatalystRead | null; eightk?: EightK | null; sec?: SecRollup | null };
 type Row = Tells & {
+  /** shares × last close from the weekly shares cache; null = unknown (kept visible, says 'cap n/a'). */
+  market_cap?: number | null;
   ticker: string; accounts: TaggedBy[]; best_tier: 'S' | 'A' | 'B';
   first_tagged_at: string; last_tagged_at?: string | null; days_since_first_tag: number;
   pct_since_tag: number | null; max_gain_pct: number | null;
@@ -140,7 +142,22 @@ export const symbolUrl = (t: string) => `https://stocktwits.com/symbol/${encodeU
 /* Symbol + where to go next: the StockTwits stream and our SEPA page landing
  * on the Supply / Demand tab (Ajay 2026-09-02: "I wanna land on the sepa page
  * with supply tab open"). */
-function SymCell({ ticker }: { ticker: string }) {
+/* Valuation floor (Ajay 2026-09-03: "filter out any company that its
+ * valuation is less than a billion"). Unknown caps stay visible and say so —
+ * hiding what we cannot size would hide real names, not just shells. */
+export const MIN_CAP_USD = 1e9;
+export const passesCapFloor = (cap: number | null | undefined, on: boolean) => !on || cap == null || cap >= MIN_CAP_USD;
+export const fmtCapShort = (v: number | null | undefined) =>
+  v == null ? 'cap n/a' : v >= 1e12 ? `$${(v / 1e12).toFixed(1)}T` : v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`;
+const CAP_FLOOR_KEY = 'pcw.capFloor';
+export function readCapFloorPref(): boolean {
+  try { return localStorage.getItem(CAP_FLOOR_KEY) !== 'off'; } catch { return true; }
+}
+export function writeCapFloorPref(on: boolean): void {
+  try { localStorage.setItem(CAP_FLOOR_KEY, on ? 'on' : 'off'); } catch { /* private mode */ }
+}
+
+function SymCell({ ticker, cap }: { ticker: string; cap?: number | null }) {
   return (
     <>
       <TickerLink ticker={ticker} tab="supply" fromLabel="Promo circuit" />
@@ -148,6 +165,8 @@ function SymCell({ ticker }: { ticker: string }) {
         <a href={symbolUrl(ticker)} target="_blank" rel="noreferrer" title={`$${ticker} on StockTwits`}>ST↗</a>
         <Link to={`/sepa/${encodeURIComponent(ticker)}?tab=supply`} title={`${ticker} on our SEPA page, Supply / Demand tab`}>SEPA</Link>
       </span>
+      <span className={`pcw__cap mono pcw__dim${cap != null && cap < MIN_CAP_USD ? ' is-small' : ''}`}
+            title={cap == null ? 'market cap unknown — no shares data yet' : `market cap ≈ ${fmtCapShort(cap)} (shares × last close)`}>{fmtCapShort(cap)}</span>
     </>
   );
 }
@@ -185,6 +204,7 @@ export type LiveRow = {
   room?: RoomRead | null;
   max_gain_pct?: number | null;
   edgar?: Row['edgar'] | null;
+  market_cap?: number | null;
 } & Tells;
 export type LivePayload = {
   rows: LiveRow[]; n: number; alert_threshold_pct: number; alert_handles?: string[];
@@ -229,6 +249,7 @@ export function usePromoLive() {
  * the reverse, third = back to the table's default. Empty cells always sort
  * last. */
 export type UnifiedRow = Tells & {
+  market_cap?: number | null;
   ticker: string; status: Row['status']; best_tier: Row['best_tier'];
   accounts: (TaggedBy | { handle: string })[];
   first_tagged_at: string | null; last_tagged_at: string | null; days_since_first_tag: number | null;
@@ -237,13 +258,13 @@ export type UnifiedRow = Tells & {
 };
 const tells = (x: Tells): Tells => ({ russell: x.russell ?? null, sales: x.sales ?? null, catalyst: x.catalyst ?? null, eightk: x.eightk ?? null, sec: x.sec ?? null });
 export function unifyBoard(r: Row, lv?: LiveRow | null): UnifiedRow {
-  return { ...tells(r), ticker: r.ticker, status: r.status, best_tier: r.best_tier, accounts: r.accounts,
+  return { ...tells(r), market_cap: r.market_cap ?? null, ticker: r.ticker, status: r.status, best_tier: r.best_tier, accounts: r.accounts,
     first_tagged_at: r.first_tagged_at, last_tagged_at: r.last_tagged_at ?? null, days_since_first_tag: r.days_since_first_tag,
     pct_since_tag: r.pct_since_tag, max_gain_pct: r.max_gain_pct, edgar: r.edgar, live: lv ?? null };
 }
 export function unifyLive(lv: LiveRow, b?: Row | null): UnifiedRow {
   if (b) return unifyBoard(b, lv);
-  return { ...tells(lv), ticker: lv.ticker, status: lv.status as Row['status'], best_tier: lv.best_tier,
+  return { ...tells(lv), market_cap: lv.market_cap ?? null, ticker: lv.ticker, status: lv.status as Row['status'], best_tier: lv.best_tier,
     accounts: lv.accounts.map((handle) => ({ handle })),           // tiers unknown without the board row
     first_tagged_at: lv.first_tagged_at ?? null, last_tagged_at: lv.last_tagged_at ?? null, days_since_first_tag: null,
     pct_since_tag: lv.pct_since_tag, max_gain_pct: lv.max_gain_pct ?? null, edgar: lv.edgar ?? null, live: lv };
@@ -419,7 +440,7 @@ function PromoRowView({ r, isOpen, toggle, thr, isLiveTable }: { r: UnifiedRow; 
     <Fragment>
       <tr className={big && isLiveTable ? 'pcw__live-big' : undefined}>
         <td className="og__sym">
-          <SymCell ticker={r.ticker} />
+          <SymCell ticker={r.ticker} cap={r.market_cap} />
           <button type="button" className={`ptt__toggle${isOpen ? ' is-on' : ''}`}
                   aria-label={`${isOpen ? 'Hide' : 'Show'} tape for ${r.ticker}`}
                   title="Price path around the tag — before or after the move?" onClick={toggle}>📈</button>
@@ -526,14 +547,14 @@ const byLatestTag = (rows: UnifiedRow[]) => sortRecent(rows);
 const byTodaysMove = (rows: UnifiedRow[]) =>
   [...rows].sort((a, b) => ((b.live?.day_pct == null ? -Infinity : b.live.day_pct) - (a.live?.day_pct == null ? -Infinity : a.live.day_pct)));
 
-export function PromoLive({ data, err, board }: { data: LivePayload | null; err: string | null; board?: Row[] }) {
+export function PromoLive({ data, err, board, rowFilter }: { data: LivePayload | null; err: string | null; board?: Row[]; rowFilter?: (lv: LiveRow) => boolean }) {
   if (err && !data) return <div className="cm-note cm-note-warn">Live board unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Pricing the circuit's names…</div>;
   const thr = data.alert_threshold_pct;
   const who = (data.alert_handles && data.alert_handles.length)
     ? data.alert_handles.map((h) => '@' + h).join(', ') : 'any roster account';
   const boardBy = Object.fromEntries((board ?? []).map((r) => [r.ticker, r]));
-  const rows = data.rows.map((lv) => unifyLive(lv, boardBy[lv.ticker]));
+  const rows = data.rows.filter((lv) => !rowFilter || rowFilter(lv)).map((lv) => unifyLive(lv, boardBy[lv.ticker]));
   return (
     <PromoTable
       className="pcw__live"
@@ -573,6 +594,8 @@ export function PromoCircuit() {
    * blank an already-rendered board (review finding 2026-09-01). */
   const [sweepErr, setSweepErr] = useState<string | null>(null);
   const [sweeping, setSweeping] = useState(false);
+  const [capFloor, setCapFloorState] = useState<boolean>(readCapFloorPref);
+  const setCapFloor = (on: boolean) => { setCapFloorState(on); writeCapFloorPref(on); };
   const seq = useRef(0);
 
   const load = useCallback((force: boolean) => {
@@ -599,9 +622,12 @@ export function PromoCircuit() {
   if (err) return <div className="cm-note cm-note-warn">Promo circuit unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Reading the circuit’s recent tags…</div>;
 
-  const seeding = data.rows.filter((r) => r.status === 'SEEDING');
-  const played = data.rows.filter((r) => r.status === 'RAN' || r.status === 'DUMPED');
-  const rest = data.rows.filter((r) => !['SEEDING', 'RAN', 'DUMPED'].includes(r.status));
+  const visibleRows = data.rows.filter((r) => passesCapFloor(r.market_cap, capFloor));
+  const hiddenSmall = data.rows.length - visibleRows.length;
+  const unknownCap = data.rows.filter((r) => r.market_cap == null).length;
+  const seeding = visibleRows.filter((r) => r.status === 'SEEDING');
+  const played = visibleRows.filter((r) => r.status === 'RAN' || r.status === 'DUMPED');
+  const rest = visibleRows.filter((r) => !['SEEDING', 'RAN', 'DUMPED'].includes(r.status));
 
   return (
     <section className="day-section pcw">
@@ -613,6 +639,11 @@ export function PromoCircuit() {
             is the <b>promotion itself</b>, never foresight. This is a <b>do-not-chase</b> radar,
             not a buy list.
           </p>
+          <label className="pcw__capfilter mono">
+            <input type="checkbox" checked={capFloor} onChange={(e) => setCapFloor(e.target.checked)} />
+            Hide names under $1B
+            <span className="pcw__dim"> · {capFloor ? `${hiddenSmall} hidden` : 'showing all'}{unknownCap ? ` · ${unknownCap} cap unknown, kept` : ''}</span>
+          </label>
         </div>
         <div className="pcw__sweepbox">
           <button type="button" className="lifeboard-btn" onClick={sweepNow} disabled={sweeping}>
@@ -622,7 +653,7 @@ export function PromoCircuit() {
         </div>
       </header>
 
-      <PromoLive data={live.data} err={live.err} board={data.rows} />
+      <PromoLive data={live.data} err={live.err} board={visibleRows} rowFilter={(lv) => passesCapFloor(lv.market_cap, capFloor)} />
 
       <PromoTable
         label="🌱 seeding"

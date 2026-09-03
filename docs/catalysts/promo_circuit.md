@@ -284,3 +284,20 @@ Tests: `test_promo_circuit.py` (8-K window/items/roll-up, catalyst verdicts,
 sales ladder with cap + cache, Russell raw join, one-fetch bundle),
 `PromoCircuit.test.tsx` (17 shared headers, the five cells + dashes, click
 sort tri-state with empties last, pure sort helpers, live-only rows).
+
+
+## 2026-09-03 — valuation floor
+
+Ajay: *"Filter out any company that its valuation is less than a billion."*
+`promo_circuit.market_caps_for()` sizes every board name from the weekly
+shares cache (`sepa.volume_movers`): shares_outstanding × the row's last
+close, the provider's own market_cap when shares are missing, then ≤60
+`shares_for` lookups per build inside 20 s for names the cache never saw.
+`market_cap` rides on the board row and the live row. The FE hides
+`market_cap < $1B` by default (`passesCapFloor`, checkbox above the tables,
+remembered in `localStorage pcw.capFloor`), keeps unknown caps visible with
+"cap n/a" (hiding what we cannot size would hide real names), and prints
+the cap under each symbol (red when it is under the floor and the toggle is
+off). Tests: `test_market_caps_for_cache_then_capped_fetch`,
+`test_build_rows_carry_market_cap_for_the_floor`, the FE "valuation floor"
+describe.

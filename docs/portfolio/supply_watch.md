@@ -87,3 +87,13 @@ have left on each. Also alerts if we are really close to supply or overhead."*
   ⚠️ `NEAR` (≤2% under the band — "set the sell order at $lo", with the $ room
   left) and 🎯 `IN_SUPPLY` (band reached). The 2% warning no longer swallows
   the in-band alert (`_alert_key` carries the stage).
+
+
+## 2026-09-03 — SELL SIGNAL wording
+
+Ajay: *"Sell signals if in supply."* Reaching the band IS the sell signal, so
+the IN_SUPPLY push title now leads with `🔴 SELL SIGNAL ·` (NEAR keeps `⚠️`)
+and the Portfolio chip reads `🔴 SELL SIGNAL · in supply — sell zone
+reached`. Nothing else changed: same two-stage, once-per-band-per-day
+alerts, same supply/demand read — this is not a SEPA sell signal and stays
+out of `position_lens` (SEPA book = SEPA concepts only).

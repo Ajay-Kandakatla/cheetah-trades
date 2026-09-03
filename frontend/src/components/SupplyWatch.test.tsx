@@ -32,7 +32,7 @@ describe('SupplyWatch', () => {
     }));
     mount();
     await waitFor(() => expect(screen.getByText('VST')).toBeInTheDocument());
-    expect(screen.getByText('🎯 IN SUPPLY')).toBeInTheDocument();
+    expect(screen.getByText('🔴 SELL SIGNAL')).toBeInTheDocument();
     expect(screen.getByText('⚠ NEAR')).toBeInTheDocument();
     expect(screen.getByText('∅ clear')).toBeInTheDocument();
     expect(screen.getByText(/\$146\.10–\$149\.00/)).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe('SupplyChip (per-card sell-side read)', () => {
 
   it('labels broken support as overhead, and CLEAR / error / missing rows degrade cleanly', () => {
     render(<SupplyChip row={row({ band: { lo: 146.1, hi: 149.0, kind: 'broken_support' }, state: 'IN_SUPPLY', distance_pct: 0, room_usd: 0 })} />);
-    expect(screen.getByTitle(/set the sell order/).textContent).toContain('overhead $146.10–$149.00 · sell zone reached');
+    expect(screen.getByTitle(/set the sell order/).textContent).toContain('overhead $146.10–$149.00 · in supply — sell zone reached');
     render(<SupplyChip row={row({ state: 'CLEAR', band: null })} />);
     expect(screen.getByText(/no overhead in the 1y frame/)).toBeInTheDocument();
     render(<SupplyChip row={row({ zones_error: 'boom' })} />);

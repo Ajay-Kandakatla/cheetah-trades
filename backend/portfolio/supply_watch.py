@@ -413,7 +413,9 @@ def check_alerts(user_email: Optional[str] = None) -> dict:
         nxt = r.get("next_band")
         room = (f" · ${r['room_usd']:,.0f} of room left" if r.get("room_usd") else "")
         msg = {
-            "title": f"{'🎯' if stage == 'IN_SUPPLY' else '⚠️'} {tag + ' · ' if tag else ''}"
+            # Ajay 2026-09-03: "Sell signals if in supply" — the band being
+            # reached IS the sell signal; say so in the first word.
+            "title": f"{'🔴 SELL SIGNAL · ' if stage == 'IN_SUPPLY' else '⚠️ '}{tag + ' · ' if tag else ''}"
                      f"{r['symbol']} {where} ${b['lo']:.2f}–${b['hi']:.2f}{pl}",
             "body": ((f"Live ${r['last']:.2f} · sell zone reached — trim or sell into it"
                       if stage == "IN_SUPPLY" else

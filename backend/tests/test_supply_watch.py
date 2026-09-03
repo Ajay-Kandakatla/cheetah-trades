@@ -256,7 +256,7 @@ def test_check_alerts_dedupes_on_delivery_or_no_targets_and_carries_deeplink(mon
     assert out["pushed"] == 0 and len(sent_payloads) == 1 and len(coll.docs) == 1
     kind, msg = sent_payloads[0]
     assert kind == "position_alert" and msg["url"] == "/portfolio" and msg["kind"] == "position_alert"
-    assert msg["ticker"] == "VST" and msg["title"].startswith("🎯 AH · VST in SUPPLY")
+    assert msg["ticker"] == "VST" and msg["title"].startswith("🔴 SELL SIGNAL · AH · VST in SUPPLY")
     assert "1y frame" in msg["body"]
     out = sw.check_alerts("o@x.com")
     assert len(sent_payloads) == 1                                  # deduped
@@ -294,4 +294,4 @@ def test_near_warning_then_in_band_alert_fire_separately(monkeypatch):
     assert "$15 of room left" in sent[0]["body"] and "set the sell order at $110.00" in sent[0]["body"]
     rows[0] = dict(near, state="IN_SUPPLY", distance_pct=0.0, last=111.0, room_usd=0.0)
     sw.check_alerts("o@x.com"); sw.check_alerts("o@x.com")
-    assert len(sent) == 2 and sent[1]["title"].startswith("🎯 VST in OVERHEAD (old support)")
+    assert len(sent) == 2 and sent[1]["title"].startswith("🔴 SELL SIGNAL · VST in OVERHEAD (old support)")

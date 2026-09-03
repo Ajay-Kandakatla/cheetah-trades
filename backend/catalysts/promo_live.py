@@ -322,6 +322,7 @@ def live_rows(force: bool = False) -> dict:
             "russell": r.get("russell"), "sales": r.get("sales"), "catalyst": r.get("catalyst"),
             "eightk": r.get("eightk"), "sec": r.get("sec"),
             "max_gain_pct": r.get("max_gain_pct"),
+            "market_cap": r.get("market_cap"),
             # Room to run: first overhead band + % to it (daily-bar zones)
             "room": _room_for(zones.get(r["ticker"]), float(last) if last else None),
         })

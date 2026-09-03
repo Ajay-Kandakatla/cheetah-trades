@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { COLUMNS, COL_WIDTHS, PromoCircuit, nextSort, sortRows, tagStamp } from './PromoCircuit';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLUMNS, COL_WIDTHS, PromoCircuit, fmtCapShort, nextSort, passesCapFloor, sortRows, tagStamp } from './PromoCircuit';
 import { _resetLiteCache } from './PromoTagTape';
 
 /* Promo-circuit watch — born 2026-09-01 from the chatter-provenance study.
@@ -480,5 +480,57 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     expect(live.querySelector('a.pcw__acct-link[href$="/topstockalerts"]')).not.toBeNull();
     expect(live.querySelector('.pcw__acct')).toBeNull();
     expect(live.querySelector('tbody tr')!.textContent).toContain('PRE');
+  });
+});
+
+describe('valuation floor (Ajay 2026-09-03: "filter out any company that its valuation is less than a billion")', () => {
+  /* the shared test setup replaces localStorage with a partial stub — give this
+   * describe a real in-memory Storage so the remembered toggle can be tested */
+  const mem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); }, clear: () => m.clear(), key: () => null, get length() { return m.size; } }; };
+  beforeEach(() => { vi.stubGlobal('localStorage', mem()); });
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); _resetLiteCache(); });
+  const boardSyms = () => Array.from(document.querySelectorAll('.pcw__table:not(.pcw__live) td.og__sym'))
+    .map((td) => td.querySelector('a[href*="stocktwits.com/symbol/"]')!.getAttribute('href')!.split('/').pop());
+
+  it('pure: sub-$1B hidden while on, unknown caps kept, everything shown when off', () => {
+    expect(passesCapFloor(6e8, true)).toBe(false);
+    expect(passesCapFloor(1e9, true)).toBe(true);
+    expect(passesCapFloor(null, true)).toBe(true);
+    expect(passesCapFloor(6e8, false)).toBe(true);
+    expect(fmtCapShort(5.2e9)).toBe('$5.2B'); expect(fmtCapShort(6.4e8)).toBe('$640M'); expect(fmtCapShort(1.3e12)).toBe('$1.3T'); expect(fmtCapShort(null)).toBe('cap n/a');
+  });
+
+  it('hides sub-$1B names by default in board AND live tables, keeps unknown caps, counts what it hid', async () => {
+    const rows = [row({ ticker: 'BIGG', market_cap: 5.2e9 }), row({ ticker: 'TINY', market_cap: 6.4e8 }), row({ ticker: 'UNKN', market_cap: null })];
+    mock(payload(rows), true, livePayload([liveRow({ ticker: 'BIGG', market_cap: 5.2e9 }), liveRow({ ticker: 'TINY', market_cap: 6.4e8 })]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(2));
+    expect(boardSyms().sort()).toEqual(['BIGG', 'UNKN']);
+    const live = document.querySelector('.pcw__table.pcw__live')!;
+    expect(live.textContent).toContain('BIGG');
+    expect(live.textContent).not.toContain('TINY');
+    expect(document.querySelector('.pcw__capfilter')!.textContent).toContain('1 hidden');
+    expect(document.querySelector('.pcw__capfilter')!.textContent).toContain('1 cap unknown, kept');
+    expect(document.body.textContent).toContain('$5.2B');
+    expect(document.body.textContent).toContain('cap n/a');
+  });
+
+  it('unticking the box shows everything, marks the small cap red, and remembers the choice', async () => {
+    const rows = [row({ ticker: 'BIGG', market_cap: 5.2e9 }), row({ ticker: 'TINY', market_cap: 6.4e8 })];
+    mock(payload(rows), true, livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(1));
+    fireEvent.click(document.querySelector('.pcw__capfilter input')!);
+    await waitFor(() => expect(boardSyms().length).toBe(2));
+    expect(document.querySelector('.pcw__cap.is-small')!.textContent).toBe('$640M');
+    expect(document.querySelector('.pcw__capfilter')!.textContent).toContain('showing all');
+    expect(localStorage.getItem('pcw.capFloor')).toBe('off');
+  });
+
+  it('honours a remembered "off" on load', async () => {
+    localStorage.setItem('pcw.capFloor', 'off');
+    mock(payload([row({ ticker: 'TINY', market_cap: 6.4e8 })]), true, livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms()).toEqual(['TINY']));
   });
 });

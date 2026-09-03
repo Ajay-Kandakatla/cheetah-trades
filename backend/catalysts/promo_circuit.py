@@ -800,6 +800,67 @@ def russell_for(coll=None) -> dict:
     return out
 
 
+CAP_FETCH_CAP = 60               # new shares lookups per build
+CAP_FETCH_BUDGET_SEC = 20.0
+
+
+def market_caps_for(tickers: list[str], last_prices: dict, fetch=None, coll=None,
+                    cap: int = CAP_FETCH_CAP, budget_sec: float = CAP_FETCH_BUDGET_SEC) -> dict:
+    """Market cap per ticker for the board's valuation floor (Ajay 2026-09-03:
+    "filter out any company that its valuation is less than a billion").
+    shares_outstanding × the row's last close from the weekly shares cache
+    (sepa.volume_movers), the provider's own market_cap when shares are
+    missing, then at most `cap` provider lookups inside `budget_sec` for
+    names the cache never saw. None = unknown — the board keeps those
+    visible and says 'cap n/a' rather than guessing."""
+    out: dict = {}
+    if coll is None:
+        try:
+            from sepa import volume_movers as vm
+            coll = vm._shares_coll()
+        except Exception:
+            coll = None
+
+    def _cap(doc: Optional[dict], sym: str) -> Optional[float]:
+        if not doc:
+            return None
+        so, px = doc.get("shares_outstanding"), last_prices.get(sym)
+        if so and px:
+            return float(so) * float(px)
+        mc = doc.get("market_cap")
+        return float(mc) if mc else None
+
+    if coll is not None and tickers:
+        try:
+            for d in coll.find({"_id": {"$in": list(tickers)}}):
+                out[d["_id"]] = _cap(d, d["_id"])
+        except Exception as exc:
+            log.warning("promo board: shares cache read failed: %s", exc)
+    missing = [t for t in tickers if t not in out][:cap]
+    if not missing:
+        return out
+    if fetch is None:
+        def fetch(sym):
+            from sepa.volume_movers import shares_for
+            return shares_for(sym)
+    t0 = time.time()
+
+    def _one(sym):
+        if time.time() - t0 > budget_sec:
+            return sym, "skip", None
+        try:
+            return sym, "ok", fetch(sym)
+        except Exception as exc:
+            log.debug("shares fetch failed for %s: %s", sym, exc)
+            return sym, "err", None
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for sym, state, doc in ex.map(_one, missing):
+            if state == "skip":
+                continue
+            out[sym] = _cap(doc, sym) if state == "ok" else None
+    return out
+
+
 def _enrich(row: dict) -> dict:
     """The capped network pass for one actionable row: one EDGAR fetch (edgar
     + eightk + sec) and one cached news read (catalyst)."""
@@ -966,6 +1027,11 @@ def _build_now() -> dict:
     t = time.time()
     with ThreadPoolExecutor(max_workers=8) as ex:
         rows = list(ex.map(_row, tickers))
+
+    # Valuation for the board's $1B floor — shares cache × last close.
+    caps = market_caps_for(tickers, {r["ticker"]: r.get("last_close") for r in rows})
+    for r in rows:
+        r["market_cap"] = caps.get(r["ticker"])
     stage["rows_prices"] = round(time.time() - t, 1)
 
     status_rank = {"SEEDING": 0, "RAN": 1, "DUMPED": 2, "QUIET": 3, "UNKNOWN": 4}

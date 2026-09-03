@@ -587,3 +587,29 @@ def test_sales_fill_is_massive_only_and_capped():
     src = inspect.getsource(pc.sales_for)
     assert "_fetch_massive_financials" in src and "fundamentals_for" not in src
     assert pc.SALES_FETCH_CAP <= 12 and pc.SALES_FETCH_BUDGET_SEC <= 15
+
+
+# ── valuation floor (Ajay 2026-09-03: "filter out … less than a billion") ────
+def test_market_caps_for_cache_then_capped_fetch():
+    coll = _Coll()
+    coll.docs["BIG"] = {"_id": "BIG", "shares_outstanding": 1_000_000_000, "market_cap": 9e9}
+    coll.docs["MCAP"] = {"_id": "MCAP", "shares_outstanding": None, "market_cap": 2.5e9}
+    coll.docs["EMPTY"] = {"_id": "EMPTY", "shares_outstanding": None, "market_cap": None}
+    fetched = []
+    def fetch(sym):
+        fetched.append(sym)
+        return {"shares_outstanding": 50_000_000} if sym == "NEW" else None
+    caps = pc.market_caps_for(["BIG", "MCAP", "EMPTY", "NEW", "GONE", "OVER"],
+                              {"BIG": 5.0, "NEW": 4.0}, fetch=fetch, coll=coll, cap=2)
+    assert caps["BIG"] == 5e9                        # shares × last close beats the stale provider cap
+    assert caps["MCAP"] == 2.5e9                     # provider cap when shares are missing
+    assert caps["EMPTY"] is None                     # cached-but-empty stays unknown
+    assert fetched == ["NEW", "GONE"] and caps["NEW"] == 2e8 and caps["GONE"] is None
+    assert "OVER" not in caps                        # cap=2 -> waits for the next build
+
+
+def test_build_rows_carry_market_cap_for_the_floor():
+    import inspect
+    src = inspect.getsource(pc)
+    body = src[src.index("rows = list(ex.map(_row, tickers))"):src.index("status_rank = ")]
+    assert "market_caps_for(tickers" in body and 'r["market_cap"] = caps.get' in body

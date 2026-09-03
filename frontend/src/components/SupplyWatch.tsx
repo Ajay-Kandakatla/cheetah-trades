@@ -30,7 +30,7 @@ type Payload = {
 };
 
 const STATE: Record<SupplyRow['state'], { label: string; color: string }> = {
-  IN_SUPPLY:   { label: '🎯 IN SUPPLY',   color: 'var(--negative, #e5484d)' },
+  IN_SUPPLY:   { label: '🔴 SELL SIGNAL', color: 'var(--negative, #e5484d)' },   // Ajay 2026-09-03: "Sell signals if in supply"
   NEAR:        { label: '⚠ NEAR',        color: '#e8a33d' },
   APPROACHING: { label: '↗ APPROACHING', color: '#d6b45a' },
   FAR:         { label: '· far',         color: 'var(--text-muted, #94a3b8)' },
@@ -84,7 +84,7 @@ export function SupplyChip({ row }: { row: SupplyRow | null | undefined }) {
       <span style={{ color: st.color, fontWeight: 700 }}>{st.label}</span>
       {' '}{bandKind(row.band)} {band(row.band)}
       {row.state === 'IN_SUPPLY'
-        ? ' · sell zone reached'
+        ? ' · in supply — sell zone reached'
         : ` · ${row.distance_pct == null ? '—' : row.distance_pct.toFixed(1) + '%'}${room} of room${row.atr_days != null ? ` · ~${row.atr_days.toFixed(0)} ATR-days` : ''}`}
       {row.next_band ? <span className="pcw__dim"> · then {band(row.next_band)}</span> : null}
       {row.support ? <span className="pcw__dim"> · support {band(row.support)}</span> : null}

@@ -11616,3 +11616,10 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pcw .og__table.pcw__grid .ptt__mini-cell { overflow: visible; }
 
 .pcw__line2 { display: block; font-size: 10px; line-height: 1.1; }
+
+
+/* Promo board — valuation floor (2026-09-03) */
+.pcw__cap { display: block; font-size: 10px; line-height: 1.1; margin-top: 1px; }
+.pcw__cap.is-small { color: var(--negative, #e5484d); opacity: 0.8; }
+.pcw__capfilter { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 6px; cursor: pointer; }
+.pcw__capfilter input { accent-color: #e8a33d; }
