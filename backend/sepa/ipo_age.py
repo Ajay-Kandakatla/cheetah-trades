@@ -140,6 +140,16 @@ def _block(first_trade_date: str, years: float, source: str) -> dict:
     }
 
 
+def listing_date(symbol: str) -> Optional[str]:
+    """The real listing date (YYYY-MM-DD) from the profile provider, or None —
+    the cheap, cached half of `age()` for callers that only need the date
+    (the Russell watch's IPO-window test) and must not load price history."""
+    try:
+        return _profile_ipo_date(symbol)
+    except Exception:
+        return None
+
+
 def age(symbol: str) -> Optional[dict]:
     df = load_prices(symbol, period="max")
     if df is None or df.empty:

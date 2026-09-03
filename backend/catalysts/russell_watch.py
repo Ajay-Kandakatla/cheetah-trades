@@ -9,10 +9,11 @@ entries."
 Why this is tradeable at all: additions force benchmark-tracking funds to
 buy at reconstitution, and anticipatory buying front-runs the effective
 date. FTSE Russell moved to SEMI-ANNUAL reconstitution starting 2026 —
-June plus a new November cycle (rank day around end-September, effective
-late November) — so the September cap snapshot is what November adds are
-judged on. Dates are stated as context, not computed: verify the current
-schedule on ftserussell.com before trading it.
+June plus a December cycle (rank day 30-Oct-2026, effective after the
+close 11-Dec-2026; FTSE moved it from November on 05-Nov-2025). Recent IPOs
+are added quarterly (Q3 2026: rank 31-Jul, prelim 21-Aug, effective
+21-Sep). The calendar lives in SCHEDULE below with its sources; `add_event`
+maps each candidate to the event that would carry it in.
 
 METHOD (approximation, uncited — NOT FTSE's actual rules):
   FTSE ranks by float-adjusted total market cap with banding hysteresis,
@@ -44,9 +45,142 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date, datetime, timezone
 from typing import Optional
 
 log = logging.getLogger("catalysts.russell_watch")
+
+# ── When would an add actually happen? ───────────────────────────────────────
+# Ajay 2026-09-02: "add the dates of these candidates additions". FTSE's
+# PUBLISHED 2026 calendar, held as data with its sources — never a rule of
+# thumb. After the last loaded event the board says the schedule is not
+# loaded rather than guessing at 2027.
+#
+# Sources (read 2026-09-02):
+#  [1] FTSE Russell notice "Russell US Semi-Annual Reconstitution — Schedule
+#      Update", 05 Nov 2025: December cycle effective after the close Fri
+#      11-Dec-2026 (open of 14-Dec), cap cut-off / rank 30-Oct-26, IPO review
+#      period 3 Aug–30 Oct 2026, indicative products 13-Nov-26, lock-down
+#      30-Nov-26. research.ftserussell.com/products/index-notices/home/getnotice/?id=2617649
+#  [2] lseg.com/en/ftse-russell/russell-reconstitution: June 2026 prelim lists
+#      from 22-May, effective after the close 26-Jun-2026; December 2026 rank
+#      day 30-Oct, prelim 13-Nov, updates 20-Nov / 27-Nov / 4-Dec, effective
+#      after the close 11-Dec-2026.
+#  [3] EMAT release, GlobeNewswire 24-Aug-2026: Q3 2026 IPO additions —
+#      preliminary lists published 21-Aug-2026, addition effective
+#      21-Sep-2026 (i.e. after the close Fri 18-Sep).
+#  [4] FTSE Russell FAQ, Russell US Equity Indexes 2026: quarterly IPO rank
+#      date = last business day of Jan/Apr/Jul/Oct; from 2026 the December
+#      IPO inclusion is folded into the December reconstitution.
+SCHEDULE = {
+    "verified_on": "2026-09-02",
+    "sources": [
+        "https://research.ftserussell.com/products/index-notices/home/getnotice/?id=2617649",
+        "https://www.lseg.com/en/ftse-russell/russell-reconstitution",
+        "https://www.globenewswire.com/news-release/2026/08/24/3349659/0/en/",
+    ],
+    "events": [
+        {"key": "recon_jun_2026", "kind": "reconstitution", "label": "June 2026 reconstitution",
+         "rank_day": "2026-04-30", "prelim": "2026-05-22",
+         "effective_close": "2026-06-26", "in_index": "2026-06-29"},
+        {"key": "ipo_q3_2026", "kind": "ipo_add", "label": "Q3 2026 IPO additions",
+         "rank_day": "2026-07-31", "prelim": "2026-08-21",
+         "effective_close": "2026-09-18", "in_index": "2026-09-21",
+         # window start = the day after the June rank day (inferred; the
+         # December window's 3-Aug start in [1] pins the end at 31-Jul)
+         "ipo_window": ["2026-05-01", "2026-07-31"]},
+        {"key": "recon_dec_2026", "kind": "reconstitution", "label": "December 2026 reconstitution",
+         "rank_day": "2026-10-30", "prelim": "2026-11-13",
+         "updates": ["2026-11-20", "2026-11-27", "2026-12-04"], "lockdown": "2026-11-30",
+         "effective_close": "2026-12-11", "in_index": "2026-12-14",
+         "ipo_window": ["2026-08-03", "2026-10-30"]},
+    ],
+}
+
+
+def _d(s: str) -> date:
+    return date.fromisoformat(s)
+
+
+def upcoming_events(today: date) -> list[dict]:
+    """Events whose effective close is still ahead of `today`, in order."""
+    return [e for e in SCHEDULE["events"] if _d(e["effective_close"]) >= today]
+
+
+def add_event(board: str, listed: Optional[str], today: date) -> Optional[dict]:
+    """The published event that would carry this candidate in, and its dates.
+
+    * promote_r1000  — membership moves only at a reconstitution.
+    * add_r2000      — an outsider that LISTED inside a quarterly IPO window
+                       rides that IPO add; everything else (and IPOs in the
+                       December window) waits for the next reconstitution.
+    `lists_published` is True once FTSE's preliminary list for that event is
+    out: from then on our cap screen is a guess at a list that already exists —
+    the row says to check it. None = no loaded event ahead (schedule ran out)."""
+    ahead = upcoming_events(today)
+    if not ahead:
+        return None
+    pick = None
+    if board == "add_r2000" and listed:
+        for e in ahead:
+            w = e.get("ipo_window")
+            if e["kind"] == "ipo_add" and w and w[0] <= listed <= w[1]:
+                pick = e
+                break
+    if pick is None:
+        pick = next((e for e in ahead if e["kind"] == "reconstitution"), None)
+    if pick is None:
+        return None
+    return {
+        "key": pick["key"], "kind": pick["kind"], "label": pick["label"],
+        "rank_day": pick["rank_day"], "prelim": pick["prelim"],
+        "effective_close": pick["effective_close"], "in_index": pick["in_index"],
+        "lists_published": _d(pick["prelim"]) <= today,
+        "listed": listed,
+    }
+
+
+def _seen_coll():
+    try:
+        from pymongo import MongoClient
+        c = MongoClient(os.environ.get("MONGO_URL", "mongodb://mongo:27017"),
+                        serverSelectionTimeoutMS=2000)
+        return c.get_database("cheetah")["russell_watch_seen"]
+    except Exception:
+        return None
+
+
+def stamp_first_seen(rows: list[dict], prior: Optional[dict], coll, now_iso: str) -> None:
+    """`first_seen` = the first build that flagged this (board, symbol).
+
+    The ledger starts today, so names already on the PRIOR cached board are
+    seeded with that board's `as_of` (the earliest we can prove), never with
+    now. Mongo down → rows carry first_seen=None and the FE prints a dash."""
+    prior_at = (prior or {}).get("as_of")
+    prior_keys = set()
+    for k in ("adds_r2000", "promotions_r1000"):
+        for r in (prior or {}).get(k) or []:
+            prior_keys.add((r.get("board"), r.get("symbol")))
+    for r in rows:
+        key = f"{r['board']}:{r['symbol']}"
+        seed = prior_at if (r["board"], r["symbol"]) in prior_keys and prior_at else now_iso
+        if coll is None:
+            r["first_seen"] = None
+            continue
+        try:
+            doc = coll.find_one({"_id": key})
+            if doc and doc.get("first_seen"):
+                coll.update_one({"_id": key}, {"$set": {"last_seen": now_iso}})
+                r["first_seen"] = doc["first_seen"]
+            else:
+                coll.update_one({"_id": key},
+                                {"$set": {"first_seen": seed, "last_seen": now_iso,
+                                          "board": r["board"], "symbol": r["symbol"]}},
+                                upsert=True)
+                r["first_seen"] = seed
+        except Exception as exc:
+            log.warning("russell_watch: seen ledger for %s failed: %s", key, exc)
+            r["first_seen"] = None
 
 CACHE_TTL_SEC = 6 * 3600
 MAX_FRESH_FETCHES = 200          # new yfinance share lookups per build
@@ -211,6 +345,12 @@ def build(force: bool = False) -> dict:
 
 def _build_now() -> dict:
     coll = _cache_coll()
+    prior = None
+    if coll is not None:
+        try:
+            prior = (coll.find_one({"_id": "board"}) or {}).get("payload")
+        except Exception:
+            prior = None
 
     from sepa import volume_movers as vm
     from supply_demand import flow
@@ -281,9 +421,35 @@ def _build_now() -> dict:
     promos = sorted((r for r in rows if r["board"] == "promote_r1000"),
                     key=lambda r: -r["market_cap"])[:MAX_ROWS]
 
+    # When would each one actually go in? Listing date (profile provider,
+    # cached forever) decides IPO-window vs reconstitution; the ledger says
+    # how long the screen has been flagging it.
+    today = datetime.now(timezone.utc).date()
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    try:
+        from sepa.ipo_age import listing_date
+    except Exception:                                       # pragma: no cover
+        listing_date = lambda sym: None                     # noqa: E731
+    for r in adds:
+        r["listed"] = listing_date(r["symbol"])
+        r["add_event"] = add_event(r["board"], r["listed"], today)
+    for r in promos:
+        r["listed"] = None
+        r["add_event"] = add_event(r["board"], None, today)
+    stamp_first_seen(adds + promos, prior, _seen_coll(), now_iso)
+
     payload = {
         "adds_r2000": adds,
         "promotions_r1000": promos,
+        "schedule": {
+            "verified_on": SCHEDULE["verified_on"], "sources": SCHEDULE["sources"],
+            "upcoming": upcoming_events(today),
+            "note": ("FTSE's published 2026 calendar. An outsider that listed inside a "
+                     "quarterly IPO window goes in at that IPO add; everything else, and "
+                     "every promotion, waits for the next reconstitution. Once a "
+                     "preliminary list is out, this cap screen is a guess at a list that "
+                     "already exists — check it on lseg.com/ftse-russell."),
+        },
         "bands": {
             "r2000_p25_cap": r2000_p25, "r1000_p10_cap": r1000_p10,
             "r2000_sampled": len(r2000_caps), "r1000_sampled": len(r1000_caps),
@@ -307,12 +473,12 @@ def _build_now() -> dict:
                         "ineligible, not missed adds; promote: >= p10 of R1000). "
                         "FTSE uses float-adjusted cap with banding, IPO windows, "
                         "float hurdles and a US-company requirement this proxy "
-                        "cannot check. 2026 begins SEMI-ANNUAL reconstitution: "
-                        "the second 2026 recon is effective 2026-09-21 (per the "
-                        "EMAT preliminary-inclusion announcement) and FTSE's "
-                        "preliminary add lists are already published — check "
-                        "ftserussell.com for the official lists; this board is "
-                        "the cap-screen guess at them. Promotions to R1000 are "
+                        "cannot check. 2026 begins SEMI-ANNUAL reconstitution "
+                        "(June + December); recent IPOs are added quarterly "
+                        "(EMAT: Q3 2026 IPO add, preliminary list 2026-08-21, "
+                        "effective 2026-09-21 — an IPO add, NOT the second "
+                        "reconstitution, which is effective 2026-12-11). This "
+                        "board is the cap-screen guess at FTSE's lists. Promotions to R1000 are "
                         "usually NET SELLING by trackers (more money follows "
                         "R2000). Not advice."),
         "as_of": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

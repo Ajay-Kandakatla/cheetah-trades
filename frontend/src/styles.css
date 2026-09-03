@@ -11534,3 +11534,8 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   position: sticky; top: var(--sticky-top, 0); z-index: 2;   /* --sticky-top = phone nav height (useStickyTop) */
   background: var(--bg); box-shadow: inset 0 -1px 0 var(--rule, #2a2a2a); border-bottom: 0;
 }
+
+/* Russell watch — add dates (2026-09-02) */
+.rw__adds { white-space: nowrap; }
+.rw__adds.is-listed b { color: #e8a33d; }     /* FTSE's list is already out: this row is a guess at it */
+.rw__sched { margin-top: 2px; }
