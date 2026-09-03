@@ -381,7 +381,7 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     const tiny = rowOf('TINY');
     expect(tiny.querySelector('.pcw__russ')!.textContent).toContain('R2K add · Dec 14');
     expect(tiny.querySelector('.pcw__russ')!.getAttribute('title')).toContain('Russell 2000 add candidate');
-    expect(tiny.querySelector('.pcw__sales')!.textContent).toContain('+38.2% strong ↑');
+    expect(tiny.querySelector('.pcw__sales')!.textContent).toContain('+38.2% strong↑');
     expect(tiny.querySelector('.pcw__cat')!.textContent).toContain('REAL');
     expect(tiny.querySelector('.pcw__cat-top')!.getAttribute('href')).toBe('https://x/n');
     expect(tiny.querySelector('.pcw__8k')!.textContent).toContain('Sep 1');
