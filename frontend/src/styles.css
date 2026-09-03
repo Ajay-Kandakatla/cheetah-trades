@@ -11602,3 +11602,15 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pcw__cat { max-width: 200px; }
 .pcw__table.is-wide { overflow-x: auto; }                /* narrow window: columns beat sticky headers */
 .pcw__table.is-wide .og__table thead th, .pcw__table.is-wide > .day-section__h { position: static; }
+
+
+/* Promo board — fixed column budget so 17 columns fit (2026-09-03) */
+.pcw .og__table.pcw__grid { table-layout: fixed; width: 100%; min-width: 1720px; }
+.pcw .og__table.pcw__grid td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcw .og__table.pcw__grid td.pcw__tagged, .pcw .og__table.pcw__grid td.pcw__sec { white-space: normal; }
+.pcw .og__table.pcw__grid .pcw__acct { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.pcw .og__table.pcw__grid .pcw__edgar { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.pcw .og__table.pcw__grid .pcw__flag { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.pcw .og__table.pcw__grid .pcw__sec-roll { display: block; margin-left: 0; width: fit-content; }
+.pcw .og__table.pcw__grid .pcw__cat { max-width: none; }
+.pcw .og__table.pcw__grid .ptt__mini-cell { overflow: visible; }

@@ -280,6 +280,13 @@ export const COLUMNS: ColDef[] = [
   { key: 'sec', label: 'SEC', num: true, title: 'EDGAR: 13D/G owner stake ≤14d, shelf/offering ≤30d, plus every other filing in 30 days', sort: secRank },
   { key: 'status', label: 'Status', sort: (r) => STATUS_RANK[r.status] ?? 9, sortDefault: 'asc' },
 ];
+/* Fixed column budget in px (table-layout: fixed) — sums to ~1790 so all 17
+ * fit a 1920-wide screen with the sticky headers intact; narrower windows
+ * fall back to the horizontal scroll (useWideTable). */
+export const COL_WIDTHS: Record<string, number> = {
+  symbol: 120, session: 50, last: 70, tagged: 160, first: 120, lastTag: 95, today: 70, since: 75, peak: 60,
+  room: 105, tape: 104, russell: 105, sales: 115, catalyst: 190, eightk: 105, sec: 150, status: 95,
+};
 export function nextSort(cur: SortState, col: ColDef): SortState {
   const first: SortDir = col.sortDefault ?? (col.num ? 'desc' : 'asc');
   if (!cur || cur.key !== col.key) return { key: col.key, dir: first };
@@ -479,6 +486,9 @@ export function PromoTable({ title, hint, rows, defaultOrder, className, emptyTe
         <div className="day-empty">{emptyText ?? 'Nothing here right now.'}</div>
       ) : (
         <table className="og__table pcw__grid">
+          <colgroup>
+            {COLUMNS.map((c) => <col key={c.key} style={{ width: COL_WIDTHS[c.key] }} />)}
+          </colgroup>
           <thead>
             <tr>
               {COLUMNS.map((c) => {

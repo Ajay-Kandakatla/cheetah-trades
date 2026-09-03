@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { COLUMNS, PromoCircuit, nextSort, sortRows, tagStamp } from './PromoCircuit';
+import { COLUMNS, COL_WIDTHS, PromoCircuit, nextSort, sortRows, tagStamp } from './PromoCircuit';
 import { _resetLiteCache } from './PromoTagTape';
 
 /* Promo-circuit watch — born 2026-09-01 from the chatter-provenance study.
@@ -359,6 +359,18 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     await waitFor(() => expect(document.querySelectorAll('.pcw__table').length).toBe(3));
     const labels = Array.from(document.querySelectorAll('.pcw__table thead .pcw__tablabel')).map((e) => e.textContent);
     expect(labels).toEqual(['⚡ live', '🌱 seeding', '🚀💥 played']);
+  });
+
+  it('lays the 17 columns out on a fixed px budget that fits a 1920 screen', async () => {
+    mock(payload([row()]), true, livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(1));
+    const cols = Array.from(board().querySelectorAll('colgroup col'));
+    expect(cols.length).toBe(17);
+    const total = cols.reduce((n, c) => n + parseInt((c as HTMLElement).style.width, 10), 0);
+    expect(total).toBeLessThanOrEqual(1880);
+    expect(total).toBeGreaterThanOrEqual(1700);
+    expect(COLUMNS.every((c) => COL_WIDTHS[c.key] > 0)).toBe(true);
   });
 
   it('board and live tables share the same 17 headers; 15 of them sortable', async () => {
