@@ -432,4 +432,15 @@ describe('the approach-target switch', () => {
     await screen.findAllByRole('tab', { name: /Approaching/ });
     expect(screen.queryByRole('tab', { name: 'Order block' })).toBeNull();
   });
+
+  it('explains names hidden by the 7% already-bounced gate (Ajay 2026-09-03)', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: VCP_BOARD, winners: WINNERS_BOARD,
+      zones: { ...WARMING_BOARD, warming: false, count: 0, tiles: [], matched: 2, dropped_bounced: 2, bounce_done_pct: 7 },
+    }));
+    draw();
+    fireEvent.click(screen.getByRole('tab', { name: 'Back in Demand' }));
+    await waitFor(() => expect(screen.getByText(/2 names hidden — already/)).toBeInTheDocument());
+    expect(screen.getByText(/bounced 7%\+ off the demand zone/)).toBeInTheDocument();
+  });
 });

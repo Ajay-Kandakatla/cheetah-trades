@@ -492,6 +492,74 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
 _SNAP_CHUNK = 250  # Massive allows up to 250 tickers per snapshot call
 
 
+def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
+    """(frame, info): the daily frame with TODAY's live bar appended when the
+    cached frame ends on an earlier session.
+
+    Ajay 2026-09-03 (CHPT): the Supply/Demand tab read "nearest support 1.4%
+    below" off the 09-02 close of 5.19 while the tape printed 9.14 (+76%) —
+    the daily parquet is refreshed by the 4:30pm fast-scan, so every
+    intraday read of the frame is a day stale. This overlays the Massive
+    snapshot's day bar (open/high/low/close/volume) as one more row so zone
+    reads, verdicts and charts see the session in progress. Nothing is
+    written back: the cached frame stays closed-bars-only, the scanner never
+    sees a partial bar, and the overlay is recomputed per read.
+
+    Silent no-op (info["appended"] False) when there is no frame, no
+    snapshot, the snapshot has no usable OHLC (pre-market zeros), or the frame
+    already holds the snapshot's date (after the close + fast-scan).
+    """
+    info = {"appended": False, "date": None, "last_price": None, "source": "frame",
+            "as_of_epoch": None}
+    if df is None or len(df) == 0:
+        return df, info
+    sym = (symbol or "").upper().strip()
+    if snap is None:
+        try:
+            snap = (bulk_snapshot([sym]) or {}).get(sym) if sym else None
+        except Exception as exc:                                # pragma: no cover
+            log.debug("with_today_bar: snapshot failed for %s: %s", sym, exc)
+            snap = None
+    if not snap:
+        return df, info
+    try:
+        o, h, l, c = (float(snap.get(k) or 0) for k in ("open", "high", "low", "close"))
+        v = float(snap.get("volume") or 0)
+        snap_date = str(snap.get("date") or "")[:10]
+    except (TypeError, ValueError):
+        return df, info
+    if not snap_date or min(o, h, l, c) <= 0:
+        return df, info
+    try:
+        last_date = pd.Timestamp(df.index[-1]).date().isoformat()
+    except Exception:                                           # pragma: no cover
+        return df, info
+    if snap_date <= last_date:
+        info.update(date=last_date)
+        return df, info
+    cols = list(df.columns)
+    row = {k: None for k in cols}
+    for k, val in (("open", o), ("high", h), ("low", l), ("close", c), ("volume", v)):
+        if k in row:
+            row[k] = val
+    ts = pd.Timestamp(f"{snap_date} 04:00:00")
+    if getattr(df.index, "tz", None) is not None:
+        ts = ts.tz_localize(df.index.tz)
+    out = pd.concat([df, pd.DataFrame([row], index=[ts], columns=cols)])
+    out.index.name = df.index.name
+    ts_ms = snap.get("last_trade_ts_ms")
+    as_of = None
+    if ts_ms:
+        try:
+            ts_ms = float(ts_ms)
+            as_of = ts_ms / 1e9 if ts_ms > 1e15 else ts_ms / 1e3   # ns vs ms stamps
+        except (TypeError, ValueError):
+            as_of = None
+    info.update(appended=True, date=snap_date, last_price=c, source="snapshot",
+                as_of_epoch=as_of)
+    return out, info
+
+
 def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
     """Fetch today's OHLCV snapshot for up to N tickers in one Massive call.
 

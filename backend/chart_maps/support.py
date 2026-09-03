@@ -165,6 +165,20 @@ def _shared_frame_as_of(sym: str) -> Optional[float]:
         return None
 
 
+def _overlay_today(prices_mod, df, sym: str):
+    """(frame, as_of_epoch | None) via prices.with_today_bar — tolerant of
+    stubs without it and of any failure; the closed frame always stands."""
+    fn = getattr(prices_mod, "with_today_bar", None)
+    if fn is None or df is None:
+        return df, None
+    try:
+        out, info = fn(df, sym)
+    except Exception as exc:                                   # pragma: no cover
+        log.debug("support: today-bar overlay failed for %s: %s", sym, exc)
+        return df, None
+    return out, ((info or {}).get("as_of_epoch") if (info or {}).get("appended") else None)
+
+
 def _frame_for(sym: str, need_bars: int):
     """(df, bars_available, as_of_epoch) — the shared 2y frame, or a deep 5y
     fetch when the window needs more than the shared frame holds. Degrades to
@@ -179,9 +193,13 @@ def _frame_for(sym: str, need_bars: int):
         df = prices.load_prices(sym, period="2y")
     except Exception:                                          # pragma: no cover
         df = None
+    # Today's live bar on top of the closed frame (Ajay 2026-09-03, CHPT: the
+    # tab said "1.4% below support" off yesterday's 5.19 while the tape was
+    # 9.14). as_of becomes the snapshot's last-trade time when it appended.
+    df, live_as_of = _overlay_today(prices, df, sym)
     have = len(df) if df is not None else 0
     if need_bars <= have:
-        return df, have, _shared_frame_as_of(sym)
+        return df, have, (live_as_of or _shared_frame_as_of(sym))
 
     key = sym.upper()
     deep_as_of = None
@@ -197,7 +215,8 @@ def _frame_for(sym: str, need_bars: int):
             deep_as_of = _t.time()
             _deep_cache[key] = (deep_as_of, deep)
     if deep is not None and len(deep) > have:
-        return deep, len(deep), deep_as_of
+        deep, deep_live_as_of = _overlay_today(prices, deep, sym)
+        return deep, len(deep), (deep_live_as_of or deep_as_of)
     return df, have, _shared_frame_as_of(sym)
 
 

@@ -646,6 +646,12 @@ export function ChartMaps() {
           liquidity floor — thin tape, so the base is not tradeable at size.
         </p>
       )}
+      {!!data?.dropped_bounced && (
+        <p className="cm-note">
+          {data.dropped_bounced} name{data.dropped_bounced === 1 ? '' : 's'} hidden — already
+          bounced {data.bounce_done_pct ?? 7}%+ off the demand zone, so the arrival is over.
+        </p>
+      )}
       {!!data?.tape_pool && (
         <p className="cm-note">
           Tape pulled for {data.tape_enriched} of the top {data.tape_pool} by

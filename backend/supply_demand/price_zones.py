@@ -263,6 +263,19 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
     }
 
 
+def _overlay_today(prices_mod, df, sym: str):
+    """prices.with_today_bar, tolerant of stubs that lack it (tests) and of any
+    failure — the closed frame is always an acceptable answer."""
+    fn = getattr(prices_mod, "with_today_bar", None)
+    if fn is None:
+        return df, None
+    try:
+        return fn(df, sym)
+    except Exception as exc:                                    # pragma: no cover
+        log.debug("price_zones: today-bar overlay failed for %s: %s", sym, exc)
+        return df, None
+
+
 def for_symbol(symbol: str, last_price: Optional[float] = None,
                tf: Optional[str] = None, **geom) -> dict:
     """Load bars and compute the zones for one ticker (on-demand).
@@ -282,6 +295,7 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
     from supply_demand import timeframes as tf_mod
     tf_key = tf_mod.parse_tf(tf) if tf else tf_mod.DAILY
     tf_meta = None
+    live_bar = None
 
     if tf_key == tf_mod.DAILY:
         from sepa import prices
@@ -289,6 +303,10 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
         if df is None or len(df) < 60:
             return {"symbol": sym, "error": "no / insufficient price data",
                     "timeframe": tf_key, "timeframes": tf_mod.tf_options()}
+        # Today's live bar rides on top of the closed frame (Ajay 2026-09-03,
+        # CHPT read "1.4% below support" off yesterday's close while the tape
+        # was +76%). Nothing is written back — see prices.with_today_bar.
+        df, live_bar = _overlay_today(prices, df, sym)
     else:
         df, tf_meta = tf_mod.frame_for(sym, tf_key)
         if df is None or len(df) < 30:
@@ -307,6 +325,7 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
     out["symbol"] = sym
     out["timeframe"] = tf_key
     out["timeframe_label"] = tf_mod.tf_spec(tf_key)["label"]
+    out["live_bar"] = live_bar if tf_key == tf_mod.DAILY else None
     out["timeframes"] = tf_mod.tf_options()
     if tf_meta:
         out["timeframe_meta"] = tf_meta

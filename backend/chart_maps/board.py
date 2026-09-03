@@ -123,7 +123,16 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     """
     from sepa import prices
     try:
-        df = _norm_frame(prices.load_prices(symbol.upper()))
+        raw = prices.load_prices(symbol.upper())
+        # Today's live bar on the tile too (Ajay 2026-09-03, CHPT) — the same
+        # overlay the Supply/Demand tab draws; stubs without it just skip.
+        fn = getattr(prices, "with_today_bar", None)
+        if fn is not None and raw is not None:
+            try:
+                raw, _info = fn(raw, symbol.upper())
+            except Exception as exc:                            # pragma: no cover
+                log.debug("chart-maps: today-bar overlay %s failed: %s", symbol, exc)
+        df = _norm_frame(raw)
     except Exception as exc:
         log.debug("chart-maps: bars %s failed: %s", symbol, exc)
         return []
@@ -174,6 +183,76 @@ def _num(v) -> Optional[float]:
 
 def _href(symbol: str, tab: str) -> str:
     return f"/sepa/{symbol.upper()}?tab={tab}"
+
+
+# Ajay 2026-09-03: "from all chart maps Demand zones remove anything that
+# already did about 7% bounce from Demand Zone." A demand board is a list of
+# names AT a level; once price has run 7% off the band the arrival he wanted
+# to catch is over, and the tile is a story, not a setup. The scan that feeds
+# these boards is cached for hours, so a name that touched at 10:00 and ran by
+# 14:00 would otherwise sit on the board all afternoon — the gate therefore
+# reads the LIVE print and falls back to the scan's last_price only when the
+# tape is unreachable. Measured from the band TOP (price re-enters from above;
+# the top is where the bounce starts). Applies to every demand board here:
+# zones (reached | approaching × zone | order block) and deep demand.
+BOUNCE_DONE_PCT = 7.0
+
+
+def bounce_pct(price, band_hi) -> Optional[float]:
+    """% that `price` sits above the band top; None when either is unusable."""
+    px, hi = _num(price), _num(band_hi)
+    if px is None or hi is None or hi <= 0:
+        return None
+    return (px - hi) / hi * 100.0
+
+
+def already_bounced(price, band_hi, done_pct: float = BOUNCE_DONE_PCT) -> bool:
+    b = bounce_pct(price, band_hi)
+    return b is not None and b >= done_pct
+
+
+def _live_last(symbols: list) -> dict:
+    """Live print per symbol for the bounce gate. {} on any failure — the
+    scan's own last_price then decides, so a tape outage never empties a board
+    or lets a stale one through unexamined."""
+    syms = sorted({(s or "").upper() for s in symbols if s})
+    if not syms:
+        return {}
+    try:
+        from sepa import prices as _p
+        live = _p.bulk_live_prices(syms) or {}
+    except Exception as exc:
+        log.debug("chart maps: live prices unavailable for the bounce gate: %s", exc)
+        return {}
+    return {k: _num((v or {}).get("price")) for k, v in live.items()}
+
+
+def _bounce_ref_hi(r: dict, phase: str, target: str) -> Optional[float]:
+    """The band top the bounce is measured from: the order block when that is
+    the target, else the demand band."""
+    if target == "order_block":
+        ob = (r.get("approaching_ob") if phase == "approaching" else r.get("in_ob")) or {}
+        hi = _num((ob.get("block") or {}).get("hi"))
+        if hi is not None:
+            return hi
+    return _num((r.get("entry_zone") or {}).get("hi"))
+
+
+def drop_bounced(rows: list, ref_hi, live: Optional[dict] = None) -> tuple:
+    """(kept_rows, dropped_count). `ref_hi(row)` gives the band top; `live`
+    maps SYMBOL → live price (missing/None entries fall back to row last_price)."""
+    live = live or {}
+    kept, dropped = [], 0
+    for r in rows:
+        sym = (r.get("symbol") or "").upper()
+        px = live.get(sym)
+        if px is None:
+            px = _num(r.get("last_price"))
+        if already_bounced(px, ref_hi(r)):
+            dropped += 1
+            continue
+        kept.append(r)
+    return kept, dropped
 
 
 def _theme_rank(theme: Optional[str]) -> int:
@@ -1308,6 +1387,10 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         rows = data.get("in_ob_rows") or []
     else:
         rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
+    matched = len(rows)
+    rows, dropped_bounced = drop_bounced(
+        rows, lambda r: _bounce_ref_hi(r, phase, target),
+        _live_last([r.get("symbol") for r in rows]))
     flash_syms = _flash_symbols()
     tiles = []
     for r in rows:
@@ -1484,7 +1567,9 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
             "target": ("order_block" if target == "order_block" else "zone"),
-            "matched": len(rows),
+            "matched": matched,
+            "dropped_bounced": dropped_bounced,
+            "bounce_done_pct": BOUNCE_DONE_PCT,
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
             # The universes the server actually offers, so the tab's
@@ -2028,6 +2113,9 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     want_state = "near" if phase == "approaching" else "in"
     rows = [r for r in rows
             if ((r.get("deep_demand") or {}).get("state") == want_state)]
+    rows, dropped_bounced = drop_bounced(
+        rows, lambda r: _num(((r.get("deep_demand") or {}).get("second_band") or {}).get("hi")),
+        _live_last([r.get("symbol") for r in rows]))
     snaps = research.sales_snapshot([r.get("symbol") for r in rows if r.get("symbol")])
     flash_syms = _flash_symbols()
 
@@ -2157,6 +2245,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "gex_as_of": gex_as_of,
             "flow_counts": flow_counts,
             "dropped_weak_sales": dropped_weak,
+            "dropped_bounced": dropped_bounced, "bounce_done_pct": BOUNCE_DONE_PCT,
             "dropped_no_sales_data": dropped_unknown,
             "deep_n": data.get("deep_n"),
             "universe_key": data.get("universe_key"),

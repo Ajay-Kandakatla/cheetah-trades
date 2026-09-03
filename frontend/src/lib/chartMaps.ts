@@ -150,6 +150,10 @@ export type CmBoard = {
   /** How many names the floor removed. Shown so a shrunken board is explained
    *  rather than just smaller. */
   dropped_thin?: number;
+  /** Demand boards only — names hidden because price already ran >= bounce_done_pct
+   *  off the band top (Ajay 2026-09-03: the arrival is over). */
+  dropped_bounced?: number;
+  bounce_done_pct?: number;
   /** 0DTE only — the same-day expiry these chains are read from. */
   expiry?: string;
   /** 0DTE only — where in the trading day this read happened. After the close

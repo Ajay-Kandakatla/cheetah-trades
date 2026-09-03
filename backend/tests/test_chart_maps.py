@@ -48,6 +48,10 @@ def prices(monkeypatch):
     store: dict = {}
 
     class _Prices:
+        # sepa/ipo_age.py does `from .prices import PERIOD_DAYS` at import time;
+        # the gabbar tab imports ipo_age, so the stub must carry the constant.
+        PERIOD_DAYS = {"2y": 504}
+
         @staticmethod
         def load_prices(symbol, *a, **kw):
             return store.get(symbol.upper())
@@ -2001,3 +2005,76 @@ def test_lens_tabs_default_all_while_demand_boards_default_reached():
     src = inspect.getsource(B.board)
     assert 'phase=(phase or "reached")' in src   # zones + deep
     assert 'phase=(phase or "all")' in src       # undervalue + gabbar
+
+
+
+# ---------------------------------------------------------------------------
+# the 7% already-bounced gate (Ajay 2026-09-03: "from all chart maps Demand
+# zones remove anything that already did about 7% bounce from Demand Zone")
+# ---------------------------------------------------------------------------
+def test_bounce_helpers_measure_from_the_band_top_and_survive_junk():
+    assert B.bounce_pct(107.0, 100.0) == pytest.approx(7.0)
+    assert B.already_bounced(107.0, 100.0) is True
+    assert B.already_bounced(106.9, 100.0) is False
+    assert B.already_bounced(99.0, 100.0) is False          # inside / below never "bounced"
+    assert B.bounce_pct(None, 100.0) is None and B.bounce_pct(100.0, 0) is None
+    assert B.already_bounced("x", 100.0) is False
+    row = {"entry_zone": {"hi": 100.0}, "in_ob": {"block": {"lo": 101.0, "hi": 102.0}},
+           "approaching_ob": {"block": {"lo": 103.0, "hi": 104.0}}}
+    assert B._bounce_ref_hi(row, "reached", "zone") == 100.0
+    assert B._bounce_ref_hi(row, "reached", "order_block") == 102.0
+    assert B._bounce_ref_hi(row, "approaching", "order_block") == 104.0
+    assert B._bounce_ref_hi({"entry_zone": {"hi": 100.0}}, "reached", "order_block") == 100.0
+    kept, dropped = B.drop_bounced(
+        [{"symbol": "A", "last_price": 108.0, "entry_zone": {"hi": 100.0}},
+         {"symbol": "B", "last_price": 108.0, "entry_zone": {"hi": 100.0}},
+         {"symbol": "C", "last_price": 101.0, "entry_zone": {"hi": 100.0}}],
+        lambda r: r["entry_zone"]["hi"], live={"B": 103.0, "C": None})
+    assert [r["symbol"] for r in kept] == ["B", "C"] and dropped == 1, \
+        "live print wins over the scan price; a None live falls back to last_price"
+
+
+def test_reached_board_drops_names_that_already_ran_seven_percent(prices, reentry_stub, monkeypatch):
+    reentry_stub["rows"] = [_reentry_row("AAA"), _reentry_row("BBB")]
+    hi = reentry_stub["rows"][0]["entry_zone"]["hi"]
+    for sym in ("AAA", "BBB"):
+        prices[sym] = _frame(200)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"AAA": hi * 1.08, "BBB": hi * 1.03})
+    out = B.board("zones", limit=10, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["BBB"]
+    assert out["dropped_bounced"] == 1 and out["bounce_done_pct"] == 7.0
+    assert out["matched"] == 2, "matched counts the board before the gate"
+
+
+def test_bounce_gate_uses_scan_price_when_the_tape_is_unreachable(prices, reentry_stub, monkeypatch):
+    row = _reentry_row("AAA")
+    row["last_price"] = row["entry_zone"]["hi"] * 1.10
+    reentry_stub["rows"] = [row]
+    prices["AAA"] = _frame(200)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {})
+    out = B.board("zones", limit=10, min_tier="any")
+    assert out["tiles"] == [] and out["dropped_bounced"] == 1
+
+
+def test_approaching_and_order_block_boards_take_the_gate_too(prices, reentry_stub, monkeypatch):
+    reentry_stub["approaching_rows"] = [_appr_row("BBB"), _appr_row("CCC")]
+    for sym in ("BBB", "CCC"):
+        prices[sym] = _frame(200, start=95.0)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"BBB": 100.0 * 1.075, "CCC": 100.0 * 1.02})
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching")
+    assert [t["symbol"] for t in out["tiles"]] == ["CCC"] and out["dropped_bounced"] == 1
+
+
+def test_deep_demand_gate_measures_from_the_second_band(prices, reentry_stub, sales_stub, monkeypatch):
+    flow_in = {"state": "inflow", "cmf_20": 0.14, "accum_days_25": 9,
+               "dist_days_25": 4, "pocket_pivot": False}
+    reentry_stub["deep_rows"] = [_deep_row("DRUN", state="in", inflow=flow_in),
+                                 _deep_row("DSIT", state="in", inflow=flow_in)]
+    for sym in ("DRUN", "DSIT"):
+        sales_stub[sym] = _sales("steady", 9.0)
+        prices[sym] = _frame(200, start=90.05)
+    # second band hi = 85: 91 is +7.06% (gone), 89 is +4.7% (still at the level)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"DRUN": 91.0, "DSIT": 89.0})
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["DSIT"]
+    assert out["dropped_bounced"] == 1 and out["bounce_done_pct"] == 7.0
