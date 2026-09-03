@@ -89,10 +89,9 @@ def alert_gate(day_pct: Optional[float], threshold: float = PROMO_MOVE_PCT) -> O
 # going UP (a supply band at/above the print, or a demand band it already
 # broke through) and the % to its bottom. Zones come off DAILY bars, so they
 # are cached for half an hour, shared through Mongo between the API process
-# and the cron warm, and a live call only computes cache misses for a few
-# seconds — the rest fill in on the next poll.
+# and the cron warm, and a live call never computes on its own clock — misses
+# go to one background worker and fill in on the next poll.
 ZONE_TTL_SEC = 30 * 60
-ZONE_BUDGET_SEC = 6.0
 ROOM_NEAR_PCT = 2.0
 _zone_mem: dict = {}
 
@@ -167,11 +166,21 @@ def _zones_load(syms: list) -> dict:
 
 
 def _zones_compute(sym: str) -> dict:
-    """Daily-bar zones for one name (every cluster, max_zones=None) → both caches."""
+    """Daily-bar zones for one name — the Chart Maps engine with EVERY swing
+    cluster (max_zones=None; the first band overhead is routinely not among
+    the 4 strongest). Anchored on the last daily close, never a live print.
+    Lands in both caches; `err` is a string when the engine missed so the row
+    says 'unavailable', never a false CLEAR."""
+    supply, demand, err = [], [], None
     try:
-        supply, demand, _atr, err = _supply_watch()._zones_for(sym)
-    except Exception as exc:                                # pragma: no cover
-        supply, demand, err = [], [], str(exc)
+        from supply_demand import price_zones as pz
+        out = pz.for_symbol(sym, max_zones=None)
+        if out.get("error"):
+            err = str(out["error"])
+        else:
+            supply, demand = out.get("supply_zones") or [], out.get("demand_zones") or []
+    except Exception as exc:
+        err = str(exc)
     z = {"at": time.time(), "supply": _slim(supply), "demand": _slim(demand), "err": err}
     _zone_mem[sym] = z
     coll = _zone_coll()
@@ -183,17 +192,41 @@ def _zones_compute(sym: str) -> dict:
     return z
 
 
-def zones_for(syms: list, budget_sec: float = ZONE_BUDGET_SEC) -> dict:
-    """Zones for as many of `syms` as the time budget allows; a miss is simply
-    absent (the row says 'pending') and lands on a later call or the cron warm."""
+# One background worker at a time fills cache misses so a live poll never
+# waits on the engine (a cold API container answered in 22 s when it computed
+# inline; a row simply reads PENDING until the next 30 s tick).
+_bg_lock = threading.Lock()
+_bg = {"running": False}
+
+
+def _bg_compute(syms: list) -> None:
+    try:
+        for s in syms:
+            z = _zone_mem.get(s)
+            if z and time.time() - float(z.get("at") or 0) < ZONE_TTL_SEC:
+                continue
+            _zones_compute(s)
+    except Exception as exc:                                # pragma: no cover
+        log.warning("promo_live: background zones failed: %s", exc)
+    finally:
+        with _bg_lock:
+            _bg["running"] = False
+
+
+def zones_for(syms: list, background: bool = True) -> dict:
+    """Cached zones for `syms` (memory, then the shared Mongo cache). Misses
+    are never computed on the caller's clock: one daemon worker fills them and
+    a later call finds them. `background=False` just reads."""
     have = _zones_load(syms)
-    t0 = time.time()
-    for s in syms:
-        if s in have:
-            continue
-        if time.time() - t0 > budget_sec:
-            break
-        have[s] = _zones_compute(s)
+    missing = [s for s in syms if s not in have]
+    if missing and background:
+        with _bg_lock:
+            kick = not _bg["running"]
+            if kick:
+                _bg["running"] = True
+        if kick:        # started outside the lock — the worker takes it to release itself
+            threading.Thread(target=_bg_compute, args=(missing,), daemon=True,
+                             name="promo-zones").start()
     return have
 
 

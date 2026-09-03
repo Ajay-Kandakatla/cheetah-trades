@@ -193,25 +193,56 @@ def test_live_rows_attach_room_and_pending(monkeypatch):
     assert "room_note" in out
 
 
-def test_zones_budget_and_warm_only_stale(monkeypatch):
+def test_zones_never_compute_inline_and_warm_only_stale(monkeypatch):
     import time as _t
     calls: list = []
+    started: list = []
     monkeypatch.setattr(pl, "_zone_coll", lambda: None)
     pl._zone_mem.clear()
+    pl._bg["running"] = False
 
     def fake_compute(sym):
         calls.append(sym)
         pl._zone_mem[sym] = {"at": _t.time(), "supply": [], "demand": [], "err": None}
         return pl._zone_mem[sym]
     monkeypatch.setattr(pl, "_zones_compute", fake_compute)
-    have = pl.zones_for(["A", "B", "C"], budget_sec=0)
-    assert calls == ["A"] and set(have) == {"A"}          # budget spent after the first miss
+
+    class FakeThread:
+        def __init__(self, target=None, args=(), **kw):
+            self.target, self.args = target, args
+        def start(self):
+            started.append(self.args[0])
+            self.target(*self.args)
+    monkeypatch.setattr(pl.threading, "Thread", FakeThread)
+    have = pl.zones_for(["A", "B", "C"])
+    assert have == {} and calls == ["A", "B", "C"] and started == [["A", "B", "C"]]
+    assert pl._bg["running"] is False                     # worker released itself
+    assert set(pl.zones_for(["A", "B", "C"])) == {"A", "B", "C"} and len(started) == 1
+    # read-only path never kicks a worker
+    pl._zone_mem.clear()
+    assert pl.zones_for(["Z"], background=False) == {} and len(started) == 1
+    # cron warm: only the stale name is recomputed
     pl._zone_mem["B"] = {"at": _t.time(), "supply": [], "demand": [], "err": None}
     pl._zone_mem["C"] = {"at": _t.time() - pl.ZONE_TTL_SEC - 1, "supply": [], "demand": [], "err": None}
-    monkeypatch.setattr(pl, "_board_rows", lambda: [{"ticker": t} for t in ("A", "B", "C")])
+    monkeypatch.setattr(pl, "_board_rows", lambda: [{"ticker": t} for t in ("B", "C")])
     calls.clear()
     res = pl.warm_zones()
-    assert calls == ["C"] and res == {"ok": True, "warmed": 1, "total": 3}
+    assert calls == ["C"] and res == {"ok": True, "warmed": 1, "total": 2}
+    pl._zone_mem.clear()
+
+
+def test_zones_compute_reads_every_cluster_and_records_engine_errors(monkeypatch):
+    import supply_demand.price_zones as pz
+    seen = {}
+    monkeypatch.setattr(pl, "_zone_coll", lambda: None)
+    monkeypatch.setattr(pz, "for_symbol", lambda sym, **kw: seen.update(kw) or {
+        "supply_zones": [{"lo": 5.5, "hi": 5.6, "strength": 3}], "demand_zones": [{"lo": 4.0, "hi": 4.1}]})
+    z = pl._zones_compute("AAA")
+    assert seen == {"max_zones": None}
+    assert z["supply"] == [{"lo": 5.5, "hi": 5.6}] and z["demand"] == [{"lo": 4.0, "hi": 4.1}] and z["err"] is None
+    monkeypatch.setattr(pz, "for_symbol", lambda sym, **kw: {"error": "no bars"})
+    assert pl._zones_compute("BBB")["err"] == "no bars"
+    assert pl._room_for(pl._zone_mem["BBB"], 5.0)["state"] == "UNAVAILABLE"
     pl._zone_mem.clear()
 
 

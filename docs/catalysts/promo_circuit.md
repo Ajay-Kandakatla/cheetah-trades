@@ -203,9 +203,11 @@ open"* + *"default supply demand to 6 months in that tab"*.
   ROOM`, plus `PENDING` (zones not computed yet) and `UNAVAILABLE` (engine
   error). Zones come off daily bars (`price_zones.for_symbol(max_zones=None)`)
   and are cached 30 min in memory **and** Mongo `promo_zone_cache`, shared
-  between the API and the cron; a live call computes misses for ≤6 s
-  (`ZONE_BUDGET_SEC`), the 5-min `promo_live` cron warms every stale name
-  after its alert pass (`warm_zones`). `CLEAR` = nothing found in the 1y read,
+  between the API and the cron; a live call never computes on its own clock
+  (a cold container answered in 22 s when it did) — misses go to one
+  background worker and read `PENDING` until the next 30 s tick, and the
+  5-min `promo_live` cron warms every stale name after its alert pass
+  (`warm_zones`). `CLEAR` = nothing found in the 1y read,
   **not** unlimited.
 - **Links**: the symbol cell = `TickerLink` → `/sepa/<T>?tab=supply` (SEPA
   page landing on the Supply / Demand tab) + `ST↗` → the StockTwits stream +

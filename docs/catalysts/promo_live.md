@@ -71,7 +71,8 @@ same read the Portfolio 🎯 table gives a holding: `overhead_bands` (supply
 at/above the print + demand bands strictly above it = support it broke) →
 `nearest_supply` → % from the print to the band bottom. Daily-bar zones,
 every cluster, cached 30 min in memory + Mongo `promo_zone_cache`; a live
-call spends ≤ `ZONE_BUDGET_SEC` on misses (rows say `PENDING` until then) and
-the 5-min cron warms stale names after `check_alerts`. `CLEAR` means nothing
+call only reads — misses go to one background worker (rows say `PENDING`
+until the next poll) and the 5-min cron warms stale names after
+`check_alerts`. `CLEAR` means nothing
 overhead in the 1y read — unknown, never unlimited. `room_note` on the payload
 says so on the board.
