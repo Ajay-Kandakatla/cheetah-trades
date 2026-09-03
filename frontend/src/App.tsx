@@ -10,7 +10,7 @@ import { TourLauncher } from './components/TourLauncher';
 import { NewFeatureWatcher } from './components/NewFeatureWatcher';
 import { PortfolioRail } from './components/PortfolioRail';
 import { InstallToHomeScreen, shouldAutoShowInstallPrompt } from './components/InstallToHomeScreen';
-import { ensureServiceWorker } from './lib/pushSubscribe';
+import { ensurePushSubscription, ensureServiceWorker } from './lib/pushSubscribe';
 import { usePageTracking } from './hooks/usePageTracking';
 import { useMyFeatures } from './hooks/useMyFeatures';
 import { useMyMenu } from './hooks/useMyMenu';
@@ -206,7 +206,11 @@ export function App() {
     const t = setTimeout(() => {
       if (shouldAutoShowInstallPrompt()) setShowInstall(true);
     }, 600);
-    return () => clearTimeout(t);
+    // Self-heal the push registration on every load (2026-09-03: the phone's
+    // endpoint was purged after a 410 and nothing re-registered it). Never
+    // prompts; throttled to once per 6h inside the helper.
+    const heal = setTimeout(() => { void ensurePushSubscription(); }, 1500);
+    return () => { clearTimeout(t); clearTimeout(heal); };
   }, []);
 
   return (

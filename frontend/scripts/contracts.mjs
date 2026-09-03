@@ -198,6 +198,23 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'service worker re-subscribes on pushsubscriptionchange (2026-09-03)',
+    file: 'public/sw.js',
+    // The phone's endpoint was purged after a 410 on 2026-09-02 and nothing
+    // re-registered it. Endpoints rotate; the worker must heal itself.
+    checks: (src) => {
+      const errs = [];
+      if (!/addEventListener\('pushsubscriptionchange'/.test(src)) errs.push('sw.js has no pushsubscriptionchange listener');
+      if (!/\/push\/subscribe/.test(src)) errs.push('sw.js never re-registers with /push/subscribe');
+      return errs;
+    },
+  },
+  {
+    name: 'app load self-heals the push registration (2026-09-03)',
+    file: 'src/App.tsx',
+    checks: (src) => (/ensurePushSubscription\(/.test(src) ? [] : ['App.tsx never calls ensurePushSubscription']),
+  },
 ];
 
 let failed = 0;
