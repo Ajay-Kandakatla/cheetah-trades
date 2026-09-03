@@ -48,6 +48,10 @@ const fmtCap = (v: number) =>
 /* "Sep 21" from an ISO date (no timezone shift: dates are calendar days). */
 export const mdy = (iso?: string | null) => {
   if (!iso) return '—';
+  if (iso.includes('T')) {                         // a timestamp: the ET calendar day it fell on
+    const t = Date.parse(iso);
+    return Number.isNaN(t) ? '—' : new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+  }
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   if (!y || !m || !d) return '—';
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });

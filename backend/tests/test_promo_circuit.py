@@ -427,3 +427,109 @@ def test_early_callers_are_radar_only_never_penalty_never_alert():
         assert m["tier"] == "B" and "penalty_days" not in m, h
         assert "backtest" in m["audit"] and "%" in m["audit"] and m["evidence"], h
         assert h not in pl.PROMO_ALERT_HANDLES, h
+
+
+# ── five tells per row (Ajay 2026-09-02) ─────────────────────────────────────
+from datetime import datetime as _dt, timezone as _tz  # noqa: E402
+
+_NOW = _dt(2026, 9, 2, 20, 0, tzinfo=_tz.utc)
+
+
+def test_sec_flags_eightk_window_items_and_rollup():
+    fs = [
+        {"form": "8-K", "filing_date": "2026-09-01", "url": "u1", "items": "1.01,9.01"},
+        {"form": "8-K", "filing_date": "2026-08-25", "url": "u0", "items": "2.02"},
+        {"form": "8-K", "filing_date": "2026-08-01", "url": "old", "items": "8.01"},   # outside 14d
+        {"form": "4", "filing_date": "2026-08-30", "url": "f4a"},
+        {"form": "4", "filing_date": "2026-08-29", "url": "f4b"},
+        {"form": "424B5", "filing_date": "2026-08-20", "url": "off"},
+        {"form": "S-8", "filing_date": "2026-08-21", "url": "s8"},
+        {"form": "10-Q", "filing_date": "2026-07-01", "url": "oldq"},                   # outside 30d
+    ]
+    out = pc.sec_flags_from_filings(fs, now=_NOW)
+    assert out["eightk"] == {"form": "8-K", "filing_date": "2026-09-01", "url": "u1",
+                             "items": ["1.01", "9.01"], "n_14d": 2}
+    sec = out["sec"]
+    assert sec["n_30d"] == 4 and sec["forms"] == ["4", "S-8", "424B5"]
+    assert sec["latest"]["filing_date"] == "2026-08-30" and sec["n_form4"] == 2
+    assert sec["has_offering"] is True                       # 424B5 counts, S-8 never does
+    assert pc.sec_flags_from_filings([], now=_NOW) == {"eightk": None, "sec": None}
+    # NEGATIVE: only an old 8-K -> no eightk, and it never leaks into sec
+    assert pc.sec_flags_from_filings([fs[2]], now=_NOW) == {"eightk": None, "sec": None}
+
+
+def test_catalyst_from_news_verdicts():
+    assert pc.catalyst_from_news(None) is None                 # fetch failed = unknown
+    assert pc.catalyst_from_news([])["verdict"] == "NONE"
+    thin = pc.catalyst_from_news([{"title": "Stock moves", "tone": "neutral", "published_utc": "2026-09-02T10:00:00Z"}])
+    assert thin["verdict"] == "THIN" and thin["top"]["title"] == "Stock moves"
+    real = pc.catalyst_from_news([
+        {"title": "Chatter", "tone": "neutral", "published_utc": "2026-09-02T12:00:00Z"},
+        {"title": "Wins $40M contract", "tone": "bullish", "published_utc": "2026-09-02T09:00:00Z", "url": "u", "publisher": "GlobeNewswire"},
+    ])
+    assert real["verdict"] == "REAL" and real["n_48h"] == 2 and real["n_bullish"] == 1
+    assert real["top"]["title"] == "Wins $40M contract" and real["top"]["publisher"] == "GlobeNewswire"
+
+
+class _Coll:
+    def __init__(self):
+        self.docs = {}
+    def find(self, q):
+        ids = q["_id"]["$in"]
+        return [d for k, d in self.docs.items() if k in ids]
+    def find_one(self, q):
+        return self.docs.get(q["_id"])
+    def update_one(self, q, u, upsert=False):
+        self.docs.setdefault(q["_id"], {"_id": q["_id"]}).update(u["$set"])
+
+
+def test_sales_for_snapshot_then_cache_then_capped_fetch():
+    fetched = []
+    coll = _Coll()
+    coll.docs["CACHED"] = {"_id": "CACHED", "at": 1e12, "sales": {"tier": "weak", "growth_yoy_pct": 2.0, "source": "provider"}}
+    def snapshot(syms):
+        return {"SEPA": {"sales": {"tier": "strong", "growth_yoy_pct": 38.0, "score": 80}}}
+    def fetch(sym):
+        fetched.append(sym)
+        return {"tier": "unknown", "reason": "insufficient revenue history (need >= 5 quarters)"} if sym == "NEWB" else None
+    out = pc.sales_for(["SEPA", "CACHED", "NEWB", "NONE", "OVERCAP"], fetch=fetch, snapshot=snapshot, coll=coll, cap=2)
+    assert out["SEPA"]["tier"] == "strong" and out["SEPA"]["source"] == "sepa_research"
+    assert out["CACHED"]["tier"] == "weak"
+    assert fetched == ["NEWB", "NONE"]                         # cap=2 -> OVERCAP waits for the next build
+    assert out["NEWB"]["tier"] == "unknown" and "insufficient" in out["NEWB"]["reason"]
+    assert out["NONE"] is None and "OVERCAP" not in out
+    assert coll.docs["NEWB"]["sales"]["source"] == "provider"  # cached for 7 days
+    assert coll.docs["NONE"]["sales"] is None                  # a looked-and-empty is cached too
+
+
+def test_russell_for_reads_the_cached_board_raw():
+    coll = _Coll()
+    coll.docs["board"] = {"_id": "board", "payload": {
+        "as_of": "2026-09-03T00:30:00Z",
+        "adds_r2000": [{"symbol": "SYM", "board": "add_r2000", "market_cap": 5.2e9,
+                        "add_event": {"key": "recon_dec_2026", "in_index": "2026-12-14"}, "first_seen": "2026-09-03T00:30:00Z"}],
+        "promotions_r1000": [{"symbol": "BIG", "board": "promote_r1000", "market_cap": 6e9, "add_event": None}]}}
+    out = pc.russell_for(coll=coll)
+    assert out["SYM"]["add_event"]["in_index"] == "2026-12-14" and out["SYM"]["as_of"] == "2026-09-03T00:30:00Z"
+    assert out["BIG"]["board"] == "promote_r1000"
+    assert pc.russell_for(coll=_Coll()) == {}
+
+
+def test_build_row_carries_the_five_tells_and_one_edgar_fetch_feeds_three(monkeypatch):
+    import inspect
+    src = inspect.getsource(pc)
+    body = src[src.index("def _row(tkr: str)"):src.index("status_rank = ")]
+    for k in ('"russell"', '"sales"', '"catalyst"', '"eightk"', '"sec"'):
+        assert k in body, k
+    enrich = src[src.index("def _enrich(row"):src.index("def _enrich(row") + 400]
+    assert "_edgar_bundle(row" in enrich and "_catalyst(row" in enrich
+    calls = []
+    monkeypatch.setattr(pc, "_fetch_sec_filings", None, raising=False)
+    import catalysts.evidence as ev
+    monkeypatch.setattr(ev, "_fetch_sec_filings", lambda t, days=7: calls.append((t, days)) or [
+        {"form": "8-K", "filing_date": "2026-09-01", "url": "u", "items": "8.01"},
+        {"form": "SC 13G", "filing_date": "2026-09-01", "url": "g"}])
+    b = pc._edgar_bundle("TINY")
+    assert calls == [("TINY", 30)]                              # ONE fetch
+    assert b["edgar"]["owner_stake"]["form"] == "SC 13G" and b["eightk"]["items"] == ["8.01"]
+    assert b["sec"]["forms"] == ["SC 13G"]

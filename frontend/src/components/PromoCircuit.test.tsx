@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PromoCircuit, tagStamp } from './PromoCircuit';
+import { COLUMNS, PromoCircuit, nextSort, sortRows, tagStamp } from './PromoCircuit';
 import { _resetLiteCache } from './PromoTagTape';
 
 /* Promo-circuit watch — born 2026-09-01 from the chatter-provenance study.
@@ -334,5 +334,106 @@ describe('promo board: room to run, links, mini tape, recency order (Ajay 2026-0
     // clicking the sparkline opens the full tape row
     fireEvent.click(mini);
     await waitFor(() => expect(document.querySelector('.ptt__row')).not.toBeNull());
+  });
+});
+
+describe('one sortable table for every view (Ajay 2026-09-02: "both be the same … sort functionality")', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); _resetLiteCache(); });
+  const tells = {
+    russell: { board: 'add_r2000', market_cap: 5.2e9, as_of: '2026-09-03T00:30:00Z',
+      add_event: { key: 'recon_dec_2026', kind: 'reconstitution', label: 'December 2026 reconstitution', rank_day: '2026-10-30', prelim: '2026-11-13', effective_close: '2026-12-11', in_index: '2026-12-14', lists_published: false } },
+    sales: { tier: 'strong', growth_yoy_pct: 38.2, prior_yoy_pct: 20.1, accelerating: true, score: 80, source: 'sepa_research' },
+    catalyst: { n_48h: 3, n_bullish: 1, n_bearish: 0, verdict: 'REAL', top: { title: 'Wins $40M Navy contract for drone swarms', url: 'https://x/n', publisher: 'GlobeNewswire', published_utc: '2026-09-02T12:00:00Z', tone: 'bullish' } },
+    eightk: { form: '8-K', filing_date: '2026-09-01', url: 'https://sec/8k', items: ['1.01', '9.01'], n_14d: 2 },
+    sec: { n_30d: 4, forms: ['4', '424B5'], latest: { form: '4', filing_date: '2026-08-30', url: 'https://sec/f4' }, n_form4: 2, has_offering: true },
+  };
+  const board = () => document.querySelector('.pcw__table:not(.pcw__live)')!;
+  const boardSyms = () => Array.from(board().querySelectorAll('td.og__sym'))
+    .map((td) => td.querySelector('a[href*="stocktwits.com/symbol/"]')!.getAttribute('href')!.split('/').pop());
+  const HEADS = ['Symbol', 'Session', 'Last', 'Tagged by', 'First tag', 'Last tag', 'Today', 'Since tag', 'Peak', 'Room', 'Tape', 'Russell', 'Sales', 'Catalyst', '8-K', 'SEC', 'Status'];
+
+  it('board and live tables share the same 17 headers; 15 of them sortable', async () => {
+    mock(payload([row()]), true, livePayload([liveRow({ ticker: 'TINY', day_pct: 3 })]));
+    draw();
+    await waitFor(() => expect(document.querySelectorAll('.pcw__table').length).toBeGreaterThanOrEqual(2));
+    const heads = (el: Element) => Array.from(el.querySelectorAll('thead th')).map((th) => th.textContent?.replace(/[▲▼⇅]/g, '').trim());
+    const live = document.querySelector('.pcw__table.pcw__live')!;
+    expect(heads(live)).toEqual(HEADS);
+    expect(heads(board())).toEqual(HEADS);
+    expect(live.querySelectorAll('th.og__sortable').length).toBe(15);
+    expect(COLUMNS.length).toBe(17);
+  });
+
+  it('renders the five tells in both tables, and dashes (no chips) when absent', async () => {
+    mock(payload([row(tells), row({ ticker: 'BARE' })]), true, livePayload([liveRow({ ticker: 'TINY', ...tells })]));
+    draw();
+    await waitFor(() => expect(screen.getAllByText('TINY').length).toBe(2));
+    const rowOf = (t: string) => Array.from(board().querySelectorAll('tbody tr')).find((tr) => tr.textContent?.includes(t))!;
+    const tiny = rowOf('TINY');
+    expect(tiny.querySelector('.pcw__russ')!.textContent).toContain('R2000 add · Dec 14');
+    expect(tiny.querySelector('.pcw__sales')!.textContent).toContain('+38.2% strong ↑');
+    expect(tiny.querySelector('.pcw__cat')!.textContent).toContain('REAL');
+    expect(tiny.querySelector('.pcw__cat-top')!.getAttribute('href')).toBe('https://x/n');
+    expect(tiny.querySelector('.pcw__8k')!.textContent).toContain('Sep 1');
+    expect(tiny.querySelector('.pcw__8k')!.textContent).toContain('1.01,9.01');
+    expect(tiny.querySelector('.pcw__sec-roll')!.textContent).toBe('4× 4, 424B5');
+    const bare = rowOf('BARE');
+    for (const sel of ['.pcw__russ', '.pcw__sales', '.pcw__cat', '.pcw__8k', '.pcw__sec-roll']) expect(bare.querySelector(sel)).toBeNull();
+    expect(bare.querySelectorAll('td.pcw__dim').length).toBeGreaterThanOrEqual(5);
+    const live = document.querySelector('.pcw__table.pcw__live')!;
+    expect(live.querySelector('.pcw__russ')!.textContent).toContain('Dec 14');
+    expect(live.querySelector('.pcw__sales')!.textContent).toContain('+38.2%');
+    expect(live.querySelector('.pcw__8k a')!.getAttribute('href')).toBe('https://sec/8k');
+  });
+
+  it('click-sorts: natural order, then reverse, then back to the default; empties always last', async () => {
+    const rows = [
+      row({ ticker: 'AAA', max_gain_pct: 10, last_tagged_at: '2026-09-01T00:00:00Z' }),
+      row({ ticker: 'BBB', max_gain_pct: 30, last_tagged_at: '2026-09-02T00:00:00Z' }),
+      row({ ticker: 'CCC', max_gain_pct: null, last_tagged_at: '2026-09-03T00:00:00Z' }),
+    ];
+    mock(payload(rows), true, livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(3));
+    expect(boardSyms()).toEqual(['CCC', 'BBB', 'AAA']);                   // default: newest tag first
+    const th = (label: string) => Array.from(board().querySelectorAll('th')).find((h) => h.textContent?.includes(label))!;
+    fireEvent.click(th('Peak').querySelector('button')!);
+    expect(boardSyms()).toEqual(['BBB', 'AAA', 'CCC']);                   // desc, empty last
+    expect(th('Peak').getAttribute('aria-sort')).toBe('descending');
+    fireEvent.click(th('Peak').querySelector('button')!);
+    expect(boardSyms()).toEqual(['AAA', 'BBB', 'CCC']);                   // asc, empty still last
+    expect(th('Peak').getAttribute('aria-sort')).toBe('ascending');
+    fireEvent.click(th('Peak').querySelector('button')!);
+    expect(boardSyms()).toEqual(['CCC', 'BBB', 'AAA']);                   // back to default
+    expect(th('Peak').getAttribute('aria-sort')).toBe('none');
+    fireEvent.click(th('Symbol').querySelector('button')!);
+    expect(boardSyms()).toEqual(['AAA', 'BBB', 'CCC']);                   // text columns: asc first
+    expect(th('Tagged by').querySelector('button')).toBeNull();          // not sortable
+  });
+
+  it('pure sortRows / nextSort: numbers, strings, empties, unsortable fallback, tri-state', () => {
+    const mk = (t: string, peak: number | null, sess: string | null): any => ({ ticker: t, max_gain_pct: peak, live: sess ? { session: sess } : null, accounts: [] });
+    const rows = [mk('B', 5, 'rth'), mk('A', null, 'afterhours'), mk('C', 9, null)];
+    expect(sortRows(rows, { key: 'peak', dir: 'desc' }, (r) => r).map((r) => r.ticker)).toEqual(['C', 'B', 'A']);
+    expect(sortRows(rows, { key: 'peak', dir: 'asc' }, (r) => r).map((r) => r.ticker)).toEqual(['B', 'C', 'A']);
+    expect(sortRows(rows, { key: 'session', dir: 'asc' }, (r) => r).map((r) => r.ticker)).toEqual(['A', 'B', 'C']);
+    expect(sortRows(rows, { key: 'tagged', dir: 'asc' }, (r) => [...r].reverse()).map((r) => r.ticker)).toEqual(['C', 'A', 'B']);
+    expect(sortRows(rows, null, (r) => r).map((r) => r.ticker)).toEqual(['B', 'A', 'C']);
+    const peak = COLUMNS.find((c) => c.key === 'peak')!;
+    expect(nextSort(null, peak)).toEqual({ key: 'peak', dir: 'desc' });
+    expect(nextSort({ key: 'peak', dir: 'desc' }, peak)).toEqual({ key: 'peak', dir: 'asc' });
+    expect(nextSort({ key: 'peak', dir: 'asc' }, peak)).toBeNull();
+    const sym = COLUMNS.find((c) => c.key === 'symbol')!;
+    expect(nextSort(null, sym)).toEqual({ key: 'symbol', dir: 'asc' });
+  });
+
+  it('live-only rows (no board row yet) render plain handles — no tier claim — and dashes for the board-only columns', async () => {
+    mock(payload([]), true, livePayload([liveRow({ ticker: 'LIV1', accounts: ['topstockalerts'] })]));
+    draw();
+    await waitFor(() => expect(screen.getByText('LIV1')).toBeTruthy());
+    const live = document.querySelector('.pcw__table.pcw__live')!;
+    expect(live.querySelector('a.pcw__acct-link[href$="/topstockalerts"]')).not.toBeNull();
+    expect(live.querySelector('.pcw__acct')).toBeNull();
+    expect(live.querySelector('tbody tr')!.textContent).toContain('PRE');
   });
 });

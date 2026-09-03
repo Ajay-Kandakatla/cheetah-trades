@@ -244,3 +244,43 @@ publishes its measured height as `--sticky-top` (`hooks/useStickyTop.ts`,
 ResizeObserver) and the headers sit under it. Guarded by
 `scripts/contracts.mjs` ("promo board column headers stick until the table
 ends") and `useStickyTop.test.tsx`.
+
+
+## 2026-09-02 pm — one sortable table, five tells per name
+
+Ajay: *"add a new column to call out russell addition to the promo circuit.
+Another column for sales and another for catalyst and another for any 8k or
+SEC filings"* + *"I want both be the same with dates and new columns and give
+me sort functionality on possible columns."*
+
+**One table** (`PromoTable` / `UnifiedRow` in `PromoCircuit.tsx`): the ⚡ live
+table and the three board tables share the same 17 columns — Symbol, Session,
+Last, Tagged by, First tag, Last tag, Today, Since tag, Peak, Room, Tape,
+Russell, Sales, Catalyst, 8-K, SEC, Status. A board row and a live row for the
+same ticker merge (`unifyBoard` / `unifyLive`); a live-only row shows plain
+handles (no tier claim). The live table defaults to today's move, the board
+tables to the latest announcement. **Sorting** (`COLUMNS`, `sortRows`,
+`nextSort`): 15 sortable headers (not Tagged by / Tape); click = the column's
+natural order (numbers desc, text asc, Russell date / Catalyst verdict asc),
+again = reverse, again = back to the default; empty cells always sort last;
+`aria-sort` on the header.
+
+**The five tells** live on the 10-min board (`promo_circuit.build`) and ride
+onto the live rows unchanged (`promo_live.live_rows`):
+
+| Column | Source | Shape | Cost |
+|---|---|---|---|
+| Russell | `russell_for()` — raw read of `russell_watch_cache` (never `build()`) | `{board, add_event{in_index, lists_published…}, as_of}` | free |
+| Sales | `sales_for()` — `sepa.research.sales_snapshot` → `promo_sales_cache` (7d) → ≤40 `canslim.fundamentals_for` lookups per build inside 25 s | Bonde `{tier, growth_yoy_pct (YoY, never QoQ), prior_yoy_pct, accelerating, score, reason}` | one Mongo query + capped provider fill |
+| Catalyst | `_catalyst()` — 48h Massive news + the evidence keyword tagger, `promo_news_cache` (30 min) | `{n_48h, n_bullish, n_bearish, top{title,url,publisher,published_utc,tone}, verdict REAL/THIN/NONE}`; `None` = fetch failed (unknown ≠ none) | one news call per name per 30 min, capped rows only |
+| 8-K | `sec_flags_from_filings()` over the SAME submissions list `_edgar_bundle()` fetches once | newest 8-K ≤14d `{form, filing_date, url, items[], n_14d}` — `evidence._fetch_sec_filings` now carries the `items` codes | free (shared fetch) |
+| SEC | same list, everything else ≤30d | `{n_30d, forms[], latest, n_form4, has_offering}` + the existing 13D/G / shelf chips (the old EDGAR column folded in) | free (shared fetch) |
+
+`_edgar_bundle` replaces three would-be EDGAR fetches per row with one; the
+capped pass (`EDGAR_ROW_CAP`, actionable statuses only) now runs `_enrich` =
+bundle + catalyst.
+
+Tests: `test_promo_circuit.py` (8-K window/items/roll-up, catalyst verdicts,
+sales ladder with cap + cache, Russell raw join, one-fetch bundle),
+`PromoCircuit.test.tsx` (17 shared headers, the five cells + dashes, click
+sort tri-state with empties last, pure sort helpers, live-only rows).

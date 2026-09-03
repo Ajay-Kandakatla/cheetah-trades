@@ -576,12 +576,226 @@ def edgar_flags_from_filings(filings: list[dict],
 
 
 def _edgar_flags(ticker: str) -> dict:
+    return _edgar_bundle(ticker)["edgar"]
+
+
+# ── Five tells per row (Ajay 2026-09-02: "add a new column to call out
+# russell addition ... another for sales and another for catalyst and
+# another for any 8k or SEC filings") ─────────────────────────────────────
+_EIGHTK_WINDOW_DAYS = 14
+_SEC_WINDOW_DAYS = 30
+NEWS_CACHE_TTL_SEC = 30 * 60
+SALES_CACHE_TTL_SEC = 7 * 24 * 3600
+SALES_FETCH_CAP = 40             # new provider lookups per build
+SALES_FETCH_BUDGET_SEC = 25.0
+
+
+def sec_flags_from_filings(filings: list[dict], now: Optional[datetime] = None) -> dict:
+    """Pure sibling of edgar_flags_from_filings over the SAME submissions list:
+    {eightk, sec}. eightk = the newest 8-K inside _EIGHTK_WINDOW_DAYS with its
+    item codes; sec = a roll-up of everything else filed inside
+    _SEC_WINDOW_DAYS (count, distinct forms newest-first, the latest one,
+    Form 4 count, offering plumbing). Both None-shaped when nothing is there."""
+    now = now or datetime.now(timezone.utc)
+    k_cut = (now - timedelta(days=_EIGHTK_WINDOW_DAYS)).date()
+    s_cut = (now - timedelta(days=_SEC_WINDOW_DAYS)).date()
+    eightk, n_8k = None, 0
+    others: list[dict] = []
+    for f in filings or []:
+        form = (f.get("form") or "").upper()
+        try:
+            fdate = datetime.strptime(f.get("filing_date") or "", "%Y-%m-%d").date()
+        except Exception:
+            continue
+        base = {"form": form, "filing_date": f.get("filing_date"), "url": f.get("url")}
+        if form.startswith("8-K"):
+            if fdate >= k_cut:
+                n_8k += 1
+                if eightk is None:
+                    codes = [c.strip() for c in (f.get("items") or "").split(",") if c.strip()]
+                    eightk = {**base, "items": codes}
+            continue
+        if fdate >= s_cut:
+            others.append(base)
+    if eightk is not None:
+        eightk["n_14d"] = n_8k
+    others.sort(key=lambda b: b["filing_date"], reverse=True)
+    sec = None
+    if others:
+        forms: list[str] = []
+        for b in others:
+            if b["form"] not in forms:
+                forms.append(b["form"])
+        sec = {
+            "n_30d": len(others), "forms": forms[:5], "latest": others[0],
+            "n_form4": sum(1 for b in others if b["form"] in ("4", "4/A")),
+            "has_offering": any(not b["form"].startswith("S-8")
+                                and b["form"].startswith(_SHELF_PREFIXES) for b in others),
+        }
+    return {"eightk": eightk, "sec": sec}
+
+
+def _edgar_bundle(ticker: str) -> dict:
+    """ONE EDGAR submissions fetch feeds three fields — edgar (the two dated
+    tells), eightk, sec. Never three fetches for one row."""
     try:
         from .evidence import _fetch_sec_filings
-        return edgar_flags_from_filings(_fetch_sec_filings(ticker, days=30))
+        filings = _fetch_sec_filings(ticker, days=_SEC_WINDOW_DAYS)
+        return {"edgar": edgar_flags_from_filings(filings), **sec_flags_from_filings(filings)}
     except Exception as exc:
-        log.debug("edgar flags failed for %s: %s", ticker, exc)
-        return {"owner_stake": None, "shelf": None}
+        log.debug("edgar bundle failed for %s: %s", ticker, exc)
+        return {"edgar": {"owner_stake": None, "shelf": None}, "eightk": None, "sec": None}
+
+
+def catalyst_from_news(news: Optional[list], now: Optional[datetime] = None) -> Optional[dict]:
+    """Pure: 48h news list (evidence._fetch_massive_news shape, each item
+    already carrying `tone`) -> {n_48h, n_bullish, n_bearish, top, verdict}.
+    REAL = a headline the keyword tagger reads as bullish or bearish (a
+    contract, an approval, an offering...); THIN = only untagged chatter;
+    NONE = nothing in 48h. None in = fetch failed -> None out (unknown, not
+    'no catalyst')."""
+    if news is None:
+        return None
+    items = sorted((n for n in news if n.get("title")),
+                   key=lambda n: n.get("published_utc") or "", reverse=True)
+    n_b = sum(1 for n in items if n.get("tone") == "bullish")
+    n_r = sum(1 for n in items if n.get("tone") == "bearish")
+    top = next((n for n in items if n.get("tone") in ("bullish", "bearish")), items[0] if items else None)
+    verdict = "REAL" if (n_b or n_r) else ("THIN" if items else "NONE")
+    return {
+        "n_48h": len(items), "n_bullish": n_b, "n_bearish": n_r, "verdict": verdict,
+        "top": ({"title": top.get("title"), "url": top.get("url"), "publisher": top.get("publisher"),
+                 "published_utc": top.get("published_utc"), "tone": top.get("tone") or "neutral"}
+                if top else None),
+    }
+
+
+def _catalyst(ticker: str) -> Optional[dict]:
+    """48h news read, cached per ticker for NEWS_CACHE_TTL_SEC so the 10-min
+    board never re-asks Massive about the same name."""
+    coll = _coll("promo_news_cache")
+    now = time.time()
+    if coll is not None:
+        try:
+            doc = coll.find_one({"_id": ticker})
+            if doc and now - float(doc.get("at") or 0) < NEWS_CACHE_TTL_SEC:
+                return doc.get("catalyst")
+        except Exception:
+            pass
+    try:
+        from .evidence import _fetch_massive_news, _tag_news_tone
+        news = _fetch_massive_news(ticker, hours=48)
+        for n in news:
+            n["tone"] = _tag_news_tone(n.get("title") or "", n.get("description") or "")
+        out = catalyst_from_news(news)
+    except Exception as exc:
+        log.debug("catalyst news failed for %s: %s", ticker, exc)
+        return None
+    if coll is not None and out is not None:
+        try:
+            coll.update_one({"_id": ticker}, {"$set": {"at": now, "catalyst": out}}, upsert=True)
+        except Exception:
+            pass
+    return out
+
+
+def _sales_project(block: Optional[dict], source: str) -> Optional[dict]:
+    if not block:
+        return None
+    return {"tier": block.get("tier"), "growth_yoy_pct": block.get("growth_yoy_pct"),
+            "prior_yoy_pct": block.get("prior_yoy_pct"), "accelerating": block.get("accelerating"),
+            "score": block.get("score"), "reason": block.get("reason"), "source": source}
+
+
+def sales_for(tickers: list[str], fetch=None, snapshot=None, coll=None,
+              cap: int = SALES_FETCH_CAP, budget_sec: float = SALES_FETCH_BUDGET_SEC) -> dict:
+    """Bonde sales read (sepa/sales.py::compute — YoY, never QoQ) for every
+    ticker: the SEPA research cache first (one Mongo query), then this
+    board's own 7-day cache, then at most `cap` provider lookups inside
+    `budget_sec` for names the SEPA universe never researched (most promo
+    micro-caps). A miss stays None — 'unknown', never a pass."""
+    out: dict = {}
+    if snapshot is None:
+        def snapshot(syms):
+            from sepa.research import sales_snapshot
+            return sales_snapshot(syms)
+    try:
+        snap = snapshot(list(tickers)) or {}
+    except Exception as exc:
+        log.warning("promo board: sales snapshot failed: %s", exc)
+        snap = {}
+    for t in tickers:
+        blk = (snap.get(t) or {}).get("sales")
+        if blk:
+            out[t] = _sales_project(blk, "sepa_research")
+    missing = [t for t in tickers if t not in out]
+    coll = coll if coll is not None else _coll("promo_sales_cache")
+    now = time.time()
+    if coll is not None and missing:
+        try:
+            for d in coll.find({"_id": {"$in": missing}}):
+                if now - float(d.get("at") or 0) < SALES_CACHE_TTL_SEC:
+                    out[d["_id"]] = d.get("sales")            # may be None = looked, nothing
+        except Exception as exc:
+            log.warning("promo board: sales cache read failed: %s", exc)
+    missing = [t for t in tickers if t not in out][:cap]
+    if not missing:
+        return out
+    if fetch is None:
+        def fetch(sym):
+            from sepa.canslim import fundamentals_for
+            return (fundamentals_for(sym) or {}).get("sales")
+    t0 = time.time()
+
+    def _one(sym):
+        if time.time() - t0 > budget_sec:
+            return sym, "skip", None
+        try:
+            return sym, "ok", fetch(sym)
+        except Exception as exc:
+            log.debug("sales fetch failed for %s: %s", sym, exc)
+            return sym, "err", None
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for sym, state, blk in ex.map(_one, missing):
+            if state == "skip":
+                continue
+            val = _sales_project(blk, "provider") if state == "ok" else None
+            out[sym] = val
+            if coll is not None and state == "ok":
+                try:
+                    coll.update_one({"_id": sym}, {"$set": {"at": now, "sales": val}}, upsert=True)
+                except Exception:
+                    pass
+    return out
+
+
+def russell_for(coll=None) -> dict:
+    """Per-symbol join onto the Russell watch's CACHED board (raw read — never
+    russell_watch.build(): a cold build takes minutes). {symbol: {board,
+    market_cap, add_event, first_seen, as_of}}; {} when no board yet."""
+    try:
+        if coll is None:
+            from . import russell_watch as rw
+            coll = rw._cache_coll()
+        if coll is None:
+            return {}
+        pay = (coll.find_one({"_id": "board"}) or {}).get("payload") or {}
+    except Exception as exc:
+        log.warning("promo board: russell join failed: %s", exc)
+        return {}
+    out = {}
+    for r in (pay.get("adds_r2000") or []) + (pay.get("promotions_r1000") or []):
+        out[r["symbol"]] = {"board": r.get("board"), "market_cap": r.get("market_cap"),
+                            "add_event": r.get("add_event"), "first_seen": r.get("first_seen"),
+                            "as_of": pay.get("as_of")}
+    return out
+
+
+def _enrich(row: dict) -> dict:
+    """The capped network pass for one actionable row: one EDGAR fetch (edgar
+    + eightk + sec) and one cached news read (catalyst)."""
+    b = _edgar_bundle(row["ticker"])
+    return {**b, "catalyst": _catalyst(row["ticker"])}
 
 
 # --- Board ----------------------------------------------------------------
@@ -655,6 +869,11 @@ def build(force: bool = False) -> dict:
         acct = PROMO_ACCOUNTS.get(rec.get("account")) or {}
         return acct.get("tier") or rec.get("tier") or "B"
 
+    # Two FREE bulk reads, hoisted out of the per-row pool (sales: one Mongo
+    # query + capped provider fill; russell: the cached board, raw).
+    sales_by = sales_for(tickers)
+    russ_by = russell_for()
+
     def _row(tkr: str) -> dict:
         recs = sorted(by_ticker[tkr], key=lambda r: TIER_ORDER.get(_tier(r), 9))
         first = min((_as_utc(r.get("first_tagged_at")) or now) for r in recs)
@@ -680,6 +899,11 @@ def build(force: bool = False) -> dict:
             **pa,
             "status": status,
             "edgar": {"owner_stake": None, "shelf": None},
+            # the five tells (Ajay 2026-09-02) — slow-changing, so they live
+            # on the 10-min board, and the live table just carries them over
+            "russell": russ_by.get(tkr),
+            "sales": sales_by.get(tkr),
+            "catalyst": None, "eightk": None, "sec": None,
         }
 
     with ThreadPoolExecutor(max_workers=8) as ex:
@@ -695,9 +919,9 @@ def build(force: bool = False) -> dict:
     edgar_rows = [r for r in rows[:EDGAR_ROW_CAP]
                   if r["status"] in ("SEEDING", "RAN", "DUMPED")]
     with ThreadPoolExecutor(max_workers=6) as ex:
-        for r, flags in zip(edgar_rows,
-                            ex.map(lambda r: _edgar_flags(r["ticker"]), edgar_rows)):
-            r["edgar"] = flags
+        for r, got in zip(edgar_rows, ex.map(_enrich, edgar_rows)):
+            r["edgar"] = got["edgar"]
+            r["eightk"], r["sec"], r["catalyst"] = got["eightk"], got["sec"], got["catalyst"]
 
     meta_coll = _coll("promo_circuit_meta")
     sweep_meta = None

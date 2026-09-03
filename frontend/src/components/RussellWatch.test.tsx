@@ -83,6 +83,7 @@ describe('add dates (Ajay 2026-09-02: "add the dates of these candidates additio
   it('mdy prints calendar days without a timezone shift', () => {
     expect(mdy('2026-12-14')).toBe('Dec 14');
     expect(mdy('2026-09-01T04:00:00Z')).toBe('Sep 1');
+    expect(mdy('2026-09-03T00:30:00Z')).toBe('Sep 2');            // a timestamp reads as its ET day
     expect(mdy(null)).toBe('—');
     expect(mdy('garbage')).toBe('—');
   });

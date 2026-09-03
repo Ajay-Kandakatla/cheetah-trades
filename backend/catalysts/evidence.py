@@ -163,6 +163,7 @@ def _fetch_sec_filings(ticker: str, days: int = 7) -> list[dict]:
         dates = recent.get("filingDate") or []
         accs = recent.get("accessionNumber") or []
         docs = recent.get("primaryDocument") or []
+        items = recent.get("items") or []          # 8-K item codes, "1.01,9.01"
 
         out = []
         for i, form in enumerate(forms):
@@ -184,6 +185,7 @@ def _fetch_sec_filings(ticker: str, days: int = 7) -> list[dict]:
                 "form": form,
                 "filing_date": dates[i],
                 "url": url_doc,
+                "items": (items[i] if i < len(items) else "") or "",
             })
         return out
     except Exception as exc:

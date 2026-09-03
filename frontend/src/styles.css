@@ -11539,3 +11539,31 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .rw__adds { white-space: nowrap; }
 .rw__adds.is-listed b { color: #e8a33d; }     /* FTSE's list is already out: this row is a guess at it */
 .rw__sched { margin-top: 2px; }
+
+
+/* Promo board — sortable headers + the five tells (2026-09-02) */
+.og__sortable { cursor: pointer; user-select: none; }
+.og__sortbtn { all: unset; cursor: pointer; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; }
+.og__sortbtn:focus-visible { outline: 1px solid var(--accent, #e8a33d); outline-offset: 2px; }
+.og__sortarrow { opacity: 0.35; font-size: 0.9em; }
+.og__sortable.is-sorted .og__sortarrow { opacity: 1; color: var(--accent, #e8a33d); }
+.og__sortable.is-sorted .og__sortbtn { color: var(--text, #e2e8f0); }
+.pcw__grid td { vertical-align: middle; }
+.pcw__russ { white-space: nowrap; font-size: 11px; }
+.pcw__russ.is-add { color: var(--positive, #46a758); }
+.pcw__russ.is-promo { color: #e8a33d; }
+.pcw__sales { white-space: nowrap; }
+.pcw__sales.is-explosive, .pcw__sales.is-strong { color: var(--positive, #46a758); }
+.pcw__sales.is-steady { color: var(--text, #e2e8f0); }
+.pcw__sales.is-weak, .pcw__sales.is-declining { color: var(--negative, #e5484d); }
+.pcw__cat { white-space: nowrap; font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.pcw__cat-verdict { font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 0.04em; padding: 0 4px; border-radius: 3px; border: 1px solid currentColor; }
+.pcw__cat.is-real .pcw__cat-verdict { color: var(--positive, #46a758); }
+.pcw__cat.is-thin .pcw__cat-verdict { color: var(--text-muted, #94a3b8); }
+.pcw__cat.is-none .pcw__cat-verdict { color: var(--text-muted, #94a3b8); opacity: 0.6; }
+.pcw__cat-top { color: var(--text, #e2e8f0); text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.25); }
+.pcw__cat-top.tone-bullish { color: var(--positive, #46a758); }
+.pcw__cat-top.tone-bearish { color: var(--negative, #e5484d); }
+.pcw__8k a { color: var(--text, #e2e8f0); text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.25); white-space: nowrap; }
+.pcw__sec { white-space: nowrap; font-size: 11px; }
+.pcw__sec-roll { color: var(--text-muted, #94a3b8); text-decoration: none; margin-left: 4px; border-bottom: 1px dotted currentColor; }

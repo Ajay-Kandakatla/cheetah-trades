@@ -318,6 +318,10 @@ def live_rows(force: bool = False) -> dict:
             "first_tagged_at": r.get("first_tagged_at"),
             "last_tagged_at": r.get("last_tagged_at"),
             "edgar": r.get("edgar"),
+            # the five tells ride along unchanged from the 10-min board
+            "russell": r.get("russell"), "sales": r.get("sales"), "catalyst": r.get("catalyst"),
+            "eightk": r.get("eightk"), "sec": r.get("sec"),
+            "max_gain_pct": r.get("max_gain_pct"),
             # Room to run: first overhead band + % to it (daily-bar zones)
             "room": _room_for(zones.get(r["ticker"]), float(last) if last else None),
         })

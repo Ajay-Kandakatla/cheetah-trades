@@ -32,7 +32,7 @@ export const etStamp = (ms: number) =>
 export function layout(bars: Bar[], tags: Tag[], w: number, h: number) {
   if (!bars.length) return null;
   const t0 = bars[0].t, t1 = bars[bars.length - 1].t;
-  const lo = Math.min(...bars.map((b) => b.l)), hi = Math.max(...bars.map((b) => b.h));
+  const lo = Math.min(...bars.map((b) => b.l ?? b.c)), hi = Math.max(...bars.map((b) => b.h ?? b.c));   // lite bars carry closes only
   const span = Math.max(1, t1 - t0), range = Math.max(1e-9, hi - lo);
   const x = (t: number) => ((Math.min(Math.max(t, t0), t1) - t0) / span) * (w - 8) + 4;
   const y = (p: number) => h - 14 - ((p - lo) / range) * (h - 26);

@@ -10,18 +10,28 @@
  * Reads /catalysts/promo-circuit; the roster lives in
  * backend/catalysts/promo_circuit.py (user-editable, like fundTiers).
  */
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { Link } from 'react-router-dom';
 import { MiniTape, PromoTagTape } from './PromoTagTape';
+import { mdy, type AddEvent } from './RussellWatch';
 
 type TaggedBy = {
   handle: string; tier: 'S' | 'A' | 'B';
   last_tagged_at: string; n_messages?: number | null; sample?: string | null;
 };
 type EdgarFlag = { form: string; filing_date: string; url?: string | null } | null;
-type Row = {
+/* The five tells (Ajay 2026-09-02) — computed on the 10-min board, carried
+ * unchanged onto the live rows. null = not read yet / nothing there. */
+export type RussellJoin = { board: 'add_r2000' | 'promote_r1000'; market_cap?: number | null; add_event?: AddEvent | null; first_seen?: string | null; as_of?: string | null };
+export type SalesRead = { tier: string | null; growth_yoy_pct: number | null; prior_yoy_pct?: number | null; accelerating?: boolean | null; score?: number | null; reason?: string | null; source?: string };
+export type CatalystRead = { n_48h: number; n_bullish: number; n_bearish: number; verdict: 'REAL' | 'THIN' | 'NONE';
+  top: { title: string; url?: string | null; publisher?: string | null; published_utc?: string | null; tone: string } | null };
+export type EightK = { form: string; filing_date: string; url?: string | null; items: string[]; n_14d?: number };
+export type SecRollup = { n_30d: number; forms: string[]; latest: { form: string; filing_date: string; url?: string | null }; n_form4: number; has_offering: boolean };
+type Tells = { russell?: RussellJoin | null; sales?: SalesRead | null; catalyst?: CatalystRead | null; eightk?: EightK | null; sec?: SecRollup | null };
+type Row = Tells & {
   ticker: string; accounts: TaggedBy[]; best_tier: 'S' | 'A' | 'B';
   first_tagged_at: string; last_tagged_at?: string | null; days_since_first_tag: number;
   pct_since_tag: number | null; max_gain_pct: number | null;
@@ -118,11 +128,10 @@ export function tagStamp(iso: string | null | undefined): string {
   return `${day} · ${t} ET`;
 }
 
-const SESSION_SHORT: Record<string, string> = { premarket: 'PRE', afterhours: 'AH' };
 
 /* Most recent announcement first (Ajay 2026-09-02: "Sort by most recent announcement"). */
-export function sortRecent<T extends { first_tagged_at: string; last_tagged_at?: string | null }>(rows: T[]): T[] {
-  const at = (r: T) => Date.parse(r.last_tagged_at ?? r.first_tagged_at) || 0;
+export function sortRecent<T extends { first_tagged_at: string | null; last_tagged_at?: string | null }>(rows: T[]): T[] {
+  const at = (r: T) => Date.parse(r.last_tagged_at ?? r.first_tagged_at ?? '') || 0;
   return [...rows].sort((a, b) => at(b) - at(a));
 }
 
@@ -165,80 +174,6 @@ export function RoomCell({ room }: { room?: RoomRead | null }) {
   );
 }
 
-function RowsTable({ title, hint, rows, live }: { title: string; hint: string; rows: Row[]; live?: Record<string, LiveRow> }) {
-  /* One expanded tape at a time per table (Ajay 2026-09-02: "small graph of
-   * price change from the time they said it"). */
-  const [open, setOpen] = useState<string | null>(null);
-  const sorted = sortRecent(rows);
-  return (
-    <div className="pcw__table">
-      <h3 className="day-section__h">{title}</h3>
-      <p className="rw__hint">{hint}</p>
-      {rows.length === 0 ? (
-        <div className="day-empty">Nothing here right now.</div>
-      ) : (
-        <table className="og__table">
-          <thead>
-            <tr>
-              <th>Symbol</th><th>Tagged by</th>
-              <th className="og__num">First tag</th>
-              <th className="og__num">Last tag</th>
-              <th className="og__num">Today</th>
-              <th className="og__num">Since tag</th>
-              <th className="og__num">Peak</th>
-              <th className="og__num" title="% from the live print to the first band overhead (daily-bar zones)">Room</th>
-              <th title="price path since the tag — marker at the first post, colored by the read">Tape</th>
-              <th>Status</th><th>EDGAR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((r) => {
-              const lv = live?.[r.ticker];
-              const since = lv?.pct_since_tag_live ?? r.pct_since_tag;
-              const isLive = lv?.pct_since_tag_live != null;
-              const isOpen = open === r.ticker;
-              return (
-                <Fragment key={r.ticker}>
-                <tr>
-                  <td className="og__sym">
-                    <SymCell ticker={r.ticker} />
-                    <button type="button" className={`ptt__toggle${isOpen ? ' is-on' : ''}`}
-                            aria-label={`${isOpen ? 'Hide' : 'Show'} tape for ${r.ticker}`}
-                            title="Price path around the tag — before or after the move?"
-                            onClick={() => setOpen(isOpen ? null : r.ticker)}>📈</button>
-                  </td>
-                  <td>{r.accounts.map((a) => <AccountChip key={a.handle} a={a} />)}</td>
-                  <td className="og__num mono" title={r.first_tagged_at}>
-                    {tagStamp(r.first_tagged_at)}<span className="pcw__dim"> · {r.days_since_first_tag.toFixed(0)}d</span>
-                  </td>
-                  <td className="og__num mono pcw__dim" title={r.last_tagged_at ?? undefined}>{tagStamp(r.last_tagged_at)}</td>
-                  <td className={`og__num mono ${((lv?.day_pct ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
-                      title={lv ? `last $${lv.last?.toFixed(2)} vs prior close $${lv.prev_close?.toFixed(2)}` : 'no live print yet'}>
-                    {lv ? pct(lv.day_pct) : '—'}{lv && SESSION_SHORT[lv.session] ? <span className="pcw__dim"> {SESSION_SHORT[lv.session]}</span> : null}
-                  </td>
-                  <td className={`og__num mono ${((since ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
-                      title={isLive ? `live print vs the pre-tag close · daily close read: ${pct(r.pct_since_tag)}` : 'daily close read'}>
-                    {isLive ? <span className="pcw__livedot">●</span> : null}{pct(since)}
-                  </td>
-                  <td className="og__num mono">{pct(r.max_gain_pct)}</td>
-                  <RoomCell room={lv?.room} />
-                  <td className="ptt__mini-cell"><MiniTape ticker={r.ticker} onOpen={() => setOpen(isOpen ? null : r.ticker)} /></td>
-                  <td title={STATUS_META[r.status]?.hint}>{STATUS_META[r.status]?.label ?? r.status}</td>
-                  <td><EdgarChips e={r.edgar} /></td>
-                </tr>
-                {isOpen ? (
-                  <tr className="ptt__row"><td colSpan={11}><PromoTagTape ticker={r.ticker} /></td></tr>
-                ) : null}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
 export type LiveRow = {
   ticker: string; status: string; best_tier: 'S' | 'A' | 'B'; accounts: string[];
   alertable?: boolean; pct_since_tag_live?: number | null;
@@ -248,7 +183,9 @@ export type LiveRow = {
   session: string; pct_since_tag: number | null;
   /** Room to run: first overhead band + % to it (daily-bar zones, 30-min cache). */
   room?: RoomRead | null;
-};
+  max_gain_pct?: number | null;
+  edgar?: Row['edgar'] | null;
+} & Tells;
 export type LivePayload = {
   rows: LiveRow[]; n: number; alert_threshold_pct: number; alert_handles?: string[];
   live: { state: string; refresh_sec: number; as_of: string | null }; method_note: string;
@@ -256,9 +193,6 @@ export type LivePayload = {
 };
 const CLOSED_POLL_SEC = 300;
 
-const SESSION_TAG: Record<string, string> = { premarket: 'PRE', rth: 'RTH', afterhours: 'AH', closed: '—' };
-const pctFmt = (v: number | null | undefined, d = 1) =>
-  v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(d)}%`;
 
 /* ⚡ Live — Ajay 2026-09-02: "Give me a real time page.. with percentage".
  * Every tagged name priced off one snapshot, pre/post market included,
@@ -285,66 +219,291 @@ export function usePromoLive() {
   return { data, err };
 }
 
-export function PromoLive({ data, err }: { data: LivePayload | null; err: string | null }) {
+
+/* ── One table for every view — Ajay 2026-09-02: "I want both be the same with
+ * dates and new columns and give me sort functionality on possible columns".
+ * A board row and a live row for the same ticker merge into one UnifiedRow;
+ * the ⚡ table is the live-priced set sorted by today's move, the board tables
+ * are split by status and sorted by the latest tag. Every column that holds a
+ * value is click-sortable: first click = the column's natural order, second =
+ * the reverse, third = back to the table's default. Empty cells always sort
+ * last. */
+export type UnifiedRow = Tells & {
+  ticker: string; status: Row['status']; best_tier: Row['best_tier'];
+  accounts: (TaggedBy | { handle: string })[];
+  first_tagged_at: string | null; last_tagged_at: string | null; days_since_first_tag: number | null;
+  pct_since_tag: number | null; max_gain_pct: number | null; edgar: Row['edgar'] | null;
+  live: LiveRow | null;
+};
+const tells = (x: Tells): Tells => ({ russell: x.russell ?? null, sales: x.sales ?? null, catalyst: x.catalyst ?? null, eightk: x.eightk ?? null, sec: x.sec ?? null });
+export function unifyBoard(r: Row, lv?: LiveRow | null): UnifiedRow {
+  return { ...tells(r), ticker: r.ticker, status: r.status, best_tier: r.best_tier, accounts: r.accounts,
+    first_tagged_at: r.first_tagged_at, last_tagged_at: r.last_tagged_at ?? null, days_since_first_tag: r.days_since_first_tag,
+    pct_since_tag: r.pct_since_tag, max_gain_pct: r.max_gain_pct, edgar: r.edgar, live: lv ?? null };
+}
+export function unifyLive(lv: LiveRow, b?: Row | null): UnifiedRow {
+  if (b) return unifyBoard(b, lv);
+  return { ...tells(lv), ticker: lv.ticker, status: lv.status as Row['status'], best_tier: lv.best_tier,
+    accounts: lv.accounts.map((handle) => ({ handle })),           // tiers unknown without the board row
+    first_tagged_at: lv.first_tagged_at ?? null, last_tagged_at: lv.last_tagged_at ?? null, days_since_first_tag: null,
+    pct_since_tag: lv.pct_since_tag, max_gain_pct: lv.max_gain_pct ?? null, edgar: lv.edgar ?? null, live: lv };
+}
+
+export type SortDir = 'asc' | 'desc';
+export type SortState = { key: string; dir: SortDir } | null;
+export type ColDef = { key: string; label: string; num?: boolean; title?: string; sort?: (r: UnifiedRow) => number | string | null | undefined; sortDefault?: SortDir };
+const ms = (iso?: string | null) => (iso ? (Date.parse(iso) || null) : null);
+const roomRank = (room?: RoomRead | null) =>
+  !room ? null : room.state === 'IN_BAND' ? 0 : room.state === 'CLEAR' ? Number.POSITIVE_INFINITY : room.room_pct ?? null;
+const STATUS_RANK: Record<string, number> = { SEEDING: 0, RAN: 1, DUMPED: 2, QUIET: 3, UNKNOWN: 4 };
+const CAT_RANK: Record<string, number> = { REAL: 0, THIN: 1, NONE: 2 };
+const secRank = (r: UnifiedRow) => {
+  const n = r.sec?.n_30d ?? 0, t = (r.edgar?.owner_stake ? 10 : 0) + (r.edgar?.shelf ? 10 : 0);
+  return n + t || (r.sec || r.edgar?.owner_stake || r.edgar?.shelf ? 0 : null);
+};
+export const COLUMNS: ColDef[] = [
+  { key: 'symbol', label: 'Symbol', sort: (r) => r.ticker, sortDefault: 'asc' },
+  { key: 'session', label: 'Session', sort: (r) => r.live?.session ?? null, sortDefault: 'asc' },
+  { key: 'last', label: 'Last', num: true, sort: (r) => r.live?.last ?? null },
+  { key: 'tagged', label: 'Tagged by' },
+  { key: 'first', label: 'First tag', num: true, sort: (r) => ms(r.first_tagged_at) },
+  { key: 'lastTag', label: 'Last tag', num: true, sort: (r) => ms(r.last_tagged_at) },
+  { key: 'today', label: 'Today', num: true, sort: (r) => r.live?.day_pct ?? null },
+  { key: 'since', label: 'Since tag', num: true, sort: (r) => r.live?.pct_since_tag_live ?? r.pct_since_tag },
+  { key: 'peak', label: 'Peak', num: true, sort: (r) => r.max_gain_pct },
+  { key: 'room', label: 'Room', num: true, title: '% from the live print to the first band overhead (daily-bar zones)', sort: (r) => roomRank(r.live?.room) },
+  { key: 'tape', label: 'Tape', title: 'price path since the tag — marker at the first post, colored by the read' },
+  { key: 'russell', label: 'Russell', title: 'on the Russell inclusion watch: R2000 add / R1000 promotion and the in-index date', sort: (r) => (r.russell ? (ms(r.russell.add_event?.in_index) ?? Number.MAX_SAFE_INTEGER) : null), sortDefault: 'asc' },
+  { key: 'sales', label: 'Sales', num: true, title: 'Bonde sales read: latest quarter revenue vs a year earlier (YoY)', sort: (r) => r.sales?.growth_yoy_pct ?? null },
+  { key: 'catalyst', label: 'Catalyst', title: 'news in the last 48h: REAL = a tagged headline (contract, approval, offering…), THIN = untagged chatter, NONE = nothing', sort: (r) => (r.catalyst ? CAT_RANK[r.catalyst.verdict] : null), sortDefault: 'asc' },
+  { key: 'eightk', label: '8-K', num: true, title: 'newest 8-K in 14 days with its item codes', sort: (r) => (r.eightk ? ms(r.eightk.filing_date) : null) },
+  { key: 'sec', label: 'SEC', num: true, title: 'EDGAR: 13D/G owner stake ≤14d, shelf/offering ≤30d, plus every other filing in 30 days', sort: secRank },
+  { key: 'status', label: 'Status', sort: (r) => STATUS_RANK[r.status] ?? 9, sortDefault: 'asc' },
+];
+export function nextSort(cur: SortState, col: ColDef): SortState {
+  const first: SortDir = col.sortDefault ?? (col.num ? 'desc' : 'asc');
+  if (!cur || cur.key !== col.key) return { key: col.key, dir: first };
+  if (cur.dir === first) return { key: col.key, dir: first === 'asc' ? 'desc' : 'asc' };
+  return null;
+}
+export function sortRows(rows: UnifiedRow[], sort: SortState, fallback: (rows: UnifiedRow[]) => UnifiedRow[]): UnifiedRow[] {
+  const col = sort ? COLUMNS.find((c) => c.key === sort.key) : undefined;
+  if (!sort || !col?.sort) return fallback(rows);
+  const dir = sort.dir === 'asc' ? 1 : -1;
+  const empty = (v: unknown) => v == null || v === '' || (typeof v === 'number' && Number.isNaN(v));
+  return rows.map((r, i) => ({ r, i, v: col.sort!(r) }))
+    .sort((a, b) => {
+      const ae = empty(a.v), be = empty(b.v);
+      if (ae && be) return a.i - b.i;
+      if (ae) return 1;
+      if (be) return -1;
+      const d = (typeof a.v === 'number' && typeof b.v === 'number') ? a.v - b.v : String(a.v).localeCompare(String(b.v));
+      return (Number.isNaN(d) ? 0 : d) * dir || a.i - b.i;
+    })
+    .map((x) => x.r);
+}
+
+const SESSION_TAG_ALL: Record<string, string> = { premarket: 'PRE', rth: 'RTH', afterhours: 'AH', closed: '—' };
+const trunc = (t: string, n: number) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
+
+function RussellCell({ r }: { r?: RussellJoin | null }) {
+  if (!r) return <td className="mono pcw__dim">—</td>;
+  const e = r.add_event;
+  const board = r.board === 'add_r2000' ? 'R2000 add' : 'R1000 promo';
+  const title = `${board} candidate on the Russell watch (cap screen, board as of ${r.as_of ?? '?'})`
+    + (e ? ` — ${e.label}: rank day ${mdy(e.rank_day)}, preliminary list ${mdy(e.prelim)}, in the index ${mdy(e.in_index)}${e.lists_published ? ' · FTSE\'s list is already out — check it' : ''}` : ' — no add date loaded')
+    + (r.board === 'promote_r1000' ? ' · promotions are usually NET SELLING by trackers' : '');
+  return (
+    <td className={`mono pcw__russ ${r.board === 'add_r2000' ? 'is-add' : 'is-promo'}`} title={title}>
+      {board}{e ? <> · <b>{mdy(e.in_index)}</b>{e.lists_published ? <span className="pcw__dim"> list out</span> : null}</> : null}
+    </td>
+  );
+}
+const TIER_CLASS: Record<string, string> = { explosive: 'is-explosive', strong: 'is-strong', steady: 'is-steady', weak: 'is-weak', declining: 'is-declining' };
+function SalesCell({ s }: { s?: SalesRead | null }) {
+  if (!s) return <td className="og__num mono pcw__dim" title="no revenue read yet — not in the SEPA research cache; the board looks it up in batches">—</td>;
+  if (!s.tier || s.tier === 'unknown' || s.growth_yoy_pct == null) {
+    return <td className="og__num mono pcw__dim" title={s.reason ?? 'insufficient revenue history — pre-revenue or too few quarters'}>no rev hist</td>;
+  }
+  return (
+    <td className={`og__num mono pcw__sales ${TIER_CLASS[s.tier] ?? ''}`}
+        title={`Bonde sales read: ${s.tier}, latest quarter ${pct(s.growth_yoy_pct)} YoY${s.prior_yoy_pct != null ? `, prior ${pct(s.prior_yoy_pct)}` : ''}${s.accelerating ? ', accelerating' : ''} · score ${s.score ?? '—'} · ${s.source ?? ''}`}>
+      {pct(s.growth_yoy_pct)} <span className="pcw__dim">{s.tier}{s.accelerating ? ' ↑' : ''}</span>
+    </td>
+  );
+}
+const CAT_CLASS: Record<string, string> = { REAL: 'is-real', THIN: 'is-thin', NONE: 'is-none' };
+function CatalystCell({ c }: { c?: CatalystRead | null }) {
+  if (!c) return <td className="pcw__dim" title="no news read yet — fills on the next board build">—</td>;
+  const top = c.top;
+  const line = top ? `${top.title}${top.publisher ? ` — ${top.publisher}` : ''}${top.published_utc ? ` · ${tagStamp(top.published_utc)}` : ''}` : 'nothing in 48h';
+  return (
+    <td className={`pcw__cat ${CAT_CLASS[c.verdict] ?? ''}`}
+        title={`${c.verdict}: ${c.n_48h} headline(s) in 48h · ${c.n_bullish} bullish / ${c.n_bearish} bearish\n${line}`}>
+      <span className="pcw__cat-verdict">{c.verdict}</span>
+      {top ? <> <a href={top.url ?? undefined} target="_blank" rel="noreferrer" className={`pcw__cat-top tone-${top.tone}`}>{trunc(top.title, 44)}</a></> : null}
+    </td>
+  );
+}
+function EightKCell({ k }: { k?: EightK | null }) {
+  if (!k) return <td className="og__num mono pcw__dim" title="no 8-K in the last 14 days">—</td>;
+  return (
+    <td className="og__num mono pcw__8k"
+        title={`${k.form} filed ${k.filing_date}${k.items.length ? ` · items ${k.items.join(', ')}` : ''}${(k.n_14d ?? 0) > 1 ? ` · ${k.n_14d} in 14d` : ''}`}>
+      <a href={k.url ?? undefined} target="_blank" rel="noreferrer">{mdy(k.filing_date)}{k.items.length ? <span className="pcw__dim"> {k.items.join(',')}</span> : null}</a>
+    </td>
+  );
+}
+function SecCell({ e, s }: { e?: Row['edgar'] | null; s?: SecRollup | null }) {
+  const hasTell = !!(e?.owner_stake || e?.shelf);
+  if (!hasTell && !s) return <td className="pcw__dim" title="nothing filed in 30 days (or not read yet)">—</td>;
+  return (
+    <td className="pcw__sec">
+      {hasTell ? <EdgarChips e={e!} /> : null}
+      {s ? (
+        <a className="pcw__sec-roll mono" href={s.latest?.url ?? undefined} target="_blank" rel="noreferrer"
+           title={`${s.n_30d} other filing(s) in 30d: ${s.forms.join(', ')}${s.n_form4 ? ` · Form 4 ×${s.n_form4}` : ''}${s.has_offering ? ' · offering plumbing' : ''} · latest ${s.latest.form} ${s.latest.filing_date}`}>
+          {s.n_30d}× {s.forms.slice(0, 2).join(', ')}
+        </a>
+      ) : null}
+    </td>
+  );
+}
+
+function PromoRowView({ r, isOpen, toggle, thr, isLiveTable }: { r: UnifiedRow; isOpen: boolean; toggle: () => void; thr?: number; isLiveTable: boolean }) {
+  const lv = r.live;
+  const since = lv?.pct_since_tag_live ?? r.pct_since_tag;
+  const isLive = lv?.pct_since_tag_live != null;
+  const move = lv ? (lv.ah_pct != null ? lv.ah_pct : lv.day_pct) : null;
+  const big = !!lv && (lv.alertable ?? true) && move != null && thr != null && Math.abs(move) >= thr;
+  return (
+    <Fragment>
+      <tr className={big && isLiveTable ? 'pcw__live-big' : undefined}>
+        <td className="og__sym">
+          <SymCell ticker={r.ticker} />
+          <button type="button" className={`ptt__toggle${isOpen ? ' is-on' : ''}`}
+                  aria-label={`${isOpen ? 'Hide' : 'Show'} tape for ${r.ticker}`}
+                  title="Price path around the tag — before or after the move?" onClick={toggle}>📈</button>
+        </td>
+        <td className="mono pcw__dim">{lv ? (SESSION_TAG_ALL[lv.session] || lv.session) : '—'}</td>
+        <td className="og__num mono">{lv?.last != null ? `$${lv.last.toFixed(2)}` : '—'}</td>
+        <td>{r.accounts.map((a) => ('tier' in a
+          ? <AccountChip key={a.handle} a={a} />
+          : <span key={a.handle} className="mono pcw__dim"><a href={accountUrl(a.handle)} target="_blank" rel="noreferrer" className="pcw__acct-link">@{a.handle}</a> </span>))}</td>
+        <td className="og__num mono" title={r.first_tagged_at ?? undefined}>
+          {tagStamp(r.first_tagged_at)}{r.days_since_first_tag != null ? <span className="pcw__dim"> · {r.days_since_first_tag.toFixed(0)}d</span> : null}
+        </td>
+        <td className="og__num mono pcw__dim" title={r.last_tagged_at ?? undefined}>{tagStamp(r.last_tagged_at)}</td>
+        <td className={`og__num mono pcw__pct ${((lv?.day_pct ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
+            title={lv ? `last $${lv.last?.toFixed(2)} vs prior close $${lv.prev_close?.toFixed(2)}${lv.ah_pct != null ? ` · after-hours ${pct(lv.ah_pct)} vs today's close` : ''}` : 'no live print yet'}>
+          {lv ? pct(lv.day_pct) : '—'}{lv?.ah_pct != null ? <span className="pcw__dim"> ({pct(lv.ah_pct)} AH)</span> : null}{big ? ' 🎪' : ''}
+        </td>
+        <td className={`og__num mono ${((since ?? 0) >= 0) ? 'og__up' : 'og__dn'}`}
+            title={isLive ? `live print vs the pre-tag close · daily close read: ${pct(r.pct_since_tag)}` : 'daily close read'}>
+          {isLive ? <span className="pcw__livedot">●</span> : null}{pct(since)}
+        </td>
+        <td className="og__num mono">{pct(r.max_gain_pct)}</td>
+        <RoomCell room={lv?.room} />
+        <td className="ptt__mini-cell"><MiniTape ticker={r.ticker} onOpen={toggle} /></td>
+        <RussellCell r={r.russell} />
+        <SalesCell s={r.sales} />
+        <CatalystCell c={r.catalyst} />
+        <EightKCell k={r.eightk} />
+        <SecCell e={r.edgar} s={r.sec} />
+        <td title={STATUS_META[r.status]?.hint}>{STATUS_META[r.status]?.label ?? r.status}</td>
+      </tr>
+      {isOpen ? (
+        <tr className="ptt__row"><td colSpan={COLUMNS.length}><PromoTagTape ticker={r.ticker} /></td></tr>
+      ) : null}
+    </Fragment>
+  );
+}
+
+export function PromoTable({ title, hint, rows, defaultOrder, className, emptyText, thr, isLiveTable = false }: {
+  title: ReactNode; hint: ReactNode; rows: UnifiedRow[];
+  defaultOrder: (rows: UnifiedRow[]) => UnifiedRow[];
+  className?: string; emptyText?: string; thr?: number; isLiveTable?: boolean;
+}) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortState>(null);
+  const sorted = sortRows(rows, sort, defaultOrder);
+  return (
+    <div className={`pcw__table${className ? ` ${className}` : ''}`}>
+      <h3 className="day-section__h">{title}</h3>
+      <p className="rw__hint">{hint}</p>
+      {rows.length === 0 ? (
+        <div className="day-empty">{emptyText ?? 'Nothing here right now.'}</div>
+      ) : (
+        <table className="og__table pcw__grid">
+          <thead>
+            <tr>
+              {COLUMNS.map((c) => {
+                const active = sort?.key === c.key;
+                const ariaSort = active ? (sort!.dir === 'asc' ? 'ascending' : 'descending') : c.sort ? 'none' : undefined;
+                return (
+                  <th key={c.key} className={`${c.num ? 'og__num ' : ''}${c.sort ? 'og__sortable' : ''}${active ? ' is-sorted' : ''}`}
+                      title={c.title} aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}>
+                    {c.sort ? (
+                      <button type="button" className="og__sortbtn" onClick={() => setSort(nextSort(sort, c))}
+                              aria-label={`Sort by ${c.label}`}>
+                        {c.label}<span className="og__sortarrow" aria-hidden="true">{active ? (sort!.dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}</span>
+                      </button>
+                    ) : c.label}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <PromoRowView key={r.ticker} r={r} isOpen={open === r.ticker} thr={thr} isLiveTable={isLiveTable}
+                            toggle={() => setOpen(open === r.ticker ? null : r.ticker)} />
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+/* Board tables: most recent announcement first. Live table: today's move. */
+const byLatestTag = (rows: UnifiedRow[]) => sortRecent(rows);
+const byTodaysMove = (rows: UnifiedRow[]) =>
+  [...rows].sort((a, b) => ((b.live?.day_pct == null ? -Infinity : b.live.day_pct) - (a.live?.day_pct == null ? -Infinity : a.live.day_pct)));
+
+export function PromoLive({ data, err, board }: { data: LivePayload | null; err: string | null; board?: Row[] }) {
   if (err && !data) return <div className="cm-note cm-note-warn">Live board unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Pricing the circuit's names…</div>;
   const thr = data.alert_threshold_pct;
   const who = (data.alert_handles && data.alert_handles.length)
     ? data.alert_handles.map((h) => '@' + h).join(', ') : 'any roster account';
+  const boardBy = Object.fromEntries((board ?? []).map((r) => [r.ticker, r]));
+  const rows = data.rows.map((lv) => unifyLive(lv, boardBy[lv.ticker]));
   return (
-    <div className="pcw__table pcw__live">
-      <h3 className="day-section__h">
-        ⚡ Live movers
-        <span className={`sl-live sl-live-${data.live.state}`} style={{ marginLeft: 8 }}>
-          {data.live.refresh_sec ? '● LIVE' : '○ CLOSED'} · {data.live.state}
-          {err ? <span className="sl-stale" title={err}> · stale</span> : null}
-        </span>
-      </h3>
-      <p className="rw__hint">
-        Every tagged name, priced now (pre/post market included), sorted by today's move.
-        A move of ±{thr.toFixed(0)}% on a name tagged by {who} pushes a 🎪 alert — once per direction per trading day
-        (after the bell, measured against today's close).
-      </p>
-      {data.rows.length === 0 ? (
-        <div className="day-empty">Nothing tagged is priced right now.</div>
-      ) : (
-        <table className="og__table">
-          <thead>
-            <tr>
-              <th>Symbol</th><th>Session</th><th className="og__num">Last</th>
-              <th className="og__num">Today</th><th className="og__num">Since tag</th>
-              <th className="og__num" title={data.room_note ?? 'room to the first band overhead'}>Room</th>
-              <th>Tagged by</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.rows.map((r) => {
-              const move = data.live.state === 'afterhours' && r.ah_pct != null ? r.ah_pct : r.day_pct;
-              const big = (r.alertable ?? true) && move != null && Math.abs(move) >= thr;
-              return (
-                <tr key={r.ticker} className={big ? 'pcw__live-big' : ''}>
-                  <td className="og__sym"><SymCell ticker={r.ticker} /></td>
-                  <td className="mono pcw__dim">{SESSION_TAG[r.session] || r.session}</td>
-                  <td className="og__num mono">{r.last == null ? '—' : `$${r.last.toFixed(2)}`}</td>
-                  <td className={`og__num mono pcw__pct ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}
-                      title={r.ah_pct != null ? `after-hours ${pctFmt(r.ah_pct)} vs today's close` : undefined}>
-                    {pctFmt(r.day_pct)}{r.ah_pct != null ? <span className="pcw__dim"> ({pctFmt(r.ah_pct)} AH)</span> : null}{big ? ' 🎪' : ''}
-                  </td>
-                  <td className={`og__num mono ${(r.pct_since_tag ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pctFmt(r.pct_since_tag)}</td>
-                  <RoomCell room={r.room} />
-                  <td className="mono pcw__dim">
-                    {r.accounts.map((h, i) => (
-                      <span key={h}>{i ? ', ' : ''}<a href={accountUrl(h)} target="_blank" rel="noreferrer" className="pcw__acct-link">@{h}</a></span>
-                    ))}
-                  </td>
-                  <td>{STATUS_META[r.status as Row['status']]?.label ?? r.status}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <PromoTable
+      className="pcw__live"
+      isLiveTable
+      thr={thr}
+      title={(
+        <>
+          ⚡ Live movers
+          <span className={`sl-live sl-live-${data.live.state}`} style={{ marginLeft: 8 }}>
+            {data.live.refresh_sec ? '● LIVE' : '○ CLOSED'} · {data.live.state}
+            {err ? <span className="sl-stale" title={err}> · stale</span> : null}
+          </span>
+        </>
       )}
-    </div>
+      hint={(
+        <>
+          Every tagged name, priced now (pre/post market included), sorted by today's move.
+          A move of ±{thr.toFixed(0)}% on a name tagged by {who} pushes a 🎪 alert — once per direction per trading day
+          (after the bell, measured against today's close). Click any column header to sort.
+        </>
+      )}
+      rows={rows}
+      defaultOrder={byTodaysMove}
+      emptyText="Nothing tagged is priced right now."
+    />
   );
 }
 
@@ -407,22 +566,23 @@ export function PromoCircuit() {
         </div>
       </header>
 
-      <PromoLive data={live.data} err={live.err} />
+      <PromoLive data={live.data} err={live.err} board={data.rows} />
 
-      <RowsTable
-        live={liveBySym}
+      <PromoTable
         title="🌱 Being seeded now"
-        hint="Tagged in the last days by the circuit, hasn’t run yet. If it pops on no news, you watched the machine work."
-        rows={seeding}
+        hint="Tagged in the last days by the circuit, hasn’t run yet. If it pops on no news, you watched the machine work. Newest announcement first — click a header to sort."
+        rows={seeding.map((r) => unifyBoard(r, liveBySym[r.ticker]))}
+        defaultOrder={byLatestTag}
       />
-      <RowsTable
-        live={liveBySym}
+      <PromoTable
         title="How the last campaigns ended"
         hint="Tagged names that already ran (≥30% since first tag) or ran and got dumped (gave back ≥40% from the peak)."
-        rows={played}
+        rows={played.map((r) => unifyBoard(r, liveBySym[r.ticker]))}
+        defaultOrder={byLatestTag}
       />
       {rest.length > 0 && (
-        <RowsTable title="Old / unpriced tags" hint="Tags that never ran, or symbols without daily bars yet." rows={rest} />
+        <PromoTable title="Old / unpriced tags" hint="Tags that never ran, or symbols without daily bars yet."
+                    rows={rest.map((r) => unifyBoard(r, liveBySym[r.ticker]))} defaultOrder={byLatestTag} />
       )}
 
       <div className="pcw__roster">
