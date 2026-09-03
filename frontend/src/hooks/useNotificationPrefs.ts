@@ -21,6 +21,9 @@ export type NotificationPrefs = {
   promo_alert?: boolean;
   demand_alert?: boolean;
   zone_bounce_alert?: boolean;
+  // Breaking resistance → new highs (supply_demand.zone_edge, every minute
+  // in session). The near-demand side of that pass reuses demand_alert.
+  supply_break_alert?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

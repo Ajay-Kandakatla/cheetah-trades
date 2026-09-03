@@ -21,6 +21,7 @@ from . import price_zones as price_zones_mod
 from . import timeframes as tf_mod
 from . import demand_reentry as reentry_mod
 from . import session_board as session_mod
+from . import zone_edge as zone_edge_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
@@ -162,6 +163,34 @@ async def post_demand_reentry_scan(
     # while qualifying rows sit just past the limit.
     data = await asyncio.to_thread(reentry_mod.scan, True, None, universe)
     return reentry_mod._apply_limit(reentry_mod._apply_rr_floor(data, min_rr), limit)
+
+
+@router.get("/supply-demand/zone-edge")
+async def get_zone_edge():
+    """The zone-edge board: $1B+ names within 1% of BREAKING their last supply
+    band toward new highs, and names inside / within 1% above a demand level —
+    as of the last one-minute pass, with the day's minute-by-minute distance
+    track per name.
+
+    Ajay 2026-09-03: *"stocks that are <1% away from breaking supply zones
+    which are going for new highs ... and stocks that are just <1% away from
+    Demand zones. I need you to give me an alert and also to track these min
+    on min."*
+
+    Read-only: the cron (`supply_demand.zone_edge`, every minute in RTH)
+    writes `zone_edge_latest` + `zone_edge_track`; this route joins them.
+    `in_session` is evaluated at request time; `as_of` null = no pass yet.
+    Rows: `breaking` (tier near | broke; broke first, new_highs first, then
+    distance) and `near_demand` (tier in | near; arrivals first, then
+    distance). `track["supply:SYM"]` / `track["demand:SYM"]` = up to the last
+    30 `[HH:MM, dist_pct]` points today.
+
+    Configured price-structure heuristic (zone_store bands), NOT a book method
+    — decision-support only, not a buy signal, not advice. See
+    backend/supply_demand/zone_edge.py and docs/supply_demand/zone_edge.md.
+    """
+    import asyncio
+    return await asyncio.to_thread(zone_edge_mod.api_payload)
 
 
 @router.get("/supply-demand/demand-reentry/history")

@@ -22,6 +22,7 @@ import { API } from '../lib/apiBase';
 import { DemandScanProgress } from './DemandScanProgress';
 import type { DemandScanProgress as DemandScanProgressPayload } from '../lib/demandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
+import { ZoneEdgeBoard } from './ZoneEdgeBoard';
 
 
 type Payload = {
@@ -148,6 +149,13 @@ export function DemandReentryPanel() {
 
   return (
     <section className="sd-section">
+      {/* The minute-by-minute edge board sits on top (Ajay 2026-09-03: "add
+        * #1 stocks in to Demand zone too ones breaking resistance"): names
+        * within 1% of breaking their LAST supply band toward new highs, and
+        * names inside / within 1% above a demand band. Its own fetch, its
+        * own clock — the scan below is a closed-bar read and this is not. */}
+      <ZoneEdgeBoard mode="both" />
+
       <div className="sepa-tab-help">
         <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
         back <em>into</em> a demand band they had already left, while the structure

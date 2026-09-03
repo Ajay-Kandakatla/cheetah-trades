@@ -219,6 +219,24 @@
 # kind zone_bounce_alert. Module refuses to run outside 9:33-16:00 ET.
 4-59/5 9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.zone_bounce_alerts
 #
+# Zone EDGE (supply_demand/zone_edge.py) — EVERY MINUTE in RTH. Ajay
+# 2026-09-03: "stocks that are <1% away from breaking supply zones which are
+# going for new highs ... and stocks that are just <1% away from Demand
+# zones. I need you to give me an alert and also to track these min on min."
+# Reads today's zone_store bands (9:20 warm above) against bulk_snapshot's
+# last trade (stale > 180s skipped): (A) within 1% UNDER the smallest supply
+# top at/above the print, or broke a ceiling TODAY (prev close <= top, at
+# most 3% through) — "new highs" when nothing sits overhead or the band is at
+# the 252-bar high; (B) inside a demand band or within 1% ABOVE the nearest
+# support (demand, or broken supply). Board = every name with a known cap
+# (Mongo zone_edge_latest + zone_edge_track, GET /supply-demand/zone-edge).
+# Phone = (A) new highs + tested 2x + cap >= $1B, kind supply_break_alert,
+# once per (symbol, band, day, tier); (B) arrivals only, tested 2x, cap >=
+# $1B, kind demand_alert REUSED with demand_alerts' own state key so the
+# 5-min pass never double-fires. 3 singles per side per pass, the rest ONE
+# digest. No per-symbol network call. Module refuses outside 9:31-16:00 ET.
+*      9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.zone_edge
+#
 # TTM-revenue warm for the Under Value tab — Sunday 10:30pm ET, after the
 # 9pm weekly research refresh, so Monday's board has revenue dollars for
 # every strong/explosive-sales candidate without board-time fetching.

@@ -41,6 +41,7 @@ import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
+import { ZoneEdgeBoard } from '../components/ZoneEdgeBoard';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
  *  warming poll on purpose — this is drift correction, not live data. */
@@ -620,6 +621,15 @@ export function ChartMaps() {
       ) : null}
 
       {err ? <div className="cm-note cm-note-err">Couldn't load the board — {err}</div> : null}
+
+      {/* Deep Demand opens with the minute-by-minute breaking-resistance
+        * board (Ajay 2026-09-03: "and also in to deep demand zones"): names
+        * within 1% of breaking their LAST supply band toward new highs. Its
+        * own endpoint and clock; the tiles below are the closed-bar scan.
+        * This tab only — the other boards do not grow a supply read. */}
+      {tab === 'deep_demand' && (
+        <ZoneEdgeBoard mode="breaking" compact fromKey="chart-maps" />
+      )}
 
       {/* The demand tab's own scan. NOT the SEPA stream above it — that one
         * feeds the VCP tab. Both this and the Back in Demand tab on

@@ -199,6 +199,70 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'Back in Demand panel opens with the zone-edge board (2026-09-03)',
+    file: 'src/components/DemandReentryPanel.tsx',
+    // Ajay 2026-09-03: "add #1 stocks in to Demand zone too". The board is a
+    // separate component with its own minute clock; drop the mount in a rebase
+    // and the page still renders with nothing failing — so the mount is pinned,
+    // with its mode (the near-demand side belongs on the Demand board) and its
+    // place (on top, before the Back-in-demand help block).
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bZoneEdgeBoard\b[^}]*\}\s*from\s*'\.\/ZoneEdgeBoard'/.test(src)) {
+        errs.push("DemandReentryPanel.tsx no longer imports ZoneEdgeBoard from './ZoneEdgeBoard'");
+      }
+      const i = src.indexOf('<ZoneEdgeBoard');
+      if (i < 0) return [...errs, 'ZoneEdgeBoard mount missing from DemandReentryPanel'];
+      const tag = src.slice(i, src.indexOf('/>', i));
+      if (!/\bmode="both"/.test(tag)) errs.push('DemandReentryPanel must mount ZoneEdgeBoard with mode="both"');
+      const help = src.indexOf('Back in demand</strong>');
+      if (help >= 0 && i > help) errs.push('ZoneEdgeBoard must render ABOVE the Back-in-demand help block');
+      return errs;
+    },
+  },
+  {
+    name: 'Chart Maps Deep Demand opens with the breaking-resistance board (2026-09-03)',
+    file: 'src/pages/ChartMaps.tsx',
+    // "and also in to deep demand zones". Gated to the deep_demand tab only —
+    // VCP / winners / zero-DTE must not grow a supply read — and above the
+    // tile grid, which is what "opens with" means.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bZoneEdgeBoard\b[^}]*\}\s*from\s*'\.\.\/components\/ZoneEdgeBoard'/.test(src)) {
+        errs.push("ChartMaps.tsx no longer imports ZoneEdgeBoard from '../components/ZoneEdgeBoard'");
+      }
+      const i = src.indexOf('<ZoneEdgeBoard');
+      if (i < 0) return [...errs, 'ZoneEdgeBoard mount missing from ChartMaps'];
+      const tag = src.slice(i, src.indexOf('/>', i));
+      if (!/\bmode="breaking"/.test(tag)) errs.push('ChartMaps must mount ZoneEdgeBoard with mode="breaking"');
+      if (!/\bcompact\b/.test(tag)) errs.push('ChartMaps mount lacks `compact` — the tab already explains itself');
+      const gate = src.slice(Math.max(0, i - 120), i);
+      if (!/tab === 'deep_demand'\s*&&\s*\(\s*$/.test(gate)) {
+        errs.push("ZoneEdgeBoard mount is not gated on tab === 'deep_demand'");
+      }
+      const grid = src.indexOf('<div className="cm-grid">');
+      if (grid >= 0 && i > grid) errs.push('ZoneEdgeBoard must render ABOVE the tile grid');
+      return errs;
+    },
+  },
+  {
+    name: 'notifications page registers the supply_break_alert kind (2026-09-03)',
+    file: 'src/pages/Notifications.tsx',
+    // Same trap as demand_alert / zone_bounce_alert: a push kind the page
+    // cannot show cannot be muted, and a muted-by-accident kind is a silent
+    // drop (memory: cheetah_push_silent_drops). Essentials must keep it on —
+    // it is the enter-zone read from the other side of the band.
+    checks: (src) => {
+      const errs = [];
+      if (!/key:\s*'supply_break_alert'/.test(src)) errs.push("CATEGORIES lacks the supply_break_alert kind — it cannot be muted from the page");
+      const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
+      if (!/supply_break_alert:\s*true/.test(ess)) errs.push('Essentials preset drops supply_break_alert');
+      const hook = read('src/hooks/useNotificationPrefs.ts');
+      if (!/supply_break_alert\?:\s*boolean/.test(hook)) errs.push('NotificationPrefs type lacks supply_break_alert — the toggle cannot type-check');
+      return errs;
+    },
+  },
+  {
     name: 'service worker re-subscribes on pushsubscriptionchange (2026-09-03)',
     file: 'public/sw.js',
     // The phone's endpoint was purged after a 410 on 2026-09-02 and nothing

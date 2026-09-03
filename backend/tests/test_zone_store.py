@@ -97,7 +97,8 @@ def test_doc_shape_keeps_both_kinds_slimmed_to_kind_lo_hi_touches_strength():
     assert doc["bands"] == [
         {"kind": "demand", "lo": 153.53, "hi": 158.99, "touches": 1, "strength": 15.0},
         {"kind": "supply", "lo": 161.78, "hi": 167.54, "touches": 1, "strength": 18.0}]
-    assert set(doc) == {"_id", "symbol", "date", "geom", "bands", "atr14", "prev_close", "computed_at"}
+    assert set(doc) == {"_id", "symbol", "date", "geom", "bands", "atr14", "prev_close", "high_252",
+                        "computed_at"}
 
 
 def test_build_doc_with_the_real_geometry_returns_only_the_two_kinds():
@@ -165,3 +166,37 @@ def test_crontab_warms_the_store_at_nine_twenty_before_the_board():
     assert len(lines) == 1 and lines[0].split()[:5] == ["20", "9", "*", "*", "1-5"]
     board = [l for l in cron.splitlines() if "demand-reentry warm full (am)" in l and not l.startswith("#")]
     assert board and board[0].split()[:2] == ["25", "9"], "board warms at 9:25, the store must be first"
+
+
+# ── high_252: the 52-week high as of yesterday's close (zone_edge "→ new highs") ─
+def test_high_252_is_the_max_high_of_the_last_252_rows_excluding_today():
+    df = _frame(n=300, seed=5)
+    df.iloc[-1, df.columns.get_loc("high")] = 999.0          # today's partial bar: never counted
+    df.iloc[-260, df.columns.get_loc("high")] = 500.0        # older than 252 sessions: never counted
+    df.iloc[-100, df.columns.get_loc("high")] = 250.0        # inside the window: the answer
+
+    def fake_compute(frame):
+        return {"demand_zones": [], "supply_zones": []}
+
+    doc = ZS.build_doc("XYZ", df, TODAY, compute=fake_compute, atr=lambda f: 1.0,
+                       now=datetime(2026, 9, 3, 9, 20, tzinfo=ET))
+    assert doc["high_252"] == 250.0
+    assert isinstance(doc["high_252"], float)
+    truncated = ZS.drop_today(df, TODAY)
+    assert doc["high_252"] == float(truncated["high"].tail(252).max())
+
+
+def test_high_252_is_none_when_the_frame_has_no_high_column_or_the_max_is_garbage():
+    df = _frame().drop(columns=["high"])
+
+    def fake_compute(frame):
+        return {"demand_zones": [], "supply_zones": []}
+
+    doc = ZS.build_doc("XYZ", df, TODAY, compute=fake_compute, atr=lambda f: 1.0)
+    assert doc is not None and doc["high_252"] is None
+    df2 = _frame()
+    df2["high"] = np.nan
+    doc2 = ZS.build_doc("XYZ", df2, TODAY, compute=fake_compute, atr=lambda f: 1.0)
+    assert doc2["high_252"] is None, "an all-NaN column is unknown, not NaN"
+    doc3 = ZS.build_doc("SYN", _frame(n=300, seed=7), TODAY)
+    assert doc3["high_252"] > 0 and doc3["high_252"] >= max(b["hi"] for b in doc3["bands"]) * 0.5

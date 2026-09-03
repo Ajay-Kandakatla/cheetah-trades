@@ -35,11 +35,26 @@ function payload(over: Overrides = {}) {
   };
 }
 
-function mockFetch(over: Overrides = {}) {
-  const fn = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => payload(over),
+/* The panel now mounts ZoneEdgeBoard, which makes its own call to
+ * /supply-demand/zone-edge on mount. The stub routes by URL so that call
+ * gets an empty zone-edge payload and the panel's call gets the fixture —
+ * one stub answering both with the same body would hand the board a
+ * demand-reentry payload and the panel a zone-edge one, depending on order. */
+const ZONE_EDGE_EMPTY = {
+  as_of: null, in_session: false, breaking: [], near_demand: [], track: {}, reason: 'no pass yet',
+};
+
+function routed(body: () => unknown) {
+  return vi.fn(async (url: string) => {
+    if (String(url).includes('/supply-demand/zone-edge')) {
+      return { ok: true, json: async () => ZONE_EDGE_EMPTY };
+    }
+    return { ok: true, json: async () => body() };
   });
+}
+
+function mockFetch(over: Overrides = {}) {
+  const fn = routed(() => payload(over));
   vi.stubGlobal('fetch', fn);
   return fn;
 }
@@ -108,14 +123,11 @@ describe('DemandReentryPanel — universe provenance', () => {
     /* NEGATIVE: the API and frontend deploy separately. A payload predating
      * universe_stale_days must render normally, not crash or show "undefined
      * days old". */
-    const fn = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => {
-        const p = payload() as Record<string, unknown>;
-        delete p.universe_stale_days;
-        delete p.universe_source;
-        return p;
-      },
+    const fn = routed(() => {
+      const p = payload() as Record<string, unknown>;
+      delete p.universe_stale_days;
+      delete p.universe_source;
+      return p;
     });
     vi.stubGlobal('fetch', fn);
     render(<DemandReentryPanel />);

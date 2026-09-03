@@ -182,9 +182,18 @@ def build_doc(symbol: str, df, today: date, *, compute: Optional[Callable] = Non
         prev_close = float(frame["close"].iloc[-1])
     except Exception:
         prev_close = None
+    # 252-bar high as of yesterday's close (today dropped above) — the
+    # zone-edge "→ new highs" read (supply_demand/zone_edge.py) treats a last
+    # supply band at/above 98% of it as the 52-week-high area. None = unknown.
+    try:
+        high_252 = float(frame["high"].tail(252).max())
+        if high_252 != high_252 or high_252 <= 0:
+            high_252 = None
+    except Exception:
+        high_252 = None
     return {"_id": f"{symbol}:{today.isoformat()}", "symbol": symbol,
             "date": today.isoformat(), "geom": GEOM_TAG, "bands": bands,
-            "atr14": a14, "prev_close": prev_close,
+            "atr14": a14, "prev_close": prev_close, "high_252": high_252,
             "computed_at": (now or datetime.now(ET)).isoformat()}
 
 

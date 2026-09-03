@@ -340,6 +340,17 @@ def default_prefs() -> dict:
         # stays tolerable; mutable at /notifications. MUST be here — a kind
         # missing from default_prefs silently drops for every device.
         "zone_bounce_alert": True,
+        # Breaking resistance → new highs (supply_demand/zone_edge.py, every
+        # minute in RTH): a $1B+ name within 1% UNDER the ceiling of its LAST
+        # supply band — nothing overhead, or the band sits at the 52-week
+        # high — or that broke it TODAY (at most 3% through); band tested 2+
+        # times; once per (symbol, band, day, tier); 3 singles per pass, the
+        # rest one digest. Ajay 2026-09-03: "stocks that are <1% away from
+        # breaking supply zones which are going for new highs". (The
+        # near-demand side of the same module reuses demand_alert above.)
+        # MUST be here — a kind missing from default_prefs silently drops
+        # for every device.
+        "supply_break_alert": True,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

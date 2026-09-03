@@ -40,6 +40,8 @@ const CATEGORIES: CategoryDef[] = [
     detail: 'A $1B+ name from the demand board ARRIVES inside, or within 1% of, a tested demand band today (yesterday it closed outside) — one push per band per day — plus one digest per 5-min check of names newly 1–3% above a band and falling. Names that have been sitting in a band are the board\'s business, not a buzz. Gabbar-level names get the same "nearing" tier under Buyable alerts. Unknown market cap is skipped.' },
   { key: 'zone_bounce_alert', label: 'Demand-level bounces', emoji: '🪃', group: 'trading',
     detail: 'A $1B+ name touched a demand band — or a BROKEN supply shelf now acting as support — intraday and is already bouncing: back above the band and at least 3% (or one ATR) off the day\'s low, with yesterday\'s close more than 3% above the band (arrivals only). Every band counts, even single-touch shelves the demand board ignores (NTAP 2026-09-03: -10% gap to 161, +6% by 09:33). Strong bounces (5% / 2 ATR, max 3 per check) get their own push; the rest share one digest per 5-min check. Once per band per day. Unknown market cap is skipped.' },
+  { key: 'supply_break_alert', label: 'Breaking resistance → new highs', emoji: '🚀', group: 'trading',
+    detail: 'A $1B+ name within 1% under the ceiling of its LAST supply band — nothing overhead, or the band sits at the 52-week high — or that broke it today (up to 3% through). Once per band per day; the strongest 3 per minute get their own push, the rest share one digest. Bands tested 2+ times only (the board on SEPA → Supply / Demand and Chart Maps → Deep Demand lists every band with its touch count). The near-demand side of the same every-minute check reuses the 🧲 demand-zone approach kind above. Unknown market cap is skipped.' },
   { key: 'minervini_flashcards', label: 'Minervini learning', emoji: '🃏', group: 'trading',
     detail: 'Hourly bite-sized lessons (24h schedule): entry rules, risk, sell rules, psychology, review, fundamentals, market structure, trader history, edge math. ~80 cards, ~2-3 week rotation. Quiet-hours pref below mutes overnight delivery.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
@@ -362,10 +364,10 @@ const PRESETS: { id: string; label: string; emoji: string; detail: string; pref:
   },
   {
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'High-signal only: buyable / Enter-zone, demand-level arrivals and bounces, promo movers + portfolio stops.',
+    detail: 'High-signal only: buyable / Enter-zone, demand-level arrivals and bounces, breaking resistance, promo movers + portfolio stops.',
     pref: {
       pivot_alert: true, position_alert: true, promo_alert: true, demand_alert: true,
-      zone_bounce_alert: true,
+      zone_bounce_alert: true, supply_break_alert: true,
       minervini_flashcards: false, market_hours_reminder: false,
       todo_reminder: false, todo_daily_digest: true,
     },
