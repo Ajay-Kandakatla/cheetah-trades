@@ -8,9 +8,18 @@
    <body> alone is sometimes ignored when a child sets width:100% with extra
    padding/margin or a hardcoded min-width. Set it on <html> too and hard-cap
    max-width to 100vw so nothing can ever push the page sideways. */
-html, body {
+html {
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: hidden;            /* propagates to the viewport — the real scroller */
+}
+body {
+  max-width: 100vw;
+  /* `clip`, never `hidden`: with <html> already hidden, body's overflow no
+     longer propagates to the viewport, so overflow-x:hidden here turns BODY
+     into a scroll container that never scrolls — and every position:sticky
+     element on the site silently stops sticking (the promo board's column
+     headers, 2026-09-03). clip clips without creating a scroll container. */
+  overflow-x: clip;
 }
 
 body {
@@ -11531,9 +11540,23 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
    sticky cell, so the rule is an inset shadow; the page background keeps the
    rows from showing through. */
 .pcw .og__table thead th {
-  position: sticky; top: var(--sticky-top, 0); z-index: 2;   /* --sticky-top = phone nav height (useStickyTop) */
+  position: sticky; top: calc(var(--sticky-top, 0px) + var(--pcw-title-h)); z-index: 2;   /* under the phone nav AND the table's own sticky title */
   background: var(--bg); box-shadow: inset 0 -1px 0 var(--rule, #2a2a2a); border-bottom: 0;
 }
+/* The table's title sticks just above its header, so a scrolled table still
+   says which one it is (Ajay 2026-09-03: "I can't tell if I am looking at
+   live feed or the other"). Fixed height so the header offset is exact. */
+.pcw { --pcw-title-h: 34px; }
+.pcw .pcw__table > .day-section__h {
+  position: sticky; top: var(--sticky-top, 0px); z-index: 3;
+  height: var(--pcw-title-h); box-sizing: border-box; margin: 0; padding: 6px 0 0;
+  background: var(--bg); display: flex; align-items: center; gap: 8px;
+}
+.pcw .pcw__table.pcw__live > .day-section__h { color: #e8a33d; }
+.pcw .pcw__table.pcw__live > .day-section__h::before { content: ''; width: 4px; height: 18px; background: #e8a33d; border-radius: 2px; }
+.pcw .pcw__table.pcw__live .og__table tbody tr > td:first-child { box-shadow: inset 3px 0 0 rgba(232, 163, 61, 0.45); }
+.pcw__tablabel { font-size: 9px; letter-spacing: 0.06em; opacity: 0.7; margin-left: 6px; font-weight: 600; text-transform: uppercase; }
+.pcw__live .pcw__tablabel { color: #e8a33d; opacity: 1; }
 
 /* Russell watch — add dates (2026-09-02) */
 .rw__adds { white-space: nowrap; }

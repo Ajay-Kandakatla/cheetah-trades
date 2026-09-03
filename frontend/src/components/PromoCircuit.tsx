@@ -419,10 +419,12 @@ function PromoRowView({ r, isOpen, toggle, thr, isLiveTable }: { r: UnifiedRow; 
   );
 }
 
-export function PromoTable({ title, hint, rows, defaultOrder, className, emptyText, thr, isLiveTable = false }: {
+export function PromoTable({ title, hint, rows, defaultOrder, className, emptyText, thr, isLiveTable = false, label }: {
   title: ReactNode; hint: ReactNode; rows: UnifiedRow[];
   defaultOrder: (rows: UnifiedRow[]) => UnifiedRow[];
   className?: string; emptyText?: string; thr?: number; isLiveTable?: boolean;
+  /** Short table name repeated in the sticky header row ("⚡ live", "🌱 seeding") — the title scrolls, this stays. */
+  label?: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>(null);
@@ -449,6 +451,7 @@ export function PromoTable({ title, hint, rows, defaultOrder, className, emptyTe
                         {c.label}<span className="og__sortarrow" aria-hidden="true">{active ? (sort!.dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}</span>
                       </button>
                     ) : c.label}
+                    {c.key === 'symbol' && label ? <span className="pcw__tablabel">{label}</span> : null}
                   </th>
                 );
               })}
@@ -483,6 +486,7 @@ export function PromoLive({ data, err, board }: { data: LivePayload | null; err:
     <PromoTable
       className="pcw__live"
       isLiveTable
+      label="⚡ live"
       thr={thr}
       title={(
         <>
@@ -569,19 +573,21 @@ export function PromoCircuit() {
       <PromoLive data={live.data} err={live.err} board={data.rows} />
 
       <PromoTable
+        label="🌱 seeding"
         title="🌱 Being seeded now"
         hint="Tagged in the last days by the circuit, hasn’t run yet. If it pops on no news, you watched the machine work. Newest announcement first — click a header to sort."
         rows={seeding.map((r) => unifyBoard(r, liveBySym[r.ticker]))}
         defaultOrder={byLatestTag}
       />
       <PromoTable
+        label="🚀💥 played"
         title="How the last campaigns ended"
         hint="Tagged names that already ran (≥30% since first tag) or ran and got dumped (gave back ≥40% from the peak)."
         rows={played.map((r) => unifyBoard(r, liveBySym[r.ticker]))}
         defaultOrder={byLatestTag}
       />
       {rest.length > 0 && (
-        <PromoTable title="Old / unpriced tags" hint="Tags that never ran, or symbols without daily bars yet."
+        <PromoTable label="💤 old" title="Old / unpriced tags" hint="Tags that never ran, or symbols without daily bars yet."
                     rows={rest.map((r) => unifyBoard(r, liveBySym[r.ticker]))} defaultOrder={byLatestTag} />
       )}
 

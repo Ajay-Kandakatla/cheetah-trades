@@ -126,7 +126,7 @@ const CONTRACTS = [
       const errs = [];
       const rule = src.match(/\.pcw \.og__table thead th \{[^}]*\}/);
       if (!rule) return ['sticky header rule for .pcw .og__table thead th is missing'];
-      if (!/position:\s*sticky/.test(rule[0]) || !/top:\s*var\(--sticky-top, 0\)/.test(rule[0])) {
+      if (!/position:\s*sticky/.test(rule[0]) || !/top:\s*calc\(var\(--sticky-top, 0px\) \+ var\(--pcw-title-h\)\)/.test(rule[0])) {
         errs.push('promo table headers are no longer position: sticky under the phone nav (top: var(--sticky-top, 0))');
       }
       const nav = read('src/components/NavBar.tsx');
@@ -135,6 +135,17 @@ const CONTRACTS = [
       }
       if (!/background:\s*var\(--bg\)/.test(rule[0])) {
         errs.push('sticky promo headers have no page background — rows show through them');
+      }
+      // <body> must never be a scroll container either: with <html> already
+      // overflow-x:hidden, body's own overflow stops propagating to the
+      // viewport and `hidden` there killed every sticky element on the site
+      // (2026-09-03, seen on the real page after the replica had passed).
+      const bodyRule = src.replace(/\/\*[\s\S]*?\*\//g, '').match(/\nbody \{[^}]*\}/);
+      if (!bodyRule || !/overflow-x:\s*clip/.test(bodyRule[0]) || /overflow(-x)?:\s*hidden/.test(bodyRule[0])) {
+        errs.push('body must use overflow-x: clip (not hidden) — a body scroll container disables every sticky header');
+      }
+      if (!/\.pcw \.pcw__table > \.day-section__h \{[^}]*position:\s*sticky/.test(src)) {
+        errs.push('promo table titles no longer stick above their headers — a scrolled table cannot be told apart');
       }
       const mq = src.slice(src.indexOf('@media (max-width: 720px)'));
       const block = mq.slice(0, mq.indexOf('}\n}') + 3).replace(/\/\*[\s\S]*?\*\//g, '');   // comments may name the trap

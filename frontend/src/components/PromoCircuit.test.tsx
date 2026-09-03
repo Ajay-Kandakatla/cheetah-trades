@@ -352,11 +352,19 @@ describe('one sortable table for every view (Ajay 2026-09-02: "both be the same 
     .map((td) => td.querySelector('a[href*="stocktwits.com/symbol/"]')!.getAttribute('href')!.split('/').pop());
   const HEADS = ['Symbol', 'Session', 'Last', 'Tagged by', 'First tag', 'Last tag', 'Today', 'Since tag', 'Peak', 'Room', 'Tape', 'Russell', 'Sales', 'Catalyst', '8-K', 'SEC', 'Status'];
 
+  it('each table names itself in the sticky header row so a scrolled table is never anonymous', async () => {
+    mock(payload([row(), row({ ticker: 'RANX', status: 'RAN' })]), true, livePayload([liveRow({ ticker: 'TINY' })]));
+    draw();
+    await waitFor(() => expect(document.querySelectorAll('.pcw__table').length).toBe(3));
+    const labels = Array.from(document.querySelectorAll('.pcw__table thead .pcw__tablabel')).map((e) => e.textContent);
+    expect(labels).toEqual(['⚡ live', '🌱 seeding', '🚀💥 played']);
+  });
+
   it('board and live tables share the same 17 headers; 15 of them sortable', async () => {
     mock(payload([row()]), true, livePayload([liveRow({ ticker: 'TINY', day_pct: 3 })]));
     draw();
     await waitFor(() => expect(document.querySelectorAll('.pcw__table').length).toBeGreaterThanOrEqual(2));
-    const heads = (el: Element) => Array.from(el.querySelectorAll('thead th')).map((th) => th.textContent?.replace(/[▲▼⇅]/g, '').trim());
+    const heads = (el: Element) => Array.from(el.querySelectorAll('thead th')).map((th) => th.querySelector('.og__sortbtn')?.textContent?.replace(/[▲▼⇅]/g, '').trim() ?? th.childNodes[0].textContent?.trim());
     const live = document.querySelector('.pcw__table.pcw__live')!;
     expect(heads(live)).toEqual(HEADS);
     expect(heads(board())).toEqual(HEADS);
