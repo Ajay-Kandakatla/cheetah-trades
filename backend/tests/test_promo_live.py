@@ -152,3 +152,71 @@ def test_dedupe_written_when_nobody_targeted_but_not_on_delivery_failure(monkeyp
     sent2, coll2 = _stub_world(monkeypatch, ROWS, "rth", {"sent": 0, "failed": 1, "total_targets": 1})
     pl.check_alerts("o@x.com"); pl.check_alerts("o@x.com")
     assert len(sent2) == 2 and len(coll2.docs) == 0          # genuine failure retries
+
+
+# ── Room to run (Ajay 2026-09-02: "Add room to run") ─────────────────────────
+def test_room_read_decision_table():
+    sup = [{"lo": 5.51, "hi": 5.57}, {"lo": 7.0, "hi": 7.2}]
+    dem = [{"lo": 4.0, "hi": 4.2}, {"lo": 6.0, "hi": 6.1}]
+    assert pl.room_read(sup, dem, None)["state"] == "UNPRICED"
+    r = pl.room_read(sup, dem, 5.14)
+    assert r["state"] == "ROOM" and r["room_pct"] == 7.2
+    assert r["band"] == {"lo": 5.51, "hi": 5.57, "kind": "supply"}
+    assert pl.room_read(sup, dem, 5.45)["state"] == "NEAR"
+    assert pl.room_read(sup, dem, 5.53) == {"state": "IN_BAND", "room_pct": 0.0,
+                                            "band": {"lo": 5.51, "hi": 5.57, "kind": "supply"}}
+    # a demand band ABOVE the print is support it already broke → overhead
+    r = pl.room_read([], dem, 5.0)
+    assert r["band"]["kind"] == "broken_support" and r["band"]["lo"] == 6.0 and r["room_pct"] == 20.0
+    # nothing overhead in the read → CLEAR with NO number (unknown, never unlimited)
+    assert pl.room_read(sup, dem, 8.0) == {"state": "CLEAR", "room_pct": None, "band": None}
+    assert pl._room_for(None, 5.0)["state"] == "PENDING"
+    assert pl._room_for({"err": "no bars"}, 5.0)["state"] == "UNAVAILABLE"
+
+
+def test_live_rows_attach_room_and_pending(monkeypatch):
+    rows = [{"ticker": "AAA", "status": "SEEDING", "best_tier": "A", "accounts": [],
+             "days_since_last_tag": 1.0, "pct_since_tag": 2.0, "base_close": 10.0},
+            {"ticker": "BBB", "status": "RAN", "best_tier": "B", "accounts": [],
+             "days_since_last_tag": 3.0, "pct_since_tag": 1.0, "base_close": 1.0}]
+    monkeypatch.setattr(pl, "_board_rows", lambda: rows)
+    import sepa.prices as prices
+    monkeypatch.setattr(prices, "bulk_live_prices", lambda syms: {
+        "AAA": {"last_trade_price": 11.0, "prev_day_close": 10.0, "last_trade_ts_ms": None},
+        "BBB": {"last_trade_price": 2.0, "prev_day_close": 1.0, "last_trade_ts_ms": None}})
+    monkeypatch.setattr(pl, "zones_for", lambda syms, **k: {
+        "AAA": {"at": 0, "supply": [{"lo": 12.1, "hi": 12.3}], "demand": [], "err": None}})
+    out = pl.live_rows(force=True)
+    by = {r["ticker"]: r["room"] for r in out["rows"]}
+    assert by["AAA"]["state"] == "ROOM" and by["AAA"]["room_pct"] == 10.0
+    assert by["BBB"]["state"] == "PENDING" and by["BBB"]["room_pct"] is None
+    assert "room_note" in out
+
+
+def test_zones_budget_and_warm_only_stale(monkeypatch):
+    import time as _t
+    calls: list = []
+    monkeypatch.setattr(pl, "_zone_coll", lambda: None)
+    pl._zone_mem.clear()
+
+    def fake_compute(sym):
+        calls.append(sym)
+        pl._zone_mem[sym] = {"at": _t.time(), "supply": [], "demand": [], "err": None}
+        return pl._zone_mem[sym]
+    monkeypatch.setattr(pl, "_zones_compute", fake_compute)
+    have = pl.zones_for(["A", "B", "C"], budget_sec=0)
+    assert calls == ["A"] and set(have) == {"A"}          # budget spent after the first miss
+    pl._zone_mem["B"] = {"at": _t.time(), "supply": [], "demand": [], "err": None}
+    pl._zone_mem["C"] = {"at": _t.time() - pl.ZONE_TTL_SEC - 1, "supply": [], "demand": [], "err": None}
+    monkeypatch.setattr(pl, "_board_rows", lambda: [{"ticker": t} for t in ("A", "B", "C")])
+    calls.clear()
+    res = pl.warm_zones()
+    assert calls == ["C"] and res == {"ok": True, "warmed": 1, "total": 3}
+    pl._zone_mem.clear()
+
+
+def test_cron_entry_warms_zones_after_the_alert_pass():
+    import inspect
+    src = inspect.getsource(pl)
+    main = src[src.index('if __name__ == "__main__"'):]
+    assert main.index("check_alerts()") < main.index("warm_zones()")

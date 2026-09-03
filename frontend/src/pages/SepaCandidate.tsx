@@ -4,7 +4,7 @@ import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } fr
 import { resolveBack } from '../lib/navSource';
 import { ipoAgeLabel } from '../lib/ipoAge';
 import { SupportLevels } from '../components/SupportLevels';
-import { DEFAULT_WINDOW } from '../lib/supportLevels';
+import { SEPA_SUPPLY_WINDOW } from '../lib/supportLevels';
 // Supply/demand + flow chips — ported from the SEPA list card so the
 // single-ticker research view has the same 🐋 whales / 📋 SEC / conviction /
 // political / 🌍 macro / insider+valuation surface (user 2026-05-30:
@@ -333,7 +333,9 @@ export function SepaCandidatePage() {
   const [accountSize, setAccountSize] = useState(100000);
   const [riskPct, setRiskPct] = useState(1);
   // Zoom for the price supply/demand panel on the supply tab (2026-08-25).
-  const [supportWin, setSupportWin] = useState(DEFAULT_WINDOW);
+  // 6 months by default here (Ajay 2026-09-02: "default supply demand to 6
+  // months in that tab") — the Chart Maps tab keeps the engine's 3m default.
+  const [supportWin, setSupportWin] = useState<string>(SEPA_SUPPLY_WINDOW);
   /* The chart's timeframe. Without this the ticker page dropped the tf half
    * of every Intraday pick — onView was never passed, the component fell back
    * to onWindow(v.window) alone, and "15 min · today from the open" snapped

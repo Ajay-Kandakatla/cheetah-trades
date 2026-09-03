@@ -178,6 +178,29 @@ def analyze(bars: list[dict], tags: list[dict]) -> dict:
     }
 
 
+LITE_STRIDE = 3     # 5-min bars → 15-min closes for the inline row sparkline
+
+
+def lite_payload(p: dict, stride: int = LITE_STRIDE) -> dict:
+    """The inline mini-tape needs closes, sessions, the tag markers and the
+    read — not OHLCV × every 5 minutes × 180 rows. Every `stride`-th bar plus
+    the last one; bar keys t/c/s only; tags without the post bodies."""
+    bars = p.get("bars") or []
+    keep = [b for i, b in enumerate(bars) if i % max(1, stride) == 0]
+    if bars and (len(bars) - 1) % max(1, stride):
+        keep.append(bars[-1])
+    tag_keys = ("handle", "tier", "at", "which", "price_at", "before_pct", "peak_after_pct")
+    return {
+        "ticker": p.get("ticker"), "lite": True, "tf": p.get("tf"), "n_bars": len(bars),
+        "bars": [{"t": b["t"], "c": b["c"], "s": b.get("s") or "rth"} for b in keep],
+        "tags": [{k: t.get(k) for k in tag_keys} for t in (p.get("tags") or [])],
+        "verdict": p.get("verdict"), "read": p.get("read"),
+        "price_at_tag": p.get("price_at_tag"), "before_pct": p.get("before_pct"),
+        "peak_pct": p.get("peak_pct"), "now_pct": p.get("now_pct"),
+        "peak_at": p.get("peak_at"), "as_of": p.get("as_of"),
+    }
+
+
 def tape_for(ticker: str, force: bool = False) -> dict:
     key = ticker.upper()
     with _lock:

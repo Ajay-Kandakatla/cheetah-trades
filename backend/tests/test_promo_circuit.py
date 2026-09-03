@@ -413,3 +413,17 @@ def test_sweep_pushes_only_fresh_posts_capped(monkeypatch):
     assert tag_updates and "$push" in tag_updates[0]
     pushed = tag_updates[0]["$push"]["posts"]
     assert [p["id"] for p in pushed["$each"]] == [12] and pushed["$slice"] == -pc.MAX_POSTS_KEPT
+
+
+# ── Early callers added 2026-09-02 (winner-provenance study + Aug backtest) ──
+EARLY_CALLERS = ["theblueflames", "stock_catcher", "blakecapital26", "jmjtrading",
+                 "birdseyetrader", "davidscott", "sadyk189", "robbysinvestmentllc"]
+
+
+def test_early_callers_are_radar_only_never_penalty_never_alert():
+    from catalysts import promo_live as pl
+    for h in EARLY_CALLERS:
+        m = pc.PROMO_ACCOUNTS[h]
+        assert m["tier"] == "B" and "penalty_days" not in m, h
+        assert "backtest" in m["audit"] and "%" in m["audit"] and m["evidence"], h
+        assert h not in pl.PROMO_ALERT_HANDLES, h

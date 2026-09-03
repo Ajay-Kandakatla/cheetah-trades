@@ -84,3 +84,26 @@ def test_markers_prefer_every_stored_post_over_first_last(monkeypatch):
         ("topstockalerts", "first", "2026-09-01T13:23"), ("beppels", "first", "2026-09-02T12:00"),
         ("topstockalerts", "post", "2026-09-02T19:35")]
     assert tags[2]["sample"] == "looks much better now" and tags[2]["msg_id"] == 12
+
+
+def test_lite_payload_keeps_every_third_bar_plus_last_and_trims():
+    from catalysts import promo_tape as _pt
+    bars = [{"t": i, "o": 1, "h": 2, "l": 0.5, "c": 1 + i, "v": 9, "s": "rth"} for i in range(7)]
+    p = {"ticker": "X", "bars": bars, "tf": "5min",
+         "tags": [{"handle": "h", "tier": "B", "at": "2026-09-01T00:00:00+00:00", "which": "first",
+                   "sample": "long body", "msg_id": 1, "price_at": 1.0}],
+         "verdict": "MID_RUN", "read": "r", "peak_pct": 5.0}
+    lite = _pt.lite_payload(p)
+    assert [b["t"] for b in lite["bars"]] == [0, 3, 6] and set(lite["bars"][0]) == {"t", "c", "s"}
+    assert lite["n_bars"] == 7 and lite["lite"] is True and lite["verdict"] == "MID_RUN"
+    assert "sample" not in lite["tags"][0] and lite["tags"][0]["price_at"] == 1.0
+    bars8 = bars + [dict(bars[0], t=7)]
+    assert [b["t"] for b in _pt.lite_payload({"bars": bars8})["bars"]] == [0, 3, 6, 7]
+    assert _pt.lite_payload({})["bars"] == [] and _pt.lite_payload({})["tags"] == []
+
+
+def test_tape_route_takes_the_lite_flag():
+    import inspect
+    from catalysts import api
+    src = inspect.getsource(api.get_promo_tape)
+    assert "lite: bool = Query(False)" in src and "lite_payload(payload) if lite" in src

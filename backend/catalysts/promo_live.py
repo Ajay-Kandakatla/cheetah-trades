@@ -84,6 +84,141 @@ def alert_gate(day_pct: Optional[float], threshold: float = PROMO_MOVE_PCT) -> O
     return None
 
 
+# ── Room to run (Ajay 2026-09-02: "Add room to run") ─────────────────────────
+# Same read the Portfolio 🎯 table gives a holding: the first band price meets
+# going UP (a supply band at/above the print, or a demand band it already
+# broke through) and the % to its bottom. Zones come off DAILY bars, so they
+# are cached for half an hour, shared through Mongo between the API process
+# and the cron warm, and a live call only computes cache misses for a few
+# seconds — the rest fill in on the next poll.
+ZONE_TTL_SEC = 30 * 60
+ZONE_BUDGET_SEC = 6.0
+ROOM_NEAR_PCT = 2.0
+_zone_mem: dict = {}
+
+
+def _supply_watch():
+    """portfolio.supply_watch, loaded by file when the package init cannot
+    import (the py3.9 annotation quirk the tests hit)."""
+    try:
+        from portfolio import supply_watch
+        return supply_watch
+    except Exception:
+        import importlib.util
+        import pathlib
+        path = pathlib.Path(__file__).resolve().parent.parent / "portfolio" / "supply_watch.py"
+        spec = importlib.util.spec_from_file_location("_promo_supply_watch", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+
+def room_read(supply: list, demand: list, last: Optional[float]) -> dict:
+    """Pure decision: where is the first overhead band and how far is it.
+
+    UNPRICED  no print yet.
+    CLEAR     nothing overhead in the engine's 1y read (room unknown, not infinite).
+    IN_BAND   the print is inside the band — room 0, the sell zone is here.
+    NEAR      ≤ ROOM_NEAR_PCT under the band bottom.
+    ROOM      further than that; room_pct = % from the print to the band bottom."""
+    if not last or float(last) <= 0:
+        return {"state": "UNPRICED", "room_pct": None, "band": None}
+    sw = _supply_watch()
+    live = float(last)
+    band = sw.nearest_supply(sw.overhead_bands(supply or [], demand or [], live), live)
+    if band is None:
+        return {"state": "CLEAR", "room_pct": None, "band": None}
+    b = {"lo": round(float(band["lo"]), 4), "hi": round(float(band["hi"]), 4),
+         "kind": band.get("kind") or "supply"}
+    if float(band["lo"]) <= live:
+        return {"state": "IN_BAND", "room_pct": 0.0, "band": b}
+    room = round((float(band["lo"]) / live - 1) * 100, 1)
+    return {"state": "NEAR" if room <= ROOM_NEAR_PCT else "ROOM", "room_pct": room, "band": b}
+
+
+def _zone_coll():
+    from catalysts.promo_circuit import _coll
+    return _coll("promo_zone_cache")
+
+
+def _slim(zones: list) -> list:
+    return [{"lo": float(z["lo"]), "hi": float(z["hi"])}
+            for z in (zones or []) if z.get("lo") and z.get("hi")]
+
+
+def _zones_load(syms: list) -> dict:
+    """Fresh (< TTL) zones for `syms` from memory, then the shared Mongo cache."""
+    now = time.time()
+    have = {s: z for s in syms
+            if (z := _zone_mem.get(s)) and now - float(z.get("at") or 0) < ZONE_TTL_SEC}
+    missing = [s for s in syms if s not in have]
+    if missing:
+        coll = _zone_coll()
+        if coll is not None:
+            try:
+                for d in coll.find({"_id": {"$in": missing}}):
+                    if now - float(d.get("at") or 0) < ZONE_TTL_SEC:
+                        have[d["_id"]] = {"at": d["at"], "supply": d.get("supply") or [],
+                                          "demand": d.get("demand") or [], "err": d.get("err")}
+            except Exception as exc:
+                log.warning("promo_live: zone cache read failed: %s", exc)
+    _zone_mem.update(have)
+    return have
+
+
+def _zones_compute(sym: str) -> dict:
+    """Daily-bar zones for one name (every cluster, max_zones=None) → both caches."""
+    try:
+        supply, demand, _atr, err = _supply_watch()._zones_for(sym)
+    except Exception as exc:                                # pragma: no cover
+        supply, demand, err = [], [], str(exc)
+    z = {"at": time.time(), "supply": _slim(supply), "demand": _slim(demand), "err": err}
+    _zone_mem[sym] = z
+    coll = _zone_coll()
+    if coll is not None:
+        try:
+            coll.replace_one({"_id": sym}, {"_id": sym, **z}, upsert=True)
+        except Exception as exc:
+            log.warning("promo_live: zone cache write for %s failed: %s", sym, exc)
+    return z
+
+
+def zones_for(syms: list, budget_sec: float = ZONE_BUDGET_SEC) -> dict:
+    """Zones for as many of `syms` as the time budget allows; a miss is simply
+    absent (the row says 'pending') and lands on a later call or the cron warm."""
+    have = _zones_load(syms)
+    t0 = time.time()
+    for s in syms:
+        if s in have:
+            continue
+        if time.time() - t0 > budget_sec:
+            break
+        have[s] = _zones_compute(s)
+    return have
+
+
+def warm_zones(force: bool = False) -> dict:
+    """Cron (after the alert pass): refresh every actionable board name whose
+    zones are stale, so the live table never waits on the engine."""
+    syms = [r["ticker"] for r in _board_rows()]
+    have = {} if force else _zones_load(syms)
+    warmed = 0
+    for s in syms:
+        if s in have:
+            continue
+        _zones_compute(s)
+        warmed += 1
+    return {"ok": True, "warmed": warmed, "total": len(syms)}
+
+
+def _room_for(zone: Optional[dict], last: Optional[float]) -> dict:
+    if zone is None:
+        return {"state": "PENDING", "room_pct": None, "band": None}
+    if zone.get("err"):
+        return {"state": "UNAVAILABLE", "room_pct": None, "band": None, "error": str(zone["err"])}
+    return room_read(zone.get("supply") or [], zone.get("demand") or [], last)
+
+
 def _board_rows() -> list[dict]:
     from catalysts.promo_circuit import _coll
     cache = _coll("promo_circuit_cache")
@@ -116,6 +251,11 @@ def live_rows(force: bool = False) -> dict:
         st = tf_mod.live_state()
     except Exception:                                       # pragma: no cover
         st = {"state": "closed", "refresh_sec": 0, "as_of": None}
+    try:
+        zones = zones_for(syms) if syms else {}
+    except Exception as exc:                                # pragma: no cover
+        log.warning("promo_live: zones failed: %s", exc)
+        zones = {}
     out = []
     for r in rows:
         q = quotes.get(r["ticker"]) or {}
@@ -145,6 +285,8 @@ def live_rows(force: bool = False) -> dict:
             "first_tagged_at": r.get("first_tagged_at"),
             "last_tagged_at": r.get("last_tagged_at"),
             "edgar": r.get("edgar"),
+            # Room to run: first overhead band + % to it (daily-bar zones)
+            "room": _room_for(zones.get(r["ticker"]), float(last) if last else None),
         })
     out.sort(key=lambda r: (r["day_pct"] is None, -(r["day_pct"] or 0)))
     payload = {
@@ -153,6 +295,10 @@ def live_rows(force: bool = False) -> dict:
                  "as_of": st.get("as_of")},
         "alert_threshold_pct": PROMO_MOVE_PCT,
         "alert_handles": sorted(PROMO_ALERT_HANDLES),
+        "room_note": ("Room = % from the live print to the bottom of the first band overhead "
+                      "(supply at/above it, or support it already broke); daily-bar zones, "
+                      "every cluster, refreshed every 30 min. CLEAR = nothing found in 1y, "
+                      "not unlimited."),
         "method_note": ("Live prints from the Massive snapshot incl. pre/post market; "
                         "% is vs the prior regular close (after the bell, also vs "
                         "today's close). Alerts: |move| ≥ "
@@ -240,4 +386,9 @@ if __name__ == "__main__":
     import json
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
-    print(json.dumps(check_alerts(), indent=2, default=str))
+    res = check_alerts()
+    try:
+        res["zones"] = warm_zones()
+    except Exception as exc:                                # pragma: no cover
+        res["zones"] = {"ok": False, "error": str(exc)}
+    print(json.dumps(res, indent=2, default=str))

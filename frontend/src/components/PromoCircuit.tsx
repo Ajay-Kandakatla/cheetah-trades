@@ -13,7 +13,8 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
-import { PromoTagTape } from './PromoTagTape';
+import { Link } from 'react-router-dom';
+import { MiniTape, PromoTagTape } from './PromoTagTape';
 
 type TaggedBy = {
   handle: string; tier: 'S' | 'A' | 'B';
@@ -119,10 +120,56 @@ export function tagStamp(iso: string | null | undefined): string {
 
 const SESSION_SHORT: Record<string, string> = { premarket: 'PRE', afterhours: 'AH' };
 
+/* Most recent announcement first (Ajay 2026-09-02: "Sort by most recent announcement"). */
+export function sortRecent<T extends { first_tagged_at: string; last_tagged_at?: string | null }>(rows: T[]): T[] {
+  const at = (r: T) => Date.parse(r.last_tagged_at ?? r.first_tagged_at) || 0;
+  return [...rows].sort((a, b) => at(b) - at(a));
+}
+
+export const symbolUrl = (t: string) => `https://stocktwits.com/symbol/${encodeURIComponent(t)}`;
+
+/* Symbol + where to go next: the StockTwits stream and our SEPA page landing
+ * on the Supply / Demand tab (Ajay 2026-09-02: "I wanna land on the sepa page
+ * with supply tab open"). */
+function SymCell({ ticker }: { ticker: string }) {
+  return (
+    <>
+      <TickerLink ticker={ticker} tab="supply" fromLabel="Promo circuit" />
+      <span className="pcw__links mono">
+        <a href={symbolUrl(ticker)} target="_blank" rel="noreferrer" title={`$${ticker} on StockTwits`}>ST↗</a>
+        <Link to={`/sepa/${encodeURIComponent(ticker)}?tab=supply`} title={`${ticker} on our SEPA page, Supply / Demand tab`}>SEPA</Link>
+      </span>
+    </>
+  );
+}
+
+export type RoomRead = {
+  state: 'UNPRICED' | 'CLEAR' | 'IN_BAND' | 'NEAR' | 'ROOM' | 'PENDING' | 'UNAVAILABLE';
+  room_pct: number | null; band: { lo: number; hi: number; kind: string } | null; error?: string;
+};
+const band$ = (b: { lo: number; hi: number }) => `$${b.lo.toFixed(2)}–${b.hi.toFixed(2)}`;
+/* Room to run — same read as the Portfolio 🎯 table: % to the first band overhead. */
+export function RoomCell({ room }: { room?: RoomRead | null }) {
+  if (!room || room.state === 'PENDING') return <td className="og__num mono pcw__dim" title="zones computing — fills in on the next refresh">…</td>;
+  if (room.state === 'UNAVAILABLE') return <td className="og__num mono pcw__dim" title={room.error ?? 'zone engine unavailable'}>—</td>;
+  if (room.state === 'UNPRICED') return <td className="og__num mono pcw__dim">—</td>;
+  if (room.state === 'CLEAR') return <td className="og__num mono pcw__room is-clear" title="nothing overhead in the 1-year read — unknown, not unlimited">clear</td>;
+  const b = room.band!;
+  const kind = b.kind === 'broken_support' ? ' (support it broke)' : '';
+  if (room.state === 'IN_BAND') return <td className="og__num mono pcw__room is-in" title={`inside the band ${band$(b)}${kind} — the sell zone is here`}>in band {band$(b)}</td>;
+  return (
+    <td className={`og__num mono pcw__room ${room.state === 'NEAR' ? 'is-near' : 'is-room'}`}
+        title={`${room.room_pct?.toFixed(1)}% from the live print to the bottom of ${band$(b)}${kind}`}>
+      +{room.room_pct?.toFixed(1)}% <span className="pcw__dim">→ {band$(b)}</span>
+    </td>
+  );
+}
+
 function RowsTable({ title, hint, rows, live }: { title: string; hint: string; rows: Row[]; live?: Record<string, LiveRow> }) {
   /* One expanded tape at a time per table (Ajay 2026-09-02: "small graph of
    * price change from the time they said it"). */
   const [open, setOpen] = useState<string | null>(null);
+  const sorted = sortRecent(rows);
   return (
     <div className="pcw__table">
       <h3 className="day-section__h">{title}</h3>
@@ -139,11 +186,13 @@ function RowsTable({ title, hint, rows, live }: { title: string; hint: string; r
               <th className="og__num">Today</th>
               <th className="og__num">Since tag</th>
               <th className="og__num">Peak</th>
+              <th className="og__num" title="% from the live print to the first band overhead (daily-bar zones)">Room</th>
+              <th title="price path since the tag — marker at the first post, colored by the read">Tape</th>
               <th>Status</th><th>EDGAR</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {sorted.map((r) => {
               const lv = live?.[r.ticker];
               const since = lv?.pct_since_tag_live ?? r.pct_since_tag;
               const isLive = lv?.pct_since_tag_live != null;
@@ -152,7 +201,7 @@ function RowsTable({ title, hint, rows, live }: { title: string; hint: string; r
                 <Fragment key={r.ticker}>
                 <tr>
                   <td className="og__sym">
-                    <TickerLink ticker={r.ticker} />
+                    <SymCell ticker={r.ticker} />
                     <button type="button" className={`ptt__toggle${isOpen ? ' is-on' : ''}`}
                             aria-label={`${isOpen ? 'Hide' : 'Show'} tape for ${r.ticker}`}
                             title="Price path around the tag — before or after the move?"
@@ -172,11 +221,13 @@ function RowsTable({ title, hint, rows, live }: { title: string; hint: string; r
                     {isLive ? <span className="pcw__livedot">●</span> : null}{pct(since)}
                   </td>
                   <td className="og__num mono">{pct(r.max_gain_pct)}</td>
+                  <RoomCell room={lv?.room} />
+                  <td className="ptt__mini-cell"><MiniTape ticker={r.ticker} onOpen={() => setOpen(isOpen ? null : r.ticker)} /></td>
                   <td title={STATUS_META[r.status]?.hint}>{STATUS_META[r.status]?.label ?? r.status}</td>
                   <td><EdgarChips e={r.edgar} /></td>
                 </tr>
                 {isOpen ? (
-                  <tr className="ptt__row"><td colSpan={9}><PromoTagTape ticker={r.ticker} /></td></tr>
+                  <tr className="ptt__row"><td colSpan={11}><PromoTagTape ticker={r.ticker} /></td></tr>
                 ) : null}
                 </Fragment>
               );
@@ -195,10 +246,13 @@ export type LiveRow = {
   days_since_last_tag: number | null; last: number | null; prev_close: number | null;
   rth_close?: number | null; day_pct: number | null; ah_pct?: number | null;
   session: string; pct_since_tag: number | null;
+  /** Room to run: first overhead band + % to it (daily-bar zones, 30-min cache). */
+  room?: RoomRead | null;
 };
 export type LivePayload = {
   rows: LiveRow[]; n: number; alert_threshold_pct: number; alert_handles?: string[];
   live: { state: string; refresh_sec: number; as_of: string | null }; method_note: string;
+  room_note?: string;
 };
 const CLOSED_POLL_SEC = 300;
 
@@ -259,6 +313,7 @@ export function PromoLive({ data, err }: { data: LivePayload | null; err: string
             <tr>
               <th>Symbol</th><th>Session</th><th className="og__num">Last</th>
               <th className="og__num">Today</th><th className="og__num">Since tag</th>
+              <th className="og__num" title={data.room_note ?? 'room to the first band overhead'}>Room</th>
               <th>Tagged by</th><th>Status</th>
             </tr>
           </thead>
@@ -268,7 +323,7 @@ export function PromoLive({ data, err }: { data: LivePayload | null; err: string
               const big = (r.alertable ?? true) && move != null && Math.abs(move) >= thr;
               return (
                 <tr key={r.ticker} className={big ? 'pcw__live-big' : ''}>
-                  <td className="og__sym"><TickerLink ticker={r.ticker} /></td>
+                  <td className="og__sym"><SymCell ticker={r.ticker} /></td>
                   <td className="mono pcw__dim">{SESSION_TAG[r.session] || r.session}</td>
                   <td className="og__num mono">{r.last == null ? '—' : `$${r.last.toFixed(2)}`}</td>
                   <td className={`og__num mono pcw__pct ${(r.day_pct ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}
@@ -276,6 +331,7 @@ export function PromoLive({ data, err }: { data: LivePayload | null; err: string
                     {pctFmt(r.day_pct)}{r.ah_pct != null ? <span className="pcw__dim"> ({pctFmt(r.ah_pct)} AH)</span> : null}{big ? ' 🎪' : ''}
                   </td>
                   <td className={`og__num mono ${(r.pct_since_tag ?? 0) >= 0 ? 'og__up' : 'og__dn'}`}>{pctFmt(r.pct_since_tag)}</td>
+                  <RoomCell room={r.room} />
                   <td className="mono pcw__dim">
                     {r.accounts.map((h, i) => (
                       <span key={h}>{i ? ', ' : ''}<a href={accountUrl(h)} target="_blank" rel="noreferrer" className="pcw__acct-link">@{h}</a></span>

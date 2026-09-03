@@ -178,3 +178,53 @@ chart with the price at that bar, the move in the hour before, and the peak
 after — so a 9:23p watchlist mention and a 3:35p victory lap read separately.
 `promo_circuit.backfill_posts(days)` fills history once (`$addToSet`, no
 high-water-mark changes).
+
+## 2026-09-02 pm — room to run, links, inline tape, recency order, early callers
+
+Ajay: *"add the accurate names to the list. Add room to run. and also give me
+the stocktwits link of the stock and our SEPA link along with and the small
+graph of when they announced vs where it is. Sort by most recent announcement"*
++ *"when I go to the sepa page I wanna land on the sepa page with supply tab
+open"* + *"default supply demand to 6 months in that tab"*.
+
+- **Roster**: 8 early callers from the winner-provenance study (22 names that
+  ran on 9/2; who tagged them BEFORE the move) added as **tier B** —
+  `theblueflames`, `stock_catcher`, `blakecapital26`, `jmjtrading`,
+  `birdseyetrader`, `davidscott`, `sadyk189`, `robbysinvestmentllc`. Each
+  carries its measured Aug-2026 audit (entry = first close on/after the tag,
+  hit = +30% touch within 15 sessions, dump = close ≤ 60% of the peak). Radar
+  only: no conviction penalty, never a phone alert (`PROMO_ALERT_HANDLES` is
+  still `topstockalerts`). Higher +30% touch = more volatile picks, not an
+  edge — every one medians red by day 5.
+- **Room to run** (`promo_live.room_read`): the Portfolio 🎯 read applied to
+  every tagged name — first band overhead (supply at/above the print, or a
+  demand band it already broke = `broken_support`) and the % from the live
+  print to its bottom. States `UNPRICED / CLEAR / IN_BAND / NEAR (≤2%) /
+  ROOM`, plus `PENDING` (zones not computed yet) and `UNAVAILABLE` (engine
+  error). Zones come off daily bars (`price_zones.for_symbol(max_zones=None)`)
+  and are cached 30 min in memory **and** Mongo `promo_zone_cache`, shared
+  between the API and the cron; a live call computes misses for ≤6 s
+  (`ZONE_BUDGET_SEC`), the 5-min `promo_live` cron warms every stale name
+  after its alert pass (`warm_zones`). `CLEAR` = nothing found in the 1y read,
+  **not** unlimited.
+- **Links**: the symbol cell = `TickerLink` → `/sepa/<T>?tab=supply` (SEPA
+  page landing on the Supply / Demand tab) + `ST↗` → the StockTwits stream +
+  an explicit `SEPA` link. The SEPA page's Supply / Demand zoom now starts at
+  **6 months** (`SEPA_SUPPLY_WINDOW`); Chart Maps keeps the engine's 3m.
+- **Inline mini tape** (`MiniTape`, `?lite=1` on the tape route →
+  `promo_tape.lite_payload`: every 3rd 5-min bar + the last one, `t/c/s`
+  only, tags without bodies): a 120×30 sparkline per row, fetched once per
+  ticker per page life and only when the row scrolls into view; marker = the
+  first post, colored by the read (green before / amber mid-run / red after);
+  click = the full tape row.
+- **Order**: every board table is sorted by the latest announcement
+  (`sortRecent`: `last_tagged_at`, else `first_tagged_at`, newest first). The
+  ⚡ live table keeps today's move as its order.
+
+Tests: `test_promo_live.py` (decision table incl. broken support, PENDING /
+UNAVAILABLE, live rows attach `room`, budget + warm-only-stale, cron order),
+`test_promo_tape.py` (lite stride + trim, route flag), `test_promo_circuit.py`
+(early callers radar-only), `PromoCircuit.test.tsx` (recency order, links,
+room cell states, mini tape per row + failure), `PromoTagTape.test.tsx`
+(`miniLayout` geometry, once-per-ticker cache, error), and a source guard for
+the 6-month default.

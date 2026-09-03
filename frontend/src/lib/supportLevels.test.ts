@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_WINDOW, FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLabel,
+import { DEFAULT_WINDOW, FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLabel,
   headline, money, normalizeSymbol, parseWindow, recencyLabel, recentCount,
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
   priceAsOf,
-  CHART_VIEWS, DEFAULT_VIEW, viewFor, viewKeyFor,
-} from './supportLevels';
+  CHART_VIEWS, DEFAULT_VIEW, viewFor, viewKeyFor, SEPA_SUPPLY_WINDOW } from './supportLevels';
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
   return {
@@ -384,5 +382,12 @@ describe('CHART_VIEWS — the live frame', () => {
   it('is an Intraday view that round-trips from its tf', () => {
     expect(viewFor('5m_live').group).toBe('Intraday');
     expect(viewKeyFor('1m', '5m_live')).toBe('5m_live');
+  });
+});
+
+describe('SEPA Supply / Demand tab default zoom (Ajay 2026-09-02)', () => {
+  it('is 6 months on the ticker page while the engine default stays 3m', () => {
+    expect(SEPA_SUPPLY_WINDOW).toBe('6m');
+    expect(DEFAULT_WINDOW).toBe('3m');
   });
 });

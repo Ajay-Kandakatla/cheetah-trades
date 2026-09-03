@@ -166,6 +166,49 @@ PROMO_ACCOUNTS: dict[str, dict] = {
                  "evidence": "OLOX 'news imminent... best low float squeeze' 8/27, mid-dump",
                  "audit": ("Aug-2026: 11 tags, posted mid-spike; follower "
                            "next-open entry medians −13% by day 5")},
+    # ── Early callers — added 2026-09-02 from the winner-provenance study
+    # (22 names that ran ≥ +2% on 9/2; who tagged them BEFORE the move) and a
+    # backtest of every Aug-2026 tag (entry = first close on/after the tag,
+    # hit = +30% touch within 15 sessions, dump = close ≤ 60% of the peak).
+    # Radar only (tier B): no conviction penalty, never a phone alert. A
+    # higher +30% touch rate meant MORE volatile picks, not an edge for a
+    # follower — every one of them medians red by day 5.
+    "theblueflames": {"tier": "B", "note": "early caller — evening watchlists",
+                      "evidence": ("10 of the 9/2 winners tagged before the move: BIAF 3h "
+                                   "early 9/1, SWVL/GYGY/NCPL the evening before"),
+                      "audit": ("Sep-2026 backtest: 87 priced Aug tags, 29% touched +30% in 15 "
+                                "sessions, 64% of hits dumped ≥40% off the peak, day-5 median "
+                                "−5.5% — best follower math of the callers, still negative")},
+    "stock_catcher": {"tier": "B", "note": "early caller — reacts to the tape",
+                      "evidence": ("8 winners, minutes early (VIOT 2m, LHAI 5m, NCPL 2m) — "
+                                   "sees the print, not the plan"),
+                      "audit": ("Sep-2026 backtest: 10 priced Aug tags (n too small), 50% "
+                                "touched +30%, 60% of hits dumped; no day-5 read")},
+    "blakecapital26": {"tier": "B", "note": "early caller — late-night lists",
+                       "evidence": "6 winners ~1h early (BIAF, SGLD, VIVK at 11pm 9/1)",
+                       "audit": ("Sep-2026 backtest: 43 priced Aug tags, 49% touched +30%, "
+                                 "81% of hits dumped ≥40%, day-5 median −13.7%")},
+    "jmjtrading": {"tier": "B", "note": "early caller",
+                   "evidence": "4 winners 5–23h early (BIAF, NCPL, PMI, FLYE)",
+                   "audit": ("Sep-2026 backtest: 86 priced Aug tags, 37% touched +30%, "
+                             "75% of hits dumped ≥40%, day-5 median −14.3%")},
+    "birdseyetrader": {"tier": "B", "note": "early caller",
+                       "evidence": "4 winners (BIAF 10h, VIVK 4.5h, SGLD 25m early)",
+                       "audit": ("Sep-2026 backtest: 107 priced Aug tags, 40% touched +30%, "
+                                 "70% of hits dumped ≥40%, day-5 median −15.6%")},
+    "davidscott": {"tier": "B", "note": "early caller — big following",
+                   "evidence": "3 winners (BIAF 5h, NCPL 22h, FLYE 16h early)",
+                   "audit": ("Sep-2026 backtest: 37 priced Aug tags, 46% touched +30%, "
+                             "59% of hits dumped ≥40%; day-5 median n/a")},
+    "sadyk189": {"tier": "B", "note": "early caller — multi-ticker posts",
+                 "evidence": "3 winners in one 9/2 01:06 ET post (SWVL, NWGL, FLYE)",
+                 "audit": ("Sep-2026 backtest: 64 priced Aug tags, 44% touched +30%, "
+                           "79% of hits dumped ≥40%, day-5 median −12.9%")},
+    "robbysinvestmentllc": {"tier": "B", "note": "early caller — highest hit rate, worst hold",
+                            "evidence": "3 winners (BIAF 9h, VIVK 6h, FLYE 5h early)",
+                            "audit": ("Sep-2026 backtest: 70 priced Aug tags, 54% touched +30% "
+                                      "(highest of anyone), 82% of hits dumped ≥40%, day-5 "
+                                      "median −18.8% (worst of anyone)")},
 }
 
 # Tags on these are never interesting for a tiny-float promo board.

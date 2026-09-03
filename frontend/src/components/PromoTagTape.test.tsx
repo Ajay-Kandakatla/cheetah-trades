@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PromoTagTape, layout, etStamp, type TapePayload } from './PromoTagTape';
+import { PromoTagTape, layout, etStamp, type TapePayload, miniLayout, MiniTape, _resetLiteCache } from './PromoTagTape';
 
 const T0 = Date.UTC(2026, 8, 2, 13, 0);                     // 9:00 ET
 const bar = (t: number, c: number, s = 'rth') => ({ t, o: c, h: c + 0.02, l: c - 0.02, c, v: 1, s });
@@ -50,5 +50,42 @@ describe('PromoTagTape', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 502, json: async () => ({}) }));
     render(<PromoTagTape ticker="XXXX" />);
     await waitFor(() => expect(screen.getByText(/Tape unavailable: HTTP 502/)).toBeInTheDocument());
+  });
+});
+
+describe('MiniTape — inline sparkline on every board row (Ajay 2026-09-02)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); _resetLiteCache(); });
+  it('miniLayout: marker sits on the close at the tag, path spans the width, ext session shaded', () => {
+    const bars = [{ t: 0, c: 1, s: 'premarket' }, { t: 100, c: 2, s: 'rth' }, { t: 200, c: 3, s: 'rth' }];
+    const g = miniLayout(bars, [{ at: new Date(100).toISOString(), which: 'first', tier: 'A' }], 120, 30)!;
+    expect(g.marker!.price).toBe(2);
+    expect(g.marker!.x).toBeCloseTo(60, 5);
+    expect(g.marker!.y).toBeCloseTo(15, 5);
+    expect(g.ext).toEqual([{ x0: 3, x1: 60 }]);
+    expect(g.last.price).toBe(3);
+    expect(g.path.startsWith('M3.0,27.0')).toBe(true);
+    expect(miniLayout([], [], 120, 30)).toBeNull();
+    // NEGATIVE: no tags → no marker, still a path
+    expect(miniLayout(bars, [], 120, 30)!.marker).toBeNull();
+  });
+
+  it('fetches the lite payload once per ticker, draws marker + now, and degrades to — on an HTTP error', async () => {
+    const tape = {
+      ticker: 'TINY', verdict: 'MID_RUN', read: 'mid-run', now_pct: 5, peak_pct: 9,
+      bars: [{ t: 0, c: 1, s: 'rth' }, { t: 100, c: 2, s: 'rth' }],
+      tags: [{ handle: 'h', tier: 'B', at: new Date(0).toISOString(), which: 'first' }],
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => tape }));
+    const first = render(<MiniTape ticker="TINY" />);
+    await waitFor(() => expect(document.querySelectorAll('.ptt__mini circle').length).toBe(2));
+    expect((fetch as any).mock.calls[0][0]).toMatch(/promo-circuit\/tape\/TINY\?lite=1$/);
+    first.unmount();
+    render(<MiniTape ticker="TINY" />);
+    await waitFor(() => expect(document.querySelectorAll('.ptt__mini circle').length).toBe(2));
+    expect((fetch as any).mock.calls.length).toBe(1);                 // served from the page cache
+    _resetLiteCache();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 502, json: async () => ({}) }));
+    render(<MiniTape ticker="BADX" />);
+    await screen.findByText('—');
   });
 });

@@ -359,13 +359,15 @@ async def get_promo_live(force: bool = Query(False)):
 
 
 @router.get("/catalysts/promo-circuit/tape/{ticker}")
-async def get_promo_tape(ticker: str, force: bool = Query(False)):
+async def get_promo_tape(ticker: str, force: bool = Query(False), lite: bool = Query(False)):
     """5-min tape (pre/post market) around the roster tags on one name plus a
     before/mid-run/after read. Ajay 2026-09-02: 'did they PSA it before the
-    blow up or after'."""
+    blow up or after'. `lite=1` → 15-min closes + markers only, for the
+    inline sparkline on every board row."""
     import asyncio
     from . import promo_tape
-    return await asyncio.to_thread(promo_tape.tape_for, ticker.upper(), force)
+    payload = await asyncio.to_thread(promo_tape.tape_for, ticker.upper(), force)
+    return promo_tape.lite_payload(payload) if lite else payload
 
 
 @router.post("/catalysts/promo-circuit/sweep")

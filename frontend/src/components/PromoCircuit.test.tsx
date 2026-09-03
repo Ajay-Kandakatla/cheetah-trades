@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PromoCircuit, tagStamp } from './PromoCircuit';
+import { _resetLiteCache } from './PromoTagTape';
 
 /* Promo-circuit watch — born 2026-09-01 from the chatter-provenance study.
  * The board is a DO-NOT-CHASE radar: SEEDING rows are being loaded now,
@@ -249,5 +250,89 @@ describe('board rows go live (Ajay 2026-09-02: "is this page real time?")', () =
     expect(tagStamp(null)).toBe('—');
     expect(tagStamp('garbage')).toBe('—');
     expect(tagStamp('2026-09-01T19:20:44Z')).toBe('Sep 1 · 3:20p ET');
+  });
+});
+
+describe('promo board: room to run, links, mini tape, recency order (Ajay 2026-09-02)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); _resetLiteCache(); });
+  const tape = {
+    ticker: 'TINY', lite: true, tf: '5min', n_bars: 3, verdict: 'BEFORE_THE_MOVE', read: 'Posted before the move',
+    bars: [{ t: 1000, c: 1.0, s: 'premarket' }, { t: 2000, c: 1.2, s: 'rth' }, { t: 3000, c: 1.5, s: 'rth' }],
+    tags: [{ handle: 'beppels', tier: 'A', at: new Date(2000).toISOString(), which: 'first' }], now_pct: 25, peak_pct: 50,
+  };
+  function mock3(body: any, live: any) {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any) => {
+      const u = String(url);
+      if (u.includes('/promo-circuit/live')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(live) } as any);
+      if (u.includes('/promo-circuit/tape/')) {
+        const ok = u.includes('/tape/TINY');
+        return Promise.resolve({ ok, status: ok ? 200 : 502, json: () => Promise.resolve(ok ? tape : { detail: 'boom' }) } as any);
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as any);
+    }));
+  }
+  const boardSyms = (i = 0) => Array.from(document.querySelectorAll('.pcw__table:not(.pcw__live)')[i].querySelectorAll('td.og__sym'))
+    .map((td) => td.querySelector('a[href*="stocktwits.com/symbol/"]')!.getAttribute('href')!.split('/').pop());
+
+  it('sorts every table by the latest announcement, newest first (last tag, else first tag)', async () => {
+    const rows = [
+      row({ ticker: 'OLDR', first_tagged_at: '2026-08-28T09:00:00Z', last_tagged_at: '2026-08-29T09:00:00Z' }),
+      row({ ticker: 'TINY', first_tagged_at: '2026-08-30T09:00:00Z', last_tagged_at: '2026-09-02T13:00:00Z' }),
+      row({ ticker: 'MIDL', first_tagged_at: '2026-09-01T09:00:00Z', last_tagged_at: null }),
+    ];
+    mock3(payload(rows), livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(3));
+    expect(boardSyms()).toEqual(['TINY', 'MIDL', 'OLDR']);
+  });
+
+  it('symbol cell links to the StockTwits stream and to our SEPA page on the Supply / Demand tab', async () => {
+    mock3(payload([row()]), livePayload([]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(1));
+    const td = document.querySelector('.pcw__table:not(.pcw__live) td.og__sym')!;
+    const st = td.querySelector('a[href="https://stocktwits.com/symbol/TINY"]')!;
+    expect(st.getAttribute('target')).toBe('_blank');
+    expect(td.querySelector('a[href="/sepa/TINY?tab=supply"]')).not.toBeNull();
+    expect(td.querySelectorAll('a[href*="tab=supply"]').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('room column: % + band, in band, clear, and … while the zones are still computing', async () => {
+    const rows = [row({ ticker: 'TINY' }), row({ ticker: 'INBD' }), row({ ticker: 'CLR' }), row({ ticker: 'PEND' })];
+    const live = livePayload([
+      liveRow({ ticker: 'TINY', room: { state: 'ROOM', room_pct: 7.2, band: { lo: 5.51, hi: 5.57, kind: 'supply' } } }),
+      liveRow({ ticker: 'INBD', room: { state: 'IN_BAND', room_pct: 0, band: { lo: 1, hi: 1.1, kind: 'broken_support' } } }),
+      liveRow({ ticker: 'CLR', room: { state: 'CLEAR', room_pct: null, band: null } }),
+      liveRow({ ticker: 'PEND', room: { state: 'PENDING', room_pct: null, band: null } }),
+    ]);
+    mock3(payload(rows), live);
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(4));
+    const board = document.querySelector('.pcw__table:not(.pcw__live)')!;
+    const rowOf = (t: string) => Array.from(board.querySelectorAll('tbody tr')).find((tr) => tr.textContent?.includes(t))!;
+    expect(rowOf('TINY').querySelector('.pcw__room.is-room')!.textContent).toContain('+7.2%');
+    expect(rowOf('TINY').querySelector('.pcw__room')!.textContent).toContain('$5.51–5.57');
+    expect(rowOf('INBD').querySelector('.pcw__room.is-in')!.textContent).toBe('in band $1.00–1.10');
+    expect(rowOf('INBD').querySelector('.pcw__room')!.getAttribute('title')).toContain('support it broke');
+    expect(rowOf('CLR').querySelector('.pcw__room.is-clear')!.textContent).toBe('clear');
+    expect(rowOf('PEND').querySelector('td[title^="zones computing"]')!.textContent).toBe('…');
+    // the ⚡ live table carries the same cell
+    expect(document.querySelectorAll('.pcw__room.is-room').length).toBe(2);
+  });
+
+  it('draws an inline mini tape per row from the lite endpoint, marker colored by the read; a failed fetch shows —', async () => {
+    mock3(payload([row({ ticker: 'TINY' }), row({ ticker: 'BADX' })]), livePayload([]));
+    draw();
+    await waitFor(() => expect(document.querySelectorAll('.ptt__mini svg').length).toBe(1));
+    const tapeCalls = (fetch as any).mock.calls.map((c: any[]) => String(c[0])).filter((u: string) => u.includes('/tape/'));
+    expect(tapeCalls.every((u: string) => u.endsWith('?lite=1'))).toBe(true);
+    expect(new Set(tapeCalls).size).toBe(2);
+    const mini = document.querySelector('.ptt__mini[data-verdict="BEFORE_THE_MOVE"]')!;
+    expect(mini.querySelectorAll('circle').length).toBe(2);          // first-tag marker + now
+    expect(mini.getAttribute('title')).toContain('Posted before the move');
+    await waitFor(() => expect(Array.from(document.querySelectorAll('.ptt__mini')).some((m) => m.textContent === '—')).toBe(true));
+    // clicking the sparkline opens the full tape row
+    fireEvent.click(mini);
+    await waitFor(() => expect(document.querySelector('.ptt__row')).not.toBeNull());
   });
 });

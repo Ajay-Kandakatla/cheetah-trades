@@ -143,6 +143,9 @@ export const FALLBACK_WINDOWS: SupportWindow[] = [
 
 /** Matches backend support.DEFAULT_WINDOW. */
 export const DEFAULT_WINDOW = '3m';
+/** The ticker page's Supply / Demand tab starts wider (Ajay 2026-09-02:
+ *  "default supply demand to 6 months in that tab"); Chart Maps keeps 3m. */
+export const SEPA_SUPPLY_WINDOW = '6m';
 
 /** Coerce a `?window=` value against the list the server actually offers, so a
  *  key retired backend-side degrades to the default instead of 404ing. */

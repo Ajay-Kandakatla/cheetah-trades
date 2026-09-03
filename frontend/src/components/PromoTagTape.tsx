@@ -5,7 +5,7 @@
  * 5-min closes (pre/post market shaded) from a session before the first tag
  * to now, a marker at every roster tag, and the backend's before / mid-run /
  * after read. Plain SVG — no chart lib, one fetch per expanded row. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 
 type Bar = { t: number; o: number; h: number; l: number; c: number; v: number; s: string };
@@ -128,5 +128,111 @@ export function PromoTagTape({ ticker, data: preset }: { ticker: string; data?: 
         <span className="pcw__dim"> · {data.tf} · shaded = pre/post market</span>
       </div>
     </div>
+  );
+}
+
+/* ── Inline mini tape — Ajay 2026-09-02: "the small graph of when they
+ * announced vs where it is" on EVERY row, not behind a toggle. Lite payload
+ * (15-min closes + the markers + the read), fetched once per ticker per page
+ * life and only when the row scrolls into view; clicking it opens the full tape. */
+type LiteBar = { t: number; c: number; s: string };
+export type LitePayload = Omit<TapePayload, 'bars'> & { bars: LiteBar[]; lite?: boolean };
+const liteCache = new Map<string, Promise<LitePayload>>();
+export function fetchLiteTape(ticker: string): Promise<LitePayload> {
+  let p = liteCache.get(ticker);
+  if (!p) {
+    p = fetch(`${API}/catalysts/promo-circuit/tape/${encodeURIComponent(ticker)}?lite=1`, { credentials: 'include' })
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<LitePayload>; });
+    p.catch(() => liteCache.delete(ticker));          // a failed fetch may retry on the next mount
+    liteCache.set(ticker, p);
+  }
+  return p;
+}
+/** Tests only — the cache is module-global. */
+export function _resetLiteCache() { liteCache.clear(); }
+
+/* Pure geometry for the sparkline: closes only, full height, no axis band. */
+export function miniLayout(bars: LiteBar[], tags: Pick<Tag, 'at' | 'which' | 'tier'>[], w: number, h: number) {
+  if (!bars?.length) return null;
+  const t0 = bars[0].t, t1 = bars[bars.length - 1].t;
+  const lo = Math.min(...bars.map((b) => b.c)), hi = Math.max(...bars.map((b) => b.c));
+  const span = Math.max(1, t1 - t0), range = Math.max(1e-9, hi - lo);
+  const x = (t: number) => ((Math.min(Math.max(t, t0), t1) - t0) / span) * (w - 6) + 3;
+  const y = (p: number) => h - 3 - ((p - lo) / range) * (h - 6);
+  const path = bars.map((b, i) => `${i ? 'L' : 'M'}${x(b.t).toFixed(1)},${y(b.c).toFixed(1)}`).join(' ');
+  const ext: { x0: number; x1: number }[] = [];
+  let run: { x0: number; x1: number } | null = null;
+  bars.forEach((b, i) => {
+    const isExt = b.s === 'premarket' || b.s === 'afterhours';
+    const xb = x(b.t), xn = i + 1 < bars.length ? x(bars[i + 1].t) : w - 3;
+    if (isExt) { if (run) run.x1 = xn; else run = { x0: xb, x1: xn }; }
+    else if (run) { ext.push(run); run = null; }
+  });
+  if (run) ext.push(run);
+  const first = tags.find((t) => t.which === 'first') ?? tags[0];
+  let marker: { x: number; y: number; price: number; ms: number } | null = null;
+  if (first) {
+    const ms = Date.parse(first.at);
+    const at = [...bars].reverse().find((b) => b.t <= ms) ?? bars[0];
+    marker = { x: x(ms), y: y(at.c), price: at.c, ms };
+  }
+  const last = bars[bars.length - 1];
+  return { path, ext, marker, last: { x: x(last.t), y: y(last.c), price: last.c }, lo, hi };
+}
+
+const pctS = (v: number | null | undefined) => (v == null ? '' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`);
+
+export function MiniTape({ ticker, onOpen }: { ticker: string; onOpen?: () => void }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined');
+  const [data, setData] = useState<LitePayload | null>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    if (seen || !ref.current) return;
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect(); }
+    }, { rootMargin: '240px' });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [seen]);
+  useEffect(() => {
+    if (!seen) return;
+    let live = true;
+    fetchLiteTape(ticker).then((j) => { if (live) setData(j); }).catch(() => { if (live) setErr(true); });
+    return () => { live = false; };
+  }, [seen, ticker]);
+
+  const W = 120, H = 30;
+  const g = data ? miniLayout(data.bars ?? [], data.tags ?? [], W, H) : null;
+  const up = !!g && g.marker != null && g.last.price >= g.marker.price;
+  const title = data && g
+    ? (data.read ?? 'No read yet')
+      + (g.marker ? `\nfirst tag ${etStamp(g.marker.ms)} @ $${g.marker.price.toFixed(2)}` : '')
+      + ` · now $${g.last.price.toFixed(2)} ${pctS(data.now_pct)}`
+      + (data.peak_pct != null ? ` · peak ${pctS(data.peak_pct)}` : '')
+      + '\nclick for the full tape'
+    : 'Price path since the tag';
+  return (
+    <span ref={ref} className={`ptt__mini${onOpen ? ' is-clickable' : ''}`} title={title}
+          onClick={onOpen} role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined}
+          onKeyDown={onOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}
+          data-verdict={data?.verdict ?? undefined}>
+      {err ? <span className="pcw__dim">—</span>
+        : !data ? <span className="pcw__dim">…</span>
+        : !g ? <span className="pcw__dim">no tape</span>
+        : (
+          <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={`${ticker} price path since the tag`}>
+            {g.ext.map((e, i) => <rect key={i} x={e.x0} y={0} width={Math.max(1, e.x1 - e.x0)} height={H} className="ptt__ext" />)}
+            <path d={g.path} className={`ptt__mini-line ${up ? 'is-up' : 'is-dn'}`} fill="none" />
+            {g.marker ? (
+              <g className="ptt__mini-tag">
+                <line x1={g.marker.x} x2={g.marker.x} y1={1} y2={H - 1} stroke={VERDICT_STYLE[data.verdict ?? ''] ?? TIER_COLORS.B} />
+                <circle cx={g.marker.x} cy={g.marker.y} r={2.6} fill={VERDICT_STYLE[data.verdict ?? ''] ?? TIER_COLORS.B} />
+              </g>
+            ) : null}
+            <circle cx={g.last.x} cy={g.last.y} r={2} className="ptt__mini-now" />
+          </svg>
+        )}
+    </span>
   );
 }

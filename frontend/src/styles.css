@@ -11502,3 +11502,22 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .slab-feed__row--buy b { color: var(--positive, #22c55e); }
 .slab-feed__row--sell b { color: var(--negative, #ef4444); }
 .slab-feed__why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Promo board — inline mini tape, room-to-run cell, symbol links (2026-09-02) */
+.ptt__mini { display: inline-flex; align-items: center; min-width: 120px; height: 30px; line-height: 30px; vertical-align: middle; font-size: 11px; }
+.ptt__mini.is-clickable { cursor: pointer; }
+.ptt__mini.is-clickable:hover svg { background: rgba(255,255,255,0.05); }
+.ptt__mini svg { display: block; border-radius: 3px; background: var(--bg-elev, rgba(255,255,255,0.02)); }
+.ptt__mini-line { stroke-width: 1.3; }
+.ptt__mini-line.is-up { stroke: var(--positive, #46a758); }
+.ptt__mini-line.is-dn { stroke: var(--negative, #e5484d); }
+.ptt__mini-now { fill: var(--text, #e2e8f0); }
+.ptt__mini-cell { padding-top: 2px !important; padding-bottom: 2px !important; }
+.pcw__room { white-space: nowrap; }
+.pcw__room.is-in { color: var(--negative, #e5484d); font-weight: 600; }
+.pcw__room.is-near { color: #e8a33d; font-weight: 600; }
+.pcw__room.is-room { color: var(--positive, #46a758); }
+.pcw__room.is-clear { color: var(--text-muted, #94a3b8); }
+.pcw__links { display: inline-flex; gap: 6px; margin-left: 6px; font-size: 10px; letter-spacing: 0.02em; }
+.pcw__links a { color: var(--text-muted, #94a3b8); text-decoration: none; border-bottom: 1px dotted currentColor; }
+.pcw__links a:hover { color: var(--text, #e2e8f0); }
