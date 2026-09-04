@@ -33,6 +33,14 @@
 # Runs after the 4:30 fast-scan so it audits today's fresh flags.
 42     16    *    *    1-5  /usr/local/bin/python -m sepa.cli breakout-audit
 #
+# Failed-trade autopsy (trading/autopsy.py) — post-close pass, 4:45pm ET
+# weekdays, after the breakout-audit. The engine tick already runs it in
+# RTH (step (i), max 3 trades per tick), but the tick stops at 16:00, so a
+# loser closed late in the day would only finalise on the third session's
+# first tick; this pass classifies today's losers tonight and finalises the
+# 2-sessions-later re-check a day earlier. Owner rules (S&D), no book.
+45     16    *    *    1-5  /usr/local/bin/python -m trading.autopsy
+#
 # Mon-Fri 4:50pm ET — Pullback-to-MA scanner. Derives the Stage-2 "pullback
 # toward the rising 50-day MA on contracting volume" list from the latest
 # fast-scan (reuses the universe + cached bars — no new provider fetch) and

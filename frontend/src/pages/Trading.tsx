@@ -27,6 +27,7 @@ import { cleanRules, scanWarning, type EngineRule, type ScanTrust } from '../lib
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 import { ExecutionRace } from '../components/ExecutionRace';
+import { TradeAutopsies } from '../components/TradeAutopsies';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
 
@@ -2112,6 +2113,13 @@ export function TradingPage() {
               mounted once the engine is configured; it owns its own empty and
               unavailable states. */}
           <ExecutionRace />
+
+          {/* d4. Failed-trade autopsies — every losing Auto-Pilot trade
+              (zone-edge, Minervini or manual) classified with numbers by the
+              owner rules in backend/trading/autopsy.py, plus its feedback
+              line (2026-09-03). Read-only; owns its own empty and unavailable
+              states. */}
+          <TradeAutopsies />
 
           {/* e. Enter card */}
           <EnterCard armed={status.armed} mode={status.mode} onPlaced={refresh} />

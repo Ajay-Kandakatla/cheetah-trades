@@ -132,6 +132,10 @@ def get_config() -> dict:
         # Default OFF in EVERY mode (owner opt-in per POST /trading/config);
         # arming is still required on top, like every other buy path.
         "zone_edge_entry": bool(doc.get("zone_edge_entry", False)),
+        # Owner rule switches (zone_edge_entry.active_rules overlays these on
+        # its STRICT defaults; anything malformed falls back to strict).
+        "zone_edge_rules": (dict(doc["zone_edge_rules"])
+                            if isinstance(doc.get("zone_edge_rules"), dict) else {}),
         "last_zone_entry_disabled_day": doc.get("last_zone_entry_disabled_day"),
         # Funnel floor overrides (data write, no deploy). This whitelist used
         # to STRIP them, which silently killed the documented auto_min_score
@@ -842,6 +846,18 @@ def tick(force: bool = False) -> dict:
     except Exception as exc:                       # noqa: BLE001
         log.warning("journal reconcile failed: %s", exc)
         summary["errors"].append("journal: %s" % exc)
+
+    # (i) failed-trade autopsies (trading/autopsy.py, owner rules) — AFTER
+    # (g) so the journal it reads is current. Read-only over the journal /
+    # zone state / prices / gauge (never the broker); writes trade_autopsies
+    # only. Same fence as (f)/(h): a crash here can NEVER break stop
+    # protection above. Bounded to autopsy.MAX_PER_RUN trades per tick.
+    try:
+        from trading import autopsy
+        summary["autopsy"] = autopsy.run()
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("autopsy run failed: %s", exc)
+        summary["errors"].append("autopsy: %s" % exc)
     return summary
 
 

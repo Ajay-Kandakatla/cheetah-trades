@@ -726,3 +726,139 @@ def test_analytics_win_loss_floor_flag_cites_p301():
     a = an.compute(trades)
     flags = " ".join(a["vs_book"]["flags"])
     assert "2:1 floor" in flags and "p.301" in flags, a["vs_book"]["flags"]
+
+
+# ── Failed-trade autopsy: OWNER rules for the Supply & Demand strategy ──────
+# trading/autopsy.py classifies every losing round-trip (zone-edge, Minervini
+# or manual) with numbers + one feedback line. Every class and threshold is an
+# OWNER rule (docs/supply_demand/trade_autopsy.md) — no book, no cite. Locked
+# here so a drift is a deliberate owner decision, never a silent tweak; the
+# module must stay read-only over the broker (never imported) and write ONLY
+# trade_autopsies (+ the one 'autopsy' ledger row via exit_engine.ledger).
+
+AUTOPSY_PATH = os.path.join(TRADING_DIR, "autopsy.py")
+
+AUTOPSY_TOKENS = [
+    "MAX_PER_RUN = 3",
+    "MAX_RETRIES = 5",
+    "RECHECK_SEC = 3600",
+    "SESSIONS_AFTER_EXIT = 2",
+    "CLAMP_TOLERANCE_PT = 0.1",
+    "MARKET_DOWN_PCT = -1.0",
+    "FOLLOW_THROUGH_R = 0.5",
+    "CHASE_DEMAND_PCT = 1.0",
+    "CHASE_BREAKOUT_PCT = 2.0",
+    "SESSION_MINUTES = 390",
+    "FIRST_MINUTES = 30",
+    "LATE_MINUTES = 330",
+    "GAP_DOWN_PCT = -1.0",
+    "THIN_BAND_TOUCHES = 2",
+    "WIDE_STOP_PCT = 7.0",
+    "ATR_DAYS = 14",
+    'COLL = "trade_autopsies"',
+    # The daily-frame period MUST be the cache-wide default: load_prices
+    # writes a miss back into the shared price_cache that the SEPA scanner /
+    # zone store / gauge read without a period (reviewer fix 2026-09-03).
+    'DAILY_PERIOD = "2y"',
+]
+
+
+def _autopsy_source():
+    with open(AUTOPSY_PATH, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def test_autopsy_params_locked_in_source():
+    src = _autopsy_source()
+    for token in AUTOPSY_TOKENS:
+        assert token in src, (
+            f"autopsy parameter drifted or was renamed: `{token}` not found "
+            f"in trading/autopsy.py — owner-chosen S&D knobs "
+            f"(docs/supply_demand/trade_autopsy.md); update doc + tests "
+            f"WITH sign-off, never silently."
+        )
+
+
+def test_autopsy_params_importable_and_equal():
+    from trading import autopsy as ap
+    assert ap.MAX_PER_RUN == 3
+    assert ap.MAX_RETRIES == 5
+    assert ap.RECHECK_SEC == 3600
+    assert ap.SESSIONS_AFTER_EXIT == 2
+    assert ap.CLAMP_TOLERANCE_PT == 0.1
+    assert ap.MARKET_DOWN_PCT == -1.0
+    assert ap.FOLLOW_THROUGH_R == 0.5
+    assert ap.CHASE_DEMAND_PCT == 1.0
+    assert ap.CHASE_BREAKOUT_PCT == 2.0
+    assert ap.SESSION_MINUTES == 390
+    assert ap.FIRST_MINUTES == 30 and ap.LATE_MINUTES == 330
+    assert ap.GAP_DOWN_PCT == -1.0
+    assert ap.THIN_BAND_TOUCHES == 2
+    assert ap.WIDE_STOP_PCT == 7.0
+    assert ap.ATR_DAYS == 14
+    assert ap.COLL == "trade_autopsies"
+    assert ap.DAILY_PERIOD == "2y"
+    # Priority order of the rule table IS the rule — locked as a sequence.
+    assert ap.CLASSES == ("stop_clamped", "shakeout", "band_failed",
+                          "market_down", "chased", "no_follow_through",
+                          "unclassified")
+    assert [r["class"] for r in ap.rules_list()] == list(ap.CLASSES)
+    assert ap.STRATEGIES == ("zone_edge", "minervini", "manual")
+
+
+def test_autopsy_never_touches_the_broker_and_cites_no_book():
+    """Read-only invariant: no broker import, no order token, no direct
+    ledger/journal/state write — the ONLY Mongo write is the single
+    trade_autopsies upsert. And no book: every rule is an owner rule."""
+    import re
+    src = _autopsy_source()
+    for forbidden in ("submit_", "replace_order", "cancel_order",
+                      "close_position", "broker_alpaca", "get_broker",
+                      "from trading.broker", "trading import broker",
+                      "insert_one", "delete_many", "delete_one",
+                      "replace_one"):
+        assert forbidden not in src, (
+            f"trading/autopsy.py contains `{forbidden}` — the autopsy is "
+            f"read-only over the broker and writes only trade_autopsies.")
+    assert src.count("update_one(") == 1, (
+        "trading/autopsy.py must hold exactly ONE update_one (the "
+        "trade_autopsies upsert) — no other collection may be written")
+    assert 'coll.update_one({"_id": doc["_id"]}' in src
+    assert "TLSW" not in src and "TTLAC" not in src, (
+        "trading/autopsy.py cites a SEPA book — the autopsy rules are owner "
+        "rules for the Supply & Demand strategy; keep the honesty note")
+    assert re.search(r"\bpp?\.\s?\d", src) is None, (
+        "a page cite crept into trading/autopsy.py")
+    assert "OWNER RULES" in src
+    assert 'ledger("autopsy"' in src, (
+        "the one 'autopsy' ledger row per trade left trading/autopsy.py")
+    # Every feedback template names the owner decision, never advice.
+    from trading import autopsy as ap
+    for cls in ap.CLASSES:
+        assert "owner decision" in ap.feedback(cls, {}), cls
+
+
+def test_autopsy_wired_fenced_after_journal_and_api_gated():
+    """exit_engine.tick step (i) calls autopsy.run() inside its own
+    try/except right AFTER (g) journal.reconcile; GET /trading/autopsies
+    exists behind the admin gate."""
+    eng_path = os.path.join(TRADING_DIR, "exit_engine.py")
+    with open(eng_path, encoding="utf-8") as fh:
+        eng = fh.read()
+    hook = ('    try:\n'
+            '        from trading import autopsy\n'
+            '        summary["autopsy"] = autopsy.run()\n'
+            '    except Exception as exc:')
+    assert hook in eng, (
+        "tick step (i) autopsy.run is missing or no longer fenced in its own "
+        "try/except — an autopsy crash could break stop protection")
+    assert eng.index('summary["journal"] = journal.reconcile()') \
+        < eng.index('summary["autopsy"] = autopsy.run()'), (
+        "step (i) must run right after (g) journal reconcile")
+    api_path = os.path.join(TRADING_DIR, "api.py")
+    with open(api_path, encoding="utf-8") as fh:
+        api = fh.read()
+    assert '@router.get("/autopsies")' in api, "GET /trading/autopsies missing"
+    block = api.split('@router.get("/autopsies")')[1].split("@router")[0]
+    assert "_require_admin(email)" in block, "GET /trading/autopsies not admin-gated"
+    assert "autopsy.report" in block

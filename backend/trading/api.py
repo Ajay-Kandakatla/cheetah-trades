@@ -13,6 +13,9 @@ POST /trading/config                JSON {equity_cap?, auto_min_score?,
                                     entry switch (admin; null resets to default)
 GET  /trading/race?days=5           execution race: engine vs owner per
                                     zone-edge signal (lags + price gaps)
+GET  /trading/autopsies?days=30     failed-trade autopsies: every losing
+                                    round-trip classified (owner rules) +
+                                    numbers + feedback line + rule table
 GET  /trading/preview               pure entry math, NO order
 POST /trading/enter                 bracket entry (admin; the ONLY buy path)
 POST /trading/flatten/{symbol}      cancel orders + close position (admin)
@@ -138,6 +141,32 @@ async def trading_config(payload: dict = Body(...),
             updates["zone_edge_entry"] = raw
         else:
             raise HTTPException(400, "zone_edge_entry must be a boolean or null")
+    if "zone_edge_rules" in payload:
+        # Owner rule switches for the zone-edge entries (Ajay 2026-09-03:
+        # "Enter anything that is in demand zone ... any stocks crossing the
+        # resistance or supply zone buy them too"). A dict of
+        # {demand_residents: bool, breakout_any_band: bool, min_touches: 1..10};
+        # null resets to STRICT (the module defaults). Unknown keys rejected so
+        # a typo cannot silently leave the engine strict.
+        raw = payload.get("zone_edge_rules")
+        if raw is None:
+            updates["zone_edge_rules"] = {}
+        elif isinstance(raw, dict):
+            clean = {}
+            for k, v in raw.items():
+                if k in ("demand_residents", "breakout_any_band"):
+                    if not isinstance(v, bool):
+                        raise HTTPException(400, "zone_edge_rules.%s must be a boolean" % k)
+                    clean[k] = v
+                elif k == "min_touches":
+                    if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 10:
+                        raise HTTPException(400, "zone_edge_rules.min_touches must be an integer 1..10")
+                    clean[k] = v
+                else:
+                    raise HTTPException(400, "zone_edge_rules: unknown key %r" % k)
+            updates["zone_edge_rules"] = clean
+        else:
+            raise HTTPException(400, "zone_edge_rules must be an object or null")
     if not updates:
         raise HTTPException(400, "nothing to update — send equity_cap, "
                                  "auto_min_score, auto_min_rs, "
@@ -327,6 +356,20 @@ async def trading_race(days: int = 5,
     from trading import zone_edge_entry
     return JSONResponse(await asyncio.to_thread(
         zone_edge_entry.race_report, max(1, min(int(days or 5), 30))))
+
+
+@router.get("/autopsies")
+async def trading_autopsies(days: int = 30,
+                            email: str = Depends(current_user_email)):
+    """Failed-trade autopsies — every closed LOSING round-trip (zone-edge,
+    Minervini or manual) classified by the OWNER rules in trading/autopsy.py
+    with its numbers (lag, chase, stop requested vs placed, MFE/MAE, band
+    held, reclaimed, SPY/RSP) and one feedback line, plus the summary and
+    the rule table. Read-only: the docs are written by the engine tick."""
+    _require_admin(email)
+    from trading import autopsy
+    return JSONResponse(await asyncio.to_thread(
+        autopsy.report, max(1, min(int(days if days is not None else 30), 365))))
 
 
 @router.get("/analytics")

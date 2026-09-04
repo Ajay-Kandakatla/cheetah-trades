@@ -1513,3 +1513,34 @@ def test_status_block_reports_active_rules(env):
     assert blk["active_rules"] == {"demand_residents": True, "breakout_any_band": True, "min_touches": 1}
     assert ZE.status_block(EE.get_config())["active_rules"] == ZE.RULES_DEFAULT
 
+
+def test_api_config_accepts_zone_edge_rules_and_status_shows_them(env):
+    fastapi = pytest.importorskip("fastapi")
+    from trading import api as TA
+    import auth
+    admin = auth.HOUSE_OWNER_EMAIL
+    env(latest=latest_doc(), flag=True)
+    wide = {"demand_residents": True, "breakout_any_band": True, "min_touches": 1}
+    resp = asyncio.run(TA.trading_config({"zone_edge_rules": wide}, email=admin))
+    assert json.loads(resp.body) == {"zone_edge_rules": wide}
+    assert EE.get_config()["zone_edge_rules"] == wide
+    assert ZE.status_block(EE.get_config())["active_rules"] == wide
+    # partial object keeps the strict default for the rest
+    resp = asyncio.run(TA.trading_config({"zone_edge_rules": {"min_touches": 3}}, email=admin))
+    assert json.loads(resp.body) == {"zone_edge_rules": {"min_touches": 3}}
+    assert ZE.active_rules(EE.get_config()) == {"demand_residents": False,
+                                                "breakout_any_band": False, "min_touches": 3}
+    # null resets to STRICT
+    resp = asyncio.run(TA.trading_config({"zone_edge_rules": None}, email=admin))
+    assert json.loads(resp.body) == {"zone_edge_rules": {}}
+    assert ZE.active_rules(EE.get_config()) == ZE.RULES_DEFAULT
+    # NEGATIVES: wrong types, out-of-range, unknown keys, non-admin
+    for bad in ({"demand_residents": "yes"}, {"min_touches": 0}, {"min_touches": True},
+                {"min_touches": 11}, {"typo_key": True}, "wide", 7):
+        with pytest.raises(fastapi.HTTPException) as exc:
+            asyncio.run(TA.trading_config({"zone_edge_rules": bad}, email=admin))
+        assert exc.value.status_code == 400, bad
+    with pytest.raises(fastapi.HTTPException) as exc:
+        asyncio.run(TA.trading_config({"zone_edge_rules": wide}, email="nobody@example.com"))
+    assert exc.value.status_code == 403
+

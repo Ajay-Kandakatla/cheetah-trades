@@ -294,6 +294,21 @@ const CONTRACTS = [
     },
   },
   {
+    // Ajay 2026-09-03: "Please make a rule to add feedback and analysis of
+    // failed trades" — the autopsy table must stay on the Trading page, right
+    // under the execution race.
+    name: 'Trading page renders the failed-trade autopsies (2026-09-03)',
+    file: 'src/pages/Trading.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bTradeAutopsies\b[^}]*\}\s*from\s*'\.\.\/components\/TradeAutopsies'/.test(src)) {
+        errs.push("Trading.tsx no longer imports TradeAutopsies from '../components/TradeAutopsies'");
+      }
+      if (!/<TradeAutopsies\s*\/>/.test(src)) errs.push('Trading.tsx never renders <TradeAutopsies />');
+      return errs;
+    },
+  },
+  {
     name: 'Trading page reads the zone-edge paper entry status (2026-09-03)',
     file: 'src/pages/Trading.tsx',
     checks: (src) => (/status\.zone_edge_entry/.test(src) ? [] : ['Trading.tsx never reads status.zone_edge_entry']),
