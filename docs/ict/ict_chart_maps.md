@@ -191,7 +191,7 @@ Count ≥ `STACK_MIN` (video: "two or more") = stacked, shown as a warn badge.
 | `TAP_TOL_PCT` | 0.25 % | engine | **owner rule — not from the video** |
 | `ENTRY_TOL_PCT` | 0.5 % | engine | **owner rule — not from the video** |
 | `STOP_BUFFER_ATR` | 0.2 (60m ATR) | engine | **owner rule — not from the video** |
-| `MICRO_MAX` | 40 names | engine | **owner rule — not from the video** |
+| `MICRO_MAX` | 120 names (was 40 until 2026-09-04: with the 21-day minute window a name costs ~1 s, so 120 fit the budget; the 423 fresh daily taps a day are ordered newest tap first) | engine | **owner rule — not from the video** |
 | `MICRO_DAYS` | 21 | engine | calendar days of 1-minute bars behind each 60m/15m frame (~15 sessions), resampled by the house closed=left resampler; frame_for's own 70-day span cost ~20 s a name and starved the micro budget (2026-09-04) |
 | `TAP_SWING_WINDOW` | 3 | engine | **owner rule — not from the video** — the wake-up tap listens to daily swings that are local extrema over ±3 bars (a key structural low/high); 1-bar fractals stay the targets. Tapping every fractal wiggle woke 685 of 1,123 names (2026-09-04) |
 | `MIN_TARGET_R` | 1.0 | engine | the next daily swing counts as the target only when it pays at least this many R; nearer 3-candle fractals are skipped (2026-09-04, first seed read R:R 0.01) |
