@@ -282,3 +282,14 @@ settings; nothing here is backtested yet.*
 ## 2026-09-04 fix after the first live seed
 
 The first seed woke **1,122 of 1,123** names (any bar sitting under an old swing low counted as a tap), so the micro loop was not dormant and the 120 s budget covered 17 names. The tap now requires a **fresh touch**: the bar before the tap must still be on the far side of the level (or outside the gap). `MICRO_DAYS` and `MIN_TARGET_R` above were added the same night.
+
+## MEASURED — walk-forward backtest 2026-09-04 (`docs/ict/backtest_2026-09-04.md`)
+
+200 random big caps, 2026-03-02 → 2026-09-04, every 60m close, no lookahead, 6,503 entry signals
+(6,004 resolved). **No edge over the board's own placebo**: median ret@10 sessions +0.03 R vs 0.00 R,
+target-before-stop 35.1% vs 34.5%, median MFE 0.81 R both, median MAE 1.00 R both. The bullish tilt is
+SPY's +1.08% drift over the same horizons (the placebo tilts the same way). Treat the tab as a study
+board / watchlist filter, not a trade generator. Levers to *propose* (research loop, never silently):
+tap-bias agreement, drop the daily-level manipulation source (−0.12 R, 69% stopped), wider
+DISPLACE_MIN_ATR, zone-edge fills.
+
