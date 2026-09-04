@@ -27,6 +27,8 @@ import {
   WINNER_SOURCES, boardQuery, isBoardTab,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
+  DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
+  ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
@@ -63,14 +65,15 @@ const HowItWorks = (
         base, the solid line the pivot, the dashed line the suggested stop.</li>
       <li><strong>🟢 Back in Demand</strong> — price left a demand zone and has
         come back into it. Band is the zone; BUY / STOP / TARGET are the plan.</li>
-      <li><strong>🚧 Into Supply</strong> — Back in Demand upside down. Names
-        that have rallied into a tested ceiling, or sit within 3% under one.
-        There is no BUY / STOP / TARGET on these tiles because there is no
-        trade being proposed: it is a caution flag. The number that matters is
-        <em>Room up:down</em> — room to the ceiling divided by room to the next
-        support. Under 1.00 you are buying with more air beneath you than
-        above. It rides the same scan as Back in Demand, so both tabs always
-        describe the same moment.</li>
+      <li><strong>🧭 ICT</strong> — took the Into Supply slot on 2026-09-03.
+        Two clocks: the daily chart sets the key levels (3-candle fractal
+        swings and open fair value gaps) and the 60-minute loop wakes only
+        when one is tapped. It then looks for the manipulation (a wick through
+        the level that fails to close through it), the energetic push back
+        that leaves a new gap, the market structure shift, and the inverted-FVG
+        entry. Stop under the manipulation wick, target at the next daily
+        swing. Every threshold the video does not give is an owner setting,
+        listed under the board. No moving averages anywhere in it.</li>
       <li><strong>📏 Support Levels</strong> — the only tab that is not a board.
         Search any ticker and pick a zoom. The same clustering rule runs over a
         1-month, 3-month, 6-month or 1-year frame, and the answers differ on
@@ -139,6 +142,16 @@ export function ChartMaps() {
   };
   const [gabbarLevel, setGabbarLevel] = useState('all');
   const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(false);
+  /* ICT (Ajay 2026-09-03): which side of the sweep, and which trigger clock.
+   * URL-backed like phase/target so a shared link keeps the read; only the
+   * non-default value is written so the plain tab URL stays clean. */
+  const bias = parseBias(params.get('bias'));
+  const micro = parseMicro(params.get('micro'));
+  const setIctParam = (key: 'bias' | 'micro', v: string, dflt: string) => {
+    const next = new URLSearchParams(params);
+    if (v && v !== dflt) next.set(key, v); else next.delete(key);
+    setParams(next, { replace: true });
+  };
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,7 +185,7 @@ export function ChartMaps() {
     const q = boardQuery({ tab, limit: tab === 'gabbar' ? 80 : 24, days,
                            universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
-                           gabbarTouchingOnly, phase, target });
+                           gabbarTouchingOnly, phase, target, bias, micro });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -187,7 +200,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -230,8 +243,10 @@ export function ChartMaps() {
    * board key is the universe the SERVER resolved (`universe_key`) — asking
    * for progress under a key the server didn't scan returns a permanent
    * idle. */
+  // The ICT tab warms its OWN engine (ict_board cache), not the demand scan —
+  // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
-    data?.universe_key || universe, Boolean(data?.warming));
+    data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -312,6 +327,13 @@ export function ChartMaps() {
   const tiles = useMemo(
     () => rawTiles.map((t) => filterTile(t, hiddenOverlays)),
     [rawTiles, hiddenOverlays]);
+  const ictParams = useMemo(() => ictParamRows(data?.params), [data?.params]);
+  // The backend flags which values the video actually states (3-candle
+  // fractal, "two or more" consolidations); they get their own line so the
+  // "not from the video" header is never printed over them.
+  const ictVideoParams = useMemo(() => ictParams.filter((r) => r.fromVideo), [ictParams]);
+  const ictOwnerParams = useMemo(() => ictParams.filter((r) => !r.fromVideo), [ictParams]);
+  const ictSrc = useMemo(() => ictSource(data?.source), [data?.source]);
 
   return (
     <div className="cm-page">
@@ -338,7 +360,18 @@ export function ChartMaps() {
         ))}
       </div>
 
-      <p className="cm-blurb">{TAB_META[tab].blurb}</p>
+      {/* The ICT blurb names its source; the name is the link (Ajay: purely
+        * price action from his spec + Jesse Rogers' walkthrough). Split on the
+        * name so the copy stays one testable string in TAB_META. */}
+      <p className="cm-blurb">
+        {tab === 'ict'
+          ? TAB_META.ict.blurb.split(ICT_SOURCE.label).flatMap((part, i, arr) =>
+              i < arr.length - 1
+                ? [part, <a key={`src-${i}`} href={ICT_SOURCE.url} target="_blank"
+                            rel="noreferrer noopener">{ICT_SOURCE.label}</a>]
+                : [part])
+          : TAB_META[tab].blurb}
+      </p>
 
       {/* Reaching vs already reached — only the two demand boards have the two
         * moments. Segmented, not a checkbox: the two states are a choice of
@@ -450,6 +483,31 @@ export function ChartMaps() {
       )}
 
       <div className="cm-controls">
+        {/* ICT (2026-09-03): both sides are always scanned; Bias only narrows
+          * what is shown. Micro picks the trigger clock the dormant loop runs
+          * on once a daily level is tapped — 60m is the video's clock. */}
+        {tab === 'ict' && (
+          <label className="cm-ctl" title="Which side of the sweep. Bullish = the manipulation ran UNDER a key low or the accumulation lows and price pushed back up; bearish is the mirror over a key high. All shows both, ordered by state then grade.">
+            Bias
+            <select aria-label="ICT bias" value={bias}
+                    onChange={(e) => setIctParam('bias', e.target.value, DEFAULT_ICT_BIAS)}>
+              {ICT_BIASES.map((b) => (
+                <option key={b.key} value={b.key}>{b.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {tab === 'ict' && (
+          <label className="cm-ctl" title="The trigger timeframe. The daily chart always sets the levels; this is the clock the manipulation, displacement, MSS and IFVG are read on once a level is tapped. 60m is the video's micro clock; 15m is a faster read of the same rules.">
+            Micro
+            <select aria-label="ICT micro timeframe" value={micro}
+                    onChange={(e) => setIctParam('micro', e.target.value, DEFAULT_ICT_MICRO)}>
+              {ICT_MICROS.map((m) => (
+                <option key={m.key} value={m.key}>{m.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {tab === 'gabbar' && (
           <label className="cm-ctl" title="Measure every covered name against one of Gabbar's band types. Aggressive is his shallowest buy zone; conservative 1 and 2 sit progressively deeper. Names he drew no such band for drop off the board under a lens.">
             Level
@@ -636,7 +694,22 @@ export function ChartMaps() {
         * /supply-demand read one demand_reentry cache, so they watch the same
         * job and now show the same counter (Ajay 2026-08-17: "Are you updating
         * both pages when supply demand is getting updated"). */}
-      {data?.warming ? (
+      {data?.warming && tab === 'ict' ? (
+        /* The ICT engine warms in its own background thread (ict/engine.py
+         * cached_or_warm, same pattern as demand_reentry) and this answers
+         * warming:true rather than holding the connection open. The demand
+         * counter above does not describe it, so it gets its own line. */
+        <>
+          <p className="cm-note" role="status">
+            Scanning the ICT universe — daily levels for every $1B+ name, then the
+            {' '}{micro} loop only for the names that tapped one. Usually under two
+            minutes.
+          </p>
+          <p className="cm-note">
+            The charts appear here as soon as it lands; you don't need to refresh.
+          </p>
+        </>
+      ) : data?.warming ? (
         <>
           <DemandScanProgress progress={demandProgress ?? data.progress}
                               universeLabel={data.universe_key || universe}
@@ -700,6 +773,63 @@ export function ChartMaps() {
           {data?.matched ? ` of ${data.matched} matches` : ''}
           {data?.scanned ? ` · ${data.scanned} names scanned` : ''}
           {data?.disclaimer ? <div className="cm-disclaimer">{data.disclaimer}</div> : null}
+        </div>
+      ) : null}
+
+      {/* ICT only, under the board (Ajay 2026-09-03): the tile legend, how far
+        * the dormant loop got, every owner constant the backend actually ran
+        * with, and the source line. The constants are rendered from the
+        * payload, not from a frontend copy, so a changed threshold shows up
+        * here on the next scan with no deploy — and nothing here can claim
+        * a number the video did not give. */}
+      {/* `data.tab` guard: the board keeps the previous tab's payload on
+        * screen while the next one loads (same as the tile grid), and a VCP
+        * payload must not feed this block for the half second it takes. */}
+      {tab === 'ict' && data && !data.warming && (data.tab ?? 'ict') === 'ict' ? (
+        <div className="cm-note cm-ict-foot" data-testid="ict-foot">
+          <div><strong>Legend</strong></div>
+          <ul className="cm-ict-legend">
+            {ICT_LEGEND.map((l) => (
+              <li key={l.label}>
+                <span className="cm-ict-glyph" aria-hidden="true">{l.glyph}</span>{' '}
+                <strong>{l.label}</strong> — {l.hint}
+              </li>
+            ))}
+          </ul>
+          {data.counts ? (
+            <div className="cm-ict-counts">
+              <strong>Dormant loop</strong> — {data.counts.macro_n ?? 0} names on the
+              daily pass · {data.counts.tapped_n ?? 0} tapped a level ·{' '}
+              {data.counts.micro_n ?? 0} ran the {micro} loop
+              {data.as_of ? ` · scanned ${String(data.as_of)}` : ''}
+            </div>
+          ) : null}
+          {ictVideoParams.length ? (
+            <div className="cm-ict-params" data-testid="ict-video-params">
+              <strong>From the video</strong>:{' '}
+              {ictVideoParams.map((r) => (
+                <span key={r.key} className="cm-badge cm-badge-muted" title={r.key}>
+                  {r.label} = {r.value}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {ictOwnerParams.length ? (
+            <div className="cm-ict-params" data-testid="ict-owner-params">
+              <strong>Owner settings</strong> (house values — not from the video):{' '}
+              {ictOwnerParams.map((r) => (
+                <span key={r.key} className="cm-badge cm-badge-muted" title={r.key}>
+                  {r.label} = {r.value}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <div className="cm-ict-source">
+            <strong>Source</strong> — Ajay's spec +{' '}
+            <a href={ictSrc.url} target="_blank"
+               rel="noreferrer noopener">{ICT_SOURCE.label}</a>
+            {` (${ictSrc.stamps})`}. Not advice.
+          </div>
         </div>
       ) : null}
       </>

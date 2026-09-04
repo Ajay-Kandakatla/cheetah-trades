@@ -444,3 +444,268 @@ describe('the approach-target switch', () => {
     expect(screen.getByText(/bounced 7%\+ off the demand zone/)).toBeInTheDocument();
   });
 });
+
+/* ── ICT tab (Ajay 2026-09-03, late) ────────────────────────────────────────
+ * "create a new chart maps tab for ICT Strategy, replace supply tab with this
+ * new tab." Payload shape is the backend/chart_maps/board.py ict_tiles
+ * envelope contract (tiles + as_of + counts + params + source); the tile is
+ * the ONE tile shape every tab shares, with the ICT bands / lines / markers. */
+const ICT_TILE = {
+  symbol: 'NTAP',
+  name: 'NetApp',
+  href: '/sepa/NTAP?tab=supply',
+  bars: Array.from({ length: 30 }, (_, i) => ({
+    t: `2026-08-${String(i + 1).padStart(2, '0')}`,
+    o: 160 + i * 0.3, h: 163 + i * 0.3, l: 158 + i * 0.3, c: 161 + i * 0.3, v: 2e6,
+  })),
+  bands: [
+    { kind: 'base', lo: 161.0, hi: 163.5, label: 'accumulation' },
+    { kind: 'demand', lo: 162.2, hi: 162.9, label: 'FVG' },
+    { kind: 'neutral', lo: 163.8, hi: 164.4, label: 'IFVG' },
+    { kind: 'demand', lo: 163.8, hi: 164.4, label: 'entry' },
+  ],
+  lines: [
+    { price: 160.4, label: 'STOP', tone: 'stop' },
+    { price: 171.2, label: 'TARGET', tone: 'target' },
+    { price: 161.0, label: 'key low', tone: 'neutral' },
+  ],
+  markers: [
+    { date: '2026-08-27', label: 'MANIP', kind: 'sweep', price: 160.6 },
+    { date: '2026-08-28', label: 'MSS', kind: 'bos', price: 163.9 },
+    { date: '2026-08-29', label: 'IFVG', kind: 'buy', price: 164.0 },
+  ],
+  stats: [
+    { k: 'State', v: 'entry' }, { k: 'Grade', v: '100' }, { k: 'R:R', v: '2.1' },
+    { k: 'Bias', v: 'bullish' }, { k: 'Micro tf', v: '60m' }, { k: 'Tapped', v: 'swing_low 161.00' },
+  ],
+  why: 'swept the daily swing low 161.00 without displacing · 60m push back left a new FVG and closed past the last swing (MSS) · IFVG 163.80–164.40',
+  badges: [{ text: 'MSS ✓', tone: 'good' }, { text: 'no displacement ✓', tone: 'good' },
+           { text: 'stacked consolidations', tone: 'warn' }],
+};
+
+const ICT_BOARD = {
+  tab: 'ict', count: 1, tiles: [ICT_TILE],
+  as_of: '2026-09-03T15:45:00-04:00',
+  counts: { macro_n: 1124, tapped_n: 37, micro_n: 37 },
+  // the exact shape ict/engine.py params() sends: a LIST, with the two values
+  // the video states flagged so the page never files them as owner rules
+  params: [
+    { key: 'FRACTAL_WINDOW', value: 1, from_video: true, note: 'video' },
+    { key: 'STACK_MIN', value: 2, from_video: true, note: 'video' },
+    { key: 'ATR_PERIOD', value: 14, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'CONSOL_MIN_BARS', value: 5, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'CONSOL_MAX_ATR', value: 1.5, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'DISPLACE_MAX_ATR', value: 0.0, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'DISPLACE_MIN_ATR', value: 1.0, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'CONFIRM_MAX_BARS', value: 3, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'N_SWINGS', value: 5, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'TAP_LOOKBACK', value: 2, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'TAP_TOL_PCT', value: 0.25, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'ENTRY_TOL_PCT', value: 0.5, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'STOP_BUFFER_ATR', value: 0.2, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'MICRO_MAX', value: 40, from_video: false, note: 'owner rule — not from the video' },
+    { key: 'BUDGET_SEC', value: 120, from_video: false, note: 'owner rule — not from the video' },
+  ],
+  source: { video: 'https://www.youtube.com/watch?v=Q7Ryv1M7CvI', timestamps: ['02:39', '03:57', '05:30'] },
+  note: null,
+  disclaimer: 'Study board. Not advice.',
+};
+
+describe('ChartMaps — the ICT tab (2026-09-03)', () => {
+  const openIct = (query = '?tab=ict', boards: Record<string, unknown> = {}) => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, ict: ICT_BOARD, ...boards }));
+    return render(<MemoryRouter initialEntries={[`/chart-maps${query}`]}><ChartMaps /></MemoryRouter>);
+  };
+
+  it('offers ICT where Into Supply used to be, and Into Supply is gone', () => {
+    openIct();
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs).toContain('ICT');
+    expect(tabs).not.toContain('Into Supply');
+    const zones = tabs.indexOf('Back in Demand');
+    expect(tabs[zones + 1]).toBe('ICT');
+  });
+
+  it('renders the engine tiles through the shared tile component', async () => {
+    openIct();
+    expect(await screen.findByText('NTAP')).toBeInTheDocument();
+    expect(screen.getByText(/without displacing/)).toBeInTheDocument();
+    expect(screen.getByText('MSS ✓')).toBeInTheDocument();
+    expect(screen.getByText('no displacement ✓')).toBeInTheDocument();
+    expect(screen.getByText('stacked consolidations')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /NTAP — open SEPA detail/ }))
+      .toHaveAttribute('href', expect.stringContaining('/sepa/NTAP?tab=supply'));
+  });
+
+  it('shows the Bias and Micro controls on this tab only', async () => {
+    openIct();
+    await screen.findByText('NTAP');
+    expect(screen.getByLabelText('ICT bias')).toBeInTheDocument();
+    expect(screen.getByLabelText('ICT micro timeframe')).toBeInTheDocument();
+    expect(screen.getByLabelText('ICT bias')).toHaveValue('all');
+    expect(screen.getByLabelText('ICT micro timeframe')).toHaveValue('60m');
+    fireEvent.click(screen.getByRole('tab', { name: 'Strong VCP' }));
+    await screen.findByText('AVGO');
+    expect(screen.queryByLabelText('ICT bias')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('ICT micro timeframe')).not.toBeInTheDocument();
+  });
+
+  it('the default request carries neither bias nor micro', async () => {
+    openIct();
+    await screen.findByText('NTAP');
+    const urls = (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) => u.includes('tab=ict') && !u.includes('bias=') && !u.includes('micro='))).toBe(true);
+  });
+
+  it('reads bias and micro from the URL and sends them to the board', async () => {
+    openIct('?tab=ict&bias=bullish&micro=15m');
+    await screen.findByText('NTAP');
+    expect(screen.getByLabelText('ICT bias')).toHaveValue('bullish');
+    expect(screen.getByLabelText('ICT micro timeframe')).toHaveValue('15m');
+    const urls = (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) => u.includes('tab=ict') && u.includes('bias=bullish') && u.includes('micro=15m'))).toBe(true);
+  });
+
+  it('changing the bias refetches with the new side; switching back to All drops it', async () => {
+    openIct();
+    await screen.findByText('NTAP');
+    fireEvent.change(screen.getByLabelText('ICT bias'), { target: { value: 'bearish' } });
+    await waitFor(() => {
+      const urls = (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+      expect(urls.some((u: string) => u.includes('tab=ict') && u.includes('bias=bearish'))).toBe(true);
+    });
+    const before = (globalThis.fetch as any).mock.calls.length;
+    fireEvent.change(screen.getByLabelText('ICT bias'), { target: { value: 'all' } });
+    await waitFor(() => {
+      const urls = (globalThis.fetch as any).mock.calls.slice(before).map((c: any[]) => String(c[0]));
+      expect(urls.length).toBeGreaterThan(0);
+      expect(urls.every((u: string) => !u.includes('bias='))).toBe(true);
+    });
+  });
+
+  it('an unknown bias or micro on the URL falls back to the defaults, never a broken request', async () => {
+    openIct('?tab=ict&bias=long&micro=5m');
+    await screen.findByText('NTAP');
+    expect(screen.getByLabelText('ICT bias')).toHaveValue('all');
+    expect(screen.getByLabelText('ICT micro timeframe')).toHaveValue('60m');
+    const urls = (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.every((u: string) => !u.includes('bias=long') && !u.includes('micro=5m'))).toBe(true);
+  });
+
+  it('under the board: legend, dormant-loop counts, owner constants from the payload, and the source', async () => {
+    openIct();
+    await screen.findByText('NTAP');
+    const foot = await screen.findByTestId('ict-foot');
+    expect(foot).toHaveTextContent('Legend');
+    expect(foot).toHaveTextContent(/MANIP/);
+    expect(foot).toHaveTextContent(/MSS/);
+    expect(foot).toHaveTextContent(/IFVG/);
+    // the dormant loop is the design: most names never reach the 60m clock
+    expect(foot).toHaveTextContent(/1124 names on the daily pass/);
+    expect(foot).toHaveTextContent(/37 tapped a level/);
+    expect(foot).toHaveTextContent(/37 ran the 60m loop/);
+    // owner constants come from the payload, labelled, and say they are his
+    const owner = screen.getByTestId('ict-owner-params');
+    expect(owner).toHaveTextContent(/not from the video/);
+    expect(owner).toHaveTextContent(/tap tolerance \(% of level\) = 0\.25/);
+    expect(owner).toHaveTextContent(/stop buffer under the wick \(× micro ATR\) = 0\.2/);
+    expect(owner).toHaveTextContent(/consolidation: min bars = 5/);
+    // …and the two values the video states sit on their own line, never
+    // under the "not from the video" header
+    const video = screen.getByTestId('ict-video-params');
+    expect(video).toHaveTextContent(/From the video/);
+    expect(video).toHaveTextContent(/3-candle fractal\) = 1/);
+    expect(video).toHaveTextContent(/stacked consolidations: min count = 2/);
+    expect(video).not.toHaveTextContent(/not from the video/);
+    expect(owner).not.toHaveTextContent(/fractal/);
+    // source line links the name to the video and lists the timestamps
+    const links = screen.getAllByRole('link', { name: 'Jesse Rogers' });
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    for (const a of links) {
+      expect(a).toHaveAttribute('href', 'https://www.youtube.com/watch?v=Q7Ryv1M7CvI');
+      expect(a).toHaveAttribute('target', '_blank');
+    }
+    expect(foot).toHaveTextContent(/02:39 · 03:57 · 05:30/);
+    expect(foot).toHaveTextContent(/Not advice/);
+  });
+
+  it('the blurb links the source name even before the board lands', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => { /* never resolves */ })));
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=ict']}><ChartMaps /></MemoryRouter>);
+    const a = screen.getByRole('link', { name: 'Jesse Rogers' });
+    expect(a).toHaveAttribute('href', 'https://www.youtube.com/watch?v=Q7Ryv1M7CvI');
+    expect(screen.getByText(/fails to close through it/)).toBeInTheDocument();
+  });
+
+  it('an old ?tab=supply bookmark opens the ICT tab', async () => {
+    openIct('?tab=supply');
+    expect(await screen.findByText('NTAP')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'ICT' })).toHaveAttribute('aria-selected', 'true');
+    const urls = (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) => u.includes('tab=ict'))).toBe(true);
+    expect(urls.every((u: string) => !u.includes('tab=supply'))).toBe(true);
+  });
+
+  it('while the engine warms it says so, in its own words, and never "nothing matched"', async () => {
+    openIct('?tab=ict', { ict: { tab: 'ict', count: 0, tiles: [], warming: true, note: 'scanning…' } });
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent(/Scanning the ICT universe/);
+    expect(status).toHaveTextContent(/60m loop only for the names that tapped/);
+    expect(screen.queryByText(/Nothing matched/i)).not.toBeInTheDocument();
+    // the owner-constant block waits for a real board — nothing to list yet
+    expect(screen.queryByTestId('ict-foot')).not.toBeInTheDocument();
+  });
+
+  it('a genuinely empty ICT board says so and still lists the owner settings', async () => {
+    openIct('?tab=ict', { ict: { ...ICT_BOARD, count: 0, tiles: [], note: 'no name tapped a daily level today' } });
+    expect(await screen.findByText(/no name tapped a daily level today/)).toBeInTheDocument();
+    expect(screen.getByTestId('ict-foot')).toHaveTextContent(/not from the video/);
+  });
+
+  it('a flat {key: value} params map (the spec wording) still lists, all as owner settings', async () => {
+    openIct('?tab=ict', { ict: { ...ICT_BOARD, params: { tap_tol_pct: 0.25, consol_min_bars: 5 } } });
+    await screen.findByText('NTAP');
+    const foot = screen.getByTestId('ict-foot');
+    expect(foot).toHaveTextContent(/tap tolerance \(% of level\) = 0\.25/);
+    expect(foot).toHaveTextContent(/consolidation: min bars = 5/);
+    expect(screen.queryByTestId('ict-video-params')).not.toBeInTheDocument();
+  });
+
+  it('a payload without params or source degrades to the legend and the fallback source link', async () => {
+    openIct('?tab=ict', { ict: { tab: 'ict', count: 1, tiles: [ICT_TILE] } });
+    await screen.findByText('NTAP');
+    const foot = screen.getByTestId('ict-foot');
+    expect(foot).toHaveTextContent('Legend');
+    expect(foot).not.toHaveTextContent(/Owner settings/);
+    expect(foot).not.toHaveTextContent(/Dormant loop/);
+    expect(screen.getAllByRole('link', { name: 'Jesse Rogers' }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('source timestamps sent as {at, rule} objects print as stamps, never [object Object]', async () => {
+    openIct('?tab=ict', { ict: { ...ICT_BOARD, source: {
+      video: 'https://www.youtube.com/watch?v=Q7Ryv1M7CvI',
+      timestamps: [{ at: '02:39', rule: 'lack of displacement' }, { at: '03:57' }, null],
+    } } });
+    await screen.findByText('NTAP');
+    const foot = screen.getByTestId('ict-foot');
+    expect(foot).toHaveTextContent(/02:39 · 03:57/);
+    expect(foot).not.toHaveTextContent(/object/i);
+  });
+
+  it('the previous tab\'s payload never feeds the ICT footer while the board reloads', async () => {
+    // Switching VCP → ICT keeps the VCP tiles on screen until the ICT board
+    // lands (page design). The footer must wait for an ICT payload too.
+    let release: (v: unknown) => void = () => {};
+    const vcpResp = { ok: true, status: 200, json: async () => VCP_BOARD };
+    vi.stubGlobal('fetch', vi.fn((url: string) => String(url).includes('tab=ict')
+      ? new Promise((res) => { release = res; })
+      : Promise.resolve(vcpResp)));
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=vcp']}><ChartMaps /></MemoryRouter>);
+    await screen.findByText('AVGO');
+    fireEvent.click(screen.getByRole('tab', { name: 'ICT' }));
+    expect(screen.getByRole('tab', { name: 'ICT' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByTestId('ict-foot')).not.toBeInTheDocument();
+    release({ ok: true, status: 200, json: async () => ICT_BOARD });
+    expect(await screen.findByTestId('ict-foot')).toHaveTextContent(/Legend/);
+  });
+});

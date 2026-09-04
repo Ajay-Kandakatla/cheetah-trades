@@ -80,6 +80,18 @@
 # the shared price cache; no provider call per symbol. Budget 240s.
 20     9     *    *    1-5  /usr/local/bin/python -m supply_demand.zone_store
 #
+# ── ICT Chart Maps tab (Ajay 2026-09-03 late) ────────────────────────────────
+# "create a new chart maps tab for ICT Strategy, replace supply tab with this
+# new tab." ict/engine.py: daily key levels (fractal swings + raw fair value
+# gaps) over the $1B+ universe, then the DORMANT 60-minute loop only on the
+# names that tapped a daily coordinate. Writes Mongo `ict_board` {_id: latest}
+# which the api container serves (GET /chart-maps?tab=ict) — a python -m, not
+# a curl, because the cache is Mongo rather than process memory. Every 15 min
+# in RTH plus a 4:50pm post-close pass so the tab is fresh at the next open.
+# Budget 120s, micro cap 40 names (owner settings, listed under the board).
+*/15   9-16  *    *    1-5  /usr/local/bin/python -m ict.engine
+50     16    *    *    1-5  /usr/local/bin/python -m ict.engine
+#
 # ── Trade Flash (Ajay 2026-08-24) ────────────────────────────────────────────
 # Zone-tied tape bursts on the demand/supply board names, pushed to his phone
 # (kind trade_flash, owner-scoped). Every 5 min in RTH; the module itself

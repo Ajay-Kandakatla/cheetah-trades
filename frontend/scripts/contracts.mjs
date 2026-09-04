@@ -313,6 +313,37 @@ const CONTRACTS = [
     file: 'src/pages/Trading.tsx',
     checks: (src) => (/status\.zone_edge_entry/.test(src) ? [] : ['Trading.tsx never reads status.zone_edge_entry']),
   },
+  {
+    name: 'Chart Maps carries the ICT tab in the old supply slot (2026-09-03)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-03 (late): "create a new chart maps tab for ICT Strategy,
+    // replace supply tab with this new tab." A rebase that restores the old
+    // CM_TABS line would silently bring Into Supply back and drop ICT with
+    // every test still green if the ICT describe were lost with it — so the
+    // tab list, the slot, the copy and the bookmark redirect are pinned here.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/);
+      if (!m) return ['CM_TABS declaration not found'];
+      const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      if (!tabs.includes('ict')) errs.push("CM_TABS lacks 'ict'");
+      if (tabs.includes('supply')) errs.push("CM_TABS still lists 'supply' — ICT replaced that slot");
+      if (tabs.indexOf('ict') !== tabs.indexOf('zones') + 1) {
+        errs.push("'ict' must sit directly after 'zones' (the old Into Supply slot)");
+      }
+      if (!/\n\s*ict:\s*\{/.test(src)) errs.push('TAB_META.ict is missing');
+      if (!/if \(t === 'supply'\) return 'ict';/.test(src)) {
+        errs.push("parseTab no longer sends ?tab=supply to 'ict' — old bookmarks would fall back to VCP");
+      }
+      if (!/youtube\.com\/watch\?v=Q7Ryv1M7CvI/.test(src)) {
+        errs.push('the ICT source video URL is gone from chartMaps.ts');
+      }
+      if (/\b(ema|sma|vwap)\b/i.test(src.slice(src.indexOf('ict: {'), src.indexOf('topping: {')))) {
+        errs.push('the ICT blurb mentions a moving average — the strategy is purely price action');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

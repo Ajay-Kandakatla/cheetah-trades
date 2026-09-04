@@ -43,7 +43,11 @@ from supply_demand import demand_order as _order
 
 log = logging.getLogger("chart_maps.board")
 
-TABS = ("vcp", "topping", "zones", "supply", "deep_demand", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
+# "ict" took the Into Supply SLOT on the page (Ajay 2026-09-03 late: "create a
+# new chart maps tab for ICT Strategy, replace supply tab with this new tab").
+# "supply" stays registered here so an old ?tab=supply bookmark still resolves
+# on the backend; the frontend maps it to ict.
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -2999,13 +3003,71 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": None}
 
 
+# ---------------------------------------------------------------------------
+# tab — ICT (took the Into Supply slot, 2026-09-03)
+# ---------------------------------------------------------------------------
+def ict_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+              themes_first: bool = THEMES_FIRST_DEFAULT,
+              sort: str = DEFAULT_SORT,
+              min_tier: str = DEFAULT_MIN_TIER,
+              bias: str = "all", micro: str = "60m") -> dict:
+    """ICT Strategy — daily key levels, the dormant 60-minute loop.
+
+    Ajay 2026-09-03 (late): "create a new chart maps tab for ICT Strategy,
+    replace supply tab with this new tab." Concepts from his spec + Jesse
+    Rogers' video (ict/engine.py carries the URL and timestamps); every
+    threshold the video does not give is an owner setting and is returned
+    in `params` so the page can list it under the board.
+
+    Reads `ict.engine.cached_or_warm` — the Mongo doc the 15-minute cron
+    writes. Never scans on the request path: a stale doc answers with its
+    rows and warming:true while a daemon thread refreshes it.
+
+    Tile geometry lives in ict/board.py (pure): accumulation range + gaps +
+    entry zone as bands, stop/target/key levels as lines, MANIP/MSS/IFVG as
+    dated markers on the DAILY chart (each 60m bar placed by its ET date).
+    """
+    from ict import board as IB
+    from ict import engine as IE
+
+    want = bias if bias in ("all", "bullish", "bearish") else "all"
+    tf = micro if micro in IE.MICRO_TFS else IE.MICRO_TF_DEFAULT
+    data = IE.cached_or_warm(limit=LIMIT_MAX, micro_tf=tf)
+    rows = list(data.get("rows") or [])
+    tiles = IB.tiles_from_rows(rows, bias=want, href=_href, name_for=_name_for,
+                               theme=_theme, metrics=tile_metrics)
+    matched = len(tiles)
+    tiles, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    warming = bool(data.get("warming"))
+    counts = {"macro_n": data.get("macro_n") or 0, "tapped_n": data.get("tapped_n") or 0,
+              "micro_n": data.get("micro_n") or 0, "rows": len(rows), "matched": matched}
+    if warming and not rows:
+        note = "first ICT scan running — daily levels over the $1B+ universe, then the 60-minute loop on the tapped names…"
+    elif warming:
+        note = "showing the last scan while a fresh one runs"
+    elif not rows:
+        note = "no name has tapped a daily key level in the last two sessions — the 60-minute loop is dormant"
+    elif not tiles and matched == 0:
+        note = f"no {want} setups in the last scan"
+    else:
+        note = None
+    return {"tiles": tiles, **meta, "note": note, "warming": warming,
+            "as_of": data.get("as_of"), "generated_at": data.get("as_of"),
+            "cached": bool(data.get("cached")), "stale_sec": data.get("stale_sec"),
+            "truncated": bool(data.get("truncated")),
+            "counts": counts, "bias": want, "micro": tf,
+            "params": data.get("params") or IE.params(),
+            "source": data.get("source") or IE.SOURCE,
+            "disclaimer": IE.DISCLAIMER}
+
+
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
           touching_only: bool = False, phase: str = "",
-          target: str = "zone") -> dict:
+          target: str = "zone", bias: str = "all", micro: str = "60m") -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
@@ -3034,6 +3096,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                          phase=(phase or "reached"), target=target)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
+    elif t == "ict":
+        out = ict_tiles(limit, days, themes_first, srt, tier,
+                        bias=bias if isinstance(bias, str) else "all",
+                        micro=micro if isinstance(micro, str) else "60m")
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":

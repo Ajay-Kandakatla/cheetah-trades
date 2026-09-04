@@ -12,16 +12,19 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
-// `supply` sits directly after `zones`: it is the same scan read the other
-// way up, and the pair is only useful side by side.
+// `ict` sits directly after `zones` — it TOOK the Into Supply slot (Ajay
+// 2026-09-03 late: "create a new chart maps tab for ICT Strategy, replace
+// supply tab with this new tab"). `supply` stays in the CmTab union so
+// TAB_META keeps its copy and an old ?tab=supply deep link still renders (it
+// resolves to `ict`, see parseTab); it is no longer in CM_TABS.
 // `zero_dte` sits after the structure tabs and before the ledger ones: it is
 // the only tab reading LIVE option chains rather than a cached equity scan,
 // so it is deliberately not adjacent to the boards it can be confused with.
-// `deep_demand` follows `supply` — it is the darkest read of the same zone
+// `deep_demand` follows `ict` — it is the darkest read of the same zone
 // structure: the first band already failed. `gabbar` follows it as the other
 // levels-plus-sales board; both carry the Bonde sales gate.
 // `topping` sits beside `vcp` — both are slices of the same SEPA scan file,
@@ -31,7 +34,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'deep_demand' | 'se
 // the daily band?), so it belongs beside its own inputs.
 // `signals` sits beside `session` — both are intraday reads; session asks
 // the demand boards' names, signals asks whatever tickers Ajay typed.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -60,9 +63,22 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     label: 'Earnings Flow',
     blurb: "Today only. Names that reported today and were BOUGHT — big volume, closing near the day's high — plus names reporting after today's close that institutions are already accumulating into. Amber badge means the print has not happened yet.",
   },
+  // Not in CM_TABS since 2026-09-03 (the slot went to `ict`). Kept so an old
+  // ?tab=supply bookmark still has copy to render if it ever reaches a page
+  // that indexes TAB_META directly — parseTab sends it to `ict`.
   supply: {
     label: 'Into Supply',
     blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+  },
+  // Ajay 2026-09-03 (late): "create a new chart maps tab for ICT Strategy,
+  // replace supply tab with this new tab." The concepts are his own spec +
+  // Jesse Rogers' video (ICT_SOURCE); everything numeric that the video does
+  // not give is an OWNER setting the backend echoes in `params`, listed under
+  // the board. Purely price action — no moving averages anywhere in it, and
+  // nothing from the SEPA book (that is a different strategy's authority).
+  ict: {
+    label: 'ICT',
+    blurb: 'Purely price action, two clocks. The daily chart sets the key levels — the last swing highs and lows (3-candle fractals) and the fair value gaps still open — and the 60-minute loop stays asleep until price actually taps one of them. Then it looks for the manipulation: a wick through a key low (or the accumulation range’s lows) that fails to close through it — no displacement. Confirmation is an energetic push the other way that leaves a new fair value gap AND closes past the last swing point (the market structure shift, MSS). Entry is the inverted FVG — an old bearish gap a candle closed firmly above — or the new gap itself; the stop sits under the manipulation wick and the target is the next daily swing point (external liquidity), mirrored for the bearish side. Tiles carry State → Grade → R:R so the ones with every step in place read first. The rules are Ajay’s spec plus Jesse Rogers’ walkthrough; every threshold the video does not give (how tight a consolidation, how many bars, the tap tolerance, the stop buffer) is an owner setting shown under the board, not a claim from the source. Not advice.',
   },
   topping: {
     label: 'S3 Topping · Shorts',
@@ -196,6 +212,22 @@ export type CmBoard = {
   universe_choices?: { key: string; label: string }[];
   generated_at?: string | number | null;
   scan_generated_at?: string | number | null;
+  /** ict tab (2026-09-03): when the engine last scanned, how far the dormant
+   *  loop got (macro pass → tapped names → micro runs), every owner constant
+   *  with its value, and the source the rules are cited to. `params` is
+   *  rendered verbatim under the board so a changed threshold is visible
+   *  without a frontend deploy. */
+  as_of?: string | null;
+  counts?: { macro_n?: number; tapped_n?: number; micro_n?: number } | null;
+  /** The backend (ict/engine.py params()) sends a LIST of {key, value,
+   *  from_video, note} so the two values the video actually states are never
+   *  listed as house rules; a flat {key: value} map is accepted too. */
+  params?: IctParamIn[] | Record<string, number | string | boolean | null> | null;
+  source?: {
+    video?: string | null;
+    /** Plain stamps ("02:39") or {at, rule} objects — ictSource() renders both. */
+    timestamps?: (string | { at?: string | null; rule?: string | null } | null)[] | null;
+  } | null;
   patterns?: string[];
   excluded_already_past_target?: number;
   record?: {
@@ -211,7 +243,183 @@ export type CmBoard = {
  *  rendering an empty board — a mistyped deep link should still show charts. */
 export function parseTab(raw: string | null | undefined): CmTab {
   const t = (raw || '').trim().toLowerCase();
+  // The Into Supply slot was replaced by ICT on 2026-09-03 (Ajay: "replace
+  // supply tab with this new tab"). An old ?tab=supply bookmark lands on the
+  // tab that took its place rather than falling back to VCP — same slot,
+  // same neighbourhood, and the backend still resolves "supply" on its side.
+  if (t === 'supply') return 'ict';
   return (CM_TABS as string[]).includes(t) ? (t as CmTab) : 'vcp';
+}
+
+/* ── ICT tab (Ajay 2026-09-03) ────────────────────────────────────────────── */
+
+/** Where the rules come from — Ajay's own spec plus this walkthrough. The
+ *  timestamps are the ones cited in backend/ict/ for each rule; the backend
+ *  echoes the same URL in the board's `source`, this copy is for the blurb
+ *  link when the board has not loaded yet. */
+export const ICT_SOURCE = {
+  label: 'Jesse Rogers',
+  url: 'https://www.youtube.com/watch?v=Q7Ryv1M7CvI',
+  timestamps: [
+    { at: '02:39', rule: 'manipulation = a sweep with no displacement' },
+    { at: '03:57', rule: 'stacked consolidations on the way to a higher-timeframe FVG' },
+    { at: '05:30', rule: 'Power of 3 — accumulation range first, then the manipulation below it' },
+  ],
+} as const;
+
+export type IctBias = 'all' | 'bullish' | 'bearish';
+export type IctMicro = '60m' | '15m';
+
+/** Server defaults — kept OUT of the query string when unchanged so the
+ *  common URL stays clean and one cache key serves the default board. */
+export const DEFAULT_ICT_BIAS: IctBias = 'all';
+export const DEFAULT_ICT_MICRO: IctMicro = '60m';
+
+export const ICT_BIASES: { key: IctBias; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'bullish', label: 'Bullish' },
+  { key: 'bearish', label: 'Bearish' },
+];
+
+/** The trigger timeframe. 60m is the video's "micro" clock; 15m is offered
+ *  because the same frame_for() resample serves it — nothing else changes. */
+export const ICT_MICROS: { key: IctMicro; label: string }[] = [
+  { key: '60m', label: '60m' },
+  { key: '15m', label: '15m' },
+];
+
+export function parseBias(raw: string | null | undefined): IctBias {
+  const v = (raw || '').trim().toLowerCase();
+  return v === 'bullish' || v === 'bearish' ? v : DEFAULT_ICT_BIAS;
+}
+
+export function parseMicro(raw: string | null | undefined): IctMicro {
+  const v = (raw || '').trim().toLowerCase();
+  return v === '15m' ? '15m' : DEFAULT_ICT_MICRO;
+}
+
+/** Plain-language names for the owner constants the backend echoes in
+ *  `params`. Every one of these is a house value — "owner rule, not from the
+ *  video" — which is exactly why they are listed under the board instead of
+ *  buried in code. Keys are matched case-insensitively so the backend is free
+ *  to spell them either way; a key not listed here still renders, by name, so
+ *  a new constant can never be hidden by an out-of-date frontend map. */
+export const ICT_PARAM_LABELS: Record<string, string> = {
+  fractal_window: 'swing point: bars each side (1 = 3-candle fractal)',
+  stack_min: 'stacked consolidations: min count',
+  atr_period: 'ATR period (the range unit every ATR rule uses)',
+  consol_min_bars: 'consolidation: min bars',
+  consol_max_atr: 'consolidation: max span (× ATR14)',
+  displace_max_atr: 'manipulation: max close-through (× ATR, 0 = must close back above)',
+  displace_min_atr: 'displacement: min body (× ATR)',
+  confirm_max_bars: 'displacement: within N bars of the sweep',
+  mss_fvg_within_bars: 'MSS: new gap within N bars of the close',
+  stack_lookback_bars: 'stacked consolidations: bars searched',
+  n_swings: 'daily swings kept as key levels',
+  tap_lookback: 'tap window (daily sessions)',
+  tap_tol_pct: 'tap tolerance (% of level)',
+  entry_tol_pct: 'entry: within % of the zone',
+  stop_buffer_atr: 'stop buffer under the wick (× micro ATR)',
+  micro_max: 'micro runs per scan (cap)',
+  budget_sec: 'scan budget (seconds)',
+  ict_ttl_sec: 'cache TTL before a background re-scan (seconds)',
+  keep_days: 'dated scans kept (days)',
+  macro_min_bars: 'daily frame: min bars to read',
+  micro_min_bars: 'micro frame: min bars to read',
+  macro_fvg_lookback: 'daily gaps: bars searched',
+  macro_fvg_keep: 'daily gaps: newest kept',
+  liq_window: 'liquidity: avg $ volume window (days)',
+  grade_manipulation: 'grade: manipulation found',
+  grade_displacement: 'grade: opposite displacement',
+  grade_mss: 'grade: market structure shift',
+  grade_entry: 'grade: at the entry zone',
+};
+
+/** One entry of the backend's `params` list (ict/engine.py params()). */
+export type IctParamIn = {
+  key?: string | null; value?: unknown; from_video?: boolean | null; note?: string | null;
+};
+
+export type IctParamRow = { key: string; label: string; value: string; fromVideo: boolean };
+
+/** `params` → rows for the settings list: known constants first in the
+ *  order the rules are applied (levels → tap → consolidation → manipulation →
+ *  displacement → entry → plan → ops), then anything unlisted, by name. A
+ *  missing or malformed payload gives [] — the list simply does not draw.
+ *
+ *  Two shapes are accepted. The backend contract is a LIST of
+ *  {key, value, from_video, note} — `from_video` is what lets the page keep
+ *  the two values the video states (3-candle fractal, "two or more"
+ *  consolidations) out of the "not from the video" group. A flat
+ *  {key: value} map still works and counts every entry as an owner rule. */
+export function ictParamRows(params: CmBoard['params']): IctParamRow[] {
+  if (!params || typeof params !== 'object') return [];
+  const order = Object.keys(ICT_PARAM_LABELS);
+  const rows: IctParamRow[] = [];
+  const push = (k: unknown, v: unknown, fromVideo: boolean) => {
+    if (v === null || v === undefined) return;
+    if (typeof v === 'object') return;                    // nested → not a constant
+    const key = typeof k === 'string' ? k.trim() : '';
+    if (!key) return;
+    const norm = key.toLowerCase();
+    rows.push({ key, label: ICT_PARAM_LABELS[norm] || key, value: String(v), fromVideo });
+  };
+  if (Array.isArray(params)) {
+    for (const p of params) {
+      if (!p || typeof p !== 'object' || Array.isArray(p)) continue;
+      push(p.key, p.value, p.from_video === true);
+    }
+  } else {
+    for (const [k, v] of Object.entries(params)) push(k, v, false);
+  }
+  rows.sort((a, b) => {
+    const ia = order.indexOf(a.key.toLowerCase());
+    const ib = order.indexOf(b.key.toLowerCase());
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.key.localeCompare(b.key);
+  });
+  return rows;
+}
+
+/** Tile legend for the ICT board. Mirrors what chart_maps/board.py ict_tiles
+ *  draws and what PatternChart does with each kind: bands by kind, lines by
+ *  tone, markers by kind (sweep / bos = small glyphs, buy / sell = candle
+ *  tags). Written here rather than in the page so it is a fixed list the
+ *  tests can hold to the backend contract. */
+export const ICT_LEGEND: { glyph: string; label: string; hint: string }[] = [
+  { glyph: '▭', label: 'accumulation', hint: 'the Power-of-3 range the manipulation dips below (grey box)' },
+  { glyph: '🟩', label: 'FVG ↑', hint: 'active bullish fair value gap (Low[i+2] > High[i]) — support' },
+  { glyph: '🟥', label: 'FVG ↓', hint: 'active bearish fair value gap (High[i+2] < Low[i]) — resistance' },
+  { glyph: '▦', label: 'IFVG', hint: 'inverted gap: a candle CLOSED through the far edge, so it flips role (neutral box)' },
+  { glyph: '🎯', label: 'entry', hint: 'the IFVG or the new gap — the zone the plan buys / sells in' },
+  { glyph: '┈', label: 'key low / key high', hint: 'the daily swing levels the 60m loop is watching' },
+  { glyph: '⤵', label: 'MANIP', hint: 'the sweep bar — wick through the level, close back inside (no displacement)' },
+  { glyph: '↗', label: 'MSS', hint: 'market structure shift — close past the last opposing swing with a new FVG' },
+  { glyph: '▲▼', label: 'IFVG tag', hint: 'the entry bar, tagged under (bullish) or over (bearish) the candle' },
+  { glyph: '— —', label: 'STOP / TARGET', hint: 'stop = manipulation extreme ± buffer; target = the next daily swing (external liquidity)' },
+];
+
+/** The source line under the ICT board. The backend echoes `source` as
+ *  {video, timestamps}; the stamps may arrive as plain strings ("02:39") or as
+ *  {at, rule} objects (the ICT_SOURCE.timestamps shape) — both render as the
+ *  bare stamps and anything else is dropped rather than printed as
+ *  "[object Object]". A missing or non-http video URL falls back to the
+ *  frontend copy so the name is always a working link. */
+export function ictSource(source: CmBoard['source']): { url: string; stamps: string } {
+  const video = source && typeof source === 'object' ? source.video : null;
+  const url = typeof video === 'string' && /^https?:\/\//i.test(video.trim())
+    ? video.trim() : ICT_SOURCE.url;
+  const raw = source && typeof source === 'object' && Array.isArray(source.timestamps)
+    ? source.timestamps : [];
+  const stamps: string[] = [];
+  for (const t of raw) {
+    if (typeof t === 'string') { if (t.trim()) stamps.push(t.trim()); continue; }
+    if (t && typeof t === 'object' && typeof t.at === 'string' && t.at.trim()) stamps.push(t.at.trim());
+  }
+  const shown = stamps.length ? stamps : ICT_SOURCE.timestamps.map((t) => t.at);
+  return { url, stamps: shown.join(' · ') };
 }
 
 /** Deep link to a ticker's SEPA detail page. Default 'supply' (Ajay
@@ -280,6 +488,7 @@ export function boardQuery(p: {
   source?: WinnerSource; minerviniOnly?: boolean; sort?: string;
   minTier?: string; gabbarLevel?: string; gabbarTouchingOnly?: boolean;
   phase?: string; target?: string;
+  bias?: string; micro?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -313,6 +522,16 @@ export function boardQuery(p: {
   // there") — only the narrowing value rides on the URL.
   if (p.tab === 'gabbar' && p.gabbarTouchingOnly === true) {
     q.set('touching_only', 'true');
+  }
+  // ICT (2026-09-03): bias narrows the board to one side of the sweep, micro
+  // picks the trigger timeframe. Both are server defaults when omitted, and
+  // both are ict-only — the other boards have no sweep side and no second
+  // clock, so a leaked param would just split their cache keys.
+  if (p.tab === 'ict' && p.bias && p.bias !== DEFAULT_ICT_BIAS) {
+    q.set('bias', p.bias);
+  }
+  if (p.tab === 'ict' && p.micro && p.micro !== DEFAULT_ICT_MICRO) {
+    q.set('micro', p.micro);
   }
   // Only sent when it differs from the shared default, so the common URL stays
   // clean. That default flipped to OFF on 2026-08-17, so this now sends `true`

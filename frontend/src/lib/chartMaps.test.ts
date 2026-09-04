@@ -19,6 +19,8 @@ import {
   dropCollidingTicks, priceTicks, tickDecimals,
   GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
   priceAt, shortVol, textWidth, tooltipPos,
+  DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
+  ICT_PARAM_LABELS, ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -569,8 +571,10 @@ describe('the Earnings Flow tab', () => {
     // Later 2026-09-01: `signals` sits beside `session` — both are intraday
     // reads; session asks the demand boards' names, signals asks whatever
     // tickers Ajay typed into the Signal Lab.
+    // 2026-09-03 (late): `ict` REPLACED `supply` in its slot ("replace supply
+    // tab with this new tab") — same position, Into Supply is gone.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'supply', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -623,9 +627,11 @@ describe('the Support Levels tab', () => {
     // 2026-08-31: `session` joined the cluster directly after `deep_demand`,
     // because it READS that tab and Back in Demand — it is the same names asked
     // whether the session is confirming their daily band.
+    // 2026-09-03 (late): `ict` took the `supply` slot — still a level board
+    // (daily swings + FVGs), so the cluster stays contiguous.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'supply', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support']);
+      .toEqual(['zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
@@ -926,41 +932,223 @@ describe('hoverLines + shortVol', () => {
 });
 
 
-// ── Into Supply tab (Ajay 2026-08-20) ────────────────────────────────────────
-describe('the Into Supply tab', () => {
-  it('sits directly after Back in Demand — the pair is only useful together', () => {
-    expect(CM_TABS.indexOf('supply')).toBe(CM_TABS.indexOf('zones') + 1);
-    expect(parseTab('supply')).toBe('supply');
+// ── ICT tab (Ajay 2026-09-03, late) ──────────────────────────────────────────
+// "create a new chart maps tab for ICT Strategy, replace supply tab with this
+// new tab." Was the Into Supply tab (2026-08-20 → 2026-09-03).
+describe('the ICT tab', () => {
+  it('took the Into Supply slot — directly after Back in Demand', () => {
+    expect(CM_TABS.indexOf('ict')).toBe(CM_TABS.indexOf('zones') + 1);
+    expect(CM_TABS).not.toContain('supply');
+    expect(parseTab('ict')).toBe('ict');
+    expect(parseTab(' ICT ')).toBe('ict');
   });
 
-  it('is a BOARD, unlike the per-ticker Support Levels tab next to it', () => {
-    // Two adjacent tabs both about supply/demand; only one takes a ticker.
-    expect(isBoardTab('supply')).toBe(true);
+  it('an old ?tab=supply bookmark lands on ICT, not on the VCP fallback', () => {
+    // Same slot, same neighbourhood; the backend keeps "supply" in TABS so
+    // the redirect is only a frontend concern. Documented in parseTab.
+    expect(parseTab('supply')).toBe('ict');
+    expect(parseTab('SUPPLY')).toBe('ict');
+    // …and the copy for the retired tab is still there for anything that
+    // indexes TAB_META directly.
+    expect(TAB_META.supply.label).toBe('Into Supply');
+  });
+
+  it('is a BOARD, unlike the per-ticker Support Levels tab beside the cluster', () => {
+    expect(isBoardTab('ict')).toBe(true);
     expect(isBoardTab('support')).toBe(false);
   });
 
-  it('sends the universe, because both demand boards read ONE cache', () => {
-    // If only `zones` sent it, the two tabs would silently describe different
-    // scans of different universes while claiming to share a pass.
-    expect(boardQuery({ tab: 'supply', universe: 'sp500' })).toContain('universe=sp500');
-    expect(boardQuery({ tab: 'zones', universe: 'sp500' })).toContain('universe=sp500');
-    expect(boardQuery({ tab: 'vcp', universe: 'sp500' })).not.toContain('universe');
-  });
-
-  it('says out loud that it is NOT a short list', () => {
-    // He trades long. A tab of names running into resistance reads as a short
-    // screen unless it says otherwise in the copy he actually sees.
-    const blurb = TAB_META.supply.blurb;
-    expect(TAB_META.supply.label).toBe('Into Supply');
-    expect(blurb).toMatch(/not a short list/i);
-    expect(blurb).toMatch(/inverse of Back in Demand/i);
-    expect(blurb).toMatch(/room up:down/i);
-  });
-
-  it('does not collide with the Support Levels tab it sits beside', () => {
-    expect(TAB_META.supply.label).not.toBe(TAB_META.support.label);
-    expect(parseTab('supply')).toBe('supply');
+  it('does not collide with the Support Levels tab', () => {
+    expect(TAB_META.ict.label).toBe('ICT');
+    expect(TAB_META.ict.label).not.toBe(TAB_META.support.label);
     expect(parseTab('support')).toBe('support');
+  });
+
+  it('copy states the concepts in his words and names the source', () => {
+    // The blurb is the one paragraph he reads before the tiles. It must say
+    // what a manipulation IS (no displacement), that the 60m loop is dormant
+    // until a daily level is tapped, what confirms (new FVG + MSS), where the
+    // entry and the target are, and that every un-cited number is his own.
+    const blurb = TAB_META.ict.blurb;
+    expect(blurb).toMatch(/manipulation/i);
+    expect(blurb).toMatch(/fails to close through/i);
+    expect(blurb).toMatch(/60-minute/i);
+    expect(blurb).toMatch(/tap/i);
+    expect(blurb).toMatch(/fair value gap/i);
+    expect(blurb).toMatch(/market structure shift|MSS/);
+    expect(blurb).toMatch(/inverted FVG/i);
+    expect(blurb).toMatch(/external liquidity/i);
+    expect(blurb).toMatch(/owner setting/i);
+    expect(blurb).toContain(ICT_SOURCE.label);
+    expect(ICT_SOURCE.url).toBe('https://www.youtube.com/watch?v=Q7Ryv1M7CvI');
+    expect(ICT_SOURCE.timestamps.map((t) => t.at)).toEqual(['02:39', '03:57', '05:30']);
+  });
+
+  it('copy carries no moving average and no SEPA book cite — purely price action', () => {
+    // Ajay: "purely price-action". The SEPA book is another strategy's
+    // authority and must not leak into this one.
+    const blurb = TAB_META.ict.blurb;
+    expect(blurb).not.toMatch(/\b(ema|sma|vwap|moving average)\b/i);
+    expect(blurb).not.toMatch(/TLSW|TTLAC|Minervini|\bp\.\s*\d/);
+  });
+
+  it('sends bias and micro only on the ict tab and only off their defaults', () => {
+    expect(boardQuery({ tab: 'ict' })).toBe('tab=ict');
+    expect(boardQuery({ tab: 'ict', bias: 'all', micro: '60m' })).toBe('tab=ict');
+    expect(boardQuery({ tab: 'ict', bias: 'bullish' })).toBe('tab=ict&bias=bullish');
+    expect(boardQuery({ tab: 'ict', bias: 'bearish', micro: '15m' }))
+      .toBe('tab=ict&bias=bearish&micro=15m');
+    expect(boardQuery({ tab: 'ict', micro: '15m' })).toBe('tab=ict&micro=15m');
+    // leaked onto another board they would just split its cache key
+    expect(boardQuery({ tab: 'zones', bias: 'bullish', micro: '15m' })).toBe('tab=zones');
+    expect(boardQuery({ tab: 'vcp', bias: 'bearish' })).toBe('tab=vcp');
+  });
+
+  it('does not send the demand universe — the ICT universe is fixed server-side', () => {
+    // big_cap_universe() on the backend; a universe param here would claim a
+    // choice the engine does not offer.
+    expect(boardQuery({ tab: 'ict', universe: 'sp500' })).toBe('tab=ict');
+  });
+
+  it('parses bias and micro with the server defaults as the fallback', () => {
+    expect(parseBias('bullish')).toBe('bullish');
+    expect(parseBias(' Bearish ')).toBe('bearish');
+    expect(parseBias('all')).toBe('all');
+    expect(parseBias('long')).toBe(DEFAULT_ICT_BIAS);
+    expect(parseBias('')).toBe('all');
+    expect(parseBias(null)).toBe('all');
+    expect(parseBias(undefined)).toBe('all');
+    expect(parseMicro('15m')).toBe('15m');
+    expect(parseMicro(' 15M ')).toBe('15m');
+    expect(parseMicro('60m')).toBe('60m');
+    expect(parseMicro('5m')).toBe(DEFAULT_ICT_MICRO);     // not offered
+    expect(parseMicro('daily')).toBe('60m');
+    expect(parseMicro(null)).toBe('60m');
+    // the menus offer exactly what the parsers accept
+    expect(ICT_BIASES.map((b) => b.key)).toEqual(['all', 'bullish', 'bearish']);
+    expect(ICT_MICROS.map((m) => m.key)).toEqual(['60m', '15m']);
+    expect(DEFAULT_ICT_BIAS).toBe('all');
+    expect(DEFAULT_ICT_MICRO).toBe('60m');
+  });
+
+  it('lists the owner constants from the payload, known ones first, in rule order', () => {
+    const rows = ictParamRows({
+      STOP_BUFFER_ATR: 0.2, consol_min_bars: 5, zzz_new_thing: 7, TAP_TOL_PCT: 0.25,
+      aaa_other: 'x',
+    });
+    expect(rows.map((r) => r.key))
+      .toEqual(['consol_min_bars', 'TAP_TOL_PCT', 'STOP_BUFFER_ATR', 'aaa_other', 'zzz_new_thing']);
+    // known keys get their plain-language label regardless of case…
+    expect(rows[0].label).toBe(ICT_PARAM_LABELS.consol_min_bars);
+    expect(rows[2].label).toBe(ICT_PARAM_LABELS.stop_buffer_atr);
+    // …unknown ones still render by name so a new constant can never hide
+    expect(rows[4]).toEqual({ key: 'zzz_new_thing', label: 'zzz_new_thing', value: '7', fromVideo: false });
+    expect(rows[3].value).toBe('x');
+    // a flat map has no provenance flag: every entry is an owner rule
+    expect(rows.every((r) => r.fromVideo === false)).toBe(true);
+  });
+
+  it('takes the backend contract — a LIST of {key, value, from_video, note} — and keeps the video values apart', () => {
+    // ict/engine.py params() sends this shape (test_ict.py iterates p["key"]).
+    // Rendering it as a flat map would list nothing (every entry is an
+    // object), and worse, would print FRACTAL_WINDOW under "not from the video".
+    const rows = ictParamRows([
+      { key: 'FRACTAL_WINDOW', value: 1, from_video: true, note: 'video' },
+      { key: 'STACK_MIN', value: 2, from_video: true, note: 'video' },
+      { key: 'ATR_PERIOD', value: 14, from_video: false, note: 'owner rule — not from the video' },
+      { key: 'CONSOL_MIN_BARS', value: 5, from_video: false, note: 'owner rule — not from the video' },
+      { key: 'TAP_TOL_PCT', value: 0.25, from_video: false, note: 'owner rule — not from the video' },
+      { key: 'GRADE_MSS', value: 30, from_video: false, note: 'owner rule — not from the video' },
+      { key: 'BRAND_NEW', value: 'y', note: 'owner rule — not from the video' },   // no flag → owner
+      { key: 'NESTED', value: { a: 1 }, from_video: false },                     // nested → skipped
+      { key: '', value: 3 }, { value: 4 }, null, 'junk', [1, 2],                // malformed → skipped
+    ] as any);
+    expect(rows.map((r) => r.key))
+      .toEqual(['FRACTAL_WINDOW', 'STACK_MIN', 'ATR_PERIOD', 'CONSOL_MIN_BARS', 'TAP_TOL_PCT', 'GRADE_MSS', 'BRAND_NEW']);
+    expect(rows.filter((r) => r.fromVideo).map((r) => r.key)).toEqual(['FRACTAL_WINDOW', 'STACK_MIN']);
+    expect(rows.find((r) => r.key === 'BRAND_NEW')).toEqual({ key: 'BRAND_NEW', label: 'BRAND_NEW', value: 'y', fromVideo: false });
+    // the upper-case backend keys still get their plain-language labels
+    expect(rows[0].label).toBe(ICT_PARAM_LABELS.fractal_window);
+    expect(rows[2].label).toBe(ICT_PARAM_LABELS.atr_period);
+    expect(rows[5].label).toBe(ICT_PARAM_LABELS.grade_mss);
+    expect(rows[4].value).toBe('0.25');
+    // an empty list, or one with nothing usable, draws nothing
+    expect(ictParamRows([])).toEqual([]);
+    expect(ictParamRows([null, 'x', {}] as any)).toEqual([]);
+  });
+
+  it('owner-constant rows degrade to nothing on a missing or malformed payload', () => {
+    expect(ictParamRows(undefined)).toEqual([]);
+    expect(ictParamRows(null)).toEqual([]);
+    expect(ictParamRows({})).toEqual([]);
+    expect(ictParamRows('nope' as any)).toEqual([]);
+    expect(ictParamRows(42 as any)).toEqual([]);
+    // nulls and nested objects are skipped, not stringified into "[object Object]"
+    expect(ictParamRows({ a: null, b: { c: 1 } as any, budget_sec: 120 }))
+      .toEqual([{ key: 'budget_sec', label: ICT_PARAM_LABELS.budget_sec, value: '120', fromVideo: false }]);
+  });
+
+  it('every owner-constant label says what the number is, and none cites the video', () => {
+    // They are house values. A label reading like a rule from the source
+    // would be the exact false claim the owner table exists to prevent.
+    for (const [k, label] of Object.entries(ICT_PARAM_LABELS)) {
+      expect(k).toBe(k.toLowerCase());
+      expect(label.length).toBeGreaterThan(5);
+      expect(label).not.toMatch(/video|rogers|\d{2}:\d{2}/i);
+    }
+    for (const k of ['consol_min_bars', 'consol_max_atr', 'displace_max_atr', 'displace_min_atr',
+                     'confirm_max_bars', 'n_swings', 'tap_lookback', 'tap_tol_pct',
+                     'entry_tol_pct', 'stop_buffer_atr', 'micro_max', 'budget_sec',
+                     // every key ict/engine.py params() actually sends (2026-09-03)
+                     'fractal_window', 'stack_min', 'atr_period', 'mss_fvg_within_bars',
+                     'stack_lookback_bars', 'ict_ttl_sec', 'keep_days', 'macro_min_bars',
+                     'micro_min_bars', 'macro_fvg_lookback', 'macro_fvg_keep', 'liq_window',
+                     'grade_manipulation', 'grade_displacement', 'grade_mss', 'grade_entry']) {
+      expect(ICT_PARAM_LABELS).toHaveProperty(k);
+    }
+  });
+
+  it('the source line takes the stamps as strings OR as {at, rule} objects', () => {
+    // The backend contract says `timestamps: [...]`; the frontend's own copy
+    // is {at, rule} objects. Either shape must print the bare stamps — never
+    // "[object Object]" — and the video link must be a real http URL.
+    const video = 'https://www.youtube.com/watch?v=Q7Ryv1M7CvI';
+    expect(ictSource({ video, timestamps: ['02:39', '03:57', '05:30'] }))
+      .toEqual({ url: video, stamps: '02:39 · 03:57 · 05:30' });
+    expect(ictSource({ video, timestamps: [{ at: '02:39', rule: 'no displacement' }, { at: '05:30' }] }))
+      .toEqual({ url: video, stamps: '02:39 · 05:30' });
+    // mixed and junk entries: strings and {at} survive, the rest is dropped
+    expect(ictSource({ video, timestamps: ['02:39', null, { rule: 'x' }, {} as any, '', 7 as any, { at: ' 03:57 ' }] }).stamps)
+      .toBe('02:39 · 03:57');
+    expect(ictSource({ video, timestamps: [] }).stamps).not.toMatch(/object/i);
+  });
+
+  it('the source line falls back to the frontend copy when the payload has none', () => {
+    const fallback = ICT_SOURCE.timestamps.map((t) => t.at).join(' · ');
+    const video = ICT_SOURCE.url;
+    expect(ictSource(undefined)).toEqual({ url: ICT_SOURCE.url, stamps: fallback });
+    expect(ictSource(null)).toEqual({ url: ICT_SOURCE.url, stamps: fallback });
+    expect(ictSource({})).toEqual({ url: ICT_SOURCE.url, stamps: fallback });
+    expect(ictSource({ video: '', timestamps: null })).toEqual({ url: ICT_SOURCE.url, stamps: fallback });
+    // only junk stamps → the fallback list, not an empty bracket
+    expect(ictSource({ video, timestamps: [null, {} as any] }).stamps).toBe(fallback);
+    // a non-http "video" is not a link anyone should click
+    expect(ictSource({ video: 'javascript:alert(1)' }).url).toBe(ICT_SOURCE.url);
+    expect(ictSource({ video: 'watch?v=Q7Ryv1M7CvI' }).url).toBe(ICT_SOURCE.url);
+    expect(ictSource('nope' as any)).toEqual({ url: ICT_SOURCE.url, stamps: fallback });
+  });
+
+  it('the tile legend names every overlay the backend draws', () => {
+    const labels = ICT_LEGEND.map((l) => l.label);
+    for (const want of ['accumulation', 'IFVG', 'entry', 'MANIP', 'MSS', 'STOP / TARGET']) {
+      expect(labels).toContain(want);
+    }
+    expect(labels.some((l) => /key low/.test(l))).toBe(true);
+    for (const l of ICT_LEGEND) {
+      expect(l.glyph).toBeTruthy();
+      expect(l.hint.length).toBeGreaterThan(10);
+    }
+    expect(new Set(labels).size).toBe(labels.length);        // no duplicate rows
   });
 });
 

@@ -22,7 +22,7 @@ router = APIRouter(tags=["chart-maps"])
 
 @router.get("/chart-maps")
 async def chart_maps(
-    tab: str = Query("vcp", description="vcp | topping | zones | supply | deep_demand | gabbar | zero_dte | earnings | winners"),
+    tab: str = Query("vcp", description="vcp | topping | zones | supply | ict | deep_demand | gabbar | zero_dte | earnings | winners"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("full",
@@ -70,6 +70,8 @@ async def chart_maps(
                                   "avg_turnover | conviction | rs | change. Applied "
                                   "BEFORE the per-theme cap and the bar fetch, so it "
                                   "ranks every match rather than reordering the page."),
+    bias: str = Query("all", description="all | bullish | bearish (ict)"),
+    micro: str = Query("60m", description="60m | 15m (ict micro timeframe)"),
 ):
     """Chart-ready tiles for one tab.
 
@@ -95,6 +97,8 @@ async def chart_maps(
             touching_only=touching_only if isinstance(touching_only, bool) else False,
             phase=phase if isinstance(phase, str) else "",
             target=target if isinstance(target, str) else "zone",
+            bias=bias if isinstance(bias, str) else "all",
+            micro=micro if isinstance(micro, str) else "60m",
         )
 
     return JSONResponse(await asyncio.to_thread(_run))
