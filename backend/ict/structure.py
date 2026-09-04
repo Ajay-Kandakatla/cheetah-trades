@@ -141,6 +141,33 @@ def swing_points_window(df, window: int = 3) -> tuple:
         return [], []
 
 
+def swing_points_strict(df, window: int = 3) -> tuple:
+    """(lows, highs) as [(iloc, price)] — STRICT local extrema over +/- `window`
+    bars: the bar's low is below EVERY other low in the window (highs
+    mirrored). window=1 is exactly the spec's 3-candle fractal; wider windows
+    are the engine's "key structural low/high" for the wake-up tap (owner
+    rule TAP_SWING_WINDOW). Unlike smc.swing_points (strict-or-equal), a flat
+    plateau of equal lows is NOT a run of swings."""
+    lows: list = []
+    highs: list = []
+    w = int(window)
+    if df is None or w < 1 or len(df) < 2 * w + 1:
+        return lows, highs
+    arrs = _ohlc(df)
+    if arrs is None:
+        return lows, highs
+    _o, h, lo, _c = arrs
+    n = len(lo)
+    for i in range(w, n - w):
+        left_lo, right_lo = lo[i - w:i], lo[i + 1:i + w + 1]
+        if lo[i] < min(left_lo) and lo[i] < min(right_lo):
+            lows.append((i, float(lo[i])))
+        left_hi, right_hi = h[i - w:i], h[i + 1:i + w + 1]
+        if h[i] > max(left_hi) and h[i] > max(right_hi):
+            highs.append((i, float(h[i])))
+    return lows, highs
+
+
 def swing_targets(df, lows: list, highs: list) -> list:
     """Swings as dated target records, oldest first:
     [{kind: swing_low|swing_high, price, i, at}]."""

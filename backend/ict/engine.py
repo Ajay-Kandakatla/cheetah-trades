@@ -97,6 +97,10 @@ MICRO_WORKERS = 4
 MICRO_DAYS = 21           # owner rule — not from the video: calendar days of 1-minute bars
                           # fetched per tapped name (~15 sessions); frame_for's 70-day span
                           # made one 60m frame cost ~20 s and starved the micro budget
+TAP_SWING_WINDOW = 3      # owner rule — not from the video: the DAILY swings the wake-up tap
+                          # listens to are local extrema over +/- this many bars (a "key
+                          # structural low/high"); 1-bar fractals stay the spec's targets, but
+                          # tapping every fractal wiggle woke 685 of 1,123 names a day
 MIN_TARGET_R = 1.0        # owner rule — not from the video: the next daily swing counts as
                           # the target only when it pays >= this many R; a 3-candle fractal
                           # a few cents above the entry is not external liquidity worth aiming at
@@ -112,6 +116,7 @@ _ENGINE_PARAMS = {
     "GRADE_MANIPULATION": GRADE["manipulation"], "GRADE_DISPLACEMENT": GRADE["displacement"],
     "GRADE_MSS": GRADE["mss"], "GRADE_ENTRY": GRADE["entry"],
     "MICRO_DAYS": MICRO_DAYS,
+    "TAP_SWING_WINDOW": TAP_SWING_WINDOW,
     "MIN_TARGET_R": MIN_TARGET_R,
 }
 
@@ -388,7 +393,11 @@ def macro(symbol: str, df=None, *, loader: Optional[Callable] = None) -> Optiona
     live = [g for g in gaps if g.get("status") in ("active", "mitigated", "inverted")]
     consols = S.consolidations(df, a)
     stack = S.stacked_consolidations(df, live, consols=consols, atr=a, last=last)
-    tapped = _tapped(df, recent_lows, recent_highs, live)
+    # The wake-up listens to the wider-window swings (owner rule
+    # TAP_SWING_WINDOW); key levels, targets and the swings list stay the
+    # spec's 3-candle fractals.
+    tap_lows, tap_highs = S.swing_points_strict(df, TAP_SWING_WINDOW)
+    tapped = _tapped(df, tap_lows[-N_SWINGS:], tap_highs[-N_SWINGS:], live)
 
     swings = []
     for kind, pts in (("swing_low", recent_lows), ("swing_high", recent_highs)):

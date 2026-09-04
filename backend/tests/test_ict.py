@@ -1075,3 +1075,33 @@ def test_micro_raw_window_is_micro_days_plus_weekend_padding():
     keys = {x["key"] for x in E.params()}
     assert {"MICRO_DAYS", "MIN_TARGET_R"} <= keys
 
+
+def test_tap_listens_to_window_swings_not_every_fractal_wiggle():
+    """A 1-bar fractal low that is NOT a +/-TAP_SWING_WINDOW extremum does not
+    wake the micro loop; a real structural low does. Fractals remain the
+    swings/targets list."""
+    base = _flat(30, 100.0, 100.5, 99.5, 100.0)
+    deep = [(100.0, 100.5, 94.0, 100.0)]                       # bar 30: window-3 swing low at 94
+    mid = _flat(2, 100.0, 100.5, 99.5, 100.0)
+    wiggle = [(100.0, 100.5, 95.0, 100.0)]                     # bar 33: fractal low, but 94 sits 3 bars back
+    body = _flat(40, 100.0, 100.5, 99.5, 100.0)
+    touch_wiggle = _daily(base + deep + mid + wiggle + body + [(100.0, 100.5, 94.95, 100.0)])
+    m = E.macro("AAA", df=touch_wiggle)
+    assert any(s["kind"] == "swing_low" and s["price"] == 95.0 for s in m["swings"]), "fractal kept as a swing"
+    assert m["tapped"] is None, "a fractal wiggle is not a key structural low"
+    touch_deep = _daily(base + deep + mid + wiggle + body + [(100.0, 100.5, 93.9, 100.0)])
+    t = E.macro("AAA", df=touch_deep)["tapped"]
+    assert t and t["kind"] == "swing_low" and t["price"] == 94.0
+    assert "TAP_SWING_WINDOW" in {x["key"] for x in E.params()}
+
+
+def test_strict_window_swings_ignore_plateaus_and_match_the_fractal_at_window_1():
+    rows = _flat(10, 100.0, 100.5, 99.5, 100.0)
+    rows[5] = (100.0, 100.5, 95.0, 100.0)
+    df = _daily(rows)
+    lows, highs = S.swing_points_strict(df, 3)
+    assert lows == [(5, 95.0)] and highs == []                  # the flat 99.5 plateau is not a swing
+    f_lows, f_highs = S.swing_points_fractal(df)
+    assert S.swing_points_strict(df, 1)[0] == f_lows and S.swing_points_strict(df, 1)[1] == f_highs
+    assert S.swing_points_strict(None, 3) == ([], []) and S.swing_points_strict(df, 0) == ([], [])
+
