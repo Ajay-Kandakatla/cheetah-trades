@@ -77,7 +77,7 @@ MAX_PER_RUN = 3
 # Backlog bound: only losers whose EXIT is within this many days are ever
 # autopsied, so the first deploy does not spend 3 Massive minute fetches per
 # tick walking every historical paper loser (owner choice, 2026-09-03).
-BACKLOG_DAYS = 30
+BACKLOG_DAYS = 60
 # An 'incomplete' doc (missing input) is re-tried at most this many times.
 MAX_RETRIES = 5
 # A non-final doc is re-checked at most once per this many seconds.
@@ -289,10 +289,21 @@ def _gain_pct(trade: dict) -> Optional[float]:
         return None
 
 
-def _losers() -> list:
-    """Closed journal round-trips with gain_pct < 0, newest entry first. A
-    malformed doc is skipped, never fatal for the run."""
+def _losers(now=None) -> list:
+    """Closed journal round-trips with gain_pct < 0 whose exit is within
+    BACKLOG_DAYS of `now` (datetime, epoch, or None = wall clock), newest
+    entry first. A malformed doc is skipped, never fatal for the run."""
     from trading import journal
+    if now is None:
+        ref = time.time()
+    elif isinstance(now, (int, float)):
+        ref = float(now)
+    else:
+        try:
+            ref = float(now.timestamp())
+        except Exception:                        # noqa: BLE001
+            ref = time.time()
+    cutoff = ref - BACKLOG_DAYS * 86400.0
     out = []
     for d in journal.load(status="closed") or []:
         try:
@@ -304,7 +315,7 @@ def _losers() -> list:
             if g is None or g >= 0:
                 continue
             ex = _f(_sub(d, "exit").get("epoch"))
-            if ex is not None and ex < time.time() - BACKLOG_DAYS * 86400.0:
+            if ex is not None and ex < cutoff:
                 continue                         # older than the backlog window
             out.append(d)
         except Exception as exc:                 # noqa: BLE001
@@ -1065,7 +1076,7 @@ def run(now=None, max_per_run: int = MAX_PER_RUN,
            "final": 0, "preliminary": 0, "incomplete": 0, "classified": [],
            "errors": []}
     try:
-        losers = _losers()
+        losers = _losers(now)
     except Exception as exc:                     # noqa: BLE001
         out["ok"] = False
         out["errors"].append("journal: %s" % exc)
