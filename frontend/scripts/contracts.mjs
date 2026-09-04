@@ -279,6 +279,25 @@ const CONTRACTS = [
     file: 'src/App.tsx',
     checks: (src) => (/ensurePushSubscription\(/.test(src) ? [] : ['App.tsx never calls ensurePushSubscription']),
   },
+  {
+    // Ajay 2026-09-03: "I wanna see the execution time comparison between you
+    // and I" — the paper Auto-Pilot's race ledger must stay on the Trading page.
+    name: 'Trading page renders the execution race (2026-09-03)',
+    file: 'src/pages/Trading.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bExecutionRace\b[^}]*\}\s*from\s*'\.\.\/components\/ExecutionRace'/.test(src)) {
+        errs.push("Trading.tsx no longer imports ExecutionRace from '../components/ExecutionRace'");
+      }
+      if (!/<ExecutionRace\s*\/>/.test(src)) errs.push('Trading.tsx never renders <ExecutionRace />');
+      return errs;
+    },
+  },
+  {
+    name: 'Trading page reads the zone-edge paper entry status (2026-09-03)',
+    file: 'src/pages/Trading.tsx',
+    checks: (src) => (/status\.zone_edge_entry/.test(src) ? [] : ['Trading.tsx never reads status.zone_edge_entry']),
+  },
 ];
 
 let failed = 0;

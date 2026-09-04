@@ -26,6 +26,7 @@ import { cashOut, rowTotals, statusErrKind, summarizePnl, tableTotals, type Stat
 import { cleanRules, scanWarning, type EngineRule, type ScanTrust } from '../lib/autopilotRules';
 import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
+import { ExecutionRace } from '../components/ExecutionRace';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
 
@@ -98,6 +99,18 @@ type AutoEntryInfo = {
   candidates: AutoEntryCandidate[];
 };
 
+/* Zone-edge entry path (2026-09-03) — the paper Auto-Pilot buying demand
+ * arrivals + breakouts through the last supply band on its own. Every field is
+ * optional: the block renders against an API that sends any subset, and the
+ * mount is gated on the object so an API that predates it renders nothing. */
+type ZoneEdgeEntryInfo = {
+  enabled?: boolean | null;
+  armed?: boolean | null;
+  today?: { entries?: number | null; cap?: number | null; blocked?: number | null } | null;
+  last_run?: string | number | null;
+  reason?: string | null;
+};
+
 /* "sim" = built-in simulated broker — no external account, always configured.
  * Switching to Alpaca later is an env change (TRADING_BROKER=alpaca). */
 type Mode = 'sim' | 'paper' | 'live';
@@ -120,6 +133,7 @@ type Status = {
   ledger_tail: LedgerRow[];
   error: string | null;
   auto_entry?: AutoEntryInfo | null;
+  zone_edge_entry?: ZoneEdgeEntryInfo | null;
   // Real engine heartbeat (its 1-min tick) — NOT the alert cron. stale=true
   // means order management may be asleep while armed + market open.
   engine?: {
@@ -1178,6 +1192,72 @@ function AutoEntryCard({ auto, mode, onChanged }: {
 }
 
 /* ----------------------------------------------------------------------
+ * Zone-edge entries (paper) — read-only status of the zone-edge entry path
+ * (2026-09-03). Mirrors the auto-entry strip: on/off pill, today's entries vs
+ * the cap, blocked count, last run, and the engine's own reason when it held
+ * back. No toggle here — the switch lives with the engine config; this block
+ * never places, cancels or arms anything.
+ * ---------------------------------------------------------------------- */
+function ZoneEdgeEntryCard({ z }: { z: ZoneEdgeEntryInfo }) {
+  const on = z.enabled === true;
+  const entries = typeof z.today?.entries === 'number' ? z.today.entries : null;
+  const cap = typeof z.today?.cap === 'number' ? z.today.cap : null;
+  const blocked = typeof z.today?.blocked === 'number' ? z.today.blocked : null;
+  const atCap = entries != null && cap != null && entries >= cap;
+  const col = on ? C.green : C.muted;
+  return (
+    <section data-testid="zone-edge-entry"
+             style={{ marginTop: '1rem', border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 12,
+                      background: 'var(--bg-raised,#16181d)', padding: '0.9rem 1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <span title={on
+                ? 'The paper engine buys zone-edge signals (demand arrivals + breakouts through the last supply band, stop under the band) on its own.'
+                : 'Zone-edge entries are off — the engine places no zone-edge orders. Exits stay automatic regardless.'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+                       background: on ? `${C.green}1a` : 'transparent', color: col,
+                       border: `1px solid ${col}66`, borderRadius: 8, padding: '4px 12px',
+                       fontSize: '0.8rem', fontWeight: 800 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: col, display: 'inline-block' }} />
+          🧲 Zone-edge entries (paper) {on ? 'ON' : 'OFF'}
+        </span>
+
+        <span className="mono" style={{ fontSize: '0.78rem' }}
+              title={cap != null ? `The engine stops taking zone-edge entries after ${cap} in one day.` : undefined}>
+          entries today{' '}
+          <b style={{ color: atCap ? C.amber : 'inherit' }}>{entries ?? '—'}</b>
+          <span style={{ color: C.sub }}> / {cap ?? '—'}</span>
+        </span>
+
+        {blocked != null && blocked > 0 && (
+          <Chip color={C.amber} title="Zone-edge signals the entry path vetoed today — see the ledger rows for each reason.">
+            {blocked} blocked
+          </Chip>
+        )}
+
+        {on && z.armed === false && (
+          <Chip color={C.amber} title="The path is switched on but the engine is not armed — nothing is ordered until it is.">
+            engine not armed
+          </Chip>
+        )}
+
+        {z.last_run != null && z.last_run !== '' && (
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.7rem', color: C.sub }}
+                title={String(z.last_run)}>
+            last run {relTime(z.last_run) || String(z.last_run)}
+          </span>
+        )}
+      </div>
+
+      {z.reason && (
+        <div style={{ fontSize: '0.72rem', color: on ? C.amber : C.sub, marginTop: 5, fontWeight: 700 }}>
+          ⏸ {z.reason}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------------------
  * Ledger feed
  * ---------------------------------------------------------------------- */
 function LedgerFeed({ rows }: { rows: LedgerRow[] }) {
@@ -2020,6 +2100,18 @@ export function TradingPage() {
           {status.auto_entry && (
             <AutoEntryCard auto={status.auto_entry} mode={status.mode} onChanged={refresh} />
           )}
+
+          {/* d2. Zone-edge entries (paper) — read-only status of the zone-edge
+              entry path, right next to the auto-entry strip (2026-09-03). */}
+          {status.zone_edge_entry && (
+            <ZoneEdgeEntryCard z={status.zone_edge_entry} />
+          )}
+
+          {/* d3. Execution race — the engine's order/fill vs Ajay's first look
+              and his own fill on every zone-edge signal (2026-09-03). Always
+              mounted once the engine is configured; it owns its own empty and
+              unavailable states. */}
+          <ExecutionRace />
 
           {/* e. Enter card */}
           <EnterCard armed={status.armed} mode={status.mode} onPlaced={refresh} />
