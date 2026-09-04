@@ -110,6 +110,15 @@ STOP_BUFFER_PCT = 0.5
 # Bands with fewer touches are not proven structure — same floor the board's
 # own pushes use (supply_demand/zone_edge.py MIN_TOUCHES_PUSH).
 MIN_TOUCHES = 2
+# Owner switches (Ajay 2026-09-03 evening, for the paper run): "Enter anything
+# that is in demand zone to buy ... Any time any stocks crossing the
+# resistance or supply zone buy them too". Defaults = the STRICT rules the
+# module shipped with; the live values come from get_config()["zone_edge_rules"]
+# (POST /trading/config {"zone_edge_rules": {...}}), so the strict/wide split
+# stays available as a named paper experiment without a code fork.
+RULES_DEFAULT = {"demand_residents": False,   # True: buy names already IN a demand band
+                 "breakout_any_band": False,  # True: buy any cross through a supply band
+                 "min_touches": MIN_TOUCHES}  # bands tested fewer times are skipped
 # "billion or at least bigger than a billion" — mirrors zone_store.MIN_CAP_USD.
 MIN_CAP_USD = 1e9
 # A latest doc older than this is STALE: the 1-min board cron is behind or
@@ -379,9 +388,26 @@ def signal_state(latest: Optional[dict], now_et: datetime, day: str) -> dict:
     return out
 
 
-def _qualify(kind: str, row: dict) -> Optional[str]:
+def active_rules(cfg: Optional[dict] = None) -> dict:
+    """RULES_DEFAULT overlaid with cfg["zone_edge_rules"] — unknown keys
+    ignored, wrong types fall back to the default (fail to STRICT)."""
+    out = dict(RULES_DEFAULT)
+    raw = (cfg or {}).get("zone_edge_rules") if isinstance(cfg, dict) else None
+    if isinstance(raw, dict):
+        for key in ("demand_residents", "breakout_any_band"):
+            if isinstance(raw.get(key), bool):
+                out[key] = raw[key]
+        mt = raw.get("min_touches")
+        if isinstance(mt, int) and not isinstance(mt, bool) and 1 <= mt <= 10:
+            out["min_touches"] = mt
+    return out
+
+
+def _qualify(kind: str, row: dict, rules: Optional[dict] = None) -> Optional[str]:
     """None when the row is a candidate of `kind` ('breakout'|'demand'),
-    else the rejection reason. Every missing field fails CLOSED."""
+    else the rejection reason. Every missing field fails CLOSED. `rules` =
+    active_rules(cfg); None = the strict defaults."""
+    rules = rules or RULES_DEFAULT
     raw_sym = row.get("symbol")
     sym = raw_sym.strip().upper() if isinstance(raw_sym, str) else ""
     if not sym:
@@ -398,8 +424,9 @@ def _qualify(kind: str, row: dict) -> Optional[str]:
     touches = _i(band.get("touches"))
     if touches is None:
         return "touches unknown"
-    if touches < MIN_TOUCHES:
-        return "touches %d < %d" % (touches, MIN_TOUCHES)
+    min_touches = int(rules.get("min_touches", MIN_TOUCHES))
+    if touches < min_touches:
+        return "touches %d < %d" % (touches, min_touches)
     cap = _f(row.get("cap"))
     if cap is None:
         return "cap unknown"
@@ -412,14 +439,14 @@ def _qualify(kind: str, row: dict) -> Optional[str]:
             return "not a supply row"
         if tier != "broke":
             return "near resistance (not through)"
-        if row.get("new_highs") is not True:
+        if not rules.get("breakout_any_band") and row.get("new_highs") is not True:
             return "no new highs"
         return None
     if side != "demand":
         return "not a demand row"
     if tier not in ("near", "in"):
         return "tier %r not near/in" % tier
-    if row.get("arrival") is not True:
+    if not rules.get("demand_residents") and row.get("arrival") is not True:
         return "resident (no arrival)"
     return None
 
@@ -486,14 +513,18 @@ def _candidate(kind: str, row: dict) -> dict:
             "dist_pct": _f(row.get("dist_pct")),
             "first_seen": row.get("first_seen"),
             "new_highs": row.get("new_highs"),
+            "arrival": row.get("arrival") is True,
             "overhead_bands": _i(row.get("overhead_bands")),
             "cap": _f(row.get("cap")), "url": row.get("url")}
 
 
-def read_candidates(latest: Optional[dict]) -> tuple:
+def read_candidates(latest: Optional[dict], rules: Optional[dict] = None) -> tuple:
     """Pure funnel over one zone_edge_latest doc -> (candidates, rejected).
     Breakouts first (least extended past the cleared band first), then
-    demand arrivals by dist_pct ascending."""
+    demand ARRIVALS by dist_pct ascending, then (wide rules only) demand
+    RESIDENTS by band quality: touches desc, strength desc, dist asc — with
+    a 4-a-day cap the freshest touch and the most-tested band go first."""
+    rules = rules or RULES_DEFAULT
     breakouts, demands, rejected = [], [], []
     if not isinstance(latest, dict):
         return [], []
@@ -502,7 +533,7 @@ def read_candidates(latest: Optional[dict]) -> tuple:
         for row in (rows if isinstance(rows, list) else []):
             if not isinstance(row, dict):
                 continue
-            why = _qualify(kind, row)
+            why = _qualify(kind, row, rules)
             if why is None:
                 (breakouts if kind == "breakout" else demands).append(
                     _candidate(kind, row))
@@ -515,9 +546,15 @@ def read_candidates(latest: Optional[dict]) -> tuple:
         return math.inf if d is None else abs(float(d))
 
     breakouts.sort(key=_dist)
-    demands.sort(key=lambda c: (math.inf if c.get("dist_pct") is None
-                                else float(c["dist_pct"])))
-    return breakouts + demands, rejected
+    arrivals = [c for c in demands if c.get("arrival")]
+    residents = [c for c in demands if not c.get("arrival")]
+    arrivals.sort(key=lambda c: (math.inf if c.get("dist_pct") is None
+                                 else float(c["dist_pct"])))
+    residents.sort(key=lambda c: (-(c["band"].get("touches") or 0),
+                                  -(c["band"].get("strength") or 0.0),
+                                  math.inf if c.get("dist_pct") is None
+                                  else float(c["dist_pct"])))
+    return breakouts + arrivals + residents, rejected
 
 
 def _needs_room_check(c: dict) -> bool:
@@ -924,7 +961,9 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     if now_et.time() >= LAST_ENTRY_ET:
         return _finish("after_last_entry_time")
 
-    cands, rejected = read_candidates(latest)
+    rules = active_rules(cfg)
+    out["rules"] = rules
+    cands, rejected = read_candidates(latest, rules)
     out["rejected"] = len(rejected)
     if not cands:
         return _finish("no_candidates")
@@ -1155,4 +1194,5 @@ def status_block(cfg: Optional[dict] = None) -> dict:
             "last_entry_et": LAST_ENTRY_ET.strftime("%H:%M"),
             "signal": sig,
             "rules": rules_list(),
+            "active_rules": active_rules(cfg),
             "attempts": _today_attempts(day)}

@@ -1433,3 +1433,83 @@ def test_run_survives_broker_configured_raising(env):
     assert out["gate"]["configured"] is False
     assert any("configured" in e for e in out["errors"])
     _assert_never(db, enter_calls)
+
+
+# ── Owner rule switches (Ajay 2026-09-03 evening: "Enter anything that is in
+# demand zone ... Any time any stocks crossing the resistance or supply zone
+# buy them too") — wide rules via cfg["zone_edge_rules"]; strict stays default.
+
+def _wide_cfg(**over):
+    rules = {"demand_residents": True, "breakout_any_band": True, "min_touches": 1}
+    rules.update(over)
+    return dict(EE.get_config(), zone_edge_rules=rules)
+
+
+def test_active_rules_defaults_are_strict_and_junk_falls_back():
+    assert ZE.active_rules(None) == ZE.RULES_DEFAULT
+    assert ZE.active_rules({"zone_edge_rules": "wide"}) == ZE.RULES_DEFAULT
+    junk = ZE.active_rules({"zone_edge_rules": {"demand_residents": "yes",
+                                                "breakout_any_band": 1,
+                                                "min_touches": 0, "extra": True}})
+    assert junk == ZE.RULES_DEFAULT
+    assert ZE.active_rules({"zone_edge_rules": {"min_touches": True}})["min_touches"] == 2
+    wide = ZE.active_rules({"zone_edge_rules": {"demand_residents": True,
+                                                "breakout_any_band": True,
+                                                "min_touches": 1}})
+    assert wide == {"demand_residents": True, "breakout_any_band": True, "min_touches": 1}
+
+
+def test_wide_rules_buy_a_resident_and_any_band_breakout(env):
+    _, db, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row(arrival=False)],
+                          breaking=[break_row(sym="BBB", new_highs=False)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(120.0,)),
+               "BBB": zone_doc("BBB", supply_los=(150.0,))})
+    out = ZE.run(cfg=_wide_cfg())
+    assert out["rules"]["demand_residents"] is True
+    assert out["rejected"] == 0
+    assert sorted(c["symbol"] for c in enter_calls) == ["AAA", "BBB"]
+    assert out["entered"][0] == "BBB", "breakouts still go first"
+
+
+def test_strict_defaults_unchanged_when_rules_key_missing(env):
+    _, db, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row(arrival=False)],
+                          breaking=[break_row(sym="BBB", new_highs=False)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(120.0,)),
+               "BBB": zone_doc("BBB", supply_los=(150.0,))})
+    out = ZE.run()
+    assert out["rejected"] == 2
+    _assert_never(db, enter_calls)
+
+
+def test_min_touches_1_buys_a_single_touch_band_only_when_widened(env):
+    row = demand_row(arrival=True)
+    row["band"]["touches"] = 1
+    _, db, enter_calls, _, _ = env(latest=latest_doc(near_demand=[row]),
+                                   zones={"AAA": zone_doc("AAA", supply_los=(120.0,))})
+    out = ZE.run()
+    assert out["rejected"] == 1 and not enter_calls
+    out = ZE.run(cfg=_wide_cfg(demand_residents=False, breakout_any_band=False))
+    assert out["rejected"] == 0 and [c["symbol"] for c in enter_calls] == ["AAA"]
+
+
+def test_wide_ordering_arrivals_before_residents_by_band_quality():
+    r_weak = demand_row(sym="WEAK", arrival=False); r_weak["band"]["touches"] = 2; r_weak["band"]["strength"] = 20.0
+    r_strong = demand_row(sym="STRG", arrival=False); r_strong["band"]["touches"] = 6; r_strong["band"]["strength"] = 90.0
+    r_arr = demand_row(sym="ARRV", arrival=True); r_arr["dist_pct"] = 0.9
+    latest = latest_doc(near_demand=[r_weak, r_strong, r_arr],
+                        breaking=[break_row(sym="BRK", new_highs=False)])
+    cands, rejected = ZE.read_candidates(latest, ZE.active_rules(_wide_cfg()))
+    assert rejected == []
+    assert [c["symbol"] for c in cands] == ["BRK", "ARRV", "STRG", "WEAK"]
+    strict, rej = ZE.read_candidates(latest)
+    assert [c["symbol"] for c in strict] == ["ARRV"] and len(rej) == 3
+
+
+def test_status_block_reports_active_rules(env):
+    env(latest=latest_doc())
+    blk = ZE.status_block(_wide_cfg())
+    assert blk["active_rules"] == {"demand_residents": True, "breakout_any_band": True, "min_touches": 1}
+    assert ZE.status_block(EE.get_config())["active_rules"] == ZE.RULES_DEFAULT
+

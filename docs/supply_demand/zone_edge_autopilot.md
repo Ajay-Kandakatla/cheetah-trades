@@ -188,3 +188,30 @@ reads `paper`.
   cites, risk numbers read from `risk_rules` (never re-derived), no direct
   broker order tokens, factory invariant, tick (h) fenced and ordered,
   config whitelist, `/race` admin-gated.
+
+## Rule switches (owner, 2026-09-03 evening) — `zone_edge_rules` in the engine config
+
+Ajay: "Enter anything that is in demand zone to buy but if it crosses the stop loss sell it ...
+Any time any stocks crossing the resistance or supply zone buy them too. Usually they are likely
+to go much higher."
+
+| key | default (STRICT) | WIDE (paper run from 2026-09-04) | effect |
+|---|---|---|---|
+| `demand_residents` | false | true | buy names already **in** a demand band, not only fresh arrivals |
+| `breakout_any_band` | false | true | buy **any** cross through a supply band (tier `broke`), not only the last one toward new highs |
+| `min_touches` | 2 | 1 | bands tested fewer times are skipped |
+
+Everything else is unchanged in both modes: stop 0.5% under the band floor (refused past the book's
+10%), room ≥ 2R to the next supply floor (breakouts to new highs with nothing overhead skip it),
+cap ≥ $1B, max 4 a day, none at/after 15:45 ET, one attempt per band per day, never a held name,
+every buy through `entries.enter` → `trading/risk_rules.py`. The **stop is the "sell it" half** of
+his ask: the bracket's stop leg rests at the broker; a stopped name is done for that band that day.
+
+Ordering with wide rules: breakouts (least extended first) → demand arrivals (closest to the band
+first) → residents by band quality (touches desc, strength desc, distance asc), so the 4 daily
+slots go to the freshest touch and the most-tested bands.
+
+Set: `POST /trading/config {"zone_edge_rules": {"demand_residents": true, "breakout_any_band": true,
+"min_touches": 1}}`; `null` resets to STRICT. `GET /trading/status` → `zone_edge_entry.active_rules`.
+Strict vs wide is the first named paper experiment (see the S&D research-loop rule).
+
