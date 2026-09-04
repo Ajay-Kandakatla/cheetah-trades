@@ -1105,3 +1105,33 @@ def test_strict_window_swings_ignore_plateaus_and_match_the_fractal_at_window_1(
     assert S.swing_points_strict(df, 1)[0] == f_lows and S.swing_points_strict(df, 1)[1] == f_highs
     assert S.swing_points_strict(None, 3) == ([], []) and S.swing_points_strict(df, 0) == ([], [])
 
+
+def test_gap_tap_is_the_first_touch_only():
+    """A daily gap wakes the loop on the bar that first trades into it; a
+    later re-touch (even from outside) does not."""
+    rows = _flat(20) + [(100.0, 104.0, 100.0, 103.5), (103.0, 104.5, 102.0, 103.5)]
+    rows += _flat(57, 103.5, 104.0, 103.0, 103.5) + [(103.5, 104.0, 101.8, 103.6)]
+    first = E.macro("AAA", df=_daily(rows))["tapped"]
+    assert first and first["kind"] == "fvg" and first["gap_status"] == "mitigated"
+    again = rows + [(103.5, 104.0, 103.0, 103.5), (103.5, 104.0, 101.9, 103.6)]
+    assert E.macro("AAA", df=_daily(again))["tapped"] is None
+
+
+def test_inverted_gap_taps_on_its_first_retest_only():
+    """bearish gap [100.5, 102] inverted by a close above 102; the first bar
+    trading back into it taps, the next re-touch does not."""
+    rows = _flat(20) + [(103.5, 104.0, 102.0, 102.5), (102.0, 102.5, 101.0, 101.2),
+                        (101.0, 101.2, 99.5, 100.5)]                    # bearish gap: High[i+2]=101.2 < Low[i]=102 ... build simply
+    rows = _flat(20) + [(103.0, 103.5, 102.0, 102.2), (102.0, 102.4, 101.6, 101.8), (101.5, 100.5, 99.0, 99.4)]
+    gaps = S.fair_value_gaps_raw(_daily(rows))
+    assert gaps and gaps[-1]["kind"] == "bearish", gaps
+    g_lo, g_hi = gaps[-1]["lo"], gaps[-1]["hi"]
+    rows += _flat(30, 99.5, 99.9, 99.0, 99.5)
+    rows += [(99.5, g_hi + 1.0, 99.4, g_hi + 0.8)]                      # close above the gap top -> inverted
+    rows += _flat(20, g_hi + 0.6, g_hi + 0.9, g_hi + 0.4, g_hi + 0.6)   # sitting above it (highs well under the old 103.5 swing)
+    retest = rows + [(g_hi + 0.6, g_hi + 0.8, g_hi - 0.2, g_hi + 0.5)]  # first retest into the gap
+    t = E.macro("AAA", df=_daily(retest))["tapped"]
+    assert t and t["kind"] == "fvg" and t["gap_status"] == "inverted" and t["bias"] == "bullish"
+    again = retest + [(g_hi + 0.6, g_hi + 0.9, g_hi + 0.4, g_hi + 0.6), (g_hi + 0.6, g_hi + 0.8, g_hi - 0.2, g_hi + 0.5)]
+    assert E.macro("AAA", df=_daily(again))["tapped"] is None
+

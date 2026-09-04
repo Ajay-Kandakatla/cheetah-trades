@@ -346,6 +346,22 @@ def _tapped(df, recent_lows: list, recent_highs: list, gaps: list,
                        and prev_lo <= g_hi * (1 + tol) and prev_hi >= g_lo * (1 - tol))
             if prev_in:
                 continue                     # already inside the gap yesterday
+            # FIRST touch only (2026-09-04: 44 of 63 gap taps in a 150-name
+            # sample were re-touches of long-inverted daily gaps): a
+            # mitigated gap wakes the loop on its mitigation bar only; an
+            # inverted gap on the first bar that retests it after the
+            # inversion; a filled gap never.
+            st, sti = g.get("status"), g.get("status_i")
+            if st == "filled":
+                continue
+            if st == "mitigated" and sti is not None and int(sti) != i:
+                continue
+            if st == "inverted":
+                if sti is None or i <= int(sti):
+                    continue
+                if any(lo[k] <= g_hi * (1 + tol) and h[k] >= g_lo * (1 - tol)
+                       for k in range(int(sti) + 1, i)):
+                    continue                 # already retested since the inversion
             if lo[i] <= g_hi * (1 + tol) and h[i] >= g_lo * (1 - tol):
                 bias = g.get("inverted_kind") or g.get("kind")
                 near = g_hi if bias == "bullish" else g_lo
