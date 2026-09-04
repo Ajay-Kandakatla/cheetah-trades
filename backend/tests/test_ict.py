@@ -1004,7 +1004,7 @@ def test_crontab_runs_the_engine_every_fifteen_minutes_and_after_the_close():
 # ---------------------------------------------------------------------------
 def test_ict_sources_cite_the_video_and_nothing_else():
     files = sorted((ROOT / "backend/ict").glob("*.py"))
-    assert len(files) == 4
+    assert len(files) == 5
     for f in files:
         src = f.read_text()
         assert S.VIDEO_URL in src, f"{f.name} must carry the video URL"
