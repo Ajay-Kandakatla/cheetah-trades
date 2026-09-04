@@ -94,6 +94,12 @@ MACRO_FVG_KEEP = 6        # owner rule — not from the video: newest live daily
 LIQ_WINDOW = 50           # owner rule — not from the video: sessions in the $-volume average
 MACRO_WORKERS = 8
 MICRO_WORKERS = 4
+MICRO_DAYS = 21           # owner rule — not from the video: calendar days of 1-minute bars
+                          # fetched per tapped name (~15 sessions); frame_for's 70-day span
+                          # made one 60m frame cost ~20 s and starved the micro budget
+MIN_TARGET_R = 1.0        # owner rule — not from the video: the next daily swing counts as
+                          # the target only when it pays >= this many R; a 3-candle fractal
+                          # a few cents above the entry is not external liquidity worth aiming at
 GRADE = {"manipulation": 30, "displacement": 20, "mss": 30, "entry": 20}
 
 _ENGINE_PARAMS = {
@@ -105,6 +111,8 @@ _ENGINE_PARAMS = {
     "MACRO_FVG_KEEP": MACRO_FVG_KEEP, "LIQ_WINDOW": LIQ_WINDOW,
     "GRADE_MANIPULATION": GRADE["manipulation"], "GRADE_DISPLACEMENT": GRADE["displacement"],
     "GRADE_MSS": GRADE["mss"], "GRADE_ENTRY": GRADE["entry"],
+    "MICRO_DAYS": MICRO_DAYS,
+    "MIN_TARGET_R": MIN_TARGET_R,
 }
 
 
@@ -222,9 +230,30 @@ def _load_daily(symbol: str, snap: Optional[dict] = None, overlay: bool = True):
     return df
 
 
+def micro_raw_window(today=None) -> tuple:
+    """(start, end) calendar dates for the 1-minute fetch behind a micro
+    frame: MICRO_DAYS back from today (+4 days weekend padding like
+    timeframes.intraday_raw)."""
+    from datetime import date as _date, timedelta as _td
+    end = today or _date.today()
+    return end - _td(days=int(MICRO_DAYS) + 4), end
+
+
 def _load_micro(symbol: str, tf: str = MICRO_TF_DEFAULT):
+    """The micro frame through the HOUSE resampler (closed=left), fed a
+    MICRO_DAYS raw minute window instead of frame_for's 70-day span."""
     from supply_demand.timeframes import frame_for
-    df, _meta = frame_for((symbol or "").upper(), tf)
+    sym = (symbol or "").upper()
+    raw = None
+    try:
+        from daytrading.data import load_intraday_range
+        start, end = micro_raw_window()
+        raw = load_intraday_range(sym, start, end, include_premarket=False,
+                                  include_afterhours=False)
+    except Exception as exc:                                    # pragma: no cover
+        log.debug("ict: short minute window for %s failed (%s); frame_for fetches", sym, exc)
+        raw = None
+    df, _meta = frame_for(sym, tf, raw=raw) if raw is not None else frame_for(sym, tf)
     return df
 
 
@@ -287,18 +316,31 @@ def _tapped(df, recent_lows: list, recent_highs: list, gaps: list,
     tol = float(tol_pct) / 100.0
     for i in range(n - 1, max(-1, n - 1 - int(lookback)), -1):
         iso, d = _stamp(df.index[i], intraday=False)
+        # FRESH touch only (fix 2026-09-04 after the first seed woke 1,122 of
+        # 1,123 names): the bar BEFORE the tap must still be on the far side
+        # of the level — a name that has sat under an old swing low for a
+        # week is not "reaching" it, it already broke it. Same for a gap: the
+        # prior bar must not already intersect it.
+        prev_lo = lo[i - 1] if i >= 1 else None
+        prev_hi = h[i - 1] if i >= 1 else None
         for j, p in reversed(recent_lows):
-            if j + 1 < i and lo[i] <= p * (1 + tol):
+            if (j + 1 < i and lo[i] <= p * (1 + tol)
+                    and (prev_lo is None or prev_lo > p * (1 + tol))):
                 return {"kind": "swing_low", "price": _r(p), "at": d, "date": d,
                         "bar_i": i, "level_i": j, "bias": "bullish"}
         for j, p in reversed(recent_highs):
-            if j + 1 < i and h[i] >= p * (1 - tol):
+            if (j + 1 < i and h[i] >= p * (1 - tol)
+                    and (prev_hi is None or prev_hi < p * (1 - tol))):
                 return {"kind": "swing_high", "price": _r(p), "at": d, "date": d,
                         "bar_i": i, "level_i": j, "bias": "bearish"}
         for g in reversed(gaps):
             if int(g.get("i", n)) >= i:
                 continue
             g_lo, g_hi = float(g["lo"]), float(g["hi"])
+            prev_in = (prev_lo is not None and prev_hi is not None
+                       and prev_lo <= g_hi * (1 + tol) and prev_hi >= g_lo * (1 - tol))
+            if prev_in:
+                continue                     # already inside the gap yesterday
             if lo[i] <= g_hi * (1 + tol) and h[i] >= g_lo * (1 - tol):
                 bias = g.get("inverted_kind") or g.get("kind")
                 near = g_hi if bias == "bullish" else g_lo
@@ -470,16 +512,22 @@ def _plan(read: dict, macro_ctx: Optional[dict], a: float) -> Optional[dict]:
     swings = (macro_ctx or {}).get("swings") or []
     if d == "bullish":
         entry, stop = z_hi, ext - buf
+        risk = entry - stop
         cands = [s["price"] for s in swings if s.get("kind") == "swing_high"
-                 and _num(s.get("price")) is not None and s["price"] > entry]
+                 and _num(s.get("price")) is not None
+                 and s["price"] - entry >= float(MIN_TARGET_R) * max(risk, 0.0)
+                 and s["price"] > entry]
         target = min(cands) if cands else None
-        risk, reward = entry - stop, (target - entry) if target is not None else None
+        reward = (target - entry) if target is not None else None
     else:
         entry, stop = z_lo, ext + buf
+        risk = stop - entry
         cands = [s["price"] for s in swings if s.get("kind") == "swing_low"
-                 and _num(s.get("price")) is not None and s["price"] < entry]
+                 and _num(s.get("price")) is not None
+                 and entry - s["price"] >= float(MIN_TARGET_R) * max(risk, 0.0)
+                 and s["price"] < entry]
         target = max(cands) if cands else None
-        risk, reward = stop - entry, (entry - target) if target is not None else None
+        reward = (entry - target) if target is not None else None
     rr = round(reward / risk, 2) if (reward is not None and risk and risk > 0) else None
     return {"entry_lo": _r(z_lo), "entry_hi": _r(z_hi), "entry": _r(entry),
             "stop": _r(stop), "target": _r(target), "rr": rr,

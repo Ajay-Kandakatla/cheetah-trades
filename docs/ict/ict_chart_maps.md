@@ -192,6 +192,8 @@ Count ≥ `STACK_MIN` (video: "two or more") = stacked, shown as a warn badge.
 | `ENTRY_TOL_PCT` | 0.5 % | engine | **owner rule — not from the video** |
 | `STOP_BUFFER_ATR` | 0.2 (60m ATR) | engine | **owner rule — not from the video** |
 | `MICRO_MAX` | 40 names | engine | **owner rule — not from the video** |
+| `MICRO_DAYS` | 21 | engine | calendar days of 1-minute bars behind each 60m/15m frame (~15 sessions), resampled by the house closed=left resampler; frame_for's own 70-day span cost ~20 s a name and starved the micro budget (2026-09-04) |
+| `MIN_TARGET_R` | 1.0 | engine | the next daily swing counts as the target only when it pays at least this many R; nearer 3-candle fractals are skipped (2026-09-04, first seed read R:R 0.01) |
 | `BUDGET_SEC` | 120 s | engine | **owner rule — not from the video** |
 | `ICT_TTL_SEC` | 900 s | engine | **owner rule — not from the video** |
 | `KEEP_DAYS` | 5 | engine | **owner rule — not from the video** |
@@ -275,3 +277,7 @@ book cite, a page cite or a moving-average token.
 
 *Decision support, not advice. The rules are one video's plus the owner's
 settings; nothing here is backtested yet.*
+
+## 2026-09-04 fix after the first live seed
+
+The first seed woke **1,122 of 1,123** names (any bar sitting under an old swing low counted as a tap), so the micro loop was not dormant and the 120 s budget covered 17 names. The tap now requires a **fresh touch**: the bar before the tap must still be on the far side of the level (or outside the gap). `MICRO_DAYS` and `MIN_TARGET_R` above were added the same night.

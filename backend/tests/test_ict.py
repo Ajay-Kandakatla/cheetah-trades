@@ -525,8 +525,11 @@ def test_micro_plan_math_uses_the_zone_edge_the_sweep_and_the_next_daily_swing()
     p = mi["plan"]
     assert p["entry_lo"] == 100.2 and p["entry_hi"] == 101.0 and p["entry"] == 101.0
     assert p["stop"] == pytest.approx(98.5 - E.STOP_BUFFER_ATR * a, abs=1e-4)
-    assert p["target"] == 103.0                                # nearest daily swing high above, not 105
-    assert p["rr"] == pytest.approx((103.0 - 101.0) / (101.0 - p["stop"]), abs=0.01)
+    # Owner rule MIN_TARGET_R (2026-09-04): 103.0 is the nearest swing high but
+    # pays < 1R against this stop, so the target steps to the next one, 105.
+    assert 103.0 - 101.0 < E.MIN_TARGET_R * (101.0 - p["stop"])
+    assert p["target"] == 105.0
+    assert p["rr"] == pytest.approx((105.0 - 101.0) / (101.0 - p["stop"]), abs=0.01)
     assert p["zone"] == "fvg"
 
 
@@ -1033,3 +1036,42 @@ def test_every_owner_constant_is_marked_and_the_video_ones_are_the_only_exceptio
     for k in list(S.PARAMS) + list(E._ENGINE_PARAMS):
         assert k in doc, f"docs/ict/ict_chart_maps.md does not list {k}"
     assert S.VIDEO_URL in doc and "not from the video" in doc
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-04 fixes after the first live seed (tapped 1,122 of 1,123 names,
+# 60m frames ~20 s each, R:R 0.01 targets)
+# ---------------------------------------------------------------------------
+def test_tap_must_be_a_fresh_touch_not_a_name_already_through_the_level():
+    """The bar BEFORE the tap must still be on the far side of the level."""
+    base = _flat(30, 100.0, 100.5, 99.5, 100.0)
+    swing = [(100.0, 100.5, 90.0, 100.0)]                    # fractal low at 90
+    body = _flat(40, 100.0, 100.5, 99.5, 100.0)
+    fresh = _daily(base + swing + body + [(100.0, 100.5, 89.9, 100.0)])
+    t = E.macro("AAA", df=fresh)["tapped"]
+    assert t and t["kind"] == "swing_low" and t["price"] == 90.0
+    # four sessions sitting at/under the level: nothing is "reaching" it
+    stale = _daily(base + swing + body + _flat(4, 100.0, 100.5, 89.9, 100.0))
+    assert E.macro("AAA", df=stale)["tapped"] is None
+
+
+def test_plan_has_no_target_when_no_daily_swing_pays_min_target_r():
+    read = {"bias": "bullish", "manipulation": {"extreme": 98.5},
+            "fvg": {"lo": 100.2, "hi": 101.0}, "ifvg": None}
+    ctx = {"swings": [{"kind": "swing_high", "price": 101.4},
+                      {"kind": "swing_high", "price": 101.9}]}
+    p = E._plan(read, ctx, a=1.0)
+    assert p["target"] is None and p["rr"] is None
+    ctx["swings"].append({"kind": "swing_high", "price": 108.0})
+    p = E._plan(read, ctx, a=1.0)
+    assert p["target"] == 108.0 and p["rr"] > 1.0
+
+
+def test_micro_raw_window_is_micro_days_plus_weekend_padding():
+    from datetime import date, timedelta
+    start, end = E.micro_raw_window(date(2026, 9, 4))
+    assert end == date(2026, 9, 4) and (end - start) == timedelta(days=E.MICRO_DAYS + 4)
+    assert E.MICRO_DAYS < 70, "must be cheaper than frame_for's own 70-day span"
+    keys = {x["key"] for x in E.params()}
+    assert {"MICRO_DAYS", "MIN_TARGET_R"} <= keys
+
