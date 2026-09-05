@@ -32,6 +32,10 @@ export const NAV_SOURCES: Record<string, NavSource> = {
   // page ... it goes to sepa always". The zones list page is part of the same
   // family and had the same raw-Link problem.
   'demand-zones': { path: '/demand-zones', label: 'Demand Zones' },
+  // Ajay 2026-09-05: "can I go to a dedicated page to see the list of alerts?"
+  // Every row on /alerts links its ticker to the Supply / Demand tab; the back
+  // button has to return to the alert he was reading, not to /sepa.
+  alerts: { path: '/alerts', label: 'Alerts' },
 };
 
 /** The registry, read backwards: which source key does a pathname belong to?

@@ -76,6 +76,7 @@ from zoneinfo import ZoneInfo
 
 from market_hours.reminder import is_market_day
 from . import alert_gates as AG
+from . import alert_status as AS
 
 log = logging.getLogger(__name__)
 
@@ -387,12 +388,27 @@ def _band_rank(band: dict, day_low: float) -> tuple:
 def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] = None,
                snapshot: Optional[dict] = None, caps: Optional[dict] = None,
                names: Optional[dict] = None, coll=None, owner: Optional[str] = None,
-               now: Optional[datetime] = None, low_times: Optional[dict] = None) -> dict:
+               now: Optional[datetime] = None, low_times: Optional[dict] = None,
+               pass_coll=None) -> dict:
     """One 5-min pass. Every input is injectable for tests; the cron passes
-    none. `force` skips the session gate for in-container smoke tests only."""
+    none. `force` skips the session gate for in-container smoke tests only.
+    Every pass that ran the read records its counters to `alert_pass_latest`
+    (`pass_coll`; alert_status.record_result, best-effort) so the /alerts page
+    can explain a quiet phone — Ajay 2026-09-05: "Do we have the same logic in
+    back end demand for the ones that I get alerts"."""
     now = now or _now_et()
     if not force and not in_session(now):
         return {"ran": False, "reason": "outside RTH"}
+    out = _check_once(push=push, store=store, snapshot=snapshot, caps=caps, names=names,
+                      coll=coll, owner=owner, now=now, low_times=low_times)
+    AS.record_result(KIND, out, now, coll=pass_coll)
+    return out
+
+
+def _check_once(*, push: bool, store: Optional[dict], snapshot: Optional[dict],
+                caps: Optional[dict], names: Optional[dict], coll, owner: Optional[str],
+                now: datetime, low_times: Optional[dict]) -> dict:
+    """The pass proper (session gate + pass record live in check_once)."""
     day = now.astimezone(ET).date()
     if store is None:
         from supply_demand import zone_store

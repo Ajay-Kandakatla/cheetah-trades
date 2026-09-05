@@ -32,6 +32,8 @@ import type { CSSProperties } from 'react';
 import { TickerLink } from './TickerLink';
 import { money } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
+import { useAlertedToday, type AlertedHit } from '../hooks/useAlertHistory';
+import { AlertedTodayChip } from './AlertedTodayChip';
 
 export type ZoneEdgeBand = {
   kind: 'demand' | 'supply' | string;
@@ -255,7 +257,9 @@ function Sparkline({ points: raw, color }: { points: TrackPoint[]; color: string
   );
 }
 
-function BreakingRow({ r, track, fromKey }: { r: ZoneEdgeRow; track: TrackPoint[]; fromKey: string }) {
+type RowProps = { r: ZoneEdgeRow; track: TrackPoint[]; fromKey: string; alerted?: AlertedHit };
+
+function BreakingRow({ r, track, fromKey, alerted }: RowProps) {
   const broke = r.tier === 'broke';
   const accent = broke ? GREEN : AMBER;
   const read = sparkRead(track, r.tier);
@@ -265,6 +269,7 @@ function BreakingRow({ r, track, fromKey }: { r: ZoneEdgeRow; track: TrackPoint[
     <div style={rowStyle(accent)} data-testid="zone-edge-row">
       <div style={LINE1}>
         <TickerLink ticker={r.symbol} fromLabel="Zone edge" tab="supply" fromKey={fromKey} />
+        <AlertedTodayChip symbol={r.symbol} hit={alerted} />
         {r.name ? <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{r.name}</span> : null}
         <span className="mono" style={MONO_SM}>{money(r.last)}</span>
         {broke ? (
@@ -297,7 +302,7 @@ function BreakingRow({ r, track, fromKey }: { r: ZoneEdgeRow; track: TrackPoint[
   );
 }
 
-function DemandRow({ r, track, fromKey }: { r: ZoneEdgeRow; track: TrackPoint[]; fromKey: string }) {
+function DemandRow({ r, track, fromKey, alerted }: RowProps) {
   const inBand = r.tier === 'in';
   const accent = inBand ? GREEN : AMBER;
   const read = sparkRead(track, r.tier);
@@ -307,6 +312,7 @@ function DemandRow({ r, track, fromKey }: { r: ZoneEdgeRow; track: TrackPoint[];
     <div style={rowStyle(accent)} data-testid="zone-edge-row">
       <div style={LINE1}>
         <TickerLink ticker={r.symbol} fromLabel="Zone edge" tab="supply" fromKey={fromKey} />
+        <AlertedTodayChip symbol={r.symbol} hit={alerted} />
         {r.name ? <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{r.name}</span> : null}
         <span className="mono" style={MONO_SM}>{money(r.last)}</span>
         {inBand ? (
@@ -331,6 +337,13 @@ function DemandRow({ r, track, fromKey }: { r: ZoneEdgeRow; track: TrackPoint[];
 export function ZoneEdgeBoard({ mode, compact = false, fromKey = 'supply-demand' }: Props) {
   const [data, setData] = useState<ZoneEdgePayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  /* 🔔 "alerted HH:MM ET" per row (Ajay 2026-09-05: "Would it be the same
+   * list of stocks.."). This board lists every band at any cap; the phone got
+   * only the $1B+, 2+-touch names that passed the room / proximity gate. The
+   * chip is the overlap, and it links to /alerts for the full push. Read once
+   * a minute on the board's own clock; a failed read leaves the rows bare. */
+  const alerted = useAlertedToday();
 
   /* Fetch on mount, then once a minute while mounted AND visible. A hidden tab
    * skips its tick (nobody is looking; the API is not free), and a tab that
@@ -426,7 +439,8 @@ export function ZoneEdgeBoard({ mode, compact = false, fromKey = 'supply-demand'
         <div style={{ display: 'grid', gap: '0.5rem' }}>
           {breaking.map((r) => (
             <BreakingRow key={`supply:${r.symbol}:${r.band?.lo}-${r.band?.hi}`} r={r}
-                         track={track[`supply:${r.symbol}`] ?? []} fromKey={fromKey} />
+                         track={track[`supply:${r.symbol}`] ?? []} fromKey={fromKey}
+                         alerted={alerted.get(String(r.symbol).toUpperCase())} />
           ))}
         </div>
       )}
@@ -447,7 +461,8 @@ export function ZoneEdgeBoard({ mode, compact = false, fromKey = 'supply-demand'
             <div style={{ display: 'grid', gap: '0.5rem' }}>
               {nearDemand.map((r) => (
                 <DemandRow key={`demand:${r.symbol}:${r.band?.lo}-${r.band?.hi}`} r={r}
-                           track={track[`demand:${r.symbol}`] ?? []} fromKey={fromKey} />
+                           track={track[`demand:${r.symbol}`] ?? []} fromKey={fromKey}
+                           alerted={alerted.get(String(r.symbol).toUpperCase())} />
               ))}
             </div>
           )}

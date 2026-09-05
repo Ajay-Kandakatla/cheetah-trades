@@ -74,6 +74,7 @@ from zoneinfo import ZoneInfo
 
 from market_hours.reminder import is_market_day
 from . import alert_gates as AG
+from . import alert_status as AS
 
 log = logging.getLogger(__name__)
 
@@ -333,14 +334,27 @@ def _terminal(res: Optional[dict]) -> bool:
 def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] = None,
                live: Optional[dict] = None, caps: Optional[dict] = None, coll=None,
                owner: Optional[str] = None, now: Optional[datetime] = None,
-               store: Optional[dict] = None) -> dict:
+               store: Optional[dict] = None, pass_coll=None) -> dict:
     """One pass. Every input is injectable for tests; the cron passes none.
     `force` skips the session gate for in-container smoke tests only. `store`
     = zone_store docs {SYM: doc} for the room gate (loaded for the candidate
-    names when None)."""
+    names when None). Every pass that ran the read records its counters to
+    `alert_pass_latest` (`pass_coll`; alert_status.record_result, best-effort)
+    so the /alerts page can explain a quiet phone — Ajay 2026-09-05: "Do we
+    have the same logic in back end demand for the ones that I get alerts"."""
     now = now or _now_et()
     if not force and not in_session(now):
         return {"ran": False, "reason": "outside RTH"}
+    out = _check_once(push=push, board=board, live=live, caps=caps, coll=coll, owner=owner,
+                      now=now, store=store)
+    AS.record_result(KIND, out, now, coll=pass_coll)
+    return out
+
+
+def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
+                caps: Optional[dict], coll, owner: Optional[str], now: datetime,
+                store: Optional[dict]) -> dict:
+    """The pass proper (session gate + pass record live in check_once)."""
     board = board if board is not None else fetch_board()
     cands = candidates(board)
     if not cands:

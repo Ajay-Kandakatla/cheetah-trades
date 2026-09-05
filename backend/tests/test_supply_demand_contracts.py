@@ -541,9 +541,16 @@ def test_live_alert_fixes_2026_09_05_phone_gate_constants_and_every_push_path_ca
     assert ze.count("AG.room_gate(") == 2, "breaking AND near-demand candidacy"
     # integrator 2026-09-05: `lo > band.hi` missed an OVERLAPPING lid; the set is every band whose top clears this one's
     assert 'float(b["hi"]) > rb["band"]["hi"]' in ze, "🚀 room is measured to the NEXT band above the one breaking"
-    zb = inspect.getsource(ZB.check_once)
+    # /alerts page 2026-09-05: check_once became a thin wrapper (session gate +
+    # alert_pass_latest record) around _check_once, the pass proper — the gate
+    # calls live in the inner function, and the wrapper must reach it
+    for mod in (ZB, DA):
+        wrap = inspect.getsource(mod.check_once)
+        assert "out = _check_once(" in wrap and "AS.record_result(KIND, out, now, coll=pass_coll)" in wrap, mod.__name__
+        assert 'return {"ran": False, "reason": "outside RTH"}' in wrap, f"{mod.__name__}: outside RTH records nothing"
+    zb = inspect.getsource(ZB._check_once)
     assert 'AG.demand_proximity_gate(px, item["band"])' in zb and "AG.room_gate(px, bands, prev)" in zb
-    da = inspect.getsource(DA.check_once)
+    da = inspect.getsource(DA._check_once)
     assert 'AG.demand_proximity_gate(it["last"], it["band"])' in da and "AG.room_gate(" in da
     assert "unknown_room += 1" in da, "no zone_store doc = unknown room = silent, counted"
     for src, names in ((ze, ("skipped_room",)),
@@ -573,7 +580,7 @@ def test_live_alert_fixes_2026_09_05_side_a_room_for_keys_holidays_stale_day():
     # room_for shares the gate's overhead rule and knows prev_close; the caller passes it
     assert "AG.room_read(px, bands or [], prev_close)" in inspect.getsource(ZB.room_for)
     assert "prev_close=None" in str(inspect.signature(ZB.room_for))
-    assert 'room_for(px, bands, item["band"], prev)' in inspect.getsource(ZB.check_once)
+    assert 'room_for(px, bands, item["band"], prev)' in inspect.getsource(ZB._check_once)
     # the gate's first-overhead read == bounce_room.first_overhead whenever no band is broken
     bands = [{"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2},
              {"kind": "supply", "lo": 99.0, "hi": 101.0, "touches": 2},

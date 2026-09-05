@@ -4103,114 +4103,12 @@ async def push_list_subscriptions(email: str = Depends(current_user_email)):
     return JSONResponse({"rows": out})
 
 
-@app.get("/notifications/recent")
-async def notifications_recent(
-    limit: int = Query(25, ge=1, le=100,
-                       description="Max merged rows to return"),
-    email: str = Depends(current_user_email),
-):
-    """Unified recent-notifications feed: push_history + sepa_breakouts.
-
-    The NotificationBell dropdown and the /notifications history panel
-    both consume this endpoint so volume breakouts / stage breakdowns
-    from the sepa_breakouts collection show up alongside the pushes
-    captured via push_history (flashcards, morning brief, etc.).
-
-    Output row shape (normalized across both sources):
-
-        {
-          _id, ts, ts_iso, title, body, kind, ticker, url,
-          source:   'push' | 'breakout',
-          sent, failed, total,    # push-only; 0 for breakouts
-          dismissed: bool,        # breakout-only; absent for pushes
-        }
-
-    Sorted by ts desc, capped at ``limit``. Breakouts are pulled with
-    a 200-row hard cap on the source side so a wildly long banner
-    stack doesn't bloat the merge.
-    """
-    from push import history
-    from sepa import breakouts as bk
-
-    def _gather() -> list[dict]:
-        # Push-history rows are already in the right shape; just tag them.
-        pushes = history.list_recent(email, limit)
-        for p in pushes:
-            p["source"] = "push"
-
-        # Breakout rows need normalization. Fetch wider than `limit` so
-        # we have plenty of candidates to merge against pushes.
-        try:
-            db = bk._get_db()
-        except Exception:
-            db = None
-        breakout_rows: list[dict] = []
-        if db is not None:
-            try:
-                cur = db.sepa_breakouts.find({}).sort("ts", -1).limit(200)
-                for b in cur:
-                    ticker = b.get("ticker") or ""
-                    kind = b.get("kind") or "volume_breakout"
-                    # Title — emoji + kind label + ticker, similar
-                    # vocabulary to the existing BreakoutAlertBanner.
-                    emoji_map = {
-                        "volume_breakout":          "🚀",
-                        "rising_momentum":          "📈",
-                        "stage_breakdown_2_3":      "⚠️",
-                        "stage_breakdown_2_4":      "🔻",
-                        "stage_breakdown_3_4":      "🔻",
-                    }
-                    label_map = {
-                        "volume_breakout":          "Volume breakout",
-                        "rising_momentum":          "Rising momentum",
-                        "stage_breakdown_2_3":      "Stage 2→3 topping",
-                        "stage_breakdown_2_4":      "Stage 2→4 cliff",
-                        "stage_breakdown_3_4":      "Stage 3→4 decline",
-                    }
-                    emoji = emoji_map.get(kind, "📣")
-                    label = label_map.get(kind, kind)
-                    ts = int(b.get("ts") or 0)
-                    ctx = b.get("context") or {}
-                    # Append a compact data row to the reason so the
-                    # history view shows price + day change even after
-                    # the live BreakoutAlertBanner has been dismissed.
-                    extras: list[str] = []
-                    if ctx.get("last_close") is not None:
-                        extras.append(f"${float(ctx['last_close']):.2f}")
-                    if ctx.get("day_change_pct") is not None:
-                        d = float(ctx["day_change_pct"])
-                        extras.append(f"{'+' if d >= 0 else ''}{d:.1f}%")
-                    extras_str = "  ·  ".join(extras)
-                    reason = (b.get("reason") or "").strip()
-                    body = f"{extras_str}\n{reason}" if extras_str else reason
-                    breakout_rows.append({
-                        "_id":          str(b.get("_id")),
-                        "ts":           ts,
-                        "ts_iso":       datetime.fromtimestamp(
-                                            ts, tz=timezone.utc
-                                        ).isoformat() if ts else None,
-                        "title":        f"{emoji} {label} · {ticker}",
-                        "body":         body,
-                        "kind":         kind,
-                        "ticker":       ticker,
-                        "url":          f"/sepa/{ticker}?from=alert" if ticker else None,
-                        "user_email":   None,
-                        "sent":         0,
-                        "failed":       0,
-                        "total":        0,
-                        "source":       "breakout",
-                        "dismissed":    bool(b.get("dismissed_at")),
-                    })
-            except Exception:
-                pass
-
-        # Merge + sort + cap.
-        merged = pushes + breakout_rows
-        merged.sort(key=lambda r: r.get("ts") or 0, reverse=True)
-        return merged[:limit]
-
-    rows = await asyncio.to_thread(_gather)
-    return JSONResponse({"rows": rows, "count": len(rows)})
+# GET /notifications/recent lives in push/recent.py since 2026-09-05 (the
+# /alerts page needed it filterable by kinds / since / ticker, and main.py
+# cannot be imported by the py3.9 test venv, so the route had no test). Same
+# path, same row shape, same default behaviour; see that module's docstring.
+from push.recent import router as notifications_recent_router  # noqa: E402
+app.include_router(notifications_recent_router)
 
 
 @app.get("/push/history")

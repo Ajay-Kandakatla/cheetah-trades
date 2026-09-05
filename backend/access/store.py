@@ -170,6 +170,12 @@ FEATURE_CATALOG: list[dict] = [
     # five-step composite). GainzAlgo-style presentation, our math, closed
     # bars only. Owner-on via added_in/VERSION.
     {"id": "signal-lab",    "label": "⚡ Signal Lab",       "group": "tools",     "default": False, "added_in": 22},
+    # Alerts (2026-09-05): the pushes that reached the phone (demand_alert /
+    # zone_bounce_alert / supply_break_alert from push_history, ET times) plus
+    # each S/D pass's last counters so a quiet phone is explainable. Ajay:
+    # "can I go to a dedicated page to see the list of alerts? May be add it
+    # to recent alerts or something?" Owner-on via added_in/VERSION.
+    {"id": "alerts",        "label": "🔔 Alerts",           "group": "tools",     "default": False, "added_in": 23},
     # Scalping (2026-06-09): Phase-1 DOCUMENTED intraday patterns (Stocks-in-Play
     # ORB / volatility-normalized shock-fade / intraday-momentum regime) with a
     # live spread gate + net-of-cost honesty layer. Sourced from a vetted research
@@ -262,7 +268,7 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 22
+CATALOG_VERSION = 23
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 

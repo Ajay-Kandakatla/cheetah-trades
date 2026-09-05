@@ -210,21 +210,42 @@ export function NotificationBell() {
                 Pushes + volume breakouts in one feed.
               </div>
             </div>
-            <Link
-              to="/notifications"
-              onClick={() => setOpen(false)}
-              style={{
-                fontSize: '0.7rem',
-                color: '#9aa8c8',
-                textDecoration: 'none',
-                padding: '3px 8px',
-                border: '1px solid rgba(154,168,200,0.3)',
-                borderRadius: 4,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              See all →
-            </Link>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {/* Ajay 2026-09-05: "can I go to a dedicated page to see the
+                * list of alerts?" — /alerts is the filtered log (ET clock,
+                * kind chips, the gate's skip counts); /notifications keeps
+                * the device + mute toggles. */}
+              <Link
+                to="/alerts"
+                onClick={() => setOpen(false)}
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#d4af37',
+                  textDecoration: 'none',
+                  padding: '3px 8px',
+                  border: '1px solid rgba(212,175,55,0.35)',
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                🔔 Alerts page →
+              </Link>
+              <Link
+                to="/notifications"
+                onClick={() => setOpen(false)}
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#9aa8c8',
+                  textDecoration: 'none',
+                  padding: '3px 8px',
+                  border: '1px solid rgba(154,168,200,0.3)',
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                See all →
+              </Link>
+            </div>
           </div>
 
           {visible.length === 0 && (

@@ -64,6 +64,9 @@ const TOOLS_SUBGROUP: Record<string, string> = {
   // Maps. Without an entry here it would drop into the catch-all 'More'
   // bucket; it is analysis, so it sits with the other Signals pages.
   research: 'Signals',
+  // /alerts (2026-09-05) is the phone's log — what the zone passes pushed and
+  // what the gate skipped. It reads a signal surface, so it sits with them.
+  alerts: 'Signals',
   food: 'Life', kids: 'Life', volleyball: 'Life', house: 'Life',
 };
 const SUBGROUP_ORDER = ['Trade', 'Screeners', 'Zones', 'Tape', 'Signals', 'Life', 'More'];

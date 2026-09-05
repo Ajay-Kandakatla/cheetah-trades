@@ -24,6 +24,7 @@ from . import demand_reentry as reentry_mod
 from . import session_board as session_mod
 from . import zone_edge as zone_edge_mod
 from . import bounce_room as bounce_room_mod
+from . import alert_status as alert_status_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
@@ -193,6 +194,30 @@ async def get_zone_edge():
     """
     import asyncio
     return await asyncio.to_thread(zone_edge_mod.api_payload)
+
+
+@router.get("/alerts/status")
+async def get_alerts_status():
+    """What each Supply & Demand push pass did last, so the /alerts page can
+    say WHY the phone was quiet.
+
+    Ajay 2026-09-05: *"Do we have the same logic in back end demand for the
+    ones that I get alerts. Would it be the same list of stocks.. Also can I
+    go to a dedicated page to see the list of alerts?"* — no: the Demand board
+    is a closed-bar scan with an R:R floor; the phone gets a live, $1B+, gated
+    subset (alert_gates). This route returns the gate numbers and the last
+    pass's counters per kind (`zone_edge` from `zone_edge_latest`,
+    `zone_bounce_alert` / `demand_alert` from `alert_pass_latest`): candidates,
+    priced, skipped_room / skipped_cap / unknown_cap / skipped_proximity,
+    pushed. `as_of` null + counts {} = no pass recorded. `in_session` is
+    evaluated at request time; times are ET.
+
+    Read-only. Configured heuristic, NOT a book method — decision-support
+    only, not a buy signal, not advice. See
+    backend/supply_demand/alert_status.py and docs/supply_demand/alerts_page.md.
+    """
+    import asyncio
+    return await asyncio.to_thread(alert_status_mod.status_payload)
 
 
 class BounceRoomBody(BaseModel):

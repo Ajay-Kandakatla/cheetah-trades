@@ -679,7 +679,8 @@ def test_api_payload_shape_ordering_and_json_safety(monkeypatch):
     assert payload["params"] == {"edge_pct": 1.0, "broke_max_pct": 3.0, "min_cap_usd": 1e9,
                                  "min_touches_push": 2}
     assert payload["counts"] == {"breaking": 3, "near_demand": 2, "candidates": 5, "priced": 5,
-                                 "stale_print": 0}
+                                 "stale_print": 0, "skipped_room": 0, "skipped_cap": 0,
+                                 "unknown_cap": 0, "pushed": 3}
     # broke first; then near with new_highs first (N1 clear, N0 has OVER above), then dist
     assert [r["symbol"] for r in payload["breaking"]] == ["B0", "N1", "N0"]
     # B0 broke RES today (prev 101 inside it): Side A only — the shelf is not support yet
@@ -708,6 +709,38 @@ def test_api_payload_shape_ordering_and_json_safety(monkeypatch):
     assert type(payload["breaking"][0]["high_252"]) is float and type(payload["breaking"][0]["cap"]) is float
     stored = colls["latest_coll"].docs["latest"]
     assert stored["_id"] == "latest" and "track" not in stored and stored["breaking"] == payload["breaking"]
+
+
+def test_stored_counts_explain_a_quiet_phone_skip_buckets_and_pushed(monkeypatch):
+    """Ajay 2026-09-05: "Do we have the same logic in back end demand for the ones
+    that I get alerts" — no; so the stored pass carries every reason a listed row
+    did NOT ring (room / cap / unknown cap) plus what did, for GET /alerts/status."""
+    sent = _capture(monkeypatch)
+    close_next = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 1, "strength": 20.0}
+    store = {"AAA": _doc("AAA", [RES], 99.0, 103.0),                # rings
+             "UNK": _doc("UNK", [RES], 99.0, 103.0),                # unknown cap: not listed
+             "SML": _doc("SML", [RES], 99.0, 103.0),                # listed, under $1B
+             "TGT": _doc("TGT", [RES, close_next], 99.0, 103.0),    # listed, 2.5% to the next lid
+             "OLD": _doc("OLD", [RES], 99.0, 103.0)}                # stale print: not priced
+    snap = {s_: _snap(101.5, 99.0) for s_ in ("AAA", "UNK", "SML", "TGT")}
+    snap["OLD"] = _snap(101.5, 99.0, age_sec=3600)
+    out, colls = _run(store, snap, {"AAA": 5e9, "SML": 5e8, "TGT": 5e9, "OLD": 5e9})
+    assert len(sent) == 1 and sent[0]["title"].startswith("🚀 AAA")
+    stored = colls["latest_coll"].docs["latest"]
+    assert stored["counts"] == {"candidates": 5, "priced": 4, "stale_print": 1, "breaking": 3,
+                                "near_demand": 0, "skipped_room": 1, "skipped_cap": 1,
+                                "unknown_cap": 1, "pushed": 1}
+    assert stored["counts"] == out["payload"]["counts"]
+    for k in ("skipped_room", "skipped_cap", "unknown_cap", "pushed"):
+        assert out[k] == stored["counts"][k], f"run result and stored payload disagree on {k}"
+    assert ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"],
+                          now=NOW)["counts"] == stored["counts"]
+    # no pass yet / store empty: the buckets exist as zeros, never missing
+    assert set(ZE.empty_payload()["counts"]) == set(stored["counts"])
+    assert all(v == 0 for v in ZE.empty_payload()["counts"].values())
+    e_out, e_colls = _run({}, {}, {})
+    assert e_out["pushed"] == e_out["skipped_room"] == e_out["skipped_cap"] == e_out["unknown_cap"] == 0
+    assert e_colls["latest_coll"].docs["latest"]["counts"]["pushed"] == 0
 
 
 def test_api_payload_without_a_pass_and_in_session_is_evaluated_at_request_time(monkeypatch):
@@ -906,6 +939,13 @@ def test_api_payload_from_another_day_is_never_live(monkeypatch):
     p2 = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"], now=fri)
     assert p2["as_of"] is None and p2["date"] == "2026-09-04" and p2["breaking"] == [] and p2["track"] == {}
     assert p2["reason"] == "zone store empty for today"
+    # as_of stays None (a real pass with rows, to the board and the paper engine);
+    # the empty write stamps ran_at so /alerts/status can say WHEN the cron found
+    # the store empty (2026-09-05) — and a later empty pass refreshes it
+    assert colls["latest_coll"].docs["latest"]["ran_at"] == fri.isoformat()
+    _run({}, {}, {}, colls=colls, now=fri + timedelta(minutes=1))
+    assert colls["latest_coll"].docs["latest"]["ran_at"] == (fri + timedelta(minutes=1)).isoformat()
+    assert colls["latest_coll"].docs["latest"]["as_of"] is None
     json.dumps(p2, allow_nan=False)
     dry = _colls()
     _run({}, {}, {}, colls=dry, now=fri, track=False)

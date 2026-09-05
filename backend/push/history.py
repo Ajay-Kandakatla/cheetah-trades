@@ -113,8 +113,12 @@ def record(payload: dict, *, user_email: Optional[str] = None,
         log.debug("push.history record failed: %s", exc)
 
 
+MAX_LIMIT = 500      # /notifications/recent may ask for a day of S/D pushes (was 100)
+
+
 def list_recent(user_email: Optional[str] = None, limit: int = 25,
-                kind: Optional[str] = None) -> list[dict]:
+                kind: Optional[str] = None, kinds: Optional[list] = None,
+                since_ts: Optional[int] = None, ticker: Optional[str] = None) -> list[dict]:
     """Return the last N pushes visible to the given user.
 
     Visibility rules:
@@ -125,11 +129,23 @@ def list_recent(user_email: Optional[str] = None, limit: int = 25,
     Caller is responsible for the admin gate; this function doesn't
     enforce it. The /push/history endpoint passes the caller's email
     by default.
+
+    Filters (all additive, 2026-09-05 — the /alerts page. Ajay: "can I go
+    to a dedicated page to see the list of alerts?"). With none given the
+    query is exactly what it was:
+      * ``kind``      one kind (the /push/history filter, unchanged)
+      * ``kinds``     a list of kinds → ``kind $in``; an empty list is
+                      "no filter", not "nothing"
+      * ``since_ts``  unix seconds → ``ts >= since_ts``
+      * ``ticker``    upper-cased before matching (rows are stored upper)
+    ``limit`` is capped at MAX_LIMIT here so no caller can page the whole
+    90-day collection in one read.
     """
     coll = _get_coll()
     if coll is None:
         return []
     try:
+        limit = max(1, min(int(limit or 1), MAX_LIMIT))
         clauses: list[dict] = []
         if user_email:
             clauses.append({"$or": [
@@ -138,6 +154,13 @@ def list_recent(user_email: Optional[str] = None, limit: int = 25,
             ]})
         if kind:
             clauses.append({"kind": kind})
+        kind_list = [str(k).strip() for k in (kinds or []) if str(k).strip()]
+        if kind_list:
+            clauses.append({"kind": {"$in": kind_list}})
+        if since_ts is not None:
+            clauses.append({"ts": {"$gte": int(since_ts)}})
+        if ticker and str(ticker).strip():
+            clauses.append({"ticker": str(ticker).strip().upper()})
         q = {"$and": clauses} if clauses else {}
         cur = coll.find(q).sort("ts", -1).limit(limit)
         out: list[dict] = []
@@ -152,4 +175,4 @@ def list_recent(user_email: Optional[str] = None, limit: int = 25,
         return []
 
 
-__all__ = ["record", "list_recent"]
+__all__ = ["record", "list_recent", "MAX_LIMIT"]

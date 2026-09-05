@@ -22,6 +22,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DemandReentryPanel } from './DemandReentryPanel';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
+import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 
 type Overrides = Record<string, unknown>;
 
@@ -58,7 +59,16 @@ const BOUNCE_ROOM_EMPTY = {
   rows: {}, requested: 0, covered: 0, pending: 0, unavailable: 0, disclaimer: 'Not advice.',
 };
 
-function routed(body: () => unknown, bounceRoom: () => unknown = () => BOUNCE_ROOM_EMPTY) {
+/* 2026-09-05: the panel (and the zone-edge board inside it) also read
+ * /notifications/recent for the 🔔 alerted-today chip. Empty by default so
+ * every earlier case still describes a board nobody's phone has heard about. */
+const ALERTS_EMPTY = { rows: [] };
+
+function routed(
+  body: () => unknown,
+  bounceRoom: () => unknown = () => BOUNCE_ROOM_EMPTY,
+  alerts: () => unknown = () => ALERTS_EMPTY,
+) {
   return vi.fn(async (url: string) => {
     if (String(url).includes('/supply-demand/zone-edge')) {
       return { ok: true, json: async () => ZONE_EDGE_EMPTY };
@@ -66,17 +76,20 @@ function routed(body: () => unknown, bounceRoom: () => unknown = () => BOUNCE_RO
     if (String(url).includes('/supply-demand/bounce-room')) {
       return { ok: true, json: async () => bounceRoom() };
     }
+    if (String(url).includes('/notifications/recent')) {
+      return { ok: true, json: async () => alerts() };
+    }
     return { ok: true, json: async () => body() };
   });
 }
 
-function mockFetch(over: Overrides = {}, bounceRoom?: () => unknown) {
-  const fn = routed(() => payload(over), bounceRoom);
+function mockFetch(over: Overrides = {}, bounceRoom?: () => unknown, alerts?: () => unknown) {
+  const fn = routed(() => payload(over), bounceRoom, alerts);
   vi.stubGlobal('fetch', fn);
   return fn;
 }
 
-beforeEach(() => { vi.restoreAllMocks(); _resetBounceRoomCache(); });
+beforeEach(() => { vi.restoreAllMocks(); _resetBounceRoomCache(); _resetAlertHistoryCache(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('DemandReentryPanel — universe provenance', () => {
@@ -257,5 +270,60 @@ describe('DemandReentryPanel — bounce · room sort (Ajay 2026-09-05)', () => {
     expect(tickerOrder()).toEqual(['EOSE', 'TJX']);
     expect(screen.queryByText(/room pending/)).not.toBeInTheDocument();
     expect(screen.queryByText(/🪃 \+/)).not.toBeInTheDocument();
+  });
+});
+
+/* ── 🔔 alerted-today chip (Ajay 2026-09-05) ─────────────────────────────────
+ * "Do we have the same logic in back end demand for the ones that I get
+ * alerts. Would it be the same list of stocks.." — no. The chip is the overlap:
+ * a row wears it only when THAT ticker pushed one of the zone kinds since
+ * 00:00 ET today, with the push's ET time, linking to /alerts for that name. */
+
+const ALERTED_EOSE = {
+  rows: [{
+    _id: 'p1', ts: Date.parse('2026-09-05T14:42:00Z') / 1000, ts_iso: '2026-09-05T14:42:00+00:00',
+    kind: 'demand_alert', ticker: 'EOSE', title: '🧲 EOSE in demand', body: 'Arrived inside the band.',
+    url: '/sepa/EOSE?tab=supply', source: 'push', sent: 2, failed: 0, total: 2,
+  }],
+};
+
+describe('DemandReentryPanel — 🔔 alerted-today chip (Ajay 2026-09-05)', () => {
+  it('a row whose name pushed today wears "🔔 alerted HH:MM ET" (ET, not UTC) linking to /alerts for that ticker', async () => {
+    mockFetch({ n: 2, rows: [row('TJX', 3.0), row('EOSE', 1.2)] }, undefined, () => ALERTED_EOSE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    const chip = await screen.findByTestId('alerted-today-chip');
+    // 14:42Z is 10:42 EDT — the phone's clock, never the UTC epoch.
+    expect(chip).toHaveTextContent('🔔 alerted 10:42 ET');
+    expect(chip.getAttribute('href')).toBe('/alerts?ticker=EOSE&days=1');
+    // It sits on the EOSE row and nowhere else.
+    expect(screen.getAllByTestId('alerted-today-chip')).toHaveLength(1);
+    const eoseRow = screen.getByRole('link', { name: /EOSE/ }).closest('div');
+    expect(eoseRow?.parentElement?.contains(chip)).toBe(true);
+    const asked = (vi.mocked(fetch).mock.calls.map((c) => String(c[0])).find((u) => u.includes('/notifications/recent')) ?? '');
+    expect(asked).toContain('kinds=demand_alert%2Czone_bounce_alert%2Csupply_break_alert');
+    expect(asked).toMatch(/since=\d+/);
+  });
+
+  it('NEGATIVE: a name that did not push today carries no chip', async () => {
+    mockFetch({ n: 1, rows: [row('TJX', 3.0)] }, undefined, () => ALERTED_EOSE);   // EOSE alerted; TJX did not
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /TJX/ }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByTestId('alerted-today-chip')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a failed alerts read leaves the board bare, never blank or broken', async () => {
+    const fn = routed(() => payload({ n: 1, rows: [row('TJX', 3.0)] }));
+    fn.mockImplementation(async (url: string) => {
+      if (String(url).includes('/notifications/recent')) return { ok: false, status: 503, json: async () => ({}) } as any;
+      if (String(url).includes('/supply-demand/zone-edge')) return { ok: true, json: async () => ZONE_EDGE_EMPTY } as any;
+      if (String(url).includes('/supply-demand/bounce-room')) return { ok: true, json: async () => BOUNCE_ROOM_EMPTY } as any;
+      return { ok: true, json: async () => payload({ n: 1, rows: [row('TJX', 3.0)] }) } as any;
+    });
+    vi.stubGlobal('fetch', fn);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /TJX/ }));
+    expect(screen.queryByTestId('alerted-today-chip')).not.toBeInTheDocument();
+    expect(screen.getByText(/1 in demand/)).toBeInTheDocument();
   });
 });

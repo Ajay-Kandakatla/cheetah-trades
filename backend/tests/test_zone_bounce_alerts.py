@@ -64,10 +64,18 @@ def _capture(monkeypatch, result=None):
     return sent
 
 
-def _run(store, snapshot, caps, *, coll=None, now=NOW, push=True, names=None, low_times=None):
+class PassColl(FakeColl):
+    """alert_pass_latest: one replace_one per pass."""
+
+    def replace_one(self, q, doc, upsert=False):
+        self.docs[q["_id"]] = dict(doc)
+
+
+def _run(store, snapshot, caps, *, coll=None, now=NOW, push=True, names=None, low_times=None,
+         pass_coll=None):
     return ZB.check_once(push=push, force=True, store=store, snapshot=snapshot, caps=caps,
                          names=names if names is not None else {}, coll=coll or FakeColl(),
-                         owner="o@x", now=now,
+                         owner="o@x", now=now, pass_coll=pass_coll,
                          low_times=low_times if low_times is not None else {})   # never the network
 
 
@@ -537,3 +545,53 @@ def test_phone_gate_needs_five_percent_room_to_the_first_unbroken_supply(monkeyp
     store2 = {"AAA": _doc("AAA", [band, dict(lid, lo=106.0, hi=108.0)], 0.5, 105.0)}   # 5.47% over
     out2 = _run(store2, {"AAA": _snap(97.0, 100.5, 105.0)}, {"AAA": 5e9})
     assert out2["pushed"] == 1 and "room +5.5% -> $106" in sent[-1]["body"]
+
+
+# ── the pass record for /alerts/status (2026-09-05) ──────────────────────────
+def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeypatch):
+    """Ajay 2026-09-05: "Do we have the same logic in back end demand for the ones
+    that I get alerts" — the answer is no, so each pass leaves WHY it was quiet:
+    {_id: kind, as_of, date, counts} in alert_pass_latest, replaced every pass."""
+    sent = _capture(monkeypatch)
+    pc = PassColl()
+    store = {"NTAP": _doc("NTAP", NTAP_BANDS, 3.0, 180.77),
+             "FAR": _doc("FAR", [{"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2}], 1.0, 100.0),
+             "SML": _doc("SML", NTAP_BANDS, 3.0, 180.77)}
+    snap = {"NTAP": _snap(160.6, 169.2, 180.77),            # the exact-single fixture: rings
+            "FAR": _snap(91.5, 96.0, 100.0),                 # bounced 4.3% above the top: too far
+            "SML": _snap(160.6, 169.2, 180.77)}              # same read, $0.5B: listed, not pushed
+    out = _run(store, snap, {"NTAP": 30e9, "FAR": 5e9, "SML": 5e8}, pass_coll=pc)
+    assert out["pushed"] == 1 and len(sent) == 1
+    assert list(pc.docs) == ["zone_bounce_alert"]
+    doc = pc.docs["zone_bounce_alert"]
+    assert doc["_id"] == ZB.KIND and doc["as_of"] == NOW.isoformat() and doc["date"] == "2026-09-03"
+    c = doc["counts"]
+    assert c["candidates"] == 3 and c["priced"] == 3 and c["stale_print"] == 0
+    assert c["hits"] == 3 and c["pushed"] == 1 and c["skipped_cap"] == 1 and c["unknown_cap"] == 0
+    assert c["skipped_proximity"] == 1 and c["skipped_room"] == 0 and c["unknown_prev"] == 0
+    assert set(c) >= {"candidates", "hits", "skipped_room", "skipped_proximity", "skipped_cap",
+                      "unknown_cap", "pushed"}, "the /alerts/status contract keys"
+    assert all(type(v) is int for v in c.values()) and "reason" not in doc
+    # the next pass REPLACES the doc (nothing accumulates) and an empty store leaves a reason
+    out2 = _run({}, {}, {}, pass_coll=pc)
+    assert out2["ran"] and list(pc.docs) == ["zone_bounce_alert"]
+    assert pc.docs["zone_bounce_alert"]["counts"]["candidates"] == 0
+    assert pc.docs["zone_bounce_alert"]["reason"] == "zone store empty for today"
+
+
+def test_pass_record_is_best_effort_and_never_written_outside_rth(monkeypatch):
+    _capture(monkeypatch)
+
+    class Broken(PassColl):
+        def replace_one(self, q, doc, upsert=False):
+            raise RuntimeError("mongo down")
+    store = {"NTAP": _doc("NTAP", NTAP_BANDS, 3.0, 180.77)}
+    snap = {"NTAP": _snap(160.6, 169.2, 180.77)}
+    out = _run(store, snap, {"NTAP": 30e9}, pass_coll=Broken())
+    assert out["pushed"] == 1, "a dead status coll never blocks the push"
+    pc = PassColl()
+    closed = ZB.check_once(store=store, now=datetime(2026, 9, 3, 7, 0, tzinfo=ET), coll=FakeColl(),
+                           pass_coll=pc)
+    assert closed == {"ran": False, "reason": "outside RTH"} and pc.docs == {}
+    # no coll injected: the module resolver is used and (no Mongo in tests) records nothing — quietly
+    assert _run(store, snap, {"NTAP": 30e9})["pushed"] == 1

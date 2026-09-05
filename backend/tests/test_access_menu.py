@@ -83,3 +83,16 @@ def test_moving_a_page_did_not_change_its_grant():
 def test_feature_ids_are_unique():
     ids = [e["id"] for e in store.FEATURE_CATALOG]
     assert len(ids) == len(set(ids))
+
+
+def test_alerts_page_is_a_tools_feature_owner_on_at_catalog_23():
+    """Ajay 2026-09-05: "can I go to a dedicated page to see the list of alerts?"
+    Feature id 'alerts' -> route /alerts (build_menu derives it); label carries
+    the bell; Tools group; owner-on via added_in == CATALOG_VERSION == 23."""
+    e = _entry("alerts")
+    assert e["label"] == "🔔 Alerts" and e["group"] == "tools" and e["default"] is False
+    assert e["added_in"] == 23 == store.CATALOG_VERSION
+    assert store._GROUP_TO_SECTION["tools"] == "misc"
+    eff = store.effective_features({"sepa"}, is_owner=True, seen_version=22)
+    assert "alerts" in eff, "an owner who saved before v23 gets the page on next load"
+    assert "alerts" not in store.effective_features({"sepa"}, is_owner=False, seen_version=22)

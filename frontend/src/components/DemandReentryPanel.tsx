@@ -25,6 +25,8 @@ import { DemandScanProgress } from './DemandScanProgress';
 import type { DemandScanProgress as DemandScanProgressPayload } from '../lib/demandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 import { ZoneEdgeBoard } from './ZoneEdgeBoard';
+import { useAlertedToday } from '../hooks/useAlertHistory';
+import { AlertedTodayChip } from './AlertedTodayChip';
 
 
 type Payload = {
@@ -163,6 +165,14 @@ export function DemandReentryPanel() {
    * sorts last rather than disappearing. */
   const rowSymbols = useMemo(() => (data?.rows ?? []).map((r) => r.symbol), [data]);
   const { map: br, payload: brPayload } = useBounceRoom(rowSymbols);
+
+  /* 🔔 "alerted HH:MM ET" — Ajay 2026-09-05: "Do we have the same logic in
+   * back end demand for the ones that I get alerts. Would it be the same list
+   * of stocks.." No: this board is a closed-bar scan with an R:R floor; the
+   * phone gets live $1B+ names through the alert gate. The chip marks the
+   * overlap so the two lists can be compared by eye. One read shared with the
+   * zone-edge board above (same module cache). */
+  const alerted = useAlertedToday();
 
   return (
     <section className="sd-section">
@@ -327,6 +337,7 @@ export function DemandReentryPanel() {
                     * row is standing in is drawn there. */}
                   <TickerLink ticker={r.symbol} fromLabel="Back in Demand"
                           tab="supply" fromKey="supply-demand" />
+                  <AlertedTodayChip symbol={r.symbol} hit={alerted.get(r.symbol.toUpperCase())} />
                   <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{r.name}</span>
                   <span className="mono" style={{ fontSize: '0.74rem' }}>{money(r.last_price)}</span>
                   <span style={{

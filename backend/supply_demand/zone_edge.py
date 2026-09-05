@@ -69,7 +69,9 @@ ALERT_MIN_ROOM_PCT (5%) from the print to the first UNBROKEN band overhead —
 breaking: the NEXT band above the one being broken (new_highs rows are usually
 CLEAR); near demand: the store's bands. The in/near tier IS the "<1% above
 demand" rule (EDGE_PCT == ALERT_MAX_ABOVE_DEMAND_PCT), reused, not duplicated.
-Skips are counted (skipped_room) so a quiet phone is explainable. Boards
+Skips are counted (skipped_room / skipped_cap / unknown_cap, and `pushed`) in the
+run result AND in the stored ``zone_edge_latest.counts`` so a quiet phone is
+explainable on the /alerts page (GET /alerts/status, 2026-09-05). Boards
 unchanged.
 
 Per side: strongest MAX_SINGLES_PER_PASS get their own push, the rest ONE
@@ -629,7 +631,8 @@ def empty_payload(reason: str = "no pass yet") -> dict:
             "params": {"edge_pct": EDGE_PCT, "broke_max_pct": BROKE_MAX_PCT,
                        "min_cap_usd": MIN_CAP_USD, "min_touches_push": MIN_TOUCHES_PUSH},
             "counts": {"breaking": 0, "near_demand": 0, "candidates": 0, "priced": 0,
-                       "stale_print": 0},
+                       "stale_print": 0, "skipped_room": 0, "skipped_cap": 0,
+                       "unknown_cap": 0, "pushed": 0},
             "breaking": [], "near_demand": [], "track": {}, "reason": reason,
             "disclaimer": DISCLAIMER}
 
@@ -726,13 +729,24 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 log.warning("zone_edge: store read empty at %s but today's latest is a live "
                             "pass — kept (transient read?)", now.astimezone(ET).strftime("%H:%M"))
             else:
-                ep = dict(empty_payload(reason), date=day_iso)
+                # `as_of` stays None here: to _latest_is_todays_pass, the board
+                # header and the paper engine's freshness read
+                # (trading/zone_edge_entry.signal_state) it means "a real pass
+                # with rows". The /alerts page still has to say the cron RAN —
+                # Ajay 2026-09-05 asked for "a dedicated page to see the list of
+                # alerts" and why the phone was quiet, and "store empty at
+                # 09:35" is a different answer from "no pass yet" — so the empty
+                # write carries its own stamp under a separate key, which
+                # alert_status.read_zone_edge reports as the pass time.
+                ep = dict(empty_payload(reason), date=day_iso,
+                          ran_at=now.astimezone(ET).isoformat())
                 ep.pop("track", None)
                 _write_latest(latest_coll, ep)
                 written = True
         return {"ran": True, "reason": reason, "latest_written": written, "candidates": 0,
                 "priced": 0, "stale_print": 0, "breaking": [], "near_demand": [],
-                "pushed": 0, "seconds": round(time.time() - t0, 2)}
+                "pushed": 0, "skipped_room": 0, "skipped_cap": 0, "unknown_cap": 0,
+                "seconds": round(time.time() - t0, 2)}
     syms = sorted(store)
     if snapshot is None:
         try:
@@ -908,7 +922,13 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
         r["first_seen"] = first_seen.get(k)
     if track:
         write_first_seen(latest_coll, day_iso, first_seen)
-    counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print}
+    # The stored counts explain a quiet phone on the /alerts page (Ajay
+    # 2026-09-05: "Do we have the same logic in back end demand for the ones
+    # that I get alerts") — every skip bucket plus what actually rang. `pushed`
+    # is known only here, after the sends, which is why the payload is built last.
+    counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print,
+              "skipped_room": skipped_room, "skipped_cap": skipped_cap,
+              "unknown_cap": unknown_cap, "pushed": pushed}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
                             pass_sec=time.time() - t0, counts=counts)
     if track:

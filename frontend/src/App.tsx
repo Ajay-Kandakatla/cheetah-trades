@@ -69,6 +69,7 @@ const TrackPage                   = lazyWithReload(() => import('./pages/Track')
 const WatchlistPage               = lazyWithReload(() => import('./pages/Watchlist'));
 const GlossaryPage                = lazyWithReload(() => import('./pages/Glossary'));
 const NotificationsPage           = lazyWithReload(() => import('./pages/Notifications'));
+const AlertsPage                  = lazyWithReload(() => import('./pages/Alerts').then(m => ({ default: m.AlertsPage })));
 const AdminUsagePage              = lazyWithReload(() => import('./pages/AdminUsage'));
 const AdminTodosPage              = lazyWithReload(() => import('./pages/AdminTodos'));
 const AdminAccessPage             = lazyWithReload(() => import('./pages/AdminAccess'));
@@ -297,6 +298,10 @@ export function App() {
             <Route path="/watchlist"      element={<FeatureRoute feature="watchlist"><WatchlistPage /></FeatureRoute>} />
             <Route path="/glossary"       element={<FeatureRoute feature="glossary"><GlossaryPage /></FeatureRoute>} />
             <Route path="/notifications"  element={<FeatureRoute feature="notifications"><NotificationsPage /></FeatureRoute>} />
+            {/* Ajay 2026-09-05: "can I go to a dedicated page to see the list
+                of alerts?" — what pushed to the phone, in ET, with the gate's
+                skip counts. Its own feature id (backend/access/store.py). */}
+            <Route path="/alerts"         element={<FeatureRoute feature="alerts"><AlertsPage /></FeatureRoute>} />
             <Route path="/todos"          element={<FeatureRoute feature="todos"><TodosPage /></FeatureRoute>} />
             <Route path="/tiny"           element={<FeatureRoute feature="tiny"><TinyPage /></FeatureRoute>} />
             <Route path="/setups"         element={<FeatureRoute feature="setups"><SetupsPage /></FeatureRoute>} />

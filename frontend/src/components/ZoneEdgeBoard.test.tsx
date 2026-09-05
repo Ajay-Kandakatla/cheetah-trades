@@ -20,6 +20,7 @@ import {
   ZoneEdgeBoard, REFRESH_MS, READ_WINDOW, FLAT_EPS, STALE_AFTER_MIN, ageMinutes, capLabel, hhmm, sparkRead,
 } from './ZoneEdgeBoard';
 import type { TrackPoint, ZoneEdgePayload } from './ZoneEdgeBoard';
+import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 
 const FIX: ZoneEdgePayload = {
   as_of: '2026-09-03T15:42:07-04:00',
@@ -70,12 +71,17 @@ const EMPTY: ZoneEdgePayload = {
   breaking: [], near_demand: [], track: {},
 };
 
-/* Routes by URL: the board's call gets the fixture; anything else (the
- * watchlist store behind TickerLink) gets a harmless empty body. */
-function stubFetch(zoneEdge: unknown) {
+/* Routes by URL: the board's call gets the fixture; /notifications/recent (the
+ * 🔔 alerted-today chip, 2026-09-05) gets `alerts` — empty by default so the
+ * older cases describe a board nobody's phone has heard about; anything else
+ * (the watchlist store behind TickerLink) gets a harmless empty body. */
+function stubFetch(zoneEdge: unknown, alerts: unknown = { rows: [] }) {
   const fn = vi.fn(async (url: string) => {
     if (String(url).includes('/supply-demand/zone-edge')) {
       return { ok: true, status: 200, json: async () => zoneEdge } as Response;
+    }
+    if (String(url).includes('/notifications/recent')) {
+      return { ok: true, status: 200, json: async () => alerts } as Response;
     }
     return { ok: true, status: 200, json: async () => ({ rows: [] }) } as Response;
   });
@@ -89,7 +95,7 @@ const zoneEdgeCalls = (fn: ReturnType<typeof vi.fn>) =>
 const draw = (props: { mode: 'both' | 'breaking'; compact?: boolean }) =>
   render(<MemoryRouter><ZoneEdgeBoard {...props} /></MemoryRouter>);
 
-beforeEach(() => vi.restoreAllMocks());
+beforeEach(() => { vi.restoreAllMocks(); _resetAlertHistoryCache(); });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe('ZoneEdgeBoard — both sections from a live payload', () => {
@@ -394,5 +400,52 @@ describe('helpers', () => {
     expect(capLabel(8.5e8)).toBe('$850M');
     expect(capLabel(null)).toBeNull();
     expect(capLabel(0)).toBeNull();
+  });
+});
+
+/* ── 🔔 alerted-today chip (Ajay 2026-09-05) ─────────────────────────────────
+ * "Would it be the same list of stocks.." — this board lists every band at any
+ * cap; the phone got only the names that passed the gate. The chip marks the
+ * overlap on the row itself, in ET, and links to /alerts for that ticker. */
+
+const ALERTED_NVDA = {
+  rows: [{
+    _id: 'p1', ts: Date.parse('2026-09-03T14:12:00Z') / 1000, ts_iso: '2026-09-03T14:12:00+00:00',
+    kind: 'supply_break_alert', ticker: 'nvda', title: '🚀 NVDA breaking $179', body: 'Through the last supply band.',
+    url: '/sepa/NVDA?tab=supply', source: 'push', sent: 2, failed: 0, total: 2,
+  }],
+};
+
+describe('ZoneEdgeBoard — 🔔 alerted-today chip (Ajay 2026-09-05)', () => {
+  it('a row whose name pushed today wears the chip with the push\'s ET time, linking to /alerts', async () => {
+    stubFetch(FIX, ALERTED_NVDA);
+    draw({ mode: 'both' });
+    const chip = await screen.findByTestId('alerted-today-chip');
+    // 14:12Z is 10:12 EDT; the ticker matched case-insensitively.
+    expect(chip).toHaveTextContent('🔔 alerted 10:12 ET');
+    expect(chip.getAttribute('href')).toBe('/alerts?ticker=NVDA&days=1');
+    // NEGATIVE: ANET, NTAP and TJX did not push — one chip on the board.
+    expect(screen.getAllByTestId('alerted-today-chip')).toHaveLength(1);
+    expect(screen.getByText('broke +1.2%').closest('[data-testid="zone-edge-row"]')?.contains(chip)).toBe(true);
+  });
+
+  it('NEGATIVE: no chip when the ticker is absent from today\'s pushes', async () => {
+    stubFetch(FIX, { rows: [{ ...ALERTED_NVDA.rows[0], ticker: 'AAPL' }] });
+    draw({ mode: 'both' });
+    expect(await screen.findByText('broke +1.2%')).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByTestId('alerted-today-chip')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a failed alerts read leaves the rows bare, the board intact', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (String(url).includes('/supply-demand/zone-edge')) return { ok: true, status: 200, json: async () => FIX } as Response;
+      if (String(url).includes('/notifications/recent')) return { ok: false, status: 503 } as Response;
+      return { ok: true, status: 200, json: async () => ({ rows: [] }) } as Response;
+    }));
+    draw({ mode: 'both' });
+    expect(await screen.findByText('broke +1.2%')).toBeInTheDocument();
+    expect(screen.getAllByTestId('zone-edge-row')).toHaveLength(4);
+    expect(screen.queryByTestId('alerted-today-chip')).not.toBeInTheDocument();
   });
 });

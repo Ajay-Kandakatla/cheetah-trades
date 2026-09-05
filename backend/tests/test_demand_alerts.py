@@ -424,3 +424,60 @@ def test_an_AT_hit_is_measured_on_the_print_but_the_phone_gate_on_the_band_top()
     assert AG.demand_proximity_gate(101.005, band) is False
     assert AG.demand_proximity_gate(101.0, band) is True
     assert DA.read(101.0, band, -0.5, 110.0)["tier"] == "at"
+
+
+# ── the pass record for /alerts/status (2026-09-05) ──────────────────────────
+class PassColl(FakeColl):
+    """alert_pass_latest: one replace_one per pass."""
+
+    def replace_one(self, q, doc, upsert=False):
+        self.docs[q["_id"]] = dict(doc)
+
+
+def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeypatch):
+    """Ajay 2026-09-05: "Do we have the same logic in back end demand for the ones
+    that I get alerts" — no (board = closed-bar scan + R:R floor; phone = live,
+    $1B+, gated). So the pass leaves WHY it was quiet in alert_pass_latest."""
+    sent = _capture(monkeypatch)
+    pc = PassColl()
+    board = _board(appr=[("BIGX", _band(90, 97)), ("BIGY", _band(40, 44)),
+                         ("SMALL", _band(10, 11)), ("UNK", _band(50, 52))],
+                   rows=[("AAPL", _band(200, 210))])
+    live = _live(BIGX=(99.0, -1.1), BIGY=(45.0, -0.4), SMALL=(11.05, -2.0),
+                 UNK=(51.0, -1.0), AAPL=(211.0, -0.2))
+    caps = {"BIGX": 5e9, "BIGY": 12e9, "SMALL": 5e8, "UNK": None, "AAPL": 3e12}
+    store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
+    out = DA.check_once(board=board, live=live, caps=caps, coll=FakeColl(), owner="o@x",
+                        now=IN_SESSION, force=True, store=store, pass_coll=pc)
+    assert out["pushed"] == 1 and len(sent) == 1
+    assert list(pc.docs) == ["demand_alert"]
+    doc = pc.docs["demand_alert"]
+    assert doc["_id"] == DA.KIND and doc["as_of"] == IN_SESSION.isoformat() and doc["date"] == "2026-09-03"
+    c = doc["counts"]
+    assert c == {"candidates": 5, "hits": 5, "at": 1, "at_singles": 1, "near": 2, "pushed": 1,
+                 "skipped_cap": 1, "unknown_cap": 1, "unknown_prev": 0, "skipped_room": 0,
+                 "skipped_proximity": 2, "unknown_room": 0}
+    assert all(type(v) is int for v in c.values()) and "reason" not in doc
+    # a warming board is a recorded, explained quiet pass — and the doc is REPLACED, not appended
+    out2 = DA.check_once(board={"warming": True}, now=IN_SESSION, force=True, pass_coll=pc)
+    assert out2["ran"] and list(pc.docs) == ["demand_alert"]
+    assert pc.docs["demand_alert"]["counts"] == {"candidates": 0, "hits": 0, "at": 0, "near": 0, "pushed": 0}
+    assert pc.docs["demand_alert"]["reason"] == "board empty or warming"
+
+
+def test_pass_record_is_best_effort_and_never_written_outside_rth(monkeypatch):
+    sent = _capture(monkeypatch)
+
+    class Broken(PassColl):
+        def replace_one(self, q, doc, upsert=False):
+            raise RuntimeError("mongo down")
+    store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
+    kw = dict(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2)),
+              caps={"AAPL": 3e12}, owner="o@x", store=store)
+    assert DA.check_once(now=IN_SESSION, force=True, coll=FakeColl(), pass_coll=Broken(), **kw)["pushed"] == 1
+    assert len(sent) == 1, "a dead status coll never blocks the push"
+    pc = PassColl()
+    closed = DA.check_once(now=datetime(2026, 9, 3, 7, 0, tzinfo=ET), coll=FakeColl(), pass_coll=pc, **kw)
+    assert closed == {"ran": False, "reason": "outside RTH"} and pc.docs == {}
+    assert DA.check_once(now=IN_SESSION, force=True, coll=FakeColl(), **kw)["pushed"] == 1, \
+        "no pass coll injected: resolver path, no Mongo in tests, still quiet"

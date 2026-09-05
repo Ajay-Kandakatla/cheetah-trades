@@ -19,6 +19,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { kindLabel } from '../lib/alertKinds';
 
 type HistoryRow = {
   _id:        string;
@@ -42,38 +43,9 @@ type HistoryRow = {
   dismissed?: boolean;
 };
 
-/* Human-friendly label for each push kind. Keys mirror the backend
- * `kind` field set by send_to_all / send_to_user callers. */
-const KIND_LABEL: Record<string, string> = {
-  volume_breakout:          '🚀 Volume breakout',
-  rising_momentum:          '📈 Rising momentum',
-  watchlist_breakout:       '⭐ Watchlist breakout',
-  juggernaut_watchlist:     '💪 Juggernaut',
-  stage_breakdown:          '⚠️ Stage breakdown',
-  watchlist_stage_breakdown:'🛑 Watchlist breakdown',
-  price_alert:              '🔔 Price alert',
-  position_alert:           '💼 Position alert',
-  morning_brief:            '🌅 Morning brief',
-  product_launch:           '🚀 Product launch',
-  todo_reminder:            '📌 Todo reminder',
-  todo_daily_digest:        '📋 Todo digest',
-  house_daily:              '🏡 House daily',
-  house_scrape_failed:      '⚠️ House scrape failed',
-  house_stagnant:           '📉 House stagnant',
-  user_signin:              '👋 New user',
-  minervini_flashcards:     '🃏 Flash card',
-  market_hours_reminder:    '🔔 Market reminder',
-  setup_inside_day:         '📦 Inside-day setup',
-  setup_peg:                '⚡ PEG setup',
-  setup_orb_capture:        '🎯 ORB range set',
-  setup_orb_triggered:      '🎯 ORB triggered',
-  generic:                  '📣 Notification',
-};
-
-function kindLabel(k: string | null): string {
-  if (!k) return KIND_LABEL.generic;
-  return KIND_LABEL[k] || k;
-}
+/* Kind labels come from the shared registry (lib/alertKinds.ts, 2026-09-05).
+ * The local map this replaced never learned the three zone kinds that page
+ * the phone, so a 🧲 push rendered here as the raw id `demand_alert`. */
 
 function fmtAgo(ts: number): string {
   const sec = Math.max(0, Math.round(Date.now() / 1000 - ts));
@@ -251,6 +223,13 @@ export function PushHistoryPanel({ limit = 25 }: { limit?: number }) {
           <div style={{ fontSize: '0.72rem', color: '#9a9aa3', marginTop: 1 }}>
             Last {limit} alerts — pushes + volume breakouts unified, full body
             (lock-screen truncates at ~180 chars). Tap a row to open its target page.
+            {' '}
+            {/* Ajay 2026-09-05: "can I go to a dedicated page to see the list
+              * of alerts? May be add it to recent alerts or something?" — the
+              * filters, the ET clock and the gate's skip counts live there. */}
+            <Link to="/alerts" style={{ color: '#9aa8c8', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              Open the full alerts page →
+            </Link>
           </div>
         </div>
         <button

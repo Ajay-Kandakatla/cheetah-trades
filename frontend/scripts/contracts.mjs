@@ -391,6 +391,62 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Alerts page exists and the boards carry the alerted-today chip (2026-09-05)',
+    file: 'src/App.tsx',
+    // Ajay 2026-09-05: "Do we have the same logic in back end demand for the
+    // ones that I get alerts. Would it be the same list of stocks.. Also can I
+    // go to a dedicated page to see the list of alerts?" The answer is NO (the
+    // board is a closed-bar scan with an R:R floor; the phone is gated), and
+    // the deliverable is the /alerts page plus the 🔔 overlap chip on both
+    // boards. Kind labels must come from ONE registry — the panel's private
+    // map is exactly how the three zone kinds went unlabelled for two days.
+    checks: (src) => {
+      const errs = [];
+      if (!/<Route\s+path="\/alerts"\s+element=\{<FeatureRoute\s+feature="alerts">/.test(src)) {
+        errs.push('App.tsx does not route /alerts behind <FeatureRoute feature="alerts">');
+      }
+      if (!/import\('\.\/pages\/Alerts'\)/.test(src)) errs.push('App.tsx no longer lazy-loads pages/Alerts');
+      for (const rel of ['src/components/DemandReentryPanel.tsx', 'src/components/ZoneEdgeBoard.tsx']) {
+        const s = read(rel);
+        if (!/import\s*\{[^}]*\buseAlertedToday\b[^}]*\}\s*from\s*'\.\.\/hooks\/useAlertHistory'/.test(s)) {
+          errs.push(`${rel} no longer imports useAlertedToday — the 🔔 alerted-today chip is gone from that board`);
+        }
+        if (!/<AlertedTodayChip\b/.test(s)) errs.push(`${rel} does not render <AlertedTodayChip>`);
+      }
+      const panel = read('src/components/PushHistoryPanel.tsx');
+      if (!/import\s*\{[^}]*\bkindLabel\b[^}]*\}\s*from\s*'\.\.\/lib\/alertKinds'/.test(panel)) {
+        errs.push("PushHistoryPanel.tsx does not import kindLabel from '../lib/alertKinds'");
+      }
+      if (/const\s+KIND_LABEL\b/.test(panel)) errs.push('PushHistoryPanel.tsx has regrown a private KIND_LABEL map — labels must come from lib/alertKinds');
+      const kinds = read('src/lib/alertKinds.ts');
+      for (const k of ['demand_alert', 'zone_bounce_alert', 'supply_break_alert']) {
+        if (!new RegExp(`^\\s*${k}:\\s*\\{`, 'm').test(kinds)) errs.push(`lib/alertKinds.ts lacks the ${k} kind`);
+      }
+      if (!/ZONE_KINDS[^=]*=\s*\['demand_alert',\s*'zone_bounce_alert',\s*'supply_break_alert'\]/.test(kinds)) {
+        errs.push('ZONE_KINDS is not exactly the three phone-gated zone kinds');
+      }
+      const nav = read('src/lib/navSource.ts');
+      if (!/^\s*alerts:\s*\{\s*path:\s*'\/alerts'/m.test(nav)) errs.push("navSource.ts lacks the 'alerts' back-source — ticker links from /alerts would fall back to /sepa");
+      // Review 2026-09-05: the chip claims the phone RANG. A send_to_user call
+      // with nobody targeted (muted kind, dead subscription) is recorded too,
+      // so the reducer must drop undelivered rows; and the chip poll must
+      // actually re-read each minute (TTL below the poll interval).
+      const hook = read('src/hooks/useAlertHistory.ts');
+      const reducer = hook.slice(hook.indexOf('export function useAlertedToday'));
+      if (!/if\s*\(!wasDelivered\(r\)\)\s*continue;/.test(reducer)) errs.push('useAlertedToday no longer skips undelivered rows (wasDelivered) — the 🔔 chip would mark names whose push reached zero devices');
+      const ttl = Number((hook.match(/ALERTED_TODAY_TTL_MS\s*=\s*([\d_]+)/) || [])[1]?.replace(/_/g, ''));
+      const poll = Number((hook.match(/ALERTED_TODAY_POLL_MS\s*=\s*([\d_]+)/) || [])[1]?.replace(/_/g, ''));
+      if (!(ttl > 0 && poll > 0 && ttl < poll)) errs.push(`ALERTED_TODAY_TTL_MS (${ttl}) must be below ALERTED_TODAY_POLL_MS (${poll}) or the minute tick skips the fetch`);
+      // The status strip must render each pass's own `reason` and judge stamps
+      // against cadence — "in_session" is the clock, not proof the crons live.
+      const page = read('src/pages/Alerts.tsx');
+      if (!/pass\?\.reason\b/.test(page) || !/data-testid="pass-reason"/.test(page)) errs.push("Alerts.tsx no longer renders a pass's `reason` — a cold store would read as a quiet day");
+      if (!/export function passHealth\(/.test(page) || !/'stale'/.test(page)) errs.push('Alerts.tsx lost the cadence-based stale read (passHealth) — a dead cron would read as "passes running"');
+      if (/In session — passes running/.test(page)) errs.push('Alerts.tsx says "In session — passes running" — that is inferred from the clock, never from evidence');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
