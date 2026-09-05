@@ -7,7 +7,7 @@ const FilterInfo = (
     <p>
       The bar is grouped left→right in <strong>Minervini's order of priority</strong>:
       Trend &amp; Stage (the qualifier) → Setup → Entry timing → Volume →
-      Smart money → Catalyst → Overlays → Type.
+      Smart money → Catalyst → Zones → Overlays → Type.
     </p>
     <ul>
       <li>
@@ -34,6 +34,14 @@ const FilterInfo = (
         (relative momentum). A name that passes both is what the market is
         already paying for. Use the <strong>Sort: 12m / 6m / 3m / 1m return</strong>
         options to rank by momentum strength.
+      </li>
+      <li>
+        <strong>🪃 Bouncing off Demand</strong> — a Supply &amp; Demand overlay,
+        not a book gate: the session low touched a demand band or a broken-supply
+        shelf within the last 5 sessions and the price is now at least 3% or one
+        ATR above the band (owner settings). Names whose zone coverage is still
+        pending are hidden while it is on; the line under the bar says how much
+        of the list is covered. Decision support, not advice.
       </li>
     </ul>
   </>
@@ -141,6 +149,16 @@ export type SepaFilters = {
    *  RS leader at new highs + pocket pivot + heavy accumulation + CMF inflow.
    *  See lib/momentumLeader.ts. */
   momentumLeaderOnly: boolean;
+  /** 🪃 Bouncing off Demand (Ajay 2026-09-05: "#1 for Sepa stocks that is
+   *  bouncing off of Demand zone"). A Supply & Demand OVERLAY on the SEPA list,
+   *  not a book gate: keep only names whose session low touched a demand band
+   *  or a broken-supply shelf within the last 5 sessions (owner setting) and
+   *  whose print is now above the band by at least 3% or one ATR — the same
+   *  floors as the 🪃 zone-bounce phone alert. Read from the bulk
+   *  /supply-demand/bounce-room map (hooks/useBounceRoom); names whose zone
+   *  coverage is still pending are hidden while the chip is on, and the count
+   *  line under the bar says how much of the list is covered. */
+  bounceDemandOnly: boolean;
   /** Venky's "weekly 21-SMA trend confirmation" filter (2026-05-29).
    *  When true, drops candidates where the latest weekly close isn't
    *  above the 21-week SMA OR where the SMA isn't sloping up. Mirrors
@@ -241,6 +259,7 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
     filters.usGovOnly,
     filters.insiderClusterBuy,
     filters.momentumLeaderOnly,
+    filters.bounceDemandOnly,
     filters.weekly21SmaPass,
     filters.atrPctMax > 0,
     filters.adxMin > 0,
@@ -445,6 +464,24 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
             title="Show only tickers tagged as part of a curated breakthrough theme (AI infra, AI storage, SMR nuclear, quantum, GLP-1, etc.). See the Pioneers nav tab for the full breakdown."
           >
             🚀 Pioneer
+          </button>
+        </div>
+
+        {/* 📐 ZONES — the Supply & Demand read layered on the SEPA list (Ajay
+            2026-09-05: "#1 for Sepa stocks that is bouncing off of Demand
+            zone"). Sits AFTER the book's own groups and before the other
+            overlays because it is an S/D overlay, not a Minervini gate: the
+            bands, the 5-session lookback and the 3% / one-ATR bounce floor are
+            owner settings of the zone engine (lib/bounceRoom.ts), and nothing
+            here cites the book. */}
+        <div className="sepa-filterbar__cat-group">
+          <span className="sepa-filterbar__cat-label" title="Supply & Demand zone reads layered on the SEPA list — a configured price-structure heuristic (owner settings), not a Minervini gate.">📐 Zones</span>
+          <button
+            className={`sepa-chip ${filters.bounceDemandOnly ? 'is-active' : ''}`}
+            onClick={() => set('bounceDemandOnly', !filters.bounceDemandOnly)}
+            title="Supply & Demand overlay, NOT a book gate: only names whose session low touched a demand band or a broken-supply shelf (old resistance now support) within the last 5 sessions (owner setting) and whose price is now above the band by at least 3% or one ATR — the zone-bounce floors. Names whose zone coverage is still pending are hidden while this is on; the count line under the bar shows the coverage. Decision support, not advice."
+          >
+            🪃 Bouncing off Demand
           </button>
         </div>
 

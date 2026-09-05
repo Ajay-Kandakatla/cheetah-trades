@@ -1,4 +1,4 @@
-/* DemandReentryPanel — universe-provenance banners.
+/* DemandReentryPanel — universe-provenance banners + the bounce·room sort.
  *
  * The panel claims "S&P 500" in its heading, its button, and its empty state.
  * These tests lock the two ways that claim can be false, because each one
@@ -9,11 +9,19 @@
  *   2. STALE UNIVERSE (the 2026-08-13 hole) — the real constituents, but
  *      frozen on the day the live fetch broke. `universe_is_sp500` stays true,
  *      so case 1's banner never fires and the list aged 76 days in silence.
+ *
+ * 2026-09-05 (Ajay: "for in demand Make sure you sort stocks by bouncing off
+ * of demand zone and have big gap in to supply"): the default sort is the
+ * shared bounce·room rule from lib/bounceRoom.ts. Locked below: a bouncing
+ * +17%-room row outranks a non-bouncing row with a better R:R, a row whose
+ * zone coverage is still pending sorts LAST and says so, and R:R is still one
+ * click away in the sort menu.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DemandReentryPanel } from './DemandReentryPanel';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 type Overrides = Record<string, unknown>;
 
@@ -36,30 +44,39 @@ function payload(over: Overrides = {}) {
 }
 
 /* The panel now mounts ZoneEdgeBoard, which makes its own call to
- * /supply-demand/zone-edge on mount. The stub routes by URL so that call
- * gets an empty zone-edge payload and the panel's call gets the fixture —
- * one stub answering both with the same body would hand the board a
- * demand-reentry payload and the panel a zone-edge one, depending on order. */
+ * /supply-demand/zone-edge on mount, and (2026-09-05) POSTs its row symbols to
+ * /supply-demand/bounce-room. The stub routes by URL so each call gets its own
+ * shape — one stub answering everything with the same body would hand the
+ * board a demand-reentry payload and the panel a zone-edge one, depending on
+ * order. */
 const ZONE_EDGE_EMPTY = {
   as_of: null, in_session: false, breaking: [], near_demand: [], track: {}, reason: 'no pass yet',
 };
 
-function routed(body: () => unknown) {
+const BOUNCE_ROOM_EMPTY = {
+  as_of: null, in_session: false, store_date: null, params: {},
+  rows: {}, requested: 0, covered: 0, pending: 0, unavailable: 0, disclaimer: 'Not advice.',
+};
+
+function routed(body: () => unknown, bounceRoom: () => unknown = () => BOUNCE_ROOM_EMPTY) {
   return vi.fn(async (url: string) => {
     if (String(url).includes('/supply-demand/zone-edge')) {
       return { ok: true, json: async () => ZONE_EDGE_EMPTY };
+    }
+    if (String(url).includes('/supply-demand/bounce-room')) {
+      return { ok: true, json: async () => bounceRoom() };
     }
     return { ok: true, json: async () => body() };
   });
 }
 
-function mockFetch(over: Overrides = {}) {
-  const fn = routed(() => payload(over));
+function mockFetch(over: Overrides = {}, bounceRoom?: () => unknown) {
+  const fn = routed(() => payload(over), bounceRoom);
   vi.stubGlobal('fetch', fn);
   return fn;
 }
 
-beforeEach(() => vi.restoreAllMocks());
+beforeEach(() => { vi.restoreAllMocks(); _resetBounceRoomCache(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('DemandReentryPanel — universe provenance', () => {
@@ -148,5 +165,97 @@ describe('DemandReentryPanel — universe provenance', () => {
     const link = await waitFor(() => screen.getByRole('link', { name: /TJX/ }));
     expect(link.getAttribute('href')).toMatch(/\/sepa\/TJX\?.*tab=supply/);
     expect(link.getAttribute('href')).not.toMatch(/tab=setup/);
+  });
+});
+
+/* ── the bounce·room default sort (Ajay 2026-09-05) ─────────────────────────── */
+
+const zone = { kind: 'demand', lo: 95, hi: 100, mid: 97.5, touches: 3, strength: 60, in_price: true } as any;
+const plan = (rr: number) => ({
+  entry_low: 96, entry_high: 100, entry_ref: 98, stop: 94, risk_pct: 4.1,
+  target: 98 + rr * 4, reward_pct: rr * 4.1, rr, risk_exceeds_max: false, max_stop_pct: 10,
+}) as any;
+const row = (symbol: string, rr: number) => ({
+  symbol, name: `${symbol} Co`, last_price: 98.5, supply_zones: [], demand_zones: [zone],
+  nearest_resistance: null, nearest_support: zone, in_demand_band: true, is_reentry: true,
+  fell_from_pct: 9.2, bars_since_above: 4, trend_ok: true, zone_quality_ok: true,
+  entry_zone: zone, plan: plan(rr),
+}) as any;
+
+/* TJX has the best R:R (3.0) but no bounce and a supply band 4% overhead.
+ * EOSE bounced +4.2% off a demand band with +17% room to its first supply.
+ * PEND is still being built on the server (coverage pending). */
+const BOUNCE_ROOM_THREE = {
+  as_of: '2026-09-05T13:02:11-04:00', in_session: true, store_date: '2026-09-04',
+  params: { touch_tol_pct: 1.0, bounce_min_pct: 3.0, lookback_sessions: 5, near_pct: 2.0 },
+  rows: {
+    TJX: { symbol: 'TJX', coverage: 'store', print: 98.5, fresh: true, bounce: null,
+           room: { state: 'ROOM', room_pct: 4.0, atr_days: 1.6,
+                   band: { kind: 'supply', lo: 102.44, hi: 104.1, touches: 2 }, at_highs: false } },
+    EOSE: { symbol: 'EOSE', coverage: 'store', print: 15.57, fresh: true,
+            bounce: { band: { kind: 'demand', lo: 14.6, hi: 14.95, touches: 3, strength: 62 }, role: 'demand',
+                      touch_low: 14.94, touch_date: '2026-09-05', sessions_ago: 0,
+                      bounce_pct: 4.2, floor_pct: 3.0, strong: false, atr_x: 1.1 },
+            room: { state: 'ROOM', room_pct: 17.0, atr_days: 3.1,
+                    band: { kind: 'supply', lo: 18.22, hi: 18.44, touches: 3 }, at_highs: false } },
+    PEND: { symbol: 'PEND', coverage: 'pending' },
+  },
+  requested: 3, covered: 2, pending: 1, unavailable: 0, disclaimer: 'Not advice.',
+};
+
+const tickerOrder = () =>
+  screen.getAllByRole('link')
+    .map((l) => l.textContent ?? '')
+    .map((t) => ['TJX', 'EOSE', 'PEND'].find((s) => t.includes(s)))
+    .filter((s): s is string => Boolean(s));
+
+describe('DemandReentryPanel — bounce · room sort (Ajay 2026-09-05)', () => {
+  it('defaults to the 🪃 bounce · room sort with R:R still in the menu', async () => {
+    mockFetch({ n: 3, rows: [row('TJX', 3.0), row('EOSE', 1.2), row('PEND', 2.0)] }, () => BOUNCE_ROOM_THREE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    const select = await waitFor(() => screen.getByLabelText('Sort by') as HTMLSelectElement);
+    expect(select.value).toBe('bounce_room');
+    expect(select.options[0].textContent).toMatch(/🪃 Bouncing · room to supply \(default\)/);
+    expect(Array.from(select.options).some((o) => o.value === 'rr' && o.textContent === '🎯 R:R')).toBe(true);
+  });
+
+  it('puts a bouncing +17%-room row above a non-bouncing row with a better R:R', async () => {
+    mockFetch({ n: 2, rows: [row('TJX', 3.0), row('EOSE', 1.2)] }, () => BOUNCE_ROOM_THREE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText('🪃 +4.2% off $14.94 · today')).toBeInTheDocument());
+    expect(tickerOrder()).toEqual(['EOSE', 'TJX']);
+    expect(screen.getByText(/\+17% room → \$18.22 · 3.1 ATR/)).toBeInTheDocument();
+    expect(screen.getByText(/\+4.0% room → \$102 · 1.6 ATR/)).toBeInTheDocument();
+    // Coverage is spelled out next to the count.
+    expect(screen.getByText(/2 of 3 covered · 1 pending · bands 2026-09-04/)).toBeInTheDocument();
+  });
+
+  it('a row whose zone coverage is still pending sorts LAST and says "room pending"', async () => {
+    mockFetch({ n: 3, rows: [row('PEND', 5.0), row('TJX', 3.0), row('EOSE', 1.2)] }, () => BOUNCE_ROOM_THREE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText('room pending')).toBeInTheDocument());
+    // PEND has the best R:R of the three — irrelevant under this sort.
+    expect(tickerOrder()).toEqual(['EOSE', 'TJX', 'PEND']);
+    // NEGATIVE: pending is not "no supply overhead" — no ROW may read as open
+    // sky (anchored: the help blurb explains the phrase in running text).
+    expect(screen.queryAllByText(/^open sky/)).toHaveLength(0);
+  });
+
+  it('switching the select back to R:R restores the R:R order', async () => {
+    mockFetch({ n: 3, rows: [row('PEND', 5.0), row('TJX', 3.0), row('EOSE', 1.2)] }, () => BOUNCE_ROOM_THREE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText('room pending')).toBeInTheDocument());
+    expect(tickerOrder()).toEqual(['EOSE', 'TJX', 'PEND']);
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'rr' } });
+    expect(tickerOrder()).toEqual(['PEND', 'TJX', 'EOSE']);
+  });
+
+  it('with no bounce-room rows at all, the board still renders in symbol order (negative)', async () => {
+    mockFetch({ n: 2, rows: [row('TJX', 3.0), row('EOSE', 1.2)] });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /TJX/ }));
+    expect(tickerOrder()).toEqual(['EOSE', 'TJX']);
+    expect(screen.queryByText(/room pending/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/🪃 \+/)).not.toBeInTheDocument();
   });
 });

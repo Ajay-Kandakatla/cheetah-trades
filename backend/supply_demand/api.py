@@ -4,8 +4,9 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from . import dependencies as deps
 from . import sectors as sec
@@ -22,6 +23,7 @@ from . import timeframes as tf_mod
 from . import demand_reentry as reentry_mod
 from . import session_board as session_mod
 from . import zone_edge as zone_edge_mod
+from . import bounce_room as bounce_room_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
@@ -191,6 +193,64 @@ async def get_zone_edge():
     """
     import asyncio
     return await asyncio.to_thread(zone_edge_mod.api_payload)
+
+
+class BounceRoomBody(BaseModel):
+    """POST body for /supply-demand/bounce-room — {"symbols": ["AVGO", ...]}."""
+    symbols: list[str]
+
+
+async def _bounce_room(raw_symbols: list) -> dict:
+    """Shared by POST and GET: upper-case + dedupe, cap MAX_SYMBOLS, 422 on
+    empty, then the read off the event loop (one store read + one chunked
+    snapshot; misses go to the background worker as `pending`)."""
+    import asyncio
+    syms = bounce_room_mod.normalize_symbols(raw_symbols, cap=bounce_room_mod.MAX_SYMBOLS)
+    if not syms:
+        raise HTTPException(status_code=422, detail="symbols: at least one ticker is required")
+    return await asyncio.to_thread(bounce_room_mod.api_payload, syms)
+
+
+@router.post("/supply-demand/bounce-room")
+async def post_bounce_room(body: BounceRoomBody):
+    """Bounce-off-demand + room-to-supply read for a list of symbols — the
+    one read behind the SEPA "bouncing off demand" filter, the Back in
+    Demand sort and the Catalysts sort.
+
+    Ajay 2026-09-05: *"The Filter need to check. #1 for Sepa stocks that is
+    bouncing off of Demand zone. #2 for in demand Make sure you sort stocks
+    by bouncing off of demand zone and have big gap in to supply. #3 for
+    catalyst same deal make sure you sort stocks by bigger gaps in to supply
+    like EOSE stock and CLYM as an example they have bigger gap and room to
+    grow."*
+
+    Body `{"symbols": [...]}` (<= 2500, upper-cased, de-duplicated; 422 when
+    empty). Rows keyed by symbol: `coverage` store | ondemand | pending |
+    unavailable; `bounce` (null = not bouncing) with the touched band, its
+    role (demand | broken_supply), touch_low/date, sessions_ago, bounce_pct,
+    strong; `room` with state CLEAR | IN_BAND | NEAR | ROOM, room_pct (null
+    only for CLEAR), atr_days, the first overhead band, at_highs. `fresh`
+    false = the print is older than 3 min (still shown, never dropped).
+    Bands are the zone_store's for the LATEST stored day <= today
+    (`store_date`), so weekends answer with Friday's bands. Whole response
+    cached 30 s per symbol set; a pending row is a queued on-demand doc,
+    never a CLEAR.
+
+    Configured price-structure heuristic, S/D scope, NOT a book method, no
+    Minervini cites — decision support, not a buy signal, not advice. See
+    backend/supply_demand/bounce_room.py and docs/supply_demand/bounce_room.md.
+    """
+    return await _bounce_room(list(body.symbols or []))
+
+
+@router.get("/supply-demand/bounce-room")
+async def get_bounce_room(
+    symbols: str = Query(..., description="comma-separated tickers (short lists; POST for many)"),
+):
+    """GET twin of POST /supply-demand/bounce-room for short lists
+    (`?symbols=EOSE,CLYM`). Same function, same payload, same 422 on empty.
+    Not advice — see the POST route's docstring."""
+    return await _bounce_room([s for s in (symbols or "").split(",")])
 
 
 @router.get("/supply-demand/demand-reentry/history")

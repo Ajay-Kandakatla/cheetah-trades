@@ -159,3 +159,12 @@ digest lines: `AAA $110 · +10.0% off $98-101 (low 2:50p) · room +2.2% -> $112.
 The Claude relay (`~/clinet-test/cheetah-alert-digest.py`) turns each line into `AAA +10.0% (low 2:50p,
 room 2.2%)`. The alert always means **already bouncing** — it fires only once the print is back above
 the band and ≥ 3% / 1 ATR off the low; it is never a forecast.
+
+## See also — the filter twin (2026-09-05)
+
+`docs/supply_demand/bounce_room.md` / `backend/supply_demand/bounce_room.py` reuse this module's
+`is_eligible`, `TOUCH_TOL_PCT`, `WICK_PCT`, `BOUNCE_MIN_PCT`, `STRONG_PCT` and `print_from_snapshot`
+for the SEPA "bouncing off demand" filter and the Back-in-Demand / Catalysts sorts — **without the
+ARRIVAL gate** (a filter lists residence bounces; the phone kind never does) and over the last
+`zone_store.RECENT_SESSIONS = 5` closed sessions (the new additive `recent` field on the store doc),
+not only today's low.

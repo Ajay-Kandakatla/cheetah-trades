@@ -64,10 +64,34 @@ export function markFeatureSeen(id: string): void {
   } catch { /* fetch unavailable */ }
 }
 
-/** Mark every new feature that lives on `pathname` as seen (page visit = view). */
-export function markRouteSeen(pathname: string): void {
+/** Does a registry route describe the page the user is on?
+ *
+ *  Routes may carry a query ('/chart-maps?tab=catalysts&sub=promo' since
+ *  2026-09-05, when the Catalysts page became a Chart Maps tab). A route
+ *  without a query matches its pathname. A route WITH a query matches only
+ *  when every param it names is present with the same value in the current
+ *  URL — dwelling on the VCP tab must not clear the ICT / Catalysts / promo
+ *  highlights the user never opened (the ✨ NEW marks and the impression log
+ *  would both lose their meaning). Extra params on the current URL are fine. */
+export function routeMatchesLocation(route: string, current: string): boolean {
+  if (!route) return false;
+  const [routePath, routeQuery = ''] = route.split('?');
+  const [curPath, curQuery = ''] = current.split('?');
+  if (routePath !== curPath) return false;
+  if (!routeQuery) return true;
+  const want = new URLSearchParams(routeQuery);
+  const have = new URLSearchParams(curQuery);
+  for (const [k, v] of want) {
+    if (have.get(k) !== v) return false;
+  }
+  return true;
+}
+
+/** Mark every new feature that lives at `current` (pathname + search) as seen
+ *  (page visit = view). A bare pathname still works for query-less routes. */
+export function markRouteSeen(current: string): void {
   for (const f of unseenNewFeatures()) {
-    if (f.route && f.route === pathname) markFeatureSeen(f.id);
+    if (f.route && routeMatchesLocation(f.route, current)) markFeatureSeen(f.id);
   }
 }
 

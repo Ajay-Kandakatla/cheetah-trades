@@ -344,6 +344,53 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Chart Maps carries the Catalysts tab; /catalysts redirects there (2026-09-05)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-05: "also move catalyst tab in to Chart maps" + "sort stocks
+    // by bigger gaps in to supply" on Catalysts and "bouncing off of demand
+    // zone ... big gap in to supply" on the Demand board. Four halves, each
+    // silent when lost in a rebase: the tab slot (right after Overnight — both
+    // movers boards), the page mounting the board, the old route redirecting
+    // (push taps still go to /catalysts?tab=promo), and the Demand board's
+    // default sort being the shared bounce·room rule.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/);
+      if (!m) return ['CM_TABS declaration not found'];
+      const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      if (!tabs.includes('catalysts')) errs.push("CM_TABS lacks 'catalysts'");
+      if (tabs.indexOf('catalysts') !== tabs.indexOf('overnight') + 1) {
+        errs.push("'catalysts' must sit directly after 'overnight' (both are movers boards)");
+      }
+      if (!/\n\s*catalysts:\s*\{/.test(src)) errs.push('TAB_META.catalysts is missing');
+      if (!/t !== 'catalysts'/.test(src)) errs.push("isBoardTab still treats 'catalysts' as a board — /chart-maps would be fetched for it");
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/import\s*\{[^}]*\bCatalystsBoard\b[^}]*\}\s*from\s*'\.\.\/pages\/Catalysts'/.test(page)) {
+        errs.push("ChartMaps.tsx no longer imports CatalystsBoard from '../pages/Catalysts'");
+      }
+      if (!/tab === 'catalysts'\s*\?\s*\(/.test(page) || !/<CatalystsBoard\s+embedded\s*\/>/.test(page)) {
+        errs.push("ChartMaps.tsx does not mount <CatalystsBoard embedded /> for tab === 'catalysts'");
+      }
+      const cat = read('src/pages/Catalysts.tsx');
+      const i = cat.indexOf('export function CatalystsPage()');
+      if (i < 0) errs.push('Catalysts.tsx lost the CatalystsPage export — App.tsx route breaks');
+      else {
+        const body = cat.slice(i, cat.indexOf('\n}\n', i));
+        if (!/<Navigate\s+replace/.test(body) || !/\/chart-maps\?tab=catalysts/.test(body)) {
+          errs.push('CatalystsPage no longer redirects to /chart-maps?tab=catalysts — old deep links 404 on the moved page');
+        }
+        if (!/&sub=/.test(body)) errs.push('CatalystsPage drops the sub-tab on redirect — /catalysts?tab=promo would lose promo');
+      }
+      if (!/export function CatalystsBoard\(/.test(cat)) errs.push('Catalysts.tsx lost the CatalystsBoard export');
+      const panel = read('src/components/DemandReentryPanel.tsx');
+      if (!/useState<string>\('bounce_room'\)/.test(panel)) {
+        errs.push("DemandReentryPanel default sortKey is no longer 'bounce_room' — Ajay asked for bouncing-off-demand first");
+      }
+      if (!/compareBounceRoom\(/.test(panel)) errs.push('DemandReentryPanel no longer sorts with the shared compareBounceRoom rule');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

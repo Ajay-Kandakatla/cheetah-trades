@@ -37,6 +37,8 @@ import { SiteTour, TOUR_DONE_KEY } from '../components/SiteTour';
 import { GlobalStockSearch } from '../components/GlobalStockSearch';
 import { useOptionsPulse, type SoirRow } from '../hooks/useOptionsPulse';
 import { useWhalesFlow, type WhalesFlowRow } from '../hooks/useWhalesFlow';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { coverageNote, isBouncing, type BounceRoomRow } from '../lib/bounceRoom';
 import { useWhales13DFlow } from '../hooks/useWhales13DFlow';
 import { prefillBulkQuotes } from '../hooks/useLiveQuote';
 import { registerSymbolInterest } from '../lib/eventBus';
@@ -147,6 +149,12 @@ function defaultRating(score: number): Rating {
 /** How recent a volume-confirmed breakout the 🟢 Enter chip will accept. */
 const BREAKOUT_WEEK_MAX_DAYS = 5;   // "past week" = ≤5 trading days
 
+/** Stable empty list for useBounceRoom while the 🪃 chip is off — a fresh
+ *  `[]` per render would be a new array every time (the hook keys on content,
+ *  so it would still not refetch, but a module constant makes the intent
+ *  legible: no chip, no read). */
+const NO_BOUNCE_SYMBOLS: string[] = [];
+
 /** Decision-gate filter. Shared by both apply paths so they never drift.
  *  - 'ALL'   → no gate.
  *  - 'ENTER' → buyable, with the breakout-recency requirement tuned by
@@ -178,14 +186,18 @@ function passesDecision(
 }
 
 /** Reactive inputs the filter predicate reads beyond the row + filters
- *  themselves: the two async Maps the page loads (earnings calendar, whale
- *  13F flow). Passed in explicitly so `passesSepaFilters` stays a pure
- *  module-level function with no closure over component state — and so every
- *  call site is forced to list the SAME inputs in its useMemo dependency
- *  array (see both call sites below). */
-type SepaFilterDeps = {
+ *  themselves: the three async Maps the page loads (earnings calendar, whale
+ *  13F flow, zone bounce/room). Passed in explicitly so `passesSepaFilters`
+ *  stays a pure module-level function with no closure over component state —
+ *  and so every call site is forced to list the SAME inputs in its useMemo
+ *  dependency array (see both call sites below). */
+export type SepaFilterDeps = {
   earningsMap: Map<string, EarningsInfo>;
   whalesFlow: Map<string, WhalesFlowRow>;
+  /** UPPER symbol → bounce / room read from POST /supply-demand/bounce-room
+   *  (hooks/useBounceRoom). Feeds the 🪃 Bouncing off Demand chip (Ajay
+   *  2026-09-05). */
+  bounceRoom: Map<string, BounceRoomRow>;
 };
 
 /** Single source of truth for the SepaFilterBar gate chain.
@@ -202,12 +214,12 @@ type SepaFilterDeps = {
  *
  *  Every clause is an AND that returns false on a miss, so clause ORDER never
  *  affects the boolean result. */
-function passesSepaFilters(
+export function passesSepaFilters(
   r: SepaCandidate,
   filters: SepaFilters,
   deps: SepaFilterDeps,
 ): boolean {
-  const { earningsMap, whalesFlow } = deps;
+  const { earningsMap, whalesFlow, bounceRoom } = deps;
 
   // Tier (Buy/Strong Buy) filter removed 2026-06-21 — rely on Enter/Watch.
   // Setup gate. 'BASE' (the default, Ajay 2026-06-22) keeps real-base setups
@@ -259,6 +271,16 @@ function passesSepaFilters(
     const er = earningsMap.get(r.symbol?.toUpperCase());
     if (er && er.days_to <= EARNINGS_WARN_DAYS) return false;
   }
+  // 🪃 Bouncing off Demand (Ajay 2026-09-05: "#1 for Sepa stocks that is
+  // bouncing off of Demand zone"). A Supply & Demand overlay, NOT a book
+  // gate: the row's session low touched a demand band or a broken-supply
+  // shelf within the last 5 sessions (owner setting) and the print is now
+  // above the band by the zone-bounce floor (3% or one ATR). Rows without a
+  // bounce read — including coverage "pending" while the server still builds
+  // their zones — are hidden while the chip is on; the count line under the
+  // filter bar says how much of the list is covered, so a short list reads as
+  // "not covered yet", never as "nothing is bouncing".
+  if (filters.bounceDemandOnly && !isBouncing(bounceRoom.get(r.symbol.toUpperCase()))) return false;
   // Hide-Distributing chip — drop institutional-distribution tape OR
   // Chaikin money-outflow names. Opposite of "accumulation", so if
   // the user enables this they don't want them at all, regardless of score.
@@ -506,6 +528,11 @@ export function SepaPage() {
     // fingerprint: RS leader at new highs + pocket pivot + heavy accumulation
     // + CMF inflow. Computed from existing row fields (lib/momentumLeader.ts).
     momentumLeaderOnly: false,
+    // Default OFF — 🪃 Bouncing off Demand (Ajay 2026-09-05). Supply & Demand
+    // overlay from the bulk bounce-room read (hooks/useBounceRoom): session low
+    // touched a demand band / broken-supply shelf in the last 5 sessions and
+    // the print is now 3% or one ATR above it (owner settings). Not a book gate.
+    bounceDemandOnly: false,
     // Venky's filter stack (2026-05-29) — all default OFF, layered on
     // top of SEPA. 21-week SMA gate is boolean; ATR%/ADX gates are
     // numeric (0 means disabled, >0 means active with that threshold).
@@ -603,6 +630,18 @@ export function SepaPage() {
   // Institutional flow — only renders chip on cards where the ticker has
   // a cached whales record (previously visited supply/demand panel).
   const whalesFlow = useWhalesFlow();
+  // Zone bounce / room-to-supply read for every rendered row — ONLY while the
+  // 🪃 chip is on (Ajay 2026-09-05: "#1 for Sepa stocks that is bouncing off of
+  // Demand zone"). Nothing else on this page reads the map, and the default
+  // page (chip off) must not POST ~1,750 names a minute: the server answers
+  // with a chunked snapshot fan-out plus on-demand zone builds for every
+  // sub-$1B name, all for zero UI output. Toggling the chip starts the read;
+  // the count line under the filter bar says "loading zone coverage…" until
+  // the first answer lands. The card chrome does not change (the scanner card
+  // stays a lean decision surface).
+  const sourceSymbols = useMemo(() => source.map((r) => r.symbol).filter(Boolean), [source]);
+  const { map: bounceRoom, payload: bounceRoomPayload, error: bounceRoomError } =
+    useBounceRoom(filters.bounceDemandOnly ? sourceSymbols : NO_BOUNCE_SYMBOLS);
   // Recent SC 13D/G filings (5% ownership threshold) — fed from the
   // whales13d_cache Mongo collection. Only renders chip on tickers
   // with filings in the lookback window (default 90 days).
@@ -651,7 +690,7 @@ export function SepaPage() {
     // Single shared gate chain — see passesSepaFilters (module scope). The
     // setup-tab path (`passesFilters` below) calls the SAME function so the
     // two filter surfaces can never drift.
-    const deps = { earningsMap, whalesFlow };
+    const deps = { earningsMap, whalesFlow, bounceRoom };
     const out = source.filter((r) => passesSepaFilters(r, filters, deps));
     out.sort((a, b) => {
       // ── Minervini risk guard (applies to ALL sorts) ──────────────────
@@ -873,7 +912,9 @@ export function SepaPage() {
     // hedgeFundTopBuyer), so the list must recompute when whale 13F flow loads
     // after a scan. It was previously omitted — a latent staleness bug surfaced
     // while extracting passesSepaFilters.
-  }, [source, filters, earningsMap, whalesFlow]);
+    // bounceRoom added 2026-09-05: the 🪃 chip reads it, and the bulk read
+    // lands (and re-polls while coverage is pending) after the scan renders.
+  }, [source, filters, earningsMap, whalesFlow, bounceRoom]);
 
   // Build a fast lookup: symbol → SepaCandidate. Used when a setup tab is
   // active to match incoming /setups/{kind} setups to the existing SEPA
@@ -897,9 +938,9 @@ export function SepaPage() {
     // Same gate chain as the main `filtered` list — both delegate to the one
     // module-level passesSepaFilters so the setup tabs (VCP / Bull Flag) and
     // the all-candidates list stay byte-for-byte identical.
-    const deps = { earningsMap, whalesFlow };
+    const deps = { earningsMap, whalesFlow, bounceRoom };
     return (r: SepaCandidate): boolean => passesSepaFilters(r, filters, deps);
-  }, [filters, earningsMap, whalesFlow]);
+  }, [filters, earningsMap, whalesFlow, bounceRoom]);
 
   // VCP-tab list — client-side filter on the already-loaded SEPA list.
   // Composes with the existing SepaFilterBar so RS, pioneer, etc. still
@@ -1258,6 +1299,21 @@ export function SepaPage() {
               : setupTabPairs.length
         }
       />
+
+      {/* 🪃 coverage line — only while the chip is on. A filter that hides
+        * names whose zones are still being built must say so: "3 bouncing ·
+        * 410 of 512 covered · 102 pending" reads as "not covered yet", where a
+        * bare short list would read as "nothing is bouncing". */}
+      {filters.bounceDemandOnly && (
+        <div className="mono" style={{ fontSize: '0.72rem', opacity: 0.75, margin: '0.2rem 0 0.6rem' }}
+             title="Supply & Demand overlay, not a book gate. Bounce = session low touched a demand band or broken-supply shelf in the last 5 sessions and the print is now 3% / one ATR above it (owner settings). Coverage = how many of the rendered names have a zone read; pending names are hidden until theirs lands.">
+          🪃 {source.reduce((n, r) => n + (isBouncing(bounceRoom.get(r.symbol.toUpperCase())) ? 1 : 0), 0)} bouncing
+          {' · '}
+          {bounceRoomError
+            ? `zone read unavailable (${bounceRoomError})`
+            : (coverageNote(bounceRoomPayload) || 'loading zone coverage…')}
+        </div>
+      )}
 
       <div
         style={{

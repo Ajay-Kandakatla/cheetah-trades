@@ -44,6 +44,8 @@ import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 import { ZoneEdgeBoard } from '../components/ZoneEdgeBoard';
+import { CatalystsBoard } from '../pages/Catalysts';
+import { useMyFeatures } from '../hooks/useMyFeatures';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
  *  warming poll on purpose — this is drift correction, not live data. */
@@ -74,6 +76,12 @@ const HowItWorks = (
         entry. Stop under the manipulation wick, target at the next daily
         swing. Every threshold the video does not give is an owner setting,
         listed under the board. No moving averages anywhere in it.</li>
+      <li><strong>🗞️ Catalysts</strong> — moved here from its own page on
+        2026-09-05. Microcaps moving on a catalyst or chatter, scored on chatter
+        vs evidence; cards lead with room to the first supply band overhead
+        (open sky first, then the biggest gap) and flag names bouncing off a
+        demand band. Room and bounce are a configured price-structure read
+        shared with the Demand board — owner settings, not advice.</li>
       <li><strong>📏 Support Levels</strong> — the only tab that is not a board.
         Search any ticker and pick a zoom. The same clustering rule runs over a
         1-month, 3-month, 6-month or 1-year frame, and the answers differ on
@@ -99,7 +107,17 @@ const HowItWorks = (
 
 export function ChartMaps() {
   const [params, setParams] = useSearchParams();
-  const tab = parseTab(params.get('tab'));
+  // The Catalysts tab (2026-09-05) mounts a board that is its own access
+  // feature (`catalysts`, backend/access/store.py) — being allowed on Chart
+  // Maps does not grant it. Offer the tab, and honour ?tab=catalysts, only
+  // when the user has it; otherwise the deep link lands on the first tab like
+  // any unknown value. Permissive while the features fetch is in flight (the
+  // FeatureRoute around this page has already waited for it in practice).
+  const feats = useMyFeatures();
+  const canCatalysts = !feats.loaded || feats.features.has('catalysts');
+  const tabs = canCatalysts ? CM_TABS : CM_TABS.filter((t) => t !== 'catalysts');
+  const rawTab = parseTab(params.get('tab'));
+  const tab = rawTab === 'catalysts' && !canCatalysts ? parseTab(null) : rawTab;
   const pattern = params.get('pattern');
   const source = parseSource(params.get('source'));
   // Chart window. Per-tab defaults live on the backend; this only widens the
@@ -351,7 +369,7 @@ export function ChartMaps() {
       <HotSectors />
 
       <div className="cm-tabs" role="tablist">
-        {CM_TABS.map((t) => (
+        {tabs.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t}
                   className={`cm-tab${tab === t ? ' cm-tab-on' : ''}`}
                   onClick={() => setTab(t)}>
@@ -455,6 +473,14 @@ export function ChartMaps() {
           next.set('symbol', sym);
           setParams(next, { replace: true });
         }} />
+      ) : tab === 'catalysts' ? (
+        /* The Catalysts page body, mounted as a tab (Ajay 2026-09-05: "move
+         * catalyst tab in to Chart maps"). Same component as the old
+         * /catalysts page — which now redirects here — one implementation.
+         * `embedded` drops its own page header and gauge banner (this page
+         * already has them) and moves its sub-tab URL param to `sub` so it
+         * cannot fight Chart Maps' own `tab`. */
+        <CatalystsBoard embedded />
       ) : !isBoardTab(tab) ? (
         <SupportLevels symbol={supportSymbol} window={supportWindow} tf={supportTf}
                        onSymbol={setSupportSymbol} onWindow={setSupportWindow}

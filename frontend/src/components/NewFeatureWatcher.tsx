@@ -22,10 +22,12 @@ export function NewFeatureWatcher() {
   }, []);
 
   // Dwelling on a page = viewing whatever's new there → clear its highlight.
+  // Pathname + search: tab-shaped features ('/chart-maps?tab=catalysts') are
+  // only "viewed" on their own tab (hooks/useNewFeatures.routeMatchesLocation).
   useEffect(() => {
-    const t = setTimeout(() => markRouteSeen(loc.pathname), DWELL_MS);
+    const t = setTimeout(() => markRouteSeen(loc.pathname + loc.search), DWELL_MS);
     return () => clearTimeout(t);
-  }, [loc.pathname]);
+  }, [loc.pathname, loc.search]);
 
   return null;
 }

@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -34,7 +34,12 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // the daily band?), so it belongs beside its own inputs.
 // `signals` sits beside `session` — both are intraday reads; session asks
 // the demand boards' names, signals asks whatever tickers Ajay typed.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+// `catalysts` sits right after `overnight` (Ajay 2026-09-05: "move catalyst
+// tab in to Chart maps") — both are MOVERS boards: overnight is what moved
+// while you slept, catalysts is what is moving now and why (chatter vs
+// evidence). Its own page became a redirect here; it is not a board tab (own
+// endpoints, own sub-tabs), so the /chart-maps fetch is skipped for it.
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -43,7 +48,9 @@ export function isBoardTab(t: CmTab): boolean {
   // `session` joins `support` as a non-board tab: it has its own endpoint
   // (/supply-demand/session-board) and its own row renderer, so the tile grid
   // and the sort/tier controls are skipped for it too.
-  return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals';
+  // `catalysts` (2026-09-05) mounts the Catalysts page body — its own scan
+  // endpoints and sub-tabs, nothing from /chart-maps.
+  return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals' && t !== 'catalysts';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -99,6 +106,15 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   overnight: {
     label: 'Overnight',
     blurb: 'The overnight movers board, in Chart Maps where the rest of the scan lives. Move = the headline change (chipped PM/AH/O\u2044N only when it IS the extended-hours move); O\u2044N drift = the actual extended-session change vs the last regular close; $ Vol avg = 50-day average liquidity for context; O\u2044N $ Vol = the dollars that actually traded in tonight\u2019s extended session (top names only \u2014 that is the real overnight volume). RelVol \u22651.5\u00d7 = elevated interest, <1\u00d7 = thin tape. Same data as the Day Trading page\u2019s scan. Not advice.',
+  },
+  // Ajay 2026-09-05: "also move catalyst tab in to Chart maps ... for
+  // catalyst same deal make sure you sort stocks by bigger gaps in to supply
+  // like EOSE stock and CLYM as an example they have bigger gap and room to
+  // grow." Room and bounce come from the same configured zone engine as the
+  // Demand board (owner settings) — nothing from the SEPA book here.
+  catalysts: {
+    label: '\u{1F5DE}️ Catalysts',
+    blurb: 'Microcaps and sub-$20 names moving on a fresh catalyst or social chatter, scored on two axes — chatter (Stocktwits + Reddit) against evidence (SEC filings, news, insider trades) — so a real setup reads apart from a pump where the crowd is loud and the paperwork is silent. Moved here from its own page on 2026-09-05; /catalysts links land on this tab. Cards now lead with room to the first supply band overhead: open sky (nothing overhead in the 1-year frame) first, then the biggest gap — the EOSE / CLYM shape — and 🪃 flags a name bouncing off a demand band or a broken-supply shelf within the last 5 sessions. Room and bounce are a configured price-structure read (owner settings, shared with the Demand board), not advice; a name whose zones are still being built says "room pending" and sorts last rather than disappearing.',
   },
   gabbar: {
     label: 'Gabbar Levels',

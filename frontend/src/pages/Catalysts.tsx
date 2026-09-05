@@ -1,6 +1,9 @@
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useMyFeatures } from '../hooks/useMyFeatures';
+import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BounceRoomRow } from '../lib/bounceRoom';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { RussellWatch } from '../components/RussellWatch';
@@ -28,7 +31,13 @@ import type {
 
 type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline' | 'russell' | 'promo';
 
-type SortKey = 'composite' | 'change' | 'chatter' | 'evidence' | 'volume_surge';
+/* 'room' leads (Ajay 2026-09-05: "for catalyst same deal make sure you sort
+ * stocks by bigger gaps in to supply like EOSE stock and CLYM as an example
+ * they have bigger gap and room to grow"): open sky (nothing overhead in the
+ * 1-year frame) first, then the biggest % gap to the first supply band, names
+ * inside a band under any room, pending coverage last. Bouncing-off-demand
+ * names lead their tier. One rule for SEPA / Demand / here — lib/bounceRoom.ts. */
+type SortKey = 'room' | 'composite' | 'change' | 'chatter' | 'evidence' | 'volume_surge';
 
 const PHASE_LABEL: Record<PumpPhase, string> = {
   ACCUMULATION: '🌱 Accumulation',
@@ -61,16 +70,38 @@ const QUADRANT_HELP: Record<Quadrant, string> = {
   DEAD: 'Move without chatter or evidence. Often microcap noise — usually skip.',
 };
 
-export function CatalystsPage() {
+/* The whole Catalysts surface. Lives inside Chart Maps since 2026-09-05 (Ajay:
+ * "also move catalyst tab in to Chart maps"); the old /catalysts route is a
+ * redirect (CatalystsPage below).
+ *
+ * `embedded` = mounted as the Chart Maps 🗞️ tab: no MarketGaugeBanner and no
+ * page header (the parent page already has both), no `cm-page` wrapper (the
+ * parent already is one), and the sub-tab URL param is `sub` because `tab` is
+ * Chart Maps' own. Standalone (embedded false) keeps the full page chrome. */
+export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
   const TOP_TABS: TopTab[] = ['predictions', 'frenzy', 'now', 'premarket', 'calendar', 'timeline', 'russell', 'promo'];
   const parseTab = (v: string | null): TopTab => (TOP_TABS.includes(v as TopTab) ? (v as TopTab) : 'predictions');
-  /* Deep links (push taps, ✨ NEW highlights) land on the right tab: /catalysts?tab=promo */
+  /* Deep links (push taps, ✨ NEW highlights) land on the right sub-tab:
+   * /chart-maps?tab=catalysts&sub=promo (embedded) or ?tab=promo (standalone). */
+  const SUB_PARAM = embedded ? 'sub' : 'tab';
   const [params, setParams] = useSearchParams();
-  const tab = parseTab(params.get('tab'));
-  const setTab = (t: TopTab) => setParams(t === 'predictions' ? {} : { tab: t });
+  const tab = parseTab(params.get(SUB_PARAM));
+  const setTab = (t: TopTab) => {
+    // Preserve every other param — inside Chart Maps, `tab=catalysts` is what
+    // keeps this board mounted at all.
+    const next = new URLSearchParams(params);
+    if (t === 'predictions') next.delete(SUB_PARAM); else next.set(SUB_PARAM, t);
+    setParams(next);
+  };
   const { data, loading, refreshing, forceRefresh } = useCatalystScan(60_000);
   const [quadrantFilter, setQuadrantFilter] = useState<Quadrant | 'ALL'>('ALL');
-  const [sortKey, setSortKey] = useState<SortKey>('composite');
+  const [sortKey, setSortKey] = useState<SortKey>('room');
+
+  /* Bounce / room-to-supply read for every candidate — one POST per scan,
+   * 30 s shared cache (hooks/useBounceRoom). Drives the default sort and the
+   * room stat on each card; coverage is printed under the sort buttons. */
+  const tickers = useMemo(() => (data?.candidates ?? []).map((c) => c.ticker), [data]);
+  const { map: br, payload: brPayload, error: brError } = useBounceRoom(tickers);
   const [drillTicker, setDrillTicker] = useState<string | null>(null);
   const [manualTicker, setManualTicker] = useState('');
   const [playbookOpen, setPlaybookOpen] = useState(false);
@@ -87,6 +118,11 @@ export function CatalystsPage() {
     }
     list.sort((a, b) => {
       switch (sortKey) {
+        case 'room': {
+          const c = compareBounceRoom(br.get(a.ticker.toUpperCase()), br.get(b.ticker.toUpperCase()));
+          // Same room read (or none loaded yet) → the scanner's own rank.
+          return c !== 0 ? c : b.composite_score - a.composite_score;
+        }
         case 'change': return Math.abs(b.change_pct) - Math.abs(a.change_pct);
         case 'chatter': return b.chatter_score - a.chatter_score;
         case 'evidence': return b.evidence_score - a.evidence_score;
@@ -96,12 +132,13 @@ export function CatalystsPage() {
       }
     });
     return list;
-  }, [data, quadrantFilter, sortKey]);
+  }, [data, quadrantFilter, sortKey, br]);
 
   return (
-    <div className="cm-page cat-page">
-      <MarketGaugeBanner />
+    <div className={embedded ? 'cat-page cat-page--embedded' : 'cm-page cat-page'}>
+      {!embedded && <MarketGaugeBanner />}
 
+      {!embedded && (
       <header className="cm-pagehead">
         <div className="cm-pagehead__col">
           <div className="eyebrow">Catalyst Scanner</div>
@@ -117,6 +154,7 @@ export function CatalystsPage() {
           </p>
         </div>
       </header>
+      )}
 
       {/* Volume alert toaster — always visible regardless of tab */}
       {volumeAlerts.length > 0 && (
@@ -346,14 +384,17 @@ export function CatalystsPage() {
         <div className="cat-controls">
           <div className="cat-controls__sort">
             <span className="cat-controls__label">Sort by:</span>
-            {(['composite', 'change', 'chatter', 'evidence', 'volume_surge'] as SortKey[]).map((k) => (
+            {(['room', 'composite', 'change', 'chatter', 'evidence', 'volume_surge'] as SortKey[]).map((k) => (
               <button
                 key={k}
                 type="button"
                 className={`cat-sort ${sortKey === k ? 'is-active' : ''}`}
                 onClick={() => setSortKey(k)}
+                title={k === 'room'
+                  ? 'Open sky (no supply band overhead in the 1-year frame) first, then the biggest % gap to the first supply band; names bouncing off a demand band lead their tier; pending coverage last. Configured price-structure read, not advice.'
+                  : undefined}
               >
-                {k.replace('_', ' ')}
+                {k === 'room' ? 'room to supply' : k.replace('_', ' ')}
               </button>
             ))}
           </div>
@@ -365,12 +406,24 @@ export function CatalystsPage() {
         </div>
       )}
 
+      {/* Coverage of the room read — printed, never assumed. A card without a
+        * read says "room pending" and sorts last; this line says how many. */}
+      {data && (
+        <div className="mono" style={{ fontSize: '0.7rem', opacity: 0.6, margin: '0.25rem 0 0.6rem' }}
+             title="Room = % from the print to the bottom of the first supply band overhead (same read as the Portfolio sell side); bounce = session low touched a demand band / broken-supply shelf in the last 5 sessions and price is 3% / one ATR above it. Owner settings, not advice.">
+          🪃 room · {brError
+            ? `zone read unavailable (${brError})`
+            : (coverageNote(brPayload) || 'loading zone coverage…')}
+        </div>
+      )}
+
       {loading && <div className="day-empty">Scanning Massive gainers/losers + Stocktwits + Reddit + SEC EDGAR…</div>}
 
       {/* Card grid */}
       <div className="cat-grid">
         {sorted.map((c) => (
-          <CandidateCard key={c.ticker} c={c} onClick={() => setDrillTicker(c.ticker)} />
+          <CandidateCard key={c.ticker} c={c} br={br.get(c.ticker.toUpperCase())}
+                         onClick={() => setDrillTicker(c.ticker)} />
         ))}
       </div>
 
@@ -405,13 +458,50 @@ export function CatalystsPage() {
 }
 
 
+/* /catalysts → Chart Maps (Ajay 2026-09-05: "move catalyst tab in to Chart
+ * maps"). Kept under its old export name so App.tsx's route still compiles,
+ * and every existing deep link — push taps to /catalysts?tab=promo, the ✨ NEW
+ * highlights, bookmarks — lands on the new home with its sub-tab intact.
+ *
+ * `catalysts` and `chart-maps` are two SEPARATE access features
+ * (backend/access/store.py, both opt-in per user). A user granted Catalysts
+ * but not Chart Maps must keep the board: redirecting them would bounce off
+ * the chart-maps FeatureRoute onto "/" with no message. So the redirect only
+ * happens when Chart Maps is open to them; otherwise the board renders here,
+ * standalone, exactly as before the move. */
+export function CatalystsPage() {
+  const [params] = useSearchParams();
+  const f = useMyFeatures();
+  if (!f.loaded) {
+    // Same posture as App.tsx's FeatureRoute: decide after the features fetch,
+    // never flash a redirect the user may not be allowed to follow.
+    return (
+      <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#888', fontSize: '0.9rem' }}>
+        Loading…
+      </div>
+    );
+  }
+  if (!f.features.has('chart-maps')) return <CatalystsBoard />;
+  const sub = params.get('tab');
+  return (
+    <Navigate replace
+              to={'/chart-maps?tab=catalysts' + (sub ? '&sub=' + encodeURIComponent(sub) : '')} />
+  );
+}
+
+
 // ---- CandidateCard ----------------------------------------------------
 
-function CandidateCard({ c, onClick }: { c: Candidate; onClick: () => void }) {
+function CandidateCard({ c, br, onClick }: { c: Candidate; br?: BounceRoomRow; onClick: () => void }) {
   const isUp = c.change_pct > 0;
   const cap = c.market_cap;
   const capStr = cap ? (cap >= 1e9 ? `$${(cap / 1e9).toFixed(1)}B` : `$${(cap / 1e6).toFixed(0)}M`) : '—';
   const grade = c.review?.evidence_grade ?? 'D';
+  // Room to the first supply band overhead (Ajay 2026-09-05: the EOSE / CLYM
+  // "bigger gap and room to grow" read). Pending coverage says so — an honest
+  // "not built yet", never a blank that reads as "no supply overhead".
+  const roomText = br?.coverage === 'pending' ? 'room pending' : roomLabel(br);
+  const bounceText = bounceLabel(br);
 
   return (
     <article className={`cat-card cat-card--${c.quadrant.toLowerCase()}`} onClick={onClick}>
@@ -464,6 +554,18 @@ function CandidateCard({ c, onClick }: { c: Candidate; onClick: () => void }) {
           </span>
         )}
         <span className="cat-card__grade" title="Evidence grade">grade {grade}</span>
+        {roomText && (
+          <span className={`cat-card__room${br?.room?.state === 'CLEAR' ? ' cat-card__room--clear' : ''}`}
+                title="Room = % from the print to the bottom of the first supply band overhead, same read as the Portfolio sell side; open sky = nothing overhead in the 1y frame; not advice">
+            {roomText}
+          </span>
+        )}
+        {bounceText && (
+          <span className="cat-card__bounce"
+                title="Session low touched a demand band or a broken-supply shelf within the last 5 sessions and price is now at least 3% / one ATR above it (owner settings). Not advice.">
+            {bounceText}
+          </span>
+        )}
         {c.review?.is_pump_warning && (
           <span className="cat-card__warn" title="High chatter / low evidence — verify before entering">
             ⚠️ pump?

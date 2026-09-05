@@ -10,8 +10,10 @@
  * Backend: GET /supply-demand/demand-reentry, POST …/scan (force).
  * Configured price-structure method — NOT a book method, NOT advice.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TickerLink } from './TickerLink';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { bounceLabel, compareBounceRoom, coverageNote, roomLabel } from '../lib/bounceRoom';
 import { DemandTrackRecord } from './DemandTrackRecord';
 import {
   bandLabel, blockCount, breakEvenWinPct, freshnessLabel, level, liquidityView, money,
@@ -74,12 +76,19 @@ const STALE_DAYS_LOUD = 120;
 const UNIVERSE = 'full';
 const UNIVERSE_LABEL = 'Full universe (Russell 1000 ∪ S&P 1500 ∪ themes)';
 
-/* Sort keys. R:R leads because it is the only cohort that backtested positive.
+/* Sort keys. 🪃 bounce · room leads (Ajay 2026-09-05: "for in demand Make sure
+ * you sort stocks by bouncing off of demand zone and have big gap in to
+ * supply"): names bouncing off a demand band first, then the biggest gap to the
+ * first supply band overhead (nothing overhead = "open sky" leads), pending
+ * coverage last. One rule shared with SEPA and Catalysts — lib/bounceRoom.ts.
+ * R:R stays one click away: it is still the only cohort that backtested
+ * positive, and the R:R FLOOR below applies whatever the sort.
  * Retail COUNT is deliberately not offered: a heavily traded name has more
  * retail prints whatever else is true, so it would mostly re-sort by volume.
  * Imbalance (direction) and participation (% of volume) carry information. */
 const SORTS: { key: string; label: string }[] = [
-  { key: 'rr',       label: '🎯 R:R (default)' },
+  { key: 'bounce_room', label: '🪃 Bouncing · room to supply (default)' },
+  { key: 'rr',       label: '🎯 R:R' },
   { key: 'retailimb',label: '🧍 Retail imbalance' },
   { key: 'retailpct',label: '🧍 Retail % of volume' },
   { key: 'dark',     label: '🟣 Off-exchange %' },
@@ -102,7 +111,7 @@ const RR_FLOORS: { key: string; label: string }[] = [
 
 export function DemandReentryPanel() {
   const universe = UNIVERSE;
-  const [sortKey, setSortKey] = useState<string>('rr');
+  const [sortKey, setSortKey] = useState<string>('bounce_room');
   const [minRr, setMinRr] = useState<string>('1');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +156,14 @@ export function DemandReentryPanel() {
    * show nothing at all for the whole pass. */
   const progress = useDemandScanProgress(universe, Boolean(data?.warming) || scanning);
 
+  /* Bounce / room-to-supply read for every row on the board — one POST per
+   * scan result, shared 30 s cache (Ajay 2026-09-05). Drives the default sort
+   * and the one-line 🪃 / room read under each plan. Coverage is printed, not
+   * assumed: a row the server is still building shows "room pending" and
+   * sorts last rather than disappearing. */
+  const rowSymbols = useMemo(() => (data?.rows ?? []).map((r) => r.symbol), [data]);
+  const { map: br, payload: brPayload } = useBounceRoom(rowSymbols);
+
   return (
     <section className="sd-section">
       {/* The minute-by-minute edge board sits on top (Ajay 2026-09-03: "add
@@ -159,14 +176,19 @@ export function DemandReentryPanel() {
       <div className="sepa-tab-help">
         <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
         back <em>into</em> a demand band they had already left, while the structure
-        still holds. Sorted by <strong>R:R</strong>, with a floor on it: measured over
-        737 walk-forward trades, <strong>36% of this board's wins hit target on the
-        entry bar itself at a median 0.45R</strong> — plans whose objective was already
-        inside the entry day's range. The floor removes those. It does <em>not</em>
-        make the rule beat SPY (it doesn't, on 13.5 months of data); it removes bad
-        trade construction. <strong>Liq</strong> is average daily dollar volume (a great
-        R:R you can't get filled in is not a trade) and <strong>dark</strong> is the
-        share that printed off-exchange.
+        still holds. Sorted <strong>🪃 bouncing off demand first, then by the biggest
+        gap to the first supply band overhead</strong> (Ajay 2026-09-05 asked for
+        bouncing-off-demand names first, biggest gap to the first supply band next —
+        "open sky" means nothing overhead in the 1-year frame; R:R is still one click
+        away in the sort menu). The <strong>R:R</strong> floor applies whatever the sort:
+        measured over 737 walk-forward trades, <strong>36% of this board's wins hit
+        target on the entry bar itself at a median 0.45R</strong> — plans whose
+        objective was already inside the entry day's range. The floor removes those.
+        It does <em>not</em> make the rule beat SPY (it doesn't, on 13.5 months of
+        data); it removes bad trade construction. Bounce and room are a configured
+        price-structure read (owner settings), not advice. <strong>Liq</strong> is
+        average daily dollar volume (a great R:R you can't get filled in is not a
+        trade) and <strong>dark</strong> is the share that printed off-exchange.
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', margin: '0.6rem 0' }}>
@@ -194,6 +216,11 @@ export function DemandReentryPanel() {
             )}
             {data.took_sec ? ` · ${data.took_sec}s` : ''}
             {data.cached ? ' · cached' : ''}
+            {sortKey === 'bounce_room' && coverageNote(brPayload) && (
+              <span title="How many of the rows have a bounce / room read yet. Pending rows sort last and say 'room pending' — they are not missing, just not built yet.">
+                {' '}· 🪃 {coverageNote(brPayload)}
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -263,6 +290,15 @@ export function DemandReentryPanel() {
           {[...data.rows].sort((a, b) => {
             const n = (v: number | null | undefined, d = -Infinity) => (v == null ? d : v);
             switch (sortKey) {
+              /* The shared rule (lib/bounceRoom.ts): bouncing first, then CLEAR
+               * (nothing overhead), then biggest room %, IN_BAND under any room,
+               * no read last. The comparator tiebreaks on the READ's symbol,
+               * which is '' for an unloaded row — so the board's own symbol
+               * settles it and the order never flickers while the read loads. */
+              case 'bounce_room': {
+                const c = compareBounceRoom(br.get(a.symbol.toUpperCase()), br.get(b.symbol.toUpperCase()));
+                return c !== 0 ? c : a.symbol.localeCompare(b.symbol);
+              }
               case 'retailimb': return n(b.retail?.imbalance_pct) - n(a.retail?.imbalance_pct);
               case 'retailpct': return n(b.retail?.retail_pct_of_volume) - n(a.retail?.retail_pct_of_volume);
               case 'dark':      return n(b.venues?.dark_pct) - n(a.venues?.dark_pct);
@@ -276,6 +312,9 @@ export function DemandReentryPanel() {
             const liq = liquidityView(r.liquidity);
             const ven = venueView(r.venues);
             const ret = retailView(r.retail);
+            const brRow = br.get(r.symbol.toUpperCase());
+            const bounce = bounceLabel(brRow);
+            const room = brRow?.coverage === 'pending' ? '' : roomLabel(brRow);
             return (
               <div key={r.symbol} style={{
                 padding: '0.6rem 0.75rem', borderRadius: 10,
@@ -310,6 +349,22 @@ export function DemandReentryPanel() {
                 <div className="mono" style={{ fontSize: '0.74rem', marginTop: '0.3rem' }}>
                   {planLine(r.plan, r.zone_broken)}
                 </div>
+                {/* 🪃 bounce · room line (Ajay 2026-09-05). Bounce = session low
+                  * touched a demand band / broken-supply shelf in the last 5
+                  * sessions and the print is 3% / one ATR above it; room = % to
+                  * the bottom of the first supply band overhead (same read as
+                  * the Portfolio sell side). Owner settings, not advice. */}
+                {(bounce || room || brRow?.coverage === 'pending') && (
+                  <div className="mono" style={{ fontSize: '0.72rem', marginTop: '0.2rem', opacity: 0.85 }}
+                       title="Bounce: the session low touched a demand band or broken-supply shelf within the last 5 sessions and price is now at least 3% / one ATR above it. Room: % from the print to the bottom of the first supply band overhead; open sky = nothing overhead in the 1-year frame. Configured price-structure read (owner settings), not advice.">
+                    {bounce && <span style={{ color: '#22c55e', fontWeight: 600 }}>{bounce}</span>}
+                    {bounce && (room || brRow?.coverage === 'pending') && ' · '}
+                    {room}
+                    {brRow?.coverage === 'pending' && (
+                      <span style={{ opacity: 0.55 }}>room pending</span>
+                    )}
+                  </div>
+                )}
                 {/* A row here has already passed the broken-band guard, so this
                     only fires when the band held on a closing basis and the wick
                     under it still ran the stop. Ajay 2026-08-17, NBIX. */}

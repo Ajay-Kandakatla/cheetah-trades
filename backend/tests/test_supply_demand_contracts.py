@@ -280,3 +280,120 @@ def test_chart_maps_reranks_on_the_live_print_with_a_position_score():
     assert "_order.inflow_of(r) or {}" in d
     # the live dict is fetched ONCE per board and shared with the bounce gate
     assert z.count("_live_last(") == 1 and d.count("_live_last(") == 1
+
+
+# ── bounce + room: one read for the SEPA filter, Back-in-Demand and Catalysts (2026-09-05) ─
+# Ajay 2026-09-05: "#1 for Sepa stocks that is bouncing off of Demand zone. #2 for
+# in demand Make sure you sort stocks by bouncing off of demand zone and have big
+# gap in to supply. #3 for catalyst same deal make sure you sort stocks by bigger
+# gaps in to supply". Spec: docs/supply_demand/bounce_room.md.
+def test_bounce_room_imports_the_alerts_touch_and_bounce_constants_never_redefines_them():
+    """Three surfaces, one meaning of 'touched' and 'bounced'. A local copy of
+    any of these is how the filter and the phone alert start disagreeing."""
+    from supply_demand import bounce_room as BR
+    from supply_demand import zone_bounce_alerts as ZB
+    from supply_demand import zone_edge as ZE
+    assert BR.TOUCH_TOL_PCT is ZB.TOUCH_TOL_PCT and BR.WICK_PCT is ZB.WICK_PCT
+    assert BR.BOUNCE_MIN_PCT is ZB.BOUNCE_MIN_PCT and BR.STRONG_PCT is ZB.STRONG_PCT
+    assert BR.NEW_HIGH_TOL is ZE.NEW_HIGH_TOL
+    assert BR.is_eligible is ZB.is_eligible and BR.print_from_snapshot is ZB.print_from_snapshot
+    src = inspect.getsource(BR)
+    for name in ("TOUCH_TOL_PCT", "WICK_PCT", "BOUNCE_MIN_PCT", "STRONG_PCT", "NEW_HIGH_TOL",
+                 "ARRIVAL_PCT"):
+        assert f"\n{name} =" not in src, f"bounce_room redefines {name}"
+    assert "from .zone_bounce_alerts import" in src and "from .zone_edge import NEW_HIGH_TOL" in src
+
+
+def test_bounce_room_owner_settings_locked():
+    from supply_demand import bounce_room as BR
+    from supply_demand import zone_store as ZS
+    assert ZS.RECENT_SESSIONS == 5
+    assert BR.LOOKBACK_SESSIONS == 5 and BR.LOOKBACK_SESSIONS is ZS.RECENT_SESSIONS, \
+        "a touch older than the doc's recent list cannot be seen — the two must be one number"
+    assert BR.NEAR_PCT == 2.0
+    assert BR.STALE_PRINT_SEC == 180
+    assert BR.RESPONSE_TTL_SEC == 30
+    assert BR.ONDEMAND_MAX_QUEUE == 400 and BR.ONDEMAND_BUDGET_SEC == 240
+    assert BR.MAX_SYMBOLS == 2500
+    assert BR.ONDEMAND_COLL == "bounce_room_zones"
+    assert BR.PARAMS == {"touch_tol_pct": 1.0, "wick_pct": 1.5, "bounce_min_pct": 3.0,
+                         "strong_pct": 5.0, "lookback_sessions": 5, "near_pct": 2.0,
+                         "stale_print_sec": 180, "new_high_tol": 0.98}
+
+
+def test_bounce_room_ordering_puts_CLEAR_first_and_bouncing_before_room():
+    """CLEAR = no supply overhead in the 1y frame = unbounded room, not zero.
+    Ajay treats names clearing their last supply as the ones 'likely to go
+    much higher' (EOSE / CLYM in the ask). The frontend mirrors this key."""
+    from supply_demand import bounce_room as BR
+    src = inspect.getsource(BR.room_rank)
+    assert 'if state == "CLEAR":\n        return (0, 0.0)' in src
+    assert 'if state in ("ROOM", "NEAR", "IN_BAND"):' in src and "return (1, -pct)" in src
+    assert "return (2, 0.0)" in src, "no room read sorts last"
+    key = inspect.getsource(BR.bounce_room_key)
+    assert "bouncing = 0 if bounce else 1" in key
+    assert "return (bouncing,) + tuple(room_rank(row)) + (-bounce_pct" in key
+
+
+def test_bounce_room_has_no_arrival_gate_the_filter_counts_residence_bounces():
+    """The phone kind's ARRIVAL_PCT is an anti-noise rule for pushes. A FILTER
+    must also list a name that lived near the band and lifted off it."""
+    from supply_demand import bounce_room as BR
+    src = inspect.getsource(BR.bounce_read)
+    assert "arrival" not in src.lower().replace("no arrival gate", "")
+    assert "ARRIVAL_PCT" not in inspect.getsource(BR).replace("ARRIVAL_PCT)", "").replace(
+        "zone_bounce_alerts ARRIVAL_PCT", "").replace('"ARRIVAL_PCT"', "")
+
+
+def test_bounce_room_stays_in_S_D_scope_no_book_cites_no_scanner_imports():
+    from supply_demand import bounce_room as BR
+    src = inspect.getsource(BR)
+    # The house disclaimer sentence is REQUIRED ("... no Minervini cites"); anything
+    # else naming the books or a page is a cite that does not belong here.
+    assert "NOT a book method, no\nMinervini cites" in src or "no Minervini cites" in src
+    src = src.replace("no\nMinervini cites", "").replace("no Minervini cites", "")
+    for forbidden in ("Minervini", "TLSW", "TTLAC", "trend_template", "sepa.scanner",
+                      "from sepa import scanner", "from catalysts", "import catalysts",
+                      "from .demand_reentry", "is_candidate", "is_buyable"):
+        assert forbidden not in src, f"bounce_room reaches for {forbidden}"
+    import re
+    assert not re.search(r"\bpp?\.\s?\d", src), "page cites do not belong on an S/D surface"
+    # the only import from outside supply_demand is the price cache, lazily, on the worker path
+    outside = [l for l in src.splitlines()
+               if l.strip().startswith(("from ", "import ")) and "supply_demand" not in l
+               and not l.strip().startswith("from .")]
+    stdlib = {"__future__", "logging", "threading", "time", "datetime", "typing", "zoneinfo",
+              "json", "sys"}
+    allowed = {"from sepa import prices",                    # the worker's price cache, lazily
+               "from portfolio.store import _get_db"}       # the house Mongo accessor, lazily
+    for l in outside:
+        mod = l.strip().split()[1].split(".")[0]
+        assert mod in stdlib or l.strip() in allowed, l
+    assert "not advice" in BR.DISCLAIMER and "not a book method" in BR.DISCLAIMER
+
+
+def test_bounce_room_request_path_never_calls_the_provider_per_symbol():
+    from supply_demand import bounce_room as BR
+    for fn in (BR.api_payload, BR.load_docs, BR.build_payload, BR.read_symbol):
+        src = inspect.getsource(fn)
+        for forbidden in ("load_prices", "for_symbol", "with_today_bar", "requests.", "httpx",
+                          "_fetch_massive_minute", "find_one("):
+            assert forbidden not in src, f"{fn.__name__} reaches for {forbidden}"
+    assert "prices.bulk_snapshot(names)" in inspect.getsource(BR.api_payload)
+    assert "load_prices" in inspect.getsource(BR.default_builder), "the worker is the only price path"
+    assert "threading.Thread(target=run, daemon=True" in inspect.getsource(BR.queue_ondemand)
+
+
+def test_zone_store_recent_is_additive_and_the_intraday_crons_still_read_today_only():
+    """`recent` rides on the doc; zone_edge / zone_bounce_alerts never read it
+    and keep `load(None, day)` (today) — `load_latest` is bounce_room's."""
+    from supply_demand import zone_bounce_alerts as ZB
+    from supply_demand import zone_edge as ZE
+    from supply_demand import zone_store as ZS
+    for mod in (ZB, ZE):
+        src = inspect.getsource(mod)
+        assert '"recent"' not in src and "load_latest" not in src and "latest_store_day" not in src
+        assert "zone_store.load(None, day)" in src
+    assert '"recent": recent_sessions(frame)' in inspect.getsource(ZS.build_doc)
+    assert "coll.distinct(\"date\")" in inspect.getsource(ZS.latest_store_day)
+    assert "day = day or _today_et()" in inspect.getsource(ZS.load), "load(day=None) still means TODAY"

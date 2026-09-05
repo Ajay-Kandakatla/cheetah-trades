@@ -18,7 +18,17 @@ What is stored (one doc per symbol per ET session date)
 -------------------------------------------------------
     {_id: "NTAP:2026-09-03", symbol, date, geom: "board",
      bands: [{kind: "supply"|"demand", lo, hi, touches, strength}, ...],
-     atr14, prev_close, computed_at}
+     atr14, prev_close, high_252,
+     recent: [{date, low, high, close}, ...]   # last RECENT_SESSIONS closed bars
+     computed_at}
+
+* ``recent`` (2026-09-05, additive) — the tail of the CLOSED frame, oldest
+  first, so a reader can ask "did a low touch a band in the last few
+  sessions" without a price read per symbol. Ajay 2026-09-05: "for Sepa
+  stocks that is bouncing off of Demand zone" — a filter has to see the
+  bounce that started two days ago, not only today's (the phone alert's
+  business). Consumers: supply_demand/bounce_room.py. zone_edge /
+  zone_bounce_alerts never read it.
 
 * Bands come from price_zones.compute(df, max_zones=None, **zone_geom()) —
   the demand board's geometry (swing 5 / merge 4% / half-width 1.75%), so a
@@ -63,6 +73,8 @@ GEOM_TAG = "board"                 # demand_reentry.zone_geom() — the board's 
 MIN_CAP_USD = 1_000_000_000.0      # Ajay 2026-09-03: "billion or at least bigger than a billion"
 MIN_BARS = 120                     # ~6 months: fewer bars is not enough structure to draw from
 ATR_PERIOD = 14
+RECENT_SESSIONS = 5                # closed bars kept on the doc (owner setting, 2026-09-05):
+                                   # a bounce that began earlier in the week still shows
 DEFAULT_WORKERS = 6                # Mongo reads + pure compute; more just contends
 DEFAULT_BUDGET_SEC = 240           # the 9:20 warm must be done before the 9:33 first pass
 
@@ -194,7 +206,44 @@ def build_doc(symbol: str, df, today: date, *, compute: Optional[Callable] = Non
     return {"_id": f"{symbol}:{today.isoformat()}", "symbol": symbol,
             "date": today.isoformat(), "geom": GEOM_TAG, "bands": bands,
             "atr14": a14, "prev_close": prev_close, "high_252": high_252,
+            "recent": recent_sessions(frame),
             "computed_at": (now or datetime.now(ET)).isoformat()}
+
+
+def recent_sessions(frame, n: int = RECENT_SESSIONS) -> list:
+    """The last `n` rows of the (already truncated) frame as
+    [{"date": "YYYY-MM-DD", "low", "high", "close"}], oldest first. Rows with
+    a missing/NaN low are skipped — a touch test against NaN is silently
+    False and would hide a real touch. [] on any failure: additive field,
+    never a reason to drop the doc."""
+    out: list = []
+    if frame is None or n <= 0:
+        return out
+    try:
+        import pandas as pd
+        tail = frame.tail(int(n))
+        idx = pd.to_datetime(tail.index)
+        if getattr(idx, "tz", None) is not None:
+            idx = idx.tz_convert("America/New_York").tz_localize(None)
+        for ts, (_, row) in zip(idx, tail.iterrows()):
+            try:
+                low = float(row["low"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if low != low or low <= 0:
+                continue
+            rec = {"date": ts.date().isoformat(), "low": low}
+            for key in ("high", "close"):
+                try:
+                    v = float(row[key])
+                    rec[key] = v if v == v else None
+                except (KeyError, TypeError, ValueError):
+                    rec[key] = None
+            out.append(rec)
+    except Exception as exc:                                    # pragma: no cover
+        log.warning("zone_store: recent_sessions failed: %s", exc)
+        return []
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -297,6 +346,42 @@ def load(symbols: Optional[Iterable[str]] = None, day: Optional[date] = None,
     except Exception as exc:
         log.warning("zone_store: load failed: %s", exc)
         return {}
+
+
+def latest_store_day(coll=None, today: Optional[date] = None) -> Optional[date]:
+    """The most recent stored session date <= `today` (default today ET), or
+    None when the store is cold. ONE distinct query. Ajay 2026-09-05 wants
+    the bounce/room filters to answer on a Saturday evening too — "latest"
+    is Friday's doc then, never "empty because today has no doc".
+    `load()` keeps its exact 'this date' semantics; use `load_latest`."""
+    coll = _coll(coll)
+    if coll is None:
+        return None
+    cutoff = (today or _today_et()).isoformat()
+    try:
+        days = [str(d) for d in coll.distinct("date") if d]
+    except Exception as exc:
+        log.warning("zone_store: latest_store_day failed: %s", exc)
+        return None
+    days = [d for d in days if d <= cutoff]
+    if not days:
+        return None
+    try:
+        return date.fromisoformat(max(days))
+    except ValueError:
+        return None
+
+
+def load_latest(symbols: Optional[Iterable[str]] = None, coll=None,
+                today: Optional[date] = None) -> tuple[Optional[date], dict]:
+    """(day, {SYMBOL: doc}) for the latest stored day <= today. (None, {})
+    when the store is cold. Explicit on purpose: `load(day=None)` still means
+    TODAY so the intraday crons keep reading only today's bands."""
+    coll = _coll(coll)
+    day = latest_store_day(coll=coll, today=today)
+    if day is None:
+        return None, {}
+    return day, load(symbols, day, coll=coll)
 
 
 if __name__ == "__main__":

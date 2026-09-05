@@ -84,7 +84,18 @@ function stubFetch(byTab: Record<string, unknown>) {
 
 const draw = () => render(<MemoryRouter initialEntries={['/chart-maps']}><ChartMaps /></MemoryRouter>);
 
-beforeEach(() => { vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, winners: WINNERS_BOARD, zones: WARMING_BOARD })); });
+/* Access features (backend/access/store.py): `catalysts` is its own grant, so
+ * the Catalysts tab is offered only to users who hold it. Mutable per test. */
+const FEATS = vi.hoisted(() => ({ loaded: true, set: new Set(['chart-maps', 'catalysts']) }));
+vi.mock('../hooks/useMyFeatures', () => ({
+  useMyFeatures: () => ({ loaded: FEATS.loaded, features: FEATS.set, catalog: [], email: null }),
+}));
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, winners: WINNERS_BOARD, zones: WARMING_BOARD }));
+  FEATS.loaded = true;
+  FEATS.set = new Set(['chart-maps', 'catalysts']);
+});
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('ChartMaps', () => {
@@ -707,5 +718,61 @@ describe('ChartMaps — the ICT tab (2026-09-03)', () => {
     expect(screen.queryByTestId('ict-foot')).not.toBeInTheDocument();
     release({ ok: true, status: 200, json: async () => ICT_BOARD });
     expect(await screen.findByTestId('ict-foot')).toHaveTextContent(/Legend/);
+  });
+});
+
+
+/* ── the Catalysts tab (Ajay 2026-09-05: "move catalyst tab in to Chart maps") ─ */
+vi.mock('../pages/Catalysts', () => ({
+  CatalystsBoard: ({ embedded }: { embedded?: boolean }) => (
+    <div data-testid="catalysts-board">{embedded ? 'embedded' : 'standalone'}</div>
+  ),
+  CatalystsPage: () => null,
+}));
+
+describe('the Catalysts tab', () => {
+  it('mounts the Catalysts board EMBEDDED and never asks /chart-maps for it', async () => {
+    const fetchSpy = vi.mocked(fetch as any);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=catalysts']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByTestId('catalysts-board')).toHaveTextContent('embedded');
+    expect(screen.getByRole('tab', { name: /Catalysts/ })).toHaveAttribute('aria-selected', 'true');
+    // The blurb is the tab's own copy, drawn above the board.
+    expect(screen.getByText(/moved here from its own page/i)).toBeInTheDocument();
+    // NEGATIVE: it is not a board tab — no /chart-maps fetch, no tile-grid
+    // states. `/chart-maps` answers an unknown tab with the VCP board, which
+    // would draw AVGO tiles under the Catalysts heading.
+    await new Promise((r) => setTimeout(r, 30));
+    const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.some((u: string) => u.includes('/chart-maps'))).toBe(false);
+    expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing matched on this tab/)).not.toBeInTheDocument();
+  });
+
+  it('clicking the tab from VCP switches the URL param and mounts the board', async () => {
+    draw();
+    await screen.findByText('AVGO');
+    fireEvent.click(screen.getByRole('tab', { name: /Catalysts/ }));
+    expect(await screen.findByTestId('catalysts-board')).toBeInTheDocument();
+    expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
+  });
+
+  it('is NOT offered to a user without the `catalysts` feature, and ?tab=catalysts falls back to VCP (negative)', async () => {
+    FEATS.set = new Set(['chart-maps']);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=catalysts']}><ChartMaps /></MemoryRouter>);
+    expect(screen.queryByRole('tab', { name: /Catalysts/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('catalysts-board')).not.toBeInTheDocument();
+    expect(await screen.findByText('AVGO')).toBeInTheDocument();          // the first tab's board
+    expect(screen.getByRole('tab', { name: 'Strong VCP' })).toHaveAttribute('aria-selected', 'true');
+    // Every other tab is still there — only the gated one is missing.
+    ['Back in Demand', 'Past Winners', 'ICT'].forEach((label) => {
+      expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
+    });
+  });
+
+  it('is offered while the features fetch is still in flight (permissive, like the nav)', () => {
+    FEATS.loaded = false;
+    FEATS.set = new Set();
+    draw();
+    expect(screen.getByRole('tab', { name: /Catalysts/ })).toBeInTheDocument();
   });
 });

@@ -574,7 +574,7 @@ describe('the Earnings Flow tab', () => {
     // 2026-09-03 (late): `ict` REPLACED `supply` in its slot ("replace supply
     // tab with this new tab") — same position, Into Supply is gone.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -631,11 +631,11 @@ describe('the Support Levels tab', () => {
     // (daily swings + FVGs), so the cluster stays contiguous.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'gabbar', 'undervalue', 'support']);
+      .toEqual(['zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly four tabs not driven by a board fetch', () => {
+  it('is one of exactly five tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -648,8 +648,10 @@ describe('the Support Levels tab', () => {
     // the Day Trading page's own component, one implementation for both pages.
     // Later 2026-09-01: `signals` is the fourth — the Signal Lab board
     // (/day/signal-lab/board), mounted from its own shared component.
+    // 2026-09-05: `catalysts` is the fifth — the Catalysts page body mounted
+    // as a tab (its own /catalysts/* endpoints and sub-tabs).
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
-    expect(nonBoard).toEqual(['session', 'signals', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['session', 'signals', 'overnight', 'catalysts', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -668,6 +670,42 @@ describe('the Support Levels tab', () => {
   it('a typo in the tab name still lands on a real board', () => {
     expect(parseTab('suport')).toBe('vcp');
     expect(parseTab('SUPPORT')).toBe('support');
+  });
+});
+
+
+// ── Catalysts tab (Ajay 2026-09-05: "move catalyst tab in to Chart maps") ────
+describe('the Catalysts tab', () => {
+  it('sits right after Overnight — both are movers boards', () => {
+    expect(CM_TABS.indexOf('catalysts')).toBe(CM_TABS.indexOf('overnight') + 1);
+    expect(parseTab('catalysts')).toBe('catalysts');
+    expect(parseTab('CATALYSTS')).toBe('catalysts');
+  });
+
+  it('is NOT a board tab — /chart-maps must never be fetched for it', () => {
+    // The page branches on this flag; a board fetch for an unknown tab quietly
+    // returns the VCP board under the Catalysts heading.
+    expect(isBoardTab('catalysts')).toBe(false);
+  });
+
+  it('says what the board is, that it moved, how cards are ordered, and that it is not advice', () => {
+    const { label, blurb } = TAB_META.catalysts;
+    expect(label).toMatch(/Catalysts/);
+    expect(blurb).toMatch(/chatter/i);
+    expect(blurb).toMatch(/evidence/i);
+    expect(blurb).toMatch(/moved here from its own page/i);
+    expect(blurb).toMatch(/room to the first supply band/i);
+    expect(blurb).toMatch(/open sky/i);
+    expect(blurb).toMatch(/EOSE/);
+    expect(blurb).toMatch(/CLYM/);
+    expect(blurb).toMatch(/bouncing off a demand band/i);
+    expect(blurb).toMatch(/not advice/i);
+    // NEGATIVE: an S/D surface — no book cites, no page numbers.
+    expect(blurb).not.toMatch(/Minervini|TLSW|TTLAC|p\.\s*\d/);
+  });
+
+  it('a typo still lands on a real board (negative)', () => {
+    expect(parseTab('catalyst')).toBe('vcp');
   });
 });
 

@@ -35,6 +35,10 @@ class FakeColl:
                 continue
             yield dict(d)
 
+    def distinct(self, field):
+        self.distinct_calls = getattr(self, "distinct_calls", 0) + 1
+        return sorted({d.get(field) for d in self.docs.values() if d.get(field)})
+
 
 def _frame(n=200, end=TODAY, seed=1, today_low=None):
     """Daily OHLCV ending on `end` (inclusive). `today_low` plants a low on
@@ -98,7 +102,7 @@ def test_doc_shape_keeps_both_kinds_slimmed_to_kind_lo_hi_touches_strength():
         {"kind": "demand", "lo": 153.53, "hi": 158.99, "touches": 1, "strength": 15.0},
         {"kind": "supply", "lo": 161.78, "hi": 167.54, "touches": 1, "strength": 18.0}]
     assert set(doc) == {"_id", "symbol", "date", "geom", "bands", "atr14", "prev_close", "high_252",
-                        "computed_at"}
+                        "recent", "computed_at"}
 
 
 def test_build_doc_with_the_real_geometry_returns_only_the_two_kinds():
@@ -184,6 +188,74 @@ def test_high_252_is_the_max_high_of_the_last_252_rows_excluding_today():
     assert isinstance(doc["high_252"], float)
     truncated = ZS.drop_today(df, TODAY)
     assert doc["high_252"] == float(truncated["high"].tail(252).max())
+
+
+# ── recent: the last RECENT_SESSIONS CLOSED bars (bounce_room's touch history, 2026-09-05) ─
+def test_recent_is_the_last_five_closed_sessions_oldest_first_and_never_today():
+    df = _frame(n=200, seed=11, today_low=50.0)              # today's row must never appear
+
+    def fake_compute(frame):
+        return {"demand_zones": [], "supply_zones": []}
+
+    doc = ZS.build_doc("XYZ", df, TODAY, compute=fake_compute, atr=lambda f: 1.0)
+    rec = doc["recent"]
+    assert len(rec) == ZS.RECENT_SESSIONS == 5
+    dates = [r["date"] for r in rec]
+    assert dates == sorted(dates) and len(set(dates)) == 5, "ascending, distinct"
+    assert dates[-1] < TODAY.isoformat(), "closed sessions only: today is dropped"
+    assert dates[-1] == pd.Timestamp(date(2026, 9, 2)).date().isoformat()
+    truncated = ZS.drop_today(df, TODAY).tail(5)
+    for r, (ts, row) in zip(rec, truncated.iterrows()):
+        assert r["date"] == ts.date().isoformat()
+        assert r["low"] == float(row["low"]) and r["high"] == float(row["high"])
+        assert r["close"] == float(row["close"])
+        assert set(r) == {"date", "low", "high", "close"}
+    assert all(r["low"] > 50.0 for r in rec), "the planted today low never leaks into recent"
+    assert isinstance(rec[0]["low"], float)
+
+
+def test_recent_skips_rows_without_a_usable_low_and_is_empty_on_a_broken_frame():
+    df = _frame(n=200, seed=12)
+    df.iloc[-2, df.columns.get_loc("low")] = np.nan          # yesterday's low unknown
+
+    def fake_compute(frame):
+        return {"demand_zones": [], "supply_zones": []}
+
+    doc = ZS.build_doc("XYZ", df, TODAY, compute=fake_compute, atr=lambda f: 1.0)
+    assert len(doc["recent"]) == 4 and all(r["low"] == r["low"] for r in doc["recent"])
+    assert ZS.recent_sessions(None) == [] and ZS.recent_sessions(df, 0) == []
+    assert ZS.recent_sessions(df.drop(columns=["low"])) == []
+    assert len(ZS.recent_sessions(df.iloc[0:0])) == 0
+    real = ZS.build_doc("SYN", _frame(n=300, seed=7), TODAY)
+    assert len(real["recent"]) == 5 and real["recent"][-1]["date"] < TODAY.isoformat()
+
+
+# ── latest_store_day / load_latest: weekends answer with Friday's docs ────────
+def test_latest_store_day_is_the_max_stored_date_at_or_before_today_in_one_distinct_query():
+    coll = FakeColl()
+    for sym, day in (("AAA", "2026-09-02"), ("BBB", "2026-09-04"), ("AAA", "2026-09-04"),
+                     ("CCC", "2026-09-08")):                    # a future-dated doc is ignored
+        coll.replace_one({"_id": f"{sym}:{day}"}, {"_id": f"{sym}:{day}", "symbol": sym,
+                                                  "date": day, "bands": []}, upsert=True)
+    assert ZS.latest_store_day(coll=coll, today=date(2026, 9, 5)) == date(2026, 9, 4)   # Saturday
+    assert ZS.latest_store_day(coll=coll, today=date(2026, 9, 4)) == date(2026, 9, 4)
+    assert ZS.latest_store_day(coll=coll, today=date(2026, 9, 3)) == date(2026, 9, 2)
+    assert ZS.latest_store_day(coll=coll, today=date(2026, 9, 1)) is None
+    assert coll.distinct_calls == 4, "one distinct per call, never a scan"
+    assert ZS.latest_store_day(coll=FakeColl(), today=date(2026, 9, 5)) is None
+
+
+def test_load_latest_returns_the_day_and_that_days_docs_while_load_keeps_today_semantics():
+    coll = FakeColl()
+    for sym, day in (("AAA", "2026-09-03"), ("AAA", "2026-09-04"), ("BBB", "2026-09-04")):
+        coll.replace_one({"_id": f"{sym}:{day}"}, {"_id": f"{sym}:{day}", "symbol": sym,
+                                                  "date": day, "bands": []}, upsert=True)
+    day, docs = ZS.load_latest(["aaa"], coll=coll, today=date(2026, 9, 6))
+    assert day == date(2026, 9, 4) and set(docs) == {"AAA"} and docs["AAA"]["_id"] == "AAA:2026-09-04"
+    day_all, docs_all = ZS.load_latest(None, coll=coll, today=date(2026, 9, 6))
+    assert day_all == date(2026, 9, 4) and set(docs_all) == {"AAA", "BBB"}
+    assert ZS.load_latest(None, coll=FakeColl(), today=date(2026, 9, 6)) == (None, {})
+    assert ZS.load(None, date(2026, 9, 6), coll=coll) == {}, "load(day) is still THAT day only"
 
 
 def test_high_252_is_none_when_the_frame_has_no_high_column_or_the_max_is_garbage():
