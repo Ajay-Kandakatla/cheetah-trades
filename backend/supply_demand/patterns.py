@@ -95,8 +95,14 @@ DEFAULT_TARGET_R = 2.0          # when no opposing structure exists
 
 
 def atr(df, period: int = 14) -> Optional[float]:
-    """Wilder-style ATR on whatever frame is passed (daily or intraday).
-    None when the frame is too short — never a guessed volatility."""
+    """ATR as the simple 14-bar mean of true range, on whatever frame is
+    passed (daily or intraday). It is NOT the recursively smoothed variant: a
+    spike leaves the number abruptly on bar 15 instead of decaying. The
+    docstring claimed the smoothed variant until 2026-09-05; the MATH is
+    unchanged on purpose — every stop buffer in the S/D surfaces is scaled by
+    this value and a smoothing change would move them all (a re-measure, not
+    a bug fix). None when the frame is too short — never a guessed
+    volatility."""
     if df is None or len(df) < period + 1:
         return None
     try:
@@ -311,9 +317,18 @@ def trade_levels(band: dict, last_price: Optional[float],
     if lo <= 0 or hi <= lo or last <= 0:
         return None
 
+    # A SUPPLY band that contains the price yields NO plan (2026-09-05, Ajay:
+    # "yes please fix the bugs"): the same payload's verdict reads AT_SUPPLY /
+    # caution — "resistance right here" — and printing a long at the band top
+    # with a stop under it contradicted that on the same row. Above price it
+    # is still the short; below price it is broken supply trading as support.
+    kind = str(band.get("kind") or "").lower()
+    if kind == "supply" and lo <= last <= hi:
+        return None
+
     side = "long" if last >= lo else "short"
-    # A band price sits inside is still a long-from-support read while the
-    # low holds; only a band entirely ABOVE price flips the side.
+    # A DEMAND band price sits inside is still a long-from-support read while
+    # the low holds; only a band entirely ABOVE price flips the side.
     if last < lo:
         side = "short"
 
@@ -377,5 +392,15 @@ def attach_levels(bands: list, last_price: Optional[float],
         except (KeyError, TypeError, ValueError):
             opposing = None
         levels = trade_levels(b, last_price, atr_value, opposing=opposing)
-        out.append({**b, "trade": levels})
+        row = {**b, "trade": levels}
+        if levels is None:
+            try:
+                inside_supply = (str(b.get("kind") or "").lower() == "supply"
+                                 and float(b["lo"]) <= float(last_price) <= float(b["hi"]))
+            except (KeyError, TypeError, ValueError):
+                inside_supply = False
+            row["trade_reason"] = ("price is inside this supply band — no long plan "
+                                   "while under resistance" if inside_supply
+                                   else "band geometry cannot support a stop")
+        out.append(row)
     return out

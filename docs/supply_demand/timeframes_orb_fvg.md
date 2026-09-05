@@ -240,3 +240,59 @@ the 60-minute frame is RTH-only so it never sees a straddling bucket.
 time are now America/New_York. They were UTC before — a 13:30 stamp over the
 opening bar read as a lunch print. This applies to the 15m / 60m / 15m-open
 views too.
+
+## 2026-09-05 — engine fixes (Ajay: *"yes please fix the bugs"*)
+
+Sign-off covers every item, including the ones that change what the tab
+prints. No threshold changed. Tests: `tests/test_timeframes_patterns.py` and
+`tests/test_price_zones.py` blocks "engine fixes 2026-09-05"; guards in
+`tests/test_supply_demand_contracts.py`.
+
+**The in-progress bucket is not structure.** `frame_for` now flags the last
+intraday bucket `partial: true` when the minute before its close label has not
+printed, and `price_zones.for_symbol` keeps that bucket out of the swings,
+gaps, ATR and trade levels — the intraday twin of the daily rule above (a
+"three-bar imbalance" whose third bar has not closed is not a gap yet; its edge
+was the low-so-far and repainted all session). The partial bucket still prices
+the verdict. This narrows the 2026-09-03 CHPT decision on purpose: verdict and
+chart see the live bar, structure does not. `chart_maps/support`,
+`session_board` and `catalysts/signal_watch` follow the same rule since the
+integrator pass of 2026-09-05 (Ajay: "yes please fix the bugs"): the Support
+tab computes swings, gaps and ATR on the frame without today's live bar
+(`_frame_for(..., with_closed=True)`; intraday: without the `partial` bucket)
+and still prices the levels at the live print; the session board's
+`fair_value_gaps` and signal-watch's zones / ATR / gaps drop the `partial`
+bucket, the live close still prices the read. `mood` / `signal` keep their own
+closed-bar discipline on the whole frame. Tests:
+`test_chart_maps_support.py::test_the_support_tab_reads_structure_off_the_closed_frame_not_the_live_bar`,
+`test_session_board.py::test_the_boards_gaps_come_from_closed_buckets_not_the_partial_one`,
+`tests/test_signal_watch.py`.
+
+**`meta.as_of` is the last raw minute actually seen**, never the last bucket's
+future close label. At 10:07 ET the 15m frame ends in a bar stamped 10:15; the
+session-board payload was carrying that as the read's timestamp. (The Support
+tab's stamp drops the string before it renders, so this was latent there.)
+
+**Hourly buckets are clock-anchored and the FIRST one is the half hour.** RTH
+resamples to 30, 60, 60, 60, 60, 60, 60 minutes labelled 10:00 … 16:00 ET; the
+module docstring said the *last* bar was the short one. Docstring fixed; the
+anchoring itself is unchanged.
+
+**ATR is the simple 14-bar mean of true range.** `patterns.atr` said
+"Wilder-style" while computing `tr.rolling(14).mean()`; a spike therefore leaves
+the number abruptly on bar 15 instead of decaying (10-point spike five bars back:
+1.643 here vs 1.444 smoothed). The **math stays** — every stop buffer on the S/D
+surfaces is `STOP_BUFFER_ATR × this value`, and a smoothing change would move
+them all — only the label is fixed. No S/D surface labelled it Wilder; the
+"Wilder for ATR" note on the SEPA trade-plan panel refers to
+`backend/analysis/trade_plan.py`, a different module.
+
+**A supply band that contains the price yields no plan.** `trade_levels` never
+read `band.kind`, so a name inside 100–104 supply printed a *long* at 104 with a
+stop under 100 on the same row whose verdict said `AT_SUPPLY` / caution.
+Inside a supply band it now returns `None` and `attach_levels` carries
+`trade_reason: "price is inside this supply band — no long plan while under
+resistance"`. A supply band above price is still the short; below price it is
+broken supply trading as support (long); a demand band containing price is
+still the long-from-support read. Every consumer already handled a `None` plan
+(`mood.signal` blockers, `demand_reentry`, the Support-tab table filter).

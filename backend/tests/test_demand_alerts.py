@@ -110,7 +110,7 @@ def test_unknown_prev_close_is_silent_never_a_guess(monkeypatch):
     live = {"AAPL": {"price": 205.0, "change_pct": -0.2, "prev_day_close": None}}
     out = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=live,
                         caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x",
-                        now=IN_SESSION, force=True)
+                        now=IN_SESSION, force=True, store={})
     assert out["unknown_prev"] == 1 and out["at"] == 0 and sent == []
 
 def test_cap_gate_is_known_and_at_least_a_billion():
@@ -150,7 +150,7 @@ def test_approaching_row_falls_back_to_entry_zone_and_missing_boards_are_empty()
 
 
 def test_state_key_is_symbol_band_day_tier():
-    assert DA.state_key("NTAP", _band(180.0, 183.5), "2026-09-03", "at") == "NTAP:180-183.5:2026-09-03:at"
+    assert DA.state_key("NTAP", _band(180.0, 183.5), "2026-09-03", "at") == "NTAP:180.00-183.50:2026-09-03:at"
 
 
 # ── messages ─────────────────────────────────────────────────────────────────
@@ -198,36 +198,40 @@ def test_check_once_pushes_at_individually_near_as_one_digest_and_gates_cap(monk
                  UNK=(51.0, -1.0), AAPL=(211.0, -0.2))
     caps = {"BIGX": 5e9, "BIGY": 12e9, "SMALL": 5e8, "UNK": None, "AAPL": 3e12}
     coll = FakeColl()
+    store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
     out = DA.check_once(board=board, live=live, caps=caps, coll=coll, owner="o@x",
-                        now=IN_SESSION, force=True)
-    assert out["ran"] and out["at"] == 1 and out["near"] == 2 and out["pushed"] == 2
-    assert out["skipped_cap"] == 1 and out["unknown_cap"] == 1
-    assert [s["kind"] for s in sent] == ["demand_alert", "demand_alert"]
+                        now=IN_SESSION, force=True, store=store)
+    # Since the phone gate (2026-09-05) the NEAR names are listed and counted, not pushed
+    assert out["ran"] and out["at"] == 1 and out["near"] == 2 and out["pushed"] == 1
+    assert out["skipped_cap"] == 1 and out["unknown_cap"] == 1 and out["skipped_proximity"] == 2
+    assert [s["kind"] for s in sent] == ["demand_alert"]
     assert sent[0]["title"] == "🧲 AAPL 0.47% above demand $200–210"
-    assert sent[1]["title"] == "🧲 Nearing demand — BIGX +1 more"
-    assert "BIGY $45 · 2.22% above $40–44 · $12.0B" in sent[1]["body"]
+    assert [h["symbol"] for h in out["hits"] if h["hit"]["tier"] == "near"] == ["BIGX", "BIGY"]
     assert all(s["owner"] == "o@x" for s in sent)
-    assert len(coll.docs) == 3                     # AAPL at + BIGX near + BIGY near
+    assert len(coll.docs) == 1                     # AAPL at; NEAR names are not recorded (nothing sent)
 
 
 def test_dedupe_is_once_per_band_per_day_but_tiers_are_separate(monkeypatch):
     sent = _capture(monkeypatch)
     board = _board(appr=[("BIGX", _band(90, 97))])
     coll = FakeColl()
-    kw = dict(board=board, caps={"BIGX": 5e9}, coll=coll, owner="o@x", now=IN_SESSION, force=True)
-    DA.check_once(live=_live(BIGX=(99.0, -1.1)), **kw)          # near → digest
-    DA.check_once(live=_live(BIGX=(99.0, -1.1)), **kw)          # same fact, silent
-    assert len(sent) == 1
+    kw = dict(board=board, caps={"BIGX": 5e9}, coll=coll, owner="o@x", now=IN_SESSION, force=True,
+              store=_store("BIGX", [{"kind": "demand", "lo": 90.0, "hi": 97.0, "touches": 3, "strength": 50.0}], 103.95))
+    out = DA.check_once(live=_live(BIGX=(99.0, -1.1)), **kw)    # near → listed, not pushed (phone gate 2026-09-05)
+    assert out["near"] == 1 and out["skipped_proximity"] == 1 and sent == []
+    DA.check_once(live=_live(BIGX=(99.0, -1.1)), **kw)
+    assert sent == [] and coll.docs == {}, "nothing sent, nothing recorded"
     DA.check_once(live=_live(BIGX=(96.5, -3.0)), **kw)          # arrived → at fires
-    assert len(sent) == 2 and sent[1]["title"] == "🧲 BIGX in demand $90–97"
+    assert len(sent) == 1 and sent[0]["title"] == "🧲 BIGX in demand $90–97"
     DA.check_once(live=_live(BIGX=(96.0, -3.5)), **kw)
-    assert len(sent) == 2
+    assert len(sent) == 1
 
 
 def test_transport_failure_is_retried_but_muted_pref_is_terminal(monkeypatch):
     board = _board(rows=[("AAPL", _band(200, 210))])
     kw = dict(board=board, live=_live(AAPL=(205.0, -0.2)), caps={"AAPL": 3e12},
-              owner="o@x", now=IN_SESSION, force=True)
+              owner="o@x", now=IN_SESSION, force=True,
+              store=_store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3}], 215.25))
     coll = FakeColl()
     _capture(monkeypatch, result={"sent": 0, "failed": 1, "total_targets": 1})
     out = DA.check_once(coll=coll, **kw)
@@ -242,7 +246,8 @@ def test_dry_run_reads_everything_and_records_nothing(monkeypatch):
     coll = FakeColl()
     out = DA.check_once(push=False, board=_board(rows=[("AAPL", _band(200, 210))]),
                         live=_live(AAPL=(205.0, 0.0)), caps={"AAPL": 3e12}, coll=coll,
-                        now=IN_SESSION, force=True)
+                        now=IN_SESSION, force=True,
+                        store=_store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3}], 215.25))
     assert out["at"] == 1 and out["pushed"] == 0 and sent == [] and coll.docs == {}
 
 
@@ -327,18 +332,95 @@ def test_at_singles_are_capped_per_pass_and_the_rest_ride_the_digest(monkeypatch
     live["NEARX"] = {"price": 56.0, "change_pct": -1.0, "prev_day_close": 60.0}
     caps = {s: 5e9 for s in syms + ["NEARX"]}
     coll = FakeColl()
+    store = {}
+    for s in syms:
+        store.update(_store(s, [{"kind": "demand", "lo": 100.0, "hi": 110.0, "touches": 3}], 120.0))
+    store.update(_store("NEARX", [{"kind": "demand", "lo": 50.0, "hi": 55.0, "touches": 3}], 60.0))
     out = DA.check_once(board=board, live=live, caps=caps, coll=coll, owner="o@x",
-                        now=IN_SESSION, force=True)
+                        now=IN_SESSION, force=True, store=store)
     assert out["at"] == 6 and out["at_singles"] == DA.MAX_SINGLES_PER_PASS == 4
-    assert out["near"] == 1 and out["pushed"] == 5           # 4 singles + 1 digest
+    assert out["near"] == 1 and out["pushed"] == 5           # 4 singles + 1 digest (AT spill only)
+    assert out["skipped_proximity"] == 1, "NEARX (1.8% above) lists, never rings — phone gate 2026-09-05"
     singles = [s for s in sent if s["title"].startswith("🧲 A")]
     assert [s["title"].split()[1] for s in singles] == ["A0", "A1", "A2", "A3"], "closest first"
     digest = [s for s in sent if "more" in s["title"] or s["title"].startswith("🧲 Demand zone")][0]
-    assert digest["title"] == "🧲 Demand zone — A4 +2 more"
-    assert "A4 $" in digest["body"] and "A5 $" in digest["body"] and "NEARX $56" in digest["body"]
-    assert "0.4% above $100–110" in digest["body"]
-    assert len(coll.docs) == 7, "every name recorded once — no second buzz next pass"
+    assert digest["title"] == "🧲 Demand zone — A4 +1 more"
+    assert "A4 $" in digest["body"] and "A5 $" in digest["body"] and "NEARX" not in digest["body"]
+    assert "0.4% above $100–110 · room: clear runway" in digest["body"]
+    assert len(coll.docs) == 6, "every pushed name recorded once — no second buzz next pass"
     assert DA.digest_message([]) is None
     near_only = DA.digest_message([{"symbol": "N", "last": 56.0, "band": _band(50, 55), "cap": 2e9,
                                     "hit": {"tier": "near", "state": "falling", "dist_pct": 1.8}}])
     assert near_only["title"] == "🧲 Nearing demand — N"
+
+
+# ── fixes 2026-09-05 (review of the S/D zone logic; Ajay: "yes please fix the bugs") ──
+def _store(sym, bands, prev_close, day="2026-09-03"):
+    """A zone_store doc, the shape zone_store.build_doc writes."""
+    return {sym: {"_id": f"{sym}:{day}", "symbol": sym, "date": day, "geom": "board",
+                  "bands": bands, "atr14": 1.0, "prev_close": prev_close}}
+
+
+def test_session_gate_skips_market_holidays():
+    assert DA.in_session(datetime(2026, 9, 7, 10, 0, tzinfo=ET)) is False    # Labor Day 2026
+    assert DA.in_session(datetime(2026, 9, 8, 10, 0, tzinfo=ET)) is True
+
+
+def test_state_key_uses_fixed_two_decimals():
+    a, b = _band(12345.67, 12400.0), _band(12345.72, 12400.0)
+    assert DA.state_key("X", a, "2026-09-05", "at") != DA.state_key("X", b, "2026-09-05", "at")
+    assert DA.state_key("NTAP", _band(180.0, 183.5), "2026-09-03", "at") == "NTAP:180.00-183.50:2026-09-03:at"
+
+
+def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypatch):
+    """Ajay 2026-09-05: "Need only alerts on stocks that have atleast 5% to Supply
+    and also <1% bounce from demand zone". NEAR (1-3% above, falling) is listed
+    and counted, never pushed; AT (inside / <=1% above) rings when the room to
+    the first unbroken supply band is >= 5%. Distance for AT is unchanged
+    (AT_PCT was already 1.0)."""
+    sent = _capture(monkeypatch)
+    board = _board(appr=[("BIGX", _band(90, 97))], rows=[("AAPL", _band(200, 210))])
+    live = _live(BIGX=(99.0, -1.1), AAPL=(211.0, -0.2))
+    coll = FakeColl()
+    store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
+    out = DA.check_once(board=board, live=live, caps={"BIGX": 5e9, "AAPL": 3e12}, coll=coll, owner="o@x",
+                        now=IN_SESSION, force=True, store=store)
+    assert out["at"] == 1 and out["near"] == 1 and out["pushed"] == 1
+    assert out["skipped_proximity"] == 1 and out["skipped_room"] == 0 and out["unknown_room"] == 0
+    assert [s["title"] for s in sent] == ["🧲 AAPL 0.47% above demand $200–210"]
+    assert sent[0]["body"] == "$211 · tested 3x · room: clear runway · $3.0T · AAPL Inc"
+    assert list(coll.docs) == ["AAPL:200.00-210.00:2026-09-03:at"], "NEAR is not recorded: nothing was sent"
+    # a lid 2.8% over the print (unbroken: hi 219 >= prev 215): listed, counted, silent
+    sent.clear()
+    lid_store = _store("AAPL", [{"kind": "supply", "lo": 217.0, "hi": 219.0, "touches": 2, "strength": 20.0}], 215.0)
+    out2 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2, 215.0)),
+                         caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True,
+                         store=lid_store)
+    assert out2["at"] == 1 and out2["pushed"] == 0 and out2["skipped_room"] == 1 and sent == []
+    assert out2["hits"][0]["room"]["room_pct"] == 2.8
+    # the same lid 5.2% over: rings, and the body says so
+    far_store = _store("AAPL", [{"kind": "supply", "lo": 222.0, "hi": 224.0, "touches": 2, "strength": 20.0}], 215.0)
+    out3 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2, 215.0)),
+                         caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True,
+                         store=far_store)
+    assert out3["pushed"] == 1 and "room +5.2% -> $222" in sent[-1]["body"]
+    # no zone_store doc for the name: the room is unknown -> conservative, silent, counted
+    out4 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2)),
+                         caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True, store={})
+    assert out4["at"] == 1 and out4["pushed"] == 0 and out4["unknown_room"] == 1 and len(sent) == 1
+    assert DA.AT_PCT == 1.0
+
+
+def test_an_AT_hit_is_measured_on_the_print_but_the_phone_gate_on_the_band_top():
+    """Documented sliver (review 2026-09-05): DA.read's dist_pct is (px-hi)/px,
+    the shared gate is px <= hi*1.01 ((px-hi)/hi). A print 1.005% over the top
+    on the hi basis is 0.995% on the px basis -> tier AT, gate False ->
+    skipped_proximity. Silence, never a wrong push; ~1c on a $100 name. Pinned
+    so demand_alerts.md stays honest about 'AT distance unchanged'."""
+    from supply_demand import alert_gates as AG
+    band = _band(98.0, 100.0)
+    hit = DA.read(101.005, band, -0.5, 110.0)
+    assert hit["tier"] == "at" and hit["dist_pct"] == 1.0
+    assert AG.demand_proximity_gate(101.005, band) is False
+    assert AG.demand_proximity_gate(101.0, band) is True
+    assert DA.read(101.0, band, -0.5, 110.0)["tier"] == "at"

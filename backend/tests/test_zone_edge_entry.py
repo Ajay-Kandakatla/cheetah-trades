@@ -9,9 +9,13 @@ Locks trading/zone_edge_entry.py:
   Funnel    demand ARRIVALS (tier near/in, arrival=true) and BREAKOUTS
             (tier broke + new_highs) only; touches >= 2, cap >= $1B; a
             'near' resistance row or a resident demand row is never bought.
-  Stops     band.lo x (1 - 0.5%) as the REQUESTED stop; wider than the 10%
-            line -> blocked + recorded; room < 2R (nearest supply floor) ->
-            blocked; unknown zone doc -> blocked (fails closed).
+  Stops     band.lo x (1 - 0.5%) as the REQUESTED stop, handed to entries
+            as the ABSOLUTE level (placed there whatever the order-time
+            print; refused when drift makes it too wide); wider than the
+            10% line -> blocked + recorded; room < 2R to the first band
+            overhead (supply at/above, or broken demand above) -> blocked;
+            inside a supply band -> blocked; unknown zone doc -> blocked
+            (fails closed).
   Attempts  one per (symbol, band, ET day), recorded BEFORE entries.enter;
             blocked/error attempts recorded too; 'market closed' is not.
   Race      one execution_race doc per attempt (blocked included);
@@ -245,8 +249,14 @@ def env(monkeypatch):
     def build(latest=None, positions=(), armed=True, flag=True,
               market_open=True, configured=True, now=NOW, zones=None,
               enter_result=None, enter_raises=None, closed_orders=(),
-              mode="paper"):
-        fake = FakeBroker(positions, market_open, configured, closed_orders, mode)
+              mode="paper", real_enter=False, live_price=None):
+        """real_enter=True leaves entries.enter UNPATCHED and wires its own
+        seams instead (live print = `live_price`, no earnings, normal regime,
+        no closed-trade history) so a test can watch the REAL stop math run
+        on a print that drifted away from the board's signal print. The
+        broker then records submit_bracket calls in `fake.brackets`."""
+        fake = (BracketBroker if real_enter else FakeBroker)(
+            positions, market_open, configured, closed_orders, mode)
         db = FakeDB(armed=armed, flag=flag)
         if latest is not None:
             db.zone_edge_latest.insert_one(latest)
@@ -254,9 +264,9 @@ def env(monkeypatch):
         zones = zones or {}
 
         def fake_enter(symbol, limit_price=None, stop_pct=None,
-                       allow_earnings=False, top_up=False):
+                       allow_earnings=False, top_up=False, stop_price=None):
             enter_calls.append({"symbol": symbol, "limit_price": limit_price,
-                                "stop_pct": stop_pct,
+                                "stop_pct": stop_pct, "stop_price": stop_price,
                                 "allow_earnings": allow_earnings,
                                 "top_up": top_up})
             if enter_raises:
@@ -289,10 +299,36 @@ def env(monkeypatch):
         monkeypatch.setattr(ZE, "_notify",
                             lambda sym, side, mode_word, body:
                             pushes.append((sym, side, mode_word, body)))
-        monkeypatch.setattr(ZE.entries, "enter", fake_enter)
+        if real_enter:
+            monkeypatch.setattr(EN, "_live_price",
+                                lambda sym: (live_price, "test-tape"))
+            monkeypatch.setattr(EN, "_closed_trade_stats", lambda: (None, 0))
+            monkeypatch.setattr(EN, "regime", lambda: "normal")
+            stub = types.ModuleType("sepa.earnings_watch")
+            stub.next_event = lambda s: None
+            monkeypatch.setitem(sys.modules, "sepa.earnings_watch", stub)
+        else:
+            monkeypatch.setattr(ZE.entries, "enter", fake_enter)
         return fake, db, enter_calls, pushes, zone_reads
 
     return build
+
+
+class BracketBroker(FakeBroker):
+    """FakeBroker + the ONE mutation entries.enter needs (submit_bracket),
+    recorded — used only by the real_enter tests."""
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.brackets = []
+
+    def submit_bracket(self, symbol, qty, take_profit_price, stop_price,
+                       limit_price=None, client_order_id=None):
+        self.brackets.append({"symbol": symbol, "qty": qty,
+                              "take_profit_price": take_profit_price,
+                              "stop_price": stop_price, "limit_price": limit_price,
+                              "client_order_id": client_order_id})
+        return {"id": "brk-%d" % len(self.brackets)}
 
 
 def _kind_rows(db, kind):
@@ -533,7 +569,7 @@ def test_room_below_2r_blocked(env):
     race = _race_rows(db)[0]
     assert race["outcome"] == "blocked" and "room <" in race["reason"]
     blk = _kind_rows(db, "zone_entry_blocked")[0]["detail"]
-    assert blk["room"]["next_supply_lo"] == 103.0
+    assert blk["room"]["next_band"] == {"kind": "supply", "lo": 103.0, "hi": 105.0}
     assert blk["room"]["room_pct"] == pytest.approx(3.0)
     assert blk["room"]["need_pct"] == pytest.approx(MIN_REWARD_RISK * _expected_stop_pct(100.0, 98.0))
 
@@ -554,7 +590,7 @@ def test_room_with_no_supply_overhead_passes(env):
         zones={"AAA": zone_doc("AAA", supply_los=(), demand_bands=((90.0, 92.0),))})
     ZE.run()
     assert [c["symbol"] for c in enter_calls] == ["AAA"]
-    assert _kind_rows(db, "zone_entry")[0]["detail"]["room"]["reason"] == "no supply overhead"
+    assert _kind_rows(db, "zone_entry")[0]["detail"]["room"]["reason"] == "no band overhead"
 
 
 def test_breakout_to_new_highs_without_overhead_skips_room_check(env):
@@ -840,14 +876,14 @@ def test_stop_request_and_room_ok_pure():
     ok, det = ZE.room_ok(100.0, 2.49, None)
     assert ok is False and "unknown" in det["reason"]
     ok, det = ZE.room_ok(100.0, 2.49, {"bands": []})
-    assert ok is True and det["reason"] == "no supply overhead"
+    assert ok is True and det["reason"] == "no band overhead"
     ok, det = ZE.room_ok(100.0, 2.49, zone_doc("X", supply_los=(104.97, 130.0)))
     assert ok is False and det["room_pct"] == pytest.approx(4.97)
     ok, det = ZE.room_ok(100.0, 2.49, zone_doc("X", supply_los=(104.98,)))
     assert ok is True and det["reason"] == "ok"
     # a supply band BELOW the print (a cleared/broken one) is not overhead
     ok, det = ZE.room_ok(100.0, 2.49, zone_doc("X", supply_los=(90.0,)))
-    assert ok is True and det["next_supply_lo"] is None
+    assert ok is True and det["next_band"] is None
 
 
 def test_signal_state_pure():
@@ -1398,7 +1434,7 @@ def test_malformed_zone_doc_blocks_room_check(env):
     ok, det = ZE.room_ok(100.0, 2.49, {"bands": [None]})
     assert ok is False and "malformed" in det["reason"]
     ok, det = ZE.room_ok(100.0, 2.49, {"bands": [{"kind": "supply", "lo": "nan"}]})
-    assert ok is True and det["reason"] == "no supply overhead"
+    assert ok is True and det["reason"] == "no band overhead"
     ok, det = ZE.room_ok(100.0, 2.49, "not-a-doc")
     assert ok is False and "unknown" in det["reason"]
 
@@ -1544,3 +1580,151 @@ def test_api_config_accepts_zone_edge_rules_and_status_shows_them(env):
         asyncio.run(TA.trading_config({"zone_edge_rules": wide}, email="nobody@example.com"))
     assert exc.value.status_code == 403
 
+
+
+# ── 2026-09-05 review fixes (Ajay: "yes please fix the bugs") ───────────────
+# Stop anchoring: the engine decided a LEVEL (band floor x 0.995); the placed
+# stop must be that level whatever the tape printed by order time.
+
+def test_stop_is_anchored_under_the_band_floor_when_the_live_print_drifts_up(env):
+    """Signal print 100.00, band 98-99.5 -> owner stop 97.51. The order goes
+    out ~1.5% higher (101.50). A percent-of-price hand-off would put the
+    broker stop at 98.97 — INSIDE the band being bought. The placed stop
+    must sit at the owner level, under band.lo."""
+    fake, db, _, pushes, _ = env(
+        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=98.0, hi=99.5)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(130.0,))},
+        real_enter=True, live_price=101.5)
+    out = ZE.run()
+    assert out["entered"] == ["AAA"], out
+    assert len(fake.brackets) == 1
+    placed = fake.brackets[0]["stop_price"]
+    assert placed == pytest.approx(97.51, abs=0.005), placed
+    assert placed < 98.0, "stop must be under the band floor, not inside the band"
+    det = _kind_rows(db, "zone_entry")[0]["detail"]
+    assert det["order"]["stop"]["stop_price"] == pytest.approx(97.51, abs=0.005)
+    assert "stop 97.51" in pushes[0][3]
+
+
+def test_stop_anchor_refused_when_drift_pushes_risk_past_the_ceiling(env):
+    """Signal print 100.00, band floor 91 -> stop 90.545 = 9.46% (passes the
+    local gate). By order time the print is 101.00 -> 10.35% to the level:
+    past ABS_MAX_STOP_PCT. Refuse with a reason; never clamp the stop back
+    up into the band and never place the order."""
+    fake, db, _, pushes, _ = env(
+        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=91.0, hi=92.0,
+                                                  dist_pct=8.7)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(150.0,))},
+        real_enter=True, live_price=101.0)
+    out = ZE.run()
+    assert fake.brackets == [] and out["entered"] == [] and pushes == []
+    assert out["blocked"] == ["AAA"]
+    st = _state_rows(db)[0]
+    assert st["result"] == "blocked"
+    assert "90.5" in st["reason"] and "%g%%" % ABS_MAX_STOP_PCT in st["reason"], st["reason"]
+
+
+def test_stop_anchor_refused_when_the_print_is_already_through_the_level(env):
+    """The tape printed 97.00 by order time — under the 97.51 level. A stop
+    above the entry is not a plan: refuse, no order."""
+    fake, db, _, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=98.0, hi=99.5)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(130.0,))},
+        real_enter=True, live_price=97.0)
+    out = ZE.run()
+    assert fake.brackets == [] and out["blocked"] == ["AAA"]
+    assert "not below" in _state_rows(db)[0]["reason"]
+
+
+def test_run_hands_entries_the_absolute_stop_level(env):
+    _, _, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row()]),
+        zones={"AAA": zone_doc("AAA", supply_los=(130.0,))})
+    ZE.run()
+    assert enter_calls[0]["stop_price"] == pytest.approx(97.51)
+    assert enter_calls[0]["stop_pct"] == pytest.approx(2.49, abs=0.01)
+
+
+# Room gate: the FIRST band overhead is kind-agnostic (broken demand above the
+# print is resistance — the rule supply_watch.overhead_bands and
+# bounce_room.first_overhead already apply), a print inside a supply band has
+# zero room, and `need` is 2R of the stop the engine will actually PLACE.
+
+def test_room_gate_counts_a_broken_demand_band_overhead(env):
+    """last 100, band lo 98 -> stop 2.49%, need 4.98%. A DEMAND band 103-105
+    sits 3% up (1.2R): broken support = resistance -> blocked 'room < 2R'."""
+    _, db, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row()]),
+        zones={"AAA": zone_doc("AAA", supply_los=(), demand_bands=((103.0, 105.0),))})
+    out = ZE.run()
+    assert enter_calls == [] and out["blocked"] == ["AAA"]
+    blk = _kind_rows(db, "zone_entry_blocked")[0]["detail"]["room"]
+    assert blk["reason"].startswith("room < %gR" % MIN_REWARD_RISK), blk
+    assert blk["next_band"] == {"kind": "demand", "lo": 103.0, "hi": 105.0}
+    assert blk["room_pct"] == pytest.approx(3.0)
+    # a demand band BELOW or CONTAINING the print is support, never overhead
+    ok, det = ZE.room_ok(100.0, 2.49, zone_doc("X", demand_bands=((90.0, 92.0), (99.0, 101.0))))
+    assert ok is True and det["reason"] == "no band overhead"
+
+
+def test_room_gate_blocks_a_print_inside_a_supply_band(env):
+    ok, det = ZE.room_ok(100.0, 3.0, {"bands": [
+        {"kind": "supply", "lo": 99.0, "hi": 104.0},
+        {"kind": "supply", "lo": 90.0, "hi": 93.0}]})
+    assert ok is False and det["room_pct"] == 0.0
+    assert det["reason"].startswith("inside supply band"), det
+    assert det["next_band"] == {"kind": "supply", "lo": 99.0, "hi": 104.0}
+    # a supply band whose TOP is exactly at the print still contains it
+    ok, det = ZE.room_ok(100.0, 3.0, {"bands": [{"kind": "supply", "lo": 96.0, "hi": 100.0}]})
+    assert ok is False and "inside supply band" in det["reason"]
+    # through the funnel: the demand row prints inside an overlapping lid
+    _, db, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row(last=99.5, lo=98.0, hi=100.0)]),
+        zones={"AAA": {"symbol": "AAA", "date": DAY, "bands": [
+            {"kind": "demand", "lo": 98.0, "hi": 100.0, "touches": 3},
+            {"kind": "supply", "lo": 99.0, "hi": 104.0, "touches": 2}]}})
+    out = ZE.run()
+    assert enter_calls == [] and out["blocked"] == ["AAA"]
+    assert "inside supply band" in _state_rows(db)[0]["reason"]
+
+
+def test_room_need_floors_at_the_engine_minimum_stop():
+    """tier 'in': last 100, lo 99.6 -> requested 0.90%. risk_rules places
+    1.0% (its floor), so 2R is 2.00% — a lid 1.9% up is NOT enough room."""
+    stop, pct = ZE.stop_request(100.0, 99.6)
+    assert pct == pytest.approx(0.9)
+    ok, det = ZE.room_ok(100.0, pct, {"bands": [{"kind": "supply", "lo": 101.9, "hi": 103.0}]})
+    assert ok is False and det["need_pct"] == pytest.approx(2.0), det
+    ok, det = ZE.room_ok(100.0, pct, {"bands": [{"kind": "supply", "lo": 102.0, "hi": 103.0}]})
+    assert ok is True and det["need_pct"] == pytest.approx(2.0)
+    # a request wider than the floor is used as-is
+    ok, det = ZE.room_ok(100.0, 2.49, {"bands": [{"kind": "supply", "lo": 104.98, "hi": 106.0}]})
+    assert ok is True and det["need_pct"] == pytest.approx(4.98)
+
+
+def test_rules_list_room_rule_names_broken_support_not_only_supply():
+    room = [r for r in ZE.rules_list() if r["rule"].startswith("Room sanity")][0]
+    assert "nearest supply floor above" not in room["rule"]
+    assert "broken support" in room["rule"] and "inside a supply band" in room["rule"]
+
+
+# ── integrator fixes 2026-09-05 (review of the 22-bug sweep) ─────────────────
+def test_a_breakout_into_an_overlapping_supply_lid_never_skips_the_room_check():
+    """Review 2026-09-05: zone_edge counted overhead as bands with lo > band.hi,
+    so a supply band OVERLAPPING the broken one (99-104 over 96-99.5, print
+    100) was invisible: new_highs True, overhead 0 -> _needs_room_check False
+    -> the paper buy proceeded with the print INSIDE a supply band. The board
+    payload now carries overhead 1 / new_highs False for that geometry, so
+    room_ok runs and blocks it."""
+    from supply_demand import zone_edge as SDZE
+    bands = [{"kind": "supply", "lo": 96.0, "hi": 99.5, "touches": 3, "strength": 1.0},
+             {"kind": "supply", "lo": 99.0, "hi": 104.0, "touches": 2, "strength": 1.0}]
+    rb = SDZE.read_breaking(100.0, bands, 99.0)
+    assert rb["tier"] == "broke" and rb["band"]["hi"] == 99.5
+    assert rb["overhead_bands"] == 1 and rb["new_highs"] is False
+    c = {"kind": "breakout", "new_highs": rb["new_highs"], "overhead_bands": rb["overhead_bands"]}
+    assert ZE._needs_room_check(c) is True
+    ok, room = ZE.room_ok(100.0, 1.0, {"bands": bands})
+    assert ok is False and room["reason"].startswith("inside supply band (99-104)")
+    # the skip itself is unchanged for a genuine breakout to new highs
+    assert ZE._needs_room_check({"kind": "breakout", "new_highs": True, "overhead_bands": 0}) is False

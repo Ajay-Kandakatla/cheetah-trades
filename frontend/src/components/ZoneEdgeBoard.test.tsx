@@ -175,6 +175,24 @@ describe('ZoneEdgeBoard — both sections from a live payload', () => {
     expect(screen.queryByText(/refreshes every minute/)).not.toBeInTheDocument();
   });
 
+  it('a pass stored on ANOTHER day says so, never "market closed" (2026-09-05)', async () => {
+    // zone_edge.api_payload: the doc date != today -> in_session false plus this reason.
+    stubFetch({ ...EMPTY, as_of: '2026-09-04T16:00:12-04:00', in_session: false,
+                reason: 'last pass 2026-09-04; no pass yet today' });
+    draw({ mode: 'both' });
+    expect(await screen.findByText('last pass 2026-09-04; no pass yet today (16:00 ET)')).toBeInTheDocument();
+    // NEGATIVE: neither the closed wording nor the live wording.
+    expect(screen.queryByText(/market closed/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/refreshes every minute/)).not.toBeInTheDocument();
+  });
+
+  it('a cold zone store is named, not hidden behind "no pass yet today"', async () => {
+    stubFetch({ as_of: null, in_session: true, breaking: [], near_demand: [], track: {},
+                reason: 'zone store empty for today' });
+    draw({ mode: 'both' });
+    expect(await screen.findByText('no pass yet today — zone store empty for today')).toBeInTheDocument();
+  });
+
   it('survives a payload with no arrays at all (older backend / foreign stub)', async () => {
     // Chart Maps' test stub routes by ?tab= and hands this board a VCP board.
     stubFetch({ tab: 'vcp', count: 1, tiles: [{ symbol: 'AVGO' }] });

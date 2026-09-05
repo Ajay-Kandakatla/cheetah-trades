@@ -118,9 +118,16 @@ def read(rec: dict) -> Optional[dict]:
                         "strength": second.get("strength")},
         # How far below the broken first level price sits.
         "below_top_pct": round((t_lo - last) / t_lo * 100.0, 2),
-        # Break evidence for the FIRST band, computed in decide_from_frame
-        # where the closes series still exists. None on older cached rows.
-        "bars_since_top_break": tb.get("bars_since_break"),
+        # Break evidence for the FIRST band — demand_reentry.band_break_read,
+        # computed in decide_from_frame where the closes series still exists.
+        # `bars_since_top_break` is the age of the FIRST close under the top
+        # band in the current leg (when it fell through); the most recent one
+        # is always today for a name still under its floor. `fell_from_pct` is
+        # how far above the top band the run-up before that break reached.
+        # None only on cached rows older than 2026-09-05 (before that date the
+        # scan fed reentry_read, which is empty whenever price is outside the
+        # band — i.e. always here — so the field was dead on every row).
+        "bars_since_top_break": tb.get("bars_since_first_break"),
         "fell_from_pct": tb.get("fell_from_pct"),
     }
 

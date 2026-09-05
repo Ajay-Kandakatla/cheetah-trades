@@ -56,8 +56,14 @@ BOUNCE  ``touch_hits`` + ``bounce_read``
             touch_low)/atr14 · role demand | broken_supply.
 
 ROOM    ``room_read``
-  overhead  supply bands with hi >= print, plus demand bands with lo > print
-            (broken support = resistance; the SAME rule as
+  overhead  supply bands with hi >= print that are NOT already broken — a
+            supply band with hi < prev_close (the doc's; yesterday CLOSED
+            above it) is support, the house rule zone_bounce_alerts.
+            is_eligible / alert_gates / zone_edge Side B use (integrator
+            2026-09-05: without it the 🪃 push said 'clear runway' while
+            this read still quoted room to the 173.87 NTAP shelf); unknown
+            prev_close = every supply band counts — plus demand bands with
+            lo > print (broken support = resistance; the SAME rule as
             portfolio.supply_watch.overhead_bands — re-stated here because
             the portfolio package cannot be imported on the py3.9 host, and
             pinned by a behavioural test that loads that file standalone).
@@ -369,18 +375,27 @@ def bounce_read(print_px, doc: dict, touches: list,
     return best[1] if best else None
 
 
-def overhead_bands(bands: list, live: float) -> list:
-    """Everything price meets going UP: supply bands at/above the print plus
-    demand bands strictly above it (broken support = resistance). A demand
-    band that CONTAINS price is support, never overhead. Same rule as
+def overhead_bands(bands: list, live: float, prev_close=None) -> list:
+    """Everything price meets going UP: UNBROKEN supply bands at/above the
+    print plus demand bands strictly above it (broken support = resistance).
+    A supply band with hi < `prev_close` (yesterday CLOSED above it) is broken
+    supply = support, never overhead — zone_bounce_alerts.is_eligible's rule,
+    the same alert_gates.overhead_bands applies (integrator 2026-09-05);
+    unknown prev_close keeps every supply band. A demand band that CONTAINS
+    price is support, never overhead. Same rule as
     portfolio.supply_watch.overhead_bands — kept in step by
     tests/test_bounce_room.py, which loads that file standalone."""
+    pc = _f(prev_close)
+    if pc is not None and pc <= 0:
+        pc = None
     out = []
     for b in bands or []:
         if not _valid_band(b):
             continue
         lo, hi = float(b["lo"]), float(b["hi"])
         if _kind(b) == "supply" and hi >= live:
+            if pc is not None and hi < pc:
+                continue                                  # yesterday closed above it: broken = support
             out.append(dict(_slim_band(b, with_strength=False), kind="supply"))
         elif _kind(b) == "demand" and lo > live:
             out.append(dict(_slim_band(b, with_strength=False), kind="broken_support"))
@@ -407,7 +422,7 @@ def room_read(print_px, doc: dict, near_pct: float = NEAR_PCT) -> Optional[dict]
     doc = doc or {}
     h252 = _f(doc.get("high_252"))
     at_highs = bool(h252 is not None and h252 > 0 and px >= NEW_HIGH_TOL * h252)
-    first = first_overhead(overhead_bands(doc.get("bands") or [], px), px)
+    first = first_overhead(overhead_bands(doc.get("bands") or [], px, doc.get("prev_close")), px)
     if first is None:
         return {"state": "CLEAR", "room_pct": None, "atr_days": None, "band": None,
                 "at_highs": at_highs}

@@ -240,7 +240,24 @@ def _live_last(symbols: list) -> dict:
     except Exception as exc:
         log.debug("chart maps: live prices unavailable for the bounce gate: %s", exc)
         return {}
-    return {k: _num((v or {}).get("price")) for k, v in live.items()}
+    return {k: _snapshot_print(v) for k, v in live.items()}
+
+
+def _snapshot_print(snap) -> Optional[float]:
+    """The usable live print in one bulk_live_prices row: the last trade
+    (extended hours included — the same field zone_bounce_alerts.
+    print_from_snapshot reads, without its staleness drop) first, else the
+    day bar close. A NON-POSITIVE value is MISSING, never a price: the day
+    bar `price` is 0 before the open (portfolio/supply_watch.py, sepa/
+    prices.py), and 0.0 fed to the bounce gate / live re-rank made every
+    row STATE_UNKNOWN so the boards fell to money-flow order (2026-09-05
+    fix). None lets the callers fall back to the row's scan price."""
+    snap = snap or {}
+    for key in ("last_trade_price", "price"):
+        px = _num(snap.get(key))
+        if px is not None and px > 0:
+            return px
+    return None
 
 
 def _bounce_ref_hi(r: dict, phase: str, target: str) -> Optional[float]:
@@ -280,14 +297,35 @@ def _live_px(r: dict, live: Optional[dict]):
 
 def _disp_dist(r: dict, live: Optional[dict], read: Optional[dict], level_key: str):
     """Distance to print on an approaching tile: the LIVE % above the level when
-    a fresh print is known (the same number the ranking used), else the scan's
-    dist_pct. Ajay reads the badge to predict the order, so they must agree."""
+    a fresh print is known (the same number the ranking used) — 0.0 once that
+    print is AT or INSIDE the level (the rank already treats it as in; the
+    stale scan number must not contradict it, 2026-09-05 fix) — else the
+    scan's dist_pct. Ajay reads the badge to predict the order, so they must
+    agree."""
     read = read or {}
     hi = _num((read.get(level_key) or {}).get("hi"))
     px = _live_px(r, live)
-    if px is not None and hi is not None and px > 0 and px > hi:
+    if px is not None and hi is not None and px > 0:
+        if px <= hi:
+            return 0.0
         return round((px - hi) / px * 100.0, 2)
     return read.get("dist_pct")
+
+
+def _dist_text(dist, above: str, inside: str) -> str:
+    """'1.96% above it' — or 'now in the band' once the distance reads 0
+    (the live print is at/inside the level)."""
+    d = _num(dist)
+    if d is not None and d <= 0:
+        return f"now in {inside}"
+    return f"{dist}% above {above}"
+
+
+def _dist_badge(dist, noun: str) -> dict:
+    d = _num(dist)
+    if d is not None and d <= 0:
+        return {"text": f"\u25c9 in {noun}", "tone": "good"}
+    return {"text": f"\u2192 {dist}% above {noun}", "tone": "warn"}
 
 
 def rerank_live(rows: list, key, live: Optional[dict]) -> list:
@@ -1521,13 +1559,15 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                    f"{blk.get('bars_ago')} bars ago")
         elif appr_ob:
             blk = appr_ob.get("block") or {}
-            why = (f"falling toward a fresh order block — {_disp_dist(r, live, appr_ob, 'block')}% "
-                   f"above it, down {abs(appr_ob['drift_pct']):.1f}% in "
+            why = (f"falling toward a fresh order block — "
+                   f"{_dist_text(_disp_dist(r, live, appr_ob, 'block'), 'it', 'the block')}, "
+                   f"down {abs(appr_ob['drift_pct']):.1f}% in "
                    f"{appr_ob['drift_bars']} sessions; the block is the last down "
                    f"candle before a {blk.get('displacement_atr')}×ATR impulse "
                    f"{blk.get('bars_ago')} bars ago")
         elif appr:
-            why = (f"falling toward a tested band — {_disp_dist(r, live, appr, 'band')}% above it, "
+            why = (f"falling toward a tested band — "
+                   f"{_dist_text(_disp_dist(r, live, appr, 'band'), 'it', 'the band')}, "
                    f"down {abs(appr['drift_pct']):.1f}% in {appr['drift_bars']} sessions")
         else:
             why = ((r.get("verdict") or {}).get("entry_read")
@@ -1562,12 +1602,11 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "_flow": _order.inflow_of(r),
             "badges": (([
                 # The approach board's own facts lead: how far, how fast.
-                {"text": f"\u2192 {_disp_dist(r, live, appr, 'band')}% above the band", "tone": "warn"},
+                _dist_badge(_disp_dist(r, live, appr, 'band'), "the band"),
                 {"text": f"\u2193 {abs(appr['drift_pct']):.1f}% / {appr['drift_bars']}d",
                  "tone": "muted"}] if appr else [])
                 + ([
-                {"text": f"\u2192 {_disp_dist(r, live, appr_ob, 'block')}% above the order block",
-                 "tone": "warn"},
+                _dist_badge(_disp_dist(r, live, appr_ob, 'block'), "the order block"),
                 {"text": f"\u2193 {abs(appr_ob['drift_pct']):.1f}% / {appr_ob['drift_bars']}d",
                  "tone": "muted"},
                 {"text": "SMC \u00b7 uncited", "tone": "muted"}] if appr_ob else [])

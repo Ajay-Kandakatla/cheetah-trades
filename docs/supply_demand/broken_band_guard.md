@@ -66,9 +66,11 @@ Three decisions inside that:
   exists to find. A close is the market's closing judgement on the level.
 * **Strictly below.** A close exactly on the floor is a successful test, not a
   break. `<`, not `<=` — otherwise every zone that ever got tested disqualifies.
-* **Scoped to after the last visit above the band.** A close under the floor from
-  *before* the run-up is old structure, and the market already answered it by
-  rallying 5%+ through the whole band since.
+* **A break stays a break until the market ANSWERS it.** A close under the floor
+  is old structure only when a *later* close sits at least `MIN_RISE_ABOVE_PCT`
+  (5%) above the band top — the same bar the re-entry itself has to clear. Until
+  2026-09-05 the scan was scoped to "after the last close above the band", which
+  let a single poke over the top re-arm a broken band (section 4).
 
 Bouncing back above a floor does not un-break it. It makes the band a level being
 fought over, not a floor to lean on.
@@ -214,6 +216,55 @@ whenever he wants it.
 
 ---
 
+## 4. A whipsaw poke over the top does not un-break the band
+
+S/D zone review, 2026-09-05. Ajay: *"yes please fix the bugs"*.
+
+The old scan looked for closes under the floor only **after the last close above
+the band**, so that a break from before the run-up would read as old structure.
+The justification in section 1 — *"the market already answered it by rallying
+5%+ through the whole band since"* — was never checked. One close a hair over
+the top was enough:
+
+```
+band 100–104, forty closes
+[112]*10 + [106]*19 + [101] + [97]*4 + [104.2] + [102]*5      last 102
+
+before   is_reentry True   broke_below False   fell_from_pct 7.7   bars_since_above 5
+after    is_reentry False  broke_below True    fell_from_pct 0.2   bars_since_break 6
+```
+
+Four closes 3% under the floor, one 104.2 close against a 104 top, back inside —
+and the row read *"back in demand after running +7.7% above it"* with a Buy/Stop.
+The +7.7% belonged to the leg **before** the break; the NBIX failure mode with
+one extra day tacked on.
+
+Two rules replace the scoping, both in `_break_scan` (one walk, shared by
+`reentry_read` and the new `band_break_read`):
+
+* **Answered, not visited.** A break is dropped only when a later close is at
+  least `min_rise_pct` (`MIN_RISE_ABOVE_PCT` = 5%, the existing constant) above
+  the band top. `[97]*4 + [110]*5 + [102]` against a 104 top qualifies (110/104
+  = +5.8%); `104 × 1.049` does not. Live breaks drive `broke_below`,
+  `bars_since_break` and `lowest_close_pct_below` — an answered 5% break followed
+  by a fresh 3% one reports **3%**, the structure being traded now.
+* **`fell_from_pct` is the leg AFTER the last break, never the whole window.**
+  For a name back inside its band that is the rebound since the last close under
+  the floor (the whole window when it never broke). NBIX's read moved from +5.3
+  (the run to 163.50 *before* the 150.82 close) to **−1.7**: the 152.72 rebound
+  never got back over the 155.30 top. For a name still **under** its floor —
+  deep_demand's top band — it is the run-up that led into the current break.
+
+Also fixed in the same pass, same module:
+
+| finding | before | after |
+|---|---|---|
+| two price bases in `decide_from_frame` | membership on the 2dp `last_price`, `reentry_read` on raw closes → a close 0.4c over the top was INSIDE and ABOVE at once (`bars_since_above 0`) | closes rounded to 2dp — the basis every other number in the record already used |
+| `top_band_read` always empty | `reentry_read` returns the empty shape outside the band, and it was only asked when price was BELOW → deep_demand's `bars_since_top_break` / `fell_from_pct` dead on every row | `band_break_read` (no in-band requirement); `bars_since_top_break` = age of the FIRST close under the top band |
+| target label on the OB reads | `trade_levels` says "next supply band" for any opposing band | `_label_target_kind`: a demand-kind band overhead prints **"broken demand band overhead"**; `trade_plan`'s docstring now says "first band of either origin" like the math always did |
+
+---
+
 ## Where the honesty is enforced
 
 | Decision | Guard |
@@ -223,6 +274,15 @@ whenever he wants it.
 | …and were refused by **this** guard, not another gate | `test_NBIX_would_still_have_qualified_without_the_break` |
 | A close exactly on the floor is a test, not a break | `test_a_close_exactly_ON_the_floor_is_not_a_break` |
 | An old break from before the run-up still qualifies | `test_a_break_from_BEFORE_the_run_up_is_old_structure_and_still_qualifies` |
+| …but only when a later close cleared the top by 5% | `test_a_break_ANSWERED_by_a_min_rise_rally_is_old_structure_and_still_qualifies` |
+| One poke over the top does not re-arm a broken band | `test_a_whipsaw_poke_over_the_top_does_not_reset_the_broken_band_guard` |
+| `fell_from_pct` is the leg after the last break | `test_fell_from_pct_describes_the_leg_AFTER_the_last_break_not_the_whole_window` |
+| Only unanswered breaks set the depth | `test_only_the_UNANSWERED_breaks_count_toward_the_deepest_close` |
+| The answer rule is the 5% constant, not a visit | `test_reentry_fix_a_break_is_answered_only_by_a_MIN_RISE_close_above_the_top` |
+| One scan behind both reads | `test_reentry_fix_reentry_read_and_band_break_read_share_ONE_scan` |
+| One 2dp price basis in `decide_from_frame` | `test_decide_from_frame_uses_ONE_price_basis_for_membership_and_the_reentry_read` |
+| `top_band_read` carries data below the band | `test_top_band_read_carries_break_evidence_for_a_name_below_its_first_band` |
+| A demand band overhead is labelled as one | `test_ob_reads_label_a_demand_kind_overhead_target_by_its_origin` |
 | The break is reported even when it is the refusal reason | `test_the_break_evidence_is_reported_even_though_the_row_is_refused` |
 | Break keys exist on every return path | `test_the_break_fields_exist_on_every_return_path` |
 | The band check reads closes, the stop check reads lows | `test_the_stop_check_is_fed_LOWS_and_the_band_check_is_fed_CLOSES` |

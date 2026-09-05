@@ -198,17 +198,24 @@ def test_digest_is_strongest_first_capped_at_six_with_a_more_line():
 
 # ── check_once end to end ────────────────────────────────────────────────────
 def test_ntap_2026_09_03_fires_a_single_push_with_the_exact_title_body_url_kind(monkeypatch):
+    """Since the phone gate (2026-09-05) the real 09:33 print (171.2, 2.2% above
+    the shelf) only LISTS — see test_phone_gate_a_bounce_that_already_ran. The
+    exact single is exercised with a print still inside the 1% window: low 160.6
+    (0.73% under the floor), print 169.2 (0.99% above the top, +5.35% off the
+    low), ATR 3.0 so STRONG (floor 5%) is reachable inside the window."""
     sent = _capture(monkeypatch)
-    store = {"NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}
+    store = {"NTAP": _doc("NTAP", NTAP_BANDS, 3.0, 180.77)}
     coll = FakeColl()
-    out = _run(store, {"NTAP": _snap(161.0, 171.2, 180.77)}, {"NTAP": 37.4e9}, coll=coll,
+    out = _run(store, {"NTAP": _snap(160.6, 169.2, 180.77)}, {"NTAP": 37.4e9}, coll=coll,
                names={"NTAP": "NetApp"})
     assert out["ran"] and out["singles"] == 1 and out["digest"] == 0 and out["pushed"] == 1
     assert len(sent) == 1
     m = sent[0]
-    assert m["title"] == "🪃 NTAP bounced +6.3% off support (old resistance) $161.78-167.54"
-    assert m["body"] == ("$171.2 · low $161 -> +$10.2 · room +1.6% -> $173.87 (0.3R) · broken supply -> support (tested 1x)"
-                         " · 2.3x ATR · $37.4B · NetApp")
+    assert out["hits"][0]["hit"]["bounce_pct"] == 5.35 and out["hits"][0]["hit"]["strong"] is True
+    assert m["title"] == "🪃 NTAP bounced +5.3% off support (old resistance) $161.78-167.54"
+    # 173.87-180.07 closed under yesterday's 180.77 = broken = support, not a ceiling: clear runway
+    assert m["body"] == ("$169.2 · low $160.6 -> +$8.6 · room: clear runway · broken supply -> support (tested 1x)"
+                         " · 2.9x ATR · $37.4B · NetApp")
     assert m["url"] == "/sepa/NTAP?tab=supply" and m["data"]["url"] == m["url"]
     assert m["kind"] == "zone_bounce_alert" and m["kind_arg"] == "zone_bounce_alert"
     assert m["owner"] == "o@x"
@@ -246,50 +253,53 @@ def test_unknown_cap_is_skipped_and_counted_small_cap_is_skipped(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"UNK": _doc("UNK", NTAP_BANDS, 4.5, 180.77), "SML": _doc("SML", NTAP_BANDS, 4.5, 180.77),
              "NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}
-    snap = {s: _snap(161.0, 171.2, 180.77) for s in store}
+    snap = {s: _snap(161.0, 168.5, 180.77) for s in store}          # 0.57% above the top: inside the phone window
     out = _run(store, snap, {"UNK": None, "SML": 9e8, "NTAP": 37.4e9})
     assert len(out["hits"]) == 3 and out["unknown_cap"] == 1 and out["skipped_cap"] == 1
-    assert [s["title"].split()[1] for s in sent] == ["NTAP"]
+    assert len(sent) == 1 and "NTAP" in sent[0]["title"] and "UNK" not in sent[0]["body"]
 
 
 def test_dedupe_is_once_per_band_per_day(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}
     coll = FakeColl()
-    snap = {"NTAP": _snap(161.0, 171.2, 180.77)}
+    snap = {"NTAP": _snap(161.0, 168.5, 180.77)}                       # inside the 1% window
     _run(store, snap, {"NTAP": 37.4e9}, coll=coll)
     later = NOW + timedelta(minutes=9)
-    _run(store, {"NTAP": _snap(161.0, 178.38, 180.77, now=later)}, {"NTAP": 37.4e9}, coll=coll, now=later)
-    assert len(sent) == 1, "the 09:42 print is the same fact on the same band"
+    _run(store, {"NTAP": _snap(161.0, 168.9, 180.77, now=later)}, {"NTAP": 37.4e9}, coll=coll, now=later)
+    assert len(sent) == 1, "the next print is the same fact on the same band"
     tomorrow = NOW + timedelta(days=1)
     _run({"NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77, day="2026-09-04")},
-         {"NTAP": _snap(161.0, 171.2, 180.77, now=tomorrow)}, {"NTAP": 37.4e9}, coll=coll, now=tomorrow)
+         {"NTAP": _snap(161.0, 168.5, 180.77, now=tomorrow)}, {"NTAP": 37.4e9}, coll=coll, now=tomorrow)
     assert len(sent) == 2 and len(coll.docs) == 2
 
 
 def test_strong_gets_singles_capped_at_three_everything_else_one_digest(monkeypatch):
     sent = _capture(monkeypatch)
-    band = [{"kind": "demand", "lo": 99.0, "hi": 100.5, "touches": 2, "strength": 40.0}]
+    # a 5.8%-wide band: STRONG (>= 5% off the low) is reachable while the print is still
+    # within 1% above the top (the phone gate, 2026-09-05)
+    band = [{"kind": "demand", "lo": 95.0, "hi": 100.5, "touches": 2, "strength": 40.0}]
     store, snap, caps = {}, {}, {}
-    # five STRONG names (+6..+10%) and two weak (+3.5%, +4%)
-    for i, pct in enumerate([6, 7, 8, 9, 10]):
+    # five STRONG names (low 95.5 inside the band, prints 0.1-0.9% above the top: +5.3..+6.2%)
+    for i, px in enumerate([100.6, 100.8, 101.0, 101.2, 101.4]):
         s = f"ST{i}"
         store[s] = _doc(s, band, 0.5, 110.0)
-        snap[s] = _snap(100.0, 100.0 * (1 + pct / 100), 110.0)
+        snap[s] = _snap(95.5, px, 110.0)
         caps[s] = 5e9
-    for i, pct in enumerate([3.5, 4.0]):
+    # two weak names (low 97.0, +3.7% / +4.0%)
+    for i, px in enumerate([100.6, 100.9]):
         s = f"WK{i}"
         store[s] = _doc(s, band, 0.5, 110.0)
-        snap[s] = _snap(100.0, 100.0 * (1 + pct / 100), 110.0)
+        snap[s] = _snap(97.0, px, 110.0)
         caps[s] = 5e9
     coll = FakeColl()
     out = _run(store, snap, caps, coll=coll)
     assert out["singles"] == 3 and out["digest"] == 4 and out["pushed"] == 4
     assert [s["title"] for s in sent[:3]] == [
-        "🪃 ST4 bounced +10.0% off demand $99-100.5",
-        "🪃 ST3 bounced +9.0% off demand $99-100.5",
-        "🪃 ST2 bounced +8.0% off demand $99-100.5"]
-    assert sent[3]["title"] == "🪃 Bouncing off demand levels — ST1 +7.0% +3 more"
+        "🪃 ST4 bounced +6.2% off demand $95-100.5",
+        "🪃 ST3 bounced +6.0% off demand $95-100.5",
+        "🪃 ST2 bounced +5.8% off demand $95-100.5"]
+    assert sent[3]["title"] == "🪃 Bouncing off demand levels — ST1 +5.5% +3 more"
     assert [l.split()[0] for l in sent[3]["body"].split("\n")] == ["ST1", "ST0", "WK1", "WK0"]
     assert all(s["kind"] == "zone_bounce_alert" for s in sent)
     assert len(coll.docs) == 7, "every pushed name is recorded, single or digest"
@@ -297,7 +307,7 @@ def test_strong_gets_singles_capped_at_three_everything_else_one_digest(monkeypa
 
 def test_transport_failure_is_retried_but_muted_pref_is_terminal(monkeypatch):
     store = {"NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}
-    snap = {"NTAP": _snap(161.0, 171.2, 180.77)}
+    snap = {"NTAP": _snap(161.0, 168.5, 180.77)}                       # inside the 1% window
     coll = FakeColl()
     _capture(monkeypatch, result={"sent": 0, "failed": 1, "total_targets": 1})
     out = _run(store, snap, {"NTAP": 37.4e9}, coll=coll)
@@ -310,7 +320,7 @@ def test_transport_failure_is_retried_but_muted_pref_is_terminal(monkeypatch):
 def test_dry_run_reads_everything_and_records_nothing(monkeypatch):
     sent = _capture(monkeypatch)
     coll = FakeColl()
-    out = _run({"NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}, {"NTAP": _snap(161.0, 171.2, 180.77)},
+    out = _run({"NTAP": _doc("NTAP", NTAP_BANDS, 3.0, 180.77)}, {"NTAP": _snap(160.6, 169.2, 180.77)},
                {"NTAP": 37.4e9}, coll=coll, push=False)
     assert out["singles"] == 1 and out["pushed"] == 0 and sent == [] and coll.docs == {}
 
@@ -376,26 +386,38 @@ def test_demand_alerts_payloads_now_carry_their_kind_for_push_history():
 
 
 def test_a_digest_item_upgrades_to_one_strong_single_later_never_a_third_push(monkeypatch):
-    """NTAP 2026-09-03 with the measured ATR (6.907): 09:33 +6.3% rides the
-    digest (strong floor 8.58%); 09:42 +10.8% is the leg he means — ONE more
-    push, as a single; after that the band is spent for the day."""
+    """A weak first read rides the digest; when the same band turns STRONG it gets
+    ONE more push, as a single; after that the band is spent for the day. Since
+    the phone gate (2026-09-05) the upgrade must still print within 1% above the
+    top — NTAP's 09:42 leg (+10.8%, 6.5% above the shelf) now only lists — so
+    the geometry here is a 5.8%-wide band: low 96.5, +4.2% at 100.6 (digest),
+    +5.1% at 101.4 (strong, 0.9% above the top)."""
     sent = _capture(monkeypatch)
-    store = {"NTAP": _doc("NTAP", NTAP_BANDS, 6.907, 180.77)}
-    caps = {"NTAP": 37e9}
+    band = [{"kind": "demand", "lo": 95.0, "hi": 100.5, "touches": 2, "strength": 40.0}]
+    store = {"AAA": _doc("AAA", band, 1.0, 110.0)}
+    caps = {"AAA": 5e9}
     coll = FakeColl()
-    out1 = _run(store, {"NTAP": _snap(161.0, 171.2, 180.77)}, caps, coll=coll)
-    assert out1["pushed"] == 1 and sent[-1]["title"].startswith("🪃 Bouncing off demand levels — NTAP")
+    out1 = _run(store, {"AAA": _snap(96.5, 100.6, 110.0)}, caps, coll=coll)
+    assert out1["pushed"] == 1 and sent[-1]["title"].startswith("🪃 Bouncing off demand levels — AAA")
     later = datetime(2026, 9, 3, 9, 43, tzinfo=ET)
-    out2 = _run(store, {"NTAP": _snap(161.0, 178.38, 180.77, now=later)}, caps, coll=coll, now=later)
-    assert out2["pushed"] == 1 and sent[-1]["title"].startswith("🪃 NTAP bounced +10.8% off support")
-    out3 = _run(store, {"NTAP": _snap(161.0, 185.0, 180.77, now=later)}, caps, coll=coll, now=later)
+    out2 = _run(store, {"AAA": _snap(96.5, 101.4, 110.0, now=later)}, caps, coll=coll, now=later)
+    assert out2["pushed"] == 1 and sent[-1]["title"].startswith("🪃 AAA bounced +5.1% off demand")
+    out3 = _run(store, {"AAA": _snap(96.5, 101.5, 110.0, now=later)}, caps, coll=coll, now=later)
     assert out3["pushed"] == 0 and len(sent) == 2
-    # a name that was already STRONG on its first push never gets a second one
-    store2 = {"DOCN": _doc("DOCN", [{"kind": "demand", "lo": 97.49, "hi": 100.97, "touches": 1, "strength": 20.0}], 3.0, 110.0)}
-    coll2 = FakeColl()
-    _run(store2, {"DOCN": _snap(101.5, 112.0, 110.0)}, {"DOCN": 12e9}, coll=coll2)
+    # the NTAP 09:42 leg itself: strong, but 6.5% above the shelf = late = lists only
+    ntap = {"NTAP": _doc("NTAP", NTAP_BANDS, 6.907, 180.77)}
+    ncoll = FakeColl()
+    _run(ntap, {"NTAP": _snap(161.0, 168.5, 180.77)}, {"NTAP": 37e9}, coll=ncoll)       # weak, digest
     n = len(sent)
-    _run(store2, {"DOCN": _snap(101.5, 118.0, 110.0)}, {"DOCN": 12e9}, coll=coll2)
+    late = _run(ntap, {"NTAP": _snap(161.0, 178.38, 180.77, now=later)}, {"NTAP": 37e9}, coll=ncoll, now=later)
+    assert late["hits"][0]["hit"]["strong"] is True and late["pushed"] == 0 and late["skipped_proximity"] == 1
+    assert len(sent) == n
+    # a name that was already STRONG on its first push never gets a second one
+    store2 = {"DOCN": _doc("DOCN", band, 0.5, 110.0)}
+    coll2 = FakeColl()
+    _run(store2, {"DOCN": _snap(95.5, 101.0, 110.0)}, {"DOCN": 12e9}, coll=coll2)     # +5.8% strong
+    n = len(sent)
+    _run(store2, {"DOCN": _snap(95.5, 101.4, 110.0)}, {"DOCN": 12e9}, coll=coll2)
     assert len(sent) == n
 
 
@@ -438,20 +460,20 @@ def test_room_is_measured_to_the_next_supply_floor_with_an_r_multiple():
 def test_pushes_carry_the_touch_clock_and_the_room(monkeypatch):
     sent = _capture(monkeypatch)
     bands = [b for b in NTAP_BANDS if not (b["kind"] == "supply" and b["lo"] > 171.2)] + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 30.0}]
-    store = {"NTAP": _doc("NTAP", bands, 4.5, 180.77)}
-    out = _run(store, {"NTAP": _snap(161.0, 171.2, 180.77)}, {"NTAP": 37e9},
+    store = {"NTAP": _doc("NTAP", bands, 3.0, 180.77)}
+    out = _run(store, {"NTAP": _snap(160.6, 169.2, 180.77)}, {"NTAP": 37e9},     # inside the 1% window
                coll=FakeColl(), names={"NTAP": "NetApp"})
     assert out["pushed"] == 1
     body = sent[-1]["body"]
-    assert "room +20% -> $205.4 (3.6R)" in body
-    assert "low $161" in body
+    assert "room +21.4% -> $205.4 (4.9R)" in body                    # (205.4-169.2)/169.2; risk to 161.78 = 4.39%
+    assert "low $160.6" in body
     sent.clear()
-    store2 = {"NTAP": _doc("NTAP", bands, 4.5, 180.77)}
-    out2 = ZB.check_once(push=True, force=True, store=store2, snapshot={"NTAP": _snap(161.0, 171.2, 180.77)},
+    store2 = {"NTAP": _doc("NTAP", bands, 3.0, 180.77)}
+    out2 = ZB.check_once(push=True, force=True, store=store2, snapshot={"NTAP": _snap(160.6, 169.2, 180.77)},
                          caps={"NTAP": 37e9}, names={"NTAP": "NetApp"}, coll=FakeColl(), owner="o@x",
                          now=NOW, low_times={"NTAP": "9:30a"})
-    assert out2["pushed"] == 1 and "low $161 at 9:30a ET -> +$10.2" in sent[-1]["body"]
-    assert out2["hits"][0]["low_time"] == "9:30a" and out2["hits"][0]["room"]["rr"] == 3.6
+    assert out2["pushed"] == 1 and "low $160.6 at 9:30a ET -> +$8.6" in sent[-1]["body"]
+    assert out2["hits"][0]["low_time"] == "9:30a" and out2["hits"][0]["room"]["rr"] == 4.9
 
 
 def test_digest_lines_carry_clock_and_room_too():
@@ -463,3 +485,55 @@ def test_digest_lines_carry_clock_and_room_too():
     m = ZB.digest_message(items)
     assert "AAA $110 · +10.0% off $98-101 (low 2:50p) · room +2.2% -> $112.4 (0.2R) · demand · $2.0B" in m["body"]
     assert "BBB $55 · +10.0% off $49-50.5 · room: clear runway · broken supply · $3.0B" in m["body"]
+
+
+# ── fixes 2026-09-05 (review of the S/D zone logic; Ajay: "yes please fix the bugs") ──
+def test_room_counts_the_band_that_contains_the_print_and_skips_a_broken_one():
+    """room_for skipped a supply band CONTAINING the print and quoted the room to
+    the band after it: '+8.6% (1.1R)' for a print sitting 2.9% under a top."""
+    bands = [{"kind": "supply", "lo": 161.78, "hi": 167.54, "touches": 1, "strength": 18.0},
+             {"kind": "supply", "lo": 173.87, "hi": 180.07, "touches": 1, "strength": 24.0},
+             {"kind": "supply", "lo": 190.0, "hi": 195.0, "touches": 2, "strength": 30.0}]
+    room = ZB.room_for(175.0, bands, bands[0])
+    assert room["target"] == 180.07 and room["room_pct"] == 2.9 and room["state"] == "IN_BAND"
+    assert room["rr"] == 0.4                                     # 2.9 / ((175-161.78)/175 = 7.55)
+    # yesterday closed 181 > 180.07: that shelf is broken (support); the ceiling is 190
+    room2 = ZB.room_for(175.0, bands, bands[0], prev_close=181.0)
+    assert room2["target"] == 190.0 and room2["room_pct"] == 8.6 and room2["rr"] == 1.1 and room2["touches"] == 2
+    # a demand band ABOVE the print is broken support = overhead too
+    room3 = ZB.room_for(175.0, bands[:1] + [{"kind": "demand", "lo": 178.0, "hi": 179.0, "touches": 2}], bands[0])
+    assert room3["target"] == 178.0 and room3["room_pct"] == 1.7
+    assert ZB._room_txt(room) == "room +2.9% -> $180.07 (0.4R)"
+
+
+def test_phone_gate_a_bounce_that_already_ran_lists_but_never_pushes(monkeypatch):
+    """Ajay 2026-09-05: "<1% bounce from demand zone" — NTAP's 09:33 print was
+    2.2% above the shelf top; by the time it reached the phone he was late.
+    Listed in hits, counted (skipped_proximity), not pushed, not recorded."""
+    sent = _capture(monkeypatch)
+    store = {"NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}
+    coll = FakeColl()
+    out = _run(store, {"NTAP": _snap(161.0, 171.2, 180.77)}, {"NTAP": 37.4e9}, coll=coll)
+    assert [h["symbol"] for h in out["hits"]] == ["NTAP"] and out["hits"][0]["hit"]["bounce_pct"] == 6.34
+    assert out["pushed"] == 0 and sent == [] and coll.docs == {}
+    assert out["skipped_proximity"] == 1 and out["skipped_room"] == 0
+    # 168.5 = 0.57% above the top, +4.7% off the low; the 173.87-180.07 shelf is broken
+    # (180.07 < prev 180.77) so nothing unbroken sits overhead: clear runway -> pushes
+    out2 = _run(store, {"NTAP": _snap(161.0, 168.5, 180.77)}, {"NTAP": 37.4e9}, coll=coll)
+    assert out2["pushed"] == 1 and out2["skipped_proximity"] == 0 and out2["skipped_room"] == 0
+    assert sent[-1]["title"].startswith("🪃 Bouncing off demand levels — NTAP +4.7%")
+    assert "room: clear runway" in sent[-1]["body"]
+    assert list(coll.docs) == ["NTAP:161.78-167.54:2026-09-03"]
+
+
+def test_phone_gate_needs_five_percent_room_to_the_first_unbroken_supply(monkeypatch):
+    sent = _capture(monkeypatch)
+    band = {"kind": "demand", "lo": 96.0, "hi": 100.0, "touches": 2, "strength": 40.0}
+    lid = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 2, "strength": 20.0}   # 3.5% over a $100.5 print
+    store = {"AAA": _doc("AAA", [band, lid], 0.5, 105.0)}          # prev 105: arrival (>103), lid unbroken (106 >= 105)
+    out = _run(store, {"AAA": _snap(97.0, 100.5, 105.0)}, {"AAA": 5e9})   # +3.6% off the low, 0.5% above the top
+    assert out["hits"] and out["hits"][0]["room"]["room_pct"] == 3.5
+    assert out["pushed"] == 0 and sent == [] and out["skipped_room"] == 1 and out["skipped_proximity"] == 0
+    store2 = {"AAA": _doc("AAA", [band, dict(lid, lo=106.0, hi=108.0)], 0.5, 105.0)}   # 5.47% over
+    out2 = _run(store2, {"AAA": _snap(97.0, 100.5, 105.0)}, {"AAA": 5e9})
+    assert out2["pushed"] == 1 and "room +5.5% -> $106" in sent[-1]["body"]

@@ -40,7 +40,8 @@ blind to it. Hence two new pieces.
 
 ## 2. The 5-min pass — `backend/supply_demand/zone_bounce_alerts.py`
 
-Session gate weekdays **9:33–16:00 ET**. Data: `sepa.prices.bulk_snapshot(syms)` **directly**
+Session gate **9:33–16:00 ET on NYSE trading days** (weekends AND the house holiday calendar,
+`market_hours.reminder.is_market_day` — fix 2026-09-05; weekday-only ran on Labor Day). Data: `sepa.prices.bulk_snapshot(syms)` **directly**
 (250-per-call chunks) — it carries the day **low**, `last_trade_price`, `last_trade_ts_ms`
 (ns), `prev_day_close`; `bulk_live_prices` drops the low.
 
@@ -60,8 +61,35 @@ On 2026-09-03 Massive aggregates lagged ~3 h after 13:13 ET — an old price is 
 
 Cap gate: `catalysts.promo_circuit.market_caps_for(syms, prints)` + `demand_alerts.passes_cap`
 — unknown cap is **skipped and counted** (`unknown_cap`). Dedupe once per **(symbol, band, ET
-day)** — Mongo `zone_bounce_state`, `_id = SYM:lo-hi:YYYY-MM-DD`; written only on a terminal
-send (delivered, or nobody targeted → muted pref / no device); a transport failure retries.
+day)** — Mongo `zone_bounce_state`, `_id = SYM:lo-hi:YYYY-MM-DD` (**fixed 2 dp since 2026-09-05**,
+`NTAP:161.78-167.54:2026-09-05`; `:g` collapsed two bands on a $10,000+ name — a weekend deploy, so
+no same-day re-push); written only on a terminal send (delivered, or nobody targeted → muted pref /
+no device); a transport failure retries.
+
+### Phone gate (2026-09-05)
+
+**Ajay 2026-09-05 (verbatim, mid-fix):** *"When alert I need the same logic. Need only alerts on
+stocks that have atleast 5% to Supply and also <1% bounce from demand zone"*. Shared module
+`backend/supply_demand/alert_gates.py` (also called by `zone_edge` and `demand_alerts`). **Boards
+unchanged**; `hits` still lists every bounce — only the phone tightens. The bounce floor above is
+unchanged.
+
+| owner setting | value | from his sentence |
+|---|---|---|
+| `ALERT_MIN_ROOM_PCT` | **5.0** | "atleast 5% to Supply" |
+| `ALERT_MAX_ABOVE_DEMAND_PCT` | **1.0** | "<1% bounce from demand zone" |
+
+* `demand_proximity_gate(print, band)` — the print must still be within 1% **above the touched band's
+  top** (`lo <= print <= hi × 1.01`). The complaint was "I am late by the time it reaches me": NTAP's
+  09:33 print (171.2, 2.2% above the 167.54 top) would now list, not ring; a 168.5 print (0.57% above)
+  rings. A bounce that already ran 4% above the top never pushes again that day — it only lists.
+  Under the floor = fell through = no push.
+* `room_gate(print, bands, prev_close)` — at least 5% from the print to the first **unbroken** supply
+  band overhead (the same read `room_for` puts in the body). CLEAR passes, `IN_BAND` fails, `< 5%` fails.
+* Counted: `skipped_proximity`, `skipped_room` in the pass result and the `ZONE-BOUNCE:` log line.
+* Because STRONG needs ≥ 5% off the low while the print sits ≤ 1% above the top, an individual push is
+  only possible off a band ≈ 4% wide (`hi/lo >= 1.05/1.01`, i.e. 3.96%; a 2.4%-wide band tops out at
+  +3.42%) or off a low that wicked under the floor; narrow bands ride the digest (corrected 2026-09-05).
 
 ### Pushes per pass
 
@@ -151,9 +179,17 @@ Tests: `backend/tests/test_zone_store.py`, `backend/tests/test_zone_bounce_alert
 
 Every push now carries **when the low printed** (first RTH minute bar at the day low, ET clock —
 one minute-bar read per fresh hit, never the universe; silently omitted on failure) and the
-**room to run**: % from the print to the FLOOR of the nearest supply band above it in the stored
-bands, with the R multiple against a stop under the touched band's floor (`room_for`). No supply
-band overhead → "room: clear runway". Single body: `$171.2 · low $161 at 9:30a ET -> +$10.2 ·
+**room to run**: % from the print to the first band overhead in the stored bands — the FLOOR of the
+nearest **unbroken** supply band above it, or the **TOP of the supply band the print is already inside**
+(fix 2026-09-05: a containing band was skipped and the room quoted to the band after it, "+8.6%
+(1.1R)" for a print sitting 2.9% under a top); a supply band with `hi < prev_close` (yesterday closed
+above it — the module's own broken-supply rule) is support, never a ceiling; a demand band above the
+print is broken support and counts — with the R multiple against a stop under the touched band's
+floor (`room_for(print, bands, touched, prev_close)`; the rule itself is `alert_gates.room_read`,
+shared with the phone gate and matching `bounce_room.first_overhead` whenever no band is broken).
+Nothing overhead → "room: clear runway". On the NTAP morning the 173.87–180.07 shelf (top under the
+180.77 prev close) is therefore *not* a ceiling: the body reads "room: clear runway", and NTAP did
+reclaim that shelf inside twelve minutes. Single body: `$171.2 · low $161 at 9:30a ET -> +$10.2 ·
 room +1.6% -> $173.87 (0.3R) · broken supply -> support (tested 1x) · 2.3x ATR · $37.4B · NetApp`;
 digest lines: `AAA $110 · +10.0% off $98-101 (low 2:50p) · room +2.2% -> $112.4 (0.2R) · demand · $2.0B`.
 The Claude relay (`~/clinet-test/cheetah-alert-digest.py`) turns each line into `AAA +10.0% (low 2:50p,

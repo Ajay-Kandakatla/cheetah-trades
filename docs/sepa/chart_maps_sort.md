@@ -278,3 +278,24 @@ neither reads the re-ranked boards.
 | Board order == the key's order with themes off | `test_approaching_board_score_is_the_position_in_the_shared_key` |
 | Same age → CMF, missing flow last | `test_in_the_block_same_age_ranks_by_cmf_and_missing_inflow_last` |
 | Deep: in before near, nearest near first | `test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase` |
+
+### Update 2026-09-05 — the live print behind the gate and the rank (Ajay: "yes please fix the bugs")
+
+Two review findings on the read-time layer above, both reproduced and fixed:
+
+* **A zero day bar was a price.** `board._live_last` read the snapshot's `price` (the day bar
+  close), which is **0 before the open**, and `0.0` is not `None` — so pre-market the row-price
+  fallback never fired, `already_bounced(0.0, hi)` was false for every row (the 7% gate went inert)
+  and `geometry(0.0, …)` was `STATE_UNKNOWN` for every row, so "closest first" collapsed to
+  money-flow order. Now `_snapshot_print` takes the **last trade** first (extended hours included,
+  the field `zone_bounce_alerts.print_from_snapshot` reads, without its staleness drop), else the
+  day bar, and a non-positive value is **missing** (`None`) → the scan's `last_price` decides, as
+  the tape-outage path always did. Test:
+  `test_live_last_treats_a_zero_day_bar_as_missing_and_prefers_the_last_trade`.
+* **Stale distance on an in-band tile.** `_disp_dist` fell back to the scan's `dist_pct` whenever
+  the live print was at or **inside** the band, so a name the re-rank had just moved to the top as
+  *in the band* still read "→ 1.96% above the band". Now a live print `≤ hi` reads **0.0** and the
+  badge / `why` say **"◉ in the band"** / "now in the band" (order block: "◉ in the order block").
+  Tests: `test_disp_dist_reads_zero_once_the_live_print_is_at_or_inside_the_band`,
+  `test_approaching_tile_in_the_band_on_the_live_print_says_so_and_leads`; source guard
+  `test_board_live_print_and_in_band_rules_stay_in_source`.

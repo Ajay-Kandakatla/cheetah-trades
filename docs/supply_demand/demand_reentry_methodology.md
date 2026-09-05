@@ -77,10 +77,15 @@ the `/zones` page and `orderflow.signals`, which share the module. Locked by
 - **Entry band** = the demand band itself — buy *into* support, not through it.
 - **Stop** = `STOP_BUFFER_PCT` under the band floor. Below the floor the reason
   for the trade is gone.
-- **Target** = the **low of the nearest overhead supply band** — the first place
-  sellers are known to be waiting. When there is no supply band above,
-  **`target` is `None`** and no R:R is shown. We do not invent a target
-  (`test_trade_plan_without_overhead_supply_has_no_target_or_rr`).
+- **Target** = the **low of the first band of either origin above the entry
+  band's top** — the first place sellers are known to be waiting. A demand-kind
+  band overhead counts: broken support acts as resistance (see "documented
+  decisions" below). When there is no band above, **`target` is `None`** and no
+  R:R is shown. We do not invent a target
+  (`test_trade_plan_without_overhead_supply_has_no_target_or_rr`,
+  `test_trade_plan_targets_the_first_band_of_EITHER_origin_above_the_entry_band`).
+  The OB reads' `target_basis` label says which it was — "next supply band" or
+  **"broken demand band overhead"** (`_label_target_kind`, 2026-09-05).
 - **`risk_exceeds_max`** flags a stop wider than `ABS_MAX_STOP_PCT` — the plan
   is surfaced as undefendable rather than silently handed over.
 
@@ -558,3 +563,42 @@ cap), `test_chart_maps.py` (board wiring), `test_supply_demand_contracts.py`
 still R:R-led, position score on the boards).
 
 *Decision-support only. Configured house ordering, not a book method.*
+
+---
+
+## 2026-09-05 review fixes — the re-entry read
+
+Ajay 2026-09-05, on the S/D zone review: *"yes please fix the bugs"*. Four
+findings against `demand_reentry.py`; the broken-band one is written up in
+`broken_band_guard.md` §4. The other three:
+
+* **One price basis.** `zones["last_price"]` and every band edge are 2dp quotes;
+  the closes fed to `reentry_read` were raw. A Massive close 0.4c above the band
+  top was INSIDE for the membership test and ABOVE for the read at the same
+  time — `is_reentry True`, `bars_since_above 0`, "dropped in today" on a bar
+  that never left. `decide_from_frame` now rounds the closes to 2dp, the basis
+  every other number in the record already used (the alternative — raw closes
+  for membership — would have shown a `last_price` inside the band on a row that
+  said it was outside).
+* **Deep Demand's break evidence is live.** `top_band_read` was `reentry_read`
+  on the top band, asked only when price was BELOW it — and that read is the
+  empty shape whenever price is outside the band, so `bars_since_top_break` and
+  `fell_from_pct` were dead on every deep row (the module docstring's "None on
+  older cached rows" was false). It is now `demand_reentry.band_break_read`
+  (the same scan, no in-band requirement). **`bars_since_top_break` = age of the
+  FIRST close under the top band in the current leg** — when it fell through;
+  the most recent close under it is always today for a name still under its
+  floor. `fell_from_pct` = how far above the top band the run-up before that
+  break reached. None only on rows cached before 2026-09-05.
+* **The target label.** `patterns.trade_levels` names target 1 "next supply
+  band" for any opposing band; `approaching_ob_read` / `in_ob_read` hand it
+  `nearest_resistance`, which is the first band of EITHER origin above price.
+  A demand band overhead is a valid target (documented above) and now prints as
+  **"broken demand band overhead"**. `trade_plan`'s docstring said "supply band"
+  while its math never did; the docstring now matches.
+
+No new thresholds: the answer rule reuses `MIN_RISE_ABOVE_PCT`, the price basis
+reuses `price_zones`' 2dp rounding. Guards: `test_supply_demand_contracts.py`
+block "reentry fixes 2026-09-05".
+
+*Decision-support only. Not investment advice.*

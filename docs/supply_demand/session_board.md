@@ -141,3 +141,13 @@ unavailable, a warming source reports warming rather than an empty board, and
 `frame_for` must not re-fetch when handed bars.
 
 *Decision-support only. Not investment advice.*
+
+## 2026-09-05 — gaps off closed buckets only (Ajay: *"yes please fix the bugs"*)
+
+`frame_for` flags the in-progress last bucket `partial`; `read_symbol` now computes
+`fair_value_gaps` on the frame **without** it (a three-bar imbalance whose third bar has
+not closed is not a gap yet — its edge is the low-so-far and repaints all session).
+`last_price` still comes from the live bucket; `mood` was already `closed_only`; SMC setups
+are untouched. Rule and cross-module notes: `timeframes_orb_fvg.md` → *The in-progress
+bucket is not structure*. Test:
+`test_session_board.py::test_the_boards_gaps_come_from_closed_buckets_not_the_partial_one`.

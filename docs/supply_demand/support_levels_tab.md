@@ -179,3 +179,14 @@ chip with the session state and as-of time, quiet 30-second re-reads while the
 extended session is open, and a one-line 🌙 overnight read ("broke support
 $198.80–$201.20 at 16:30; bounced off support $184.75–$186.98 at 17:35 ✓").
 Method and contracts: `timeframes_orb_fvg.md` → *Live frame*.
+
+## 2026-09-05 — structure off the closed frame (Ajay: *"yes please fix the bugs"*)
+
+The tab computes its swings, fair value gaps and ATR on the frame **without** today's live
+bar (`_frame_for(sym, bars, with_closed=True)` returns both; on an intraday timeframe the
+`partial` last bucket is dropped the same way) and still **prices** the levels at the live
+print (`pz.compute(closed, last_price=live_last, ...)`). Before this a displacement bar plus
+the live bar printed a demand FVG whose top was the live bar's low-so-far, and a partial-day
+true range leaked into the ATR the entry/stop buffer is scaled by. Same rule as
+`price_zones.for_symbol` (`price_zones_methodology.md` → 2026-09-05). Test:
+`test_chart_maps_support.py::test_the_support_tab_reads_structure_off_the_closed_frame_not_the_live_bar`.

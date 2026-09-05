@@ -2263,3 +2263,91 @@ def test_approaching_badges_print_the_live_distance_the_ranking_used(prices, ree
     monkeypatch.setattr(B, "_live_last", lambda syms: {})
     out2 = B.board("zones", limit=10, min_tier="any", phase="approaching")
     assert any("2.9% above the band" in b["text"] for b in out2["tiles"][0]["badges"])
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-05 review fixes (Ajay: "yes please fix the bugs") — the live print
+# behind the bounce gate / live re-rank, and the in-band approaching tile
+# ---------------------------------------------------------------------------
+def test_live_last_treats_a_zero_day_bar_as_missing_and_prefers_the_last_trade(prices):
+    """Pre-market the snapshot day bar `price` is 0 (the codebase's own
+    documented feed behaviour). 0 is MISSING, not a price: prefer the last
+    trade (extended hours included), else the day bar, else None — so
+    drop_bounced / rerank_live fall back to the row's scan price instead of
+    running every row through geometry(0.0, ...)."""
+    snaps = {"AAA": {"price": 0, "last_trade_price": 25.1},
+             "BBB": {"price": 0, "last_trade_price": 0},
+             "CCC": {"price": 101.0, "last_trade_price": None},
+             "DDD": None}
+    import sys as _sys
+    _sys.modules["sepa.prices"].bulk_live_prices = lambda syms: snaps
+    live = B._live_last(["AAA", "BBB", "CCC", "DDD"])
+    assert live == {"AAA": 25.1, "BBB": None, "CCC": 101.0, "DDD": None}
+    # Pre-market board: day bars 0, only AAA has an extended-hours trade.
+    # BBB -> None -> its SCAN price (108, +8% off the band) decides: the
+    # bounce gate drops it and the re-rank puts the 0.5%-out name first.
+    # (The old reader gave both 0.0: BBB was kept and led on money flow.)
+    _sys.modules["sepa.prices"].bulk_live_prices = lambda syms: {
+        "AAA": {"price": 0, "last_trade_price": 100.5},
+        "BBB": {"price": 0, "last_trade_price": 0}}
+    live = B._live_last(["AAA", "BBB"])
+    assert live == {"AAA": 100.5, "BBB": None}
+    rows = [{"symbol": "BBB", "last_price": 108.0, "entry_zone": {"lo": 98.0, "hi": 100.0},
+             "approaching": {"band": {"lo": 98.0, "hi": 100.0}, "dist_pct": 7.4},
+             "inflow": {"state": "inflow", "cmf_20": 0.2}},
+            {"symbol": "AAA", "last_price": 100.5, "entry_zone": {"lo": 98.0, "hi": 100.0},
+             "approaching": {"band": {"lo": 98.0, "hi": 100.0}, "dist_pct": 0.5}}]
+    kept, dropped = B.drop_bounced(rows, lambda r: r["entry_zone"]["hi"], live)
+    assert [r["symbol"] for r in kept] == ["AAA"] and dropped == 1
+    from supply_demand import demand_order as O
+    assert [r["symbol"] for r in B.rerank_live(rows, O.approaching_key, live)] == ["AAA", "BBB"]
+    assert B._live_px(rows[0], {"BBB": None}) == 108.0
+
+
+def test_disp_dist_reads_zero_once_the_live_print_is_at_or_inside_the_band():
+    row = {"symbol": "AAA", "last_price": 102.0,
+           "approaching": {"band": {"lo": 98.0, "hi": 100.0}, "dist_pct": 1.96},
+           "entry_zone": {"lo": 98.0, "hi": 100.0}}
+    read = row["approaching"]
+    assert B._disp_dist(row, {"AAA": 99.0}, read, "band") == 0.0
+    assert B._disp_dist(row, {"AAA": 100.0}, read, "band") == 0.0
+    assert B._disp_dist(row, {"AAA": 100.2}, read, "band") == pytest.approx(0.2)
+    assert B._disp_dist(row, {}, read, "band") == 1.96          # no print: scan number
+    assert B._disp_dist(row, {"AAA": None}, read, "band") == 1.96
+
+
+def test_approaching_tile_in_the_band_on_the_live_print_says_so_and_leads(
+        prices, reentry_stub, monkeypatch):
+    """Scan: INBAND 1.96% out, OUT 0.3% out. Live: INBAND printed 99.0 (in
+    the 98-100 band), OUT 100.3. The re-rank puts INBAND first; its badge
+    and `why` must say it is IN the band — never the stale 1.96%."""
+    reentry_stub["approaching_rows"] = [_appr_row("OUT", dist=0.3),
+                                        _appr_row("INBAND", dist=1.96)]
+    for sym in ("OUT", "INBAND"):
+        prices[sym] = _frame(200, start=95.0)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"INBAND": 99.0, "OUT": 100.3})
+    out = B.board("zones", limit=10, min_tier="any", phase="approaching",
+                  themes_first=False)
+    assert [t["symbol"] for t in out["tiles"]] == ["INBAND", "OUT"]
+    top, second = out["tiles"]
+    texts = [b["text"] for b in top["badges"]]
+    assert any("in the band" in t for t in texts), texts
+    assert not any("1.96" in t for t in texts), texts
+    assert "in the band" in top["why"] and "1.96" not in top["why"]
+    assert any(b["text"] == "→ 0.3% above the band" for b in second["badges"])
+
+
+def test_board_live_print_and_in_band_rules_stay_in_source():
+    """Guards for the 2026-09-05 fixes: the live print prefers the last trade
+    and treats a non-positive value as missing; an approaching tile whose
+    live print is at/inside the level reads 0 and says 'in the band'."""
+    import inspect
+    sp = inspect.getsource(B._snapshot_print)
+    assert 'for key in ("last_trade_price", "price"):' in sp and "px > 0" in sp
+    assert "_snapshot_print(v)" in inspect.getsource(B._live_last)
+    dd = inspect.getsource(B._disp_dist)
+    assert "if px <= hi:\n            return 0.0" in dd
+    zt = inspect.getsource(B.zone_tiles)
+    assert zt.count("_dist_badge(") == 2 and zt.count("_dist_text(") == 2, (
+        "the approaching band / order-block badge and why must go through the "
+        "in-band aware helpers")

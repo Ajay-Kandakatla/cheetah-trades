@@ -49,6 +49,14 @@ last trade only while it is within STALE_PRINT_SEC of now; otherwise the
 bounce leg is SKIPPED for that name (2026-09-03: Massive aggregates lagged
 ~3h after 13:13 ET — a stale print is not a bounce, it is an old price).
 
+Phone gate (Ajay 2026-09-05, alert_gates.py): a push also wants the print
+still within ALERT_MAX_ABOVE_DEMAND_PCT (1%) above the touched band's top —
+"<1% bounce from demand zone"; by the time NTAP's 09:33 print (2.2% above the
+shelf) reached him he was late — AND at least ALERT_MIN_ROOM_PCT (5%) from the
+print to the first UNBROKEN supply band overhead. The bounce floor is
+unchanged. A bounce that already ran lists in `hits`, counted
+(skipped_proximity / skipped_room), never rings. The board is unchanged.
+
 Cap gate: catalysts.promo_circuit.market_caps_for + demand_alerts.passes_cap
 — unknown cap is skipped and counted. Dedupe once per (symbol, band, ET
 day); state written only on a terminal send (delivered, or nobody
@@ -65,6 +73,9 @@ import time
 from datetime import datetime, time as dtime
 from typing import Optional
 from zoneinfo import ZoneInfo
+
+from market_hours.reminder import is_market_day
+from . import alert_gates as AG
 
 log = logging.getLogger(__name__)
 
@@ -91,9 +102,11 @@ def _now_et() -> datetime:
 
 
 def in_session(now: Optional[datetime] = None) -> bool:
-    """RTH weekdays 9:33-16:00 ET."""
+    """RTH 9:33-16:00 ET on NYSE trading days — weekends AND the house holiday
+    calendar (market_hours.reminder.is_market_day; fix 2026-09-05)."""
     now = now or _now_et()
-    if now.weekday() >= 5:
+    et = now.astimezone(ET) if now.tzinfo is not None else now
+    if not is_market_day(et):
         return False
     return SESSION_OPEN <= now.time() <= SESSION_CLOSE
 
@@ -213,34 +226,35 @@ def _low_time_et(symbol: str, day, day_low) -> Optional[str]:
         return None
 
 
-def room_for(print_px, bands: list, touched: dict) -> Optional[dict]:
-    """Room to run: % from the print to the FLOOR of the nearest supply band
-    above it, plus the R multiple against a stop under the touched band's
-    floor (Ajay 2026-09-03: "had room to grow 2.2"). None = no supply band
-    overhead in the store = clear runway."""
+def room_for(print_px, bands: list, touched: dict, prev_close=None) -> Optional[dict]:
+    """Room to run: % from the print to the first band overhead — the FLOOR of
+    the nearest UNBROKEN supply band above it, or the TOP of the supply band the
+    print is already inside (fix 2026-09-05: a containing band was skipped and
+    the room quoted to the band after it, +8.6% for a print 2.9% under a top);
+    a supply band yesterday closed above (hi < prev_close) is support, never a
+    ceiling; a demand band above the print is broken support and counts. Plus
+    the R multiple against a stop under the touched band's floor (Ajay
+    2026-09-03: "had room to grow 2.2"). None = clear runway. The rule itself is
+    alert_gates.room_read, shared with the phone gate."""
     try:
         px = float(print_px)
         if px <= 0:
             return None
-        above = [b for b in bands or []
-                 if str(b.get("kind") or "").lower() == "supply"
-                 and _f(b.get("lo")) is not None and float(b["lo"]) > px]
-        if not above:
+        room = AG.room_read(px, bands or [], prev_close)
+        if room is None:
             return None
-        nxt = min(above, key=lambda b: float(b["lo"]))
-        target = float(nxt["lo"])
-        room_pct = (target - px) / px * 100.0
+        raw_room = (float(room["target"]) - px) / px * 100.0
         stop = _f((touched or {}).get("lo"))
         risk_pct = (px - stop) / px * 100.0 if stop is not None and stop < px else None
-        rr = round(room_pct / risk_pct, 1) if risk_pct and risk_pct > 0 else None
-        return {"room_pct": round(room_pct, 1), "target": round(target, 2), "rr": rr,
-                "touches": nxt.get("touches")}
+        rr = round(raw_room / risk_pct, 1) if risk_pct and risk_pct > 0 else None
+        return dict(room, rr=rr)
     except Exception:
         return None
 
 
 def state_key(symbol: str, band: dict, day: str) -> str:
-    return f"{symbol}:{float(band['lo']):g}-{float(band['hi']):g}:{day}"
+    """Fixed 2 dp (2026-09-05): ':g' collapsed two bands on a $10,000+ name."""
+    return f"{symbol}:{float(band['lo']):.2f}-{float(band['hi']):.2f}:{day}"
 
 
 def _band_txt(band: dict) -> str:
@@ -254,11 +268,7 @@ def _band_role(band: dict) -> str:
     return f"demand ({tested})"
 
 
-def _room_txt(room: Optional[dict]) -> str:
-    if not room:
-        return "room: clear runway"
-    rr = f" ({room['rr']:g}R)" if room.get("rr") is not None else ""
-    return f"room +{room['room_pct']:g}% -> ${room['target']:g}{rr}"
+_room_txt = AG.room_txt            # one wording for every S/D push body
 
 
 def single_message(item: dict) -> dict:
@@ -425,7 +435,7 @@ def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] 
         coll = _state_coll()
     day_iso = day.isoformat()
     hits, items = [], []
-    unknown_prev = unknown_cap = skipped_cap = 0
+    unknown_prev = unknown_cap = skipped_cap = skipped_room = skipped_proximity = 0
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -453,12 +463,23 @@ def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] 
                 "bands": [b for b, _ in touched], "cap": cap, "name": None}
         hits.append(item)
         hit_row = item                                  # dry runs see the detail too
+        bands = doc.get("bands") or []
+        item["room"] = room_for(px, bands, item["band"], prev)
         from supply_demand.demand_alerts import passes_cap
         if not passes_cap(cap, MIN_CAP_USD):
             if cap is None:
                 unknown_cap += 1
             else:
                 skipped_cap += 1
+            continue
+        # phone gate (Ajay 2026-09-05): still within 1% above the touched band's
+        # top, and >= 5% to the first unbroken supply band overhead
+        if not AG.demand_proximity_gate(px, item["band"]):
+            skipped_proximity += 1
+            continue
+        room_ok, _ = AG.room_gate(px, bands, prev)
+        if not room_ok:
+            skipped_room += 1
             continue
         fresh, upgrades = [], []
         for b, h in touched:
@@ -482,11 +503,10 @@ def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] 
             except Exception:
                 item["name"] = None
         # Detail only for what will be pushed: the touch clock (one minute-bar
-        # read) and the room to the next supply band (from the stored bands).
+        # read); the room rode in with the hit row above.
         item["low_time"] = (low_times.get(sym) if low_times is not None
                             else _low_time_et(sym, day, low))
-        item["room"] = room_for(px, doc.get("bands") or [], item["band"])
-        hit_row["low_time"], hit_row["room"] = item["low_time"], item["room"]
+        hit_row["low_time"] = item["low_time"]
         items.append(item)
     strong = sorted((it for it in items if it["hit"]["strong"]),
                     key=lambda it: -it["hit"]["bounce_pct"])
@@ -522,7 +542,8 @@ def check_once(*, push: bool = True, force: bool = False, store: Optional[dict] 
     return {"ran": True, "date": day_iso, "candidates": len(syms), "priced": len(prints),
             "stale_print": stale_print, "hits": hits, "singles": len(singles),
             "digest": len(digest), "pushed": pushed, "skipped_cap": skipped_cap,
-            "unknown_cap": unknown_cap, "unknown_prev": unknown_prev}
+            "unknown_cap": unknown_cap, "unknown_prev": unknown_prev,
+            "skipped_room": skipped_room, "skipped_proximity": skipped_proximity}
 
 
 if __name__ == "__main__":
@@ -532,8 +553,9 @@ if __name__ == "__main__":
     out = check_once()
     log.info("ZONE-BOUNCE: ran=%s candidates=%s priced=%s stale_print=%s hits=%d "
              "singles=%s digest=%s pushed=%s skipped_cap=%s unknown_cap=%s "
-             "unknown_prev=%s seconds=%.1f", out.get("ran"), out.get("candidates"),
+             "unknown_prev=%s skipped_room=%s skipped_proximity=%s seconds=%.1f",
+             out.get("ran"), out.get("candidates"),
              out.get("priced"), out.get("stale_print"), len(out.get("hits") or []),
              out.get("singles"), out.get("digest"), out.get("pushed"),
              out.get("skipped_cap"), out.get("unknown_cap"), out.get("unknown_prev"),
-             time.time() - t0)
+             out.get("skipped_room"), out.get("skipped_proximity"), time.time() - t0)

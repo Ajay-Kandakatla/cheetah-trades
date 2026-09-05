@@ -44,6 +44,11 @@ MAX_ZONES_PER_SIDE   = 4      # surface the N NEAREST supply + N demand bands (w
 MIN_BARS             = 60     # default-window floor — unchanged since 2026-06-09
 MIN_BARS_ABS         = 12     # hard floor for a custom window, at any resolution
 
+# One tick at the 2dp every band edge is rounded to. NOT a threshold — the
+# rounding grain `_make_zone` already applies; a cluster whose natural span is
+# thinner than this has no width after rounding (see the degenerate-band fix).
+_TICK_2DP            = 0.01
+
 DISCLAIMER = ("Price-structure zones — a configured, pragmatic read of where "
               "supply/demand showed up (NOT a book method). Decision-support only "
               "— not a buy signal and not advice.")
@@ -72,7 +77,15 @@ def _make_zone(df: pd.DataFrame, cluster, kind: str,
     lo, hi = min(prices), max(prices)
     mid = sum(prices) / len(prices)
     hwp = ZONE_HALF_WIDTH_PCT if half_width_pct is None else float(half_width_pct)
-    if hi <= lo:                                   # single-swing band → give it width
+    # A single swing has no span, and (2026-09-05, Ajay: "yes please fix the
+    # bugs") so does a multi-touch cluster whose swings sit a fraction of a cent
+    # apart: 1.2001/1.2004 rounded to a 1.20–1.20 band with two touches and no
+    # width, which killed its trade_levels and made in_price a one-cent target.
+    # Both degenerate cases get the symmetric single-swing half-width. ONLY the
+    # degenerate case is widened — a real span (100.0–101.5, or even one tick,
+    # 110.00–110.01) is left exactly as the swings drew it. Widening every
+    # multi-touch band would reshape every board and needs a re-measure first.
+    if hi <= lo or (round(hi, 2) - round(lo, 2)) < _TICK_2DP - 1e-9:
         hw = mid * hwp / 100.0
         lo, hi = mid - hw, mid + hw
     vol = float(df["volume"].iloc[idxs].sum()) if "volume" in df else 0.0
@@ -130,8 +143,14 @@ def _verdict(px, res, sup, in_zone):
         return {**base, "state": "AT_SUPPLY", "entry_read": "caution",
                 "label": f"In an overhead-supply band (${in_zone['lo']}–${in_zone['hi']}) — "
                          f"resistance right here; it needs to clear this before it runs."}
+    # AT_DEMAND used to force support_pct to 0.0 ("support is right here").
+    # `nearest_support` is the band BELOW price, never the one it stands in, and
+    # the /zones page prints the two as one statement — so 0.0 annotated the
+    # NEXT band down as "−0.0%" when it was 12% away. Both sides now carry the
+    # true distance to the band the payload names; the containing band is in
+    # the label (2026-09-05, Ajay: "yes please fix the bugs").
     if in_zone and in_zone["kind"] == "demand":
-        return {**base, "state": "AT_DEMAND", "entry_read": "favorable", "support_pct": 0.0,
+        return {**base, "state": "AT_DEMAND", "entry_read": "favorable",
                 "label": f"In a demand zone (${in_zone['lo']}–${in_zone['hi']}, "
                          f"{in_zone['touches']}× tested) — support is right here."}
     if res is not None and res_pct is not None and res_pct <= NEAR_PCT:
@@ -265,7 +284,12 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
 
 def _overlay_today(prices_mod, df, sym: str):
     """prices.with_today_bar, tolerant of stubs that lack it (tests) and of any
-    failure — the closed frame is always an acceptable answer."""
+    failure — the closed frame is always an acceptable answer.
+
+    Since 2026-09-05 `for_symbol` uses only the INFO half of the answer (the
+    live price + the block the chart draws); structure is read off the closed
+    frame it was given. The overlaid frame is still returned for any caller
+    that wants it."""
     fn = getattr(prices_mod, "with_today_bar", None)
     if fn is None:
         return df, None
@@ -288,6 +312,17 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
     byte — the intraday branch is additive and cannot change what the
     existing callers see. Every intraday answer also carries its Fair Value
     Gaps, the session opening range, and the entry/stop each band implies.
+
+    STRUCTURE IS READ OFF CLOSED BARS ONLY (2026-09-05, Ajay: "yes please fix
+    the bugs"). Swings/bands, fair value gaps, ATR and trade levels are
+    computed on the frame BEFORE today's live bar (daily) or without the
+    in-progress last bucket (intraday). The partial bar supplies only the
+    price the verdict is read at, and the `live_bar` block the chart draws.
+    A "three-bar imbalance" whose third bar has not closed is not a gap yet —
+    its edge was the intraday low-so-far and repainted all session; the same
+    bar was leaking a partial-day true range into the ATR the stop buffer is
+    scaled by. This deliberately NARROWS the 2026-09-03 CHPT decision: the
+    verdict and the chart still see the live bar; the structure does not.
     """
     sym = (symbol or "").upper().strip()
     if not sym:
@@ -303,10 +338,17 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
         if df is None or len(df) < 60:
             return {"symbol": sym, "error": "no / insufficient price data",
                     "timeframe": tf_key, "timeframes": tf_mod.tf_options()}
-        # Today's live bar rides on top of the closed frame (Ajay 2026-09-03,
-        # CHPT read "1.4% below support" off yesterday's close while the tape
-        # was +76%). Nothing is written back — see prices.with_today_bar.
-        df, live_bar = _overlay_today(prices, df, sym)
+        # Today's live bar (Ajay 2026-09-03, CHPT read "1.4% below support"
+        # off yesterday's close while the tape was +76%) supplies the PRICE
+        # the verdict is read at; the structure stays on the closed frame
+        # (docstring). Nothing is written back — see prices.with_today_bar.
+        closed = df
+        _live_df, live_bar = _overlay_today(prices, closed, sym)
+        if last_price is None and live_bar and live_bar.get("appended"):
+            try:
+                last_price = float(live_bar.get("last_price"))
+            except (TypeError, ValueError):
+                last_price = None
     else:
         df, tf_meta = tf_mod.frame_for(sym, tf_key)
         if df is None or len(df) < 30:
@@ -315,10 +357,18 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
                     "timeframe_meta": tf_meta,
                     "error": ((tf_meta or {}).get("reason")
                               or "no / insufficient intraday data")}
+        # The in-progress last bucket (frame_for flags it `partial`) is the
+        # intraday twin of today's live bar: it prices the read, it is not
+        # structure.
+        closed = df
+        if (tf_meta or {}).get("partial") and len(df) > 1:
+            closed = df.iloc[:-1]
+            if last_price is None:
+                last_price = float(df["close"].iloc[-1])
         geom.setdefault("swing_window", tf_mod.tf_spec(tf_key)["swing_window"])
-        geom.setdefault("lookback_bars", len(df))
+        geom.setdefault("lookback_bars", len(closed))
 
-    out = compute(df, last_price=last_price, **geom)
+    out = compute(closed, last_price=last_price, **geom)
     if out is None:
         return {"symbol": sym, "error": "no swing structure found",
                 "timeframe": tf_key, "timeframes": tf_mod.tf_options()}
@@ -333,9 +383,9 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
     # ORB / FVG / dynamic entry-stop ride along on every answer.
     try:
         from supply_demand import patterns as pat_mod
-        lp = float(out.get("last_price") or df["close"].iloc[-1])
-        atr_value = pat_mod.atr(df)
-        gaps = pat_mod.fair_value_gaps(df, lp)
+        lp = float(out.get("last_price") or closed["close"].iloc[-1])
+        atr_value = pat_mod.atr(closed)
+        gaps = pat_mod.fair_value_gaps(closed, lp)
         bands = [{"kind": z.get("kind"), "lo": z.get("lo"), "hi": z.get("hi"),
                   "source": "swing", "touches": z.get("touches")}
                  for z in (list(out.get("demand_zones") or [])

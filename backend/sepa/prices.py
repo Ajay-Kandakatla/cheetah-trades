@@ -508,9 +508,20 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     Silent no-op (info["appended"] False) when there is no frame, no
     snapshot, the snapshot has no usable OHLC (pre-market zeros), or the frame
     already holds the snapshot's date (after the close + fast-scan).
+
+    Two more rejections (2026-09-05, Ajay: "yes please fix the bugs"), both
+    reusing guards `patch_latest_closes` already applies to the cache and
+    that this overlay had skipped: a WEEKEND-dated bar (bulk_snapshot falls
+    back to today-ET when `day.t` is absent, so a Saturday read stamps
+    Friday's aggregate with Saturday's date), and a PHANTOM echo — the
+    pre-session snapshot carrying the prior session's completed aggregate
+    under today's date, detected exactly as `_drop_phantom_tail` does (same
+    close AND same volume as the last closed bar). Either would have
+    duplicated the last session for every zone / ATR / gap read and flagged
+    it as today's live bar. A rejected snapshot reports `reason`.
     """
     info = {"appended": False, "date": None, "last_price": None, "source": "frame",
-            "as_of_epoch": None}
+            "as_of_epoch": None, "reason": None}
     if df is None or len(df) == 0:
         return df, info
     sym = (symbol or "").upper().strip()
@@ -537,6 +548,13 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     if snap_date <= last_date:
         info.update(date=last_date)
         return df, info
+    try:
+        if pd.Timestamp(snap_date).weekday() >= 5:            # 5 = Sat, 6 = Sun
+            info.update(reason=f"weekend-dated snapshot bar ({snap_date}) rejected")
+            return df, info
+    except (TypeError, ValueError):
+        info.update(reason=f"unparseable snapshot date ({snap_date!r})")
+        return df, info
     cols = list(df.columns)
     row = {k: None for k in cols}
     for k, val in (("open", o), ("high", h), ("low", l), ("close", c), ("volume", v)):
@@ -547,6 +565,13 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
         ts = ts.tz_localize(df.index.tz)
     out = pd.concat([df, pd.DataFrame([row], index=[ts], columns=cols)])
     out.index.name = df.index.name
+    # Same test the read path applies to the cache: an appended row that
+    # duplicates the prior session's close AND volume is a phantom, not today.
+    healed = _drop_phantom_tail(out)
+    if healed is None or len(healed) < len(out):
+        info.update(reason="snapshot echoes the prior session (phantom duplicate "
+                           "close+volume) — not appended")
+        return df, info
     ts_ms = snap.get("last_trade_ts_ms")
     as_of = None
     if ts_ms:

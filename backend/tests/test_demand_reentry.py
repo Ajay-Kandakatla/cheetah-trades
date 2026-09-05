@@ -1122,7 +1122,12 @@ def test_the_real_NBIX_case_is_refused():
     closes = [140.0, 150.0, 163.5, 158.0, 156.49, 150.82, 152.72]
     out = dr.reentry_read(closes, zone_hi=155.30, zone_lo=152.54, last_price=152.72)
     assert out["in_band"] is True
-    assert out["fell_from_pct"] == 5.3, "it really did run 5%+ above the band"
+    # Until 2026-09-05 this read 5.3 — the +5.3% run to 163.50 from BEFORE the
+    # break. `fell_from_pct` now describes the leg AFTER the last close under
+    # the floor: the 152.72 rebound never got back over the 155.30 top (-1.7%).
+    # That NBIX really did run 5%+ above the band beforehand is what
+    # test_NBIX_would_still_have_qualified_without_the_break proves.
+    assert out["fell_from_pct"] == -1.7, "the rebound since the break, not the run before it"
     assert out["broke_below"] is True
     assert out["bars_since_break"] == 1
     assert out["lowest_close_pct_below"] == 1.13
@@ -2157,3 +2162,212 @@ def test_in_ob_respects_the_knife_guard_and_missing_frame():
     df = _in_ob_frame()
     assert dr.in_ob_read(_ob_rec(df, trend_ok=False), df) is None
     assert dr.in_ob_read(_ob_rec(df), None) is None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# S/D ZONE REVIEW FIXES — reentry cluster (Ajay 2026-09-05: "yes please fix
+# the bugs"). Four findings against demand_reentry.py: the whipsaw that reset
+# the broken-band guard (:557), two price bases in decide_from_frame (:1118),
+# the dead top_band_read (:1180) and the target-kind label (:615).
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Band 100-104. Ten closes at 112, nineteen at 106, one inside at 101, FOUR
+# closes 3% under the floor, ONE close a hair over the top (104.2), five back
+# inside at 102. The reviewer's exact whipsaw: before the fix this read
+# is_reentry True / broke_below False / "fell from +7.7%".
+WHIPSAW_CLOSES = ([112.0] * 10 + [106.0] * 19 + [101.0] + [97.0] * 4
+                  + [104.2] + [102.0] * 5)
+
+
+def test_a_whipsaw_poke_over_the_top_does_not_reset_the_broken_band_guard():
+    """One close 0.2% over the band top after a 3% break is not the market
+    answering that break. The guard used to rescope its scan to after the last
+    close above the band, so this single poke erased four closes under the
+    floor and the row offered Buy/Stop — the NBIX failure mode with one extra
+    day tacked on."""
+    out = dr.reentry_read(WHIPSAW_CLOSES, zone_hi=104.0, zone_lo=100.0,
+                          last_price=102.0)
+    assert out["in_band"] is True
+    assert out["broke_below"] is True, "four closes 3% under the floor are a break"
+    assert out["bars_since_break"] == 6
+    assert out["lowest_close_pct_below"] == 3.0
+    assert out["is_reentry"] is False
+
+
+def test_fell_from_pct_describes_the_leg_AFTER_the_last_break_not_the_whole_window():
+    """The +7.7% the board used to print belonged to the run BEFORE the band
+    broke. What the trader is looking at is the rebound since the break: the
+    104.2 poke, +0.2% over the top."""
+    out = dr.reentry_read(WHIPSAW_CLOSES, zone_hi=104.0, zone_lo=100.0,
+                          last_price=102.0)
+    assert out["fell_from_pct"] == 0.2
+    # Same rule with a real rebound: 110 after the 97 break, not the 120 before it.
+    out2 = dr.reentry_read([120.0] * 5 + [97.0] + [110.0] * 3 + [102.0],
+                           zone_hi=104.0, zone_lo=100.0, last_price=102.0)
+    assert out2["fell_from_pct"] == 5.8, "110/104 - 1, never 120/104 - 1 (15.4)"
+
+
+def test_a_break_ANSWERED_by_a_min_rise_rally_is_old_structure_and_still_qualifies():
+    """The healthy case the old scoping existed for, now stated honestly: a
+    break is old structure only when the market rallied MIN_RISE_ABOVE_PCT
+    through the whole band AFTER it — the same bar the re-entry itself has to
+    clear. 110/104 = +5.8% answers the 97 break; 104*1.049 does not."""
+    answered = [101.0] * 30 + [97.0] * 4 + [110.0] * 5 + [102.0]
+    out = dr.reentry_read(answered, zone_hi=104.0, zone_lo=100.0, last_price=102.0)
+    assert out["broke_below"] is False
+    assert out["is_reentry"] is True
+    assert out["fell_from_pct"] == 5.8
+
+    short = [101.0] * 30 + [97.0] * 4 + [round(104.0 * 1.049, 2)] * 5 + [102.0]
+    out2 = dr.reentry_read(short, zone_hi=104.0, zone_lo=100.0, last_price=102.0)
+    assert out2["broke_below"] is True
+    assert out2["is_reentry"] is False
+    assert out2["bars_since_break"] == 6
+
+
+def test_only_the_UNANSWERED_breaks_count_toward_the_deepest_close():
+    """A 5% break answered by a 20% rally, then a fresh 3% break: the row is
+    broken by the fresh one, and the depth it reports is the fresh one's."""
+    closes = [95.0, 120.0, 103.0, 97.0, 104.2, 102.0]
+    out = dr.reentry_read(closes, zone_hi=104.0, zone_lo=100.0, last_price=102.0)
+    assert out["broke_below"] is True
+    assert out["lowest_close_pct_below"] == 3.0, "the answered 95 (5%) is not today's structure"
+    assert out["bars_since_break"] == 2
+
+
+# ── one price basis (finding :1118) ──────────────────────────────────────────
+def _reentry_frame(last_close):
+    """The repo's own end-to-end shape (tested band ~95-96, modest uptrend,
+    mild dip back into it) with ONLY the final close overridden — the band
+    geometry is unchanged, so the two frames differ in one number."""
+    import numpy as np
+    import pandas as pd
+    px = np.concatenate([
+        np.linspace(100, 96, 40), np.linspace(96, 112, 60), np.linspace(112, 97, 30),
+        np.linspace(97, 104, 100), np.linspace(104, 99.5, 10),
+    ])
+    n = len(px)
+    df = pd.DataFrame({"open": px, "high": px * 1.01, "low": px * 0.99, "close": px,
+                       "volume": [2_000_000] * n},
+                      index=pd.bdate_range("2025-08-01", periods=n))
+    df.iloc[-1, df.columns.get_loc("close")] = float(last_close)
+    return df
+
+
+def test_decide_from_frame_uses_ONE_price_basis_for_membership_and_the_reentry_read():
+    """`zones["last_price"]` and the band edges are 2dp quotes; the closes fed
+    to `reentry_read` were raw. A close 0.4c above the band top was therefore
+    INSIDE for membership and ABOVE for the read: is_reentry True with
+    bars_since_above 0 ("dropped in today") on a bar that never left. Both now
+    read the 2dp close — the basis every other number in the record uses."""
+    ctrl = dr.decide_from_frame(_reentry_frame(95.5), "CTRL")
+    ez = ctrl["entry_zone"]
+    assert ez and ez["lo"] <= 95.5 <= ez["hi"], "control frame must sit inside its band"
+    assert ctrl["in_demand_band"] is True and ctrl["bars_since_above"] == 1
+
+    rec = dr.decide_from_frame(_reentry_frame(ez["hi"] + 0.004), "SUBCENT")
+    assert rec["last_price"] == ez["hi"], "the 2dp quote sits exactly on the band top"
+    assert rec["in_demand_band"] is True
+    # The read saw the SAME 2dp close: today's bar is inside, not above, so the
+    # last visit above is yesterday's — identical to the control frame.
+    assert rec["bars_since_above"] == 1, rec["bars_since_above"]
+    assert rec["fell_from_pct"] == ctrl["fell_from_pct"]
+
+
+# ── top_band_read carries data (finding :1180) ───────────────────────────────
+def _below_band_frame(bars_below=8):
+    """The reentry frame, then a plunge to 92-93 under the ~95-96 band for
+    `bars_below` closes: a name that broke its first band and stayed under it."""
+    import numpy as np
+    import pandas as pd
+    px = np.concatenate([
+        np.linspace(100, 96, 40), np.linspace(96, 112, 60), np.linspace(112, 97, 30),
+        np.linspace(97, 104, 100), np.linspace(104, 99.5, 10),
+        np.linspace(93, 92, bars_below),
+    ])
+    n = len(px)
+    return pd.DataFrame({"open": px, "high": px * 1.01, "low": px * 0.99, "close": px,
+                         "volume": [2_000_000] * n},
+                        index=pd.bdate_range("2025-08-01", periods=n))
+
+
+def test_top_band_read_carries_break_evidence_for_a_name_below_its_first_band():
+    """`reentry_read` returns the empty shape whenever price is not inside the
+    band, and decide_from_frame only asked it about the top band when price
+    was BELOW it — so deep_demand's bars_since_top_break / fell_from_pct could
+    never carry data. The break scan is now its own read with no in-band
+    requirement."""
+    rec = dr.decide_from_frame(_below_band_frame(bars_below=8), "DEEP")
+    top = rec["demand_zones"][0]
+    assert rec["last_price"] < top["lo"], "price must be under the first band"
+    tb = rec["top_band_read"]
+    assert tb is not None
+    assert tb["broke_below"] is True
+    assert tb["bars_since_first_break"] == 7, "eight closes under the floor: it broke 7 bars ago"
+    assert tb["bars_since_break"] == 0, "and is still under it today"
+    # The run-up that led INTO the break, measured against the band top: the
+    # 40-bar window peaks at 104 against a 96.03 top.
+    assert tb["fell_from_pct"] == pytest.approx(round((104.0 / top["hi"] - 1) * 100, 1), abs=0.1)
+    assert tb["lowest_close_pct_below"] == pytest.approx(round((1 - 92.0 / top["lo"]) * 100, 2), abs=0.01)
+
+
+def test_band_break_read_needs_no_in_band_and_is_the_reentry_reads_own_scan():
+    """Pure. Same closes, same answers as reentry_read's evidence keys — one
+    scan, two callers — plus the first-break age the deep board wants."""
+    closes = [110.0] * 32 + [95.0] * 8
+    tb = dr.band_break_read(closes, zone_hi=104.0, zone_lo=100.0)
+    assert tb["broke_below"] is True
+    assert tb["bars_since_first_break"] == 7
+    assert tb["bars_since_break"] == 0
+    assert tb["fell_from_pct"] == 5.8, "ran to 110 before falling through"
+    assert tb["lowest_close_pct_below"] == 5.0
+    # Degenerate input: the shape, never a raise.
+    for bad in (dr.band_break_read([], 104.0, 100.0),
+                dr.band_break_read([100.0, 110.0], 0, 0),
+                dr.band_break_read([100.0, 110.0], 100.0, 104.0)):
+        assert bad["broke_below"] is False and bad["bars_since_first_break"] is None
+    # Agreement with reentry_read on an in-band case, key for key.
+    rr = dr.reentry_read(WHIPSAW_CLOSES, 104.0, 100.0, 102.0)
+    bb = dr.band_break_read(WHIPSAW_CLOSES, 104.0, 100.0)
+    for k in ("fell_from_pct", "bars_since_above", "broke_below", "bars_since_break",
+              "lowest_close_pct_below"):
+        assert rr[k] == bb[k], k
+
+
+# ── the target label carries the band's origin (finding :615) ────────────────
+def test_ob_reads_label_a_demand_kind_overhead_target_by_its_origin():
+    """`patterns.trade_levels` says "next supply band" for ANY opposing band;
+    the OB reads hand it `nearest_resistance`, the first band of either origin
+    above price. A demand band overhead is a valid target (documented) and the
+    label must say what it is."""
+    df = _ob_frame()
+    rec = _ob_rec(df)
+    rec["nearest_resistance"] = {"kind": "demand", "lo": 120.0, "hi": 122.0}
+    out = dr.approaching_ob_read(rec, df, df["close"].tolist())
+    assert out and out["trade"]["target1"] == 120.0
+    assert out["trade"]["target_basis"] == "broken demand band overhead"
+
+    rec["nearest_resistance"] = {"kind": "supply", "lo": 120.0, "hi": 122.0}
+    out = dr.approaching_ob_read(rec, df, df["close"].tolist())
+    assert out["trade"]["target_basis"] == "next supply band"
+
+    df2 = _in_ob_frame()
+    rec2 = _ob_rec(df2)
+    rec2["nearest_resistance"] = {"kind": "demand", "lo": 120.0, "hi": 122.0}
+    out2 = dr.in_ob_read(rec2, df2)
+    assert out2 and out2["trade"]["target_basis"] == "broken demand band overhead"
+    # A measured target is never relabelled, whatever the opposing band's kind.
+    rec2["nearest_resistance"] = {"kind": "demand", "lo": 50.0, "hi": 52.0}   # below entry
+    out3 = dr.in_ob_read(rec2, df2)
+    assert out3["trade"]["target_basis"].endswith("R measured")
+
+
+def test_trade_plan_targets_the_first_band_of_EITHER_origin_above_the_entry_band():
+    """The documented decision (broken support acts as resistance), now also
+    what the docstring says. The demand band at 108 is the first objective,
+    not the supply band at 130."""
+    p = dr.trade_plan(101.0, {"lo": 100.0, "hi": 104.0},
+                      [None, {"kind": "supply", "lo": 130.0, "hi": 133.0},
+                       {"kind": "demand", "lo": 108.0, "hi": 110.0}])
+    assert p["target"] == 108.0
+    assert "either origin" in dr.trade_plan.__doc__.lower()

@@ -80,14 +80,25 @@ def _live_price(symbol: str):
 def _evaluate(symbol: str, limit_price: Optional[float] = None,
               stop_pct: Optional[float] = None,
               allow_earnings: bool = False,
-              top_up: bool = False):
+              top_up: bool = False,
+              stop_price: Optional[float] = None):
     """Run every entry check WITHOUT raising. Returns (blocked, ctx).
 
     top_up=True is the PYRAMID path (TTLAC §3 Add and Reduce / §5 scale-up,
     TLSW pp.307-308): size = full-position shares MINUS shares already held,
     so an add can only ever complete the position toward the same p.312
     25%-of-equity ceiling — never past it. Requires an existing position;
-    never-average-down (pp.304-305) still applies on top."""
+    never-average-down (pp.304-305) still applies on top.
+
+    stop_price is an ABSOLUTE stop level (2026-09-05, zone-edge entries):
+    the caller decided a price — a band floor — not a percent of whatever
+    the tape prints at order time. It is converted to the requested percent
+    AT THE PLANNING PRICE (so the placed stop is that level, on the cent
+    grid) and takes precedence over stop_pct. It is refused, never clamped,
+    when the level is not below the entry or sits past ABS_MAX_STOP_PCT —
+    a clamp would move the stop back up into the structure the strategy is
+    buying. risk_rules' own floor still applies (a level tighter than its
+    minimum is widened, i.e. placed lower — safer, never higher)."""
     symbol = (symbol or "").strip().upper()
     blocked = []
     ctx = {"symbol": symbol, "price": None, "price_source": None,
@@ -132,6 +143,27 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
         blocked.append("no price available for %s" % (symbol or "?"))
         price = None
     ctx["price"], ctx["price_source"] = price, source
+
+    # Absolute stop level -> requested percent at the planning price (see
+    # the docstring). Refuse rather than clamp: the level is the plan.
+    ctx["stop_level"] = None
+    if stop_price is not None and price:
+        try:
+            level = float(stop_price)
+        except (TypeError, ValueError):
+            level = 0.0
+        dist = ((price - level) / price * 100.0) if level > 0 else None
+        if dist is None or dist <= 0:
+            blocked.append("requested stop %.2f is not below the entry price "
+                           "%.2f" % (level, price))
+        elif dist > risk_rules.ABS_MAX_STOP_PCT:
+            blocked.append("requested stop %.2f is %.2f%% under the entry price "
+                           "%.2f — past the %g%% line (the print moved away "
+                           "from the level; not clamping the stop up into it)"
+                           % (level, dist, price, risk_rules.ABS_MAX_STOP_PCT))
+        else:
+            stop_pct = dist
+            ctx["stop_level"] = level
 
     # never average down (pp.304-305); add only when in profit (p.307/308)
     if held is not None and price:
@@ -278,15 +310,17 @@ def preview(symbol: str, price: Optional[float] = None,
 def enter(symbol: str, limit_price: Optional[float] = None,
           stop_pct: Optional[float] = None,
           allow_earnings: bool = False,
-          top_up: bool = False) -> dict:
+          top_up: bool = False,
+          stop_price: Optional[float] = None) -> dict:
     """Place the bracket entry. Raises ValueError(reason) on any failed
     check; the API maps that to 400 {detail}. top_up=True is the pyramid
     add (see _evaluate) — the bracket covers ONLY the added shares; its own
     stop/target legs protect the tranche, and the p.308 breakeven ratchet
-    keeps operating on the whole position via the exit engine."""
+    keeps operating on the whole position via the exit engine. stop_price
+    is an absolute stop LEVEL that wins over stop_pct (see _evaluate)."""
     blocked, ctx = _evaluate(symbol, limit_price=limit_price,
                              stop_pct=stop_pct, allow_earnings=allow_earnings,
-                             top_up=top_up)
+                             top_up=top_up, stop_price=stop_price)
     if blocked:
         raise ValueError("; ".join(blocked))
 
@@ -325,7 +359,7 @@ def enter(symbol: str, limit_price: Optional[float] = None,
         "size_multiplier": ctx["sizing"]["multiplier"],
         "consecutive_losses": ctx["cfg"]["consecutive_losses"],
         "stop_price": plan.stop_price, "stop_pct": plan.stop_pct,
-        "stop_basis": plan.basis,
+        "stop_basis": plan.basis, "stop_level_requested": ctx["stop_level"],
         "target_price": target["target_price"], "target_pct": target["target_pct"],
         "reward_risk": target["reward_risk"],
         "breakeven_trigger": ctx["breakeven_trigger"],

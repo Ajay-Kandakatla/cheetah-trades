@@ -249,7 +249,10 @@ def test_data_through_is_et_so_an_evening_bar_is_not_tomorrow():
 
 def test_for_symbol_reads_levels_from_the_daily_window_on_the_live_frame():
     src = (Path(__file__).resolve().parents[1] / "chart_maps" / "support.py").read_text()
-    assert 'daily_df, _have_d, levels_as_of = _frame_for(sym, spec["bars"])' in src
+    # 2026-09-05: `_frame_for(..., with_closed=True)` also hands back the frame without
+    # today's live bar; the levels still come from the DAILY window on the live frame.
+    assert 'daily_df, _have_d, levels_as_of, daily_closed = _frame_for(' in src
+    assert 'sym, spec["bars"], with_closed=True)' in src
     assert 'and not ext_frame:\n            _record_signal' in src   # no double ledger
     assert 'opening_range_from_bars' in src        # one minute fetch per poll
     assert 'allow_ext=True' in src

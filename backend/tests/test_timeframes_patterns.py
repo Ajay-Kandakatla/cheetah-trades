@@ -659,3 +659,81 @@ def test_trend_says_bullish_or_bearish_and_refuses_on_a_short_frame():
     # disagreement with mood is stated, not silently averaged away
     dis = S.trend_read(up, {"score": -40})
     assert dis["mood_agrees"] is False
+
+
+# ── engine fixes 2026-09-05 (Ajay: "yes please fix the bugs") ─────────────────
+def _minutes(start, n, tz="UTC"):
+    idx = pd.date_range(start, periods=n, freq="1min", tz=tz)
+    base = [100.0 + (i % 5) * 0.1 for i in range(n)]
+    return pd.DataFrame({"open": base, "high": [b + 0.2 for b in base],
+                         "low": [b - 0.2 for b in base], "close": base,
+                         "volume": [100] * n}, index=idx)
+
+
+def test_frame_for_as_of_is_the_last_minute_seen_never_a_future_label():
+    """At 10:07 ET the 15m frame's last bucket is labelled 10:15 (its CLOSE);
+    stamping the payload with that put the read 8 minutes in the future.
+    as_of is the last raw minute that actually printed, and the bucket that
+    has not reached its label is flagged partial."""
+    raw = _minutes("2026-09-04 13:30", 38)                    # 13:30–14:07 UTC
+    df, meta = TF.frame_for("ACME", TF.M15, raw=raw)
+    assert meta["available"] is True
+    assert str(df.index[-1]) == "2026-09-04 14:15:00+00:00", "label stays the close"
+    assert meta["as_of"] == str(raw.index[-1])                # 14:07, not 14:15
+    assert meta["partial"] is True
+
+
+def test_frame_for_marks_a_bucket_that_saw_its_last_minute_as_complete():
+    raw = _minutes("2026-09-04 13:30", 45)                    # 13:30–14:14 UTC
+    df, meta = TF.frame_for("ACME", TF.M15, raw=raw)
+    assert str(df.index[-1]) == "2026-09-04 14:15:00+00:00"
+    assert meta["as_of"] == str(raw.index[-1])
+    assert meta["partial"] is False
+
+
+def test_hourly_buckets_are_clock_anchored_and_the_FIRST_is_the_half_hour():
+    """The module docstring said the LAST hourly bar was the half hour. On
+    09:30–16:00 ET the buckets are 30,60,60,60,60,60,60 minutes: the first
+    (09:30–10:00) is the short one, and every label sits on the clock hour."""
+    raw = _minutes("2026-09-04 13:30", 390)                   # full RTH session
+    df, meta = TF.frame_for("ACME", TF.H1, raw=raw)
+    assert list(df["volume"]) == [3000, 6000, 6000, 6000, 6000, 6000, 6000]
+    assert all(t.minute == 0 for t in df.index)
+    assert meta["partial"] is False
+    doc = TF.__doc__
+    assert "the last one is a half hour" not in doc
+    assert "first" in doc.lower() and "half hour" in doc.lower()
+
+
+def test_a_supply_band_containing_price_yields_no_long_plan():
+    """Inside resistance the verdict says AT_SUPPLY / caution; the same payload
+    printed a LONG at the band top with a stop under it. No plan while price
+    is inside a supply band."""
+    inside = P.trade_levels({"kind": "supply", "lo": 100.0, "hi": 104.0}, 102.0, 2.0)
+    assert inside is None
+    # a demand band containing price is still the long-from-support read
+    dem = P.trade_levels({"kind": "demand", "lo": 100.0, "hi": 104.0}, 102.0, 2.0)
+    assert dem and dem["side"] == "long"
+    # a supply band entirely above / below price is unchanged
+    above = P.trade_levels({"kind": "supply", "lo": 120.0, "hi": 125.0}, 110.0, 4.0)
+    assert above and above["side"] == "short"
+    below = P.trade_levels({"kind": "supply", "lo": 90.0, "hi": 95.0}, 110.0, 4.0)
+    assert below and below["side"] == "long"                # broken supply = support
+    # attach_levels carries the absence with a reason, never a fabricated plan
+    rows = P.attach_levels([{"kind": "supply", "lo": 100.0, "hi": 104.0, "source": "swing"}],
+                           102.0, 2.0)
+    assert rows[0]["trade"] is None and "supply" in rows[0]["trade_reason"]
+
+
+def test_atr_is_labelled_as_the_simple_mean_it_computes():
+    """The docstring said Wilder-style; the math is a 14-bar simple mean of true
+    range. The MATH stays (changing it moves every stop); the label is fixed."""
+    n = 36
+    tr = [1.0] * n
+    tr[-6] = 10.0
+    df = pd.DataFrame({"open": [100.0] * n, "high": [100.0 + t for t in tr],
+                       "low": [100.0] * n, "close": [100.0] * n, "volume": [1] * n},
+                      index=pd.date_range("2026-01-01", periods=n, freq="D"))
+    assert P.atr(df) == pytest.approx((13 * 1.0 + 10.0) / 14)      # simple mean
+    assert "Wilder" not in (P.atr.__doc__ or "")
+    assert "simple" in P.atr.__doc__ and "mean" in P.atr.__doc__

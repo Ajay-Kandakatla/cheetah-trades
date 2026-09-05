@@ -397,3 +397,262 @@ def test_zone_store_recent_is_additive_and_the_intraday_crons_still_read_today_o
     assert '"recent": recent_sessions(frame)' in inspect.getsource(ZS.build_doc)
     assert "coll.distinct(\"date\")" in inspect.getsource(ZS.latest_store_day)
     assert "day = day or _today_et()" in inspect.getsource(ZS.load), "load(day=None) still means TODAY"
+
+
+# ── engine fixes 2026-09-05 (Ajay: "yes please fix the bugs") ─────────────────
+# Source guards for the six engine fixes. Behaviour lives in test_price_zones.py,
+# test_prices_today_bar.py and test_timeframes_patterns.py; these make sure the
+# next refactor cannot drop a rule silently.
+def test_engine_fixes_2026_09_05_at_demand_carries_the_true_support_distance():
+    """AT_DEMAND no longer forces support_pct to 0.0 next to the band BELOW."""
+    src = inspect.getsource(pz._verdict)
+    assert '"support_pct": 0.0' not in src
+    assert 'base = {"resistance_pct": res_pct, "support_pct": sup_pct}' in src
+
+
+def test_engine_fixes_2026_09_05_structure_reads_the_closed_frame_only():
+    """Swings, gaps, ATR and trade levels come off `closed`; the live bar / the
+    partial intraday bucket only prices the read."""
+    src = inspect.getsource(pz.for_symbol)
+    assert "out = compute(closed, last_price=last_price, **geom)" in src
+    assert "atr_value = pat_mod.atr(closed)" in src
+    assert "gaps = pat_mod.fair_value_gaps(closed, lp)" in src
+    assert '.get("partial") and len(df) > 1:' in src and "closed = df.iloc[:-1]" in src
+    assert "compute(df," not in src and "pat_mod.atr(df)" not in src
+
+
+def test_engine_fixes_2026_09_05_hairline_bands_get_width_but_real_spans_do_not():
+    assert pz._TICK_2DP == 0.01, "the 2dp rounding grain, not a threshold"
+    src = inspect.getsource(pz._make_zone)
+    assert "if hi <= lo or (round(hi, 2) - round(lo, 2)) < _TICK_2DP - 1e-9:" in src
+
+
+def test_engine_fixes_2026_09_05_with_today_bar_reuses_the_cache_guards():
+    from sepa import prices as P
+    src = inspect.getsource(P.with_today_bar)
+    assert "weekday() >= 5" in src, "weekend-dated snapshot rejected"
+    assert "healed = _drop_phantom_tail(out)" in src, "phantom echo rejected by the read-path test"
+    assert '"reason": None' in src
+
+
+def test_engine_fixes_2026_09_05_atr_is_labelled_simple_mean_and_the_math_is_untouched():
+    from supply_demand import patterns as P
+    assert "Wilder" not in (P.atr.__doc__ or "")
+    assert "tr.rolling(period).mean()" in inspect.getsource(P.atr), "changing the math moves every stop"
+
+
+def test_engine_fixes_2026_09_05_no_long_plan_inside_a_supply_band():
+    from supply_demand import patterns as P
+    src = inspect.getsource(P.trade_levels)
+    assert 'if kind == "supply" and lo <= last <= hi:\n        return None' in src
+    assert '"trade_reason"' in inspect.getsource(P.attach_levels)
+
+
+def test_engine_fixes_2026_09_05_intraday_as_of_is_the_last_minute_and_the_bucket_is_flagged():
+    from supply_demand import timeframes as TF
+    src = inspect.getsource(TF.frame_for)
+    assert "as_of = str(raw.index[-1])" in src
+    assert '"partial": partial' in src
+    assert "partial = bool((label - last_minute) > pd.Timedelta(minutes=1))" in src
+    assert "the last one is a half hour" not in (TF.__doc__ or "")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# reentry fixes 2026-09-05  (Ajay 2026-09-05: "yes please fix the bugs")
+# Source / constant guards for the four demand_reentry.py findings of the S/D
+# zone review. Behaviour lives in test_demand_reentry.py + test_deep_demand.py.
+# ═════════════════════════════════════════════════════════════════════════════
+def test_reentry_fix_a_break_is_answered_only_by_a_MIN_RISE_close_above_the_top():
+    """The whipsaw guard: one close a hair over the band top must NOT re-arm a
+    band that closed under its floor. The scan answers a break only with a
+    close >= min_rise_pct above the top — the same bar the re-entry clears."""
+    src = inspect.getsource(dr._break_scan)
+    assert "(c / zone_hi - 1.0) * 100.0 >= min_rise_pct" in src
+    assert "above_idx[-1] + 1" not in src, "the old 'after the last close above' scoping is back"
+    whipsaw = [112.0] * 10 + [106.0] * 19 + [101.0] + [97.0] * 4 + [104.2] + [102.0] * 5
+    assert dr.reentry_read(whipsaw, 104.0, 100.0, 102.0)["is_reentry"] is False
+
+
+def test_reentry_fix_reentry_read_and_band_break_read_share_ONE_scan():
+    """Two callers, one walk. If either grows its own loop they will disagree
+    about the same band on the same day."""
+    for fn in (dr.reentry_read, dr.band_break_read):
+        src = inspect.getsource(fn)
+        assert "_break_scan(window, zone_hi, zone_lo, min_rise_pct)" in src, fn.__name__
+        assert "_break_fields(scan, zone_hi, zone_lo)" in src, fn.__name__
+        assert "for i, c in enumerate" not in src, f"{fn.__name__} grew its own scan"
+
+
+def test_reentry_fix_band_break_read_payload_shape_is_stable():
+    out = dr.band_break_read([110.0] * 32 + [95.0] * 8, 104.0, 100.0)
+    assert set(out) == {"fell_from_pct", "bars_since_above", "broke_below",
+                        "bars_since_break", "bars_since_first_break",
+                        "lowest_close_pct_below"}
+    # reentry_read's shape did NOT grow — the FE destructures it.
+    assert "bars_since_first_break" not in dr.reentry_read([100, 110, 120, 103], 106, 100, 103)
+
+
+def test_reentry_fix_decide_from_frame_reads_closes_on_the_2dp_quote_basis():
+    """`zones["last_price"]` and the band edges are 2dp. The closes fed to the
+    reads must be too, or a sub-cent close above the band top is INSIDE for
+    membership and ABOVE for reentry_read at the same time."""
+    src = inspect.getsource(dr.decide_from_frame)
+    assert 'closes = [round(float(c), 2) for c in df["close"].tolist()]' in src
+
+
+def test_reentry_fix_top_band_read_uses_the_no_in_band_read():
+    """reentry_read is the empty shape whenever price is outside the band, and
+    top_band_read is only ever asked when price is BELOW it. It must be
+    band_break_read, and deep_demand must read the FIRST-break age from it."""
+    from supply_demand import deep_demand as DD
+    src = inspect.getsource(dr.decide_from_frame)
+    assert '"top_band_read": (band_break_read(closes, demand[0]["hi"], demand[0]["lo"])' in src
+    assert 'top_band_read": (reentry_read(' not in src
+    assert '"bars_since_top_break": tb.get("bars_since_first_break")' in inspect.getsource(DD.read)
+
+
+def test_reentry_fix_ob_reads_label_the_target_by_the_bands_origin():
+    """Both OB reads hand trade_levels `nearest_resistance` (either origin);
+    the label must go through _label_target_kind or a demand band overhead is
+    printed as 'next supply band'."""
+    for fn in (dr.approaching_ob_read, dr.in_ob_read):
+        src = inspect.getsource(fn)
+        assert "trade = _label_target_kind(" in src, fn.__name__
+    assert dr._label_target_kind({"target_basis": "next supply band"},
+                                 {"kind": "demand"})["target_basis"] == "broken demand band overhead"
+    assert dr._label_target_kind({"target_basis": "2R measured"},
+                                 {"kind": "demand"})["target_basis"] == "2R measured"
+    assert "either origin" in dr.trade_plan.__doc__.lower()
+
+
+# ── live alert fixes 2026-09-05 (review of the S/D zone logic; Ajay: "yes please fix the bugs") ──
+def test_live_alert_fixes_2026_09_05_phone_gate_constants_and_every_push_path_calls_it():
+    """Ajay 2026-09-05: "When alert I need the same logic. Need only alerts on
+    stocks that have atleast 5% to Supply and also <1% bounce from demand zone".
+    One gate module, three callers, counters in every pass result."""
+    from supply_demand import alert_gates as AG
+    from supply_demand import demand_alerts as DA
+    from supply_demand import zone_bounce_alerts as ZB
+    from supply_demand import zone_edge as ZE
+    assert AG.ALERT_MIN_ROOM_PCT == 5.0 and AG.ALERT_MAX_ABOVE_DEMAND_PCT == 1.0
+    assert ZE.EDGE_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT, "zone_edge's in/near tier IS the <1% rule — reused"
+    assert DA.AT_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT, "AT already pushed at <=1%; only NEAR pushes stopped"
+    ze = inspect.getsource(ZE.check_once)
+    assert ze.count("AG.room_gate(") == 2, "breaking AND near-demand candidacy"
+    # integrator 2026-09-05: `lo > band.hi` missed an OVERLAPPING lid; the set is every band whose top clears this one's
+    assert 'float(b["hi"]) > rb["band"]["hi"]' in ze, "🚀 room is measured to the NEXT band above the one breaking"
+    zb = inspect.getsource(ZB.check_once)
+    assert 'AG.demand_proximity_gate(px, item["band"])' in zb and "AG.room_gate(px, bands, prev)" in zb
+    da = inspect.getsource(DA.check_once)
+    assert 'AG.demand_proximity_gate(it["last"], it["band"])' in da and "AG.room_gate(" in da
+    assert "unknown_room += 1" in da, "no zone_store doc = unknown room = silent, counted"
+    for src, names in ((ze, ("skipped_room",)),
+                       (zb, ("skipped_room", "skipped_proximity")),
+                       (da, ("skipped_room", "skipped_proximity", "unknown_room"))):
+        for n in names:
+            assert f'"{n}": {n}' in src, n
+    # alert_gates stays a LEAF: bounce_room imports zone_edge + zone_bounce_alerts, which import it
+    imports = [l for l in inspect.getsource(AG).splitlines() if l.startswith(("from ", "import "))]
+    assert imports == ["from __future__ import annotations", "import math", "from typing import Optional"]
+    ag = inspect.getsource(AG)
+    assert "no Minervini cites" in ag and "not advice" in ag
+    for forbidden in ("TLSW", "TTLAC", "trend_template", "sepa.", "from catalysts"):
+        assert forbidden not in ag, forbidden
+
+
+def test_live_alert_fixes_2026_09_05_side_a_room_for_keys_holidays_stale_day():
+    from supply_demand import alert_gates as AG
+    from supply_demand import bounce_room as BR
+    from supply_demand import demand_alerts as DA
+    from supply_demand import zone_bounce_alerts as ZB
+    from supply_demand import zone_edge as ZE
+    # Side A: a supply band yesterday CLOSED above is Side B's support, never resistance
+    rb = inspect.getsource(ZE.read_breaking)
+    assert 'resistance = supply if pc0 is None else [b for b in supply if float(b["hi"]) >= pc0]' in rb
+    assert 'above = [b for b in resistance if float(b["hi"]) >= px]' in rb
+    # room_for shares the gate's overhead rule and knows prev_close; the caller passes it
+    assert "AG.room_read(px, bands or [], prev_close)" in inspect.getsource(ZB.room_for)
+    assert "prev_close=None" in str(inspect.signature(ZB.room_for))
+    assert 'room_for(px, bands, item["band"], prev)' in inspect.getsource(ZB.check_once)
+    # the gate's first-overhead read == bounce_room.first_overhead whenever no band is broken
+    bands = [{"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2},
+             {"kind": "supply", "lo": 99.0, "hi": 101.0, "touches": 2},
+             {"kind": "supply", "lo": 104.0, "hi": 105.0, "touches": 1},
+             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2},
+             {"kind": "supply", "lo": 120.0, "hi": 125.0, "touches": 3}]
+    for px in (50.0, 99.0, 100.0, 104.5, 106.0, 110.0, 130.0):
+        theirs = BR.first_overhead(BR.overhead_bands(bands, px), px)
+        ours = AG.first_overhead(bands, px, None)
+        assert (theirs is None) == (ours is None), px
+        assert theirs is None or (theirs["lo"], theirs["hi"]) == (ours["lo"], ours["hi"]), px
+    # and the ONE addition: a broken band (hi < prev_close) is not a ceiling for the phone
+    assert AG.first_overhead(bands[:3], 100.0, 106.0) is None and AG.first_overhead(bands[:3], 100.0, 104.5)["lo"] == 104.0
+    # state / first_seen / dedupe keys are fixed 2 dp (':g' collided above $10,000)
+    for fn in (ZE.break_state_key, ZE.first_seen_key, ZB.state_key, DA.state_key):
+        src = inspect.getsource(fn)
+        assert ":.2f}" in src and ":g}" not in src, fn.__name__
+    # holiday-aware session gates through the ONE house calendar
+    for mod in (ZE, ZB, DA):
+        assert "is_market_day(et)" in inspect.getsource(mod.in_session), mod.__name__
+        assert "from market_hours.reminder import is_market_day" in inspect.getsource(mod), mod.__name__
+    # a doc from another day is never live; a cold store writes the reason so the board self-heals
+    ap = inspect.getsource(ZE.api_payload)
+    assert 'if str(payload.get("date") or "") != today:' in ap and 'payload["in_session"] = False' in ap
+    assert "no pass yet today" in ap
+    ze = inspect.getsource(ZE.check_once)
+    assert "_write_latest(latest_coll, ep)" in ze and 'reason = "zone store empty for today"' in ze
+
+
+# ── integrator fixes 2026-09-05 (review of the 22-bug sweep; Ajay: "yes please fix the bugs") ──
+def test_integrator_fixes_2026_09_05_overlapping_lid_and_transient_store_read():
+    from supply_demand import zone_edge as ZE
+    # overhead = every OTHER supply band whose TOP clears the band's top (an overlapping lid counts)
+    rb = inspect.getsource(ZE.read_breaking)
+    assert 'overhead = sum(1 for b in supply if float(b["hi"]) > hi)' in rb
+    assert 'float(b["lo"]) > hi' not in rb
+    ze = inspect.getsource(ZE.check_once)
+    assert 'float(b["hi"]) > rb["band"]["hi"]' in ze, "the 🚀 room read uses the same set"
+    # a transient {} from zone_store.load never blanks a board a live pass wrote today
+    assert "_latest_is_todays_pass(latest_coll, day_iso)" in ze
+    assert '"latest_written": written' in ze
+    lp = inspect.getsource(ZE._latest_is_todays_pass)
+    assert 'str(doc.get("date") or "") == day_iso and doc.get("as_of")' in lp
+
+
+def test_integrator_fixes_2026_09_05_broken_supply_rule_reaches_bounce_room_and_supply_watch():
+    import importlib.util
+    from supply_demand import bounce_room as BR
+    assert "prev_close=None" in str(inspect.signature(BR.overhead_bands))
+    ob = inspect.getsource(BR.overhead_bands)
+    assert "if pc is not None and hi < pc:" in ob and "continue" in ob
+    assert 'overhead_bands(doc.get("bands") or [], px, doc.get("prev_close"))' in inspect.getsource(BR.room_read)
+    spec = importlib.util.spec_from_file_location(
+        "sw_contract", Path(__file__).resolve().parents[2] / "backend/portfolio/supply_watch.py")
+    sw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sw)
+    assert "prev_close=None" in str(inspect.signature(sw.overhead_bands))
+    assert 'overhead_bands(supply, demand, live, quote.get("prev_close"))' in inspect.getsource(sw.derive)
+    assert '"prev_close": float(prev) if prev else None' in inspect.getsource(sw)
+
+
+def test_integrator_fixes_2026_09_05_structure_reads_closed_bars_in_every_caller():
+    """price_zones.for_symbol adopted the closed-frame rule; the three callers
+    that still computed on the live bar / partial bucket follow it."""
+    from catalysts import signal_watch as SW
+    from chart_maps import support as S
+    from supply_demand import session_board as SB
+    fs = inspect.getsource(S.for_symbol)
+    assert "zones = pz.compute(closed, last_price=live_last" in fs
+    assert "atr_value = pat_mod.atr(closed)" in fs and "fair_value_gaps(closed, last_price)" in fs
+    assert 'df, _have, as_of, closed = _frame_for(sym, spec["bars"], with_closed=True)' in fs
+    assert "with_closed: bool = False" in str(inspect.signature(S._frame_for)) or \
+        "with_closed" in str(inspect.signature(S._frame_for))
+    sb = inspect.getsource(SB.read_symbol)
+    assert 'closed = df.iloc[:-1] if (meta.get("partial") and len(df) > 1) else df' in sb
+    assert "gaps = pat.fair_value_gaps(closed, last)" in sb
+    sw = inspect.getsource(SW.check_once)
+    assert "df.iloc[:-1] if ((meta or {}).get(\"partial\") and len(df) > 1)" in sw
+    assert "atr_value = pat_mod.atr(closed)" in sw and "fair_value_gaps(closed, last)" in sw
+    assert "lookback_bars=len(closed)" in sw
+    # the zone_bounce_alerts phone-gate geometry note: STRONG off a band needs hi/lo >= 1.05/1.01
+    assert round(1.05 / 1.01 - 1.0, 4) == 0.0396

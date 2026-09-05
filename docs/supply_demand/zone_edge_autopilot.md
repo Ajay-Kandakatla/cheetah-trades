@@ -52,6 +52,7 @@ same Mongo handle `exit_engine` uses and never writes to them.
 | `MIN_CAP_USD` | 1e9 | "billion or at least bigger than a billion" (mirrors `zone_store.MIN_CAP_USD`) |
 | `SIGNAL_MAX_AGE_SEC` | 180 | a `latest` doc older than this (or from another day, or without a readable `as_of`) is **stale → no entries** |
 | `LAST_ENTRY_ET` | 15:45 | no new entries at/after this; the 15:44 tick is the last |
+| `RISK_STOP_FLOOR_PCT` | 1.0 | **not an owner rule** — a mirror of the bare literal `pct = max(pct, 1.0)` in FROZEN `trading/risk_rules.py` (the floor every placed stop gets); the room gate measures 2R off the stop that will actually be placed. Pinned to the literal in `tests/test_trading_contracts.py`. |
 
 Candidates per tick, in this order:
 
@@ -67,15 +68,31 @@ Then, per candidate:
 
 - `stop_pct = (last − stop) / last × 100`. `stop_pct > risk_rules.ABS_MAX_STOP_PCT`
   (10) → **blocked** `stop wider than book max`; `stop_pct ≤ 0` → blocked.
-  Otherwise `stop_pct` is passed to `entries.enter(sym, limit_price=None,
-  stop_pct=…, allow_earnings=False)` as the *requested* stop and risk_rules
-  clamps / sizes / targets from there.
-- **Room sanity** — the nearest **supply** band floor above `last` (from the
-  symbol's `zone_store` doc for the day — **one read per candidate**) must be
-  at least `risk_rules.MIN_REWARD_RISK × stop_pct` (2R) away in %, else
-  **blocked** `room < 2R`. No supply band above = unbounded room = ok. **No
-  zone doc = unknown = blocked** (fails closed). Breakouts to new highs with
-  `overhead_bands == 0` skip the check.
+  Otherwise the stop is handed to `entries.enter(sym, limit_price=None,
+  stop_pct=…, stop_price=stop, allow_earnings=False)` as the **absolute
+  level** (`stop_price`, since 2026-09-05 — `stop_pct` rides along as the
+  signal-time request the ledgers record). `entries` converts the level to a
+  percent **at its own planning price** (the live print at order time), so
+  the broker stop rests at `band.lo × 0.995` on the cent grid whatever the
+  tape printed since the board saw the row; risk_rules sizes / targets from
+  there. If the print drifted so far that the level is past the 10% line, or
+  the print is already **through** the level, `entries` **refuses** (a
+  `blocked` attempt with the reason) — it never clamps the stop back up into
+  the band.
+- **Room sanity** — the **first band overhead** (from the symbol's
+  `zone_store` doc for the day — **one read per candidate**) must be at least
+  `risk_rules.MIN_REWARD_RISK × max(stop_pct, RISK_STOP_FLOOR_PCT)` (2R of
+  the stop that will be *placed*) away in %, else **blocked** `room < 2R`.
+  Overhead is kind-agnostic, the same rule the Portfolio supply watch
+  (`portfolio/supply_watch.overhead_bands`) and the bounce-room read
+  (`supply_demand/bounce_room.first_overhead`) apply: a **supply** band with
+  `hi ≥ last` — one that **contains** the print is zero room → **blocked**
+  `inside supply band` — and a **demand** band with `lo > last` (broken
+  support is resistance). A demand band containing or below the print is
+  support, never overhead. Nothing overhead = unbounded room = ok. **No zone
+  doc = unknown = blocked** (fails closed). Breakouts to new highs with
+  `overhead_bands == 0` skip the check. The gate's detail carries
+  `need_pct`, `room_pct`, `next_band {kind, lo, hi}` and `reason`.
 - Every missing input (no print, no band, unknown touches/cap, unknown
   overhead) **fails closed**.
 
@@ -201,8 +218,9 @@ to go much higher."
 | `breakout_any_band` | false | true | buy **any** cross through a supply band (tier `broke`), not only the last one toward new highs |
 | `min_touches` | 2 | 1 | bands tested fewer times are skipped |
 
-Everything else is unchanged in both modes: stop 0.5% under the band floor (refused past the book's
-10%), room ≥ 2R to the next supply floor (breakouts to new highs with nothing overhead skip it),
+Everything else is unchanged in both modes: stop 0.5% under the band floor, placed at that level
+(refused past the book's 10% — at the signal or after the print drifted), room ≥ 2R to the first band
+overhead, supply or broken demand (breakouts to new highs with nothing overhead skip it),
 cap ≥ $1B, max 4 a day, none at/after 15:45 ET, one attempt per band per day, never a held name,
 every buy through `entries.enter` → `trading/risk_rules.py`. The **stop is the "sell it" half** of
 his ask: the bracket's stop leg rests at the broker; a stopped name is done for that band that day.
@@ -215,3 +233,21 @@ Set: `POST /trading/config {"zone_edge_rules": {"demand_residents": true, "break
 "min_touches": 1}}`; `null` resets to STRICT. `GET /trading/status` → `zone_edge_entry.active_rules`.
 Strict vs wide is the first named paper experiment (see the S&D research-loop rule).
 
+
+## Fixes 2026-09-05 — stop anchoring, room gate (Ajay 2026-09-05: "yes please fix the bugs")
+
+A six-agent review of the Supply & Demand zone logic reproduced these on synthetic frames; Ajay
+signed off on fixing every one.
+
+| # | Was | Now | Test |
+|---|---|---|---|
+| stop as a percent of a stale print | `stop_pct` (derived from the **board** print) was re-applied by `risk_rules.initial_stop` to the **order-time** print, so a print 1.5% higher than the signal put the broker stop **inside** the band being bought (signal 100 / band 98–100 → stop 97.51 requested, 98.97 placed at a 101.50 print). | `entries.enter(..., stop_price=level)`: the absolute level is converted at the planning price; the placed stop is `band.lo × 0.995` regardless of drift. Drift that pushes the level past `ABS_MAX_STOP_PCT`, or a print already through the level, is **refused** with a reason — never clamped. | `test_stop_is_anchored_under_the_band_floor_when_the_live_print_drifts_up`, `test_stop_anchor_refused_when_drift_pushes_risk_past_the_ceiling`, `test_stop_anchor_refused_when_the_print_is_already_through_the_level` |
+| room gate blind to broken demand overhead | only `kind == 'supply'` bands counted, so a demand band 3% above a deep-demand arrival (broken first band = the Portfolio page's "overhead (old support)") was invisible and the buy went in under a lid the app reports. | kind-agnostic first band overhead (supply `hi ≥ last`, demand `lo > last`), the rule `supply_watch.overhead_bands` / `bounce_room.first_overhead` already use. | `test_room_gate_counts_a_broken_demand_band_overhead` |
+| inside a supply band = "no supply overhead" | `lo > last` excluded a supply band containing the print. | a containing supply band is zero room → blocked `inside supply band`. | `test_room_gate_blocks_a_print_inside_a_supply_band` |
+| need vs the engine's 1% floor | `need = 2 × requested stop_pct` while `risk_rules` places at least 1.0%, so a 0.9% request under-asked room by 0.2pp. | `need = 2 × max(stop_pct, RISK_STOP_FLOOR_PCT)`; the constant mirrors the risk_rules literal and is pinned to it. | `test_room_need_floors_at_the_engine_minimum_stop` |
+
+The FE ⓘ panel text (`rules_list`) now says "first band overhead … or a demand band above it =
+broken support … a print inside a supply band has no room" instead of "nearest supply floor above".
+Source guards: `test_zone_edge_entry_hands_entries_the_absolute_stop_level`,
+`test_zone_edge_room_gate_is_kind_agnostic_and_floors_need_at_the_placed_stop`
+(`tests/test_trading_contracts.py`).

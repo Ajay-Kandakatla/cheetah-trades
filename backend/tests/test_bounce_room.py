@@ -795,3 +795,42 @@ def test_routes_exist_and_offload_to_a_thread_with_the_disclaimer():
     assert "asyncio.to_thread(bounce_room_mod.api_payload, syms)" in src
     assert "not advice" in src[src.index('@router.post("/supply-demand/bounce-room")'):][:3000]
     assert "docs/supply_demand/bounce_room.md" in src
+
+
+# ── integrator fixes 2026-09-05 (review of the 22-bug sweep) ─────────────────
+def test_room_read_skips_a_supply_band_yesterday_closed_above():
+    """Review 2026-09-05: room_for / alert_gates learned the broken-supply rule
+    (hi < prev_close = support, not a ceiling) but bounce_room.first_overhead did
+    not, so the 🪃 push said 'room: clear runway' while the SEPA chip / Demand
+    sort still quoted room to the 173.87 shelf. Same doc, same answer now; an
+    unknown prev close keeps every supply band (the conservative read)."""
+    from supply_demand import alert_gates as AG
+    out = BR.room_read(96.0, _doc([SUP_BROKEN, SUP_OVER], prev_close=100.0))   # 95-97 closed above yesterday
+    assert out["state"] == "ROOM" and out["band"]["lo"] == 110.0 and out["room_pct"] == 14.58
+    assert BR.room_read(96.0, _doc([SUP_BROKEN, SUP_OVER], prev_close=None))["state"] == "IN_BAND"
+    assert BR.room_read(96.0, _doc([SUP_BROKEN, SUP_OVER], prev_close=97.0))["state"] == "IN_BAND", \
+        "closed ON the top is not above it"
+    bands = [DEM, SUP_BROKEN, SUP_OVER]
+    for px, pc in ((96.0, 100.0), (96.0, None), (99.0, 100.0), (111.0, 100.0), (94.0, 96.0), (96.0, 97.0)):
+        ours = BR.first_overhead(BR.overhead_bands(bands, px, pc), px)
+        theirs = AG.first_overhead(bands, px, pc)
+        assert (ours is None) == (theirs is None), (px, pc)
+        assert ours is None or (ours["lo"], ours["hi"]) == (theirs["lo"], theirs["hi"]), (px, pc)
+
+
+def test_overhead_rule_with_prev_close_matches_portfolio_supply_watch_loaded_standalone():
+    """The broken-supply rule travels to the Portfolio 🎯 table too (same
+    function pair, same fixture, every print, both prev-close states)."""
+    spec = importlib.util.spec_from_file_location(
+        "sw_standalone2", ROOT / "backend/portfolio/supply_watch.py")
+    sw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sw)
+    bands = [DEM, DEM2, SUP_BROKEN, SUP_OVER, SUP_FAR]
+    supply = [b for b in bands if b["kind"] == "supply"]
+    demand = [b for b in bands if b["kind"] == "demand"]
+    for pc in (None, 100.0, 97.0, 111.0):
+        for live in (80.0, 91.0, 96.0, 99.0, 111.0, 120.0):
+            theirs = {(z["lo"], z["hi"]) for z in sw.overhead_bands(supply, demand, live, pc)}
+            ours = {(z["lo"], z["hi"]) for z in BR.overhead_bands(bands, live, pc)}
+            assert ours == theirs, (live, pc)
+    assert [z["lo"] for z in sw.overhead_bands(supply, demand, 96.0, 100.0)] == [110.0, 130.0]

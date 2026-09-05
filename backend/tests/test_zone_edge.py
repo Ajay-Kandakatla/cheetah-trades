@@ -278,9 +278,9 @@ def test_near_demand_garbage_never_crashes():
 
 # ── keys + messages ──────────────────────────────────────────────────────────
 def test_state_keys():
-    assert ZE.break_state_key("AAA", RES, DAY, "near") == "AAA:100-102:2026-09-03:near"
-    assert ZE.break_state_key("AAA", RES, DAY, "broke") == "AAA:100-102:2026-09-03:broke"
-    assert DA.state_key("AAA", DEM, DAY, "at") == "AAA:90-92:2026-09-03:at"
+    assert ZE.break_state_key("AAA", RES, DAY, "near") == "AAA:100.00-102.00:2026-09-03:near"
+    assert ZE.break_state_key("AAA", RES, DAY, "broke") == "AAA:100.00-102.00:2026-09-03:broke"
+    assert DA.state_key("AAA", DEM, DAY, "at") == "AAA:90.00-92.00:2026-09-03:at"
 
 
 def test_break_single_message_near_and_broke_exact():
@@ -334,10 +334,10 @@ def test_near_resistance_toward_new_highs_pushes_once_with_exact_payload(monkeyp
     assert len(sent) == 1
     m = sent[0]
     assert m["title"] == "🚀 AAA 0.49% under resistance $100–102 → new highs"
-    assert m["body"] == "$101.5 · tested 3x · 52w high $103 (+1.5%) · $5.0B · Alpha"
+    assert m["body"] == "$101.5 · tested 3x · 52w high $103 (+1.5%) · room: clear runway · $5.0B · Alpha"
     assert m["kind"] == "supply_break_alert" and m["kind_arg"] == "supply_break_alert"
     assert m["owner"] == "o@x" and m["url"] == "/sepa/AAA?tab=supply"
-    assert list(colls["coll_break"].docs) == ["AAA:100-102:2026-09-03:near"]
+    assert list(colls["coll_break"].docs) == ["AAA:100.00-102.00:2026-09-03:near"]
     assert colls["coll_demand"].docs == {}
     row = out["breaking"][0]
     assert row["symbol"] == "AAA" and row["name"] == "Alpha" and row["tier"] == "near"
@@ -351,7 +351,7 @@ def test_broke_today_pushes_with_the_broke_title(monkeypatch):
     store = {"AAA": _doc("AAA", [RES], 101.0)}
     out, colls = _run(store, {"AAA": _snap(103.0, 101.0)}, {"AAA": 5e9})
     assert out["pushed"] == 1 and sent[0]["title"] == "🚀 AAA broke resistance $100–102 (+1.0%) → new highs"
-    assert list(colls["coll_break"].docs) == ["AAA:100-102:2026-09-03:broke"]
+    assert list(colls["coll_break"].docs) == ["AAA:100.00-102.00:2026-09-03:broke"]
     assert out["breaking"][0]["tier"] == "broke" and out["breaking"][0]["dist_pct"] == -0.97
 
 
@@ -396,10 +396,10 @@ def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_stat
     assert out["singles_demand"] == 1 and out["pushed"] == 1 and len(sent) == 1
     m = sent[0]
     assert m["title"] == "🧲 AAA in demand $90–92"
-    assert m["body"] == "$91 · tested 2x · $5.0B · Alpha"
+    assert m["body"] == "$91 · tested 2x · room +9.9% -> $100 · $5.0B · Alpha"   # RES 100-102 (hi >= prev 95) is the first unbroken lid
     assert m["kind"] == "demand_alert" == DA.KIND and m["kind_arg"] == "demand_alert"
     key = DA.state_key("AAA", DEM, DAY, "at")
-    assert list(colls["coll_demand"].docs) == [key] == ["AAA:90-92:2026-09-03:at"]
+    assert list(colls["coll_demand"].docs) == [key] == ["AAA:90.00-92.00:2026-09-03:at"]
     assert colls["coll_demand"].docs[key]["tier"] == "at" and colls["coll_break"].docs == {}
     row = out["near_demand"][0]
     assert row["tier"] == "in" and row["side"] == "demand" and row["role"] == "demand"
@@ -415,7 +415,7 @@ def test_demand_alerts_five_minute_pass_never_double_fires_a_band_zone_edge_alre
     board = {"rows": [{"symbol": "AAA", "name": "AAA Inc", "entry_zone": dict(DEM)}], "approaching_rows": []}
     live = {"AAA": {"price": 91.0, "change_pct": -4.2, "prev_day_close": 95.0}}
     da = DA.check_once(push=True, force=True, board=board, live=live, caps={"AAA": 5e9},
-                       coll=colls["coll_demand"], owner="o@x", now=NOW)
+                       coll=colls["coll_demand"], owner="o@x", now=NOW, store=store)
     assert da["at"] == 0 and da["pushed"] == 0 and len(sent) == 1, "same key, same coll: one fact"
     # and the other way round: a key demand_alerts wrote silences zone_edge
     pre = _colls()
@@ -437,7 +437,7 @@ def test_resident_is_on_the_board_tagged_and_never_pushed(monkeypatch):
     assert [r["symbol"] for r in out["near_demand"]][0] == "ARR", "arrivals first"
     assert out["unknown_prev"] == 1
     assert [s["title"] for s in sent] == ["🧲 ARR in demand $90–92"]
-    assert list(colls["coll_demand"].docs) == ["ARR:90-92:2026-09-03:at"]
+    assert list(colls["coll_demand"].docs) == ["ARR:90.00-92.00:2026-09-03:at"]
 
 
 def test_singles_capped_at_three_per_side_rest_one_digest_digest_names_recorded(monkeypatch):
@@ -500,8 +500,8 @@ def test_second_identical_pass_pushes_nothing_but_still_lists_and_tracks(monkeyp
     assert out3["pushed"] == 1
     assert sent[-1]["title"] == "🚀 AAA broke resistance $100–102 (+1.0%) → new highs"
     assert [r["symbol"] for r in out3["near_demand"]] == []
-    assert set(colls["coll_break"].docs) == {"AAA:100-102:2026-09-03:near", "AAA:100-102:2026-09-03:broke"}
-    assert set(colls["coll_demand"].docs) == {"BBB:90-92:2026-09-03:at"}
+    assert set(colls["coll_break"].docs) == {"AAA:100.00-102.00:2026-09-03:near", "AAA:100.00-102.00:2026-09-03:broke"}
+    assert set(colls["coll_demand"].docs) == {"BBB:90.00-92.00:2026-09-03:at"}
     out3b, _ = _run(store, {"AAA": _snap(103.1, 99.0, now=later2)}, caps, colls=colls, now=later2)
     assert out3b["pushed"] == 0 and len(sent) == 3
     # tomorrow is a new day
@@ -561,7 +561,7 @@ def test_a_shelf_broken_today_is_one_push_a_shelf_broken_yesterday_is_support(mo
     nd = out2["near_demand"][0]
     assert nd["tier"] == "near" and nd["role"] == "broken supply" and nd["arrival"] is True
     assert [s["title"] for s in sent] == ["🧲 AAA 0.49% above demand $100–102"]
-    assert list(colls["coll_demand"].docs) == ["AAA:100-102:2026-09-03:at"]
+    assert list(colls["coll_demand"].docs) == ["AAA:100.00-102.00:2026-09-03:at"]
     # closed ON the shelf's ring yesterday (102.5, 0.49% above): resident, listed, silent
     sent.clear()
     out3, _ = _run({"AAA": _doc("AAA", [RES, DEM], 102.5)}, {"AAA": _snap(102.5, 102.5, 0.0)}, {"AAA": 5e9})
@@ -603,13 +603,13 @@ def test_first_seen_is_the_first_minute_listed_today_per_symbol_side_band(monkey
     colls = _colls()
     # yesterday's clocks never leak: the map doc is per day
     colls["latest_coll"].docs["first_seen"] = {"_id": "first_seen", "date": "2026-09-02",
-                                               "rows": [["AAA:supply:100-102", "09:31"]]}
+                                               "rows": [["AAA:supply:100.00-102.00", "09:31"]]}
     t1, t2, t3 = NOW, NOW + timedelta(minutes=1), NOW + timedelta(minutes=2)
     _run(store, {"AAA": _snap(101.3, 99.0, now=t1)}, {"AAA": 5e9}, colls=colls, now=t1)
     _run(store, {"AAA": _snap(101.5, 99.0, now=t2)}, {"AAA": 5e9}, colls=colls, now=t2)
     out, _ = _run(store, {"AAA": _snap(101.7, 99.0, now=t3)}, {"AAA": 5e9}, colls=colls, now=t3)
     assert out["breaking"][0]["first_seen"] == "10:00"
-    assert ZE.read_first_seen(colls["latest_coll"], DAY) == {"AAA:supply:100-102": "10:00"}
+    assert ZE.read_first_seen(colls["latest_coll"], DAY) == {"AAA:supply:100.00-102.00": "10:00"}
     assert ZE.read_first_seen(colls["latest_coll"], "2026-09-02") == {}, "another day = empty map"
     assert ZE.read_first_seen(None, DAY) == {}
     assert colls["latest_coll"].docs["first_seen"]["date"] == DAY
@@ -852,3 +852,187 @@ def test_names_read_failure_and_missing_index_support_are_quiet(monkeypatch):
         def find(self, q, projection=None):
             raise RuntimeError("down")
     assert ZE._existing_keys(Broken(), ["k"]) == set(), "read failure = push again, never never"
+
+
+# ── fixes 2026-09-05 (review of the S/D zone logic; Ajay: "yes please fix the bugs") ──
+def test_near_tier_ignores_a_supply_band_yesterday_closed_above(monkeypatch):
+    """Blocker: prev 104 > RES.hi 102 = broken supply = SUPPORT (Side B's rule),
+    yet a pullback INTO that shelf read as 'near resistance → new highs' and
+    pushed 🚀 five minutes after the same band pushed 🧲 — two contradictory
+    phone pushes on one band on a down day."""
+    assert ZE.read_breaking(101.5, [RES], 104.0, 104.5) is None
+    assert ZE.read_breaking(102.0, [RES], 104.0, 104.5) is None, "on the top: still not resistance"
+    near = ZE.read_breaking(101.5, [RES], 99.0, None)
+    assert near and near["tier"] == "near" and near["dist_pct"] == 0.49, "prev under the band: as before"
+    on_top = ZE.read_breaking(101.5, [RES], 102.0, None)
+    assert on_top and on_top["tier"] == "near", "prev ON the top (hi >= prev): resistance, same edge as broke"
+    assert ZE.read_breaking(101.5, [RES], None, None)["tier"] == "near", "unknown prev: geometry only"
+    # a broken band is skipped; the next UNBROKEN band is the resistance
+    nxt = {"kind": "supply", "lo": 104.2, "hi": 104.5, "touches": 2, "strength": 20.0}
+    r = ZE.read_breaking(103.7, [RES, nxt], 104.0, None)
+    assert r["tier"] == "near" and r["band"]["hi"] == 104.5 and r["dist_pct"] == 0.77
+    # end to end: prev 104. 10:00 print 102.5 -> 🧲 arrival at broken-supply support;
+    # 10:05 print 101.5 (inside the shelf) -> Side A silent, no 🚀, the row never flips side
+    sent = _capture(monkeypatch)
+    store = {"XYZ": _doc("XYZ", [RES], 104.0, 104.5)}
+    colls = _colls()
+    out1, _ = _run(store, {"XYZ": _snap(102.5, 104.0, -1.4)}, {"XYZ": 5e9}, colls=colls)
+    assert [r["side"] for r in out1["near_demand"]] == ["demand"] and out1["breaking"] == []
+    later = NOW + timedelta(minutes=5)
+    out2, _ = _run(store, {"XYZ": _snap(101.5, 104.0, -2.4, now=later)}, {"XYZ": 5e9}, colls=colls, now=later)
+    assert out2["breaking"] == [] and out2["near_demand"] == []
+    assert [s["kind"] for s in sent] == ["demand_alert"], "one band, one day, one fact"
+
+
+def test_api_payload_from_another_day_is_never_live(monkeypatch):
+    """A cold zone_store (warm failed) left Thursday's doc as 'latest' all Friday,
+    served with in_session True and Thursday's rows under a live header."""
+    _capture(monkeypatch)
+    thu = datetime(2026, 9, 3, 15, 59, tzinfo=ET)
+    out, colls = _run({"AAA": _doc("AAA", [RES], 99.0)}, {"AAA": _snap(101.5, 99.0, now=thu)},
+                      {"AAA": 5e9}, now=thu)
+    fri = datetime(2026, 9, 4, 10, 0, tzinfo=ET)
+    p = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"], now=fri)
+    assert p["in_session"] is False and p["date"] == "2026-09-03"
+    assert p["reason"] == "last pass 2026-09-03; no pass yet today"
+    assert len(p["breaking"]) == 1, "the evening/weekend board still shows the last pass"
+    json.dumps(p, allow_nan=False)
+    same = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"],
+                          now=thu + timedelta(minutes=1))
+    assert same["in_session"] is True and "reason" not in same, "same day: live as before"
+    # a cold store on Friday writes an EMPTY payload with the reason -> the board self-heals
+    out2, _ = _run({}, {}, {}, colls=colls, now=fri)
+    assert out2["reason"] == "zone store empty for today"
+    p2 = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"], now=fri)
+    assert p2["as_of"] is None and p2["date"] == "2026-09-04" and p2["breaking"] == [] and p2["track"] == {}
+    assert p2["reason"] == "zone store empty for today"
+    json.dumps(p2, allow_nan=False)
+    dry = _colls()
+    _run({}, {}, {}, colls=dry, now=fri, track=False)
+    assert dry["latest_coll"].docs == {}, "a dry run on a cold store writes nothing"
+
+
+def test_session_gate_skips_market_holidays_in_all_three_modules():
+    """Weekday-only gates ran on holidays: the store warmed with the holiday's date
+    and the board said 'refreshes every minute' over an empty list."""
+    from supply_demand import zone_bounce_alerts as ZB
+    from market_hours.reminder import is_market_day
+    labor_day = datetime(2026, 9, 7, 10, 0, tzinfo=ET)
+    assert is_market_day(labor_day) is False, "the house calendar (market_hours/reminder.py) is the one source"
+    assert ZE.in_session(labor_day) is False and ZB.in_session(labor_day) is False
+    assert DA.in_session(labor_day) is False
+    tue = datetime(2026, 9, 8, 10, 0, tzinfo=ET)
+    assert ZE.in_session(tue) is True and ZB.in_session(tue) is True and DA.in_session(tue) is True
+    colls = _colls()
+    assert ZE.check_once(store={}, now=labor_day, **colls)["ran"] is False
+
+
+def test_state_and_first_seen_keys_use_fixed_two_decimals():
+    """':g' (6 significant digits) collapsed two bands on a $10,000+ name into
+    one key — the second band was silently deduped for the day."""
+    from supply_demand import zone_bounce_alerts as ZB
+    a = {"kind": "supply", "lo": 12345.67, "hi": 12400.0, "touches": 2}
+    b = {"kind": "supply", "lo": 12345.72, "hi": 12400.0, "touches": 2}
+    assert ZE.break_state_key("X", a, DAY, "near") != ZE.break_state_key("X", b, DAY, "near")
+    assert ZE.break_state_key("X", a, DAY, "near") == "X:12345.67-12400.00:2026-09-03:near"
+    assert ZE.first_seen_key("X", "supply", a) != ZE.first_seen_key("X", "supply", b)
+    assert ZE.first_seen_key("AAA", "supply", RES) == "AAA:supply:100.00-102.00"
+    assert DA.state_key("X", a, DAY, "at") != DA.state_key("X", b, DAY, "at")
+    assert ZB.state_key("X", a, DAY) != ZB.state_key("X", b, DAY)
+    assert ZB.state_key("NTAP", {"lo": 161.78, "hi": 167.54}, DAY) == "NTAP:161.78-167.54:2026-09-03"
+    assert ZE._band_txt(RES) == "$100–102", "display text keeps the short form"
+
+
+def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch):
+    """Ajay 2026-09-05: "When alert I need the same logic. Need only alerts on
+    stocks that have atleast 5% to Supply and also <1% bounce from demand zone".
+    The board lists; only the phone tightens."""
+    from supply_demand import alert_gates as AG
+    sent = _capture(monkeypatch)
+    tight = {"kind": "supply", "lo": 93.0, "hi": 94.0, "touches": 2, "strength": 20.0}   # 2.2% over a $91 print
+    # prev 93.5: still an arrival (1.6% above DEM's top) AND the lid is unbroken (94 >= 93.5)
+    out, colls = _run({"AAA": _doc("AAA", [DEM, tight], 93.5)}, {"AAA": _snap(91.0, 93.5, -2.7)}, {"AAA": 5e9})
+    assert [r["symbol"] for r in out["near_demand"]] == ["AAA"] and out["near_demand"][0]["arrival"] is True
+    assert sent == [] and out["pushed"] == 0 and out["skipped_room"] == 1 and colls["coll_demand"].docs == {}
+    roomy = {"kind": "supply", "lo": 96.0, "hi": 97.0, "touches": 2, "strength": 20.0}   # 5.49% over
+    out2, _ = _run({"AAA": _doc("AAA", [DEM, roomy], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
+    assert out2["pushed"] == 1 and out2["skipped_room"] == 0
+    assert sent[-1]["body"] == "$91 · tested 2x · room +5.5% -> $96 · $5.0B"
+    out3, _ = _run({"AAA": _doc("AAA", [DEM], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
+    assert out3["pushed"] == 1 and sent[-1]["body"] == "$91 · tested 2x · room: clear runway · $5.0B"
+    assert ZE.EDGE_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT == 1.0, "the in/near tier IS the <1% rule — reused, not duplicated"
+
+
+def test_phone_gate_breaking_needs_five_percent_to_the_next_band(monkeypatch):
+    """'At least 5% to supply' applies to every phone kind: a 🚀 push wants 5% from
+    the print to the NEXT band above the one being broken."""
+    sent = _capture(monkeypatch)
+    close_next = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 1, "strength": 20.0}   # 2.5% over $101.5
+    # RES top 102 >= 98% of the 52w high 103 -> new_highs by the 52w rule even with a band overhead
+    out, colls = _run({"AAA": _doc("AAA", [RES, close_next], 99.0, 103.0)}, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9})
+    row = out["breaking"][0]
+    assert row["new_highs"] is True and row["overhead_bands"] == 1
+    assert sent == [] and out["pushed"] == 0 and out["skipped_room"] == 1 and colls["coll_break"].docs == {}
+    out2, _ = _run({"AAA": _doc("AAA", [RES, OVER], 99.0, 103.0)}, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9})
+    assert out2["pushed"] == 1 and out2["skipped_room"] == 0
+    assert sent[-1]["body"] == "$101.5 · tested 3x · 52w high $103 (+1.5%) · room +8.4% -> $110 · $5.0B"
+    out3, _ = _run({"AAA": _doc("AAA", [RES], 99.0, 103.0)}, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9})
+    assert out3["pushed"] == 1 and "· room: clear runway ·" in sent[-1]["body"]
+
+
+# ── integrator fixes 2026-09-05 (review of the 22-bug sweep) ─────────────────
+def test_overhead_counts_an_overlapping_supply_band_whose_top_is_above_the_broken_one(monkeypatch):
+    """Review 2026-09-05: overhead was 'supply bands with lo > band.hi', so a lid
+    OVERLAPPING the band being broken (99-104 over 96-99.5, print 100) was
+    invisible — new_highs True, overhead 0, a 🚀 push with the print INSIDE a
+    supply band, and zone_edge_entry skipped its room check on the same fact.
+    Overhead is every OTHER supply band whose top is above this band's top."""
+    a = {"kind": "supply", "lo": 96.0, "hi": 99.5, "touches": 3, "strength": 30.0}
+    b = {"kind": "supply", "lo": 99.0, "hi": 104.0, "touches": 2, "strength": 25.0}
+    r = ZE.read_breaking(100.0, [a, b], 99.0)
+    assert r["tier"] == "broke" and r["band"]["hi"] == 99.5
+    assert r["overhead_bands"] == 1 and r["new_highs"] is False, "99-104 still sits overhead"
+    # the near tier reads the same way: RES 100-102 approached with 101-105 overlapping it
+    ovl = {"kind": "supply", "lo": 101.0, "hi": 105.0, "touches": 2, "strength": 25.0}
+    n = ZE.read_breaking(101.5, [RES, ovl], 99.0)
+    assert n["tier"] == "near" and n["band"]["hi"] == 102.0
+    assert n["overhead_bands"] == 1 and n["new_highs"] is False
+    # non-overlapping geometry is byte-for-byte unchanged
+    assert ZE.read_breaking(101.5, [RES, OVER], 99.0)["overhead_bands"] == 1
+    assert ZE.read_breaking(101.5, [RES], 99.0)["overhead_bands"] == 0
+    # end to end: the row lists (broke, not new highs) and the phone stays quiet
+    sent = _capture(monkeypatch)
+    out, _ = _run({"OVL": _doc("OVL", [a, b], 99.0)}, {"OVL": _snap(100.0, 99.0, 1.0)}, {"OVL": 5e9})
+    assert [(r["tier"], r["new_highs"], r["overhead_bands"]) for r in out["breaking"]] == [("broke", False, 1)]
+    assert sent == [] and out["pushed"] == 0
+
+
+def test_a_transient_empty_store_read_does_not_overwrite_todays_live_payload(monkeypatch):
+    """Review 2026-09-05: zone_store.load swallows a Mongo read error and returns
+    {}, and the cold-store self-heal wrote an EMPTY 'latest' on every {} — one
+    failed find at 10:30 blanked the day's board ('no pass yet today') and
+    zone_edge_entry read as_of None for a minute. A latest doc that is a real
+    pass from TODAY is kept; a stale-day or missing doc is still replaced."""
+    _capture(monkeypatch)
+    colls = _colls()
+    out1, _ = _run({"AAA": _doc("AAA", [RES], 99.0)}, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9}, colls=colls)
+    assert len(out1["breaking"]) == 1
+    live = dict(colls["latest_coll"].docs["latest"])
+    later = NOW + timedelta(minutes=1)
+    out2, _ = _run({}, {}, {}, colls=colls, now=later)
+    assert out2["reason"] == "zone store empty for today" and out2["latest_written"] is False
+    kept = colls["latest_coll"].docs["latest"]
+    assert kept["as_of"] == live["as_of"] and len(kept["breaking"]) == 1, \
+        "one failed store read must not blank the day's board"
+    p = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"], now=later)
+    assert p["in_session"] is True and len(p["breaking"]) == 1 and "reason" not in p
+    # a doc from ANOTHER day is still replaced — the self-heal the 2026-09-05 fix was written for
+    stale = _colls()
+    stale["latest_coll"].docs["latest"] = dict(live, date="2026-09-02")
+    out3, _ = _run({}, {}, {}, colls=stale)
+    assert out3["latest_written"] is True
+    assert stale["latest_coll"].docs["latest"]["reason"] == "zone store empty for today"
+    # and so is a missing doc (first pass of the day on a cold store)
+    cold = _colls()
+    out4, _ = _run({}, {}, {}, colls=cold)
+    assert out4["latest_written"] is True and cold["latest_coll"].docs["latest"]["date"] == DAY

@@ -325,3 +325,37 @@ def test_the_tile_never_draws_two_competing_entries():
     labels2 = [ln["label"] for ln in t2["lines"]]
     assert labels2 == ["SMC BUY", "STOP", "TARGET"]
     assert any(b["kind"] == "order_block" for b in t2["bands"])
+
+
+# ── integrator fixes 2026-09-05: gaps off CLOSED buckets only ─────────────────
+def _frame_15m_with_partial_bucket(n=60):
+    """60 15-minute bars; [-2] is a displacement bar (closed), [-1] the
+    in-progress bucket whose low-so-far (52.7) would top a demand FVG."""
+    import math
+    idx = pd.date_range("2026-09-03 13:45", periods=n, freq="15min", tz="UTC")
+    c = [50.0 + math.sin(i / 3.0) * 0.4 for i in range(n)]
+    h = [x + 0.25 for x in c]; l = [x - 0.25 for x in c]
+    h[-2], l[-2], c[-2] = 52.5, 50.3, 52.4
+    h[-1], l[-1], c[-1] = 52.9, 52.7, 52.8
+    return pd.DataFrame({"open": c, "high": h, "low": l, "close": c,
+                         "volume": [1e5] * n}, index=idx)
+
+
+def test_the_boards_gaps_come_from_closed_buckets_not_the_partial_one(monkeypatch):
+    """frame_for flags the in-progress bucket `partial` (2026-09-05); a
+    three-bar imbalance whose third bar has not closed is not a gap yet — its
+    edge is the low-so-far and repaints all session. The price is still the
+    live one; a CLOSED last bucket is read whole."""
+    df = _frame_15m_with_partial_bucket()
+    meta = {"label": "15 min", "bars": len(df), "available": True,
+            "as_of": "2026-09-04 04:37:00+00:00", "partial": True, "reason": None}
+    monkeypatch.setattr(TF, "intraday_raw", lambda *a, **k: None)
+    monkeypatch.setattr(TF, "frame_for", lambda *a, **k: (df.copy(), dict(meta)))
+    out = SB.read_symbol("ACME", None, tf="15m")
+    assert out["last_price"] == 52.8
+    assert not any(abs(g["hi"] - 52.7) < 1e-9 for g in out["fair_value_gaps"]), out["fair_value_gaps"]
+    assert out["fair_value_gaps"] == P.fair_value_gaps(df.iloc[:-1], 52.8)[:6]
+    monkeypatch.setattr(TF, "frame_for", lambda *a, **k: (df.copy(), dict(meta, partial=False)))
+    whole = SB.read_symbol("ACME", None, tf="15m")
+    assert any(abs(g["hi"] - 52.7) < 1e-9 for g in whole["fair_value_gaps"]), \
+        "a CLOSED bucket that forms the imbalance still counts"

@@ -221,3 +221,168 @@ def test_band_distance_and_nearest_first():
     assert [z["lo"] for z in pz.nearest_first([z_up, z_dn, z_in], 100)] == [99, 90, 110]
     tie_a, tie_b = {"lo": 110, "hi": 112, "strength": 10}, {"lo": 110, "hi": 112, "strength": 80}
     assert pz.nearest_first([tie_a, tie_b], 100)[0] is tie_b                  # ties -> stronger first
+
+
+# ── engine fixes 2026-09-05 (Ajay: "yes please fix the bugs") ─────────────────
+def _two_level_frame(hi_a=110.0, hi_b=130.0, lo_a=80.0, lo_b=70.0, n=80):
+    """80 bars of a 90–100 range with two isolated swing highs (bars 20/40) and
+    two isolated swing lows (bars 20/40): four single-swing bands, so nearest
+    support/resistance and the containing band are all different objects."""
+    h = np.full(n, 100.0); l = np.full(n, 90.0)
+    h[20], h[40] = hi_a, hi_b
+    l[20], l[40] = lo_a, lo_b
+    c = (h + l) / 2
+    return pd.DataFrame({"open": c, "high": h, "low": l, "close": c,
+                         "volume": np.full(n, 1e6)})
+
+
+def _dist_pct(px, band, side):
+    if band is None:
+        return None
+    return (round((band["lo"] - px) / px * 100, 1) if side == "res"
+            else round((px - band["hi"]) / px * 100, 1))
+
+
+def test_at_demand_support_pct_is_the_distance_to_nearest_support_not_zero():
+    """The /zones page prints `nearest_support lo–hi (−support_pct%)` as ONE
+    statement, so the pair must describe the same band. AT_DEMAND used to
+    force 0.0 next to the NEXT band below (12% away)."""
+    out = pz.compute(_two_level_frame(), last_price=80.0)
+    v, ns = out["verdict"], out["nearest_support"]
+    assert v["state"] == "AT_DEMAND"
+    assert ns is not None and ns["hi"] < 80.0, "nearest_support is the band BELOW price"
+    assert v["support_pct"] == _dist_pct(80.0, ns, "sup")
+    assert v["support_pct"] > 0
+    # the AT_SUPPLY side was already honest; it stays that way
+    out2 = pz.compute(_two_level_frame(), last_price=110.0)
+    v2, nr = out2["verdict"], out2["nearest_resistance"]
+    assert v2["state"] == "AT_SUPPLY"
+    assert v2["resistance_pct"] == _dist_pct(110.0, nr, "res") and v2["resistance_pct"] > 0
+
+
+def test_support_and_resistance_pct_describe_the_nearest_band_in_every_state():
+    """Both sides symmetric: pct == distance to the band the payload names;
+    0.0 only if that band contained the price (it never does — nearest_*
+    are strictly outside the price by construction)."""
+    frame = _two_level_frame()
+    seen = set()
+    for px in (60.0, 70.0, 75.0, 80.0, 85.0, 95.0, 101.0, 108.0, 110.0, 120.0, 128.0,
+               130.0, 150.0):
+        out = pz.compute(frame, last_price=px)
+        v, ns, nr = out["verdict"], out["nearest_support"], out["nearest_resistance"]
+        seen.add(v["state"])
+        assert v["support_pct"] == _dist_pct(px, ns, "sup"), (px, v, ns)
+        assert v["resistance_pct"] == _dist_pct(px, nr, "res"), (px, v, nr)
+        for band, pct in ((ns, v["support_pct"]), (nr, v["resistance_pct"])):
+            if band is not None:
+                assert (pct == 0.0) == (band["lo"] <= px <= band["hi"])
+    assert {"AT_DEMAND", "AT_SUPPLY", "INTO_SUPPLY", "MID_RANGE",
+            "EXTENDED_NO_SUPPORT"} <= seen, seen
+
+
+def test_a_degenerate_multi_touch_cluster_gets_the_single_swing_width():
+    """Two swing highs a fraction of a cent apart used to make a 2-touch band of
+    ZERO width after 2dp rounding (1.2001/1.2004 -> 1.20–1.20), which killed
+    its trade_levels. The single-swing half-width applies whenever the span
+    rounds below one tick."""
+    df = _two_level_frame()
+    z = pz._make_zone(df, [(100.001, 20), (100.004, 30)], "supply")
+    hw = round(100.0025 * pz.ZONE_HALF_WIDTH_PCT / 100.0, 2)
+    assert z["touches"] == 2
+    assert z["hi"] - z["lo"] >= 2 * hw - 0.02, z
+    assert z["lo"] < 100.001 and z["hi"] > 100.004
+    # end to end: the sub-$2 repro from the review
+    h = df["high"].values.copy(); h[:] = 1.0; h[20], h[30] = 1.2001, 1.2004
+    small = df.assign(high=h, low=0.9, close=0.95, open=0.95)
+    out = pz.compute(small, last_price=0.95)
+    band = next(b for b in out["supply_zones"] if b["touches"] == 2)
+    assert band["hi"] > band["lo"]
+    from supply_demand import patterns as pat
+    assert pat.trade_levels(band, 0.95, 0.02) is not None
+
+
+def test_a_real_span_multi_touch_cluster_is_NOT_widened():
+    """Only the degenerate case is fixed. Widening every multi-touch band would
+    reshape every board and needs a re-measure first."""
+    df = _two_level_frame()
+    z = pz._make_zone(df, [(100.0, 20), (101.5, 30)], "supply")
+    assert (z["lo"], z["hi"], z["touches"]) == (100.0, 101.5, 2)
+    one_tick = pz._make_zone(df, [(110.0, 20), (110.01, 30)], "supply")
+    assert (one_tick["lo"], one_tick["hi"]) == (110.0, 110.01), "a one-tick span is a real span"
+
+
+def _closed_with_displacement(n=80, last="2026-09-02"):
+    """Wavy closed frame whose LAST bar is a displacement bar (h105 / l100.5)."""
+    import math
+    idx = pd.bdate_range(end=pd.Timestamp(last), periods=n) + pd.Timedelta(hours=4)
+    c = [100.0 + math.sin(i / 3.0) * 0.8 for i in range(n)]
+    h = [x + 0.5 for x in c]; l = [x - 0.5 for x in c]
+    h[-1], l[-1], c[-1] = 105.0, 100.5, 104.8
+    return pd.DataFrame({"open": c, "high": h, "low": l, "close": c,
+                         "volume": [1e6] * n}, index=idx)
+
+
+LIVE_SNAP = {"open": 105.6, "high": 106.0, "low": 105.5, "close": 105.8,
+             "volume": 2.5e6, "date": "2026-09-03 00:00:00",
+             "last_trade_ts_ms": 1788455521222}
+
+
+def test_for_symbol_daily_structure_comes_from_the_closed_frame_only(monkeypatch):
+    """A displacement bar + a LIVE bar used to print a demand FVG whose top was
+    the live bar's low-so-far — a three-bar imbalance whose third bar had not
+    closed. Structure (swings, gaps, ATR, trade levels) now reads the CLOSED
+    frame; the live bar supplies only the price the verdict is read at."""
+    from sepa import prices as P
+    from supply_demand import patterns as pat
+    closed = _closed_with_displacement()
+    monkeypatch.setattr(P, "load_prices", lambda sym, *a, **k: closed.copy())
+    monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {"ACME": LIVE_SNAP})
+    monkeypatch.setattr(pat, "opening_range", lambda *a, **k: None)
+    out = pz.for_symbol("ACME")
+    assert out.get("error") is None, out
+    assert out["live_bar"]["appended"] is True
+    assert out["last_price"] == 105.8, "the verdict still reads the live price"
+    assert not any(abs(g["hi"] - 105.5) < 1e-9 for g in out["fair_value_gaps"]), \
+        out["fair_value_gaps"]
+    assert out["fair_value_gaps"] == pat.fair_value_gaps(closed, 105.8)
+    assert out["atr"] == round(pat.atr(closed), 4)
+    # bars_since_test counts CLOSED bars: the live bar is not a session
+    ref = pz.compute(closed, last_price=105.8)
+    assert out["supply_zones"] == ref["supply_zones"]
+    assert out["demand_zones"] == ref["demand_zones"]
+    assert out["verdict"] == ref["verdict"]
+
+
+def test_for_symbol_intraday_excludes_the_partial_last_bucket(monkeypatch):
+    """Same rule on the intraday path: `frame_for` flags an in-progress last
+    bucket and for_symbol keeps it out of the structure."""
+    import math
+    from supply_demand import patterns as pat
+    from supply_demand import timeframes as TF
+    n = 60
+    idx = pd.date_range("2026-09-03 13:45", periods=n, freq="15min", tz="UTC")
+    c = [50.0 + math.sin(i / 3.0) * 0.4 for i in range(n)]
+    h = [x + 0.25 for x in c]; l = [x - 0.25 for x in c]
+    h[-2], l[-2], c[-2] = 52.5, 50.3, 52.4          # displacement bar (closed)
+    h[-1], l[-1], c[-1] = 52.9, 52.7, 52.8          # in-progress bucket
+    df = pd.DataFrame({"open": c, "high": h, "low": l, "close": c,
+                       "volume": [1e5] * n}, index=idx)
+    meta = {"tf": TF.M15, "label": "15 min", "span": "x", "bars": n, "available": True,
+            "source": "test", "as_of": "2026-09-04 04:37:00+00:00", "swing_window": 2,
+            "reason": None, "partial": True}
+    monkeypatch.setattr(TF, "frame_for", lambda *a, **k: (df.copy(), meta))
+    monkeypatch.setattr(pat, "opening_range", lambda *a, **k: None)
+    out = pz.for_symbol("ACME", tf="15m")
+    assert out.get("error") is None, out
+    assert out["last_price"] == 52.8
+    assert out["timeframe_meta"]["partial"] is True
+    assert not any(abs(g["hi"] - 52.7) < 1e-9 for g in out["fair_value_gaps"]), \
+        out["fair_value_gaps"]
+    closed = df.iloc[:-1]
+    assert out["fair_value_gaps"] == pat.fair_value_gaps(closed, 52.8)
+    assert out["atr"] == round(pat.atr(closed), 4)
+    assert out["params"]["lookback"] == n - 1
+    # a frame whose last bucket is CLOSED is read whole
+    monkeypatch.setattr(TF, "frame_for", lambda *a, **k: (df.copy(), {**meta, "partial": False}))
+    whole = pz.for_symbol("ACME", tf="15m")
+    assert whole["params"]["lookback"] == n

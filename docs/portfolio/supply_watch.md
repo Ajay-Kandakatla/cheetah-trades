@@ -78,6 +78,11 @@ have left on each. Also alerts if we are really close to supply or overhead."*
   print **plus demand bands strictly above it** (broken support = resistance,
   the engine's own `nearest_resistance` rule). A demand band that *contains*
   price is support, never overhead. Bands carry `kind: supply | broken_support`.
+  **2026-09-05 (Ajay: "yes please fix the bugs"):** `overhead_bands()` now also takes
+  `prev_close` — a supply band with `hi < prev_close` (the holding CLOSED above it
+  yesterday) is broken supply = support, not a sell zone; unknown `prev_close` keeps
+  every band. Same rule as `supply_demand/bounce_room.overhead_bands` and the S/D
+  alert gates, pinned by `tests/test_bounce_room.py`.
 - **Room left** = distance to the band bottom in % and in **$** (`room_usd` =
   (band.lo − live) × shares), so "how much run-up is left" reads in dollars.
 - **Table moved above the position cards; every card gets a `SupplyChip`**

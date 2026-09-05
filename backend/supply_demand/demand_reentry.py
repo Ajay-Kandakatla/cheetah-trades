@@ -528,6 +528,18 @@ def reentry_read(closes: list[float], zone_hi: float, zone_lo: float,
     Only CLOSES count, deliberately. Intraday wicks through a band are how
     demand zones get tested in the first place — failing on a wick would reject
     the healthy case this signal exists to find.
+
+    THE WHIPSAW (2026-09-05 review; Ajay: "yes please fix the bugs")
+    ----------------------------------------------------------------
+    The break scan used to be scoped to "after the last close above the band",
+    so that a break from BEFORE the run-up read as old structure. That let a
+    single close a hair over the top re-arm the band: 3% under the floor for
+    four sessions, one 104.2 close against a 104 top, back inside — and the
+    row read is_reentry True with a "fell from +7.7%" that belonged to the leg
+    before the break. A break is now old structure only when the market has
+    ANSWERED it: a later close at least `min_rise_pct` above the band top, the
+    same bar the re-entry itself has to clear. `fell_from_pct` describes the
+    leg AFTER the last break, never the whole window. See `_break_scan`.
     """
     out = {"is_reentry": False, "fell_from_pct": None,
            "bars_since_above": None, "in_band": False,
@@ -539,31 +551,127 @@ def reentry_read(closes: list[float], zone_hi: float, zone_lo: float,
     if not out["in_band"]:
         return out
 
-    window = closes[-int(lookback):] if lookback else closes
+    window = _close_window(closes, lookback)
     if not window:
         return out
-    peak = max(window)
-    rise = (peak / zone_hi - 1.0) * 100.0
-    out["fell_from_pct"] = round(rise, 1)
+    scan = _break_scan(window, zone_hi, zone_lo, min_rise_pct)
+    fields = _break_fields(scan, zone_hi, zone_lo)
+    fields.pop("bars_since_first_break")     # the deep board's question, not this read's
+    out.update(fields)
 
-    above_idx = [i for i, c in enumerate(window) if c > zone_hi]
-    if above_idx:
-        out["bars_since_above"] = int(len(window) - 1 - above_idx[-1])
-
-    # Has any bar CLOSED beneath the floor since price was last above the band?
-    # Scoped to after the last visit above on purpose: a close below the floor
-    # from before the run-up is old structure, already priced in by the fact
-    # that price then rose 5%+ through the whole band.
-    start = (above_idx[-1] + 1) if above_idx else 0
-    below = [(i, c) for i, c in enumerate(window[start:], start) if c < zone_lo]
-    if below:
-        out["broke_below"] = True
-        out["bars_since_break"] = int(len(window) - 1 - below[-1][0])
-        worst = min(c for _i, c in below)
-        out["lowest_close_pct_below"] = round((1.0 - worst / zone_lo) * 100.0, 2)
-
+    rise = ((scan["peak"] / zone_hi - 1.0) * 100.0
+            if scan["peak"] is not None else float("-inf"))
+    above_idx = scan["above_idx"]
     out["is_reentry"] = bool(rise >= min_rise_pct and above_idx
                              and not out["broke_below"])
+    return out
+
+
+def _close_window(closes, lookback: int) -> list:
+    """The last `lookback` closes as floats; [] on anything unusable."""
+    window = closes[-int(lookback):] if lookback else list(closes)
+    try:
+        return [float(c) for c in window]
+    except (TypeError, ValueError):
+        return []
+
+
+def _break_scan(window: list, zone_hi: float, zone_lo: float,
+                min_rise_pct: float) -> dict:
+    """ONE walk over a close window for the break / run-up evidence. PURE, raw.
+
+    A close STRICTLY under the floor is a break. A break stays live until the
+    market ANSWERS it — a later close at least `min_rise_pct` above the band
+    top (MIN_RISE_ABOVE_PCT by default, the re-entry's own bar). Until
+    2026-09-05 the scan was rescoped to after the last close above the band,
+    so one close 0.2% over the top erased four closes 3% under the floor (the
+    whipsaw in `reentry_read`'s docstring). Answered breaks are dropped; the
+    live ones drive `broke_below`.
+
+    `peak` is the top of the leg the trader is looking at:
+      * a name back INSIDE the band → the rebound since the last close under
+        the floor (the whole window when it never broke);
+      * a name still UNDER the floor (deep_demand's top band) → the run-up
+        that led INTO the current break, from the bar after the last answered
+        break up to the first live one.
+    """
+    n = len(window)
+    live = []                 # unanswered breaks, as window indices
+    leg_start = 0             # first bar after the last ANSWERED break
+    last_below = None
+    for i, c in enumerate(window):
+        if c < zone_lo:
+            live.append(i)
+            last_below = i
+        elif live and (c / zone_hi - 1.0) * 100.0 >= min_rise_pct:
+            leg_start = live[-1] + 1
+            live = []
+    above_idx = [i for i, c in enumerate(window) if c > zone_hi]
+    if last_below is None:
+        leg = window
+    elif last_below < n - 1:
+        leg = window[last_below + 1:]
+    else:
+        leg = window[leg_start:live[0]] if live else []
+    return {
+        "n": n,
+        "peak": max(leg) if leg else None,
+        "above_idx": above_idx,
+        "breaks": live,
+        "worst": min(window[i] for i in live) if live else None,
+    }
+
+
+def _break_fields(scan: dict, zone_hi: float, zone_lo: float) -> dict:
+    """Format a `_break_scan` into the payload keys both readers ship."""
+    n = scan["n"]
+    breaks = scan["breaks"]
+    out = {"fell_from_pct": None, "bars_since_above": None,
+           "broke_below": False, "bars_since_break": None,
+           "bars_since_first_break": None, "lowest_close_pct_below": None}
+    if scan["peak"] is not None:
+        out["fell_from_pct"] = round((scan["peak"] / zone_hi - 1.0) * 100.0, 1)
+    if scan["above_idx"]:
+        out["bars_since_above"] = int(n - 1 - scan["above_idx"][-1])
+    if breaks:
+        out["broke_below"] = True
+        out["bars_since_break"] = int(n - 1 - breaks[-1])
+        out["bars_since_first_break"] = int(n - 1 - breaks[0])
+        out["lowest_close_pct_below"] = round((1.0 - scan["worst"] / zone_lo) * 100.0, 2)
+    return out
+
+
+def band_break_read(closes: list, zone_hi: float, zone_lo: float,
+                    lookback: int = REENTRY_LOOKBACK_BARS,
+                    min_rise_pct: float = MIN_RISE_ABOVE_PCT) -> dict:
+    """Break / run-up evidence for ONE band, with NO in-band requirement. PURE.
+
+    The same scan `reentry_read` runs, for a caller whose price is not inside
+    the band — decide_from_frame's `top_band_read` (deep_demand: price BELOW
+    its first band). Until 2026-09-05 that field was `reentry_read`, which
+    returns the empty shape whenever price is outside the band, so
+    `bars_since_top_break` / `fell_from_pct` could never carry data.
+
+    Keys: fell_from_pct, bars_since_above, broke_below, bars_since_break (the
+    most recent close under the floor), bars_since_first_break (when the
+    current leg first fell through — the deep board's number), and
+    lowest_close_pct_below. Every key present on every return path.
+    """
+    out = {"fell_from_pct": None, "bars_since_above": None,
+           "broke_below": False, "bars_since_break": None,
+           "bars_since_first_break": None, "lowest_close_pct_below": None}
+    try:
+        zone_hi = float(zone_hi)
+        zone_lo = float(zone_lo)
+    except (TypeError, ValueError):
+        return out
+    if not closes or not zone_hi or not zone_lo or zone_hi <= zone_lo:
+        return out
+    window = _close_window(closes, lookback)
+    if not window:
+        return out
+    scan = _break_scan(window, zone_hi, zone_lo, min_rise_pct)
+    out.update(_break_fields(scan, zone_hi, zone_lo))
     return out
 
 
@@ -575,9 +683,13 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     entry area = the demand band itself (buy into support, not through it)
     stop       = `stop_buffer_pct` under the band floor — the level that says
                  "demand failed", so the reason for the trade is gone
-    target     = the LOW of the first supply band ABOVE THE ENTRY BAND'S TOP:
-                 the first place sellers are known to be waiting, not a
-                 hoped-for extension.
+    target     = the LOW of the first band of EITHER ORIGIN above the entry
+                 band's top: the first place sellers are known to be waiting,
+                 not a hoped-for extension. A demand-kind band overhead counts
+                 — broken support acts as resistance (decide_from_frame hands
+                 in `nearest_resistance` + both zone lists; documented in
+                 demand_reentry_methodology.md). The docstring said "supply
+                 band" until the 2026-09-05 review; the math never did.
 
                  Measured against the band top, NOT against spot (fixed
                  2026-08-13). `price_zones.nearest_resistance` means "first
@@ -690,6 +802,26 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
         "lowest_low_pct_below_stop": worst_below,
         "stop_hit_lookback_bars": STOP_HIT_LOOKBACK_BARS,
     }
+
+
+def _label_target_kind(trade: Optional[dict], opposing: Optional[dict]) -> Optional[dict]:
+    """Make an OB plan's target label carry the overhead band's ACTUAL origin.
+
+    `patterns.trade_levels` names target 1 "next supply band" whenever an
+    opposing band exists. The OB reads hand it `nearest_resistance`, which
+    `price_zones` computes over bands of EITHER origin — a demand band overhead
+    is a valid, documented target (broken support acts as resistance), so the
+    label must say what it is. Only a target actually taken from the opposing
+    band is relabelled; a measured multiple keeps its own label. The FE prints
+    `target_basis` as free text (SupportLevels.tsx, ZoneMap.tsx). 2026-09-05
+    review; Ajay: "yes please fix the bugs".
+    """
+    if not trade or not opposing or trade.get("target_basis") != "next supply band":
+        return trade
+    if str(opposing.get("kind") or "").lower() == "demand":
+        trade = dict(trade)
+        trade["target_basis"] = "broken demand band overhead"
+    return trade
 
 
 def approaching_read(rec: dict, closes: Optional[list] = None,
@@ -814,8 +946,10 @@ def approaching_ob_read(rec: dict, df, closes: Optional[list] = None,
 
     try:
         from supply_demand import patterns as pat_mod
-        trade = pat_mod.trade_levels(best, last, pat_mod.atr(df),
-                                     opposing=rec.get("nearest_resistance"))
+        trade = _label_target_kind(
+            pat_mod.trade_levels(best, last, pat_mod.atr(df),
+                                 opposing=rec.get("nearest_resistance")),
+            rec.get("nearest_resistance"))
     except Exception:
         trade = None
 
@@ -893,8 +1027,10 @@ def in_ob_read(rec: dict, df,
 
     try:
         from supply_demand import patterns as pat_mod
-        trade = pat_mod.trade_levels(best, last, pat_mod.atr(df),
-                                     opposing=rec.get("nearest_resistance"))
+        trade = _label_target_kind(
+            pat_mod.trade_levels(best, last, pat_mod.atr(df),
+                                 opposing=rec.get("nearest_resistance")),
+            rec.get("nearest_resistance"))
     except Exception:
         trade = None
 
@@ -1135,7 +1271,13 @@ def decide_from_frame(df, sym: str):
     trend_ok = not is_knife
 
     entry_zone = _pick_entry_zone(last_price, demand)
-    closes = [float(c) for c in df["close"].tolist()]
+    # ONE price basis (2026-09-05 review). `zones["last_price"]` and every band
+    # edge are 2dp quotes (price_zones rounds them); the closes used to be raw.
+    # A Massive close 0.4c above the band top was therefore INSIDE for the
+    # membership test below and ABOVE for reentry_read — is_reentry True with
+    # bars_since_above 0 on a bar that never left. The closes now carry the
+    # same 2dp basis as the rest of this record.
+    closes = [round(float(c), 2) for c in df["close"].tolist()]
 
     band = None
     if entry_zone and entry_zone.get("lo", 0) <= last_price <= entry_zone.get("hi", 0):
@@ -1177,8 +1319,10 @@ def decide_from_frame(df, sym: str):
         # and `zone_broken` above describes the ENTRY band — which for a name
         # in its second-level band is a different band entirely. Computed here
         # because `closes` exists here; deep_demand.read() consumes it.
-        "top_band_read": (reentry_read(closes, demand[0]["hi"], demand[0]["lo"],
-                                       last_price)
+        # `band_break_read`, NOT `reentry_read`: the latter returns the empty
+        # shape whenever price is outside the band, which it always is here,
+        # so until 2026-09-05 this field never carried data.
+        "top_band_read": (band_break_read(closes, demand[0]["hi"], demand[0]["lo"])
                           if demand and last_price < demand[0]["lo"] else None),
         "verdict": _verdict_after_break(zones.get("verdict"), entry_zone, band),
         # The re-entry read.

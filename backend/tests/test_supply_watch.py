@@ -295,3 +295,21 @@ def test_near_warning_then_in_band_alert_fire_separately(monkeypatch):
     rows[0] = dict(near, state="IN_SUPPLY", distance_pct=0.0, last=111.0, room_usd=0.0)
     sw.check_alerts("o@x.com"); sw.check_alerts("o@x.com")
     assert len(sent) == 2 and sent[1]["title"].startswith("🔴 SELL SIGNAL · VST in OVERHEAD (old support)")
+
+
+# ── integrator fixes 2026-09-05 (review of the 22-bug sweep) ─────────────────
+def test_overhead_skips_a_supply_band_yesterday_closed_above():
+    """A supply band the holding CLOSED above yesterday is broken supply =
+    support (the house rule zone_bounce_alerts.is_eligible / alert_gates /
+    bounce_room use since 2026-09-05); a dip back into it today is not
+    'IN_SUPPLY — trim'. Unknown prev close keeps every band (conservative)."""
+    supply = [{"lo": 95, "hi": 97, "touches": 2}, {"lo": 120, "hi": 123, "touches": 2}]
+    assert [z["lo"] for z in sw.overhead_bands(supply, [], 96.0, prev_close=100.0)] == [120]
+    assert [z["lo"] for z in sw.overhead_bands(supply, [], 96.0)] == [95, 120]
+    assert [z["lo"] for z in sw.overhead_bands(supply, [], 96.0, prev_close=97.0)] == [95, 120], \
+        "closed ON the top is not above it"
+    base = {"symbol": "VST", "shares": 10.0, "avg_cost": 80.0, "atr": 2.0, "zones_error": None,
+            "_zones": {"supply": supply, "demand": []}}
+    row = sw.derive(base, {"last": 96.0, "prev_close": 100.0})
+    assert row["state"] == "FAR" and row["band"]["lo"] == 120
+    assert sw.derive(base, {"last": 96.0})["state"] == "IN_SUPPLY", "no prev close in the quote: unchanged"

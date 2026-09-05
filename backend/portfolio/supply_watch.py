@@ -61,13 +61,25 @@ def nearest_supply(zones: list, live: float) -> Optional[dict]:
     return min(above, key=lambda z: z["lo"])
 
 
-def overhead_bands(supply: list, demand: list, live: float) -> list:
-    """Everything price meets going UP: supply bands at/above the print plus
-    demand bands strictly above it (broken support turns into resistance —
-    the engine's own nearest_resistance rule). A demand band that CONTAINS
-    price is support, never overhead."""
+def overhead_bands(supply: list, demand: list, live: float, prev_close=None) -> list:
+    """Everything price meets going UP: UNBROKEN supply bands at/above the
+    print plus demand bands strictly above it (broken support turns into
+    resistance — the engine's own nearest_resistance rule). A supply band
+    with hi < `prev_close` (the holding CLOSED above it yesterday) is broken
+    supply = support, not a sell zone — the house rule the S/D alert paths
+    and bounce_room share (integrator 2026-09-05); unknown prev_close keeps
+    every band. A demand band that CONTAINS price is support, never
+    overhead. Kept in step with supply_demand.bounce_room.overhead_bands by
+    tests/test_bounce_room.py."""
+    try:
+        pc = float(prev_close) if prev_close is not None else None
+    except (TypeError, ValueError):
+        pc = None
+    if pc is not None and pc <= 0:
+        pc = None
     out = [dict(z, kind="supply") for z in (supply or [])
-           if z.get("lo") and z.get("hi") and z["hi"] >= live]
+           if z.get("lo") and z.get("hi") and z["hi"] >= live
+           and not (pc is not None and z["hi"] < pc)]
     out += [dict(z, kind="broken_support") for z in (demand or [])
             if z.get("lo") and z.get("hi") and z["lo"] > live]
     return out
@@ -192,7 +204,7 @@ def derive(base: dict, quote: dict) -> dict:
     supply = (base.get("_zones") or {}).get("supply") or []
     demand = (base.get("_zones") or {}).get("demand") or []
     atr, avg = base.get("atr"), base.get("avg_cost")
-    overhead = overhead_bands(supply, demand, live) if live else []
+    overhead = overhead_bands(supply, demand, live, quote.get("prev_close")) if live else []
     band = nearest_supply(overhead, live) if (live and not err) else None
     cls = (classify(live, band, atr) if (live and not err)
            else {"state": "UNKNOWN", "distance_pct": None, "atr_days": None})
@@ -301,6 +313,7 @@ def quote_book(syms: list) -> dict:
             continue
         out[sym] = {
             "last": float(last),
+            "prev_close": float(prev) if prev else None,
             "day_change_pct": (round((float(last) / float(prev) - 1) * 100, 2)
                                if prev else None),
             "session": session_from_ts(q.get("last_trade_ts_ms")) if session_from_ts else None,
@@ -312,6 +325,7 @@ def quote_book(syms: list) -> dict:
             for sym, q in (quotes.fetch_quotes(missing) or {}).items():
                 if q.get("last"):
                     out[sym.upper()] = {"last": float(q["last"]),
+                                        "prev_close": None,
                                         "day_change_pct": q.get("day_change_pct"),
                                         "session": None}
         except Exception as exc:                            # pragma: no cover

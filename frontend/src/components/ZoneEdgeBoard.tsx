@@ -373,10 +373,19 @@ export function ZoneEdgeBoard({ mode, compact = false, fromKey = 'supply-demand'
   const stale = age != null && age > STALE_AFTER_MIN;
 
   let head: string;
+  // The backend's own `reason` wins over our wording whenever it carries a
+  // fact we cannot infer here (2026-09-05, zone_edge.api_payload): a stored
+  // pass from ANOTHER day ("last pass 2026-09-04; no pass yet today") must
+  // never read as "market closed" on a weekday whose 9:20 warm failed, and a
+  // cold store ("zone store empty for today") is a different fact from a
+  // quiet day. The generic "no pass yet" reason of the empty payload adds
+  // nothing, so it keeps the short line.
+  const why = data?.reason && data.reason !== 'no pass yet' ? data.reason : null;
   if (!data) head = err ? `zone edge unavailable — ${err}` : 'loading…';
-  else if (data.as_of == null || !stamp) head = 'no pass yet today';
+  else if (data.as_of == null || !stamp) head = why ? `no pass yet today — ${why}` : 'no pass yet today';
   else if (stale) head = `as of ${stamp} ET · STALE — no pass for ${age} min`;
   else if (data.in_session) head = `as of ${stamp} ET · refreshes every minute`;
+  else if (why) head = `${why} (${stamp} ET)`;
   else head = `market closed — last pass ${stamp}`;
 
   return (

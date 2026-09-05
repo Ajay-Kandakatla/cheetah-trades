@@ -38,6 +38,18 @@ pushes at 9:33. A name that closed in the band yesterday is the board's
 business; the phone gets the day it ARRIVES. Unknown prev close = silent
 (counted as unknown_prev), never a guess.
 
+Phone gate (Ajay 2026-09-05, alert_gates.py): "Need only alerts on stocks
+that have atleast 5% to Supply and also <1% bounce from demand zone". AT was
+already the <=1% tier (AT_PCT = 1.0; the tier measures (px-hi)/px, the gate
+px <= hi*1.01 — an AT hit in the (0.99%, 1.0%] sliver between the two bases is
+counted skipped_proximity: silence, never a wrong push); NEAR (1-3% above) is
+looser than 1%, so it is still read and listed in `hits` / counted in `near`
+but no longer pushed (skipped_proximity). Every push also wants at least
+ALERT_MIN_ROOM_PCT (5%) from the print to the first UNBROKEN supply band in
+the zone_store doc for the name (`store`, loaded once per pass); a name with
+no store doc has an UNKNOWN room and stays silent (unknown_room) — "at least
+5%" cannot be asserted about supply nobody measured. Boards unchanged.
+
 Cap gate: catalysts/promo_circuit.market_caps_for (weekly shares cache × the
 live print). Unknown cap is SKIPPED, not kept — the ask is "big companies",
 and an ETF or a name the shares cache never saw is not a known-big company.
@@ -59,6 +71,9 @@ import os
 from datetime import datetime, time as dtime
 from typing import Optional
 from zoneinfo import ZoneInfo
+
+from market_hours.reminder import is_market_day
+from . import alert_gates as AG
 
 log = logging.getLogger(__name__)
 
@@ -82,9 +97,11 @@ def _now_et() -> datetime:
 
 
 def in_session(now: Optional[datetime] = None) -> bool:
-    """RTH weekdays 9:32-16:00 ET — the same gate as gabbar_watch."""
+    """RTH 9:32-16:00 ET on NYSE trading days — weekends AND the house holiday
+    calendar (market_hours.reminder.is_market_day; fix 2026-09-05)."""
     now = now or _now_et()
-    if now.weekday() >= 5:
+    et = now.astimezone(ET) if now.tzinfo is not None else now
+    if not is_market_day(et):
         return False
     return SESSION_OPEN <= now.time() <= SESSION_CLOSE
 
@@ -188,7 +205,9 @@ def candidates(board: Optional[dict]) -> dict:
 
 
 def state_key(symbol: str, band: dict, day: str, tier: str) -> str:
-    return f"{symbol}:{float(band['lo']):g}-{float(band['hi']):g}:{day}:{tier}"
+    """Fixed 2 dp (2026-09-05): ':g' collapsed two bands on a $10,000+ name into
+    one key (zone_edge shares this key for its near-demand pushes)."""
+    return f"{symbol}:{float(band['lo']):.2f}-{float(band['hi']):.2f}:{day}:{tier}"
 
 
 def fmt_cap(cap) -> str:
@@ -206,7 +225,11 @@ def at_message(item: dict) -> dict:
     sym, hit, band = item["symbol"], item["hit"], item["band"]
     where = "in demand" if hit["state"] == "in" else f"{hit['dist_pct']:g}% above demand"
     tested = f"tested {int(band['touches'])}x" if band.get("touches") else "tested band"
-    body = f"${float(item['last']):g} · {tested} · {fmt_cap(item.get('cap'))}"
+    parts = [f"${float(item['last']):g}", tested]
+    if "room" in item:                                    # the phone gate's read (2026-09-05)
+        parts.append(AG.room_txt(item.get("room")))
+    parts.append(fmt_cap(item.get("cap")))
+    body = " · ".join(parts)
     if item.get("name"):
         body += f" · {item['name']}"
     # "kind" rides in the payload: push/history.py records payload["kind"], so
@@ -230,8 +253,9 @@ def digest_message(items: list) -> Optional[dict]:
     for it in items[:DIGEST_MAX]:
         where = ("in demand" if it["hit"].get("state") == "in"
                  else f"{it['hit']['dist_pct']:g}% above")
+        room = f" · {AG.room_txt(it.get('room'))}" if "room" in it else ""
         lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} "
-                     f"{_band_txt(it['band'])} · {fmt_cap(it.get('cap'))}")
+                     f"{_band_txt(it['band'])}{room} · {fmt_cap(it.get('cap'))}")
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more on the board")
     url = "/chart-maps?tab=zones&phase=approaching"
@@ -308,9 +332,12 @@ def _terminal(res: Optional[dict]) -> bool:
 
 def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] = None,
                live: Optional[dict] = None, caps: Optional[dict] = None, coll=None,
-               owner: Optional[str] = None, now: Optional[datetime] = None) -> dict:
+               owner: Optional[str] = None, now: Optional[datetime] = None,
+               store: Optional[dict] = None) -> dict:
     """One pass. Every input is injectable for tests; the cron passes none.
-    `force` skips the session gate for in-container smoke tests only."""
+    `force` skips the session gate for in-container smoke tests only. `store`
+    = zone_store docs {SYM: doc} for the room gate (loaded for the candidate
+    names when None)."""
     now = now or _now_et()
     if not force and not in_session(now):
         return {"ran": False, "reason": "outside RTH"}
@@ -337,9 +364,17 @@ def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] 
             caps = {}
     if coll is None:
         coll = _state_coll()
-    day = now.date().isoformat()
+    day_et = now.astimezone(ET).date() if now.tzinfo is not None else now.date()
+    day = day_et.isoformat()
+    if store is None:
+        try:
+            from supply_demand import zone_store
+            store = zone_store.load(syms, day_et) or {}
+        except Exception as exc:
+            log.warning("demand_alerts: zone store read failed: %s", exc)
+            store = {}
     hits, at_items, near_items = [], [], []
-    skipped_cap = unknown_cap = unknown_prev = 0
+    skipped_cap = unknown_cap = unknown_prev = skipped_room = skipped_proximity = unknown_room = 0
     for sym in syms:
         last = last_px.get(sym)
         if not last:
@@ -355,7 +390,7 @@ def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] 
             if not hit:
                 continue
             item = {"symbol": sym, "last": float(last), "band": band, "hit": hit,
-                    "cap": cap, "name": cands[sym]["name"]}
+                    "cap": cap, "name": cands[sym]["name"], "prev_close": prev}
             hits.append(item)
             if not passes_cap(cap):
                 if cap is None:
@@ -368,11 +403,30 @@ def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] 
                 continue
             item["key"] = key
             (at_items if hit["tier"] == "at" else near_items).append(item)
+    # Phone gate (Ajay 2026-09-05): within 1% above the band (NEAR never is), and
+    # >= 5% to the first unbroken supply band in the name's zone_store doc.
+    pushable = []
+    for it in at_items + near_items:
+        if not AG.demand_proximity_gate(it["last"], it["band"]):
+            skipped_proximity += 1
+            continue
+        zdoc = store.get(it["symbol"])
+        if not zdoc:
+            unknown_room += 1                             # nobody measured its supply: silent
+            continue
+        ok, room = AG.room_gate(it["last"], zdoc.get("bands") or [], it.get("prev_close"))
+        it["room"] = room
+        if not ok:
+            skipped_room += 1
+            continue
+        pushable.append(it)
+    at_ok = [it for it in pushable if it["hit"]["tier"] == "at"]
+    near_ok = [it for it in pushable if it["hit"]["tier"] != "at"]
     # Closest first; only MAX_SINGLES_PER_PASS ring individually, the rest
     # join the digest so a first pass (deploy, 9:33 open) is one buzz, not 14.
-    at_items.sort(key=lambda it: it["hit"]["dist_pct"])
-    singles, spill = at_items[:MAX_SINGLES_PER_PASS], at_items[MAX_SINGLES_PER_PASS:]
-    digest = spill + near_items
+    at_ok.sort(key=lambda it: it["hit"]["dist_pct"])
+    singles, spill = at_ok[:MAX_SINGLES_PER_PASS], at_ok[MAX_SINGLES_PER_PASS:]
+    digest = spill + near_ok
     pushed = 0
     if push and (singles or digest):
         from push import sender
@@ -402,7 +456,8 @@ def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] 
             "at": len(at_items), "at_singles": len(singles), "near": len(near_items),
             "pushed": pushed,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
-            "unknown_prev": unknown_prev}
+            "unknown_prev": unknown_prev, "skipped_room": skipped_room,
+            "skipped_proximity": skipped_proximity, "unknown_room": unknown_room}
 
 
 if __name__ == "__main__":
@@ -410,7 +465,9 @@ if __name__ == "__main__":
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
     out = check_once()
     log.info("DEMAND-ALERTS: ran=%s candidates=%s hits=%d at=%s near=%s pushed=%s "
-             "skipped_cap=%s unknown_cap=%s unknown_prev=%s", out.get("ran"),
+             "skipped_cap=%s unknown_cap=%s unknown_prev=%s skipped_room=%s "
+             "skipped_proximity=%s unknown_room=%s", out.get("ran"),
              out.get("candidates"), len(out.get("hits") or []), out.get("at"),
              out.get("near"), out.get("pushed"), out.get("skipped_cap"),
-             out.get("unknown_cap"), out.get("unknown_prev"))
+             out.get("unknown_cap"), out.get("unknown_prev"), out.get("skipped_room"),
+             out.get("skipped_proximity"), out.get("unknown_room"))

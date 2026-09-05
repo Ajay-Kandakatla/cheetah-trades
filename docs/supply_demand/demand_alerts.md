@@ -22,7 +22,7 @@ method** — decision support, not a buy signal, not advice.
 | tier | condition | push |
 |---|---|---|
 | **AT** | inside the band, or ≤ `AT_PCT` = 1% above its top | one push per (symbol, band, ET day): `🧲 NTAP 0.6% above demand $180–183.5` → `/sepa/NTAP?tab=supply` |
-| **NEAR** | 1–3% (`NEAR_PCT`) above the top **and down on the day** | one **digest** per pass (`🧲 Nearing demand — ITRI +4 more`, ≤ 6 names spelled out) → `/chart-maps?tab=zones&phase=approaching`; each name once per (symbol, band, day) |
+| **NEAR** | 1–3% (`NEAR_PCT`) above the top **and down on the day** | read, listed in `hits`, counted in `near` — **no longer pushed since 2026-09-05** (the phone gate below: NEAR is by definition more than 1% above the band; `skipped_proximity`). The digest now carries only AT spill-over. |
 | — | below the band (breakdown), flat/up on the day at 1–3%, unknown day change | silent |
 | — | **not an arrival**: yesterday's close was already inside that tier's ring (≤1% / ≤3% above the top), or prev close unknown | silent (`unknown_prev` counted) |
 
@@ -31,12 +31,46 @@ inside a band (the reached board's whole population) and 18 nearing: 58 pushes a
 closed in the band yesterday is the board's business; the phone gets the day it *arrives*
 (`prev_day_close` from `bulk_live_prices`). A reclaim from under the floor counts as an arrival.
 
-Dedupe: Mongo `demand_alert_state`, `_id = SYM:lo-hi:YYYY-MM-DD:tier`. Written only on a
-*terminal* outcome (delivered, or nobody targeted — muted pref / no device); a transport
-failure retries next pass. NEAR then AT on the same band are two facts, two pushes.
+Dedupe: Mongo `demand_alert_state`, `_id = SYM:lo-hi:YYYY-MM-DD:tier` (**fixed 2 dp since
+2026-09-05**, `NTAP:180.00-183.50:2026-09-05:at`; `:g` collapsed two bands on a $10,000+ name; the key
+is shared with `zone_edge`'s near-demand side, so both changed together — a weekend deploy, no
+same-day re-push). Written only on a *terminal* outcome (delivered, or nobody targeted — muted pref /
+no device); a transport failure retries next pass.
 
-Session gate: weekdays 9:32–16:00 ET, module refuses outside. Cron:
+Session gate: 9:32–16:00 ET on NYSE trading days — weekends AND the house holiday calendar
+(`market_hours.reminder.is_market_day`, fix 2026-09-05), module refuses outside. Cron:
 `3-58/5 9-16 * * 1-5 python -m supply_demand.demand_alerts` (`backend/crontab`).
+
+### Phone gate (2026-09-05)
+
+**Ajay 2026-09-05 (verbatim, mid-fix):** *"When alert I need the same logic. Need only alerts on
+stocks that have atleast 5% to Supply and also <1% bounce from demand zone"*. Shared module
+`backend/supply_demand/alert_gates.py` (also called by `zone_edge` and `zone_bounce_alerts`).
+**Boards unchanged** — the demand board and `hits` list as before; only the phone tightens.
+
+| owner setting | value | from his sentence |
+|---|---|---|
+| `ALERT_MIN_ROOM_PCT` | **5.0** | "atleast 5% to Supply" |
+| `ALERT_MAX_ABOVE_DEMAND_PCT` | **1.0** | "<1% bounce from demand zone" |
+
+* Distance: `AT_PCT` was already **1.0** (inside / ≤ 1% above the top), so the AT tier's distance is
+  unchanged; `demand_proximity_gate(print, band)` is applied to every push candidate and by
+  construction only the NEAR tier (1–3% above) fails it → NEAR stops pushing (`skipped_proximity`).
+  One sliver (review 2026-09-05): the tier measures `(px − hi) / px`, the gate `px <= hi × 1.01`
+  (`(px − hi) / hi`), so an AT hit between 0.99% and 1.0% on the print basis — about 1¢ on a $100
+  name — is counted `skipped_proximity`. Silence, never a wrong push; pinned by
+  `test_an_AT_hit_is_measured_on_the_print_but_the_phone_gate_on_the_band_top`.
+* Room: `room_gate(print, bands, prev_close)` against the name's **`zone_store` doc** (loaded once per
+  pass for the candidate names; injectable as `store=`) — at least 5% from the print to the first
+  **unbroken** supply band overhead (supply with `hi >= print` and not `hi < prev_close`, plus demand
+  bands above the print). CLEAR passes, `IN_BAND` fails, `< 5%` fails (`skipped_room`). A name with **no
+  store doc** has an unknown room and stays silent (`unknown_room`): "at least 5% to supply" cannot be
+  asserted about supply nobody measured. The board's own demand bands come from the demand-reentry
+  engine, not the store, so this is the only place supply enters this module.
+* Push bodies gain the read before the cap: `$211 · tested 3x · room: clear runway · $3.0T · AAPL Inc`
+  / `· room +5.2% -> $222 ·` (the wording `zone_bounce_alerts` already used); digest lines likewise.
+* Counters ride in the pass result and the `DEMAND-ALERTS:` log line: `skipped_room`,
+  `skipped_proximity`, `unknown_room`.
 
 ### Why the board, not a fresh zone scan
 The board *is* the app's definition of a demand zone worth the phone. Re-deriving zones

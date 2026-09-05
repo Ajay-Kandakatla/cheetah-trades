@@ -741,3 +741,43 @@ def test_as_of_falls_back_to_parquet_then_none(monkeypatch, tmp_path):
     assert S._shared_frame_as_of("INTU") == f.stat().st_mtime
     monkeypatch.setattr(prices_mod, "_cache_path", lambda s: tmp_path / "nope.parquet")
     assert S._shared_frame_as_of("INTU") is None
+
+
+# ── integrator fixes 2026-09-05: structure off the CLOSED frame ───────────────
+def _closed_with_displacement(n=80, last="2026-09-02"):
+    """Wavy closed daily frame whose LAST bar is a displacement bar (h105 / l100.5)
+    — the same fixture tests/test_price_zones.py uses for for_symbol."""
+    import math
+    idx = pd.bdate_range(end=pd.Timestamp(last), periods=n) + pd.Timedelta(hours=4)
+    c = [100.0 + math.sin(i / 3.0) * 0.8 for i in range(n)]
+    h = [x + 0.5 for x in c]; l = [x - 0.5 for x in c]
+    h[-1], l[-1], c[-1] = 105.0, 100.5, 104.8
+    return pd.DataFrame({"open": c, "high": h, "low": l, "close": c,
+                         "volume": [1e6] * n}, index=idx)
+
+
+LIVE_SNAP = {"open": 105.6, "high": 106.0, "low": 105.5, "close": 105.8,
+             "volume": 2.5e6, "date": "2026-09-03 00:00:00", "last_trade_ts_ms": 1788455521222}
+
+
+def test_the_support_tab_reads_structure_off_the_closed_frame_not_the_live_bar(monkeypatch):
+    """price_zones.for_symbol stopped reading FVGs / ATR / swings off today's
+    partial bar on 2026-09-05; this tab computed the same things on the
+    overlaid frame and still printed a demand FVG whose top was the live bar's
+    low-so-far. The levels are still READ at the live print."""
+    from sepa import prices as P
+    from supply_demand import patterns as pat
+    closed = _closed_with_displacement()
+    monkeypatch.setattr(P, "load_prices", lambda sym, *a, **k: closed.copy())
+    monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {"ACME": LIVE_SNAP})
+    monkeypatch.setattr(pat, "opening_range", lambda *a, **k: None)
+    out = S.for_symbol("ACME", "1m")
+    assert out.get("error") is None, out
+    assert out["last_price"] == 105.8, "the levels are still read at the live print"
+    assert not any(abs(g["hi"] - 105.5) < 1e-9 for g in out["fair_value_gaps"]), out["fair_value_gaps"]
+    assert out["fair_value_gaps"] == pat.fair_value_gaps(closed, 105.8)
+    assert out["atr"] == round(pat.atr(closed), 4)
+    # a frame the overlay did NOT extend (after the close + fast-scan) is read whole, as before
+    monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {})
+    same = S.for_symbol("ACME", "1m")
+    assert same["fair_value_gaps"] == pat.fair_value_gaps(closed, float(closed["close"].iloc[-1]))

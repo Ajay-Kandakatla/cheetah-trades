@@ -315,7 +315,13 @@ def read_symbol(sym: str, band: Optional[dict] = None, *,
     if m.get("label") == "unavailable":
         out["unavailable"].extend(m.get("unavailable") or ["mood unavailable"])
 
-    gaps = pat.fair_value_gaps(df, last)
+    # Gaps off CLOSED buckets only (integrator 2026-09-05, the rule
+    # price_zones.for_symbol adopted): frame_for flags the in-progress bucket
+    # `partial`; a three-bar imbalance whose third bar has not closed is not
+    # a gap yet — its edge is the low-so-far and repaints all session. `last`
+    # still prices the read off that bucket.
+    closed = df.iloc[:-1] if (meta.get("partial") and len(df) > 1) else df
+    gaps = pat.fair_value_gaps(closed, last)
     out["fair_value_gaps"] = gaps[:6]
     out["session_gaps"] = [g for g in gaps if _is_session_gap(g, out["session"])][:4]
 

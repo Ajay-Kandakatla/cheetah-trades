@@ -862,3 +862,44 @@ def test_autopsy_wired_fenced_after_journal_and_api_gated():
     block = api.split('@router.get("/autopsies")')[1].split("@router")[0]
     assert "_require_admin(email)" in block, "GET /trading/autopsies not admin-gated"
     assert "autopsy.report" in block
+
+
+# ── Zone-edge review fixes 2026-09-05 (Ajay: "yes please fix the bugs") ──────
+# The stop is handed over as an ABSOLUTE level and the room gate counts every
+# band overhead. Source guards so a refactor cannot silently drop either.
+
+def test_zone_edge_entry_hands_entries_the_absolute_stop_level():
+    """A percent-of-print stop drifts INTO the band when the tape moves up
+    between the board print and the order; the engine passes the level and
+    entries refuses (never clamps) when the drift makes it too wide."""
+    src = _zone_edge_entry_source()
+    assert "stop_price=stop_price, allow_earnings=False)" in src, (
+        "zone_edge_entry no longer passes the absolute stop level to entries.enter")
+    with open(os.path.join(TRADING_DIR, "entries.py"), encoding="utf-8") as fh:
+        en = fh.read()
+    assert "stop_price: Optional[float] = None) -> dict:" in en, (
+        "entries.enter lost its absolute stop_price kwarg")
+    assert "is not below the entry price" in en and "past the %g%% line" in en, (
+        "entries must REFUSE an absolute stop that is through the print or "
+        "wider than ABS_MAX_STOP_PCT — never clamp it back up into the band")
+    assert "stop_pct = dist" in en and 'ctx["stop_level"] = level' in en
+
+
+def test_zone_edge_room_gate_is_kind_agnostic_and_floors_need_at_the_placed_stop():
+    """Overhead = supply bands at/above the print (containing = zero room)
+    + demand bands above it (broken support); `need` uses the stop the
+    engine will place, whose 1% floor is a bare literal in FROZEN
+    risk_rules — pinned here to the mirrored constant."""
+    src = _zone_edge_entry_source()
+    assert 'if kind == "supply" and hi >= last:' in src
+    assert 'elif kind == "demand" and lo > last:' in src
+    assert 'detail["reason"] = "inside supply band (%g-%g): no room"' in src
+    assert "max(stop_pct, RISK_STOP_FLOOR_PCT)" in src
+    assert "RISK_STOP_FLOOR_PCT = 1.0" in src
+    with open(os.path.join(TRADING_DIR, "risk_rules.py"), encoding="utf-8") as fh:
+        rr = fh.read()
+    assert "pct = max(pct, 1.0)" in rr, (
+        "risk_rules.initial_stop's floor moved — update RISK_STOP_FLOOR_PCT in "
+        "trading/zone_edge_entry.py with it (the room gate mirrors that literal)")
+    from trading import zone_edge_entry as ze
+    assert ze.RISK_STOP_FLOOR_PCT == 1.0

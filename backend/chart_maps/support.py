@@ -166,40 +166,52 @@ def _shared_frame_as_of(sym: str) -> Optional[float]:
 
 
 def _overlay_today(prices_mod, df, sym: str):
-    """(frame, as_of_epoch | None) via prices.with_today_bar — tolerant of
-    stubs without it and of any failure; the closed frame always stands."""
+    """(frame, as_of_epoch or None, appended) via prices.with_today_bar —
+    tolerant of stubs without it and of any failure; the closed frame always
+    stands. `appended` says whether the last row IS today's live bar."""
     fn = getattr(prices_mod, "with_today_bar", None)
     if fn is None or df is None:
-        return df, None
+        return df, None, False
     try:
         out, info = fn(df, sym)
     except Exception as exc:                                   # pragma: no cover
         log.debug("support: today-bar overlay failed for %s: %s", sym, exc)
-        return df, None
-    return out, ((info or {}).get("as_of_epoch") if (info or {}).get("appended") else None)
+        return df, None, False
+    appended = bool((info or {}).get("appended"))
+    return out, ((info or {}).get("as_of_epoch") if appended else None), appended
 
 
-def _frame_for(sym: str, need_bars: int):
-    """(df, bars_available, as_of_epoch) — the shared 2y frame, or a deep 5y
-    fetch when the window needs more than the shared frame holds. Degrades to
-    the shared frame on a failed deep fetch — the caller reports the
-    shortfall rather than silently drawing a 2-year chart under a 5-year
+def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
+    """(df, bars_available, as_of_epoch[, closed]) — the shared 2y frame, or a
+    deep 5y fetch when the window needs more than the shared frame holds.
+    Degrades to the shared frame on a failed deep fetch — the caller reports
+    the shortfall rather than silently drawing a 2-year chart under a 5-year
     label. `as_of_epoch` is when the data left the PROVIDER (shared frame:
-    parquet mtime; deep frame: its fetch time), or None — never now()."""
+    parquet mtime; deep frame: its fetch time), or None — never now().
+
+    `with_closed=True` (integrator 2026-09-05) also returns the frame WITHOUT
+    today's live bar (== df when nothing was appended): structure — swings,
+    gaps, ATR — is read off closed bars only and the live bar prices the read,
+    the rule price_zones.for_symbol adopted the same day."""
     import time as _t
     from sepa import prices
 
+    def _ret(frame, have, as_of, closed_frame):
+        return (frame, have, as_of, closed_frame) if with_closed else (frame, have, as_of)
+
     try:
-        df = prices.load_prices(sym, period="2y")
+        closed = prices.load_prices(sym, period="2y")
     except Exception:                                          # pragma: no cover
-        df = None
+        closed = None
     # Today's live bar on top of the closed frame (Ajay 2026-09-03, CHPT: the
     # tab said "1.4% below support" off yesterday's 5.19 while the tape was
     # 9.14). as_of becomes the snapshot's last-trade time when it appended.
-    df, live_as_of = _overlay_today(prices, df, sym)
+    df, live_as_of, appended = _overlay_today(prices, closed, sym)
+    if not appended:
+        closed = df
     have = len(df) if df is not None else 0
     if need_bars <= have:
-        return df, have, (live_as_of or _shared_frame_as_of(sym))
+        return _ret(df, have, (live_as_of or _shared_frame_as_of(sym)), closed)
 
     key = sym.upper()
     deep_as_of = None
@@ -215,9 +227,12 @@ def _frame_for(sym: str, need_bars: int):
             deep_as_of = _t.time()
             _deep_cache[key] = (deep_as_of, deep)
     if deep is not None and len(deep) > have:
-        deep, deep_live_as_of = _overlay_today(prices, deep, sym)
-        return deep, len(deep), (deep_live_as_of or deep_as_of)
-    return df, have, _shared_frame_as_of(sym)
+        deep_closed = deep
+        deep, deep_live_as_of, deep_appended = _overlay_today(prices, deep, sym)
+        if not deep_appended:
+            deep_closed = deep
+        return _ret(deep, len(deep), (deep_live_as_of or deep_as_of), deep_closed)
+    return _ret(df, have, _shared_frame_as_of(sym), closed)
 
 
 def window_keys() -> list[str]:
@@ -905,6 +920,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     tf_key = tf_mod.parse_tf(tf)
     intraday = tf_key != tf_mod.DAILY
     live_raw = None
+    # `closed` = the frame WITHOUT today's live bar / the in-progress bucket
+    # (integrator 2026-09-05). Structure (swings, gaps, ATR) reads it; the
+    # live print still prices the levels — price_zones.for_symbol's rule.
+    closed = None
     try:
         if intraday:
             # allow_ext: this tab draws the pre/post-market bars but reads
@@ -920,8 +939,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                 return {**base, "error": (
                     f"No {tf_meta['label']} bars for {sym} — "
                     f"{tf_meta.get('reason') or 'intraday data unavailable'}.")}
+            if tf_meta.get("partial") and len(df) > 1:
+                closed = df.iloc[:-1]
         else:
-            df, _have, as_of = _frame_for(sym, spec["bars"])
+            df, _have, as_of, closed = _frame_for(sym, spec["bars"], with_closed=True)
     except Exception as exc:                                  # pragma: no cover
         log.debug("support: prices %s failed: %s", sym, exc)
         return {**base, "error": f"No price data for {sym}."}
@@ -942,13 +963,15 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     ext_frame = bool(intraday and tf_mod.tf_spec(tf_key).get("ext_hours"))
     if ext_frame:
         try:
-            daily_df, _have_d, levels_as_of = _frame_for(sym, spec["bars"])
+            daily_df, _have_d, levels_as_of, daily_closed = _frame_for(
+                sym, spec["bars"], with_closed=True)
         except Exception as exc:                              # pragma: no cover
             log.debug("support: daily frame for live %s failed: %s", sym, exc)
-            daily_df, levels_as_of = None, None
+            daily_df, levels_as_of, daily_closed = None, None, None
         if daily_df is None or not len(daily_df):
             return {**base, "error": f"No daily price data for {sym} to read levels from."}
         df = daily_df
+        closed = daily_closed
         base = {**base, "levels_as_of": levels_as_of}
 
     # A frame SHORTER than the window asked for still computes — `.iloc[-126:]`
@@ -963,8 +986,17 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     swing = tf_spec_["swing_window"] if own_bars else spec["swing_window"]
     bars_used = min(len(df), budget)
     short = bars_used < budget
+    if closed is None or not len(closed):
+        closed = df                                   # nothing live on top: read whole
+    try:
+        live_last = float(df["close"].iloc[-1])
+    except Exception:                                 # pragma: no cover
+        live_last = None
+    if live_last is not None and not live_last > 0:
+        live_last = None
 
-    zones = pz.compute(df, swing_window=swing, lookback_bars=budget, max_zones=None)
+    zones = pz.compute(closed, last_price=live_last, swing_window=swing,
+                       lookback_bars=budget, max_zones=None)
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
@@ -983,8 +1015,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # Fair Value Gaps, the opening range, and the entry/stop each band
     # implies (Ajay 2026-08-29). Every one of these degrades to empty
     # rather than raising: a level surface must keep answering.
-    atr_value = pat_mod.atr(df)
-    gaps = pat_mod.fair_value_gaps(df, last_price)
+    atr_value = pat_mod.atr(closed)
+    gaps = pat_mod.fair_value_gaps(closed, last_price)
     # The live frame already holds the minute bars; fetching them again for
     # the opening range doubled provider load on a 30s poll (review
     # 2026-09-02 — the same double-fetch intraday_raw's docstring warns of).

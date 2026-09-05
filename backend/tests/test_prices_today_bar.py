@@ -126,3 +126,44 @@ def test_tile_bars_include_todays_candle(monkeypatch):
     monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {"CHPT": SNAP})
     bars = B.bars_for("CHPT", days=60)
     assert bars and bars[-1]["t"] == "2026-09-03" and bars[-1]["c"] == 9.1069
+
+
+# ── engine fixes 2026-09-05 (Ajay: "yes please fix the bugs") ─────────────────
+def test_a_snapshot_that_echoes_the_prior_session_is_not_appended():
+    """Pre-session, Massive's day object can carry YESTERDAY's o/h/l/c/v under
+    today's date (the phantom `_drop_phantom_tail` documents). Same close AND
+    same volume as the last closed bar = placeholder, not a session."""
+    df = _frame()
+    last = df.iloc[-1]
+    echo = {**SNAP, "open": float(last["open"]), "high": float(last["high"]),
+            "low": float(last["low"]), "close": float(last["close"]),
+            "volume": float(last["volume"])}
+    out, info = P.with_today_bar(df, "CHPT", snap=echo)
+    assert out is df and len(out) == len(df)
+    assert info["appended"] is False and info["source"] == "frame"
+    assert "phantom" in (info.get("reason") or "")
+
+
+def test_a_weekend_dated_snapshot_is_not_appended():
+    """bulk_snapshot falls back to today-ET when day.t is absent, so a Saturday
+    read stamps Friday's aggregate with a Saturday date. Real daily bars only
+    fall Mon–Fri — the same guard patch_latest_closes already applies."""
+    df = _frame(last="2026-09-04")                                # Friday
+    sat = {**SNAP, "close": 9.5, "volume": 1234.0, "date": "2026-09-05 00:00:00"}
+    out, info = P.with_today_bar(df, "CHPT", snap=sat)
+    assert out is df and info["appended"] is False
+    assert "weekend" in (info.get("reason") or "")
+    sun = {**sat, "date": "2026-09-06 00:00:00"}
+    assert P.with_today_bar(df, "CHPT", snap=sun)[1]["appended"] is False
+
+
+def test_a_genuine_live_bar_still_appends_after_the_guards():
+    """Same date, different close/volume from the prior session = a real
+    session in progress; the guards must not eat it."""
+    df = _frame()                                                 # ends Wed 09-02
+    out, info = P.with_today_bar(df, "CHPT", snap=SNAP)           # Thu 09-03
+    assert info["appended"] is True and len(out) == len(df) + 1
+    assert info.get("reason") is None
+    # a bar that shares ONLY the close (volume differs) is a real session too
+    same_close = {**SNAP, "close": float(df["close"].iloc[-1]), "volume": 777.0}
+    assert P.with_today_bar(df, "CHPT", snap=same_close)[1]["appended"] is True

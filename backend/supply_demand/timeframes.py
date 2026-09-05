@@ -21,9 +21,16 @@ and gappy, and a swing low made on 400 shares at 07:12 is not a level
 anyone defended — including it would manufacture zones out of noise.
 
 Bar budgets are per timeframe, not shared: 15m RTH has 26 bars a day, 60m
-has 7 (the last one is a half hour), so "60 bars of structure" is 2.5
-sessions on the 15m and 9 on the hourly. The dropdown labels state the
-real calendar span so the zoom is never ambiguous.
+has 7, so "60 bars of structure" is 2.5 sessions on the 15m and 9 on the
+hourly. Hourly buckets are CLOCK-anchored (labels 10:00, 11:00 … 16:00 ET),
+so the FIRST hourly bar of a session (09:30–10:00) is the half hour and the
+remaining six are full hours — not open-anchored 10:30/11:30 bars. The
+dropdown labels state the real calendar span so the zoom is never ambiguous.
+
+The last bucket of an intraday frame is usually IN PROGRESS. `frame_for`
+stamps `as_of` with the last raw minute actually seen (never the bucket's
+future close label) and sets `partial` so a consumer can keep that bucket
+out of its structure (2026-09-05, Ajay: "yes please fix the bugs").
 """
 from __future__ import annotations
 
@@ -255,11 +262,26 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
         except Exception as exc:                            # pragma: no cover
             log.warning("timeframes: session slice failed: %s", exc)
     df = df.tail(want)
+    # as_of = the last raw MINUTE seen. The last bucket is labelled by its
+    # CLOSE (right label), so at 10:07 ET the 15m frame ends in a bar stamped
+    # 10:15 — a future time, and the Support-tab / session-board payloads
+    # were carrying it as the read's timestamp. That bucket is `partial`
+    # unless the minute before its label has printed (2026-09-05).
+    try:
+        import pandas as pd
+        last_minute = pd.Timestamp(raw.index[-1])
+        label = pd.Timestamp(df.index[-1])
+        partial = bool((label - last_minute) > pd.Timedelta(minutes=1))
+        as_of = str(raw.index[-1])
+    except Exception as exc:                                # pragma: no cover
+        log.warning("timeframes: as_of from raw minutes failed: %s", exc)
+        partial, as_of = True, str(df.index[-1])
     meta.update({"bars": len(df), "available": True,
                  "source": (f"1-minute bars resampled to {spec['label']}, "
                             + ("pre/post market drawn, structure from RTH"
                                if spec.get("ext_hours") else "RTH only")),
-                 "as_of": str(df.index[-1]),
+                 "as_of": as_of,
+                 "partial": partial,
                  "ext_hours": bool(spec.get("ext_hours"))})
     return df, meta
 

@@ -76,10 +76,33 @@ def test_flimsy_second_band_is_refused_by_the_scan_own_bar():
 
 
 def test_break_evidence_rides_along_when_present():
-    tb = {"bars_since_break": 4, "fell_from_pct": 12.5, "broke_below": True}
+    """`bars_since_top_break` is the age of the FIRST close under the top band
+    in the current leg — when it fell through — not the most recent one, which
+    for a name still under its floor is always today (2026-09-05 fix)."""
+    tb = {"bars_since_break": 0, "bars_since_first_break": 4,
+          "fell_from_pct": 12.5, "broke_below": True}
     r = DD.read(_rec(82.0, [_band(90, 95), _band(80, 85)], top_band_read=tb))
     assert r["bars_since_top_break"] == 4
     assert r["fell_from_pct"] == 12.5
+
+
+def test_break_evidence_is_the_real_band_break_read_not_a_hand_fed_dict():
+    """Until 2026-09-05 the wiring could never carry data: decide_from_frame
+    asked `reentry_read` about the top band only when price was BELOW it, and
+    that read returns the empty shape whenever price is not inside. The scan
+    now ships `demand_reentry.band_break_read` output; this feeds the REAL
+    helper on a name that ran to 110, broke the 100-104 band 7 bars ago and
+    sits inside its second band at 95. (Ajay 2026-09-05: "yes please fix the
+    bugs".)"""
+    from supply_demand import demand_reentry as dr
+    tb = dr.band_break_read([110.0] * 32 + [95.0] * 8, zone_hi=104.0, zone_lo=100.0)
+    r = DD.read(_rec(95.0, [_band(100, 104), _band(90, 95)], top_band_read=tb))
+    assert r is not None and r["state"] == "in"
+    assert r["bars_since_top_break"] == 7
+    assert r["fell_from_pct"] == 5.8
+    # And the empty shape (older cached rows) still reads as None, not a crash.
+    r0 = DD.read(_rec(95.0, [_band(100, 104), _band(90, 95)], top_band_read=None))
+    assert r0["bars_since_top_break"] is None and r0["fell_from_pct"] is None
 
 
 def test_below_top_pct_measures_the_penalty():

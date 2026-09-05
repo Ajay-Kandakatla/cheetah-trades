@@ -30,11 +30,11 @@ Same inputs as `zone_bounce_alerts.py`, once per minute, **no per-symbol network
 
 | step | rule | constant |
 |---|---|---|
-| resistance | supply bands with `hi >= px`; take the **smallest `hi`** | |
+| resistance | supply bands with `hi >= px` **that yesterday did not close above** (`hi >= prev_close` when known; a band with `hi < prev_close` is Side B's broken supply = support, never resistance — fix 2026-09-05, before it a pullback INTO such a shelf read `near` and pushed 🚀 five minutes after the same band pushed 🧲). Unknown prev close: geometry only. Take the **smallest `hi`** | |
 | **near** | `0 <= (hi − px) / px × 100 <= EDGE_PCT` | `EDGE_PCT = 1.0` |
 | **broke** | no near band, and some supply band has `hi < px <= hi × (1 + BROKE_MAX_PCT%)` **and** `prev_close <= hi` (it broke **today** — yesterday still closed at/under the ceiling). Take the **highest** such band. `dist_pct = −(px − hi)/px × 100` (negative = above). Unknown prev close → cannot say → nothing. | `BROKE_MAX_PCT = 3.0` |
-| new_highs | no supply band with `lo > band.hi` **or** (`high_252` known and `band.hi >= 0.98 × high_252`) | `NEW_HIGH_TOL = 0.98` |
-| overhead_bands | count of supply bands with `lo > band.hi` | |
+| new_highs | `overhead_bands == 0` **or** (`high_252` known and `band.hi >= 0.98 × high_252`) | `NEW_HIGH_TOL = 0.98` |
+| overhead_bands | count of **other** supply bands with `hi > band.hi` — an **overlapping** lid (`lo <= band.hi < hi`) counts (integrator 2026-09-05, Ajay: *"yes please fix the bugs"*; was `lo > band.hi`, which made a 99–104 band invisible over a 96–99.5 break at 100: `new_highs` read true with the print **inside** a supply band, the 🚀 gate read CLEAR, and `zone_edge_entry._needs_room_check` skipped the room check on the same fact) | |
 | pct_to_52w | `(high_252 − px) / px × 100` (None when unknown) | |
 
 Near beats broke on purpose: a name 1% under the *next* ceiling after breaking one reads as
@@ -65,11 +65,40 @@ minute.
 
 | side | pushed when | kind | state coll · key |
 |---|---|---|---|
-| breaking | `new_highs` **and** `band.touches >= MIN_TOUCHES_PUSH (2)` **and** cap ≥ $1B | `supply_break_alert` (**new**, default on in `push/subs.py`) | `supply_break_state` · `SYM:lo-hi:YYYY-MM-DD:tier` — once per (symbol, band, day, tier); `near` then `broke` on the same band are two facts |
-| near demand | `arrival` **and** touches ≥ 2 **and** cap ≥ $1B | `demand_alert` (**reused**, no new kind) | `demand_alert_state` · `demand_alerts.state_key(sym, band, day, 'at')` — the same key the 5-min `demand_alerts.py` writes, so **neither module can double-fire the same band on the same day** (locked both directions in the tests) |
+| breaking | `new_highs` **and** `band.touches >= MIN_TOUCHES_PUSH (2)` **and** cap ≥ $1B **and** the phone gate (below) | `supply_break_alert` (**new**, default on in `push/subs.py`) | `supply_break_state` · `SYM:lo-hi:YYYY-MM-DD:tier` — once per (symbol, band, day, tier); `near` then `broke` on the same band are two facts |
+| near demand | `arrival` **and** touches ≥ 2 **and** cap ≥ $1B **and** the phone gate (below) | `demand_alert` (**reused**, no new kind) | `demand_alert_state` · `demand_alerts.state_key(sym, band, day, 'at')` — the same key the 5-min `demand_alerts.py` writes, so **neither module can double-fire the same band on the same day** (locked both directions in the tests) |
 
 Singles order: breaking → broke rows first (furthest through first), then nearest to the
 ceiling; near demand → closest first.
+
+### Phone gate (2026-09-05)
+
+**Ajay 2026-09-05 (verbatim, mid-fix):** *"When alert I need the same logic. Need only alerts on
+stocks that have atleast 5% to Supply and also <1% bounce from demand zone"*. One shared module,
+`backend/supply_demand/alert_gates.py`, called by every S/D push path (this module, zone_bounce_alerts,
+demand_alerts). **Boards unchanged** — the near/broke/in rows list exactly as before; only the phone
+tightens.
+
+| owner setting | value | from his sentence |
+|---|---|---|
+| `ALERT_MIN_ROOM_PCT` | **5.0** | "atleast 5% to Supply" |
+| `ALERT_MAX_ABOVE_DEMAND_PCT` | **1.0** | "<1% bounce from demand zone" |
+
+* `room_gate(print, bands, prev_close)` — the first band price meets going up, the same rule as
+  `bounce_room.first_overhead` / the fixed `zone_bounce_alerts.room_for`: unbroken supply bands with
+  `hi >= print` (a band with `hi < prev_close` is support, skipped), plus demand bands with `lo > print`
+  (broken support). CLEAR passes; inside a band (`IN_BAND`) fails; room `< 5%` fails.
+  * 🚀 breaking: measured from the print to the **next band above the one being broken** — every
+    band whose top clears this one's (`hi > band.hi`, an overlapping lid included; integrator
+    2026-09-05, was `lo > band.hi`) — new-highs rows are usually CLEAR and pass. "At least 5% to
+    supply" applies to every phone kind.
+  * 🧲 near demand: measured against the store's bands. The in/near tier **is** the "<1% above
+    demand" rule (`EDGE_PCT == ALERT_MAX_ABOVE_DEMAND_PCT`, locked in the contracts) — reused, not
+    duplicated.
+* Push bodies gain the read: `· room +8.4% -> $110 ·` or `· room: clear runway ·` (the wording
+  `zone_bounce_alerts` pushes already used), before the cap.
+* Skips are counted: `skipped_room` in the pass result and the `ZONE-EDGE:` log line, so a quiet
+  phone is explainable.
 
 ### Message formats
 
@@ -77,10 +106,10 @@ ceiling; near demand → closest first.
 |---|---|
 | near single | `🚀 AAA 0.49% under resistance $100–102 → new highs` |
 | broke single | `🚀 AAA broke resistance $100–102 (+1.0%) → new highs` |
-| body | `$101.5 · tested 3x · 52w high $103 (+1.5%) · $5.0B · Alpha` — the 52w piece is dropped when unknown, the name when None |
+| body | `$101.5 · tested 3x · 52w high $103 (+1.5%) · room: clear runway · $5.0B · Alpha` — the 52w piece is dropped when unknown, the name when None; the room piece is the phone gate's read (2026-09-05) |
 | url | `/sepa/AAA?tab=supply` (also `data.url`) |
 | break digest | title `🚀 Breaking resistance — N1 0.49% +1 more` (a broke lead reads `B1 broke +1.0%`); one line per name `N1 $101.5 · 0.49% under $100–102 · tested 3x · $5.0B` (broke lines: `B1 $103 · broke $100–102 (+1.0%) · tested 3x · $3.0B`); url `/chart-maps?tab=deep_demand` |
-| demand single | `demand_alerts.at_message` — `🧲 AAA in demand $90–92` / `🧲 D1 0.22% above demand $90–92`, body `$91 · tested 2x · $5.0B · Alpha` |
+| demand single | `demand_alerts.at_message` — `🧲 AAA in demand $90–92` / `🧲 D1 0.22% above demand $90–92`, body `$91 · tested 2x · room +5.5% -> $96 · $5.0B · Alpha` |
 | demand digest | `demand_alerts.digest_message` — `🧲 Demand zone — D3 +1 more` |
 
 ## Tracking ("min on min")
@@ -96,7 +125,7 @@ Every pass (`track=True`):
 * `first_seen` per (symbol, side, band, date) = the first minute that key was listed today
   (== the earliest track row for it, since every listing writes a row), kept as **one per-day
   map doc** `zone_edge_latest/_id 'first_seen'` `{date, rows: [[key, "HH:MM"], ...]}` with
-  `key = SYM:side:lo-hi` — one `find_one` + one `replace_one` per pass, never a re-read of the
+  `key = SYM:side:lo-hi` (**fixed 2 dp since 2026-09-05**, e.g. `AAA:supply:100.00-102.00`) — one `find_one` + one `replace_one` per pass, never a re-read of the
   day's rows. A name that drops off the board and returns keeps its first clock. A dry run
   (`track=False`) shows the clocks it finds and starts none.
 
@@ -128,10 +157,24 @@ Ordering: `breaking` → broke rows first, then near; within each `new_highs` fi
 "no pass yet"}`. JSON-safe: plain float/int/str/bool/None only (`_clean` strips numpy scalars,
 NaN/inf → None).
 
+**A doc from another day is never live (fix 2026-09-05).** `api_payload` compares the stored doc's
+`date` with today (ET): when they differ, `in_session` is `false` and `reason` is
+`"last pass 2026-09-03; no pass yet today"`. The rows and track stay, so the evening/weekend board
+still shows the last pass, but nothing claims live. Before this a cold `zone_store` (warm failed)
+left Thursday's rows under a live header all Friday. And a cold store now **writes** an empty payload
+`{"as_of": null, "date": <today>, "reason": "zone store empty for today", ...}` each minute (unless
+`track=False`), so the board self-heals instead of serving yesterday. **Except** when the stored
+`latest` is already a real pass from **today** (`date` = today and `as_of` set): `zone_store.load`
+swallows a Mongo read error into `{}`, so a transient failed read at 10:30 must not blank the day's
+board for a minute (integrator 2026-09-05; the pass result says `latest_written: false` and the log
+warns "kept (transient read?)"). A missing, stale-day or already-empty doc still gets the write. The FE (`ZoneEdgeBoard.tsx`)
+renders the `as_of` stamp as HH:MM only and does **not** render `reason` — a stale-day doc shows as
+"market closed — last pass HH:MM" (honest, not live), and the cold-store doc as "no pass yet today".
+
 ## Ops
 
 Log line per pass: `ZONE-EDGE: ran=… candidates=… priced=… stale_print=… breaking=…
-near_demand=… pushed=… seconds=…` — `docker logs cheetah-market-app-cron-1 | grep ZONE-EDGE`.
+near_demand=… pushed=… skipped_room=… seconds=…` — `docker logs cheetah-market-app-cron-1 | grep ZONE-EDGE`.
 
 Dry run in the cron container (reads everything, pushes nothing, writes nothing):
 
@@ -155,6 +198,17 @@ last pass HH:MM".
 
 ## Traps
 
+* **Holidays (fix 2026-09-05):** `in_session` (here, `zone_bounce_alerts`, `demand_alerts`) is weekday
+  AND `market_hours.reminder.is_market_day` — the house NYSE full-closure list (`HOLIDAYS_2026/2027`,
+  hand-maintained yearly, that module's own documented choice over pandas-market-calendars). Before
+  this the passes ran on Labor Day, warmed the store with the holiday's date and the board said
+  "refreshes every minute" over an empty list. Known limitation: early-close days are not modelled
+  (the passes run to 16:00 on a 13:00 close; every print is stale after the close, so nothing lists).
+* **Keys changed format on 2026-09-05** (a weekend deploy, so no same-day re-push): state, first_seen
+  and dedupe keys are fixed 2 dp (`AAA:100.00-102.00:2026-09-05:near`) instead of `:g` (6 significant
+  digits, which collapsed two bands on a $10,000+ name into one key and deduped the second for the
+  day). Display text (`$100–102`) keeps the short form. `demand_alerts.state_key` — shared with the
+  near-demand side — changed the same way.
 * `zone_store` cold (warm failed / first day) → `zone store empty for today`, nothing listed.
   Store docs from before this change have no `high_252` → the 52w rule is simply off for them
   (`new_highs` falls back to "nothing overhead"); the next 9:20 warm fills it.

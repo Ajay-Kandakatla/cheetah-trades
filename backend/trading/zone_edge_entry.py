@@ -36,11 +36,20 @@ Candidates per tick (owner rules; missing fields FAIL CLOSED):
             becomes support). A 'near' resistance row is NEVER bought —
             it is not through yet.
   stop_pct = (last - stop) / last * 100; wider than risk_rules.
-  ABS_MAX_STOP_PCT -> blocked. Room sanity: the nearest supply band floor
-  above `last` (zone_store doc, ONE read per candidate) must sit at least
-  MIN_REWARD_RISK x stop_pct away; breakouts to new highs with no supply
-  overhead skip the room check. Order: breakouts first, then demand
-  arrivals by dist_pct ascending.
+  ABS_MAX_STOP_PCT -> blocked. The stop is handed to entries.enter as the
+  ABSOLUTE level (stop_price=), never as a percent of whatever the tape
+  prints at order time: a print that drifted up since the signal would
+  otherwise pull a percent stop up INSIDE the band being bought
+  (2026-09-05 fix). entries refuses (does not clamp) when the drift
+  pushes the level past ABS_MAX_STOP_PCT or through the print.
+  Room sanity: the FIRST band overhead — a supply band with hi >= last
+  (one containing the print = zero room) or a demand band with lo > last
+  (broken support = resistance; the rule portfolio.supply_watch and
+  supply_demand.bounce_room already apply) — read from the zone_store doc
+  (ONE read per candidate) must sit at least MIN_REWARD_RISK x the stop
+  that will be PLACED (max(stop_pct, RISK_STOP_FLOOR_PCT)) away;
+  breakouts to new highs with no supply overhead skip the room check.
+  Order: breakouts first, then demand arrivals by dist_pct ascending.
 
 Safety invariants (same house rules as exit_engine / entries / auto_entry):
   * NEVER places an order at the broker directly — buys flow through
@@ -121,6 +130,13 @@ RULES_DEFAULT = {"demand_residents": False,   # True: buy names already IN a dem
                  "min_touches": MIN_TOUCHES}  # bands tested fewer times are skipped
 # "billion or at least bigger than a billion" — mirrors zone_store.MIN_CAP_USD.
 MIN_CAP_USD = 1e9
+# risk_rules.initial_stop floors every PLACED stop at this percent ("a stop
+# tighter than 1% is a data error, not a plan" — the bare literal
+# `pct = max(pct, 1.0)` in trading/risk_rules.py, which is FROZEN, so the
+# value is mirrored here rather than imported; tests/test_trading_contracts.py
+# pins the two together). The room gate measures its 2R off the stop the
+# engine will actually place, never off a tighter request it would widen.
+RISK_STOP_FLOOR_PCT = 1.0
 # A latest doc older than this is STALE: the 1-min board cron is behind or
 # dead, and a 3-min-old print is not "now". No entries on a stale doc.
 SIGNAL_MAX_AGE_SEC = 180
@@ -463,15 +479,23 @@ def stop_request(last, band_lo) -> tuple:
 
 
 def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
-    """Room sanity for an entry: the nearest SUPPLY band floor above `last`
-    must be >= risk_rules.MIN_REWARD_RISK x stop_pct away (in %). No supply
-    band above = unbounded room = ok. No zone doc = unknown = NOT ok (fails
-    closed). Returns (ok, detail)."""
+    """Room sanity for an entry: the FIRST band price meets going up must
+    sit >= risk_rules.MIN_REWARD_RISK x the stop that will be PLACED
+    (max(stop_pct, RISK_STOP_FLOOR_PCT)) away, in %.
+
+    Overhead is kind-agnostic — the same rule portfolio.supply_watch.
+    overhead_bands and supply_demand.bounce_room.first_overhead apply:
+      * a SUPPLY band with hi >= last; one CONTAINING the print (lo <= last
+        <= hi) is zero room -> blocked 'inside supply band';
+      * a DEMAND band with lo > last — broken support is resistance. A
+        demand band containing or below the print is support, not overhead.
+    Nothing overhead = unbounded room = ok. No zone doc = unknown = NOT ok
+    (fails closed). Returns (ok, detail)."""
     last, stop_pct = _f(last), _f(stop_pct)
     need = None
     if last is not None and stop_pct is not None:
-        need = round(risk_rules.MIN_REWARD_RISK * stop_pct, 2)
-    detail = {"need_pct": need, "room_pct": None, "next_supply_lo": None,
+        need = round(risk_rules.MIN_REWARD_RISK * max(stop_pct, RISK_STOP_FLOOR_PCT), 2)
+    detail = {"need_pct": need, "room_pct": None, "next_band": None,
               "reason": None}
     if not isinstance(zone_doc, dict) or last is None or stop_pct is None:
         detail["reason"] = "room unknown (no zone_store doc)"
@@ -480,22 +504,33 @@ def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
     if not isinstance(bands, list) or not all(isinstance(b, dict) for b in bands):
         detail["reason"] = "room unknown (malformed zone_store doc)"
         return False, detail
-    above = []
+    overhead = []                                  # (lo, hi, kind)
     for b in bands:
-        if str(b.get("kind") or "") != "supply":
+        kind = str(b.get("kind") or "")
+        lo, hi = _f(b.get("lo")), _f(b.get("hi"))
+        if lo is None:
             continue
-        lo = _f(b.get("lo"))
-        if lo is not None and lo > last:
-            above.append(lo)
-    if not above:
-        detail["reason"] = "no supply overhead"
+        if hi is None or hi < lo:
+            hi = lo                                # degenerate band = its floor
+        if kind == "supply" and hi >= last:
+            overhead.append((lo, hi, kind))
+        elif kind == "demand" and lo > last:
+            overhead.append((lo, hi, kind))
+    if not overhead:
+        detail["reason"] = "no band overhead"
         return True, detail
-    nxt = min(above)
-    room = round((nxt - last) / last * 100.0, 2)
-    detail["next_supply_lo"], detail["room_pct"] = nxt, room
+    inside = [b for b in overhead if b[0] <= last <= b[1]]
+    nxt = min(inside or overhead, key=lambda b: b[0])
+    detail["next_band"] = {"kind": nxt[2], "lo": nxt[0], "hi": nxt[1]}
+    if inside:
+        detail["room_pct"] = 0.0
+        detail["reason"] = "inside supply band (%g-%g): no room" % (nxt[0], nxt[1])
+        return False, detail
+    room = round((nxt[0] - last) / last * 100.0, 2)
+    detail["room_pct"] = room
     if room < need:
-        detail["reason"] = "room < %gR (%.2f%% < %.2f%%)" % (
-            risk_rules.MIN_REWARD_RISK, room, need)
+        detail["reason"] = "room < %gR (%.2f%% < %.2f%% to %s band %g-%g)" % (
+            risk_rules.MIN_REWARD_RISK, room, need, nxt[2], nxt[0], nxt[1])
         return False, detail
     detail["reason"] = "ok"
     return True, detail
@@ -1081,8 +1116,12 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         veto = None
         res = None
         try:
+            # stop_price = the ABSOLUTE owner level; entries converts it at
+            # its own planning price and refuses if the drift since the
+            # signal made it too wide or put the print through it. stop_pct
+            # rides along as the signal-time request the ledgers record.
             res = entries.enter(sym, limit_price=None, stop_pct=stop_pct,
-                                allow_earnings=False)
+                                stop_price=stop_price, allow_earnings=False)
         except ValueError as exc:
             veto = str(exc)
         except Exception as exc:                   # noqa: BLE001
@@ -1155,14 +1194,19 @@ def rules_list() -> list:
                  "known big cap",
          "value": "touches >= %d, cap >= $%gB" % (MIN_TOUCHES, MIN_CAP_USD / 1e9),
          "source": "owner rule (S&D, no book)"},
-        {"rule": "Requested stop sits under the band floor; wider than the "
-                 "engine's absolute maximum is refused",
+        {"rule": "Requested stop sits under the band floor and is placed at "
+                 "that LEVEL (not a percent of the order-time print); wider "
+                 "than the engine's absolute maximum — at the signal or after "
+                 "the print drifted — is refused, never clamped",
          "value": "band.lo x (1 - %g%%), refused past %g%%"
                   % (STOP_BUFFER_PCT, risk_rules.ABS_MAX_STOP_PCT),
          "source": "owner buffer; cap = trading/risk_rules.py risk contract"},
-        {"rule": "Room sanity — the nearest supply floor above must leave at "
-                 "least %gx the stop distance; breakouts to new highs with "
-                 "no supply overhead skip this" % risk_rules.MIN_REWARD_RISK,
+        {"rule": "Room sanity — the first band overhead (a supply band at/above "
+                 "the print, or a demand band above it = broken support) must "
+                 "leave at least %gx the stop the engine will place (min %g%%); "
+                 "a print inside a supply band has no room; breakouts to new "
+                 "highs with no supply overhead skip this"
+                 % (risk_rules.MIN_REWARD_RISK, RISK_STOP_FLOOR_PCT),
          "value": "room >= %gR" % risk_rules.MIN_REWARD_RISK,
          "source": "owner rule using the engine's reward:risk floor"},
         {"rule": "Signal must be fresh — a board doc older than this (or "

@@ -14,7 +14,11 @@ drew BEFORE today (board geometry, every band, both kinds):
 
 Side A — "breaking" (resistance)  ``read_breaking``
 -----------------------------------------------------
-  resistance  the supply band with the SMALLEST top at or above the print
+  resistance  the supply band with the SMALLEST top at or above the print that
+              yesterday did NOT close above (hi >= prev_close when known; a band
+              closed above is Side B's support, never resistance — fix 2026-09-05,
+              before it a pullback INTO such a shelf pushed 🚀 five minutes after
+              the same band pushed 🧲). Unknown prev close: geometry only.
   near        0 <= (hi - px) / px <= EDGE_PCT           within 1% under it
   broke       no near band, and some supply band has
               hi < px <= hi * (1 + BROKE_MAX_PCT%)  AND  prev_close <= hi
@@ -24,7 +28,11 @@ Side A — "breaking" (resistance)  ``read_breaking``
   new_highs   no supply band sits above the band (nothing overhead), OR the
               band's top is at/above 98% of the 252-bar high (the last shelf
               IS the 52-week high area).
-  overhead    count of supply bands with lo > band.hi (told on the board).
+  overhead    count of OTHER supply bands with hi > band.hi (told on the
+              board). A lid OVERLAPPING the band (lo <= band.hi < hi) counts
+              too — review 2026-09-05: 'lo > band.hi' made 99-104 invisible
+              over a 96-99.5 break at 100, so new_highs read True with the
+              print INSIDE a supply band.
 
 Side B — "near_demand"  ``read_near_demand``
 ---------------------------------------------
@@ -55,6 +63,14 @@ arrivals and residents tagged. The phone gets a strict subset:
               ``demand_alert`` REUSED with demand_alerts.state_key(...,'at')
               in demand_alerts.STATE_COLL, so the 5-min module and this one
               can never double-fire the same band on the same day.
+
+Phone gate (Ajay 2026-09-05, alert_gates.py): every push also wants at least
+ALERT_MIN_ROOM_PCT (5%) from the print to the first UNBROKEN band overhead —
+breaking: the NEXT band above the one being broken (new_highs rows are usually
+CLEAR); near demand: the store's bands. The in/near tier IS the "<1% above
+demand" rule (EDGE_PCT == ALERT_MAX_ABOVE_DEMAND_PCT), reused, not duplicated.
+Skips are counted (skipped_room) so a quiet phone is explainable. Boards
+unchanged.
 
 Per side: strongest MAX_SINGLES_PER_PASS get their own push, the rest ONE
 digest (trade_flash discipline). Digest names are recorded too — nothing
@@ -94,6 +110,8 @@ from datetime import datetime, time as dtime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from market_hours.reminder import is_market_day
+from . import alert_gates as AG
 from . import demand_alerts as DA
 from .zone_bounce_alerts import print_from_snapshot
 
@@ -127,9 +145,12 @@ def _now_et() -> datetime:
 
 
 def in_session(now: Optional[datetime] = None) -> bool:
-    """RTH weekdays 9:31-16:00 ET."""
+    """RTH 9:31-16:00 ET on NYSE trading days — weekends AND the house holiday
+    calendar (market_hours.reminder.is_market_day; fix 2026-09-05: weekday-only
+    ran every pass on Labor Day and warmed the store with the holiday's date)."""
     now = now or _now_et()
-    if now.weekday() >= 5:
+    et = now.astimezone(ET) if now.tzinfo is not None else now
+    if not is_market_day(et):
         return False
     return SESSION_OPEN <= now.time() <= SESSION_CLOSE
 
@@ -204,7 +225,13 @@ def read_breaking(px, bands: list, prev_close=None, high_252=None,
     if not supply:
         return None
     tier, band, dist = None, None, None
-    above = [b for b in supply if float(b["hi"]) >= px]
+    pc0 = _f(prev_close)
+    if pc0 is not None and pc0 <= 0:
+        pc0 = None
+    # A band yesterday CLOSED above (hi < prev_close) is broken supply = Side B's
+    # support, never resistance (fix 2026-09-05). Unknown prev close: geometry only.
+    resistance = supply if pc0 is None else [b for b in supply if float(b["hi"]) >= pc0]
+    above = [b for b in resistance if float(b["hi"]) >= px]
     if above:
         res = min(above, key=lambda b: float(b["hi"]))
         d = (float(res["hi"]) - px) / px * 100.0
@@ -222,7 +249,9 @@ def read_breaking(px, bands: list, prev_close=None, high_252=None,
         band = max(broke, key=lambda b: float(b["hi"]))
         tier, dist = "broke", -(px - float(band["hi"])) / px * 100.0
     hi = float(band["hi"])
-    overhead = sum(1 for b in supply if float(b["lo"]) > hi)
+    # Every OTHER supply band whose top is above this band's top — an
+    # overlapping lid included (review 2026-09-05; was `lo > hi`).
+    overhead = sum(1 for b in supply if float(b["hi"]) > hi)
     h252 = _f(high_252)
     if h252 is not None and h252 <= 0:
         h252 = None
@@ -281,7 +310,9 @@ def read_near_demand(px, bands: list, change_pct=None, prev_close=None,
 # Keys + messages
 # --------------------------------------------------------------------------
 def break_state_key(symbol: str, band: dict, day: str, tier: str) -> str:
-    return f"{symbol}:{float(band['lo']):g}-{float(band['hi']):g}:{day}:{tier}"
+    """Fixed 2 dp (2026-09-05): ':g' collapsed two bands on a $10,000+ name into
+    one key. Display text (_band_txt) keeps the short form."""
+    return f"{symbol}:{float(band['lo']):.2f}-{float(band['hi']):.2f}:{day}:{tier}"
 
 
 def _band_txt(band: dict) -> str:
@@ -304,6 +335,8 @@ def break_single_message(item: dict) -> dict:
     parts = [f"${px:g}", f"tested {int(band.get('touches') or 0)}x"]
     if item.get("high_252") is not None and item.get("pct_to_52w") is not None:
         parts.append(f"52w high ${float(item['high_252']):g} ({float(item['pct_to_52w']):+.1f}%)")
+    if "room" in item:                                        # the phone gate's read (2026-09-05)
+        parts.append(AG.room_txt(item.get("room")))
     parts.append(DA.fmt_cap(item.get("cap")))
     if item.get("name"):
         parts.append(str(item["name"]))
@@ -334,8 +367,9 @@ def break_digest_message(items: list) -> Optional[dict]:
         d, band = float(it["dist_pct"]), it["band"]
         where = (f"broke {_band_txt(band)} (+{abs(d):.1f}%)" if it["tier"] == "broke"
                  else f"{d:g}% under {_band_txt(band)}")
+        room = f" · {AG.room_txt(it.get('room'))}" if "room" in it else ""
         lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} · "
-                     f"tested {int(band.get('touches') or 0)}x · {DA.fmt_cap(it.get('cap'))}")
+                     f"tested {int(band.get('touches') or 0)}x{room} · {DA.fmt_cap(it.get('cap'))}")
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more")
     url = "/chart-maps?tab=deep_demand"
@@ -511,7 +545,7 @@ FIRST_SEEN_ID = "first_seen"
 
 
 def first_seen_key(symbol: str, side: str, band: dict) -> str:
-    return f"{symbol}:{side}:{float(band['lo']):g}-{float(band['hi']):g}"
+    return f"{symbol}:{side}:{float(band['lo']):.2f}-{float(band['hi']):.2f}"      # 2 dp, see break_state_key
 
 
 def read_first_seen(latest_coll, day: str) -> dict:
@@ -600,9 +634,37 @@ def empty_payload(reason: str = "no pass yet") -> dict:
             "disclaimer": DISCLAIMER}
 
 
+def _write_latest(latest_coll, payload: dict) -> None:
+    if latest_coll is None:
+        return
+    try:
+        latest_coll.replace_one({"_id": "latest"}, dict(payload, _id="latest"), upsert=True)
+    except Exception as exc:
+        log.warning("zone_edge: latest write failed: %s", exc)
+
+
+def _latest_is_todays_pass(latest_coll, day_iso: str) -> bool:
+    """True when the stored 'latest' is a REAL pass from `day_iso` (date matches
+    and as_of is set). zone_store.load swallows a Mongo read error into {}
+    (review 2026-09-05), so an empty store mid-session must not blank a board a
+    live pass already wrote today; a missing, stale-day or already-empty doc
+    still gets the self-heal write. An unreadable latest reads False (heal)."""
+    if latest_coll is None:
+        return False
+    try:
+        doc = latest_coll.find_one({"_id": "latest"})
+    except Exception as exc:
+        log.warning("zone_edge: latest read failed: %s", exc)
+        return False
+    return bool(doc and str(doc.get("date") or "") == day_iso and doc.get("as_of"))
+
+
 def api_payload(*, latest_coll=None, track_coll=None, now: Optional[datetime] = None) -> dict:
     """GET /supply-demand/zone-edge: the last pass + the day's track. in_session
-    is evaluated NOW (the stored flag is the pass's own clock)."""
+    is evaluated NOW (the stored flag is the pass's own clock). A doc from
+    another day is never live (fix 2026-09-05: a cold store left Thursday's
+    rows under a live header all Friday): in_session False + reason; the rows
+    stay so the evening/weekend board still shows the last pass."""
     now = now or _now_et()
     latest_coll = latest_coll if latest_coll is not None else _coll(LATEST_COLL)
     doc = None
@@ -614,7 +676,12 @@ def api_payload(*, latest_coll=None, track_coll=None, now: Optional[datetime] = 
     if not doc:
         return empty_payload()
     payload = {k: v for k, v in doc.items() if k != "_id"}
-    payload["in_session"] = in_session(now)
+    today = now.astimezone(ET).date().isoformat()
+    if str(payload.get("date") or "") != today:
+        payload["in_session"] = False
+        payload["reason"] = f"last pass {payload.get('date')}; no pass yet today"
+    else:
+        payload["in_session"] = in_session(now)
     track_coll = track_coll if track_coll is not None else _coll(TRACK_COLL)
     syms = [r["symbol"] for r in (payload.get("breaking") or []) + (payload.get("near_demand") or [])]
     as_of = None
@@ -647,7 +714,23 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
         from supply_demand import zone_store
         store = zone_store.load(None, day)
     if not store:
-        return {"ran": True, "reason": "zone store empty for today", "candidates": 0,
+        reason = "zone store empty for today"
+        written = False
+        if track:                                             # self-heal: never serve yesterday as today
+            if latest_coll is None:
+                latest_coll = _coll(LATEST_COLL)
+            if _latest_is_todays_pass(latest_coll, day_iso):
+                # zone_store.load returns {} on a READ ERROR too (review
+                # 2026-09-05): a live pass already wrote today's board, so one
+                # empty read must not blank it for a minute.
+                log.warning("zone_edge: store read empty at %s but today's latest is a live "
+                            "pass — kept (transient read?)", now.astimezone(ET).strftime("%H:%M"))
+            else:
+                ep = dict(empty_payload(reason), date=day_iso)
+                ep.pop("track", None)
+                _write_latest(latest_coll, ep)
+                written = True
+        return {"ran": True, "reason": reason, "latest_written": written, "candidates": 0,
                 "priced": 0, "stale_print": 0, "breaking": [], "near_demand": [],
                 "pushed": 0, "seconds": round(time.time() - t0, 2)}
     syms = sorted(store)
@@ -694,7 +777,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     # name, every minute.
     breaking, near_demand = [], []
     break_cands, demand_cands = [], []
-    unknown_cap = skipped_cap = unknown_prev = 0
+    unknown_cap = skipped_cap = unknown_prev = skipped_room = 0
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -720,15 +803,30 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             row = _row(sym, px, "supply", "resistance", rb, cap, None)
             breaking.append(row)
             if (cap_ok and rb["new_highs"] and rb["band"]["touches"] >= MIN_TOUCHES_PUSH):
-                break_cands.append(dict(row, key=break_state_key(sym, rb["band"], day_iso, rb["tier"])))
+                # phone gate: >= 5% from the print to the NEXT band above the one being
+                # broken — every band whose top clears this one's (an overlapping lid
+                # included; review 2026-09-05), the same set `overhead_bands` counts
+                nxt = [b for b in bands if _valid_band(b) and float(b["hi"]) > rb["band"]["hi"]]
+                ok, room = AG.room_gate(px, nxt, prev)
+                if ok:
+                    break_cands.append(dict(row, key=break_state_key(sym, rb["band"], day_iso, rb["tier"]),
+                                            room=room))
+                else:
+                    skipped_room += 1
         if rd is not None:
             row = _row(sym, px, "demand", rd["role"], rd, cap, None)
             near_demand.append(row)
             if (cap_ok and rd["arrival"] and rd["band"]["touches"] >= MIN_TOUCHES_PUSH):
-                demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
-                                     "last": float(px), "cap": _f(cap), "name": None,
-                                     "key": DA.state_key(sym, rd["band"], day_iso, "at"),
-                                     "tier": rd["tier"], "dist_pct": rd["dist_pct"]})
+                # phone gate: >= 5% to the first unbroken band overhead; the in/near
+                # tier already IS the "<1% above demand" rule (EDGE_PCT)
+                ok, room = AG.room_gate(px, bands, prev)
+                if ok:
+                    demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
+                                         "last": float(px), "cap": _f(cap), "name": None,
+                                         "key": DA.state_key(sym, rd["band"], day_iso, "at"),
+                                         "tier": rd["tier"], "dist_pct": rd["dist_pct"], "room": room})
+                else:
+                    skipped_room += 1
 
     # ── names + dedupe: one read each, never per symbol ──────────────────────
     if names is None:
@@ -813,11 +911,8 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
                             pass_sec=time.time() - t0, counts=counts)
-    if track and latest_coll is not None:
-        try:
-            latest_coll.replace_one({"_id": "latest"}, dict(payload, _id="latest"), upsert=True)
-        except Exception as exc:
-            log.warning("zone_edge: latest write failed: %s", exc)
+    if track:
+        _write_latest(latest_coll, payload)
     return {"ran": True, "date": day_iso, "as_of": payload["as_of"], "candidates": len(syms),
             "priced": len(prints), "stale_print": stale_print,
             "breaking": payload["breaking"], "near_demand": payload["near_demand"],
@@ -825,8 +920,8 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "singles_demand": len(d_singles), "digest_demand": len(d_digest),
             "pushed": pushed, "tracked": tracked, "purged": purged,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
-            "unknown_prev": unknown_prev, "seconds": round(time.time() - t0, 2),
-            "payload": payload}
+            "unknown_prev": unknown_prev, "skipped_room": skipped_room,
+            "seconds": round(time.time() - t0, 2), "payload": payload}
 
 
 if __name__ == "__main__":
@@ -835,6 +930,8 @@ if __name__ == "__main__":
     t0 = time.time()
     out = check_once()
     log.info("ZONE-EDGE: ran=%s candidates=%s priced=%s stale_print=%s breaking=%s "
-             "near_demand=%s pushed=%s seconds=%.1f", out.get("ran"), out.get("candidates"),
-             out.get("priced"), out.get("stale_print"), len(out.get("breaking") or []),
-             len(out.get("near_demand") or []), out.get("pushed"), time.time() - t0)
+             "near_demand=%s pushed=%s skipped_room=%s seconds=%.1f", out.get("ran"),
+             out.get("candidates"), out.get("priced"), out.get("stale_print"),
+             len(out.get("breaking") or []),
+             len(out.get("near_demand") or []), out.get("pushed"), out.get("skipped_room"),
+             time.time() - t0)

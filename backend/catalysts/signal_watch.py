@@ -143,19 +143,28 @@ def check_once(*, push: bool = True, force: bool = False,
                 df, meta = tf_mod.frame_for(sym, tf)
                 if df is None or len(df) < 30:
                     continue
+                # Structure off CLOSED buckets only (integrator 2026-09-05,
+                # the rule price_zones.for_symbol adopted): frame_for flags
+                # the in-progress bucket `partial`; zones, ATR and gaps skip
+                # it, the live close prices the read. mood/signal keep their
+                # own closed-bar discipline on the whole frame.
+                closed = (df.iloc[:-1] if ((meta or {}).get("partial") and len(df) > 1)
+                          else df)
+                live_last = float(df["close"].iloc[-1])
                 zones = pz_mod.compute(
-                    df, swing_window=tf_mod.tf_spec(tf)["swing_window"],
-                    lookback_bars=len(df))
+                    closed, last_price=live_last if live_last > 0 else None,
+                    swing_window=tf_mod.tf_spec(tf)["swing_window"],
+                    lookback_bars=len(closed))
                 if not zones:
                     continue
-                last = float(zones.get("last_price") or df["close"].iloc[-1])
-                atr_value = pat_mod.atr(df)
+                last = float(zones.get("last_price") or live_last)
+                atr_value = pat_mod.atr(closed)
                 bands = [{"kind": z.get("kind"), "lo": z.get("lo"),
                           "hi": z.get("hi"), "source": "swing"}
                          for z in (list(zones.get("demand_zones") or [])
                                    + list(zones.get("supply_zones") or []))
                          if z.get("lo") and z.get("hi")]
-                bands += pat_mod.fair_value_gaps(df, last)
+                bands += pat_mod.fair_value_gaps(closed, last)
                 sig = mood_mod.signal(df, bands, last_price=last,
                                       atr_value=atr_value)
             except Exception as exc:
