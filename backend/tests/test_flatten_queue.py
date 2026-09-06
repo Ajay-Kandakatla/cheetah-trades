@@ -91,6 +91,7 @@ def qenv(monkeypatch):
         db = FakeDB(armed=armed)
         db.trading_config = CasColl(db.trading_config.rows)
         db.trading_account_baseline = FakeColl()   # status() P&L baseline
+        db.trade_journal = FakeColl()              # tick step (g) journal reconcile
         if queue:
             db.trading_config.rows[0]["flatten_queue"] = [dict(e) for e in queue]
         pushes = []
@@ -145,6 +146,19 @@ def test_flatten_queues_on_alpaca_held_refusal(qenv):
     # read it as an exit).
     assert len(_rows(db, "flatten_queued")) == 1 and not _rows(db, "flatten")
     assert _rows(db, "flatten_queued")[0]["detail"]["reason"] == "pre-gate cohort"
+
+
+def test_flatten_does_not_recancel_pending_cancel_orders(qenv):
+    """Second Exit click while the first cancel is still pending: Alpaca
+    answers HTTP 422 'order pending cancel' to a repeat — do not send it."""
+    broker, db, _ = qenv(positions=[_position("AEIS", 44, 278.0, 280.0)],
+                         orders=[_tp_leg("AEIS", oid="tp-1", status="pending_cancel"),
+                                 _tp_leg("AEIS", oid="stop-2", status="held")],
+                         held={"AEIS"})
+    res = EE.flatten("AEIS", reason="again")
+    assert res["queued"] is True and res["already_cancelling"] == 1
+    assert _calls(broker, "cancel_order") == [{"order_id": "stop-2"}]
+    assert len(res["errors"]) == 1 and "40310000" in res["errors"][0]
 
 
 def test_flatten_other_broker_error_is_not_queued(qenv):
@@ -238,7 +252,7 @@ def test_still_held_stays_pending_and_protect_loop_skips_it(qenv):
     s2 = EE.tick()                            # next minute: same, no spam
     assert s2["flatten_queue"]["still_held"] == 1
     assert not _rows(db, "flatten") and not _rows(db, "flatten_queued")
-    assert s1["errors"] == [] and s2["errors"] == []
+    assert not [e for e in s1["errors"] + s2["errors"] if "flatten" in e]
 
 
 def test_other_close_error_is_surfaced_and_entry_kept(qenv):

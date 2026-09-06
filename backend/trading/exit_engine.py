@@ -1461,10 +1461,13 @@ def flatten(symbol: str, reason=None) -> dict:
         return {"dry_run": True, "canceled": 0, "closed": False, "queued": False,
                 "detail": "disarmed — no orders placed; dry-run ledger row recorded"}
 
-    canceled, errors = 0, []
+    canceled, errors, already_cancelling = 0, [], 0
     for o in orders:
         oid = o.get("id")
         if not oid:
+            continue
+        if (o.get("status") or "").lower() == "pending_cancel":
+            already_cancelling += 1      # Alpaca 422 "order pending cancel" on a repeat
             continue
         try:
             broker.cancel_order(oid)
@@ -1485,6 +1488,7 @@ def flatten(symbol: str, reason=None) -> dict:
                    dry_run=False, cite="p.302")
             return {"dry_run": False, "canceled": canceled, "closed": False,
                     "queued": True, "errors": errors,
+                    "already_cancelling": already_cancelling,
                     "queue": public_flatten_queue([entry])[0]}
     ledger("flatten", symbol=sym,
            detail={"canceled": canceled, "closed": closed, "errors": errors,
