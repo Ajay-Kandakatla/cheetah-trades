@@ -109,3 +109,18 @@ def test_route_is_registered_in_main():
         src = fh.read()
     assert '@app.get("/market/iv")' in src
     assert "iv_read.get, force" in src
+
+
+def test_term_structure_older_than_a_week_is_marked_stale_not_shown(monkeypatch):
+    """Live 2026-09-06: ^VIX9D / ^VIX3M stopped at 2026-07-17 while ^VIX was
+    current. A seven-week-old curve must not be shown as today's."""
+    vix = [("2026-08-%02d" % d, 18.0) for d in range(1, 30)] + [("2026-09-04", 14.53)]
+    v9 = [("2026-07-17", 16.85)]
+    v3 = [("2026-07-17", 20.54)]
+    _wire(monkeypatch, vix, v9, v3, None)
+    out = IV.compute()
+    t = out["term"]
+    assert t["stale"] is True and t["as_of"] == "2026-07-17"
+    assert t["shape"] is None and t["ratio_30d_3m"] is None and t["vix3m"] is None
+    assert "contango" not in out["read"] and "backwardation" not in out["read"]
+    assert IV.TERM_MAX_LAG_DAYS == 7

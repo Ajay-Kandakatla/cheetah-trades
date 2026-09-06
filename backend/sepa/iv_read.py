@@ -10,6 +10,10 @@ volatility pillar reads), and the regime cut points are the ones
 `sepa.market_regime._stress_score` already uses (15 / 20 / 30). Nothing here
 is a book rule; it is a house read of implied volatility. Not advice.
 
+Every tenor is loaded with period="1y": the price cache keys on (symbol,
+period) and a shorter period can hand back a weeks-old cached frame (seen
+2026-09-06: the 3mo ^VIX3M frame ended 2026-07-17 while 1y was current).
+
 Term structure is aligned on ONE date: the last session where ^VIX closed
 and the shorter/longer tenors also have a close (the 9D/3M series sometimes
 miss the newest bar), so a ratio never mixes two days.
@@ -37,6 +41,11 @@ LABELS = {"calm": "Calm", "normal": "Normal", "elevated": "Elevated", "stress": 
 FLAT_BAND = 0.02
 PCT_WINDOW = 252
 TTL_SEC = 180
+# The 9D / 3M series can stop updating at the source (seen 2026-09-06: both
+# ended 2026-07-17 while ^VIX was current). A term read older than this many
+# calendar days behind the VIX close is STALE: ratios and shape are nulled,
+# the date stays so the badge can say "term n/a since <date>".
+TERM_MAX_LAG_DAYS = 7
 DISCLAIMER = ("House read of market implied volatility (CBOE VIX family) — "
               "context for option pricing and risk, not a signal, not advice.")
 
@@ -107,6 +116,14 @@ def _load(symbol: str, period: str):
         return None
 
 
+def _lag_days(newer: str, older: str) -> int:
+    from datetime import date
+    try:
+        return (date.fromisoformat(newer[:10]) - date.fromisoformat(older[:10])).days
+    except (TypeError, ValueError):
+        return 0
+
+
 def _one_liner(regime: Optional[str], pct: Optional[float], shape: Optional[str],
                chg: Optional[float]) -> str:
     if regime is None:
@@ -139,7 +156,7 @@ def compute() -> dict:
            "bands": {"calm_below": CALM_BELOW, "normal_below": NORMAL_BELOW,
                      "elevated_below": ELEVATED_BELOW},
            "term": {"vix9d": None, "vix3m": None, "ratio_9d_30d": None,
-                    "ratio_30d_3m": None, "shape": None, "as_of": None},
+                    "ratio_30d_3m": None, "shape": None, "as_of": None, "stale": False},
            "vvix": None, "as_of": None, "read": None,
            "generated_at": time.time(), "disclaimer": DISCLAIMER}
     if not vix:
@@ -157,8 +174,8 @@ def compute() -> dict:
     out["regime"], out["regime_label"] = regime, LABELS.get(regime)
 
     by_date = dict(vix)
-    v9 = dict(_closes(_load("^VIX9D", "3mo")))
-    v3 = dict(_closes(_load("^VIX3M", "3mo")))
+    v9 = dict(_closes(_load("^VIX9D", "1y")))
+    v3 = dict(_closes(_load("^VIX3M", "1y")))
     # Align on the newest date where ^VIX and at least one tenor closed.
     term_date = None
     for d, _ in reversed(vix):
@@ -166,6 +183,11 @@ def compute() -> dict:
             term_date = d
             break
     shape = None
+    if term_date is not None and _lag_days(as_of, term_date) > TERM_MAX_LAG_DAYS:
+        out["term"] = {"vix9d": None, "vix3m": None, "ratio_9d_30d": None,
+                       "ratio_30d_3m": None, "shape": None, "as_of": term_date,
+                       "stale": True}
+        term_date = None
     if term_date is not None:
         base = by_date[term_date]
         r9 = round(v9[term_date] / base, 3) if term_date in v9 and base else None
@@ -176,8 +198,8 @@ def compute() -> dict:
         out["term"] = {"vix9d": round(v9[term_date], 2) if term_date in v9 else None,
                        "vix3m": round(v3[term_date], 2) if term_date in v3 else None,
                        "ratio_9d_30d": r9, "ratio_30d_3m": r3,
-                       "shape": shape, "as_of": term_date}
-    vv = _closes(_load("^VVIX", "3mo"))
+                       "shape": shape, "as_of": term_date, "stale": False}
+    vv = _closes(_load("^VVIX", "1y"))
     if vv:
         out["vvix"] = round(vv[-1][1], 2)
     out["read"] = _one_liner(regime, out["pct_252"], shape, chg)
