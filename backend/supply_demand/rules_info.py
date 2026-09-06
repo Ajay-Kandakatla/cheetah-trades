@@ -20,13 +20,14 @@ from . import bounce_room as BR
 from . import demand_alerts as DA
 from . import demand_reentry as DR
 from . import deep_demand as DD
+from . import quick_bounce as QB
 from . import price_zones as PZ
 from . import zone_bounce_alerts as ZB
 from . import zone_edge as ZE
 from . import zone_store as ZS
 
 SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
-                "sepa_bounce", "catalysts", "options")
+                "sepa_bounce", "catalysts", "options", "quick_bounce")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -273,6 +274,32 @@ def sections() -> dict:
         "note": "Paper account (Alpaca options level 3). Owner rules from the 2026-09-06 chat, no book.",
     }
 
+    out["quick_bounce"] = {
+        "title": "Quick Bounce", "emoji": "🪃",
+        "picks": [
+            "Historical: a name is on the list when ≥ %d visits to a proven demand band "
+            "(tested ≥ %d×, strength ≥ %d) turned QUICK at least %d%% of the time — quick = "
+            "the close lifted ≥ max(%s, 1 ATR) off the low on one of the first %d touch days, "
+            "or the next session opened ≥ %s above the touch-day close (the KLAC gap)."
+            % (QB.MIN_EVENTS, AG.LID_MIN_TOUCHES, int(AG.LID_MIN_STRENGTH), int(QB.MIN_QUICK_RATE_PCT),
+               _pct(QB.BOUNCE_MIN_PCT), QB.QUICK_MAX_TOUCH_DAYS, _pct(QB.GAP_MIN_PCT)),
+            "Live: the print is inside a proven demand band or ≤ %s above its top (under the "
+            "band = fell through, not listed), with ≥ %s room to the first proven lid (the "
+            "alert gate). Nearest to the band first, most room as the tie-break."
+            % (_pct(QB.NEAR_MAX_PCT), _pct(QB.ROOM_MIN_PCT)),
+            "Every rate is shown next to the name's own any-day base rate, and the study's "
+            "first-half → second-half persistence is printed under the board: a list, not a forecast.",
+        ],
+        "stops": [
+            "Stop %s under the band floor (the paper lane's stop); target = the first proven lid."
+            % _pct(QB.STOP_BUFFER_PCT),
+            "Paper Auto-Pilot: a demand-zone entry on a Quick Bounce name is journaled as the "
+            "quick_bounce lane and flattened at %s ET the same day (day-trade variant)."
+            % "15:55",
+        ],
+        "alerts": ["No separate push: the 🧲 / 🪃 alerts already cover these names."],
+        "note": _DISCLAIMER,
+    }
     return out
 
 

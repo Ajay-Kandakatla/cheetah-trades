@@ -80,6 +80,14 @@
 # warming:true and skip. Warming here means the 9:33 pass sees a filled board.
 25     9     *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm full (am): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=full&limit=1'
 #
+# Quick Bounce study (supply_demand/quick_bounce.py) — Sundays 07:00 ET (Ajay
+# 2026-09-06: "quick bounce potential list ... do the data analysis"). Walks
+# every universe name's 2-year daily frame (bands recomputed at anchors on
+# prior bars only), writes per-name stats + the study meta to Mongo
+# `quick_bounce_stats`; the Chart Maps Quick Bounce tab and the paper lane
+# tag read it. ~10 min on a warm price cache.
+0      7     *    *    0    /usr/local/bin/python -m supply_demand.quick_bounce
+
 # Zone store warm (supply_demand/zone_store.py) — 9:20 ET weekdays, five
 # minutes before the demand board warms. Draws EVERY supply + demand band
 # (board geometry, max_zones=None, TODAY's bar dropped) for each $1B+ name

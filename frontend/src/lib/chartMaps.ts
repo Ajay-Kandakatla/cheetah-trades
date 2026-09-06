@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
 // `support` sits next to `zones` because it is the same structure at a
 // different zoom — but it is the only tab that is NOT a board: it takes a
 // ticker and computes, so the page skips its board fetch there entirely.
@@ -39,7 +39,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // while you slept, catalysts is what is moving now and why (chatter vs
 // evidence). Its own page became a redirect here; it is not a board tab (own
 // endpoints, own sub-tabs), so the /chart-maps fetch is skipped for it.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'quick_bounce', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -95,6 +95,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     label: 'Deep Demand',
     blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03): names inside the second band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
+  quick_bounce: {
+    label: '\u{1FA83} Quick Bounce',
+    blurb: 'Names that historically turned at a demand band THE SAME DAY — the close lifted at least 3% (or one ATR) off the low on one of the first three touch days — or gapped up 2%+ the next morning (the KLAC 09-04 shape), measured over two years of daily bars with the bands recomputed monthly on prior bars only. A name makes the list with 3+ visits and a quick rate of 50%+, and shows only while it sits inside a proven demand band or within 5% above it with 5%+ room to the first proven lid, nearest to the band first. Each rate is printed next to the name\u2019s own any-day base rate, and the study\u2019s first-half \u2192 second-half persistence sits under the board, because the 2026-08-14 bounce study found per-name bounce rankings did not carry over. A screen for where to stand with a limit order, not a forecast. Not advice.',
+  },
   undervalue: {
     label: 'Under Value',
     blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name — nothing here is estimated.',
@@ -133,6 +137,44 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     blurb: 'Setups from your own ledger that reached their measure-rule target before their stop. The dotted line is the confirmation bar — study what the base looked like BEFORE it.',
   },
 };
+
+export type CmQuickBouncePersistence = {
+  split_date?: string; names?: number; quartile?: number;
+  top_q_first_half_pct?: number; top_q_second_half_pct?: number;
+  bottom_q_second_half_pct?: number; gap_pts?: number; rank_corr?: number | null; note?: string;
+};
+export type CmQuickBounceStudy = {
+  as_of?: string; universe?: number; studied?: number; events?: number; quick?: number;
+  same_day?: number; gap_up?: number; quick_rate_pct?: number | null;
+  first_day_rate_pct?: number | null; placebo_rate_pct?: number | null; edge_pts?: number | null;
+  qualifying?: number; persistence?: CmQuickBouncePersistence | null;
+  params?: Record<string, number> | null;
+};
+
+/** One-line read of the Quick Bounce study for the strip under the board.
+ *  Pure so the wording is testable; '' when there is no study yet. */
+export function quickBounceStudyText(s?: CmQuickBounceStudy | null): string {
+  if (!s || s.events == null) return '';
+  const pct = (v?: number | null) => (v == null ? '—' : `${Math.round(v)}%`);
+  const parts = [
+    `${s.studied ?? '—'} names · ${s.events} band visits`,
+    `quick ${pct(s.quick_rate_pct)} vs ${pct(s.placebo_rate_pct)} on any day` +
+      (s.edge_pts == null ? '' : ` (${s.edge_pts >= 0 ? '+' : ''}${Math.round(s.edge_pts)} pts)`),
+    `first-day ${pct(s.first_day_rate_pct)}`,
+    `${s.qualifying ?? 0} on the list`,
+  ];
+  return parts.join(' · ');
+}
+
+/** The persistence verdict in words: does a high quick rate carry over? */
+export function quickBouncePersistenceText(p?: CmQuickBouncePersistence | null): string {
+  if (!p || p.gap_pts == null || p.top_q_second_half_pct == null || p.bottom_q_second_half_pct == null) {
+    return p?.note ? `Persistence: ${p.note}.` : '';
+  }
+  const carry = p.gap_pts >= 10 ? 'carries over' : p.gap_pts >= 5 ? 'carries over weakly' : 'does not carry over';
+  const rho = p.rank_corr == null ? '' : `, rank corr ${p.rank_corr.toFixed(2)}`;
+  return `Persistence: names ranked in the top quarter by their first-half quick rate ran ${Math.round(p.top_q_second_half_pct)}% in the second half vs ${Math.round(p.bottom_q_second_half_pct)}% for the bottom quarter (${p.gap_pts >= 0 ? '+' : ''}${Math.round(p.gap_pts)} pts${rho}) — the ranking ${carry}.`;
+}
 
 /** `s` marks an extended-hours bar ('pre' | 'ah') on the live frame so the
  *  chart can shade it; absent on regular-hours and daily bars. */
@@ -192,6 +234,14 @@ export type CmBoard = {
    *  room atleast >5%". 0 = floor off. */
   min_room?: number;
   hidden_low_room?: number;
+  /** Quick Bounce only (2026-09-06) — the weekly study's universe numbers and
+   *  its persistence check, printed under the board so the list is read
+   *  against its own evidence. */
+  study?: CmQuickBounceStudy | null;
+  qualifying?: number;
+  no_band?: number;
+  no_print?: number;
+  store_date?: string | null;
   /** 0DTE only — the same-day expiry these chains are read from. */
   expiry?: string;
   /** 0DTE only — where in the trading day this read happened. After the close
@@ -315,7 +365,7 @@ export const ICT_MICROS: { key: IctMicro; label: string }[] = [
 /** The two boards the floor applies to. Their tiles are demand arrivals; a
  *  tile 0.3% under a supply band (TRU, 2026-09-05) is not one worth showing.
  *  The other tabs have no room read and never receive the param. */
-export const ROOM_TABS: CmTab[] = ['zones', 'deep_demand'];
+export const ROOM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce'];
 
 /** Frontend mirror of ALERT_MIN_ROOM_PCT (backend/supply_demand/alert_gates.py,
  *  owner setting) — the phone's gate and now the demand boards' floor. Same

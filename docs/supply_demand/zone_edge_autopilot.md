@@ -196,6 +196,26 @@ protection. `GET /trading/status` carries `zone_edge_entry`
 (`enabled, entries_today, max_per_day, last_entry_et, signal{fresh, age_sec,
 reason…}, rules[], attempts[]`).
 
+## 3b. Quick Bounce day-trade variant (Ajay 2026-09-06)
+
+> "automating this with paper trade I think we will see more value for day
+> trading."
+
+A demand-zone entry on a name the weekly Quick Bounce study lists
+(`supply_demand.quick_bounce.qualifies`: ≥ 3 visits to a proven demand band,
+≥ 50% of them a same-day / next-morning-gap turn) is journaled as strategy
+**`quick_bounce`** instead of `demand_zone` — same entry rules, same alert
+gate, same stop — and the state doc carries `strategy`. Tick step **(h2)**
+(`zone_edge_entry.quick_bounce_eod`, owner switch `quick_bounce_eod_flatten`,
+default ON, `POST /trading/config`) flattens every quick_bounce entry of the
+day still held at/after **15:55 ET** through `exit_engine.flatten` (queued
+when Alpaca refuses, like any owner exit); once per symbol per day
+(`eod_flattened` on the state doc). Names not held any more (stopped,
+targeted, unfilled) are skipped and noted. The Journal's by-lane table
+therefore reports `quick_bounce` next to `demand_zone`, so the day-trade
+variant is measured on its own (Rule #9 autopsies apply). Study + list:
+`docs/supply_demand/quick_bounce.md`.
+
 ## 4. The execution race ledger (`execution_race`)
 
 One doc per `(symbol, side, band, ET day)`, `_id = "{SYM}:{side}:{lo}-{hi}:{day}"`,

@@ -136,17 +136,26 @@ def _enrich_with_yfinance(c: dict) -> dict:
         sector = None
         company_name = None
         share_float = None
+        enterprise_value = None
         try:
             info = tk.info or {}
             sector = info.get("sector")
             company_name = info.get("shortName") or info.get("longName")
             share_float = info.get("floatShares") or info.get("sharesOutstanding")
+            # Ajay 2026-09-06: the paper catalyst lane wants ">700 mil
+            # enterprise value" — read here, on the same .info call, so the
+            # tick never reaches yfinance (trading/catalyst_entry.size_gate).
+            try:
+                enterprise_value = float(info.get("enterpriseValue") or 0) or None
+            except (TypeError, ValueError):
+                enterprise_value = None
         except Exception:
             pass
 
         return {
             **c,
             "market_cap": cap,
+            "enterprise_value": enterprise_value,
             "avg_volume_10d": avg_vol,
             "volume_surge_ratio": round(surge, 1) if surge else None,
             "sector": sector,

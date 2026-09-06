@@ -2478,3 +2478,57 @@ def test_room_floor_default_on_the_boards_is_the_alert_gate_number():
         assert "min_room" in str(inspect.signature(fn))
     for fn in (B.supply_tiles, B.vcp_tiles):
         assert "min_room" not in str(inspect.signature(fn))
+
+
+# ── Quick Bounce tab (Ajay 2026-09-06) ────────────────────────────────────────
+def test_quick_bounce_tab_lists_qualifying_names_at_a_band_nearest_first(prices, monkeypatch):
+    from supply_demand import quick_bounce as QB, zone_store
+    band = {"kind": "demand", "lo": 100.0, "hi": 102.0, "touches": 3, "strength": 80.0}
+    lid = {"kind": "supply", "lo": 115.0, "hi": 116.0, "touches": 2, "strength": 50.0}
+    weak = {"kind": "supply", "lo": 104.0, "hi": 105.0, "touches": 1, "strength": 10.0}
+    st = {"events": 6, "quick": 4, "same_day": 3, "gap_up": 1, "first_day_quick": 2, "quick_rate_pct": 66.7,
+          "first_day_rate_pct": 33.3, "placebo_rate_pct": 24.0, "edge_pts": 42.7, "median_lift_pct": 3.8,
+          "last_quick_date": "2026-09-01", "avg_dollar_vol_50": 40e6}
+    stats = {"AAA": dict(st), "BBB": dict(st), "CCC": dict(st, events=2), "DDD": dict(st)}
+    meta = {"_id": "_meta", "as_of": "2026-09-06", "studied": 4, "events": 20, "quick": 8, "same_day": 6,
+            "gap_up": 2, "quick_rate_pct": 40.0, "first_day_rate_pct": 20.0, "placebo_rate_pct": 15.0,
+            "edge_pts": 25.0, "qualifying": 3, "persistence": {"gap_pts": 5.0}, "params": {"gap_min_pct": 2.0},
+            "generated_at": 1.0}
+    docs = {"AAA": {"bands": [band, weak, lid], "prev_close": 101.0, "recent": [{"close": 103.0}]},
+            "BBB": {"bands": [band, lid], "prev_close": 101.0, "recent": [{"close": 101.0}]},
+            "DDD": {"bands": [band, dict(weak, touches=2, strength=50.0)], "prev_close": 101.0,
+                    "recent": [{"close": 101.0}]}}
+    monkeypatch.setattr(QB, "load_stats", lambda symbols=None, coll=None: stats)
+    monkeypatch.setattr(QB, "load_meta", lambda coll=None: meta)
+    monkeypatch.setattr(zone_store, "load_latest", lambda symbols=None, coll=None, today=None:
+                        (__import__("datetime").date(2026, 9, 4), docs))
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"AAA": 103.0})     # BBB / DDD fall back to the stored close
+    for s in ("AAA", "BBB", "DDD"):
+        prices[s] = _frame(200, start=90.0)
+    out = B.board("quick_bounce", limit=10, min_tier="any")
+    assert out["tab"] == "quick_bounce" and [t["symbol"] for t in out["tiles"]] == ["BBB", "AAA"]
+    assert out["hidden_low_room"] == 1 and out["qualifying"] == 3 and out["matched"] == 2
+    assert out["study"]["quick_rate_pct"] == 40.0 and out["study"]["persistence"] == {"gap_pts": 5.0}
+    assert out["store_date"] == "2026-09-04" and out["min_room"] == 5.0
+    bbb, aaa = out["tiles"]
+    assert bbb["title"] == "BBB — quick bounce 67% (4/6)" and bbb["why"].startswith("buy $100-102 · stop $99.50")
+    assert [b["kind"] for b in bbb["bands"]] == ["demand", "supply"] and bbb["bands"][1]["lo"] == 115.0
+    assert [l["label"] for l in bbb["lines"]] == ["BUY", "STOP", "TARGET"] and bbb["lines"][2]["price"] == 115.0
+    stats_bbb = {s["k"]: s["v"] for s in bbb["stats"]}
+    assert stats_bbb["Quick"] == "4/6 (67%)" and stats_bbb["To band"] == "inside" and stats_bbb["Room"] == "+13.9% → 115"
+    assert stats_bbb["Any-day base"] == "24%" and stats_bbb["Last quick"] == "2026-09-01"
+    txt = " ".join(b["text"] for b in aaa["badges"])
+    assert "1.0% above the band" in txt and "same-day 3 · gap-up 1" in txt and "+43 pts" in txt
+    assert aaa["bands"][1]["lo"] == 115.0, "the 1-touch lid is skipped: room reads to the proven one"
+    # room off: the lidded name lists, flagged
+    out_any = B.board("quick_bounce", limit=10, min_tier="any", min_room=0)
+    assert [t["symbol"] for t in out_any["tiles"]] == ["BBB", "DDD", "AAA"] and out_any["hidden_low_room"] == 0
+
+
+def test_quick_bounce_tab_without_stats_says_so(monkeypatch):
+    from supply_demand import quick_bounce as QB
+    monkeypatch.setattr(QB, "load_stats", lambda symbols=None, coll=None: {})
+    monkeypatch.setattr(QB, "load_meta", lambda coll=None: None)
+    out = B.board("quick_bounce", limit=10)
+    assert out["tiles"] == [] and "not built yet" in out["note"] and out["study"] is None
+    assert "quick_bounce" in B.TABS

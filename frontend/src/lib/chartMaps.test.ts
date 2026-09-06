@@ -15,7 +15,7 @@ import {
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
-  CM_TABS, TAB_META, isBoardTab,
+  CM_TABS, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText,
   dropCollidingTicks, priceTicks, tickDecimals,
   GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
   priceAt, shortVol, textWidth, tooltipPos,
@@ -163,7 +163,7 @@ describe('boardQuery', () => {
  * no third value — the URL knows `room=any` (off) and nothing else. */
 describe('room floor — parseMinRoom / boardQuery min_room', () => {
   it('ROOM_TABS is exactly the two demand boards', () => {
-    expect(ROOM_TABS).toEqual(['zones', 'deep_demand']);
+    expect(ROOM_TABS).toEqual(['zones', 'deep_demand', 'quick_bounce']);
   });
 
   it('parseMinRoom: room=any (or 0) is off; everything else is the 5% floor', () => {
@@ -611,7 +611,7 @@ describe('the Earnings Flow tab', () => {
     // 2026-09-03 (late): `ict` REPLACED `supply` in its slot ("replace supply
     // tab with this new tab") — same position, Into Supply is gone.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'quick_bounce', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -668,7 +668,7 @@ describe('the Support Levels tab', () => {
     // (daily swings + FVGs), so the cluster stays contiguous.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'ict', 'deep_demand', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support']);
+      .toEqual(['zones', 'ict', 'deep_demand', 'quick_bounce', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support']);
     expect(parseTab('support')).toBe('support');
   });
 
@@ -1449,5 +1449,34 @@ describe('timeTicks', () => {
     const ticks = timeTicks(bars, 8);
     expect(ticks.length).toBeLessThanOrEqual(8);
     expect(ticks.filter((t) => /^Sep/.test(t.label)).length).toBe(6);
+  });
+});
+
+
+describe('Quick Bounce tab (Ajay 2026-09-06)', () => {
+  it('is a board tab after Deep Demand, room-gated, with the honest blurb', () => {
+    expect(CM_TABS.indexOf('quick_bounce')).toBe(CM_TABS.indexOf('deep_demand') + 1);
+    expect(isBoardTab('quick_bounce')).toBe(true);
+    expect(ROOM_TABS).toContain('quick_bounce');
+    expect(TAB_META.quick_bounce.label).toMatch(/Quick Bounce/);
+    const b = TAB_META.quick_bounce.blurb;
+    expect(b).toMatch(/SAME DAY/);
+    expect(b).toMatch(/gapped up 2%\+/);
+    expect(b).toMatch(/3\+ visits and a quick rate of 50%\+/);
+    expect(b).toMatch(/not a forecast/);
+    expect(b).toMatch(/did not carry over/);
+  });
+
+  it('quickBounceStudyText / quickBouncePersistenceText say the numbers plainly and are null-safe', () => {
+    expect(quickBounceStudyText(null)).toBe('');
+    expect(quickBounceStudyText({ studied: 1700, events: 9000, quick_rate_pct: 27.4, placebo_rate_pct: 14.9, edge_pts: 12.5, first_day_rate_pct: 14.5, qualifying: 120 }))
+      .toBe('1700 names · 9000 band visits · quick 27% vs 15% on any day (+13 pts) · first-day 15% · 120 on the list');
+    expect(quickBounceStudyText({ events: 10, studied: 2 })).toBe('2 names · 10 band visits · quick — vs — on any day · first-day — · 0 on the list');
+    expect(quickBouncePersistenceText(null)).toBe('');
+    expect(quickBouncePersistenceText({ note: 'too few events' })).toBe('Persistence: too few events.');
+    expect(quickBouncePersistenceText({ top_q_second_half_pct: 44.9, bottom_q_second_half_pct: 39.1, gap_pts: 5.8, rank_corr: 0.107 }))
+      .toBe('Persistence: names ranked in the top quarter by their first-half quick rate ran 45% in the second half vs 39% for the bottom quarter (+6 pts, rank corr 0.11) — the ranking carries over weakly.');
+    expect(quickBouncePersistenceText({ top_q_second_half_pct: 30, bottom_q_second_half_pct: 31, gap_pts: -1, rank_corr: null })).toMatch(/does not carry over/);
+    expect(quickBouncePersistenceText({ top_q_second_half_pct: 60, bottom_q_second_half_pct: 30, gap_pts: 30 })).toMatch(/ranking carries over\./);
   });
 });

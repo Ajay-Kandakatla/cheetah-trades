@@ -83,6 +83,7 @@ export type ExtraEntry = {
 export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=zones',       label: 'Chart Maps ▸ Demand zones', keywords: ['zones', 'in demand', 'back in demand', 'demand', 'bands', 'pullback'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=deep_demand', label: 'Chart Maps ▸ Deep Demand',  keywords: ['deep demand', 'zones', 'breaking resistance', 'zone edge'] },
+  { parent: 'chart-maps', to: '/chart-maps?tab=quick_bounce', label: 'Chart Maps ▸ Quick Bounce', keywords: ['quick bounce', 'same day bounce', 'bounce', 'gap up', 'klac', 'ntap', 'day trade'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=catalysts',   label: 'Chart Maps ▸ Catalysts',    keywords: ['news', '8-k', 'promo', 'movers', 'russell', 'seeding'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=ict',         label: 'Chart Maps ▸ ICT',          keywords: ['fvg', 'fair value gap', 'swing', 'liquidity', 'manipulation'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=overnight',   label: 'Chart Maps ▸ Overnight',    keywords: ['gappers', 'after hours', 'pre-market', 'movers'] },

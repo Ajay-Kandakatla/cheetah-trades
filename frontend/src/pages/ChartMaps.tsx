@@ -24,6 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
+  quickBounceStudyText, quickBouncePersistenceText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
@@ -408,10 +409,20 @@ export function ChartMaps() {
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
         * a rule section; the zones tab is the "in demand" board. */}
-      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts') && (
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'quick_bounce') && (
         <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
           <RulesInfo section={tab === 'zones' ? 'in_demand' : tab} />
         </div>
+      )}
+
+      {/* Quick Bounce (Ajay 2026-09-06): the study's own numbers under the
+        * blurb — the list is read against its base rate and its persistence,
+        * never on its own. */}
+      {tab === 'quick_bounce' && data?.study && (
+        <p className="cm-note" data-testid="quick-bounce-study">
+          Study{data.study.as_of ? ` (${data.study.as_of})` : ''}: {quickBounceStudyText(data.study)}.
+          {' '}{quickBouncePersistenceText(data.study.persistence)}
+        </p>
       )}
 
       {/* Reaching vs already reached — only the two demand boards have the two
@@ -812,6 +823,13 @@ export function ChartMaps() {
           {data.hidden_low_room} hidden: room &lt; {data.min_room ?? DEFAULT_MIN_ROOM}% to the
           first unbroken band overhead on the live print (the phone's own gate) — pick
           {' '}<em>Any room</em> to see them.
+        </p>
+      )}
+      {tab === 'quick_bounce' && !!(data?.no_band || data?.no_print) && (
+        <p className="cm-note" data-testid="quick-bounce-away">
+          {data.qualifying ?? 0} names qualify historically; {data.no_band ?? 0} sit away from
+          every proven demand band right now (or fell through one) and {data.no_print ?? 0} had no
+          print — only names at or just above a band are listed.
         </p>
       )}
       {!!data?.tape_pool && (

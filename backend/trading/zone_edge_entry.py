@@ -129,6 +129,14 @@ MAX_ZONE_ENTRIES_PER_DAY = 4
 # The requested stop sits this far UNDER the band floor (a print through
 # the floor is the thesis failing, not noise to sit through).
 STOP_BUFFER_PCT = 0.5
+# Quick Bounce day-trade variant (Ajay 2026-09-06: "automating this with paper
+# trade I think we will see more value for day trading"): a demand-zone entry
+# on a name the weekly study lists (supply_demand.quick_bounce.qualifies) is
+# journaled as strategy `quick_bounce` and flattened at QB_EOD_FLATTEN_ET the
+# same day when it is still open — owner switch `quick_bounce_eod_flatten`
+# (default ON). Same entry rules, same stop; only the tag and the clock differ.
+QB_STRATEGY = "quick_bounce"
+QB_EOD_FLATTEN_ET = dtime(15, 55)
 # Bands with fewer touches are not proven structure — same floor the board's
 # own pushes use (supply_demand/zone_edge.py MIN_TOUCHES_PUSH).
 MIN_TOUCHES = 2
@@ -303,6 +311,67 @@ def _mode_word(brk) -> str:
 
 
 # ── zone_edge_entry_state (per symbol + band + ET day) ──────────────────────
+
+def _quick_bounce_names() -> set:
+    """The weekly study's qualifying names (Mongo `quick_bounce_stats`); an
+    unreadable store = an empty set (every entry keeps its normal lane)."""
+    try:
+        from supply_demand import quick_bounce as QB
+        return QB.qualifying_symbols()
+    except Exception as exc:                       # noqa: BLE001
+        log.debug("zone_edge_entry: quick-bounce names unavailable: %s", exc)
+        return set()
+
+
+def quick_bounce_eod(broker=None, cfg: Optional[dict] = None,
+                     now_et: Optional[datetime] = None, day: Optional[str] = None) -> dict:
+    """Day-trade close for the quick_bounce lane: at/after QB_EOD_FLATTEN_ET,
+    every position this lane entered TODAY that is still held is flattened
+    through exit_engine.flatten (queued when the broker refuses). Once per
+    symbol per day (state doc `eod_flattened`). Fenced; never raises."""
+    from trading import exit_engine as EE
+    brk = broker if broker is not None else globals()["broker"]
+    cfg = cfg or get_config()
+    now_et = now_et or _now_et()
+    day = day or _et_day()
+    out = {"ran": False, "flattened": [], "skipped": [], "errors": [],
+           "enabled": bool(cfg.get("quick_bounce_eod_flatten", True))}
+    if not out["enabled"] or now_et.time() < QB_EOD_FLATTEN_ET:
+        return out
+    coll = _coll(STATE_COLL)
+    if coll is None:
+        out["errors"].append("state unreadable")
+        return out
+    try:
+        rows = list(coll.find({"day": day, "entered": True, "strategy": QB_STRATEGY}))
+    except Exception as exc:                       # noqa: BLE001
+        out["errors"].append("state read: %s" % exc)
+        return out
+    if not rows:
+        return out
+    out["ran"] = True
+    try:
+        held = {str(p.get("symbol") or "").upper() for p in brk.positions() if isinstance(p, dict)}
+    except Exception as exc:                       # noqa: BLE001
+        out["errors"].append("positions: %s" % exc)
+        return out
+    for r in rows:
+        sym = str(r.get("symbol") or "").upper()
+        if r.get("eod_flattened"):
+            continue
+        if sym not in held:
+            out["skipped"].append({"symbol": sym, "reason": "not held (stopped / targeted / never filled)"})
+            _set_state(r.get("key"), eod_flattened=True, eod_note="not held")
+            continue
+        try:
+            res = EE.flatten(sym, "quick_bounce day-trade close at %s ET" % QB_EOD_FLATTEN_ET.strftime("%H:%M"))
+        except Exception as exc:                   # noqa: BLE001
+            out["errors"].append("%s: %s" % (sym, exc))
+            continue
+        _set_state(r.get("key"), eod_flattened=True, eod_result=res)
+        out["flattened"].append({"symbol": sym, "queued": bool((res or {}).get("queued"))})
+    return out
+
 
 def state_key(symbol: str, band: dict, day: str) -> str:
     return "%s:%g-%g:%s" % (symbol, float(band["lo"]), float(band["hi"]), day)
@@ -1073,6 +1142,8 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     out["signal"] = sig
     if not sig["fresh"]:
         return _finish("stale_signal")
+    qb_names = _quick_bounce_names()
+    out["quick_bounce_names"] = len(qb_names)
     # Entry window — no NEW entries at/after LAST_ENTRY_ET.
     if now_et.time() >= LAST_ENTRY_ET:
         return _finish("after_last_entry_time")
@@ -1221,7 +1292,9 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
             # strategy / reason = the journal LANE tag (2026-09-05: "journal
             # it appropriately") — demand rows are the demand_zone lane,
             # supply-side rows the breakout lane.
-            lane = "demand_zone" if c["kind"] == "demand" else "breakout"
+            lane = ("demand_zone" if c["kind"] == "demand" else "breakout")
+            if lane == "demand_zone" and sym in qb_names:
+                lane = QB_STRATEGY                 # the day-trade variant, same rules
             res = entries.enter(sym, limit_price=None, stop_pct=stop_pct,
                                 strategy=lane,
                                 reason={"side": c["side"], "tier": c["tier"],
@@ -1273,7 +1346,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                            order_id=order_id, client_order_id=coid),
                dry_run=False, cite=CITE)
         _set_state(key, entered=True, result="entered", order_id=order_id,
-                   client_order_id=coid, order_ts=order_ts)
+                   client_order_id=coid, order_ts=order_ts, strategy=lane)
         _write_race(c, day, "ordered", None, as_of, stop_pct=stop_pct,
                     engine_order_ts=order_ts, engine_order_id=order_id,
                     engine_client_order_id=coid)

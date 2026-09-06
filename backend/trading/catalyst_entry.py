@@ -125,6 +125,16 @@ GRADES_OK = ("A", "B")
 # docs/supply_demand/catalyst_entry.md for him to change).
 CATALYST_MIN_PRICE = 2.0
 CATALYST_MIN_DOLLAR_VOL = 2_000_000
+# Ajay 2026-09-06: "for catalyst look at other rules like I established in the
+# past Like >700 mil enterprise value and also, Sales are intact." Enterprise
+# value rides on the scan row (catalysts/scanner._enrich_with_yfinance reads
+# it on the .info call it already makes — the tick never reaches yfinance);
+# when EV is unknown the scan's market cap stands in (his 2026-09-03 promo-tab
+# floor was market cap at the same number). Sales = Pradeep Bonde's tiers
+# (catalysts.promo_circuit.sales_for, cache-only in the tick; the warm cron
+# fills the cache); unknown sales FAIL CLOSED and are counted.
+CATALYST_MIN_EV_USD = 700_000_000.0
+SALES_PASS_TIERS = ("steady", "strong", "explosive")   # = sepa.sales.BONDE_PASS_TIERS (pinned)
 # The review's one-line catalyst summary is journaled at most this long.
 SUMMARY_MAX_CHARS = 160
 # Reused from the zone-edge lane (one truth, never redefined here).
@@ -419,6 +429,50 @@ def qualify(c) -> Optional[str]:
     return None
 
 
+def sales_for(symbols: list) -> dict:
+    """{SYMBOL: sales block or None} — the promo board's Bonde read, CACHE
+    ONLY here (cap=0: the SEPA research cache, then promo_sales_cache); the
+    warm cron is what fetches. A name nobody researched is None (fails closed)."""
+    syms = [str(s).upper() for s in symbols if s]
+    if not syms:
+        return {}
+    try:
+        from catalysts.promo_circuit import sales_for as _promo_sales
+        out = _promo_sales(syms, cap=0) or {}
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("catalyst_entry: sales read failed: %s", exc)
+        out = {}
+    return {sym: (out.get(sym) or None) for sym in syms}
+
+
+def size_gate(c: dict) -> Optional[str]:
+    """None when the name clears CATALYST_MIN_EV_USD on the scan row's
+    enterprise value (or, when EV is unknown, on its market cap); else why."""
+    ev = _f((c or {}).get("enterprise_value"))
+    if ev is not None:
+        if ev >= CATALYST_MIN_EV_USD:
+            return None
+        return "enterprise value $%.0fM < $%.0fM" % (ev / 1e6, CATALYST_MIN_EV_USD / 1e6)
+    cap = _f((c or {}).get("market_cap"))
+    if cap is None:
+        return "enterprise value and market cap unknown"
+    if cap >= CATALYST_MIN_EV_USD:
+        return None
+    return "market cap $%.0fM < $%.0fM (EV unknown)" % (cap / 1e6, CATALYST_MIN_EV_USD / 1e6)
+
+
+def sales_gate(sales: Optional[dict]) -> Optional[str]:
+    """None when Bonde's read says the top line is intact; else the reason.
+    Unknown fails closed."""
+    if not isinstance(sales, dict) or sales.get("score") is None:
+        return "sales unknown (no research snapshot)"
+    tier = sales.get("tier")
+    if tier in SALES_PASS_TIERS:
+        return None
+    g = _f(sales.get("growth_yoy_pct"))
+    return "sales %s%s — not intact" % (tier, (" (%+.0f%% YoY)" % g) if g is not None else "")
+
+
 def _candidate(c: dict) -> dict:
     review = c.get("review") or {}
     summary = review.get("catalyst_summary")
@@ -429,6 +483,7 @@ def _candidate(c: dict) -> dict:
             "catalyst_summary": summary,
             "price": _f(c.get("price")), "dollar_volume": _f(c.get("dollar_volume")),
             "change_pct": _f(c.get("change_pct")), "market_cap": _f(c.get("market_cap")),
+            "enterprise_value": _f(c.get("enterprise_value")),
             "composite_score": _f(c.get("composite_score")),
             # the scan's own session bar — the print the zone gate reads
             "day_low": _f(c.get("day_low")), "day_high": _f(c.get("day_high")),
@@ -622,6 +677,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     day = _et_day()
     out = {"ok": True, "ran": False, "day": day, "entered": [], "blocked": [],
            "skipped": [], "skipped_alert_gate": 0, "skipped_pending": 0,
+           "skipped_size": 0, "skipped_sales": 0,
            "evaluated": 0, "rejected": 0, "entries_today": 0, "errors": []}
 
     try:
@@ -700,6 +756,29 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
             _skip(sym, "attempted today")
             continue
         todo.append(c)
+    if not todo:
+        out["reason"] = "no_candidates_left"
+        return out
+
+    # Size + sales (Ajay 2026-09-06): EV >= $700M (market cap when EV is
+    # unknown) and Bonde's sales tier intact; unknown sales fail closed.
+    sales = sales_for([c["symbol"] for c in todo])
+    kept = []
+    for c in todo:
+        sym = c["symbol"]
+        why = size_gate(c)
+        if why:
+            out["skipped_size"] += 1
+            _skip(sym, why)
+            continue
+        why = sales_gate(sales.get(sym))
+        if why:
+            out["skipped_sales"] += 1
+            _skip(sym, why)
+            continue
+        c["sales_tier"] = (sales.get(sym) or {}).get("tier")
+        kept.append(c)
+    todo = kept
     if not todo:
         out["reason"] = "no_candidates_left"
         return out
@@ -821,6 +900,14 @@ def rules_list() -> list:
         {"rule": "Source is the Catalysts board's CACHED scan only — the lane never "
                  "triggers a scan; no cached scan (or an expired one) = nothing bought",
          "value": "catalysts.api._cache_get()", "source": "owner rule (%s; no book)" % quote},
+        {"rule": "Enterprise value at least $%dM (the scan's market cap stands in when EV "
+                 "is unknown)" % int(CATALYST_MIN_EV_USD / 1e6),
+         "value": ">= $%dM" % int(CATALYST_MIN_EV_USD / 1e6),
+         "source": "owner rule (Ajay 2026-09-06: '>700 mil enterprise value'; no book)"},
+        {"rule": "Sales intact — Pradeep Bonde's revenue tier steady / strong / explosive "
+                 "(YoY); unknown fails closed",
+         "value": "sepa.sales.BONDE_PASS_TIERS",
+         "source": "owner rule (Ajay 2026-09-06: 'Sales are intact'; no book)"},
         {"rule": "Quadrant must be evidence-backed", "value": " | ".join(QUADRANTS_OK),
          "source": "owner setting (builder default, NOT from Ajay; S&D/catalysts, no book)"},
         {"rule": "Review evidence grade", "value": " | ".join(GRADES_OK),
@@ -960,6 +1047,15 @@ def warm(now: Optional[datetime] = None, *, cached=None, scan_fn=None, cache_put
             from supply_demand import bounce_room
             load_docs = load_docs or bounce_room.load_docs
             compute_batch = compute_batch or bounce_room.compute_batch
+        # Sales cache (Ajay 2026-09-06 "Sales are intact"): the warm is the
+        # ONLY place the lane fetches — the tick reads cache-only.
+        try:
+            from catalysts.promo_circuit import sales_for as _promo_sales
+            got = _promo_sales(tickers) or {}
+            out["sales_known"] = len([v for v in got.values() if isinstance(v, dict)])
+        except Exception as exc:                   # noqa: BLE001
+            log.warning("catalyst_entry: sales warm failed: %s", exc)
+            out["sales_known"] = None
         docs, missing = load_docs(tickers, day)
         out["docs_have"] = len([v for v in (docs or {}).values() if isinstance(v, dict)])
         out["docs_missing"] = len(missing or [])

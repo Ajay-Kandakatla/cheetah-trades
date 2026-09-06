@@ -345,6 +345,36 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'Chart Maps carries the Quick Bounce tab with its study strip (2026-09-06)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-06: "quick bounce potential list ... in one place under
+    // chartmaps ... sort them by nearest of the Demand zones again with 5%
+    // supply zone." The tab sits right after Deep Demand (the demand boards
+    // cluster), is room-gated like them, the page prints the study's own
+    // numbers + persistence under the blurb, and the search palette finds it.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/);
+      if (!m) return ['CM_TABS declaration not found'];
+      const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      if (tabs.indexOf('quick_bounce') !== tabs.indexOf('deep_demand') + 1) {
+        errs.push("'quick_bounce' must sit directly after 'deep_demand'");
+      }
+      if (!/\n\s*quick_bounce:\s*\{/.test(src)) errs.push('TAB_META.quick_bounce is missing');
+      if (!/export function quickBounceStudyText\(/.test(src) || !/export function quickBouncePersistenceText\(/.test(src)) {
+        errs.push('chartMaps.ts lost the study / persistence wording helpers');
+      }
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/data-testid="quick-bounce-study"/.test(page)) errs.push('ChartMaps.tsx no longer prints the study strip');
+      if (!/tab === 'quick_bounce'\)\s*&&\s*\(/.test(page)) errs.push('ChartMaps.tsx no longer mounts the ℹ️ Rules pill on the Quick Bounce tab');
+      const nav = read('src/lib/navSearch.ts');
+      if (!/\/chart-maps\?tab=quick_bounce/.test(nav)) errs.push('navSearch.ts lost the Chart Maps ▸ Quick Bounce entry');
+      const feats = read('src/lib/newFeatures.ts');
+      if (!/id: 'quick-bounce-tab'/.test(feats)) errs.push("newFeatures.ts lost the 'quick-bounce-tab' highlight");
+      return errs;
+    },
+  },
+  {
     name: 'Chart Maps carries the Catalysts tab; /catalysts redirects there (2026-09-05)',
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-09-05: "also move catalyst tab in to Chart maps" + "sort stocks
@@ -475,8 +505,8 @@ const CONTRACTS = [
       const cm = read('src/lib/chartMaps.ts');
       const dm = cm.match(/export const DEFAULT_MIN_ROOM\s*=\s*([\d.]+)\s*;/);
       if (!dm || Number(dm[1]) !== 5) errs.push('chartMaps.ts DEFAULT_MIN_ROOM must be 5 (same owner setting)');
-      if (!/export const ROOM_TABS:\s*CmTab\[\]\s*=\s*\['zones',\s*'deep_demand'\]/.test(cm)) {
-        errs.push("chartMaps.ts ROOM_TABS is not exactly ['zones', 'deep_demand']");
+      if (!/export const ROOM_TABS:\s*CmTab\[\]\s*=\s*\['zones',\s*'deep_demand',\s*'quick_bounce'\]/.test(cm)) {
+        errs.push("chartMaps.ts ROOM_TABS is not exactly ['zones', 'deep_demand', 'quick_bounce'] (Quick Bounce joined the room-gated boards 2026-09-06)");
       }
       if (!/q\.set\('min_room'/.test(cm)) errs.push('boardQuery no longer sends min_room');
       const panel = read('src/components/DemandReentryPanel.tsx');

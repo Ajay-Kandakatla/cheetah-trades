@@ -987,7 +987,12 @@ def test_zone_edge_entry_applies_both_alert_gates():
     src = _zone_edge_entry_source()
     assert "alert_gates.room_gate(" in src and "alert_gates.demand_proximity_gate(" in src
     assert 'out["skipped_alert_gate"]' in src
-    assert 'lane = "demand_zone" if c["kind"] == "demand" else "breakout"' in src
+    assert 'lane = ("demand_zone" if c["kind"] == "demand" else "breakout")' in src
+    # Quick Bounce day-trade variant (Ajay 2026-09-06): a demand entry on a
+    # study-listed name takes the quick_bounce tag, same rules, same stop, and
+    # the tick flattens it at 15:55 ET (step h2).
+    assert 'if lane == "demand_zone" and sym in qb_names:' in src and "lane = QB_STRATEGY" in src
+    assert 'QB_STRATEGY = "quick_bounce"' in src and "QB_EOD_FLATTEN_ET = dtime(15, 55)" in src
     assert "strategy=lane," in src
     assert "stop_price=stop_price, allow_earnings=False)" in src
     with open(os.path.join(TRADING_DIR, "auto_entry.py"), encoding="utf-8") as fh:

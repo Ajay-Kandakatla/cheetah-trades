@@ -160,8 +160,8 @@ def cand(ticker="EOSE", quadrant="REAL", grade="A", pump=False, offering=False,
          price=5.0, dollar_volume=5_000_000, summary="Grid storage contract award",
          composite=80.0, review="default", evidence="default", **extra):
     c = {"ticker": ticker, "price": price, "dollar_volume": dollar_volume,
-         "change_pct": 12.0, "market_cap": 3e8, "quadrant": quadrant,
-         "composite_score": composite}
+         "change_pct": 12.0, "market_cap": 3e8, "enterprise_value": 9e8,   # clears the $700M EV floor (2026-09-06)
+         "quadrant": quadrant, "composite_score": composite}
     if review == "default":
         c["review"] = {"catalyst_summary": summary, "evidence_grade": grade,
                        "is_pump_warning": pump}
@@ -237,7 +237,8 @@ def env(monkeypatch):
 
     def build(payload="none", bounce=None, docs=None, positions=(), armed=True,
               flag=True, market_open=True, configured=True, now=NOW,
-              enter_result=None, enter_raises=None, mode="paper"):
+              enter_result=None, enter_raises=None, mode="paper",
+              sales=None):
         fake = FakeBroker(positions, market_open, configured, mode)
         db = FakeDB(armed=armed, flag=flag)
         enter_calls, pushes = [], []
@@ -296,6 +297,10 @@ def env(monkeypatch):
         monkeypatch.setattr(CE, "_notify",
                             lambda sym, mode_word, body: pushes.append((sym, mode_word, body)))
         monkeypatch.setattr(CE.entries, "enter", fake_enter)
+        # Size + sales gates (Ajay 2026-09-06) pass by default so the older
+        # tests keep exercising the zone gate; the gate tests override these.
+        _sales = sales if sales is not None else {"tier": "steady", "score": 60, "growth_yoy_pct": 12.0}
+        monkeypatch.setattr(CE, "sales_for", lambda syms: {s: (dict(_sales) if _sales else None) for s in syms})
         return fake, db, enter_calls, pushes, calls
 
     return build
@@ -975,3 +980,54 @@ def test_warm_cron_line_is_in_the_crontab_and_pinned():
     line = [ln for ln in crontab.splitlines() if "trading.catalyst_entry --warm" in ln]
     assert len(line) == 1, "exactly one catalyst warm cron line"
     assert line[0].split("/usr/local/bin/python")[0].split() == CE.WARM_CRON.split()
+
+
+# ── size + sales gates (Ajay 2026-09-06: ">700 mil enterprise value and also, Sales are intact") ──
+def test_size_and_sales_gates_pure():
+    assert CE.CATALYST_MIN_EV_USD == 700_000_000.0
+    from sepa.sales import BONDE_PASS_TIERS
+    assert CE.SALES_PASS_TIERS == BONDE_PASS_TIERS
+    assert CE.size_gate({"enterprise_value": 7.0e8, "market_cap": 1e9}) is None
+    assert CE.size_gate({"enterprise_value": 6.99e8, "market_cap": 9e9}).startswith("enterprise value $699M < $700M")
+    assert CE.size_gate({"enterprise_value": None, "market_cap": 8.0e8}) is None, "EV unknown: market cap stands in"
+    assert CE.size_gate({"market_cap": 3.0e8}).startswith("market cap $300M < $700M (EV unknown)")
+    assert CE.size_gate({"market_cap": None}) == "enterprise value and market cap unknown"
+    assert CE.sales_gate({"tier": "strong", "score": 80, "growth_yoy_pct": 40.0}) is None
+    assert CE.sales_gate({"tier": "explosive", "score": 90}) is None
+    assert CE.sales_gate({"tier": "declining", "score": 20, "growth_yoy_pct": -12.0}) == "sales declining (-12% YoY) — not intact"
+    assert CE.sales_gate({"tier": "weak", "score": 30}) == "sales weak — not intact"
+    assert CE.sales_gate(None) == "sales unknown (no research snapshot)"
+    assert CE.sales_gate({"tier": "steady"}) == "sales unknown (no research snapshot)", "no score = never computed"
+    # the scan row carries EV (scanner._enrich_with_yfinance) and the funnel keeps it
+    c = CE._candidate(dict(cand(), enterprise_value="850000000"))
+    assert c["enterprise_value"] == 8.5e8
+    # the tick reads sales CACHE-ONLY: promo_circuit.sales_for with cap=0
+    import inspect
+    assert "_promo_sales(syms, cap=0)" in inspect.getsource(CE.sales_for)
+    assert "_promo_sales(tickers)" in inspect.getsource(CE.warm), "the warm is where the fetch happens"
+
+
+def test_small_ev_or_broken_sales_skip_before_the_zone_read(env):
+    bounce, docs = happy()
+    small = scan([dict(cand(), enterprise_value=4.5e8)])
+    fake, db, enter_calls, _, calls = env(payload=small, bounce=bounce, docs=docs)
+    out = CE.run()
+    assert enter_calls == [] and out["skipped_size"] == 1 and calls["docs"] == []
+    assert out["skipped"][0] == {"symbol": "EOSE", "reason": "enterprise value $450M < $700M"}
+    big = scan([dict(cand(), enterprise_value=2.1e9)])
+    fake, db, enter_calls, _, calls = env(payload=big, bounce=bounce, docs=docs,
+                                          sales={"tier": "declining", "score": 15, "growth_yoy_pct": -30.0})
+    out = CE.run()
+    assert enter_calls == [] and out["skipped_sales"] == 1 and calls["docs"] == []
+    assert out["skipped"][0]["reason"] == "sales declining (-30% YoY) — not intact"
+    fake, db, enter_calls, _, calls = env(payload=big, bounce=bounce, docs=docs, sales={})
+    out = CE.run()
+    assert out["skipped_sales"] == 1 and "sales unknown" in out["skipped"][0]["reason"]
+    # EV unknown + market cap over the line + sales intact: the zone read runs as before
+    capped = scan([dict(cand(), enterprise_value=None, market_cap=9.0e8)])
+    fake, db, enter_calls, _, calls = env(payload=capped, bounce=bounce, docs=docs,
+                                          sales={"tier": "strong", "score": 85, "growth_yoy_pct": 44.0})
+    out = CE.run()
+    assert out["entered"] == ["EOSE"] and out["skipped_size"] == 0 and out["skipped_sales"] == 0
+    rules = " ".join(r["rule"] for r in CE.rules_list())
+    assert "Enterprise value at least $700M" in rules and "Sales intact" in rules

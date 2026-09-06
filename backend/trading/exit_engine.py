@@ -151,6 +151,9 @@ def get_config() -> dict:
         "zone_edge_rules": (dict(doc["zone_edge_rules"])
                             if isinstance(doc.get("zone_edge_rules"), dict) else {}),
         "last_zone_entry_disabled_day": doc.get("last_zone_entry_disabled_day"),
+        # Quick Bounce day-trade variant (Ajay 2026-09-06): flatten the
+        # quick_bounce lane's same-day entries at 15:55 ET. Default ON.
+        "quick_bounce_eod_flatten": bool(doc.get("quick_bounce_eod_flatten", True)),
         # Catalyst-lane entries — trading/catalyst_entry.py (Ajay 2026-09-05:
         # "make sure you have demand zone and catalyst based entries time to
         # time"). Default OFF in EVERY mode, owner opt-in per POST
@@ -1226,6 +1229,17 @@ def tick(force: bool = False) -> dict:
     except Exception as exc:                       # noqa: BLE001
         log.warning("zone_edge_entry run failed: %s", exc)
         summary["errors"].append("zone_edge_entry: %s" % exc)
+
+    # (h2) quick-bounce day-trade close (trading/zone_edge_entry.quick_bounce_eod;
+    # owner switch `quick_bounce_eod_flatten`, default ON): at 15:55 ET the
+    # quick_bounce lane's same-day entries still held are flattened through
+    # flatten() (queued when the broker refuses). Fenced like (h).
+    try:
+        from trading import zone_edge_entry as _zee
+        summary["quick_bounce_eod"] = _zee.quick_bounce_eod(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("quick_bounce_eod failed: %s", exc)
+        summary["errors"].append("quick_bounce_eod: %s" % exc)
 
     # (j) catalyst-lane entries (trading/catalyst_entry.py, owner rules; flag
     # `catalyst_entry`, default OFF) — fenced exactly like (h): a buy-side

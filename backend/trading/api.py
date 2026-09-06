@@ -155,6 +155,16 @@ async def trading_config(payload: dict = Body(...),
             updates["catalyst_entry"] = raw
         else:
             raise HTTPException(400, "catalyst_entry must be a boolean or null")
+    if "quick_bounce_eod_flatten" in payload:
+        # Quick Bounce day-trade close (Ajay 2026-09-06). Strict boolean; null
+        # resets to the default ON.
+        raw = payload.get("quick_bounce_eod_flatten")
+        if raw is None:
+            updates["quick_bounce_eod_flatten"] = True
+        elif isinstance(raw, bool):
+            updates["quick_bounce_eod_flatten"] = raw
+        else:
+            raise HTTPException(400, "quick_bounce_eod_flatten must be a boolean or null")
     if "options_entry" in payload:
         # Options lane (trading/options_lane.py; Ajay 2026-09-06). Strict
         # boolean; null resets to the default OFF. Arming still gates orders;

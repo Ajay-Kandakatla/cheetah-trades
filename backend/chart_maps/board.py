@@ -47,7 +47,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -1734,6 +1734,113 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": data.get("as_of")}
 
 
+# ---------------------------------------------------------------------------
+# tab — Quick Bounce (Ajay 2026-09-06): names that historically turned at a
+# demand band THE SAME DAY (or gapped up next morning), sitting at / just
+# above a proven demand band now, with room to the first proven lid.
+# supply_demand/quick_bounce.py owns the study + the row rule; this only
+# draws. Stats are rebuilt weekly (cron) into Mongo `quick_bounce_stats`.
+# ---------------------------------------------------------------------------
+def _qb_study(meta: Optional[dict]) -> Optional[dict]:
+    if not isinstance(meta, dict):
+        return None
+    keys = ("as_of", "universe", "studied", "events", "quick", "same_day", "gap_up",
+            "quick_rate_pct", "first_day_rate_pct", "placebo_rate_pct", "edge_pts",
+            "qualifying", "persistence", "params")
+    return {k: meta.get(k) for k in keys}
+
+
+def quick_bounce_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                       themes_first: bool = THEMES_FIRST_DEFAULT,
+                       sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER,
+                       min_room: Optional[float] = None) -> dict:
+    from supply_demand import quick_bounce as QB, zone_store
+    from supply_demand import room_floor as RF
+
+    stats = QB.load_stats()
+    meta = QB.load_meta()
+    study = _qb_study(meta)
+    base = {"tiles": [], "study": study, "disclaimer": QB.DISCLAIMER,
+            **_room_meta(min_room, 0)}
+    if not stats:
+        return {**base, "note": "Quick-bounce statistics are not built yet — the weekly study "
+                                "(python -m supply_demand.quick_bounce) fills them."}
+    qual = {s: st for s, st in stats.items() if QB.qualifies(st)}
+    if not qual:
+        return {**base, "note": "No name in the universe clears the list bar "
+                                "(>= %d visits, >= %d%% quick)." % (QB.MIN_EVENTS, QB.MIN_QUICK_RATE_PCT)}
+    store_day, docs = zone_store.load_latest(list(qual))
+    live = _live_last(list(qual))
+    prints = {s: px for s, px in live.items() if px}
+    for s, d in docs.items():
+        if s not in prints:                      # weekend / pre-open: the last stored close
+            recent = d.get("recent") or []
+            px = _num((recent[-1] or {}).get("close")) if recent else None
+            if px:
+                prints[s] = px
+    floor = RF.MIN_ROOM_DEFAULT if min_room is None else float(min_room)
+    res = QB.live_rows(qual, docs, prints, floor if floor > 0 else None)
+    rows = res["rows"]
+    tiles = []
+    for rank, r in enumerate(rows):
+        sym = r["symbol"]
+        band = r["band"]
+        st = r["stats"] or {}
+        room = r.get("room") or {}
+        bands = [{"kind": "demand", "lo": band["lo"], "hi": band["hi"], "label": "demand"}]
+        tb = room.get("band") or {}
+        if _num(tb.get("lo")) is not None and _num(tb.get("hi")) is not None:
+            bands.append({"kind": "supply", "lo": float(tb["lo"]), "hi": float(tb["hi"]),
+                          "label": "first proven lid"})
+        lines = [{"price": float(band["hi"]), "label": "BUY", "tone": "buy"},
+                 {"price": float(r["stop"]), "label": "STOP", "tone": "stop"}]
+        if r.get("target") is not None:
+            lines.append({"price": float(r["target"]), "label": "TARGET", "tone": "target"})
+        n, q = int(st.get("events") or 0), int(st.get("quick") or 0)
+        rate = st.get("quick_rate_pct")
+        first = int(st.get("first_day_quick") or 0)
+        stats_rows = [
+            {"k": "Quick", "v": f"{q}/{n} ({rate:.0f}%)" if rate is not None else "—"},
+            {"k": "1st day", "v": f"{first}/{n}"},
+            {"k": "Any-day base", "v": (f"{st['placebo_rate_pct']:.0f}%"
+                                        if st.get("placebo_rate_pct") is not None else "—")},
+            {"k": "To band", "v": ("inside" if r["state"] == "inside" else f"+{r['dist_pct']:.1f}%")},
+            {"k": "Room", "v": (f"+{room['room_pct']:g}% → {room['target']:g}" if room.get("target")
+                                else "open sky")},
+            {"k": "Risk", "v": f"{r['risk_pct']:.1f}% → {r['stop']:g}"},
+            {"k": "Last quick", "v": st.get("last_quick_date") or "—"},
+        ]
+        edge = st.get("edge_pts")
+        badges = [({"text": "◉ in the demand band", "tone": "good"} if r["state"] == "inside"
+                   else {"text": f"{r['dist_pct']:.1f}% above the band", "tone": "muted"}),
+                  {"text": f"🪃 same-day {int(st.get('same_day') or 0)} · gap-up {int(st.get('gap_up') or 0)}",
+                   "tone": "good" if q else "muted"}]
+        if edge is not None:
+            badges.append({"text": f"{edge:+.0f} pts vs its own base rate",
+                           "tone": "good" if edge >= 10 else "muted"})
+        if r.get("rr") is not None:
+            badges.append({"text": f"{r['rr']:.1f}R to the lid", "tone": "good" if r["rr"] >= 2 else "muted"})
+        tiles.append({
+            "symbol": sym, "name": _name_for(sym),
+            "title": f"{sym} — quick bounce {rate:.0f}% ({q}/{n})" if rate is not None else sym,
+            "why": r.get("plan") or "",
+            "href": _href(sym, "supply"),
+            "bars": [], "_bars": {"days": days},
+            "bands": bands, "lines": lines, "markers": [],
+            "stats": stats_rows, "badges": badges, "theme": _theme(sym),
+            "_score": float(len(rows) - rank),
+            "_m": {"avg_turnover": _num(stats.get(sym, {}).get("avg_dollar_vol_50")),
+                   "velocity": None, "avg_shares": None},
+        })
+    out, fmeta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    return {"tiles": out, **fmeta, "study": study, "disclaimer": QB.DISCLAIMER,
+            "matched": len(rows), "qualifying": len(qual),
+            "no_band": res["no_band"], "no_print": res["no_print"],
+            "store_date": store_day.isoformat() if store_day else None,
+            "generated_at": (meta or {}).get("generated_at"),
+            **_room_meta(min_room, res["hidden_room"])}
+
+
 def _zone_badges(r: dict) -> list[dict]:
     out = []
     v = (r.get("verdict") or {}).get("state")
@@ -3219,6 +3326,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier,
                                 phase=(phase or "reached"), min_room=min_room)
+    elif t == "quick_bounce":
+        out = quick_bounce_tiles(limit, days, themes_first, srt, tier, min_room=min_room)
     elif t == "undervalue":
         out = undervalue_tiles(limit, days, themes_first, srt, tier,
                                phase=(phase or "all"))

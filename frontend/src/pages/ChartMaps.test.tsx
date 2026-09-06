@@ -866,3 +866,27 @@ describe('the Catalysts tab', () => {
     expect(screen.getByRole('tab', { name: /Catalysts/ })).toBeInTheDocument();
   });
 });
+
+
+describe('ChartMaps — the Quick Bounce tab (Ajay 2026-09-06)', () => {
+  const QB_BOARD = {
+    tab: 'quick_bounce', count: 1, sort: 'theme', sorts: [], min_tier: 'ok', tiers: [],
+    tiles: [{ symbol: 'KLAC', name: 'KLA Corp', title: 'KLAC — quick bounce 67% (4/6)', why: 'buy $164.6-169.81 · stop $163.78',
+              href: '/sepa/KLAC?tab=supply', bars: [], bands: [], lines: [], markers: [], stats: [{ k: 'Quick', v: '4/6 (67%)' }],
+              badges: [{ text: '◉ in the demand band', tone: 'good' }] }],
+    study: { as_of: '2026-09-06', studied: 1700, events: 9000, quick_rate_pct: 27.4, placebo_rate_pct: 14.9, edge_pts: 12.5,
+             first_day_rate_pct: 14.5, qualifying: 120,
+             persistence: { top_q_second_half_pct: 44.9, bottom_q_second_half_pct: 39.1, gap_pts: 5.8, rank_corr: 0.107 } },
+    qualifying: 120, no_band: 100, no_print: 3, hidden_low_room: 2, min_room: 5,
+  };
+  it('prints the study read and the away count under the board', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, quick_bounce: QB_BOARD }));
+    draw();
+    fireEvent.click(await screen.findByRole('tab', { name: /Quick Bounce/i }));
+    const strip = await screen.findByTestId('quick-bounce-study');
+    expect(strip.textContent).toMatch(/Study \(2026-09-06\): 1700 names · 9000 band visits · quick 27% vs 15% on any day \(\+13 pts\)/);
+    expect(strip.textContent).toMatch(/carries over weakly/);
+    expect((await screen.findByTestId('quick-bounce-away')).textContent).toMatch(/120 names qualify historically; 100 sit away/);
+    expect(await screen.findByTestId('hidden-low-room')).toBeInTheDocument();
+  });
+});

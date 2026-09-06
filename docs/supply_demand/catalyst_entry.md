@@ -65,6 +65,8 @@ dollar_volume, change_pct, market_cap, quadrant, composite_score, review:
 | Constant | Value | Source | Meaning |
 |---|---|---|---|
 | `MAX_CATALYST_ENTRIES_PER_DAY` | 1 | Ajay 2026-09-05 *"time to time"* | one catalyst buy per ET day, counted from `catalyst_entry_state` successes |
+| `CATALYST_MIN_EV_USD` | `$700M` | **owner rule (Ajay 2026-09-06: ">700 mil enterprise value")** | enterprise value from the scan row (`catalysts/scanner._enrich_with_yfinance` reads `enterpriseValue` on the `.info` call it already makes — the tick never reaches yfinance); EV unknown → the scan's market cap stands in (his 2026-09-03 promo-tab floor was market cap at the same number); both unknown → skip |
+| sales intact | Bonde tier `steady` / `strong` / `explosive` (`SALES_PASS_TIERS` = `sepa.sales.BONDE_PASS_TIERS`) | **owner rule (Ajay 2026-09-06: "Sales are intact")** | `catalysts.promo_circuit.sales_for` CACHE-ONLY in the tick (`cap=0`: SEPA research cache, then `promo_sales_cache`); the `--warm` cron (`WARM_CRON`) fetches for the scan's candidates; unknown fails closed and is counted (`skipped_sales`) |
 | `QUADRANTS_OK` | `REAL`, `OVERLOOKED` | owner setting (builder default, **NOT from Ajay**) | evidence-backed moves only; `PUMP_RISK` / `DEAD` never |
 | `GRADES_OK` | `A`, `B` | owner setting (builder default, **NOT from Ajay**) | the review's evidence grade |
 | pump warning | `review.is_pump_warning is False` | owner setting (builder default, **NOT from Ajay**) | unknown fails closed |
