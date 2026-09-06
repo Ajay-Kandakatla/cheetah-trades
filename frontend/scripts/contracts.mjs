@@ -518,6 +518,52 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'Trading page carries the Options lane tab (2026-09-06)',
+    file: 'src/pages/Trading.tsx',
+    // Ajay 2026-09-06: "create a new tab on the Auto pilot on options trading
+    // and paper trade with it." The tab is a paper OPTIONS lane on the demand-
+    // zone touch (owner rules, S/D scope — no book cites). Pinned: the View
+    // union + VIEWS carry `options`, the page mounts <OptionsLaneTab> on that
+    // view, the tab's two writes are exactly {options_entry} on /trading/config
+    // and /trading/options/close/{underlying}, and the Journal's by-lane table
+    // labels the lane's `options_zone` key "🎛️ Options".
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bOptionsLaneTab\b[^}]*\}\s*from\s*'\.\.\/components\/OptionsLaneTab'/.test(src)) {
+        errs.push("Trading.tsx no longer imports OptionsLaneTab from '../components/OptionsLaneTab'");
+      }
+      if (!/export\s+type\s+View\s*=[^;]*'options'/.test(src)) errs.push("Trading.tsx View type lost 'options'");
+      if (!/\{\s*key:\s*'options'\s*,\s*label:\s*'Options'\s*\}/.test(src)) errs.push("VIEWS no longer carries { key: 'options', label: 'Options' }");
+      if (!/view\s*===\s*'options'\s*&&\s*<OptionsLaneTab\b/.test(src)) errs.push("Trading.tsx does not mount <OptionsLaneTab> on view === 'options'");
+      if (!/parseView\(params\.get\('view'\)\)/.test(src)) errs.push('Trading.tsx no longer reads ?view= from the URL (deep links / the ✨ NEW route break)');
+      if (!/options_lane\?:\s*OptionsLaneStatus\s*\|\s*null/.test(src)) errs.push('Status type lost the optional options_lane block');
+      const tab = read('src/components/OptionsLaneTab.tsx');
+      if (!/options_entry:\s*enabled/.test(tab) || !/\/trading\/config/.test(tab)) {
+        errs.push('OptionsLaneTab no longer POSTs {options_entry} to /trading/config');
+      }
+      if (!/\/trading\/options\/close\/\$\{encodeURIComponent\(symbol\)\}/.test(tab)) {
+        errs.push('OptionsLaneTab no longer POSTs /trading/options/close/{underlying}');
+      }
+      if (!/\$\{API\}\/trading\/options`/.test(tab)) errs.push('OptionsLaneTab no longer polls GET /trading/options');
+      if (!/setClosing\(p\.symbol\)/.test(tab) || !/role="dialog"\s+aria-label=\{`Close \$\{closing\} options\?`\}/.test(tab)) {
+        errs.push('the Close button lost its confirm dialog — a close must never fire on one click');
+      }
+      if (/TLSW|TTLAC|Minervini p\./.test(tab)) errs.push('OptionsLaneTab is S/D scope — it must carry no book cites');
+      const jbs = read('src/components/JournalByStrategy.tsx');
+      if (!/options_zone:\s*\{\s*glyph:\s*'🎛️',\s*label:\s*'Options'/.test(jbs)) {
+        errs.push("JournalByStrategy no longer labels options_zone as '🎛️ Options'");
+      }
+      if (!/'options_zone'/.test(jbs.slice(jbs.indexOf('export type StrategyKey'), jbs.indexOf('export type StrategyKey') + 200))) {
+        errs.push('StrategyKey lost options_zone');
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      if (!/id:\s*'autopilot-options-lane'[^}]*route:\s*'\/trading\?view=options'/.test(nf)) {
+        errs.push("newFeatures.ts lacks the 'autopilot-options-lane' highlight routed to /trading?view=options");
+      }
+      return errs;
+    },
+  },
+  {
     name: 'NavBar carries the global search palette (2026-09-06)',
     file: 'src/components/NavBar.tsx',
     // Ajay 2026-09-06: "give me a global search navigation like if I wanna

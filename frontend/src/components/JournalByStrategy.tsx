@@ -17,7 +17,7 @@
  */
 import type { CSSProperties } from 'react';
 
-export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'manual';
+export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'options_zone' | 'manual';
 
 /** One lane's block in journal.summary.by_strategy. Every field optional —
  *  the API and the page deploy separately, and a lane the engine has never
@@ -37,8 +37,8 @@ export type StrategyStats = {
 export type StrategyMeta = { glyph: string; label: string; blurb: string };
 
 /** Fixed row order — the book lane first, then the two zone lanes, then the
- *  catalyst lane, then hand entries. */
-export const STRATEGY_ORDER: StrategyKey[] = ['minervini', 'demand_zone', 'breakout', 'catalyst', 'manual'];
+ *  catalyst lane, then the options lane (2026-09-06), then hand entries. */
+export const STRATEGY_ORDER: StrategyKey[] = ['minervini', 'demand_zone', 'breakout', 'catalyst', 'options_zone', 'manual'];
 
 export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
   minervini: {
@@ -56,6 +56,10 @@ export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
   catalyst: {
     glyph: '🗞️', label: 'catalyst',
     blurb: 'Catalysts board names clearing the room floor — owner rules, not the book.',
+  },
+  options_zone: {
+    glyph: '🎛️', label: 'Options',
+    blurb: 'Paper calls / bull call spreads on the same demand-zone touch the stock lane buys (the alert gates); the row is merged in from the lane\'s own position ledger — owner rules, not the book.',
   },
   manual: {
     glyph: '✋', label: 'manual',

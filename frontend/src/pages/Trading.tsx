@@ -16,6 +16,10 @@
  *   POST /trading/flatten-all?confirm=yes — disaster plan
  *   POST /trading/sim-reset?confirm=yes — sim mode only: wipe sim positions/orders, restore starting cash
  *   GET  /trading/ledger?limit=…    — action ledger (every row carries a book cite)
+ *   GET  /trading/options           — Options lane tab payload (2026-09-06; status block +
+ *                                     open / recent contracts + the lane's own journal)
+ *   POST /trading/config {options_entry} — the options lane switch
+ *   POST /trading/options/close/{underlying} — close one options position now (confirm)
  *
  * Poll pattern follows LiveGateStrip (10s interval, alive-flag cleanup).
  * SIM / PAPER / LIVE is always front-and-center — this page can move real money.
@@ -33,6 +37,7 @@ import { TickerLink } from '../components/TickerLink';
 import { ExecutionRace } from '../components/ExecutionRace';
 import { TradeAutopsies } from '../components/TradeAutopsies';
 import { CatalystEntryCard, type CatalystEntryInfo } from '../components/CatalystEntryCard';
+import { OptionsLaneTab, type OptionsLaneStatus } from '../components/OptionsLaneTab';
 import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
@@ -155,6 +160,10 @@ type Status = {
    * catalyst based entries time to time and journal it appropriately").
    * Mount is gated on the object so an API predating it renders nothing. */
   catalyst_entry?: CatalystEntryInfo | null;
+  /* Options lane (2026-09-06, Ajay: "create a new tab on the Auto pilot on
+   * options trading and paper trade with it"). The same status block the
+   * Options tab reads; optional so an API predating it renders unchanged. */
+  options_lane?: OptionsLaneStatus | null;
   // Real engine heartbeat (its 1-min tick) — NOT the alert cron. stale=true
   // means order management may be asleep while armed + market open.
   engine?: {
@@ -372,6 +381,13 @@ const KIND_COLOR: Record<string, string> = {
   auto_entry_disabled: C.muted,
   auto_entry_error:    C.red,
   auto_entry_skipped_scan: C.amber,
+  // Options lane (2026-09-06) — trading/options_lane.py ledger kinds.
+  options_entry:          C.green,
+  options_exit:           C.amber,
+  options_close_sent:     C.amber,
+  options_blocked:        C.amber,
+  options_entry_disabled: C.muted,
+  options_error:          C.red,
 };
 
 function KindChip({ kind }: { kind?: string | null }) {
@@ -1336,6 +1352,49 @@ function ZoneEdgeEntryCard({ z }: { z: ZoneEdgeEntryInfo }) {
   );
 }
 
+/* Options lane pointer on the dashboard (2026-09-06) — status only; every
+ * action lives on the Options tab. */
+function OptionsLaneStrip({ o, onOpen }: { o: OptionsLaneStatus; onOpen: () => void }) {
+  const on = o.enabled === true;
+  const col = on ? C.green : C.muted;
+  const entries = typeof o.entries_today === 'number' ? o.entries_today : null;
+  const cap = typeof o.max_per_day === 'number' ? o.max_per_day : null;
+  const open = Array.isArray(o.open) ? o.open.length : null;
+  const maxOpen = typeof o.max_open === 'number' ? o.max_open : null;
+  return (
+    <section data-testid="options-lane-strip"
+             style={{ marginTop: '1rem', border: '1px solid var(--hairline,#2a2a2a)', borderRadius: 12,
+                      background: 'var(--bg-raised,#16181d)', padding: '0.9rem 1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <span title={on
+                ? 'The paper engine buys one call (or bull call spread) a day on a demand-zone touch that passes the alert gate. Switch and tables on the Options tab.'
+                : 'The options lane is off — no new contracts. Switch it on from the Options tab.'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+                       background: on ? `${C.green}1a` : 'transparent', color: col,
+                       border: `1px solid ${col}66`, borderRadius: 8, padding: '4px 12px',
+                       fontSize: '0.8rem', fontWeight: 800 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: col, display: 'inline-block' }} />
+          🎛️ Options lane (paper) {on ? 'ON' : 'OFF'}
+        </span>
+        <span className="mono" style={{ fontSize: '0.78rem' }}>
+          entries today <b>{entries ?? '—'}</b><span style={{ color: C.sub }}> / {cap ?? '—'}</span>
+        </span>
+        <span className="mono" style={{ fontSize: '0.78rem' }}>
+          open <b>{open ?? '—'}</b><span style={{ color: C.sub }}> / {maxOpen ?? '—'}</span>
+        </span>
+        {o.broker_has_options === false && (
+          <Chip color={C.amber} title="The broker cannot read option chains — the lane gates itself off.">broker has no options helpers</Chip>
+        )}
+        <button onClick={onOpen}
+                style={{ marginLeft: 'auto', background: 'transparent', color: C.blue, border: `1px solid ${C.blue}66`,
+                         borderRadius: 6, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+          Open the Options tab →
+        </button>
+      </div>
+    </section>
+  );
+}
+
 /* ----------------------------------------------------------------------
  * Ledger feed
  * ---------------------------------------------------------------------- */
@@ -1836,12 +1895,18 @@ type ConfirmState =
 const SIM_NOTE_KEY = 'trading.simNoteDismissed';
 const VIEW_KEY = 'trading.view';
 
-type View = 'dashboard' | 'journal' | 'analytics';
-const VIEWS: { key: View; label: string }[] = [
+export type View = 'dashboard' | 'journal' | 'analytics' | 'options';
+export const VIEWS: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'journal', label: 'Journal' },
   { key: 'analytics', label: 'Analytics' },
+  // Options lane tab (2026-09-06) — paper options on demand-zone touches.
+  { key: 'options', label: 'Options' },
 ];
+/** A ?view= / stored value → a View, or null for anything else (never a crash). */
+export function parseView(v?: string | null): View | null {
+  return v === 'dashboard' || v === 'journal' || v === 'analytics' || v === 'options' ? v : null;
+}
 
 export function TradingPage() {
   const [status, setStatus] = useState<Status | null>(null);
@@ -1865,18 +1930,29 @@ export function TradingPage() {
     try { return localStorage.getItem(SIM_NOTE_KEY) === '1'; } catch { return false; }
   });
 
-  // Which view — Dashboard (default) | Journal | Analytics. Persisted.
+  // Which view — Dashboard (default) | Journal | Analytics | Options.
+  // ?view= in the URL wins (deep links, the ✨ NEW highlight route), then the
+  // persisted pick, then Dashboard.
+  const [params, setParams] = useSearchParams();
+  const urlView = parseView(params.get('view'));
   const [view, setView] = useState<View>(() => {
+    if (urlView) return urlView;
     try {
-      const v = localStorage.getItem(VIEW_KEY);
-      if (v === 'journal' || v === 'analytics' || v === 'dashboard') return v;
+      const stored = parseView(localStorage.getItem(VIEW_KEY));
+      if (stored) return stored;
     } catch { /* private mode */ }
     return 'dashboard';
   });
   const pickView = (v: View) => {
     setView(v);
     try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode — session only */ }
+    setParams((p) => { p.set('view', v); return p; }, { replace: true });
   };
+  // Something navigated here with a new ?view= (e.g. /trading?view=options) — adopt it.
+  useEffect(() => {
+    if (urlView && urlView !== view) setView(urlView);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlView]);
 
   // Journal + Analytics — fetched & polled only while their view is active.
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -2018,6 +2094,9 @@ export function TradingPage() {
 
       {view === 'analytics' && <AnalyticsView a={analytics} err={analyticsErr} />}
       {view === 'journal' && <JournalView j={journal} err={journalErr} />}
+      {/* Options lane (2026-09-06) — owns its own poll (60 s while mounted),
+          switch, close-now dialog and empty states. */}
+      {view === 'options' && <OptionsLaneTab onChanged={refresh} />}
 
       {view === 'dashboard' && <>
       {statusErr && !status && (
@@ -2236,6 +2315,13 @@ export function TradingPage() {
               on the server. Gated on the object like the zone-edge card. */}
           {status.catalyst_entry && (
             <CatalystEntryCard c={status.catalyst_entry} mode={status.mode} onChanged={refresh} />
+          )}
+
+          {/* d2c. Options lane (paper) — one-line pointer to the Options tab
+              (2026-09-06). The switch, tables and close-now live on the tab;
+              the dashboard stays a lean decision surface. Gated on the object. */}
+          {status.options_lane && (
+            <OptionsLaneStrip o={status.options_lane} onOpen={() => pickView('options')} />
           )}
 
           {/* d3. Execution race — the engine's order/fill vs Ajay's first look

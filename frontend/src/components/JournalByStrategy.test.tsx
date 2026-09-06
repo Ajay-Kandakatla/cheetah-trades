@@ -57,15 +57,15 @@ describe('JournalByStrategy — rows', () => {
     expect(within(c).queryByText('0%')).toBeNull();
   });
 
-  it('an absent by_strategy block renders all five lanes muted, plus the honesty note (negative)', () => {
+  it('an absent by_strategy block renders all six lanes muted, plus the honesty note (negative)', () => {
     render(<JournalByStrategy byStrategy={undefined} />);
-    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(5);
+    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(6);
     expect(screen.getByText(HONESTY_NOTE)).toBeInTheDocument();
     render(<JournalByStrategy byStrategy={null} />);
-    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(10);
+    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(12);
   });
 
-  it('a lane the server adds that we do not know still gets a row, after the five', () => {
+  it('a lane the server adds that we do not know still gets a row, after the six', () => {
     render(<JournalByStrategy byStrategy={{ ...FULL, zone_edge: { n: 4, open: 0, closed: 4, wins: 2, losses: 2, win_rate_pct: 50, avg_r: 0.2, expectancy_pct: 0.5, realized_pnl: 30 } }} />);
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows[rows.length - 1].getAttribute('data-strategy')).toBe('zone_edge');
@@ -119,8 +119,8 @@ describe('pure helpers', () => {
     const rows = strategyRows({ manual: FULL.manual, extra: { n: 1 } });
     expect(rows.map(([k]) => k)).toEqual([...STRATEGY_ORDER, 'extra']);
     expect(rows[0][1]).toBeNull();
-    expect(rows[4][1]).toEqual(FULL.manual);
-    expect(strategyRows(undefined).map(([, v]) => v)).toEqual([null, null, null, null, null]);
+    expect(rows[STRATEGY_ORDER.indexOf('manual')][1]).toEqual(FULL.manual);
+    expect(strategyRows(undefined).map(([, v]) => v)).toEqual([null, null, null, null, null, null]);
   });
   it('formatters are null-safe and signed where a sign carries meaning', () => {
     expect(fmtInt(3)).toBe('3'); expect(fmtInt(null)).toBe('—'); expect(fmtInt(NaN)).toBe('—');
@@ -128,5 +128,29 @@ describe('pure helpers', () => {
     expect(fmtR(0.42)).toBe('+0.42R'); expect(fmtR(-1)).toBe('-1.00R'); expect(fmtR(undefined)).toBe('—');
     expect(fmtMoney(212.5)).toBe('+$212.50'); expect(fmtMoney(-48.2)).toBe('-$48.20'); expect(fmtMoney(0)).toBe('$0.00');
     expect(fmtMoney(null)).toBe('—');
+  });
+});
+
+/* Options lane (2026-09-06) — the backend merges options_lane.journal_block()
+   into by_strategy under the key `options_zone`; the table must label it as
+   the Options lane, never as an unknown "options zone". */
+describe('JournalByStrategy — options lane (2026-09-06)', () => {
+  it('labels the options_zone key "🎛️ Options" with its stats, before manual', () => {
+    render(<JournalByStrategy byStrategy={{ ...FULL, options_zone: { n: 2, open: 1, closed: 1, wins: 1, losses: 0, win_rate_pct: 100, avg_r: null, expectancy_pct: 38.5, realized_pnl: 231.0 } }} />);
+    const rows = screen.getAllByRole('row').slice(1);
+    const keys = rows.map((r) => r.getAttribute('data-strategy'));
+    expect(keys.indexOf('options_zone')).toBe(keys.indexOf('manual') - 1);
+    const o = screen.getByRole('row', { name: /🎛️ Options/ });
+    expect(within(o).getByText('🎛️ Options')).toBeInTheDocument();
+    expect(within(o).getByText('+38.5%')).toBeInTheDocument();
+    expect(within(o).getByText('+$231.00')).toBeInTheDocument();
+    expect(within(o).getByText('100%')).toBeInTheDocument();
+    // NEGATIVE: not rendered as an unknown lane.
+    expect(screen.queryByText(/options zone/)).toBeNull();
+  });
+
+  it('the lane chip reads 🎛️ Options for an options_zone trade', () => {
+    render(<StrategyChip strategy="options_zone" />);
+    expect(screen.getByTestId('strategy-chip')).toHaveTextContent('🎛️ Options');
   });
 });
