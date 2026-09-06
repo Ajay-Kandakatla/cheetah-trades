@@ -20,7 +20,7 @@ DEM = {"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2, "strength": 30.0}
 
 
 def _sup(lo, hi, touches=2):
-    return {"kind": "supply", "lo": lo, "hi": hi, "touches": touches, "strength": 20.0}
+    return {"kind": "supply", "lo": lo, "hi": hi, "touches": touches, "strength": 50.0}
 
 
 # ── the two owner numbers come straight from his sentence ─────────────────────
@@ -130,7 +130,7 @@ def test_first_overhead_agrees_with_bounce_room_when_no_band_is_broken(px):
     whenever prev_close is unknown — the gate adds ONLY the broken-band rule."""
     from supply_demand import bounce_room as BR
     bands = [DEM, _sup(99.0, 101.0), _sup(104.0, 105.0), _sup(120.0, 125.0),
-             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 30.0}]
+             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 50.0}]
     theirs = BR.first_overhead(BR.overhead_bands(bands, px), px)
     ours = AG.first_overhead(bands, px, None)
     if theirs is None:
@@ -147,7 +147,7 @@ def test_first_overhead_agrees_with_bounce_room_when_a_band_IS_broken(px, pc):
     🪃 chip / Demand sort quote the same first ceiling."""
     from supply_demand import bounce_room as BR
     bands = [DEM, _sup(95.0, 97.0), _sup(99.0, 101.0), _sup(104.0, 105.0), _sup(120.0, 125.0),
-             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 30.0}]
+             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 50.0}]
     theirs = BR.first_overhead(BR.overhead_bands(bands, px, pc), px)
     ours = AG.first_overhead(bands, px, pc)
     if theirs is None:
@@ -169,3 +169,59 @@ def test_boundary_4_995_pct_rounds_to_5_0_but_FAILS_and_says_so_raw():
     assert ok is True and room["room_pct_raw"] == pytest.approx(5.0, abs=1e-9)
     inb = AG.room_read(100.0, [_sup(99.0, 101.0)])
     assert inb["state"] == "IN_BAND" and inb["room_pct_raw"] == pytest.approx(1.0, abs=1e-9)
+
+
+# ── proven lids (Ajay 2026-09-06, "ok please all 3" — the KLAC lesson) ────────
+KLAC_BANDS = [{"kind": "demand", "lo": 164.60, "hi": 169.81, "touches": 3, "strength": 100.0},
+              {"kind": "supply", "lo": 166.37, "hi": 172.30, "touches": 1, "strength": 32.0},
+              {"kind": "supply", "lo": 191.11, "hi": 193.94, "touches": 2, "strength": 53.0}]
+
+
+def test_proven_band_is_the_boards_own_bar():
+    assert (AG.LID_MIN_TOUCHES, AG.LID_MIN_STRENGTH) == (2, 40.0)
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 2, "strength": 40.0}) is True
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 1, "strength": 90.0}) is False, "one touch is not structure"
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 3, "strength": 39.9}) is False, "weak band"
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 2}) is True, "unknown strength: judged on touches"
+    assert AG.is_proven_band({"lo": 1, "hi": 2}) is True, "unknown touches: keep the lid (conservative)"
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 0, "strength": 5.0}) is True, "0 = nobody counted"
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": "nan", "strength": 5.0}) is True
+    assert AG.is_proven_band(None) is False and AG.is_proven_band("x") is False
+
+
+def test_klac_2026_09_02_the_one_touch_lid_no_longer_blocks_the_push():
+    """Print 169.50 inside the 164.60-169.81 demand band with a 1-touch /
+    strength-32 supply band 166.37-172.30 on top of it. Before: IN_BAND, no
+    push, no paper buy for two days. Now: room to the next PROVEN lid 191.11."""
+    ok, room = AG.room_gate(169.50, KLAC_BANDS, 167.56)
+    assert ok is True and room["state"] == "ROOM" and room["target"] == 191.11
+    assert room["room_pct"] == 12.7 and room["touches"] == 2
+    assert AG.demand_proximity_gate(169.50, KLAC_BANDS[0]) is True
+    # the same lid PROVEN (2 touches, strength 53) is a real ceiling: blocked as before
+    proven = [dict(b, touches=2, strength=53.0) if b["lo"] == 166.37 else b for b in KLAC_BANDS]
+    ok2, room2 = AG.room_gate(169.50, proven, 167.56)
+    assert ok2 is False and room2["state"] == "IN_BAND" and room2["target"] == 172.30
+    # strength alone does not rescue a one-touch lid; touches alone do not rescue a weak one
+    assert AG.room_gate(169.50, [dict(b, strength=90.0) if b["lo"] == 166.37 else b for b in KLAC_BANDS], 167.56)[0] is True
+    assert AG.room_gate(169.50, [dict(b, touches=3) if b["lo"] == 166.37 else b for b in KLAC_BANDS], 167.56)[0] is True
+    # overhead_bands itself drops the lid; the board still holds every band (the caller's list is untouched)
+    assert [b["lo"] for b in AG.overhead_bands(KLAC_BANDS, 169.50, 167.56)] == [191.11]
+    assert len(KLAC_BANDS) == 3
+
+
+def test_plan_txt_is_the_paper_lanes_stop_and_the_first_proven_target():
+    room = AG.room_read(169.50, KLAC_BANDS, 167.56)
+    txt = AG.plan_txt(169.50, KLAC_BANDS[0], room)
+    assert txt == "buy $164.6-169.81 · stop $163.78 (0.5% under the floor, 3.4% risk) · target $191.11 (3.8R)"
+    assert AG.plan_txt(169.50, KLAC_BANDS[0], None) == \
+        "buy $164.6-169.81 · stop $163.78 (0.5% under the floor, 3.4% risk) · target: clear runway"
+    # risk is measured from the PRINT: a bounce that already ran shows the wider risk
+    assert "5.8% risk" in AG.plan_txt(173.9, KLAC_BANDS[0], room)
+    # garbage in -> '' (the body omits the plan, never prints nonsense)
+    assert AG.plan_txt(None, KLAC_BANDS[0], room) == ""
+    assert AG.plan_txt(0, KLAC_BANDS[0], room) == ""
+    assert AG.plan_txt(169.5, {"lo": 170.0, "hi": 160.0}, room) == ""
+    assert AG.plan_txt(169.5, None, room) == ""
+    # a target under the print (stale room) prints no R multiple rather than a negative one
+    assert AG.plan_txt(169.5, KLAC_BANDS[0], {"target": 150.0}).endswith("target $150")
+    assert AG.STOP_BUFFER_PCT == 0.5

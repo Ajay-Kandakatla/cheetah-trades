@@ -75,7 +75,9 @@ def plan_bands(cands, entry_band: Optional[dict] = None) -> list:
     garbage, drop the entry band itself, dedupe, and give every band the
     shape alert_gates reads. A band without `kind` is a resistance candidate
     (trade_plan's legacy `{"lo": ...}` call) — supply; one without `hi` is a
-    level, hi = lo."""
+    level, hi = lo. A band that fails alert_gates.is_proven_band (touches < 2
+    or strength < 40) is dropped — the KLAC lesson (2026-09-06): a 1-touch
+    lid is not a target. `strength` rides along (None when unknown)."""
     out, seen = [], set()
     for z in cands or []:
         if not isinstance(z, dict):
@@ -89,13 +91,16 @@ def plan_bands(cands, entry_band: Optional[dict] = None) -> list:
             continue
         if entry_band and _same_band(z, entry_band):
             continue
+        if not _gates.is_proven_band(z):
+            continue                          # unproven lid = noise (KLAC 2026-09-06)
         kind = str(z.get("kind") or "supply").lower()
         key = (kind, round(lo, 2), round(hi, 2))
         if key in seen:
             continue
         seen.add(key)
         out.append({"kind": kind, "lo": lo, "hi": hi,
-                    "touches": int(_f(z.get("touches")) or 0)})
+                    "touches": int(_f(z.get("touches")) or 0),
+                    "strength": _f(z.get("strength"))})
     return out
 
 

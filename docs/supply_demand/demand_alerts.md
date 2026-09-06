@@ -43,6 +43,13 @@ Session gate: 9:32–16:00 ET on NYSE trading days — weekends AND the house ho
 
 ### Phone gate (2026-09-05)
 
+> **2026-09-06 — proven lids + the plan line.** The room half of the gate skips
+> a lid with < 2 touches or strength < 40 (`alert_gates.is_proven_band`) and
+> the push body ends with the plan (`alert_gates.plan_txt`): buy = the band,
+> stop = 0.5% under its floor, target = the first proven lid. See
+> `docs/supply_demand/proven_lids.md`.
+
+
 **Ajay 2026-09-05 (verbatim, mid-fix):** *"When alert I need the same logic. Need only alerts on
 stocks that have atleast 5% to Supply and also <1% bounce from demand zone"*. Shared module
 `backend/supply_demand/alert_gates.py` (also called by `zone_edge` and `zone_bounce_alerts`).

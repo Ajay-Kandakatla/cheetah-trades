@@ -589,7 +589,7 @@ def test_live_alert_fixes_2026_09_05_side_a_room_for_keys_holidays_stale_day():
     # the gate's first-overhead read == bounce_room.first_overhead whenever no band is broken
     bands = [{"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2},
              {"kind": "supply", "lo": 99.0, "hi": 101.0, "touches": 2},
-             {"kind": "supply", "lo": 104.0, "hi": 105.0, "touches": 1},
+             {"kind": "supply", "lo": 104.0, "hi": 105.0, "touches": 2},
              {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2},
              {"kind": "supply", "lo": 120.0, "hi": 125.0, "touches": 3}]
     for px in (50.0, 99.0, 100.0, 104.5, 106.0, 110.0, 130.0):
@@ -729,3 +729,27 @@ def test_room_block_shape_is_the_shared_contract():
     assert RF.room_stat(room) == "+0.3% -> 80.12"
     assert RF.room_stat(RF.room_block(10.0, [])) == "open sky"
     assert RF.room_stat(None) == "—"
+
+
+# ── proven lids 2026-09-06 (Ajay: "ok please all 3" after the KLAC bounce) ────
+def test_proven_lid_rule_2026_09_06_one_bar_every_overhead_reader():
+    """A lid must meet the board's own bar (touches >= 2, strength >= 40) to count
+    as overhead. ONE pair of constants in the leaf module, pinned to the board's
+    (demand_reentry.MIN_TOUCHES / MIN_ZONE_STRENGTH), and every overhead reader
+    routes through is_proven_band — a drift is a deliberate owner decision."""
+    import inspect
+    from supply_demand import alert_gates as AG, bounce_room as BR, room_floor as RF
+    from supply_demand import demand_reentry as DR, demand_alerts as DA, zone_bounce_alerts as ZB
+    from trading import zone_edge_entry as ZEE
+    assert AG.LID_MIN_TOUCHES == DR.MIN_TOUCHES == 2
+    assert AG.LID_MIN_STRENGTH == DR.MIN_ZONE_STRENGTH == 40.0
+    assert "is_proven_band(b)" in inspect.getsource(AG.overhead_bands)
+    assert "_gates.is_proven_band(b)" in inspect.getsource(BR.overhead_bands)
+    assert "_gates.is_proven_band(z)" in inspect.getsource(RF.plan_bands)
+    assert "alert_gates.is_proven_band(b)" in inspect.getsource(ZEE.room_ok)
+    sw_src = (Path(__file__).resolve().parents[2] / "backend/portfolio/supply_watch.py").read_text()
+    assert sw_src.count("is_proven_band(z)") == 2, "the Portfolio 🎯 table applies the same bar to both sides"
+    # the plan inside the push: the 🧲 body (demand_alerts serves zone_edge's near-demand push) and the 🪃 body
+    assert "AG.plan_txt(item[\"last\"], band, item.get(\"room\"))" in inspect.getsource(DA.at_message)
+    assert "AG.plan_txt(px, band, item.get(\"room\"))" in inspect.getsource(ZB.single_message)
+    assert AG.STOP_BUFFER_PCT == ZEE.STOP_BUFFER_PCT == 0.5, "the plan quotes the stop the paper lane places"

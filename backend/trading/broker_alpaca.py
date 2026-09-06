@@ -326,7 +326,9 @@ def submit_option_spread(legs: list, qty: int, limit_price: float,
                          client_order_id: Optional[str] = None,
                          tif: str = "day") -> dict:
     """Multi-leg (mleg) LIMIT order. `legs` = [{symbol, side, position_intent,
-    ratio_qty}]; `limit_price` is the NET debit (positive) of the package."""
+    ratio_qty}]; `limit_price` is the NET price of the package: positive =
+    debit, NEGATIVE = credit (Alpaca POST /v2/orders: "A positive value
+    indicates a debit ... A negative value signifies a credit")."""
     body = {"order_class": "mleg", "qty": str(int(qty)), "type": "limit",
             "time_in_force": tif,
             "limit_price": str(round(float(limit_price), 2)),

@@ -382,16 +382,19 @@ def overhead_bands(bands: list, live: float, prev_close=None) -> list:
     supply = support, never overhead — zone_bounce_alerts.is_eligible's rule,
     the same alert_gates.overhead_bands applies (integrator 2026-09-05);
     unknown prev_close keeps every supply band. A demand band that CONTAINS
-    price is support, never overhead. Same rule as
+    price is support, never overhead. A band that fails
+    alert_gates.is_proven_band (touches < 2 or strength < 40) is skipped —
+    the KLAC lesson (2026-09-06). Same rule as
     portfolio.supply_watch.overhead_bands — kept in step by
     tests/test_bounce_room.py, which loads that file standalone."""
     pc = _f(prev_close)
     if pc is not None and pc <= 0:
         pc = None
+    from . import alert_gates as _gates
     out = []
     for b in bands or []:
-        if not _valid_band(b):
-            continue
+        if not _valid_band(b) or not _gates.is_proven_band(b):
+            continue                                      # unproven lid = noise (KLAC 2026-09-06)
         lo, hi = float(b["lo"]), float(b["hi"])
         if _kind(b) == "supply" and hi >= live:
             if pc is not None and hi < pc:

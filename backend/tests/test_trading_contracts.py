@@ -1078,6 +1078,15 @@ def test_options_lane_2026_09_06_owner_settings_locked_and_engine_seams():
     assert (OL.MIN_DTE, OL.MAX_DTE, OL.CLOSE_DTE) == (28, 60, 7)
     assert (OL.DELTA_LO, OL.DELTA_HI) == (0.55, 0.75)
     assert OL.IV_SPREAD_THRESHOLD == 0.45
+    # put spread under the band floor (Ajay 2026-09-06 "ok please all 3"; builder defaults)
+    import inspect
+    assert OL.PUT_SPREAD_WIDTH_PCT == 5.0 and OL.MIN_CREDIT_PCT_OF_WIDTH == 15.0
+    assert OL.TAKE_PROFIT_PCT_OF_CREDIT == 25.0
+    assert OL.structure_for(0.45, False) == "short_put_spread" and OL.structure_for(0.449, True) == "long_call"
+    lane_src = inspect.getsource(OL)
+    assert 'if plan["structure"] in ("bull_call_spread", "short_put_spread"):' in lane_src, "one mleg package, never a naked leg"
+    assert '"limit_price": round(-credit, 2)' in lane_src, "a negative mleg limit is a net credit at Alpaca"
+    assert "take_profit_reason(pos, _pos_quotes(brk, pos, snaps_cache))" in lane_src
     assert OL.MAX_SPREAD_PCT_OF_MID == 10.0 and OL.MAX_SPREAD_ABS == 0.15
     assert OL.MIN_OPEN_INTEREST == 200 and OL.MIN_UNDERLYING_PRICE == 20.0
     assert OL.EARNINGS_CLOSE_DAYS == 2

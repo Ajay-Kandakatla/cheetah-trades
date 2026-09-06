@@ -284,6 +284,9 @@ def single_message(item: dict) -> dict:
     parts = [f"${px:g} · low ${low:g}{when} -> +${px - low:.1f}",
              _room_txt(item.get("room")),
              " | ".join(_band_role(b) for b in item["bands"])]
+    plan = AG.plan_txt(px, band, item.get("room"))           # the plan (Ajay 2026-09-06)
+    if plan:
+        parts.append(plan)
     if hit.get("atr_x") is not None:
         parts.append(f"{hit['atr_x']:g}x ATR")
     parts.append(fmt_cap(item.get("cap")))

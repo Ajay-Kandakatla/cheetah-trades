@@ -57,6 +57,12 @@ for them until the next 9:20 warm.
 
 ### ROOM — `room_read(print, doc)`
 
+> **2026-09-06 — proven lids.** `overhead_bands` skips a band that fails
+> `alert_gates.is_proven_band` (< 2 touches or strength < 40); the SEPA 🪃 chip,
+> the Demand sort and the Catalysts room sort therefore measure to the first
+> PROVEN lid. See `docs/supply_demand/proven_lids.md`.
+
+
 | step | rule | constant |
 |---|---|---|
 | overhead | supply bands with `hi >= print` that are **not already broken** — a supply band with `hi < prev_close` (the doc's; yesterday **closed** above it) is support, skipped (integrator 2026-09-05, Ajay: *"yes please fix the bugs"* — the same rule `zone_bounce_alerts.is_eligible` / `alert_gates` / `zone_edge` Side B use; without it the 🪃 push said "room: clear runway" while this read still quoted room to the 173.87 NTAP shelf); unknown `prev_close` = every supply band counts — **plus demand bands with `lo > print`** (broken support = resistance, kind `broken_support`). A demand band that *contains* the print is support, never overhead. `portfolio.supply_watch.overhead_bands` took the same `prev_close` (from the quote's `prev_day_close`; the fallback quote path has none → unchanged). | same rule as `portfolio.supply_watch.overhead_bands`; re-stated here because the `portfolio` package cannot be imported on the py3.9 host — `test_overhead_rule_matches_portfolio_supply_watch_loaded_standalone` loads that file by path and compares every print |

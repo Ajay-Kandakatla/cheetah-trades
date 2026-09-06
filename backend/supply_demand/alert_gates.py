@@ -30,6 +30,27 @@ Two owner settings, both straight from that sentence:
   late by the time it reaches me" is the complaint; a bounce that already ran 4%
   above the top lists, it does not ring). Garbage fails closed.
 
+``is_proven_band(band) -> bool``  (Ajay 2026-09-06, the KLAC lesson)
+  A band counts as OVERHEAD only when it meets the board's own bar for a real
+  band: touches >= LID_MIN_TOUCHES (2) AND strength >= LID_MIN_STRENGTH (40),
+  the same numbers demand_reentry.MIN_TOUCHES / MIN_ZONE_STRENGTH use to list
+  a demand band (pinned equal in tests/test_supply_demand_contracts.py). KLAC
+  2026-09-02..03: price 169.50 sat inside the 164.60-169.81 demand band with a
+  1-touch / strength-32 supply band 166.37-172.30 on top of it; the room read
+  measured to THAT lid = IN_BAND = no push, no paper buy for two days, then the
+  +7% gap. Unproven lids are noise, not ceilings: skip them and measure to the
+  next PROVEN band (191.11 -> 12.7% room). Unknown touches keep the lid
+  (conservative); unknown strength is judged on touches alone. Every overhead
+  reader applies it: overhead_bands here, bounce_room.overhead_bands,
+  portfolio.supply_watch.overhead_bands, trading.zone_edge_entry.room_ok and
+  room_floor.plan_bands (the board plan's target). Boards still LIST every band.
+
+``plan_txt(print, band, room) -> str``  (Ajay 2026-09-06, "ok please all 3")
+  The plan inside the push text: "buy $lo-hi · stop $x (0.5% under the floor,
+  y% risk) · target $t (nR)". The stop is the SAME one the paper lane places
+  (STOP_BUFFER_PCT under the band floor = trading.zone_edge_entry.STOP_BUFFER_PCT,
+  pinned equal in tests/test_trading_contracts.py).
+
 Pure, no I/O, and NO imports from the sibling modules: bounce_room imports both
 zone_edge and zone_bounce_alerts, so this module must stay a leaf. "At least 5% to
 supply" applies to every phone kind, including ``supply_break_alert`` (measured to
@@ -45,6 +66,14 @@ from typing import Optional
 
 ALERT_MIN_ROOM_PCT = 5.0            # Ajay 2026-09-05: "atleast 5% to Supply"
 ALERT_MAX_ABOVE_DEMAND_PCT = 1.0    # Ajay 2026-09-05: "<1% bounce from demand zone"
+# A lid must be PROVEN to count as overhead (Ajay 2026-09-06, KLAC): the
+# board's own bar for a real band — demand_reentry.MIN_TOUCHES /
+# MIN_ZONE_STRENGTH. Pinned equal in tests/test_supply_demand_contracts.py.
+LID_MIN_TOUCHES = 2
+LID_MIN_STRENGTH = 40.0
+# The plan text's stop: this far under the band floor — the stop the paper
+# lane places (trading.zone_edge_entry.STOP_BUFFER_PCT, pinned equal).
+STOP_BUFFER_PCT = 0.5
 
 
 def _f(x) -> Optional[float]:
@@ -57,6 +86,24 @@ def _f(x) -> Optional[float]:
 
 def _kind(band: dict) -> str:
     return str((band or {}).get("kind") or "demand").lower()
+
+
+def is_proven_band(band) -> bool:
+    """True when the band meets the board's bar for real structure: touches
+    >= LID_MIN_TOUCHES and strength >= LID_MIN_STRENGTH. Touches unknown
+    (missing / non-positive) keeps the band — a lid nobody counted is not
+    dismissed; strength unknown is judged on touches alone."""
+    if not isinstance(band, dict):
+        return False
+    touches = _f(band.get("touches"))
+    if touches is None or touches <= 0:
+        return True
+    if touches < LID_MIN_TOUCHES:
+        return False
+    strength = _f(band.get("strength"))
+    if strength is None:
+        return True
+    return bool(strength >= LID_MIN_STRENGTH)
 
 
 def _valid_band(band) -> bool:
@@ -72,10 +119,12 @@ def _slim(band: dict) -> dict:
 
 
 def overhead_bands(bands, print_px, prev_close=None) -> list:
-    """Everything price meets going UP: unbroken supply bands with hi >= print,
-    plus demand bands strictly above the print. A demand band that CONTAINS the
-    print is support, never overhead. Same shape as bounce_room.overhead_bands
-    with ONE addition — the broken-supply rule when prev_close is known."""
+    """Everything price meets going UP: unbroken PROVEN supply bands with
+    hi >= print, plus proven demand bands strictly above the print. A demand
+    band that CONTAINS the print is support, never overhead; a band that fails
+    is_proven_band is skipped (KLAC 2026-09-06). Same shape as
+    bounce_room.overhead_bands with ONE addition — the broken-supply rule when
+    prev_close is known."""
     px = _f(print_px)
     if px is None or px <= 0:
         return []
@@ -84,8 +133,8 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
         pc = None
     out = []
     for b in bands or []:
-        if not _valid_band(b):
-            continue
+        if not _valid_band(b) or not is_proven_band(b):
+            continue                                      # unproven lid = noise, not a ceiling
         lo, hi = float(b["lo"]), float(b["hi"])
         if _kind(b) == "supply":
             if hi < px:
@@ -172,3 +221,26 @@ def room_txt(room: Optional[dict]) -> str:
         return "room: clear runway"
     rr = f" ({room['rr']:g}R)" if room.get("rr") is not None else ""
     return f"room +{room['room_pct']:g}% -> ${room['target']:g}{rr}"
+
+
+def plan_txt(print_px, band, room: Optional[dict],
+             stop_buffer_pct: float = STOP_BUFFER_PCT) -> str:
+    """The plan inside the push (Ajay 2026-09-06): 'buy $164.6-169.81 · stop
+    $163.78 (0.5% under the floor, 3.4% risk) · target $191.11 (3.6R)'. Risk is
+    measured from the PRINT (what a fill here risks), the stop from the band
+    floor (what the paper lane places). No overhead band: 'target: clear
+    runway'. Garbage in -> '' (the body simply omits the plan)."""
+    px = _f(print_px)
+    if px is None or px <= 0 or not _valid_band(band):
+        return ""
+    lo, hi = float(band["lo"]), float(band["hi"])
+    stop = lo * (1.0 - stop_buffer_pct / 100.0)
+    risk_pct = (px - stop) / px * 100.0
+    out = (f"buy ${lo:g}-{hi:g} · stop ${stop:.2f} ({stop_buffer_pct:g}% under the floor, "
+           f"{risk_pct:.1f}% risk)")
+    target = _f((room or {}).get("target")) if room else None
+    if target is None:
+        return out + " · target: clear runway"
+    rr = (target - px) / (px - stop) if px > stop else None
+    rr_txt = f" ({rr:.1f}R)" if rr is not None and rr > 0 else ""
+    return out + f" · target ${target:g}{rr_txt}"

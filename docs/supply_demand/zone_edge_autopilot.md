@@ -130,6 +130,11 @@ dicts is *unknown room* (blocked) — never a crash out of `run()`.
 
 ### Phone gate = entry gate (2026-09-05)
 
+> **2026-09-06 — proven lids.** Both the alert gate's room read and `room_ok`'s
+> 2R check skip a lid with < 2 touches or strength < 40 and measure to the next
+> proven band (the KLAC lesson). See `docs/supply_demand/proven_lids.md`.
+
+
 **Ask (Ajay 2026-09-05, verbatim):** *"What ever rules I created for the alerts
 are the ideal conditions for a stock to be bough in Autopilot. Keep the
 minervini entries but also make sure you have demand zone and catalyst based

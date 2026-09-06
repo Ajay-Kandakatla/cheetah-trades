@@ -34,9 +34,9 @@ STORE_DAY = "2026-09-04"
 
 DEM = {"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2, "strength": 50.0}
 DEM2 = {"kind": "demand", "lo": 86.0, "hi": 88.0, "touches": 1, "strength": 20.0}
-SUP_BROKEN = {"kind": "supply", "lo": 95.0, "hi": 97.0, "touches": 1, "strength": 18.0}
+SUP_BROKEN = {"kind": "supply", "lo": 95.0, "hi": 97.0, "touches": 2, "strength": 40.0}
 SUP_OVER = {"kind": "supply", "lo": 110.0, "hi": 112.0, "touches": 3, "strength": 40.0}
-SUP_FAR = {"kind": "supply", "lo": 130.0, "hi": 133.0, "touches": 1, "strength": 15.0}
+SUP_FAR = {"kind": "supply", "lo": 130.0, "hi": 133.0, "touches": 2, "strength": 45.0}
 
 
 def _doc(bands, *, prev_close=100.0, atr14=2.0, high_252=120.0, recent=None, day=STORE_DAY,
@@ -331,7 +331,7 @@ def test_room_IN_BAND_NEAR_and_ROOM():
 
 
 def test_a_demand_band_above_the_print_is_broken_support_and_counts_as_resistance():
-    high_dem = {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 30.0}
+    high_dem = {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 50.0}
     out = BR.room_read(99.0, _doc([high_dem, DEM]))
     assert out["state"] == "ROOM" and out["room_pct"] == 6.06
     assert out["band"] == {"kind": "broken_support", "lo": 105.0, "hi": 107.0, "touches": 2}
@@ -355,7 +355,7 @@ def test_overhead_rule_matches_portfolio_supply_watch_loaded_standalone():
     sw = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sw)
     bands = [DEM, DEM2, SUP_BROKEN, SUP_OVER, SUP_FAR,
-             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 30.0}]
+             {"kind": "demand", "lo": 105.0, "hi": 107.0, "touches": 2, "strength": 50.0}]
     supply = [b for b in bands if b["kind"] == "supply"]
     demand = [b for b in bands if b["kind"] == "demand"]
     for live in (80.0, 87.0, 91.0, 96.0, 99.0, 106.0, 111.0, 120.0, 140.0):
@@ -834,3 +834,29 @@ def test_overhead_rule_with_prev_close_matches_portfolio_supply_watch_loaded_sta
             ours = {(z["lo"], z["hi"]) for z in BR.overhead_bands(bands, live, pc)}
             assert ours == theirs, (live, pc)
     assert [z["lo"] for z in sw.overhead_bands(supply, demand, 96.0, 100.0)] == [110.0, 130.0]
+
+
+# ── proven lids (Ajay 2026-09-06, the KLAC lesson) ───────────────────────────
+def test_overhead_bands_skip_an_unproven_lid_and_supply_watch_agrees_standalone():
+    """A 1-touch or sub-40 band is noise, not a ceiling — the room read measures
+    to the next PROVEN band; the Portfolio 🎯 table (same rule, loaded
+    standalone) agrees on every print."""
+    weak_touch = {"kind": "supply", "lo": 100.0, "hi": 102.0, "touches": 1, "strength": 90.0}
+    weak_str = {"kind": "supply", "lo": 104.0, "hi": 105.0, "touches": 3, "strength": 39.0}
+    weak_dem = {"kind": "demand", "lo": 106.0, "hi": 107.0, "touches": 1, "strength": 10.0}
+    unknown = {"kind": "supply", "lo": 120.0, "hi": 121.0}                      # nobody counted: kept
+    bands = [DEM, weak_touch, weak_str, weak_dem, SUP_OVER, unknown, SUP_FAR]
+    assert [b["lo"] for b in BR.overhead_bands(bands, 99.0)] == [110.0, 120.0, 130.0]
+    out = BR.room_read(101.0, _doc(bands))                                   # inside the 1-touch lid
+    assert out["state"] == "ROOM" and out["band"]["lo"] == 110.0 and out["room_pct"] == 8.91
+    spec = importlib.util.spec_from_file_location("sw_standalone3", ROOT / "backend/portfolio/supply_watch.py")
+    sw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sw)
+    supply = [b for b in bands if b["kind"] == "supply"]
+    demand = [b for b in bands if b["kind"] == "demand"]
+    for pc in (None, 100.0, 111.0):
+        for live in (91.0, 99.0, 101.0, 104.5, 106.5, 111.0, 125.0):
+            theirs = {(z["lo"], z["hi"]) for z in sw.overhead_bands(supply, demand, live, pc)}
+            ours = {(z["lo"], z["hi"]) for z in BR.overhead_bands(bands, live, pc)}
+            assert ours == theirs, (live, pc)
+    assert [z["lo"] for z in sw.overhead_bands(supply, demand, 99.0, None)] == [110.0, 120.0, 130.0]

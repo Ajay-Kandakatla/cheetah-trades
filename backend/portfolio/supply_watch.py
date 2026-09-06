@@ -69,7 +69,9 @@ def overhead_bands(supply: list, demand: list, live: float, prev_close=None) -> 
     supply = support, not a sell zone — the house rule the S/D alert paths
     and bounce_room share (integrator 2026-09-05); unknown prev_close keeps
     every band. A demand band that CONTAINS price is support, never
-    overhead. Kept in step with supply_demand.bounce_room.overhead_bands by
+    overhead. A band that fails supply_demand.alert_gates.is_proven_band
+    (touches < 2 or strength < 40) is not a lid at all (KLAC 2026-09-06).
+    Kept in step with supply_demand.bounce_room.overhead_bands by
     tests/test_bounce_room.py."""
     try:
         pc = float(prev_close) if prev_close is not None else None
@@ -77,11 +79,12 @@ def overhead_bands(supply: list, demand: list, live: float, prev_close=None) -> 
         pc = None
     if pc is not None and pc <= 0:
         pc = None
+    from supply_demand.alert_gates import is_proven_band   # leaf module, no cycle
     out = [dict(z, kind="supply") for z in (supply or [])
            if z.get("lo") and z.get("hi") and z["hi"] >= live
-           and not (pc is not None and z["hi"] < pc)]
+           and not (pc is not None and z["hi"] < pc) and is_proven_band(z)]
     out += [dict(z, kind="broken_support") for z in (demand or [])
-            if z.get("lo") and z.get("hi") and z["lo"] > live]
+            if z.get("lo") and z.get("hi") and z["lo"] > live and is_proven_band(z)]
     return out
 
 

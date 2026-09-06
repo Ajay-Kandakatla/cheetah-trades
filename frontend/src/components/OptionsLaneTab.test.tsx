@@ -15,7 +15,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import {
   OptionsLaneTab, EMPTY_OPEN_TEXT, EMPTY_ATTEMPTS_TEXT, EMPTY_CLOSED_TEXT, NO_BROKER_TEXT,
-  fmtEt, legsText, structureLabel, settingsRows, fmtIv,
+  fmtEt, legsText, structureLabel, settingsRows, fmtIv, netText,
 } from './OptionsLaneTab';
 import type { OptionsLanePayload, OptionPosition } from './OptionsLaneTab';
 
@@ -357,6 +357,10 @@ describe('OptionsLaneTab — helpers', () => {
   });
   it('structureLabel / fmtIv / settingsRows are null-safe', () => {
     expect(structureLabel('long_call')).toBe('long call');
+    expect(structureLabel('short_put_spread')).toBe('short put spread');
+    expect(netText(-1.9)).toBe('$1.90 cr');
+    expect(netText(6.3)).toBe('$6.30');
+    expect(netText(null)).toBe('—');
     expect(structureLabel('iron_condor')).toBe('iron condor');
     expect(structureLabel(null)).toBe('—');
     expect(fmtIv(0.45)).toBe('45%');

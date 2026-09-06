@@ -43,7 +43,11 @@ export type OptionPosition = {
   pos_id?: string | null;
   symbol: string;
   status?: 'open' | 'closing' | 'closed' | string | null;
-  structure?: 'long_call' | 'bull_call_spread' | string | null;
+  structure?: 'long_call' | 'bull_call_spread' | 'short_put_spread' | string | null;
+  otype?: 'call' | 'put' | string | null;
+  credit?: number | null;          // per-spread credit received ($ per share) — credit structures only
+  width?: number | null;
+  take_profit_debit?: number | null;
   legs?: OptionsLeg[] | null;
   qty?: number | null;
   debit?: number | null;           // per-spread debit ($ per share)
@@ -204,8 +208,16 @@ export function fmtEt(ts?: string | number | null): string {
 export function structureLabel(s?: string | null): string {
   if (s === 'long_call') return 'long call';
   if (s === 'bull_call_spread') return 'bull call spread';
+  if (s === 'short_put_spread') return 'short put spread';
   if (typeof s === 'string' && s) return s.replace(/_/g, ' ');
   return '—';
+}
+/** Net price per spread: a credit structure stores debit as -credit → "$1.90 cr". */
+export function netText(debit?: number | null): string {
+  const n = num(debit);
+  if (n == null) return '—';
+  if (n < 0) return `${fmtMoney(-n)} cr`;
+  return fmtMoney(n);
 }
 /** "L 142 · S 155" — one strike per leg, role first. */
 export function legsText(legs?: OptionsLeg[] | null): string {
@@ -550,7 +562,7 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                   <th style={TH}>Structure</th>
                   <th style={TH} title="One strike per leg — L = long, S = short.">Legs</th>
                   <th style={THR}>Qty</th>
-                  <th style={THR} title="Net debit per spread ($ per share).">Debit</th>
+                  <th style={THR} title="Net price per spread ($ per share): debit paid, or 'cr' = credit received (short put spread).">Net</th>
                   <th style={THR} title="Whole-position $ at risk (debit × 100 × qty).">Max loss</th>
                   <th style={TH}>Expiry</th>
                   <th style={THR}>Delta</th>
@@ -581,7 +593,7 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                       <td style={TD}>{structureLabel(p.structure)}</td>
                       <td className="mono" style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{legsText(p.legs)}</td>
                       <td className="mono" style={NUM}>{fmtInt(p.qty)}</td>
-                      <td className="mono" style={NUM}>{fmtMoney(p.debit)}</td>
+                      <td className="mono" style={NUM}>{netText(p.debit)}</td>
                       <td className="mono" style={{ ...NUM, color: C.red }}>{fmtMoney(p.max_loss, 0)}</td>
                       <td className="mono" style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>
                         {p.expiry || '—'}
@@ -647,7 +659,7 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                 <tr>
                   <th style={TH}>Symbol</th>
                   <th style={TH}>Structure</th>
-                  <th style={THR} title="Debit paid → credit received, per spread.">Debit → exit</th>
+                  <th style={THR} title="Net paid (or 'cr' received) → net at exit, per spread.">Net → exit</th>
                   <th style={THR} title="Realized $ on the whole position, paper dollars.">Realized</th>
                   <th style={TH}>Close reason</th>
                   <th style={TH}>Closed (ET)</th>
@@ -661,7 +673,7 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                                   style={{ fontWeight: 700, color: 'inherit', textDecoration: 'none' }} />
                     </td>
                     <td style={TD}>{structureLabel(p.structure)}</td>
-                    <td className="mono" style={NUM}>{fmtMoney(p.debit)} → {fmtMoney(p.exit_credit)}</td>
+                    <td className="mono" style={NUM}>{netText(p.debit)} → {netText(p.exit_credit)}</td>
                     <td className="mono" style={{ ...NUM, color: pnlColor(p.realized_pnl), fontWeight: 700 }}>{fmtSignedMoney(p.realized_pnl)}</td>
                     <td style={{ ...TD, whiteSpace: 'normal', color: C.sub, minWidth: 160 }}>{p.close_reason || '—'}</td>
                     <td className="mono" style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{fmtEt(p.closed_ts)}</td>

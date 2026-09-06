@@ -42,7 +42,27 @@ def _occ(strike: float, exp: str = EXP_PICK) -> str:
 
 def _contract(strike, exp=EXP_PICK, oi=500):
     return {"symbol": _occ(strike, exp), "expiration_date": exp, "strike_price": str(strike),
-            "open_interest": str(oi), "tradable": True, "status": "active"}
+            "open_interest": str(oi), "tradable": True, "status": "active", "type": "call"}
+
+
+def _pocc(strike: float, exp: str = EXP_PICK) -> str:
+    return "KLAC%sP%08d" % (exp[2:].replace("-", ""), int(round(strike * 1000)))
+
+
+def _put(strike, exp=EXP_PICK, oi=500):
+    return {"symbol": _pocc(strike, exp), "expiration_date": exp, "strike_price": str(strike),
+            "open_interest": str(oi), "tradable": True, "status": "active", "type": "put"}
+
+
+PUTS = [_put(140), _put(145), _put(150), _put(155), _put(160), _put(165)]
+SNAPS_PUTS = {
+    _pocc(140): {"bid": 0.55, "ask": 0.65, "iv": 0.60, "delta": -0.08},
+    _pocc(145): {"bid": 0.90, "ask": 1.00, "iv": 0.58, "delta": -0.12},
+    _pocc(150): {"bid": 1.40, "ask": 1.50, "iv": 0.56, "delta": -0.18},
+    _pocc(155): {"bid": 2.20, "ask": 2.35, "iv": 0.54, "delta": -0.26},
+    _pocc(160): {"bid": 3.40, "ask": 3.60, "iv": 0.52, "delta": -0.35},   # the short: highest <= floor 164.6
+    _pocc(165): {"bid": 5.20, "ask": 5.50, "iv": 0.50, "delta": -0.45},
+}
 
 
 CONTRACTS = [_contract(165, EXP_NEAR), _contract(165, EXP_FAR),
@@ -76,10 +96,13 @@ class FakeOptBroker(FakeBrokerModule):
     """FakeBrokerModule + the options surface of broker_alpaca."""
 
     def __init__(self, positions=(), contracts=None, snaps=None, last=None,
-                 closed=(), equity=100_000.0, market_open=True, reject=None):
+                 closed=(), equity=100_000.0, market_open=True, reject=None,
+                 puts=None, put_snaps=None):
         super().__init__(positions, (), equity, market_open)
         self.contracts = list(CONTRACTS if contracts is None else contracts)
         self.snaps = dict(SNAPS_LONG_CALL if snaps is None else snaps)
+        self.puts = list(PUTS if puts is None else puts)
+        self.put_snaps = dict(SNAPS_PUTS if put_snaps is None else put_snaps)
         self.last = dict(last or {"KLAC": 168.5})
         self.closed = list(closed)
         self.reject = reject
@@ -88,9 +111,9 @@ class FakeOptBroker(FakeBrokerModule):
     def option_contracts(self, underlying, exp_gte, exp_lte, otype="call",
                          strike_gte=None, strike_lte=None):
         self.calls.append(("option_contracts", {"underlying": underlying, "exp_gte": exp_gte,
-                                                "exp_lte": exp_lte}))
+                                                "exp_lte": exp_lte, "otype": otype}))
         out = []
-        for c in self.contracts:
+        for c in (self.puts if otype == "put" else self.contracts):
             if not (exp_gte <= c["expiration_date"] <= exp_lte):
                 continue
             k = float(c["strike_price"])
@@ -103,7 +126,9 @@ class FakeOptBroker(FakeBrokerModule):
 
     def option_snapshots(self, underlying, exp_gte, exp_lte, otype="call",
                          strike_gte=None, strike_lte=None):
-        return {k: dict(v) for k, v in self.snaps.items()}
+        self.calls.append(("option_snapshots", {"underlying": underlying, "otype": otype}))
+        src = self.put_snaps if otype == "put" else self.snaps
+        return {k: dict(v) for k, v in src.items()}
 
     def submit_option_order(self, symbol, qty, side, limit_price, position_intent=None,
                             client_order_id=None, tif="day"):
@@ -208,9 +233,11 @@ def test_short_strike_is_the_lowest_liquid_strike_at_or_above_the_target():
 
 def test_structure_size_and_ticks():
     assert OL.structure_for(0.38, True) == "long_call"
-    assert OL.structure_for(0.55, True) == "bull_call_spread"
-    assert OL.structure_for(0.55, False) == "long_call"          # nothing to sell at
+    assert OL.structure_for(0.55, True) == "short_put_spread"    # rich IV: sell premium (2026-09-06)
+    assert OL.structure_for(0.55, False) == "short_put_spread"   # no supply target needed
     assert OL.structure_for(None, True) == "long_call"
+    assert OL.call_spread_fallback(True) == "bull_call_spread"
+    assert OL.call_spread_fallback(False) == "long_call"          # nothing to sell at
     assert OL.size_contracts(6.3, 100_000.0) == (1, 1000.0)       # 1% of equity = $1000
     assert OL.size_contracts(2.0, 100_000.0) == (5, 1000.0)
     assert OL.size_contracts(20.0, 1_000_000.0) == (0, 1500.0)    # $1,500 cap
@@ -253,9 +280,10 @@ def test_demand_touch_passing_the_gate_buys_one_long_call(oenv):
 
 
 def test_rich_iv_buys_a_bull_call_spread_short_at_the_supply_band(oenv):
+    """The FALLBACK (2026-09-06): rich IV with no liquid put spread listed."""
     snaps = {k: dict(v) for k, v in SNAPS_LONG_CALL.items()}
     snaps[_occ(165)]["iv"] = 0.55
-    fake, db, _ = oenv(snaps=snaps)
+    fake, db, _ = oenv(snaps=snaps, puts=[])
     out = OL.run()
     assert out["entered"] == ["KLAC"]
     o = fake.orders[0]
@@ -272,10 +300,11 @@ def test_rich_iv_without_a_liquid_short_strike_falls_back_to_a_long_call(oenv):
     snaps = {k: dict(v) for k, v in SNAPS_LONG_CALL.items()}
     snaps[_occ(165)]["iv"] = 0.55
     contracts = [c for c in CONTRACTS if float(c["strike_price"]) < 190]
-    fake, db, _ = oenv(snaps=snaps, contracts=contracts)
+    fake, db, _ = oenv(snaps=snaps, contracts=contracts, puts=[])
     OL.run()
     assert fake.orders[0]["kind"] == "single"
-    assert "spread_fallback" in _rows(db, "options_entry")[0]["detail"]
+    det = _rows(db, "options_entry")[0]["detail"]
+    assert "spread_fallback" in det and "put_spread_fallback" in det
 
 
 def test_earnings_inside_the_window_blocks_the_entry(oenv):
@@ -523,6 +552,7 @@ def test_status_block_and_tab_payload_shape(oenv):
     assert blk["enabled"] is True and blk["max_per_day"] == 1 and blk["max_open"] == 3
     assert blk["open"][0]["symbol"] == "KLAC" and "_id" not in blk["open"][0]
     assert len(blk["rules"]) == 6 and blk["settings"]["min_dte"] == 28
+    assert blk["settings"]["put_spread_width_pct"] == 5.0 and blk["settings"]["take_profit_pct_of_credit"] == 25.0
     tab = OL.tab_payload()
     assert tab["armed"] is True and tab["status"]["strategy"] == "options_zone"
     assert tab["recent_closed"] == []
@@ -548,3 +578,112 @@ def test_close_now_requires_armed_and_an_open_position(oenv):
     fake, db, _ = oenv(open_docs=[OPEN_LONG])
     res = OL.close_now("klac", "owner close")
     assert res["orders"][0]["symbol"] == _occ(165) and _pos(db)["status"] == "closing"
+
+
+# ── put spread under the band floor (Ajay 2026-09-06, "ok please all 3") ─────
+OPEN_PUT_SPREAD = {"pos_id": "KLAC-p", "symbol": "KLAC", "strategy": "options_zone", "status": "open",
+                   "structure": "short_put_spread", "otype": "put", "qty": 2, "debit": -1.2, "credit": 1.2,
+                   "width": 5.0, "max_loss": 760.0, "take_profit_debit": 0.3, "expiry": EXP_PICK,
+                   "legs": [{"symbol": _pocc(160), "side": "sell", "position_intent": "sell_to_open",
+                             "ratio_qty": 1, "strike": 160.0, "role": "short"},
+                            {"symbol": _pocc(155), "side": "buy", "position_intent": "buy_to_open",
+                             "ratio_qty": 1, "strike": 155.0, "role": "long"}],
+                   "stop_underlying": 163.78, "target_underlying": 191.11,
+                   "order_id": "mleg-1", "entry_ts": (datetime.now(timezone.utc) - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")}
+
+
+def test_put_spread_pure_rules():
+    c, sn, why = OL.pick_put_short_strike(PUTS, SNAPS_PUTS, 164.6)
+    assert why is None and float(c["strike_price"]) == 160.0, "highest strike at or under the floor"
+    c2, _, why2 = OL.pick_put_long_strike(PUTS, SNAPS_PUTS, 160.0)
+    assert why2 is None and float(c2["strike_price"]) == 150.0, "highest strike <= 160 x 0.95 = 152"
+    assert OL.pick_put_long_strike(PUTS, SNAPS_PUTS, 160.0, width_pct=3.0)[0]["strike_price"] == "155"
+    illiquid = {k: dict(v, bid=0.0) for k, v in SNAPS_PUTS.items()}
+    assert "no two-sided quote" in OL.pick_put_short_strike(PUTS, illiquid, 164.6)[2]
+    assert OL.pick_put_short_strike([], {}, 164.6)[2].startswith("no put strike")
+    assert OL.credit_ok(1.2, 5.0) is None
+    assert OL.credit_ok(0.6, 5.0).startswith("credit 0.60 = 12% of the 5.00 width < 15%")
+    assert OL.credit_ok(0.0, 5.0).startswith("net credit") and OL.credit_ok(1.0, 0.0).startswith("spread width")
+    quotes = {_pocc(160): {"bid": 0.40, "ask": 0.50}, _pocc(155): {"bid": 0.20, "ask": 0.30}}
+    assert OL.spread_cost_to_close(OPEN_PUT_SPREAD, quotes) == 0.3
+    assert OL.take_profit_reason(OPEN_PUT_SPREAD, quotes) == "take profit: buy-back 0.30 <= 25% of the 1.20 credit"
+    assert OL.take_profit_reason(OPEN_PUT_SPREAD, {_pocc(160): {"bid": 0.9, "ask": 1.0}, _pocc(155): {"bid": 0.3, "ask": 0.4}}) is None
+    assert OL.take_profit_reason(OPEN_PUT_SPREAD, {}) is None, "no read = hold"
+    assert OL.take_profit_reason(OPEN_LONG, quotes) is None, "debit structures never take profit on premium"
+
+
+def test_rich_iv_sells_a_put_spread_under_the_band_floor_as_one_credit_package(oenv):
+    snaps = {k: dict(v) for k, v in SNAPS_LONG_CALL.items()}
+    snaps[_occ(165)]["iv"] = 0.55
+    fake, db, pushes = oenv(snaps=snaps)
+    out = OL.run()
+    assert out["entered"] == ["KLAC"]
+    o = fake.orders[0]
+    assert o["kind"] == "mleg" and o["limit_price"] == -1.9, "3.40 bid - 1.50 ask = 1.90 credit, NEGATIVE = credit"
+    assert [l["symbol"] for l in o["legs"]] == [_pocc(160), _pocc(150)]
+    assert [l["position_intent"] for l in o["legs"]] == ["sell_to_open", "buy_to_open"]
+    assert o["qty"] == 1                                          # risk 8.10 x100 = $810 per spread inside $1,000
+    pos = _pos(db)
+    assert pos["structure"] == "short_put_spread" and pos["otype"] == "put"
+    assert pos["credit"] == 1.9 and pos["width"] == 10.0 and pos["debit"] == -1.9
+    assert pos["max_loss"] == 810.0 and pos["take_profit_debit"] == 0.47
+    assert [l["role"] for l in pos["legs"]] == ["short", "long"]
+    assert pos["stop_underlying"] == 163.78 and pos["target_underlying"] == 191.11
+    assert "1.90 credit" in pushes[0][2] and "short put spread" in pushes[0][2]
+    assert [c[1]["otype"] for c in fake.calls if c[0] == "option_contracts"] == ["call", "put"]
+
+
+def test_put_spread_needs_a_worthwhile_credit_else_falls_back(oenv):
+    snaps = {k: dict(v) for k, v in SNAPS_LONG_CALL.items()}
+    snaps[_occ(165)]["iv"] = 0.55
+    thin = {k: dict(v) for k, v in SNAPS_PUTS.items()}
+    thin[_pocc(160)] = {"bid": 1.55, "ask": 1.60, "iv": 0.52, "delta": -0.3}    # 1.55 - 1.50 = 0.05 credit
+    fake, db, _ = oenv(snaps=snaps, put_snaps=thin)
+    OL.run()
+    assert fake.orders[0]["kind"] == "mleg" and fake.orders[0]["limit_price"] == 5.0    # the call spread
+    det = _rows(db, "options_entry")[0]["detail"]
+    assert det["structure"] == "bull_call_spread" and "< 15%" in det["put_spread_fallback"]
+
+
+def test_put_spread_take_profit_buys_it_back_short_leg_first(oenv):
+    cheap = {_pocc(160): {"bid": 0.40, "ask": 0.45}, _pocc(150): {"bid": 0.05, "ask": 0.10},
+             _pocc(155): {"bid": 0.15, "ask": 0.20}}
+    fake, db, pushes = oenv(open_docs=[OPEN_PUT_SPREAD], rows=[], last={"KLAC": 178.0}, put_snaps=cheap,
+                            positions=[_opt_position(_pocc(160), qty=-2), _opt_position(_pocc(155), qty=2)])
+    out = OL.run()
+    assert out["closing"] == ["KLAC"]
+    pos = _pos(db)
+    assert pos["close_reason"] == "take profit: buy-back 0.30 <= 25% of the 1.20 credit"
+    assert [o["position_intent"] for o in fake.orders] == ["buy_to_close", "sell_to_close"]
+    assert fake.orders[0]["symbol"] == _pocc(160) and fake.orders[0]["limit_price"] == 0.45
+    assert fake.orders[1]["symbol"] == _pocc(155) and fake.orders[1]["limit_price"] == 0.15
+    assert all(c[1]["otype"] == "put" for c in fake.calls if c[0] == "option_snapshots")
+    # not cheap enough: hold
+    rich = {_pocc(160): {"bid": 0.90, "ask": 1.00}, _pocc(155): {"bid": 0.30, "ask": 0.40}}
+    fake2, db2, _ = oenv(open_docs=[OPEN_PUT_SPREAD], rows=[], last={"KLAC": 178.0}, put_snaps=rich,
+                         positions=[_opt_position(_pocc(160), qty=-2), _opt_position(_pocc(155), qty=2)])
+    assert OL.run()["held"] == ["KLAC"] and not fake2.orders
+
+
+def test_put_spread_underlying_under_the_floor_closes_like_the_stock_lane(oenv):
+    fake, db, _ = oenv(open_docs=[OPEN_PUT_SPREAD], rows=[], last={"KLAC": 163.0},
+                       positions=[_opt_position(_pocc(160), qty=-2), _opt_position(_pocc(155), qty=2)])
+    assert OL.run()["closing"] == ["KLAC"] and "under the band floor" in _pos(db)["close_reason"]
+    assert fake.orders[0]["position_intent"] == "buy_to_close" and fake.orders[0]["symbol"] == _pocc(160)
+
+
+def test_put_spread_close_realizes_the_credit_minus_the_buy_back(oenv):
+    closing = dict(OPEN_PUT_SPREAD, status="closing", close_reason="take profit",
+                   close_orders=[{"symbol": _pocc(160), "order_id": "b-1", "price": 0.45},
+                                 {"symbol": _pocc(155), "order_id": "s-1", "price": 0.15}])
+    fills = [{"id": "b-1", "symbol": _pocc(160), "status": "filled", "filled_avg_price": "0.40"},
+             {"id": "s-1", "symbol": _pocc(155), "status": "filled", "filled_avg_price": "0.15"}]
+    fake, db, pushes = oenv(open_docs=[closing], positions=[], closed=fills, rows=[])
+    assert OL.run()["closed"] == ["KLAC"]
+    pos = _pos(db)
+    # close net = +0.15 (long sold) - 0.40 (short bought) = -0.25; P&L = (-0.25 - (-1.20)) x 100 x 2 = +190
+    assert pos["status"] == "closed" and pos["exit_credit"] == -0.25 and pos["realized_pnl"] == 190.0
+    j = OL.journal_block()
+    assert j["wins"] == 1 and j["realized_pnl"] == 190.0
+    assert j["expectancy_pct"] == pytest.approx(190.0 / 760.0 * 100.0, abs=0.01), "gain on the $ at risk (max loss)"
+    assert "+190" in pushes[0][2]

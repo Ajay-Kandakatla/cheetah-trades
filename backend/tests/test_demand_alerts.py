@@ -388,18 +388,19 @@ def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypa
     assert out["at"] == 1 and out["near"] == 1 and out["pushed"] == 1
     assert out["skipped_proximity"] == 1 and out["skipped_room"] == 0 and out["unknown_room"] == 0
     assert [s["title"] for s in sent] == ["🧲 AAPL 0.47% above demand $200–210"]
-    assert sent[0]["body"] == "$211 · tested 3x · room: clear runway · $3.0T · AAPL Inc"
+    assert sent[0]["body"] == ("$211 · tested 3x · room: clear runway · buy $200-210 · stop $199.00 "
+                               "(0.5% under the floor, 5.7% risk) · target: clear runway · $3.0T · AAPL Inc")
     assert list(coll.docs) == ["AAPL:200.00-210.00:2026-09-03:at"], "NEAR is not recorded: nothing was sent"
     # a lid 2.8% over the print (unbroken: hi 219 >= prev 215): listed, counted, silent
     sent.clear()
-    lid_store = _store("AAPL", [{"kind": "supply", "lo": 217.0, "hi": 219.0, "touches": 2, "strength": 20.0}], 215.0)
+    lid_store = _store("AAPL", [{"kind": "supply", "lo": 217.0, "hi": 219.0, "touches": 2, "strength": 50.0}], 215.0)
     out2 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2, 215.0)),
                          caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True,
                          store=lid_store)
     assert out2["at"] == 1 and out2["pushed"] == 0 and out2["skipped_room"] == 1 and sent == []
     assert out2["hits"][0]["room"]["room_pct"] == 2.8
     # the same lid 5.2% over: rings, and the body says so
-    far_store = _store("AAPL", [{"kind": "supply", "lo": 222.0, "hi": 224.0, "touches": 2, "strength": 20.0}], 215.0)
+    far_store = _store("AAPL", [{"kind": "supply", "lo": 222.0, "hi": 224.0, "touches": 2, "strength": 50.0}], 215.0)
     out3 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2, 215.0)),
                          caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True,
                          store=far_store)

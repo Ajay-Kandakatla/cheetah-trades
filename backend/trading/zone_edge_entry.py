@@ -501,7 +501,9 @@ def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
       * a SUPPLY band with hi >= last; one CONTAINING the print (lo <= last
         <= hi) is zero room -> blocked 'inside supply band';
       * a DEMAND band with lo > last — broken support is resistance. A
-        demand band containing or below the print is support, not overhead.
+        demand band containing or below the print is support, not overhead;
+      * a band that fails alert_gates.is_proven_band (touches < 2 or
+        strength < 40) is skipped — the KLAC lesson (2026-09-06).
     Nothing overhead = unbounded room = ok. No zone doc = unknown = NOT ok
     (fails closed). Returns (ok, detail)."""
     last, stop_pct = _f(last), _f(stop_pct)
@@ -521,8 +523,8 @@ def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
     for b in bands:
         kind = str(b.get("kind") or "")
         lo, hi = _f(b.get("lo")), _f(b.get("hi"))
-        if lo is None:
-            continue
+        if lo is None or not alert_gates.is_proven_band(b):
+            continue                               # unproven lid = noise (KLAC 2026-09-06)
         if hi is None or hi < lo:
             hi = lo                                # degenerate band = its floor
         if kind == "supply" and hi >= last:

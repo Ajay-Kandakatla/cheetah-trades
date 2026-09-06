@@ -25,14 +25,14 @@ tab in `frontend/src/components/OptionsLaneTab.tsx`.
 | underlying | price ≥ $20 | `MIN_UNDERLYING_PRICE` |
 | expiry | nearest listed expiry with 28–60 days; skipped if an earnings date sits inside [today, expiry] | `MIN_DTE`, `MAX_DTE`, `sepa.earnings_watch` |
 | long strike | highest listed strike **at or under the band top** whose delta is 0.55–0.75 (in the money the moment the bounce starts); falls back to the highest liquid strike under the top when the feed carries no greeks | `pick_long_strike` |
-| structure | long call; **bull call spread** when the chosen call's IV ≥ 45 % (short strike = lowest listed strike at or above the first supply band = the room target); no liquid short strike → long call | `structure_for`, `pick_short_strike` |
+| structure | long call by default. **IV ≥ 45 % → short put spread under the band floor** (2026-09-06): short put = highest listed strike at or under the floor, long put = highest strike at or under short × 0.95, credit ≥ 15 % of the width, risk = width − credit; no liquid put spread → **bull call spread** (short strike = lowest listed strike at or above the first supply band = the room target); no liquid short strike → long call | `structure_for`, `_plan_put_spread`, `pick_put_short_strike`, `pick_put_long_strike`, `credit_ok`, `call_spread_fallback`, `pick_short_strike` |
 | liquidity | open interest ≥ 200, two-sided quote, bid-ask ≤ 10 % of mid or ≤ $0.15 | `liquidity_ok` |
-| size | premium at risk = min(1 % of equity, $1,500) → whole contracts | `size_contracts` |
+| size | $ at risk = min(1 % of equity, $1,500) → whole contracts; premium for debit structures, width − credit for the put spread | `size_contracts` |
 | pace | 1 entry per ET day, 3 open underlyings, one position per underlying | caps |
-| orders | marketable limits rounded to the option tick ($0.05 under $3, $0.10 above): buy at the ask, spread at long-ask − short-bid (`mleg`, net debit) | `_place` |
+| orders | marketable limits rounded to the option tick ($0.05 under $3, $0.10 above): buy at the ask, call spread at long-ask − short-bid (`mleg`, net debit), put spread at short-bid − long-ask as ONE `mleg` package with a **negative** limit (Alpaca: "a negative value signifies a credit") — never a naked short leg | `_place` |
 
-Put-selling (short put / put spread under the band floor) is **not** in v1:
-assignment and margin need the owner's separate yes.
+Put-selling was out of v1; Ajay approved it 2026-09-06 ("ok please all 3").
+Only the defined-risk put **spread** is placed, never a naked put.
 
 ## Stop-loss and exit rules (on the underlying, never on the premium)
 
@@ -42,10 +42,12 @@ assignment and margin need the owner's separate yes.
 | target | underlying reaches the first supply band (the short strike on a spread) → close |
 | time | DTE ≤ 7 → close |
 | earnings | earnings within 2 days → close |
-| max loss | the premium paid (long call / debit spread) |
+| take profit (put spread only) | the spread can be bought back for ≤ 25 % of the credit received → close (`take_profit_reason`, quotes read once per tick per open credit position) |
+| max loss | the premium paid (long call / debit spread); width − credit (put spread) |
 
 Closes are marketable limits: long leg sold at the bid, short leg bought
-back at the ask, **short leg first** so there is never a naked short. A
+back at the ask, **short leg first** so there is never a naked short. The
+quotes come from the position's own option type (`otype` call / put). A
 position is `closing` until every leg is gone at the broker, then the fill
 prices from the closed orders realise the P&L (`options_exit` row, push).
 
@@ -96,3 +98,11 @@ guard in `backend/tests/test_trading_contracts.py`,
 - One close order per leg per tick; an unfilled close is re-sent by the
   next minute's tick with a fresh quote (no market orders on contracts).
 - IV is the chosen contract's implied volatility, not an IV rank.
+- Put-spread P&L: the position stores `debit = -credit`, so the same
+  `(close net − debit) × 100 × qty` realises both structures; the journal's
+  expectancy divides by `max_loss` (the $ actually at risk).
+
+## Builder defaults (2026-09-06, put spread) — change on Ajay's word
+
+`PUT_SPREAD_WIDTH_PCT` 5, `MIN_CREDIT_PCT_OF_WIDTH` 15, `TAKE_PROFIT_PCT_OF_CREDIT`
+25. Pinned in `tests/test_trading_contracts.py`.

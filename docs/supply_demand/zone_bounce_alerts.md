@@ -68,6 +68,12 @@ no device); a transport failure retries.
 
 ### Phone gate (2026-09-05)
 
+> **2026-09-06 — proven lids + the plan line.** `room_for` measures to the first
+> PROVEN band (≥ 2 touches, strength ≥ 40); NTAP's 1-touch 173.87 shelf no longer
+> counts as a ceiling. The single push ends with the plan (buy / stop 0.5% under
+> the floor / target). See `docs/supply_demand/proven_lids.md`.
+
+
 **Ajay 2026-09-05 (verbatim, mid-fix):** *"When alert I need the same logic. Need only alerts on
 stocks that have atleast 5% to Supply and also <1% bounce from demand zone"*. Shared module
 `backend/supply_demand/alert_gates.py` (also called by `zone_edge` and `demand_alerts`). **Boards

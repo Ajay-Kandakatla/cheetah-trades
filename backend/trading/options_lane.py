@@ -20,10 +20,19 @@ OWNER RULES (2026-09-06 chat, no book — S/D scope, no Minervini cites):
               not win if the bounce stalls (room is usually 2-3 ATR-days).
   earnings    no earnings date inside [today, expiry]; an open position is
               closed EARNINGS_CLOSE_DAYS before one.
-  structure   long call by default; bull call spread when the chosen call's
-              IV >= IV_SPREAD_THRESHOLD (rich IV after a slide favours
-              defined-risk spreads). Put-selling is deliberately NOT in v1
-              (assignment / margin — needs the owner's separate yes).
+  structure   long call by default. When the chosen call's IV >=
+              IV_SPREAD_THRESHOLD (rich IV after a slide) the lane SELLS
+              premium instead (Ajay 2026-09-06, "ok please all 3"): a short
+              put spread UNDER the band floor — short put = the highest listed
+              strike at or under the floor (the level the thesis says holds),
+              long put = the highest strike at or under short x (1 -
+              PUT_SPREAD_WIDTH_PCT/100); credit >= MIN_CREDIT_PCT_OF_WIDTH of
+              the width; defined risk = width - credit. No liquid put spread
+              -> bull call spread (short strike at the room target) -> long
+              call. Sent as ONE mleg package at a net credit (Alpaca: a
+              negative limit_price is a credit), so there is never a naked
+              short. Extra exit for the credit structure: buy it back when
+              the spread costs <= TAKE_PROFIT_PCT_OF_CREDIT of the credit.
   exits       thesis, not premium: underlying prints under the band floor
               minus STOP_BUFFER_PCT -> close; underlying reaches the room
               target -> close; DTE <= CLOSE_DTE -> close; earnings within
@@ -76,7 +85,10 @@ MIN_DTE = 28                      # "at least 3 to 4 weeks"
 MAX_DTE = 60
 CLOSE_DTE = 7                     # time exit
 DELTA_LO, DELTA_HI = 0.55, 0.75   # long strike window ("delta 0.6-0.7")
-IV_SPREAD_THRESHOLD = 0.45        # chosen call IV >= this -> bull call spread
+IV_SPREAD_THRESHOLD = 0.45        # chosen call IV >= this -> sell premium (put spread), else spreads
+PUT_SPREAD_WIDTH_PCT = 5.0        # long put ~5% under the short put (owner default, 2026-09-06)
+MIN_CREDIT_PCT_OF_WIDTH = 15.0    # credit must be >= 15% of the spread width
+TAKE_PROFIT_PCT_OF_CREDIT = 25.0  # buy the spread back at <= 25% of the credit received
 MAX_SPREAD_PCT_OF_MID = 10.0      # bid-ask as % of mid
 MAX_SPREAD_ABS = 0.15             # or this many dollars, whichever is looser
 MIN_OPEN_INTEREST = 200
@@ -234,11 +246,98 @@ def pick_short_strike(contracts: list, snaps: dict, target: float, long_strike: 
     return None, None, "no liquid strike at or above the target %.2f" % target
 
 
+def pick_put_short_strike(contracts: list, snaps: dict, band_lo: float) -> tuple:
+    """(contract, snap, reason): the HIGHEST liquid put strike at or under
+    the band floor — the level the thesis says holds."""
+    under = [c for c in contracts or []
+             if _f(c.get("strike_price")) is not None
+             and float(c["strike_price"]) <= band_lo + 1e-9]
+    under.sort(key=lambda c: -float(c["strike_price"]))
+    why = []
+    for c in under:
+        snap = (snaps or {}).get(c.get("symbol")) or {}
+        liq = liquidity_ok(c, snap)
+        if liq:
+            why.append("%s: %s" % (c.get("symbol"), liq))
+            continue
+        return c, snap, None
+    return None, None, "; ".join(why[:3]) or "no put strike at or under the band floor %.2f" % band_lo
+
+
+def pick_put_long_strike(contracts: list, snaps: dict, short_strike: float,
+                         width_pct: float = PUT_SPREAD_WIDTH_PCT) -> tuple:
+    """(contract, snap, reason): the highest liquid put strike at or under
+    short x (1 - width_pct/100) — the wing that defines the risk."""
+    cap = short_strike * (1.0 - width_pct / 100.0)
+    under = [c for c in contracts or []
+             if _f(c.get("strike_price")) is not None
+             and float(c["strike_price"]) <= cap + 1e-9
+             and float(c["strike_price"]) < short_strike - 1e-9]
+    under.sort(key=lambda c: -float(c["strike_price"]))
+    why = []
+    for c in under:
+        snap = (snaps or {}).get(c.get("symbol")) or {}
+        liq = liquidity_ok(c, snap)
+        if liq:
+            why.append("%s: %s" % (c.get("symbol"), liq))
+            continue
+        return c, snap, None
+    return None, None, "; ".join(why[:3]) or "no put strike %g%% under the short %.2f" % (width_pct, short_strike)
+
+
+def credit_ok(credit: float, width: float) -> Optional[str]:
+    """None when the credit is worth the risk, else the reason."""
+    if width <= 0:
+        return "spread width %.2f not positive" % width
+    if credit <= 0:
+        return "net credit %.2f not positive" % credit
+    if credit / width * 100.0 < MIN_CREDIT_PCT_OF_WIDTH:
+        return "credit %.2f = %.0f%% of the %.2f width < %d%%" % (
+            credit, credit / width * 100.0, width, MIN_CREDIT_PCT_OF_WIDTH)
+    return None
+
+
+def spread_cost_to_close(pos: dict, quotes: dict) -> Optional[float]:
+    """What the credit spread costs to buy back now: short ask - long bid
+    (per share). None without a two-sided read."""
+    short = next((l for l in pos.get("legs") or [] if l.get("role") == "short"), None)
+    long_ = next((l for l in pos.get("legs") or [] if l.get("role") == "long"), None)
+    if not short or not long_:
+        return None
+    ask = _f(((quotes or {}).get(short.get("symbol")) or {}).get("ask"))
+    bid = _f(((quotes or {}).get(long_.get("symbol")) or {}).get("bid"))
+    if ask is None or bid is None:
+        return None
+    return round(ask - bid, 2)
+
+
+def take_profit_reason(pos: dict, quotes: dict) -> Optional[str]:
+    """Credit structures only: buy back when the spread costs <=
+    TAKE_PROFIT_PCT_OF_CREDIT of the credit received. None = hold."""
+    credit = _f(pos.get("credit"))
+    if not credit or credit <= 0 or not str(pos.get("structure") or "").startswith("short_"):
+        return None
+    cost = spread_cost_to_close(pos, quotes)
+    if cost is None:
+        return None
+    line = round(credit * TAKE_PROFIT_PCT_OF_CREDIT / 100.0, 2)
+    if cost <= line:
+        return "take profit: buy-back %.2f <= %d%% of the %.2f credit" % (
+            cost, TAKE_PROFIT_PCT_OF_CREDIT, credit)
+    return None
+
+
 def structure_for(iv: Optional[float], has_target: bool) -> str:
-    """long_call unless IV is rich AND there is a supply band to sell at."""
-    if has_target and iv is not None and iv >= IV_SPREAD_THRESHOLD:
-        return "bull_call_spread"
+    """long_call unless IV is rich: then short_put_spread (sell the rich
+    premium under the floor); the bull call spread is the fallback when the
+    put spread is not liquid and a supply target exists."""
+    if iv is not None and iv >= IV_SPREAD_THRESHOLD:
+        return "short_put_spread"
     return "long_call"
+
+
+def call_spread_fallback(has_target: bool) -> str:
+    return "bull_call_spread" if has_target else "long_call"
 
 
 def size_contracts(debit_per_contract: float, equity: float) -> tuple:
@@ -366,6 +465,45 @@ def _chain(brk, sym: str, today: date, band_hi: float, target: Optional[float]) 
     return contracts, snaps, expiry, None
 
 
+def _put_chain(brk, sym: str, expiry: str, band_lo: float) -> tuple:
+    """(contracts, snaps) for the PUTS of one expiry around the band floor."""
+    lo_strike = round(band_lo * 0.80, 2)
+    hi_strike = round(band_lo * 1.02, 2)
+    contracts = brk.option_contracts(sym, expiry, expiry, "put", lo_strike, hi_strike)
+    if not contracts:
+        return [], {}
+    snaps = brk.option_snapshots(sym, expiry, expiry, "put", lo_strike, hi_strike)
+    return contracts, snaps
+
+
+def _plan_put_spread(brk, sym: str, expiry: str, band_lo: float) -> dict:
+    """{"ok", "reason", legs, credit, width, short_strike, long_strike}."""
+    try:
+        contracts, snaps = _put_chain(brk, sym, expiry, band_lo)
+    except BrokerError as exc:
+        return {"ok": False, "reason": "put chain unavailable: %s" % exc}
+    short_c, short_s, why = pick_put_short_strike(contracts, snaps, band_lo)
+    if why:
+        return {"ok": False, "reason": why}
+    k_short = float(short_c["strike_price"])
+    long_c, long_s, why = pick_put_long_strike(contracts, snaps, k_short)
+    if why:
+        return {"ok": False, "reason": why}
+    k_long = float(long_c["strike_price"])
+    credit = round_down_tick(float(short_s["bid"]) - float(long_s["ask"]))
+    width = round(k_short - k_long, 2)
+    why = credit_ok(credit, width)
+    if why:
+        return {"ok": False, "reason": why}
+    legs = [{"symbol": short_c["symbol"], "side": "sell", "position_intent": "sell_to_open",
+             "ratio_qty": 1, "strike": k_short, "role": "short"},
+            {"symbol": long_c["symbol"], "side": "buy", "position_intent": "buy_to_open",
+             "ratio_qty": 1, "strike": k_long, "role": "long"}]
+    return {"ok": True, "legs": legs, "credit": round(credit, 2), "width": width,
+            "short_strike": k_short, "long_strike": k_long,
+            "iv": _f(short_s.get("iv")), "delta": _f(short_s.get("delta"))}
+
+
 def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> dict:
     """Build the order plan for one gated candidate. Pure apart from the
     broker chain reads. Returns {"ok": bool, "reason", ...plan}."""
@@ -404,12 +542,33 @@ def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> d
     out["delta"] = _f(long_s.get("delta"))
     structure = structure_for(iv, target is not None)
     short_c, short_s = None, None
+    if structure == "short_put_spread":
+        ps = _plan_put_spread(brk, sym, expiry, float(band["lo"]))
+        if ps["ok"]:
+            out["structure"] = "short_put_spread"
+            out["otype"] = "put"
+            out["iv"], out["delta"] = ps["iv"] if ps["iv"] is not None else iv, ps["delta"]
+            credit, width = ps["credit"], ps["width"]
+            qty, budget = size_contracts(width - credit, equity)      # risk = width - credit
+            out.update({"legs": ps["legs"], "credit": credit, "width": width,
+                        "debit": round(-credit, 2), "limit_price": round(-credit, 2),
+                        "qty": qty, "budget": round(budget, 2),
+                        "max_loss": round((width - credit) * 100.0 * qty, 2),
+                        "take_profit_debit": round(credit * TAKE_PROFIT_PCT_OF_CREDIT / 100.0, 2)})
+            if qty < 1:
+                out["reason"] = "put spread risk %.2f x100 over the budget $%.0f" % (width - credit, budget)
+                return out
+            out["ok"] = True
+            return out
+        out["put_spread_fallback"] = ps["reason"]
+        structure = call_spread_fallback(target is not None)
     if structure == "bull_call_spread":
         short_c, short_s, why = pick_short_strike(contracts, snaps, target, float(long_c["strike_price"]))
         if why:
             structure = "long_call"            # no liquid short strike: keep it simple
             out["spread_fallback"] = why
     out["structure"] = structure
+    out["otype"] = "call"
     long_ask = float(long_s["ask"])
     legs = [{"symbol": long_c["symbol"], "side": "buy", "position_intent": "buy_to_open",
              "ratio_qty": 1, "strike": float(long_c["strike_price"]), "role": "long"}]
@@ -438,7 +597,10 @@ def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> d
 def _place(brk, plan: dict, day: str) -> dict:
     """Send the entry order(s). Returns the broker response dict."""
     cid = "opt-%s-%s" % (plan["symbol"], day.replace("-", ""))
-    if plan["structure"] == "bull_call_spread":
+    if plan["structure"] in ("bull_call_spread", "short_put_spread"):
+        # ONE mleg package: a negative limit_price is a net CREDIT at Alpaca
+        # ("A positive value indicates a debit ... A negative value signifies
+        # a credit", POST /v2/orders reference) — never a naked short leg.
         return brk.submit_option_spread(plan["legs"], plan["qty"], plan["limit_price"],
                                         client_order_id=cid) or {}
     leg = plan["legs"][0]
@@ -518,7 +680,10 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
             return
         pos = {"pos_id": "%s-%s" % (sym, day), "symbol": sym, "strategy": STRATEGY,
                "status": "open", "structure": plan["structure"], "legs": plan["legs"],
+               "otype": plan.get("otype") or "call",
                "qty": plan["qty"], "debit": plan["limit_price"],
+               "credit": plan.get("credit"), "width": plan.get("width"),
+               "take_profit_debit": plan.get("take_profit_debit"),
                "max_loss": plan["max_loss"], "expiry": plan["expiry"], "dte": plan["dte"],
                "iv": plan.get("iv"), "delta": plan.get("delta"), "band": plan["band"],
                "entry_underlying": plan["last"], "stop_underlying": plan["stop_underlying"],
@@ -535,10 +700,12 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
                dry_run=False, cite=CITE)
         _notify_autopilot(
             "position_alert", sym,
-            "%s options %s: %s x%d @ %.2f (exp %s, %d DTE) — stop %.2f / target %s"
+            "%s options %s: %s x%d @ %s (exp %s, %d DTE) — stop %.2f / target %s"
             % (sym, plan["structure"].replace("_", " "),
                " / ".join("%s %g" % (l["role"], l["strike"]) for l in plan["legs"]),
-               plan["qty"], plan["limit_price"], plan["expiry"], plan["dte"],
+               plan["qty"],
+               ("%.2f credit" % plan["credit"]) if plan.get("credit") else "%.2f" % plan["limit_price"],
+               plan["expiry"], plan["dte"],
                plan["stop_underlying"],
                ("%.2f" % plan["target_underlying"]) if plan.get("target_underlying") else "clear"))
         out["entered"].append(sym)
@@ -562,6 +729,16 @@ def _broker_qty(brk, symbol: str, cache: dict) -> Optional[float]:
     return pos.get(symbol) or 0.0
 
 
+def _pos_quotes(brk, pos: dict, snaps_cache: dict) -> dict:
+    """Snapshots for the position's expiry and option type (call / put)."""
+    expiry = str(pos.get("expiry"))
+    otype = str(pos.get("otype") or "call")
+    key = (pos["symbol"], expiry, otype)
+    if key not in snaps_cache:
+        snaps_cache[key] = brk.option_snapshots(pos["symbol"], expiry, expiry, otype)
+    return snaps_cache[key] or {}
+
+
 def _send_close(brk, pos: dict, snaps_cache: dict) -> tuple:
     """Close the position's legs (short leg first). Returns (order_ids, errors)."""
     ids, errors = [], []
@@ -570,11 +747,7 @@ def _send_close(brk, pos: dict, snaps_cache: dict) -> tuple:
         sym = leg["symbol"]
         quote = None
         try:
-            expiry = str(pos.get("expiry"))
-            key = (pos["symbol"], expiry)
-            if key not in snaps_cache:
-                snaps_cache[key] = brk.option_snapshots(pos["symbol"], expiry, expiry, "call")
-            quote = (snaps_cache[key] or {}).get(sym)
+            quote = (_pos_quotes(brk, pos, snaps_cache) or {}).get(sym)
         except BrokerError as exc:
             errors.append("quote %s: %s" % (sym, exc))
         try:
@@ -694,6 +867,11 @@ def _manage(brk, cfg: dict, out: dict, open_docs: list, today: date) -> None:
         except BrokerError:
             last = None
         why = exit_reason(pos, last, today, _earnings(sym))
+        if not why and _f(pos.get("credit")):
+            try:
+                why = take_profit_reason(pos, _pos_quotes(brk, pos, snaps_cache))
+            except BrokerError as exc:
+                out["errors"].append("%s: quotes for take-profit: %s" % (sym, exc))
         if not why:
             out["held"].append(sym)
             continue
@@ -807,7 +985,11 @@ def rules_list() -> list:
         "%.2f-%.2f; spread short strike = lowest strike at or above the first supply band."
         % (DELTA_LO, DELTA_HI),
         "Expiry %d-%d days out; no earnings inside the window." % (MIN_DTE, MAX_DTE),
-        "Long call by default; bull call spread when IV >= %d%%." % int(IV_SPREAD_THRESHOLD * 100),
+        "Long call by default. IV >= %d%%: SELL a put spread under the band floor — short put = "
+        "highest strike at or under the floor, long put ~%g%% lower, credit >= %d%% of the width, "
+        "bought back at <= %d%% of the credit; no liquid put spread -> bull call spread -> long call."
+        % (int(IV_SPREAD_THRESHOLD * 100), PUT_SPREAD_WIDTH_PCT, int(MIN_CREDIT_PCT_OF_WIDTH),
+           int(TAKE_PROFIT_PCT_OF_CREDIT)),
         "Exit on the underlying, never on the premium: under the band floor -%g%%, at the supply "
         "target, DTE <= %d, or earnings within %d days." % (STOP_BUFFER_PCT, CLOSE_DTE, EARNINGS_CLOSE_DAYS),
         "Size: premium at risk = min(%g%% of equity, $%d); %d entry/day; %d open names; "
@@ -840,7 +1022,9 @@ def journal_block() -> dict:
         b["realized_pnl"] += pnl
         debit = _f(d.get("debit")) or 0.0
         qty = int(d.get("qty") or 0)
-        cost = debit * 100.0 * qty
+        cost = _f(d.get("max_loss")) or 0.0          # $ at risk: premium, or width - credit
+        if cost <= 0:
+            cost = debit * 100.0 * qty
         if cost > 0:
             g = pnl / cost * 100.0
             gains.append(g)
@@ -872,6 +1056,9 @@ def status_block(cfg: Optional[dict] = None) -> dict:
                          "min_dte": MIN_DTE, "max_dte": MAX_DTE, "close_dte": CLOSE_DTE,
                          "delta_lo": DELTA_LO, "delta_hi": DELTA_HI,
                          "iv_spread_threshold": IV_SPREAD_THRESHOLD,
+                         "put_spread_width_pct": PUT_SPREAD_WIDTH_PCT,
+                         "min_credit_pct_of_width": MIN_CREDIT_PCT_OF_WIDTH,
+                         "take_profit_pct_of_credit": TAKE_PROFIT_PCT_OF_CREDIT,
                          "min_open_interest": MIN_OPEN_INTEREST,
                          "max_spread_pct_of_mid": MAX_SPREAD_PCT_OF_MID,
                          "min_underlying_price": MIN_UNDERLYING_PRICE,

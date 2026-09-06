@@ -223,6 +223,7 @@ def test_ntap_2026_09_03_fires_a_single_push_with_the_exact_title_body_url_kind(
     assert m["title"] == "🪃 NTAP bounced +5.3% off support (old resistance) $161.78-167.54"
     # 173.87-180.07 closed under yesterday's 180.77 = broken = support, not a ceiling: clear runway
     assert m["body"] == ("$169.2 · low $160.6 -> +$8.6 · room: clear runway · broken supply -> support (tested 1x)"
+                         " · buy $161.78-167.54 · stop $160.97 (0.5% under the floor, 4.9% risk) · target: clear runway"
                          " · 2.9x ATR · $37.4B · NetApp")
     assert m["url"] == "/sepa/NTAP?tab=supply" and m["data"]["url"] == m["url"]
     assert m["kind"] == "zone_bounce_alert" and m["kind_arg"] == "zone_bounce_alert"
@@ -450,12 +451,15 @@ def test_low_time_is_the_first_rth_bar_at_the_day_low_in_et_clock():
 
 def test_room_is_measured_to_the_next_supply_floor_with_an_r_multiple():
     below_only = [b for b in NTAP_BANDS if not (b["kind"] == "supply" and b["lo"] > 171.2)]   # keep the touched shelf, drop overhead supply
-    bands = below_only + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 30.0}]
+    bands = below_only + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 50.0}]
     room = ZB.room_for(171.2, bands, NTAP_SHELF)
     assert room["target"] == 205.4 and room["room_pct"] == 20.0            # (205.4-171.2)/171.2
     assert room["rr"] == 3.6                                               # 20.0 / ((171.2-161.78)/171.2 = 5.5)
     assert ZB.room_for(171.2, below_only, NTAP_SHELF) is None, "no supply overhead = clear runway"
-    real = ZB.room_for(171.2, NTAP_BANDS, NTAP_SHELF)                      # the reclaimed shelf above is overhead at 09:33
+    # the reclaimed 1-touch shelf above is NOT a proven lid (2026-09-06, KLAC): clear runway
+    assert ZB.room_for(171.2, NTAP_BANDS, NTAP_SHELF) is None
+    proven = [dict(b, touches=2, strength=45.0) if b["lo"] == 173.87 else b for b in NTAP_BANDS]
+    real = ZB.room_for(171.2, proven, NTAP_SHELF)                          # a proven shelf overhead counts
     assert real["target"] == 173.87 and real["room_pct"] == 1.6 and real["rr"] == 0.3
     assert ZB.room_for(171.2, bands + [{"kind": "supply", "lo": 150.0, "hi": 155.0}], NTAP_SHELF)["target"] == 205.4, \
         "a supply band BELOW the print is not overhead"
@@ -467,7 +471,7 @@ def test_room_is_measured_to_the_next_supply_floor_with_an_r_multiple():
 
 def test_pushes_carry_the_touch_clock_and_the_room(monkeypatch):
     sent = _capture(monkeypatch)
-    bands = [b for b in NTAP_BANDS if not (b["kind"] == "supply" and b["lo"] > 171.2)] + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 30.0}]
+    bands = [b for b in NTAP_BANDS if not (b["kind"] == "supply" and b["lo"] > 171.2)] + [{"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2, "strength": 50.0}]
     store = {"NTAP": _doc("NTAP", bands, 3.0, 180.77)}
     out = _run(store, {"NTAP": _snap(160.6, 169.2, 180.77)}, {"NTAP": 37e9},     # inside the 1% window
                coll=FakeColl(), names={"NTAP": "NetApp"})
@@ -500,8 +504,8 @@ def test_room_counts_the_band_that_contains_the_print_and_skips_a_broken_one():
     """room_for skipped a supply band CONTAINING the print and quoted the room to
     the band after it: '+8.6% (1.1R)' for a print sitting 2.9% under a top."""
     bands = [{"kind": "supply", "lo": 161.78, "hi": 167.54, "touches": 1, "strength": 18.0},
-             {"kind": "supply", "lo": 173.87, "hi": 180.07, "touches": 1, "strength": 24.0},
-             {"kind": "supply", "lo": 190.0, "hi": 195.0, "touches": 2, "strength": 30.0}]
+             {"kind": "supply", "lo": 173.87, "hi": 180.07, "touches": 2, "strength": 45.0},   # proven lids
+             {"kind": "supply", "lo": 190.0, "hi": 195.0, "touches": 2, "strength": 50.0}]
     room = ZB.room_for(175.0, bands, bands[0])
     assert room["target"] == 180.07 and room["room_pct"] == 2.9 and room["state"] == "IN_BAND"
     assert room["rr"] == 0.4                                     # 2.9 / ((175-161.78)/175 = 7.55)
@@ -537,7 +541,7 @@ def test_phone_gate_a_bounce_that_already_ran_lists_but_never_pushes(monkeypatch
 def test_phone_gate_needs_five_percent_room_to_the_first_unbroken_supply(monkeypatch):
     sent = _capture(monkeypatch)
     band = {"kind": "demand", "lo": 96.0, "hi": 100.0, "touches": 2, "strength": 40.0}
-    lid = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 2, "strength": 20.0}   # 3.5% over a $100.5 print
+    lid = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 2, "strength": 50.0}   # 3.5% over a $100.5 print
     store = {"AAA": _doc("AAA", [band, lid], 0.5, 105.0)}          # prev 105: arrival (>103), lid unbroken (106 >= 105)
     out = _run(store, {"AAA": _snap(97.0, 100.5, 105.0)}, {"AAA": 5e9})   # +3.6% off the low, 0.5% above the top
     assert out["hits"] and out["hits"][0]["room"]["room_pct"] == 3.5

@@ -26,7 +26,7 @@ NOW = datetime(2026, 9, 3, 10, 0, tzinfo=ET)
 DAY = "2026-09-03"
 
 RES = {"kind": "supply", "lo": 100.0, "hi": 102.0, "touches": 3, "strength": 40.0}
-OVER = {"kind": "supply", "lo": 110.0, "hi": 112.0, "touches": 1, "strength": 20.0}
+OVER = {"kind": "supply", "lo": 110.0, "hi": 112.0, "touches": 2, "strength": 40.0}
 DEM = {"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2, "strength": 30.0}
 LOWDEM = {"kind": "demand", "lo": 80.0, "hi": 82.0, "touches": 4, "strength": 55.0}
 
@@ -396,7 +396,8 @@ def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_stat
     assert out["singles_demand"] == 1 and out["pushed"] == 1 and len(sent) == 1
     m = sent[0]
     assert m["title"] == "🧲 AAA in demand $90–92"
-    assert m["body"] == "$91 · tested 2x · room +9.9% -> $100 · $5.0B · Alpha"   # RES 100-102 (hi >= prev 95) is the first unbroken lid
+    assert m["body"] == ("$91 · tested 2x · room +9.9% -> $100 · buy $90-92 · stop $89.55 "
+                         "(0.5% under the floor, 1.6% risk) · target $100 (6.2R) · $5.0B · Alpha")   # RES 100-102 (hi >= prev 95) is the first unbroken lid
     assert m["kind"] == "demand_alert" == DA.KIND and m["kind_arg"] == "demand_alert"
     key = DA.state_key("AAA", DEM, DAY, "at")
     assert list(colls["coll_demand"].docs) == [key] == ["AAA:90.00-92.00:2026-09-03:at"]
@@ -716,7 +717,7 @@ def test_stored_counts_explain_a_quiet_phone_skip_buckets_and_pushed(monkeypatch
     that I get alerts" — no; so the stored pass carries every reason a listed row
     did NOT ring (room / cap / unknown cap) plus what did, for GET /alerts/status."""
     sent = _capture(monkeypatch)
-    close_next = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 1, "strength": 20.0}
+    close_next = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 2, "strength": 40.0}
     store = {"AAA": _doc("AAA", [RES], 99.0, 103.0),                # rings
              "UNK": _doc("UNK", [RES], 99.0, 103.0),                # unknown cap: not listed
              "SML": _doc("SML", [RES], 99.0, 103.0),                # listed, under $1B
@@ -989,17 +990,19 @@ def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch):
     The board lists; only the phone tightens."""
     from supply_demand import alert_gates as AG
     sent = _capture(monkeypatch)
-    tight = {"kind": "supply", "lo": 93.0, "hi": 94.0, "touches": 2, "strength": 20.0}   # 2.2% over a $91 print
+    tight = {"kind": "supply", "lo": 93.0, "hi": 94.0, "touches": 2, "strength": 50.0}   # 2.2% over a $91 print
     # prev 93.5: still an arrival (1.6% above DEM's top) AND the lid is unbroken (94 >= 93.5)
     out, colls = _run({"AAA": _doc("AAA", [DEM, tight], 93.5)}, {"AAA": _snap(91.0, 93.5, -2.7)}, {"AAA": 5e9})
     assert [r["symbol"] for r in out["near_demand"]] == ["AAA"] and out["near_demand"][0]["arrival"] is True
     assert sent == [] and out["pushed"] == 0 and out["skipped_room"] == 1 and colls["coll_demand"].docs == {}
-    roomy = {"kind": "supply", "lo": 96.0, "hi": 97.0, "touches": 2, "strength": 20.0}   # 5.49% over
+    roomy = {"kind": "supply", "lo": 96.0, "hi": 97.0, "touches": 2, "strength": 50.0}   # 5.49% over
     out2, _ = _run({"AAA": _doc("AAA", [DEM, roomy], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
     assert out2["pushed"] == 1 and out2["skipped_room"] == 0
-    assert sent[-1]["body"] == "$91 · tested 2x · room +5.5% -> $96 · $5.0B"
+    assert sent[-1]["body"] == ("$91 · tested 2x · room +5.5% -> $96 · buy $90-92 · stop $89.55 "
+                                "(0.5% under the floor, 1.6% risk) · target $96 (3.4R) · $5.0B")
     out3, _ = _run({"AAA": _doc("AAA", [DEM], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
-    assert out3["pushed"] == 1 and sent[-1]["body"] == "$91 · tested 2x · room: clear runway · $5.0B"
+    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · tested 2x · room: clear runway · buy $90-92 · stop $89.55 "
+                                                       "(0.5% under the floor, 1.6% risk) · target: clear runway · $5.0B")
     assert ZE.EDGE_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT == 1.0, "the in/near tier IS the <1% rule — reused, not duplicated"
 
 
@@ -1007,7 +1010,7 @@ def test_phone_gate_breaking_needs_five_percent_to_the_next_band(monkeypatch):
     """'At least 5% to supply' applies to every phone kind: a 🚀 push wants 5% from
     the print to the NEXT band above the one being broken."""
     sent = _capture(monkeypatch)
-    close_next = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 1, "strength": 20.0}   # 2.5% over $101.5
+    close_next = {"kind": "supply", "lo": 104.0, "hi": 106.0, "touches": 2, "strength": 40.0}   # 2.5% over $101.5
     # RES top 102 >= 98% of the 52w high 103 -> new_highs by the 52w rule even with a band overhead
     out, colls = _run({"AAA": _doc("AAA", [RES, close_next], 99.0, 103.0)}, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9})
     row = out["breaking"][0]

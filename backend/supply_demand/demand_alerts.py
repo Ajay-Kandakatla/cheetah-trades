@@ -229,6 +229,9 @@ def at_message(item: dict) -> dict:
     parts = [f"${float(item['last']):g}", tested]
     if "room" in item:                                    # the phone gate's read (2026-09-05)
         parts.append(AG.room_txt(item.get("room")))
+        plan = AG.plan_txt(item["last"], band, item.get("room"))   # the plan (2026-09-06)
+        if plan:
+            parts.append(plan)
     parts.append(fmt_cap(item.get("cap")))
     body = " · ".join(parts)
     if item.get("name"):

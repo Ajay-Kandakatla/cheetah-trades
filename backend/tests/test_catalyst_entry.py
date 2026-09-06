@@ -198,7 +198,7 @@ def br_payload(rows, store_date=DAY):
 
 
 def band(kind, lo, hi, touches=3):
-    return {"kind": kind, "lo": lo, "hi": hi, "touches": touches, "strength": 1.0}
+    return {"kind": kind, "lo": lo, "hi": hi, "touches": touches, "strength": 50.0}   # proven (2026-09-06 rule)
 
 
 def zdoc(sym, bands, prev_close=4.9):

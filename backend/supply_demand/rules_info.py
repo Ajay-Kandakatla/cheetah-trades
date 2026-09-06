@@ -59,9 +59,16 @@ def _zone_lines():
 
 def _room_lines():
     return [
-        "Room floor: at least %s to the first unbroken band overhead (CLEAR counts); "
+        "Room floor: at least %s to the first unbroken PROVEN band overhead (CLEAR counts); "
         "set Room to any to see everything." % _pct(DR.MIN_ROOM_DEFAULT),
+        _proven_line(),
     ]
+
+
+def _proven_line():
+    return ("A lid counts only when it is proven — tested ≥ %d× and strength ≥ %d; a one-touch "
+            "or weak band overhead is skipped and room is measured to the next real one "
+            "(the KLAC lesson, 2026-09-06)." % (AG.LID_MIN_TOUCHES, int(AG.LID_MIN_STRENGTH)))
 
 
 def sections() -> dict:
@@ -115,10 +122,14 @@ def sections() -> dict:
     out["alerts"] = {
         "title": "Zone alerts", "emoji": "🔔",
         "picks": [
-            "Every zone push passes the gate: ≥ %s room to the first band overhead (CLEAR "
-            "ok); demand-side kinds also need the print ≤ %s above the band top and not "
+            "Every zone push passes the gate: ≥ %s room to the first PROVEN band overhead "
+            "(CLEAR ok); demand-side kinds also need the print ≤ %s above the band top and not "
             "under its floor. Boards list everything; only the phone is gated."
             % (gate_room, gate_prox),
+            _proven_line(),
+            "🧲 and 🪃 bodies carry the plan: buy = the band, stop = %s under its floor with the "
+            "risk from the print, target = the first proven lid with the R multiple."
+            % _pct(AG.STOP_BUFFER_PCT),
             "🧲 demand_alert (every 5 min, %s–%s ET, cap ≥ %s): inside the band or ≤ %s above "
             "its top → push; %s–%s above and falling → digest; max %d singles per pass."
             % (_t(DA.SESSION_OPEN), _t(DA.SESSION_CLOSE), _b(DA.MIN_CAP_USD),
@@ -160,9 +171,9 @@ def sections() -> dict:
             % (int(AE.AUTO_MIN_SCORE), int(AE.AUTO_MIN_RS), AE.AUTO_RELVOL_MIN,
                _pct(AE.MAX_EXTENSION_PCT), AE.MAX_AUTO_ENTRIES_PER_DAY),
             "🧲 Demand-zone / 🚀 breakout: the zone-edge board's rules (owner switches: "
-            "residents, any-band breakout, min touches) PLUS the alert gate (≥ %s room, "
-            "≤ %s above the band), ≥ 2R room over the stop, cap ≥ %s, signal ≤ %d s old, "
-            "no new entry after %s ET; %d per day."
+            "residents, any-band breakout, min touches) PLUS the alert gate (≥ %s room to the "
+            "first proven lid, ≤ %s above the band), ≥ 2R room over the stop, cap ≥ %s, "
+            "signal ≤ %d s old, no new entry after %s ET; %d per day."
             % (gate_room, gate_prox, _b(ZEE.MIN_CAP_USD), ZEE.SIGNAL_MAX_AGE_SEC,
                _t(ZEE.LAST_ENTRY_ET), ZEE.MAX_ZONE_ENTRIES_PER_DAY),
             "🗞️ Catalyst: from the Catalysts scan — quadrant %s, evidence grade %s, no pump "
@@ -205,9 +216,10 @@ def sections() -> dict:
         "Bouncing = a session low in the last %d sessions touched a demand band (or a supply "
         "band already broken above) and the print is ≥ max(%s, 1 ATR) above it."
         % (BR.LOOKBACK_SESSIONS, _pct(BR.BOUNCE_MIN_PCT)),
-        "Room = distance to the first unbroken band overhead: CLEAR, ROOM, NEAR (≤ %s), or "
+        "Room = distance to the first unbroken PROVEN band overhead: CLEAR, ROOM, NEAR (≤ %s), or "
         "IN_BAND; at highs = print ≥ %d%% of the 252-bar high."
         % (_pct(BR.NEAR_PCT), int(round(BR.NEW_HIGH_TOL * 100))),
+        _proven_line(),
         "Order: bouncing with ≥ %s room, then ≥ %s room, then bouncing but ⛔ into supply, "
         "then the rest." % (_pct(DR.MIN_ROOM_DEFAULT), _pct(DR.MIN_ROOM_DEFAULT)),
     ]
@@ -238,8 +250,12 @@ def sections() -> dict:
             "spread short strike = lowest strike at or above the first supply band (the room target)."
             % (OL.DELTA_LO, OL.DELTA_HI),
             "Expiry %d–%d days out; skip if earnings sits inside the window." % (OL.MIN_DTE, OL.MAX_DTE),
-            "Long call by default; bull call spread when the call's IV ≥ %d%%. No put selling in v1."
-            % int(OL.IV_SPREAD_THRESHOLD * 100),
+            "Long call by default. IV ≥ %d%%: sell a put SPREAD under the band floor — short put = "
+            "highest strike at or under the floor, long put ~%g%% lower, credit ≥ %d%% of the width, "
+            "bought back at ≤ %d%% of the credit; no liquid put spread → bull call spread → long call. "
+            "Never a naked put."
+            % (int(OL.IV_SPREAD_THRESHOLD * 100), OL.PUT_SPREAD_WIDTH_PCT,
+               int(OL.MIN_CREDIT_PCT_OF_WIDTH), int(OL.TAKE_PROFIT_PCT_OF_CREDIT)),
             "Liquidity: open interest ≥ %d, bid-ask ≤ %d%% of mid (or ≤ $%.2f)."
             % (OL.MIN_OPEN_INTEREST, int(OL.MAX_SPREAD_PCT_OF_MID), OL.MAX_SPREAD_ABS),
             "%d entry per day, %d open names, one position per underlying; %d contracts sized to "

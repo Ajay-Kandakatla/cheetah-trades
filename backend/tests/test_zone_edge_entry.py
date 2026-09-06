@@ -234,9 +234,9 @@ def latest_doc(breaking=(), near_demand=(), as_of=None, day=None):
 
 def zone_doc(sym, supply_los=(), demand_bands=()):
     bands = [{"kind": "supply", "lo": lo, "hi": lo + 2.0, "touches": 2,
-              "strength": 1.0} for lo in supply_los]
+              "strength": 50.0} for lo in supply_los]          # proven lids (2026-09-06 rule)
     bands += [{"kind": "demand", "lo": lo, "hi": hi, "touches": 2,
-               "strength": 1.0} for lo, hi in demand_bands]
+               "strength": 50.0} for lo, hi in demand_bands]
     return {"_id": "%s:%s" % (sym, DAY), "symbol": sym, "date": DAY,
             "bands": bands, "prev_close": 99.0, "high_252": 104.0}
 
@@ -1725,8 +1725,8 @@ def test_a_breakout_into_an_overlapping_supply_lid_never_skips_the_room_check():
     payload now carries overhead 1 / new_highs False for that geometry, so
     room_ok runs and blocks it."""
     from supply_demand import zone_edge as SDZE
-    bands = [{"kind": "supply", "lo": 96.0, "hi": 99.5, "touches": 3, "strength": 1.0},
-             {"kind": "supply", "lo": 99.0, "hi": 104.0, "touches": 2, "strength": 1.0}]
+    bands = [{"kind": "supply", "lo": 96.0, "hi": 99.5, "touches": 3, "strength": 50.0},
+             {"kind": "supply", "lo": 99.0, "hi": 104.0, "touches": 2, "strength": 50.0}]
     rb = SDZE.read_breaking(100.0, bands, 99.0)
     assert rb["tier"] == "broke" and rb["band"]["hi"] == 99.5
     assert rb["overhead_bands"] == 1 and rb["new_highs"] is False
@@ -1866,3 +1866,24 @@ def test_status_block_counts_alert_gate_skips_today(env):
     assert blk["skipped_alert_gate_today"] == 1
     rules = " ".join(r["rule"] + r["value"] for r in blk["rules"])
     assert "5%" in rules and "1%" in rules and "alert" in rules.lower()
+
+
+# ── proven lids (Ajay 2026-09-06, the KLAC lesson) ───────────────────────────
+def test_room_ok_skips_an_unproven_lid_and_measures_to_the_next_proven_one():
+    """KLAC 2026-09-02: print 169.50 inside a 1-touch / strength-32 supply band
+    166.37-172.30 sitting on the demand band. room_ok read 'inside supply
+    band' and the lane never bought; the next PROVEN lid is 191.11 (12.7%)."""
+    bands = [{"kind": "demand", "lo": 164.60, "hi": 169.81, "touches": 3, "strength": 100.0},
+             {"kind": "supply", "lo": 166.37, "hi": 172.30, "touches": 1, "strength": 32.0},
+             {"kind": "supply", "lo": 191.11, "hi": 193.94, "touches": 2, "strength": 53.0}]
+    ok, det = ZE.room_ok(169.50, 3.37, {"bands": bands})
+    assert ok is True and det["reason"] == "ok" and det["room_pct"] == 12.75
+    assert det["next_band"] == {"kind": "supply", "lo": 191.11, "hi": 193.94}
+    proven = [dict(b, touches=2, strength=53.0) if b["lo"] == 166.37 else b for b in bands]
+    ok2, det2 = ZE.room_ok(169.50, 3.37, {"bands": proven})
+    assert ok2 is False and det2["reason"].startswith("inside supply band (166.37-172.3)")
+    # a weak DEMAND band above the print is not resistance either
+    weak_dem = {"kind": "demand", "lo": 175.0, "hi": 176.0, "touches": 1, "strength": 5.0}
+    assert ZE.room_ok(169.50, 3.37, {"bands": bands + [weak_dem]})[1]["next_band"]["lo"] == 191.11
+    # unknown touches keep the lid (conservative): a bare level still blocks
+    assert ZE.room_ok(169.50, 3.37, {"bands": bands + [{"kind": "supply", "lo": 171.0}]})[0] is False

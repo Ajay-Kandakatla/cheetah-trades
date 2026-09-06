@@ -2687,3 +2687,17 @@ def test_the_warming_payload_carries_the_room_fields():
     src = inspect.getsource(dr.cached_or_warm)
     for key in ('"min_room"', '"min_room_default"', '"dropped_low_room"'):
         assert key in src, f"warming payload is missing {key}"
+
+
+# ── proven lids (Ajay 2026-09-06, the KLAC lesson) ───────────────────────────
+def test_plan_bands_drop_an_unproven_lid_so_the_board_target_is_the_next_real_one():
+    from supply_demand import room_floor as RF
+    cands = [{"kind": "supply", "lo": 166.37, "hi": 172.30, "touches": 1, "strength": 32.0},
+             {"kind": "supply", "lo": 191.11, "hi": 193.94, "touches": 2, "strength": 53.0},
+             {"lo": 200.0},                                                     # legacy level: kept
+             {"kind": "demand", "lo": 175.0, "hi": 176.0, "touches": 1, "strength": 9.0}]
+    out = RF.plan_bands(cands)
+    assert [b["lo"] for b in out] == [191.11, 200.0]
+    assert out[0]["strength"] == 53.0 and out[1]["strength"] is None and out[1]["touches"] == 0
+    room = RF.room_block(169.50, cands)
+    assert room["state"] == "ROOM" and room["target_lo"] == 191.11 and room["room_pct"] == 12.7
