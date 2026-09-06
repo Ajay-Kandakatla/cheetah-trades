@@ -40,6 +40,17 @@
 # first tick; this pass classifies today's losers tonight and finalises the
 # 2-sessions-later re-check a day earlier. Owner rules (S&D), no book.
 45     16    *    *    1-5  /usr/local/bin/python -m trading.autopsy
+
+# Catalyst-lane warm (trading/catalyst_entry.py --warm) — twice an hour in RTH.
+# Ajay 2026-09-05: "make sure you have demand zone and catalyst based entries
+# time to time". The engine tick never scans / never touches the tape / never
+# builds zone docs, so this pass keeps its two inputs populated: the Catalysts
+# scan (reused when the board's cache is fresh, else run through the board's
+# own pipeline WITH the LLM review and written to the same cache) and the
+# bounce_room zone docs for every candidate missing one (synchronous). Offset
+# from the :30 history scan below. Paper only; the flag `catalyst_entry` gates
+# the buys, not this warm.
+12,42  9-15  *    *    1-5  /usr/local/bin/python -m trading.catalyst_entry --warm
 #
 # Mon-Fri 4:50pm ET — Pullback-to-MA scanner. Derives the Stage-2 "pullback
 # toward the rising 50-day MA on contracting volume" list from the latest

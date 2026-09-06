@@ -21,6 +21,7 @@ import {
   priceAt, shortVol, textWidth, tooltipPos,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_PARAM_LABELS, ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
+  ROOM_TABS, parseMinRoom,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -152,6 +153,42 @@ describe('boardQuery', () => {
     expect(boardQuery({ tab: 'vcp', themesFirst: false })).toBe('tab=vcp');
     expect(boardQuery({ tab: 'vcp', themesFirst: true })).toBe('tab=vcp&themes_first=true');
     expect(boardQuery({ tab: 'vcp' })).toBe('tab=vcp');
+  });
+});
+
+/* ── the 5% room floor (Ajay 2026-09-05) ─────────────────────────────────────
+ * "I need the same logic in Demand and deep demand zone. So that there are
+ * stocks that have more room atleast >5%". The phone gate's ALERT_MIN_ROOM_PCT
+ * = 5.0 (owner setting) rides to the two demand boards as min_room; there is
+ * no third value — the URL knows `room=any` (off) and nothing else. */
+describe('room floor — parseMinRoom / boardQuery min_room', () => {
+  it('ROOM_TABS is exactly the two demand boards', () => {
+    expect(ROOM_TABS).toEqual(['zones', 'deep_demand']);
+  });
+
+  it('parseMinRoom: room=any (or 0) is off; everything else is the 5% floor', () => {
+    expect(parseMinRoom('any')).toBe(0);
+    expect(parseMinRoom('0')).toBe(0);
+    expect(parseMinRoom(null)).toBe(5);
+    expect(parseMinRoom(undefined)).toBe(5);
+    expect(parseMinRoom('5')).toBe(5);
+    // NEGATIVE: no third number exists — a typed 3 or garbage lands on the floor.
+    expect(parseMinRoom('3')).toBe(5);
+    expect(parseMinRoom('garbage')).toBe(5);
+  });
+
+  it('sends min_room on zones and deep_demand only, and only when given', () => {
+    expect(boardQuery({ tab: 'zones', minRoom: 5 })).toBe('tab=zones&min_room=5');
+    expect(boardQuery({ tab: 'deep_demand', minRoom: 0 })).toBe('tab=deep_demand&min_room=0');
+    expect(boardQuery({ tab: 'zones', phase: 'approaching', minRoom: 5 }))
+      .toBe('tab=zones&phase=approaching&min_room=5');
+    // NEGATIVE: the other boards have no room read — a leaked param would just
+    // split their cache keys.
+    expect(boardQuery({ tab: 'vcp', minRoom: 5 })).toBe('tab=vcp');
+    expect(boardQuery({ tab: 'ict', minRoom: 0 })).toBe('tab=ict');
+    expect(boardQuery({ tab: 'gabbar', minRoom: 5 })).toBe('tab=gabbar');
+    // Unspecified → not sent (the existing zones query is unchanged byte for byte).
+    expect(boardQuery({ tab: 'zones' })).toBe('tab=zones');
   });
 });
 

@@ -341,3 +341,87 @@ def test_empty_ledger_reconciles_to_zero(db):
     out = JN.reconcile()
     assert out["n_open"] == 0 and out["n_closed"] == 0
     assert JN.load() == []
+
+
+# ── Strategy tag + per-lane summary (2026-09-05 lanes) ───────────────────────
+
+def _entry_detail(price=100.0, qty=10, stop=97.0, **extra):
+    d = {"order_id": "o", "qty": qty, "price": price, "stop_price": stop,
+         "stop_pct": round((price - stop) / price * 100, 2), "target_price": price * 1.1,
+         "target_pct": 10.0, "reward_risk": 3.0, "breakeven_trigger": price * 1.09,
+         "regime": "normal", "size_multiplier": 1.0}
+    d.update(extra)
+    return d
+
+
+def test_entry_doc_carries_strategy_tag_and_reason(db):
+    _seed(db)
+    reason = {"side": "demand", "tier": "near", "band": {"lo": 98.0, "hi": 99.5},
+              "gate": {"room": {"room_pct": 8.0}}}
+    db.trade_ledger.insert_one(_row("entry", "ZZZ", BASE + 900,
+                                    detail=_entry_detail(strategy="demand_zone",
+                                                         entry_reason=reason)))
+    db.trade_ledger.insert_one(_row("entry", "CAT", BASE + 950,
+                                    detail=_entry_detail(strategy="catalyst",
+                                                         entry_reason={"quadrant": "REAL"})))
+    JN.reconcile()
+    docs = {d["symbol"]: d for d in JN.load()}
+    assert docs["ZZZ"]["entry"]["strategy"] == "demand_zone"
+    assert docs["ZZZ"]["entry"]["entry_reason"] == reason
+    assert docs["CAT"]["entry"]["strategy"] == "catalyst"
+    # Old rows: no tag -> inferred minervini from the auto_entry trigger,
+    # else manual; entry_reason None.
+    assert docs["AAA"]["entry"]["strategy"] == "minervini"
+    assert docs["BBB"]["entry"]["strategy"] == "manual"
+    assert docs["BBB"]["entry"]["entry_reason"] is None
+    # A malformed tag never poisons the doc.
+    db.trade_ledger.insert_one(_row("entry", "BAD", BASE + 960,
+                                    detail=_entry_detail(strategy="alpha_wolf")))
+    JN.reconcile()
+    assert {d["symbol"]: d for d in JN.load()}["BAD"]["entry"]["strategy"] == "manual"
+    assert "demand-zone" in docs["ZZZ"]["narrative"].lower() or "demand_zone" in docs["ZZZ"]["narrative"]
+
+
+def test_summary_by_strategy(db):
+    _seed(db)
+    # Two demand_zone trades: one +6% winner (risk 10 x 3 = $30, pnl $60 ->
+    # 2.0R), one -3% loser (-1.0R); one catalyst trade still open.
+    db.trade_ledger.insert_one(_row("entry", "DZ1", BASE + 1000,
+                                    detail=_entry_detail(strategy="demand_zone")))
+    db.trade_ledger.insert_one(_row("trade_closed", "DZ1", BASE + 1000 + DAY,
+                                    detail={"leg": "take_profit", "fill": 106.0,
+                                            "entry": 100.0, "gain_pct": 6.0}))
+    db.trade_ledger.insert_one(_row("entry", "DZ2", BASE + 1100,
+                                    detail=_entry_detail(strategy="demand_zone")))
+    db.trade_ledger.insert_one(_row("trade_closed", "DZ2", BASE + 1100 + DAY,
+                                    detail={"leg": "stop", "fill": 97.0,
+                                            "entry": 100.0, "gain_pct": -3.0}))
+    db.trade_ledger.insert_one(_row("entry", "CAT", BASE + 1200,
+                                    detail=_entry_detail(strategy="catalyst")))
+    JN.reconcile()
+    s = JN.summary()
+    bs = s["by_strategy"]
+    assert set(bs) == {"minervini", "manual", "demand_zone", "catalyst"}
+    dz = bs["demand_zone"]
+    assert dz["n"] == 2 and dz["open"] == 0 and dz["closed"] == 2
+    assert dz["wins"] == 1 and dz["losses"] == 1 and dz["win_rate_pct"] == 50.0
+    assert dz["avg_r"] == 0.5                          # (2.0 + -1.0) / 2
+    assert dz["expectancy_pct"] == 1.5                 # mean gain_pct (6 - 3) / 2
+    assert dz["realized_pnl"] == 30.0                  # 60 - 30
+    cat = bs["catalyst"]
+    assert cat == {"n": 1, "open": 1, "closed": 0, "wins": 0, "losses": 0,
+                   "win_rate_pct": None, "avg_r": None, "expectancy_pct": None,
+                   "realized_pnl": 0.0}
+    mv = bs["minervini"]                               # AAA: 12 sh, 182.40 -> 209.80
+    assert mv["closed"] == 1 and mv["wins"] == 1 and mv["realized_pnl"] == 328.8
+    assert mv["avg_r"] == round(328.8 / (12 * (182.40 - 169.63)), 2)
+    assert s["n_open"] == 2 and s["n_closed"] == 5
+    import json
+    json.dumps(s, allow_nan=False)
+    # Pure helper on an empty list is an empty dict; a doc without qty/stop
+    # falls back to the journal's r_multiple.
+    assert JN.by_strategy([]) == {}
+    doc = {"status": "closed", "entry": {"strategy": "manual", "qty": None, "price": 10.0,
+                                         "stop_price": None},
+           "realized": {"gain_pct": 4.0, "gain_dollars": None, "r_multiple": 1.33}}
+    assert JN.by_strategy([doc])["manual"]["avg_r"] == 1.33

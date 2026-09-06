@@ -24,6 +24,11 @@ How a round-trip is reconstructed (the ledger is already the event log):
   * "trade_closed" rows (exit_engine, p.299) carry the realized gain_pct and
     the exit leg (stop|take_profit). "flatten"/"flatten_all" rows are manual
     exits — they also close a trade (leg "flatten").
+  * The entry row's detail.strategy / detail.entry_reason (entries.enter,
+    2026-09-05 — Ajay: "journal it appropriately") name the LANE that bought:
+    minervini | demand_zone | breakout | catalyst | manual. Older rows carry
+    no tag: a trigger row infers minervini, everything else is manual, and
+    entry_reason is null. summary() splits the book per lane (by_strategy).
 
 Import-light: no pandas/numpy anywhere here. The Mongo handle, ledger reader
 and config all come from exit_engine via lazy module-level imports of pure
@@ -46,6 +51,10 @@ JOURNAL_CITE = ("journal: round-trips reconstructed from trade_ledger; entry "
 
 # Ledger kinds that CLOSE an open entry (in time order, next-after-entry).
 _EXIT_KINDS = ("trade_closed", "flatten", "flatten_all")
+
+# Journal lane tags (mirror of trading/entries.STRATEGIES — kept literal so
+# this import-light module never pulls entries -> broker at import time).
+STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")
 
 # Per ET trading day ~6.5h; holding_days counts CALENDAR days between entry and
 # exit (weekends/holidays included) — a plain wall-clock read, labelled clearly.
@@ -127,9 +136,20 @@ def _entry_doc(entry_row: dict, trigger_row: Optional[dict],
             "cleared_at_frac": tdet.get("cleared_at_frac"),
         }
 
+    # Lane tag: the explicit tag wins; an untagged row with an auto_entry
+    # trigger is the Minervini funnel (pre-2026-09-05 rows); else manual.
+    tag = det.get("strategy")
+    if tag not in STRATEGIES:
+        tag = "minervini" if (trigger and trigger.get("path")) else "manual"
+    entry_reason = det.get("entry_reason")
+    if not isinstance(entry_reason, dict):
+        entry_reason = None
+
     entry = {
         "ts": entry_row.get("ts"),
         "epoch": entry_epoch,
+        "strategy": tag,
+        "entry_reason": entry_reason,
         "price": price,
         "qty": qty,
         "stop_price": _f("stop_price"),
@@ -343,24 +363,114 @@ def load(limit: Optional[int] = None, status: Optional[str] = None) -> list:
     return docs
 
 
+def _initial_risk_dollars(entry: dict):
+    """qty x (entry price - placed stop) when all three are known, else None."""
+    try:
+        qty = int(entry.get("qty"))
+        px = float(entry.get("price"))
+        sp = float(entry.get("stop_price"))
+    except (TypeError, ValueError):
+        return None
+    risk = qty * (px - sp)
+    return risk if risk > 0 else None
+
+
+def _realized_r(doc: dict):
+    """Realized R for a closed doc: realized $ / initial risk $ when both are
+    known (the honest R — the stop the engine PLACED), else the journal's
+    gain_pct / stop_pct r_multiple, else None."""
+    r = doc.get("realized") or {}
+    risk = _initial_risk_dollars(doc.get("entry") or {})
+    pnl = r.get("gain_dollars")
+    if risk and pnl is not None:
+        try:
+            return round(float(pnl) / risk, 2)
+        except (TypeError, ValueError):
+            pass
+    rm = r.get("r_multiple")
+    try:
+        return round(float(rm), 2) if rm is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def by_strategy(docs: list) -> dict:
+    """{strategy: {n, open, closed, wins, losses, win_rate_pct, avg_r,
+    expectancy_pct, realized_pnl}} over journal docs — one row per lane
+    that has at least one trade (Ajay 2026-09-05: "journal it
+    appropriately"). expectancy_pct = mean realized gain_pct over the lane's
+    CLOSED trades (a 0% close is neither win nor loss); avg_r = mean
+    realized R (see _realized_r); realized_pnl = summed gain_dollars.
+    Rates are None until a lane has a closed trade. Pure."""
+    out = {}
+    for d in docs or []:
+        if not isinstance(d, dict):
+            continue
+        e = d.get("entry") or {}
+        tag = e.get("strategy")
+        if tag not in STRATEGIES:
+            tag = "manual"
+        b = out.setdefault(tag, {"n": 0, "open": 0, "closed": 0, "wins": 0, "losses": 0,
+                                 "win_rate_pct": None, "avg_r": None,
+                                 "expectancy_pct": None, "realized_pnl": 0.0,
+                                 "_gains": [], "_rs": []})
+        b["n"] += 1
+        if d.get("status") != "closed":
+            b["open"] += 1
+            continue
+        b["closed"] += 1
+        r = d.get("realized") or {}
+        g = r.get("gain_pct")
+        try:
+            g = float(g) if g is not None else None
+        except (TypeError, ValueError):
+            g = None
+        if g is not None:
+            b["_gains"].append(g)
+            if g > 0:
+                b["wins"] += 1
+            elif g < 0:
+                b["losses"] += 1
+        rr = _realized_r(d)
+        if rr is not None:
+            b["_rs"].append(rr)
+        pnl = r.get("gain_dollars")
+        try:
+            b["realized_pnl"] += float(pnl) if pnl is not None else 0.0
+        except (TypeError, ValueError):
+            pass
+    for b in out.values():
+        gains, rs = b.pop("_gains"), b.pop("_rs")
+        decided = b["wins"] + b["losses"]
+        b["win_rate_pct"] = round(b["wins"] / decided * 100.0, 1) if decided else None
+        b["avg_r"] = round(sum(rs) / len(rs), 2) if rs else None
+        b["expectancy_pct"] = round(sum(gains) / len(gains), 2) if gains else None
+        b["realized_pnl"] = round(b["realized_pnl"], 2)
+    return out
+
+
 def summary() -> dict:
-    """{n_open, n_closed, last_reconcile_ts} without rebuilding."""
+    """{n_open, n_closed, last_reconcile_ts, by_strategy} without rebuilding."""
     coll = _journal_coll()
+    docs = None
+    last = None
     if coll is not None:
         try:
-            n_open = sum(1 for _ in coll.find({"status": "open"}))
-            n_closed = sum(1 for _ in coll.find({"status": "closed"}))
-            last = None
+            docs = []
+            for d in coll.find({}):
+                d.pop("_id", None)
+                docs.append(d)
             for d in coll.find({}).sort("last_reconcile_ts", -1).limit(1):
                 last = d.get("last_reconcile_ts")
-            return {"n_open": n_open, "n_closed": n_closed,
-                    "last_reconcile_ts": last}
         except Exception as exc:                   # noqa: BLE001
             log.warning("journal summary failed: %s", exc)
-    docs = _build_docs(_ledger_rows())
-    return {"n_open": sum(1 for d in docs if d["status"] == "open"),
-            "n_closed": sum(1 for d in docs if d["status"] == "closed"),
-            "last_reconcile_ts": None}
+            docs = None
+    if docs is None:
+        docs = _build_docs(_ledger_rows())
+    return {"n_open": sum(1 for d in docs if d.get("status") == "open"),
+            "n_closed": sum(1 for d in docs if d.get("status") == "closed"),
+            "last_reconcile_ts": last,
+            "by_strategy": by_strategy(docs)}
 
 
 # ── Narrative (deterministic, factual — never invents a number) ─────────────
@@ -403,6 +513,7 @@ def narrate(doc: dict) -> str:
     parts.append(head)
 
     trig = e.get("trigger")
+    lane = e.get("strategy")
     if trig and trig.get("path"):
         path = trig["path"].replace("_", "-")
         seg = "Auto-entry, %s" % path
@@ -412,6 +523,23 @@ def narrate(doc: dict) -> str:
             seg += " on %.1fx volume" % float(trig["relvol"])
         if trig.get("score") is not None:
             seg += " (score %s)" % _num(trig["score"])
+        parts.append(seg + ".")
+    elif lane in ("demand_zone", "breakout", "catalyst"):
+        # Lane entries (S&D owner rules, no book): name the lane + the
+        # level it rested on when the reason carries one.
+        reason = e.get("entry_reason") or {}
+        label = {"demand_zone": "Demand-zone", "breakout": "Breakout",
+                 "catalyst": "Catalyst"}[lane]
+        seg = "%s lane entry (paper Auto-Pilot, owner rules)" % label
+        band = reason.get("band") if isinstance(reason.get("band"), dict) else None
+        if band is None and isinstance(reason.get("proximity"), dict):
+            band = reason["proximity"].get("band")
+        if band is None and isinstance(reason.get("bounce"), dict):
+            band = reason["bounce"].get("band")
+        if isinstance(band, dict) and band.get("lo") is not None and band.get("hi") is not None:
+            seg += ", band %s-%s" % (_num(band["lo"]), _num(band["hi"]))
+        if lane == "catalyst" and reason.get("catalyst_summary"):
+            seg += " — %s" % str(reason["catalyst_summary"])[:160]
         parts.append(seg + ".")
     else:
         parts.append("Manual entry.")

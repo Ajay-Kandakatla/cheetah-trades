@@ -124,7 +124,12 @@ def room_read(print_px, bands, prev_close=None) -> Optional[dict]:
     in_band = first["lo"] <= px <= first["hi"]
     target = first["hi"] if in_band else first["lo"]
     room_pct = (target - px) / px * 100.0
+    # room_pct is the 1-dp DISPLAY number; room_pct_raw is what the gate
+    # compares and what callers format in a refusal (review 2026-09-05: a
+    # 4.995% room printed "5.0% < 5%" — the rounded value must never be the
+    # one compared or quoted).
     return {"state": "IN_BAND" if in_band else "ROOM", "room_pct": round(room_pct, 1),
+            "room_pct_raw": room_pct,
             "target": round(target, 2), "touches": first.get("touches"), "band": dict(first)}
 
 
@@ -140,7 +145,12 @@ def room_gate(print_px, bands, prev_close=None,
         return True, None
     if room["state"] == "IN_BAND":
         return False, room
-    raw = (room["target"] - px) / px * 100.0
+    # Compare the UNROUNDED room. Until 2026-09-05 this rebuilt the pct from
+    # room["target"], which is rounded to cents — a band floor at 104.995 read
+    # 105.00 and a 4.995% room passed the 5% line (found by the boundary test).
+    raw = room.get("room_pct_raw")
+    if raw is None:
+        raw = (room["target"] - px) / px * 100.0
     return bool(raw >= min_room_pct), room
 
 

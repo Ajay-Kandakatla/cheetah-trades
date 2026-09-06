@@ -53,6 +53,8 @@ same Mongo handle `exit_engine` uses and never writes to them.
 | `SIGNAL_MAX_AGE_SEC` | 180 | a `latest` doc older than this (or from another day, or without a readable `as_of`) is **stale → no entries** |
 | `LAST_ENTRY_ET` | 15:45 | no new entries at/after this; the 15:44 tick is the last |
 | `RISK_STOP_FLOOR_PCT` | 1.0 | **not an owner rule** — a mirror of the bare literal `pct = max(pct, 1.0)` in FROZEN `trading/risk_rules.py` (the floor every placed stop gets); the room gate measures 2R off the stop that will actually be placed. Pinned to the literal in `tests/test_trading_contracts.py`. |
+| `alert_gates.ALERT_MIN_ROOM_PCT` | 5.0 | **phone gate = entry gate (2026-09-05)** — at least 5% room from the print to the first *unbroken* band overhead (imported from `supply_demand/alert_gates.py`, never redefined). Owner setting — Ajay 2026-09-05: *"atleast 5% to Supply"*. |
+| `alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT` | 1.0 | **phone gate = entry gate (2026-09-05)** — a demand buy only while the print sits between the band floor and 1% above its top (imported). Owner setting — Ajay 2026-09-05: *"<1% bounce from demand zone"*. |
 
 Candidates per tick, in this order:
 
@@ -126,8 +128,58 @@ rows (non-string symbol, band that is not a dict, sections that are not
 lists) are rejected, and a `zone_store` doc whose `bands` is not a list of
 dicts is *unknown room* (blocked) — never a crash out of `run()`.
 
+### Phone gate = entry gate (2026-09-05)
+
+**Ask (Ajay 2026-09-05, verbatim):** *"What ever rules I created for the alerts
+are the ideal conditions for a stock to be bough in Autopilot. Keep the
+minervini entries but also make sure you have demand zone and catalyst based
+entries time to time and journal it appropriately."*
+
+The two phone rules in `supply_demand/alert_gates.py` are now an **AND on top
+of every gate above** — none of them moved. Measured on the same `zone_store`
+doc the 2R gate reads (one read per candidate), in `zone_edge_entry.alert_gate`:
+
+| Rule | Function | Applies to | Detail |
+|---|---|---|---|
+| ≥ 5% room to the first **unbroken** band overhead | `alert_gates.room_gate(last, bands, prev_close)` | every candidate | overhead = supply bands with `hi ≥ last` that yesterday did **not** close above (`hi < prev_close` = broken lid = support), plus demand bands with `lo > last` (broken support = resistance). **CLEAR** (nothing overhead) passes; **IN_BAND** (the print inside a supply band) fails; room under 5% fails. **Breakouts** are measured against the bands strictly **above the band being cleared** (`hi > band.hi`) so the cleared band is never its own lid; a breakout to new highs with `overhead_bands == 0` is CLEAR by the board's own read (no doc needed). For demand rows the entry band itself is excluded (it is support). |
+| print within 1% above the demand band top | `alert_gates.demand_proximity_gate(last, band)` | demand candidates only | `band.lo ≤ last ≤ band.hi × 1.01`. Under the floor = fell through; above the line = *"I am late by the time it reaches me"* — both fail. |
+
+**Why TRU was on the board and must not be bought:** print 79.88 inside demand
+band 78.34–81.08, which *contains* a supply band 80.12–82.10 → the first
+unbroken band overhead is 0.3% away → `alert gate: room 0.30% < 5% (supply
+80.12-82.1)`. The old 2R gate would also have refused it (`room < 2R`), but the
+alert gate now speaks first and in the owner's own units. The refusal quotes
+the **raw** pct at 2 dp (`room["room_pct_raw"]`, added to `alert_gates.room_read`
+2026-09-05): the 1-dp display number can read "5.0% < 5%" at the 4.995%
+boundary, and `room_gate` itself now compares the unrounded value (it used to
+rebuild the pct from a cents-rounded target and let 4.995% through).
+
+**A failure is a SKIP, not an attempt** — the room can open later in the day
+(a lid breaks, the print pulls back to the level), so the row is re-read next
+tick. It lands in the tick summary's `skipped[]` with reason `alert gate: …`,
+is counted in `skipped_alert_gate`, and writes an `execution_race` row with
+`outcome: 'skipped'` and the gate detail (`gate: {ok, room, proximity,
+reason, min_room_pct, max_above_demand_pct}`), so the race still records that
+the engine saw the signal and why it stood aside. An **unknown** doc (missing,
+or `bands` not a list of dicts) is not a gate verdict — the 2R gate then blocks
+`room unknown` as before (fails closed either way).
+
+Order per candidate: stop gate → **alert gate** (skip) → 2R room gate (blocked
+attempt) → `entries.enter`. `GET /trading/status .zone_edge_entry` gains
+`alert_gate {min_room_pct, max_above_demand_pct}` and
+`skipped_alert_gate_today` (distinct race rows skipped today); the `rules[]`
+list carries both rules with the dated quote as their source.
+
+**Journal lane tag.** The ONE `entries.enter` call now passes
+`strategy="demand_zone"` for demand rows and `"breakout"` for supply-side rows,
+with `reason = {side, tier, band, room (2R detail), proximity, gate, dist_pct,
+first_seen}` — see `docs/sepa/journal_analytics_methodology.md` §2a. The
+Minervini funnel tags its buys `minervini`; the catalyst lane
+(`docs/supply_demand/catalyst_entry.md`) tags `catalyst`. Every lane is still
+**paper** and still flows through the same `entries.enter → risk_rules` path.
+
 Ledger kinds: `zone_entry` (side, band, stop_pct, dist_pct, first_seen,
-order id; `dry_run=false`), `zone_entry_blocked` (`dry_run=true`),
+order id, `gate`; `dry_run=false`), `zone_entry_blocked` (`dry_run=true`),
 `zone_entry_error` (`dry_run=false`, "verify at the broker whether an order
 exists"), `zone_entry_disabled` (once per day). Push on a buy: owner-only,
 title `🎯 Zone-edge paper buy {SYM} {side}` (the mode word follows the
@@ -153,7 +205,8 @@ still records that the engine saw the signal at signal time.
 | `engine_fill_ts`, `engine_fill_px` | reconciled from `broker.closed_orders_since` (matched by `client_order_id` / id, filled buys only) — the same read `exit_engine` uses for fills |
 | `user_view_ts`, `user_view_px` | the owner's first `usage_events` row with route `/sepa/{SYM}` (any query string) started after `signal_ts`; px = the `zone_edge_track` print nearest that minute (within 5 min, else `None`) |
 | `user_fill_ts`, `user_fill_px` | the owner's `portfolio_holdings` row for SYM added/updated after `signal_ts`; px = `cost_basis / shares` |
-| `outcome`, `reason` | `ordered` \| `blocked` \| `error` |
+| `outcome`, `reason` | `ordered` \| `blocked` \| `error` \| `skipped` (alert gate, 2026-09-05 — re-read next tick) |
+| `gate` | the alert-gate detail `{ok, room, proximity, reason, min_room_pct, max_above_demand_pct}` (2026-09-05); `null` on rows written before the gate existed |
 
 `reconcile_race()` runs at the end of every `run()` and on every
 `GET /trading/race`; it touches **only** today's and yesterday's docs and is
@@ -194,7 +247,14 @@ reads `paper`.
 
 ## 6. Tests
 
-- `tests/test_zone_edge_entry.py` — gates, every funnel negative, stop/room
+- `tests/test_zone_edge_entry.py` — phone gate = entry gate (2026-09-05): the
+  TRU shape (0.3% room → skipped, race row `skipped` + gate detail, no
+  attempt, re-read next tick), a resident in its band with 8% room passes
+  (strategy `demand_zone`), 1.5% above the top fails proximity, a breakout
+  measured to the band above the cleared one (3% skip / 6% pass / none pass,
+  strategy `breakout`), pure-function edges (unknown doc → 2R gate, broken
+  lid, under the floor), status `skipped_alert_gate_today`; gates, every
+  funnel negative, stop/room
   blocks, skips vs attempts, success/veto/error/market-closed paths,
   ordering, reconcile + report (lags, medians, NaN safety, window), tick
   hook fence, status block, config + race routes; review regressions: state

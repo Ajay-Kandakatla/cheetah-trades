@@ -13,7 +13,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TickerLink } from './TickerLink';
 import { useBounceRoom } from '../hooks/useBounceRoom';
-import { bounceLabel, compareBounceRoom, coverageNote, roomLabel } from '../lib/bounceRoom';
+import {
+  ROOM_MIN_PCT, bounceLabel, compareBounceRoom, coverageNote, roomLabel,
+  type BounceRoomRow, type RoomRead, type RoomState,
+} from '../lib/bounceRoom';
 import { DemandTrackRecord } from './DemandTrackRecord';
 import {
   bandLabel, blockCount, breakEvenWinPct, freshnessLabel, level, liquidityView, money,
@@ -29,8 +32,27 @@ import { useAlertedToday } from '../hooks/useAlertHistory';
 import { AlertedTodayChip } from './AlertedTodayChip';
 
 
+/* The server's room block on every row (2026-09-05, GET /supply-demand/
+ * demand-reentry?min_room=): % from the PRINT to the first UNBROKEN band
+ * overhead — supply not broken under prev_close, plus demand bands above —
+ * excluding the row's own entry band. `basis` says which print: the live
+ * snapshot when one was available, else the scan's close. CLEAR = nothing
+ * overhead; IN_BAND = the print is inside a band. Owner setting, not advice. */
+type ServerRoom = {
+  room_pct: number | null;
+  /** unrounded pct the server compared (room_floor.room_block, 2026-09-05) */
+  room_pct_raw?: number | null;
+  target_lo: number | null;
+  target_hi: number | null;
+  target_kind: string | null;
+  state: RoomState;
+  basis: 'live' | 'scan';
+};
+
+type ReentryRow = ZoneMapPayload & { room?: ServerRoom | null };
+
 type Payload = {
-  rows: ZoneMapPayload[];
+  rows: ReentryRow[];
   n: number;
   scanned: number;
   universe: number;
@@ -62,6 +84,12 @@ type Payload = {
   min_rr?: number;
   min_rr_default?: number;
   dropped_low_rr?: number;
+  /* Room floor applied on the server (2026-09-05) and how many rows it hid.
+   * Ajay, on TRU 0.3% under a supply band: "Why is it still in in Demand
+   * page? There is only 0.5% room" → "stocks that have more room atleast
+   * >5%". Same ALERT_MIN_ROOM_PCT the phone gate uses. */
+  min_room?: number;
+  dropped_low_room?: number;
   disclaimer: string;
 };
 
@@ -111,10 +139,52 @@ const RR_FLOORS: { key: string; label: string }[] = [
   { key: '2',    label: '🎯 R:R ≥ 2' },
 ];
 
+/* Room floor (Ajay 2026-09-05): "I need the same logic in Demand and deep
+ * demand zone. So that there are stocks that have more room atleast >5%".
+ * Two options only — the alert gate's floor (ALERT_MIN_ROOM_PCT = 5.0, owner
+ * setting, mirrored as ROOM_MIN_PCT) or off. Not a tunable: the phone and the
+ * board must describe the same list, and a third number would be one Ajay did
+ * not give. Sent to the server as min_room on both the read and the scan. */
+const ROOM_FLOORS: { key: string; label: string }[] = [
+  { key: String(ROOM_MIN_PCT), label: `🧱 Room ≥ ${ROOM_MIN_PCT}% (default)` },
+  { key: '0', label: '🧱 any room' },
+];
+
+/** The server's room block as the shared RoomRead so ONE label / ONE sort
+ *  rule (lib/bounceRoom.ts) covers both the board's own read and the
+ *  bounce-room hook's. ATR-days and the 52-week flag are not in the block;
+ *  they are left null rather than guessed. */
+function toRoomRead(sr: ServerRoom): RoomRead {
+  const band = sr.target_lo != null && Number.isFinite(sr.target_lo)
+    ? { kind: sr.target_kind === 'broken_support' ? 'broken_support' as const
+             : sr.target_kind === 'demand' ? 'demand' as const : 'supply' as const,
+        lo: sr.target_lo, hi: sr.target_hi ?? sr.target_lo, touches: 0 }
+    : null;
+  return { state: sr.state, room_pct: sr.room_pct, room_pct_raw: sr.room_pct_raw ?? null,
+           atr_days: null, band, at_highs: false };
+}
+
+/** The read a row is sorted and labelled by: the server's room block when the
+ *  payload carries one (it is measured from the same print the floor was
+ *  applied on, so the page and the count agree), else the hook's row. The
+ *  bounce half always comes from the hook — the server block has none. */
+function mergedRead(r: ReentryRow, hookRow: BounceRoomRow | undefined): BounceRoomRow | undefined {
+  if (!r.room) return hookRow;
+  return {
+    symbol: r.symbol.toUpperCase(),
+    coverage: hookRow?.coverage ?? 'store',
+    print: r.last_price,
+    fresh: r.room.basis === 'live',
+    bounce: hookRow?.bounce ?? null,
+    room: toRoomRead(r.room),
+  };
+}
+
 export function DemandReentryPanel() {
   const universe = UNIVERSE;
   const [sortKey, setSortKey] = useState<string>('bounce_room');
   const [minRr, setMinRr] = useState<string>('1');
+  const [minRoom, setMinRoom] = useState<string>(String(ROOM_MIN_PCT));
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -124,7 +194,8 @@ export function DemandReentryPanel() {
     force ? setScanning(true) : setLoading(true);
     setErr(null);
     try {
-      const u = `universe=${encodeURIComponent(universe)}&min_rr=${encodeURIComponent(minRr)}`;
+      const u = `universe=${encodeURIComponent(universe)}&min_rr=${encodeURIComponent(minRr)}`
+        + `&min_room=${encodeURIComponent(minRoom)}`;
       const r = force
         ? await fetch(`${API}/supply-demand/demand-reentry/scan?${u}`, {
             method: 'POST', credentials: 'include',
@@ -138,7 +209,7 @@ export function DemandReentryPanel() {
       setLoading(false);
       setScanning(false);
     }
-  }, [universe, minRr]);
+  }, [universe, minRr, minRoom]);
 
   useEffect(() => { load(false); }, [load]);
 
@@ -186,11 +257,16 @@ export function DemandReentryPanel() {
       <div className="sepa-tab-help">
         <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
         back <em>into</em> a demand band they had already left, while the structure
-        still holds. Sorted <strong>🪃 bouncing off demand first, then by the biggest
-        gap to the first supply band overhead</strong> (Ajay 2026-09-05 asked for
-        bouncing-off-demand names first, biggest gap to the first supply band next —
-        "open sky" means nothing overhead in the 1-year frame; R:R is still one click
-        away in the sort menu). The <strong>R:R</strong> floor applies whatever the sort:
+        still holds. Sorted <strong>🪃 bouncing off demand WITH room first</strong>, then
+        names with room, then bounces heading straight into a band (⛔), then the rest
+        (Ajay 2026-09-05 asked for bouncing-off-demand names first, biggest gap to the
+        first band overhead next — "open sky" means nothing overhead in the 1-year
+        frame; R:R is still one click away in the sort menu). The <strong>Room</strong>{' '}
+        floor is the phone's own gate — at least <strong>{ROOM_MIN_PCT}%</strong> from the
+        live print to the first unbroken band overhead, measured on the server; a name
+        already at its lid (TRU, 2026-09-05: 0.3% under a supply band sitting inside
+        the demand zone) is hidden by default and counted, and "any room" shows it
+        flagged. The <strong>R:R</strong> floor applies whatever the sort:
         measured over 737 walk-forward trades, <strong>36% of this board's wins hit
         target on the entry bar itself at a median 0.45R</strong> — plans whose
         objective was already inside the entry day's range. The floor removes those.
@@ -213,6 +289,12 @@ export function DemandReentryPanel() {
                 title="A plan that risks more than its first objective pays is not a trade. 36% of this board's backtested wins hit target on the ENTRY bar at a median 0.45R — this removes those.">
           {RR_FLOORS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
         </select>
+        <select value={minRoom} onChange={(e) => setMinRoom(e.target.value)}
+                disabled={busy} className="sepa-select" aria-label="Room floor"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}
+                title={`Room from the live print to the first unbroken band overhead (supply not broken under yesterday's close, plus demand bands above), excluding this row's own entry band. The phone only pages a name with ≥ ${ROOM_MIN_PCT}%; this board now applies the same floor. TRU 2026-09-05: 0.3% room, R:R 0.09 from the print.`}>
+          {ROOM_FLOORS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+        </select>
         <button className="sepa-btn" onClick={() => load(true)} disabled={busy}>
           {scanning ? 'Scanning…' : '🔄 Scan'}
         </button>
@@ -222,6 +304,11 @@ export function DemandReentryPanel() {
             {!!data.dropped_low_rr && (
               <span title={`Removed by the R:R ≥ ${data.min_rr} floor. A plan that risks more than its first objective pays is not a trade.`}>
                 {' '}· {data.dropped_low_rr} below R:R {data.min_rr}
+              </span>
+            )}
+            {!!data.dropped_low_room && (
+              <span title={`Hidden by the room floor: fewer than ${data.min_room ?? ROOM_MIN_PCT}% from the live print to the first unbroken band overhead. Pick "any room" to see them flagged ⛔.`}>
+                {' '}· {data.dropped_low_room} hidden: room &lt; {data.min_room ?? ROOM_MIN_PCT}%
               </span>
             )}
             {data.took_sec ? ` · ${data.took_sec}s` : ''}
@@ -300,13 +387,17 @@ export function DemandReentryPanel() {
           {[...data.rows].sort((a, b) => {
             const n = (v: number | null | undefined, d = -Infinity) => (v == null ? d : v);
             switch (sortKey) {
-              /* The shared rule (lib/bounceRoom.ts): bouncing first, then CLEAR
-               * (nothing overhead), then biggest room %, IN_BAND under any room,
-               * no read last. The comparator tiebreaks on the READ's symbol,
-               * which is '' for an unloaded row — so the board's own symbol
-               * settles it and the order never flickers while the read loads. */
+              /* The shared rule (lib/bounceRoom.ts): bouncing WITH room, then
+               * room ok (CLEAR / ≥ 5%), then bounces into supply (⛔), then the
+               * rest; inside a group CLEAR, then biggest room %, IN_BAND under
+               * any room, no read last. The server's room block (same print the
+               * floor ran on) is preferred over the hook's when present. The
+               * comparator tiebreaks on the READ's symbol, which is '' for an
+               * unloaded row — so the board's own symbol settles it and the
+               * order never flickers while the read loads. */
               case 'bounce_room': {
-                const c = compareBounceRoom(br.get(a.symbol.toUpperCase()), br.get(b.symbol.toUpperCase()));
+                const c = compareBounceRoom(mergedRead(a, br.get(a.symbol.toUpperCase())),
+                                            mergedRead(b, br.get(b.symbol.toUpperCase())));
                 return c !== 0 ? c : a.symbol.localeCompare(b.symbol);
               }
               case 'retailimb': return n(b.retail?.imbalance_pct) - n(a.retail?.imbalance_pct);
@@ -322,9 +413,14 @@ export function DemandReentryPanel() {
             const liq = liquidityView(r.liquidity);
             const ven = venueView(r.venues);
             const ret = retailView(r.retail);
-            const brRow = br.get(r.symbol.toUpperCase());
+            const brRow = mergedRead(r, br.get(r.symbol.toUpperCase()));
             const bounce = bounceLabel(brRow);
-            const room = brRow?.coverage === 'pending' ? '' : roomLabel(brRow);
+            /* Server block first (2026-09-05): it is the read the floor was
+             * applied on. A read taken from the scan's close rather than a
+             * live print says so — a 0.3% room on a stale print is a different
+             * claim from 0.3% now. */
+            const roomBase = brRow?.coverage === 'pending' && !r.room ? '' : roomLabel(brRow);
+            const room = roomBase && r.room?.basis === 'scan' ? `${roomBase} · scan close` : roomBase;
             return (
               <div key={r.symbol} style={{
                 padding: '0.6rem 0.75rem', borderRadius: 10,
@@ -365,13 +461,13 @@ export function DemandReentryPanel() {
                   * sessions and the print is 3% / one ATR above it; room = % to
                   * the bottom of the first supply band overhead (same read as
                   * the Portfolio sell side). Owner settings, not advice. */}
-                {(bounce || room || brRow?.coverage === 'pending') && (
+                {(bounce || room || (brRow?.coverage === 'pending' && !r.room)) && (
                   <div className="mono" style={{ fontSize: '0.72rem', marginTop: '0.2rem', opacity: 0.85 }}
-                       title="Bounce: the session low touched a demand band or broken-supply shelf within the last 5 sessions and price is now at least 3% / one ATR above it. Room: % from the print to the bottom of the first supply band overhead; open sky = nothing overhead in the 1-year frame. Configured price-structure read (owner settings), not advice.">
+                       title={`Bounce: the session low touched a demand band or broken-supply shelf within the last 5 sessions and price is now at least 3% / one ATR above it. Room: % from the print to the first unbroken band overhead (${r.room?.target_kind ? `here a ${r.room.target_kind} band, ` : ''}${r.room ? `measured on the ${r.room.basis === 'live' ? 'live print' : "scan's close"}` : 'bounce-room read'}); open sky = nothing overhead in the 1-year frame; ⛔ = under the ${ROOM_MIN_PCT}% floor the phone gate uses. Configured price-structure read (owner settings), not advice.`}>
                     {bounce && <span style={{ color: '#22c55e', fontWeight: 600 }}>{bounce}</span>}
-                    {bounce && (room || brRow?.coverage === 'pending') && ' · '}
-                    {room}
-                    {brRow?.coverage === 'pending' && (
+                    {bounce && (room || (brRow?.coverage === 'pending' && !r.room)) && ' · '}
+                    {room.startsWith('⛔') ? <span style={{ color: '#ef4444', fontWeight: 600 }}>{room}</span> : room}
+                    {brRow?.coverage === 'pending' && !r.room && (
                       <span style={{ opacity: 0.55 }}>room pending</span>
                     )}
                   </div>

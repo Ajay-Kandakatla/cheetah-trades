@@ -22,6 +22,15 @@
  * the ones "likely to go much higher", so CLEAR leads, then the biggest
  * measured gap to the first band overhead, then names still inside a band.
  * Rows without a read (coverage pending / unavailable) sort last, never hidden.
+ *
+ * The ROOM FLOOR (Ajay 2026-09-05, on TRU sitting 0.3% under a supply band on
+ * the Back-in-Demand board: "It already gapped up very close to the
+ * resistance. Why is it still in in Demand page? There is only 0.5% room" and
+ * "I need the same logic in Demand and deep demand zone. So that there are
+ * stocks that have more room atleast >5%"): the phone's alert gate
+ * (backend/supply_demand/alert_gates.py ALERT_MIN_ROOM_PCT = 5.0, owner
+ * setting) is now the boards' rule too. ROOM_MIN_PCT mirrors it, and the sort
+ * groups by it before anything else — a bounce INTO supply is not a lead.
  */
 import { level, money } from './zonePlan';
 
@@ -49,8 +58,10 @@ export type BounceRead = {
 };
 
 export type RoomBand = {
-  /** 'broken_support' = a demand band price fell through, now resistance. */
-  kind: 'supply' | 'broken_support';
+  /** 'broken_support' = a demand band price fell through, now resistance;
+   *  'demand' = an intact demand band whose floor sits ABOVE the print (the
+   *  server's room block counts those as overhead too, 2026-09-05). */
+  kind: 'supply' | 'broken_support' | 'demand';
   lo: number;
   hi: number;
   touches: number;
@@ -61,8 +72,13 @@ export type RoomState = 'CLEAR' | 'IN_BAND' | 'NEAR' | 'ROOM';
 export type RoomRead = {
   state: RoomState;
   /** % from the print to the bottom of the first band overhead; 0.0 inside a
-   *  band; null ONLY for CLEAR (nothing overhead). */
+   *  band; null ONLY for CLEAR (nothing overhead). Rounded to 1 dp by the
+   *  server — DISPLAY only; compare `room_pct_raw` when it is present. */
   room_pct: number | null;
+  /** The unrounded pct the server compared (alert_gates / room_floor,
+   *  2026-09-05). Absent on older payloads and on the bounce-room endpoint's
+   *  legacy rows; the compare then falls back to room_pct. */
+  room_pct_raw?: number | null;
   atr_days: number | null;
   band: RoomBand | null;
   /** print >= NEW_HIGH_TOL x high_252 (when the 52-week high is known). */
@@ -119,6 +135,64 @@ export function isBouncing(row?: BounceRoomRow | null): boolean {
   return Boolean(row && row.bounce);
 }
 
+/** Frontend mirror of ALERT_MIN_ROOM_PCT (backend/supply_demand/alert_gates.py,
+ *  owner setting, Ajay 2026-09-05: "stocks that have more room atleast >5%").
+ *  % from the print to the first unbroken band overhead. Not a book number. */
+export const ROOM_MIN_PCT = 5;
+
+/** True when a MEASURED room read clears the floor: CLEAR (nothing overhead)
+ *  or room_pct >= ROOM_MIN_PCT. IN_BAND (0.0), NEAR / ROOM under the floor,
+ *  pending, unavailable, unloaded and malformed reads are all false — an
+ *  unknown room is not room. Same boundary as the phone gate (>= 5 passes). */
+export function roomOk(row?: BounceRoomRow | null): boolean {
+  const room = row?.room;
+  if (!room) return false;
+  if (room.state === 'CLEAR') return true;
+  // The server's NEAR verdict was reached on the RAW pct (room_floor.room_block
+  // splits ROOM/NEAR at the house floor before rounding): 4.995% arrives as
+  // room_pct 5.0 + NEAR and must not read as room-ok here (review 2026-09-05).
+  if (room.state === 'NEAR') return false;
+  const p = effectiveRoomPct(room);
+  return p != null && p >= ROOM_MIN_PCT;
+}
+
+/** The pct to COMPARE: the server's unrounded `room_pct_raw` when it carries
+ *  one, else the 1-dp `room_pct`. null when neither is a finite number. */
+export function effectiveRoomPct(room?: RoomRead | null): number | null {
+  if (!room) return null;
+  const raw = room.room_pct_raw;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  return room.room_pct != null && Number.isFinite(room.room_pct) ? room.room_pct : null;
+}
+
+/** True only for a MEASURED read under the floor (ROOM / NEAR < 5%, IN_BAND).
+ *  Never true for CLEAR, at-floor, pending, unavailable or unloaded rows —
+ *  the ⛔ flag must name a band the print is heading into, not a missing read. */
+export function intoSupply(row?: BounceRoomRow | null): boolean {
+  const room = row?.room;
+  if (!room || room.state === 'CLEAR') return false;
+  if (!ROOM_STATES.includes(room.state)) return false;
+  if (room.state === 'NEAR') return true;                 // the server measured it under the floor
+  const p = effectiveRoomPct(room);
+  if (p == null) return false;
+  return p < ROOM_MIN_PCT;
+}
+
+/** The sort's first key (Ajay 2026-09-05):
+ *    0 — bouncing AND room ok (the phone-grade read: off demand, room to run)
+ *    1 — room ok (CLEAR or >= 5%), not bouncing
+ *    2 — bouncing but INTO supply (measured room under the floor) — flagged ⛔
+ *    3 — everything else: under-floor non-bouncers, IN_BAND, bounce with an
+ *        unknown room, pending, unavailable, unloaded */
+export function roomGroup(row?: BounceRoomRow | null): 0 | 1 | 2 | 3 {
+  const ok = roomOk(row);
+  const b = isBouncing(row);
+  if (b && ok) return 0;
+  if (ok) return 1;
+  if (b && intoSupply(row)) return 2;
+  return 3;
+}
+
 /* ── ordering (mirrors backend room_rank / bounce_room_key) ──────────────── */
 
 const ROOM_STATES: RoomState[] = ['ROOM', 'NEAR', 'IN_BAND'];
@@ -138,12 +212,15 @@ export function roomRank(row?: BounceRoomRow | null): [number, number] {
   return [2, 0];
 }
 
-/** The one sort for all three surfaces: bouncing first, then roomRank, then
- *  bounce_pct DESC, then symbol. Undefined rows fall to the end of every tier. */
+/** The one sort for all three surfaces: roomGroup (bouncing+room, room,
+ *  bouncing-into-supply, rest), then roomRank, then bounce_pct DESC, then
+ *  symbol. Undefined rows fall to the end of every tier. Until 2026-09-05 the
+ *  first key was "bouncing at all", which put TRU-class bounces into a band
+ *  0.3% overhead on top of the board. */
 export function compareBounceRoom(a?: BounceRoomRow | null, b?: BounceRoomRow | null): number {
-  const ba = isBouncing(a) ? 0 : 1;
-  const bb = isBouncing(b) ? 0 : 1;
-  if (ba !== bb) return ba - bb;
+  const ga = roomGroup(a);
+  const gb = roomGroup(b);
+  if (ga !== gb) return ga - gb;
   const ra = roomRank(a);
   const rb = roomRank(b);
   if (ra[0] !== rb[0]) return ra[0] - rb[0];
@@ -162,22 +239,30 @@ function pct(v: number): string {
   return `${v >= 0 ? '+' : ''}${Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)}%`;
 }
 
+/** The flag every under-floor MEASURED read wears (Ajay 2026-09-05, TRU). */
+export const INTO_SUPPLY_PREFIX = '⛔ into supply · ';
+
 /** Short room read for a stat / row line.
  *    CLEAR    → "open sky" (+ " · 52w highs" when at_highs)
  *    ROOM/NEAR→ "+17% room → $18.22 · 3.1 ATR"
  *    IN_BAND  → "in supply band"
  *    pending / unavailable / no room read → "room n/a"
- *    undefined row (not loaded) → "" */
+ *    undefined row (not loaded) → ""
+ *  A measured read UNDER the floor (ROOM / NEAR < 5%, IN_BAND) is prefixed
+ *  "⛔ into supply · " — group 2 (a bounce into supply) and the under-floor
+ *  rest alike, because the flag describes the band overhead, not the bounce.
+ *  CLEAR, at-floor and absent reads are never flagged. */
 export function roomLabel(row?: BounceRoomRow | null): string {
   if (!row) return '';
   const room = row.room;
   if (!room) return 'room n/a';
+  const flag = intoSupply(row) ? INTO_SUPPLY_PREFIX : '';
   if (room.state === 'CLEAR') return `open sky${room.at_highs ? ' · 52w highs' : ''}`;
-  if (room.state === 'IN_BAND') return 'in supply band';
+  if (room.state === 'IN_BAND') return `${flag}in supply band`;
   if (room.room_pct == null || !Number.isFinite(room.room_pct)) return 'room n/a';
   const to = room.band ? ` → ${money(room.band.lo)}` : '';
   const atr = room.atr_days != null && Number.isFinite(room.atr_days) ? ` · ${room.atr_days.toFixed(1)} ATR` : '';
-  return `${pct(room.room_pct)} room${to}${atr}`;
+  return `${flag}${pct(room.room_pct)} room${to}${atr}`;
 }
 
 /** "🪃 +4.2% off $161.00 · today" / "· 2d ago"; "" when not bouncing. The

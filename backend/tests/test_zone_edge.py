@@ -1076,3 +1076,13 @@ def test_a_transient_empty_store_read_does_not_overwrite_todays_live_payload(mon
     cold = _colls()
     out4, _ = _run({}, {}, {}, colls=cold)
     assert out4["latest_written"] is True and cold["latest_coll"].docs["latest"]["date"] == DAY
+
+
+def test_break_single_message_carries_the_ticker_for_push_history_2026_09_05():
+    """/alerts page + alerted-today chips key on push_history.ticker."""
+    item = {"symbol": "ARM", "last": 241.0, "tier": "broke", "dist_pct": 0.6, "new_highs": True,
+            "band": {"kind": "supply", "lo": 240.0, "hi": 244.0, "touches": 3, "strength": 60.0},
+            "cap": 250e9, "name": "Arm Holdings", "role": "resistance", "side": "supply",
+            "key": "x", "first_seen": "09:31"}
+    msg = ZE.break_single_message(item)
+    assert msg["ticker"] == "ARM"

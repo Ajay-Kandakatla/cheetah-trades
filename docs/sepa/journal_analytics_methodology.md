@@ -65,7 +65,8 @@ One journal doc per round-trip, keyed by a **stable** `trade_id =
 
 ```
 { trade_id, symbol, status: "open"|"closed",
-  entry: { ts, epoch, price, qty, stop_price, stop_pct, target_price,
+  entry: { ts, epoch, strategy, entry_reason,
+           price, qty, stop_price, stop_pct, target_price,
            target_pct, reward_risk, breakeven_trigger, regime,
            size_multiplier, mode, trigger: {path, pivot, relvol, score,
            cleared_at_frac} | null },
@@ -82,6 +83,65 @@ fill price but no `gain_pct`; we derive `gain_pct` from `(fill/entry − 1)` whe
 both are present and otherwise leave it `null` — **never invent a number**.
 `holding_days` is **calendar** days between entry and exit epochs (clearly
 labelled; weekends/holidays included).
+
+### 2a. Strategy lanes (`entry.strategy`, `entry.entry_reason`, `summary.by_strategy`)
+
+**Ask (Ajay 2026-09-05, verbatim):** *"Keep the minervini entries but also make
+sure you have demand zone and catalyst based entries time to time and journal
+it appropriately."* This is journaling, not method: **no new gate, no book
+formula** — the Minervini rules in `auto_entry.py` / `risk_rules.py` are
+untouched.
+
+Every `entry` ledger row written by `entries.enter()` now carries
+`detail.strategy` (one of `minervini | demand_zone | breakout | catalyst |
+manual`, the lane that bought) and `detail.entry_reason` (a small JSON-safe
+dict the lane hands over — capped at `REASON_MAX_BYTES = 2048`, past that a
+`{truncated: true, preview}` marker). The journal copies both onto
+`entry.strategy` / `entry.entry_reason`:
+
+| Lane | Who passes it | `entry_reason` carries |
+|---|---|---|
+| `minervini` | `trading/auto_entry.py` (the TLSW funnel, unchanged) | `{path, pivot, score, rs_rank, relvol}` |
+| `demand_zone` | `trading/zone_edge_entry.py`, demand-side rows | `{side, tier, band, room, proximity, gate, dist_pct, first_seen}` |
+| `breakout` | `trading/zone_edge_entry.py`, supply-side rows | same shape |
+| `catalyst` | `trading/catalyst_entry.py` | `{quadrant, grade, catalyst_summary, room, bounce, proximity, side, price, dollar_volume, print, stop_pct}` |
+| `manual` | `POST /trading/enter` (default) | `null` |
+
+**Old rows (before 2026-09-05)** carry no tag: an entry with an `auto_entry`
+trigger row is journaled `minervini` (inference, the same read
+`autopsy.detect` makes), everything else `manual`; `entry_reason` is `null`.
+An unknown tag is journaled `manual` — a bad tag never poisons the doc.
+
+`summary()` gains **`by_strategy`** — one row per lane that has at least one
+trade:
+
+```
+by_strategy: { <lane>: { n, open, closed, wins, losses, win_rate_pct,
+                         avg_r, expectancy_pct, realized_pnl } }
+```
+
+- `wins` / `losses` — closed trades with `gain_pct > 0` / `< 0` (a 0% close is
+  neither); `win_rate_pct = wins / (wins + losses) × 100`.
+- `avg_r` — mean **realized R** = `gain_dollars / (qty × (entry − placed
+  stop))` when all three are known (the stop the engine actually placed, so a
+  clamped stop reads honestly), else the doc's `r_multiple`
+  (`gain_pct / stop_pct`), else the trade is left out of the mean.
+- `expectancy_pct` — mean `gain_pct` over the lane's closed trades. **Not**
+  the p.298 batting-weighted expectancy in `analytics.compute` — that one is
+  book-wide; this one is a per-lane arithmetic mean, labelled as such.
+- `realized_pnl` — summed `gain_dollars`.
+- Rates are `null` until a lane has a closed trade; `open` counts the rest.
+
+Small-sample rule applies per lane, harder: one catalyst buy a day means the
+`catalyst` row is anecdote for weeks.
+
+`GET /trading/journal` returns it inside `summary` (shape otherwise
+unchanged). `narrate()` names the lane for `demand_zone` / `breakout` /
+`catalyst` entries ("Demand-zone lane entry (paper Auto-Pilot, owner rules),
+band 98-99.5.") and quotes the catalyst summary for the catalyst lane.
+`autopsy.detect` reads the tag **first** (`demand_zone` / `breakout` →
+`zone_edge`; `catalyst` gets its own label; `STRATEGIES` extended) and falls
+back to the old state-doc / trigger inference for untagged rows.
 
 ### Perpetual — never pruned
 `reconcile()` **upserts** by `trade_id` into `trade_journal` — **no TTL, no
@@ -164,7 +224,8 @@ the app's existing `MIN_RECORD_N = 10` convention in
 - **`GET /trading/journal?limit=&decisions=`** → `{trades: [...closed docs with
   narrative...], open: [...open docs mark-to-market via
   `sepa.prices.bulk_live_prices` (lazy), each with a `mark` block...],
-  decisions: [...] when `decisions=1`, summary}`. The journal stays
+  decisions: [...] when `decisions=1`, summary}` — `summary` carries
+  `by_strategy` (§2a) since 2026-09-05. The journal stays
   pure/historical; the live mark-to-market overlay lives only in the API
   response.
 - **`GET /trading/analytics`** → `journal.reconcile()` then

@@ -186,6 +186,12 @@ export type CmBoard = {
    *  off the band top (Ajay 2026-09-03: the arrival is over). */
   dropped_bounced?: number;
   bounce_done_pct?: number;
+  /** Demand boards only (2026-09-05) — the room floor the server applied on the
+   *  LIVE print (% to the first unbroken band overhead; ALERT_MIN_ROOM_PCT,
+   *  owner setting) and how many tiles it hid. Ajay: "stocks that have more
+   *  room atleast >5%". 0 = floor off. */
+  min_room?: number;
+  hidden_low_room?: number;
   /** 0DTE only — the same-day expiry these chains are read from. */
   expiry?: string;
   /** 0DTE only — where in the trading day this read happened. After the close
@@ -303,6 +309,26 @@ export const ICT_MICROS: { key: IctMicro; label: string }[] = [
   { key: '60m', label: '60m' },
   { key: '15m', label: '15m' },
 ];
+
+/* ── room floor (Ajay 2026-09-05) ─────────────────────────────────────────── */
+
+/** The two boards the floor applies to. Their tiles are demand arrivals; a
+ *  tile 0.3% under a supply band (TRU, 2026-09-05) is not one worth showing.
+ *  The other tabs have no room read and never receive the param. */
+export const ROOM_TABS: CmTab[] = ['zones', 'deep_demand'];
+
+/** Frontend mirror of ALERT_MIN_ROOM_PCT (backend/supply_demand/alert_gates.py,
+ *  owner setting) — the phone's gate and now the demand boards' floor. Same
+ *  constant as lib/bounceRoom.ts ROOM_MIN_PCT; re-declared here so this file
+ *  stays dependency-free (it is imported by the chart primitives). */
+export const DEFAULT_MIN_ROOM = 5;
+
+/** `?room=` → the floor. Two values only: `any` (or `0`) turns it off, every
+ *  other value — including a typed number Ajay never chose — is the floor. */
+export function parseMinRoom(raw: string | null | undefined): 5 | 0 {
+  if (raw === 'any' || raw === '0') return 0;
+  return DEFAULT_MIN_ROOM;
+}
 
 export function parseBias(raw: string | null | undefined): IctBias {
   const v = (raw || '').trim().toLowerCase();
@@ -505,6 +531,7 @@ export function boardQuery(p: {
   minTier?: string; gabbarLevel?: string; gabbarTouchingOnly?: boolean;
   phase?: string; target?: string;
   bias?: string; micro?: string;
+  minRoom?: number;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -521,6 +548,14 @@ export function boardQuery(p: {
   }
   if (p.tab === 'zones' && p.target === 'order_block') {
     q.set('target', 'order_block');
+  }
+  // Room floor (Ajay 2026-09-05: "same logic in Demand and deep demand
+  // zone ... more room atleast >5%"). Sent EXPLICITLY — 5 and 0 alike — so the
+  // request says which floor the board was asked for, and only on the two
+  // demand boards; nothing else has a room read. Omitted when the caller did
+  // not decide (older call sites), leaving their query byte for byte.
+  if (ROOM_TABS.includes(p.tab) && p.minRoom != null && Number.isFinite(p.minRoom)) {
+    q.set('min_room', String(p.minRoom));
   }
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));

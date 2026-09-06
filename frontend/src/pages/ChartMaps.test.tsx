@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartMaps } from './ChartMaps';
 
@@ -453,6 +453,96 @@ describe('the approach-target switch', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Back in Demand' }));
     await waitFor(() => expect(screen.getByText(/2 names hidden — already/)).toBeInTheDocument());
     expect(screen.getByText(/bounced 7%\+ off the demand zone/)).toBeInTheDocument();
+  });
+});
+
+/* ── the 5% room floor (Ajay 2026-09-05) ─────────────────────────────────────
+ * "I need the same logic in Demand and deep demand zone. So that there are
+ * stocks that have more room atleast >5%". Server-side floor (min_room), the
+ * two demand boards only; the page sends it, offers the one alternative (any
+ * room), reports how many tiles it hid, and the tile's own "room" stat renders
+ * through the shared tile component like every other stat. */
+const ROOM_TILE = {
+  ...VCP_TILE,
+  symbol: 'EOSE', name: 'Eos Energy', href: '/sepa/EOSE?tab=supply',
+  bands: [{ kind: 'demand', lo: 14.6, hi: 14.95 }],
+  lines: [], badges: [],
+  stats: [{ k: 'CMF', v: '+0.18' }, { k: 'room', v: '+12.4% -> 84.10' }],
+  why: 'back inside a tested band',
+};
+const ROOM_BOARD = {
+  tab: 'zones', count: 1, matched: 3, scanned: 1746, tiles: [ROOM_TILE],
+  min_room: 5, hidden_low_room: 2, disclaimer: 'Study board.',
+};
+
+describe('the room floor (Ajay 2026-09-05)', () => {
+  const urlsOf = () => vi.mocked(fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+
+  it('offers Room ≥ 5% / Any room on zones and deep_demand, and nowhere else', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, zones: ROOM_BOARD, deep_demand: { ...ROOM_BOARD, tab: 'deep_demand' } }));
+    const a = render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    const ctl = await screen.findByRole('tablist', { name: 'Room floor' });
+    expect(within(ctl).getByRole('tab', { name: /Room ≥ 5%/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(ctl).getByRole('tab', { name: /Any room/ })).toHaveAttribute('aria-selected', 'false');
+    a.unmount();
+
+    const b = render(<MemoryRouter initialEntries={['/chart-maps?tab=deep_demand']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByRole('tablist', { name: 'Room floor' })).toBeInTheDocument();
+    b.unmount();
+
+    // NEGATIVE: VCP has no room read and no control.
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=vcp']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByText('AVGO')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Room floor' })).toBeNull();
+    expect(urlsOf().some((u: string) => u.includes('tab=vcp') && u.includes('min_room'))).toBe(false);
+  });
+
+  it('sends min_room=5 by default on the two boards, min_room=0 for ?room=any', async () => {
+    vi.stubGlobal('fetch', stubFetch({ zones: ROOM_BOARD, deep_demand: { ...ROOM_BOARD, tab: 'deep_demand' } }));
+    const a = render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    await screen.findByRole('tablist', { name: 'Room floor' });
+    expect(urlsOf().some((u: string) => u.includes('tab=zones') && u.includes('min_room=5'))).toBe(true);
+    a.unmount();
+
+    const b = render(<MemoryRouter initialEntries={['/chart-maps?tab=deep_demand&room=any']}><ChartMaps /></MemoryRouter>);
+    const ctl = await screen.findByRole('tablist', { name: 'Room floor' });
+    expect(within(ctl).getByRole('tab', { name: /Any room/ })).toHaveAttribute('aria-selected', 'true');
+    expect(urlsOf().some((u: string) => u.includes('tab=deep_demand') && u.includes('min_room=0'))).toBe(true);
+    b.unmount();
+  });
+
+  it('clicking Any room refetches with min_room=0; clicking back sends 5 again', async () => {
+    vi.stubGlobal('fetch', stubFetch({ zones: ROOM_BOARD }));
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    const ctl = await screen.findByRole('tablist', { name: 'Room floor' });
+    fireEvent.click(within(ctl).getByRole('tab', { name: /Any room/ }));
+    await waitFor(() => expect(urlsOf().some((u: string) => u.includes('tab=zones') && u.includes('min_room=0'))).toBe(true));
+    const before = urlsOf().length;
+    fireEvent.click(within(ctl).getByRole('tab', { name: /Room ≥ 5%/ }));
+    await waitFor(() => expect(urlsOf().length).toBeGreaterThan(before));
+    expect(urlsOf()[urlsOf().length - 1]).toContain('min_room=5');
+  });
+
+  it('says how many tiles the floor hid and renders the tile "room" stat through the shared tile', async () => {
+    vi.stubGlobal('fetch', stubFetch({ zones: ROOM_BOARD }));
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByText('EOSE')).toBeInTheDocument();
+    expect(screen.getByText(/2 hidden: room < 5%/)).toBeInTheDocument();
+    expect(screen.getByText('+12.4% -> 84.10')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: no hidden line when the server hid nothing or predates the floor', async () => {
+    vi.stubGlobal('fetch', stubFetch({ zones: { ...ROOM_BOARD, hidden_low_room: 0 } }));
+    const a = render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByText('EOSE')).toBeInTheDocument();
+    expect(screen.queryByText(/hidden: room </)).toBeNull();
+    a.unmount();
+    const { hidden_low_room: _h, min_room: _m, ...legacy } = ROOM_BOARD;
+    void _h; void _m;
+    vi.stubGlobal('fetch', stubFetch({ zones: legacy }));
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByText('EOSE')).toBeInTheDocument();
+    expect(screen.queryByText(/hidden: room </)).toBeNull();
   });
 });
 

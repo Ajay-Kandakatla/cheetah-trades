@@ -236,7 +236,7 @@ def at_message(item: dict) -> dict:
     # "kind" rides in the payload: push/history.py records payload["kind"], so
     # without it every 🧲 push logged as kind=None (found 2026-09-03).
     return {"title": f"🧲 {sym} {where} {_band_txt(band)}", "body": body,
-            "url": f"/sepa/{sym}?tab=supply", "data": {"url": f"/sepa/{sym}?tab=supply"},
+            "url": f"/sepa/{sym}?tab=supply", "data": {"url": f"/sepa/{sym}?tab=supply"}, "ticker": sym,
             "kind": KIND}
 
 

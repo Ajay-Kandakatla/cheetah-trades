@@ -100,6 +100,12 @@ async def get_demand_reentry(
     min_rr: Optional[float] = Query(None, ge=0, le=10,
                                     description="reward:risk floor; 0 = off, "
                                                 "omit for the house default (1.0)"),
+    min_room: float = Query(reentry_mod.MIN_ROOM_DEFAULT, ge=0, le=50,
+                            description="room floor: % from the LIVE print to the "
+                                        "first unbroken band overhead; rows under "
+                                        "it are dropped (dropped_low_room). 0 = off "
+                                        "(every row still carries `room`). Default "
+                                        "= alert_gates.ALERT_MIN_ROOM_PCT (5.0)."),
 ):
     """Names that have pulled back DOWN into a tested demand band while the
     structure still holds ("entering back into demand").
@@ -115,6 +121,14 @@ async def get_demand_reentry(
     `universe`: sp500 (default) | sp1500 | sp400 | sp600. sp1500 adds the
     ~1,000 S&P MidCap + SmallCap names beyond the S&P 500 (2026-08-13).
 
+    `min_room` (2026-09-05): every row (and deep row) carries `room` — the %
+    from the live print (basis "live"; the scan price, basis "scan", when the
+    tape has nothing) to the first unbroken band overhead, the entry band
+    excluded — and rows under the floor are dropped like the R:R floor drops.
+    Ajay, TRU: "It already gapped up very close to the resistance. Why is it
+    still in in Demand page? There is only 0.5% room". Owner setting, S&D
+    scope; the number is the phone gate's ALERT_MIN_ROOM_PCT.
+
     Independent of the Minervini/SEPA stack. Configured price-structure method
     (NOT a book method) — decision-support only, not a buy signal, not advice.
     See backend/supply_demand/demand_reentry.py.
@@ -123,11 +137,11 @@ async def get_demand_reentry(
     # Never block the request on a cold pass — a full sp1500 scan is minutes
     # and Cloudflare cuts at ~100s (the 524 of 2026-08-14). `force` still runs
     # inline for the Scan button, which the UI shows a spinner for.
+    room = min_room if isinstance(min_room, (int, float)) else reentry_mod.MIN_ROOM_DEFAULT
     if force is True:
         data = await asyncio.to_thread(reentry_mod.scan, True, None, universe)
-        return reentry_mod._apply_limit(
-            reentry_mod._apply_rr_floor(data, min_rr), limit)
-    return await asyncio.to_thread(reentry_mod.cached_or_warm, universe, limit, min_rr)
+        return await asyncio.to_thread(reentry_mod.read_view, data, min_rr, room, limit)
+    return await asyncio.to_thread(reentry_mod.cached_or_warm, universe, limit, min_rr, room)
 
 
 @router.get("/supply-demand/demand-reentry/progress")
@@ -157,15 +171,19 @@ async def post_demand_reentry_scan(
     universe: str = Query("sp1500", description="sp1500 (default) | sp500 | sp400 | sp600"),
     min_rr: Optional[float] = Query(None, ge=0, le=10,
                                     description="reward:risk floor; 0 = off"),
+    min_room: float = Query(reentry_mod.MIN_ROOM_DEFAULT, ge=0, le=50,
+                            description="room floor (% to the first unbroken band "
+                                        "overhead, live print); 0 = off"),
 ):
     """Force a fresh demand-zone re-entry scan (the page's Scan button).
     Bypasses the 3h cache. sp1500 covers ~1,500 names."""
     import asyncio
-    # The floor is applied AFTER the scan, never inside it: `limit` must cut the
-    # list that already cleared the floor, or a strict floor returns a short page
-    # while qualifying rows sit just past the limit.
+    # The floors are applied AFTER the scan, never inside it: `limit` must cut
+    # the list that already cleared them, or a strict floor returns a short page
+    # while qualifying rows sit just past the limit (read_view keeps the order).
+    room = min_room if isinstance(min_room, (int, float)) else reentry_mod.MIN_ROOM_DEFAULT
     data = await asyncio.to_thread(reentry_mod.scan, True, None, universe)
-    return reentry_mod._apply_limit(reentry_mod._apply_rr_floor(data, min_rr), limit)
+    return await asyncio.to_thread(reentry_mod.read_view, data, min_rr, room, limit)
 
 
 @router.get("/supply-demand/zone-edge")

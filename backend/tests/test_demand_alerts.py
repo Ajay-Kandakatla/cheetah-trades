@@ -481,3 +481,16 @@ def test_pass_record_is_best_effort_and_never_written_outside_rth(monkeypatch):
     assert closed == {"ran": False, "reason": "outside RTH"} and pc.docs == {}
     assert DA.check_once(now=IN_SESSION, force=True, coll=FakeColl(), **kw)["pushed"] == 1, \
         "no pass coll injected: resolver path, no Mongo in tests, still quiet"
+
+
+def test_at_message_carries_the_ticker_for_push_history_2026_09_05():
+    """push.history.record stores payload["ticker"]; the /alerts page ticker
+    filter and the boards' alerted-today chip key on it. Every zone push had
+    ticker None until 2026-09-05 (verified on the live push_history)."""
+    from supply_demand import demand_alerts as DA
+    item = {"symbol": "ERIE", "hit": {"dist_pct": 0.8, "tier": "at", "state": "near"}, "last": 249.0,
+            "band": {"lo": 246.99, "hi": 250.68, "touches": 2, "kind": "demand"},
+            "cap": 12e9, "name": "Erie Indemnity", "tier": "near", "dist_pct": 0.8}
+    msg = DA.at_message(item)
+    assert msg["ticker"] == "ERIE"
+    assert msg["url"].startswith("/sepa/ERIE")

@@ -77,15 +77,39 @@ the `/zones` page and `orderflow.signals`, which share the module. Locked by
 - **Entry band** = the demand band itself — buy *into* support, not through it.
 - **Stop** = `STOP_BUFFER_PCT` under the band floor. Below the floor the reason
   for the trade is gone.
-- **Target** = the **low of the first band of either origin above the entry
-  band's top** — the first place sellers are known to be waiting. A demand-kind
-  band overhead counts: broken support acts as resistance (see "documented
-  decisions" below). When there is no band above, **`target` is `None`** and no
-  R:R is shown. We do not invent a target
+- **Target** = the **low of the first UNBROKEN band of either origin above the
+  PRINT**, the entry band itself excluded — the first place sellers are known
+  to be waiting. The rule is `alert_gates.first_overhead`, the same one the
+  phone gate uses: supply bands with `hi >= print` that are not broken (`hi <
+  prev_close` = yesterday closed above it = support; unknown prior close =
+  every supply band counts), plus demand bands with `lo > print` (broken
+  support acts as resistance — see "documented decisions" below). When that
+  first band **contains** the print the reward is spent: target = its low,
+  `reward_pct` 0, **`rr` 0.0** (not `None` — `None` means nothing overhead),
+  and the R:R floor removes the plan. When there is no band above, **`target`
+  is `None`** and no R:R is shown. We do not invent a target
   (`test_trade_plan_without_overhead_supply_has_no_target_or_rr`,
   `test_trade_plan_targets_the_first_band_of_EITHER_origin_above_the_entry_band`).
-  The OB reads' `target_basis` label says which it was — "next supply band" or
-  **"broken demand band overhead"** (`_label_target_kind`, 2026-09-05).
+  `plan.target_kind` (supply | demand), `plan.target_state` (ROOM | IN_BAND)
+  and `plan.target_basis` (free text) say which band it was. The OB reads'
+  `target_basis` label likewise — "next supply band" or **"broken demand band
+  overhead"** (`_label_target_kind`, 2026-09-05).
+
+  **Above the PRINT, not above the entry band's top — changed 2026-09-05.**
+  Ajay, TRU on the Back-in-Demand board: *"It already gapped up very close to
+  the resistance. Why is it still in in Demand page? There is only 0.5% room"*.
+  The scan's demand band 78.34–81.08 **contained** a supply band 80.12–82.10.
+  The old rule (`lo > max(hi, last_price)`, the 2026-08-13 VRT fix) skipped any
+  band under the entry band's top and targeted 83.87 — **1.47R advertised,
+  0.09R real** from the 79.88 print. The VRT case (price four cents UNDER its
+  own band, which then read as the nearest thing above) still holds, because
+  the entry band is now excluded **by identity** (`room_floor.plan_bands`),
+  not by height. Tests: `test_tru_the_target_is_the_first_band_above_the_PRINT_
+  not_above_the_entry_band_top`, `test_a_print_INSIDE_an_overhead_band_has_
+  zero_reward_and_fails_the_floor`, `test_a_supply_band_yesterday_CLOSED_above_
+  is_broken_and_is_not_a_target`, `test_target_is_never_inside_or_below_the_
+  entry_band`. `decide_from_frame` hands in `prev_close` (the prior closed
+  bar) and keeps it on the record for the room read below.
 - **`risk_exceeds_max`** flags a stop wider than `ABS_MAX_STOP_PCT` — the plan
   is surfaced as undefendable rather than silently handed over.
 
@@ -293,6 +317,50 @@ and would call fetchers those tests do not stub.
 
 ---
 
+## Room to the first band overhead — every row, live print, 5% floor (2026-09-05)
+
+Ajay, the same TRU morning: *"I need the same logic in Demand and deep demand
+zone. So that there are stocks that have more room atleast >5%"*. The "same
+logic" is the phone gate's (`alert_gates.ALERT_MIN_ROOM_PCT = 5.0`, his
+*"atleast 5% to Supply"* of the same day). **Owner settings for the S&D
+strategy — not a book method, no Minervini cite.**
+
+`supply_demand/room_floor.py` (a pure leaf over `alert_gates`):
+
+| field | meaning |
+|---|---|
+| `room.px` / `room.basis` | the price the room was read from — the **live** print (`bulk_live_prices`, last trade first, day bar second, a non-positive bar is *missing*) or the **scan** price when the tape has nothing |
+| `room.target_lo` / `target_hi` / `target_kind` | the first unbroken band overhead, the row's own entry band excluded (a deep row's entry band is its **second** band; its broken first band is the lid) |
+| `room.room_pct` | `(target_lo − px) / px`, 1 dp — **display only**; `0.0` inside the band; `None` when clear |
+| `room.room_pct_raw` | the unrounded pct the split and the floor compare (review 2026-09-05: 4.995% shows 5.0 and must still be `NEAR`; `alert_gates.room_read` carries the same key) |
+| `room.state` | `CLEAR` (nothing overhead) · `ROOM` (raw ≥ the house floor) · `NEAR` (raw under it) · `IN_BAND` |
+| `room.prev_close` | the prior closed bar behind the broken-supply rule: the snapshot's `prev_day_close`, else the scan's `last_price` when the print is live, else the record's own `prev_close` (None on rows cached before 2026-09-05 = every supply band counts, the conservative side) |
+
+`GET /supply-demand/demand-reentry?min_room=` (default `MIN_ROOM_DEFAULT` =
+the alert number; `0` = off, every row still carries `room`; ≤ 50). Applied at
+**read time** like the R:R floor — one cache entry per universe — in the order
+R:R floor → room (live) + room floor → limit (`read_view`). Payload: `min_room`,
+`min_room_default`, `dropped_low_room`, and `dropped_low_room_deep` (deep rows
+are thinned too; `deep_n` stays the scan's uncapped total), `room_basis`,
+`room_as_of`. `CLEAR` passes, `IN_BAND` fails, an uncomputable room **fails a
+real floor** (the R:R floor's rule, same reason). `cached_or_warm(min_room=None)`
+leaves the room layer **off** — chart_maps, `catalysts/signal_watch` and
+`orderflow/trade_flash` read the same cache and keep seeing the rows they always
+did (the Chart Maps boards apply their own floor on their own live print, see
+`docs/sepa/chart_maps_sort.md`).
+
+`trade_plan.rr_at_entry_high` is clamped at **0.0** when the target sits under
+the entry band's top (TRU: 80.12 under 81.08 — possible once the target is the
+first band above the print), and `target_basis` appends "no reward left at the
+band top"; `thin_across_band` is then true. Never a negative R
+(`test_rr_at_entry_high_is_never_negative_when_the_target_is_under_the_band_top`).
+
+Tests: `test_room_block_*` (incl. the 4.995 boundary), `test_meets_room_floor_*`, `test_the_room_floor_*`,
+`test_attach_room_*`, `test_cached_or_warm_applies_the_room_floor_only_when_asked`
+(test_demand_reentry.py); `test_a_deep_row_*` (test_deep_demand.py); the
+"room floor 2026-09-05" block in test_supply_demand_contracts.py.
+
+---
 ## R:R is measured at spot, but the card instructs a band (2026-08-31)
 
 Ajay: *"there is a problem with setup tab and Supply demand tab.. Can you make

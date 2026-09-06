@@ -7,10 +7,12 @@ POST /trading/arm?armed=true|false  master switch (admin)
 POST /trading/auto-entry?enabled=true|false  auto-entry flag (admin)
 POST /trading/config                JSON {equity_cap?, auto_min_score?,
                                     auto_min_rs?, progressive_exposure?,
-                                    pyramiding?, zone_edge_entry?} —
+                                    pyramiding?, zone_edge_entry?,
+                                    zone_edge_rules?, catalyst_entry?} —
                                     sizing ceiling + funnel floors + pilot
                                     governor + the Supply & Demand zone-edge
-                                    entry switch (admin; null resets to default)
+                                    and catalyst-lane entry switches (admin;
+                                    null resets to default = OFF)
 GET  /trading/race?days=5           execution race: engine vs owner per
                                     zone-edge signal (lags + price gaps)
 GET  /trading/autopsies?days=30     failed-trade autopsies: every losing
@@ -141,6 +143,18 @@ async def trading_config(payload: dict = Body(...),
             updates["zone_edge_entry"] = raw
         else:
             raise HTTPException(400, "zone_edge_entry must be a boolean or null")
+    if "catalyst_entry" in payload:
+        # Catalyst-lane entries (trading/catalyst_entry.py; Ajay 2026-09-05
+        # "catalyst based entries time to time"). Strict boolean like the
+        # zone_edge_entry flag; null resets to the default, which is OFF in
+        # every mode. Arming still gates orders; paper account.
+        raw = payload.get("catalyst_entry")
+        if raw is None:
+            updates["catalyst_entry"] = False        # reset -> default OFF
+        elif isinstance(raw, bool):
+            updates["catalyst_entry"] = raw
+        else:
+            raise HTTPException(400, "catalyst_entry must be a boolean or null")
     if "zone_edge_rules" in payload:
         # Owner rule switches for the zone-edge entries (Ajay 2026-09-03:
         # "Enter anything that is in demand zone ... any stocks crossing the
@@ -170,8 +184,9 @@ async def trading_config(payload: dict = Body(...),
     if not updates:
         raise HTTPException(400, "nothing to update — send equity_cap, "
                                  "auto_min_score, auto_min_rs, "
-                                 "progressive_exposure, pyramiding, and/or "
-                                 "zone_edge_entry")
+                                 "progressive_exposure, pyramiding, "
+                                 "zone_edge_entry, zone_edge_rules and/or "
+                                 "catalyst_entry")
     from trading import exit_engine
 
     def work():

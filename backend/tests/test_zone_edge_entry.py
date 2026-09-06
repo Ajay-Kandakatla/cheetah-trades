@@ -264,11 +264,13 @@ def env(monkeypatch):
         zones = zones or {}
 
         def fake_enter(symbol, limit_price=None, stop_pct=None,
-                       allow_earnings=False, top_up=False, stop_price=None):
+                       allow_earnings=False, top_up=False, stop_price=None,
+                       strategy="manual", reason=None):
             enter_calls.append({"symbol": symbol, "limit_price": limit_price,
                                 "stop_pct": stop_pct, "stop_price": stop_price,
                                 "allow_earnings": allow_earnings,
-                                "top_up": top_up})
+                                "top_up": top_up, "strategy": strategy,
+                                "reason": reason})
             if enter_raises:
                 raise enter_raises
             res = enter_result or {"order_id": "o-%d" % len(enter_calls),
@@ -556,11 +558,13 @@ def test_stop_wider_than_book_max_blocked_and_recorded(env):
 
 
 def test_room_below_2r_blocked(env):
-    """AAA: last 100, band lo 98 -> stop 97.51 (2.49%) -> needs 4.98% room;
-    nearest supply floor at 103 (3%) -> blocked 'room < 2R'."""
+    """AAA: last 100, band lo 95 -> stop 94.525 (5.48%) -> needs 10.95% room;
+    nearest supply floor at 106 (6%, past the 5% alert gate) -> blocked
+    'room < 2R'. (Geometry widened 2026-09-05: the alert gate's 5% floor now
+    runs first, so the 2R block needs a wider requested stop to show.)"""
     _, db, enter_calls, _, zone_reads = env(
-        latest=latest_doc(near_demand=[demand_row()]),
-        zones={"AAA": zone_doc("AAA", supply_los=(103.0, 130.0))})
+        latest=latest_doc(near_demand=[demand_row(lo=95.0)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(106.0, 130.0))})
     out = ZE.run()
     assert enter_calls == [] and out["blocked"] == ["AAA"]
     assert zone_reads == ["AAA"]                   # ONE read, this candidate
@@ -569,9 +573,9 @@ def test_room_below_2r_blocked(env):
     race = _race_rows(db)[0]
     assert race["outcome"] == "blocked" and "room <" in race["reason"]
     blk = _kind_rows(db, "zone_entry_blocked")[0]["detail"]
-    assert blk["room"]["next_band"] == {"kind": "supply", "lo": 103.0, "hi": 105.0}
-    assert blk["room"]["room_pct"] == pytest.approx(3.0)
-    assert blk["room"]["need_pct"] == pytest.approx(MIN_REWARD_RISK * _expected_stop_pct(100.0, 98.0))
+    assert blk["room"]["next_band"] == {"kind": "supply", "lo": 106.0, "hi": 108.0}
+    assert blk["room"]["room_pct"] == pytest.approx(6.0)
+    assert blk["room"]["need_pct"] == pytest.approx(MIN_REWARD_RISK * _expected_stop_pct(100.0, 95.0))
 
 
 def test_room_unknown_without_zone_doc_blocked(env):
@@ -609,7 +613,7 @@ def test_breakout_with_overhead_still_needs_room(env):
     row = break_row(overhead=1)
     _, db, enter_calls, _, zone_reads = env(
         latest=latest_doc(breaking=[row]),
-        zones={"BBB": zone_doc("BBB", supply_los=(107.0,))})
+        zones={"BBB": zone_doc("BBB", supply_los=(110.5,))})   # 5.2% room: past the 5% alert gate, under 2R
     out = ZE.run()
     assert enter_calls == [] and out["blocked"] == ["BBB"]
     assert zone_reads == ["BBB"]
@@ -1612,8 +1616,8 @@ def test_stop_anchor_refused_when_drift_pushes_risk_past_the_ceiling(env):
     past ABS_MAX_STOP_PCT. Refuse with a reason; never clamp the stop back
     up into the band and never place the order."""
     fake, db, _, pushes, _ = env(
-        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=91.0, hi=92.0,
-                                                  dist_pct=8.7)]),
+        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=91.0, hi=99.5,
+                                                  dist_pct=0.5)]),
         zones={"AAA": zone_doc("AAA", supply_los=(150.0,))},
         real_enter=True, live_price=101.0)
     out = ZE.run()
@@ -1651,17 +1655,18 @@ def test_run_hands_entries_the_absolute_stop_level(env):
 # zero room, and `need` is 2R of the stop the engine will actually PLACE.
 
 def test_room_gate_counts_a_broken_demand_band_overhead(env):
-    """last 100, band lo 98 -> stop 2.49%, need 4.98%. A DEMAND band 103-105
-    sits 3% up (1.2R): broken support = resistance -> blocked 'room < 2R'."""
+    """last 100, band lo 95 -> stop 5.48%, need 10.95%. A DEMAND band 106-108
+    sits 6% up (1.1R; past the 5% alert gate): broken support = resistance
+    -> blocked 'room < 2R'."""
     _, db, enter_calls, _, _ = env(
-        latest=latest_doc(near_demand=[demand_row()]),
-        zones={"AAA": zone_doc("AAA", supply_los=(), demand_bands=((103.0, 105.0),))})
+        latest=latest_doc(near_demand=[demand_row(lo=95.0)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(), demand_bands=((106.0, 108.0),))})
     out = ZE.run()
     assert enter_calls == [] and out["blocked"] == ["AAA"]
     blk = _kind_rows(db, "zone_entry_blocked")[0]["detail"]["room"]
     assert blk["reason"].startswith("room < %gR" % MIN_REWARD_RISK), blk
-    assert blk["next_band"] == {"kind": "demand", "lo": 103.0, "hi": 105.0}
-    assert blk["room_pct"] == pytest.approx(3.0)
+    assert blk["next_band"] == {"kind": "demand", "lo": 106.0, "hi": 108.0}
+    assert blk["room_pct"] == pytest.approx(6.0)
     # a demand band BELOW or CONTAINING the print is support, never overhead
     ok, det = ZE.room_ok(100.0, 2.49, zone_doc("X", demand_bands=((90.0, 92.0), (99.0, 101.0))))
     assert ok is True and det["reason"] == "no band overhead"
@@ -1684,8 +1689,11 @@ def test_room_gate_blocks_a_print_inside_a_supply_band(env):
             {"kind": "demand", "lo": 98.0, "hi": 100.0, "touches": 3},
             {"kind": "supply", "lo": 99.0, "hi": 104.0, "touches": 2}]}})
     out = ZE.run()
-    assert enter_calls == [] and out["blocked"] == ["AAA"]
-    assert "inside supply band" in _state_rows(db)[0]["reason"]
+    # 2026-09-05: the alert gate sees the lid first -> a SKIP (re-read next
+    # tick), the TRU class; never an order either way.
+    assert enter_calls == [] and out["blocked"] == []
+    assert out["skipped"][0]["reason"].startswith("alert gate: inside supply band 99-104")
+    assert _state_rows(db) == []
 
 
 def test_room_need_floors_at_the_engine_minimum_stop():
@@ -1728,3 +1736,133 @@ def test_a_breakout_into_an_overlapping_supply_lid_never_skips_the_room_check():
     assert ok is False and room["reason"].startswith("inside supply band (99-104)")
     # the skip itself is unchanged for a genuine breakout to new highs
     assert ZE._needs_room_check({"kind": "breakout", "new_highs": True, "overhead_bands": 0}) is False
+
+
+# ── Phone gate = entry gate (Ajay 2026-09-05) ────────────────────────────────
+# "What ever rules I created for the alerts are the ideal conditions for a
+# stock to be bough in Autopilot." The alert_gates rules (>= 5% room to the
+# first unbroken band overhead; demand print within 1% above the band top)
+# are an AND on top of every existing gate. Rejections are SKIPS (re-read next
+# tick — room can open), counted in skipped_alert_gate, with a race row.
+
+def _tru_row():
+    """TRU 2026-09-05: print 79.88 inside demand band 78.34-81.08 which
+    CONTAINS a supply band 80.12-82.10 -> 0.3% room, R:R 0.09."""
+    return demand_row(sym="TRU", last=79.88, lo=78.34, hi=81.08, tier="in",
+                      arrival=True, dist_pct=0.0, touches=3)
+
+
+def _tru_zone():
+    return {"_id": "TRU:%s" % DAY, "symbol": "TRU", "date": DAY,
+            "bands": [{"kind": "demand", "lo": 78.34, "hi": 81.08, "touches": 3},
+                      {"kind": "supply", "lo": 80.12, "hi": 82.10, "touches": 2},
+                      {"kind": "supply", "lo": 83.87, "hi": 85.00, "touches": 2}],
+            "prev_close": 79.50, "high_252": 90.0}
+
+
+def test_alert_gate_tru_shape_blocked_on_room(env):
+    _, db, enter_calls, _, zone_reads = env(
+        latest=latest_doc(near_demand=[_tru_row()]), zones={"TRU": _tru_zone()})
+    out = ZE.run()
+    assert enter_calls == []
+    assert out["skipped"] == [{"symbol": "TRU",
+                               "reason": "alert gate: room 0.30% < 5% (supply 80.12-82.1)"}]
+    assert out["skipped_alert_gate"] == 1 and out["blocked"] == []
+    assert zone_reads == ["TRU"]
+    assert _state_rows(db) == []                       # a skip, not an attempt
+    race = _race_rows(db)
+    assert len(race) == 1 and race[0]["outcome"] == "skipped"
+    assert race[0]["reason"].startswith("alert gate: room 0.30%")
+    assert race[0]["gate"]["room"]["room_pct"] == 0.3
+    out2 = ZE.run()                                    # re-evaluated, still skipped
+    assert out2["skipped_alert_gate"] == 1 and enter_calls == []
+    assert len(_race_rows(db)) == 1
+
+
+def test_alert_gate_resident_in_band_with_8pct_room_passes(env):
+    """demand_residents rule ON: a name sitting IN its band with the first
+    supply 8% up passes both alert rules and enters as strategy demand_zone."""
+    _, db, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row(last=99.0, lo=98.0, hi=99.5,
+                                                  tier="in", arrival=False, dist_pct=0.0)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(106.92,))})
+    EE.update_config(zone_edge_rules={"demand_residents": True})
+    out = ZE.run()
+    assert out["entered"] == ["AAA"] and out["skipped_alert_gate"] == 0
+    call = enter_calls[0]
+    assert call["strategy"] == "demand_zone"
+    r = call["reason"]
+    assert r["side"] == "demand" and r["tier"] == "in"
+    assert r["band"] == {"kind": "demand", "lo": 98.0, "hi": 99.5, "touches": 3, "strength": 1.5}
+    assert r["gate"]["room"]["room_pct"] == 8.0 and r["gate"]["proximity"] is True
+    assert r["room"]["reason"] == "ok"
+    json.dumps(r, allow_nan=False)
+    assert _kind_rows(db, "zone_entry")[0]["detail"]["gate"]["ok"] is True
+
+
+def test_alert_gate_print_1_5pct_above_band_top_fails_proximity(env):
+    """last 101.0 vs band top 99.5 = 1.5% above -> 'I am late' -> skipped."""
+    _, db, enter_calls, _, _ = env(
+        latest=latest_doc(near_demand=[demand_row(last=101.0, lo=98.0, hi=99.5, dist_pct=1.5)]),
+        zones={"AAA": zone_doc("AAA", supply_los=(120.0,))})
+    out = ZE.run()
+    assert enter_calls == []
+    assert out["skipped"] == [{"symbol": "AAA",
+                               "reason": "alert gate: print 1.5% above demand band top "
+                                         "99.5 (max 1%)"}]
+    assert out["skipped_alert_gate"] == 1 and _state_rows(db) == []
+
+
+def test_alert_gate_breakout_measures_to_the_next_band_above_the_broken_one(env):
+    """Breakout through 102-103 at 103.5 (stop 101.49 = 1.94%, 2R needs 3.9%):
+    next supply 3% up -> alert gate skip; 6% up -> passes (strategy breakout);
+    nothing above -> passes. The cleared band is never its own lid."""
+    row = break_row(last=103.5, lo=102.0, hi=103.0, overhead=1, dist_pct=-0.5)
+    zone = {"_id": "BBB:%s" % DAY, "symbol": "BBB", "date": DAY, "prev_close": 102.5,
+            "bands": [{"kind": "supply", "lo": 102.0, "hi": 103.0, "touches": 3},
+                      {"kind": "supply", "lo": 106.605, "hi": 108.0, "touches": 2}]}
+    _, db, enter_calls, _, _ = env(latest=latest_doc(breaking=[row]), zones={"BBB": zone})
+    out = ZE.run()
+    assert enter_calls == []
+    assert out["skipped"][0]["reason"] == "alert gate: room 3.00% < 5% (supply 106.605-108)"
+    zone["bands"][1] = {"kind": "supply", "lo": 109.71, "hi": 111.0, "touches": 2}
+    _, db, enter_calls, _, _ = env(latest=latest_doc(breaking=[row]), zones={"BBB": zone})
+    out = ZE.run()
+    assert out["entered"] == ["BBB"]
+    assert enter_calls[0]["strategy"] == "breakout"
+    assert enter_calls[0]["reason"]["gate"]["room"]["room_pct"] == 6.0
+    assert enter_calls[0]["reason"]["gate"]["proximity"] is None     # supply side: n/a
+    zone["bands"] = zone["bands"][:1]
+    _, db, enter_calls, _, _ = env(latest=latest_doc(breaking=[row]), zones={"BBB": zone})
+    out = ZE.run()
+    assert out["entered"] == ["BBB"]
+    assert enter_calls[0]["reason"]["gate"]["room"] is None            # CLEAR
+
+
+def test_alert_gate_pure_function_edges():
+    """No doc -> the gate is UNKNOWN (falls through to the 2R gate's
+    'room unknown' block); malformed bands fail closed; supply broken under
+    prev_close is not overhead; demand row proximity under the floor fails."""
+    c = ZE._candidate("demand", demand_row(last=100.0, lo=98.0, hi=99.5))
+    assert ZE.alert_gate(c, None) is None
+    assert ZE.alert_gate(c, {"bands": "nope"}) is None        # unknown -> 2R gate blocks
+    assert ZE.alert_gate(c, {"bands": [None]}) is None
+    doc = {"bands": [{"kind": "supply", "lo": 101.0, "hi": 102.0, "touches": 2}],
+           "prev_close": 102.5}
+    ok, d = ZE.alert_gate(c, doc)
+    assert ok is True and d["room"] is None                # broken lid = support
+    doc["prev_close"] = 100.5
+    ok, d = ZE.alert_gate(c, doc)
+    assert ok is False and d["reason"].startswith("alert gate: room 1.00% < 5%")
+    c_low = ZE._candidate("demand", demand_row(last=97.0, lo=98.0, hi=99.5))
+    ok, d = ZE.alert_gate(c_low, {"bands": [], "prev_close": 99.0})
+    assert ok is False and "under" in d["reason"] and d["proximity"] is False
+
+
+def test_status_block_counts_alert_gate_skips_today(env):
+    _, db, _, _, _ = env(latest=latest_doc(near_demand=[_tru_row()]), zones={"TRU": _tru_zone()})
+    ZE.run()
+    blk = ZE.status_block(EE.get_config())
+    assert blk["skipped_alert_gate_today"] == 1
+    rules = " ".join(r["rule"] + r["value"] for r in blk["rules"])
+    assert "5%" in rules and "1%" in rules and "alert" in rules.lower()

@@ -2371,3 +2371,319 @@ def test_trade_plan_targets_the_first_band_of_EITHER_origin_above_the_entry_band
                        {"kind": "demand", "lo": 108.0, "hi": 110.0}])
     assert p["target"] == 108.0
     assert "either origin" in dr.trade_plan.__doc__.lower()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# room floor 2026-09-05 — the target is the first UNBROKEN band above the PRINT,
+# and every board row carries the room to it (owner setting, S/D scope).
+#
+# Ajay 2026-09-05, TRU on the Back-in-Demand board: "It already gapped up very
+# close to the resistance. Why is it still in in Demand page? There is only
+# 0.5% room". Measured: the scan's demand band 78.34-81.08 CONTAINS a supply
+# band 80.12-82.10; trade_plan targeted 83.87 (the first band above the ENTRY
+# BAND TOP) so R:R read 1.47, while from the print (79.88) the first band
+# overhead is 80.12 = 0.3% room, R:R 0.09.
+#
+# And, the same day: "I need the same logic in Demand and deep demand zone. So
+# that there are stocks that have more room atleast >5%". The 5% is
+# alert_gates.ALERT_MIN_ROOM_PCT (imported, one number for phone and board).
+# Spec: docs/supply_demand/rr_floor.md, demand_reentry_methodology.md.
+# ═════════════════════════════════════════════════════════════════════════════
+from supply_demand import alert_gates as _gates          # noqa: E402
+from supply_demand import room_floor as RF               # noqa: E402
+
+_TRU_ENTRY = {"kind": "demand", "lo": 78.34, "hi": 81.08, "touches": 3, "strength": 80}
+_TRU_BANDS = [{"kind": "supply", "lo": 80.12, "hi": 82.10, "touches": 2},
+              {"kind": "supply", "lo": 83.87, "hi": 85.20, "touches": 2},
+              _TRU_ENTRY]
+
+
+def test_tru_the_target_is_the_first_band_above_the_PRINT_not_above_the_entry_band_top():
+    """REGRESSION (TRU, 2026-09-05). The supply band nested inside the entry
+    band is the first place sellers wait; skipping to 83.87 because it sat
+    below the entry band's top advertised a 1.47R trade with 0.3% of room."""
+    p = dr.trade_plan(79.88, _TRU_ENTRY, _TRU_BANDS)
+    assert p["target"] == 80.12
+    assert p["target_kind"] == "supply"
+    assert p["target_state"] == "ROOM"
+    assert p["rr"] < 1.0
+    assert dr.meets_rr_floor(p, 1.0) is False, "the R:R floor drops it on its own"
+    assert p["reward_pct"] == pytest.approx(0.3, abs=0.05)
+    # review 2026-09-05: the target (80.12) sits UNDER the entry band top
+    # (81.08), so the reward is spent before the band ends — rr_at_entry_high
+    # is clamped to 0.0 (never negative) and the plan says so.
+    assert p["rr_at_entry_high"] == 0.0
+    assert p["thin_across_band"] is True
+    assert "no reward left at the band top" in p["target_basis"]
+
+
+def test_rr_at_entry_high_is_never_negative_when_the_target_is_under_the_band_top():
+    """REGRESSION (review 2026-09-05): with the target above the PRINT rather
+    than above the entry band's top, (target - hi) / (hi - stop) went negative
+    for TRU-type geometry; the FE's plan line consumed it unguarded."""
+    for px in (79.0, 79.88, 80.0):
+        p = dr.trade_plan(px, _TRU_ENTRY, _TRU_BANDS, prev_close=79.5)
+        assert p["rr_at_entry_high"] is not None and p["rr_at_entry_high"] >= 0.0
+    clean = dr.trade_plan(79.5, {"lo": 78.0, "hi": 81.0},
+                          [{"kind": "supply", "lo": 86.0, "hi": 88.0}])
+    assert clean["rr_at_entry_high"] > 0.0
+    assert "no reward left" not in clean["target_basis"]
+
+
+def test_a_clean_entry_band_still_targets_the_next_band_as_before():
+    p = dr.trade_plan(79.5, {"lo": 78.0, "hi": 81.0, "touches": 3, "strength": 80},
+                      [{"kind": "supply", "lo": 86.0, "hi": 88.0},
+                       {"kind": "demand", "lo": 78.0, "hi": 81.0}])
+    assert p["target"] == 86.0 and p["target_kind"] == "supply"
+    assert p["rr"] > 1.0 and dr.meets_rr_floor(p, 1.0) is True
+
+
+def test_a_print_INSIDE_an_overhead_band_has_zero_reward_and_fails_the_floor():
+    """Sellers are already here: the first objective is behind the print, so
+    the plan's reward is nothing — rr 0.0, not None (None would read as
+    'no band overhead')."""
+    p = dr.trade_plan(80.50, _TRU_ENTRY, _TRU_BANDS)
+    assert p["target_state"] == "IN_BAND"
+    assert p["rr"] == 0.0 and p["reward_pct"] == 0.0
+    assert p["target"] == 80.12
+    assert dr.meets_rr_floor(p, 1.0) is False
+
+
+def test_a_supply_band_yesterday_CLOSED_above_is_broken_and_is_not_a_target():
+    """The alert_gates rule, reused: supply with hi < prev_close is support."""
+    bands = [{"kind": "supply", "lo": 82.0, "hi": 83.0},
+             {"kind": "supply", "lo": 90.0, "hi": 92.0}]
+    zone = {"lo": 78.0, "hi": 81.0}
+    assert dr.trade_plan(84.0, zone, bands)["target"] == 90.0          # hi 83 < px
+    p = dr.trade_plan(80.0, zone, bands, prev_close=83.5)
+    assert p["target"] == 90.0, "83.5 closed above 82-83: broken, skipped"
+    assert dr.trade_plan(80.0, zone, bands, prev_close=82.5)["target"] == 82.0
+
+
+def test_the_entry_band_itself_is_never_the_target_even_from_below():
+    """VRT (2026-08-13) still holds under the new rule: price four cents under
+    its own band must not target its own floor."""
+    zone = {"lo": 287.11, "hi": 293.88, "touches": 3, "strength": 80}
+    p = dr.trade_plan(287.07, zone, [{"kind": "demand", "lo": 287.11, "hi": 293.88},
+                                     {"kind": "supply", "lo": 305.0, "hi": 310.0}])
+    assert p["target"] == 305.0
+
+
+def test_trade_plan_reads_the_overhead_through_alert_gates_not_its_own_math():
+    import inspect
+    src = inspect.getsource(dr.trade_plan)
+    assert "_gates.first_overhead(" in src
+    assert "prev_close" in str(inspect.signature(dr.trade_plan))
+
+
+def test_decide_from_frame_hands_trade_plan_the_prior_close_and_keeps_it_on_the_record():
+    import inspect
+    src = inspect.getsource(dr.decide_from_frame)
+    assert "prev_close=prev_close" in src
+    assert '"prev_close": prev_close' in src
+
+
+# --- room_block: the pure read every board row carries ---
+def test_room_block_tru_reads_0_3_pct_to_the_nested_supply_band():
+    room = RF.room_block(79.88, _TRU_BANDS, entry_band=_TRU_ENTRY, basis="live")
+    assert room["state"] == "NEAR"
+    assert room["room_pct"] == pytest.approx(0.3, abs=0.05)
+    assert room["target_lo"] == 80.12 and room["target_hi"] == 82.10
+    assert room["target_kind"] == "supply" and room["basis"] == "live"
+
+
+def test_room_block_clear_when_nothing_sits_overhead():
+    room = RF.room_block(79.88, [_TRU_ENTRY], entry_band=_TRU_ENTRY)
+    assert room["state"] == "CLEAR" and room["room_pct"] is None
+    assert room["target_lo"] is None and room["target_kind"] is None
+    assert room["basis"] == "scan"
+
+
+def test_room_block_room_state_at_and_above_the_house_floor():
+    bands = [{"kind": "supply", "lo": 86.0, "hi": 88.0}]
+    room = RF.room_block(79.5, bands)
+    assert room["state"] == "ROOM" and room["room_pct"] == pytest.approx(8.2, abs=0.05)
+    exactly = RF.room_block(100.0, [{"kind": "supply", "lo": 105.0, "hi": 106.0}])
+    assert exactly["state"] == "ROOM" and exactly["room_pct"] == 5.0
+
+
+def test_room_block_in_band_and_the_entry_band_is_excluded():
+    room = RF.room_block(80.50, _TRU_BANDS, entry_band=_TRU_ENTRY)
+    assert room["state"] == "IN_BAND" and room["room_pct"] == 0.0
+    # from BELOW its own entry band, that band is not overhead
+    below = RF.room_block(78.0, [_TRU_ENTRY, {"kind": "supply", "lo": 90.0, "hi": 91.0}],
+                          entry_band=_TRU_ENTRY)
+    assert below["target_lo"] == 90.0
+
+
+def test_room_block_a_broken_demand_band_overhead_counts_as_resistance():
+    room = RF.room_block(82.0, [{"kind": "demand", "lo": 90.0, "hi": 95.0}])
+    assert room["target_kind"] == "demand" and room["room_pct"] == pytest.approx(9.8, abs=0.01)
+
+
+def test_room_block_boundary_4_995_is_NEAR_and_fails_the_floor_like_the_phone():
+    """review 2026-09-05: room_pct is rounded to 1 dp for display, but the
+    state split and the floor compare the RAW value — alert_gates.room_gate
+    compares raw, so 4.995% (shown 5.0) fails on the phone and must fail on
+    the boards too. room_pct_raw rides along for the FE's own compare."""
+    near = RF.room_block(100.0, [{"kind": "supply", "lo": 104.995, "hi": 106.0}])
+    assert near["room_pct"] == 5.0
+    assert near["room_pct_raw"] == pytest.approx(4.995, abs=1e-6)
+    assert near["state"] == "NEAR"
+    assert RF.meets_room_floor(near, 5.0) is False
+    from supply_demand import alert_gates as G
+    assert G.room_gate(100.0, [{"kind": "supply", "lo": 104.995, "hi": 106.0}])[0] is False
+    at = RF.room_block(100.0, [{"kind": "supply", "lo": 105.0, "hi": 106.0}])
+    assert at["state"] == "ROOM" and at["room_pct_raw"] == pytest.approx(5.0, abs=1e-9)
+    assert RF.meets_room_floor(at, 5.0) is True
+    # a legacy block without the raw key still compares on room_pct
+    assert RF.meets_room_floor({"state": "ROOM", "room_pct": 5.0}, 5.0) is True
+    assert RF.meets_room_floor({"state": "NEAR", "room_pct": 5.0}, 5.0) is False, \
+        "the server said NEAR: its raw compare wins over the rounded number"
+    assert RF.room_stat(near) == "+5.0% -> 105.00"
+
+
+def test_room_block_garbage_print_is_None_not_a_number():
+    assert RF.room_block(None, _TRU_BANDS) is None
+    assert RF.room_block(0.0, _TRU_BANDS) is None
+    assert RF.room_block(float("nan"), _TRU_BANDS) is None
+
+
+# --- the floor on the payload ---
+def _room_row(sym, room):
+    return {"symbol": sym, "plan": {"rr": 2.0}, "room": room}
+
+
+def _rooms():
+    return [_room_row("TRU", RF.room_block(79.88, _TRU_BANDS, entry_band=_TRU_ENTRY)),
+            _room_row("SKY", RF.room_block(50.0, [])),
+            _room_row("OK8", RF.room_block(79.5, [{"kind": "supply", "lo": 86.0, "hi": 88.0}])),
+            _room_row("INB", RF.room_block(80.5, _TRU_BANDS, entry_band=_TRU_ENTRY))]
+
+
+def test_meets_room_floor_clear_passes_in_band_fails_near_fails_room_passes():
+    tru, sky, ok8, inb = [r["room"] for r in _rooms()]
+    assert RF.meets_room_floor(sky, 5.0) is True
+    assert RF.meets_room_floor(ok8, 5.0) is True
+    assert RF.meets_room_floor(tru, 5.0) is False
+    assert RF.meets_room_floor(inb, 5.0) is False
+    assert RF.meets_room_floor(None, 5.0) is False, "uncomputable fails a real floor"
+    for r in (tru, sky, ok8, inb, None):
+        assert RF.meets_room_floor(r, 0) is True
+
+
+def test_the_room_floor_drops_tru_keeps_clear_and_8_pct_and_reports_it():
+    out = dr._apply_room_floor({"rows": _rooms(), "n": 4}, 5.0)
+    assert [r["symbol"] for r in out["rows"]] == ["SKY", "OK8"]
+    assert out["n"] == 2 and out["dropped_low_room"] == 2
+    assert out["min_room"] == 5.0
+    assert out["min_room_default"] == _gates.ALERT_MIN_ROOM_PCT == RF.MIN_ROOM_DEFAULT
+
+
+def test_min_room_zero_is_OFF_and_min_room_None_means_the_default():
+    off = dr._apply_room_floor({"rows": _rooms(), "n": 4}, 0)
+    assert len(off["rows"]) == 4 and off["dropped_low_room"] == 0 and off["min_room"] == 0.0
+    dflt = dr._apply_room_floor({"rows": _rooms(), "n": 4}, None)
+    assert dflt["dropped_low_room"] == 2 and dflt["min_room"] == RF.MIN_ROOM_DEFAULT
+
+
+def test_the_room_floor_never_reorders_survivors_and_survives_an_empty_board():
+    rows = _rooms()
+    rows[1], rows[2] = rows[2], rows[1]
+    out = dr._apply_room_floor({"rows": rows}, 5.0)
+    assert [r["symbol"] for r in out["rows"]] == ["OK8", "SKY"]
+    empty = dr._apply_room_floor({"rows": [], "n": 0}, 5.0)
+    assert empty["rows"] == [] and empty["dropped_low_room"] == 0
+
+
+def test_the_room_floor_also_thins_deep_rows_with_its_own_count():
+    """Ajay 2026-09-05: 'I need the same logic in Demand and deep demand zone'."""
+    data = {"rows": [], "deep_rows": _rooms(), "deep_n": 240}
+    out = dr._apply_room_floor(data, 5.0)
+    assert [r["symbol"] for r in out["deep_rows"]] == ["SKY", "OK8"]
+    assert out["dropped_low_room_deep"] == 2
+    assert out["deep_n"] == 240, "deep_n stays the scan's uncapped total"
+
+
+# --- attach_room: live print first, scan price as the fallback ---
+def _scan_row(sym, last, entry, bands, prev_close=None):
+    return {"symbol": sym, "last_price": last, "prev_close": prev_close,
+            "entry_zone": entry, "nearest_resistance": bands[0] if bands else None,
+            "supply_zones": [b for b in bands if b.get("kind") == "supply"],
+            "demand_zones": [b for b in bands if b.get("kind") != "supply"],
+            "plan": {"rr": 2.0}}
+
+
+def test_attach_room_measures_from_the_live_print_and_says_so():
+    row = _scan_row("TRU", 78.90, _TRU_ENTRY, _TRU_BANDS)        # scan: 1.5% room
+    live = {"TRU": {"last_trade_price": 79.88, "price": 79.10, "prev_day_close": 78.90}}
+    out = dr.attach_room({"rows": [row]}, live=live)
+    room = out["rows"][0]["room"]
+    assert room["basis"] == "live" and room["px"] == 79.88
+    assert room["room_pct"] == pytest.approx(0.3, abs=0.05)
+    assert row.get("room") is None, "cached rows are never mutated in place"
+
+
+def test_attach_room_falls_back_to_the_scan_price_when_the_tape_has_nothing():
+    row = _scan_row("TRU", 78.90, _TRU_ENTRY, _TRU_BANDS)
+    out = dr.attach_room({"rows": [row]}, live={})
+    room = out["rows"][0]["room"]
+    assert room["basis"] == "scan" and room["px"] == 78.90
+    assert room["room_pct"] == pytest.approx(1.5, abs=0.1)
+    zero_bar = dr.attach_room({"rows": [row]}, live={"TRU": {"price": 0, "last_trade_price": None}})
+    assert zero_bar["rows"][0]["room"]["basis"] == "scan", "a 0 day bar is missing, not a price"
+
+
+def test_attach_room_uses_the_snapshot_prev_close_for_the_broken_supply_rule():
+    bands = [{"kind": "supply", "lo": 82.0, "hi": 83.0},
+             {"kind": "supply", "lo": 90.0, "hi": 92.0}]
+    row = _scan_row("X", 80.0, {"lo": 78.0, "hi": 81.0}, bands)
+    live = {"X": {"last_trade_price": 80.5, "prev_day_close": 83.5}}
+    room = dr.attach_room({"rows": [row]}, live=live)["rows"][0]["room"]
+    assert room["target_lo"] == 90.0, "yesterday closed above 82-83: broken = support"
+    # scan basis: the record's own prior close decides; unknown = every band counts
+    room2 = dr.attach_room({"rows": [_scan_row("X", 80.0, {"lo": 78.0, "hi": 81.0}, bands)]},
+                           live={})["rows"][0]["room"]
+    assert room2["target_lo"] == 82.0
+
+
+def test_attach_room_covers_deep_rows_against_their_SECOND_band():
+    deep = {"symbol": "D", "last_price": 82.0, "entry_zone": None,
+            "supply_zones": [], "nearest_resistance": None,
+            "demand_zones": [{"kind": "demand", "lo": 90.0, "hi": 95.0, "touches": 3},
+                             {"kind": "demand", "lo": 80.0, "hi": 85.0, "touches": 3}],
+            "deep_demand": {"state": "in", "top_band": {"lo": 90.0, "hi": 95.0},
+                            "second_band": {"lo": 80.0, "hi": 85.0}}}
+    room = dr.attach_room({"rows": [], "deep_rows": [deep]}, live={})["deep_rows"][0]["room"]
+    assert room["target_lo"] == 90.0 and room["target_kind"] == "demand"
+    assert room["room_pct"] == pytest.approx(9.8, abs=0.01)
+
+
+def test_cached_or_warm_applies_the_room_floor_only_when_asked(monkeypatch):
+    """The board route passes min_room; chart_maps, signal_watch and trade_flash
+    read the same cache WITHOUT it and must see the rows they always did (the
+    zones board applies its own floor on its own live print)."""
+    import time as _t
+    rows = [_scan_row("TRU", 79.88, _TRU_ENTRY, _TRU_BANDS),
+            _scan_row("OK8", 79.5, {"lo": 78.0, "hi": 81.0},
+                      [{"kind": "supply", "lo": 86.0, "hi": 88.0}])]
+    dr._cache.clear()
+    dr._cache[dr._universe_key("sp500")] = {"ts": _t.time(), "data": {"rows": rows, "n": 2,
+                                                                       "deep_rows": []}}
+    monkeypatch.setattr(dr, "_live_snapshots", lambda syms: {})
+    legacy = dr.cached_or_warm("sp500", limit=60)
+    assert len(legacy["rows"]) == 2 and "room" not in legacy["rows"][0]
+    floored = dr.cached_or_warm("sp500", limit=60, min_room=5.0)
+    assert [r["symbol"] for r in floored["rows"]] == ["OK8"]
+    assert floored["dropped_low_room"] == 1 and floored["min_room"] == 5.0
+    assert floored["rows"][0]["room"]["basis"] == "scan"
+    off = dr.cached_or_warm("sp500", limit=60, min_room=0)
+    assert len(off["rows"]) == 2 and off["rows"][0]["room"] is not None
+    dr._cache.clear()
+
+
+def test_the_warming_payload_carries_the_room_fields():
+    import inspect
+    src = inspect.getsource(dr.cached_or_warm)
+    for key in ('"min_room"', '"min_room_default"', '"dropped_low_room"'):
+        assert key in src, f"warming payload is missing {key}"

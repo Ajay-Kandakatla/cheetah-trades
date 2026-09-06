@@ -137,6 +137,12 @@ def get_config() -> dict:
         "zone_edge_rules": (dict(doc["zone_edge_rules"])
                             if isinstance(doc.get("zone_edge_rules"), dict) else {}),
         "last_zone_entry_disabled_day": doc.get("last_zone_entry_disabled_day"),
+        # Catalyst-lane entries — trading/catalyst_entry.py (Ajay 2026-09-05:
+        # "make sure you have demand zone and catalyst based entries time to
+        # time"). Default OFF in EVERY mode, owner opt-in per POST
+        # /trading/config; arming is still required on top. Paper account.
+        "catalyst_entry": bool(doc.get("catalyst_entry", False)),
+        "last_catalyst_entry_disabled_day": doc.get("last_catalyst_entry_disabled_day"),
         # Funnel floor overrides (data write, no deploy). This whitelist used
         # to STRIP them, which silently killed the documented auto_min_score
         # override — found in the 2026-07-12 low-RS audit.
@@ -836,6 +842,19 @@ def tick(force: bool = False) -> dict:
         log.warning("zone_edge_entry run failed: %s", exc)
         summary["errors"].append("zone_edge_entry: %s" % exc)
 
+    # (j) catalyst-lane entries (trading/catalyst_entry.py, owner rules; flag
+    # `catalyst_entry`, default OFF) — fenced exactly like (h): a buy-side
+    # crash can never break stop protection above. Reads ONLY the cached
+    # catalyst scan (never triggers one); buys flow ONLY through
+    # entries.enter().
+    try:
+        from trading import catalyst_entry
+        summary["catalyst_entry"] = catalyst_entry.run(broker=broker,
+                                                       cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("catalyst_entry run failed: %s", exc)
+        summary["errors"].append("catalyst_entry: %s" % exc)
+
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no
     # trading side effects; fully fenced + lazy-imported so it can NEVER break
@@ -934,6 +953,12 @@ def status() -> dict:
     except Exception as exc:                       # noqa: BLE001
         out["zone_edge_entry"] = {"enabled": bool(cfg.get("zone_edge_entry")),
                                   "error": str(exc)}
+    try:
+        from trading import catalyst_entry
+        out["catalyst_entry"] = catalyst_entry.status_block(cfg)
+    except Exception as exc:                       # noqa: BLE001
+        out["catalyst_entry"] = {"enabled": bool(cfg.get("catalyst_entry")),
+                                 "error": str(exc)}
     if not out["configured"]:
         return out
     try:

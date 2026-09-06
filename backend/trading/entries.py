@@ -15,7 +15,9 @@ Check order (each cite = the printed TLSW page):
 """
 from __future__ import annotations
 
+import json
 import logging
+import math
 from typing import Optional
 
 from trading import risk_rules
@@ -27,6 +29,49 @@ broker = get_broker()    # module-level so tests can monkeypatch EN.broker
 log = logging.getLogger("trading.entries")
 
 EARNINGS_SHIELD_DAYS = 7      # block entries into a report inside this window
+
+# Journal LANE tag on every entry row (Ajay 2026-09-05: "Keep the minervini
+# entries but also make sure you have demand zone and catalyst based entries
+# time to time and journal it appropriately"). The caller names its lane;
+# anything unknown is journaled as manual — a bad tag must never block a buy.
+STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")
+# entry_reason is a small JSON-safe dict; anything bigger is truncated so a
+# runaway payload can never bloat the ledger row.
+REASON_MAX_BYTES = 2048
+
+
+def _strategy_tag(strategy) -> str:
+    return strategy if isinstance(strategy, str) and strategy in STRATEGIES else "manual"
+
+
+def _json_clean(v):
+    """Recursively JSON-safe: NaN/inf -> None, non-JSON leaves -> str."""
+    if isinstance(v, dict):
+        return {str(k): _json_clean(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_json_clean(x) for x in v]
+    if isinstance(v, bool) or v is None or isinstance(v, str):
+        return v
+    if isinstance(v, (int, float)):
+        f = float(v)
+        return None if (f != f or math.isinf(f)) else v
+    return str(v)
+
+
+def _safe_reason(reason) -> Optional[dict]:
+    """The entry_reason the ledger/journal carry: a JSON-safe dict capped at
+    REASON_MAX_BYTES (a truncated marker + preview past that). None for
+    anything that is not a dict."""
+    if not isinstance(reason, dict):
+        return None
+    clean = _json_clean(reason)
+    try:
+        text = json.dumps(clean, allow_nan=False, default=str)
+    except (TypeError, ValueError):
+        return {"truncated": True, "preview": str(clean)[:REASON_MAX_BYTES]}
+    if len(text) > REASON_MAX_BYTES:
+        return {"truncated": True, "preview": text[:REASON_MAX_BYTES]}
+    return clean
 
 
 def _closed_trade_stats():
@@ -311,13 +356,19 @@ def enter(symbol: str, limit_price: Optional[float] = None,
           stop_pct: Optional[float] = None,
           allow_earnings: bool = False,
           top_up: bool = False,
-          stop_price: Optional[float] = None) -> dict:
+          stop_price: Optional[float] = None,
+          strategy: str = "manual",
+          reason: Optional[dict] = None) -> dict:
     """Place the bracket entry. Raises ValueError(reason) on any failed
     check; the API maps that to 400 {detail}. top_up=True is the pyramid
     add (see _evaluate) — the bracket covers ONLY the added shares; its own
     stop/target legs protect the tranche, and the p.308 breakeven ratchet
     keeps operating on the whole position via the exit engine. stop_price
-    is an absolute stop LEVEL that wins over stop_pct (see _evaluate)."""
+    is an absolute stop LEVEL that wins over stop_pct (see _evaluate).
+    strategy / reason (2026-09-05) are the journal LANE tag and the small
+    why-dict the caller hands over; they change nothing about the checks or
+    the order — they ride on the 'entry' ledger row for the journal's
+    by_strategy split and the autopsy's strategy read."""
     blocked, ctx = _evaluate(symbol, limit_price=limit_price,
                              stop_pct=stop_pct, allow_earnings=allow_earnings,
                              top_up=top_up, stop_price=stop_price)
@@ -367,6 +418,8 @@ def enter(symbol: str, limit_price: Optional[float] = None,
         "regime": ctx["regime"], "earnings": ctx["earnings"],
         "allow_earnings": bool(allow_earnings),
         "top_up": bool(top_up),
+        "strategy": _strategy_tag(strategy),
+        "entry_reason": _safe_reason(reason),
     }
     ledger("entry", symbol=sym, detail=detail, dry_run=False,
            cite="stop p.299/301/311; target p.301/311; size p.312; "

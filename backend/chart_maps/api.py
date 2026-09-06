@@ -72,6 +72,15 @@ async def chart_maps(
                                   "ranks every match rather than reordering the page."),
     bias: str = Query("all", description="all | bullish | bearish (ict)"),
     micro: str = Query("60m", description="60m | 15m (ict micro timeframe)"),
+    min_room: Optional[float] = Query(None, ge=0, le=50,
+                                      description="zones + deep_demand tabs only — hide "
+                                                  "tiles with less than this % of room "
+                                                  "from the LIVE print to the first "
+                                                  "unbroken band overhead; 0 = off; omit "
+                                                  "for the house default (alert_gates."
+                                                  "ALERT_MIN_ROOM_PCT, 5.0). Ajay "
+                                                  "2026-09-05: 'stocks that have more "
+                                                  "room atleast >5%'. Other tabs ignore it."),
 ):
     """Chart-ready tiles for one tab.
 
@@ -99,6 +108,8 @@ async def chart_maps(
             target=target if isinstance(target, str) else "zone",
             bias=bias if isinstance(bias, str) else "all",
             micro=micro if isinstance(micro, str) else "60m",
+            min_room=(float(min_room) if isinstance(min_room, (int, float))
+                      and not isinstance(min_room, bool) else None),
         )
 
     return JSONResponse(await asyncio.to_thread(_run))

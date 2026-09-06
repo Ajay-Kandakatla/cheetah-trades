@@ -26,6 +26,13 @@ export type Plan = {
   entry_low: number; entry_high: number; entry_ref: number;
   stop: number; risk_pct: number | null;
   target: number | null; reward_pct: number | null;
+  /** Which band the target is — 'supply' | 'demand' (broken support acting as
+   *  resistance) — and whether the print is under it (ROOM) or inside it
+   *  (IN_BAND). Server fields since 2026-09-05 (target above the PRINT);
+   *  absent on older payloads. `target_basis` is free text the cards print. */
+  target_kind?: string | null;
+  target_state?: string | null;
+  target_basis?: string | null;
   rr: number | null;
   /** R:R if filled at `entry_high` instead of `entry_ref`. The card tells Ajay
    *  to buy a BAND, but `rr` is measured at spot only; on 2026-08-31 those
@@ -176,7 +183,11 @@ export function planLine(plan: Plan | null | undefined,
   const parts = [`Buy ${level(plan.entry_low)}–${level(hi)}`];
   parts.push(`Stop ${level(plan.stop)}${plan.risk_pct != null ? ` (−${plan.risk_pct}%)` : ''}`);
   if (plan.target != null) {
-    parts.push(`Target ${level(plan.target)}${plan.reward_pct != null ? ` (+${plan.reward_pct}%)` : ''}`);
+    // The band kind rides along (2026-09-05: the target is the first unbroken
+    // band above the PRINT, of either origin — "supply band" / "demand band").
+    const kind = typeof plan.target_kind === 'string' && plan.target_kind ? `${plan.target_kind} band` : '';
+    const inner = [plan.reward_pct != null ? `+${plan.reward_pct}%` : '', kind].filter(Boolean).join(', ');
+    parts.push(`Target ${level(plan.target)}${inner ? ` (${inner})` : ''}`);
   } else {
     parts.push('Target — none (no overhead supply in range)');
   }
@@ -186,6 +197,16 @@ export function planLine(plan: Plan | null | undefined,
       : 'target too close to the band — no 1R fill anywhere in it');
   }
   return parts.join(' · ');
+}
+
+/** R:R at the top of the entry band, never negative. The server clamps it at
+ *  0.0 since 2026-09-05 (TRU: the target sat UNDER the band top once it was
+ *  measured above the print), but a cached plan may still carry the sign —
+ *  a negative R is "no reward left", not a number to print. null = no target. */
+export function rrAtEntryHigh(plan: Plan | null | undefined): number | null {
+  const v = plan?.rr_at_entry_high;
+  if (v == null || !Number.isFinite(v)) return null;
+  return v < 0 ? 0 : v;
 }
 
 /** Highest entry price at which the first objective still pays 1R.

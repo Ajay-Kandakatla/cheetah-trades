@@ -327,3 +327,117 @@ describe('DemandReentryPanel — 🔔 alerted-today chip (Ajay 2026-09-05)', () 
     expect(screen.getByText(/1 in demand/)).toBeInTheDocument();
   });
 });
+
+/* ── the 5% room floor (Ajay 2026-09-05) ─────────────────────────────────────
+ * TRU on the Back-in-Demand board: "It already gapped up very close to the
+ * resistance. Why is it still in in Demand page? There is only 0.5% room".
+ * Measured: the scan's demand band 78.34-81.08 CONTAINED a supply band
+ * 80.12-82.10; from the print (79.88) the first band overhead was 80.12 =
+ * 0.3% room. "I need the same logic in Demand and deep demand zone. So that
+ * there are stocks that have more room atleast >5%" — the alert gate's
+ * ALERT_MIN_ROOM_PCT = 5.0 (owner setting) is now the board's floor, applied
+ * on the SERVER (GET/POST ...?min_room=5). The panel's job: send the floor,
+ * say how many rows it hid, let "any room" show them flagged. */
+
+const TRU_ROW = {
+  ...row('TRU', 0.09),
+  last_price: 79.88,
+  room: { room_pct: 0.3, target_lo: 80.12, target_hi: 82.10, target_kind: 'supply', state: 'NEAR', basis: 'live' },
+};
+const CLYM_ROW = {
+  ...row('CLYM', 1.8),
+  last_price: 15.57,
+  room: { room_pct: 17.0, target_lo: 18.22, target_hi: 18.44, target_kind: 'supply', state: 'ROOM', basis: 'live' },
+};
+
+/* Routes by the min_room the panel actually asked for — the floor is the
+ * server's rule, so the stub plays the server: 5 hides TRU and counts it,
+ * 0 returns it with its room block. */
+function roomStub() {
+  return vi.fn(async (url: string, init?: RequestInit) => {
+    const u = String(url);
+    if (u.includes('/supply-demand/zone-edge')) return { ok: true, json: async () => ZONE_EDGE_EMPTY } as any;
+    if (u.includes('/supply-demand/bounce-room')) return { ok: true, json: async () => BOUNCE_ROOM_EMPTY } as any;
+    if (u.includes('/notifications/recent')) return { ok: true, json: async () => ALERTS_EMPTY } as any;
+    const minRoom = new URL(u, 'http://x').searchParams.get('min_room');
+    void init;
+    if (minRoom === '0') {
+      return { ok: true, json: async () => payload({ n: 2, rows: [TRU_ROW, CLYM_ROW], min_room: 0, dropped_low_room: 0 }) } as any;
+    }
+    return { ok: true, json: async () => payload({ n: 1, rows: [CLYM_ROW], min_room: 5, dropped_low_room: 1 }) } as any;
+  });
+}
+
+describe('DemandReentryPanel — 5% room floor (Ajay 2026-09-05, TRU)', () => {
+  it('asks the server for min_room=5 by default and offers "any room"', async () => {
+    const fn = roomStub();
+    vi.stubGlobal('fetch', fn);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    const sel = await waitFor(() => screen.getByLabelText('Room floor') as HTMLSelectElement);
+    expect(sel.value).toBe('5');
+    expect(Array.from(sel.options).map((o) => o.textContent)).toEqual(['🧱 Room ≥ 5% (default)', '🧱 any room']);
+    const gets = fn.mock.calls.map((c) => String(c[0])).filter((u) => u.includes('/supply-demand/demand-reentry?'));
+    expect(gets.length).toBeGreaterThan(0);
+    expect(gets.every((u) => new URL(u, 'http://x').searchParams.get('min_room') === '5')).toBe(true);
+  });
+
+  it('says how many rows the floor hid, from the server count', async () => {
+    vi.stubGlobal('fetch', roomStub());
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/1 hidden: room < 5%/)).toBeInTheDocument());
+    // NEGATIVE: TRU is not on the page under the default floor.
+    expect(screen.queryByRole('link', { name: /TRU/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /CLYM/ })).toBeInTheDocument();
+  });
+
+  it('"any room" re-asks with min_room=0, shows TRU with the ⛔ flag and drops the hidden count', async () => {
+    const fn = roomStub();
+    vi.stubGlobal('fetch', fn);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /CLYM/ }));
+    fireEvent.change(screen.getByLabelText('Room floor'), { target: { value: '0' } });
+    await waitFor(() => expect(screen.getByRole('link', { name: /TRU/ })).toBeInTheDocument());
+    const gets = fn.mock.calls.map((c) => String(c[0])).filter((u) => u.includes('/supply-demand/demand-reentry?'));
+    expect(new URL(gets[gets.length - 1], 'http://x').searchParams.get('min_room')).toBe('0');
+    // The server room block is what the row prints — 0.3% to the 80.12 band
+    // (money() rounds ≥ $20 to whole dollars, the board's convention), flagged,
+    // over anything the bounce-room hook (empty here) could say.
+    expect(screen.getByText(/⛔ into supply · \+0\.3% room → \$80\b/)).toBeInTheDocument();
+    expect(screen.getByText(/\+17% room → \$18\.22/)).toBeInTheDocument();
+    expect(screen.queryByText(/hidden: room </)).not.toBeInTheDocument();
+    // And the room-ok row leads the into-supply one under the default sort.
+    const order = screen.getAllByRole('link').map((l) => l.textContent ?? '')
+      .map((t) => ['TRU', 'CLYM'].find((s) => t.includes(s))).filter(Boolean);
+    expect(order).toEqual(['CLYM', 'TRU']);
+  });
+
+  it('the Scan button POSTs with the same min_room', async () => {
+    const fn = roomStub();
+    vi.stubGlobal('fetch', fn);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /CLYM/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Scan/ }));
+    await waitFor(() => {
+      const posts = fn.mock.calls.filter((c) => c[1] && (c[1] as RequestInit).method === 'POST'
+        && String(c[0]).includes('/supply-demand/demand-reentry/scan'));
+      expect(posts.length).toBe(1);
+      expect(new URL(String(posts[0][0]), 'http://x').searchParams.get('min_room')).toBe('5');
+    });
+  });
+
+  it('a row whose room was measured from the scan close (no live print) says so (honesty)', async () => {
+    const scanRow = { ...CLYM_ROW, room: { ...CLYM_ROW.room, basis: 'scan' } };
+    mockFetch({ n: 1, rows: [scanRow], min_room: 5, dropped_low_room: 0 });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /CLYM/ }));
+    expect(screen.getByText(/\+17% room → \$18\.22 · scan close/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: an older API with no room block or count still renders the hook read and no hidden line', async () => {
+    mockFetch({ n: 2, rows: [row('TJX', 3.0), row('EOSE', 1.2)] }, () => BOUNCE_ROOM_THREE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText('🪃 +4.2% off $14.94 · today')).toBeInTheDocument());
+    expect(screen.getByText(/\+17% room → \$18.22 · 3.1 ATR/)).toBeInTheDocument();
+    expect(screen.queryByText(/hidden: room </)).not.toBeInTheDocument();
+  });
+});

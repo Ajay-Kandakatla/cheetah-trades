@@ -119,6 +119,7 @@ def test_room_txt_is_the_wording_zone_bounce_pushes_already_use():
 def test_room_read_rounds_like_room_for_and_reports_the_first_overhead():
     room = AG.room_read(171.2, [_sup(161.78, 167.54, 1), _sup(205.4, 212.72, 2)], 180.77)
     assert room == {"state": "ROOM", "room_pct": 20.0, "target": 205.4, "touches": 2,
+                    "room_pct_raw": pytest.approx((205.4 - 171.2) / 171.2 * 100.0, abs=1e-4),
                     "band": {"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2}}
     assert AG.room_read(171.2, [_sup(161.78, 167.54, 1)], 180.77) is None
 
@@ -153,3 +154,18 @@ def test_first_overhead_agrees_with_bounce_room_when_a_band_IS_broken(px, pc):
         assert ours is None
     else:
         assert (ours["lo"], ours["hi"]) == (theirs["lo"], theirs["hi"])
+
+
+def test_boundary_4_995_pct_rounds_to_5_0_but_FAILS_and_says_so_raw():
+    """review 2026-09-05: room_pct is shown at 1 dp, the gate compares RAW.
+    4.995% prints as 5.0 and must still fail — and room_pct_raw carries the
+    number the callers format (2 dp) so the message never reads '5.0% < 5%'."""
+    ok, room = AG.room_gate(100.0, [_sup(104.995, 106.0)], None)
+    assert ok is False
+    assert room["room_pct"] == 5.0
+    assert room["room_pct_raw"] == pytest.approx(4.995, abs=1e-6)
+    assert room["room_pct_raw"] < AG.ALERT_MIN_ROOM_PCT
+    ok, room = AG.room_gate(100.0, [_sup(105.0, 106.0)], None)
+    assert ok is True and room["room_pct_raw"] == pytest.approx(5.0, abs=1e-9)
+    inb = AG.room_read(100.0, [_sup(99.0, 101.0)])
+    assert inb["state"] == "IN_BAND" and inb["room_pct_raw"] == pytest.approx(1.0, abs=1e-9)

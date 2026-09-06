@@ -75,6 +75,13 @@ from sepa import prices, universe as universe_mod, company_names
 from . import sd_liquidity as liq
 from . import price_zones
 from . import demand_order as _order
+from . import alert_gates as _gates
+# Room to the first unbroken band overhead (Ajay 2026-09-05, TRU: "There is
+# only 0.5% room"). Re-exported so callers can read dr.room_block / the floor
+# default; the module itself is a leaf so chart_maps can import it while the
+# tests stub THIS module.
+from .room_floor import (MIN_ROOM_DEFAULT, room_block, meets_room_floor,  # noqa: F401
+                         room_stat, row_entry_band, row_bands, plan_bands as _plan_bands)
 
 # Time box for the in-scan money-flow read on the order-block lists (in_ob /
 # approaching_ob). Ajay 2026-09-03 ("Of course CMF inflow too considered")
@@ -324,8 +331,18 @@ def progress_for(universe: str) -> dict:
 
 
 def cached_or_warm(universe: str, limit: Optional[int] = None,
-                   min_rr: Optional[float] = None) -> dict:
+                   min_rr: Optional[float] = None,
+                   min_room: Optional[float] = None) -> dict:
     """Serve the cache, or start a background compute and say so — never block.
+
+    `min_room` (2026-09-05): the room floor. **None = the room layer is OFF**
+    for this caller — chart_maps, catalysts/signal_watch and orderflow/
+    trade_flash read this cache and must keep seeing the rows they always did
+    (the zones board applies its own floor on its own live print). The board
+    ROUTE always passes a number (its Query default is MIN_ROOM_DEFAULT), and
+    0 there means "show me everything, with the room on every row". This is
+    deliberately unlike `min_rr`, where None means the house default: the R:R
+    floor has no live fetch behind it; this one does.
 
     A cold sp1500 pass is ~3 MINUTES (1,500 price frames, then a tape + NBBO
     fetch per enriched row). Cloudflare cuts the connection at ~100s, which is
@@ -339,8 +356,10 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
     ukey = _universe_key(universe)
     c = _cache.get(ukey)
     if c and (time.time() - c["ts"]) < _CACHE_TTL_SEC:
-        return {**_apply_limit(_apply_rr_floor(c["data"], min_rr), limit),
-                "cached": True, "warming": False}
+        out = _apply_rr_floor(c["data"], min_rr)
+        if min_room is not None:
+            out = _apply_room_floor(attach_room(out), min_room)
+        return {**_apply_limit(out, limit), "cached": True, "warming": False}
 
     with _warm_lock:
         already = ukey in _warming
@@ -377,6 +396,9 @@ def cached_or_warm(universe: str, limit: Optional[int] = None,
             "errors": 0, "took_sec": 0, "cached": False, "warming": True,
             "min_rr": (MIN_RR_DEFAULT if min_rr is None else float(min_rr)),
             "min_rr_default": MIN_RR_DEFAULT, "dropped_low_rr": 0,
+            "min_room": (MIN_ROOM_DEFAULT if min_room is None else max(0.0, float(min_room))),
+            "min_room_default": MIN_ROOM_DEFAULT,
+            "dropped_low_room": 0, "dropped_low_room_deep": 0,
             # Carried on the warming payload as well as the dedicated endpoint,
             # so a page that only polls the board still gets a moving number.
             "progress": progress_for(ukey),
@@ -478,6 +500,127 @@ def _apply_limit(data: dict, limit: Optional[int]) -> dict:
     if not limit:
         return data
     return {**data, "rows": data.get("rows", [])[:int(limit)]}
+
+
+# ── The room floor (2026-09-05) ──────────────────────────────────────────────
+# Ajay 2026-09-05, TRU on the Back-in-Demand board: "It already gapped up very
+# close to the resistance. Why is it still in in Demand page? There is only
+# 0.5% room". And: "I need the same logic in Demand and deep demand zone. So
+# that there are stocks that have more room atleast >5%".
+#
+# Owner settings for the S&D strategy (no book cite): the number is
+# alert_gates.ALERT_MIN_ROOM_PCT, imported through room_floor so the phone gate
+# and the boards can never disagree. Like the R:R floor this runs at READ time
+# — the 3-hour cache holds one row set per universe — but unlike it the read is
+# made on the LIVE print when the tape has one: the scan's last_price is a day
+# stale by mid-session, and TRU's 0.5% was a gap the scan never saw.
+def _live_snapshots(symbols: list) -> dict:
+    """bulk_live_prices over the payload's symbols; {} on any failure so a
+    tape outage leaves the room on the scan basis instead of emptying the
+    board. Mirrors chart_maps.board._live_last."""
+    syms = sorted({(s or "").upper() for s in symbols if s})
+    if not syms:
+        return {}
+    try:
+        return prices.bulk_live_prices(syms) or {}
+    except Exception as exc:
+        log.debug("demand-reentry: live prices unavailable for the room read: %s", exc)
+        return {}
+
+
+def _snapshot_print(snap) -> Optional[float]:
+    """The usable live print in one bulk_live_prices row: the last trade
+    (extended hours included) first, else the day bar close. A NON-POSITIVE
+    value is MISSING, never a price — the day bar is 0 before the open
+    (chart_maps' 2026-09-05 fix, same rule)."""
+    snap = snap or {}
+    for key in ("last_trade_price", "price"):
+        try:
+            px = float(snap.get(key))
+        except (TypeError, ValueError):
+            continue
+        if px == px and px > 0:
+            return px
+    return None
+
+
+def _with_room(r: dict, live: dict) -> dict:
+    """A COPY of the row with `room` attached (cached rows are never mutated —
+    the room changes with every print). Live print + the snapshot's prior
+    close when the tape has them; else the scan's last_price + the record's
+    own prior close (`prev_close`, None on rows cached before 2026-09-05 =
+    every supply band counts, the conservative side)."""
+    sym = (r.get("symbol") or "").upper()
+    snap = live.get(sym) if isinstance(live, dict) else None
+    px = _snapshot_print(snap)
+    if px is not None:
+        basis = "live"
+        pc = (snap or {}).get("prev_day_close")
+        try:
+            pc = float(pc) if pc is not None and float(pc) > 0 else None
+        except (TypeError, ValueError):
+            pc = None
+        # The scan's last close is the last CLOSED bar it saw — the prior
+        # session by the time a live print exists.
+        prev_close = pc if pc is not None else r.get("last_price")
+    else:
+        basis, px, prev_close = "scan", r.get("last_price"), r.get("prev_close")
+    return {**r, "room": room_block(px, row_bands(r), row_entry_band(r),
+                                    prev_close, basis)}
+
+
+def attach_room(data: dict, live: Optional[dict] = None) -> dict:
+    """Attach `room` to every row in `rows` AND `deep_rows` (Ajay: "the same
+    logic in Demand and deep demand zone"). `live` is injectable for tests;
+    None fetches bulk_live_prices once over both lists."""
+    rows = list(data.get("rows") or [])
+    deep = list(data.get("deep_rows") or [])
+    if live is None:
+        live = _live_snapshots([r.get("symbol") for r in rows + deep])
+    live = live or {}
+    out = {**data, "rows": [_with_room(r, live) for r in rows],
+           "room_basis": "live" if live else "scan",
+           "room_as_of": datetime.now(timezone.utc).isoformat()}
+    if "deep_rows" in data:
+        out["deep_rows"] = [_with_room(r, live) for r in deep]
+    return out
+
+
+def _apply_room_floor(data: dict, min_room: Optional[float]) -> dict:
+    """Filter a payload by the room floor, reporting what it removed — the
+    `_apply_rr_floor` pattern. None = the house default (MIN_ROOM_DEFAULT);
+    0 = off, every row kept and said so. `rows` and `deep_rows` are both
+    thinned (deep gets its own count; `deep_n` stays the scan's uncapped
+    total). Rows must already carry `room` (attach_room)."""
+    floor = MIN_ROOM_DEFAULT if min_room is None else float(min_room)
+    rows = data.get("rows") or []
+    deep = data.get("deep_rows") or []
+    if floor <= 0:
+        return {**data, "min_room": 0.0, "min_room_default": MIN_ROOM_DEFAULT,
+                "dropped_low_room": 0, "dropped_low_room_deep": 0}
+    kept = [r for r in rows if meets_room_floor(r.get("room"), floor)]
+    out = {**data, "rows": kept, "n": len(kept),
+           "min_room": floor, "min_room_default": MIN_ROOM_DEFAULT,
+           "dropped_low_room": len(rows) - len(kept),
+           "dropped_low_room_deep": 0}
+    if "deep_rows" in data:
+        kept_deep = [r for r in deep if meets_room_floor(r.get("room"), floor)]
+        out["deep_rows"] = kept_deep
+        out["dropped_low_room_deep"] = len(deep) - len(kept_deep)
+    return out
+
+
+def read_view(data: dict, min_rr: Optional[float], min_room: Optional[float],
+              limit: Optional[int]) -> dict:
+    """The route's read-time layers, in the one order that is right: R:R floor
+    → room (live print) + room floor → limit. The limit must cut the list that
+    already cleared both floors, or a strict floor returns a short page while
+    qualifying rows sit past it. `min_room` None = the room layer off (see
+    cached_or_warm)."""
+    out = _apply_rr_floor(data, min_rr)
+    if min_room is not None:
+        out = _apply_room_floor(attach_room(out), min_room)
+    return _apply_limit(out, limit)
 
 DISCLAIMER = (
     "Demand-zone re-entry is a configured, pragmatic price-structure read (NOT a "
@@ -677,27 +820,37 @@ def band_break_read(closes: list, zone_hi: float, zone_lo: float,
 
 def trade_plan(last_price: float, entry_zone: Optional[dict],
                resistance, stop_buffer_pct: float = STOP_BUFFER_PCT,
-               recent_lows: Optional[list[float]] = None) -> Optional[dict]:
+               recent_lows: Optional[list[float]] = None,
+               prev_close: Optional[float] = None) -> Optional[dict]:
     """Entry / stop / target for a demand-zone play. PURE.
 
     entry area = the demand band itself (buy into support, not through it)
     stop       = `stop_buffer_pct` under the band floor — the level that says
                  "demand failed", so the reason for the trade is gone
-    target     = the LOW of the first band of EITHER ORIGIN above the entry
-                 band's top: the first place sellers are known to be waiting,
-                 not a hoped-for extension. A demand-kind band overhead counts
-                 — broken support acts as resistance (decide_from_frame hands
-                 in `nearest_resistance` + both zone lists; documented in
-                 demand_reentry_methodology.md). The docstring said "supply
-                 band" until the 2026-09-05 review; the math never did.
+    target     = the LOW of the first UNBROKEN band of EITHER ORIGIN above the
+                 PRINT (`last_price`), excluding the entry band itself: the
+                 first place sellers are known to be waiting, not a hoped-for
+                 extension. The rule is alert_gates.first_overhead — supply
+                 bands with hi >= print that are not broken (hi < `prev_close`
+                 = yesterday closed above it = support; unknown prev close =
+                 every supply band counts), plus demand bands with lo > print
+                 (broken support acts as resistance). When that first band
+                 CONTAINS the print the reward is spent: target = its low,
+                 reward 0, **rr 0.0** (not None — None means "nothing
+                 overhead"), and the R:R floor removes the plan.
 
-                 Measured against the band top, NOT against spot (fixed
-                 2026-08-13). `price_zones.nearest_resistance` means "first
-                 band above the current price", and when price sits just under
-                 its own entry band that band IS the nearest thing above —
-                 so VRT at $287.07 got a $287.11 "target", i.e. its own floor,
-                 for a 0.01R plan. Locked by
-                 `test_target_is_never_inside_or_below_the_entry_band`.
+                 ABOVE THE PRINT, not above the entry band's top (changed
+                 2026-09-05). Ajay, TRU on the Back-in-Demand board: "It
+                 already gapped up very close to the resistance. Why is it
+                 still in in Demand page? There is only 0.5% room". The scan's
+                 demand band 78.34-81.08 CONTAINED a supply band 80.12-82.10;
+                 the old `lo > max(hi, last_price)` rule skipped it and
+                 targeted 83.87 — 1.47R advertised, 0.09R real. Locked by
+                 `test_tru_the_target_is_the_first_band_above_the_PRINT_...`.
+                 The 2026-08-13 VRT case (price four cents UNDER its own band,
+                 which then read as the nearest thing above) still holds
+                 because the entry band is excluded by identity, not by
+                 height — `test_target_is_never_inside_or_below_the_entry_band`.
 
     `risk_exceeds_max` flags a stop wider than the house/book hard cap
     (`trading.risk_rules.ABS_MAX_STOP_PCT`, the p.299/p.301 cap) — such a plan
@@ -721,20 +874,30 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     stop = round(lo * (1.0 - stop_buffer_pct / 100.0), 2)
     risk_pct = round((last_price - stop) / last_price * 100.0, 1) if last_price else None
 
-    # `resistance` accepts a single band (legacy) or the full supply-zone list.
-    # Either way the target must clear the ENTRY BAND's top, not merely spot.
+    # `resistance` accepts a single band (legacy) or the full band list of
+    # either origin. The first UNBROKEN band above the PRINT, the entry band
+    # excluded (room_floor.plan_bands normalises: kind-less = supply, hi-less
+    # = a level) — the same read alert_gates.room_gate makes for the phone.
     cands = resistance if isinstance(resistance, list) else ([resistance] if resistance else [])
-    above = [z for z in cands
-             if z and z.get("lo") and float(z["lo"]) > max(hi, last_price)]
+    first = _gates.first_overhead(_plan_bands(cands, entry_zone), last_price, prev_close)
     target = None
     reward_pct = None
-    if above:
-        target = round(float(min(above, key=lambda z: z["lo"])["lo"]), 2)
-        reward_pct = round((target - last_price) / last_price * 100.0, 1)
-
     rr = None
-    if target is not None and last_price > stop:
-        rr = round((target - last_price) / (last_price - stop), 2)
+    target_kind = None
+    target_state = None
+    if first is not None:
+        target = round(float(first["lo"]), 2)
+        target_kind = first.get("kind")
+        if first["lo"] <= last_price <= first["hi"]:
+            # Sellers are already here: no reward to the first objective.
+            target_state = "IN_BAND"
+            reward_pct = 0.0
+            rr = 0.0 if last_price > stop else None
+        else:
+            target_state = "ROOM"
+            reward_pct = round((target - last_price) / last_price * 100.0, 1)
+            if last_price > stop:
+                rr = round((target - last_price) / (last_price - stop), 2)
 
     # R:R at the WORST fill the plan permits — the top of the entry band.
     #
@@ -755,7 +918,12 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     # actually worth filling.
     rr_at_entry_high = None
     if target is not None and hi > stop:
-        rr_at_entry_high = round((target - hi) / (hi - stop), 2)
+        # With the target above the PRINT (2026-09-05) it can sit UNDER the
+        # entry band's top (TRU: target 80.12, band top 81.08): the reward is
+        # spent before the band ends. Clamp at 0.0 — "no reward left", never a
+        # negative R (review 2026-09-05; the FE plan line consumed the sign).
+        rr_at_entry_high = round(max((target - hi) / (hi - stop), 0.0), 2)
+    reward_spent_at_top = bool(target is not None and target <= hi)
 
     try:
         from trading.risk_rules import ABS_MAX_STOP_PCT as _MAX
@@ -786,6 +954,15 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
         "stop": stop,
         "risk_pct": risk_pct,
         "target": target,
+        # Which band the target is (supply | demand), and whether the print is
+        # still under it (ROOM) or already inside it (IN_BAND). None = nothing
+        # overhead. The FE prints `target_basis` as free text.
+        "target_kind": target_kind,
+        "target_state": target_state,
+        "target_basis": (None if target_kind is None else
+                         f"first unbroken {target_kind} band above the print"
+                         + (" — print already inside it" if target_state == "IN_BAND" else "")
+                         + (" — no reward left at the band top" if reward_spent_at_top else "")),
         "reward_pct": reward_pct,
         "rr": rr,
         # R:R if filled at `entry_high` instead of `entry_ref`. None when there
@@ -1299,17 +1476,26 @@ def decide_from_frame(df, sym: str):
     # them, so a supply-list-only search jumped to $302, an implausible 11.8R.
     # Band origin is irrelevant here: price_zones keeps it for colour only,
     # since broken support acts as resistance. The entry band excludes itself
-    # via the `lo > band top` rule inside trade_plan.
+    # by identity inside trade_plan (room_floor.plan_bands); the target is the
+    # first unbroken band above the PRINT (2026-09-05, TRU).
+    # The prior CLOSED bar's close, for the broken-supply rule (a supply band
+    # yesterday closed above is support, alert_gates 2026-09-05). Same 2dp
+    # basis as the rest of the record.
+    prev_close = closes[-2] if len(closes) > 1 else None
     plan = trade_plan(last_price, entry_zone,
                       [zones.get("nearest_resistance")]
                       + (zones.get("supply_zones") or [])
                       + (zones.get("demand_zones") or []),
-                      recent_lows=[float(x) for x in lows_s.tolist()])
+                      recent_lows=[float(x) for x in lows_s.tolist()],
+                      prev_close=prev_close)
 
     rec = {
         "symbol": sym,
         "name": company_names.name_for(sym) or sym,
         "last_price": last_price,
+        # Prior closed bar's close — the scan-basis prev_close for the room
+        # read (room_floor). None only on rows cached before 2026-09-05.
+        "prev_close": prev_close,
         "supply_zones": supply,
         "demand_zones": demand,
         "nearest_resistance": zones.get("nearest_resistance"),

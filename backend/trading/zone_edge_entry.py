@@ -50,6 +50,17 @@ Candidates per tick (owner rules; missing fields FAIL CLOSED):
   that will be PLACED (max(stop_pct, RISK_STOP_FLOOR_PCT)) away;
   breakouts to new highs with no supply overhead skip the room check.
   Order: breakouts first, then demand arrivals by dist_pct ascending.
+  PHONE GATE = ENTRY GATE (Ajay 2026-09-05: "What ever rules I created for
+  the alerts are the ideal conditions for a stock to be bough in
+  Autopilot"): every candidate must ALSO pass supply_demand/alert_gates —
+  room_gate (>= ALERT_MIN_ROOM_PCT to the first UNBROKEN band overhead,
+  CLEAR ok, IN_BAND fails; for a breakout measured against the bands
+  strictly above the one being cleared) and, for demand candidates,
+  demand_proximity_gate (print between the band floor and
+  ALERT_MAX_ABOVE_DEMAND_PCT above its top). A failure is a SKIP (the room
+  can open later in the day; re-read next tick), counted in
+  skipped_alert_gate, with an execution_race row carrying the gate detail.
+  It is an AND on top of every gate above — none of them moved.
 
 Safety invariants (same house rules as exit_engine / entries / auto_entry):
   * NEVER places an order at the broker directly — buys flow through
@@ -72,8 +83,9 @@ Safety invariants (same house rules as exit_engine / entries / auto_entry):
     re-attempted (the broker's same-day client_order_id would reject it).
   * run() is called from exit_engine.tick() step (h) inside try/except —
     a zone-entry crash can never break stop protection.
-  * Import-light: stdlib + trading modules only; supply_demand and push
-    imports are lazy.
+  * Import-light: stdlib + trading modules + supply_demand.alert_gates (a
+    pure leaf: math/typing only); every other supply_demand and push import
+    is lazy.
 
 EXECUTION RACE ledger (`execution_race`): one doc per (symbol, side, band,
 ET day) for EVERY candidate attempt, blocked ones included — the race
@@ -94,6 +106,7 @@ from datetime import date, datetime, time as dtime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from supply_demand import alert_gates
 from trading import entries
 from trading import risk_rules
 from trading.broker import get_broker
@@ -600,6 +613,71 @@ def _needs_room_check(c: dict) -> bool:
                 and c.get("overhead_bands") == 0)
 
 
+def alert_gate(c: dict, zone_doc: Optional[dict]):
+    """PHONE GATE = ENTRY GATE (Ajay 2026-09-05, quoted in the module
+    docstring). None when the zone doc is unknown — the 2R gate then blocks
+    'room unknown' as before; otherwise (ok, detail).
+
+      room       alert_gates.room_gate(last, bands, prev_close): >= 5% to the
+                 first unbroken band overhead; CLEAR passes; IN_BAND fails.
+                 Breakout: only bands strictly ABOVE the band being cleared
+                 (hi > band.hi) — the cleared band is never its own lid.
+                 Demand: the entry band itself is excluded (it is support).
+      proximity  demand candidates only: alert_gates.demand_proximity_gate
+                 (band.lo <= last <= band.hi x 1.01); under the floor = fell
+                 through, above the line = "I am late" — both fail.
+    A malformed doc (bands not a list of dicts) is UNKNOWN too -> None, and
+    the 2R gate blocks it 'room unknown' (fails closed either way)."""
+    if not isinstance(zone_doc, dict):
+        return None
+    bands = zone_doc.get("bands")
+    if not isinstance(bands, list) or not all(isinstance(b, dict) for b in bands):
+        return None
+    detail = {"ok": False, "room": None, "proximity": None, "reason": None,
+              "min_room_pct": alert_gates.ALERT_MIN_ROOM_PCT,
+              "max_above_demand_pct": alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT}
+    last, band = c["last"], c["band"]
+    if c["kind"] == "breakout":
+        gate_bands = [b for b in bands
+                      if _f(b.get("hi")) is not None and float(b["hi"]) > band["hi"]]
+    else:
+        gate_bands = [b for b in bands
+                      if not (_f(b.get("lo")) == band["lo"] and _f(b.get("hi")) == band["hi"])]
+    ok_room, room = alert_gates.room_gate(last, gate_bands, zone_doc.get("prev_close"))
+    detail["room"] = room
+    if not ok_room:
+        if room is None:
+            detail["reason"] = "alert gate: unusable print"
+        else:
+            rb = room.get("band") or {}
+            where = "%s %g-%g" % (rb.get("kind"), rb.get("lo", 0.0), rb.get("hi", 0.0))
+            if room.get("state") == "IN_BAND":
+                detail["reason"] = "alert gate: inside %s band %g-%g" % (
+                    rb.get("kind"), rb.get("lo", 0.0), rb.get("hi", 0.0))
+            else:
+                # RAW at 2 dp: the rounded 1-dp number can read "5.0% < 5%"
+                # (review 2026-09-05, the 4.995% boundary).
+                detail["reason"] = "alert gate: room %.2f%% < %g%% (%s)" % (
+                    room.get("room_pct_raw", room["room_pct"]),
+                    alert_gates.ALERT_MIN_ROOM_PCT, where)
+        return False, detail
+    if c["kind"] == "demand":
+        prox = alert_gates.demand_proximity_gate(last, band)
+        detail["proximity"] = bool(prox)
+        if not prox:
+            if last < band["lo"]:
+                detail["reason"] = ("alert gate: print %.2f under demand band floor %g "
+                                    "(fell through)" % (last, band["lo"]))
+            else:
+                detail["reason"] = ("alert gate: print %.1f%% above demand band top %g "
+                                    "(max %g%%)" % ((last / band["hi"] - 1.0) * 100.0,
+                                                    band["hi"],
+                                                    alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT))
+            return False, detail
+    detail["ok"] = True
+    return True, detail
+
+
 # ── Execution race ledger ────────────────────────────────────────────────────
 
 def race_id(symbol: str, side: str, band: dict, day: str) -> str:
@@ -631,6 +709,7 @@ def _write_race(c: dict, day: str, outcome: str, reason: Optional[str],
     rid = race_id(c["symbol"], c["side"], c["band"], day)
     sig_ts, basis = signal_ts_for(day, c.get("first_seen"), as_of)
     stop_pct = engine.pop("stop_pct", None)
+    gate = engine.pop("gate", None)                # alert-gate detail (2026-09-05)
     doc = {"symbol": c["symbol"], "side": c["side"], "kind": c["kind"],
            "tier": c["tier"],
            "band": {"lo": c["band"]["lo"], "hi": c["band"]["hi"]},
@@ -645,7 +724,7 @@ def _write_race(c: dict, day: str, outcome: str, reason: Optional[str],
            "engine_fill_ts": None, "engine_fill_px": None,
            "user_view_ts": None, "user_view_px": None,
            "user_fill_ts": None, "user_fill_px": None,
-           "outcome": outcome, "reason": reason,
+           "outcome": outcome, "reason": reason, "gate": gate,
            "created_at": _utc_iso()}
     try:
         coll.update_one({"_id": rid}, {"$set": doc}, upsert=True)
@@ -951,8 +1030,8 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     cfg = cfg or get_config()
     day = _et_day()
     out = {"ok": True, "ran": False, "day": day, "entered": [], "blocked": [],
-           "skipped": [], "evaluated": 0, "rejected": 0, "entries_today": 0,
-           "errors": []}
+           "skipped": [], "skipped_alert_gate": 0, "evaluated": 0, "rejected": 0,
+           "entries_today": 0, "errors": []}
 
     # Master gate: configured AND armed AND zone_edge_entry flag AND open.
     try:
@@ -1080,13 +1159,30 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         elif stop_pct > risk_rules.ABS_MAX_STOP_PCT:
             reason = ("stop wider than book max (%.2f%% > %g%%)"
                       % (stop_pct, risk_rules.ABS_MAX_STOP_PCT))
-        elif _needs_room_check(c):
-            ok_room, room = room_ok(c["last"], stop_pct, _zone_doc(sym, day))
-            attempt["room"] = room
-            if not ok_room:
-                reason = room["reason"]
         else:
-            attempt["room"] = {"reason": "skipped: breakout to new highs, no supply overhead"}
+            # PHONE GATE = ENTRY GATE (Ajay 2026-09-05) — the alert rules,
+            # read off the same zone_store doc the 2R gate uses (ONE read).
+            # A breakout to new highs with no band overhead is CLEAR by the
+            # board's own read (no doc needed). A failure is a SKIP, not an
+            # attempt: the room can open later, so the row is re-read next
+            # tick; the race row records that the engine saw it and why.
+            needs_room = _needs_room_check(c)
+            zone_doc = _zone_doc(sym, day) if needs_room else None
+            gate = alert_gate(c, zone_doc if needs_room else {"bands": []})
+            if gate is not None and not gate[0]:
+                out["skipped_alert_gate"] += 1
+                _skip(sym, gate[1]["reason"])
+                _write_race(c, day, "skipped", gate[1]["reason"], as_of,
+                            stop_pct=stop_pct, gate=gate[1])
+                continue
+            attempt["gate"] = gate[1] if gate is not None else None
+            if needs_room:
+                ok_room, room = room_ok(c["last"], stop_pct, zone_doc)
+                attempt["room"] = room
+                if not ok_room:
+                    reason = room["reason"]
+            else:
+                attempt["room"] = {"reason": "skipped: breakout to new highs, no supply overhead"}
 
         # Record the attempt BEFORE the order path — blocked or not, this
         # band is done for the day (no per-minute retry of a rejected name).
@@ -1120,7 +1216,18 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
             # its own planning price and refuses if the drift since the
             # signal made it too wide or put the print through it. stop_pct
             # rides along as the signal-time request the ledgers record.
+            # strategy / reason = the journal LANE tag (2026-09-05: "journal
+            # it appropriately") — demand rows are the demand_zone lane,
+            # supply-side rows the breakout lane.
+            lane = "demand_zone" if c["kind"] == "demand" else "breakout"
             res = entries.enter(sym, limit_price=None, stop_pct=stop_pct,
+                                strategy=lane,
+                                reason={"side": c["side"], "tier": c["tier"],
+                                        "band": c["band"], "room": attempt.get("room"),
+                                        "proximity": (attempt.get("gate") or {}).get("proximity"),
+                                        "gate": attempt.get("gate"),
+                                        "dist_pct": c.get("dist_pct"),
+                                        "first_seen": c.get("first_seen")},
                                 stop_price=stop_price, allow_earnings=False)
         except ValueError as exc:
             veto = str(exc)
@@ -1209,6 +1316,25 @@ def rules_list() -> list:
                  % (risk_rules.MIN_REWARD_RISK, RISK_STOP_FLOOR_PCT),
          "value": "room >= %gR" % risk_rules.MIN_REWARD_RISK,
          "source": "owner rule using the engine's reward:risk floor"},
+        {"rule": "Phone gate = entry gate (2026-09-05): at least %g%% room from "
+                 "the print to the first UNBROKEN band overhead (a supply band "
+                 "yesterday closed above is support; CLEAR passes; inside a band "
+                 "fails); a breakout is measured to the bands above the one it "
+                 "is clearing. Failing rows are skipped and re-read next tick, "
+                 "never bought" % alert_gates.ALERT_MIN_ROOM_PCT,
+         "value": "room >= %g%% (alert_gates.ALERT_MIN_ROOM_PCT)"
+                  % alert_gates.ALERT_MIN_ROOM_PCT,
+         "source": "owner rule (Ajay 2026-09-05: 'What ever rules I created for "
+                   "the alerts are the ideal conditions for a stock to be bough "
+                   "in Autopilot'; S&D, no book)"},
+        {"rule": "Phone gate = entry gate (2026-09-05): a demand buy only while "
+                 "the print sits between the band floor and %g%% above its top — "
+                 "under the floor it fell through, above the line the engine is "
+                 "late" % alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT,
+         "value": "band.lo <= print <= band.hi x (1 + %g%%) "
+                  "(alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT)"
+                  % alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT,
+         "source": "owner rule (Ajay 2026-09-05, same quote; S&D, no book)"},
         {"rule": "Signal must be fresh — a board doc older than this (or "
                  "from another day) places nothing",
          "value": "<= %ds old" % SIGNAL_MAX_AGE_SEC,
@@ -1228,6 +1354,20 @@ def rules_list() -> list:
     ]
 
 
+def _alert_gate_skips_today(day: str) -> Optional[int]:
+    """Distinct (symbol, side, band) rows the alert gate turned away today —
+    the race docs with outcome 'skipped'. None when unreadable."""
+    coll = _coll(RACE_COLL)
+    if coll is None:
+        return None
+    try:
+        return sum(1 for d in coll.find({"day": day, "outcome": "skipped"})
+                   if isinstance(d, dict))
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("execution_race skip count failed: %s", exc)
+        return None
+
+
 def status_block(cfg: Optional[dict] = None) -> dict:
     cfg = cfg or get_config()
     day = _et_day()
@@ -1239,4 +1379,7 @@ def status_block(cfg: Optional[dict] = None) -> dict:
             "signal": sig,
             "rules": rules_list(),
             "active_rules": active_rules(cfg),
+            "alert_gate": {"min_room_pct": alert_gates.ALERT_MIN_ROOM_PCT,
+                           "max_above_demand_pct": alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT},
+            "skipped_alert_gate_today": _alert_gate_skips_today(day),
             "attempts": _today_attempts(day)}

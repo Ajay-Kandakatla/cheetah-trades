@@ -24,7 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
-  WINNER_SOURCES, boardQuery, isBoardTab,
+  WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
@@ -158,6 +158,18 @@ export function ChartMaps() {
     else next.delete('target');
     setParams(next, { replace: true });
   };
+  /* Room floor (Ajay 2026-09-05: "I need the same logic in Demand and deep
+   * demand zone. So that there are stocks that have more room atleast >5%").
+   * URL-backed like phase; only the OFF value is written (`room=any`) so the
+   * plain tab URL keeps the floor. The floor itself is applied on the server
+   * against the LIVE print — the page only asks for it and reports the count. */
+  const ROOM_TAB = ROOM_TABS.includes(tab);
+  const minRoom = parseMinRoom(params.get('room'));
+  const setRoom = (v: 'floor' | 'any') => {
+    const next = new URLSearchParams(params);
+    if (v === 'any') next.set('room', 'any'); else next.delete('room');
+    setParams(next, { replace: true });
+  };
   const [gabbarLevel, setGabbarLevel] = useState('all');
   const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(false);
   /* ICT (Ajay 2026-09-03): which side of the sweep, and which trigger clock.
@@ -203,7 +215,8 @@ export function ChartMaps() {
     const q = boardQuery({ tab, limit: tab === 'gabbar' ? 80 : 24, days,
                            universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
-                           gabbarTouchingOnly, phase, target, bias, micro });
+                           gabbarTouchingOnly, phase, target, bias, micro,
+                           minRoom: ROOM_TAB ? minRoom : undefined });
     try {
       const r = await fetch(`${API}/chart-maps?${q}`, {
         credentials: 'include', cache: 'no-store',
@@ -218,7 +231,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -426,6 +439,26 @@ export function ChartMaps() {
             * tab only, BOTH phases — reached+order block = in the block on
             * its first touch. Deep Demand's second band IS its level, and the
             * lens tabs measure to their own screens' bands. */}
+          {/* Room floor (Ajay 2026-09-05), the two demand boards only. Two
+            * states, not a slider: the phone's gate (≥ 5% from the live print
+            * to the first unbroken band overhead — ALERT_MIN_ROOM_PCT, owner
+            * setting) or off. A tile at its lid is hidden by default and
+            * counted under the board; Any room shows it. */}
+          {ROOM_TAB && (
+            <span className="cm-phase-sub" role="tablist" aria-label="Room floor"
+                  title={`Room = % from the LIVE print to the first unbroken band overhead (supply not broken under yesterday's close, plus demand bands above). The phone only pages names with ≥ ${DEFAULT_MIN_ROOM}%; this floor hides the rest here too. TRU 2026-09-05: 0.3% under a supply band — hidden.`}>
+              <button type="button" role="tab" aria-selected={minRoom !== 0}
+                      className={`cm-phase-btn${minRoom !== 0 ? ' cm-phase-on' : ''}`}
+                      onClick={() => setRoom('floor')}>
+                🧱 Room ≥ {DEFAULT_MIN_ROOM}%
+              </button>
+              <button type="button" role="tab" aria-selected={minRoom === 0}
+                      className={`cm-phase-btn${minRoom === 0 ? ' cm-phase-on' : ''}`}
+                      onClick={() => setRoom('any')}>
+                Any room
+              </button>
+            </span>
+          )}
           {tab === 'zones' && (
             <span className="cm-phase-sub" role="tablist" aria-label="Approach target">
               <button type="button" role="tab" aria-selected={target === 'zone'}
@@ -759,6 +792,16 @@ export function ChartMaps() {
         <p className="cm-note">
           {data.dropped_bounced} name{data.dropped_bounced === 1 ? '' : 's'} hidden — already
           bounced {data.bounce_done_pct ?? 7}%+ off the demand zone, so the arrival is over.
+        </p>
+      )}
+      {/* Room floor count (2026-09-05). Rendered from the payload, so it says
+        * what the SERVER hid on the print it actually read — and it shows even
+        * when the floor hid every tile, which is when it matters most. */}
+      {!!data?.hidden_low_room && (
+        <p className="cm-note" data-testid="hidden-low-room">
+          {data.hidden_low_room} hidden: room &lt; {data.min_room ?? DEFAULT_MIN_ROOM}% to the
+          first unbroken band overhead on the live print (the phone's own gate) — pick
+          {' '}<em>Any room</em> to see them.
         </p>
       )}
       {!!data?.tape_pool && (

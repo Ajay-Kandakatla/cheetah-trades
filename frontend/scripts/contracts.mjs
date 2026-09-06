@@ -447,6 +447,76 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Room floor on the boards + three Auto-Pilot lanes on the Trading page (2026-09-05)',
+    file: 'src/lib/bounceRoom.ts',
+    // Ajay 2026-09-05, three asks in one afternoon: (1) "What ever rules I
+    // created for the alerts are the ideal conditions for a stock to be bough
+    // in Autopilot. Keep the minervini entries but also make sure you have
+    // demand zone and catalyst based entries time to time and journal it
+    // appropriately." (2) "I need the same logic in Demand and deep demand
+    // zone. So that there are stocks that have more room atleast >5%".
+    // (3) TRU: "It already gapped up very close to the resistance. Why is it
+    // still in in Demand page? There is only 0.5% room". Each half is silent
+    // when lost in a rebase: the FE floor drifting from the alert gate's 5,
+    // the Demand panel or Chart Maps no longer asking the server for the
+    // floor, the Trading page dropping the per-lane table or the catalyst
+    // card. Owner settings for the Supply & Demand strategy — no book cites.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/export const ROOM_MIN_PCT\s*=\s*([\d.]+)\s*;/);
+      if (!m) errs.push('bounceRoom.ts lost ROOM_MIN_PCT');
+      else if (Number(m[1]) !== 5) errs.push(`ROOM_MIN_PCT is ${m[1]} — must mirror ALERT_MIN_ROOM_PCT = 5.0 (backend/supply_demand/alert_gates.py)`);
+      if (!/export function roomGroup\(/.test(src) || !/export function roomOk\(/.test(src)) {
+        errs.push('bounceRoom.ts lost roomOk / roomGroup — the sort no longer puts bounces INTO supply under room-ok rows');
+      }
+      const cmp = src.slice(src.indexOf('export function compareBounceRoom'));
+      if (!/roomGroup\(a\)/.test(cmp.slice(0, 400))) errs.push('compareBounceRoom no longer keys on roomGroup first');
+      const cm = read('src/lib/chartMaps.ts');
+      const dm = cm.match(/export const DEFAULT_MIN_ROOM\s*=\s*([\d.]+)\s*;/);
+      if (!dm || Number(dm[1]) !== 5) errs.push('chartMaps.ts DEFAULT_MIN_ROOM must be 5 (same owner setting)');
+      if (!/export const ROOM_TABS:\s*CmTab\[\]\s*=\s*\['zones',\s*'deep_demand'\]/.test(cm)) {
+        errs.push("chartMaps.ts ROOM_TABS is not exactly ['zones', 'deep_demand']");
+      }
+      if (!/q\.set\('min_room'/.test(cm)) errs.push('boardQuery no longer sends min_room');
+      const panel = read('src/components/DemandReentryPanel.tsx');
+      if (!/&min_room=\$\{encodeURIComponent\(minRoom\)\}/.test(panel)) {
+        errs.push('DemandReentryPanel no longer sends min_room on the demand-reentry GET / POST');
+      }
+      if (!/aria-label="Room floor"/.test(panel)) errs.push('DemandReentryPanel lost the Room floor selector');
+      if (!/dropped_low_room/.test(panel)) errs.push('DemandReentryPanel no longer reports dropped_low_room');
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/aria-label="Room floor"/.test(page)) errs.push('ChartMaps lost the Room floor control');
+      const gate = page.slice(Math.max(0, page.indexOf('aria-label="Room floor"') - 260), page.indexOf('aria-label="Room floor"'));
+      if (!/\{ROOM_TAB && \(/.test(gate)) errs.push('ChartMaps Room floor control is not gated on ROOM_TAB (zones / deep_demand only)');
+      if (!/hidden_low_room/.test(page)) errs.push('ChartMaps no longer reports hidden_low_room');
+      if (!/minRoom:\s*ROOM_TAB \? minRoom : undefined/.test(page)) errs.push('ChartMaps no longer passes minRoom into boardQuery for the two demand boards');
+      const tr = read('src/pages/Trading.tsx');
+      if (!/import\s*\{[^}]*\bJournalByStrategy\b[^}]*\}\s*from\s*'\.\.\/components\/JournalByStrategy'/.test(tr)) {
+        errs.push("Trading.tsx no longer imports JournalByStrategy from '../components/JournalByStrategy'");
+      }
+      if (!/<JournalByStrategy\s+byStrategy=\{j\.summary\?\.by_strategy\}/.test(tr)) errs.push('Trading.tsx JournalView does not mount <JournalByStrategy byStrategy={j.summary?.by_strategy}>');
+      if (!/<StrategyChip\s+strategy=\{t\.entry\?\.strategy\}/.test(tr)) errs.push('TradeCard lost its lane chip (StrategyChip from trade.entry.strategy)');
+      if (!/import\s*\{[^}]*\bCatalystEntryCard\b[^}]*\}\s*from\s*'\.\.\/components\/CatalystEntryCard'/.test(tr)) {
+        errs.push("Trading.tsx no longer imports CatalystEntryCard from '../components/CatalystEntryCard'");
+      }
+      if (!/status\.catalyst_entry\s*&&\s*\(\s*<CatalystEntryCard\s+c=\{status\.catalyst_entry\}/.test(tr)) {
+        errs.push('Trading.tsx does not mount <CatalystEntryCard c={status.catalyst_entry}> gated on the object');
+      }
+      const card = read('src/components/CatalystEntryCard.tsx');
+      if (!/catalyst_entry:\s*enabled/.test(card) || !/\/trading\/config/.test(card)) {
+        errs.push('CatalystEntryCard no longer POSTs {catalyst_entry} to /trading/config');
+      }
+      if (/TLSW|TTLAC|Minervini p\./.test(card) || /TLSW|TTLAC|Minervini p\./.test(src)) {
+        errs.push('owner-rule files (bounceRoom.ts / CatalystEntryCard.tsx) must carry no book cites');
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      for (const id of ['autopilot-three-lanes', 'demand-room-floor', 'chart-maps-room-floor']) {
+        if (!new RegExp(`id:\\s*'${id}'`).test(nf)) errs.push(`newFeatures.ts lacks the '${id}' highlight`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -291,7 +291,7 @@ def single_message(item: dict) -> dict:
         parts.append(str(item["name"]))
     url = f"/sepa/{sym}?tab=supply"
     return {"title": title, "body": " · ".join(parts), "url": url,
-            "data": {"url": url}, "kind": KIND}
+            "data": {"url": url}, "kind": KIND, "ticker": sym}
 
 
 def digest_message(items: list) -> dict:

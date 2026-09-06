@@ -727,8 +727,15 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         stop_req = _structural_stop_pct(row, live)
         _set_state(sym, day, attempted=True)
         try:
+            # Journal lane tag (2026-09-05): the Minervini funnel's ONE buy
+            # call names its lane + why, for the journal's by_strategy split.
             res = entries.enter(sym, limit_price=None, stop_pct=stop_req,
-                                allow_earnings=False, top_up=is_add)
+                                allow_earnings=False, top_up=is_add,
+                                strategy="minervini",
+                                reason={"path": path, "pivot": pivot,
+                                        "score": row.get("score"),
+                                        "rs_rank": row.get("rs_rank"),
+                                        "relvol": relvol})
             entries_today += 1
             if not is_add:
                 pos_count += 1

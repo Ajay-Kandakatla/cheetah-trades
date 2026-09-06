@@ -162,11 +162,13 @@ def env(monkeypatch):
         enter_calls = []
 
         def fake_enter(symbol, limit_price=None, stop_pct=None,
-                       allow_earnings=False, top_up=False):
+                       allow_earnings=False, top_up=False, stop_price=None,
+                       strategy="manual", reason=None):
             enter_calls.append({"symbol": symbol, "limit_price": limit_price,
                                 "stop_pct": stop_pct,
                                 "allow_earnings": allow_earnings,
-                                "top_up": top_up})
+                                "top_up": top_up, "strategy": strategy,
+                                "reason": reason})
             if enter_raises:
                 raise enter_raises
             return enter_result or {"order_id": "o-%d" % len(enter_calls),
@@ -874,3 +876,22 @@ def test_top_up_composes_with_progressive_scale_up(env):
     blocked, ctx = EN._evaluate("CAP", limit_price=55.0, top_up=True)
     assert not blocked
     assert ctx["sizing"]["shares"] == 11          # 22 full - 11 held
+
+
+# ── Journal tag (2026-09-05 lanes): the ONE enter call is strategy minervini ─
+
+def test_enter_call_tagged_minervini_with_reason(env):
+    _, db, enter_calls, _ = env(
+        rows=[_row("AAA", pivot=100.0)],
+        quotes={"AAA": {"price": 101.5, "prev_day_close": 102.0}},
+        frac=0.6, relvols={})
+    AE.run()
+    assert len(enter_calls) == 1
+    call = enter_calls[0]
+    assert call["strategy"] == "minervini"
+    r = call["reason"]
+    assert set(r) == {"path", "pivot", "score", "rs_rank", "relvol"}
+    assert r["path"] == "close_confirm" and r["pivot"] == 100.0
+    assert r["score"] == 85.0 and r["relvol"] is None
+    import json
+    json.dumps(r, allow_nan=False)

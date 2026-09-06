@@ -227,6 +227,56 @@ def already_bounced(price, band_hi, done_pct: float = BOUNCE_DONE_PCT) -> bool:
     return b is not None and b >= done_pct
 
 
+def _room_prev_close(r: dict, live_px) -> Optional[float]:
+    """The prior CLOSED bar's close behind the room read's broken-supply rule:
+    with a live print the scan's last_price is the last closed bar it saw;
+    on the scan basis the record's own `prev_close` (None on rows cached
+    before 2026-09-05 = every supply band counts, the conservative side)."""
+    if live_px is not None:
+        return _num(r.get("last_price"))
+    return _num(r.get("prev_close"))
+
+
+def drop_low_room(rows: list, live: Optional[dict], min_room: Optional[float]) -> tuple:
+    """(kept_rows, hidden_count, room_by_symbol) — the room floor on a demand
+    board (Ajay 2026-09-05, TRU: "There is only 0.5% room"; "the same logic
+    in Demand and deep demand zone ... more room atleast >5%"). Room is
+    room_floor.room_block on the LIVE print when the tape has one (basis
+    "live"), else the scan price ("scan"), to the first unbroken band
+    overhead, the row's own entry band excluded. None = the house default
+    (alert_gates.ALERT_MIN_ROOM_PCT via room_floor); 0 = off — every tile
+    kept, the room still read and said. An unreadable room fails a real
+    floor, the R:R-floor rule."""
+    from supply_demand import room_floor as RF
+    floor = RF.MIN_ROOM_DEFAULT if min_room is None else float(min_room)
+    kept, hidden, rooms = [], 0, {}
+    for r in rows:
+        sym = (r.get("symbol") or "").upper()
+        live_px = (live or {}).get(sym)
+        px = live_px if live_px is not None else _num(r.get("last_price"))
+        room = RF.room_block(px, RF.row_bands(r), RF.row_entry_band(r),
+                             _room_prev_close(r, live_px),
+                             "live" if live_px is not None else "scan")
+        rooms[sym] = room
+        if not RF.meets_room_floor(room, floor):
+            hidden += 1
+            continue
+        kept.append(r)
+    return kept, hidden, rooms
+
+
+def _room_stat_row(rooms: dict, sym: str) -> dict:
+    from supply_demand import room_floor as RF
+    return {"k": "room", "v": RF.room_stat(rooms.get(sym))}
+
+
+def _room_meta(min_room: Optional[float], hidden: int) -> dict:
+    from supply_demand import room_floor as RF
+    floor = RF.MIN_ROOM_DEFAULT if min_room is None else max(0.0, float(min_room))
+    return {"min_room": floor, "min_room_default": RF.MIN_ROOM_DEFAULT,
+            "hidden_low_room": hidden}
+
+
 def _live_last(symbols: list) -> dict:
     """Live print per symbol for the bounce gate. {} on any failure — the
     scan's own last_price then decides, so a tape outage never empties a board
@@ -1435,7 +1485,8 @@ def _supply_disclaimer() -> str:
 def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
                sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER,
-               phase: str = "reached", target: str = "zone") -> dict:
+               phase: str = "reached", target: str = "zone",
+               min_room: Optional[float] = None) -> dict:
     # One board, two moments (Ajay 2026-08-31: "find a way to show me both
     # and give me toggle reaching vs already reached"). `reached` is the
     # historical board — price back INSIDE a tested band. `approaching` is the
@@ -1474,6 +1525,10 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     live = _live_last([r.get("symbol") for r in rows])     # fetched ONCE, reused
     rows, dropped_bounced = drop_bounced(
         rows, lambda r: _bounce_ref_hi(r, phase, target), live)
+    # The room floor (Ajay 2026-09-05, TRU: "There is only 0.5% room"): hide
+    # names without `min_room` % of room from the LIVE print to the first
+    # unbroken band overhead. Same print the bounce gate just used.
+    rows, hidden_low_room, rooms = drop_low_room(rows, live, min_room)
     # Read-time order (2026-09-03). Approaching (both targets) and In-the-block
     # re-rank on the LIVE print with the scan's own key — closest first, flow
     # inside a 0.5% bucket; in_ob keeps block age as the lead. The REACHED zone
@@ -1542,7 +1597,10 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  {"k": "Break-even", "v": f"{be:.0f}%" if be is not None else "—"},
                  {"k": "Liquidity", "v": (liq.get("tier") or "—")},
                  {"k": "Back in", "v": (f"{r.get('bars_since_above')}d"
-                                        if r.get("bars_since_above") is not None else "—")}]
+                                        if r.get("bars_since_above") is not None else "—")},
+                 # Room to the first unbroken band overhead on the live print
+                 # ("+12.4% -> 84.10" | "open sky" | "in band"), 2026-09-05.
+                 _room_stat_row(rooms, sym)]
 
         fell = _num(r.get("fell_from_pct"))
         appr_ob = (r.get("approaching_ob")
@@ -1661,6 +1719,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "matched": matched,
             "dropped_bounced": dropped_bounced,
             "bounce_done_pct": BOUNCE_DONE_PCT,
+            **_room_meta(min_room, hidden_low_room),
             "universe_key": data.get("universe_key"),
             "universe_label": data.get("universe_label"),
             # The universes the server actually offers, so the tab's
@@ -2169,7 +2228,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                       themes_first: bool = THEMES_FIRST_DEFAULT,
                       sort: str = DEFAULT_SORT,
                       min_tier: str = DEFAULT_MIN_TIER,
-                      phase: str = "reached") -> dict:
+                      phase: str = "reached",
+                      min_room: Optional[float] = None) -> dict:
     """Deep Demand: broke the FIRST demand band, entering the SECOND — and
     Bonde sales say the business didn't break with the price.
 
@@ -2208,6 +2268,11 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     rows, dropped_bounced = drop_bounced(
         rows, lambda r: _num(((r.get("deep_demand") or {}).get("second_band") or {}).get("hi")),
         live)
+    # The room floor (Ajay 2026-09-05: "the same logic in Demand and deep
+    # demand zone"). Room is read to the first unbroken band overhead — for a
+    # deep row that is usually its BROKEN first band, drawn on the tile as
+    # the lid — from the live print, the second band excluded as the entry.
+    rows, hidden_low_room, rooms = drop_low_room(rows, live, min_room)
     # Closest to the second band first on the LIVE print, flow inside a 0.5%
     # bucket (Ajay 2026-09-03) — the same key the scan sorted with
     # (deep_demand.sort_key -> demand_order.deep_key), re-read at the live
@@ -2296,7 +2361,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  {"k": "Vol days", "v": (f"{flow.get('accum_days_25')}↑ / "
                                           f"{flow.get('dist_days_25')}↓"
                                           if flow.get("accum_days_25") is not None else "—")},
-                 {"k": "Liquidity", "v": (liq.get("tier") or "—")}]
+                 {"k": "Liquidity", "v": (liq.get("tier") or "—")},
+                 _room_stat_row(rooms, sym)]
 
         # The score IS the position in the live re-rank above (`_finish`
         # ranks `_score` DESCENDING): inside the band, then nearest, flow
@@ -2338,6 +2404,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "flow_counts": flow_counts,
             "dropped_weak_sales": dropped_weak,
             "dropped_bounced": dropped_bounced, "bounce_done_pct": BOUNCE_DONE_PCT,
+            **_room_meta(min_room, hidden_low_room),
             "dropped_no_sales_data": dropped_unknown,
             "deep_n": data.get("deep_n"),
             "universe_key": data.get("universe_key"),
@@ -2355,8 +2422,10 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"{'nearest the second band first' if phase == 'approaching' else 'inside the second band first'}"
                      f" on the live print, money flow (CMF) ranking within a 0.5% "
                      f"distance bucket; names already {BOUNCE_DONE_PCT:.0f}% off the band "
-                     f"are dropped. These fail the trend gate BY DESIGN — size and stop "
-                     f"accordingly."),
+                     f"are dropped, and so are names with under "
+                     f"{_room_meta(min_room, 0)['min_room']:g}% of room to the first band "
+                     f"overhead on the live print ({hidden_low_room} hidden). These fail the "
+                     f"trend gate BY DESIGN — size and stop accordingly."),
             "generated_at": data.get("as_of")}
 
 
@@ -3106,8 +3175,13 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
           touching_only: bool = False, phase: str = "",
-          target: str = "zone", bias: str = "all", micro: str = "60m") -> dict:
+          target: str = "zone", bias: str = "all", micro: str = "60m",
+          min_room: Optional[float] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
+
+    `min_room` (2026-09-05) reaches ONLY the zones and deep_demand tabs — the
+    room floor on the live print (None = the house default, 0 = off). Every
+    other tab ignores it and carries no room keys.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
     chart-pattern ledger, "zone" is the demand-zone re-entry backtest.
@@ -3132,7 +3206,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         # An empty phase means "the tab's own default" so URLs from before any
         # of this behave identically on every tab.
         out = zone_tiles(limit, days, universe, themes_first, srt, tier,
-                         phase=(phase or "reached"), target=target)
+                         phase=(phase or "reached"), target=target,
+                         min_room=min_room)
     elif t == "supply":
         out = supply_tiles(limit, days, universe, themes_first, srt, tier)
     elif t == "ict":
@@ -3143,7 +3218,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier,
-                                phase=(phase or "reached"))
+                                phase=(phase or "reached"), min_room=min_room)
     elif t == "undervalue":
         out = undervalue_tiles(limit, days, themes_first, srt, tier,
                                phase=(phase or "all"))

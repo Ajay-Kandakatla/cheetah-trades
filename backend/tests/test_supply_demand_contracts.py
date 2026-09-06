@@ -92,6 +92,11 @@ def test_the_plan_payload_shape_is_stable():
         # These report R:R at the worst fill the plan permits. See
         # docs/supply_demand/demand_reentry_methodology.md.
         "rr_at_entry_high", "thin_across_band", "thin_band_rr",
+        # 2026-09-05 (TRU): the target is the first UNBROKEN band above the
+        # PRINT; these say which band it is (supply | demand), whether the
+        # print is under it (ROOM) or already inside it (IN_BAND), and the
+        # free-text basis the card prints. See rr_floor.md section 6.
+        "target_kind", "target_state", "target_basis",
     }
 
 
@@ -663,3 +668,64 @@ def test_integrator_fixes_2026_09_05_structure_reads_closed_bars_in_every_caller
     assert "lookback_bars=len(closed)" in sw
     # the zone_bounce_alerts phone-gate geometry note: STRONG off a band needs hi/lo >= 1.05/1.01
     assert round(1.05 / 1.01 - 1.0, 4) == 0.0396
+
+
+# ── room floor 2026-09-05 ────────────────────────────────────────────────────
+# Ajay 2026-09-05 (TRU, Back in Demand): "It already gapped up very close to
+# the resistance. Why is it still in in Demand page? There is only 0.5% room";
+# and "I need the same logic in Demand and deep demand zone. So that there are
+# stocks that have more room atleast >5%". Owner settings for the S&D strategy,
+# no book cite. Spec: docs/supply_demand/rr_floor.md (section 6),
+# docs/supply_demand/demand_reentry_methodology.md, docs/sepa/chart_maps_sort.md.
+def test_room_floor_default_IS_the_alert_gate_number_imported_not_retyped():
+    from supply_demand import alert_gates as G
+    from supply_demand import room_floor as RF
+    assert RF.MIN_ROOM_DEFAULT == G.ALERT_MIN_ROOM_PCT == dr.MIN_ROOM_DEFAULT
+    src = inspect.getsource(RF)
+    line = next(l for l in src.splitlines() if l.startswith("MIN_ROOM_DEFAULT"))
+    assert "_gates.ALERT_MIN_ROOM_PCT" in line and "5" not in line.split("=")[1].split("#")[0]
+    # room_floor is a LEAF: alert_gates is its only sibling import — never the
+    # boards or demand_reentry (chart_maps reads it while tests stub the latter)
+    imports = [l for l in src.splitlines() if l.startswith(("from ", "import "))]
+    assert "from . import alert_gates as _gates" in imports
+    assert not any("demand_reentry" in l or "chart_maps" in l or "board" in l for l in imports)
+
+
+def test_trade_plan_target_is_alert_gates_first_overhead_above_the_PRINT():
+    src = inspect.getsource(dr.trade_plan)
+    assert "_gates.first_overhead(" in src
+    assert 'float(z["lo"]) > max(hi, last_price)' not in src, \
+        "the old 'above the entry band top' rule is gone"
+    assert "prev_close" in str(inspect.signature(dr.trade_plan))
+    assert "prev_close=prev_close" in inspect.getsource(dr.decide_from_frame)
+
+
+def test_room_floor_is_read_time_like_the_rr_floor_and_the_routes_take_min_room():
+    assert "_apply_room_floor" not in inspect.getsource(dr.scan)
+    cw = inspect.getsource(dr.cached_or_warm)
+    assert "_apply_room_floor" in cw and "attach_room" in cw
+    assert "min_room" in str(inspect.signature(dr.cached_or_warm))
+    from supply_demand import api as sd_api
+    for fn in (sd_api.get_demand_reentry, sd_api.post_demand_reentry_scan):
+        assert "min_room" in str(inspect.signature(fn))
+    from chart_maps import api as cm_api
+    assert "min_room" in str(inspect.signature(cm_api.chart_maps))
+    from chart_maps import board as B
+    for fn in (B.zone_tiles, B.deep_demand_tiles):
+        assert "min_room" in str(inspect.signature(fn))
+    assert "min_room" not in str(inspect.signature(B.supply_tiles))
+
+
+def test_room_block_shape_is_the_shared_contract():
+    from supply_demand import room_floor as RF
+    room = RF.room_block(79.88, [{"kind": "supply", "lo": 80.12, "hi": 82.10}])
+    assert set(room) >= {"room_pct", "room_pct_raw", "target_lo", "target_hi", "target_kind",
+                         "state", "basis", "px"}
+    assert room["state"] in ("CLEAR", "ROOM", "NEAR", "IN_BAND")
+    # the state split and the floor compare RAW; room_pct is display-only (1 dp)
+    src = inspect.getsource(RF.room_block)
+    assert "room_pct_raw" in src
+    assert "room_pct_raw" in inspect.getsource(RF.meets_room_floor)
+    assert RF.room_stat(room) == "+0.3% -> 80.12"
+    assert RF.room_stat(RF.room_block(10.0, [])) == "open sky"
+    assert RF.room_stat(None) == "—"

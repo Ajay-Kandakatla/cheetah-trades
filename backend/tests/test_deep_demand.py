@@ -262,3 +262,52 @@ def test_cap_trims_in_and_near_separately_preserving_order():
     # NEGATIVE: a short list is never padded or reordered
     few = [_drow("N1", 86.0), _drow("I1", 82.0)]
     assert DD.cap(few) == few
+
+
+# ── room floor 2026-09-05 — which bands a DEEP row measures its room against ──
+# Ajay 2026-09-05: "I need the same logic in Demand and deep demand zone. So
+# that there are stocks that have more room atleast >5%". A deep row's entry
+# band is its SECOND band; the broken first band overhead is resistance.
+from supply_demand import room_floor as RF   # noqa: E402
+
+
+def _deep_row():
+    return {"symbol": "D", "last_price": 82.0,
+            "entry_zone": {"lo": 80.0, "hi": 85.0},
+            "nearest_resistance": {"kind": "demand", "lo": 90.0, "hi": 95.0},
+            "supply_zones": [{"kind": "supply", "lo": 100.0, "hi": 102.0}],
+            "demand_zones": [{"kind": "demand", "lo": 90.0, "hi": 95.0},
+                             {"kind": "demand", "lo": 80.0, "hi": 85.0}],
+            "deep_demand": {"state": "in", "top_band": {"lo": 90.0, "hi": 95.0},
+                            "second_band": {"lo": 80.0, "hi": 85.0, "touches": 3}}}
+
+
+def test_a_deep_row_entry_band_is_its_second_band():
+    eb = RF.row_entry_band(_deep_row())
+    assert (eb["lo"], eb["hi"]) == (80.0, 85.0)
+    plain = {"entry_zone": {"lo": 14.0, "hi": 15.0}}
+    assert RF.row_entry_band(plain) == {"lo": 14.0, "hi": 15.0}
+
+
+def test_a_deep_row_measures_room_to_its_broken_first_band_not_past_it():
+    r = _deep_row()
+    bands = RF.row_bands(r)
+    assert {"kind": "demand", "lo": 90.0, "hi": 95.0} in [
+        {"kind": b["kind"], "lo": b["lo"], "hi": b["hi"]} for b in bands]
+    room = RF.room_block(82.0, bands, entry_band=RF.row_entry_band(r))
+    assert room["target_lo"] == 90.0 and room["target_kind"] == "demand"
+    assert room["room_pct"] == pytest.approx(9.8, abs=0.01)
+
+
+def test_a_deep_row_with_no_band_lists_still_counts_the_top_band_it_carries():
+    r = _deep_row()
+    r["demand_zones"] = []
+    r["nearest_resistance"] = None
+    room = RF.room_block(82.0, RF.row_bands(r), entry_band=RF.row_entry_band(r))
+    assert room["target_lo"] == 90.0, "deep_demand.top_band is the ceiling this screen is about"
+
+
+def test_row_bands_dedupes_the_same_band_arriving_from_two_lists():
+    bands = RF.row_bands(_deep_row())
+    keys = [(b["kind"], b["lo"], b["hi"]) for b in bands]
+    assert len(keys) == len(set(keys))

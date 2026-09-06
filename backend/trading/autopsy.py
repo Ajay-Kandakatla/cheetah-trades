@@ -7,7 +7,14 @@ with live execution. I wanna put some money eventually on the supply demand
 concept. Please make a rule to add feedback and analysis of failed trades."
 
 SCOPE — closed trade_journal round-trips with a NEGATIVE realized gain, any
-strategy:
+strategy. The journal's explicit lane tag (entry.strategy, written by
+entries.enter since 2026-09-05 — "journal it appropriately") is read FIRST:
+  demand_zone / breakout -> zone_edge (band + side from the matched state
+              doc when there is one, else from entry.entry_reason)
+  catalyst    -> its own strategy label; the anchoring band (proximity or
+              bounce band in entry_reason) is the floor, kind demand
+  minervini   -> pivot floor as below
+Untagged / manual rows keep the inference:
   zone_edge   a zone_edge_entry_state doc matches (symbol + ET day of the
               entry; client_order_id / order_id preferred when both sides
               carry one)
@@ -117,7 +124,7 @@ DAILY_PERIOD = "2y"
 
 CLASSES = ("stop_clamped", "shakeout", "band_failed", "market_down",
            "chased", "no_follow_through", "unclassified")
-STRATEGIES = ("zone_edge", "minervini", "manual")
+STRATEGIES = ("zone_edge", "minervini", "catalyst", "manual")
 STATUSES = ("preliminary", "final", "incomplete")
 
 CITE = ("autopsy: Supply & Demand OWNER RULES, no book "
@@ -589,11 +596,52 @@ def _band(raw) -> Optional[dict]:
             "touches": _i(raw.get("touches"))}
 
 
+def _minervini_det(pivot) -> dict:
+    pivot = _f(pivot)
+    band = ({"kind": "pivot", "lo": pivot, "hi": pivot, "touches": None}
+            if pivot is not None else None)
+    return {"strategy": "minervini", "side": "pivot", "kind": "breakout",
+            "band": band, "tier": None, "first_seen": None,
+            "stop_requested_pct": None}
+
+
+def _tagged_det(tag: str, entry: dict, state: Optional[dict]) -> Optional[dict]:
+    """The explicit journal lane tag (2026-09-05). None when the tag does not
+    decide (manual / unknown) so the caller falls back to inference."""
+    reason = entry.get("entry_reason")
+    reason = reason if isinstance(reason, dict) else {}
+    st = state if (isinstance(state, dict) and state) else {}
+    if tag in ("demand_zone", "breakout"):
+        kind = "demand" if tag == "demand_zone" else "breakout"
+        side = st.get("side") or reason.get("side") or ("demand" if kind == "demand" else "supply")
+        band = _band(st.get("band")) or _band(reason.get("band"))
+        return {"strategy": "zone_edge", "side": side, "kind": kind, "band": band,
+                "tier": st.get("tier") or reason.get("tier"),
+                "first_seen": st.get("first_seen") or reason.get("first_seen"),
+                "stop_requested_pct": _f(st.get("stop_pct")) or _f(reason.get("stop_pct"))}
+    if tag == "catalyst":
+        prox = reason.get("proximity") if isinstance(reason.get("proximity"), dict) else {}
+        bounce = reason.get("bounce") if isinstance(reason.get("bounce"), dict) else {}
+        band = _band(prox.get("band")) or _band(bounce.get("band"))
+        return {"strategy": "catalyst", "side": reason.get("side") or "demand",
+                "kind": "demand", "band": band, "tier": None, "first_seen": None,
+                "stop_requested_pct": _f(reason.get("stop_pct"))}
+    if tag == "minervini":
+        trig = entry.get("trigger") if isinstance(entry.get("trigger"), dict) else {}
+        pivot = trig.get("pivot") if trig.get("pivot") is not None else reason.get("pivot")
+        return _minervini_det(pivot)
+    return None
+
+
 def detect(entry: dict, state: Optional[dict]) -> dict:
     """{strategy, side, kind, band, tier, first_seen, stop_requested_pct}.
+    The explicit journal tag decides first (see _tagged_det); otherwise
     zone_edge when a state doc matched; minervini when the journal trigger
     carries a path (pivot = floor, band lo=hi=pivot); else manual."""
     entry = entry or {}
+    tagged = _tagged_det(entry.get("strategy"), entry, state)
+    if tagged is not None:
+        return tagged
     if isinstance(state, dict) and state:
         side = state.get("side")
         kind = state.get("kind") or ("demand" if side == "demand" else "breakout")
@@ -603,12 +651,7 @@ def detect(entry: dict, state: Optional[dict]) -> dict:
                 "stop_requested_pct": _f(state.get("stop_pct"))}
     trig = entry.get("trigger")
     if isinstance(trig, dict) and trig.get("path"):
-        pivot = _f(trig.get("pivot"))
-        band = ({"kind": "pivot", "lo": pivot, "hi": pivot, "touches": None}
-                if pivot is not None else None)
-        return {"strategy": "minervini", "side": "pivot", "kind": "breakout",
-                "band": band, "tier": None, "first_seen": None,
-                "stop_requested_pct": None}
+        return _minervini_det(trig.get("pivot"))
     return {"strategy": "manual", "side": None, "kind": None, "band": None,
             "tier": None, "first_seen": None, "stop_requested_pct": None}
 

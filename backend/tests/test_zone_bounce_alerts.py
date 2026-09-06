@@ -595,3 +595,15 @@ def test_pass_record_is_best_effort_and_never_written_outside_rth(monkeypatch):
     assert closed == {"ran": False, "reason": "outside RTH"} and pc.docs == {}
     # no coll injected: the module resolver is used and (no Mongo in tests) records nothing — quietly
     assert _run(store, snap, {"NTAP": 30e9})["pushed"] == 1
+
+
+def test_single_message_carries_the_ticker_for_push_history_2026_09_05():
+    """/alerts page + alerted-today chips key on push_history.ticker."""
+    from supply_demand import zone_bounce_alerts as ZB
+    item = {"symbol": "NTAP", "print": 171.2, "day_low": 161.0, "prev_close": 180.77,
+            "atr14": 4.0, "band": {"kind": "supply", "lo": 161.78, "hi": 167.54, "touches": 1},
+            "hit": {"bounce_pct": 6.3, "floor_pct": 3.0, "strong": True, "strong_pct": 5.0,
+                    "undercut_pct": 0.48, "atr_x": 2.5},
+            "bands": [], "cap": 40e9, "name": "NetApp", "low_time": "09:30a", "room": None}
+    msg = ZB.single_message(item)
+    assert msg["ticker"] == "NTAP"

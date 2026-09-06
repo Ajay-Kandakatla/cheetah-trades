@@ -1148,3 +1148,60 @@ def test_losers_skip_exits_older_than_the_backlog_window(monkeypatch):
     ids = [d["trade_id"] for d in AU._losers()]
     assert ids == ["AAA:1", "CCC:1"], ids
 
+
+
+# ── Explicit strategy tag (2026-09-05 lanes) ─────────────────────────────────
+
+def test_detect_prefers_the_explicit_tag_and_falls_back_to_inference():
+    assert AP.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual")
+    band = {"kind": "demand", "lo": 98.0, "hi": 99.5, "touches": 3, "strength": 1.5}
+    # demand_zone tag, no state doc matched -> zone_edge/demand from the reason.
+    d = AP.detect({"strategy": "demand_zone",
+                   "entry_reason": {"side": "demand", "tier": "near", "band": band,
+                                    "stop_pct": 2.49}}, None)
+    assert (d["strategy"], d["side"], d["kind"], d["tier"]) == ("zone_edge", "demand", "demand", "near")
+    assert d["band"] == {"kind": "demand", "lo": 98.0, "hi": 99.5, "touches": 3}
+    assert d["stop_requested_pct"] == 2.49
+    # breakout tag -> zone_edge/breakout; a matching state doc still wins the band + first_seen.
+    st = state("AAA", side="supply", kind="breakout", tier="broke", lo=100.0, hi=103.0)
+    d = AP.detect({"strategy": "breakout", "entry_reason": {"side": "supply", "band": band}}, st)
+    assert (d["strategy"], d["side"], d["kind"]) == ("zone_edge", "supply", "breakout")
+    assert d["band"]["lo"] == 100.0 and d["first_seen"] == "10:12"
+    # catalyst -> its own strategy label; floor = the anchoring band's lo.
+    d = AP.detect({"strategy": "catalyst",
+                   "entry_reason": {"side": "demand", "quadrant": "REAL",
+                                    "proximity": {"band": band}, "stop_pct": 4.5}}, None)
+    assert (d["strategy"], d["side"], d["kind"]) == ("catalyst", "demand", "demand")
+    assert d["band"]["lo"] == 98.0 and AP.floor_of(d["kind"], d["band"]) == 98.0
+    assert d["stop_requested_pct"] == 4.5
+    d = AP.detect({"strategy": "catalyst",
+                   "entry_reason": {"side": "broken_supply",
+                                    "bounce": {"band": {"kind": "supply", "lo": 90.0, "hi": 92.0,
+                                                        "touches": 2}}}}, None)
+    assert d["strategy"] == "catalyst" and d["band"]["lo"] == 90.0 and d["side"] == "broken_supply"
+    # minervini tag with the trigger still present.
+    d = AP.detect({"strategy": "minervini", "trigger": {"path": "intraday", "pivot": 99.0}}, None)
+    assert (d["strategy"], d["kind"]) == ("minervini", "breakout") and d["band"]["lo"] == 99.0
+    # manual / missing tag -> the OLD inference (state -> zone_edge; trigger -> minervini).
+    assert AP.detect({"strategy": "manual"}, state("AAA"))["strategy"] == "zone_edge"
+    assert AP.detect({"trigger": {"path": "intraday", "pivot": 99.0}}, None)["strategy"] == "minervini"
+    assert AP.detect({"strategy": "manual"}, None)["strategy"] == "manual"
+    assert AP.detect({"strategy": "alpha_wolf"}, None)["strategy"] == "manual"
+
+
+def test_catalyst_trade_autopsied_under_its_own_strategy(env):
+    t = trade("CAT")
+    t["entry"]["strategy"] = "catalyst"
+    t["entry"]["entry_reason"] = {"side": "demand", "quadrant": "OVERLOOKED", "grade": "B",
+                                  "proximity": {"band": {"kind": "demand", "lo": FLOOR,
+                                                         "hi": BAND_HI, "touches": 3}},
+                                  "stop_pct": 2.49}
+    db, _ = env(trades=[t], minute={"CAT": BASE_MINUTE},
+                dailies={"CAT": daily(99.0, after=(97.0, 97.0))})
+    out = AP.run(now=et(D0, 16, 30))
+    assert out["checked"] == 1 and out["errors"] == []
+    d = _doc(db, "CAT")
+    assert (d["strategy"], d["side"], d["kind"]) == ("catalyst", "demand", "demand")
+    assert d["structure"]["floor"] == FLOOR and d["entry"]["stop_requested_pct"] == 2.49
+    rep = AP.report(days=60, now=et(D0, 16, 30))
+    assert rep["summary"]["by_strategy"] == {"catalyst": 1}

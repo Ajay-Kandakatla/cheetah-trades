@@ -251,6 +251,9 @@ def test_themes_lead_when_asked_and_not_when_not(prices, scan_stub, monkeypatch)
 def _reentry_row(symbol="AAA", rr=2.5):
     return {
         "symbol": symbol, "is_reentry": True,
+        # last_price since 2026-09-05: the room floor measures from the scan
+        # price when the tape has no print (a row without one is not a row).
+        "last_price": 14.6,
         "entry_zone": {"lo": 14.0, "hi": 15.0},
         "supply_zones": [{"lo": 22.0, "hi": 23.0}],
         "plan": {"entry_ref": 14.6, "stop": 13.8, "target": 21.0, "rr": rr},
@@ -1579,8 +1582,11 @@ def test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase(
 
     out = B.board("deep_demand", limit=5, min_tier="any", themes_first=False)
     assert [t["symbol"] for t in out["tiles"]] == ["STILLIN", "LIFTED"]
+    # min_room=0: this test is about the ORDER. N12 / N29 sit 4.6% / 2.8%
+    # under their broken first band (90), which the 2026-09-05 room floor
+    # hides by default — see test_deep_demand_tab_applies_the_same_room_floor.
     out2 = B.board("deep_demand", limit=5, min_tier="any", themes_first=False,
-                   phase="approaching")
+                   phase="approaching", min_room=0)
     assert [t["symbol"] for t in out2["tiles"]] == ["N035", "N12", "N29"]
     assert "nearest the second band first" in out2["note"]
     assert all("_score" not in t for t in out2["tiles"])
@@ -2228,7 +2234,9 @@ def test_deep_demand_gate_measures_from_the_second_band(prices, reentry_stub, sa
         prices[sym] = _frame(200, start=90.05)
     # second band hi = 85: 91 is +7.06% (gone), 89 is +4.7% (still at the level)
     monkeypatch.setattr(B, "_live_last", lambda syms: {"DRUN": 91.0, "DSIT": 89.0})
-    out = B.board("deep_demand", limit=5, min_tier="any")
+    # min_room=0: this test is about the BOUNCE gate. DSIT at 89 has 1.1% of
+    # room to its broken first band (90), which the room floor hides by default.
+    out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
     assert [t["symbol"] for t in out["tiles"]] == ["DSIT"]
     assert out["dropped_bounced"] == 1 and out["bounce_done_pct"] == 7.0
 
@@ -2351,3 +2359,122 @@ def test_board_live_print_and_in_band_rules_stay_in_source():
     assert zt.count("_dist_badge(") == 2 and zt.count("_dist_text(") == 2, (
         "the approaching band / order-block badge and why must go through the "
         "in-band aware helpers")
+
+
+# ---------------------------------------------------------------------------
+# room floor 2026-09-05 — zones + deep_demand hide tiles under 5% of room to
+# the first unbroken band overhead, measured on the LIVE print.
+#
+# Ajay 2026-09-05, TRU: "It already gapped up very close to the resistance.
+# Why is it still in in Demand page? There is only 0.5% room" — and "I need
+# the same logic in Demand and deep demand zone. So that there are stocks
+# that have more room atleast >5%". The 5% is alert_gates.ALERT_MIN_ROOM_PCT
+# via supply_demand.room_floor (owner setting, S/D scope, no book cite).
+# ---------------------------------------------------------------------------
+def _tru_row():
+    r = _reentry_row("TRU", rr=1.47)
+    r["last_price"] = 78.90
+    r["entry_zone"] = {"lo": 78.34, "hi": 81.08}
+    r["supply_zones"] = [{"kind": "supply", "lo": 80.12, "hi": 82.10},
+                         {"kind": "supply", "lo": 83.87, "hi": 85.20}]
+    r["nearest_resistance"] = {"kind": "supply", "lo": 80.12, "hi": 82.10}
+    return r
+
+
+def _room_stat(tile):
+    return next(s["v"] for s in tile["stats"] if s["k"] == "room")
+
+
+def test_zones_tab_hides_tru_on_the_live_print_and_keeps_the_name_with_room(
+        prices, reentry_stub, monkeypatch):
+    for s in ("TRU", "AAA"):
+        prices[s] = _frame(200)
+    reentry_stub["rows"] = [_tru_row(), _reentry_row("AAA")]
+    # the scan saw TRU at 78.90 (1.5% room); it has since gapped to 79.88
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"TRU": 79.88})
+
+    out = B.board("zones", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["AAA"]
+    assert out["hidden_low_room"] == 1
+    assert out["min_room"] == 5.0
+    assert _room_stat(out["tiles"][0]) == "+50.7% -> 22.00"
+
+
+def test_zones_tab_min_room_zero_shows_everything_and_still_says_the_room(
+        prices, reentry_stub, monkeypatch):
+    for s in ("TRU", "AAA"):
+        prices[s] = _frame(200)
+    reentry_stub["rows"] = [_tru_row(), _reentry_row("AAA")]
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"TRU": 79.88})
+
+    out = B.board("zones", limit=5, min_tier="any", min_room=0)
+    assert {t["symbol"] for t in out["tiles"]} == {"TRU", "AAA"}
+    assert out["hidden_low_room"] == 0 and out["min_room"] == 0.0
+    tru = next(t for t in out["tiles"] if t["symbol"] == "TRU")
+    assert _room_stat(tru) == "+0.3% -> 80.12"
+
+
+def test_zones_tab_open_sky_and_in_band_wordings(prices, reentry_stub, monkeypatch):
+    for s in ("SKY", "INB"):
+        prices[s] = _frame(200)
+    sky = _reentry_row("SKY")
+    sky["supply_zones"] = []
+    inb = _tru_row()
+    inb["symbol"] = "INB"
+    reentry_stub["rows"] = [sky, inb]
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"INB": 80.50})    # inside 80.12-82.10
+
+    shown = B.board("zones", limit=5, min_tier="any")
+    assert [t["symbol"] for t in shown["tiles"]] == ["SKY"]
+    assert _room_stat(shown["tiles"][0]) == "open sky"
+    everything = B.board("zones", limit=5, min_tier="any", min_room=0)
+    inb_tile = next(t for t in everything["tiles"] if t["symbol"] == "INB")
+    assert _room_stat(inb_tile) == "in band"
+
+
+def test_zones_tab_falls_back_to_the_scan_price_without_a_tape(prices, reentry_stub, monkeypatch):
+    """No live print: the scan's last_price decides, as the bounce gate does."""
+    prices["TRU"] = _frame(200)
+    reentry_stub["rows"] = [_tru_row()]            # 78.90 -> 80.12 = 1.5%: under 5
+    monkeypatch.setattr(B, "_live_last", lambda syms: {})
+    out = B.board("zones", limit=5, min_tier="any")
+    assert out["count"] == 0 and out["hidden_low_room"] == 1
+    loose = B.board("zones", limit=5, min_tier="any", min_room=1.0)
+    assert loose["count"] == 1 and _room_stat(loose["tiles"][0]) == "+1.5% -> 80.12"
+
+
+def test_deep_demand_tab_applies_the_same_room_floor_against_the_broken_first_band(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """Ajay 2026-09-05: 'the same logic in Demand and deep demand zone'."""
+    reentry_stub["deep_rows"] = [_deep_row("ROOMY"), _deep_row("LIDDED")]
+    for s in ("ROOMY", "LIDDED"):
+        prices[s] = _frame(200)
+        sales_stub[s] = _sales("strong", 30.0)
+    # LIDDED has run to 89.80, 0.2% under its broken first band (90-95)
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"LIDDED": 89.80})
+
+    out = B.board("deep_demand", limit=5, min_tier="any")
+    assert [t["symbol"] for t in out["tiles"]] == ["ROOMY"]
+    assert out["hidden_low_room"] == 1 and out["min_room"] == 5.0
+    assert _room_stat(out["tiles"][0]) == "+9.8% -> 90.00"
+    both = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
+    assert {t["symbol"] for t in both["tiles"]} == {"ROOMY", "LIDDED"}
+
+
+def test_other_tabs_ignore_min_room(prices, scan_stub):
+    prices["AAA"] = _frame(200)
+    scan_stub["all_results"] = [_vcp_row("AAA", tightness=95)]
+    out = B.board("vcp", limit=5, min_tier="any", min_room=0)
+    assert out["count"] == 1
+    assert "hidden_low_room" not in out and "min_room" not in out
+
+
+def test_room_floor_default_on_the_boards_is_the_alert_gate_number():
+    from supply_demand import alert_gates as G
+    from supply_demand import room_floor as RF
+    import inspect
+    assert RF.MIN_ROOM_DEFAULT == G.ALERT_MIN_ROOM_PCT
+    for fn in (B.zone_tiles, B.deep_demand_tiles, B.board):
+        assert "min_room" in str(inspect.signature(fn))
+    for fn in (B.supply_tiles, B.vcp_tiles):
+        assert "min_room" not in str(inspect.signature(fn))

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, oneRCeiling, planLine, reentryReason, retailView, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
+import { rrAtEntryHigh, bandLabel, bandWidthPct, breakEvenWinPct, chartDomain, freshnessLabel, layoutLabels, level, liquidityView, money, oneRCeiling, planLine, reentryReason, retailView, rrBand, venueView, visibleBands, volLabel } from './zonePlan';
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
 
 const zone = (over: Partial<Zone> = {}): Zone => ({
@@ -87,6 +87,26 @@ describe('planLine — the written entry/exit', () => {
   });
   it('says there is no entry when there is no band below', () => {
     expect(planLine(null)).toContain('No demand band below price');
+  });
+  it('names the target band kind and never shows a negative R at the band top (TRU, review 2026-09-05)', () => {
+    // TRU: entry 78.34-81.08, print 79.88, first unbroken band above the PRINT
+    // is the nested supply 80.12 — under the band top, so the server clamps
+    // rr_at_entry_high at 0.0; an older payload may still carry the sign.
+    const tru = plan({ entry_low: 78.34, entry_high: 81.08, entry_ref: 79.88, stop: 77.95,
+                       risk_pct: 2.4, target: 80.12, reward_pct: 0.3, rr: 0.09,
+                       target_kind: 'supply', rr_at_entry_high: -0.24, thin_across_band: true });
+    const s = planLine(tru);
+    expect(s).toContain('Target $80.12 (+0.3%, supply band)');
+    expect(s).toContain('this stops being 1R');
+    expect(s).not.toMatch(/-0\.24|−0\.24/);
+    expect(rrAtEntryHigh(tru)).toBe(0);
+    expect(rrAtEntryHigh(plan({ rr_at_entry_high: 0.37 }))).toBe(0.37);
+    expect(rrAtEntryHigh(plan({ rr_at_entry_high: null }))).toBeNull();
+    expect(rrAtEntryHigh(plan())).toBeNull();
+    // a demand band overhead (broken support) is named as such; no kind = the old label
+    expect(planLine(plan({ target_kind: 'demand' }))).toContain('Target $120.00 (+16.5%, demand band)');
+    expect(planLine(plan())).toContain('Target $120.00 (+16.5%)');
+    expect(planLine(plan())).not.toContain('band)');
   });
 });
 

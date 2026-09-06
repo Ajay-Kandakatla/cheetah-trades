@@ -28,6 +28,8 @@ import { InfoButton } from '../components/InfoButton';
 import { TickerLink } from '../components/TickerLink';
 import { ExecutionRace } from '../components/ExecutionRace';
 import { TradeAutopsies } from '../components/TradeAutopsies';
+import { CatalystEntryCard, type CatalystEntryInfo } from '../components/CatalystEntryCard';
+import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
 
@@ -135,6 +137,10 @@ type Status = {
   error: string | null;
   auto_entry?: AutoEntryInfo | null;
   zone_edge_entry?: ZoneEdgeEntryInfo | null;
+  /* Catalyst lane (2026-09-05, Ajay: "make sure you have demand zone and
+   * catalyst based entries time to time and journal it appropriately").
+   * Mount is gated on the object so an API predating it renders nothing. */
+  catalyst_entry?: CatalystEntryInfo | null;
   // Real engine heartbeat (its 1-min tick) — NOT the alert cron. stale=true
   // means order management may be asleep while armed + market open.
   engine?: {
@@ -229,6 +235,12 @@ type TradeEntry = {
   reward_risk: number;
   regime: string;
   trigger: TradeTrigger;
+  /* Which lane opened the trade (2026-09-05): minervini | demand_zone |
+   * breakout | catalyst | manual. Absent on rows from before the tag — the
+   * page reads those as manual, never as a book trade. */
+  strategy?: string | null;
+  /* The lane's own small JSON-safe reason (band, room %, catalyst…). */
+  entry_reason?: Record<string, unknown> | null;
 };
 
 type TradeExit = { ts: number | string; price: number; leg: string } | null;
@@ -257,11 +269,17 @@ type Trade = {
 
 type Decision = { ts: number | string; kind: string; symbol?: string | null; text: string };
 
+type JournalSummary = {
+  /* Per-lane record (2026-09-05) — the JournalByStrategy table. */
+  by_strategy?: Record<string, StrategyStats | null | undefined> | null;
+  [k: string]: unknown;
+};
+
 type Journal = {
   trades: Trade[];
   open: Trade[];
   decisions: Decision[];
-  summary?: unknown;
+  summary?: JournalSummary | null;
 };
 
 /* ----------------------------------------------------------------------
@@ -1587,6 +1605,13 @@ function TradeDetail({ t }: { t: Trade }) {
           <span style={{ color: C.sub }}>trigger manual</span>
         )}
       </div>
+      {/* The lane's own reason (2026-09-05, "journal it appropriately"):
+          rendered verbatim so nothing here restates the engine's claim. */}
+      {e?.entry_reason && typeof e.entry_reason === 'object' && Object.keys(e.entry_reason).length > 0 && (
+        <div style={{ color: C.sub, wordBreak: 'break-word' }}>
+          reason <span style={{ color: 'inherit' }}>{JSON.stringify(e.entry_reason)}</span>
+        </div>
+      )}
       {t.exit && (
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           <span><span style={{ color: C.sub }}>exit</span> {money(t.exit.price)} ({t.exit.leg})</span>
@@ -1610,6 +1635,8 @@ function TradeCard({ t }: { t: Trade }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <TickerLink ticker={t.symbol} fromLabel="Auto-Pilot" showWatchlist={false}
                     style={{ fontWeight: 800, fontSize: '0.95rem', color: 'inherit', textDecoration: 'none' }} />
+        {/* Which lane opened it (2026-09-05). Untagged = manual. */}
+        <StrategyChip strategy={t.entry?.strategy} />
         <span style={{ marginLeft: 'auto' }}><ResultChip t={t} /></span>
       </div>
       {t.narrative && (
@@ -1683,7 +1710,7 @@ function DecisionsList({ decisions }: { decisions: Decision[] }) {
   );
 }
 
-function JournalView({ j, err }: { j: Journal | null; err: boolean }) {
+export function JournalView({ j, err }: { j: Journal | null; err: boolean }) {
   const [tab, setTab] = useState<'trades' | 'decisions'>('trades');
   if (!j && err) {
     return <p style={{ fontSize: '0.8rem', color: C.red }}>Can't load the journal — is the api container running?</p>;
@@ -1707,7 +1734,14 @@ function JournalView({ j, err }: { j: Journal | null; err: boolean }) {
           </button>
         ))}
       </div>
-      {tab === 'trades' ? <TradesList j={j} /> : <DecisionsList decisions={j.decisions || []} />}
+      {tab === 'trades' ? (
+        <>
+          {/* Per-lane record first (2026-09-05): the three lanes compared
+              side by side before the individual cards. */}
+          <JournalByStrategy byStrategy={j.summary?.by_strategy} />
+          <TradesList j={j} />
+        </>
+      ) : <DecisionsList decisions={j.decisions || []} />}
     </>
   );
 }
@@ -2106,6 +2140,14 @@ export function TradingPage() {
               entry path, right next to the auto-entry strip (2026-09-03). */}
           {status.zone_edge_entry && (
             <ZoneEdgeEntryCard z={status.zone_edge_entry} />
+          )}
+
+          {/* d2b. Catalyst entries (paper) — the third lane's switch + status
+              (2026-09-05, Ajay: "catalyst based entries time to time"). The
+              only write is POST /trading/config {catalyst_entry}; default OFF
+              on the server. Gated on the object like the zone-edge card. */}
+          {status.catalyst_entry && (
+            <CatalystEntryCard c={status.catalyst_entry} mode={status.mode} onChanged={refresh} />
           )}
 
           {/* d3. Execution race — the engine's order/fill vs Ajay's first look

@@ -343,7 +343,7 @@ def break_single_message(item: dict) -> dict:
     if item.get("name"):
         parts.append(str(item["name"]))
     url = _url(sym)
-    return {"title": title, "body": " · ".join(parts), "url": url, "data": {"url": url},
+    return {"title": title, "body": " · ".join(parts), "url": url, "data": {"url": url}, "ticker": sym,
             "kind": KIND_BREAK}
 
 

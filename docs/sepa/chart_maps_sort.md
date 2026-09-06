@@ -299,3 +299,45 @@ Two review findings on the read-time layer above, both reproduced and fixed:
   Tests: `test_disp_dist_reads_zero_once_the_live_print_is_at_or_inside_the_band`,
   `test_approaching_tile_in_the_band_on_the_live_print_says_so_and_leads`; source guard
   `test_board_live_print_and_in_band_rules_stay_in_source`.
+
+### Update 2026-09-05 — the room floor on Back in Demand + Deep Demand (Ajay: "more room atleast >5%")
+
+Ajay, TRU on the Back-in-Demand board: *"It already gapped up very close to the resistance. Why
+is it still in in Demand page? There is only 0.5% room"* — and *"I need the same logic in Demand
+and deep demand zone. So that there are stocks that have more room atleast >5%"*.
+
+**Owner setting, S&D scope, no book cite.** `GET /chart-maps?tab=zones|deep_demand&min_room=`
+(omit = the house default, `alert_gates.ALERT_MIN_ROOM_PCT` = 5.0 via `supply_demand.room_floor`;
+`0` = off; other tabs ignore it and carry no room keys). After the 7% bounce gate, on the **same
+live print** (`_live_last`, scan `last_price` when the tape has nothing), `board.drop_low_room`
+reads each row's room to the **first unbroken band overhead** — supply with `hi >= print` not
+broken under the prior close, plus demand with `lo > print` — the row's own entry band excluded
+(a deep row's entry band is its **second** band; its broken first band, the tile's "1st demand ·
+broken" lid, is what it measures to). Tiles under the floor are **hidden**; the payload says
+`min_room`, `min_room_default`, `hidden_low_room`; every surviving tile's stats gain
+`{k: "room", v: "+12.4% -> 84.10"}` — or `"open sky"` (nothing overhead, passes) or `"in band"`
+(the print is inside the first overhead band, fails). An unreadable room fails a real floor, the
+R:R-floor rule. The floor and the `ROOM`/`NEAR` split compare the **raw** pct (`room_pct_raw` on
+the block); the stat's 1-dp number is display only — 4.995% reads "+5.0%" and is hidden, as the
+phone refuses it (review 2026-09-05). The prior close behind the broken-supply rule is the scan's last close when the
+print is live (the last closed bar the scan saw), else the record's own `prev_close`.
+
+This is the same read the Back in Demand API attaches to every row (`room`, `min_room`,
+`dropped_low_room` — `docs/supply_demand/rr_floor.md` section 6); the boards apply it themselves
+because `cached_or_warm` without `min_room` must keep serving the unfloored rows to the callers
+that always read it that way.
+
+| Decision | Guard |
+|---|---|
+| TRU hidden on the live print, the name with room kept, stat says the room | `test_zones_tab_hides_tru_on_the_live_print_and_keeps_the_name_with_room` |
+| `min_room=0` shows everything and still says "+0.3% -> 80.12" | `test_zones_tab_min_room_zero_shows_everything_and_still_says_the_room` |
+| "open sky" / "in band" wordings | `test_zones_tab_open_sky_and_in_band_wordings` |
+| No tape → scan price decides | `test_zones_tab_falls_back_to_the_scan_price_without_a_tape` |
+| Deep Demand measures to the broken first band | `test_deep_demand_tab_applies_the_same_room_floor_against_the_broken_first_band` |
+| Other tabs ignore it | `test_other_tabs_ignore_min_room` |
+| The number is the alert number | `test_room_floor_default_on_the_boards_is_the_alert_gate_number` |
+
+Two older tests now pass `min_room=0` because their near rows sit 1–5% under the broken first
+band — exactly what the default floor hides:
+`test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase`,
+`test_deep_demand_gate_measures_from_the_second_band`.

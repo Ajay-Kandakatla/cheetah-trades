@@ -803,7 +803,8 @@ def test_autopsy_params_importable_and_equal():
                           "market_down", "chased", "no_follow_through",
                           "unclassified")
     assert [r["class"] for r in ap.rules_list()] == list(ap.CLASSES)
-    assert ap.STRATEGIES == ("zone_edge", "minervini", "manual")
+    # 2026-09-05 lanes: the catalyst lane got its own autopsy label (deliberate).
+    assert ap.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual")
 
 
 def test_autopsy_never_touches_the_broker_and_cites_no_book():
@@ -877,8 +878,13 @@ def test_zone_edge_entry_hands_entries_the_absolute_stop_level():
         "zone_edge_entry no longer passes the absolute stop level to entries.enter")
     with open(os.path.join(TRADING_DIR, "entries.py"), encoding="utf-8") as fh:
         en = fh.read()
-    assert "stop_price: Optional[float] = None) -> dict:" in en, (
-        "entries.enter lost its absolute stop_price kwarg")
+    # 2026-09-05 lanes: the signature grew strategy + reason (the journal
+    # tag) — the guard moved with it, deliberately.
+    assert "stop_price: Optional[float] = None," in en and \
+        'strategy: str = "manual",' in en and \
+        "reason: Optional[dict] = None) -> dict:" in en, (
+        "entries.enter lost its absolute stop_price kwarg or the "
+        "strategy/reason journal tags")
     assert "is not below the entry price" in en and "past the %g%% line" in en, (
         "entries must REFUSE an absolute stop that is through the print or "
         "wider than ABS_MAX_STOP_PCT — never clamp it back up into the band")
@@ -903,3 +909,125 @@ def test_zone_edge_room_gate_is_kind_agnostic_and_floors_need_at_the_placed_stop
         "trading/zone_edge_entry.py with it (the room gate mirrors that literal)")
     from trading import zone_edge_entry as ze
     assert ze.RISK_STOP_FLOOR_PCT == 1.0
+
+
+# ── Autopilot lanes 2026-09-05 (Ajay: "What ever rules I created for the
+# alerts are the ideal conditions for a stock to be bough in Autopilot. Keep
+# the minervini entries but also make sure you have demand zone and catalyst
+# based entries time to time and journal it appropriately.") ─────────────────
+
+CATALYST_ENTRY_PATH = os.path.join(TRADING_DIR, "catalyst_entry.py")
+
+
+def _catalyst_entry_source():
+    with open(CATALYST_ENTRY_PATH, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def test_catalyst_entry_never_submits_to_broker_directly():
+    src = _catalyst_entry_source()
+    for forbidden in ("submit_", "replace_order", "cancel_order", "close_position",
+                      "_full_scan(", "scan_catalysts("):
+        assert forbidden not in src, (
+            f"trading/catalyst_entry.py contains `{forbidden}` — buys flow through "
+            f"entries.enter() only and the lane must never trigger a catalyst scan")
+    assert "entries.enter(" in src and "_cache_get()" in src
+
+
+def test_catalyst_entry_tick_never_reaches_the_tape_or_the_ondemand_zone_builder():
+    """review 2026-09-05: the lane called bounce_room.api_payload from the
+    engine tick — a synchronous provider snapshot plus on-demand 2-year price
+    loads + zone builds for every funnel survivor. The tick may read Mongo
+    (zone_store / bounce_room_zones via bounce_room.load_docs) and the cached
+    scan, and price off the scan's own row — nothing else."""
+    src = _catalyst_entry_source()
+    for forbidden in ("api_payload", "queue_ondemand", "bulk_snapshot", "load_prices(",
+                      "build_doc(", "sepa.prices", "from sepa", "background=",
+                      "default_builder"):
+        assert forbidden not in src, (
+            f"trading/catalyst_entry.py reaches `{forbidden}` — the tick must read "
+            f"existing zone docs only; coverage is built by the Catalysts board")
+    assert "bounce_room.load_docs(" in src and "bounce_room.read_symbol(" in src
+    assert "def snap_from_scan(" in src and "def zone_rows(" in src
+    assert "STALE_PRINT_SEC" in src, "the phone's stale-print line must gate the print"
+
+
+CATALYST_TOKENS = [
+    "MAX_CATALYST_ENTRIES_PER_DAY = 1",
+    "CATALYST_MIN_PRICE = 2.0",
+    "CATALYST_MIN_DOLLAR_VOL = 2_000_000",
+    'QUADRANTS_OK = ("REAL", "OVERLOOKED")',
+    'GRADES_OK = ("A", "B")',
+    'STATE_COLL = "catalyst_entry_state"',
+    "SUMMARY_MAX_CHARS = 160",
+    "LAST_ENTRY_ET = zone_edge_entry.LAST_ENTRY_ET",
+    "STOP_BUFFER_PCT = zone_edge_entry.STOP_BUFFER_PCT",
+]
+
+
+def test_catalyst_entry_params_locked_and_cite_no_book():
+    import re
+    src = _catalyst_entry_source()
+    for token in CATALYST_TOKENS:
+        assert token in src, f"catalyst lane owner setting drifted: `{token}`"
+    assert "TLSW" not in src and "TTLAC" not in src
+    assert re.search(r"\bpp?\.\s?\d", src) is None, "a page cite crept into catalyst_entry.py"
+    assert "NOT from Ajay" in src, "the two conservative defaults must say they are not his"
+    from trading import catalyst_entry as ce
+    assert ce.MAX_CATALYST_ENTRIES_PER_DAY == 1
+    assert ce.CATALYST_MIN_PRICE == 2.0 and ce.CATALYST_MIN_DOLLAR_VOL == 2_000_000
+    for token in ("risk_rules.ABS_MAX_STOP_PCT", "risk_rules.MAX_POSITIONS"):
+        assert token in src
+
+
+def test_zone_edge_entry_applies_both_alert_gates():
+    """The phone gate is the entry gate: zone_edge_entry must call
+    alert_gates.room_gate AND alert_gates.demand_proximity_gate, count the
+    skips, and tag its ONE enter call with the lane."""
+    src = _zone_edge_entry_source()
+    assert "alert_gates.room_gate(" in src and "alert_gates.demand_proximity_gate(" in src
+    assert 'out["skipped_alert_gate"]' in src
+    assert 'lane = "demand_zone" if c["kind"] == "demand" else "breakout"' in src
+    assert "strategy=lane," in src
+    assert "stop_price=stop_price, allow_earnings=False)" in src
+    with open(os.path.join(TRADING_DIR, "auto_entry.py"), encoding="utf-8") as fh:
+        ae = fh.read()
+    assert 'strategy="minervini"' in ae, "auto_entry's enter call lost its lane tag"
+
+
+def test_catalyst_entry_wired_fenced_and_configurable():
+    eng_path = os.path.join(TRADING_DIR, "exit_engine.py")
+    with open(eng_path, encoding="utf-8") as fh:
+        eng = fh.read()
+    assert '"catalyst_entry": bool(doc.get("catalyst_entry", False))' in eng
+    assert '"last_catalyst_entry_disabled_day": doc.get("last_catalyst_entry_disabled_day")' in eng
+    hook = ('    try:\n'
+            '        from trading import catalyst_entry\n'
+            '        summary["catalyst_entry"] = catalyst_entry.run(broker=broker,\n'
+            '                                                       cfg=get_config())\n'
+            '    except Exception as exc:')
+    assert hook in eng, "tick step (j) catalyst_entry.run missing / not fenced"
+    assert eng.index('summary["zone_edge_entry"] = zone_edge_entry.run(') \
+        < eng.index('summary["catalyst_entry"] = catalyst_entry.run(') \
+        < eng.index('summary["journal"] = journal.reconcile()')
+    assert 'out["catalyst_entry"] = catalyst_entry.status_block(cfg)' in eng
+    with open(os.path.join(TRADING_DIR, "api.py"), encoding="utf-8") as fh:
+        api = fh.read()
+    assert '"catalyst_entry" in payload' in api
+    assert 'updates["catalyst_entry"] = False' in api, "catalyst_entry null must reset to OFF"
+
+
+def test_entries_ledger_detail_carries_strategy_and_reason():
+    with open(os.path.join(TRADING_DIR, "entries.py"), encoding="utf-8") as fh:
+        en = fh.read()
+    assert 'STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")' in en
+    assert '"strategy": ' in en and '"entry_reason": ' in en
+    assert "REASON_MAX_BYTES = 2048" in en
+    from trading import entries
+    assert entries._strategy_tag("catalyst") == "catalyst"
+    assert entries._strategy_tag("ALPHA") == "manual" and entries._strategy_tag(None) == "manual"
+    assert entries._safe_reason(None) is None
+    assert entries._safe_reason({"a": float("nan"), "b": 1}) == {"a": None, "b": 1}
+    big = entries._safe_reason({"blob": "x" * 5000})
+    assert big["truncated"] is True and len(big["preview"]) <= entries.REASON_MAX_BYTES
+    assert entries._safe_reason("not a dict") is None
