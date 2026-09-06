@@ -53,6 +53,8 @@ export function ivTitle(iv: MarketIv): string {
   if (word) parts.push(word);
   if (iv.pct_252 != null) parts.push(`${ordinal(iv.pct_252)} pct of the year`);
   const t = iv.term;
+  const spy = spyCurveText(t);
+  if (spy) parts.push(spy);
   if (t && t.ratio_9d_30d != null) parts.push(`9D/30D ${t.ratio_9d_30d.toFixed(2)}`);
   if (t && t.ratio_30d_3m != null) {
     parts.push(`30D/3M ${t.ratio_30d_3m.toFixed(2)}${t.shape ? ` ${t.shape}` : ''}`);
@@ -62,4 +64,12 @@ export function ivTitle(iv: MarketIv): string {
   if (day) parts.push(`as of ${day}`);
   const head = parts.join(' · ');
   return iv.read ? `${head} — ${iv.read}` : head;
+}
+
+/* "SPY IV 9d/30d/90d 9.9/12.2/14.1%" when the live chain curve is present
+ * (term.source === 'spy_chain'); empty otherwise. Missing tenors print "—". */
+export function spyCurveText(t: MarketIv['term'] | null | undefined): string {
+  if (!t || t.source !== 'spy_chain' || t.iv30d == null) return '';
+  const f = (v: number | null | undefined) => (v == null ? '—' : v.toFixed(1));
+  return `SPY IV 9d/30d/90d ${f(t.iv9d)}/${f(t.iv30d)}/${f(t.iv90d)}%`;
 }

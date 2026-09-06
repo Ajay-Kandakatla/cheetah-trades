@@ -2366,6 +2366,7 @@ tr:last-child td { border-bottom: none; }
 .mg-iv__grid { display: flex; gap: 0.6rem 1.6rem; flex-wrap: wrap; margin: 0.55rem 0 0; font-size: 0.82rem; }
 .mg-iv__grid dt { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; }
 .mg-iv__grid dd { margin: 0; }
+.mg-iv__source { font-size: 0.72rem; opacity: 0.65; margin: 0.35rem 0 0; }
 .mg-iv__read { font-size: 0.9rem; opacity: 0.85; margin: 0.55rem 0 0; line-height: 1.5; }
 
 .mg-hero {

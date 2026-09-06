@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { asOfDay, fmtRatio, ivArrow, ivRegimeWord, ivTitle, ordinal } from './ivFormat';
+import { asOfDay, fmtRatio, ivArrow, ivRegimeWord, ivTitle, ordinal, spyCurveText } from './ivFormat';
 import type { MarketIv } from '../hooks/useMarketIv';
 
 /* ivFormat — pure formatting behind the nav IvBadge + the /market-gauge card. */
@@ -86,5 +86,24 @@ describe('ivTitle', () => {
     const t = ivTitle({ ...BASE, term: { ...BASE.term!, shape: null } });
     expect(t).toContain('30D/3M 0.71 · VVIX 84');
     expect(t).not.toContain('contango');
+  });
+});
+
+describe('spyCurveText (live SPY curve, 2026-09-06)', () => {
+  const spy = { ...BASE.term!, source: 'spy_chain', iv9d: 9.89, iv30d: 12.2, iv90d: 14.06,
+                ratio_9d_30d: 0.811, ratio_30d_3m: 0.868, ratio_30d_90d: 0.868, shape: 'contango' as const };
+  it('prints the three tenors in percent', () => {
+    expect(spyCurveText(spy)).toBe('SPY IV 9d/30d/90d 9.9/12.2/14.1%');
+  });
+  it('is empty for the CBOE fallback or without a 30d point', () => {
+    expect(spyCurveText(BASE.term)).toBe('');
+    expect(spyCurveText({ ...spy, iv30d: null })).toBe('');
+    expect(spyCurveText(null)).toBe('');
+  });
+  it('dashes a missing tenor and rides inside the title', () => {
+    expect(spyCurveText({ ...spy, iv90d: null })).toBe('SPY IV 9d/30d/90d 9.9/12.2/—%');
+    const t = ivTitle({ ...BASE, term: spy });
+    expect(t).toContain('SPY IV 9d/30d/90d 9.9/12.2/14.1%');
+    expect(t).toContain('30D/3M 0.87 contango');
   });
 });

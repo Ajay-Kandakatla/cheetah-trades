@@ -18,6 +18,17 @@ export type IvTerm = {
   ratio_30d_3m: number | null;
   shape: IvTermShape | null;
   as_of?: string | null;
+  /* 2026-09-06: live SPY curve from the option chain (source "spy_chain") —
+   * ATM IV in % at 9 / 30 / 90 days. Absent on the CBOE fallback, which then
+   * carries `stale` when its series stopped updating at the source. */
+  source?: string | null;
+  source_label?: string | null;
+  iv9d?: number | null;
+  iv30d?: number | null;
+  iv90d?: number | null;
+  ratio_30d_90d?: number | null;
+  underlying?: number | null;
+  stale?: boolean | null;
 };
 
 export type MarketIv = {

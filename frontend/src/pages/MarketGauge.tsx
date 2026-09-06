@@ -100,6 +100,14 @@ function IvCard() {
         )}
       </div>
       <dl className="mg-iv__grid">
+        {t?.source === 'spy_chain' && t.iv30d != null && (
+          <div>
+            <dt>SPY IV 9d / 30d / 90d</dt>
+            <dd className="mono">
+              {t.iv9d != null ? t.iv9d.toFixed(1) : '—'} / {t.iv30d.toFixed(1)} / {t.iv90d != null ? t.iv90d.toFixed(1) : '—'}%
+            </dd>
+          </div>
+        )}
         <div><dt>9D / 30D</dt><dd className="mono">{fmtRatio(t?.ratio_9d_30d)}</dd></div>
         <div>
           <dt>30D / 3M</dt>
@@ -115,6 +123,17 @@ function IvCard() {
           </div>
         )}
       </dl>
+      {t?.source === 'spy_chain' && (
+        <p className="mg-iv__source">
+          Term structure from the {t.source_label ?? 'SPY option chain'}
+          {t.underlying != null ? ` · SPY ${t.underlying.toFixed(2)}` : ''}
+        </p>
+      )}
+      {t?.source !== 'spy_chain' && t?.stale && (
+        <p className="mg-iv__source">
+          CBOE term series stale{t.as_of ? ` since ${t.as_of}` : ''} — ratios hidden
+        </p>
+      )}
       {iv.read && <p className="mg-iv__read">{iv.read}</p>}
       {iv.disclaimer && <p className="mg-disclaimer">{iv.disclaimer}</p>}
     </section>
