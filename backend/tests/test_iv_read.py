@@ -40,10 +40,11 @@ def test_pct_rank_is_the_share_of_closes_under_the_level():
     assert IV.pct_rank(series + [float("nan")], 50.5) == 50.0   # NaN ignored
 
 
-def _wire(monkeypatch, vix, v9=None, v3=None, vv=None):
+def _wire(monkeypatch, vix, v9=None, v3=None, vv=None, spy=None):
     frames = {"^VIX": _df(vix), "^VIX9D": _df(v9 or []), "^VIX3M": _df(v3 or []),
               "^VVIX": _df(vv or [])}
     monkeypatch.setattr(IV, "_load", lambda sym, period: frames.get(sym))
+    monkeypatch.setattr(IV, "_spy_curve", lambda: spy)
 
 
 def test_compute_aligns_the_term_structure_on_one_date(monkeypatch):
@@ -124,3 +125,25 @@ def test_term_structure_older_than_a_week_is_marked_stale_not_shown(monkeypatch)
     assert t["shape"] is None and t["ratio_30d_3m"] is None and t["vix3m"] is None
     assert "contango" not in out["read"] and "backwardation" not in out["read"]
     assert IV.TERM_MAX_LAG_DAYS == 7
+
+
+def test_live_spy_curve_replaces_the_stale_cboe_tenors(monkeypatch):
+    vix = [("2026-08-%02d" % d, 18.0) for d in range(1, 30)] + [("2026-09-04", 14.53)]
+    spy = {"source": "spy_chain", "iv9d": 13.1, "iv30d": 14.8, "iv90d": 16.9,
+           "ratio_9d_30d": 0.885, "ratio_30d_90d": 0.876, "ratio_30d_3m": 0.876,
+           "vix9d": None, "vix3m": None, "shape": "contango", "as_of": "2026-09-04",
+           "stale": False, "underlying": 770.19}
+    _wire(monkeypatch, vix, [("2026-07-17", 16.85)], [("2026-07-17", 20.54)], None, spy=spy)
+    out = IV.compute()
+    t = out["term"]
+    assert t["source"] == "spy_chain" and t["stale"] is False and t["iv30d"] == 14.8
+    assert t["ratio_30d_3m"] == 0.876 and t["shape"] == "contango"
+    assert t["cboe"]["stale"] is True and t["cboe"]["as_of"] == "2026-07-17"
+    assert "contango" in out["read"]
+
+
+def test_spy_curve_failure_keeps_the_cboe_read(monkeypatch):
+    vix = [("2026-08-%02d" % d, 18.0) for d in range(1, 30)] + [("2026-09-04", 14.53)]
+    _wire(monkeypatch, vix, None, [("2026-09-04", 16.0)], None, spy=None)
+    out = IV.compute()
+    assert "source" not in out["term"] and out["term"]["ratio_30d_3m"] == round(14.53 / 16.0, 3)

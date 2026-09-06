@@ -204,11 +204,29 @@ def compute() -> dict:
                        "vix3m": round(v3[term_date], 2) if term_date in v3 else None,
                        "ratio_9d_30d": r9, "ratio_30d_3m": r3,
                        "shape": shape, "as_of": term_date, "stale": False}
+    # Live SPY curve from the option chain (sepa.iv_term) wins over the CBOE
+    # tenors whenever it is available — those series went stale at the
+    # source on 2026-07-17. The CBOE read stays as the fallback.
+    spy = _spy_curve()
+    if spy is not None:
+        cboe = dict(out["term"])
+        out["term"] = dict(spy, cboe=cboe)
+        shape = spy.get("shape")
     vv = _closes(_load("^VVIX", "1y"))
     if vv:
         out["vvix"] = round(vv[-1][1], 2)
     out["read"] = _one_liner(regime, out["pct_252"], shape, chg)
     return out
+
+
+def _spy_curve() -> Optional[dict]:
+    """Fenced hook so tests can stub the chain read."""
+    try:
+        from sepa import iv_term
+        return iv_term.spy_curve()
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("iv_read: SPY curve unavailable: %s", exc)
+        return None
 
 
 def get(force: bool = False) -> dict:
