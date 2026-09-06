@@ -1062,3 +1062,49 @@ def test_flatten_queue_2026_09_05_drain_precedes_market_gate_and_flatten_queues_
     with open(os.path.join(TRADING_DIR, "journal.py"), encoding="utf-8") as fh:
         jn = fh.read()
     assert "def _is_exit_row" in jn and 'det.get("closed") is False' in jn
+
+
+# ── options lane 2026-09-06 ──────────────────────────────────────────────────
+
+def test_options_lane_2026_09_06_owner_settings_locked_and_engine_seams():
+    """Paper options on demand-zone touches (Ajay 2026-09-06). Owner settings
+    are pinned verbatim; the tick runs the lane at step (k) AFTER the catalyst
+    lane; the stock protect loop and status() skip option contracts; the flag
+    is a strict boolean on POST /trading/config; the journal merges the lane."""
+    from trading import options_lane as OL
+    assert OL.STRATEGY == "options_zone"
+    assert OL.MAX_OPTIONS_ENTRIES_PER_DAY == 1 and OL.MAX_OPEN_OPTIONS == 3
+    assert OL.RISK_PCT_OF_EQUITY == 1.0 and OL.MAX_PREMIUM_PER_TRADE == 1500.0
+    assert (OL.MIN_DTE, OL.MAX_DTE, OL.CLOSE_DTE) == (28, 60, 7)
+    assert (OL.DELTA_LO, OL.DELTA_HI) == (0.55, 0.75)
+    assert OL.IV_SPREAD_THRESHOLD == 0.45
+    assert OL.MAX_SPREAD_PCT_OF_MID == 10.0 and OL.MAX_SPREAD_ABS == 0.15
+    assert OL.MIN_OPEN_INTEREST == 200 and OL.MIN_UNDERLYING_PRICE == 20.0
+    assert OL.EARNINGS_CLOSE_DAYS == 2
+    from trading import zone_edge_entry as ZEE
+    assert OL.STOP_BUFFER_PCT == ZEE.STOP_BUFFER_PCT == 0.5
+    assert OL.LAST_ENTRY_ET == ZEE.LAST_ENTRY_ET and OL.MIN_CAP_USD == ZEE.MIN_CAP_USD
+    with open(os.path.join(TRADING_DIR, "exit_engine.py"), encoding="utf-8") as fh:
+        eng = fh.read()
+    assert eng.index('summary["catalyst_entry"] = catalyst_entry.run(') \
+        < eng.index('summary["options_lane"] = options_lane.run(') \
+        < eng.index('summary["journal"] = journal.reconcile()')
+    tick_src = eng[eng.index("def tick(force"):eng.index("def _broker_mode")]
+    assert 'if (pos.get("asset_class") or "") == "us_option":' in tick_src
+    status_src = eng[eng.index("def status()"):eng.index("def flatten(symbol")]
+    assert 'if (pos.get("asset_class") or "") == "us_option":' in status_src
+    assert 'out["options_lane"] = options_lane.status_block(cfg)' in eng
+    assert '"options_entry": bool(doc.get("options_entry", False))' in eng
+    with open(os.path.join(TRADING_DIR, "api.py"), encoding="utf-8") as fh:
+        api = fh.read()
+    assert '"options_entry" in payload' in api and 'updates["options_entry"] = False' in api
+    assert '@router.get("/options")' in api and '@router.post("/options/close/{underlying}")' in api
+    with open(os.path.join(TRADING_DIR, "journal.py"), encoding="utf-8") as fh:
+        jn = fh.read()
+    assert "options_lane.journal_block()" in jn
+    with open(os.path.join(TRADING_DIR, "broker_alpaca.py"), encoding="utf-8") as fh:
+        ba = fh.read()
+    for fn in ("def option_contracts(", "def option_snapshots(", "def submit_option_order(",
+               "def submit_option_spread(", "def option_positions("):
+        assert fn in ba, fn
+    assert '"order_class": "mleg"' in ba

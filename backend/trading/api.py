@@ -155,6 +155,17 @@ async def trading_config(payload: dict = Body(...),
             updates["catalyst_entry"] = raw
         else:
             raise HTTPException(400, "catalyst_entry must be a boolean or null")
+    if "options_entry" in payload:
+        # Options lane (trading/options_lane.py; Ajay 2026-09-06). Strict
+        # boolean; null resets to the default OFF. Arming still gates orders;
+        # paper account only.
+        raw = payload.get("options_entry")
+        if raw is None:
+            updates["options_entry"] = False
+        elif isinstance(raw, bool):
+            updates["options_entry"] = raw
+        else:
+            raise HTTPException(400, "options_entry must be a boolean or null")
     if "zone_edge_rules" in payload:
         # Owner rule switches for the zone-edge entries (Ajay 2026-09-03:
         # "Enter anything that is in demand zone ... any stocks crossing the
@@ -240,6 +251,26 @@ def _flatten_reason(payload) -> Optional[str]:
         raise HTTPException(400, "reason must be a string")
     from trading import exit_engine
     return exit_engine._clean_reason(raw)
+
+
+@router.get("/options")
+async def trading_options(email: str = Depends(current_user_email)):
+    """Options lane tab: status block, open / recent contracts, journal."""
+    from trading import options_lane
+    return JSONResponse(await asyncio.to_thread(options_lane.tab_payload))
+
+
+@router.post("/options/close/{underlying}")
+async def trading_options_close(underlying: str,
+                                email: str = Depends(current_user_email)):
+    """Owner closes the lane's position on one underlying now (armed only)."""
+    _require_admin(email)
+    from trading import options_lane
+    try:
+        result = await asyncio.to_thread(options_lane.close_now, underlying, "owner close")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return JSONResponse(result)
 
 
 @router.post("/flatten/{symbol}")

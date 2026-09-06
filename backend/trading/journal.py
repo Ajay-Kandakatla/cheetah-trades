@@ -536,7 +536,7 @@ def by_strategy(docs: list) -> dict:
     return out
 
 
-def summary() -> dict:
+def _summary_core() -> dict:
     """{n_open, n_closed, last_reconcile_ts, by_strategy} without rebuilding."""
     coll = _journal_coll()
     docs = None
@@ -558,6 +558,24 @@ def summary() -> dict:
             "n_closed": sum(1 for d in docs if d.get("status") == "closed"),
             "last_reconcile_ts": last,
             "by_strategy": by_strategy(docs)}
+
+
+def summary() -> dict:
+    """{n_open, n_closed, last_reconcile_ts, by_strategy} without rebuilding.
+    The options lane's contracts never pass through entries.enter, so its
+    lane row is merged in from trading/options_lane.journal_block()
+    (2026-09-06); fenced so a Mongo miss there cannot break the journal."""
+    out = _summary_core()
+    try:
+        from trading import options_lane
+        blk = options_lane.journal_block()
+        if blk.get("n"):
+            bs = dict(out.get("by_strategy") or {})
+            bs[options_lane.STRATEGY] = blk
+            out["by_strategy"] = bs
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("journal: options lane block unavailable: %s", exc)
+    return out
 
 
 # ── Narrative (deterministic, factual — never invents a number) ─────────────

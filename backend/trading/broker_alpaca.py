@@ -231,6 +231,118 @@ def replace_order(order_id: str, stop_price: Optional[float] = None,
     return _request("PATCH", "/v2/orders/%s" % order_id, json_body=body) or {}
 
 
+# ── Options (paper options lane, 2026-09-06) ───────────────────────────────
+# The paper account is options level 3 (verified 2026-09-06: options_approved
+# _level 3, options_buying_power ~$79.7k). Contracts come from the trading
+# API, quotes/greeks/IV from the data API "indicative" feed. Every helper
+# returns Alpaca-shaped dicts; the lane (trading/options_lane.py) owns the
+# rules. broker_sim has none of these — the lane gates itself off on a
+# broker without them.
+
+def option_contracts(underlying: str, expiration_gte: str, expiration_lte: str,
+                     otype: str = "call", strike_gte=None, strike_lte=None,
+                     limit: int = 1000) -> list:
+    """Tradable option contracts for one underlying inside an expiry window.
+    Rows carry symbol (OCC), expiration_date, strike_price, open_interest,
+    close_price, tradable, status."""
+    params = {"underlying_symbols": underlying.upper(),
+              "expiration_date_gte": expiration_gte,
+              "expiration_date_lte": expiration_lte,
+              "type": otype, "status": "active", "limit": str(int(limit))}
+    if strike_gte is not None:
+        params["strike_price_gte"] = str(strike_gte)
+    if strike_lte is not None:
+        params["strike_price_lte"] = str(strike_lte)
+    out, token = [], None
+    for _ in range(10):                            # pagination guard
+        if token:
+            params["page_token"] = token
+        doc = _request("GET", "/v2/options/contracts", params=params) or {}
+        rows = doc.get("option_contracts") if isinstance(doc, dict) else doc
+        out.extend(r for r in (rows or []) if isinstance(r, dict))
+        token = doc.get("next_page_token") if isinstance(doc, dict) else None
+        if not token:
+            break
+    return out
+
+
+def option_snapshots(underlying: str, expiration_gte: str, expiration_lte: str,
+                     otype: str = "call", strike_gte=None, strike_lte=None,
+                     feed: str = "indicative") -> dict:
+    """{OCC symbol: {"bid", "ask", "iv", "delta", "last"}} from the options
+    snapshot endpoint (data API). Missing quotes/greeks come back as None."""
+    params = {"feed": feed, "type": otype, "limit": "1000",
+              "expiration_date_gte": expiration_gte,
+              "expiration_date_lte": expiration_lte}
+    if strike_gte is not None:
+        params["strike_price_gte"] = str(strike_gte)
+    if strike_lte is not None:
+        params["strike_price_lte"] = str(strike_lte)
+    out, token = {}, None
+    for _ in range(10):
+        if token:
+            params["page_token"] = token
+        doc = _request("GET", "/v1beta1/options/snapshots/%s" % underlying.upper(),
+                       params=params, base=_DATA_URL) or {}
+        snaps = doc.get("snapshots") or {}
+        for sym, v in snaps.items():
+            if not isinstance(v, dict):
+                continue
+            q = v.get("latestQuote") or {}
+            g = v.get("greeks") or {}
+            t = v.get("latestTrade") or {}
+            out[sym] = {"bid": _fnum(q.get("bp")), "ask": _fnum(q.get("ap")),
+                        "iv": _fnum(v.get("impliedVolatility")),
+                        "delta": _fnum(g.get("delta")), "last": _fnum(t.get("p"))}
+        token = doc.get("next_page_token")
+        if not token:
+            break
+    return out
+
+
+def _fnum(x):
+    try:
+        return float(x) if x is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def submit_option_order(symbol: str, qty: int, side: str, limit_price: float,
+                        position_intent: Optional[str] = None,
+                        client_order_id: Optional[str] = None,
+                        tif: str = "day") -> dict:
+    """Single-leg option LIMIT order (buy_to_open / sell_to_close ...)."""
+    body = {"symbol": symbol, "qty": str(int(qty)), "side": side,
+            "type": "limit", "time_in_force": tif,
+            "limit_price": str(round(float(limit_price), 2))}
+    if position_intent:
+        body["position_intent"] = position_intent
+    if client_order_id:
+        body["client_order_id"] = client_order_id
+    return _request("POST", "/v2/orders", json_body=body) or {}
+
+
+def submit_option_spread(legs: list, qty: int, limit_price: float,
+                         client_order_id: Optional[str] = None,
+                         tif: str = "day") -> dict:
+    """Multi-leg (mleg) LIMIT order. `legs` = [{symbol, side, position_intent,
+    ratio_qty}]; `limit_price` is the NET debit (positive) of the package."""
+    body = {"order_class": "mleg", "qty": str(int(qty)), "type": "limit",
+            "time_in_force": tif,
+            "limit_price": str(round(float(limit_price), 2)),
+            "legs": [{"symbol": l["symbol"], "ratio_qty": str(int(l.get("ratio_qty") or 1)),
+                      "side": l["side"], "position_intent": l["position_intent"]}
+                     for l in legs]}
+    if client_order_id:
+        body["client_order_id"] = client_order_id
+    return _request("POST", "/v2/orders", json_body=body) or {}
+
+
+def option_positions() -> list:
+    """Open positions whose asset_class is us_option."""
+    return [p for p in positions() if (p.get("asset_class") or "") == "us_option"]
+
+
 def cancel_order(order_id: str) -> None:
     _request("DELETE", "/v2/orders/%s" % order_id)
 

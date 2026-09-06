@@ -14,6 +14,7 @@ from trading import risk_rules as RR
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import catalyst_entry as CE
+from trading import options_lane as OL
 from . import alert_gates as AG
 from . import bounce_room as BR
 from . import demand_alerts as DA
@@ -25,7 +26,7 @@ from . import zone_edge as ZE
 from . import zone_store as ZS
 
 SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
-                "sepa_bounce", "catalysts")
+                "sepa_bounce", "catalysts", "options")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -227,6 +228,35 @@ def sections() -> dict:
         "alerts": [],
         "note": _DISCLAIMER,
     }
+    out["options"] = {
+        "title": "Options lane (paper)", "emoji": "🎛️",
+        "picks": [
+            "Signal = the same demand-zone touch the stock lane buys: zone-edge near/in row "
+            "passing the alert gate (≥ %s room, ≤ %s above the band top), cap ≥ %s, print ≥ $%d."
+            % (gate_room, gate_prox, _b(OL.MIN_CAP_USD), int(OL.MIN_UNDERLYING_PRICE)),
+            "Long call strike = highest strike at or under the band top with delta %.2f–%.2f; "
+            "spread short strike = lowest strike at or above the first supply band (the room target)."
+            % (OL.DELTA_LO, OL.DELTA_HI),
+            "Expiry %d–%d days out; skip if earnings sits inside the window." % (OL.MIN_DTE, OL.MAX_DTE),
+            "Long call by default; bull call spread when the call's IV ≥ %d%%. No put selling in v1."
+            % int(OL.IV_SPREAD_THRESHOLD * 100),
+            "Liquidity: open interest ≥ %d, bid-ask ≤ %d%% of mid (or ≤ $%.2f)."
+            % (OL.MIN_OPEN_INTEREST, int(OL.MAX_SPREAD_PCT_OF_MID), OL.MAX_SPREAD_ABS),
+            "%d entry per day, %d open names, one position per underlying; %d contracts sized to "
+            "min(%g%% of equity, $%d) premium." % (OL.MAX_OPTIONS_ENTRIES_PER_DAY, OL.MAX_OPEN_OPTIONS,
+                                                    1, OL.RISK_PCT_OF_EQUITY, int(OL.MAX_PREMIUM_PER_TRADE)),
+        ],
+        "stops": [
+            "Exit on the underlying, never on the premium: a print under the band floor − %s closes it."
+            % _pct(OL.STOP_BUFFER_PCT),
+            "Take profit when the underlying reaches the first supply band (the short strike on a spread).",
+            "Time exit at %d DTE; close %d days before earnings." % (OL.CLOSE_DTE, OL.EARNINGS_CLOSE_DAYS),
+            "Max loss per trade = the premium paid (long call / debit spread).",
+        ],
+        "alerts": ["position_alert on every options entry, close sent and close filled."],
+        "note": "Paper account (Alpaca options level 3). Owner rules from the 2026-09-06 chat, no book.",
+    }
+
     return out
 
 

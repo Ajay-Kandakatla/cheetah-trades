@@ -157,6 +157,12 @@ def get_config() -> dict:
         # /trading/config; arming is still required on top. Paper account.
         "catalyst_entry": bool(doc.get("catalyst_entry", False)),
         "last_catalyst_entry_disabled_day": doc.get("last_catalyst_entry_disabled_day"),
+        # Options lane — trading/options_lane.py (Ajay 2026-09-06: "create a
+        # new tab on the Auto pilot on options trading and paper trade with
+        # it"). Default OFF in every mode; owner opt-in per POST /trading/
+        # config; arming still required on top. Paper account (options L3).
+        "options_entry": bool(doc.get("options_entry", False)),
+        "last_options_entry_disabled_day": doc.get("last_options_entry_disabled_day"),
         # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
         "flatten_queue": _norm_queue(doc.get("flatten_queue")),
         "flatten_queue_rev": int(doc.get("flatten_queue_rev") or 0),
@@ -957,6 +963,11 @@ def tick(force: bool = False) -> dict:
 
     for pos in positions:
         sym = (pos.get("symbol") or "").upper()
+        if (pos.get("asset_class") or "") == "us_option":
+            # Option contracts belong to the options lane (step k): no stock
+            # stop, no ratchet, no watchdog on a contract (2026-09-06).
+            summary["options_positions"] = summary.get("options_positions", 0) + 1
+            continue
         if sym in queued_syms:
             # On its way out (flatten queue): a fresh protective stop would
             # re-hold the shares and block the close forever; the watchdog
@@ -1229,6 +1240,17 @@ def tick(force: bool = False) -> dict:
         log.warning("catalyst_entry run failed: %s", exc)
         summary["errors"].append("catalyst_entry: %s" % exc)
 
+    # (k) options lane (trading/options_lane.py, owner rules; flag
+    # `options_entry`, default OFF) — manages its open contracts (underlying
+    # under the band floor / target / DTE / earnings) THEN looks for one new
+    # demand-zone entry. Fenced exactly like (h)/(j).
+    try:
+        from trading import options_lane
+        summary["options_lane"] = options_lane.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("options_lane run failed: %s", exc)
+        summary["errors"].append("options_lane: %s" % exc)
+
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no
     # trading side effects; fully fenced + lazy-imported so it can NEVER break
@@ -1335,6 +1357,12 @@ def status() -> dict:
     except Exception as exc:                       # noqa: BLE001
         out["catalyst_entry"] = {"enabled": bool(cfg.get("catalyst_entry")),
                                  "error": str(exc)}
+    try:
+        from trading import options_lane
+        out["options_lane"] = options_lane.status_block(cfg)
+    except Exception as exc:                       # noqa: BLE001
+        out["options_lane"] = {"enabled": bool(cfg.get("options_entry")),
+                               "error": str(exc)}
     if not out["configured"]:
         return out
     try:
@@ -1347,6 +1375,8 @@ def status() -> dict:
         out["regime"] = regime()
         orders = _flatten_orders(broker.open_orders())
         for pos in broker.positions():
+            if (pos.get("asset_class") or "") == "us_option":
+                continue                       # shown by the options lane block
             sym = (pos.get("symbol") or "").upper()
             qty = int(float(pos.get("qty") or 0))
             avg_entry = float(pos.get("avg_entry_price") or 0)
