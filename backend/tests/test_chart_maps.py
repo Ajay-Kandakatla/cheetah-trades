@@ -2494,15 +2494,14 @@ def test_quick_bounce_tab_lists_qualifying_names_at_a_band_nearest_first(prices,
             "gap_up": 2, "quick_rate_pct": 40.0, "first_day_rate_pct": 20.0, "placebo_rate_pct": 15.0,
             "edge_pts": 25.0, "qualifying": 3, "persistence": {"gap_pts": 5.0}, "params": {"gap_min_pct": 2.0},
             "generated_at": 1.0}
-    docs = {"AAA": {"bands": [band, weak, lid], "prev_close": 101.0, "recent": [{"close": 103.0}]},
-            "BBB": {"bands": [band, lid], "prev_close": 101.0, "recent": [{"close": 101.0}]},
-            "DDD": {"bands": [band, dict(weak, touches=2, strength=50.0)], "prev_close": 101.0,
-                    "recent": [{"close": 101.0}]}}
+    docs = {"AAA": {"bands": [band, weak, lid], "prev_close": 101.0},
+            "BBB": {"bands": [band, lid], "prev_close": 101.0},
+            "DDD": {"bands": [band, dict(weak, touches=2, strength=50.0)], "prev_close": 101.0}}
     monkeypatch.setattr(QB, "load_stats", lambda symbols=None, coll=None: stats)
     monkeypatch.setattr(QB, "load_meta", lambda coll=None: meta)
     monkeypatch.setattr(zone_store, "load_latest", lambda symbols=None, coll=None, today=None:
                         (__import__("datetime").date(2026, 9, 4), docs))
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"AAA": 103.0})     # BBB / DDD fall back to the stored close
+    monkeypatch.setattr(B, "_live_last", lambda syms: {"AAA": 103.0})     # BBB / DDD fall back to the store's prev_close
     for s in ("AAA", "BBB", "DDD"):
         prices[s] = _frame(200, start=90.0)
     out = B.board("quick_bounce", limit=10, min_tier="any")

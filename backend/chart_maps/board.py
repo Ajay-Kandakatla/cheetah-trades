@@ -1773,9 +1773,8 @@ def quick_bounce_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     live = _live_last(list(qual))
     prints = {s: px for s, px in live.items() if px}
     for s, d in docs.items():
-        if s not in prints:                      # weekend / pre-open: the last stored close
-            recent = d.get("recent") or []
-            px = _num((recent[-1] or {}).get("close")) if recent else None
+        if s not in prints:                      # no live print: the store's last closed bar
+            px = _num(d.get("prev_close"))       # (store docs carry prev_close, not `recent`)
             if px:
                 prints[s] = px
     floor = RF.MIN_ROOM_DEFAULT if min_room is None else float(min_room)

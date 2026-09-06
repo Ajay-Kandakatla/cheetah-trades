@@ -64,8 +64,9 @@ any-day base rate, distance to the band, room → target, risk → stop
 line as the "why". The study strip under the blurb prints the universe
 numbers and the persistence verdict.
 
-Weekends / pre-open: the live print falls back to the last stored close on
-the zone doc, so the list reads on Sunday night as it will at the open.
+No live print (a tape outage): the print falls back to the zone doc's
+`prev_close` (the store's last closed bar). On a weekend the live snapshot
+still carries Friday's last trade, so the list reads as it will at the open.
 
 ## 3. Paper Auto-Pilot — the `quick_bounce` day-trade variant
 
