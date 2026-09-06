@@ -8,7 +8,11 @@
  *   POST /trading/arm?armed=…       — master switch (confirm dialog on arm)
  *   GET  /trading/preview?symbol=…  — pure math, NO order placed
  *   POST /trading/enter             — bracket order {symbol, limit_price?, stop_pct?, allow_earnings?}
- *   POST /trading/flatten/{symbol}  — cancel orders + close one position
+ *   POST /trading/flatten/{symbol}  — cancel orders + close one position; optional body {reason}.
+ *                                     Outside the session Alpaca holds the shares for the
+ *                                     pending-cancel orders → {queued: true, closed: false} and the
+ *                                     engine retries every minute (flatten queue, 2026-09-05)
+ *   POST /trading/flatten-queue/{symbol}/cancel — take a queued exit back
  *   POST /trading/flatten-all?confirm=yes — disaster plan
  *   POST /trading/sim-reset?confirm=yes — sim mode only: wipe sim positions/orders, restore starting cash
  *   GET  /trading/ledger?limit=…    — action ledger (every row carries a book cite)
@@ -21,7 +25,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
-import { stopStatusView } from '../lib/autopilotStop';
+import { exitQueueLine, stopStatusView, type ExitQueueEntry, type ExitQueueState } from '../lib/autopilotStop';
 import { cashOut, rowTotals, statusErrKind, summarizePnl, tableTotals, type StatusErrKind } from '../lib/autopilotPnl';
 import { cleanRules, scanWarning, type EngineRule, type ScanTrust } from '../lib/autopilotRules';
 import { InfoButton } from '../components/InfoButton';
@@ -67,7 +71,16 @@ type Position = {
   target: TargetInfo;
   breakeven_trigger: number;
   protected: boolean;
+  // Flatten queue (2026-09-05) — the owner asked to exit but Alpaca holds the
+  // shares for the pending-cancel bracket orders until the next session; the
+  // engine retries the close every minute. Optional so an older API renders
+  // the row exactly as before.
+  exit_queued?: boolean | null;
+  exit_queue_state?: ExitQueueState | null;
 };
+
+/* One row of the persistent flatten queue (GET /trading/status.flatten_queue). */
+type FlattenQueueEntry = ExitQueueEntry;
 
 type LedgerRow = {
   ts?: number | string | null;
@@ -153,6 +166,11 @@ type Status = {
   } | null;
   // Symbols of open positions with NO stop at all ("real risk uncovered now").
   unprotected?: string[];
+  /* Persistent flatten queue (2026-09-05): owner exits Alpaca refused outside
+   * the session (403 40310000 — shares held for pending-cancel orders) wait
+   * here until the engine's minute retry gets the market sell accepted, then
+   * until it fills. Optional — an API predating the queue renders unchanged. */
+  flatten_queue?: FlattenQueueEntry[] | null;
 };
 
 type Preview = {
@@ -472,12 +490,16 @@ const TD: React.CSSProperties = {
   verticalAlign: 'middle', whiteSpace: 'nowrap',
 };
 
-function PositionsTable({ positions, simMode, cash, equity, onFlatten, onFlattenAll, onSimReset }: {
+function PositionsTable({ positions, simMode, cash, equity, flattenQueue, onFlatten, onUnqueue, onFlattenAll, onSimReset }: {
   positions: Position[];
   simMode: boolean;
   cash?: number | null;
   equity?: number | null;
+  /* status.flatten_queue — one compact line under the table (2026-09-05). */
+  flattenQueue?: FlattenQueueEntry[] | null;
   onFlatten: (symbol: string) => void;
+  /* Take a queued exit back (POST /trading/flatten-queue/{symbol}/cancel). */
+  onUnqueue: (symbol: string) => void;
   onFlattenAll: () => void;
   onSimReset: () => void;
 }) {
@@ -611,13 +633,26 @@ function PositionsTable({ positions, simMode, cash, equity, onFlatten, onFlatten
                       })()}
                     </td>
                     <td style={TD}>
-                      <button onClick={() => onFlatten(p.symbol)}
-                              title={`Cancel ${p.symbol} orders and sell the position at market.`}
-                              style={{ background: 'transparent', color: C.red, border: `1px solid ${C.red}55`,
-                                       borderRadius: 6, padding: '2px 9px', fontSize: '0.72rem',
-                                       fontWeight: 700, cursor: 'pointer' }}>
-                        Exit
-                      </button>
+                      {p.exit_queued ? (
+                        /* Already on its way out at the open — the only sensible
+                           action left is to take it back (2026-09-05). */
+                        <button onClick={() => onUnqueue(p.symbol)}
+                                data-testid={`unqueue-${p.symbol}`}
+                                title={`Take ${p.symbol} out of the exit queue — the engine will NOT sell it at the open.`}
+                                style={{ background: 'transparent', color: C.amber, border: `1px solid ${C.amber}55`,
+                                         borderRadius: 6, padding: '2px 9px', fontSize: '0.72rem',
+                                         fontWeight: 700, cursor: 'pointer' }}>
+                          Unqueue
+                        </button>
+                      ) : (
+                        <button onClick={() => onFlatten(p.symbol)}
+                                title={`Cancel ${p.symbol} orders and sell the position at market — outside market hours the exit is queued and fills at the next open.`}
+                                style={{ background: 'transparent', color: C.red, border: `1px solid ${C.red}55`,
+                                         borderRadius: 6, padding: '2px 9px', fontSize: '0.72rem',
+                                         fontWeight: 700, cursor: 'pointer' }}>
+                          Exit
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -676,6 +711,25 @@ function PositionsTable({ positions, simMode, cash, equity, onFlatten, onFlatten
           </table>
         </div>
       )}
+
+      {/* Flatten queue (2026-09-05) — one compact line, reason + state on hover.
+          Rendered off status.flatten_queue (not the rows) so a queued symbol
+          whose position row is momentarily missing still shows. */}
+      {(() => {
+        const line = exitQueueLine(flattenQueue);
+        if (!line) return null;
+        return (
+          <p data-testid="flatten-queue-line"
+             style={{ fontSize: '0.74rem', color: C.amber, margin: '0.45rem 0 0', fontWeight: 600 }}>
+            ⏳ Exits queued for the open:{' '}
+            {line.items.map((it, i) => (
+              <span key={it.symbol} className="mono" title={it.title} style={{ cursor: 'help' }}>
+                {it.symbol}{i < line.items.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </p>
+        );
+      })()}
     </section>
   );
 }
@@ -1768,6 +1822,7 @@ const PageInfo = (
 type ConfirmState =
   | { kind: 'arm' }
   | { kind: 'flatten'; symbol: string }
+  | { kind: 'unqueue'; symbol: string }
   | { kind: 'flatten-all' }
   | { kind: 'sim-reset' }
   | null;
@@ -1790,6 +1845,16 @@ export function TradingPage() {
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<string | null>(null);
+  // Non-error feedback (2026-09-05): a flatten the API QUEUED for the next
+  // session is not a failure — it gets an amber note, not the red ⛔ strip.
+  const [actionNote, setActionNote] = useState<string | null>(null);
+  // Optional owner reason typed into the Exit dialog — journaled with the exit.
+  const [exitReason, setExitReason] = useState('');
+  useEffect(() => {
+    if (!actionNote) return;
+    const t = setTimeout(() => setActionNote(null), 20000);
+    return () => clearTimeout(t);
+  }, [actionNote]);
   const [simNoteDismissed, setSimNoteDismissed] = useState<boolean>(() => {
     try { return localStorage.getItem(SIM_NOTE_KEY) === '1'; } catch { return false; }
   });
@@ -1876,9 +1941,18 @@ export function TradingPage() {
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setActionErr(null);
+    setActionNote(null);
     try {
-      await fn();
+      const res: any = await fn();
       setConfirm(null);
+      // POST /trading/flatten/{symbol} outside the session → {queued: true,
+      // closed: false}: Alpaca holds the shares for the pending-cancel orders,
+      // the engine retries every minute. Feedback, not a failure (2026-09-05).
+      if (res && typeof res === 'object' && res.queued === true && res.closed !== true) {
+        const sym = typeof res.symbol === 'string' && res.symbol ? ` — ${res.symbol}` : '';
+        setActionNote(`Exit queued for the next session${sym}: Alpaca holds the shares for the `
+          + 'pending-cancel orders; the engine retries every minute and tracks the sell until it fills at the open.');
+      }
       refresh();
     } catch (e: any) {
       setConfirm(null);
@@ -2091,6 +2165,12 @@ export function TradingPage() {
               ⛔ {actionErr}
             </div>
           )}
+          {actionNote && (
+            <div role="status" data-testid="action-note"
+                 style={{ fontSize: '0.76rem', color: C.amber, marginTop: 8, fontWeight: 700 }}>
+              ⏳ {actionNote}
+            </div>
+          )}
 
           {/* UNPROTECTED page alarm (2026-06-13) — promoted out of a single
               scroll-off-right table cell. An open position with no resting stop
@@ -2127,7 +2207,9 @@ export function TradingPage() {
                           simMode={sim}
                           cash={status.account?.cash}
                           equity={status.account?.equity}
-                          onFlatten={(symbol) => setConfirm({ kind: 'flatten', symbol })}
+                          flattenQueue={status.flatten_queue}
+                          onFlatten={(symbol) => { setExitReason(''); setConfirm({ kind: 'flatten', symbol }); }}
+                          onUnqueue={(symbol) => setConfirm({ kind: 'unqueue', symbol })}
                           onFlattenAll={() => setConfirm({ kind: 'flatten-all' })}
                           onSimReset={() => setConfirm({ kind: 'sim-reset' })} />
 
@@ -2199,11 +2281,42 @@ export function TradingPage() {
       {confirm?.kind === 'flatten' && status && (
         <ConfirmDialog title={`Exit ${confirm.symbol}?`} color={C.red}
                        confirmLabel={`Exit ${confirm.symbol}`} busy={busy}
-                       onConfirm={() => run(() => postJson(`/trading/flatten/${encodeURIComponent(confirm.symbol)}`))}
-                       onCancel={() => setConfirm(null)}>
-          <p style={{ margin: 0 }}>
+                       onConfirm={() => {
+                         const reason = exitReason.trim();
+                         void run(() => postJson(`/trading/flatten/${encodeURIComponent(confirm.symbol)}`,
+                                                 reason ? { reason } : undefined));
+                         setExitReason('');
+                       }}
+                       onCancel={() => { setConfirm(null); setExitReason(''); }}>
+          <p style={{ margin: '0 0 6px' }}>
             Cancels every open <b>{confirm.symbol}</b> order and sells the position at market in the{' '}
             <b>{status.mode}</b> account. This cannot be undone.
+          </p>
+          <p style={{ margin: '0 0 8px', color: C.sub }}>
+            Outside market hours the exit is <b>queued</b> and fills at the next open — Alpaca keeps the
+            shares held for the cancelled orders until the next session, so the engine retries the close
+            every minute and tracks the sell until it fills. You can Unqueue it from the table until then.
+          </p>
+          <label style={{ display: 'block', fontSize: '0.72rem', color: C.sub }}>
+            Reason (optional — journaled with the exit)
+            <input value={exitReason} onChange={(e) => setExitReason(e.target.value)}
+                   placeholder="e.g. lane rules retired" maxLength={200}
+                   style={{ ...INPUT, display: 'block', width: '100%', marginTop: 4, boxSizing: 'border-box' }} />
+          </label>
+        </ConfirmDialog>
+      )}
+
+      {confirm?.kind === 'unqueue' && status && (
+        <ConfirmDialog title={`Unqueue the ${confirm.symbol} exit?`} color={C.amber}
+                       confirmLabel={`Unqueue ${confirm.symbol}`} busy={busy}
+                       onConfirm={() => run(() => postJson(`/trading/flatten-queue/${encodeURIComponent(confirm.symbol)}/cancel`))}
+                       onCancel={() => setConfirm(null)}>
+          <p style={{ margin: '0 0 6px' }}>
+            Takes <b>{confirm.symbol}</b> out of the exit queue — the engine will <b>not</b> sell it at the open.
+          </p>
+          <p style={{ margin: 0, color: C.sub }}>
+            The position stays open in the <b>{status.mode}</b> account with whatever stop it has now — the
+            original bracket was already cancelled, so check the Stop-status cell after the open.
           </p>
         </ConfirmDialog>
       )}

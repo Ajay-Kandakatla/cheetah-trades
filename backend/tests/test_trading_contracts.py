@@ -1031,3 +1031,34 @@ def test_entries_ledger_detail_carries_strategy_and_reason():
     big = entries._safe_reason({"blob": "x" * 5000})
     assert big["truncated"] is True and len(big["preview"]) <= entries.REASON_MAX_BYTES
     assert entries._safe_reason("not a dict") is None
+
+
+# ── flatten queue 2026-09-05 ─────────────────────────────────────────────────
+
+def test_flatten_queue_2026_09_05_drain_precedes_market_gate_and_flatten_queues_on_held():
+    """Owner exits Alpaca refused outside the session (HTTP 403 40310000,
+    shares held for pending-cancel orders) are queued and drained by the
+    tick BEFORE the market-closed early return and BEFORE the protect loop,
+    which skips queued symbols; nothing runs disarmed."""
+    with open(os.path.join(TRADING_DIR, "exit_engine.py"), encoding="utf-8") as fh:
+        eng = fh.read()
+    assert "FLATTEN_HELD_CODE = 40310000" in eng
+    tick_src = eng[eng.index("def tick(force"):]
+    drain_at = tick_src.index('summary["flatten_queue"] = _drain_flatten_queue()')
+    assert drain_at < tick_src.index("# (b) market clock")
+    assert drain_at < tick_src.index("for pos in positions:")
+    assert "if sym in queued_syms:" in tick_src
+    drain = eng[eng.index("def _drain_flatten_queue"):eng.index("def tick(force")]
+    assert 'if not cfg["armed"]:' in drain and 'out["skipped_disarmed"]' in drain
+    assert 'if (o.get("status") or "").lower() == "pending_cancel":' in drain
+    flat_src = eng[eng.index("def flatten(symbol"):eng.index("def flatten_all(")]
+    assert "_held_for_orders(exc)" in flat_src and "queue_flatten(sym, reason)" in flat_src
+    with open(os.path.join(TRADING_DIR, "api.py"), encoding="utf-8") as fh:
+        api = fh.read()
+    assert '@router.post("/flatten-queue/{symbol}/cancel")' in api
+    assert "exit_engine.flatten, symbol, reason" in api
+    assert '"flatten_queue"' not in api[api.index('@router.post("/config")'):api.index('@router.post("/enter")')], \
+        "flatten_queue must not be writable through POST /trading/config"
+    with open(os.path.join(TRADING_DIR, "journal.py"), encoding="utf-8") as fh:
+        jn = fh.read()
+    assert "def _is_exit_row" in jn and 'det.get("closed") is False' in jn

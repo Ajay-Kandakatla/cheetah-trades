@@ -227,16 +227,52 @@ async def trading_enter(payload: dict = Body(...),
     return JSONResponse(result)
 
 
+def _flatten_reason(payload) -> Optional[str]:
+    """Optional owner reason from the flatten body ({"reason": str}); 400 on
+    a non-string; capped by exit_engine.FLATTEN_REASON_MAX; None when
+    absent/blank. The body itself is optional (the Exit button sends none)."""
+    if payload is None or not isinstance(payload, dict) or "reason" not in payload:
+        return None
+    raw = payload.get("reason")
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise HTTPException(400, "reason must be a string")
+    from trading import exit_engine
+    return exit_engine._clean_reason(raw)
+
+
 @router.post("/flatten/{symbol}")
 async def trading_flatten(symbol: str,
+                          payload: Optional[dict] = Body(default=None),
                           email: str = Depends(current_user_email)):
+    """Cancel orders + close one position. Outside the session Alpaca can
+    refuse the close (shares held for the pending-cancel orders): then the
+    exit is QUEUED and the engine drains it every minute (flatten queue,
+    2026-09-05) — the response says queued=true."""
     _require_admin(email)
+    reason = _flatten_reason(payload)
     from trading import exit_engine
     try:
-        result = await asyncio.to_thread(exit_engine.flatten, symbol)
+        result = await asyncio.to_thread(exit_engine.flatten, symbol, reason)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     return JSONResponse(result)
+
+
+@router.post("/flatten-queue/{symbol}/cancel")
+async def trading_flatten_unqueue(symbol: str,
+                                  email: str = Depends(current_user_email)):
+    """Take a queued exit back: the engine will NOT sell it at the open. A
+    sell Alpaca already accepted (state sent) is not cancelled here."""
+    _require_admin(email)
+    from trading import exit_engine
+    try:
+        ok = await asyncio.to_thread(exit_engine.unqueue_flatten, symbol)
+        queue = await asyncio.to_thread(exit_engine.public_flatten_queue)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return JSONResponse({"unqueued": bool(ok), "flatten_queue": queue})
 
 
 @router.post("/flatten-all")

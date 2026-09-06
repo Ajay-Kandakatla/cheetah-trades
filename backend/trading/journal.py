@@ -54,6 +54,25 @@ JOURNAL_CITE = ("journal: round-trips reconstructed from trade_ledger; entry "
 # Ledger kinds that CLOSE an open entry (in time order, next-after-entry).
 _EXIT_KINDS = ("trade_closed", "flatten", "flatten_all")
 
+
+def _is_exit_row(r: dict) -> bool:
+    """A ledger row that actually closed the trade. A "flatten" row whose
+    close Alpaca REFUSED (detail.closed False — shares held for pending-cancel
+    orders, 2026-09-05) or that only QUEUED the exit is not an exit: the
+    trade stays open until the drained sell's trade_closed row lands."""
+    if r.get("kind") not in _EXIT_KINDS:
+        return False
+    det = r.get("detail") or {}
+    if r.get("kind") == "flatten":
+        if det.get("closed") is False or det.get("queued") is True:
+            return False
+    return True
+
+
+def _has_fill(r: dict) -> bool:
+    det = r.get("detail") or {}
+    return any(det.get(k) is not None for k in ("fill", "price", "exit_price"))
+
 # Journal lane tags (mirror of trading/entries.STRATEGIES — kept literal so
 # this import-light module never pulls entries -> broker at import time).
 STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")
@@ -292,6 +311,10 @@ def _exit_and_realized(entry: dict, exit_row: dict, entry_price,
                    "sim_handover": "SIM paper handover"}.get(leg, leg)
     if kind == "flatten_all":
         exit_reason = "flatten-all (disaster plan)"
+    elif leg == "flatten" and det.get("reason"):
+        # Owner-typed reason (flatten queue, 2026-09-05) rides along so the
+        # journal says WHY, not just "manual flatten".
+        exit_reason = ("manual flatten, %s" % str(det["reason"]).strip())[:160]
 
     exit_doc = {
         "ts": exit_row.get("ts"),
@@ -341,21 +364,36 @@ def _build_docs(rows: list, zone_lanes: Optional[dict] = None) -> list:
         # Forward scan for the next exit + any ratchet, for this symbol.
         exit_row = None
         ratcheted = False
+        exit_k = None
         for k in range(i + 1, n):
             r = rows[k]
             if (r.get("symbol") or "").upper() != sym:
                 # flatten_all has symbol=None but closes EVERY held symbol;
                 # treat it as an exit for any still-open symbol.
                 if r.get("kind") == "flatten_all":
-                    exit_row = r
+                    exit_row, exit_k = r, k
                     break
                 continue
             if r.get("kind") == "ratchet_breakeven":
                 ratcheted = True
                 continue
-            if r.get("kind") in _EXIT_KINDS:
-                exit_row = r
+            if _is_exit_row(r):
+                exit_row, exit_k = r, k
                 break
+        # A flatten row without a fill (the sell was only SUBMITTED) is
+        # superseded by the trade_closed row the flatten queue writes once
+        # the market sell filled — same symbol, before any new entry.
+        if (exit_row is not None and exit_row.get("kind") in ("flatten", "flatten_all")
+                and not _has_fill(exit_row)):
+            for k in range(exit_k + 1, n):
+                r = rows[k]
+                if (r.get("symbol") or "").upper() != sym:
+                    continue
+                if r.get("kind") == "entry":
+                    break
+                if r.get("kind") == "trade_closed":
+                    exit_row = r
+                    break
 
         lane = (zone_lanes or {}).get((sym, _et_day_of(row.get("ts"))))
         docs.append(_entry_doc(row, trigger_row, ratcheted, exit_row, zone_lane=lane))

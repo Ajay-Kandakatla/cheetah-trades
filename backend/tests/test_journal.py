@@ -457,3 +457,72 @@ def test_untagged_entry_takes_its_lane_from_the_zone_edge_state_doc(db):
     assert JN._et_day_of("2026-09-04T23:30:00Z") == "2026-09-04"
     assert JN._et_day_of("2026-09-05T01:30:00Z") == "2026-09-04"   # 9:30pm ET still the 4th
     assert JN._et_day_of("garbage") == "garbage"
+
+
+# ── Flatten queue (2026-09-05): refused / queued flattens are not exits ───────
+
+def test_refused_flatten_row_does_not_close_the_trade(db):
+    """Saturday 2026-09-05: flatten() cancelled the bracket, Alpaca refused the
+    close (shares held for pending-cancel orders) and the ledger got a
+    "flatten" row with closed False. The live journal read it as a closed
+    trade with no price. It is NOT an exit."""
+    L = db.trade_ledger
+    L.insert_one(_row("entry", "EEE", BASE + 900,
+                      detail={"order_id": "o-eee", "qty": 44, "price": 278.035,
+                              "stop_price": 275.25, "stop_pct": 1.0,
+                              "target_price": 305.84, "target_pct": 10.0,
+                              "reward_risk": 10.0, "breakeven_trigger": 286.39,
+                              "regime": "difficult", "size_multiplier": 0.5}))
+    L.insert_one(_row("flatten", "EEE", BASE + 900 + DAY,
+                      detail={"canceled": 1, "closed": False,
+                              "errors": ["HTTP 403 40310000 insufficient qty available"]},
+                      cite="p.302"))
+    L.insert_one(_row("flatten_queued", "EEE", BASE + 900 + DAY + 1,
+                      detail={"reason": "pre-gate cohort"}, cite="p.302"))
+    docs = JN.reconcile() and JN.load()
+    eee = _by_id(docs, "EEE")
+    assert eee["status"] == "open"
+    assert eee["exit"] is None or eee["exit"].get("price") is None
+
+
+def test_queued_flatten_fill_lands_via_trade_closed_with_the_reason(db):
+    """Drained queue: the "flatten" row (sell SUBMITTED, closed True, no fill)
+    is superseded by the trade_closed row written when the sell filled."""
+    L = db.trade_ledger
+    L.insert_one(_row("entry", "FFF", BASE + 950,
+                      detail={"order_id": "o-fff", "qty": 10, "price": 100.0,
+                              "stop_price": 97.0, "stop_pct": 3.0,
+                              "target_price": 110.0, "target_pct": 10.0,
+                              "reward_risk": 3.33, "breakeven_trigger": 109.0,
+                              "regime": "normal", "size_multiplier": 1.0}))
+    L.insert_one(_row("flatten", "FFF", BASE + 950 + DAY,
+                      detail={"canceled": 0, "closed": True, "order_id": "sell-1",
+                              "reason": "pre-gate cohort",
+                              "note": "drained from flatten_queue"}, cite="p.302"))
+    L.insert_one(_row("trade_closed", "FFF", BASE + 950 + DAY + 60,
+                      detail={"order_id": "sell-1", "leg": "flatten", "fill": 104.0,
+                              "entry": 100.0, "gain_pct": 4.0,
+                              "reason": "pre-gate cohort"}, cite="p.302"))
+    L.insert_one(_row("flatten_done", "FFF", BASE + 950 + DAY + 61,
+                      detail={"state": "sent", "filled": True}, cite="p.302"))
+    docs = JN.reconcile() and JN.load()
+    fff = _by_id(docs, "FFF")
+    assert fff["status"] == "closed"
+    assert fff["exit"]["leg"] == "flatten" and fff["exit"]["price"] == 104.0
+    assert fff["realized"]["gain_pct"] == pytest.approx(4.0, abs=0.01)
+    assert fff["realized"]["exit_reason"] == "manual flatten, pre-gate cohort"
+
+
+def test_legacy_flatten_row_without_closed_flag_still_closes(db):
+    """Rows written before 2026-09-05 have no `closed` key: unchanged."""
+    L = db.trade_ledger
+    L.insert_one(_row("entry", "GGG", BASE + 990,
+                      detail={"order_id": "o-ggg", "qty": 5, "price": 50.0,
+                              "stop_price": 46.5, "stop_pct": 7.0,
+                              "target_price": 57.5, "target_pct": 15.0,
+                              "reward_risk": 2.14, "breakeven_trigger": 60.5,
+                              "regime": "normal", "size_multiplier": 1.0}))
+    L.insert_one(_row("flatten", "GGG", BASE + 990 + DAY,
+                      detail={"canceled": 0, "fill": 52.0}, cite="p.302"))
+    docs = JN.reconcile() and JN.load()
+    assert _by_id(docs, "GGG")["status"] == "closed"

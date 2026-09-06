@@ -49,6 +49,20 @@ log = logging.getLogger("trading.exit_engine")
 CONFIG_ID = "config"
 PROCESSED_IDS_KEEP = 1000      # cap on the never-double-count order-id list
 STREAK_LOOKBACK_DAYS = 14      # closed-order scan window (see tick step e)
+# ── Flatten queue (2026-09-05) ──────────────────────────────────────────────
+# Alpaca refuses DELETE /v2/positions/{sym} with HTTP 403 code 40310000
+# "insufficient qty available for order (requested: 44, available: 0)" while
+# the shares are held for orders that sit in pending_cancel — a cancel sent
+# outside the session is only processed at the next one. Found Saturday
+# 2026-09-05 flattening AEIS/APLD/LUNR (Ajay: exit the pre-gate cohort at
+# Monday open). The owner's exit is therefore QUEUED in trading_config and
+# the tick retries the close every minute until Alpaca accepts the market
+# sell, then tracks that order until the position is gone and journals the
+# fill. States: pending -> sent -> dropped. Never runs disarmed.
+FLATTEN_HELD_CODE = 40310000
+FLATTEN_REASON_MAX = 300
+FLATTEN_SENT_LOOKBACK_DAYS = 7
+_QUEUE_STATES = ("pending", "sent")
 
 
 # ── Mongo (same lazy pattern as giants/flows.py) ───────────────────────────
@@ -143,6 +157,9 @@ def get_config() -> dict:
         # /trading/config; arming is still required on top. Paper account.
         "catalyst_entry": bool(doc.get("catalyst_entry", False)),
         "last_catalyst_entry_disabled_day": doc.get("last_catalyst_entry_disabled_day"),
+        # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
+        "flatten_queue": _norm_queue(doc.get("flatten_queue")),
+        "flatten_queue_rev": int(doc.get("flatten_queue_rev") or 0),
         # Funnel floor overrides (data write, no deploy). This whitelist used
         # to STRIP them, which silently killed the documented auto_min_score
         # override — found in the 2026-07-12 low-RS audit.
@@ -165,6 +182,154 @@ def update_config(**fields) -> None:
                                      {"$set": fields}, upsert=True)
     except Exception as exc:                       # noqa: BLE001
         log.warning("trading_config write failed: %s", exc)
+
+
+def _clean_reason(reason) -> Optional[str]:
+    """Owner-typed exit reason, stripped and capped; None when empty."""
+    if reason is None:
+        return None
+    text = str(reason).strip()
+    return text[:FLATTEN_REASON_MAX] if text else None
+
+
+def _norm_queue(raw) -> list:
+    """Persisted flatten_queue -> clean entries (upper-cased, deduped by
+    symbol, unknown state -> pending, sent-only fields dropped otherwise).
+    Malformed rows are skipped, never raised on: a bad stored doc must not
+    take the reconciler down."""
+    out, seen = [], set()
+    for e in (raw if isinstance(raw, list) else []):
+        if not isinstance(e, dict):
+            continue
+        sym = str(e.get("symbol") or "").strip().upper()
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        state = e.get("state") if e.get("state") in _QUEUE_STATES else "pending"
+        out.append({"symbol": sym,
+                    "reason": _clean_reason(e.get("reason")),
+                    "queued_at": e.get("queued_at"),
+                    "state": state,
+                    "order_id": (e.get("order_id") or None) if state == "sent" else None,
+                    "sent_at": e.get("sent_at") if state == "sent" else None})
+    return out
+
+
+def flatten_queue() -> list:
+    return get_config()["flatten_queue"]
+
+
+def _queue_write(queue: list, rev: int) -> bool:
+    """Compare-and-set write of the queue: lands only while the stored
+    revision is still `rev` (a missing field counts as 0). The API flatten
+    (api container) and the cron drain (cron container) both mutate this
+    list, so a plain read-modify-write could drop a just-queued exit or
+    resurrect a dropped one. No Mongo -> True (nothing to protect)."""
+    db = _db()
+    if db is None:
+        return True
+    want = [0, None] if not rev else [int(rev)]
+    fields = {"flatten_queue": queue, "flatten_queue_rev": int(rev or 0) + 1,
+              "updated_at": _utc_iso()}
+    try:
+        res = db.trading_config.update_one(
+            {"_id": CONFIG_ID, "flatten_queue_rev": {"$in": want}},
+            {"$set": fields})
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("flatten queue write failed: %s", exc)
+        return False
+    matched = getattr(res, "matched_count", None)
+    if matched is None or matched > 0:
+        return True
+    try:
+        exists = db.trading_config.find_one({"_id": CONFIG_ID}) is not None
+    except Exception:                              # noqa: BLE001
+        exists = True
+    if not exists:                                 # first ever config doc
+        update_config(**fields)
+        return True
+    return False                                   # somebody else wrote first
+
+
+def _queue_commit(mutate, attempts: int = 6) -> list:
+    """Read the queue, apply `mutate(list) -> list`, CAS-write; on a
+    concurrent writer re-read and re-apply (mutate must be cheap and pure —
+    no broker calls). Returns the committed list."""
+    new = None
+    for _ in range(attempts):
+        cfg = get_config()
+        new = mutate([dict(e) for e in cfg["flatten_queue"]])
+        if _queue_write(new, cfg["flatten_queue_rev"]):
+            return new
+    log.warning("flatten queue: %d conflicting writes, last attempt not confirmed", attempts)
+    return new if new is not None else []
+
+
+def public_flatten_queue(queue: Optional[list] = None) -> list:
+    """The queue as the API/status shows it (no broker order ids)."""
+    q = flatten_queue() if queue is None else queue
+    return [{k: e.get(k) for k in ("symbol", "reason", "queued_at", "state", "sent_at")}
+            for e in q]
+
+
+def queue_flatten(symbol: str, reason=None) -> dict:
+    """Queue an owner exit for the tick to drain. Idempotent per symbol: a
+    second call only refreshes the reason (when one is given) and never
+    resets a 'sent' entry back to pending."""
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        raise ValueError("symbol required")
+    reason = _clean_reason(reason)
+    holder = {}
+
+    def mutate(q):
+        for e in q:
+            if e["symbol"] == sym:
+                if reason:
+                    e["reason"] = reason
+                holder["entry"] = e
+                return q
+        entry = {"symbol": sym, "reason": reason, "queued_at": _utc_iso(),
+                 "state": "pending", "order_id": None, "sent_at": None}
+        q.append(entry)
+        holder["entry"] = entry
+        return q
+
+    _queue_commit(mutate)
+    return dict(holder["entry"])
+
+
+def unqueue_flatten(symbol: str) -> bool:
+    """Owner takes a queued exit back. True when an entry was removed. A
+    'sent' entry can still be unqueued (stops the tracking only — the market
+    sell Alpaca already accepted is NOT cancelled here; the row says so)."""
+    sym = (symbol or "").strip().upper()
+    holder = {}
+
+    def mutate(q):
+        keep = [e for e in q if e["symbol"] != sym]
+        if len(keep) != len(q):
+            holder["gone"] = [e for e in q if e["symbol"] == sym][0]
+        return keep
+
+    _queue_commit(mutate)
+    gone = holder.get("gone")
+    if gone is None:
+        return False
+    ledger("flatten_unqueued", symbol=sym,
+           detail={"state": gone.get("state"), "order_id": gone.get("order_id"),
+                   "note": ("owner took the exit back; the accepted sell order is untouched"
+                            if gone.get("state") == "sent" else "owner took the exit back")},
+           dry_run=False, cite="p.302")
+    return True
+
+
+def _held_for_orders(err) -> bool:
+    """Alpaca's 'shares held for (pending-cancel) orders' refusal."""
+    text = str(err or "").lower()
+    return ("insufficient qty available" in text
+            or str(FLATTEN_HELD_CODE) in text
+            or "held_for_orders" in text)
 
 
 def ledger(kind: str, symbol: Optional[str] = None, detail: Optional[dict] = None,
@@ -529,12 +694,202 @@ def _entry_price_from_ledger(symbol: str) -> Optional[float]:
 
 # ── The reconciler ─────────────────────────────────────────────────────────
 
+def _empty_drain() -> dict:
+    return {"queued": 0, "drained": 0, "still_held": 0, "sent_waiting": 0,
+            "done": 0, "skipped_disarmed": 0, "protect_skipped": 0, "errors": []}
+
+
+def _find_sent_order(closed: list, entry: dict) -> Optional[dict]:
+    """The queued exit's sell among closed orders: by id when we have one,
+    else the most recent FILLED market sell for the symbol."""
+    oid = entry.get("order_id")
+    sym = entry["symbol"]
+    if oid:
+        for o in closed or []:
+            if o.get("id") == oid:
+                return o
+        return None
+    best = None
+    for o in closed or []:
+        if ((o.get("symbol") or "").upper() != sym
+                or (o.get("side") or "").lower() != "sell"
+                or _order_type(o) != "market"
+                or (o.get("status") or "").lower() != "filled"):
+            continue
+        if best is None or (o.get("filled_at") or "") > (best.get("filled_at") or ""):
+            best = o
+    return best
+
+
+def _finish_queued_exit(entry: dict) -> bool:
+    """Position gone: journal the fill of a 'sent' exit (ledger trade_closed,
+    leg flatten) and write the flatten_done row. True when a fill was found."""
+    sym = entry["symbol"]
+    filled = False
+    if entry.get("state") == "sent":
+        since = _utc_iso(datetime.now(timezone.utc)
+                         - timedelta(days=FLATTEN_SENT_LOOKBACK_DAYS))
+        try:
+            closed = broker.closed_orders_since(since)
+        except BrokerError as exc:
+            log.warning("flatten queue: closed orders for %s unavailable: %s", sym, exc)
+            closed = []
+        o = _find_sent_order(closed, entry)
+        if o is not None and (o.get("status") or "").lower() == "filled":
+            try:
+                fill = float(o.get("filled_avg_price") or 0)
+            except (TypeError, ValueError):
+                fill = 0.0
+            entry_px = _entry_price_from_ledger(sym)
+            gain_pct = (round((fill / entry_px - 1) * 100, 2)
+                        if (entry_px and fill) else None)
+            ledger("trade_closed", symbol=sym,
+                   detail={"order_id": o.get("id"), "leg": "flatten", "fill": fill,
+                           "entry": entry_px, "gain_pct": gain_pct,
+                           "reason": entry.get("reason"),
+                           "queued_at": entry.get("queued_at")},
+                   dry_run=False, cite="p.302")
+            filled = True
+            _notify_autopilot(
+                "position_alert", sym,
+                "%s exit filled at %.2f%s — %s" % (
+                    sym, fill,
+                    (" (%+.2f%%)" % gain_pct) if gain_pct is not None else "",
+                    entry.get("reason") or "queued exit"))
+    ledger("flatten_done", symbol=sym,
+           detail={"state": entry.get("state"), "order_id": entry.get("order_id"),
+                   "filled": filled, "queued_at": entry.get("queued_at"),
+                   "reason": entry.get("reason")},
+           dry_run=False, cite="p.302")
+    return filled
+
+
+def _drain_flatten_queue() -> dict:
+    """Tick step (a2). See FLATTEN_HELD_CODE. Invariants: nothing is placed or
+    cancelled while disarmed; a 'sent' entry is never re-sold or re-cancelled
+    while its order is still open; an entry is dropped only when the position
+    is gone."""
+    out = _empty_drain()
+    cfg = get_config()
+    queue = cfg["flatten_queue"]
+    out["queued"] = len(queue)
+    if not queue:
+        return out
+    if not cfg["armed"]:
+        out["skipped_disarmed"] = len(queue)
+        return out
+    try:
+        positions = {(p.get("symbol") or "").upper(): p for p in broker.positions()}
+        open_orders = _flatten_orders(broker.open_orders())
+    except BrokerError as exc:
+        out["errors"].append(str(exc))
+        return out
+
+    changes = {}                     # symbol -> new entry, or None = drop
+    for entry in queue:
+        sym = entry["symbol"]
+        if sym not in positions:
+            _finish_queued_exit(entry)
+            out["done"] += 1
+            changes[sym] = None
+            continue
+        if entry["state"] == "sent":
+            oid = entry.get("order_id")
+            if oid:
+                still_open = any(o.get("id") == oid for o in open_orders)
+            else:
+                still_open = any((o.get("symbol") or "").upper() == sym
+                                 and (o.get("side") or "").lower() == "sell"
+                                 and _order_type(o) == "market"
+                                 for o in open_orders)
+            if not still_open and _sent_order_filled(entry):
+                still_open = True      # filled; the position read just lags
+            if still_open:
+                out["sent_waiting"] += 1
+                continue
+            # The accepted sell is gone but the position is not (rejected /
+            # cancelled elsewhere / expired) -> retry from pending.
+            entry = dict(entry, state="pending", order_id=None, sent_at=None)
+
+        # pending: free the shares (skip orders already pending_cancel — a
+        # second cancel on those is what Alpaca rejects), then close.
+        canceled, cancel_errors = 0, []
+        for o in open_orders:
+            if (o.get("symbol") or "").upper() != sym:
+                continue
+            if (o.get("status") or "").lower() == "pending_cancel":
+                continue
+            oid = o.get("id")
+            if not oid:
+                continue
+            try:
+                broker.cancel_order(oid)
+                canceled += 1
+            except BrokerError as exc:
+                cancel_errors.append(str(exc))
+        try:
+            resp = broker.close_position(sym) or {}
+        except BrokerError as exc:
+            if _held_for_orders(exc):
+                out["still_held"] += 1          # expected every minute until the session
+            else:
+                out["errors"].append("flatten_queue %s: %s" % (sym, exc))
+            changes[sym] = entry                # keeps a pending reset
+            continue
+        entry = dict(entry, state="sent", order_id=resp.get("id") or None,
+                     sent_at=_utc_iso())
+        ledger("flatten", symbol=sym,
+               detail={"canceled": canceled, "cancel_errors": cancel_errors,
+                       "closed": True, "order_id": entry["order_id"],
+                       "reason": entry.get("reason"), "queued_at": entry.get("queued_at"),
+                       "note": "drained from flatten_queue"},
+               dry_run=False, cite="p.302")
+        _notify_autopilot(
+            "position_alert", sym,
+            "%s exit sent at market (queued %s) — %s" % (
+                sym, (entry.get("queued_at") or "earlier")[:16].replace("T", " "),
+                entry.get("reason") or "owner exit"))
+        out["drained"] += 1
+        changes[sym] = entry
+    if changes:
+        _queue_commit(lambda q: _apply_queue_changes(q, changes))
+    return out
+
+
+def _apply_queue_changes(queue: list, changes: dict) -> list:
+    """Merge one drain's results onto the FRESH queue: entries the drain did
+    not touch (an exit the owner queued meanwhile) stay; an entry the owner
+    unqueued meanwhile stays gone even if the drain moved it on."""
+    out = []
+    for e in queue:
+        sym = e["symbol"]
+        if sym in changes:
+            if changes[sym] is not None:
+                out.append(dict(changes[sym]))
+            continue
+        out.append(e)
+    return out
+
+
+def _sent_order_filled(entry: dict) -> bool:
+    """A 'sent' exit whose order left the open list: filled (position read
+    lagging) or gone for good (rejected / cancelled elsewhere / expired)?"""
+    since = _utc_iso(datetime.now(timezone.utc)
+                     - timedelta(days=FLATTEN_SENT_LOOKBACK_DAYS))
+    try:
+        o = _find_sent_order(broker.closed_orders_since(since), entry)
+    except BrokerError:
+        return False
+    return bool(o is not None and (o.get("status") or "").lower() == "filled")
+
+
 def tick(force: bool = False) -> dict:
     summary = {"ok": True, "forced": bool(force), "market_open": None,
                "armed": False, "regime": None, "positions": 0,
                "adopted": 0, "ratcheted": 0, "watchdog_exits": 0,
                "distribution_exits": 0, "distribution_alerts": 0,
-               "dry_run_rows": 0, "streak_events": 0, "errors": []}
+               "dry_run_rows": 0, "streak_events": 0, "errors": [],
+               "flatten_queue": _empty_drain()}
 
     # (0) sim matching engine — duck-called when the active broker has one
     # (the sim broker fills pending orders against Massive quotes here; a
@@ -555,6 +910,18 @@ def tick(force: bool = False) -> dict:
             update_config(last_not_configured_day=today)
         summary.update(ok=False, reason="not_configured")
         return summary
+
+    # (a2) flatten queue — owner exits Alpaca refused because the shares were
+    # held for pending-cancel orders (FLATTEN_HELD_CODE). Runs BEFORE the
+    # market-closed early return on purpose: a market sell submitted outside
+    # hours is accepted and queues for the open, so the exit goes out the
+    # minute Alpaca releases the shares. Fenced: a bug here must never take
+    # stop protection below down with it.
+    try:
+        summary["flatten_queue"] = _drain_flatten_queue()
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("flatten queue drain failed: %s", exc)
+        summary["errors"].append("flatten_queue: %s" % exc)
 
     # (b) market clock — authoritative; cron's hour band only bounds calls.
     try:
@@ -586,9 +953,16 @@ def tick(force: bool = False) -> dict:
         summary["errors"].append(str(exc))
         return summary
     summary["positions"] = len(positions)
+    queued_syms = {e["symbol"] for e in cfg["flatten_queue"]}
 
     for pos in positions:
         sym = (pos.get("symbol") or "").upper()
+        if sym in queued_syms:
+            # On its way out (flatten queue): a fresh protective stop would
+            # re-hold the shares and block the close forever; the watchdog
+            # cannot sell held shares either. Skip until it is gone.
+            summary["flatten_queue"]["protect_skipped"] += 1
+            continue
         try:
             qty = int(float(pos.get("qty") or 0))
             avg_entry = float(pos.get("avg_entry_price") or 0)
@@ -940,7 +1314,9 @@ def status() -> dict:
         "positions": [],
         "ledger_tail": ledger_tail(20),
         "error": None,
+        "flatten_queue": public_flatten_queue(cfg["flatten_queue"]),
     }
+    queued = {e["symbol"]: e for e in cfg["flatten_queue"]}
     try:
         from trading import auto_entry
         out["auto_entry"] = auto_entry.status_block(cfg)
@@ -1000,7 +1376,10 @@ def status() -> dict:
             # bare "UNPROTECTED" scare when the broker leg is stuck.
             eff = _effective_stop(sym, avg_entry, out["regime"], working)
             watchdog_stop = round(eff, 2) if eff else None
-            if working is not None:
+            qe = queued.get(sym)
+            if qe is not None:
+                stop_status = "queued"           # on its way out (flatten queue)
+            elif working is not None:
                 stop_status = "working"          # live broker stop resting
             elif watchdog_stop and cfg["armed"]:
                 stop_status = "watchdog"         # engine-enforced backstop
@@ -1028,8 +1407,11 @@ def status() -> dict:
                 "target": target, "breakeven_trigger": bt,
                 # Covered = a working broker stop OR the engine watchdog enforces
                 # one. Only "none" (no working stop and nothing to enforce) is
-                # truly uncovered.
+                # truly uncovered. A queued exit is not uncovered risk that
+                # needs a stop: it is leaving at the open.
                 "protected": stop_status != "none",
+                "exit_queued": qe is not None,
+                "exit_queue_state": qe.get("state") if qe is not None else None,
             })
     except Exception as exc:                       # noqa: BLE001 — BrokerError is pre-scrubbed
         out["error"] = str(exc)
@@ -1051,12 +1433,16 @@ def status() -> dict:
 
 # ── Flatten (manual risk-off actions; still gated by armed) ────────────────
 
-def flatten(symbol: str) -> dict:
+def flatten(symbol: str, reason=None) -> dict:
     """Cancel symbol's open orders + close the position. Disarmed -> a
-    dry_run ledger row only (invariant: armed=false places NO orders)."""
+    dry_run ledger row only (invariant: armed=false places NO orders).
+    When Alpaca refuses the close because the shares are held for the
+    just-cancelled (pending_cancel) orders, the exit is QUEUED for the tick
+    (see FLATTEN_HELD_CODE) and the result says queued=True."""
     sym = (symbol or "").strip().upper()
     if not sym:
         raise ValueError("symbol required")
+    reason = _clean_reason(reason)
     if not broker.configured():
         raise ValueError("Alpaca not configured (ALPACA_KEY_ID / ALPACA_SECRET_KEY)")
     cfg = get_config()
@@ -1069,9 +1455,10 @@ def flatten(symbol: str) -> dict:
     if not cfg["armed"]:
         ledger("flatten", symbol=sym,
                detail={"orders_to_cancel": [o.get("id") for o in orders],
+                       "reason": reason,
                        "note": "disarmed — dry run, nothing sent"},
                dry_run=True, cite="p.302")
-        return {"dry_run": True, "canceled": 0, "closed": False,
+        return {"dry_run": True, "canceled": 0, "closed": False, "queued": False,
                 "detail": "disarmed — no orders placed; dry-run ledger row recorded"}
 
     canceled, errors = 0, []
@@ -1090,11 +1477,21 @@ def flatten(symbol: str) -> dict:
         closed = True
     except BrokerError as exc:
         errors.append(str(exc))
+        if _held_for_orders(exc):
+            entry = queue_flatten(sym, reason)
+            ledger("flatten_queued", symbol=sym,
+                   detail={"reason": reason, "error": str(exc),
+                           "orders_cancelled": canceled, "queued_at": entry["queued_at"]},
+                   dry_run=False, cite="p.302")
+            return {"dry_run": False, "canceled": canceled, "closed": False,
+                    "queued": True, "errors": errors,
+                    "queue": public_flatten_queue([entry])[0]}
     ledger("flatten", symbol=sym,
-           detail={"canceled": canceled, "closed": closed, "errors": errors},
+           detail={"canceled": canceled, "closed": closed, "errors": errors,
+                   "reason": reason},
            dry_run=False, cite="p.302")
     return {"dry_run": False, "canceled": canceled, "closed": closed,
-            "errors": errors}
+            "queued": False, "errors": errors}
 
 
 def flatten_all() -> dict:
