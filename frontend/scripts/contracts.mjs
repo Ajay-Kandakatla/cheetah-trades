@@ -328,8 +328,10 @@ const CONTRACTS = [
       const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
       if (!tabs.includes('ict')) errs.push("CM_TABS lacks 'ict'");
       if (tabs.includes('supply')) errs.push("CM_TABS still lists 'supply' — ICT replaced that slot");
-      if (tabs.indexOf('ict') !== tabs.indexOf('zones') + 1) {
-        errs.push("'ict' must sit directly after 'zones' (the old Into Supply slot)");
+      // 2026-09-06 (most-used first): ICT is a study board that measured no
+      // edge (2026-09-04) — it must never lead the strip again.
+      if (tabs.indexOf('ict') < tabs.indexOf('quick_bounce')) {
+        errs.push("'ict' must sit behind the demand boards (most-used-first order, 2026-09-06)");
       }
       if (!/\n\s*ict:\s*\{/.test(src)) errs.push('TAB_META.ict is missing');
       if (!/if \(t === 'supply'\) return 'ict';/.test(src)) {
@@ -341,6 +343,38 @@ const CONTRACTS = [
       if (/\b(ema|sma|vwap)\b/i.test(src.slice(src.indexOf('ict: {'), src.indexOf('topping: {')))) {
         errs.push('the ICT blurb mentions a moving average — the strategy is purely price action');
       }
+      return errs;
+    },
+  },
+  {
+    name: 'Chart Maps runs most-used first and counts every tab open (2026-09-06)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-06: "Move most used tabs to the beginning of the list." No
+    // per-tab use had ever been recorded (page views log the pathname only),
+    // so the order is a first cut from the boards his alerts and asks land
+    // on, and the page now counts every tab open so the next cut is measured.
+    // Four halves a rebase could lose one at a time: the leading three, the
+    // bare-link default following the first tab, the tracking call, and the
+    // highlight that told him the strip moved.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/);
+      if (!m) return ['CM_TABS declaration not found'];
+      const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      if (tabs.slice(0, 3).join(',') !== 'zones,deep_demand,quick_bounce') {
+        errs.push(`CM_TABS must lead with zones, deep_demand, quick_bounce — got ${tabs.slice(0, 3).join(', ')}`);
+      }
+      if (!/export const DEFAULT_TAB: CmTab = CM_TABS\[0\];/.test(src)) errs.push('DEFAULT_TAB no longer follows CM_TABS[0]');
+      if (!/\? \(t as CmTab\) : DEFAULT_TAB;/.test(src)) {
+        errs.push("parseTab's fallback is no longer DEFAULT_TAB — a bare /chart-maps would open elsewhere");
+      }
+      if (!/export function tabUsageKey\(/.test(src)) errs.push('tabUsageKey helper is gone');
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/trackFeature\(tabUsageKey\(tab\)\)/.test(page)) {
+        errs.push('ChartMaps.tsx no longer counts tab opens — the order could never be re-cut from use');
+      }
+      const feats = read('src/lib/newFeatures.ts');
+      if (!/id: 'chart-maps-most-used-first'/.test(feats)) errs.push("newFeatures.ts lost the 'chart-maps-most-used-first' highlight");
       return errs;
     },
   },
@@ -390,8 +424,8 @@ const CONTRACTS = [
       if (!m) return ['CM_TABS declaration not found'];
       const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
       if (!tabs.includes('catalysts')) errs.push("CM_TABS lacks 'catalysts'");
-      if (tabs.indexOf('catalysts') !== tabs.indexOf('overnight') + 1) {
-        errs.push("'catalysts' must sit directly after 'overnight' (both are movers boards)");
+      if (Math.abs(tabs.indexOf('catalysts') - tabs.indexOf('overnight')) !== 1) {
+        errs.push("'catalysts' must sit beside 'overnight' (both are movers boards)");
       }
       if (!/\n\s*catalysts:\s*\{/.test(src)) errs.push('TAB_META.catalysts is missing');
       if (!/t !== 'catalysts'/.test(src)) errs.push("isBoardTab still treats 'catalysts' as a board — /chart-maps would be fetched for it");

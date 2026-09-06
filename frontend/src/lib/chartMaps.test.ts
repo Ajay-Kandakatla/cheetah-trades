@@ -13,9 +13,9 @@ import {
   markerIndex, monthTicks, parseSource, parseTab, recordLine, sepaHref,
   THEME_LABEL, themeLabel, WINNER_SOURCES,
   toneColor, xFor, yFor,
-  type CmBar, type CmBand, type CmLine,
+  type CmBar, type CmBand, type CmLine, type CmTab,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
-  CM_TABS, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText,
+  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey,
   dropCollidingTicks, priceTicks, tickDecimals,
   GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
   priceAt, shortVol, textWidth, tooltipPos,
@@ -47,11 +47,14 @@ describe('parseTab', () => {
   });
 
   // A stale bookmark or a typo must still show charts, not an empty board.
-  it('falls back to vcp on unknown, empty, null and undefined', () => {
-    expect(parseTab('nope')).toBe('vcp');
-    expect(parseTab('')).toBe('vcp');
-    expect(parseTab(null)).toBe('vcp');
-    expect(parseTab(undefined)).toBe('vcp');
+  it('falls back to the first (most-used) tab on unknown, empty, null and undefined', () => {
+    // 2026-09-06: the fallback FOLLOWS the order (DEFAULT_TAB = CM_TABS[0]),
+    // so a bare /chart-maps opens on the most-used board, not on a constant.
+    expect(parseTab('nope')).toBe(DEFAULT_TAB);
+    expect(parseTab('')).toBe(DEFAULT_TAB);
+    expect(parseTab(null)).toBe(DEFAULT_TAB);
+    expect(parseTab(undefined)).toBe(DEFAULT_TAB);
+    expect(DEFAULT_TAB).toBe('zones');
   });
 });
 
@@ -610,8 +613,11 @@ describe('the Earnings Flow tab', () => {
     // tickers Ajay typed into the Signal Lab.
     // 2026-09-03 (late): `ict` REPLACED `supply` in its slot ("replace supply
     // tab with this new tab") — same position, Into Supply is gone.
+    // 2026-09-06: MOST-USED FIRST (Ajay: "Move most used tabs to the
+    // beginning of the list") — the demand boards lead, the SEPA slices and
+    // ICT moved behind every S/D read; see the describe at the end of this file.
     expect(CM_TABS).toEqual(
-      ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'quick_bounce', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -626,8 +632,8 @@ describe('the Earnings Flow tab', () => {
   });
 
   it('an unknown tab still falls back rather than 404ing a bookmark', () => {
-    expect(parseTab('earnigs')).toBe('vcp');
-    expect(parseTab(null)).toBe('vcp');
+    expect(parseTab('earnigs')).toBe(DEFAULT_TAB);
+    expect(parseTab(null)).toBe(DEFAULT_TAB);
   });
 });
 
@@ -666,9 +672,16 @@ describe('the Support Levels tab', () => {
     // whether the session is confirming their daily band.
     // 2026-09-03 (late): `ict` took the `supply` slot — still a level board
     // (daily swings + FVGs), so the cluster stays contiguous.
+    // 2026-09-06: the strip runs most-used first, so the SEPA slices now sit
+    // inside the run. What still holds: the three demand boards lead and are
+    // contiguous, every level board precedes the per-ticker tool, and the
+    // tool closes the level reads before the option / ledger tabs.
     const i = CM_TABS.indexOf('support');
-    expect(CM_TABS.slice(CM_TABS.indexOf('zones'), i + 1))
-      .toEqual(['zones', 'ict', 'deep_demand', 'quick_bounce', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support']);
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+    for (const t of ['zones', 'deep_demand', 'quick_bounce', 'ict', 'gabbar', 'undervalue'] as CmTab[]) {
+      expect(CM_TABS.indexOf(t)).toBeLessThan(i);
+    }
+    expect(CM_TABS.slice(i)).toEqual(['support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('support')).toBe('support');
   });
 
@@ -688,7 +701,8 @@ describe('the Support Levels tab', () => {
     // 2026-09-05: `catalysts` is the fifth — the Catalysts page body mounted
     // as a tab (its own /catalysts/* endpoints and sub-tabs).
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
-    expect(nonBoard).toEqual(['session', 'signals', 'overnight', 'catalysts', 'support']);
+    // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
+    expect(nonBoard).toEqual(['session', 'signals', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -705,7 +719,7 @@ describe('the Support Levels tab', () => {
   });
 
   it('a typo in the tab name still lands on a real board', () => {
-    expect(parseTab('suport')).toBe('vcp');
+    expect(parseTab('suport')).toBe(DEFAULT_TAB);
     expect(parseTab('SUPPORT')).toBe('support');
   });
 });
@@ -713,8 +727,8 @@ describe('the Support Levels tab', () => {
 
 // ── Catalysts tab (Ajay 2026-09-05: "move catalyst tab in to Chart maps") ────
 describe('the Catalysts tab', () => {
-  it('sits right after Overnight — both are movers boards', () => {
-    expect(CM_TABS.indexOf('catalysts')).toBe(CM_TABS.indexOf('overnight') + 1);
+  it('sits beside Overnight — both are movers boards (Catalysts first since the 2026-09-06 most-used reorder)', () => {
+    expect(CM_TABS.indexOf('overnight')).toBe(CM_TABS.indexOf('catalysts') + 1);
     expect(parseTab('catalysts')).toBe('catalysts');
     expect(parseTab('CATALYSTS')).toBe('catalysts');
   });
@@ -742,7 +756,7 @@ describe('the Catalysts tab', () => {
   });
 
   it('a typo still lands on a real board (negative)', () => {
-    expect(parseTab('catalyst')).toBe('vcp');
+    expect(parseTab('catalyst')).toBe(DEFAULT_TAB);
   });
 });
 
@@ -1011,8 +1025,9 @@ describe('hoverLines + shortVol', () => {
 // "create a new chart maps tab for ICT Strategy, replace supply tab with this
 // new tab." Was the Into Supply tab (2026-08-20 → 2026-09-03).
 describe('the ICT tab', () => {
-  it('took the Into Supply slot — directly after Back in Demand', () => {
-    expect(CM_TABS.indexOf('ict')).toBe(CM_TABS.indexOf('zones') + 1);
+  it('replaced Into Supply; since the 2026-09-06 most-used reorder it sits behind the SEPA slices (study board, no edge measured 2026-09-04)', () => {
+    expect(CM_TABS.indexOf('ict')).toBe(CM_TABS.indexOf('topping') + 1);
+    expect(CM_TABS.indexOf('ict')).toBeGreaterThan(CM_TABS.indexOf('quick_bounce'));
     expect(CM_TABS).not.toContain('supply');
     expect(parseTab('ict')).toBe('ict');
     expect(parseTab(' ICT ')).toBe('ict');
@@ -1478,5 +1493,47 @@ describe('Quick Bounce tab (Ajay 2026-09-06)', () => {
       .toBe('Persistence: names ranked in the top quarter by their first-half quick rate ran 45% in the second half vs 39% for the bottom quarter (+6 pts, rank corr 0.11) — the ranking carries over weakly.');
     expect(quickBouncePersistenceText({ top_q_second_half_pct: 30, bottom_q_second_half_pct: 31, gap_pts: -1, rank_corr: null })).toMatch(/does not carry over/);
     expect(quickBouncePersistenceText({ top_q_second_half_pct: 60, bottom_q_second_half_pct: 30, gap_pts: 30 })).toMatch(/ranking carries over\./);
+  });
+});
+
+
+// ── Most-used tabs first (Ajay 2026-09-06: "Move most used tabs to the
+// beginning of the list") ────────────────────────────────────────────────────
+// Nothing had ever recorded which tab was open (page views log the pathname
+// only), so this order is the first cut from where his alerts and asks land;
+// the page now counts every tab open so the next cut is measured.
+describe('tab order — most-used first', () => {
+  it('leads with the three demand boards, in the order the alerts land on them', () => {
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+  });
+
+  it('keeps the SEPA slices and the no-edge ICT study board behind every S/D read', () => {
+    const sd: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'session', 'signals', 'catalysts', 'overnight', 'gabbar'];
+    const lastSd = Math.max(...sd.map((t) => CM_TABS.indexOf(t)));
+    for (const t of ['vcp', 'topping', 'ict'] as CmTab[]) {
+      expect(CM_TABS.indexOf(t)).toBeGreaterThan(lastSd);
+    }
+    // `topping` still sits beside `vcp` — two slices of one SEPA scan file.
+    expect(CM_TABS.indexOf('topping')).toBe(CM_TABS.indexOf('vcp') + 1);
+  });
+
+  it('opens a bare /chart-maps on the first tab, not on a separate constant', () => {
+    expect(DEFAULT_TAB).toBe(CM_TABS[0]);
+    expect(parseTab(null)).toBe(CM_TABS[0]);
+    expect(parseTab('garbage')).toBe(CM_TABS[0]);
+  });
+
+  it('names the usage key the order will be re-cut from', () => {
+    expect(tabUsageKey('zones')).toBe('chart-maps:tab:zones');
+    expect(tabUsageKey('quick_bounce')).toBe('chart-maps:tab:quick_bounce');
+    // Under the tracker's 80-char key cap for every tab.
+    for (const t of CM_TABS) expect(tabUsageKey(t).length).toBeLessThan(80);
+  });
+
+  it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
+    expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
+    expect(CM_TABS).toHaveLength(16);
+    expect(CM_TABS).not.toContain('supply');
+    expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
 });

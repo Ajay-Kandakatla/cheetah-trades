@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartMaps } from './ChartMaps';
+import { CM_TABS, TAB_META } from '../lib/chartMaps';
 
 /* ChartMaps — the /chart-maps study board.
  *
@@ -82,7 +83,14 @@ function stubFetch(byTab: Record<string, unknown>) {
   });
 }
 
-const draw = () => render(<MemoryRouter initialEntries={['/chart-maps']}><ChartMaps /></MemoryRouter>);
+/* Most tests read the VCP payload, so they pin ?tab=vcp — a bare /chart-maps
+ * opens on Back in Demand since the 2026-09-06 most-used reorder (tested below). */
+const draw = (entry = '/chart-maps?tab=vcp') => render(<MemoryRouter initialEntries={[entry]}><ChartMaps /></MemoryRouter>);
+
+/* usageTracker is fire-and-forget (sendBeacon); mocked so the tab-open counts
+ * the strip's order is re-cut from can be asserted. */
+const TRACK = vi.hoisted(() => ({ trackFeature: vi.fn() }));
+vi.mock('../lib/usageTracker', () => ({ trackFeature: TRACK.trackFeature }));
 
 /* Access features (backend/access/store.py): `catalysts` is its own grant, so
  * the Catalysts tab is offered only to users who hold it. Mutable per test. */
@@ -95,15 +103,18 @@ beforeEach(() => {
   vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, winners: WINNERS_BOARD, zones: WARMING_BOARD }));
   FEATS.loaded = true;
   FEATS.set = new Set(['chart-maps', 'catalysts']);
+  TRACK.trackFeature.mockClear();
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('ChartMaps', () => {
-  it('lands on the VCP tab and renders its tiles as links', async () => {
+  it('renders the VCP tab tiles as links', async () => {
     draw();
     expect(await screen.findByText('AVGO')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /AVGO — open SEPA detail/ }))
-      .toHaveAttribute('href', '/sepa/AVGO?tab=setup&from=chart-maps');
+    // Pinned on ?tab=vcp since the 2026-09-06 reorder, so the link also
+    // carries the return query (from_q) — the SEPA hand-off itself is unchanged.
+    expect(screen.getByRole('link', { name: /AVGO — open SEPA detail/ }).getAttribute('href'))
+      .toMatch(/^\/sepa\/AVGO\?tab=setup&from=chart-maps(&|$)/);
     expect(screen.getByText(/tightens 23%/)).toBeInTheDocument();
   });
 
@@ -112,6 +123,37 @@ describe('ChartMaps', () => {
     ['Strong VCP', 'Back in Demand', 'Past Winners'].forEach((label) => {
       expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
     });
+    // Most-used first (2026-09-06): the demand boards open the strip, in the
+    // module's own order — a reorder of CM_TABS is what the strip renders.
+    const tabs = screen.getAllByRole('tab');
+    CM_TABS.slice(0, 3).forEach((t, i) => expect(tabs[i]).toHaveTextContent(TAB_META[t].label));
+    expect(tabs[0]).toHaveTextContent('Back in Demand');
+  });
+
+  it('a bare /chart-maps opens on Back in Demand — the most-used tab (2026-09-06)', async () => {
+    draw('/chart-maps');
+    expect(screen.getByRole('tab', { name: 'Back in Demand' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Strong VCP' })).toHaveAttribute('aria-selected', 'false');
+    // Its stub is the warming payload, so the scanning panel is the proof the
+    // demand board (not VCP's tiles) is what loaded.
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(screen.getByText(/Scanning|Loading the/)).toBeInTheDocument();
+    expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
+  });
+
+  it('counts every tab open under chart-maps:tab:<tab> so the order can be re-cut from use', async () => {
+    draw('/chart-maps?tab=zones');
+    expect(TRACK.trackFeature).toHaveBeenCalledWith('chart-maps:tab:zones');
+    fireEvent.click(screen.getByRole('tab', { name: 'Strong VCP' }));
+    await waitFor(() => expect(TRACK.trackFeature).toHaveBeenCalledWith('chart-maps:tab:vcp'));
+    // Once per open, not once per render.
+    expect(TRACK.trackFeature.mock.calls.filter((c) => c[0] === 'chart-maps:tab:zones')).toHaveLength(1);
+  });
+
+  it('counts the retired ?tab=supply bookmark as ICT, never as supply (NEGATIVE)', () => {
+    draw('/chart-maps?tab=supply');
+    expect(TRACK.trackFeature).toHaveBeenCalledWith('chart-maps:tab:ict');
+    expect(TRACK.trackFeature).not.toHaveBeenCalledWith('chart-maps:tab:supply');
   });
 
   it('reports how many matched out of how many were scanned', async () => {
@@ -623,8 +665,12 @@ describe('ChartMaps — the ICT tab (2026-09-03)', () => {
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
     expect(tabs).toContain('ICT');
     expect(tabs).not.toContain('Into Supply');
-    const zones = tabs.indexOf('Back in Demand');
-    expect(tabs[zones + 1]).toBe('ICT');
+    // 2026-09-06 most-used reorder: ICT (a study board, no edge measured)
+    // sits behind the SEPA slices, right after S3 Topping.
+    const topping = tabs.findIndex((t) => /S3 Topping/.test(t ?? ''));
+    expect(topping).toBeGreaterThan(-1);
+    expect(tabs[topping + 1]).toBe('ICT');
+    expect(tabs.indexOf('ICT')).toBeGreaterThan(tabs.indexOf('Back in Demand'));
   });
 
   it('renders the engine tiles through the shared tile component', async () => {
@@ -846,13 +892,17 @@ describe('the Catalysts tab', () => {
     expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
   });
 
-  it('is NOT offered to a user without the `catalysts` feature, and ?tab=catalysts falls back to VCP (negative)', async () => {
+  it('is NOT offered to a user without the `catalysts` feature, and ?tab=catalysts falls back to the first tab (negative)', async () => {
     FEATS.set = new Set(['chart-maps']);
     render(<MemoryRouter initialEntries={['/chart-maps?tab=catalysts']}><ChartMaps /></MemoryRouter>);
     expect(screen.queryByRole('tab', { name: /Catalysts/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId('catalysts-board')).not.toBeInTheDocument();
-    expect(await screen.findByText('AVGO')).toBeInTheDocument();          // the first tab's board
-    expect(screen.getByRole('tab', { name: 'Strong VCP' })).toHaveAttribute('aria-selected', 'true');
+    // The first tab's board — Back in Demand since the 2026-09-06 reorder
+    // (its stub is the warming payload, so the scanning panel is the proof).
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Back in Demand' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Strong VCP' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
     // Every other tab is still there — only the gated one is missing.
     ['Back in Demand', 'Past Winners', 'ICT'].forEach((label) => {
       expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();

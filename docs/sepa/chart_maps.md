@@ -183,6 +183,48 @@ Measured warm: **0.23s** for 24 VCP tiles, **0.15s** for 24 winners.
   tiles. Locks that the winners tab always shows its stop-first losses and that
   the demand tab says "scanning" rather than "nothing matched" while warming.
 
+## Tab order — most-used first (2026-09-06)
+
+Ajay 2026-09-06: "Move most used tabs to the beginning of the list."
+
+**What was measurable:** nothing per tab. Page views (`usage_events`) log the
+pathname only, the API keeps no access log (uvicorn access logging is off and
+`cheetah.log` carries app lines only), and `feature_events` records the first
+time a highlight was seen, not how often a tab is opened.
+
+**First cut** (`CM_TABS` in `frontend/src/lib/chartMaps.ts`), from where his
+alerts and asks land:
+
+| # | tab | why it sits here |
+|---|---|---|
+| 1 | Back in Demand | every S/D push (🧲 demand, 🪃 bounce, 🚀 supply break) lands here |
+| 2 | Deep Demand | the other demand board (proximity ordering) |
+| 3 | Quick Bounce | asked for the same day; the day-trade list |
+| 4 | Session | reads the two demand boards intraday |
+| 5 | Signals | his own tickers, 1-min tags |
+| 6 | Catalysts | moved into Chart Maps 2026-09-05 (CLYB, EOSE came from it) |
+| 7 | Overnight | Catalysts' movers twin |
+| 8 | Gabbar Levels | backtested levels with their own alerts |
+| 9–10 | Strong VCP, S3 Topping | SEPA-scan slices; that scan is read on the SEPA page |
+| 11 | ICT | study board — no edge vs placebo (2026-09-04) |
+| 12–16 | Under Value, Support Levels, 0DTE, Earnings Flow, Past Winners | occasional |
+
+A bare `/chart-maps` (and any unknown `?tab=`) now opens on the FIRST tab
+(`DEFAULT_TAB = CM_TABS[0]`), so the landing board follows the order.
+
+**Measured from now on:** the page calls `trackFeature(tabUsageKey(tab))` on
+every tab open (landing or click) → `POST /usage/track` → Mongo `usage_stats`
+`_id: feature:chart-maps:tab:<tab>` with `count` and weekday/hour `buckets`.
+Re-cut the order from the numbers once ~2 weeks have accumulated:
+
+    db.usage_stats.find({_id: /^feature:chart-maps:tab:/}, {count: 1}).sort({count: -1})
+
+Adjacencies kept on purpose: Deep Demand → Quick Bounce → Session → Signals,
+Catalysts beside Overnight, S3 Topping beside Strong VCP, Support Levels closes
+the level boards before the option / ledger tabs. Pinned in
+`frontend/src/lib/chartMaps.test.ts` ("tab order — most-used first") and
+`frontend/scripts/contracts.mjs` ("Chart Maps runs most-used first…").
+
 ---
 
 **Not advice.** The winners tab shows a measured sample of what happened to past

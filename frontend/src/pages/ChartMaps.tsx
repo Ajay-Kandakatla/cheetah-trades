@@ -24,7 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
-  quickBounceStudyText, quickBouncePersistenceText,
+  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
@@ -48,6 +48,7 @@ import { ZoneEdgeBoard } from '../components/ZoneEdgeBoard';
 import { CatalystsBoard } from '../pages/Catalysts';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
+import { trackFeature } from '../lib/usageTracker';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
  *  warming poll on purpose — this is drift correction, not live data. */
@@ -63,12 +64,16 @@ const HowItWorks = (
   <>
     <p>A study board — the same scans you already run, shown as charts instead
       of rows, so the shape is what you remember.</p>
+    <p><strong>Order.</strong> The tabs run most-used first (2026-09-06): the
+      demand boards lead and a bare Chart Maps link opens on Back in Demand;
+      the SEPA slices and the study boards follow. Every tab open is counted,
+      so the order is re-cut from the numbers rather than from memory.</p>
     <ul>
+      <li><strong>🟢 Back in Demand</strong> — price left a demand zone and has
+        come back into it. Band is the zone; BUY / STOP / TARGET are the plan.</li>
       <li><strong>📐 Strong VCP</strong> — the SEPA scan named VCP as the entry
         setup <em>and</em> the base scored tight (≥70). The green box is the
         base, the solid line the pivot, the dashed line the suggested stop.</li>
-      <li><strong>🟢 Back in Demand</strong> — price left a demand zone and has
-        come back into it. Band is the zone; BUY / STOP / TARGET are the plan.</li>
       <li><strong>🧭 ICT</strong> — took the Into Supply slot on 2026-09-03.
         Two clocks: the daily chart sets the key levels (3-candle fractal
         swings and open fair value gaps) and the 60-minute loop wakes only
@@ -120,6 +125,11 @@ export function ChartMaps() {
   const tabs = canCatalysts ? CM_TABS : CM_TABS.filter((t) => t !== 'catalysts');
   const rawTab = parseTab(params.get('tab'));
   const tab = rawTab === 'catalysts' && !canCatalysts ? parseTab(null) : rawTab;
+  // Count every tab open (landing or click) — Ajay 2026-09-06: "Move most
+  // used tabs to the beginning of the list"; nothing had recorded which tab
+  // was open, so the strip's order is re-cut from these counts (Mongo
+  // usage_stats `feature:chart-maps:tab:<tab>`). Best-effort, never blocks.
+  useEffect(() => { trackFeature(tabUsageKey(tab)); }, [tab]);
   const pattern = params.get('pattern');
   const source = parseSource(params.get('source'));
   // Chart window. Per-tab defaults live on the backend; this only widens the

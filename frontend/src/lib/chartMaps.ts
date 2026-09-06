@@ -13,33 +13,37 @@ import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
 export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
-// `support` sits next to `zones` because it is the same structure at a
-// different zoom — but it is the only tab that is NOT a board: it takes a
-// ticker and computes, so the page skips its board fetch there entirely.
-// `ict` sits directly after `zones` — it TOOK the Into Supply slot (Ajay
-// 2026-09-03 late: "create a new chart maps tab for ICT Strategy, replace
-// supply tab with this new tab"). `supply` stays in the CmTab union so
-// TAB_META keeps its copy and an old ?tab=supply deep link still renders (it
-// resolves to `ict`, see parseTab); it is no longer in CM_TABS.
-// `zero_dte` sits after the structure tabs and before the ledger ones: it is
-// the only tab reading LIVE option chains rather than a cached equity scan,
-// so it is deliberately not adjacent to the boards it can be confused with.
-// `deep_demand` follows `ict` — it is the darkest read of the same zone
-// structure: the first band already failed. `gabbar` follows it as the other
-// levels-plus-sales board; both carry the Bonde sales gate.
-// `topping` sits beside `vcp` — both are slices of the same SEPA scan file,
-// one long-side, one short-side.
-// `session` sits right after `deep_demand` because it READS those two tabs:
-// it is the same names asked a different question (is the session confirming
-// the daily band?), so it belongs beside its own inputs.
-// `signals` sits beside `session` — both are intraday reads; session asks
-// the demand boards' names, signals asks whatever tickers Ajay typed.
-// `catalysts` sits right after `overnight` (Ajay 2026-09-05: "move catalyst
-// tab in to Chart maps") — both are MOVERS boards: overnight is what moved
-// while you slept, catalysts is what is moving now and why (chatter vs
-// evidence). Its own page became a redirect here; it is not a board tab (own
-// endpoints, own sub-tabs), so the /chart-maps fetch is skipped for it.
-export const CM_TABS: CmTab[] = ['vcp', 'topping', 'zones', 'ict', 'deep_demand', 'quick_bounce', 'session', 'signals', 'overnight', 'catalysts', 'gabbar', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+// Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
+// beginning of the list"). Nothing had ever recorded which tab was open —
+// page views log the pathname only, the API keeps no access log — so this
+// first cut is the evidence at hand: every S/D push (demand, bounce, supply
+// break) lands on Back in Demand / Deep Demand, Quick Bounce was asked for
+// the same day, Session and Signals are the intraday reads of those names,
+// Catalysts was moved in on 2026-09-05 with Overnight as its movers twin,
+// Gabbar carries its own alerts. The SEPA slices (Strong VCP, S3 Topping)
+// sit behind them because that scan is read on the SEPA page, ICT measured
+// no edge (2026-09-04) and is a study board, and the rest are occasional.
+// From this change on every tab open is counted (tabUsageKey → Mongo
+// usage_stats `feature:chart-maps:tab:<tab>`), so the next cut is measured.
+// Adjacencies kept: `deep_demand` → `quick_bounce` → `session` → `signals`
+// (session READS the two demand boards; signals is the other intraday read),
+// `catalysts` beside `overnight` (both movers boards), `topping` beside `vcp`
+// (two slices of one SEPA scan file), `support` — the only per-ticker tool —
+// closes the level boards before the option / ledger tabs. `supply` stays in
+// the CmTab union so TAB_META keeps its copy and an old ?tab=supply deep link
+// still renders (→ `ict`, see parseTab); it is not in CM_TABS.
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+
+/** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
+ *  most-used tab, so the landing board follows the order itself. */
+export const DEFAULT_TAB: CmTab = CM_TABS[0];
+
+/** usage/track key for one tab open (landing or click). Read back from Mongo
+ *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
+ *  buckets) to re-cut CM_TABS from measured use. */
+export function tabUsageKey(t: CmTab): string {
+  return `chart-maps:tab:${t}`;
+}
 
 /** Tabs driven by a scan. `support` answers one ticker on request, so the
  *  board loader, the sort/tier controls and the tile grid are all skipped for
@@ -317,10 +321,10 @@ export function parseTab(raw: string | null | undefined): CmTab {
   const t = (raw || '').trim().toLowerCase();
   // The Into Supply slot was replaced by ICT on 2026-09-03 (Ajay: "replace
   // supply tab with this new tab"). An old ?tab=supply bookmark lands on the
-  // tab that took its place rather than falling back to VCP — same slot,
+  // tab that took its place rather than falling back to the first tab — same slot,
   // same neighbourhood, and the backend still resolves "supply" on its side.
   if (t === 'supply') return 'ict';
-  return (CM_TABS as string[]).includes(t) ? (t as CmTab) : 'vcp';
+  return (CM_TABS as string[]).includes(t) ? (t as CmTab) : DEFAULT_TAB;
 }
 
 /* ── ICT tab (Ajay 2026-09-03) ────────────────────────────────────────────── */
