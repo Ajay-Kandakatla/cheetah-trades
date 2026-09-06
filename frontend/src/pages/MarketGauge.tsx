@@ -12,6 +12,8 @@ import { FearGreedGauge } from '../components/FearGreedGauge';
 import { GaugeTrend } from '../components/GaugeTrend';
 import { MacroIndicators } from '../components/MacroIndicators';
 import { useMarketGauge, type GaugeComponent } from '../hooks/useMarketGauge';
+import { useMarketIv } from '../hooks/useMarketIv';
+import { fmtRatio, ivArrow, ivRegimeWord, ordinal } from '../lib/ivFormat';
 import HotSectors from '../components/HotSectors';
 
 const PageInfo = (
@@ -70,6 +72,55 @@ function ComponentBar({ c }: { c: GaugeComponent }) {
   );
 }
 
+/* Implied-volatility card — the nav IvBadge, expanded (Ajay 2026-09-06):
+ * VIX level + change, regime, 252-day percentile, term structure (9D/30D,
+ * 30D/3M + shape), VVIX, the read line and the disclaimer. Renders nothing
+ * until loaded or when VIX is missing. */
+function IvCard() {
+  const iv = useMarketIv();
+  if (!iv || iv.vix == null) return null;
+  const regime = iv.regime ?? 'na';
+  const arrow = ivArrow(iv.chg);
+  const word = ivRegimeWord(iv);
+  const t = iv.term;
+  const chgPct = iv.chg_pct != null && arrow
+    ? ` (${iv.chg_pct > 0 ? '+' : ''}${iv.chg_pct.toFixed(1)}%)`
+    : '';
+  return (
+    <section className={`mg-iv mg-iv--${regime}`} aria-label="Implied volatility">
+      <div className="eyebrow">
+        Implied volatility · VIX{iv.as_of ? ` · as of ${iv.as_of}` : ''}
+      </div>
+      <div className="mg-iv__head">
+        <span className="mg-iv__level mono">{iv.vix.toFixed(1)}</span>
+        {arrow && <span className="mg-iv__chg mono">{arrow}{chgPct}</span>}
+        {word && <span className={`mg-iv__regime mg-iv__regime--${regime}`}>{word}</span>}
+        {iv.pct_252 != null && (
+          <span className="mg-iv__pct mono">{ordinal(iv.pct_252)} pct of the last 252 sessions</span>
+        )}
+      </div>
+      <dl className="mg-iv__grid">
+        <div><dt>9D / 30D</dt><dd className="mono">{fmtRatio(t?.ratio_9d_30d)}</dd></div>
+        <div>
+          <dt>30D / 3M</dt>
+          <dd className="mono">{fmtRatio(t?.ratio_30d_3m)}{t?.shape ? ` ${t.shape}` : ''}</dd>
+        </div>
+        <div><dt>VVIX</dt><dd className="mono">{iv.vvix != null ? Math.round(iv.vvix) : '—'}</dd></div>
+        {iv.bands && (
+          <div>
+            <dt>Bands</dt>
+            <dd className="mono">
+              calm &lt;{iv.bands.calm_below} · normal &lt;{iv.bands.normal_below} · elevated &lt;{iv.bands.elevated_below}
+            </dd>
+          </div>
+        )}
+      </dl>
+      {iv.read && <p className="mg-iv__read">{iv.read}</p>}
+      {iv.disclaimer && <p className="mg-disclaimer">{iv.disclaimer}</p>}
+    </section>
+  );
+}
+
 export function MarketGaugePage() {
   const g = useMarketGauge();
 
@@ -111,6 +162,9 @@ export function MarketGaugePage() {
               </div>
             </div>
           </section>
+
+          {/* Implied volatility — the nav IV badge, expanded (Ajay 2026-09-06). */}
+          <IvCard />
 
           {/* Next-day outlook — current regime + what would flip it (NOT a price call) */}
           {g.next_day_outlook && (

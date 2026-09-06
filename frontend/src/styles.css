@@ -2326,6 +2326,48 @@ tr:last-child td { border-bottom: none; }
 .mg-badge--risk_off     { background: var(--negative-bg, rgba(190,40,40,0.14)); color: var(--negative); border-color: var(--negative); }
 .mg-badge.is-active { outline: 1px solid currentColor; outline-offset: 1px; }
 
+/* IV badge — implied-volatility read beside the Market Gauge badge in both nav
+   layouts (Ajay 2026-09-06). Same tokens as .mg-badge: calm + normal → positive,
+   elevated → warn, stress → negative; the percentile chip mirrors __weekly. */
+.iv-badge {
+  display: inline-flex; align-items: center; gap: 0.32rem;
+  padding: 2px 8px; border-radius: 999px;
+  font: 600 0.72rem var(--sans, system-ui);
+  text-decoration: none; border: 1px solid transparent; white-space: nowrap;
+}
+.iv-badge__label { font-size: 0.6rem; letter-spacing: 0.06em; opacity: 0.8; }
+.iv-badge__level { font-weight: 700; }
+.iv-badge__chg { font-size: 0.62rem; opacity: 0.9; }
+.iv-badge__regime { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.9; }
+.iv-badge__pct { font-size: 0.6rem; font-weight: 700; padding: 0 4px; border-radius: 4px; border: 1px solid currentColor; opacity: 0.85; }
+.iv-badge--compact { padding: 2px 7px; }
+.iv-badge--calm     { background: var(--positive-bg); color: var(--positive); border-color: var(--positive); }
+.iv-badge--normal   { background: var(--positive-bg); color: var(--positive); border-color: var(--positive); }
+.iv-badge--elevated { background: var(--warn-bg, rgba(180,120,0,0.14)); color: var(--warn); border-color: var(--warn); }
+.iv-badge--stress   { background: var(--negative-bg, rgba(190,40,40,0.14)); color: var(--negative); border-color: var(--negative); }
+.iv-badge--na       { background: var(--bg-raised, rgba(255,255,255,0.06)); color: var(--ink-subtle, inherit); border-color: currentColor; }
+.iv-badge.is-active { outline: 1px solid currentColor; outline-offset: 1px; }
+
+/* IV card on /market-gauge — the badge, expanded (level, term structure, VVIX). */
+.mg-iv { margin: 0.8rem 0 1.2rem; padding: 0.8rem 1.1rem; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,22,0.35); }
+.mg-iv--calm, .mg-iv--normal { border-left: 4px solid var(--positive); }
+.mg-iv--elevated { border-left: 4px solid var(--warn); }
+.mg-iv--stress { border-left: 4px solid var(--negative); }
+.mg-iv__head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.2rem; }
+.mg-iv__level { font-size: 1.35rem; font-weight: 700; }
+.mg-iv__chg { font-size: 0.85rem; opacity: 0.85; }
+.mg-iv__regime { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; }
+.mg-iv__regime--calm, .mg-iv__regime--normal { color: var(--positive); }
+.mg-iv__regime--elevated { color: var(--warn); }
+.mg-iv__regime--stress { color: var(--negative); }
+.mg-iv__pct { font-size: 0.72rem; opacity: 0.7; }
+.mg-iv__grid { display: flex; gap: 0.6rem 1.6rem; flex-wrap: wrap; margin: 0.55rem 0 0; font-size: 0.82rem; }
+.mg-iv__grid dt { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; }
+.mg-iv__grid dd { margin: 0; }
+.mg-iv__read { font-size: 0.9rem; opacity: 0.85; margin: 0.55rem 0 0; line-height: 1.5; }
+
 .mg-hero {
   display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
   padding: 1.2rem 1.4rem; border-radius: 10px; margin: 0.5rem 0 1.2rem;

@@ -7,6 +7,7 @@ import { useCurrentUser } from '../hooks/useUser';
 import { useMyMenu, type MenuItem } from '../hooks/useMyMenu';
 import { NavLabel } from './NavLabel';
 import { MarketGaugeBadge } from './MarketGaugeBadge';
+import { IvBadge } from './IvBadge';
 import { ScanHealthChip } from './ScanHealthChip';
 import { MarketPostureBanner } from './MarketPostureBanner';
 import { GlobalSearch } from './GlobalSearch';
@@ -190,6 +191,7 @@ export function NavBar() {
 
         <div className="cm-nav__mobile-actions">
           {hasGauge && <MarketGaugeBadge compact />}
+          {hasGauge && <IvBadge compact />}
           <ScanHealthChip compact />
           <GlobalSearch compact subgroupOf={toolsSubgroupOf} />
           {hasPortfolio && (
@@ -407,6 +409,8 @@ export function NavBar() {
       <div className="cm-nav__meta">
         <MarketPostureBanner />
         {hasGauge && <MarketGaugeBadge />}
+        {/* Implied-volatility read beside the gauge (Ajay 2026-09-06). */}
+        {hasGauge && <IvBadge />}
         {/* Are-all-scans-OK count (Ajay 2026-08-25) — links to /health. */}
         <ScanHealthChip />
         <span className="cm-nav__meta-date mono">{TODAY}</span>

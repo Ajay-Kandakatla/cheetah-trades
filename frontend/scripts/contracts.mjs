@@ -596,6 +596,36 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'NavBar carries the IV badge beside the Market Gauge (2026-09-06)',
+    file: 'src/components/NavBar.tsx',
+    // Ajay 2026-09-06: "Do we have an IV indicator in our pages? can you add
+    // that to our regular used pages as a global indicator? May be beside
+    // Market gauge metric?" The badge must stay mounted in BOTH nav layouts
+    // (desktop meta cluster + phone action bar, compact there), and the
+    // stress regime must keep its own colour rule so a hot tape reads red.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bIvBadge\b[^}]*\}\s*from\s*'\.\/IvBadge'/.test(src)) {
+        errs.push("NavBar.tsx no longer imports IvBadge from './IvBadge'");
+      }
+      const mounts = src.match(/<IvBadge\b/g) || [];
+      if (mounts.length < 2) {
+        errs.push(`NavBar.tsx mounts <IvBadge> ${mounts.length}× — needs the desktop meta cluster AND the phone action bar`);
+      }
+      if (!/<IvBadge\s+compact\b/.test(src)) {
+        errs.push('the phone action bar lost its compact <IvBadge compact> mount');
+      }
+      if (!/hasGauge\s*&&\s*<IvBadge\b/.test(src)) {
+        errs.push('IvBadge is no longer gated by hasGauge — it must follow the Market Gauge badge');
+      }
+      const css = read('src/styles.css');
+      if (!/\.iv-badge--stress\s*\{/.test(css)) {
+        errs.push('styles.css lacks the .iv-badge--stress rule — the stress regime would render unstyled');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
