@@ -87,7 +87,48 @@ fetches; unknown fails closed). See `catalyst_entry.md`.
 
 ## 5. Results — first full run, 2026-09-06 (read-only, api container)
 
-RESULTS_PLACEHOLDER
+Universe 1,751 → 1,736 studied (15 too short), 2-year daily frames, bands
+recomputed at 21-bar anchors, **37,403 visits** to proven demand bands.
+
+| | visits | quick | rate |
+|---|---|---|---|
+| all visits | 37,403 | 7,784 | **20.8 %** |
+| same-day turns | | 4,884 | 13.1 % |
+| next-morning gaps (≥ 2 %) | | 2,900 | 7.8 % |
+| quick on the FIRST touch day | | 4,202 | 11.2 % |
+| **any-day base rate** (placebo, same test on every day) | | | **11.2 %** |
+
+**Edge: +9.6 points** — a visit to a proven demand band roughly doubles the
+odds of a same-day / next-morning turn versus a random day. Median 21 visits
+per name.
+
+**Persistence (first half → second half, split 2025-12-16, 1,570 names):**
+top-quartile names by first-half quick rate ran **32.5 %** in the second half
+versus **20.6 %** for the bottom quartile — a **+11.9-point** carry-over,
+rank correlation **0.24**. The character carries over, moderately, but note
+the regression: the top quartile's own first half was 44.9 %. A name printing
+70 % should be read as "likely above the 21 % universe rate", not as 70 %.
+(The 2026-08-14 5-bar bounce study found a 0.4-point gap — same-day turns are
+a more stable property than 5-bar bounces.)
+
+**The list bar (≥ 3 visits, ≥ 50 % quick): 83 names.** Top by rate (visits /
+quick / rate / own base rate): SEDG 6/5/83 % (29 %), COHU 5/4/80 % (26 %),
+TER 5/4/80 % (27 %), ACMR 9/7/78 % (26 %), BKSY 9/7/78 % (32 %), MOD 11/8/73 %
+(23 %), QS 11/8/73 % (22 %), ALAB 13/9/69 % (35 %), VIK 13/9/69 % (15 %),
+NVDA 16/11/69 % (17 %), KLAC 6/4/67 % (24 %). The list leans semis / equipment
+(TER, KLAC, ACMR, COHU, AMKR, ALAB, NVDA, STX) and high-beta names.
+
+**His examples:** KLAC 4/6 quick (67 % vs 24 % base) — on the list. NTAP
+2/19 (10.5 % vs 9.9 %) — NOT a quick-bounce name by this measure: its 09-03
+turn was off a one-touch broken-supply shelf, which this study (proven
+demand bands only) does not count. EOSE 2/7 (29 % vs 31 % base) — no edge.
+CLYB is outside the universe.
+
+**The live list on the store's last closes (Sep 3; Monday's live prints will
+differ):** 10 names — TER, AMKR, MARA, ASTS inside their band; AMSC, HUT, STX,
+KLAC, CLSK, AVAV 0.2–4.8 % above; 8 more hidden for < 5 % room, 47 sitting
+away from every proven band, 18 of the 83 with no zone doc (the store covers
+$1B+ names only, so the smallest listed names never show).
 
 ## 6. Traps
 
