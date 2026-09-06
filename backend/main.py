@@ -1269,6 +1269,16 @@ async def market_gauge_get(force: bool = Query(False, description="Bypass the 5-
     return JSONResponse(_scrub_nan(await asyncio.to_thread(market_gauge.get_gauge, force)))
 
 
+@app.get("/market/iv")
+async def market_iv_get(force: bool = Query(False, description="Bypass the 3-min cache")):
+    """Market implied-volatility read for the nav badge beside the Market Gauge
+    (Ajay 2026-09-06): VIX level, day change, 252-day percentile, term
+    structure (9D / 30D / 3M) and VVIX. House read on the VIX family — the
+    same source and cut points the gauge's volatility pillar uses. Not advice."""
+    from sepa import iv_read
+    return JSONResponse(_scrub_nan(await asyncio.to_thread(iv_read.get, force)))
+
+
 @app.get("/market/gauge/history")
 async def market_gauge_history(days: int = Query(90, ge=2, le=365)):
     """Daily market-gauge trend — one point per ET day (Ajay 2026-06-13). History
