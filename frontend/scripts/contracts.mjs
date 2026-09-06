@@ -517,6 +517,39 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'NavBar carries the global search palette (2026-09-06)',
+    file: 'src/components/NavBar.tsx',
+    // Ajay 2026-09-06: "give me a global search navigation like if I wanna
+    // search or related like notification I want them to show up from all the
+    // navigational menu." The palette must stay mounted in BOTH nav layouts
+    // (desktop meta cluster + phone action bar), and the synonym map must keep
+    // the two-way notification ↔ alerts bridge that motivated the feature.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bGlobalSearch\b[^}]*\}\s*from\s*'\.\/GlobalSearch'/.test(src)) {
+        errs.push("NavBar.tsx no longer imports GlobalSearch from './GlobalSearch'");
+      }
+      const mounts = src.match(/<GlobalSearch\b/g) || [];
+      if (mounts.length < 2) {
+        errs.push(`NavBar.tsx mounts <GlobalSearch> ${mounts.length}× — needs the desktop meta cluster AND the phone action bar`);
+      }
+      if (!/<GlobalSearch\s+compact\b/.test(src)) {
+        errs.push('the phone action bar lost its compact <GlobalSearch compact> mount');
+      }
+      const ns = read('src/lib/navSearch.ts');
+      if (!/export\s+const\s+NAV_SYNONYMS\s*:/.test(ns)) {
+        errs.push('navSearch.ts no longer exports NAV_SYNONYMS');
+      }
+      if (!/^\s*notifications\s*:\s*\[/m.test(ns)) errs.push("NAV_SYNONYMS lacks the 'notifications' key");
+      if (!/^\s*alerts\s*:\s*\[/m.test(ns)) errs.push("NAV_SYNONYMS lacks the 'alerts' key");
+      if (!/notifications\s*:\s*\[[^\]]*'alerts'/.test(ns)) errs.push("'notifications' synonyms no longer include 'alerts'");
+      if (!/alerts\s*:\s*\[[^\]]*'notification'/.test(ns)) errs.push("'alerts' synonyms no longer include 'notification'");
+      const nf = read('src/lib/newFeatures.ts');
+      if (!/id:\s*'global-search'/.test(nf)) errs.push("newFeatures.ts lacks the 'global-search' highlight");
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

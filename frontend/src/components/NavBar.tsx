@@ -9,6 +9,7 @@ import { NavLabel } from './NavLabel';
 import { MarketGaugeBadge } from './MarketGaugeBadge';
 import { ScanHealthChip } from './ScanHealthChip';
 import { MarketPostureBanner } from './MarketPostureBanner';
+import { GlobalSearch } from './GlobalSearch';
 import { openRail } from '../lib/railBus';
 
 /* ==========================================================================
@@ -70,6 +71,9 @@ const TOOLS_SUBGROUP: Record<string, string> = {
   food: 'Life', kids: 'Life', volleyball: 'Life', house: 'Life',
 };
 const SUBGROUP_ORDER = ['Trade', 'Screeners', 'Zones', 'Tape', 'Signals', 'Life', 'More'];
+// The ⌘K palette (GlobalSearch) names its group chips from the same map, so
+// "Tools ▸ Signals" in the search reads exactly like the dropdown header.
+const toolsSubgroupOf = (feature?: string): string => TOOLS_SUBGROUP[feature ?? ''] ?? 'More';
 
 function groupTools(items: MenuItem[]): Array<{ label: string; items: MenuItem[] }> {
   const buckets = new Map<string, MenuItem[]>();
@@ -187,6 +191,7 @@ export function NavBar() {
         <div className="cm-nav__mobile-actions">
           {hasGauge && <MarketGaugeBadge compact />}
           <ScanHealthChip compact />
+          <GlobalSearch compact subgroupOf={toolsSubgroupOf} />
           {hasPortfolio && (
             <button
               type="button"
@@ -406,6 +411,8 @@ export function NavBar() {
         <ScanHealthChip />
         <span className="cm-nav__meta-date mono">{TODAY}</span>
         <ThemeToggle />
+        {/* ⌘K search over every menu entry (Ajay 2026-09-06). */}
+        <GlobalSearch subgroupOf={toolsSubgroupOf} />
         {/* Bell + dropdown of the last 8 unified notifications (pushes
             merged with sepa_breakouts). Sits to the left of the
             profile avatar — same visual weight, separate concern. */}
