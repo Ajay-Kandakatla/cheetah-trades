@@ -6,11 +6,23 @@
 
 .cm-nav {
   display: grid;
-  /* brand fixed-narrow · nav grows to fill · meta fixed-narrow */
-  grid-template-columns: minmax(110px, auto) 1fr minmax(150px, auto);
+  /* Two rows at EVERY desktop width since 2026-09-06: brand · meta on the
+     first, the primary links on their own full-width row beneath. Until then
+     this was brand · links(1fr) · meta(auto) on one row above 1300px, and the
+     meta cluster — posture banner, gauge, the new IV badge, scans, date,
+     theme, the new ⌘K search pill, bell, avatar — had grown to ~1,400px, so
+     on a 2,000px window the links track collapsed to ~300px and every link
+     wrapped onto its own line (Ajay: "app looks weird"). The row the links
+     used to share never fits any more; giving them their own row is the
+     layout the ≤1300px rule already used, now unconditional. */
+  /* Brand column = its own width (max-content, nowrap); the badge cluster
+     takes the rest and WRAPS inside minmax(0, 1fr). An `auto` cluster column
+     used to size to the cluster's full max-content (~1,190px) and crush the
+     brand to zero width under ~1,250px. */
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
-  gap: var(--s-4);
-  padding: 14px var(--s-5) 12px;
+  gap: 6px var(--s-4);
+  padding: 10px var(--s-5) 8px;
   max-width: var(--content-max);
   margin: 0 auto;
   border-bottom: 0.5px solid var(--hairline);
@@ -19,6 +31,8 @@
 
 /* -- Brand / wordmark ----------------------------------------------------- */
 .cm-nav__brand {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -48,12 +62,16 @@
 /* -- Primary navigation --------------------------------------------------- */
 .cm-nav__links {
   display: flex;
-  gap: 2px;
+  gap: 0;
   align-items: center;
-  justify-content: space-around;
-  /* wrap (not nowrap) so a crowded row can never overflow its grid track and
-     overlap the date/meta cluster — at any width it stacks instead. The
-     ≤1300px rule gives the clean full-width row for the common cramped case. */
+  justify-content: flex-start;
+  /* The full-width second row (grid-column 1 / -1); wrap (not nowrap) so a
+     crowded row can never overflow — at any width it stacks a second line of
+     links instead of overlapping the meta cluster. */
+  grid-column: 1 / -1;
+  /* Explicit row: with the links spanning both columns, auto-placement would
+     push the meta cluster (later in the DOM) to a THIRD row under them. */
+  grid-row: 2;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -182,14 +200,21 @@
 
 /* -- Right meta cluster --------------------------------------------------- */
 .cm-nav__meta {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  /* The chips never break inside, the CLUSTER breaks between chips: a
+     crowded meta becomes two right-aligned rows instead of stealing the
+     links' row (2026-09-06). */
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
   font-size: 12px;
   color: var(--ink-subtle);
-  white-space: nowrap;
 }
+.cm-nav__meta > * { white-space: nowrap; }
 
 .cm-nav__meta-name {
   font-family: var(--font-serif);
@@ -328,32 +353,16 @@
 }
 
 @media (max-width: 1100px) {
-  .cm-nav { grid-template-columns: auto 1fr auto; gap: var(--s-3); }
   .cm-nav__link { padding: 7px 8px; font-size: 10.5px; }
   .cm-nav__meta-date { display: none; }
 }
 
-/* Below ~1300px the trading + household pages (8 items, some with long labels
-   like "Food (meal planner)") no longer fit one line beside the brand + meta,
-   so the links drop to their own full-width row that wraps cleanly — no overlap
-   with the date / Misc / avatar cluster. Raised from 900px on 2026-06-04 after
-   adding the Research page tipped the row into the meta. */
+/* The links-on-their-own-row layout used to switch on below 1300px (raised
+   from 900px on 2026-06-04 when the Research page tipped the row into the
+   meta). Since 2026-09-06 it is the base layout at every desktop width (see
+   .cm-nav); only the tighter padding and the hidden meta name remain here. */
 @media (max-width: 1300px) {
-  .cm-nav:not(.cm-nav--mobile) {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: var(--s-3);
-    padding: 10px var(--s-4);
-  }
-  .cm-nav:not(.cm-nav--mobile) .cm-nav__links {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    gap: 0;
-    flex-wrap: wrap;
-  }
-  .cm-nav:not(.cm-nav--mobile) .cm-nav__meta {
-    justify-content: flex-end;
-  }
+  .cm-nav:not(.cm-nav--mobile) { padding: 10px var(--s-4); }
   .cm-nav:not(.cm-nav--mobile) .cm-nav__meta-name { display: none; }
 }
 
