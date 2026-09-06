@@ -39,7 +39,9 @@ Page cites trace to backend/sepa/minervini.pdf (printed page = PDF page - 15).
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from trading.exit_engine import _db, _utc_iso
 
@@ -84,6 +86,48 @@ def _ledger_rows() -> list:
         return []
 
 
+_ET = ZoneInfo("America/New_York")
+
+
+def _et_day_of(ts) -> str:
+    """ET calendar day of a ledger row's UTC ISO stamp ('2026-09-04T13:32:15Z'
+    -> '2026-09-04'); falls back to the first ten characters."""
+    try:
+        t = str(ts or "")
+        dt = datetime.fromisoformat(t.replace("Z", "+00:00"))
+        return dt.astimezone(_ET).date().isoformat()
+    except Exception:                              # noqa: BLE001
+        return str(ts or "")[:10]
+
+
+def _zone_lanes() -> dict:
+    """{(SYMBOL, ET day): 'breakout' | 'demand_zone'} from every
+    zone_edge_entry_state doc that actually placed an order (order_ts set).
+    Lane fallback for entry rows written BEFORE 2026-09-05, when
+    entries.enter did not yet stamp detail.strategy — the four zone-edge paper
+    buys of 2026-09-04 (APLD, ATI, LUNR, AEIS) read as 'manual' on the
+    Journal-by-strategy card otherwise. Read-only; {} when the coll is
+    absent (tests) or unreadable."""
+    db = _db()
+    coll = getattr(db, "zone_edge_entry_state", None) if db is not None else None
+    if coll is None:
+        return {}
+    out: dict = {}
+    try:
+        for st in coll.find({}):
+            if not st.get("order_ts"):
+                continue
+            sym = str(st.get("symbol") or "").upper()
+            day = str(st.get("date") or "")[:10]
+            if not sym or not day:
+                continue
+            out[(sym, day)] = "breakout" if str(st.get("side") or "") == "supply" else "demand_zone"
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("journal: zone lane read failed: %s", exc)
+        return {}
+    return out
+
+
 def _journal_coll():
     db = _db()
     return None if db is None else db.trade_journal
@@ -103,7 +147,8 @@ def _trade_id(symbol: str, entry_epoch: float) -> str:
 
 
 def _entry_doc(entry_row: dict, trigger_row: Optional[dict],
-               ratcheted: bool, exit_row: Optional[dict]) -> dict:
+               ratcheted: bool, exit_row: Optional[dict],
+               zone_lane: Optional[str] = None) -> dict:
     """Build one round-trip journal doc from the paired ledger rows."""
     det = entry_row.get("detail") or {}
     sym = (entry_row.get("symbol") or "").upper()
@@ -140,7 +185,10 @@ def _entry_doc(entry_row: dict, trigger_row: Optional[dict],
     # trigger is the Minervini funnel (pre-2026-09-05 rows); else manual.
     tag = det.get("strategy")
     if tag not in STRATEGIES:
-        tag = "minervini" if (trigger and trigger.get("path")) else "manual"
+        # Untagged (pre-2026-09-05): a zone-edge state doc that ordered on the
+        # same ET day names the lane; else an auto_entry trigger = Minervini;
+        # else manual.
+        tag = zone_lane or ("minervini" if (trigger and trigger.get("path")) else "manual")
     entry_reason = det.get("entry_reason")
     if not isinstance(entry_reason, dict):
         entry_reason = None
@@ -261,7 +309,7 @@ def _exit_and_realized(entry: dict, exit_row: dict, entry_price,
     return exit_doc, realized
 
 
-def _build_docs(rows: list) -> list:
+def _build_docs(rows: list, zone_lanes: Optional[dict] = None) -> list:
     """Reconstruct every round-trip from the ordered ledger rows.
 
     One pass, time-ordered: for each "entry" row, find the matching
@@ -309,7 +357,8 @@ def _build_docs(rows: list) -> list:
                 exit_row = r
                 break
 
-        docs.append(_entry_doc(row, trigger_row, ratcheted, exit_row))
+        lane = (zone_lanes or {}).get((sym, _et_day_of(row.get("ts"))))
+        docs.append(_entry_doc(row, trigger_row, ratcheted, exit_row, zone_lane=lane))
     return docs
 
 
@@ -322,7 +371,7 @@ def reconcile() -> dict:
     epoch}"), so re-running upserts in place — no duplicates, no deletes, no
     new trading side effects. Safe to call at the top of any read handler and
     once per engine tick. Returns the same shape as summary()."""
-    docs = _build_docs(_ledger_rows())
+    docs = _build_docs(_ledger_rows(), _zone_lanes())
     coll = _journal_coll()
     now = _utc_iso()
     if coll is not None:
@@ -353,7 +402,7 @@ def load(limit: Optional[int] = None, status: Optional[str] = None) -> list:
         except Exception as exc:                   # noqa: BLE001
             log.warning("journal load failed: %s", exc)
     if not docs:                                   # derive on the fly
-        docs = _build_docs(_ledger_rows())
+        docs = _build_docs(_ledger_rows(), _zone_lanes())
         if status is not None:
             docs = [d for d in docs if d.get("status") == status]
     docs.sort(key=lambda d: (d.get("entry") or {}).get("epoch") or 0.0,
@@ -466,7 +515,7 @@ def summary() -> dict:
             log.warning("journal summary failed: %s", exc)
             docs = None
     if docs is None:
-        docs = _build_docs(_ledger_rows())
+        docs = _build_docs(_ledger_rows(), _zone_lanes())
     return {"n_open": sum(1 for d in docs if d.get("status") == "open"),
             "n_closed": sum(1 for d in docs if d.get("status") == "closed"),
             "last_reconcile_ts": last,

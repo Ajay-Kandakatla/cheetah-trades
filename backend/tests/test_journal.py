@@ -425,3 +425,35 @@ def test_summary_by_strategy(db):
                                          "stop_price": None},
            "realized": {"gain_pct": 4.0, "gain_dollars": None, "r_multiple": 1.33}}
     assert JN.by_strategy([doc])["manual"]["avg_r"] == 1.33
+
+
+
+def test_untagged_entry_takes_its_lane_from_the_zone_edge_state_doc(db):
+    """Pre-2026-09-05 zone-edge buys had no detail.strategy; the state doc
+    that ordered them (order_ts set, same symbol + ET day) names the lane.
+    A state doc that never ordered (blocked) names nothing; an explicit tag
+    always wins."""
+    fdb = EE._db()
+    fdb.zone_edge_entry_state = FakeColl([
+        {"symbol": "APLD", "date": "2026-09-04", "side": "supply", "order_ts": "2026-09-04T13:32:05Z"},
+        {"symbol": "COTY", "date": "2026-09-04", "side": "demand", "order_ts": "2026-09-04T14:01:00Z"},
+        {"symbol": "UCTT", "date": "2026-09-04", "side": "supply"},
+        {"symbol": "ATI", "date": "2026-09-03", "side": "supply", "order_ts": "2026-09-03T15:00:00Z"},
+    ])
+    e = 1788528725                                   # 2026-09-04T13:32:05Z
+    fdb.trade_ledger.insert_one(_row("entry", "APLD", e, detail=_entry_detail()))
+    fdb.trade_ledger.insert_one(_row("entry", "COTY", e + 1800, detail=_entry_detail()))
+    fdb.trade_ledger.insert_one(_row("entry", "UCTT", e + 60, detail=_entry_detail()))
+    fdb.trade_ledger.insert_one(_row("entry", "ATI", e + 120, detail=_entry_detail()))
+    fdb.trade_ledger.insert_one(_row("entry", "TAGD", e + 180,
+                                    detail=_entry_detail(strategy="catalyst")))
+    JN.reconcile()
+    docs = {d["symbol"]: d for d in JN.load()}
+    assert docs["APLD"]["entry"]["strategy"] == "breakout"
+    assert docs["COTY"]["entry"]["strategy"] == "demand_zone"
+    assert docs["UCTT"]["entry"]["strategy"] == "manual"        # blocked state doc: no lane
+    assert docs["ATI"]["entry"]["strategy"] == "manual"         # ordered on another day
+    assert docs["TAGD"]["entry"]["strategy"] == "catalyst"      # explicit tag wins
+    assert JN._et_day_of("2026-09-04T23:30:00Z") == "2026-09-04"
+    assert JN._et_day_of("2026-09-05T01:30:00Z") == "2026-09-04"   # 9:30pm ET still the 4th
+    assert JN._et_day_of("garbage") == "garbage"
