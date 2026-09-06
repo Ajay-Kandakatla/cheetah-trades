@@ -183,11 +183,16 @@ def compute() -> dict:
             term_date = d
             break
     shape = None
+    tenor_last = max(list(v9.keys()) + list(v3.keys())) if (v9 or v3) else None
+    if term_date is None and tenor_last is not None:
+        term_date = tenor_last            # tenors exist but predate the VIX window
     if term_date is not None and _lag_days(as_of, term_date) > TERM_MAX_LAG_DAYS:
         out["term"] = {"vix9d": None, "vix3m": None, "ratio_9d_30d": None,
                        "ratio_30d_3m": None, "shape": None, "as_of": term_date,
                        "stale": True}
         term_date = None
+    if term_date is not None and term_date not in by_date:
+        term_date = None                  # no VIX close on that day: nothing to ratio
     if term_date is not None:
         base = by_date[term_date]
         r9 = round(v9[term_date] / base, 3) if term_date in v9 and base else None
