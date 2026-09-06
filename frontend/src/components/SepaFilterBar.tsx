@@ -1,5 +1,6 @@
 import type { Rating } from '../hooks/useSepa';
 import { InfoButton } from './InfoButton';
+import { RulesInfo } from './RulesInfo';
 
 const FilterInfo = (
   <>
@@ -483,6 +484,10 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           >
             🪃 Bouncing off Demand
           </button>
+          {/* ℹ️ Rules — the bounce chip's own floors from GET
+            * /supply-demand/rules (Ajay 2026-09-06); compact = popover under
+            * the pill so the filter bar keeps its shape. */}
+          <RulesInfo section="sepa_bounce" compact />
         </div>
 
         {/* 🧩 OVERLAYS — non-Minervini frameworks layered on top: Buffett moat,

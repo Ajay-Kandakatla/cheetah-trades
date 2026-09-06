@@ -25,9 +25,20 @@ from . import session_board as session_mod
 from . import zone_edge as zone_edge_mod
 from . import bounce_room as bounce_room_mod
 from . import alert_status as alert_status_mod
+from . import rules_info as rules_info_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
+
+
+@router.get("/supply-demand/rules")
+async def supply_demand_rules(section: Optional[str] = Query(default=None)):
+    """House rules behind the demand boards, zone alerts and Auto-Pilot lanes
+    as short lines for the ℹ️ Rules panel (Ajay 2026-09-06). Numbers are read
+    from the enforcing modules, never retyped. `section` narrows to one key."""
+    if section and section not in rules_info_mod.SECTION_KEYS:
+        raise HTTPException(404, "unknown section")
+    return JSONResponse(rules_info_mod.payload(section))
 
 
 @router.get("/supply-demand/session-board")

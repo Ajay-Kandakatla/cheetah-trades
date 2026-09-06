@@ -46,6 +46,7 @@ import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 import { ZoneEdgeBoard } from '../components/ZoneEdgeBoard';
 import { CatalystsBoard } from '../pages/Catalysts';
 import { useMyFeatures } from '../hooks/useMyFeatures';
+import { RulesInfo } from '../components/RulesInfo';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
  *  warming poll on purpose — this is drift correction, not live data. */
@@ -403,6 +404,15 @@ export function ChartMaps() {
                 : [part])
           : TAB_META[tab].blurb}
       </p>
+
+      {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
+        * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
+        * a rule section; the zones tab is the "in demand" board. */}
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts') && (
+        <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
+          <RulesInfo section={tab === 'zones' ? 'in_demand' : tab} />
+        </div>
+      )}
 
       {/* Reaching vs already reached — only the two demand boards have the two
         * moments. Segmented, not a checkbox: the two states are a choice of

@@ -30,6 +30,7 @@ import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 import { ZoneEdgeBoard } from './ZoneEdgeBoard';
 import { useAlertedToday } from '../hooks/useAlertHistory';
 import { AlertedTodayChip } from './AlertedTodayChip';
+import { RulesInfo } from './RulesInfo';
 
 
 /* The server's room block on every row (2026-09-05, GET /supply-demand/
@@ -320,6 +321,10 @@ export function DemandReentryPanel() {
             )}
           </span>
         )}
+        {/* ℹ️ Rules — this board's picks / stops / alerts from GET
+          * /supply-demand/rules (Ajay 2026-09-06); the panel drops to its own
+          * line under the toolbar when open. */}
+        <RulesInfo section="in_demand" />
       </div>
 
       {data && !data.universe_is_sp500 && (

@@ -36,6 +36,7 @@ import { CatalystEntryCard, type CatalystEntryInfo } from '../components/Catalys
 import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
+import { RulesInfo } from '../components/RulesInfo';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', blue: '#38bdf8', violet: '#a78bfa', muted: '#94a3b8', sub: '#8a93a6' };
 
@@ -509,6 +510,11 @@ function PositionsTable({ positions, simMode, cash, equity, flattenQueue, onFlat
   const { verdicts } = useBuyVerdicts(symbols);
   return (
     <section style={{ marginTop: '1rem' }}>
+      {/* ℹ️ Rules — the engine's entry lanes / stops / alerts from GET
+        * /supply-demand/rules (Ajay 2026-09-06), above the positions table. */}
+      <div style={{ marginBottom: 6 }}>
+        <RulesInfo section="autopilot" />
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <span className="eyebrow">📊 Engine-managed positions</span>
         <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8 }}>

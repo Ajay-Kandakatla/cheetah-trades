@@ -43,6 +43,7 @@ import { useAlertHistory, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHist
 import {
   ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay, todayEtKey,
 } from '../lib/alertKinds';
+import { RulesInfo } from '../components/RulesInfo';
 
 /* ── status (GET /alerts/status) ─────────────────────────────────────────── */
 
@@ -461,6 +462,11 @@ export function AlertsPage() {
             What actually pushed to your phone, in ET. The Demand board is a different list
             (closed-bar scan, full universe, R:R floor); a 🔔 on a board row means it also alerted today.
           </p>
+          {/* ℹ️ Rules — what pages the phone, from GET /supply-demand/rules
+            * (Ajay 2026-09-06). */}
+          <div style={{ marginTop: '0.5rem' }}>
+            <RulesInfo section="alerts" />
+          </div>
         </div>
       </header>
 
