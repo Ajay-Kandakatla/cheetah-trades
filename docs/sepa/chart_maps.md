@@ -225,6 +225,56 @@ the level boards before the option / ledger tabs. Pinned in
 `frontend/src/lib/chartMaps.test.ts` ("tab order — most-used first") and
 `frontend/scripts/contracts.mjs` ("Chart Maps runs most-used first…").
 
+## 🚀 Breaking tab — the zone-edge read as cards (2026-09-06)
+
+Ajay 2026-09-06: "Can you change the deep demand to be like In Demand with
+charts and cards?"
+
+**What he was seeing:** the Deep Demand tab opened with `ZoneEdgeBoard
+mode="breaking"` — the minute-by-minute breaking-resistance list, ~200 text
+rows on a normal day — and its own seven chart cards sat below that list.
+Back in Demand is cards only.
+
+**Change:**
+
+- Deep Demand is cards only now (the `ZoneEdgeBoard` mount left
+  `ChartMaps.tsx`; the list still opens the Demand board on `/supply-demand`).
+- The breaking read became its own board tab, `breaking` (label 🚀 Breaking),
+  right after Quick Bounce: `backend/chart_maps/board.py::breaking_tiles`
+  draws every row of the last zone-edge pass (`supply_demand.zone_edge.
+  api_payload`, the minute cron behind the 🚀 pushes) as the same tile the
+  demand boards use.
+
+**Tile:** red band = the ceiling being tested (`last supply · testing` /
+`· broke`), dashed BREAK line at its top, LAST line at the pass's print, a
+52W line when the 52-week high sits above the band, a second band = the next
+PROVEN lid (`room_floor.room_block` from the print, the ceiling itself excluded
+as the entry band). Stats: Ceiling · To break · Tested (touches, strength) ·
+52w high · Room · Since (first seen HH:MM ET). Badges: 🚀 broke / under,
+new highs or N supply above, tested N× (good at the push's 2+ touches), cap.
+
+**Order and gates:** the pass's own order — broke today first, then new highs,
+then nearest to the ceiling. The Room ≥ 5% floor hides names with a lid under
+5% overhead (open sky passes; the switch reads "Any room" like the demand
+tabs). Liquidity tiers read the quick-bounce study's `avg_dollar_vol_50` (the
+only per-name turnover cache covering this universe); a name outside the study
+fails a real floor, as on every board.
+
+**Stamp:** the payload carries `pass_as_of`, `pass_date`, `in_session`,
+`reason`, `edge_counts`; the page prints `breakingPassText` under the blurb
+("as of 15:59 ET · the pass runs every minute in session; these cards refresh
+every 5" / "last pass 2026-09-04; no pass yet today (15:59 ET)" / "market
+closed — last pass 15:59 ET"). No pass stored → the note says so and the
+board is empty, never silently blank.
+
+Tests: `backend/tests/test_chart_maps.py` (`test_breaking_tab_*`),
+`frontend/src/lib/chartMaps.test.ts` ("the 🚀 Breaking tab"),
+`frontend/src/pages/ChartMaps.test.tsx` (Deep Demand cards-only negative +
+the Breaking tab render), contract "Deep Demand is cards only; the 🚀 breaking
+read has its own card tab" in `frontend/scripts/contracts.mjs`. Tab order:
+`breaking` joined right after Quick Bounce in the most-used-first list above
+(the tabs after it shift by one).
+
 ---
 
 **Not advice.** The winners tab shows a measured sample of what happened to past

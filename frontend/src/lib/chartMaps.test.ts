@@ -15,7 +15,7 @@ import {
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine, type CmTab,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
-  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey,
+  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText,
   dropCollidingTicks, priceTicks, tickDecimals,
   GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
   priceAt, shortVol, textWidth, tooltipPos,
@@ -165,8 +165,9 @@ describe('boardQuery', () => {
  * = 5.0 (owner setting) rides to the two demand boards as min_room; there is
  * no third value — the URL knows `room=any` (off) and nothing else. */
 describe('room floor — parseMinRoom / boardQuery min_room', () => {
-  it('ROOM_TABS is exactly the two demand boards', () => {
-    expect(ROOM_TABS).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+  it('ROOM_TABS is exactly the room-gated boards', () => {
+    // 2026-09-06: Quick Bounce and 🚀 Breaking joined the two demand boards.
+    expect(ROOM_TABS).toEqual(['zones', 'deep_demand', 'quick_bounce', 'breaking']);
   });
 
   it('parseMinRoom: room=any (or 0) is off; everything else is the 5% floor', () => {
@@ -617,7 +618,7 @@ describe('the Earnings Flow tab', () => {
     // beginning of the list") — the demand boards lead, the SEPA slices and
     // ICT moved behind every S/D read; see the describe at the end of this file.
     expect(CM_TABS).toEqual(
-      ['zones', 'deep_demand', 'quick_bounce', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -678,7 +679,7 @@ describe('the Support Levels tab', () => {
     // tool closes the level reads before the option / ledger tabs.
     const i = CM_TABS.indexOf('support');
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
-    for (const t of ['zones', 'deep_demand', 'quick_bounce', 'ict', 'gabbar', 'undervalue'] as CmTab[]) {
+    for (const t of ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'ict', 'gabbar', 'undervalue'] as CmTab[]) {
       expect(CM_TABS.indexOf(t)).toBeLessThan(i);
     }
     expect(CM_TABS.slice(i)).toEqual(['support', 'zero_dte', 'earnings', 'winners']);
@@ -1508,7 +1509,7 @@ describe('tab order — most-used first', () => {
   });
 
   it('keeps the SEPA slices and the no-edge ICT study board behind every S/D read', () => {
-    const sd: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'session', 'signals', 'catalysts', 'overnight', 'gabbar'];
+    const sd: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'session', 'signals', 'catalysts', 'overnight', 'gabbar'];
     const lastSd = Math.max(...sd.map((t) => CM_TABS.indexOf(t)));
     for (const t of ['vcp', 'topping', 'ict'] as CmTab[]) {
       expect(CM_TABS.indexOf(t)).toBeGreaterThan(lastSd);
@@ -1532,8 +1533,50 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(16);
+    expect(CM_TABS).toHaveLength(17);
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
+  });
+});
+
+
+// ── 🚀 Breaking tab (Ajay 2026-09-06: "Can you change the deep demand to be
+// like In Demand with charts and cards?") — the zone-edge breaking list left
+// the Deep Demand tab and became its own card board. ────────────────────────
+describe('the 🚀 Breaking tab', () => {
+  it('sits right after Quick Bounce, is a room-gated board tab', () => {
+    expect(CM_TABS.indexOf('breaking')).toBe(CM_TABS.indexOf('quick_bounce') + 1);
+    expect(isBoardTab('breaking')).toBe(true);
+    expect(ROOM_TABS).toContain('breaking');
+    expect(parseTab('breaking')).toBe('breaking');
+    expect(parseTab(' BREAKING ')).toBe('breaking');
+  });
+
+  it('says what it is and that Deep Demand is cards only now', () => {
+    expect(TAB_META.breaking.label).toBe('\u{1F680} Breaking');
+    const blurb = TAB_META.breaking.blurb;
+    expect(blurb).toMatch(/last zone-edge pass/i);
+    expect(blurb).toMatch(/within 1% under the ceiling/i);
+    expect(blurb).toMatch(/up to 3%/);
+    expect(blurb).toMatch(/Deep Demand is cards only/);
+    expect(blurb).toMatch(/not advice/i);
+    // NEGATIVE: an S/D surface — no book cites.
+    expect(blurb).not.toMatch(/Minervini|TLSW|TTLAC|p\.\s*\d/);
+  });
+
+  it('prints the pass stamp the way the list it replaced did', () => {
+    const iso = '2026-09-04T15:59:03-04:00';
+    expect(breakingPassText({ pass_as_of: iso, in_session: true, reason: null }))
+      .toBe('as of 15:59 ET \u00b7 the pass runs every minute in session; these cards refresh every 5');
+    expect(breakingPassText({ pass_as_of: iso, in_session: false, reason: 'last pass 2026-09-04; no pass yet today' }))
+      .toBe('last pass 2026-09-04; no pass yet today (15:59 ET)');
+    expect(breakingPassText({ pass_as_of: iso, in_session: false, reason: null }))
+      .toBe('market closed \u2014 last pass 15:59 ET');
+    // NEGATIVE: no stamp at all, with and without the backend's reason; the
+    // generic 'no pass yet' adds nothing and is dropped.
+    expect(breakingPassText({ pass_as_of: null, in_session: false, reason: 'no pass yet' })).toBe('no pass yet today');
+    expect(breakingPassText({ pass_as_of: null, in_session: false, reason: 'zone store empty for today' }))
+      .toBe('no pass yet today \u2014 zone store empty for today');
+    expect(breakingPassText({ pass_as_of: 'garbage', in_session: true, reason: null })).toBe('no pass yet today');
   });
 });

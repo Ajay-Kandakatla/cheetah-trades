@@ -221,27 +221,21 @@ const CONTRACTS = [
     },
   },
   {
-    name: 'Chart Maps Deep Demand opens with the breaking-resistance board (2026-09-03)',
+    name: 'Chart Maps Deep Demand is cards only; the zone-edge list stays on the Demand board (2026-09-06)',
     file: 'src/pages/ChartMaps.tsx',
-    // "and also in to deep demand zones". Gated to the deep_demand tab only —
-    // VCP / winners / zero-DTE must not grow a supply read — and above the
-    // tile grid, which is what "opens with" means.
+    // Replaces "Deep Demand opens with the breaking-resistance board
+    // (2026-09-03)". Ajay 2026-09-06: "change the deep demand to be like In
+    // Demand with charts and cards" — the ~200-row text list left this page
+    // for the 🚀 Breaking card tab. It must not come back on ANY chart tab,
+    // and it must still open the Demand board on /supply-demand (mode="both"),
+    // which is where the minute-by-minute list belongs.
     checks: (src) => {
       const errs = [];
-      if (!/import\s*\{[^}]*\bZoneEdgeBoard\b[^}]*\}\s*from\s*'\.\.\/components\/ZoneEdgeBoard'/.test(src)) {
-        errs.push("ChartMaps.tsx no longer imports ZoneEdgeBoard from '../components/ZoneEdgeBoard'");
+      if (/ZoneEdgeBoard/.test(src)) errs.push('ChartMaps.tsx imports or mounts ZoneEdgeBoard again — the text list is back on a chart tab');
+      const panel = read('src/components/DemandReentryPanel.tsx');
+      if (!/<ZoneEdgeBoard\s+mode="both"/.test(panel)) {
+        errs.push('DemandReentryPanel.tsx no longer mounts <ZoneEdgeBoard mode="both"> — the zone-edge list would be gone everywhere');
       }
-      const i = src.indexOf('<ZoneEdgeBoard');
-      if (i < 0) return [...errs, 'ZoneEdgeBoard mount missing from ChartMaps'];
-      const tag = src.slice(i, src.indexOf('/>', i));
-      if (!/\bmode="breaking"/.test(tag)) errs.push('ChartMaps must mount ZoneEdgeBoard with mode="breaking"');
-      if (!/\bcompact\b/.test(tag)) errs.push('ChartMaps mount lacks `compact` — the tab already explains itself');
-      const gate = src.slice(Math.max(0, i - 120), i);
-      if (!/tab === 'deep_demand'\s*&&\s*\(\s*$/.test(gate)) {
-        errs.push("ZoneEdgeBoard mount is not gated on tab === 'deep_demand'");
-      }
-      const grid = src.indexOf('<div className="cm-grid">');
-      if (grid >= 0 && i > grid) errs.push('ZoneEdgeBoard must render ABOVE the tile grid');
       return errs;
     },
   },
@@ -375,6 +369,35 @@ const CONTRACTS = [
       }
       const feats = read('src/lib/newFeatures.ts');
       if (!/id: 'chart-maps-most-used-first'/.test(feats)) errs.push("newFeatures.ts lost the 'chart-maps-most-used-first' highlight");
+      return errs;
+    },
+  },
+  {
+    name: 'Deep Demand is cards only; the 🚀 breaking read has its own card tab (2026-09-06)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-06: "Can you change the deep demand to be like In Demand
+    // with charts and cards?" The zone-edge breaking list (~200 text rows)
+    // used to open the Deep Demand tab above its cards. It is the Breaking
+    // tab now, drawn by the backend as the same tile. A rebase that restores
+    // the ZoneEdgeBoard mount on ChartMaps.tsx, or drops the tab, would put
+    // the text list back with every test green if the describe were lost.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/);
+      if (!m) return ['CM_TABS declaration not found'];
+      const tabs = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+      if (tabs.indexOf('breaking') !== tabs.indexOf('quick_bounce') + 1) {
+        errs.push("'breaking' must sit directly after 'quick_bounce'");
+      }
+      if (!/\n\s*breaking:\s*\{/.test(src)) errs.push('TAB_META.breaking is missing');
+      if (!/export function breakingPassText\(/.test(src)) errs.push('chartMaps.ts lost breakingPassText');
+      const page = read('src/pages/ChartMaps.tsx');
+      if (/ZoneEdgeBoard/.test(page)) errs.push('ChartMaps.tsx mounts ZoneEdgeBoard again — the text list is back on a chart tab');
+      if (!/data-testid="breaking-pass"/.test(page)) errs.push('ChartMaps.tsx no longer prints the pass stamp on the Breaking tab');
+      const feats = read('src/lib/newFeatures.ts');
+      if (!/id: 'breaking-cards-tab'/.test(feats)) errs.push("newFeatures.ts lost the 'breaking-cards-tab' highlight");
+      const nav = read('src/lib/navSearch.ts');
+      if (!/\/chart-maps\?tab=breaking/.test(nav)) errs.push('navSearch.ts lost the Chart Maps ▸ Breaking entry');
       return errs;
     },
   },
@@ -539,8 +562,8 @@ const CONTRACTS = [
       const cm = read('src/lib/chartMaps.ts');
       const dm = cm.match(/export const DEFAULT_MIN_ROOM\s*=\s*([\d.]+)\s*;/);
       if (!dm || Number(dm[1]) !== 5) errs.push('chartMaps.ts DEFAULT_MIN_ROOM must be 5 (same owner setting)');
-      if (!/export const ROOM_TABS:\s*CmTab\[\]\s*=\s*\['zones',\s*'deep_demand',\s*'quick_bounce'\]/.test(cm)) {
-        errs.push("chartMaps.ts ROOM_TABS is not exactly ['zones', 'deep_demand', 'quick_bounce'] (Quick Bounce joined the room-gated boards 2026-09-06)");
+      if (!/export const ROOM_TABS:\s*CmTab\[\]\s*=\s*\['zones',\s*'deep_demand',\s*'quick_bounce',\s*'breaking'\]/.test(cm)) {
+        errs.push("chartMaps.ts ROOM_TABS is not exactly ['zones', 'deep_demand', 'quick_bounce', 'breaking'] (Quick Bounce joined the room-gated boards 2026-09-06)");
       }
       if (!/q\.set\('min_room'/.test(cm)) errs.push('boardQuery no longer sends min_room');
       const panel = read('src/components/DemandReentryPanel.tsx');

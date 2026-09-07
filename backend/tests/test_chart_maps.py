@@ -2531,3 +2531,115 @@ def test_quick_bounce_tab_without_stats_says_so(monkeypatch):
     out = B.board("quick_bounce", limit=10)
     assert out["tiles"] == [] and "not built yet" in out["note"] and out["study"] is None
     assert "quick_bounce" in B.TABS
+
+# ── 🚀 Breaking tab (Ajay 2026-09-06: "change the deep demand to be like In
+# Demand with charts and cards") — the zone-edge breaking list left the Deep
+# Demand tab and became its own card board. ──────────────────────────────────
+def _edge_payload(rows, as_of="2026-09-04T15:59:03-04:00", in_session=False, reason=None):
+    return {"as_of": as_of, "date": "2026-09-04", "in_session": in_session, "pass_sec": 6.5,
+            "params": {"edge_pct": 1.0, "broke_max_pct": 3.0, "min_cap_usd": 1e9, "min_touches_push": 2},
+            "counts": {"breaking": len(rows), "near_demand": 0}, "breaking": rows, "near_demand": [],
+            "track": {}, "reason": reason, "disclaimer": "x"}
+
+
+def _edge_row(sym, px, lo, hi, dist, tier, **kw):
+    return {"symbol": sym, "name": f"{sym} Inc", "last": px, "dist_pct": dist, "tier": tier,
+            "side": "supply", "role": "supply",
+            "band": {"kind": "supply", "lo": lo, "hi": hi, "touches": kw.get("touches", 2),
+                     "strength": kw.get("strength", 60.0)},
+            "cap": kw.get("cap", 5e9), "new_highs": kw.get("new_highs", False),
+            "high_252": kw.get("high_252"), "pct_to_52w": kw.get("pct_to_52w"),
+            "overhead_bands": kw.get("overhead", 0), "arrival": None,
+            "first_seen": kw.get("first_seen", "09:31"), "url": f"/sepa/{sym}?tab=supply"}
+
+
+def test_breaking_tab_draws_the_zone_edge_pass_as_cards(prices, monkeypatch):
+    from supply_demand import zone_edge as ZE, zone_store, quick_bounce as QB
+    rows = [_edge_row("AAA", 101.8, 98.0, 100.0, -1.8, "broke", new_highs=True, high_252=100.0, pct_to_52w=1.8),
+            _edge_row("BBB", 99.6, 98.0, 100.0, 0.4, "near", overhead=1, high_252=120.0, pct_to_52w=-17.0),
+            _edge_row("CCC", 99.7, 98.0, 100.0, 0.3, "near", overhead=1, high_252=103.0, pct_to_52w=-3.2,
+                      touches=1, strength=30.0, cap=None)]
+    lid_far = {"kind": "supply", "lo": 115.0, "hi": 116.0, "touches": 2, "strength": 50.0}
+    lid_near = {"kind": "supply", "lo": 101.5, "hi": 102.5, "touches": 3, "strength": 55.0}
+    docs = {"AAA": {"bands": [dict(rows[0]["band"])], "prev_close": 99.5},
+            "BBB": {"bands": [dict(rows[1]["band"]), lid_far], "prev_close": 99.0},
+            "CCC": {"bands": [dict(rows[2]["band"]), lid_near], "prev_close": 99.0}}
+    monkeypatch.setattr(ZE, "api_payload", lambda **kw: _edge_payload(
+        rows, reason="last pass 2026-09-04; no pass yet today"))
+    monkeypatch.setattr(zone_store, "load_latest", lambda symbols=None, coll=None, today=None:
+                        (__import__("datetime").date(2026, 9, 4), docs))
+    monkeypatch.setattr(QB, "load_stats", lambda symbols=None, coll=None:
+                        {s: {"avg_dollar_vol_50": 40e6} for s in ("AAA", "BBB", "CCC")})
+    for s in ("AAA", "BBB", "CCC"):
+        prices[s] = _frame(200, start=90.0)
+    out = B.board("breaking", limit=10, min_tier="any")
+    assert out["tab"] == "breaking" and [t["symbol"] for t in out["tiles"]] == ["AAA", "BBB"]
+    assert out["hidden_low_room"] == 1 and out["matched"] == 3 and out["min_room"] == 5.0
+    assert out["pass_as_of"] == "2026-09-04T15:59:03-04:00" and out["pass_date"] == "2026-09-04"
+    assert out["in_session"] is False and "no pass yet today" in out["reason"]
+    assert out["store_date"] == "2026-09-04" and out["edge_counts"]["breaking"] == 3
+    assert out["generated_at"] == 1788551943.0   # 2026-09-04T15:59:03-04:00
+    aaa, bbb = out["tiles"]
+    # Broke today, band AT the 52-week high: one band, no 52W line, open sky.
+    assert aaa["title"] == "AAA — 🚀 broke $98–100" and aaa["name"] == "AAA Inc"
+    assert aaa["bands"] == [{"kind": "supply", "lo": 98.0, "hi": 100.0, "label": "last supply · broke"}]
+    assert [(l["label"], l["price"], l["tone"]) for l in aaa["lines"]] == [("BREAK", 100.0, "target"), ("LAST", 101.8, "now")]
+    st = {s["k"]: s["v"] for s in aaa["stats"]}
+    assert st == {"Ceiling": "98–100", "To break": "+1.8% through", "Tested": "2× · str 60",
+                  "52w high": "100 (+1.8%)", "Room": "open sky", "Since": "09:31"}
+    txt = " ".join(b["text"] for b in aaa["badges"])
+    assert "🚀 broke +1.8% today" in txt and "◎ new highs" in txt and "tested 2×" in txt and "$5.0B cap" in txt
+    assert {b["tone"] for b in aaa["badges"] if b["text"].startswith(("🚀", "◎", "tested"))} == {"good"}
+    assert aaa["why"] == "$101.8 · broke +1.8% today its last supply band $98–100 · new highs · 52w $100 (+1.8%) · since 09:31"
+    assert aaa["href"] == "/sepa/AAA?tab=supply" and len(aaa["bars"]) > 0
+    # Still under the ceiling, a proven lid 15% up: second band drawn, room said.
+    assert bbb["title"] == "BBB — 🚀 breaking $98–100"
+    assert [b["label"] for b in bbb["bands"]] == ["last supply · testing", "next proven lid"]
+    assert bbb["bands"][1]["lo"] == 115.0 and bbb["bands"][1]["hi"] == 116.0
+    assert [l["label"] for l in bbb["lines"]] == ["BREAK", "LAST", "52W"] and bbb["lines"][2]["price"] == 120.0
+    stb = {s["k"]: s["v"] for s in bbb["stats"]}
+    assert stb["To break"] == "0.4% under" and stb["Room"] == "+15.5% -> 115.00" and stb["52w high"] == "120 (-17.0%)"
+    assert "1 supply above" in " ".join(b["text"] for b in bbb["badges"])
+    assert [b["tone"] for b in bbb["badges"]][:3] == ["muted", "warn", "good"]
+    # Room off: the lidded name lists too, its lid drawn and its room said.
+    out_any = B.board("breaking", limit=10, min_tier="any", min_room=0)
+    assert [t["symbol"] for t in out_any["tiles"]] == ["AAA", "BBB", "CCC"] and out_any["hidden_low_room"] == 0
+    ccc = out_any["tiles"][2]
+    assert ccc["bands"][1]["lo"] == 101.5
+    stc = {s["k"]: s["v"] for s in ccc["stats"]}
+    assert stc["Room"] == "+1.8% -> 101.50" and stc["Tested"] == "1× · str 30"
+    assert [b["tone"] for b in ccc["badges"]][2] == "muted" and not any("cap" in b["text"] for b in ccc["badges"])
+
+
+def test_breaking_tab_liquidity_floor_needs_a_measured_turnover(prices, monkeypatch):
+    """A name the quick-bounce study never measured has NO turnover: it fails
+    the default floor (dropped_thin) and shows only at 'any' — the same
+    unknown-fails rule every board applies."""
+    from supply_demand import zone_edge as ZE, zone_store, quick_bounce as QB
+    rows = [_edge_row("AAA", 99.6, 98.0, 100.0, 0.4, "near"), _edge_row("BBB", 99.5, 98.0, 100.0, 0.5, "near")]
+    docs = {s: {"bands": [dict(r["band"])], "prev_close": 99.0} for s, r in zip(("AAA", "BBB"), rows)}
+    monkeypatch.setattr(ZE, "api_payload", lambda **kw: _edge_payload(rows, in_session=True))
+    monkeypatch.setattr(zone_store, "load_latest", lambda symbols=None, coll=None, today=None: (None, docs))
+    monkeypatch.setattr(QB, "load_stats", lambda symbols=None, coll=None: {"AAA": {"avg_dollar_vol_50": 40e6}})
+    for s in ("AAA", "BBB"):
+        prices[s] = _frame(200, start=90.0)
+    out = B.board("breaking", limit=10)
+    assert [t["symbol"] for t in out["tiles"]] == ["AAA"] and out["dropped_thin"] == 1
+    assert out["in_session"] is True and out["store_date"] is None
+    out_any = B.board("breaking", limit=10, min_tier="any")
+    assert [t["symbol"] for t in out_any["tiles"]] == ["AAA", "BBB"]
+
+
+def test_breaking_tab_without_a_pass_says_so(monkeypatch):
+    from supply_demand import zone_edge as ZE
+    monkeypatch.setattr(ZE, "api_payload", lambda **kw: ZE.empty_payload())
+    out = B.board("breaking", limit=10)
+    assert out["tiles"] == [] and "No zone-edge pass" in out["note"] and out["pass_as_of"] is None
+    assert out["generated_at"] is None and out["min_room"] == 5.0
+    assert "breaking" in B.TABS
+    # A pass that found nothing at the edge is a different, dated answer.
+    monkeypatch.setattr(ZE, "api_payload", lambda **kw: _edge_payload([], in_session=True))
+    out = B.board("breaking", limit=10)
+    assert out["tiles"] == []
+    assert out["note"] == "nothing within 1% of breaking its last supply band at the last pass (15:59 ET)"
+    assert out["in_session"] is True and out["pass_as_of"] == "2026-09-04T15:59:03-04:00"

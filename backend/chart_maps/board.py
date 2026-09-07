@@ -47,7 +47,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 400
@@ -1840,6 +1840,138 @@ def quick_bounce_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             **_room_meta(min_room, res["hidden_room"])}
 
 
+def _hhmm_et(iso) -> Optional[str]:
+    """'15:59' from a zone-edge stamp — already ET with its offset
+    ("2026-09-04T15:59:03-04:00"), so a substring, never a conversion."""
+    s = str(iso or "")
+    return s[11:16] if len(s) >= 16 and s[10] == "T" else None
+
+
+def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                   themes_first: bool = THEMES_FIRST_DEFAULT,
+                   sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER,
+                   min_room: Optional[float] = None) -> dict:
+    """🚀 Breaking resistance as chart cards.
+
+    Ajay 2026-09-06: "Can you change the deep demand to be like In Demand
+    with charts and cards?" — the Deep Demand tab opened with the zone-edge
+    breaking list as ~200 TEXT rows above its own seven cards. That list is
+    now this board: every row of the last zone-edge pass (supply_demand.
+    zone_edge, the minute cron behind the 🚀 pushes) drawn as the same tile
+    the demand boards use, in the pass's own order — broke today first, then
+    new highs, then nearest to the ceiling. Deep Demand is cards only.
+
+    Prints and distances are the PASS's (its stamp goes on the page as
+    pass_as_of / in_session / reason); the tile's bars are the closed daily
+    frame. Room is room_floor.room_block from that print to the next PROVEN
+    band beyond the ceiling being tested (the ceiling itself excluded as the
+    entry band), so the 5% floor the phone uses hides names with a lid
+    straight overhead — open sky passes. Turnover for the liquidity tiers is
+    the quick-bounce study's avg_dollar_vol_50 (the only per-name turnover
+    cache covering this universe); a name outside it fails a real floor,
+    the same rule as every board. Structure read, not advice.
+    """
+    from datetime import datetime as _dt
+    from supply_demand import zone_edge as ZE, zone_store, quick_bounce as QB
+    from supply_demand import room_floor as RF
+
+    payload = ZE.api_payload()
+    rows = [r for r in (payload.get("breaking") or [])
+            if isinstance(r, dict) and r.get("symbol")]
+    stamp = payload.get("as_of")
+    gen = None
+    if stamp:
+        try:
+            gen = _dt.fromisoformat(str(stamp)).timestamp()
+        except ValueError:
+            gen = None
+    base = {"tiles": [], "pass_as_of": stamp, "pass_date": payload.get("date"),
+            "in_session": bool(payload.get("in_session")), "reason": payload.get("reason"),
+            "params": payload.get("params"), "edge_counts": payload.get("counts"),
+            "generated_at": gen, "disclaimer": ZE.DISCLAIMER, **_room_meta(min_room, 0)}
+    if not stamp:
+        return {**base, "note": "No zone-edge pass stored yet — the board fills from the "
+                                "first pass after 9:31 ET."}
+    if not rows:
+        hh = _hhmm_et(stamp)
+        return {**base, "note": "nothing within %g%% of breaking its last supply band at the "
+                                "last pass%s" % (ZE.EDGE_PCT, f" ({hh} ET)" if hh else "")}
+    syms = [r["symbol"] for r in rows]
+    store_day, docs = zone_store.load_latest(syms)
+    turnover = QB.load_stats(syms) or {}
+    floor = RF.MIN_ROOM_DEFAULT if min_room is None else float(min_room)
+    hidden = 0
+    tiles = []
+    for rank, r in enumerate(rows):
+        sym = r["symbol"]
+        px = _num(r.get("last"))
+        band = r.get("band") or {}
+        lo, hi = _num(band.get("lo")), _num(band.get("hi"))
+        if px is None or lo is None or hi is None or hi <= 0:
+            continue
+        doc = docs.get(sym) or {}
+        room = RF.room_block(px, doc.get("bands") or [], band,
+                             _num(doc.get("prev_close")), "live")
+        if floor > 0 and not RF.meets_room_floor(room, floor):
+            hidden += 1
+            continue
+        dist = float(_num(r.get("dist_pct")) or 0.0)
+        broke = str(r.get("tier") or "") == "broke" or dist < 0
+        touches = int(_num(band.get("touches")) or 0)
+        strength = _num(band.get("strength"))
+        overhead = int(_num(r.get("overhead_bands")) or 0)
+        new_highs = bool(r.get("new_highs"))
+        h252, p52 = _num(r.get("high_252")), _num(r.get("pct_to_52w"))
+        since = r.get("first_seen")
+        bands = [{"kind": "supply", "lo": float(lo), "hi": float(hi),
+                  "label": "last supply · broke" if broke else "last supply · testing"}]
+        if isinstance(room, dict) and room.get("target_lo") is not None:
+            bands.append({"kind": "supply", "lo": float(room["target_lo"]),
+                          "hi": float(room["target_hi"]), "label": "next proven lid"})
+        lines = [{"price": float(hi), "label": "BREAK", "tone": "target"},
+                 {"price": float(px), "label": "LAST", "tone": "now"}]
+        if h252 is not None and h252 > hi * 1.001:
+            lines.append({"price": float(h252), "label": "52W", "tone": "neutral"})
+        dist_txt = f"broke +{abs(dist):.1f}% today" if broke else f"{dist:.1f}% under the ceiling"
+        over_txt = ("new highs" if new_highs
+                    else (f"{overhead} supply above" if overhead else "clear above"))
+        stats_rows = [
+            {"k": "Ceiling", "v": f"{lo:g}–{hi:g}"},
+            {"k": "To break", "v": f"+{abs(dist):.1f}% through" if broke else f"{dist:.1f}% under"},
+            {"k": "Tested", "v": f"{touches}×" + (f" · str {strength:.0f}" if strength is not None else "")},
+            {"k": "52w high", "v": (f"{h252:g} ({p52:+.1f}%)"
+                                    if h252 is not None and p52 is not None else "—")},
+            {"k": "Room", "v": RF.room_stat(room)},
+            {"k": "Since", "v": str(since) if since else "—"},
+        ]
+        badges = [{"text": f"🚀 {dist_txt}", "tone": "good" if broke else "muted"},
+                  {"text": ("◎ " if new_highs else "") + over_txt,
+                   "tone": "good" if new_highs else ("warn" if overhead else "muted")},
+                  {"text": f"tested {touches}×",
+                   "tone": "good" if touches >= ZE.MIN_TOUCHES_PUSH else "muted"}]
+        cap = _num(r.get("cap"))
+        if cap:
+            badges.append({"text": f"{_usd_short(cap)} cap", "tone": "muted"})
+        why = (f"${px:g} · {dist_txt} its last supply band ${lo:g}–{hi:g} · {over_txt}"
+               + (f" · 52w ${h252:g} ({p52:+.1f}%)" if h252 is not None and p52 is not None else "")
+               + (f" · since {since}" if since else ""))
+        tiles.append({
+            "symbol": sym, "name": r.get("name") or _name_for(sym),
+            "title": f"{sym} — 🚀 {'broke' if broke else 'breaking'} ${lo:g}–{hi:g}",
+            "why": why, "href": _href(sym, "supply"),
+            "bars": [], "_bars": {"days": days},
+            "bands": bands, "lines": lines, "markers": [],
+            "stats": stats_rows, "badges": badges, "theme": _theme(sym),
+            "_score": float(len(rows) - rank),
+            "_m": {"avg_turnover": _num((turnover.get(sym) or {}).get("avg_dollar_vol_50")),
+                   "velocity": None, "avg_shares": None},
+        })
+    out, fmeta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    return {**base, "tiles": out, **fmeta, "matched": len(rows),
+            "store_date": store_day.isoformat() if store_day else None,
+            **_room_meta(min_room, hidden)}
+
+
 def _zone_badges(r: dict) -> list[dict]:
     out = []
     v = (r.get("verdict") or {}).get("state")
@@ -3285,9 +3417,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           min_room: Optional[float] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
-    `min_room` (2026-09-05) reaches ONLY the zones and deep_demand tabs — the
-    room floor on the live print (None = the house default, 0 = off). Every
-    other tab ignores it and carries no room keys.
+    `min_room` (2026-09-05) reaches ONLY the room-gated tabs — zones,
+    deep_demand, quick_bounce and (2026-09-06) breaking — the room floor on
+    the live print (None = the house default, 0 = off). Every other tab
+    ignores it and carries no room keys.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
     chart-pattern ledger, "zone" is the demand-zone re-entry backtest.
@@ -3327,6 +3460,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                                 phase=(phase or "reached"), min_room=min_room)
     elif t == "quick_bounce":
         out = quick_bounce_tiles(limit, days, themes_first, srt, tier, min_room=min_room)
+    elif t == "breaking":
+        out = breaking_tiles(limit, days, themes_first, srt, tier, min_room=min_room)
     elif t == "undervalue":
         out = undervalue_tiles(limit, days, themes_first, srt, tier,
                                phase=(phase or "all"))

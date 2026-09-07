@@ -24,7 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
-  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey,
+  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
@@ -44,7 +44,6 @@ import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
-import { ZoneEdgeBoard } from '../components/ZoneEdgeBoard';
 import { CatalystsBoard } from '../pages/Catalysts';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
@@ -71,6 +70,11 @@ const HowItWorks = (
     <ul>
       <li><strong>🟢 Back in Demand</strong> — price left a demand zone and has
         come back into it. Band is the zone; BUY / STOP / TARGET are the plan.</li>
+      <li><strong>🚀 Breaking</strong> — the zone-edge pass as cards (2026-09-06):
+        $1B+ names within 1% under the ceiling of their last supply band, or
+        through it today by up to 3%, broke-today first. Red band is the
+        ceiling, the dashed line its top, a second band the next proven lid.
+        It was the text list on top of Deep Demand; Deep Demand is cards only now.</li>
       <li><strong>📐 Strong VCP</strong> — the SEPA scan named VCP as the entry
         setup <em>and</em> the base scored tight (≥70). The green box is the
         base, the solid line the pivot, the dashed line the suggested stop.</li>
@@ -419,9 +423,9 @@ export function ChartMaps() {
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
         * a rule section; the zones tab is the "in demand" board. */}
-      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'quick_bounce') && (
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'breaking' || tab === 'quick_bounce') && (
         <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
-          <RulesInfo section={tab === 'zones' ? 'in_demand' : tab} />
+          <RulesInfo section={tab === 'zones' ? 'in_demand' : tab === 'breaking' ? 'alerts' : tab} />
         </div>
       )}
 
@@ -433,6 +437,13 @@ export function ChartMaps() {
           Study{data.study.as_of ? ` (${data.study.as_of})` : ''}: {quickBounceStudyText(data.study)}.
           {' '}{quickBouncePersistenceText(data.study.persistence)}
         </p>
+      )}
+
+      {/* 🚀 Breaking (2026-09-06): the cards are the last zone-edge pass —
+        * its stamp and whether it is live sit on the board, exactly as the
+        * text list they replaced said them. */}
+      {tab === 'breaking' && data && (
+        <p className="cm-note" data-testid="breaking-pass">{breakingPassText(data)}</p>
       )}
 
       {/* Reaching vs already reached — only the two demand boards have the two
@@ -770,14 +781,10 @@ export function ChartMaps() {
 
       {err ? <div className="cm-note cm-note-err">Couldn't load the board — {err}</div> : null}
 
-      {/* Deep Demand opens with the minute-by-minute breaking-resistance
-        * board (Ajay 2026-09-03: "and also in to deep demand zones"): names
-        * within 1% of breaking their LAST supply band toward new highs. Its
-        * own endpoint and clock; the tiles below are the closed-bar scan.
-        * This tab only — the other boards do not grow a supply read. */}
-      {tab === 'deep_demand' && (
-        <ZoneEdgeBoard mode="breaking" compact fromKey="chart-maps" />
-      )}
+      {/* Until 2026-09-06 Deep Demand opened with the zone-edge 🚀 list as
+        * ~200 text rows above its cards. Ajay: "change the deep demand to be
+        * like In Demand with charts and cards" — that read is the Breaking
+        * tab now (board.py breaking_tiles); this tab is cards only. */}
 
       {/* The demand tab's own scan. NOT the SEPA stream above it — that one
         * feeds the VCP tab. Both this and the Back in Demand tab on

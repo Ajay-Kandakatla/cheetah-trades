@@ -156,6 +156,46 @@ describe('ChartMaps', () => {
     expect(TRACK.trackFeature).not.toHaveBeenCalledWith('chart-maps:tab:supply');
   });
 
+  it('Deep Demand is cards only — the zone-edge text list no longer opens it (2026-09-06)', async () => {
+    // Ajay: "change the deep demand to be like In Demand with charts and
+    // cards". Until then ZoneEdgeBoard mode="breaking" (~200 text rows) sat
+    // above this tab's cards and fetched /supply-demand/zone-edge.
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: { tab: 'deep_demand', count: 0, tiles: [], note: 'nothing arriving at a second band' } }));
+    draw('/chart-maps?tab=deep_demand');
+    expect(await screen.findByText(/nothing arriving at a second band/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Zone edge')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Breaking resistance/)).not.toBeInTheDocument();
+    const urls = (fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes('zone-edge'))).toBe(false);
+    expect(urls.some((u) => u.includes('tab=deep_demand'))).toBe(true);
+  });
+
+  it('the 🚀 Breaking tab draws the last zone-edge pass as cards under its stamp', async () => {
+    const tile = {
+      ...VCP_BOARD.tiles[0], symbol: 'BWA', name: 'BorgWarner Inc.', href: '/sepa/BWA?tab=supply',
+      title: 'BWA — 🚀 broke $65.32–66.32',
+      why: '$68 · broke +1.8% today its last supply band $65.32–66.32 · 2 supply above · since 09:31',
+      badges: [{ text: '🚀 broke +1.8% today', tone: 'good' }, { text: '2 supply above', tone: 'warn' }],
+      stats: [{ k: 'Ceiling', v: '65.32–66.32' }, { k: 'Room', v: '+16.7% -> 78.82' }],
+    };
+    vi.stubGlobal('fetch', stubFetch({ breaking: {
+      tab: 'breaking', count: 1, matched: 1, tiles: [tile], hidden_low_room: 0, min_room: 5,
+      pass_as_of: '2026-09-04T15:59:03-04:00', pass_date: '2026-09-04', in_session: false,
+      reason: 'last pass 2026-09-04; no pass yet today',
+    } }));
+    draw('/chart-maps?tab=breaking');
+    expect(screen.getByRole('tab', { name: '🚀 Breaking' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('BWA')).toBeInTheDocument();
+    expect(screen.getByTestId('breaking-pass')).toHaveTextContent('last pass 2026-09-04; no pass yet today (15:59 ET)');
+    expect(screen.getByText(/broke \+1\.8% today its last supply band/)).toBeInTheDocument();
+    expect(screen.getByText('🚀 broke +1.8% today')).toBeInTheDocument();
+    expect(TRACK.trackFeature).toHaveBeenCalledWith('chart-maps:tab:breaking');
+    // NEGATIVE: the tab is a board — the zone-edge list endpoint is never asked.
+    const urls = (fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes('tab=breaking'))).toBe(true);
+    expect(urls.some((u) => u.includes('zone-edge'))).toBe(false);
+  });
+
   it('reports how many matched out of how many were scanned', async () => {
     draw();
     expect(await screen.findByText(/265 matches/)).toBeInTheDocument();

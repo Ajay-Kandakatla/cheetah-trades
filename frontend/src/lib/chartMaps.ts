@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -32,7 +32,11 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // closes the level boards before the option / ledger tabs. `supply` stays in
 // the CmTab union so TAB_META keeps its copy and an old ?tab=supply deep link
 // still renders (→ `ict`, see parseTab); it is not in CM_TABS.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+// `breaking` (2026-09-06, Ajay: "change the deep demand to be like In Demand
+// with charts and cards") is the zone-edge 🚀 list that used to sit as ~200
+// text rows on top of Deep Demand, now its own card board right after the
+// demand cluster; Deep Demand is cards only, like Back in Demand.
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -102,6 +106,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   quick_bounce: {
     label: '\u{1FA83} Quick Bounce',
     blurb: 'Names that historically turned at a demand band THE SAME DAY — the close lifted at least 3% (or one ATR) off the low on one of the first three touch days — or gapped up 2%+ the next morning (the KLAC 09-04 shape), measured over two years of daily bars with the bands recomputed monthly on prior bars only. A name makes the list with 3+ visits and a quick rate of 50%+, and shows only while it sits inside a proven demand band or within 5% above it with 5%+ room to the first proven lid, nearest to the band first. Each rate is printed next to the name\u2019s own any-day base rate, and the study\u2019s first-half \u2192 second-half persistence sits under the board, because the 2026-08-14 bounce study found per-name bounce rankings did not carry over. A screen for where to stand with a limit order, not a forecast. Not advice.',
+  },
+  breaking: {
+    label: '\u{1F680} Breaking',
+    blurb: 'Breaking resistance, as cards (2026-09-06). Every name of the last zone-edge pass — $1B+ names within 1% under the ceiling of their LAST supply band (nothing overhead, or the band sits at the 52-week high) or through it today by up to 3% — drawn like the demand boards: red band is the ceiling being tested, the dashed line its top, a second band the next proven lid, and Room \u2265 5% hides names with a lid straight overhead (open sky passes). Broke-today names first, then new highs, then nearest to the ceiling; prints and distances are the pass\u2019s own and its stamp sits under this line. The pass runs every minute in session and is the same read your \u{1F680} pushes come from (pushes want 2+ touches). Until 2026-09-06 this was the text list on top of Deep Demand; Deep Demand is cards only now. A structure read, not advice.',
   },
   undervalue: {
     label: 'Under Value',
@@ -238,6 +246,12 @@ export type CmBoard = {
    *  room atleast >5%". 0 = floor off. */
   min_room?: number;
   hidden_low_room?: number;
+  /** 🚀 Breaking (2026-09-06): the zone-edge pass the cards were drawn from. */
+  pass_as_of?: string | null;
+  pass_date?: string | null;
+  in_session?: boolean;
+  reason?: string | null;
+  edge_counts?: Record<string, number> | null;
   /** Quick Bounce only (2026-09-06) — the weekly study's universe numbers and
    *  its persistence check, printed under the board so the list is read
    *  against its own evidence. */
@@ -369,7 +383,7 @@ export const ICT_MICROS: { key: IctMicro; label: string }[] = [
 /** The two boards the floor applies to. Their tiles are demand arrivals; a
  *  tile 0.3% under a supply band (TRU, 2026-09-05) is not one worth showing.
  *  The other tabs have no room read and never receive the param. */
-export const ROOM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce'];
+export const ROOM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking'];
 
 /** Frontend mirror of ALERT_MIN_ROOM_PCT (backend/supply_demand/alert_gates.py,
  *  owner setting) — the phone's gate and now the demand boards' floor. Same
@@ -1184,4 +1198,19 @@ export function dataThrough(tiles: { bars?: CmBar[] }[] | null | undefined): str
   const d = Number(best.slice(8, 10));
   if (!(m >= 1 && m <= 12) || !d) return null;
   return `data through ${MON[m - 1]} ${d}`;
+}
+
+/** The 🚀 Breaking board's stamp line (2026-09-06) — the same facts the
+ *  zone-edge list said above Deep Demand: which pass the cards are, whether
+ *  it is live, and the backend's own reason when it is not. The stamp is
+ *  already ET with its offset, so the clock is a substring, never a
+ *  timezone conversion (same rule as ZoneEdgeBoard.hhmm). */
+export function breakingPassText(b: Pick<CmBoard, 'pass_as_of' | 'in_session' | 'reason'>): string {
+  const iso = b.pass_as_of ? String(b.pass_as_of) : '';
+  const hhmm = iso.length >= 16 && iso[10] === 'T' ? iso.slice(11, 16) : '';
+  const why = b.reason && b.reason !== 'no pass yet' ? b.reason : '';
+  if (!hhmm) return why ? `no pass yet today \u2014 ${why}` : 'no pass yet today';
+  if (b.in_session) return `as of ${hhmm} ET \u00b7 the pass runs every minute in session; these cards refresh every 5`;
+  if (why) return `${why} (${hhmm} ET)`;
+  return `market closed \u2014 last pass ${hhmm} ET`;
 }
