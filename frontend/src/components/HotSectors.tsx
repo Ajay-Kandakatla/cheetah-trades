@@ -24,6 +24,10 @@ export type HotRow = {
 };
 
 export type HotPayload = {
+  /* 2026-09-06 (Ajay: "make ... Hot sectors part of the scans"): "scan" = the
+   * last scan's persisted build with its ET stamp; "live" = built on request. */
+  source?: 'scan' | 'live' | null;
+  built_at_iso?: string | null;
   as_of?: string; start?: string; benchmark?: string;
   in: HotRow[]; out: HotRow[]; ranked_by?: string;
   stance?: { defensive?: number | null; cyclical?: number | null;
@@ -35,6 +39,14 @@ export function chipLabel(r: HotRow): string {
   const v = r.rel_21d;
   const num = v == null ? '' : ` ${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
   return `${r.group}${num}`;
+}
+
+/** 'HH:MM' of the scan that built the strip, or '' when it was built on
+ *  request. The stamp is already ET with its offset — a substring, never a
+ *  timezone conversion. */
+export function scanStamp(d: Pick<HotPayload, 'source' | 'built_at_iso'>): string {
+  const iso = d.source === 'scan' && d.built_at_iso ? String(d.built_at_iso) : '';
+  return iso.length >= 16 && iso[10] === 'T' ? iso.slice(11, 16) : '';
 }
 
 export default function HotSectors() {
@@ -60,7 +72,10 @@ export default function HotSectors() {
     <div className="hs" role="complementary" aria-label="Hot sectors">
       <span className="hs-head">
         🔥 Hot sectors
-        <em className="hs-sub">last 21 sessions vs {data.benchmark || 'RSP'} · median member</em>
+        <em className="hs-sub">
+          last 21 sessions vs {data.benchmark || 'RSP'} · median member
+          {scanStamp(data) ? ` · scan ${scanStamp(data)} ET` : ''}
+        </em>
       </span>
       <span className="hs-group">
         <em className="hs-tag hs-tag-in">money in</em>

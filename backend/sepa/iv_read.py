@@ -51,6 +51,7 @@ DISCLAIMER = ("House read of market implied volatility (CBOE VIX family) — "
 
 _LOCK = threading.Lock()
 _CACHE = {"at": 0.0, "data": None}
+_BG = {"running": False}
 
 
 def _f(x) -> Optional[float]:
@@ -157,7 +158,7 @@ def compute() -> dict:
                      "elevated_below": ELEVATED_BELOW},
            "term": {"vix9d": None, "vix3m": None, "ratio_9d_30d": None,
                     "ratio_30d_3m": None, "shape": None, "as_of": None, "stale": False},
-           "vvix": None, "as_of": None, "read": None,
+           "vvix": None, "as_of": None, "read": None, "source": "live",
            "generated_at": time.time(), "disclaimer": DISCLAIMER}
     if not vix:
         out["read"] = _one_liner(None, None, None, None)
@@ -229,13 +230,59 @@ def _spy_curve() -> Optional[dict]:
         return None
 
 
-def get(force: bool = False) -> dict:
-    """Cached read (TTL_SEC); `age_sec` says how old the payload is."""
+def _persisted() -> Optional[dict]:
+    """The last scan's read (sepa.context_refresh, 2026-09-06: "make VIX, IV ...
+    part of the scans"), fresh enough to answer a cold process at once."""
+    try:
+        from sepa import context_refresh as MC
+        doc = MC.load_doc(MC.IV_ID, max_age_sec=MC.PERSIST_FRESH_SEC)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("iv_read: persisted read failed: %s", exc)
+        return None
+    if not doc:
+        return None
+    return dict(doc["payload"], source="scan", built_at_iso=doc.get("built_at_iso"),
+                age_sec=float(doc.get("age_sec") or 0.0))
+
+
+def _refresh_bg() -> None:
+    try:
+        fresh = compute()
+        with _LOCK:
+            _CACHE["data"], _CACHE["at"] = fresh, time.time()
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("iv_read: background refresh failed: %s", exc)
+    finally:
+        with _LOCK:
+            _BG["running"] = False
+
+
+def get(force: bool = False, background: bool = True) -> dict:
+    """Cached read (TTL_SEC); `age_sec` says how old the payload is.
+
+    A COLD process (nothing computed yet, e.g. right after a deploy) answers
+    the last scan's persisted read immediately — stamped source "scan" — and
+    kicks the live compute off behind it (16 s measured 2026-09-06) so the
+    badge's next poll is live. `background=False` is for tests."""
     now = time.time()
     with _LOCK:
         data = _CACHE["data"]
         if not force and data is not None and now - _CACHE["at"] < TTL_SEC:
             return dict(data, age_sec=round(now - _CACHE["at"], 1))
+    if not force and data is None:
+        stored = _persisted()
+        if stored is not None:
+            start = False
+            with _LOCK:
+                if not _BG["running"]:
+                    _BG["running"] = True
+                    start = True
+            if start:
+                if background:
+                    threading.Thread(target=_refresh_bg, name="iv-refresh", daemon=True).start()
+                else:
+                    _refresh_bg()
+            return stored
     fresh = compute()
     with _LOCK:
         _CACHE["data"], _CACHE["at"] = fresh, time.time()

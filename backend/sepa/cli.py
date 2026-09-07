@@ -63,6 +63,9 @@ def main() -> int:
                                  "cross the TTL — the nightly catch-up guard")
 
     sub.add_parser("research-status", help="Print research cache freshness")
+    sub.add_parser("scan-context",
+                   help="Refresh the VIX frames, the IV read and the sector rotation "
+                        "map (runs at the end of every scan; this is the manual run)")
 
     sub.add_parser("brief", help="Generate the morning brief from the latest scan")
     sub.add_parser("alerts", help="Check positions and fire WhatsApp alerts")
@@ -205,6 +208,9 @@ def main() -> int:
             log.info("  %-6s  score=%.1f  RS=%s  setup=%s  pivot=%s stop=%s",
                      c["symbol"], c["score"], c["rs_rank"],
                      setup.get("type"), setup.get("pivot"), setup.get("stop"))
+        # Ajay 2026-09-06: "make VIX, IV and Hot sectors part of the scans".
+        from . import context_refresh
+        context_refresh.after_scan("scan")
         return 0
 
     if args.cmd == "fast-scan":
@@ -221,6 +227,9 @@ def main() -> int:
                  result["duration_sec"],
                  result.get("research_cache_hits"),
                  result.get("research_cache_misses"))
+        # Ajay 2026-09-06: "make VIX, IV and Hot sectors part of the scans".
+        from . import context_refresh
+        context_refresh.after_scan("fast-scan")
         return 0
 
     if args.cmd == "research-refresh":
@@ -242,6 +251,15 @@ def main() -> int:
                  len(result["refreshed"]), len(result["failed"]),
                  result["duration_sec"])
         return 0
+
+    if args.cmd == "scan-context":
+        from . import context_refresh
+        s = context_refresh.refresh_all()
+        for name, part in (s.get("parts") or {}).items():
+            log.info("SCAN CONTEXT %-8s %s %.1fs %s", name,
+                     "ok" if part.get("ok") else "FAILED", part.get("sec") or 0.0,
+                     part.get("error") or "")
+        return 0 if s.get("ok") else 1
 
     if args.cmd == "research-status":
         from . import research

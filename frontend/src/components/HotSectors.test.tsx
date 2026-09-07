@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import HotSectors, { chipLabel } from './HotSectors';
+import HotSectors, { chipLabel, scanStamp } from './HotSectors';
 
 const PAYLOAD = {
   as_of: '2026-08-31', start: '2026-06-01', benchmark: 'RSP',
@@ -67,5 +67,17 @@ describe('HotSectors', () => {
     expect(chipLabel({ group: 'X', rel_21d: null })).toBe('X');
     expect(chipLabel({ group: 'X', rel_21d: 2.15 })).toBe('X +2.1%');
     expect(chipLabel({ group: 'X', rel_21d: -0.24 })).toBe('X -0.2%');
+  });
+});
+
+
+/* ── the scan stamp (Ajay 2026-09-06: "make ... Hot sectors part of the scans") ── */
+describe('scanStamp — the strip says which scan built it', () => {
+  it('prints the ET clock of a scan-built strip and nothing for a live build', () => {
+    expect(scanStamp({ source: 'scan', built_at_iso: '2026-09-04T16:41:12-04:00' })).toBe('16:41');
+    expect(scanStamp({ source: 'live', built_at_iso: '2026-09-04T16:41:12-04:00' })).toBe('');
+    expect(scanStamp({ source: 'scan', built_at_iso: null })).toBe('');
+    expect(scanStamp({ source: 'scan', built_at_iso: 'garbage' })).toBe('');
+    expect(scanStamp({})).toBe('');
   });
 });

@@ -44,6 +44,10 @@ export type MarketIv = {
   term: IvTerm | null;
   vvix: number | null;
   as_of: string | null;          // YYYY-MM-DD
+  /** 2026-09-06: "scan" = the last scan's persisted read answering a cold
+   *  process (its ET stamp in built_at_iso), "live" = computed on request. */
+  source?: 'scan' | 'live' | null;
+  built_at_iso?: string | null;
   read: string;
   generated_at: number;
   age_sec: number;

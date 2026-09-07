@@ -435,6 +435,28 @@ def check_research_cache_age():
         return _fail("research_cache", "data", WARN, f"check error: {exc}")
 
 
+def check_scan_context():
+    """VIX frames + IV read + rotation map, refreshed by the scans since
+    2026-09-06 (Ajay: "make VIX, IV and Hot sectors part of the scans"). WARN
+    only — a stale context degrades two badges, it does not break trading."""
+    try:
+        from sepa import context_refresh as MC
+        st = MC.status()
+        if not st.get("built"):
+            return _fail("scan_context", "data", WARN,
+                         "never built — the scan hook has not run (sepa.cli scan-context)")
+        age = st.get("age_h")
+        if st.get("failed"):
+            return _fail("scan_context", "data", WARN,
+                         f"last scan left {', '.join(st['failed'])} failed ({age}h ago)", age)
+        if not _is_weekend() and age is not None and age > MC.STALE_AFTER_H:
+            return _fail("scan_context", "data", WARN,
+                         f"{age}h old (cap {MC.STALE_AFTER_H}h) — the scans stopped refreshing it", age)
+        return _ok("scan_context", "data", f"{age}h old, all parts ok", age)
+    except Exception as exc:
+        return _fail("scan_context", "data", WARN, f"check error: {exc}")
+
+
 CHECKS = [
     check_mongo, check_scan_fresh, check_scan_nonempty, check_price_cache,
     check_market_gauge, check_macro_risk, check_pullback_artifact,
@@ -445,6 +467,8 @@ CHECKS = [
     # WARNing into a void (Ajay: "some scans failed silently").
     check_demand_scan_fresh, check_trade_flash_heartbeat,
     check_zero_dte_ledger, check_research_cache_age,
+    # 2026-09-06: VIX frames + IV read + rotation map, refreshed by the scans.
+    check_scan_context,
 ]
 
 

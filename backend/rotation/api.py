@@ -24,6 +24,37 @@ DEFAULT_START = "2026-06-01"
 
 _CACHE_TTL_SEC = 30 * 60
 _cache: dict = {}
+_DEFAULT_KEY = (DEFAULT_START, 20_000_000.0, 10.0)
+
+
+def warm_cache(start: str, data: dict, *, source: str = "live",
+               built_at_iso: Optional[str] = None) -> None:
+    """Seed the in-process cache for the default key (the scans call this
+    after persisting their build, so a smoke run in the API process is warm)."""
+    if start == DEFAULT_START and isinstance(data, dict):
+        _cache[_DEFAULT_KEY] = {"ts": time.time(), "data": data, "source": source,
+                                "built_at_iso": built_at_iso}
+
+
+def _persisted_hit(key) -> Optional[dict]:
+    """2026-09-06 (Ajay: "make ... Hot sectors part of the scans"): the last
+    scan's build, when it is fresh enough, replaces a cold on-demand build
+    (89 s measured that day). Default key only — the scans build exactly
+    that; a custom start still computes on request."""
+    if key != _DEFAULT_KEY:
+        return None
+    try:
+        from sepa import context_refresh as MC
+        doc = MC.load_doc(MC.ROTATION_ID, max_age_sec=MC.PERSIST_FRESH_SEC)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rotation: persisted read failed: %s", exc)
+        return None
+    if not doc:
+        return None
+    hit = {"ts": time.time(), "data": doc["payload"], "source": "scan",
+           "built_at_iso": doc.get("built_at_iso")}
+    _cache[key] = hit
+    return hit
 
 
 def _coerce_str(v, fallback: str) -> str:
@@ -58,7 +89,12 @@ async def rotation(
     if not (refresh is True):
         hit = _cache.get(key)
         if hit and (time.time() - hit["ts"]) < _CACHE_TTL_SEC:
-            return JSONResponse({**hit["data"], "cached": True})
+            return JSONResponse({**hit["data"], "cached": True, "source": hit.get("source", "live"),
+                                 "built_at_iso": hit.get("built_at_iso")})
+        hit = _persisted_hit(key)
+        if hit:
+            return JSONResponse({**hit["data"], "cached": True, "source": "scan",
+                                 "built_at_iso": hit.get("built_at_iso")})
 
     try:
         data = T.build(start=s, min_dollar_vol=dv, min_price=px)
@@ -69,8 +105,8 @@ async def rotation(
              "themes": [], "havens": [], "start": s},
             status_code=503)
 
-    _cache[key] = {"ts": time.time(), "data": data}
-    return JSONResponse({**data, "cached": False})
+    _cache[key] = {"ts": time.time(), "data": data, "source": "live", "built_at_iso": None}
+    return JSONResponse({**data, "cached": False, "source": "live", "built_at_iso": None})
 
 
 @router.get("/rotation/hot")
@@ -83,8 +119,10 @@ async def rotation_hot(refresh: bool = Query(False)):
     key), a fraction of the payload: the two pages poll this on every visit,
     and shipping them the full member tables would be weight without signal.
     """
-    key = (DEFAULT_START, 20_000_000.0, 10.0)
+    key = _DEFAULT_KEY
     hit = _cache.get(key)
+    if not (refresh is True) and (not hit or (time.time() - hit["ts"]) >= _CACHE_TTL_SEC):
+        hit = _persisted_hit(key) or hit      # the last scan's build, if fresh enough
     if (refresh is True) or not hit or (time.time() - hit["ts"]) >= _CACHE_TTL_SEC:
         try:
             data = T.build(start=DEFAULT_START)
@@ -92,7 +130,7 @@ async def rotation_hot(refresh: bool = Query(False)):
             log.warning("rotation: hot build failed: %s", exc)
             return JSONResponse({"error": f"{type(exc).__name__}: {exc}"[:200]},
                                 status_code=503)
-        _cache[key] = {"ts": time.time(), "data": data}
+        _cache[key] = {"ts": time.time(), "data": data, "source": "live", "built_at_iso": None}
         hit = _cache[key]
 
     d = hit["data"]
@@ -112,7 +150,11 @@ async def rotation_hot(refresh: bool = Query(False)):
         "ranked_by": hot.get("ranked_by"),
         "stance": d.get("stance"),
         "note": d.get("note"),
-        "cached": bool(time.time() - hit["ts"] > 1),
+        "cached": bool(time.time() - hit["ts"] > 1) or hit.get("source") == "scan",
+        # 2026-09-06: "scan" = the last scan's persisted build (stamped), "live"
+        # = built on request; the strip prints the scan clock.
+        "source": hit.get("source", "live"),
+        "built_at_iso": hit.get("built_at_iso"),
     })
 
 
