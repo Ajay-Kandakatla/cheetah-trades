@@ -1429,7 +1429,13 @@ _UNIVERSE_ALIASES: dict[str, tuple[str, ...]] = {
     # Union, not replacement: Russell keeps the not-yet-in-S&P large caps
     # (recent IPOs), sp1500 adds the small-cap tier, curated + themes carry
     # the pre-profit / ADR names no index will hold.
-    "full": ("russell1000", "sp1500", "curated", "themes"),
+    # Ajay 2026-09-07: "Yes please add 3000, I wanna be able to scan more..
+    # becuz there is so much growth to small cap." Was russell1000 (1,751 names
+    # measured that day); the Russell 3000 layer adds ~900 small caps and every
+    # consumer of "full" (scan, zone_store, demand boards, quick-bounce study)
+    # widens with it. A raw `russell3000` mode would have DROPPED 95 names that
+    # only curated / themes / sp1500 carry — hence the layered alias.
+    "full": ("russell3000", "sp1500", "curated", "themes"),
 }
 
 

@@ -299,17 +299,22 @@ def test_the_theme_names_survive_the_dropdown_removal():
     assert "themes" in U._UNIVERSE_ALIASES["full"]
 
 
-def test_full_is_russell1000_union_sp1500_plus_curated_plus_themes(fake_lists):
+def test_full_is_russell3000_union_sp1500_plus_curated_plus_themes(fake_lists):
     """'full' exists so the scanner's net matches the demand board's (Ajay
     2026-08-25). Every layer must survive the union — losing sp1500 here would
-    silently shrink the SEPA page back to the 1,001-name scan."""
+    silently shrink the SEPA page back to the 1,001-name scan.
+    2026-09-07 ("add 3000, I wanna be able to scan more"): the Russell layer is
+    the 3000 now, and the 1000 rides inside it."""
     got = set(U.load_universe("full"))
-    for part in ("russell1000", "sp1500", "curated", "themes"):
+    for part in ("russell3000", "russell1000", "sp1500", "curated", "themes"):
         assert set(fake_lists[part]) <= got, f"'full' dropped {part}"
+    # the small-cap tail the 1000 never carried (fake R1001..R2558) is in
+    assert {"R1001", "R2000", "R2558"} <= got
+    assert len(got) >= 2559 + 1500 + 158 + 82           # disjoint fake prefixes
 
 
 def test_full_alias_only_names_known_components(fake_lists):
-    assert U._UNIVERSE_ALIASES["full"] == ("russell1000", "sp1500", "curated", "themes")
+    assert U._UNIVERSE_ALIASES["full"] == ("russell3000", "sp1500", "curated", "themes")
     for part in U._UNIVERSE_ALIASES["full"]:
         assert part in U._KNOWN_COMPONENTS, f"alias names unknown component {part}"
 

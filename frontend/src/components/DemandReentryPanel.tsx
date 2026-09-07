@@ -105,7 +105,7 @@ const STALE_DAYS_LOUD = 120;
  * legacy key (sp500, sp1500, ...) into the SEPA `full` alias, so old
  * bookmarked URLs still resolve to this same scan. */
 const UNIVERSE = 'full';
-const UNIVERSE_LABEL = 'Full universe (Russell 1000 ∪ S&P 1500 ∪ themes)';
+const UNIVERSE_LABEL = 'Full universe (Russell 3000 ∪ S&P 1500 ∪ themes)';   // 2026-09-07: R3000, see sepa/universe.py
 
 /* Sort keys. 🪃 bounce · room leads (Ajay 2026-09-05: "for in demand Make sure
  * you sort stocks by bouncing off of demand zone and have big gap in to

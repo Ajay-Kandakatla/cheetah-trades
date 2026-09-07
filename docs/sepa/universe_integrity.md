@@ -119,3 +119,30 @@ range`.
 
 Universe membership decides who gets **looked at**. Nothing here changes a gate,
 a score, or an entry. A wider universe is not a reason to own anything.
+
+## 2026-09-07 — `full` carries the Russell 3000
+
+Ajay: *"Yes please add 3000, I wanna be able to scan more.. becuz there is so much growth
+to small cap."* Asked after "Do we scan russell 2000 in our app?" — the answer was no:
+`full` = russell1000 ∪ sp1500 ∪ curated ∪ themes, 1,751 names measured that morning,
+which held 659 of the ~1,560 Russell 2000-sized names and missed 901.
+
+**Change:** `_UNIVERSE_ALIASES["full"]` = `("russell3000", "sp1500", "curated", "themes")`.
+One line, because every consumer already reads the alias: the SEPA scan
+(`SEPA_UNIVERSE_MODE=full` in the gitignored `backend/.env`), `zone_store.warm`, the
+demand boards (`demand_reentry.UNIVERSES["full"]`), `chart_maps.board` (Gabbar /
+undervalue), the weekly quick-bounce study. Labels that said "Russell 1000" now say
+"Russell 3000" (demand_reentry, DemandReentryPanel).
+
+**Why the alias, not `SEPA_UNIVERSE_MODE=russell3000`:** the raw mode measured 2,556
+names — 900 new, but it DROPS 95 that only curated / themes / sp1500 carry (pre-profit
+names, ADRs, S&P 600 names the iShares file lags on). Layering keeps them.
+
+**Expected size:** ~2,650 (R3000 2,556 ∪ the 95). `russell3000` keeps its own count band
+(1,800–3,200) in `_EXPECTED_COUNTS`; `full` has none — it is a union of guarded parts.
+
+**Operational notes:** the research cache (`sepa/research.py`, weekly Sunday 20:00 +
+nightly `--only-if-stale`) has to warm the ~900 new names or the first fast-scan runs
+900 fallback analyses; run `python -m sepa.cli research-refresh --symbols <delta>` once
+after the flip. The 16:30 fast-scan grows from ~49 s (1,680 analysed) — measured after
+the flip in the session log.

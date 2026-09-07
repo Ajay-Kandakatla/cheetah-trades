@@ -1826,12 +1826,14 @@ def _rank_key(r: dict):
 UNIVERSES = {
     # ONE universe (Ajay 2026-08-25: "Remove all these themes and just do
     # default universe scan" + "I need full universe scanned for this").
-    # Same `full` alias the SEPA scanner runs — Russell 1000 ∪ S&P 1500 ∪
+    # Same `full` alias the SEPA scanner runs — Russell 3000 ∪ S&P 1500 ∪
     # curated ∪ themes, ONE definition in sepa/universe.py so the two engines
     # can never fish different waters again. Legacy keys (sp1500_plus, qqq,
     # sp500, ...) normalise here via _universe_key's default, so old
     # bookmarks, cron lines and cached history keep working.
-    "full": ("Full universe (Russell 1000 ∪ S&P 1500 ∪ themes)",
+    # 2026-09-07: the alias grew to the Russell 3000 ("add 3000, I wanna be
+    # able to scan more") — this label follows sepa/universe.py, never the reverse.
+    "full": ("Full universe (Russell 3000 ∪ S&P 1500 ∪ themes)",
              lambda: universe_mod.load_universe("full")),
 }
 # The one universe (2026-08-25). History: sp500 → sp1500 (2026-08-14, "make
