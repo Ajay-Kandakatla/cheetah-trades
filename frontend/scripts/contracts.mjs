@@ -767,6 +767,28 @@ const CONTRACTS = [
       return errs;
     },
   },
+
+  {
+    name: 'Every board card and the promo list carry the one-click + Signals button (2026-09-07)',
+    file: 'src/components/PatternChart.tsx',
+    // Ajay 2026-09-07: "One click and add to signals tab ... Same from
+    // Gabbars and strong VCP and from Quick Bounce ... signals is like my
+    // watch list." One store (useSignalWatchlist) behind the cards, the promo
+    // rows AND the Signals board, so a click anywhere shows up on the tab.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{\s*SignalWatchButton\s*\}\s*from\s*'\.\/SignalWatchButton'/.test(src)) errs.push('PatternChart.tsx no longer imports SignalWatchButton');
+      if (!/<SignalWatchButton symbol=\{tile\.symbol\}/.test(src)) errs.push('PatternChart.tsx no longer mounts <SignalWatchButton symbol={tile.symbol}>');
+      const promo = read('src/components/PromoCircuit.tsx');
+      if (!/<SignalWatchButton symbol=\{ticker\}/.test(promo)) errs.push('PromoCircuit.tsx ticker cell lost its + Signals button');
+      const board = read('src/components/SignalLabBoard.tsx');
+      if (!/useSignalWatchlist\(\)/.test(board)) errs.push('SignalLabBoard.tsx must render the shared store (useSignalWatchlist), not its own list');
+      const hook = read('src/hooks/useSignalWatchlist.ts');
+      if (!/export const MAX_SYMBOLS = 12;/.test(hook)) errs.push('useSignalWatchlist MAX_SYMBOLS must stay 12 (backend daytrading/signal_lab.MAX_SYMBOLS)');
+      if (!/export const LS_KEY = 'signal-lab-symbols';/.test(hook)) errs.push("useSignalWatchlist must keep the board's localStorage key 'signal-lab-symbols'");
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

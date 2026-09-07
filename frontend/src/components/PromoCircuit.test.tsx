@@ -539,3 +539,15 @@ describe('valuation floor (Ajay 2026-09-03: "filter out any company that its val
     await waitFor(() => expect(boardSyms()).toEqual(['TINY']));
   });
 });
+
+// Ajay 2026-09-07: "Give me options in Catalyst promo tab list for add something
+// to signals" — every ticker cell carries the one-click + Signals button.
+describe('PromoCircuit — + Signals on every row', () => {
+  it('each promo row carries an Add-to-Signals button for its ticker', async () => {
+    mock(payload([row()]));
+    draw();
+    const btns = await screen.findAllByRole('button', { name: /^Add [A-Z0-9.]+ to Signals$/ });
+    expect(btns.length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Add LIV1 to Signals' })).toBeInTheDocument();
+  });
+});

@@ -21,6 +21,7 @@ import {
 } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openTvChart } from '../lib/tvChart';
+import { SignalWatchButton } from './SignalWatchButton';
 
 const W = 620;
 const PAD_Y = 10;
@@ -142,6 +143,9 @@ export const PatternChart = memo(function PatternChart(
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}
+            {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
+              * every board; the Signals tab reads the same store. */}
+            <SignalWatchButton symbol={tile.symbol} />
             <button type="button" className="cm-tv"
                     title={`Open ${tile.symbol} in TradingView`}
                     aria-label={`Open ${tile.symbol} in TradingView`}

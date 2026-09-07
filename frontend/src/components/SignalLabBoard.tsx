@@ -17,8 +17,9 @@
  * and sits still when the market is closed. Whoever asked LAST owns the
  * screen (the Support-tab race lesson, 2026-08-31).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
+import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
 import { SymbolSearch } from './SymbolSearch';
 import type { CmTile } from '../lib/chartMaps';
@@ -37,45 +38,18 @@ type Payload = {
 };
 
 const POLL_MS = 45_000;
-const LS_KEY = 'signal-lab-symbols';
-
-function loadLocal(): string[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr.filter((s) => typeof s === 'string') : [];
-  } catch { return []; }
-}
-function saveLocal(syms: string[]) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(syms)); } catch { /* private mode */ }
-}
-
 export function SignalLabBoard() {
-  const [symbols, setSymbols] = useState<string[]>(() => loadLocal());
-  const [held, setHeld] = useState<Set<string>>(new Set());
+  // ONE watchlist for the app (Ajay 2026-09-07: "one click and add to signals
+  // tab" from every board) — the store fetches the account's list once, the
+  // cards' + Signals buttons write to it, this board renders it.
+  const wl = useSignalWatchlist();
+  const symbols = wl.symbols;
+  const held = useMemo(() => new Set(wl.held), [wl.held]);
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
-
-  // server watchlist wins over localStorage once it answers — the list
-  // follows him across browsers; localStorage is the offline fallback
-  useEffect(() => {
-    const my = ++seq.current;
-    fetch(`${API}/day/signal-lab/watchlist`, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (my !== seq.current || !j) return;
-        if (Array.isArray(j.symbols) && j.symbols.length) {
-          setSymbols(j.symbols); saveLocal(j.symbols);
-        }
-        // Held names ride the board by default (Ajay 2026-09-02) — they leave
-        // with the position, not with the × here.
-        if (Array.isArray(j.held)) setHeld(new Set<string>(j.held));
-      })
-      .catch(() => { /* localStorage list stands */ });
-  }, []);
 
   const load = useCallback((quiet = false) => {
     if (!symbols.length) { setData(null); return; }
@@ -104,20 +78,8 @@ export function SignalLabBoard() {
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [data?.session_state, load]);
 
-  const add = (sym: string) => {
-    const s = sym.trim().toUpperCase();
-    if (!s || symbols.includes(s)) return;
-    const next = [...symbols, s].slice(-12);
-    setSymbols(next); saveLocal(next);
-    fetch(`${API}/day/signal-lab/watchlist/${encodeURIComponent(s)}`,
-          { method: 'POST', credentials: 'include' }).catch(() => {});
-  };
-  const remove = (sym: string) => {
-    const next = symbols.filter((x) => x !== sym);
-    setSymbols(next); saveLocal(next);
-    fetch(`${API}/day/signal-lab/watchlist/${encodeURIComponent(sym)}`,
-          { method: 'DELETE', credentials: 'include' }).catch(() => {});
-  };
+  const add = wl.add;
+  const remove = wl.remove;
 
   return (
     <div className="slab">

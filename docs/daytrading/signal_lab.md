@@ -52,3 +52,23 @@ formula is paid/closed and none of it is used.
 - `GET /day/signal-lab/board?symbols=A,B,C`
 - `GET/POST/DELETE /day/signal-lab/watchlist[/{symbol}]` (user-scoped via
   `current_user_email`)
+
+## 2026-09-07 — one watchlist, one click from every board
+
+Ajay: *"Give me options in Catalyst promo tab list for add something to signals. Also same
+from Demand and deep demand. One click and add to signals tab. Same from Gabbars and strong
+VCP and from Quick Bounce.. So I can add it to signals — signals is like my watch list."*
+
+- `frontend/src/hooks/useSignalWatchlist.ts` — the ONE store: server list first
+  (`GET/POST/DELETE /day/signal-lab/watchlist`, per user), localStorage `signal-lab-symbols`
+  as the offline mirror, `held` from the portfolio merge, `MAX_SYMBOLS = 12` (matches
+  `daytrading/signal_lab.MAX_SYMBOLS`; a 13th add drops the oldest on both sides).
+- `SignalWatchButton` — `+ Signals` / `✓ Signals` / `💼 Signals` (held: static). Mounted on
+  every Chart Maps card (`PatternChart`, beside TV — so every tile board) and in the promo
+  list's ticker cell (`PromoCircuit.SymCell`, compact). The click never bubbles into the
+  card's link.
+- `SignalLabBoard` renders the same store, so a click on a Deep Demand card is on the
+  Signals tab the moment it opens. No backend change.
+- Tests: `useSignalWatchlist.test.ts`, `SignalWatchButton.test.tsx`, `PatternChart.test.tsx`
+  (+ negative held), `PromoCircuit.test.tsx`, `SignalLabBoard.test.tsx`; contract "Every
+  board card and the promo list carry the one-click + Signals button".

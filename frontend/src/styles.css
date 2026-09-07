@@ -11473,6 +11473,10 @@ a.tk-link:hover   { color: inherit; }
   font-family: inherit;
 }
 .cm-tv:hover { color: var(--ink, #e7e7e7); border-color: var(--text-muted, #94a3b8); }
+/* + Signals (2026-09-07): one click onto the Signals watchlist from any card / promo row */
+.cm-watch.is-on { color: var(--ok, #4ade80); border-color: var(--ok, #4ade80); }
+.cm-watch.is-held { opacity: .75; cursor: default; }
+.pcw__links .cm-watch { margin-left: 4px; }
 
 /* Russell inclusion watch */
 .rw__table { margin-top: 14px; }

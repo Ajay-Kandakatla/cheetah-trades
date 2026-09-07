@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SignalLabPage } from './SignalLab';
+import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
 
 vi.mock('../components/PatternChart', () => ({
   PatternChart: ({ tile }: any) => <div data-testid="chart">{tile.symbol}</div>,
@@ -31,6 +32,7 @@ const PAYLOAD = {
 const draw = () => render(<MemoryRouter><SignalLabPage /></MemoryRouter>);
 
 afterEach(() => {
+  _resetSignalWatchlist();                       // the watchlist store is a singleton (2026-09-07)
   vi.unstubAllGlobals(); vi.restoreAllMocks();
   try { localStorage.removeItem('signal-lab-symbols'); } catch { /* stub env */ }
 });

@@ -16,6 +16,7 @@ import { TickerLink } from './TickerLink';
 import { Link } from 'react-router-dom';
 import { MiniTape, PromoTagTape } from './PromoTagTape';
 import { mdy, type AddEvent } from './RussellWatch';
+import { SignalWatchButton } from './SignalWatchButton';
 
 type TaggedBy = {
   handle: string; tier: 'S' | 'A' | 'B';
@@ -166,6 +167,8 @@ function SymCell({ ticker, cap }: { ticker: string; cap?: number | null }) {
       <span className="pcw__links mono">
         <a href={symbolUrl(ticker)} target="_blank" rel="noreferrer" title={`$${ticker} on StockTwits`}>ST↗</a>
         <Link to={`/sepa/${encodeURIComponent(ticker)}?tab=supply`} title={`${ticker} on our SEPA page, Supply / Demand tab`}>SEPA</Link>
+        {/* Ajay 2026-09-07: "options in Catalyst promo tab list for add something to signals" */}
+        <SignalWatchButton symbol={ticker} compact />
       </span>
       <span className={`pcw__cap mono pcw__dim${cap != null && cap < MIN_CAP_USD ? ' is-small' : ''}`}
             title={cap == null ? 'market cap unknown — no shares data yet' : `market cap ≈ ${fmtCapShort(cap)} (shares × last close)`}>{fmtCapShort(cap)}</span>

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
+import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
 import type { CmBar, CmTile } from '../lib/chartMaps';
 
 /* PatternChart — one Chart Maps study tile.
@@ -324,5 +325,39 @@ describe('extended-hours shading', () => {
   it('NEGATIVE: daily bars draw no shading', () => {
     const { container } = draw(TILE);
     expect(container.querySelectorAll('.pc-ext').length).toBe(0);
+  });
+});
+
+// Ajay 2026-09-07: "One click and add to signals tab" — every card carries the
+// + Signals button; it adds without leaving the board (the card is a Link).
+describe('PatternChart — + Signals button', () => {
+  afterEach(() => { vi.unstubAllGlobals(); _resetSignalWatchlist(); });
+
+  it('adds the ticker to the Signals watchlist in one click and does not navigate', async () => {
+    _resetSignalWatchlist();
+    const calls: { url: string; method: string }[] = [];
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any, init?: any) => {
+      calls.push({ url: String(url), method: init?.method || 'GET' });
+      return Promise.resolve({ ok: true, json: async () => ({ symbols: calls.some((c) => c.method === 'POST') ? ['IONQ'] : [], held: [] }) });
+    }));
+    draw(TILE);
+    const btn = await screen.findByRole('button', { name: 'Add IONQ to Signals' });
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(btn);
+    expect(await screen.findByRole('button', { name: 'Remove IONQ from Signals' })).toHaveAttribute('aria-pressed', 'true');
+    expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/day/signal-lab/watchlist/IONQ'))).toBe(true);
+    // the card link is still the one on screen — no navigation happened
+    expect(screen.getByRole('link', { name: /IONQ — open SEPA detail/ })).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a held name shows the 💼 state and never posts', async () => {
+    _resetSignalWatchlist();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ symbols: ['IONQ'], held: ['IONQ'] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    draw(TILE);
+    const held = await screen.findByLabelText('IONQ is in Signals via your portfolio');
+    fireEvent.click(held);
+    expect(fetchMock.mock.calls.filter((c: any[]) => c[1]?.method === 'POST' || c[1]?.method === 'DELETE')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /IONQ (to|from) Signals/ })).toBeNull();
   });
 });
