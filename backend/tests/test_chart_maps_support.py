@@ -815,3 +815,16 @@ def test_a_two_or_three_year_zoom_hands_price_zones_that_many_bars(loaded, monke
     assert out["window"] == "2y" and 504 in seen
     # The dropdown the response carries lists both, in zoom order.
     assert [w["key"] for w in out["windows"]] == ["1m", "3m", "6m", "1y", "2y", "3y", "5y", S.OVERLAY_KEY]
+
+
+# ── default zoom = 1 year (Ajay 2026-09-06) ───────────────────────────────────
+def test_the_default_zoom_is_one_year_on_every_surface(loaded):
+    """Ajay 2026-09-06: "make support default to 1 year on all the tabs? I
+    think its safer and more accurate." The API default, the fallback for
+    junk and a call with no window all open on 1y — was 3m."""
+    assert S.DEFAULT_WINDOW == "1y"
+    assert S.parse_window("") == "1y" and S.parse_window("nope") == "1y" and S.parse_window(None) == "1y"
+    out = S.for_symbol("TEST")
+    assert out["window"] == "1y" and out["window_label"] == "1 year"
+    # NEGATIVE: the old default still exists as a zoom, it is just not opened on.
+    assert S.parse_window("3m") == "3m" and S.for_symbol("TEST", "3m")["window"] == "3m"

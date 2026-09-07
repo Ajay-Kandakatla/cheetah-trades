@@ -385,10 +385,24 @@ describe('CHART_VIEWS — the live frame', () => {
   });
 });
 
-describe('SEPA Supply / Demand tab default zoom (Ajay 2026-09-02)', () => {
-  it('is 6 months on the ticker page while the engine default stays 3m', () => {
-    expect(SEPA_SUPPLY_WINDOW).toBe('6m');
-    expect(DEFAULT_WINDOW).toBe('3m');
+describe('default zoom — 1 year on every surface (Ajay 2026-09-06)', () => {
+  it('opens on 1 year: engine default, ticker page, and the merged control', () => {
+    // Was 3m on Chart Maps and 6m on the ticker page (Ajay 2026-09-02);
+    // 2026-09-06: "make support default to 1 year on all the tabs? I think
+    // its safer and more accurate."
+    expect(DEFAULT_WINDOW).toBe('1y');
+    expect(SEPA_SUPPLY_WINDOW).toBe('1y');
+    expect(DEFAULT_VIEW).toBe('daily:1y');
+    expect(parseWindow('')).toBe('1y');
+    expect(parseWindow('garbage')).toBe('1y');
+    expect(viewKeyFor('99y', 'daily')).toBe('daily:1y');
+    expect(viewFor('nonsense')).toMatchObject({ window: '1y', tf: 'daily' });
+  });
+
+  it('keeps shared URLs short on the default and spells out the old default (NEGATIVE)', () => {
+    expect(supportQuery({ symbol: 'NVDA', window: '1y' })).not.toContain('window');
+    expect(supportQuery({ symbol: 'NVDA', window: '3m' })).toContain('window=3m');
+    expect(supportQuery({ symbol: 'NVDA', window: '6m' })).toContain('window=6m');
   });
 });
 

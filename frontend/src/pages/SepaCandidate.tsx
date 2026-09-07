@@ -318,8 +318,9 @@ export function SepaCandidatePage() {
   const [accountSize, setAccountSize] = useState(100000);
   const [riskPct, setRiskPct] = useState(1);
   // Zoom for the price supply/demand panel on the supply tab (2026-08-25).
-  // 6 months by default here (Ajay 2026-09-02: "default supply demand to 6
-  // months in that tab") — the Chart Maps tab keeps the engine's 3m default.
+  // Was 6 months here (Ajay 2026-09-02) while Chart Maps opened on 3m; since
+  // 2026-09-06 both open on 1 year ("make support default to 1 year on all
+  // the tabs"), one constant in supportLevels.ts.
   const [supportWin, setSupportWin] = useState<string>(SEPA_SUPPLY_WINDOW);
   /* The chart's timeframe. Without this the ticker page dropped the tf half
    * of every Intraday pick — onView was never passed, the component fell back

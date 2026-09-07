@@ -425,6 +425,12 @@ const CONTRACTS = [
       }
       const feats = read('src/lib/newFeatures.ts');
       if (!/id: 'chart-maps-2y-3y-windows'/.test(feats)) errs.push("newFeatures.ts lost the 'chart-maps-2y-3y-windows' highlight");
+      // Ajay 2026-09-06 (later): "make support default to 1 year on all the
+      // tabs? I think its safer and more accurate." Three constants, one value.
+      if (!/export const DEFAULT_WINDOW = '1y';/.test(src)) errs.push("DEFAULT_WINDOW is not '1y' — the Support tab would open on another zoom");
+      if (!/export const SEPA_SUPPLY_WINDOW = '1y';/.test(src)) errs.push("SEPA_SUPPLY_WINDOW is not '1y' — the ticker page would open on another zoom");
+      if (!/export const DEFAULT_VIEW = 'daily:1y';/.test(src)) errs.push("DEFAULT_VIEW is not 'daily:1y'");
+      if (!/id: 'support-default-1y'/.test(feats)) errs.push("newFeatures.ts lost the 'support-default-1y' highlight");
       return errs;
     },
   },

@@ -287,6 +287,13 @@ are still the scan's; only the picture gets longer. The Support Levels zoom
 gained the same 2y / 3y reads with the demand-zone clustering run on that many
 bars — see `docs/supply_demand/support_levels_tab.md`.
 
+## Support Levels opens on 1 year (2026-09-06)
+
+Ajay: "make support default to 1 year on all the tabs? I think its safer and
+more accurate." `support.DEFAULT_WINDOW = "1y"` (was 3m); the ticker page's
+Supply / Demand chart follows (was 6m). See
+`docs/supply_demand/support_levels_tab.md` §Default zoom.
+
 ---
 
 **Not advice.** The winners tab shows a measured sample of what happened to past

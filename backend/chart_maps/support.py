@@ -80,10 +80,13 @@ SUPPORT_WINDOWS: tuple[dict, ...] = (
     {"key": "5y", "label": "5 years",  "bars": 1260, "swing_window": 5},
 )
 
-# 3 months is the middle of what was asked for and the horizon a swing stop
-# actually lives on. Not 1y: that is what every other surface already answers,
-# so opening on it would make the tab look like a duplicate of /zones.
-DEFAULT_WINDOW = "3m"
+# 1 year since 2026-09-06 (Ajay: "make support default to 1 year on all the
+# tabs? I think its safer and more accurate"). Until then 3 months — the middle
+# of the 2026-08-19 ask and the horizon a swing stop lives on; 1y was avoided
+# because /zones already answered it. He would rather open on the structural
+# floor and zoom IN than start on a week's shelf. One default on every surface
+# (Chart Maps tab, ticker page) — the frontend mirrors it.
+DEFAULT_WINDOW = "1y"
 
 # 1Y is not in the request. It is here because `/supply-demand/price-zones` and
 # the /zones page both read 252 bars, and a tab that could not reproduce their

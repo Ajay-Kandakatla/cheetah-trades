@@ -145,11 +145,15 @@ export const FALLBACK_WINDOWS: SupportWindow[] = [
   { key: 'all', label: 'All windows · overlay', bars: 0 },
 ];
 
-/** Matches backend support.DEFAULT_WINDOW. */
-export const DEFAULT_WINDOW = '3m';
-/** The ticker page's Supply / Demand tab starts wider (Ajay 2026-09-02:
- *  "default supply demand to 6 months in that tab"); Chart Maps keeps 3m. */
-export const SEPA_SUPPLY_WINDOW = '6m';
+/** Matches backend support.DEFAULT_WINDOW — 1 year since 2026-09-06 (Ajay:
+ *  "make support default to 1 year on all the tabs? I think its safer and
+ *  more accurate"); was 3m. */
+export const DEFAULT_WINDOW = '1y';
+/** The ticker page's Supply / Demand tab. It diverged once (Ajay 2026-09-02:
+ *  "default supply demand to 6 months in that tab"); since 2026-09-06 it is
+ *  the same 1 year as every other surface ("on all the tabs"). The constant
+ *  stays so the page can diverge again on his word, in one place. */
+export const SEPA_SUPPLY_WINDOW = '1y';
 
 /** Coerce a `?window=` value against the list the server actually offers, so a
  *  key retired backend-side degrades to the default instead of 404ing. */
@@ -248,7 +252,7 @@ export const CHART_VIEWS: ChartView[] = [
     hint: 'last ~2.5 sessions incl. overnight against the 6-month daily levels; refreshes every 30s while the tape is open' },
 ];
 
-export const DEFAULT_VIEW = 'daily:3m';
+export const DEFAULT_VIEW = 'daily:1y';   // follows DEFAULT_WINDOW (1 year since 2026-09-06)
 
 /** Resolve a (window, tf) pair back to the single control's value, so a
  *  shared URL written before this change still selects the right entry. */

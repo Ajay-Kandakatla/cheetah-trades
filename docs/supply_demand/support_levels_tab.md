@@ -223,3 +223,19 @@ from the same deep fetch). Pinned in `backend/tests/test_chart_maps_support.py`,
 `backend/tests/test_chart_maps.py`, `frontend/src/lib/supportLevels.test.ts`,
 `frontend/src/pages/ChartMaps.test.tsx` and the contract "Chart Maps time frames
 carry 2 / 3 / 5 years".
+
+## Default zoom: 1 year (2026-09-06)
+
+Ajay 2026-09-06: "Can you make support default to 1 year on all the tabs? I
+think its safer and more accurate."
+
+`support.DEFAULT_WINDOW` is `"1y"` (was `"3m"`), mirrored by
+`frontend/src/lib/supportLevels.ts` `DEFAULT_WINDOW`, `DEFAULT_VIEW`
+(`daily:1y`) and `SEPA_SUPPLY_WINDOW` (the ticker page's Supply / Demand chart,
+which had opened on 6 months since 2026-09-02). Every surface opens on the
+1-year read; an unknown or missing `?window=` lands there too; a shared URL
+omits `window` only when it is 1y. The 1m / 3m / 6m zooms are unchanged as
+choices. Pinned in `backend/tests/test_chart_maps_support.py`
+(`test_the_default_zoom_is_one_year_on_every_surface`),
+`frontend/src/lib/supportLevels.test.ts` ("default zoom — 1 year on every
+surface") and the contract "Chart Maps time frames carry 2 / 3 / 5 years".

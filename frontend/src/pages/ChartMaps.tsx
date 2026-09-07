@@ -94,8 +94,8 @@ const HowItWorks = (
         demand band. Room and bounce are a configured price-structure read
         shared with the Demand board — owner settings, not advice.</li>
       <li><strong>📏 Support Levels</strong> — the only tab that is not a board.
-        Search any ticker and pick a zoom. The same clustering rule runs over a
-        1-month, 3-month, 6-month or 1-year frame, and the answers differ on
+        Search any ticker and pick a zoom (opens on 1 year since 2026-09-06). The
+        same clustering rule runs over a 1-month to 5-year frame, and the answers differ on
         purpose: a short read finds the level this week's trade is standing on,
         a long one finds the structural floor. A ● marks a level price has
         actually tested inside the last month — untested year-old structure and
