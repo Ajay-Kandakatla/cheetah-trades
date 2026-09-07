@@ -49,6 +49,8 @@ for a measured scan on a holiday afternoon or a backfill. Never set it in the cr
 
 - ℹ️ Rules panel ▸ Zone alerts: "Closed days push nothing market-driven and run no
   scan … (next: YYYY-MM-DD)" — built from the same calendar.
+- The "⚠️ Alerts may be paused" banner (`/health/engine`) reads the same calendar since the
+  same afternoon: a gated (skipped) alerts cron on a holiday is not a dead host.
 - `/alerts` is simply quiet on those days; the app log carries
   `GATE closed (holiday 2026-09-07) — <module> skipped` per job and
   `push.sender: kind=… dropped — market closed` per push.

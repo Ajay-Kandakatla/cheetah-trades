@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pytest
+
 from observability import engine_heartbeat as hb
 
 
@@ -39,3 +41,26 @@ def test_to_epoch_accepts_iso_and_number():
 def test_threshold_is_two_missed_cycles():
     # alerts run every 5 min; the stale threshold should be > one cycle.
     assert hb.ALERTS_STALE_SEC >= 10 * 60
+
+
+# 2026-09-07 (Labor Day): the gate skips the alerts cron on closed days, so the
+# banner must read the SAME calendar or it tells him to restart cron on a holiday.
+def test_market_open_is_false_on_a_weekday_holiday(monkeypatch):
+    monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
+    assert hb._market_open(_et(2026, 9, 7, 10, 0)) is False    # Labor Day, Monday
+    assert hb._market_open(_et(2026, 9, 8, 10, 0)) is True     # the next trading day
+    assert hb._market_open(_et(2026, 11, 26, 10, 0)) is False  # Thanksgiving
+
+
+def test_engine_status_is_not_stale_on_a_closed_day_even_with_an_old_beat(monkeypatch):
+    monkeypatch.setattr(hb, "_market_open", lambda now=None: False)
+    monkeypatch.setattr(hb, "_last_beat", lambda name="alerts": hb._now_epoch() - 6 * 3600)
+    s = hb.engine_status()
+    assert s["market_open"] is False and s["stale"] is False and s["stale_reason"] is None
+
+
+def test_engine_status_still_flags_a_dead_engine_on_a_trading_day(monkeypatch):
+    monkeypatch.setattr(hb, "_market_open", lambda now=None: True)
+    monkeypatch.setattr(hb, "_last_beat", lambda name="alerts": hb._now_epoch() - 6 * 3600)
+    s = hb.engine_status()
+    assert s["stale"] is True and "last ran" in (s["stale_reason"] or "")

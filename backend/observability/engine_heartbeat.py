@@ -95,12 +95,22 @@ def _to_epoch(val) -> Optional[float]:
 
 
 def _market_open(now: Optional[datetime] = None) -> bool:
-    """True on a weekday between 9:30 and 16:00 ET. Does NOT account for market
-    holidays (a holiday would read 'open' and could show a false banner) — an
-    accepted, low-harm edge for an informational banner."""
+    """True on a TRADING day between 9:30 and 16:00 ET.
+
+    2026-09-07 (Labor Day): the closed-day gate stopped the alerts cron on
+    holidays, so the heartbeat went stale and this read said "open" → the UI
+    told him to restart the cron container on a closed market. Same calendar
+    as the gate now (market_hours.gate.closed_reason: weekends + NYSE
+    holidays); the former "holidays are an accepted edge" is gone."""
     n = now or (datetime.now(_ET) if _ET else datetime.utcnow())
     if n.weekday() >= 5:
         return False
+    try:
+        from market_hours.gate import closed_reason
+        if closed_reason(n):
+            return False
+    except Exception:  # pragma: no cover - calendar unavailable → old behaviour
+        pass
     minutes = n.hour * 60 + n.minute
     return (9 * 60 + 30) <= minutes <= (16 * 60)
 
