@@ -95,6 +95,12 @@
 # `quick_bounce_stats`; the Chart Maps Quick Bounce tab and the paper lane
 # tag read it. ~10 min on a warm price cache.
 0      7     *    *    0    /usr/local/bin/python -m supply_demand.quick_bounce
+# Last-lid break study (supply_demand/lid_break.py) — Sundays 07:30 ET (Ajay
+# 2026-09-07: "when the last resistance break will the price go to ATH").
+# Breaks of the LAST supply band vs the prior 52-week high / 2y frame high,
+# universe-wide, no lookahead; writes `lid_break_stats`. The 🚀 Breaking tab
+# prints the pooled read + per-card counts. Study board only.
+30     7     *    *    0    /usr/local/bin/python -m supply_demand.lid_break
 
 # Zone store warm (supply_demand/zone_store.py) — 9:20 ET weekdays, five
 # minutes before the demand board warms. Draws EVERY supply + demand band

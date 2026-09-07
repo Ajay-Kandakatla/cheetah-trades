@@ -15,7 +15,7 @@ import {
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine, type CmTab,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
-  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText,
+  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText,
   dropCollidingTicks, priceTicks, tickDecimals,
   GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
   priceAt, shortVol, textWidth, tooltipPos,
@@ -1578,5 +1578,44 @@ describe('the 🚀 Breaking tab', () => {
     expect(breakingPassText({ pass_as_of: null, in_session: false, reason: 'zone store empty for today' }))
       .toBe('no pass yet today \u2014 zone store empty for today');
     expect(breakingPassText({ pass_as_of: 'garbage', in_session: true, reason: null })).toBe('no pass yet today');
+  });
+});
+
+// Ajay 2026-09-07: "when the last resistance break will the price go to ATH" — the
+// weekly lid-break study line under the 🚀 Breaking pass line. Every rate beside
+// its placebo and n; the frame high stands in for ATH and the page says so.
+describe('lidBreakStudyText', () => {
+  const meta = {
+    as_of: '2026-09-07', events: 6393, names: 2138, universe: 2650,
+    hit_52w_21_pct: 57.5, hit_52w_21_n: 3967, hit_52w_63_pct: 75.9, hit_52w_63_n: 3634,
+    placebo_any_21_pct: 24.0, placebo_up_21_pct: 26.4, placebo_any_63_pct: 44.2, placebo_up_63_pct: 46.8,
+    failed_21_pct: 75.2, median_days_to_52w_63: 2, median_runup_21_pct: 7.5, median_runup_63_pct: 13.14,
+    proven_hit_52w_21_pct: 57.6, proven_n: 1673, single_hit_52w_21_pct: 57.5, single_n: 2294,
+    volc_hit_52w_21_pct: 56.7, volc_n: 1452,
+    dist: { '\u22645%': { pct: 89.6, n: 1835 }, '5\u201315%': { pct: 51.8, n: 856 }, '>15%': { pct: 15.3, n: 1276 } },
+  };
+
+  it('prints the measured read with placebo and n beside every rate', () => {
+    const t = lidBreakStudyText(meta)!;
+    expect(t).toContain('6393 breaks of the last lid across 2138 names');
+    expect(t).toContain('58% reached the prior 52-week high within 21 sessions (n=3967) vs 24% from any day / 26% from any up-day');
+    expect(t).toContain('76% within 63 (n=3634) vs 44% / 47%');
+    expect(t).toContain('median 2 sessions to get there');
+    expect(t).toContain('75% closed back under the lid within 21');
+    expect(t).toContain('median best run +7.5% in 21 / +13.14% in 63');
+    expect(t).toContain('proven lids 58% (n=1673) vs single-touch 58% (n=2294)');
+    expect(t).toContain('volume-confirmed breaks 57% (n=1452)');
+    expect(t).toContain('by distance to that high: \u22645% away 90% (n=1835), 5\u201315% away 52% (n=856), >15% away 15% (n=1276)');
+  });
+
+  it('is null before the study has run and tolerates missing splits', () => {
+    expect(lidBreakStudyText(null)).toBeNull();
+    expect(lidBreakStudyText(undefined)).toBeNull();
+    expect(lidBreakStudyText({ events: 0 })).toBeNull();
+    const t = lidBreakStudyText({ events: 4, names: 3, hit_52w_21_pct: 50, hit_52w_21_n: 4 })!;
+    expect(t).toContain('4 breaks of the last lid across 3 names');
+    expect(t).toContain('50% reached the prior 52-week high within 21 sessions (n=4) vs \u2014 from any day / \u2014 from any up-day');
+    expect(t).not.toContain('proven lids');
+    expect(t).not.toContain('by distance');
   });
 });

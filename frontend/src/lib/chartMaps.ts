@@ -223,6 +223,34 @@ export type CmPatternRecord = {
 
 export type CmSort = { key: string; label: string };
 
+export type CmLidBreak = {
+  as_of?: string | null;
+  events?: number | null;
+  names?: number | null;
+  universe?: number | null;
+  hit_52w_21_pct?: number | null;
+  hit_52w_21_n?: number | null;
+  hit_52w_63_pct?: number | null;
+  hit_52w_63_n?: number | null;
+  placebo_any_21_pct?: number | null;
+  placebo_up_21_pct?: number | null;
+  placebo_any_63_pct?: number | null;
+  placebo_up_63_pct?: number | null;
+  failed_21_pct?: number | null;
+  median_days_to_52w_63?: number | null;
+  median_runup_21_pct?: number | null;
+  median_runup_63_pct?: number | null;
+  proven_hit_52w_21_pct?: number | null;
+  proven_n?: number | null;
+  single_hit_52w_21_pct?: number | null;
+  single_n?: number | null;
+  volc_hit_52w_21_pct?: number | null;
+  volc_n?: number | null;
+  dist?: Record<string, { pct?: number | null; n?: number | null }> | null;
+  persistence?: CmQuickBounceStudy['persistence'];
+  disclaimer?: string | null;
+};
+
 export type CmBoard = {
   tab: CmTab;
   count: number;
@@ -256,6 +284,10 @@ export type CmBoard = {
    *  its persistence check, printed under the board so the list is read
    *  against its own evidence. */
   study?: CmQuickBounceStudy | null;
+  /** \u{1F680} Breaking only (2026-09-07) — the weekly last-lid-break study, pooled
+   *  (supply_demand/lid_break.board_meta): does breaking the LAST supply band carry
+   *  price to the prior 52-week high? Printed under the pass line. */
+  lid_break?: CmLidBreak | null;
   qualifying?: number;
   no_band?: number;
   no_print?: number;
@@ -1205,6 +1237,29 @@ export function dataThrough(tiles: { bars?: CmBar[] }[] | null | undefined): str
  *  it is live, and the backend's own reason when it is not. The stamp is
  *  already ET with its offset, so the clock is a substring, never a
  *  timezone conversion (same rule as ZoneEdgeBoard.hhmm). */
+/** The lid-break study line under the \u{1F680} Breaking pass line (2026-09-07). Every
+ *  rate next to its placebo and n; null when the study has not run yet. */
+export function lidBreakStudyText(m: CmLidBreak | null | undefined): string | null {
+  if (!m || !m.events) return null;
+  const pct = (v: number | null | undefined) => (v == null ? '\u2014' : `${Math.round(v)}%`);
+  const n = (v: number | null | undefined) => (v == null ? '' : ` (n=${v})`);
+  const parts: string[] = [];
+  parts.push(`${m.events} breaks of the last lid across ${m.names ?? '?'} names`);
+  parts.push(`${pct(m.hit_52w_21_pct)} reached the prior 52-week high within 21 sessions${n(m.hit_52w_21_n)} vs ${pct(m.placebo_any_21_pct)} from any day / ${pct(m.placebo_up_21_pct)} from any up-day`);
+  parts.push(`${pct(m.hit_52w_63_pct)} within 63${n(m.hit_52w_63_n)} vs ${pct(m.placebo_any_63_pct)} / ${pct(m.placebo_up_63_pct)}`);
+  if (m.median_days_to_52w_63 != null) parts.push(`median ${m.median_days_to_52w_63} sessions to get there`);
+  parts.push(`${pct(m.failed_21_pct)} closed back under the lid within 21`);
+  if (m.median_runup_21_pct != null) parts.push(`median best run +${m.median_runup_21_pct}% in 21 / +${m.median_runup_63_pct ?? '\u2014'}% in 63`);
+  if (m.proven_hit_52w_21_pct != null || m.single_hit_52w_21_pct != null) {
+    parts.push(`proven lids ${pct(m.proven_hit_52w_21_pct)}${n(m.proven_n)} vs single-touch ${pct(m.single_hit_52w_21_pct)}${n(m.single_n)}`);
+  }
+  if (m.volc_hit_52w_21_pct != null) parts.push(`volume-confirmed breaks ${pct(m.volc_hit_52w_21_pct)}${n(m.volc_n)}`);
+  const d = m.dist || {};
+  const dparts = Object.keys(d).filter(k => d[k] && d[k]!.pct != null).map(k => `${k} away ${pct(d[k]!.pct)}${n(d[k]!.n)}`);
+  if (dparts.length) parts.push(`by distance to that high: ${dparts.join(', ')}`);
+  return parts.join(' \u00b7 ');
+}
+
 export function breakingPassText(b: Pick<CmBoard, 'pass_as_of' | 'in_session' | 'reason'>): string {
   const iso = b.pass_as_of ? String(b.pass_as_of) : '';
   const hhmm = iso.length >= 16 && iso[10] === 'T' ? iso.slice(11, 16) : '';

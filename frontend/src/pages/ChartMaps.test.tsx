@@ -211,6 +211,33 @@ describe('ChartMaps', () => {
     expect(urls.some((u) => u.includes('zone-edge'))).toBe(false);
   });
 
+  it('the 🚀 Breaking tab prints the last-lid-break study under the pass line (2026-09-07)', async () => {
+    vi.stubGlobal('fetch', stubFetch({ breaking: {
+      tab: 'breaking', count: 0, matched: 0, tiles: [], hidden_low_room: 0, min_room: 5,
+      pass_as_of: '2026-09-04T15:59:03-04:00', pass_date: '2026-09-04', in_session: false,
+      reason: 'last pass 2026-09-04; no pass yet today',
+      lid_break: { as_of: '2026-09-07', events: 6393, names: 2138, hit_52w_21_pct: 57.5, hit_52w_21_n: 3967,
+        placebo_any_21_pct: 24.0, placebo_up_21_pct: 26.4, failed_21_pct: 75.2,
+        persistence: { split_date: '2026-03-16', names: 179, top_q_second_half_pct: 71.6, bottom_q_second_half_pct: 59.5, gap_pts: 12.1, rank_corr: 0.161 } },
+    } }));
+    draw('/chart-maps?tab=breaking');
+    const line = await screen.findByTestId('lid-break-study');
+    expect(line).toHaveTextContent('Last-lid breaks (study 2026-09-07): 6393 breaks of the last lid across 2138 names');
+    expect(line).toHaveTextContent('58% reached the prior 52-week high within 21 sessions (n=3967) vs 24% from any day / 26% from any up-day');
+    expect(line).toHaveTextContent('75% closed back under the lid within 21');
+    expect(line).toHaveTextContent('frame’s high stands in for the all-time high');
+  });
+
+  it('the study line is absent until the study has run (NEGATIVE)', async () => {
+    vi.stubGlobal('fetch', stubFetch({ breaking: {
+      tab: 'breaking', count: 0, matched: 0, tiles: [], hidden_low_room: 0, min_room: 5,
+      pass_as_of: '2026-09-04T15:59:03-04:00', pass_date: '2026-09-04', in_session: false, reason: 'x', lid_break: null,
+    } }));
+    draw('/chart-maps?tab=breaking');
+    expect(await screen.findByTestId('breaking-pass')).toBeInTheDocument();
+    expect(screen.queryByTestId('lid-break-study')).toBeNull();
+  });
+
   it('reports how many matched out of how many were scanned', async () => {
     draw();
     expect(await screen.findByText(/265 matches/)).toBeInTheDocument();

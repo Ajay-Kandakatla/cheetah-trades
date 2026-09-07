@@ -24,7 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
-  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText,
+  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
@@ -444,6 +444,15 @@ export function ChartMaps() {
         * text list they replaced said them. */}
       {tab === 'breaking' && data && (
         <p className="cm-note" data-testid="breaking-pass">{breakingPassText(data)}</p>
+      )}
+      {/* Ajay 2026-09-07: "when the last resistance break will the price go to ATH" —
+        * the weekly lid-break study (supply_demand/lid_break.py), pooled, placebo beside
+        * every rate. The 2-year frame's high stands in for ATH and says so. */}
+      {tab === 'breaking' && data?.lid_break && lidBreakStudyText(data.lid_break) && (
+        <p className="cm-note" data-testid="lid-break-study">
+          Last-lid breaks{data.lid_break.as_of ? ` (study ${data.lid_break.as_of})` : ''}: {lidBreakStudyText(data.lid_break)}.
+          {' '}{quickBouncePersistenceText(data.lid_break.persistence)} Prior high = the 52-week high before the break; the 2-year frame’s high stands in for the all-time high. A study, not a rule.
+        </p>
       )}
 
       {/* Reaching vs already reached — only the two demand boards have the two

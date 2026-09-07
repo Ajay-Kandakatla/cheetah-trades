@@ -1886,6 +1886,7 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     from datetime import datetime as _dt
     from supply_demand import zone_edge as ZE, zone_store, quick_bounce as QB
     from supply_demand import room_floor as RF
+    from supply_demand import lid_break as LB
 
     payload = ZE.api_payload()
     rows = [r for r in (payload.get("breaking") or [])
@@ -1900,7 +1901,10 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     base = {"tiles": [], "pass_as_of": stamp, "pass_date": payload.get("date"),
             "in_session": bool(payload.get("in_session")), "reason": payload.get("reason"),
             "params": payload.get("params"), "edge_counts": payload.get("counts"),
-            "generated_at": gen, "disclaimer": ZE.DISCLAIMER, **_room_meta(min_room, 0)}
+            "generated_at": gen, "disclaimer": ZE.DISCLAIMER, **_room_meta(min_room, 0),
+            # Ajay 2026-09-07: "when the last resistance break will the price go to
+            # ATH" — the weekly lid-break study, pooled, printed under the pass line.
+            "lid_break": LB.board_meta()}
     if not stamp:
         return {**base, "note": "No zone-edge pass stored yet — the board fills from the "
                                 "first pass after 9:31 ET."}
@@ -1911,6 +1915,7 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     syms = [r["symbol"] for r in rows]
     store_day, docs = zone_store.load_latest(syms)
     turnover = QB.load_stats(syms) or {}
+    lid_stats = LB.load_stats(syms) or {}
     floor = RF.MIN_ROOM_DEFAULT if min_room is None else float(min_room)
     hidden = 0
     tiles = []
@@ -1956,6 +1961,9 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             {"k": "Room", "v": RF.room_stat(room)},
             {"k": "Since", "v": str(since) if since else "—"},
         ]
+        lid_txt = LB.card_stat(lid_stats.get(sym))
+        if lid_txt:
+            stats_rows.append({"k": "Lid breaks", "v": lid_txt})
         badges = [{"text": f"🚀 {dist_txt}", "tone": "good" if broke else "muted"},
                   {"text": ("◎ " if new_highs else "") + over_txt,
                    "tone": "good" if new_highs else ("warn" if overhead else "muted")},

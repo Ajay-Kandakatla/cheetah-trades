@@ -746,6 +746,27 @@ const CONTRACTS = [
       return errs;
     },
   },
+
+  {
+    name: 'Breaking tab prints the last-lid-break study (2026-09-07)',
+    file: 'src/pages/ChartMaps.tsx',
+    // Ajay 2026-09-07: "I would like to understand when the last resistance
+    // break will the price go to ATH." The weekly study (supply_demand/
+    // lid_break.py) is printed under the 🚀 Breaking pass line with its
+    // placebo and n, and the page must say the 2-year frame high stands in
+    // for the all-time high — a study line, never a rule.
+    checks: (src) => {
+      const errs = [];
+      if (!/\blidBreakStudyText\b/.test(src)) errs.push('ChartMaps.tsx no longer imports lidBreakStudyText');
+      if (!/data-testid="lid-break-study"/.test(src)) errs.push('the lid-break study line (data-testid="lid-break-study") is gone');
+      if (!/tab === 'breaking' && data\?\.lid_break/.test(src)) errs.push('the study line must be gated on the breaking tab + data.lid_break');
+      if (!/stands in for the all-time high/.test(src)) errs.push('the page must say the frame high stands in for the all-time high');
+      const lib = read('src/lib/chartMaps.ts');
+      if (!/export function lidBreakStudyText/.test(lib)) errs.push('chartMaps.ts lost lidBreakStudyText');
+      if (!/from any up-day/.test(lib)) errs.push('the study text must print the up-day placebo');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
