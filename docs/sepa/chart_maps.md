@@ -275,6 +275,18 @@ read has its own card tab" in `frontend/scripts/contracts.mjs`. Tab order:
 `breaking` joined right after Quick Bounce in the most-used-first list above
 (the tabs after it shift by one).
 
+## Window dropdown: 2 / 3 / 5 years (2026-09-06)
+
+Ajay 2026-09-06: "make sure we have this in all the chart map calculations and
+dropdown time frames." The board tabs' Window select (bars drawn per card) now
+offers 6 months · 9 months · 1 year · **2 years (504) · 3 years (756) · 5 years
+(1260)**; `board.BARS_MAX` is 1260 and any window past `DEEP_BARS_FROM` (480)
+is served from the Support tab's deep 5y fetch (`support._frame_for`, one
+in-process cache) — never a second price-cache period key. Bands on the cards
+are still the scan's; only the picture gets longer. The Support Levels zoom
+gained the same 2y / 3y reads with the demand-zone clustering run on that many
+bars — see `docs/supply_demand/support_levels_tab.md`.
+
 ---
 
 **Not advice.** The winners tab shows a measured sample of what happened to past

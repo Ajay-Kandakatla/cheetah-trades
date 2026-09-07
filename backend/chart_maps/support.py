@@ -68,6 +68,12 @@ SUPPORT_WINDOWS: tuple[dict, ...] = (
     {"key": "3m", "label": "3 months", "bars": 63,  "swing_window": 3},
     {"key": "6m", "label": "6 months", "bars": 126, "swing_window": 4},
     {"key": "1y", "label": "1 year",   "bars": 252, "swing_window": 4},
+    # Ajay 2026-09-06: "add 2 years to the time frame ... I do seem sometime
+    # we have bounces off the 2 years as well; also add 3 years and then keep
+    # 5 years." Same swing window as 5y: past a year only structural pivots
+    # are levels. The zoom IS the demand-zone lookback (lookback_bars below).
+    {"key": "2y", "label": "2 years",  "bars": 504, "swing_window": 5},
+    {"key": "3y", "label": "3 years",  "bars": 756, "swing_window": 5},
     # Ajay 2026-08-25: "select support level ... by up to 5 years". Wider
     # swing window on purpose — at this zoom only structural pivots matter;
     # a 2-bar swing five years ago is noise, not a level.

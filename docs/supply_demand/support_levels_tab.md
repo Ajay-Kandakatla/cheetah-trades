@@ -190,3 +190,36 @@ the live bar printed a demand FVG whose top was the live bar's low-so-far, and a
 true range leaked into the ATR the entry/stop buffer is scaled by. Same rule as
 `price_zones.for_symbol` (`price_zones_methodology.md` → 2026-09-05). Test:
 `test_chart_maps_support.py::test_the_support_tab_reads_structure_off_the_closed_frame_not_the_live_bar`.
+
+## 2- and 3-year zooms (2026-09-06)
+
+Ajay 2026-09-06: "Can you add 2 years to the time frame down please for demand
+zone calculation. I do seem sometime we have bounces off the 2 years as well;
+also add 3 years and then keep 5 years. Make sure we have this in all the chart
+map calculations and dropdown time frames."
+
+| zoom | bars | swing window | frame |
+|---|---|---|---|
+| 1 month | 21 | 2 | shared 2y frame |
+| 3 months | 63 | 3 | shared 2y frame |
+| 6 months | 126 | 4 | shared 2y frame |
+| 1 year | 252 | 4 | shared 2y frame |
+| **2 years** | **504** | **5** | shared 2y frame, or the deep 5y fetch when it holds more |
+| **3 years** | **756** | **5** | deep 5y fetch (`_frame_for`, 6-hour in-process cache) |
+| 5 years | 1260 | 5 | deep 5y fetch |
+
+The zoom IS the demand-zone lookback (`price_zones.compute(lookback_bars=…)`),
+so 2y / 3y are new reads of the structure, not longer pictures of the 1-year
+one. The swing window matches 5y: past a year only structural pivots are
+levels. The overlay view now clusters seven windows, so its "N windows agree"
+counts can rise by up to two for old structure.
+
+Same lists everywhere: `chart_maps/support.SUPPORT_WINDOWS` (server, wins),
+`frontend/src/lib/supportLevels.ts` `FALLBACK_WINDOWS` + `CHART_VIEWS`
+(`daily:2y`, `daily:3y`), the ticker page's Supply / Demand chart (same
+control), and the board tabs' Window dropdown on Chart Maps (2 / 3 / 5 years
+of bars per card — `board.BARS_MAX` 1260, bars past `DEEP_BARS_FROM` 480 come
+from the same deep fetch). Pinned in `backend/tests/test_chart_maps_support.py`,
+`backend/tests/test_chart_maps.py`, `frontend/src/lib/supportLevels.test.ts`,
+`frontend/src/pages/ChartMaps.test.tsx` and the contract "Chart Maps time frames
+carry 2 / 3 / 5 years".

@@ -121,7 +121,7 @@ async def chart_maps_support(
                                         "/symbol-search for it"),
     window: str = Query(support_mod.DEFAULT_WINDOW,
                         description="zoom the structure is read at: "
-                                    "1m | 3m | 6m | 1y"),
+                                    "1m | 3m | 6m | 1y | 2y | 3y | 5y | all"),
     tf: str = Query(support_mod.TF_DEFAULT,
                     description="bar timeframe the structure is read on: "
                                 "daily | 60m | 15m"),

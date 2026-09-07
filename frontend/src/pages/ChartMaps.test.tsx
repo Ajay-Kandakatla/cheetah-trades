@@ -156,6 +156,21 @@ describe('ChartMaps', () => {
     expect(TRACK.trackFeature).not.toHaveBeenCalledWith('chart-maps:tab:supply');
   });
 
+  it('the Window dropdown offers 2, 3 and 5 years and asks the API for that many bars (2026-09-06)', async () => {
+    // Ajay: "make sure we have this in all the chart map calculations and
+    // dropdown time frames." 5 years = board.BARS_MAX (1260 bars).
+    draw();
+    await screen.findByText('AVGO');
+    const win = screen.getByRole('combobox', { name: /Window/ }) as HTMLSelectElement;
+    const options = Array.from(win.options).map((o) => `${o.value}:${o.textContent}`);
+    expect(options).toEqual([':Default', '130:6 months', '180:9 months', '252:1 year', '504:2 years', '756:3 years', '1260:5 years']);
+    fireEvent.change(win, { target: { value: '756' } });
+    await waitFor(() => {
+      const urls = (fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+      expect(urls.some((u) => u.includes('tab=vcp') && u.includes('days=756'))).toBe(true);
+    });
+  });
+
   it('Deep Demand is cards only — the zone-edge text list no longer opens it (2026-09-06)', async () => {
     // Ajay: "change the deep demand to be like In Demand with charts and
     // cards". Until then ZoneEdgeBoard mode="breaking" (~200 text rows) sat

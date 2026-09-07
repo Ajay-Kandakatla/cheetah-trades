@@ -650,6 +650,12 @@ export function ChartMaps() {
               <option value="130">6 months</option>
               <option value="180">9 months</option>
               <option value="252">1 year</option>
+              {/* Ajay 2026-09-06: "2 years ... 3 years and then keep 5 years
+                * ... in all the chart map calculations and dropdown time
+                * frames." Served from the deep 5y frame (board.DEEP_BARS_FROM). */}
+              <option value="504">2 years</option>
+              <option value="756">3 years</option>
+              <option value="1260">5 years</option>
             </select>
           </label>
         )}

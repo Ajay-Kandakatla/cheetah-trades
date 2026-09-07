@@ -781,3 +781,37 @@ def test_the_support_tab_reads_structure_off_the_closed_frame_not_the_live_bar(m
     monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {})
     same = S.for_symbol("ACME", "1m")
     assert same["fair_value_gaps"] == pat.fair_value_gaps(closed, float(closed["close"].iloc[-1]))
+
+
+# ── 2 / 3-year zooms (Ajay 2026-09-06) ────────────────────────────────────────
+def test_two_and_three_year_windows_sit_between_one_and_five_years():
+    """Ajay 2026-09-06: "add 2 years to the time frame ... I do seem sometime
+    we have bounces off the 2 years as well; also add 3 years and then keep 5
+    years." Order is the zoom order; 5y stays the deepest."""
+    assert S.window_keys() == ["1m", "3m", "6m", "1y", "2y", "3y", "5y", S.OVERLAY_KEY]
+    by_key = {w["key"]: w for w in S.SUPPORT_WINDOWS}
+    assert by_key["2y"]["bars"] == 504 and by_key["3y"]["bars"] == 756 and by_key["5y"]["bars"] == 1260
+    assert by_key["2y"]["swing_window"] == by_key["3y"]["swing_window"] == by_key["5y"]["swing_window"]
+    assert by_key["2y"]["swing_window"] > by_key["1y"]["swing_window"]
+    for k in ("2y", "3y", " 3Y "):
+        assert S.parse_window(k) == k.strip().lower()
+    assert S.window_spec("2y")["label"] == "2 years" and S.window_spec("3y")["label"] == "3 years"
+
+
+def test_a_two_or_three_year_zoom_hands_price_zones_that_many_bars(loaded, monkeypatch):
+    """The zoom IS the demand-zone lookback: 3y must hand price_zones 756
+    bars (2y: 504), not the 1y default — else the dropdown is a label change."""
+    seen = []
+    real = pz.compute
+
+    def spy(df, *a, **kw):
+        seen.append(kw.get("lookback_bars"))
+        return real(df, *a, **kw)
+    monkeypatch.setattr(pz, "compute", spy)
+    out = S.for_symbol("TEST", "3y")
+    assert out["window"] == "3y" and out["window_label"] == "3 years" and 756 in seen
+    seen.clear()
+    out = S.for_symbol("TEST", "2y")
+    assert out["window"] == "2y" and 504 in seen
+    # The dropdown the response carries lists both, in zoom order.
+    assert [w["key"] for w in out["windows"]] == ["1m", "3m", "6m", "1y", "2y", "3y", "5y", S.OVERLAY_KEY]

@@ -402,6 +402,33 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'Chart Maps time frames carry 2 / 3 / 5 years (2026-09-06)',
+    file: 'src/lib/supportLevels.ts',
+    // Ajay 2026-09-06: "add 2 years to the time frame ... also add 3 years
+    // and then keep 5 years. make sure we have this in all the chart map
+    // calculations and dropdown time frames." Three lists a rebase could
+    // trim one at a time: the Support zoom fallback, the merged chart views,
+    // and the board tabs' Window dropdown.
+    checks: (src) => {
+      const errs = [];
+      const fb = src.match(/export const FALLBACK_WINDOWS[^=]*=\s*\[([\s\S]*?)\];/);
+      const keys = fb ? [...fb[1].matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]) : [];
+      if (keys.join(',') !== '1m,3m,6m,1y,2y,3y,5y,all') {
+        errs.push(`FALLBACK_WINDOWS is ${keys.join(',') || '(not found)'} — expected 1m,3m,6m,1y,2y,3y,5y,all`);
+      }
+      for (const k of ['daily:2y', 'daily:3y', 'daily:5y']) {
+        if (!src.includes(`key: '${k}'`)) errs.push(`CHART_VIEWS lacks ${k}`);
+      }
+      const page = read('src/pages/ChartMaps.tsx');
+      for (const [v, l] of [['504', '2 years'], ['756', '3 years'], ['1260', '5 years']]) {
+        if (!page.includes(`<option value="${v}">${l}</option>`)) errs.push(`ChartMaps.tsx Window dropdown lacks ${l} (${v})`);
+      }
+      const feats = read('src/lib/newFeatures.ts');
+      if (!/id: 'chart-maps-2y-3y-windows'/.test(feats)) errs.push("newFeatures.ts lost the 'chart-maps-2y-3y-windows' highlight");
+      return errs;
+    },
+  },
+  {
     name: 'Chart Maps carries the Quick Bounce tab with its study strip (2026-09-06)',
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-09-06: "quick bounce potential list ... in one place under

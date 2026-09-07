@@ -50,7 +50,12 @@ log = logging.getLogger("chart_maps.board")
 TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
-BARS_MAX = 400
+BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
+# The shared price frame is 2y (~504 bars). A window past this many bars is
+# served from the Support tab's deep 5y fetch (chart_maps.support._frame_for,
+# one in-process cache) rather than a second price-cache period key that no
+# cron refreshes (memory: a cached short period handed back a weeks-old frame).
+DEEP_BARS_FROM = 480
 LIMIT_DEFAULT = 24
 # 80 since 2026-08-27 (was 60): the gabbar tab shows ALL 66 covered names
 # ("can you just show me all of them there") and 60 silently cut the ladder.
@@ -132,16 +137,24 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     should degrade to a usable chart, not a blank tile.
     """
     from sepa import prices
+    days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
     try:
-        raw = prices.load_prices(symbol.upper())
-        # Today's live bar on the tile too (Ajay 2026-09-03, CHPT) — the same
-        # overlay the Supply/Demand tab draws; stubs without it just skip.
-        fn = getattr(prices, "with_today_bar", None)
-        if fn is not None and raw is not None:
-            try:
-                raw, _info = fn(raw, symbol.upper())
-            except Exception as exc:                            # pragma: no cover
-                log.debug("chart-maps: today-bar overlay %s failed: %s", symbol, exc)
+        if days > DEEP_BARS_FROM and not around:
+            # 2 / 3 / 5-year windows (Ajay 2026-09-06): the deep frame, today's
+            # bar already overlaid by _frame_for; the shared 2y frame cannot
+            # hold them. Event-centred windows (winners) never need it.
+            from chart_maps import support as _support
+            raw, _have, _as_of = _support._frame_for(symbol.upper(), days)
+        else:
+            raw = prices.load_prices(symbol.upper())
+            # Today's live bar on the tile too (Ajay 2026-09-03, CHPT) — the same
+            # overlay the Supply/Demand tab draws; stubs without it just skip.
+            fn = getattr(prices, "with_today_bar", None)
+            if fn is not None and raw is not None:
+                try:
+                    raw, _info = fn(raw, symbol.upper())
+                except Exception as exc:                        # pragma: no cover
+                    log.debug("chart-maps: today-bar overlay %s failed: %s", symbol, exc)
         df = _norm_frame(raw)
     except Exception as exc:
         log.debug("chart-maps: bars %s failed: %s", symbol, exc)
@@ -149,7 +162,6 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     if df is None:
         return []
 
-    days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
     if around:
         dates = [_row_date(d) for d in df.index]
         try:

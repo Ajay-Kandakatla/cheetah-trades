@@ -2643,3 +2643,37 @@ def test_breaking_tab_without_a_pass_says_so(monkeypatch):
     assert out["tiles"] == []
     assert out["note"] == "nothing within 1% of breaking its last supply band at the last pass (15:59 ET)"
     assert out["in_session"] is True and out["pass_as_of"] == "2026-09-04T15:59:03-04:00"
+
+
+# ── 2 / 3 / 5-year Window on the board tabs (Ajay 2026-09-06) ─────────────────
+def test_bars_for_long_windows_read_the_deep_frame(prices, monkeypatch):
+    """Ajay 2026-09-06: "make sure we have this in all the chart map
+    calculations and dropdown time frames." The shared frame is 2y; a window
+    past DEEP_BARS_FROM comes from the Support tab's deep 5y fetch (one
+    in-process cache), never a second price-cache key."""
+    from chart_maps import support as S
+    prices["AAA"] = _frame(200, start=50.0)
+    calls = []
+
+    def fake_frame_for(sym, need, **kw):
+        calls.append((sym, need))
+        return _frame(1300, start=10.0), 1300, None
+    monkeypatch.setattr(S, "_frame_for", fake_frame_for)
+    assert B.BARS_MAX == 1260 and B.DEEP_BARS_FROM == 480
+    assert len(B.bars_for("AAA", days=756)) == 756 and calls == [("AAA", 756)]
+    assert len(B.bars_for("AAA", days=1260)) == 1260 and calls[-1] == ("AAA", 1260)
+    # Past the cap the request is clamped to 5 years, never more.
+    assert len(B.bars_for("AAA", days=99_999)) == 1260
+    # The shared frame still serves every ordinary window — no deep call.
+    calls.clear()
+    assert len(B.bars_for("AAA", days=130)) == 130 and calls == []
+    assert len(B.bars_for("AAA", days=480)) == 200 and calls == []      # at the line, not past it
+    # NEGATIVE: an event-centred window (winners tab) never goes deep.
+    assert B.bars_for("AAA", days=600, around="2026-03-02") and calls == []
+
+
+def test_bars_for_falls_back_to_the_shared_frame_when_the_deep_fetch_fails(prices, monkeypatch):
+    from chart_maps import support as S
+    prices["AAA"] = _frame(200, start=50.0)
+    monkeypatch.setattr(S, "_frame_for", lambda sym, need, **kw: (_ for _ in ()).throw(RuntimeError("massive down")))
+    assert B.bars_for("AAA", days=756) == []          # fenced: an empty tile, never a 500

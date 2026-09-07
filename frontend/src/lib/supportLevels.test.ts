@@ -391,3 +391,29 @@ describe('SEPA Supply / Demand tab default zoom (Ajay 2026-09-02)', () => {
     expect(DEFAULT_WINDOW).toBe('3m');
   });
 });
+
+/* ── 2 / 3-year zooms (Ajay 2026-09-06) ──────────────────────────────────── */
+describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
+  it('the fallback window list runs 1m → 3m → 6m → 1y → 2y → 3y → 5y → overlay', () => {
+    expect(FALLBACK_WINDOWS.map((w) => w.key)).toEqual(['1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']);
+    const bars = FALLBACK_WINDOWS.filter((w) => w.key !== 'all').map((w) => w.bars);
+    expect(bars).toEqual([...bars].sort((a, b) => a - b));
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '2y')).toEqual({ key: '2y', label: '2 years', bars: 504 });
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '3y')).toEqual({ key: '3y', label: '3 years', bars: 756 });
+  });
+
+  it('the chart control offers both as daily views between 1 year and 5 years', () => {
+    const daily = CHART_VIEWS.filter((v) => v.group === 'Daily').map((v) => v.key);
+    expect(daily).toEqual(['daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']);
+    expect(viewKeyFor('2y', 'daily')).toBe('daily:2y');
+    expect(viewKeyFor('3y', 'daily')).toBe('daily:3y');
+    expect(viewFor('daily:3y')).toMatchObject({ window: '3y', tf: 'daily' });
+    expect(parseWindow('2y')).toBe('2y');
+    expect(parseWindow(' 3Y ')).toBe('3y');
+    // NEGATIVE: no intraday view borrowed a long zoom — intraday tapes are
+    // sessions, not years.
+    for (const v of CHART_VIEWS.filter((x) => x.group === 'Intraday')) {
+      expect(['2y', '3y', '5y']).not.toContain(v.window);
+    }
+  });
+});

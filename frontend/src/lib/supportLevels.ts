@@ -136,6 +136,10 @@ export const FALLBACK_WINDOWS: SupportWindow[] = [
   { key: '3m', label: '3 months', bars: 63 },
   { key: '6m', label: '6 months', bars: 126 },
   { key: '1y', label: '1 year', bars: 252 },
+  // Ajay 2026-09-06: "add 2 years ... I do seem sometime we have bounces off
+  // the 2 years as well; also add 3 years and then keep 5 years."
+  { key: '2y', label: '2 years', bars: 504 },
+  { key: '3y', label: '3 years', bars: 756 },
   { key: '5y', label: '5 years', bars: 1260 },
   // The overlay pseudo-window: every zoom at once, clustered by agreement.
   { key: 'all', label: 'All windows · overlay', bars: 0 },
@@ -217,6 +221,12 @@ export const CHART_VIEWS: ChartView[] = [
   { key: 'daily:3m', label: '3 months', group: 'Daily', window: '3m', tf: 'daily' },
   { key: 'daily:6m', label: '6 months', group: 'Daily', window: '6m', tf: 'daily' },
   { key: 'daily:1y', label: '1 year', group: 'Daily', window: '1y', tf: 'daily' },
+  // Ajay 2026-09-06: the bounces that come off two- and three-year-old
+  // structure — the zoom is the demand-zone lookback, so these are new reads,
+  // not longer pictures of the 1-year one.
+  { key: 'daily:2y', label: '2 years', group: 'Daily', window: '2y', tf: 'daily',
+    hint: 'the structure a two-year-old base bounces from' },
+  { key: 'daily:3y', label: '3 years', group: 'Daily', window: '3y', tf: 'daily' },
   { key: 'daily:5y', label: '5 years', group: 'Daily', window: '5y', tf: 'daily',
     hint: 'the structural floor' },
   { key: 'daily:all', label: 'All windows · overlay', group: 'Daily',
