@@ -1,3 +1,11 @@
+# ── Closed-day gate (market_hours/gate.py) ─────────────────────────────────
+# Ajay 2026-09-07 (Labor Day): "TOday is holiday so turn of alerts scans."
+# Weekday-only cron fields cannot see NYSE holidays, so every price-reading
+# job below runs through `python -m market_hours.gate <module>` (exits 0 on
+# weekends + market_hours.reminder.ALL_HOLIDAYS) and every `sepa.cli` market
+# command gates itself (MARKET_DAY_CMDS). Personal jobs (todos, house, VB)
+# are untouched. CHEETAH_IGNORE_HOLIDAY=1 forces a manual run — never here.
+
 # Cheetah SEPA cron — times are container-local; container TZ set to America/New_York.
 # Min  Hour  DOM  Mon  DOW  Command
 #
@@ -39,7 +47,7 @@
 # loser closed late in the day would only finalise on the third session's
 # first tick; this pass classifies today's losers tonight and finalises the
 # 2-sessions-later re-check a day earlier. Owner rules (S&D), no book.
-45     16    *    *    1-5  /usr/local/bin/python -m trading.autopsy
+45     16    *    *    1-5  /usr/local/bin/python -m market_hours.gate trading.autopsy
 
 # Catalyst-lane warm (trading/catalyst_entry.py --warm) — twice an hour in RTH.
 # Ajay 2026-09-05: "make sure you have demand zone and catalyst based entries
@@ -50,7 +58,7 @@
 # bounce_room zone docs for every candidate missing one (synchronous). Offset
 # from the :30 history scan below. Paper only; the flag `catalyst_entry` gates
 # the buys, not this warm.
-12,42  9-15  *    *    1-5  /usr/local/bin/python -m trading.catalyst_entry --warm
+12,42  9-15  *    *    1-5  /usr/local/bin/python -m market_hours.gate trading.catalyst_entry --warm
 #
 # Mon-Fri 4:50pm ET — Pullback-to-MA scanner. Derives the Stage-2 "pullback
 # toward the rising 50-day MA on contracting volume" list from the latest
@@ -97,7 +105,7 @@
 # the shelf the low bounced off was a one-touch BROKEN-SUPPLY band the
 # demand board never keeps — hence every band, both kinds. Bars come from
 # the shared price cache; no provider call per symbol. Budget 240s.
-20     9     *    *    1-5  /usr/local/bin/python -m supply_demand.zone_store
+20     9     *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.zone_store
 #
 # ── ICT Chart Maps tab (Ajay 2026-09-03 late) ────────────────────────────────
 # "create a new chart maps tab for ICT Strategy, replace supply tab with this
@@ -108,8 +116,8 @@
 # a curl, because the cache is Mongo rather than process memory. Every 15 min
 # in RTH plus a 4:50pm post-close pass so the tab is fresh at the next open.
 # Budget 120s, micro cap 40 names (owner settings, listed under the board).
-*/15   9-16  *    *    1-5  /usr/local/bin/python -m ict.engine
-50     16    *    *    1-5  /usr/local/bin/python -m ict.engine
+*/15   9-16  *    *    1-5  /usr/local/bin/python -m market_hours.gate ict.engine
+50     16    *    *    1-5  /usr/local/bin/python -m market_hours.gate ict.engine
 #
 # ── Trade Flash (Ajay 2026-08-24) ────────────────────────────────────────────
 # Zone-tied tape bursts on the demand/supply board names, pushed to his phone
@@ -192,7 +200,7 @@
 # Mon-Fri 5:30pm ET — daily SOIR snapshot across the Russell 1000 universe
 # (parallel via ThreadPoolExecutor; ~3-5 min for 1000 tickers @ 10 workers).
 # Runs after fast-scan so the trend/score pillars come from fresh SEPA data.
-30     17    *    *    1-5  /usr/local/bin/python -m options.scanner russell1000
+30     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate options.scanner russell1000
 #
 # Sunday 9pm ET — full SOIR sweep alongside the weekly research refresh
 # so Monday morning's brief has a complete options-pulse picture.
@@ -203,7 +211,7 @@
 # bullish/watch + top-SEPA) name into gex_history, never pruned — so
 # "did GEX flag this move?" is answerable from data (2026-07-06: today's
 # watchlist pop could only be GEX-read live, post-move).
-50     17    *    *    1-5  /usr/local/bin/python -m options.gex_history
+50     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate options.gex_history
 #
 # Daily 7pm ET — pre-warm SC 13D/G filings cache for every candidate in
 # the latest scan. EDGAR is fast (~0.3 sec/ticker) so this is cheap;
@@ -226,7 +234,7 @@
 # Portfolio drop-attribution — 4:40pm ET weekdays, after the 4:30 fast-scan
 # refreshes today's close. Flags holdings dropping on their OWN (not the
 # market/sector) so the user knows which names need a news check.
-40     16    *    *    1-5  /usr/local/bin/python -c "from portfolio.alerts import run_drop_attribution_default as f; f()"
+40     16    *    *    1-5  /usr/local/bin/python -m market_hours.gate --call portfolio.alerts:run_drop_attribution_default
 #
 # Gabbar level watch — every 10 min in RTH (Ajay 2026-08-27: "I missed the
 # Adobe today ... can you do something about that so I don't miss"). Pushes
@@ -234,7 +242,7 @@
 # or within 1% of one of veerenj's bands; Bonde declining/weak sales never
 # page; one push per (ticker, band, day). Module refuses to run outside
 # 9:32-16:00 ET, so the wide window is harmless.
-6-56/10 9-16 *    *    1-5  /usr/local/bin/python -m catalysts.gabbar_watch
+6-56/10 9-16 *    *    1-5  /usr/local/bin/python -m market_hours.gate catalysts.gabbar_watch
 #
 # Demand-zone approach alerts (supply_demand/demand_alerts.py) — every 5 min
 # in RTH (Ajay 2026-09-03: "other big companies billion or atleast bigger
@@ -244,7 +252,7 @@
 # demand_alert: AT (inside / <=1% above) = one push per (symbol, band, day);
 # NEAR (1-3% above, falling) = one digest per pass. Module refuses to run
 # outside 9:32-16:00 ET.
-3-58/5 9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.demand_alerts
+3-58/5 9-16  *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.demand_alerts
 #
 # Zone-BOUNCE alerts (supply_demand/zone_bounce_alerts.py) — every 5 min in
 # RTH, offset from demand_alerts (3-58) and gabbar (6-56/10). Ajay

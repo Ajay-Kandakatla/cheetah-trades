@@ -8,6 +8,14 @@ from todos import store
 log = logging.getLogger("todos.reminder")
 
 
+# 2026-09-07: a due todo whose owner has NO subscribed device (Vineetha's phone
+# dropped its push subscription) can never deliver, and "not delivered" used to
+# mean "retry next minute" — forever: 34,441 push_history rows on Labor Day
+# alone, 4.42M in total, every one sent=0. Three strikes, then it is marked
+# notified with a WARNING line; the todo itself stays on the list.
+MAX_NOTIFY_ATTEMPTS = 3
+
+
 def fire_due() -> dict:
     """Find todos whose notify_at has passed and fire push for each.
 
@@ -30,6 +38,7 @@ def fire_due() -> dict:
     from sepa import notify
     fired = 0
     skipped_no_owner = 0
+    gave_up = 0
     for t in due:
         owner = (t.get("user_email") or "").strip().lower()
         if not owner:
@@ -60,9 +69,17 @@ def fire_due() -> dict:
         if ok:
             store.mark_notified(t["_id"])
             fired += 1
-    log.info("todos.reminder: checked=%d fired=%d skipped_no_owner=%d",
-             len(due), fired, skipped_no_owner)
-    return {"checked": len(due), "fired": fired, "skipped_no_owner": skipped_no_owner}
+            continue
+        attempts = store.bump_notify_attempts(t["_id"])
+        if attempts >= MAX_NOTIFY_ATTEMPTS:
+            log.warning("todos.reminder: todo %s for %s undeliverable after %d attempts "
+                        "(no subscribed device?) — marking notified", t.get("_id"), owner, attempts)
+            store.mark_notified(t["_id"])
+            gave_up += 1
+    log.info("todos.reminder: checked=%d fired=%d skipped_no_owner=%d gave_up=%d",
+             len(due), fired, skipped_no_owner, gave_up)
+    return {"checked": len(due), "fired": fired, "skipped_no_owner": skipped_no_owner,
+            "gave_up": gave_up}
 
 
 def fire_daily_digest() -> dict:

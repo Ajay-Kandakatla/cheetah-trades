@@ -72,6 +72,17 @@ def _proven_line():
             "(the KLAC lesson, 2026-09-06)." % (AG.LID_MIN_TOUCHES, int(AG.LID_MIN_STRENGTH)))
 
 
+def _closed_day_line() -> str:
+    """Ajay 2026-09-07 (Labor Day): 'turn of alerts scans' — built from the gate."""
+    from market_hours import gate
+    from market_hours.reminder import ALL_HOLIDAYS
+    today = gate._now_et().strftime("%Y-%m-%d")
+    nxt = sorted(d for d in ALL_HOLIDAYS if d >= today)
+    return ("Closed days push nothing market-driven and run no scan: weekends and NYSE holidays "
+            "(next: %s). Personal reminders (%d kinds: todos, flashcards, household) still deliver."
+            % (nxt[0] if nxt else "none loaded", len(gate.PERSONAL_KINDS)))
+
+
 def sections() -> dict:
     gate_room, gate_prox = _pct(AG.ALERT_MIN_ROOM_PCT), _pct(AG.ALERT_MAX_ABOVE_DEMAND_PCT)
     out = {}
@@ -127,6 +138,7 @@ def sections() -> dict:
             "(CLEAR ok); demand-side kinds also need the print ≤ %s above the band top and not "
             "under its floor. Boards list everything; only the phone is gated."
             % (gate_room, gate_prox),
+            _closed_day_line(),
             _proven_line(),
             "🧲 and 🪃 bodies carry the plan: buy = the band, stop = %s under its floor with the "
             "risk from the print, target = the first proven lid with the R multiple."

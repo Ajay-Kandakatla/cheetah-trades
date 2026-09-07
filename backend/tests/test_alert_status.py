@@ -232,7 +232,7 @@ def test_cadence_sec_matches_the_crontab():
 
     def minute_field(module: str) -> str:
         hits = [ln for ln in lines if ln.strip() and not ln.lstrip().startswith("#")
-                and re.search(rf"-m\s+{re.escape(module)}(\s|$)", ln)]
+                and re.search(rf"-m\s+(?:market_hours\.gate\s+)?{re.escape(module)}(\s|$)", ln)]   # gate wrapper 2026-09-07
         assert len(hits) == 1, f"{module}: expected one crontab line, got {hits}"
         return hits[0].split()[0]
 

@@ -8,6 +8,17 @@ Usage:
 from __future__ import annotations
 
 import argparse
+
+# Ajay 2026-09-07 (Labor Day, 11:35 ET): "TOday is holiday so turn of alerts
+# scans." Every command here that reads prices runs only on NYSE trading days
+# (market_hours.gate: weekends + ALL_HOLIDAYS). Sixteen pivot alerts had gone
+# out at 09:00 on Friday's closes. CHEETAH_IGNORE_HOLIDAY=1 forces a manual run.
+MARKET_DAY_CMDS: frozenset = frozenset({
+    "scan", "fast-scan", "alerts", "breakout-audit", "pullback-scan",
+    "trade-flash-watch", "scalping-paper-record", "scalping-paper-resolve",
+    "scalping-watch", "zero-dte-record", "zero-dte-resolve", "brief",
+    "market-gauge-preopen", "vcp-watch", "juggernauts",
+})
 import json
 import logging
 import sys
@@ -179,6 +190,14 @@ def main() -> int:
     )
 
     args = p.parse_args()
+
+    if args.cmd in MARKET_DAY_CMDS:
+        from market_hours import gate
+        reason = gate.closed_reason()
+        if reason:
+            log.info("%s skipped — market closed (%s); %s=1 forces a run",
+                     args.cmd, reason, gate.OVERRIDE_ENV)
+            return 0
 
     if args.cmd == "breakout-audit":
         from . import breakout_audit

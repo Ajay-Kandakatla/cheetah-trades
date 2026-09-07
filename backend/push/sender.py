@@ -69,6 +69,13 @@ def _send_one(subscription: dict, payload: dict) -> bool:
 
 def send_to_all(payload: dict, kind: Optional[str] = None) -> dict:
     """Deliver a push payload to every subscribed device whose prefs allow ``kind``."""
+    from market_hours import gate   # lazy: gate → reminder → notify → sender
+    reason = gate.should_drop_kind(kind)
+    if reason:
+        # Ajay 2026-09-07 (Labor Day): "turn of alerts scans" — no device, no
+        # push_history row; the row would only be noise on a closed market.
+        log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
+        return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind)
     sent = 0
     failed = 0
@@ -95,6 +102,13 @@ def send_to_all(payload: dict, kind: Optional[str] = None) -> dict:
 def send_to_user(user_email: str, payload: dict, kind: Optional[str] = None) -> dict:
     """Deliver a push to a SPECIFIC user's devices only. Used for admin-
     only notifications like "a new user signed in"."""
+    from market_hours import gate   # lazy: gate → reminder → notify → sender
+    reason = gate.should_drop_kind(kind)
+    if reason:
+        # Ajay 2026-09-07 (Labor Day): "turn of alerts scans" — no device, no
+        # push_history row; the row would only be noise on a closed market.
+        log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
+        return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind, user_email=user_email)
     sent = 0
     failed = 0

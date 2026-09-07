@@ -387,6 +387,20 @@ def find_due_reminders(limit: int = 50) -> list[dict]:
     return rows
 
 
+def bump_notify_attempts(todo_id: str) -> int:
+    """Count one failed delivery attempt; returns the new count (0 without a db).
+    2026-09-07: reminder.fire_due gives up after MAX_NOTIFY_ATTEMPTS."""
+    db = _get_db()
+    if db is None:
+        return 0
+    from bson import ObjectId
+    from pymongo import ReturnDocument
+    doc = db.todos.find_one_and_update({"_id": ObjectId(todo_id)},
+                                       {"$inc": {"notify_attempts": 1}},
+                                       return_document=ReturnDocument.AFTER)
+    return int((doc or {}).get("notify_attempts") or 0)
+
+
 def mark_notified(todo_id: str) -> None:
     db = _get_db()
     if db is None:

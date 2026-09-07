@@ -996,7 +996,8 @@ def test_crontab_runs_the_engine_every_fifteen_minutes_and_after_the_close():
     assert len(lines) == 2
     assert lines[0].split()[:5] == ["*/15", "9-16", "*", "*", "1-5"]
     assert lines[1].split()[:5] == ["50", "16", "*", "*", "1-5"]
-    assert all(l.rstrip().endswith("/usr/local/bin/python -m ict.engine") for l in lines)
+    # 2026-09-07: runs through the closed-day gate (market_hours/gate.py)
+    assert all(l.rstrip().endswith("/usr/local/bin/python -m market_hours.gate ict.engine") for l in lines)
 
 
 # ---------------------------------------------------------------------------
