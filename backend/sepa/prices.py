@@ -526,7 +526,7 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     premarket hours … Also after hours"): the snapshot's last trade keeps
     printing from 04:00 ET while the day aggregate is still zero, and again
     after 16:00 while it is frozen. Pre-market → a flat synthetic bar at the
-    print (info["source"] "premarket"); after-hours → the day bar's close
+    print, opened at yesterday's close (info["source"] "premarket"); after-hours → the day bar's close
     (high/low widened) whether that bar is appended here or already in the
     frame ("afterhours", info["adjusted"]). info["session"] names the session
     the print came from; prints from another day or outside 04:00–20:00 ET
@@ -560,12 +560,23 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     if not day_ok:
         # Pre-market (2026-09-08): the day aggregate is all zeros until the
         # open, so the only price is the last trade. A pre-market print dated
-        # after the frame's last bar becomes a flat synthetic bar (o=h=l=c=
-        # print, volume 0) so zones, room and charts read the pre-market
-        # tape. Yesterday's after-hours print, a weekend stamp or a print
-        # before 04:00 ET add nothing.
+        # after the frame's last bar becomes a synthetic GAP bar — open at
+        # yesterday's close, close at the print, high/low the span between
+        # them, volume 0 — so zones, room and charts read the pre-market tape
+        # AND the chart shows the move (Ajay 2026-09-08 IONS, −10% pre-market:
+        # the first cut drew a flat o=h=l=c tick that was invisible beside the
+        # close, so "Maps are not accurate"). The snapshot carries no
+        # pre-market high/low, so the span is the honest extent of what is
+        # known; `s: "pre"` on the bar tells the chart to shade it. Yesterday's
+        # after-hours print, a weekend stamp or a print before 04:00 ET add
+        # nothing.
         if lt and lt["session"] == "premarket" and lt["date"] > last_date:
-            out = _append_row(df, lt["date"], lt["price"], lt["price"], lt["price"],
+            try:
+                prev = float(snap.get("prev_day_close") or 0)
+            except (TypeError, ValueError):
+                prev = 0.0
+            o_ = prev if prev > 0 else lt["price"]
+            out = _append_row(df, lt["date"], o_, max(o_, lt["price"]), min(o_, lt["price"]),
                               lt["price"], 0.0)
             if out is not None:
                 info.update(appended=True, date=lt["date"], last_price=lt["price"],

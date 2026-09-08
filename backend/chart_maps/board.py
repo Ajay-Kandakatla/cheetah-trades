@@ -142,6 +142,7 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     """
     from sepa import prices
     days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
+    _info = None
     try:
         if days > DEEP_BARS_FROM and not around:
             # 2 / 3 / 5-year windows (Ajay 2026-09-06): the deep frame, today's
@@ -175,8 +176,31 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
         if i >= 0:
             lo = max(0, i - days)
             hi = min(len(df), i + max(0, int(pad_after)) + 1)
-            return _frame_to_bars(df.iloc[lo:hi])
-    return _frame_to_bars(df.tail(days))
+            return _tag_live_bar(_frame_to_bars(df.iloc[lo:hi]), _info)
+    return _tag_live_bar(_frame_to_bars(df.tail(days)), _info)
+
+
+def _tag_live_bar(bars: list, info: Optional[dict]) -> list:
+    """`s: "pre"` / `"ah"` on the last bar when it is today's extended-hours
+    print (prices.with_today_bar info — 2026-09-08), the flag the intraday
+    frames already carry and PatternChart shades. Without info (the deep
+    5-year frame overlays inside support._frame_for) a zero-volume bar dated
+    today can only be the synthetic pre-market bar. RTH bars carry no flag."""
+    if not bars:
+        return bars
+    last = bars[-1]
+    src = str((info or {}).get("source") or "")
+    if info is not None:
+        if src in ("premarket", "afterhours") and str(info.get("date") or "") == str(last.get("t")):
+            last["s"] = "pre" if src == "premarket" else "ah"
+        return bars
+    try:
+        today = datetime.now(ET).date().isoformat()
+    except Exception:                                          # pragma: no cover
+        return bars
+    if str(last.get("t")) == today and float(last.get("v") or 0) == 0:
+        last["s"] = "pre"
+    return bars
 
 
 # ---------------------------------------------------------------------------

@@ -126,6 +126,31 @@ def test_tile_bars_include_todays_candle(monkeypatch):
     monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {"CHPT": SNAP})
     bars = B.bars_for("CHPT", days=60)
     assert bars and bars[-1]["t"] == "2026-09-03" and bars[-1]["c"] == 9.1069
+    assert "s" not in bars[-1], "an RTH day bar carries no session flag"
+
+
+def test_tile_bars_flag_the_extended_hours_bar_for_shading(monkeypatch):
+    """The chart shades `s: pre / ah` bars (the intraday frames' flag) — the
+    daily pre-market gap bar and an after-hours-carried close get it too."""
+    from chart_maps import board as B
+    monkeypatch.setattr(P, "load_prices", lambda sym, *a, **k: _frame(300))
+    monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {"CHPT": PRE})
+    bars = B.bars_for("CHPT", days=60)
+    assert bars[-1]["t"] == "2026-09-03" and bars[-1]["s"] == "pre"
+    assert (bars[-1]["o"], bars[-1]["c"], bars[-1]["v"]) == (5.19, 5.61, 0.0)
+    assert "s" not in bars[-2]
+    ah = {**SNAP, "last_trade_price": 9.40, "last_trade_ts_ms": _stamp(2026, 9, 3, 17, 5)}
+    monkeypatch.setattr(P, "bulk_snapshot", lambda syms: {"CHPT": ah})
+    bars = B.bars_for("CHPT", days=60)
+    assert bars[-1]["s"] == "ah" and bars[-1]["c"] == 9.40
+    # the deep-frame path has no info: only a zero-volume bar dated today is flagged
+    import datetime as _d
+    today = _d.datetime.now(ZoneInfo("America/New_York")).date().isoformat()
+    tagged = B._tag_live_bar([{"t": "2026-09-03", "v": 1e6}, {"t": today, "v": 0.0}], None)
+    assert tagged[-1]["s"] == "pre" and "s" not in tagged[0]
+    assert "s" not in B._tag_live_bar([{"t": today, "v": 5e5}], None)[-1]
+    assert "s" not in B._tag_live_bar([{"t": "2026-09-03", "v": 0.0}], None)[-1]
+    assert B._tag_live_bar([], None) == []
 
 
 # ── engine fixes 2026-09-05 (Ajay: "yes please fix the bugs") ─────────────────
@@ -187,12 +212,22 @@ PRE = {"open": 0, "high": 0, "low": 0, "close": 0, "volume": 0, "date": "2026-09
        "last_trade_ts_ms": _stamp(2026, 9, 3, 8, 13)}
 
 
-def test_premarket_print_becomes_a_flat_synthetic_bar():
+def test_premarket_print_becomes_a_gap_bar_from_yesterdays_close():
+    # IONS 2026-09-08 (−10% pre-market): a flat o=h=l=c tick was invisible
+    # beside the close — the bar must show the gap from yesterday's close.
     df = _frame()
     out, info = P.with_today_bar(df, "CHPT", snap=PRE)
     assert len(out) == len(df) + 1
     last = out.iloc[-1]
-    assert (last["open"], last["high"], last["low"], last["close"], last["volume"]) == (5.61, 5.61, 5.61, 5.61, 0.0)
+    assert (last["open"], last["high"], last["low"], last["close"], last["volume"]) == (5.19, 5.61, 5.19, 5.61, 0.0)
+    # a gap DOWN: open at the close, low at the print
+    down, _ = P.with_today_bar(df, "CHPT", snap={**PRE, "last_trade_price": 4.80})
+    d = down.iloc[-1]
+    assert (d["open"], d["high"], d["low"], d["close"]) == (5.19, 5.19, 4.80, 4.80)
+    # NEGATIVE: no usable prev close → flat at the print (never a fabricated open)
+    flat, _ = P.with_today_bar(df, "CHPT", snap={**PRE, "prev_day_close": None})
+    f = flat.iloc[-1]
+    assert (f["open"], f["high"], f["low"], f["close"]) == (5.61, 5.61, 5.61, 5.61)
     assert out.index[-1] == pd.Timestamp("2026-09-03 04:00:00")
     assert info["appended"] is True and info["adjusted"] is False
     assert info["source"] == "premarket" and info["session"] == "premarket"

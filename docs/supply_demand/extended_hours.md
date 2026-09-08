@@ -26,8 +26,13 @@ ET wall clock: pre-market 04:00–09:30, RTH 09:30–16:00, after-hours 16:00–
 (`prices.trade_session`; `zone_edge.session_state` adds the holiday calendar).
 
 1. **Price overlay** (`prices.with_today_bar`, `extended_print`):
-   - pre-market (day OHLC zero, print stamped today ≥ 04:00) → a flat synthetic bar
-     o=h=l=c=print, volume 0, `info.source="premarket"`;
+   - pre-market (day OHLC zero, print stamped today ≥ 04:00) → a synthetic **gap bar**:
+     open = yesterday's close, close = the print, high/low the span, volume 0,
+     `info.source="premarket"` (IONS 2026-09-08 −10%: the first cut's flat o=h=l=c tick was
+     invisible beside the close — "Maps are not accurate"). The snapshot carries no pre-market
+     high/low, so the span is the honest extent of what is known; the bar is flagged
+     `s: "pre"` (`board._tag_live_bar`) and PatternChart shades it like the intraday frames'
+     extended-hours bars (`ah` for an after-hours-carried close);
    - after-hours (print stamped today ≥ 16:00) → the day bar's close = print, high/low
      widened — appended when the frame ends yesterday, `adjusted` in the returned copy when
      the frame already holds today (`info.adjusted`, `info.appended` False);
