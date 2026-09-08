@@ -120,7 +120,8 @@ def test_room_read_rounds_like_room_for_and_reports_the_first_overhead():
     room = AG.room_read(171.2, [_sup(161.78, 167.54, 1), _sup(205.4, 212.72, 2)], 180.77)
     assert room == {"state": "ROOM", "room_pct": 20.0, "target": 205.4, "touches": 2,
                     "room_pct_raw": pytest.approx((205.4 - 171.2) / 171.2 * 100.0, abs=1e-4),
-                    "band": {"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2}}
+                    "band": {"kind": "supply", "lo": 205.4, "hi": 212.72, "touches": 2},
+                    "weak": None}
     assert AG.room_read(171.2, [_sup(161.78, 167.54, 1)], 180.77) is None
 
 
@@ -225,3 +226,54 @@ def test_plan_txt_is_the_paper_lanes_stop_and_the_first_proven_target():
     # a target under the print (stale room) prints no R multiple rather than a negative one
     assert AG.plan_txt(169.5, KLAC_BANDS[0], {"target": 150.0}).endswith("target $150")
     assert AG.STOP_BUFFER_PCT == 0.5
+
+
+# ── weak lids ride along in the wording (Ajay 2026-09-08, FSLR) ───────────────
+FSLR = [{"kind": "supply", "lo": 207.31, "hi": 214.69, "touches": 1, "strength": 17.0},
+        {"kind": "demand", "lo": 214.0, "hi": 221.62, "touches": 6, "strength": 100.0},
+        {"kind": "demand", "lo": 233.0, "hi": 241.0, "touches": 2, "strength": 27.0},
+        {"kind": "supply", "lo": 240.84, "hi": 248.04, "touches": 2, "strength": 35.0},
+        {"kind": "demand", "lo": 248.66, "hi": 249.0, "touches": 2, "strength": 31.0},
+        {"kind": "supply", "lo": 250.99, "hi": 252.52, "touches": 3, "strength": 47.0}]
+
+
+def test_room_read_names_the_first_weak_lid_under_the_proven_target():
+    """The push said 'room +17.3% -> $250.99' while the chart showed shelves at
+    233 and 241 first — 2-touch bands of strength 27 / 35 the KLAC bar drops.
+    The GATE is unchanged (still 17.3%, still passes); the wording now names
+    the dropped shelf."""
+    room = AG.room_read(214.04, FSLR, 204.45)
+    assert room["state"] == "ROOM" and room["target"] == 250.99 and room["room_pct"] == 17.3
+    assert room["weak"] == {"lo": 233.0, "hi": 241.0, "touches": 2, "strength": 27.0, "pct": 8.9}
+    assert AG.room_txt(room) == "room +17.3% -> $250.99 · weak lid $233 first (+8.9%, 2×)"
+    ok, gate_room = AG.room_gate(214.04, FSLR, 204.45)
+    assert ok is True and gate_room["room_pct"] == 17.3, "the gate did not move"
+    # a 1-touch lid counts as weak too; the nearest one is named
+    one = [{"kind": "supply", "lo": 226.96, "hi": 229.71, "touches": 1, "strength": 20.0}] + FSLR
+    assert AG.room_read(214.04, one, 204.45)["weak"]["lo"] == 226.96
+    assert AG.first_weak_lid(one, 214.04, 250.99)["touches"] == 1
+
+
+def test_weak_lid_negative_cases_keep_the_old_wording():
+    # nothing weak between the print and the target → the exact old text
+    clean = [{"kind": "supply", "lo": 250.99, "hi": 252.52, "touches": 3, "strength": 47.0}]
+    room = AG.room_read(214.04, clean, 204.45)
+    assert room["weak"] is None and AG.room_txt(room) == "room +17.3% -> $250.99"
+    # a weak lid ABOVE the target is not "first"; one BELOW the print is not a lid
+    above = clean + [{"kind": "supply", "lo": 260.0, "hi": 262.0, "touches": 1},
+                     {"kind": "supply", "lo": 200.0, "hi": 205.0, "touches": 1}]
+    assert AG.room_read(214.04, above, 204.45)["weak"] is None
+    assert AG.first_weak_lid(clean, None, 250.99) is None and AG.first_weak_lid(clean, 0, None) is None
+    assert AG.first_weak_lid([None, {"lo": "x"}, {"lo": 230, "hi": 220, "touches": 1}], 214.04, None) is None
+    # the pinned wording without a weak key is untouched
+    assert AG.room_txt({"room_pct": 12.0, "target": 112.0}) == "room +12% -> $112"
+    assert AG.room_txt({"room_pct": 12.0, "target": 112.0, "weak": None}) == "room +12% -> $112"
+
+
+def test_board_room_block_and_stat_carry_the_weak_lid():
+    from supply_demand import room_floor as RF
+    room = RF.room_block(214.04, FSLR, None, 204.45, "live")
+    assert room["state"] == "ROOM" and room["target_lo"] == 250.99
+    assert room["weak"]["lo"] == 233.0 and RF.room_stat(room) == "+17.3% -> 250.99 · weak 233.00 first"
+    clean = RF.room_block(214.04, [FSLR[-1]], None, 204.45, "live")
+    assert clean["weak"] is None and RF.room_stat(clean) == "+17.3% -> 250.99"

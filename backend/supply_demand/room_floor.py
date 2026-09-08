@@ -129,7 +129,9 @@ def room_block(px, bands, entry_band: Optional[dict] = None, prev_close=None,
         state = "ROOM" if raw >= float(near_pct) else "NEAR"
     return {**base, "state": state, "room_pct": round(raw, 1), "room_pct_raw": raw,
             "target_lo": round(lo, 2), "target_hi": round(hi, 2),
-            "target_kind": first.get("kind")}
+            "target_kind": first.get("kind"),
+            # the first unproven lid under the target, for the card (2026-09-08)
+            "weak": _gates.first_weak_lid(bands, p, lo)}
 
 
 def meets_room_floor(room: Optional[dict], min_room: Optional[float]) -> bool:
@@ -170,7 +172,11 @@ def room_stat(room: Optional[dict]) -> str:
     pct, tgt = _f(room.get("room_pct")), _f(room.get("target_lo"))
     if pct is None or tgt is None:
         return "—"
-    return f"+{pct:.1f}% -> {tgt:.2f}"
+    txt = f"+{pct:.1f}% -> {tgt:.2f}"
+    weak = room.get("weak")
+    if isinstance(weak, dict) and _f(weak.get("lo")) is not None:
+        txt += f" · weak {float(weak['lo']):.2f} first"          # FSLR 2026-09-08
+    return txt
 
 
 def row_entry_band(row: dict) -> Optional[dict]:

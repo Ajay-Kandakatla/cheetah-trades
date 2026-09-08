@@ -147,6 +147,36 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
     return out
 
 
+def first_weak_lid(bands, print_px, target=None) -> Optional[dict]:
+    """The first band above the print that the room rule does NOT count — a
+    lid that fails is_proven_band (1 touch, or strength < LID_MIN_STRENGTH) —
+    and that sits under `target` (the proven lid the room is measured to).
+    FSLR 2026-09-08: the push read "room +17.3% -> $250.99" while the chart
+    showed shelves at 233 and 241 first; both were 2-touch bands of strength
+    27 / 35, dropped by the KLAC bar. The gate is unchanged — this only puts
+    the dropped lid back into the wording so the room is never read as empty
+    sky. {"lo","hi","touches","strength","pct"} or None."""
+    px = _f(print_px)
+    if px is None or px <= 0:
+        return None
+    tgt = _f(target)
+    weak = []
+    for b in bands or []:
+        if not _valid_band(b) or is_proven_band(b):
+            continue
+        lo, hi = float(b["lo"]), float(b["hi"])
+        if lo <= px:
+            continue
+        if tgt is not None and lo >= tgt:
+            continue
+        weak.append((lo, hi, b))
+    if not weak:
+        return None
+    lo, hi, b = min(weak, key=lambda t: t[0])
+    return {"lo": round(lo, 2), "hi": round(hi, 2), "touches": int(_f(b.get("touches")) or 0),
+            "strength": _f(b.get("strength")), "pct": round((lo - px) / px * 100.0, 1)}
+
+
 def first_overhead(bands, print_px, prev_close=None) -> Optional[dict]:
     """The band price meets FIRST going up: the one containing the print
     (lowest lo when nested), else the lowest lo above it. None = clear."""
@@ -179,7 +209,9 @@ def room_read(print_px, bands, prev_close=None) -> Optional[dict]:
     # one compared or quoted).
     return {"state": "IN_BAND" if in_band else "ROOM", "room_pct": round(room_pct, 1),
             "room_pct_raw": room_pct,
-            "target": round(target, 2), "touches": first.get("touches"), "band": dict(first)}
+            "target": round(target, 2), "touches": first.get("touches"), "band": dict(first),
+            # the first lid the rule dropped on the way to the target (2026-09-08)
+            "weak": first_weak_lid(bands, px, target)}
 
 
 def room_gate(print_px, bands, prev_close=None,
@@ -220,7 +252,13 @@ def room_txt(room: Optional[dict]) -> str:
     if not room:
         return "room: clear runway"
     rr = f" ({room['rr']:g}R)" if room.get("rr") is not None else ""
-    return f"room +{room['room_pct']:g}% -> ${room['target']:g}{rr}"
+    txt = f"room +{room['room_pct']:g}% -> ${room['target']:g}{rr}"
+    weak = room.get("weak")
+    if isinstance(weak, dict) and weak.get("lo") is not None:
+        # Ajay 2026-09-08 (FSLR): "Do we really have that much room?" — name the
+        # weaker shelf the chart draws before the proven target.
+        txt += f" · weak lid ${weak['lo']:g} first (+{weak['pct']:g}%, {weak.get('touches') or 0}×)"
+    return txt
 
 
 def plan_txt(print_px, band, room: Optional[dict],
