@@ -54,10 +54,17 @@ ET wall clock: pre-market 04:00–09:30, RTH 09:30–16:00, after-hours 16:00–
    (`premarket|rth|afterhours|closed` — NOT `session`, which the 0DTE tab already uses for
    its chain-liveness block).
 4. **Page**: one `cm-note` under any board read outside RTH (`sessionNoteText`) and the
-   Breaking pass line names the tape (`breakingPassText`); both say the phone stays quiet.
+   Breaking pass line names the tape (`breakingPassText`); both state the push window.
 
-**Phone pushes stay RTH-only.** Extended-hours tape is thin; it moves the boards, never the
-phone. Enabling pre-market pushes is a separate decision (Ajay's call).
+**Phone pushes (revised the same afternoon).** The first cut kept pushes RTH-only (thin tape).
+Ajay, 08:50 ET: *"Make phone push also pre and post market"* — `PUSH_OPEN/CLOSE` are now
+04:00–20:00 too, the same gates apply (2 touches, cap ≥ $1B, ≥ 5% room, once per band/day),
+and an extended-hours print is tagged `pre-mkt` / `after-hrs` at the end of the push body
+(`tape_tag`) so a 5am title is never read as a session print. `push_window` stays a separate
+gate so the two windows can be split again by editing two constants. Quiet hours were checked:
+off on both of his devices, so early pushes deliver. The 5-minute `zone_bounce_alert` /
+`demand_alerts` crons keep their RTH windows — a bounce needs a session low; near-demand
+arrivals already push from the minute pass.
 
 ## Where it shows
 
@@ -65,7 +72,7 @@ phone. Enabling pre-market pushes is a separate decision (Ajay's call).
 - 🚀 Breaking: the pass line reads "pre-market pass as of 08:20 ET · thin tape, no phone
   pushes outside regular hours"; tiles say `LAST · PRE`.
 - ℹ️ Rules ▸ Zone alerts: "pass every minute 04:00–20:00 ET incl. pre-market and
-  after-hours; phone pushes 09:31–16:00 ET only".
+  after-hours; phone pushes 04:00–20:00 ET".
 
 ## Tests
 

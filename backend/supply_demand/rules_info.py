@@ -155,7 +155,7 @@ def sections() -> dict:
                _pct(ZB.TOUCH_TOL_PCT), _pct(ZB.WICK_PCT), _pct(ZB.BOUNCE_MIN_PCT),
                _pct(ZB.STRONG_PCT), ZB.MAX_SINGLES_PER_PASS, ZB.STALE_PRINT_SEC // 60),
             "🚀 supply_break_alert (pass every minute %s–%s ET incl. pre-market and after-hours; "
-            "phone pushes %s–%s ET only): crossed a supply band tested ≥ %d "
+            "phone pushes %s–%s ET): crossed a supply band tested ≥ %d "
             "times, at most %s through it; near tier within %s under; 'new highs' when the "
             "band top is ≥ %d%% of the 252-bar high; room measured to the next band above; "
             "max %d singles; print ≤ %d min old."

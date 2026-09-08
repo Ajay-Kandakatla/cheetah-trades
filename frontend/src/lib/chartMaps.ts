@@ -1272,9 +1272,9 @@ export function breakingPassText(b: Pick<CmBoard, 'pass_as_of' | 'in_session' | 
   const why = b.reason && b.reason !== 'no pass yet' ? b.reason : '';
   if (!hhmm) return why ? `no pass yet today \u2014 ${why}` : 'no pass yet today';
   if (b.in_session && (b.tape_session === 'premarket' || b.tape_session === 'afterhours')) {
-    // 2026-09-08: the pass runs 4:00–20:00 ET; the phone only 9:31–16:00.
+    // 2026-09-08: the pass AND the phone run 4:00–20:00 ET (Ajay: "Make phone push also pre and post market").
     const tape = b.tape_session === 'premarket' ? 'pre-market' : 'after-hours';
-    return `${tape} pass as of ${hhmm} ET \u00b7 thin tape, no phone pushes outside regular hours; these cards refresh every 5`;
+    return `${tape} pass as of ${hhmm} ET \u00b7 thin tape, pushes on 4:00\u201320:00 ET; these cards refresh every 5`;
   }
   if (b.in_session) return `as of ${hhmm} ET \u00b7 the pass runs every minute in session; these cards refresh every 5`;
   if (why) return `${why} (${hhmm} ET)`;
@@ -1284,7 +1284,7 @@ export function breakingPassText(b: Pick<CmBoard, 'pass_as_of' | 'in_session' | 
 /** One line under any board read outside regular hours (2026-09-08): where the
  *  `now` lines came from. Empty in RTH / closed — nothing to explain. */
 export function sessionNoteText(session: CmTapeSession | null | undefined): string {
-  if (session === 'premarket') return '\u{1F305} pre-market prints: every now line sits on the last pre-market trade (now \u00b7 pre) \u2014 thin tape, no phone pushes until 9:31 ET';
-  if (session === 'afterhours') return '\u{1F319} after-hours prints: every now line sits on the last after-hours trade (now \u00b7 AH) \u2014 thin tape, no phone pushes after 16:00 ET';
+  if (session === 'premarket') return '\u{1F305} pre-market prints: every now line sits on the last pre-market trade (now \u00b7 pre) \u2014 thin tape; phone pushes are on from 4:00 ET';
+  if (session === 'afterhours') return '\u{1F319} after-hours prints: every now line sits on the last after-hours trade (now \u00b7 AH) \u2014 thin tape; phone pushes stay on until 20:00 ET';
   return '';
 }

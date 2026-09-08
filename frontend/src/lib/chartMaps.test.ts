@@ -1582,12 +1582,12 @@ describe('the 🚀 Breaking tab', () => {
 
   // Ajay 2026-09-08: "enable pre market pricing and let me scan premarket hours
   // ... Also after hours" — the pass runs 4:00–20:00 ET, pushes stay RTH.
-  it('names the extended-hours tape and says the phone stays quiet', () => {
+  it('names the extended-hours tape and says the phone is on (Ajay 2026-09-08 PM)', () => {
     const iso = '2026-09-08T08:20:11-04:00';
     expect(breakingPassText({ pass_as_of: iso, in_session: true, reason: null, tape_session: 'premarket' }))
-      .toBe('pre-market pass as of 08:20 ET \u00b7 thin tape, no phone pushes outside regular hours; these cards refresh every 5');
+      .toBe('pre-market pass as of 08:20 ET \u00b7 thin tape, pushes on 4:00\u201320:00 ET; these cards refresh every 5');
     expect(breakingPassText({ pass_as_of: '2026-09-08T17:03:00-04:00', in_session: true, reason: null, tape_session: 'afterhours' }))
-      .toBe('after-hours pass as of 17:03 ET \u00b7 thin tape, no phone pushes outside regular hours; these cards refresh every 5');
+      .toBe('after-hours pass as of 17:03 ET \u00b7 thin tape, pushes on 4:00\u201320:00 ET; these cards refresh every 5');
     // RTH keeps the old wording; a closed session reads as before
     expect(breakingPassText({ pass_as_of: iso, in_session: true, reason: null, tape_session: 'rth' }))
       .toBe('as of 08:20 ET \u00b7 the pass runs every minute in session; these cards refresh every 5');
@@ -1599,8 +1599,8 @@ describe('the 🚀 Breaking tab', () => {
   });
 
   it('sessionNoteText explains the now lines outside regular hours only', () => {
-    expect(sessionNoteText('premarket')).toMatch(/pre-market prints.*now \u00b7 pre.*no phone pushes until 9:31 ET/);
-    expect(sessionNoteText('afterhours')).toMatch(/after-hours prints.*now \u00b7 AH.*no phone pushes after 16:00 ET/);
+    expect(sessionNoteText('premarket')).toMatch(/pre-market prints.*now \u00b7 pre.*phone pushes are on from 4:00 ET/);
+    expect(sessionNoteText('afterhours')).toMatch(/after-hours prints.*now \u00b7 AH.*phone pushes stay on until 20:00 ET/);
     expect(sessionNoteText('rth')).toBe('');
     expect(sessionNoteText('closed')).toBe('');
     expect(sessionNoteText(null)).toBe('');

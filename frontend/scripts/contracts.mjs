@@ -813,14 +813,15 @@ const CONTRACTS = [
     // Ajay 2026-09-08 (ORCL): "show real time premarket and extended hours
     // trading info as well in all the chart maps." Outside RTH the backend
     // moves every tile's now line to the live print; the page must say so on
-    // EVERY tab (not only Breaking) and the wording must keep the no-push line.
+    // EVERY tab (not only Breaking) and the wording must state the push window
+    // (4:00–20:00 ET since the same afternoon: "Make phone push also pre and post market").
     checks: (src) => {
       const errs = [];
       if (!/data-testid="session-note"/.test(src)) errs.push('the session note is gone from ChartMaps.tsx');
       if (!/sessionNoteText\(data\.tape_session\)/.test(src)) errs.push('the session note must read data.tape_session via sessionNoteText');
       const lib = read('src/lib/chartMaps.ts');
-      if (!/no phone pushes until 9:31 ET/.test(lib)) errs.push('the pre-market note must say pushes wait for 9:31 ET');
-      if (!/no phone pushes after 16:00 ET/.test(lib)) errs.push('the after-hours note must say pushes stop at 16:00 ET');
+      if (!/phone pushes are on from 4:00 ET/.test(lib)) errs.push('the pre-market note must say pushes are on from 4:00 ET');
+      if (!/phone pushes stay on until 20:00 ET/.test(lib)) errs.push('the after-hours note must say pushes run until 20:00 ET');
       return errs;
     },
   },

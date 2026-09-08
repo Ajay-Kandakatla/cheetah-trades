@@ -323,5 +323,6 @@ Ajay: *"enable pre market pricing and let me scan premarket hours … Also after
 with ORCL, *"show real time premarket and Extended hours trading info as well in all the
 chart maps."* Every tile's `now` line now sits on the last extended-hours trade (tagged
 `now · pre` / `now · AH`), the charts carry the pre-market bar, the 🚀 Breaking / near-demand
-pass runs 04:00–20:00 ET, and one note under the tab bar names the tape. Phone pushes stay
-RTH-only. Full rule: `docs/supply_demand/extended_hours.md`.
+pass runs 04:00–20:00 ET, and one note under the tab bar names the tape. Phone pushes ride the
+same window since the same afternoon (body tagged pre-mkt / after-hrs). Full rule:
+`docs/supply_demand/extended_hours.md`.

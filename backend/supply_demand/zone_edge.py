@@ -130,8 +130,8 @@ DIGEST_MAX = 6                     # names spelled out in one digest body
 STALE_PRINT_SEC = 180              # one-minute cadence: a 3-min-old print is not "now"
 SESSION_OPEN = dtime(4, 0)         # the pass runs through extended hours (Ajay 2026-09-08)
 SESSION_CLOSE = dtime(20, 0)       # pre-market 04:00 → after-hours 20:00 ET
-PUSH_OPEN = dtime(9, 31)           # phone pushes stay RTH: first pass after the open + prints
-PUSH_CLOSE = dtime(16, 0)
+PUSH_OPEN = dtime(4, 0)            # phone pushes ride the whole pass window (Ajay 2026-09-08 PM:
+PUSH_CLOSE = dtime(20, 0)          # "Make phone push also pre and post market"); was 9:31-16:00
 TRACK_KEEP_DAYS = 2                # track rows older than this are purged every pass
 TRACK_POINTS = 30                  # points per "side:SYM" the API hands the sparkline
 KIND_BREAK = "supply_break_alert"
@@ -164,9 +164,11 @@ def in_session(now: Optional[datetime] = None) -> bool:
 
 
 def push_window(now: Optional[datetime] = None) -> bool:
-    """Pushes fire only in RTH 9:31-16:00 ET on trading days — the window the
-    pass had before 2026-09-08. A pre-market or after-hours print is thin
-    tape: it moves the boards, never the phone."""
+    """The push window on trading days. Started as RTH 9:31-16:00 (the pass
+    window before 2026-09-08); the same afternoon Ajay asked for pre- and
+    post-market pushes too, so it now equals the pass window 04:00-20:00.
+    Kept as its own gate so the two can be split again by changing two
+    constants; the push body tags an extended-hours print (`tape_tag`)."""
     now = now or _now_et()
     et = now.astimezone(ET) if now.tzinfo is not None else now
     if not is_market_day(et):
@@ -411,6 +413,21 @@ def break_digest_message(items: list) -> Optional[dict]:
     url = "/chart-maps?tab=deep_demand"
     return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url},
             "kind": KIND_BREAK}
+
+
+def tape_tag(session: Optional[str]) -> str:
+    """' · pre-mkt' / ' · after-hrs' for an extended-hours pass, '' in RTH —
+    appended to every push body since pushes ride the 04:00-20:00 window
+    (Ajay 2026-09-08 PM) so a 5am title is never read as a session print."""
+    return {"premarket": " · pre-mkt", "afterhours": " · after-hrs"}.get(str(session or ""), "")
+
+
+def _tag_msg(msg: Optional[dict], session: Optional[str]) -> Optional[dict]:
+    tag = tape_tag(session)
+    if msg and tag:
+        msg = dict(msg)
+        msg["body"] = f"{msg.get('body') or ''}{tag}"
+    return msg
 
 
 # --------------------------------------------------------------------------
@@ -743,14 +760,15 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     """One 1-min pass. Every input is injectable for tests; the cron passes
     none. `force` skips the session gate for in-container smoke tests only;
     `track=False` (dry runs) reads the board without writing latest/track.
-    Pushes are additionally gated to RTH (`push_window`) — the pass itself
-    runs 04:00-20:00 ET since 2026-09-08 so the boards read extended hours."""
+    Pushes are gated by `push_window` (04:00-20:00 since 2026-09-08 PM — the
+    same as the pass; RTH-only until Ajay asked for pre/post-market pushes)."""
     t0 = time.time()
     now = now or _now_et()
     if not force and not in_session(now):
         return {"ran": False, "reason": "outside the 04:00-20:00 ET pass window"}
     push_ok = push_window(now)
     push = bool(push) and push_ok
+    sess = session_state(now)
     day = now.astimezone(ET).date()
     day_iso = day.isoformat()
     if store is None:
@@ -907,7 +925,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             owner = _resolve_owner()
         for it in b_singles:
             try:
-                res = sender.send_to_user(owner, break_single_message(it), kind=KIND_BREAK)
+                res = sender.send_to_user(owner, _tag_msg(break_single_message(it), sess), kind=KIND_BREAK)
             except Exception as exc:
                 log.warning("zone_edge: break push for %s failed: %s", it["symbol"], exc)
                 continue
@@ -916,7 +934,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 pushed += 1
         if b_digest:
             try:
-                res = sender.send_to_user(owner, break_digest_message(b_digest), kind=KIND_BREAK)
+                res = sender.send_to_user(owner, _tag_msg(break_digest_message(b_digest), sess), kind=KIND_BREAK)
             except Exception as exc:
                 log.warning("zone_edge: break digest push failed: %s", exc)
                 res = None
@@ -926,7 +944,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 pushed += 1
         for it in d_singles:
             try:
-                res = sender.send_to_user(owner, DA.at_message(it), kind=DA.KIND)
+                res = sender.send_to_user(owner, _tag_msg(DA.at_message(it), sess), kind=DA.KIND)
             except Exception as exc:
                 log.warning("zone_edge: demand push for %s failed: %s", it["symbol"], exc)
                 continue
@@ -935,7 +953,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 pushed += 1
         if d_digest:
             try:
-                res = sender.send_to_user(owner, DA.digest_message(d_digest), kind=DA.KIND)
+                res = sender.send_to_user(owner, _tag_msg(DA.digest_message(d_digest), sess), kind=DA.KIND)
             except Exception as exc:
                 log.warning("zone_edge: demand digest push failed: %s", exc)
                 res = None

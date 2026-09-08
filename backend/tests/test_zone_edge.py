@@ -778,13 +778,17 @@ def test_session_gate_is_four_am_to_eight_pm_weekdays_and_pushes_stay_rth():
     assert ZE.in_session(datetime(2026, 9, 3, 20, 1, tzinfo=ET)) is False
     assert ZE.in_session(datetime(2026, 9, 5, 11, 0, tzinfo=ET)) is False     # Saturday
     assert ZE.in_session(datetime(2026, 9, 6, 11, 0, tzinfo=ET)) is False     # Sunday
-    assert ZE.push_window(datetime(2026, 9, 3, 9, 30, tzinfo=ET)) is False
+    # pushes ride the whole window since 2026-09-08 PM ("Make phone push also
+    # pre and post market") — never a weekend / holiday
+    assert ZE.push_window(datetime(2026, 9, 3, 3, 59, tzinfo=ET)) is False
+    assert ZE.push_window(datetime(2026, 9, 3, 4, 0, tzinfo=ET)) is True
+    assert ZE.push_window(datetime(2026, 9, 3, 7, 0, tzinfo=ET)) is True       # pre-market: phone on
     assert ZE.push_window(datetime(2026, 9, 3, 9, 31, tzinfo=ET)) is True
-    assert ZE.push_window(datetime(2026, 9, 3, 16, 0, tzinfo=ET)) is True
-    assert ZE.push_window(datetime(2026, 9, 3, 16, 1, tzinfo=ET)) is False
-    assert ZE.push_window(datetime(2026, 9, 3, 7, 0, tzinfo=ET)) is False      # pre-market: no phone
-    assert ZE.push_window(datetime(2026, 9, 3, 18, 0, tzinfo=ET)) is False     # after-hours: no phone
+    assert ZE.push_window(datetime(2026, 9, 3, 18, 0, tzinfo=ET)) is True      # after-hours: phone on
+    assert ZE.push_window(datetime(2026, 9, 3, 20, 0, tzinfo=ET)) is True
+    assert ZE.push_window(datetime(2026, 9, 3, 20, 1, tzinfo=ET)) is False
     assert ZE.push_window(datetime(2026, 9, 5, 11, 0, tzinfo=ET)) is False
+    assert ZE.push_window(datetime(2026, 9, 7, 11, 0, tzinfo=ET)) is False     # Labor Day
     s = lambda hh, mm, d=3: ZE.session_state(datetime(2026, 9, d, hh, mm, tzinfo=ET))
     assert s(3, 59) == "closed" and s(4, 0) == "premarket" and s(9, 29) == "premarket"
     assert s(9, 30) == "rth" and s(16, 0) == "rth" and s(16, 1) == "afterhours"
@@ -803,26 +807,38 @@ def test_check_once_refuses_outside_the_pass_window_unless_forced():
     assert out["ran"] is True and out["candidates"] == 0
 
 
-def test_premarket_pass_lists_and_tracks_but_never_pushes(monkeypatch):
+def test_premarket_and_afterhours_passes_push_with_the_tape_tag(monkeypatch):
+    # Ajay 2026-09-08 PM: "Make phone push also pre and post market" — same
+    # gates, same dedupe, the body says which tape the print came from.
     sent = _capture(monkeypatch)
     pre = datetime(2026, 9, 3, 8, 0, tzinfo=ET)
     store = {"AAA": _doc("AAA", [RES, DEM], 99.0, 103.0)}
     out, colls = _run(store, {"AAA": _snap(101.5, 99.0, now=pre)}, {"AAA": 5e9},
                       names={"AAA": "Alpha"}, now=pre)
-    assert out["ran"] and out["push_window"] is False and out["session"] == "premarket"
-    assert out["pushed"] == 0 and sent == [], "an extended-hours print moves the board, never the phone"
-    assert [r["symbol"] for r in out["breaking"]] == ["AAA"]
-    assert colls["coll_break"].docs == {}, "no push → no state row → the RTH pass may still push it"
+    assert out["ran"] and out["push_window"] is True and out["session"] == "premarket"
+    assert out["pushed"] == 1 and len(sent) == 1
+    assert sent[0]["title"] == "🚀 AAA 0.49% under resistance $100–102 → new highs", "title unchanged"
+    assert sent[0]["body"].endswith(" · $5.0B · Alpha · pre-mkt"), sent[0]["body"]
+    assert list(colls["coll_break"].docs) == ["AAA:100.00-102.00:2026-09-03:near"], "state row → no repeat at the open"
     payload = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"], now=pre)
     assert payload["in_session"] is True and payload["session"] == "premarket"
     assert payload["breaking"][0]["symbol"] == "AAA"
-    # after-hours: same rule
+    # after-hours: tagged after-hrs
     ah = datetime(2026, 9, 3, 17, 30, tzinfo=ET)
     out, _ = _run(store, {"AAA": _snap(101.5, 99.0, now=ah)}, {"AAA": 5e9}, names={"AAA": "Alpha"}, now=ah)
-    assert out["push_window"] is False and out["session"] == "afterhours" and out["pushed"] == 0 and sent == []
-    # RTH: pushes as before
+    assert out["push_window"] is True and out["session"] == "afterhours" and out["pushed"] == 1
+    assert sent[-1]["body"].endswith(" · after-hrs")
+    # RTH: no tag at all
     out, _ = _run(store, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
-    assert out["push_window"] is True and out["session"] == "rth" and out["pushed"] == 1 and len(sent) == 1
+    assert out["push_window"] is True and out["session"] == "rth" and out["pushed"] == 1
+    assert not sent[-1]["body"].endswith(("pre-mkt", "after-hrs"))
+    # NEGATIVE: 03:00 and a Saturday never push, forced or not
+    for when in (datetime(2026, 9, 3, 3, 0, tzinfo=ET), datetime(2026, 9, 5, 11, 0, tzinfo=ET)):
+        n = len(sent)
+        out, _ = _run(store, {"AAA": _snap(101.5, 99.0, now=when)}, {"AAA": 5e9}, names={"AAA": "Alpha"}, now=when)
+        assert out["push_window"] is False and out["pushed"] == 0 and len(sent) == n
+    assert ZE.tape_tag("premarket") == " · pre-mkt" and ZE.tape_tag("afterhours") == " · after-hrs"
+    assert ZE.tape_tag("rth") == "" and ZE.tape_tag(None) == "" and ZE.tape_tag("closed") == ""
 
 
 # ── source guards: the wiring ────────────────────────────────────────────────
@@ -834,8 +850,8 @@ def test_constants_locked():
     assert ZE.LATEST_COLL == "zone_edge_latest" and ZE.TRACK_COLL == "zone_edge_track"
     assert ZE.SESSION_OPEN.hour == 4 and ZE.SESSION_OPEN.minute == 0          # 2026-09-08
     assert ZE.SESSION_CLOSE.hour == 20 and ZE.SESSION_CLOSE.minute == 0
-    assert ZE.PUSH_OPEN.hour == 9 and ZE.PUSH_OPEN.minute == 31
-    assert ZE.PUSH_CLOSE.hour == 16 and ZE.PUSH_CLOSE.minute == 0
+    assert ZE.PUSH_OPEN.hour == 4 and ZE.PUSH_OPEN.minute == 0              # 2026-09-08 PM
+    assert ZE.PUSH_CLOSE.hour == 20 and ZE.PUSH_CLOSE.minute == 0
 
 
 def test_crontab_runs_zone_edge_every_minute_after_the_bounce_line():
