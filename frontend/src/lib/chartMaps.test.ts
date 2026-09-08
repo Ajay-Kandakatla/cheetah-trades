@@ -318,7 +318,8 @@ describe('lineLabels', () => {
       { price: 18, label: 'overhead 18', tone: 'target' },
     ];
     const out = lineLabels(lines, d, 200);
-    expect(out.map((l) => l.text)).toEqual(['now 14.17', 'support 12.5', 'overhead 18']);
+    // layoutLabels orders by y (top of the chart first), so compare as a set
+    expect([...out.map((l) => l.text)].sort()).toEqual(['now 14.17', 'overhead 18', 'support 12.5'].sort());
     expect(lineLabels([{ price: 15.4, label: 'now \u00b7 pre', tone: 'now' }], d, 200)[0].text).toBe('now \u00b7 pre 15.40');
     expect(lineLabels([{ price: 15.4, label: 'LAST \u00b7 AH', tone: 'now' }], d, 200)[0].text).toBe('LAST \u00b7 AH 15.40');
     expect(nowLabelText('now', 0.4173)).toBe('now 0.417');          // sub-dollar keeps a third decimal
