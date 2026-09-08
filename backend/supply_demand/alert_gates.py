@@ -30,20 +30,34 @@ Two owner settings, both straight from that sentence:
   late by the time it reaches me" is the complaint; a bounce that already ran 4%
   above the top lists, it does not ring). Garbage fails closed.
 
-``is_proven_band(band) -> bool``  (Ajay 2026-09-06, the KLAC lesson)
-  A band counts as OVERHEAD only when it meets the board's own bar for a real
-  band: touches >= LID_MIN_TOUCHES (2) AND strength >= LID_MIN_STRENGTH (40),
-  the same numbers demand_reentry.MIN_TOUCHES / MIN_ZONE_STRENGTH use to list
-  a demand band (pinned equal in tests/test_supply_demand_contracts.py). KLAC
+``is_proven_band(band) -> bool``  (Ajay 2026-09-06, the KLAC lesson; 2026-09-08 touches only)
+  A band counts as OVERHEAD only when it is tested: touches >= LID_MIN_TOUCHES
+  (2). The strength half of the bar (>= 40, the board's MIN_ZONE_STRENGTH) was
+  dropped on 2026-09-08 — FSLR: 2-touch shelves at 233 and 241 of strength 27 /
+  35 were skipped and the push read "room +17.3% -> $250.99" while the chart
+  drew them; Ajay: "ok push please" to "room bar = touches only". KLAC
   2026-09-02..03: price 169.50 sat inside the 164.60-169.81 demand band with a
   1-touch / strength-32 supply band 166.37-172.30 on top of it; the room read
   measured to THAT lid = IN_BAND = no push, no paper buy for two days, then the
   +7% gap. Unproven lids are noise, not ceilings: skip them and measure to the
   next PROVEN band (191.11 -> 12.7% room). Unknown touches keep the lid
-  (conservative); unknown strength is judged on touches alone. Every overhead
-  reader applies it: overhead_bands here, bounce_room.overhead_bands,
-  portfolio.supply_watch.overhead_bands, trading.zone_edge_entry.room_ok and
-  room_floor.plan_bands (the board plan's target). Boards still LIST every band.
+  (conservative). Every overhead reader applies it: overhead_bands here,
+  bounce_room.overhead_bands, portfolio.supply_watch.overhead_bands,
+  trading.zone_edge_entry.room_ok and room_floor.plan_bands (the board plan's
+  target). Boards still LIST every band.
+
+``gap_day(print, prev_close) -> bool``  (Ajay 2026-09-08, DYN −29%)
+  A print GAP_DOWN_PCT (8%) or more under yesterday's close resets the
+  structure for the day: every shelf between the print and that close is
+  trapped supply, whatever the closed bars called it. DYN 2026-09-08 pushed
+  "above demand" four times on the way back up from 17.2 because the house
+  rule "a supply band yesterday CLOSED above is broken = support" was judged
+  against a 24.28 close the gap had just invalidated, and the room read ran
+  to 23.96 over the same shelves. On a gap day: supply bands are NEVER
+  support (zone_edge.read_near_demand, zone_bounce_alerts.is_eligible) and
+  the broken-supply skip is OFF in every overhead reader (overhead_bands
+  here, bounce_room, portfolio.supply_watch) — the shelves count for the 5%
+  room gate. Same-day replay: DYN pushes once, at 09:09 (16.56–17.02).
 
 ``plan_txt(print, band, room) -> str``  (Ajay 2026-09-06, "ok please all 3")
   The plan inside the push text: "buy $lo-hi · stop $x (0.5% under the floor,
@@ -66,11 +80,15 @@ from typing import Optional
 
 ALERT_MIN_ROOM_PCT = 5.0            # Ajay 2026-09-05: "atleast 5% to Supply"
 ALERT_MAX_ABOVE_DEMAND_PCT = 1.0    # Ajay 2026-09-05: "<1% bounce from demand zone"
-# A lid must be PROVEN to count as overhead (Ajay 2026-09-06, KLAC): the
-# board's own bar for a real band — demand_reentry.MIN_TOUCHES /
-# MIN_ZONE_STRENGTH. Pinned equal in tests/test_supply_demand_contracts.py.
+# A lid must be PROVEN to count as overhead (Ajay 2026-09-06, KLAC): tested
+# at least twice — demand_reentry.MIN_TOUCHES, pinned equal in
+# tests/test_supply_demand_contracts.py. Strength no longer counts
+# (Ajay 2026-09-08, FSLR: "room bar = touches only").
 LID_MIN_TOUCHES = 2
-LID_MIN_STRENGTH = 40.0
+# A gap DOWN of this much from yesterday's close resets the structure for the
+# day (Ajay 2026-09-08, DYN): shelves between the print and that close are
+# trapped supply — never support, always overhead.
+GAP_DOWN_PCT = 8.0
 # The plan text's stop: this far under the band floor — the stop the paper
 # lane places (trading.zone_edge_entry.STOP_BUFFER_PCT, pinned equal).
 STOP_BUFFER_PCT = 0.5
@@ -89,21 +107,25 @@ def _kind(band: dict) -> str:
 
 
 def is_proven_band(band) -> bool:
-    """True when the band meets the board's bar for real structure: touches
-    >= LID_MIN_TOUCHES and strength >= LID_MIN_STRENGTH. Touches unknown
-    (missing / non-positive) keeps the band — a lid nobody counted is not
-    dismissed; strength unknown is judged on touches alone."""
+    """True when the band is tested: touches >= LID_MIN_TOUCHES. Touches
+    unknown (missing / non-positive) keeps the band — a lid nobody counted is
+    not dismissed. Strength is not consulted (Ajay 2026-09-08)."""
     if not isinstance(band, dict):
         return False
     touches = _f(band.get("touches"))
     if touches is None or touches <= 0:
         return True
-    if touches < LID_MIN_TOUCHES:
+    return bool(touches >= LID_MIN_TOUCHES)
+
+
+def gap_day(print_px, prev_close, gap_pct: float = GAP_DOWN_PCT) -> bool:
+    """True when the print sits `gap_pct` or more UNDER yesterday's close —
+    the day the closed-bar roles no longer apply (DYN 2026-09-08). Unknown
+    or garbage inputs: False (the ordinary rules stand)."""
+    px, pc = _f(print_px), _f(prev_close)
+    if px is None or pc is None or px <= 0 or pc <= 0:
         return False
-    strength = _f(band.get("strength"))
-    if strength is None:
-        return True
-    return bool(strength >= LID_MIN_STRENGTH)
+    return px <= pc * (1.0 - float(gap_pct) / 100.0)
 
 
 def _valid_band(band) -> bool:
@@ -131,6 +153,7 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
     pc = _f(prev_close)
     if pc is not None and pc <= 0:
         pc = None
+    gap = gap_day(px, pc)                                 # DYN 2026-09-08: the gap resets the roles
     out = []
     for b in bands or []:
         if not _valid_band(b) or not is_proven_band(b):
@@ -139,7 +162,7 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
         if _kind(b) == "supply":
             if hi < px:
                 continue                                  # below the print
-            if pc is not None and hi < pc:
+            if pc is not None and hi < pc and not gap:
                 continue                                  # yesterday closed above it: broken = support
             out.append(_slim(b))
         elif lo > px:
@@ -149,7 +172,7 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
 
 def first_weak_lid(bands, print_px, target=None) -> Optional[dict]:
     """The first band above the print that the room rule does NOT count — a
-    lid that fails is_proven_band (1 touch, or strength < LID_MIN_STRENGTH) —
+    lid that fails is_proven_band (a 1-touch shelf, since 2026-09-08) —
     and that sits under `target` (the proven lid the room is measured to).
     FSLR 2026-09-08: the push read "room +17.3% -> $250.99" while the chart
     showed shelves at 233 and 241 first; both were 2-touch bands of strength

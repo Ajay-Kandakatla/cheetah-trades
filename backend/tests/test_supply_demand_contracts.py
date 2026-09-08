@@ -639,7 +639,7 @@ def test_integrator_fixes_2026_09_05_broken_supply_rule_reaches_bounce_room_and_
     from supply_demand import bounce_room as BR
     assert "prev_close=None" in str(inspect.signature(BR.overhead_bands))
     ob = inspect.getsource(BR.overhead_bands)
-    assert "if pc is not None and hi < pc:" in ob and "continue" in ob
+    assert "if pc is not None and hi < pc and not gap:" in ob and "continue" in ob   # gap day 2026-09-08
     assert 'overhead_bands(doc.get("bands") or [], px, doc.get("prev_close"))' in inspect.getsource(BR.room_read)
     spec = importlib.util.spec_from_file_location(
         "sw_contract", Path(__file__).resolve().parents[2] / "backend/portfolio/supply_watch.py")
@@ -745,8 +745,23 @@ def test_proven_lid_rule_2026_09_06_one_bar_every_overhead_reader():
     from supply_demand import demand_reentry as DR, demand_alerts as DA, zone_bounce_alerts as ZB
     from trading import zone_edge_entry as ZEE
     assert AG.LID_MIN_TOUCHES == DR.MIN_TOUCHES == 2
-    assert AG.LID_MIN_STRENGTH == DR.MIN_ZONE_STRENGTH == 40.0
+    # 2026-09-08 (Ajay, FSLR: "room bar = touches only" — "ok push please"): the
+    # strength half of the bar is gone; a reader that quietly re-adds it drifts.
+    assert not hasattr(AG, "LID_MIN_STRENGTH")
+    assert "strength" not in inspect.getsource(AG.is_proven_band).split('"""')[2]
     assert "is_proven_band(b)" in inspect.getsource(AG.overhead_bands)
+    # 2026-09-08 (Ajay, DYN −29%): the gap-day rule must sit in EVERY reader that
+    # flips a supply band to support or skips it as broken.
+    assert AG.GAP_DOWN_PCT == 8.0
+    from supply_demand import bounce_room as BR, zone_edge as ZE, zone_bounce_alerts as ZB
+    assert "gap_day(" in inspect.getsource(AG.overhead_bands)
+    assert "gap_day(" in inspect.getsource(BR.overhead_bands)
+    assert "gap_day(" in inspect.getsource(ZE.read_near_demand)
+    assert "gap_day(" in inspect.getsource(ZB.is_eligible)
+    assert "is_eligible(band, pc, print_px)" in inspect.getsource(ZB.read)
+    import pathlib as _pl
+    sw = (_pl.Path(__file__).resolve().parents[2] / "backend/portfolio/supply_watch.py").read_text()
+    assert "gap_day(live, pc)" in sw and "and not gap)" in sw
     assert "_gates.is_proven_band(b)" in inspect.getsource(BR.overhead_bands)
     assert "_gates.is_proven_band(z)" in inspect.getsource(RF.plan_bands)
     assert "alert_gates.is_proven_band(b)" in inspect.getsource(ZEE.room_ok)

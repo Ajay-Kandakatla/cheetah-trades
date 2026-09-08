@@ -67,9 +67,11 @@ def _room_lines():
 
 
 def _proven_line():
-    return ("A lid counts only when it is proven — tested ≥ %d× and strength ≥ %d; a one-touch "
-            "or weak band overhead is skipped and room is measured to the next real one "
-            "(the KLAC lesson, 2026-09-06)." % (AG.LID_MIN_TOUCHES, int(AG.LID_MIN_STRENGTH)))
+    return ("A lid counts only when it is tested ≥ %d× (touches only since 2026-09-08 — FSLR); a "
+            "one-touch band overhead is skipped and room is measured to the next real one "
+            "(the KLAC lesson, 2026-09-06). Gap day (print ≥ %s under yesterday's close, 2026-09-08 "
+            "DYN): every shelf between the print and that close is trapped supply — never "
+            "support, always counted for room." % (AG.LID_MIN_TOUCHES, _pct(AG.GAP_DOWN_PCT)))
 
 
 def _closed_day_line() -> str:
@@ -292,10 +294,10 @@ def sections() -> dict:
         "title": "Quick Bounce", "emoji": "🪃",
         "picks": [
             "Historical: a name is on the list when ≥ %d visits to a proven demand band "
-            "(tested ≥ %d×, strength ≥ %d) turned QUICK at least %d%% of the time — quick = "
+            "(tested ≥ %d×) turned QUICK at least %d%% of the time — quick = "
             "the close lifted ≥ max(%s, 1 ATR) off the low on one of the first %d touch days, "
             "or the next session opened ≥ %s above the touch-day close (the KLAC gap)."
-            % (QB.MIN_EVENTS, AG.LID_MIN_TOUCHES, int(AG.LID_MIN_STRENGTH), int(QB.MIN_QUICK_RATE_PCT),
+            % (QB.MIN_EVENTS, AG.LID_MIN_TOUCHES, int(QB.MIN_QUICK_RATE_PCT),
                _pct(QB.BOUNCE_MIN_PCT), QB.QUICK_MAX_TOUCH_DAYS, _pct(QB.GAP_MIN_PCT)),
             "Live: the print is inside a proven demand band or ≤ %s above its top (under the "
             "band = fell through, not listed), with ≥ %s room to the first proven lid (the "

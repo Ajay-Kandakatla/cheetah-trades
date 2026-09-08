@@ -26,8 +26,8 @@ under the proven target that fails `is_proven_band`. `room_read` carries it as `
 for the boards and `room_stat` prints *"+17.3% -> 250.99 · weak 233.00 first"*. With nothing
 weak in between, every string is byte-identical to before (pinned).
 
-The 5% room gate, the ≥2-touch / strength ≥ 40 bar and the geometry are unchanged. Two rule
-options are on the table for Ajay's call, not made:
+The 5% room gate and the geometry are unchanged. **Both options below were adopted the same
+afternoon ("ok push please") — see `docs/supply_demand/gap_day_rule.md`.** Kept for the record:
 
 1. room bar = touches only (drop the strength ≥ 40 half): FSLR's room would read +8.9% → 233
    (still passes 5%); DYN's 20.91–21.65 (1×) would still be ignored.

@@ -838,17 +838,18 @@ def test_overhead_rule_with_prev_close_matches_portfolio_supply_watch_loaded_sta
 
 # ── proven lids (Ajay 2026-09-06, the KLAC lesson) ───────────────────────────
 def test_overhead_bands_skip_an_unproven_lid_and_supply_watch_agrees_standalone():
-    """A 1-touch or sub-40 band is noise, not a ceiling — the room read measures
-    to the next PROVEN band; the Portfolio 🎯 table (same rule, loaded
-    standalone) agrees on every print."""
+    """A 1-touch band is noise, not a ceiling — the room read measures to the
+    next PROVEN band (touches only since 2026-09-08: a weak 3-touch shelf IS a
+    lid); the Portfolio 🎯 table (same rule, loaded standalone) agrees on every
+    print."""
     weak_touch = {"kind": "supply", "lo": 100.0, "hi": 102.0, "touches": 1, "strength": 90.0}
     weak_str = {"kind": "supply", "lo": 104.0, "hi": 105.0, "touches": 3, "strength": 39.0}
     weak_dem = {"kind": "demand", "lo": 106.0, "hi": 107.0, "touches": 1, "strength": 10.0}
     unknown = {"kind": "supply", "lo": 120.0, "hi": 121.0}                      # nobody counted: kept
     bands = [DEM, weak_touch, weak_str, weak_dem, SUP_OVER, unknown, SUP_FAR]
-    assert [b["lo"] for b in BR.overhead_bands(bands, 99.0)] == [110.0, 120.0, 130.0]
+    assert [b["lo"] for b in BR.overhead_bands(bands, 99.0)] == [104.0, 110.0, 120.0, 130.0]
     out = BR.room_read(101.0, _doc(bands))                                   # inside the 1-touch lid
-    assert out["state"] == "ROOM" and out["band"]["lo"] == 110.0 and out["room_pct"] == 8.91
+    assert out["state"] == "ROOM" and out["band"]["lo"] == 104.0 and out["room_pct"] == 2.97
     spec = importlib.util.spec_from_file_location("sw_standalone3", ROOT / "backend/portfolio/supply_watch.py")
     sw = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sw)
@@ -859,4 +860,4 @@ def test_overhead_bands_skip_an_unproven_lid_and_supply_watch_agrees_standalone(
             theirs = {(z["lo"], z["hi"]) for z in sw.overhead_bands(supply, demand, live, pc)}
             ours = {(z["lo"], z["hi"]) for z in BR.overhead_bands(bands, live, pc)}
             assert ours == theirs, (live, pc)
-    assert [z["lo"] for z in sw.overhead_bands(supply, demand, 99.0, None)] == [110.0, 120.0, 130.0]
+    assert [z["lo"] for z in sw.overhead_bands(supply, demand, 99.0, None)] == [104.0, 110.0, 120.0, 130.0]

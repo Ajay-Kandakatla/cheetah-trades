@@ -166,7 +166,7 @@ def test_run_with_an_injected_loader_and_zone_compute():
     assert r["symbol"] == "AAA" and r["slow"] == 1 and r["quick"] == 0 and r["avg_dollar_vol_50"] > 0
     assert "_pq" not in r and m["placebo_rate_pct"] is not None and m["qualifying"] == 0
     assert set(m["params"]) >= {"gap_min_pct", "quick_max_touch_days", "min_events", "min_quick_rate_pct",
-                                "lid_min_touches", "lid_min_strength"}
+                                "lid_min_touches"}
     assert QB.STUDY_CRON == "0 7 * * 0"
 
 

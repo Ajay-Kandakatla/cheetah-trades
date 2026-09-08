@@ -178,11 +178,13 @@ KLAC_BANDS = [{"kind": "demand", "lo": 164.60, "hi": 169.81, "touches": 3, "stre
               {"kind": "supply", "lo": 191.11, "hi": 193.94, "touches": 2, "strength": 53.0}]
 
 
-def test_proven_band_is_the_boards_own_bar():
-    assert (AG.LID_MIN_TOUCHES, AG.LID_MIN_STRENGTH) == (2, 40.0)
+def test_proven_band_is_touches_only_since_2026_09_08():
+    # Ajay 2026-09-08 (FSLR): "room bar = touches only, drop the strength half" — "ok push please"
+    assert AG.LID_MIN_TOUCHES == 2 and not hasattr(AG, "LID_MIN_STRENGTH")
     assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 2, "strength": 40.0}) is True
     assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 1, "strength": 90.0}) is False, "one touch is not structure"
-    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 3, "strength": 39.9}) is False, "weak band"
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 3, "strength": 39.9}) is True, "a weak 3-touch shelf IS a lid now"
+    assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 2, "strength": 1.0}) is True
     assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 2}) is True, "unknown strength: judged on touches"
     assert AG.is_proven_band({"lo": 1, "hi": 2}) is True, "unknown touches: keep the lid (conservative)"
     assert AG.is_proven_band({"lo": 1, "hi": 2, "touches": 0, "strength": 5.0}) is True, "0 = nobody counted"
@@ -202,9 +204,9 @@ def test_klac_2026_09_02_the_one_touch_lid_no_longer_blocks_the_push():
     proven = [dict(b, touches=2, strength=53.0) if b["lo"] == 166.37 else b for b in KLAC_BANDS]
     ok2, room2 = AG.room_gate(169.50, proven, 167.56)
     assert ok2 is False and room2["state"] == "IN_BAND" and room2["target"] == 172.30
-    # strength alone does not rescue a one-touch lid; touches alone do not rescue a weak one
+    # strength alone does not rescue a one-touch lid; touches alone DO make a lid (touches-only, 2026-09-08)
     assert AG.room_gate(169.50, [dict(b, strength=90.0) if b["lo"] == 166.37 else b for b in KLAC_BANDS], 167.56)[0] is True
-    assert AG.room_gate(169.50, [dict(b, touches=3) if b["lo"] == 166.37 else b for b in KLAC_BANDS], 167.56)[0] is True
+    assert AG.room_gate(169.50, [dict(b, touches=3) if b["lo"] == 166.37 else b for b in KLAC_BANDS], 167.56)[0] is False
     # overhead_bands itself drops the lid; the board still holds every band (the caller's list is untouched)
     assert [b["lo"] for b in AG.overhead_bands(KLAC_BANDS, 169.50, 167.56)] == [191.11]
     assert len(KLAC_BANDS) == 3
@@ -237,21 +239,100 @@ FSLR = [{"kind": "supply", "lo": 207.31, "hi": 214.69, "touches": 1, "strength":
         {"kind": "supply", "lo": 250.99, "hi": 252.52, "touches": 3, "strength": 47.0}]
 
 
-def test_room_read_names_the_first_weak_lid_under_the_proven_target():
-    """The push said 'room +17.3% -> $250.99' while the chart showed shelves at
-    233 and 241 first — 2-touch bands of strength 27 / 35 the KLAC bar drops.
-    The GATE is unchanged (still 17.3%, still passes); the wording now names
-    the dropped shelf."""
+def test_fslr_2026_09_08_room_is_measured_to_the_two_touch_shelf_now():
+    """12:10 ET push read 'room +17.3% -> $250.99' while the chart drew shelves
+    at 233 and 241 — 2-touch bands of strength 27 / 35 the old bar dropped.
+    Touches-only (Ajay 2026-09-08): room is +8.9% to 233, still over the 5%
+    gate; nothing weak sits under it, so the wording is the plain one."""
     room = AG.room_read(214.04, FSLR, 204.45)
-    assert room["state"] == "ROOM" and room["target"] == 250.99 and room["room_pct"] == 17.3
-    assert room["weak"] == {"lo": 233.0, "hi": 241.0, "touches": 2, "strength": 27.0, "pct": 8.9}
-    assert AG.room_txt(room) == "room +17.3% -> $250.99 · weak lid $233 first (+8.9%, 2×)"
+    assert room["state"] == "ROOM" and room["target"] == 233.0 and room["room_pct"] == 8.9
+    assert room["touches"] == 2 and room["weak"] is None
+    assert AG.room_txt(room) == "room +8.9% -> $233"
     ok, gate_room = AG.room_gate(214.04, FSLR, 204.45)
-    assert ok is True and gate_room["room_pct"] == 17.3, "the gate did not move"
-    # a 1-touch lid counts as weak too; the nearest one is named
+    assert ok is True and gate_room["room_pct"] == 8.9
+    # a 1-touch shelf under 233 is still not a lid — but it is named as the weak one
     one = [{"kind": "supply", "lo": 226.96, "hi": 229.71, "touches": 1, "strength": 20.0}] + FSLR
-    assert AG.room_read(214.04, one, 204.45)["weak"]["lo"] == 226.96
-    assert AG.first_weak_lid(one, 214.04, 250.99)["touches"] == 1
+    r1 = AG.room_read(214.04, one, 204.45)
+    assert r1["target"] == 233.0 and r1["weak"]["lo"] == 226.96 and r1["weak"]["touches"] == 1
+    assert AG.room_txt(r1) == "room +8.9% -> $233 · weak lid $226.96 first (+6%, 1×)"
+    assert AG.first_weak_lid(one, 214.04, 233.0)["touches"] == 1
+
+
+# ── gap day (Ajay 2026-09-08, DYN −29%: "ok push please") ────────────────────
+DYN = [{"kind": "demand", "lo": 15.87, "hi": 16.0, "touches": 3, "strength": 60.0},
+       {"kind": "demand", "lo": 16.56, "hi": 17.02, "touches": 4, "strength": 70.0},
+       {"kind": "demand", "lo": 18.21, "hi": 18.43, "touches": 2, "strength": 45.0},
+       {"kind": "supply", "lo": 18.99, "hi": 19.61, "touches": 4, "strength": 60.0},
+       {"kind": "supply", "lo": 19.9, "hi": 20.03, "touches": 2, "strength": 40.0},
+       {"kind": "demand", "lo": 20.91, "hi": 21.65, "touches": 1, "strength": 20.0},
+       {"kind": "supply", "lo": 21.0, "hi": 21.43, "touches": 2, "strength": 44.0},
+       {"kind": "supply", "lo": 21.9, "hi": 22.68, "touches": 1, "strength": 15.0},
+       {"kind": "supply", "lo": 23.96, "hi": 24.6, "touches": 2, "strength": 50.0}]
+DYN_PC = 24.28
+
+
+def test_gap_day_clock():
+    assert AG.GAP_DOWN_PCT == 8.0
+    assert AG.gap_day(17.11, DYN_PC) is True            # −29.5%
+    assert AG.gap_day(22.33, DYN_PC) is True            # −8.03%
+    assert AG.gap_day(22.35, DYN_PC) is False           # −7.95%
+    assert AG.gap_day(26.0, DYN_PC) is False            # gap UP: ordinary rules
+    for bad in ((None, DYN_PC), (17.11, None), (0, DYN_PC), (17.11, 0), ("x", DYN_PC), (17.11, float("nan"))):
+        assert AG.gap_day(*bad) is False, bad
+
+
+def test_dyn_2026_09_08_gap_day_shelves_are_overhead_and_room_shrinks():
+    """Replay of the 11:19 / 11:44 pushes' room reads. Old rule: every shelf
+    under the 24.28 close was 'broken = support' and room ran to 23.96.
+    Gap day: 18.99–19.61 and 19.90–20.03 are overhead again."""
+    over = AG.overhead_bands(DYN, 18.22, DYN_PC)
+    assert [(b["lo"], b["hi"]) for b in over][:3] == [(18.99, 19.61), (19.9, 20.03), (21.0, 21.43)]
+    ok, room = AG.room_gate(18.22, DYN, DYN_PC)
+    assert ok is False and room["target"] == 18.99 and room["room_pct"] == 4.2, "09:34 'in demand 18.21–18.43': room +4.2% < 5% → no push"
+    ok, room = AG.room_gate(17.11, DYN, DYN_PC)
+    assert ok is True and room["target"] == 18.21 and room["room_pct"] == 6.4, "09:09 push stands: +6.4% to 18.21"
+    # NEGATIVE: the same bands on an ordinary day (prev close 19.7) keep the old roles
+    assert [(b["lo"], b["hi"]) for b in AG.overhead_bands(DYN, 18.22, 19.7)][:1] == [(19.9, 20.03)], \
+        "ordinary day, prev close 19.7: 18.99–19.61 (hi < prev close) is broken = support"
+    assert [(b["lo"], b["hi"]) for b in AG.overhead_bands(DYN, 19.71, 20.75)][:1] == [(21.0, 21.43)], \
+        "−5% (prev close 20.75): not a gap day, 19.90–20.03 (hi < prev close) is still broken supply"
+
+
+def test_gap_day_supply_shelves_are_never_support_in_the_minute_pass_or_the_bounce_read():
+    from supply_demand import zone_edge as ZE, zone_bounce_alerts as ZB
+    # 11:19 and 11:44 ET: 0.5% / 0.05% above a supply shelf the gap fell through
+    assert ZE.read_near_demand(19.71, DYN, None, DYN_PC) is None
+    assert ZE.read_near_demand(20.04, DYN, None, DYN_PC) is None
+    # the two true demand reads of the morning still read
+    r = ZE.read_near_demand(17.11, DYN, None, DYN_PC)
+    assert r and r["role"] == "demand" and (r["band"]["lo"], r["band"]["hi"]) == (16.56, 17.02)
+    r = ZE.read_near_demand(18.22, DYN, None, DYN_PC)
+    assert r and r["tier"] == "in" and r["band"]["lo"] == 18.21
+    # NEGATIVE: ordinary day → the broken-supply flip still works
+    r = ZE.read_near_demand(19.71, DYN, None, 19.7)
+    assert r and r["role"] == "broken supply" and r["band"]["hi"] == 19.61
+    # bounce eligibility follows the same clock
+    sup = {"kind": "supply", "lo": 18.99, "hi": 19.61, "touches": 4}
+    assert ZB.is_eligible(sup, DYN_PC, 19.71) is False, "gap day: never"
+    assert ZB.is_eligible(sup, DYN_PC) is True, "no print given: the ordinary rule"
+    assert ZB.is_eligible(sup, 19.7, 19.71) is True, "ordinary day: broken under a 19.7 close → eligible"
+    assert ZB.is_eligible(sup, 24.28, 23.0) is True, "−5% is not a gap day"
+    assert ZB.is_eligible({"kind": "demand", "lo": 18.21, "hi": 18.43}, DYN_PC, 19.71) is True
+
+
+def test_gap_day_in_the_other_two_overhead_readers():
+    import importlib.util
+    from supply_demand import bounce_room as BR
+    over = BR.overhead_bands(DYN, 18.22, DYN_PC)
+    assert [(b["lo"], b["hi"]) for b in over][:2] == [(18.99, 19.61), (19.9, 20.03)]
+    assert [(b["lo"], b["hi"]) for b in BR.overhead_bands(DYN, 18.22, 19.7)][:1] == [(19.9, 20.03)]
+    assert BR.overhead_bands(DYN, 19.71, 20.75)[0]["lo"] == 21.0, "ordinary day (−5%): 19.90–20.03 broken under a 20.75 close"
+    spec = importlib.util.spec_from_file_location(
+        "supply_watch_standalone", Path(__file__).resolve().parents[1] / "portfolio" / "supply_watch.py")
+    SW = importlib.util.module_from_spec(spec); spec.loader.exec_module(SW)
+    sup = [b for b in DYN if b["kind"] == "supply"]; dem = [b for b in DYN if b["kind"] == "demand"]
+    assert [(b["lo"], b["hi"]) for b in SW.overhead_bands(sup, dem, 19.71, DYN_PC)][:1] == [(19.9, 20.03)]
+    assert SW.overhead_bands(sup, dem, 19.71, 20.75)[0]["lo"] == 21.0
 
 
 def test_weak_lid_negative_cases_keep_the_old_wording():
@@ -272,8 +353,9 @@ def test_weak_lid_negative_cases_keep_the_old_wording():
 
 def test_board_room_block_and_stat_carry_the_weak_lid():
     from supply_demand import room_floor as RF
-    room = RF.room_block(214.04, FSLR, None, 204.45, "live")
-    assert room["state"] == "ROOM" and room["target_lo"] == 250.99
-    assert room["weak"]["lo"] == 233.0 and RF.room_stat(room) == "+17.3% -> 250.99 · weak 233.00 first"
+    one = [{"kind": "supply", "lo": 226.96, "hi": 229.71, "touches": 1, "strength": 20.0}] + FSLR
+    room = RF.room_block(214.04, one, None, 204.45, "live")
+    assert room["state"] == "ROOM" and room["target_lo"] == 233.0
+    assert room["weak"]["lo"] == 226.96 and RF.room_stat(room) == "+8.9% -> 233.00 · weak 226.96 first"
     clean = RF.room_block(214.04, [FSLR[-1]], None, 204.45, "live")
     assert clean["weak"] is None and RF.room_stat(clean) == "+17.3% -> 250.99"

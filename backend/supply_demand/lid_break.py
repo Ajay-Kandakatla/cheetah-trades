@@ -27,7 +27,7 @@ A lid whose top already sits at the 52-week high (within AT_HIGH_TOL) is the
 `at_52w` bucket: breaking it IS the new 52-week high, so the 52w question is
 moot and only the frame-high / run-up / fail reads apply.
 
-Splits: proven lid (alert_gates.is_proven_band — LID_MIN_TOUCHES / LID_MIN_STRENGTH,
+Splits: proven lid (alert_gates.is_proven_band — LID_MIN_TOUCHES, touches only since 2026-09-08,
 the board's own bar) vs single-touch; volume-confirmed break (volume ≥
 VOL_CONFIRM_RATIO × 50-day average, the bar sepa.breakout uses) vs not; distance
 from the lid top to the 52-week high at the event (`≤5%`, `5–15%`, `>15%`).
@@ -354,7 +354,7 @@ def run(symbols: Iterable[str], load=None, compute: Optional[Callable] = None,
             "params": {"anchor_step_bars": ANCHOR_STEP_BARS, "min_history_bars": MIN_HISTORY_BARS,
                        "horizons": list(HORIZONS), "fail_lookahead_bars": FAIL_LOOKAHEAD_BARS,
                        "vol_confirm_ratio": VOL_CONFIRM_RATIO, "at_high_tol": AT_HIGH_TOL,
-                       "lid_min_touches": AG.LID_MIN_TOUCHES, "lid_min_strength": AG.LID_MIN_STRENGTH,
+                       "lid_min_touches": AG.LID_MIN_TOUCHES,
                        "geometry": DR.zone_geom()},
             "seconds": round(time.time() - t0, 1), "disclaimer": DISCLAIMER}
     return {"rows": rows, "meta": meta}

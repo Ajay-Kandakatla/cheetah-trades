@@ -574,16 +574,23 @@ def test_room_in_band_and_under_floor_skip_clear_and_wide_pass(env):
 
 def test_broken_supply_under_prev_close_is_not_overhead(env):
     """A supply band yesterday CLOSED above is support (the house rule): with
-    prev_close 5.45 the 5.20-5.40 band no longer lids the print."""
+    prev_close 5.42 the 5.20-5.40 band no longer lids the 5.00 print. Since
+    2026-09-08 (DYN) that flip is OFF on a gap day: prev_close 5.45 puts the
+    print 8.3% under the close, the shelf is trapped supply and the 4% room
+    fails the gate."""
     bands = (DEMAND, band("supply", 5.20, 5.40), SUPPLY_FAR)
     br, docs = happy(bands=bands)
-    docs["EOSE"]["prev_close"] = 5.45
+    docs["EOSE"]["prev_close"] = 5.42                   # −7.7%: ordinary day, broken = support
     _, db, enter_calls, _, _ = env(payload=scan([cand()]), bounce=br, docs=docs)
     assert CE.run()["entered"] == ["EOSE"]
     docs["EOSE"]["prev_close"] = 5.0                    # not broken -> 4% room -> skip
     _, db, enter_calls, _, _ = env(payload=scan([cand()]), bounce=br, docs=docs)
     out = CE.run()
     assert out["skipped"][0]["reason"].startswith("alert gate: room 4.00% <")
+    docs["EOSE"]["prev_close"] = 5.45                   # −8.3%: gap day -> the shelf is overhead -> skip
+    _, db, enter_calls, _, _ = env(payload=scan([cand()]), bounce=br, docs=docs)
+    out = CE.run()
+    assert out["entered"] == [] and out["skipped"][0]["reason"].startswith("alert gate: room 4.00% <")
 
 
 def test_requires_bounce_or_demand_proximity(env):

@@ -310,7 +310,9 @@ def read_near_demand(px, bands: list, change_pct=None, prev_close=None,
     Side A's "broke" fact, not support — with hi < px alone the same band
     fired 🚀 broke and 🧲 "above demand" in the same minute. Unknown prev
     close: supply bands are never support (as in zone_bounce); demand bands
-    still list, as residents.
+    still list, as residents. On a GAP day (alert_gates.gap_day, Ajay
+    2026-09-08 DYN −29%: four "above demand" pushes on shelves the 24.28
+    close had "broken") supply bands are never support either.
 
     {"tier": "in"|"near", "band", "role": "demand"|"broken supply", "dist_pct",
      "arrival", "hit"}   hit = demand_alerts.read(...) (None for a resident /
@@ -324,7 +326,8 @@ def read_near_demand(px, bands: list, change_pct=None, prev_close=None,
         pc = None
     demand = [b for b in bands or [] if _kind(b) == "demand" and _valid_band(b)]
     broken = [b for b in bands or [] if _kind(b) == "supply" and _valid_band(b)
-              and float(b["hi"]) < px and pc is not None and float(b["hi"]) < pc]
+              and float(b["hi"]) < px and pc is not None and float(b["hi"]) < pc
+              and not AG.gap_day(px, pc)]
     tier, band, dist = None, None, None
     inside = [b for b in demand if float(b["lo"]) <= px <= float(b["hi"])]
     if inside:

@@ -123,15 +123,19 @@ def _f(x) -> Optional[float]:
     return v if v == v else None          # NaN guard
 
 
-def is_eligible(band: dict, prev_close: float) -> bool:
+def is_eligible(band: dict, prev_close: float, print_px=None) -> bool:
     """Demand bands always; supply bands only once BROKEN (top below
-    yesterday's close). Garbage bands are never eligible."""
+    yesterday's close) — and never on a gap day (alert_gates.gap_day, Ajay
+    2026-09-08 DYN: the close the "broken" test leans on is the one the gap
+    just invalidated). Garbage bands are never eligible."""
     lo, hi = _f(band.get("lo")), _f(band.get("hi"))
     if lo is None or hi is None or lo <= 0 or lo > hi:
         return False
     kind = str(band.get("kind") or "demand").lower()
     if kind == "supply":
         pc = _f(prev_close)
+        if AG.gap_day(print_px, pc):
+            return False
         return pc is not None and hi < pc
     return True
 
@@ -147,7 +151,7 @@ def read(day_low, print_px, prev_close, band: dict, atr14,
     low, px, pc = _f(day_low), _f(print_px), _f(prev_close)
     if low is None or px is None or pc is None or low <= 0 or px <= 0 or pc <= 0:
         return None
-    if not is_eligible(band, pc):
+    if not is_eligible(band, pc, print_px):
         return None
     lo, hi = float(band["lo"]), float(band["hi"])
     if not (low <= hi * (1 + touch_tol_pct / 100.0) and low >= lo * (1 - wick_pct / 100.0)):

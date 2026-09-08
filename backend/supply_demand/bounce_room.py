@@ -391,13 +391,14 @@ def overhead_bands(bands: list, live: float, prev_close=None) -> list:
     if pc is not None and pc <= 0:
         pc = None
     from . import alert_gates as _gates
+    gap = _gates.gap_day(live, pc)                        # DYN 2026-09-08: the gap resets the roles
     out = []
     for b in bands or []:
         if not _valid_band(b) or not _gates.is_proven_band(b):
             continue                                      # unproven lid = noise (KLAC 2026-09-06)
         lo, hi = float(b["lo"]), float(b["hi"])
         if _kind(b) == "supply" and hi >= live:
-            if pc is not None and hi < pc:
+            if pc is not None and hi < pc and not gap:
                 continue                                  # yesterday closed above it: broken = support
             out.append(dict(_slim_band(b, with_strength=False), kind="supply"))
         elif _kind(b) == "demand" and lo > live:

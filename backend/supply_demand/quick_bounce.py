@@ -19,7 +19,7 @@ ANCHOR_STEP_BARS using only bars up to the anchor — the sd_bounce.py
 discipline, so a band never sees the bars it is judged on):
 
   touch day   the day's low reaches a PROVEN demand band (touches >=
-              alert_gates.LID_MIN_TOUCHES, strength >= LID_MIN_STRENGTH):
+              alert_gates.LID_MIN_TOUCHES; strength dropped 2026-09-08):
               low <= hi x (1 + TOUCH_TOL_PCT) and low >= lo x (1 - WICK_PCT)
               — zone_bounce_alerts' own touch geometry.
   episode     consecutive touch days of the same band (a gap of one non-touch
@@ -449,7 +449,7 @@ def run(symbols: Iterable[str], load=None, compute: Optional[Callable] = None,
                        "slow_lookahead_bars": SLOW_LOOKAHEAD_BARS, "slow_bounce_pct": SLOW_BOUNCE_PCT,
                        "min_events": MIN_EVENTS, "min_quick_rate_pct": MIN_QUICK_RATE_PCT,
                        "near_max_pct": NEAR_MAX_PCT, "room_min_pct": ROOM_MIN_PCT,
-                       "lid_min_touches": AG.LID_MIN_TOUCHES, "lid_min_strength": AG.LID_MIN_STRENGTH},
+                       "lid_min_touches": AG.LID_MIN_TOUCHES},
             "seconds": round(time.time() - t0, 1), "disclaimer": DISCLAIMER}
     meta["edge_pts"] = (round(meta["quick_rate_pct"] - meta["placebo_rate_pct"], 1)
                         if meta["quick_rate_pct"] is not None and meta["placebo_rate_pct"] is not None
