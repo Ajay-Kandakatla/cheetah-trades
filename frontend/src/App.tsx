@@ -33,6 +33,7 @@ import { PageContextProvider } from './hooks/usePageContext';
    component-level lazy imports (SepaCandidate's panels, card modals, ...) get
    the same one-shot reload guard as routes. House rule: never raw React.lazy. */
 import { lazyWithReload } from './lib/lazyWithReload';
+import { pickLanding } from './lib/landing';
 const LiveStream                  = lazyWithReload(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
 const SepaPage                    = lazyWithReload(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
 const SepaGlobalPage              = lazyWithReload(() => import('./pages/SepaGlobal').then(m => ({ default: m.SepaGlobalPage })));
@@ -177,12 +178,11 @@ function SmartLanding() {
   // it. The owner can still open the full /sepa or /breakouts from the menu;
   // those stay next in the admin chain. First accessible feature wins; the
   // fallbacks chain down before bailing into a 404.
-  const PREFERRED_ORDER = menu.is_admin
-    ? ['sepa-global', 'sepa', 'portfolio', 'morning', 'leaderboard', 'todos', 'notifications']
-    : ['sepa-global', 'breakouts', 'sepa', 'morning', 'food', 'kids', 'todos', 'notifications', 'glossary'];
-  for (const id of PREFERRED_ORDER) {
-    if (f.features.has(id)) return <Navigate to={`/${id}`} replace />;
-  }
+  // Ajay 2026-09-07: "Make chart maps default loading page for me on the app
+  // load. Also for everyone." Chart Maps leads both chains (lib/landing.ts);
+  // the 2026-06-23 order stays behind it as the fallback.
+  const target = pickLanding(f.features, !!menu.is_admin);
+  if (target) return <Navigate to={target} replace />;
   // No accessible feature at all — show 404 rather than a redirect loop.
   return <NotFound />;
 }

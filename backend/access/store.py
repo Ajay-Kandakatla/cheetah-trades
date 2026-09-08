@@ -143,7 +143,11 @@ FEATURE_CATALOG: list[dict] = [
     # surface — the whole point is looking at charts day by day — so it earns a
     # top-level slot, and Research moved down to make room rather than the bar
     # growing. Owner-on via added_in/VERSION.
-    {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "daily",     "default": False, "added_in": 19},
+    # 2026-09-07 (Ajay): "Make chart maps default loading page ... Also for everyone."
+    # default-on and re-added at catalog 24 so every saved menu written before
+    # v24 picks it up (effective_features grants default-on pages added after
+    # seen_version to non-owners too). Was owner-on, added_in 19.
+    {"id": "chart-maps",    "label": "🗺️ Chart Maps",       "group": "daily",     "default": True, "added_in": 24},
     {"id": "rotation",      "label": "🔄 Rotation",         "group": "daily",     "default": False, "added_in": 20},
     # Desk (2026-08-28): the daily pre-market trader-persona report — regime
     # verdict, scored book, cut list, carried-forward journal. Cron-built.
@@ -268,7 +272,9 @@ ALL_FEATURE_IDS: set[str] = {f["id"] for f in FEATURE_CATALOG}
 #
 # To add a new owner-visible page: add the catalog entry with `"added_in":
 # CATALOG_VERSION + 1`, then bump CATALOG_VERSION. Owners get it on next load.
-CATALOG_VERSION = 23
+# 24 (2026-09-07): chart-maps re-added as default-on for EVERYONE — "Make chart
+# maps default loading page for me on the app load. Also for everyone."
+CATALOG_VERSION = 24
 OWNER_AUTO_BASELINE = 1          # features at version <= this follow the saved allow-list (preserve declutter)
 
 
@@ -286,8 +292,14 @@ def effective_features(saved: set[str], *, is_owner: bool, seen_version: int) ->
     any feature added to the catalog after `seen_version` (new pages appear by
     default). Separated from Mongo so it's unit-testable."""
     eff = {f for f in saved if f in ALL_FEATURE_IDS}
+    added = _features_added_after(seen_version)
     if is_owner:
-        eff |= _features_added_after(seen_version)
+        eff |= added
+    else:
+        # 2026-09-07: a DEFAULT-ON page added after the user last saved appears
+        # for everyone (chart-maps at v24: "Also for everyone"). Owner-only pages
+        # still need a grant; a page the user hid after seeing it stays hidden.
+        eff |= {f for f in added if f in DEFAULT_FEATURES}
     return eff
 
 

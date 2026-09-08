@@ -306,3 +306,13 @@ beside `TV ↗`. One click puts the name on the ⚡ Signals watchlist (the Signa
 12 names, per user) without leaving the board; `✓` = on the list (click removes), `💼` = in the
 portfolio (rides the board by default, leaves with the position). One store behind the cards,
 the promo rows and the Signals board — see `docs/daytrading/signal_lab.md` §2026-09-07.
+
+## Chart Maps is the landing page (2026-09-07)
+
+Ajay: *"Make chart maps default loading page for me on the app load. Also for everyone."*
+`/` resolves through `frontend/src/lib/landing.ts` (`pickLanding`): `chart-maps` leads both the
+admin and the friends chain; the 2026-06-23 order (SEPA Global first) follows as the fallback for
+an account that hid Chart Maps. To make "everyone" true, the access catalog (`backend/access/
+store.py`) marks `chart-maps` default-on and re-adds it at `CATALOG_VERSION` 24, and
+`effective_features` now grants default-on pages added after a non-owner's last save (owner-only
+pages still need a grant; a page hidden after it was seen stays hidden).

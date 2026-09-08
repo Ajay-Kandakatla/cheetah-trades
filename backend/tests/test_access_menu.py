@@ -72,11 +72,12 @@ def test_the_route_equals_the_feature_id():
 
 
 def test_moving_a_page_did_not_change_its_grant():
-    """Placement is cosmetic — it must not silently revoke access. chart-maps
-    stays owner-on via added_in; research keeps its original added_in so an
-    owner who already saw it is not re-granted."""
+    """Placement is cosmetic — it must not silently revoke access. research keeps
+    its original added_in so an owner who already saw it is not re-granted.
+    chart-maps was owner-on (added_in 19) until 2026-09-07, when Ajay made it the
+    landing page for everyone: default-on, re-added at 24 (test_owner_auto_grant)."""
     cm, rs = _entry("chart-maps"), _entry("research")
-    assert cm["added_in"] == 19 and cm["default"] is False
+    assert cm["added_in"] == 24 and cm["default"] is True
     assert rs["added_in"] == 3 and rs["default"] is False
 
 
@@ -91,7 +92,7 @@ def test_alerts_page_is_a_tools_feature_owner_on_at_catalog_23():
     the bell; Tools group; owner-on via added_in == CATALOG_VERSION == 23."""
     e = _entry("alerts")
     assert e["label"] == "🔔 Alerts" and e["group"] == "tools" and e["default"] is False
-    assert e["added_in"] == 23 == store.CATALOG_VERSION
+    assert e["added_in"] == 23 <= store.CATALOG_VERSION
     assert store._GROUP_TO_SECTION["tools"] == "misc"
     eff = store.effective_features({"sepa"}, is_owner=True, seen_version=22)
     assert "alerts" in eff, "an owner who saved before v23 gets the page on next load"

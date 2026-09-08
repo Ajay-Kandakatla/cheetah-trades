@@ -789,6 +789,24 @@ const CONTRACTS = [
       return errs;
     },
   },
+
+  {
+    name: '"/" lands on Chart Maps for everyone (2026-09-07)',
+    file: 'src/App.tsx',
+    // Ajay 2026-09-07: "Make chart maps default loading page for me on the
+    // app load. Also for everyone." SmartLanding must resolve through
+    // lib/landing.pickLanding, and Chart Maps must lead BOTH chains (the
+    // backend catalog grants it to every account by default since v24).
+    checks: (src) => {
+      const errs = [];
+      if (!/pickLanding\(f\.features, !!menu\.is_admin\)/.test(src)) errs.push('SmartLanding no longer resolves through pickLanding');
+      if (/PREFERRED_ORDER/.test(src)) errs.push('the old inline PREFERRED_ORDER is back in App.tsx');
+      const lib = read('src/lib/landing.ts');
+      if (!/admin: \['chart-maps'/.test(lib)) errs.push("landing.ts: 'chart-maps' must lead the admin chain");
+      if (!/user: \['chart-maps'/.test(lib)) errs.push("landing.ts: 'chart-maps' must lead the user chain");
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

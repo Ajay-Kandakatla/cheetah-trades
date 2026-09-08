@@ -67,3 +67,30 @@ def test_sepa_global_is_default_on_for_all_users():
     eff = store.effective_features(store.DEFAULT_FEATURES, is_owner=False,
                                    seen_version=store.CATALOG_VERSION)
     assert "sepa-global" in eff and "sepa" not in eff
+
+
+# ── Chart Maps lands for everyone (Ajay 2026-09-07) ──────────────────────────
+def test_chart_maps_is_default_on_and_re_added_at_catalog_24():
+    """Ajay 2026-09-07: "Make chart maps default loading page for me on the app
+    load. Also for everyone." Default-on for new accounts AND re-added at v24 so
+    a friend whose saved menu predates it gets the page without a manual grant."""
+    entry = next(e for e in store.FEATURE_CATALOG if e["id"] == "chart-maps")
+    assert entry["default"] is True and entry["added_in"] == 24 == store.CATALOG_VERSION
+    assert "chart-maps" in store.DEFAULT_FEATURES
+    # a friend with NO saved doc: the default set carries it
+    assert "chart-maps" in store.effective_features(store.DEFAULT_FEATURES, is_owner=False,
+                                                    seen_version=store.CATALOG_VERSION)
+    # a friend who SAVED a menu at v23 without it: appears (default-on page added after)
+    assert "chart-maps" in store.effective_features({"sepa-global", "food"}, is_owner=False, seen_version=23)
+    # a friend who saved at v24 and left it out: stays hidden (their choice)
+    assert "chart-maps" not in store.effective_features({"sepa-global"}, is_owner=False, seen_version=24)
+
+
+def test_non_owners_do_not_inherit_owner_only_pages_added_after_they_saved():
+    """NEGATIVE: the v24 rule grants DEFAULT-ON pages only — an owner-only page
+    added after a friend's last save must still need an explicit grant."""
+    owner_only = [e["id"] for e in store.FEATURE_CATALOG if not e["default"] and store._added_in(e) > 20]
+    assert owner_only, "catalog has owner-only pages past v20"
+    eff = store.effective_features({"sepa-global"}, is_owner=False, seen_version=20)
+    assert not (set(owner_only) & eff)
+    assert "chart-maps" in eff                                       # the default-on one does appear
