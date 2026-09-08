@@ -102,8 +102,11 @@
 # prints the pooled read + per-card counts. Study board only.
 30     7     *    *    0    /usr/local/bin/python -m supply_demand.lid_break
 
-# Zone store warm (supply_demand/zone_store.py) — 9:20 ET weekdays, five
-# minutes before the demand board warms. Draws EVERY supply + demand band
+# Zone store warm (supply_demand/zone_store.py) — 04:05 ET weekdays (was
+# 9:20 until 2026-09-08: the zone-edge pass now runs from 04:00 and a
+# pre-market pass with no store is an empty Breaking board — Ajay: "let me
+# scan premarket hours"). Closed bars only, so 04:05 reads exactly what 9:20
+# read; still hours before the demand board warms. Draws EVERY supply + demand band
 # (board geometry, max_zones=None, TODAY's bar dropped) for each $1B+ name
 # in the full universe (~1,124 names, weekly shares cache for the cap) and
 # writes them to Mongo `zone_store` so the 9:33 zone-bounce pass has
@@ -111,7 +114,7 @@
 # the shelf the low bounced off was a one-touch BROKEN-SUPPLY band the
 # demand board never keeps — hence every band, both kinds. Bars come from
 # the shared price cache; no provider call per symbol. Budget 240s.
-20     9     *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.zone_store
+5      4     *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.zone_store
 #
 # ── ICT Chart Maps tab (Ajay 2026-09-03 late) ────────────────────────────────
 # "create a new chart maps tab for ICT Strategy, replace supply tab with this
@@ -277,7 +280,7 @@
 # 2026-09-03: "stocks that are <1% away from breaking supply zones which are
 # going for new highs ... and stocks that are just <1% away from Demand
 # zones. I need you to give me an alert and also to track these min on min."
-# Reads today's zone_store bands (9:20 warm above) against bulk_snapshot's
+# Reads today's zone_store bands (04:05 warm above) against bulk_snapshot's
 # last trade (stale > 180s skipped): (A) within 1% UNDER the smallest supply
 # top at/above the print, or broke a ceiling TODAY (prev close <= top, at
 # most 3% through) — "new highs" when nothing sits overhead or the band is at

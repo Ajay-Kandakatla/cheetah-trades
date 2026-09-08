@@ -138,10 +138,20 @@ async def chart_maps_support(
     and has no `.lower()`.
     """
     def _run():
-        return support_mod.for_symbol(
+        res = support_mod.for_symbol(
             symbol if isinstance(symbol, str) else "",
             window if isinstance(window, str) else support_mod.DEFAULT_WINDOW,
             tf if isinstance(tf, str) else support_mod.TF_DEFAULT,
         )
+        # Extended hours (Ajay 2026-09-08, ORCL): the tile's `now` line moves
+        # to the live print and says which tape — the same overlay every
+        # board tab gets at the end of board().
+        tile = res.get("tile") if isinstance(res, dict) else None
+        if isinstance(tile, dict):
+            try:
+                board_mod.attach_live_now([tile], res)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/support: live now-line failed: %s", exc)
+        return res
 
     return JSONResponse(await asyncio.to_thread(_run))

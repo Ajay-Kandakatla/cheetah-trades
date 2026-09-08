@@ -164,10 +164,14 @@ def test_load_reads_one_date_and_optionally_a_symbol_subset():
 
 
 # ── source guard: the cron line ──────────────────────────────────────────────
-def test_crontab_warms_the_store_at_nine_twenty_before_the_board():
+def test_crontab_warms_the_store_at_four_oh_five_before_the_premarket_pass():
+    # 2026-09-08: the zone-edge pass runs from 04:00 ET (pre-market), so the
+    # store must exist before it — 04:05, hours before the 9:25 board warm.
     cron = (Path(__file__).resolve().parents[2] / "backend/crontab").read_text()
     lines = [l for l in cron.splitlines() if "supply_demand.zone_store" in l and not l.startswith("#")]
-    assert len(lines) == 1 and lines[0].split()[:5] == ["20", "9", "*", "*", "1-5"]
+    assert len(lines) == 1 and lines[0].split()[:5] == ["5", "4", "*", "*", "1-5"]
+    edge = [l for l in cron.splitlines() if "supply_demand.zone_edge" in l and not l.startswith("#")]
+    assert edge and edge[0].split()[1] == "4-19", "the pass the store feeds starts at 04:00"
     board = [l for l in cron.splitlines() if "demand-reentry warm full (am)" in l and not l.startswith("#")]
     assert board and board[0].split()[:2] == ["25", "9"], "board warms at 9:25, the store must be first"
 

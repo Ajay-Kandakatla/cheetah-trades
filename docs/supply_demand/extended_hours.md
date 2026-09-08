@@ -40,11 +40,16 @@ ET wall clock: pre-market 04:00–09:30, RTH 09:30–16:00, after-hours 16:00–
    `PUSH_OPEN/CLOSE` 09:31–16:00 (`push_window`). `check_once` forces `push=False`
    outside the push window and records `push_window` + `session`; no state row is written
    for a suppressed push, so the first RTH pass can still fire it. Crontab
-   `* 4-19 * * 1-5`. Paper lane unaffected (it gates on the broker clock).
+   `* 4-19 * * 1-5`; the zone-store warm moved from 9:20 to **04:05 ET** so the first
+   pre-market pass has bands to read (closed bars only — same data either hour). Paper lane
+   unaffected (it gates on the broker clock).
 3. **Boards** (`chart_maps.board.attach_live_now`, end of `board()` for EVERY tab): one
    `bulk_live_prices` call for the shown tiles; each tile's `now`-toned line moves to the
    live print and is tagged `now · pre` / `now · AH` when the print is stamped today outside
    RTH (`now_label`); the Breaking tile's line is `LAST · PRE` / `LAST · AH` (`last_label`).
+   A tile with no now line (demand / VCP boards) gets one only for an extended-hours print
+   (the flat pre-market bar is invisible; in RTH the candle is the marker). The Support tab
+   route applies the same overlay to its one tile.
    Tiles record `live_price` / `live_session`; the board records `tape_session`
    (`premarket|rth|afterhours|closed` — NOT `session`, which the 0DTE tab already uses for
    its chain-liveness block).

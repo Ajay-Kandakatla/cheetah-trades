@@ -3566,12 +3566,15 @@ def attach_live_now(tiles: list, out: Optional[dict] = None, *, live: Optional[d
     bulk_live_prices call for the shown tiles (`live` injectable for tests);
     the print is the last trade (pre-market / after-hours included, the same
     field the demand boards' room gate reads), tagged only when it is stamped
-    TODAY outside RTH. A tile without a now line is left alone (the demand
-    boards price the print in `why` / room). Any failure leaves every tile as
-    it was — a tape outage never blanks a board. Mutates in place; records
-    `tape_session` (the clock now) on `out` and returns {moved, tagged}."""
+    TODAY outside RTH. A tile with NO now line (the demand / VCP boards price
+    the print in `why` and let the candle be the marker) gets one only for an
+    extended-hours print — the pre-market bar is a flat one-print bar the eye
+    misses, so the line is the read; in RTH those tiles keep their look. Any
+    failure leaves every tile as it was — a tape outage never blanks a board.
+    Mutates in place; records `tape_session` (the clock now) on `out` and
+    returns {moved, tagged, added}."""
     from supply_demand import zone_edge as ZE
-    stats = {"moved": 0, "tagged": 0}
+    stats = {"moved": 0, "tagged": 0, "added": 0}
     syms = sorted({str(t.get("symbol") or "").upper() for t in tiles if t.get("symbol")})
     if out is not None and "tape_session" not in out:
         try:
@@ -3609,6 +3612,11 @@ def attach_live_now(tiles: list, out: Optional[dict] = None, *, live: Optional[d
                 if sess:
                     ln["label"] = now_label(ln.get("label"), sess)
                 hit = True
+        if not hit and sess and isinstance(t.get("lines"), list):
+            t["lines"].append({"price": round(float(px), 4), "label": now_label("now", sess),
+                               "tone": "now"})
+            stats["added"] += 1
+            hit = True
         if hit:
             t["live_price"] = round(float(px), 4)
             if sess:

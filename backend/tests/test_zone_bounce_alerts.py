@@ -372,7 +372,7 @@ def test_kind_has_a_default_pref_and_both_cron_lines():
     bounce = [l for l in cron if "supply_demand.zone_bounce_alerts" in l and not l.startswith("#")]
     assert len(bounce) == 1 and bounce[0].split()[:5] == ["4-59/5", "9-16", "*", "*", "1-5"]
     store = [l for l in cron if "supply_demand.zone_store" in l and not l.startswith("#")]
-    assert len(store) == 1 and store[0].split()[:5] == ["20", "9", "*", "*", "1-5"]
+    assert len(store) == 1 and store[0].split()[:5] == ["5", "4", "*", "*", "1-5"]   # 04:05 since 2026-09-08
 
 
 def test_notifications_page_and_prefs_type_know_the_kind():

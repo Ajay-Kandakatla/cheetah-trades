@@ -2715,12 +2715,14 @@ def test_attach_live_now_moves_and_tags_the_now_line_on_every_tab():
     }
     out = {}
     stats = B.attach_live_now(tiles, out, live=live, now=pre)
-    assert stats == {"moved": 3, "tagged": 2}, "ORCL, AAA, STALE move; NOLINE has no now line; MISSING has no live row"
+    assert stats == {"moved": 3, "tagged": 3, "added": 1}, "ORCL, AAA, STALE move; NOLINE gains a line; MISSING has no live row"
     assert tiles[0]["lines"][0] == {"price": 166.73, "label": "now · pre", "tone": "now"}
     assert tiles[0]["lines"][1]["price"] == 159.37, "only the now line moves"
     assert tiles[0]["live_price"] == 166.73 and tiles[0]["live_session"] == "premarket"
     assert tiles[1]["lines"][0]["label"] == "LAST · PRE" and tiles[1]["lines"][0]["price"] == 101.9
-    assert "live_price" not in tiles[2], "a tile without a now line is left alone"
+    assert tiles[2]["lines"][-1] == {"price": 10.5, "label": "now \u00b7 pre", "tone": "now"}, \
+        "a tile without a now line gets one for an extended-hours print"
+    assert tiles[2]["lines"][0]["label"] == "ceiling" and tiles[2]["live_session"] == "premarket"
     assert tiles[3]["lines"][0] == {"price": 5.2, "label": "now", "tone": "now"}
     assert "live_session" not in tiles[3]
     assert tiles[4]["lines"][0]["price"] == 7.0, "no live row → untouched"
@@ -2737,6 +2739,10 @@ def test_attach_live_now_moves_and_tags_the_now_line_on_every_tab():
     t4 = [{"symbol": "ORCL", "lines": [{"price": 160.0, "label": "now", "tone": "now"}]}]
     B.attach_live_now(t4, None, live={"ORCL": {"price": 0, "last_trade_price": 0}}, now=rth)
     assert t4[0]["lines"][0]["price"] == 160.0
+    # NEGATIVE: in RTH a tile without a now line keeps its look (the candle is the marker)
+    t5 = [{"symbol": "ORCL", "lines": [{"price": 150.0, "label": "ceiling", "tone": "target"}]}]
+    st = B.attach_live_now(t5, None, live={"ORCL": {"price": 162.0, "last_trade_price": 162.0, "last_trade_ts_ms": ns(rth)}}, now=rth)
+    assert len(t5[0]["lines"]) == 1 and st["added"] == 0 and "live_price" not in t5[0]
     assert B.now_label("now", "premarket") == "now · pre" and B.now_label("now", "afterhours") == "now · AH"
     assert B.now_label("now", "rth") == "now" and B.now_label("now", None) == "now"
     assert B.now_label("LAST · AH", "premarket") == "LAST · AH"
