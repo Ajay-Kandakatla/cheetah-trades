@@ -653,25 +653,52 @@ def test_position_slots_full_skipped_without_attempt(env):
 
 
 def test_per_day_cap_four(env):
-    """Five valid demand arrivals -> exactly MAX_ZONE_ENTRIES_PER_DAY buys;
-    a pre-seeded day at the cap -> zero."""
+    """Five valid demand arrivals -> exactly MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY
+    buys; a pre-seeded day at the cap -> zero."""
     syms = ["A%d" % i for i in range(5)]
     rows = [demand_row(sym=s, dist_pct=0.1 * i) for i, s in enumerate(syms)]
     zones = {s: zone_doc(s, supply_los=(120.0,)) for s in syms}
     _, db, enter_calls, _, _ = env(latest=latest_doc(near_demand=rows), zones=zones)
     out = ZE.run()
-    assert len(enter_calls) == ZE.MAX_ZONE_ENTRIES_PER_DAY == 4
+    assert len(enter_calls) == ZE.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY == 4
     assert out["entries_today"] == 4
     assert sum(1 for r in _state_rows(db) if r.get("entered")) == 4
-    assert out["skipped"] == [{"symbol": "A4", "reason": "daily cap 4 reached"}]
+    assert out["skipped"] == [{"symbol": "A4", "reason": "daily cap 4 reached (demand side)"}]
 
     _, db, enter_calls, _, _ = env(latest=latest_doc(near_demand=rows[:1]), zones=zones)
     for i in range(4):
         db.zone_edge_entry_state.insert_one(
             {"key": "X%d:1-2:%s" % (i, DAY), "symbol": "X%d" % i, "date": DAY,
-             "attempted": True, "entered": True})
+             "attempted": True, "entered": True, "side": "demand"})
     out = ZE.run()
-    assert enter_calls == [] and out["skipped"][0]["reason"] == "daily cap 4 reached"
+    assert enter_calls == [] and out["skipped"][0]["reason"] == "daily cap 4 reached (demand side)"
+
+
+def test_breakouts_never_eat_the_demand_slots(env):
+    """Ajay 2026-09-08: "buy stocks on our supply demand basis too". On 9/8
+    four supply-break buys at the open used the shared cap and every demand
+    arrival was skipped all day. Each side owns four: five breakouts + three
+    demand arrivals -> 4 + 3 buys, the fifth breakout is the only cap skip."""
+    brk = [break_row(sym="B%d" % i, first_seen="09:3%d" % i) for i in range(5)]
+    dem = [demand_row(sym="D%d" % i, dist_pct=0.1 * i) for i in range(3)]
+    zones = {r["symbol"]: zone_doc(r["symbol"], supply_los=(120.0,)) for r in brk + dem}
+    _, db, enter_calls, _, _ = env(latest=latest_doc(breaking=brk, near_demand=dem), zones=zones)
+    out = ZE.run()
+    # risk_rules.MAX_POSITIONS (5) is the other ceiling: 4 breakouts + 1 demand
+    # fill the book; the demand side is never told "daily cap".
+    from trading import risk_rules as RR
+    want_demand = min(3, RR.MAX_POSITIONS - 4)
+    assert len(enter_calls) == 4 + want_demand and out["entries_today"] == 4 + want_demand
+    assert out["entered"][:4] == ["B0", "B1", "B2", "B3"] and out["entered"][4:] == ["D%d" % i for i in range(want_demand)]
+    reasons = {s["symbol"]: s["reason"] for s in out["skipped"]}
+    assert reasons["B4"] == "daily cap 4 reached (supply side)"
+    assert all("daily cap" not in r for sym, r in reasons.items() if sym.startswith("D"))
+    sides = [r.get("side") for r in _state_rows(db) if r.get("entered")]
+    assert sides.count("supply") == 4 and sides.count("demand") == want_demand
+    # NEGATIVE: the day total still stops at 8 — a ninth candidate of either side is skipped
+    assert ZE.MAX_ZONE_ENTRIES_PER_DAY == 8
+    status = ZE.status_block({"zone_edge_entry": True})
+    assert status["max_per_day"] == 8 and status["max_per_side_per_day"] == 4
 
 
 def test_second_tick_same_band_no_second_attempt(env):
@@ -1132,7 +1159,7 @@ def test_status_block_shape(env):
     ZE.run()
     blk = ZE.status_block()
     assert blk["enabled"] is True and blk["entries_today"] == 1
-    assert blk["max_per_day"] == 4 and blk["last_entry_et"] == "15:45"
+    assert blk["max_per_day"] == 8 and blk["max_per_side_per_day"] == 4 and blk["last_entry_et"] == "15:45"
     assert blk["signal"]["fresh"] is True
     assert blk["attempts"][0]["symbol"] == "AAA" and "_id" not in blk["attempts"][0]
     assert any("arrival" in r["rule"] for r in blk["rules"])
@@ -1193,7 +1220,7 @@ def test_status_carries_zone_edge_block_and_survives_its_failure(env, monkeypatc
     monkeypatch.setattr(EE, "regime", lambda: "normal")
     out = EE.status()
     assert out["zone_edge_entry"]["enabled"] is True
-    assert out["zone_edge_entry"]["max_per_day"] == 4
+    assert out["zone_edge_entry"]["max_per_day"] == 8
 
     def boom(cfg=None):
         raise RuntimeError("status boom")

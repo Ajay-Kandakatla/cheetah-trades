@@ -46,7 +46,8 @@ same Mongo handle `exit_engine` uses and never writes to them.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `MAX_ZONE_ENTRIES_PER_DAY` | 4 | zone-edge buys per ET day (counted from `zone_edge_entry_state` successes) |
+| `MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY` | 4 | zone-edge buys per ET day **per side** (breakouts and demand arrivals each own four; counted from `zone_edge_entry_state` successes by `side`). Ajay 2026-09-08: four supply-break buys at 09:30–09:32 had used the old shared cap of 4 and every demand-zone arrival was skipped all day |
+| `MAX_ZONE_ENTRIES_PER_DAY` | 8 | the day total (2 × per side) |
 | `STOP_BUFFER_PCT` | 0.5 | the requested stop sits this far **under the band floor**: `stop = band.lo × (1 − 0.5%)` |
 | `MIN_TOUCHES` | 2 | band must be proven structure (same floor as the board's pushes) |
 | `MIN_CAP_USD` | 1e9 | "billion or at least bigger than a billion" (mirrors `zone_store.MIN_CAP_USD`) |

@@ -684,6 +684,42 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'Trading page carries the 0DTE paper lane tab (2026-09-08)',
+    file: 'src/pages/Trading.tsx',
+    // Ajay 2026-09-08: "Did you start the ODTE options". A paper SAME-DAY
+    // options lane on Signal Lab tags (owner rules, day-trading scope — no
+    // book cites). Pinned: View + VIEWS carry `zero_dte`, the page mounts
+    // <ZeroDteLaneTab> on that view, the tab's two writes are exactly
+    // {zero_dte_entry} on /trading/config and /trading/zero-dte/close/{symbol},
+    // the close has a confirm dialog, and the highlight routes to the tab.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bZeroDteLaneTab\b[^}]*\}\s*from\s*'\.\.\/components\/ZeroDteLaneTab'/.test(src)) {
+        errs.push("Trading.tsx no longer imports ZeroDteLaneTab from '../components/ZeroDteLaneTab'");
+      }
+      if (!/export\s+type\s+View\s*=[^;]*'zero_dte'/.test(src)) errs.push("Trading.tsx View type lost 'zero_dte'");
+      if (!/\{\s*key:\s*'zero_dte'\s*,\s*label:\s*'0DTE'\s*\}/.test(src)) errs.push("VIEWS no longer carries { key: 'zero_dte', label: '0DTE' }");
+      if (!/view\s*===\s*'zero_dte'\s*&&\s*<ZeroDteLaneTab\b/.test(src)) errs.push("Trading.tsx does not mount <ZeroDteLaneTab> on view === 'zero_dte'");
+      const tab = read('src/components/ZeroDteLaneTab.tsx');
+      if (!/zero_dte_entry:\s*next/.test(tab) || !/\/trading\/config/.test(tab)) {
+        errs.push('ZeroDteLaneTab no longer POSTs {zero_dte_entry} to /trading/config');
+      }
+      if (!/\/trading\/zero-dte\/close\/\$\{encodeURIComponent\(symbol\)\}/.test(tab)) {
+        errs.push('ZeroDteLaneTab no longer POSTs /trading/zero-dte/close/{symbol}');
+      }
+      if (!/\$\{API\}\/trading\/zero-dte`/.test(tab)) errs.push('ZeroDteLaneTab no longer polls GET /trading/zero-dte');
+      if (!/setClosing\(p\.symbol\)/.test(tab) || !/role="dialog"\s+aria-label=\{`Close \$\{closing\} 0DTE\?`\}/.test(tab)) {
+        errs.push('the Close button lost its confirm dialog — a close must never fire on one click');
+      }
+      if (/TLSW|TTLAC|Minervini p\./.test(tab)) errs.push('ZeroDteLaneTab is day-trading scope — it must carry no book cites');
+      const nf = read('src/lib/newFeatures.ts');
+      if (!/id:\s*'autopilot-zero-dte-lane'[^}]*route:\s*'\/trading\?view=zero_dte'/.test(nf)) {
+        errs.push("newFeatures.ts lacks the 'autopilot-zero-dte-lane' highlight routed to /trading?view=zero_dte");
+      }
+      return errs;
+    },
+  },
+  {
     name: 'NavBar carries the global search palette (2026-09-06)',
     file: 'src/components/NavBar.tsx',
     // Ajay 2026-09-06: "give me a global search navigation like if I wanna

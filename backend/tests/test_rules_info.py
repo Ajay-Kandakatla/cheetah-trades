@@ -49,7 +49,7 @@ def test_numbers_come_from_the_enforcing_modules():
     p = _text(secs["autopilot"])
     assert ("score ≥ %d" % int(AE.AUTO_MIN_SCORE)) in p and ("RS ≥ %d" % int(AE.AUTO_MIN_RS)) in p
     assert RI._pct(RR.NORMAL_STOP_BAND[0]) in p and RI._pct(RR.DIFFICULT_STOP_BAND[1]) in p
-    assert RI._pct(ZEE.STOP_BUFFER_PCT) in p and ("%d per day" % ZEE.MAX_ZONE_ENTRIES_PER_DAY) in p
+    assert RI._pct(ZEE.STOP_BUFFER_PCT) in p and ("%d+%d per day" % (ZEE.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY, ZEE.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY)) in p
     assert "/".join(CE.QUADRANTS_OK) in p and ("$%dM" % int(CE.CATALYST_MIN_DOLLAR_VOL / 1e6)) in p
     assert ("%d positions" % RR.MAX_POSITIONS) in p
 

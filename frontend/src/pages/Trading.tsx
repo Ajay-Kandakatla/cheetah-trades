@@ -38,6 +38,7 @@ import { ExecutionRace } from '../components/ExecutionRace';
 import { TradeAutopsies } from '../components/TradeAutopsies';
 import { CatalystEntryCard, type CatalystEntryInfo } from '../components/CatalystEntryCard';
 import { OptionsLaneTab, type OptionsLaneStatus } from '../components/OptionsLaneTab';
+import { ZeroDteLaneTab } from '../components/ZeroDteLaneTab';
 import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
@@ -1895,17 +1896,19 @@ type ConfirmState =
 const SIM_NOTE_KEY = 'trading.simNoteDismissed';
 const VIEW_KEY = 'trading.view';
 
-export type View = 'dashboard' | 'journal' | 'analytics' | 'options';
+export type View = 'dashboard' | 'journal' | 'analytics' | 'options' | 'zero_dte';
 export const VIEWS: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'journal', label: 'Journal' },
   { key: 'analytics', label: 'Analytics' },
   // Options lane tab (2026-09-06) — paper options on demand-zone touches.
   { key: 'options', label: 'Options' },
+  // 0DTE lane tab (2026-09-08) — paper same-day options on Signal Lab tags.
+  { key: 'zero_dte', label: '0DTE' },
 ];
 /** A ?view= / stored value → a View, or null for anything else (never a crash). */
 export function parseView(v?: string | null): View | null {
-  return v === 'dashboard' || v === 'journal' || v === 'analytics' || v === 'options' ? v : null;
+  return v === 'dashboard' || v === 'journal' || v === 'analytics' || v === 'options' || v === 'zero_dte' ? v : null;
 }
 
 export function TradingPage() {
@@ -2097,6 +2100,9 @@ export function TradingPage() {
       {/* Options lane (2026-09-06) — owns its own poll (60 s while mounted),
           switch, close-now dialog and empty states. */}
       {view === 'options' && <OptionsLaneTab onChanged={refresh} />}
+      {/* 0DTE lane (2026-09-08) — same-day paper options on Signal Lab tags;
+          owns its own poll, switch and close-now dialog. */}
+      {view === 'zero_dte' && <ZeroDteLaneTab onChanged={refresh} />}
 
       {view === 'dashboard' && <>
       {statusErr && !status && (

@@ -166,6 +166,11 @@ def get_config() -> dict:
         # config; arming still required on top. Paper account (options L3).
         "options_entry": bool(doc.get("options_entry", False)),
         "last_options_entry_disabled_day": doc.get("last_options_entry_disabled_day"),
+        # 0DTE paper lane (trading/zero_dte_lane.py; Ajay 2026-09-08 "Did you
+        # start the ODTE options"). Default ON — the lane itself refuses a
+        # live broker, so ON only ever means the paper account.
+        "zero_dte_entry": bool(doc.get("zero_dte_entry", True)),
+        "last_zero_dte_disabled_day": doc.get("last_zero_dte_disabled_day"),
         # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
         "flatten_queue": _norm_queue(doc.get("flatten_queue")),
         "flatten_queue_rev": int(doc.get("flatten_queue_rev") or 0),
@@ -1265,6 +1270,17 @@ def tick(force: bool = False) -> dict:
         log.warning("options_lane run failed: %s", exc)
         summary["errors"].append("options_lane: %s" % exc)
 
+    # (l) 0DTE paper lane (trading/zero_dte_lane.py, owner rules; flag
+    # `zero_dte_entry`, default ON, paper-only) — manages its same-day
+    # contracts (stock stop/target, premium, 15:45 flatten) THEN looks for
+    # fresh Signal Lab tags. Fenced exactly like (k).
+    try:
+        from trading import zero_dte_lane
+        summary["zero_dte_lane"] = zero_dte_lane.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("zero_dte_lane run failed: %s", exc)
+        summary["errors"].append("zero_dte_lane: %s" % exc)
+
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no
     # trading side effects; fully fenced + lazy-imported so it can NEVER break
@@ -1377,6 +1393,12 @@ def status() -> dict:
     except Exception as exc:                       # noqa: BLE001
         out["options_lane"] = {"enabled": bool(cfg.get("options_entry")),
                                "error": str(exc)}
+    try:
+        from trading import zero_dte_lane
+        out["zero_dte_lane"] = zero_dte_lane.status_block(cfg)
+    except Exception as exc:                       # noqa: BLE001
+        out["zero_dte_lane"] = {"enabled": bool(cfg.get("zero_dte_entry")),
+                                "error": str(exc)}
     if not out["configured"]:
         return out
     try:

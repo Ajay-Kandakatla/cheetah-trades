@@ -442,7 +442,8 @@ def test_auto_entry_never_submits_to_broker_directly():
 # drift is a deliberate owner decision, never a silent tweak.
 
 ZONE_EDGE_TOKENS = [
-    "MAX_ZONE_ENTRIES_PER_DAY = 4",
+    "MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY = 4",
+    "MAX_ZONE_ENTRIES_PER_DAY = 2 * MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY",
     "STOP_BUFFER_PCT = 0.5",
     "MIN_TOUCHES = 2",
     "MIN_CAP_USD = 1e9",
@@ -467,7 +468,7 @@ def test_zone_edge_entry_params_locked_in_source():
 def test_zone_edge_entry_params_importable_and_equal():
     from datetime import time as dtime
     from trading import zone_edge_entry as ze
-    assert ze.MAX_ZONE_ENTRIES_PER_DAY == 4
+    assert ze.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY == 4 and ze.MAX_ZONE_ENTRIES_PER_DAY == 8
     assert ze.STOP_BUFFER_PCT == 0.5
     assert ze.MIN_TOUCHES == 2
     assert ze.MIN_CAP_USD == 1e9
@@ -1122,3 +1123,32 @@ def test_options_lane_2026_09_06_owner_settings_locked_and_engine_seams():
                "def submit_option_spread(", "def option_positions("):
         assert fn in ba, fn
     assert '"order_class": "mleg"' in ba
+
+
+def test_zero_dte_lane_2026_09_08_owner_numbers_locked_and_engine_seams():
+    """Paper 0DTE lane on Signal Lab tags (Ajay 2026-09-08: "Did you start the
+    ODTE options"). Owner numbers pinned verbatim; the tick runs the lane at
+    step (l) AFTER the options lane; the flag is a strict boolean on POST
+    /trading/config defaulting ON; the lane refuses a live broker."""
+    import inspect
+    from trading import zero_dte_lane as ZD, exit_engine as EE, api as TA
+    assert ZD.STRATEGY == "zero_dte"
+    assert (ZD.ENTRY_OPEN_ET.strftime("%H:%M"), ZD.LAST_ENTRY_ET.strftime("%H:%M"),
+            ZD.FLATTEN_ET.strftime("%H:%M")) == ("09:45", "14:30", "15:45")
+    assert ZD.SIGNAL_MAX_AGE_SEC == 180 and ZD.ENTRY_FILL_WAIT_SEC == 180
+    assert (ZD.RISK_PCT_OF_EQUITY, ZD.MAX_PREMIUM_PER_TRADE) == (0.5, 500.0)
+    assert (ZD.MAX_ENTRIES_PER_DAY, ZD.MAX_OPEN) == (3, 3)
+    assert (ZD.PREMIUM_TAKE_PCT, ZD.PREMIUM_STOP_PCT) == (100.0, 50.0)
+    assert ZD.SKIP_REGIMES == ("PINNED",)
+    src = inspect.getsource(EE.tick) if hasattr(EE, "tick") else inspect.getsource(EE)
+    assert 'summary["zero_dte_lane"] = zero_dte_lane.run(broker=broker, cfg=get_config())' in src
+    assert src.index("options_lane.run(") < src.index("zero_dte_lane.run("), "step (l) runs after (k)"
+    cfg_src = inspect.getsource(EE.get_config)
+    assert '"zero_dte_entry": bool(doc.get("zero_dte_entry", True))' in cfg_src, "default ON (paper)"
+    api_src = inspect.getsource(TA)
+    assert 'raise HTTPException(400, "zero_dte_entry must be a boolean or null")' in api_src
+    assert '@router.get("/zero-dte")' in api_src and '@router.post("/zero-dte/close/{symbol}")' in api_src
+    run_src = inspect.getsource(ZD.run)
+    assert '"paper": mode != "live"' in run_src and "paper-only" in run_src
+    assert "never a market order" in ZD.__doc__
+

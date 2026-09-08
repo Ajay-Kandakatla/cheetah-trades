@@ -13,6 +13,7 @@ from typing import Optional
 from trading import risk_rules as RR
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
+from trading import zero_dte_lane as ZDL
 from trading import catalyst_entry as CE
 from trading import options_lane as OL
 from . import alert_gates as AG
@@ -190,16 +191,25 @@ def sections() -> dict:
             "🧲 Demand-zone / 🚀 breakout: the zone-edge board's rules (owner switches: "
             "residents, any-band breakout, min touches) PLUS the alert gate (≥ %s room to the "
             "first proven lid, ≤ %s above the band), ≥ 2R room over the stop, cap ≥ %s, "
-            "signal ≤ %d s old, no new entry after %s ET; %d per day."
+            "signal ≤ %d s old, no new entry after %s ET; %d+%d per day (breakouts + demand "
+            "arrivals, each side its own cap since 2026-09-08)."
             % (gate_room, gate_prox, _b(ZEE.MIN_CAP_USD), ZEE.SIGNAL_MAX_AGE_SEC,
-               _t(ZEE.LAST_ENTRY_ET), ZEE.MAX_ZONE_ENTRIES_PER_DAY),
+               _t(ZEE.LAST_ENTRY_ET), ZEE.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY,
+               ZEE.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY),
             "🗞️ Catalyst: from the Catalysts scan — quadrant %s, evidence grade %s, no pump "
             "warning, no offering, price ≥ $%d, dollar volume ≥ $%dM — and the same gate "
             "read through bounce-room; %d per day."
             % ("/".join(CE.QUADRANTS_OK), "/".join(CE.GRADES_OK), int(CE.CATALYST_MIN_PRICE),
                int(CE.CATALYST_MIN_DOLLAR_VOL / 1e6), CE.MAX_CATALYST_ENTRIES_PER_DAY),
+            "⏱️ 0DTE paper lane: Signal Lab's 1-min BUY / SELL tag (≤ %d s old) on the 0DTE tab's "
+            "names with a SAME-DAY chain → the tab's call / put pick; entries %s–%s ET, "
+            "min(%g%% of equity, $%d) a trade, %d a day, exits on the stock first (signal stop / "
+            "2R), then the premium (+%d%% / −%d%%), flat by %s. Paper only."
+            % (ZDL.SIGNAL_MAX_AGE_SEC, _t(ZDL.ENTRY_OPEN_ET), _t(ZDL.LAST_ENTRY_ET),
+               ZDL.RISK_PCT_OF_EQUITY, int(ZDL.MAX_PREMIUM_PER_TRADE), ZDL.MAX_ENTRIES_PER_DAY,
+               int(ZDL.PREMIUM_TAKE_PCT), int(ZDL.PREMIUM_STOP_PCT), _t(ZDL.FLATTEN_ET)),
             "Every entry is journaled by strategy (minervini / demand_zone / breakout / "
-            "catalyst / manual).",
+            "catalyst / options_zone / zero_dte / manual).",
         ],
         "stops": [
             "Minervini stop: %s–%s of entry in a normal tape, %s–%s when difficult, never "

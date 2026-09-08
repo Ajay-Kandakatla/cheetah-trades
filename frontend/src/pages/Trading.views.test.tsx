@@ -9,8 +9,9 @@ import { VIEWS, parseView } from './Trading';
 
 describe('Trading page views', () => {
   it('the segmented control carries the Options tab after Analytics', () => {
-    expect(VIEWS.map((v) => v.key)).toEqual(['dashboard', 'journal', 'analytics', 'options']);
+    expect(VIEWS.map((v) => v.key)).toEqual(['dashboard', 'journal', 'analytics', 'options', 'zero_dte']);
     expect(VIEWS.find((v) => v.key === 'options')?.label).toBe('Options');
+    expect(VIEWS.find((v) => v.key === 'zero_dte')?.label).toBe('0DTE');   // 2026-09-08
   });
 
   it('parseView accepts every tab and rejects anything else (negative)', () => {

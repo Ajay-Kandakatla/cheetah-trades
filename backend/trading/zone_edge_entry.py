@@ -124,8 +124,14 @@ ET = ZoneInfo("America/New_York")
 # NOT book numbers (no book exists for this strategy). Locked verbatim in
 # tests/test_trading_contracts.py; changing any needs Ajay's sign-off.
 # ──────────────────────────────────────────────────────────────────────────────
-# Max zone-edge buys per ET day — observation-friendly pace for the trial.
-MAX_ZONE_ENTRIES_PER_DAY = 4
+# Max zone-edge buys per ET day PER SIDE — observation-friendly pace for the
+# trial. Ajay 2026-09-08: "buy stocks on our supply demand basis too. Not just
+# Minervini's SEPA" — that day four supply-break buys at 09:30–09:32 used up
+# the old SHARED cap of 4 and every demand-zone arrival for the rest of the
+# session was skipped "daily cap 4 reached". Breakouts and demand arrivals now
+# each get their own four; the day total is the sum.
+MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY = 4
+MAX_ZONE_ENTRIES_PER_DAY = 2 * MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY
 # The requested stop sits this far UNDER the band floor (a print through
 # the floor is the thesis failing, not noise to sit through).
 STOP_BUFFER_PCT = 0.5
@@ -1173,6 +1179,10 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         out["errors"].append("zone_edge_entry_state unreadable — no attempts")
         return _finish("state_unavailable")
     entries_today = len(entered_rows)
+    entries_by_side: dict = {}
+    for r in entered_rows:
+        sd = str(r.get("side") or "")
+        entries_by_side[sd] = entries_by_side.get(sd, 0) + 1
     entered_syms = {str(r.get("symbol") or "").upper() for r in entered_rows}
     as_of = (latest or {}).get("as_of")
     mode_word = _mode_word(brk)
@@ -1191,6 +1201,10 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
             continue
         if sym in held:
             _skip(sym, "already held")
+            continue
+        if entries_by_side.get(c["side"], 0) >= MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY:
+            _skip(sym, "daily cap %d reached (%s side)"
+                  % (MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY, c["side"]))
             continue
         if entries_today >= MAX_ZONE_ENTRIES_PER_DAY:
             _skip(sym, "daily cap %d reached" % MAX_ZONE_ENTRIES_PER_DAY)
@@ -1338,6 +1352,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         entries_today += 1
         pos_count += 1
         entered_syms.add(sym)
+        entries_by_side[c["side"]] = entries_by_side.get(c["side"], 0) + 1
         out["entered"].append(sym)
         order_id = _res_get(res, "order_id")
         coid = _client_order_id(sym, order_id, brk)
@@ -1414,11 +1429,14 @@ def rules_list() -> list:
                  "from another day) places nothing",
          "value": "<= %ds old" % SIGNAL_MAX_AGE_SEC,
          "source": "owner rule (S&D, no book)"},
-        {"rule": "At most %d zone-edge buys a day, none at/after %s ET, "
-                 "one attempt per band per day, never a name already held"
-                 % (MAX_ZONE_ENTRIES_PER_DAY, LAST_ENTRY_ET.strftime("%H:%M")),
-         "value": "%d/day, last tick %s" % (MAX_ZONE_ENTRIES_PER_DAY,
-                                           LAST_ENTRY_ET.strftime("%H:%M")),
+        {"rule": "At most %d zone-edge buys a day per side (%d breakouts + %d "
+                 "demand arrivals), none at/after %s ET, one attempt per band "
+                 "per day, never a name already held"
+                 % (MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY, MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY,
+                    MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY, LAST_ENTRY_ET.strftime("%H:%M")),
+         "value": "%d+%d/day, last tick %s" % (MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY,
+                                              MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY,
+                                              LAST_ENTRY_ET.strftime("%H:%M")),
          "source": "owner rule (S&D, no book)"},
         {"rule": "Every buy flows through the same sized-and-stopped path as "
                  "manual and Minervini auto-entries: armed switch, %d-position "
@@ -1450,6 +1468,7 @@ def status_block(cfg: Optional[dict] = None) -> dict:
     return {"enabled": bool(cfg.get("zone_edge_entry")),
             "entries_today": _entries_today(day),
             "max_per_day": MAX_ZONE_ENTRIES_PER_DAY,
+            "max_per_side_per_day": MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY,
             "last_entry_et": LAST_ENTRY_ET.strftime("%H:%M"),
             "signal": sig,
             "rules": rules_list(),

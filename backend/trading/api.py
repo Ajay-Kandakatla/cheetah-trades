@@ -176,6 +176,16 @@ async def trading_config(payload: dict = Body(...),
             updates["options_entry"] = raw
         else:
             raise HTTPException(400, "options_entry must be a boolean or null")
+    if "zero_dte_entry" in payload:
+        # 0DTE paper lane (trading/zero_dte_lane.py; Ajay 2026-09-08). Strict
+        # boolean; null resets to the default ON. Paper-only inside the lane.
+        raw = payload.get("zero_dte_entry")
+        if raw is None:
+            updates["zero_dte_entry"] = True
+        elif isinstance(raw, bool):
+            updates["zero_dte_entry"] = raw
+        else:
+            raise HTTPException(400, "zero_dte_entry must be a boolean or null")
     if "zone_edge_rules" in payload:
         # Owner rule switches for the zone-edge entries (Ajay 2026-09-03:
         # "Enter anything that is in demand zone ... any stocks crossing the
@@ -278,6 +288,26 @@ async def trading_options_close(underlying: str,
     from trading import options_lane
     try:
         result = await asyncio.to_thread(options_lane.close_now, underlying, "owner close")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return JSONResponse(result)
+
+
+@router.get("/zero-dte")
+async def trading_zero_dte(email: str = Depends(current_user_email)):
+    """0DTE paper lane tab: status block, open / recent contracts, latency, journal."""
+    from trading import zero_dte_lane
+    return JSONResponse(await asyncio.to_thread(zero_dte_lane.tab_payload))
+
+
+@router.post("/zero-dte/close/{symbol}")
+async def trading_zero_dte_close(symbol: str,
+                                 email: str = Depends(current_user_email)):
+    """Owner closes the 0DTE lane's contract on one name now (armed only)."""
+    _require_admin(email)
+    from trading import zero_dte_lane
+    try:
+        result = await asyncio.to_thread(zero_dte_lane.close_now, symbol, "owner close")
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     return JSONResponse(result)
