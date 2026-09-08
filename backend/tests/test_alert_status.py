@@ -165,8 +165,12 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     p2 = AS.status_payload(pass_coll=pc, latest_coll=lc, now=sat)
     assert p2["in_session"] is False and p2["now_et"] == "2026-09-05T11:00:00-04:00"
     assert p2["passes"]["zone_edge"]["as_of"] == NOW.isoformat(), "stale as_of stays visible, never hidden"
+    # 16:01 is an after-hours pass since 2026-09-08 (the boards read the tape
+    # till 20:00); 20:01 is off the clock.
     assert AS.status_payload(pass_coll=pc, latest_coll=lc,
-                             now=datetime(2026, 9, 3, 16, 1, tzinfo=ET))["in_session"] is False
+                             now=datetime(2026, 9, 3, 16, 1, tzinfo=ET))["in_session"] is True
+    assert AS.status_payload(pass_coll=pc, latest_coll=lc,
+                             now=datetime(2026, 9, 3, 20, 1, tzinfo=ET))["in_session"] is False
     utc = datetime(2026, 9, 3, 14, 0, tzinfo=ZoneInfo("UTC"))                        # 10:00 ET
     assert AS.status_payload(pass_coll=pc, latest_coll=lc, now=utc)["now_et"] == "2026-09-03T10:00:00-04:00"
 

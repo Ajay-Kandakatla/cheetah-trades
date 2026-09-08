@@ -24,7 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
-  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText,
+  quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText, sessionNoteText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
@@ -444,6 +444,12 @@ export function ChartMaps() {
         * text list they replaced said them. */}
       {tab === 'breaking' && data && (
         <p className="cm-note" data-testid="breaking-pass">{breakingPassText(data)}</p>
+      )}
+      {/* Ajay 2026-09-08 (ORCL): "show real time premarket and extended hours
+        * trading info as well in all the chart maps" — outside RTH every tile's
+        * now line is the live print; one line says which tape. */}
+      {data && sessionNoteText(data.tape_session) && (
+        <p className="cm-note" data-testid="session-note">{sessionNoteText(data.tape_session)}</p>
       )}
       {/* Ajay 2026-09-07: "when the last resistance break will the price go to ATH" —
         * the weekly lid-break study (supply_demand/lid_break.py), pooled, placebo beside

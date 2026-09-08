@@ -753,28 +753,76 @@ def test_api_payload_without_a_pass_and_in_session_is_evaluated_at_request_time(
     last_pass = datetime(2026, 9, 3, 15, 59, tzinfo=ET)
     out, colls = _run({"AAA": _doc("AAA", [RES], 99.0)}, {"AAA": _snap(101.5, 99.0, now=last_pass)},
                       {"AAA": 5e9}, now=last_pass)
+    # 18:00 is an after-hours pass since 2026-09-08 (in_session True, tagged);
+    # 20:01 is off the clock.
     evening = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"],
                              now=datetime(2026, 9, 3, 18, 0, tzinfo=ET))
-    assert evening["in_session"] is False and evening["as_of"] == last_pass.isoformat()
+    assert evening["in_session"] is True and evening["session"] == "afterhours"
+    evening = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"],
+                             now=datetime(2026, 9, 3, 20, 1, tzinfo=ET))
+    assert evening["in_session"] is False and evening["session"] == "closed"
+    assert evening["as_of"] == last_pass.isoformat()
     assert evening["track"] == {"supply:AAA": [["15:59", 0.49]]}
 
 
 # ── the session gate ─────────────────────────────────────────────────────────
-def test_session_gate_is_nine_thirty_one_to_four_weekdays():
-    assert ZE.in_session(datetime(2026, 9, 3, 9, 30, tzinfo=ET)) is False
+def test_session_gate_is_four_am_to_eight_pm_weekdays_and_pushes_stay_rth():
+    # Ajay 2026-09-08: "enable pre market pricing and let me scan premarket
+    # hours … Also after hours" — the PASS runs 04:00-20:00 ET; PUSHES keep the
+    # old 9:31-16:00 window.
+    assert ZE.in_session(datetime(2026, 9, 3, 3, 59, tzinfo=ET)) is False
+    assert ZE.in_session(datetime(2026, 9, 3, 4, 0, tzinfo=ET)) is True       # pre-market pass
     assert ZE.in_session(datetime(2026, 9, 3, 9, 31, tzinfo=ET)) is True
     assert ZE.in_session(datetime(2026, 9, 3, 16, 0, tzinfo=ET)) is True
-    assert ZE.in_session(datetime(2026, 9, 3, 16, 1, tzinfo=ET)) is False
+    assert ZE.in_session(datetime(2026, 9, 3, 20, 0, tzinfo=ET)) is True      # after-hours pass
+    assert ZE.in_session(datetime(2026, 9, 3, 20, 1, tzinfo=ET)) is False
     assert ZE.in_session(datetime(2026, 9, 5, 11, 0, tzinfo=ET)) is False     # Saturday
     assert ZE.in_session(datetime(2026, 9, 6, 11, 0, tzinfo=ET)) is False     # Sunday
+    assert ZE.push_window(datetime(2026, 9, 3, 9, 30, tzinfo=ET)) is False
+    assert ZE.push_window(datetime(2026, 9, 3, 9, 31, tzinfo=ET)) is True
+    assert ZE.push_window(datetime(2026, 9, 3, 16, 0, tzinfo=ET)) is True
+    assert ZE.push_window(datetime(2026, 9, 3, 16, 1, tzinfo=ET)) is False
+    assert ZE.push_window(datetime(2026, 9, 3, 7, 0, tzinfo=ET)) is False      # pre-market: no phone
+    assert ZE.push_window(datetime(2026, 9, 3, 18, 0, tzinfo=ET)) is False     # after-hours: no phone
+    assert ZE.push_window(datetime(2026, 9, 5, 11, 0, tzinfo=ET)) is False
+    s = lambda hh, mm, d=3: ZE.session_state(datetime(2026, 9, d, hh, mm, tzinfo=ET))
+    assert s(3, 59) == "closed" and s(4, 0) == "premarket" and s(9, 29) == "premarket"
+    assert s(9, 30) == "rth" and s(16, 0) == "rth" and s(16, 1) == "afterhours"
+    assert s(20, 0) == "afterhours" and s(20, 1) == "closed" and s(11, 0, 5) == "closed"
+    assert ZE.session_state(datetime(2026, 9, 7, 11, 0, tzinfo=ET)) == "closed"   # Labor Day
 
 
-def test_check_once_refuses_outside_rth_unless_forced():
+def test_check_once_refuses_outside_the_pass_window_unless_forced():
     colls = _colls()
-    out = ZE.check_once(store={}, now=datetime(2026, 9, 3, 7, 0, tzinfo=ET), **colls)
-    assert out["ran"] is False and "RTH" in out["reason"]
-    out = ZE.check_once(store={}, now=datetime(2026, 9, 3, 7, 0, tzinfo=ET), force=True, **colls)
+    out = ZE.check_once(store={}, now=datetime(2026, 9, 3, 3, 0, tzinfo=ET), **colls)
+    assert out["ran"] is False and "pass window" in out["reason"]
+    out = ZE.check_once(store={}, now=datetime(2026, 9, 3, 3, 0, tzinfo=ET), force=True, **colls)
     assert out["ran"] is True and out["candidates"] == 0
+    # 07:00 is now inside the pass window (no force needed)
+    out = ZE.check_once(store={}, now=datetime(2026, 9, 3, 7, 0, tzinfo=ET), **colls)
+    assert out["ran"] is True and out["candidates"] == 0
+
+
+def test_premarket_pass_lists_and_tracks_but_never_pushes(monkeypatch):
+    sent = _capture(monkeypatch)
+    pre = datetime(2026, 9, 3, 8, 0, tzinfo=ET)
+    store = {"AAA": _doc("AAA", [RES, DEM], 99.0, 103.0)}
+    out, colls = _run(store, {"AAA": _snap(101.5, 99.0, now=pre)}, {"AAA": 5e9},
+                      names={"AAA": "Alpha"}, now=pre)
+    assert out["ran"] and out["push_window"] is False and out["session"] == "premarket"
+    assert out["pushed"] == 0 and sent == [], "an extended-hours print moves the board, never the phone"
+    assert [r["symbol"] for r in out["breaking"]] == ["AAA"]
+    assert colls["coll_break"].docs == {}, "no push → no state row → the RTH pass may still push it"
+    payload = ZE.api_payload(latest_coll=colls["latest_coll"], track_coll=colls["track_coll"], now=pre)
+    assert payload["in_session"] is True and payload["session"] == "premarket"
+    assert payload["breaking"][0]["symbol"] == "AAA"
+    # after-hours: same rule
+    ah = datetime(2026, 9, 3, 17, 30, tzinfo=ET)
+    out, _ = _run(store, {"AAA": _snap(101.5, 99.0, now=ah)}, {"AAA": 5e9}, names={"AAA": "Alpha"}, now=ah)
+    assert out["push_window"] is False and out["session"] == "afterhours" and out["pushed"] == 0 and sent == []
+    # RTH: pushes as before
+    out, _ = _run(store, {"AAA": _snap(101.5, 99.0)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
+    assert out["push_window"] is True and out["session"] == "rth" and out["pushed"] == 1 and len(sent) == 1
 
 
 # ── source guards: the wiring ────────────────────────────────────────────────
@@ -784,14 +832,16 @@ def test_constants_locked():
     assert ZE.STALE_PRINT_SEC == 180 and ZE.TRACK_KEEP_DAYS == 2 and ZE.TRACK_POINTS == 30
     assert ZE.KIND_BREAK == "supply_break_alert" and ZE.STATE_COLL_BREAK == "supply_break_state"
     assert ZE.LATEST_COLL == "zone_edge_latest" and ZE.TRACK_COLL == "zone_edge_track"
-    assert ZE.SESSION_OPEN.hour == 9 and ZE.SESSION_OPEN.minute == 31
-    assert ZE.SESSION_CLOSE.hour == 16 and ZE.SESSION_CLOSE.minute == 0
+    assert ZE.SESSION_OPEN.hour == 4 and ZE.SESSION_OPEN.minute == 0          # 2026-09-08
+    assert ZE.SESSION_CLOSE.hour == 20 and ZE.SESSION_CLOSE.minute == 0
+    assert ZE.PUSH_OPEN.hour == 9 and ZE.PUSH_OPEN.minute == 31
+    assert ZE.PUSH_CLOSE.hour == 16 and ZE.PUSH_CLOSE.minute == 0
 
 
 def test_crontab_runs_zone_edge_every_minute_after_the_bounce_line():
     cron = (ROOT / "backend/crontab").read_text().splitlines()
     edge = [l for l in cron if "supply_demand.zone_edge" in l and not l.startswith("#")]
-    assert len(edge) == 1 and edge[0].split()[:5] == ["*", "9-16", "*", "*", "1-5"]
+    assert len(edge) == 1 and edge[0].split()[:5] == ["*", "4-19", "*", "*", "1-5"]
     assert edge[0].split()[5:] == ["/usr/local/bin/python", "-m", "supply_demand.zone_edge"]
     bounce = [i for i, l in enumerate(cron) if "supply_demand.zone_bounce_alerts" in l and not l.startswith("#")]
     assert cron.index(edge[0]) > bounce[0], "placed after the zone_bounce entry"

@@ -211,6 +211,20 @@ describe('ChartMaps', () => {
     expect(urls.some((u) => u.includes('zone-edge'))).toBe(false);
   });
 
+  it('says which tape the now lines came from outside regular hours, on any tab (2026-09-08)', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: { ...VCP_BOARD, tape_session: 'premarket' } }));
+    draw('/chart-maps?tab=vcp');
+    expect(await screen.findByTestId('session-note')).toHaveTextContent(/pre-market prints/);
+    expect(screen.queryByTestId('breaking-pass')).toBeNull();
+  });
+
+  it('NEGATIVE: no session note in regular hours or when the board carries no clock', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: { ...VCP_BOARD, tape_session: 'rth' } }));
+    draw('/chart-maps?tab=vcp');
+    expect(await screen.findByText(VCP_BOARD.tiles[0].symbol)).toBeInTheDocument();
+    expect(screen.queryByTestId('session-note')).toBeNull();
+  });
+
   it('the 🚀 Breaking tab prints the last-lid-break study under the pass line (2026-09-07)', async () => {
     vi.stubGlobal('fetch', stubFetch({ breaking: {
       tab: 'breaking', count: 0, matched: 0, tiles: [], hidden_low_room: 0, min_room: 5,

@@ -29,7 +29,7 @@ GET /alerts/status (supply_demand/api.py) -> ``status_payload``:
   {in_session, now_et, gate: {min_room_pct, max_above_demand_pct},
    passes: {zone_edge, zone_bounce_alert, demand_alert}, disclaimer}
   each pass: {as_of, date, counts, cadence_sec[, reason]}
-Times are ET ISO strings; ``in_session`` is zone_edge's clock (RTH 9:31-16:00
+Times are ET ISO strings; ``in_session`` is zone_edge's clock (04:00-20:00 ET pass window since 2026-09-08, pushes RTH 9:31-16:00
 on NYSE trading days), evaluated at request time. ``in_session`` is the CLOCK,
 not proof the crons are alive — the page compares each ``as_of`` with
 ``now_et`` against ``cadence_sec`` and says "stale" when a pass is overdue.

@@ -15,7 +15,7 @@ import {
   toneColor, xFor, yFor,
   type CmBar, type CmBand, type CmLine, type CmTab,
   DEFAULT_SORT, THEMES_FIRST_DEFAULT, parseSort,
-  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText,
+  CM_TABS, DEFAULT_TAB, TAB_META, isBoardTab, quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText, sessionNoteText,
   dropCollidingTicks, priceTicks, tickDecimals,
   GUTTER_MAX, GUTTER_MIN, bandAt, barIndexAt, gutterWidth, hoverLines,
   priceAt, shortVol, textWidth, tooltipPos,
@@ -1578,6 +1578,33 @@ describe('the 🚀 Breaking tab', () => {
     expect(breakingPassText({ pass_as_of: null, in_session: false, reason: 'zone store empty for today' }))
       .toBe('no pass yet today \u2014 zone store empty for today');
     expect(breakingPassText({ pass_as_of: 'garbage', in_session: true, reason: null })).toBe('no pass yet today');
+  });
+
+  // Ajay 2026-09-08: "enable pre market pricing and let me scan premarket hours
+  // ... Also after hours" — the pass runs 4:00–20:00 ET, pushes stay RTH.
+  it('names the extended-hours tape and says the phone stays quiet', () => {
+    const iso = '2026-09-08T08:20:11-04:00';
+    expect(breakingPassText({ pass_as_of: iso, in_session: true, reason: null, tape_session: 'premarket' }))
+      .toBe('pre-market pass as of 08:20 ET \u00b7 thin tape, no phone pushes outside regular hours; these cards refresh every 5');
+    expect(breakingPassText({ pass_as_of: '2026-09-08T17:03:00-04:00', in_session: true, reason: null, tape_session: 'afterhours' }))
+      .toBe('after-hours pass as of 17:03 ET \u00b7 thin tape, no phone pushes outside regular hours; these cards refresh every 5');
+    // RTH keeps the old wording; a closed session reads as before
+    expect(breakingPassText({ pass_as_of: iso, in_session: true, reason: null, tape_session: 'rth' }))
+      .toBe('as of 08:20 ET \u00b7 the pass runs every minute in session; these cards refresh every 5');
+    expect(breakingPassText({ pass_as_of: iso, in_session: false, reason: null, tape_session: 'closed' }))
+      .toBe('market closed \u2014 last pass 08:20 ET');
+    // NEGATIVE: a session tag on a pass that is NOT live never claims a live pass
+    expect(breakingPassText({ pass_as_of: iso, in_session: false, reason: null, tape_session: 'premarket' }))
+      .toBe('market closed \u2014 last pass 08:20 ET');
+  });
+
+  it('sessionNoteText explains the now lines outside regular hours only', () => {
+    expect(sessionNoteText('premarket')).toMatch(/pre-market prints.*now \u00b7 pre.*no phone pushes until 9:31 ET/);
+    expect(sessionNoteText('afterhours')).toMatch(/after-hours prints.*now \u00b7 AH.*no phone pushes after 16:00 ET/);
+    expect(sessionNoteText('rth')).toBe('');
+    expect(sessionNoteText('closed')).toBe('');
+    expect(sessionNoteText(null)).toBe('');
+    expect(sessionNoteText(undefined)).toBe('');
   });
 });
 

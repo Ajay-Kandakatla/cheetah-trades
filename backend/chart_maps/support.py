@@ -175,9 +175,13 @@ def _shared_frame_as_of(sym: str) -> Optional[float]:
 
 
 def _overlay_today(prices_mod, df, sym: str):
-    """(frame, as_of_epoch or None, appended) via prices.with_today_bar —
+    """(frame, as_of_epoch or None, live) via prices.with_today_bar —
     tolerant of stubs without it and of any failure; the closed frame always
-    stands. `appended` says whether the last row IS today's live bar."""
+    stands. `live` says whether the last row carries today's live print:
+    appended (the day bar / a pre-market print) or, since 2026-09-08,
+    ADJUSTED — an after-hours print carried into the last bar the frame
+    already holds. Either way the caller keeps the frame it passed in as the
+    closed one."""
     fn = getattr(prices_mod, "with_today_bar", None)
     if fn is None or df is None:
         return df, None, False
@@ -186,8 +190,9 @@ def _overlay_today(prices_mod, df, sym: str):
     except Exception as exc:                                   # pragma: no cover
         log.debug("support: today-bar overlay failed for %s: %s", sym, exc)
         return df, None, False
-    appended = bool((info or {}).get("appended"))
-    return out, ((info or {}).get("as_of_epoch") if appended else None), appended
+    info = info or {}
+    live = bool(info.get("appended") or info.get("adjusted"))
+    return out, (info.get("as_of_epoch") if live else None), live
 
 
 def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):

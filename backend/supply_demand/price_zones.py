@@ -344,7 +344,7 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
         # (docstring). Nothing is written back — see prices.with_today_bar.
         closed = df
         _live_df, live_bar = _overlay_today(prices, closed, sym)
-        if last_price is None and live_bar and live_bar.get("appended"):
+        if last_price is None and live_bar and (live_bar.get("appended") or live_bar.get("adjusted")):
             try:
                 last_price = float(live_bar.get("last_price"))
             except (TypeError, ValueError):

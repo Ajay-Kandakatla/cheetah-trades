@@ -18,7 +18,9 @@ import os
 from massive_keys import stocks_key
 import time
 from pathlib import Path
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -519,9 +521,19 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     close AND same volume as the last closed bar). Either would have
     duplicated the last session for every zone / ATR / gap read and flagged
     it as today's live bar. A rejected snapshot reports `reason`.
+
+    Extended hours (Ajay 2026-09-08: "enable pre market pricing and let me scan
+    premarket hours … Also after hours"): the snapshot's last trade keeps
+    printing from 04:00 ET while the day aggregate is still zero, and again
+    after 16:00 while it is frozen. Pre-market → a flat synthetic bar at the
+    print (info["source"] "premarket"); after-hours → the day bar's close
+    (high/low widened) whether that bar is appended here or already in the
+    frame ("afterhours", info["adjusted"]). info["session"] names the session
+    the print came from; prints from another day or outside 04:00–20:00 ET
+    change nothing.
     """
-    info = {"appended": False, "date": None, "last_price": None, "source": "frame",
-            "as_of_epoch": None, "reason": None}
+    info = {"appended": False, "adjusted": False, "date": None, "last_price": None,
+            "source": "frame", "as_of_epoch": None, "reason": None, "session": None}
     if df is None or len(df) == 0:
         return df, info
     sym = (symbol or "").upper().strip()
@@ -539,14 +551,38 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
         snap_date = str(snap.get("date") or "")[:10]
     except (TypeError, ValueError):
         return df, info
-    if not snap_date or min(o, h, l, c) <= 0:
-        return df, info
     try:
         last_date = pd.Timestamp(df.index[-1]).date().isoformat()
     except Exception:                                           # pragma: no cover
         return df, info
+    lt = extended_print(snap)
+    day_ok = bool(snap_date) and min(o, h, l, c) > 0
+    if not day_ok:
+        # Pre-market (2026-09-08): the day aggregate is all zeros until the
+        # open, so the only price is the last trade. A pre-market print dated
+        # after the frame's last bar becomes a flat synthetic bar (o=h=l=c=
+        # print, volume 0) so zones, room and charts read the pre-market
+        # tape. Yesterday's after-hours print, a weekend stamp or a print
+        # before 04:00 ET add nothing.
+        if lt and lt["session"] == "premarket" and lt["date"] > last_date:
+            out = _append_row(df, lt["date"], lt["price"], lt["price"], lt["price"],
+                              lt["price"], 0.0)
+            if out is not None:
+                info.update(appended=True, date=lt["date"], last_price=lt["price"],
+                            source="premarket", session="premarket", as_of_epoch=lt["epoch"])
+                return out, info
+        return df, info
     if snap_date <= last_date:
         info.update(date=last_date)
+        # After-hours on a day the frame already holds (after the 16:30
+        # fast-scan): the last closed bar is extended in the RETURNED copy —
+        # close = the print, high/low widened — never in the cache.
+        if lt and lt["session"] == "afterhours" and lt["date"] == last_date == snap_date:
+            out = df.copy()
+            _extend_last_row(out, lt["price"])
+            info.update(adjusted=True, last_price=lt["price"], source="afterhours",
+                        session="afterhours", as_of_epoch=lt["epoch"])
+            return out, info
         return df, info
     try:
         if pd.Timestamp(snap_date).weekday() >= 5:            # 5 = Sat, 6 = Sun
@@ -555,35 +591,104 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     except (TypeError, ValueError):
         info.update(reason=f"unparseable snapshot date ({snap_date!r})")
         return df, info
+    out = _append_row(df, snap_date, o, h, l, c, v)
+    if out is None:
+        info.update(reason="snapshot echoes the prior session (phantom duplicate "
+                           "close+volume) — not appended")
+        return df, info
+    as_of = lt["epoch"] if lt else _trade_epoch(snap.get("last_trade_ts_ms"))
+    source, session, last_price = "snapshot", "rth", c
+    if lt and lt["date"] == snap_date:
+        session = lt["session"]
+        if session == "afterhours":
+            # 16:00–20:00 ET before the fast-scan: the day bar is complete and
+            # the tape has moved on — carry the after-hours print as the close.
+            _extend_last_row(out, lt["price"])
+            source, last_price = "afterhours", lt["price"]
+    info.update(appended=True, date=snap_date, last_price=last_price, source=source,
+                session=session, as_of_epoch=as_of)
+    return out, info
+
+
+def _append_row(df, date: str, o: float, h: float, l: float, c: float, v: float):
+    """`df` + one bar at `{date} 04:00` (the frame's convention), or None when
+    the bar is a phantom echo of the last closed bar (same close AND volume —
+    the test `_drop_phantom_tail` applies to the cache)."""
     cols = list(df.columns)
     row = {k: None for k in cols}
     for k, val in (("open", o), ("high", h), ("low", l), ("close", c), ("volume", v)):
         if k in row:
             row[k] = val
-    ts = pd.Timestamp(f"{snap_date} 04:00:00")
+    ts = pd.Timestamp(f"{date} 04:00:00")
     if getattr(df.index, "tz", None) is not None:
         ts = ts.tz_localize(df.index.tz)
     out = pd.concat([df, pd.DataFrame([row], index=[ts], columns=cols)])
     out.index.name = df.index.name
-    # Same test the read path applies to the cache: an appended row that
-    # duplicates the prior session's close AND volume is a phantom, not today.
     healed = _drop_phantom_tail(out)
     if healed is None or len(healed) < len(out):
-        info.update(reason="snapshot echoes the prior session (phantom duplicate "
-                           "close+volume) — not appended")
-        return df, info
-    ts_ms = snap.get("last_trade_ts_ms")
-    as_of = None
-    if ts_ms:
-        try:
-            ts_ms = float(ts_ms)
-            as_of = ts_ms / 1e9 if ts_ms > 1e15 else ts_ms / 1e3   # ns vs ms stamps
-        except (TypeError, ValueError):
-            as_of = None
-    info.update(appended=True, date=snap_date, last_price=c, source="snapshot",
-                as_of_epoch=as_of)
-    return out, info
+        return None
+    return out
 
+
+def _extend_last_row(out, px: float) -> None:
+    """Carry an after-hours print into the frame's last bar: close = print,
+    high/low widened to include it. Mutates `out` (always a copy)."""
+    i = out.index[-1]
+    out.loc[i, "close"] = float(px)
+    if "high" in out.columns:
+        out.loc[i, "high"] = max(float(out.loc[i, "high"] or 0), float(px))
+    if "low" in out.columns:
+        lo = out.loc[i, "low"]
+        out.loc[i, "low"] = float(px) if not lo or lo <= 0 else min(float(lo), float(px))
+
+
+def _trade_epoch(ts_ms) -> Optional[float]:
+    """Massive's last-trade stamp → epoch seconds (ns and ms stamps both seen)."""
+    try:
+        ts = float(ts_ms)
+    except (TypeError, ValueError):
+        return None
+    if ts <= 0:
+        return None
+    return ts / 1e9 if ts > 1e15 else ts / 1e3
+
+
+def trade_session(et) -> str:
+    """Which session an ET wall-clock stamp falls in: 'premarket' 04:00–09:30,
+    'rth' 09:30–16:00, 'afterhours' 16:00–20:00, else 'closed' (weekends
+    closed). Exchange hours, not the house holiday calendar — the callers
+    that gate on trading days apply that themselves."""
+    if et.weekday() >= 5:
+        return "closed"
+    m = et.hour * 60 + et.minute
+    if 240 <= m < 570:
+        return "premarket"
+    if 570 <= m < 960:
+        return "rth"
+    if 960 <= m < 1200:
+        return "afterhours"
+    return "closed"
+
+
+def extended_print(snap: Optional[dict]) -> Optional[dict]:
+    """{price, epoch, date, session} of the snapshot's last trade (the print
+    that keeps moving through pre-market and after-hours while the day
+    aggregate is zero or frozen), or None without a priced, stamped trade."""
+    if not snap:
+        return None
+    try:
+        px = float(snap.get("last_trade_price") or 0)
+    except (TypeError, ValueError):
+        return None
+    epoch = _trade_epoch(snap.get("last_trade_ts_ms"))
+    if px <= 0 or epoch is None:
+        return None
+    try:
+        et = datetime.fromtimestamp(epoch, tz=ZoneInfo("America/New_York"))
+    except (OverflowError, OSError, ValueError):
+        return None
+    return {"price": px, "epoch": epoch, "date": et.date().isoformat(),
+            "session": trade_session(et)}
 
 def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
     """Fetch today's OHLCV snapshot for up to N tickers in one Massive call.

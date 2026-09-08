@@ -436,7 +436,10 @@ def test_engine_fixes_2026_09_05_with_today_bar_reuses_the_cache_guards():
     from sepa import prices as P
     src = inspect.getsource(P.with_today_bar)
     assert "weekday() >= 5" in src, "weekend-dated snapshot rejected"
-    assert "healed = _drop_phantom_tail(out)" in src, "phantom echo rejected by the read-path test"
+    # 2026-09-08: the append + phantom test moved into _append_row so the
+    # pre-market synthetic bar reuses it — the guard must still be on the path.
+    assert "out = _append_row(df, snap_date, o, h, l, c, v)" in src, "the day bar must go through _append_row"
+    assert "healed = _drop_phantom_tail(out)" in inspect.getsource(P._append_row), "phantom echo rejected by the read-path test"
     assert '"reason": None' in src
 
 

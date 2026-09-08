@@ -128,8 +128,10 @@ MIN_TOUCHES_PUSH = 2               # pushes only; the board lists every band + i
 MAX_SINGLES_PER_PASS = 3           # strongest first; the rest ride ONE digest
 DIGEST_MAX = 6                     # names spelled out in one digest body
 STALE_PRINT_SEC = 180              # one-minute cadence: a 3-min-old print is not "now"
-SESSION_OPEN = dtime(9, 31)        # first pass after the open + first prints
-SESSION_CLOSE = dtime(16, 0)
+SESSION_OPEN = dtime(4, 0)         # the pass runs through extended hours (Ajay 2026-09-08)
+SESSION_CLOSE = dtime(20, 0)       # pre-market 04:00 → after-hours 20:00 ET
+PUSH_OPEN = dtime(9, 31)           # phone pushes stay RTH: first pass after the open + prints
+PUSH_CLOSE = dtime(16, 0)
 TRACK_KEEP_DAYS = 2                # track rows older than this are purged every pass
 TRACK_POINTS = 30                  # points per "side:SYM" the API hands the sparkline
 KIND_BREAK = "supply_break_alert"
@@ -147,14 +149,46 @@ def _now_et() -> datetime:
 
 
 def in_session(now: Optional[datetime] = None) -> bool:
-    """RTH 9:31-16:00 ET on NYSE trading days — weekends AND the house holiday
-    calendar (market_hours.reminder.is_market_day; fix 2026-09-05: weekday-only
-    ran every pass on Labor Day and warmed the store with the holiday's date)."""
+    """The pass window: 04:00-20:00 ET on NYSE trading days — pre-market,
+    RTH and after-hours (Ajay 2026-09-08: "enable pre market pricing and let
+    me scan premarket hours … Also after hours"), never weekends or the house
+    holiday calendar (market_hours.reminder.is_market_day; fix 2026-09-05:
+    weekday-only ran every pass on Labor Day and warmed the store with the
+    holiday's date). Phone pushes have their own, narrower window
+    (`push_window`)."""
     now = now or _now_et()
     et = now.astimezone(ET) if now.tzinfo is not None else now
     if not is_market_day(et):
         return False
-    return SESSION_OPEN <= now.time() <= SESSION_CLOSE
+    return SESSION_OPEN <= et.time() <= SESSION_CLOSE
+
+
+def push_window(now: Optional[datetime] = None) -> bool:
+    """Pushes fire only in RTH 9:31-16:00 ET on trading days — the window the
+    pass had before 2026-09-08. A pre-market or after-hours print is thin
+    tape: it moves the boards, never the phone."""
+    now = now or _now_et()
+    et = now.astimezone(ET) if now.tzinfo is not None else now
+    if not is_market_day(et):
+        return False
+    return PUSH_OPEN <= et.time() <= PUSH_CLOSE
+
+
+def session_state(now: Optional[datetime] = None) -> str:
+    """'premarket' | 'rth' | 'afterhours' | 'closed' — the tag the boards print
+    next to a pass so a 7:40 read is never mistaken for the open."""
+    now = now or _now_et()
+    et = now.astimezone(ET) if now.tzinfo is not None else now
+    if not is_market_day(et):
+        return "closed"
+    t = et.time()
+    if SESSION_OPEN <= t < dtime(9, 30):
+        return "premarket"
+    if dtime(9, 30) <= t <= dtime(16, 0):
+        return "rth"
+    if dtime(16, 0) < t <= SESSION_CLOSE:
+        return "afterhours"
+    return "closed"
 
 
 # --------------------------------------------------------------------------
@@ -619,7 +653,7 @@ def build_payload(breaking: list, near_demand: list, *, now: datetime, day: str,
     counts["breaking"], counts["near_demand"] = len(breaking), len(near_demand)
     return _clean({
         "as_of": now.astimezone(ET).isoformat(), "date": day, "in_session": in_session(now),
-        "pass_sec": round(float(pass_sec), 2),
+        "session": session_state(now), "pass_sec": round(float(pass_sec), 2),
         "params": {"edge_pct": EDGE_PCT, "broke_max_pct": BROKE_MAX_PCT,
                    "min_cap_usd": MIN_CAP_USD, "min_touches_push": MIN_TOUCHES_PUSH},
         "counts": counts, "breaking": breaking, "near_demand": near_demand,
@@ -627,7 +661,8 @@ def build_payload(breaking: list, near_demand: list, *, now: datetime, day: str,
 
 
 def empty_payload(reason: str = "no pass yet") -> dict:
-    return {"as_of": None, "date": None, "in_session": False, "pass_sec": None,
+    return {"as_of": None, "date": None, "in_session": False, "session": "closed",
+            "pass_sec": None,
             "params": {"edge_pct": EDGE_PCT, "broke_max_pct": BROKE_MAX_PCT,
                        "min_cap_usd": MIN_CAP_USD, "min_touches_push": MIN_TOUCHES_PUSH},
             "counts": {"breaking": 0, "near_demand": 0, "candidates": 0, "priced": 0,
@@ -685,6 +720,7 @@ def api_payload(*, latest_coll=None, track_coll=None, now: Optional[datetime] = 
         payload["reason"] = f"last pass {payload.get('date')}; no pass yet today"
     else:
         payload["in_session"] = in_session(now)
+    payload["session"] = session_state(now)
     track_coll = track_coll if track_coll is not None else _coll(TRACK_COLL)
     syms = [r["symbol"] for r in (payload.get("breaking") or []) + (payload.get("near_demand") or [])]
     as_of = None
@@ -706,11 +742,15 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                owner: Optional[str] = None, now: Optional[datetime] = None) -> dict:
     """One 1-min pass. Every input is injectable for tests; the cron passes
     none. `force` skips the session gate for in-container smoke tests only;
-    `track=False` (dry runs) reads the board without writing latest/track."""
+    `track=False` (dry runs) reads the board without writing latest/track.
+    Pushes are additionally gated to RTH (`push_window`) — the pass itself
+    runs 04:00-20:00 ET since 2026-09-08 so the boards read extended hours."""
     t0 = time.time()
     now = now or _now_et()
     if not force and not in_session(now):
-        return {"ran": False, "reason": "outside RTH"}
+        return {"ran": False, "reason": "outside the 04:00-20:00 ET pass window"}
+    push_ok = push_window(now)
+    push = bool(push) and push_ok
     day = now.astimezone(ET).date()
     day_iso = day.isoformat()
     if store is None:
@@ -933,7 +973,8 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                             pass_sec=time.time() - t0, counts=counts)
     if track:
         _write_latest(latest_coll, payload)
-    return {"ran": True, "date": day_iso, "as_of": payload["as_of"], "candidates": len(syms),
+    return {"ran": True, "date": day_iso, "as_of": payload["as_of"], "push_window": push_ok,
+            "session": payload.get("session"), "candidates": len(syms),
             "priced": len(prints), "stale_print": stale_print,
             "breaking": payload["breaking"], "near_demand": payload["near_demand"],
             "singles_break": len(b_singles), "digest_break": len(b_digest),

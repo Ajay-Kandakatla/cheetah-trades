@@ -197,6 +197,7 @@ export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: 
 export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral'; lo: number; hi: number; label?: string };
 export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral';
 export type CmLine = { price: number; label: string; tone: CmLineTone };
+export type CmTapeSession = 'premarket' | 'rth' | 'afterhours' | 'closed';
 export type CmMarker = { date: string; label?: string; kind?: string; price?: number };
 export type CmStat = { k: string; v: string };
 export type CmBadge = { text: string; tone: 'good' | 'warn' | 'muted' };
@@ -280,6 +281,11 @@ export type CmBoard = {
   in_session?: boolean;
   reason?: string | null;
   edge_counts?: Record<string, number> | null;
+  /** Every tab (2026-09-08, Ajay: "show real time premarket and extended hours
+   *  trading info as well in all the chart maps") — the clock the board was
+   *  read on. Outside RTH every tile's `now` line already sits on the live
+   *  print (tagged `now · pre` / `now · AH`); the board says so once. */
+  tape_session?: CmTapeSession | null;
   /** Quick Bounce only (2026-09-06) — the weekly study's universe numbers and
    *  its persistence check, printed under the board so the list is read
    *  against its own evidence. */
@@ -1260,12 +1266,25 @@ export function lidBreakStudyText(m: CmLidBreak | null | undefined): string | nu
   return parts.join(' \u00b7 ');
 }
 
-export function breakingPassText(b: Pick<CmBoard, 'pass_as_of' | 'in_session' | 'reason'>): string {
+export function breakingPassText(b: Pick<CmBoard, 'pass_as_of' | 'in_session' | 'reason' | 'tape_session'>): string {
   const iso = b.pass_as_of ? String(b.pass_as_of) : '';
   const hhmm = iso.length >= 16 && iso[10] === 'T' ? iso.slice(11, 16) : '';
   const why = b.reason && b.reason !== 'no pass yet' ? b.reason : '';
   if (!hhmm) return why ? `no pass yet today \u2014 ${why}` : 'no pass yet today';
+  if (b.in_session && (b.tape_session === 'premarket' || b.tape_session === 'afterhours')) {
+    // 2026-09-08: the pass runs 4:00–20:00 ET; the phone only 9:31–16:00.
+    const tape = b.tape_session === 'premarket' ? 'pre-market' : 'after-hours';
+    return `${tape} pass as of ${hhmm} ET \u00b7 thin tape, no phone pushes outside regular hours; these cards refresh every 5`;
+  }
   if (b.in_session) return `as of ${hhmm} ET \u00b7 the pass runs every minute in session; these cards refresh every 5`;
   if (why) return `${why} (${hhmm} ET)`;
   return `market closed \u2014 last pass ${hhmm} ET`;
+}
+
+/** One line under any board read outside regular hours (2026-09-08): where the
+ *  `now` lines came from. Empty in RTH / closed — nothing to explain. */
+export function sessionNoteText(session: CmTapeSession | null | undefined): string {
+  if (session === 'premarket') return '\u{1F305} pre-market prints: every now line sits on the last pre-market trade (now \u00b7 pre) \u2014 thin tape, no phone pushes until 9:31 ET';
+  if (session === 'afterhours') return '\u{1F319} after-hours prints: every now line sits on the last after-hours trade (now \u00b7 AH) \u2014 thin tape, no phone pushes after 16:00 ET';
+  return '';
 }

@@ -316,3 +316,12 @@ an account that hid Chart Maps. To make "everyone" true, the access catalog (`ba
 store.py`) marks `chart-maps` default-on and re-adds it at `CATALOG_VERSION` 24, and
 `effective_features` now grants default-on pages added after a non-owner's last save (owner-only
 pages still need a grant; a page hidden after it was seen stays hidden).
+
+## Pre-market and after-hours prints on every board (2026-09-08)
+
+Ajay: *"enable pre market pricing and let me scan premarket hours … Also after hours"* and,
+with ORCL, *"show real time premarket and Extended hours trading info as well in all the
+chart maps."* Every tile's `now` line now sits on the last extended-hours trade (tagged
+`now · pre` / `now · AH`), the charts carry the pre-market bar, the 🚀 Breaking / near-demand
+pass runs 04:00–20:00 ET, and one note under the tab bar names the tape. Phone pushes stay
+RTH-only. Full rule: `docs/supply_demand/extended_hours.md`.

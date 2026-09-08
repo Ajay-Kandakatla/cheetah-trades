@@ -2677,3 +2677,72 @@ def test_bars_for_falls_back_to_the_shared_frame_when_the_deep_fetch_fails(price
     prices["AAA"] = _frame(200, start=50.0)
     monkeypatch.setattr(S, "_frame_for", lambda sym, need, **kw: (_ for _ in ()).throw(RuntimeError("massive down")))
     assert B.bars_for("AAA", days=756) == []          # fenced: an empty tile, never a 500
+
+
+
+def test_breaking_last_label_tags_extended_hours_prints():
+    # Ajay 2026-09-08: pre-market / after-hours prints drive the board; the tile
+    # says which tape the mark came from.
+    from chart_maps import board as B
+    assert B.last_label("premarket") == "LAST · PRE"
+    assert B.last_label("afterhours") == "LAST · AH"
+    assert B.last_label("rth") == "LAST" and B.last_label(None) == "LAST" and B.last_label("closed") == "LAST"
+
+
+def test_attach_live_now_moves_and_tags_the_now_line_on_every_tab():
+    # Ajay 2026-09-08 (ORCL): "showing last closed but I would like it to show
+    # real time premarket and extended hours trading info as well in all the
+    # chart maps."
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo
+    ET = ZoneInfo("America/New_York")
+    pre = _dt(2026, 9, 8, 8, 20, tzinfo=ET)
+    ns = lambda d: int(d.timestamp() * 1e9)
+    tiles = [
+        {"symbol": "ORCL", "lines": [{"price": 158.78, "label": "now", "tone": "now"},
+                                     {"price": 159.37, "label": "overhead 159.37", "tone": "target"}]},
+        {"symbol": "AAA", "lines": [{"price": 101.5, "label": "LAST · PRE", "tone": "now"}]},
+        {"symbol": "NOLINE", "lines": [{"price": 10.0, "label": "ceiling", "tone": "target"}]},
+        {"symbol": "STALE", "lines": [{"price": 5.0, "label": "now", "tone": "now"}]},
+        {"symbol": "MISSING", "lines": [{"price": 7.0, "label": "now", "tone": "now"}]},
+    ]
+    live = {
+        "ORCL": {"price": 0, "last_trade_price": 166.73, "last_trade_ts_ms": ns(pre), "prev_day_close": 158.78},
+        "AAA": {"price": 0, "last_trade_price": 101.9, "last_trade_ts_ms": ns(pre)},
+        "NOLINE": {"price": 0, "last_trade_price": 10.5, "last_trade_ts_ms": ns(pre)},
+        # yesterday's after-hours print: the price stands as the latest print, no session tag
+        "STALE": {"price": 0, "last_trade_price": 5.2, "last_trade_ts_ms": ns(_dt(2026, 9, 4, 19, 0, tzinfo=ET))},
+    }
+    out = {}
+    stats = B.attach_live_now(tiles, out, live=live, now=pre)
+    assert stats == {"moved": 3, "tagged": 2}, "ORCL, AAA, STALE move; NOLINE has no now line; MISSING has no live row"
+    assert tiles[0]["lines"][0] == {"price": 166.73, "label": "now · pre", "tone": "now"}
+    assert tiles[0]["lines"][1]["price"] == 159.37, "only the now line moves"
+    assert tiles[0]["live_price"] == 166.73 and tiles[0]["live_session"] == "premarket"
+    assert tiles[1]["lines"][0]["label"] == "LAST · PRE" and tiles[1]["lines"][0]["price"] == 101.9
+    assert "live_price" not in tiles[2], "a tile without a now line is left alone"
+    assert tiles[3]["lines"][0] == {"price": 5.2, "label": "now", "tone": "now"}
+    assert "live_session" not in tiles[3]
+    assert tiles[4]["lines"][0]["price"] == 7.0, "no live row → untouched"
+    assert out["tape_session"] == "premarket"
+    # after-hours tag; RTH keeps the plain label; a zero/absent print never moves a line
+    ah = _dt(2026, 9, 8, 17, 15, tzinfo=ET)
+    t2 = [{"symbol": "ORCL", "lines": [{"price": 160.0, "label": "now", "tone": "now"}]}]
+    B.attach_live_now(t2, None, live={"ORCL": {"price": 161.0, "last_trade_price": 161.4, "last_trade_ts_ms": ns(ah)}}, now=ah)
+    assert t2[0]["lines"][0] == {"price": 161.4, "label": "now · AH", "tone": "now"}
+    rth = _dt(2026, 9, 8, 11, 0, tzinfo=ET)
+    t3 = [{"symbol": "ORCL", "lines": [{"price": 160.0, "label": "now", "tone": "now"}]}]
+    B.attach_live_now(t3, None, live={"ORCL": {"price": 162.0, "last_trade_price": 162.0, "last_trade_ts_ms": ns(rth)}}, now=rth)
+    assert t3[0]["lines"][0] == {"price": 162.0, "label": "now", "tone": "now"} and "live_session" not in t3[0]
+    t4 = [{"symbol": "ORCL", "lines": [{"price": 160.0, "label": "now", "tone": "now"}]}]
+    B.attach_live_now(t4, None, live={"ORCL": {"price": 0, "last_trade_price": 0}}, now=rth)
+    assert t4[0]["lines"][0]["price"] == 160.0
+    assert B.now_label("now", "premarket") == "now · pre" and B.now_label("now", "afterhours") == "now · AH"
+    assert B.now_label("now", "rth") == "now" and B.now_label("now", None) == "now"
+    assert B.now_label("LAST · AH", "premarket") == "LAST · AH"
+
+
+def test_attach_live_now_runs_at_the_end_of_board_for_every_tab():
+    src = (Path(__file__).resolve().parents[1] / "chart_maps" / "board.py").read_text()
+    tail = src[src.index("def board("):src.index("def now_label(")]
+    assert "attach_live_now(out.get(\"tiles\") or [], out)" in tail, "the live now-line overlay must run for every tab"

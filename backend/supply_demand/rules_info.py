@@ -154,11 +154,13 @@ def sections() -> dict:
             % (_t(ZB.SESSION_OPEN), _t(ZB.SESSION_CLOSE), _pct(ZB.ARRIVAL_PCT),
                _pct(ZB.TOUCH_TOL_PCT), _pct(ZB.WICK_PCT), _pct(ZB.BOUNCE_MIN_PCT),
                _pct(ZB.STRONG_PCT), ZB.MAX_SINGLES_PER_PASS, ZB.STALE_PRINT_SEC // 60),
-            "🚀 supply_break_alert (every minute, %s–%s ET): crossed a supply band tested ≥ %d "
+            "🚀 supply_break_alert (pass every minute %s–%s ET incl. pre-market and after-hours; "
+            "phone pushes %s–%s ET only): crossed a supply band tested ≥ %d "
             "times, at most %s through it; near tier within %s under; 'new highs' when the "
             "band top is ≥ %d%% of the 252-bar high; room measured to the next band above; "
             "max %d singles; print ≤ %d min old."
-            % (_t(ZE.SESSION_OPEN), _t(ZE.SESSION_CLOSE), ZE.MIN_TOUCHES_PUSH,
+            % (_t(ZE.SESSION_OPEN), _t(ZE.SESSION_CLOSE), _t(ZE.PUSH_OPEN), _t(ZE.PUSH_CLOSE),
+               ZE.MIN_TOUCHES_PUSH,
                _pct(ZE.BROKE_MAX_PCT), _pct(ZE.EDGE_PCT), int(ZE.NEW_HIGH_TOL * 100),
                ZE.MAX_SINGLES_PER_PASS, ZE.STALE_PRINT_SEC // 60),
             "Near demand (within %s of a band) rides the same minute pass as a demand_alert."

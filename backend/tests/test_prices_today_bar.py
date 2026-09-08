@@ -167,3 +167,127 @@ def test_a_genuine_live_bar_still_appends_after_the_guards():
     # a bar that shares ONLY the close (volume differs) is a real session too
     same_close = {**SNAP, "close": float(df["close"].iloc[-1]), "volume": 777.0}
     assert P.with_today_bar(df, "CHPT", snap=same_close)[1]["appended"] is True
+
+
+# ── extended hours (Ajay 2026-09-08: "enable pre market pricing and let me scan
+# premarket hours … Also after hours") ──────────────────────────────────────────
+import datetime as _dt  # noqa: E402
+from zoneinfo import ZoneInfo  # noqa: E402
+
+_ET = ZoneInfo("America/New_York")
+
+
+def _stamp(y, m, d, hh, mm):
+    """A Massive-style ns stamp for an ET wall-clock time."""
+    return int(_dt.datetime(y, m, d, hh, mm, tzinfo=_ET).timestamp() * 1e9)
+
+
+PRE = {"open": 0, "high": 0, "low": 0, "close": 0, "volume": 0, "date": "2026-09-03 00:00:00",
+       "prev_day_close": 5.19, "last_trade_price": 5.61,
+       "last_trade_ts_ms": _stamp(2026, 9, 3, 8, 13)}
+
+
+def test_premarket_print_becomes_a_flat_synthetic_bar():
+    df = _frame()
+    out, info = P.with_today_bar(df, "CHPT", snap=PRE)
+    assert len(out) == len(df) + 1
+    last = out.iloc[-1]
+    assert (last["open"], last["high"], last["low"], last["close"], last["volume"]) == (5.61, 5.61, 5.61, 5.61, 0.0)
+    assert out.index[-1] == pd.Timestamp("2026-09-03 04:00:00")
+    assert info["appended"] is True and info["adjusted"] is False
+    assert info["source"] == "premarket" and info["session"] == "premarket"
+    assert info["last_price"] == 5.61 and info["date"] == "2026-09-03"
+    assert abs(info["as_of_epoch"] - PRE["last_trade_ts_ms"] / 1e9) < 1e-3
+    assert len(df) == 80, "the cached frame itself is never mutated"
+
+
+def test_afterhours_print_extends_the_appended_day_bar():
+    snap = {**SNAP, "last_trade_price": 9.40, "last_trade_ts_ms": _stamp(2026, 9, 3, 17, 5)}
+    out, info = P.with_today_bar(_frame(), "CHPT", snap=snap)
+    last = out.iloc[-1]
+    assert (last["open"], last["high"], last["low"], last["close"]) == (6.9, 9.40, 6.71, 9.40)
+    assert last["volume"] == 30903227.0, "the session's volume stands"
+    assert info["appended"] is True and info["source"] == "afterhours"
+    assert info["session"] == "afterhours" and info["last_price"] == 9.40
+    # a LOWER after-hours print pulls the low, never the high
+    out2, _ = P.with_today_bar(_frame(), "CHPT", snap={**snap, "last_trade_price": 6.50})
+    l2 = out2.iloc[-1]
+    assert (l2["high"], l2["low"], l2["close"]) == (9.2, 6.50, 6.50)
+
+
+def test_afterhours_print_adjusts_the_frame_that_already_holds_today():
+    df = _frame(last="2026-09-03")
+    before = float(df.iloc[-1]["close"])
+    snap = {**SNAP, "last_trade_price": 9.40, "last_trade_ts_ms": _stamp(2026, 9, 3, 18, 0)}
+    out, info = P.with_today_bar(df, "CHPT", snap=snap)
+    assert out is not df and len(out) == len(df)
+    assert out.iloc[-1]["close"] == 9.40 and out.iloc[-1]["high"] == 9.40
+    assert float(df.iloc[-1]["close"]) == before, "the cached frame is never mutated"
+    assert info["appended"] is False and info["adjusted"] is True
+    assert info["source"] == "afterhours" and info["session"] == "afterhours"
+    assert info["date"] == "2026-09-03" and info["last_price"] == 9.40
+
+
+def test_negative_stale_or_off_session_prints_change_nothing():
+    df = _frame()
+    # yesterday's after-hours print under a zero pre-market bar → no bar
+    out, info = P.with_today_bar(df, "CHPT", snap={**PRE, "last_trade_ts_ms": _stamp(2026, 9, 2, 19, 0)})
+    assert out is df and info["appended"] is False
+    # a print stamped before the pre-market opens (03:00) → no bar
+    assert P.with_today_bar(df, "CHPT", snap={**PRE, "last_trade_ts_ms": _stamp(2026, 9, 3, 3, 0)})[1]["appended"] is False
+    # a Saturday stamp → no bar
+    assert P.with_today_bar(df, "CHPT", snap={**PRE, "last_trade_ts_ms": _stamp(2026, 9, 5, 8, 0)})[1]["appended"] is False
+    # unpriced / unstamped / garbage
+    for bad in ({**PRE, "last_trade_price": 0}, {**PRE, "last_trade_ts_ms": None},
+                {**PRE, "last_trade_price": "x"}, {**PRE, "last_trade_ts_ms": "soon"}):
+        out, info = P.with_today_bar(df, "CHPT", snap=bad)
+        assert out is df and info["appended"] is False, bad
+    # an RTH print on a real day bar: the bar is the bar (source stays "snapshot")
+    rth = {**SNAP, "last_trade_price": 9.1069, "last_trade_ts_ms": _stamp(2026, 9, 3, 14, 0)}
+    out, info = P.with_today_bar(df, "CHPT", snap=rth)
+    assert info["source"] == "snapshot" and info["session"] == "rth" and out.iloc[-1]["close"] == 9.1069
+    # an after-hours print of a DIFFERENT day than the day bar → bar unchanged
+    other = {**SNAP, "last_trade_price": 9.40, "last_trade_ts_ms": _stamp(2026, 9, 2, 17, 0)}
+    out, info = P.with_today_bar(df, "CHPT", snap=other)
+    assert out.iloc[-1]["close"] == 9.1069 and info["source"] == "snapshot"
+    # the frame already holds today and the print is RTH → plain no-op
+    held = _frame(last="2026-09-03")
+    out, info = P.with_today_bar(held, "CHPT", snap=rth)
+    assert out is held and info["appended"] is False and info["adjusted"] is False
+
+
+def test_trade_session_clock_and_extended_print():
+    d = lambda hh, mm, day=3: _dt.datetime(2026, 9, day, hh, mm, tzinfo=_ET)
+    assert P.trade_session(d(3, 59)) == "closed" and P.trade_session(d(4, 0)) == "premarket"
+    assert P.trade_session(d(9, 29)) == "premarket" and P.trade_session(d(9, 30)) == "rth"
+    assert P.trade_session(d(15, 59)) == "rth" and P.trade_session(d(16, 0)) == "afterhours"
+    assert P.trade_session(d(19, 59)) == "afterhours" and P.trade_session(d(20, 0)) == "closed"
+    assert P.trade_session(d(10, 0, day=5)) == "closed"      # Saturday
+    ep = P.extended_print(PRE)
+    assert ep["price"] == 5.61 and ep["date"] == "2026-09-03" and ep["session"] == "premarket"
+    assert P.extended_print({}) is None and P.extended_print(None) is None
+    assert P.extended_print({"last_trade_price": 5.0}) is None, "a price without a stamp is not a print"
+    ms = {**PRE, "last_trade_ts_ms": PRE["last_trade_ts_ms"] // 1_000_000}   # ms stamp
+    assert P.extended_print(ms)["session"] == "premarket"
+
+
+def test_support_overlay_treats_an_adjusted_afterhours_frame_as_live():
+    """chart_maps.support._overlay_today: the frame that already holds today,
+    close carried to the after-hours print, is LIVE (as_of = the print's
+    stamp) and the closed frame the caller keeps stays the original."""
+    from chart_maps import support as S
+    df = _frame(last="2026-09-03")
+    snap = {**SNAP, "last_trade_price": 9.40, "last_trade_ts_ms": _stamp(2026, 9, 3, 18, 0)}
+
+    class _P:
+        @staticmethod
+        def with_today_bar(frame, sym):
+            return P.with_today_bar(frame, sym, snap=snap)
+
+    out, as_of, live = S._overlay_today(_P, df, "CHPT")
+    assert live is True and abs(as_of - snap["last_trade_ts_ms"] / 1e9) < 1e-3
+    assert out.iloc[-1]["close"] == 9.40 and df.iloc[-1]["close"] != 9.40
+    # zones read: the adjusted print prices the verdict
+    from supply_demand import price_zones as PZ
+    _df, info = PZ._overlay_today(_P, df, "CHPT")
+    assert info["adjusted"] and info["last_price"] == 9.40

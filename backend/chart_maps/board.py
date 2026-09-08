@@ -33,7 +33,11 @@ setups; it is a study aid, not a forecast.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+ET = ZoneInfo("America/New_York")
 
 # One definition of "closest to the level first, money flow breaks ties" for
 # every demand board that is not the reached one (Ajay 2026-09-03). Pure module
@@ -1859,6 +1863,13 @@ def _hhmm_et(iso) -> Optional[str]:
     return s[11:16] if len(s) >= 16 and s[10] == "T" else None
 
 
+def last_label(session) -> str:
+    """The Breaking tile's price line: 'LAST' in regular hours, tagged when the
+    pass read an extended-hours print (2026-09-08) so a pre-market mark is
+    never mistaken for a session print."""
+    return {"premarket": "LAST · PRE", "afterhours": "LAST · AH"}.get(str(session or ""), "LAST")
+
+
 def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                    themes_first: bool = THEMES_FIRST_DEFAULT,
                    sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER,
@@ -1900,6 +1911,7 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             gen = None
     base = {"tiles": [], "pass_as_of": stamp, "pass_date": payload.get("date"),
             "in_session": bool(payload.get("in_session")), "reason": payload.get("reason"),
+            "tape_session": payload.get("session"),
             "params": payload.get("params"), "edge_counts": payload.get("counts"),
             "generated_at": gen, "disclaimer": ZE.DISCLAIMER, **_room_meta(min_room, 0),
             # Ajay 2026-09-07: "when the last resistance break will the price go to
@@ -1907,7 +1919,7 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "lid_break": LB.board_meta()}
     if not stamp:
         return {**base, "note": "No zone-edge pass stored yet — the board fills from the "
-                                "first pass after 9:31 ET."}
+                                "first pass after 04:00 ET."}
     if not rows:
         hh = _hhmm_et(stamp)
         return {**base, "note": "nothing within %g%% of breaking its last supply band at the "
@@ -1946,7 +1958,7 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             bands.append({"kind": "supply", "lo": float(room["target_lo"]),
                           "hi": float(room["target_hi"]), "label": "next proven lid"})
         lines = [{"price": float(hi), "label": "BREAK", "tone": "target"},
-                 {"price": float(px), "label": "LAST", "tone": "now"}]
+                 {"price": float(px), "label": last_label(payload.get("session")), "tone": "now"}]
         if h252 is not None and h252 > hi * 1.001:
             lines.append({"price": float(h252), "label": "52W", "tone": "neutral"})
         dist_txt = f"broke +{abs(dist):.1f}% today" if broke else f"{dist:.1f}% under the ceiling"
@@ -3529,4 +3541,77 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # caution flag, not a study board, and the generic line would have
     # overwritten the sentence that says it is not a short signal.
     out["disclaimer"] = out.get("disclaimer") or DISCLAIMER
+    # Extended hours on every tab (Ajay 2026-09-08, ORCL): the `now` line
+    # moves to the live print and says which tape it came from.
+    attach_live_now(out.get("tiles") or [], out)
     return out
+
+
+def now_label(label, session) -> str:
+    """The `now` line's label once the live print replaces it: tagged with the
+    session outside RTH ('now · pre' / 'now · AH'), unchanged in RTH and for
+    lines that carry their own wording (the Breaking tile's LAST · PRE)."""
+    base = str(label or "now")
+    if base != "now" or session not in ("premarket", "afterhours"):
+        return base
+    return "now · pre" if session == "premarket" else "now · AH"
+
+
+def attach_live_now(tiles: list, out: Optional[dict] = None, *, live: Optional[dict] = None,
+                    now: Optional[datetime] = None) -> dict:
+    """Move every tile's `now`-toned line to the LIVE print and tag it with the
+    session the print came from. Ajay 2026-09-08 (ORCL): the ticker page read
+    $166.73 pre-market while the Support tile's `now` sat on the $158.78
+    close — every board tab drew its price line off the scan row. One
+    bulk_live_prices call for the shown tiles (`live` injectable for tests);
+    the print is the last trade (pre-market / after-hours included, the same
+    field the demand boards' room gate reads), tagged only when it is stamped
+    TODAY outside RTH. A tile without a now line is left alone (the demand
+    boards price the print in `why` / room). Any failure leaves every tile as
+    it was — a tape outage never blanks a board. Mutates in place; records
+    `tape_session` (the clock now) on `out` and returns {moved, tagged}."""
+    from supply_demand import zone_edge as ZE
+    stats = {"moved": 0, "tagged": 0}
+    syms = sorted({str(t.get("symbol") or "").upper() for t in tiles if t.get("symbol")})
+    if out is not None and "tape_session" not in out:
+        try:
+            out["tape_session"] = ZE.session_state(now)
+        except Exception:                                      # pragma: no cover
+            out["tape_session"] = None
+    if not syms:
+        return stats
+    if live is None:
+        try:
+            from sepa import prices as _p
+            live = _p.bulk_live_prices(syms) or {}
+        except Exception as exc:
+            log.debug("chart maps: live prices unavailable for the now line: %s", exc)
+            return stats
+    from sepa import prices as _p
+    today = (now or datetime.now(ET)).astimezone(ET).date().isoformat()
+    for t in tiles:
+        snap = (live or {}).get(str(t.get("symbol") or "").upper())
+        if not snap:
+            continue
+        px = _snapshot_print(snap)
+        if px is None:
+            continue
+        ep = _p.extended_print(snap) if hasattr(_p, "extended_print") else None
+        sess = None
+        if ep and ep.get("date") == today and ep.get("session") in ("premarket", "afterhours"):
+            sess = ep["session"]
+        hit = False
+        for ln in t.get("lines") or []:
+            if isinstance(ln, dict) and ln.get("tone") == "now":
+                if abs(float(ln.get("price") or 0) - float(px)) > 1e-9:
+                    ln["price"] = round(float(px), 4)
+                    stats["moved"] += 1
+                if sess:
+                    ln["label"] = now_label(ln.get("label"), sess)
+                hit = True
+        if hit:
+            t["live_price"] = round(float(px), 4)
+            if sess:
+                t["live_session"] = sess
+                stats["tagged"] += 1
+    return stats
