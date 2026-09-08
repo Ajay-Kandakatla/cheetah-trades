@@ -78,7 +78,7 @@ export const PatternChart = memo(function PatternChart(
   const H = height;
   const domain = barDomain(bars, tile.bands, tile.lines);
   const bands = clipBands(tile.bands || [], domain);
-  const labels = lineLabels(tile.lines || [], domain, H, PAD_Y);
+  const labels = lineLabels(tile.lines || [], domain, H, PAD_Y, LABEL_FS);
   const axis = priceTicks(domain, H, PAD_Y);
   // The gutter is sized from the labels it has to hold. Ajay 2026-08-19 sent a
   // META tile reading "overhead 553" and "support 527." — a fixed 62 units
@@ -290,6 +290,16 @@ export const PatternChart = memo(function PatternChart(
               </g>
             );
           })}
+
+          {/* pointers: a label pushed off its level points back to it
+            * (Ajay 2026-09-08: "These overlap, can you use some pointers") */}
+          {labels
+            .filter((l) => l.y0 != null && Math.abs(l.y - l.y0) >= 2)
+            .map((l) => (
+              <path key={`ld-${l.text}`} className="pc-leader"
+                    d={`M${plotW},${l.y0} L${plotW + 3},${l.y}`}
+                    stroke={l.color} strokeWidth={0.8} opacity={0.6} fill="none" />
+            ))}
 
           {/* right-edge price labels, de-collided */}
           {labels.map((l) => (

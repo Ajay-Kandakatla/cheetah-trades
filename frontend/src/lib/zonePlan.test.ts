@@ -233,6 +233,28 @@ describe('layoutLabels — the plan must stay readable when levels crowd', () =>
     expect(out.map((o) => o.text)).toEqual(['STOP']);
   });
 
+  it('a pile-up beyond maxShift still separates every plan label and remembers its level (y0)', () => {
+    // Ajay 2026-09-08 (Support tab, 5 labels inside 20 units): plan labels that
+    // could not fit within maxShift were pinned onto each other. They now travel
+    // as far as the bounds allow, and each keeps y0 for the pointer.
+    const out = layoutLabels(
+      [L(100, 'CHoCH', 2), L(102, 'overhead', 2), L(104, 'now', 2), L(106, 'ORB', 2), L(108, 'support', 2), L(110, 'BOS', 2)],
+      { minGap: 11, maxShift: 4, top: 0, bottom: 400 },
+    );
+    expect(out).toHaveLength(6);
+    for (let i = 1; i < out.length; i += 1) {
+      expect(Math.abs(out[i].y - out[i - 1].y)).toBeGreaterThanOrEqual(11);
+    }
+    const byText = Object.fromEntries(out.map((o) => [o.text, o]));
+    expect(byText.CHoCH.y0).toBe(100);
+    expect(byText.BOS.y0).toBe(110);
+    expect(out.some((o) => o.y !== o.y0)).toBe(true);
+    // a lone label stays put: y === y0, nothing to point at
+    const alone = layoutLabels([L(300, 'now', 2)], { minGap: 11 });
+    expect(alone[0].y).toBe(300);
+    expect(alone[0].y0).toBe(300);
+  });
+
   it('returns labels sorted top-to-bottom', () => {
     const out = layoutLabels([L(200, 'low', 2), L(40, 'high', 2)], { minGap: 11 });
     expect(out.map((o) => o.text)).toEqual(['high', 'low']);

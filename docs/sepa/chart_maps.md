@@ -324,6 +324,8 @@ with ORCL, *"show real time premarket and Extended hours trading info as well in
 chart maps."* Every tile's `now` line now sits on the last extended-hours trade (tagged
 `now · pre` / `now · AH`), the charts carry the pre-market bar, the 🚀 Breaking / near-demand
 pass runs 04:00–20:00 ET, and one note under the tab bar names the tape. The now label prints the
-live price on every chart ("now 4.17", `lineLabels` → `nowLabelText`). Phone pushes ride the
+live price on every chart ("now 4.17", `lineLabels` → `nowLabelText`). Right-edge labels never
+stack on each other any more: the gap follows the type size, a plan label travels as far as the
+bounds allow, and a pointer (`.pc-leader`, `LabelItem.y0` → `y`) leads back to its level. Phone pushes ride the
 same window since the same afternoon (body tagged pre-mkt / after-hrs). Full rule:
 `docs/supply_demand/extended_hours.md`.

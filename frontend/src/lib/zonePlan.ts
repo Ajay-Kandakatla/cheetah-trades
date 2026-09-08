@@ -397,6 +397,11 @@ export function retailView(r: Retail | null | undefined):
 export type LabelItem = {
   /** Ideal vertical position, in SVG user units. */
   y: number;
+  /** The level's own y, set by layoutLabels on every placed item. When it
+   *  differs from `y` the label was pushed off its level and the chart draws a
+   *  pointer back to it (Ajay 2026-09-08: "These overlap, can you use some
+   *  pointers"). */
+  y0?: number;
   text: string;
   color: string;
   bold?: boolean;
@@ -436,17 +441,27 @@ export function layoutLabels(
   const clashes = (y: number) =>
     y < top || y > bottom || placed.some((p) => Math.abs(p.y - y) < minGap);
 
+  const reach = Number.isFinite(bottom) ? Math.max(maxShift, bottom - top) : maxShift * 20;
   for (const item of ordered) {
     let y: number | null = null;
     for (let shift = 0; shift <= maxShift; shift += 1) {
       if (!clashes(item.y + shift)) { y = item.y + shift; break; }
       if (shift && !clashes(item.y - shift)) { y = item.y - shift; break; }
     }
+    if (y == null && item.priority >= 2) {
+      // The plan is never dropped — and since 2026-09-08 never printed on top
+      // of another label either: keep looking, as far as the drawing bounds
+      // allow, and let the pointer (y0 → y) say where the level really is.
+      for (let shift = maxShift + 1; shift <= reach; shift += 1) {
+        if (!clashes(item.y + shift)) { y = item.y + shift; break; }
+        if (!clashes(item.y - shift)) { y = item.y - shift; break; }
+      }
+    }
     if (y == null) {
-      if (item.priority >= 2) y = item.y;   // never drop the plan
+      if (item.priority >= 2) y = item.y;   // truly no room anywhere: pin
       else continue;                        // drop a colliding band label
     }
-    placed.push({ ...item, y });
+    placed.push({ ...item, y, y0: item.y });
   }
   return placed.sort((a, b) => a.y - b.y);
 }

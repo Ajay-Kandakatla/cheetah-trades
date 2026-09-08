@@ -52,6 +52,25 @@ describe('PatternChart', () => {
 
   // The board exists to be clicked through — a tile that is not a link is a
   // dead end, which is the one thing Ajay asked for explicitly.
+  it('draws a pointer from a displaced label back to its level, and none when nothing moved', () => {
+    // Ajay 2026-09-08: "These overlap, can you use some pointers"
+    const crowded: CmTile = {
+      ...TILE,
+      lines: [
+        { price: 12.40, label: 'BUY', tone: 'buy' },
+        { price: 12.42, label: 'STOP', tone: 'stop' },
+        { price: 12.44, label: 'TARGET', tone: 'target' },
+        { price: 12.46, label: 'now', tone: 'now' },
+      ],
+    };
+    const { container } = draw(crowded);
+    expect(container.querySelectorAll('.pc-leader').length).toBeGreaterThanOrEqual(1);
+    const texts = Array.from(container.querySelectorAll('svg text')).map((t) => t.textContent);
+    expect(texts).toEqual(expect.arrayContaining(['BUY', 'STOP', 'TARGET', 'now 12.46']));
+    const { container: calm } = draw(TILE);                   // PIVOT 12.4 vs STOP 11.1: far apart
+    expect(calm.querySelectorAll('.pc-leader').length).toBe(0);
+  });
+
   it('is a link to the ticker SEPA detail page', () => {
     draw(TILE);
     const link = screen.getByRole('link', { name: /IONQ — open SEPA detail/ });

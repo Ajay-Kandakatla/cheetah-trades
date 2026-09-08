@@ -305,6 +305,21 @@ describe('lineLabels', () => {
     expect(Math.abs(out[0].y - out[1].y)).toBeGreaterThanOrEqual(10);
   });
 
+  it('spaces labels by the type size and keeps the level (y0) for the pointer', () => {
+    const lines: CmLine[] = [
+      { price: 15.00, label: 'now', tone: 'now' },
+      { price: 15.02, label: 'overhead 15.02', tone: 'target' },
+      { price: 14.98, label: 'support 14.98', tone: 'buy' },
+    ];
+    const out = lineLabels(lines, d, 200, 8, 12);
+    expect(out).toHaveLength(3);
+    for (let i = 1; i < out.length; i += 1) {
+      expect(Math.abs(out[i].y - out[i - 1].y)).toBeGreaterThanOrEqual(14);   // 12 + 2
+    }
+    out.forEach((o) => expect(typeof o.y0).toBe('number'));
+    expect(out.some((o) => o.y !== o.y0)).toBe(true);
+  });
+
   it('marks the buy level bold so the entry reads first', () => {
     const out = lineLabels([{ price: 15, label: 'BUY', tone: 'buy' }], d, 200);
     expect(out[0].bold).toBe(true);

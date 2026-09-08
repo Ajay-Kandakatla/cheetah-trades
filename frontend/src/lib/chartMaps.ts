@@ -804,7 +804,7 @@ export function nowLabelText(label: string, price: number): string {
 }
 
 export function lineLabels(
-  lines: CmLine[], d: Domain, height: number, padY = 8,
+  lines: CmLine[], d: Domain, height: number, padY = 8, fontSize = 9.5,
 ): LabelItem[] {
   const items: LabelItem[] = lines
     .filter((l) => Number.isFinite(l.price) && l.price >= d.lo && l.price <= d.hi)
@@ -815,7 +815,11 @@ export function lineLabels(
       bold: l.tone === 'buy',
       priority: TONE_PRIORITY[l.tone] ?? 2,
     }));
-  return layoutLabels(items, { minGap: 10, top: 6, bottom: height - 4, maxShift: 22 });
+  // The gap follows the type size: a 10-unit gap under 9.5-unit text let two
+  // labels touch, and a plan label that could not fit within maxShift used to
+  // be pinned onto its neighbour (Ajay 2026-09-08: "These overlap"). Now it
+  // travels further and a pointer leads back to its level.
+  return layoutLabels(items, { minGap: fontSize + 2, top: 6, bottom: height - 4, maxShift: 22 });
 }
 
 /* ── price axis (2026-08-19) ──────────────────────────────────────────────────
