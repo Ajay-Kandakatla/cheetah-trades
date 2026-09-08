@@ -206,7 +206,7 @@ const DAY_CHOICES: { days: number; label: string; window: string; sinceOffset: n
   { days: 5,  label: '5 days',    window: 'in the last 5 days',  sinceOffset: 4 },
   { days: 30, label: '30 days',   window: 'in the last 30 days', sinceOffset: 29 },
 ];
-const KIND_CHIPS: string[] = [...ZONE_KINDS, 'position_alert', 'pivot_alert', 'promo_alert', 'todo_reminder'];
+const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
 const ALL = 'all';
 /** Typing "AVGO" is one query, not four (review 2026-09-05). Enter / blur commit at once. */
 export const TICKER_DEBOUNCE_MS = 300;
@@ -214,11 +214,16 @@ export const TICKER_DEBOUNCE_MS = 300;
 const sameSet = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
 
+/** Ajay 2026-09-08: "The alerts I am getting on the phone are not the same as
+ *  the ones on alerts page" — the page opened on the three zone kinds while
+ *  the phone also rang with trade flashes, promo movers and Auto-Pilot
+ *  fills. It now opens on EVERYTHING that pushed (no kinds param = the
+ *  endpoint's full feed); the chips narrow from there. */
 export function parseKinds(raw: string | null): string[] | 'all' {
-  if (raw == null || raw === '') return [...ZONE_KINDS];
+  if (raw == null || raw === '') return 'all';
   if (raw === ALL) return 'all';
   const ks = raw.split(',').map((s) => s.trim()).filter(Boolean);
-  return ks.length ? ks : [...ZONE_KINDS];
+  return ks.length ? ks : 'all';
 }
 
 export function parseDays(raw: string | null): number {

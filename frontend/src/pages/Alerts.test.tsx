@@ -117,14 +117,18 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('Alerts page — the query it sends', () => {
-  it('defaults to the three zone kinds ONLY, since 00:00 ET today, at the 500 cap', async () => {
+  it('defaults to EVERY push (no kinds param), since 00:00 ET today, at the 500 cap', async () => {
+    // Ajay 2026-09-08: the phone and the page must list the same pushes.
     const fn = stubFetch();
     draw();
     await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
     const u = lastRecent(fn);
-    expect(u.searchParams.get('kinds')).toBe('demand_alert,zone_bounce_alert,supply_break_alert');
-    // NEGATIVE: none of the other chips are on by default.
-    expect(u.searchParams.get('kinds')).not.toMatch(/position_alert|pivot_alert|promo_alert|todo_reminder/);
+    expect(u.searchParams.get('kinds')).toBeNull();
+    expect(screen.getByRole('button', { name: '📣 all pushes' })).toHaveAttribute('aria-pressed', 'true');
+    // every kind that pages the phone has a chip; in "all" mode each reads as included
+    for (const name of ['⚡ Trade flash at a zone', '🤖 Auto-Pilot', '🎪 Promo mover', '💼 Position alert']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+    }
     expect(u.searchParams.get('since')).toBe(String(startOfEtDay(0, NOW)));
     expect(u.searchParams.get('since')).toBe(String(T('2026-09-05T04:00:00Z')));
     expect(u.searchParams.get('limit')).toBe('500');
@@ -195,13 +199,13 @@ describe('Alerts page — the query it sends', () => {
     draw('/alerts?ticker=NVDA&days=1');
     await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
     expect(lastRecent(fn).searchParams.get('ticker')).toBe('NVDA');
-    expect(lastRecent(fn).searchParams.get('kinds')).toBe('demand_alert,zone_bounce_alert,supply_break_alert');
+    expect(lastRecent(fn).searchParams.get('kinds')).toBeNull();
     expect((screen.getByLabelText('Ticker') as HTMLInputElement).value).toBe('NVDA');
   });
 
-  it('kind chips: adding one widens the list; "all pushes" drops the filter; the last chip cannot be turned off', async () => {
+  it('kind chips: from "all" one chip narrows; a second widens; "all pushes" drops the filter; the last chip cannot be turned off', async () => {
     const fn = stubFetch();
-    draw();
+    draw('/alerts?kinds=demand_alert,zone_bounce_alert,supply_break_alert');
     await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: '💼 Position alert' }));
     await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('demand_alert,zone_bounce_alert,supply_break_alert,position_alert'));
@@ -278,21 +282,28 @@ describe('Alerts page — the rows', () => {
 describe('Alerts page — the honest empty state', () => {
   it('names the kinds and the window, and carries today\'s skip counts', async () => {
     stubFetch({ rows: [] }, STATUS_LIVE);
-    draw();
+    draw('/alerts?kinds=demand_alert,zone_bounce_alert,supply_break_alert');
     const empty = await screen.findByTestId('alerts-empty');
     expect(empty).toHaveTextContent('No zone alerts today. — the gate skipped 14 (room) / 3 (proximity) today');
   });
 
+  it('in the default "all" mode the empty sentence names no kind (2026-09-08)', async () => {
+    stubFetch({ rows: [] });
+    draw();
+    const empty = await screen.findByTestId('alerts-empty');
+    expect(empty).toHaveTextContent(/^No alerts today\./);
+  });
+
   it('with a ticker and a wider window the sentence says both', async () => {
     stubFetch({ rows: [] }, STATUS_LIVE);
-    draw('/alerts?ticker=NVDA&days=30');
+    draw('/alerts?kinds=demand_alert,zone_bounce_alert,supply_break_alert&ticker=NVDA&days=30');
     const empty = await screen.findByTestId('alerts-empty');
     expect(empty).toHaveTextContent(/^No zone alerts for NVDA in the last 30 days\./);
   });
 
   it('NEGATIVE: skips from ANOTHER day are not claimed as today\'s', async () => {
     stubFetch({ rows: [] }, STATUS_CLOSED);          // zone_edge skipped 9 on 2026-09-04
-    draw();
+    draw('/alerts?kinds=demand_alert,zone_bounce_alert,supply_break_alert');
     const empty = await screen.findByTestId('alerts-empty');
     expect(empty).toHaveTextContent('No zone alerts today.');
     expect(empty).not.toHaveTextContent(/skipped/);
@@ -300,7 +311,7 @@ describe('Alerts page — the honest empty state', () => {
 
   it('NEGATIVE: the Yesterday window never carries today\'s skip note', async () => {
     stubFetch({ rows: [ROWS[0]] }, STATUS_LIVE);     // only a today row → yesterday is empty
-    draw('/alerts?days=2');
+    draw('/alerts?kinds=demand_alert,zone_bounce_alert,supply_break_alert&days=2');
     const empty = await screen.findByTestId('alerts-empty');
     expect(empty).toHaveTextContent('No zone alerts yesterday.');
     expect(empty).not.toHaveTextContent(/skipped/);
