@@ -687,3 +687,85 @@ def test_put_spread_close_realizes_the_credit_minus_the_buy_back(oenv):
     assert j["wins"] == 1 and j["realized_pnl"] == 190.0
     assert j["expectancy_pct"] == pytest.approx(190.0 / 760.0 * 100.0, abs=0.01), "gain on the $ at risk (max loss)"
     assert "+190" in pushes[0][2]
+
+
+# ── the journal (Ajay 2026-09-08: "There was no journal on why we entered INTC") ─
+INTC_DOC = {"pos_id": "INTC-2026-09-08", "symbol": "INTC", "strategy": "options_zone", "status": "open",
+            "structure": "long_call", "otype": "call", "qty": 1, "debit": 9.7, "credit": None, "width": None,
+            "max_loss": 970.0, "expiry": "2026-10-09", "dte": 31, "iv": 0.6378, "delta": 0.6052,
+            "band": {"kind": "demand", "lo": 100.61, "hi": 104.19, "touches": 1, "strength": 52.0},
+            "entry_underlying": 101.205, "stop_underlying": 100.11, "target_underlying": 141.45,
+            "earnings": "2026-10-22", "budget": 992.57,
+            "room": {"state": "ROOM", "room_pct": 39.8, "target": 141.45, "touches": 2},
+            "legs": [{"symbol": "INTC261009C00100000", "side": "buy", "position_intent": "buy_to_open",
+                      "ratio_qty": 1, "strike": 100.0, "role": "long"}],
+            "structure_reason": {"put_spread_fallback": "INTC261009P00100000: open interest 137 < 200",
+                                 "spread_fallback": "no liquid strike at or above the target 141.45"},
+            "close_reason": None, "exit_credit": None, "realized_pnl": None, "closed_ts": None}
+
+
+def test_narrative_says_what_why_how_and_every_exit_from_the_doc_alone():
+    n = OL.narrative(INTC_DOC)
+    assert n.startswith("Bought INTC — 1 × Oct 9 call ($100 long) @ $9.7 ($970 at risk).")
+    assert "the stock printed 101.2 in the demand band 100.61–104.19 (1 touch)" in n
+    assert "room +39.8% to 141.45 (the first supply band); alert gate passed" in n
+    assert "Expiry 2026-10-09, 31 DTE inside the 28–60 window; earnings 2026-10-22, after expiry." in n
+    assert "Long $100 call = highest strike at or under the band top with delta 0.61 (0.55–0.75)." in n
+    assert ("IV 64% ≥ 45% asked for a put spread under the floor — INTC261009P00100000: open interest 137 < 200"
+            " — then a bull call spread: no liquid strike at or above the target 141.45 — so a long call.") in n
+    assert "Size: 1 contract, $970 at risk inside the $992.57 budget (min 1% of equity, $1500)." in n
+    assert n.endswith("Exits on the stock, never the premium: under 100.11 (band floor −0.5%) → close; "
+                      "at 141.45 → close; DTE ≤ 7 (by 2026-10-02) → close; earnings within 2 days → close.")
+    assert "Closed" not in n and "Closing" not in n
+
+
+def test_narrative_closing_closed_and_the_other_structures():
+    closing = dict(INTC_DOC, status="closing", close_reason="INTC 99.80 under the band floor 100.11")
+    assert OL.narrative(closing).endswith("Closing: INTC 99.80 under the band floor 100.11.")
+    closed = dict(INTC_DOC, status="closed", close_reason="target 141.45 hit", exit_credit=41.2,
+                  realized_pnl=3150.0, closed_ts="2026-09-30T15:10:00Z")
+    n = OL.narrative(closed)
+    assert n.endswith("Closed Sep 30: target 141.45 hit — out at $41.2, realized +$3150 (+325% of the risk).")
+    loser = dict(closed, realized_pnl=-970.0, exit_credit=0.0, close_reason="DTE 7 <= 7")
+    assert "realized −$970 (-100% of the risk)" in OL.narrative(loser)
+    # cheap IV → the default sentence; a sold put spread reads as sold with its buy-back
+    cheap = dict(INTC_DOC, iv=0.30, structure_reason={})
+    assert "IV 30% < 45%: long call by default." in OL.narrative(cheap)
+    ps = dict(INTC_DOC, structure="short_put_spread", otype="put", credit=1.9, debit=-1.9, width=5.0,
+              max_loss=310.0, take_profit_debit=0.48,
+              legs=[{"symbol": "x", "side": "sell", "position_intent": "sell_to_open", "ratio_qty": 1, "strike": 100.0, "role": "short"},
+                    {"symbol": "y", "side": "buy", "position_intent": "buy_to_open", "ratio_qty": 1, "strike": 95.0, "role": "long"}],
+              structure_reason={})
+    n = OL.narrative(ps)
+    assert n.startswith("Sold INTC — 1 × Oct 9 put spread (sold) ($100 short / $95 long) for a $1.9 credit ($310 at risk).")
+    assert "asked for a put spread under the floor — sold it." in n
+    assert "buy back at ≤ $0.48 (25% of the credit)" in n
+    # NEGATIVE: an empty / partial doc never raises and never invents a number
+    assert OL.narrative({}).startswith("Bought ?.")
+    thin = OL.narrative({"symbol": "X", "status": "open"})
+    assert "Expiry" not in thin and "Size" not in thin and "IV" not in thin and "under" not in thin
+    assert "earnings within 2 days → close" in thin
+
+
+def test_entry_keeps_the_structure_reasons_and_the_tab_row_carries_the_narrative(oenv):
+    snaps = {k: dict(v) for k, v in SNAPS_LONG_CALL.items()}
+    snaps[_occ(165)]["iv"] = 0.55
+    contracts = [c for c in CONTRACTS if float(c["strike_price"]) < 190]
+    fake, db, _ = oenv(snaps=snaps, contracts=contracts, puts=[])
+    OL.run()
+    pos = _pos(db)
+    assert set(pos["structure_reason"]) == {"put_spread_fallback", "spread_fallback"}
+    assert pos["budget"] is not None
+    n = OL.narrative(pos)
+    assert "IV 55% ≥ 45% asked for a put spread" in n and "so a long call." in n
+    assert OL._public(pos)["narrative"] == n
+    import inspect
+    assert 'd["narrative"] = narrative(doc)' in inspect.getsource(OL._public), "every tab row carries its why"
+
+
+def test_plain_long_call_entry_has_no_fallback_reasons(oenv):
+    fake, db, _ = oenv()
+    OL.run()
+    pos = _pos(db)
+    assert pos["structure_reason"] == {}
+    assert "long call by default" in OL.narrative(pos)

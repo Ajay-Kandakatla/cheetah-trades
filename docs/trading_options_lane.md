@@ -106,3 +106,28 @@ guard in `backend/tests/test_trading_contracts.py`,
 
 `PUT_SPREAD_WIDTH_PCT` 5, `MIN_CREDIT_PCT_OF_WIDTH` 15, `TAKE_PROFIT_PCT_OF_CREDIT`
 25. Pinned in `tests/test_trading_contracts.py`.
+
+## The why line (2026-09-08)
+
+Ajay: *"There was no journal on why we entered INTC."* Every open and closed options position now
+carries `narrative` — built on read by `options_lane.narrative(doc)` from the position doc alone
+(nothing invented; a missing field drops its sentence), in the stock lanes' journal voice:
+
+> Bought INTC — 1 × Oct 9 call ($100 long) @ $9.7 ($970 at risk). Options lane entry (paper
+> Auto-Pilot, owner rules): the stock printed 101.2 in the demand band 100.61–104.19 (1 touch);
+> room +39.8% to 141.45 (the first supply band); alert gate passed. Expiry 2026-10-09, 31 DTE
+> inside the 28–60 window; earnings 2026-10-22, after expiry. Long $100 call = highest strike at
+> or under the band top with delta 0.61 (0.55–0.75). IV 64% ≥ 45% asked for a put spread under
+> the floor — INTC261009P00100000: open interest 137 < 200 — then a bull call spread: no liquid
+> strike at or above the target 141.45 — so a long call. Size: 1 contract, $970 at risk inside
+> the $992.57 budget. Exits on the stock, never the premium: under 100.11 → close; at 141.45 →
+> close; DTE ≤ 7 (by 2026-10-02) → close; earnings within 2 days → close.
+
+Closing / closed positions append the exit and the realized result. To say *why this
+structure*, the entry now keeps `structure_reason` (`put_spread_fallback`, `spread_fallback`
+from the plan) and `budget` on the doc; INTC's were backfilled from its `options_entry` ledger
+row. The Auto-Pilot ▸ Options tab prints the line under each position row
+(`data-testid="options-why"`). Tests: `test_options_lane.py` (the INTC doc word for word, closing /
+closed / sold put spread / cheap-IV variants, NEGATIVE empty doc; the entry keeps the reasons;
+`_public` carries the narrative), `OptionsLaneTab.test.tsx` (one why row per position that has
+one).

@@ -443,7 +443,163 @@ def _ledger_disabled_once(cfg: dict, gate: dict) -> None:
 
 def _public(doc: dict) -> dict:
     d = {k: v for k, v in (doc or {}).items() if k != "_id"}
+    # Ajay 2026-09-08: "There was no journal on why we entered INTC" — every
+    # row the tab shows carries its why, built from the doc on read.
+    d["narrative"] = narrative(doc)
     return d
+
+
+def _fmt_px(v) -> str:
+    x = _f(v)
+    if x is None:
+        return "?"
+    return ("%.2f" % x).rstrip("0").rstrip(".") if abs(x) < 1000 else "%.0f" % x
+
+
+def _fmt_date(iso) -> str:
+    try:
+        d = date.fromisoformat(str(iso)[:10])
+        return d.strftime("%b %-d")
+    except (TypeError, ValueError):
+        return str(iso or "?")
+
+
+def narrative(pos: dict) -> str:
+    """Prose journal for one options position, built ONLY from the doc —
+    nothing is invented; a missing field drops its sentence. Same voice as
+    trading.journal.narrative for the stock lanes (Ajay 2026-09-08: "There was
+    no journal on why we entered INTC"). Open: what, why, how the contract
+    was picked, the exits. Closing / closed: the exit appended."""
+    pos = pos or {}
+    sym = str(pos.get("symbol") or "?")
+    structure = str(pos.get("structure") or "long_call")
+    legs = [l for l in (pos.get("legs") or []) if isinstance(l, dict)]
+    qty = _f(pos.get("qty"))
+    exp = pos.get("expiry")
+    parts = []
+
+    # 1. what
+    strikes = " / ".join("$%s %s" % (_fmt_px(l.get("strike")), l.get("role") or "") for l in legs).strip()
+    kind = {"long_call": "call", "bull_call_spread": "bull call spread",
+            "short_put_spread": "put spread (sold)"}.get(structure, structure.replace("_", " "))
+    head = ("Sold %s" if structure == "short_put_spread" else "Bought %s") % sym
+    if qty is not None and exp:
+        head += " — %d × %s %s" % (int(qty), _fmt_date(exp), kind)
+        if strikes:
+            head += " (%s)" % strikes
+    credit, debit, max_loss = _f(pos.get("credit")), _f(pos.get("debit")), _f(pos.get("max_loss"))
+    if structure == "short_put_spread" and credit is not None:
+        head += " for a $%s credit" % _fmt_px(credit)
+    elif debit is not None:
+        head += " @ $%s" % _fmt_px(debit)
+    if max_loss is not None:
+        head += " ($%s at risk)" % _fmt_px(max_loss)
+    parts.append(head + ".")
+
+    # 2. why — the signal, the band, the room
+    band = pos.get("band") if isinstance(pos.get("band"), dict) else {}
+    room = pos.get("room") if isinstance(pos.get("room"), dict) else {}
+    why = "Options lane entry (paper Auto-Pilot, owner rules)"
+    last = _f(pos.get("entry_underlying"))
+    if band.get("lo") is not None and band.get("hi") is not None:
+        rel = "in" if (last is not None and float(band["lo"]) <= last <= float(band["hi"])) else "at"
+        why += ": the stock printed %s %s the demand band %s–%s" % (
+            _fmt_px(last) if last is not None else "?", rel, _fmt_px(band["lo"]), _fmt_px(band["hi"]))
+        t = _f(band.get("touches"))
+        if t is not None and t > 0:
+            why += " (%d touch%s)" % (int(t), "" if int(t) == 1 else "es")
+    tgt = _f(pos.get("target_underlying"))
+    if room.get("room_pct") is not None and tgt is not None:
+        why += "; room +%s%% to %s (the first supply band)" % (_fmt_px(room["room_pct"]), _fmt_px(tgt))
+    elif tgt is None and room.get("state") == "CLEAR":
+        why += "; clear runway overhead"
+    why += "; alert gate passed (≥ 5% room, ≤ 1% above the band)."
+    parts.append(why)
+
+    # 3. the contract: expiry, earnings, strike, structure decision
+    dte = _f(pos.get("dte"))
+    if exp:
+        seg = "Expiry %s" % exp
+        if dte is not None:
+            seg += ", %d DTE inside the %d–%d window" % (int(dte), MIN_DTE, MAX_DTE)
+        earn = pos.get("earnings")
+        if earn:
+            after = str(earn)[:10] > str(exp)[:10]
+            seg += "; earnings %s, %s expiry" % (earn, "after" if after else "before")
+        else:
+            seg += "; no earnings date on file"
+        parts.append(seg + ".")
+    delta = _f(pos.get("delta"))
+    long_leg = next((l for l in legs if l.get("role") == "long"), None)
+    if long_leg is not None and structure in ("long_call", "bull_call_spread"):
+        seg = "Long $%s call = highest strike at or under the band top" % _fmt_px(long_leg.get("strike"))
+        if delta is not None:
+            seg += " with delta %.2f (%.2f–%.2f)" % (delta, DELTA_LO, DELTA_HI)
+        parts.append(seg + ".")
+    iv = _f(pos.get("iv"))
+    reasons = pos.get("structure_reason") if isinstance(pos.get("structure_reason"), dict) else {}
+    if iv is not None:
+        if iv >= IV_SPREAD_THRESHOLD:
+            seg = "IV %d%% ≥ %d%% asked for a put spread under the floor" % (round(iv * 100), round(IV_SPREAD_THRESHOLD * 100))
+            if structure == "short_put_spread":
+                seg += " — sold it"
+            else:
+                if reasons.get("put_spread_fallback"):
+                    seg += " — %s" % reasons["put_spread_fallback"]
+                if structure == "bull_call_spread":
+                    seg += " — so a bull call spread short at the supply band"
+                else:
+                    if reasons.get("spread_fallback"):
+                        seg += " — then a bull call spread: %s" % reasons["spread_fallback"]
+                    seg += " — so a long call"
+            parts.append(seg + ".")
+        else:
+            parts.append("IV %d%% < %d%%: long call by default." % (round(iv * 100), round(IV_SPREAD_THRESHOLD * 100)))
+    budget = _f(pos.get("budget"))
+    if qty is not None and max_loss is not None:
+        seg = "Size: %d contract%s, $%s at risk" % (int(qty), "" if int(qty) == 1 else "s", _fmt_px(max_loss))
+        if budget is not None:
+            seg += " inside the $%s budget (min %g%% of equity, $%s)" % (_fmt_px(budget), RISK_PCT_OF_EQUITY, _fmt_px(MAX_PREMIUM_PER_TRADE))
+        parts.append(seg + ".")
+
+    # 4. exits — on the stock, never the premium
+    ex = []
+    stop = _f(pos.get("stop_underlying"))
+    if stop is not None:
+        ex.append("under %s (band floor −%g%%) → close" % (_fmt_px(stop), STOP_BUFFER_PCT))
+    if tgt is not None:
+        ex.append("at %s → close" % _fmt_px(tgt))
+    if exp:
+        try:
+            by = date.fromisoformat(str(exp)[:10]) - timedelta(days=CLOSE_DTE)
+            ex.append("DTE ≤ %d (by %s) → close" % (CLOSE_DTE, by.isoformat()))
+        except (TypeError, ValueError):
+            ex.append("DTE ≤ %d → close" % CLOSE_DTE)
+    ex.append("earnings within %d days → close" % EARNINGS_CLOSE_DAYS)
+    tp = _f(pos.get("take_profit_debit"))
+    if structure == "short_put_spread" and tp is not None:
+        ex.append("buy back at ≤ $%s (%g%% of the credit)" % (_fmt_px(tp), TAKE_PROFIT_PCT_OF_CREDIT))
+    parts.append("Exits on the stock, never the premium: " + "; ".join(ex) + ".")
+
+    # 5. closing / closed
+    status = str(pos.get("status") or "open")
+    if status == "closing" and pos.get("close_reason"):
+        parts.append("Closing: %s." % pos["close_reason"])
+    elif status == "closed":
+        seg = "Closed"
+        if pos.get("closed_ts"):
+            seg += " %s" % _fmt_date(pos["closed_ts"])
+        if pos.get("close_reason"):
+            seg += ": %s" % pos["close_reason"]
+        xc, pnl = _f(pos.get("exit_credit")), _f(pos.get("realized_pnl"))
+        if xc is not None:
+            seg += " — out at $%s" % _fmt_px(xc)
+        if pnl is not None:
+            seg += ", realized %s$%s" % ("+" if pnl >= 0 else "−", _fmt_px(abs(pnl)))
+            if max_loss:
+                seg += " (%+.0f%% of the risk)" % (pnl / max_loss * 100.0)
+        parts.append(seg + ".")
+    return " ".join(parts)
 
 
 # ── entry ────────────────────────────────────────────────────────────────────
@@ -689,6 +845,11 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
                "entry_underlying": plan["last"], "stop_underlying": plan["stop_underlying"],
                "target_underlying": plan.get("target_underlying"),
                "earnings": plan.get("earnings"), "room": gate[1].get("room"),
+               # why THIS structure (2026-09-08): the fallback reasons the plan
+               # recorded, kept on the doc so the journal can say them.
+               "structure_reason": {k: plan[k] for k in ("put_spread_fallback", "spread_fallback")
+                                    if plan.get(k)},
+               "budget": plan.get("budget"),
                "order_id": resp.get("id"), "entry_ts": _utc_iso(), "day": day,
                "mode": _broker_mode(), "close_reason": None, "exit_credit": None,
                "realized_pnl": None, "closed_ts": None}

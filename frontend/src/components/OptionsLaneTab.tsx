@@ -59,6 +59,9 @@ export type OptionPosition = {
   band?: { lo?: number | null; hi?: number | null; touches?: number | null; strength?: number | null } | null;
   entry_underlying?: number | null;
   stop_underlying?: number | null;
+  /** The lane's own journal for this position, built server-side from the doc
+   *  (Ajay 2026-09-08: "There was no journal on why we entered INTC"). */
+  narrative?: string | null;
   target_underlying?: number | null;   // null = CLEAR (no supply overhead)
   earnings?: string | null;
   room?: { state?: string | null; room_pct?: number | null; target?: number | null; [k: string]: unknown } | null;
@@ -579,6 +582,7 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                   const target = num(p.target_underlying);
                   const dte = num(p.dte);
                   return (
+                    <>
                     <tr key={p.pos_id || p.symbol} data-testid="options-open-row">
                       <td style={TD}>
                         <TickerLink ticker={p.symbol} fromLabel="Auto-Pilot" showWatchlist={false}
@@ -619,6 +623,16 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                         </button>
                       </td>
                     </tr>
+                    {p.narrative && (
+                      <tr key={`${p.pos_id || p.symbol}-why`}>
+                        <td colSpan={99} data-testid="options-why"
+                            style={{ ...TD, whiteSpace: 'normal', color: C.sub, fontSize: '0.74rem',
+                                     lineHeight: 1.45, paddingTop: 0, paddingBottom: 10 }}>
+                          {p.narrative}
+                        </td>
+                      </tr>
+                    )}
+                  </>
                   );
                 })}
               </tbody>
@@ -667,6 +681,7 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
               </thead>
               <tbody>
                 {closedRows.map((p) => (
+                  <>
                   <tr key={p.pos_id || `${p.symbol}-${String(p.closed_ts)}`} data-testid="options-closed-row">
                     <td style={TD}>
                       <TickerLink ticker={p.symbol} fromLabel="Auto-Pilot" showWatchlist={false}
@@ -678,6 +693,16 @@ export function OptionsLaneTab({ onChanged }: { onChanged?: () => void }) {
                     <td style={{ ...TD, whiteSpace: 'normal', color: C.sub, minWidth: 160 }}>{p.close_reason || '—'}</td>
                     <td className="mono" style={{ ...TD, fontVariantNumeric: 'tabular-nums' }}>{fmtEt(p.closed_ts)}</td>
                   </tr>
+                  {p.narrative && (
+                    <tr key={`${p.pos_id || p.symbol}-why`}>
+                      <td colSpan={99} data-testid="options-why"
+                          style={{ ...TD, whiteSpace: 'normal', color: C.sub, fontSize: '0.74rem',
+                                   lineHeight: 1.45, paddingTop: 0, paddingBottom: 10 }}>
+                        {p.narrative}
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 ))}
               </tbody>
             </table>

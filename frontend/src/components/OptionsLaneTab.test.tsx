@@ -42,6 +42,7 @@ const KLAC: OptionPosition = {
   earnings: '2026-10-28', room: { state: 'ROOM', room_pct: 6.2, target: 962.0 },
   order_id: 'o-1', entry_ts: '2026-09-06T14:31:05+00:00', day: '2026-09-06', mode: 'paper',
   close_reason: null, exit_credit: null, realized_pnl: null, closed_ts: null,
+  narrative: 'Bought KLAC — 2 × Oct 17 bull call spread ($900 long / $960 short) @ $22.4 ($4480 at risk). Options lane entry (paper Auto-Pilot, owner rules): the stock printed 906.1 at the demand band 895.2–905 (3 touches); room +6.2% to 962 (the first supply band); alert gate passed (≥ 5% room, ≤ 1% above the band).',
 };
 const NTAP: OptionPosition = {
   ...KLAC, pos_id: 'NTAP-2026-09-06', symbol: 'NTAP', status: 'closing', structure: 'long_call',
@@ -369,5 +370,30 @@ describe('OptionsLaneTab — helpers', () => {
     const rows = settingsRows(null);
     expect(rows).toHaveLength(11);
     for (const [, v] of rows) expect(v).not.toMatch(/NaN|undefined|null/);
+  });
+});
+
+// Ajay 2026-09-08: "There was no journal on why we entered INTC" — every position
+// row carries the lane's own why, straight from the server.
+describe('OptionsLaneTab — the why row', () => {
+  it('prints the narrative under every position that has one, open and closed', async () => {
+    vi.stubGlobal('fetch', stubFetch(FULL));                    // NTAP / CLOSED / LOSER spread from KLAC → all four carry it
+    render(<MemoryRouter><OptionsLaneTab /></MemoryRouter>);
+    const why = await screen.findAllByTestId('options-why');
+    expect(why).toHaveLength(4);
+    expect(why[0]).toHaveTextContent(/Bought KLAC — 2 × Oct 17 bull call spread/);
+    expect(why[0]).toHaveTextContent(/alert gate passed/);
+  });
+
+  it('NEGATIVE: a position without a narrative gets no why row', async () => {
+    const bare: OptionsLanePayload = {
+      ...FULL,
+      status: { ...FULL.status, open: [{ ...KLAC, narrative: null }, { ...NTAP, narrative: undefined }] },
+      recent_closed: [{ ...CLOSED, narrative: '' }],
+    };
+    vi.stubGlobal('fetch', stubFetch(bare));
+    render(<MemoryRouter><OptionsLaneTab /></MemoryRouter>);
+    expect((await screen.findAllByText(/KLAC/)).length).toBeGreaterThan(0);
+    expect(screen.queryAllByTestId('options-why')).toHaveLength(0);
   });
 });
