@@ -387,6 +387,23 @@ def test_touch_tolerance_is_one_percent_above_the_top():
     assert AG.approach_read(19.0, DYN_BAND, 18.4, 18.80)["dir"] == "lifting"
 
 
+def test_smr_run_up_into_the_band_reads_reclaiming_not_bouncing():
+    """SMR 2026-09-08: closed 9.70, opened 9.97, ran +12% and the alert fired at
+    10.835 inside 10.83–11.22. Ajay bought at 10.91 "after the alert did some run
+    up" — the read has to say the run, not a bounce off the low."""
+    band = {"kind": "demand", "lo": 10.83, "hi": 11.22, "touches": 2, "strength": 40.0}
+    ap = AG.approach_read(10.835, band, 9.70, 9.895)
+    assert ap["dir"] == "reclaiming" and ap["tag"] == "↑ reclaiming"
+    assert ap["text"] == "↑ reclaiming the band from below (+11.7% today)"
+    # above the band from below: still a reclaim (the run is the fact)
+    assert AG.approach_read(11.3, band, 9.70, 9.895)["dir"] == "reclaiming"
+    # NEGATIVE: still under the floor → nothing reached, no read
+    assert AG.approach_read(10.80, band, 9.70, 9.895) is None
+    # NEGATIVE: yesterday closed INSIDE the band → not a reclaim (resting / bouncing as before)
+    assert AG.approach_read(10.9, band, 10.9, 10.9)["dir"] == "resting"
+    assert AG.approach_read(11.0, band, 10.9, 10.85)["dir"] == "bouncing"
+
+
 def test_approach_read_negatives_return_none():
     assert AG.approach_read(0, DYN_BAND, 24.28, 18.05) is None
     assert AG.approach_read(None, DYN_BAND, 24.28, 18.05) is None

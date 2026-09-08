@@ -191,6 +191,9 @@ def approach_read(print_px, band, prev_close=None, day_low=None) -> Optional[dic
                 low and the close                    → "↓ settling into"
       resting   inside the band, came from inside/below, no lift → "resting in"
       lifting   above the band from below, ≥ 0.5% off the low  → "↑ lifting off"
+      reclaiming yesterday closed UNDER the band and the print is back in or
+                above it — a run UP into the band, not a bounce (SMR 2026-09-08:
+                +12% on the day when the alert fired)  → "↑ reclaiming"
     """
     px = _f(print_px)
     if px is None or px <= 0 or not _valid_band(band):
@@ -202,7 +205,13 @@ def approach_read(print_px, band, prev_close=None, day_low=None) -> Optional[dic
     off_low = (px / dl - 1.0) * 100.0 if dl is not None else None
     touched = dl is not None and dl <= hi * (1.0 + APPROACH_TOUCH_TOL_PCT / 100.0)
     from_above = pc is not None and pc > hi
+    from_below = pc is not None and pc < lo
     chg = (px / pc - 1.0) * 100.0 if pc is not None else None
+    if from_below:
+        if px < lo:
+            return None                      # still under the floor: nothing reached yet
+        return {"dir": "reclaiming", "tag": "↑ reclaiming",
+                "text": "↑ reclaiming the band from below (%+.1f%% today)" % chg}
     if touched and off_low is not None and off_low >= APPROACH_LIFT_PCT:
         return {"dir": "bouncing", "tag": "↑ bouncing off",
                 "text": "↑ bouncing off the band, +%.1f%% off the %g low" % (off_low, dl)}

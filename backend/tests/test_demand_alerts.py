@@ -191,6 +191,16 @@ def test_at_message_says_which_way_it_got_here(monkeypatch):
     assert m["body"].startswith("$18.7 · 0.54% above · ↑ bouncing off the band, +3.6% off the 18.05 low · tested 3x")
 
 
+def test_at_message_reclaim_title_names_the_run_up():
+    from supply_demand import alert_gates as AG
+    band = _band(10.83, 11.22, touches=2)
+    m = DA.at_message({"symbol": "SMR", "last": 10.835, "band": band, "cap": 4.4e9, "name": "NuScale",
+                       "hit": {"tier": "at", "state": "in", "dist_pct": 0.0},
+                       "approach": AG.approach_read(10.835, band, 9.70, 9.895)})
+    assert m["title"] == "🧲 SMR ↑ reclaiming demand $10.83–11.22"
+    assert m["body"].startswith("$10.835 · ↑ reclaiming the band from below (+11.7% today) · tested 2x")
+
+
 def test_digest_lines_carry_the_direction_tag():
     from supply_demand import alert_gates as AG
     band = _band(17.9, 18.6, touches=3)

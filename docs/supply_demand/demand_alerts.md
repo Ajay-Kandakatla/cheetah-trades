@@ -98,6 +98,7 @@ lifting), `APPROACH_AT_LOW_PCT` 0.2 (within that of the low = still on it).
 | **falling** | yesterday closed above the band and the print sits on the day's low (≤ 0.2% off it, under it after hours, or no low yet — the pre-market day bar is 0) | `🧲 DYN ↓ falling into demand $17.9–18.6` | `↓ falling into the band from 24.28 (-25.6% today)` |
 | **settling** | from above, off the low by less than the lift | `🧲 DYN ↓ settling into demand …` | `↓ came down from 24.28 (-25.4% today), holding 0.3% off the 18.05 low` |
 | **lifting** | above the band from inside/below, the low never reached it, ≥ 0.5% off the low | `↑ lifting off demand` | `↑ lifting away from the band, +1.1% off the 18.8 low` |
+| **reclaiming** | yesterday closed UNDER the band, the print is back in/above it — a run up into the band (SMR 2026-09-08, +12% when the alert fired), never called a bounce | `🧲 SMR ↑ reclaiming demand $10.83–11.22` | `↑ reclaiming the band from below (+11.7% today)` (chip tone warn) |
 | resting | inside the band, came from inside, no lift | *unchanged* (`in demand`) | nothing added |
 | — | no prev close and no low, or above the band with no lift | *unchanged* | nothing added |
 

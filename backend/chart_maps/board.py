@@ -355,7 +355,7 @@ def _approach_badge(sym: str, band: Optional[dict], live_rows: dict, live: dict)
     ap = AG.approach_read(px, band, row.get("prev_day_close"), row.get("low"))
     if not ap or ap.get("dir") == "resting":
         return None
-    tone = {"bouncing": "good", "lifting": "good", "falling": "warn"}.get(ap["dir"], "muted")
+    tone = {"bouncing": "good", "lifting": "good", "falling": "warn", "reclaiming": "warn"}.get(ap["dir"], "muted")
     txt = ap["text"]
     # "↓ falling into …" → "↓ Falling into …" for the chip; the why line keeps
     # the sentence case.
