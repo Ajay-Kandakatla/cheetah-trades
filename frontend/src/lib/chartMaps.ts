@@ -794,6 +794,15 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
 
 /** Right-edge labels for the plan lines, de-collided. Reuses zonePlan's
  *  layoutLabels so the two chart surfaces cannot drift apart. */
+/** The now line's label carries the live price (Ajay 2026-09-08: "add the now
+ *  price here please from current market") — "now 4.17", "now · pre 52.41",
+ *  "LAST · AH 75.94". Sub-dollar names keep a third decimal. */
+export function nowLabelText(label: string, price: number): string {
+  if (!Number.isFinite(price)) return label;
+  const px = Math.abs(price) < 1 ? price.toFixed(3) : price.toFixed(2);
+  return `${label || 'now'} ${px}`;
+}
+
 export function lineLabels(
   lines: CmLine[], d: Domain, height: number, padY = 8,
 ): LabelItem[] {
@@ -801,7 +810,7 @@ export function lineLabels(
     .filter((l) => Number.isFinite(l.price) && l.price >= d.lo && l.price <= d.hi)
     .map((l) => ({
       y: yFor(l.price, d, height, padY),
-      text: l.label,
+      text: l.tone === 'now' ? nowLabelText(l.label, l.price) : l.label,
       color: toneColor(l.tone),
       bold: l.tone === 'buy',
       priority: TONE_PRIORITY[l.tone] ?? 2,

@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dataThrough, parseScanTs, scanStamp,
-  barDomain, barWidth, boardQuery, clipBands, isThinSample, lineLabels,
+  barDomain, barWidth, boardQuery, clipBands, isThinSample, lineLabels, nowLabelText,
   markerIndex, monthTicks, parseSource, parseTab, recordLine, sepaHref,
   THEME_LABEL, themeLabel, WINNER_SOURCES,
   toneColor, xFor, yFor,
@@ -308,6 +308,22 @@ describe('lineLabels', () => {
   it('marks the buy level bold so the entry reads first', () => {
     const out = lineLabels([{ price: 15, label: 'BUY', tone: 'buy' }], d, 200);
     expect(out[0].bold).toBe(true);
+  });
+
+  // Ajay 2026-09-08: "Can you add the now price here please from current market"
+  it('the now label carries the live price; every other label is untouched', () => {
+    const lines: CmLine[] = [
+      { price: 14.17, label: 'now', tone: 'now' },
+      { price: 12.5, label: 'support 12.5', tone: 'buy' },
+      { price: 18, label: 'overhead 18', tone: 'target' },
+    ];
+    const out = lineLabels(lines, d, 200);
+    expect(out.map((l) => l.text)).toEqual(['now 14.17', 'support 12.5', 'overhead 18']);
+    expect(lineLabels([{ price: 15.4, label: 'now \u00b7 pre', tone: 'now' }], d, 200)[0].text).toBe('now \u00b7 pre 15.40');
+    expect(lineLabels([{ price: 15.4, label: 'LAST \u00b7 AH', tone: 'now' }], d, 200)[0].text).toBe('LAST \u00b7 AH 15.40');
+    expect(nowLabelText('now', 0.4173)).toBe('now 0.417');          // sub-dollar keeps a third decimal
+    expect(nowLabelText('', 4.2)).toBe('now 4.20');
+    expect(nowLabelText('now', Number.NaN)).toBe('now');            // NEGATIVE: no number, no garbage
   });
 });
 
