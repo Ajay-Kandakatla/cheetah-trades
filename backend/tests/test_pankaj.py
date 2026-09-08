@@ -1,8 +1,12 @@
-"""Pankaj picks — data integrity + pure status/alert logic.
+"""Pankaj picks — data integrity + pure status logic.
 
 No IO: every test drives the pure functions in ``sepa.pankaj_picks`` with
-synthetic prices. The alert cron (``sepa.pankaj_alerts``) is just dedup + delivery
-on top of these, so locking the pure logic locks the behaviour."""
+synthetic prices. The alert cron (``sepa.pankaj_alerts``) was removed
+2026-09-08 (Ajay: "Remove all of Pankaj's alerts") — the guard at the bottom
+keeps it out."""
+import inspect
+import pathlib
+
 from sepa import pankaj_picks as pk
 
 
@@ -62,42 +66,26 @@ def test_status_pullback():
     assert pk.setup_status(pbk, 10.50)["state"] == "below_zone"
 
 
-# ── alert_events (drives the cron) ─────────────────────────────────────────
-def _events(sym, price, now_hm=None):
-    return {e["event"] for e in pk.alert_events(_pick(sym), price, now_hm)}
+# ── the alert cron is gone (Ajay 2026-09-08: "Remove all of Pankaj's alerts") ──
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
-def test_breakout_trigger_and_close_confirm():
-    # Intraday tag of the trigger → TRIGGER, but no close-confirm outside the window.
-    assert "TRIGGER" in _events("VG", 13.40)
-    assert "CLOSE_CONFIRM" not in _events("VG", 13.40)
-    assert "CLOSE_CONFIRM" not in _events("VG", 13.40, "11:00")
-    # In the close window, above the trigger → both fire.
-    ev = _events("VG", 13.40, "16:00")
-    assert "TRIGGER" in ev and "CLOSE_CONFIRM" in ev
-
-
-def test_breakout_approach_and_quiet():
-    assert "APPROACH" in _events("VG", 13.20)        # 1.1% below 13.35
-    assert _events("VG", 12.50) == set()             # too far below the trigger / zone → silent
-
-
-def test_pullback_zone_event():
-    assert "ZONE" in _events("VG", 11.30)
-    assert "ZONE" in _events("MRVL", 200.0)
-    assert _events("MRVL", 288.0) == set()           # nowhere near the 195-210 zone
-
-
-def test_events_have_attribution_and_levels():
-    ev = pk.alert_events(_pick("VG"), 13.40, "16:00")
-    for e in ev:
-        assert "not advice" in e["body"].lower()
-        assert e["emoji"] and e["title"] and e["setup_id"]
-
-
-def test_titles_lead_with_brand_then_ticker():
-    # Ajay 2026-06-10: notifications must read "Pankaj Swing Alert" then the
-    # actual ticker, so the source is unmistakable on a phone lock screen.
-    for sym, price in (("VG", 13.40), ("VG", 13.20), ("VG", 11.30), ("MRVL", 200.0)):
-        for e in pk.alert_events(_pick(sym), price, "16:00"):
-            assert e["title"].startswith(f"Pankaj Swing Alert · {sym}"), e["title"]
+def test_pankaj_alert_cron_is_gone_everywhere():
+    """6,378 `pankaj_alert` rows (1 ever delivered) re-fired every 5 minutes into
+    push_history and dominated the /alerts page once it opened on every push.
+    Nothing computes, registers or labels the kind any more; the /pankaj page
+    keeps his picks and levels."""
+    assert not (ROOT / "backend" / "sepa" / "pankaj_alerts.py").exists()
+    from sepa import cli
+    src = inspect.getsource(cli)
+    assert "pankaj_alerts" not in src and "check_pankaj_alerts" not in src
+    assert not hasattr(pk, "alert_events") and not hasattr(pk, "CLOSE_WINDOW_ET")
+    for gone in ("_confirm_text", "_stops_text", "_targets_text", "_in_close_window"):
+        assert not hasattr(pk, gone), gone
+    from market_hours import gate
+    assert "pankaj_alert" not in gate.MARKET_ALERT_KINDS and "pankaj_alert" not in gate.PERSONAL_KINDS
+    assert "pankaj" not in (ROOT / "backend" / "crontab").read_text().lower()
+    fe = (ROOT / "frontend" / "src" / "lib" / "alertKinds.ts").read_text()
+    assert "pankaj_alert" not in fe
+    # the page's own pure reads stay
+    assert pk.setup_status(_pick("VG")["setups"][0], 13.40)["state"] in {"triggered", "approaching", "below", "in_zone", "above_zone", "below_zone"}

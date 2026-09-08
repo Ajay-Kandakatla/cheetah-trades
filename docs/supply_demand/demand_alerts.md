@@ -139,8 +139,10 @@ kind `pivot_alert`, once per (ticker, band, day). Added 2026-09-03:
   one-name fix.
 * Import-side `demand_reentry.cached_or_warm` from the cron container is always cold —
   use HTTP.
-* `pankaj_alert` re-fires every 5 min with `sent=0` (muted) — unrelated noise in
-  `push_history`, not this module.
+* `pankaj_alert` used to re-fire every 5 min with `sent=0` (muted) — 6,378 rows, one
+  ever delivered, 84 of the 200 newest rows on /alerts the day the page opened on every
+  push. Removed 2026-09-08 (Ajay: "Remove all of Pankaj's alerts"): cron call, module,
+  kind registration, rows purged. The /pankaj page keeps his levels.
 
 ## Verify in the container
 

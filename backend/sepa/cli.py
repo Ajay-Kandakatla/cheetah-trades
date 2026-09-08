@@ -295,14 +295,15 @@ def main() -> int:
         return 0
 
     if args.cmd == "alerts":
-        from . import alerts, price_alerts, pivot_alerts, pankaj_alerts
+        # Pankaj-level alerts left this pass 2026-09-08 (Ajay: "Remove all of
+        # Pankaj's alerts") — the /pankaj page keeps his picks and levels.
+        from . import alerts, price_alerts, pivot_alerts
         pos = alerts.check_positions()
         pa = price_alerts.check_alerts()
         pv = pivot_alerts.check_pivot_alerts()
-        pk = pankaj_alerts.check_pankaj_alerts()
-        log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d  pivot: fired=%d  pankaj: fired=%d",
+        log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d  pivot: fired=%d",
                  len(pos["fired"]), len(pos["skipped"]),
-                 pa["fired"], pa["checked"], len(pv["fired"]), len(pk["fired"]))
+                 pa["fired"], pa["checked"], len(pv["fired"]))
         # Stamp the engine heartbeat so the UI can show a "paused" banner if this
         # job stops running (e.g. the host slept). Best-effort; never blocks.
         try:

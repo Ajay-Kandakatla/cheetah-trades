@@ -43,7 +43,6 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   autopilot:           { emoji: '🤖', label: 'Auto-Pilot',              group: 'trading' },
   promo_alert:         { emoji: '🎪', label: 'Promo mover',             group: 'trading' },
   price_alert:         { emoji: '🔔', label: 'Price alert',             group: 'trading' },
-  pankaj_alert:        { emoji: '📊', label: "Pankaj's level",          group: 'trading' },
   stage_out_alert:     { emoji: '📉', label: 'Stage-out',               group: 'trading' },
   accumulation_change: { emoji: '🏦', label: 'Accumulation change',     group: 'trading' },
   scalp_tape:          { emoji: '🎛️', label: 'Scalp tape',              group: 'trading' },
