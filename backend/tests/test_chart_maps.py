@@ -1578,7 +1578,7 @@ def test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase(
         prices[r["symbol"]] = _frame(200, start=90.05)
         sales_stub[r["symbol"]] = _sales("steady", 9.0)
     # live: LIFTED now 85.34 (0.4% above the 80-85 band), STILLIN unchanged
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"LIFTED": 85.34})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"LIFTED": 85.34})
 
     out = B.board("deep_demand", limit=5, min_tier="any", themes_first=False)
     assert [t["symbol"] for t in out["tiles"]] == ["STILLIN", "LIFTED"]
@@ -1987,7 +1987,7 @@ def test_approaching_reranks_on_the_live_print_not_the_scan_price(
         prices[sym] = _frame(200, start=95.0)
     calls = []
 
-    def live(syms):
+    def live(syms, rows=None):
         calls.append(sorted(syms))
         return {"WASFAR": 100.2}                  # WASCLOSE: no print → scan px
     monkeypatch.setattr(B, "_live_last", live)
@@ -2198,11 +2198,62 @@ def test_reached_board_drops_names_that_already_ran_seven_percent(prices, reentr
     hi = reentry_stub["rows"][0]["entry_zone"]["hi"]
     for sym in ("AAA", "BBB"):
         prices[sym] = _frame(200)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"AAA": hi * 1.08, "BBB": hi * 1.03})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"AAA": hi * 1.08, "BBB": hi * 1.03})
     out = B.board("zones", limit=10, min_tier="any")
     assert [t["symbol"] for t in out["tiles"]] == ["BBB"]
     assert out["dropped_bounced"] == 1 and out["bounce_done_pct"] == 7.0
     assert out["matched"] == 2, "matched counts the board before the gate"
+
+
+def test_zone_tiles_lead_with_which_way_it_got_here(prices, reentry_stub, monkeypatch):
+    """Ajay 2026-09-08: "nearing demand zone from the top like falling or
+    Bouncing back … I need the distinction in writing sometime its hard to
+    see in the charts". One live fetch feeds the bounce gate AND the read."""
+    reentry_stub["rows"] = [_reentry_row("FALL"), _reentry_row("BNCE"), _reentry_row("NOLIVE")]
+    lo, hi = (reentry_stub["rows"][0]["entry_zone"][k] for k in ("lo", "hi"))
+    for sym in ("FALL", "BNCE", "NOLIVE"):
+        prices[sym] = _frame(200)
+    calls = []
+
+    def rows_(syms):
+        calls.append(sorted(syms))
+        return {"FALL": {"price": lo * 1.002, "last_trade_price": lo * 1.002,
+                         "prev_day_close": hi * 1.12, "low": lo * 1.001},
+                "BNCE": {"price": lo * 1.02, "last_trade_price": lo * 1.02,
+                         "prev_day_close": hi * 1.12, "low": lo * 1.001}}
+    monkeypatch.setattr(B, "_live_rows", rows_)
+    out = B.board("zones", limit=10, min_tier="any", themes_first=False)
+    assert calls == [["BNCE", "FALL", "NOLIVE"]], "fetched once, shared with the bounce gate"
+    by = {t["symbol"]: t for t in out["tiles"]}
+    assert by["FALL"]["badges"][0] == {"text": f"↓ Falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)", "tone": "warn"}
+    assert by["FALL"]["why"].endswith(f"— ↓ falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)")
+    assert by["BNCE"]["badges"][0] == {"text": f"↑ Bouncing off the band, +1.9% off the {lo * 1.001:g} low", "tone": "good"}
+    assert "↑ bouncing off the band" in by["BNCE"]["why"]
+    # NEGATIVE: no live row → the scan print alone cannot say which way → no badge, why untouched
+    assert not any("↓" in b["text"] or "↑ B" in b["text"] for b in by["NOLIVE"]["badges"])
+    assert "—" not in by["NOLIVE"]["why"].split("zone")[-1] or "falling into" not in by["NOLIVE"]["why"]
+
+
+def test_deep_demand_tiles_read_the_direction_against_the_second_band(prices, reentry_stub, sales_stub, monkeypatch):
+    flow_in = {"state": "inflow", "cmf_20": 0.14, "accum_days_25": 9,
+               "dist_days_25": 4, "pocket_pivot": False}
+    reentry_stub["deep_rows"] = [_deep_row("DBNC", state="in", inflow=flow_in)]
+    sales_stub["DBNC"] = _sales("steady", 9.0)
+    prices["DBNC"] = _frame(200, start=90.05)
+    second = reentry_stub["deep_rows"][0]["deep_demand"]["second_band"]
+    lo2 = second["lo"]
+    monkeypatch.setattr(B, "_live_rows", lambda syms: {
+        "DBNC": {"price": lo2 * 1.015, "last_trade_price": lo2 * 1.015,
+                 "prev_day_close": 95.0, "low": lo2 * 1.001}})
+    out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
+    t = out["tiles"][0]
+    assert t["badges"][0] == {"text": f"↑ Bouncing off the band, +1.4% off the {lo2 * 1.001:g} low", "tone": "good"}
+    assert t["badges"][1]["text"] == "🩹 In 2nd demand band"
+    assert t["why"].endswith(f"— ↑ bouncing off the band, +1.4% off the {lo2 * 1.001:g} low")
+    # NEGATIVE: tape down → the old tile, first badge is the band chip
+    monkeypatch.setattr(B, "_live_rows", lambda syms: {})
+    t = B.board("deep_demand", limit=5, min_tier="any", min_room=0)["tiles"][0]
+    assert t["badges"][0]["text"] == "🩹 In 2nd demand band" and "bouncing" not in t["why"]
 
 
 def test_bounce_gate_uses_scan_price_when_the_tape_is_unreachable(prices, reentry_stub, monkeypatch):
@@ -2210,7 +2261,7 @@ def test_bounce_gate_uses_scan_price_when_the_tape_is_unreachable(prices, reentr
     row["last_price"] = row["entry_zone"]["hi"] * 1.10
     reentry_stub["rows"] = [row]
     prices["AAA"] = _frame(200)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     out = B.board("zones", limit=10, min_tier="any")
     assert out["tiles"] == [] and out["dropped_bounced"] == 1
 
@@ -2219,7 +2270,7 @@ def test_approaching_and_order_block_boards_take_the_gate_too(prices, reentry_st
     reentry_stub["approaching_rows"] = [_appr_row("BBB"), _appr_row("CCC")]
     for sym in ("BBB", "CCC"):
         prices[sym] = _frame(200, start=95.0)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"BBB": 100.0 * 1.075, "CCC": 100.0 * 1.02})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"BBB": 100.0 * 1.075, "CCC": 100.0 * 1.02})
     out = B.board("zones", limit=10, min_tier="any", phase="approaching")
     assert [t["symbol"] for t in out["tiles"]] == ["CCC"] and out["dropped_bounced"] == 1
 
@@ -2233,7 +2284,7 @@ def test_deep_demand_gate_measures_from_the_second_band(prices, reentry_stub, sa
         sales_stub[sym] = _sales("steady", 9.0)
         prices[sym] = _frame(200, start=90.05)
     # second band hi = 85: 91 is +7.06% (gone), 89 is +4.7% (still at the level)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"DRUN": 91.0, "DSIT": 89.0})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"DRUN": 91.0, "DSIT": 89.0})
     # min_room=0: this test is about the BOUNCE gate. DSIT at 89 has 1.1% of
     # room to its broken first band (90), which the room floor hides by default.
     out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
@@ -2263,12 +2314,12 @@ def test_approaching_badges_print_the_live_distance_the_ranking_used(prices, ree
     no print it falls back to the scan's dist_pct."""
     reentry_stub["approaching_rows"] = [_appr_row("BBB", dist=2.9)]
     prices["BBB"] = _frame(200, start=95.0)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"BBB": 100.5})   # band hi 100 → 0.5%
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"BBB": 100.5})   # band hi 100 → 0.5%
     out = B.board("zones", limit=10, min_tier="any", phase="approaching")
     tile = out["tiles"][0]
     assert any(b["text"] == "\u2192 0.5% above the band" for b in tile["badges"]), tile["badges"]
     assert "0.5% above it" in tile["why"]
-    monkeypatch.setattr(B, "_live_last", lambda syms: {})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     out2 = B.board("zones", limit=10, min_tier="any", phase="approaching")
     assert any("2.9% above the band" in b["text"] for b in out2["tiles"][0]["badges"])
 
@@ -2333,7 +2384,7 @@ def test_approaching_tile_in_the_band_on_the_live_print_says_so_and_leads(
                                         _appr_row("INBAND", dist=1.96)]
     for sym in ("OUT", "INBAND"):
         prices[sym] = _frame(200, start=95.0)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"INBAND": 99.0, "OUT": 100.3})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"INBAND": 99.0, "OUT": 100.3})
     out = B.board("zones", limit=10, min_tier="any", phase="approaching",
                   themes_first=False)
     assert [t["symbol"] for t in out["tiles"]] == ["INBAND", "OUT"]
@@ -2391,7 +2442,7 @@ def test_zones_tab_hides_tru_on_the_live_print_and_keeps_the_name_with_room(
         prices[s] = _frame(200)
     reentry_stub["rows"] = [_tru_row(), _reentry_row("AAA")]
     # the scan saw TRU at 78.90 (1.5% room); it has since gapped to 79.88
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"TRU": 79.88})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"TRU": 79.88})
 
     out = B.board("zones", limit=5, min_tier="any")
     assert [t["symbol"] for t in out["tiles"]] == ["AAA"]
@@ -2405,7 +2456,7 @@ def test_zones_tab_min_room_zero_shows_everything_and_still_says_the_room(
     for s in ("TRU", "AAA"):
         prices[s] = _frame(200)
     reentry_stub["rows"] = [_tru_row(), _reentry_row("AAA")]
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"TRU": 79.88})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"TRU": 79.88})
 
     out = B.board("zones", limit=5, min_tier="any", min_room=0)
     assert {t["symbol"] for t in out["tiles"]} == {"TRU", "AAA"}
@@ -2422,7 +2473,7 @@ def test_zones_tab_open_sky_and_in_band_wordings(prices, reentry_stub, monkeypat
     inb = _tru_row()
     inb["symbol"] = "INB"
     reentry_stub["rows"] = [sky, inb]
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"INB": 80.50})    # inside 80.12-82.10
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"INB": 80.50})    # inside 80.12-82.10
 
     shown = B.board("zones", limit=5, min_tier="any")
     assert [t["symbol"] for t in shown["tiles"]] == ["SKY"]
@@ -2436,7 +2487,7 @@ def test_zones_tab_falls_back_to_the_scan_price_without_a_tape(prices, reentry_s
     """No live print: the scan's last_price decides, as the bounce gate does."""
     prices["TRU"] = _frame(200)
     reentry_stub["rows"] = [_tru_row()]            # 78.90 -> 80.12 = 1.5%: under 5
-    monkeypatch.setattr(B, "_live_last", lambda syms: {})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     out = B.board("zones", limit=5, min_tier="any")
     assert out["count"] == 0 and out["hidden_low_room"] == 1
     loose = B.board("zones", limit=5, min_tier="any", min_room=1.0)
@@ -2451,7 +2502,7 @@ def test_deep_demand_tab_applies_the_same_room_floor_against_the_broken_first_ba
         prices[s] = _frame(200)
         sales_stub[s] = _sales("strong", 30.0)
     # LIDDED has run to 89.80, 0.2% under its broken first band (90-95)
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"LIDDED": 89.80})
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"LIDDED": 89.80})
 
     out = B.board("deep_demand", limit=5, min_tier="any")
     assert [t["symbol"] for t in out["tiles"]] == ["ROOMY"]
@@ -2501,7 +2552,7 @@ def test_quick_bounce_tab_lists_qualifying_names_at_a_band_nearest_first(prices,
     monkeypatch.setattr(QB, "load_meta", lambda coll=None: meta)
     monkeypatch.setattr(zone_store, "load_latest", lambda symbols=None, coll=None, today=None:
                         (__import__("datetime").date(2026, 9, 4), docs))
-    monkeypatch.setattr(B, "_live_last", lambda syms: {"AAA": 103.0})     # BBB / DDD fall back to the store's prev_close
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"AAA": 103.0})     # BBB / DDD fall back to the store's prev_close
     for s in ("AAA", "BBB", "DDD"):
         prices[s] = _frame(200, start=90.0)
     out = B.board("quick_bounce", limit=10, min_tier="any")

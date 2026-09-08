@@ -225,8 +225,18 @@ def _band_txt(band: dict) -> str:
 def at_message(item: dict) -> dict:
     sym, hit, band = item["symbol"], item["hit"], item["band"]
     where = "in demand" if hit["state"] == "in" else f"{hit['dist_pct']:g}% above demand"
+    # Ajay 2026-09-08: the direction in writing — "falling into" vs "bouncing off"
+    ap = item.get("approach") if isinstance(item.get("approach"), dict) else None
+    ap = ap if ap and ap.get("tag") and ap.get("text") else None   # resting inside = the old wording
     tested = f"tested {int(band['touches'])}x" if band.get("touches") else "tested band"
-    parts = [f"${float(item['last']):g}", tested]
+    parts = [f"${float(item['last']):g}"]
+    if ap:
+        # the tag takes the title's slot, so the distance moves into the body
+        if hit["state"] != "in":
+            parts.append(f"{hit['dist_pct']:g}% above")
+        where = f"{ap['tag']} demand"
+        parts.append(ap["text"])
+    parts.append(tested)
     if "room" in item:                                    # the phone gate's read (2026-09-05)
         parts.append(AG.room_txt(item.get("room")))
         plan = AG.plan_txt(item["last"], band, item.get("room"))   # the plan (2026-09-06)
@@ -257,6 +267,9 @@ def digest_message(items: list) -> Optional[dict]:
     for it in items[:DIGEST_MAX]:
         where = ("in demand" if it["hit"].get("state") == "in"
                  else f"{it['hit']['dist_pct']:g}% above")
+        ap = it.get("approach") if isinstance(it.get("approach"), dict) else None
+        if ap and ap.get("tag"):
+            where = ap["tag"]
         room = f" · {AG.room_txt(it.get('room'))}" if "room" in it else ""
         lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} "
                      f"{_band_txt(it['band'])}{room} · {fmt_cap(it.get('cap'))}")
@@ -407,7 +420,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             if not hit:
                 continue
             item = {"symbol": sym, "last": float(last), "band": band, "hit": hit,
-                    "cap": cap, "name": cands[sym]["name"], "prev_close": prev}
+                    "cap": cap, "name": cands[sym]["name"], "prev_close": prev,
+                    "approach": AG.approach_read(last, band, prev, (live.get(sym) or {}).get("low"))}
             hits.append(item)
             if not passes_cap(cap):
                 if cap is None:

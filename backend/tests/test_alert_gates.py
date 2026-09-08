@@ -335,6 +335,70 @@ def test_gap_day_in_the_other_two_overhead_readers():
     assert SW.overhead_bands(sup, dem, 19.71, 20.75)[0]["lo"] == 21.0
 
 
+# ── which way it got here (Ajay 2026-09-08: "nearing demand zone from the top
+#    like falling or Bouncing back … I need the distinction in writing") ───────
+DYN_BAND = {"kind": "demand", "lo": 17.9, "hi": 18.6, "touches": 3, "strength": 40.0}
+
+
+def test_approach_constants_are_owner_numbers():
+    assert (AG.APPROACH_TOUCH_TOL_PCT, AG.APPROACH_LIFT_PCT, AG.APPROACH_AT_LOW_PCT) == (1.0, 0.5, 0.2)
+
+
+def test_dyn_bouncing_off_the_band_after_the_gap_down():
+    # DYN 2026-09-08: closed 24.28, gapped into 17.9-18.6, low 18.05, print 18.27
+    ap = AG.approach_read(18.27, DYN_BAND, 24.28, 18.05)
+    assert ap["dir"] == "bouncing" and ap["tag"] == "↑ bouncing off"
+    assert ap["text"] == "↑ bouncing off the band, +1.2% off the 18.05 low"
+
+
+def test_dyn_still_falling_when_the_print_sits_on_the_low():
+    ap = AG.approach_read(18.06, DYN_BAND, 24.28, 18.05)
+    assert ap["dir"] == "falling" and ap["tag"] == "↓ falling into"
+    assert ap["text"] == "↓ falling into the band from 24.28 (-25.6% today)"
+    # after-hours print UNDER the day's RTH low is still falling
+    assert AG.approach_read(17.95, DYN_BAND, 24.28, 18.05)["dir"] == "falling"
+    # no day low known (pre-market day bar is 0) and yesterday closed above: falling
+    assert AG.approach_read(18.3, DYN_BAND, 24.28, None)["dir"] == "falling"
+    assert AG.approach_read(18.3, DYN_BAND, 24.28, 0)["dir"] == "falling"
+
+
+def test_settling_is_from_above_but_off_the_low_by_less_than_the_lift():
+    ap = AG.approach_read(18.11, DYN_BAND, 24.28, 18.05)
+    assert ap["dir"] == "settling" and ap["tag"] == "↓ settling into"
+    assert ap["text"] == "↓ came down from 24.28 (-25.4% today), holding 0.3% off the 18.05 low"
+
+
+def test_resting_and_lifting_come_from_inside_or_below():
+    # yesterday closed inside the band, the low is the print: nothing moved
+    ap = AG.approach_read(18.2, DYN_BAND, 18.3, 18.2)
+    assert ap["dir"] == "resting" and ap["tag"] is None and ap["text"] == "resting in the band"
+    # print 0.4% above the top, the low INSIDE the band, 1.5% off it: that is a bounce
+    ap = AG.approach_read(18.67, DYN_BAND, 18.3, 18.39)
+    assert ap["dir"] == "bouncing" and ap["text"] == "↑ bouncing off the band, +1.5% off the 18.39 low"
+    # the low never reached the band (1.08% above the top), print 1.1% off it: lifting away
+    ap = AG.approach_read(19.0, DYN_BAND, 18.4, 18.80)
+    assert ap["dir"] == "lifting" and ap["tag"] == "↑ lifting off"
+    assert ap["text"] == "↑ lifting away from the band, +1.1% off the 18.8 low"
+
+
+def test_touch_tolerance_is_one_percent_above_the_top():
+    # low 18.78 = 0.97% above 18.6 → touched; 18.80 = 1.08% → not touched
+    assert AG.approach_read(19.0, DYN_BAND, 18.4, 18.78)["dir"] == "bouncing"
+    assert AG.approach_read(19.0, DYN_BAND, 18.4, 18.80)["dir"] == "lifting"
+
+
+def test_approach_read_negatives_return_none():
+    assert AG.approach_read(0, DYN_BAND, 24.28, 18.05) is None
+    assert AG.approach_read(None, DYN_BAND, 24.28, 18.05) is None
+    assert AG.approach_read(18.2, None, 24.28, 18.05) is None
+    assert AG.approach_read(18.2, {"lo": 18.6, "hi": 17.9}, 24.28, 18.05) is None   # inverted band
+    assert AG.approach_read(18.2, {"lo": "x", "hi": 18.6}, 24.28, 18.05) is None
+    # above the band, nothing known about yesterday or the low: nothing to say
+    assert AG.approach_read(18.7, DYN_BAND, None, None) is None
+    # above the band, came from below, no lift: nothing to say
+    assert AG.approach_read(18.7, DYN_BAND, 18.2, 18.68) is None
+
+
 def test_weak_lid_negative_cases_keep_the_old_wording():
     # nothing weak between the print and the target → the exact old text
     clean = [{"kind": "supply", "lo": 250.99, "hi": 252.52, "touches": 3, "strength": 47.0}]

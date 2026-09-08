@@ -1059,6 +1059,9 @@ def bulk_live_prices(syms: list[str]) -> dict[str, dict]:
             "last_trade_price": bar.get("last_trade_price"),
             "last_trade_ts_ms": bar.get("last_trade_ts_ms"),
             "prev_day_close":   bar.get("prev_day_close"),
+            # the day's low / open (2026-09-08): "falling into" vs "bouncing off"
+            "low":              bar.get("low"),
+            "open":             bar.get("open"),
         }
         for sym, bar in snaps.items()
         # Surface a ticker if it has ANY usable price:

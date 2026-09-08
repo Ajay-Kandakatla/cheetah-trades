@@ -317,20 +317,50 @@ def _room_meta(min_room: Optional[float], hidden: int) -> dict:
             "hidden_low_room": hidden}
 
 
-def _live_last(symbols: list) -> dict:
-    """Live print per symbol for the bounce gate. {} on any failure — the
-    scan's own last_price then decides, so a tape outage never empties a board
-    or lets a stale one through unexamined."""
+def _live_rows(symbols: list) -> dict:
+    """The raw bulk_live_prices rows per symbol (price, prev_day_close, the
+    day's low/open …). {} on any failure — same contract as _live_last."""
     syms = sorted({(s or "").upper() for s in symbols if s})
     if not syms:
         return {}
     try:
         from sepa import prices as _p
-        live = _p.bulk_live_prices(syms) or {}
+        return _p.bulk_live_prices(syms) or {}
     except Exception as exc:
         log.debug("chart maps: live prices unavailable for the bounce gate: %s", exc)
         return {}
+
+
+def _live_last(symbols: list, rows: Optional[dict] = None) -> dict:
+    """Live print per symbol for the bounce gate. {} on any failure — the
+    scan's own last_price then decides, so a tape outage never empties a board
+    or lets a stale one through unexamined. Pass `rows` (from _live_rows) to
+    reuse one fetch."""
+    live = rows if rows is not None else _live_rows(symbols)
     return {k: _snapshot_print(v) for k, v in live.items()}
+
+
+def _approach_badge(sym: str, band: Optional[dict], live_rows: dict, live: dict) -> Optional[dict]:
+    """How the LIVE print reached the demand band, in writing (Ajay
+    2026-09-08: "nearing demand zone from the top like falling or Bouncing
+    back … I need the distinction in writing"). One read, alert_gates.
+    approach_read — the same words the phone push carries. None when there is
+    no live row (the scan print alone cannot say which way it moved today) or
+    the read has nothing to add (resting inside the band)."""
+    row = (live_rows or {}).get(sym) or {}
+    px = (live or {}).get(sym)
+    if not row or px is None or not band:
+        return None
+    from supply_demand import alert_gates as AG
+    ap = AG.approach_read(px, band, row.get("prev_day_close"), row.get("low"))
+    if not ap or ap.get("dir") == "resting":
+        return None
+    tone = {"bouncing": "good", "lifting": "good", "falling": "warn"}.get(ap["dir"], "muted")
+    txt = ap["text"]
+    # "↓ falling into …" → "↓ Falling into …" for the chip; the why line keeps
+    # the sentence case.
+    chip = (txt[:2] + txt[2].upper() + txt[3:]) if len(txt) > 3 and txt[1] == " " else txt
+    return {"text": chip, "tone": tone, "_dir": ap["dir"], "_text": txt}
 
 
 def _snapshot_print(snap) -> Optional[float]:
@@ -1562,7 +1592,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     else:
         rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
     matched = len(rows)
-    live = _live_last([r.get("symbol") for r in rows])     # fetched ONCE, reused
+    live_rows = _live_rows([r.get("symbol") for r in rows])   # fetched ONCE, reused
+    live = _live_last([r.get("symbol") for r in rows], live_rows)
     rows, dropped_bounced = drop_bounced(
         rows, lambda r: _bounce_ref_hi(r, phase, target), live)
     # The room floor (Ajay 2026-09-05, TRU: "There is only 0.5% room"): hide
@@ -1671,6 +1702,11 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             why = ((r.get("verdict") or {}).get("entry_read")
                    or (f"pulled back {fell:.0f}% into a demand zone it had left"
                        if fell is not None else "back inside a demand zone"))
+        # Which way it got here TODAY (2026-09-08): falling into / bouncing off.
+        ap_badge = (_approach_badge(sym, bands[0], live_rows, live)
+                    if bands and bands[0].get("kind") == "demand" else None)
+        if ap_badge:
+            why = f"{why} — {ap_badge['_text']}"
 
         tiles.append({
             "symbol": sym,
@@ -1698,7 +1734,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "why": why,
             "theme": _theme(sym),
             "_flow": _order.inflow_of(r),
-            "badges": (([
+            "badges": (([{"text": ap_badge["text"], "tone": ap_badge["tone"]}] if ap_badge else [])
+                + ([
                 # The approach board's own facts lead: how far, how fast.
                 _dist_badge(_disp_dist(r, live, appr, 'band'), "the band"),
                 {"text": f"\u2193 {abs(appr['drift_pct']):.1f}% / {appr['drift_bars']}d",
@@ -2558,7 +2595,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     want_state = "near" if phase == "approaching" else "in"
     rows = [r for r in rows
             if ((r.get("deep_demand") or {}).get("state") == want_state)]
-    live = _live_last([r.get("symbol") for r in rows])     # fetched ONCE, reused
+    live_rows = _live_rows([r.get("symbol") for r in rows])   # fetched ONCE, reused
+    live = _live_last([r.get("symbol") for r in rows], live_rows)
     rows, dropped_bounced = drop_bounced(
         rows, lambda r: _num(((r.get("deep_demand") or {}).get("second_band") or {}).get("hi")),
         live)
@@ -2623,6 +2661,14 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
         badges = [{"text": ("🩹 In 2nd demand band" if d.get("state") == "in"
                              else "🩹 Entering 2nd band"), "tone": "warn"}]
+        # Which way it got here TODAY (2026-09-08): falling into / bouncing off
+        # the SECOND band — the entry this board is about.
+        ap_badge = _approach_badge(
+            sym, {"lo": _num(second.get("lo")), "hi": _num(second.get("hi"))}
+            if _num(second.get("lo")) is not None else None, live_rows, live)
+        if ap_badge:
+            badges.insert(0, {"text": ap_badge["text"], "tone": ap_badge["tone"]})
+            why = f"{why} — {ap_badge['_text']}"
         # The flow verdict (Ajay 2026-08-25: "bullish momentum stocks and
         # inflow signals"). States and numbers come from sepa/volume via
         # deep_demand.inflow_read — never re-derived here.

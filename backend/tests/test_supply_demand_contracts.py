@@ -285,6 +285,29 @@ def test_chart_maps_reranks_on_the_live_print_with_a_position_score():
     assert "_order.inflow_of(r) or {}" in d
     # the live dict is fetched ONCE per board and shared with the bounce gate
     assert z.count("_live_last(") == 1 and d.count("_live_last(") == 1
+    # … and the direction read (2026-09-08) rides the SAME fetch, never a second one
+    assert z.count("_live_rows(") == 1 and d.count("_live_rows(") == 1
+    assert "_live_last([r.get(\"symbol\") for r in rows], live_rows)" in z
+    assert "_live_last([r.get(\"symbol\") for r in rows], live_rows)" in d
+    assert "_approach_badge(" in z and "_approach_badge(" in d
+
+
+def test_direction_read_is_one_function_on_every_demand_path():
+    """Ajay 2026-09-08: "falling or Bouncing back … the distinction in writing".
+    One read (alert_gates.approach_read) behind the push title, the digest line,
+    the minute pass and both boards — never re-derived per surface."""
+    from supply_demand import alert_gates as AG, demand_alerts as DA, zone_edge as ZE
+    from chart_maps import board
+    assert inspect.getsource(AG.approach_read).count("APPROACH_") >= 3
+    assert inspect.getsource(DA).count("AG.approach_read(") == 1
+    assert "AG.approach_read(" in inspect.getsource(ZE.check_once)
+    assert "AG.approach_read(" in inspect.getsource(board._approach_badge)
+    am = inspect.getsource(DA.at_message)
+    assert "where = f\"{ap['tag']} demand\"" in am and "parts.append(ap[\"text\"])" in am
+    assert 'ap = ap if ap and ap.get("tag") and ap.get("text") else None' in am, "resting inside = old wording"
+    assert "where = ap[\"tag\"]" in inspect.getsource(DA.digest_message)
+    src = inspect.getsource(__import__("sepa.prices", fromlist=["bulk_live_prices"]).bulk_live_prices)
+    assert '"low":              bar.get("low")' in src, "the day's low rides bulk_live_prices"
 
 
 # ── bounce + room: one read for the SEPA filter, Back-in-Demand and Catalysts (2026-09-05) ─

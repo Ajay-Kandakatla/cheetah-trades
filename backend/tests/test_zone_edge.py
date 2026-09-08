@@ -395,8 +395,9 @@ def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_stat
     out, colls = _run(store, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
     assert out["singles_demand"] == 1 and out["pushed"] == 1 and len(sent) == 1
     m = sent[0]
-    assert m["title"] == "🧲 AAA in demand $90–92"
-    assert m["body"] == ("$91 · tested 2x · room +9.9% -> $100 · buy $90-92 · stop $89.55 "
+    assert m["title"] == "🧲 AAA ↓ falling into demand $90–92"      # prev 95 > the band, low = the print
+    assert m["body"] == ("$91 · ↓ falling into the band from 95 (-4.2% today) · tested 2x · room +9.9% -> $100 · "
+                         "buy $90-92 · stop $89.55 "
                          "(0.5% under the floor, 1.6% risk) · target $100 (6.2R) · $5.0B · Alpha")   # RES 100-102 (hi >= prev 95) is the first unbroken lid
     assert m["kind"] == "demand_alert" == DA.KIND and m["kind_arg"] == "demand_alert"
     key = DA.state_key("AAA", DEM, DAY, "at")
@@ -406,6 +407,20 @@ def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_stat
     assert row["tier"] == "in" and row["side"] == "demand" and row["role"] == "demand"
     assert row["arrival"] is True and row["dist_pct"] == 0.0 and row["new_highs"] is None
     assert ZE.STATE_COLL_BREAK == "supply_break_state" and DA.STATE_COLL == "demand_alert_state"
+
+
+def test_minute_pass_says_bouncing_when_the_low_touched_the_band(monkeypatch):
+    """Ajay 2026-09-08: the direction in writing. Same read as the 5-min pass."""
+    sent = _capture(monkeypatch)
+    store = {"AAA": _doc("AAA", [DEM, RES], 95.0)}
+    snap = {**_snap(91.5, 95.0, -3.7), "low": 90.4}
+    out, _ = _run(store, {"AAA": snap}, {"AAA": 5e9}, names={"AAA": "Alpha"})
+    assert out["pushed"] == 1 and sent[0]["title"] == "🧲 AAA ↑ bouncing off demand $90–92"
+    assert sent[0]["body"].startswith("$91.5 · ↑ bouncing off the band, +1.2% off the 90.4 low · tested 2x")
+    # NEGATIVE: the low IS the print → still falling from 95
+    sent.clear()
+    out, _ = _run(store, {"AAA": _snap(91.5, 95.0, -3.7)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
+    assert sent[0]["title"] == "🧲 AAA ↓ falling into demand $90–92"
 
 
 def test_demand_alerts_five_minute_pass_never_double_fires_a_band_zone_edge_already_sent(monkeypatch):
@@ -437,7 +452,7 @@ def test_resident_is_on_the_board_tagged_and_never_pushed(monkeypatch):
     assert rows["ARR"]["arrival"] is True and rows["RES"]["arrival"] is False and rows["UNK"]["arrival"] is False
     assert [r["symbol"] for r in out["near_demand"]][0] == "ARR", "arrivals first"
     assert out["unknown_prev"] == 1
-    assert [s["title"] for s in sent] == ["🧲 ARR in demand $90–92"]
+    assert [s["title"] for s in sent] == ["🧲 ARR ↓ falling into demand $90–92"]
     assert list(colls["coll_demand"].docs) == ["ARR:90.00-92.00:2026-09-03:at"]
 
 
@@ -462,8 +477,9 @@ def test_singles_capped_at_three_per_side_rest_one_digest_digest_names_recorded(
                           "🚀 N0 0.1% under resistance $100–102 → new highs"]
     assert titles[3] == "🚀 Breaking resistance — N1 0.49% +1 more"
     assert [l.split()[0] for l in sent[3]["body"].split("\n")] == ["N1", "N2"]
-    assert titles[4:7] == ["🧲 D0 in demand $90–92", "🧲 D1 0.22% above demand $90–92",
-                           "🧲 D2 0.43% above demand $90–92"]
+    assert titles[4:7] == ["🧲 D0 ↓ falling into demand $90–92", "🧲 D1 ↓ falling into demand $90–92",
+                           "🧲 D2 ↓ falling into demand $90–92"]
+    assert sent[5]["body"].startswith("$92.2 · 0.22% above · ↓ falling into the band from")
     assert titles[7] == "🧲 Demand zone — D3 +1 more"
     assert [l.split()[0] for l in sent[7]["body"].split("\n")] == ["D3", "D4"]
     assert all(s["kind"] == "supply_break_alert" for s in sent[:4])
@@ -561,7 +577,7 @@ def test_a_shelf_broken_today_is_one_push_a_shelf_broken_yesterday_is_support(mo
     assert out2["breaking"] == []
     nd = out2["near_demand"][0]
     assert nd["tier"] == "near" and nd["role"] == "broken supply" and nd["arrival"] is True
-    assert [s["title"] for s in sent] == ["🧲 AAA 0.49% above demand $100–102"]
+    assert [s["title"] for s in sent] == ["🧲 AAA ↓ falling into demand $100–102"]
     assert list(colls["coll_demand"].docs) == ["AAA:100.00-102.00:2026-09-03:at"]
     # closed ON the shelf's ring yesterday (102.5, 0.49% above): resident, listed, silent
     sent.clear()
@@ -1064,10 +1080,11 @@ def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch):
     roomy = {"kind": "supply", "lo": 96.0, "hi": 97.0, "touches": 2, "strength": 50.0}   # 5.49% over
     out2, _ = _run({"AAA": _doc("AAA", [DEM, roomy], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
     assert out2["pushed"] == 1 and out2["skipped_room"] == 0
-    assert sent[-1]["body"] == ("$91 · tested 2x · room +5.5% -> $96 · buy $90-92 · stop $89.55 "
+    assert sent[-1]["body"] == ("$91 · ↓ falling into the band from 95 (-4.2% today) · tested 2x · "
+                                "room +5.5% -> $96 · buy $90-92 · stop $89.55 "
                                 "(0.5% under the floor, 1.6% risk) · target $96 (3.4R) · $5.0B")
     out3, _ = _run({"AAA": _doc("AAA", [DEM], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
-    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · tested 2x · room: clear runway · buy $90-92 · stop $89.55 "
+    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · ↓ falling into the band from 95 (-4.2% today) · tested 2x · room: clear runway · buy $90-92 · stop $89.55 "
                                                        "(0.5% under the floor, 1.6% risk) · target: clear runway · $5.0B")
     assert ZE.EDGE_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT == 1.0, "the in/near tier IS the <1% rule — reused, not duplicated"
 

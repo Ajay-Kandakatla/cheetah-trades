@@ -899,7 +899,9 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                     demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
                                          "last": float(px), "cap": _f(cap), "name": None,
                                          "key": DA.state_key(sym, rd["band"], day_iso, "at"),
-                                         "tier": rd["tier"], "dist_pct": rd["dist_pct"], "room": room})
+                                         "tier": rd["tier"], "dist_pct": rd["dist_pct"], "room": room,
+                                         "approach": AG.approach_read(
+                                             px, rd["band"], prev, (snapshot.get(sym) or {}).get("low"))})
                 else:
                     skipped_room += 1
 

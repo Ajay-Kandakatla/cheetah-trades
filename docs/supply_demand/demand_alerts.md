@@ -79,6 +79,40 @@ stocks that have atleast 5% to Supply and also <1% bounce from demand zone"*. Sh
 * Counters ride in the pass result and the `DEMAND-ALERTS:` log line: `skipped_room`,
   `skipped_proximity`, `unknown_room`.
 
+### Which way it got here (2026-09-08)
+
+**Ask (Ajay 2026-09-08):** *"For demand zone alerts I would like to somehow know if we are
+nearing demand zone from the top like falling or Bouncing back from Demand zone.. I need the
+distinction in writing sometime its hard to se in the charts."*
+
+One pure read, `alert_gates.approach_read(print, band, prev_close, day_low)`, behind every
+demand surface — the single push title, its body, the digest line, the minute pass
+(`zone_edge`), the Back in Demand tiles and the Deep Demand tiles (a leading chip + the why
+line). Owner numbers, no book: `APPROACH_TOUCH_TOL_PCT` 1.0 (the day's low within 1% above the
+band top = it touched the band today), `APPROACH_LIFT_PCT` 0.5 (the print that far off the low =
+lifting), `APPROACH_AT_LOW_PCT` 0.2 (within that of the low = still on it).
+
+| read | condition | title | body / chip |
+|---|---|---|---|
+| **bouncing** | low touched the band and the print is ≥ 0.5% off it | `🧲 DYN ↑ bouncing off demand $17.9–18.6` | `↑ bouncing off the band, +1.2% off the 18.05 low` |
+| **falling** | yesterday closed above the band and the print sits on the day's low (≤ 0.2% off it, under it after hours, or no low yet — the pre-market day bar is 0) | `🧲 DYN ↓ falling into demand $17.9–18.6` | `↓ falling into the band from 24.28 (-25.6% today)` |
+| **settling** | from above, off the low by less than the lift | `🧲 DYN ↓ settling into demand …` | `↓ came down from 24.28 (-25.4% today), holding 0.3% off the 18.05 low` |
+| **lifting** | above the band from inside/below, the low never reached it, ≥ 0.5% off the low | `↑ lifting off demand` | `↑ lifting away from the band, +1.1% off the 18.8 low` |
+| resting | inside the band, came from inside, no lift | *unchanged* (`in demand`) | nothing added |
+| — | no prev close and no low, or above the band with no lift | *unchanged* | nothing added |
+
+The tag takes the title slot the `0.47% above` distance used to hold, so that distance moves into
+the body (`$211 · 0.47% above · ↓ falling into …`). Inputs: `prev_day_close` and the new `low`
+field on `sepa.prices.bulk_live_prices` rows (the 5-min pass) / the snapshot row (the minute
+pass); the boards read the same rows once (`board._live_rows`, shared with the bounce gate, so
+the read costs no second fetch) and stay silent for a name with no live row — the scan print
+alone cannot say which way it moved today.
+
+Tests: `test_alert_gates.py` (DYN fixtures, every read, negatives), `test_demand_alerts.py`
+(title / body / digest / the live-row low), `test_zone_edge.py` (minute pass),
+`test_chart_maps.py` (both boards, one fetch, no-live negative),
+`test_supply_demand_contracts.py` (one function on every path).
+
 ### Why the board, not a fresh zone scan
 The board *is* the app's definition of a demand zone worth the phone. Re-deriving zones
 per symbol here would be a second definition, and a cold full-universe zone pass is

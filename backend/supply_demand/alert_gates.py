@@ -170,6 +170,56 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
     return out
 
 
+# Direction into a demand band (Ajay 2026-09-08: "I would like to somehow know
+# if we are nearing demand zone from the top like falling or Bouncing back from
+# Demand zone.. I need the distinction in writing"). Owner constants, no book.
+APPROACH_TOUCH_TOL_PCT = 1.0     # the day's low within 1% above the band top = touched it today
+APPROACH_LIFT_PCT = 0.5          # the print this far off the day's low = lifting / bouncing
+APPROACH_AT_LOW_PCT = 0.2        # the print within this of the day's low = still falling
+
+
+def approach_read(print_px, band, prev_close=None, day_low=None) -> Optional[dict]:
+    """How price reached a demand band, in words. {"dir", "tag", "text"} or
+    None when nothing can be said (no prev close and no day low, or the print
+    is simply above the band with no lift).
+
+      bouncing  the day's low touched the band (≤ 1% above its top) and the
+                print is ≥ 0.5% off that low        → "↑ bouncing off"
+      falling   yesterday closed ABOVE the band and the print sits at the
+                day's low (≤ 0.2% off it, or no low known) → "↓ falling into"
+      settling  yesterday closed above the band, the print is between the
+                low and the close                    → "↓ settling into"
+      resting   inside the band, came from inside/below, no lift → "resting in"
+      lifting   above the band from below, ≥ 0.5% off the low  → "↑ lifting off"
+    """
+    px = _f(print_px)
+    if px is None or px <= 0 or not _valid_band(band):
+        return None
+    lo, hi = float(band["lo"]), float(band["hi"])
+    pc, dl = _f(prev_close), _f(day_low)
+    pc = pc if pc is not None and pc > 0 else None
+    dl = dl if dl is not None and dl > 0 else None
+    off_low = (px / dl - 1.0) * 100.0 if dl is not None else None
+    touched = dl is not None and dl <= hi * (1.0 + APPROACH_TOUCH_TOL_PCT / 100.0)
+    from_above = pc is not None and pc > hi
+    chg = (px / pc - 1.0) * 100.0 if pc is not None else None
+    if touched and off_low is not None and off_low >= APPROACH_LIFT_PCT:
+        return {"dir": "bouncing", "tag": "↑ bouncing off",
+                "text": "↑ bouncing off the band, +%.1f%% off the %g low" % (off_low, dl)}
+    if from_above and (off_low is None or off_low <= APPROACH_AT_LOW_PCT):
+        return {"dir": "falling", "tag": "↓ falling into",
+                "text": "↓ falling into the band from %g (%+.1f%% today)" % (pc, chg)}
+    if from_above:
+        return {"dir": "settling", "tag": "↓ settling into",
+                "text": "↓ came down from %g (%+.1f%% today), holding %.1f%% off the %g low" % (pc, chg, off_low, dl)}
+    if lo <= px <= hi:
+        return {"dir": "resting", "tag": None, "text": "resting in the band"}
+    if px > hi and off_low is not None and off_low >= APPROACH_LIFT_PCT:
+        return {"dir": "lifting", "tag": "↑ lifting off",
+                "text": "↑ lifting away from the band, +%.1f%% off the %g low" % (off_low, dl)}
+    return None
+
+
 def first_weak_lid(bands, print_px, target=None) -> Optional[dict]:
     """The first band above the print that the room rule does NOT count — a
     lid that fails is_proven_band (a 1-touch shelf, since 2026-09-08) —
