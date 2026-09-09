@@ -22,6 +22,7 @@ from . import price_zones as price_zones_mod
 from . import timeframes as tf_mod
 from . import demand_reentry as reentry_mod
 from . import session_board as session_mod
+from . import hot_pullback as hot_pullback_mod
 from . import premarket_entry as premarket_mod
 from . import zone_edge as zone_edge_mod
 from . import bounce_room as bounce_room_mod
@@ -76,6 +77,39 @@ async def get_session_board(
                                        limit=limit, orb_minutes=orb_minutes)
     return session_mod.cached_or_warm(universe, tf, limit=limit,
                                       orb_minutes=orb_minutes)
+
+
+@router.get("/supply-demand/hot-pullback")
+async def get_hot_pullback(
+    universe: str = Query("full", description="same universe key the demand boards use"),
+    limit: int = Query(hot_pullback_mod.MAX_ROWS, ge=1, le=200),
+    force: bool = Query(False, description="bypass the 3-minute cache and re-scan"),
+):
+    """🔥 Hot Pullback — a HOT name takes one hard flush into a demand band and
+    reverses the same day.
+
+    Ajay 2026-09-09: *"a new tab for hot pull back like 21 day moving average
+    drops but have a reversal from demand zones ... like DYN today which bounced
+    back quick ... names which dropped huge but have been hot."*
+
+    The rule, all four parts required: hot before the flush (prior close >=30%
+    above its own 52-week low, >=$5M median dollar volume); the day's LOW at
+    least 12% under the prior 10-day high AND the close at least 10% under the
+    21-day line; that low landed inside a TESTED demand band; and the close
+    finished >=8% off the low in the top 30% of the range.
+
+    MEASURED over 2 years (65 events, 56 names, no lookahead): next-open entry
+    +2.40% median by the next close, +2.85% by day two (66% up), against a
+    placebo of +0.05% / +0.19%. The same reversal NOT in a demand band measured
+    nothing (p=0.461). **The edge is gone by day five** (p=0.450) — a 1-3
+    session trade, not a hold. Worst 3-day in the sample was -36%.
+
+    `near_miss` carries names that failed exactly one rule, so an empty board
+    still says what the market is doing. Payload carries `study` and `rules`
+    so the numbers on screen come from the enforcing module, never retyped.
+    """
+    return JSONResponse(hot_pullback_mod.cached_or_warm(
+        universe_key=universe, limit=limit, force=force))
 
 
 @router.get("/supply-demand/premarket-entry")

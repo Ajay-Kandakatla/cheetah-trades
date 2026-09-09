@@ -905,6 +905,47 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Hot Pullback tab prints its measured horizon (2026-09-09)',
+    file: 'src/components/HotPullbackBoard.tsx',
+    // Ajay 2026-09-09: "a new tab for hot pull back ... like DYN today which
+    // bounced back quick." The measured edge DIES by day five (p=0.450). A
+    // board that showed the entry without the horizon would mislead him into
+    // holding, so the horizon and the placebo comparison are pinned on screen,
+    // and every strategy number must come off the payload rather than be typed
+    // into the component.
+    checks: (src) => {
+      const errs = [];
+      if (!/studyLine/.test(src)) errs.push('HotPullbackBoard.tsx lost studyLine — the measured line must lead the board');
+      if (!/gone by day five/.test(src)) errs.push('the study line no longer says the edge is gone by day five');
+      if (!/placebo/.test(src)) errs.push('the study line no longer quotes the placebo');
+      if (!/plan\.horizon/.test(src)) errs.push('the row no longer prints plan.horizon beside the entry');
+      if (!/data\?\.study/.test(src) && !/data\.study/.test(src)) {
+        errs.push('the study block must come from the payload, not be typed into the component');
+      }
+      // no hard-coded strategy thresholds in the UI
+      if (/const\s+(FALL|UNDER_MA|OFF_LOW|RANGE_POS)/.test(src)) {
+        errs.push('a strategy threshold is hard-coded in the component — it belongs in supply_demand/hot_pullback.py');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'Chart Maps carries the Hot Pullback tab (2026-09-09)',
+    file: 'src/lib/chartMaps.ts',
+    checks: (src) => {
+      const errs = [];
+      if (!/'hot_pullback'/.test(src)) errs.push("CmTab union lost 'hot_pullback'");
+      if (!/CM_TABS[^=]*=\s*\[[^\]]*'hot_pullback'/.test(src)) errs.push("CM_TABS no longer lists 'hot_pullback'");
+      if (!/hot_pullback:\s*\{[\s\S]*?label:/.test(src)) errs.push('TAB_META has no hot_pullback entry');
+      if (!/t !== 'hot_pullback'/.test(src)) errs.push('isBoardTab must exclude hot_pullback — it has its own endpoint and renderer');
+      const meta = /hot_pullback:\s*\{[\s\S]*?\},/.exec(src);
+      if (meta && !/gone by day five|GONE by day five|by day five/i.test(meta[0])) {
+        errs.push('the Hot Pullback blurb must state that the edge dies by day five');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

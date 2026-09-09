@@ -45,6 +45,7 @@ import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
 import { useDemandScanProgress } from '../hooks/useDemandScanProgress';
 import { CatalystsBoard } from '../pages/Catalysts';
+import { HotPullbackBoard } from '../components/HotPullbackBoard';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
 import { trackFeature } from '../lib/usageTracker';
@@ -546,6 +547,14 @@ export function ChartMaps() {
           next.set('symbol', sym);
           setParams(next, { replace: true });
         }} />
+      ) : tab === 'hot_pullback' ? (
+        /* 🔥 Hot Pullback (Ajay 2026-09-09: "a new tab for hot pull back like
+         * 21 day moving average drops but have a reversal from demand zones …
+         * like DYN today which bounced back quick"). Its own endpoint and its
+         * own renderer, so the tile grid and the sort/tier controls are skipped
+         * — the row's facts ARE the read, and the measured horizon rides on
+         * every one of them. */
+        <HotPullbackBoard />
       ) : tab === 'signals' ? (
         /* The Signal Lab's working surface, mounted as a tab (Ajay 2026-09-01:
          * "add the signals tab inside chart maps"). Same component as the

@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -32,11 +32,15 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // closes the level boards before the option / ledger tabs. `supply` stays in
 // the CmTab union so TAB_META keeps its copy and an old ?tab=supply deep link
 // still renders (→ `ict`, see parseTab); it is not in CM_TABS.
+// `hot_pullback` (2026-09-09) sits after `breaking`: it is the other side of
+// the same demand structure — `breaking` is price leaving a lid, this is price
+// flushing into a band and turning. It must NOT split `quick_bounce` from
+// `breaking`, whose adjacency a frontend contract pins.
 // `breaking` (2026-09-06, Ajay: "change the deep demand to be like In Demand
 // with charts and cards") is the zone-edge 🚀 list that used to sit as ~200
 // text rows on top of Deep Demand, now its own card board right after the
 // demand cluster; Deep Demand is cards only, like Back in Demand.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -58,10 +62,15 @@ export function isBoardTab(t: CmTab): boolean {
   // and the sort/tier controls are skipped for it too.
   // `catalysts` (2026-09-05) mounts the Catalysts page body — its own scan
   // endpoints and sub-tabs, nothing from /chart-maps.
-  return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals' && t !== 'catalysts';
+  return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
+    && t !== 'catalysts' && t !== 'hot_pullback';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  hot_pullback: {
+    label: '\uD83D\uDD25 Hot Pullback',
+    blurb: 'A stock that has been HOT takes one hard flush into a demand band and turns the same day \u2014 the DYN 2026-09-08 shape: gapped from 24.28 to a 17.00 low that landed inside a 4-touch demand band, then closed 20.31, +19.5% off that low and 21% under the 21-day line. All four parts are required: hot before the drop (prior close at least 30% above its own 52-week low), the day\u2019s low at least 12% under the prior 10-day high AND the close at least 10% under the 21-day line, that low inside a TESTED demand band, and the close at least 8% off the low in the top 30% of the day\u2019s range. MEASURED over 2 years (65 events, 56 names, no lookahead): entering at the NEXT OPEN returned a median +2.40% by the next close and +2.85% by day two, 66% up, against a placebo of +0.05% / +0.19%. The demand band is what carries it \u2014 the identical reversal NOT in a band measured nothing (p=0.461). The edge is GONE by day five (p=0.450), so this is a one-to-three session trade, not a hold, and the worst three-day in the sample was \u221236%. A study board with a measured horizon, not a buy button. Not advice.',
+  },
   signals: {
     label: '\u26A1 Signals',
     blurb: 'Your own tickers on 1-minute candles with BUY / SELL tags \u2014 opening-range breaks, liquidity sweeps and BOS/CHoCH structure composed into the five-step entry (stop at the trap wick, 2R target). Closed bars only; signals never repaint. Same board as the Signal Lab page.',

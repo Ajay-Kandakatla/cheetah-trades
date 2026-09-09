@@ -171,6 +171,12 @@ def get_config() -> dict:
         # live broker, so ON only ever means the paper account.
         "zero_dte_entry": bool(doc.get("zero_dte_entry", True)),
         "last_zero_dte_disabled_day": doc.get("last_zero_dte_disabled_day"),
+        # 🔥 Hot Pullback paper lane (trading/hot_pullback_entry.py; Ajay
+        # 2026-09-09 "Can you make sure we paper trade this in autopilot too?").
+        # Default ON — the lane refuses a live broker, so ON only ever means
+        # the paper account, exactly like the 0DTE lane above.
+        "hot_pullback_entry": bool(doc.get("hot_pullback_entry", True)),
+        "last_hot_pullback_disabled_day": doc.get("last_hot_pullback_disabled_day"),
         # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
         "flatten_queue": _norm_queue(doc.get("flatten_queue")),
         "flatten_queue_rev": int(doc.get("flatten_queue_rev") or 0),
@@ -1280,6 +1286,18 @@ def tick(force: bool = False) -> dict:
     except Exception as exc:                       # noqa: BLE001
         log.warning("zero_dte_lane run failed: %s", exc)
         summary["errors"].append("zero_dte_lane: %s" % exc)
+
+    # (m) 🔥 Hot Pullback paper lane (trading/hot_pullback_entry.py, owner
+    # rules; flag `hot_pullback_entry`, default ON, paper-only) — closes its
+    # open positions on stop / target / the 3-session clock, THEN buys
+    # yesterday's flush-into-demand signals at today's open. Fenced exactly
+    # like (k)/(l): a crash here can never reach stop protection above.
+    try:
+        from trading import hot_pullback_entry
+        summary["hot_pullback"] = hot_pullback_entry.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("hot_pullback lane run failed: %s", exc)
+        summary["errors"].append("hot_pullback: %s" % exc)
 
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no

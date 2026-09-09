@@ -650,7 +650,7 @@ describe('the Earnings Flow tab', () => {
     // beginning of the list") — the demand boards lead, the SEPA slices and
     // ICT moved behind every S/D read; see the describe at the end of this file.
     expect(CM_TABS).toEqual(
-      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -735,7 +735,7 @@ describe('the Support Levels tab', () => {
     // as a tab (its own /catalysts/* endpoints and sub-tabs).
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
-    expect(nonBoard).toEqual(['session', 'signals', 'catalysts', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1541,7 +1541,7 @@ describe('tab order — most-used first', () => {
   });
 
   it('keeps the SEPA slices and the no-edge ICT study board behind every S/D read', () => {
-    const sd: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'session', 'signals', 'catalysts', 'overnight', 'gabbar'];
+    const sd: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'gabbar'];
     const lastSd = Math.max(...sd.map((t) => CM_TABS.indexOf(t)));
     for (const t of ['vcp', 'topping', 'ict'] as CmTab[]) {
       expect(CM_TABS.indexOf(t)).toBeGreaterThan(lastSd);
@@ -1565,7 +1565,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(17);
+    expect(CM_TABS).toHaveLength(18);
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });

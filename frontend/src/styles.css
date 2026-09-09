@@ -11752,3 +11752,45 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pe__ruleslist { margin: 8px 0 0 16px; padding: 0; }
 .pe__ruleslist li { font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); margin-bottom: 4px; line-height: 1.45; }
 .pe__asof { font-size: 0.7rem; color: var(--ink-subtle, #9aa8c8); margin-top: 10px; }
+
+/* ── 🔥 Hot Pullback tab (2026-09-09) ────────────────────────────────────────
+   Ajay: "names which dropped huge but have been hot in the market. Are having
+   reversals." The row's FACTS are the read, so they get the weight; the
+   measured horizon sits on every plan line because the edge dies by day five
+   and a board that hid that would mislead. */
+.hp__study { font-size: 0.78rem; color: var(--ink-subtle, #9aa8c8); margin: 0 0 10px;
+             max-width: 88ch; line-height: 1.5; }
+.hp__bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.hp__count { font-size: 0.8rem; font-weight: 600; }
+.hp__spacer { flex: 1 1 auto; }
+.hp__refresh { font: inherit; font-size: 0.74rem; padding: 3px 8px; border-radius: 6px;
+               border: 1px solid var(--hairline); background: var(--bg-sunken);
+               color: var(--ink); cursor: pointer; }
+.hp__err { font-size: 0.8rem; color: var(--negative, #e5484d); }
+.hp__note { font-size: 0.82rem; color: var(--ink-subtle, #9aa8c8); padding: 14px 0; }
+.hp__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.hp-row { border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px;
+          background: var(--bg-raised); }
+.hp-row__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hp-row__sym { font-weight: 700; font-size: 1rem; color: var(--ink); text-decoration: none; }
+.hp-row__sym:hover { text-decoration: underline; }
+.hp-row__px { font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.hp-row__chg { font-variant-numeric: tabular-nums; font-size: 0.84rem; font-weight: 600; }
+.hp-row__chg.is-dn { color: var(--negative, #e5484d); }
+.hp-row__date, .hp-row__vol { font-size: 0.72rem; color: var(--ink-subtle, #9aa8c8); }
+.hp-row__facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px;
+                 font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8); }
+.hp-row__facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.hp-row__plan { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px;
+                padding-top: 8px; border-top: 1px dashed var(--hairline);
+                font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8); }
+.hp-row__plan b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.hp-row__horizon { color: #e8a33d; font-weight: 600; }
+.hp__more { all: unset; cursor: pointer; font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8);
+            margin-top: 12px; display: inline-block; border-bottom: 1px dotted currentColor; }
+.hp__more:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.hp__nearlist, .hp__ruleslist { margin: 8px 0 0 16px; padding: 0; }
+.hp__nearlist li, .hp__ruleslist li { font-size: 0.75rem; color: var(--ink-subtle, #9aa8c8);
+                                      margin-bottom: 4px; line-height: 1.45; }
+.hp__nearlist a { color: var(--ink); text-decoration: none; font-weight: 600; }
+.hp__asof { font-size: 0.7rem; color: var(--ink-subtle, #9aa8c8); margin-top: 12px; }
