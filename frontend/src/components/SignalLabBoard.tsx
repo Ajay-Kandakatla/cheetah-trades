@@ -22,6 +22,7 @@ import { API } from '../lib/apiBase';
 import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
 import { SymbolSearch } from './SymbolSearch';
+import { PremarketEntry } from './PremarketEntry';
 import type { CmTile } from '../lib/chartMaps';
 
 type Feed = {
@@ -83,6 +84,13 @@ export function SignalLabBoard() {
 
   return (
     <div className="slab">
+      {/* Ajay 2026-09-09: "I wanna see this category in the signals page with a
+       * section for it." It LEADS the tab because it answers the question he
+       * opens the page with — what can I enter right now — while everything
+       * below is the per-ticker tape. Collapsible, so the watchlist is one
+       * click away when he does not want it. */}
+      <PremarketEntry />
+
       <div className="slab-controls">
         <SymbolSearch onAdd={add} placeholder="Add a ticker to watch — e.g. TSLA, IREN, SNDK" />
         <div className="slab-chips">

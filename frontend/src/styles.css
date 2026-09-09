@@ -11656,8 +11656,27 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pcw__acct-more { border: 1px solid var(--muted, #8b8fa3); color: var(--muted, #8b8fa3); border-radius: 3px; padding: 0 4px; font-size: 10px; cursor: default; }
 .pcw__room-band { display: block; font-size: 10px; line-height: 1.1; }
 .pcw__cat { max-width: 200px; }
-.pcw__table.is-wide { overflow-x: auto; }                /* narrow window: columns beat sticky headers */
-.pcw__table.is-wide .og__table thead th, .pcw__table.is-wide > .day-section__h { position: static; }
+/* Wide table (2026-09-09). Ajay: "what happened to the catalyst table I wanted
+   the headers to be static it broke the logic." It broke because the fallback
+   below used to set `position: static` on the header whenever the table did
+   not fit — and with a 1720px min-width against a ~1470px wrapper on his
+   1512-wide screen, it NEVER fit, so the static headers he asked for never
+   engaged once. Measured 2026-09-09: table 1759px, wrapper 1472px, computed
+   thead position `static`.
+
+   The fix keeps the headers. An `overflow-x: auto` box is a scroll container
+   on BOTH axes, so bounding its height makes it the vertical scroller too and
+   `top: 0` sticks the header to the top of the BOX (not the viewport) while
+   the rows scroll under it — and the header still scrolls sideways in step
+   with its columns, which is the only correct behaviour for a wide table.
+   The title sticks above it in the same box. */
+.pcw__table.is-wide {
+  overflow: auto;
+  max-height: calc(100vh - var(--sticky-top, 0px) - 2.5rem);
+  overscroll-behavior: contain;
+}
+.pcw__table.is-wide > .day-section__h { top: 0; z-index: 4; }
+.pcw__table.is-wide .og__table thead th { top: var(--pcw-title-h); z-index: 3; }
 
 
 /* Promo board — fixed column budget so 17 columns fit (2026-09-03) */
@@ -11679,3 +11698,57 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .pcw__cap.is-small { color: var(--negative, #e5484d); opacity: 0.8; }
 .pcw__capfilter { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 6px; cursor: pointer; }
 .pcw__capfilter input { accent-color: #e8a33d; }
+
+
+/* ── 🎯 Ready to enter (Signals tab, 2026-09-09) ─────────────────────────────
+   Ajay: "ready to enter premarket category ... I wanna see this category in
+   the signals page with a section for it." Leads the tab, collapses to a
+   single header row. Grades carry colour; mood is deliberately the quietest
+   line on a row, because it is context and never a reason to buy. */
+.pe { border: 1px solid var(--hairline); border-radius: 10px; background: var(--bg-raised);
+      margin: 0 0 16px; overflow: hidden; }
+.pe__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 10px 14px; border-bottom: 1px solid var(--hairline); }
+.pe__toggle { all: unset; cursor: pointer; }
+.pe__toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.pe__title { font-size: 0.98rem; font-weight: 700; margin: 0; }
+.pe__count { font-size: 0.78rem; color: var(--ink-subtle, #9aa8c8); }
+.pe__spacer { flex: 1 1 auto; }
+.pe__pass, .pe__refresh { font: inherit; font-size: 0.74rem; padding: 3px 8px;
+            border-radius: 6px; border: 1px solid var(--hairline);
+            background: var(--bg-sunken); color: var(--ink); cursor: pointer; }
+.pe__body { padding: 10px 14px 12px; }
+.pe__sub { font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8); margin: 0 0 10px; max-width: 78ch; }
+.pe__err, .pe__warming, .pe__empty, .pe__closed { font-size: 0.8rem; margin: 6px 0;
+            color: var(--ink-subtle, #9aa8c8); }
+.pe__err { color: var(--negative, #e5484d); }
+.pe__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pe-row { border: 1px solid var(--hairline); border-radius: 8px; padding: 8px 10px;
+          background: var(--bg-sunken); }
+.pe-row__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pe-row__sym { font-weight: 700; font-size: 0.92rem; color: var(--ink); text-decoration: none; }
+.pe-row__sym:hover { text-decoration: underline; }
+.pe-row__px { font-variant-numeric: tabular-nums; font-size: 0.86rem; }
+.pe-row__chg { font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+.pe-row__chg.is-up { color: var(--positive, #46a758); }
+.pe-row__chg.is-dn { color: var(--negative, #e5484d); }
+.pe-row__band, .pe-row__sess { font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); }
+.pe-row__sess { text-transform: uppercase; letter-spacing: 0.05em; }
+.pe-row__line { font-size: 0.76rem; margin-top: 3px; line-height: 1.45; }
+.pe-row__approach { color: var(--ink); }
+.pe-row__plan { color: var(--ink); font-variant-numeric: tabular-nums; }
+.pe-row__confirm { color: #e8a33d; }
+.pe-row__drag { color: #e8a33d; }
+.pe-row__blocked { color: var(--negative, #e5484d); }
+.pe-row__mood { color: var(--ink-subtle, #9aa8c8); opacity: 0.85; }
+.pe-pill { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.05em; padding: 2px 6px;
+           border-radius: 999px; text-transform: uppercase; }
+.pe-pill.is-ready { background: rgba(70, 167, 88, 0.18); color: var(--positive, #46a758); }
+.pe-pill.is-watch { background: rgba(232, 163, 61, 0.18); color: #e8a33d; }
+.pe-pill.is-blocked { background: rgba(229, 72, 77, 0.15); color: var(--negative, #e5484d); }
+.pe__more { all: unset; cursor: pointer; font-size: 0.76rem; color: var(--ink-subtle, #9aa8c8);
+            margin-top: 10px; display: inline-block; border-bottom: 1px dotted currentColor; }
+.pe__more:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.pe__ruleslist { margin: 8px 0 0 16px; padding: 0; }
+.pe__ruleslist li { font-size: 0.74rem; color: var(--ink-subtle, #9aa8c8); margin-bottom: 4px; line-height: 1.45; }
+.pe__asof { font-size: 0.7rem; color: var(--ink-subtle, #9aa8c8); margin-top: 10px; }

@@ -88,6 +88,22 @@
 # warming:true and skip. Warming here means the 9:33 pass sees a filled board.
 25     9     *    *    1-5  curl -sS -m 30 -o /dev/null -w 'demand-reentry warm full (am): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/demand-reentry?universe=full&limit=1'
 #
+# Premarket + session ENTRY lane (supply_demand/premarket_entry.py) — Ajay
+# 2026-09-09: "ready to enter premarket category ... from In demand and Deep
+# demands with crons firing in the morning to scan at 7 CT and another one
+# regular market session". The container clock is ET, so 07:00 CT = 08:00 ET.
+# curl, NOT `python -m`: the board is served from the API process's own memory,
+# and a module run in the CRON container would warm a different process and
+# leave the page cold (the same trap the 09:25 warm above exists to avoid).
+# `record=true` persists that one scan to `premarket_entry_runs` so the grades
+# can be graded forward later; the session passes record too, every 15 minutes.
+# Both go through market_hours.gate's calendar via the API's own holiday check.
+0      8     *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (pre): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=premarket&universe=full&force=true&record=true'
+20     8     *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (pre 8:20): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=premarket&universe=full&force=true&record=true'
+0      9     *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (pre 9:00): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=premarket&universe=full&force=true&record=true'
+*/15   10-15 *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (session): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=session&universe=full&force=true&record=true'
+35,50  9     *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (session am): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=session&universe=full&force=true&record=true'
+#
 # Quick Bounce study (supply_demand/quick_bounce.py) — Sundays 07:00 ET (Ajay
 # 2026-09-06: "quick bounce potential list ... do the data analysis"). Walks
 # every universe name's 2-year daily frame (bands recomputed at anchors on

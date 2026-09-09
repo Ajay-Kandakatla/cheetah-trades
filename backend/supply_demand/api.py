@@ -22,6 +22,7 @@ from . import price_zones as price_zones_mod
 from . import timeframes as tf_mod
 from . import demand_reentry as reentry_mod
 from . import session_board as session_mod
+from . import premarket_entry as premarket_mod
 from . import zone_edge as zone_edge_mod
 from . import bounce_room as bounce_room_mod
 from . import alert_status as alert_status_mod
@@ -75,6 +76,49 @@ async def get_session_board(
                                        limit=limit, orb_minutes=orb_minutes)
     return session_mod.cached_or_warm(universe, tf, limit=limit,
                                       orb_minutes=orb_minutes)
+
+
+@router.get("/supply-demand/premarket-entry")
+async def get_premarket_entry(
+    pass_name: Optional[str] = Query(None, alias="pass",
+                                     description="premarket | session; omitted = whatever the ET clock is in"),
+    universe: str = Query("full", description="same universe key the demand boards use"),
+    limit: int = Query(premarket_mod.MAX_SYMBOLS, ge=1, le=300),
+    force: bool = Query(False, description="bypass the 2-minute cache and re-read"),
+    record: bool = Query(False,
+                         description="persist this pass to premarket_entry_runs (the crons set it)"),
+):
+    """Ready-to-enter cut of the Back in Demand + Deep Demand boards.
+
+    Ajay 2026-09-09: *"I would like to see you ready to enter premarket
+    category for me from In demand and Deep demands ... I need an entry signal
+    with mood considered and demand zone and other criterate we discussed."*
+
+    Every row carries a GRADE and the reason for it:
+      READY   — clears both standing gates (>=5% room to the first proven band
+                overhead, print at the band or within 1% above its top) and
+                carries no measured drag.
+      WATCH   — clears both gates but carries one: reclaiming the band from
+                below (measured 66% floor-stop rate vs 11% for arrivals from
+                above) or a -3..-8% day (22% closed above the print vs 57%).
+      BLOCKED — fails a gate; listed anyway with the reason, because boards
+                list everything and gates decide only what is tradable.
+
+    Mood rides on every row and breaks ties WITHIN a grade. It can never
+    promote, demote or block a row — the 2026-09-08 rule, pinned by a test.
+
+    Never blocks (Cloudflare 524, 2026-08-14): a cold pass serves what it has
+    and warms in a thread.
+    """
+    if pass_name is not None and pass_name not in premarket_mod.PASSES:
+        raise HTTPException(404, "unknown pass")
+    data = premarket_mod.cached_or_warm(
+        universe=universe, pass_name=pass_name, limit=limit, force=force)
+    if record:
+        # The crons curl this endpoint rather than running the module, so the
+        # ONE scan that warms the API's own memory is also the one recorded.
+        data = {**data, "recorded": premarket_mod.record(data)}
+    return JSONResponse(data)
 
 
 @router.get("/supply-demand/session-board/progress")

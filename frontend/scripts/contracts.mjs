@@ -861,6 +861,50 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Signals tab leads with the Ready-to-enter section (2026-09-09)',
+    file: 'src/components/SignalLabBoard.tsx',
+    // Ajay 2026-09-09: "I wanna see this category in the signals page with a
+    // section for it." Pinned: the board imports PremarketEntry and mounts it
+    // BEFORE the watchlist controls, so it leads the tab rather than trailing
+    // the tiles.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bPremarketEntry\b[^}]*\}\s*from\s*'\.\/PremarketEntry'/.test(src)) {
+        errs.push("SignalLabBoard.tsx no longer imports PremarketEntry from './PremarketEntry'");
+      }
+      if (!/<PremarketEntry\s*\/>/.test(src)) errs.push('SignalLabBoard.tsx no longer mounts <PremarketEntry />');
+      const mount = src.indexOf('<PremarketEntry');
+      const controls = src.indexOf('slab-controls');
+      if (mount < 0 || controls < 0 || mount > controls) {
+        errs.push('PremarketEntry must mount BEFORE the slab-controls block so the section leads the tab');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'Ready-to-enter grades never read mood (2026-09-09)',
+    file: 'src/components/PremarketEntry.tsx',
+    // The mood watcher was DELETED on 2026-09-08 after a wrong DYN sell. Mood
+    // came back as context only. The frontend must not reintroduce it as a
+    // decision: grading happens in the backend, and this file may only render
+    // `mood_txt`. Pinned: no grade is computed here from a mood value.
+    checks: (src) => {
+      const errs = [];
+      if (!/mood_txt/.test(src)) errs.push('PremarketEntry.tsx no longer renders mood_txt (mood must stay visible as context)');
+      if (/context only/.test(src) === false) errs.push("PremarketEntry.tsx no longer labels mood 'context only'");
+      // An ASSIGNMENT to a grade (`grade =`, not the comparison `grade ===`)
+      // whose right-hand side mentions mood, on the same line. The greedy
+      // `[^;]*` version matched `grade === 'READY'` and then ran forward to an
+      // unrelated `mood_txt` several lines later.
+      const badGrade = src.split('\n').some((ln) => /\bgrade\s*=(?!=)/.test(ln) && /mood/i.test(ln));
+      if (badGrade) errs.push('PremarketEntry.tsx derives a grade from mood — mood is context, never a gate');
+      if (!/GRADES\s*=\s*\['READY',\s*'WATCH',\s*'BLOCKED'\]/.test(src)) {
+        errs.push('PremarketEntry.tsx lost the three-grade vocabulary');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -14,6 +14,7 @@ from trading import risk_rules as RR
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import zero_dte_lane as ZDL
+from . import premarket_entry as PME
 from trading import catalyst_entry as CE
 from trading import options_lane as OL
 from . import alert_gates as AG
@@ -110,6 +111,15 @@ def sections() -> dict:
         ],
         "stops": _zone_lines(),
         "alerts": [
+            "\U0001F3AF Ready to enter (\u26A1 Signals tab, pre-market 08:00 ET and every 15 min in "
+            "session): the same two gates decide READY; a name that clears them still grades "
+            "WATCH if it is reclaiming the band from below (measured %s floor-stop rate vs %s "
+            "for arrivals from above) or is down %s\u2013%s on the day (%s closed above the "
+            "print vs %s). BLOCKED rows stay on the board with the gate they failed. Mood "
+            "orders rows inside a grade and never decides one."
+            % (_pct(PME.RECLAIM_STOP_PCT), _pct(PME.ARRIVAL_STOP_PCT),
+               _pct(abs(PME.WEAK_DAY_HI_PCT)), _pct(abs(PME.WEAK_DAY_LO_PCT)),
+               _pct(PME.WEAK_DAY_UP_PCT), _pct(PME.NORMAL_DAY_UP_PCT)),
             "🧲 demand_alert pushes only names ≥ %s cap that are inside the band or ≤ %s "
             "above its top, with ≥ %s room (see Alerts)." % (_b(DA.MIN_CAP_USD),
                                                              _pct(DA.AT_PCT), gate_room),
