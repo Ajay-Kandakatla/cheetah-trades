@@ -415,6 +415,7 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             store = {}
     hits, at_items, near_items = [], [], []
     skipped_cap = unknown_cap = unknown_prev = skipped_room = skipped_proximity = unknown_room = 0
+    skipped_direction = 0
     for sym in syms:
         last = last_px.get(sym)
         if not last:
@@ -459,6 +460,11 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         it["room"] = room
         if not ok:
             skipped_room += 1
+            continue
+        # Bouncing only (Ajay 2026-09-09, after CASY). Falling / settling /
+        # reclaiming / resting still list on the BOARDS; the phone stays quiet.
+        if not AG.direction_gate(it.get("approach")):
+            skipped_direction += 1
             continue
         pushable.append(it)
     # Mood as CONTEXT (Ajay 2026-09-08: "do include mood in the overall
@@ -506,7 +512,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             "pushed": pushed,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
-            "skipped_proximity": skipped_proximity, "unknown_room": unknown_room}
+            "skipped_proximity": skipped_proximity, "unknown_room": unknown_room,
+            "skipped_direction": skipped_direction}
 
 
 if __name__ == "__main__":
@@ -515,8 +522,9 @@ if __name__ == "__main__":
     out = check_once()
     log.info("DEMAND-ALERTS: ran=%s candidates=%s hits=%d at=%s near=%s pushed=%s "
              "skipped_cap=%s unknown_cap=%s unknown_prev=%s skipped_room=%s "
-             "skipped_proximity=%s unknown_room=%s", out.get("ran"),
+             "skipped_proximity=%s unknown_room=%s skipped_direction=%s", out.get("ran"),
              out.get("candidates"), len(out.get("hits") or []), out.get("at"),
              out.get("near"), out.get("pushed"), out.get("skipped_cap"),
              out.get("unknown_cap"), out.get("unknown_prev"), out.get("skipped_room"),
-             out.get("skipped_proximity"), out.get("unknown_room"))
+             out.get("skipped_proximity"), out.get("unknown_room"),
+             out.get("skipped_direction"))

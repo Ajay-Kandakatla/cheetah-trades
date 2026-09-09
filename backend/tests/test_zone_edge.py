@@ -127,11 +127,21 @@ def _doc(sym, bands, prev_close, high_252=None, day=DAY):
             "bands": bands, "atr14": 1.0, "prev_close": prev_close, "high_252": high_252}
 
 
-def _snap(last, prev=None, change_pct=0.0, *, now=NOW, age_sec=30):
+def _snap(last, prev=None, change_pct=0.0, *, now=NOW, age_sec=30, low=None):
+    """`low=None` puts the print AT the day's low, which reads as FALLING and,
+    since 2026-09-09, is no longer pushed. Pass `low` below the band top to make
+    it a BOUNCE — the only approach the phone still takes."""
     ts_ns = int((now - timedelta(seconds=age_sec)).timestamp() * 1e9)
-    return {"open": last, "high": last, "low": last, "close": last, "volume": 1e6,
+    lo = last if low is None else low
+    return {"open": last, "high": last, "low": lo, "close": last, "volume": 1e6,
             "change_pct": change_pct, "last_trade_price": last, "last_trade_ts_ms": ts_ns,
             "prev_day_close": prev}
+
+
+def _bounce(last, prev=None, change_pct=0.0, **kw):
+    """A snapshot that reads as BOUNCING off DEM (90-92): the day's low sits in
+    the band and the print is >= 0.5% off it."""
+    return _snap(last, prev, change_pct, low=round(min(91.9, last * 0.988), 2), **kw)
 
 
 def _capture(monkeypatch, result=None):
@@ -378,7 +388,7 @@ def test_touches_under_two_are_listed_never_pushed(monkeypatch):
     one = dict(RES, touches=1)
     onedem = dict(DEM, touches=1)
     store = {"AAA": _doc("AAA", [one], 99.0), "BBB": _doc("BBB", [onedem], 95.0)}
-    out, colls = _run(store, {"AAA": _snap(101.5, 99.0), "BBB": _snap(91.0, 95.0, -2.0)},
+    out, colls = _run(store, {"AAA": _snap(101.5, 99.0), "BBB": _bounce(91.0, 95.0, -2.0)},
                       {"AAA": 5e9, "BBB": 5e9})
     assert [r["symbol"] for r in out["breaking"]] == ["AAA"] and out["breaking"][0]["band"]["touches"] == 1
     assert [r["symbol"] for r in out["near_demand"]] == ["BBB"] and out["near_demand"][0]["arrival"] is True
@@ -401,11 +411,11 @@ def test_unknown_cap_is_skipped_from_the_board_small_cap_listed_not_pushed(monke
 def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_state(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"AAA": _doc("AAA", [DEM, RES], 95.0)}
-    out, colls = _run(store, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
+    out, colls = _run(store, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
     assert out["singles_demand"] == 1 and out["pushed"] == 1 and len(sent) == 1
     m = sent[0]
-    assert m["title"] == "🧲 AAA ↓ falling into demand $90–92"      # prev 95 > the band, low = the print
-    assert m["body"] == ("$91 · ↓ falling into the band from 95 (-4.2% today) · tested 2x · room +9.9% -> $100 · "
+    assert m["title"] == "🧲 AAA ↑ bouncing off demand $90–92"      # the ONLY approach the phone takes since 2026-09-09
+    assert m["body"] == ("$91 · ↑ bouncing off the band, +1.2% off the 89.91 low · tested 2x · room +9.9% -> $100 · "
                          "buy $90-92 · stop $89.55 "
                          "(0.5% under the floor, 1.6% risk) · target $100 (6.2R) · $5.0B · Alpha")   # RES 100-102 (hi >= prev 95) is the first unbroken lid
     assert m["kind"] == "demand_alert" == DA.KIND and m["kind_arg"] == "demand_alert"
@@ -426,16 +436,21 @@ def test_minute_pass_says_bouncing_when_the_low_touched_the_band(monkeypatch):
     out, _ = _run(store, {"AAA": snap}, {"AAA": 5e9}, names={"AAA": "Alpha"})
     assert out["pushed"] == 1 and sent[0]["title"] == "🧲 AAA ↑ bouncing off demand $90–92"
     assert sent[0]["body"].startswith("$91.5 · ↑ bouncing off the band, +1.2% off the 90.4 low · tested 2x")
-    # NEGATIVE: the low IS the print → still falling from 95
+    # NEGATIVE (rewritten 2026-09-09): the low IS the print, so it is FALLING —
+    # and Ajay turned falling off. "Turn off falling in to deman alerts all
+    # together. only bouncing off alerts." The board still lists it; the phone
+    # says nothing.
     sent.clear()
     out, _ = _run(store, {"AAA": _snap(91.5, 95.0, -3.7)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
-    assert sent[0]["title"] == "🧲 AAA ↓ falling into demand $90–92"
+    assert sent == [] and out["pushed"] == 0
+    assert out["skipped_direction"] == 1
+    assert [r["symbol"] for r in out["near_demand"]] == ["AAA"], "still on the board"
 
 
 def test_demand_alerts_five_minute_pass_never_double_fires_a_band_zone_edge_already_sent(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"AAA": _doc("AAA", [DEM], 95.0)}
-    out, colls = _run(store, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
+    out, colls = _run(store, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9})
     assert out["pushed"] == 1
     board = {"rows": [{"symbol": "AAA", "name": "AAA Inc", "entry_zone": dict(DEM)}], "approaching_rows": []}
     live = {"AAA": {"price": 91.0, "change_pct": -4.2, "prev_day_close": 95.0}}
@@ -446,7 +461,7 @@ def test_demand_alerts_five_minute_pass_never_double_fires_a_band_zone_edge_alre
     pre = _colls()
     pre["coll_demand"].update_one({"_id": DA.state_key("AAA", DEM, DAY, "at")},
                                   {"$set": {"symbol": "AAA"}}, upsert=True)
-    out2, _ = _run(store, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9}, colls=pre)
+    out2, _ = _run(store, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9}, colls=pre)
     assert out2["pushed"] == 0 and len(sent) == 1 and len(out2["near_demand"]) == 1
 
 
@@ -454,14 +469,14 @@ def test_resident_is_on_the_board_tagged_and_never_pushed(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"RES": _doc("RES", [DEM], 91.5), "ARR": _doc("ARR", [DEM], 95.0),
              "UNK": _doc("UNK", [DEM], None)}
-    snap = {"RES": _snap(91.0, 91.5, -0.5), "ARR": _snap(91.0, 95.0, -4.2), "UNK": _snap(91.0, None, -1.0)}
+    snap = {"RES": _snap(91.0, 91.5, -0.5), "ARR": _bounce(91.0, 95.0, -4.2), "UNK": _snap(91.0, None, -1.0)}
     out, colls = _run(store, snap, {s: 5e9 for s in store})
     rows = {r["symbol"]: r for r in out["near_demand"]}
     assert set(rows) == {"RES", "ARR", "UNK"}
     assert rows["ARR"]["arrival"] is True and rows["RES"]["arrival"] is False and rows["UNK"]["arrival"] is False
     assert [r["symbol"] for r in out["near_demand"]][0] == "ARR", "arrivals first"
     assert out["unknown_prev"] == 1
-    assert [s["title"] for s in sent] == ["🧲 ARR ↓ falling into demand $90–92"]
+    assert [s["title"] for s in sent] == ["🧲 ARR ↑ bouncing off demand $90–92"]
     assert list(colls["coll_demand"].docs) == ["ARR:90.00-92.00:2026-09-03:at"]
 
 
@@ -476,7 +491,7 @@ def test_singles_capped_at_three_per_side_rest_one_digest_digest_names_recorded(
         store[s], snap[s], caps[s] = _doc(s, [RES], 99.0), _snap(px, 99.0), 5e9
     for i, px in enumerate([91.0, 92.2, 92.4, 92.6, 92.8]):         # demand: in, 0.22, 0.43, 0.65, 0.86
         s = f"D{i}"
-        store[s], snap[s], caps[s] = _doc(s, [DEM], 95.0), _snap(px, 95.0, -3.0), 5e9
+        store[s], snap[s], caps[s] = _doc(s, [DEM], 95.0), _bounce(px, 95.0, -3.0), 5e9
     out, colls = _run(store, snap, caps)
     assert out["singles_break"] == 3 and out["digest_break"] == 2
     assert out["singles_demand"] == 3 and out["digest_demand"] == 2 and out["pushed"] == 8
@@ -486,9 +501,9 @@ def test_singles_capped_at_three_per_side_rest_one_digest_digest_names_recorded(
                           "🚀 N0 0.1% under resistance $100–102 → new highs"]
     assert titles[3] == "🚀 Breaking resistance — N1 0.49% +1 more"
     assert [l.split()[0] for l in sent[3]["body"].split("\n")] == ["N1", "N2"]
-    assert titles[4:7] == ["🧲 D0 ↓ falling into demand $90–92", "🧲 D1 ↓ falling into demand $90–92",
-                           "🧲 D2 ↓ falling into demand $90–92"]
-    assert sent[5]["body"].startswith("$92.2 · 0.22% above · ↓ falling into the band from")
+    assert titles[4:7] == ["🧲 D0 ↑ bouncing off demand $90–92", "🧲 D1 ↑ bouncing off demand $90–92",
+                           "🧲 D2 ↑ bouncing off demand $90–92"]
+    assert sent[5]["body"].startswith("$92.2 · 0.22% above · ↑ bouncing off the band,")
     assert titles[7] == "🧲 Demand zone — D3 +1 more"
     assert [l.split()[0] for l in sent[7]["body"].split("\n")] == ["D3", "D4"]
     assert all(s["kind"] == "supply_break_alert" for s in sent[:4])
@@ -507,12 +522,12 @@ def test_singles_capped_at_three_per_side_rest_one_digest_digest_names_recorded(
 def test_second_identical_pass_pushes_nothing_but_still_lists_and_tracks(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"AAA": _doc("AAA", [RES, DEM], 99.0), "BBB": _doc("BBB", [DEM], 95.0)}
-    snap = {"AAA": _snap(101.5, 99.0), "BBB": _snap(91.0, 95.0, -4.2)}
+    snap = {"AAA": _snap(101.5, 99.0), "BBB": _bounce(91.0, 95.0, -4.2)}
     caps = {"AAA": 5e9, "BBB": 5e9}
     out1, colls = _run(store, snap, caps)
     assert out1["pushed"] == 2 and len(sent) == 2
     later = NOW + timedelta(minutes=1)
-    snap2 = {"AAA": _snap(101.6, 99.0, now=later), "BBB": _snap(91.2, 95.0, -4.0, now=later)}
+    snap2 = {"AAA": _snap(101.6, 99.0, now=later), "BBB": _bounce(91.2, 95.0, -4.0, now=later)}
     out2, _ = _run(store, snap2, caps, colls=colls, now=later)
     assert out2["pushed"] == 0 and len(sent) == 2
     assert len(out2["breaking"]) == 1 and len(out2["near_demand"]) == 1
@@ -582,11 +597,12 @@ def test_a_shelf_broken_today_is_one_push_a_shelf_broken_yesterday_is_support(mo
     # yesterday CLOSED 1.5% above the shelf; today pulled back to 0.49% above it:
     # not breaking anything (Side A None), an ARRIVAL at broken-supply support
     sent.clear()
-    out2, colls = _run({"AAA": _doc("AAA", [RES, DEM], 103.5)}, {"AAA": _snap(102.5, 103.5, -1.0)}, {"AAA": 5e9})
+    out2, colls = _run({"AAA": _doc("AAA", [RES, DEM], 103.5)},
+                       {"AAA": _snap(102.5, 103.5, -1.0, low=101.8)}, {"AAA": 5e9})
     assert out2["breaking"] == []
     nd = out2["near_demand"][0]
     assert nd["tier"] == "near" and nd["role"] == "broken supply" and nd["arrival"] is True
-    assert [s["title"] for s in sent] == ["🧲 AAA ↓ falling into demand $100–102"]
+    assert [s["title"] for s in sent] == ["🧲 AAA ↑ bouncing off demand $100–102"]
     assert list(colls["coll_demand"].docs) == ["AAA:100.00-102.00:2026-09-03:at"]
     # closed ON the shelf's ring yesterday (102.5, 0.49% above): resident, listed, silent
     sent.clear()
@@ -598,7 +614,7 @@ def test_a_shelf_broken_today_is_one_push_a_shelf_broken_yesterday_is_support(mo
 def test_track_rows_written_per_listed_row_with_the_exact_shape(monkeypatch):
     _capture(monkeypatch)
     store = {"AAA": _doc("AAA", [RES, DEM], 99.0), "BBB": _doc("BBB", [DEM], 95.0)}
-    out, colls = _run(store, {"AAA": _snap(101.5, 99.0), "BBB": _snap(91.0, 95.0, -4.2)},
+    out, colls = _run(store, {"AAA": _snap(101.5, 99.0), "BBB": _bounce(91.0, 95.0, -4.2)},
                       {"AAA": 5e9, "BBB": 5e9})
     rows = colls["track_coll"].rows
     assert out["tracked"] == 2 and len(rows) == 2
@@ -704,9 +720,11 @@ def test_api_payload_shape_ordering_and_json_safety(monkeypatch):
     assert payload["as_of"] == NOW.isoformat() and payload["date"] == DAY and payload["in_session"] is True
     assert payload["params"] == {"edge_pct": 1.0, "broke_max_pct": 3.0, "min_cap_usd": 1e9,
                                  "min_touches_push": 2}
+    # D1 arrives FALLING, so since 2026-09-09 it lists but never pushes.
     assert payload["counts"] == {"breaking": 3, "near_demand": 2, "candidates": 5, "priced": 5,
-                                 "stale_print": 0, "skipped_room": 0, "skipped_cap": 0,
-                                 "unknown_cap": 0, "pushed": 3}
+                                 "stale_print": 0, "skipped_room": 0, "skipped_direction": 1,
+                                 "skipped_cap": 0,
+                                 "unknown_cap": 0, "pushed": 2}
     # broke first; then near with new_highs first (N1 clear, N0 has OVER above), then dist
     assert [r["symbol"] for r in payload["breaking"]] == ["B0", "N1", "N0"]
     # B0 broke RES today (prev 101 inside it): Side A only — the shelf is not support yet
@@ -754,7 +772,8 @@ def test_stored_counts_explain_a_quiet_phone_skip_buckets_and_pushed(monkeypatch
     assert len(sent) == 1 and sent[0]["title"].startswith("🚀 AAA")
     stored = colls["latest_coll"].docs["latest"]
     assert stored["counts"] == {"candidates": 5, "priced": 4, "stale_print": 1, "breaking": 3,
-                                "near_demand": 0, "skipped_room": 1, "skipped_cap": 1,
+                                "near_demand": 0, "skipped_room": 1, "skipped_direction": 0,
+                                "skipped_cap": 1,
                                 "unknown_cap": 1, "pushed": 1}
     assert stored["counts"] == out["payload"]["counts"]
     for k in ("skipped_room", "skipped_cap", "unknown_cap", "pushed"):
@@ -931,7 +950,7 @@ def test_pass_never_goes_to_mongo_per_symbol_one_bulk_read_each(monkeypatch):
         store[s], snap[s], caps[s] = _doc(s, [RES], 99.0), _snap(101.0 + i * 0.02, 99.0), 5e9
     for i in range(40):                                              # 40 demand arrivals
         s = f"D{i}"
-        store[s], snap[s], caps[s] = _doc(s, [DEM], 95.0), _snap(91.0 + i * 0.02, 95.0, -3.0), 5e9
+        store[s], snap[s], caps[s] = _doc(s, [DEM], 95.0), _bounce(91.0 + i * 0.02, 95.0, -3.0), 5e9
     colls = {"coll_break": FakeColl(), "coll_demand": FakeColl(),
              "latest_coll": FakeColl(), "track_coll": IndexedFakeColl()}
     out, _ = _run(store, snap, caps, colls=colls, names=None)
@@ -952,7 +971,8 @@ def test_pass_never_goes_to_mongo_per_symbol_one_bulk_read_each(monkeypatch):
     assert colls["track_coll"].indexes == [([("date", 1), ("symbol", 1), ("ts", 1)], {"name": "date_symbol_ts"})]
     # second minute: the 80 keys are already recorded — still ONE read per coll, nothing pushed
     later = NOW + timedelta(minutes=1)
-    snap2 = {s: _snap(v["last_trade_price"], v["prev_day_close"], v["change_pct"], now=later)
+    snap2 = {s: _snap(v["last_trade_price"], v["prev_day_close"], v["change_pct"],
+                      now=later, low=v["low"])
              for s, v in snap.items()}
     out2, _ = _run(store, snap2, caps, colls=colls, names=None, now=later)
     assert out2["pushed"] == 0 and len(sent) == 8
@@ -1001,7 +1021,7 @@ def test_near_tier_ignores_a_supply_band_yesterday_closed_above(monkeypatch):
     sent = _capture(monkeypatch)
     store = {"XYZ": _doc("XYZ", [RES], 104.0, 104.5)}
     colls = _colls()
-    out1, _ = _run(store, {"XYZ": _snap(102.5, 104.0, -1.4)}, {"XYZ": 5e9}, colls=colls)
+    out1, _ = _run(store, {"XYZ": _snap(102.5, 104.0, -1.4, low=101.8)}, {"XYZ": 5e9}, colls=colls)
     assert [r["side"] for r in out1["near_demand"]] == ["demand"] and out1["breaking"] == []
     later = NOW + timedelta(minutes=5)
     out2, _ = _run(store, {"XYZ": _snap(101.5, 104.0, -2.4, now=later)}, {"XYZ": 5e9}, colls=colls, now=later)
@@ -1087,13 +1107,13 @@ def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch):
     assert [r["symbol"] for r in out["near_demand"]] == ["AAA"] and out["near_demand"][0]["arrival"] is True
     assert sent == [] and out["pushed"] == 0 and out["skipped_room"] == 1 and colls["coll_demand"].docs == {}
     roomy = {"kind": "supply", "lo": 96.0, "hi": 97.0, "touches": 2, "strength": 50.0}   # 5.49% over
-    out2, _ = _run({"AAA": _doc("AAA", [DEM, roomy], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
+    out2, _ = _run({"AAA": _doc("AAA", [DEM, roomy], 95.0)}, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9})
     assert out2["pushed"] == 1 and out2["skipped_room"] == 0
-    assert sent[-1]["body"] == ("$91 · ↓ falling into the band from 95 (-4.2% today) · tested 2x · "
+    assert sent[-1]["body"] == ("$91 · ↑ bouncing off the band, +1.2% off the 89.91 low · tested 2x · "
                                 "room +5.5% -> $96 · buy $90-92 · stop $89.55 "
                                 "(0.5% under the floor, 1.6% risk) · target $96 (3.4R) · $5.0B")
-    out3, _ = _run({"AAA": _doc("AAA", [DEM], 95.0)}, {"AAA": _snap(91.0, 95.0, -4.2)}, {"AAA": 5e9})
-    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · ↓ falling into the band from 95 (-4.2% today) · tested 2x · room: clear runway · buy $90-92 · stop $89.55 "
+    out3, _ = _run({"AAA": _doc("AAA", [DEM], 95.0)}, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9})
+    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · ↑ bouncing off the band, +1.2% off the 89.91 low · tested 2x · room: clear runway · buy $90-92 · stop $89.55 "
                                                        "(0.5% under the floor, 1.6% risk) · target: clear runway · $5.0B")
     assert ZE.EDGE_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT == 1.0, "the in/near tier IS the <1% rule — reused, not duplicated"
 

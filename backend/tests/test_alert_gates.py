@@ -492,3 +492,44 @@ def test_mood_never_decides_whether_an_alert_fires():
     for fn in (AG.room_gate, AG.demand_proximity_gate, AG.is_proven_band, AG.overhead_bands):
         assert "mood" not in inspect.getsource(fn), fn.__name__
 
+
+
+# ── bouncing only (2026-09-09) ─────────────────────────────────────────────
+# Ajay, after CASY: "Turn off falling in to deman alerts all together. only
+# bouncing off alerts."
+#
+# On 2026-09-09 08:13 ET the phone said "🧲 CASY ↓ falling into demand
+# $627.49-651 · buy · stop $624.35". CASY had reported earnings after the close;
+# it printed $604.51 that morning, 3% through the stop. Two minutes later the
+# promo tape said "do not chase" on the same name.
+def test_only_bouncing_reaches_the_phone():
+    assert AG.PUSH_DIRECTIONS == ("bouncing",)
+    assert AG.direction_gate({"dir": "bouncing"}) is True
+    for d in ("falling", "settling", "reclaiming", "resting", "lifting"):
+        assert AG.direction_gate({"dir": d}) is False, d
+
+
+def test_the_gate_fails_closed_on_anything_it_cannot_read():
+    """No approach = no evidence of a bounce. Silence is the safe side."""
+    for bad in (None, {}, {"dir": None}, {"dir": ""}, {"dir": "   "},
+                {"tag": "↑ bouncing off"}, {"dir": 7}):
+        assert AG.direction_gate(bad) is False, bad
+
+
+def test_the_gate_reads_dir_not_the_arrow_tag():
+    """`approach_read` returns dir='bouncing' AND tag='↑ bouncing off'. Matching
+    the tag is how the premarket-entry drag broke on 2026-09-09 — pin the field."""
+    assert AG.direction_gate({"dir": "falling", "tag": "↑ bouncing off"}) is False
+    assert AG.direction_gate({"dir": "BOUNCING"}) is True          # case-folded
+
+
+def test_a_real_approach_read_round_trips_through_the_gate():
+    band = {"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2}
+    bounce = AG.approach_read(91.5, band, prev_close=95.0, day_low=90.4)
+    assert bounce["dir"] == "bouncing" and AG.direction_gate(bounce) is True
+    falling = AG.approach_read(91.5, band, prev_close=95.0, day_low=91.5)
+    assert falling["dir"] == "falling" and AG.direction_gate(falling) is False
+    # the CASY shape: gapped down from well above, sitting on the low
+    casy = AG.approach_read(646.0, {"kind": "demand", "lo": 627.49, "hi": 651.0, "touches": 2},
+                            prev_close=733.49, day_low=646.0)
+    assert AG.direction_gate(casy) is False, "the 2026-09-09 CASY push must not fire again"

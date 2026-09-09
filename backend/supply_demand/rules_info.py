@@ -65,7 +65,18 @@ def _room_lines():
         "Room floor: at least %s to the first unbroken PROVEN band overhead (CLEAR counts); "
         "set Room to any to see everything." % _pct(DR.MIN_ROOM_DEFAULT),
         _proven_line(),
+        _direction_line(),
     ]
+
+
+def _direction_line():
+    """Built from the enforcing constant, never retyped."""
+    return ("PHONE: only %s reaches it (Ajay 2026-09-09, after CASY). Falling into, settling "
+            "into, reclaiming from below and resting inside all still LIST on the boards and "
+            "send nothing. On 2026-09-09 a 'falling into demand' push on CASY named a stop at "
+            "$624.35 twenty minutes before it printed $604.51 — it had reported earnings after "
+            "the previous close. A bounce is the only approach with price already turning."
+            % " / ".join(AG.PUSH_DIRECTIONS))
 
 
 def _proven_line():

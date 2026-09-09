@@ -50,10 +50,25 @@ def _no_mood_by_default(monkeypatch):
     monkeypatch.setattr(DA.AG, "mood_read", lambda sym, frame=None: None)
 
 
+def _live_bouncing(**px):
+    """`_live` with a day low just under each print, so every row reads as
+    BOUNCING off its band.
+
+    Since 2026-09-09 that is the ONLY approach the phone takes (Ajay: "Turn off
+    falling in to deman alerts all together. only bouncing off alerts"), so a
+    test whose subject is caps, dedupe, digests or mood has to hand the gate a
+    bounce or it is really just re-testing the direction gate."""
+    out = _live(**px)
+    for sym, row in out.items():
+        row.setdefault("low", round(row["price"] * 0.988, 4))
+    return out
+
+
 def _live(**px):
     """price, change_pct[, prev_day_close[, low]]. Default prev close = 5% above
     the live print, i.e. yesterday was outside every ring → today is an arrival.
-    No `low` = the pre-market shape (day bar 0) → "falling into" from above."""
+    No `low` = the pre-market shape (day bar 0) → "falling into" from above,
+    which since 2026-09-09 lists on the board and never reaches the phone."""
     out = {}
     for s, v in px.items():
         p, c = v[0], v[1]
@@ -237,11 +252,18 @@ def test_check_once_reads_the_day_low_off_the_live_row(monkeypatch):
     out = DA.check_once(live=_live(DYN=(18.27, -24.8, 24.28, 18.05)), coll=FakeColl(), **kw)
     assert out["pushed"] == 1 and sent[-1]["title"] == "🧲 DYN ↑ bouncing off demand $17.9–18.6"
     assert out["hits"][0]["approach"]["dir"] == "bouncing"
+    # The print sits ON the day's low → FALLING, and since 2026-09-09 falling
+    # never reaches the phone (Ajay: "only bouncing off alerts"). The read is
+    # still made and still listed — the push is what stops.
+    n_before = len(sent)
     out = DA.check_once(live=_live(DYN=(18.06, -25.6, 24.28, 18.05)), coll=FakeColl(), **kw)
-    assert sent[-1]["title"] == "🧲 DYN ↓ falling into demand $17.9–18.6"
-    # NEGATIVE: no low on the row (pre-market) → still a read, from yesterday's close
+    assert out["hits"][0]["approach"]["dir"] == "falling"
+    assert out["pushed"] == 0 and out["skipped_direction"] == 1 and len(sent) == n_before
+    # NEGATIVE: no low on the row (pre-market) → falling from yesterday's close,
+    # so it is silent too.
     out = DA.check_once(live=_live(DYN=(18.27, -24.8, 24.28)), coll=FakeColl(), **kw)
-    assert sent[-1]["title"] == "🧲 DYN ↓ falling into demand $17.9–18.6"
+    assert out["hits"][0]["approach"]["dir"] == "falling"
+    assert out["pushed"] == 0 and len(sent) == n_before
 
 
 def test_digest_sorts_by_distance_and_caps_the_body():
@@ -274,7 +296,7 @@ def test_check_once_pushes_at_individually_near_as_one_digest_and_gates_cap(monk
     board = _board(appr=[("BIGX", _band(90, 97)), ("BIGY", _band(40, 44)),
                          ("SMALL", _band(10, 11)), ("UNK", _band(50, 52))],
                    rows=[("AAPL", _band(200, 210))])
-    live = _live(BIGX=(99.0, -1.1), BIGY=(45.0, -0.4), SMALL=(11.05, -2.0),
+    live = _live_bouncing(BIGX=(99.0, -1.1), BIGY=(45.0, -0.4), SMALL=(11.05, -2.0),
                  UNK=(51.0, -1.0), AAPL=(211.0, -0.2))
     caps = {"BIGX": 5e9, "BIGY": 12e9, "SMALL": 5e8, "UNK": None, "AAPL": 3e12}
     coll = FakeColl()
@@ -285,7 +307,7 @@ def test_check_once_pushes_at_individually_near_as_one_digest_and_gates_cap(monk
     assert out["ran"] and out["at"] == 1 and out["near"] == 2 and out["pushed"] == 1
     assert out["skipped_cap"] == 1 and out["unknown_cap"] == 1 and out["skipped_proximity"] == 2
     assert [s["kind"] for s in sent] == ["demand_alert"]
-    assert sent[0]["title"] == "🧲 AAPL ↓ falling into demand $200–210"   # prev 221.55 > the band, no low
+    assert sent[0]["title"] == "🧲 AAPL ↑ bouncing off demand $200–210"   # bouncing is the only push since 2026-09-09
     assert [h["symbol"] for h in out["hits"] if h["hit"]["tier"] == "near"] == ["BIGX", "BIGY"]
     assert all(s["owner"] == "o@x" for s in sent)
     assert len(coll.docs) == 1                     # AAPL at; NEAR names are not recorded (nothing sent)
@@ -297,19 +319,19 @@ def test_dedupe_is_once_per_band_per_day_but_tiers_are_separate(monkeypatch):
     coll = FakeColl()
     kw = dict(board=board, caps={"BIGX": 5e9}, coll=coll, owner="o@x", now=IN_SESSION, force=True,
               store=_store("BIGX", [{"kind": "demand", "lo": 90.0, "hi": 97.0, "touches": 3, "strength": 50.0}], 103.95))
-    out = DA.check_once(live=_live(BIGX=(99.0, -1.1)), **kw)    # near → listed, not pushed (phone gate 2026-09-05)
+    out = DA.check_once(live=_live_bouncing(BIGX=(99.0, -1.1)), **kw)    # near → listed, not pushed (phone gate 2026-09-05)
     assert out["near"] == 1 and out["skipped_proximity"] == 1 and sent == []
-    DA.check_once(live=_live(BIGX=(99.0, -1.1)), **kw)
+    DA.check_once(live=_live_bouncing(BIGX=(99.0, -1.1)), **kw)
     assert sent == [] and coll.docs == {}, "nothing sent, nothing recorded"
-    DA.check_once(live=_live(BIGX=(96.5, -3.0)), **kw)          # arrived → at fires
-    assert len(sent) == 1 and sent[0]["title"] == "🧲 BIGX ↓ falling into demand $90–97"
-    DA.check_once(live=_live(BIGX=(96.0, -3.5)), **kw)
+    DA.check_once(live=_live_bouncing(BIGX=(96.5, -3.0)), **kw)          # arrived → at fires
+    assert len(sent) == 1 and sent[0]["title"] == "🧲 BIGX ↑ bouncing off demand $90–97"
+    DA.check_once(live=_live_bouncing(BIGX=(96.0, -3.5)), **kw)
     assert len(sent) == 1
 
 
 def test_transport_failure_is_retried_but_muted_pref_is_terminal(monkeypatch):
     board = _board(rows=[("AAPL", _band(200, 210))])
-    kw = dict(board=board, live=_live(AAPL=(205.0, -0.2)), caps={"AAPL": 3e12},
+    kw = dict(board=board, live=_live_bouncing(AAPL=(205.0, -0.2)), caps={"AAPL": 3e12},
               owner="o@x", now=IN_SESSION, force=True,
               store=_store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3}], 215.25))
     coll = FakeColl()
@@ -325,7 +347,7 @@ def test_dry_run_reads_everything_and_records_nothing(monkeypatch):
     sent = _capture(monkeypatch)
     coll = FakeColl()
     out = DA.check_once(push=False, board=_board(rows=[("AAPL", _band(200, 210))]),
-                        live=_live(AAPL=(205.0, 0.0)), caps={"AAPL": 3e12}, coll=coll,
+                        live=_live_bouncing(AAPL=(205.0, 0.0)), caps={"AAPL": 3e12}, coll=coll,
                         now=IN_SESSION, force=True,
                         store=_store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3}], 215.25))
     assert out["at"] == 1 and out["pushed"] == 0 and sent == [] and coll.docs == {}
@@ -407,9 +429,13 @@ def test_at_singles_are_capped_per_pass_and_the_rest_ride_the_digest(monkeypatch
     syms = [f"A{i}" for i in range(6)]
     board = _board(rows=[(s, _band(100, 110)) for s in syms] + [("NEARX", _band(50, 55))])
     # A0 inside, A1..A5 0.1%..0.5% above (closest first ordering is testable)
+    # `low` just under each print: since 2026-09-09 only a BOUNCE reaches the
+    # phone, and this test's subject is the singles cap, not the direction gate.
     live = {s: {"price": 110.0 * (1 + 0.001 * i) if i else 105.0, "change_pct": -0.5,
-                "prev_day_close": 120.0} for i, s in enumerate(syms)}
-    live["NEARX"] = {"price": 56.0, "change_pct": -1.0, "prev_day_close": 60.0}
+                "prev_day_close": 120.0,
+                "low": round((110.0 * (1 + 0.001 * i) if i else 105.0) * 0.988, 4)}
+            for i, s in enumerate(syms)}
+    live["NEARX"] = {"price": 56.0, "change_pct": -1.0, "prev_day_close": 60.0, "low": 55.3}
     caps = {s: 5e9 for s in syms + ["NEARX"]}
     coll = FakeColl()
     store = {}
@@ -426,7 +452,7 @@ def test_at_singles_are_capped_per_pass_and_the_rest_ride_the_digest(monkeypatch
     digest = [s for s in sent if "more" in s["title"] or s["title"].startswith("🧲 Demand zone")][0]
     assert digest["title"] == "🧲 Demand zone — A4 +1 more"
     assert "A4 $" in digest["body"] and "A5 $" in digest["body"] and "NEARX" not in digest["body"]
-    assert "↓ falling into $100–110 · room: clear runway" in digest["body"]
+    assert "↑ bouncing off $100–110 · room: clear runway" in digest["body"]
     assert len(coll.docs) == 6, "every pushed name recorded once — no second buzz next pass"
     assert DA.digest_message([]) is None
     near_only = DA.digest_message([{"symbol": "N", "last": 56.0, "band": _band(50, 55), "cap": 2e9,
@@ -460,34 +486,34 @@ def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypa
     (AT_PCT was already 1.0)."""
     sent = _capture(monkeypatch)
     board = _board(appr=[("BIGX", _band(90, 97))], rows=[("AAPL", _band(200, 210))])
-    live = _live(BIGX=(99.0, -1.1), AAPL=(211.0, -0.2))
+    live = _live_bouncing(BIGX=(99.0, -1.1), AAPL=(211.0, -0.2))
     coll = FakeColl()
     store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
     out = DA.check_once(board=board, live=live, caps={"BIGX": 5e9, "AAPL": 3e12}, coll=coll, owner="o@x",
                         now=IN_SESSION, force=True, store=store)
     assert out["at"] == 1 and out["near"] == 1 and out["pushed"] == 1
     assert out["skipped_proximity"] == 1 and out["skipped_room"] == 0 and out["unknown_room"] == 0
-    assert [s["title"] for s in sent] == ["🧲 AAPL ↓ falling into demand $200–210"]
-    assert sent[0]["body"] == ("$211 · 0.47% above · ↓ falling into the band from 221.55 (-4.8% today) · tested 3x · "
+    assert [s["title"] for s in sent] == ["🧲 AAPL ↑ bouncing off demand $200–210"]
+    assert sent[0]["body"] == ("$211 · 0.47% above · ↑ bouncing off the band, +1.2% off the 208.468 low · tested 3x · "
                                "room: clear runway · buy $200-210 · stop $199.00 "
                                "(0.5% under the floor, 5.7% risk) · target: clear runway · $3.0T · AAPL Inc")
     assert list(coll.docs) == ["AAPL:200.00-210.00:2026-09-03:at"], "NEAR is not recorded: nothing was sent"
     # a lid 2.8% over the print (unbroken: hi 219 >= prev 215): listed, counted, silent
     sent.clear()
     lid_store = _store("AAPL", [{"kind": "supply", "lo": 217.0, "hi": 219.0, "touches": 2, "strength": 50.0}], 215.0)
-    out2 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2, 215.0)),
+    out2 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live_bouncing(AAPL=(211.0, -0.2, 215.0)),
                          caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True,
                          store=lid_store)
     assert out2["at"] == 1 and out2["pushed"] == 0 and out2["skipped_room"] == 1 and sent == []
     assert out2["hits"][0]["room"]["room_pct"] == 2.8
     # the same lid 5.2% over: rings, and the body says so
     far_store = _store("AAPL", [{"kind": "supply", "lo": 222.0, "hi": 224.0, "touches": 2, "strength": 50.0}], 215.0)
-    out3 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2, 215.0)),
+    out3 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live_bouncing(AAPL=(211.0, -0.2, 215.0)),
                          caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True,
                          store=far_store)
     assert out3["pushed"] == 1 and "room +5.2% -> $222" in sent[-1]["body"]
     # no zone_store doc for the name: the room is unknown -> conservative, silent, counted
-    out4 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2)),
+    out4 = DA.check_once(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live_bouncing(AAPL=(211.0, -0.2)),
                          caps={"AAPL": 3e12}, coll=FakeColl(), owner="o@x", now=IN_SESSION, force=True, store={})
     assert out4["at"] == 1 and out4["pushed"] == 0 and out4["unknown_room"] == 1 and len(sent) == 1
     assert DA.AT_PCT == 1.0
@@ -525,7 +551,7 @@ def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeyp
     board = _board(appr=[("BIGX", _band(90, 97)), ("BIGY", _band(40, 44)),
                          ("SMALL", _band(10, 11)), ("UNK", _band(50, 52))],
                    rows=[("AAPL", _band(200, 210))])
-    live = _live(BIGX=(99.0, -1.1), BIGY=(45.0, -0.4), SMALL=(11.05, -2.0),
+    live = _live_bouncing(BIGX=(99.0, -1.1), BIGY=(45.0, -0.4), SMALL=(11.05, -2.0),
                  UNK=(51.0, -1.0), AAPL=(211.0, -0.2))
     caps = {"BIGX": 5e9, "BIGY": 12e9, "SMALL": 5e8, "UNK": None, "AAPL": 3e12}
     store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
@@ -538,7 +564,7 @@ def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeyp
     c = doc["counts"]
     assert c == {"candidates": 5, "hits": 5, "at": 1, "at_singles": 1, "near": 2, "pushed": 1,
                  "skipped_cap": 1, "unknown_cap": 1, "unknown_prev": 0, "skipped_room": 0,
-                 "skipped_proximity": 2, "unknown_room": 0}
+                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0}
     assert all(type(v) is int for v in c.values()) and "reason" not in doc
     # a warming board is a recorded, explained quiet pass — and the doc is REPLACED, not appended
     out2 = DA.check_once(board={"warming": True}, now=IN_SESSION, force=True, pass_coll=pc)
@@ -554,7 +580,7 @@ def test_pass_record_is_best_effort_and_never_written_outside_rth(monkeypatch):
         def replace_one(self, q, doc, upsert=False):
             raise RuntimeError("mongo down")
     store = _store("AAPL", [{"kind": "demand", "lo": 200.0, "hi": 210.0, "touches": 3, "strength": 50.0}], 221.55)
-    kw = dict(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live(AAPL=(211.0, -0.2)),
+    kw = dict(board=_board(rows=[("AAPL", _band(200, 210))]), live=_live_bouncing(AAPL=(211.0, -0.2)),
               caps={"AAPL": 3e12}, owner="o@x", store=store)
     assert DA.check_once(now=IN_SESSION, force=True, coll=FakeColl(), pass_coll=Broken(), **kw)["pushed"] == 1
     assert len(sent) == 1, "a dead status coll never blocks the push"
@@ -604,7 +630,7 @@ def test_a_constructive_mood_rings_first_but_nothing_is_dropped(monkeypatch):
     store = {}
     for s in syms:
         store.update(_store(s, [{"kind": "demand", "lo": 90.0, "hi": 97.0, "touches": 3, "strength": 50.0}], 103.95))
-    live = _live(**{s: (96.0 + i * 0.05, -2.0) for i, s in enumerate(syms)})
+    live = _live_bouncing(**{s: (96.0 + i * 0.05, -2.0) for i, s in enumerate(syms)})
     # M5 is furthest but the only constructive name; M0 is closest and heavy
     moods = {"M5": {"score": 40.0, "label": "bullish", "constructive": True, "heavy": False},
              "M0": {"score": -40.0, "label": "bearish", "constructive": False, "heavy": True}}
@@ -627,7 +653,7 @@ def test_mood_is_recorded_with_every_alert_so_it_can_be_measured(monkeypatch):
     monkeypatch.setattr(DA.AG, "mood_read",
                         lambda sym, frame=None: {"score": 22.0, "label": "bullish",
                                                  "constructive": True, "heavy": False})
-    DA.check_once(board=board, live=_live(AAA=(96.0, -2.0)), caps={"AAA": 5e9}, coll=coll,
+    DA.check_once(board=board, live=_live_bouncing(AAA=(96.0, -2.0)), caps={"AAA": 5e9}, coll=coll,
                   owner="o@x", now=IN_SESSION, force=True, store=store)
     doc = list(coll.docs.values())[0]
     assert doc["mood"]["score"] == 22.0 and doc["mood"]["constructive"] is True

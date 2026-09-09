@@ -686,7 +686,8 @@ def empty_payload(reason: str = "no pass yet") -> dict:
             "params": {"edge_pct": EDGE_PCT, "broke_max_pct": BROKE_MAX_PCT,
                        "min_cap_usd": MIN_CAP_USD, "min_touches_push": MIN_TOUCHES_PUSH},
             "counts": {"breaking": 0, "near_demand": 0, "candidates": 0, "priced": 0,
-                       "stale_print": 0, "skipped_room": 0, "skipped_cap": 0,
+                       "stale_print": 0, "skipped_room": 0, "skipped_direction": 0,
+                       "skipped_cap": 0,
                        "unknown_cap": 0, "pushed": 0},
             "breaking": [], "near_demand": [], "track": {}, "reason": reason,
             "disclaimer": DISCLAIMER}
@@ -852,7 +853,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     # name, every minute.
     breaking, near_demand = [], []
     break_cands, demand_cands = [], []
-    unknown_cap = skipped_cap = unknown_prev = skipped_room = 0
+    unknown_cap = skipped_cap = unknown_prev = skipped_room = skipped_direction = 0
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -895,7 +896,13 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 # phone gate: >= 5% to the first unbroken band overhead; the in/near
                 # tier already IS the "<1% above demand" rule (EDGE_PCT)
                 ok, room = AG.room_gate(px, bands, prev)
-                if ok:
+                approach = AG.approach_read(
+                    px, rd["band"], prev, (snapshot.get(sym) or {}).get("low"))
+                # Bouncing only (Ajay 2026-09-09, after CASY). The BOARD still
+                # carries every arrival; only the phone is gated.
+                if ok and not AG.direction_gate(approach):
+                    skipped_direction += 1
+                elif ok:
                     # Mood as CONTEXT only (Ajay 2026-09-08) — read after every
                     # S/D gate passed, never a reason to fire or to skip.
                     demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
@@ -903,8 +910,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                                          "last": float(px), "cap": _f(cap), "name": None,
                                          "key": DA.state_key(sym, rd["band"], day_iso, "at"),
                                          "tier": rd["tier"], "dist_pct": rd["dist_pct"], "room": room,
-                                         "approach": AG.approach_read(
-                                             px, rd["band"], prev, (snapshot.get(sym) or {}).get("low"))})
+                                         "approach": approach})
                 else:
                     skipped_room += 1
 
@@ -993,7 +999,8 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     # that I get alerts") — every skip bucket plus what actually rang. `pushed`
     # is known only here, after the sends, which is why the payload is built last.
     counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print,
-              "skipped_room": skipped_room, "skipped_cap": skipped_cap,
+              "skipped_room": skipped_room, "skipped_direction": skipped_direction,
+              "skipped_cap": skipped_cap,
               "unknown_cap": unknown_cap, "pushed": pushed}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
                             pass_sec=time.time() - t0, counts=counts)
@@ -1008,6 +1015,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "pushed": pushed, "tracked": tracked, "purged": purged,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
+            "skipped_direction": skipped_direction,
             "seconds": round(time.time() - t0, 2), "payload": payload}
 
 

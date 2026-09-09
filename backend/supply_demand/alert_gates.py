@@ -372,6 +372,36 @@ def room_gate(print_px, bands, prev_close=None,
     return bool(raw >= min_room_pct), room
 
 
+# Ajay 2026-09-09, after CASY: "Turn off falling in to deman alerts all
+# together. only bouncing off alerts".
+#
+# WHY HE ASKED. On 2026-09-09 at 08:13 ET the phone said "🧲 CASY ↓ falling into
+# demand $627.49-651 · buy $627.49-651 · stop $624.35". Two minutes later the
+# promo tape said "do not chase" on the same name. He bought at $646.50; CASY
+# had reported earnings after the close and printed $604.51 that morning — the
+# stop was gone through by 3%.
+#
+# It also matches the 2026-09-08 autopsy of his own 286 pushes: reclaims from
+# below were 40% of pushes and 66% of them hit the floor stop, and same-day
+# arrivals on a -3..-8% day closed above the print only 22% of the time. A
+# bounce is the only approach that has price already turning.
+#
+# This is a TIGHTENING. Every other direction still appears on the boards — only
+# the PHONE is gated. `None` fails closed: if the approach cannot be read there
+# is no evidence of a bounce, and silence is the safe side.
+PUSH_DIRECTIONS = ("bouncing",)
+
+
+def direction_gate(approach, allowed=PUSH_DIRECTIONS) -> bool:
+    """True only when price is BOUNCING off the band. Fails closed on None."""
+    if not isinstance(approach, dict):
+        return False
+    d = approach.get("dir")
+    if not isinstance(d, str):          # a non-string dir is not a bounce
+        return False
+    return d.strip().lower() in allowed
+
+
 def demand_proximity_gate(print_px, band,
                           max_above_pct: float = ALERT_MAX_ABOVE_DEMAND_PCT) -> bool:
     """At the demand level or within `max_above_pct` above its top. Under the
