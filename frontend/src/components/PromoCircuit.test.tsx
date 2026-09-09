@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { COLUMNS, COL_WIDTHS, PromoCircuit, fmtCapShort, nextSort, passesCapFloor, sortRows, tagStamp } from './PromoCircuit';
+import { COLUMNS, COL_WIDTHS, PromoCircuit, fmtCapShort, nextSort, passesCapFloor, sortRows, tagStamp,
+         etDay, latestTagAt, taggedToday } from './PromoCircuit';
 import { _resetLiteCache } from './PromoTagTape';
 
 /* Promo-circuit watch — born 2026-09-01 from the chatter-provenance study.
@@ -538,6 +539,32 @@ describe('valuation floor (Ajay 2026-09-03: "filter out any company that its val
     draw();
     await waitFor(() => expect(boardSyms()).toEqual(['TINY']));
   });
+
+  /* Ajay 2026-09-09: "Why is promo not showing todays updates in the catalyst
+   * page there are some new stock alerts." They were tagged — 91 that morning —
+   * but the floor defaults ON and hid 35, and those 35 were the microcap pumps
+   * this board exists to warn about. A fresh tag now beats the floor. */
+  it('a microcap tagged TODAY beats the floor; the same name tagged yesterday does not', async () => {
+    vi.setSystemTime(new Date('2026-09-09T13:00:00Z'));           // 09:00 ET
+    const rows = [
+      row({ ticker: 'GNS', market_cap: 12e6, last_tagged_at: '2026-09-09T12:26:59+00:00' }),
+      row({ ticker: 'OLDTINY', market_cap: 12e6, last_tagged_at: '2026-09-08T19:00:00+00:00' }),
+      row({ ticker: 'BIGG', market_cap: 5.2e9, last_tagged_at: '2026-09-08T19:00:00+00:00' }),
+    ];
+    mock(payload(rows), true, livePayload([
+      liveRow({ ticker: 'GNS', market_cap: 12e6 }), liveRow({ ticker: 'BIGG', market_cap: 5.2e9 })]));
+    draw();
+    await waitFor(() => expect(boardSyms().length).toBe(2));
+    expect(boardSyms().sort()).toEqual(['BIGG', 'GNS']);   // today's microcap survives
+    expect(boardSyms()).not.toContain('OLDTINY');          // yesterday's does not
+    // the live table honours the same exemption
+    const live = document.querySelector('.pcw__table.pcw__live')!;
+    expect(live.textContent).toContain('GNS');
+    // and the filter label says it kept something under the floor
+    expect(document.querySelector('.pcw__capfilter')!.textContent)
+      .toContain('tagged today are under the floor and kept anyway');
+    vi.useRealTimers();
+  });
 });
 
 // Ajay 2026-09-07: "Give me options in Catalyst promo tab list for add something
@@ -549,5 +576,57 @@ describe('PromoCircuit — + Signals on every row', () => {
     const btns = await screen.findAllByRole('button', { name: /^Add [A-Z0-9.]+ to Signals$/ });
     expect(btns.length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Add LIV1 to Signals' })).toBeInTheDocument();
+  });
+});
+
+
+/* 🆕 Tagged today (2026-09-09).
+ *
+ * Ajay: "Why is promo not showing todays updates in the catalyst page there are
+ * some new stock alerts."
+ *
+ * They WERE being tagged — 91 names that morning — but the $700M cap floor
+ * defaults ON and hid 35 of them, and those 35 were the microcap pumps this
+ * board exists to warn about (ANGX, GNS, MODD, FAMI, PRZO, IXHL, DVLT...).
+ * A do-not-chase radar whose default filter removes the likeliest pumps is not
+ * doing its job. These pin the fix so the floor can never swallow a day again. */
+describe('taggedToday', () => {
+  const NOW = new Date('2026-09-09T13:00:00Z');           // 09:00 ET
+
+  it('uses the ET day, not the viewer\'s local day', () => {
+    // 08:26 ET is 12:26 UTC — the same instant is Sep 9 in ET either way, but a
+    // 23:30 ET stamp is already Sep 10 in UTC and must still read as Sep 9.
+    expect(etDay('2026-09-09T12:26:59+00:00')).toBe('2026-09-09');
+    expect(etDay('2026-09-10T03:30:00+00:00')).toBe('2026-09-09');
+    expect(etDay(null)).toBeNull();
+    expect(etDay('not a date')).toBeNull();
+  });
+
+  it('reads the newest post on a row, falling back to the first', () => {
+    expect(latestTagAt({ last_tagged_at: 'b', first_tagged_at: 'a' })).toBe('b');
+    expect(latestTagAt({ last_tagged_at: null, first_tagged_at: 'a' })).toBe('a');
+    expect(latestTagAt({})).toBeNull();
+  });
+
+  it('keeps only rows tagged today', () => {
+    const rows = [
+      { ticker: 'MODD', last_tagged_at: '2026-09-09T12:26:59+00:00', first_tagged_at: '2026-09-01T00:00:00+00:00' },
+      { ticker: 'AVTR', last_tagged_at: '2026-09-08T19:52:39+00:00', first_tagged_at: '2026-09-08T19:51:34+00:00' },
+      { ticker: 'OLD', last_tagged_at: null, first_tagged_at: '2026-08-20T10:00:00+00:00' },
+    ];
+    expect(taggedToday(rows, NOW).map((r) => r.ticker)).toEqual(['MODD']);
+    expect(taggedToday([], NOW)).toEqual([]);
+  });
+
+  it('is cap-blind, so the floor cannot swallow the day (the whole bug)', () => {
+    const micro = { ticker: 'GNS', market_cap: 12e6, last_tagged_at: '2026-09-09T12:26:59+00:00', first_tagged_at: null };
+    const big = { ticker: 'INTC', market_cap: 90e9, last_tagged_at: '2026-09-09T12:26:59+00:00', first_tagged_at: null };
+    const kept = taggedToday([micro, big], NOW).map((r) => r.ticker);
+    expect(kept).toContain('GNS');          // the floor would have hidden this
+    expect(kept).toContain('INTC');
+    // and the floor genuinely would drop it, so the test means something
+    expect(passesCapFloor(micro.market_cap, true)).toBe(false);
+    // a microcap tagged YESTERDAY is still the floor's business
+    expect(taggedToday([{ ...micro, ticker: 'OLDGNS', last_tagged_at: '2026-09-08T19:00:00+00:00' }], NOW)).toHaveLength(0);
   });
 });

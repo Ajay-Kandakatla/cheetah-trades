@@ -121,9 +121,19 @@
 # different process and leaves the page cold.
 5      17    *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (post-close record): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
 5      8     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (premarket record): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
-25     9     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (pre-open warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
-*/20   10-15 *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (session warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true'
-35     9     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (session am warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true'
+#
+# Ajay 2026-09-09: "Can refresh hot pull back in the pre market too". Every 20
+# minutes from 04:20 to 09:20 ET. These re-evaluate the LAST CLOSED session
+# against freshly rebuilt bands (the 04:05 zone_store warm moves them), so a
+# name whose band only appears in this morning's store shows up before the open
+# instead of at 17:05 tonight. They cannot invent today's session: the rule
+# needs a close, an off-low and a range position, and pre-market has none of
+# the three — see the note in the module docstring.
+*/20   4-9   *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (premarket refresh): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
+#
+# In session the board DOES read today's live partial bar, so a flush that
+# snaps back appears while it is happening. Every 10 minutes, not 20.
+*/10   9-15  *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (session warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true'
 #
 # Quick Bounce study (supply_demand/quick_bounce.py) — Sundays 07:00 ET (Ajay
 # 2026-09-06: "quick bounce potential list ... do the data analysis"). Walks

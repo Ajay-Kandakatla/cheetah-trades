@@ -453,6 +453,9 @@ def test_the_scan_is_actually_scheduled():
              .joinpath("crontab").read_text().splitlines()
              if "hot-pullback" in l and not l.lstrip().startswith("#")]
     assert len(lines) >= 2, "the board needs at least a post-close and a premarket pass"
+    # Ajay 2026-09-09: "Can refresh hot pull back in the pre market too."
+    pre = [l for l in lines if l.split()[1] in ("4-9", "8")]
+    assert pre, "no pre-market pass — he asked for one explicitly"
     recorders = [l for l in lines if "record=true" in l]
     assert recorders, "at least one pass must persist the closed session"
     assert any(l.split()[:2] == ["5", "17"] for l in recorders), \

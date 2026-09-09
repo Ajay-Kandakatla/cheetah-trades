@@ -132,6 +132,36 @@ export function tagStamp(iso: string | null | undefined): string {
 }
 
 
+/* The ET calendar day of an ISO stamp. The tags carry a UTC offset and the
+ * circuit posts pre-market, so a naive local-date compare would put an 08:26 ET
+ * alert on the wrong day for anyone west of ET. */
+export function etDay(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+/* The newest roster post on a row. */
+export function latestTagAt<T extends { last_tagged_at?: string | null; first_tagged_at?: string | null }>(r: T): string | null {
+  return r.last_tagged_at ?? r.first_tagged_at ?? null;
+}
+/** Rows the circuit tagged TODAY (ET).
+ *
+ *  Ajay 2026-09-09: "Why is promo not showing todays updates in the catalyst
+ *  page there are some new stock alerts."
+ *
+ *  They were being tagged — 91 names that morning — but the $700M cap floor
+ *  defaults ON and hid 35 of them, which were precisely the microcap pumps this
+ *  board exists to warn about (ANGX, GNS, MODD, FAMI, PRZO, IXHL, DVLT...).
+ *  A do-not-chase radar whose default filter removes the names most likely to
+ *  be pumped is not doing its job, so this cut runs on the UNFILTERED rows. */
+export function taggedToday<T extends { last_tagged_at?: string | null; first_tagged_at?: string | null }>(
+  rows: T[], now: Date = new Date(),
+): T[] {
+  const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  return rows.filter((r) => etDay(latestTagAt(r)) === today);
+}
+
 /* Most recent announcement first (Ajay 2026-09-02: "Sort by most recent announcement"). */
 export function sortRecent<T extends { first_tagged_at: string | null; last_tagged_at?: string | null }>(rows: T[]): T[] {
   const at = (r: T) => Date.parse(r.last_tagged_at ?? r.first_tagged_at ?? '') || 0;
@@ -627,8 +657,22 @@ export function PromoCircuit() {
   if (err) return <div className="cm-note cm-note-warn">Promo circuit unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Reading the circuit’s recent tags…</div>;
 
-  const visibleRows = data.rows.filter((r) => passesCapFloor(r.market_cap, capFloor));
+  // The $700M floor never applies to a name tagged TODAY (2026-09-09). It
+  // exists to keep stale drive-by microcap tags from burying the board, and for
+  // that it still runs — but on 2026-09-09 it hid 35 of the day's 91 fresh
+  // tags, and those 35 (ANGX, GNS, MODD, FAMI, PRZO, IXHL, DVLT...) were the
+  // microcap pumps this do-not-chase radar exists to warn about. Today's names
+  // stay in their normal SEEDING/RAN sections rather than getting a duplicate
+  // table of their own.
+  const todaySet = new Set(taggedToday(data.rows).map((r) => r.ticker));
+  const keep = (r: { ticker: string; market_cap?: number | null }) =>
+    todaySet.has(r.ticker) || passesCapFloor(r.market_cap, capFloor);
+  const visibleRows = data.rows.filter(keep);
   const hiddenSmall = data.rows.length - visibleRows.length;
+  const todayKeptUnderFloor = [...todaySet].filter((t) => {
+    const r = data.rows.find((x) => x.ticker === t);
+    return r != null && !passesCapFloor(r.market_cap, capFloor);
+  }).length;
   const unknownCap = data.rows.filter((r) => r.market_cap == null).length;
   const seeding = visibleRows.filter((r) => r.status === 'SEEDING');
   const played = visibleRows.filter((r) => r.status === 'RAN' || r.status === 'DUMPED');
@@ -648,6 +692,9 @@ export function PromoCircuit() {
             <input type="checkbox" checked={capFloor} onChange={(e) => setCapFloor(e.target.checked)} />
             Hide names under $700M
             <span className="pcw__dim"> · {capFloor ? `${hiddenSmall} hidden` : 'showing all'}{unknownCap ? ` · ${unknownCap} cap unknown, kept` : ''}</span>
+            {capFloor && todayKeptUnderFloor > 0 && (
+              <span className="pcw__todaywarn"> · {todayKeptUnderFloor} tagged today are under the floor and kept anyway — a fresh tag is the point of this board</span>
+            )}
           </label>
         </div>
         <div className="pcw__sweepbox">
@@ -658,7 +705,8 @@ export function PromoCircuit() {
         </div>
       </header>
 
-      <PromoLive data={live.data} err={live.err} board={visibleRows} rowFilter={(lv) => passesCapFloor(lv.market_cap, capFloor)} />
+      <PromoLive data={live.data} err={live.err} board={visibleRows}
+                 rowFilter={(lv) => todaySet.has(lv.ticker) || passesCapFloor(lv.market_cap, capFloor)} />
 
       <PromoTable
         label="🌱 seeding"
