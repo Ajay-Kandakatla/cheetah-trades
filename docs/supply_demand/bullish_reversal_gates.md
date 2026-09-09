@@ -148,14 +148,73 @@ already computes it) and `_knife_decor` appends a **`🔪 falling knife`** badge
 tone `warn`. Unlike the dwell tag this one is coloured, because it *has* been
 measured: 32% of his own pushes were knives.
 
-## Still open
+## What the study said afterwards — READ THIS BEFORE QUOTING THE GATES
 
-`stationary_bottom` — a positive test that the stock has **based**, distinct from
-the knife guard's negative. Three definitions are measured in
-`studies/bounce_quality_study.py`; the strongest single clause found so far is
-**no new low in the last 5 sessions**, which alone rejects CASY *and* rejects
-KBH, a real losing trade that both `is_falling_knife` and `structure_read` waved
-through. Not shipped until the study says which constants earn their place.
+`studies/bounce_quality_study.py` replayed **31,861 bouncing events** over 192
+dates (2025-09-09 → 2026-06-12). **Two independent audits returned
+`do_not_quote`** on its headline, for good reasons:
+
+- Mean R is **tail-dominated** — the top 1% of events carry **86.6% of total R**,
+  max R is +101.8, and the **median R is −1.000 in every cohort including the
+  baseline**. Lead on win rate and stop rate: binomials, tight intervals,
+  ungameable.
+- Events cluster on dates (192 of them). Any interval must resample **whole
+  dates**, never individual events. The script's i.i.d. placebo was matched on
+  nothing but n, so every `*outside placebo*` flag it printed is invalid.
+- ~83% of its baseline sits on bands the phone never sees (the live push takes
+  only board-qualified bands: `touches ≥ 2`, `strength ≥ 40`, one entry zone per
+  name). On the phone's own population the study's alarming "the stack is
+  measurably WORSE, −0.174R" collapses to **+0.001R, CI [−0.192,+0.197]** —
+  indistinguishable from zero, not harmful.
+- It measured *proxies*, not the shipped gates: a 10-bar 50-MA slope vs the
+  shipped 1-bar, and mood on the full ~500-bar frame vs the shipped 60.
+
+### The two gates that shipped measure FLAT
+
+Re-run independently, date-clustered, on win rate:
+
+| gate | keeps | win | Δ | 95% CI |
+|---|---|---|---|---|
+| not a falling knife | 59.4% | 24.1% vs 24.2% | **−0.08pp** | [−1.62, +1.47] |
+| mood ≥ 25 (proxy) | 15.7% | 24.3% vs 24.1% | **+0.30pp** | [−1.82, +2.31] |
+
+**Neither is a measured edge.** They are here because he asked for them after
+CASY, and because a demand band under a post-earnings repricing is a line on a
+chart. That is a defensible reason to tighten. It is **not** evidence, and this
+doc must never be read as claiming it is.
+
+Baseline for scale: **24.1% win, 75.3% stop-out, median R −1.000.**
+
+### The room "finding" is circular — do not act on it
+
+An audit surfaced `room_pct ≥ 15 or clear` at **R Δ +0.286, CI [+0.114,+0.491]**.
+On the win rate the same gate is **−6.2pp, CI [−7.6,−4.8]** — *fewer* winners,
+*bigger* ones. R is measured to the target and the target **is** the room, so
+"more room ⇒ more R" is close to definitional. Rejected as a proposal.
+
+## Still open — one clause, and it is NOT the one first reported
+
+The clause the definition agent nominated — *no new low in the last N sessions* —
+**measures nothing**: Δ +0.5pp at N=5, CI [−1.25, +2.23], and the CI crosses zero
+at N = 2, 3, 5, 8 and 10. An earlier note in this file claiming it was the
+strongest clause was repeating the agent, not a measurement. It is corrected here.
+
+What actually separates, on win rate, date-clustered, my own run:
+
+| clause | keeps | win | Δ | 95% CI | stop-out Δ |
+|---|---|---|---|---|---|
+| **no cut under the shelf in ≥ 3 sessions** | **80.4%** | 25.2% vs 19.9% | **+5.34pp** | **[+3.26, +7.43]** | **−5.93pp** |
+| no cut under the shelf in ≥ 5 | 71.9% | 25.4% vs 20.8% | +4.63pp | [+2.43, +6.78] | −5.14pp |
+| lows at the shelf ≥ 3 | 89.3% | 24.5% vs 21.0% | +3.48pp | [+1.21, +5.62] | −3.95pp |
+| full `shelf_ok` (all clauses) | 38.1% | 26.1% vs 22.9% | +3.17pp | [+1.77, +4.56] | −3.75pp |
+
+The strongest is the cheapest: **the band must not have been sliced through in
+the last 3 sessions**. A shelf that was cut three days ago is a broken shelf
+being retested from underneath — which is what stops you out.
+
+**Not shipped.** It needs re-measuring on board-qualified bands (the ~17% of this
+cohort the phone actually sees) before it goes near his phone, and S/D rules are
+never changed without his sign-off.
 
 ## Files
 

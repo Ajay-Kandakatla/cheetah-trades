@@ -475,11 +475,21 @@ def plan_txt(print_px, band, room: Optional[dict],
 #       swing lows 811.19 -> 740.00 stepping down, 50-day 825.82 -> 822.61 falling
 #   mood(CASY) = -24.3 "leaning bearish"      (the floor for a long is +25.0)
 #
-# MEASURED on the live universe (1,355 names with a demand band, last closed
-# session, studies/bounce_quality_study.py):
+# COUNTED on the live universe (1,355 names with a demand band, last closed
+# session, walking zone_store through these same gates):
 #       402 bouncing -> 151 with >=5% room -> 108 within 1% of the band
 #           -> 69 not a falling knife          (-36%)
 #           -> 15 also mood-bullish on the turn (-78% more)
+#
+# THAT IS A COUNT, NOT AN EDGE, and the difference matters. Measured afterwards
+# on 31,861 replayed bouncing events over 192 dates, date-clustered bootstrap:
+#       not a falling knife   win 24.1% vs 24.2%   Δ -0.08pp  CI[-1.62,+1.47]
+#       mood >= 25            win 24.3% vs 24.1%   Δ +0.30pp  CI[-1.82,+2.31]
+# Both are INDISTINGUISHABLE FROM ZERO. They are here because Ajay asked for
+# them after CASY and because a demand band under a post-earnings repricing is
+# a line on a chart — a tightening on principle, NOT a measured edge. Do not
+# describe them as one. (Lead on win/stop rate: mean R is tail-dominated here,
+# the top 1% of events carry 86.6% of total R and the median R is -1.000.)
 #
 # THE MOOD FRAME IS THE SUBTLE PART. mood() is a TREND read: 25 of its points
 # are price vs EMA20/EMA50, 10 are position in the frame's range and 10 are
