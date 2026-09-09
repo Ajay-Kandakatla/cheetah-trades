@@ -44,7 +44,24 @@ export type HpPayload = {
 export const EMPTY_TEXT = 'No hot name flushed into a demand band and turned today. This is a rare setup — 65 in two years.';
 export const WARMING_TEXT = 'Scanning the universe for hot names that flushed into demand…';
 export const NEAR_MISS_LABEL = 'One rule short';
+export const SCAN_LABEL = 'Scan now';
+export const SCANNING_LABEL = 'Scanning…';
 const POLL_MS = 120_000;
+
+/** What the Scan button says. Pending must be visible: the scan walks ~2,600
+ *  names and takes a few seconds, and a button that looked idle the whole time
+ *  is why "hot pull back doesn't have scan" was the impression. */
+export function scanLabel(scanning: boolean): string {
+  return scanning ? SCANNING_LABEL : SCAN_LABEL;
+}
+/** The receipt line after a forced scan — proof it actually ran. */
+export function scanNote(d: HpPayload | null): string {
+  if (!d || d.warming) return '';
+  const n = d.scanned;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return '';
+  const t = String(d.as_of || '').slice(11, 19);
+  return `scanned ${n.toLocaleString()} names${t ? ` at ${t}` : ''}`;
+}
 
 export function pct(v: number | null | undefined, digits = 1): string {
   if (typeof v !== 'number' || !Number.isFinite(v)) return '—';
@@ -117,19 +134,23 @@ export function HotPullbackBoard() {
   const [err, setErr] = useState<string | null>(null);
   const [showNear, setShowNear] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const seq = useRef(0);
 
-  const load = useCallback(() => {
+  const load = useCallback((force = false) => {
     const my = ++seq.current;
-    fetch(`${API}/supply-demand/hot-pullback`, { credentials: 'include', cache: 'no-store' })
+    if (force) setScanning(true);
+    const qs = force ? '?force=true' : '';
+    fetch(`${API}/supply-demand/hot-pullback${qs}`, { credentials: 'include', cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((j: HpPayload) => { if (my === seq.current) { setData(j); setErr(null); } })
-      .catch((e) => { if (my === seq.current) setErr(String(e?.message ?? e)); });
+      .catch((e) => { if (my === seq.current) setErr(String(e?.message ?? e)); })
+      .finally(() => { if (my === seq.current && force) setScanning(false); });
   }, []);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    const t = window.setInterval(load, POLL_MS);
+    const t = window.setInterval(() => load(), POLL_MS);
     return () => window.clearInterval(t);
   }, [load]);
 
@@ -142,7 +163,11 @@ export function HotPullbackBoard() {
       <div className="hp__bar">
         <span className="hp__count">{headline(data)}</span>
         <span className="hp__spacer" />
-        <button type="button" className="hp__refresh" onClick={() => load()}>Refresh</button>
+        {scanNote(data) && <span className="hp__scannote">{scanNote(data)}</span>}
+        <button type="button" className="hp__refresh" disabled={scanning}
+                aria-busy={scanning} onClick={() => load(true)}>
+          {scanLabel(scanning)}
+        </button>
       </div>
 
       {err && <p className="hp__err">Could not load: {err}</p>}

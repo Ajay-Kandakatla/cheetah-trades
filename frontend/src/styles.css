@@ -11766,6 +11766,8 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hp__refresh { font: inherit; font-size: 0.74rem; padding: 3px 8px; border-radius: 6px;
                border: 1px solid var(--hairline); background: var(--bg-sunken);
                color: var(--ink); cursor: pointer; }
+.hp__refresh[disabled] { cursor: progress; opacity: 0.65; }
+.hp__scannote { font-size: 0.7rem; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .hp__err { font-size: 0.8rem; color: var(--negative, #e5484d); }
 .hp__note { font-size: 0.82rem; color: var(--ink-subtle, #9aa8c8); padding: 14px 0; }
 .hp__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

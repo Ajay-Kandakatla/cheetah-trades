@@ -462,16 +462,47 @@ def scan(universe_key: str = "full", limit: int = MAX_ROWS,
 # ── cache ──────────────────────────────────────────────────────────────────
 _CACHE: dict = {}
 _LOCK = threading.Lock()
+_SCAN_LOCKS: dict = {}
+
+
+def _scan_lock(key: str) -> threading.Lock:
+    """One lock per cache key, so two forced passes coalesce onto one scan."""
+    with _LOCK:
+        lk = _SCAN_LOCKS.get(key)
+        if lk is None:
+            lk = _SCAN_LOCKS[key] = threading.Lock()
+        return lk
 
 
 def cached_or_warm(universe_key: str = "full", limit: int = MAX_ROWS,
                    force: bool = False) -> dict:
-    """Serve what we have, warm in a thread. Never blocks (the 2026-08-14 524)."""
+    """Serve what we have, warm in a thread. Never blocks (the 2026-08-14 524)
+    — EXCEPT under `force`, which blocks and re-scans.
+
+    `force` used to fall through to the background-warm path and hand back the
+    STALE board flagged `warming: True`. Two things read that as a failure: the
+    Scan button, which showed the same rows and looked like nothing happened,
+    and `record()`, which refuses a warming payload — so the 17:05 cron, the one
+    the paper lane depends on, wrote nothing. The 2026-08-14 524 was a ~100s
+    Cloudflare cut; this scan is ~6s, so blocking here is safe.
+    """
     key = f"{universe_key}:{limit}"
+    if force:
+        with _LOCK:
+            before = float((_CACHE.get(key) or {}).get("ts") or 0.0)
+        with _scan_lock(key):
+            with _LOCK:
+                hit = _CACHE.get(key)
+                if hit and float(hit.get("ts") or 0.0) > before and not hit.get("warming"):
+                    return {**hit["data"], "cached": True}   # another Scan just ran
+            data = scan(universe_key, limit)
+            with _LOCK:
+                _CACHE[key] = {"ts": time.time(), "data": data, "warming": False}
+            return data
     now = time.time()
     with _LOCK:
         hit = _CACHE.get(key)
-        if hit and (now - hit["ts"]) < CACHE_TTL_SEC and not force:
+        if hit and (now - hit["ts"]) < CACHE_TTL_SEC:
             return {**hit["data"], "cached": True}
         warming = bool(hit and hit.get("warming"))
     if hit and not warming:

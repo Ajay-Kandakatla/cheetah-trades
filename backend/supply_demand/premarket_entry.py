@@ -402,6 +402,16 @@ def rules_lines() -> list:
 # ── cache + cron ───────────────────────────────────────────────────────────
 _CACHE: dict = {}
 _LOCK = threading.Lock()
+_SCAN_LOCKS: dict = {}
+
+
+def _scan_lock(key: str) -> threading.Lock:
+    """One lock per cache key, so two forced passes coalesce onto one scan."""
+    with _LOCK:
+        lk = _SCAN_LOCKS.get(key)
+        if lk is None:
+            lk = _SCAN_LOCKS[key] = threading.Lock()
+        return lk
 
 
 def _key(universe: str, pass_name: str, limit: int) -> str:
@@ -414,14 +424,33 @@ def cached_or_warm(universe: str = "full", pass_name: Optional[str] = None,
 
     Same rule as `demand_reentry.cached_or_warm` and for the same reason:
     Cloudflare cuts the connection at ~100s (the 524 of 2026-08-14).
+
+    EXCEPT under `force`, which blocks and re-scans. `force` used to fall
+    through to the background-warm path and return the STALE pass flagged
+    `warming: True`, and `record()` refuses a warming payload — so every
+    `force=true&record=true` cron would have written nothing to
+    `premarket_entry_runs`. This scan reads the demand boards' own caches and
+    takes well under a second, so blocking is safe.
     """
     pass_name = pass_name if pass_name in PASSES else current_pass()
     limit = max(1, int(limit or MAX_SYMBOLS))
     key = _key(universe, pass_name, limit)
+    if force:
+        with _LOCK:
+            before = float((_CACHE.get(key) or {}).get("ts") or 0.0)
+        with _scan_lock(key):
+            with _LOCK:
+                hit = _CACHE.get(key)
+                if hit and float(hit.get("ts") or 0.0) > before and not hit.get("warming"):
+                    return {**hit["data"], "cached": True}   # another pass just ran
+            data = scan(universe=universe, pass_name=pass_name, limit=limit)
+            with _LOCK:
+                _CACHE[key] = {"ts": time.time(), "data": data, "warming": False}
+            return data
     now = time.time()
     with _LOCK:
         hit = _CACHE.get(key)
-        fresh = hit and (now - hit["ts"]) < CACHE_TTL_SEC and not force
+        fresh = hit and (now - hit["ts"]) < CACHE_TTL_SEC
         if fresh:
             return {**hit["data"], "cached": True}
         warming = bool(hit and hit.get("warming"))

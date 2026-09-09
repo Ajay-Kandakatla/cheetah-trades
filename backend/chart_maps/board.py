@@ -779,6 +779,91 @@ def _velocity_decor(tiles: list) -> None:
                 {"text": f"🐘 Heavy supply — {v:.2f}%/day of shares", "tone": "muted"})
 
 
+DWELL_STAT_KEY = "On board"
+DWELL_NEW_TEXT = "🆕 new today"
+
+
+def _dwell_month(day: str) -> str:
+    """'2026-09-05' -> 'Sep 5'. Sliced, never parsed into a datetime — the
+    stamps are already ET and a Date conversion would shift them a day."""
+    m = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    try:
+        y, mo, d = str(day)[:10].split("-")
+        return f"{m[int(mo) - 1]} {int(d)}"
+    except Exception:
+        return str(day)[:10]
+
+
+def dwell_text(appearances, first_seen) -> Optional[str]:
+    """The badge line. PURE, so a test can pin the wording."""
+    try:
+        n = int(appearances)
+    except Exception:
+        return None
+    if n < 1:
+        return None
+    if n == 1:
+        return DWELL_NEW_TEXT
+    since = _dwell_month(first_seen) if first_seen else ""
+    return f"📌 {n} board days" + (f" · since {since}" if since else "")
+
+
+def _dwell_decor(tiles: list) -> int:
+    """Tag how long each name has been sitting in its demand band.
+
+    Ajay 2026-09-09: *"May be tag them to say they are in demand zone for 3 days
+    or so... Cuz I have seen some stocks sitting there"*.
+
+    The count is `demand_episodes.appearances` — board days inside ONE continuous
+    episode; `demand_history` closes an episode after a gap, so a name that left
+    and came back reads as new again, which is the honest read. It is a COUNT OF
+    BOARD DAYS, not calendar days: a name first seen Aug 26 with 13 appearances
+    sat through 13 scans, not 14 days.
+
+    Tone is `muted` for every tier ON PURPOSE. Nothing has measured whether a
+    long sit is good or bad, and colouring it green or amber would put a verdict
+    on his screen that this app has not earned.
+
+    Only the demand-family tabs call this — `demand_episodes` is written from
+    the Back in Demand board (`demand_history.record_board`), so the count is
+    meaningless on a VCP or topping tile.
+    """
+    syms = [t.get("symbol") for t in tiles if t.get("symbol")]
+    if not syms:
+        return 0
+    try:
+        from supply_demand import demand_history as DH
+        db = DH._db()
+        if db is None:
+            return 0
+        cur = db[DH.EPISODES_COLL].find(
+            {"symbol": {"$in": syms}},
+            {"symbol": 1, "appearances": 1, "first_seen": 1, "last_seen": 1, "_id": 0})
+        best: dict = {}
+        for ep in cur:
+            sym = ep.get("symbol")
+            prev = best.get(sym)
+            if prev is None or str(ep.get("last_seen") or "") > str(prev.get("last_seen") or ""):
+                best[sym] = ep
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("chart_maps: dwell decor unavailable: %s", exc)
+        return 0
+    n = 0
+    for t in tiles:
+        ep = best.get(t.get("symbol"))
+        if not ep:
+            continue
+        txt = dwell_text(ep.get("appearances"), ep.get("first_seen"))
+        if not txt:
+            continue
+        t.setdefault("badges", []).append({"text": txt, "tone": "muted"})
+        t.setdefault("stats", []).append(
+            {"k": DWELL_STAT_KEY, "v": f"{int(ep['appearances'])}d"})
+        n += 1
+    return n
+
+
 def attach_tape(rows: list, budget_sec: float = TAPE_BUDGET_SEC) -> int:
     """Pull each row's intraday tape for venue + retail detail, in place.
 
@@ -1789,6 +1874,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             t["_score"] = f * 10000.0 + vlead * 1000.0 + (t.get("_score") or 0.0)
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "demand")
+    _dwell_decor(out)
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
@@ -2728,6 +2814,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "demand")
+    _dwell_decor(out)
     flow_counts = {"inflow": 0, "neutral": 0, "distribution": 0}
     for t in tiles:
         st = next((b for b in t.get("badges") or [] if "Money flowing in" in b["text"]), None)

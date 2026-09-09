@@ -12,8 +12,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import {
-  HotPullbackBoard, pct, money, bandText, headline, studyLine,
-  EMPTY_TEXT, WARMING_TEXT, NEAR_MISS_LABEL,
+  HotPullbackBoard, pct, money, bandText, headline, studyLine, scanLabel, scanNote,
+  EMPTY_TEXT, WARMING_TEXT, NEAR_MISS_LABEL, SCAN_LABEL, SCANNING_LABEL,
 } from './HotPullbackBoard';
 import type { HpPayload, HpRow } from './HotPullbackBoard';
 
@@ -176,5 +176,59 @@ describe('HotPullbackBoard', () => {
     await screen.findByText('NULLY');
     expect(screen.queryByTestId('hp-plan')).toBeNull();
     expect(document.body.textContent).not.toContain('NaN');
+  });
+});
+
+/* The Scan button (2026-09-09).
+ *
+ * Ajay: "can you give me a scan button in hot pull back or just do a scan
+ * please". The board had a Refresh that only re-read the 3-minute cache — it
+ * could not rescan, so pressing it looked like nothing happened. Scan sends
+ * force=true, which now blocks on the backend for a real universe walk. */
+describe('the Scan button', () => {
+  it('asks the backend to actually rescan, not just re-read the cache', async () => {
+    const calls: string[] = [];
+    stub(PAYLOAD, calls);
+    render(<HotPullbackBoard />);
+    const btn = await screen.findByRole('button', { name: SCAN_LABEL });
+    expect(calls[0]).not.toContain('force');          // first load rides the cache
+    fireEvent.click(btn);
+    expect(calls[1]).toContain('force=true');
+  });
+
+  it('shows it is working and refuses a second click mid-scan (negative)', async () => {
+    const calls: string[] = [];
+    let release: (v: any) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any) => {
+      calls.push(String(url));
+      if (calls.length === 1) return Promise.resolve({ ok: true, json: async () => PAYLOAD });
+      return new Promise((res) => { release = () => res({ ok: true, json: async () => PAYLOAD }); });
+    }));
+    render(<HotPullbackBoard />);
+    const btn = await screen.findByRole('button', { name: SCAN_LABEL });
+    fireEvent.click(btn);
+    const busy = await screen.findByRole('button', { name: SCANNING_LABEL });
+    expect(busy.getAttribute('aria-busy')).toBe('true');
+    expect((busy as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(busy);
+    expect(calls).toHaveLength(2);                    // the second click did nothing
+    release(null);
+    await screen.findByRole('button', { name: SCAN_LABEL });
+  });
+
+  it('prints a receipt so a scan that found nothing new is still visibly a scan', async () => {
+    stub(PAYLOAD, []);
+    render(<HotPullbackBoard />);
+    expect(await screen.findByText('scanned 2,594 names at 08:12:00')).toBeTruthy();
+  });
+
+  it('the helpers never invent a receipt (negative)', () => {
+    expect(scanLabel(false)).toBe(SCAN_LABEL);
+    expect(scanLabel(true)).toBe(SCANNING_LABEL);
+    expect(scanNote(null)).toBe('');
+    expect(scanNote({ warming: true, scanned: 10 })).toBe('');
+    expect(scanNote({ scanned: null as any })).toBe('');
+    expect(scanNote({ scanned: Number.NaN })).toBe('');
+    expect(scanNote({ scanned: 7 })).toBe('scanned 7 names');
   });
 });

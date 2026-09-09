@@ -415,3 +415,81 @@ def test_the_scan_is_actually_scheduled():
     for l in lines:
         assert l.strip().startswith("curl") or " curl " in l, \
             "curl the API, never `python -m` — the cron container is a different process"
+
+
+# ── force has to actually force (2026-09-09) ───────────────────────────────
+# `force=True` used to fall through to the background-warm path and hand back
+# the STALE board flagged warming:True. Two callers read that as failure: the
+# Scan button (same rows, looked like nothing happened) and record(), which
+# refuses a warming payload — so the 17:05 cron, the one the paper lane depends
+# on, wrote nothing. Proven live: a forced pass at 02:39 did not update the
+# 02:32 history row.
+def _seed_cache(monkeypatch, key="full:60", age=0.0, warming=False):
+    import time as _t
+    monkeypatch.setattr(HP, "_CACHE", {key: {
+        "ts": _t.time() - age, "warming": warming,
+        "data": {"warming": False, "rows": [], "scanned": 1, "as_of": "STALE"}}})
+
+
+def test_force_blocks_and_rescans_instead_of_serving_the_stale_board(monkeypatch):
+    calls = []
+
+    def fake_scan(u="full", limit=HP.MAX_ROWS):
+        calls.append(u)
+        return {"warming": False, "rows": [], "scanned": 2594, "as_of": "FRESH"}
+
+    _seed_cache(monkeypatch, age=0.0)            # cache is FRESH, the worst case
+    monkeypatch.setattr(HP, "scan", fake_scan)
+    out = HP.cached_or_warm("full", HP.MAX_ROWS, force=True)
+    assert out["as_of"] == "FRESH", "force must re-scan, not serve the cache"
+    assert out.get("warming") is False, "a forced pass must never come back warming"
+    assert len(calls) == 1
+
+
+def test_without_force_a_fresh_cache_is_still_served_without_scanning(monkeypatch):
+    """The 524 guard stays: only `force` is allowed to block."""
+    calls = []
+    monkeypatch.setattr(HP, "scan", lambda *a, **k: calls.append(1) or {})
+    _seed_cache(monkeypatch, age=0.0)
+    out = HP.cached_or_warm("full", HP.MAX_ROWS)
+    assert out["as_of"] == "STALE" and out["cached"] is True
+    assert calls == []
+
+
+def test_two_scan_buttons_at_once_coalesce_onto_one_scan(monkeypatch):
+    """He can click Scan twice. That must not start two universe walks."""
+    import threading, time as _t
+    calls, started = [], threading.Event()
+
+    def slow_scan(u="full", limit=HP.MAX_ROWS):
+        calls.append(u)
+        started.set()
+        _t.sleep(0.25)
+        return {"warming": False, "rows": [], "scanned": 2594, "as_of": "FRESH"}
+
+    _seed_cache(monkeypatch, age=0.0)
+    monkeypatch.setattr(HP, "scan", slow_scan)
+    monkeypatch.setattr(HP, "_SCAN_LOCKS", {})
+    out = {}
+    def go(i):
+        out[i] = HP.cached_or_warm("full", HP.MAX_ROWS, force=True)
+    a = threading.Thread(target=go, args=(0,)); a.start()
+    started.wait(2)
+    b = threading.Thread(target=go, args=(1,)); b.start()
+    a.join(5); b.join(5)
+    assert len(calls) == 1, "the second Scan must ride the first, not re-walk the universe"
+    assert out[0]["as_of"] == "FRESH" and out[1]["as_of"] == "FRESH"
+
+
+def test_a_forced_pass_is_recordable_which_is_the_whole_point(monkeypatch):
+    """The regression that mattered: force -> warming:True -> record() bails."""
+    db = _FakeDB()
+    monkeypatch.setattr(HP, "_db", lambda: db)
+    monkeypatch.setattr(HP, "market_closed_reason", lambda now=None: None)
+    row = dict(dyn_row(), date="2026-09-08", live=False)
+    monkeypatch.setattr(HP, "scan", lambda *a, **k: _board([row], as_of="FRESH"))
+    _seed_cache(monkeypatch, age=0.0)
+    data = HP.cached_or_warm("full", HP.MAX_ROWS, force=True)
+    assert data.get("warming") is False
+    assert HP.record(data) is True
+    assert db.hot_pullback_runs.docs[0]["day"] == "2026-09-08"
