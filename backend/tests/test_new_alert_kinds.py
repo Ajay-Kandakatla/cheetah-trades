@@ -189,3 +189,51 @@ def test_pattern_counts_what_it_skipped_so_a_quiet_phone_is_explainable(monkeypa
     rows = [_pat(status="forming"), _pat(sym="B", pattern="flat_top"), _pat(sym="C")]
     out = PA.check_once(owner="o@x", rows=rows, coll=FakeColl())
     assert out["skipped_stale"] == 2 and out["fresh"] == 1 and out["pushed"] == 1
+
+
+# ── the push builders must never raise on a real recorded row ──────────────
+# Caught by a dry run before the 08:15 cron ever fired: `reversal` on a recorded
+# hot-pullback row is a DICT ({"off_low_pct", "range_pos"}), not a number, and
+# float(dict) raises. A push builder that throws takes the whole pass with it.
+def test_hot_pullback_message_handles_the_real_recorded_row_shape():
+    row = {"symbol": "DYN", "date": "2026-09-08", "close": 20.31, "prev_close": 24.28,
+           "flush_pct": -36.3, "vol_x": 6.9, "under_ma21_pct": -20.59,
+           "reversal": {"off_low_pct": 19.46, "range_pos": 0.846},
+           "band": {"kind": "demand", "lo": 16.56, "hi": 17.02, "touches": 4},
+           "plan": {"stop": 16.48, "entry_note": "next open"}}
+    body = HPA.message(row)["body"]
+    assert "+19.5% off the low" in body
+    assert "85% up the day's range" in body
+    assert "flushed 36%" in body and "band $16.56-17.02" in body
+
+
+@pytest.mark.parametrize("junk", [
+    {}, {"symbol": "X"},
+    {"symbol": "X", "close": "n/a", "flush_pct": {}, "vol_x": None,
+     "reversal": "weird", "band": {"lo": None, "hi": "x"}, "plan": {"stop": float("nan")}},
+    {"symbol": "X", "reversal": {"off_low_pct": None, "range_pos": "x"},
+     "band": {}, "plan": {}},
+])
+def test_neither_push_builder_raises_on_junk(junk):
+    """A builder that throws takes the whole pass down. Every numeric read is
+    guarded, NaN included."""
+    assert HPA.message(junk)["kind"] == "hot_pullback_alert"
+    assert PA.message({**junk, "pattern": "double_bottom"})["kind"] == "pattern_alert"
+
+
+def test_pattern_message_handles_the_real_scan_row_shape():
+    row = _pat()
+    body = PA.message(row)["body"]
+    assert "$12.5" in body and "neckline $12" in body and "target $14.1" in body
+
+
+def test_pattern_alerts_read_the_scan_doc_by_id_not_by_timestamp():
+    """`patterns_scan` holds TWO docs: "latest" (the scan, 200 rows) and
+    "qualifier_verdicts" (always empty, and NEWER). Sorting by generated_at
+    picks the empty one, and the pass would find nothing forever while looking
+    like a quiet market. Caught by a dry run before the cron shipped."""
+    import inspect
+    assert PA.SCAN_DOC_ID == "latest"
+    src = inspect.getsource(PA.check_once)
+    assert 'find_one({"_id": SCAN_DOC_ID})' in src
+    assert 'sort=[("generated_at"' not in src

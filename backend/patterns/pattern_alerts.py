@@ -36,6 +36,7 @@ log = logging.getLogger("patterns.pattern_alerts")
 
 KIND = "pattern_alert"
 STATE_COLL = "pattern_alerts"
+SCAN_DOC_ID = "latest"     # patterns.scan writes this id; NOT the newest by generated_at
 FRESH_BARS = 2           # confirmed within this many sessions
 MAX_SINGLES = 4
 ET = ZoneInfo("America/New_York")
@@ -87,17 +88,24 @@ def is_fresh(row: dict, fresh_bars: int = FRESH_BARS) -> bool:
     return 0 <= b <= fresh_bars
 
 
+def _num(x):
+    """Float or None. Scan rows carry dicts, strings and NaN where a number is
+    expected — never let one raise inside a push builder."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return None if v != v else v
+
+
 def message(row: dict) -> dict:
     sym, pat = row.get("symbol"), row.get("pattern")
     parts = []
-    if row.get("last_close") is not None:
-        parts.append("$%g" % float(row["last_close"]))
-    if row.get("neckline") is not None:
-        parts.append("neckline $%g" % float(row["neckline"]))
-    if row.get("stop") is not None:
-        parts.append("stop $%g" % float(row["stop"]))
-    if row.get("target") is not None:
-        parts.append("target $%g" % float(row["target"]))
+    for key, fmt in (("last_close", "$%g"), ("neckline", "neckline $%g"),
+                     ("stop", "stop $%g"), ("target", "target $%g")):
+        v = _num(row.get(key))
+        if v is not None:
+            parts.append(fmt % v)
     parts.append(record_line(pat))
     return {"title": "\U0001F4D0 %s %s confirmed" % (sym, str(pat).replace("_", " ")),
             "body": " · ".join(parts), "icon": "/icon.svg",
@@ -132,7 +140,12 @@ def check_once(owner: Optional[str] = None, now: Optional[datetime] = None,
         doc = None
         if db is not None:
             try:
-                doc = db.patterns_scan.find_one(sort=[("generated_at", -1)])
+                # The scan writes _id "latest". Sorting by generated_at instead
+                # picks up "qualifier_verdicts" — a different doc in the same
+                # collection whose `results` is always empty, so the pass would
+                # have found nothing forever and looked like a quiet market.
+                # Caught by a dry run before the cron shipped.
+                doc = db.patterns_scan.find_one({"_id": SCAN_DOC_ID})
             except Exception as exc:                            # pragma: no cover
                 log.warning("pattern_alerts: scan read failed: %s", exc)
         rows = list((doc or {}).get("results") or [])

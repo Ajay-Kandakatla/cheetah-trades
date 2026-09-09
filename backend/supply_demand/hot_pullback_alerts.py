@@ -63,27 +63,52 @@ def study_line() -> str:
                s["ci_lo_r"], s["ci_hi_r"]))
 
 
+def _num(x):
+    """Float or None. Recorded rows carry dicts, strings and NaN in places a
+    number is expected — never let one raise inside a push builder."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return None if v != v else v
+
+
 def message(row: dict) -> dict:
     sym = row.get("symbol")
     band = row.get("band") or {}
     close = row.get("close")
     parts = []
+    close = _num(close)
     if close is not None:
-        parts.append("$%g" % float(close))
-    fl = row.get("flush_pct")
+        parts.append("$%g" % close)
+    fl = _num(row.get("flush_pct"))
     if fl is not None:
-        parts.append("flushed %.0f%%" % abs(float(fl)))
+        parts.append("flushed %.0f%%" % abs(fl))
+    # `reversal` is a DICT on a recorded row — {"off_low_pct", "range_pos"} —
+    # not a number. A dry run of this module caught float(dict) before the cron
+    # ever ran it.
     rv = row.get("reversal")
-    if rv is not None:
-        parts.append("closed %+.1f%% off the low" % float(rv))
-    if band.get("lo") is not None:
-        parts.append("band $%g-%g" % (float(band["lo"]), float(band["hi"])))
-    vx = row.get("vol_x")
+    if isinstance(rv, dict):
+        off = _num(rv.get("off_low_pct"))
+        if off is not None:
+            parts.append("closed +%.1f%% off the low" % off)
+        pos = _num(rv.get("range_pos"))
+        if pos is not None:
+            parts.append("%.0f%% up the day's range" % (pos * 100.0))
+    elif rv is not None:
+        off = _num(rv)
+        if off is not None:
+            parts.append("closed +%.1f%% off the low" % off)
+    b_lo, b_hi = _num(band.get("lo")), _num(band.get("hi"))
+    if b_lo is not None and b_hi is not None:
+        parts.append("band $%g-%g" % (b_lo, b_hi))
+    vx = _num(row.get("vol_x"))
     if vx is not None:
-        parts.append("%.1fx vol" % float(vx))
+        parts.append("%.1fx vol" % vx)
     plan = row.get("plan") or {}
-    if plan.get("stop") is not None:
-        parts.append("stop $%.2f" % float(plan["stop"]))
+    stop = _num(plan.get("stop"))
+    if stop is not None:
+        parts.append("stop $%.2f" % stop)
     body = " · ".join(parts) + " · " + study_line()
     return {"title": "\U0001F525 %s hot pullback" % sym,
             "body": body, "icon": "/icon.svg",
