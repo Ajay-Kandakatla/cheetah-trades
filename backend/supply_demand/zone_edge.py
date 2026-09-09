@@ -687,7 +687,7 @@ def empty_payload(reason: str = "no pass yet") -> dict:
                        "min_cap_usd": MIN_CAP_USD, "min_touches_push": MIN_TOUCHES_PUSH},
             "counts": {"breaking": 0, "near_demand": 0, "candidates": 0, "priced": 0,
                        "stale_print": 0, "skipped_room": 0, "skipped_direction": 0,
-                       "skipped_knife": 0, "skipped_mood": 0,
+                       "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
                        "skipped_cap": 0,
                        "unknown_cap": 0, "pushed": 0},
             "breaking": [], "near_demand": [], "track": {}, "reason": reason,
@@ -855,7 +855,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     breaking, near_demand = [], []
     break_cands, demand_cands = [], []
     unknown_cap = skipped_cap = unknown_prev = skipped_room = skipped_direction = 0
-    skipped_knife = skipped_mood = 0
+    skipped_knife = skipped_mood = skipped_floor = 0
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -919,6 +919,10 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                         # Swing lows stepping down under a falling 50-day. The
                         # BOARD still lists it, wearing the 🔪 badge.
                         skipped_knife += 1
+                    elif not AG.floor_held_gate(rd["band"], sym, frame=frame):
+                        # The band floor must have HELD — intact 30.7% win vs
+                        # swept 22.7% / broken 21.5% over 31,861 events.
+                        skipped_floor += 1
                     elif not AG.reversal_mood_gate(sym, read=rm):
                         # The mood of the TURN, last 60 sessions. The two-year
                         # read scores a genuinely bottomed name -45 before
@@ -1024,6 +1028,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print,
               "skipped_room": skipped_room, "skipped_direction": skipped_direction,
               "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
+              "skipped_floor": skipped_floor,
               "skipped_cap": skipped_cap,
               "unknown_cap": unknown_cap, "pushed": pushed}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
@@ -1041,6 +1046,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
             "skipped_direction": skipped_direction,
             "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
+            "skipped_floor": skipped_floor,
             "seconds": round(time.time() - t0, 2), "payload": payload}
 
 

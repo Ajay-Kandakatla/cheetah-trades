@@ -158,11 +158,12 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
     case 'skipped_direction': return `${n} skipped: not bouncing`;
     case 'skipped_knife':     return `${n} skipped: falling knife`;
     case 'skipped_mood':      return `${n} skipped: turn not bullish`;
+    case 'skipped_floor':     return `${n} skipped: band floor was pierced`;
     default: return null;
   }
 }
 const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'skipped_knife',
-                   'skipped_mood', 'skipped_cap', 'unknown_cap', 'stale_print', 'unknown_prev',
+                   'skipped_mood', 'skipped_floor', 'skipped_cap', 'unknown_cap', 'stale_print', 'unknown_prev',
                    'unknown_room'];
 /* `pushed` on the backend counts send CALLS that terminated — delivered, or
  * nobody targeted (a muted kind still counts, demand_alerts._terminal). So the
@@ -191,8 +192,8 @@ function useAlertsStatus(nonce: number) {
 }
 
 export function skipsToday(status: AlertsStatus | null, today: string):
-    { room: number; proximity: number; direction: number; knife: number; mood: number } {
-  const out = { room: 0, proximity: 0, direction: 0, knife: 0, mood: 0 };
+    { room: number; proximity: number; direction: number; knife: number; mood: number; floor: number } {
+  const out = { room: 0, proximity: 0, direction: 0, knife: 0, mood: 0, floor: 0 };
   if (!status?.passes) return out;
   for (const p of Object.values(status.passes)) {
     if (!p || passDay(p) !== today) continue;
@@ -201,6 +202,7 @@ export function skipsToday(status: AlertsStatus | null, today: string):
     out.direction += Number(p.counts?.skipped_direction) || 0;
     out.knife += Number(p.counts?.skipped_knife) || 0;
     out.mood += Number(p.counts?.skipped_mood) || 0;
+    out.floor += Number(p.counts?.skipped_floor) || 0;
   }
   return out;
 }
@@ -471,6 +473,7 @@ export function AlertsPage() {
   const skipParts = ([
     [skips.room, 'room'], [skips.proximity, 'proximity'], [skips.direction, 'not bouncing'],
     [skips.knife, 'falling knife'], [skips.mood, 'turn not bullish'],
+    [skips.floor, 'band floor pierced'],
   ] as [number, string][]).filter(([n]) => n > 0).map(([n, label]) => `${n} (${label})`);
   const skipNote = choice.untilOffset == null && skipParts.length
     ? ` — the gate skipped ${skipParts.join(' / ')} today`

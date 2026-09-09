@@ -685,3 +685,60 @@ def sweep_txt(read: Optional[dict]) -> str:
         return ("\U0001F52A broke the band%s and stayed under"
                 % (" by %.1f%%" % p if p is not None else ""))
     return ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE BAND FLOOR MUST HAVE HELD — the one gate measured all day that separates.
+#
+# Ajay asked for the stop hunt: "bullish stocks that got in to demand zone ..
+# where Institutions hunt for stop losses .. I been catching some falling
+# knives". The measurement says the stop hunt is the LOSING side.
+#
+# 31,861 replayed bouncing events, 2,364 names, 192 dates (2025-09-09 ->
+# 2026-06-12), win rate with a bootstrap that resamples WHOLE DATES:
+#
+#     state     n        win     stop-out
+#     swept     12,290   22.7%   76.9%     <- the stop hunt he asked for
+#     broken    11,990   21.5%   78.2%     <- the knife he keeps catching
+#     intact     7,581   30.7%   67.9%     <- the band nobody touched
+#     baseline  31,861   24.1%   75.3%
+#
+#     intact as a gate   keeps 23.8%   Δwin +8.60pp CI[+6.39,+11.06]
+#                                      Δstop -9.58pp CI[-12.05,-7.40]
+#     swept  as a gate   keeps 38.6%   Δwin -2.37pp CI[-3.76,-1.01]   WORSE
+#     broken as a gate   keeps 37.6%   Δwin -4.23pp CI[-5.50,-3.02]   WORSE
+#
+# THE RECLAIM DOES NOT SAVE IT. A floor that was pierced and bought back still
+# underperforms one that was never tested — and the deeper the pierce the worse
+# it gets (2-4% sweeps: Δwin -2.80pp CI[-4.49,-1.07]). Whatever a stop run
+# signals, it is not that the level will hold the next time.
+#
+# CONFIRMED TWICE, independently. A separate definition on a different window
+# (the shelf study's "no low cut under the band floor in the last N sessions",
+# K=20) measured +5.34pp CI[+3.26,+7.43] at N=3 and stayed positive at N=5 and
+# N=8. Two implementations, two windows, same answer.
+#
+# WHY WIN RATE. On this cohort the top 1% of events carry 86.6% of total R and
+# the median R is -1.000 in EVERY arm including the baseline. Mean R is a tail
+# statistic here; win and stop rates are binomials.
+#
+# HONEST LIMITS. One 9-month window. ~83% of the replayed cohort sits on bands
+# the live push never sees (it takes board-qualified bands only), so the size of
+# the effect on his own population is not yet confirmed — the DIRECTION is what
+# two independent measurements agree on. Fails closed.
+
+FLOOR_HELD_STATES = ("intact",)
+
+
+def floor_held_gate(band, symbol=None, frame=None, read=None,
+                    allowed=FLOOR_HELD_STATES) -> bool:
+    """True when the demand band's floor has NOT been pierced in the sweep
+    window. Unreadable = False (fails closed), same side every other phone gate
+    fails on."""
+    r = read if isinstance(read, dict) else sweep_read(band, symbol, frame)
+    if not isinstance(r, dict):
+        return False
+    st = r.get("state")
+    if not isinstance(st, str):
+        return False
+    return st.strip().lower() in allowed

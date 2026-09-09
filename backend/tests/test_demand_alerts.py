@@ -58,6 +58,10 @@ def _no_mood_by_default(monkeypatch):
     monkeypatch.setattr(DA.AG, "daily_frame", lambda sym, frame=None: frame)
     monkeypatch.setattr(DA.AG, "knife_read",
                         lambda sym, frame=None: {"knife": False, "trend": "rising"})
+    monkeypatch.setattr(DA.AG, "sweep_read",
+                        lambda band, symbol=None, frame=None, window=None:
+                            {"state": "intact", "pierce_pct": None,
+                             "reclaim_bars": None, "vol_x": None})
     monkeypatch.setattr(DA.AG, "reversal_mood_read",
                         lambda sym, frame=None, bars=None: {"score": 40.0, "label": "bullish",
                                                             "bars": 60, "bullish": True})
@@ -580,7 +584,7 @@ def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeyp
     c = doc["counts"]
     assert c == {"candidates": 5, "hits": 5, "at": 1, "at_singles": 1, "near": 2, "pushed": 1,
                  "skipped_cap": 1, "unknown_cap": 1, "unknown_prev": 0, "skipped_room": 0,
-                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0}
+                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0}
     assert all(type(v) is int for v in c.values()) and "reason" not in doc
     # a warming board is a recorded, explained quiet pass — and the doc is REPLACED, not appended
     out2 = DA.check_once(board={"warming": True}, now=IN_SESSION, force=True, pass_coll=pc)

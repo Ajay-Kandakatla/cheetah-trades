@@ -425,6 +425,7 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     skipped_direction = 0
     skipped_knife = 0
     skipped_mood = 0
+    skipped_floor = 0
     for sym in syms:
         last = last_px.get(sym)
         if not last:
@@ -494,7 +495,15 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         it["reversal_mood"] = rm
         # Which kind of dip this was — swept the stops and reclaimed, or broke
         # and stayed under. Same frame, no extra load.
-        it["sweep"] = AG.sweep_read(it["band"], it["symbol"], frame=frame)
+        sw = AG.sweep_read(it["band"], it["symbol"], frame=frame)
+        it["sweep"] = sw
+        # The band floor must have HELD. The only gate measured to separate:
+        # intact 30.7% win vs swept 22.7% and broken 21.5% (n=31,861, 192 dates,
+        # Δwin +8.60pp CI[+6.39,+11.06]). The stop hunt he asked for is the
+        # LOSING side — the reclaim does not save it.
+        if not AG.floor_held_gate(it["band"], read=sw):
+            skipped_floor += 1
+            continue
         if not AG.reversal_mood_gate(it["symbol"], read=rm):
             skipped_mood += 1
             continue
@@ -551,7 +560,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
             "skipped_proximity": skipped_proximity, "unknown_room": unknown_room,
             "skipped_direction": skipped_direction,
-            "skipped_knife": skipped_knife, "skipped_mood": skipped_mood}
+            "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
+            "skipped_floor": skipped_floor}
 
 
 if __name__ == "__main__":
@@ -560,10 +570,10 @@ if __name__ == "__main__":
     out = check_once()
     log.info("DEMAND-ALERTS: ran=%s candidates=%s hits=%d at=%s near=%s pushed=%s "
              "skipped_cap=%s unknown_cap=%s unknown_prev=%s skipped_room=%s "
-             "skipped_proximity=%s unknown_room=%s skipped_direction=%s skipped_knife=%s skipped_mood=%s", out.get("ran"),
+             "skipped_proximity=%s unknown_room=%s skipped_direction=%s skipped_knife=%s skipped_mood=%s skipped_floor=%s", out.get("ran"),
              out.get("candidates"), len(out.get("hits") or []), out.get("at"),
              out.get("near"), out.get("pushed"), out.get("skipped_cap"),
              out.get("unknown_cap"), out.get("unknown_prev"), out.get("skipped_room"),
              out.get("skipped_proximity"), out.get("unknown_room"),
              out.get("skipped_direction"), out.get("skipped_knife"),
-             out.get("skipped_mood"))
+             out.get("skipped_mood"), out.get("skipped_floor"))

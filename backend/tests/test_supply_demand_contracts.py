@@ -842,3 +842,34 @@ def test_bullish_reversal_gates_2026_09_09_are_wired_to_every_demand_push_path()
     line = RI._direction_line()
     assert str(int(AG.REVERSAL_MOOD_BARS)) in line and "falling knife" in line
     assert "NEVER gate" in line
+
+
+def test_floor_held_gate_2026_09_09_is_the_measured_one_and_is_wired_everywhere():
+    """MEASURED, unlike the two gates that shipped earlier the same day.
+
+    31,861 replayed bouncing events, 2,364 names, 192 dates, bootstrap over
+    whole DATES, on win rate (the top 1% of events carry 86.6% of total R, so
+    mean R is a tail statistic and win rate is the honest estimator):
+
+        intact  30.7% win / 67.9% stop   Δwin +8.60pp CI[+6.39,+11.06]
+        swept   22.7% win / 76.9% stop   Δwin -2.37pp CI[-3.76,-1.01]  WORSE
+        broken  21.5% win / 78.2% stop   Δwin -4.23pp CI[-5.50,-3.02]  WORSE
+        base    24.1% win / 75.3% stop
+
+    Confirmed by a second, independent definition on a different window
+    (+5.34pp CI[+3.26,+7.43])."""
+    from supply_demand import alert_gates as AG
+    from supply_demand import demand_alerts as DA
+    from supply_demand import zone_edge as ZE
+
+    assert AG.FLOOR_HELD_STATES == ("intact",), \
+        "swept measured WORSE than baseline — do not add it back without a new measurement"
+    for src in (inspect.getsource(DA._check_once), inspect.getsource(ZE.check_once)):
+        assert "AG.floor_held_gate(" in src
+        assert '"skipped_floor": skipped_floor' in src
+
+    # the sweep READ stays a read: no gate may consult it except through the
+    # floor gate, which is the measured one
+    for gate in ("direction_gate", "knife_gate", "reversal_mood_gate",
+                 "room_gate", "demand_proximity_gate"):
+        assert "sweep" not in inspect.getsource(getattr(AG, gate)), gate

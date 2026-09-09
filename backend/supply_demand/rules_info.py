@@ -61,19 +61,21 @@ def _zone_lines():
 
 
 def _sweep_line():
-    """Built from sd_liquidity's own house geometry, never retyped."""
+    """Built from sd_liquidity's geometry and the measured gate, never retyped."""
     from . import sd_liquidity as liq
-    return ("\U0001F3AF STOP HUNT vs \U0001F52A BROKEN BAND (Ajay 2026-09-09: \"bullish stocks that "
-            "got in to demand zone .. where Institutions hunt for stop losses .. I been catching "
-            "some falling knives\"). Every push and every demand tile now says which dip put the "
-            "name there. SWEPT = the low pierced the band floor by %s\u2013%s (deeper is a "
-            "breakdown, not a stop-run) on at least %.1f\u00d7 the local volume, and price CLOSED "
-            "back above the floor within %d bars. BROKEN = pierced and stayed under \u2014 CASY's "
-            "own read. INTACT = never pierced. A READ, not a gate: it rides on the alert so the "
-            "two can be told apart, which on a chart they cannot. Counted on the live board: of "
-            "102 names past bouncing + room + proximity, 37%% swept, 32%% intact, 30%% BROKEN."
-            % (_pct(liq.SWEEP_MIN_PIERCE_PCT), _pct(liq.SWEEP_MAX_PIERCE_PCT),
-               liq.SWEEP_MIN_VOL_X, liq.RECLAIM_MAX_BARS))
+    return ("PHONE: the demand band's FLOOR MUST HAVE HELD \u2014 %s only (Ajay 2026-09-09: "
+            "\"bullish stocks that got in to demand zone .. where Institutions hunt for stop "
+            "losses .. I been catching some falling knives\"). MEASURED, and it is the OPPOSITE of "
+            "what he expected: over 31,861 replayed bounces on 192 dates, a band never pierced won "
+            "30.7%% of the time against 22.7%% for one swept and bought back and 21.5%% for one that "
+            "broke (baseline 24.1%%) \u2014 +8.60pp with a date-clustered interval of +6.39 to "
+            "+11.06, and 9.6pp fewer stop-outs. THE RECLAIM DOES NOT SAVE IT: the stop hunt "
+            "measures WORSE than average, and the deeper the pierce the worse it gets. Boards "
+            "still list every arrival and say which it was \u2014 \U0001F3AF swept (pierced %s\u2013%s "
+            "on \u2265%.1f\u00d7 volume and closed back above within %d bars) or \U0001F52A broken "
+            "(pierced and stayed under, CASY's own read)."
+            % (" / ".join(AG.FLOOR_HELD_STATES), _pct(liq.SWEEP_MIN_PIERCE_PCT),
+               _pct(liq.SWEEP_MAX_PIERCE_PCT), liq.SWEEP_MIN_VOL_X, liq.RECLAIM_MAX_BARS))
 
 
 def _room_lines():

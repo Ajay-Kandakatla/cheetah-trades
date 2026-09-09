@@ -751,3 +751,39 @@ def test_the_sweep_read_degrades_to_none_instead_of_raising():
     assert AG.sweep_read(BAND, "X", frame=None) is None
     assert AG.sweep_read(BAND, "X", frame=_frame([100.0] * 5)) is None
     assert AG.sweep_txt(None) == "" and AG.sweep_txt({}) == ""
+
+
+# ── the band floor must have held (2026-09-09, MEASURED) ───────────────────
+# The one gate measured all day that separates. 31,861 replayed bouncing events,
+# 192 dates, date-clustered: intact 30.7% win vs swept 22.7% and broken 21.5%,
+# baseline 24.1%. Δwin +8.60pp CI[+6.39,+11.06].
+#
+# IT IS THE OPPOSITE OF WHAT HE ASKED FOR. He wanted the stop hunt; the stop
+# hunt measures WORSE than average (Δwin -2.37pp CI[-3.76,-1.01]). The reclaim
+# does not save a pierced floor.
+def test_only_an_untouched_floor_passes():
+    assert AG.FLOOR_HELD_STATES == ("intact",)
+    assert AG.floor_held_gate(BAND, read={"state": "intact"}) is True
+    for st in ("swept", "broken"):
+        assert AG.floor_held_gate(BAND, read={"state": st}) is False, st
+
+
+def test_the_stop_hunt_does_not_pass_however_clean_it_looks():
+    """A textbook stop run — shallow pierce, same-bar reclaim, heavy volume —
+    still fails. Measured worse than average; the geometry does not rescue it."""
+    r = AG.sweep_read(BAND, "X", frame=_sweep_frame(0.8, True, vol_x=3.0))
+    assert r["state"] == "swept"
+    assert AG.floor_held_gate(BAND, read=r) is False
+
+
+def test_the_floor_gate_fails_closed():
+    for bad in (None, {}, {"state": None}, {"state": ""}, {"state": 7}, "nope"):
+        assert AG.floor_held_gate(BAND, read=bad) is False, bad
+    assert AG.floor_held_gate(None, "X", frame=_sweep_frame(1.0, True)) is False
+
+
+def test_the_floor_gate_and_the_sweep_read_agree_end_to_end():
+    held = _frame([106.0] * 40, lows=[104.5] * 40)
+    assert AG.floor_held_gate(BAND, "X", frame=held) is True
+    assert AG.floor_held_gate(BAND, "X", frame=_sweep_frame(1.2, False)) is False
+    assert AG.floor_held_gate(BAND, "X", frame=_sweep_frame(1.2, True)) is False

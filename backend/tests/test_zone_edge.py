@@ -125,6 +125,10 @@ def _no_mood_by_default(monkeypatch):
     monkeypatch.setattr(ZE.AG, "daily_frame", lambda sym, frame=None: frame)
     monkeypatch.setattr(ZE.AG, "knife_read",
                         lambda sym, frame=None: {"knife": False, "trend": "rising"})
+    monkeypatch.setattr(ZE.AG, "sweep_read",
+                        lambda band, symbol=None, frame=None, window=None:
+                            {"state": "intact", "pierce_pct": None,
+                             "reclaim_bars": None, "vol_x": None})
     monkeypatch.setattr(ZE.AG, "reversal_mood_read",
                         lambda sym, frame=None, bars=None: {"score": 40.0, "label": "bullish",
                                                             "bars": 60, "bullish": True})
@@ -735,7 +739,7 @@ def test_api_payload_shape_ordering_and_json_safety(monkeypatch):
                                  "min_touches_push": 2}
     # D1 arrives FALLING, so since 2026-09-09 it lists but never pushes.
     assert payload["counts"] == {"breaking": 3, "near_demand": 2, "candidates": 5, "priced": 5,
-                                 "stale_print": 0, "skipped_room": 0, "skipped_direction": 1, "skipped_knife": 0, "skipped_mood": 0,
+                                 "stale_print": 0, "skipped_room": 0, "skipped_direction": 1, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
                                  "skipped_cap": 0,
                                  "unknown_cap": 0, "pushed": 2}
     # broke first; then near with new_highs first (N1 clear, N0 has OVER above), then dist
@@ -785,7 +789,7 @@ def test_stored_counts_explain_a_quiet_phone_skip_buckets_and_pushed(monkeypatch
     assert len(sent) == 1 and sent[0]["title"].startswith("🚀 AAA")
     stored = colls["latest_coll"].docs["latest"]
     assert stored["counts"] == {"candidates": 5, "priced": 4, "stale_print": 1, "breaking": 3,
-                                "near_demand": 0, "skipped_room": 1, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0,
+                                "near_demand": 0, "skipped_room": 1, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
                                 "skipped_cap": 1,
                                 "unknown_cap": 1, "pushed": 1}
     assert stored["counts"] == out["payload"]["counts"]
