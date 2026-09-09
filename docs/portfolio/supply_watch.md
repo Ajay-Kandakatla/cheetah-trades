@@ -87,6 +87,35 @@ every signal is still computed, recorded and graded, and the mood read stays on 
 — the phone now carries only the two structural signals above. This is a tightening: no
 gate anywhere was loosened.
 
+### One voice on the phone — the owner keep-set
+
+Ajay, same day: *"Also kill the tape burst and pankaj and also few others
+miscellaneous notifications... I need just supply demand and also Sell signals and
+buy signals accurately."* His second phone had been registered with
+`default_prefs()` (every kind ON) and carried, in one week: promo movers 335,
+pivot alerts 183, flash cards 105, trade flash 119, mood signals 91.
+
+`push/subs.OWNER_KEEP_SET` — the only kinds the owner's phone carries:
+
+| kind | what it is |
+|---|---|
+| `demand_alert` | S/D **buy**: arrival at a tested demand band |
+| `zone_bounce_alert` | S/D **buy**: a confirmed bounce off one |
+| `supply_break_alert` | S/D **buy**: breaking the last supply band to new highs |
+| `position_alert` | S/D **sell**: supply reached, and the entry-band STOP |
+| `todo_reminder` | his own todos — personal, never market noise |
+
+`prefs_for(email)` gives the owner `owner_prefs()` (default_prefs with everything
+outside the keep-set False) at registration; every other account keeps
+`default_prefs()` untouched. Muting is still a per-device data write — this is the
+floor a re-subscribe falls back to, so a reinstalled phone cannot reopen the
+firehose. Both of his devices were set to the keep-set the same day.
+
+**Every delivered sell signal is graded forward** (`_record_signal` →
+`learning/observations`, `supply_watch:<stage>`, 24 h horizon, direction down).
+That is the same measurement that retired the mood pushes; without it, "more
+accurate" is an opinion.
+
 ## First live read (2026-09-02 10:47 ET)
 
 BMNR NEAR (1.05% under $23.47–23.85) · UBER APPROACHING (2.1%, ~1 ATR-day) ·

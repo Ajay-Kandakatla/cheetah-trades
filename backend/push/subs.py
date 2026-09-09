@@ -74,7 +74,7 @@ def add_subscription(subscription: dict, label: Optional[str] = None,
         "endpoint": endpoint,
         "keys": subscription.get("keys"),
         "label": label or "device",
-        "prefs": prefs or default_prefs(),
+        "prefs": prefs or prefs_for(user_email),
         "user_email": user_email.lower(),
         "updated_at": _now(),
     }
@@ -221,7 +221,7 @@ def add_mac_subscription(device_id: str,
             },
             "$setOnInsert": {
                 "endpoint": synthetic_endpoint,
-                "prefs": prefs or default_prefs(),
+                "prefs": prefs or prefs_for(user_email),
                 "created_at": _now(),
             },
         },
@@ -296,6 +296,43 @@ def _backfill(db):
                 {"_id": sub["_id"]}, {"$set": update},
             )
     _backfilled = True
+
+
+# ── The owner's keep-set (Ajay 2026-09-08) ──────────────────────────────────
+# "Also kill the tape burst and pankaj and also few others miscellaneous
+# notifications... I need just supply demand and also Sell signals and buy
+# signals accurately."
+#
+# A NEW device registration used to get default_prefs() — every kind ON — which
+# is exactly how his second phone ended up carrying 335 promo movers, 183 pivot
+# alerts and 105 flash cards in a week. For the OWNER only, a registering device
+# starts with these five and nothing else; everyone else keeps default_prefs().
+# Muting a kind is a data write; this is the floor a re-subscribe falls back to.
+OWNER_KEEP_SET: frozenset = frozenset({
+    "demand_alert",        # S/D buy: arrival at a tested demand band
+    "zone_bounce_alert",   # S/D buy: confirmed bounce off one
+    "supply_break_alert",  # S/D buy: breaking the last supply band
+    "position_alert",      # S/D sell: supply reached, and the entry-band STOP
+    "todo_reminder",       # his own todos — personal, never market noise
+})
+
+
+def owner_prefs() -> dict:
+    """default_prefs() with everything OFF except OWNER_KEEP_SET."""
+    return {k: (v if not isinstance(v, bool) else k in OWNER_KEEP_SET)
+            for k, v in default_prefs().items()}
+
+
+def _owner_email() -> str:
+    import os
+    return (os.getenv("OWNER_EMAIL")
+            or os.getenv("DEFAULT_USER_EMAIL", "ajay@example.com")).lower()
+
+
+def prefs_for(user_email: Optional[str]) -> dict:
+    """Starting prefs for a NEWLY registered device."""
+    return (owner_prefs() if (user_email or "").lower() == _owner_email()
+            else default_prefs())
 
 
 def default_prefs() -> dict:

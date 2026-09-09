@@ -34,6 +34,10 @@ APPROACH_PCT = 5.0        # <= this -> APPROACHING
 ENTRY_ABOVE_BAND_PCT = 3.0   # bought inside the band or <= this above its top
 ENTRY_BELOW_COST_PCT = 5.0   # else the first band under the cost, <= this under it
 STOP_NEAR_PCT = 1.0          # <= this above the stop -> "set the stop order" warning
+# Every sell signal that reaches the phone is graded forward, like the mood
+# signals were (Ajay 2026-09-08: "Make sure signals are more accurate"). A
+# signal nobody measures cannot be made more accurate.
+GRADE_HORIZON_H = {"IN_SUPPLY": 24, "NEAR": 24, "STOP": 24, "NEAR_STOP": 24}
 CACHE_TTL_SEC = 30 * 60   # zone half; prices re-derive every call
 ERROR_RETRY_SEC = 120     # a book whose zone engine missed retries this fast
 LIVE_REFRESH_SEC = 60
@@ -566,9 +570,30 @@ def check_alerts(user_email: Optional[str] = None) -> dict:
                 except Exception as exc:                    # pragma: no cover
                     log.warning("supply alert dedupe write failed: %s", exc)
             fired.append({"symbol": r["symbol"], "stage": stage, "sent": sent})
+            if sent > 0:
+                _record_signal(r, stage)
     out = {"ok": True, "pushed": pushed, "fired": fired, "session": state["state"]}
     log.info("supply_watch: %s", out)
     return out
+
+
+def _record_signal(r: dict, stage: str) -> None:
+    """Grade every delivered sell signal forward (learning/observations), so
+    its hit rate is measured from his own tape — the same treatment that
+    retired the mood pushes. IN_SUPPLY / STOP say the name goes DOWN from
+    here; the NEAR stages are warnings, recorded on the same footing so the
+    two can be compared. Best-effort: a grading failure never blocks a push."""
+    try:
+        import time
+        from learning import observations as obs
+        obs.record_observation(
+            source=f"supply_watch:{stage.lower()}", ticker=r["symbol"],
+            ts=int(time.time()), direction="down",
+            baseline_price=r.get("last"),
+            horizon_hours=GRADE_HORIZON_H.get(stage, 24),
+            prediction_id=f"{r['symbol']}:{stage}:{_trading_day_et()}")
+    except Exception as exc:                                # pragma: no cover
+        log.debug("supply_watch: observation for %s failed: %s", r.get("symbol"), exc)
 
 
 if __name__ == "__main__":

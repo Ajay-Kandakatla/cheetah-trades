@@ -424,3 +424,43 @@ def test_check_alerts_pushes_the_stop_once_per_band_per_day(monkeypatch):
     # NEGATIVE: the supply side untouched — a FAR row pushes nothing there
     assert all(m[1]["data"]["stage"] == "STOP" for m in sent_payloads)
 
+
+def test_delivered_sell_signals_are_graded_forward(monkeypatch):
+    """Ajay 2026-09-08: "Make sure signals are more accurate do not mean to
+    loosen up." The mood pushes were retired because their forward record was
+    measured; these are recorded the same way from day one. A signal nobody
+    grades cannot be made more accurate."""
+    import types, sys
+    recorded, sent_payloads = [], []
+    res = {"sent": 2, "failed": 0, "total_targets": 2}
+    fake_alerts = types.SimpleNamespace(_resolve_owner=lambda: "o@x.com",
+                                        _send_push=lambda email, msg, kind: (sent_payloads.append(msg), dict(res))[1])
+    pkg = types.ModuleType("portfolio"); pkg.__path__ = []; pkg.alerts = fake_alerts
+    monkeypatch.setitem(sys.modules, "portfolio", pkg)
+    monkeypatch.setitem(sys.modules, "portfolio.alerts", fake_alerts)
+    tf = types.SimpleNamespace(live_state=lambda: {"state": "rth", "refresh_sec": 30, "as_of": "x"})
+    sd = types.ModuleType("supply_demand"); sd.__path__ = []; sd.timeframes = tf
+    monkeypatch.setitem(sys.modules, "supply_demand", sd)
+    monkeypatch.setitem(sys.modules, "supply_demand.timeframes", tf)
+    obs = types.SimpleNamespace(record_observation=lambda **kw: recorded.append(kw))
+    lp = types.ModuleType("learning"); lp.__path__ = []; lp.observations = obs
+    monkeypatch.setitem(sys.modules, "learning", lp)
+    monkeypatch.setitem(sys.modules, "learning.observations", obs)
+    monkeypatch.setattr(sw, "_coll", lambda name: _Coll())
+    row = {"symbol": "MAN", "state": "IN_SUPPLY", "distance_pct": 0.0, "last": 57.0, "pl_pct": -1.5,
+           "band": {"lo": 56.5, "hi": 57.5, "touches": 3, "kind": "supply"}, "next_band": None, "room_usd": 0.0,
+           "entry_band": {"lo": 55.7, "hi": 57.08, "kind": "supply"}, "stop_price": 55.42,
+           "stop_state": None, "stop_distance_pct": 2.85, "next_support": None}
+    monkeypatch.setattr(sw, "build", lambda owner, force=False: {"rows": [row]})
+    sw.check_alerts("o@x.com")
+    assert len(recorded) == 1
+    o = recorded[0]
+    assert o["source"] == "supply_watch:in_supply" and o["ticker"] == "MAN"
+    assert o["direction"] == "down" and o["baseline_price"] == 57.0 and o["horizon_hours"] == 24
+    assert o["prediction_id"] == "MAN:IN_SUPPLY:" + sw._trading_day_et()
+    # NEGATIVE: a push nobody received is not a prediction — nothing recorded
+    recorded.clear(); res.update(sent=0, total_targets=0)
+    monkeypatch.setattr(sw, "_coll", lambda name: _Coll())
+    sw.check_alerts("o@x.com")
+    assert recorded == []
+
