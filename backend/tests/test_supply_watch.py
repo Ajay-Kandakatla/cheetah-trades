@@ -313,3 +313,114 @@ def test_overhead_skips_a_supply_band_yesterday_closed_above():
     row = sw.derive(base, {"last": 96.0, "prev_close": 100.0})
     assert row["state"] == "FAR" and row["band"]["lo"] == 120
     assert sw.derive(base, {"last": 96.0})["state"] == "IN_SUPPLY", "no prev close in the quote: unchanged"
+
+
+# ── the STOP side (Ajay 2026-09-08: "From now on, I will wait for your
+#    signals.. Sell signals like I did with MAN today after entries") ─────────
+DEM = [{"lo": 90.0, "hi": 92.0, "touches": 2}, {"lo": 80.0, "hi": 82.0, "touches": 3}]
+SUP = [{"lo": 110.0, "hi": 112.0, "touches": 3}, {"lo": 55.7, "hi": 57.08, "touches": 2}]
+
+
+def test_entry_band_is_the_band_the_cost_sits_in_or_just_above():
+    b = sw.entry_band(91.0, DEM, SUP)                       # inside 90–92
+    assert (b["lo"], b["hi"], b["kind"]) == (90.0, 92.0, "demand")
+    b = sw.entry_band(94.0, DEM, SUP)                       # 2.2% above the top: bought just above it
+    assert b["lo"] == 90.0
+    # MAN 2026-09-08: bought 57.875 on the broken SUPPLY shelf 55.7–57.08 (+1.4% above its top)
+    b = sw.entry_band(57.875, [], SUP)
+    assert (b["lo"], b["hi"], b["kind"]) == (55.7, 57.08, "supply")
+    # 4% above the top: not "in" it, but the first band under the cost within 5%
+    b = sw.entry_band(95.5, DEM, SUP)
+    assert b["lo"] == 90.0
+    # NEGATIVE: 8% above every band -> no zone under the entry (AVGO-style old holding)
+    assert sw.entry_band(99.5, DEM, SUP) is None
+    assert sw.entry_band(None, DEM, SUP) is None and sw.entry_band(0, DEM, SUP) is None
+    assert sw.entry_band(91.0, [{"lo": "x", "hi": 92}], []) is None
+    assert sw.entry_band(91.0, [{"lo": 95, "hi": 92}], []) is None       # inverted band ignored
+
+
+def test_stop_is_half_a_percent_under_the_entry_band_floor_and_states_are_two():
+    assert sw.stop_for({"lo": 55.7, "hi": 57.08}) == 55.42          # the MAN plan's own number
+    assert sw.stop_for(None) is None
+    assert sw.stop_state(56.0, 55.42) == {"stop_state": None, "stop_distance_pct": 1.05}
+    assert sw.stop_state(55.9, 55.42) == {"stop_state": "NEAR_STOP", "stop_distance_pct": 0.87}
+    assert sw.stop_state(55.42, 55.42) == {"stop_state": "STOP", "stop_distance_pct": 0.0}
+    assert sw.stop_state(55.0, 55.42)["stop_state"] == "STOP"
+    assert sw.stop_state(None, 55.42) == {"stop_state": None, "stop_distance_pct": None}
+    assert sw.stop_state(56.0, None)["stop_state"] is None
+    assert sw.STOP_NEAR_PCT == 1.0 and sw.ENTRY_ABOVE_BAND_PCT == 3.0 and sw.ENTRY_BELOW_COST_PCT == 5.0
+
+
+def test_row_carries_the_entry_band_stop_and_next_support(monkeypatch):
+    monkeypatch.setattr(sw, "_zones_for", lambda sym, live=None: (Z, DEM, 2.0, None))
+    r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.9, "day_change_pct": -2.0})
+    assert r["entry_band"]["lo"] == 90.0 and r["stop_price"] == 89.55
+    assert r["stop_state"] == "NEAR_STOP" and r["stop_distance_pct"] == 0.39
+    assert r["next_support"] == {"lo": 80.0, "hi": 82.0}
+    r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.5})
+    assert r["stop_state"] == "STOP"
+    # NEGATIVE: no band under the entry -> no stop, no state, nothing to push
+    r = sw._row({"ticker": "OLD", "shares": 10, "cost_basis": 1050}, {"last": 108.0})
+    assert r["entry_band"] is None and r["stop_price"] is None and r["stop_state"] is None
+    assert [m[0] for m in sw.stage_messages(r) if m[0] in ("STOP", "NEAR_STOP")] == []
+    # NEGATIVE: zone engine miss -> no stop read either
+    monkeypatch.setattr(sw, "_zones_for", lambda sym, live=None: ([], [], None, "boom"))
+    r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.5})
+    assert r["entry_band"] is None and r["stop_state"] is None
+
+
+def test_stage_messages_stop_and_near_stop_wording():
+    base = {"symbol": "MAN", "state": "CLEAR", "distance_pct": None, "band": None, "last": 55.30, "pl_pct": -4.45,
+            "entry_band": {"lo": 55.7, "hi": 57.08, "kind": "supply"}, "stop_price": 55.42,
+            "next_support": {"lo": 48.02, "hi": 49.74}}
+    msgs = sw.stage_messages({**base, "stop_state": "STOP", "stop_distance_pct": -0.22}, "")
+    assert [m[0] for m in msgs] == ["STOP"] and msgs[0][1]["lo"] == 55.7
+    assert msgs[0][2]["title"] == "🔴 STOP · MAN $55.30 under the band floor $55.42 (-4.5% P/L)"
+    assert msgs[0][2]["body"] == ("Live $55.30 · the entry band $55.70–$57.08 broke — sell; a print through the "
+                                  "floor is the thesis failing, not noise · next support $48.02–$49.74")
+    msgs = sw.stage_messages({**base, "last": 55.80, "pl_pct": -3.59, "stop_state": "NEAR_STOP",
+                              "stop_distance_pct": 0.69, "next_support": None}, "AH")
+    assert msgs[0][0] == "NEAR_STOP"
+    assert msgs[0][2]["title"] == "⚠️ AH · MAN 0.7% above the stop $55.42 (-3.6% P/L)"
+    assert msgs[0][2]["body"] == ("Live $55.80 · set the stop order at $55.42 (0.5% under the entry band floor "
+                                  "$55.70) · nothing under it in the 1y frame (252 daily bars)")
+    # both sides at once: a name in its sell zone AND (nonsense but must not crash) at its stop
+    both = {**base, "state": "IN_SUPPLY", "distance_pct": 0.0, "band": {"lo": 55.0, "hi": 56.0, "touches": 3},
+            "stop_state": "STOP", "stop_distance_pct": -0.2}
+    assert [m[0] for m in sw.stage_messages(both)] == ["IN_SUPPLY", "STOP"]
+    # NEGATIVE: no stop state -> only the supply side; nothing at all when neither
+    assert [m[0] for m in sw.stage_messages({**base, "stop_state": None})] == []
+    assert [m[0] for m in sw.stage_messages({**both, "stop_state": None})] == ["IN_SUPPLY"]
+
+
+def test_check_alerts_pushes_the_stop_once_per_band_per_day(monkeypatch):
+    import types, sys
+    sent_payloads, res = [], {"sent": 2, "failed": 0, "total_targets": 2}
+    fake_alerts = types.SimpleNamespace(_resolve_owner=lambda: "o@x.com",
+                                        _send_push=lambda email, msg, kind: (sent_payloads.append((kind, msg)), dict(res))[1])
+    pkg = types.ModuleType("portfolio"); pkg.__path__ = []; pkg.alerts = fake_alerts
+    monkeypatch.setitem(sys.modules, "portfolio", pkg)
+    monkeypatch.setitem(sys.modules, "portfolio.alerts", fake_alerts)
+    tf = types.SimpleNamespace(live_state=lambda: {"state": "rth", "refresh_sec": 30, "as_of": "x"})
+    sd = types.ModuleType("supply_demand"); sd.__path__ = []; sd.timeframes = tf
+    monkeypatch.setitem(sys.modules, "supply_demand", sd)
+    monkeypatch.setitem(sys.modules, "supply_demand.timeframes", tf)
+    coll = _Coll()
+    monkeypatch.setattr(sw, "_coll", lambda name: coll)
+    row = {"symbol": "MAN", "state": "FAR", "distance_pct": 9.0, "last": 55.30, "pl_pct": -4.45,
+           "band": {"lo": 60.0, "hi": 61.0, "touches": 2, "kind": "supply"}, "next_band": None, "room_usd": 800.0,
+           "entry_band": {"lo": 55.7, "hi": 57.08, "kind": "supply"}, "stop_price": 55.42,
+           "stop_state": "STOP", "stop_distance_pct": -0.22, "next_support": None}
+    monkeypatch.setattr(sw, "build", lambda owner, force=False: {"rows": [row]})
+    out = sw.check_alerts("o@x.com")
+    assert out["pushed"] == 1 and out["fired"] == [{"symbol": "MAN", "stage": "STOP", "sent": 2}]
+    kind, msg = sent_payloads[0]
+    assert kind == "position_alert" and msg["kind"] == "position_alert" and msg["ticker"] == "MAN"
+    assert msg["title"].startswith("🔴 STOP · MAN $55.30 under the band floor $55.42")
+    assert msg["tag"] == "stop-man" and msg["data"]["stage"] == "STOP" and msg["url"] == "/portfolio"
+    assert list(coll.docs)[0].endswith(":MAN:55.70:STOP:" + sw._trading_day_et())
+    sw.check_alerts("o@x.com")
+    assert len(sent_payloads) == 1, "same band, same day: one STOP push"
+    # NEGATIVE: the supply side untouched — a FAR row pushes nothing there
+    assert all(m[1]["data"]["stage"] == "STOP" for m in sent_payloads)
+

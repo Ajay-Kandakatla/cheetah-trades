@@ -76,3 +76,20 @@ def test_signal_watch_reads_a_closed_last_bucket_whole(monkeypatch):
     gaps = [b for b in s["bands"] if b.get("source") != "swing"]
     assert any(abs(float(b["hi"]) - 52.7) < 1e-9 for b in gaps), "a CLOSED bucket forming the gap counts"
     assert s["atr"] == pat.atr(df)
+
+
+def test_mood_signal_pushes_are_retired_but_still_recorded():
+    """Ajay 2026-09-08 on the DYN 60m mood sell (DYN then ran +7%): "Why did
+    you give me a sell signal on this this grew out a lot". Measured record of
+    these pushes: 15m 5 hits / 14 misses, 60m 3 hits / 11 misses. The phone
+    gets the S/D sell signals only; this module records and grades, never
+    sends, unless the owner flips the switch."""
+    import inspect
+    from catalysts import signal_watch as SW
+    assert SW.PUSH_TO_PHONE is False
+    src = inspect.getsource(SW.check_once)
+    assert "push = PUSH_TO_PHONE" in src, "check_once must default to the owner switch"
+    assert "obs.record_observation(" in src, "signals are still recorded and graded"
+    sig = inspect.signature(SW.check_once)
+    assert sig.parameters["push"].default is None
+

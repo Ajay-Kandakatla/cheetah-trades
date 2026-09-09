@@ -27,6 +27,13 @@ log = logging.getLogger("portfolio.supply_watch")
 
 NEAR_PCT = 2.0            # <= this under the band bottom -> NEAR
 APPROACH_PCT = 5.0        # <= this -> APPROACHING
+# The STOP side (Ajay 2026-09-08: "From now on, I will wait for your signals..
+# Sell signals like I did with MAN today after entries"). The band the entry
+# was made at is the thesis; its floor minus the same buffer the alert plan
+# and the paper lane use (alert_gates.STOP_BUFFER_PCT, 0.5%) is the stop.
+ENTRY_ABOVE_BAND_PCT = 3.0   # bought inside the band or <= this above its top
+ENTRY_BELOW_COST_PCT = 5.0   # else the first band under the cost, <= this under it
+STOP_NEAR_PCT = 1.0          # <= this above the stop -> "set the stop order" warning
 CACHE_TTL_SEC = 30 * 60   # zone half; prices re-derive every call
 ERROR_RETRY_SEC = 120     # a book whose zone engine missed retries this fast
 LIVE_REFRESH_SEC = 60
@@ -93,6 +100,57 @@ def overhead_bands(supply: list, demand: list, live: float, prev_close=None) -> 
 
 def _band_kind(z: dict) -> str:
     return z.get("kind") or "supply"
+
+
+def entry_band(avg_cost: Optional[float], demand: list, supply: list) -> Optional[dict]:
+    """The band the entry was made AT — the thesis a stop is measured from.
+    Demand bands and supply shelves alike (a broken shelf is support: MAN
+    2026-09-08 was bought on 55.7–57.08, a supply band). First choice: a band
+    the cost sits inside or <= ENTRY_ABOVE_BAND_PCT above its top (the highest
+    such band). Else the first band under the cost within ENTRY_BELOW_COST_PCT.
+    None = no zone under the entry (an old holding far above its bands: no
+    zone stop, the table says so)."""
+    try:
+        avg = float(avg_cost)
+    except (TypeError, ValueError):
+        return None
+    if avg <= 0:
+        return None
+    bands = []
+    for kind, zs in (("demand", demand or []), ("supply", supply or [])):
+        for z in zs:
+            try:
+                lo, hi = float(z.get("lo")), float(z.get("hi"))
+            except (TypeError, ValueError):
+                continue
+            if lo <= 0 or hi < lo:
+                continue
+            bands.append({"lo": lo, "hi": hi, "kind": z.get("kind") or kind,
+                          "touches": z.get("touches")})
+    inside = [b for b in bands if b["lo"] <= avg <= b["hi"] * (1 + ENTRY_ABOVE_BAND_PCT / 100)]
+    if inside:
+        return max(inside, key=lambda b: b["hi"])
+    below = [b for b in bands if b["hi"] < avg and (avg / b["hi"] - 1) * 100 <= ENTRY_BELOW_COST_PCT]
+    return max(below, key=lambda b: b["hi"]) if below else None
+
+
+def stop_for(band: Optional[dict]) -> Optional[float]:
+    """The stop under the entry band: floor x (1 - STOP_BUFFER_PCT%) — the
+    number the alert plan printed and the paper lane placed."""
+    if not band:
+        return None
+    from supply_demand import alert_gates
+    return round(float(band["lo"]) * (1 - alert_gates.STOP_BUFFER_PCT / 100.0), 2)
+
+
+def stop_state(live: Optional[float], stop: Optional[float]) -> dict:
+    """STOP: the print is at/under the stop. NEAR_STOP: <= STOP_NEAR_PCT above
+    it. distance = how far the print sits above the stop, in %."""
+    if not live or not stop or live <= 0 or stop <= 0:
+        return {"stop_state": None, "stop_distance_pct": None}
+    dist = round((live / stop - 1) * 100, 2)
+    state = "STOP" if live <= stop else "NEAR_STOP" if dist <= STOP_NEAR_PCT else None
+    return {"stop_state": state, "stop_distance_pct": dist}
 
 
 def alert_stage(state: str, distance_pct: Optional[float]) -> Optional[str]:
@@ -227,6 +285,15 @@ def derive(base: dict, quote: dict) -> dict:
     shares = float(base.get("shares") or 0)
     room_usd = (round((band["lo"] - live) * shares, 2) if (band and shares and live < band["lo"])
                 else 0.0 if band else None)
+    # The stop side (2026-09-08): the band the entry was made at, its floor
+    # minus the buffer, and where the live print sits against it.
+    eb = entry_band(avg, demand, supply) if not err else None
+    stop_px = stop_for(eb)
+    sst = stop_state(live, stop_px)
+    next_support = None
+    if eb and live:
+        under = [z for z in demand if z.get("hi") and z["hi"] < eb["lo"]]
+        next_support = max(under, key=lambda z: z["hi"]) if under else None
     row = {
         "symbol": base["symbol"], "shares": base.get("shares"), "avg_cost": avg,
         "last": live, "day_pct": quote.get("day_change_pct"),
@@ -236,7 +303,9 @@ def derive(base: dict, quote: dict) -> dict:
         "next_band": ({"lo": nxt["lo"], "hi": nxt["hi"], "kind": _band_kind(nxt)} if nxt else None),
         "room_usd": room_usd,
         "support": ({"lo": support["lo"], "hi": support["hi"]} if support else None),
-        "atr": atr, "session": quote.get("session"), "zones_error": err, **cls,
+        "entry_band": eb, "stop_price": stop_px,
+        "next_support": ({"lo": next_support["lo"], "hi": next_support["hi"]} if next_support else None),
+        "atr": atr, "session": quote.get("session"), "zones_error": err, **cls, **sst,
     }
     row["read"] = read_for(row)
     return row
@@ -399,6 +468,56 @@ def _alert_key(user_email: str, sym: str, band: dict, day: str, stage: str = "IN
     return f"{user_email.lower()}:{sym}:{band['lo']:.2f}:{stage}:{day}"
 
 
+def stage_messages(r: dict, tag: str = "") -> list:
+    """PURE: every (stage, band, push message) a row calls for right now —
+    the supply side (NEAR / IN_SUPPLY, the sell-into-supply signal) and the
+    stop side (NEAR_STOP / STOP, the sell-because-the-thesis-broke signal).
+    Ajay 2026-09-03 "Sell signals if in supply"; 2026-09-08 "I will wait for
+    your signals.. Sell signals like I did with MAN today after entries"."""
+    out = []
+    pl = f" ({r['pl_pct']:+.1f}% P/L)" if r.get("pl_pct") is not None else ""
+    pre = f"{tag} · " if tag else ""
+    stage = alert_stage(r.get("state"), r.get("distance_pct")) if r.get("band") else None
+    if stage:
+        b = r["band"]
+        what = "OVERHEAD (old support)" if b.get("kind") == "broken_support" else "SUPPLY"
+        where = (f"in {what}" if stage == "IN_SUPPLY"
+                 else f"{r['distance_pct']:.1f}% under {what}")
+        nxt = r.get("next_band")
+        room = (f" · ${r['room_usd']:,.0f} of room left" if r.get("room_usd") else "")
+        out.append((stage, b, {
+            # Ajay 2026-09-03: "Sell signals if in supply" — the band being
+            # reached IS the sell signal; say so in the first word.
+            "title": f"{'🔴 SELL SIGNAL · ' if stage == 'IN_SUPPLY' else '⚠️ '}{pre}"
+                     f"{r['symbol']} {where} ${b['lo']:.2f}–${b['hi']:.2f}{pl}",
+            "body": ((f"Live ${r['last']:.2f} · sell zone reached — trim or sell into it"
+                      if stage == "IN_SUPPLY" else
+                      f"Live ${r['last']:.2f}{room} · set the sell order at ${b['lo']:.2f}")
+                     + (f" · next ${nxt['lo']:.2f}–${nxt['hi']:.2f}" if nxt else
+                        f" · nothing above this in the {FRAME_NOTE}")),
+        }))
+    sst, eb, stop = r.get("stop_state"), r.get("entry_band"), r.get("stop_price")
+    if sst and eb and stop:
+        ns = r.get("next_support")
+        under = (f" · next support ${ns['lo']:.2f}–${ns['hi']:.2f}" if ns
+                 else f" · nothing under it in the {FRAME_NOTE}")
+        if sst == "STOP":
+            out.append(("STOP", eb, {
+                "title": f"🔴 STOP · {pre}{r['symbol']} ${r['last']:.2f} under the band floor "
+                         f"${stop:.2f}{pl}",
+                "body": (f"Live ${r['last']:.2f} · the entry band ${eb['lo']:.2f}–${eb['hi']:.2f} broke "
+                         f"— sell; a print through the floor is the thesis failing, not noise{under}"),
+            }))
+        else:
+            out.append(("NEAR_STOP", eb, {
+                "title": f"⚠️ {pre}{r['symbol']} {r['stop_distance_pct']:.1f}% above the stop "
+                         f"${stop:.2f}{pl}",
+                "body": (f"Live ${r['last']:.2f} · set the stop order at ${stop:.2f} "
+                         f"(0.5% under the entry band floor ${eb['lo']:.2f}){under}"),
+            }))
+    return out
+
+
 def check_alerts(user_email: Optional[str] = None) -> dict:
     """Push ONE position_alert per holding per band per day when the live
     print is inside its sell zone or within ALERT_PCT of it. Runs from cron
@@ -415,53 +534,38 @@ def check_alerts(user_email: Optional[str] = None) -> dict:
     tag = {"premarket": "PRE", "afterhours": "AH"}.get(state["state"], "")
     pushed, fired = 0, []
     for r in payload["rows"]:
-        stage = alert_stage(r["state"], r.get("distance_pct")) if r.get("band") else None
-        if not stage:
-            continue
-        key = _alert_key(owner, r["symbol"], r["band"], day, stage)
-        if coll is not None:
-            try:
-                if coll.find_one({"_id": key}):
-                    continue
-            except Exception as exc:                        # pragma: no cover
-                log.warning("supply alert dedupe read failed: %s", exc)
-        b = r["band"]
-        pl = f" ({r['pl_pct']:+.1f}% P/L)" if r.get("pl_pct") is not None else ""
-        what = "OVERHEAD (old support)" if b.get("kind") == "broken_support" else "SUPPLY"
-        where = (f"in {what}" if stage == "IN_SUPPLY"
-                 else f"{r['distance_pct']:.1f}% under {what}")
-        nxt = r.get("next_band")
-        room = (f" · ${r['room_usd']:,.0f} of room left" if r.get("room_usd") else "")
-        msg = {
-            # Ajay 2026-09-03: "Sell signals if in supply" — the band being
-            # reached IS the sell signal; say so in the first word.
-            "title": f"{'🔴 SELL SIGNAL · ' if stage == 'IN_SUPPLY' else '⚠️ '}{tag + ' · ' if tag else ''}"
-                     f"{r['symbol']} {where} ${b['lo']:.2f}–${b['hi']:.2f}{pl}",
-            "body": ((f"Live ${r['last']:.2f} · sell zone reached — trim or sell into it"
-                      if stage == "IN_SUPPLY" else
-                      f"Live ${r['last']:.2f}{room} · set the sell order at ${b['lo']:.2f}")
-                     + (f" · next ${nxt['lo']:.2f}–${nxt['hi']:.2f}" if nxt else
-                        f" · nothing above this in the {FRAME_NOTE}")),
-            "icon": "/icon.svg",
-            "tag": f"supply-{r['symbol'].lower()}",
-            "url": "/portfolio", "kind": "position_alert", "ticker": r["symbol"],
-            "data": {"url": "/portfolio", "symbol": r["symbol"], "source": "supply_watch"},
-        }
-        res = _send_push(owner, msg, kind="position_alert") or {}
-        sent, targets = res.get("sent", 0), res.get("total_targets", 0)
-        if sent > 0:
-            pushed += 1
-        # Terminal outcomes dedupe: delivered, or nobody to deliver to (muted
-        # pref / quiet hours / no device). Only a genuine send failure retries.
-        if (sent > 0 or targets == 0) and coll is not None:
-            try:
-                coll.update_one({"_id": key}, {"$set": {"at": datetime.now(timezone.utc),
-                                                        "symbol": r["symbol"], "band": b,
-                                                        "sent": sent, "targets": targets}},
-                                upsert=True)
-            except Exception as exc:                        # pragma: no cover
-                log.warning("supply alert dedupe write failed: %s", exc)
-        fired.append({"symbol": r["symbol"], "stage": stage, "sent": sent})
+        for stage, b, text in stage_messages(r, tag):
+            key = _alert_key(owner, r["symbol"], b, day, stage)
+            if coll is not None:
+                try:
+                    if coll.find_one({"_id": key}):
+                        continue
+                except Exception as exc:                    # pragma: no cover
+                    log.warning("supply alert dedupe read failed: %s", exc)
+            msg = {
+                **text,
+                "icon": "/icon.svg",
+                "tag": f"{'stop' if stage in ('STOP', 'NEAR_STOP') else 'supply'}-{r['symbol'].lower()}",
+                "url": "/portfolio", "kind": "position_alert", "ticker": r["symbol"],
+                "data": {"url": "/portfolio", "symbol": r["symbol"], "source": "supply_watch",
+                         "stage": stage},
+            }
+            res = _send_push(owner, msg, kind="position_alert") or {}
+            sent, targets = res.get("sent", 0), res.get("total_targets", 0)
+            if sent > 0:
+                pushed += 1
+            # Terminal outcomes dedupe: delivered, or nobody to deliver to (muted
+            # pref / quiet hours / no device). Only a genuine send failure retries.
+            if (sent > 0 or targets == 0) and coll is not None:
+                try:
+                    coll.update_one({"_id": key}, {"$set": {"at": datetime.now(timezone.utc),
+                                                            "symbol": r["symbol"], "band": b,
+                                                            "stage": stage,
+                                                            "sent": sent, "targets": targets}},
+                                    upsert=True)
+                except Exception as exc:                    # pragma: no cover
+                    log.warning("supply alert dedupe write failed: %s", exc)
+            fired.append({"symbol": r["symbol"], "stage": stage, "sent": sent})
     out = {"ok": True, "pushed": pushed, "fired": fired, "session": state["state"]}
     log.info("supply_watch: %s", out)
     return out

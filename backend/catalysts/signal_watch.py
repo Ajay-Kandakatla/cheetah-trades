@@ -35,6 +35,18 @@ NOISE RULES (the same discipline as every other push here)
   alert for something already in the book is not a decision he can act on,
   and a sell alert for something he does not own is noise.
 * Outside 9:35-15:55 ET the module refuses to run.
+
+PHONE PUSHES RETIRED 2026-09-08 (PUSH_TO_PHONE = False)
+────────────────────────────────────────────────────────
+Ajay, on the 10:35 ET "🔴 Sell signal — DYN 60m · mood -34.4" (DYN went on
+to +7% into the close): "Why did you give me a sell signal on this this grew
+out a lot", after "From now on, I will wait for your signals.. Sell signals".
+The measured record of these SELL pushes (learning/observations, forward
+6h / 24h): 15m 5 hits / 14 misses, 60m 3 hits / 11 misses — the name rose
++3.6% on average after a "sell". One voice on the phone: the Supply & Demand
+sell signals (portfolio/supply_watch: supply reached, entry-band stop). The
+mood read stays on the boards and every signal is still RECORDED and graded
+here; nothing is pushed unless the owner flips PUSH_TO_PHONE.
 """
 from __future__ import annotations
 
@@ -48,6 +60,8 @@ log = logging.getLogger("catalysts.signal_watch")
 ET = ZoneInfo("America/New_York")
 WATCH_TFS = ("15m", "60m")
 MAX_NAMES = 40
+# Owner switch (2026-09-08): record and grade every signal, push none.
+PUSH_TO_PHONE = False
 
 
 def _now_et() -> datetime:
@@ -115,9 +129,13 @@ def _record_sent(db, ticker: str, tf: str, action: str, date_key: str,
         upsert=True)
 
 
-def check_once(*, push: bool = True, force: bool = False,
+def check_once(*, push: Optional[bool] = None, force: bool = False,
                symbols: Optional[list] = None) -> dict:
-    """One pass. `force` skips the session gate for container smoke tests."""
+    """One pass. `force` skips the session gate for container smoke tests.
+    `push` defaults to PUSH_TO_PHONE (False since 2026-09-08): signals are
+    recorded and graded, never sent."""
+    if push is None:
+        push = PUSH_TO_PHONE
     if not force and not in_session():
         return {"ran": False, "reason": "outside RTH"}
 

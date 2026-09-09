@@ -21,6 +21,11 @@ export type SupplyRow = {
   atr: number | null; distance_pct: number | null; atr_days: number | null;
   session?: string | null; zones_error?: string | null; room_usd?: number | null;
   state: 'IN_SUPPLY' | 'NEAR' | 'APPROACHING' | 'FAR' | 'CLEAR' | 'UNKNOWN';
+  /* The STOP side (Ajay 2026-09-08: "I will wait for your signals.. Sell
+   * signals like I did with MAN today after entries"). The band the entry was
+   * made at, its floor minus 0.5% = the stop, and where the print sits. */
+  entry_band?: Band | null; stop_price?: number | null; next_support?: Band | null;
+  stop_state?: 'STOP' | 'NEAR_STOP' | null; stop_distance_pct?: number | null;
   read: string;
 };
 type Payload = {
@@ -37,6 +42,18 @@ const STATE: Record<SupplyRow['state'], { label: string; color: string }> = {
   CLEAR:       { label: '∅ clear',       color: 'var(--positive, #46a758)' },
   UNKNOWN:     { label: '?',             color: 'var(--text-muted, #94a3b8)' },
 };
+
+const STOP_STATE: Record<string, { label: string; color: string }> = {
+  STOP:      { label: '🔴 STOP', color: 'var(--negative, #e5484d)' },
+  NEAR_STOP: { label: '⚠ near stop', color: '#e8a33d' },
+};
+
+/** The stop cell: the price, how far the print is above it, and the state. */
+export function stopText(row: SupplyRow): string {
+  if (row.stop_price == null) return '—';
+  const d = row.stop_distance_pct;
+  return `$${row.stop_price.toFixed(2)}${d == null ? '' : ` · ${d >= 0 ? '+' : ''}${d.toFixed(1)}%`}`;
+}
 
 const CLOSED_POLL_SEC = 300;
 const money = (v: number | null | undefined) => (v == null ? '—' : `$${v.toFixed(2)}`);
@@ -88,6 +105,12 @@ export function SupplyChip({ row }: { row: SupplyRow | null | undefined }) {
         : ` · ${row.distance_pct == null ? '—' : row.distance_pct.toFixed(1) + '%'}${room} of room${row.atr_days != null ? ` · ~${row.atr_days.toFixed(0)} ATR-days` : ''}`}
       {row.next_band ? <span className="pcw__dim"> · then {band(row.next_band)}</span> : null}
       {row.support ? <span className="pcw__dim"> · support {band(row.support)}</span> : null}
+      {row.stop_price != null ? (
+        <span style={{ color: (STOP_STATE[row.stop_state || ''] || {}).color || undefined }}>
+          {' '}· {row.stop_state ? `${STOP_STATE[row.stop_state].label} ` : 'stop '}
+          {stopText(row)}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -124,6 +147,7 @@ export function SupplyWatch(props: { data?: Payload | null; err?: string | null 
               <th>Symbol</th><th className="og__num">Last</th><th className="og__num">Day</th>
               <th className="og__num">P/L</th><th>Sell zone</th>
               <th className="og__num">Room left</th><th className="og__num">ATR-days</th>
+              <th className="og__num">Stop</th>
               <th>State</th><th>Read</th>
             </tr>
           </thead>
@@ -141,7 +165,10 @@ export function SupplyWatch(props: { data?: Payload | null; err?: string | null 
                     {r.next_band ? <span className="pcw__dim"> then {band(r.next_band)}</span> : null}
                   </td>
                   <td className="og__num mono">{r.distance_pct == null ? '—' : `${r.distance_pct.toFixed(1)}%`}{r.room_usd ? <span className="pcw__dim"> ${Math.round(r.room_usd).toLocaleString()}</span> : null}</td>
-                  <td className="og__num mono">{r.atr_days == null ? '—' : r.atr_days.toFixed(0)}</td>
+                  <td className="og__num mono" title={r.entry_band ? `entry band $${r.entry_band.lo.toFixed(2)}–$${r.entry_band.hi.toFixed(2)}, stop 0.5% under its floor` : 'no zone under the entry'}>
+                    {stopText(r)}
+                    {r.stop_state ? <span style={{ color: STOP_STATE[r.stop_state].color }}> {STOP_STATE[r.stop_state].label}</span> : null}
+                  </td>
                   <td style={{ color: st.color, whiteSpace: 'nowrap' }}>{st.label}</td>
                   <td className="sw__read">{r.read}</td>
                 </tr>

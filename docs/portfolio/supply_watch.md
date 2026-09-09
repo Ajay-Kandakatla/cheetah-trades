@@ -52,6 +52,41 @@ a muted kind cannot turn every 5-minute run into a duplicate feed row. Skips whe
 a `PRE ·` / `AH ·` prefix outside regular hours; the payload carries top-level
 `url` / `kind` / `ticker` so a tap opens `/portfolio`.
 
+## 2026-09-08 — the STOP side, and one voice on the phone
+
+Ajay: *"From now on, I will wait for your signals.. Sell signals like I did with
+MAN something today after entries going forward. Continue to track after the
+portfolio."* Same day, on a mood push: *"Why did you give me a sell signal on this
+this grew out a lot"* (DYN, which then ran ~+7%), and *"Make sure signals are more
+accurate do not mean to loosen up."*
+
+**Two sell signals now, both structural, both on `position_alert`:**
+
+| signal | fires when | says |
+|---|---|---|
+| supply (2026-09-02) | the print reaches the first band overhead, or is ≤ 2% under it | `🔴 SELL SIGNAL · SYM in SUPPLY $lo–$hi` — sell into it |
+| **stop (2026-09-08)** | the print breaks the **entry band's** floor − 0.5%, or sits ≤ 1% above it | `🔴 STOP · SYM $55.30 under the band floor $55.42` — the thesis broke |
+
+**The entry band** (`entry_band`) is the band the cost basis was made at: the highest
+band the average cost sits inside or ≤ `ENTRY_ABOVE_BAND_PCT` (3%) above, else the first
+band under the cost within `ENTRY_BELOW_COST_PCT` (5%). Demand bands **and** supply
+shelves both count — MAN 2026-09-08 was bought on the broken shelf 55.70–57.08. The stop
+is `floor × (1 − alert_gates.STOP_BUFFER_PCT)` = the same number the alert plan printed
+and the paper lane placed, never a second arithmetic path. No band under the entry (an old
+holding far above its zones) = **no stop signal at all**, and the table prints `—`; the
+alert never guesses.
+
+Both sides dedupe once per (user, symbol, band, stage, ET day), so a name can send its
+NEAR_STOP warning and later its STOP, and nothing repeats.
+
+**Retired the same day: the mood pushes.** `catalysts/signal_watch.py` had been pushing
+`🔴 Sell signal — DYN 60m · mood -34.4` on `pivot_alert`. Its own forward record
+(`learning/observations`, 6 h / 24 h horizons) was **15m: 5 hits / 14 misses; 60m: 3 hits /
+11 misses**, and the average name was **+3.6%** after a "sell". `PUSH_TO_PHONE = False`:
+every signal is still computed, recorded and graded, and the mood read stays on the boards
+— the phone now carries only the two structural signals above. This is a tightening: no
+gate anywhere was loosened.
+
 ## First live read (2026-09-02 10:47 ET)
 
 BMNR NEAR (1.05% under $23.47–23.85) · UBER APPROACHING (2.1%, ~1 ATR-day) ·
