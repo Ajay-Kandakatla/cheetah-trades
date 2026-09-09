@@ -79,13 +79,20 @@ alert never guesses.
 Both sides dedupe once per (user, symbol, band, stage, ET day), so a name can send its
 NEAR_STOP warning and later its STOP, and nothing repeats.
 
-**Retired the same day: the mood pushes.** `catalysts/signal_watch.py` had been pushing
-`🔴 Sell signal — DYN 60m · mood -34.4` on `pivot_alert`. Its own forward record
+**Removed the same day: the mood watcher.** `catalysts/signal_watch.py` had been pushing
+`🔴 Sell signal — DYN 60m · mood -34.4` on `pivot_alert`, watching his **holdings** on 15m
+and 60m bars — the portfolio signal path. Its own forward record
 (`learning/observations`, 6 h / 24 h horizons) was **15m: 5 hits / 14 misses; 60m: 3 hits /
-11 misses**, and the average name was **+3.6%** after a "sell". `PUSH_TO_PHONE = False`:
-every signal is still computed, recorded and graded, and the mood read stays on the boards
-— the phone now carries only the two structural signals above. This is a tightening: no
-gate anywhere was loosened.
+11 misses**, and the average name was **+3.6%** after a "sell"; DYN then ran ~+7% into the
+close. Ajay: *"Remove mood watcher from Portfolio signal."* The module, its crontab entry
+and its tests are **deleted** — `test_timeframes_patterns.test_the_mood_watcher_is_gone_from_the_portfolio_signal_path`
+keeps it gone. Portfolio sell signals now come from this module alone.
+
+`supply_demand/mood.py` itself stays: the Support tab and the Session board still print the
+mood read for context, and still record every BUY/SELL they draw to the forward ledger.
+Those screen reads grade poorly too and are worth a decision of their own — the daily frame
+is **56 hits / 147 misses** on the SELL side, with the misses averaging **+9.9%**. Nothing
+about them reaches the phone.
 
 ### One voice on the phone — the owner keep-set
 

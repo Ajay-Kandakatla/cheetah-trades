@@ -401,52 +401,33 @@ def test_signal_never_fires_without_a_stop():
     assert out["action"] != "BUY" or out["trade"] is not None
 
 
-def test_watch_pushes_only_the_actionable_half_of_each_signal():
-    """A BUY on something already held is not a decision; a SELL on
-    something not held is noise."""
-    from catalysts import signal_watch as SW
-    assert SW.should_push("BUY", False) == (True, "")
-    assert SW.should_push("BUY", True)[0] is False
-    assert SW.should_push("SELL", True) == (True, "")
-    assert SW.should_push("SELL", False)[0] is False
-    assert SW.should_push("WAIT", False)[0] is False
-
-
-def test_signal_watch_session_gate_and_push_kind():
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    from catalysts import signal_watch as SW
-    et = ZoneInfo("America/New_York")
-    assert SW.in_session(datetime(2026, 8, 29, 11, 0, tzinfo=et)) is False   # Sat
-    assert SW.in_session(datetime(2026, 8, 28, 9, 20, tzinfo=et)) is False   # pre
-    assert SW.in_session(datetime(2026, 8, 28, 10, 0, tzinfo=et)) is True
-    # The gate is asserted against a STUBBED clock. Reading the real one made
-    # this test pass only outside market hours: on 2026-08-31 at 09:31 ET it
-    # went past the gate into the live path and died on an unrelated py3.9
-    # pydantic annotation. A test whose result depends on when the suite runs
-    # is not testing the thing it names.
-    real = SW.in_session
+def test_the_mood_watcher_is_gone_from_the_portfolio_signal_path():
+    """Ajay 2026-09-08: "Remove mood watcher from Portfolio signal." The
+    15m/60m watcher pushed "🔴 Sell signal — DYN 60m · mood -34.4" the day DYN
+    ran ~+7%; its graded record was 8 hits / 25 misses (names +3.6% AFTER a
+    "sell"). Module, cron entry and pushes are gone; portfolio sell signals
+    come from portfolio/supply_watch.py alone."""
+    import importlib
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[2]
+    assert not (root / "backend" / "catalysts" / "signal_watch.py").exists()
     try:
-        SW.in_session = lambda *a, **k: False
-        out = SW.check_once()
-    finally:
-        SW.in_session = real
-    assert out["ran"] is False and "RTH" in out["reason"]
+        importlib.import_module("catalysts.signal_watch")
+        raise AssertionError("catalysts.signal_watch is still importable")
+    except ModuleNotFoundError:
+        pass
+    cron = (root / "backend" / "crontab").read_text()
+    assert "signal_watch" not in cron.replace("# The 15m/60m mood buy-sell watcher", "")
+    assert "catalysts.signal_watch" not in cron
+
+
+def test_every_screen_signal_is_still_written_to_the_forward_ledger():
+    """The honest answer to "how does GainzAlgo figure it out": we cannot
+    know, so we measure OURS against real forward prices. The Support tab's
+    read keeps recording even though nothing pushes."""
     import inspect
-    src = inspect.getsource(SW)
-    assert 'kind="pivot_alert"' in src, "the keep-set gains no new kinds"
-    assert "signal_alert" not in src
 
-
-def test_every_signal_is_written_to_the_forward_ledger():
-    """The honest answer to 'how does GainzAlgo figure it out': we cannot
-    know, so we measure OURS against real forward prices."""
-    import inspect
-
-    from catalysts import signal_watch as SW
     from chart_maps import support as S
-    assert "record_observation" in inspect.getsource(SW)
     assert "record_observation" in inspect.getsource(S._record_signal)
 
 

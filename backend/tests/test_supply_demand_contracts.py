@@ -251,7 +251,7 @@ def test_no_distance_default_can_send_a_true_zero_to_the_back():
 def test_the_reached_board_keeps_its_measured_rr_order():
     """Every reached row is INSIDE its band — proximity is a constant there.
     rows.sort stays R:R-led (docs/supply_demand/rr_floor.md); the limit and
-    signal_watch truncate by that order."""
+    truncate by that order."""
     src = inspect.getsource(dr.scan)
     assert 'rows.sort(key=lambda r: (-((r.get("plan") or {}).get("rr") or 0.0), _rank_key(r)))' in src
     assert "\n    rows.sort(key=_order" not in src
@@ -676,7 +676,6 @@ def test_integrator_fixes_2026_09_05_broken_supply_rule_reaches_bounce_room_and_
 def test_integrator_fixes_2026_09_05_structure_reads_closed_bars_in_every_caller():
     """price_zones.for_symbol adopted the closed-frame rule; the three callers
     that still computed on the live bar / partial bucket follow it."""
-    from catalysts import signal_watch as SW
     from chart_maps import support as S
     from supply_demand import session_board as SB
     fs = inspect.getsource(S.for_symbol)
@@ -688,10 +687,8 @@ def test_integrator_fixes_2026_09_05_structure_reads_closed_bars_in_every_caller
     sb = inspect.getsource(SB.read_symbol)
     assert 'closed = df.iloc[:-1] if (meta.get("partial") and len(df) > 1) else df' in sb
     assert "gaps = pat.fair_value_gaps(closed, last)" in sb
-    sw = inspect.getsource(SW.check_once)
-    assert "df.iloc[:-1] if ((meta or {}).get(\"partial\") and len(df) > 1)" in sw
-    assert "atr_value = pat_mod.atr(closed)" in sw and "fair_value_gaps(closed, last)" in sw
-    assert "lookback_bars=len(closed)" in sw
+    # (catalysts/signal_watch was the third caller; the module was removed
+    # 2026-09-08 — Ajay: "Remove mood watcher from Portfolio signal.")
     # the zone_bounce_alerts phone-gate geometry note: STRONG off a band needs hi/lo >= 1.05/1.01
     assert round(1.05 / 1.01 - 1.0, 4) == 0.0396
 

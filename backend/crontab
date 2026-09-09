@@ -892,10 +892,9 @@
 40     8     *    *    1-5  /usr/local/bin/python -m desk.report
 
 # ── Continuous buy/sell signal monitor (Ajay 2026-08-29) ────────────────────
-# Every 15 min during RTH. Watches holdings + current demand candidates on
-# 15m and hourly bars; pushes ONE pivot_alert per (ticker, tf, action, day).
-# BUY only on names he does NOT hold, SELL only on names he does — the other
-# two combinations are not decisions he can act on. Signals are computed on
-# CLOSED bars (no repainting) and every one is written to the forward ledger
-# so the hit rate is measured from his own tape, not a vendor's marketing.
-5-50/15 9-15 * * 1-5  /usr/local/bin/python -m catalysts.signal_watch
+# The 15m/60m mood buy-sell watcher ran here until 2026-09-08. Ajay, on its
+# "🔴 Sell signal — DYN 60m · mood -34.4" (DYN then ran ~+7%): "Why did you
+# give me a sell signal on this this grew out a lot" … "Remove mood watcher
+# from Portfolio signal." Its own graded forward record was 8 hits / 25
+# misses, names +3.6% on average AFTER a "sell". Portfolio sell signals come
+# from portfolio/supply_watch.py only (supply reached, entry-band stop).
