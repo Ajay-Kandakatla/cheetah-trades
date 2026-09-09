@@ -84,6 +84,8 @@ async def get_hot_pullback(
     universe: str = Query("full", description="same universe key the demand boards use"),
     limit: int = Query(hot_pullback_mod.MAX_ROWS, ge=1, le=200),
     force: bool = Query(False, description="bypass the 3-minute cache and re-scan"),
+    record: bool = Query(False,
+                         description="persist the CLOSED session to hot_pullback_runs (the crons set it)"),
 ):
     """🔥 Hot Pullback — a HOT name takes one hard flush into a demand band and
     reverses the same day.
@@ -108,8 +110,15 @@ async def get_hot_pullback(
     still says what the market is doing. Payload carries `study` and `rules`
     so the numbers on screen come from the enforcing module, never retyped.
     """
-    return JSONResponse(hot_pullback_mod.cached_or_warm(
-        universe_key=universe, limit=limit, force=force))
+    data = hot_pullback_mod.cached_or_warm(
+        universe_key=universe, limit=limit, force=force)
+    if record:
+        # The lane reads history, not a live re-scan: during RTH the board is
+        # built off today's PARTIAL bar, and a signal dated today is rejected
+        # as "not yesterday's flush". The closed session has to be written down
+        # when it closes. See hot_pullback.record.
+        hot_pullback_mod.record(data)
+    return JSONResponse(data)
 
 
 @router.get("/supply-demand/premarket-entry")

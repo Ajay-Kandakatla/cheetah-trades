@@ -2,8 +2,13 @@
 
 Ajay 2026-09-09: *"Can you make sure we paper trade this in autopilot too?"*
 
-WHAT IT TRADES. Yesterday's `supply_demand.hot_pullback` signals, entered at
-TODAY'S OPEN. That entry is not a convenience — it is the one the study
+WHAT IT TRADES. Yesterday's `supply_demand.hot_pullback` signals, read back
+from the RECORDED board (`hot_pullback_runs`, written by the 17:05 post-close
+cron), entered at TODAY'S OPEN. It reads history rather than re-scanning for a
+reason: the board is computed off the LATEST bar, so a live scan at 09:35
+describes today's PARTIAL session and dates every row TODAY — `signal_is_fresh`
+then rejects all of them and the lane never fires. That was the shape of the
+2026-09-09 bug ("hot pull back doesn't have scan"). That entry is not a convenience — it is the one the study
 measured best, because the signal day gaps DOWN into the next open 60% of the
 time (median -0.53%), so the morning fill is cheaper than the close the signal
 printed at:
@@ -333,13 +338,23 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
         out["note"] = f"caps: {entries_today}/{MAX_ENTRIES_PER_DAY} today, {open_n}/{MAX_OPEN} open"
         return out
 
+    today = _today_et(now)
+    # RECORDED history, never a live re-scan. The board is computed off the
+    # LATEST bar, so at 09:35 it describes today's PARTIAL session and every
+    # row is dated today — `signal_is_fresh` rejects them all and the lane
+    # could never fire. The signal is a CLOSED session, written down by the
+    # post-close cron (`record=true`) and read back here.
     try:
         from supply_demand import hot_pullback as HP
-        board = HP.cached_or_warm()
+        signal_day, rows = HP.last_closed_signals(before=today)
     except Exception as exc:                                   # noqa: BLE001
-        log.warning("hot_pullback: board read failed: %s", exc)
+        log.warning("hot_pullback: history read failed: %s", exc)
         return out
-    today = _today_et(now)
+    if not rows:
+        out["note"] = ("no recorded hot-pullback session to trade — "
+                       "the post-close scan has not written one")
+        return out
+    board = {"rows": rows}
     held_syms = {p["symbol"] for p in _open_positions()}
 
     from trading import entries as TE

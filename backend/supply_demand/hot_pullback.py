@@ -494,3 +494,134 @@ def cached_or_warm(universe_key: str = "full", limit: int = MAX_ROWS,
     with _LOCK:
         _CACHE[key] = {"ts": time.time(), "data": data, "warming": False}
     return data
+
+
+# ── history ────────────────────────────────────────────────────────────────
+# The board is computed off the LATEST bar. During RTH that bar is today's
+# live partial session, so a lane that re-scans at 09:35 sees rows dated TODAY
+# and `hot_pullback_entry.signal_is_fresh` rejects every one of them — the lane
+# could never fire. The signal day is a CLOSED session, so it has to be written
+# down when it closes and read back the next morning. That is what this is for.
+RUNS_COLL = "hot_pullback_runs"
+_KEEP = ("symbol", "date", "live", "close", "open", "high", "low", "prev_close",
+         "change_pct", "ma21", "high_10d", "low_252", "dollar_vol_musd", "vol_x",
+         "above_52w_low_pct", "flush_pct", "under_ma21_pct", "reversal", "band",
+         "plan", "misses")
+
+
+def market_closed_reason(now: Optional[datetime] = None) -> Optional[str]:
+    """'weekend' / 'holiday YYYY-MM-DD' / None — the one calendar
+    (`market_hours.gate`). The BOARD still renders on a closed day, on purpose;
+    only `record` is gated, so a holiday cron cannot write a history row built
+    from stale prices."""
+    try:
+        from market_hours import gate
+        return gate.closed_reason(now or datetime.now(ET))
+    except Exception:
+        return None
+
+
+def _db():
+    try:
+        from sepa import prices as _p
+        coll = _p._get_mongo()
+        return coll.database if coll is not None else None
+    except Exception as exc:                                   # pragma: no cover
+        log.warning("hot_pullback: mongo unavailable: %s", exc)
+        return None
+
+
+def closed_session_rows(data: dict) -> tuple:
+    """(day, rows) for the CLOSED session in a board payload, or (None, []).
+
+    A row carrying `live: True` is today's unfinished bar. It is a fine thing to
+    look at and a terrible thing to trade off tomorrow, so it never gets
+    written. All recorded rows share one session date.
+    """
+    rows = [r for r in (data or {}).get("rows") or []
+            if not r.get("live") and r.get("date")]
+    if not rows:
+        return None, []
+    day = max(str(r["date"])[:10] for r in rows)
+    return day, [r for r in rows if str(r["date"])[:10] == day]
+
+
+def record(data: dict) -> bool:
+    """Persist one completed pass to Mongo `hot_pullback_runs`, keyed by the
+    CLOSED session it describes.
+
+    Called from the endpoint when the cron asks for `record=true`, so the ONE
+    scan that warms the API's own cache is also the one that lands in history.
+    A cron running `python -m supply_demand.hot_pullback` in the cron container
+    would warm a different process's memory and leave the page cold — the same
+    trap the 09:25 demand-reentry curl exists to avoid.
+
+    Idempotent: re-running the same session's cron replaces that day's doc
+    rather than stacking duplicates.
+    """
+    if not data or data.get("warming"):
+        return False
+    closed = market_closed_reason()
+    if closed:
+        log.info("hot_pullback: not recording — market closed (%s)", closed)
+        return False
+    day, rows = closed_session_rows(data)
+    if not day:
+        log.info("hot_pullback: not recording — no closed-session row to write")
+        return False
+    db = _db()
+    if db is None:
+        return False
+    try:
+        getattr(db, RUNS_COLL).replace_one(
+            {"day": day},
+            {"day": day, "as_of": data.get("as_of"),
+             "universe": data.get("universe"), "scanned": data.get("scanned"),
+             "n": len(rows),
+             "rows": [{k: r.get(k) for k in _KEEP} for r in rows],
+             "near_miss": [{k: r.get(k) for k in _KEEP}
+                           for r in (data.get("near_miss") or [])[:12]]},
+            upsert=True)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hot_pullback: persist failed: %s", exc)
+        return False
+    log.info("hot_pullback recorded %s: %d row(s)", day, len(rows))
+    return True
+
+
+def last_closed_signals(before: Optional[str] = None) -> tuple:
+    """(day, rows) — the newest RECORDED closed session, for the paper lane.
+
+    `before` (an ET date string) excludes that day and everything after it, so
+    a lane running today reads yesterday's board and never its own morning.
+    Returns (None, []) when nothing is recorded — the lane then buys nothing,
+    which is the correct behaviour for a board that never scanned.
+    """
+    db = _db()
+    if db is None:
+        return None, []
+    q = {"day": {"$lt": str(before)[:10]}} if before else {}
+    try:
+        doc = getattr(db, RUNS_COLL).find_one(q, sort=[("day", -1)])
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hot_pullback: history read failed: %s", exc)
+        return None, []
+    if not doc:
+        return None, []
+    return doc.get("day"), list(doc.get("rows") or [])
+
+
+def run(universe_key: str = "full", limit: int = MAX_ROWS) -> dict:
+    """Manual / module entry point: scan, persist, seed this process's cache."""
+    data = scan(universe_key, limit)
+    record(data)
+    with _LOCK:
+        _CACHE[f"{universe_key}:{limit}"] = {
+            "ts": time.time(), "data": data, "warming": False}
+    return data
+
+
+if __name__ == "__main__":  # pragma: no cover - manual entry
+    logging.basicConfig(level=logging.INFO)
+    d = run()
+    print(f"{d.get('n')} row(s) of {d.get('scanned')} scanned")

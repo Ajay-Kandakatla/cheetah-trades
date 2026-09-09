@@ -143,9 +143,47 @@ the fwd5 death, arrived at independently.
 The clock exit is a rule, not a preference: the edge is gone by day five, so a
 lane that held would be trading something unmeasured.
 
+## The scan, and the bug it was hiding
+
+Ajay 2026-09-09: *"hot pull back doesn't have scan."* It had none — the board
+recomputed only when the tab was opened. Two consequences, one cosmetic and one
+that cost the lane everything:
+
+- opening the tab on a cold API process met a "warming" page;
+- **the paper lane could never fire.** The board is built off the *latest* bar.
+  At 09:35 that bar is today's partial session, so every row is dated today,
+  and `hot_pullback_entry.signal_is_fresh` rejects anything that is not the
+  *previous* session. It skipped 100% of rows, silently.
+
+The signal day is a **closed session**, so it is now written down when it
+closes and read back the next morning.
+
+| | |
+|---|---|
+| `hot_pullback.record(data)` | writes the closed session to Mongo `hot_pullback_runs`, one doc per `day`, `replace_one(upsert)` so a re-run cannot stack |
+| what is written | only rows with `live: False`; a board that is all live (the RTH case) writes **nothing**, on purpose |
+| gate | `market_hours.gate.closed_reason` — the board still renders on a closed day, only `record` is gated |
+| `last_closed_signals(before=today)` | what the lane reads: the newest recorded day strictly before today |
+| no history | the lane buys nothing and says `the post-close scan has not written one` |
+
+| cron (ET, Mon-Fri) | what it does |
+|---|---|
+| **17:05** | the one that matters — records, after the 16:30 broad fast-scan patched the closed bars and the 16:55 warm rebuilt the bands |
+| **08:05** | backstop — if 17:05 failed, still writes yesterday's session before the 09:30 lane |
+| 09:25 | pre-open record + warm |
+| 09:35, `*/20` 10-15 | warm only; `record` finds no closed row mid-day and writes nothing |
+
+All five **curl the API**. A `python -m` in the cron container would warm a
+different process's memory and leave the page cold — the trap the 09:25
+demand-reentry curl exists to avoid.
+
+A source guard (`test_the_lane_never_goes_back_to_a_live_rescan`) asserts
+`run()` calls `last_closed_signals` and never `cached_or_warm`, so this cannot
+regress quietly.
+
 ## Tests
 
-`backend/tests/test_hot_pullback.py` (29): the DYN archetype passes every part;
+`backend/tests/test_hot_pullback.py` (39): the DYN archetype passes every part;
 the owner constants; the study block including the simulated expectancy; each
 missing part blocks and names itself; the inclusive edges; any tested band
 counts and `alert_gates` is not imported; the band must contain the low; the
@@ -153,7 +191,12 @@ strongest containing demand band wins and supply is ignored; garbage in → None
 the plan stops under the low; sort order; every rules line built from its
 constant. Lane: the entry window, only yesterday's flush, the stop and its
 budget boundary, the clock exit, the stop/target/clock precedence, the live
-broker refusal, both gates, the status block, the narrative.
+broker refusal, both gates, the status block, the narrative. The scan: only a closed session is written
+down; record replaces rather than stacks; record refuses on a closed market,
+while warming, mid-session when every row is live, and on an empty board; the
+lane reads yesterday's recorded session and never today's; no history means it
+buys nothing; the source guard against a live re-scan; the crontab actually
+carries the passes.
 
 `frontend/src/components/HotPullbackBoard.test.tsx` (10): formatters never print
 NaN; the headline; the study line carries the horizon and the tail; the DYN row

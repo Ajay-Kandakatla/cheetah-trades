@@ -104,6 +104,27 @@
 */15   10-15 *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (session): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=session&universe=full&force=true&record=true'
 35,50  9     *    *    1-5  curl -sS -m 90 -o /dev/null -w 'premarket-entry (session am): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/premarket-entry?pass=session&universe=full&force=true&record=true'
 #
+# 🔥 Hot Pullback (supply_demand/hot_pullback.py) — Ajay 2026-09-09: "hot pull
+# back doesn't have scan". It didn't. The board recomputed only when the tab
+# was opened, so he met a cold "warming" page, and worse: the PAPER LANE could
+# never fire. The board is built off the LATEST bar, so during RTH every row is
+# dated TODAY, and `hot_pullback_entry.signal_is_fresh` rejects a signal that
+# is not the PREVIOUS session. The signal day is a CLOSED session and has to be
+# written down when it closes.
+#
+# 17:05 is the one that matters — after the 16:30 broad fast-scan has patched
+# the closed bars and after the 16:55 demand-reentry warm has rebuilt the
+# bands. 08:05 is the backstop: if 17:05 failed, this still writes yesterday's
+# closed session before the 09:30 lane reads it. The session passes only WARM
+# the tab — `record` finds no closed-session row mid-day and writes nothing,
+# by design. curl, NOT `python -m`: a module run in the CRON container warms a
+# different process and leaves the page cold.
+5      17    *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (post-close record): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
+5      8     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (premarket record): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
+25     9     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (pre-open warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
+*/20   10-15 *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (session warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true'
+35     9     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (session am warm): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true'
+#
 # Quick Bounce study (supply_demand/quick_bounce.py) — Sundays 07:00 ET (Ajay
 # 2026-09-06: "quick bounce potential list ... do the data analysis"). Walks
 # every universe name's 2-year daily frame (bands recomputed at anchors on

@@ -285,3 +285,133 @@ def test_the_narrative_names_the_band_and_the_exit():
     n = HPE.narrative(dyn_row(), 17.5, 16.92, 25.58)
     assert "DYN" in n and "16.56-17.02" in n and "21-day line" in n
     assert "3 sessions" in n
+
+
+# ── the scan that was missing (2026-09-09, "hot pull back doesn't have scan") ──
+# The board recomputed only when the tab was opened, and the paper lane read a
+# LIVE re-scan. During RTH that scan describes today's PARTIAL session, so every
+# row is dated today and `signal_is_fresh` rejects all of them — the lane could
+# never fire. These pin the fix: the CLOSED session is written down, and the
+# lane reads that history rather than re-scanning.
+class _FakeColl:
+    def __init__(self):
+        self.docs = []
+
+    def replace_one(self, flt, doc, upsert=False):
+        self.docs = [d for d in self.docs if d.get("day") != flt.get("day")]
+        self.docs.append(doc)
+
+    def find_one(self, q=None, sort=None):
+        rows = list(self.docs)
+        lt = ((q or {}).get("day") or {}).get("$lt")
+        if lt:
+            rows = [d for d in rows if str(d.get("day")) < str(lt)]
+        if not rows:
+            return None
+        return sorted(rows, key=lambda d: str(d.get("day")))[-1]
+
+
+class _FakeDB:
+    def __init__(self):
+        self.hot_pullback_runs = _FakeColl()
+
+
+def _board(rows, **over):
+    d = {"warming": False, "universe": "full", "as_of": "2026-09-08T17:05:00-04:00",
+         "scanned": 2594, "rows": rows, "near_miss": []}
+    d.update(over)
+    return d
+
+
+def test_only_a_closed_session_is_ever_written_down(monkeypatch):
+    """A `live` row is today's unfinished bar — fine to look at, ruinous to
+    trade off tomorrow. It must never reach history."""
+    live = dict(dyn_row(), date="2026-09-09", live=True)
+    closed = dict(dyn_row(), date="2026-09-08", live=False)
+    older = dict(dyn_row(symbol="OLD"), date="2026-09-05", live=False)
+
+    day, rows = HP.closed_session_rows(_board([closed, older]))
+    assert day == "2026-09-08" and [r["symbol"] for r in rows] == ["DYN"]
+    # the whole board live (the RTH case that broke the lane) -> nothing
+    assert HP.closed_session_rows(_board([live])) == (None, [])
+    assert HP.closed_session_rows(_board([])) == (None, [])
+    assert HP.closed_session_rows(None) == (None, [])
+    assert HP.closed_session_rows(_board([dict(dyn_row(), date=None)])) == (None, [])
+
+
+def test_record_writes_one_doc_per_session_and_replaces_on_a_rerun(monkeypatch):
+    db = _FakeDB()
+    monkeypatch.setattr(HP, "_db", lambda: db)
+    monkeypatch.setattr(HP, "market_closed_reason", lambda now=None: None)
+
+    row = dict(dyn_row(), date="2026-09-08", live=False)
+    assert HP.record(_board([row])) is True
+    assert len(db.hot_pullback_runs.docs) == 1
+    assert db.hot_pullback_runs.docs[0]["day"] == "2026-09-08"
+    assert db.hot_pullback_runs.docs[0]["n"] == 1
+    # the 08:05 backstop re-runs the same session: replace, never stack
+    assert HP.record(_board([row])) is True
+    assert len(db.hot_pullback_runs.docs) == 1
+
+
+@pytest.mark.parametrize("why,board,closed", [
+    ("market closed", _board([dict(dyn_row(), date="2026-09-08", live=False)]), "weekend"),
+    ("still warming", _board([], warming=True), None),
+    ("mid-session, every row live", _board([dict(dyn_row(), date="2026-09-09", live=True)]), None),
+    ("empty board", _board([]), None),
+])
+def test_record_refuses_when_there_is_nothing_honest_to_write(monkeypatch, why, board, closed):
+    db = _FakeDB()
+    monkeypatch.setattr(HP, "_db", lambda: db)
+    monkeypatch.setattr(HP, "market_closed_reason", lambda now=None: closed)
+    assert HP.record(board) is False, why
+    assert db.hot_pullback_runs.docs == []
+
+
+def test_the_lane_reads_yesterdays_recorded_session_never_today(monkeypatch):
+    db = _FakeDB()
+    monkeypatch.setattr(HP, "_db", lambda: db)
+    monkeypatch.setattr(HP, "market_closed_reason", lambda now=None: None)
+    HP.record(_board([dict(dyn_row(symbol="OLD"), date="2026-09-05", live=False)]))
+    HP.record(_board([dict(dyn_row(), date="2026-09-08", live=False)]))
+    # the morning cron may already have re-written TODAY before the lane runs
+    HP.record(_board([dict(dyn_row(symbol="TDY"), date="2026-09-09", live=False)]))
+
+    day, rows = HP.last_closed_signals(before="2026-09-09")
+    assert day == "2026-09-08" and [r["symbol"] for r in rows] == ["DYN"]
+    # every recorded field the lane and the board need survives the round trip
+    assert rows[0]["low"] == DYN_LOW and rows[0]["band"]["lo"] == BAND["lo"]
+    # without a cutoff it is simply the newest
+    assert HP.last_closed_signals()[0] == "2026-09-09"
+
+
+def test_no_history_means_the_lane_buys_nothing_and_says_so(monkeypatch):
+    monkeypatch.setattr(HP, "_db", lambda: None)
+    assert HP.last_closed_signals(before="2026-09-09") == (None, [])
+    assert HP.last_closed_signals() == (None, [])
+
+
+def test_the_lane_never_goes_back_to_a_live_rescan():
+    """Source guard for the bug this fixed. `run` re-scanning the board means
+    every row is dated TODAY during RTH and the lane silently never fires."""
+    import inspect
+    src = inspect.getsource(HPE.run)
+    assert "last_closed_signals" in src, "the lane must read the recorded session"
+    assert "cached_or_warm" not in src, "a live re-scan is dated today — the lane cannot use it"
+
+
+def test_the_scan_is_actually_scheduled():
+    """Ajay 2026-09-09: "hot pull back doesn't have scan." It had none. The
+    post-close record is the one the lane depends on."""
+    import pathlib
+    lines = [l for l in pathlib.Path(__file__).resolve().parents[1]
+             .joinpath("crontab").read_text().splitlines()
+             if "hot-pullback" in l and not l.lstrip().startswith("#")]
+    assert len(lines) >= 2, "the board needs at least a post-close and a premarket pass"
+    recorders = [l for l in lines if "record=true" in l]
+    assert recorders, "at least one pass must persist the closed session"
+    assert any(l.split()[:2] == ["5", "17"] for l in recorders), \
+        "the post-close record must run after the 16:55 band warm"
+    for l in lines:
+        assert l.strip().startswith("curl") or " curl " in l, \
+            "curl the API, never `python -m` — the cron container is a different process"
