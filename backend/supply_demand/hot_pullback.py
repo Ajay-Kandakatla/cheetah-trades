@@ -254,7 +254,11 @@ def qualifies(row: dict) -> tuple:
     if (_f(rev.get("range_pos")) or -1) < RANGE_POS_MIN:
         miss.append(f"the close is not in the top {(1-RANGE_POS_MIN)*100:.0f}% of the day's range")
     if not row.get("band"):
-        miss.append("the low never reached a tested demand band — the study says this is the one that matters")
+        # NOT "the one that matters" any more. That was the pre-correction claim
+        # and the 2026-09-09 re-measurement disproved it: the same reversal with
+        # NO band gives +0.007R against +0.100R, p=0.198.
+        miss.append("the low never reached a tested demand band (a required part of the "
+                    "rule, though measured it separates least — p=0.198)")
     return (not miss), miss
 
 

@@ -538,3 +538,15 @@ def test_a_forced_pass_is_recordable_which_is_the_whole_point(monkeypatch):
     assert data.get("warming") is False
     assert HP.record(data) is True
     assert db.hot_pullback_runs.docs[0]["day"] == "2026-09-08"
+
+
+def test_the_near_miss_line_no_longer_calls_the_band_load_bearing():
+    """It used to tell him "the study says this is the one that matters". The
+    2026-09-09 correction disproved exactly that: the same reversal with NO band
+    measures +0.007R against +0.100R, p=0.198. A stale claim on a near-miss row
+    is still a claim on his screen."""
+    _, miss = HP.qualifies(dyn_row(band=None))
+    blob = " ".join(miss)
+    assert "tested demand band" in blob
+    assert "the one that matters" not in blob
+    assert "0.198" in blob or "separates least" in blob
