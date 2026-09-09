@@ -13,7 +13,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import {
   HotPullbackBoard, pct, money, bandText, headline, studyLine, scanLabel, scanNote,
-  EMPTY_TEXT, WARMING_TEXT, NEAR_MISS_LABEL, SCAN_LABEL, SCANNING_LABEL,
+  r, correctionLine,
+  EMPTY_TEXT, WARMING_TEXT, NEAR_MISS_LABEL, SCAN_LABEL, SCANNING_LABEL, CORRECTION_TEXT,
 } from './HotPullbackBoard';
 import type { HpPayload, HpRow } from './HotPullbackBoard';
 
@@ -26,9 +27,9 @@ const DYN: HpRow = {
   reversal: { off_low_pct: 19.46, range_pos: 0.846 },
   band: { kind: 'demand', lo: 16.56, hi: 17.02, touches: 4, strength: 92 },
   plan: {
-    entry_note: 'next open (measured better than the close: the signal day gaps down into it 60% of the time)',
+    entry_note: 'next open — the entry the corrected study measures and the paper lane trades',
     trigger: 20.93, stop: 16.91, risk_from_close_pct: 16.7,
-    target: 25.58, target_pct: 26.0, horizon: '1-3 sessions — the edge measured gone by day 5',
+    target: 25.58, target_pct: 26.0, horizon: "1-3 sessions — the lane's clock. No measured edge at any horizon.",
   },
   misses: [],
 };
@@ -42,10 +43,15 @@ const NULLS: HpRow = {
   under_ma21_pct: null, reversal: null, band: null, plan: null, misses: [],
 };
 
+/* The CORRECTED study block (2026-09-09). The board previously advertised
+ * +0.27R off a backtest that started at bar 300 instead of 252. */
 const STUDY = {
-  events: 65, names: 56,
-  next_open_fwd1_pct: 2.40, next_open_fwd2_pct: 2.85, next_open_up2_pct: 66,
-  placebo_fwd1_pct: 0.05, placebo_fwd3_pct: 0.19, fwd5_p: 0.45, worst_3d_pct: -36.1,
+  events: 83, names: 71, sim_n: 83, sim_distinct_dates: 50,
+  sim_win_pct: 51.8, sim_mean_pct: 0.75, sim_expectancy_r: 0.10,
+  sim_median_risk_pct: 8.8, sim_worst_pct: -14.61,
+  ci_lo_r: -0.18, ci_hi_r: 0.40, p_r_le_zero: 0.26,
+  one_per_date_r: -0.031, survivorship_r: 0.0,
+  no_band_p: 0.191, band_separation_r: 0.093,
 };
 
 const PAYLOAD: HpPayload = {
@@ -53,7 +59,7 @@ const PAYLOAD: HpPayload = {
   zone_store_day: '2026-09-08', scanned: 2594, n: 1,
   rows: [DYN], near_miss: [NEAR], study: STUDY,
   rules: ['Hot first: the prior close sits at least 30% above its own 52-week low, median 50-day dollar volume at least $5M.',
-          'THE EDGE DIES BY DAY 5: fwd5 +0.39%, 51% up, p=0.45. This is a 1-3 session trade, not a hold.'],
+          'NO MEASURED EDGE. 83 trades on 50 dates: 51.8% win, expectancy +0.1R. The 95% interval INCLUDES ZERO.'],
 };
 
 function stub(payload: HpPayload | null, calls: string[]) {
@@ -84,15 +90,46 @@ describe('pure helpers', () => {
     expect(headline(null)).toBe('');
   });
 
-  it('the study line carries the horizon and the ugly tail, from the payload', () => {
+  it('the study line leads with the expectancy AND its interval', () => {
     const s = studyLine(STUDY);
-    expect(s).toContain('65 events');
-    expect(s).toContain('+2.85%');   // 2dp: a measured figure must not be rounded on screen
-    expect(s).toContain('+2.40%');
-    expect(s).toContain('66% up');
-    expect(s).toContain('gone by day five');
-    expect(s).toContain('-36.1%');
+    expect(s).toContain('NO MEASURED EDGE');
+    expect(s).toContain('83 trades on 50 dates');
+    expect(s).toContain('51.8% win');
+    expect(s).toContain('+0.10R');          // 2dp: +0.1R reads bigger than it is
+    expect(s).toContain('-0.18R');
+    expect(s).toContain('+0.40R');
+    expect(s).toContain('includes zero');   // the finding, not a footnote
+    expect(s).toContain('-0.03R');          // one trade per date
+    expect(s).toContain('watchlist, not an edge');
     expect(studyLine(null)).toBe('');
+    expect(studyLine({} as any)).toBe('');
+  });
+
+  it('the invalidated numbers can never come back through the study line (negative)', () => {
+    // The CORRECTION line quotes the old figures on purpose — the study line
+    // is the one that must never assert them again.
+    const s = studyLine(STUDY);
+    for (const gone of ['+2.40%', '+2.85%', '58% win', '+0.27R', '66% up', '-36.1%']) {
+      expect(s).not.toContain(gone);
+    }
+    expect(correctionLine(STUDY)).toContain('+0.27R');   // stated, as history
+  });
+
+  it('R is always two decimals and never NaN', () => {
+    expect(r(0.1)).toBe('+0.10R');
+    expect(r(-0.031)).toBe('-0.03R');
+    expect(r(0)).toBe('+0.00R');
+    expect(r(null)).toBe('—');
+    expect(r(Number.NaN)).toBe('—');
+  });
+
+  it('the correction is stated, not quietly applied', () => {
+    expect(correctionLine(STUDY)).toBe(CORRECTION_TEXT);
+    expect(CORRECTION_TEXT).toContain('+0.27R');    // says what it USED to claim
+    expect(CORRECTION_TEXT).toContain('2.3x');
+    expect(CORRECTION_TEXT).toContain('NOT load-bearing');
+    expect(correctionLine(null)).toBe('');
+    expect(correctionLine({} as any)).toBe('');
   });
 });
 
@@ -119,17 +156,20 @@ describe('HotPullbackBoard', () => {
     expect(plan.textContent).toContain('next open');
     expect(plan.textContent).toContain('$16.91');      // the stop
     expect(plan.textContent).toContain('$25.58');      // the 21-day target
-    expect(plan.textContent).toContain('the edge measured gone by day 5');
+    expect(plan.textContent).toContain('No measured edge at any horizon');
 
     expect(document.body.textContent).not.toContain('NaN');
   });
 
-  it('the measured study line leads the board', async () => {
+  it('the measured study line leads the board, with the correction under it', async () => {
     stub(PAYLOAD, []);
     render(<HotPullbackBoard />);
     const s = await screen.findByTestId('hp-study');
-    expect(s.textContent).toContain('placebo');
-    expect(s.textContent).toContain('gone by day five');
+    expect(s.textContent).toContain('NO MEASURED EDGE');
+    expect(s.textContent).toContain('includes zero');
+    const c = screen.getByTestId('hp-corrected');
+    expect(c.textContent).toContain('Corrected 2026-09-09');
+    expect(c.textContent).toContain('overstated about 2.3x');
   });
 
   it('an empty board says the setup is RARE, not that something broke', async () => {
@@ -137,7 +177,7 @@ describe('HotPullbackBoard', () => {
     render(<HotPullbackBoard />);
     expect(await screen.findByText(EMPTY_TEXT)).toBeTruthy();
     expect(screen.queryAllByTestId('hp-row')).toHaveLength(0);
-    expect(EMPTY_TEXT).toContain('65 in two years');
+    expect(EMPTY_TEXT).toContain('83 in a year');
   });
 
   it('near-misses are behind one click and name the rule that failed', async () => {
@@ -155,9 +195,9 @@ describe('HotPullbackBoard', () => {
     stub(PAYLOAD, []);
     render(<HotPullbackBoard />);
     const btn = await screen.findByRole('button', { name: 'ℹ️ What decides a row' });
-    expect(screen.queryByText(/THE EDGE DIES BY DAY 5/)).toBeNull();
+    expect(screen.queryByText(/INCLUDES ZERO/)).toBeNull();
     fireEvent.click(btn);
-    expect(screen.getByText(/THE EDGE DIES BY DAY 5/)).toBeTruthy();
+    expect(screen.getByText(/INCLUDES ZERO/)).toBeTruthy();
   });
 
   it('says so while warming, and reports a failed load (negative)', async () => {

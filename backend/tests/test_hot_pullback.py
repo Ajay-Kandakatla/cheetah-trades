@@ -76,32 +76,70 @@ def test_the_owner_constants_are_the_measured_cuts():
     assert HP.MIN_DOLLAR_VOL_USD == 5e6
 
 
-def test_the_study_block_is_what_the_study_produced():
+def test_the_study_block_carries_the_CORRECTED_numbers_and_the_interval():
+    """2026-09-09. The first numbers shipped here were wrong: the backtest's
+    event window began at bar 301 instead of 252, deleting 17 trades that ran
+    -0.418R (twelve on the 2025-11-06/07/11 flush days) and turning +0.10R into
+    +0.27R. Four independent re-derivations agree on the figures below.
+
+    The interval is pinned deliberately. A point estimate alone is what let a
+    2.3x-overstated expectancy sit on a board he sizes off."""
     s = HP.STUDY
-    assert (s["events"], s["names"]) == (65, 56)
-    assert s["fwd5_p"] == 0.450 and s["fwd5_up_pct"] == 51      # the edge dies
-    assert s["no_band_p"] == 0.461                              # the band carries it
-    assert s["next_open_fwd2_pct"] == 2.85 and s["next_open_up2_pct"] == 66
-    assert s["worst_3d_pct"] == -36.1                           # the tail is ugly
-    assert s["mean_fwd3_pct"] < s["fwd3_median_pct"]            # mean below median
-    # the SIMULATED trade — the numbers that decide it (a median is not expectancy)
-    assert s["sim_n"] == 65 and s["sim_win_pct"] == 58
-    assert s["sim_expectancy_r"] == 0.27
-    assert s["sim_mean_pct"] == 2.29
-    assert s["sim_worst_pct"] == -13.3                          # the stop caps the tail
-    assert s["sim_avg_win_pct"] > abs(s["sim_avg_loss_pct"])     # wins bigger than losses
-    assert (s["sim_exit_clock"] + s["sim_exit_stop"] + s["sim_exit_target"]) == s["sim_n"]
-    assert s["sim_distinct_dates"] < s["sim_n"]                 # the trades are clustered
+    assert s["sim_n"] == 83 and s["sim_distinct_dates"] == 50 and s["names"] == 71
+    assert s["sim_win_pct"] == 51.8
+    assert s["sim_mean_pct"] == 0.75
+    assert s["sim_expectancy_r"] == 0.10
+    assert s["sim_worst_pct"] == -14.61
+    assert (s["sim_exit_clock"], s["sim_exit_stop"], s["sim_exit_target"]) == (54, 21, 8)
+    # the interval INCLUDES ZERO — that is the finding, not a footnote
+    assert s["ci_lo_r"] < 0 < s["ci_hi_r"]
+    assert s["p_r_le_zero"] == 0.264
+    # and the fragility: 83 trades on 50 dates, one date carrying it
+    assert abs(s["drop_top_date_r"]) < 0.05
+    assert s["sim_n"] > s["sim_distinct_dates"]
+    # "2 years" was never reachable through a ~501-bar cache with a 252-day gate
+    assert "2 years" not in s["window"]
+    assert "2025-10-21" in s["window"] and "2026-08-25" in s["window"]
 
 
-# ── each part is required, and each failure is named ───────────────────────
+def test_the_old_wrong_numbers_are_gone_for_good():
+    """Regression guard. Every one of these was on his live board and every one
+    was wrong; none may come back without a fresh measurement."""
+    # The VALUES, not the prose: the rules panel deliberately quotes the old
+    # +0.27R to explain what was corrected, and that sentence must stay.
+    vals = {k: v for k, v in HP.STUDY.items() if isinstance(v, (int, float))}
+    assert vals["sim_expectancy_r"] != 0.27
+    assert vals["sim_mean_pct"] != 2.29
+    assert vals["sim_win_pct"] != 58
+    assert vals["sim_worst_pct"] != -13.3
+    assert vals["next_open_fwd1_pct"] != 2.40
+    assert vals.get("next_open_fwd2_pct") != 2.85
+    # and the keys whose only purpose was to carry an invalidated claim are gone
+    for dead in ("fwd1_median_pct", "fwd3_median_pct", "fwd5_median_pct", "fwd5_p",
+                 "trigger_rate_pct", "trigger_fwd3_pct", "worst_3d_pct",
+                 "no_band_fwd1_pct", "mean_fwd3_pct"):
+        assert dead not in HP.STUDY, f"{dead} belonged to the invalidated run"
+    # the correction must be stated on the board, not quietly applied
+    assert "CORRECTED" in " ".join(HP.rules_lines())
+
+
+def test_the_band_is_no_longer_called_load_bearing():
+    """It measured +0.007R against +0.100R at p=0.191 — the WEAKEST gate in the
+    rule. The module used to call it 'the one that matters'."""
+    blob = " ".join(HP.rules_lines()) + (HP.__doc__ or "")
+    assert "NO GATE IN THIS RULE SEPARATES" in blob or "does not" in blob
+    assert HP.STUDY["no_band_p"] > 0.05, "no band claim may assert significance"
+    assert HP.STUDY["snapback_p"] > 0.05, "no snapback claim may assert significance either"
+    assert HP.STUDY["band_separation_r"] < 0.1
+
+
 @pytest.mark.parametrize("over,needle", [
     ({"hot": False}, "not hot"),
-    ({"flush_pct": -6.0}, "flush is only"),
-    ({"under_ma21_pct": -4.0}, "under the 21-day line"),
-    ({"reversal": {"off_low_pct": 2.0, "range_pos": 0.9}}, "off the low"),
-    ({"reversal": {"off_low_pct": 12.0, "range_pos": 0.4}}, "top 30%"),
-    ({"band": None}, "never reached a tested demand band"),
+    ({"flush_pct": -5.0}, "off the 10-day high"),
+    ({"under_ma21_pct": -2.0}, "under the 21-day line"),
+    ({"reversal": {"off_low_pct": 2.0, "range_pos": 0.9}}, "no real snapback"),
+    ({"reversal": {"off_low_pct": 20.0, "range_pos": 0.2}}, "top 30%"),
+    ({"band": None}, "tested demand band"),
 ])
 def test_every_missing_part_blocks_the_row_and_says_which(over, needle):
     ok, miss = HP.qualifies(dyn_row(**over))
@@ -180,7 +218,11 @@ def test_the_plan_stops_under_the_low_that_tagged_the_band():
     assert p["stop"] == round(DYN_LOW * 0.995, 2) == 16.91
     assert p["trigger"] == round(DYN_HIGH * 1.001, 2)
     assert p["target"] == round(DYN_MA21, 2)
-    assert "1-3 sessions" in p["horizon"] and "day 5" in p["horizon"]
+    assert "1-3 sessions" in p["horizon"]
+    # The clock is the LANE's rule now, not a measured edge boundary — the
+    # corrected study found no edge at any horizon.
+    assert "No measured edge" in p["horizon"]
+    assert "day 5" not in p["horizon"], "that claim came from the invalidated run"
     assert "next open" in p["entry_note"]
     assert HP.plan_for({"close": None}) is None
 
@@ -198,10 +240,13 @@ def test_every_rules_line_is_built_from_its_constant():
     assert f"{abs(HP.UNDER_MA21_PCT):g}%" in blob
     assert f"{HP.MA_LEN}-day" in blob
     assert str(HP.STUDY["events"]) in blob
-    assert "DIES BY DAY 5" in blob
-    assert "-36.1%" in blob or "−36.1" in blob
+    assert "NO MEASURED EDGE" in blob
+    assert "CORRECTED" in blob
+    assert f"{HP.STUDY['sim_worst_pct']:g}%" in blob     # the CORRECTED worst case
+    assert f"{HP.STUDY['sim_expectancy_r']:+g}R" in blob
     assert f"{HP.STUDY['sim_expectancy_r']:+g}R" in blob        # expectancy is on the board
-    assert "correlated flush days" in blob                      # and so is the caveat
+    assert "correlated market-wide flush days" in blob          # and so is the caveat
+    assert "INCLUDES ZERO" in blob                              # the whole point
 
 
 # ── the paper lane ─────────────────────────────────────────────────────────

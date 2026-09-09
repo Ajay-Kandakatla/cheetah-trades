@@ -906,19 +906,35 @@ const CONTRACTS = [
     },
   },
   {
-    name: 'Hot Pullback tab prints its measured horizon (2026-09-09)',
+    name: 'Hot Pullback prints its expectancy AND the interval (2026-09-09, corrected)',
     file: 'src/components/HotPullbackBoard.tsx',
-    // Ajay 2026-09-09: "a new tab for hot pull back ... like DYN today which
-    // bounced back quick." The measured edge DIES by day five (p=0.450). A
-    // board that showed the entry without the horizon would mislead him into
-    // holding, so the horizon and the placebo comparison are pinned on screen,
-    // and every strategy number must come off the payload rather than be typed
-    // into the component.
+    // This board shipped on 2026-09-09 advertising 58% win / +0.27R off a
+    // backtest whose event window started at bar 300 instead of 252, deleting
+    // the sample's worst week. Corrected the same day to 51.8% / +0.10R with a
+    // 95% interval of [-0.18R, +0.40R] — which INCLUDES ZERO.
+    //
+    // A point estimate with no interval is precisely what let the wrong number
+    // sit on a board he sizes real money off. So the interval is pinned to the
+    // screen, the correction must be stated rather than quietly applied, and
+    // the invalidated figures may never reappear.
     checks: (src) => {
       const errs = [];
       if (!/studyLine/.test(src)) errs.push('HotPullbackBoard.tsx lost studyLine — the measured line must lead the board');
-      if (!/gone by day five/.test(src)) errs.push('the study line no longer says the edge is gone by day five');
-      if (!/placebo/.test(src)) errs.push('the study line no longer quotes the placebo');
+      if (!/NO MEASURED EDGE/.test(src)) errs.push('the study line no longer leads with the null result');
+      if (!/includes zero/.test(src)) errs.push('the study line no longer says the interval includes zero');
+      if (!/ci_lo_r/.test(src) || !/ci_hi_r/.test(src)) errs.push('the confidence interval is no longer rendered');
+      if (!/correctionLine/.test(src)) errs.push('the correction notice was removed — a silent correction is how this happened');
+      // Strip comments and the correction notice itself: both are allowed to
+      // name the old figures, because explaining the correction is the point.
+      const live = src
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+        .replace(/CORRECTION_TEXT[\s\S]*?;/, '');
+      for (const gone of ['2\\.40', '2\\.85', '0\\.27R', 'gone by day five']) {
+        if (new RegExp(gone).test(live)) {
+          errs.push(`an invalidated 2026-09-09 figure (${gone}) is back outside the correction notice`);
+        }
+      }
       if (!/plan\.horizon/.test(src)) errs.push('the row no longer prints plan.horizon beside the entry');
       if (!/data\?\.study/.test(src) && !/data\.study/.test(src)) {
         errs.push('the study block must come from the payload, not be typed into the component');

@@ -41,9 +41,20 @@ export type HpPayload = {
   study?: HpStudy | null; rules?: string[]; cached?: boolean; error?: string | null;
 };
 
-export const EMPTY_TEXT = 'No hot name flushed into a demand band and turned today. This is a rare setup — 65 in two years.';
+export const EMPTY_TEXT = 'No hot name flushed into a demand band and turned today. This is a rare setup — 83 in a year.';
 export const WARMING_TEXT = 'Scanning the universe for hot names that flushed into demand…';
 export const NEAR_MISS_LABEL = 'One rule short';
+export const CORRECTION_TEXT =
+  'Corrected 2026-09-09: this board previously showed 58% win and +0.27R. That came from a '
+  + 'backtest whose window started at bar 300 instead of 252, deleting 17 trades that ran '
+  + '-0.418R. Expectancy was overstated about 2.3x. The demand band is also NOT load-bearing '
+  + '(p=0.19), and flush depth carries no information.';
+/** Format an R multiple. Two decimals — these are small numbers and rounding
+ *  +0.10R to "+0.1R" reads bigger than it is. */
+export function r(v: number | null | undefined): string {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return '—';
+  return `${v >= 0 ? '+' : ''}${v.toFixed(2)}R`;
+}
 export const SCAN_LABEL = 'Scan now';
 export const SCANNING_LABEL = 'Scanning…';
 const POLL_MS = 120_000;
@@ -87,15 +98,28 @@ export function headline(d: HpPayload | null): string {
   const base = n === 1 ? '1 name' : `${n} names`;
   return `${base} of ${scanned.toLocaleString()} scanned${near ? ` · ${near} one rule short` : ''}`;
 }
-/** The measured line the board leads with — built from the payload's study. */
+/** The measured line the board leads with — built from the payload's study.
+ *
+ *  CORRECTED 2026-09-09. This line used to advertise a +2.40%/+2.85% next-open
+ *  return against a placebo. Four independent re-derivations found the backtest
+ *  behind those numbers started its event window at bar 300 instead of 252,
+ *  deleting the sample's worst week and overstating expectancy about 2.3x. The
+ *  line now leads with the expectancy AND its interval, because a point
+ *  estimate with no interval is exactly what let the wrong number stand. */
 export function studyLine(s: HpStudy | null | undefined): string {
   if (!s) return '';
-  // Two decimals on purpose: these are quoted STUDY figures, and rounding
-  // +2.85% to "+2.9%" misstates a measured result on a board he trades from.
-  return `Measured on ${s.events} events across ${s.names} names: entering at the next open returned a median `
-    + `${pct(s.next_open_fwd1_pct, 2)} by the next close and ${pct(s.next_open_fwd2_pct, 2)} by day two `
-    + `(${s.next_open_up2_pct}% up), against a placebo of ${pct(s.placebo_fwd1_pct, 2)} / ${pct(s.placebo_fwd3_pct, 2)}. `
-    + `The edge is gone by day five (p=${s.fwd5_p}). Worst three-day in the sample: ${pct(s.worst_3d_pct)}.`;
+  const n = s.sim_n, dates = s.sim_distinct_dates;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return '';
+  return `NO MEASURED EDGE. ${n} trades on ${dates} dates: ${s.sim_win_pct}% win, `
+    + `mean ${pct(s.sim_mean_pct, 2)}, expectancy ${r(s.sim_expectancy_r)} on a median `
+    + `${s.sim_median_risk_pct}% risk — 95% interval ${r(s.ci_lo_r)} to ${r(s.ci_hi_r)}, `
+    + `which includes zero. One trade per date gives ${r(s.one_per_date_r)}; correcting for `
+    + `survivorship gives ${r(s.survivorship_r)}. A watchlist, not an edge.`;
+}
+/** The correction notice. He sized off the old number, so it says so plainly. */
+export function correctionLine(s: HpStudy | null | undefined): string {
+  if (!s || typeof s.sim_expectancy_r !== 'number') return '';
+  return CORRECTION_TEXT;
 }
 
 function Row({ r }: { r: HpRow }) {
@@ -160,6 +184,9 @@ export function HotPullbackBoard() {
   return (
     <section className="hp" data-testid="hot-pullback">
       <p className="hp__study" data-testid="hp-study">{studyLine(data?.study)}</p>
+      {correctionLine(data?.study) && (
+        <p className="hp__corrected" data-testid="hp-corrected">{correctionLine(data?.study)}</p>
+      )}
       <div className="hp__bar">
         <span className="hp__count">{headline(data)}</span>
         <span className="hp__spacer" />

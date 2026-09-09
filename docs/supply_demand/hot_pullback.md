@@ -40,63 +40,101 @@ A **proven** band (2+ touches) is deliberately NOT required — requiring one
 measured *worse* (52% up vs 53%; 3+ touches 50%). `alert_gates` is not imported
 here at all, and a test pins that.
 
-## What the study found
+## ⚠️ CORRECTED 2026-09-09 — this rule has NO measured edge
 
-Two years, 2,650-name universe, no lookahead; bands rebuilt at every historical
-date from prior bars only, with the live geometry (`demand_reentry.zone_geom`).
+**The numbers this board first shipped were wrong.** They claimed 58% win,
++2.29% mean and **+0.27R**. Ajay sizes real money off this board.
 
-**Placebo** — every hot + liquid bar (n=238,857): fwd1 +0.05%, fwd3 +0.19%, 52% up.
+### The corrected measurement
 
-1. **The flush and the snapback alone are worse than the placebo.** A ≥20% fall
-   into a reversal close (n=5,314) gives ~50% up. The sharper the snapback
-   *without* a zone, the worse: off-low ≥12% with a top-30% close measured fwd5
-   −2.83%, 47% up.
-2. **The demand band is load-bearing.** The same reversal NOT in a band (n=434):
-   fwd1 +0.06%, bootstrap p=0.461 — nothing.
-3. **The full rule** (n=65, 56 names): fwd1 +1.60% / 62% up (p=0.000),
-   fwd3 +2.50% / 63% up (p=0.001).
-4. **The edge dies by day five** — fwd5 +0.39%, 51% up, p=0.450.
-5. **Entry:** the signal day gaps DOWN into the next open 60% of the time
-   (median −0.53%), so the next open beats the close.
-
-| entry | +1 day | +2/3 days |
-|---|---|---|
-| signal-day close | +1.60% / 62% up | +2.50% / 63% |
-| **next open** | **+2.40% / 57%** | **+2.85% / 66%** |
-| trigger over the signal-day high (fires 83%) | +0.80% | +2.37% / 65%, 17% stopped |
-
-## The number that actually decides it
-
-A median forward return is not expectancy. Simulating the trade the lane
-places — buy the next open, stop 0.5% under the signal-day low, out at the
-21-day line or after 3 sessions, intrabar stops honoured — across the same 65
-events:
+2,594 usable names, bands rebuilt at every historical date from prior bars only,
+no lookahead. The trade: buy the next open, stop 0.5% under the signal-day low,
+out at the 21-day line or after 3 sessions, intrabar stops honoured.
 
 | | |
 |---|---|
-| win rate | **58%** |
-| mean | **+2.29%** (median +2.37%) |
-| average win / average loss | **+8.28% / −6.14%** |
-| best / worst | +19.9% / **−13.3%** |
-| median risk (entry → stop) | 8.4% |
-| **expectancy** | **+0.27R** |
-| exits | 42 clock, 15 stopped, 8 target |
+| trades / dates / names | **83 / 50 / 71** |
+| window | 2025-10-21 → 2026-08-25 |
+| win rate | **51.8%** |
+| mean / median | **+0.75%** / +0.21% |
+| avg win / avg loss | +7.82% / −6.85% |
+| worst / best | **−14.61%** / +19.94% |
+| median risk | 8.8% |
+| **expectancy** | **+0.10R** |
+| **95% CI (date-block bootstrap)** | **−0.188R to +0.405R — includes zero**, P(R≤0)=0.264 |
+| exits | 54 clock, 21 stopped, 8 target |
 
-**The stop is what makes it work.** The raw column's −36.1% worst case becomes
-−13.3% once the stop is honoured, and no simulated trade lost more than 15%.
+And +0.10R is the *most favourable defensible* figure. It does not survive:
 
-## What is still wrong with it
+| stress | result |
+|---|---|
+| one trade per date (these are correlated market-wide flush days) | **+0.094R**, n=50, 54% win |
+| drop the single best date, 2025-11-24 | **+0.015R** |
 
-- **The trades are correlated.** 65 trades sit on only 41 distinct dates and one
-  day carries six. Effective sample is nearer 41 than 65.
-- **The rule is price-only and cannot see a permanent repricing.** The archetype
-  is the warning: DYN fell on 2026-09-08 because *another* company
-  (Avidity/Novartis) missed the Phase 3 primary endpoint that Dyne's own
-  registrational study uses. A ticker-level news filter would have missed it.
-  Boudoukh et al. (NBER 18725) measured exactly this fork — after extreme moves
-  no-news names reverse (~40bp) while identified-news names **continue**.
-- The literature's short-term reversal effect is 20–40bp; this measured 160bp.
-  That gap is either the small-cap population or small-n luck.
+83 trades sit on **50 dates**, so the effective sample is nearer 50 than 83.
+**The honest number for a sizing decision is 0.0R ± 0.2.** A separate
+survivorship check (the cache holds delisted names the survivors-only universe
+does not) put it near 0.00R; that one is *not* reproduced by the shipped script,
+so it is not quoted on the board.
+
+### Why it was wrong
+
+The original feature pass computed the rolling columns, called `dropna()`, and
+only *then* applied `rolling(252)` — so the event window began at bar **301**,
+not 252. That off-by-49 deleted the first 49 eligible sessions: **17 trades
+running 23.5% win and −0.418R**, twelve of them on the 2025-11-06/07/11
+market-wide flush days. The backtest started one week after the sample's worst
+cluster.
+
+| | n | win | mean | R | worst | exits |
+|---|---|---|---|---|---|---|
+| shipped (wrong) | 65 | 58% | +2.29% | +0.27 | −13.3% | 42/15/8 |
+| re-run at `--floor 300` | 66 | 59.1% | +2.40% | +0.233 | −13.3% | 43/15/8 |
+| **re-run at `--floor 252`** | **83** | **51.8%** | **+0.75%** | **+0.100** | −14.61% | 54/21/8 |
+
+Four independent re-derivations — one inline, three by agents that did not
+share code — agree on the corrected row, and all four reproduce the original by
+that single change.
+
+**The process failure is the real lesson: the module, docs, tests and paper
+lane all shipped; the backtest did not.** Nothing could re-run the number, so
+nothing caught it. The measurement now lives at
+`backend/studies/hot_pullback_study.py` and `--floor 300` reproduces the bug on
+demand.
+
+### What else the correction overturned
+
+1. **No gate in this rule separates — and the demand band least of all.** This
+   doc used to call it "the one that matters".
+
+   | gate | kept | excluded cohort | separation | p |
+   |---|---|---|---|---|
+   | demand band | +0.100R | **+0.007R** (n=467) | +0.093R | **0.198** |
+   | snapback pair | +0.100R | −0.026R (n=3,906) | +0.126R | **0.234** |
+
+   Neither clears p<0.05. `studies/hot_pullback_study.py` measures each gate
+   against the cohort it removes, so both are re-runnable.
+3. **Flush depth carries no information.** The −10%-under-the-21-day gate
+   already implies a deep flush, so the flush gate is effectively inert: 10%,
+   12% and 15% select the **same 83 events**. Ajay asked on 2026-09-09 to
+   loosen it to 10% — measured, that adds **zero** names. The only stable read
+   is that deeper than 30% is worse (−0.059R, n=39). **No constant was changed.**
+4. **The forward medians were shifted a session.** From the next open: +0.79%
+   by that close (52% up), +2.39% by day two (59%), +0.61% by day three (57%).
+   The old "+2.40% by the next close" was the day-two figure; the old "+2.85%"
+   existed nowhere.
+5. **"2 years" was never reachable.** The cache holds ~501 bars and the 252-day
+   hot gate eats half, so the window is ~12 months — and the original run saw
+   only ~9.5 of them.
+6. Worst simulated trade is **−14.61%**, not −13.3%. The old sentence "no
+   simulated trade lost more than 15%" survived on 0.4pp of luck.
+
+### What it is still good for
+
+A watchlist. "A hot name took one hard flush into structure and turned the same
+day" is a real, rare, legible thing to look at — ~83 a year. It is not a trade
+signal, the board says so on every row and in a correction notice, and the paper
+lane stays on to keep measuring it forward.
 
 ## What verified practitioners actually do
 
