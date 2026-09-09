@@ -229,6 +229,7 @@ def at_message(item: dict) -> dict:
     ap = item.get("approach") if isinstance(item.get("approach"), dict) else None
     ap = ap if ap and ap.get("tag") and ap.get("text") else None   # resting inside = the old wording
     tested = f"tested {int(band['touches'])}x" if band.get("touches") else "tested band"
+    mood_s = AG.mood_txt(item.get("mood"))
     parts = [f"${float(item['last']):g}"]
     if ap:
         # the tag takes the title's slot, so the distance moves into the body
@@ -237,6 +238,8 @@ def at_message(item: dict) -> dict:
         where = f"{ap['tag']} demand"
         parts.append(ap["text"])
     parts.append(tested)
+    if mood_s:
+        parts.append(mood_s)
     if "room" in item:                                    # the phone gate's read (2026-09-05)
         parts.append(AG.room_txt(item.get("room")))
         plan = AG.plan_txt(item["last"], band, item.get("room"))   # the plan (2026-09-06)
@@ -271,6 +274,8 @@ def digest_message(items: list) -> Optional[dict]:
         if ap and ap.get("tag"):
             where = ap["tag"]
         room = f" · {AG.room_txt(it.get('room'))}" if "room" in it else ""
+        mood_s = AG.mood_txt(it.get("mood"))
+        room = room + (f" · {mood_s}" if mood_s else "")
         lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} "
                      f"{_band_txt(it['band'])}{room} · {fmt_cap(it.get('cap'))}")
     if len(items) > DIGEST_MAX:
@@ -335,7 +340,12 @@ def _record(coll, key: str, item: dict, now: datetime) -> None:
             "symbol": item["symbol"], "tier": item["hit"]["tier"],
             "band": {"lo": item["band"]["lo"], "hi": item["band"]["hi"]},
             "last": item["last"], "dist_pct": item["hit"]["dist_pct"],
-            "cap": item.get("cap"), "sent_at": now.isoformat()}}, upsert=True)
+            "cap": item.get("cap"), "sent_at": now.isoformat(),
+            # Mood at the moment of the alert, so "does a constructive mood
+            # bounce faster off demand?" can be answered from his own tape
+            # later (Ajay 2026-09-08) instead of assumed.
+            "mood": item.get("mood"),
+            "approach": (item.get("approach") or {}).get("dir")}}, upsert=True)
     except Exception as exc:
         log.warning("demand_alerts: dedupe write failed: %s", exc)
 
@@ -451,11 +461,19 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             skipped_room += 1
             continue
         pushable.append(it)
+    # Mood as CONTEXT (Ajay 2026-09-08: "do include mood in the overall
+    # criteria of the stocks for alerts becuz mood determins if stock grows
+    # faster from demand or not"). Read ONLY for names that already passed
+    # every S/D gate — a handful a pass, so this costs one cached daily frame
+    # each — and it never adds or removes a name.
+    for it in pushable:
+        it["mood"] = AG.mood_read(it["symbol"])
     at_ok = [it for it in pushable if it["hit"]["tier"] == "at"]
     near_ok = [it for it in pushable if it["hit"]["tier"] != "at"]
-    # Closest first; only MAX_SINGLES_PER_PASS ring individually, the rest
-    # join the digest so a first pass (deploy, 9:33 open) is one buzz, not 14.
-    at_ok.sort(key=lambda it: it["hit"]["dist_pct"])
+    # Constructive mood first, then closest; only MAX_SINGLES_PER_PASS ring
+    # individually, the rest join the digest so a first pass (deploy, 9:33
+    # open) is one buzz, not 14.
+    at_ok.sort(key=lambda it: (AG.mood_rank(it.get("mood")), it["hit"]["dist_pct"]))
     singles, spill = at_ok[:MAX_SINGLES_PER_PASS], at_ok[MAX_SINGLES_PER_PASS:]
     digest = spill + near_ok
     pushed = 0

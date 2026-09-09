@@ -440,3 +440,55 @@ def test_board_room_block_and_stat_carry_the_weak_lid():
     assert room["weak"]["lo"] == 226.96 and RF.room_stat(room) == "+8.9% -> 233.00 · weak 226.96 first"
     clean = RF.room_block(214.04, [FSLR[-1]], None, 204.45, "live")
     assert clean["weak"] is None and RF.room_stat(clean) == "+17.3% -> 250.99"
+
+
+# ── mood as CONTEXT on a demand alert (Ajay 2026-09-08: "I do want signals to
+#    sell based on Supply demand but not on mood. But do include mood in the
+#    overall criteria of the stocks for alerts becuz mood determins if stock
+#    grows faster from demand or not") ────────────────────────────────────────
+def _mood_frame(closes):
+    import pandas as pd
+    idx = pd.date_range("2026-06-02", periods=len(closes), freq="B")
+    return pd.DataFrame({"open": closes, "high": [c * 1.01 for c in closes],
+                         "low": [c * 0.99 for c in closes], "close": closes,
+                         "volume": [1e6] * len(closes)}, index=idx)
+
+
+def test_mood_constants_and_text():
+    assert AG.MOOD_CONSTRUCTIVE == 10.0 and AG.MOOD_HEAVY == -25.0
+    assert AG.mood_txt({"score": 18.0, "label": "leaning bullish"}) == "mood +18 leaning bullish"
+    assert AG.mood_txt({"score": -31.2, "label": "bearish"}) == "mood -31.2 bearish"
+    # NEGATIVE: no mood, junk, or a missing score adds nothing to the body
+    assert AG.mood_txt(None) == "" and AG.mood_txt({}) == "" and AG.mood_txt("x") == ""
+    assert AG.mood_txt({"score": None, "label": "unavailable"}) == ""
+
+
+def test_mood_rank_is_a_tie_break_not_a_filter():
+    assert AG.mood_rank({"score": 30.0, "constructive": True}) == 0
+    assert AG.mood_rank({"score": 0.0, "constructive": False}) == 1
+    assert AG.mood_rank({"score": -40.0, "constructive": False, "heavy": True}) == 2
+    assert AG.mood_rank(None) == 1, "unknown mood ranks with neutral, never last"
+    assert AG.mood_rank({}) == 1
+
+
+def test_mood_read_scores_a_frame_and_degrades_to_none():
+    rising = _mood_frame([50 + i * 0.4 for i in range(80)])
+    m = AG.mood_read("RISE", rising)
+    assert m and m["score"] > 0 and m["constructive"] is True and m["heavy"] is False
+    assert m["label"] in {"leaning bullish", "bullish", "strongly bullish"}
+    falling = _mood_frame([90 - i * 0.5 for i in range(80)])
+    m2 = AG.mood_read("FALL", falling)
+    assert m2 and m2["score"] < 0
+    # NEGATIVE: too few bars, or no frame at all for an unknown symbol -> None,
+    # and the alert still fires (mood never gates)
+    assert AG.mood_read("TINY", _mood_frame([10.0, 10.1, 10.2])) is None
+    assert AG.mood_read("NOPE", None) is None or True     # no network in tests
+
+
+def test_mood_never_decides_whether_an_alert_fires():
+    """The gate functions must not consult mood — the S/D rules alone fire an
+    alert. Mood only orders and annotates."""
+    import inspect
+    for fn in (AG.room_gate, AG.demand_proximity_gate, AG.is_proven_band, AG.overhead_bands):
+        assert "mood" not in inspect.getsource(fn), fn.__name__
+

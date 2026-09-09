@@ -170,6 +170,61 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
     return out
 
 
+# Mood as CONTEXT on a demand alert (Ajay 2026-09-08: "I do want signals to
+# sell based on Supply demand but not on mood. But do include mood in the
+# overall criteria of the stocks for alerts becuz mood determins if stock grows
+# faster from demand or not"). Mood NEVER fires or suppresses an alert — the
+# S/D gates alone decide that, and the mood watcher was deleted the same day
+# for a measured 8-hits/25-misses record as a signal. Here it only:
+#   * rides in the push body and on the board tile ("mood +18 bullish"), and
+#   * breaks the tie for the MAX_SINGLES_PER_PASS names that ring individually
+#     (constructive first) — nothing is dropped, the rest ride the digest.
+# Whether it actually separates the fast bounces is being measured; a gate
+# needs those numbers and Ajay's sign-off (Rule #10).
+MOOD_CONSTRUCTIVE = 10.0     # score >= this = "leaning bullish" or better
+MOOD_HEAVY = -25.0           # score <= this = bearish, the tile says so
+
+
+def mood_read(symbol, frame=None) -> Optional[dict]:
+    """{"score", "label", "constructive"} on the name's CLOSED daily bars, or
+    None when it cannot be computed. Best-effort: a mood failure never blocks
+    an alert."""
+    try:
+        from . import mood as mood_mod
+        df = frame
+        if df is None:
+            from sepa import prices
+            df = prices.load_prices(symbol, period="1y")
+        if df is None or len(df) < 6:
+            return None
+        m = mood_mod.mood(df)
+        score = _f(m.get("score"))
+        if score is None or m.get("label") == "unavailable":
+            return None
+        return {"score": round(score, 1), "label": m.get("label"),
+                "constructive": score >= MOOD_CONSTRUCTIVE,
+                "heavy": score <= MOOD_HEAVY}
+    except Exception:                                # noqa: BLE001
+        return None
+
+
+def mood_txt(mood: Optional[dict]) -> str:
+    """"mood +18 bullish" — the body/tile fragment, "" when unknown."""
+    if not isinstance(mood, dict) or mood.get("score") is None:
+        return ""
+    return "mood %+g %s" % (mood["score"], mood.get("label") or "")
+
+
+def mood_rank(mood: Optional[dict]) -> int:
+    """Sort key fragment: constructive names ring first (0), unknown next (1),
+    heavy last (2). A tie-break, never a filter."""
+    if not isinstance(mood, dict) or mood.get("score") is None:
+        return 1
+    if mood.get("constructive"):
+        return 0
+    return 2 if mood.get("heavy") else 1
+
+
 # Direction into a demand band (Ajay 2026-09-08: "I would like to somehow know
 # if we are nearing demand zone from the top like falling or Bouncing back from
 # Demand zone.. I need the distinction in writing"). Owner constants, no book.

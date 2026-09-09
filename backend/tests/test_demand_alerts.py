@@ -4,6 +4,8 @@ Behavioural tests on synthetic boards + source guards for the wiring (pref
 default, crontab line, notifications page). Ajay 2026-09-03.
 """
 import sys
+
+import pytest
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -37,6 +39,15 @@ def _board(appr=(), rows=()):
     return {"approaching_rows": [{"symbol": s, "name": f"{s} Inc",
                                   "approaching": {"band": b}} for s, b in appr],
             "rows": [{"symbol": s, "name": f"{s} Inc", "entry_zone": b} for s, b in rows]}
+
+
+@pytest.fixture(autouse=True)
+def _no_mood_by_default(monkeypatch):
+    """Mood is CONTEXT on the alert (2026-09-08) and it reads daily bars. In a
+    unit test that would make every pinned body depend on the local price
+    cache, so the default here is "unknown mood"; the mood tests stub their
+    own."""
+    monkeypatch.setattr(DA.AG, "mood_read", lambda sym, frame=None: None)
 
 
 def _live(**px):
@@ -565,3 +576,60 @@ def test_at_message_carries_the_ticker_for_push_history_2026_09_05():
     msg = DA.at_message(item)
     assert msg["ticker"] == "ERIE"
     assert msg["url"].startswith("/sepa/ERIE")
+
+
+# ── mood rides the alert as CONTEXT (Ajay 2026-09-08) ────────────────────────
+def test_body_and_digest_carry_the_mood_and_do_not_need_it():
+    band = _band(90, 97, touches=3)
+    hit = {"tier": "at", "state": "in", "dist_pct": 0.0}
+    m = DA.at_message({"symbol": "AAA", "last": 96.0, "band": band, "hit": hit, "cap": 5e9,
+                       "name": "Alpha", "mood": {"score": 18.0, "label": "leaning bullish"}})
+    assert "· mood +18 leaning bullish ·" in m["body"]
+    assert m["title"] == "🧲 AAA in demand $90–97", "mood never touches the title"
+    # NEGATIVE: no mood -> the old body, unchanged
+    m2 = DA.at_message({"symbol": "AAA", "last": 96.0, "band": band, "hit": hit, "cap": 5e9,
+                        "name": "Alpha"})
+    assert "mood" not in m2["body"]
+    d = DA.digest_message([{"symbol": "AAA", "last": 96.0, "band": band, "hit": hit, "cap": 5e9,
+                            "mood": {"score": -31.0, "label": "bearish"}}])
+    assert "· mood -31 bearish" in d["body"]
+
+
+def test_a_constructive_mood_rings_first_but_nothing_is_dropped(monkeypatch):
+    """Ajay 2026-09-08: "mood determins if stock grows faster from demand or
+    not". It orders the singles; every name still gets through."""
+    sent = _capture(monkeypatch)
+    syms = [f"M{i}" for i in range(6)]
+    board = _board(rows=[(s, _band(90, 97)) for s in syms])
+    store = {}
+    for s in syms:
+        store.update(_store(s, [{"kind": "demand", "lo": 90.0, "hi": 97.0, "touches": 3, "strength": 50.0}], 103.95))
+    live = _live(**{s: (96.0 + i * 0.05, -2.0) for i, s in enumerate(syms)})
+    # M5 is furthest but the only constructive name; M0 is closest and heavy
+    moods = {"M5": {"score": 40.0, "label": "bullish", "constructive": True, "heavy": False},
+             "M0": {"score": -40.0, "label": "bearish", "constructive": False, "heavy": True}}
+    monkeypatch.setattr(DA.AG, "mood_read", lambda sym, frame=None: moods.get(sym))
+    out = DA.check_once(board=board, live=live, caps={s: 5e9 for s in syms}, coll=FakeColl(),
+                        owner="o@x", now=IN_SESSION, force=True, store=store)
+    singles = [s for s in sent if "more" not in s["title"]]
+    assert singles[0]["title"].startswith("🧲 M5"), "constructive rings first"
+    assert not any(t["title"].startswith("🧲 M0") for t in singles), "the heavy name loses its single"
+    assert out["at"] == 6 and out["pushed"] == DA.MAX_SINGLES_PER_PASS + 1
+    digest = [s for s in sent if "more" in s["title"]][0]
+    assert "M0" in digest["body"], "the heavy name is still delivered, in the digest"
+
+
+def test_mood_is_recorded_with_every_alert_so_it_can_be_measured(monkeypatch):
+    sent = _capture(monkeypatch)
+    coll = FakeColl()
+    board = _board(rows=[("AAA", _band(90, 97))])
+    store = _store("AAA", [{"kind": "demand", "lo": 90.0, "hi": 97.0, "touches": 3, "strength": 50.0}], 103.95)
+    monkeypatch.setattr(DA.AG, "mood_read",
+                        lambda sym, frame=None: {"score": 22.0, "label": "bullish",
+                                                 "constructive": True, "heavy": False})
+    DA.check_once(board=board, live=_live(AAA=(96.0, -2.0)), caps={"AAA": 5e9}, coll=coll,
+                  owner="o@x", now=IN_SESSION, force=True, store=store)
+    doc = list(coll.docs.values())[0]
+    assert doc["mood"]["score"] == 22.0 and doc["mood"]["constructive"] is True
+    assert doc["approach"] in {"falling", "bouncing", "settling", "resting", None}
+

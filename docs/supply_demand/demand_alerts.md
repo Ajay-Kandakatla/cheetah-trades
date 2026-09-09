@@ -114,6 +114,37 @@ Tests: `test_alert_gates.py` (DYN fixtures, every read, negatives), `test_demand
 `test_chart_maps.py` (both boards, one fetch, no-live negative),
 `test_supply_demand_contracts.py` (one function on every path).
 
+### Mood rides along as context (2026-09-08)
+
+**Ask (Ajay 2026-09-08):** *"I do want signals to sell based on Supply demand but not on
+mood. But do include mood in the overall criteria of the stocks for alerts becuz mood
+determins if stock grows faster from demand or not."*
+
+The mood **watcher** was deleted the same day (it pushed a DYN sell that then ran +7%;
+graded 8 hits / 25 misses). Mood as an **input to a supply-and-demand alert** is a
+different thing, and this is where it sits:
+
+| where | what it does |
+|---|---|
+| push body | `… · tested 3x · mood +18 leaning bullish · room +9.9% -> $100 …` |
+| digest line | `AAA $96 · in demand $90–97 · room … · mood -31 bearish · $5.0B` |
+| ordering | `alert_gates.mood_rank` breaks the tie for the 4 names that ring individually: constructive (score ≥ `MOOD_CONSTRUCTIVE` 10) first, unknown next, heavy (≤ `MOOD_HEAVY` −25) last |
+| recorded | `demand_alert_state` stores the mood **and** the approach direction with every alert |
+
+**What it explicitly does NOT do:** fire an alert, suppress one, or change any gate. Every
+name that passed the S/D gates is still delivered — a heavy-mood name simply rides the
+digest instead of ringing on its own. A test pins that `room_gate`,
+`demand_proximity_gate`, `is_proven_band` and `overhead_bands` never mention mood.
+
+`mood_read(symbol)` computes `supply_demand.mood.mood()` on the name's **closed daily
+bars**, only for names that already passed every gate (a handful per pass, one cached
+frame each), and returns `None` on any failure — an unknown mood never blocks an alert
+and ranks with neutral, never last.
+
+**Why it is recorded:** so "does a constructive mood actually bounce faster off demand?"
+is answered from his own tape rather than assumed. Making mood a **gate** needs those
+numbers and his sign-off (Rule #10) — it is not one today.
+
 ### Why the board, not a fresh zone scan
 The board *is* the app's definition of a demand zone worth the phone. Re-deriving zones
 per symbol here would be a second definition, and a cold full-universe zone pass is

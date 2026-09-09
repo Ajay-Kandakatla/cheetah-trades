@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -106,6 +107,14 @@ class FakeNames:
         for s in q["symbol"]["$in"]:
             if s in self.names:
                 yield {"symbol": s, "name": self.names[s]}
+
+
+@pytest.fixture(autouse=True)
+def _no_mood_by_default(monkeypatch):
+    """Mood is CONTEXT on a demand alert (2026-09-08) and it reads daily bars;
+    in a unit test that would make every pinned push body depend on the local
+    price cache. Default here: unknown mood."""
+    monkeypatch.setattr(ZE.AG, "mood_read", lambda sym, frame=None: None)
 
 
 def _colls():

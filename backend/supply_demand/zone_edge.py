@@ -896,7 +896,10 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 # tier already IS the "<1% above demand" rule (EDGE_PCT)
                 ok, room = AG.room_gate(px, bands, prev)
                 if ok:
+                    # Mood as CONTEXT only (Ajay 2026-09-08) — read after every
+                    # S/D gate passed, never a reason to fire or to skip.
                     demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
+                                         "mood": AG.mood_read(sym),
                                          "last": float(px), "cap": _f(cap), "name": None,
                                          "key": DA.state_key(sym, rd["band"], day_iso, "at"),
                                          "tier": rd["tier"], "dist_pct": rd["dist_pct"], "room": room,
