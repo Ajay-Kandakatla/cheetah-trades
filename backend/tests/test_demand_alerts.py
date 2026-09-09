@@ -49,6 +49,22 @@ def _no_mood_by_default(monkeypatch):
     own."""
     monkeypatch.setattr(DA.AG, "mood_read", lambda sym, frame=None: None)
 
+    # Bullish reversal, not a falling knife (2026-09-09). Both read DAILY bars,
+    # so in a unit test they would make every pinned body depend on the local
+    # price cache. Default here is "clean structure, bullish turn" so a test
+    # whose subject is caps, dedupe, digests or mood keeps testing THAT; the
+    # gate tests stub their own. The things-to-see block is off by default —
+    # it reaches the network.
+    monkeypatch.setattr(DA.AG, "daily_frame", lambda sym, frame=None: frame)
+    monkeypatch.setattr(DA.AG, "knife_read",
+                        lambda sym, frame=None: {"knife": False, "trend": "rising"})
+    monkeypatch.setattr(DA.AG, "reversal_mood_read",
+                        lambda sym, frame=None, bars=None: {"score": 40.0, "label": "bullish",
+                                                            "bars": 60, "bullish": True})
+    monkeypatch.setattr(DA.BC, "bullish_context",
+                        lambda sym, frame=None, with_sentiment=True: {"gex": None, "patterns": None,
+                                                                      "sentiment": None})
+
 
 def _live_bouncing(**px):
     """`_live` with a day low just under each print, so every row reads as
@@ -564,7 +580,7 @@ def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeyp
     c = doc["counts"]
     assert c == {"candidates": 5, "hits": 5, "at": 1, "at_singles": 1, "near": 2, "pushed": 1,
                  "skipped_cap": 1, "unknown_cap": 1, "unknown_prev": 0, "skipped_room": 0,
-                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0}
+                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0}
     assert all(type(v) is int for v in c.values()) and "reason" not in doc
     # a warming board is a recorded, explained quiet pass — and the doc is REPLACED, not appended
     out2 = DA.check_once(board={"warming": True}, now=IN_SESSION, force=True, pass_coll=pc)
@@ -659,3 +675,79 @@ def test_mood_is_recorded_with_every_alert_so_it_can_be_measured(monkeypatch):
     assert doc["mood"]["score"] == 22.0 and doc["mood"]["constructive"] is True
     assert doc["approach"] in {"falling", "bouncing", "settling", "resting", None}
 
+
+
+# ── bullish reversal, not a falling knife (2026-09-09) ─────────────────────
+# Ajay, hours after bouncing-only shipped: "I think we got alerts wrong.. I need
+# only bullish reversal stocks that touched demand zone and bouncing back .. and
+# mood has to be bullish too with reversal. After a stationary bottommed stocks
+# as I caught a fallig knife today with Casy"
+def _casy_kw():
+    """The exact 2026-09-09 CASY shape: an arrival at a demand band, bouncing
+    off the day's low, that passed every gate the phone had that morning."""
+    band = _band(627.49, 651.0)
+    return dict(board=_board(rows=[("CASY", band)]),
+                caps={"CASY": 24e9}, owner="o@x", now=IN_SESSION, force=True,
+                store=_store("CASY", [{"kind": "demand", "lo": 627.49, "hi": 651.0,
+                                       "touches": 3, "strength": 55.0}], 733.49))
+
+
+def test_a_falling_knife_is_listed_and_never_pushed(monkeypatch):
+    """CASY's swing lows were stepping down under a falling 50-day. The board
+    keeps it (wearing the 🔪 badge); the phone does not."""
+    sent = _capture(monkeypatch)
+    monkeypatch.setattr(DA.AG, "knife_read",
+                        lambda sym, frame=None: {"knife": True, "trend": "falling"})
+    out = DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)),
+                        coll=FakeColl(), **_casy_kw())
+    assert out["hits"], "the board still lists it"
+    assert out["hits"][0]["approach"]["dir"] == "bouncing", "it really was bouncing"
+    assert out["pushed"] == 0 and out["skipped_knife"] == 1 and sent == []
+
+
+def test_a_bearish_turn_is_listed_and_never_pushed(monkeypatch):
+    """CASY's 60-session mood was -57. The floor for a push is +25."""
+    sent = _capture(monkeypatch)
+    monkeypatch.setattr(DA.AG, "reversal_mood_read",
+                        lambda sym, frame=None, bars=None: {"score": -57.0, "label": "bearish",
+                                                            "bars": 60, "bullish": False})
+    out = DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)),
+                        coll=FakeColl(), **_casy_kw())
+    assert out["hits"] and out["pushed"] == 0
+    assert out["skipped_mood"] == 1 and sent == []
+
+
+def test_both_new_gates_fail_closed_when_the_daily_bars_cannot_be_read(monkeypatch):
+    """No frame = no evidence of a bullish reversal = no push. Same side the
+    direction gate fails on."""
+    sent = _capture(monkeypatch)
+    monkeypatch.setattr(DA.AG, "knife_read", lambda sym, frame=None: None)
+    out = DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)),
+                        coll=FakeColl(), **_casy_kw())
+    assert out["pushed"] == 0 and out["skipped_knife"] == 1 and sent == []
+
+
+def test_a_clean_bullish_reversal_still_rings(monkeypatch):
+    """The gates are a TIGHTENING, not an off switch — the good case survives."""
+    sent = _capture(monkeypatch)
+    out = DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)),
+                        coll=FakeColl(), **_casy_kw())
+    assert out["pushed"] == 1 and len(sent) == 1
+    assert out["skipped_knife"] == 0 and out["skipped_mood"] == 0
+
+
+def test_the_things_to_see_are_read_only_for_names_that_survive(monkeypatch):
+    """GEX / patterns / sentiment cost a network hop, so they are read AFTER
+    every gate — and never for a name the phone is not going to mention."""
+    _capture(monkeypatch)
+    seen = []
+    monkeypatch.setattr(DA.BC, "bullish_context",
+                        lambda sym, frame=None, with_sentiment=True: seen.append(sym) or {})
+    monkeypatch.setattr(DA.AG, "knife_read",
+                        lambda sym, frame=None: {"knife": True, "trend": "falling"})
+    DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)), coll=FakeColl(), **_casy_kw())
+    assert seen == [], "a blocked name must not cost a network read"
+    monkeypatch.setattr(DA.AG, "knife_read",
+                        lambda sym, frame=None: {"knife": False, "trend": "rising"})
+    DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)), coll=FakeColl(), **_casy_kw())
+    assert seen == ["CASY"]

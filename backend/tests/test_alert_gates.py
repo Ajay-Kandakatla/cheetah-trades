@@ -533,3 +533,146 @@ def test_a_real_approach_read_round_trips_through_the_gate():
     casy = AG.approach_read(646.0, {"kind": "demand", "lo": 627.49, "hi": 651.0, "touches": 2},
                             prev_close=733.49, day_low=646.0)
     assert AG.direction_gate(casy) is False, "the 2026-09-09 CASY push must not fire again"
+
+
+# ── bullish reversal, not a falling knife (2026-09-09) ─────────────────────
+# Ajay, hours after the bouncing-only fix shipped: "I think we got alerts
+# wrong.. I need only bullish reversal stocks that touched demand zone and
+# bouncing back.. and mood has to be bullish too with reversal. After a
+# stationary bottommed stocks as I caught a fallig knife today with Casy"
+#
+# "bouncing" is an INTRADAY read. CASY satisfied it at 08:13 ET while in
+# free-fall on a post-earnings repricing. These are the two daily-structure
+# gates that stop that, both of which already existed and neither of which was
+# wired to the phone.
+import pandas as pd
+
+
+def _frame(closes, *, lows=None, highs=None, vol=1_000_000):
+    """A daily OHLCV frame from a close series. Lows/highs default to a tight
+    band around the close so the frame is usable by every reader."""
+    lows = lows if lows is not None else [c * 0.99 for c in closes]
+    highs = highs if highs is not None else [c * 1.01 for c in closes]
+    idx = pd.date_range("2024-01-01", periods=len(closes), freq="D")
+    return pd.DataFrame({"open": closes, "high": highs, "low": lows,
+                         "close": closes, "volume": [vol] * len(closes)}, index=idx)
+
+
+def _staircase(start, step, cycles=12, down=8, up=5):
+    """A zigzag whose TROUGHS march by `step`. A monotonic slide has no swing
+    lows at all (every bar is a new low, so nothing is a local minimum) — the
+    knife read is about troughs, so the fixture has to actually print them."""
+    out, level = [], float(start)
+    for _ in range(cycles):
+        for k in range(down):
+            out.append(level - k * abs(step) * 0.5)
+        trough = out[-1]
+        for k in range(1, up + 1):
+            out.append(trough + k * abs(step) * 0.6)
+        level = out[-1] + step
+    return out
+
+
+def test_the_knife_gate_blocks_a_staircase_down_and_passes_a_climb():
+    """Swing lows stepping DOWN and a falling 50-day, BOTH required."""
+    falling = _frame(_staircase(400.0, -6.0))
+    rising = _frame(_staircase(100.0, +6.0))
+    assert AG.knife_read("X", frame=falling)["trend"] == "falling"
+    assert AG.knife_read("X", frame=falling)["knife"] is True
+    assert AG.knife_gate("X", frame=falling) is False
+    assert AG.knife_read("Y", frame=rising)["trend"] == "rising"
+    assert AG.knife_read("Y", frame=rising)["knife"] is False
+    assert AG.knife_gate("Y", frame=rising) is True
+
+
+def test_the_knife_gate_needs_BOTH_falling_lows_and_a_falling_average():
+    """A shakeout inside an uptrend prints a lower swing low while the 50-day
+    still climbs — that must NOT be called a knife, or every pullback is one."""
+    from supply_demand import sd_liquidity as liq
+    stepping_down = {"trend": "falling"}
+    assert liq.is_falling_knife(stepping_down, 100.0, ma50=90.0, ma50_prior=110.0) is True
+    assert liq.is_falling_knife(stepping_down, 100.0, ma50=110.0, ma50_prior=90.0) is False
+    assert liq.is_falling_knife({"trend": "rising"}, 100.0, ma50=90.0, ma50_prior=110.0) is False
+
+
+def test_the_knife_gate_fails_closed_when_it_cannot_read_the_structure():
+    """No bars, too few bars, junk -> no evidence of anything, so no push.
+    Same side direction_gate fails on."""
+    assert AG.knife_read("X", frame=_frame([10.0] * 20)) is None
+    assert AG.knife_gate("X", frame=_frame([10.0] * 20)) is False
+    assert AG.knife_gate("X", read={}) is False
+    assert AG.knife_gate("X", read={"knife": None}) is False
+    assert AG.knife_gate("X", read="not a dict") is False
+
+
+def test_the_knife_gate_never_reads_the_still_forming_bar():
+    """A violent unfinished bar must not change the structure read — scans and
+    gates stay on closed bars (the live-bar overlay rule, 2026-09-03)."""
+    base = [100.0 + i * 0.8 for i in range(120)]
+    calm = _frame(base)
+    crashed = _frame(base[:-1] + [base[-1] * 0.55])       # today gaps 45% down
+    assert AG.knife_read("X", frame=calm)["swing_lows"] == \
+           AG.knife_read("X", frame=crashed)["swing_lows"]
+
+
+def test_the_mood_gate_reads_the_turn_not_the_two_year_trend():
+    """THE POINT OF THE WHOLE CHANGE. A long slide that has based and turned
+    scores bearish on the full frame and bullish on the recent window. If these
+    two ever agree, the short frame has stopped doing its job."""
+    slide = [400.0 - i * 1.6 for i in range(200)]          # long decline
+    turn = [80.0 + i * 1.1 for i in range(60)]             # then a real turn
+    df = _frame(slide + turn)
+    full = AG.mood_read("X", frame=df)
+    rev = AG.reversal_mood_read("X", frame=df)
+    assert full["score"] < rev["score"], (full, rev)
+    assert rev["bars"] == AG.REVERSAL_MOOD_BARS
+
+
+def test_the_mood_gate_fails_closed_and_honours_its_floor():
+    assert AG.REVERSAL_MOOD_FLOOR == 25.0        # mood.LABELS: >= +25 is "bullish"
+    assert AG.reversal_mood_gate("X", read=None) is False
+    assert AG.reversal_mood_gate("X", read={}) is False
+    assert AG.reversal_mood_gate("X", read={"score": None}) is False
+    assert AG.reversal_mood_gate("X", read={"score": 24.9}) is False
+    assert AG.reversal_mood_gate("X", read={"score": 25.0}) is True
+
+
+def test_the_things_to_see_can_never_block_a_push():
+    """GEX, patterns and sentiment RIDE ALONG. His own ledger says no chart
+    pattern beats the 50% placebo, so none of them is a gate — and every one
+    of these readers must answer None rather than raise on a bad symbol."""
+    from supply_demand import bullish_context as BC
+    ctx = BC.bullish_context("__nope__", with_sentiment=False)
+    assert set(ctx) == {"gex", "patterns", "sentiment"}
+    assert BC.context_txt(ctx) == "" or isinstance(BC.context_txt(ctx), str)
+    assert BC.context_txt(None) == ""
+    assert BC.context_txt({}) == ""
+    # none of the see-it readers appears in any gate
+    import inspect
+    for gate in (AG.direction_gate, AG.knife_gate, AG.reversal_mood_gate,
+                 AG.room_gate, AG.demand_proximity_gate):
+        src = inspect.getsource(gate)
+        for banned in ("bullish_context", "gex_bullish_read", "sentiment_read",
+                       "bullish_patterns_read"):
+            assert banned not in src, f"{gate.__name__} must not read {banned}"
+    # structural, not a promise: the gate module cannot even see the context one
+    import inspect as _i
+    assert "bullish_context" not in _i.getsource(AG)
+
+
+def test_flat_top_is_excluded_because_it_fires_on_everything():
+    """Measured 120/120 on a random universe sample. A pattern present on every
+    name would read as confirmation while carrying no information."""
+    from supply_demand import bullish_context as BC
+    assert "flat_top" in BC.NOISE_PATTERNS
+
+
+def test_every_pattern_shown_carries_its_record_against_the_placebo():
+    """Standing rule: always quote a placebo next to a per-name rate."""
+    from supply_demand import bullish_context as BC
+    assert BC.PATTERN_PLACEBO[1] == 50
+    for name, (n, up, mean) in BC.PATTERN_RECORD.items():
+        assert n > 0 and 0 <= up <= 100, name
+    txt = BC.context_txt({"patterns": [{"name": "double_bottom",
+                                        "record": {"n": 248, "up_pct": 43, "mean_pct": 0.35}}]})
+    assert "43% up" in txt and "50% placebo" in txt

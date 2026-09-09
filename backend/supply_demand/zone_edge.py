@@ -687,6 +687,7 @@ def empty_payload(reason: str = "no pass yet") -> dict:
                        "min_cap_usd": MIN_CAP_USD, "min_touches_push": MIN_TOUCHES_PUSH},
             "counts": {"breaking": 0, "near_demand": 0, "candidates": 0, "priced": 0,
                        "stale_print": 0, "skipped_room": 0, "skipped_direction": 0,
+                       "skipped_knife": 0, "skipped_mood": 0,
                        "skipped_cap": 0,
                        "unknown_cap": 0, "pushed": 0},
             "breaking": [], "near_demand": [], "track": {}, "reason": reason,
@@ -854,6 +855,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     breaking, near_demand = [], []
     break_cands, demand_cands = [], []
     unknown_cap = skipped_cap = unknown_prev = skipped_room = skipped_direction = 0
+    skipped_knife = skipped_mood = 0
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -900,19 +902,39 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                     px, rd["band"], prev, (snapshot.get(sym) or {}).get("low"))
                 # Bouncing only (Ajay 2026-09-09, after CASY). The BOARD still
                 # carries every arrival; only the phone is gated.
-                if ok and not AG.direction_gate(approach):
-                    skipped_direction += 1
-                elif ok:
-                    # Mood as CONTEXT only (Ajay 2026-09-08) — read after every
-                    # S/D gate passed, never a reason to fire or to skip.
-                    demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
-                                         "mood": AG.mood_read(sym),
-                                         "last": float(px), "cap": _f(cap), "name": None,
-                                         "key": DA.state_key(sym, rd["band"], day_iso, "at"),
-                                         "tier": rd["tier"], "dist_pct": rd["dist_pct"], "room": room,
-                                         "approach": approach})
-                else:
+                if not ok:
                     skipped_room += 1
+                elif not AG.direction_gate(approach):
+                    skipped_direction += 1
+                else:
+                    # Bullish reversal, not a falling knife (Ajay 2026-09-09,
+                    # after CASY). "Bouncing" is an INTRADAY read and CASY
+                    # satisfied it while in free-fall; both reads below are on
+                    # the DAILY structure. ONE frame load, shared — this pass
+                    # runs every minute.
+                    frame = AG.daily_frame(sym)
+                    kr = AG.knife_read(sym, frame=frame)
+                    rm = AG.reversal_mood_read(sym, frame=frame)
+                    if not AG.knife_gate(sym, read=kr):
+                        # Swing lows stepping down under a falling 50-day. The
+                        # BOARD still lists it, wearing the 🔪 badge.
+                        skipped_knife += 1
+                    elif not AG.reversal_mood_gate(sym, read=rm):
+                        # The mood of the TURN, last 60 sessions. The two-year
+                        # read scores a genuinely bottomed name -45 before
+                        # momentum, so it could never call a real reversal
+                        # bullish.
+                        skipped_mood += 1
+                    else:
+                        # Mood as CONTEXT only (Ajay 2026-09-08) — read after
+                        # every S/D gate passed, never a reason to fire or skip.
+                        demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
+                                             "mood": AG.mood_read(sym, frame=frame),
+                                             "knife": kr, "reversal_mood": rm,
+                                             "last": float(px), "cap": _f(cap), "name": None,
+                                             "key": DA.state_key(sym, rd["band"], day_iso, "at"),
+                                             "tier": rd["tier"], "dist_pct": rd["dist_pct"],
+                                             "room": room, "approach": approach})
 
     # ── names + dedupe: one read each, never per symbol ──────────────────────
     if names is None:
@@ -1000,6 +1022,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     # is known only here, after the sends, which is why the payload is built last.
     counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print,
               "skipped_room": skipped_room, "skipped_direction": skipped_direction,
+              "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
               "skipped_cap": skipped_cap,
               "unknown_cap": unknown_cap, "pushed": pushed}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
@@ -1016,6 +1039,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
             "skipped_direction": skipped_direction,
+            "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
             "seconds": round(time.time() - t0, 2), "payload": payload}
 
 

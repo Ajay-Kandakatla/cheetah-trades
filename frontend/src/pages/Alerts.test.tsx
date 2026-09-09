@@ -285,6 +285,9 @@ describe('Alerts page — the honest empty state', () => {
     draw('/alerts?kinds=demand_alert,zone_bounce_alert,supply_break_alert');
     const empty = await screen.findByTestId('alerts-empty');
     expect(empty).toHaveTextContent('No zone alerts today. — the gate skipped 14 (room) / 3 (proximity) today');
+    // only the reasons that fired are named — a quiet day must not read
+    // "0 (falling knife) / 0 (turn not bullish)" (2026-09-09)
+    expect(empty.textContent).not.toMatch(/0 \(/);
   });
 
   it('in the default "all" mode the empty sentence names no kind (2026-09-08)', async () => {

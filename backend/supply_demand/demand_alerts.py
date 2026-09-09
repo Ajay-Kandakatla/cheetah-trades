@@ -74,6 +74,7 @@ from zoneinfo import ZoneInfo
 
 from market_hours.reminder import is_market_day
 from . import alert_gates as AG
+from . import bullish_context as BC
 from . import alert_status as AS
 
 log = logging.getLogger(__name__)
@@ -416,6 +417,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     hits, at_items, near_items = [], [], []
     skipped_cap = unknown_cap = unknown_prev = skipped_room = skipped_proximity = unknown_room = 0
     skipped_direction = 0
+    skipped_knife = 0
+    skipped_mood = 0
     for sym in syms:
         last = last_px.get(sym)
         if not last:
@@ -466,6 +469,26 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         if not AG.direction_gate(it.get("approach")):
             skipped_direction += 1
             continue
+        # Bullish reversal, not a falling knife (Ajay 2026-09-09, after CASY:
+        # "I need only bullish reversal stocks ... mood has to be bullish too
+        # with reversal. After a stationary bottommed stocks as I caught a
+        # fallig knife today with Casy"). "Bouncing" is an INTRADAY read and
+        # CASY satisfied it while in free-fall; these two read the DAILY
+        # structure. One frame load, shared by all three daily reads below.
+        frame = AG.daily_frame(it["symbol"])
+        kr = AG.knife_read(it["symbol"], frame=frame)
+        it["knife"] = kr
+        if not AG.knife_gate(it["symbol"], read=kr):
+            skipped_knife += 1
+            continue
+        # The mood of the TURN, not of the two-year trend — a name that has
+        # bottomed scores -45 on trend+location+structure before anything else,
+        # so the full-frame read can never call a real bottom bullish.
+        rm = AG.reversal_mood_read(it["symbol"], frame=frame)
+        it["reversal_mood"] = rm
+        if not AG.reversal_mood_gate(it["symbol"], read=rm):
+            skipped_mood += 1
+            continue
         pushable.append(it)
     # Mood as CONTEXT (Ajay 2026-09-08: "do include mood in the overall
     # criteria of the stocks for alerts becuz mood determins if stock grows
@@ -474,6 +497,11 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     # each — and it never adds or removes a name.
     for it in pushable:
         it["mood"] = AG.mood_read(it["symbol"])
+        # Things to SEE (Ajay 2026-09-09: "looking at GEX and other bullish
+        # patterns to see and also most recent sentiment"). NEVER a gate — his
+        # own ledger has no chart pattern beating the 50% placebo. One call per
+        # surviving name, cached 15 min, all three fail to None silently.
+        it["context"] = BC.bullish_context(it["symbol"])
     at_ok = [it for it in pushable if it["hit"]["tier"] == "at"]
     near_ok = [it for it in pushable if it["hit"]["tier"] != "at"]
     # Constructive mood first, then closest; only MAX_SINGLES_PER_PASS ring
@@ -513,7 +541,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
             "skipped_proximity": skipped_proximity, "unknown_room": unknown_room,
-            "skipped_direction": skipped_direction}
+            "skipped_direction": skipped_direction,
+            "skipped_knife": skipped_knife, "skipped_mood": skipped_mood}
 
 
 if __name__ == "__main__":
@@ -522,9 +551,10 @@ if __name__ == "__main__":
     out = check_once()
     log.info("DEMAND-ALERTS: ran=%s candidates=%s hits=%d at=%s near=%s pushed=%s "
              "skipped_cap=%s unknown_cap=%s unknown_prev=%s skipped_room=%s "
-             "skipped_proximity=%s unknown_room=%s skipped_direction=%s", out.get("ran"),
+             "skipped_proximity=%s unknown_room=%s skipped_direction=%s skipped_knife=%s skipped_mood=%s", out.get("ran"),
              out.get("candidates"), len(out.get("hits") or []), out.get("at"),
              out.get("near"), out.get("pushed"), out.get("skipped_cap"),
              out.get("unknown_cap"), out.get("unknown_prev"), out.get("skipped_room"),
              out.get("skipped_proximity"), out.get("unknown_room"),
-             out.get("skipped_direction"))
+             out.get("skipped_direction"), out.get("skipped_knife"),
+             out.get("skipped_mood"))

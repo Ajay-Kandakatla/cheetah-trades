@@ -791,3 +791,54 @@ def test_proven_lid_rule_2026_09_06_one_bar_every_overhead_reader():
     assert "AG.plan_txt(item[\"last\"], band, item.get(\"room\"))" in inspect.getsource(DA.at_message)
     assert "AG.plan_txt(px, band, item.get(\"room\"))" in inspect.getsource(ZB.single_message)
     assert AG.STOP_BUFFER_PCT == ZEE.STOP_BUFFER_PCT == 0.5, "the plan quotes the stop the paper lane places"
+
+
+def test_bullish_reversal_gates_2026_09_09_are_wired_to_every_demand_push_path():
+    """Ajay 2026-09-09, after CASY: "I need only bullish reversal stocks that
+    touched demand zone and bouncing back .. and mood has to be bullish too with
+    reversal. After a stationary bottommed stocks as I caught a fallig knife
+    today with Casy".
+
+    The morning's direction gate was necessary and NOT sufficient: "bouncing" is
+    an intraday read and CASY satisfied it at 08:13 ET mid-collapse. Both daily
+    reads already existed in this repo and neither was wired to the phone —
+    THAT is the bug this pins shut."""
+    from supply_demand import alert_gates as AG
+    from supply_demand import bullish_context as BC
+    from supply_demand import demand_alerts as DA
+    from supply_demand import zone_edge as ZE
+
+    assert AG.REVERSAL_MOOD_FLOOR == 25.0        # mood.LABELS: >= +25 is "bullish"
+    assert AG.REVERSAL_MOOD_BARS == 60           # the TURN, not the two-year trend
+    from supply_demand import mood as MD
+    assert AG.REVERSAL_MOOD_FLOOR == MD.MOOD_BUY, "the floor is mood.py's own long floor"
+
+    # both push paths call BOTH gates and count BOTH refusals
+    for src in (inspect.getsource(DA._check_once), inspect.getsource(ZE.check_once)):
+        assert "AG.knife_gate(" in src and "AG.reversal_mood_gate(" in src
+        assert '"skipped_knife": skipped_knife' in src
+        assert '"skipped_mood": skipped_mood' in src
+
+    # alert_gates stays a LEAF — the see-it reads live in their own module, so
+    # "context can never gate" is a fact about the import graph, not a promise
+    ag = inspect.getsource(AG)
+    assert "bullish_context" not in ag and "from catalysts" not in ag
+    for gate in ("knife_gate", "reversal_mood_gate", "direction_gate",
+                 "room_gate", "demand_proximity_gate"):
+        g = inspect.getsource(getattr(AG, gate))
+        for banned in ("gex", "sentiment", "pattern", "chatter"):
+            assert banned not in g.lower(), f"{gate} must not read {banned}"
+
+    # flat_top fired on 120/120 random names — excluded, and every shown
+    # pattern carries its record against the placebo (standing rule)
+    assert "flat_top" in BC.NOISE_PATTERNS
+    assert BC.PATTERN_PLACEBO[1] == 50
+    assert set(BC.PATTERN_RECORD) >= {"cup_with_handle", "double_bottom", "triple_bottom"}
+    assert all(rec[1] <= BC.PATTERN_PLACEBO[1] for rec in BC.PATTERN_RECORD.values()), \
+        "if a pattern ever BEATS the placebo, promote it deliberately — do not let this drift"
+
+    # the rules panel builds the line from the constants, never retyped
+    from supply_demand import rules_info as RI
+    line = RI._direction_line()
+    assert str(int(AG.REVERSAL_MOOD_BARS)) in line and "falling knife" in line
+    assert "NEVER gate" in line

@@ -864,6 +864,37 @@ def _dwell_decor(tiles: list) -> int:
     return n
 
 
+# Ajay 2026-09-09: "Also add falling knife indicator to the alerts if they are
+# true so I know not to buy them."
+#
+# The PHONE already refuses a knife (alert_gates.knife_gate), so a knife can
+# only ever reach him by way of a BOARD — which is exactly where he browses for
+# something to buy. The flag is the row's own `is_knife`, computed by
+# demand_reentry from sd_liquidity.is_falling_knife: swing lows stepping DOWN
+# AND a falling 50-day, both required, neutral price structure, no book.
+KNIFE_BADGE_TEXT = "\U0001F52A falling knife"
+KNIFE_STAT_KEY = "Knife"
+
+
+def _knife_decor(tiles: list) -> int:
+    """Flag every tile whose daily structure is a falling knife.
+
+    Tone is `warn`, not `muted`: unlike the dwell tag this one HAS been
+    measured — on 2026-09-09, 32% of his own demand pushes were on names whose
+    swing lows were stepping down under a falling 50-day, CASY among them.
+
+    Reads the row's precomputed `_knife`; a tile whose source never supplied it
+    is left alone rather than having prices reloaded per tile."""
+    n = 0
+    for t in tiles:
+        if t.get("_knife") is not True:
+            continue
+        t.setdefault("badges", []).append({"text": KNIFE_BADGE_TEXT, "tone": "warn"})
+        t.setdefault("stats", []).append({"k": KNIFE_STAT_KEY, "v": "yes"})
+        n += 1
+    return n
+
+
 def attach_tape(rows: list, budget_sec: float = TAPE_BUDGET_SEC) -> int:
     """Pull each row's intraday tape for venue + retail detail, in place.
 
@@ -1818,6 +1849,10 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": stats,
             "why": why,
             "theme": _theme(sym),
+            # Falling-knife flag for _knife_decor (2026-09-09). demand_reentry
+            # already computes it per row; passing it through beats reloading
+            # prices once per tile.
+            "_knife": bool(r.get("is_knife")),
             "_flow": _order.inflow_of(r),
             "badges": (([{"text": ap_badge["text"], "tone": ap_badge["tone"]}] if ap_badge else [])
                 + ([
@@ -1875,6 +1910,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "demand")
     _dwell_decor(out)
+    _knife_decor(out)
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
@@ -2807,6 +2843,9 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": stats,
             "why": why,
             "theme": _theme(sym),
+            # Falling-knife flag for _knife_decor (2026-09-09). Absent on a row
+            # that never computed it -> False -> no badge, never a wrong one.
+            "_knife": bool(r.get("is_knife")),
             "badges": badges,
             "_score": float(len(rows) - rank),
             "_m": tile_metrics(r),
@@ -2815,6 +2854,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "demand")
     _dwell_decor(out)
+    _knife_decor(out)
     flow_counts = {"inflow": 0, "neutral": 0, "distribution": 0}
     for t in tiles:
         st = next((b for b in t.get("badges") or [] if "Money flowing in" in b["text"]), None)

@@ -152,10 +152,18 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
     case 'stale_print':       return `${n} stale print`;
     case 'unknown_prev':      return `${n} no prev close`;
     case 'unknown_room':      return `${n} no room read`;
+    /* Ajay 2026-09-09, after CASY. The direction counter shipped that morning
+     * and was never listed here, so the quietest gate of the three was the one
+     * the page could not explain. */
+    case 'skipped_direction': return `${n} skipped: not bouncing`;
+    case 'skipped_knife':     return `${n} skipped: falling knife`;
+    case 'skipped_mood':      return `${n} skipped: turn not bullish`;
     default: return null;
   }
 }
-const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_cap', 'unknown_cap', 'stale_print', 'unknown_prev', 'unknown_room'];
+const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'skipped_knife',
+                   'skipped_mood', 'skipped_cap', 'unknown_cap', 'stale_print', 'unknown_prev',
+                   'unknown_room'];
 /* `pushed` on the backend counts send CALLS that terminated — delivered, or
  * nobody targeted (a muted kind still counts, demand_alerts._terminal). So the
  * chip says "push calls", and each row's delivery line says what landed. */
@@ -182,13 +190,17 @@ function useAlertsStatus(nonce: number) {
   return { status, error };
 }
 
-export function skipsToday(status: AlertsStatus | null, today: string): { room: number; proximity: number } {
-  const out = { room: 0, proximity: 0 };
+export function skipsToday(status: AlertsStatus | null, today: string):
+    { room: number; proximity: number; direction: number; knife: number; mood: number } {
+  const out = { room: 0, proximity: 0, direction: 0, knife: 0, mood: 0 };
   if (!status?.passes) return out;
   for (const p of Object.values(status.passes)) {
     if (!p || passDay(p) !== today) continue;
     out.room += Number(p.counts?.skipped_room) || 0;
     out.proximity += Number(p.counts?.skipped_proximity) || 0;
+    out.direction += Number(p.counts?.skipped_direction) || 0;
+    out.knife += Number(p.counts?.skipped_knife) || 0;
+    out.mood += Number(p.counts?.skipped_mood) || 0;
   }
   return out;
 }
@@ -452,9 +464,16 @@ export function AlertsPage() {
       ? 'zone '
       : `${kindList.map((k) => kindText(k).replace(/ alert$/i, '').toLowerCase()).join(' / ')} `;
   const skips = skipsToday(status, today);
-  // The gate's skips are today's; only the Today window may claim them.
-  const skipNote = choice.untilOffset == null && (skips.room > 0 || skips.proximity > 0)
-    ? ` — the gate skipped ${skips.room} (room) / ${skips.proximity} (proximity) today`
+  // The gate's skips are today's; only the Today window may claim them. Only
+  // the reasons that actually fired are named — after 2026-09-09 there are five
+  // of them, and "0 (falling knife) / 0 (turn not bullish)" on a quiet day is
+  // noise, not an explanation.
+  const skipParts = ([
+    [skips.room, 'room'], [skips.proximity, 'proximity'], [skips.direction, 'not bouncing'],
+    [skips.knife, 'falling knife'], [skips.mood, 'turn not bullish'],
+  ] as [number, string][]).filter(([n]) => n > 0).map(([n, label]) => `${n} (${label})`);
+  const skipNote = choice.untilOffset == null && skipParts.length
+    ? ` — the gate skipped ${skipParts.join(' / ')} today`
     : '';
 
   return (

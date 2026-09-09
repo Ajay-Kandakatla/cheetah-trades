@@ -449,3 +449,143 @@ def plan_txt(print_px, band, room: Optional[dict],
     rr = (target - px) / (px - stop) if px > stop else None
     rr_txt = f" ({rr:.1f}R)" if rr is not None and rr > 0 else ""
     return out + f" · target ${target:g}{rr_txt}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BULLISH REVERSAL, NOT A FALLING KNIFE — Ajay 2026-09-09, after CASY:
+#
+#   "I think we got alerts wrong.. I need only bullish reversal stocks that
+#    touched demand zone and bouncing back.. Those are the only alerts I need
+#    and mood has to be bullish too with reversal. After a stationary bottommed
+#    stocks as I caught a fallig knife today with Casy"
+#
+# and, on the mood question, "#1 but I need them to be looking at GEX and other
+# bullish patterns to see and also most recent sentiment and they have to be
+# <1% of reversal from demand with a minimum of 5% room to Supply" — the last
+# two being ALERT_MAX_ABOVE_DEMAND_PCT and ALERT_MIN_ROOM_PCT, unchanged.
+#
+# WHY. The morning's direction gate (PUSH_DIRECTIONS) was necessary and not
+# sufficient: "bouncing" is an INTRADAY read — the day's low touched the band
+# and the print is 0.5% off it. CASY satisfied that at 08:13 ET while it was in
+# free-fall on a post-earnings repricing. Both of the things that would have
+# stopped it were already computed in this repo and neither was wired to the
+# phone:
+#
+#   is_falling_knife(CASY, 2026-09-09) = True
+#       swing lows 811.19 -> 740.00 stepping down, 50-day 825.82 -> 822.61 falling
+#   mood(CASY) = -24.3 "leaning bearish"      (the floor for a long is +25.0)
+#
+# MEASURED on the live universe (1,355 names with a demand band, last closed
+# session, studies/bounce_quality_study.py):
+#       402 bouncing -> 151 with >=5% room -> 108 within 1% of the band
+#           -> 69 not a falling knife          (-36%)
+#           -> 15 also mood-bullish on the turn (-78% more)
+#
+# THE MOOD FRAME IS THE SUBTLE PART. mood() is a TREND read: 25 of its points
+# are price vs EMA20/EMA50, 10 are position in the frame's range and 10 are
+# higher-highs/higher-lows. A stock that has genuinely BOTTOMED scores -45 on
+# those three before momentum and pressure are counted, so it can never reach
+# +25 on a 2-year frame — the literal reading of "mood has to be bullish" would
+# have silently deleted the exact setup he described and left only strong names
+# pulling back. Measured across 1,172 names: 22.6% are mood-bullish, 37.5% sit
+# within 8% of their 60-day low, and 1.19% are both.
+#
+# So the mood is read on a SHORT frame: the same six components, scored over the
+# last REVERSAL_MOOD_BARS sessions, which asks "is the TURN bullish" instead of
+# "is the TREND bullish". Ajay picked this reading over the literal one.
+#
+# Both gates FAIL CLOSED. If the structure or the mood cannot be read there is
+# no evidence of a bullish reversal, and silence is the safe side — the same
+# side direction_gate fails on.
+
+REVERSAL_MOOD_BARS = 60      # sessions the turn is scored over (~3 months)
+REVERSAL_MOOD_FLOOR = 25.0   # mood.LABELS: >= +25 is "bullish". His word.
+KNIFE_MA_LEN = 50            # the average sd_liquidity.is_falling_knife reads
+
+
+def daily_frame(symbol, frame=None):
+    """The name's daily bars, loaded once and shared by every read below.
+    None when they cannot be had."""
+    if frame is not None:
+        return frame
+    try:
+        from sepa import prices
+        return prices.load_prices(symbol)
+    except Exception:                                # noqa: BLE001
+        return None
+
+
+def knife_read(symbol, frame=None) -> Optional[dict]:
+    """{"knife", "trend", "swing_lows", "ma", "ma_prior"} on CLOSED daily bars,
+    or None when it cannot be computed.
+
+    Neutral price-structure only — NOT the Minervini trend template. See
+    sd_liquidity.structure_read / is_falling_knife, which this only wires up:
+    swing lows stepping DOWN *and* the 50-day falling, both required, so a
+    single shakeout low inside an uptrend does not disqualify a name."""
+    df = daily_frame(symbol, frame)
+    if df is None or len(df) < KNIFE_MA_LEN + 12:
+        return None
+    try:
+        from . import sd_liquidity as liq
+        closed = df.iloc[:-1]                        # never the forming bar
+        if len(closed) < KNIFE_MA_LEN + 2:
+            return None
+        closes, lows = closed["close"], closed["low"]
+        ma = closes.rolling(KNIFE_MA_LEN).mean()
+        ma_now, ma_prior = _f(ma.iloc[-1]), _f(ma.iloc[-2])
+        st = liq.structure_read(closes, lows)
+        knife = liq.is_falling_knife(st, float(closes.iloc[-1]), ma_now, ma_prior)
+        return {"knife": bool(knife), "trend": st.get("trend"),
+                "swing_lows": st.get("swing_lows"),
+                "ma": round(ma_now, 2) if ma_now is not None else None,
+                "ma_prior": round(ma_prior, 2) if ma_prior is not None else None}
+    except Exception:                                # noqa: BLE001
+        return None
+
+
+def knife_gate(symbol, frame=None, read=None) -> bool:
+    """True when the name is NOT a falling knife. Unreadable = False (closed)."""
+    r = read if isinstance(read, dict) else knife_read(symbol, frame)
+    if not isinstance(r, dict) or r.get("knife") is None:
+        return False
+    return not bool(r["knife"])
+
+
+def reversal_mood_read(symbol, frame=None, bars: int = REVERSAL_MOOD_BARS) -> Optional[dict]:
+    """Mood scored on the last `bars` sessions — the TURN, not the trend.
+
+    Same six components as mood_read; only the window differs, so a name that
+    based and turned is judged on the base and the turn instead of on the
+    decline that came before them."""
+    df = daily_frame(symbol, frame)
+    if df is None or len(df) < 6:
+        return None
+    try:
+        from . import mood as mood_mod
+        m = mood_mod.mood(df.tail(bars))             # closed_only drops the forming bar
+        score = _f(m.get("score"))
+        if score is None or m.get("label") == "unavailable":
+            return None
+        return {"score": round(score, 1), "label": m.get("label"), "bars": bars,
+                "bullish": score >= REVERSAL_MOOD_FLOOR,
+                "components": m.get("components")}
+    except Exception:                                # noqa: BLE001
+        return None
+
+
+def reversal_mood_gate(symbol, frame=None, read=None,
+                       floor: float = REVERSAL_MOOD_FLOOR) -> bool:
+    """True when the TURN is bullish. Unreadable = False (fails closed)."""
+    r = read if isinstance(read, dict) else reversal_mood_read(symbol, frame)
+    if not isinstance(r, dict) or r.get("score") is None:
+        return False
+    return bool(float(r["score"]) >= floor)
+
+
+def reversal_mood_txt(read: Optional[dict]) -> str:
+    """"turn +41 bullish (60d)" — the body fragment, "" when unknown."""
+    if not isinstance(read, dict) or read.get("score") is None:
+        return ""
+    return "turn %+g %s (%dd)" % (read["score"], read.get("label") or "",
+                                 read.get("bars") or REVERSAL_MOOD_BARS)

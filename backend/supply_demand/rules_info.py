@@ -71,12 +71,24 @@ def _room_lines():
 
 def _direction_line():
     """Built from the enforcing constant, never retyped."""
-    return ("PHONE: only %s reaches it (Ajay 2026-09-09, after CASY). Falling into, settling "
-            "into, reclaiming from below and resting inside all still LIST on the boards and "
-            "send nothing. On 2026-09-09 a 'falling into demand' push on CASY named a stop at "
-            "$624.35 twenty minutes before it printed $604.51 — it had reported earnings after "
-            "the previous close. A bounce is the only approach with price already turning."
-            % " / ".join(AG.PUSH_DIRECTIONS))
+    from . import bullish_context as BC
+    return ("PHONE: only %s reaches it, and only as a BULLISH REVERSAL (Ajay 2026-09-09, after "
+            "CASY: \"only bouncing off alerts\", then \"mood has to be bullish too with "
+            "reversal. After a stationary bottommed stocks as I caught a fallig knife\"). "
+            "Falling into, settling into, reclaiming from below and resting inside all still LIST "
+            "and send nothing. On top of that bounce — which is an INTRADAY read, and CASY "
+            "satisfied it at 08:13 ET while in free-fall — two DAILY-structure gates: NOT a "
+            "falling knife (swing lows stepping down AND the %d-day falling, both required, "
+            "neutral structure, no book) and the mood of the TURN ≥ %+g over the last %d sessions. "
+            "The turn, not the two-year read, which scores a genuinely bottomed name −45 on trend, "
+            "location and structure before momentum and so could never call a real reversal "
+            "bullish. Both FAIL CLOSED. GEX, named bullish patterns and the latest StockTwits "
+            "sentiment ride in the body and NEVER gate — across %d resolved pattern observations "
+            "not one beat the %d%% placebo, and flat_top fired on 120 of 120 random names."
+            % (" / ".join(AG.PUSH_DIRECTIONS), AG.KNIFE_MA_LEN, AG.REVERSAL_MOOD_FLOOR,
+               AG.REVERSAL_MOOD_BARS, BC.PATTERN_PLACEBO[0], BC.PATTERN_PLACEBO[1]))
+
+
 
 
 def _proven_line():
