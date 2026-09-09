@@ -875,6 +875,10 @@ def _dwell_decor(tiles: list) -> int:
 KNIFE_BADGE_TEXT = "\U0001F52A falling knife"
 KNIFE_STAT_KEY = "Knife"
 
+# Stop hunt vs break, on the band the tile is about (Ajay 2026-09-09).
+SWEPT_BADGE_TEXT = "\U0001F3AF swept the stops"
+BROKEN_BADGE_TEXT = "\U0001F52A band broken"
+
 
 def _knife_decor(tiles: list) -> int:
     """Flag every tile whose daily structure is a falling knife.
@@ -891,6 +895,35 @@ def _knife_decor(tiles: list) -> int:
             continue
         t.setdefault("badges", []).append({"text": KNIFE_BADGE_TEXT, "tone": "warn"})
         t.setdefault("stats", []).append({"k": KNIFE_STAT_KEY, "v": "yes"})
+        n += 1
+    return n
+
+
+def _sweep_decor(tiles: list) -> int:
+    """Say which kind of dip put the name here.
+
+    Ajay 2026-09-09: "bullish stocks that got in to demand zone .. where
+    Institutions hunt for stop losses .. I been catching some falling knives".
+    The two look identical on a board until you ask whether price CLOSED back
+    above the floor:
+
+        swept   pierced the floor and reclaimed it   -> the setup he wants
+        broken  pierced and stayed under             -> the knife he keeps buying
+        intact  never pierced                        -> nothing to say
+
+    Measured 2026-09-09 on the live board: of 102 names past bouncing + room +
+    proximity, 37% swept, 32% intact and 30% BROKEN — and two of the broken ones
+    cleared every gate the phone had."""
+    n = 0
+    for t in tiles:
+        st = t.get("_sweep")
+        if st == "swept":
+            t.setdefault("badges", []).append({"text": SWEPT_BADGE_TEXT, "tone": "good"})
+        elif st == "broken":
+            t.setdefault("badges", []).append({"text": BROKEN_BADGE_TEXT, "tone": "warn"})
+        else:
+            continue
+        t.setdefault("stats", []).append({"k": "Band", "v": st})
         n += 1
     return n
 
@@ -1853,6 +1886,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # already computes it per row; passing it through beats reloading
             # prices once per tile.
             "_knife": bool(r.get("is_knife")),
+            "_sweep": ((r.get("sweep") or {}).get("state")),
             "_flow": _order.inflow_of(r),
             "badges": (([{"text": ap_badge["text"], "tone": ap_badge["tone"]}] if ap_badge else [])
                 + ([
@@ -1911,6 +1945,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     gex_as_of = _gex_decor(out, "demand")
     _dwell_decor(out)
     _knife_decor(out)
+    _sweep_decor(out)
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
@@ -2846,6 +2881,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # Falling-knife flag for _knife_decor (2026-09-09). Absent on a row
             # that never computed it -> False -> no badge, never a wrong one.
             "_knife": bool(r.get("is_knife")),
+            "_sweep": ((r.get("sweep") or {}).get("state")),
             "badges": badges,
             "_score": float(len(rows) - rank),
             "_m": tile_metrics(r),
@@ -2855,6 +2891,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     gex_as_of = _gex_decor(out, "demand")
     _dwell_decor(out)
     _knife_decor(out)
+    _sweep_decor(out)
     flow_counts = {"inflow": 0, "neutral": 0, "distribution": 0}
     for t in tiles:
         st = next((b for b in t.get("badges") or [] if "Money flowing in" in b["text"]), None)

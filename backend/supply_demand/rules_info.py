@@ -60,6 +60,22 @@ def _zone_lines():
     ]
 
 
+def _sweep_line():
+    """Built from sd_liquidity's own house geometry, never retyped."""
+    from . import sd_liquidity as liq
+    return ("\U0001F3AF STOP HUNT vs \U0001F52A BROKEN BAND (Ajay 2026-09-09: \"bullish stocks that "
+            "got in to demand zone .. where Institutions hunt for stop losses .. I been catching "
+            "some falling knives\"). Every push and every demand tile now says which dip put the "
+            "name there. SWEPT = the low pierced the band floor by %s\u2013%s (deeper is a "
+            "breakdown, not a stop-run) on at least %.1f\u00d7 the local volume, and price CLOSED "
+            "back above the floor within %d bars. BROKEN = pierced and stayed under \u2014 CASY's "
+            "own read. INTACT = never pierced. A READ, not a gate: it rides on the alert so the "
+            "two can be told apart, which on a chart they cannot. Counted on the live board: of "
+            "102 names past bouncing + room + proximity, 37%% swept, 32%% intact, 30%% BROKEN."
+            % (_pct(liq.SWEEP_MIN_PIERCE_PCT), _pct(liq.SWEEP_MAX_PIERCE_PCT),
+               liq.SWEEP_MIN_VOL_X, liq.RECLAIM_MAX_BARS))
+
+
 def _room_lines():
     return [
         "Room floor: at least %s to the first unbroken PROVEN band overhead (CLEAR counts); "
@@ -134,6 +150,7 @@ def sections() -> dict:
         ],
         "stops": _zone_lines(),
         "alerts": [
+            _sweep_line(),
             "\U0001F3AF Ready to enter (\u26A1 Signals tab, pre-market 08:00 ET and every 15 min in "
             "session): the same two gates decide READY; a name that clears them still grades "
             "WATCH if it is reclaiming the band from below (measured %s floor-stop rate vs %s "

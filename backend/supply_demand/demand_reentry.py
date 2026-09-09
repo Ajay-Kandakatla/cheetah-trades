@@ -1448,6 +1448,12 @@ def decide_from_frame(df, sym: str):
     trend_ok = not is_knife
 
     entry_zone = _pick_entry_zone(last_price, demand)
+    # Stop hunt vs break, on the band this row is ABOUT (Ajay 2026-09-09: "bullish
+    # stocks that got in to demand zone .. where Institutions hunt for stop losses
+    # .. I been catching some falling knives"). ONE definition, alert_gates', read
+    # on the frame already in hand — swept = pierced and closed back above the
+    # floor; broken = pierced and stayed under. A READ for the tiles, not a gate.
+    sweep = _gates.sweep_read(entry_zone, frame=df) if entry_zone else None
     # ONE price basis (2026-09-05 review). `zones["last_price"]` and every band
     # edge are 2dp quotes (price_zones rounds them); the closes used to be raw.
     # A Massive close 0.4c above the band top was therefore INSIDE for the
@@ -1525,6 +1531,7 @@ def decide_from_frame(df, sym: str):
         # Why it did / didn't qualify — surfaced so the list is auditable.
         "structure": structure,
         "is_knife": is_knife,
+        "sweep": sweep,
         "trend_ok": trend_ok,
         "zone_quality_ok": quality_ok,
         "entry_zone": entry_zone,

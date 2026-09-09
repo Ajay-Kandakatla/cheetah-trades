@@ -239,6 +239,12 @@ def at_message(item: dict) -> dict:
         where = f"{ap['tag']} demand"
         parts.append(ap["text"])
     parts.append(tested)
+    # Stop hunt vs break (Ajay 2026-09-09: "Institutions hunt for stop losses ..
+    # I been catching some falling knives"). A READ, not a gate — it says which
+    # kind of dip this was, in his own terms.
+    sweep_s = AG.sweep_txt(item.get("sweep"))
+    if sweep_s:
+        parts.append(sweep_s)
     if mood_s:
         parts.append(mood_s)
     if "room" in item:                                    # the phone gate's read (2026-09-05)
@@ -486,6 +492,9 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         # so the full-frame read can never call a real bottom bullish.
         rm = AG.reversal_mood_read(it["symbol"], frame=frame)
         it["reversal_mood"] = rm
+        # Which kind of dip this was — swept the stops and reclaimed, or broke
+        # and stayed under. Same frame, no extra load.
+        it["sweep"] = AG.sweep_read(it["band"], it["symbol"], frame=frame)
         if not AG.reversal_mood_gate(it["symbol"], read=rm):
             skipped_mood += 1
             continue

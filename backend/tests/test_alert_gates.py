@@ -676,3 +676,78 @@ def test_every_pattern_shown_carries_its_record_against_the_placebo():
     txt = BC.context_txt({"patterns": [{"name": "double_bottom",
                                         "record": {"n": 248, "up_pct": 43, "mean_pct": 0.35}}]})
     assert "43% up" in txt and "50% placebo" in txt
+
+
+# ── stop hunt vs falling knife (2026-09-09) ────────────────────────────────
+# Ajay: "I am trying to find bullish stocks that got in to demand zone for some
+# reason in the short while where Institutions hunt for stop losses in the
+# journey I been catching some falling knives do what ever is best"
+def _sweep_frame(pierce_pct, reclaim, *, floor=100.0, bars=40, vol_x=2.0):
+    """A frame that dips `pierce_pct` under `floor` and, if `reclaim`, closes
+    back above it on the next bar. Volume on the dip bar is `vol_x` the rest."""
+    closes = [floor * 1.06] * bars
+    lows = [floor * 1.04] * bars
+    vols = [1_000_000] * bars
+    i = bars - 3
+    low = floor * (1.0 - pierce_pct / 100.0)
+    lows[i] = low
+    closes[i] = low if not reclaim else floor * 0.999
+    vols[i] = int(1_000_000 * vol_x)
+    if reclaim:
+        closes[i + 1] = floor * 1.02
+        lows[i + 1] = floor * 1.01
+    else:
+        for k in range(i + 1, bars):
+            closes[k] = low * 0.99
+            lows[k] = low * 0.98
+    return _frame(closes, lows=lows, highs=[c * 1.01 for c in closes], vol=1_000_000).assign(
+        volume=vols)
+
+
+BAND = {"kind": "demand", "lo": 100.0, "hi": 104.0, "touches": 3}
+
+
+def test_a_stop_run_that_reclaims_reads_swept():
+    """Pierced the floor to take the stops, closed back above it. HIS setup."""
+    r = AG.sweep_read(BAND, "X", frame=_sweep_frame(1.2, True))
+    assert r["state"] == "swept"
+    assert 1.0 < r["pierce_pct"] < 1.5
+    assert "swept the stops" in AG.sweep_txt(r)
+
+
+def test_a_break_that_never_reclaims_reads_broken():
+    """Pierced and stayed under. THE FALLING KNIFE — CASY's own read."""
+    r = AG.sweep_read(BAND, "X", frame=_sweep_frame(1.2, False))
+    assert r["state"] == "broken"
+    assert "broke the band" in AG.sweep_txt(r)
+    assert "swept" not in AG.sweep_txt(r)
+
+
+def test_a_band_never_pierced_reads_intact():
+    r = AG.sweep_read(BAND, "X", frame=_frame([106.0] * 40, lows=[104.5] * 40))
+    assert r["state"] == "intact" and AG.sweep_txt(r) == ""
+
+
+def test_a_dip_too_deep_is_a_breakdown_not_a_stop_run():
+    """sd_liquidity's own house rule: deeper than SWEEP_MAX_PIERCE_PCT is a
+    breakdown. It must never read as the setup, reclaim or not."""
+    from supply_demand import sd_liquidity as liq
+    assert liq.SWEEP_MAX_PIERCE_PCT == 4.0
+    r = AG.sweep_read(BAND, "X", frame=_sweep_frame(liq.SWEEP_MAX_PIERCE_PCT + 3.0, True))
+    assert r["state"] != "swept", "a 7% slice is not a stop run"
+
+
+def test_the_sweep_read_is_a_read_and_never_a_gate():
+    """He asked to SEE which dip was a stop run. Nothing here blocks a push —
+    pin that, because the gates and the reads live in the same module."""
+    import inspect
+    for gate in (AG.direction_gate, AG.knife_gate, AG.reversal_mood_gate,
+                 AG.room_gate, AG.demand_proximity_gate):
+        assert "sweep" not in inspect.getsource(gate), gate.__name__
+
+
+def test_the_sweep_read_degrades_to_none_instead_of_raising():
+    assert AG.sweep_read(None, "X", frame=_sweep_frame(1.0, True)) is None
+    assert AG.sweep_read(BAND, "X", frame=None) is None
+    assert AG.sweep_read(BAND, "X", frame=_frame([100.0] * 5)) is None
+    assert AG.sweep_txt(None) == "" and AG.sweep_txt({}) == ""

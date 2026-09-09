@@ -599,3 +599,89 @@ def reversal_mood_txt(read: Optional[dict]) -> str:
         return ""
     return "turn %+g %s (%dd)" % (read["score"], read.get("label") or "",
                                  read.get("bars") or REVERSAL_MOOD_BARS)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STOP HUNT vs FALLING KNIFE — Ajay 2026-09-09:
+#
+#   "I am trying to find bullish stocks that got in to demand zone for some
+#    reason in the short while where Institutions hunt for stop losses in the
+#    journey I been catching some falling knives do what ever is best"
+#
+# THE SETUP HE IS DESCRIBING IS NOT A BOTTOM. It is a strong name whose demand
+# band gets sliced through to take the stops resting under it, and then bought
+# back. The difference between that and the knife he keeps catching is ONE
+# thing: whether price CLOSED back above the floor.
+#
+# sd_liquidity.find_sweep has named those three states since 2026-08 and nothing
+# but a backtest has ever called it:
+#
+#     swept    pierced the floor and closed back above it   <- the setup
+#     broken   pierced and never reclaimed                  <- the knife
+#     intact   never pierced
+#
+# Its own house geometry already says what he said: pierce >= 0.15% ("must break
+# the floor to hit stops"), <= 4.0% ("deeper than this is a breakdown, not a
+# stop-run"), reclaim within 12 bars, and sweep-bar volume >= 1.3x local average
+# — absorption, not a quiet dip.
+#
+# This is a READ, not a gate. It rides on the push and the tiles so he can see
+# which dip was a stop run and which was a break.
+
+SWEEP_WINDOW_BARS = 15       # how far back a sweep may live and still be "now"
+
+
+def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS) -> Optional[dict]:
+    """{"state","pierce_pct","reclaim_bars","vol_x","sweep_low","stop_shelf"} or
+    None when it cannot be computed.
+
+    CLOSED BARS PLUS THE EVENT BAR: the day's low and close are both known at
+    the moment a push is decided, so the forming bar is legitimate HERE (unlike
+    the structure reads) — a stop run that happened this morning is the whole
+    point. Nothing after the decision bar is ever touched."""
+    if not _valid_band(band):
+        return None
+    df = daily_frame(symbol, frame)
+    if df is None or len(df) < window + 2:
+        return None
+    try:
+        from . import sd_liquidity as liq
+        lo, hi = float(band["lo"]), float(band["hi"])
+        w = df.iloc[-window:]
+        sw = liq.find_sweep(w, lo, hi)
+        state = sw.get("state") or "intact"
+        if not sw.get("found") and float(w["low"].min()) < lo:
+            state = "broken"          # pierced somewhere in the window, never reclaimed
+        return {"state": state,
+                "pierce_pct": sw.get("pierce_pct"),
+                "reclaim_bars": sw.get("reclaim_bars"),
+                "vol_x": sw.get("sweep_volume_x"),
+                "sweep_low": sw.get("sweep_low"),
+                "stop_shelf": sw.get("stop_shelf")}
+    except Exception:                                # noqa: BLE001
+        return None
+
+
+def sweep_txt(read: Optional[dict]) -> str:
+    """"🎯 swept the stops -0.8% and reclaimed in 1 bar (2.1x vol)" / "🔪 broke
+    the band and stayed under". "" when nothing can be said."""
+    if not isinstance(read, dict):
+        return ""
+    st = read.get("state")
+    if st == "swept":
+        bits = []
+        p = _f(read.get("pierce_pct"))
+        if p is not None:
+            bits.append("-%.1f%%" % p)
+        rb = read.get("reclaim_bars")
+        if rb is not None:
+            bits.append("reclaimed in %d bar%s" % (int(rb), "" if int(rb) == 1 else "s"))
+        v = _f(read.get("vol_x"))
+        if v is not None:
+            bits.append("%.1fx vol" % v)
+        return "\U0001F3AF swept the stops" + (" " + " · ".join(bits) if bits else "")
+    if st == "broken":
+        p = _f(read.get("pierce_pct"))
+        return ("\U0001F52A broke the band%s and stayed under"
+                % (" by %.1f%%" % p if p is not None else ""))
+    return ""
