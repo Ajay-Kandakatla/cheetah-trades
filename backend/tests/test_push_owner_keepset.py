@@ -17,16 +17,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from push import subs   # noqa: E402
 
 
-def test_keep_set_is_the_sd_signals_plus_his_todos():
-    assert subs.OWNER_KEEP_SET == frozenset({
-        "demand_alert", "zone_bounce_alert", "supply_break_alert",
-        "position_alert", "todo_reminder"})
-    for gone in ("promo_alert", "pivot_alert", "trade_flash", "scalp_tape",
-                 "minervini_flashcards", "market_hours_reminder", "price_alert",
-                 "morning_brief", "product_launch", "vb_workout", "house_daily",
-                 "volume_breakout", "rising_momentum", "accumulation_change"):
-        assert gone not in subs.OWNER_KEEP_SET, gone
+def test_keep_set_is_the_2026_09_09_four():
+    """REPLACED 2026-09-09. Ajay: "Can you give me hot pull back alerts and
+    chart pattern Alerts and also Sameday deman alerts please... Kill all
+    other.. I just wanna these alerts.. Default turn these on from tomorrow."
 
+    Asked whether the stop alerts on stocks he OWNS counted as "other", he kept
+    those and dropped the todo reminders. What left: zone_bounce_alert,
+    supply_break_alert, todo_reminder."""
+    assert subs.OWNER_KEEP_SET == frozenset({
+        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert"})
+    for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
+        assert gone not in subs.OWNER_KEEP_SET, gone
+    # every kept kind must exist in default_prefs or it sends to ZERO devices
+    assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs())
 
 def test_owner_prefs_mute_everything_outside_the_keep_set():
     p = subs.owner_prefs()

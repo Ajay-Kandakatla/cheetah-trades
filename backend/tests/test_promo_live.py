@@ -117,10 +117,14 @@ def _stub_world(monkeypatch, rows, state, send_result):
     return sent, coll
 
 
+# Every row carries a cap OVER the alert floor (2026-09-09): these tests are
+# about sessions, handles and dedupe, and a row without a cap now fails the
+# floor closed — which would make them silently re-test the floor instead.
+_OVER = 1_500_000_000.0
 ROWS = [
-    {"ticker": "RUN", "status": "RAN", "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 2},
-    {"ticker": "FLAT", "status": "SEEDING", "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 1},
-    {"ticker": "GATED", "status": "SEEDING", "accounts": [{"handle": "ShangVXO"}], "days_since_last_tag": 1},
+    {"ticker": "RUN", "status": "RAN", "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 2, "market_cap": _OVER},
+    {"ticker": "FLAT", "status": "SEEDING", "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 1, "market_cap": _OVER},
+    {"ticker": "GATED", "status": "SEEDING", "accounts": [{"handle": "ShangVXO"}], "days_since_last_tag": 1, "market_cap": _OVER},
 ]
 
 
@@ -251,3 +255,66 @@ def test_cron_entry_warms_zones_after_the_alert_pass():
     src = inspect.getsource(pl)
     main = src[src.index('if __name__ == "__main__"'):]
     assert main.index("check_alerts()") < main.index("warm_zones()")
+
+
+# ── alert cap floor (2026-09-09) ───────────────────────────────────────────
+# Ajay: "the promo page do not alert if the stocks is not greator than 700 M
+# networth." A PUSH floor only — the board still lists every microcap, because
+# it is a do-not-chase radar and hiding the pumps would defeat it.
+def test_the_alert_cap_floor_is_seven_hundred_million():
+    assert pl.PROMO_MIN_CAP_USD == 700_000_000.0
+
+
+def _capped(cap):
+    """The ROWS fixture with RUN's cap swapped — RUN is the name that alerts."""
+    out = []
+    for r in ROWS:
+        r = dict(r)
+        if r["ticker"] == "RUN":
+            r["market_cap"] = cap
+        out.append(r)
+    return out
+
+
+def test_a_name_under_the_floor_is_listed_and_never_pushed(monkeypatch):
+    sent, _ = _stub_world(monkeypatch, _capped(120_000_000.0), "afterhours",
+                          {"sent": 1, "failed": 0, "total_targets": 1})
+    out = pl.check_alerts("o@x.com")
+    assert [t for t, _m in sent] == [] or "RUN" not in [m["ticker"] for _t, m in sent]
+    assert out["pushed"] == 0 and out["skipped_cap"] == 1
+
+
+def test_a_name_over_the_floor_still_rings(monkeypatch):
+    sent, _ = _stub_world(monkeypatch, _capped(3_000_000_000.0), "afterhours",
+                          {"sent": 1, "failed": 0, "total_targets": 1})
+    out = pl.check_alerts("o@x.com")
+    assert [m["ticker"] for _t, m in sent] == ["RUN"]
+    assert out["pushed"] == 1 and out["skipped_cap"] == 0 and out["unknown_cap"] == 0
+
+
+def test_exactly_the_floor_does_not_ring_because_he_said_GREATER_than(monkeypatch):
+    sent, _ = _stub_world(monkeypatch, _capped(pl.PROMO_MIN_CAP_USD), "afterhours",
+                          {"sent": 1, "failed": 0, "total_targets": 1})
+    out = pl.check_alerts("o@x.com")
+    assert out["pushed"] == 0 and out["skipped_cap"] == 1 and sent == []
+
+
+def test_an_unknown_cap_fails_closed_and_is_counted_separately(monkeypatch):
+    """"not greater than 700M" includes "nobody knows how big it is" — and the
+    promo roster is exactly where cap data is thinnest."""
+    for bad in (None, "", "n/a", float("nan")):
+        sent, _ = _stub_world(monkeypatch, _capped(bad), "afterhours",
+                              {"sent": 1, "failed": 0, "total_targets": 1})
+        out = pl.check_alerts("o@x.com")
+        assert out["pushed"] == 0 and sent == [], bad
+        assert out["unknown_cap"] == 1 and out["skipped_cap"] == 0, bad
+
+
+def test_the_floor_never_hides_a_row_from_the_board(monkeypatch):
+    """A PUSH gate only. The live table must still carry the microcap — the
+    board is a do-not-chase radar and hiding the pumps would defeat it."""
+    _stub_world(monkeypatch, _capped(120_000_000.0), "afterhours",
+                {"sent": 1, "failed": 0, "total_targets": 1})
+    payload = pl.live_rows(force=True)
+    assert "RUN" in [r["ticker"] for r in payload["rows"]]
+    assert payload["alert_min_cap_usd"] == pl.PROMO_MIN_CAP_USD

@@ -23,6 +23,16 @@ from zoneinfo import ZoneInfo
 log = logging.getLogger("catalysts.promo_live")
 
 PROMO_MOVE_PCT = 8.0
+# Ajay 2026-09-09: "the promo page do not alert if the stocks is not greator
+# than 700 M networth." A PUSH floor only — the live table still prices and
+# lists the whole board, microcaps included, because the board is a
+# do-not-chase radar and hiding the pumps would defeat it.
+#
+# UNKNOWN CAP FAILS CLOSED. "not greater than 700M" includes "nobody knows how
+# big it is", and the promo roster is exactly where cap data is thinnest.
+# Measured on the live board the day he asked: of 128 roster-tagged names, 59
+# (46.1%) clear the floor, 62 sit under it and 7 have no cap at all.
+PROMO_MIN_CAP_USD = 700_000_000.0
 # Ajay 2026-09-02: "just give me alerts from the topstock alerts only". Alerts
 # fire ONLY on names carrying a tag from these handles; the live table still
 # prices the whole board. User-editable; empty set = every roster handle.
@@ -332,6 +342,7 @@ def live_rows(force: bool = False) -> dict:
         "live": {"state": st["state"], "refresh_sec": LIVE_REFRESH_SEC if st["refresh_sec"] else 0,
                  "as_of": st.get("as_of")},
         "alert_threshold_pct": PROMO_MOVE_PCT,
+        "alert_min_cap_usd": PROMO_MIN_CAP_USD,
         "alert_handles": sorted(PROMO_ALERT_HANDLES),
         "room_note": ("Room = % from the live print to the bottom of the first band overhead "
                       "(supply at/above it, or support it already broke); daily-bar zones, "
@@ -363,6 +374,7 @@ def check_alerts(owner: Optional[str] = None) -> dict:
     state = payload["live"]["state"]
     tag = {"premarket": "PRE", "afterhours": "AH", "rth": "RTH"}.get(state, "")
     pushed, fired = 0, []
+    skipped_cap = unknown_cap = 0
     for r in payload["rows"]:
         if not r.get("alertable") or r.get("session") == "closed":
             continue
@@ -382,6 +394,24 @@ def check_alerts(owner: Optional[str] = None) -> dict:
             key = f"{r['ticker']}:{day}:{d}"
             move = f"{r['day_pct']:+.1f}%"
             base_px = r.get("prev_close")
+        # Cap floor (Ajay 2026-09-09). Placed AFTER the move read on purpose, so
+        # skipped_cap counts names that WOULD have alerted rather than every
+        # microcap on the board.
+        cap = r.get("market_cap")
+        try:
+            cap = float(cap) if cap is not None else None
+        except (TypeError, ValueError):
+            cap = None
+        # NaN parses as a float and `nan <= floor` is FALSE, so a NaN cap would
+        # sail straight through the floor. Caught by its own negative test.
+        if cap is not None and cap != cap:
+            cap = None
+        if cap is None:
+            unknown_cap += 1
+            continue
+        if cap <= PROMO_MIN_CAP_USD:
+            skipped_cap += 1
+            continue
         if coll is not None:
             try:
                 if coll.find_one({"_id": key}):
@@ -415,7 +445,10 @@ def check_alerts(owner: Optional[str] = None) -> dict:
                 log.warning("promo alert dedupe write failed: %s", exc)
         fired.append({"symbol": r["ticker"], "move": move,
                       "session": state, "sent": sent})
-    out = {"ok": True, "pushed": pushed, "fired": fired, "session": payload["live"]["state"]}
+    out = {"ok": True, "pushed": pushed, "fired": fired, "session": payload["live"]["state"],
+           # why the phone was quiet (Ajay 2026-09-09)
+           "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
+           "min_cap_usd": PROMO_MIN_CAP_USD}
     log.info("promo_live: %s", out)
     return out
 

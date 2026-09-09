@@ -755,3 +755,31 @@ def test_the_things_to_see_are_read_only_for_names_that_survive(monkeypatch):
                         lambda sym, frame=None: {"knife": False, "trend": "rising"})
     DA.check_once(live=_live_bouncing(CASY=(646.0, -11.9, 733.49)), coll=FakeColl(), **_casy_kw())
     assert seen == ["CASY"]
+
+
+def test_same_day_arrivals_only_is_enforced_by_read_not_a_second_gate():
+    """Ajay 2026-09-09 asked for "Sameday deman alerts". That rule ALREADY lives
+    in read(): "prev_close given = arrivals only — the tier fires only if
+    yesterday's close was still OUTSIDE that tier's ring". Pinned here rather
+    than restated as a second gate, because two copies of a rule drift.
+
+    A resident (yesterday closed inside the band) gets NO tier at all, so it
+    never becomes a candidate and can never reach the phone."""
+    band = _band(627.49, 651.0)
+    # arrived today: yesterday closed above the band top
+    assert DA.read(646.0, band, -11.9, 733.49)["tier"] == "at"
+    # resident: yesterday closed inside it
+    assert DA.read(646.0, band, -0.4, 640.0) is None
+    # resident: yesterday closed just above the top but inside the AT ring
+    assert DA.read(646.0, band, -0.4, 651.0 * 1.005) is None
+    # no prior close at all -> cannot tell arrival from residence -> None
+    assert DA.read(646.0, band, -0.4, 0) is None
+
+
+def test_the_pass_refuses_a_row_with_no_prior_close(monkeypatch):
+    """The arrival rule is only as good as prev_close always being there —
+    demand_alerts counts and drops a row without one."""
+    _capture(monkeypatch)
+    out = DA.check_once(live={"CASY": {"price": 646.0, "change_pct": -11.9}},
+                        coll=FakeColl(), **_casy_kw())
+    assert out["pushed"] == 0 and out["unknown_prev"] == 1

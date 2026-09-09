@@ -308,12 +308,25 @@ def _backfill(db):
 # alerts and 105 flash cards in a week. For the OWNER only, a registering device
 # starts with these five and nothing else; everyone else keeps default_prefs().
 # Muting a kind is a data write; this is the floor a re-subscribe falls back to.
+# REPLACED 2026-09-09. Ajay: "Can you give me hot pull back alerts and chart
+# pattern Alerts and also Sameday deman alerts please... Kill all other.. I just
+# wanna these alerts.. Default turn these on from tomorrow." Asked whether the
+# stop alerts on stocks he OWNS counted as "other", he chose to keep them and
+# drop the todo reminders.
+#
+# WHAT LEFT: zone_bounce_alert, supply_break_alert, todo_reminder.
+#
+# SAID OUT LOUD, BECAUSE THE CODE SHOULD NOT PRETEND OTHERWISE: the three
+# scanning kinds he chose are the three this app has measured at or below a coin
+# flip — hot pullback 51.8% (interval includes zero), chart patterns 49.3%
+# against a 50% placebo, same-day demand arrivals 52%. He was shown those
+# numbers and asked for them anyway, as a watchlist. Each push carries its own
+# record so the screen never implies more than the measurement supports.
 OWNER_KEEP_SET: frozenset = frozenset({
-    "demand_alert",        # S/D buy: arrival at a tested demand band
-    "zone_bounce_alert",   # S/D buy: confirmed bounce off one
-    "supply_break_alert",  # S/D buy: breaking the last supply band
-    "position_alert",      # S/D sell: supply reached, and the entry-band STOP
-    "todo_reminder",       # his own todos — personal, never market noise
+    "hot_pullback_alert",  # 🔥 the flush-and-turn board
+    "pattern_alert",       # 📐 named bullish reversal patterns
+    "demand_alert",        # 🧲 SAME-DAY arrivals at a tested demand band only
+    "position_alert",      # 🔴 stop / supply reached on stocks he actually owns
 })
 
 
@@ -367,6 +380,23 @@ def default_prefs() -> dict:
         # per 5-min pass). Ajay 2026-09-03: "big companies ... coming close
         # to Demand zones."
         "demand_alert": True,
+        # 🔥 Hot Pullback (supply_demand/hot_pullback_alerts.py): a name that was
+        # HOT, took one hard flush into a tested demand band and turned the same
+        # day. Ajay 2026-09-09: "Can you give me hot pull back alerts and chart
+        # pattern Alerts and also Sameday deman alerts please... Kill all other."
+        # HONEST: this board measures 51.8% win over 83 trades with a 95%
+        # interval of -0.19R to +0.41R that INCLUDES ZERO. He asked for it as a
+        # watchlist ping, not as an edge, and the push says so.
+        # MUST be here — a kind missing from default_prefs silently drops for
+        # every device (total_targets = 0).
+        "hot_pullback_alert": True,
+        # 📐 Chart pattern (patterns/pattern_alerts.py): a named bullish reversal
+        # pattern confirms on the daily frame. Same ask, same day.
+        # HONEST: his own ledger has cup_with_handle at 45% up, double_bottom
+        # 43%, triple_bottom 37% against a 50% placebo over 669 resolved
+        # observations — NOT ONE beats chance. Every push carries the pattern's
+        # own record beside the placebo so the number is never hidden.
+        "pattern_alert": True,
         # Zone bounce (supply_demand/zone_bounce_alerts.py): a $1B+ name
         # touched a demand level — or a BROKEN supply shelf now acting as
         # support — intraday and is already bouncing off it (above the band,

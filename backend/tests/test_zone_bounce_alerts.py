@@ -380,7 +380,10 @@ def test_notifications_page_and_prefs_type_know_the_kind():
     assert "key: 'zone_bounce_alert'" in page
     assert page.index("key: 'demand_alert'") < page.index("key: 'zone_bounce_alert'") < \
         page.index("key: 'minervini_flashcards'"), "sits right after demand_alert"
-    assert "zone_bounce_alert: true" in page, "essentials preset keeps it on"
+    # 2026-09-09 ("Kill all other"): Essentials now MUTES this kind. What this
+    # test is really for still holds — the page must LIST it, because a kind
+    # the page cannot show is a kind he cannot turn back on.
+    assert "zone_bounce_alert: false" in page, "essentials must mute it since 2026-09-09"
     prefs = (ROOT / "frontend/src/hooks/useNotificationPrefs.ts").read_text()
     assert "zone_bounce_alert?: boolean" in prefs
 

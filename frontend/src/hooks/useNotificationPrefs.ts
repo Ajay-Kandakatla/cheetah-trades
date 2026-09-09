@@ -21,6 +21,10 @@ export type NotificationPrefs = {
   promo_alert?: boolean;
   demand_alert?: boolean;
   zone_bounce_alert?: boolean;
+  /* 2026-09-09 keep-set (Ajay: "hot pull back alerts and chart pattern Alerts
+     and also Sameday deman alerts ... Kill all other"). */
+  hot_pullback_alert?: boolean;
+  pattern_alert?: boolean;
   // Breaking resistance → new highs (supply_demand.zone_edge, every minute
   // in session). The near-demand side of that pass reuses demand_alert.
   supply_break_alert?: boolean;

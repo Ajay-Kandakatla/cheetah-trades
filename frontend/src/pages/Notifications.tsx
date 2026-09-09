@@ -38,6 +38,10 @@ const CATEGORIES: CategoryDef[] = [
     detail: 'A name tagged by the caught pump accounts moves ±8% vs the prior close — pre-market, regular and after-hours. Once per direction per day. The tag is the promotion: a do-not-chase radar.' },
   { key: 'demand_alert', label: 'Demand-zone approach', emoji: '🧲', group: 'trading',
     detail: 'A $1B+ name from the demand board ARRIVES inside, or within 1% of, a tested demand band today (yesterday it closed outside) — one push per band per day — plus one digest per 5-min check of names newly 1–3% above a band and falling. Names that have been sitting in a band are the board\'s business, not a buzz. Gabbar-level names get the same "nearing" tier under Buyable alerts. Unknown market cap is skipped. Phone gate (Ajay 2026-09-05: \"Need only alerts on stocks that have atleast 5% to Supply and also <1% bounce from demand zone\"): the push fires only when the first band overhead is at least 5% above the print (nothing overhead passes) and the print sits between the band floor and 1% above its top; the boards still list every name.' },
+  { key: 'hot_pullback_alert', label: 'Hot Pullback', emoji: '🔥', group: 'trading',
+    detail: 'A name that had been HOT takes one hard flush into a tested demand band and turns the same day — pushed at 08:15 ET from the CLOSED session recorded the evening before, never a live re-scan (mid-day the board repaints). One push per name per signal day; 4 ring individually, the rest share a digest. HONEST RECORD, and the push repeats it: 51.8% win over 83 trades on 50 dates, expectancy +0.10R with a 95% interval of −0.19R to +0.41R that INCLUDES ZERO, and no gate inside the rule separates (the demand band itself measures p=0.198). You asked for this as a watchlist ping after seeing those numbers — treat it as one. The edge, such as it is, is gone by day 5.' },
+  { key: 'pattern_alert', label: 'Chart patterns', emoji: '📐', group: 'trading',
+    detail: 'A named bullish reversal pattern CONFIRMS on the daily frame — cup-with-handle, double bottom, triple bottom, inverse head-and-shoulders — pushed at 08:15 ET off the 17:05 scan. One push per symbol per pattern per confirmation day. HONEST RECORD, carried in every push beside the pattern: across 669 resolved observations in your own ledger, cup-with-handle closed up 45% of the time over 434, double bottom 43% over 248, triple bottom 37% over 68 and inverse head-and-shoulders 10% over 10 — against a 50% placebo. NOT ONE BEATS CHANCE. flat_top is excluded outright: it fired on 120 of 120 random names. A watchlist ping, not a signal this app stands behind.' },
   { key: 'zone_bounce_alert', label: 'Demand-level bounces', emoji: '🪃', group: 'trading',
     detail: 'A $1B+ name touched a demand band — or a BROKEN supply shelf now acting as support — intraday and is already bouncing: back above the band and at least 3% (or one ATR) off the day\'s low, with yesterday\'s close more than 3% above the band (arrivals only). Every band counts, even single-touch shelves the demand board ignores (NTAP 2026-09-03: -10% gap to 161, +6% by 09:33). Strong bounces (5% / 2 ATR, max 3 per check) get their own push; the rest share one digest per 5-min check. Once per band per day. Unknown market cap is skipped. Phone gate (Ajay 2026-09-05: \"Need only alerts on stocks that have atleast 5% to Supply and also <1% bounce from demand zone\"): the push fires only when the first band overhead is at least 5% above the print (nothing overhead passes) and the print sits between the band floor and 1% above its top; the boards still list every name.' },
   { key: 'supply_break_alert', label: 'Breaking resistance → new highs', emoji: '🚀', group: 'trading',
@@ -363,13 +367,20 @@ const PRESETS: { id: string; label: string; emoji: string; detail: string; pref:
     pref: Object.fromEntries(CATEGORIES.map(c => [c.key, false])) as any,
   },
   {
+    // Ajay 2026-09-09: "Can you give me hot pull back alerts and chart pattern
+    // Alerts and also Sameday deman alerts please... Kill all other.. I just
+    // wanna these alerts.. Default turn these on from tomorrow." Asked whether
+    // the stops on stocks he OWNS counted as "other", he kept those and dropped
+    // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'High-signal only: buyable / Enter-zone, demand-level arrivals and bounces, breaking resistance, promo movers + portfolio stops.',
+    detail: 'The 2026-09-09 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals, and 💼 stops on stocks you own. Everything else muted.',
     pref: {
-      pivot_alert: true, position_alert: true, promo_alert: true, demand_alert: true,
-      zone_bounce_alert: true, supply_break_alert: true,
+      hot_pullback_alert: true, pattern_alert: true,
+      demand_alert: true, position_alert: true,
+      pivot_alert: false, promo_alert: false,
+      zone_bounce_alert: false, supply_break_alert: false,
       minervini_flashcards: false, market_hours_reminder: false,
-      todo_reminder: false, todo_daily_digest: true,
+      todo_reminder: false, todo_daily_digest: false,
     },
   },
   {

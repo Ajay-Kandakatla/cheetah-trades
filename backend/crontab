@@ -122,6 +122,21 @@
 5      17    *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (post-close record): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
 5      8     *    *    1-5  curl -sS -m 120 -o /dev/null -w 'hot-pullback (premarket record): HTTP %{http_code}\n' -H 'X-User-Email: cron@internal' 'http://api:8000/supply-demand/hot-pullback?universe=full&force=true&record=true'
 #
+# 🔥 HOT PULLBACK ALERTS (supply_demand/hot_pullback_alerts.py) — Ajay
+# 2026-09-09: "Can you give me hot pull back alerts and chart pattern Alerts
+# and also Sameday deman alerts please... Kill all other.. I just wanna these
+# alerts.. Default turn these on from tomorrow."
+#
+# 08:15, AFTER the 08:05 record has written yesterday's closed session — the
+# alert reads what was recorded, never a live re-scan, because the board is
+# built off the latest bar and mid-day that bar repaints. One push per name per
+# SIGNAL day, so the 08:05 backstop re-running cannot double-fire.
+#
+# The push carries the board's own 51.8% win rate and the words "INCLUDES
+# ZERO": he asked for this as a watchlist ping after being shown that its 95%
+# interval spans -0.19R to +0.41R.
+15     8     *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.hot_pullback_alerts
+#
 # Ajay 2026-09-09: "Can refresh hot pull back in the pre market too". Every 20
 # minutes from 04:20 to 09:20 ET. These re-evaluate the LAST CLOSED session
 # against freshly rebuilt bands (the 04:05 zone_store warm moves them), so a
@@ -320,6 +335,10 @@
 # 1 ATR) off the low. STRONG (>= max(5%, 2 ATR)) = own push, max 3 per
 # pass; the rest = ONE digest. Once per (symbol, band, day); cap >= $1B;
 # kind zone_bounce_alert. Module refuses to run outside 9:33-16:00 ET.
+# STILL RUNS after 2026-09-09 ("Kill all other"). The PREF is what silences a
+# kind, not the cron: this pass also maintains the bounce state the boards and
+# the 🔔 alerted-today chips read, so switching it off would break screens he
+# still uses to see what he is no longer being pushed.
 4-59/5 9-16  *    *    1-5  /usr/local/bin/python -m supply_demand.zone_bounce_alerts
 #
 # Zone EDGE (supply_demand/zone_edge.py) — EVERY MINUTE 04:00-20:00 ET (pre-
@@ -704,6 +723,17 @@
 # reads → next-5-bar direction. Feeds GET /patterns/accuracy — the live
 # "are our patterns accurate?" record Ajay asked for 2026-06-10.
 20     17    *    *    1-5  /usr/local/bin/python -m patterns.history
+#
+# 📐 CHART-PATTERN ALERTS (patterns/pattern_alerts.py) — same ask, same day.
+# 08:15, reading the 17:05 scan's confirmations from the close just gone; a
+# pattern confirmed yesterday is actionable at today's open. One push per
+# (symbol, pattern, confirmation day).
+#
+# EVERY PUSH CARRIES ITS OWN RECORD AND THE PLACEBO, because his ledger says
+# none of these beats chance: cup_with_handle 45% up over 434, double_bottom
+# 43% over 248, triple_bottom 37% over 68, against a 50% placebo over 659
+# resolved observations. He was shown that and asked for the alerts anyway.
+15     8     *    *    1-5  /usr/local/bin/python -m market_hours.gate patterns.pattern_alerts
 #
 # Back in Demand ledger resolver — 5:40 PM ET weekdays (Ajay 2026-08-17: "Can
 # you maintain history of our In deman page please… Want you to track it").

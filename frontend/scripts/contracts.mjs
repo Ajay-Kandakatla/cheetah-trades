@@ -156,6 +156,30 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'notifications page carries the 2026-09-09 keep-set (hot pullback + patterns)',
+    file: 'src/pages/Notifications.tsx',
+    // Ajay 2026-09-09: "Kill all other.. I just wanna these alerts". A kind the
+    // page cannot show cannot be muted, and a kind missing from the backend's
+    // default_prefs sends to ZERO devices silently.
+    checks: (src) => {
+      const errs = [];
+      for (const k of ['hot_pullback_alert', 'pattern_alert']) {
+        if (!new RegExp(`key:\\s*'${k}'`).test(src)) errs.push(`CATEGORIES lacks ${k} — it cannot be muted from the page`);
+      }
+      const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
+      for (const on of ['hot_pullback_alert', 'pattern_alert', 'demand_alert', 'position_alert']) {
+        if (!new RegExp(`${on}:\\s*true`).test(ess)) errs.push(`Essentials preset drops ${on} — it is in the keep-set`);
+      }
+      for (const off of ['zone_bounce_alert', 'supply_break_alert', 'promo_alert', 'todo_reminder']) {
+        if (!new RegExp(`${off}:\\s*false`).test(ess)) errs.push(`Essentials preset must mute ${off} — he killed it`);
+      }
+      // the honest record must ride on the page, not just in the push
+      if (!/INCLUDES ZERO/.test(src)) errs.push('Hot Pullback detail drops the interval that includes zero');
+      if (!/NOT ONE BEATS CHANCE/.test(src)) errs.push('Chart-pattern detail drops the placebo comparison');
+      return errs;
+    },
+  },
+  {
     name: 'notifications page registers the demand_alert kind (2026-09-03)',
     file: 'src/pages/Notifications.tsx',
     // backend/push/subs.py defaults the kind on; a kind the page cannot show
@@ -250,7 +274,10 @@ const CONTRACTS = [
       const errs = [];
       if (!/key:\s*'supply_break_alert'/.test(src)) errs.push("CATEGORIES lacks the supply_break_alert kind — it cannot be muted from the page");
       const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
-      if (!/supply_break_alert:\s*true/.test(ess)) errs.push('Essentials preset drops supply_break_alert');
+      // 2026-09-09: he killed this kind ("Kill all other"), so Essentials
+      // now MUTES it. The kind must still be listed on the page — a kind
+      // the page cannot show is a kind he cannot turn back on.
+      if (!/supply_break_alert:\s*false/.test(ess)) errs.push('Essentials must mute supply_break_alert since 2026-09-09');
       const hook = read('src/hooks/useNotificationPrefs.ts');
       if (!/supply_break_alert\?:\s*boolean/.test(hook)) errs.push('NotificationPrefs type lacks supply_break_alert — the toggle cannot type-check');
       return errs;
