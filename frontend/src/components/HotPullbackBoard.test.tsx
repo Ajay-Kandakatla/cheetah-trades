@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import {
   HotPullbackBoard, pct, money, bandText, headline, studyLine, scanLabel, scanNote,
-  r, correctionLine,
+  r, correctionLine, funnelNote,
   EMPTY_TEXT, WARMING_TEXT, NEAR_MISS_LABEL, SCAN_LABEL, SCANNING_LABEL, CORRECTION_TEXT,
 } from './HotPullbackBoard';
 import type { HpPayload, HpRow } from './HotPullbackBoard';
@@ -270,5 +270,43 @@ describe('the Scan button', () => {
     expect(scanNote({ scanned: null as any })).toBe('');
     expect(scanNote({ scanned: Number.NaN })).toBe('');
     expect(scanNote({ scanned: 7 })).toBe('scanned 7 names');
+  });
+});
+
+
+/* ── the depth funnel (Ajay 2026-09-09) ────────────────────────────────────
+ * "IN the hot pull back can you add more than 20% too.. I think we are not
+ *  seeing some becuz of that limit."
+ * There is no limit: the flush rule is a floor. The board now prints WHY it is
+ * empty instead, so the question answers itself on screen. */
+describe('HotPullbackBoard — the depth funnel', () => {
+  const funnel = {
+    note: '77 names fell more than 20% off their 10-day high today and 76 of them closed '
+      + 'less than 8% off the low — freefall, not a pullback. There is no upper limit on '
+      + 'the flush: the rule asks for AT LEAST 12%.',
+    deep_cut_pct: -20, deep_n: 77, deep_qualified: 0, deep_no_snapback: 76,
+  };
+
+  it('prints the funnel on an empty board', () => {
+    expect(funnelNote({ rows: [], funnel })).toMatch(/77 names fell more than 20%/);
+    expect(funnelNote({ rows: [], funnel })).toMatch(/no upper limit/);
+  });
+
+  it('says nothing when the server sent no funnel (NEGATIVE, old payload)', () => {
+    expect(funnelNote({ rows: [] })).toBe('');
+    expect(funnelNote({ rows: [], funnel: null })).toBe('');
+    expect(funnelNote({ rows: [], funnel: { deep_n: 77 } })).toBe('');
+    expect(funnelNote(null)).toBe('');
+    expect(funnelNote(undefined)).toBe('');
+  });
+
+  it('renders it under the empty-board line', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true, json: () => Promise.resolve({ rows: [], near_miss: [], funnel }),
+    } as Response)));
+    render(<HotPullbackBoard />);
+    const el = await screen.findByTestId('hp-funnel');
+    expect(el.textContent).toMatch(/76 of them closed less than 8% off the low/);
+    expect(screen.getByText(EMPTY_TEXT)).toBeInTheDocument();
   });
 });

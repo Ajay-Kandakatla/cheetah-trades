@@ -108,6 +108,79 @@ RANGE_POS_MIN = 0.70            # and in the top 30% of today's range
 MA_LEN = 21                     # "21 day moving average drops" — his words
 HIGH_LOOKBACK = 10              # the prior 10-day high the flush is measured from
 
+# Ajay 2026-09-09: "IN the hot pull back can you add more than 20% too.. I
+# think we are not seeing some becuz of that limit."
+#
+# THERE IS NO UPPER LIMIT AND THERE NEVER WAS. FALL_FROM_10D_HIGH_PCT is a
+# FLOOR — "at least 12% under the 10-day high" — so a -59% flush passes it, and
+# the board's own near-miss list already carried TYRA at -36.9%, CASY at -30.8%
+# and EXPE at -23.6% the day he asked.
+#
+# What is actually empty is the QUALIFIED list, and the gate doing it is the
+# snapback, not the depth. Measured on the live universe that day: 77 names
+# flushed worse than -20%; 76 of them closed less than OFF_LOW_PCT off their
+# low and 73 closed in the bottom of their own day's range. ALMS fell 59.5%
+# and closed 0.31% off the low. Those are freefalls, not pullbacks — the exact
+# falling knives the rule exists to skip.
+#
+# So instead of a limit to raise, the board now PRINTS that funnel, the same
+# way /alerts explains a quiet phone. A depth bucket a reader can check beats a
+# number a reader has to trust.
+DEEP_FLUSH_PCT = -20.0          # "more than 20%" — his words, the reporting cut
+
+
+def funnel_of(seen: list) -> dict:
+    """How many names reached each gate, bucketed by flush depth. PURE.
+
+    `seen` is [(row, ok, misses)]. This EXPLAINS the board; it never filters it.
+    """
+    def bucket(f):
+        if f is None:
+            return "unknown"
+        if f > FALL_FROM_10D_HIGH_PCT:
+            return "under_floor"
+        if f > DEEP_FLUSH_PCT:
+            return "floor_to_deep"
+        return "deeper_than_deep"
+
+    keys = ("no_snapback", "not_top_of_range", "no_band", "not_hot", "shallow_ma")
+    out = {b: {"n": 0, "qualified": 0, **{k: 0 for k in keys}}
+           for b in ("under_floor", "floor_to_deep", "deeper_than_deep", "unknown")}
+    for row, ok, miss in seen:
+        b = out[bucket(_f(row.get("flush_pct")))]
+        b["n"] += 1
+        if ok:
+            b["qualified"] += 1
+        for m in miss:
+            if "no real snapback" in m:
+                b["no_snapback"] += 1
+            elif "day's range" in m:
+                b["not_top_of_range"] += 1
+            elif "demand band" in m:
+                b["no_band"] += 1
+            elif m.startswith("not hot"):
+                b["not_hot"] += 1
+            elif "day line" in m:
+                b["shallow_ma"] += 1
+    deep = out["deeper_than_deep"]
+    out["deep_cut_pct"] = DEEP_FLUSH_PCT
+    out["deep_n"] = deep["n"]
+    out["deep_qualified"] = deep["qualified"]
+    out["deep_no_snapback"] = deep["no_snapback"]
+    out["deep_not_top_of_range"] = deep["not_top_of_range"]
+    # The sentence the board prints, built here so the component cannot retype it.
+    if deep["n"]:
+        out["note"] = (
+            "%d names fell more than %g%% off their 10-day high today and %d of them "
+            "closed less than %g%% off the low — freefall, not a pullback. There is no "
+            "upper limit on the flush: the rule asks for AT LEAST %g%%."
+            % (deep["n"], abs(DEEP_FLUSH_PCT), deep["no_snapback"], OFF_LOW_PCT,
+               abs(FALL_FROM_10D_HIGH_PCT)))
+    else:
+        out["note"] = ("No name fell more than %g%% off its 10-day high today."
+                       % abs(DEEP_FLUSH_PCT))
+    return out
+
 # What the study measured, carried on the payload so the board can print it and
 # nobody has to trust a number typed into a component.
 # CORRECTED 2026-09-09. The numbers first shipped here were wrong, and the cause
@@ -447,7 +520,7 @@ def scan(universe_key: str = "full", limit: int = MAX_ROWS,
         log.warning("hot_pullback: zone_store failed: %s", exc)
         store_day, store = None, {}
 
-    hits, near = [], []
+    hits, near, seen = [], [], []
     for sym, f in frames.items():
         try:
             c = f["close"].astype(float)
@@ -490,6 +563,7 @@ def scan(universe_key: str = "full", limit: int = MAX_ROWS,
             row["band"] = band_for_low(today["low"], (store.get(sym) or {}).get("bands") or [])
             ok, miss = qualifies(row)
             row["misses"] = miss
+            seen.append((row, ok, miss))
             row["plan"] = plan_for(row) if ok else None
             if ok:
                 hits.append(row)
@@ -509,6 +583,7 @@ def scan(universe_key: str = "full", limit: int = MAX_ROWS,
         "n": len(hits),
         "rows": hits[:max(1, int(limit))],
         "near_miss": near[:12],
+        "funnel": funnel_of(seen),
         "study": STUDY,
         "rules": rules_lines(),
     }

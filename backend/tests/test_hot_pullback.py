@@ -553,3 +553,66 @@ def test_the_near_miss_line_no_longer_calls_the_band_load_bearing():
     assert "tested demand band" in blob
     assert "the one that matters" not in blob
     assert "0.198" in blob or "separates least" in blob
+
+
+# ── the depth funnel (Ajay 2026-09-09) ─────────────────────────────────────
+# "IN the hot pull back can you add more than 20% too.. I think we are not
+#  seeing some becuz of that limit."
+#
+# There is no limit to raise. FALL_FROM_10D_HIGH_PCT is a FLOOR, so a -59%
+# flush already passes it and the near-miss list carried TYRA at -36.9% the
+# day he asked. What was missing was the EXPLANATION, so these pin the funnel.
+def _seen_row(sym, flush, misses, ok=False):
+    return ({"symbol": sym, "flush_pct": flush}, ok, misses)
+
+
+def test_the_flush_rule_is_a_floor_not_a_ceiling():
+    """The one thing that must never quietly become a cap."""
+    assert HP.FALL_FROM_10D_HIGH_PCT < 0
+    deep = {"hot": True, "flush_pct": -59.5, "under_ma21_pct": -25.0,
+            "reversal": {"off_low_pct": 12.0, "range_pos": 0.9},
+            "band": {"kind": "demand", "lo": 1.0, "hi": 2.0}}
+    ok, miss = HP.qualifies(deep)
+    assert ok is True, miss
+    assert not any("10-day high" in m for m in miss)
+
+
+def test_funnel_buckets_by_depth_and_names_the_gate_that_stopped_them():
+    seen = [
+        _seen_row("A", -59.5, ["the close is under 8% off the low — no real snapback",
+                               "the close is not in the top 30% of the day's range"]),
+        _seen_row("B", -36.9, ["the low never reached a tested demand band"]),
+        _seen_row("C", -25.0, ["the close is under 8% off the low — no real snapback"]),
+        _seen_row("D", -15.0, ["not hot — the prior close is under 30% above its 52-week low"]),
+        _seen_row("E", -3.0, ["the flush is only -3.0% off the 10-day high (rule -12%)"]),
+        _seen_row("F", -30.0, [], ok=True),
+    ]
+    f = HP.funnel_of(seen)
+    assert f["deep_n"] == 4, "A, B, C and F are past the 20% cut"
+    assert f["deep_qualified"] == 1
+    assert f["deep_no_snapback"] == 2
+    assert f["under_floor"]["n"] == 1 and f["floor_to_deep"]["n"] == 1
+    assert f["deeper_than_deep"]["no_band"] == 1
+    assert f["floor_to_deep"]["not_hot"] == 1
+
+
+def test_the_funnel_note_says_there_is_no_upper_limit():
+    seen = [_seen_row("A", -40.0, ["the close is under 8% off the low — no real snapback"])]
+    note = HP.funnel_of(seen)["note"]
+    assert "no upper limit" in note.lower()
+    assert "AT LEAST" in note
+    assert "%g" % abs(HP.FALL_FROM_10D_HIGH_PCT) in note
+
+
+def test_the_funnel_says_so_when_nothing_fell_that_far():
+    f = HP.funnel_of([_seen_row("A", -14.0, ["x"])])
+    assert f["deep_n"] == 0
+    assert "No name fell more than" in f["note"]
+
+
+def test_funnel_never_raises_on_junk():
+    for junk in ([], [({}, False, [])], [({"flush_pct": None}, False, [])],
+                 [({"flush_pct": float("nan")}, False, [])]):
+        f = HP.funnel_of(junk)
+        assert isinstance(f.get("note"), str)
+        assert f["deep_n"] >= 0

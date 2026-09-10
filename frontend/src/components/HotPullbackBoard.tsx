@@ -39,11 +39,30 @@ export type HpPayload = {
   warming?: boolean; universe?: string; as_of?: string | null; zone_store_day?: string | null;
   scanned?: number | null; n?: number | null; rows?: HpRow[]; near_miss?: HpRow[];
   study?: HpStudy | null; rules?: string[]; cached?: boolean; error?: string | null;
+  /* Why the board is empty, in his own terms (Ajay 2026-09-09: "IN the hot
+   * pull back can you add more than 20% too.. I think we are not seeing some
+   * becuz of that limit"). There is no upper limit — the flush rule is a
+   * FLOOR — so instead of raising one the board prints the funnel. */
+  funnel?: HpFunnel | null;
+};
+export type HpFunnel = {
+  note?: string | null;
+  deep_cut_pct?: number | null; deep_n?: number | null;
+  deep_qualified?: number | null; deep_no_snapback?: number | null;
+  deep_not_top_of_range?: number | null;
 };
 
 export const EMPTY_TEXT = 'No hot name flushed into a demand band and turned today. This is a rare setup — 83 in a year.';
 export const WARMING_TEXT = 'Scanning the universe for hot names that flushed into demand…';
 export const NEAR_MISS_LABEL = 'One rule short';
+
+/** The depth funnel in one line, straight off the payload. '' when the server
+ *  did not send one (older payloads) so the board never invents a number. */
+export function funnelNote(d?: HpPayload | null): string {
+  const f = d?.funnel;
+  if (!f || !f.note) return '';
+  return String(f.note);
+}
 export const CORRECTION_TEXT =
   'Corrected 2026-09-09: this board previously showed 58% win and +0.27R. That came from a '
   + 'backtest whose window started at bar 300 instead of 252, deleting 17 trades that ran '
@@ -200,6 +219,12 @@ export function HotPullbackBoard() {
       {err && <p className="hp__err">Could not load: {err}</p>}
       {data?.warming && <p className="hp__note">{WARMING_TEXT}</p>}
       {!data?.warming && !err && rows.length === 0 && <p className="hp__note">{EMPTY_TEXT}</p>}
+      {/* The funnel, so an empty board is a fact rather than a shrug — and so
+        * the "we are not seeing some because of the 20% limit" question
+        * answers itself on the screen. */}
+      {!data?.warming && !err && funnelNote(data) && (
+        <p className="hp__note" data-testid="hp-funnel">{funnelNote(data)}</p>
+      )}
 
       {rows.length > 0 && <ul className="hp__list">{rows.map((r) => <Row key={r.symbol} r={r} />)}</ul>}
 
