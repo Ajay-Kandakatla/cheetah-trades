@@ -41,14 +41,15 @@ const MEMBERS = {
     sort: 'gaining desc, traction desc, vs_group_21 desc, symbol asc',
   },
   zone: { as_of: '2026-09-09' }, at_demand: 180, zone_unmarked: 168,
+  median_1d_full: 0.6, up_today: 201,
   gaining: 2, n: 3, shown: 3,
   rows: [
-    { symbol: 'NVDA', rel_5d: 3.1, rel_21d: 12.4, rel_63d: 22.0,
+    { symbol: 'NVDA', rel_1d: 0.9, rel_5d: 3.1, rel_21d: 12.4, rel_63d: 22.0,
       vs_group_21: 13.6, traction: 0.42, gaining: true, at_demand: false },
-    { symbol: 'AVGO', rel_5d: 1.0, rel_21d: 4.0, rel_63d: -3.0,
+    { symbol: 'AVGO', rel_1d: -0.4, rel_5d: 1.0, rel_21d: 4.0, rel_63d: -3.0,
       vs_group_21: 5.2, traction: 0.11, gaining: true, at_demand: true,
       zone_role: 'demand', zone_depth_pct: 1.4, zone_off_floor_pct: 4.2 },
-    { symbol: 'INTC', rel_5d: -2.0, rel_21d: -9.5, rel_63d: -14.0,
+    { symbol: 'INTC', rel_1d: -1.1, rel_5d: -2.0, rel_21d: -9.5, rel_63d: -14.0,
       vs_group_21: -8.3, traction: -0.27, gaining: false, at_demand: false },
   ],
 };
@@ -126,14 +127,26 @@ describe('Hot sectors chips open a member popover', () => {
       .toMatch(/^\/sepa\/NVDA/);
   });
 
-  it('prints the 5/21/63 legs and the vs-group column', async () => {
+  it('leads with TODAY, then the 5/21/63 legs and the vs-group column', async () => {
     stub(MEMBERS);
     draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const row = within(dialog).getByRole('link', { name: 'NVDA' }).closest('tr')!;
     expect(Array.from(row.querySelectorAll('td')).map((c) => c.textContent))
-      .toEqual(['+3.1%', '+12.4%', '+22.0%', '+13.6', '']);
+      .toEqual(['+0.9%', '+3.1%', '+12.4%', '+22.0%', '+13.6', '']);
+  });
+
+  it('prints the group\u2019s SAME-DAY move and its breadth (2026-09-10)', async () => {
+    // Ajay: "Can you also check for same day sector too please?" -- the group
+    // number, not just the per-name column. Breadth rides with it: a median
+    // says nothing about whether one name is carrying the sector.
+    stub(MEMBERS);
+    draw();
+    await openTech();
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toMatch(/today \+0\.6%/);
+    expect(dialog.textContent).toMatch(/201 of 342 up/);
   });
 
   it('marks the ones the BACKEND flagged, and only those (NEGATIVE)', async () => {

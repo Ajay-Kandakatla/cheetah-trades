@@ -93,6 +93,17 @@ WINDOW_MED = 63
 # no group median is computed over it, so nothing on an existing screen moves.
 WINDOW_FAST = 5
 
+# Same day (2026-09-10, Ajay: "Can you also check for same day sector too
+# please? ... Instead of 5 days"). One session: the member's last close against
+# the one before it, and the group's MEDIAN of those — "what is this sector
+# doing TODAY", which no window here answered.
+#
+# Deliberately NOT wired into `traction`: over one session a single gap flags a
+# name, and the standing instruction is that signals get more accurate, never
+# noisier. It is a column and a group median, printed beside the flag rather
+# than feeding it.
+WINDOW_DAY = 1
+
 # Bars pulled per symbol. 260 covers a year, enough for any window here plus
 # the pre-window anchor.
 BARS = 260
@@ -502,8 +513,8 @@ def member_stats(bars, freshest: str) -> Optional[dict]:
     if not isinstance(last, (int, float)) or last <= 0:
         return None
     out = {"last_close": round(float(last), 2)}
-    for key, n in (("ret_5d", WINDOW_FAST), ("ret_21d", WINDOW_SHORT),
-                   ("ret_63d", WINDOW_MED)):
+    for key, n in (("ret_1d", WINDOW_DAY), ("ret_5d", WINDOW_FAST),
+                   ("ret_21d", WINDOW_SHORT), ("ret_63d", WINDOW_MED)):
         v = trailing_return(bars, n)
         out[key] = None if v is None else round(v, 2)
     return out
@@ -569,13 +580,15 @@ def traction_row(symbol: str, stat: dict, group_median_21d,
     """
     stat = stat or {}
     row = {"symbol": symbol}
-    for k in ("sector", "industry", "last_close", "ret_5d", "ret_21d", "ret_63d",
+    for k in ("sector", "industry", "last_close", "ret_1d", "ret_5d",
+              "ret_21d", "ret_63d",
               "at_demand", "zone_role", "zone_depth_pct", "zone_off_floor_pct"):
         if k in stat:
             row[k] = stat[k]
     # No zone coverage is UNMARKED, never "not at demand" and never a drop.
     row.setdefault("at_demand", None)
-    for key, bkey in (("rel_5d", "ret_5d"), ("rel_21d", "ret_21d"),
+    for key, bkey in (("rel_1d", "ret_1d"), ("rel_5d", "ret_5d"),
+                      ("rel_21d", "ret_21d"),
                       ("rel_63d", "ret_63d")):
         v, b = stat.get(bkey), (bench or {}).get(bkey)
         row[key] = (None if not isinstance(v, (int, float))
@@ -706,6 +719,8 @@ def _member_table(full_groups: dict, published: dict, labels: dict,
     # rounding artefact that would read on screen as a real disagreement
     # between the two medians. Never persisted; only the median uses it.
     raw_21 = {s: trailing_return(frames.get(s), WINDOW_SHORT) for s in by_symbol}
+    # The same-day leg, per symbol, so each group can carry TODAY'S median.
+    raw_1 = {s: trailing_return(frames.get(s), WINDOW_DAY) for s in by_symbol}
 
     marks, zone_meta = _zone_marks({s: v["last_close"] for s, v in by_symbol.items()})
     for sym, stat in by_symbol.items():
@@ -742,6 +757,11 @@ def _member_table(full_groups: dict, published: dict, labels: dict,
                 # … and this table's own, over everything below it. Never
                 # reconciled — see MEMBER_NOTE.
                 "median_21d_full": _median([raw_21.get(s) for s in priced]),
+                # TODAY, over the same full membership as the table below it.
+                "median_1d_full": _median([raw_1.get(s) for s in priced]),
+                "up_today": sum(1 for s in priced
+                                if isinstance(raw_1.get(s), (int, float))
+                                and raw_1[s] > 0),
                 "n_full": len(members),
                 "priced": len(priced),
                 "unpriced": len(missing),
@@ -756,7 +776,8 @@ def _member_table(full_groups: dict, published: dict, labels: dict,
 
     return {
         "as_of": freshest,
-        "windows": {"fast": WINDOW_FAST, "short": WINDOW_SHORT, "med": WINDOW_MED},
+        "windows": {"day": WINDOW_DAY, "fast": WINDOW_FAST,
+                    "short": WINDOW_SHORT, "med": WINDOW_MED},
         # The benchmark's own three windows, stored ONCE. `traction_row`
         # subtracts them to rebase each member (decision 1) — the chip the
         # popover opens under prints rel_21d, so raw member returns beside it
@@ -920,6 +941,7 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         {sym: (sec, ind) for sym, sec, ind in scan_rows},
         frames, freshest,
         {"symbol": bench["symbol"],
+         "ret_1d": _round(trailing_return(bench_bars, WINDOW_DAY)),
          "ret_5d": _round(trailing_return(bench_bars, WINDOW_FAST)),
          "ret_21d": _round(bench["d21"]), "ret_63d": _round(bench["d63"])})
 

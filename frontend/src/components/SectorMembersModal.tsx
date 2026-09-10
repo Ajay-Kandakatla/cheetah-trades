@@ -90,6 +90,7 @@ function MemberLine({ m, benchmark }: { m: MemberRow; benchmark: string }) {
         )}
         <TickerLink ticker={m.symbol} showWatchlist={false} fromLabel="Hot sectors" />
       </th>
+      <td className={`hsm-num ${toneOf(m.rel_1d)}`}>{fmtRel(m.rel_1d)}</td>
       <td className={`hsm-num ${toneOf(m.rel_5d)}`}>{fmtRel(m.rel_5d)}</td>
       <td className={`hsm-num ${toneOf(m.rel_21d)}`}>{fmtRel(m.rel_21d)}</td>
       <td className={`hsm-num ${toneOf(m.rel_63d)}`}>{fmtRel(m.rel_63d)}</td>
@@ -107,6 +108,20 @@ function MemberLine({ m, benchmark }: { m: MemberRow; benchmark: string }) {
  *  participates in the table's min-content width, which blew this table out to
  *  1400px inside a 680px panel and pushed the vs-group and demand columns off
  *  the right edge. */
+/* SAME DAY at the GROUP level (Ajay 2026-09-10: "Can you also check for same
+ * day sector too please?"). The median move of this group's full membership
+ * today, and how many of them are green — the breadth is the half that says
+ * whether one name is carrying the number. Raw, not rebased: "what is this
+ * sector doing today" is a plain question and rebasing it against RSP would
+ * answer a different one. */
+function todayLine(p: MembersPayload): string {
+  const m = p.median_1d_full;
+  if (m == null || !Number.isFinite(m)) return '';
+  const breadth = p.up_today != null && p.n_priced
+    ? `, ${p.up_today} of ${p.n_priced} up` : '';
+  return ` · today ${m >= 0 ? '+' : ''}${m.toFixed(1)}%${breadth}`;
+}
+
 function ColumnNote({ p }: { p: MembersPayload }) {
   return (
     <p className="hsm-caption">
@@ -127,6 +142,7 @@ function Table({ p }: { p: MembersPayload }) {
       <thead>
         <tr>
           <th scope="col">Ticker</th>
+          <th scope="col" className="hsm-num" title="today: this name's last close against the one before it, restated vs the benchmark">today</th>
           <th scope="col" className="hsm-num">5d</th>
           <th scope="col" className="hsm-num">21d</th>
           <th scope="col" className="hsm-num">63d</th>
@@ -222,7 +238,8 @@ export function SectorMembersModal({
             <div className="hsm-sub">
               {data
                 ? `${data.n_priced} of ${data.n_members} members covered${
-                    tractionCount ? ` · ${tractionCount} gaining traction` : ''}`
+                    tractionCount ? ` · ${tractionCount} gaining traction` : ''}${
+                    todayLine(data)}`
                 : loading ? 'reading the group’s membership…' : 'membership unavailable'}
             </div>
           </div>

@@ -392,6 +392,11 @@ async def rotation_members(
         "age_sec": meta.get("age_sec"), "stale": meta.get("stale"),
         "traction": table.get("traction") or T.TRACTION_SPEC,
         "median_21d": median, "median_21d_full": grp.get("median_21d_full"),
+        # SAME DAY (Ajay 2026-09-10). The group's median move TODAY over the
+        # same full membership as the rows, and how many of them are green.
+        # A read, never a gate -- one session does not feed `traction`.
+        "median_1d_full": grp.get("median_1d_full"),
+        "up_today": grp.get("up_today"),
         "n_measured": n_measured, "n_full": n_full, "sampled": sampled,
         "n_population": n_pop,
         "median_note": median_note,

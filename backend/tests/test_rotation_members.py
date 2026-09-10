@@ -180,7 +180,12 @@ def test_the_traction_definition_travels_with_the_table(built):
     assert spec["min_vs_group_pp"] == T.TRACTION_MIN_VS_GROUP_PP
     assert "not a buy signal" in spec["not_a_signal"].lower()
     assert built[T.MEMBERS_KEY]["windows"] == {
-        "fast": T.WINDOW_FAST, "short": T.WINDOW_SHORT, "med": T.WINDOW_MED}
+        "day": T.WINDOW_DAY, "fast": T.WINDOW_FAST,
+        "short": T.WINDOW_SHORT, "med": T.WINDOW_MED}
+    # SAME DAY is a column, never part of the flag (2026-09-10). Over one
+    # session a single gap would mark a name as gaining traction, and the
+    # standing rule is that signals get more accurate, not noisier.
+    assert "pace_1" not in spec["formula"] and "ret_1d" not in spec["formula"]
 
 
 def test_the_full_table_is_stripped_off_the_rotation_page_payload(built):
@@ -792,6 +797,7 @@ def test_every_payload_key_the_popover_renders_is_a_key_this_endpoint_sends():
     row_keys = {"symbol", "sector", "industry", "last_close", "ret_5d", "ret_21d",
                 "ret_63d", "at_demand", "zone_role", "zone_depth_pct",
                 "zone_off_floor_pct", "pace_5", "pace_21", "traction",
+                "ret_1d", "rel_1d",
                 "vs_group_21", "gaining",
                 # traction_row rebases each window against the benchmark and
                 # ships these three beside the raw ret_* legs.

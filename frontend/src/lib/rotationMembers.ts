@@ -61,6 +61,10 @@ export type MemberRow = {
   traction: boolean;
   /** True when today's print sits inside an eligible demand band
    *  (supply_demand.bounce_room.in_demand_read). */
+  /** SAME DAY (2026-09-10): the last close against the one before it, restated
+   *  against the benchmark like every other leg. Deliberately not part of
+   *  `traction` — over one session a single gap would flag a name. */
+  rel_1d?: number | null;
   /** TRI-STATE: true = at a demand band, false = not, null = the zone store
    *  has NO doc for this name. null is "never looked", not "no". */
   at_demand?: boolean | null;
@@ -119,6 +123,10 @@ export type MembersPayload = {
   ranked_by?: string | null;
   /** One line saying what traction MEASURES. Printed verbatim. */
   traction_def?: string | null;
+  /** SAME DAY over the full membership: the group's median move today and how
+   *  many members are green. A read on the group, never a gate. */
+  median_1d_full?: number | null;
+  up_today?: number | null;
   /** Which day's zone bands the demand markers came from, and how many of the
    *  members the zone store covered. */
   demand_as_of?: string | null;
@@ -282,6 +290,7 @@ export function normalizeMembers(raw: unknown): MembersPayload | null {
     .map((m) => ({
       ...(m as object),
       symbol: String(m.symbol).toUpperCase(),
+      rel_1d: num(m.rel_1d),
       rel_5d: num(m.rel_5d),
       rel_21d: num(m.rel_21d),
       rel_63d: num(m.rel_63d),
@@ -314,6 +323,8 @@ export function normalizeMembers(raw: unknown): MembersPayload | null {
     sampled: p.sampled === true,
     sample_n: num(p.n_population),
     member_median_21d: num(p.median_21d_full),
+    median_1d_full: num(p.median_1d_full),
+    up_today: num(p.up_today),
     demand_covered: nFull !== null && zoneUnmarked !== null
       ? Math.max(0, nFull - zoneUnmarked) : num(p.at_demand),
     traction_def: typeof spec.formula === 'string' ? spec.formula : null,
