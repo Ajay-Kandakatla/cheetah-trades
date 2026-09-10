@@ -1037,6 +1037,47 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // Ajay 2026-09-09: "Can you move chart patterns in to the Chartmaps page
+  // please and show the winning charts". The tab is half of it; the link into
+  // 🏆 Past Winners is the other half and is the only honest way to use a board
+  // whose patterns do not beat a coin flip.
+  {
+    name: 'Chart Maps carries the Patterns tab and links to the winning charts (2026-09-09)',
+    file: 'src/lib/chartMaps.ts',
+    checks: (src) => {
+      const errs = [];
+      if (!/'hot_pullback', 'patterns'/.test(src)) {
+        errs.push('patterns must sit right after hot_pullback in CM_TABS');
+      }
+      if (!/t !== 'patterns'/.test(src)) {
+        errs.push('patterns must be excluded from isBoardTab — it mounts its own page body');
+      }
+      if (!/'winners'\];/.test(src)) {
+        errs.push('winners must stay LAST with the ledger tabs');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the Patterns board keeps its door into Past Winners (2026-09-09)',
+    file: 'src/pages/PatternsPage.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/export function winnersHref/.test(src)) errs.push('winnersHref must stay exported');
+      if (!/tab=winners/.test(src)) errs.push('the winners link is gone');
+      if (!/Show the winning charts/.test(src)) errs.push('the board-level winners door is gone');
+      if (!/export function PatternsBoard/.test(src)) {
+        errs.push('PatternsBoard must stay exported for the Chart Maps tab');
+      }
+      if (!/Navigate replace to="\/chart-maps\?tab=patterns"/.test(src)) {
+        errs.push('/patterns must redirect to the tab');
+      }
+      if (!/features\.has\('chart-maps'\)/.test(src)) {
+        errs.push('the redirect must respect the separate chart-maps feature gate');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

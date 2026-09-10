@@ -57,6 +57,9 @@ STATE_COLL = "pattern_alerts"
 SCAN_DOC_ID = "latest"     # patterns.scan writes this id; NOT the newest by generated_at
 FRESH_BARS = 2           # confirmed within this many sessions
 MAX_SINGLES = 4
+# Where a tap lands. The board moved into Chart Maps on 2026-09-09; /patterns
+# still redirects here, but the push should not spend a hop.
+PUSH_URL = "/chart-maps?tab=patterns"
 # Zone docs the pass may build on demand when the store has no coverage for a
 # fresh name. The fresh list is a handful a day; this only bounds a bad day.
 MAX_ZONE_BUILDS = 40
@@ -205,8 +208,8 @@ def message(row: dict, anchor: Optional[dict] = None) -> dict:
     return {"title": "\U0001F4D0 %s %s confirmed" % (sym, str(pat).replace("_", " ")),
             "body": " · ".join(parts), "icon": "/icon.svg",
             "tag": "pat-%s" % str(sym).lower(),
-            "url": "/patterns", "kind": KIND, "ticker": sym,
-            "data": {"url": "/patterns", "symbol": sym, "source": "patterns"}}
+            "url": PUSH_URL, "kind": KIND, "ticker": sym,
+            "data": {"url": PUSH_URL, "symbol": sym, "source": "patterns"}}
 
 
 def digest_message(rows: list, day: str) -> Optional[dict]:
@@ -222,8 +225,8 @@ def digest_message(rows: list, day: str) -> Optional[dict]:
             "body": names + " · placebo %d%% up — none of these beats chance"
                     % BC.PATTERN_PLACEBO[1],
             "icon": "/icon.svg", "tag": "pat-digest-%s" % day,
-            "url": "/patterns", "kind": KIND, "ticker": None,
-            "data": {"url": "/patterns", "source": "patterns"}}
+            "url": PUSH_URL, "kind": KIND, "ticker": None,
+            "data": {"url": PUSH_URL, "source": "patterns"}}
 
 
 def _demand_pass(fresh: list, now: Optional[datetime] = None,

@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
+import { PatternsBoard } from './PatternsPage';
 import { InfoButton } from '../components/InfoButton';
 import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
@@ -555,6 +556,14 @@ export function ChartMaps() {
          * — the row's facts ARE the read, and the measured horizon rides on
          * every one of them. */
         <HotPullbackBoard />
+      ) : tab === 'patterns' ? (
+        /* 📐 Chart Patterns (Ajay 2026-09-09: "Can you move chart patterns in
+         * to the Chartmaps page please and show the winning charts"). The same
+         * component as the /patterns page — one implementation, one scan — with
+         * its page title dropped because the tab header already says it. Every
+         * card carries a 🏆 link into the Past Winners tab filtered to that
+         * pattern, which is the tab immediately to the right. */
+        <PatternsBoard />
       ) : tab === 'signals' ? (
         /* The Signal Lab's working surface, mounted as a tab (Ajay 2026-09-01:
          * "add the signals tab inside chart maps"). Same component as the

@@ -5,6 +5,8 @@
  * (self-validation) beside the practitioner base rates. A pattern without its
  * confirmation close is a shape, not a signal. Educational, not advice. */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useMyFeatures } from '../hooks/useMyFeatures';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { useCurrentUser } from '../hooks/useUser';
@@ -100,7 +102,42 @@ const PageInfo = (
   </>
 );
 
+/* Ajay 2026-09-09: "Can you move chart patterns in to the Chartmaps page
+ * please and show the winning charts". `embedded` drops the page title block —
+ * Chart Maps draws its own tab header and blurb — and keeps everything else,
+ * including the admin rescan buttons he uses. ONE implementation, mounted
+ * twice; /patterns redirects to the tab (the Catalysts precedent). */
+export function PatternsBoard() {
+  return <PatternsBody embedded />;
+}
+
+
+/* /patterns → Chart Maps (Ajay 2026-09-09). Kept under its old export name so
+ * App.tsx's route still compiles, and every existing deep link — the 📐 push
+ * taps, ✨ NEW highlights, bookmarks — lands on the new home.
+ *
+ * `patterns` and `chart-maps` are two SEPARATE access features, both opt-in per
+ * user (backend/access/store.py). A user granted Patterns but not Chart Maps
+ * must keep the board: redirecting them would bounce off the chart-maps
+ * FeatureRoute onto "/" with no message. Exactly the Catalysts posture, for
+ * exactly the same reason. */
 export function PatternsPage() {
+  const f = useMyFeatures();
+  if (!f.loaded) {
+    // Decide after the features fetch; never flash a redirect the user may not
+    // be allowed to follow.
+    return (
+      <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#888', fontSize: '0.9rem' }}>
+        Loading…
+      </div>
+    );
+  }
+  if (!f.features.has('chart-maps')) return <PatternsBody />;
+  return <Navigate replace to="/chart-maps?tab=patterns" />;
+}
+
+
+function PatternsBody({ embedded = false }: { embedded?: boolean }) {
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [latest, setLatest] = useState<Latest | null>(null);
@@ -152,9 +189,9 @@ export function PatternsPage() {
   const val = latest?.validation || {};
 
   return (
-    <div className="sepa-page">
-      <div className="sepa-page__title">
-        <div>
+    <div className={embedded ? '' : 'sepa-page'}>
+      <div className="sepa-page__title" style={embedded ? { marginBottom: 4 } : undefined}>
+        <div hidden={embedded}>
           <div className="eyebrow">Bullish reversals · confirmation-line discipline</div>
           <h1 className="display sepa-page__h1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             Patterns
@@ -195,6 +232,19 @@ export function PatternsPage() {
           </div>
         </div>
       )}
+      {/* "show the winning charts" (Ajay 2026-09-09). The board-level door into
+        * the ledger; every card has the same link filtered to its own pattern. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                    margin: '2px 0 10px', fontSize: '0.74rem', color: C.sub }}>
+        <button type="button" onClick={() => navigate(winnersHref(null))}
+                title="Past Winners: every setup in your own ledger that reached its measure-rule target before its stop, drawn with the confirmation bar marked — and the stop-first losses counted from the same denominator, because a winners-only wall is a highlight reel."
+                style={{ fontSize: '0.72rem', fontWeight: 700, color: C.gold, background: 'transparent',
+                         border: `1px solid ${C.gold}88`, borderRadius: 7, padding: '3px 10px',
+                         cursor: 'pointer', minHeight: 0 }}>
+          🏆 Show the winning charts
+        </button>
+        <span>the ones that actually reached target before stop — study the base BEFORE the confirmation bar</span>
+      </div>
       {scanStatus?.error && <p className="mono" style={{ color: C.red }}>Scan failed — {scanStatus.error}</p>}
       {err && <p className="mono" style={{ color: C.red }}>{err}</p>}
 
@@ -423,7 +473,18 @@ function Section({ title, rows, navigate }: { title: string; rows: Pattern[]; na
   );
 }
 
-function Card({ p }: { p: Pattern; navigate?: (path: string) => void }) {
+/* "show the winning charts" (Ajay 2026-09-09). Not a second implementation:
+ * 🏆 Past Winners already draws the ledger's setups that reached the
+ * measure-rule target before their stop, already filters by pattern, and
+ * already prints the stop-first losses from the same denominator. This is the
+ * link from a pattern to its OWN winning charts, which is the only honest way
+ * to use this board — none of these patterns beats the placebo. */
+export function winnersHref(pattern?: string | null): string {
+  return `/chart-maps?tab=winners${pattern ? `&pattern=${encodeURIComponent(pattern)}` : ''}`;
+}
+
+
+function Card({ p, navigate }: { p: Pattern; navigate?: (path: string) => void }) {
   const s = p.sepa || {};
   const conf = p.status === 'confirmed';
   const ext = p.ext_past_confirm_pct;
@@ -435,6 +496,15 @@ function Card({ p }: { p: Pattern; navigate?: (path: string) => void }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <TickerCell symbol={p.symbol} size="0.95rem" />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{PATTERN_LABEL[p.pattern] || p.pattern}</span>
+        <button type="button"
+                onClick={() => (navigate ? navigate(winnersHref(p.pattern))
+                                         : window.location.assign(winnersHref(p.pattern)))}
+                title={`Past Winners, filtered to ${PATTERN_LABEL[p.pattern] || p.pattern}: the charts in your own ledger that reached the measure-rule target before the stop, with the stop-first losses counted from the same denominator. Study what the base looked like BEFORE the confirmation bar.`}
+                style={{ fontSize: '0.66rem', fontWeight: 700, color: C.gold, background: 'transparent',
+                         border: `1px solid ${C.gold}55`, borderRadius: 5, padding: '1px 7px',
+                         cursor: 'pointer', minHeight: 0 }}>
+          🏆 winning charts
+        </button>
         <span style={{ fontSize: '0.68rem', fontWeight: 700, color: conf ? C.green : C.amber,
                        border: `1px solid ${(conf ? C.green : C.amber)}55`, background: `${conf ? C.green : C.amber}14`,
                        borderRadius: 5, padding: '1px 7px' }}>

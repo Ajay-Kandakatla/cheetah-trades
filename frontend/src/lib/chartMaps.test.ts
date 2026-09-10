@@ -649,8 +649,12 @@ describe('the Earnings Flow tab', () => {
     // 2026-09-06: MOST-USED FIRST (Ajay: "Move most used tabs to the
     // beginning of the list") — the demand boards lead, the SEPA slices and
     // ICT moved behind every S/D read; see the describe at the end of this file.
+    // 2026-09-09: `patterns` joins after `hot_pullback` (Ajay: "move chart
+    // patterns in to the Chartmaps page"). `winners` stays LAST with the other
+    // ledger tabs — that grouping is its own rule, so the patterns board links
+    // out to it instead of the tab moving up beside it.
     expect(CM_TABS).toEqual(
-      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -718,7 +722,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly five tabs not driven by a board fetch', () => {
+  it('is one of exactly six tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -733,9 +737,11 @@ describe('the Support Levels tab', () => {
     // (/day/signal-lab/board), mounted from its own shared component.
     // 2026-09-05: `catalysts` is the fifth — the Catalysts page body mounted
     // as a tab (its own /catalysts/* endpoints and sub-tabs).
+    // 2026-09-09: `patterns` is the sixth — the Patterns page body mounted the
+    // same way (its own /patterns/* endpoints and scan buttons).
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
-    expect(nonBoard).toEqual(['hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'session', 'signals', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1565,7 +1571,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(18);
+    expect(CM_TABS).toHaveLength(19);
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -1676,5 +1682,46 @@ describe('lidBreakStudyText', () => {
     expect(t).toContain('50% reached the prior 52-week high within 21 sessions (n=4) vs \u2014 from any day / \u2014 from any up-day');
     expect(t).not.toContain('proven lids');
     expect(t).not.toContain('by distance');
+  });
+});
+
+
+// ── 📐 Chart Patterns tab (Ajay 2026-09-09: "Can you move chart patterns in to
+// the Chartmaps page please and show the winning charts") ───────────────────
+describe('the Chart Patterns tab (2026-09-09)', () => {
+  it('sits after Hot Pullback and is NOT driven by a board fetch', () => {
+    // It mounts the Patterns page body — its own /patterns/* endpoints and its
+    // own scan buttons — so a /chart-maps fetch here would draw the VCP board
+    // (the unknown-tab fallback) under the wrong heading.
+    expect(CM_TABS.indexOf('patterns')).toBe(CM_TABS.indexOf('hot_pullback') + 1);
+    expect(isBoardTab('patterns')).toBe(false);
+    expect(parseTab('patterns')).toBe('patterns');
+  });
+
+  it('keeps Past Winners at the END with the ledger tabs, not beside it', () => {
+    // "show the winning charts" is served by links OUT of the patterns board,
+    // one per pattern. The ledger grouping at the end of the strip is its own
+    // rule and this change does not get to quietly undo it.
+    expect(CM_TABS[CM_TABS.length - 1]).toBe('winners');
+    expect(CM_TABS.indexOf('winners')).toBeGreaterThan(CM_TABS.indexOf('patterns') + 1);
+  });
+
+  it('says the record honestly and points at the winning charts', () => {
+    const { label, blurb } = TAB_META.patterns;
+    expect(label).toMatch(/Chart Patterns/);
+    // The standing rule: never a per-name rate without its placebo, and these
+    // patterns do not beat theirs. The blurb may not soften that.
+    expect(blurb).toMatch(/placebo/i);
+    expect(blurb).toMatch(/not one of these beats/i);
+    expect(blurb).toMatch(/Past Winners/);
+    expect(blurb).toMatch(/flat_top/);
+    expect(blurb).toMatch(/not advice/i);
+    // and it must say the phone is gated on demand, since that is now true
+    expect(blurb).toMatch(/demand zone|reversing off/i);
+  });
+
+  it('a typo still lands on a real board (negative)', () => {
+    expect(parseTab('patterms')).toBe(CM_TABS[0]);
+    expect(parseTab('')).toBe(CM_TABS[0]);
   });
 });

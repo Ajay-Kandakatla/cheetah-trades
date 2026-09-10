@@ -120,7 +120,7 @@ describe('ChartMaps', () => {
 
   it('offers all three tabs', () => {
     draw();
-    ['Strong VCP', 'Back in Demand', 'Past Winners'].forEach((label) => {
+    [/Strong VCP/, /Back in Demand/, /Past Winners/].forEach((label) => {
       expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
     });
     // Most-used first (2026-09-06): the demand boards open the strip, in the
@@ -260,7 +260,7 @@ describe('ChartMaps', () => {
 
   it('switches to the winners tab and shows the wins AND the stop-outs', async () => {
     draw();
-    fireEvent.click(screen.getByRole('tab', { name: 'Past Winners' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Past Winners/ }));
 
     expect(await screen.findByText(/57 hit target/)).toBeInTheDocument();
     expect(screen.getByText(/52 stopped out/)).toBeInTheDocument();
@@ -271,7 +271,7 @@ describe('ChartMaps', () => {
 
   it('carries the cross-pattern caveat and flags thin samples', async () => {
     draw();
-    fireEvent.click(screen.getByRole('tab', { name: 'Past Winners' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Past Winners/ }));
 
     expect(await screen.findByText(/NOT\s+comparable across patterns/)).toBeInTheDocument();
     // inverse H&S has n=3 — below the 20-observation floor
@@ -282,7 +282,7 @@ describe('ChartMaps', () => {
 
   it('shows each pattern record with its losses, never wins alone', async () => {
     draw();
-    fireEvent.click(screen.getByRole('tab', { name: 'Past Winners' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Past Winners/ }));
     expect(await screen.findByText(/17 hit target · 32 stopped out · 34.7% of 49/))
       .toBeInTheDocument();
   });
@@ -1000,7 +1000,7 @@ describe('the Catalysts tab', () => {
     expect(screen.getByRole('tab', { name: 'Strong VCP' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
     // Every other tab is still there — only the gated one is missing.
-    ['Back in Demand', 'Past Winners', 'ICT'].forEach((label) => {
+    [/Back in Demand/, /Past Winners/, /ICT/].forEach((label) => {
       expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
     });
   });

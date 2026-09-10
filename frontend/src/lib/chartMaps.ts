@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'patterns';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -40,7 +40,15 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // with charts and cards") is the zone-edge 🚀 list that used to sit as ~200
 // text rows on top of Deep Demand, now its own card board right after the
 // demand cluster; Deep Demand is cards only, like Back in Demand.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+// `patterns` (2026-09-09, Ajay: "Can you move chart patterns in to the
+// Chartmaps page please and show the winning charts") mounts the Patterns
+// page body; /patterns redirects here, the Catalysts precedent. `winners`
+// deliberately STAYS at the end with the other ledger tabs — that grouping is
+// its own tested rule — so "show the winning charts" is served by a link out
+// of the patterns board instead: one at the top, one on every card, each
+// filtered to that pattern. A link from the thing you are looking at beats a
+// tab two seats over.
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -63,7 +71,7 @@ export function isBoardTab(t: CmTab): boolean {
   // `catalysts` (2026-09-05) mounts the Catalysts page body — its own scan
   // endpoints and sub-tabs, nothing from /chart-maps.
   return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
-    && t !== 'catalysts' && t !== 'hot_pullback';
+    && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -153,8 +161,12 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     label: '0DTE Options',
     blurb: 'Same-day expiry, calls and puts. "0.4x" means the underlying needs four tenths of today\'s expected move for the contract to double — the only figure comparable across names, since a 1% day is a crash in SPY and a Tuesday in TSLA. Read the badge first: PINNED means dealers suppress movement and you are fighting them, AMPLIFYING means they push it along. Theta on a 0DTE routinely exceeds the entire premium in a day. Every suggestion here is recorded and graded, because nothing about it has been backtested — there is no intraday option history to backtest against.',
   },
+  patterns: {
+    label: '\u{1F4D0} Chart Patterns',
+    blurb: 'Named bullish reversal patterns on the daily frame \u2014 cup-with-handle, double bottom, triple bottom, inverse head-and-shoulders \u2014 with the confirmation line, the measure-rule target and the stop on every card. Moved here from its own page on 2026-09-09; /patterns links land on this tab. SAID PLAINLY: in your own ledger, across 669 resolved observations, not one of these beats a 50% placebo (cup-with-handle 45% over 434, double bottom 43% over 248, triple bottom 37% over 68, inverse head-and-shoulders 10% over 10), and flat_top is excluded outright because it fired on 120 of 120 random names. Each pattern links straight to \u{1F3C6} Past Winners filtered to itself \u2014 the charts from your ledger that actually reached target before stop \u2014 which is the honest way to use this board: to learn what a working base looked like, not as a signal. Phone pushes for these are gated on the name also being IN a demand zone or reversing off one. Not advice.',
+  },
   winners: {
-    label: 'Past Winners',
+    label: '\u{1F3C6} Past Winners',
     blurb: 'Setups from your own ledger that reached their measure-rule target before their stop. The dotted line is the confirmation bar — study what the base looked like BEFORE it.',
   },
 };
