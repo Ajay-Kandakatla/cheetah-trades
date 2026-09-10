@@ -1004,7 +1004,11 @@ const CONTRACTS = [
       if (/bounce/i.test(m[0].replace('zone_bounce_alert', ''))) {
         errs.push('the zone_bounce_alert LABEL still says bounce');
       }
-      if (!/reversal/i.test(m[0])) errs.push('the label must say reversal');
+      // 2026-09-10: this used to also demand the word "reversal" HERE. That was
+      // over-specified and it backfired — it pinned the word onto the MUTED
+      // kind while the live one read "approach", which is exactly why he said
+      // he saw no reversal alerts. Which kind owns the word is now pinned by
+      // its own contract below; this one only guards against "bounce".
       return errs;
     },
   },
@@ -1103,6 +1107,27 @@ const CONTRACTS = [
       }
       if (!/thin/.test(src)) {
         errs.push('a thin cohort (rare_earth n=4) must be marked as thin');
+      }
+      return errs;
+    },
+  },
+  // 2026-09-10, after "I do not see any reversal alerts today": he HAD five,
+  // from the 🧲 kind. The 🪃 kind — muted since the keep-set — was the one
+  // wearing the word "reversal", so the live kind looked absent. The live kind
+  // must own that word and the muted one must not.
+  {
+    name: 'the LIVE demand kind owns the word "reversal" (2026-09-10)',
+    file: 'src/lib/alertKinds.ts',
+    checks: (src) => {
+      const errs = [];
+      const live = src.match(/demand_alert:\s*\{[^}]*\}/);
+      const muted = src.match(/zone_bounce_alert:\s*\{[^}]*\}/);
+      if (!live || !muted) return ['both zone kinds must stay registered'];
+      if (!/reversal/i.test(live[0])) {
+        errs.push('demand_alert is the kind that sends reversals — its label must say so');
+      }
+      if (/reversal/i.test(muted[0].replace('zone_bounce_alert', ''))) {
+        errs.push('the MUTED zone_bounce_alert label must not claim the word "reversal"');
       }
       return errs;
     },

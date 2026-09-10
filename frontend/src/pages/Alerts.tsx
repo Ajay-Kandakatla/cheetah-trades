@@ -72,8 +72,8 @@ export type AlertsStatus = {
  * two 5-minute checks) and are used only when the API sends no cadence_sec. */
 const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'zone_edge',         label: '🚀 🧲 Zone edge',             fallbackCadenceSec: 60 },
-  { key: 'zone_bounce_alert', label: '🪃 Demand-zone reversal',     fallbackCadenceSec: 300 },
-  { key: 'demand_alert',      label: '🧲 Demand-zone approach',     fallbackCadenceSec: 300 },
+  { key: 'zone_bounce_alert', label: '🪃 Intraday demand turn',   fallbackCadenceSec: 300 },
+  { key: 'demand_alert',      label: '🧲 Reversal at demand',      fallbackCadenceSec: 300 },
 ];
 
 export function cadenceOf(pass: PassStatus | undefined, meta: (typeof PASSES)[number]): number {

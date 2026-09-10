@@ -16,11 +16,24 @@ const T = (iso: string) => Date.parse(iso) / 1000;
 
 describe('kind registry', () => {
   it('labels the three zone kinds that page the phone', () => {
-    expect(kindLabel('demand_alert')).toBe('🧲 Demand-zone approach');
-    expect(kindLabel('zone_bounce_alert')).toBe('🪃 Demand-zone reversal');
+    expect(kindLabel('demand_alert')).toBe('🧲 Reversal at demand');
+    expect(kindLabel('zone_bounce_alert')).toBe('🪃 Intraday demand turn');
     expect(kindLabel('supply_break_alert')).toBe('🚀 Breaking resistance');
     expect(ZONE_KINDS).toEqual(['demand_alert', 'zone_bounce_alert', 'supply_break_alert']);
     for (const k of ZONE_KINDS) expect(ALERT_KINDS[k].group).toBe('zones');
+  });
+
+  // Ajay 2026-09-10: "I do not see any reversal alerts today" — he HAD 11 of
+  // them. The word was on the wrong kind: the MUTED zone_bounce_alert was
+  // labelled "Demand-zone reversal" while the LIVE demand_alert, the one that
+  // actually sends "\u2191 reversal off demand", read "Demand-zone approach".
+  // KIND_CHIPS is a static list, so the reversal chip rendered on /alerts even
+  // though that kind never fires, and clicking it returned nothing.
+  it('gives the word "reversal" to the LIVE kind and never to the muted one', () => {
+    expect(ALERT_KINDS.demand_alert.label).toMatch(/reversal/i);
+    expect(ALERT_KINDS.zone_bounce_alert.label).not.toMatch(/reversal/i);
+    // and neither may go back to the word he asked us to drop
+    for (const k of ZONE_KINDS) expect(ALERT_KINDS[k].label).not.toMatch(/bounce/i);
   });
 
   it('carries every kind PushHistoryPanel used to label on its own, plus the phone kinds', () => {

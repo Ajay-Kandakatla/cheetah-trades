@@ -214,14 +214,14 @@ describe('Alerts page — the query it sends', () => {
     await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBeNull());
     expect(screen.getByRole('button', { name: '📣 all pushes' })).toHaveAttribute('aria-pressed', 'true');
     // From "all", picking one kind narrows to just it…
-    fireEvent.click(screen.getByRole('button', { name: '🪃 Demand-zone reversal' }));
+    fireEvent.click(screen.getByRole('button', { name: '🪃 Intraday demand turn' }));
     await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('zone_bounce_alert'));
     // …and it cannot be turned off (that would silently mean "all").
     const before = recentUrls(fn).length;
-    fireEvent.click(screen.getByRole('button', { name: '🪃 Demand-zone reversal' }));
+    fireEvent.click(screen.getByRole('button', { name: '🪃 Intraday demand turn' }));
     await new Promise((r) => setTimeout(r, 20));
     expect(recentUrls(fn)).toHaveLength(before);
-    expect(screen.getByRole('button', { name: '🪃 Demand-zone reversal' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '🪃 Intraday demand turn' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -233,7 +233,7 @@ describe('Alerts page — the rows', () => {
     expect(rows).toHaveLength(3);
     // 14:42Z = 10:42 EDT. Never the UTC clock, never the browser's zone.
     expect(within(rows[0]).getByText('10:42 ET')).toBeInTheDocument();
-    expect(within(rows[0]).getByText('🧲 Demand-zone approach')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('🧲 Reversal at demand')).toBeInTheDocument();
     const link = within(rows[0]).getByRole('link', { name: /NVDA/ });
     expect(link.getAttribute('href')).toMatch(/^\/sepa\/NVDA\?.*tab=supply/);
     expect(link.getAttribute('href')).toMatch(/from=alerts/);

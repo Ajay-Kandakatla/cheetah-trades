@@ -32,8 +32,13 @@ export type AlertKindDef = {
  * callers (backend/push/*.py, supply_demand/*_alerts.py, zone_edge.py). */
 export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // ── Supply & Demand zone pushes (the phone-gated ones) ────────────────────
-  demand_alert:        { emoji: '🧲', label: 'Demand-zone approach',    group: 'zones' },
-  zone_bounce_alert:   { emoji: '🪃', label: 'Demand-zone reversal',    group: 'zones' },
+  // 2026-09-10: demand_alert is the kind that actually sends reversals — its
+  // direction gate has allowed ONLY a reversal since 2026-09-09, so "approach"
+  // was a name it had outgrown. It was also colliding with the MUTED 🪃 kind,
+  // which is what "I do not see any reversal alerts today" was really about:
+  // the thing named reversal was off, the thing sending reversals was not.
+  demand_alert:        { emoji: '🧲', label: 'Reversal at demand',     group: 'zones' },
+  zone_bounce_alert:   { emoji: '🪃', label: 'Intraday demand turn',   group: 'zones' },
   supply_break_alert:  { emoji: '🚀', label: 'Breaking resistance',     group: 'zones' },
   trade_flash:         { emoji: '⚡', label: 'Trade flash at a zone',   group: 'zones' },
 
@@ -111,7 +116,7 @@ export const BREAKOUT_KINDS: readonly string[] = [
   'volume_breakout', 'rising_momentum', 'stage_breakdown_2_3', 'stage_breakdown_2_4', 'stage_breakdown_3_4',
 ];
 
-/** "🧲 Demand-zone approach". Unknown kind → its raw id (never hidden: a
+/** "🧲 Reversal at demand". Unknown kind → its raw id (never hidden: a
  *  kind the registry has not met is still a real push he received). Null /
  *  empty → the generic label. */
 export function kindLabel(kind: string | null | undefined): string {
