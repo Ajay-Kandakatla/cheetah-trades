@@ -11425,6 +11425,93 @@ a.tk-link:hover   { color: inherit; }
 .hs-more { margin-left: auto; color: var(--cm-slate, #8595ad); white-space: nowrap; }
 .hs-more:hover { color: var(--ink, #e7e7e7); }
 
+/* Chips are buttons (Ajay 2026-09-09: "click on the sector category and see the
+   related stocks list in a pop over"). Reset the UA button chrome so a chip
+   looks exactly as it did as a span, and give it a real focus ring — it is now
+   a keyboard stop. */
+.hs-chip {
+  font: inherit; cursor: pointer; appearance: none; -webkit-appearance: none;
+  line-height: inherit; text-align: left;
+}
+.hs-chip:hover { border-color: currentColor; }
+.hs-chip:focus-visible { outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; }
+.hs-chip[aria-expanded="true"] { border-color: currentColor; }
+
+/* ── Hot sectors member popover (Ajay 2026-09-09) ─────────────────────────
+   Same portal + overlay conventions as the app's other drill panels. Body
+   scroll is deliberately NOT locked — locking it strands mobile readers. */
+.hsm-overlay {
+  position: fixed; inset: 0; z-index: 1100; background: rgba(0, 0, 0, 0.65);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: clamp(0.5rem, 4vh, 3rem) 1rem; overflow-y: auto;
+}
+.hsm-panel {
+  width: 100%; max-width: min(720px, calc(100vw - 2rem)); max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg-raised, #181c24); color: var(--ink, #e7e7e7);
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 10px;
+  padding: 1rem clamp(0.7rem, 3vw, 1.2rem) 0.8rem;
+}
+.hsm-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 0.5rem; flex-wrap: wrap;
+}
+.hsm-title { margin: 0.15rem 0 0.1rem; font-size: 1.15rem; }
+.hsm-sub { font-size: 0.76rem; color: var(--cm-slate, #8595ad); font-weight: 400; }
+.hsm-close {
+  background: transparent; color: inherit; cursor: pointer;
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 6px; padding: 6px 12px;
+}
+.hsm-close:focus-visible { outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; }
+/* The line that keeps the table from being read as the chip's arithmetic. */
+.hsm-warn {
+  margin: 0.6rem 0 0.5rem; padding: 0.45rem 0.6rem; border-radius: 6px;
+  font-size: 0.78rem; line-height: 1.45;
+  color: var(--ink, #e7e7e7);
+  background: rgba(217, 119, 6, 0.10);
+  border: 1px solid var(--warn, #d97706);
+}
+.hsm-sort { margin: 0 0 0.4rem; font-size: 0.76rem; color: var(--cm-slate, #8595ad); }
+.hsm-note { margin: 0.4rem 0; font-size: 0.82rem; color: var(--cm-slate, #8595ad); }
+.hsm-err { margin: 0.4rem 0; font-size: 0.8rem; color: var(--cm-red, #dc2626); }
+.hsm-scroll { overflow: auto; overscroll-behavior: contain; flex: 1 1 auto; }
+/* `min-width: 0` overrides the global `table { min-width: 1400px }` at the top
+   of this file — inherited, that rule blew the member table out to 1400px
+   inside a 680px panel and pushed vs-group and demand off the right edge. */
+.hsm-table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 0.8rem; }
+.hsm-caption {
+  margin: 0 0 0.35rem; font-size: 0.72rem; line-height: 1.4;
+  color: var(--cm-slate, #8595ad);
+}
+/* Columns share the width evenly; only the ticker column sizes to content. */
+.hsm-table { table-layout: fixed; }
+.hsm-table th:first-child, .hsm-row th { width: 30%; }
+.hsm-table thead th {
+  position: sticky; top: 0; z-index: 1; text-align: left; font-weight: 700;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--cm-slate, #8595ad); background: var(--bg-raised, #181c24);
+  border-bottom: 1px solid var(--rule, #2a2f3a); padding: 0.3rem 0.4rem;
+}
+.hsm-table thead th.hsm-num { text-align: right; }
+.hsm-table thead th.hsm-mark { text-align: center; }
+.hsm-row > * { padding: 0.28rem 0.4rem; border-bottom: 1px solid var(--rule, #2a2f3a); }
+.hsm-row th { font-weight: 600; text-align: left; }
+/* The traction marker: a green rail down the row plus the ▲ next to the name. */
+.hsm-row-traction { background: rgba(34, 197, 94, 0.07); }
+.hsm-row-traction th { box-shadow: inset 3px 0 0 var(--cm-green, #22c55e); }
+.hsm-flag { color: var(--cm-green, #22c55e); margin-right: 0.3rem; font-size: 0.72rem; }
+.hsm-sym { white-space: nowrap; }
+.hsm-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hsm-mark { text-align: center; white-space: nowrap; }
+.hsm-up { color: var(--cm-green, #22c55e); }
+.hsm-down { color: var(--cm-red, #dc2626); }
+.hsm-flat { color: var(--cm-slate, #8595ad); }
+.hsm-demand { cursor: help; }
+.hsm-foot {
+  margin: 0.45rem 0 0; font-size: 0.7rem; line-height: 1.45;
+  color: var(--cm-slate, #8595ad);
+}
+
 /* Approach-target sub-toggle (zone vs order block), inside the phase row. */
 .cm-phase-sub {
   display: inline-flex; gap: 0.3rem; margin-left: 0.6rem;
