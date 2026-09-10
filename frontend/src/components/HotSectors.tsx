@@ -11,11 +11,21 @@
  * its two hot ends. Mounted on Chart Maps AND Market Gauge — one component,
  * so the two pages can never disagree.
  *
+ * Every chip is a BUTTON (Ajay 2026-09-09: "I would like to click on the
+ * sector category and see the related stocks list in a pop over to see which
+ * ones are gaining traction") — it opens SectorMembersModal on that group's
+ * FULL membership, which is a different set from the 25-name sample behind the
+ * median printed on the chip. The panel says that out loud; the chip's number
+ * is untouched by any of it.
+ *
  * Measurement of what moved — not a forecast and not advice.
  */
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { SectorMembersModal } from './SectorMembersModal';
+import type { GroupKind } from '../lib/rotationMembers';
 
 export type HotRow = {
   group: string; sector?: string; tier?: string; index?: string;
@@ -72,9 +82,32 @@ export function scanStamp(d: Pick<HotPayload, 'source' | 'built_at_iso'>): strin
   return iso.length >= 16 && iso[10] === 'T' ? iso.slice(11, 16) : '';
 }
 
+/** Which group a chip is standing for. `cohort` is rotation.tracker's own word
+ *  for the sector × cap-tier rows. */
+type OpenGroup = { kind: GroupKind; row: HotRow; trigger: HTMLElement | null };
+
+/** One chip. A real <button> rather than a styled span so it is reachable and
+ *  operable from the keyboard for free — Tab lands on it, Enter/Space opens the
+ *  member panel, Escape closes it. The label and the hover text are byte-for-byte
+ *  what the span printed. */
+function HotChip({ row, kind, tone, title, open, onOpen, children }: {
+  row: HotRow; kind: GroupKind; tone: 'in' | 'out'; title: string;
+  open: OpenGroup | null; onOpen: (g: OpenGroup) => void; children: ReactNode;
+}) {
+  const isOpen = !!open && open.kind === kind && open.row.group === row.group;
+  return (
+    <button type="button" className={`hs-chip hs-chip-${tone}`} title={title}
+            aria-haspopup="dialog" aria-expanded={isOpen}
+            onClick={(e) => onOpen({ kind, row, trigger: e.currentTarget })}>
+      {children}
+    </button>
+  );
+}
+
 export default function HotSectors() {
   const [data, setData] = useState<HotPayload | null>(null);
   const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState<OpenGroup | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -96,6 +129,11 @@ export default function HotSectors() {
                   + indIn.length + indOut.length + thmIn.length + thmOut.length > 0;
   if (!hasRows) return null;
 
+  const cohortTitle = (r: HotRow) =>
+    `${r.group} — ${r.n} names · window ${r.rel_window ?? '—'}% rel`;
+  const industryTitle = (r: HotRow) =>
+    `${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`;
+
   return (
     <div className="hs" role="complementary" aria-label="Hot sectors">
       <span className="hs-head">
@@ -103,24 +141,25 @@ export default function HotSectors() {
         <em className="hs-sub">
           last 21 sessions vs {data.benchmark || 'RSP'} · median member
           {scanStamp(data) ? ` · scan ${scanStamp(data)} ET` : ''}
+          {' · click a chip for its member stocks'}
         </em>
       </span>
       <span className="hs-group">
         <em className="hs-tag hs-tag-in">money in</em>
         {(data.in || []).map((r) => (
-          <span key={r.group} className="hs-chip hs-chip-in"
-                title={`${r.group} — ${r.n} names · window ${r.rel_window ?? '—'}% rel`}>
+          <HotChip key={r.group} row={r} kind="cohort" tone="in" title={cohortTitle(r)}
+                   open={open} onOpen={setOpen}>
             {chipLabel(r)}
-          </span>
+          </HotChip>
         ))}
       </span>
       <span className="hs-group">
         <em className="hs-tag hs-tag-out">money out</em>
         {(data.out || []).map((r) => (
-          <span key={r.group} className="hs-chip hs-chip-out"
-                title={`${r.group} — ${r.n} names · window ${r.rel_window ?? '—'}% rel`}>
+          <HotChip key={r.group} row={r} kind="cohort" tone="out" title={cohortTitle(r)}
+                   open={open} onOpen={setOpen}>
             {chipLabel(r)}
-          </span>
+          </HotChip>
         ))}
       </span>
       {(indIn.length > 0 || indOut.length > 0) && (
@@ -128,19 +167,19 @@ export default function HotSectors() {
           <span className="hs-group">
             <em className="hs-tag hs-tag-in">industry in</em>
             {indIn.map((r) => (
-              <span key={`ii-${r.group}`} className="hs-chip hs-chip-in"
-                    title={`${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`}>
+              <HotChip key={`ii-${r.group}`} row={r} kind="industry" tone="in"
+                       title={industryTitle(r)} open={open} onOpen={setOpen}>
                 {chipLabel(r)}
-              </span>
+              </HotChip>
             ))}
           </span>
           <span className="hs-group">
             <em className="hs-tag hs-tag-out">industry out</em>
             {indOut.map((r) => (
-              <span key={`io-${r.group}`} className="hs-chip hs-chip-out"
-                    title={`${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`}>
+              <HotChip key={`io-${r.group}`} row={r} kind="industry" tone="out"
+                       title={industryTitle(r)} open={open} onOpen={setOpen}>
                 {chipLabel(r)}
-              </span>
+              </HotChip>
             ))}
           </span>
         </>
@@ -150,22 +189,29 @@ export default function HotSectors() {
           <span className="hs-group">
             <em className="hs-tag hs-tag-in">theme in</em>
             {thmIn.map((r) => (
-              <span key={`ti-${r.group}`} className="hs-chip hs-chip-in" title={themeTitle(r)}>
+              <HotChip key={`ti-${r.group}`} row={r} kind="theme" tone="in"
+                       title={themeTitle(r)} open={open} onOpen={setOpen}>
                 {chipLabel(r)}{r.thin ? ' ·thin' : ''}
-              </span>
+              </HotChip>
             ))}
           </span>
           <span className="hs-group">
             <em className="hs-tag hs-tag-out">theme out</em>
             {thmOut.map((r) => (
-              <span key={`to-${r.group}`} className="hs-chip hs-chip-out" title={themeTitle(r)}>
+              <HotChip key={`to-${r.group}`} row={r} kind="theme" tone="out"
+                       title={themeTitle(r)} open={open} onOpen={setOpen}>
                 {chipLabel(r)}{r.thin ? ' ·thin' : ''}
-              </span>
+              </HotChip>
             ))}
           </span>
         </>
       )}
       <Link to="/rotation" className="hs-more">full rotation →</Link>
+      {open && (
+        <SectorMembersModal key={`${open.kind}|${open.row.group}`}
+                            kind={open.kind} row={open.row} headline={open.row.rel_21d}
+                            returnFocus={open.trigger} onClose={() => setOpen(null)} />
+      )}
     </div>
   );
 }

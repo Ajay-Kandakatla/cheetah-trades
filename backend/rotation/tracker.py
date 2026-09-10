@@ -44,6 +44,29 @@ It does not read 13F. Institutional holdings are filed 45 days after quarter
 end and our cache caps holders at 10 per ticker, so they are a LAGGING LEVEL,
 never a flow. Calling a 13F level "money flowing in" is the exact error that
 once printed +968% on this project.
+
+THE MEMBER TABLE (Ajay 2026-09-10)
+----------------------------------
+"I would like to click on the sector category and see the related stocks list
+in a pop over to see which ones are gaining traction."
+
+Every row above is a MEDIAN over a deterministic 25-to-40-name sample of its
+group — cheap, stable, and the number he already reads on the strip. The
+popover asks a different question ("which NAMES"), and a sample would answer
+it wrongly: 25 of Technology's 298 liquid names, presented as the sector.
+
+So `build` also emits a per-member table over the FULL liquidity-filtered
+membership (`members`, see `_member_table`). Two rules keep the two honest:
+
+  * the sampled medians are computed EXACTLY as before — this table is
+    additive and changes no number already on a screen;
+  * the table carries its own full-membership median (`median_21d_full`)
+    beside the published sampled one, and `MEMBER_NOTE` says in one line that
+    they are two populations. They are never silently reconciled.
+
+Cost, measured 2026-09-10 on the live scan: the full membership is 1,712
+symbols against the 1,480 the sampled grid already loads, so ONE `_load` over
+the union adds 251 fetches / +6.4 s, and the demand-zone marker adds ~0.1 s.
 """
 from __future__ import annotations
 
@@ -66,6 +89,9 @@ MAX_STALE_DAYS = 10
 # Trailing windows, in trading days.
 WINDOW_SHORT = 21
 WINDOW_MED = 63
+# The member table's "this week" leg (2026-09-10). Only the popover reads it —
+# no group median is computed over it, so nothing on an existing screen moves.
+WINDOW_FAST = 5
 
 # Bars pulled per symbol. 260 covers a year, enough for any window here plus
 # the pre-window anchor.
@@ -139,6 +165,11 @@ def _cohort_members(sectors: dict, tiers: dict,
     Tiering happens BEFORE sampling, on the full sector membership: sampling
     first and tiering after would leave small-cap cohorts starved by whichever
     names the sector stride happened to pick.
+
+    `sample <= 0` turns the cap OFF and returns the full roster — the member
+    table (2026-09-10) needs every name, and it must come out of THIS builder
+    rather than a parallel one, or the popover's membership could drift from
+    the row it opens under.
     """
     out = []
     for sec, syms in sectors.items():
@@ -147,7 +178,7 @@ def _cohort_members(sectors: dict, tiers: dict,
             members = [s for s in pool if s in (tiers.get(tier) or ())]
             if len(members) < MIN_COHORT_N:
                 continue
-            if len(members) > sample:
+            if sample > 0 and len(members) > sample:
                 step = len(members) / sample
                 members = [members[int(i * step)] for i in range(sample)]
             label = f"{sec} · {tier} caps"
@@ -190,6 +221,8 @@ def _industry_members(rows: list, sample: int = INDUSTRY_SAMPLE) -> list:
     the sector grid see EXACTLY the same population — an industry median over a
     different universe than the sector median above it is two answers to one
     question.
+
+    `sample <= 0` turns the cap OFF (see `_cohort_members`).
     """
     pools: dict = {}
     for sym, sec, ind in rows:
@@ -201,7 +234,7 @@ def _industry_members(rows: list, sample: int = INDUSTRY_SAMPLE) -> list:
         members = sorted(syms)
         if len(members) < MIN_INDUSTRY_N:
             continue
-        if len(members) > sample:
+        if sample > 0 and len(members) > sample:
             step = len(members) / sample
             members = [members[int(i * step)] for i in range(sample)]
         out.append({"label": ind, "sector": sec or None, "industry": ind,
@@ -308,6 +341,10 @@ def _pct(n, d) -> Optional[float]:
     return round(100.0 * n / d, 1) if d else None
 
 
+def _round(v, places: int = 2) -> Optional[float]:
+    return round(float(v), places) if isinstance(v, (int, float)) else None
+
+
 def group_row(name: str, members: list, frames: dict, start: str,
               freshest: str, etf: Optional[str] = None) -> dict:
     """One measured row. PURE given `frames`.
@@ -403,6 +440,339 @@ def _sector_members(min_dollar_vol: float, min_price: float) -> dict:
     return out
 
 
+# ── Per-member table (Ajay 2026-09-10) ──────────────────────────────────────
+# "I would like to click on the sector category and see the related stocks list
+# in a pop over to see which ones are gaining traction."
+#
+# The four grains a member table exists for. Havens are single-symbol proxies —
+# a popover listing one name is not a popover, so they are not a grain.
+MEMBER_GRAINS = ("sector", "cohort", "industry", "theme")
+
+# The build payload's key, and the API's read key. Named once so a rename can
+# never leave the endpoint reading a key the tracker stopped writing.
+MEMBERS_KEY = "members"
+
+# "Gaining traction" thresholds — see `traction_read` for what they gate. Both
+# are 0.0 BY DEFINITION ("faster than its own month", "ahead of its own
+# group"), not a level anyone measured. Constants so the gate is one edit, and
+# so nothing here can be mistaken for a tested edge.
+TRACTION_MIN_ACCEL_PP = 0.0
+TRACTION_MIN_VS_GROUP_PP = 0.0
+
+# How many dropped names a group prints. Same 8 as group_row's dropped_symbols.
+MEMBER_UNPRICED_SAMPLE = 8
+
+# Shipped WITH the number, every time it is served (his standing rule: any
+# per-name measure on a board he trades ships its definition).
+TRACTION_SPEC = {
+    "field": "traction",
+    "units": "percentage points per session",
+    "formula": ("pace_5 = ret_5d/5 · pace_21 = ret_21d/21 · "
+                "traction = pace_5 - pace_21 · "
+                "vs_group_21 = ret_21d - the group's published median_21d · "
+                "gaining = traction > %.1f AND vs_group_21 > %.1f"
+                % (TRACTION_MIN_ACCEL_PP, TRACTION_MIN_VS_GROUP_PP)),
+    "min_accel_pp": TRACTION_MIN_ACCEL_PP,
+    "min_vs_group_pp": TRACTION_MIN_VS_GROUP_PP,
+    "sort": "gaining desc, traction desc, vs_group_21 desc, symbol asc",
+    "not_a_signal": ("A ranking of what already moved, like every other number "
+                     "in this module. Not a buy signal and not advice."),
+}
+
+# The one line that keeps the popover from reading as the source of the median
+# printed above it. Two populations, said out loud rather than reconciled.
+MEMBER_NOTE = (
+    "Full liquidity-filtered membership. The group median above this table is "
+    "measured on the rotation grid's fixed sample of the group, so it is a "
+    "DIFFERENT population from the rows below — median_21d_full is this "
+    "table's own median. Shown side by side on purpose, not reconciled.")
+
+
+def member_stats(bars, freshest: str) -> Optional[dict]:
+    """The symbol half of a member row — everything that does NOT depend on
+    which group the name is being viewed inside. PURE.
+
+    None for a series that cannot be priced (no frame, or a dead ticker by
+    decision 4) so the caller COUNTS the drop instead of printing a zero. Same
+    staleness rule as `group_row`: one definition of "dead" in this module.
+    """
+    if not bars or is_stale(bars, freshest):
+        return None
+    last = bars[-1].get("c")
+    if not isinstance(last, (int, float)) or last <= 0:
+        return None
+    out = {"last_close": round(float(last), 2)}
+    for key, n in (("ret_5d", WINDOW_FAST), ("ret_21d", WINDOW_SHORT),
+                   ("ret_63d", WINDOW_MED)):
+        v = trailing_return(bars, n)
+        out[key] = None if v is None else round(v, 2)
+    return out
+
+
+def traction_read(ret_fast, ret_short, group_median_21d) -> dict:
+    """"Which ones are gaining traction", as a DEFINED number. PURE.
+
+      pace_5      = ret_5d  / WINDOW_FAST    percent per session, last week
+      pace_21     = ret_21d / WINDOW_SHORT   percent per session, last month
+      traction    = pace_5 - pace_21         percentage points per session
+      vs_group_21 = ret_21d - the group's published median_21d
+
+      gaining     = traction > TRACTION_MIN_ACCEL_PP
+                    AND vs_group_21 > TRACTION_MIN_VS_GROUP_PP
+
+    TWO conditions, because either one alone lies. A name can accelerate while
+    its whole group runs harder — it is being carried, not leading. And a name
+    can lead a dead group while decelerating — it led LAST month. Traction is
+    the name pulling ahead of its own group AND doing it faster this week than
+    it managed over the month.
+
+    Everything unknown fails closed: no 5-day frame, no 21-day frame, or no
+    group median leaves traction / vs_group_21 None and `gaining` False. A name
+    we cannot measure never ranks as the one gaining traction.
+    """
+    pace_f = None if not isinstance(ret_fast, (int, float)) else ret_fast / float(WINDOW_FAST)
+    pace_s = None if not isinstance(ret_short, (int, float)) else ret_short / float(WINDOW_SHORT)
+    traction = (None if pace_f is None or pace_s is None
+                else round(pace_f - pace_s, 3))
+    vs = (None if pace_s is None or not isinstance(group_median_21d, (int, float))
+          else round(float(ret_short) - float(group_median_21d), 2))
+    return {
+        "pace_5": None if pace_f is None else round(pace_f, 3),
+        "pace_21": None if pace_s is None else round(pace_s, 3),
+        "traction": traction,
+        "vs_group_21": vs,
+        "gaining": bool(traction is not None and vs is not None
+                        and traction > TRACTION_MIN_ACCEL_PP
+                        and vs > TRACTION_MIN_VS_GROUP_PP),
+    }
+
+
+def traction_row(symbol: str, stat: dict, group_median_21d,
+                 bench: Optional[dict] = None) -> dict:
+    """One popover row: the persisted symbol stats plus the group-dependent
+    half. PURE.
+
+    Lives HERE and not in the API so `traction` has exactly one definition
+    however many surfaces end up sorting on it — the same reason
+    supply_demand.bounce_room owns "bouncing" for its three pages.
+
+    `bench` restates each window against the benchmark (decision 1), because
+    the CHIP the popover opens under prints rel_21d. Raw member returns beside
+    a rebased chip number are two measures in one column. Rebased HERE rather
+    than persisted per name: it is the same three subtractions for every row,
+    so the table stores the benchmark's three returns once instead of 5,136
+    derived numbers.
+
+    `vs_group_21` is deliberately NOT rebased — it is a difference of two
+    returns over the same window, so the benchmark cancels out of it. Rebasing
+    both legs would print the identical number with a longer story.
+    """
+    stat = stat or {}
+    row = {"symbol": symbol}
+    for k in ("sector", "industry", "last_close", "ret_5d", "ret_21d", "ret_63d",
+              "at_demand", "zone_role", "zone_depth_pct", "zone_off_floor_pct"):
+        if k in stat:
+            row[k] = stat[k]
+    # No zone coverage is UNMARKED, never "not at demand" and never a drop.
+    row.setdefault("at_demand", None)
+    for key, bkey in (("rel_5d", "ret_5d"), ("rel_21d", "ret_21d"),
+                      ("rel_63d", "ret_63d")):
+        v, b = stat.get(bkey), (bench or {}).get(bkey)
+        row[key] = (None if not isinstance(v, (int, float))
+                    or not isinstance(b, (int, float)) else round(v - b, 2))
+    row.update(traction_read(stat.get("ret_5d"), stat.get("ret_21d"),
+                             group_median_21d))
+    return row
+
+
+def traction_sort_key(row: dict):
+    """gaining first, then traction, then the group-relative 21d, then symbol.
+    PURE and total — no input raises.
+
+    A None sorts LAST in every position: a name whose frame was too short to
+    measure must never rank above one that was measured and won.
+    """
+    def num(v):
+        return float(v) if isinstance(v, (int, float)) else float("-inf")
+
+    return (0 if row.get("gaining") else 1,
+            -num(row.get("traction")), -num(row.get("vs_group_21")),
+            str(row.get("symbol") or ""))
+
+
+def _zone_marks(closes: dict, day=None, docs=None) -> tuple:
+    """({SYMBOL: mark}, meta) — which members are standing INSIDE a demand band.
+
+    CONTEXT, never a gate. Nothing is dropped for lacking a zone; `unmarked`
+    counts the names the store has no doc for (556 of 1,731 on 2026-09-10).
+
+    ONE definition, imported: supply_demand.bounce_room.load_docs for the
+    stored bands and `in_demand_read` for the read the SEPA 🪃 chip, the demand
+    board and the phone's zone kinds already use. A second definition of "at
+    demand" inside the rotation package would be a second answer to a question
+    this app has already answered once.
+
+    The price is the member's last CLOSED bar — the same frame every other
+    number in this module is computed on. Deliberately not a live print: the
+    rotation map is a daily read, and an intraday print would make the marker
+    disagree with the returns sitting next to it.
+
+    Imported inside the fence on purpose. A zone-store failure must degrade the
+    MARKER — every name unmarked, `error` saying why — never the rotation build
+    or the endpoint that reads it.
+    """
+    meta = {"day": None, "covered": 0, "unmarked": len(closes or {}),
+            "at_demand": 0, "source": "unavailable", "error": None}
+    if not closes:
+        return {}, meta
+    try:
+        from supply_demand import bounce_room as BR, zone_store as ZS
+
+        symbols = sorted(closes)
+        if day is None:
+            day = ZS.latest_store_day()
+        if day is None:
+            meta["error"] = "zone store is cold"
+            return {}, meta
+        if docs is None:
+            docs, _missing = BR.load_docs(symbols, day)
+        marks = {}
+        for sym in symbols:
+            doc = (docs or {}).get(sym)
+            # A tombstone doc ("error") is NOT coverage — marking it "not at
+            # demand" would print a measurement we never made.
+            if not doc or doc.get("error"):
+                continue
+            read = BR.in_demand_read(closes.get(sym), doc)
+            if read:
+                marks[sym] = {"at_demand": True, "zone_role": read.get("role"),
+                              "zone_depth_pct": read.get("depth_pct"),
+                              "zone_off_floor_pct": read.get("off_floor_pct")}
+            else:
+                marks[sym] = {"at_demand": False}
+        meta.update(day=str(day), covered=len(marks),
+                    unmarked=len(closes) - len(marks),
+                    at_demand=sum(1 for m in marks.values() if m["at_demand"]),
+                    source="zone_store")
+        return marks, meta
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("rotation: demand-zone marker unavailable: %s", exc)
+        meta["error"] = f"{type(exc).__name__}: {exc}"[:120]
+        return {}, meta
+
+
+def _member_table(full_groups: dict, published: dict, labels: dict,
+                  frames: dict, freshest: str,
+                  bench: Optional[dict] = None) -> dict:
+    """The per-member table behind the popover. PURE given `frames`, apart from
+    the fenced demand-zone read.
+
+    `full_groups`  {grain: {group: [FULL membership]}}
+    `published`    {grain: {group: the row he actually sees}} — a group is in
+                   the table ONLY if it survived the member floor and the
+                   dead-ticker drops upstream, so every chip on the strip opens
+                   on a table and no orphan table rides along in the payload.
+    `labels`       {SYMBOL: (sector, industry)} from the same scan rows.
+
+    Every symbol is priced ONCE into `by_symbol`, not once per group: a name
+    sits in a sector, a cap-tier cohort, an industry and sometimes a theme, and
+    duplicating its row four times would quadruple a payload that already
+    crosses the wire into Mongo.
+    """
+    wanted = set()
+    for grain, groups in full_groups.items():
+        pub = published.get(grain) or {}
+        for name, syms in groups.items():
+            if name in pub:
+                wanted |= {str(s).upper() for s in syms}
+
+    by_symbol: dict = {}
+    unpriced: list = []
+    for sym in sorted(wanted):
+        stat = member_stats(frames.get(sym), freshest)
+        if stat is None:
+            unpriced.append(sym)          # counted, never silently absent
+            continue
+        sec, ind = labels.get(sym) or (None, None)
+        if sec:
+            stat["sector"] = sec
+        if ind:
+            stat["industry"] = ind
+        by_symbol[sym] = stat
+
+    # The full-membership median is taken on UNROUNDED returns, exactly as
+    # group_row takes the sampled one. Medianing the 2-dp row values instead
+    # moved a same-population theme by 0.01 (ai_infra, 2026-09-10) — a
+    # rounding artefact that would read on screen as a real disagreement
+    # between the two medians. Never persisted; only the median uses it.
+    raw_21 = {s: trailing_return(frames.get(s), WINDOW_SHORT) for s in by_symbol}
+
+    marks, zone_meta = _zone_marks({s: v["last_close"] for s, v in by_symbol.items()})
+    for sym, stat in by_symbol.items():
+        stat.update(marks.get(sym) or {"at_demand": None})
+
+    groups_out: dict = {}
+    for grain, groups in full_groups.items():
+        pub = published.get(grain) or {}
+        out: dict = {}
+        for name, syms in groups.items():
+            row = pub.get(name)
+            if row is None:
+                continue
+            members = sorted({str(s).upper() for s in syms})
+            priced = [s for s in members if s in by_symbol]
+            missing = [s for s in members if s not in by_symbol]
+            out[name] = {
+                # Echoed from the published row so the endpoint can CROSS-CHECK
+                # the sector / tier the clicked chip rode in with, instead of
+                # re-parsing " · large caps" back out of a display label.
+                "sector": row.get("sector"),
+                "tier": row.get("tier"),
+                "industry": row.get("industry"),
+                # The number he already sees, over the grid's sample …
+                "median_21d": row.get("median_21d"),
+                "n_measured": row.get("n"),
+                # The published row's POPULATION, not its survivors: n is what
+                # priced, dropped is what did not, and their sum is the set the
+                # grid actually sampled. `n_measured < n_full` looked like the
+                # sampled test and is not — one dead name in a full-membership
+                # group makes it true, and the popover then announces a sample
+                # that was never taken (themes are never strided at all).
+                "n_population": (row.get("n") or 0) + (row.get("dropped") or 0),
+                # … and this table's own, over everything below it. Never
+                # reconciled — see MEMBER_NOTE.
+                "median_21d_full": _median([raw_21.get(s) for s in priced]),
+                "n_full": len(members),
+                "priced": len(priced),
+                "unpriced": len(missing),
+                "unpriced_symbols": missing[:MEMBER_UNPRICED_SAMPLE],
+                "at_demand": sum(1 for s in priced
+                                 if by_symbol[s].get("at_demand") is True),
+                "zone_unmarked": sum(1 for s in priced
+                                     if by_symbol[s].get("at_demand") is None),
+                "symbols": priced,
+            }
+        groups_out[grain] = out
+
+    return {
+        "as_of": freshest,
+        "windows": {"fast": WINDOW_FAST, "short": WINDOW_SHORT, "med": WINDOW_MED},
+        # The benchmark's own three windows, stored ONCE. `traction_row`
+        # subtracts them to rebase each member (decision 1) — the chip the
+        # popover opens under prints rel_21d, so raw member returns beside it
+        # would be two different measures sharing a column.
+        "benchmark": dict(bench or {}),
+        "traction": TRACTION_SPEC,
+        "zone": zone_meta,
+        "coverage": {"symbols": len(wanted), "priced": len(by_symbol),
+                     "unpriced": len(unpriced),
+                     "unpriced_symbols": unpriced[:MEMBER_UNPRICED_SAMPLE]},
+        "by_symbol": by_symbol,
+        "groups": groups_out,
+        "note": MEMBER_NOTE,
+    }
+
+
 def build(start: str, min_dollar_vol: float = 20_000_000.0,
           min_price: float = 10.0, sample_per_group: int = 40) -> dict:
     """The rotation map: sectors, Ajay's themes, and safe havens, vs RSP.
@@ -433,8 +803,23 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
     # Sector × cap-tier cohorts (2026-08-31). Tiered from the FULL sector
     # membership before any sampling, so small-cap cohorts are not starved by
     # the sector stride.
-    cohorts = _cohort_members(sectors, _tier_sets())
+    tiers = _tier_sets()
+    cohorts = _cohort_members(sectors, tiers)
     industries = _industry_members(scan_rows)
+
+    # FULL membership per grain, for the popover's member table (2026-09-10).
+    # Same builders with the sample cap OFF, so a group's full roster can never
+    # drift from the sampled row it opens underneath — one source, two views.
+    full_groups = {
+        "sector": {sec: sorted({s.upper() for s in syms})
+                   for sec, syms in sectors.items()},
+        "cohort": {c["label"]: c["members"]
+                   for c in _cohort_members(sectors, tiers, sample=0)},
+        "industry": {c["label"]: c["members"]
+                     for c in _industry_members(scan_rows, sample=0)},
+        "theme": {name: sorted({s.upper() for s in syms})
+                  for name, syms in themes.items()},
+    }
 
     wanted = {BENCHMARK, BENCHMARK_FALLBACK}
     wanted |= set(SECTOR_ETF.values()) | set(HAVEN_PROXY.values())
@@ -444,6 +829,13 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         wanted |= set(c["members"])
     for c in industries:
         wanted |= set(c["members"])
+    # ONE load for both purposes: the sampled rows and the full-membership
+    # table read the SAME frames. A second pass would be duplicate provider
+    # work (+6.4 s measured 2026-09-10) and could hand the two views a
+    # different last bar for the same name.
+    for groups in full_groups.values():
+        for syms in groups.values():
+            wanted |= set(syms)
     frames = _load(wanted)
 
     freshest = max((_last_date(b) for b in frames.values() if b), default="")
@@ -516,6 +908,21 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
                   "out": list(reversed(ranked_thm[-6:])) if len(ranked_thm) > 6 else [],
                   "ranked_by": "rel_21d"}
 
+    # The member table is built LAST, off the rows that SURVIVED — so a chip he
+    # can click always opens on a table, and a group that was dropped upstream
+    # never ships one.
+    members = _member_table(
+        full_groups,
+        {"sector": {r["group"]: r for r in sector_rows},
+         "cohort": {r["group"]: r for r in cohort_rows},
+         "industry": {r["group"]: r for r in industry_rows},
+         "theme": {r["group"]: r for r in theme_rows}},
+        {sym: (sec, ind) for sym, sec, ind in scan_rows},
+        frames, freshest,
+        {"symbol": bench["symbol"],
+         "ret_5d": _round(trailing_return(bench_bars, WINDOW_FAST)),
+         "ret_21d": _round(bench["d21"]), "ret_63d": _round(bench["d63"])})
+
     ranked_ind = sorted((r for r in industry_rows if r.get("rel_21d") is not None),
                         key=lambda r: -r["rel_21d"])
     hot_industries = {
@@ -536,6 +943,10 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "hot": hot,
         "hot_industries": hot_industries,
         "hot_themes": hot_themes,
+        # ~350 KB of per-member rows behind the popover (2026-09-10). Persisted
+        # with the build and served one group at a time by /rotation/members —
+        # /rotation strips it, so no page pays for a table it did not open.
+        MEMBERS_KEY: members,
         # Ajay's "safe havens vs in general" read, as a single number each.
         "stance": {"defensive": _stance("defensive"),
                    "cyclical": _stance("cyclical"),
