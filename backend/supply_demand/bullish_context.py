@@ -129,6 +129,115 @@ def sentiment_read(symbol) -> Optional[dict]:
         return None
 
 
+# ── Sector heat (Ajay 2026-09-09) ───────────────────────────────────────────
+# "What we are looking for hot sectors in demand zone ... Becuz when money is
+# moved from a sector its just sitting there stock is not reversing quick."
+#
+# Lives HERE and not in alert_gates because alert_gates is a leaf by contract
+# (its module-level imports are pinned to three, and `rotation.` would be a new
+# edge). Keeping it in the SEE-only module also makes "sector heat can never
+# gate a push" structural rather than a promise.
+#
+# The rotation map is one build for the whole pass, cached 15 minutes: it walks
+# ~1,500 series and takes ~7s, which no per-symbol caller can afford.
+_HEAT_TTL = 900.0
+_HEAT_CACHE: dict = {}
+
+
+def _rotation_index(allow_build: bool = False):
+    """The heat index for this pass, or None. Never raises.
+
+    NEVER BUILDS INLINE BY DEFAULT. A cold `tracker.build` walks ~1,500 price
+    series and measured 29.5s — putting that inside a board request or a
+    per-minute alert pass would make the whole surface wait on a decoration.
+    So the order is: this process's 15-minute cache, then the rotation doc the
+    SCAN already persists (sepa.context_refresh writes it every run), and only
+    an explicit caller may pay for a live build. No cached map = no badge, and
+    a missing badge is invisible where a 30-second board is not.
+    """
+    import time as _t
+    hit = _HEAT_CACHE.get("idx")
+    if hit and (_t.time() - hit[0]) < _HEAT_TTL:
+        return hit[1]
+    payload = None
+    try:
+        from rotation import api as RA
+        cached = RA._cache.get(RA._DEFAULT_KEY) or RA._persisted_hit(RA._DEFAULT_KEY)
+        payload = (cached or {}).get("data")
+    except Exception:                                       # pragma: no cover
+        payload = None
+    if payload is None and allow_build:
+        try:
+            from rotation import tracker as RT
+            payload = RT.build(start=RT_START())
+        except Exception:                                   # pragma: no cover
+            payload = None
+    idx = None
+    if payload is not None:
+        try:
+            from rotation import heat as RH
+            idx = RH.build_index(payload)
+        except Exception:                                   # pragma: no cover
+            idx = None
+    # A miss is cached too, briefly, so a cold map is not re-probed per symbol.
+    _HEAT_CACHE["idx"] = (_t.time(), idx)
+    return idx
+
+
+def RT_START() -> str:
+    """The rotation window's anchor — the same default the /rotation route
+    uses, so the boards and the pushes read one map."""
+    try:
+        from rotation.api import DEFAULT_START
+        return DEFAULT_START
+    except Exception:                                       # pragma: no cover
+        return "2026-06-01"
+
+
+_LABELS_TTL = 3600.0
+_LABELS: dict = {}
+
+
+def _labels_for(symbol) -> tuple:
+    """(sector, industry) off the latest scan. ({}, None) on any failure — an
+    unlabelled name simply gets no heat read."""
+    import time as _t
+    hit = _LABELS.get("map")
+    if not hit or (_t.time() - hit[0]) >= _LABELS_TTL:
+        try:
+            from sepa import scanner
+            rows = (scanner.load_latest() or {}).get("all_results") or []
+            m = {(r.get("symbol") or "").upper(): (r.get("sector"), r.get("industry"))
+                 for r in rows if r.get("symbol")}
+        except Exception:                                   # pragma: no cover
+            m = {}
+        _LABELS["map"] = (_t.time(), m)
+        hit = _LABELS["map"]
+    return (hit[1] or {}).get(str(symbol).upper(), (None, None))
+
+
+def sector_heat_read(symbol) -> Optional[dict]:
+    """Is this name's group taking money in or giving it up? None when nothing
+    covers the name — silence, never a guess."""
+    idx = _rotation_index()
+    if not idx:
+        return None
+    try:
+        from rotation import heat as RH
+        sec, ind = _labels_for(symbol)
+        return RH.read(str(symbol).upper(), idx, sector=sec, industry=ind)
+    except Exception:                                       # pragma: no cover
+        return None
+
+
+def sector_heat_txt(heat: Optional[dict]) -> str:
+    try:
+        from rotation import heat as RH
+        return RH.txt(heat)
+    except Exception:                                       # pragma: no cover
+        return ""
+
+
 def bullish_context(symbol, frame=None, with_sentiment: bool = True) -> dict:
     """Everything he asked to SEE beside a push, in one call. Never raises,
     never blocks, cached briefly because zone_edge runs every minute.
@@ -142,7 +251,8 @@ def bullish_context(symbol, frame=None, with_sentiment: bool = True) -> dict:
         return hit[1]
     ctx = {"gex": gex_bullish_read(symbol),
            "patterns": bullish_patterns_read(symbol, frame),
-           "sentiment": sentiment_read(symbol) if with_sentiment else None}
+           "sentiment": sentiment_read(symbol) if with_sentiment else None,
+           "sector_heat": sector_heat_read(symbol)}
     _CTX_CACHE[key] = (_t.time(), ctx)
     return ctx
 

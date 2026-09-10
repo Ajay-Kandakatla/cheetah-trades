@@ -156,6 +156,60 @@ def _cohort_members(sectors: dict, tiers: dict,
     return out
 
 
+# ── Industry cohorts (Ajay 2026-09-09) ──────────────────────────────────────
+# "increase our sectors It looks like a rotation is happening every other day
+# today I see oil and energy had a bunch, money got moved in to technology too
+# from Semis or reduced in semis today. Like AVGO had burst with Semis and now
+# its down with all semis."
+#
+# GICS SECTOR IS THE WRONG GRAIN FOR WHAT HE WATCHES. AVGO is labelled
+# Technology / Semiconductors. Inside "Technology" (426 scan names) a semis
+# rotation is diluted by ~370 software, IT-services and hardware names moving
+# on something else entirely — so the sector row can read flat through exactly
+# the move he is describing.
+#
+# The scan rows already carry `industry` and nothing was reading it: 2,643 of
+# 2,948 rows have one, across 143 distinct values, 98 of which clear
+# MIN_COHORT_N and together cover 2,454 names. That IS his vocabulary —
+# Semiconductors (52) and Semiconductor Equipment & Materials (25) as separate
+# groups, Oil & Gas E&P (39), Oil & Gas Equipment & Services (33), Oil & Gas
+# Midstream (22), Solar (9), Uranium (5, below the floor and correctly
+# dropped). Measured 2026-09-09 on the live scan.
+#
+# Same floor and the same deterministic stride as the cap-tier cohorts: a
+# median over a handful of names is noise wearing a number.
+MIN_INDUSTRY_N = MIN_COHORT_N
+INDUSTRY_SAMPLE = COHORT_SAMPLE
+
+
+def _industry_members(rows: list, sample: int = INDUSTRY_SAMPLE) -> list:
+    """[{label, sector, industry, members}] from already-liquidity-filtered scan
+    rows. PURE given `rows`.
+
+    Takes the rows rather than re-reading the scan so the liquidity gate and
+    the sector grid see EXACTLY the same population — an industry median over a
+    different universe than the sector median above it is two answers to one
+    question.
+    """
+    pools: dict = {}
+    for sym, sec, ind in rows:
+        if not ind:
+            continue
+        pools.setdefault((str(ind), str(sec or "")), set()).add(sym)
+    out = []
+    for (ind, sec), syms in pools.items():
+        members = sorted(syms)
+        if len(members) < MIN_INDUSTRY_N:
+            continue
+        if len(members) > sample:
+            step = len(members) / sample
+            members = [members[int(i * step)] for i in range(sample)]
+        out.append({"label": ind, "sector": sec or None, "industry": ind,
+                    "members": members})
+    out.sort(key=lambda c: c["label"])
+    return out
+
+
 # Safe-haven proxies tracked outside the sector grid. Ajay: "make sure few other
 # sectors that wallstreet rotates in to historically. Like safe haves."
 HAVEN_PROXY = {
@@ -319,6 +373,7 @@ def _sector_members(min_dollar_vol: float, min_price: float) -> dict:
     rows = scan.get("all_results") or scan.get("candidates") or []
     out: dict = {}
     unmapped = 0
+    rows_out: list = []
     for r in rows:
         sym = (r.get("symbol") or "").upper()
         if not sym:
@@ -339,7 +394,12 @@ def _sector_members(min_dollar_vol: float, min_price: float) -> dict:
             unmapped += 1
             continue
         out.setdefault(str(sec), []).append(sym)
+        # Same population, one grain finer (2026-09-09). Collected HERE rather
+        # than by a second scan read so the industry medians and the sector
+        # medians can never be computed over different universes.
+        rows_out.append((sym, str(sec), r.get("industry")))
     out["_unmapped"] = unmapped
+    out["_rows"] = rows_out
     return out
 
 
@@ -354,6 +414,7 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
 
     sectors = _sector_members(min_dollar_vol, min_price)
     unmapped = sectors.pop("_unmapped", 0)
+    scan_rows = sectors.pop("_rows", [])
     # Cap per sector to bound the fetch. Deterministic stride, never random, so
     # the same request returns the same number twice.
     trimmed = {}
@@ -373,12 +434,15 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
     # membership before any sampling, so small-cap cohorts are not starved by
     # the sector stride.
     cohorts = _cohort_members(sectors, _tier_sets())
+    industries = _industry_members(scan_rows)
 
     wanted = {BENCHMARK, BENCHMARK_FALLBACK}
     wanted |= set(SECTOR_ETF.values()) | set(HAVEN_PROXY.values())
     for group in list(trimmed.values()) + list(themes.values()):
         wanted |= set(group)
     for c in cohorts:
+        wanted |= set(c["members"])
+    for c in industries:
         wanted |= set(c["members"])
     frames = _load(wanted)
 
@@ -409,10 +473,15 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         [{**group_row(c["label"], c["members"], frames, start, freshest),
           "sector": c["sector"], "tier": c["tier"], "index": c["index"]}
          for c in cohorts], bench)
+    industry_rows = _relativize(
+        [{**group_row(c["label"], c["members"], frames, start, freshest),
+          "sector": c["sector"], "industry": c["industry"]}
+         for c in industries], bench)
     # A cohort can shrink below the floor AFTER dead tickers drop out.
     cohort_rows = [r for r in cohort_rows if (r.get("n") or 0) >= MIN_COHORT_N]
+    industry_rows = [r for r in industry_rows if (r.get("n") or 0) >= MIN_INDUSTRY_N]
 
-    for rows in (sector_rows, theme_rows, haven_rows, cohort_rows):
+    for rows in (sector_rows, theme_rows, haven_rows, cohort_rows, industry_rows):
         rows.sort(key=lambda r: (r.get("rel_window") is None,
                                  -(r.get("rel_window") or 0)))
 
@@ -433,6 +502,14 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "ranked_by": "rel_21d",
     }
 
+    ranked_ind = sorted((r for r in industry_rows if r.get("rel_21d") is not None),
+                        key=lambda r: -r["rel_21d"])
+    hot_industries = {
+        "in": ranked_ind[:8],
+        "out": list(reversed(ranked_ind[-8:])) if len(ranked_ind) > 8 else [],
+        "ranked_by": "rel_21d",
+    }
+
     return {
         "start": start,
         "as_of": freshest,
@@ -441,7 +518,9 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "themes": theme_rows,
         "havens": haven_rows,
         "cohorts": cohort_rows,
+        "industries": industry_rows,
         "hot": hot,
+        "hot_industries": hot_industries,
         # Ajay's "safe havens vs in general" read, as a single number each.
         "stance": {"defensive": _stance("defensive"),
                    "cyclical": _stance("cyclical"),

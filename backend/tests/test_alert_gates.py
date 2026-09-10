@@ -638,12 +638,15 @@ def test_the_mood_gate_fails_closed_and_honours_its_floor():
 
 
 def test_the_things_to_see_can_never_block_a_push():
-    """GEX, patterns and sentiment RIDE ALONG. His own ledger says no chart
-    pattern beats the 50% placebo, so none of them is a gate — and every one
-    of these readers must answer None rather than raise on a bad symbol."""
+    """GEX, patterns, sentiment and SECTOR HEAT ride along. His own ledger says
+    no chart pattern beats the 50% placebo, and sector heat measured flat on
+    50,191 replayed demand arrivals (docs/supply_demand/sector_heat.md), so
+    none of them is a gate — and every one of these readers must answer None
+    rather than raise on a bad symbol."""
     from supply_demand import bullish_context as BC
     ctx = BC.bullish_context("__nope__", with_sentiment=False)
-    assert set(ctx) == {"gex", "patterns", "sentiment"}
+    assert set(ctx) == {"gex", "patterns", "sentiment", "sector_heat"}
+    assert ctx["sector_heat"] is None, "an unlabelled name gets NO heat read"
     assert BC.context_txt(ctx) == "" or isinstance(BC.context_txt(ctx), str)
     assert BC.context_txt(None) == ""
     assert BC.context_txt({}) == ""
@@ -653,11 +656,14 @@ def test_the_things_to_see_can_never_block_a_push():
                  AG.room_gate, AG.demand_proximity_gate):
         src = inspect.getsource(gate)
         for banned in ("bullish_context", "gex_bullish_read", "sentiment_read",
-                       "bullish_patterns_read"):
+                       "bullish_patterns_read", "sector_heat", "rotation"):
             assert banned not in src, f"{gate.__name__} must not read {banned}"
     # structural, not a promise: the gate module cannot even see the context one
     import inspect as _i
     assert "bullish_context" not in _i.getsource(AG)
+    # ... and cannot reach the rotation map either, which is why sector heat
+    # lives in bullish_context and not here (alert_gates is a pinned leaf).
+    assert "rotation" not in _i.getsource(AG)
 
 
 def test_flat_top_is_excluded_because_it_fires_on_everything():

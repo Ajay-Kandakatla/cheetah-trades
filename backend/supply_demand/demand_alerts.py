@@ -245,6 +245,12 @@ def at_message(item: dict) -> dict:
     sweep_s = AG.sweep_txt(item.get("sweep"))
     if sweep_s:
         parts.append(sweep_s)
+    # Where the money is (Ajay 2026-09-09). A READ, never a gate — it measured
+    # FLAT on win rate over 50,191 replayed arrivals and his speed claim came
+    # back inverted; see docs/supply_demand/sector_heat.md.
+    heat_s = BC.sector_heat_txt((item.get("context") or {}).get("sector_heat"))
+    if heat_s:
+        parts.append(heat_s)
     if mood_s:
         parts.append(mood_s)
     if "room" in item:                                    # the phone gate's read (2026-09-05)

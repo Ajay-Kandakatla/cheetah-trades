@@ -140,6 +140,11 @@ async def rotation_hot(refresh: bool = Query(False)):
                 ("group", "sector", "tier", "index", "n", "rel_21d",
                  "rel_window", "rel_63d", "pct_positive")}
 
+    def _slim_ind(r):
+        return {k: r.get(k) for k in
+                ("group", "sector", "industry", "n", "rel_21d", "rel_window",
+                 "rel_63d", "pct_positive")}
+
     hot = d.get("hot") or {}
     return JSONResponse({
         "as_of": d.get("as_of"),
@@ -148,6 +153,12 @@ async def rotation_hot(refresh: bool = Query(False)):
         "in": [_slim(r) for r in (hot.get("in") or [])],
         "out": [_slim(r) for r in (hot.get("out") or [])],
         "ranked_by": hot.get("ranked_by"),
+        # One grain finer (Ajay 2026-09-09: "increase our sectors ... money got
+        # moved in to technology too from Semis"). A semis rotation is invisible
+        # in the Technology row and obvious here — 2026-09-09: Semiconductors
+        # rel_63d -13.3 against Software-Infrastructure +19.1, inside one sector.
+        "industries_in": [_slim_ind(r) for r in ((d.get("hot_industries") or {}).get("in") or [])],
+        "industries_out": [_slim_ind(r) for r in ((d.get("hot_industries") or {}).get("out") or [])],
         "stance": d.get("stance"),
         "note": d.get("note"),
         "cached": bool(time.time() - hit["ts"] > 1) or hit.get("source") == "scan",

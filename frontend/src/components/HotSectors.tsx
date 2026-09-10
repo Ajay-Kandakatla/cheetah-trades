@@ -20,6 +20,7 @@ import { API } from '../lib/apiBase';
 export type HotRow = {
   group: string; sector?: string; tier?: string; index?: string;
   n?: number; rel_21d: number | null; rel_window?: number | null;
+  rel_63d?: number | null; industry?: string;
   pct_positive?: number | null;
 };
 
@@ -30,6 +31,12 @@ export type HotPayload = {
   built_at_iso?: string | null;
   as_of?: string; start?: string; benchmark?: string;
   in: HotRow[]; out: HotRow[]; ranked_by?: string;
+  /* One grain finer (Ajay 2026-09-09: "increase our sectors ... money got
+   * moved in to technology too from Semis"). Industry cohorts off the scan's
+   * own `industry` label — Semiconductors and Software-Infrastructure are
+   * separate rows here and both sit inside the one Technology row above, which
+   * on 2026-09-09 hid a 33-point 63-day spread between them. */
+  industries_in?: HotRow[]; industries_out?: HotRow[];
   stance?: { defensive?: number | null; cyclical?: number | null;
              commodity?: number | null };
   error?: string;
@@ -65,7 +72,10 @@ export default function HotSectors() {
   // A decorative strip must never block or break the page it rides on:
   // no data yet renders nothing, an error renders nothing.
   if (failed || !data || data.error) return null;
-  const hasRows = (data.in?.length || 0) + (data.out?.length || 0) > 0;
+  const indIn = data.industries_in || [];
+  const indOut = data.industries_out || [];
+  const hasRows = (data.in?.length || 0) + (data.out?.length || 0)
+                  + indIn.length + indOut.length > 0;
   if (!hasRows) return null;
 
   return (
@@ -95,6 +105,28 @@ export default function HotSectors() {
           </span>
         ))}
       </span>
+      {(indIn.length > 0 || indOut.length > 0) && (
+        <>
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-in">industry in</em>
+            {indIn.map((r) => (
+              <span key={`ii-${r.group}`} className="hs-chip hs-chip-in"
+                    title={`${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`}>
+                {chipLabel(r)}
+              </span>
+            ))}
+          </span>
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-out">industry out</em>
+            {indOut.map((r) => (
+              <span key={`io-${r.group}`} className="hs-chip hs-chip-out"
+                    title={`${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`}>
+                {chipLabel(r)}
+              </span>
+            ))}
+          </span>
+        </>
+      )}
       <Link to="/rotation" className="hs-more">full rotation →</Link>
     </div>
   );

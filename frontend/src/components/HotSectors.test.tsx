@@ -81,3 +81,66 @@ describe('scanStamp — the strip says which scan built it', () => {
     expect(scanStamp({})).toBe('');
   });
 });
+
+
+/* ── industry cohorts on the strip (Ajay 2026-09-09) ────────────────────────
+ * "increase our sectors ... money got moved in to technology too from Semis
+ *  or reduced in semis today."
+ * The sector row cannot show this: on 2026-09-09 Technology read -4.72 while
+ * Semiconductors was -13.32 over 63 days and Software-Infrastructure +19.10.
+ * These pin that the finer rows render, and that the strip still degrades to
+ * nothing rather than breaking the page it rides on. */
+describe('HotSectors — industry cohorts (2026-09-09)', () => {
+  const withIndustries = {
+    as_of: '2026-09-09', benchmark: 'RSP', source: 'scan' as const,
+    built_at_iso: '2026-09-09T16:31:50-04:00',
+    in: [{ group: 'Energy · large caps', n: 40, rel_21d: 8.61 }],
+    out: [{ group: 'Technology · large caps', n: 40, rel_21d: -4.72 }],
+    industries_in: [
+      { group: 'Oil & Gas E&P', sector: 'Energy', n: 25, rel_21d: 9.22, rel_63d: 8.74 },
+      { group: 'Gold', sector: 'Basic Materials', n: 10, rel_21d: 14.25, rel_63d: 25.61 },
+    ],
+    industries_out: [
+      { group: 'Semiconductors', sector: 'Technology', n: 25, rel_21d: -1.95, rel_63d: -13.32 },
+      { group: 'Aerospace & Defense', sector: 'Industrials', n: 25, rel_21d: -12.13, rel_63d: -8.36 },
+    ],
+  };
+
+  it('renders the finer rows with their numbers beside the sector rows', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(withIndustries) } as Response)));
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    expect(await screen.findByText(/Oil & Gas E&P \+9\.2%/)).toBeInTheDocument();
+    expect(screen.getByText(/^Semiconductors -[12]\.\d%$/)).toBeInTheDocument();
+    expect(screen.getByText('industry in')).toBeInTheDocument();
+    expect(screen.getByText('industry out')).toBeInTheDocument();
+    // the sector rows are still there — the finer grain ADDS, never replaces
+    expect(screen.getByText(/Energy · large caps/)).toBeInTheDocument();
+  });
+
+  it('says which sector an industry sits inside, so the split is legible', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(withIndustries) } as Response)));
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    const chip = await screen.findByText(/^Semiconductors -[12]\.\d%$/);
+    expect(chip.getAttribute('title')).toMatch(/inside Technology/);
+    expect(chip.getAttribute('title')).toMatch(/-13\.32% rel/);
+  });
+
+  it('NEGATIVE: an old payload with no industry keys still renders the strip', async () => {
+    const legacy = { ...withIndustries, industries_in: undefined, industries_out: undefined };
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(legacy) } as Response)));
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    expect(await screen.findByText(/Energy · large caps/)).toBeInTheDocument();
+    expect(screen.queryByText('industry in')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: industries alone (no sector rows) still render', async () => {
+    const only = { ...withIndustries, in: [], out: [] };
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(only) } as Response)));
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    expect(await screen.findByText(/Gold \+14\.3%/)).toBeInTheDocument();
+  });
+});

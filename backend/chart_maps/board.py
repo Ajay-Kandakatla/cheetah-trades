@@ -928,6 +928,90 @@ def _sweep_decor(tiles: list) -> int:
     return n
 
 
+def _heat_decor(tiles: list) -> int:
+    """Is the money coming into this name's group, or leaving it?
+
+    Ajay 2026-09-09: "What we are looking for hot sectors in demand zone ...
+    Becuz when money is moved from a sector its just sitting there stock is not
+    reversing quick."
+
+    CONTEXT, NEVER A GATE, AND THE MEASUREMENT SAYS WHY. Replayed over 50,191
+    demand-zone arrivals on 192 dates (studies/sector_heat_study.py):
+
+        arm       n        win%    stop%
+        ALL     50,191     22.8    76.6
+        hot     12,507     22.4    76.9
+        cold    20,091     23.2    76.3
+
+    Hot is -0.57pp on win rate, 95% [-1.87, +0.71] — flat. And his SPEED claim
+    measures BACKWARDS: at the 5-session clock cold wins 30.8% against hot's
+    28.3%, -2.55pp with a 95% interval of [-4.48, -0.65] that excludes zero,
+    and the gap shrinks monotonically to -0.33pp by 60 sessions. A name falling
+    into demand while its group is hot is falling AGAINST its group; one
+    falling with a cold group is riding a group drawdown that mean-reverts.
+
+    So the badge tells him where the money is — which is what he asked for and
+    is worth knowing — and nothing in the app is allowed to trade on it.
+    """
+    n = 0
+    for t in tiles:
+        b = t.get("_heat_badge")
+        if not b:
+            continue
+        t.setdefault("badges", []).append(b)
+        h = t.get("_heat") or {}
+        if h.get("group"):
+            t.setdefault("stats", []).append(
+                {"k": "Sector flow", "v": "%s %+.1f%%" % (h["group"], h.get("rel_21d") or 0.0)})
+        n += 1
+    return n
+
+
+def heat_index():
+    """The rotation heat index for this board pass, or None.
+
+    Read-only: it takes the map the SCAN already persisted and never builds one
+    inline. A cold build measured 29.5s and a board must not wait on a badge.
+    """
+    try:
+        from supply_demand import bullish_context as BC
+        return BC._rotation_index(allow_build=False)
+    except Exception as exc:                                # pragma: no cover
+        log.debug("chart maps: rotation heat unavailable: %s", exc)
+        return None
+
+
+def attach_heat(tiles: list) -> int:
+    """Stamp `_heat` / `_heat_badge` on every tile. Never raises; a tile with
+    no read simply carries none."""
+    if not tiles:
+        return 0
+    idx = heat_index()
+    if not idx:
+        return 0
+    try:
+        from rotation import heat as RH
+        from supply_demand import bullish_context as BC
+    except Exception:                                       # pragma: no cover
+        return 0
+    n = 0
+    for t in tiles:
+        sym = str(t.get("symbol") or "").upper()
+        if not sym:
+            continue
+        try:
+            sec, ind = BC._labels_for(sym)
+            h = RH.read(sym, idx, sector=sec, industry=ind)
+        except Exception:                                   # pragma: no cover
+            continue
+        if not h:
+            continue
+        t["_heat"] = h
+        t["_heat_badge"] = RH.badge(h)
+        n += 1
+    return n
+
+
 def attach_tape(rows: list, budget_sec: float = TAPE_BUDGET_SEC) -> int:
     """Pull each row's intraday tape for venue + retail detail, in place.
 
@@ -1946,6 +2030,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     _dwell_decor(out)
     _knife_decor(out)
     _sweep_decor(out)
+    attach_heat(out)
+    _heat_decor(out)
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "phase": ("approaching" if phase == "approaching" else "reached"),
@@ -2892,6 +2978,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     _dwell_decor(out)
     _knife_decor(out)
     _sweep_decor(out)
+    attach_heat(out)
+    _heat_decor(out)
     flow_counts = {"inflow": 0, "neutral": 0, "distribution": 0}
     for t in tiles:
         st = next((b for b in t.get("badges") or [] if "Money flowing in" in b["text"]), None)

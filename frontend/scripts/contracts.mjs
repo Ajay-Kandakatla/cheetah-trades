@@ -1078,6 +1078,27 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // Ajay 2026-09-09: "increase our sectors ... atleast give me an indicator
+  // that its in hot sector or not". The finer grain is the half that measured
+  // TRUE; the edge is the half that measured flat. The strip must keep the
+  // finer rows, and must survive a payload that has none.
+  {
+    name: 'the Hot-sectors strip carries the finer industry rows (2026-09-09)',
+    file: 'src/components/HotSectors.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/industries_in/.test(src) || !/industries_out/.test(src)) {
+        errs.push('the industry cohorts must ride the strip');
+      }
+      if (!/industries_in \|\| \[\]/.test(src) && !/industries_in \?\?/.test(src)) {
+        errs.push('a payload with no industry keys must not break the strip');
+      }
+      if (!/inside \$\{r\.sector\}/.test(src)) {
+        errs.push('an industry chip must say which sector it sits inside');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

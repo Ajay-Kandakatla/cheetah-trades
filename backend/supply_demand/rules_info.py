@@ -110,6 +110,20 @@ def _direction_line():
 
 
 
+def _sector_heat_line():
+    """Built from the enforcing constants, never retyped."""
+    from rotation import heat as RH
+    return ("\U0001F525 Sector flow rides the body and the board tiles and GATES NOTHING: the "
+            "name's industry cohort (or its sector when the industry is too thin) "
+            "median-member 21-session return minus %s, ranked against every group on the "
+            "rotation map — top %g%% reads hot, bottom %g%%%s cold. MEASURED FLAT: over "
+            "50,191 replayed demand arrivals hot won 22.4%% against cold's 23.2%% (-0.57pp, "
+            "95%% -1.87..+0.71). And \"when money is moved from a sector its just sitting "
+            "there\" measured BACKWARDS — at 5 sessions COLD wins 30.8%% to 28.3%%, -2.55pp "
+            "with an interval excluding zero, decaying to -0.33pp by 60."
+            % ("RSP", 100.0 - RH.HOT_PCTL, RH.COLD_PCTL, ""))
+
+
 def _proven_line():
     return ("A lid counts only when it is tested ≥ %d× (touches only since 2026-09-08 — FSLR); a "
             "one-touch band overhead is skipped and room is measured to the next real one "
@@ -154,6 +168,7 @@ def sections() -> dict:
         "stops": _zone_lines(),
         "alerts": [
             _sweep_line(),
+            _sector_heat_line(),
             "\U0001F3AF Ready to enter (\u26A1 Signals tab, pre-market 08:00 ET and every 15 min in "
             "session): the same two gates decide READY; a name that clears them still grades "
             "WATCH if it is reclaiming the band from below (measured %s floor-stop rate vs %s "
