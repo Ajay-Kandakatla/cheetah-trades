@@ -32,6 +32,13 @@ UNIV_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 UNIV_CACHE_TTL_SEC = 30 * 24 * 3600  # 30 days
 
 # Liquid growth + momentum names. Edit freely.
+# Index ETFs carried in every universe for RS math ONLY — never tradeable rows.
+# They are NOT in the SEPA scan's results, so a consumer that filters ETFs by
+# the scan's own `is_etf` flag will silently let these three through: that is
+# exactly how SPY/QQQ/IWM reached the pattern sweep on 2026-09-10 when it
+# widened to load_universe("full"). Filter against THIS, not against a scan row.
+RS_ANCHORS: tuple[str, ...] = ("SPY", "QQQ", "IWM")
+
 UNIVERSE: list[str] = [
     # Mega-cap tech
     "NVDA", "MSFT", "AAPL", "META", "GOOGL", "AMZN", "TSLA", "AVGO", "ORCL", "NFLX",
@@ -66,7 +73,7 @@ UNIVERSE: list[str] = [
     "RGTI", "QBTS", "BBAI", "SOUN", "TEM", "HIMS", "DUOL", "RBLX", "DKNG",
     "SPOT", "RDDT", "APP", "APPN", "PATH", "BILL", "DOCN",
     # Anchor / benchmarks (not traded but used for RS math)
-    "SPY", "QQQ", "IWM",
+    *RS_ANCHORS,
 ]
 
 

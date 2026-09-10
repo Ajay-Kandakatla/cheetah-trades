@@ -89,10 +89,17 @@ const PageInfo = (
   <>
     <p><strong>Patterns</strong> — an on-demand scan for bullish-reversal geometry on daily bars:
       <strong> double bottoms</strong>, <strong>triple bottoms</strong>, <strong>inverse head &amp; shoulders</strong> and
-      <strong> cup-with-handles</strong>, found across the SEPA universe's cached charts.</p>
-    <p><strong>🎯 Scan Qualifiers</strong> answers <em>every</em> current SEPA qualifier: the pattern(s) its chart matches
-      right now, recent candle formations (hammer, engulfing, morning star — each shown with Bulkowski's measured
-      frequency AND the academic null), or an explicit <em>no pattern</em>. A chart-analysis input beside SEPA, VCP and volume.</p>
+      <strong> cup-with-handles</strong>, found across the <strong>whole universe's</strong> cached charts — every name we
+      carry, not only the names that pass the SEPA gates (Ajay 2026-09-10: "I want them to run against all").</p>
+    <p><strong>⚡ Scan ALL names</strong> is the full-universe sweep, and it is what the confirmed/forming board below shows.
+      <strong> 🎯 Qualifier verdicts only</strong> is the smaller, different job: it answers <em>every</em> current SEPA
+      qualifier (plus holdings, at-pivot and leaders) with the pattern(s) its chart matches right now, recent candle
+      formations (hammer, engulfing, morning star — each shown with Bulkowski's measured frequency AND the academic null),
+      or an explicit <em>no pattern</em>. That complete-answer set is what fills the 📐 chips on the SEPA, Portfolio and
+      Leaderboard rows; it does not refresh the board below.</p>
+    <p><strong>The board is wider than the phone.</strong> A full-universe sweep does <em>not</em> mean more pushes:
+      a pattern only reaches your phone if the name is <strong>$1B+</strong> (your own size rule) <em>and</em> is sitting
+      <strong> at a demand zone</strong> (your own alert rule). Everything else stays here on the board to be read, not pushed.</p>
     <p>Discipline: a pattern only counts when it <strong>closes above its confirmation line</strong> (the interim peak / neckline) —
       before that it's listed as "forming", a shape to watch, not a signal. Targets use the measure rule; stops sit under the pattern low.</p>
     <p>Evidence, honestly: Lo, Mamaysky &amp; Wang (2000, J. Finance) found algorithmically-detected patterns carry
@@ -197,25 +204,36 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
             Patterns
             <InfoButton inline title="Patterns">{PageInfo}</InfoButton>
           </h1>
-          <p className="lede">Double bottoms, triple bottoms, inverse H&amp;S &amp; cup-with-handles across the SEPA universe — confirmed vs forming, with our own measured record beside the book numbers.</p>
+          <p className="lede">Double bottoms, triple bottoms, inverse H&amp;S &amp; cup-with-handles across the <b>whole universe</b> — every name, not just the SEPA qualifiers — confirmed vs forming, with our own measured record beside the book numbers. Phone alerts stay narrower than this board on purpose: only $1B+ names sitting at a demand zone push.</p>
         </div>
         {user?.is_admin && (
+          /* Ajay 2026-09-10: "The chart patterns are only looking at qualified
+           * sepa list I want them to run against all". The gold button he
+           * actually clicks now sweeps the FULL universe and refreshes the
+           * confirmed/forming board below. The qualifier verdict scan is a
+           * genuinely different product — an explicit answer for EVERY
+           * qualifier including "no pattern", which is what feeds the 📐 chips
+           * — so it keeps its button, demoted to secondary. Both labels and
+           * both tooltips now carry their scope and their name count, so which
+           * one covers what is unambiguous on sight. */
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => startScan('qualifiers', true)} disabled={!!scanStatus?.running}
-                    title="Re-run the pattern read on every current SEPA qualifier, refreshing each chart's TODAY bar with the live close first — so a breakout confirming this session shows up now (not after the post-close run). Geometry still uses the full daily history; only the trigger freshness is 'today'."
+            <button onClick={() => startScan('universe', true)} disabled={!!scanStatus?.running}
+                    title={`Sweep EVERY name in the full universe — ${latest?.symbols_scanned ? `all ${latest.symbols_scanned.toLocaleString()} charts on the last run` : 'roughly 2,650 charts'}, not just the SEPA qualifiers — for bullish-reversal geometry, refreshing each chart's TODAY bar with the live close first, so a breakout confirming this session shows up now (not after the post-close run). Geometry still uses the full daily history; only the trigger freshness is "today". This is the scan that fills the confirmed/forming board below. ~1–2 min. A wider board is NOT more phone alerts: pattern pushes stay gated to $1B+ names sitting at a demand zone.`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.9rem',
                              borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 700,
                              fontSize: '0.8rem', minHeight: 36, background: C.gold, color: '#1a1a1a', border: 'none',
                              opacity: scanStatus?.running ? 0.7 : 1 }}>
-              ↻ {scanStatus?.running && scanStatus.scope === 'qualifiers' ? 'Rescanning…' : 'Rescan (today’s data)'}
+              ⚡ {scanStatus?.running && scanStatus.scope !== 'qualifiers' ? 'Sweeping all names…' : 'Scan ALL names (full universe)'}
             </button>
-            <button onClick={() => startScan('universe', true)} disabled={!!scanStatus?.running}
-                    title="Heavier sweep of the WHOLE SEPA universe (not just qualifiers) for fresh bullish-reversal breakouts, also refreshing today's bar first. ~1–2 min."
+            <button onClick={() => startScan('qualifiers', true)} disabled={!!scanStatus?.running}
+                    title={`Re-answer only the qualifier verdict set — ${quals?.n_symbols ? `${quals.n_symbols} names` : 'roughly 300 names'}: current SEPA qualifiers plus your holdings, the buyable, the at-pivot and the leaders. Every one gets an explicit answer (pattern, candle read, or "no pattern"), and that is what fills the 📐 chips on the SEPA, Portfolio and Leaderboard rows. Far smaller and faster than the full sweep — and it does NOT refresh the confirmed/forming board below.`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.9rem',
                              borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
                              fontSize: '0.8rem', minHeight: 36, background: 'transparent', color: C.gold,
                              border: `1px solid ${C.gold}88`, opacity: scanStatus?.running ? 0.7 : 1 }}>
-              ⚡ {scanStatus?.running && scanStatus.scope !== 'qualifiers' ? 'Sweeping…' : 'Full sweep'}
+              🎯 {scanStatus?.running && scanStatus.scope === 'qualifiers'
+                    ? 'Rescanning qualifiers…'
+                    : `Qualifier verdicts only${quals?.n_symbols ? ` (${quals.n_symbols})` : ''}`}
             </button>
           </div>
         )}
@@ -332,7 +350,7 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
       ) : latest.n_found === 0 ? (
         <div className="sepa-empty-card">
           <div className="eyebrow">{latest.note || 'No fresh patterns in the last scan'}</div>
-          <p style={{ color: C.muted, margin: 0 }}>Hit ⚡ Scan Patterns to sweep the universe's cached daily charts (~1–2 min).</p>
+          <p style={{ color: C.muted, margin: 0 }}>Hit ⚡ Scan ALL names to sweep every chart in the universe's cached daily frames (~1–2 min).</p>
         </div>
       ) : (
         <>

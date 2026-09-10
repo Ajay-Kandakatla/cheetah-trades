@@ -1,17 +1,22 @@
 """On-demand pattern scan — the "full scan button" engine.
 
-Runs the pattern detectors across the SEPA universe (the latest scan's symbols,
-so every hit carries its SEPA context — RS rank, stage, candidate/buyable) using
-the price_cache daily frames (no provider calls). Background thread + a polled
+Runs the pattern detectors across the FULL scanning universe (load_universe
+"full", unioned with the latest SEPA scan's rows so every hit that has one
+carries its SEPA context — RS rank, stage, candidate/buyable) using the
+price_cache daily frames (no provider calls). Background thread + a polled
 progress status, results persisted to Mongo `patterns_scan` so the page loads
 instantly afterward.
 
 Two scopes (Ajay 2026-06-09: "a chart pattern analysis to make a decision
 besides the SEPA qualifications and VCP and volume"):
 - "universe": hits-only sweep of every cached chart (the original mode).
-- "qualifiers": EVERY SEPA qualifier gets a verdict row — the Bulkowski
+- "qualifiers": EVERY universe name gets a verdict row — the Bulkowski
   pattern(s) it matches (confirmed or forming), recent candle reads, or an
   explicit "no pattern". No-match is an answer too; that's the point.
+
+Both scopes were narrower than their names until 2026-09-10 (Ajay: "The chart
+patterns are only looking at qualified sepa list I want them to run against
+all") — see _universe_with_context, MAX_RESULTS and _verdict_universe.
 
 SELF-VALIDATION in the same pass: every historically CONFIRMED pattern in the
 ~2y frames is measured (+21-bar return and max gain), aggregated per pattern,
@@ -32,6 +37,25 @@ from . import detector
 log = logging.getLogger("patterns.scan")
 
 MAX_WORKERS = 8
+
+# The sweep's width. "full" is the SAME alias the SEPA scan, zone_store and the
+# demand boards run (russell3000 ∪ sp1500 ∪ curated ∪ themes, 2,650 names on
+# 2026-09-10), so the pattern board can never be narrower than the pages that
+# link into it. Cost is a non-issue: cached daily frames load in ~24 ms, so
+# 2,650 names is ~8 s at MAX_WORKERS before the detectors run.
+UNIVERSE_MODE = "full"
+
+# Persisted-hit cap on the "universe" scope. Measured 2026-09-10: ~600 B per
+# result row, so 2,000 rows ≈ 1.2 MB against Mongo's 16 MB document limit.
+# It was a bare 200 and it BOUND (239 hits that day): the display sort puts
+# confirmed + SEPA candidates first, so the 39 rows it silently cut were the
+# NON-qualifier hits — exactly the names Ajay asked for (2026-09-10: "The
+# chart patterns are only looking at qualified sepa list I want them to run
+# against all"), and pattern_alerts.py reads this same truncated list.
+# Whatever the cap still cuts is counted in the payload as n_dropped, never
+# dropped in silence.
+MAX_RESULTS = 2000
+
 _LOCK = threading.Lock()
 _STATE: dict = {"running": False, "scope": "universe", "done": 0, "total": 0,
                 "started_at": 0, "finished_at": 0, "error": None}
@@ -49,15 +73,35 @@ def _coll():
 
 
 def _universe_with_context() -> tuple:
-    """(symbols, context_by_symbol) from the latest SEPA scan; fallback to the
-    universe loader with empty context."""
+    """(symbols, context_by_symbol) — the FULL universe, carrying each name's
+    SEPA context wherever the latest scan produced a row for it.
+
+    The symbol list used to BE the SEPA scan's rows, which made every name the
+    last scan never rowed invisible to the detectors — 286 of the 2,650 on
+    2026-09-10, the day Ajay said "The chart patterns are only looking at
+    qualified sepa list I want them to run against all". Union now: universe ∪
+    scan rows, and a name with no SEPA row gets an EMPTY context dict instead
+    of being dropped — a missing SEPA row is a missing chip, never a reason to
+    skip the chart. ETFs the scan marked stay out (basket geometry isn't a
+    stock pattern; that is also what keeps the SPY/QQQ/IWM benchmarks
+    load_universe appends off the board).
+
+    Fails toward the narrower list, never toward nothing: if load_universe
+    itself fails we sweep the scan's own rows (the pre-2026-09-10 behaviour),
+    and only if BOTH are empty do we fall back to russell1000 with no context.
+    """
     ctx: dict = {}
+    scanned: list = []
+    etfs: set = set()
     try:
         from sepa import scanner
         rows = (scanner.load_latest() or {}).get("all_results") or []
         for r in rows:
             sym = r.get("symbol")
-            if not sym or r.get("is_etf"):
+            if not sym:
+                continue
+            if r.get("is_etf"):
+                etfs.add(sym)
                 continue
             ctx[sym] = {
                 "rs_rank": r.get("rs_rank"), "score": r.get("score"),
@@ -65,10 +109,34 @@ def _universe_with_context() -> tuple:
                 "is_candidate": bool(r.get("is_candidate")),
                 "is_buyable": bool(r.get("is_buyable")),
             }
-        if ctx:
-            return list(ctx.keys()), ctx
+            scanned.append(sym)
     except Exception as exc:
         log.warning("patterns universe from scan failed: %s", exc)
+
+    universe: list = []
+    try:
+        from sepa import universe as U
+        universe = [s for s in (U.load_universe(UNIVERSE_MODE) or []) if s]
+        # The RS anchors ride in every universe for the RS math and are NOT in
+        # the scan's rows, so the `is_etf` filter above cannot see them. Caught
+        # on the first dry run of this widening: SPY, QQQ and IWM came back as
+        # pattern candidates. An index basket's geometry is not a stock's.
+        # getattr, not a from-import: a missing constant must cost us the three
+        # anchors, never the whole 2,650-name widening this function exists for.
+        etfs.update(getattr(U, "RS_ANCHORS", ()) or ())
+    except Exception as exc:
+        log.warning("patterns universe load_universe(%s) failed: %s — sweeping "
+                    "the SEPA scan's own rows only", UNIVERSE_MODE, exc)
+
+    # Scan rows first so the old ordering stays a prefix of the wider sweep;
+    # the universe-only names follow. dict.fromkeys keeps dedup + order.
+    symbols = [s for s in dict.fromkeys(scanned + universe) if s not in etfs]
+    if symbols:
+        log.info("patterns universe: %d symbols — %d with SEPA context, %d "
+                 "universe-only (no SEPA row), %d ETFs excluded",
+                 len(symbols), sum(1 for s in symbols if s in ctx),
+                 sum(1 for s in symbols if s not in ctx), len(etfs))
+        return symbols, ctx
     try:
         from sepa.universe import load_universe
         return [s for s in load_universe("russell1000") or []], {}
@@ -102,12 +170,23 @@ def _scan_symbol(sym: str) -> Optional[dict]:
 
 
 def _verdict_universe() -> dict:
-    """{symbol: {"ctx": sepa_ctx, "sources": [...]}} for the verdict scan —
-    qualifiers ∪ portfolio holdings ∪ buyable ∪ at-pivot ∪ leaderboard, so the
-    Portfolio and Leaderboard pages can cross-link every name they show
-    (Ajay 2026-06-09). Source tags: qualifier / buyable / holding / at_pivot /
-    leader. Same shape as scalping's watch universe, without its size cap."""
-    _, ctx = _universe_with_context()
+    """{symbol: {"ctx": sepa_ctx, "sources": [...]}} for the verdict scan — the
+    FULL universe, so every row the SEPA / Portfolio / Leaderboard pages list
+    can answer its 📐 chip.
+
+    This was qualifiers ∪ portfolio holdings ∪ buyable ∪ at-pivot ∪
+    leaderboard (Ajay 2026-06-09), which cross-linked those pages but came to
+    313 names against a SEPA page listing 2,365 rows — every row outside the
+    union drew a BLANK chip, which reads as "no pattern" and is really "never
+    looked". Ajay 2026-09-10: "The chart patterns are only looking at
+    qualified sepa list I want them to run against all". Union members keep
+    their own tags; every other universe name is tagged `universe` — in the
+    sweep, none of the above — so the cross-link chips stay exactly as narrow
+    as they were. Source tags: qualifier / buyable / holding / at_pivot /
+    leader / universe. Same shape as scalping's watch universe, without its
+    size cap; measured 2026-09-10 at ~678 B per verdict, so the full 2,650
+    ≈ 1.8 MB against Mongo's 16 MB document limit."""
+    symbols, ctx = _universe_with_context()
     out: dict = {}
 
     def add(sym, source, sepa_ctx=None):
@@ -146,6 +225,17 @@ def _verdict_universe() -> dict:
             add(l.get("symbol"), "leader")
     except Exception as exc:
         log.debug("verdict universe leaderboard failed: %s", exc)
+
+    # The rest of the sweep, added LAST and only where nothing else claimed the
+    # name, so `universe` never dilutes a real cross-link tag.
+    for sym in symbols:
+        if sym and sym.upper() not in out:
+            add(sym, "universe")
+    log.info("verdict universe: %d names — %d tagged qualifier/buyable/"
+             "holding/at_pivot/leader, %d universe-only",
+             len(out),
+             sum(1 for e in out.values() if e["sources"] != ["universe"]),
+             sum(1 for e in out.values() if e["sources"] == ["universe"]))
     return out
 
 
@@ -213,7 +303,8 @@ def _run_qualifier_scan(refresh_today: bool = False) -> None:
         with _LOCK:
             _STATE.update(total=len(universe), done=0, error=None)
         if not universe:
-            raise RuntimeError("no qualifiers in the latest SEPA scan — run a SEPA scan first")
+            raise RuntimeError("empty universe and no rows in the latest SEPA "
+                               "scan — run a SEPA scan first")
         if refresh_today:
             _refresh_today(universe.keys())
 
@@ -244,15 +335,24 @@ def _run_qualifier_scan(refresh_today: bool = False) -> None:
             "generated_at": int(time.time()),
             "scope": "qualifiers",
             "n_symbols": len(verdicts),
+            # How wide the sweep actually was, split by why each name is in it —
+            # a full-universe run and a qualifiers-only run must never look the
+            # same on the board.
+            "n_qualifiers": sum(1 for v in verdicts
+                                if "qualifier" in (v.get("sources") or [])),
+            "n_universe_only": sum(1 for v in verdicts
+                                   if (v.get("sources") or []) == ["universe"]),
+            "n_errored": sum(1 for v in verdicts if v.get("error")),
             "n_matched": sum(1 for v in verdicts if v["matches"]),
             "n_candle_only": sum(1 for v in verdicts if not v["matches"] and not v["no_match"]),
             "n_no_match": sum(1 for v in verdicts if v["no_match"]),
             "verdicts": verdicts,
             "disclaimer": (
-                "Every SEPA qualifier — plus your holdings, buyables, at-pivot and "
-                "leaderboard names — answered: the Bulkowski pattern(s) the daily "
-                "chart matches right now (confirmed or forming), recent candle "
-                "formations, or — most of the time — no pattern at all. Geometry is "
+                "Every name in the scanning universe — qualifiers, your holdings, "
+                "buyables, at-pivot and leaderboard names, and everything else we "
+                "scan — answered: the Bulkowski pattern(s) the daily chart matches "
+                "right now (confirmed or forming), recent candle formations, or — "
+                "most of the time — no pattern at all. Geometry is "
                 "descriptive, not predictive; candle formations have NO standalone "
                 "academic support (Marshall 2006; Horton 2009). A decision input "
                 "beside SEPA, VCP and volume — not advice."),
@@ -273,8 +373,11 @@ def _run_qualifier_scan(refresh_today: bool = False) -> None:
             log.warning("pattern ledger record failed: %s", exc)
         with _LOCK:
             _STATE.update(running=False, finished_at=int(time.time()))
-        log.info("qualifier verdict scan done: %d qualifiers, %d matched",
-                 len(verdicts), payload["n_matched"])
+        log.info("qualifier verdict scan done: %d names (%d qualifiers, %d "
+                 "universe-only), %d matched, %d with no usable frame",
+                 len(verdicts), payload["n_qualifiers"],
+                 payload["n_universe_only"], payload["n_matched"],
+                 payload["n_errored"])
     except Exception as exc:
         log.exception("qualifier verdict scan failed")
         with _LOCK:
@@ -334,11 +437,25 @@ def _run_scan(refresh_today: bool = False) -> None:
             -((p.get("sepa") or {}).get("rs_rank") or 0),
         ))
 
+        # A bound cap is a truncated board, and a truncated board reads exactly
+        # like a quiet market. Say so in the log AND in the payload.
+        n_dropped = max(0, len(all_found) - MAX_RESULTS)
+        if n_dropped:
+            log.warning("patterns scan: %d of %d hits DROPPED by the "
+                        "MAX_RESULTS=%d cap — the board and pattern_alerts are "
+                        "seeing a truncated list (the sort cuts non-qualifiers "
+                        "first); raise MAX_RESULTS", n_dropped, len(all_found),
+                        MAX_RESULTS)
+
         payload = {
             "generated_at": int(time.time()),
             "symbols_scanned": len(symbols),
+            "symbols_with_sepa_ctx": sum(1 for s in symbols if ctx.get(s)),
             "n_found": len(all_found),
-            "results": all_found[:200],
+            "n_results": min(len(all_found), MAX_RESULTS),
+            "n_dropped": n_dropped,
+            "max_results": MAX_RESULTS,
+            "results": all_found[:MAX_RESULTS],
             "validation": _aggregate_validation(outcome_lists),
             "validation_note": (
                 "OUR universe's measured outcomes: every historically CONFIRMED "
@@ -359,7 +476,10 @@ def _run_scan(refresh_today: bool = False) -> None:
                 log.warning("patterns persist failed: %s", exc)
         with _LOCK:
             _STATE.update(running=False, finished_at=int(time.time()))
-        log.info("patterns scan done: %d symbols, %d found", len(symbols), len(all_found))
+        log.info("patterns scan done: %d symbols (%d with SEPA context), %d "
+                 "found, %d persisted, %d dropped by the cap", len(symbols),
+                 payload["symbols_with_sepa_ctx"], len(all_found),
+                 payload["n_results"], n_dropped)
     except Exception as exc:
         log.exception("patterns scan failed")
         with _LOCK:
