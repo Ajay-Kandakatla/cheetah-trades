@@ -223,6 +223,30 @@ describe('Alerts page — the query it sends', () => {
     expect(recentUrls(fn)).toHaveLength(before);
     expect(screen.getByRole('button', { name: '🪃 Intraday demand turn' })).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('REGRESSION: completing the three zone kinds does NOT flip the page to "all pushes"', async () => {
+    // Ajay 2026-09-10: "These selections are not working proper sometime it
+    // selects all if I click on Breaking resistance".
+    //
+    // writeKinds used to delete the kinds param when the selection equalled
+    // ZONE_KINDS -- correct back when an ABSENT param meant those three. It
+    // does not any more (parseKinds(null) === 'all'), so the deletion read
+    // back as ALL PUSHES. Breaking Resistance is the third zone kind, so it
+    // was the click that completed the set and tripped it.
+    const fn = stubFetch();
+    draw('/alerts?kinds=demand_alert,zone_bounce_alert');
+    await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: '🚀 Breaking resistance' }));
+    await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds'))
+      .toBe('demand_alert,zone_bounce_alert,supply_break_alert'));
+    // the param is WRITTEN OUT, never dropped …
+    expect(lastRecent(fn).searchParams.get('kinds')).not.toBeNull();
+    // … and the all-pushes chip stays off, with all three narrow chips on.
+    expect(screen.getByRole('button', { name: '📣 all pushes' })).toHaveAttribute('aria-pressed', 'false');
+    for (const name of ['🧲 Reversal at demand', '🪃 Intraday demand turn', '🚀 Breaking resistance']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+    }
+  });
 });
 
 describe('Alerts page — the rows', () => {

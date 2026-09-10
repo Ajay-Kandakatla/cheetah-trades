@@ -410,7 +410,14 @@ export function AlertsPage() {
   };
   const writeKinds = (ks: string[] | 'all') => write((p) => {
     if (ks === 'all') p.set('kinds', ALL);
-    else if (sameSet(ks, ZONE_KINDS)) p.delete('kinds');
+    // Ajay 2026-09-10: "These selections are not working proper sometime it
+    // selects all if I click on Breaking resistance". There used to be a
+    // `sameSet(ks, ZONE_KINDS) -> p.delete('kinds')` branch here, from back
+    // when an absent param MEANT the three zone kinds. It does not any more —
+    // parseKinds(null) returns 'all' — so selecting exactly those three wrote
+    // an empty param and the page read it back as ALL PUSHES. Breaking
+    // Resistance is the third zone kind, so it was the click that completed
+    // the set and tripped it. The selection is now always written out.
     else p.set('kinds', ks.join(','));
   });
   const toggleKind = (k: string) => {
