@@ -1028,7 +1028,7 @@ describe('ChartMaps — the Quick Bounce tab (Ajay 2026-09-06)', () => {
   it('prints the study read and the away count under the board', async () => {
     vi.stubGlobal('fetch', stubFetch({ vcp: VCP_BOARD, quick_bounce: QB_BOARD }));
     draw();
-    fireEvent.click(await screen.findByRole('tab', { name: /Quick Bounce/i }));
+    fireEvent.click(await screen.findByRole('tab', { name: /Quick Reversal/i }));
     const strip = await screen.findByTestId('quick-bounce-study');
     expect(strip.textContent).toMatch(/Study \(2026-09-06\): 1700 names · 9000 band visits · quick 27% vs 15% on any day \(\+13 pts\)/);
     expect(strip.textContent).toMatch(/carries over weakly/);

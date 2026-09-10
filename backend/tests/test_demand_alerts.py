@@ -223,8 +223,8 @@ def test_at_message_says_which_way_it_got_here(monkeypatch):
     assert m["title"] == "🧲 DYN ↓ falling into demand $17.9–18.6"
     assert m["body"].startswith("$18.06 · ↓ falling into the band from 24.28 (-25.6% today) · tested 3x")
     m = DA.at_message({**base, "last": 18.27, "approach": AG.approach_read(18.27, base["band"], 24.28, 18.05)})
-    assert m["title"] == "🧲 DYN ↑ bouncing off demand $17.9–18.6"
-    assert m["body"].startswith("$18.27 · ↑ bouncing off the band, +1.2% off the 18.05 low · tested 3x")
+    assert m["title"] == "🧲 DYN ↑ reversal off demand $17.9–18.6"
+    assert m["body"].startswith("$18.27 · ↑ reversal off the band, +1.2% off the 18.05 low · tested 3x")
     # NEGATIVE: no read (resting inside, or nothing known) keeps the old title and body
     for ap in (None, {}, AG.approach_read(18.2, base["band"], 18.3, 18.2), "junk"):
         m = DA.at_message({**base, "last": 18.2, "approach": ap})
@@ -233,8 +233,8 @@ def test_at_message_says_which_way_it_got_here(monkeypatch):
     # ABOVE the band: the distance the title used to carry moves into the body
     m = DA.at_message({**base, "last": 18.7, "hit": {"tier": "at", "state": "above", "dist_pct": 0.54},
                        "approach": AG.approach_read(18.7, base["band"], 24.28, 18.05)})
-    assert m["title"] == "🧲 DYN ↑ bouncing off demand $17.9–18.6"
-    assert m["body"].startswith("$18.7 · 0.54% above · ↑ bouncing off the band, +3.6% off the 18.05 low · tested 3x")
+    assert m["title"] == "🧲 DYN ↑ reversal off demand $17.9–18.6"
+    assert m["body"].startswith("$18.7 · 0.54% above · ↑ reversal off the band, +3.6% off the 18.05 low · tested 3x")
 
 
 def test_at_message_reclaim_title_names_the_run_up():
@@ -259,7 +259,7 @@ def test_digest_lines_carry_the_direction_tag():
              {"symbol": "RST", "last": 18.2, "band": band, "cap": 3e9,
               "hit": {"tier": "at", "state": "in", "dist_pct": 0.0}, "approach": None}]
     lines = DA.digest_message(items)["body"].split("\n")
-    assert lines[0] == "DYN $18.27 · ↑ bouncing off $17.9–18.6 · $1.2B"
+    assert lines[0] == "DYN $18.27 · ↑ reversal off $17.9–18.6 · $1.2B"
     assert lines[1] == "FLL $18.06 · ↓ falling into $17.9–18.6 · $3.0B"
     assert lines[2] == "RST $18.2 · in demand $17.9–18.6 · $3.0B"
 
@@ -270,7 +270,7 @@ def test_check_once_reads_the_day_low_off_the_live_row(monkeypatch):
     store = _store("DYN", [{"kind": "demand", "lo": 17.9, "hi": 18.6, "touches": 3, "strength": 50.0}], 24.28)
     kw = dict(board=board, caps={"DYN": 1.2e9}, owner="o@x", now=IN_SESSION, force=True, store=store)
     out = DA.check_once(live=_live(DYN=(18.27, -24.8, 24.28, 18.05)), coll=FakeColl(), **kw)
-    assert out["pushed"] == 1 and sent[-1]["title"] == "🧲 DYN ↑ bouncing off demand $17.9–18.6"
+    assert out["pushed"] == 1 and sent[-1]["title"] == "🧲 DYN ↑ reversal off demand $17.9–18.6"
     assert out["hits"][0]["approach"]["dir"] == "bouncing"
     # The print sits ON the day's low → FALLING, and since 2026-09-09 falling
     # never reaches the phone (Ajay: "only bouncing off alerts"). The read is
@@ -327,7 +327,7 @@ def test_check_once_pushes_at_individually_near_as_one_digest_and_gates_cap(monk
     assert out["ran"] and out["at"] == 1 and out["near"] == 2 and out["pushed"] == 1
     assert out["skipped_cap"] == 1 and out["unknown_cap"] == 1 and out["skipped_proximity"] == 2
     assert [s["kind"] for s in sent] == ["demand_alert"]
-    assert sent[0]["title"] == "🧲 AAPL ↑ bouncing off demand $200–210"   # bouncing is the only push since 2026-09-09
+    assert sent[0]["title"] == "🧲 AAPL ↑ reversal off demand $200–210"   # bouncing is the only push since 2026-09-09
     assert [h["symbol"] for h in out["hits"] if h["hit"]["tier"] == "near"] == ["BIGX", "BIGY"]
     assert all(s["owner"] == "o@x" for s in sent)
     assert len(coll.docs) == 1                     # AAPL at; NEAR names are not recorded (nothing sent)
@@ -344,7 +344,7 @@ def test_dedupe_is_once_per_band_per_day_but_tiers_are_separate(monkeypatch):
     DA.check_once(live=_live_bouncing(BIGX=(99.0, -1.1)), **kw)
     assert sent == [] and coll.docs == {}, "nothing sent, nothing recorded"
     DA.check_once(live=_live_bouncing(BIGX=(96.5, -3.0)), **kw)          # arrived → at fires
-    assert len(sent) == 1 and sent[0]["title"] == "🧲 BIGX ↑ bouncing off demand $90–97"
+    assert len(sent) == 1 and sent[0]["title"] == "🧲 BIGX ↑ reversal off demand $90–97"
     DA.check_once(live=_live_bouncing(BIGX=(96.0, -3.5)), **kw)
     assert len(sent) == 1
 
@@ -472,7 +472,7 @@ def test_at_singles_are_capped_per_pass_and_the_rest_ride_the_digest(monkeypatch
     digest = [s for s in sent if "more" in s["title"] or s["title"].startswith("🧲 Demand zone")][0]
     assert digest["title"] == "🧲 Demand zone — A4 +1 more"
     assert "A4 $" in digest["body"] and "A5 $" in digest["body"] and "NEARX" not in digest["body"]
-    assert "↑ bouncing off $100–110 · room: clear runway" in digest["body"]
+    assert "↑ reversal off $100–110 · room: clear runway" in digest["body"]
     assert len(coll.docs) == 6, "every pushed name recorded once — no second buzz next pass"
     assert DA.digest_message([]) is None
     near_only = DA.digest_message([{"symbol": "N", "last": 56.0, "band": _band(50, 55), "cap": 2e9,
@@ -513,8 +513,8 @@ def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypa
                         now=IN_SESSION, force=True, store=store)
     assert out["at"] == 1 and out["near"] == 1 and out["pushed"] == 1
     assert out["skipped_proximity"] == 1 and out["skipped_room"] == 0 and out["unknown_room"] == 0
-    assert [s["title"] for s in sent] == ["🧲 AAPL ↑ bouncing off demand $200–210"]
-    assert sent[0]["body"] == ("$211 · 0.47% above · ↑ bouncing off the band, +1.2% off the 208.468 low · tested 3x · "
+    assert [s["title"] for s in sent] == ["🧲 AAPL ↑ reversal off demand $200–210"]
+    assert sent[0]["body"] == ("$211 · 0.47% above · ↑ reversal off the band, +1.2% off the 208.468 low · tested 3x · "
                                "room: clear runway · buy $200-210 · stop $199.00 "
                                "(0.5% under the floor, 5.7% risk) · target: clear runway · $3.0T · AAPL Inc")
     assert list(coll.docs) == ["AAPL:200.00-210.00:2026-09-03:at"], "NEAR is not recorded: nothing was sent"

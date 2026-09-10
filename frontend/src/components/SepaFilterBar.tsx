@@ -37,7 +37,7 @@ const FilterInfo = (
         options to rank by momentum strength.
       </li>
       <li>
-        <strong>🪃 Bouncing off Demand</strong> — a Supply &amp; Demand overlay,
+        <strong>🪃 Reversal from Demand</strong> — a Supply &amp; Demand overlay,
         not a book gate: the session low touched a demand band or a broken-supply
         shelf within the last 5 sessions and the price is now at least 3% or one
         ATR above the band (owner settings). Names whose zone coverage is still
@@ -480,9 +480,9 @@ export function SepaFilterBar({ filters, onChange, onClear, total, shown }: Prop
           <button
             className={`sepa-chip ${filters.bounceDemandOnly ? 'is-active' : ''}`}
             onClick={() => set('bounceDemandOnly', !filters.bounceDemandOnly)}
-            title="Supply & Demand overlay, NOT a book gate: only names whose session low touched a demand band or a broken-supply shelf (old resistance now support) within the last 5 sessions (owner setting) and whose price is now above the band by at least 3% or one ATR — the zone-bounce floors. Names whose zone coverage is still pending are hidden while this is on; the count line under the bar shows the coverage. Decision support, not advice."
+            title="Supply & Demand overlay, NOT a book gate: only names whose session low touched a demand band or a broken-supply shelf (old resistance now support) within the last 5 sessions (owner setting) and whose price is now above the band by at least 3% or one ATR — the demand-zone reversal floors. Names whose zone coverage is still pending are hidden while this is on; the count line under the bar shows the coverage. Decision support, not advice."
           >
-            🪃 Bouncing off Demand
+            🪃 Reversal from Demand
           </button>
           {/* ℹ️ Rules — the bounce chip's own floors from GET
             * /supply-demand/rules (Ajay 2026-09-06); compact = popover under

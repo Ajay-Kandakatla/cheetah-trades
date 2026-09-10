@@ -33,7 +33,7 @@ export type AlertKindDef = {
 export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // ── Supply & Demand zone pushes (the phone-gated ones) ────────────────────
   demand_alert:        { emoji: '🧲', label: 'Demand-zone approach',    group: 'zones' },
-  zone_bounce_alert:   { emoji: '🪃', label: 'Demand-level bounce',     group: 'zones' },
+  zone_bounce_alert:   { emoji: '🪃', label: 'Demand-zone reversal',    group: 'zones' },
   supply_break_alert:  { emoji: '🚀', label: 'Breaking resistance',     group: 'zones' },
   trade_flash:         { emoji: '⚡', label: 'Trade flash at a zone',   group: 'zones' },
 

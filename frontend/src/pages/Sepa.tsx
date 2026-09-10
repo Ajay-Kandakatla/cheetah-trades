@@ -1306,8 +1306,8 @@ export function SepaPage() {
         * bare short list would read as "nothing is bouncing". */}
       {filters.bounceDemandOnly && (
         <div className="mono" style={{ fontSize: '0.72rem', opacity: 0.75, margin: '0.2rem 0 0.6rem' }}
-             title="Supply & Demand overlay, not a book gate. Bounce = session low touched a demand band or broken-supply shelf in the last 5 sessions and the print is now 3% / one ATR above it (owner settings). Coverage = how many of the rendered names have a zone read; pending names are hidden until theirs lands.">
-          🪃 {source.reduce((n, r) => n + (isBouncing(bounceRoom.get(r.symbol.toUpperCase())) ? 1 : 0), 0)} bouncing
+             title="Supply & Demand overlay, not a book gate. Reversal off demand = session low touched a demand band or broken-supply shelf in the last 5 sessions and the print is now 3% / one ATR above it (owner settings). Coverage = how many of the rendered names have a zone read; pending names are hidden until theirs lands.">
+          🪃 {source.reduce((n, r) => n + (isBouncing(bounceRoom.get(r.symbol.toUpperCase())) ? 1 : 0), 0)} reversing off demand
           {' · '}
           {bounceRoomError
             ? `zone read unavailable (${bounceRoomError})`

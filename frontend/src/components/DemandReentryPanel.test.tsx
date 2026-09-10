@@ -228,7 +228,7 @@ describe('DemandReentryPanel — bounce · room sort (Ajay 2026-09-05)', () => {
     render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
     const select = await waitFor(() => screen.getByLabelText('Sort by') as HTMLSelectElement);
     expect(select.value).toBe('bounce_room');
-    expect(select.options[0].textContent).toMatch(/🪃 Bouncing · room to supply \(default\)/);
+    expect(select.options[0].textContent).toMatch(/🪃 Reversal off demand · room to supply \(default\)/);
     expect(Array.from(select.options).some((o) => o.value === 'rr' && o.textContent === '🎯 R:R')).toBe(true);
   });
 

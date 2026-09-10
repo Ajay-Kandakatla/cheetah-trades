@@ -239,7 +239,7 @@ def approach_read(print_px, band, prev_close=None, day_low=None) -> Optional[dic
     is simply above the band with no lift).
 
       bouncing  the day's low touched the band (≤ 1% above its top) and the
-                print is ≥ 0.5% off that low        → "↑ bouncing off"
+                print is ≥ 0.5% off that low        → "↑ reversal off"
       falling   yesterday closed ABOVE the band and the print sits at the
                 day's low (≤ 0.2% off it, or no low known) → "↓ falling into"
       settling  yesterday closed above the band, the print is between the
@@ -268,8 +268,14 @@ def approach_read(print_px, band, prev_close=None, day_low=None) -> Optional[dic
         return {"dir": "reclaiming", "tag": "↑ reclaiming",
                 "text": "↑ reclaiming the band from below (%+.1f%% today)" % chg}
     if touched and off_low is not None and off_low >= APPROACH_LIFT_PCT:
-        return {"dir": "bouncing", "tag": "↑ bouncing off",
-                "text": "↑ bouncing off the band, +%.1f%% off the %g low" % (off_low, dl)}
+        # Ajay 2026-09-09: "Instead of bounce use the word reversal from Demand
+        # zone or something I have trauma with that word now cuz I caught
+        # falliing knives with it". WORDING ONLY. The dir key stays "bouncing":
+        # it is the value PUSH_DIRECTIONS, direction_gate, the stored dedupe
+        # keys and the board tones all match on. Two names for one state is how
+        # a gate drifts; the phrase he reads is the only thing that moved.
+        return {"dir": "bouncing", "tag": "↑ reversal off",
+                "text": "↑ reversal off the band, +%.1f%% off the %g low" % (off_low, dl)}
     if from_above and (off_low is None or off_low <= APPROACH_AT_LOW_PCT):
         return {"dir": "falling", "tag": "↓ falling into",
                 "text": "↓ falling into the band from %g (%+.1f%% today)" % (pc, chg)}
@@ -392,12 +398,35 @@ def room_gate(print_px, bands, prev_close=None,
 PUSH_DIRECTIONS = ("bouncing",)
 
 
+# What each internal `dir` is CALLED on his phone and on the boards. The keys
+# are the engine's states and never change; the values are the only words he
+# reads (Ajay 2026-09-09: "Instead of bounce use the word reversal from Demand
+# zone or something I have trauma with that word now cuz I caught falliing
+# knives with it"). rules_info renders the phone rule through this map, so the
+# panel can never drift from PUSH_DIRECTIONS or re-type the old word.
+DIRECTION_LABELS = {
+    "bouncing": "a reversal off demand",
+    "falling": "falling into",
+    "settling": "settling into",
+    "resting": "resting inside",
+    "lifting": "lifting off",
+    "reclaiming": "reclaiming from below",
+}
+
+
+def direction_label(direction) -> str:
+    """The words for an internal direction state. Unknown states print as-is."""
+    d = str(direction or "").strip().lower()
+    return DIRECTION_LABELS.get(d, d)
+
+
 def direction_gate(approach, allowed=PUSH_DIRECTIONS) -> bool:
-    """True only when price is BOUNCING off the band. Fails closed on None."""
+    """True only when price is REVERSING off the band (internal dir
+    "bouncing"). Fails closed on None."""
     if not isinstance(approach, dict):
         return False
     d = approach.get("dir")
-    if not isinstance(d, str):          # a non-string dir is not a bounce
+    if not isinstance(d, str):          # a non-string dir is not a reversal
         return False
     return d.strip().lower() in allowed
 

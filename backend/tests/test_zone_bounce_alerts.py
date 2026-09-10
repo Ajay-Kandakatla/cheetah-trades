@@ -196,12 +196,12 @@ def test_digest_is_strongest_first_capped_at_six_with_a_more_line():
               "band": {"kind": "demand", "lo": 94.0, "hi": 96.0, "touches": 2},
               "hit": {"bounce_pct": 3.0 + i * 0.5, "strong": False}} for i in range(8)]
     m = ZB.digest_message(items)
-    assert m["title"] == "🪃 Bouncing off demand levels — S7 +6.5% +7 more"
+    assert m["title"] == "🪃 Reversal off demand levels — S7 +6.5% +7 more"
     lines = m["body"].split("\n")
     assert len(lines) == ZB.DIGEST_MAX + 1 and lines[-1] == "+2 more"
     assert lines[0] == "S7 $107 · +6.5% off $94-96 · room: clear runway · demand · $2.0B"
     assert m["kind"] == "zone_bounce_alert" and m["url"] == "/chart-maps?tab=zones"
-    assert ZB.digest_message(items[:1])["title"] == "🪃 Bouncing off demand levels — S0 +3.0%"
+    assert ZB.digest_message(items[:1])["title"] == "🪃 Reversal off demand levels — S0 +3.0%"
 
 
 # ── check_once end to end ────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ def test_ntap_2026_09_03_fires_a_single_push_with_the_exact_title_body_url_kind(
     assert len(sent) == 1
     m = sent[0]
     assert out["hits"][0]["hit"]["bounce_pct"] == 5.35 and out["hits"][0]["hit"]["strong"] is True
-    assert m["title"] == "🪃 NTAP bounced +5.3% off support (old resistance) $161.78-167.54"
+    assert m["title"] == "🪃 NTAP reversed +5.3% off support (old resistance) $161.78-167.54"
     # 173.87-180.07 closed under yesterday's 180.77 = broken = support, not a ceiling: clear runway
     assert m["body"] == ("$169.2 · low $160.6 -> +$8.6 · room: clear runway · broken supply -> support (tested 1x)"
                          " · buy $161.78-167.54 · stop $160.97 (0.5% under the floor, 4.9% risk) · target: clear runway"
@@ -255,7 +255,7 @@ def test_residence_gap_through_and_flat_names_are_silent_end_to_end(monkeypatch)
     # FLAT: 168 > 167.54 and +4.35% >= 3% -> it IS a (weak) bounce -> digest of one.
     assert [h["symbol"] for h in out["hits"]] == ["FLAT"]
     assert out["singles"] == 0 and out["digest"] == 1 and len(sent) == 1
-    assert sent[0]["title"] == "🪃 Bouncing off demand levels — FLAT +4.3%"
+    assert sent[0]["title"] == "🪃 Reversal off demand levels — FLAT +4.3%"
 
 
 def test_unknown_cap_is_skipped_and_counted_small_cap_is_skipped(monkeypatch):
@@ -305,10 +305,10 @@ def test_strong_gets_singles_capped_at_three_everything_else_one_digest(monkeypa
     out = _run(store, snap, caps, coll=coll)
     assert out["singles"] == 3 and out["digest"] == 4 and out["pushed"] == 4
     assert [s["title"] for s in sent[:3]] == [
-        "🪃 ST4 bounced +6.2% off demand $95-100.5",
-        "🪃 ST3 bounced +6.0% off demand $95-100.5",
-        "🪃 ST2 bounced +5.8% off demand $95-100.5"]
-    assert sent[3]["title"] == "🪃 Bouncing off demand levels — ST1 +5.5% +3 more"
+        "🪃 ST4 reversed +6.2% off demand $95-100.5",
+        "🪃 ST3 reversed +6.0% off demand $95-100.5",
+        "🪃 ST2 reversed +5.8% off demand $95-100.5"]
+    assert sent[3]["title"] == "🪃 Reversal off demand levels — ST1 +5.5% +3 more"
     assert [l.split()[0] for l in sent[3]["body"].split("\n")] == ["ST1", "ST0", "WK1", "WK0"]
     assert all(s["kind"] == "zone_bounce_alert" for s in sent)
     assert len(coll.docs) == 7, "every pushed name is recorded, single or digest"
@@ -410,10 +410,10 @@ def test_a_digest_item_upgrades_to_one_strong_single_later_never_a_third_push(mo
     caps = {"AAA": 5e9}
     coll = FakeColl()
     out1 = _run(store, {"AAA": _snap(96.5, 100.6, 110.0)}, caps, coll=coll)
-    assert out1["pushed"] == 1 and sent[-1]["title"].startswith("🪃 Bouncing off demand levels — AAA")
+    assert out1["pushed"] == 1 and sent[-1]["title"].startswith("🪃 Reversal off demand levels — AAA")
     later = datetime(2026, 9, 3, 9, 43, tzinfo=ET)
     out2 = _run(store, {"AAA": _snap(96.5, 101.4, 110.0, now=later)}, caps, coll=coll, now=later)
-    assert out2["pushed"] == 1 and sent[-1]["title"].startswith("🪃 AAA bounced +5.1% off demand")
+    assert out2["pushed"] == 1 and sent[-1]["title"].startswith("🪃 AAA reversed +5.1% off demand")
     out3 = _run(store, {"AAA": _snap(96.5, 101.5, 110.0, now=later)}, caps, coll=coll, now=later)
     assert out3["pushed"] == 0 and len(sent) == 2
     # the NTAP 09:42 leg itself: strong, but 6.5% above the shelf = late = lists only
@@ -536,7 +536,7 @@ def test_phone_gate_a_bounce_that_already_ran_lists_but_never_pushes(monkeypatch
     # (180.07 < prev 180.77) so nothing unbroken sits overhead: clear runway -> pushes
     out2 = _run(store, {"NTAP": _snap(161.0, 168.5, 180.77)}, {"NTAP": 37.4e9}, coll=coll)
     assert out2["pushed"] == 1 and out2["skipped_proximity"] == 0 and out2["skipped_room"] == 0
-    assert sent[-1]["title"].startswith("🪃 Bouncing off demand levels — NTAP +4.7%")
+    assert sent[-1]["title"].startswith("🪃 Reversal off demand levels — NTAP +4.7%")
     assert "room: clear runway" in sent[-1]["body"]
     assert list(coll.docs) == ["NTAP:161.78-167.54:2026-09-03"]
 

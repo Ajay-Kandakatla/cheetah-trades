@@ -277,13 +277,13 @@ _room_txt = AG.room_txt            # one wording for every S/D push body
 
 
 def single_message(item: dict) -> dict:
-    """'🪃 NTAP bounced +6.3% off demand $161.78-167.54'"""
+    """'🪃 NTAP reversed +6.3% off demand $161.78-167.54'"""
     from supply_demand.demand_alerts import fmt_cap
     sym, hit, band = item["symbol"], item["hit"], item["band"]
     px, low = float(item["print"]), float(item["day_low"])
     level = ("support (old resistance)" if str(band.get("kind") or "").lower() == "supply"
              else "demand")
-    title = f"🪃 {sym} bounced +{hit['bounce_pct']:.1f}% off {level} {_band_txt(band)}"
+    title = f"🪃 {sym} reversed +{hit['bounce_pct']:.1f}% off {level} {_band_txt(band)}"
     when = f" at {item['low_time']} ET" if item.get("low_time") else ""
     parts = [f"${px:g} · low ${low:g}{when} -> +${px - low:.1f}",
              _room_txt(item.get("room")),
@@ -302,13 +302,13 @@ def single_message(item: dict) -> dict:
 
 
 def digest_message(items: list) -> dict:
-    """'🪃 Bouncing off demand - NTAP +6.3% +4 more' — strongest first."""
+    """'🪃 Reversal off demand — NTAP +6.3% +4 more' — strongest first."""
     from supply_demand.demand_alerts import fmt_cap
     if not items:
         return None
     items = sorted(items, key=lambda it: -it["hit"]["bounce_pct"])
     lead = items[0]
-    title = f"🪃 Bouncing off demand levels — {lead['symbol']} +{lead['hit']['bounce_pct']:.1f}%"
+    title = f"🪃 Reversal off demand levels — {lead['symbol']} +{lead['hit']['bounce_pct']:.1f}%"
     if len(items) > 1:
         title += f" +{len(items) - 1} more"
     lines = []

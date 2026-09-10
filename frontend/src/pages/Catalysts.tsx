@@ -391,7 +391,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
                 className={`cat-sort ${sortKey === k ? 'is-active' : ''}`}
                 onClick={() => setSortKey(k)}
                 title={k === 'room'
-                  ? 'Open sky (no supply band overhead in the 1-year frame) first, then the biggest % gap to the first supply band; names bouncing off a demand band lead their tier; pending coverage last. Configured price-structure read, not advice.'
+                  ? 'Open sky (no supply band overhead in the 1-year frame) first, then the biggest % gap to the first supply band; names reversing off a demand band lead their tier; pending coverage last. Configured price-structure read, not advice.'
                   : undefined}
               >
                 {k === 'room' ? 'room to supply' : k.replace('_', ' ')}
@@ -410,7 +410,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
         * read says "room pending" and sorts last; this line says how many. */}
       {data && (
         <div className="mono" style={{ fontSize: '0.7rem', opacity: 0.6, margin: '0.25rem 0 0.6rem' }}
-             title="Room = % from the print to the bottom of the first supply band overhead (same read as the Portfolio sell side); bounce = session low touched a demand band / broken-supply shelf in the last 5 sessions and price is 3% / one ATR above it. Owner settings, not advice.">
+             title="Room = % from the print to the bottom of the first supply band overhead (same read as the Portfolio sell side); reversal off demand = session low touched a demand band / broken-supply shelf in the last 5 sessions and price is 3% / one ATR above it. Owner settings, not advice.">
           🪃 room · {brError
             ? `zone read unavailable (${brError})`
             : (coverageNote(brPayload) || 'loading zone coverage…')}

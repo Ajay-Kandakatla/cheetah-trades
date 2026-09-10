@@ -214,14 +214,14 @@ describe('Alerts page — the query it sends', () => {
     await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBeNull());
     expect(screen.getByRole('button', { name: '📣 all pushes' })).toHaveAttribute('aria-pressed', 'true');
     // From "all", picking one kind narrows to just it…
-    fireEvent.click(screen.getByRole('button', { name: '🪃 Demand-level bounce' }));
+    fireEvent.click(screen.getByRole('button', { name: '🪃 Demand-zone reversal' }));
     await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('zone_bounce_alert'));
     // …and it cannot be turned off (that would silently mean "all").
     const before = recentUrls(fn).length;
-    fireEvent.click(screen.getByRole('button', { name: '🪃 Demand-level bounce' }));
+    fireEvent.click(screen.getByRole('button', { name: '🪃 Demand-zone reversal' }));
     await new Promise((r) => setTimeout(r, 20));
     expect(recentUrls(fn)).toHaveLength(before);
-    expect(screen.getByRole('button', { name: '🪃 Demand-level bounce' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '🪃 Demand-zone reversal' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

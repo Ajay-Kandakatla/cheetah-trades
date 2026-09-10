@@ -873,3 +873,51 @@ def test_floor_held_gate_2026_09_09_is_the_measured_one_and_is_wired_everywhere(
     for gate in ("direction_gate", "knife_gate", "reversal_mood_gate",
                  "room_gate", "demand_proximity_gate"):
         assert "sweep" not in inspect.getsource(getattr(AG, gate)), gate
+
+
+# ── the pattern push's demand gate borrows an EXISTING number ───────────────
+# Ajay 2026-09-09: "on the Patterns you know the deal, we need make sure they
+# need to be in demand zone or bouncing off demand zone." The ceiling on how
+# far above a band still counts as standing at it is the Quick Reversal
+# board's live rule, not a fresh constant invented for the phone. If one moves
+# the other must move with it, or "at demand" means two things again.
+def test_pattern_alerts_near_max_is_the_quick_reversal_boards_own_bound():
+    from patterns import pattern_alerts as PA
+    from supply_demand import quick_bounce as QB
+    assert PA.NEAR_MAX_PCT == QB.NEAR_MAX_PCT
+
+
+# ── the phone never says "bounce" again ────────────────────────────────────
+# Ajay 2026-09-09: "Instead of bounce use the word reversal from Demand zone or
+# something I have trauma with that word now cuz I caught falliing knives with
+# it". The internal `dir` value, the module names and the stored dedupe keys
+# all still read "bounce" on purpose — renaming those is how a gate drifts.
+# What is pinned here is the TEXT he actually reads.
+def test_no_push_title_or_chip_says_bounce_to_him():
+    from supply_demand import alert_gates as AG, zone_bounce_alerts as ZB
+
+    ap = AG.approach_read(10.5, {"kind": "demand", "lo": 9.8, "hi": 10.2},
+                          prev_close=11.0, day_low=10.0)
+    assert ap["dir"] == "bouncing", "the engine's state name must NOT change"
+    assert "bounc" not in ap["tag"].lower() and "bounc" not in ap["text"].lower()
+    assert "reversal" in ap["tag"].lower() and "reversal" in ap["text"].lower()
+    assert AG.direction_gate(ap) is True, "wording moved, the gate did not"
+    assert "bounc" not in AG.direction_label("bouncing").lower()
+
+    item = {"symbol": "NTAP", "print": 171.4, "day_low": 161.78, "low_time": "09:33",
+            "hit": {"bounce_pct": 6.3, "atr_x": 2.1}, "cap": 3.4e10, "room": None,
+            "band": {"kind": "demand", "lo": 161.78, "hi": 167.54, "touches": 2},
+            "bands": [{"kind": "demand", "lo": 161.78, "hi": 167.54, "touches": 2}]}
+    assert "bounc" not in ZB.single_message(item)["title"].lower()
+    assert "bounc" not in ZB.digest_message([item])["title"].lower()
+
+
+def test_the_rules_panel_renders_the_phone_rule_through_the_label_map():
+    """The panel is built from the enforcing constants, never retyped — so the
+    wording cannot drift from PUSH_DIRECTIONS and cannot regress to the old
+    word behind our backs."""
+    from supply_demand import alert_gates as AG, rules_info as RI
+    line = RI._direction_line()
+    assert AG.direction_label(AG.PUSH_DIRECTIONS[0]) in line
+    head = line.split("(Ajay")[0]      # his own quotes stay verbatim after this
+    assert "bounc" not in head.lower(), head

@@ -118,7 +118,7 @@ const UNIVERSE_LABEL = 'Full universe (Russell 3000 ∪ S&P 1500 ∪ themes)';  
  * retail prints whatever else is true, so it would mostly re-sort by volume.
  * Imbalance (direction) and participation (% of volume) carry information. */
 const SORTS: { key: string; label: string }[] = [
-  { key: 'bounce_room', label: '🪃 Bouncing · room to supply (default)' },
+  { key: 'bounce_room', label: '🪃 Reversal off demand · room to supply (default)' },
   { key: 'rr',       label: '🎯 R:R' },
   { key: 'retailimb',label: '🧍 Retail imbalance' },
   { key: 'retailpct',label: '🧍 Retail % of volume' },
@@ -258,9 +258,9 @@ export function DemandReentryPanel() {
       <div className="sepa-tab-help">
         <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
         back <em>into</em> a demand band they had already left, while the structure
-        still holds. Sorted <strong>🪃 bouncing off demand WITH room first</strong>, then
-        names with room, then bounces heading straight into a band (⛔), then the rest
-        (Ajay 2026-09-05 asked for bouncing-off-demand names first, biggest gap to the
+        still holds. Sorted <strong>🪃 reversal off demand WITH room first</strong>, then
+        names with room, then reversals heading straight into a band (⛔), then the rest
+        (Ajay 2026-09-05 asked for reversal-off-demand names first, biggest gap to the
         first band overhead next — "open sky" means nothing overhead in the 1-year
         frame; R:R is still one click away in the sort menu). The <strong>Room</strong>{' '}
         floor is the phone's own gate — at least <strong>{ROOM_MIN_PCT}%</strong> from the
@@ -272,7 +272,7 @@ export function DemandReentryPanel() {
         target on the entry bar itself at a median 0.45R</strong> — plans whose
         objective was already inside the entry day's range. The floor removes those.
         It does <em>not</em> make the rule beat SPY (it doesn't, on 13.5 months of
-        data); it removes bad trade construction. Bounce and room are a configured
+        data); it removes bad trade construction. The reversal and room reads are a configured
         price-structure read (owner settings), not advice. <strong>Liq</strong> is
         average daily dollar volume (a great R:R you can't get filled in is not a
         trade) and <strong>dark</strong> is the share that printed off-exchange.
@@ -315,7 +315,7 @@ export function DemandReentryPanel() {
             {data.took_sec ? ` · ${data.took_sec}s` : ''}
             {data.cached ? ' · cached' : ''}
             {sortKey === 'bounce_room' && coverageNote(brPayload) && (
-              <span title="How many of the rows have a bounce / room read yet. Pending rows sort last and say 'room pending' — they are not missing, just not built yet.">
+              <span title="How many of the rows have a reversal / room read yet. Pending rows sort last and say 'room pending' — they are not missing, just not built yet.">
                 {' '}· 🪃 {coverageNote(brPayload)}
               </span>
             )}

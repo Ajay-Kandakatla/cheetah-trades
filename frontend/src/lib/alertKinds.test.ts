@@ -17,7 +17,7 @@ const T = (iso: string) => Date.parse(iso) / 1000;
 describe('kind registry', () => {
   it('labels the three zone kinds that page the phone', () => {
     expect(kindLabel('demand_alert')).toBe('🧲 Demand-zone approach');
-    expect(kindLabel('zone_bounce_alert')).toBe('🪃 Demand-level bounce');
+    expect(kindLabel('zone_bounce_alert')).toBe('🪃 Demand-zone reversal');
     expect(kindLabel('supply_break_alert')).toBe('🚀 Breaking resistance');
     expect(ZONE_KINDS).toEqual(['demand_alert', 'zone_bounce_alert', 'supply_break_alert']);
     for (const k of ZONE_KINDS) expect(ALERT_KINDS[k].group).toBe('zones');

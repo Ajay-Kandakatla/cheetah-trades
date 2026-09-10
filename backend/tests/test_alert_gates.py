@@ -347,8 +347,8 @@ def test_approach_constants_are_owner_numbers():
 def test_dyn_bouncing_off_the_band_after_the_gap_down():
     # DYN 2026-09-08: closed 24.28, gapped into 17.9-18.6, low 18.05, print 18.27
     ap = AG.approach_read(18.27, DYN_BAND, 24.28, 18.05)
-    assert ap["dir"] == "bouncing" and ap["tag"] == "↑ bouncing off"
-    assert ap["text"] == "↑ bouncing off the band, +1.2% off the 18.05 low"
+    assert ap["dir"] == "bouncing" and ap["tag"] == "↑ reversal off"
+    assert ap["text"] == "↑ reversal off the band, +1.2% off the 18.05 low"
 
 
 def test_dyn_still_falling_when_the_print_sits_on_the_low():
@@ -374,7 +374,7 @@ def test_resting_and_lifting_come_from_inside_or_below():
     assert ap["dir"] == "resting" and ap["tag"] is None and ap["text"] == "resting in the band"
     # print 0.4% above the top, the low INSIDE the band, 1.5% off it: that is a bounce
     ap = AG.approach_read(18.67, DYN_BAND, 18.3, 18.39)
-    assert ap["dir"] == "bouncing" and ap["text"] == "↑ bouncing off the band, +1.5% off the 18.39 low"
+    assert ap["dir"] == "bouncing" and ap["text"] == "↑ reversal off the band, +1.5% off the 18.39 low"
     # the low never reached the band (1.08% above the top), print 1.1% off it: lifting away
     ap = AG.approach_read(19.0, DYN_BAND, 18.4, 18.80)
     assert ap["dir"] == "lifting" and ap["tag"] == "↑ lifting off"
@@ -512,14 +512,14 @@ def test_only_bouncing_reaches_the_phone():
 def test_the_gate_fails_closed_on_anything_it_cannot_read():
     """No approach = no evidence of a bounce. Silence is the safe side."""
     for bad in (None, {}, {"dir": None}, {"dir": ""}, {"dir": "   "},
-                {"tag": "↑ bouncing off"}, {"dir": 7}):
+                {"tag": "↑ reversal off"}, {"dir": 7}):
         assert AG.direction_gate(bad) is False, bad
 
 
 def test_the_gate_reads_dir_not_the_arrow_tag():
-    """`approach_read` returns dir='bouncing' AND tag='↑ bouncing off'. Matching
+    """`approach_read` returns dir='bouncing' AND tag='↑ reversal off'. Matching
     the tag is how the premarket-entry drag broke on 2026-09-09 — pin the field."""
-    assert AG.direction_gate({"dir": "falling", "tag": "↑ bouncing off"}) is False
+    assert AG.direction_gate({"dir": "falling", "tag": "↑ reversal off"}) is False
     assert AG.direction_gate({"dir": "BOUNCING"}) is True          # case-folded
 
 

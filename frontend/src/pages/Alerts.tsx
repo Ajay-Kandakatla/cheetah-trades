@@ -72,7 +72,7 @@ export type AlertsStatus = {
  * two 5-minute checks) and are used only when the API sends no cadence_sec. */
 const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'zone_edge',         label: '🚀 🧲 Zone edge',             fallbackCadenceSec: 60 },
-  { key: 'zone_bounce_alert', label: '🪃 Demand-level bounce',      fallbackCadenceSec: 300 },
+  { key: 'zone_bounce_alert', label: '🪃 Demand-zone reversal',     fallbackCadenceSec: 300 },
   { key: 'demand_alert',      label: '🧲 Demand-zone approach',     fallbackCadenceSec: 300 },
 ];
 
@@ -155,7 +155,7 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
     /* Ajay 2026-09-09, after CASY. The direction counter shipped that morning
      * and was never listed here, so the quietest gate of the three was the one
      * the page could not explain. */
-    case 'skipped_direction': return `${n} skipped: not bouncing`;
+    case 'skipped_direction': return `${n} skipped: no reversal off demand`;
     case 'skipped_knife':     return `${n} skipped: falling knife`;
     case 'skipped_mood':      return `${n} skipped: turn not bullish`;
     case 'skipped_floor':     return `${n} skipped: band floor was pierced`;
@@ -471,7 +471,7 @@ export function AlertsPage() {
   // of them, and "0 (falling knife) / 0 (turn not bullish)" on a quiet day is
   // noise, not an explanation.
   const skipParts = ([
-    [skips.room, 'room'], [skips.proximity, 'proximity'], [skips.direction, 'not bouncing'],
+    [skips.room, 'room'], [skips.proximity, 'proximity'], [skips.direction, 'no reversal off demand'],
     [skips.knife, 'falling knife'], [skips.mood, 'turn not bullish'],
     [skips.floor, 'band floor pierced'],
   ] as [number, string][]).filter(([n]) => n > 0).map(([n, label]) => `${n} (${label})`);

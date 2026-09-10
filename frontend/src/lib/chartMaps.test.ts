@@ -782,7 +782,7 @@ describe('the Catalysts tab', () => {
     expect(blurb).toMatch(/open sky/i);
     expect(blurb).toMatch(/EOSE/);
     expect(blurb).toMatch(/CLYM/);
-    expect(blurb).toMatch(/bouncing off a demand band/i);
+    expect(blurb).toMatch(/reversing off a demand band/i);
     expect(blurb).toMatch(/not advice/i);
     // NEGATIVE: an S/D surface — no book cites, no page numbers.
     expect(blurb).not.toMatch(/Minervini|TLSW|TTLAC|p\.\s*\d/);
@@ -1506,7 +1506,7 @@ describe('Quick Bounce tab (Ajay 2026-09-06)', () => {
     expect(CM_TABS.indexOf('quick_bounce')).toBe(CM_TABS.indexOf('deep_demand') + 1);
     expect(isBoardTab('quick_bounce')).toBe(true);
     expect(ROOM_TABS).toContain('quick_bounce');
-    expect(TAB_META.quick_bounce.label).toMatch(/Quick Bounce/);
+    expect(TAB_META.quick_bounce.label).toMatch(/Quick Reversal/);
     const b = TAB_META.quick_bounce.blurb;
     expect(b).toMatch(/SAME DAY/);
     expect(b).toMatch(/gapped up 2%\+/);

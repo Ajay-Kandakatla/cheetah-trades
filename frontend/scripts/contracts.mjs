@@ -989,6 +989,54 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // Ajay 2026-09-09: "Instead of bounce use the word reversal from Demand zone
+  // or something I have trauma with that word now cuz I caught falliing knives
+  // with it". The kind KEY stays zone_bounce_alert on purpose — that is the
+  // stored value on both devices' prefs and in push_history; only the words he
+  // reads moved. This pins the words.
+  {
+    name: 'no zone alert label says "bounce" to him (2026-09-09)',
+    file: 'src/lib/alertKinds.ts',
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/zone_bounce_alert:\s*\{[^}]*\}/);
+      if (!m) return ['zone_bounce_alert must stay registered under its own key'];
+      if (/bounce/i.test(m[0].replace('zone_bounce_alert', ''))) {
+        errs.push('the zone_bounce_alert LABEL still says bounce');
+      }
+      if (!/reversal/i.test(m[0])) errs.push('the label must say reversal');
+      return errs;
+    },
+  },
+  {
+    name: 'the Alerts page explains a direction skip in his words (2026-09-09)',
+    file: 'src/pages/Alerts.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/skipped: no reversal off demand/.test(src)) {
+        errs.push('skipped_direction must read "no reversal off demand"');
+      }
+      if (/skipped: not bouncing/.test(src)) errs.push('the old "not bouncing" copy is back');
+      return errs;
+    },
+  },
+  {
+    name: 'pattern alerts declare the demand gate on the Notifications page (2026-09-09)',
+    file: 'src/pages/Notifications.tsx',
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/key: 'pattern_alert'[\s\S]*?\},/);
+      if (!m) return ['pattern_alert must stay listed'];
+      const d = m[0];
+      if (!/INSIDE a demand band/.test(d)) errs.push('must say the name has to be IN a demand band');
+      if (!/reversing off one/.test(d)) errs.push('must say the reversal half of the gate');
+      if (!/FAILS CLOSED/.test(d)) errs.push('must say no zone coverage means silence');
+      if (!/does NOT beat chance|NOT ONE BEATS CHANCE/.test(d)) {
+        errs.push('the honest record must not be dropped from the pattern detail');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

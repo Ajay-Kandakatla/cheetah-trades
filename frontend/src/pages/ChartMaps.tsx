@@ -91,8 +91,8 @@ const HowItWorks = (
       <li><strong>🗞️ Catalysts</strong> — moved here from its own page on
         2026-09-05. Microcaps moving on a catalyst or chatter, scored on chatter
         vs evidence; cards lead with room to the first supply band overhead
-        (open sky first, then the biggest gap) and flag names bouncing off a
-        demand band. Room and bounce are a configured price-structure read
+        (open sky first, then the biggest gap) and flag names reversing off a
+        demand band. Room and the reversal read are a configured price-structure read
         shared with the Demand board — owner settings, not advice.</li>
       <li><strong>📏 Support Levels</strong> — the only tab that is not a board.
         Search any ticker and pick a zoom (opens on 1 year since 2026-09-06). The

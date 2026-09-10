@@ -141,12 +141,33 @@ def _pat(sym="AAA", pattern="double_bottom", status="confirmed", bars=0):
             "last_close": 12.5, "neckline": 12.0, "stop": 11.4, "target": 14.1}
 
 
+class _AllAtDemand(dict):
+    """Every symbol has zone coverage and is standing INSIDE a demand band.
+    The `anchors` seam exists so the gate's own tests can drive it without
+    Mongo, prices or a zone build."""
+
+    def __contains__(self, _k):
+        return True
+
+    def get(self, _k, _default=None):
+        return {"state": "in_zone", "price": 12.5, "role": "demand",
+                "band": {"kind": "demand", "lo": 12.2, "hi": 12.9, "touches": 3},
+                "off_floor_pct": 2.46}
+
+
+_ANCH = _AllAtDemand()
+
+_REVERSAL = {"state": "reversal", "price": 12.5, "role": "demand",
+             "band": {"kind": "demand", "lo": 11.4, "hi": 12.0, "touches": 3},
+             "off_low_pct": 6.2, "above_top_pct": 4.17, "sessions_ago": 1}
+
+
 def test_pattern_push_carries_its_record_AND_the_placebo(monkeypatch):
     """His ledger: double_bottom 43% up over 248 against a 50% placebo. Neither
     number may be dropped — a per-name rate without its placebo is the thing he
     made a standing rule about."""
     sent = _capture(monkeypatch)
-    out = PA.check_once(owner="o@x", rows=[_pat()], coll=FakeColl())
+    out = PA.check_once(owner="o@x", rows=[_pat()], coll=FakeColl(), anchors=_ANCH)
     assert out["pushed"] == 1
     _kind, msg = sent[0]
     assert msg["kind"] == "pattern_alert" and msg["ticker"] == "AAA"
@@ -176,18 +197,18 @@ def test_only_a_fresh_confirmed_named_pattern_fires():
 def test_pattern_pushes_once_per_symbol_pattern_and_confirmation_day(monkeypatch):
     sent = _capture(monkeypatch)
     coll = FakeColl()
-    assert PA.check_once(owner="o@x", rows=[_pat()], coll=coll)["pushed"] == 1
-    out = PA.check_once(owner="o@x", rows=[_pat()], coll=coll)
+    assert PA.check_once(owner="o@x", rows=[_pat()], coll=coll, anchors=_ANCH)["pushed"] == 1
+    out = PA.check_once(owner="o@x", rows=[_pat()], coll=coll, anchors=_ANCH)
     assert out["pushed"] == 0 and out["skipped_seen"] == 1 and len(sent) == 1
     # a DIFFERENT pattern on the same name is its own alert
     assert PA.check_once(owner="o@x", rows=[_pat(pattern="cup_with_handle")],
-                         coll=coll)["pushed"] == 1
+                         coll=coll, anchors=_ANCH)["pushed"] == 1
 
 
 def test_pattern_counts_what_it_skipped_so_a_quiet_phone_is_explainable(monkeypatch):
     _capture(monkeypatch)
     rows = [_pat(status="forming"), _pat(sym="B", pattern="flat_top"), _pat(sym="C")]
-    out = PA.check_once(owner="o@x", rows=rows, coll=FakeColl())
+    out = PA.check_once(owner="o@x", rows=rows, coll=FakeColl(), anchors=_ANCH)
     assert out["skipped_stale"] == 2 and out["fresh"] == 1 and out["pushed"] == 1
 
 
@@ -237,3 +258,126 @@ def test_pattern_alerts_read_the_scan_doc_by_id_not_by_timestamp():
     src = inspect.getsource(PA.check_once)
     assert 'find_one({"_id": SCAN_DOC_ID})' in src
     assert 'sort=[("generated_at"' not in src
+
+
+# ── the demand gate (Ajay 2026-09-09: "on the Patterns you know the deal, we
+#    need make sure they need to be in demand zone or bouncing off demand
+#    zone"). It is a TIGHTENING and it FAILS CLOSED. ─────────────────────────
+def test_a_confirmation_away_from_demand_never_reaches_the_phone(monkeypatch):
+    """Coverage exists, the name simply is not at a level -> silence, counted
+    as skipped_no_demand so the quiet is explainable."""
+    sent = _capture(monkeypatch)
+    out = PA.check_once(owner="o@x", rows=[_pat()], coll=FakeColl(),
+                        anchors={"AAA": None})
+    assert out["pushed"] == 0 and sent == []
+    assert out["skipped_no_demand"] == 1 and out["skipped_no_zone"] == 0
+
+
+def test_no_zone_coverage_fails_closed_and_is_counted_apart(monkeypatch):
+    """A blind morning must never look like a quiet one: a name with no zone
+    doc at all sends nothing and lands in its OWN counter."""
+    sent = _capture(monkeypatch)
+    out = PA.check_once(owner="o@x", rows=[_pat()], coll=FakeColl(),
+                        anchors={}, build_zones=False)
+    assert out["pushed"] == 0 and sent == []
+    assert out["skipped_no_zone"] == 1 and out["skipped_no_demand"] == 0
+
+
+def test_the_push_says_which_side_of_the_demand_gate_it_came_from(monkeypatch):
+    sent = _capture(monkeypatch)
+    PA.check_once(owner="o@x", rows=[_pat()], coll=FakeColl(), anchors=_ANCH)
+    assert "\U0001F9F2 in demand $12.2-12.9" in sent[0][1]["body"]
+    sent2 = _capture(monkeypatch)
+    PA.check_once(owner="o@x", rows=[_pat()], coll=FakeColl(),
+                  anchors={"AAA": _REVERSAL})
+    body = sent2[0][1]["body"]
+    assert "\U0001FA83 reversal off demand $11.4-12" in body and "+6.2%" in body
+
+
+def test_the_word_bounce_is_gone_from_the_pattern_push(monkeypatch):
+    """Ajay 2026-09-09: "I have trauma with that word now cuz I caught falliing
+    knives with it". The wording is part of the contract, not decoration."""
+    sent = _capture(monkeypatch)
+    PA.check_once(owner="o@x", rows=[_pat(), _pat(sym="B")], coll=FakeColl(),
+                  anchors={"AAA": _ANCH.get("AAA"), "B": _REVERSAL})
+    for _kind, msg in sent:
+        assert "bounc" not in (msg["title"] + msg["body"]).lower(), msg
+
+
+def test_a_duplicated_scan_row_is_one_push_not_two(monkeypatch):
+    """The live scan really did carry HGBL double_bottom twice on 2026-09-09.
+    Mongo dedupe only spans passes; without an in-pass guard that is two
+    identical pushes in one go."""
+    sent = _capture(monkeypatch)
+    out = PA.check_once(owner="o@x", rows=[_pat(), _pat()], coll=FakeColl(),
+                        anchors=_ANCH)
+    assert out["skipped_dup"] == 1 and out["pushed"] == 1 and len(sent) == 1
+
+
+def test_digest_lines_say_which_side_of_the_gate_each_name_is_on():
+    rows = [dict(_pat(sym="A"), demand_anchor=_ANCH.get("A")),
+            dict(_pat(sym="B"), demand_anchor=_REVERSAL)]
+    body = PA.digest_message(rows, "2026-09-09")["body"]
+    assert "A (double bottom \u00b7 in demand)" in body
+    assert "B (double bottom \u00b7 reversal)" in body
+
+
+# ── the anchor read itself, against the real bounce_room ───────────────────
+def _zone_doc():
+    """Bands the way zone_store writes them: a demand band, a NESTED tighter
+    one inside it, a broken supply shelf (top under yesterday's close) and an
+    unbroken supply lid overhead."""
+    return {"date": "2026-09-09", "prev_close": 12.6, "atr14": 0.25, "recent": [],
+            "bands": [{"kind": "demand", "lo": 11.8, "hi": 12.6, "touches": 3},
+                      {"kind": "demand", "lo": 12.1, "hi": 12.4, "touches": 2},
+                      {"kind": "supply", "lo": 10.4, "hi": 11.0, "touches": 3},
+                      {"kind": "supply", "lo": 14.0, "hi": 14.6, "touches": 4}]}
+
+
+def test_in_demand_read_takes_the_innermost_band_and_ignores_an_unbroken_lid():
+    from supply_demand import bounce_room as BR
+    doc = _zone_doc()
+    inz = BR.in_demand_read(12.3, doc)
+    assert inz["band"]["lo"] == 12.1 and inz["band"]["hi"] == 12.4, "innermost wins"
+    assert inz["role"] == "demand"
+    assert BR.in_demand_read(14.2, doc) is None, "an unbroken supply lid is not demand"
+    # A BROKEN supply shelf is support and counts — but only off a gap day.
+    # Against this doc's 12.6 close a 10.7 print is -15%, and alert_gates.
+    # gap_day then makes every shelf trapped supply (the DYN 2026-09-08 rule),
+    # so the same price reads differently under a close it did not gap from.
+    near = dict(doc, prev_close=11.2)
+    assert BR.in_demand_read(10.7, near)["role"] == "broken_supply"
+    assert BR.in_demand_read(10.7, doc) is None, "gap day: a shelf is not support"
+    assert BR.in_demand_read(13.2, doc) is None, "between bands is not in a zone"
+    for junk in (None, 0, -1, "x", float("nan")):
+        assert BR.in_demand_read(junk, doc) is None, junk
+    assert BR.in_demand_read(12.3, None) is None
+    assert BR.in_demand_read(12.3, {}) is None
+
+
+def test_demand_anchor_rejects_a_name_that_already_ran_past_the_band():
+    """SIG on 2026-09-09 touched $78.69-81.56 and printed $102.48 — a true
+    reversal by the filter's rule (no ceiling, by design) and exactly the
+    "late by the time it reaches me" push this gate must not send."""
+    doc = _zone_doc()
+    near = PA.demand_anchor("X", doc, None, fallback_px=12.9)
+    far = PA.demand_anchor("X", doc, None, fallback_px=12.6 * 1.30)
+    assert (near or {}).get("state") in ("in_zone", "reversal", None)
+    assert far is None, "30% above the band top is not standing at it"
+
+
+def test_demand_anchor_fails_closed_on_a_missing_doc_tombstone_or_price():
+    doc = _zone_doc()
+    assert PA.demand_anchor("X", None, None, fallback_px=12.3) is None
+    assert PA.demand_anchor("X", {}, None, fallback_px=12.3) is None
+    assert PA.demand_anchor("X", {"error": "no data"}, None, fallback_px=12.3) is None
+    for junk in (None, 0, -5, "n/a", float("nan"), {}):
+        assert PA.demand_anchor("X", doc, None, fallback_px=junk) is None, junk
+
+
+def test_anchor_txt_never_raises_and_says_nothing_when_there_is_no_anchor():
+    assert PA.anchor_txt(None) == "" and PA.anchor_txt("weird") == ""
+    assert PA.anchor_txt({"state": "reversal", "band": {}}) .startswith("\U0001FA83")
+    assert "broken-supply shelf" in PA.anchor_txt(
+        {"state": "in_zone", "role": "broken_supply",
+         "band": {"lo": 10.4, "hi": 11.0}})

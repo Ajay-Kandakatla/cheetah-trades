@@ -94,7 +94,7 @@ def _direction_line():
             "CASY: \"only bouncing off alerts\", then \"mood has to be bullish too with "
             "reversal. After a stationary bottommed stocks as I caught a fallig knife\"). "
             "Falling into, settling into, reclaiming from below and resting inside all still LIST "
-            "and send nothing. On top of that bounce — which is an INTRADAY read, and CASY "
+            "and send nothing. On top of that reversal — which is an INTRADAY read, and CASY "
             "satisfied it at 08:13 ET while in free-fall — two DAILY-structure gates: NOT a "
             "falling knife (swing lows stepping down AND the %d-day falling, both required, "
             "neutral structure, no book) and the mood of the TURN ≥ %+g over the last %d sessions. "
@@ -103,7 +103,8 @@ def _direction_line():
             "bullish. Both FAIL CLOSED. GEX, named bullish patterns and the latest StockTwits "
             "sentiment ride in the body and NEVER gate — across %d resolved pattern observations "
             "not one beat the %d%% placebo, and flat_top fired on 120 of 120 random names."
-            % (" / ".join(AG.PUSH_DIRECTIONS), AG.KNIFE_MA_LEN, AG.REVERSAL_MOOD_FLOOR,
+            % (" / ".join(AG.direction_label(d) for d in AG.PUSH_DIRECTIONS),
+               AG.KNIFE_MA_LEN, AG.REVERSAL_MOOD_FLOOR,
                AG.REVERSAL_MOOD_BARS, BC.PATTERN_PLACEBO[0], BC.PATTERN_PLACEBO[1]))
 
 
@@ -141,13 +142,13 @@ def sections() -> dict:
             "%s above its top (re-entry, not a resident)." % (DR.REENTRY_LOOKBACK_BARS,
                                                              _pct(DR.ENTRY_ABOVE_TOL_PCT)),
             "Not a falling knife (swing lows stepping down AND a falling 50-day) and not a "
-            "broken band (a close below it, then a bounce back in).",
+            "broken band (a close below it, then a reversal back in).",
             "Approaching list: band top within %s below price and price down at least %s "
             "over the last %d sessions." % (_pct(DR.APPROACH_NEAR_PCT),
                                             _pct(DR.APPROACH_MIN_DRIFT_PCT),
                                             DR.APPROACH_DRIFT_BARS),
         ] + _room_lines() + [
-            "Order: bouncing off the band with room first, then room, money-flow (CMF) as "
+            "Order: a reversal off the band with room first, then room, money-flow (CMF) as "
             "the tie-break; under %s room reads ⛔ into supply." % _pct(DR.MIN_ROOM_DEFAULT),
         ],
         "stops": _zone_lines(),
@@ -204,7 +205,7 @@ def sections() -> dict:
                _pct(DA.AT_PCT), _pct(DA.AT_PCT), _pct(DA.NEAR_PCT), DA.MAX_SINGLES_PER_PASS),
             "🪃 zone_bounce_alert (every 5 min, %s–%s ET): an arrival (prior close > %s above "
             "the top) whose low touched the band (≤ %s above the top, wick ≤ %s under the "
-            "floor) and bounced ≥ max(%s, 1 ATR); a single push needs ≥ max(%s, 2 ATR), the "
+            "floor) and reversed ≥ max(%s, 1 ATR); a single push needs ≥ max(%s, 2 ATR), the "
             "rest ride the digest; max %d singles; print ≤ %d min old."
             % (_t(ZB.SESSION_OPEN), _t(ZB.SESSION_CLOSE), _pct(ZB.ARRIVAL_PCT),
                _pct(ZB.TOUCH_TOL_PCT), _pct(ZB.WICK_PCT), _pct(ZB.BOUNCE_MIN_PCT),
@@ -299,11 +300,12 @@ def sections() -> dict:
         "IN_BAND; at highs = print ≥ %d%% of the 252-bar high."
         % (_pct(BR.NEAR_PCT), int(round(BR.NEW_HIGH_TOL * 100))),
         _proven_line(),
-        "Order: bouncing with ≥ %s room, then ≥ %s room, then bouncing but ⛔ into supply, "
+        "Order: a reversal off demand with ≥ %s room, then ≥ %s room, then a reversal "
+        "heading ⛔ into supply, "
         "then the rest." % (_pct(DR.MIN_ROOM_DEFAULT), _pct(DR.MIN_ROOM_DEFAULT)),
     ]
     out["sepa_bounce"] = {
-        "title": "🪃 Bouncing off Demand", "emoji": "🪃",
+        "title": "🪃 Reversal from Demand", "emoji": "🪃",
         "picks": bounce,
         "stops": ["A filter, not an entry: the plan (stop, target) lives on the Back in "
                   "Demand board."],
@@ -353,7 +355,7 @@ def sections() -> dict:
     }
 
     out["quick_bounce"] = {
-        "title": "Quick Bounce", "emoji": "🪃",
+        "title": "Quick Reversal", "emoji": "🪃",
         "picks": [
             "Historical: a name is on the list when ≥ %d visits to a proven demand band "
             "(tested ≥ %d×) turned QUICK at least %d%% of the time — quick = "
@@ -371,7 +373,7 @@ def sections() -> dict:
         "stops": [
             "Stop %s under the band floor (the paper lane's stop); target = the first proven lid."
             % _pct(QB.STOP_BUFFER_PCT),
-            "Paper Auto-Pilot: a demand-zone entry on a Quick Bounce name is journaled as the "
+            "Paper Auto-Pilot: a demand-zone entry on a Quick Reversal name is journaled as the "
             "quick_bounce lane and flattened at %s ET the same day (day-trade variant)."
             % "15:55",
         ],

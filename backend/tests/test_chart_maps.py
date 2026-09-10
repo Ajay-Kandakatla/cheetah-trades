@@ -2227,8 +2227,8 @@ def test_zone_tiles_lead_with_which_way_it_got_here(prices, reentry_stub, monkey
     by = {t["symbol"]: t for t in out["tiles"]}
     assert by["FALL"]["badges"][0] == {"text": f"↓ Falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)", "tone": "warn"}
     assert by["FALL"]["why"].endswith(f"— ↓ falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)")
-    assert by["BNCE"]["badges"][0] == {"text": f"↑ Bouncing off the band, +1.9% off the {lo * 1.001:g} low", "tone": "good"}
-    assert "↑ bouncing off the band" in by["BNCE"]["why"]
+    assert by["BNCE"]["badges"][0] == {"text": f"↑ Reversal off the band, +1.9% off the {lo * 1.001:g} low", "tone": "good"}
+    assert "↑ reversal off the band" in by["BNCE"]["why"]
     # NEGATIVE: no live row → the scan print alone cannot say which way → no badge, why untouched
     assert not any("↓" in b["text"] or "↑ B" in b["text"] for b in by["NOLIVE"]["badges"])
     assert "—" not in by["NOLIVE"]["why"].split("zone")[-1] or "falling into" not in by["NOLIVE"]["why"]
@@ -2247,9 +2247,9 @@ def test_deep_demand_tiles_read_the_direction_against_the_second_band(prices, re
                  "prev_day_close": 95.0, "low": lo2 * 1.001}})
     out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
     t = out["tiles"][0]
-    assert t["badges"][0] == {"text": f"↑ Bouncing off the band, +1.4% off the {lo2 * 1.001:g} low", "tone": "good"}
+    assert t["badges"][0] == {"text": f"↑ Reversal off the band, +1.4% off the {lo2 * 1.001:g} low", "tone": "good"}
     assert t["badges"][1]["text"] == "🩹 In 2nd demand band"
-    assert t["why"].endswith(f"— ↑ bouncing off the band, +1.4% off the {lo2 * 1.001:g} low")
+    assert t["why"].endswith(f"— ↑ reversal off the band, +1.4% off the {lo2 * 1.001:g} low")
     # NEGATIVE: tape down → the old tile, first badge is the band chip
     monkeypatch.setattr(B, "_live_rows", lambda syms: {})
     t = B.board("deep_demand", limit=5, min_tier="any", min_room=0)["tiles"][0]

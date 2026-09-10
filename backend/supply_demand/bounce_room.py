@@ -375,6 +375,43 @@ def bounce_read(print_px, doc: dict, touches: list,
     return best[1] if best else None
 
 
+def in_demand_read(print_px, doc: dict) -> Optional[dict]:
+    """The eligible demand band the print is INSIDE (lo <= print <= hi), or
+    None. Ajay 2026-09-09: "on the Patterns ... we need make sure they need to
+    be in demand zone or bouncing off demand zone" — this is the first half of
+    that; ``bounce_read`` is the second.
+
+    Eligible = the SAME set every other read here uses (zone_bounce_alerts.
+    is_eligible): demand bands always, supply bands only once broken (top under
+    yesterday's close, and never on a gap day). No new geometry, no new
+    threshold — being inside a band is what the band already means.
+
+    Nested bands -> the INNERMOST wins (highest floor), which is the tightest
+    true statement about where price is standing.
+    """
+    px = _f(print_px)
+    if px is None or px <= 0:
+        return None
+    doc = doc or {}
+    prev_close = _f(doc.get("prev_close"))
+    best = None
+    for band in doc.get("bands") or []:
+        if not _valid_band(band) or not is_eligible(band, prev_close, px):
+            continue
+        lo, hi = float(band["lo"]), float(band["hi"])
+        if not (lo <= px <= hi):
+            continue
+        if best is None or lo > float(best["lo"]):
+            best = band
+    if best is None:
+        return None
+    lo, hi = float(best["lo"]), float(best["hi"])
+    return {"band": _slim_band(best),
+            "role": "broken_supply" if _kind(best) == "supply" else "demand",
+            "depth_pct": round((px / hi - 1.0) * 100.0, 2),   # <= 0: how far under the top
+            "off_floor_pct": round((px / lo - 1.0) * 100.0, 2)}
+
+
 def overhead_bands(bands: list, live: float, prev_close=None) -> list:
     """Everything price meets going UP: UNBROKEN supply bands at/above the
     print plus demand bands strictly above it (broken support = resistance).
