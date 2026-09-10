@@ -144,13 +144,30 @@ def _universe_with_context() -> tuple:
         return [], {}
 
 
+def _stale(df) -> bool:
+    """True when the newest bar is too old to trust. THE WIDENING REMOVED A
+    GUARD WE USED TO GET FOR FREE: the symbol list was the SEPA scan's rows,
+    and `sepa.scanner` had already dropped stale names (`prices.is_stale`).
+    `load_universe` has no such filter — it only resolves hand-maintained
+    delisting fates — so an acquired or halted name whose cached frame froze a
+    couple of bars after a neckline close comes back `confirmed` and fresh, and
+    `pattern_alerts.is_fresh` would push it. `prices.is_stale`'s own docstring
+    names this failure: "a frozen last bar reads as a pocket pivot / breakout".
+    Fails CLOSED — an unreadable frame counts as stale."""
+    try:
+        from sepa import prices
+        return bool(prices.is_stale(df))
+    except Exception:                                        # pragma: no cover
+        return True
+
+
 def _scan_symbol(sym: str) -> Optional[dict]:
     from sepa import prices
     try:
         df = prices.load_prices(sym)
     except Exception:
         return None
-    if df is None or len(df) < 80:
+    if df is None or len(df) < 80 or _stale(df):
         return None
     found, confirms = [], {}
     for name, fn in detector.DETECTORS.items():
@@ -253,6 +270,10 @@ def _verdict_for_symbol(sym: str, ctx: dict) -> dict:
         df = None
     if df is None or len(df) < 80:
         row["error"] = "no usable daily frame"
+        return row
+    if _stale(df):
+        row["error"] = "stale frame — the symbol stopped printing daily bars"
+        row["no_match"] = True
         return row
     for name, fn in detector.DETECTORS.items():
         try:
@@ -368,7 +389,20 @@ def _run_qualifier_scan(refresh_today: bool = False) -> None:
         # the data behind "are our patterns accurate in the long run?".
         try:
             from . import history
-            history.record_observations(verdicts)
+            # ONLY the cross-linked set feeds the ledger. Widening the verdict
+            # sweep to the whole universe on 2026-09-10 took its daily intake
+            # from 313 names to ~2,650, and this ledger is the denominator
+            # behind GET /patterns/accuracy — the "how accurate are our
+            # patterns" record quoted in the pushes and measured over 669
+            # resolved observations. Diluting it with universe-only names would
+            # silently make the new rates incomparable to the old ones. The
+            # sweep got wider; the RECORD keeps its meaning.
+            tracked = [v for v in verdicts
+                       if (v.get("sources") or []) != ["universe"]]
+            history.record_observations(tracked)
+            log.info("pattern ledger: recorded %d of %d verdicts "
+                     "(universe-only names are scanned, not ledgered)",
+                     len(tracked), len(verdicts))
         except Exception as exc:
             log.warning("pattern ledger record failed: %s", exc)
         with _LOCK:
@@ -618,7 +652,8 @@ def latest_qualifiers() -> dict:
     refreshing = _kick_if_stale(doc, QUALIFIERS_STALE_S, "qualifiers")
     if not doc:
         return {"verdicts": [], "n_symbols": 0, "generated_at": 0, "refreshing": refreshing,
-                "note": "First verdict scan is running now — refresh in ~30s."}
+                "note": ("First verdict scan is running now — it sweeps the "
+                         "whole universe, so give it a minute or two.")}
     doc.pop("_id", None)
     doc["refreshing"] = refreshing
     return doc

@@ -57,8 +57,16 @@ type Verdict = {
 };
 type QualLatest = {
   generated_at: number; n_symbols: number; n_matched?: number; n_candle_only?: number;
-  n_no_match?: number; verdicts: Verdict[]; disclaimer?: string; note?: string;
+  n_no_match?: number; n_qualifiers?: number; n_universe_only?: number;
+  verdicts: Verdict[]; disclaimer?: string; note?: string;
 };
+
+/* The verdict sweep went from 313 names to the whole universe on 2026-09-10,
+ * so the "no pattern" bucket went from a couple of dozen chips to ~2,000 of
+ * them in one flex-wrap. Render a readable head and count the rest: the value
+ * of that bucket is knowing the name WAS looked at, which the count carries
+ * just as well as two thousand DOM nodes. */
+const NO_MATCH_SHOWN = 300;
 
 const PATTERN_LABEL: Record<string, string> = {
   double_bottom: 'Double bottom (W)', inverse_head_shoulders: 'Inverse head & shoulders',
@@ -97,9 +105,14 @@ const PageInfo = (
       formations (hammer, engulfing, morning star — each shown with Bulkowski's measured frequency AND the academic null),
       or an explicit <em>no pattern</em>. That complete-answer set is what fills the 📐 chips on the SEPA, Portfolio and
       Leaderboard rows; it does not refresh the board below.</p>
-    <p><strong>The board is wider than the phone.</strong> A full-universe sweep does <em>not</em> mean more pushes:
-      a pattern only reaches your phone if the name is <strong>$1B+</strong> (your own size rule) <em>and</em> is sitting
-      <strong> at a demand zone</strong> (your own alert rule). Everything else stays here on the board to be read, not pushed.</p>
+    <p><strong>The board is wider than the phone.</strong> A pattern only reaches your phone if the name is sitting
+      <strong> at a demand zone</strong> — inside an eligible demand band, or reversing off one and no more than 5% above it.
+      Everything else stays here on the board to be read, not pushed.</p>
+    <p><strong>There is no size floor on this path, and you should know it.</strong> The $1B rule you set on 2026-09-03 only
+      decides which names get a demand zone pre-built overnight; a name without one can still have a zone built on demand
+      (up to 40 a run) with <em>no</em> market-cap check. So widening the sweep does make a small, thin name more likely to
+      reach you than before. If you want a real size floor on pattern pushes, say so and it becomes a gate — I have not
+      added one on my own.</p>
     <p>Discipline: a pattern only counts when it <strong>closes above its confirmation line</strong> (the interim peak / neckline) —
       before that it's listed as "forming", a shape to watch, not a signal. Targets use the measure rule; stops sit under the pattern low.</p>
     <p>Evidence, honestly: Lo, Mamaysky &amp; Wang (2000, J. Finance) found algorithmically-detected patterns carry
@@ -204,7 +217,7 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
             Patterns
             <InfoButton inline title="Patterns">{PageInfo}</InfoButton>
           </h1>
-          <p className="lede">Double bottoms, triple bottoms, inverse H&amp;S &amp; cup-with-handles across the <b>whole universe</b> — every name, not just the SEPA qualifiers — confirmed vs forming, with our own measured record beside the book numbers. Phone alerts stay narrower than this board on purpose: only $1B+ names sitting at a demand zone push.</p>
+          <p className="lede">Double bottoms, triple bottoms, inverse H&amp;S &amp; cup-with-handles across the <b>whole universe</b> — every name, not just the SEPA qualifiers — confirmed vs forming, with our own measured record beside the book numbers. Phone alerts stay narrower than this board on purpose: only names sitting at a demand zone push — there is no size floor on that path, see ℹ️.</p>
         </div>
         {user?.is_admin && (
           /* Ajay 2026-09-10: "The chart patterns are only looking at qualified
@@ -218,7 +231,7 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
            * one covers what is unambiguous on sight. */
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => startScan('universe', true)} disabled={!!scanStatus?.running}
-                    title={`Sweep EVERY name in the full universe — ${latest?.symbols_scanned ? `all ${latest.symbols_scanned.toLocaleString()} charts on the last run` : 'roughly 2,650 charts'}, not just the SEPA qualifiers — for bullish-reversal geometry, refreshing each chart's TODAY bar with the live close first, so a breakout confirming this session shows up now (not after the post-close run). Geometry still uses the full daily history; only the trigger freshness is "today". This is the scan that fills the confirmed/forming board below. ~1–2 min. A wider board is NOT more phone alerts: pattern pushes stay gated to $1B+ names sitting at a demand zone.`}
+                    title={`Sweep EVERY name in the full universe — ${latest?.symbols_scanned ? `all ${latest.symbols_scanned.toLocaleString()} charts on the last run` : 'roughly 2,650 charts'}, not just the SEPA qualifiers — for bullish-reversal geometry, refreshing each chart's TODAY bar with the live close first, so a breakout confirming this session shows up now (not after the post-close run). Geometry still uses the full daily history; only the trigger freshness is "today". This is the scan that fills the confirmed/forming board below. ~1–2 min. A wider board is mostly NOT more phone alerts: a pattern push still has to be sitting at a demand zone. Note there is no market-cap floor on that path — see the ℹ️ panel.`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.9rem',
                              borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 700,
                              fontSize: '0.8rem', minHeight: 36, background: C.gold, color: '#1a1a1a', border: 'none',
@@ -226,14 +239,14 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
               ⚡ {scanStatus?.running && scanStatus.scope !== 'qualifiers' ? 'Sweeping all names…' : 'Scan ALL names (full universe)'}
             </button>
             <button onClick={() => startScan('qualifiers', true)} disabled={!!scanStatus?.running}
-                    title={`Re-answer only the qualifier verdict set — ${quals?.n_symbols ? `${quals.n_symbols} names` : 'roughly 300 names'}: current SEPA qualifiers plus your holdings, the buyable, the at-pivot and the leaders. Every one gets an explicit answer (pattern, candle read, or "no pattern"), and that is what fills the 📐 chips on the SEPA, Portfolio and Leaderboard rows. Far smaller and faster than the full sweep — and it does NOT refresh the confirmed/forming board below.`}
+                    title={`Re-answer EVERY name with an explicit verdict — ${quals?.n_symbols ? `${quals.n_symbols.toLocaleString()} names on the last run` : 'the whole universe'} — so each one reads as a pattern, a candle read, or an explicit "no pattern". That complete answer set is what fills the 📐 chips on the SEPA, Portfolio and Leaderboard rows, and "no pattern" is the point: a blank chip used to mean "never looked". Slower than the sweep beside it, not faster — it runs the candle reads and a ledger write per name on top of the detectors — and it does NOT refresh the confirmed/forming board below.`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.45rem 0.9rem',
                              borderRadius: 8, cursor: scanStatus?.running ? 'wait' : 'pointer', fontWeight: 600,
                              fontSize: '0.8rem', minHeight: 36, background: 'transparent', color: C.gold,
                              border: `1px solid ${C.gold}88`, opacity: scanStatus?.running ? 0.7 : 1 }}>
               🎯 {scanStatus?.running && scanStatus.scope === 'qualifiers'
-                    ? 'Rescanning qualifiers…'
-                    : `Qualifier verdicts only${quals?.n_symbols ? ` (${quals.n_symbols})` : ''}`}
+                    ? 'Re-answering every name…'
+                    : `Verdict for every name${quals?.n_symbols ? ` (${quals.n_symbols.toLocaleString()})` : ''}`}
             </button>
           </div>
         )}
@@ -377,9 +390,9 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
     <div style={{ marginBottom: 18, padding: '0.7rem 0.85rem', borderRadius: 12,
                   border: `1px solid ${C.gold}44`, background: 'var(--bg-raised,#16181d)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>🎯 Qualifier verdicts</div>
+        <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>🎯 Verdict for every name</div>
         <span style={{ fontSize: '0.72rem', color: C.muted }}>
-          {q.n_symbols} names (qualifiers + holdings + leaders) · {matched.length} match a pattern · {candleOnly.length} candle reads only · {noMatch.length} no pattern
+          {q.n_symbols.toLocaleString()} names swept{q.n_qualifiers ? ` (${q.n_qualifiers} of them SEPA qualifiers)` : ''} · {matched.length} match a pattern · {candleOnly.length} candle reads only · {noMatch.length} no pattern
         </span>
         {q.generated_at > 0 && (
           <span style={{ marginLeft: 'auto', fontSize: '0.66rem', color: C.sub }}>
@@ -407,7 +420,7 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
             No pattern, no notable candles ({noMatch.length}) — that's an answer too
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {noMatch.map((v) => (
+            {noMatch.slice(0, NO_MATCH_SHOWN).map((v) => (
               <button key={v.symbol} onClick={() => navigate(`/sepa/${encodeURIComponent(v.symbol)}`)}
                       title={v.error ? v.error : `RS ${v.sepa?.rs_rank ?? '—'} · Stage ${v.sepa?.stage ?? '—'} — no pattern on the daily chart`}
                       style={{ fontSize: '0.72rem', padding: '2px 9px', borderRadius: 6, cursor: 'pointer',
@@ -416,6 +429,12 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
                 {v.symbol}
               </button>
             ))}
+            {noMatch.length > NO_MATCH_SHOWN && (
+              <span data-testid="no-match-more"
+                    style={{ fontSize: '0.72rem', padding: '2px 9px', color: C.sub, alignSelf: 'center' }}>
+                +{(noMatch.length - NO_MATCH_SHOWN).toLocaleString()} more looked at, no pattern
+              </span>
+            )}
           </div>
         </>
       )}

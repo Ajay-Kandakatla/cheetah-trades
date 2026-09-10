@@ -1629,9 +1629,15 @@ def _resolve_fates(syms: list[str]) -> list[str]:
 
 
 def _with_benchmarks(syms: list[str]) -> list[str]:
-    """Resolve symbol fates, then append SPY/QQQ/IWM (for RS math)."""
+    """Resolve symbol fates, then append the RS anchors (for RS math).
+
+    Reads RS_ANCHORS rather than its own tuple: this function is what PUTS the
+    anchors into every universe, and `patterns.scan` is what has to keep them
+    off a stock-pattern board. A fourth benchmark added here and not there
+    would ship an index ETF straight onto the board.
+    """
     out = _resolve_fates(syms)
-    for b in ("SPY", "QQQ", "IWM"):
+    for b in RS_ANCHORS:
         if b not in out:
             out.append(b)
     return out

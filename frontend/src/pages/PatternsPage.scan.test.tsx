@@ -66,7 +66,7 @@ const draw = () => render(<MemoryRouter><PatternsBoard /></MemoryRouter>);
  *  names a scope, which is itself part of the contract below. */
 const scanButtons = () =>
   screen.getAllByRole('button')
-    .filter((b) => /universe|qualifier/i.test(b.getAttribute('title') || ''));
+    .filter((b) => /universe|qualifier|verdict/i.test(b.getAttribute('title') || ''));
 
 beforeEach(() => { USER = { is_admin: true }; POSTS.length = 0; vi.stubGlobal('fetch', stubFetch()); });
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -161,7 +161,10 @@ describe('both buttons name their scope', () => {
     const [primary, secondary] = scanButtons();
     expect(scanButtons().length).toBe(2);
     expect(primary.textContent).toMatch(/all names|full universe/i);
-    expect(secondary.textContent).toMatch(/qualifier/i);
+    // Not /qualifier/ any more: since 2026-09-10 BOTH buttons cover the whole
+    // universe, so "qualifiers" stopped being what separates them. What does
+    // is hits-only vs an explicit verdict for every name.
+    expect(secondary.textContent).toMatch(/verdict/i);
   });
 
   it('each tooltip names the scope AND how many names it is', async () => {
@@ -170,8 +173,13 @@ describe('both buttons name their scope', () => {
     const [primary, secondary] = scanButtons();
     expect(primary.getAttribute('title')).toMatch(/full universe/i);
     expect(primary.getAttribute('title')).toMatch(/2,650/);      // last run's symbols_scanned
-    expect(secondary.getAttribute('title')).toMatch(/qualifier/i);
+    expect(secondary.getAttribute('title')).toMatch(/verdict/i);
     expect(secondary.getAttribute('title')).toMatch(/313/);      // quals.n_symbols
+    // NEGATIVE. It used to claim it was "far smaller and faster than the full
+    // sweep". Once the verdict scan went full-universe that became false in
+    // both halves — same names, and slower per name (candle reads + a ledger
+    // write on top of the detectors).
+    expect(secondary.getAttribute('title')).not.toMatch(/smaller and faster/i);
   });
 
   it('the secondary is honest that it does NOT refresh the board below', async () => {
@@ -182,14 +190,20 @@ describe('both buttons name their scope', () => {
 
   it('the primary does not let a wider board imply more phone alerts', async () => {
     // The consequence he must not be surprised by: widening the SCAN widens
-    // the BOARD. The phone stays gated to $1B+ names sitting at a demand zone
+    // the BOARD. The phone stays gated to names sitting at a demand zone
     // (zone_store.MIN_CAP_USD + patterns/pattern_alerts.py). Never loosened to
     // make the wider board "work".
     draw();
     await screen.findByText('BKH');
     const title = scanButtons()[0].getAttribute('title') || '';
     expect(title).toMatch(/demand zone/i);
-    expect(title).toMatch(/\$1B/i);
+    // NOT /\$1B/: this test used to pin a size floor that DOES NOT EXIST on
+    // the pattern-alert path. MIN_CAP_USD only decides which names get a zone
+    // pre-built overnight; pattern_alerts builds missing ones on demand with
+    // no market-cap check at all, so the copy claiming a $1B gate was false.
+    // Pin the gate that is really there, and pin that the false one is gone.
+    expect(title).toMatch(/demand zone/i);
+    expect(title).not.toMatch(/gated to \$1B/i);
   });
 });
 

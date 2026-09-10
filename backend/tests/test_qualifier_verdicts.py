@@ -9,8 +9,13 @@ import pandas as pd
 from patterns import scan
 
 
-def _df(closes, start="2025-06-01"):
-    idx = pd.bdate_range(start, periods=len(closes))
+def _df(closes, end=None):
+    # The LAST bar is anchored to today, because these frames stand in for a
+    # LIVE name. Since 2026-09-10 the scan drops stale frames (a frozen last
+    # bar reads as a breakout — see patterns.scan._stale), so a fixture pinned
+    # to a fixed past date stopped representing what it means to represent.
+    idx = pd.bdate_range(end=(end or pd.Timestamp.today().normalize()),
+                         periods=len(closes))
     c = np.asarray(closes, dtype=float)
     return pd.DataFrame({"open": np.r_[c[0], c[:-1]], "high": c + 0.5, "low": c - 0.5,
                          "close": c, "volume": np.full(len(c), 1e6)}, index=idx)
@@ -114,3 +119,40 @@ def test_symbol_verdict_on_demand(monkeypatch):
     assert row["sepa"]["rs_rank"] == 91
     assert row["generated_at"] > 0
     assert "double_bottom" in (row.get("validation") or {})
+
+
+def test_a_stale_frame_is_never_answered_with_a_pattern(monkeypatch):
+    """REGRESSION (2026-09-10). Widening the sweep to load_universe("full")
+    removed a guard we had been getting for free: the symbol list used to be
+    the SEPA scan's rows, which `sepa.scanner` had already stripped of stale
+    names. load_universe has no such filter, so an acquired/halted name whose
+    cached frame froze two bars after a neckline close comes back `confirmed`
+    and FRESH, and pattern_alerts.is_fresh would push it."""
+    from sepa import prices
+    quiet = list(100 + np.random.RandomState(3).normal(0, 0.2, 30))
+    w = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 92, 13)) +
+         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 92, 11)) + [96])
+    frozen = _df(quiet + w, end=pd.Timestamp("2025-06-01"))
+    monkeypatch.setattr(prices, "load_prices", lambda s, **k: frozen.copy())
+
+    # the hits-only sweep drops it outright
+    assert scan._scan_symbol("DEADCO") is None
+
+    # the verdict sweep answers, but never with a pattern
+    row = scan._verdict_for_symbol("DEADCO", {})
+    assert row["matches"] == []
+    assert row["no_match"] is True
+    assert "stale" in (row.get("error") or "")
+
+
+def test_the_same_geometry_dated_today_still_matches(monkeypatch):
+    """NEGATIVE control for the test above — proves the stale guard is what
+    rejected it, not the shape. Same closes, last bar today."""
+    from sepa import prices
+    quiet = list(100 + np.random.RandomState(3).normal(0, 0.2, 30))
+    w = (list(np.linspace(100, 80, 25)) + list(np.linspace(80, 92, 13)) +
+         list(np.linspace(92, 80, 13)) + list(np.linspace(80, 92, 11)) + [96])
+    live = _df(quiet + w)
+    monkeypatch.setattr(prices, "load_prices", lambda s, **k: live.copy())
+    row = scan._verdict_for_symbol("LIVECO", {})
+    assert row["matches"] and row["no_match"] is False
