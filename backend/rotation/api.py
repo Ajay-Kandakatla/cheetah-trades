@@ -140,6 +140,11 @@ async def rotation_hot(refresh: bool = Query(False)):
                 ("group", "sector", "tier", "index", "n", "rel_21d",
                  "rel_window", "rel_63d", "pct_positive")}
 
+    def _slim_thm(r):
+        return {k: r.get(k) for k in
+                ("group", "n", "rel_21d", "rel_window", "rel_63d",
+                 "pct_positive", "thin")}
+
     def _slim_ind(r):
         return {k: r.get(k) for k in
                 ("group", "sector", "industry", "n", "rel_21d", "rel_window",
@@ -159,6 +164,12 @@ async def rotation_hot(refresh: bool = Query(False)):
         # rel_63d -13.3 against Software-Infrastructure +19.1, inside one sector.
         "industries_in": [_slim_ind(r) for r in ((d.get("hot_industries") or {}).get("in") or [])],
         "industries_out": [_slim_ind(r) for r in ((d.get("hot_industries") or {}).get("out") or [])],
+        # His own build-out rosters — robotics, energy, optical, nuclear,
+        # rare_earth, datacenter_build and the AI complex. Computed since the
+        # tracker was written and never once shown, which is why he asked for
+        # things the app was already tracking (2026-09-09).
+        "themes_in": [_slim_thm(r) for r in ((d.get("hot_themes") or {}).get("in") or [])],
+        "themes_out": [_slim_thm(r) for r in ((d.get("hot_themes") or {}).get("out") or [])],
         "stance": d.get("stance"),
         "note": d.get("note"),
         "cached": bool(time.time() - hit["ts"] > 1) or hit.get("source") == "scan",

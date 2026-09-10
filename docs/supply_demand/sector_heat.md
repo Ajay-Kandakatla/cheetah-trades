@@ -49,10 +49,34 @@ Gas, Uranium, Solar, Gold. Same floor, same deterministic stride and the same
 liquidity population as the cap-tier cohorts, so an industry median and the
 sector median above it can never be computed over different universes.
 
-The 11 curated themes (`ai_semis`, `ai_power`, `nuclear`, `rare_earth`,
-`space`, `quantum`, `optical`, `robotics`, `ai_infra`, `defense`, `energy`)
-were already computed and never surfaced. They are now ranked and returned —
-that is the "AI related sectors" and "rare earth minerals and nuclear" half.
+The curated themes (`ai_semis`, `ai_power`, `nuclear`, `rare_earth`, `space`,
+`quantum`, `optical`, `robotics`, `ai_infra`, `defense`, `energy`) were already
+computed and never surfaced. They are now ranked and rendered — that is the "AI
+related sectors" and "rare earth minerals and nuclear" half.
+
+### The follow-up that proved the point
+
+> robotics, energy and optic fiber, constructipn like for data centers add these
+
+Three of those four **were already tracked**: `robotics` (19 names), `energy`
+(20) and `optical` (12, the optic-fibre roster — AAOI, CIEN, COHR, FN, LITE,
+POET, VIAV). He asked for them because nothing ever rendered them. That is the
+whole bug, and it is why the theme rows now ship.
+
+The fourth was genuinely missing, so **`datacenter_build`** was added: EME,
+FIX, IESC, STRL, MTZ, MYRG, PRIM, APG, FLR, LGN — the mechanical, electrical
+and site contractors whose backlog moves with the build-out. Deliberately
+narrower than the `Engineering & Construction` industry row (31 names, half of
+it highway, water and environmental work driven by federal spending rather than
+AI capex) and separate from `ai_infra`, which is racks, cooling and
+transmission hardware. PWR (Quanta) and DY (Dycom) fit this theme on the
+business but were **left in `ai_infra`** — themes must stay disjoint and
+restructuring his existing rosters is his call, not mine.
+
+Measured the day it shipped: the build-out complex is **cold** —
+`datacenter_build` −6.98 (10% of members positive, −23.71 over 63d),
+`ai_infra` −3.12, `optical` −3.13, `robotics` −4.19 — while `energy` is +9.03
+with **90%** of its members positive.
 
 ### 2. The edge — NOT CONFIRMED. Flat on wins, and the speed claim is inverted.
 

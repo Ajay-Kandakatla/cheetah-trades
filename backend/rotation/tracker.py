@@ -502,6 +502,20 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "ranked_by": "rel_21d",
     }
 
+    # The curated rosters, ranked at last (Ajay 2026-09-09: "robotics, energy
+    # and optic fiber, constructipn like for data centers add these"). They
+    # were computed from the start and never surfaced anywhere, so from the
+    # boards it looked like they were not tracked. Thin ones are KEPT and
+    # flagged rather than dropped — he asked for rare_earth (n=4) and nuclear
+    # by name, and a four-name median is worth seeing as long as it says so.
+    for r in theme_rows:
+        r["thin"] = (r.get("n") or 0) < MIN_COHORT_N
+    ranked_thm = sorted((r for r in theme_rows if r.get("rel_21d") is not None),
+                        key=lambda r: -r["rel_21d"])
+    hot_themes = {"in": ranked_thm[:6],
+                  "out": list(reversed(ranked_thm[-6:])) if len(ranked_thm) > 6 else [],
+                  "ranked_by": "rel_21d"}
+
     ranked_ind = sorted((r for r in industry_rows if r.get("rel_21d") is not None),
                         key=lambda r: -r["rel_21d"])
     hot_industries = {
@@ -521,6 +535,7 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "industries": industry_rows,
         "hot": hot,
         "hot_industries": hot_industries,
+        "hot_themes": hot_themes,
         # Ajay's "safe havens vs in general" read, as a single number each.
         "stance": {"defensive": _stance("defensive"),
                    "cyclical": _stance("cyclical"),

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import HotSectors, { chipLabel, scanStamp } from './HotSectors';
+import HotSectors, { chipLabel, scanStamp, themeTitle } from './HotSectors';
 
 const PAYLOAD = {
   as_of: '2026-08-31', start: '2026-06-01', benchmark: 'RSP',
@@ -142,5 +142,76 @@ describe('HotSectors — industry cohorts (2026-09-09)', () => {
       Promise.resolve({ ok: true, json: () => Promise.resolve(only) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
     expect(await screen.findByText(/Gold \+14\.3%/)).toBeInTheDocument();
+  });
+});
+
+
+/* ── theme rows (Ajay 2026-09-09: "robotics, energy and optic fiber,
+ * constructipn like for data centers add these") ──────────────────────────
+ * Three of those four were already tracked and had never been rendered — the
+ * bug was invisibility, not absence. These pin that they render, that a thin
+ * cohort says so, and that an old payload without the keys still works. */
+describe('HotSectors — build-out theme rows (2026-09-09)', () => {
+  const withThemes = {
+    as_of: '2026-09-09', benchmark: 'RSP',
+    in: [{ group: 'Energy · large caps', n: 40, rel_21d: 8.61 }],
+    out: [{ group: 'Technology · large caps', n: 40, rel_21d: -4.72 }],
+    themes_in: [
+      { group: 'energy', n: 20, rel_21d: 9.03, rel_63d: 7.53, pct_positive: 90 },
+      { group: 'rare_earth', n: 4, rel_21d: 2.96, rel_63d: -11.27, pct_positive: 0, thin: true },
+    ],
+    themes_out: [
+      { group: 'datacenter_build', n: 10, rel_21d: -6.98, rel_63d: -23.71, pct_positive: 10 },
+      { group: 'robotics', n: 19, rel_21d: -4.19, rel_63d: -7.75, pct_positive: 31.6 },
+      { group: 'optical', n: 12, rel_21d: -3.13, rel_63d: -20.69, pct_positive: 16.7 },
+    ],
+  };
+  const stub = (d: unknown) => vi.stubGlobal('fetch', vi.fn(() =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve(d) } as Response)));
+
+  it('renders every theme he named, with its number', async () => {
+    stub(withThemes);
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    expect(await screen.findByText(/^energy \+9\.0%$/)).toBeInTheDocument();
+    expect(screen.getByText(/^robotics -4\.2%$/)).toBeInTheDocument();
+    expect(screen.getByText(/^optical -3\.1%$/)).toBeInTheDocument();
+    expect(screen.getByText(/^datacenter_build -7\.0%$/)).toBeInTheDocument();
+  });
+
+  it('marks a thin cohort on the chip AND explains it on hover', async () => {
+    stub(withThemes);
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    const chip = await screen.findByText(/rare_earth \+3\.0% ·thin/);
+    expect(chip.getAttribute('title')).toMatch(/THIN/);
+    expect(chip.getAttribute('title')).toMatch(/4 names/);
+  });
+
+  it('a non-thin theme carries no thin marker (NEGATIVE)', async () => {
+    stub(withThemes);
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    const chip = await screen.findByText(/^robotics -4\.2%$/);
+    expect(chip.textContent).not.toMatch(/thin/);
+    expect(chip.getAttribute('title')).not.toMatch(/THIN/);
+  });
+
+  it('NEGATIVE: an old payload with no theme keys still renders the strip', async () => {
+    stub({ ...withThemes, themes_in: undefined, themes_out: undefined });
+    render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    expect(await screen.findByText(/Energy · large caps/)).toBeInTheDocument();
+    expect(screen.queryByText('theme in')).not.toBeInTheDocument();
+  });
+});
+
+describe('themeTitle', () => {
+  it('names the count, the 63-day read and the breadth', () => {
+    expect(themeTitle({ group: 'robotics', n: 19, rel_21d: -4.19, rel_63d: -7.75, pct_positive: 31.6 }))
+      .toBe('robotics — 19 names · 63d -7.75% rel · 31.6% of members positive');
+  });
+  it('warns when the cohort is too thin to mean much', () => {
+    expect(themeTitle({ group: 'rare_earth', n: 4, rel_21d: 2.96, rel_63d: -11.27, pct_positive: 0, thin: true }))
+      .toMatch(/THIN: too few names/);
+  });
+  it('survives missing numbers', () => {
+    expect(themeTitle({ group: 'x', rel_21d: null })).toBe('x — undefined names · 63d —% rel');
   });
 });

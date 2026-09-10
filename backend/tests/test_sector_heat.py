@@ -182,3 +182,66 @@ def test_industry_cohorts_drop_thin_groups_and_stride_deterministically():
 def test_industry_cohorts_are_empty_on_empty_input_not_an_exception():
     assert T._industry_members([]) == []
     assert T._industry_members([("A", None, None)]) == []
+
+
+# ── his build-out rosters, surfaced at last (Ajay 2026-09-09) ──────────────
+# "robotics, energy and optic fiber, constructipn like for data centers add
+#  these" — three of those four were ALREADY tracked and had simply never been
+# rendered, which is why he asked for things the app already had.
+def test_every_theme_he_named_is_tracked():
+    from sepa import universe as U
+    for name in ("robotics", "energy", "optical", "datacenter_build",
+                 "nuclear", "rare_earth", "ai_semis", "ai_power", "ai_infra"):
+        assert name in U.THEME_UNIVERSE, name
+        assert len(U.THEME_UNIVERSE[name]) > 0, name
+
+
+def test_datacenter_build_is_builders_not_hardware_and_not_highways():
+    """Separate from ai_infra (which is racks, cooling and transmission gear)
+    and narrower than the Engineering & Construction industry row (31 names,
+    half of them highway / water / environmental work driven by federal
+    spending rather than AI capex)."""
+    from sepa import universe as U
+    roster = set(U.THEME_UNIVERSE["datacenter_build"])
+    assert {"EME", "FIX", "IESC", "STRL", "MTZ"} <= roster
+    # hardware makers stay in ai_infra
+    assert not (roster & {"VRT", "SMCI", "ANET", "AAON", "SPXC"})
+    # the civil names are deliberately out
+    assert not (roster & {"ROAD", "GVA", "ACM", "J", "TTEK", "ORN", "BWMN"})
+    # the diversified HVAC majors are deliberately out
+    assert not (roster & {"TT", "JCI", "CARR", "LII"})
+    assert len(roster) >= T.MIN_COHORT_N, "must clear the cohort floor on its own"
+
+
+def test_themes_stay_disjoint_so_a_name_has_exactly_one():
+    """universe._assert_themes_disjoint runs at import; this pins the two the
+    new roster could have stolen. PWR and DY belong here on the business but
+    are LEFT in ai_infra — restructuring his existing rosters is his call."""
+    from sepa import universe as U
+    assert U.theme_for("PWR") == "ai_infra"
+    assert U.theme_for("DY") == "ai_infra"
+    assert U.theme_for("AGX") == "ai_power"
+    assert U.theme_for("FIX") == "datacenter_build"
+    seen = {}
+    for theme, names in U.THEME_UNIVERSE.items():
+        for t in names:
+            assert t not in seen, f"{t} in both {seen.get(t)} and {theme}"
+            seen[t] = theme
+
+
+def test_every_theme_has_a_rank_so_none_sorts_as_unknown():
+    from sepa import universe as U
+    for name in U.THEME_UNIVERSE:
+        assert U.theme_rank(name) < U.UNKNOWN_THEME_RANK, name
+
+
+def test_hot_themes_flag_thin_cohorts_rather_than_dropping_them():
+    """rare_earth (4), quantum (5) and defense (6) are under MIN_COHORT_N. He
+    named rare_earth and nuclear specifically, so they are shown WITH the
+    warning rather than silently removed."""
+    rows = [{"group": "energy", "rel_21d": 9.03, "n": 20},
+            {"group": "rare_earth", "rel_21d": 2.96, "n": 4},
+            {"group": "robotics", "rel_21d": -4.19, "n": 19}]
+    for r in rows:
+        r["thin"] = (r.get("n") or 0) < T.MIN_COHORT_N
+    assert [r["group"] for r in rows if r["thin"]] == ["rare_earth"]

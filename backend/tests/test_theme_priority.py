@@ -110,9 +110,15 @@ def test_priority_is_the_order_ajay_asked_for():
     # now with AI").
     # defense + rare_earth appended 2026-08-28 ("the ones Trump has been
     # announcing" + rare earth minerals) — behind the AI build-out story.
+    # datacenter_build inserted 2026-09-09 ("constructipn like for data centers
+    # add these") directly BEHIND ai_infra: same build-out, the other half —
+    # ai_infra makes what goes in the building, this pours and wires it. It
+    # goes after, not before, because the hardware is the thesis and the
+    # contractors are the derivative. defense and rare_earth keep their
+    # relative order behind both.
     assert order == ["space", "quantum", "ai_semis", "ai_power", "nuclear",
                      "energy", "optical", "robotics", "ai_infra",
-                     "defense", "rare_earth"]
+                     "datacenter_build", "defense", "rare_earth"]
 
 
 def test_every_roster_has_a_priority():

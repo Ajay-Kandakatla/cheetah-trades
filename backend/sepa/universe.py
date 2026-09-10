@@ -181,6 +181,26 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   # MTRX 2026-08-28 (more-like-LPTH sweep): LNG/ammonia tank
                   # EPC, backlog ~2x the cap, inflecting losses -> profit
                   "MTRX"],
+    # The people who BUILD the data centre, as opposed to the people who make
+    # what goes inside it (Ajay 2026-09-09: "robotics, energy and optic fiber,
+    # constructipn like for data centers add these").
+    #
+    # Why this is separate from ai_infra and from the Engineering &
+    # Construction industry cohort. ai_infra is hardware — racks, cooling,
+    # transmission gear — a different business with a different cycle. The
+    # `Engineering & Construction` industry row (31 names) is the right grain
+    # for "construction" but the wrong one for "for data centers": it is half
+    # highways, water and environmental work (ROAD, GVA, ACM, J, TTEK), whose
+    # driver is federal spending, not AI capex. These ten are the mechanical,
+    # electrical and site contractors whose backlog moves with the build-out.
+    #
+    # PWR (Quanta) and DY (Dycom) belong here on the business and are LEFT in
+    # ai_infra, because themes must stay disjoint and quietly restructuring his
+    # existing rosters is not mine to do — say the word and they move.
+    # Deliberately excluded: TT / JCI / CARR / LII (diversified HVAC majors,
+    # data centres are a minority of revenue) and the civil names above.
+    "datacenter_build": ["EME", "FIX", "IESC", "STRL", "MTZ", "MYRG", "PRIM",
+                         "APG", "FLR", "LGN"],
     # Racks, cooling, transmission hardware.
     "ai_infra":  ["VRT", "MOD", "SMCI", "ANET", "ETN", "PWR", "GEV", "NVT",
                   "HUBB", "POWL", "AAON", "CLS", "FLEX",
@@ -223,8 +243,10 @@ THEME_PRIORITY: dict[str, int] = {
     "optical":   6,
     "robotics":  7,
     "ai_infra":  8,
-    "defense":   9,
-    "rare_earth": 10,
+    # Right behind the hardware it houses — same build-out, different half.
+    "datacenter_build": 9,
+    "defense":   10,
+    "rare_earth": 11,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of

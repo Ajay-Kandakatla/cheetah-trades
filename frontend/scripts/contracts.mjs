@@ -1096,6 +1096,14 @@ const CONTRACTS = [
       if (!/inside \$\{r\.sector\}/.test(src)) {
         errs.push('an industry chip must say which sector it sits inside');
       }
+      // 2026-09-09: "robotics, energy and optic fiber, constructipn like for
+      // data centers add these" — three were already tracked and invisible.
+      if (!/themes_in/.test(src) || !/themes_out/.test(src)) {
+        errs.push('the build-out theme rosters must be rendered, not just computed');
+      }
+      if (!/thin/.test(src)) {
+        errs.push('a thin cohort (rare_earth n=4) must be marked as thin');
+      }
       return errs;
     },
   },

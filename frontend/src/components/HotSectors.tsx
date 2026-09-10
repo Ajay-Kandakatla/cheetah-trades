@@ -20,7 +20,7 @@ import { API } from '../lib/apiBase';
 export type HotRow = {
   group: string; sector?: string; tier?: string; index?: string;
   n?: number; rel_21d: number | null; rel_window?: number | null;
-  rel_63d?: number | null; industry?: string;
+  rel_63d?: number | null; industry?: string; thin?: boolean;
   pct_positive?: number | null;
 };
 
@@ -37,10 +37,26 @@ export type HotPayload = {
    * separate rows here and both sit inside the one Technology row above, which
    * on 2026-09-09 hid a 33-point 63-day spread between them. */
   industries_in?: HotRow[]; industries_out?: HotRow[];
+  /* His own build-out rosters (Ajay 2026-09-09: "robotics, energy and optic
+   * fiber, constructipn like for data centers add these"). Three of those four
+   * were ALREADY tracked — they had just never been rendered anywhere, which
+   * is why he asked for things the app already had. */
+  themes_in?: HotRow[]; themes_out?: HotRow[];
   stance?: { defensive?: number | null; cyclical?: number | null;
              commodity?: number | null };
   error?: string;
 };
+
+/** A theme chip's hover. `thin` cohorts (rare_earth n=4, quantum 5, defense 6)
+ *  are SHOWN — he asked for them by name — but a median over four names is
+ *  noise wearing a number, so the count and the warning ride the tooltip. */
+export function themeTitle(r: HotRow): string {
+  const n = `${r.group} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`;
+  const pos = r.pct_positive == null ? '' : ` · ${r.pct_positive}% of members positive`;
+  return r.thin
+    ? `${n}${pos} · THIN: too few names for the median to mean much`
+    : `${n}${pos}`;
+}
 
 export function chipLabel(r: HotRow): string {
   const v = r.rel_21d;
@@ -74,8 +90,10 @@ export default function HotSectors() {
   if (failed || !data || data.error) return null;
   const indIn = data.industries_in || [];
   const indOut = data.industries_out || [];
+  const thmIn = data.themes_in || [];
+  const thmOut = data.themes_out || [];
   const hasRows = (data.in?.length || 0) + (data.out?.length || 0)
-                  + indIn.length + indOut.length > 0;
+                  + indIn.length + indOut.length + thmIn.length + thmOut.length > 0;
   if (!hasRows) return null;
 
   return (
@@ -122,6 +140,26 @@ export default function HotSectors() {
               <span key={`io-${r.group}`} className="hs-chip hs-chip-out"
                     title={`${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names · 63d ${r.rel_63d ?? '—'}% rel`}>
                 {chipLabel(r)}
+              </span>
+            ))}
+          </span>
+        </>
+      )}
+      {(thmIn.length > 0 || thmOut.length > 0) && (
+        <>
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-in">theme in</em>
+            {thmIn.map((r) => (
+              <span key={`ti-${r.group}`} className="hs-chip hs-chip-in" title={themeTitle(r)}>
+                {chipLabel(r)}{r.thin ? ' ·thin' : ''}
+              </span>
+            ))}
+          </span>
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-out">theme out</em>
+            {thmOut.map((r) => (
+              <span key={`to-${r.group}`} className="hs-chip hs-chip-out" title={themeTitle(r)}>
+                {chipLabel(r)}{r.thin ? ' ·thin' : ''}
               </span>
             ))}
           </span>
