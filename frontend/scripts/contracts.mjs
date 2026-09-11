@@ -18,6 +18,41 @@ const read = (rel) => readFileSync(join(FRONTEND_ROOT, rel), 'utf8');
 
 const CONTRACTS = [
   {
+    name: 'every styled class the member popover uses has a rule that ships (2026-09-10)',
+    file: 'src/components/SectorMembersModal.tsx',
+    // Ajay 2026-09-10, on a screenshot of the panel rendering as raw
+    // full-width page text with a bare ✕ on its own line: "This is how its
+    // rendering". The component was correct and every test passed — the
+    // stylesheet simply was not in the commit. I staged an explicit file list
+    // and missed src/styles.css, so all 20 hsm-* classes resolved to nothing.
+    //
+    // No render test can catch this: jsdom does not load the stylesheet, so
+    // the DOM is identical with and without it. The only thing that catches a
+    // class with no rule is looking for the rule.
+    checks: (src) => {
+      const errs = [];
+      const used = new Set();
+      for (const m of src.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+        for (const cls of (m[1] || m[2] || '').split(/[\s${}?:'"]+/)) {
+          if (cls.startsWith('hsm-')) used.add(cls);
+        }
+      }
+      if (!used.size) return ['no hsm-* classes found — did the panel get renamed?'];
+      let css = '';
+      try {
+        css = read('src/styles.css');
+      } catch {
+        return ['src/styles.css is unreadable'];
+      }
+      const missing = [...used].filter((c) => !css.includes(`.${c}`)).sort();
+      if (missing.length) {
+        errs.push(`the popover uses classes with NO rule in styles.css: ${missing.join(', ')}`
+          + ' — that ships an unstyled panel, which is what happened on 2026-09-10');
+      }
+      return errs;
+    },
+  },
+  {
     name: 'ticker page passes BOTH halves of the chart view to SupportLevels',
     file: 'src/pages/SepaCandidate.tsx',
     // The component's onChange falls back to onWindow(v.window) when onView is

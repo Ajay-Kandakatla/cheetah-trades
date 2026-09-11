@@ -259,3 +259,40 @@ compared with `n_full`. When it says not sampled, the panel says the two
 populations *agree* instead of inventing a discrepancy — and an absent payload
 (a failed read) knows neither, so it falls through to the conservative wording
 rather than asserting an agreement it cannot verify.
+
+
+## Same day (2026-09-10)
+
+Ajay: *"Can you also check for same day sector too please?"* / *"Instead of 5
+days"*.
+
+`WINDOW_DAY = 1` — the member's last close against the one before it.
+
+| where | field | population |
+| --- | --- | --- |
+| each member row, **leading column** | `rel_1d` (raw `ret_1d`, rebased) | that name |
+| the group line in the header | `median_1d_full` | the **full** membership |
+| beside it | `up_today` | how many of `priced` are green |
+
+Two deliberate choices:
+
+* **The group number is RAW, not rebased.** "What is this sector doing today"
+  is a plain question; restating it against RSP answers a different one. The
+  per-name column *is* rebased, because it sits in a row of rebased legs.
+* **The 5d column stays.** `traction = pace_5 - pace_21`, so removing that leg
+  would hide the sort key the panel prints a definition for.
+
+**Same day does not feed `traction`.** Over one session a single gap would flag
+a name as gaining traction, and the standing instruction is that signals get
+more accurate, never noisier. `test_the_traction_definition_travels_with_the_table`
+asserts `pace_1` / `ret_1d` are absent from the formula so this cannot drift in
+later. Moving the flag onto same-day is his call, not a default.
+
+## The stylesheet is pinned too (2026-09-10)
+
+The panel shipped once with **no CSS at all** — the component was right, every
+test passed, and `src/styles.css` simply was not in the commit, so all 20
+`hsm-*` classes resolved to nothing and the popover rendered as raw full-width
+page text. jsdom does not load stylesheets, so no render test can see this: the
+DOM is identical either way. A frontend contract now reads the classes the
+component uses and fails when any of them has no rule in `styles.css`.
