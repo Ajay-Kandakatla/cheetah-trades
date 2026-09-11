@@ -427,6 +427,67 @@ SECTORS: list[Sector] = [
         "thesis": "Optical content per AI cluster compounds with scale-up/scale-out; transceiver + switch demand grows faster than server count. No clean pure-play ETF.",
         "leverage_etfs": [],
     },
+    # Ajay 2026-09-10: "another sector security like AI securty and internet
+    # security like CROWD Strike, NTSK and Robotic software security like BB is
+    # an examaple" — his three anchors set the shape, so the roster covers all
+    # three legs: AI-native endpoint/SOC, the internet/cloud edge, and the
+    # embedded software inside robots and vehicles.
+    #
+    # The id is "cybersecurity" ON PURPOSE, not a prettier one: macro_risk.py
+    # already reserves that exact string in its id -> bucket map, so every
+    # sp_ticker here inherits the "software_growth" macro-event bucket for free.
+    # Rename the id and the whole roster silently falls back to "broad".
+    #
+    # No gap_economics, same as ai_software: there is no physical bottleneck to
+    # size here and no filing to source a demand/supply split from, so the field
+    # stays off rather than carrying invented numbers.
+    {
+        "id": "cybersecurity",
+        "label": "Security — AI, Internet & Embedded",
+        "narrative": "Securing the AI stack itself: AI-native endpoint and SOC, the internet/cloud edge (SSE, zero trust, identity), and the embedded software running robots, vehicles and industrial gear.",
+        "etf": "CIBR",
+        "commodity": "",
+        "keywords": ["cybersecurity spending", "AI security", "SASE", "SSE", "zero trust",
+                     "endpoint security", "identity security", "data security posture",
+                     "ransomware", "CISO budget", "OT security", "embedded RTOS",
+                     "automotive software security", "post-quantum cryptography"],
+        # Every name below printed a bar on the day this shipped. NTSK is the
+        # exception that needed work: it is a 2025 IPO no index layer carries,
+        # so it was added to the curated list in sepa/universe.py in the same
+        # commit — sectors.py does NOT feed the scan universe, and a roster
+        # ticker outside it is a chip that never scans, charts or alerts.
+        "sp_tickers": ["CRWD", "PANW", "ZS", "NTSK", "S", "FTNT", "NET",
+                       "OKTA", "SAIL", "RBRK", "VRNS", "TENB", "BB"],
+        "thesis": "Not a supply gap — a budget-priority play. Security is the software line that keeps getting funded when others are cut, and agentic AI widens the attack surface (machine identities, AI apps, autonomous agents) faster than defences ship. The hazard is consolidation: this roster churns by acquisition faster than any other in this file, so treat a name going quiet as a corporate action until proven otherwise.",
+        "leverage_etfs": ["CIBR", "BUG", "HACK"],
+    },
+    # Ajay 2026-09-10: "also bio tech and personal medicine and diruptive
+    # research companies related to medicine". Three legs again — biotech
+    # proper, precision/personalized medicine (genomics, diagnostics, targeted
+    # oncology), and the disruptive platforms (gene editing, RNA, AI-read
+    # diagnostics).
+    #
+    # DELIBERATELY DISTINCT from healthcare_pharma, which holds the big-pharma
+    # megacaps (LLY PFE MRK JNJ UNH ISRG NVO) against a GLP-1 fill-finish supply
+    # thesis. No ticker appears in both: that one is a capacity story, this one
+    # is a pipeline story. The id is "biotech" for the same macro_risk.py reason
+    # as above — it inherits the "healthcare" event bucket.
+    {
+        "id": "biotech",
+        "label": "Biotech / Precision Medicine",
+        "narrative": "Medicine aimed at one patient's biology — gene editing and RNA therapeutics, targeted oncology, and the sequencing and liquid-biopsy layer that decides who gets which drug.",
+        "etf": "XBI",
+        "commodity": "",
+        "keywords": ["gene editing", "CRISPR", "base editing", "RNAi", "antisense",
+                     "cell and gene therapy", "precision oncology", "targeted therapy",
+                     "liquid biopsy", "MRD testing", "companion diagnostic",
+                     "genomic sequencing", "PDUFA", "FDA advisory committee",
+                     "phase 3 readout", "orphan drug"],
+        "sp_tickers": ["VRTX", "ALNY", "RVMD", "MRNA", "NTRA", "BBIO", "ARWR",
+                       "KRYS", "IONS", "GH", "ILMN", "TEM", "CRSP", "NTLA"],
+        "thesis": "Not a supply gap — an approval and readout story. Value moves on dated binary events (PDUFA actions, advisory committees, phase-3 readouts), not on capacity. READ THIS BEFORE TRADING THE ZONE MACHINERY HERE: these names GAP on those dates, they do not walk down into a demand band and bounce, and a stop parked at a band floor does not fill anywhere near it through a failed readout. Treat this board as a watchlist, not as a source of zone entries.",
+        "leverage_etfs": ["XBI", "IBB", "ARKG"],
+    },
 ]
 
 

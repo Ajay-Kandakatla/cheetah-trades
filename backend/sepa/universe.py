@@ -47,6 +47,14 @@ UNIVERSE: list[str] = [
     "CRDO", "ALAB", "ANET", "CRWV", "NBIS",
     # Software / cloud
     "CRM", "NOW", "SNOW", "DDOG", "NET", "CRWD", "PANW", "ZS", "MDB", "PLTR",
+    # NTSK added 2026-09-10. Ajay holds it AND watches it, and it named itself
+    # in his security-sector ask — but it reached NO index layer, so it was
+    # scanning nowhere: no SEPA card, no zone_store doc, and therefore no
+    # demand / bounce / supply-break alert and no paper entry. A 2025 IPO is
+    # exactly what this curated list exists to carry. NOTE this is the ONLY
+    # thing that makes a ticker scannable: supply_demand/sectors.py sp_tickers
+    # is display-only and shares no code path with this file.
+    "NTSK",
     # CFLT + SMAR removed 2026-08-25 — both delisted (see sepa.symbols.DELISTED)
     "SHOP", "TEAM", "WDAY", "HUBS", "TOST",
     # Consumer growth
