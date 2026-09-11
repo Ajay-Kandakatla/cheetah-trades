@@ -1001,8 +1001,8 @@ def test_psg_growth_is_capped_so_base_effects_cannot_buy_cheapness():
     assert joby == pytest.approx((6.9e9 / 116e6) / cap)
     assert joby > B.UNDERVALUE_MAX_PSG, "59x sales must not screen as cheap"
     assert B.psg_ratio(745e6, 62.8e6, 108.9) == pytest.approx(0.109, abs=0.001)
-    at_cap = B.psg_ratio(1e9, 1e8, cap)
-    beyond = B.psg_ratio(1e9, 1e8, cap * 100)
+    at_cap = B.psg_ratio(7e8, 1e8, cap)
+    beyond = B.psg_ratio(7e8, 1e8, cap * 100)
     assert at_cap == pytest.approx(beyond), "growth beyond the cap is inert"
 
 

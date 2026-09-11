@@ -123,7 +123,13 @@ ET = ZoneInfo("America/New_York")
 
 EDGE_PCT = 1.0                     # "<1% away" — within this of the level
 BROKE_MAX_PCT = 3.0                # broke today, at most this far through the ceiling
-MIN_CAP_USD = 1_000_000_000.0      # "billion or at least bigger than a billion"
+# Ajay 2026-09-10: "make cap 700 m" — was 1e9 (his 2026-09-03 "billion or at
+# least bigger than a billion"). Measured the day it moved: 1,501 names had a
+# known cap at or above $1B and 80 more sit in the $700M–$1B band, so this
+# widens the eligible set by 5.3%. This is a LOOSENING and it was his call,
+# not a measured improvement. Every S/D path carries its own copy of this
+# floor; test_cap_floor_agrees pins them equal so they cannot drift apart.
+MIN_CAP_USD = 700_000_000.0
 MIN_TOUCHES_PUSH = 2               # pushes only; the board lists every band + its touches
 MAX_SINGLES_PER_PASS = 3           # strongest first; the rest ride ONE digest
 DIGEST_MAX = 6                     # names spelled out in one digest body

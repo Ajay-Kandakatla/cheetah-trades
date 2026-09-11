@@ -75,6 +75,11 @@ def test_payload_narrows_to_one_section_and_lists_keys():
 def test_helpers_format_like_the_page_reads():
     assert RI._pct(5.0) == "5%" and RI._pct(1.5) == "1.5%" and RI._pct(0.5) == "0.5%"
     assert RI._b(1_000_000_000.0) == "$1B"
+    # REGRESSION (2026-09-10): integer-billions printed "$0B" for the $700M
+    # floor he set — the ℹ️ panel would have told him there is no floor.
+    assert RI._b(700_000_000.0) == "$700M"
+    assert RI._b(250_000_000.0) == "$250M"
+    assert RI._b(1_500_000_000.0) == "$1.5B"
     from datetime import time as dtime
     assert RI._t(dtime(9, 32)) == "9:32" and RI._t(dtime(16, 0)) == "16:00"
 

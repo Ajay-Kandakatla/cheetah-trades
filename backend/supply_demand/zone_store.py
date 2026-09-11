@@ -70,7 +70,13 @@ log = logging.getLogger(__name__)
 ET = ZoneInfo("America/New_York")
 COLL = "zone_store"
 GEOM_TAG = "board"                 # demand_reentry.zone_geom() — the board's resolution
-MIN_CAP_USD = 1_000_000_000.0      # Ajay 2026-09-03: "billion or at least bigger than a billion"
+# Ajay 2026-09-10: "make cap 700 m" — was 1e9 (his 2026-09-03 "billion or at
+# least bigger than a billion"). Measured the day it moved: 1,501 names had a
+# known cap at or above $1B and 80 more sit in the $700M–$1B band, so this
+# widens the eligible set by 5.3%. This is a LOOSENING and it was his call,
+# not a measured improvement. Every S/D path carries its own copy of this
+# floor; test_cap_floor_agrees pins them equal so they cannot drift apart.
+MIN_CAP_USD = 700_000_000.0
 MIN_BARS = 120                     # ~6 months: fewer bars is not enough structure to draw from
 ATR_PERIOD = 14
 RECENT_SESSIONS = 5                # closed bars kept on the doc (owner setting, 2026-09-05):

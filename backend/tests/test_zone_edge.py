@@ -417,7 +417,7 @@ def test_unknown_cap_is_skipped_from_the_board_small_cap_listed_not_pushed(monke
     sent = _capture(monkeypatch)
     store = {s: _doc(s, [RES], 99.0) for s in ("UNK", "SML", "BIG")}
     snap = {s: _snap(101.5, 99.0) for s in store}
-    out, _ = _run(store, snap, {"UNK": None, "SML": 9e8, "BIG": 5e9})
+    out, _ = _run(store, snap, {"UNK": None, "SML": ZE.MIN_CAP_USD - 1, "BIG": 5e9})
     assert [r["symbol"] for r in out["breaking"]] == ["BIG", "SML"]
     assert out["unknown_cap"] == 1 and out["skipped_cap"] == 1
     assert [s["title"].split()[1] for s in sent] == ["BIG"]
@@ -735,7 +735,7 @@ def test_api_payload_shape_ordering_and_json_safety(monkeypatch):
     assert set(payload) >= {"as_of", "date", "in_session", "pass_sec", "params", "counts",
                             "breaking", "near_demand", "track", "disclaimer"}
     assert payload["as_of"] == NOW.isoformat() and payload["date"] == DAY and payload["in_session"] is True
-    assert payload["params"] == {"edge_pct": 1.0, "broke_max_pct": 3.0, "min_cap_usd": 1e9,
+    assert payload["params"] == {"edge_pct": 1.0, "broke_max_pct": 3.0, "min_cap_usd": ZE.MIN_CAP_USD,
                                  "min_touches_push": 2}
     # D1 arrives FALLING, so since 2026-09-09 it lists but never pushes.
     assert payload["counts"] == {"breaking": 3, "near_demand": 2, "candidates": 5, "priced": 5,
@@ -904,7 +904,7 @@ def test_premarket_and_afterhours_passes_push_with_the_tape_tag(monkeypatch):
 
 # ── source guards: the wiring ────────────────────────────────────────────────
 def test_constants_locked():
-    assert ZE.EDGE_PCT == 1.0 and ZE.BROKE_MAX_PCT == 3.0 and ZE.MIN_CAP_USD == 1e9
+    assert ZE.EDGE_PCT == 1.0 and ZE.BROKE_MAX_PCT == 3.0 and ZE.MIN_CAP_USD == 700_000_000.0
     assert ZE.MIN_TOUCHES_PUSH == 2 and ZE.MAX_SINGLES_PER_PASS == 3 and ZE.DIGEST_MAX == 6
     assert ZE.STALE_PRINT_SEC == 180 and ZE.TRACK_KEEP_DAYS == 2 and ZE.TRACK_POINTS == 30
     assert ZE.KIND_BREAK == "supply_break_alert" and ZE.STATE_COLL_BREAK == "supply_break_state"

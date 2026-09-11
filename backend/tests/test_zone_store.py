@@ -124,8 +124,11 @@ def test_build_doc_refuses_missing_or_short_frames_and_a_crashing_compute():
 
 
 # ── universe filter ──────────────────────────────────────────────────────────
-def test_big_cap_universe_keeps_known_caps_at_or_above_a_billion_only():
-    caps = {"BIG": 37e9, "EDGE": 1e9, "SMALL": 999_999_999, "UNK": None, "BAD": "x"}
+def test_big_cap_universe_keeps_known_caps_at_or_above_the_floor_only():
+    # Relative to the floor, never a literal: "SMALL" was 999_999_999, which
+    # stopped being small the moment the floor moved to $700M (2026-09-10).
+    F = ZS.MIN_CAP_USD
+    caps = {"BIG": 37e9, "EDGE": F, "SMALL": F - 1, "UNK": None, "BAD": "x"}
     out = ZS.big_cap_universe(["big", "EDGE", "SMALL", "UNK", "BAD", "MISSING"], caps)
     assert out == ["BIG", "EDGE"]
 

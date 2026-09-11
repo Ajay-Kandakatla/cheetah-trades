@@ -162,10 +162,14 @@ def test_unknown_prev_close_is_silent_never_a_guess(monkeypatch):
                         now=IN_SESSION, force=True, store={})
     assert out["unknown_prev"] == 1 and out["at"] == 0 and sent == []
 
-def test_cap_gate_is_known_and_at_least_a_billion():
+def test_cap_gate_is_known_and_at_the_cap_floor():
     assert DA.passes_cap(2e9) is True
     assert DA.passes_cap(1e9) is True
-    assert DA.passes_cap(999_999_999) is False
+    # just under the floor he set on 2026-09-10 ("make cap 700 m")
+    assert DA.passes_cap(699_999_999) is False
+    # and a name that used to be blocked at the old $1B floor now passes —
+    # that IS the widening, stated rather than implied
+    assert DA.passes_cap(800_000_000) is True
     assert DA.passes_cap(None) is False, "unknown cap is not a known-big company"
     assert DA.passes_cap("x") is False
 

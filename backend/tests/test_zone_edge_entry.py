@@ -497,7 +497,7 @@ def test_touches_below_min_never_bought(env):
 
 def test_cap_below_floor_or_unknown_never_bought(env):
     _, db, enter_calls, _, _ = env(
-        latest=latest_doc(breaking=[break_row(cap=9.9e8)],
+        latest=latest_doc(breaking=[break_row(cap=ZE.MIN_CAP_USD - 1)],
                           near_demand=[demand_row(cap=None)]),
         zones={"AAA": zone_doc("AAA", supply_los=(120.0,)), "BBB": zone_doc("BBB")})
     out = ZE.run()

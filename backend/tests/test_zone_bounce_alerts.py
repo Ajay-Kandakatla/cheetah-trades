@@ -263,7 +263,7 @@ def test_unknown_cap_is_skipped_and_counted_small_cap_is_skipped(monkeypatch):
     store = {"UNK": _doc("UNK", NTAP_BANDS, 4.5, 180.77), "SML": _doc("SML", NTAP_BANDS, 4.5, 180.77),
              "NTAP": _doc("NTAP", NTAP_BANDS, 4.5, 180.77)}
     snap = {s: _snap(161.0, 168.5, 180.77) for s in store}          # 0.57% above the top: inside the phone window
-    out = _run(store, snap, {"UNK": None, "SML": 9e8, "NTAP": 37.4e9})
+    out = _run(store, snap, {"UNK": None, "SML": ZB.MIN_CAP_USD - 1, "NTAP": 37.4e9})
     assert len(out["hits"]) == 3 and out["unknown_cap"] == 1 and out["skipped_cap"] == 1
     assert len(sent) == 1 and "NTAP" in sent[0]["title"] and "UNK" not in sent[0]["body"]
 

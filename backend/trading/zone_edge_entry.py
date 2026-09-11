@@ -156,7 +156,13 @@ RULES_DEFAULT = {"demand_residents": False,   # True: buy names already IN a dem
                  "breakout_any_band": False,  # True: buy any cross through a supply band
                  "min_touches": MIN_TOUCHES}  # bands tested fewer times are skipped
 # "billion or at least bigger than a billion" — mirrors zone_store.MIN_CAP_USD.
-MIN_CAP_USD = 1e9
+# Ajay 2026-09-10: "make cap 700 m" — was 1e9 (his 2026-09-03 "billion or at
+# least bigger than a billion"). Measured the day it moved: 1,501 names had a
+# known cap at or above $1B and 80 more sit in the $700M–$1B band, so this
+# widens the eligible set by 5.3%. This is a LOOSENING and it was his call,
+# not a measured improvement. Every S/D path carries its own copy of this
+# floor; test_cap_floor_agrees pins them equal so they cannot drift apart.
+MIN_CAP_USD = 700_000_000.0
 # risk_rules.initial_stop floors every PLACED stop at this percent ("a stop
 # tighter than 1% is a data error, not a plan" — the bare literal
 # `pct = max(pct, 1.0)` in trading/risk_rules.py, which is FROZEN, so the

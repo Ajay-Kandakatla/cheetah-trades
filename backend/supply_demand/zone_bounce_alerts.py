@@ -91,7 +91,13 @@ ARRIVAL_PCT = 3.0          # prev close must be > 3% above the top: arrivals onl
 BOUNCE_MIN_PCT = 3.0       # floor on the move off the low (raised by ATR)
 STRONG_PCT = 5.0           # floor for an individual push (raised by 2x ATR)
 STALE_PRINT_SEC = 600      # a last trade older than 10 min is not "now"
-MIN_CAP_USD = 1_000_000_000.0
+# Ajay 2026-09-10: "make cap 700 m" — was 1e9 (his 2026-09-03 "billion or at
+# least bigger than a billion"). Measured the day it moved: 1,501 names had a
+# known cap at or above $1B and 80 more sit in the $700M–$1B band, so this
+# widens the eligible set by 5.3%. This is a LOOSENING and it was his call,
+# not a measured improvement. Every S/D path carries its own copy of this
+# floor; test_cap_floor_agrees pins them equal so they cannot drift apart.
+MIN_CAP_USD = 700_000_000.0
 MAX_SINGLES_PER_PASS = 3   # strongest first; the rest ride the digest
 DIGEST_MAX = 6             # names spelled out in one digest body
 SESSION_OPEN = dtime(9, 33)   # first pass after the 9:30 open + first prints

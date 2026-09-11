@@ -446,7 +446,7 @@ ZONE_EDGE_TOKENS = [
     "MAX_ZONE_ENTRIES_PER_DAY = 2 * MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY",
     "STOP_BUFFER_PCT = 0.5",
     "MIN_TOUCHES = 2",
-    "MIN_CAP_USD = 1e9",
+    "MIN_CAP_USD = 700_000_000.0",
     "SIGNAL_MAX_AGE_SEC = 180",
     "LAST_ENTRY_ET = dtime(15, 45)",
     'STATE_COLL = "zone_edge_entry_state"',
@@ -471,7 +471,7 @@ def test_zone_edge_entry_params_importable_and_equal():
     assert ze.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY == 4 and ze.MAX_ZONE_ENTRIES_PER_DAY == 8
     assert ze.STOP_BUFFER_PCT == 0.5
     assert ze.MIN_TOUCHES == 2
-    assert ze.MIN_CAP_USD == 1e9
+    assert ze.MIN_CAP_USD == 700_000_000.0
     assert ze.SIGNAL_MAX_AGE_SEC == 180
     assert ze.LAST_ENTRY_ET == dtime(15, 45)
     assert ze.STATE_COLL == "zone_edge_entry_state"

@@ -50,7 +50,7 @@ same Mongo handle `exit_engine` uses and never writes to them.
 | `MAX_ZONE_ENTRIES_PER_DAY` | 8 | the day total (2 × per side) |
 | `STOP_BUFFER_PCT` | 0.5 | the requested stop sits this far **under the band floor**: `stop = band.lo × (1 − 0.5%)` |
 | `MIN_TOUCHES` | 2 | band must be proven structure (same floor as the board's pushes) |
-| `MIN_CAP_USD` | 1e9 | "billion or at least bigger than a billion" (mirrors `zone_store.MIN_CAP_USD`) |
+| `MIN_CAP_USD` | 700_000_000.0 | Ajay 2026-09-10: "make cap 700 m" — was 1e9 ("billion or at least bigger than a billion", 2026-09-03). Mirrors `zone_store.MIN_CAP_USD`; `tests/test_cap_floor.py` pins all five copies equal |
 | `SIGNAL_MAX_AGE_SEC` | 180 | a `latest` doc older than this (or from another day, or without a readable `as_of`) is **stale → no entries** |
 | `LAST_ENTRY_ET` | 15:45 | no new entries at/after this; the 15:44 tick is the last |
 | `RISK_STOP_FLOOR_PCT` | 1.0 | **not an owner rule** — a mirror of the bare literal `pct = max(pct, 1.0)` in FROZEN `trading/risk_rules.py` (the floor every placed stop gets); the room gate measures 2R off the stop that will actually be placed. Pinned to the literal in `tests/test_trading_contracts.py`. |
@@ -60,11 +60,11 @@ same Mongo handle `exit_engine` uses and never writes to them.
 Candidates per tick, in this order:
 
 1. **Breakouts** — `breaking` rows with `tier == 'broke'` **and** `new_highs`
-   **and** `touches ≥ 2` **and** `cap ≥ $1B`. Stop under the floor of the band
+   **and** `touches ≥ 2` **and** `cap ≥ $700M`. Stop under the floor of the band
    just cleared (it becomes support). A **`near` resistance row is never
    bought** — it is not through yet. Least-extended first.
 2. **Demand arrivals** — `near_demand` rows with `arrival == true`, `tier in
-   ('near','in')`, `touches ≥ 2`, `cap ≥ $1B`. Residents (`arrival` false or
+   ('near','in')`, `touches ≥ 2`, `cap ≥ $700M`. Residents (`arrival` false or
    missing) are never bought. Closest to the band first (`dist_pct` asc).
 
 Then, per candidate:
@@ -307,7 +307,7 @@ to go much higher."
 Everything else is unchanged in both modes: stop 0.5% under the band floor, placed at that level
 (refused past the book's 10% — at the signal or after the print drifted), room ≥ 2R to the first band
 overhead, supply or broken demand (breakouts to new highs with nothing overhead skip it),
-cap ≥ $1B, max 4 a day, none at/after 15:45 ET, one attempt per band per day, never a held name,
+cap ≥ $700M, max 4 a day, none at/after 15:45 ET, one attempt per band per day, never a held name,
 every buy through `entries.enter` → `trading/risk_rules.py`. The **stop is the "sell it" half** of
 his ask: the bracket's stop leg rests at the broker; a stopped name is done for that band that day.
 
@@ -337,3 +337,28 @@ broken support … a print inside a supply band has no room" instead of "nearest
 Source guards: `test_zone_edge_entry_hands_entries_the_absolute_stop_level`,
 `test_zone_edge_room_gate_is_kind_agnostic_and_floors_need_at_the_placed_stop`
 (`tests/test_trading_contracts.py`).
+
+## Cap floor moved to $700M (2026-09-10)
+
+Ajay: *"make cap 700 m"* — set the day after I told him demand pushes carry a
+$1B floor while **pattern** pushes carry none.
+
+**This is a LOOSENING, not a measured improvement.** Measured the day it moved:
+1,501 names in the `full` universe had a known cap at or above $1B, and **80
+more** sit in the $700M–$1B band — a **+5.3%** widening of the eligible set.
+Nothing about win rate or stop-out rate was re-measured at the new floor.
+
+**Five modules carry their own copy** of this one rule — `demand_alerts`,
+`zone_bounce_alerts`, `zone_edge`, `zone_store` and `trading.zone_edge_entry`
+(with `trading.options_lane` deriving from the last). Nothing made them agree
+until now; `backend/tests/test_cap_floor.py` pins them equal, so a future
+change to one cannot silently leave the others behind — which would let a name
+clear the alert gate with no pre-built zone, or reach the paper lane while the
+push that justifies it never fires.
+
+**Two of the five are paper-trading lanes** (`zone_edge_entry`, `options_lane`),
+so the engine's own entries widen with the boards.
+
+Watch for: `rules_info._b` formatted integer billions only and printed **"$0B"**
+for this floor on the first run — the ℹ️ panel would have said there is no floor
+at all. Fixed and pinned in `test_rules_info`.

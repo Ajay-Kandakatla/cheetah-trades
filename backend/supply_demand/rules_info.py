@@ -41,7 +41,15 @@ def _pct(x) -> str:
 
 
 def _b(usd) -> str:
-    return "$%dB" % int(float(usd) / 1e9)
+    """A cap floor in words. Integer-billions ONLY worked while the floor was a
+    round billion: the moment Ajay moved it to $700M (2026-09-10) this printed
+    "$0B" on the ℹ️ panel — the rule telling him there is no floor at all."""
+    v = float(usd)
+    if v >= 1e9:
+        b = v / 1e9
+        return "$%dB" % int(b) if abs(b - round(b)) < 1e-9 else "$%.1fB" % b
+    m = v / 1e6
+    return "$%dM" % int(m) if abs(m - round(m)) < 1e-9 else "$%.0fM" % m
 
 
 def _t(t) -> str:

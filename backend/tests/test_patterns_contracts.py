@@ -170,11 +170,17 @@ def test_mongo_doc_ids_and_alert_kind_unchanged():
     assert PA.STATE_COLL == "pattern_alerts"
 
 
-def test_the_billion_dollar_zone_floor_is_untouched():
+def test_the_zone_cap_floor_matches_the_one_he_set():
     """Ajay 2026-09-03: *"billion or at least bigger than a billion"*. 1,242 of
     the 2,650 names now swept have no zone doc BY HIS CHOICE. Widening the scan
     widens the board; it must not reach down to sub-$1B names on the phone."""
-    assert ZS.MIN_CAP_USD == 1_000_000_000.0
+    # Ajay 2026-09-10: "make cap 700 m". The POINT of this test is that the
+    # patterns widening never moved his floor on its own — it is his number,
+    # changed only when he says so, and every S/D path must carry the same one
+    # (tests/test_cap_floor.py pins them equal).
+    from supply_demand import demand_alerts as DA
+    assert ZS.MIN_CAP_USD == 700_000_000.0
+    assert DA.MIN_CAP_USD == ZS.MIN_CAP_USD
 
 
 def test_the_demand_gate_is_untouched():
