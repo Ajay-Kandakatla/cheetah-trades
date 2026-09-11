@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HotSectors, {
-  chipFace, marketLine, monthLeg, scanStamp, themeTitle, windowLabel,
+  chipFace, marketIsRed, marketLine, monthLeg, scanStamp, themeTitle, windowLabel,
 } from './HotSectors';
 
 const PAYLOAD = {
@@ -417,5 +417,39 @@ describe('themeTitle', () => {
   it('survives missing numbers', () => {
     expect(themeTitle({ group: 'x', rel_21d: null }))
       .toBe('x — undefined names · 63d —% rel · 21d —% rel');
+  });
+});
+
+
+describe('the tape read shows on a red day even when some group is hot (2026-09-10)', () => {
+  it('fires on breadth, not on an empty inflow list', () => {
+    // His ask was about the DAY -- "when there are none hot that day it helps
+    // to know overall market it red" -- while the chips rank on the WEEK.
+    // 2026-09-10 was exactly the awkward case: 10 of 11 sectors red on the
+    // day, and still 5 cohorts green over the week. Gating the line on an
+    // empty inflow list would have hidden it on the very day he described.
+    const red = { market: { benchmark: 'RSP', ret_1d: -0.68,
+                            sectors_red: 10, sectors_measured: 11,
+                            pct_positive_1d: 31 } };
+    expect(marketIsRed(red)).toBe(true);
+    const line = marketLine(red, false);
+    expect(line).toMatch(/RSP -0\.7%/);
+    expect(line).toMatch(/10 of 11 sectors red/);
+    expect(line).toMatch(/31% of names up/);
+    // NEGATIVE: it must not claim nothing is hot when something is.
+    expect(line).not.toMatch(/nothing is hot/);
+    expect(marketLine(red, true)).toMatch(/nothing is hot today/);
+  });
+
+  it('NEGATIVE: a green day with hot groups prints no tape line', () => {
+    const green = { market: { benchmark: 'RSP', ret_1d: 0.9,
+                              sectors_red: 3, sectors_measured: 11,
+                              pct_positive_1d: 68 } };
+    expect(marketIsRed(green)).toBe(false);
+  });
+
+  it('NEGATIVE: no market dict at all is silence, never a fabricated reading', () => {
+    expect(marketIsRed({})).toBe(false);
+    expect(marketLine({})).toBeNull();
   });
 });

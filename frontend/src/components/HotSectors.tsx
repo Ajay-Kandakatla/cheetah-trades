@@ -186,7 +186,19 @@ export function windowLabel(rankedBy?: string | null): string {
  *
  *  Returns null when the build measured neither leg — an empty strip is better
  *  than an invented sentence about a market nobody read. */
-export function marketLine(d: Pick<HotPayload, 'market' | 'benchmark'>): string | null {
+/** Is the DAY broadly red? Majority of sectors down, or the benchmark down —
+ *  a plain read on the tape, computed from what the backend already sent. */
+export function marketIsRed(d: Pick<HotPayload, 'market'>): boolean {
+  const m = d.market || {};
+  const red = num(m.sectors_red);
+  const measured = num(m.sectors_measured);
+  if (red != null && measured) return red * 2 > measured;
+  const day = num(m.ret_1d);
+  return day != null && day < 0;
+}
+
+export function marketLine(d: Pick<HotPayload, 'market' | 'benchmark'>,
+                           noneHot = true): string | null {
   const m = d.market || {};
   const sym = m.benchmark || d.benchmark || 'RSP';
   const day = num(m.ret_1d);
@@ -202,7 +214,10 @@ export function marketLine(d: Pick<HotPayload, 'market' | 'benchmark'>): string 
     : day < 0 ? 'the whole tape is red'
       : day > 0 ? 'the whole tape is green'
         : 'the tape is flat';
-  return `nothing is hot today; ${tape}: ${parts.join(', ')}`;
+  const lead = noneHot
+    ? 'nothing is hot today'
+    : 'read the chips against the tape';
+  return `${lead}; ${tape}: ${parts.join(', ')}`;
 }
 
 /** 'HH:MM' of the scan that built the strip, or '' when it was built on
@@ -271,7 +286,13 @@ export default function HotSectors() {
   // — none hot means nothing on the money-IN side at any grain, which is the
   // shape a red tape actually takes: plenty of outflow rows, no inflow ones.
   const noneHot = cohIn.length + indIn.length + thmIn.length === 0;
-  const tape = noneHot ? marketLine(data) : null;
+  // Show the tape read whenever the DAY is broadly red — not only when the
+  // inflow list happens to be empty. His ask was about the day ("when there
+  // are none hot that day it helps to know overall market it red") while the
+  // chips are now ranked on the WEEK, so gating the line on an empty inflow
+  // list would hide it on exactly the day he described: 2026-09-10 had 10 of
+  // 11 sectors red and still had 5 cohorts green over the week.
+  const tape = noneHot || marketIsRed(data) ? marketLine(data, noneHot) : null;
   // Nothing measured and nothing to say: vanish, exactly as before.
   if (!hasRows && !tape) return null;
 
