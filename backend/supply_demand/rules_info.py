@@ -113,15 +113,23 @@ def _direction_line():
 def _sector_heat_line():
     """Built from the enforcing constants, never retyped."""
     from rotation import heat as RH
+    # The WINDOW is read from heat, never retyped: it moved from 21 sessions to
+    # the week on 2026-09-10 and this line went on claiming 21 until it was
+    # caught. The study caveat below is the important half — see heat's own
+    # docstring.
     return ("\U0001F525 Sector flow rides the body and the board tiles and GATES NOTHING: the "
             "name's industry cohort (or its sector when the industry is too thin) "
-            "median-member 21-session return minus %s, ranked against every group on the "
-            "rotation map — top %g%% reads hot, bottom %g%%%s cold. MEASURED FLAT: over "
-            "50,191 replayed demand arrivals hot won 22.4%% against cold's 23.2%% (-0.57pp, "
-            "95%% -1.87..+0.71). And \"when money is moved from a sector its just sitting "
-            "there\" measured BACKWARDS — at 5 sessions COLD wins 30.8%% to 28.3%%, -2.55pp "
-            "with an interval excluding zero, decaying to -0.33pp by 60."
-            % ("RSP", 100.0 - RH.HOT_PCTL, RH.COLD_PCTL, ""))
+            "median-member %s return minus %s, ranked against every group on the "
+            "rotation map — top %g%% reads hot, bottom %g%%%s cold. Ajay 2026-09-10: "
+            "\"Lately sector rotation is with in a week since its bear market... Ignore "
+            "the 21 day\" — Aerospace & Defense read -11.9%% over 21 sessions while it "
+            "was GREEN over 5, so the old window printed the inverse of the tape. "
+            "NOT MEASURED ON THIS WINDOW: the -0.57pp flat result (50,191 replayed "
+            "arrivals, hot 22.4%% vs cold 23.2%%, 95%% -1.87..+0.71) and the backwards "
+            "5-session read (COLD 30.8%% vs 28.3%%) both measured the 21-SESSION "
+            "definition. They do not describe what ships now; re-running the study on "
+            "the new window is what honesty requires before anyone leans on it."
+            % (RH.HEAT_WINDOW, "RSP", 100.0 - RH.HOT_PCTL, RH.COLD_PCTL, ""))
 
 
 def _proven_line():

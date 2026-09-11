@@ -132,10 +132,12 @@ function ColumnNote({ p }: { p: MembersPayload }) {
   return (
     <p className="hsm-caption">
       Trailing returns restated vs {p.benchmark || 'RSP'}. “vs group” is this
-      name’s 21-day rel minus <b>the median on the chip you clicked</b>, in
-      points — so the column reconciles with the chip above it.
+      name’s <b>21-day</b> rel minus its group’s published 21-day median, in
+      points. Since 2026-09-10 the chip you clicked leads with <b>today</b> and
+      is ranked on the <b>week</b>, so this column is a different window from
+      the chip and the two are not meant to line up.
       {p.sampled && p.member_median_21d != null
-        ? ` This table’s own full-membership median is ${fmtRel(p.member_median_21d)}, which is a different population and deliberately not the yardstick here.`
+        ? ` This table’s own full-membership 21-day median is ${fmtRel(p.member_median_21d)} — a different population again, and deliberately not the yardstick here.`
         : ''}
     </p>
   );

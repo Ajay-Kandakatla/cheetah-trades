@@ -17,13 +17,17 @@ import { MemoryRouter } from 'react-router-dom';
 import HotSectors from './HotSectors';
 import { _resetRotationMembersCache } from '../hooks/useRotationMembers';
 
+/* The strip leads with TODAY and ranks by the WEEK (2026-09-10) — `rel_5d` is
+ * the number the panel quotes back as "the chip's". */
 const HOT = {
-  as_of: '2026-09-09', benchmark: 'RSP', ranked_by: 'rel_21d',
+  as_of: '2026-09-09', benchmark: 'RSP', ranked_by: 'rel_5d',
   in: [{ group: 'Technology · large caps', sector: 'Technology', tier: 'large',
-         index: 'S&P 500', n: 25, rel_21d: 5.7, rel_window: -8.17 }],
+         index: 'S&P 500', n: 25, rel_1d: 0.9, rel_5d: 5.7, rel_21d: -2.4,
+         rel_window: -8.17 }],
   out: [{ group: 'Real Estate · small caps', sector: 'Real Estate', tier: 'small',
-          n: 25, rel_21d: -7.44, rel_window: -2.39 }],
-  themes_in: [{ group: 'robotics', n: 19, rel_21d: 4.2, rel_63d: 7.7, pct_positive: 60 }],
+          n: 25, rel_1d: -1.4, rel_5d: -7.44, rel_21d: -2.39, rel_window: -2.39 }],
+  themes_in: [{ group: 'robotics', n: 19, rel_1d: 0.6, rel_5d: 4.2, rel_21d: 4.2,
+                rel_63d: 7.7, pct_positive: 60 }],
 };
 
 /* THE ENDPOINT'S OWN PAYLOAD, key for key (backend/rotation/api.py). The
@@ -64,7 +68,7 @@ function stub(members: unknown, ok = true) {
 const draw = () => render(<MemoryRouter><HotSectors /></MemoryRouter>);
 
 async function openTech() {
-  const chip = await screen.findByRole('button', { name: /Technology · large caps \+5\.7%/ });
+  const chip = await screen.findByRole('button', { name: /Technology · large caps/ });
   fireEvent.click(chip);
   return chip as HTMLButtonElement;
 }
@@ -227,7 +231,8 @@ describe('Hot sectors chips open a member popover', () => {
     expect(await screen.findByText(/Member read failed/)).toBeInTheDocument();
     expect(screen.getByText(/median on the strip is\s+unaffected/)).toBeInTheDocument();
     // The strip itself is untouched.
-    expect(screen.getByRole('button', { name: /Technology · large caps \+5\.7%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Technology · large caps \+0\.9% · 5d \+5\.7%/ }))
+      .toBeInTheDocument();
   });
 
   it('Escape closes it and focus goes back to the chip that opened it', async () => {
@@ -252,7 +257,7 @@ describe('Hot sectors chips open a member popover', () => {
     stub({ ...MEMBERS, grain: 'theme', group: 'robotics', n_full: 19, priced: 19, sampled: false, n_population: 19,
            n_dropped: 0, dropped_symbols: [] });
     draw();
-    fireEvent.click(await screen.findByRole('button', { name: /robotics \+4\.2%/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /robotics \+0\.6% · 5d \+4\.2%/ }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/19 of 19 members covered/)).toBeInTheDocument();
     const url = String((globalThis.fetch as any).mock.calls.at(-1)[0]);

@@ -32,16 +32,18 @@ import HotSectors from './HotSectors';
 import { _resetRotationMembersCache } from '../hooks/useRotationMembers';
 
 const HOT = {
-  as_of: '2026-09-10', start: '2026-06-01', benchmark: 'RSP', ranked_by: 'rel_21d',
+  as_of: '2026-09-10', start: '2026-06-01', benchmark: 'RSP', ranked_by: 'rel_5d',
   source: 'scan' as const, built_at_iso: '2026-09-10T16:31:50-04:00',
   in: [{ group: 'Technology · large caps', sector: 'Technology', tier: 'large',
-         index: 'S&P 500', n: 25, rel_21d: 5.7, rel_window: -8.17 }],
+         index: 'S&P 500', n: 25, rel_1d: 0.9, rel_5d: 5.7, rel_21d: -2.4,
+         rel_window: -8.17 }],
   out: [{ group: 'Real Estate · small caps', sector: 'Real Estate', tier: 'small',
-          index: 'S&P 600', n: 25, rel_21d: -7.44, rel_window: -2.39 }],
+          index: 'S&P 600', n: 25, rel_1d: -1.4, rel_5d: -7.44, rel_21d: -2.39,
+          rel_window: -2.39 }],
   industries_in: [{ group: 'Semiconductors', sector: 'Technology', n: 25,
-                    rel_21d: 9.22, rel_63d: 8.74 }],
-  themes_out: [{ group: 'robotics', n: 19, rel_21d: -4.19, rel_63d: -7.75,
-                 pct_positive: 31.6 }],
+                    rel_1d: 0.3, rel_5d: 9.22, rel_21d: 9.22, rel_63d: 8.74 }],
+  themes_out: [{ group: 'robotics', n: 19, rel_1d: -0.9, rel_5d: -4.19,
+                 rel_21d: -4.19, rel_63d: -7.75, pct_positive: 31.6 }],
 };
 
 /* THE ENDPOINT'S OWN PAYLOAD, key for key.
@@ -159,7 +161,7 @@ describe('opening the panel changes no number he already sees', () => {
     fireEvent.click(c);
     await screen.findByRole('dialog');
     expect(c.textContent).toBe(before);
-    expect(c.textContent).toBe('Technology · large caps +5.7%');
+    expect(c.textContent).toBe('Technology · large caps +0.9% · 5d +5.7%');
     expect(c.getAttribute('title')).toBe(title);
     // the full-membership median (-1.2%) lives in the panel and nowhere else
     expect(c.textContent).not.toContain('1.2');
@@ -170,7 +172,8 @@ describe('opening the panel changes no number he already sees', () => {
     draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     await screen.findByRole('dialog');
-    expect(chip(/Real Estate · small caps/).textContent).toBe('Real Estate · small caps -7.4%');
+    expect(chip(/Real Estate · small caps/).textContent)
+      .toBe('Real Estate · small caps -1.4% · 5d -7.4%');
     expect(screen.getByText(/money in/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /full rotation/ })).toBeInTheDocument();
   });
@@ -231,7 +234,8 @@ describe('the sample-vs-full sentence cannot be dropped', () => {
     expect(await within(dialog).findByText(/Member read failed/)).toBeInTheDocument();
     expect(dialog.textContent).toMatch(RECONCILE);
     // and the strip's own number survived the failure untouched
-    expect(chip(/Technology · large caps/).textContent).toBe('Technology · large caps +5.7%');
+    expect(chip(/Technology · large caps/).textContent)
+      .toBe('Technology · large caps +0.9% · 5d +5.7%');
   });
 });
 

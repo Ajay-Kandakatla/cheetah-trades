@@ -961,8 +961,19 @@ def _heat_decor(tiles: list) -> int:
         t.setdefault("badges", []).append(b)
         h = t.get("_heat") or {}
         if h.get("group"):
-            t.setdefault("stats", []).append(
-                {"k": "Sector flow", "v": "%s %+.1f%%" % (h["group"], h.get("rel_21d") or 0.0)})
+            # PRINT THE WINDOW THE BADGE IS TONED BY. This printed rel_21d
+            # beside a badge computed on the week, so a tile could read
+            # "🔥 hot sector Aerospace & Defense" next to "Sector flow
+            # Aerospace & Defense -11.9%" — the exact inversion Ajay reported
+            # on 2026-09-10. And `or 0.0` fabricated a flat "+0.0%" for a
+            # group with no 21-day leg at all, which only became reachable
+            # once the tone stopped requiring one.
+            from rotation import heat as _RH
+            v = h.get(_RH.HEAT_KEY)
+            if isinstance(v, (int, float)):
+                t.setdefault("stats", []).append(
+                    {"k": "Sector flow (%s)" % _RH.HEAT_WINDOW,
+                     "v": "%s %+.1f%%" % (h["group"], v)})
         n += 1
     return n
 

@@ -279,3 +279,252 @@ def test_the_hot_ends_rank_by_rel_21d_and_skip_unrankable_rows():
     ranked = sorted((r for r in rows if r.get("rel_21d") is not None),
                     key=lambda r: -r["rel_21d"])
     assert [r["group"] for r in ranked] == ["A", "D", "B"]
+
+
+# --------------------------------------------------------------------------
+# The member table behind the popover (Ajay 2026-09-10)
+#
+# "I would like to click on the sector category and see the related stocks list
+# in a pop over to see which ones are gaining traction."
+#
+# What these pin: "gaining traction" is a DEFINED number with two conditions,
+# it fails closed on anything it could not measure, the table is the FULL
+# membership while the medians above it stay the sampled ones, and the
+# demand-zone marker degrades to unmarked instead of taking the build with it.
+# --------------------------------------------------------------------------
+def series(*closes, last=FRESH):
+    """A frame long enough for the 63-day window, ending on `closes`."""
+    pad = [("2026-01-%02d" % (i + 1), 50.0) for i in range(70 - len(closes))]
+    tail = [("2026-08-%02d" % (i + 1), c) for i, c in enumerate(closes)]
+    out = bars(pad + tail)
+    out[-1]["t"] = last
+    return out
+
+
+def test_traction_is_this_weeks_pace_minus_this_months_pace():
+    """+10% over 5 sessions is 2.0pp/session; +21% over 21 is 1.0. The name is
+    running twice as hard this week as it did over the month."""
+    r = T.traction_read(10.0, 21.0, 0.0)
+    assert r["pace_5"] == pytest.approx(2.0)
+    assert r["pace_21"] == pytest.approx(1.0)
+    assert r["traction"] == pytest.approx(1.0)
+    assert r["vs_group_21"] == pytest.approx(21.0)
+    assert r["gaining"] is True
+
+
+# --- negatives: each of the two conditions alone is a lie ---
+
+def test_accelerating_while_the_group_runs_harder_is_not_traction():
+    """Carried, not leading: +21% in a group whose median is +30%."""
+    r = T.traction_read(10.0, 21.0, 30.0)
+    assert r["traction"] > 0 and r["vs_group_21"] == pytest.approx(-9.0)
+    assert r["gaining"] is False
+
+
+def test_leading_a_dead_group_while_decelerating_is_not_traction():
+    """It led LAST month. +1% this week against +21% over the month is a name
+    losing its pace, however far ahead of a flat group it still sits."""
+    r = T.traction_read(1.0, 21.0, 0.0)
+    assert r["vs_group_21"] > 0 and r["traction"] < 0
+    assert r["gaining"] is False
+
+
+def test_exactly_flat_is_not_gaining():
+    """The thresholds are a strict >; dead level is not traction."""
+    assert T.traction_read(5.0, 21.0, 21.0)["gaining"] is False
+
+
+def test_an_unmeasurable_name_never_ranks_as_gaining():
+    """No 5-day frame, no 21-day frame, or no group median — each fails closed
+    rather than defaulting a missing leg to zero."""
+    for args in ((None, 21.0, 0.0), (10.0, None, 0.0), (10.0, 21.0, None)):
+        r = T.traction_read(*args)
+        assert r["gaining"] is False
+    assert T.traction_read(None, 21.0, 0.0)["traction"] is None
+    assert T.traction_read(10.0, 21.0, None)["vs_group_21"] is None
+
+
+def test_the_sort_puts_gainers_first_and_the_unmeasurable_last():
+    rows = [
+        {"symbol": "SLOW", "traction": 0.1, "vs_group_21": 1.0, "gaining": True},
+        {"symbol": "DEAD", "traction": None, "vs_group_21": None, "gaining": False},
+        {"symbol": "FAST", "traction": 2.0, "vs_group_21": 5.0, "gaining": True},
+        {"symbol": "LAG", "traction": 0.5, "vs_group_21": -1.0, "gaining": False},
+    ]
+    assert [r["symbol"] for r in sorted(rows, key=T.traction_sort_key)] == [
+        "FAST", "SLOW", "LAG", "DEAD"]
+
+
+def test_the_sort_key_never_raises_on_a_junk_row():
+    assert T.traction_sort_key({}) == T.traction_sort_key({"traction": "x"})
+
+
+def test_member_stats_drops_a_dead_ticker_rather_than_pricing_it_flat():
+    """Decision 4, at the member grain: MRO's last bar is 2024-11-21. A None
+    here is what lets the caller COUNT the drop; a zero would print a name that
+    has not traded in ten months as unchanged."""
+    assert T.member_stats(series(100.0, last="2024-11-21"), FRESH) is None
+    assert T.member_stats([], FRESH) is None
+    assert T.member_stats(series(100.0), FRESH)["last_close"] == 100.0
+
+
+def test_the_full_roster_builders_can_turn_the_sample_cap_off():
+    """The popover needs every name; the sampled row above it needs 25. Both
+    must come out of the SAME builder or the two can drift apart."""
+    pool = [f"S{i:03d}" for i in range(100)]
+    assert len(T._cohort_members({"Ind": pool}, {"small": set(pool)})[0]["members"]) \
+        == T.COHORT_SAMPLE
+    assert T._cohort_members({"Ind": pool}, {"small": set(pool)},
+                             sample=0)[0]["members"] == sorted(pool)
+    rows = [(s, "Ind", "Widgets") for s in pool]
+    assert len(T._industry_members(rows)[0]["members"]) == T.INDUSTRY_SAMPLE
+    assert T._industry_members(rows, sample=0)[0]["members"] == sorted(pool)
+
+
+# --- the table itself ---
+
+def _table(monkeypatch, marks=None, zone_meta=None):
+    """A 4-name sector where one name is dead, built with the zone read stubbed
+    (that read is fenced and tested separately)."""
+    monkeypatch.setattr(T, "_zone_marks",
+                        lambda closes, day=None, docs=None:
+                        (marks or {}, zone_meta or {"source": "stub", "unmarked": 0}))
+    frames = {"AAA": series(100.0, 110.0), "BBB": series(100.0, 90.0),
+              "CCC": series(100.0, 101.0),
+              "DDD": series(100.0, last="2024-11-21")}       # dead
+    full = {"sector": {"Tech": ["AAA", "BBB", "CCC", "DDD"], "Ghost": ["ZZZ"]}}
+    published = {"sector": {"Tech": {"group": "Tech", "median_21d": 1.0, "n": 2}}}
+    labels = {s: ("Tech", "Widgets") for s in ("AAA", "BBB", "CCC", "DDD")}
+    return T._member_table(full, published, labels, frames, FRESH)
+
+
+def test_the_table_is_the_full_membership_and_counts_what_it_could_not_price(monkeypatch):
+    t = _table(monkeypatch)
+    g = t["groups"]["sector"]["Tech"]
+    assert g["n_full"] == 4 and g["priced"] == 3
+    assert g["unpriced"] == 1 and g["unpriced_symbols"] == ["DDD"]
+    assert g["symbols"] == ["AAA", "BBB", "CCC"]
+    assert t["coverage"]["priced"] == 3 and t["coverage"]["unpriced"] == 1
+
+
+def test_the_published_sampled_median_is_carried_untouched_beside_the_full_one(monkeypatch):
+    """The number he already sees must not move. It rides ALONGSIDE the table's
+    own median, and MEMBER_NOTE says they are two populations."""
+    g = _table(monkeypatch)["groups"]["sector"]["Tech"]
+    assert g["median_21d"] == 1.0        # the grid's sampled row, verbatim
+    assert g["n_measured"] == 2 and g["n_full"] == 4
+    assert g["median_21d_full"] is not None and g["median_21d_full"] != g["median_21d"]
+    assert "different population" in T.MEMBER_NOTE.lower()
+
+
+def test_a_group_that_was_dropped_upstream_ships_no_orphan_table(monkeypatch):
+    """Only groups he can actually click get a table — 'Ghost' never survived
+    the member floor, so it is not in the payload and not in the fetch."""
+    t = _table(monkeypatch)
+    assert "Ghost" not in t["groups"]["sector"]
+    assert "ZZZ" not in t["by_symbol"]
+
+
+def test_a_name_with_no_zone_coverage_is_unmarked_never_dropped(monkeypatch):
+    """Demand zones are CONTEXT here. 556 of 1,731 names had no zone doc on
+    2026-09-10; every one of them still belongs in the sector's list."""
+    t = _table(monkeypatch, marks={"AAA": {"at_demand": True, "zone_role": "demand"}})
+    assert t["by_symbol"]["AAA"]["at_demand"] is True
+    assert t["by_symbol"]["BBB"]["at_demand"] is None      # unmarked, still listed
+    g = t["groups"]["sector"]["Tech"]
+    assert g["at_demand"] == 1 and g["zone_unmarked"] == 2 and g["priced"] == 3
+
+
+def test_traction_row_reads_the_group_median_it_was_handed(monkeypatch):
+    t = _table(monkeypatch)
+    row = T.traction_row("AAA", t["by_symbol"]["AAA"], t["groups"]["sector"]["Tech"]["median_21d"])
+    assert row["symbol"] == "AAA" and row["sector"] == "Tech"
+    assert row["vs_group_21"] == pytest.approx(row["ret_21d"] - 1.0)
+
+
+def test_traction_row_of_a_symbol_the_table_never_priced_is_inert():
+    """The endpoint looks every symbol up; a miss must not raise and must not
+    rank."""
+    row = T.traction_row("GONE", None, 1.0)
+    assert row["gaining"] is False and row["at_demand"] is None
+
+
+# --- the zone marker degrades, it never takes the build down ---
+
+def test_a_cold_zone_store_leaves_every_name_unmarked(monkeypatch):
+    from supply_demand import zone_store as ZS
+    monkeypatch.setattr(ZS, "latest_store_day", lambda *a, **k: None)
+    marks, meta = T._zone_marks({"AAA": 10.0})
+    assert marks == {} and meta["unmarked"] == 1
+    assert meta["source"] == "unavailable" and "cold" in meta["error"]
+
+
+def test_a_raising_zone_store_degrades_the_marker_not_the_endpoint(monkeypatch):
+    from supply_demand import zone_store as ZS
+
+    def boom(*a, **k):
+        raise RuntimeError("mongo down")
+
+    monkeypatch.setattr(ZS, "latest_store_day", boom)
+    marks, meta = T._zone_marks({"AAA": 10.0})
+    assert marks == {} and meta["error"].startswith("RuntimeError")
+    assert meta["unmarked"] == 1
+
+
+def test_the_marker_uses_the_shared_in_demand_read_and_skips_tombstones():
+    """One definition of 'at demand' — bounce_room's. A tombstone doc is NOT
+    coverage: calling it 'not at demand' would print a read we never made."""
+    docs = {"IN": {"prev_close": 105.0,
+                   "bands": [{"kind": "demand", "lo": 90.0, "hi": 100.0,
+                              "touches": 3, "strength": 60.0}]},
+            "OUT": {"prev_close": 105.0,
+                    "bands": [{"kind": "demand", "lo": 10.0, "hi": 20.0,
+                               "touches": 3, "strength": 60.0}]},
+            "ERR": {"error": "engine error"}}
+    marks, meta = T._zone_marks({"IN": 95.0, "OUT": 95.0, "ERR": 95.0},
+                                day="2026-09-10", docs=docs)
+    assert marks["IN"]["at_demand"] is True and marks["IN"]["zone_role"] == "demand"
+    assert marks["OUT"]["at_demand"] is False
+    assert "ERR" not in marks
+    assert meta["covered"] == 2 and meta["unmarked"] == 1 and meta["at_demand"] == 1
+
+
+def test_an_unsampled_group_agrees_exactly_with_its_published_median(monkeypatch):
+    """Themes are never sampled, so the two medians describe the SAME names and
+    must print the SAME number. Medianing the 2-dp row values instead of the
+    raw returns moved ai_infra by 0.01 on 2026-09-10 — a rounding artefact that
+    reads on screen as a real disagreement between the two."""
+    monkeypatch.setattr(T, "_zone_marks", lambda closes, day=None, docs=None: ({}, {}))
+    frames = {"AAA": series(100.0, 103.3333), "BBB": series(100.0, 107.7777),
+              "CCC": series(100.0, 91.1111)}
+    row = T.group_row("robotics", ["AAA", "BBB", "CCC"], frames, "2026-06-01", FRESH)
+    t = T._member_table({"theme": {"robotics": ["AAA", "BBB", "CCC"]}},
+                        {"theme": {"robotics": row}}, {}, frames, FRESH)
+    g = t["groups"]["theme"]["robotics"]
+    assert g["n_measured"] == g["n_full"] == 3
+    assert g["median_21d_full"] == g["median_21d"]
+
+
+def test_money_in_holds_only_groups_that_are_actually_up(monkeypatch):
+    """REGRESSION (2026-09-10). `hot["in"]` was `ranked[:5]` unconditionally, so
+    on a red day the strip labelled the five LEAST-red groups as inflow — and,
+    worse, made "no group is hot" arithmetically impossible. That is what Ajay
+    asked to see: "when there are none hot that day it helps to know overall
+    market it red". The market line could never fire, and the frontend test
+    that covered it passed only on a fixture the API cannot emit.
+
+    Verified against the real 2026-09-10 tape: every cohort was negative on
+    rel_5d, so the honest answer is an EMPTY inflow list."""
+    ranked = [{"group": "A", "rel_5d": -0.2}, {"group": "B", "rel_5d": -1.0},
+              {"group": "C", "rel_5d": -2.0}, {"group": "D", "rel_5d": -3.0},
+              {"group": "E", "rel_5d": -4.0}, {"group": "F", "rel_5d": -9.0}]
+    keep = [r for r in ranked[:5] if (r.get("rel_5d") or 0) > 0]
+    assert keep == [], "a negative group may never sit under 'money in'"
+
+    # …and the cold end is still shown, because that IS the information.
+    out = list(reversed(ranked[-5:]))
+    assert out and out[0]["group"] == "F"
+
+    # A genuinely green group still makes the cut.
+    mixed = [{"group": "G", "rel_5d": 1.4}] + ranked[:4]
+    assert [r["group"] for r in mixed[:5] if (r.get("rel_5d") or 0) > 0] == ["G"]

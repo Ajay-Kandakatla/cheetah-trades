@@ -11420,8 +11420,24 @@ a.tk-link:hover   { color: inherit; }
   background: var(--bg, #0f1115); border: 1px solid var(--rule, #2a2f3a);
   white-space: nowrap;
 }
-.hs-chip-in { color: var(--cm-green, #22c55e); }
-.hs-chip-out { color: var(--cm-red, #dc2626); }
+/* Today leads and tones the chip (Ajay 2026-09-10: "what ever today is what I
+   wanna see in green"). The tone is TODAY's sign — never the month's, and never
+   which bucket the row was ranked into, which is how a sector that had already
+   turned kept reading deep red. An unmeasurable day tones flat: unknown is not
+   hot. The group name stays ink and the week stays muted so the coloured number
+   is the one his eye lands on first. */
+.hs-chip-up { color: var(--cm-green, #22c55e); }
+.hs-chip-down { color: var(--cm-red, #dc2626); }
+.hs-chip-flat { color: var(--cm-slate, #8595ad); }
+.hs-chip .hs-name { color: var(--ink, #e7e7e7); }
+.hs-chip .hs-today { font-weight: 700; }
+.hs-chip .hs-week { color: var(--cm-slate, #8595ad); font-weight: 600; }
+/* The market line, for the days nothing qualifies ("when there are none hot
+   that day it helps to know overall market it red"). Its own row in the strip,
+   muted — the sentence already says which way the tape went. */
+.hs-market {
+  flex: 1 1 100%; margin: 0; color: var(--cm-slate, #8595ad);
+}
 .hs-more { margin-left: auto; color: var(--cm-slate, #8595ad); white-space: nowrap; }
 .hs-more:hover { color: var(--ink, #e7e7e7); }
 

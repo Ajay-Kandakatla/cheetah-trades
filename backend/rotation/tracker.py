@@ -89,8 +89,10 @@ MAX_STALE_DAYS = 10
 # Trailing windows, in trading days.
 WINDOW_SHORT = 21
 WINDOW_MED = 63
-# The member table's "this week" leg (2026-09-10). Only the popover reads it —
-# no group median is computed over it, so nothing on an existing screen moves.
+# "This week" (2026-09-10). Started as the member table's own leg; the same day
+# it became the RANKING window for every hot end — Ajay: "Lately sector
+# rotation is with in a week since its bear market." Group medians are computed
+# over it now, so it is no longer popover-only.
 WINDOW_FAST = 5
 
 # Same day (2026-09-10, Ajay: "Can you also check for same day sector too
@@ -98,10 +100,11 @@ WINDOW_FAST = 5
 # the one before it, and the group's MEDIAN of those — "what is this sector
 # doing TODAY", which no window here answered.
 #
-# Deliberately NOT wired into `traction`: over one session a single gap flags a
-# name, and the standing instruction is that signals get more accurate, never
-# noisier. It is a column and a group median, printed beside the flag rather
-# than feeding it.
+# Deliberately NOT wired into `traction`, and NOT the ranking window either:
+# over one session a single gap flags a name, and the standing instruction is
+# that signals get more accurate, never noisier. Today is a column, a group
+# median (`median_1d` / `rel_1d` / `pct_positive_1d`) and the whole-tape read
+# — printed BESIDE the week that does the ranking, never deciding it.
 WINDOW_DAY = 1
 
 # Bars pulled per symbol. 260 covers a year, enough for any window here plus
@@ -364,7 +367,7 @@ def group_row(name: str, members: list, frames: dict, start: str,
     were dead is a group whose median means little, and the reader must be able
     to see that.
     """
-    rets, shorts, meds, kept, dropped = [], [], [], [], []
+    rets, days, fasts, shorts, meds, kept, dropped = [], [], [], [], [], [], []
     for sym in members:
         bars = frames.get(sym) or []
         if not bars or is_stale(bars, freshest):
@@ -372,19 +375,36 @@ def group_row(name: str, members: list, frames: dict, start: str,
             continue
         kept.append(sym)
         rets.append(window_return(bars, start))
+        days.append(trailing_return(bars, WINDOW_DAY))
+        fasts.append(trailing_return(bars, WINDOW_FAST))
         shorts.append(trailing_return(bars, WINDOW_SHORT))
         meds.append(trailing_return(bars, WINDOW_MED))
 
     live = [r for r in rets if isinstance(r, (int, float))]
+    # Same-day breadth, over the SAME kept members as every other leg. A name
+    # that could not be priced today is absent from both halves of the share —
+    # never counted as flat, exactly as decision 4 treats a dead ticker.
+    live_1d = [r for r in days if isinstance(r, (int, float))]
     row = {
         "group": name,
         "n": len(kept),
         "dropped": len(dropped),
         "dropped_symbols": sorted(dropped)[:8],
         "median_window": _median(rets),
+        # The short legs (Ajay 2026-09-10). Aerospace & Defense read rel_21d
+        # −11.9 — deep cold — while over five sessions AIR +3.0, MOG-A +2.9,
+        # ATRO +2.5, TXT +2.4, LMT +2.2, AVAV +4.1, RDW +7.5: the month was
+        # describing a rotation that had already finished. "Lately sector
+        # rotation is with in a week since its bear market... Ignore the 21 day
+        # even if its read now recently market rotated that is the actual truth
+        # to us." The month and the quarter STAY on the row — "keep the other
+        # days too" — they just stop deciding which end is hot.
+        "median_1d": _median(days),
+        "median_5d": _median(fasts),
         "median_21d": _median(shorts),
         "median_63d": _median(meds),
         "pct_positive": _pct(sum(1 for r in live if r > 0), len(live)),
+        "pct_positive_1d": _pct(sum(1 for r in live_1d if r > 0), len(live_1d)),
         "stance": STANCE.get(name),
     }
     if etf:
@@ -399,9 +419,16 @@ def group_row(name: str, members: list, frames: dict, start: str,
 
 
 def _relativize(rows: list, bench: dict) -> list:
-    """Restate every return relative to the benchmark. See decision 1."""
+    """Restate every return relative to the benchmark. See decision 1.
+
+    The two short legs rebase exactly like the others — a benchmark that is
+    itself −0.68% today (RSP, 2026-09-10) makes a sector that only fell 0.2%
+    a RELATIVE winner, and the raw median would have called it red. A bench
+    dict without `d1`/`d5` leaves rel_1d / rel_5d None rather than raw.
+    """
     for r in rows:
-        for key, bkey in (("median_window", "window"), ("median_21d", "d21"),
+        for key, bkey in (("median_window", "window"), ("median_1d", "d1"),
+                          ("median_5d", "d5"), ("median_21d", "d21"),
                           ("median_63d", "d63")):
             v, b = r.get(key), bench.get(bkey)
             r[key.replace("median", "rel")] = (
@@ -812,6 +839,59 @@ def _member_table(full_groups: dict, published: dict, labels: dict,
     }
 
 
+# ── The whole-tape read (Ajay 2026-09-10) ───────────────────────────────────
+# "when there are none hot that day it helps to know overall market it red."
+#
+# Every number above this line is RELATIVE to RSP, and relative numbers cannot
+# answer "is the tape red" — by construction the benchmark is 0.0 against
+# itself, so a day when everything falls together reads as a flat strip with
+# nothing hot. On 2026-09-10 that was the actual state: RSP itself −0.68%
+# today, 9 of 11 sector medians red, Utilities and Basic Materials with 9% of
+# their members up.
+#
+# So this one dict is the module's only ABSOLUTE read, and it exists precisely
+# for the day the hot list is empty. It is three independently-sourced
+# measurements of the same session — the benchmark's own return, the median
+# sector, and raw breadth across every priced name — so the sentence the strip
+# prints is backed by more than one number. Computed, never a hardcoded mood.
+
+
+def market_read(bench: dict, sector_rows: list, by_symbol: dict) -> dict:
+    """"What is the whole tape doing today", in absolute terms. PURE.
+
+    `bench`       the build's benchmark dict (its own `d1` / `d5`)
+    `sector_rows` the published sector rows — their `median_1d` legs
+    `by_symbol`   the member table's priced names, for raw breadth
+
+    Fails closed in every leg: a missing benchmark, a sector row we could not
+    price today, or an empty member table leaves that leg None rather than 0.0.
+    A zero here would read as "flat", which is a measurement we did not make.
+    Counts ride beside every share — a percentage without its denominator is
+    not a read, and `n_priced` is what makes it auditable.
+    """
+    sector_1d = [r.get("median_1d") for r in (sector_rows or [])
+                 if isinstance(r.get("median_1d"), (int, float))]
+    day_rets = [s.get("ret_1d") for s in (by_symbol or {}).values()
+                if isinstance(s.get("ret_1d"), (int, float))]
+    up = sum(1 for v in day_rets if v > 0)
+    return {
+        "benchmark": (bench or {}).get("symbol"),
+        # The benchmark's OWN session and week — the tape itself, unrebased.
+        "ret_1d": _round((bench or {}).get("d1")),
+        "ret_5d": _round((bench or {}).get("d5")),
+        # The median sector today. Median of medians on purpose: it is the
+        # middle SECTOR, which is the grain the strip is showing.
+        "median_1d": _median(sector_1d),
+        "sectors_red": sum(1 for v in sector_1d if v < 0),
+        "sectors_measured": len(sector_1d),
+        # Breadth across every priced member of every group in the table —
+        # the leg that separates "the index slipped" from "nothing is working".
+        "pct_positive_1d": _pct(up, len(day_rets)),
+        "up_today": up,
+        "n_priced": len(day_rets),
+    }
+
+
 def build(start: str, min_dollar_vol: float = 20_000_000.0,
           min_price: float = 10.0, sample_per_group: int = 40) -> dict:
     """The rotation map: sectors, Ajay's themes, and safe havens, vs RSP.
@@ -884,9 +964,15 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
     if not bench_bars or is_stale(bench_bars, freshest):
         bench_sym = BENCHMARK_FALLBACK
         bench_bars = frames.get(BENCHMARK_FALLBACK) or []
+    # d1 / d5 come off the SAME `bench_bars` as d21 / d63 — RSP's frame, or
+    # SPY's when RSP has none or is stale — so every leg on every row is
+    # rebased against one symbol's one frame. Computed once here and reused by
+    # the member table below, which used to recompute them for itself.
     bench = {
         "symbol": bench_sym,
         "window": window_return(bench_bars, start),
+        "d1": trailing_return(bench_bars, WINDOW_DAY),
+        "d5": trailing_return(bench_bars, WINDOW_FAST),
         "d21": trailing_return(bench_bars, WINDOW_SHORT),
         "d63": trailing_return(bench_bars, WINDOW_MED),
     }
@@ -921,16 +1007,32 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
                 if r.get("stance") == kind and r.get("rel_window") is not None]
         return _median(vals)
 
-    # The "hot" ends, ranked by the LAST MONTH (rel_21d) rather than the full
-    # window — "where is the money flowing RIGHT NOW" is a 21-day question,
-    # while the tables stay sorted by the window like everything else. Only
-    # cohorts with a computable 21d rank; a None must not sort as hottest.
-    ranked = sorted((r for r in cohort_rows if r.get("rel_21d") is not None),
-                    key=lambda r: -r["rel_21d"])
+    # The "hot" ends, ranked by the LAST WEEK (rel_5d). Ajay 2026-09-10:
+    # "Lately sector rotation is with in a week since its bear market... Ignore
+    # the 21 day even if its read now recently market rotated that is the
+    # actual truth to us." The month was inverting the answer, not softening
+    # it: Aerospace & Defense sat at rel_21d −11.9 (deep cold) on a day its
+    # members were the ones bid over five sessions. The month and the quarter
+    # stay ON every row — "keep the other days too" — they just stop deciding
+    # which end is hot; the tables also stay sorted by the window.
+    #
+    # Only cohorts with a computable 5d rank. A None is not ranked at all,
+    # here or in `out`: an unmeasurable cohort must never print as the hottest,
+    # and printing it as the coldest would be the same invented number wearing
+    # the other sign.
+    ranked = sorted((r for r in cohort_rows if r.get("rel_5d") is not None),
+                    key=lambda r: -r["rel_5d"])
+    # A row under "money IN" must actually be up on the week. Taking ranked[:5]
+    # unconditionally meant the strip labelled the five LEAST-red groups as
+    # inflow on a day when every one of them was negative — and it made "no
+    # group is hot" arithmetically impossible, so the market-red line Ajay
+    # asked for (2026-09-10: "when there are none hot that day it helps to
+    # know overall market it red") could never fire. `out` keeps the worst
+    # regardless: the cold end is always worth showing.
     hot = {
-        "in": ranked[:5],
+        "in": [r for r in ranked[:5] if (r.get("rel_5d") or 0) > 0],
         "out": list(reversed(ranked[-5:])) if len(ranked) > 5 else [],
-        "ranked_by": "rel_21d",
+        "ranked_by": "rel_5d",
     }
 
     # The curated rosters, ranked at last (Ajay 2026-09-09: "robotics, energy
@@ -941,11 +1043,11 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
     # by name, and a four-name median is worth seeing as long as it says so.
     for r in theme_rows:
         r["thin"] = (r.get("n") or 0) < MIN_COHORT_N
-    ranked_thm = sorted((r for r in theme_rows if r.get("rel_21d") is not None),
-                        key=lambda r: -r["rel_21d"])
-    hot_themes = {"in": ranked_thm[:6],
+    ranked_thm = sorted((r for r in theme_rows if r.get("rel_5d") is not None),
+                        key=lambda r: -r["rel_5d"])
+    hot_themes = {"in": [r for r in ranked_thm[:6] if (r.get("rel_5d") or 0) > 0],
                   "out": list(reversed(ranked_thm[-6:])) if len(ranked_thm) > 6 else [],
-                  "ranked_by": "rel_21d"}
+                  "ranked_by": "rel_5d"}
 
     # The member table is built LAST, off the rows that SURVIVED — so a chip he
     # can click always opens on a table, and a group that was dropped upstream
@@ -959,16 +1061,15 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         {sym: (sec, ind) for sym, sec, ind in scan_rows},
         frames, freshest,
         {"symbol": bench["symbol"],
-         "ret_1d": _round(trailing_return(bench_bars, WINDOW_DAY)),
-         "ret_5d": _round(trailing_return(bench_bars, WINDOW_FAST)),
+         "ret_1d": _round(bench["d1"]), "ret_5d": _round(bench["d5"]),
          "ret_21d": _round(bench["d21"]), "ret_63d": _round(bench["d63"])})
 
-    ranked_ind = sorted((r for r in industry_rows if r.get("rel_21d") is not None),
-                        key=lambda r: -r["rel_21d"])
+    ranked_ind = sorted((r for r in industry_rows if r.get("rel_5d") is not None),
+                        key=lambda r: -r["rel_5d"])
     hot_industries = {
-        "in": ranked_ind[:8],
+        "in": [r for r in ranked_ind[:8] if (r.get("rel_5d") or 0) > 0],
         "out": list(reversed(ranked_ind[-8:])) if len(ranked_ind) > 8 else [],
-        "ranked_by": "rel_21d",
+        "ranked_by": "rel_5d",
     }
 
     return {
@@ -983,6 +1084,10 @@ def build(start: str, min_dollar_vol: float = 20_000_000.0,
         "hot": hot,
         "hot_industries": hot_industries,
         "hot_themes": hot_themes,
+        # The absolute read, for the day nothing is hot (2026-09-10). Built off
+        # the SURVIVING sector rows and the member table's priced names, so it
+        # can never disagree with the rows printed beside it.
+        "market": market_read(bench, sector_rows, members.get("by_symbol") or {}),
         # ~350 KB of per-member rows behind the popover (2026-09-10). Persisted
         # with the build and served one group at a time by /rotation/members —
         # /rotation strips it, so no page pays for a table it did not open.

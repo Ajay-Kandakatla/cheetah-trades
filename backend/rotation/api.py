@@ -166,20 +166,28 @@ async def rotation_hot(refresh: bool = Query(False)):
     # instead of inferring one from which list the chip came out of. The strip's
     # money-in/out chips are cap-tier cohorts, not bare sectors — an inferred
     # mapping would have got exactly that wrong.
+    # The SHORT legs ride on every chip (Ajay 2026-09-10: "what ever today is
+    # what I wanna see in green but keep the other days too ... May be just
+    # keep 5days and today"). Adding keys only — the 21d/63d/window legs stay
+    # exactly where the strip already reads them, they just stop being the
+    # only thing it can colour on.
+    _SHORT = ("rel_1d", "rel_5d", "pct_positive_1d")
+
     def _slim(r):
         return dict({k: r.get(k) for k in
                      ("group", "sector", "tier", "index", "n", "rel_21d",
-                      "rel_window", "rel_63d", "pct_positive")}, grain="cohort")
+                      "rel_window", "rel_63d", "pct_positive") + _SHORT},
+                    grain="cohort")
 
     def _slim_thm(r):
         return dict({k: r.get(k) for k in
                      ("group", "n", "rel_21d", "rel_window", "rel_63d",
-                      "pct_positive", "thin")}, grain="theme")
+                      "pct_positive", "thin") + _SHORT}, grain="theme")
 
     def _slim_ind(r):
         return dict({k: r.get(k) for k in
                      ("group", "sector", "industry", "n", "rel_21d", "rel_window",
-                      "rel_63d", "pct_positive")}, grain="industry")
+                      "rel_63d", "pct_positive") + _SHORT}, grain="industry")
 
     hot = d.get("hot") or {}
     return JSONResponse({
@@ -203,6 +211,14 @@ async def rotation_hot(refresh: bool = Query(False)):
         "themes_out": [_slim_thm(r) for r in ((d.get("hot_themes") or {}).get("out") or [])],
         "stance": d.get("stance"),
         "note": d.get("note"),
+        # Ajay 2026-09-10: "when there are none hot that day it helps to know
+        # overall market it red." The whole-tape read the build already
+        # computes, served HERE so the strip prints it without a second round
+        # trip — on a day when 9 of 11 sectors are red, "nothing is hot" and
+        # "everything is red" are different sentences and he wants the second
+        # one. None when the persisted build predates the key: the strip must
+        # show no market line rather than a made-up one.
+        "market": d.get("market"),
         # Whether the persisted build carries a member table at all — a doc
         # written before 2026-09-10 does not, and the popover must know that
         # before it offers a click that can only answer "nothing here".
