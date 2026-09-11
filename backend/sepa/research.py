@@ -142,6 +142,61 @@ def sales_snapshot(symbols: list[str],
         return {}
 
 
+# Fields the Hottest Sectors table prints per name (Ajay 2026-09-11: "keep
+# sales and other crucial metrics for me"). ONE projected Mongo read for the
+# whole board, same shape as sales_snapshot above — the full research blob is
+# ~everything, and this board asks for a few hundred names at once.
+#
+# Measured coverage on the live hot-group pool before these were chosen, so no
+# column here is mostly blank for exactly the unfamiliar names the board exists
+# to surface: rev_growth_q_pct 93.1%, q_eps_growth_pct 92.7%,
+# y_eps_growth_pct 88.6%, sales/earnings_quality 87.2%. DELIBERATELY ABSENT:
+# catalyst text (42.9%), moat (64.7%), institutional ownership (65.1%) — a
+# column blank for a third of the board is worse than no column.
+DECISION_FIELDS = (
+    "fundamentals.sales",
+    "fundamentals.rev_growth_q_pct",
+    "fundamentals.q_eps_growth_pct",
+    "fundamentals.y_eps_growth_pct",
+    "fundamentals.earnings_quality",
+)
+
+
+def decision_snapshot(symbols: list[str],
+                      max_age_sec: int = CACHE_TTL_SEC) -> dict[str, dict]:
+    """Sales + earnings-quality per symbol, one projected Mongo query.
+
+    Returns {} on any failure and simply omits a symbol it cannot answer for —
+    the board renders an em-dash for a miss and never lets a blank pass a sort
+    or a filter, the same discipline the falling-knife gate uses.
+    """
+    coll = _get_cache()
+    if coll is None or not symbols:
+        return {}
+    cutoff = time.time() - max_age_sec
+    proj = {"symbol": 1, "cached_at": 1}
+    for f in DECISION_FIELDS:
+        proj[f] = 1
+    try:
+        out: dict[str, dict] = {}
+        for doc in coll.find(
+                {"symbol": {"$in": [s.upper() for s in symbols]},
+                 "cached_at": {"$gte": cutoff}}, proj):
+            f = doc.get("fundamentals") or {}
+            out[doc["symbol"]] = {
+                "sales": f.get("sales"),
+                "rev_growth_q_pct": f.get("rev_growth_q_pct"),
+                "q_eps_growth_pct": f.get("q_eps_growth_pct"),
+                "y_eps_growth_pct": f.get("y_eps_growth_pct"),
+                "earnings_quality": f.get("earnings_quality"),
+                "cached_at": doc.get("cached_at"),
+            }
+        return out
+    except Exception as exc:
+        log.warning("research decision_snapshot failed: %s", exc)
+        return {}
+
+
 def _put_research(symbol: str, payload: dict) -> None:
     coll = _get_cache()
     if coll is None:

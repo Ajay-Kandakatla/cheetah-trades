@@ -16,6 +16,15 @@ import { dirname, join } from 'node:path';
 const FRONTEND_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(FRONTEND_ROOT, rel), 'utf8');
 
+/** CM_TABS as a real array. Every tab contract parses the declaration instead
+ *  of grepping the file, so neither a reformat nor a comment can decide
+ *  whether a contract passes. */
+const parseCmTabs = (src) => {
+  const m = /export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/.exec(src);
+  if (!m) return null;
+  return m[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+};
+
 const CONTRACTS = [
   {
     name: 'every styled class the member popover uses has a rule that ships (2026-09-10)',
@@ -44,7 +53,11 @@ const CONTRACTS = [
       } catch {
         return ['src/styles.css is unreadable'];
       }
-      const missing = [...used].filter((c) => !css.includes(`.${c}`)).sort();
+      // A boundary is required, not a substring: `css.includes('.hsm-coname')`
+      // is satisfied by `.hsm-conameXX`, so renaming a rule passed this check
+      // (found 2026-09-11 while building the same guard for the Hottest table).
+      const missing = [...used]
+        .filter((c) => !new RegExp(`\\.${c}(?![\\w-])`).test(css)).sort();
       if (missing.length) {
         errs.push(`the popover uses classes with NO rule in styles.css: ${missing.join(', ')}`
           + ' — that ships an unstyled panel, which is what happened on 2026-09-10');
@@ -1061,7 +1074,7 @@ const CONTRACTS = [
     checks: (src) => {
       const errs = [];
       if (!/'hot_pullback'/.test(src)) errs.push("CmTab union lost 'hot_pullback'");
-      if (!/CM_TABS[^=]*=\s*\[[^\]]*'hot_pullback'/.test(src)) errs.push("CM_TABS no longer lists 'hot_pullback'");
+      if (!(parseCmTabs(src) || []).includes('hot_pullback')) errs.push("CM_TABS no longer lists 'hot_pullback'");
       if (!/hot_pullback:\s*\{[\s\S]*?label:/.test(src)) errs.push('TAB_META has no hot_pullback entry');
       if (!/t !== 'hot_pullback'/.test(src)) errs.push('isBoardTab must exclude hot_pullback — it has its own endpoint and renderer');
       const meta = /hot_pullback:\s*\{[\s\S]*?\},/.exec(src);
@@ -1128,18 +1141,76 @@ const CONTRACTS = [
   // 🏆 Past Winners is the other half and is the only honest way to use a board
   // whose patterns do not beat a coin flip.
   {
+    name: 'Chart Maps carries the 🔥 Hottest tab, styled and wired (2026-09-11)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-11: "find the hottest of the sectors like the most growth
+    // and put them in to a new tab ... hottest from a sector in to a table.
+    // Like the catalyst and keep sales and other crucial metrics for me."
+    // Every hs-* class the TSX uses must have a rule that SHIPS: jsdom loads
+    // no stylesheets, so no render test can catch a missing one — the member
+    // popover already shipped unstyled once for exactly this reason.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+      if (!tabs.includes('hot_sectors')) errs.push("CM_TABS no longer lists 'hot_sectors'");
+      if (!/hot_sectors:\s*\{[\s\S]*?label:/.test(src)) errs.push('TAB_META has no hot_sectors entry');
+      if (!/t !== 'hot_sectors'/.test(src)) errs.push('isBoardTab must exclude hot_sectors — it has its own endpoint and renderer');
+      const meta = /hot_sectors:\s*\{[\s\S]*?\},\n/.exec(src);
+      if (meta && !/discovery/i.test(meta[0])) {
+        errs.push('the Hottest blurb must say plainly that it is a DISCOVERY list, not a measured signal');
+      }
+      if (meta && !/ALL ELEVEN|all eleven/.test(meta[0])) {
+        errs.push('the Hottest blurb must say every sector is listed — a strong name in a cold sector is the case it exists for');
+      }
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/<HottestSectors \/>/.test(page)) errs.push('ChartMaps.tsx no longer mounts <HottestSectors />');
+
+      const tsx = read('src/components/HottestSectors.tsx');
+      if (!/\/rotation\/hottest/.test(tsx)) errs.push('HottestSectors must read GET /rotation/hottest');
+      // the backend owns heat and traction; a second definition here is how
+      // this board and the Hot-sectors strip would start disagreeing
+      if (/traction\s*[=:]\s*.*pace/.test(tsx)) errs.push('HottestSectors must not recompute traction — the backend owns it');
+
+      const css = read('src/styles.css');
+      const used = new Set();
+      for (const m of tsx.matchAll(/(?:className=\{?["'`])([^"'`]+)/g)) {
+        for (const c of m[1].split(/[\s${}]+/)) if (/^hs-[a-z0-9-]+$/.test(c)) used.add(c);
+      }
+      for (const m of tsx.matchAll(/hs-[a-z0-9-]+/g)) used.add(m[0]);
+      if (!used.size) errs.push('no hs-* classes found — did the Hottest table get renamed?');
+      for (const c of [...used].sort()) {
+        // (?![\w-]) not (?![a-z0-9-]): the narrow class let `.hs-conameXX`
+        // satisfy a lookup for `.hs-coname`, so renaming a rule passed.
+        if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) {
+          errs.push(`styles.css has no rule for .${c} — the Hottest table would ship unstyled`);
+        }
+      }
+      return errs;
+    },
+  },
+  {
     name: 'Chart Maps carries the Patterns tab and links to the winning charts (2026-09-09)',
     file: 'src/lib/chartMaps.ts',
     checks: (src) => {
+      // Parse the ARRAY, do not pin substrings of its formatting. The old
+      // spelling tested /'hot_pullback', 'patterns'/ against the whole file,
+      // which broke BOTH ways (both reproduced 2026-09-11): a line-wrap of
+      // CM_TABS failed a correct file, and a COMMENT carrying the pair
+      // satisfied it while the real order was wrong.
       const errs = [];
-      if (!/'hot_pullback', 'patterns'/.test(src)) {
-        errs.push('patterns must sit right after hot_pullback in CM_TABS');
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+      const i = tabs.indexOf('hot_pullback');
+      if (i < 0 || tabs[i + 1] !== 'patterns') {
+        errs.push(`patterns must sit right after hot_pullback in CM_TABS — got ${tabs.join(', ')}`);
       }
       if (!/t !== 'patterns'/.test(src)) {
         errs.push('patterns must be excluded from isBoardTab — it mounts its own page body');
       }
-      if (!/'winners'\];/.test(src)) {
-        errs.push('winners must stay LAST with the ledger tabs');
+      if (tabs[tabs.length - 1] !== 'winners') {
+        errs.push(`winners must stay LAST with the ledger tabs — got ${tabs[tabs.length - 1]}`);
       }
       return errs;
     },

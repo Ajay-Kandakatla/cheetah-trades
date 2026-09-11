@@ -35,6 +35,7 @@ import {
 } from '../lib/chartMaps';
 import { SupportLevels } from '../components/SupportLevels';
 import { SignalLabBoard } from '../components/SignalLabBoard';
+import { HottestSectors } from '../components/HottestSectors';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
@@ -581,6 +582,15 @@ export function ChartMaps() {
           next.set('symbol', sym);
           setParams(next, { replace: true });
         }} />
+      ) : tab === 'hot_sectors' ? (
+        /* 🔥 Hottest (Ajay 2026-09-11: "find the hottest of the sectors like
+         * the most growth and put them in to a new tab ... hottest from a
+         * sector in to a table. Like the catalyst and keep sales and other
+         * crucial metrics"). Its own endpoint and its own grouped table, so
+         * the tile grid and the sort/tier controls are skipped. Sits with the
+         * movers boards (Catalysts, Overnight) — it answers the same question
+         * they do, one level up. */
+        <HottestSectors />
       ) : tab === 'catalysts' ? (
         /* The Catalysts page body, mounted as a tab (Ajay 2026-09-05: "move
          * catalyst tab in to Chart maps"). Same component as the old

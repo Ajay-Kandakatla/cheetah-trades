@@ -14,6 +14,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from . import backtest as B
+from . import hottest as H
 from . import tracker as T
 
 log = logging.getLogger("rotation.api")
@@ -242,6 +243,37 @@ _MEMBERS_TTL_SEC = 5 * 60
 _members_cache: dict = {}
 
 
+def _members_payload() -> dict:
+    """The whole persisted rotation payload, not just its member table.
+
+    The Hottest board needs the SHIPPED group rows (`sectors`, `industries`,
+    `sampled`, `market`) so it reuses the strip's numbers verbatim instead of
+    computing a second definition of how hot a sector is. Same doc and same
+    never-build rule as `_members_table`; returns {} rather than raising, so a
+    Mongo blip costs the group legs, never the board.
+    """
+    try:
+        from sepa import context_refresh as MC
+        return (MC.load_doc(MC.ROTATION_ID) or {}).get("payload") or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("rotation: payload read failed: %s", exc)
+        return {}
+
+
+def _scrub(o):
+    """NaN / inf -> None, recursively. FastAPI serialises NaN as a bare `NaN`
+    token, which is not JSON: the frontend's JSON.parse throws and the board
+    renders as a spinner that never resolves (the stuck-Scanning bug, 2026-05-29).
+    """
+    if isinstance(o, float):
+        return None if (o != o or o in (float("inf"), float("-inf"))) else o
+    if isinstance(o, dict):
+        return {k: _scrub(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_scrub(v) for v in o]
+    return o
+
+
 def _members_table() -> tuple:
     """(table, meta), or (None, meta carrying `reason`). NEVER builds.
 
@@ -440,6 +472,36 @@ async def rotation_members(
 # moves on the scale of months, not minutes.
 _BT_TTL_SEC = 12 * 60 * 60
 _bt_cache: dict = {}
+
+
+@router.get("/rotation/hottest")
+async def rotation_hottest(
+    sort: str = Query(H.DEFAULT_SORT, description="rel_1d | rel_5d | rel_21d | traction"),
+    names: int = Query(H.NAMES_PER_GROUP, ge=1, le=200,
+                       description="names returned per sector/industry"),
+):
+    """The 🔥 Hottest tab: every sector ranked, each opening into its
+    industries and then its names, with the sales block on every row.
+
+    ALL ELEVEN sectors answer, not just the hot end — deliberately. His own
+    example is a strong name in a COLD sector (ANDE is 2nd of Consumer
+    Defensive's 76 on 21 days while the sector itself is 8th of 11), so a
+    board that lists only hot sectors structurally cannot find it.
+
+    Group heat is the SHIPPED sampled median, reused verbatim so this can never
+    disagree with the Hot-sectors strip. Name rows are the FULL membership.
+    Both bases ride in the payload (`basis`) rather than being blended.
+    """
+    table, meta = _members_table()
+    if table is None:
+        return JSONResponse({"sectors": [], "reason": meta.get("reason") or "member table unavailable",
+                             "sorted_by": sort, **meta}, status_code=200)
+    payload = dict(_members_payload() or {})
+    payload[T.MEMBERS_KEY] = table
+    body = H.build_live(payload, sort=_coerce_str(sort, H.DEFAULT_SORT),
+                        names_per_group=_coerce_int(names, H.NAMES_PER_GROUP))
+    body.update({k: v for k, v in meta.items() if k in ("source", "built_at_iso", "age_sec", "stale")})
+    return JSONResponse(_scrub(body))
 
 
 @router.get("/rotation/backtest")

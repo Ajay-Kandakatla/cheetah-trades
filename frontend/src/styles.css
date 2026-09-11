@@ -11910,3 +11910,51 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
                                       margin-bottom: 4px; line-height: 1.45; }
 .hp__nearlist a { color: var(--ink); text-decoration: none; font-weight: 600; }
 .hp__asof { font-size: 0.7rem; color: var(--ink-subtle, #9aa8c8); margin-top: 12px; }
+
+/* 🔥 Hottest sectors (2026-09-11) — sectors ranked, opening into industries
+ * and then names. Ajay: "hottest of the sectors and then hottest from a sector
+ * in to a table. Like the catalyst and keep sales and other crucial metrics."
+ * A frontend contract pins that every hs-* class used in the TSX has a rule
+ * here — the member popover once shipped with no stylesheet at all, and jsdom
+ * loads no CSS, so no render test can catch it. */
+.hs { display: flex; flex-direction: column; gap: 0.5rem; }
+.hs-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.hs-sorts { display: inline-flex; gap: 4px; }
+.hs-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--ink-muted); cursor: pointer; }
+.hs-meta { font-size: 0.72rem; color: var(--ink-muted); }
+.hs-stale { color: var(--warn, #f59e0b); }
+/* The table is wide; it scrolls inside its own box so the PAGE never scrolls
+ * sideways, and the header stays put while a long sector is open. */
+.hs-scroll { overflow-x: auto; overflow-y: visible; }
+.hs-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.78rem; }
+.hs-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--bg-raised); color: var(--ink-muted);
+  text-align: left; font-weight: 600; white-space: nowrap;
+  padding: 6px 8px; border-bottom: 1px solid var(--hairline-strong);
+}
+.hs-table td { padding: 5px 8px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.hs-table th.hs-num, .hs-table td.hs-num { text-align: right; font-variant-numeric: tabular-nums; }
+.hs-sector > td { background: var(--bg-sunken); font-weight: 600; }
+.hs-sector.is-open > td { border-bottom-color: var(--hairline-strong); }
+.hs-industry > td { background: color-mix(in srgb, var(--bg-sunken) 45%, transparent); }
+.hs-disc { background: none; border: 0; color: var(--ink); font: inherit; cursor: pointer; padding: 0; text-align: left; }
+.hs-disc:hover { color: var(--gold); }
+.hs-disc--ind { padding-left: 1.1rem; font-weight: 500; }
+.hs-n { margin-left: 6px; font-size: 0.7rem; color: var(--ink-muted); font-weight: 400; }
+.hs-name > td.hs-sym { padding-left: 2.2rem; }
+.hs-coname { font-size: 0.68rem; color: var(--ink-muted); margin-top: 1px; }
+.hs-sym { min-width: 190px; }
+.hs-tier { white-space: nowrap; color: var(--ink-muted); }
+.hs-er { white-space: nowrap; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.hs-spacer { background: inherit; }
+.hs-more { font-size: 0.7rem; color: var(--ink-muted); padding-left: 2.2rem; }
+/* Tone by each cell's OWN sign — a row hot over 5 days still prints today red
+ * when today is red (his 2026-09-10 rule). */
+.hs-up { color: var(--cm-green, #4ade80); }
+.hs-dn { color: var(--cm-red, #f87171); }
+.hs-flat { color: var(--ink-muted); }
+@media (max-width: 720px) {
+  .hs-table { min-width: 760px; font-size: 0.72rem; }
+  .hs-sym { min-width: 150px; }
+}

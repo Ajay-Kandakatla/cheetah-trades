@@ -654,7 +654,7 @@ describe('the Earnings Flow tab', () => {
     // ledger tabs — that grouping is its own rule, so the patterns board links
     // out to it instead of the tab moving up beside it.
     expect(CM_TABS).toEqual(
-      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -722,7 +722,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly six tabs not driven by a board fetch', () => {
+  it('is one of exactly seven tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -739,9 +739,11 @@ describe('the Support Levels tab', () => {
     // as a tab (its own /catalysts/* endpoints and sub-tabs).
     // 2026-09-09: `patterns` is the sixth — the Patterns page body mounted the
     // same way (its own /patterns/* endpoints and scan buttons).
+    // 2026-09-11: `hot_sectors` is the seventh — the 🔥 Hottest board reads
+    // /rotation/hottest and renders a grouped table, not tiles.
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'session', 'signals', 'catalysts', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1571,7 +1573,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(19);
+    expect(CM_TABS).toHaveLength(20);   // +hot_sectors, 2026-09-11
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });

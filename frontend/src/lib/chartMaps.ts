@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'patterns';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'patterns';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -48,7 +48,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // of the patterns board instead: one at the top, one on every card, each
 // filtered to that pattern. A link from the thing you are looking at beats a
 // tab two seats over.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -71,10 +71,15 @@ export function isBoardTab(t: CmTab): boolean {
   // `catalysts` (2026-09-05) mounts the Catalysts page body — its own scan
   // endpoints and sub-tabs, nothing from /chart-maps.
   return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
-    && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns';
+    && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns'
+    && t !== 'hot_sectors';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  hot_sectors: {
+    label: '\uD83D\uDD25 Hottest',
+    blurb: 'Every sector ranked, opening into its industries and then its names, with the sales block on each row \u2014 built to surface names you are NOT already tracking. Three legs: today, 5 days and 21 days, each against RSP (equal-weight), so a name is measured against the average stock rather than the mega-caps. ALL ELEVEN sectors are listed, not just the hot end, deliberately: a strong name often sits in a cold sector \u2014 ANDE, the name that prompted this board, is 2nd of Consumer Defensive\u2019s 76 over 21 days while the sector itself is 8th of 11, so a hot-sectors-only list could never find it. Sector and industry heat is the rotation grid\u2019s sampled median (the SAME number the Hot-sectors strip prints, reused so the two can never disagree); name rows are the FULL membership, which is what makes those names reachable. Industries too small for a ranked row still show inside their sector, flagged \u2014 a 6-name median is not a 25-name one. Names are ranked by the return legs, NOT by traction: traction measures acceleration, and it ranks ANDE 23rd of 76 while the 5-day ranks it 3rd. This is a DISCOVERY list off trailing returns \u2014 nothing here is backtested and none of it is a buy signal. Sales, EPS and margin come from the weekly research cache, so they can be up to a week behind a fresh print; a blank is printed as \u2014 and never as a zero.',
+  },
   hot_pullback: {
     label: '\uD83D\uDD25 Hot Pullback',
     blurb: 'A stock that has been HOT takes one hard flush into a demand band and turns the same day \u2014 the DYN 2026-09-08 shape: gapped from 24.28 to a 17.00 low that landed inside a 4-touch demand band, then closed 20.31, +19.5% off that low and 21% under the 21-day line. All four parts are required: hot before the drop (prior close at least 30% above its own 52-week low), the day\u2019s low at least 12% under the prior 10-day high AND the close at least 10% under the 21-day line, that low inside a TESTED demand band, and the close at least 8% off the low in the top 30% of the day\u2019s range. MEASURED over 2 years (65 events, 56 names, no lookahead): entering at the NEXT OPEN returned a median +2.40% by the next close and +2.85% by day two, 66% up, against a placebo of +0.05% / +0.19%. The demand band is what carries it \u2014 the identical reversal NOT in a band measured nothing (p=0.461). The edge is GONE by day five (p=0.450), so this is a one-to-three session trade, not a hold, and the worst three-day in the sample was \u221236%. A study board with a measured horizon, not a buy button. Not advice.',
