@@ -3,18 +3,29 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SignalWatchButton } from './SignalWatchButton';
-import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
+import { _resetSignalWatchlist, watchCount } from '../hooks/useSignalWatchlist';
 
-function stub(initial: { symbols?: string[]; held?: string[] }) {
+function stub(initial: { symbols?: string[]; held?: string[]; watch_n?: number }) {
   const calls: { url: string; method: string }[] = [];
   let symbols = [...(initial.symbols ?? [])];
+  let watchN = initial.watch_n;
   vi.stubGlobal('fetch', vi.fn().mockImplementation((url: any, init?: any) => {
     const u = String(url); const method = init?.method || 'GET';
     calls.push({ url: u, method });
     const sym = u.split('/watchlist/')[1];
-    if (method === 'POST' && sym && !symbols.includes(sym)) symbols = [...symbols, sym];
-    if (method === 'DELETE' && sym) symbols = symbols.filter((s) => s !== sym);
-    return Promise.resolve({ ok: true, json: async () => ({ symbols: [...symbols], held: initial.held ?? [] }) });
+    if (method === 'POST' && sym && !symbols.includes(sym)) {
+      symbols = [...symbols, sym];
+      if (watchN != null) watchN += 1;
+    }
+    if (method === 'DELETE' && sym && symbols.includes(sym)) {
+      symbols = symbols.filter((s) => s !== sym);
+      if (watchN != null) watchN = Math.max(0, watchN - 1);
+    }
+    // `watch_n` omitted when the test does not set it — that plays a server
+    // from before 2026-09-10, which the store must still handle.
+    const body: Record<string, unknown> = { symbols: [...symbols], held: initial.held ?? [] };
+    if (watchN != null) body.watch_n = watchN;
+    return Promise.resolve({ ok: true, json: async () => body });
   }));
   return calls;
 }
@@ -89,6 +100,65 @@ describe('SignalWatchButton', () => {
   });
 
   it('when the list is full the title says the oldest drops off', async () => {
+    stub({ symbols: Array.from({ length: 12 }, (_, i) => `S${i}`), watch_n: 12 });
+    render(<MemoryRouter><SignalWatchButton symbol="NEW" /></MemoryRouter>);
+    const btn = await screen.findByRole('button', { name: 'Add NEW to Signals' });
+    await waitFor(() => expect(btn.getAttribute('title')).toMatch(/holds 12/));
+  });
+
+  /* The ticker-page mount (2026-09-10). `chrome` REPLACES the look class and
+   * must never take `cm-watch` with it — .cm-watch.is-on / .is-held are the
+   * only rules that paint those two states. */
+  it('chrome defaults to the card chip so the board mounts are untouched', async () => {
+    stub({ symbols: [] });
+    render(<MemoryRouter><SignalWatchButton symbol="DELL" /></MemoryRouter>);
+    const btn = await screen.findByRole('button', { name: 'Add DELL to Signals' });
+    expect(btn.className).toBe('cm-tv cm-watch');
+  });
+
+  it('a custom chrome replaces cm-tv but KEEPS cm-watch, in both states', async () => {
+    stub({ symbols: [] });
+    render(<MemoryRouter><SignalWatchButton symbol="ANDE" chrome="sepa-btn sepa-btn--ghost" /></MemoryRouter>);
+    const add = await screen.findByRole('button', { name: 'Add ANDE to Signals' });
+    expect(add.className).toBe('sepa-btn sepa-btn--ghost cm-watch');
+    expect(add.className).not.toContain('cm-tv');
+    fireEvent.click(add);
+    const on = await screen.findByRole('button', { name: 'Remove ANDE from Signals' });
+    expect(on.className).toBe('sepa-btn sepa-btn--ghost cm-watch is-on');
+  });
+
+  it('the HELD span takes the chrome too (it is a span, not the button branch)', async () => {
+    stub({ symbols: ['AVGO'], held: ['AVGO'] });
+    render(<MemoryRouter><SignalWatchButton symbol="AVGO" chrome="sepa-btn sepa-btn--ghost" /></MemoryRouter>);
+    const held = await screen.findByLabelText('AVGO is in Signals via your portfolio');
+    expect(held.className).toBe('sepa-btn sepa-btn--ghost cm-watch is-held');
+    expect(held.className).not.toContain('cm-tv');
+  });
+
+  /* REGRESSION (2026-09-10): `full` was computed off the MERGED list, which is
+   * watchlist ∪ portfolio and is NOT capped. Ajay holds names that are also on
+   * his watchlist, so the merged length overstates what counts against the cap
+   * and the button warned that the oldest name would drop when nothing would.
+   * The server now reports watch_n; the count must come from that. */
+  it('NEGATIVE: portfolio names do not make the list look full', async () => {
+    stub({
+      symbols: [...Array.from({ length: 6 }, (_, i) => `W${i}`), ...Array.from({ length: 8 }, (_, i) => `H${i}`)],
+      held: Array.from({ length: 8 }, (_, i) => `H${i}`),
+      watch_n: 6,
+    });
+    render(<MemoryRouter><SignalWatchButton symbol="ANDE" chrome="sepa-btn sepa-btn--ghost" /></MemoryRouter>);
+    const btn = await screen.findByRole('button', { name: 'Add ANDE to Signals' });
+    await waitFor(() => expect(btn.getAttribute('title')).toBe('Add ANDE to Signals (your watchlist)'));
+    expect(btn.getAttribute('title')).not.toMatch(/holds 12|drops off/);
+  });
+
+  it('watchCount prefers the server count and falls back to the merged length', () => {
+    expect(watchCount({ symbols: ['A', 'B', 'C'], watchN: 1 })).toBe(1);
+    expect(watchCount({ symbols: ['A', 'B', 'C'], watchN: 0 })).toBe(0);
+    expect(watchCount({ symbols: ['A', 'B', 'C'], watchN: null })).toBe(3);
+  });
+
+  it('a server that omits watch_n keeps the old merged-length behaviour', async () => {
     stub({ symbols: Array.from({ length: 12 }, (_, i) => `S${i}`) });
     render(<MemoryRouter><SignalWatchButton symbol="NEW" /></MemoryRouter>);
     const btn = await screen.findByRole('button', { name: 'Add NEW to Signals' });

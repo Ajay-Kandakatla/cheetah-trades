@@ -887,6 +887,53 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'The ticker page carries the + Signals button, sized like its siblings (2026-09-10)',
+    file: 'src/pages/SepaCandidate.tsx',
+    // Ajay 2026-09-10: "add a signals button in individual ticket page, I am
+    // using it as a watch list page." Two things can silently break this and
+    // neither shows up in jsdom, which loads no stylesheets:
+    //   1. `chrome` must REPLACE the look class, never append — .cm-tv sits
+    //      BELOW .sepa-btn--ghost in styles.css and both are single-class, so
+    //      an appended chrome loses and the button renders as a 10px chip.
+    //   2. `cm-watch` must survive the swap in BOTH branches — .cm-watch.is-on
+    //      and .cm-watch.is-held are the only rules that paint those states.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{\s*SignalWatchButton\s*\}\s*from\s*'\.\.\/components\/SignalWatchButton'/.test(src)) errs.push('SepaCandidate.tsx no longer imports SignalWatchButton');
+      const mount = /<SignalWatchButton\s+symbol=\{symbol\}\s+chrome="sepa-btn sepa-btn--ghost"/.test(src);
+      if (!mount) errs.push('SepaCandidate.tsx must mount <SignalWatchButton symbol={symbol} chrome="sepa-btn sepa-btn--ghost"> — the ticker page is his watchlist page');
+      // it has to sit INSIDE the action cluster, not somewhere else on a 5k-line page
+      const cluster = src.split('sepa-candidate-page__head-actions')[1] || '';
+      if (!/<SignalWatchButton/.test(cluster.slice(0, 2000))) errs.push('the + Signals button left the sepa-candidate-page__head-actions cluster');
+
+      const btn = read('src/components/SignalWatchButton.tsx');
+      if (!/chrome = WATCH_CHROME_CARD/.test(btn)) errs.push('SignalWatchButton must default chrome to WATCH_CHROME_CARD so the board/promo mounts keep the chip look');
+      if (!/export const WATCH_CHROME_CARD = 'cm-tv';/.test(btn)) errs.push("WATCH_CHROME_CARD must stay 'cm-tv' (the Chart Maps chip chrome)");
+      const classAttrs = btn.match(/className=\{`[^`]*`\}/g) || [];
+      if (classAttrs.length !== 2) errs.push(`SignalWatchButton should build exactly 2 class strings (held span + button), found ${classAttrs.length}`);
+      for (const c of classAttrs) {
+        if (!c.includes('${chrome}')) errs.push(`a SignalWatchButton branch hardcodes its chrome instead of taking the prop: ${c}`);
+        if (!/cm-watch/.test(c)) errs.push(`a SignalWatchButton branch dropped cm-watch, so .is-on/.is-held stop painting: ${c}`);
+      }
+      if (/cm-tv cm-watch/.test(btn.replace(/WATCH_CHROME_CARD = 'cm-tv'/, ''))) errs.push('SignalWatchButton still hardcodes "cm-tv cm-watch" somewhere — chrome must replace it');
+
+      // the states it keeps alive must actually exist in the stylesheet
+      const css = read('src/styles.css');
+      for (const rule of ['.cm-watch.is-on', '.cm-watch.is-held']) {
+        if (!css.includes(rule)) errs.push(`styles.css lost ${rule} — the + Signals button has no ${rule.split('.').pop()} state`);
+      }
+      for (const cls of ['sepa-btn--ghost']) {
+        if (!new RegExp(`\\.${cls}\\s*[,{]`).test(css)) errs.push(`styles.css has no rule for .${cls}, which the ticker-page button wears`);
+      }
+
+      // the server must still report what the cap actually counts
+      const hook = read('src/hooks/useSignalWatchlist.ts');
+      if (!/full: watchCount\(s\) >= MAX_SYMBOLS/.test(hook)) errs.push('useSignalWatchlist.full must come from watchCount (the stored list), not the merged watchlist+portfolio length');
+      if (!/j\.watch_n/.test(hook)) errs.push("useSignalWatchlist must read the server's watch_n");
+      return errs;
+    },
+  },
 
   {
     name: '"/" lands on Chart Maps for everyone (2026-09-07)',

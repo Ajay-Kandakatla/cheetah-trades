@@ -339,7 +339,15 @@ def merge_holdings(watchlist: list, holdings: list) -> dict:
     2026-09-02: "add my portfolio by default to Signals tab in chartmap").
     Watchlist order first, then any held ticker not already listed. `held`
     tells the UI which rows come from the book (they cannot be removed here —
-    they leave when the position does)."""
+    they leave when the position does).
+
+    `watch_n` is the size of the STORED watchlist — the only number MAX_SYMBOLS
+    caps. `symbols` is the union with the portfolio and is deliberately NOT
+    capped, so the client cannot recover watch_n from it: subtracting `held`
+    undercounts every name that is both watched and held. Without this field
+    the UI called itself full as soon as watchlist+portfolio reached 12 and
+    warned that the oldest name would drop when nothing would (Ajay 2026-09-10,
+    adding the button to the ticker page)."""
     seen, out = set(), []
     for s in list(watchlist or []) + [(h.get("ticker") or "") for h in (holdings or [])]:
         sym = (s or "").strip().upper()
@@ -347,4 +355,6 @@ def merge_holdings(watchlist: list, holdings: list) -> dict:
             seen.add(sym)
             out.append(sym)
     held = sorted({(h.get("ticker") or "").strip().upper() for h in (holdings or [])} - {""})
-    return {"symbols": out, "held": held}
+    watched = {(s or "").strip().upper() for s in (watchlist or [])} - {""}
+    return {"symbols": out, "held": held,
+            "watch_n": len(watched), "max_symbols": MAX_SYMBOLS}

@@ -29,6 +29,7 @@ import { LivePriceTag } from '../components/LivePriceTag';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
+import { SignalWatchButton } from '../components/SignalWatchButton';
 import type { SignalKind } from '../components/SignalDrillModal';
 const WhalesFlowModal = lazyWithReload(() =>
   import('../components/WhalesFlowModal').then(m => ({ default: m.WhalesFlowModal })),
@@ -781,6 +782,16 @@ export function SepaCandidatePage() {
             className="sepa-candidate-page__head-search"
             placeholder="Jump to ticker — ⌘K"
           />
+          {/* Ajay 2026-09-10: "add a signals button in individual ticket page,
+              I am using it as a watch list page." Same one-click control as
+              every Chart Maps card and the promo list, same single watchlist —
+              only the chrome changes so it sizes like its ghost-button
+              siblings. It LEADS the cluster because keeping the name is the
+              verb he opens this page for; the four below act on it instead.
+              Note the Setup tab's "+ Add to watchlist" is a DIFFERENT list
+              (the SEPA entry/stop plan at /sepa/watchlist) — this one feeds
+              ⚡ Signals. */}
+          <SignalWatchButton symbol={symbol} chrome="sepa-btn sepa-btn--ghost" />
           <button
             className="sepa-btn sepa-btn--ghost"
             onClick={() => setPresetOpen(true)}

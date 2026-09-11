@@ -30,6 +30,13 @@ export type SignalWatchState = {
   loaded: boolean;
   symbols: string[];
   held: string[];
+  /** Size of the STORED watchlist — the only list MAX_SYMBOLS caps. `symbols`
+   *  is that list unioned with the portfolio and is NOT capped, so it cannot
+   *  stand in for this: a name that is both watched and held appears once, and
+   *  subtracting `held` would undercount it. null until the server answers
+   *  (pre-2026-09-10 responses omit the field) — `full` then falls back to the
+   *  merged length, the old behaviour. */
+  watchN: number | null;
   error: string | null;
 };
 
@@ -61,7 +68,7 @@ export function removeFromList(list: string[], sym: string): string[] {
   return list.filter((x) => x !== s);
 }
 
-let _state: SignalWatchState = { loaded: false, symbols: loadLocal(), held: [], error: null };
+let _state: SignalWatchState = { loaded: false, symbols: loadLocal(), held: [], watchN: null, error: null };
 let _inflight: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
@@ -81,6 +88,7 @@ function applyServer(j: any): void {
     saveLocal(next.symbols as string[]);
   }
   if (Array.isArray(j.held)) next.held = j.held.filter((s: unknown) => typeof s === 'string');
+  if (typeof j.watch_n === 'number' && Number.isFinite(j.watch_n)) next.watchN = j.watch_n;
   patch(next);
 }
 
@@ -100,7 +108,13 @@ export function addSymbol(sym: string): Promise<void> {
   const s = normalizeSymbol(sym);
   if (!s) return Promise.resolve();
   const next = addToList(_state.symbols, s);
-  if (next !== _state.symbols) { saveLocal(next); patch({ symbols: next }); }
+  // Keep the optimistic mirror internally consistent: the server's watch_n in
+  // the response is the truth, this only covers the round trip (and a failed
+  // POST, where the optimistic list is what stands).
+  if (next !== _state.symbols) {
+    saveLocal(next);
+    patch({ symbols: next, watchN: _state.watchN == null ? null : _state.watchN + 1 });
+  }
   return fetch(`${API}/day/signal-lab/watchlist/${encodeURIComponent(s)}`,
                { method: 'POST', credentials: 'include' })
     .then((r) => (r.ok ? r.json() : null))
@@ -112,12 +126,23 @@ export function removeSymbol(sym: string): Promise<void> {
   const s = normalizeSymbol(sym);
   if (!s) return Promise.resolve();
   const next = removeFromList(_state.symbols, s);
-  saveLocal(next); patch({ symbols: next });
+  const dropped = next.length < _state.symbols.length;
+  saveLocal(next);
+  patch({ symbols: next,
+          watchN: _state.watchN == null || !dropped ? _state.watchN
+            : Math.max(0, _state.watchN - 1) });
   return fetch(`${API}/day/signal-lab/watchlist/${encodeURIComponent(s)}`,
                { method: 'DELETE', credentials: 'include' })
     .then((r) => (r.ok ? r.json() : null))
     .then((j) => { applyServer(j); })
     .catch((e) => { patch({ error: String(e?.message ?? e) }); });
+}
+
+/** How many names count against MAX_SYMBOLS. The server's `watch_n` is the
+ *  truth; before it answers (or on a pre-2026-09-10 response) fall back to the
+ *  merged length, which is what this returned for its whole life. */
+export function watchCount(s: Pick<SignalWatchState, 'symbols' | 'watchN'>): number {
+  return s.watchN ?? s.symbols.length;
 }
 
 export function isWatched(sym: string): boolean {
@@ -136,7 +161,7 @@ export function _resetSignalWatchlist(seed?: string[]): void {
     else localStorage.removeItem(LS_KEY);
   } catch { /* private mode */ }
   _inflight = null;
-  _state = { loaded: false, symbols: seed ? [...seed] : [], held: [], error: null };
+  _state = { loaded: false, symbols: seed ? [...seed] : [], held: [], watchN: null, error: null };
   emit();
 }
 
@@ -147,8 +172,9 @@ export function useSignalWatchlist() {
     loaded: s.loaded,
     symbols: s.symbols,
     held: s.held,
+    watchN: s.watchN,
     error: s.error,
-    full: s.symbols.length >= MAX_SYMBOLS,
+    full: watchCount(s) >= MAX_SYMBOLS,
     has: (sym: string) => s.symbols.includes(normalizeSymbol(sym)),
     isHeld: (sym: string) => s.held.includes(normalizeSymbol(sym)),
     add: addSymbol,

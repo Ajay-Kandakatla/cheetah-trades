@@ -72,3 +72,55 @@ VCP and from Quick Bounce.. So I can add it to signals — signals is like my wa
 - Tests: `useSignalWatchlist.test.ts`, `SignalWatchButton.test.tsx`, `PatternChart.test.tsx`
   (+ negative held), `PromoCircuit.test.tsx`, `SignalLabBoard.test.tsx`; contract "Every
   board card and the promo list carry the one-click + Signals button".
+
+## 2026-09-10 — the ticker page carries it too, and the cap stops lying
+
+Ajay: *"Add a signals button in individual ticket page, I am using it as a watch list page."*
+
+- `SignalWatchButton` gained an optional **`chrome`** prop (default `WATCH_CHROME_CARD =
+  'cm-tv'`, so the board and promo mounts are byte-identical to before). It **replaces** the
+  look class, it does not append: `.cm-tv` (styles.css:11573) sits BELOW `.sepa-btn--ghost`
+  (3641) and both are single-class, so an appended chrome loses the cascade and the button
+  renders as a 10px chip beside full-size siblings. `cm-watch` is never swappable — it is the
+  sole anchor for `.cm-watch.is-on` (green, already on the list) and `.cm-watch.is-held`
+  (dimmed). **Both branches take the chrome**; the held state is a `<span>`, not the button.
+- Mounted first in `.sepa-candidate-page__head-actions` on `pages/SepaCandidate.tsx` with
+  `chrome="sepa-btn sepa-btn--ghost"`. It LEADS the cluster because keeping the name is the
+  verb that page is open for; 🔔 Quick alerts / ✎ Custom level / ↻ Re-scan act on it instead.
+- **Two different lists on one page.** The Setup tab's `+ Add to watchlist` writes the SEPA
+  entry/stop plan (`POST /sepa/watchlist`, rendered at `/watchlist`). The head-action
+  `+ Signals` writes `signal_lab_watchlist`. Neither reads the other; the labels are the only
+  thing keeping them apart, so do not rename either one to "watchlist".
+
+### Bug found while wiring it: the cap counted names it does not cap
+
+`merge_holdings` returns `symbols` = watchlist ∪ portfolio, **uncapped** — only the *stored*
+watchlist is capped at `MAX_SYMBOLS`. The client computed `full` from that merged length, so a
+user with a portfolio saw "the list holds 12, so the oldest name drops off" long before
+anything would actually be evicted. Ajay watches 5 names and holds 5, which already merges to
+7 of a 12-name budget he has barely touched.
+
+The client cannot recover the real count on its own: subtracting `held` undercounts every name
+that is both watched and held (ATEX, DASH and NTSK are all three, for him). So the **server now
+reports it**:
+
+- `merge_holdings` → `+ watch_n` (size of the stored list) and `+ max_symbols`.
+- `useSignalWatchlist` → `watchN` + `watchCount(s)`, and `full: watchCount(s) >= MAX_SYMBOLS`.
+  `watchN` is `null` until the server answers and on any pre-2026-09-10 response, where
+  `watchCount` falls back to the merged length — the old behaviour, unchanged.
+- Optimistic add/remove adjust `watchN` so the mirror stays self-consistent across the round
+  trip and across a failed POST; the server's value overwrites it on every response.
+
+**The 12-name cap itself is unchanged.** A 13th add still silently drops the oldest on both
+sides — that is pre-existing and deliberate, and it is what the warning is for.
+
+- Tests: `SignalWatchButton.test.tsx` (12) — default chrome pinned to `cm-tv cm-watch`, custom
+  chrome keeps `cm-watch` in both the button and held branches, `watchCount` fallback, and the
+  NEGATIVE "a big portfolio does not make the list look full". `tests/test_signal_lab_holdings.py`
+  (7) — `watch_n` vs the merged length, the both-watched-and-held case that defeats subtraction,
+  dedupe/blank safety, and 20 held names against an empty watchlist.
+- Contract: "The ticker page carries the + Signals button, sized like its siblings (2026-09-10)"
+  — pins the mount inside the cluster, that `chrome` replaces rather than appends, that neither
+  branch drops `cm-watch`, that `.cm-watch.is-on` / `.is-held` still exist in `styles.css`
+  (jsdom loads no stylesheets, so no render test can catch that), and that `full` comes from
+  `watchCount`.
