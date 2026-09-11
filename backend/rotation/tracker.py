@@ -580,7 +580,7 @@ def traction_row(symbol: str, stat: dict, group_median_21d,
     """
     stat = stat or {}
     row = {"symbol": symbol}
-    for k in ("sector", "industry", "last_close", "ret_1d", "ret_5d",
+    for k in ("name", "sector", "industry", "last_close", "ret_1d", "ret_5d",
               "ret_21d", "ret_63d",
               "at_demand", "zone_role", "zone_depth_pct", "zone_off_floor_pct"):
         if k in stat:
@@ -721,6 +721,24 @@ def _member_table(full_groups: dict, published: dict, labels: dict,
     raw_21 = {s: trailing_return(frames.get(s), WINDOW_SHORT) for s in by_symbol}
     # The same-day leg, per symbol, so each group can carry TODAY'S median.
     raw_1 = {s: trailing_return(frames.get(s), WINDOW_DAY) for s in by_symbol}
+    # Company names (Ajay 2026-09-10: "Cna you add company name too next to
+    # these tickers"). ONE cache read for the whole map -- 6,021 entries in
+    # 0.12 s, covering 99% of the universe -- never name_for() per symbol,
+    # which is a Mongo round trip each. CACHE ONLY: company_names.name_for
+    # does not fetch, and warming is somebody else's cron. A name we do not
+    # have is simply absent, never a blank row and never a provider call from
+    # inside the rotation build.
+    try:
+        from sepa import company_names
+        names = company_names.all_names() or {}
+    except Exception as exc:                                # pragma: no cover
+        log.warning("rotation: company names unavailable (%s) — rows ship "
+                    "without them", exc)
+        names = {}
+    for sym, stat in by_symbol.items():
+        nm = names.get(sym)
+        if nm:
+            stat["name"] = nm
 
     marks, zone_meta = _zone_marks({s: v["last_close"] for s, v in by_symbol.items()})
     for sym, stat in by_symbol.items():

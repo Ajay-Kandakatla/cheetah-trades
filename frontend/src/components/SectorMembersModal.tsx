@@ -89,6 +89,12 @@ function MemberLine({ m, benchmark }: { m: MemberRow; benchmark: string }) {
           <span className="hsm-flag" aria-label="gaining traction" title="gaining traction">▲</span>
         )}
         <TickerLink ticker={m.symbol} showWatchlist={false} fromLabel="Hot sectors" />
+        {/* Ajay 2026-09-10: "Cna you add company name too next to these
+          * tickers". Under the symbol, not beside it: names run to "Marathon
+          * Petroleum Corporation" and this panel is 720px, so a column would
+          * squeeze the five numeric ones the table exists for. Absent for the
+          * ~1% with no cached name — the row is unchanged, never blank. */}
+        {m.name && <span className="hsm-coname" title={m.name}>{m.name}</span>}
       </th>
       <td className={`hsm-num ${toneOf(m.rel_1d)}`}>{fmtRel(m.rel_1d)}</td>
       <td className={`hsm-num ${toneOf(m.rel_5d)}`}>{fmtRel(m.rel_5d)}</td>

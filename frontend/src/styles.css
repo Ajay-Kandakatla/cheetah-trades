@@ -11501,6 +11501,14 @@ a.tk-link:hover   { color: inherit; }
 .hsm-row-traction th { box-shadow: inset 3px 0 0 var(--cm-green, #22c55e); }
 .hsm-flag { color: var(--cm-green, #22c55e); margin-right: 0.3rem; font-size: 0.72rem; }
 .hsm-sym { white-space: nowrap; }
+/* The company name under each ticker. Tiny, dim, and hard-clipped: it must
+   never widen the column and push the numeric legs off a narrow panel. */
+.hsm-coname {
+  display: block; max-width: 15ch; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.64rem; font-weight: 400; line-height: 1.25;
+  color: var(--cm-slate, #8595ad);
+}
 .hsm-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hsm-mark { text-align: center; white-space: nowrap; }
 .hsm-up { color: var(--cm-green, #22c55e); }

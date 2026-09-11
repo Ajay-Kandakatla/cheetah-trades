@@ -44,9 +44,9 @@ const MEMBERS = {
   median_1d_full: 0.6, up_today: 201,
   gaining: 2, n: 3, shown: 3,
   rows: [
-    { symbol: 'NVDA', rel_1d: 0.9, rel_5d: 3.1, rel_21d: 12.4, rel_63d: 22.0,
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', rel_1d: 0.9, rel_5d: 3.1, rel_21d: 12.4, rel_63d: 22.0,
       vs_group_21: 13.6, traction: 0.42, gaining: true, at_demand: false },
-    { symbol: 'AVGO', rel_1d: -0.4, rel_5d: 1.0, rel_21d: 4.0, rel_63d: -3.0,
+    { symbol: 'AVGO', name: 'Broadcom Inc.', rel_1d: -0.4, rel_5d: 1.0, rel_21d: 4.0, rel_63d: -3.0,
       vs_group_21: 5.2, traction: 0.11, gaining: true, at_demand: true,
       zone_role: 'demand', zone_depth_pct: 1.4, zone_off_floor_pct: 4.2 },
     { symbol: 'INTC', rel_1d: -1.1, rel_5d: -2.0, rel_21d: -9.5, rel_63d: -14.0,
@@ -135,6 +135,33 @@ describe('Hot sectors chips open a member popover', () => {
     const row = within(dialog).getByRole('link', { name: 'NVDA' }).closest('tr')!;
     expect(Array.from(row.querySelectorAll('td')).map((c) => c.textContent))
       .toEqual(['+0.9%', '+3.1%', '+12.4%', '+22.0%', '+13.6', '']);
+  });
+
+  it('prints the company name under each ticker (2026-09-10)', async () => {
+    // Ajay: "Cna you add company name too next to these tickers".
+    stub(MEMBERS);
+    draw();
+    await openTech();
+    const dialog = await screen.findByRole('dialog');
+    const nvda = within(dialog).getByRole('link', { name: 'NVDA' }).closest('th')!;
+    expect(nvda.textContent).toContain('NVIDIA Corporation');
+    expect(within(dialog).getByRole('link', { name: 'AVGO' }).closest('th')!.textContent)
+      .toContain('Broadcom Inc.');
+  });
+
+  it('NEGATIVE: a name the cache has never seen still renders its row', async () => {
+    // ~1% of the universe has no cached name. That must cost the second line
+    // and nothing else -- never a blank row, and never a provider call from
+    // inside the rotation build to go and find one.
+    stub(MEMBERS);
+    draw();
+    await openTech();
+    const dialog = await screen.findByRole('dialog');
+    const intc = within(dialog).getByRole('link', { name: 'INTC' }).closest('tr')!;
+    expect(intc).toBeInTheDocument();
+    expect(Array.from(intc.querySelectorAll('td')).map((c) => c.textContent))
+      .toEqual(['-1.1%', '-2.0%', '-9.5%', '-14.0%', '-8.3', '']);
+    expect(intc.querySelector('.hsm-coname')).toBeNull();
   });
 
   it('prints the group\u2019s SAME-DAY move and its breadth (2026-09-10)', async () => {

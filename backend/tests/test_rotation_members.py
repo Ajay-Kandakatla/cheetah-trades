@@ -797,7 +797,7 @@ def test_every_payload_key_the_popover_renders_is_a_key_this_endpoint_sends():
     row_keys = {"symbol", "sector", "industry", "last_close", "ret_5d", "ret_21d",
                 "ret_63d", "at_demand", "zone_role", "zone_depth_pct",
                 "zone_off_floor_pct", "pace_5", "pace_21", "traction",
-                "ret_1d", "rel_1d",
+                "ret_1d", "rel_1d", "name",
                 "vs_group_21", "gaining",
                 # traction_row rebases each window against the benchmark and
                 # ships these three beside the raw ret_* legs.
@@ -828,3 +828,38 @@ def test_every_payload_key_the_popover_renders_is_a_key_this_endpoint_sends():
         "the popover reads payload keys /rotation/members never sends: %s. "
         "Either the endpoint grows them or the panel stops asking — a silent "
         "em dash is the one outcome that must not ship." % sorted(missing))
+
+
+def test_company_names_ride_the_member_rows_and_never_fetch(monkeypatch):
+    """Ajay 2026-09-10: "Cna you add company name too next to these tickers".
+
+    ONE cache read for the whole map, and CACHE ONLY: `company_names.name_for`
+    does not fetch, and a rotation build must never reach a provider to go
+    looking for a label. A name the cache has never seen costs the second line
+    under the ticker and nothing else."""
+    from sepa import company_names
+
+    calls = []
+
+    def fake_all_names():
+        calls.append("all_names")
+        return {"AAA": "Alpha Industries, Inc."}
+
+    def boom(*a, **k):                      # pragma: no cover - must not run
+        raise AssertionError("the rotation build fetched a company name")
+
+    monkeypatch.setattr(company_names, "all_names", fake_all_names)
+    monkeypatch.setattr(company_names, "name_for", boom)
+    monkeypatch.setattr(company_names, "_fetch_yfinance", boom, raising=False)
+
+    row_named = T.traction_row("AAA", {"name": "Alpha Industries, Inc.",
+                                       "ret_5d": 3.0, "ret_21d": 6.0}, 1.0)
+    row_bare = T.traction_row("ZZZ", {"ret_5d": 3.0, "ret_21d": 6.0}, 1.0)
+
+    assert row_named["name"] == "Alpha Industries, Inc."
+    # NEGATIVE: absent, not empty-string and not the symbol echoed back --
+    # the frontend renders the second line only when there is a name.
+    assert "name" not in row_bare
+    assert row_bare["symbol"] == "ZZZ"
+    # and the row is otherwise complete
+    assert row_bare["traction"] == row_named["traction"]

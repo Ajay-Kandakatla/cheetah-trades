@@ -296,3 +296,28 @@ test passed, and `src/styles.css` simply was not in the commit, so all 20
 page text. jsdom does not load stylesheets, so no render test can see this: the
 DOM is identical either way. A frontend contract now reads the classes the
 component uses and fails when any of them has no rule in `styles.css`.
+
+
+## Company names (2026-09-10)
+
+Ajay: *"Cna you add company name too next to these tickers"*.
+
+`tracker._member_table` attaches `name` per member from
+`sepa.company_names.all_names()` — **one** read of the whole map (6,021
+entries, 0.12 s, covering 2,631 of the 2,650-name universe), never
+`name_for()` per symbol, which is a Mongo round trip each.
+
+**Cache only.** `name_for` does not fetch and `all_names` does not warm; a
+rotation build must never reach a provider to go looking for a label. Warming
+is somebody else's cron. `test_company_names_ride_the_member_rows_and_never_fetch`
+stubs the fetch path to raise, so a future change that makes the build fetch
+fails the suite.
+
+A symbol the cache has never seen has **no `name` key at all** — not an empty
+string, not the symbol echoed back — and the panel renders the second line only
+when there is one. The row is otherwise unchanged.
+
+Rendered **under** the ticker (`.hsm-coname`), not in its own column: names run
+to "Marathon Petroleum Corporation" and the panel is capped at 720 px, so a
+column would squeeze the five numeric legs the table exists for. The class is
+hard-clipped at 15ch with an ellipsis and the full name is in the `title`.

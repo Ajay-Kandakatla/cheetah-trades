@@ -40,6 +40,9 @@ export type GroupKind = 'cohort' | 'industry' | 'theme';
 
 export type MemberRow = {
   symbol: string;
+  /** Company name from the shared cache (sepa.company_names), rendered under
+   *  the ticker. Absent for the ~1% of the universe the cache has never seen —
+   *  the row still renders, it just has no second line. */
   name?: string | null;
   /** Trailing returns restated vs the strip's benchmark (RSP), same rebase as
    *  every number on the strip. Null when the leg could not be measured. */
@@ -290,6 +293,7 @@ export function normalizeMembers(raw: unknown): MembersPayload | null {
     .map((m) => ({
       ...(m as object),
       symbol: String(m.symbol).toUpperCase(),
+      name: typeof m.name === 'string' && m.name.trim() ? m.name.trim() : null,
       rel_1d: num(m.rel_1d),
       rel_5d: num(m.rel_5d),
       rel_21d: num(m.rel_21d),
