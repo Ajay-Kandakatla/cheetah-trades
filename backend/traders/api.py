@@ -14,7 +14,8 @@ import logging
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
-from traders import gnt as G
+from traders import feed as G
+from traders import registry as R
 
 log = logging.getLogger("traders.api")
 router = APIRouter(tags=["traders"])
@@ -32,8 +33,43 @@ def _scrub(o):
     return o
 
 
-@router.get("/traders/gnt")
-async def gnt_board(limit: int = Query(400, ge=1, le=2000)):
+@router.get("/traders")
+async def traders_list():
+    """Who is tracked, with each one's cited championship claim."""
+    return JSONResponse(_scrub({
+        "traders": R.TRADERS, "default": R.DEFAULT_KEY,
+        "disclaimer": R.DISCLAIMER,
+    }))
+
+
+@router.get("/traders/curated")
+async def traders_curated(limit: int = Query(200, ge=1, le=1000)):
+    """What the curator ADDED to the scan universe, and what it REJECTED.
+
+    The rejections are the useful half: on the first real run, three of the
+    eight uncovered names these accounts mention were CRYPTO (BNB, ETH, XRP).
+    A job that added what it was told would have put them in the universe every
+    scan, zone store and paper lane runs on."""
+    from traders import curate as C
+    db = C._db()
+    rows = []
+    if db is not None:
+        try:
+            rows = list(db[C.COLL].find({}).sort("checked_at", -1).limit(int(limit)))
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("traders/curated read failed: %s", exc)
+    return JSONResponse(_scrub({
+        "rows": rows,
+        "added": sum(1 for r in rows if r.get("status") == "added"),
+        "rejected": sum(1 for r in rows if r.get("status") == "rejected"),
+        "note": ("A name is added because it RESOLVES — a real company record "
+                 "and real price history — never because a champion said it. "
+                 "Added means the app can SEE it, not that it likes it."),
+    }))
+
+
+@router.get("/traders/{key}")
+async def trader_board(key: str, limit: int = Query(400, ge=1, le=2000)):
     """Tito Adhikary's (@GnT_Trades) tickers, each with the post behind it and
     this app's own read beside it.
 
@@ -51,15 +87,18 @@ async def gnt_board(limit: int = Query(400, ge=1, le=2000)):
 
     Nothing here gates a scan, an alert or a lane.
     """
-    return JSONResponse(_scrub(G.board(limit=limit)))
+    if R.get(key) is None:
+        return JSONResponse({"error": f"unknown trader '{key}'",
+                             "known": R.keys()}, status_code=404)
+    return JSONResponse(_scrub(G.board(limit=limit, trader=key)))
 
 
-@router.post("/traders/gnt/refresh")
-async def gnt_refresh():
+@router.post("/traders/refresh")
+async def traders_refresh():
     """Fetch X now and store. The cron calls the same function twice a day.
 
     `ok: false` means the RECENT source returned nothing — X changed its page
     shape and the board is no longer tracking his latest posts. That is
     reported, never hidden: a tracker that silently stops updating is worse
     than one that is visibly broken."""
-    return JSONResponse(_scrub(G.refresh()))
+    return JSONResponse(_scrub(G.refresh_all()))

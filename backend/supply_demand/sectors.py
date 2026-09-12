@@ -107,6 +107,55 @@ SECTORS: list[Sector] = [
         ),
         "leverage_etfs": [],
     },
+    # Ajay 2026-09-12: "there are so many Crypto related stocks are missin gin
+    # ours like IREN, Mining stocks like bit coind related can you create a new
+    # caterogy for crypto please in to our apps" — said in the same breath as
+    # "Ignore Crypo", and the two are not in tension: the TOKENS are refused
+    # (traders/curate.NEVER_ADD rejects BNB / ETH / XRP outright, and they are
+    # not scannable equities), while the LISTED COMPANIES whose earnings move
+    # with them are exactly what this app screens.
+    #
+    # EVERY TICKER BELOW WAS PRICE-VALIDATED ON 2026-09-12 against production
+    # data before it went in — no roster was typed from memory. Four candidates
+    # were REJECTED by that check and are named here so nobody re-adds them:
+    #   GREE  7 bars — effectively dead
+    #   SDIG  126 bars but stopped printing — acquired by Bitfarms
+    # and two were false negatives on a keyless container and DID validate
+    # against production (BITF 390 bars, SMLR 337), which is why they are here.
+    #
+    # The miners are no longer a pure crypto bet: IREN, CORZ, APLD, WULF and
+    # HUT are converting halls to AI/HPC hosting, which is why several already
+    # sat in the universe on their own. That dual identity is the thesis, and
+    # it is also why this sector deliberately does NOT claim a supply gap.
+    {
+        "id": "crypto_equities",
+        "label": "Crypto Miners / Equities",
+        "narrative": "Listed companies whose revenue tracks crypto — miners, exchanges, treasury holders — several now pivoting mined power into AI/HPC hosting.",
+        "etf": "WGMI",
+        "commodity": "",
+        "keywords": ["bitcoin halving", "hashrate", "hash price", "mining difficulty",
+                     "AI hosting conversion", "HPC pivot", "bitcoin treasury",
+                     "spot bitcoin ETF"],
+        "sp_tickers": [
+            # miners (several dual-track into AI/HPC hosting)
+            "IREN", "MARA", "RIOT", "CLSK", "CIFR", "WULF", "HUT", "BTDR",
+            "CORZ", "BTBT", "APLD", "BITF", "HIVE", "CAN", "SLNH", "ARBK",
+            # exchanges / brokers
+            "COIN", "HOOD", "GLXY", "BKKT",
+            # treasury holders — the stock is a levered proxy for the coin
+            "MSTR", "SMLR", "DFDV", "UPXI",
+        ],
+        "thesis": (
+            "Earnings are levered to coin price and hash price, and the better "
+            "operators are converting mined power into AI/HPC hosting revenue "
+            "that does not depend on the coin at all. This is NOT A SUPPLY GAP: "
+            "hashrate expands to meet price and difficulty adjusts it away, so "
+            "there is no bottleneck to own — the edge, where it exists, is cheap "
+            "contracted power and a credible HPC pivot. Treasury holders are a "
+            "levered proxy for the coin, not an operating business."
+        ),
+        "leverage_etfs": ["WGMI", "BITQ", "BLOK", "DAPP"],
+    },
     {
         "id": "lithium",
         "label": "Lithium / EV Battery",

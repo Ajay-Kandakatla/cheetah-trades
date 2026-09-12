@@ -1,4 +1,4 @@
-"""📌 GnT — tracking Tito Adhikary (@GnT_Trades) on X.
+"""📌 The trader feed — reading a public X account into tickers + evidence.
 
 Ajay 2026-09-12: *"Can you create a new tab on chartmaps tracking this person..
 https://x.com/GnT_Trades ... He had humongous growth of stocks"* and
@@ -83,9 +83,21 @@ from typing import Optional
 
 log = logging.getLogger("traders.gnt")
 
-HANDLE = "GnT_Trades"
+# Kept as the module default so every existing caller and test keeps working;
+# `registry.py` is what actually says WHO is tracked.
+DEFAULT_HANDLE = "GnT_Trades"
+HANDLE = DEFAULT_HANDLE
 DISPLAY = "Tito Adhikary"
 PROFILE_URL = f"https://x.com/{HANDLE}"
+
+
+def recent_url(handle: str) -> str:
+    return f"https://x.com/{handle}"
+
+
+def top_url(handle: str) -> str:
+    return ("https://syndication.twitter.com/srv/timeline-profile/screen-name/"
+            f"{handle}")
 
 # His claim, quoted from the @USICOfficial post he pinned. Stored as a CITED
 # fact with its source, not as a number this app measured.
@@ -100,9 +112,8 @@ USIC_2025 = {
              "this app's own risk rules forbid."),
 }
 
-RECENT_URL = f"https://x.com/{HANDLE}"
-TOP_URL = ("https://syndication.twitter.com/srv/timeline-profile/screen-name/"
-           f"{HANDLE}")
+RECENT_URL = recent_url(HANDLE)
+TOP_URL = top_url(HANDLE)
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/127.0 Safari/537.36")
 TIMEOUT_SEC = 25
@@ -304,7 +315,7 @@ def fetch(recent_url: str = RECENT_URL, top_url: str = TOP_URL,
 # ═══════════════════════════════════════════════════════════════════════════
 # STORAGE — cumulative, so the history outgrows what either endpoint returns
 # ═══════════════════════════════════════════════════════════════════════════
-def store(payload: dict, coll=None) -> int:
+def store(payload: dict, coll=None, trader: str = "gnt") -> int:
     """Upsert every post. `_id` is the tweet's own id, so running twice a day
     deepens the archive instead of duplicating it. Returns posts written."""
     posts = (payload or {}).get("posts") or []
@@ -317,7 +328,7 @@ def store(payload: dict, coll=None) -> int:
     for p in posts:
         try:
             coll.update_one({"_id": p["id"]},
-                            {"$set": {**p, "_id": p["id"]},
+                            {"$set": {**p, "_id": p["id"], "trader": trader},
                              "$setOnInsert": {"first_seen": _now().isoformat()}},
                             upsert=True)
             n += 1
@@ -326,15 +337,20 @@ def store(payload: dict, coll=None) -> int:
     return n
 
 
-def stored(limit: int = 400, coll=None) -> list[dict]:
-    """Everything we have ever seen him post, newest first."""
+def stored(limit: int = 400, coll=None, trader: Optional[str] = None) -> list[dict]:
+    """Everything we have ever seen them post, newest first.
+
+    `trader=None` returns EVERY tracked account's posts — used by the curator,
+    which does not care who said a name. A board always passes its own key: two
+    feeds in one table would attribute one trader's idea to the other."""
     if coll is None:
         db = _db()
         if db is None:
             return []
         coll = db[COLL]
+    q = {} if trader is None else {"trader": trader}
     try:
-        return list(coll.find({}).sort("created_at", -1).limit(int(limit)))
+        return list(coll.find(q).sort("created_at", -1).limit(int(limit)))
     except Exception as exc:                                   # noqa: BLE001
         log.warning("traders.gnt: read failed: %s", exc)
         return []
@@ -467,53 +483,75 @@ def overlay(rows: list[dict]) -> list[dict]:
     return out
 
 
-def board(limit: int = 400, coll=None) -> dict:
+def board(limit: int = 400, coll=None, trader: str = "gnt") -> dict:
     """Everything the tab renders. Reads STORED posts; it never fetches.
 
     Same rule as every other board here: a page load must not depend on a third
     party answering. The twice-daily cron owns the fetching."""
-    posts = stored(limit=limit, coll=coll)
+    from traders import registry as R
+    who = R.get(trader) or R.get(R.DEFAULT_KEY) or {}
+    posts = stored(limit=limit, coll=coll, trader=who.get("key", trader))
     rows = overlay(tickers(posts))
     fresh = [r for r in rows if r["fresh"]]
     newest = next((p.get("created_at") for p in posts if p.get("created_at")), None)
+    handle = who.get("handle") or HANDLE
     return {
-        "handle": HANDLE, "display": DISPLAY, "profile_url": PROFILE_URL,
-        "usic": USIC_2025,
+        "key": who.get("key"), "handle": handle, "display": who.get("display") or DISPLAY,
+        "profile_url": recent_url(handle),
+        "usic": who.get("usic") or USIC_2025, "style": who.get("style"),
         "n_posts": len(posts), "n_tickers": len(rows), "n_fresh": len(fresh),
         "fresh_days": FRESH_DAYS,
         "newest_post_at": newest,
         "newest_age_days": age_days(newest),
         "tickers": rows,
         "market_tickers": sorted(MARKET_TICKERS),
-        "disclaimer": (
-            "His posts, NOT advice and NOT a portfolio. He posts forward ideas "
-            "AND past-tense recaps of closed trades, several of them PUTS — "
-            "read the sentence, not the ticker. Nothing here gates a scan, an "
-            "alert or a lane."
-        ),
+        "disclaimer": R.DISCLAIMER,
     }
 
 
-def refresh(coll=None) -> dict:
-    """Fetch → store. What the cron calls, twice a day."""
-    f = fetch()
-    n = store(f, coll=coll)
-    log.info("traders.gnt: stored %s posts (ok=%s sources=%s)", n, f["ok"], f["sources"])
-    return {"stored": n, "ok": f["ok"], "sources": f["sources"],
-            "errors": f["errors"], "fetched_at": f["fetched_at"]}
+def refresh(coll=None, trader: str = "gnt") -> dict:
+    """Fetch → store, for ONE trader. What the cron calls, twice a day."""
+    from traders import registry as R
+    who = R.get(trader) or {}
+    handle = who.get("handle") or HANDLE
+    f = fetch(recent_url=recent_url(handle), top_url=top_url(handle))
+    n = store(f, coll=coll, trader=who.get("key", trader))
+    log.info("traders.feed[%s]: stored %s posts (ok=%s sources=%s)",
+             handle, n, f["ok"], f["sources"])
+    return {"trader": who.get("key", trader), "handle": handle, "stored": n,
+            "ok": f["ok"], "sources": f["sources"], "errors": f["errors"],
+            "fetched_at": f["fetched_at"]}
+
+
+def refresh_all(coll=None) -> dict:
+    """Every tracked account. One failing account must not stop the others."""
+    from traders import registry as R
+    out, ok = {}, True
+    for t in R.TRADERS:
+        try:
+            r = refresh(coll=coll, trader=t["key"])
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("traders.feed: %s failed: %s", t["key"], exc)
+            r = {"trader": t["key"], "ok": False, "stored": 0,
+                 "errors": [f"{type(exc).__name__}: {exc}"[:160]]}
+        out[t["key"]] = r
+        ok = ok and bool(r.get("ok"))
+    return {"ok": ok, "traders": out}
 
 
 if __name__ == "__main__":                                     # pragma: no cover
     import sys
     cmd = sys.argv[1] if len(sys.argv) > 1 else "refresh"
     if cmd == "refresh":
-        r = refresh()
-        print(f"gnt: stored {r['stored']} posts, ok={r['ok']}, sources={r['sources']}")
-        for e in r["errors"]:
-            print(f"  ⚠️  {e}")
-        raise SystemExit(0 if r["ok"] else 1)
+        all_ = refresh_all()
+        for key, r in all_["traders"].items():
+            print(f"{key}: stored {r.get('stored')} posts, ok={r.get('ok')}, "
+                  f"sources={r.get('sources')}")
+            for e in r.get("errors") or []:
+                print(f"  ⚠️  {e}")
+        raise SystemExit(0 if all_["ok"] else 1)
     if cmd == "show":
-        b = board()
+        b = board(trader=(sys.argv[2] if len(sys.argv) > 2 else "gnt"))
         print(f"{b['display']} (@{b['handle']}) — {b['n_posts']} posts, "
               f"{b['n_tickers']} tickers, {b['n_fresh']} fresh")
         for r in b["tickers"][:20]:

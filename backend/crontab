@@ -1041,7 +1041,24 @@
 # touches no in-process cache. It EXITS NON-ZERO when the recent-post source
 # returns nothing, so a shape change at X shows up in the cron log instead of
 # the board quietly going stale.
-40     7,17  *    *    *    /usr/local/bin/python -m traders.gnt refresh
+40     7,17  *    *    *    /usr/local/bin/python -m traders.feed refresh
+#
+# ── Curate what they NAME into the scan universe (Ajay 2026-09-12) ───────────
+# "May be a cron job to check their events daily and add to our list of stocks
+# in case they are not in our existing list".
+#
+# A cashtag is a string someone typed, so nothing is added for being mentioned:
+# a name is added because it RESOLVES — a real company record and real price
+# history. On the first live run three of the eight uncovered names these two
+# accounts mention were CRYPTO (BNB, ETH, XRP); a job that added what it was
+# told would have put them in the universe every scan, zone store, board and
+# paper lane runs on.
+#
+# Runs ONCE daily and 20 minutes after the morning fetch above, so it reads
+# posts that are already stored. Adds land in Mongo (`trader_universe_adds`),
+# not in the Python list — a cron cannot edit a file baked into the image, and
+# the edit would vanish on the next deploy. Capped at 12 adds per run.
+0      8     *    *    *    /usr/local/bin/python -m traders.curate
 #
 # Demand alerts every 15 min in session, market days only. The board is
 # separate and has no cap floor, but the PUSH still passes his 2026-09-05

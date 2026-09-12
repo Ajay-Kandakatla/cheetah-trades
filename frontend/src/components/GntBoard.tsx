@@ -115,7 +115,15 @@ export function zoneText(t: GntTicker): { text: string; tone: string; title: str
            title: 'In a band, but the floor check did not answer — unknown, not pierced.' };
 }
 
-export default function GntBoard() {
+/** Who the tab can show. Mirrors backend/traders/registry.py — the labels are
+ *  local, the numbers and the handles all come from the payload. */
+export const TRADER_TABS: { key: string; label: string }[] = [
+  { key: 'gnt', label: 'Tito Adhikary' },
+  { key: 'martinluk', label: 'Martin Luk' },
+];
+
+export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string } = {}) {
+  const [trader, setTrader] = useState(initial);
   const [d, setD] = useState<GntPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,14 +132,14 @@ export default function GntBoard() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/traders/gnt`, { credentials: 'include' });
+      const r = await fetch(`${API}/traders/${trader}`, { credentials: 'include' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setD(await r.json());
       setErr(null);
     } catch (e) {
       setErr(String((e as Error)?.message ?? e));
     } finally { setLoading(false); }
-  }, []);
+  }, [trader]);
   useEffect(() => { void load(); }, [load]);
 
   if (loading) return <div className="gnt-note">loading his posts…</div>;
@@ -155,6 +163,16 @@ export default function GntBoard() {
             </span>
           )}
         </div>
+        <span className="gnt-switch" role="tablist" aria-label="Tracked traders">
+          {TRADER_TABS.map((t) => (
+            <button key={t.key} type="button" role="tab"
+                    aria-selected={t.key === trader}
+                    className={`gnt-tab${t.key === trader ? ' is-on' : ''}`}
+                    onClick={() => setTrader(t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </span>
         <label className="gnt-chk">
           <input type="checkbox" checked={freshOnly}
                  onChange={(e) => setFreshOnly(e.target.checked)} />

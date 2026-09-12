@@ -12209,3 +12209,14 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .gnt-warn { color: var(--cm-amber, #f59e0b); }
 .gnt-err { color: var(--cm-red, #dc2626); }
 .gnt-dim { color: var(--cm-slate, #8595ad); }
+
+/* Two champions, one board (Ajay 2026-09-12: "Also track their mentions") — a
+   switcher rather than a second tab, so the caveats cannot drift apart. */
+.gnt-switch { display: inline-flex; gap: 0.25rem; }
+.gnt-tab {
+  font: inherit; font-size: 0.78rem; cursor: pointer; padding: 0.15rem 0.5rem;
+  border-radius: 6px; border: 1px solid var(--rule, #2a2f3a);
+  background: none; color: var(--cm-slate, #8595ad);
+}
+.gnt-tab.is-on { color: var(--ink, #e7e7e7); border-color: currentColor; font-weight: 600; }
+.gnt-tab:focus-visible { outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; }

@@ -52,6 +52,9 @@ def fake_lists(monkeypatch):
         "microcap": make("U", 1278),
         "etf": make("E", 373),
         "broad": make("B", 3707),
+        # Curated in from the tracked traders' posts (2026-09-12). Tiny on
+        # purpose: it is a handful of validated names, not an index layer.
+        "traders": make("X", 3),
     }
     monkeypatch.setattr(U, "_COMPONENT_FETCHERS",
                         {k: (lambda v=v: list(v)) for k, v in lists.items()}
@@ -314,9 +317,35 @@ def test_full_is_russell3000_union_sp1500_plus_curated_plus_themes(fake_lists):
 
 
 def test_full_alias_only_names_known_components(fake_lists):
-    assert U._UNIVERSE_ALIASES["full"] == ("russell3000", "sp1500", "curated", "themes")
+    # `traders` joined 2026-09-12 (Ajay: "add to our list of stocks in case they
+    # are not in our existing list") — names the tracked public traders posted
+    # that RESOLVED to a real company with real price history. Mongo-backed,
+    # because the curated list is a Python literal baked into the image.
+    assert U._UNIVERSE_ALIASES["full"] == (
+        "russell3000", "sp1500", "curated", "themes", "traders")
     for part in U._UNIVERSE_ALIASES["full"]:
         assert part in U._KNOWN_COMPONENTS, f"alias names unknown component {part}"
+
+
+def test_NEGATIVE_the_traders_component_fails_EMPTY_never_raising():
+    """It sits inside `full`. A Mongo blip must cost the handful of curated
+    adds, never the 2,661-name universe every scan and board runs on."""
+    import traders.curate as C
+    real = C.added_symbols
+    try:
+        C.added_symbols = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down"))
+        assert U.fetch_trader_adds() == []
+    finally:
+        C.added_symbols = real
+
+
+def test_NEGATIVE_an_EMPTY_traders_list_is_legitimate_not_a_broken_parse():
+    """Day one has nothing curated. The default count band starts at 1, which
+    would log an empty list as a silently-changed parse — so this component
+    gets an explicit band that allows zero."""
+    lo, hi = U._EXPECTED_COUNTS["traders"]
+    assert lo == 0, "zero curated adds is the normal starting state"
+    assert hi <= 500, "an upper bound must still catch a runaway curator"
 
 
 # ---------------------------------------------------------------------------

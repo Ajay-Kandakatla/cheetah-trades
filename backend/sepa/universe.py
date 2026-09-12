@@ -55,6 +55,25 @@ UNIVERSE: list[str] = [
     # thing that makes a ticker scannable: supply_demand/sectors.py sp_tickers
     # is display-only and shares no code path with this file.
     "NTSK",
+    # Crypto EQUITIES, curated 2026-09-12. Ajay: "there are so many Crypto
+    # related stocks are missin gin ours like IREN, Mining stocks like bit coind
+    # related". Said alongside "Ignore Crypo" — and both hold: the TOKENS stay
+    # out (BNB/ETH/XRP are refused outright), the listed companies come in.
+    #
+    # Only the names that were NOT already carried by an index layer are listed
+    # here; IREN, MARA, RIOT, CLSK, CIFR, WULF, HUT, BTDR, CORZ, BTBT, APLD,
+    # COIN, HOOD, GLXY and MSTR already reach `full` on their own.
+    #
+    # EVERY ONE PRICE-VALIDATED against production data before it went in.
+    # GREE (7 bars) and SDIG (acquired by Bitfarms, stopped printing) FAILED
+    # that check and are deliberately absent.
+    "BITF", "HIVE", "CAN", "SLNH", "ARBK", "BKKT", "SMLR", "DFDV", "UPXI",
+    # Crypto ETFs — they CHART AND SCAN BUT NEVER ALERT, the same deal he
+    # accepted for the robotics funds: the provider reports AUM for a fund and
+    # never a market cap, and zone_store keeps only a KNOWN cap over MIN_CAP_USD,
+    # so no ETF can ever get zone bands or fire a demand push.
+    "IBIT", "FBTC", "BITO", "BLOK", "WGMI", "BITQ", "DAPP",
+
     # AXTI added 2026-09-11 — the SAME invisibility, found while building the
     # growth tracker. Ajay named AXTI as the shape he wants ("I want real
     # growing stocks like AXTI and SABR with genuine sales") and it screens at
@@ -552,6 +571,12 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     "microcap": (0, 2500),        # measured 1278
     "etf": (150, 600),            # measured 373
     "themes": (20, 300),          # measured 82, hand-curated
+    # ZERO IS LEGITIMATE here and nowhere else in this table: on day one nothing
+    # has been curated in from the tracked traders, and the default band starts
+    # at 1 — which would fail an empty list and log it as a broken parse. The
+    # upper bound is the real guard: it catches a curator regression that starts
+    # yielding names by the hundred (traders/curate.py caps a single run at 12).
+    "traders": (0, 200),
     "broad": (1800, 6000),        # measured 3707
     "massive": (3000, 7000),      # ~5300 per the fetcher's own docstring
 }
@@ -1552,7 +1577,7 @@ _UNIVERSE_ALIASES: dict[str, tuple[str, ...]] = {
     # consumer of "full" (scan, zone_store, demand boards, quick-bounce study)
     # widens with it. A raw `russell3000` mode would have DROPPED 95 names that
     # only curated / themes / sp1500 carry — hence the layered alias.
-    "full": ("russell3000", "sp1500", "curated", "themes"),
+    "full": ("russell3000", "sp1500", "curated", "themes", "traders"),
 }
 
 
@@ -1576,6 +1601,13 @@ _COMPONENT_FETCHERS: dict = {
     # exists to catch. It caught this one.
     "nasdaq_listed": lambda: fetch_nasdaq_listed(),
     "themes":      lambda: fetch_themes(),
+    # Tickers the tracked public traders named that resolved to a real company
+    # with real price history (traders/curate.py). Mongo-backed BECAUSE the
+    # curated list above is a Python literal baked into the image: a cron
+    # cannot edit it, and the edit would vanish on the next deploy anyway.
+    # Every row carries who said it and which post, so an add is auditable and
+    # flipping its status removes it from the next scan with no code change.
+    "traders":     lambda: fetch_trader_adds(),
     "russell1000": lambda: fetch_russell1000(),
     "russell3000": lambda: fetch_russell3000(),
     "micro":       lambda: fetch_microcap(),
@@ -1588,6 +1620,23 @@ _COMPONENT_FETCHERS: dict = {
 # Late-bound via lambdas above so the _count_guarded wrappers installed at the
 # bottom of this module are the ones actually called.
 _KNOWN_COMPONENTS = frozenset(_COMPONENT_FETCHERS)
+
+
+def fetch_trader_adds() -> list[str]:
+    """Names curated in from the tracked traders' posts. [] on any failure.
+
+    Fails EMPTY, never raising: this component sits inside `full`, and a Mongo
+    blip must cost the handful of curated adds, never the 2,661-name universe
+    every scan and board runs on."""
+    try:
+        from traders.curate import added_symbols
+        out = added_symbols()
+        if out:
+            log.info("universe: %d trader-curated add(s)", len(out))
+        return out
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("universe: trader adds unavailable: %s", exc)
+        return []
 
 
 def _fetch_component(name: str) -> list[str]:

@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from traders import gnt as G
+from traders import feed as G
 
 
 # Real text, copied verbatim from his timeline on 2026-09-12.
@@ -238,3 +238,52 @@ def test_NEGATIVE_the_board_never_fetches_on_a_page_load():
     import inspect
     src = inspect.getsource(G.board)
     assert "fetch(" not in src, "board() must read STORED posts only"
+
+
+# ── the registry (2026-09-12) ───────────────────────────────────────────────
+# Ajay: "Also track their mentions for me.. Martin Luk +969.8% (stocks)".
+def test_both_champions_are_registered_with_CITED_claims():
+    from traders import registry as R
+    assert set(R.keys()) == {"gnt", "martinluk"}
+    for t in R.TRADERS:
+        u = t["usic"]
+        assert u["source"], f"{t['key']}: a championship claim needs its source"
+        assert u["year"] == 2025 and u["rank"] == 1
+        assert t["handle"] and t["display"]
+
+
+def test_the_handles_are_the_ones_he_gave_me():
+    from traders import registry as R
+    assert R.get("gnt")["handle"] == "GnT_Trades"
+    assert R.get("martinluk")["handle"] == "martinlukkt"
+
+
+def test_NEGATIVE_the_969_8_decimal_was_NOT_invented():
+    """He wrote "+969.8%". Martin's own bio and TraderLion both say 969%. The
+    extra decimal is not resolvable from any public source, so the stored
+    figure is the one his bio states rather than the one that looks precise."""
+    from traders import registry as R
+    assert R.get("martinluk")["usic"]["return_pct"] == 969.0
+
+
+def test_the_two_feeds_cannot_merge_into_one_archive():
+    """`stored(trader=...)` filters; a board that showed both would attribute
+    one trader's idea to the other."""
+    import inspect
+    from traders import feed as F
+    assert 'q = {} if trader is None else {"trader": trader}' in inspect.getsource(F.stored)
+    assert '"trader": trader' in inspect.getsource(F.store)
+
+
+def test_one_failing_account_does_not_stop_the_others():
+    import inspect
+    from traders import feed as F
+    src = inspect.getsource(F.refresh_all)
+    assert "except Exception" in src and "continue" not in src.split("except")[0]
+
+
+def test_the_disclaimer_is_shared_so_no_surface_can_soften_it():
+    from traders import registry as R
+    d = R.DISCLAIMER.lower()
+    assert "not advice" in d and "not a portfolio" in d and "puts" in d
+    assert "not a transferable track record" in d

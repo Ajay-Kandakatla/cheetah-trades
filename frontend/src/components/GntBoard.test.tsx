@@ -151,3 +151,46 @@ describe('GntBoard', () => {
     expect(await screen.findByText(/⛔ HTTP 503/)).toBeInTheDocument();
   });
 });
+
+/* ── Two champions, one board (2026-09-12) ─────────────────────────────────
+ * Ajay: "Also track their mentions for me.. Martin Luk +969.8% (stocks)".
+ * A switcher rather than a second tab, so the caveats cannot drift apart. */
+describe('GntBoard — the trader switcher', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function spy(payload: unknown) {
+    const seen: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      seen.push(String(url));
+      return { ok: true, status: 200, json: async () => payload } as unknown as Response;
+    }));
+    return seen;
+  }
+
+  it('opens on GnT and switching refetches the OTHER feed', async () => {
+    const seen = spy(PAYLOAD);
+    mount();
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    expect(seen[0]).toContain('/traders/gnt');
+
+    fireEvent.click(screen.getByRole('tab', { name: /Martin Luk/ }));
+    await waitFor(() => expect(seen.length).toBeGreaterThan(1));
+    expect(seen[seen.length - 1]).toContain('/traders/martinluk');
+  });
+
+  it('marks exactly one trader selected at a time', async () => {
+    stub(PAYLOAD);
+    mount();
+    await waitFor(() => expect(screen.getByText(/nice look/)).toBeInTheDocument());
+    const on = screen.getAllByRole('tab').filter((t) => t.getAttribute('aria-selected') === 'true');
+    expect(on).toHaveLength(1);
+    expect(on[0]).toHaveTextContent('Tito Adhikary');
+  });
+
+  it('NEGATIVE: the shared caveat renders whichever trader is shown', async () => {
+    stub({ ...PAYLOAD, display: 'Martin Luk', handle: 'martinlukkt' });
+    mount();
+    expect(await screen.findByText(/Read the sentence, not the ticker/)).toBeInTheDocument();
+    expect(screen.getByText(/NOT advice and NOT a portfolio/)).toBeInTheDocument();
+  });
+});
