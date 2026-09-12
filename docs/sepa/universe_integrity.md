@@ -146,3 +146,77 @@ nightly `--only-if-stale`) has to warm the ~900 new names or the first fast-scan
 900 fallback analyses; run `python -m sepa.cli research-refresh --symbols <delta>` once
 after the flip. The 16:30 fast-scan grows from ~49 s (1,680 analysed) — measured after
 the flip in the session log.
+
+## 2026-09-12 — curating four blind names, and the SECOND gate
+
+Ajay pointed his own watchlist at the app: *"Can you check if these companies
+are in our scans?"* **Four of twelve came back blind**, in two different ways.
+
+| Ticker | Company | Was | Now |
+|---|---|---|---|
+| UMAC | Unusual Machines | in `broad` only — daily fast-scan, **no zone doc** | curated into `full` |
+| CLYM | Climb Bio | in `broad` only — same | curated into `full` |
+| LWLG | Lightwave Logic | **not in `companies`, no universe, never scanned** | company filed + curated |
+| WYFI | WhiteFiber | **same** | company filed + curated |
+
+`full` 2,652 → **2,656**.
+
+Two more from the same check, reported but not changed:
+
+- **`AST` is a dead ticker** on his watchlist — Asterias Biotherapeutics, gone
+  years ago. The live company he means is **`ASTS`** (AST SpaceMobile), already
+  in `full`.
+- **`RUN`** is fully scanned with 11 demand bands, but absent from the 🔥
+  Hottest grid — see the separate coverage gap below.
+
+### Nothing here was hand-written
+
+Both missing company records were filed by the REAL fetcher
+(`companies.store.get(sym, force=True)`), and every price checked through
+`sepa.prices.load_prices` before the ticker was added: 276–504 bars apiece
+through 2026-09-11. One result is a surprise worth recording — **LWLG files as
+Basic Materials / Specialty Chemicals**, not optical, so it would never have
+appeared under the `optical` theme on a GICS-grouped board regardless.
+
+### The second gate — curating is necessary and NOT sufficient
+
+`supply_demand/zone_store.big_cap_universe()` keeps only names with a **KNOWN**
+market cap ≥ `MIN_CAP_USD` ($700M). LWLG and WYFI were curated into `full` and
+**still had no zone document**, because neither had a `shares_cache` row at all
+— an unknown cap is dropped, not assumed.
+
+Warmed through `volume_movers.shares_for()` (the same path the app uses):
+
+```
+UMAC  $1,182M      CLYM  $760M      LWLG  $806M      WYFI  $744M
+```
+
+All four now clear the floor. **Two of them barely.** CLYM at $760M and WYFI at
+$744M sit 6–9% over a floor computed as shares × price — the circularity
+already documented in `trading/safety_floor.py`. A normal down week drops either
+one back under it and it silently leaves every zone board again.
+
+**WYFI's float is 11.3M of 38.8M shares outstanding — 29%.** At $19.14 that is
+roughly $217M of actually tradeable stock inside a $744M "cap". This is exactly
+the whale-movable shape the safety floors do **not** catch, because nothing in
+the app reads float as a gate.
+
+### Known gap this exposed, not fixed
+
+A newly curated name has **no `shares_cache` row until the weekly warm runs**,
+so it sits in `full` and out of every zone board for up to a week — invisible
+in a way that looks like coverage. These four were warmed by hand. Curation
+should trigger the shares warm; it does not.
+
+### Tests
+
+`backend/tests/test_curated_blind_names.py` — 23 tests pinning the CLASS, not
+the four names: every curated-blind ticker (NTSK, AXTI, UMAC, CLYM, LWLG, WYFI)
+is in `full`, is an AST literal in `UNIVERSE` so an index refresh cannot drop
+it, is not delisted and is not a rename source; `big_cap_universe` drops an
+unknown cap and a NaN cap; the floor matches `safety_floor.MIN_CAP_USD`; and a
+source guard that `zone_store` still builds from `full` — without which every
+`full`-vs-`broad` assertion above would pass vacuously.
+
+All 5 mutations caught, including "unknown cap admitted" and "zone_store
+switched to broad".

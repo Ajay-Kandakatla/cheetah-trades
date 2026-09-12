@@ -65,6 +65,28 @@ UNIVERSE: list[str] = [
     # actually use. Net effect: zero zone_store docs, so AXTI could never fire
     # a demand alert no matter how good the setup. Curating it fixes that.
     "AXTI",
+    # UMAC, CLYM, LWLG, WYFI added 2026-09-12 — Ajay pointed his own watchlist
+    # at the app ("Can you check if these companies are in our scans?") and four
+    # of twelve came back blind. Two failure modes, both already seen:
+    #
+    #   UMAC, CLYM — the AXTI case exactly: in `broad` (3,703) and therefore
+    #       fast-scanned at 16:30, but NOT in `full` (2,652), which is what the
+    #       hourly scan, zone_store, every board and every alert run on. Both
+    #       had ZERO zone_store docs, so neither could ever fire a demand alert
+    #       however good the setup looked.
+    #   LWLG, WYFI — worse: not in `companies` at all, in no universe, never
+    #       scanned. LWLG (Lightwave Logic) is a photonics name and `optical`
+    #       was his #1 theme that week at +9.29%; WYFI (WhiteFiber) is Bit
+    #       Digital's 2025 AI-infrastructure spin-out, and BTBT was already
+    #       carried while its spin-out was not.
+    #
+    # All four verified priceable before being added, via the REAL fetchers and
+    # not by hand: companies.store.get(force=True) filed each one, and
+    # sepa.prices.load_prices returned 276-504 bars apiece through 2026-09-11.
+    # NOTE their GICS tags are the provider's, not a guess, and one is a
+    # surprise: LWLG files as Basic Materials / Specialty Chemicals, so it
+    # would never have shown up under optical on a GICS-grouped board anyway.
+    "UMAC", "CLYM", "LWLG", "WYFI",
     # CFLT + SMAR removed 2026-08-25 — both delisted (see sepa.symbols.DELISTED)
     "SHOP", "TEAM", "WDAY", "HUBS", "TOST",
     # Consumer growth
