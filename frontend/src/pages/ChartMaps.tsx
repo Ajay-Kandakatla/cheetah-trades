@@ -385,12 +385,13 @@ export function ChartMaps() {
     });
   };
   const overlayGroups = useMemo(() => presentGroups(rawTiles), [rawTiles]);
-  // filterTile drops the families he unchecked; filterForGrid then drops the
-  // fib lines specifically, because he chose "expanded chart only, not every
-  // grid tile" — six fib levels on a small tile is noise. The lines stay in
-  // the payload for the expanded chart; this is a display rule, not a data one.
+  // He chose "expanded chart only, not every grid tile" for fib. Applying that
+  // HERE was a mistake: these tiles ARE the chart he reads on this page and
+  // there is no separate expanded surface, so the rule silently meant "never
+  // draw fib" — he reported it as "Non of these are showing up I selected AMD,
+  // Fibonacci". Fib draws on the tiles; the checkbox is how he turns it off.
   const tiles = useMemo(
-    () => rawTiles.map((t) => filterForGrid(filterTile(t, hiddenOverlays), false)),
+    () => rawTiles.map((t) => filterForGrid(filterTile(t, hiddenOverlays), true)),
     [rawTiles, hiddenOverlays]);
   const ictParams = useMemo(() => ictParamRows(data?.params), [data?.params]);
   // The backend flags which values the video actually states (3-candle

@@ -1392,6 +1392,30 @@ const CONTRACTS = [
         errs.push('sector AND industry rows must print their fundamental medians — otherwise a sort on one of those columns reorders the tree with nothing visible behind it');
       }
 
+      // REGRESSION 2026-09-12: the five study overlays shipped with their tones
+      // absent from CmLineTone, so toneColor had no case and every one of them
+      // drew in the SAME grey as the gridlines. He reported it as "Non of these
+      // are showing up". A checkbox whose line is invisible is not a feature.
+      {
+        const cm = read('src/lib/chartMaps.ts');
+        for (const tone of ['amd', 'fib', 'meanrev', 'keltner']) {
+          if (!new RegExp(`tone === '${tone}'`).test(cm)) {
+            errs.push(`toneColor has no case for '${tone}' — that study overlay would draw grid-grey and look like it is not showing up`);
+          }
+          if (!new RegExp(`\\b${tone}\\b`).test(/CmLineTone = [^;]*/.exec(cm)?.[0] || '')) {
+            errs.push(`CmLineTone is missing '${tone}'`);
+          }
+        }
+        const pc = read('src/components/PatternChart.tsx');
+        if (!/amd_accumulation:/.test(pc)) {
+          errs.push('BAND_FILL has no amd_accumulation — the AMD base would paint as a neutral range');
+        }
+        const page2 = read('src/pages/ChartMaps.tsx');
+        if (/filterForGrid\([^)]*,\s*false\)/.test(page2)) {
+          errs.push('ChartMaps passes expanded=false to filterForGrid — that strips fib from the only chart surface the page has');
+        }
+      }
+
       const css = read('src/styles.css');
 
       // Ajay 2026-09-11: "Can you make the table header static for this please?"

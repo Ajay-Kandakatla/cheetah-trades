@@ -226,7 +226,11 @@ export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: 
 // walls, which bracket where dealer hedging is expected to contain the tape.
 // Colouring it green or red would imply a direction it does not have.
 export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral'; lo: number; hi: number; label?: string };
-export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral';
+// The last four are the 2026-09-12 study overlays. They were missing from
+// this union, so `toneColor` and `TONE_PRIORITY` had no case for them and
+// every study line rendered grid-grey with a droppable label.
+export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
+  | 'amd' | 'fib' | 'meanrev' | 'keltner';
 export type CmLine = { price: number; label: string; tone: CmLineTone };
 export type CmTapeSession = 'premarket' | 'rth' | 'afterhours' | 'closed';
 export type CmMarker = { date: string; label?: string; kind?: string; price?: number };
@@ -821,6 +825,12 @@ export function clipBands(bands: CmBand[], d: Domain): CmBand[] {
 // which is right, because the gap it marks is already written in the stats.
 const TONE_PRIORITY: Record<CmLineTone, number> = {
   buy: 3, stop: 3, target: 2, now: 2, neutral: 1,
+  // Priority 1 for the study overlays, deliberately. `layoutLabels` hunts the
+  // whole chart height for anything >= 2 and DROPS a 1 that cannot fit — which
+  // is the behaviour we want here: sixteen study labels must never shove the
+  // BUY / STOP / TARGET plan off the chart. The coloured line still draws;
+  // only its right-edge text yields.
+  amd: 1, fib: 1, meanrev: 1, keltner: 1,
 };
 
 /** Right-edge labels for the plan lines, de-collided. Reuses zonePlan's
@@ -1099,6 +1109,15 @@ export function toneColor(tone: CmLineTone): string {
   if (tone === 'buy') return 'var(--positive, #22c55e)';
   if (tone === 'stop') return 'var(--negative, #ef4444)';
   if (tone === 'target') return 'var(--gold, #c9a227)';
+  // The 2026-09-12 study overlays. They shipped WITHOUT these and every one of
+  // them fell through to the muted grey below — drawn, but the same colour as
+  // the grid, which is why Ajay reported "Non of these are showing up".
+  // Each colour is the one its checkbox shows in the ledger, so the swatch and
+  // the line agree.
+  if (tone === 'amd') return 'var(--cm-violet, #8b5cf6)';
+  if (tone === 'fib') return 'var(--cm-teal, #14b8a6)';
+  if (tone === 'meanrev') return 'var(--cm-slate, #64748b)';
+  if (tone === 'keltner') return 'var(--cm-amberlt, #f59e0b)';
   return 'var(--text-muted, #94a3b8)';
 }
 

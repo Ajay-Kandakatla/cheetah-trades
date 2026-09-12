@@ -42,6 +42,9 @@ const BAND_FILL: Record<string, string> = {
   fvg_demand: 'var(--info, #38bdf8)',
   fvg_supply: 'var(--warn, #e8a33d)',
   order_block: 'var(--accent, #a78bfa)',
+  // The AMD accumulation base (2026-09-12). Without it the band fell to
+  // the muted grey default and read as a 0DTE range.
+  amd_accumulation: 'var(--cm-violet, #8b5cf6)',
 };
 
 const BAND_NAME: Record<string, string> = {

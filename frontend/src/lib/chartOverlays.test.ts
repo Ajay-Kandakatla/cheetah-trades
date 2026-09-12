@@ -1,3 +1,4 @@
+import { toneColor } from './chartMaps';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { OVERLAY_GROUPS, filterTile, loadHidden, presentGroups, saveHidden, STUDY_KEYS, defaultHidden, studiesWanted, filterForGrid } from './chartOverlays';
 
@@ -178,6 +179,28 @@ describe('the 2026-09-12 default (supply/demand + order blocks only)', () => {
     const t = { lines: [{ price: 1, tone: 'fib' }, { price: 2, tone: 'now' }] } as any;
     expect(filterForGrid(t, false).lines.map((l: any) => l.tone)).toEqual(['now']);
     expect(filterForGrid(t, true).lines).toHaveLength(2);
+  });
+
+  /* REGRESSION 2026-09-12. Shipped broken and he caught it: "Non of these are
+     showing up I selected AMD, Fibonacci." Three separate defects, all mine —
+     the tones were missing from CmLineTone so every study line rendered in the
+     SAME GREY as the grid; amd_accumulation was missing from BAND_FILL; and
+     the page passed expanded=false to filterForGrid, so fib was stripped from
+     the only chart surface that page has. */
+  it('every study tone has its OWN colour, never the grid grey', () => {
+    const grey = toneColor('neutral');
+    for (const tone of ['amd', 'fib', 'meanrev', 'keltner'] as const) {
+      expect(toneColor(tone)).not.toEqual(grey);
+    }
+    const seen = new Set(['amd', 'fib', 'meanrev', 'keltner'].map((t) => toneColor(t as any)));
+    expect(seen.size).toBe(4);          // and four DIFFERENT colours
+  });
+
+  it('the ledger swatch matches the line colour for each study family', () => {
+    for (const key of STUDY_KEYS) {
+      const g = OVERLAY_GROUPS.find((x) => x.key === key)!;
+      expect(g.swatch).toEqual(toneColor(key as any));
+    }
   });
 
   it('NEGATIVE: filterForGrid never touches the levels he trades', () => {
