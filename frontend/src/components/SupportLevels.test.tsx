@@ -551,3 +551,70 @@ describe('live frame', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
+
+/* ── The study overlays, asked for (2026-09-12) ────────────────────────────
+ *
+ * Ajay, three times: "Non of these are showing up I selected AMD, Fibonacci" ·
+ * "Nope still dont see them" · "Still not seeing, AMD or keltners indicators.
+ * Whts going on?"
+ *
+ * My first two answers were wrong. His third screenshot settled it: the ledger
+ * on THIS surface showed AMD phases / Fibonacci / Mean reversion / Keltner all
+ * ticked and nothing drew. The ledger renders those four everywhere it is
+ * mounted — they are declared `always: true` — but `/chart-maps/support` had no
+ * `studies` parameter at all, so the payload could never carry an AMD band or a
+ * fib line however the checkbox was set. Verified against the live endpoint on
+ * DBRG: tones {neutral, now, target}, bands {demand, order_block}, nothing else.
+ *
+ * These drive his exact flow — tick the box, and the page must GO AND GET IT.
+ */
+describe('SupportLevels — the study overlays are actually requested', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function spyFetch(payload: unknown) {
+    const seen: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      seen.push(String(url));
+      return { ok: true, status: 200, json: async () => payload } as unknown as Response;
+    }));
+    return seen;
+  }
+
+  it('NEGATIVE: asks for NO studies on the default view — they cost a frame read', async () => {
+    const seen = spyFetch(PAYLOAD);
+    render(<SupportLevels symbol="DBRG" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    expect(seen.some((u) => u.includes('studies=true'))).toBe(false);
+  });
+
+  it('ticking a study REFETCHES with studies=true — the bug he hit three times', async () => {
+    const seen = spyFetch(PAYLOAD);
+    render(<SupportLevels symbol="DBRG" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    const before = seen.length;
+
+    const box = await screen.findByRole('checkbox', { name: /AMD phases/i });
+    fireEvent.click(box);
+
+    await waitFor(() => expect(seen.length).toBeGreaterThan(before));
+    expect(seen[seen.length - 1]).toContain('studies=true');
+    expect(seen[seen.length - 1]).toContain('symbol=DBRG');
+  });
+
+  it('NEGATIVE: refetches only on the CROSSING, not on every study click', async () => {
+    // Turning a SECOND study on while one is already on changes nothing the
+    // server has to send — we already asked for all four. Refetching there
+    // would put a frame read behind every checkbox click.
+    const seen = spyFetch(PAYLOAD);
+    render(<SupportLevels symbol="DBRG" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /AMD phases/i }));
+    await waitFor(() => expect(seen[seen.length - 1]).toContain('studies=true'));
+    const afterFirst = seen.length;
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /Fibonacci/i }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen.length).toBe(afterFirst);
+  });
+});

@@ -24,7 +24,7 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
 import OverlayLegend from './OverlayLegend';
-import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
+import { filterTile, loadHidden, presentGroups, saveHidden, studiesWanted } from '../lib/chartOverlays';
 import {
   bandLabel, distanceLabel,
   CHART_VIEWS, evidenceLabel, headline, money, sourceLabel, viewFor, viewKeyFor,
@@ -96,11 +96,24 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   // The chart ledger — same families, same localStorage key as the boards,
   // so hiding order blocks here hides them everywhere.
   const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
+  // `load` reads the live set through a ref so the 30s poll closure is not
+  // rebuilt on every checkbox click; the toggle below triggers one refetch of
+  // its own when it crosses the studies boundary.
+  const loadRef = useRef<((s?: AbortSignal, q?: boolean) => Promise<void>) | null>(null);
+  const hiddenRef = useRef(hiddenOverlays);
+  hiddenRef.current = hiddenOverlays;
   const toggleOverlay = (key: string) => {
     setHiddenOverlays((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       saveHidden(next);
+      // Crossing the studies boundary changes what the SERVER must send, not
+      // just what we draw — so refetch. Only on the crossing: toggling
+      // supply/demand or an order block filters a payload we already hold.
+      if (studiesWanted(next) !== studiesWanted(prev)) {
+        hiddenRef.current = next;
+        void loadRef.current?.(undefined, true);
+      }
       return next;
     });
   };
@@ -132,7 +145,16 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
     setErr(null);
     try {
       const r = await fetch(
-        `${API}/chart-maps/support?${supportQuery({ symbol: sym, window: win, tf })}`,
+        // Ask for the study overlays when any of them is toggled on. THE BUG
+        // AJAY HIT THREE TIMES (2026-09-12, "Still not seeing, AMD or keltners
+        // indicators"): the overlay ledger below renders AMD / Fibonacci /
+        // mean-reversion / Keltner on every surface that mounts it, because
+        // those groups are declared `always: true` — so the checkboxes appeared
+        // here, he ticked them, and nothing drew, because this endpoint was
+        // never asked for them and until today could not answer anyway.
+        // Requested only when wanted: they cost a second frame read per name.
+        `${API}/chart-maps/support?${supportQuery({ symbol: sym, window: win, tf })}`
+        + (studiesWanted(hiddenRef.current) ? '&studies=true' : ''),
         { credentials: 'include', cache: 'no-store', signal });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const payload = await r.json();
@@ -155,6 +177,7 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
       if (my === seq.current) setLoading(false);
     }
   }, [symbol, win, tf]);
+  loadRef.current = load;
 
   useEffect(() => {
     const ctl = new AbortController();

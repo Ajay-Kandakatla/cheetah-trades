@@ -56,6 +56,19 @@ export type BreakoutBoardRow = {
   decision?: EntryExitDecision | null;
   decision_color?: string | null;
   buy_verdict?: BuyVerdict | null;
+  /** EPS + explosive-growth overlay (Ajay 2026-09-12: "update the breakout page
+   *  with EPS and explosive growth logic we created"). Sales/EPS come from the
+   *  SAME research cache the 🔥 Hottest board reads, so the two boards cannot
+   *  print different numbers for one name. `explosive` is MEMBERSHIP of the
+   *  🚀 Growth board (100% sales AND 100% quarterly EPS, prior quarter also
+   *  growing) — a pointer, never a second copy of that screen. */
+  sales_yoy?: number | null;
+  q_eps_yoy?: number | null;
+  sales_tier?: string | null;
+  explosive?: boolean;
+  /** The 🚀 name is one the trading engine will REFUSE (sub-$2 or a known cap
+   *  under $700M). Good growth must not make an unbuyable row look clean. */
+  explosive_refused?: boolean;
 };
 
 export type BreakoutBoardSummary = {

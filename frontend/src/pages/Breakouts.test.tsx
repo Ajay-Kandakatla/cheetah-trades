@@ -120,7 +120,7 @@ describe('BreakoutsPage', () => {
     expect(screen.queryByText(/🎯 BUYABLE/)).not.toBeInTheDocument();
   });
 
-  it('defaults to CONVICTION — Enter-eligible first, then conviction desc (Ajay 2026-06-22)', () => {
+  it('CONVICTION column: Enter-eligible first, then conviction desc (Ajay 2026-06-22; no longer the default after 2026-09-12)', () => {
     const mk = (sym: string, conv: number, buyable: boolean): BreakoutBoardRow => ({
       symbol: sym, name: `${sym} Inc`, breakout_count: 3, days_since_breakout: 0,
       high_vol_breakout: true, broke_out_today: true, last_close: 100, last_vol: 2_000_000,
@@ -134,6 +134,8 @@ describe('BreakoutsPage', () => {
       mk('BUYHI', 85, true),      // buyable, higher conviction
     ];
     renderPage();
+    // Conviction is one tap away since the default became recency (2026-09-12).
+    fireEvent.click(screen.getByRole('button', { name: /Conv\./ }));
     const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
     // Enter-eligible (is_buyable) first, conviction-ordered within: BUYHI(85) >
     // BUYLO(60); the non-buyable HICONVNB sinks to last DESPITE the highest conviction.
@@ -155,11 +157,76 @@ describe('BreakoutsPage', () => {
     expect(screen.getByRole('button', { name: /Conv\./ })).toBeInTheDocument();
     expect(screen.getByText('88')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
-    // Despite AMAT's HIGHER breakout count (7 vs 5), the clean buyable leader sorts
-    // first under the conviction default — the suppressed climax sinks.
+    fireEvent.click(screen.getByRole('button', { name: /Conv\./ }));
+    // Despite AMAT's HIGHER breakout count (7 vs 5), the clean buyable leader
+    // sorts first under the conviction sort — the suppressed climax sinks.
     const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
     expect(within(rows[0]).getByText('LEAD')).toBeInTheDocument();
     expect(within(rows[1]).getByText('AMAT')).toBeInTheDocument();
+  });
+
+  /* Ajay 2026-09-12: "Sort it by recent breakout instead of # of breakouts."
+   *
+   * The server now ranks by recency too, which is the half that matters: it
+   * used to sort by COUNT and only then cut to the top 250, so on the
+   * 2026-09-12 scan 47 names that broke out THAT DAY — HPQ, HPE, QRVO, SWKS
+   * among them — were discarded before the browser saw anything. */
+  it('defaults to RECENT breakouts first, not the highest count (2026-09-12)', () => {
+    const mk = (sym: string, days: number, count: number): BreakoutBoardRow => ({
+      symbol: sym, name: `${sym} Inc`, breakout_count: count, days_since_breakout: days,
+      high_vol_breakout: true, broke_out_today: days === 0, last_close: 100,
+      last_vol: 2_000_000, avg_vol_50: 1_000_000, day_change_pct: 1, rs_rank: 90,
+      stage: 2, is_etf: false, is_buyable: true, setup_ready: true, conviction: 50,
+      setup_type: 'VCP', buy_verdict: verdict(true, true) as any,
+    });
+    mockState.rows = [
+      mk('OLDMANY', 12, 19),   // the most breakouts, none of them recent
+      mk('FRESH', 0, 2),       // broke out TODAY on a low count
+      mk('MID', 4, 9),
+    ];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).getByText('FRESH')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('MID')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('OLDMANY')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a name with NO recorded breakout date sorts LAST, not first', () => {
+    const mk = (sym: string, days: number | null): BreakoutBoardRow => ({
+      symbol: sym, name: `${sym} Inc`, breakout_count: 5, days_since_breakout: days,
+      high_vol_breakout: true, broke_out_today: days === 0, last_close: 100,
+      last_vol: 2_000_000, avg_vol_50: 1_000_000, day_change_pct: 1, rs_rank: 90,
+      stage: 2, is_etf: false, is_buyable: true, setup_ready: true, conviction: 50,
+      setup_type: 'VCP', buy_verdict: verdict(true, true) as any,
+    });
+    // Unknown is not recent. Scoring it as 0 would put a name nobody dated at
+    // the top of a board that now claims to be ordered by recency.
+    mockState.rows = [mk('NODATE', null), mk('TODAY', 0)];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).getByText('TODAY')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('NODATE')).toBeInTheDocument();
+  });
+
+  it('shows the EPS and 🚀 explosive-growth overlay (2026-09-12)', () => {
+    mockState.rows = [
+      { ...row('DELL', 9, true, true), sales_yoy: 83.4, q_eps_yoy: 144.2 },
+      { ...row('IPI', 4, true, true), sales_yoy: 366.8, q_eps_yoy: 120.0,
+        explosive: true, explosive_refused: true },
+    ];
+    renderPage();
+    expect(screen.getByText('+83%')).toBeInTheDocument();
+    expect(screen.getByText('+144%')).toBeInTheDocument();
+    // the 🚀 name that the trading engine still refuses must say so
+    expect(screen.getByTitle(/trading engine REFUSES this one/i)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a name the research cache cannot answer for prints an em-dash, not 0%', () => {
+    mockState.rows = [{ ...row('NOFUND', 3, true, true), sales_yoy: null, q_eps_yoy: null }];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).queryByText('+0%')).not.toBeInTheDocument();
+    expect(within(rows[0]).getAllByText('—').length).toBeGreaterThan(0);
   });
 
   it('hides bare-breakout (non-base) names by default; "Base only" toggle reveals them (Ajay 2026-06-22)', () => {
@@ -185,10 +252,13 @@ describe('BreakoutsPage', () => {
     fireEvent.click(trigger);
     const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
     expect(legend.getByText(/dollar volume traded today/i)).toBeInTheDocument();   // Turnover
-    expect(legend.getByText(/none recent/i)).toBeInTheDocument();                  // Last
+    expect(legend.getByText(/none recorded/i)).toBeInTheDocument();                // Last
     expect(legend.getByText(/buyable-stock/i)).toBeInTheDocument();                // Verdict
     expect(legend.getByText(/the 1.5× volume that confirms a breakout/i)).toBeInTheDocument(); // Vol %
     expect(legend.getByText(/sort low-volatility first/i)).toBeInTheDocument();    // Beta
+    // EPS + explosive growth (2026-09-12)
+    expect(legend.getByText(/revenue and quarterly EPS growth year-over-year/i)).toBeInTheDocument();
+    expect(legend.getByText(/This is the default sort/i)).toBeInTheDocument();      // Last
   });
 
   it('shows the Beta column and sorts low-volatility (low beta) first', () => {

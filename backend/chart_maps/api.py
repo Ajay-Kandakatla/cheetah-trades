@@ -133,6 +133,9 @@ async def chart_maps_support(
     tf: str = Query(support_mod.TF_DEFAULT,
                     description="bar timeframe the structure is read on: "
                                 "daily | 60m | 15m"),
+    studies: bool = Query(False,
+                          description="append the AMD / Fibonacci / "
+                                      "mean-reversion / Keltner study overlays"),
 ):
     """Support + overhead levels for ONE ticker at one zoom.
 
@@ -160,6 +163,27 @@ async def chart_maps_support(
                 board_mod.attach_live_now([tile], res)
             except Exception as exc:                        # pragma: no cover
                 log.debug("chart-maps/support: live now-line failed: %s", exc)
+            # THE BUG AJAY HIT THREE TIMES (2026-09-12): "Still not seeing, AMD
+            # or keltners indicators. Whts going on?"
+            #
+            # The overlay ledger renders the four study groups on EVERY surface
+            # that mounts it, because they are declared `always: true` in
+            # chartOverlays.ts — so on this tab he saw four checkboxes, ticked
+            # them, and nothing drew. It was never a stale tab: this endpoint
+            # had no `studies` parameter at all, so the payload could not carry
+            # an AMD band or a fib line no matter what the checkbox said. Proven
+            # on DBRG: the tile came back with tones {neutral, now, target} and
+            # bands {demand, order_block} and nothing else.
+            #
+            # Same helper the board tabs use, so the two surfaces cannot draw a
+            # different Fibonacci for one name. Soft-fails per tile.
+            if studies is True:
+                try:
+                    board_mod._attach_studies(
+                        {"tiles": [tile]},
+                        int((res.get("bars") or res.get("days") or 0) or 0))
+                except Exception as exc:                    # pragma: no cover
+                    log.debug("chart-maps/support: studies failed: %s", exc)
         return res
 
     return JSONResponse(await asyncio.to_thread(_run))

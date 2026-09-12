@@ -99,6 +99,16 @@ def _verdict_for(r: dict) -> Optional[dict]:
         return None
 
 
+def _fnum(v):
+    """float, or None for anything that is not a finite number. A blank must
+    print as an em-dash and must never win a sort as a zero."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if (f != f or f in (float("inf"), float("-inf"))) else f
+
+
 def board(top: int = 250, min_count: int = 1) -> dict:
     """Rich breakout-ranked board for the dedicated /breakouts page (Ajay
     2026-06-16: "a page to track only breakouts and # of breakouts, highest
@@ -162,8 +172,52 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             "decision_color":  (r.get("entry_exit") or {}).get("decision_color"),
             "buy_verdict":     _verdict_for(r),
         })
-    # Highest breakout count first; RS then symbol break ties deterministically.
-    rows.sort(key=lambda x: (-x["breakout_count"], -(x.get("rs_rank") or 0), x["symbol"]))
+    # AI-ecosystem sector tag + priority rank (Ajay 2026-06-25: breakout lists
+    # lead with AI-sector winners — chips/energy/nuclear/water-cooling/grid/…).
+    # Lazy + fenced: a sector-map failure must never blank the board.
+    #
+    # RUNS BEFORE THE SORT (moved 2026-09-12). The recency sort uses
+    # `ai_sector_rank` as its within-the-day tiebreak; tagging afterwards would
+    # have left every rank reading as the 99 default and silently dropped his
+    # standing AI-first rule while still looking like it applied.
+    try:
+        from supply_demand.sectors import ai_sector_for_ticker
+        for x in rows:
+            ais = ai_sector_for_ticker(x["symbol"])
+            x["ai_sector"] = ais["label"] if ais else None
+            x["ai_sector_id"] = ais["id"] if ais else None
+            x["ai_sector_etf"] = ais["etf"] if ais else None
+            x["ai_sector_rank"] = ais["rank"] if ais else None
+    except Exception as exc:                            # noqa: BLE001
+        log.debug("board: ai-sector tag failed: %s", exc)
+
+    # ── RECENCY first (Ajay 2026-09-12) ────────────────────────────────────
+    # "Sort it by recent breakout instead of # of breakouts."
+    #
+    # THIS HAD TO MOVE TO THE SERVER, and that is the whole point of the change.
+    # The board sorted by COUNT and only then cut to `top`, so the cut itself was
+    # count-biased: on the 2026-09-12 scan, 47 names that broke out THAT DAY were
+    # thrown away before the browser ever saw them — HPQ, HPE, QRVO, SWKS, SFL,
+    # TNK, FEIM, INSP among them — while the names it kept at the head (AXTI 19,
+    # BELFA 18, QUIK 18) had `days_since_breakout = None`, i.e. no recent
+    # breakout at all. Re-sorting those 250 in the browser would have reordered a
+    # list that had already discarded the answer.
+    #
+    # A name with NO recorded last-breakout date sorts LAST, not first: `None` is
+    # unknown, and an unknown must never take the top of a board that now claims
+    # to be ordered by recency.
+    #
+    # AI-sector rank breaks the tie, which keeps Ajay's 2026-06-25 standing rule
+    # intact WITHIN a day rather than in place of recency: "any breakout list
+    # puts AI-ecosystem sector winners on top". Count is demoted to the third
+    # key — still a column, no longer the ranking.
+    def _recency_key(x):
+        d = x.get("days_since_breakout")
+        return (d is None, d if d is not None else 0,
+                x.get("ai_sector_rank") if x.get("ai_sector_rank") is not None else 99,
+                -x["breakout_count"], -(x.get("rs_rank") or 0), x["symbol"])
+    rows.sort(key=_recency_key)
+    n_all = len(rows)
     rows = rows[:top]
 
     # Beta (1y daily vs SPY) for the displayed names only — the volatility
@@ -179,19 +233,54 @@ def board(top: int = 250, min_count: int = 1) -> dict:
     for x in rows:
         x["beta"] = _betas.get(x["symbol"])
 
-    # AI-ecosystem sector tag + priority rank (Ajay 2026-06-25: breakout lists
-    # lead with AI-sector winners — chips/energy/nuclear/water-cooling/grid/…).
-    # Lazy + fenced: a sector-map failure must never blank the board.
+    # ── EPS + explosive-growth overlay (Ajay 2026-09-12) ───────────────────
+    # "update the breakout page with EPS and explosive growth logic we created."
+    #
+    # Both halves REUSE their existing owners rather than re-deriving anything:
+    #   • sales / EPS come from `research.decision_snapshot`, the SAME cache the
+    #     🔥 Hottest board reads, so the two boards cannot print different
+    #     numbers for one name;
+    #   • `explosive` is a POINTER to the 🚀 Growth board's own membership
+    #     (100% sales AND 100% quarterly EPS, with the prior quarter also
+    #     growing), never a second copy of that screen — that is the same rule
+    #     the 🚀 chip follows everywhere else in the app.
+    #
+    # Fenced and display-only: a cache miss costs the columns, never the board,
+    # and a missing number stays None so the page prints an em-dash rather than
+    # a zero and it never wins a sort.
     try:
-        from supply_demand.sectors import ai_sector_for_ticker
-        for x in rows:
-            ais = ai_sector_for_ticker(x["symbol"])
-            x["ai_sector"] = ais["label"] if ais else None
-            x["ai_sector_id"] = ais["id"] if ais else None
-            x["ai_sector_etf"] = ais["etf"] if ais else None
-            x["ai_sector_rank"] = ais["rank"] if ais else None
+        from sepa import research
+        snap = research.decision_snapshot([x["symbol"] for x in rows]) or {}
     except Exception as exc:                            # noqa: BLE001
-        log.debug("board: ai-sector tag failed: %s", exc)
+        log.debug("board: fundamentals snapshot failed: %s", exc)
+        snap = {}
+    try:
+        from growth import tracker as _gt
+        grows = {r["symbol"]: r for r in ((_gt.board() or {}).get("rows") or [])
+                 if r.get("symbol")}
+    except Exception as exc:                            # noqa: BLE001
+        log.debug("board: growth board unavailable: %s", exc)
+        grows = {}
+    for x in rows:
+        # TRAP: `decision_snapshot` returns a FLAT dict per symbol — the
+        # fundamentals are already unwrapped. Reading a "fundamentals" key here
+        # yields {} for every name and a silently 100%-blank column that reads
+        # like "we have no data", exactly the shape of the earnings_calendar
+        # keyed-by-_id trap next door in rotation/hottest.py. Caught by checking
+        # the live fill rate, not by a test passing.
+        f = snap.get(x["symbol"]) or {}
+        sales = f.get("sales") or {}
+        x["sales_yoy"] = _fnum(f.get("rev_growth_q_pct"))
+        x["q_eps_yoy"] = _fnum(f.get("q_eps_growth_pct"))
+        x["sales_tier"] = sales.get("tier") or None
+        x["fundamentals_as_of"] = f.get("cached_at")
+        g = grows.get(x["symbol"])
+        # `explosive` is membership of the 🚀 board, and `explosive_refused`
+        # carries its ⛔ — good sales must never make a name the trading engine
+        # will refuse (sub-$2, or a known cap under $700M) look clean here.
+        x["explosive"] = bool(g)
+        x["explosive_refused"] = bool(g) and any(
+            str(w).startswith("⛔") for w in (g.get("warnings") or []))
 
     def _mp(x):
         return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")
@@ -209,7 +298,13 @@ def board(top: int = 250, min_count: int = 1) -> dict:
         "bonde_fail":      sum(1 for x in rows if _bp(x) is False),
         "both_pass":       sum(1 for x in rows if (x.get("buy_verdict") or {}).get("both_pass")),
     }
-    return {"rows": rows, "scan_ts": scan.get("generated_at"), "n": len(rows), "summary": summary}
+    return {"rows": rows, "scan_ts": scan.get("generated_at"), "n": len(rows),
+            # The cut is now RECENCY-ranked, so what it drops is the oldest
+            # breakouts rather than (as before) 47 of the day's freshest. Said
+            # in the payload anyway: a cap the reader cannot see is how a
+            # truncated list reads as a complete one.
+            "n_all": n_all, "capped": n_all > len(rows), "top": top,
+            "summary": summary}
 
 
 def for_symbol(symbol: str) -> dict:

@@ -35,7 +35,7 @@ const bPass = (r: BreakoutBoardRow) => r.buy_verdict?.bonde?.passed === true;
 const bFail = (r: BreakoutBoardRow) => r.buy_verdict?.bonde?.passed === false;
 
 const FILTERS: { key: FilterKey; label: string; tip: string; match: (r: BreakoutBoardRow) => boolean }[] = [
-  { key: 'all',            label: 'All breakouts',  tip: 'Every name with ≥1 volume-confirmed breakout, ranked by count.', match: () => true },
+  { key: 'all',            label: 'All breakouts',  tip: 'Every name with ≥1 volume-confirmed breakout, most recent first.', match: () => true },
   { key: 'today',          label: '⚡ Broke out today', tip: 'Cleared its pivot on volume TODAY (days since breakout = 0).', match: (r) => r.broke_out_today },
   { key: 'buyable',        label: '🎯 Buyable now', tip: 'Clears the strict Minervini buy-now gate (is_buyable, pp.79-83/198-203): Stage 2 + a setup + not avoid-stage (base ≥5) + not exhausted + a volume-confirmed breakout, in the buy zone. The SAME gate as the SEPA scan\'s 🟢 Enter — not just the Trend-Template qualifier.', match: (r) => r.is_buyable === true },
   { key: 'both_pass',      label: '🟢 Minervini + Bonde', tip: 'Both frameworks agree — Minervini buyable-stock gate AND Bonde sales both pass.', match: (r) => r.buy_verdict?.both_pass === true },
@@ -53,7 +53,7 @@ const PageInfo = (
       <strong> how many times</strong> it's done so over the trailing year.
     </p>
     <ul>
-      <li><strong># breakouts</strong> — count of distinct volume-confirmed breakouts. Highest first.</li>
+      <li><strong># breakouts</strong> — count of distinct volume-confirmed breakouts. A column, no longer the ranking.</li>
       <li><strong>Verdict</strong> — the combined Minervini-buyable + Bonde-sales PASS/PARTIAL/FAIL. Filter the list by which side passes.</li>
       <li><strong>⚡ today</strong> — it cleared its pivot on volume in the latest session.</li>
       <li><strong>Stage</strong> — Weinstein/Minervini stage. <strong>✓ S2</strong> (advancing) is the only buyable stage; S4 (decline) is avoid.</li>
@@ -69,19 +69,22 @@ const ColumnsInfo = (
   <>
     <p>
       What each column means. The table sorts by <strong>any</strong> column — tap
-      a header, tap again to flip. Default sort is <strong>Conviction</strong> (same
-      as the SEPA page) — buyable names first, then by return potential.
+      a header, tap again to flip. Default sort is <strong>Last</strong> — the most recent breakouts first (Ajay
+      2026-09-12: “Sort it by recent breakout instead of # of breakouts”). The
+      server ranks by recency too, so the top-250 cut now keeps the freshest
+      breakouts instead of the highest counts.
     </p>
     <ul>
       <li><strong>#</strong> — rank in the current sort.</li>
       <li><strong>Ticker</strong> — symbol + company. Tap a row to open its detail <em>Breakout</em> tab (where each breakout fired on the chart).</li>
-      <li><strong># breakouts</strong> — how many <em>distinct, volume-confirmed</em> breakouts over the trailing year: a close above the prior 21-day high on &gt;1.5× the 50-day average volume (Minervini p.203). <strong>⚡</strong> = one was today. This is the headline ranking.</li>
-      <li><strong>Last</strong> — how long since its most recent breakout (“today”, “3d ago”). “—” = none recent.</li>
+      <li><strong># breakouts</strong> — how many <em>distinct, volume-confirmed</em> breakouts over the trailing year: a close above the prior 21-day high on &gt;1.5× the 50-day average volume (Minervini p.203). <strong>⚡</strong> = one was today. <strong>No longer the ranking</strong> — a high count can be a name that has not broken out in months.</li>
+      <li><strong>Last</strong> — how long since its most recent breakout (“today”, “3d ago”). “—” = none recorded, and those sort to the BOTTOM in both directions: unknown is not recent. <strong>This is the default sort.</strong> Ties inside a day break on AI-sector rank, so same-day AI-ecosystem breakouts still lead.</li>
+      <li><strong>Sales / Q EPS</strong> — revenue and quarterly EPS growth year-over-year, from the same weekly research cache the 🔥 Hottest board reads, so the two can never disagree. Up to a week behind a fresh print; “—” means the cache has no answer for that name, never zero. <strong>🚀</strong> = the name is on the Explosive Growth board (100%+ sales AND 100%+ quarterly EPS, prior quarter also growing); <strong>🚀⛔</strong> means it qualifies there but the trading engine will refuse to buy it.</li>
       <li><strong>Price</strong> — latest close.</li>
       <li><strong>Δ%</strong> — today’s percent change (green up / red down).</li>
       <li><strong>Vol %</strong> — today’s volume as a % of its 50-day average. <strong>≥150%</strong> (gold) is the 1.5× volume that confirms a breakout (p.203).</li>
       <li><strong>Total Vol</strong> — today’s share volume.</li>
-      <li><strong>Conv.</strong> — the momentum-led conviction rank (volume + dried volume + momentum). <strong>The default sort</strong>, matching the SEPA page: buyable names first, then highest conviction.</li>
+      <li><strong>Conv.</strong> — the momentum-led conviction rank (volume + dried volume + momentum). Buyable names first, then highest conviction. Was the default until 2026-09-12; still one tap away.</li>
       <li><strong>Turnover</strong> — dollar volume traded today (price × volume) — “where the money is.”</li>
       <li><strong>Stage</strong> — Weinstein/Minervini market stage. <strong>✓ S2</strong> (advancing) is the only buyable stage; S4 (decline) = avoid.</li>
       <li><strong>Beta</strong> — 1-year daily volatility vs the market (SPY). <strong>&lt;1</strong> (green) = calmer than the market / lower-volatility; <strong>&gt;1.3</strong> (red) = jumpier. Tap the header to <strong>sort low-volatility first</strong>.</li>
@@ -219,6 +222,8 @@ export function BreakoutsPage() {
     ticker: (r) => r.symbol,
     count: (r) => r.breakout_count,
     last: (r) => r.days_since_breakout,
+    sales: (r) => r.sales_yoy ?? null,
+    eps: (r) => r.q_eps_yoy ?? null,
     price: (r) => r.last_close,
     change: (r) => r.day_change_pct,
     volpct: volPctOf,
@@ -233,7 +238,18 @@ export function BreakoutsPage() {
     // sector rank (chips→energy/nuclear→water-cooling→grid→software→…), then
     // buyable + conviction within. Non-AI names sink below. See lib/breakoutSort.
     sector: aiSectorSortValue,
-  }, 'sector', 'desc');
+    // 🚀 membership first, then the EPS number inside it — a 100/100 grower
+    // breaking out is the row worth reading twice.
+    explosive: (r) => (r.explosive ? 1e9 : 0) + (r.q_eps_yoy ?? 0),
+    // RECENT FIRST is the default now (Ajay 2026-09-12: "Sort it by recent
+    // breakout instead of # of breakouts"). `useSort` sinks nulls in both
+    // directions, so a name with no recorded breakout date stays at the bottom.
+    //
+    // HIS 2026-06-25 STANDING RULE IS NOT DROPPED, it moved INSIDE the day: the
+    // server now orders by recency and breaks ties on AI-sector rank, so
+    // same-day AI-ecosystem breakouts still lead. The 'sector' sort is kept as
+    // a column if he wants it back wholesale.
+  }, 'last', 'asc');
 
   return (
     <div className="sepa-page">
@@ -402,6 +418,8 @@ export function BreakoutsPage() {
               <Th label="Conv." k="conviction" style={colConviction} align="right" sort={sort} />
               <Th label="# breakouts" k="count" style={colCount} sort={sort} />
               <Th label="Last" k="last" style={colLast} preferred="asc" sort={sort} />
+              <Th label="Sales" k="sales" style={colSales} align="right" sort={sort} />
+              <Th label="Q EPS" k="eps" style={colEps} align="right" sort={sort} />
               <Th label="Price" k="price" style={colPrice} align="right" sort={sort} />
               <Th label="Δ%" k="change" style={colChg} align="right" sort={sort} />
               <Th label="Vol %" k="volpct" style={colVolPct} align="right" sort={sort} />
@@ -498,8 +516,29 @@ export function BreakoutsPage() {
                   <span style={{ ...colLast, color: 'var(--cm-slate)', fontSize: '0.74rem' }}>
                     {r.broke_out_today ? 'today' : r.days_since_breakout != null ? `${r.days_since_breakout}d ago` : '—'}
                   </span>
+                  {/* EPS + explosive growth (Ajay 2026-09-12). A blank is an
+                      em-dash, never a zero — the research cache does not cover
+                      every breakout name. */}
+                  <span className="mono" style={{ ...colSales, fontSize: '0.74rem',
+                        color: r.sales_yoy == null ? 'var(--cm-slate)'
+                          : r.sales_yoy >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}>
+                    {r.sales_yoy == null ? '—' : `${r.sales_yoy >= 0 ? '+' : ''}${r.sales_yoy.toFixed(0)}%`}
+                  </span>
+                  <span className="mono" style={{ ...colEps, fontSize: '0.74rem',
+                        color: r.q_eps_yoy == null ? 'var(--cm-slate)'
+                          : r.q_eps_yoy >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}>
+                    {r.q_eps_yoy == null ? '—' : `${r.q_eps_yoy >= 0 ? '+' : ''}${r.q_eps_yoy.toFixed(0)}%`}
+                    {r.explosive && (
+                      <span title={r.explosive_refused
+                        ? '🚀 On the Explosive Growth board (100% sales AND 100% quarterly EPS) — but the trading engine REFUSES this one (under $2, or a known cap under $700M).'
+                        : '🚀 On the Explosive Growth board: 100%+ sales AND 100%+ quarterly EPS year-over-year, with the prior quarter also growing.'}
+                            style={{ marginLeft: 4 }}>
+                        🚀{r.explosive_refused ? '⛔' : ''}
+                      </span>
+                    )}
+                  </span>
                   <span className="mono" style={colPrice}>
-                    {r.last_close != null ? `$${r.last_close.toFixed(2)}` : '—'}
+                    {r.last_close != null ? `${r.last_close.toFixed(2)}` : '—'}
                   </span>
                   <span
                     className="mono"
@@ -619,6 +658,9 @@ const colTicker: CSSProperties = { flex: '1 1 120px', minWidth: 110 };
 const colCount: CSSProperties = { width: 96, textAlign: 'left' };
 const colConviction: CSSProperties = { width: 64, textAlign: 'right' };
 const colLast: CSSProperties = { width: 68 };
+// EPS + explosive growth (Ajay 2026-09-12) — narrow, right-aligned numerics.
+const colSales: CSSProperties = { width: 64 };
+const colEps: CSSProperties = { width: 78 };
 const colPrice: CSSProperties = { width: 76, textAlign: 'right' };
 const colChg: CSSProperties = { width: 70, textAlign: 'right' };
 const colVolPct: CSSProperties = { width: 80, textAlign: 'right' };
