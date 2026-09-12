@@ -66,10 +66,13 @@ def test_NEGATIVE_an_undated_breakout_sorts_LAST_not_first():
 
 
 def test_the_board_sorts_BEFORE_it_cuts_and_reports_the_cut():
+    """The ranking key changed on 2026-09-12 (recency -> income+growth QoQ) and
+    will change again. What must NEVER change is that the sort precedes the cut:
+    a list ordered after being truncated is an ordering of the wrong 250."""
     src = inspect.getsource(B.board)
-    i_sort = src.index("rows.sort(key=_recency_key)")
+    i_sort = src.index("rows.sort(key=")
     i_cut = src.index("rows = rows[:top]")
-    assert i_sort < i_cut, "the cut must follow the recency order, not the count order"
+    assert i_sort < i_cut, "the cut must follow the order, not precede it"
     assert '"capped"' in src and '"n_all"' in src, \
         "a cap the reader cannot see is how a truncated list reads as a complete one"
 
@@ -80,13 +83,17 @@ def test_the_ai_tag_is_attached_BEFORE_the_sort_that_uses_it():
     the 99 default and silently drops his AI-first rule while still looking
     like it applied."""
     src = inspect.getsource(B.board)
-    assert src.index('x["ai_sector_rank"] = ') < src.index("rows.sort(key=_recency_key)")
+    assert src.index('x["ai_sector_rank"] = ') < src.index("rows.sort(key=")
 
 
 def test_the_overlay_reuses_the_research_cache_not_a_second_screen():
     """Sales/EPS must come from the SAME cache the 🔥 Hottest board reads, and
-    `explosive` must POINT AT the 🚀 board rather than re-implement 100/100."""
-    src = inspect.getsource(B.board)
+    `explosive` must POINT AT the 🚀 board rather than re-implement 100/100.
+
+    The read moved out of `board()` into `_attach_fundamentals` on 2026-09-12
+    (it had to run before the cut, not after it), so the guard follows it —
+    reading only `board()` would have passed on the docstring alone."""
+    src = inspect.getsource(B.board) + inspect.getsource(B._attach_fundamentals)
     assert "decision_snapshot" in src
     assert "from growth import tracker" in src
     for reimpl in ("100.0", ">= 100", "MIN_SALES_GROWTH_PCT"):
@@ -98,7 +105,7 @@ def test_NEGATIVE_the_fundamentals_are_read_FLAT_not_under_a_fundamentals_key():
     a "fundamentals" key yields {} for every name — a silently 100%-blank column
     that reads like "we have no data". It shipped that way for one run and was
     caught by checking the live fill rate, not by a test passing."""
-    src = inspect.getsource(B.board)
+    src = inspect.getsource(B._attach_fundamentals)
     assert 'snap.get(x["symbol"]) or {}' in src
     assert '.get("fundamentals")' not in src
 

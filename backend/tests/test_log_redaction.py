@@ -185,3 +185,69 @@ def test_handlers_get_the_filter_too():
         assert any(isinstance(f, L.RedactFilter) for f in cap.filters)
     finally:
         root.removeHandler(cap)
+
+
+# ---------------------------------------------------------------------------
+# Exception ARGS (2026-09-12) — the 5th credential exposure
+# ---------------------------------------------------------------------------
+# The 2026-08-16 layer redacted `str` args only. `log.warning("failed: %s", exc)`
+# hands the filter an EXCEPTION, not a string, so it sailed straight through —
+# and `requests` puts the full request URL inside its ConnectTimeout text, with
+# the Massive key riding in that URL as `apiKey=`. One network blip during the
+# 2026-09-12 qoq backfill printed the live key in plaintext.
+LEAKY = ("HTTPSConnectionPool(host='api.massive.com', port=443): Max retries "
+         "exceeded with url: /vX/reference/financials?ticker=ESNT&limit=8"
+         "&timeframe=quarterly&apiKey=SUPERSECRETKEYVALUE123 (Caused by "
+         "ConnectTimeoutError(...))")
+
+
+def _emit(logger_name, *args):
+    import io
+    buf = io.StringIO()
+    h = logging.StreamHandler(buf)
+    h.addFilter(L.RedactFilter())
+    lg = logging.getLogger(logger_name)
+    lg.handlers = [h]
+    lg.propagate = False
+    lg.setLevel(logging.INFO)
+    lg.warning(*args)
+    return buf.getvalue()
+
+
+def test_THE_LEAK_an_EXCEPTION_arg_is_redacted_not_just_a_string():
+    out = _emit("t.exc", "fetch failed for %s: %s", "ESNT", RuntimeError(LEAKY))
+    assert "SUPERSECRETKEYVALUE123" not in out
+    assert "<redacted>" in out
+
+
+def test_a_plain_string_arg_is_still_redacted():
+    out = _emit("t.str", "fetch failed: %s", LEAKY)
+    assert "SUPERSECRETKEYVALUE123" not in out
+
+
+def test_NEGATIVE_a_clean_non_string_arg_keeps_its_type_and_its_formatting():
+    """Blanket-stringifying every arg would break `%d` / `%.2f` on every other
+    log line in the app. Only args whose TEXT actually matches are touched."""
+    out = _emit("t.num", "scanned %d names in %.2fs", 2840, 1.5)
+    assert "scanned 2840 names in 1.50s" in out
+
+
+def test_NEGATIVE_the_exception_MESSAGE_survives_minus_the_secret():
+    """A redacted log line still has to be debuggable — the host, the path and
+    the failing ticker must all remain."""
+    out = _emit("t.keep", "fetch failed for %s: %s", "ESNT", RuntimeError(LEAKY))
+    for keep in ("api.massive.com", "ESNT", "ConnectTimeoutError", "reference/financials"):
+        assert keep in out
+
+
+def test_the_module_that_KNOWS_the_key_is_in_the_url_scrubs_it_itself():
+    """Defence in depth: `canslim` builds the keyed URL, so it must not depend
+    on a downstream filter being installed in whatever process is running."""
+    from sepa.canslim import _scrub
+    assert "SUPERSECRETKEYVALUE123" not in _scrub(RuntimeError(LEAKY))
+
+
+def test_the_backfill_CLI_installs_redaction_because_it_has_no_app_startup():
+    import inspect
+    from sepa import qoq
+    assert "install_redaction" in inspect.getsource(qoq._main)

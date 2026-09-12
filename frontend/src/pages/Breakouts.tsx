@@ -69,18 +69,63 @@ const ColumnsInfo = (
   <>
     <p>
       What each column means. The table sorts by <strong>any</strong> column — tap
-      a header, tap again to flip. Default sort is <strong>Last</strong> — the most recent breakouts first (Ajay
-      2026-09-12: “Sort it by recent breakout instead of # of breakouts”). The
-      server ranks by recency too, so the top-250 cut now keeps the freshest
-      breakouts instead of the highest counts.
+      a header, tap again to flip. Default sort is <strong>income + growth,
+      quarter over quarter</strong> (Ajay 2026-09-12: “May show any stage but
+      prioritize income and growth only quarter over quarter”). The server ranks
+      the same way <em>before</em> the top-250 cut, so the 250 you see are the
+      250 best-ranked of ~2,840 candidates — not a re-sort of a list picked on
+      other grounds. The <strong>🕑 Most recent</strong> chip restores this
+      morning’s recency order.
+    </p>
+    <p>
+      <strong>Quarter over quarter means the quarter just ended against the one
+      before it</strong> — not against the same quarter a year ago. The board
+      shows both: the big number is sequential, the small grey <em>y/y</em>
+      beneath it is the year-over-year comparison the page has always carried.
+      They disagree more often than you would expect (measured Spearman 0.58 on
+      revenue, 0.37 on EPS): JFB’s revenue was <em>+418% y/y</em> and
+      <em>−89% sequentially</em>, and sequential caught the collapse. Sequential
+      also answers for names year-over-year cannot, because it needs two
+      quarters where year-over-year needs five. It has one weakness
+      year-over-year does not: <strong>seasonality</strong>. A retailer’s
+      January quarter is smaller than its December quarter every single year,
+      and sequential reads that as a decline. Measured on this board, the median
+      sequential revenue move is <strong>+5.3%</strong> for a fiscal Q1→Q2
+      transition against <strong>−4.0%</strong> for Q4→Q1 — a Q1 reporter is
+      docked about nine points of “growth” for nothing but the calendar.
+    </p>
+    <p>
+      So the <strong>ranking</strong> compares each name’s sequential move to
+      what <em>the same transition did a year earlier</em>, and ranks on the
+      difference. That is still quarter over quarter — measured against the
+      company’s own calendar instead of against zero. <strong>🔁</strong> marks
+      a row making a move it makes every year, and the number you see is still
+      the plain sequential one.
+    </p>
+    <p>
+      <strong>The honest limit, measured.</strong> Rank the board on last
+      quarter’s <em>raw</em> sequential EPS and look at what those names did the
+      next quarter: median <strong>+0.4%</strong>, 50% still positive
+      <em>[25, 70]</em>. The placebo — every other name on the board — was
+      median <strong>+24.0%</strong>, 70% positive <em>[61, 79]</em>. The raw
+      sequential leaderboard did <em>worse</em> than the rest of the board. Part
+      of that is mechanical: a big quarter becomes the next quarter’s
+      denominator. That is exactly why the ranking uses the seasonally
+      referenced number and not the raw one. Nothing here has been measured
+      against forward <em>stock returns</em> at all — this orders what already
+      broke out, it does not predict.
     </p>
     <ul>
       <li><strong>#</strong> — rank in the current sort.</li>
       <li><strong>Ticker</strong> — symbol + company. Tap a row to open its detail <em>Breakout</em> tab (where each breakout fired on the chart).</li>
       <li><strong># breakouts</strong> — how many <em>distinct, volume-confirmed</em> breakouts over the trailing year: a close above the prior 21-day high on &gt;1.5× the 50-day average volume (Minervini p.203). <strong>⚡</strong> = one was today. <strong>No longer the ranking</strong> — a high count can be a name that has not broken out in months.</li>
-      <li><strong>Last</strong> — how long since its most recent breakout (“today”, “3d ago”). “—” = none recorded, and those sort to the BOTTOM in both directions: unknown is not recent. <strong>This is the default sort.</strong> Ties inside a day break on AI-sector rank, so same-day AI-ecosystem breakouts still lead.</li>
-      <li><strong>Sales / Q EPS</strong> — revenue and quarterly EPS growth year-over-year, from the same weekly research cache the 🔥 Hottest board reads, so the two can never disagree. Up to a week behind a fresh print; “—” means the cache has no answer for that name, never zero. <strong>🚀</strong> = the name is on the Explosive Growth board (100%+ sales AND 100%+ quarterly EPS, prior quarter also growing); <strong>🚀⛔</strong> means it qualifies there but the trading engine will refuse to buy it; <strong>✨</strong> = it <em>arrived</em> on that board recently rather than having sat on it for months.</li>
-      <li><strong>Stage gate</strong> — the board keeps <strong>stage 2 only</strong>, plus an <strong>explosive grower at stage 1 or 3</strong> (Ajay 2026-09-12). Stage 4 is never kept: a decline is a decline. A name whose stage the classifier could not read is KEPT — dropping it would hide it for a reason that has nothing to do with the stock. The gate runs on the SERVER before the top-250 cut, so the 250 you see are 250 <em>qualifying</em> names; the <strong>✓ S2 only</strong> chip says how many it removed and turns it off.</li>
+      <li><strong>Last</strong> — how long since its most recent breakout (“today”, “3d ago”). “—” = none recorded, and those sort to the BOTTOM in both directions: unknown is not recent. Ties inside a day break on AI-sector rank, so same-day AI-ecosystem breakouts still lead.</li>
+      <li><strong>Sales Q/Q · EPS Q/Q</strong> — revenue and diluted EPS, <em>this quarter against last quarter</em>, with the year-over-year number in small grey underneath and the full comparison in the tooltip. Both come from the same weekly research cache the 🔥 Hottest board reads, so the two boards can never disagree; up to a week behind a fresh print.
+        <br/><strong>“loss”</strong> is not missing data — it means the company lost money (or broke even) last quarter, so a percentage change would be meaningless: −0.02 → +0.30 would read “+1,600%”. Those rows are never ranked on an invented number. <strong>“≈0”</strong> means last quarter’s figure was a rounding error, which is different from a loss. <strong>“—”</strong> means we do not have two consecutive quarters. <strong>↗</strong> = first profitable quarter after a loss — a real event, but not a growth rate.
+        <br/><strong>🔁</strong> = it made a move of the same size and direction at this exact point in its calendar last year, so most of the number is the calendar rather than growth. The tooltip gives last year’s figure and the genuine improvement in points.
+        <br/><strong>🚀</strong> = on the Explosive Growth board (100%+ sales AND 100%+ quarterly EPS year-over-year, prior quarter also growing); <strong>🚀⛔</strong> = it qualifies there but the trading engine will refuse to buy it; <strong>✨</strong> = it <em>arrived</em> on that board recently.</li>
+      <li><strong>The ranking</strong> — income and growth are blended by <strong>percentile within the whole candidate list</strong>, not by raw percentage, so a single +5,000% EPS print is worth exactly one rank and cannot own the top. Names that <em>actually earned money</em> last quarter rank as a block above names that did not — you cannot prioritise income by ignoring whether there is any. A name with only one of the two legs is ranked on that leg and says so; a name with neither sorts to the bottom, never to the top. The chip shows how many rows could be scored at all.</li>
+      <li><strong>Stage gate</strong> — <strong>off by default</strong> since 2026-09-12 (“May show any stage”), so stages 1, 3 and 4 all appear. Tap <strong>✓ S2 only</strong> to bring back the stage-2-plus-explosive-grower gate; it runs on the SERVER before the top-250 cut, so with it on the 250 you see are 250 <em>qualifying</em> names, and the chip says how many it removed. <strong>Read the Stage column.</strong> Fundamentals lag price by up to a quarter, so a name already in stage 4 can still print a superb quarter and rank high here.</li>
       <li><strong>Price</strong> — latest close.</li>
       <li><strong>Δ%</strong> — today’s percent change (green up / red down).</li>
       <li><strong>Vol %</strong> — today’s volume as a % of its 50-day average. <strong>≥150%</strong> (gold) is the 1.5× volume that confirms a breakout (p.203).</li>
@@ -183,16 +228,34 @@ function Stat({ n, label, tone }: { n: number; label: string; tone?: string }) {
 }
 
 export function BreakoutsPage() {
-  /* Ajay 2026-09-12: "From the breakout remove any S3. Only S2 stocks and if
-     thy have explosive growth its ok to have s1 and s3." The gate runs on the
-     SERVER, before the top-N cut — filtering the already-cut rows would leave
-     ~80 names drawn from a 250-name window while 2,840 candidates existed. */
-  const [stageGate, setStageGate] = useState(true);
-  const { rows, summary, scanTs, loading, error, reload, stageInfo: rawStage } =
-    useBreakoutBoard(250, 1, stageGate);
+  /* Ajay 2026-09-12, second word on the same day: "May show any stage but
+     prioritize income and growth only quarter over quarter."
+
+     So the stage gate is OFF by default — every stage shows — and the RANKING
+     is income + growth measured quarter over quarter. Both run on the SERVER,
+     before the top-N cut: ranking the already-cut 250 would reorder a list that
+     had already thrown the answer away, the same mistake the count-ranked cut
+     made with recency this morning. The gate is still one tap away. */
+  const [stageGate, setStageGate] = useState(false);
+  const [rankMode, setRankMode] = useState<'qoq' | 'recent'>('qoq');
+  const { rows, summary, scanTs, loading, error, reload, stageInfo: rawStage,
+          rankInfo: rawRank } = useBreakoutBoard(250, 1, stageGate, rankMode);
   // Defensive: an older/mocked hook may not carry it, and a missing count must
   // never blank the board.
   const stageInfo = rawStage ?? { on: false, dropped: 0, qualifying: 0, scanned: 0 };
+  // Defensive PER FIELD, not per object. `rawRank ?? {...}` only fires when the
+  // whole thing is undefined, so an older hook — or a payload from a server
+  // that has not been redeployed yet — hands over a PARTIAL object and every
+  // `.toLocaleString()` throws, blanking the entire board. That exact shape
+  // crashed this page once already today on `stageInfo`; a count nobody has is
+  // a zero, never a white screen.
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  const rankInfo = {
+    sort: rawRank?.sort === 'recent' ? ('recent' as const) : ('qoq' as const),
+    scored: n(rawRank?.scored), income: n(rawRank?.income),
+    growth: n(rawRank?.growth), seasonalBasis: n(rawRank?.seasonalBasis),
+    seasonalEcho: n(rawRank?.seasonalEcho), total: n(rawRank?.total),
+  };
   const [filter, setFilter] = useState<FilterKey>('all');
   // Base-only is ON by default (Ajay 2026-06-22): hide bare breakouts that have
   // no detected base; keep VCP / Power Play / pocket pivot. Toggle off to widen.
@@ -234,6 +297,17 @@ export function BreakoutsPage() {
     last: (r) => r.days_since_breakout,
     sales: (r) => r.sales_yoy ?? null,
     eps: (r) => r.q_eps_yoy ?? null,
+    // SEQUENTIAL quarter-over-quarter (Ajay 2026-09-12). `useSort` sinks nulls
+    // in BOTH directions, which is what a refused ratio needs: a name that lost
+    // money last quarter has no percentage, and "no percentage" must never
+    // outrank a measured decline.
+    growthq: (r) => r.growth_qoq ?? null,
+    incomeq: (r) => r.income_qoq ?? null,
+    // The ranking itself: percentile blend of both legs, with names that
+    // actually EARNED money last quarter as a block on top — you cannot
+    // prioritise income by ignoring whether there is any.
+    qoq: (r) => (r.qoq_score == null ? null
+                 : (r.income_qoq != null ? 1e6 : 0) + r.qoq_score),
     price: (r) => r.last_close,
     change: (r) => r.day_change_pct,
     volpct: volPctOf,
@@ -259,7 +333,7 @@ export function BreakoutsPage() {
     // server now orders by recency and breaks ties on AI-sector rank, so
     // same-day AI-ecosystem breakouts still lead. The 'sector' sort is kept as
     // a column if he wants it back wholesale.
-  }, 'last', 'asc');
+  }, 'qoq', 'desc');
 
   return (
     <div className="sepa-page">
@@ -272,9 +346,11 @@ export function BreakoutsPage() {
             <NewBadge id="breakouts-beta" label="Beta column + sort by low volatility" />
           </h1>
           <p className="lede">
-            Every name that's broken out, ranked by <strong>how often</strong> — highest first.
-            Each carries the <strong>Minervini + Bonde</strong> verdict, so you can see which
-            breakouts pass the book and which don't. Filter by either side below.
+            Every name that's broken out, ranked by <strong>income and growth,
+            quarter over quarter</strong> — the quarter just ended against the one
+            before it. Each carries the <strong>Minervini + Bonde</strong> verdict,
+            so you can see which breakouts pass the book and which don't. Every
+            stage shows; the Stage column tells you which.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -341,12 +417,33 @@ export function BreakoutsPage() {
             {f.label}
           </button>
         ))}
+        {/* THE RANKING (Ajay 2026-09-12: "prioritize income and growth only
+            quarter over quarter"). A server round-trip, like the stage chip: the
+            order decides which 250 of 2,840 candidates survive the cut, so it
+            cannot be a client-side re-sort. Says how much of the board could
+            actually be ranked — a board ordered by income where most names have
+            no income has to admit it. */}
+        <button
+          className={`sepa-chip ${rankMode === 'qoq' ? 'is-active' : ''}`}
+          title={rankMode === 'qoq'
+            ? `Ranked by INCOME + GROWTH, quarter over quarter — this quarter against the one before it, both legs blended by PERCENTILE so one +5,000% print cannot own the top. Names that actually earned money last quarter rank as a block above those that did not. ${rankInfo.seasonalBasis.toLocaleString()} of ${rankInfo.total.toLocaleString()} rows are ranked against their OWN prior-year transition rather than against zero, which is what stops a refiner's ordinary strong quarter reading as an earnings explosion; 🔁 marks the ${rankInfo.seasonalEcho.toLocaleString()} rows making a move they make every year. ${rankInfo.income.toLocaleString()} rows have an EPS number, ${rankInfo.growth.toLocaleString()} a revenue number, ${rankInfo.scored.toLocaleString()} could be scored at all. Tap for most-recent-breakout order.`
+            : 'Ranked by most recent breakout. Tap to rank by income + growth, quarter over quarter.'}
+          onClick={() => setRankMode((m) => (m === 'qoq' ? 'recent' : 'qoq'))}
+          style={{
+            cursor: 'pointer', fontSize: '0.74rem',
+            ...(rankMode === 'qoq' ? { borderColor: 'var(--gold, #c9a227)', color: 'var(--gold, #c9a227)', fontWeight: 700 } : {}),
+          }}
+        >
+          {rankMode === 'qoq'
+            ? `📈 Income + growth Q/Q (${rankInfo.scored.toLocaleString()}/${rankInfo.total.toLocaleString()})`
+            : '🕑 Most recent'}
+        </button>
         {/* Stage gate (Ajay 2026-09-12: "From the breakout remove any S3. Only S2
-            stocks and if thy have explosive growth its ok to have s1 and s3").
-            ON by default. Unlike the chips beside it this one is a SERVER
-            round-trip: the gate runs before the top-250 cut, so turning it off
-            re-ranks 2,840 candidates rather than un-hiding 250 already-cut
-            rows. */}
+            stocks and if thy have explosive growth its ok to have s1 and s3"),
+            then OFF the same day ("May show any stage"). Kept one tap away.
+            Unlike the chips beside it this one is a SERVER round-trip: the gate
+            runs before the top-250 cut, so turning it on re-ranks 2,840
+            candidates rather than hiding 250 already-cut rows. */}
         <button
           className={`sepa-chip ${stageGate ? 'is-active' : ''}`}
           title={stageGate
@@ -448,8 +545,8 @@ export function BreakoutsPage() {
               <Th label="Conv." k="conviction" style={colConviction} align="right" sort={sort} />
               <Th label="# breakouts" k="count" style={colCount} sort={sort} />
               <Th label="Last" k="last" style={colLast} preferred="asc" sort={sort} />
-              <Th label="Sales" k="sales" style={colSales} align="right" sort={sort} />
-              <Th label="Q EPS" k="eps" style={colEps} align="right" sort={sort} />
+              <Th label="Sales Q/Q" k="growthq" style={colSales} align="right" sort={sort} />
+              <Th label="EPS Q/Q" k="incomeq" style={colEps} align="right" sort={sort} />
               <Th label="Price" k="price" style={colPrice} align="right" sort={sort} />
               <Th label="Δ%" k="change" style={colChg} align="right" sort={sort} />
               <Th label="Vol %" k="volpct" style={colVolPct} align="right" sort={sort} />
@@ -546,18 +643,35 @@ export function BreakoutsPage() {
                   <span style={{ ...colLast, color: 'var(--cm-slate)', fontSize: '0.74rem' }}>
                     {r.broke_out_today ? 'today' : r.days_since_breakout != null ? `${r.days_since_breakout}d ago` : '—'}
                   </span>
-                  {/* EPS + explosive growth (Ajay 2026-09-12). A blank is an
-                      em-dash, never a zero — the research cache does not cover
-                      every breakout name. */}
+                  {/* Sequential quarter-over-quarter leads, year-over-year sits
+                      under it as the check (Ajay 2026-09-12). Two columns, not
+                      four: the table already carries sixteen, and repurposing
+                      beats appending. A blank is an em-dash, never a zero, and a
+                      REFUSED ratio says which refusal it was — "lost money last
+                      quarter" is a fact, not a gap in our data. */}
                   <span className="mono" style={{ ...colSales, fontSize: '0.74rem',
-                        color: r.sales_yoy == null ? 'var(--cm-slate)'
-                          : r.sales_yoy >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}>
-                    {r.sales_yoy == null ? '—' : `${r.sales_yoy >= 0 ? '+' : ''}${r.sales_yoy.toFixed(0)}%`}
+                        color: qoqColor(r.growth_qoq) }}
+                        title={qoqTitle('Revenue', r.growth_qoq, r.growth_base, r.sales_yoy)}>
+                    {qoqText(r.growth_qoq, r.growth_base)}
+                    {r.seasonal_echo && (
+                      <span title={`It moved the same way at this point in its calendar last year too (${r.growth_qoq_ly != null ? `${r.growth_qoq_ly >= 0 ? '+' : ''}${r.growth_qoq_ly.toFixed(0)}%` : 'same direction'}), so most of this is the calendar, not growth. Genuine improvement over its own seasonal norm: ${r.growth_vs_seasonal != null ? `${r.growth_vs_seasonal >= 0 ? '+' : ''}${r.growth_vs_seasonal.toFixed(0)} points` : 'unknown'}. The ranking already uses that difference — this badge is why the row may sit lower than its big number suggests.`}
+                            style={{ marginLeft: 3, opacity: 0.85 }}>🔁</span>
+                    )}
+                    <span style={{ display: 'block', fontSize: '0.6rem', color: 'var(--cm-slate)' }}>
+                      {r.sales_yoy == null ? 'y/y —' : `y/y ${r.sales_yoy >= 0 ? '+' : ''}${r.sales_yoy.toFixed(0)}%`}
+                    </span>
                   </span>
                   <span className="mono" style={{ ...colEps, fontSize: '0.74rem',
-                        color: r.q_eps_yoy == null ? 'var(--cm-slate)'
-                          : r.q_eps_yoy >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}>
-                    {r.q_eps_yoy == null ? '—' : `${r.q_eps_yoy >= 0 ? '+' : ''}${r.q_eps_yoy.toFixed(0)}%`}
+                        color: qoqColor(r.income_qoq) }}
+                        title={qoqTitle('EPS', r.income_qoq, r.income_base, r.q_eps_yoy, r.income_turn)}>
+                    {qoqText(r.income_qoq, r.income_base)}
+                    {r.income_turn === 'to_profit' && (
+                      <span title="First profitable quarter after a loss. A real event — but not a growth percentage, and it never competes as one."
+                            style={{ marginLeft: 3 }}>↗</span>
+                    )}
+                    <span style={{ display: 'block', fontSize: '0.6rem', color: 'var(--cm-slate)' }}>
+                      {r.q_eps_yoy == null ? 'y/y —' : `y/y ${r.q_eps_yoy >= 0 ? '+' : ''}${r.q_eps_yoy.toFixed(0)}%`}
+                    </span>
                     {r.explosive && r.explosive_new && (
                       <span title="✨ NEWLY found on the Explosive Growth board — it arrived there recently, rather than having sat on it for months."
                             style={{ marginLeft: 4 }}>✨</span>
@@ -693,8 +807,47 @@ const colCount: CSSProperties = { width: 96, textAlign: 'left' };
 const colConviction: CSSProperties = { width: 64, textAlign: 'right' };
 const colLast: CSSProperties = { width: 68 };
 // EPS + explosive growth (Ajay 2026-09-12) — narrow, right-aligned numerics.
-const colSales: CSSProperties = { width: 64 };
-const colEps: CSSProperties = { width: 78 };
+
+/* ── Sequential quarter-over-quarter rendering (Ajay 2026-09-12) ───────────
+ * The board must never print a percentage it does not have, and must never
+ * print "—" for two different reasons. `growth_base`/`income_base` say WHICH:
+ *   non_positive — it lost money (or broke even) last quarter, so (now−then)/then
+ *                  is meaningless; -0.02 → +0.30 would read "+1,600%"
+ *   too_small    — it earned a rounding error; the ratio is noise
+ *   unknown      — we do not have the two quarters
+ * Each gets its own glyph so a reader can tell a fact from a gap. */
+function qoqColor(v?: number | null): string {
+  if (v == null) return 'var(--cm-slate)';
+  return v >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)';
+}
+function qoqText(v?: number | null, base?: string | null): string {
+  if (v != null) return `${v >= 0 ? '+' : ''}${v.toFixed(0)}%`;
+  if (base === 'non_positive') return 'loss';
+  if (base === 'too_small') return '≈0';
+  return '—';
+}
+function qoqTitle(what: string, v?: number | null, base?: string | null,
+                  yoy?: number | null, turn?: string | null): string {
+  const yy = yoy == null ? 'no year-over-year number' :
+    `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}% vs the same quarter a year ago`;
+  let head: string;
+  if (v != null) {
+    head = `${what} ${v >= 0 ? '+' : ''}${v.toFixed(1)}% vs LAST quarter.`;
+  } else if (base === 'non_positive') {
+    head = `${what} was negative or zero last quarter, so a percentage change would be meaningless — a swing from −0.02 to +0.30 reads as "+1,600%". No percentage is shown and this row is not ranked on one.`;
+  } else if (base === 'too_small') {
+    head = `${what} last quarter was too near zero to carry a ratio. Not a loss — a rounding error.`;
+  } else {
+    head = `No two consecutive quarters on file for ${what.toLowerCase()}.`;
+  }
+  const t = turn === 'to_profit' ? ' First profitable quarter after a loss.'
+    : turn === 'narrowing' ? ' Still a loss, but a narrowing one.'
+    : turn === 'to_loss' ? ' Profitable a quarter ago, at a loss now.' : '';
+  return `${head}${t} Year-over-year: ${yy}. The two comparisons disagree often — measured Spearman 0.58 on revenue, 0.37 on EPS.`;
+}
+
+const colSales: CSSProperties = { width: 72 };
+const colEps: CSSProperties = { width: 84 };
 const colPrice: CSSProperties = { width: 76, textAlign: 'right' };
 const colChg: CSSProperties = { width: 70, textAlign: 'right' };
 const colVolPct: CSSProperties = { width: 80, textAlign: 'right' };

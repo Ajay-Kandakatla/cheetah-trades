@@ -128,7 +128,114 @@ def _stage_ok(x: dict) -> bool:
     return st in STAGE_EXCEPTION and bool(x.get("explosive"))
 
 
-def board(top: int = 250, min_count: int = 1, stages: bool = True) -> dict:
+def _attach_fundamentals(rows: list) -> None:
+    """Sales / EPS / sequential-QoQ columns for EVERY candidate, in place.
+
+    Two reads, both fenced and both display-safe:
+
+      • `research.decision_snapshot` — ONE projected Mongo query, the SAME cache
+        the 🔥 Hottest board uses, so the two boards can never print different
+        numbers for one name. It carries the quarterly YEAR-over-year legs the
+        page already showed AND (since 2026-09-12) the raw newest-first
+        quarterly series.
+      • `sepa.qoq` — the SEQUENTIAL read off those series: this quarter against
+        the one before it, which is the comparison Ajay asked for. It is not a
+        second copy of the YoY math; it answers a different question, and the
+        page prints both so neither is a black box.
+
+    A cache miss costs the columns, never the board. A missing number stays
+    None so the page renders an em-dash rather than a zero — a zero would place
+    an unknown above every genuine decliner in the sort.
+    """
+    if not rows:
+        return
+    try:
+        from sepa import research
+        snap = research.decision_snapshot([x["symbol"] for x in rows]) or {}
+    except Exception as exc:                            # noqa: BLE001
+        log.debug("board: fundamentals snapshot failed: %s", exc)
+        snap = {}
+
+    from sepa import qoq as _qoq
+    for x in rows:
+        # TRAP: `decision_snapshot` returns a FLAT dict per symbol — the
+        # fundamentals are already unwrapped. Reading a "fundamentals" key here
+        # yields {} for every name and a silently 100%-blank column that reads
+        # like "we have no data". Caught 2026-09-12 by checking the live fill
+        # rate, not by a test passing.
+        f = snap.get(x["symbol"]) or {}
+        sales = f.get("sales") or {}
+        x["sales_yoy"] = _fnum(f.get("rev_growth_q_pct"))
+        x["q_eps_yoy"] = _fnum(f.get("q_eps_growth_pct"))
+        x["sales_tier"] = sales.get("tier") or None
+        x["fundamentals_as_of"] = f.get("cached_at")
+
+        q = _qoq.compute(f.get("rev_q_series"), f.get("eps_q_series"),
+                         f.get("ni_q_series"))
+        x["growth_qoq"] = q["growth_qoq_pct"]
+        x["income_qoq"] = q["income_qoq_pct"]
+        x["ni_qoq"] = q["ni_qoq_pct"]
+        x["income_base"] = q["income_base"]
+        x["growth_base"] = q["growth_base"]
+        x["income_turn"] = q["income_turn"]
+        x["growth_qoq_ly"] = q["growth_qoq_ly_pct"]
+        x["growth_vs_seasonal"] = q["growth_vs_seasonal_pp"]
+        x["income_vs_seasonal"] = q["income_vs_seasonal_pp"]
+        x["seasonal_echo"] = q["seasonal_echo"]
+        # What the RANK is computed on — the seasonally referenced move where
+        # the prior-year transition is on file, the raw sequential move where it
+        # is not. Held in their own keys so the DISPLAYED numbers stay the plain
+        # sequential ones he asked for: the page must never show one number and
+        # sort by another without saying so.
+        inc, gro, basis = _qoq.rank_values(q)
+        x["rank_income"] = inc
+        x["rank_growth"] = gro
+        x["rank_basis"] = basis
+
+    # Percentiles are computed across the WHOLE candidate list, before the cut,
+    # so a name's score means "where it sits among everything that broke out",
+    # not "where it sits among the 250 that happened to survive".
+    _qoq.score_board(rows, income_key="rank_income", growth_key="rank_growth")
+
+
+def _qoq_key(x: dict):
+    """Order by income + growth, quarter over quarter (Ajay 2026-09-12).
+
+    Read top to bottom, this is the whole ranking:
+
+      1. HAS AN INCOME LEG. You cannot prioritise income by ignoring whether
+         there is any. MEASURED on the live 250-row board: only 90 names had a
+         PROFITABLE prior quarter, so an EPS percentage simply does not exist
+         for most of a breakout board. Rather than invent one, names that earn
+         money rank as a block above names that do not — and both blocks are
+         then ordered by the same blend.
+      2. The blend itself (percentile of income × percentile of growth).
+      3. AI-sector rank, keeping his 2026-06-25 standing rule inside the
+         ranking rather than instead of it.
+      4. Recency, then count, then symbol — the old ordering, demoted to
+         tiebreaks.
+
+    An unknown sorts LAST at every level. `qoq_score` of None is not zero: a
+    zero would rank a name we know nothing about above every measured decliner.
+    """
+    score = x.get("qoq_score")
+    has_income = x.get("rank_income") is not None
+    d = x.get("days_since_breakout")
+    return (score is None,                    # unknown last
+            not has_income,                   # profitable block first
+            -(score if score is not None else 0.0),
+            x.get("ai_sector_rank") if x.get("ai_sector_rank") is not None else 99,
+            d is None, d if d is not None else 0,
+            -x["breakout_count"], x["symbol"])
+
+
+SORT_QOQ = "qoq"
+SORT_RECENT = "recent"
+SORTS = (SORT_QOQ, SORT_RECENT)
+
+
+def board(top: int = 250, min_count: int = 1, stages: bool = False,
+          sort: str = SORT_QOQ) -> dict:
     """Rich breakout-ranked board for the dedicated /breakouts page (Ajay
     2026-06-16: "a page to track only breakouts and # of breakouts, highest
     first ... some passing Minervinis and some not, and Bonde, but mainly around
@@ -251,6 +358,22 @@ def board(top: int = 250, min_count: int = 1, stages: bool = True) -> dict:
     if stages:
         rows = [x for x in rows if _stage_ok(x)]
 
+    # ── Fundamentals overlay — NOW BEFORE THE CUT (Ajay 2026-09-12) ────────
+    # "May show any stage but prioritize income and growth only quarter over
+    # quarter."
+    #
+    # THIS BLOCK USED TO RUN AFTER `rows[:top]`, and it had to move, for the
+    # same reason the recency sort had to move to the server earlier today: a
+    # ranking computed after the cut reorders a list that already threw the
+    # answer away. Sorting 250 recency-picked rows by growth would have been a
+    # growth-ranked view OF A RECENCY-RANKED SAMPLE, not a growth ranking.
+    #
+    # The cost of moving it is ONE projected Mongo query widened from `top` to
+    # every candidate (2,840 on the 2026-09-12 scan) — `decision_snapshot` was
+    # always a single `$in` read, and the three quarterly arrays it now carries
+    # are ≤8 floats each. Beta stays AFTER the cut: that one loads prices.
+    _attach_fundamentals(rows)
+
     # ── RECENCY first (Ajay 2026-09-12) ────────────────────────────────────
     # "Sort it by recent breakout instead of # of breakouts."
     #
@@ -276,7 +399,12 @@ def board(top: int = 250, min_count: int = 1, stages: bool = True) -> dict:
         return (d is None, d if d is not None else 0,
                 x.get("ai_sector_rank") if x.get("ai_sector_rank") is not None else 99,
                 -x["breakout_count"], -(x.get("rs_rank") or 0), x["symbol"])
-    rows.sort(key=_recency_key)
+    # ── The ranking (Ajay 2026-09-12) ─────────────────────────────────────
+    # "prioritize income and growth only quarter over quarter" — so the DEFAULT
+    # order is the income+growth blend, and recency keeps its own key because it
+    # was his ask an hour earlier and is still the right read some mornings.
+    sort_key = sort if sort in SORTS else SORT_QOQ
+    rows.sort(key=_qoq_key if sort_key == SORT_QOQ else _recency_key)
     n_all = len(rows)
     rows = rows[:top]
 
@@ -292,41 +420,6 @@ def board(top: int = 250, min_count: int = 1, stages: bool = True) -> dict:
         _betas = {}
     for x in rows:
         x["beta"] = _betas.get(x["symbol"])
-
-    # ── EPS + explosive-growth overlay (Ajay 2026-09-12) ───────────────────
-    # "update the breakout page with EPS and explosive growth logic we created."
-    #
-    # Both halves REUSE their existing owners rather than re-deriving anything:
-    #   • sales / EPS come from `research.decision_snapshot`, the SAME cache the
-    #     🔥 Hottest board reads, so the two boards cannot print different
-    #     numbers for one name;
-    #   • `explosive` is a POINTER to the 🚀 Growth board's own membership
-    #     (100% sales AND 100% quarterly EPS, with the prior quarter also
-    #     growing), never a second copy of that screen — that is the same rule
-    #     the 🚀 chip follows everywhere else in the app.
-    #
-    # Fenced and display-only: a cache miss costs the columns, never the board,
-    # and a missing number stays None so the page prints an em-dash rather than
-    # a zero and it never wins a sort.
-    try:
-        from sepa import research
-        snap = research.decision_snapshot([x["symbol"] for x in rows]) or {}
-    except Exception as exc:                            # noqa: BLE001
-        log.debug("board: fundamentals snapshot failed: %s", exc)
-        snap = {}
-    for x in rows:
-        # TRAP: `decision_snapshot` returns a FLAT dict per symbol — the
-        # fundamentals are already unwrapped. Reading a "fundamentals" key here
-        # yields {} for every name and a silently 100%-blank column that reads
-        # like "we have no data", exactly the shape of the earnings_calendar
-        # keyed-by-_id trap next door in rotation/hottest.py. Caught by checking
-        # the live fill rate, not by a test passing.
-        f = snap.get(x["symbol"]) or {}
-        sales = f.get("sales") or {}
-        x["sales_yoy"] = _fnum(f.get("rev_growth_q_pct"))
-        x["q_eps_yoy"] = _fnum(f.get("q_eps_growth_pct"))
-        x["sales_tier"] = sales.get("tier") or None
-        x["fundamentals_as_of"] = f.get("cached_at")
 
     def _mp(x):
         return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")
@@ -354,6 +447,18 @@ def board(top: int = 250, min_count: int = 1, stages: bool = True) -> dict:
             # as the whole market breaking out.
             "stage_filter": bool(stages), "n_prestage": n_prestage,
             "n_stage_dropped": n_prestage - n_all,
+            # What the ranking is, and how much of it could actually be
+            # answered. A board ordered by income where two thirds of the names
+            # have no income is a board that must say so.
+            "sort": sort_key,
+            "qoq_scored": sum(1 for x in rows if x.get("qoq_score") is not None),
+            "qoq_income": sum(1 for x in rows if x.get("income_qoq") is not None),
+            "qoq_growth": sum(1 for x in rows if x.get("growth_qoq") is not None),
+            # How many rows are ranked against their own seasonal norm rather
+            # than against zero, and how many are a move the name makes every
+            # year at this point in its calendar.
+            "qoq_seasonal_basis": sum(1 for x in rows if x.get("rank_basis") == "seasonal"),
+            "qoq_seasonal_echo": sum(1 for x in rows if x.get("seasonal_echo")),
             "summary": summary}
 
 

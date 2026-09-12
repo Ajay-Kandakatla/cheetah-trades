@@ -47,6 +47,30 @@ from . import symbols
 log = logging.getLogger("sepa.canslim")
 
 
+def _head8(series):
+    """The first 8 quarters, or None.
+
+    The quarterly fetch widened to 12 on 2026-09-12 so the sequential read has
+    two prior observations of each fiscal transition. Every SCORED consumer
+    keeps seeing exactly what it saw before — `sales.score` and
+    `earnings_quality` are book-cited and thresholded, and moving their input as
+    a side effect of a different feature is how a methodology drifts without
+    anyone deciding to change it.
+    """
+    return series[:8] if series else series
+
+
+def _scrub(exc) -> str:
+    """Exception text with any secret-looking query value removed."""
+    try:
+        from observability.logsetup import redact
+        return redact(str(exc))
+    except Exception:                                       # noqa: BLE001
+        import re as _re
+        return _re.sub(r"((?:api_?[Kk]ey|token|secret)=)[^&\s\)]+",
+                       r"\1<redacted>", str(exc))
+
+
 CANSLIM_SOURCE = os.getenv("CANSLIM_SOURCE", "hybrid").lower()
 
 
@@ -60,6 +84,9 @@ def fundamentals_for(symbol: str) -> dict:
             "q_eps_growth_pct":   float | None,    # Most recent Q vs same Q prior yr
             "y_eps_growth_pct":   float | None,    # Trailing 3yr avg annual EPS growth
             "rev_growth_q_pct":   float | None,    # Revenue Q growth (bonus)
+            "rev_q_series":       list | None,     # newest-first quarterly revenue
+            "eps_q_series":       list | None,     # newest-first quarterly diluted EPS
+            "ni_q_series":        list | None,     # newest-first quarterly net income
             "inst_ownership_pct": float | None,
             "checks": {
                 "c_strong_q_eps":   bool,   # ≥ 25%
@@ -115,13 +142,22 @@ def _from_hybrid(symbol: str) -> dict:
         "inst_ownership_pct": inst,
         # Sales Confidence (Bonde/Stockbee-inspired) — computed from the SAME
         # financials fetch (no extra API call). See sepa/sales.py.
-        "sales": sales.compute(m.get("rev_q_series"), m.get("q_eps_growth_pct")),
+        # Raw newest-first quarterly series, PERSISTED (2026-09-12). They were
+        # already fetched here and then thrown away — `sales.compute` and
+        # `earnings_quality.compute` consumed them and nothing survived into the
+        # research cache, so `sepa/qoq.py` could not answer Ajay's "quarter over
+        # quarter" for a single name (0 of 250 board rows had a series). Keeping
+        # them costs one small array per symbol and no extra API call.
+        "rev_q_series": m.get("rev_q_series"),
+        "eps_q_series": m.get("eps_q_series"),
+        "ni_q_series":  m.get("ni_q_series"),
+        "sales": sales.compute(_head8(m.get("rev_q_series")), m.get("q_eps_growth_pct")),
         # Minervini Ch.8 earnings quality (Code 33 / margins / red flags, book
         # p.140-159) — also from the same fetch. See sepa/earnings_quality.py.
         # Computed + surfaced here; folded into the scanner score separately.
         "earnings_quality": earnings_quality.compute(
-            m.get("eps_q_series"), m.get("rev_q_series"),
-            m.get("ni_q_series"), m.get("inv_q_series"),
+            _head8(m.get("eps_q_series")), _head8(m.get("rev_q_series")),
+            _head8(m.get("ni_q_series")), _head8(m.get("inv_q_series")),
             recv_q_series=recv,
         ),
         "checks":  checks,
@@ -161,11 +197,18 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
     base = "https://api.massive.com/vX/reference/financials"
 
     try:
-        # Quarterly — 8 quarters: 5 for the latest YoY (Q vs Q-4), and enough
-        # back-history for the sales score's acceleration + 4-quarter consistency.
+        # Quarterly — 12 quarters since 2026-09-12 (was 8): 5 for the latest YoY
+        # (Q vs Q-4), enough back-history for the sales score's acceleration +
+        # 4-quarter consistency, and now TWO prior observations of the SAME
+        # fiscal transition so `sepa/qoq.py` can take a name's seasonal norm as
+        # an average rather than trusting a single prior year.
+        #
+        # The SCORED screens still see exactly 8 — see the slice at the call
+        # sites below. Widening their input would silently move `sales.score`
+        # and `earnings_quality`, which are book-cited and thresholded.
         rq = sess.get(base, params={
             "ticker":    symbol.upper(),
-            "limit":     8,
+            "limit":     12,
             "timeframe": "quarterly",
             "apiKey":    api_key,
         }, timeout=8)
@@ -177,7 +220,15 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
             "apiKey":    api_key,
         }, timeout=8)
     except Exception as exc:
-        log.warning("canslim.massive: fetch failed for %s: %s", symbol, exc)
+        # SCRUBBED at the source. `requests` embeds the full request URL in its
+        # timeout/connection errors and the Massive key rides in that URL as
+        # `apiKey=`, so handing `exc` straight to a logger printed the live key
+        # in plaintext (seen 2026-09-12 during the qoq backfill — the 5th
+        # credential exposure). The root log filter also catches this now, but
+        # the module that KNOWS the secret is in the string should never be the
+        # one relying on a downstream filter.
+        log.warning("canslim.massive: fetch failed for %s: %s",
+                    symbol, _scrub(exc))
         return None
 
     if rq.status_code in (401, 403):
@@ -305,10 +356,13 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "y_eps_growth_pct":   y,
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
         "inst_ownership_pct": inst,
-        "sales": sales.compute(m.get("rev_q_series"), q),
+        "rev_q_series": m.get("rev_q_series"),
+        "eps_q_series": m.get("eps_q_series"),
+        "ni_q_series":  m.get("ni_q_series"),
+        "sales": sales.compute(_head8(m.get("rev_q_series")), q),
         "earnings_quality": earnings_quality.compute(
-            m.get("eps_q_series"), m.get("rev_q_series"),
-            m.get("ni_q_series"), m.get("inv_q_series"),
+            _head8(m.get("eps_q_series")), _head8(m.get("rev_q_series")),
+            _head8(m.get("ni_q_series")), _head8(m.get("inv_q_series")),
             recv_q_series=recv,
         ),
         "checks":  checks,
@@ -333,6 +387,16 @@ def _from_yfinance(symbol: str) -> dict:
     y_eps = _y_eps_growth_yf(t)
     rev_q = _rev_q_growth_yf(t)
     inst = _inst_ownership_yf(t)
+    # The quarterly SERIES on this path too (2026-09-12). It used to return
+    # None here, which made 20% of the cache — 746 of 3,738 documents whose
+    # `_source` is "yfinance" — a PERMANENT blind spot for the sequential
+    # quarter-over-quarter read: the Sunday research refresh could never fill
+    # them, and only an out-of-band backfill could reach them at all. yfinance
+    # exposes the same rows the growth numbers above are already computed from,
+    # so this costs nothing extra.
+    rev_s = _q_series_yf(t, "Total Revenue")
+    eps_s = _q_series_yf(t, "Diluted EPS")
+    ni_s = _q_series_yf(t, "Net Income")
 
     checks = {
         "c_strong_q_eps":  (q_eps is not None and q_eps >= 25),
@@ -344,9 +408,17 @@ def _from_yfinance(symbol: str) -> dict:
         "y_eps_growth_pct":   y_eps,
         "rev_growth_q_pct":   rev_q,
         "inst_ownership_pct": inst,
-        # yfinance fallback doesn't expose a clean revenue SERIES here, so the
-        # full sales + earnings-quality scores are unknown on this path
-        # (Massive is the primary). Field present (score None) for contract parity.
+        # Present and None-when-absent for contract parity, never missing: a
+        # consumer that has to tell "this path has no series" from "this key
+        # does not exist" is a consumer that will one day guess wrong.
+        "rev_q_series": rev_s,
+        "eps_q_series": eps_s,
+        "ni_q_series":  ni_s,
+        # sales/earnings-quality stay UNSCORED on this path on purpose. Their
+        # thresholds were measured against Massive's SEC-filing-backed rows;
+        # feeding them a Yahoo scrape would make two sources look like one
+        # number. The raw series above are handed on for the sequential read,
+        # which is a plain ratio of two filings and not a scored screen.
         "sales": sales.compute([], q_eps),
         "earnings_quality": earnings_quality.compute([], [], []),
         "checks":  checks,
@@ -359,6 +431,7 @@ def _empty() -> dict:
     return {
         "q_eps_growth_pct": None, "y_eps_growth_pct": None,
         "rev_growth_q_pct": None, "inst_ownership_pct": None,
+        "rev_q_series": None, "eps_q_series": None, "ni_q_series": None,
         "sales": sales.compute([]),
         "earnings_quality": earnings_quality.compute([], [], []),
         "checks": {"c_strong_q_eps": False, "a_strong_y_eps": False, "i_institutional": False},
@@ -400,6 +473,30 @@ def _y_eps_growth_yf(t) -> Optional[float]:
                 growths.append((cur - prev) / abs(prev) * 100)
         return round(sum(growths) / len(growths), 2) if growths else None
     except Exception:
+        return None
+
+
+def _q_series_yf(t, row: str) -> Optional[list]:
+    """Newest-first quarterly series for one income-statement row.
+
+    Same orientation Massive returns (index 0 = latest filed quarter), so both
+    sources feed `sepa.qoq` identically. A missing row is None, never [] — an
+    empty list would read as "we looked and there are no quarters".
+    """
+    try:
+        df = t.quarterly_income_stmt
+        if df is None or df.empty or row not in df.index:
+            return None
+        vals = []
+        for v in list(df.loc[row])[:8]:
+            try:
+                f = float(v)
+                vals.append(f if f == f else None)       # NaN -> hole, not 0.0
+            except (TypeError, ValueError):
+                vals.append(None)
+        return vals or None
+    except Exception as exc:                             # noqa: BLE001
+        log.debug("yfinance quarterly series (%s) failed: %s", row, exc)
         return None
 
 

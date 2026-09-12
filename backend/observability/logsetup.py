@@ -93,6 +93,30 @@ def redact(text: str) -> str:
     return _SECRET_RE.sub(r"\1<redacted>", text)
 
 
+def _redact_arg(a):
+    """Redact ANY arg whose text carries a secret, not just `str` ones.
+
+    THE HOLE THIS CLOSES (found 2026-09-12, 5th credential exposure): the old
+    filter tested `isinstance(a, str)`, so `log.warning("fetch failed: %s", exc)`
+    sailed straight through — an EXCEPTION is not a string. `requests` puts the
+    full request URL in its ConnectTimeout text, and the Massive key rides in
+    that URL as `apiKey=`, so one network blip printed the live key in
+    plaintext. The 2026-08-16 fix quieted httpx's own INFO logging; it never
+    covered exception OBJECTS we format ourselves.
+
+    Non-string args keep their identity (and their `%d` / `%.2f` formatting)
+    unless their text actually matches, so this cannot break a log line that
+    was not leaking.
+    """
+    if isinstance(a, str):
+        return redact(a)
+    try:
+        t = str(a)
+    except Exception:
+        return a
+    return redact(t) if _SECRET_RE.search(t) else a
+
+
 class RedactFilter(logging.Filter):
     """Scrub secrets from a record before any handler formats it.
 
@@ -110,8 +134,7 @@ class RedactFilter(logging.Filter):
                     record.args = {k: (redact(v) if isinstance(v, str) else v)
                                    for k, v in record.args.items()}
                 elif isinstance(record.args, tuple):
-                    record.args = tuple(redact(a) if isinstance(a, str) else a
-                                        for a in record.args)
+                    record.args = tuple(_redact_arg(a) for a in record.args)
         except Exception:
             pass                      # a logging filter must never raise
         return True

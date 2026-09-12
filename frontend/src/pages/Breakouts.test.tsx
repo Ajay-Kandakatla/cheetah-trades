@@ -16,11 +16,17 @@ let mockState: {
 /* Recorded so a test can prove the stage gate is a SERVER round-trip: it runs
    before the top-250 cut, so it cannot be undone in the browser. */
 const boardCalls = vi.hoisted(() => [] as unknown[][]);
+/* Lets one test hand the page a PARTIAL rankInfo — the shape a not-yet-redeployed
+   server produces, which must degrade to zeros rather than a white screen. */
+let partialRank = false;
 vi.mock('../hooks/useBreakoutBoard', () => ({
   useBreakoutBoard: (...args: unknown[]) => {
     boardCalls.push(args);
     return { ...mockState, scanTs: 1, reload: vi.fn(),
-             stageInfo: { on: true, dropped: 2490, qualifying: 350, scanned: 2840 } };
+             stageInfo: { on: false, dropped: 0, qualifying: 2840, scanned: 2840 },
+             rankInfo: (partialRank ? { sort: 'qoq' } : {
+               sort: 'qoq', scored: 250, income: 250, growth: 247,
+               seasonalBasis: 236, seasonalEcho: 53, total: 250 }) as any };
   },
 }));
 
@@ -178,7 +184,7 @@ describe('BreakoutsPage', () => {
    * used to sort by COUNT and only then cut to the top 250, so on the
    * 2026-09-12 scan 47 names that broke out THAT DAY — HPQ, HPE, QRVO, SWKS
    * among them — were discarded before the browser saw anything. */
-  it('defaults to RECENT breakouts first, not the highest count (2026-09-12)', () => {
+  it('the RECENCY order is still reachable and still beats the highest count (2026-09-12)', () => {
     const mk = (sym: string, days: number, count: number): BreakoutBoardRow => ({
       symbol: sym, name: `${sym} Inc`, breakout_count: count, days_since_breakout: days,
       high_vol_breakout: true, broke_out_today: days === 0, last_close: 100,
@@ -192,6 +198,10 @@ describe('BreakoutsPage', () => {
       mk('MID', 4, 9),
     ];
     renderPage();
+    // The default is now income+growth (Ajay: "prioritize income and growth
+    // only quarter over quarter"), and none of these rows carries a QoQ leg —
+    // so tap the Last header to ask for recency and check it still holds.
+    fireEvent.click(screen.getByTitle('Sort by Last'));
     const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
     expect(within(rows[0]).getByText('FRESH')).toBeInTheDocument();
     expect(within(rows[1]).getByText('MID')).toBeInTheDocument();
@@ -210,6 +220,7 @@ describe('BreakoutsPage', () => {
     // the top of a board that now claims to be ordered by recency.
     mockState.rows = [mk('NODATE', null), mk('TODAY', 0)];
     renderPage();
+    fireEvent.click(screen.getByTitle('Sort by Last'));
     const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
     expect(within(rows[0]).getByText('TODAY')).toBeInTheDocument();
     expect(within(rows[1]).getByText('NODATE')).toBeInTheDocument();
@@ -222,8 +233,9 @@ describe('BreakoutsPage', () => {
         explosive: true, explosive_refused: true },
     ];
     renderPage();
-    expect(screen.getByText('+83%')).toBeInTheDocument();
-    expect(screen.getByText('+144%')).toBeInTheDocument();
+    // Year-over-year moved to the small grey line under the sequential number.
+    expect(screen.getByText('y/y +83%')).toBeInTheDocument();
+    expect(screen.getByText('y/y +144%')).toBeInTheDocument();
     // the 🚀 name that the trading engine still refuses must say so
     expect(screen.getByTitle(/trading engine REFUSES this one/i)).toBeInTheDocument();
   });
@@ -263,9 +275,9 @@ describe('BreakoutsPage', () => {
     expect(legend.getByText(/buyable-stock/i)).toBeInTheDocument();                // Verdict
     expect(legend.getByText(/the 1.5× volume that confirms a breakout/i)).toBeInTheDocument(); // Vol %
     expect(legend.getByText(/sort low-volatility first/i)).toBeInTheDocument();    // Beta
-    // EPS + explosive growth (2026-09-12)
-    expect(legend.getByText(/revenue and quarterly EPS growth year-over-year/i)).toBeInTheDocument();
-    expect(legend.getByText(/This is the default sort/i)).toBeInTheDocument();      // Last
+    // Income + growth, quarter over quarter (2026-09-12)
+    expect(legend.getByText(/this quarter against last quarter/i)).toBeInTheDocument();
+    expect(legend.getByText(/percentile within the whole candidate list/i)).toBeInTheDocument();
   });
 
   it('shows the Beta column and sorts low-volatility (low beta) first', () => {
@@ -542,25 +554,26 @@ describe('BreakoutsPage — table exposes usable horizontal scroll', () => {
  * the toggle, the count, and the ✨ newly-found badge.
  */
 describe('BreakoutsPage — the stage gate', () => {
-  it('is ON by default and says how many it removed', () => {
-    mockState.rows = [row('AAA', 5, true, true)];
-    renderPage();
-    const chip = screen.getByRole('button', { name: /S2 only/ });
-    expect(chip).toBeInTheDocument();
-    expect(chip).toHaveTextContent('2,490');
-    expect(chip.title).toMatch(/Stage 2 only/);
-    expect(chip.title).toMatch(/Stage 4 is never kept/);
-  });
-
-  it('turning it off RE-REQUESTS with stages=false, not a local un-hide', () => {
-    // 2,840 candidates sit behind a 250-row cut and the gate runs before it,
-    // so it cannot be undone in the browser — the chip must refetch.
+  it('is OFF by default now — "May show any stage" (2026-09-12)', () => {
     mockState.rows = [row('AAA', 5, true, true)];
     boardCalls.length = 0;
     renderPage();
-    expect(boardCalls.at(-1)?.[2]).toBe(true);          // gate ON by default
+    expect(boardCalls.at(-1)?.[2]).toBe(false);
+    const chip = screen.getByRole('button', { name: /S2 only/ });
+    expect(chip.title).toMatch(/Showing EVERY stage/i);
+  });
+
+  it('turning it ON RE-REQUESTS with stages=true, not a local hide', () => {
+    // 2,840 candidates sit behind a 250-row cut and the gate runs before it,
+    // so it cannot be applied in the browser — the chip must refetch.
+    mockState.rows = [row('AAA', 5, true, true)];
+    boardCalls.length = 0;
+    renderPage();
+    expect(boardCalls.at(-1)?.[2]).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /S2 only/ }));
-    expect(boardCalls.at(-1)?.[2]).toBe(false);         // and OFF after the tap
+    expect(boardCalls.at(-1)?.[2]).toBe(true);
+    expect(screen.getByRole('button', { name: /S2 only/ }).title)
+      .toMatch(/Stage 4 is never kept/);
   });
 
   it('✨ marks a NEWLY found explosive grower, and nothing else', () => {
@@ -588,9 +601,155 @@ describe('BreakoutsPage — the stage gate', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: /What is Breakout columns\?/i }));
     const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
-    expect(legend.getByText(/explosive grower at stage 1 or 3/i)).toBeInTheDocument();
-    expect(legend.getByText(/a decline is a decline/i)).toBeInTheDocument();
-    // an unreadable stage must be KEPT, not silently dropped
-    expect(legend.getByText(/could not read is KEPT/i)).toBeInTheDocument();
+    expect(legend.getByText(/off by default/i)).toBeInTheDocument();
+    expect(legend.getByText(/stage-2-plus-explosive-grower gate/i)).toBeInTheDocument();
+    // the hazard of showing every stage must be named, not left implicit
+    expect(legend.getByText(/Fundamentals lag price by up to a quarter/i)).toBeInTheDocument();
+  });
+});
+
+/* ── Income + growth, quarter over quarter (2026-09-12) ────────────────────
+ * Ajay, reversing the stage gate he had asked for three hours earlier:
+ * "May show any stage but prioritize income and growth only quarter over
+ * quarter."
+ *
+ * Sequential Q0-vs-Q1, not the quarterly YEAR-over-year the page already
+ * carried. MEASURED on his own board before this shipped: the two orderings
+ * agree only 0.58 (revenue) / 0.37 (EPS); 11 of the top 20 on the RAW
+ * percentage were bought by a base under $0.10 a share; and the raw sequential
+ * leaderboard performed WORSE next quarter than the rest of the board
+ * (median +0.4% / 50% positive vs a placebo of +24.0% / 70%).
+ *
+ * These tests cover the page's half: what it shows, what it refuses to show,
+ * and what it admits it does not know.
+ */
+describe('BreakoutsPage — income + growth, quarter over quarter', () => {
+  const qrow = (sym: string, o: Partial<BreakoutBoardRow>): BreakoutBoardRow =>
+    ({ ...row(sym, 4, true, true), ...o });
+
+  it('ranks by the income+growth blend by default, not by recency', () => {
+    mockState.rows = [
+      qrow('SLOWER', { days_since_breakout: 0, qoq_score: 20, income_qoq: 5, growth_qoq: 4 }),
+      qrow('STRONG', { days_since_breakout: 9, qoq_score: 95, income_qoq: 60, growth_qoq: 40 }),
+    ];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).getByText('STRONG')).toBeInTheDocument();
+  });
+
+  it('a name that EARNED money last quarter ranks above one that did not', () => {
+    // You cannot prioritise income by ignoring whether there is any. A
+    // growth-only row can still carry a higher blend on its single leg.
+    mockState.rows = [
+      qrow('NOEPS', { qoq_score: 99, income_qoq: null, growth_qoq: 80,
+                      income_base: 'non_positive' }),
+      qrow('EARNS', { qoq_score: 55, income_qoq: 30, growth_qoq: 20,
+                      income_base: 'positive' }),
+    ];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).getByText('EARNS')).toBeInTheDocument();
+  });
+
+  it('shows the SEQUENTIAL number big and the year-over-year small beneath it', () => {
+    mockState.rows = [qrow('SEQ', { growth_qoq: 18.4, sales_yoy: 120.0,
+                                    income_qoq: 44.0, q_eps_yoy: 9.1 })];
+    renderPage();
+    expect(screen.getByText('+18%')).toBeInTheDocument();      // sequential
+    expect(screen.getByText('y/y +120%')).toBeInTheDocument(); // the check
+    expect(screen.getByText('+44%')).toBeInTheDocument();
+    expect(screen.getByText('y/y +9%')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a LOSS-making prior quarter prints "loss", never a percentage', () => {
+    /* (now-then)/|then| turns -0.02 -> +0.30 into "+1,600%". Printing that
+       beside a real grower's +12% is the whole failure this guards. */
+    mockState.rows = [qrow('LOSER', { income_qoq: null, income_base: 'non_positive',
+                                      income_turn: 'to_profit' })];
+    renderPage();
+    expect(screen.getByText('loss')).toBeInTheDocument();
+    expect(screen.getByTitle(/would be meaningless/i)).toBeInTheDocument();
+    // the turn is still surfaced — it is a real event, just not a growth rate
+    // (both the cell tooltip and the ↗ glyph carry it; either is enough)
+    expect(screen.getAllByTitle(/First profitable quarter after a loss/i).length)
+      .toBeGreaterThan(0);
+    expect(screen.getByText('↗')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a base too near zero says "≈0" and is NOT called a loss', () => {
+    mockState.rows = [qrow('TINY', { income_qoq: null, income_base: 'too_small' })];
+    renderPage();
+    expect(screen.getByText('≈0')).toBeInTheDocument();
+    expect(screen.queryByText('loss')).not.toBeInTheDocument();
+    expect(screen.getByTitle(/rounding error/i)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: no two quarters on file is an em-dash, never a zero', () => {
+    mockState.rows = [qrow('NODATA', { income_qoq: null, income_base: 'unknown',
+                                       growth_qoq: null, growth_base: 'unknown' })];
+    renderPage();
+    const rows = screen.getAllByRole('row').filter((r) => !r.className.includes('--head'));
+    expect(within(rows[0]).queryByText('+0%')).not.toBeInTheDocument();
+    expect(within(rows[0]).getAllByText('—').length).toBeGreaterThan(0);
+  });
+
+  it('🔁 marks a move the name makes EVERY year at this point', () => {
+    mockState.rows = [
+      qrow('SEASON', { growth_qoq: 66, growth_qoq_ly: 64, growth_vs_seasonal: 2,
+                       seasonal_echo: true }),
+      qrow('REAL', { growth_qoq: 66, growth_qoq_ly: 4, growth_vs_seasonal: 62,
+                     seasonal_echo: false }),
+    ];
+    renderPage();
+    const echoes = screen.getAllByTitle(/same way at this point in its calendar last year/i);
+    expect(echoes).toHaveLength(1);
+  });
+
+  it('the ranking chip says how much of the board could actually be ranked', () => {
+    mockState.rows = [qrow('AAA', { qoq_score: 50, income_qoq: 10, growth_qoq: 10 })];
+    renderPage();
+    const chip = screen.getByRole('button', { name: /Income \+ growth/i });
+    expect(chip).toHaveTextContent('250/250');
+    expect(chip.title).toMatch(/ranked against their OWN prior-year transition/i);
+    expect(chip.title).toMatch(/53/);            // the seasonal-echo count
+  });
+
+  it('switching to most-recent RE-REQUESTS the server, not a local re-sort', () => {
+    // The order decides which 250 of ~2,840 candidates survive the cut, so it
+    // cannot be a browser-side sort of the 250 already returned.
+    mockState.rows = [qrow('AAA', { qoq_score: 50, income_qoq: 10, growth_qoq: 10 })];
+    boardCalls.length = 0;
+    renderPage();
+    expect(boardCalls.at(-1)?.[3]).toBe('qoq');
+    fireEvent.click(screen.getByRole('button', { name: /Income \+ growth/i }));
+    expect(boardCalls.at(-1)?.[3]).toBe('recent');
+  });
+
+  it('NEGATIVE: a partial rankInfo must not blank the board', () => {
+    /* `rawRank ?? {...}` only fires when the WHOLE object is missing, so a
+       server that has not been redeployed hands over some fields and every
+       .toLocaleString() throws. The same shape crashed this page on stageInfo
+       earlier the same day. */
+    const orig = mockState.rows;
+    mockState.rows = [qrow('AAA', { qoq_score: 50 })];
+    partialRank = true;
+    try {
+      renderPage();
+      expect(screen.getByText('AAA')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Income \+ growth/i })).toBeInTheDocument();
+    } finally {
+      partialRank = false;
+      mockState.rows = orig;
+    }
+  });
+
+  it('the legend states the honest limit with its PLACEBO, not just the method', () => {
+    mockState.rows = [qrow('AAA', {})];
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /What is Breakout columns\?/i }));
+    const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
+    expect(legend.getByText(/did .worse. than the rest of the board|worse/i)).toBeInTheDocument();
+    expect(legend.getByText(/placebo/i)).toBeInTheDocument();
+    expect(legend.getByText(/it does not predict/i)).toBeInTheDocument();
   });
 });

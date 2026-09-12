@@ -74,6 +74,48 @@ export type BreakoutBoardRow = {
    *  present at the very first build is not "new", it is just the first thing
    *  we ever saw. */
   explosive_new?: boolean;
+  /** SEQUENTIAL quarter-over-quarter — this quarter against the one BEFORE it
+   *  (Ajay 2026-09-12: "prioritize income and growth only quarter over
+   *  quarter"). A different comparison from `sales_yoy`/`q_eps_yoy`, which are
+   *  the same quarter a YEAR earlier: measured Spearman 0.58 on revenue and
+   *  0.37 on EPS, so the two orderings genuinely disagree. Sequential needs
+   *  only two quarters, so it answers for names YoY cannot. */
+  growth_qoq?: number | null;      // revenue, Q0 vs Q1, %
+  income_qoq?: number | null;      // diluted EPS, Q0 vs Q1, % — positive base only
+  ni_qoq?: number | null;          // net income, Q0 vs Q1, %
+  /** WHY a percentage is missing, which is not the same as "no data":
+   *  'non_positive' = it lost money last quarter, so the ratio is meaningless;
+   *  'too_small' = it earned a rounding error; 'unknown' = we lack the two
+   *  quarters. A refused ratio NEVER sorts as though it were good. */
+  income_base?: 'positive' | 'non_positive' | 'too_small' | 'unknown' | null;
+  growth_base?: 'positive' | 'non_positive' | 'too_small' | 'unknown' | null;
+  /** A loss-maker's first profitable quarter is a real event and he should see
+   *  it — but it is not a growth percentage and never competes as one. */
+  income_turn?: 'to_profit' | 'narrowing' | 'to_loss' | null;
+  /** Percentile blend of the two legs within the WHOLE candidate list (0-100),
+   *  computed before the top-N cut. Percentile, not the raw number, so one
+   *  +5,000% EPS print cannot own rank 1. null = neither leg available. */
+  qoq_score?: number | null;
+  qoq_income_pctile?: number | null;
+  qoq_growth_pctile?: number | null;
+  qoq_legs?: number;
+  /** What the SAME fiscal transition did a year earlier, and how far this year
+   *  beats it (in percentage POINTS). This is the answer to the one real
+   *  objection to a sequential read — a retailer's January quarter is smaller
+   *  than its December quarter EVERY year. MEASURED on this board: median
+   *  sequential revenue is +5.3% for a Q1→Q2 transition against −4.0% for
+   *  Q4→Q1, so a fiscal-Q1 reporter is docked ~9 points for no business
+   *  reason. */
+  growth_qoq_ly?: number | null;
+  growth_vs_seasonal?: number | null;
+  income_vs_seasonal?: number | null;
+  /** It made a move of the same sign and size at this point last year too —
+   *  "this is what it does every year". Flagged, never filtered out. */
+  seasonal_echo?: boolean;
+  /** Which reading the ROW WAS RANKED ON: 'seasonal' = against its own
+   *  prior-year transition, 'raw' = against zero, when no prior year is on
+   *  file. The displayed numbers are always the plain sequential ones. */
+  rank_basis?: 'seasonal' | 'raw' | null;
 };
 
 export type BreakoutBoardSummary = {
@@ -95,6 +137,7 @@ type Board = {
   error: string | null;
   reload: () => void;
   stageInfo: StageInfo;
+  rankInfo: RankInfo;
 };
 
 const EMPTY_SUMMARY: BreakoutBoardSummary = {
@@ -114,7 +157,28 @@ export type StageInfo = {
 };
 const EMPTY_STAGE: StageInfo = { on: false, dropped: 0, qualifying: 0, scanned: 0 };
 
-export function useBreakoutBoard(top = 250, minCount = 1, stages = true): Board {
+/** How much of the income+growth ranking could actually be answered. A board
+ *  ordered by income where most names have no income must say so. */
+export type RankInfo = {
+  sort: 'qoq' | 'recent';
+  /** rows with at least one leg */
+  scored: number;
+  /** rows with an EPS percentage — i.e. that EARNED money last quarter */
+  income: number;
+  /** rows with a revenue percentage */
+  growth: number;
+  /** rows ranked against their own prior-year transition rather than zero */
+  seasonalBasis: number;
+  /** rows making a move they make every year at this point */
+  seasonalEcho: number;
+  /** rows returned */
+  total: number;
+};
+const EMPTY_RANK: RankInfo = { sort: 'qoq', scored: 0, income: 0, growth: 0,
+                               seasonalBasis: 0, seasonalEcho: 0, total: 0 };
+
+export function useBreakoutBoard(top = 250, minCount = 1, stages = false,
+                                 sort: 'qoq' | 'recent' = 'qoq'): Board {
   const [rows, setRows] = useState<BreakoutBoardRow[]>([]);
   const [summary, setSummary] = useState<BreakoutBoardSummary | null>(null);
   const [scanTs, setScanTs] = useState<number | null>(null);
@@ -123,6 +187,7 @@ export function useBreakoutBoard(top = 250, minCount = 1, stages = true): Board 
   /* What the stage gate removed, so a filtered board can never read as the
      whole market breaking out (Ajay 2026-09-12). */
   const [stageInfo, setStageInfo] = useState<StageInfo>(EMPTY_STAGE);
+  const [rankInfo, setRankInfo] = useState<RankInfo>(EMPTY_RANK);
   const [nonce, setNonce] = useState(0);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
@@ -131,7 +196,7 @@ export function useBreakoutBoard(top = 250, minCount = 1, stages = true): Board 
     let alive = true;
     setLoading(true);
     setError(null);
-    fetch(`${API}/sepa/breakout-board?top=${top}&min_count=${minCount}&stages=${stages}`,
+    fetch(`${API}/sepa/breakout-board?top=${top}&min_count=${minCount}&stages=${stages}&sort=${sort}`,
           { credentials: 'include' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((j) => {
@@ -145,6 +210,15 @@ export function useBreakoutBoard(top = 250, minCount = 1, stages = true): Board 
           qualifying: typeof j.n_all === 'number' ? j.n_all : 0,
           scanned: typeof j.n_prestage === 'number' ? j.n_prestage : 0,
         });
+        setRankInfo({
+          sort: j.sort === 'recent' ? 'recent' : 'qoq',
+          scored: typeof j.qoq_scored === 'number' ? j.qoq_scored : 0,
+          income: typeof j.qoq_income === 'number' ? j.qoq_income : 0,
+          growth: typeof j.qoq_growth === 'number' ? j.qoq_growth : 0,
+          seasonalBasis: typeof j.qoq_seasonal_basis === 'number' ? j.qoq_seasonal_basis : 0,
+          seasonalEcho: typeof j.qoq_seasonal_echo === 'number' ? j.qoq_seasonal_echo : 0,
+          total: Array.isArray(j.rows) ? j.rows.length : 0,
+        });
         setLoading(false);
       })
       .catch((e) => {
@@ -153,7 +227,7 @@ export function useBreakoutBoard(top = 250, minCount = 1, stages = true): Board 
         setLoading(false);
       });
     return () => { alive = false; };
-  }, [top, minCount, stages, nonce]);
+  }, [top, minCount, stages, sort, nonce]);
 
-  return { rows, summary, scanTs, loading, error, reload, stageInfo };
+  return { rows, summary, scanTs, loading, error, reload, stageInfo, rankInfo };
 }

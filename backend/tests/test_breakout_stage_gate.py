@@ -67,10 +67,12 @@ def test_NEGATIVE_an_UNREADABLE_stage_is_KEPT_not_dropped():
 def test_THE_GATE_RUNS_BEFORE_THE_CUT():
     """The whole point. Gating after `rows[:top]` would filter 250 rows drawn
     from 2,840 candidates down to ~80; gating first means the 250 returned are
-    250 QUALIFYING names."""
+    250 QUALIFYING names. The sort key itself changed later the same day
+    (recency -> income+growth QoQ), so this pins the ORDER of the steps, not
+    which key is in use."""
     src = inspect.getsource(B.board)
     i_gate = src.index("_stage_ok(x)")
-    i_sort = src.index("rows.sort(key=_recency_key)")
+    i_sort = src.index("rows.sort(key=")
     i_cut = src.index("rows = rows[:top]")
     assert i_gate < i_sort < i_cut
 
@@ -90,9 +92,13 @@ def test_what_the_gate_REMOVED_is_reported():
         assert key in src
 
 
-def test_the_gate_can_be_TURNED_OFF():
+def test_the_gate_is_OFF_by_default_and_can_be_turned_ON():
+    """Reversed the same afternoon: *"May show any stage but prioritize income
+    and growth only quarter over quarter"*. The gate is kept, one tap away —
+    the rule it encodes (S2, plus an explosive grower at S1/S3, never S4) is
+    unchanged and still tested above."""
     sig = inspect.signature(B.board)
-    assert sig.parameters["stages"].default is True, "his ask is the default"
+    assert sig.parameters["stages"].default is False, "any stage may show"
 
 
 def test_the_rule_lives_in_ONE_predicate_not_scattered_inline():

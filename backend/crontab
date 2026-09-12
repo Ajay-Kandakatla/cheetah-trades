@@ -1011,6 +1011,26 @@
 # misses, names +3.6% on average AFTER a "sell". Portfolio sell signals come
 # from portfolio/supply_watch.py only (supply reached, entry-band stop).
 
+# ── QUARTER-OVER-QUARTER SERIES BACKFILL (sepa/qoq.py) — Ajay 2026-09-12 ────
+# "May show any stage but prioritize income and growth only quarter over
+# quarter." The sequential read needs the RAW quarterly series, and those were
+# fetched-then-discarded until today — measured 2026-09-12, 0 of 250 board rows
+# carried one. `canslim` now persists them, but only for names the SUNDAY
+# research refresh actually re-fetches, so without this line the board would
+# rank whatever slice the cache happened to hold and call it the market.
+#
+# Runs at 04:40 ET daily, before the pre-market boards. --limit caps one night's
+# API spend; it is idempotent and only touches names still missing a series, so
+# the cache fills over a few nights and then each run is a near no-op.
+40     4     *    *    *    /usr/local/bin/python -m sepa.qoq backfill --limit 900 >> /var/log/cron.log 2>&1
+
+# Saturday 05:10 ET — WIDEN. The daily line above only touches names with NO
+# series, so a document stored when the fetch was 8 quarters long keeps 8
+# forever and its seasonal norm rests on ONE prior year instead of two. --all
+# re-fetches regardless; 700/week walks the whole cache in about five weeks and
+# then just keeps it current.
+10     5     *    *    6    /usr/local/bin/python -m sepa.qoq backfill --all --limit 700 >> /var/log/cron.log 2>&1
+
 # ── 🚀 EXPLOSIVE GROWTH TRACKER (growth/) — Ajay 2026-09-11 ─────────────────
 # "tell me which new ones are blowing up? in Sales by 100% or more and 100
 # growth Quarter over Quarter ... I wanna know when ever these are in demand,

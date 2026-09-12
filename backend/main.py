@@ -2603,26 +2603,40 @@ async def sepa_breakout_leaders(top: int = Query(30, ge=1, le=100)):
 @app.get("/sepa/breakout-board")
 async def sepa_breakout_board(top: int = Query(250, ge=1, le=500),
                               min_count: int = Query(1, ge=0, le=50),
-                              stages: bool = Query(True,
+                              stages: bool = Query(False,
                                   description="apply the stage gate: S2 only, "
-                                              "plus an explosive grower at S1/S3")):
+                                              "plus an explosive grower at S1/S3. "
+                                              "OFF by default since 2026-09-12 "
+                                              "(\"May show any stage\")"),
+                              sort: str = Query("qoq",
+                                  pattern="^(qoq|recent)$",
+                                  description="qoq = income + growth, quarter "
+                                              "over quarter (default); "
+                                              "recent = most recent breakout")):
     """Dedicated /breakouts page feed (Ajay 2026-06-16): every name that has
     broken out, each carrying the Minervini+Bonde buy_verdict + RS/stage/
     day-change context plus a summary of the pass/fail mix. Display-only —
     feeds no score.
 
-    Ranked by RECENCY since 2026-09-12 ("Sort it by recent breakout instead of
-    # of breakouts"), AI-sector rank breaking ties inside a day.
+    Ranked by INCOME + GROWTH, QUARTER OVER QUARTER since 2026-09-12 ("May show
+    any stage but prioritize income and growth only quarter over quarter").
+    Sequential Q0-vs-Q1 revenue and EPS, blended by percentile so one +5,000%
+    print cannot own rank 1, with names that actually earned money last quarter
+    ranking as a block above names that did not. `sort=recent` restores the
+    recency order from earlier the same day. Both the ranking and the
+    fundamentals it reads are computed BEFORE the top-N cut — ranking after a
+    cut reorders a list that already discarded the answer.
 
-    `stages` (2026-09-12, "From the breakout remove any S3. Only S2 stocks and
-    if thy have explosive growth its ok to have s1 and s3") keeps stage 2 plus
-    an explosive grower at stage 1 or 3. Stage 4 is never excepted. It runs
-    BEFORE the top-N cut, so the rows returned are N QUALIFYING names rather
-    than whatever survives a cut made on other grounds. `stages=false` returns
-    the unfiltered board; `n_stage_dropped` says what the gate removed."""
+    `stages` keeps stage 2 plus an explosive grower at stage 1 or 3, stage 4
+    never excepted. It is OFF by default since he asked for any stage to show;
+    `stages=true` restores it and `n_stage_dropped` says what it removed.
+
+    `qoq_scored` / `qoq_income` / `qoq_growth` report how much of the ranking
+    could actually be answered — a board ordered by income where most names
+    have no income must say so."""
     from sepa import breakout
     return JSONResponse(_scrub_nan(
-        await asyncio.to_thread(breakout.board, top, min_count, stages)))
+        await asyncio.to_thread(breakout.board, top, min_count, stages, sort)))
 
 
 @app.get("/sepa/breakout-breadth")
