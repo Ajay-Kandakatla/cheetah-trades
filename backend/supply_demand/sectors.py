@@ -357,7 +357,29 @@ SECTORS: list[Sector] = [
         "etf": "ROBO",
         "commodity": "",
         "keywords": ["surgical robot", "Da Vinci", "industrial automation", "Amazon robotics", "humanoid"],
-        "sp_tickers": ["ISRG", "AMZN", "TSLA"],
+        # Ajay 2026-09-12: "Do we have a robotic category? Can you find robotics
+        # stocks and ETFs please". It carried THREE names against the 19 in
+        # sepa.universe.THEME_UNIVERSE["robotics"] — two lists for one idea,
+        # silently disagreeing. Kept in step by
+        # tests/test_robotics_coverage.py::test_the_sector_and_the_theme_agree.
+        # AMZN is deliberately extra: it is robotics-relevant here but lives in
+        # no theme roster, and the themes are a strict partition.
+        # TER is EXCLUDED on purpose, though it IS in the robotics theme.
+        # sectors.py allows a ticker in several sectors, but macro_risk builds
+        # a ONE-bucket-per-ticker map from it, so listing TER here moved it out
+        # of `semis_ai` and into `broad` — it would have stopped inheriting
+        # chip-export-control risk. Teradyne is genuinely both (it owns
+        # Universal Robots); its macro wiring is the tie-breaker. Caught by
+        # test_sector_semi_materials::test_the_id_is_the_macro_risk_wiring_key.
+        "sp_tickers": ["ISRG", "AMZN", "TSLA", "SERV", "RR", "SYM",
+                       "ROK", "PATH", "CGNX", "MBLY", "OUST", "EMR", "AME",
+                       "NDSN", "HON", "INDI", "AMBA", "ALNT", "NOVT"],
+        # Ajay 2026-09-12 asked for the ETFs too. They are curated into the
+        # scan universe (sepa/universe.py) so they chart and scan, but they
+        # carry NO market cap from the provider — only AUM — so the zone store
+        # excludes them and they can never fire a demand alert. His call:
+        # "charts and scans only". ROBO stays the sector's benchmark above.
+        "etfs": ["ROBO", "BOTZ", "ARKQ", "ROBT", "KOID"],
         "thesis": "Surgical robotics in scarce-supply regime (multi-month wait at hospitals); humanoid still pre-revenue.",
         "gap_economics": {
             "demand_usd_bn": 80,

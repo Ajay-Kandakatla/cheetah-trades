@@ -305,6 +305,14 @@ def sections() -> dict:
             % (SFL.MIN_SHARE_PRICE, _b(SFL.MIN_CAP_USD), int(SFL.MIN_DOLLAR_VOL / 1e6)),
             "Every entry is journaled by strategy (minervini / demand_zone / breakout / "
             "catalyst / options_zone / zero_dte / manual).",
+            # Ajay 2026-09-12 chose "charts and scans only" for the robotics
+            # ETFs once this limit surfaced. It is invisible from the board —
+            # an ETF just quietly never alerts — so the rules panel says it.
+            "\U0001F4CA ETFs chart and scan but NEVER alert. The provider reports no market "
+            "cap for a fund, only AUM, and the zone store keeps only a KNOWN cap \u2265 %s \u2014 "
+            "so an ETF gets no zone bands and therefore no demand, reversal or supply-break "
+            "push. Affects KOID, BOTZ, ROBO, ARKQ, ROBT and every index anchor."
+            % _b(SFL.MIN_CAP_USD),
         ],
         "stops": [
             "Minervini stop: %s–%s of entry in a normal tape, %s–%s when difficult, never "

@@ -87,6 +87,22 @@ UNIVERSE: list[str] = [
     # surprise: LWLG files as Basic Materials / Specialty Chemicals, so it
     # would never have shown up under optical on a GICS-grouped board anyway.
     "UMAC", "CLYM", "LWLG", "WYFI",
+    # Robotics ETFs, 2026-09-12 — Ajay: "Can you find robotics stocks and ETFs
+    # please", then chose "charts and scans only" once the limit below surfaced.
+    #
+    # THE LIMIT, stated here because it is invisible otherwise: the provider
+    # reports NO market cap for an ETF, only AUM (BOTZ $3.44B, ROBO $2.06B,
+    # ARKQ $1.92B, ROBT $0.79B, KOID $0.33B). `zone_store.big_cap_universe`
+    # keeps only a KNOWN cap >= MIN_CAP_USD, so every one of these is excluded
+    # from the zone store and CAN NEVER FIRE A DEMAND ALERT. They chart, they
+    # scan, they appear on boards; they do not alert.
+    #
+    # Deliberately NOT fixed by falling back to AUM: MIN_CAP_USD is shared with
+    # trading/safety_floor.py, where it is a MANIPULATION-SAFETY floor that
+    # blocks real buys. AUM is not market cap, and conflating them would change
+    # what that number means on the entry path. His call, offered as option 2
+    # and declined.
+    "KOID", "BOTZ", "ROBO", "ARKQ", "ROBT",
     # CFLT + SMAR removed 2026-08-25 — both delisted (see sepa.symbols.DELISTED)
     "SHOP", "TEAM", "WDAY", "HUBS", "TOST",
     # Consumer growth
