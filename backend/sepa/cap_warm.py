@@ -135,12 +135,16 @@ def _floor(floor: Optional[float] = None) -> float:
 
 
 def last_close(symbol: str, loader: Optional[Callable] = None) -> Optional[float]:
-    """Last CLOSED bar's close from our own Mongo price cache. None when the
-    frame is missing or its close is not a usable number.
+    """Last bar's close from our own Mongo price cache. None when the frame is
+    missing or its close is not a usable number.
 
-    Closed bars only — never prices.with_today_bar. A cap is a scale read; an
-    intraday snapshot would make it flicker and would cost a provider call per
-    symbol, which is the thing zone_store is careful never to do."""
+    Never prices.with_today_bar: a cap is a scale read, and that call costs a
+    provider snapshot per symbol, which is the thing zone_store is careful never
+    to do. The cache's last bar IS today's once the session has printed, which
+    is correct here and unlike zone_store's own drop_today — a band drawn from
+    today's low would be tautologically "touched", but a cap is just shares x a
+    price and today's price is the best one. On the Saturday cron the last bar
+    is Friday's anyway."""
     if loader is None:
         from sepa import prices
 

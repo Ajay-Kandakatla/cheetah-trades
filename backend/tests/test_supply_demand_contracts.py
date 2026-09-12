@@ -934,11 +934,13 @@ def test_big_cap_universe_still_fails_closed_on_an_unknown_cap():
     """SOURCE GUARD. The cap_warm work must not have softened the comparison
     into a default, a coalesce, or an 'unknown means pass' branch. An unpriced
     name is not a small name, but it is not a known-big one either."""
-    from pathlib import Path as _P
+    import inspect
 
     from supply_demand import zone_store as ZS
 
-    src = (_P(__file__).resolve().parents[2] / "backend/supply_demand/zone_store.py").read_text()
+    # Read the module's OWN file, not a repo-relative guess: the suite also runs
+    # inside the api container, where the tree is /app and there is no backend/.
+    src = inspect.getsource(ZS)
     assert "caps.get(s) is not None and float(caps[s]) >= floor" in src, \
         "the fail-closed cap comparison changed shape — coverage work must not touch the gate"
     assert ZS.MIN_CAP_USD == 700_000_000.0
@@ -983,9 +985,11 @@ def test_both_cap_writers_fill_a_row_through_the_same_helper():
     both write this row. When they disagree the lazy one wins by recency and
     silently re-blinds a name the warm just fixed — which is exactly how MU
     stayed invisible for a week at a time. One helper, both paths."""
-    from pathlib import Path as _P
+    import inspect
 
-    vm_src = (_P(__file__).resolve().parents[2] / "backend/sepa/volume_movers.py").read_text()
+    from sepa import volume_movers as _vm
+
+    vm_src = inspect.getsource(_vm)
     assert "from sepa.cap_warm import cap_fields" in vm_src, \
         "shares_for stopped deriving the cap — its next fetch will clobber cap_warm's row"
     assert "cap_fields(sym, fetched)" in vm_src
