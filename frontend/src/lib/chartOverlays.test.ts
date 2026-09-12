@@ -110,7 +110,22 @@ describe('presentGroups', () => {
   /* Ajay 2026-09-12. The study families are fetched ONLY while one is on, so a
      purely data-driven legend would never render the switch that turns them on
      — a control unreachable because it is off. */
-  it('the three study families ALWAYS get a checkbox, even with no data', () => {
+  it('Keltner joins the study families and keeps its own tone', () => {
+    const g = OVERLAY_GROUPS.find((x) => x.key === 'keltner')!;
+    expect(g.always).toBe(true);
+    expect(STUDY_KEYS).toContain('keltner');
+    // lines tagged `keltner` must not fall through to another family's box
+    const t = { lines: [{ price: 1, tone: 'keltner', label: 'KC upper 1.00' }] } as any;
+    expect(filterTile(t, new Set(['keltner'])).lines).toHaveLength(0);
+    expect(filterTile(t, new Set(['trade', 'meanrev'])).lines).toHaveLength(1);
+  });
+
+  it('NEGATIVE: the KC mid label does not get eaten by the mean-reversion box', () => {
+    const t = { lines: [{ price: 1, tone: 'keltner', label: 'KC mid 1.00 · squeeze 4b' }] } as any;
+    expect(filterTile(t, new Set(['meanrev'])).lines).toHaveLength(1);
+  });
+
+  it('the study families ALWAYS get a checkbox, even with no data', () => {
     const keys = presentGroups([]).map((g) => g.key);
     expect(keys).toEqual(STUDY_KEYS);
   });

@@ -267,3 +267,97 @@ def test_both_amd_modules_share_one_kind_so_ONE_checkbox_governs_both():
     sess = S.chart_overlay(session_frame())
     assert daily["bands"][0]["kind"] == sess["bands"][0]["kind"] == "amd_accumulation"
     assert {l["tone"] for l in daily["lines"] + sess["lines"]} == {"amd"}
+
+
+# ---------------------------------------------------------------- Keltner
+# Ajay 2026-09-12: "implement the Keltner channel strategy a new tab in chart
+# maps", then "Over lay I think is better to toggle off if I want to".
+from supply_demand import keltner as K          # noqa: E402
+
+
+def kc_frame(n=200, seed=5, scale=1.2):
+    rng = np.random.default_rng(seed)
+    c = list(100 + np.cumsum(rng.normal(0, scale, n)))
+    return frame(c, [x + 1 for x in c], [x - 1 for x in c])
+
+
+def test_the_channel_is_ema_plus_and_minus_an_atr_multiple():
+    df = kc_frame()
+    ch = K.channel(df)
+    assert ch["lower"] < ch["mid"] < ch["upper"]
+    # the bands are symmetric about the mid by construction
+    assert abs((ch["upper"] - ch["mid"]) - (ch["mid"] - ch["lower"])) < 1e-6
+    assert abs((ch["upper"] - ch["mid"]) - K.MULT * ch["atr"]) < 1e-3
+
+
+def test_position_runs_OUTSIDE_zero_to_one_when_price_leaves_the_channel():
+    """Clamping would hide exactly the case the overlay exists to show."""
+    df = kc_frame()
+    ch = K.channel(df)
+    spike = frame(list(df["close"]) + [ch["upper"] * 1.35],
+                  list(df["high"]) + [ch["upper"] * 1.36],
+                  list(df["low"]) + [ch["upper"] * 1.30])
+    assert K.channel(spike)["position"] > 1.0
+    assert K.reading(spike)["where"] == "above the upper band"
+
+
+def test_a_compressed_series_is_a_squeeze_and_a_wild_one_is_not():
+    rng = np.random.default_rng(11)
+    tight = list(100 + rng.normal(0, 0.05, 120))
+    quiet = frame(tight, [x + 0.06 for x in tight], [x - 0.06 for x in tight])
+    assert K.squeeze(quiet)["on"] is True and K.squeeze(quiet)["bars"] > 10
+    assert K.squeeze(kc_frame(scale=4.0))["on"] is False
+
+
+def test_the_squeeze_uses_its_OWN_tighter_multiplier():
+    """Carter compares Bollinger against a 1.5x Keltner, not the 2.0x channel
+    that is drawn. Collapsing the two would report a squeeze far too often."""
+    assert K.SQUEEZE_MULT < K.MULT
+
+
+def test_released_marks_only_the_FIRST_bar_after_a_squeeze_ends():
+    rng = np.random.default_rng(21)
+    tight = list(100 + rng.normal(0, 0.05, 120))
+    c = tight + [104.0]                      # the expansion bar
+    df = frame(c, [x + 0.06 for x in c[:-1]] + [105.0],
+               [x - 0.06 for x in c[:-1]] + [103.5])
+    assert K.squeeze(df)["released"] is True
+    # one bar later it is no longer a release, just "off"
+    c2 = c + [104.5]
+    df2 = frame(c2, [x + 0.06 for x in c2[:-2]] + [105.0, 105.5],
+                [x - 0.06 for x in c2[:-2]] + [103.5, 104.0])
+    assert K.squeeze(df2)["released"] is False
+
+
+def test_the_squeeze_NEVER_claims_a_direction():
+    """A squeeze is a volatility statement. The reading says so every time,
+    because the word reads like a signal and is not one."""
+    rng = np.random.default_rng(11)
+    tight = list(100 + rng.normal(0, 0.05, 120))
+    r = K.reading(frame(tight, [x + 0.06 for x in tight], [x - 0.06 for x in tight]))
+    assert r["squeeze"] is True
+    assert "not a direction" in r["note"]
+    assert not any(k in r for k in ("direction", "bias", "signal"))
+
+
+def test_NEGATIVE_too_few_bars_draws_nothing():
+    assert K.channel(frame(list(np.linspace(10, 11, 12)))) is None
+    assert K.chart_lines(frame(list(np.linspace(10, 11, 12)))) == []
+    assert K.squeeze(None) is None
+
+
+def test_NEGATIVE_a_flat_series_has_no_atr_and_draws_nothing():
+    """Zero ATR would make the channel a single line and `position` a divide
+    by zero."""
+    flat = frame([50.0] * 120, [50.0] * 120, [50.0] * 120)
+    assert K.channel(flat) is None
+
+
+def test_keltner_lines_have_their_OWN_tone():
+    assert {l["tone"] for l in K.chart_lines(kc_frame())} == {"keltner"}
+
+
+def test_keltner_is_uncited_and_says_a_squeeze_is_not_direction():
+    assert K.CITED is False
+    assert "never measured forward" in K.SOURCE_NOTE
+    assert "never a direction" in K.SOURCE_NOTE

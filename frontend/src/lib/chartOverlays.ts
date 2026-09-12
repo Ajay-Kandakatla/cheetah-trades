@@ -72,6 +72,13 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   { key: 'meanrev', always: true, label: 'Mean reversion', swatch: 'var(--cm-slate, #64748b)',
     hint: 'least-squares mean of the visible window with ±1σ/±2σ — σ is dispersion, NOT a probability',
     lineTones: ['meanrev'], linePrefixes: ['mean'] },
+  // Ajay 2026-09-12 asked for "the Keltner channel strategy a new tab", then
+  // chose the overlay instead: "Over lay I think is better to toggle off if I
+  // want to." Same deal as the other three — uncited, unmeasured, gates
+  // nothing, off by default.
+  { key: 'keltner', always: true, label: 'Keltner channel', swatch: 'var(--cm-amberlt, #f59e0b)',
+    hint: 'EMA20 ± 2×ATR10 with the TTM squeeze on the mid label — a squeeze is compression, NOT a direction (convention, uncited)',
+    lineTones: ['keltner'], linePrefixes: ['kc '] },
 ];
 
 /** The families that are ON when he has never touched a checkbox.
@@ -166,7 +173,7 @@ export function saveHidden(hidden: Set<string>): void {
 
 /** The three uncited study families. The board fetches them only while at
  *  least one is visible, so a default view costs nothing to draw. */
-export const STUDY_KEYS = ['amd', 'fib', 'meanrev'];
+export const STUDY_KEYS = ['amd', 'fib', 'meanrev', 'keltner'];
 
 export function studiesWanted(hidden: Set<string>): boolean {
   return STUDY_KEYS.some((k) => !hidden.has(k));

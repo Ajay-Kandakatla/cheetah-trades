@@ -28,6 +28,7 @@ tab came back at **+0.03R over 6,004 signals against placebo** (2026-09-04).
 | `daytrading/amd_sessions.py` | intraday session AMD |
 | `supply_demand/fib.py` | 0.382 / 0.5 / 0.618 / 0.786 + 1.272 / 1.618 |
 | `supply_demand/meanrev.py` | least-squares channel ±1σ / ±2σ |
+| `supply_demand/keltner.py` | EMA20 ± 2×ATR10, plus the TTM squeeze |
 
 ### AMD — the whole test is the close
 
@@ -70,6 +71,33 @@ overlay. `SLOPED = False` flips it.
 
 σ is dispersion about the fit, **not a probability** — the fit is estimated on
 the same bars it scores.
+
+### Keltner is an overlay, not a tab
+
+He asked for *"the Keltner channel strategy a new tab"*, then chose otherwise:
+*"Over lay I think is better to toggle off if I want to."*
+
+**There are three Keltner "strategies" and they trade opposite ways** —
+band-fade, trend-pullback, squeeze-breakout. An overlay does not have to pick:
+it draws the channel all three read, and labels the one state not visible by
+eye, the squeeze. Band-fade is deliberately not modelled as a signal — it would
+duplicate `meanrev.py`, shipped the same day, and neither is measured.
+
+```
+mid = EMA(close, 20);  upper/lower = mid ± 2.0 × ATR(10)
+squeeze = Bollinger(20, 2.0) sits INSIDE Keltner(1.5)
+```
+
+`SQUEEZE_MULT = 1.5` is deliberately **tighter** than the drawn `MULT = 2.0`
+(Carter's construction). Collapsing them would report a squeeze far too often.
+
+**A squeeze is compression, not direction.** `reading()` says so in every
+payload, and carries no `direction`, `bias` or `signal` key at all — the word
+reads like a signal and is not one. Pinned by
+`test_the_squeeze_NEVER_claims_a_direction`.
+
+`position` runs **outside [0, 1]** when price leaves the channel; clamping
+would hide exactly the case the overlay exists to show.
 
 ## Where it is computed, and why only on request
 

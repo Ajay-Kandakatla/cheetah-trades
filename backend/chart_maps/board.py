@@ -3813,6 +3813,11 @@ def _study_overlays(df, days: int) -> dict:
         lines.extend(_mr.chart_lines(df))
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: meanrev overlay failed: %s", exc)
+    try:
+        from supply_demand import keltner as _kc
+        lines.extend(_kc.chart_lines(df))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: keltner overlay failed: %s", exc)
     return {"bands": bands, "lines": lines}
 
 
@@ -3939,9 +3944,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # Say so in the payload: these are studies, not signals, and the frontend
     # prints the note under the ledger rather than leaving it to the docstring.
     out["studies"] = {
-        "families": ["amd", "fib", "meanrev"],
+        "families": ["amd", "fib", "meanrev", "keltner"],
         "cited": False,
-        "note": ("AMD, Fibonacci and mean reversion are chart conventions — "
+        "note": ("AMD, Fibonacci, mean reversion and Keltner are chart "
+                 "conventions — "
                  "uncited, never measured forward, and they gate nothing. "
                  "Off by default."),
     }
