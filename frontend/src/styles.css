@@ -11923,9 +11923,24 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--ink-muted); cursor: pointer; }
 .hs-meta { font-size: 0.72rem; color: var(--ink-muted); }
 .hs-stale { color: var(--warn, #f59e0b); }
-/* The table is wide; it scrolls inside its own box so the PAGE never scrolls
- * sideways, and the header stays put while a long sector is open. */
-.hs-scroll { overflow-x: auto; overflow-y: visible; }
+/* Ajay 2026-09-11: "Can you make the table header static for this please?"
+ *
+ * The SAME bug the Catalysts table hit on 2026-09-09 ("I wanted the headers to
+ * be static it broke the logic"), and for the same reason: `overflow-x: auto`
+ * makes a box a scroll container on BOTH axes — the `overflow-y: visible` this
+ * rule used to carry is computed away to `auto`. With no height bound the box
+ * never scrolls vertically, so `top: 0` sticks the header to the top of a box
+ * that is itself scrolling away with the page, and the header never engages.
+ *
+ * Bounding the height makes this box the vertical scroller, so the rows move
+ * under a header that stays put AND still scrolls sideways in step with its
+ * own columns — the only correct behaviour for a table this wide. Same recipe
+ * as .pcw__table.is-wide; a contract pins it so it cannot silently revert. */
+.hs-scroll {
+  overflow: auto;
+  max-height: calc(100vh - var(--sticky-top, 0px) - 2.5rem);
+  overscroll-behavior: contain;
+}
 .hs-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.78rem; }
 .hs-table thead th {
   position: sticky; top: 0; z-index: 2;

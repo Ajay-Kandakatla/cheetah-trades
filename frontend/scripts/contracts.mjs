@@ -177,6 +177,18 @@ const CONTRACTS = [
       if (!/position:\s*sticky/.test(rule[0]) || !/top:\s*calc\(var\(--sticky-top, 0px\) \+ var\(--pcw-title-h\)\)/.test(rule[0])) {
         errs.push('promo table headers are no longer position: sticky under the phone nav (top: var(--sticky-top, 0))');
       }
+      // The wide-table box is the OTHER half, and it was unpinned until
+      // 2026-09-11: an `overflow: auto` box only becomes the vertical scroller
+      // when its height is bounded, and without that the header sticks to a box
+      // that is itself scrolling away with the page — exactly the 2026-09-09
+      // failure ("I wanted the headers to be static it broke the logic").
+      // Removing the max-height used to pass this contract.
+      const wide = src.match(/\.pcw__table\.is-wide \{[^}]*\}/);
+      if (!wide) errs.push('.pcw__table.is-wide is gone — the wide promo table has no scroll box');
+      else {
+        if (!/overflow:\s*auto/.test(wide[0])) errs.push('.pcw__table.is-wide must be `overflow: auto` on both axes');
+        if (!/max-height:/.test(wide[0])) errs.push('.pcw__table.is-wide needs a max-height or its static header never engages');
+      }
       const nav = read('src/components/NavBar.tsx');
       if (!/useStickyTop\(mobileBarRef, isMobile\)/.test(nav) || !/cm-nav--mobile" ref=\{mobileBarRef\}/.test(nav)) {
         errs.push('NavBar no longer publishes the phone nav height as --sticky-top — headers slide behind it');
@@ -1174,6 +1186,33 @@ const CONTRACTS = [
       if (/traction\s*[=:]\s*.*pace/.test(tsx)) errs.push('HottestSectors must not recompute traction — the backend owns it');
 
       const css = read('src/styles.css');
+
+      // Ajay 2026-09-11: "Can you make the table header static for this please?"
+      // This broke once already on the Catalysts table for a subtle reason: an
+      // `overflow-x: auto` box is a scroll container on BOTH axes, so without a
+      // height bound it never scrolls vertically and `top: 0` sticks the header
+      // to a box that is itself scrolling away with the page. The header only
+      // engages when the box is the vertical scroller. jsdom loads no CSS, so a
+      // render test cannot catch a revert — this can.
+      const scroll = /\.hs-scroll\s*\{([^}]*)\}/.exec(css);
+      if (!scroll) errs.push('styles.css has no .hs-scroll rule — the Hottest table has no scroll container');
+      else {
+        if (!/overflow:\s*auto/.test(scroll[1])) errs.push('.hs-scroll must be `overflow: auto` on BOTH axes — overflow-x alone still traps the sticky header');
+        if (!/max-height:/.test(scroll[1])) errs.push('.hs-scroll needs a max-height or the box never scrolls vertically and the static header never engages');
+      }
+      const thead = /\.hs-table thead th\s*\{([^}]*)\}/.exec(css);
+      if (!thead) errs.push('styles.css lost the .hs-table thead th rule');
+      else if (!/position:\s*sticky/.test(thead[1]) || !/top:\s*0/.test(thead[1])) {
+        errs.push('.hs-table thead th must stay `position: sticky; top: 0` — he asked for a static header');
+      }
+      // and the Signals button must stay readable as a button in that table
+      if (/<SignalWatchButton[^>]*\bcompact\b/.test(tsx)) {
+        errs.push('the Hottest table must NOT use the compact Signals button — a bare "+" beside the ☆ does not read as a control');
+      }
+      if (!/<SignalWatchButton\s+symbol=\{r\.symbol\}/.test(tsx)) {
+        errs.push('every Hottest name row must carry the + Signals button — he picks names off this table');
+      }
+
       const used = new Set();
       for (const m of tsx.matchAll(/(?:className=\{?["'`])([^"'`]+)/g)) {
         for (const c of m[1].split(/[\s${}]+/)) if (/^hs-[a-z0-9-]+$/.test(c)) used.add(c);

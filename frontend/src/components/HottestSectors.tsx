@@ -94,7 +94,11 @@ function NameRow({ r }: { r: HsName }) {
     <tr className="hs-name">
       <td className="hs-sym">
         <TickerLink ticker={r.symbol} fromLabel="Hottest sectors" />
-        <SignalWatchButton symbol={r.symbol} compact />
+        {/* Ajay 2026-09-11: "add to signals button in that table I wanna pick a
+            few stocks from this". NOT compact — compact prints a bare "+" which
+            sits next to TickerLink's ☆ and reads as decoration rather than a
+            control. The word is what makes it a button. */}
+        <SignalWatchButton symbol={r.symbol} />
         <div className="hs-coname">{r.name || ''}</div>
       </td>
       <LegCells r={r} />
