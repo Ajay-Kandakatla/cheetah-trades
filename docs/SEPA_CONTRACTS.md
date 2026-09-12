@@ -963,11 +963,43 @@ backfill (`test_top_picks.py`).
 `backend/sepa/adr.py`:
 
 - ADR period: 20 bars
-- Liquidity gates (cookstock-style institutional floor) — exact thresholds in
-  `adr.liquidity_check()`. `liquid: bool` is what the gate exposes.
+- Liquidity gate — ONE floor: **50-day avg $-volume >= $20M**. `liquid: bool` is
+  what the gate exposes. `avg_shares` is still computed and reported on the row
+  but **no longer decides anything**.
+- **CHANGED 2026-09-11 — the share-count leg is deleted.** The rule used to be
+  `avg_dollar_vol >= $20M **OR** avg_shares >= 200k`, and the OR made the
+  $-volume floor decorative: **925 of 3,738 rows passed on the share leg alone**,
+  365 of them under $5, ARAI reading `liquid=True` on **$148,074/day**.
+  Ajay asked for OR -> AND; measured first, AND also deleted **53 high-priced
+  institutional names** (NVR $6,405/sh on 32k shares, SEB $4,309, FCNCA $2,150,
+  WTM, MKL, MTD) — the opposite cohort from the manipulation risk he asked to be
+  protected from. Deleting the leg removes the identical 925 thin names and keeps
+  all 53. Full write-up + re-runnable script:
+  [`docs/trading_safety_floors.md`](trading_safety_floors.md),
+  `backend/studies/liq_leg_impact.py`. Pinned by AST in
+  `tests/test_safety_floor.py::test_adr_liquidity_has_no_or_leg`.
 - A scan with `require_liquidity=True` (default) skips non-liquid names entirely.
 - The on-demand analyze path uses `require_liquidity=False` so detail pages
   work for typed-in tickers outside the universe (RYOJ, NOK, etc).
+
+### 10a. Manipulation-safety floors on the ENTRY path — LOCKED (2026-09-11)
+
+`backend/trading/safety_floor.py` — the single source of truth, consulted by
+`trading/entries.py::_evaluate`, which is the ONE function every stock lane
+(minervini auto-entry, demand-zone, zone-edge, hot-pullback, catalyst, manual)
+funnels through on its way to the broker.
+
+| Floor | Value | Behaviour |
+|---|---|---|
+| `MIN_SHARE_PRICE` | **$2.00** | HARD block, every lane |
+| `MIN_CAP_USD` | **$700M** | HARD block when the cap is KNOWN; WARN when unknown |
+| `MIN_DOLLAR_VOL` | **$20M/day** | WARN on the entry path (HARD in `sepa/adr`) |
+| `THIN_DOLLAR_VOL` | **$5M/day** | WARN, "one whale order moves this" |
+
+Before this, `_evaluate` enforced `price > 0` and nothing else — it had already
+filled **SABR at $2.24 on 2026-09-09** (11,043 shares, stopped out −4.46% /
+−0.74R). The cap floor equals the S/D board floors and is pinned equal by
+`test_cap_floor_agrees_with_the_sd_boards`.
 
 ---
 

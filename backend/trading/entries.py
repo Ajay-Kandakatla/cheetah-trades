@@ -20,7 +20,7 @@ import logging
 import math
 from typing import Optional
 
-from trading import risk_rules
+from trading import risk_rules, safety_floor
 from trading.broker import BrokerError, get_broker
 from trading.exit_engine import _db, get_config, ledger, regime
 
@@ -151,7 +151,7 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
            "equity_cap": None, "earnings": None,
            "sizing": None, "stop_plan": None, "target": None,
            "breakeven_trigger": None, "equity_risk_pct": None,
-           "regime": "normal"}
+           "regime": "normal", "market_cap": None, "warnings": []}
     if not symbol:
         blocked.append("symbol required")
 
@@ -188,6 +188,18 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
         blocked.append("no price available for %s" % (symbol or "?"))
         price = None
     ctx["price"], ctx["price_source"] = price, source
+
+    # Manipulation-safety floors (trading/safety_floor.py). THIS is the
+    # chokepoint: every stock lane — minervini auto-entry, demand-zone,
+    # zone-edge, hot-pullback, catalyst, manual — reaches the broker through
+    # _evaluate, so the floors belong here and nowhere else. Ajay 2026-09-11:
+    # "make sure to give me not penny stocks and other safety gates or warn
+    # me.. I dont want 10 Million Market Cap stocks too". A known-small cap
+    # and a sub-$2 quote BLOCK; an unknown cap and a thin tape WARN.
+    floors = safety_floor.check(symbol, price)
+    blocked.extend(floors["blocked"])
+    ctx["market_cap"] = floors["market_cap"]
+    ctx["warnings"] = list(floors["warnings"])
 
     # Absolute stop level -> requested percent at the planning price (see
     # the docstring). Refuse rather than clamp: the level is the plan.
@@ -348,7 +360,9 @@ def preview(symbol: str, price: Optional[float] = None,
         "regime": ctx["regime"],
         "market_open": ctx["market_open"],
         "earnings": ctx["earnings"],
+        "market_cap": ctx["market_cap"],
         "blocked": blocked,
+        "warnings": ctx["warnings"],
     }
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 from trading import risk_rules as RR
+from trading import safety_floor as SFL
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import zero_dte_lane as ZDL
@@ -292,6 +293,10 @@ def sections() -> dict:
             % (ZDL.SIGNAL_MAX_AGE_SEC, _t(ZDL.ENTRY_OPEN_ET), _t(ZDL.LAST_ENTRY_ET),
                ZDL.RISK_PCT_OF_EQUITY, int(ZDL.MAX_PREMIUM_PER_TRADE), ZDL.MAX_ENTRIES_PER_DAY,
                int(ZDL.PREMIUM_TAKE_PCT), int(ZDL.PREMIUM_STOP_PCT), _t(ZDL.FLATTEN_ET)),
+            "\U0001F6E1\uFE0F Safety floors — EVERY lane, no exceptions (they all buy through "
+            "the one entry function): share price ≥ $%.2f and, when the cap is known, market "
+            "cap ≥ %s. An unknown cap or a tape under $%dM/day WARNS instead of blocking."
+            % (SFL.MIN_SHARE_PRICE, _b(SFL.MIN_CAP_USD), int(SFL.MIN_DOLLAR_VOL / 1e6)),
             "Every entry is journaled by strategy (minervini / demand_zone / breakout / "
             "catalyst / options_zone / zero_dte / manual).",
         ],

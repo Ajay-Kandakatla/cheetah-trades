@@ -194,7 +194,12 @@ type Preview = {
   breakeven_trigger: number;
   equity_risk_pct: number;
   earnings: { next_date: string; days_to: number } | null;
+  market_cap?: number | null;
   blocked: string[];
+  /* Non-fatal safety notes from trading/safety_floor.py — an unknown market
+     cap or a thin tape. He asked for "other safety gates or warn me": the
+     gates that can decide are in blocked[], these are the ones that cannot. */
+  warnings?: string[] | null;
 };
 
 type EnterResult = { order_id: string; shares: number; stop?: unknown; target?: unknown };
@@ -766,7 +771,7 @@ const INPUT: React.CSSProperties = {
   border: '1px solid var(--hairline,#2a2a2a)',
 };
 
-function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: Mode; onPlaced: () => void }) {
+export function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: Mode; onPlaced: () => void }) {
   const [params, setParams] = useSearchParams();
   const [sym, setSym] = useState<string>(() => (params.get('symbol') || '').toUpperCase());
   const [limit, setLimit] = useState('');
@@ -818,6 +823,7 @@ function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: Mode; onPl
   }, [sym, limit, stopPct]);
 
   const blocked = preview?.blocked ?? [];
+  const warnings = preview?.warnings ?? [];
   const earningsSoon = preview?.earnings != null && preview.earnings.days_to <= 7;
   const canSubmit = !!preview && blocked.length === 0 && armed && !busy && (preview.shares ?? 0) > 0;
 
@@ -910,6 +916,10 @@ function EnterCard({ armed, mode, onPlaced }: { armed: boolean; mode: Mode; onPl
 
           {blocked.map((b) => (
             <div key={b} style={{ marginTop: 6, fontSize: '0.76rem', color: C.red }}>⛔ {b}</div>
+          ))}
+
+          {warnings.map((w) => (
+            <div key={w} style={{ marginTop: 6, fontSize: '0.76rem', color: C.amber }}>⚠️ {w}</div>
           ))}
         </div>
       )}
