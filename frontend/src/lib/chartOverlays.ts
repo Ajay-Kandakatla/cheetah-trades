@@ -18,6 +18,11 @@ export type OverlayGroup = {
   /** Matches PatternChart's BAND_FILL so the swatch IS the chart's color. */
   swatch: string;
   hint: string;
+  /** Render this family's checkbox even when the payload carries none of it.
+   *  The three study families are fetched ONLY when one of them is on, so a
+   *  purely data-driven legend would never show the switch that turns them
+   *  on — a control you cannot reach because it is off. */
+  always?: boolean;
   bandKinds?: string[];
   lineTones?: string[];
   /** Case-insensitive LABEL prefixes ("swept 71.80", "support 68.43", ...).
@@ -53,7 +58,33 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   { key: 'now', label: 'Now line', swatch: 'var(--ink, #e7e7e7)',
     hint: 'the last price marker',
     lineTones: ['now'] },
+  // Ajay 2026-09-12: "I wanna be able to toggle AMD ... and Fibonacci" and
+  // "Also mean reversion please". All three are UNCITED and UNMEASURED, and
+  // all three gate nothing — which is why each gets its OWN family rather than
+  // being folded into `trade` or `demand`. An unmeasured read must never share
+  // a checkbox with the levels he actually trades.
+  { key: 'amd', always: true, label: 'AMD phases', swatch: 'var(--cm-violet, #8b5cf6)',
+    hint: 'accumulation base, the raid that swept it, the markup after (ICT convention, uncited, unmeasured)',
+    bandKinds: ['amd_accumulation'], lineTones: ['amd'], linePrefixes: ['amd'] },
+  { key: 'fib', always: true, label: 'Fibonacci', swatch: 'var(--cm-teal, #14b8a6)',
+    hint: 'retracements 0.382/0.5/0.618/0.786 + extensions 1.272/1.618 off the last major swing (convention, uncited)',
+    lineTones: ['fib'], linePrefixes: ['fib'] },
+  { key: 'meanrev', always: true, label: 'Mean reversion', swatch: 'var(--cm-slate, #64748b)',
+    hint: 'least-squares mean of the visible window with ±1σ/±2σ — σ is dispersion, NOT a probability',
+    lineTones: ['meanrev'], linePrefixes: ['mean'] },
 ];
+
+/** The families that are ON when he has never touched a checkbox.
+ *
+ *  Ajay 2026-09-12: "Default toggle on only supple demand and order block for
+ *  me." Everything else starts hidden — including the three overlays added
+ *  that same day, which is the point: a new uncited read must not arrive
+ *  switched on over the levels he trades. */
+export const DEFAULT_ON = ['demand', 'supply', 'order_block'];
+
+export function defaultHidden(): Set<string> {
+  return new Set(OVERLAY_GROUPS.map((g) => g.key).filter((k) => !DEFAULT_ON.includes(k)));
+}
 
 const BY_BAND: Record<string, string> = {};
 const BY_TONE: Record<string, string> = {};
@@ -87,7 +118,7 @@ export function presentGroups(tiles: Array<Partial<CmTile>>): OverlayGroup[] {
       if (g) seen.add(g);
     }
   }
-  return OVERLAY_GROUPS.filter((g) => seen.has(g.key));
+  return OVERLAY_GROUPS.filter((g) => g.always || seen.has(g.key));
 }
 
 /** The tile with hidden families removed. Identity when nothing is hidden.
@@ -102,19 +133,26 @@ export function filterTile<T extends Partial<CmTile>>(tile: T, hidden: Set<strin
   };
 }
 
-const LS_KEY = 'cm-hidden-overlays';
+/* v2 on 2026-09-12. The KEY IS BUMPED ON PURPOSE: the default flipped from
+ * "show everything" to "supply/demand + order blocks only", and reading the v1
+ * value would hand every existing browser an empty hidden-set — i.e. the OLD
+ * default — and his instruction would silently never take effect. A fresh key
+ * means the new default applies once, then his own choices persist. */
+const LS_KEY = 'cm-hidden-overlays-v2';
 
 /** localStorage round-trip, both directions inside try/catch: a blocked or
- *  cleared store must render the default view, never a broken one. */
+ *  cleared store must render the DEFAULT view, never a broken one and never
+ *  the everything-on view the default replaced. */
 export function loadHidden(): Set<string> {
   try {
     const raw = window.localStorage.getItem(LS_KEY);
-    if (!raw) return new Set();
+    if (!raw) return defaultHidden();
     const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return defaultHidden();
     const legal = new Set(OVERLAY_GROUPS.map((g) => g.key));
-    return new Set((Array.isArray(arr) ? arr : []).filter((k) => legal.has(k)));
+    return new Set(arr.filter((k) => legal.has(k)));
   } catch {
-    return new Set();
+    return defaultHidden();
   }
 }
 
@@ -124,4 +162,21 @@ export function saveHidden(hidden: Set<string>): void {
   } catch {
     /* per-viewer convenience only — losing it must cost nothing */
   }
+}
+
+/** The three uncited study families. The board fetches them only while at
+ *  least one is visible, so a default view costs nothing to draw. */
+export const STUDY_KEYS = ['amd', 'fib', 'meanrev'];
+
+export function studiesWanted(hidden: Set<string>): boolean {
+  return STUDY_KEYS.some((k) => !hidden.has(k));
+}
+
+/** Fibonacci draws on the EXPANDED chart only — Ajay 2026-09-12 picked
+ *  "Expanded chart only, not every grid tile", because six fib lines on a
+ *  small tile is noise. The family stays in the payload either way; this is a
+ *  display rule, not a data one. */
+export function filterForGrid<T extends { lines?: any[] }>(tile: T, expanded: boolean): T {
+  if (expanded || !tile || !tile.lines?.length) return tile;
+  return { ...tile, lines: tile.lines.filter((l) => (l?.tone || '') !== 'fib') };
 }

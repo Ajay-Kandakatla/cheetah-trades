@@ -41,7 +41,8 @@ import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
 import OverlayLegend from '../components/OverlayLegend';
-import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
+import { filterForGrid, filterTile, loadHidden, presentGroups, saveHidden,
+         studiesWanted } from '../lib/chartOverlays';
 import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -224,6 +225,11 @@ export function ChartMaps() {
    * request is in flight let the STALE response land last and repaint the
    * old board under the new toggles (same race Ajay hit on the Support tab
    * zoom, 2026-08-31). */
+  /* Declared ABOVE `load` on purpose: `load`'s dependency array reads it so a
+   * study toggle refetches, and a const declared further down is in its
+   * temporal dead zone at that point. */
+  const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
+
   const boardSeq = useRef(0);
   const load = useCallback(async () => {
     const my = ++boardSeq.current;
@@ -237,8 +243,12 @@ export function ChartMaps() {
                            source, minerviniOnly, sort, minTier, gabbarLevel,
                            gabbarTouchingOnly, phase, target, bias, micro,
                            minRoom: ROOM_TAB ? minRoom : undefined });
+    // The three study overlays are computed server-side and cost real time on
+    // 60 tiles, so they are requested ONLY while one of their checkboxes is on
+    // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
+    const qs = studiesWanted(hiddenOverlays) ? `${q}&studies=true` : q;
     try {
-      const r = await fetch(`${API}/chart-maps?${q}`, {
+      const r = await fetch(`${API}/chart-maps?${qs}`, {
         credentials: 'include', cache: 'no-store',
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -251,7 +261,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, hiddenOverlays]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -363,9 +373,9 @@ export function ChartMaps() {
   const rawTiles = data?.tiles || [];
   /* The chart ledger (Ajay 2026-08-31: "Chart feel so clumsy can you give me
    * a ledger and some check boxes to toggle these off"). Hidden families are
-   * a per-browser convenience (localStorage), filtered client-side so a
-   * toggle never refetches a board. */
-  const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
+   * a per-browser convenience (localStorage), filtered client-side — except
+   * the three study families (AMD / fib / mean reversion), which are computed
+   * server-side and so DO refetch when switched on. */
   const toggleOverlay = (key: string) => {
     setHiddenOverlays((prev) => {
       const next = new Set(prev);
@@ -375,8 +385,12 @@ export function ChartMaps() {
     });
   };
   const overlayGroups = useMemo(() => presentGroups(rawTiles), [rawTiles]);
+  // filterTile drops the families he unchecked; filterForGrid then drops the
+  // fib lines specifically, because he chose "expanded chart only, not every
+  // grid tile" — six fib levels on a small tile is noise. The lines stay in
+  // the payload for the expanded chart; this is a display rule, not a data one.
   const tiles = useMemo(
-    () => rawTiles.map((t) => filterTile(t, hiddenOverlays)),
+    () => rawTiles.map((t) => filterForGrid(filterTile(t, hiddenOverlays), false)),
     [rawTiles, hiddenOverlays]);
   const ictParams = useMemo(() => ictParamRows(data?.params), [data?.params]);
   // The backend flags which values the video actually states (3-candle

@@ -81,6 +81,13 @@ async def chart_maps(
                                                   "ALERT_MIN_ROOM_PCT, 5.0). Ajay "
                                                   "2026-09-05: 'stocks that have more "
                                                   "room atleast >5%'. Other tabs ignore it."),
+    studies: bool = Query(False,
+                          description="append the AMD / Fibonacci / mean-reversion "
+                                      "overlays (Ajay 2026-09-12). Default FALSE: "
+                                      "they are uncited, unmeasured, gate nothing, "
+                                      "and are off in the UI by default — the "
+                                      "frontend asks for them only when one of the "
+                                      "three checkboxes is on."),
 ):
     """Chart-ready tiles for one tab.
 
@@ -108,6 +115,7 @@ async def chart_maps(
             target=target if isinstance(target, str) else "zone",
             bias=bias if isinstance(bias, str) else "all",
             micro=micro if isinstance(micro, str) else "60m",
+            studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),
         )

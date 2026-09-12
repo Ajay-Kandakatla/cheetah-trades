@@ -3772,6 +3772,80 @@ def ict_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "disclaimer": IE.DISCLAIMER}
 
 
+
+# ---------------------------------------------------------------------------
+# Study overlays — AMD / Fibonacci / mean reversion (Ajay 2026-09-12)
+# ---------------------------------------------------------------------------
+# "I wanna be able to toggle AMD ... and Fibonacci", "Also mean reversion
+# please on 1 year charts", then "Basically any chart time frame add this
+# newly please" — so they attach to EVERY tab, computed from the same window
+# the tile is drawn on rather than a fixed 252 bars.
+#
+# Attached HERE, once, after the tab dispatcher, instead of inside each of the
+# twelve tile builders. One call site means one definition: a tab cannot end up
+# with a differently-computed fib from its neighbour.
+#
+# ALL THREE ARE UNCITED AND UNMEASURED, and all three gate nothing. They ride
+# in their own band kinds and line tones (`amd_*`, tone `amd` / `fib` /
+# `meanrev`) so the frontend routes them to their own checkboxes and they can
+# never be mistaken for the demand/supply levels he trades. They are also OFF
+# by default — see chartOverlays.DEFAULT_ON.
+STUDY_MAX_TILES = 60          # a bound, so a wide board cannot turn into a scan
+
+
+def _study_overlays(df, days: int) -> dict:
+    """{"bands": [...], "lines": [...]} for one frame. Never raises."""
+    bands, lines = [], []
+    try:
+        from supply_demand import amd as _amd
+        o = _amd.chart_overlay(df)
+        bands.extend(o.get("bands") or [])
+        lines.extend(o.get("lines") or [])
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: amd overlay failed: %s", exc)
+    try:
+        from supply_demand import fib as _fib
+        lines.extend(_fib.chart_lines(df))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: fib overlay failed: %s", exc)
+    try:
+        from supply_demand import meanrev as _mr
+        lines.extend(_mr.chart_lines(df))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: meanrev overlay failed: %s", exc)
+    return {"bands": bands, "lines": lines}
+
+
+def _attach_studies(out: dict, days: int) -> None:
+    """Append the study overlays to every tile in `out`, in place.
+
+    Soft-fails per tile: a name whose frame will not load keeps its real bands
+    and simply carries no study lines. A study must never be able to empty a
+    tile that the rest of the board built correctly."""
+    tiles = (out or {}).get("tiles") or []
+    if not tiles:
+        return
+    for t in tiles[:STUDY_MAX_TILES]:
+        sym = (t or {}).get("symbol")
+        if not sym:
+            continue
+        try:
+            from sepa import prices
+            df = _norm_frame(prices.load_prices(str(sym).upper()))
+            if df is None or len(df) < 40:
+                continue
+            if days and len(df) > days:
+                df = df.iloc[-int(days):]
+            o = _study_overlays(df, days)
+            if o["bands"]:
+                t["bands"] = list(t.get("bands") or []) + o["bands"]
+            if o["lines"]:
+                t["lines"] = list(t.get("lines") or []) + o["lines"]
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: studies for %s failed: %s", sym, exc)
+
+
+
 def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
           universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
@@ -3779,8 +3853,12 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
           touching_only: bool = False, phase: str = "",
           target: str = "zone", bias: str = "all", micro: str = "60m",
-          min_room: Optional[float] = None) -> dict:
+          min_room: Optional[float] = None, studies: bool = False) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
+
+    `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
+    overlays. DEFAULT FALSE: they are uncited, unmeasured, off in the UI by
+    default, and every tab's tile contract asserts the exact bands it builds.
 
     `min_room` (2026-09-05) reaches ONLY the room-gated tabs — zones,
     deep_demand, quick_bounce and (2026-09-06) breaking — the room floor on
@@ -3847,8 +3925,26 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     else:
         out = vcp_tiles(limit, days, themes_first, sort=srt, min_tier=tier)
 
+    # Computed ONLY when asked. Two reasons, and the first is the real one:
+    # every existing tile contract asserts the exact bands its tab produces,
+    # and silently appending an uncited study band to all of them would have
+    # weakened seven real tests into "contains at least". The second is cost —
+    # they are OFF by default in the UI, so computing three studies for sixty
+    # tiles on every board load would be pure waste. The frontend asks for them
+    # when, and only when, one of the three checkboxes is on.
+    if studies:
+        _attach_studies(out, days)
     out["tab"] = t
     out["count"] = len(out.get("tiles") or [])
+    # Say so in the payload: these are studies, not signals, and the frontend
+    # prints the note under the ledger rather than leaving it to the docstring.
+    out["studies"] = {
+        "families": ["amd", "fib", "meanrev"],
+        "cited": False,
+        "note": ("AMD, Fibonacci and mean reversion are chart conventions — "
+                 "uncited, never measured forward, and they gate nothing. "
+                 "Off by default."),
+    }
     # The winners tabs read a ledger, not a scan, so they carry no live volume
     # to sort by. Say so rather than offering a control that silently does
     # nothing.
