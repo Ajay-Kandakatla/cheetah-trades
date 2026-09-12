@@ -83,21 +83,28 @@ const ColumnsInfo = (
       shows both: the big number is sequential, the small grey <em>y/y</em>
       beneath it is the year-over-year comparison the page has always carried.
       They disagree more often than you would expect (measured Spearman 0.58 on
-      revenue, 0.37 on EPS): JFB’s revenue was <em>+418% y/y</em> and
-      <em>−89% sequentially</em>, and sequential caught the collapse. Sequential
-      also answers for names year-over-year cannot, because it needs two
-      quarters where year-over-year needs five. It has one weakness
-      year-over-year does not: <strong>seasonality</strong>. A retailer’s
-      January quarter is smaller than its December quarter every single year,
-      and sequential reads that as a decline. Measured on this board, the median
-      sequential revenue move is <strong>+5.3%</strong> for a fiscal Q1→Q2
-      transition against <strong>−4.0%</strong> for Q4→Q1 — a Q1 reporter is
-      docked about nine points of “growth” for nothing but the calendar.
+      revenue, 0.37 on EPS), and neither one always wins. NFE’s revenue was
+      <em>+3.6% y/y</em> and <em>+37.7% sequentially</em> — year-over-year said
+      “flat” and was wrong. JFB went the other way: <em>+418% y/y</em> against
+      <em>−89% sequentially</em>, and the −89% turned out to be simply what its
+      Q2 always does. Sequential also answers for names year-over-year cannot,
+      because it needs two quarters where year-over-year needs five. It has one
+      weakness year-over-year does not: <strong>seasonality</strong>. A
+      retailer’s January quarter is smaller than its December quarter every
+      single year, and sequential reads that as a decline. Measured on this
+      board over all history, with each name’s own median removed and a rotation
+      placebo: sequential revenue spreads <strong>8.8 points</strong> across
+      fiscal quarters (placebo 2.1, <em>p=0.0005</em>) and sequential EPS spreads
+      <strong>28.2 points</strong> (placebo 6.5, <em>p=0.0005</em>), while
+      year-over-year spreads 0.3 points at <em>p=0.11</em> — no effect at all,
+      which is exactly what it is built for. And <strong>81% of this board is
+      currently on its fiscal Q2</strong>, the seasonally strongest quarter, so
+      raw sequential would hand the majority a shared free ride.
     </p>
     <p>
       So the <strong>ranking</strong> compares each name’s sequential move to
-      what <em>the same transition did a year earlier</em>, and ranks on the
-      difference. That is still quarter over quarter — measured against the
+      what <em>the same transition did in prior years</em> (its median, over up
+      to two of them), and ranks on the difference. That is still quarter over quarter — measured against the
       company’s own calendar instead of against zero. <strong>🔁</strong> marks
       a row making a move it makes every year, and the number you see is still
       the plain sequential one.

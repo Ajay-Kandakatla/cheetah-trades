@@ -171,7 +171,8 @@ def _attach_fundamentals(rows: list) -> None:
         x["fundamentals_as_of"] = f.get("cached_at")
 
         q = _qoq.compute(f.get("rev_q_series"), f.get("eps_q_series"),
-                         f.get("ni_q_series"))
+                         f.get("ni_q_series"),
+                         periods=f.get("q_period_series"))
         x["growth_qoq"] = q["growth_qoq_pct"]
         x["income_qoq"] = q["income_qoq_pct"]
         x["ni_qoq"] = q["ni_qoq_pct"]

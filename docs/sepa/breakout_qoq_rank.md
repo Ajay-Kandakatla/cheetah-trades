@@ -24,11 +24,19 @@ against Q1**, the quarter that just ended against the one before it
 They are different orderings, not two names for one number. Measured on his own
 board: **Spearman 0.58 revenue, 0.37 EPS**.
 
-| | year-over-year | sequential |
-|---|---|---|
-| JFB revenue | **+418%** | **−89%** — YoY hid a collapse |
-| NFE revenue | −34% | +38% — sequential flattered a trough |
-| GOLD revenue | *no number* | +60% — sequential answers where YoY cannot |
+| | year-over-year | sequential | own seasonal norm | verdict |
+|---|---|---|---|---|
+| NFE revenue | +3.6% | **+37.7%** | −3.1% | **sequential is right** — YoY says "flat" and is wrong; adjusted surprise +40.8% |
+| MU revenue | +345.7% *(stale, off the 2025 trough)* | **+73.7%** | +15.5% | **sequential is right** — adjusted +58.2% |
+| JFB revenue | +417.8% | −89.5% | −95.6% | **sequential is the artifact** — −89.5% is what its Q2 always does; adjusted **+6.2%** |
+| FTDR revenue | — | +43.0% | +42.5% | **pure calendar** — adjusted **+0.5%**, η² 0.99 |
+| GOLD revenue | *no number* | +59.8% | *no prior year* | sequential answers where YoY cannot |
+
+> **A correction to my own first draft.** I shipped JFB as the headline case for
+> sequential catching a collapse YoY hid. Measuring the name's own seasonal
+> history reversed it: −89.5% *is* JFB's normal Q2, and YoY was the one telling
+> the truth. That reversal is the entire argument for the seasonal reference
+> below — made by the example that was meant to argue against it.
 
 Sequential needs **two** quarters where YoY needs five, so it covers more names.
 
@@ -72,19 +80,29 @@ subtracted first so scale cannot masquerade as season, with a rotation placebo:
 
 | metric | spread across fiscal quarters | placebo | p |
 |---|---|---|---|
-| revenue **sequential** | **5.8 pp** | 1.2 pp | **0.0005** |
-| EPS **sequential** | **18.3 pp** | 3.0 pp | **0.0005** |
-| revenue YoY *(control)* | 0.3 pp | 0.1 pp | 0.119 |
-| EPS YoY *(control)* | 1.4 pp | 0.1 pp | 0.165 |
+| revenue **sequential** | **8.8 pp** | 2.1 pp | **0.0005** |
+| EPS **sequential** | **28.2 pp** | 6.5 pp | **0.0005** |
+| revenue YoY *(control)* | 0.3 pp | 0.1 pp | 0.106 |
+| revenue TTM-sequential | 0.2 pp | 0.1 pp | 0.008 *(nil in size)* |
 
-Within a single name's own series, fiscal quarter explains a median **30.5%** of
-the variance of its sequential revenue (shift-null 21.9%; **29%** of names beat
-their own 95th-percentile null against a 5% chance). For YoY: 3.5% against a
-6.5% null — **nothing**. Quarter-vs-same-quarter-prior-year is built to cancel
-exactly this, and it does.
+Reproduced on an independent 250-name draw 40 minutes earlier (the board drifts
+intraday): revenue sequential 5.7 pp vs a 1.2 pp placebo, p=0.0005; YoY 0.4 pp,
+p=0.085. Dropping every |value| > 150%: 8.7 pp vs 2.1 pp, still p=0.0005 — not
+driven by blow-ups.
 
-And it is a third of the ranking: **32.9%** of the variance in the raw
-sequential ordering is the names' seasonal norms.
+Within a single name's own series, fiscal quarter explains a median **41.2%** of
+the variance of its sequential revenue (phase-shift null 24.3%; **46%** of names
+beat their own 95th-percentile null against a 5% chance). For YoY: 3.0% against
+a 5.4% null, 4% of names — **exactly chance**. Quarter-vs-same-quarter-prior-year
+is built to cancel this, and on his own universe it does.
+
+And it is roughly half the ranking: **48.1%** of the variance in the raw
+sequential ordering is the names' own seasonal norms.
+
+**The harm is live right now:** 81% of the board's latest filing is fiscal Q2 —
+the seasonally strongest quarter (+3.7 pp revenue, +16.5 pp EPS). Ranking on raw
+sequential hands that whole majority a shared upward bias and docks the ~19% on
+a different fiscal phase by −5.0 pp revenue / −11.7 pp EPS of pure calendar.
 
 > ZYME: **+90.6%** sequential — and its own Q2 history is **+85.8%**. Genuine
 > surprise: **+4.8%**. Its year-over-year was **−90.6%**.
@@ -181,11 +199,17 @@ Two more things this does not claim:
   months before the breakdown. The Stage column and the verdict are on the row
   for that reason — measured: of the 72 S3/S4 names on the board, **zero** are
   `is_buyable`.
-- **Array position is trusted over `fiscal_period`.** Massive omits missing
-  quarters rather than leaving a placeholder, so a gap shifts a comparison
-  silently: measured **3.2%** of sequential pairs are not adjacent, against
-  **12.6%** of the YoY pairs the board already printed. Sequential is ~4× less
-  exposed, but neither is zero. Open.
+- **Array position is not quarter adjacency — fixed.** Massive omits a missing
+  quarter rather than leaving a placeholder (ORCL is missing Q2 FY2025 *and* Q2
+  FY2026; NVDA is missing Q1 FY2025). Measured: **3.2%** of sequential pairs are
+  not adjacent, against **12.6%** of the YoY pairs the board has printed for
+  months — ASO's compares 2027Q2 against 2025Q4. `q_period_series` now carries
+  `fiscal_year*4 + (quarter-1)` beside every series, a non-adjacent pair is
+  refused (`gap`) instead of mislabelled, and a seasonal slot that is not a
+  whole number of years back is skipped. A legacy document with no period keys
+  is still computed — refusing them would blank the ranking rather than improve
+  it — and `periods_checked` records that it was not verified. **The
+  year-over-year columns are NOT yet period-checked; that is still open.**
 
 ---
 

@@ -201,8 +201,9 @@ def test_NEGATIVE_the_backfill_never_bumps_cached_at():
     assert '"$set": sets' in src
     # `sets` is built from the three series keys and nothing else, so no write
     # path can reach cached_at.
-    assert ('sets = {f"fundamentals.{k}": m.get(k)\n'
-            '                for k in ("rev_q_series", "eps_q_series", "ni_q_series")') in src
+    assert 'sets = {f"fundamentals.{k}": m.get(k)' in src
+    for k in ('"q_period_series"', '"rev_q_series"', '"eps_q_series"', '"ni_q_series"'):
+        assert k in src
     assert '"cached_at"' not in src
 
 

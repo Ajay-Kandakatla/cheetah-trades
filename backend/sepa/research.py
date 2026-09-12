@@ -162,6 +162,7 @@ DECISION_FIELDS = (
     # Raw newest-first quarterly series — the ONLY source for Ajay's
     # sequential quarter-over-quarter read (sepa/qoq.py, 2026-09-12). Small
     # arrays (<=8 floats each); they ride the same single projected query.
+    "fundamentals.q_period_series",
     "fundamentals.rev_q_series",
     "fundamentals.eps_q_series",
     "fundamentals.ni_q_series",
@@ -195,6 +196,7 @@ def decision_snapshot(symbols: list[str],
                 "q_eps_growth_pct": f.get("q_eps_growth_pct"),
                 "y_eps_growth_pct": f.get("y_eps_growth_pct"),
                 "earnings_quality": f.get("earnings_quality"),
+                "q_period_series": f.get("q_period_series"),
                 "rev_q_series": f.get("rev_q_series"),
                 "eps_q_series": f.get("eps_q_series"),
                 "ni_q_series": f.get("ni_q_series"),

@@ -148,6 +148,7 @@ def _from_hybrid(symbol: str) -> dict:
         # research cache, so `sepa/qoq.py` could not answer Ajay's "quarter over
         # quarter" for a single name (0 of 250 board rows had a series). Keeping
         # them costs one small array per symbol and no extra API call.
+        "q_period_series": m.get("q_period_series"),
         "rev_q_series": m.get("rev_q_series"),
         "eps_q_series": m.get("eps_q_series"),
         "ni_q_series":  m.get("ni_q_series"),
@@ -258,11 +259,41 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         # red flag (p.153-155). All come from the SAME 8-quarter fetch — no extra
         # API call. net_income_loss & inventory verified present on Massive
         # /vX/reference/financials (income_statement + balance_sheet) 2026-06-08.
+        # PERIOD KEYS, parallel to the series (2026-09-12). Massive OMITS a
+        # missing quarter rather than leaving a placeholder, so list position is
+        # not quarter adjacency — ORCL is missing Q2 FY2025 and Q2 FY2026, NVDA
+        # is missing Q1 FY2025. Measured over 200 of his board names: 3.2% of
+        # "sequential" pairs are not actually adjacent, and 12.6% of the
+        # year-over-year pairs the board has printed for months are not four
+        # quarters apart (ASO's compares 2027Q2 against 2025Q4). One monotonic
+        # integer per report, `fiscal_year * 4 + (quarter - 1)`, lets `sepa.qoq`
+        # REFUSE a pair instead of silently mislabelling it.
+        "q_period_series": [_period_index(q) for q in q_results],
         "rev_q_series": [_income_value(q, "revenues") for q in q_results],
         "eps_q_series": [_income_value(q, "diluted_earnings_per_share") for q in q_results],
         "ni_q_series":  [_income_value(q, "net_income_loss") for q in q_results],
         "inv_q_series": [_balance_value(q, "inventory") for q in q_results],
     }
+
+
+def _period_index(report: dict) -> Optional[int]:
+    """Monotonic quarter index from a Massive report: FY*4 + (Q-1).
+
+    None when the report does not name its period — and None must stay None
+    rather than becoming a guess, because a wrong index is worse than an
+    unknown one: it turns a refusal into a confident mislabelling.
+    """
+    try:
+        fy = int(report.get("fiscal_year"))
+        fp = str(report.get("fiscal_period") or "").upper().strip()
+        if not fp.startswith("Q"):
+            return None
+        q = int(fp[1:])
+        if not 1 <= q <= 4:
+            return None
+        return fy * 4 + (q - 1)
+    except (TypeError, ValueError):
+        return None
 
 
 def _income_value(report: dict, key: str) -> Optional[float]:
@@ -356,6 +387,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "y_eps_growth_pct":   y,
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
         "inst_ownership_pct": inst,
+        "q_period_series": m.get("q_period_series"),
         "rev_q_series": m.get("rev_q_series"),
         "eps_q_series": m.get("eps_q_series"),
         "ni_q_series":  m.get("ni_q_series"),
@@ -411,6 +443,7 @@ def _from_yfinance(symbol: str) -> dict:
         # Present and None-when-absent for contract parity, never missing: a
         # consumer that has to tell "this path has no series" from "this key
         # does not exist" is a consumer that will one day guess wrong.
+        "q_period_series": _q_periods_yf(t),
         "rev_q_series": rev_s,
         "eps_q_series": eps_s,
         "ni_q_series":  ni_s,
@@ -431,6 +464,7 @@ def _empty() -> dict:
     return {
         "q_eps_growth_pct": None, "y_eps_growth_pct": None,
         "rev_growth_q_pct": None, "inst_ownership_pct": None,
+        "q_period_series": None,
         "rev_q_series": None, "eps_q_series": None, "ni_q_series": None,
         "sales": sales.compute([]),
         "earnings_quality": earnings_quality.compute([], [], []),
@@ -473,6 +507,29 @@ def _y_eps_growth_yf(t) -> Optional[float]:
                 growths.append((cur - prev) / abs(prev) * 100)
         return round(sum(growths) / len(growths), 2) if growths else None
     except Exception:
+        return None
+
+
+def _q_periods_yf(t) -> Optional[list]:
+    """Period indices for the yfinance quarterly columns (period-END dates).
+
+    Calendar quarters, not fiscal ones — yfinance does not expose a fiscal
+    label. That is fine for the ADJACENCY test this exists for: two reports one
+    calendar quarter apart are one fiscal quarter apart too.
+    """
+    try:
+        df = t.quarterly_income_stmt
+        if df is None or df.empty:
+            return None
+        out = []
+        for c in list(df.columns)[:8]:
+            try:
+                out.append(int(c.year) * 4 + ((int(c.month) - 1) // 3))
+            except Exception:                                # noqa: BLE001
+                out.append(None)
+        return out or None
+    except Exception as exc:                                 # noqa: BLE001
+        log.debug("yfinance quarterly periods failed: %s", exc)
         return None
 
 

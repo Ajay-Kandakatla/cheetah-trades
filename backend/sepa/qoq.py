@@ -12,12 +12,22 @@ adds the OTHER comparison, the literal one he asked for — Q0 against Q1, the
 quarter that just ended against the one before it.
 
 They are genuinely different orderings, not two names for one number. MEASURED
-on an 80-name sample of his own board, 2026-09-12 (script:
-`scripts/qoq_vs_yoy.py`): Spearman 0.579 on revenue and 0.367 on EPS. Two
-examples that show which way each errs —
+on his own board, 2026-09-12 (`scripts/qoq_vs_yoy.py`): Spearman 0.579 on
+revenue and 0.367 on EPS. Two examples, and the pair is instructive because
+they point OPPOSITE ways —
 
-  JFB   revenue YoY +417.8%  ·  sequential −89.5%   YoY hid a collapse
-  NFE   revenue YoY  −33.6%  ·  sequential +37.7%   sequential flattered a trough
+  NFE   revenue YoY +3.6%  ·  sequential +37.7%  ·  own-Q2 norm −3.1%
+        Sequential is RIGHT. YoY says "flat" and is wrong; the adjusted
+        surprise is +40.8%.
+
+  JFB   revenue YoY +417.8%  ·  sequential −89.5%  ·  own-Q2 history −95.6%
+        Sequential is the ARTIFACT. −89.5% is simply what JFB's Q2 does; the
+        adjusted surprise is +6.2%. (Weak — only one prior observation.)
+
+The JFB read is a correction to this module's own first draft, which used it
+as the headline case for sequential catching a collapse. Measuring the name's
+own seasonal history reversed it. That is the entire argument for the seasonal
+reference below, made by the example that was supposed to argue against it.
 
 Sequential also COVERS MORE NAMES, because it needs two quarters where YoY needs
 five: 59/80 vs 57/80 on revenue, 66/80 vs 56/80 on net income. GOLD has a
@@ -90,6 +100,7 @@ BASE_OK = "positive"
 BASE_NON_POSITIVE = "non_positive"   # prior quarter lost money (or broke even)
 BASE_TOO_SMALL = "too_small"         # positive, but too near zero to carry a ratio
 BASE_UNKNOWN = "unknown"             # we do not have the two quarters
+BASE_NOT_ADJACENT = "gap"            # the two newest filings skip a quarter
 
 
 def _f(v) -> Optional[float]:
@@ -156,7 +167,7 @@ def _seq_pct(cur: Optional[float], prev: Optional[float],
 SEASONAL_SLOTS = ((4, 5), (8, 9))
 
 
-def _seasonal_norm(series, min_base: float) -> Optional[float]:
+def _seasonal_norm(series, min_base: float, periods=None) -> Optional[float]:
     """What this name usually does at THIS point in its calendar.
 
     The mean of the same fiscal transition in prior years. MEASURED on his
@@ -184,18 +195,70 @@ def _seasonal_norm(series, min_base: float) -> Optional[float]:
     """
     vals = []
     for i, j in SEASONAL_SLOTS:
+        # The slot pair must itself be one quarter apart, AND must sit a whole
+        # number of YEARS back from the current transition — otherwise it is
+        # not the same fiscal quarter and the "seasonal norm" is some other
+        # season's.
+        if not _adjacent(periods, i, j):
+            continue
+        if not _adjacent(periods, 0, i, gap=i):
+            continue
         cur, prev = _pair(series, i, j)
         pct, _ = _seq_pct(cur, prev, min_base)
         if pct is not None:
             vals.append(pct)
-    return round(sum(vals) / len(vals), 2) if vals else None
+    if not vals:
+        return None
+    # MEDIAN, not mean. Measured 2026-09-12: one near-zero-revenue quarter gave
+    # ATRC a "typical Q2" of +4,825% and destroyed the adjustment outright. The
+    # base floors above already refuse that case, but the median costs nothing
+    # and does not depend on them staying right.
+    vals.sort()
+    n = len(vals)
+    mid = n // 2
+    med = vals[mid] if n % 2 else (vals[mid - 1] + vals[mid]) / 2
+    return round(med, 2)
 
 
-def compute(rev_series=None, eps_series=None, ni_series=None) -> dict:
+def _adjacent(periods, i: int, j: int, gap: int = 1) -> bool:
+    """Are slots i and j exactly `gap` fiscal quarters apart?
+
+    THE SILENT MISLABELLING THIS STOPS. Massive OMITS a quarter it does not
+    have rather than leaving a placeholder, so list POSITION is not quarter
+    adjacency — ORCL is missing Q2 FY2025 and Q2 FY2026, NVDA is missing Q1
+    FY2025. Measured over 200 of his board names: 3.2% of "sequential" pairs
+    span two quarters, and 12.6% of the YEAR-over-year pairs the board has been
+    printing for months are not four quarters apart (ASO's compares 2027Q2
+    against 2025Q4). Without the period keys the board prints a two-quarter
+    change and calls it quarter-over-quarter.
+
+    No periods on file (an older cached document, or the yfinance path before
+    it carried them) means we cannot check — and an unverifiable pair is
+    ACCEPTED, not refused, because refusing every legacy row would blank the
+    ranking rather than improve it. `periods_checked` on the result says which
+    rows were actually verified.
+    """
+    if not periods:
+        return True
+    p = list(periods)
+    a = p[i] if len(p) > i else None
+    b = p[j] if len(p) > j else None
+    if a is None or b is None:
+        return True
+    try:
+        return int(a) - int(b) == gap
+    except (TypeError, ValueError):
+        return True
+
+
+def compute(rev_series=None, eps_series=None, ni_series=None,
+            periods=None) -> dict:
     """Sequential growth (revenue) and income (EPS, net income) for one name.
 
     Every series is newest-first, as Massive's quarterly financials return them
-    and as `canslim` already stores them.
+    and as `canslim` already stores them. `periods` is the parallel list of
+    `fiscal_year*4 + (quarter-1)` indices; when present, a pair that is not
+    actually one quarter apart is refused rather than mislabelled.
     """
     rev_cur, rev_prev = _first_two(rev_series)
     # THE SAME FISCAL TRANSITION ONE YEAR EARLIER (slots 4 and 5). This is the
@@ -209,14 +272,22 @@ def compute(rev_series=None, eps_series=None, ni_series=None) -> dict:
     # no business reason at all. Sequential revenue against the SAME transition
     # a year earlier correlates 0.376 (n=148); against the ADJACENT transition,
     # 0.023. The seasonal component is real, large, and repeatable.
-    rev_ly = _seasonal_norm(rev_series, MIN_REV_BASE)
-    eps_ly = _seasonal_norm(eps_series, MIN_EPS_BASE)
+    rev_ly = _seasonal_norm(rev_series, MIN_REV_BASE, periods)
+    eps_ly = _seasonal_norm(eps_series, MIN_EPS_BASE, periods)
+    seq_ok = _adjacent(periods, 0, 1)
     eps_cur, eps_prev = _first_two(eps_series)
     ni_cur, ni_prev = _first_two(ni_series)
 
     growth_pct, growth_base = _seq_pct(rev_cur, rev_prev, MIN_REV_BASE)
     income_pct, income_base = _seq_pct(eps_cur, eps_prev, MIN_EPS_BASE)
     ni_pct, ni_base = _seq_pct(ni_cur, ni_prev, MIN_REV_BASE)
+    if not seq_ok:
+        # The two newest filings are not consecutive quarters. Printing their
+        # difference as "quarter over quarter" would be a confident false
+        # label — worse than an em-dash.
+        growth_pct, growth_base = None, BASE_NOT_ADJACENT
+        income_pct, income_base = None, BASE_NOT_ADJACENT
+        ni_pct, ni_base = None, BASE_NOT_ADJACENT
 
     # A loss-maker that just printed its first profitable quarter is a real
     # event and he should see it — but it is NOT a growth percentage, and it
@@ -257,6 +328,7 @@ def compute(rev_series=None, eps_series=None, ni_series=None) -> dict:
         "ni_qoq_pct": ni_pct,
         "ni_base": ni_base,
         "income_turn": turned,
+        "periods_checked": bool(periods),
         "eps_latest": eps_cur,
         "eps_prior": eps_prev,
         "rev_latest": rev_cur,
@@ -368,6 +440,10 @@ MAX_BACKFILL_WORKERS = 6
 
 def _series_missing(doc: dict) -> bool:
     f = (doc or {}).get("fundamentals") or {}
+    # A document with series but NO period keys is still "missing": it predates
+    # the adjacency check and its pairs cannot be verified.
+    if not (isinstance(f.get("q_period_series"), list) and f.get("q_period_series")):
+        return True
     return not any(isinstance(f.get(k), list) and f.get(k)
                    for k in ("rev_q_series", "eps_q_series", "ni_q_series"))
 
@@ -406,7 +482,8 @@ def backfill(symbols: Optional[list] = None, *, limit: int = 0,
         if not m:
             return False
         sets = {f"fundamentals.{k}": m.get(k)
-                for k in ("rev_q_series", "eps_q_series", "ni_q_series")
+                for k in ("q_period_series", "rev_q_series", "eps_q_series",
+                          "ni_q_series")
                 if m.get(k)}
         if not sets:
             return False
@@ -446,7 +523,8 @@ def snapshot(symbols: list) -> dict:
     for sym, f in snap.items():
         out[sym] = compute(f.get("rev_q_series"),
                            f.get("eps_q_series"),
-                           f.get("ni_q_series"))
+                           f.get("ni_q_series"),
+                           periods=f.get("q_period_series"))
     return out
 
 

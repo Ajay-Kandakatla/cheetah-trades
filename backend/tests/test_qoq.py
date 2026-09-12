@@ -324,3 +324,81 @@ def test_the_SCORED_screens_still_see_exactly_eight_quarters():
     for call in ("sales.compute(_head8(", "_head8(m.get(\"eps_q_series\"))"):
         assert call in src
     assert 'sales.compute(m.get("rev_q_series")' not in src
+
+
+# ── array position is NOT quarter adjacency ────────────────────────────────
+# Massive OMITS a quarter it does not have rather than leaving a placeholder,
+# so slot 0 and slot 1 are not necessarily consecutive. ORCL is missing Q2
+# FY2025 and Q2 FY2026; NVDA is missing Q1 FY2025. Measured over 200 of his
+# board names: 3.2% of "sequential" pairs span two quarters, and 12.6% of the
+# YEAR-over-year pairs the board has printed for months are not four quarters
+# apart — ASO's compares 2027Q2 against 2025Q4.
+Q = lambda fy, q: fy * 4 + (q - 1)                                  # noqa: E731
+
+
+def test_a_verified_adjacent_pair_is_computed_normally():
+    out = qoq.compute(rev_series=[1.5e9, 1.0e9],
+                      periods=[Q(2026, 2), Q(2026, 1)])
+    assert out["growth_qoq_pct"] == 50.0
+    assert out["periods_checked"] is True
+
+
+def test_NEGATIVE_a_GAP_between_the_two_newest_filings_is_REFUSED():
+    """Printing a two-quarter change and calling it quarter-over-quarter is a
+    confident false label — worse than an em-dash."""
+    out = qoq.compute(rev_series=[1.5e9, 1.0e9], eps_series=[0.5, 0.4],
+                      periods=[Q(2026, 3), Q(2026, 1)])
+    assert out["growth_qoq_pct"] is None
+    assert out["income_qoq_pct"] is None
+    assert out["growth_base"] == qoq.BASE_NOT_ADJACENT
+    assert qoq.BASE_NOT_ADJACENT not in (qoq.BASE_UNKNOWN, qoq.BASE_NON_POSITIVE)
+
+
+def test_NEGATIVE_a_seasonal_slot_that_is_not_a_WHOLE_YEAR_back_is_skipped():
+    """Slot 4 is only "the same transition a year ago" when it really is four
+    quarters back. With a hole in the history it can be five — a different
+    season, silently used as this one's norm."""
+    good = qoq.compute(rev_series=[1.5e9, 1.0e9, 1, 1, 1.5e9, 1.0e9],
+                       periods=[Q(2026, 2), Q(2026, 1), Q(2025, 4), Q(2025, 3),
+                                Q(2025, 2), Q(2025, 1)])
+    assert good["growth_qoq_ly_pct"] == 50.0
+    bad = qoq.compute(rev_series=[1.5e9, 1.0e9, 1, 1, 1.5e9, 1.0e9],
+                      periods=[Q(2026, 2), Q(2026, 1), Q(2025, 4), Q(2025, 3),
+                               Q(2024, 3), Q(2024, 2)])     # five back, not four
+    assert bad["growth_qoq_ly_pct"] is None
+
+
+def test_NEGATIVE_an_UNVERIFIABLE_pair_is_ACCEPTED_not_dropped():
+    """Legacy cached documents carry no period keys. Refusing every one of them
+    would blank the ranking rather than improve it — so they compute, and
+    `periods_checked` says they were not verified."""
+    out = qoq.compute(rev_series=[1.5e9, 1.0e9], periods=None)
+    assert out["growth_qoq_pct"] == 50.0
+    assert out["periods_checked"] is False
+    out2 = qoq.compute(rev_series=[1.5e9, 1.0e9], periods=[None, None])
+    assert out2["growth_qoq_pct"] == 50.0
+
+
+def test_the_backfill_treats_a_document_with_NO_period_keys_as_missing():
+    """Otherwise every row cached before today keeps an unverifiable pair
+    forever and the nightly fill would skip it as already done."""
+    assert qoq._series_missing({"fundamentals": {"rev_q_series": [1, 2]}}) is True
+    assert qoq._series_missing({"fundamentals": {
+        "rev_q_series": [1, 2], "q_period_series": [8105, 8104]}}) is False
+
+
+def test_the_seasonal_norm_is_a_MEDIAN_not_a_mean():
+    """Measured 2026-09-12: one near-zero-revenue quarter gave ATRC a "typical
+    Q2" of +4,825% and destroyed the adjustment outright. The base floors
+    already refuse that case; the median does not depend on them staying
+    right."""
+    import inspect
+    src = inspect.getsource(qoq._seasonal_norm)
+    assert "MEDIAN, not mean" in src
+    assert "ATRC" in src
+    # three prior observations: +10, +12, +4825 -> median 12, mean 1615
+    rev = [2.0e9, 1.0e9, 1, 1,
+           1.10e9, 1.0e9, 1, 1,
+           1.12e9, 1.0e9]
+    out = qoq.compute(rev_series=rev)
+    assert out["growth_qoq_ly_pct"] == 11.0        # mean of the two = median

@@ -749,7 +749,9 @@ describe('BreakoutsPage — income + growth, quarter over quarter', () => {
     fireEvent.click(screen.getByRole('button', { name: /What is Breakout columns\?/i }));
     const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
     expect(legend.getByText(/did .worse. than the rest of the board|worse/i)).toBeInTheDocument();
-    expect(legend.getByText(/placebo/i)).toBeInTheDocument();
+    // A placebo beside every rate, per his standing rule — the seasonality
+    // spread carries one AND so does the persistence result.
+    expect(legend.getAllByText(/placebo/i).length).toBeGreaterThanOrEqual(2);
     expect(legend.getByText(/it does not predict/i)).toBeInTheDocument();
   });
 });
