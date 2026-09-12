@@ -73,6 +73,11 @@ def _build_ticker_buckets() -> dict:
             # 2026-09-11: the consumables/test layer is semis-AI exposed too —
             # without this it would fall through to "broad" and be mis-bucketed.
             "semi_materials": "semis_ai",
+            # 2026-09-12: the server OEMs ship mostly-NVIDIA value, so a chip
+            # export control hits them directly — SMCI most of all. Without
+            # this they fall through to "broad" and stop inheriting the one
+            # macro risk that actually moves them.
+            "ai_servers": "semis_ai",
             "lithium": "materials", "uranium": "energy", "oil_gas": "energy",
             "defense": "defense", "cybersecurity": "software_growth",
             "quantum": "software_growth", "software": "software_growth",

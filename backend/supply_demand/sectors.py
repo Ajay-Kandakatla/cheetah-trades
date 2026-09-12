@@ -75,6 +75,38 @@ SECTORS: list[Sector] = [
             "sources": ["Micron Q4'24", "SK Hynix earnings", "TrendForce"],
         },
     },
+    # Ajay 2026-09-12, after the breakout-board recency change surfaced HPQ /
+    # HPE / DELL / SWKS breaking out the same day with no AI tag between them:
+    # "Add them please".
+    #
+    # THE SERVER OEMs HAD NO HOME. `ai_chips` is silicon, `memory_hbm` is DRAM,
+    # `cloud_infra` is the HYPERSCALERS who buy the racks, `optical_interconnect`
+    # is the networking. Nothing covered the layer that actually integrates a
+    # GPU, its memory and its cooling into a sellable rack — so DELL, HPE and
+    # SMCI resolved to None and sank below every tagged name on any AI-first
+    # list, which is exactly the ranking he asked for in June.
+    #
+    # SMCI is included though he did not name it: a server-OEM bucket without
+    # the most GPU-levered server OEM in it would be a bucket that misleads.
+    {
+        "id": "ai_servers",
+        "label": "AI Servers / Systems",
+        "narrative": "The box layer — GPUs, HBM, power and cooling integrated into the rack-scale systems hyperscalers and enterprises actually buy.",
+        "etf": "",
+        "commodity": "",
+        "keywords": ["AI server", "rack-scale", "GB200 rack", "liquid-cooled rack",
+                     "server ODM", "AI factory", "server backlog"],
+        "sp_tickers": ["DELL", "HPE", "SMCI"],
+        "thesis": (
+            "Levered to AI capex as the integration layer, and directly exposed "
+            "to chip export controls because the value shipped is mostly the "
+            "silicon inside. But this is NOT A SUPPLY GAP: assembly capacity is "
+            "not the bottleneck — GPU allocation upstream is — and the layer "
+            "earns thin, competitive margins on someone else's scarcity. Being "
+            "adjacent to the shortage is not the same as owning it."
+        ),
+        "leverage_etfs": [],
+    },
     {
         "id": "lithium",
         "label": "Lithium / EV Battery",
@@ -576,7 +608,10 @@ def sectors_for_ticker(ticker: str) -> list[Sector]:
 # with AI-sector winners — chips → energy/nuclear → water/cooling → grid →
 # software → infra/optical). Lower rank = higher priority.
 AI_SECTOR_PRIORITY: list[str] = [
-    "ai_chips", "memory_hbm",
+    # `ai_servers` sits directly behind the silicon it integrates (2026-09-12):
+    # it is the next layer out from chips and memory, and ahead of the energy
+    # and building blocks that support the data centre around it.
+    "ai_chips", "memory_hbm", "ai_servers",
     "uranium", "power_grid", "oil_gas",
     "datacenter_water_cooling", "grid_equipment",
     "ai_software", "datacenter_reits", "optical_interconnect",
