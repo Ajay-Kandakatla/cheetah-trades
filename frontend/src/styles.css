@@ -11960,6 +11960,21 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-name > td.hs-sym { padding-left: 2.2rem; }
 .hs-coname { font-size: 0.68rem; color: var(--ink-muted); margin-top: 1px; }
 .hs-sym { min-width: 190px; }
+/* Sortable column headers (Ajay 2026-09-12: "Add sort in this"). The arrow
+ * on the active column IS the sort state — the three leg chips that used to
+ * duplicate it were removed the same day. */
+.hs-sort {
+  background: none; border: none; color: inherit; font: inherit;
+  cursor: pointer; padding: 0; text-align: inherit; white-space: nowrap;
+}
+.hs-sort:hover { text-decoration: underline; }
+.hs-table th.is-sorted { color: var(--ink); }
+.hs-table th.is-sorted .hs-sort { font-weight: 700; }
+.hs-sorted-by { font-size: 0.72rem; color: var(--ink-muted); }
+.hs-dim { color: var(--ink-muted); opacity: 0.8; }
+/* A group row's fundamental cell is a MEDIAN of its membership, not a filed
+ * number — dimmed so it never reads as a company's own figure. */
+.hs-med { opacity: 0.72; font-style: italic; }
 .hs-tier { white-space: nowrap; color: var(--ink-muted); }
 .hs-er { white-space: nowrap; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .hs-spacer { background: inherit; }

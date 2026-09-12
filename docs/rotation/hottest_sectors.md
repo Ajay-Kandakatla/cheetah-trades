@@ -98,6 +98,78 @@ names**.
 - **NaN passes every `<=` comparison**, so one bad bar silently reorders the whole board. The
   shared `traction_row` output is scrubbed *before* the sort, not just before serialisation.
 
+## Sorting every column (2026-09-12)
+
+Ajay 2026-09-12: *"Add sort in this."*
+
+Nine sortable columns, listed in `HS_COLS` (frontend) and validated against
+`SORT_KEYS` (backend) by
+`test_every_printed_column_is_sortable` — a header that ranks on a key the
+server rejects would silently fall back to `rel_5d`.
+
+| Column | Sort key | Notes |
+|---|---|---|
+| Today / 5 days / 21 days | `rel_1d` `rel_5d` `rel_21d` | relative to RSP |
+| Sales YoY | `sales_yoy` | |
+| Sales trend | `sales_tier` | **ordinal**, not alphabetical: explosive 5 › strong 4 › steady 3 › weak 2 › declining 1 |
+| Q EPS | `q_eps_yoy` | |
+| Margin | `net_margin` | |
+| Quality | `eq_score` | Minervini Ch.8 |
+| Next ER | `next_earnings` | opens **ascending** — the question is who reports soonest |
+
+### Why the sort is a server round-trip and not a client reorder
+
+The payload keeps `names_per_group` (25) rows per sector and per industry.
+Sorting in the browser would rank those 25 and **never reach the 305th
+Technology name**. `_build` sorts `rows` *before* `irows[:names_per_group]`, so
+the round-trip re-ranks the full membership and then truncates. Pinned by
+`test_the_sort_runs_BEFORE_the_names_are_truncated` (with `names_per_group=1`,
+the one row returned must be the column's top, not the return leg's).
+
+### The trap: a blank must sort last in BOTH directions
+
+`_sort_value` returns a `(present, value)` pair and every caller sorts
+`reverse=True`. The obvious implementation scores a missing value as `-inf`,
+which is **correct descending and wrong ascending** — it floats every em-dash
+row to the top. `test_NEGATIVE_a_blank_sorts_LAST_in_BOTH_directions` runs all
+six nullable columns × both directions.
+
+### Group rows gained a median, because a sort has to be visible
+
+Sector and industry rows were **blank** in the four fundamental columns, so
+ranking on one of them reordered the tree with nothing on screen to explain
+the new order. `_fund_medians()` computes the median of the group's **full
+membership** for `sales_yoy`, `q_eps_yoy`, `net_margin`, `eq_score` and a
+median tier, rendered in italics (`.hs-med`) so it never reads as a company's
+own filed figure.
+
+**The three legs are NOT recomputed.** They stay `_group_legs(shipped)` — the
+rotation grid's sampled median, reused verbatim, which is what stops this board
+disagreeing with the Hot-sectors strip. Only the fundamental columns are
+computed here, and they carry `fund_basis` saying so. Pinned by
+`test_group_legs_are_still_the_SAMPLED_median_not_recomputed`.
+
+### The three leg chips were removed
+
+They set the same backend `sort` the headers now set. Two controls for one
+piece of state is how a board starts disagreeing with itself about its own
+order; the arrow on the active header is the state, plus one line of prose
+above the table.
+
+### Mutation coverage
+
+All 13 mutations caught — 8 backend (blank scored `-inf`, direction ignored,
+tier as a string, sort after truncation, medians dropped, medians invented from
+blanks, legs recomputed, unknown key accepted) and 5 frontend (active-click
+stops flipping, Next ER opens desc, no arrow, medians back to a spacer,
+direction never sent).
+
+**One test initially passed for the wrong reason.** The tier test compared two
+names, and `'explosive'` is both the top tier *and* the longest string — so it
+survived replacing the rank with `len(tier)`. Rewritten to assert the full
+five-tier order in both directions, which defeats alphabetical and
+length-based impostors alike.
+
 ## What this board is not
 
 A trailing-return ranking with **no measured edge**. Nothing here is backtested and none of it

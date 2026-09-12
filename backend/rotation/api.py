@@ -476,12 +476,20 @@ _bt_cache: dict = {}
 
 @router.get("/rotation/hottest")
 async def rotation_hottest(
-    sort: str = Query(H.DEFAULT_SORT, description="rel_1d | rel_5d | rel_21d | traction"),
+    sort: str = Query(H.DEFAULT_SORT,
+                      description="any key in the payload's `sortable` list"),
+    dir: str = Query(H.DEFAULT_DIR, description="desc | asc"),
     names: int = Query(H.NAMES_PER_GROUP, ge=1, le=200,
                        description="names returned per sector/industry"),
 ):
     """The 🔥 Hottest tab: every sector ranked, each opening into its
     industries and then its names, with the sales block on every row.
+
+    Every column the table prints is sortable (`sortable` in the payload), in
+    both directions (`dir`). The sort runs HERE and not in the browser because
+    the payload keeps only `names` rows per group: a client-side sort would
+    reorder the visible 25 and never reach the 46th name. A missing value
+    sorts LAST in both directions.
 
     ALL ELEVEN sectors answer, not just the hot end — deliberately. His own
     example is a strong name in a COLD sector (ANDE is 2nd of Consumer
@@ -495,10 +503,11 @@ async def rotation_hottest(
     table, meta = _members_table()
     if table is None:
         return JSONResponse({"sectors": [], "reason": meta.get("reason") or "member table unavailable",
-                             "sorted_by": sort, **meta}, status_code=200)
+                             "sorted_by": sort, "sorted_dir": dir, **meta}, status_code=200)
     payload = dict(_members_payload() or {})
     payload[T.MEMBERS_KEY] = table
     body = H.build_live(payload, sort=_coerce_str(sort, H.DEFAULT_SORT),
+                        direction=_coerce_str(dir, H.DEFAULT_DIR),
                         names_per_group=_coerce_int(names, H.NAMES_PER_GROUP))
     body.update({k: v for k, v in meta.items() if k in ("source", "built_at_iso", "age_sec", "stale")})
     return JSONResponse(_scrub(body))

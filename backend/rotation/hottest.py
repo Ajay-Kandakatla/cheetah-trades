@@ -66,7 +66,17 @@ DEFAULT_SORT = "rel_5d"
 THIN_N = 8
 NAMES_PER_GROUP = 25          # per sector/industry in the payload; the UI pages
 
-SORT_KEYS = LEGS + ("traction", "ret_1d", "ret_5d", "ret_21d")
+# The fundamental columns the table prints. Ajay 2026-09-12: "Add sort in
+# this" — every column he can read, he can rank on. These sort at the BACKEND
+# on purpose: the payload keeps only `names_per_group` names per group, so a
+# client-side sort would reorder the visible 25 and never reach the 46th name.
+FUND_SORTS = ("sales_yoy", "q_eps_yoy", "net_margin", "eq_score")
+# Ordinal, not numeric — a tier string has to become a rank before it sorts.
+TIER_RANK = {"explosive": 5, "strong": 4, "steady": 3, "weak": 2, "declining": 1}
+SORT_KEYS = (LEGS + ("traction", "ret_1d", "ret_5d", "ret_21d") + FUND_SORTS
+             + ("sales_tier", "next_earnings"))
+SORT_DIRS = ("desc", "asc")
+DEFAULT_DIR = "desc"
 
 
 def _num(v):
@@ -83,8 +93,58 @@ def _num(v):
 
 
 def _sort_value(row: dict, key: str):
+    """One comparable for any sortable column: numeric, tier ordinal, or date.
+
+    Returns a `(present, value)` pair, and every caller sorts `reverse=True`.
+    A MISSING value is `(0, ...)` and therefore sorts LAST in BOTH directions
+    — the whole point of the pair. The old single `-inf` was correct only
+    descending; on an ascending sort it floats every blank row to the top,
+    which is the "sort by margin ascending shows 300 em-dashes" bug.
+    """
+    if key == "sales_tier":
+        r = TIER_RANK.get(str(row.get(key) or "").lower())
+        return (1, float(r)) if r else (0, 0.0)
+    if key == "next_earnings":
+        # ISO dates compare lexicographically; mapped to a number so the pair
+        # stays homogeneous. Soonest-first is the ASCENDING direction.
+        d = str(row.get(key) or "")
+        if len(d) < 10 or d[4] != "-":
+            return (0, 0.0)
+        try:
+            return (1, float(d[:4] + d[5:7] + d[8:10]))
+        except ValueError:
+            return (0, 0.0)
     v = _num(row.get(key))
-    return v if v is not None else float("-inf")
+    return (1, v) if v is not None else (0, 0.0)
+
+
+def _sorter(key: str, direction: str):
+    """`sorted(key=...)` for one column + direction, missing values last."""
+    asc = direction == "asc"
+    def _k(row):
+        present, v = _sort_value(row, key)
+        return (present, -v if asc else v)
+    return _k
+
+
+def _fund_medians(rows: list) -> dict:
+    """A group's own read on each fundamental column: the median of its FULL
+    membership. Sectors and industries had NOTHING in these columns, so a sort
+    on one of them reordered the tree for no visible reason. The legs stay the
+    rotation grid's sampled median (reused verbatim so this board can never
+    disagree with the Hot-sectors strip); these are computed here because the
+    grid ships no fundamentals at all."""
+    out = {k: _median([_num(r.get(k)) for r in rows]) for k in FUND_SORTS}
+    tiers = [TIER_RANK.get(str(r.get("sales_tier") or "").lower())
+             for r in rows]
+    tiers = [t for t in tiers if t]
+    if tiers:
+        rank = int(round(_median([float(t) for t in tiers]) or 0))
+        out["sales_tier"] = next((n for n, v in TIER_RANK.items() if v == rank), None)
+    else:
+        out["sales_tier"] = None
+    out["fund_basis"] = "median of full membership"
+    return out
 
 
 def _fundamentals_row(sym: str, fund: dict, earn: dict) -> dict:
@@ -168,27 +228,34 @@ def _median(vals: list) -> Optional[float]:
 
 
 def build(payload: dict, *, sort: str = DEFAULT_SORT,
+          direction: str = DEFAULT_DIR,
           names_per_group: int = NAMES_PER_GROUP) -> dict:
     """Assemble the board from an already-built rotation payload. PURE — no
     Mongo, no fetch — except the two bulk joins, which are injected by
     `build_live`. Keeps the shape testable off a fixture."""
-    return _build(payload, sort=sort, names_per_group=names_per_group,
+    return _build(payload, sort=sort, direction=direction,
+                  names_per_group=names_per_group,
                   decisions={}, earnings={})
 
 
 def build_live(payload: dict, *, sort: str = DEFAULT_SORT,
+          direction: str = DEFAULT_DIR,
                names_per_group: int = NAMES_PER_GROUP) -> dict:
     """`build` plus the two bulk reads, done ONCE for the whole board rather
     than per row."""
     table = (payload or {}).get(T.MEMBERS_KEY) or {}
     syms = list((table.get("by_symbol") or {}).keys())
-    return _build(payload, sort=sort, names_per_group=names_per_group,
+    return _build(payload, sort=sort, direction=direction,
+                  names_per_group=names_per_group,
                   decisions=_decision_map(syms), earnings=_earnings_map(syms))
 
 
 def _build(payload: dict, *, sort: str, names_per_group: int,
-           decisions: dict, earnings: dict) -> dict:
+           decisions: dict, earnings: dict,
+           direction: str = DEFAULT_DIR) -> dict:
     sort_key = sort if sort in SORT_KEYS else DEFAULT_SORT
+    sort_dir = direction if direction in SORT_DIRS else DEFAULT_DIR
+    _by = _sorter(sort_key, sort_dir)
     payload = payload or {}
     table = payload.get(T.MEMBERS_KEY) or {}
     by_symbol = table.get("by_symbol") or {}
@@ -216,7 +283,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             r = {k: (_num(v) if isinstance(v, float) else v) for k, v in r.items()}
             r.update(_fundamentals_row(s, decisions.get(s), earnings.get(s)))
             rows.append(r)
-        rows.sort(key=lambda r: _sort_value(r, sort_key), reverse=True)
+        rows.sort(key=_by, reverse=True)
         return rows
 
     out_sectors = []
@@ -253,8 +320,9 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
                 "names": irows[:names_per_group],
                 "names_total": len(irows),
                 **legs,
+                **_fund_medians(irows),
             })
-        inds.sort(key=lambda r: _sort_value(r, sort_key), reverse=True)
+        inds.sort(key=_by, reverse=True)
 
         samp = sampled.get(name) or {}
         out_sectors.append({
@@ -267,8 +335,9 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             "names": names[:names_per_group],
             "names_total": len(names),
             **_group_legs(shipped),
+            **_fund_medians(names),
         })
-    out_sectors.sort(key=lambda r: _sort_value(r, sort_key), reverse=True)
+    out_sectors.sort(key=_by, reverse=True)
 
     covered = sum(1 for s in by_symbol if s in decisions)
     return {
@@ -276,6 +345,8 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         "benchmark": payload.get("benchmark") or (bench or {}).get("symbol") or "RSP",
         "market": payload.get("market"),
         "sorted_by": sort_key,
+        "sorted_dir": sort_dir,
+        "sortable": list(SORT_KEYS),
         "legs": list(LEGS),
         "sectors": out_sectors,
         "names_per_group": names_per_group,

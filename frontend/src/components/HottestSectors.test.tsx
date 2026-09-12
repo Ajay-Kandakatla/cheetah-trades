@@ -34,6 +34,9 @@ const PAYLOAD = {
       group: 'Technology', n_full: 305, sampled_of: 305, sampled_used: 40,
       basis: 'rotation grid sample', n_measured: 40,
       rel_1d: -0.59, rel_5d: 2.0, rel_21d: -4.27,
+      // the medians rotation/hottest.py::_fund_medians now ships on group rows
+      sales_yoy: 12.4, sales_tier: 'steady', q_eps_yoy: 18.0,
+      net_margin: 9.6, eq_score: 44, fund_basis: 'median of full membership',
       names: [NOFUND], names_total: 305,
       industries: [{
         group: 'Semiconductor Equipment & Materials', n_full: 23, ranked: true,
@@ -164,8 +167,88 @@ describe('HottestSectors board', () => {
     const calls = stub();
     view();
     await screen.findByText(/Technology/);
-    fireEvent.click(screen.getByRole('button', { name: '21 days' }));
+    fireEvent.click(screen.getByRole('button', { name: /21 days/ }));
     await waitFor(() => expect(calls.some((u) => u.includes('sort=rel_21d'))).toBe(true));
+  });
+
+  /* Ajay 2026-09-12: "Add sort in this". */
+  it('EVERY printed column is a sort control, not just the three legs', async () => {
+    stub();
+    view();
+    await screen.findByText(/Technology/);
+    for (const label of ['Today', '5 days', '21 days', 'Sales YoY', 'Sales trend',
+                         'Q EPS', 'Margin', 'Quality', 'Next ER']) {
+      expect(screen.getByRole('button', { name: new RegExp(label) })).toBeTruthy();
+    }
+  });
+
+  it('sorting a FUNDAMENTAL column round-trips to the server, not the browser', async () => {
+    const calls = stub();
+    view();
+    await screen.findByText(/Technology/);
+    fireEvent.click(screen.getByRole('button', { name: /Sales YoY/ }));
+    // the server sort is the point: the payload keeps 25 names per group, so a
+    // client-side reorder could never reach the 305th Technology name
+    await waitFor(() => expect(calls.some((u) => u.includes('sort=sales_yoy'))).toBe(true));
+  });
+
+  it('clicking the ACTIVE column flips the direction instead of re-sorting it', async () => {
+    const calls = stub();
+    view();
+    await screen.findByText(/Technology/);
+    expect(calls.some((u) => u.includes('dir=desc'))).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: /5 days/ }));   // already active
+    await waitFor(() => expect(calls.some((u) => u.includes('sort=rel_5d&dir=asc'))).toBe(true));
+  });
+
+  it('Next ER opens ASCENDING — the useful question is who reports soonest', async () => {
+    const calls = stub();
+    view();
+    await screen.findByText(/Technology/);
+    fireEvent.click(screen.getByRole('button', { name: /Next ER/ }));
+    await waitFor(() => expect(calls.some((u) => u.includes('sort=next_earnings&dir=asc'))).toBe(true));
+  });
+
+  it('the active column carries the direction arrow and aria-sort', async () => {
+    stub();
+    view();
+    await screen.findByText(/Technology/);
+    expect(screen.getByRole('button', { name: /5 days ▼/ })).toBeTruthy();
+    expect(document.querySelector('th[aria-sort="descending"]')).toBeTruthy();
+    // an idle column shows NO arrow — nine resting ⇅ glyphs is furniture
+    expect(screen.getByRole('button', { name: /^Margin$/ })).toBeTruthy();
+  });
+
+  it('the sorted-on state is stated in words, once', async () => {
+    stub();
+    view();
+    await screen.findByText(/ranked on/);
+    expect(screen.getByText(/high → low/)).toBeTruthy();
+    // the three leg CHIPS that used to duplicate the headers are gone
+    expect(screen.queryByRole('button', { pressed: true })).toBeNull();
+  });
+
+  it('a GROUP row prints its median in the fundamental columns', async () => {
+    stub();
+    view();
+    const row = (await screen.findByText(/Technology/)).closest('tr')!;
+    // blank before 2026-09-12 — so a sort on one of these reordered the tree
+    // with nothing on screen to explain the new order
+    expect(within(row).getByText('+12.4%')).toBeTruthy();          // sales median
+    expect(within(row).getAllByTitle(/median of full membership/).length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: a group with no filed fundamentals prints em-dashes, not zeros', async () => {
+    stub({
+      ...PAYLOAD,
+      sectors: [{ ...PAYLOAD.sectors[0], sales_yoy: null, q_eps_yoy: null,
+                  net_margin: null, eq_score: null, sales_tier: null,
+                  fund_basis: 'median of full membership' }],
+    });
+    view();
+    const row = (await screen.findByText(/Technology/)).closest('tr')!;
+    expect(within(row).queryByText('+0.0%')).toBeNull();
+    expect(within(row).getAllByText('—').length).toBeGreaterThan(0);
   });
 
   it('NEGATIVE: a failed fetch says so instead of rendering an empty board', async () => {

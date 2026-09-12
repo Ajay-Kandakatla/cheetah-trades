@@ -39,25 +39,63 @@ export type HsName = {
   sales_backed?: boolean | null; inventory_flag?: boolean | null;
   next_earnings?: string | null; earnings_when?: string | null;
 };
-export type HsIndustry = {
+/** The fundamental columns a GROUP row carries: the median of its full
+ *  membership, computed in rotation/hottest.py::_fund_medians. Before
+ *  2026-09-12 these columns were blank on sector and industry rows, so
+ *  sorting on one of them reordered the tree for no visible reason. */
+export type HsFundMedians = {
+  sales_yoy?: number | null; sales_tier?: string | null;
+  q_eps_yoy?: number | null; net_margin?: number | null;
+  eq_score?: number | null; fund_basis?: string | null;
+};
+export type HsIndustry = HsFundMedians & {
   group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
   rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
   names: HsName[]; names_total: number;
 };
-export type HsSector = {
+export type HsSector = HsFundMedians & {
   group: string; n_full: number; sampled_of?: number | null; sampled_used?: number | null;
   basis: string; n_measured?: number | null;
   rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
   industries: HsIndustry[]; names: HsName[]; names_total: number;
 };
 export type HsPayload = {
-  as_of?: string; benchmark?: string; sorted_by?: string; legs?: string[];
+  as_of?: string; benchmark?: string; sorted_by?: string; sorted_dir?: string;
+  sortable?: string[]; legs?: string[];
   sectors: HsSector[]; coverage?: { priced?: number; with_fundamentals?: number; pct?: number | null };
   note?: string; reason?: string; built_at_iso?: string; stale?: boolean;
 };
 
-const LEG_LABEL: Record<string, string> = { rel_1d: 'Today', rel_5d: '5 days', rel_21d: '21 days' };
 const SORTS = ['rel_1d', 'rel_5d', 'rel_21d'] as const;
+
+export type HsDir = 'desc' | 'asc';
+/** Every column, in print order, with the payload key it ranks on.
+ *
+ *  Ajay 2026-09-12: "Add sort in this". The sort is a BACKEND round-trip, not
+ *  a client-side reorder, because the payload holds only `names_per_group`
+ *  rows per group — sorting in the browser would rank the visible 25 and never
+ *  reach the 46th name. `asc` is the useful direction for Next ER (who reports
+ *  soonest) and for hunting the weak end of a column. */
+export const HS_COLS: { key: string; label: string; num: boolean; title?: string }[] = [
+  { key: 'rel_1d', label: 'Today', num: true },
+  { key: 'rel_5d', label: '5 days', num: true },
+  { key: 'rel_21d', label: '21 days', num: true },
+  { key: 'sales_yoy', label: 'Sales YoY', num: true },
+  { key: 'sales_tier', label: 'Sales trend', num: false,
+    title: 'ranks explosive › strong › steady › weak › declining' },
+  { key: 'q_eps_yoy', label: 'Q EPS', num: true },
+  { key: 'net_margin', label: 'Margin', num: true },
+  { key: 'eq_score', label: 'Quality', num: true,
+    title: 'Minervini Ch.8 earnings quality · 🎯 Code 33 · ⚠️ inventory vs sales' },
+  { key: 'next_earnings', label: 'Next ER', num: false,
+    title: 'ascending = who reports soonest' },
+];
+
+/** The arrow a header shows. Inactive columns show nothing — an idle ⇅ on
+ *  nine headers is nine pieces of furniture. */
+export function arrow(active: boolean, dir: HsDir): string {
+  return active ? (dir === 'desc' ? ' ▼' : ' ▲') : '';
+}
 
 /** An em-dash, never a zero — a missing quarter is not flat growth. */
 export function pct(v: number | null | undefined, dp = 1): string {
@@ -86,6 +124,25 @@ function LegCells({ r }: { r: { rel_1d?: number | null; rel_5d?: number | null; 
       {SORTS.map((k) => (
         <td key={k} className={`mono hs-num ${tone(r[k])}`}>{pct(r[k])}</td>
       ))}
+    </>
+  );
+}
+
+/** The four fundamental cells + the trend + Next ER, for a GROUP row (sector
+ *  or industry). Medians of the full membership — the row's own read on the
+ *  column it may be sorted by. */
+function GroupFundCells({ r }: { r: HsFundMedians }) {
+  const t = r.fund_basis || 'median of full membership';
+  return (
+    <>
+      <td className={`mono hs-num hs-med ${tone(r.sales_yoy)}`} title={t}>{pct(r.sales_yoy)}</td>
+      <td className="hs-tier hs-med" title={t}>{tierChip(r.sales_tier)} {r.sales_tier || '—'}</td>
+      <td className={`mono hs-num hs-med ${tone(r.q_eps_yoy)}`} title={t}>{pct(r.q_eps_yoy, 0)}</td>
+      <td className={`mono hs-num hs-med ${tone(r.net_margin)}`} title={t}>{pct(r.net_margin)}</td>
+      <td className="mono hs-num hs-med" title={t}>
+        {typeof r.eq_score === 'number' ? r.eq_score.toFixed(0) : '—'}
+      </td>
+      <td className="hs-spacer" />
     </>
   );
 }
@@ -133,21 +190,28 @@ export function HottestSectors() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState<string>('rel_5d');
+  const [dir, setDir] = useState<HsDir>('desc');
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [byIndustry, setByIndustry] = useState(true);
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}`,
+    fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}&dir=${dir}`,
           { credentials: 'include', cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((j: HsPayload) => { setData(j); setErr(null); setLoading(false); })
       .catch((e) => { setErr(String(e?.message ?? e)); setLoading(false); });
-  }, [sort]);
+  }, [sort, dir]);
   useEffect(() => { load(); }, [load]);
 
   const sectors = useMemo(() => data?.sectors || [], [data]);
   const toggle = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+  /** Click a new column → sort it DESC (the interesting end of every column
+   *  except Next ER). Click the active column again → flip direction. */
+  const clickSort = (k: string) => {
+    if (k === sort) setDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    else { setSort(k); setDir(k === 'next_earnings' ? 'asc' : 'desc'); }
+  };
 
   if (err) return <div className="cm-note cm-note-warn">Hottest sectors unavailable: {err}</div>;
   if (!data && loading) return <div className="cm-note">Reading the rotation table…</div>;
@@ -156,13 +220,16 @@ export function HottestSectors() {
   return (
     <div className="hs">
       <div className="hs-controls">
+        {/* The three leg chips used to live here. They set the same backend
+            `sort` the column headers now do, and two controls for one piece of
+            state is how a board starts lying about its own order. The header
+            arrow IS the state. */}
         <div className="hs-sorts">
-          {SORTS.map((k) => (
-            <button key={k} type="button"
-                    className={`cm-chip${sort === k ? ' is-on' : ''}`}
-                    aria-pressed={sort === k}
-                    onClick={() => setSort(k)}>{LEG_LABEL[k]}</button>
-          ))}
+          <span className="hs-sorted-by">
+            ranked on <b>{HS_COLS.find((c) => c.key === sort)?.label || sort}</b>
+            {dir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
+            <span className="hs-dim"> · click any column header</span>
+          </span>
         </div>
         <label className="hs-toggle">
           <input type="checkbox" checked={byIndustry}
@@ -170,7 +237,8 @@ export function HottestSectors() {
           Break into industries
         </label>
         <InfoButton inline title="🔥 Hottest — how to read this">
-          <p>Every sector ranked on <b>{LEG_LABEL[sort]}</b> against <b>{data?.benchmark || 'RSP'}</b>,
+          <p>Every sector ranked on <b>{HS_COLS.find((c) => c.key === sort)?.label || sort}</b>
+            against <b>{data?.benchmark || 'RSP'}</b>,
             the equal-weight benchmark — so a name is measured against the average stock, not the
             mega-caps. Open a sector for its industries, then its names.</p>
           <p><b>All eleven sectors are listed, not just the hot ones.</b> A strong name often sits in
@@ -180,6 +248,13 @@ export function HottestSectors() {
             median — the same number the Hot-sectors strip prints, reused so the two can never
             disagree. Name rows are the <b>full</b> membership. Industries too small for a ranked row
             still show, flagged <i>thin</i>: a 6-name median is not a 25-name one.</p>
+          <p><b>Every column sorts, and it sorts on the server.</b> Click a header to rank on
+            it; click it again to flip the direction. The board keeps 25 names per group, so a
+            browser-side sort would only reorder those 25 — the round-trip re-ranks the FULL
+            membership and then takes the top 25 of the column you picked. A blank always sorts
+            LAST, in both directions. Sector and industry rows show the <b>median of their full
+            membership</b> in the fundamental columns, so a sort there has something visible behind
+            it; the three return legs stay the rotation grid&rsquo;s sampled median.</p>
           <p><b>Names are ranked by return, not by traction.</b> Traction measures acceleration, and it
             ranks ANDE 23rd of 76 while the 5-day ranks it 3rd.</p>
           <p><b>This is a discovery list, not a signal.</b> It is trailing returns — nothing here is
@@ -202,13 +277,18 @@ export function HottestSectors() {
           <thead>
             <tr>
               <th className="hs-sym">Sector / Name</th>
-              {SORTS.map((k) => <th key={k} className="hs-num">{LEG_LABEL[k]}</th>)}
-              <th className="hs-num">Sales YoY</th>
-              <th>Sales trend</th>
-              <th className="hs-num">Q EPS</th>
-              <th className="hs-num">Margin</th>
-              <th className="hs-num" title="Minervini Ch.8 earnings quality · 🎯 Code 33 · ⚠️ inventory vs sales">Quality</th>
-              <th>Next ER</th>
+              {HS_COLS.map((c) => {
+                const on = sort === c.key;
+                return (
+                  <th key={c.key} className={`${c.num ? 'hs-num' : ''}${on ? ' is-sorted' : ''}`}
+                      aria-sort={on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                    <button type="button" className="hs-sort" onClick={() => clickSort(c.key)}
+                            title={c.title ? `${c.title} · click to sort` : 'click to sort'}>
+                      {c.label}{arrow(on, dir)}
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -233,7 +313,7 @@ export function HottestSectors() {
                       </span>
                     </td>
                     <LegCells r={s} />
-                    <td colSpan={6} className="hs-spacer" />
+                    <GroupFundCells r={s} />
                   </tr>
                   {isOpen && byIndustry ? s.industries.map((ind) => {
                     const ik = `${k}|i:${ind.group}`;
@@ -251,7 +331,7 @@ export function HottestSectors() {
                             </span>
                           </td>
                           <LegCells r={ind} />
-                          <td colSpan={6} className="hs-spacer" />
+                          <GroupFundCells r={ind} />
                         </tr>
                         {iOpen ? ind.names.map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (

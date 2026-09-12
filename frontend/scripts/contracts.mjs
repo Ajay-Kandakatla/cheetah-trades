@@ -1372,6 +1372,25 @@ const CONTRACTS = [
       // the backend owns heat and traction; a second definition here is how
       // this board and the Hot-sectors strip would start disagreeing
       if (/traction\s*[=:]\s*.*pace/.test(tsx)) errs.push('HottestSectors must not recompute traction — the backend owns it');
+      // Ajay 2026-09-12: "Add sort in this". Every column he reads, he ranks
+      // on — and the sort MUST be a server round-trip: the payload keeps only
+      // `names_per_group` rows per group, so a client-side reorder ranks the
+      // visible 25 and never reaches the 305th Technology name.
+      if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir\}/.test(tsx)) {
+        errs.push('HottestSectors must send BOTH sort and dir to the server — a client-side sort only reorders the truncated 25');
+      }
+      if (/\.sort\(\(a, b\)|\[\.\.\.(sectors|names)\]\.sort\(/.test(tsx)) {
+        errs.push('HottestSectors must not sort rows locally — the server sorts before it truncates');
+      }
+      for (const key of ['sales_yoy', 'sales_tier', 'q_eps_yoy', 'net_margin',
+                         'eq_score', 'next_earnings']) {
+        if (!tsx.includes(`key: '${key}'`)) {
+          errs.push(`HS_COLS is missing the ${key} column — every printed column must sort`);
+        }
+      }
+      if (!/<GroupFundCells r=\{s\}/.test(tsx) || !/<GroupFundCells r=\{ind\}/.test(tsx)) {
+        errs.push('sector AND industry rows must print their fundamental medians — otherwise a sort on one of those columns reorders the tree with nothing visible behind it');
+      }
 
       const css = read('src/styles.css');
 
