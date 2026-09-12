@@ -167,6 +167,30 @@ def _promo_tagged(symbols: Iterable[str]) -> set:
         return set()
 
 
+def _sectors(symbols) -> dict:
+    """{SYM: (sector, industry)} from the companies collection.
+
+    Ajay 2026-09-11: "I wanna see the secorts in the growth.. To show that only
+    some are growing." This is the GICS axis the 🔥 Hottest tab groups by —
+    NOT supply_demand/sectors.py, which is the curated thematic list and shares
+    no code path with it.
+
+    TRAP: `companies` is keyed by an ObjectId _id with the ticker in `symbol`.
+    Querying it by _id returns zero docs with no error."""
+    db = _db()
+    if db is None:
+        return {}
+    try:
+        return {(d.get("symbol") or "").upper(): (d.get("sector"), d.get("industry"))
+                for d in db.companies.find(
+                    {"symbol": {"$in": list(symbols)}},
+                    {"symbol": 1, "sector": 1, "industry": 1})
+                if d.get("symbol")}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("growth.tracker: sector read failed: %s", exc)
+        return {}
+
+
 def _caps(symbols) -> dict:
     try:
         from sepa import volume_movers as vm
@@ -206,6 +230,7 @@ def screen(limit: int = MAX_ROWS) -> list[dict]:
 
     syms = [h[0] for h in hits]
     caps = _caps(syms)
+    secs = _sectors(syms)
     promo = _promo_tagged(syms)
     prices = _prices(syms)
 
@@ -222,6 +247,8 @@ def screen(limit: int = MAX_ROWS) -> list[dict]:
         rows.append({
             "symbol": sym,
             "name": d.get("name"),
+            "sector": secs.get(sym, (None, None))[0],
+            "industry": secs.get(sym, (None, None))[1],
             "price": round(px, 2) if px else None,
             "market_cap": cap,
             "avg_dollar_vol": dv,

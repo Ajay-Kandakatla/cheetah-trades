@@ -26,6 +26,7 @@ export type GrowthZone = {
 };
 export type GrowthRow = {
   symbol: string; name?: string | null;
+  sector?: string | null; industry?: string | null;
   price?: number | null; market_cap?: number | null;
   avg_dollar_vol?: number | null; liquid?: boolean;
   promo_tagged?: boolean;
@@ -38,8 +39,26 @@ export type GrowthRow = {
   zone?: GrowthZone; warnings?: string[];
   as_of?: string | null;
 };
+export type GrowthIndustry = {
+  group: string; n: number;
+  median_sales_growth_pct?: number | null;
+  median_eps_growth_pct?: number | null;
+  symbols: string[];
+};
+export type GrowthGroup = {
+  group: string; n: number;
+  /** how many SCANNED names sit in this sector — the denominator that turns
+   *  "9 names" into "9 of 493", which is the point of the grouping */
+  n_scanned?: number | null;
+  hit_rate_pct?: number | null;
+  median_sales_growth_pct?: number | null;
+  median_eps_growth_pct?: number | null;
+  industries: GrowthIndustry[];
+  symbols: string[];
+};
 export type GrowthPayload = {
   rows: GrowthRow[]; n: number; built_at?: string | null;
+  groups?: GrowthGroup[];
   screen?: {
     min_sales_growth_pct?: number; min_eps_growth_pct?: number;
     min_prior_sales_pct?: number; cap_floor?: number | null;
@@ -89,6 +108,8 @@ export function ExplosiveGrowth() {
   const [busy, setBusy] = useState(false);
   const [onlyBuyable, setOnlyBuyable] = useState(false);
   const [onlyDemand, setOnlyDemand] = useState(false);
+  const [sector, setSector] = useState<string | null>(null);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async (refresh = false) => {
     refresh ? setBusy(true) : setLoading(true);
@@ -111,9 +132,11 @@ export function ExplosiveGrowth() {
     let r = data?.rows ?? [];
     if (onlyBuyable) r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
     if (onlyDemand) r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
+    if (sector) r = r.filter((x) => (x.sector || '(unmapped)') === sector);
     return r;
-  }, [data, onlyBuyable, onlyDemand]);
+  }, [data, onlyBuyable, onlyDemand, sector]);
 
+  const groups = data?.groups ?? [];
   const blockedN = (data?.rows ?? []).filter(
     (x) => (x.warnings ?? []).some((w) => w.startsWith('⛔'))).length;
   const demandN = (data?.rows ?? []).filter((x) => x.zone?.in_band && x.zone?.intact).length;
@@ -154,6 +177,62 @@ export function ExplosiveGrowth() {
         the broker. {data?.disclaimer}
         {data?.built_at && <> Built {String(data.built_at).slice(0, 16).replace('T', ' ')} UTC.</>}
       </div>
+
+      {/* Sectors (Ajay 2026-09-11: "I wanna see the secorts in the growth.. To
+          show that only some are growing"). The denominator is the point: 9 of
+          493 Technology names is a different statement from "9 names". Same
+          GICS axis the 🔥 Hottest tab groups by. Click a sector to filter the
+          table; expand it for the industries underneath. */}
+      {!!groups.length && (
+        <div className="eg-groups">
+          <div className="eg-groups-head">
+            Sectors — how many of each sector's scanned names clear the screen.
+            {sector && (
+              <button className="eg-btn eg-clear" onClick={() => setSector(null)}>
+                clear filter ({sector})
+              </button>
+            )}
+          </div>
+          {groups.map((g) => {
+            const isOpen = !!open[g.group];
+            return (
+              <div key={g.group} className="eg-grp">
+                <div className={`eg-grp-row${sector === g.group ? ' is-on' : ''}`}>
+                  <button className="eg-twist"
+                          aria-label={isOpen ? 'collapse' : 'expand'}
+                          onClick={() => setOpen((o) => ({ ...o, [g.group]: !isOpen }))}>
+                    {isOpen ? '▾' : '▸'}
+                  </button>
+                  <button className="eg-grp-name"
+                          onClick={() => setSector(sector === g.group ? null : g.group)}>
+                    {g.group}
+                  </button>
+                  <span className="eg-grp-n">
+                    <b>{g.n}</b>
+                    {g.n_scanned ? <span className="eg-dim"> of {g.n_scanned}</span> : null}
+                  </span>
+                  <span className="eg-num eg-dim">
+                    {g.hit_rate_pct == null ? '—' : `${g.hit_rate_pct.toFixed(1)}%`}
+                  </span>
+                  <span className="eg-num eg-good">{pct(g.median_sales_growth_pct, 1)}</span>
+                </div>
+                {isOpen && (
+                  <div className="eg-inds">
+                    {g.industries.map((i) => (
+                      <div key={i.group} className="eg-ind">
+                        <span className="eg-ind-name">{i.group}</span>
+                        <span className="eg-grp-n"><b>{i.n}</b></span>
+                        <span className="eg-num eg-good">{pct(i.median_sales_growth_pct, 1)}</span>
+                        <span className="eg-ind-syms">{i.symbols.join(', ')}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="eg-scroll">
         <table className="eg-table">

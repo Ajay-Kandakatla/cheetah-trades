@@ -33,11 +33,89 @@ def _scrub(o):
     return o
 
 
+def _median(v):
+    v = sorted(x for x in v if isinstance(x, (int, float)) and x == x)
+    if not v:
+        return None
+    n = len(v)
+    return v[n // 2] if n % 2 else round((v[n // 2 - 1] + v[n // 2]) / 2.0, 2)
+
+
+def _sector_totals() -> dict:
+    """{sector: how many SCANNED names sit in it} — the denominator.
+
+    Ajay 2026-09-11: "I wanna see the secorts in the growth.. To show that only
+    some are growing." A count of 11 means nothing on its own; 11 OF 306 is the
+    statement he asked for. Same GICS axis the 🔥 Hottest tab groups by."""
+    try:
+        from portfolio.store import _get_db
+        db = _get_db()
+        if db is None:
+            return {}
+        scanned = {(d.get("symbol") or "").upper()
+                   for d in db.sepa_research_cache.find({}, {"symbol": 1})
+                   if d.get("symbol")}
+        out = {}
+        for d in db.companies.find({"symbol": {"$in": list(scanned)}},
+                                   {"symbol": 1, "sector": 1}):
+            sec = d.get("sector")
+            if sec:
+                out[sec] = out.get(sec, 0) + 1
+        return out
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("growth.api: sector totals failed: %s", exc)
+        return {}
+
+
+def _group(rows: list) -> list:
+    """Sector -> industries -> names, richest sales growth first at every level.
+
+    The same shape as the 🔥 Hottest tab so the two boards read alike. A row
+    with no sector lands in an explicit "(unmapped)" bucket rather than being
+    dropped — a missing GICS tag must never silently shrink the board."""
+    totals = _sector_totals()
+    by_sec = {}
+    for r in rows:
+        by_sec.setdefault(r.get("sector") or "(unmapped)", []).append(r)
+
+    out = []
+    for sec, names in by_sec.items():
+        by_ind = {}
+        for r in names:
+            by_ind.setdefault(r.get("industry") or "(unmapped)", []).append(r)
+        inds = [{
+            "group": ind,
+            "n": len(rs),
+            "median_sales_growth_pct": _median([x.get("sales_growth_pct") for x in rs]),
+            "median_eps_growth_pct": _median([x.get("q_eps_growth_pct") for x in rs]),
+            "symbols": [x["symbol"] for x in
+                        sorted(rs, key=lambda x: -(x.get("sales_growth_pct") or 0))],
+        } for ind, rs in by_ind.items()]
+        inds.sort(key=lambda g: -(g["median_sales_growth_pct"] or 0))
+        scanned = totals.get(sec)
+        out.append({
+            "group": sec,
+            "n": len(names),
+            "n_scanned": scanned,
+            # "11 of 306" — the whole point of the grouping
+            "hit_rate_pct": (round(100.0 * len(names) / scanned, 2)
+                             if scanned else None),
+            "median_sales_growth_pct": _median([x.get("sales_growth_pct") for x in names]),
+            "median_eps_growth_pct": _median([x.get("q_eps_growth_pct") for x in names]),
+            "industries": inds,
+            "symbols": [x["symbol"] for x in
+                        sorted(names, key=lambda x: -(x.get("sales_growth_pct") or 0))],
+        })
+    out.sort(key=lambda g: (-g["n"], -(g["median_sales_growth_pct"] or 0)))
+    return out
+
+
 def _payload(doc: dict) -> dict:
     rows = doc.get("rows") or []
     return _scrub({
         "rows": rows,
         "n": len(rows),
+        "groups": _group(rows),
         "built_at": (doc.get("built_at").isoformat()
                      if hasattr(doc.get("built_at"), "isoformat")
                      else doc.get("built_at")),

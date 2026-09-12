@@ -1187,6 +1187,19 @@ const CONTRACTS = [
       if (!/\/growth\/\$\{refresh \? 'refresh' : 'board'\}/.test(tsx)) {
         errs.push('ExplosiveGrowth must read GET /growth/board (and POST /growth/refresh)');
       }
+      // Sectors with the DENOMINATOR (Ajay 2026-09-11: "I wanna see the secorts
+      // in the growth.. To show that only some are growing"). A bare count of 9
+      // says nothing; "9 of 493" is the statement. If n_scanned stops rendering,
+      // the board silently goes back to saying nothing.
+      if (!/n_scanned/.test(tsx)) {
+        errs.push('the sector rows must print n_scanned — "9 of 493", not just "9"');
+      }
+      if (!/hit_rate_pct/.test(tsx)) {
+        errs.push('the sector rows must print the hit rate');
+      }
+      if (!/industries\.map\(/.test(tsx)) {
+        errs.push('a sector must expand into its industries — he asked for the individual categories');
+      }
       // The board must PRINT the warnings, not merely receive them. Rendering
       // the row without them is the silent-unbuyable-list failure.
       if (!/warns\.map\(/.test(tsx)) {

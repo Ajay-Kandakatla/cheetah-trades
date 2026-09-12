@@ -12034,3 +12034,42 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-badge-bad    { color: #f85149; background: rgba(248,81,73,0.12); }
 .sb-chip-growth  { color: #22d3ee; background: rgba(34,211,238,0.12); }
 .sb-chip-bad     { color: #f85149; background: rgba(248,81,73,0.12); }
+
+/* 🚀 Explosive Growth — sector grouping (2026-09-11).
+ * Ajay: "I wanna see the secorts in the growth.. To show that only some are
+ * growing .. I do need individual categories of these". Sector row carries the
+ * DENOMINATOR (9 of 493) because the count alone says nothing; expanding shows
+ * the industries underneath, same shape as the 🔥 Hottest tab. */
+.eg-groups {
+  border: 1px solid var(--hairline); border-radius: 9px;
+  padding: 6px 8px 8px; background: var(--bg-raised);
+}
+.eg-groups-head {
+  font-size: 0.7rem; color: var(--ink-muted); padding: 2px 2px 7px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.eg-clear { font-size: 0.68rem; padding: 2px 8px; }
+.eg-grp { border-top: 1px solid var(--hairline); }
+.eg-grp:first-of-type { border-top: none; }
+.eg-grp-row {
+  display: grid; grid-template-columns: 20px minmax(140px, 1.4fr) 96px 62px 84px;
+  align-items: center; gap: 8px; padding: 5px 2px; font-size: 0.78rem;
+}
+.eg-grp-row.is-on { background: rgba(34, 211, 238, 0.08); border-radius: 6px; }
+.eg-twist {
+  background: none; border: none; color: var(--ink-muted);
+  cursor: pointer; font-size: 0.8rem; padding: 0; line-height: 1;
+}
+.eg-grp-name {
+  background: none; border: none; color: inherit; cursor: pointer;
+  text-align: left; font: inherit; padding: 0;
+}
+.eg-grp-name:hover { text-decoration: underline; }
+.eg-grp-n { text-align: right; font-variant-numeric: tabular-nums; }
+.eg-inds { padding: 2px 0 6px 26px; }
+.eg-ind {
+  display: grid; grid-template-columns: minmax(120px, 1fr) 44px 78px 2.2fr;
+  gap: 8px; align-items: baseline; padding: 3px 0; font-size: 0.72rem;
+}
+.eg-ind-name { color: var(--ink-muted); }
+.eg-ind-syms { color: var(--ink-muted); font-size: 0.68rem; }
