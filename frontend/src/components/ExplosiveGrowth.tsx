@@ -17,6 +17,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
+import {
+  DEFAULT_SORT, DEFAULT_DIR, SORT_LABEL, arrow, initialDir, sortRows,
+} from '../lib/growthSort';
+import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
 
 export type GrowthZone = {
@@ -58,6 +62,12 @@ export type GrowthGroup = {
 };
 export type GrowthPayload = {
   rows: GrowthRow[]; n: number; built_at?: string | null;
+  /* The screen's own row cap, and whether this build hit it. At the cap the
+   * list is the SALES-GROWTH top N, so a demand sort ranks within that cut and
+   * an intact name past it is ABSENT, not merely low. Never true today (29 of
+   * 300) — carried anyway, because a cap the reader cannot see is exactly how a
+   * truncated list reads as a complete one. */
+  max_rows?: number; capped?: boolean;
   groups?: GrowthGroup[];
   screen?: {
     min_sales_growth_pct?: number; min_eps_growth_pct?: number;
@@ -119,12 +129,20 @@ function demandCell(z?: GrowthZone): { text: string; tone: string; title: string
   if (!z.in_band) {
     return { text: 'out', tone: 'eg-dim', title: 'Not inside a demand band today.' };
   }
-  if (z.intact) {
+  if (z.intact === true) {
     return { text: '🧲 intact', tone: 'eg-good',
              title: 'Inside a demand band whose floor has never been pierced — the only gate that measured (+8.6pp win over 31,861 events).' };
   }
-  return { text: 'in band, pierced', tone: 'eg-warn',
-           title: 'Inside the band, but the floor has been pierced in the sweep window. The intact-floor edge does not apply here.' };
+  if (z.intact === false) {
+    return { text: 'in band, pierced', tone: 'eg-warn',
+             title: 'Inside the band, but the floor has been pierced in the sweep window. The intact-floor edge does not apply here.' };
+  }
+  // Surfaced by the 2026-09-12 demand sort: the band is real but the floor
+  // gate never answered (it throws and is logged at debug). This used to print
+  // as "in band, pierced", which states a fact nobody checked. It is UNKNOWN,
+  // and it sorts with the other unknowns — last in both directions.
+  return { text: 'in band, floor ?', tone: 'eg-dim',
+           title: 'Inside a demand band, but the floor-held check did not answer for this name — unknown, not pierced.' };
 }
 
 export function ExplosiveGrowth() {
@@ -136,6 +154,20 @@ export function ExplosiveGrowth() {
   const [onlyDemand, setOnlyDemand] = useState(false);
   const [sector, setSector] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  // Ajay 2026-09-12: "sort this by demand intact". The board OPENS on demand
+  // now — the four names at an intact floor were ranked 5th to 20th by sales
+  // growth and you had to hunt for them.
+  const [sortKey, setSortKey] = useState<GrowthSortKey>(DEFAULT_SORT);
+  const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_DIR);
+
+  /** A new column opens at its interesting end; the live column flips. */
+  const clickSort = useCallback((k: GrowthSortKey) => {
+    setSortKey((prev) => {
+      if (prev === k) { setSortDir((d) => (d === 'desc' ? 'asc' : 'desc')); return prev; }
+      setSortDir(initialDir(k));
+      return k;
+    });
+  }, []);
 
   const load = useCallback(async (refresh = false) => {
     refresh ? setBusy(true) : setLoading(true);
@@ -159,8 +191,11 @@ export function ExplosiveGrowth() {
     if (onlyBuyable) r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
     if (onlyDemand) r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
     if (sector) r = r.filter((x) => (x.sector || '(unmapped)') === sector);
-    return r;
-  }, [data, onlyBuyable, onlyDemand, sector]);
+    // Sort LAST, on the filtered set: every row the screen returned is in this
+    // payload (29 of a 300 cap), so unlike the 🔥 Hottest board this is a
+    // complete ordering and needs no round-trip.
+    return sortRows(r, sortKey, sortDir);
+  }, [data, onlyBuyable, onlyDemand, sector, sortKey, sortDir]);
 
   const groups = data?.groups ?? [];
   const blockedN = (data?.rows ?? []).filter(
@@ -278,19 +313,92 @@ export function ExplosiveGrowth() {
         </div>
       )}
 
+      <div className="eg-note eg-sortnote">
+        Sorted by <b>{SORT_LABEL[sortKey]}</b>,
+        {sortDir === 'desc' ? ' best first' : ' worst first'}
+        {' — click any header to change it. Rows the board could not measure —'}
+        {' no zone read, or a floor check that did not answer — sort to the'}
+        {' bottom in either direction. That is unknown, not bad.'}
+        {data?.capped && (
+          <div className="eg-warn">
+            ⚠️ This build hit the {data.max_rows}-row screen cap, and the cap is
+            {' '}taken by <b>sales growth</b> — so this sort ranks within that cut.
+            {' '}A name at an intact floor ranked past the cap is absent here, not
+            {' '}just low.
+          </div>
+        )}
+      </div>
+
       <div className="eg-scroll">
         <table className="eg-table">
           <thead>
+            {/* Every column sorts (Ajay 2026-09-12: "sort this by demand
+                intact"). Click a header to rank on it, click it again to flip.
+                A missing value sorts LAST in both directions. */}
             <tr>
-              <th>Symbol</th>
-              <th className="eg-num">Sales YoY</th>
-              <th className="eg-num">Prior Q</th>
-              <th className="eg-num">Q EPS</th>
-              <th className="eg-num">Net margin</th>
-              <th className="eg-num">Price</th>
-              <th className="eg-num">Cap</th>
-              <th className="eg-num">$ vol/day</th>
-              <th>Demand</th>
+              <th
+                  aria-sort={sortKey === 'symbol' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('symbol')}>
+                  Symbol{arrow('symbol', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'sales_growth_pct' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('sales_growth_pct')}>
+                  Sales YoY{arrow('sales_growth_pct', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'sales_prior_pct' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('sales_prior_pct')}>
+                  Prior Q{arrow('sales_prior_pct', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'q_eps_growth_pct' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('q_eps_growth_pct')}>
+                  Q EPS{arrow('q_eps_growth_pct', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'npm_latest_pct' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('npm_latest_pct')}>
+                  Net margin{arrow('npm_latest_pct', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'price' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('price')}>
+                  Price{arrow('price', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'market_cap' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('market_cap')}>
+                  Cap{arrow('market_cap', sortKey, sortDir)}
+                </button>
+              </th>
+              <th className="eg-num"
+                  aria-sort={sortKey === 'avg_dollar_vol' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('avg_dollar_vol')}>
+                  $ vol/day{arrow('avg_dollar_vol', sortKey, sortDir)}
+                </button>
+              </th>
+              <th
+                  aria-sort={sortKey === 'demand' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                <button type="button" className="eg-sort"
+                        onClick={() => clickSort('demand')}>
+                  Demand{arrow('demand', sortKey, sortDir)}
+                </button>
+              </th>
               <th>Flags</th>
               <th />
             </tr>

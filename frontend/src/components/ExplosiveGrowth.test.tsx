@@ -232,3 +232,126 @@ describe('ExplosiveGrowth board', () => {
     await waitFor(() => expect(screen.getByText(/nothing matches/)).toBeTruthy());
   });
 });
+
+/* ── Sorting (Ajay 2026-09-12: "sort this by demand intact") ───────────────
+ *
+ * The board sorted by sales growth only, so on the 09-12 build the four names
+ * standing at an intact demand floor sat 5th to 20th under fifteen names that
+ * are not at a band at all. The column carrying the one MEASURED gate was the
+ * one column you could not order by.
+ */
+describe('ExplosiveGrowth — sorting by demand', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const INTACT = row({ symbol: 'HHH', sales_growth_pct: 330.2,
+                       zone: { missing: false, in_band: true, intact: true } });
+  const PIERCED = row({ symbol: 'ABC', sales_growth_pct: 900,
+                        zone: { missing: false, in_band: true, intact: false } });
+  const OUT = row({ symbol: 'DBRG', sales_growth_pct: 15961.5,
+                    zone: { missing: false, in_band: false, intact: null } });
+  const NOBAND = row({ symbol: 'PROP', sales_growth_pct: 627.4, market_cap: null,
+                       zone: { missing: true } });
+
+  /** Data-row symbols, in render order. */
+  const order = () => screen.getAllByRole('row').slice(1)
+    .map((r) => r.querySelector('a')?.textContent?.trim())
+    .filter(Boolean);
+
+  it('OPENS with the intact floors on top, ahead of far bigger growers', async () => {
+    // DBRG grows 15,961% and leads the board by sales. It is not at a band.
+    stub([OUT, NOBAND, PIERCED, INTACT]);
+    mount();
+    await waitFor(() => expect(order().length).toBe(4));
+    expect(order()).toEqual(['HHH', 'ABC', 'DBRG', 'PROP']);
+  });
+
+  it('clicking Sales YoY gets the old board order back', async () => {
+    stub([OUT, NOBAND, PIERCED, INTACT]);
+    mount();
+    await waitFor(() => expect(order().length).toBe(4));
+    fireEvent.click(screen.getByRole('button', { name: /Sales YoY/ }));
+    expect(order()).toEqual(['DBRG', 'ABC', 'PROP', 'HHH']);
+  });
+
+  it('clicking the live column flips its direction', async () => {
+    stub([OUT, PIERCED, INTACT]);
+    mount();
+    await waitFor(() => expect(order().length).toBe(3));
+    fireEvent.click(screen.getByRole('button', { name: /Demand/ }));
+    expect(order()).toEqual(['DBRG', 'ABC', 'HHH']);
+  });
+
+  it('NEGATIVE: a name with no zone read stays LAST when the sort is flipped', async () => {
+    // Scoring "no bands" as a zero is right descending and puts a name nobody
+    // measured at rank 1 ascending, reading as the worst on the board.
+    stub([OUT, NOBAND, PIERCED, INTACT]);
+    mount();
+    await waitFor(() => expect(order().length).toBe(4));
+    fireEvent.click(screen.getByRole('button', { name: /Demand/ }));
+    expect(order()[order().length - 1]).toBe('PROP');
+  });
+
+  it('NEGATIVE: an unanswered floor check says so — it does not read as pierced', async () => {
+    stub([row({ symbol: 'XYZ', zone: { missing: false, in_band: true, intact: null } })]);
+    mount();
+    expect(await screen.findByText('in band, floor ?')).toBeInTheDocument();
+    expect(screen.queryByText('in band, pierced')).not.toBeInTheDocument();
+  });
+
+  it('exactly one header carries the sort arrow, and it announces itself', async () => {
+    stub([INTACT, OUT]);
+    mount();
+    await waitFor(() => expect(order().length).toBe(2));
+    expect(screen.getByRole('button', { name: /Demand ▾/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader')
+      .filter((h) => (h.getAttribute('aria-sort') || 'none') !== 'none')).toHaveLength(1);
+    expect(screen.getByText(/Sorted by/)).toBeInTheDocument();
+  });
+
+  it('the sort survives a filter and never fights it', async () => {
+    stub([OUT, NOBAND, PIERCED, INTACT]);
+    mount();
+    await waitFor(() => expect(order().length).toBe(4));
+    fireEvent.click(screen.getByRole('checkbox', { name: /at demand, floor intact/ }));
+    expect(order()).toEqual(['HHH']);
+  });
+});
+
+/* The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps by
+ * SALES GROWTH. Now the board sorts client-side that is load-bearing: at the
+ * cap, a demand sort ranks within the sales-growth cut and an intact name past
+ * it is ABSENT, not merely low. 29 of 300 today — so this must stay silent. */
+describe('ExplosiveGrowth — the row cap', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const stubCap = (rows: GrowthRow[], extra: Record<string, unknown>) =>
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        rows, n: rows.length, groups: [], built_at: '2026-09-12T02:52:00',
+        screen: { min_sales_growth_pct: 100, min_eps_growth_pct: 100 },
+        disclaimer: 'Discovery list, NOT a signal.', ...extra,
+      }),
+    }) as unknown as Response));
+
+  it('says so when the list is truncated — a client sort of a capped list lies', async () => {
+    stubCap([row()], { max_rows: 300, capped: true });
+    mount();
+    expect(await screen.findByText(/hit the 300-row screen cap/)).toBeInTheDocument();
+    expect(screen.getByText(/absent here, not/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: stays silent on a normal build — 29 of 300 is not a warning', async () => {
+    stubCap([row()], { max_rows: 300, capped: false });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(screen.queryByText(/screen cap/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: an older payload with no cap fields renders no warning', async () => {
+    stubCap([row()], {});
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(screen.queryByText(/screen cap/)).not.toBeInTheDocument();
+  });
+});

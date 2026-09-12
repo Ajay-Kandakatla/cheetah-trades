@@ -378,3 +378,32 @@ def test_the_cap_is_one_named_constant_not_a_literal_in_the_loop():
     calls = {getattr(c.func, "id", None) for c in _ast.walk(grp)
              if isinstance(c, _ast.Call)}
     assert "_top" in calls, "_group must cut through _top(), not inline"
+
+
+# ── the row cap is stated, not silent (2026-09-12) ──────────────────────────
+# The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps by
+# SALES GROWTH. That became load-bearing when the board started sorting
+# client-side (Ajay: "sort this by demand intact"): at the cap, a demand sort
+# ranks within the sales-growth cut, so an intact name past the cap is ABSENT,
+# not merely low. 29 of 300 today — the point is that the reader can tell.
+def test_the_payload_states_the_row_cap_so_a_client_sort_cannot_lie():
+    from growth import api as GA, tracker as GT
+    out = GA._payload({"rows": [{"symbol": "HHH"}], "built_at": None})
+    assert out["max_rows"] == GT.MAX_ROWS
+    assert out["capped"] is False
+
+
+def test_NEGATIVE_a_full_build_reports_itself_as_capped():
+    from growth import api as GA, tracker as GT
+    rows = [{"symbol": f"S{i}"} for i in range(GT.MAX_ROWS)]
+    out = GA._payload({"rows": rows, "built_at": None})
+    assert out["capped"] is True, "a build at the cap must say the list is cut"
+    assert out["n"] == GT.MAX_ROWS
+
+
+def test_NEGATIVE_capped_is_never_a_truthy_row_count():
+    """`capped` must be a bool, not the count — the FE renders it directly and
+    a non-empty board would print the warning on every load."""
+    from growth import api as GA
+    out = GA._payload({"rows": [{"symbol": "A"}, {"symbol": "B"}], "built_at": None})
+    assert out["capped"] is False and isinstance(out["capped"], bool)

@@ -126,9 +126,18 @@ def _group(rows: list) -> list:
 
 def _payload(doc: dict) -> dict:
     rows = doc.get("rows") or []
+    # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
+    # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
+    # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks
+    # within the sales-growth top N and an intact name at N+1 is not merely
+    # ranked low, it is absent. 29 of 300 today, so it has never bound — but a
+    # cap the reader cannot see is exactly how a truncated list reads as a
+    # complete one. Said in the payload so the board can say it out loud.
     return _scrub({
         "rows": rows,
         "n": len(rows),
+        "max_rows": T.MAX_ROWS,
+        "capped": len(rows) >= T.MAX_ROWS,
         "groups": _group(rows),
         "built_at": (doc.get("built_at").isoformat()
                      if hasattr(doc.get("built_at"), "isoformat")

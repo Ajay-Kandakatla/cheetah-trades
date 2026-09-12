@@ -12061,6 +12061,23 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   text-align: left; font-weight: 600; padding: 7px 9px;
   border-bottom: 1px solid var(--hairline); white-space: nowrap;
 }
+
+/* ── Sortable growth headers (Ajay 2026-09-12: "sort this by demand intact") ─
+   A real <button> inside the th so the header is a keyboard stop, not a
+   click-target only the mouse can reach. It inherits the th's own type so the
+   column looks exactly as it did before it became clickable. */
+.eg-table th .eg-sort {
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  appearance: none; -webkit-appearance: none; white-space: nowrap;
+}
+.eg-table th.eg-num .eg-sort { width: 100%; text-align: right; }
+.eg-table th .eg-sort:hover { color: var(--ink, #e7e7e7); text-decoration: underline dotted; }
+.eg-table th .eg-sort:focus-visible {
+  outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; border-radius: 3px;
+}
+.eg-table th[aria-sort]:not([aria-sort="none"]) { color: var(--ink, #e7e7e7); }
+.eg-sortnote { margin-top: 0.35rem; }
 .eg-table td { padding: 7px 9px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
 .eg-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .eg-table thead th.eg-num { text-align: right; }

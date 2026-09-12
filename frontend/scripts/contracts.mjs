@@ -1615,6 +1615,60 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // Ajay 2026-09-12: "sort this by demand intact". The board ranked by sales
+  // growth only, so the four names at an intact demand floor sat 5th to 20th
+  // under fifteen that are not at a band at all — the one column carrying a
+  // MEASURED gate (+8.6pp over 31,861 events) was the one you could not sort.
+  {
+    name: 'the growth board sorts by demand, unknown pinned last (2026-09-12)',
+    file: 'src/lib/growthSort.ts',
+    checks: (src) => {
+      const errs = [];
+      // The ladder is ordered by distance from the measured gate.
+      if (!/DEMAND_INTACT = 3/.test(src) || !/DEMAND_PIERCED = 2/.test(src)
+          || !/DEMAND_OUT = 1/.test(src)) {
+        errs.push('the demand ladder must stay intact > pierced > out');
+      }
+      // The rule the whole sort turns on.
+      if (!/va\.known !== vb\.known/.test(src)) {
+        errs.push('an unknown must be compared BEFORE the direction sign is applied');
+      }
+      if (/sign \* \(va\.known/.test(src)) {
+        errs.push('an unknown must never flip to the top of an ascending sort');
+      }
+      // in-band + intact null is UNKNOWN, not pierced.
+      if (!/z\.intact === false/.test(src) || !/z\.intact === true/.test(src)) {
+        errs.push('intact must be tested for true/false explicitly — null is neither');
+      }
+      if (!/DEFAULT_SORT: GrowthSortKey = 'demand'/.test(src)) {
+        errs.push('the board must OPEN on demand — that was the ask');
+      }
+      if (!/\[\.\.\.rows\]\.sort/.test(src)) {
+        errs.push('the sort must copy; sorting the payload in place makes order click-dependent');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the growth demand cell never calls an unknown floor pierced (2026-09-12)',
+    file: 'src/components/ExplosiveGrowth.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/floor \?/.test(src)) {
+        errs.push('an unanswered floor check needs its own label, not the pierced one');
+      }
+      if (!/z\.intact === true/.test(src)) {
+        errs.push('a truthy test on intact reads null as pierced — state a fact nobody checked');
+      }
+      if (!/aria-sort=/.test(src)) {
+        errs.push('the live sort column must announce itself');
+      }
+      if (!/sortRows\(r, sortKey, sortDir\)/.test(src)) {
+        errs.push('the sort must run on the FILTERED rows, not the raw payload');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
