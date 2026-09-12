@@ -263,9 +263,20 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
     bench = table.get("benchmark") or {}
     sector_groups = groups.get("sector") or {}
     industry_groups = groups.get("industry") or {}
+    # THE GRAIN THIS BOARD COULD NOT SEE (Ajay 2026-09-12, looking at the
+    # table): "Where is Robitics and crypto here?"
+    #
+    # It read `sector` and `industry` and nothing else, so the twelve curated
+    # rosters — robotics, nuclear, quantum, rare_earth, optical, space, the AI
+    # complex — were invisible here even though the Hot-sectors strip has
+    # ranked them as THEME IN / THEME OUT chips for days and the members table
+    # has carried the grain all along (`T.MEMBER_GRAINS`). Robotics was never
+    # missing; this board simply never asked for it.
+    theme_groups = groups.get("theme") or {}
 
     shipped_sectors = {r.get("group"): r for r in (payload.get("sectors") or [])}
     shipped_inds = {r.get("group"): r for r in (payload.get("industries") or [])}
+    shipped_themes = {r.get("group"): r for r in (payload.get("themes") or [])}
     sampled = payload.get("sampled") or {}
 
     def _names(symbols: list, group_median) -> list:
@@ -339,6 +350,45 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         })
     out_sectors.sort(key=_by, reverse=True)
 
+    # ── Themes ────────────────────────────────────────────────────────────
+    # A theme is a FLAT roster: no industry layer, because the whole point of a
+    # curated theme is that it cuts ACROSS the provider's industries — robotics
+    # spans Technology, Industrials and Consumer Cyclical, and splitting it back
+    # into them would undo the only thing the roster is for.
+    #
+    # They ride ALONGSIDE the sectors and never replace them (rotation/heat.py
+    # states why at length): on 2026-09-09 the curated `ai_semis` roster read
+    # rel_21d +0.28 while the provider's `Semiconductors` cohort read −1.95 —
+    # opposite signs on the same question. The objective label answers "how are
+    # semis doing"; a roster we picked does not get to overrule it.
+    out_themes = []
+    for name, grp in theme_groups.items():
+        shipped = shipped_themes.get(name) or {}
+        symbols = list(grp.get("symbols") or [])
+        med21 = grp.get("median_21d")
+        trows = _names(symbols, med21)
+        legs = (_group_legs(shipped) if shipped else
+                {k: _median([_num(r.get(k)) for r in trows]) for k in LEGS})
+        if not shipped:
+            legs.update({"pct_positive_1d": None, "n_measured": len(symbols),
+                         "dropped": None})
+        out_themes.append({
+            "group": name,
+            "n_full": len(symbols),
+            # Thin rosters are KEPT and FLAGGED, never dropped — he asked for
+            # rare_earth (n=4) and nuclear by name, and a four-name median is
+            # worth seeing as long as the row says how few names made it.
+            "thin": len(symbols) < THIN_N,
+            "ranked": bool(shipped),
+            "basis": "rotation grid sample" if shipped else "full membership",
+            "industries": [],
+            "names": trows[:names_per_group],
+            "names_total": len(trows),
+            **legs,
+            **_fund_medians(trows),
+        })
+    out_themes.sort(key=_by, reverse=True)
+
     covered = sum(1 for s in by_symbol if s in decisions)
     return {
         "as_of": payload.get("as_of"),
@@ -349,6 +399,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         "sortable": list(SORT_KEYS),
         "legs": list(LEGS),
         "sectors": out_sectors,
+        "themes": out_themes,
         "names_per_group": names_per_group,
         "coverage": {
             "priced": len(by_symbol),
@@ -359,8 +410,10 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         "note": (
             "Sector heat is the rotation grid's sampled median (the same number the "
             "Hot-sectors strip prints). Name rows are the FULL membership, which is why "
-            "a strong name in a cold sector is still reachable. Trailing returns only — "
-            "a discovery list, not a measured signal."
+            "a strong name in a cold sector is still reachable. Themes are our own "
+            "curated rosters and cut ACROSS the provider's sectors, so they ride "
+            "alongside rather than replacing them — they disagree, and the objective "
+            "label wins. Trailing returns only — a discovery list, not a measured signal."
         ),
         "built_at": int(time.time()),
     }

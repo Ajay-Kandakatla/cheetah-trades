@@ -195,6 +195,39 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   # backlog, below IPO price — lumpiest name on the roster
                   "FLY"],
     "quantum":   ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ"],
+    # Crypto EQUITIES — Ajay 2026-09-12, looking at the 🔥 Hottest board:
+    # "Where is Robitics and crypto here?"
+    #
+    # WHAT IS AND IS NOT HERE, because the answer is not obvious. The big
+    # miners he would expect first — IREN, MARA, RIOT, CIFR, WULF, HUT, BTDR,
+    # CORZ, APLD and GLXY — are ALREADY TRACKED, under `ai_power`, and they
+    # stay there. Themes are a strict partition (`_assert_themes_disjoint`
+    # raises at import), and those ten sit in ai_power because that is the
+    # actual trade: they are power-constrained datacenter operators converting
+    # contracted megawatts into AI/HPC hosting, which is why several were in
+    # the universe on their own merits before any crypto roster existed.
+    # Moving them here would disturb a roster he already watches AND would tell
+    # him the wrong story about what drives them.
+    #
+    # So this theme is the half that had NO theme at all: the pure miners, the
+    # exchanges and brokers, and the treasury holders.
+    #
+    # A TREASURY HOLDER IS A LEVERED COIN PROXY, not an operating business —
+    # MSTR, SMLR, DFDV, UPXI, BTCS, CEP and SBET move with the coin and with
+    # their own issuance, and their "earnings" are mark-to-market. Read them
+    # that way.
+    #
+    # NO SUPPLY GAP IS CLAIMED. Hashrate expands to meet price and difficulty
+    # adjusts it away, so there is no bottleneck to own; the edge, where it
+    # exists, is cheap contracted power. And the COINS stay out entirely —
+    # BNB/ETH/XRP are not scannable US equities.
+    #
+    # The 24-name roster in supply_demand/sectors.py has no partition
+    # constraint and still holds all of them; it renders on /supply-demand,
+    # which he does not use. This is the Chart Maps copy.
+    "crypto":    ["CLSK", "BTBT", "BITF", "HIVE", "CAN", "SLNH", "ARBK",
+                  "COIN", "HOOD", "BKKT",
+                  "MSTR", "SMLR", "DFDV", "UPXI", "BTCS", "CEP", "SBET"],
     # Ajay 2026-09-11: "there are companies like SNDK but for raw material for
     # Semis" -> "yes add that". Then, correcting me: "i dont use supply deman
     # page at all.. I only been using chart maps". The sector I first added to
@@ -361,6 +394,9 @@ THEME_PRIORITY: dict[str, int] = {
     "datacenter_build": 10,
     "defense":   11,
     "rare_earth": 12,
+    # Last on purpose: it is the only roster here with no AI-ecosystem thesis,
+    # and his standing rule puts AI-ecosystem winners on top of every list.
+    "crypto":    13,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of

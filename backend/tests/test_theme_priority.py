@@ -123,10 +123,17 @@ def test_priority_is_the_order_ajay_asked_for():
     # chips are the thesis, the consumables and the test step are the
     # derivative. Same reasoning as datacenter_build behind ai_infra.
     # Everything below shifted one rank; relative order is unchanged.
+    # crypto appended LAST 2026-09-12 (Ajay, on the 🔥 Hottest table: "Where is
+    # Robitics and crypto here?"). Last on purpose and it is the only roster
+    # here with no AI-ecosystem thesis — his 2026-06-25 standing rule puts
+    # AI-ecosystem winners on top of every breakout list, so a roster that is
+    # not part of that story must not outrank one that is. Note the big miners
+    # are NOT in it: IREN, MARA, RIOT, CIFR, WULF, HUT, BTDR, CORZ, APLD and
+    # GLXY stay in ai_power, which is where their actual trade lives.
     assert order == ["space", "quantum", "ai_semis", "semi_materials",
                      "ai_power", "nuclear",
                      "energy", "optical", "robotics", "ai_infra",
-                     "datacenter_build", "defense", "rare_earth"]
+                     "datacenter_build", "defense", "rare_earth", "crypto"]
 
 
 def test_every_roster_has_a_priority():

@@ -54,6 +54,7 @@ import { API } from '../lib/apiBase';
 import { pct, tone } from '../lib/rotation';
 import { SectorMembersModal } from './SectorMembersModal';
 import RotationChanges from './RotationChanges';
+import { HottestSectors } from './HottestSectors';
 import type { GroupKind } from '../lib/rotationMembers';
 
 export type HotRow = {
@@ -329,14 +330,37 @@ export default function HotSectors() {
         // a broken scan or a missing payload.
         <p className="hs-market">{tape || 'nothing is hot today'}</p>
       )}
+      {/* THE FULL BOARD IS THE TABLE NOW (Ajay 2026-09-12: "Actually move this
+          table in to ... Instead of hiding this is more organized").
+
+          The fold was my answer to "this whole thing is super messay" this
+          morning and he is right that it was the wrong one — hiding a mess
+          leaves a mess one click away. The 🔥 Hottest table answers the same
+          question in a form he can RANK: every group, all three legs, sales /
+          EPS / margin / quality, and it opens into the member names. So the
+          toggle now reveals THAT.
+
+          ONE COMPONENT, ONE SET OF NUMBERS. Both renderings read the same
+          rotation grid; two renderings of one measurement is how the strip and
+          the board start disagreeing about which sector is hot.
+
+          The chips are KEPT underneath, not deleted. They are the only way to
+          the member popover (grain-aware drill, the sample-vs-full sentence,
+          the 🪃 demand mark) and he did not ask for that to go — removing it
+          would be a loss dressed up as a layout change. Say the word and they
+          come out in one edit. */}
       {chipCount > 0 && (
         <button type="button" className="hs-toggle" aria-expanded={showAll}
                 onClick={() => setShowAll((v) => !v)}>
-          {showAll ? 'hide the full board' : `full board (${chipCount} chips)`}
+          {showAll ? 'hide the full board' : 'full board'}
         </button>
       )}
       {showAll && (
         <>
+        <div className="hs-embed">
+          <HottestSectors />
+        </div>
+        <em className="hs-tag">or drill a chip for its members</em>
         {cohIn.length > 0 && (
           <span className="hs-group">
             <em className="hs-tag hs-tag-in">money in</em>

@@ -446,8 +446,17 @@ export function WhalesFlowModal({
               >
                 📅 {data.period.human}
                 {data.period.earliest !== data.period.latest && (
-                  <span style={{ marginLeft: '0.4rem' }}>
-                    · filings span {data.period.earliest} → {data.period.latest}
+                  /* Ajay 2026-09-12: "Can we do another scan? These are from
+                     July for whales." He read this line as staleness, and it is
+                     not — the headline above already says the quarter. Funds
+                     report their own period-end dates, and a handful use a
+                     non-calendar fiscal quarter, so one Q2 snapshot legitimately
+                     carries 05-31, 06-30 and 07-31. Naming the dominant date as
+                     the answer and the span as the scatter stops the widest
+                     date reading as the data's age. */
+                  <span style={{ marginLeft: '0.4rem' }}
+                        title={`${data.period.n_dates ?? 2} different period-end dates across these funds. A few report on a non-calendar fiscal quarter, so their date differs from ${data.period.dominant}. It is not the age of the data.`}>
+                    · funds report {data.period.earliest} → {data.period.latest}
                   </span>
                 )}
               </p>

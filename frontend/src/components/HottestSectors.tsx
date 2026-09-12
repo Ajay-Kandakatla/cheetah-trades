@@ -59,14 +59,47 @@ export type HsSector = HsFundMedians & {
   rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
   industries: HsIndustry[]; names: HsName[]; names_total: number;
 };
+export type HsTheme = HsFundMedians & {
+  group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
+  rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
+  names: HsName[]; names_total: number;
+};
 export type HsPayload = {
   as_of?: string; benchmark?: string; sorted_by?: string; sorted_dir?: string;
   sortable?: string[]; legs?: string[];
-  sectors: HsSector[]; coverage?: { priced?: number; with_fundamentals?: number; pct?: number | null };
+  sectors: HsSector[];
+  /** Our own curated rosters — robotics, nuclear, quantum, the AI complex,
+   *  crypto. They cut ACROSS the provider's sectors (robotics spans Technology,
+   *  Industrials and Consumer Cyclical), so they are a FLAT list with no
+   *  industry layer, and they ride alongside the sectors rather than replacing
+   *  them: the two disagree and the objective label wins. */
+  themes?: HsTheme[];
+  coverage?: { priced?: number; with_fundamentals?: number; pct?: number | null };
   note?: string; reason?: string; built_at_iso?: string; stale?: boolean;
 };
 
 const SORTS = ['rel_1d', 'rel_5d', 'rel_21d'] as const;
+
+/** Readable names for the curated rosters. The payload ships the snake_case id
+ *  (it is the key everything else in the app joins on); only the display
+ *  changes here. An id with no entry prints as-is rather than being prettified
+ *  by a rule that would one day mangle a new one. */
+export const THEME_LABELS: Record<string, string> = {
+  ai_semis: 'AI semis',
+  semi_materials: 'Semi materials',
+  ai_power: 'AI power',
+  ai_infra: 'AI infra',
+  datacenter_build: 'Datacenter build',
+  optical: 'Optical',
+  robotics: 'Robotics',
+  nuclear: 'Nuclear',
+  energy: 'Energy (curated)',
+  quantum: 'Quantum',
+  space: 'Space',
+  defense: 'Defense',
+  rare_earth: 'Rare earth',
+  crypto: 'Crypto equities',
+};
 
 export type HsDir = 'desc' | 'asc';
 /** Every column, in print order, with the payload key it ranks on.
@@ -205,6 +238,7 @@ export function HottestSectors() {
   useEffect(() => { load(); }, [load]);
 
   const sectors = useMemo(() => data?.sectors || [], [data]);
+  const themes = useMemo(() => data?.themes || [], [data]);
   const toggle = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   /** Click a new column → sort it DESC (the interesting end of every column
    *  except Next ER). Click the active column again → flip direction. */
@@ -255,6 +289,15 @@ export function HottestSectors() {
             LAST, in both directions. Sector and industry rows show the <b>median of their full
             membership</b> in the fundamental columns, so a sort there has something visible behind
             it; the three return legs stay the rotation grid&rsquo;s sampled median.</p>
+          <p><b>Our rosters sit above the sectors.</b> Robotics, the AI complex, nuclear,
+            quantum, rare earth, crypto — these are lists we curated, and they cut ACROSS the
+            provider&rsquo;s sectors (robotics spans Technology, Industrials and Consumer
+            Cyclical), so they have no industry layer. They <i>ride alongside</i> and never
+            overrule: on 2026-09-09 our <code>ai_semis</code> roster read −0.28 over 21 days while
+            the provider&rsquo;s <code>Semiconductors</code> cohort read −1.95 — opposite signs on
+            the same question. &ldquo;How are semis doing&rdquo; is a question about all semis, so
+            the objective label answers it. A roster too small for a ranked row still shows,
+            flagged <i>thin</i>.</p>
           <p><b>Names are ranked by return, not by traction.</b> Traction measures acceleration, and it
             ranks ANDE 23rd of 76 while the 5-day ranks it 3rd.</p>
           <p><b>This is a discovery list, not a signal.</b> It is trailing returns — nothing here is
@@ -292,6 +335,53 @@ export function HottestSectors() {
             </tr>
           </thead>
           <tbody>
+            {/* THEMES FIRST (Ajay 2026-09-12: "Where is Robitics and crypto
+                here?"). They were tracked all along — the Hot-sectors strip has
+                ranked them as chips for days — but this board only ever read
+                the sector and industry grains, so a roster he asked for by name
+                was invisible on the one surface built to answer "what is hot".
+                Above the sectors because they are the rosters he curated; the
+                provider's eleven follow underneath, unchanged. */}
+            {themes.length ? (
+              <tr className="hs-grain"><td colSpan={10}>
+                our rosters · cut across the sectors below
+              </td></tr>
+            ) : null}
+            {themes.map((t) => {
+              const k = `t:${t.group}`;
+              const isOpen = !!open[k];
+              return (
+                <>
+                  <tr key={k} className={`hs-sector hs-theme${isOpen ? ' is-open' : ''}`}>
+                    <td className="hs-sym">
+                      <button type="button" className="hs-disc" aria-expanded={isOpen}
+                              onClick={() => toggle(k)}>
+                        {isOpen ? '▾' : '▸'} {THEME_LABELS[t.group] || t.group}
+                      </button>
+                      <span className="hs-n" title={
+                        t.thin
+                          ? `${t.n_full} names — too few for a ranked row of its own, so this median is thinner than a sector's. Kept because you asked for these rosters by name.`
+                          : `${t.n_full} names · ${t.basis}`}>
+                        {t.n_full}{t.thin ? ' · thin' : ''}
+                      </span>
+                    </td>
+                    <LegCells r={t} />
+                    <GroupFundCells r={t} />
+                  </tr>
+                  {isOpen ? t.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} />) : null}
+                  {isOpen && t.names_total > t.names.length ? (
+                    <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
+                      showing {t.names.length} of {t.names_total}
+                    </td></tr>
+                  ) : null}
+                </>
+              );
+            })}
+            {themes.length ? (
+              <tr className="hs-grain"><td colSpan={10}>
+                the provider&rsquo;s sectors
+              </td></tr>
+            ) : null}
             {sectors.map((s) => {
               const k = `s:${s.group}`;
               const isOpen = !!open[k];
