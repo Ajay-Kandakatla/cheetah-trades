@@ -2602,13 +2602,27 @@ async def sepa_breakout_leaders(top: int = Query(30, ge=1, le=100)):
 
 @app.get("/sepa/breakout-board")
 async def sepa_breakout_board(top: int = Query(250, ge=1, le=500),
-                              min_count: int = Query(1, ge=0, le=50)):
+                              min_count: int = Query(1, ge=0, le=50),
+                              stages: bool = Query(True,
+                                  description="apply the stage gate: S2 only, "
+                                              "plus an explosive grower at S1/S3")):
     """Dedicated /breakouts page feed (Ajay 2026-06-16): every name that has
-    broken out, ranked by breakout COUNT (highest first), each carrying the
-    Minervini+Bonde buy_verdict + RS/stage/day-change context, plus a summary of
-    the pass/fail mix. Display-only — feeds no score."""
+    broken out, each carrying the Minervini+Bonde buy_verdict + RS/stage/
+    day-change context plus a summary of the pass/fail mix. Display-only —
+    feeds no score.
+
+    Ranked by RECENCY since 2026-09-12 ("Sort it by recent breakout instead of
+    # of breakouts"), AI-sector rank breaking ties inside a day.
+
+    `stages` (2026-09-12, "From the breakout remove any S3. Only S2 stocks and
+    if thy have explosive growth its ok to have s1 and s3") keeps stage 2 plus
+    an explosive grower at stage 1 or 3. Stage 4 is never excepted. It runs
+    BEFORE the top-N cut, so the rows returned are N QUALIFYING names rather
+    than whatever survives a cut made on other grounds. `stages=false` returns
+    the unfiltered board; `n_stage_dropped` says what the gate removed."""
     from sepa import breakout
-    return JSONResponse(_scrub_nan(await asyncio.to_thread(breakout.board, top, min_count)))
+    return JSONResponse(_scrub_nan(
+        await asyncio.to_thread(breakout.board, top, min_count, stages)))
 
 
 @app.get("/sepa/breakout-breadth")

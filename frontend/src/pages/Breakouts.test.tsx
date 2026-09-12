@@ -13,8 +13,15 @@ let mockState: {
   rows: BreakoutBoardRow[]; summary: BreakoutBoardSummary | null;
   loading: boolean; error: string | null;
 };
+/* Recorded so a test can prove the stage gate is a SERVER round-trip: it runs
+   before the top-250 cut, so it cannot be undone in the browser. */
+const boardCalls = vi.hoisted(() => [] as unknown[][]);
 vi.mock('../hooks/useBreakoutBoard', () => ({
-  useBreakoutBoard: () => ({ ...mockState, scanTs: 1, reload: vi.fn() }),
+  useBreakoutBoard: (...args: unknown[]) => {
+    boardCalls.push(args);
+    return { ...mockState, scanTs: 1, reload: vi.fn(),
+             stageInfo: { on: true, dropped: 2490, qualifying: 350, scanned: 2840 } };
+  },
 }));
 
 // Dynamic re-scan control (Ajay 2026-06-18): the "Update" button runs a CHEAP
@@ -520,5 +527,70 @@ describe('BreakoutsPage — table exposes usable horizontal scroll', () => {
     expect(link).toBeTruthy();
     expect(link!.getAttribute('href')).toBe('/sepa/AAA');
     expect(link!.getAttribute('href')).not.toMatch(/tab=breakout/);
+  });
+});
+
+/* ── The stage gate (2026-09-12) ───────────────────────────────────────────
+ * Ajay: "From the breakout remove any S3. Only S2 stocks and if thy have
+ * explosive growth its ok to have s1 and s3. If they are newly found explosive
+ * growth".
+ *
+ * The gate itself runs on the SERVER, before the top-250 cut — measured: the
+ * board went from 250 rows drawn over stages {1:111, 2:78, 3:35, 4:26} to 250
+ * drawn from 350 QUALIFYING names, {1:4, 2:240, 3:6, 4:0}. Filtering the
+ * already-cut rows would have left ~80. These tests cover the page's half:
+ * the toggle, the count, and the ✨ newly-found badge.
+ */
+describe('BreakoutsPage — the stage gate', () => {
+  it('is ON by default and says how many it removed', () => {
+    mockState.rows = [row('AAA', 5, true, true)];
+    renderPage();
+    const chip = screen.getByRole('button', { name: /S2 only/ });
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveTextContent('2,490');
+    expect(chip.title).toMatch(/Stage 2 only/);
+    expect(chip.title).toMatch(/Stage 4 is never kept/);
+  });
+
+  it('turning it off RE-REQUESTS with stages=false, not a local un-hide', () => {
+    // 2,840 candidates sit behind a 250-row cut and the gate runs before it,
+    // so it cannot be undone in the browser — the chip must refetch.
+    mockState.rows = [row('AAA', 5, true, true)];
+    boardCalls.length = 0;
+    renderPage();
+    expect(boardCalls.at(-1)?.[2]).toBe(true);          // gate ON by default
+    fireEvent.click(screen.getByRole('button', { name: /S2 only/ }));
+    expect(boardCalls.at(-1)?.[2]).toBe(false);         // and OFF after the tap
+  });
+
+  it('✨ marks a NEWLY found explosive grower, and nothing else', () => {
+    mockState.rows = [
+      { ...row('NEWG', 4, true, true), sales_yoy: 300, q_eps_yoy: 200,
+        explosive: true, explosive_new: true },
+      { ...row('OLDG', 4, true, true), sales_yoy: 300, q_eps_yoy: 200,
+        explosive: true, explosive_new: false },
+    ];
+    renderPage();
+    const badges = screen.getAllByTitle(/NEWLY found on the Explosive Growth board/);
+    expect(badges).toHaveLength(1);
+  });
+
+  it('NEGATIVE: a non-grower never gets the ✨, however fresh', () => {
+    mockState.rows = [{ ...row('PLAIN', 4, true, true), explosive: false,
+                        explosive_new: true }];
+    renderPage();
+    expect(screen.queryByTitle(/NEWLY found on the Explosive Growth board/))
+      .not.toBeInTheDocument();
+  });
+
+  it('the legend explains the rule, including what is NEVER kept', () => {
+    mockState.rows = [row('AAA', 5, true, true)];
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /What is Breakout columns\?/i }));
+    const legend = within(screen.getByRole('dialog', { name: /Breakout columns/i }));
+    expect(legend.getByText(/explosive grower at stage 1 or 3/i)).toBeInTheDocument();
+    expect(legend.getByText(/a decline is a decline/i)).toBeInTheDocument();
+    // an unreadable stage must be KEPT, not silently dropped
+    expect(legend.getByText(/could not read is KEPT/i)).toBeInTheDocument();
   });
 });

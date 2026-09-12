@@ -109,7 +109,26 @@ def _fnum(v):
     return None if (f != f or f in (float("inf"), float("-inf"))) else f
 
 
-def board(top: int = 250, min_count: int = 1) -> dict:
+STAGE_KEEP = (2,)                 # the only advancing stage
+STAGE_EXCEPTION = (1, 3)          # allowed WHEN the name is an explosive grower
+STAGE_NEVER = (4,)                # a decline is a decline — never excepted
+
+
+def _stage_ok(x: dict) -> bool:
+    """His rule, in one place. A row with NO stage is UNKNOWN and is kept:
+    dropping a name because the classifier could not answer would hide it for a
+    reason that has nothing to do with the stock."""
+    st = x.get("stage")
+    if st is None:
+        return True
+    if st in STAGE_NEVER:
+        return False
+    if st in STAGE_KEEP:
+        return True
+    return st in STAGE_EXCEPTION and bool(x.get("explosive"))
+
+
+def board(top: int = 250, min_count: int = 1, stages: bool = True) -> dict:
     """Rich breakout-ranked board for the dedicated /breakouts page (Ajay
     2026-06-16: "a page to track only breakouts and # of breakouts, highest
     first ... some passing Minervinis and some not, and Bonde, but mainly around
@@ -191,6 +210,47 @@ def board(top: int = 250, min_count: int = 1) -> dict:
     except Exception as exc:                            # noqa: BLE001
         log.debug("board: ai-sector tag failed: %s", exc)
 
+    # ── Stage gate (Ajay 2026-09-12) ───────────────────────────────────────
+    # "From the breakout remove any S3. Only S2 stocks and if thy have explosive
+    # growth its ok to have s1 and s3. If they are newly found explosive growth"
+    #
+    # Stage 2 is the only advancing stage and the only one Minervini calls
+    # buyable; 1 is basing, 3 is topping, 4 is decline. So the board keeps S2 —
+    # PLUS an explosive grower at stage 1 or 3, because a 100%-sales/100%-EPS
+    # name basing or consolidating is a different proposition from a tired one.
+    # Stage 4 is never excepted: he named 1 and 3, and a decline is a decline.
+    #
+    # THIS RUNS BEFORE THE SORT AND THE CUT, and that is the point. Filtering
+    # the already-cut 250 would leave ~80 rows drawn from a 250-name window
+    # while 2,840 candidates existed — the same mistake the count-ranked cut
+    # made with recency. Gating first means the 250 he sees are 250 QUALIFYING
+    # names.
+    #
+    # The `explosive` tag therefore has to be attached here too. It is a cheap
+    # dict lookup against the ~29-row growth board; the sales/EPS columns stay
+    # after the cut because that snapshot is a real query.
+    try:
+        from growth import tracker as _gt
+        grows = {r["symbol"]: r for r in ((_gt.board() or {}).get("rows") or [])
+                 if r.get("symbol")}
+        fresh = _gt.newly_found()
+    except Exception as exc:                                # noqa: BLE001
+        log.debug("board: growth board unavailable: %s", exc)
+        grows, fresh = {}, set()
+    for x in rows:
+        g = grows.get(x["symbol"])
+        # `explosive` is membership of the 🚀 board; `explosive_refused` carries
+        # its ⛔ so good sales never make a name the engine will refuse look
+        # clean; `explosive_new` says it ARRIVED there recently.
+        x["explosive"] = bool(g)
+        x["explosive_refused"] = bool(g) and any(
+            str(w).startswith("⛔") for w in (g.get("warnings") or []))
+        x["explosive_new"] = x["symbol"] in fresh
+
+    n_prestage = len(rows)
+    if stages:
+        rows = [x for x in rows if _stage_ok(x)]
+
     # ── RECENCY first (Ajay 2026-09-12) ────────────────────────────────────
     # "Sort it by recent breakout instead of # of breakouts."
     #
@@ -254,13 +314,6 @@ def board(top: int = 250, min_count: int = 1) -> dict:
     except Exception as exc:                            # noqa: BLE001
         log.debug("board: fundamentals snapshot failed: %s", exc)
         snap = {}
-    try:
-        from growth import tracker as _gt
-        grows = {r["symbol"]: r for r in ((_gt.board() or {}).get("rows") or [])
-                 if r.get("symbol")}
-    except Exception as exc:                            # noqa: BLE001
-        log.debug("board: growth board unavailable: %s", exc)
-        grows = {}
     for x in rows:
         # TRAP: `decision_snapshot` returns a FLAT dict per symbol — the
         # fundamentals are already unwrapped. Reading a "fundamentals" key here
@@ -274,13 +327,6 @@ def board(top: int = 250, min_count: int = 1) -> dict:
         x["q_eps_yoy"] = _fnum(f.get("q_eps_growth_pct"))
         x["sales_tier"] = sales.get("tier") or None
         x["fundamentals_as_of"] = f.get("cached_at")
-        g = grows.get(x["symbol"])
-        # `explosive` is membership of the 🚀 board, and `explosive_refused`
-        # carries its ⛔ — good sales must never make a name the trading engine
-        # will refuse (sub-$2, or a known cap under $700M) look clean here.
-        x["explosive"] = bool(g)
-        x["explosive_refused"] = bool(g) and any(
-            str(w).startswith("⛔") for w in (g.get("warnings") or []))
 
     def _mp(x):
         return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")
@@ -304,6 +350,10 @@ def board(top: int = 250, min_count: int = 1) -> dict:
             # in the payload anyway: a cap the reader cannot see is how a
             # truncated list reads as a complete one.
             "n_all": n_all, "capped": n_all > len(rows), "top": top,
+            # What the stage gate removed, so a filtered board can never read
+            # as the whole market breaking out.
+            "stage_filter": bool(stages), "n_prestage": n_prestage,
+            "n_stage_dropped": n_prestage - n_all,
             "summary": summary}
 
 

@@ -69,6 +69,11 @@ export type BreakoutBoardRow = {
   /** The 🚀 name is one the trading engine will REFUSE (sub-$2 or a known cap
    *  under $700M). Good growth must not make an unbuyable row look clean. */
   explosive_refused?: boolean;
+  /** It ARRIVED on the growth board recently (growth.tracker.newly_found).
+   *  False until first-seen tracking has actually observed an arrival — a name
+   *  present at the very first build is not "new", it is just the first thing
+   *  we ever saw. */
+  explosive_new?: boolean;
 };
 
 export type BreakoutBoardSummary = {
@@ -89,6 +94,7 @@ type Board = {
   loading: boolean;
   error: string | null;
   reload: () => void;
+  stageInfo: StageInfo;
 };
 
 const EMPTY_SUMMARY: BreakoutBoardSummary = {
@@ -96,12 +102,27 @@ const EMPTY_SUMMARY: BreakoutBoardSummary = {
   bonde_pass: 0, bonde_fail: 0, both_pass: 0,
 };
 
-export function useBreakoutBoard(top = 250, minCount = 1): Board {
+export type StageInfo = {
+  /** the gate was applied by the server */
+  on: boolean;
+  /** names the gate removed BEFORE the top-N cut */
+  dropped: number;
+  /** how many names passed the gate in total (the cut is taken from these) */
+  qualifying: number;
+  /** how many had broken out at all, before the gate */
+  scanned: number;
+};
+const EMPTY_STAGE: StageInfo = { on: false, dropped: 0, qualifying: 0, scanned: 0 };
+
+export function useBreakoutBoard(top = 250, minCount = 1, stages = true): Board {
   const [rows, setRows] = useState<BreakoutBoardRow[]>([]);
   const [summary, setSummary] = useState<BreakoutBoardSummary | null>(null);
   const [scanTs, setScanTs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /* What the stage gate removed, so a filtered board can never read as the
+     whole market breaking out (Ajay 2026-09-12). */
+  const [stageInfo, setStageInfo] = useState<StageInfo>(EMPTY_STAGE);
   const [nonce, setNonce] = useState(0);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
@@ -110,13 +131,20 @@ export function useBreakoutBoard(top = 250, minCount = 1): Board {
     let alive = true;
     setLoading(true);
     setError(null);
-    fetch(`${API}/sepa/breakout-board?top=${top}&min_count=${minCount}`, { credentials: 'include' })
+    fetch(`${API}/sepa/breakout-board?top=${top}&min_count=${minCount}&stages=${stages}`,
+          { credentials: 'include' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((j) => {
         if (!alive) return;
         setRows(Array.isArray(j.rows) ? j.rows : []);
         setSummary(j.summary ?? EMPTY_SUMMARY);
         setScanTs(j.scan_ts ?? null);
+        setStageInfo({
+          on: !!j.stage_filter,
+          dropped: typeof j.n_stage_dropped === 'number' ? j.n_stage_dropped : 0,
+          qualifying: typeof j.n_all === 'number' ? j.n_all : 0,
+          scanned: typeof j.n_prestage === 'number' ? j.n_prestage : 0,
+        });
         setLoading(false);
       })
       .catch((e) => {
@@ -125,7 +153,7 @@ export function useBreakoutBoard(top = 250, minCount = 1): Board {
         setLoading(false);
       });
     return () => { alive = false; };
-  }, [top, minCount, nonce]);
+  }, [top, minCount, stages, nonce]);
 
-  return { rows, summary, scanTs, loading, error, reload };
+  return { rows, summary, scanTs, loading, error, reload, stageInfo };
 }

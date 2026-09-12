@@ -79,7 +79,8 @@ const ColumnsInfo = (
       <li><strong>Ticker</strong> — symbol + company. Tap a row to open its detail <em>Breakout</em> tab (where each breakout fired on the chart).</li>
       <li><strong># breakouts</strong> — how many <em>distinct, volume-confirmed</em> breakouts over the trailing year: a close above the prior 21-day high on &gt;1.5× the 50-day average volume (Minervini p.203). <strong>⚡</strong> = one was today. <strong>No longer the ranking</strong> — a high count can be a name that has not broken out in months.</li>
       <li><strong>Last</strong> — how long since its most recent breakout (“today”, “3d ago”). “—” = none recorded, and those sort to the BOTTOM in both directions: unknown is not recent. <strong>This is the default sort.</strong> Ties inside a day break on AI-sector rank, so same-day AI-ecosystem breakouts still lead.</li>
-      <li><strong>Sales / Q EPS</strong> — revenue and quarterly EPS growth year-over-year, from the same weekly research cache the 🔥 Hottest board reads, so the two can never disagree. Up to a week behind a fresh print; “—” means the cache has no answer for that name, never zero. <strong>🚀</strong> = the name is on the Explosive Growth board (100%+ sales AND 100%+ quarterly EPS, prior quarter also growing); <strong>🚀⛔</strong> means it qualifies there but the trading engine will refuse to buy it.</li>
+      <li><strong>Sales / Q EPS</strong> — revenue and quarterly EPS growth year-over-year, from the same weekly research cache the 🔥 Hottest board reads, so the two can never disagree. Up to a week behind a fresh print; “—” means the cache has no answer for that name, never zero. <strong>🚀</strong> = the name is on the Explosive Growth board (100%+ sales AND 100%+ quarterly EPS, prior quarter also growing); <strong>🚀⛔</strong> means it qualifies there but the trading engine will refuse to buy it; <strong>✨</strong> = it <em>arrived</em> on that board recently rather than having sat on it for months.</li>
+      <li><strong>Stage gate</strong> — the board keeps <strong>stage 2 only</strong>, plus an <strong>explosive grower at stage 1 or 3</strong> (Ajay 2026-09-12). Stage 4 is never kept: a decline is a decline. A name whose stage the classifier could not read is KEPT — dropping it would hide it for a reason that has nothing to do with the stock. The gate runs on the SERVER before the top-250 cut, so the 250 you see are 250 <em>qualifying</em> names; the <strong>✓ S2 only</strong> chip says how many it removed and turns it off.</li>
       <li><strong>Price</strong> — latest close.</li>
       <li><strong>Δ%</strong> — today’s percent change (green up / red down).</li>
       <li><strong>Vol %</strong> — today’s volume as a % of its 50-day average. <strong>≥150%</strong> (gold) is the 1.5× volume that confirms a breakout (p.203).</li>
@@ -182,7 +183,16 @@ function Stat({ n, label, tone }: { n: number; label: string; tone?: string }) {
 }
 
 export function BreakoutsPage() {
-  const { rows, summary, scanTs, loading, error, reload } = useBreakoutBoard(250, 1);
+  /* Ajay 2026-09-12: "From the breakout remove any S3. Only S2 stocks and if
+     thy have explosive growth its ok to have s1 and s3." The gate runs on the
+     SERVER, before the top-N cut — filtering the already-cut rows would leave
+     ~80 names drawn from a 250-name window while 2,840 candidates existed. */
+  const [stageGate, setStageGate] = useState(true);
+  const { rows, summary, scanTs, loading, error, reload, stageInfo: rawStage } =
+    useBreakoutBoard(250, 1, stageGate);
+  // Defensive: an older/mocked hook may not carry it, and a missing count must
+  // never blank the board.
+  const stageInfo = rawStage ?? { on: false, dropped: 0, qualifying: 0, scanned: 0 };
   const [filter, setFilter] = useState<FilterKey>('all');
   // Base-only is ON by default (Ajay 2026-06-22): hide bare breakouts that have
   // no detected base; keep VCP / Power Play / pocket pivot. Toggle off to widen.
@@ -331,6 +341,26 @@ export function BreakoutsPage() {
             {f.label}
           </button>
         ))}
+        {/* Stage gate (Ajay 2026-09-12: "From the breakout remove any S3. Only S2
+            stocks and if thy have explosive growth its ok to have s1 and s3").
+            ON by default. Unlike the chips beside it this one is a SERVER
+            round-trip: the gate runs before the top-250 cut, so turning it off
+            re-ranks 2,840 candidates rather than un-hiding 250 already-cut
+            rows. */}
+        <button
+          className={`sepa-chip ${stageGate ? 'is-active' : ''}`}
+          title={stageGate
+            ? `Stage 2 only — plus an explosive grower at stage 1 or 3. Stage 4 is never kept. ${stageInfo.dropped.toLocaleString()} of ${stageInfo.scanned.toLocaleString()} breakouts removed; ${stageInfo.qualifying.toLocaleString()} qualify. Tap to show every stage.`
+            : 'Showing EVERY stage, including 3 and 4. Tap to keep stage 2 only (plus explosive growers at 1/3).'}
+          onClick={() => setStageGate((b) => !b)}
+          style={{
+            cursor: 'pointer', fontSize: '0.74rem',
+            ...(stageGate ? { borderColor: 'var(--gold, #c9a227)', color: 'var(--gold, #c9a227)', fontWeight: 700 } : {}),
+          }}
+        >
+          ✓ S2 only{stageGate && stageInfo.dropped > 0
+            ? ` (−${stageInfo.dropped.toLocaleString()})` : ''}
+        </button>
         {/* Base-only toggle (Ajay 2026-06-22) — ANDs with the filter above; ON by
             default so bare breakouts (no base) are hidden. */}
         <button
@@ -528,6 +558,10 @@ export function BreakoutsPage() {
                         color: r.q_eps_yoy == null ? 'var(--cm-slate)'
                           : r.q_eps_yoy >= 0 ? 'var(--positive, #10b981)' : 'var(--negative, #f87171)' }}>
                     {r.q_eps_yoy == null ? '—' : `${r.q_eps_yoy >= 0 ? '+' : ''}${r.q_eps_yoy.toFixed(0)}%`}
+                    {r.explosive && r.explosive_new && (
+                      <span title="✨ NEWLY found on the Explosive Growth board — it arrived there recently, rather than having sat on it for months."
+                            style={{ marginLeft: 4 }}>✨</span>
+                    )}
                     {r.explosive && (
                       <span title={r.explosive_refused
                         ? '🚀 On the Explosive Growth board (100% sales AND 100% quarterly EPS) — but the trading engine REFUSES this one (under $2, or a known cap under $700M).'

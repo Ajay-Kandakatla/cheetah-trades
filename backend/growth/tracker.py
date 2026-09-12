@@ -44,7 +44,7 @@ forward. It is a discovery list.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 log = logging.getLogger("growth.tracker")
@@ -345,10 +345,78 @@ def _zone_read(symbol: str) -> dict:
     return out
 
 
+SEEN_COLL = "growth_seen"
+# A name counts as NEWLY FOUND for this long after it first appears on the
+# board. The board rebuilds Sundays, so a month is about four builds — long
+# enough that a fresh print is still "new" when he looks mid-week.
+NEW_GROWTH_DAYS = 30
+
+
+def _record_seen(rows: list, db=None) -> None:
+    """Remember when each name FIRST appeared on the growth board.
+
+    Ajay 2026-09-12 wants a breakout at stage 1 or 3 allowed when the name is a
+    NEWLY FOUND explosive grower — and nothing recorded that. The board doc is
+    `_id: "latest"`, latest-only, so the moment a build finished there was no
+    way to tell a name that arrived today from one that has sat there for
+    months. Same gap the rotation strip had.
+
+    A `__meta__` row stores when tracking itself began, because without it EVERY
+    name looks new on the first build — and "unknown" must never read as the
+    favourable state."""
+    db = db if db is not None else _db()
+    if db is None:
+        return
+    # ONE stamp for the meta row AND every symbol: the first build then has
+    # first_seen == tracking_since exactly, and `newly_found`'s strict `>`
+    # excludes that cohort. Two clock reads would leave microseconds of
+    # drift and badge the entire first board as new.
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        coll = db[SEEN_COLL]
+        coll.update_one({"_id": "__meta__"},
+                        {"$setOnInsert": {"tracking_since": now}}, upsert=True)
+        for r in rows:
+            sym = r.get("symbol")
+            if sym:
+                coll.update_one({"_id": str(sym).upper()},
+                                {"$set": {"last_seen": now},
+                                 "$setOnInsert": {"first_seen": now}},
+                                upsert=True)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("growth.tracker: first-seen write failed: %s", exc)
+
+
+def newly_found(days: int = NEW_GROWTH_DAYS, db=None) -> set:
+    """Symbols that ARRIVED on the board within `days`.
+
+    A name present at the very first build is NOT new — it is merely the first
+    thing we ever saw, which is a different statement. Returns an empty set
+    until tracking has actually observed an arrival."""
+    db = db if db is not None else _db()
+    if db is None:
+        return set()
+    try:
+        coll = db[SEEN_COLL]
+        meta = coll.find_one({"_id": "__meta__"}) or {}
+        since = meta.get("tracking_since")
+        if not since:
+            return set()
+        cut = (datetime.now(timezone.utc) - timedelta(days=int(days))).isoformat()
+        floor = max(str(since), cut)
+        return {str(d["_id"]).upper()
+                for d in coll.find({"_id": {"$ne": "__meta__"},
+                                    "first_seen": {"$gt": floor}}, {"_id": 1})}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("growth.tracker: newly-found read failed: %s", exc)
+        return set()
+
+
 def build(limit: int = MAX_ROWS) -> dict:
     """Screen and persist. The weekly refresh calls this; the API reads the
     stored doc so a page load never runs the screen."""
     rows = screen(limit=limit)
+    _record_seen(rows)
     doc = {
         "_id": "latest",
         "built_at": datetime.now(timezone.utc),
