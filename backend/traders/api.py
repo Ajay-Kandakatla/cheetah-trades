@@ -1,0 +1,65 @@
+"""📌 The GnT tab's endpoints.
+
+Ajay 2026-09-12: "create a tab for me. I wanna track his stocks for investing"
++ "do this daily twice".
+
+Both endpoints READ STORED POSTS. Neither fetches X on a page load — a board
+that depends on a third party answering is a board that spins. The twice-daily
+cron (`python -m traders.gnt refresh`) owns the fetching.
+"""
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
+
+from traders import gnt as G
+
+log = logging.getLogger("traders.api")
+router = APIRouter(tags=["traders"])
+
+
+def _scrub(o):
+    """NaN / inf -> None, recursively. FastAPI serialises NaN as a bare `NaN`
+    token, which is not JSON and breaks the frontend's JSON.parse."""
+    if isinstance(o, float):
+        return None if (o != o or o in (float("inf"), float("-inf"))) else o
+    if isinstance(o, dict):
+        return {k: _scrub(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_scrub(v) for v in o]
+    return o
+
+
+@router.get("/traders/gnt")
+async def gnt_board(limit: int = Query(400, ge=1, le=2000)):
+    """Tito Adhikary's (@GnT_Trades) tickers, each with the post behind it and
+    this app's own read beside it.
+
+    READ THE SENTENCE, NOT THE TICKER. He posts forward ideas ("$SPCX ...
+    definitely on watch next week") AND past-tense recaps of closed trades,
+    several of them PUTS ("Great day on $QQQ puts, +$12K"). A bare ticker list
+    off this account inverts him. Every row therefore carries its most recent
+    post verbatim, its age in days, and the words found in it — never a
+    direction this app inferred.
+
+    His 2,115.1% USIC 2025 win is a CITED claim from @USICOfficial, not a
+    number this app measured, and a contest return is not a transferable track
+    record: those divisions permit concentration and leverage this app's own
+    risk rules forbid.
+
+    Nothing here gates a scan, an alert or a lane.
+    """
+    return JSONResponse(_scrub(G.board(limit=limit)))
+
+
+@router.post("/traders/gnt/refresh")
+async def gnt_refresh():
+    """Fetch X now and store. The cron calls the same function twice a day.
+
+    `ok: false` means the RECENT source returned nothing — X changed its page
+    shape and the board is no longer tracking his latest posts. That is
+    reported, never hidden: a tracker that silently stops updating is worse
+    than one that is visibly broken."""
+    return JSONResponse(_scrub(G.refresh()))

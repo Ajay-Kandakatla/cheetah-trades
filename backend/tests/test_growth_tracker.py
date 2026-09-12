@@ -407,3 +407,67 @@ def test_NEGATIVE_capped_is_never_a_truthy_row_count():
     from growth import api as GA
     out = GA._payload({"rows": [{"symbol": "A"}, {"symbol": "B"}], "built_at": None})
     assert out["capped"] is False and isinstance(out["capped"], bool)
+
+
+# ── unreadable is NOT pierced (2026-09-12) ──────────────────────────────────
+# Found by an adversarial review of the demand sort. `AG.floor_held_gate` FAILS
+# CLOSED — "Unreadable = False (fails closed)" — so an unloadable price frame
+# returns the same plain False a real pierce does. `_zone_read` used to do
+# `bool(floor_held_gate(...))`, collapsing the two, and the board then printed
+# "in band, pierced" ("the floor has been pierced in the sweep window") for a
+# name nobody had checked — ranking it ABOVE every row marked honestly unknown.
+#
+# The alert gate is deliberately NOT changed: failing closed is correct for a
+# phone push and is a standing rule. Only the BOARD's tri-state is restored.
+def _band():
+    return {"lo": 10.0, "hi": 11.0, "kind": "demand", "touches": 3}
+
+
+def _patched_zone_read(monkeypatch, sweep, held):
+    """Drive tracker._zone_read with a stubbed zone doc and gate."""
+    from supply_demand import alert_gates as AG
+    from growth import tracker as GT
+    monkeypatch.setattr(AG, "sweep_read", lambda *a, **k: sweep, raising=False)
+    monkeypatch.setattr(AG, "floor_held_gate", lambda *a, **k: held, raising=False)
+
+    class _DB:
+        class zone_store:
+            @staticmethod
+            def find_one(*a, **k):
+                return {"symbol": "X", "prev_close": 10.5, "date": "2026-09-11",
+                        "bands": [_band()]}
+    monkeypatch.setattr(GT, "_db", lambda: _DB, raising=False)
+    return GT._zone_read("X")
+
+
+def test_an_UNREADABLE_floor_is_unknown_not_pierced(monkeypatch):
+    """sweep_read returns None when the price frame will not load."""
+    out = _patched_zone_read(monkeypatch, sweep=None, held=False)
+    assert out["in_band"] is True
+    assert out["intact"] is None, "unreadable must stay UNKNOWN, never False"
+
+
+def test_a_REAL_pierce_is_still_reported_as_pierced(monkeypatch):
+    out = _patched_zone_read(monkeypatch, sweep={"state": "broken"}, held=False)
+    assert out["intact"] is False
+
+
+def test_an_intact_floor_still_reads_intact(monkeypatch):
+    out = _patched_zone_read(monkeypatch, sweep={"state": "intact"}, held=True)
+    assert out["intact"] is True
+
+
+def test_NEGATIVE_the_alert_gate_itself_is_untouched_and_still_fails_closed():
+    """Ajay's standing rule: never loosen a gate. `floor_held_gate` must keep
+    returning False for an unreadable read — the fix belongs in the BOARD's
+    tri-state, not in the gate."""
+    from supply_demand import alert_gates as AG
+    assert AG.floor_held_gate(_band(), None, read=None) is False
+    assert AG.floor_held_gate(_band(), None, read={"state": "broken"}) is False
+    assert AG.floor_held_gate(_band(), None, read={"state": "intact"}) is True
+
+
+def test_NEGATIVE_an_unknown_floor_still_fails_the_growth_alert(monkeypatch):
+    """Restoring the tri-state must not let an unknown through to a push."""
+    from growth import alerts as A
+    assert not A.candidates([{"symbol": "X", "zone": {"in_band": True, "intact": None}}])

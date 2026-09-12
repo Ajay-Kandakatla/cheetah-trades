@@ -658,7 +658,7 @@ describe('the Earnings Flow tab', () => {
     // ledger tabs — that grouping is its own rule, so the patterns board links
     // out to it instead of the tab moving up beside it.
     expect(CM_TABS).toEqual(
-      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -726,7 +726,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly eight tabs not driven by a board fetch', () => {
+  it('is one of exactly nine tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -749,7 +749,7 @@ describe('the Support Levels tab', () => {
     // reads /growth/board and renders its own table with per-row warnings.
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'catalysts', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1579,7 +1579,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(21);   // +hot_sectors, +growth, 2026-09-11
+    expect(CM_TABS).toHaveLength(22);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });

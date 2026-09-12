@@ -749,6 +749,12 @@ app.include_router(rotation_router)
 from growth.api import router as growth_router  # noqa: E402
 app.include_router(growth_router)
 
+# 📌 Public traders this app tracks (Ajay 2026-09-12: "create a tab for me. I
+# wanna track his stocks for investing"). One public X account, read-only, no
+# key. His calls, never advice — and never a gate on anything.
+from traders.api import router as traders_router  # noqa: E402
+app.include_router(traders_router)
+
 # Giants module — full per-fund 13F portfolios from SEC EDGAR: "where the
 # giants are buying" aggregate leaderboard + per-symbol money rotation.
 from giants.api import router as giants_router  # noqa: E402

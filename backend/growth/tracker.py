@@ -316,7 +316,30 @@ def _zone_read(symbol: str) -> dict:
     if band is not None:
         try:
             from supply_demand import alert_gates as AG
-            out["intact"] = bool(AG.floor_held_gate(band, symbol))
+            # READ FIRST, THEN GATE — and keep the two apart. (2026-09-12)
+            #
+            # `floor_held_gate` FAILS CLOSED by design: an unreadable price
+            # frame returns plain False, byte-identical to a real pierce
+            # ("Unreadable = False (fails closed)", alert_gates.floor_held_gate).
+            # That is exactly right for a PHONE ALERT and must not change.
+            #
+            # It is wrong for a BOARD. `bool(floor_held_gate(...))` collapsed
+            # unknown into False, so a name whose prices simply did not load
+            # was printed as "in band, pierced" — a fact nobody checked — and
+            # the 2026-09-12 demand sort then ranked it ABOVE every row the
+            # board honestly marks unknown. It matters on the only scheduled
+            # run there is: `growth build` fires Sunday 09:00 ET, ~40h after
+            # Friday's last price-cache write, and prices.CACHE_TTL_SEC is 20h,
+            # so every symbol misses both cache tiers and any failed refetch
+            # lands here.
+            #
+            # So the READ decides whether we know anything, and only then does
+            # the gate decide the answer. `read=` is passed through so this
+            # costs no second fetch. Nothing downstream is loosened: `intact`
+            # stays falsy when unknown, so growth.alerts still refuses it.
+            r = AG.sweep_read(band, symbol)
+            out["intact"] = (bool(AG.floor_held_gate(band, symbol, read=r))
+                             if isinstance(r, dict) else None)
         except Exception as exc:                               # noqa: BLE001
             log.debug("growth.tracker: intact read failed for %s: %s", symbol, exc)
     return out

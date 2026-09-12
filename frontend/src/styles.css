@@ -12160,3 +12160,52 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .eg-grp-top > span:first-child { grid-column: 1 / span 3; }
 .eg-sym { font-weight: 600; }
+
+
+/* ── 📌 GnT board (Ajay 2026-09-12: "I wanna track his stocks for investing") ─
+   The SENTENCE is the content here, not the ticker, so the "what he said"
+   column takes the width and everything else stays out of its way. */
+.gnt-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+.gnt-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 0.5rem; font-size: 0.9rem;
+}
+.gnt-handle { color: var(--cm-blue, #60a5fa); text-decoration: none; }
+.gnt-handle:hover { text-decoration: underline; }
+.gnt-usic { color: var(--cm-green, #22c55e); font-weight: 600; font-size: 0.82rem; }
+.gnt-chk { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; }
+.gnt-note {
+  font-size: 0.78rem; line-height: 1.5; color: var(--cm-slate, #8595ad);
+  background: var(--bg-raised, #181c24); border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 8px; padding: 0.5rem 0.7rem;
+}
+.gnt-scroll { overflow-x: auto; }
+.gnt-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.gnt-table th {
+  text-align: left; font-weight: 600; color: var(--cm-slate, #8595ad);
+  border-bottom: 1px solid var(--rule, #2a2f3a); padding: 0.4rem 0.5rem;
+  white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 0.7rem;
+}
+.gnt-table td {
+  padding: 0.5rem; border-bottom: 1px solid var(--rule, #2a2f3a);
+  vertical-align: top;
+}
+.gnt-table th.gnt-num, .gnt-table td.gnt-num { text-align: right; white-space: nowrap; }
+/* The quote column carries the weight — it is why this board exists. */
+.gnt-said { min-width: 22rem; max-width: 46rem; line-height: 1.45; }
+.gnt-said a { color: inherit; text-decoration: none; }
+.gnt-said a:hover { text-decoration: underline dotted; }
+.gnt-fresh { background: color-mix(in srgb, var(--cm-green, #22c55e) 6%, transparent); }
+.gnt-chip {
+  display: inline-block; margin: 0 0.2rem 0.2rem 0; padding: 0.05rem 0.35rem;
+  border-radius: 5px; border: 1px solid currentColor; font-size: 0.72rem;
+  font-weight: 600; white-space: nowrap;
+}
+.gnt-good { color: var(--cm-green, #22c55e); }
+.gnt-bull { color: var(--cm-green, #22c55e); }
+.gnt-bear { color: var(--cm-red, #dc2626); }
+.gnt-watch { color: var(--cm-blue, #60a5fa); }
+.gnt-warn { color: var(--cm-amber, #f59e0b); }
+.gnt-err { color: var(--cm-red, #dc2626); }
+.gnt-dim { color: var(--cm-slate, #8595ad); }

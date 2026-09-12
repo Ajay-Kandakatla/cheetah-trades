@@ -1282,6 +1282,7 @@ const CONTRACTS = [
         catalysts: 'src/pages/Catalysts.tsx',
         overnight: 'src/components/OvernightGappers.tsx',
         support: 'src/components/SupportLevels.tsx',
+        gnt: 'src/components/GntBoard.tsx',
       };
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners)$/.test(t));
       for (const t of nonBoard) {
@@ -1665,6 +1666,68 @@ const CONTRACTS = [
       }
       if (!/sortRows\(r, sortKey, sortDir\)/.test(src)) {
         errs.push('the sort must run on the FILTERED rows, not the raw payload');
+      }
+      return errs;
+    },
+  },
+  // Ajay 2026-09-12: "create a tab for me. I wanna track his stocks for
+  // investing". He does not post a portfolio — his timeline mixes forward ideas
+  // with past-tense recaps of CLOSED trades, several of them PUTS, and one post
+  // carries both directions across its own tickers ("caught the upside on $FSLR
+  // and downside on $META $TSLA"). A bare ticker list inverts him.
+  {
+    name: 'the GnT board shows sentences and claims no direction (2026-09-12)',
+    file: 'src/components/GntBoard.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/last_post/.test(src) || !/gnt-said/.test(src)) {
+        errs.push('every row must carry the post that produced it');
+      }
+      if (!/ageText/.test(src)) {
+        errs.push('a row must show its AGE — a 2022 recap must not read as current');
+      }
+      // The chips are evidence words, never a verdict. Checked against the
+      // CODE with comments stripped — the header comment explains at length
+      // why there is no direction here, and must not trip its own rule.
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const bad of [/\bdirection\s*[:=]/i, /\bbias\s*[:=]/i, /\bsignal\s*[:=]/i,
+                         /t\.direction/i]) {
+        if (bad.test(code)) {
+          errs.push('the board must not resolve his words into a direction field');
+        }
+      }
+      if (!/BEARISH/.test(src)) {
+        errs.push('a put mention must be visibly bearish, or a short reads as a pick');
+      }
+      if (!/not scanned/.test(src)) {
+        errs.push('a name outside the scan universe must say so — it is invisible to every board here');
+      }
+      if (!/read the sentence, not the ticker/i.test(src)) {
+        errs.push('the caveat must ride on the board, not only in a doc');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'Chart Maps carries the 📌 GnT tab, not as a tile board (2026-09-12)',
+    file: 'src/lib/chartMaps.ts',
+    checks: (src) => {
+      const errs = [];
+      if (!/'gnt'/.test(src)) errs.push('the tab key must exist');
+      if (!/CM_TABS[\s\S]{0,400}'gnt'/.test(src)) errs.push('the tab must be in the tab order');
+      if (!/t !== 'gnt'/.test(src)) {
+        errs.push('the GnT board is its own table, not a zone-tile board');
+      }
+      const meta = /gnt:\s*\{[\s\S]*?blurb:\s*'([\s\S]*?)',\n\s*\},/.exec(src);
+      if (!meta) errs.push('the tab needs a label and a blurb');
+      else {
+        const b = meta[1];
+        if (!/NOT advice/i.test(b)) errs.push('the blurb must say his calls are not advice');
+        if (!/2,115\.1%/.test(b)) errs.push('the cited championship number must be stated');
+        if (!/USICOfficial/.test(b)) errs.push('the championship claim must carry its SOURCE');
+        if (!/gates a scan, an alert or a lane/i.test(b)) {
+          errs.push('the blurb must say the board gates nothing');
+        }
       }
       return errs;
     },

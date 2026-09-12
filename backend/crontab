@@ -1024,6 +1024,25 @@
 # a closed day and the gate would skip it forever.
 0      9     *    *    0    /usr/local/bin/python -m growth build
 #
+# ── 📌 GnT tracker — Tito Adhikary (@GnT_Trades) (Ajay 2026-09-12) ───────────
+# "create a tab for me. I wanna track his stocks for investing" + "do this
+# daily twice".
+#
+# TWICE A DAY, and deliberately NOT gated by market_hours.gate: he posts on
+# weekends (the 09-11 SPCX/BBY/SMCI ideas all landed on a Friday evening and
+# his weekend recaps are where the next week's watchlist shows up). A closed-day
+# gate would drop exactly the posts worth reading.
+#
+# 07:40 CT catches anything posted overnight before the open; 17:40 CT catches
+# the post-close wrap. Storage is idempotent — _id is the tweet's own id — so
+# an extra run upserts instead of duplicating.
+#
+# `python -m` is correct here: this is an HTTP fetch plus a Mongo write and
+# touches no in-process cache. It EXITS NON-ZERO when the recent-post source
+# returns nothing, so a shape change at X shows up in the cron log instead of
+# the board quietly going stale.
+40     7,17  *    *    *    /usr/local/bin/python -m traders.gnt refresh
+#
 # Demand alerts every 15 min in session, market days only. The board is
 # separate and has no cap floor, but the PUSH still passes his 2026-09-05
 # standing gates (>=5% room overhead, print within 1% above the band floor)

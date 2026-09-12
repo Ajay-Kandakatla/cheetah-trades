@@ -37,6 +37,7 @@ import { SupportLevels } from '../components/SupportLevels';
 import { SignalLabBoard } from '../components/SignalLabBoard';
 import { HottestSectors } from '../components/HottestSectors';
 import { ExplosiveGrowth } from '../components/ExplosiveGrowth';
+import GntBoard from '../components/GntBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
@@ -607,6 +608,11 @@ export function ChartMaps() {
          * movers boards (Catalysts, Overnight) — it answers the same question
          * they do, one level up. */
         <HottestSectors />
+      ) : tab === 'gnt' ? (
+        /* 📌 One public trader's posts + our own read (Ajay 2026-09-12:
+           "I wanna track his stocks for investing"). Sentences, not a ticker
+           list — he mixes live ideas with closed put trades. */
+        <GntBoard />
       ) : tab === 'growth' ? (
         /* 🚀 Explosive Growth (Ajay 2026-09-11: 100%+ sales AND 100%+ quarterly
          * EPS, "I wanna know when ever these are in demand, separately just

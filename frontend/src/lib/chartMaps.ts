@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -48,7 +48,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // of the patterns board instead: one at the top, one on every card, each
 // filtered to that pattern. A link from the thing you are looking at beats a
 // tab two seats over.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -73,10 +73,15 @@ export function isBoardTab(t: CmTab): boolean {
   return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
     && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns'
     && t !== 'hot_sectors'
-    && t !== 'growth';
+    && t !== 'growth'
+    && t !== 'gnt';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  gnt: {
+    label: '\uD83D\uDCCC GnT',
+    blurb: 'Tito Adhikary (@GnT_Trades) \u2014 what he is posting, with this app\u2019s own read beside it. Ajay 2026-09-12: "I wanna track his stocks for investing". HE WON THE 2025 US INVESTING CHAMPIONSHIP, $20k+ Enhanced Growth division, +2,115.1% \u2014 a CITED claim quoted from @USICOfficial on his own pinned post, not a number this app measured, and not a transferable track record: those divisions permit concentration and leverage this app\u2019s own risk rules forbid. THE BOARD SHOWS SENTENCES, NOT A TICKER LIST, and that is deliberate. He does not post a portfolio: his timeline mixes forward ideas ("$SPCX reclaiming 150 into the close. Definitely on watch next week") with past-tense recaps of CLOSED trades, several of them PUTS ("Great day on $QQQ puts, +$12K") and some from 2022 naming stocks that no longer exist. A bare cashtag list inverts him. So every row leads with his actual words and its age, and NO row claims a direction \u2014 one of his own posts reads "caught the upside on $FSLR and downside on $META $TSLA", one sentence carrying both, so the chips are WORDS FOUND IN THE POST rather than a reading of it. Index tickers are dropped from the roster because "$SPY $QQQ weak" is him describing the tape, not naming a stock. The overlay columns are ours: whether the name is even in the scan universe (his freshest idea, SPCX, is NOT \u2014 invisible to every board and alert here), the demand-band read, and the 100/100 growth screen. Fetched twice a day, 07:40 and 17:40 CT, weekends included because his weekend wrap is where the next week\u2019s watchlist shows up. His calls, NOT advice. Nothing here gates a scan, an alert or a lane.',
+  },
   growth: {
     label: '\uD83D\uDE80 Explosive Growth',
     blurb: 'Sales up 100%+ AND quarterly EPS up 100%+ year-over-year on the latest reported quarter \u2014 with the quarter BEFORE it also growing, which is the leg that separates a real ramp from an easy year-ago base. Ajay 2026-09-11: "I want real growing stocks like AXTI and SABR with genuine sales". THIS BOARD HAS NO MARKET-CAP FLOOR \u2014 your call ("remove the 700M rule for this page") \u2014 so it can show a name before it is big. Every other board in the app filters to $700M+, and so does the trading engine: a row the engine will REFUSE to buy (under $2 a share, or a known cap under $700M) says exactly that in its own warnings rather than looking buyable. \u26A0\uFE0F also flags a thin tape and a promo-tagged name. The \uD83E\uDDF2 demand column is the one gate that measured \u2014 the band floor never pierced (+8.6pp win rate over 31,861 events); an order block rides along as a DISPLAY flag only, because the ICT study measured +0.03R over 6,004 signals, i.e. nothing. Rebuilt Sundays after the weekly research refresh, so new Russell entrants join on their own. NOTHING HERE IS BACKTESTED: the 100/100 screen has never been measured forward. It is a discovery list, not a buy signal.',
