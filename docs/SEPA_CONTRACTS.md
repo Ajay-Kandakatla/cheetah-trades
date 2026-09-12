@@ -1521,3 +1521,65 @@ stays Stage 2 despite failing p.71-72's own up-days-vs-down-days test. Adding
 `dn_days_on_avg_vol > up_days_on_avg_vol` to that downgrade would align it with
 the book — but `stage.py` feeds Auto-Pilot's entry gate, so it changes what the
 engine buys with real money. Ajay's call, not a side effect.
+
+## 15. Market-cap coverage — the shares cache is a gate input (2026-09-11)
+
+`sepa/volume_movers.py`'s `shares_cache` started as a **display** cache (Volume
+Movers turnover, 2026-06-15) and its own docstring still says "DISPLAY-ONLY:
+never feeds the scanner score." That is true of the *score*. It stopped being
+true of the **universe**: since 2026-09-03, `supply_demand.zone_store.big_cap_universe`
+reads `market_cap` out of this cache to decide which names get bands at all.
+
+A display cache may be sparse. A gate input may not.
+
+**Measured 2026-09-11**: 710 of 2,651 full-universe names (26.8%) had no usable
+`market_cap` — 671 with no row, 39 with `market_cap: None`. 331 of them traded
+over $50M/day. MU ($37.0B/day), TSM, LLY, SHOP, APH, AZO, CVNA, TGT, TEAM,
+TTWO, SAP, ALNY, UAL, DVN and CAH had **zero** `zone_store` docs, therefore no
+bands, no `demand_alert`, no `zone_bounce_alert`, no `supply_break_alert` and no
+`zone_edge_entry` paper lane.
+
+Two causes: `shares_for()` is lazy (it fetches only what a card render happens
+to ask for, and nothing warmed the scan universe), and a partial row — shares
+back, no `marketCap` — was honored for the full 7-day TTL.
+
+**Fixed by coverage, not by loosening.** `sepa/cap_warm.py` warms the universe
+weekly (Saturdays 08:10 ET) and derives a cap from shares (or float) × our own
+cached last close when the provider reports none, tagged `cap_source`. A
+float-derived cap understates, which is the safe direction against a `>= floor`
+gate: it can under-admit, never over-admit.
+
+That bound is **one-directional and enforced**: a float-derived cap is written
+only when it CLEARS the floor. `trading/safety_floor.cap_block` (same day) HARD
+-blocks an entry on a known sub-floor cap while an unknown cap only warns, so a
+too-low estimate would refuse a buy the lanes should have been allowed to take.
+`shares_outstanding x close` is the cap by definition and is written either way.
+
+### Locked
+
+* `MIN_CAP_USD = 700_000_000.0` in all six S/D modules — unchanged.
+  `tests/test_cap_floor.py` pins them equal.
+* `big_cap_universe`'s fail-closed comparison — unchanged, and its **source
+  text** is now pinned by
+  `test_supply_demand_contracts.py::test_big_cap_universe_still_fails_closed_on_an_unknown_cap`
+  so that coverage work can never quietly become gate work.
+* A reported cap is never overwritten by a derived one.
+* Both writers of the row (`shares_for`, `cap_warm`) go through the same
+  `cap_fields()` helper — otherwise the lazy one wins by recency and re-blinds
+  a name the warm just fixed.
+
+### Safe to change without sign-off
+
+Warm cadence, batch size, worker count and budget — throttling knobs, no effect
+on which names qualify.
+
+### Requires sign-off
+
+Anything touching `MIN_CAP_USD`, the fail-closed comparison, or the preference
+order `reported > shares > float`. Admitting on a cap derived from something
+that can *overstate* would be a genuine loosening of the floor and needs Ajay's
+call, not a refactor.
+
+Methodology: `docs/supply_demand/cap_coverage.md`.
+Guards: `tests/test_cap_warm.py` (24 tests, both regressions mutation-verified),
+`tests/test_supply_demand_contracts.py` (3 source guards), `tests/test_cap_floor.py`.

@@ -959,6 +959,23 @@
 # Weekly, Saturdays 07:40, when nothing else is running.
 40     7     *    *    6    /usr/local/bin/python -m observability.symbol_liveness
 
+# ── Market-cap coverage warm (2026-09-11) ──────────────────────────────────
+# zone_store.big_cap_universe fails closed on an unknown cap, and nothing ever
+# filled the cache over the scan universe, so "unknown" was mostly an artifact
+# of our fetch schedule: 710 of 2,651 full-universe names (26.8%) had no usable
+# market_cap, 331 of them trading over $50M/day. MU, TSM, LLY, SHOP, TGT and
+# ~700 others therefore had no zone_store doc — no bands, no demand_alert, no
+# zone_bounce_alert, no supply_break_alert, no zone_edge_entry paper lane.
+#
+# This fills MISSING caps only; a row that already has one is left alone, so
+# after the first fill a run costs almost nothing (new universe entrants only).
+# The $700M floor and the fail-closed comparison are untouched — see
+# docs/supply_demand/cap_coverage.md and tests/test_cap_floor.py.
+#
+# Saturdays 08:10, half an hour after symbol_liveness, on a day when no scan
+# is running. Cache-only, so no market_hours gate.
+10     8     *    *    6    /usr/local/bin/python -m sepa.cap_warm
+
 # ── Desk: daily pre-market trader report (Ajay 2026-08-28) ──────────────────
 # 8:40am ET weekdays — after the 19:10 earnings-calendar refresh (prior
 # evening) and inside the pre-market quote window, before the open. Builds

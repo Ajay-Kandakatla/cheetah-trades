@@ -921,3 +921,71 @@ def test_the_rules_panel_renders_the_phone_rule_through_the_label_map():
     assert AG.direction_label(AG.PUSH_DIRECTIONS[0]) in line
     head = line.split("(Ajay")[0]      # his own quotes stay verbatim after this
     assert "bounc" not in head.lower(), head
+
+
+# ── cap coverage: filling the cache must never become widening the gate ─────
+# Added 2026-09-11 with sepa/cap_warm.py. The blindness it fixes was 710 of
+# 2,651 full-universe names (26.8%) with no usable market_cap — MU, TSM, LLY,
+# SHOP, TGT among them — which big_cap_universe correctly dropped, so those
+# names had no bands, no demand_alert, no zone_bounce_alert, no
+# supply_break_alert and no zone_edge_entry paper lane. The fix is a warm job,
+# NOT a gate change, and these guards are what keep it that way.
+def test_big_cap_universe_still_fails_closed_on_an_unknown_cap():
+    """SOURCE GUARD. The cap_warm work must not have softened the comparison
+    into a default, a coalesce, or an 'unknown means pass' branch. An unpriced
+    name is not a small name, but it is not a known-big one either."""
+    from pathlib import Path as _P
+
+    from supply_demand import zone_store as ZS
+
+    src = (_P(__file__).resolve().parents[2] / "backend/supply_demand/zone_store.py").read_text()
+    assert "caps.get(s) is not None and float(caps[s]) >= floor" in src, \
+        "the fail-closed cap comparison changed shape — coverage work must not touch the gate"
+    assert ZS.MIN_CAP_USD == 700_000_000.0
+
+    F = ZS.MIN_CAP_USD
+    caps = {"KNOWN": F, "UNDER": F - 1, "UNKNOWN": None, "NAN": float("nan")}
+    assert ZS.big_cap_universe(["KNOWN", "UNDER", "UNKNOWN", "NAN", "ABSENT"], caps) == ["KNOWN"]
+
+
+def test_a_derived_cap_is_tagged_and_never_overwrites_a_reported_one():
+    """SOURCE GUARD. A derived cap is an ESTIMATE sitting in the same field the
+    gate reads. It must be distinguishable (cap_source) and it must never
+    displace a provider's own figure, or the cache quietly stops being data."""
+    from sepa import cap_warm as CW
+
+    reported = {"market_cap": 37e9, "shares_outstanding": 1, "float_shares": 1}
+    assert CW.cap_fields("X", reported) == {"cap_source": CW.REPORTED}
+
+    from supply_demand import zone_store as ZS
+
+    over = int((ZS.MIN_CAP_USD * 4) / 10.0)
+    derived = CW.cap_fields("X", {"market_cap": None, "float_shares": over},
+                            loader=lambda s: None, close=10.0)
+    assert derived["cap_source"] == CW.DERIVED_FLOAT
+    assert derived["market_cap"] == over * 10
+
+    # ASYMMETRY. float understates, so it can prove a name is big and can never
+    # prove one is small. A sub-floor float-derived cap must not be written at
+    # all: trading/safety_floor HARD-blocks an entry on a known sub-floor cap
+    # while an unknown one only warns, so a too-low estimate would refuse a buy
+    # the lanes should have been allowed to take.
+    under = int((ZS.MIN_CAP_USD * 0.85) / 10.0)
+    assert CW.cap_fields("X", {"market_cap": None, "float_shares": under},
+                         loader=lambda s: None, close=10.0) == {}
+    # shares_outstanding IS the cap by definition — trustworthy both ways.
+    assert CW.cap_fields("X", {"market_cap": None, "shares_outstanding": under},
+                         loader=lambda s: None, close=10.0)["market_cap"] == under * 10
+
+
+def test_both_cap_writers_fill_a_row_through_the_same_helper():
+    """SOURCE GUARD. shares_for (lazy, on a card render) and cap_warm (weekly)
+    both write this row. When they disagree the lazy one wins by recency and
+    silently re-blinds a name the warm just fixed — which is exactly how MU
+    stayed invisible for a week at a time. One helper, both paths."""
+    from pathlib import Path as _P
+
+    vm_src = (_P(__file__).resolve().parents[2] / "backend/sepa/volume_movers.py").read_text()
+    assert "from sepa.cap_warm import cap_fields" in vm_src, \
+        "shares_for stopped deriving the cap — its next fetch will clobber cap_warm's row"
+    assert "cap_fields(sym, fetched)" in vm_src

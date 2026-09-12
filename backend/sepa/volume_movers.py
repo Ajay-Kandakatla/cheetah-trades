@@ -89,6 +89,17 @@ def shares_for(symbol: str):
         # Cache the result — INCLUDING a null tombstone on a miss — so a burst of
         # card renders for the same symbol doesn't stampede yfinance.
         payload = fetched or {"shares_outstanding": None, "float_shares": None, "market_cap": None}
+        # A PARTIAL row (shares back, no marketCap) used to be written with
+        # market_cap None and then honored for the whole 7-day TTL, which is how
+        # MU stayed invisible to every zone board for a week at a time. Derive
+        # the cap here so this write can never undo cap_warm's — same helper,
+        # same tag, either path. Best-effort: a failure just leaves the row as
+        # it was, which is the old behaviour.
+        try:
+            from sepa.cap_warm import cap_fields
+            payload.update(cap_fields(sym, fetched) if fetched else {})
+        except Exception:                              # noqa: BLE001
+            pass
         try:
             coll.update_one({"_id": sym}, {"$set": {**payload, "as_of": now}}, upsert=True)
         except Exception:
