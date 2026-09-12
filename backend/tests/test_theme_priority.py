@@ -116,7 +116,15 @@ def test_priority_is_the_order_ajay_asked_for():
     # goes after, not before, because the hardware is the thesis and the
     # contractors are the derivative. defense and rare_earth keep their
     # relative order behind both.
-    assert order == ["space", "quantum", "ai_semis", "ai_power", "nuclear",
+    # semi_materials inserted 2026-09-11, directly BEHIND ai_semis. Ajay asked
+    # for the roster ("companies like SNDK but for raw material for Semis") but
+    # NOT for this rank — the placement is mine, and it sits after ai_semis
+    # rather than before because it is the same semis story one layer down: the
+    # chips are the thesis, the consumables and the test step are the
+    # derivative. Same reasoning as datacenter_build behind ai_infra.
+    # Everything below shifted one rank; relative order is unchanged.
+    assert order == ["space", "quantum", "ai_semis", "semi_materials",
+                     "ai_power", "nuclear",
                      "energy", "optical", "robotics", "ai_infra",
                      "datacenter_build", "defense", "rare_earth"]
 

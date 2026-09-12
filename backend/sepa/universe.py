@@ -138,6 +138,33 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   # backlog, below IPO price — lumpiest name on the roster
                   "FLY"],
     "quantum":   ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ"],
+    # Ajay 2026-09-11: "there are companies like SNDK but for raw material for
+    # Semis" -> "yes add that". Then, correcting me: "i dont use supply deman
+    # page at all.. I only been using chart maps". The sector I first added to
+    # supply_demand/sectors.py only renders on /supply-demand, which he never
+    # opens; the Chart Maps 🔥 Hot-sectors strip ranks THEMES, and themes come
+    # from HERE. So the roster lives in both places, on purpose.
+    #
+    # THE LAYER UNDER THE CHIP. ai_semis below already holds the designers, the
+    # four equipment giants and the HBM/storage names, plus ONTO/NVMI/CAMT. This
+    # roster is the CONSUMABLES, sub-fab parts, test, probe and packaging step —
+    # paid per wafer and per die rather than per tool, so it tracks fab
+    # utilisation instead of the lumpy capex cycle.
+    #
+    # THEMES ARE A STRICT PARTITION — _assert_themes_disjoint() raises at import
+    # on any ticker in two themes. I first wrote this roster with all 17 names
+    # and the assert caught five of them: FORM, ICHR, ONTO and UCTT already sit
+    # in ai_semis, and TER sits in robotics. They stay where they are rather
+    # than being moved, so a roster he already watches is not disturbed; this
+    # theme is the 12 that had no theme at all. The full 17-name roster lives in
+    # supply_demand/sectors.py, which has no such constraint.
+    #
+    # READ BEFORE TRADING IT (measured 2026-09-11, same 6-month window): being
+    # upstream is NOT the edge. ASML +26%, KLAC +27%, AMAT +34%, LIN -6%,
+    # APD +1% against AEHR +166%, COHU +110%, MTRN +89%, ONTO +48%, VECO +45%.
+    # Size mattered far more than position in the stack.
+    "semi_materials": ["ENTG", "MTRN", "CBT", "ROG", "ACMR", "AEHR", "COHU",
+                       "AMKR", "KLIC", "ACLS", "VECO", "PLAB"],
     # Semis incl. the HBM/storage layer Ajay named. MU is the HBM name; SNDK,
     # WDC and STX are the AI-storage bottleneck; ONTO/NVMI/CAMT are the
     # metrology tools that gate HBM stacking yield.
@@ -259,19 +286,24 @@ THEME_PRIORITY: dict[str, int] = {
     "space":     0,
     "quantum":   1,
     "ai_semis":  2,
+    # 2026-09-11 — right behind the chips it feeds, because it is the SAME story
+    # one layer down: fabs cannot ship without the consumables, the probe cards
+    # and the packaging step. Everything below shifts one rank; relative order
+    # is unchanged.
+    "semi_materials": 3,
     # The power thesis, kept together and ranked right behind Ajay's stated
     # three: AI is megawatt-constrained, so the compute hosts, the reactors and
     # the barrels are one story, not three.
-    "ai_power":  3,
-    "nuclear":   4,
-    "energy":    5,
-    "optical":   6,
-    "robotics":  7,
-    "ai_infra":  8,
+    "ai_power":  4,
+    "nuclear":   5,
+    "energy":    6,
+    "optical":   7,
+    "robotics":  8,
+    "ai_infra":  9,
     # Right behind the hardware it houses — same build-out, different half.
-    "datacenter_build": 9,
-    "defense":   10,
-    "rare_earth": 11,
+    "datacenter_build": 10,
+    "defense":   11,
+    "rare_earth": 12,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of

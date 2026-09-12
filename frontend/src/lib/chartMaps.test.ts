@@ -488,6 +488,10 @@ describe('themeLabel', () => {
   const BACKEND_THEMES = [
     'space', 'quantum', 'ai_semis', 'optical', 'robotics', 'ai_infra', 'nuclear',
     'defense', 'rare_earth',
+    // 2026-09-11: the semi consumables / test layer. He only uses Chart Maps,
+    // so a roster that exists only in supply_demand/sectors.py never reaches
+    // him — the Hot-sectors strip ranks THEMES, and this is one.
+    'semi_materials',
   ];
 
   it('labels every theme the backend can emit', () => {

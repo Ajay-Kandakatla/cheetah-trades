@@ -1207,6 +1207,8 @@ export const THEME_LABEL: Record<string, string> = {
   nuclear: '☢ Nuclear',
   defense: '🎖 Defense',
   rare_earth: '⛏ Rare earth',
+  // 2026-09-11 — the layer under the chip: consumables, test and packaging.
+  semi_materials: '🧪 Semi materials',
 };
 
 export function themeLabel(theme: string | null | undefined): string | null {
