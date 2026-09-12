@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HotSectors, {
   chipFace, marketIsRed, marketLine, monthLeg, scanStamp, themeTitle, windowLabel,
@@ -20,13 +20,31 @@ const PAYLOAD = {
   ],
 };
 
-function stub(body: any, ok = true) {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok, status: ok ? 200 : 503, json: () => Promise.resolve(body),
-  } as any));
+/* The strip now makes TWO calls: /rotation/hot for the board and
+ * /rotation/changes for the 🔄 line above it. The stub answers both so a test
+ * never silently exercises the change line against a hot payload. */
+export const CHANGES_QUIET = {
+  grain: 'all', as_of: '2026-09-10', baseline: '2026-09-09', quiet: true,
+  grains: { sectors: { top: ['Energy'], streaks: { Energy: 8 }, quiet: true,
+                       entered: [], left: [], moved: [] } },
+};
+
+function stub(body: any, ok = true, changes: any = CHANGES_QUIET) {
+  vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve({
+    ok, status: ok ? 200 : 503,
+    json: () => Promise.resolve(String(url).includes('/rotation/changes') ? changes : body),
+  } as any)));
 }
 
 const draw = () => render(<MemoryRouter><HotSectors /></MemoryRouter>);
+
+/* The ~35-chip board is FOLDED on arrival (Ajay 2026-09-12: "this whole thing
+ * is super messay"). Every chip assertion below therefore opens it first —
+ * which is itself the contract: the chips are still all there, they are just
+ * no longer the first thing on the page. */
+async function openBoard() {
+  fireEvent.click(await screen.findByRole('button', { name: /full board/ }));
+}
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
@@ -34,6 +52,7 @@ describe('HotSectors', () => {
   it('leads every chip with TODAY and prints the week beside it', async () => {
     stub(PAYLOAD);
     draw();
+    await openBoard();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Technology · large caps +0.9% · 5d +5.7%' }))
         .toBeTruthy());
@@ -128,6 +147,7 @@ describe('today decides the colour, the month decides nothing', () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve(TAPE) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     const chip = await screen.findByRole('button', { name: /Aerospace & Defense/ });
     expect(chip.textContent).toBe('Aerospace & Defense +1.2% · 5d +3.0%');
     expect(chip.textContent).not.toContain('11.9');
@@ -191,12 +211,14 @@ describe('the strip on a day nothing is hot', () => {
     out: [{ group: 'Utilities · large caps', n: 25, rel_1d: -1.9, rel_5d: -4.1, rel_21d: -3.0 }],
     market: { benchmark: 'RSP', ret_1d: -0.68, ret_5d: -2.48, pct_positive_1d: 23 },
   };
-  const stubHot = (d: unknown) => vi.stubGlobal('fetch', vi.fn(() =>
-    Promise.resolve({ ok: true, json: () => Promise.resolve(d) } as Response)));
+  const stubHot = (d: unknown) => vi.stubGlobal('fetch', vi.fn((url: string) =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve(
+      String(url).includes('/rotation/changes') ? CHANGES_QUIET : d) } as Response)));
 
   it('says so in words and prints the market-wide read', async () => {
     stubHot(RED_TAPE);
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     expect(await screen.findByText(
       'nothing is hot today; the whole tape is red: RSP -0.7%, 23% of names up',
     )).toBeInTheDocument();
@@ -223,6 +245,7 @@ describe('the strip on a day nothing is hot', () => {
   it('NEGATIVE: the line is absent on a day something IS hot', async () => {
     stubHot({ ...RED_TAPE, in: [{ group: 'Gold', n: 10, rel_1d: 2.0, rel_5d: 6.0, rel_21d: 14.2 }] });
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     await screen.findByRole('button', { name: /Gold/ });
     expect(screen.queryByText(/nothing is hot today/)).not.toBeInTheDocument();
   });
@@ -290,6 +313,7 @@ describe('HotSectors — industry cohorts (2026-09-09)', () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve(withIndustries) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     expect(await screen.findByRole('button', { name: 'Oil & Gas E&P +1.4% · 5d +9.2%' }))
       .toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Semiconductors -0.7% · 5d -1.9%' })).toBeInTheDocument();
@@ -303,6 +327,7 @@ describe('HotSectors — industry cohorts (2026-09-09)', () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve(withIndustries) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     const chip = await screen.findByRole('button', { name: /^Semiconductors/ });
     expect(chip.getAttribute('title')).toMatch(/inside Technology/);
     expect(chip.getAttribute('title')).toMatch(/-13\.32% rel/);
@@ -313,6 +338,7 @@ describe('HotSectors — industry cohorts (2026-09-09)', () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve(legacy) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     expect(await screen.findByRole('button', { name: /Energy · large caps/ })).toBeInTheDocument();
     expect(screen.queryByText('industry in')).not.toBeInTheDocument();
   });
@@ -322,6 +348,7 @@ describe('HotSectors — industry cohorts (2026-09-09)', () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve(only) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     expect(await screen.findByRole('button', { name: 'Gold +2.6% · 5d +14.3%' })).toBeInTheDocument();
   });
 
@@ -336,6 +363,7 @@ describe('HotSectors — industry cohorts (2026-09-09)', () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve(stale) } as Response)));
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     const chip = await screen.findByRole('button', { name: /Energy · large caps/ });
     expect(chip.textContent).toBe('Energy · large caps — · 21d —');
     expect(chip.className).toContain('hs-chip-flat');
@@ -370,6 +398,7 @@ describe('HotSectors — build-out theme rows (2026-09-09)', () => {
   it('renders every theme he named, with its numbers', async () => {
     stubThemes(withThemes);
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     expect(await screen.findByRole('button', { name: 'energy +1.0% · 5d +9.0%' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'robotics -0.9% · 5d -4.2%' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'optical -0.4% · 5d -3.1%' })).toBeInTheDocument();
@@ -379,6 +408,7 @@ describe('HotSectors — build-out theme rows (2026-09-09)', () => {
   it('marks a thin cohort on the chip AND explains it on hover', async () => {
     stubThemes(withThemes);
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     const chip = await screen.findByRole('button', { name: /rare_earth .* ·thin/ });
     expect(chip.getAttribute('title')).toMatch(/THIN/);
     expect(chip.getAttribute('title')).toMatch(/4 names/);
@@ -387,6 +417,7 @@ describe('HotSectors — build-out theme rows (2026-09-09)', () => {
   it('a non-thin theme carries no thin marker (NEGATIVE)', async () => {
     stubThemes(withThemes);
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     const chip = await screen.findByRole('button', { name: /^robotics/ });
     expect(chip.textContent).not.toMatch(/thin/);
     expect(chip.getAttribute('title')).not.toMatch(/THIN/);
@@ -395,6 +426,7 @@ describe('HotSectors — build-out theme rows (2026-09-09)', () => {
   it('NEGATIVE: an old payload with no theme keys still renders the strip', async () => {
     stubThemes({ ...withThemes, themes_in: undefined, themes_out: undefined });
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
+    await openBoard();
     expect(await screen.findByRole('button', { name: /Energy · large caps/ })).toBeInTheDocument();
     expect(screen.queryByText('theme in')).not.toBeInTheDocument();
   });

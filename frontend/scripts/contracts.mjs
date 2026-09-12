@@ -1555,6 +1555,66 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // Ajay 2026-09-12: "this whole thing is super messay" · "I am trying to see
+  // what changed if there is no change continously same sectors continue to
+  // show the top for example energy has been continous."
+  //
+  // Energy at #1 for eight days is ONE fact, not eight. The strip must open on
+  // the DELTA with the board folded behind it, and when nothing moved it must
+  // SAY so — an empty render reads as a broken scan, and re-printing ~35 chips
+  // is the thing he called messy.
+  {
+    name: 'the Hot-sectors strip leads with what CHANGED, board folded (2026-09-12)',
+    file: 'src/components/HotSectors.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/<RotationChanges \/>/.test(src)) {
+        errs.push('the change line must ride above the board');
+      }
+      if (!/useState\(false\)/.test(src) || !/showAll/.test(src)) {
+        errs.push('the chip board must start FOLDED (showAll defaults false)');
+      }
+      if (!/\{showAll && \(/.test(src)) {
+        errs.push('the chip groups must sit behind the fold, not beside it');
+      }
+      if (!/aria-expanded=\{showAll\}/.test(src)) {
+        errs.push('the fold toggle must announce its state to a screen reader');
+      }
+      // The chips are KEPT — this is a declutter, not a deletion.
+      for (const k of ['cohIn', 'indIn', 'thmIn', 'cohOut', 'indOut', 'thmOut']) {
+        if (!new RegExp(k).test(src)) errs.push('the fold must still contain ' + k);
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the change line answers "no change" instead of rendering nothing (2026-09-12)',
+    file: 'src/components/RotationChanges.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/no rank change since/.test(src)) {
+        errs.push('a quiet session must say so in words');
+      }
+      if (!/still leading/.test(src) || !/streakText/.test(src)) {
+        errs.push('the quiet line must carry the streak — "Energy #1 · 8d"');
+      }
+      if (!/rotation\/changes/.test(src)) {
+        errs.push('the line must read the backend change detector, not recompute ranks');
+      }
+      // grain=all: the board below renders three grains, so a one-grain answer
+      // could print a confident "no change" while themes reshuffled under it.
+      if (/grain=themes/.test(src) || /grain=\$\{/.test(src)) {
+        errs.push('the strip must take the all-grain answer, not one grain');
+      }
+      if (!/extra/.test(src) || !/Math\.max\(0/.test(src)) {
+        errs.push('movers beyond the cap must be COUNTED, never silently dropped');
+      }
+      if (!/not a reason to trade/i.test(src)) {
+        errs.push('the strip must state that a visible shift is not tradeable');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -130,8 +130,20 @@ def refresh_rotation(*, coll=None) -> dict:
     data = T.build(start=RA.DEFAULT_START)
     saved = save_doc(ROTATION_ID, data, meta={"start": RA.DEFAULT_START}, coll=coll)
     RA.warm_cache(RA.DEFAULT_START, data, source="scan", built_at_iso=_et_iso())
+    # Keep the SESSION's ranking (Ajay 2026-09-12: "I am trying to see what
+    # changed ... energy has been continous"). Nothing stored a rotation
+    # history before this — `scan_context` holds three latest-only documents,
+    # so yesterday's ranking died the moment today's scan finished and the
+    # strip could never say "no change". Fenced: a history write must never be
+    # able to fail the scan refresh that produced the data.
+    stored = None
+    try:
+        from rotation import history as RH
+        stored = RH.store(data)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("context_refresh: rotation history not stored: %s", exc)
     hot = data.get("hot") or {}
-    return {"saved": saved, "as_of": data.get("as_of"),
+    return {"saved": saved, "as_of": data.get("as_of"), "history": stored,
             "in": [r.get("group") for r in (hot.get("in") or [])],
             "out": [r.get("group") for r in (hot.get("out") or [])]}
 

@@ -65,7 +65,15 @@ function stub(members: unknown, ok = true) {
       : { ok: true, status: 200, json: () => Promise.resolve(HOT) }) as any));
 }
 
-const draw = () => render(<MemoryRouter><HotSectors /></MemoryRouter>);
+/* The ~35-chip board is FOLDED on arrival (Ajay 2026-09-12: "this whole thing
+ * is super messay"). Every chip assertion below therefore opens it first —
+ * which is itself the contract: the chips are all still there, they are just
+ * no longer the first thing on the page. */
+const draw = async () => {
+  const r = render(<MemoryRouter><HotSectors /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: /full board/ }));
+  return r;
+};
 
 async function openTech() {
   const chip = await screen.findByRole('button', { name: /Technology · large caps/ });
@@ -79,7 +87,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe('Hot sectors chips open a member popover', () => {
   it('every strip row is a keyboard-reachable button, not a dead span', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await screen.findByRole('button', { name: /Technology · large caps/ });
     expect(screen.getByRole('button', { name: /Real Estate · small caps/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /robotics/ })).toBeInTheDocument();
@@ -89,7 +97,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('names the group and how many members it covers', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/342 of 348 members covered/)).toBeInTheDocument();
@@ -98,7 +106,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('states the sample-vs-full-membership caveat IN THE BODY', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const warn = within(dialog).getByText(/not expected to reconcile/);
@@ -113,7 +121,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('labels the sort with the backend definition of traction', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     expect(await screen.findByText(
       /Sorted by traction, strongest first — 21-session rel vs RSP, confirmed by the last 5 sessions/,
@@ -122,7 +130,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('ranks by the backend score and links every ticker to its page', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const rows = within(dialog).getAllByRole('row').slice(1);   // drop the header
@@ -133,7 +141,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('leads with TODAY, then the 5/21/63 legs and the vs-group column', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const row = within(dialog).getByRole('link', { name: 'NVDA' }).closest('tr')!;
@@ -144,7 +152,7 @@ describe('Hot sectors chips open a member popover', () => {
   it('prints the company name under each ticker (2026-09-10)', async () => {
     // Ajay: "Cna you add company name too next to these tickers".
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const nvda = within(dialog).getByRole('link', { name: 'NVDA' }).closest('th')!;
@@ -158,7 +166,7 @@ describe('Hot sectors chips open a member popover', () => {
     // and nothing else -- never a blank row, and never a provider call from
     // inside the rotation build to go and find one.
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const intc = within(dialog).getByRole('link', { name: 'INTC' }).closest('tr')!;
@@ -173,7 +181,7 @@ describe('Hot sectors chips open a member popover', () => {
     // number, not just the per-name column. Breadth rides with it: a median
     // says nothing about whether one name is carrying the sector.
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toMatch(/today \+0\.6%/);
@@ -182,7 +190,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('marks the ones the BACKEND flagged, and only those (NEGATIVE)', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const flagged = within(dialog).getAllByLabelText('gaining traction');
@@ -194,7 +202,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('marks a name standing at a demand band with the shared 🪃 read', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
     const avgo = within(dialog).getByRole('link', { name: 'AVGO' }).closest('tr')!;
@@ -209,7 +217,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('counts what it dropped rather than hiding it', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     expect(await screen.findByText(/6 dropped \(dead or stale series\)/)).toBeInTheDocument();
     expect(screen.getByText(/dropped: DEAD1, DEAD2/)).toBeInTheDocument();
@@ -217,7 +225,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('NEGATIVE: a group nothing could be priced says so, never reads as empty', async () => {
     stub({ ...MEMBERS, priced: 0, rows: [], n: 0, shown: 0 });
-    draw();
+    await draw();
     await openTech();
     expect(await screen.findByText(/None of this group’s 348 members could be priced/))
       .toBeInTheDocument();
@@ -226,7 +234,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('NEGATIVE: a failed member read never touches the number on the chip', async () => {
     stub({ error: 'boom' }, false);
-    draw();
+    await draw();
     await openTech();
     expect(await screen.findByText(/Member read failed/)).toBeInTheDocument();
     expect(screen.getByText(/median on the strip is\s+unaffected/)).toBeInTheDocument();
@@ -237,7 +245,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('Escape closes it and focus goes back to the chip that opened it', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     const chip = await openTech();
     await screen.findByRole('dialog');
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -247,7 +255,7 @@ describe('Hot sectors chips open a member popover', () => {
 
   it('the ✕ button closes it too', async () => {
     stub(MEMBERS);
-    draw();
+    await draw();
     await openTech();
     fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -256,7 +264,7 @@ describe('Hot sectors chips open a member popover', () => {
   it('a theme chip drills its own roster', async () => {
     stub({ ...MEMBERS, grain: 'theme', group: 'robotics', n_full: 19, priced: 19, sampled: false, n_population: 19,
            n_dropped: 0, dropped_symbols: [] });
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /robotics \+0\.6% · 5d \+4\.2%/ }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/19 of 19 members covered/)).toBeInTheDocument();

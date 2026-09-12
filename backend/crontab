@@ -943,6 +943,24 @@
 # Weekdays 17:10 CT, after the 16:55/16:57 demand warms have finished so the
 # price cache is already hot.
 10     17    *    *    1-5  curl -sS -m 300 -o /dev/null -w 'rotation warm: HTTP %{http_code} in %{time_total}s\n' -H 'X-User-Email: cron@internal' 'http://api:8000/rotation?start=2026-06-01&refresh=true'
+#
+# ── Daily rotation HISTORY (Ajay 2026-09-12) ────────────────────────────────
+# "I am trying to see what changed if there is no change continously same
+# sectors continue to show the top for example energy has been continous."
+#
+# Nothing stored a rotation history before this: `scan_context` holds three
+# latest-only documents, so yesterday's ranking died the moment today's scan
+# finished and the strip could only reprint ~35 chips. One document per SESSION
+# DATE now feeds the strip's "what changed" line and its streak counts.
+#
+# Every scan's context refresh already stores one, so this is the end-of-day
+# final word plus the prune. It reads the PERSISTED doc and never rebuilds, so
+# it is a Mongo read — unlike the warm above it, `python -m` in this container
+# is correct precisely because it touches no in-process cache. Idempotent: the
+# _id is the payload's own as_of, so a second run upserts the same day.
+#
+# 17:20 CT, ten minutes after the warm above has persisted the final build.
+20     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate rotation.history snapshot
 
 # ── Symbol liveness — has anything stopped printing bars? ────────────────────
 # Ajay 2026-08-16: "look at this issue with SATS stocks". The app said SATS was

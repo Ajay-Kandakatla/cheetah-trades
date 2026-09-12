@@ -53,6 +53,7 @@ import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { pct, tone } from '../lib/rotation';
 import { SectorMembersModal } from './SectorMembersModal';
+import RotationChanges from './RotationChanges';
 import type { GroupKind } from '../lib/rotationMembers';
 
 export type HotRow = {
@@ -259,6 +260,10 @@ function HotChip({ row, kind, title, rankedBy, open, onOpen, children }: {
 
 export default function HotSectors() {
   const [data, setData] = useState<HotPayload | null>(null);
+  // Ajay 2026-09-12: "this whole thing is super messay". The ~35 chips are
+  // KEPT — he reads them — but they start folded, so the strip opens on what
+  // changed instead of on six rows that mostly say what they said yesterday.
+  const [showAll, setShowAll] = useState(false);
   const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState<OpenGroup | null>(null);
 
@@ -302,6 +307,9 @@ export default function HotSectors() {
     `${r.group}${r.sector ? ` · inside ${r.sector}` : ''} — ${r.n} names`
     + ` · 63d ${r.rel_63d ?? '—'}% rel${monthLeg(r)}${breadthLeg(r)}`;
 
+  const chipCount = cohIn.length + cohOut.length + indIn.length + indOut.length
+                    + thmIn.length + thmOut.length;
+
   return (
     <div className="hs" role="complementary" aria-label="Hot sectors">
       <span className="hs-head">
@@ -313,68 +321,81 @@ export default function HotSectors() {
           {' · click a chip for its member stocks'}
         </em>
       </span>
+      {/* What CHANGED leads. Everything below it is the same board as before,
+          folded away. */}
+      <RotationChanges />
       {noneHot && (
         // Plain words first, so an empty inflow side can never be mistaken for
         // a broken scan or a missing payload.
         <p className="hs-market">{tape || 'nothing is hot today'}</p>
       )}
-      {cohIn.length > 0 && (
-        <span className="hs-group">
-          <em className="hs-tag hs-tag-in">money in</em>
-          {cohIn.map((r) => (
-            <HotChip key={r.group} row={r} kind="cohort" rankedBy={data.ranked_by} title={cohortTitle(r)}
-                     open={open} onOpen={setOpen} />
-          ))}
-        </span>
+      {chipCount > 0 && (
+        <button type="button" className="hs-toggle" aria-expanded={showAll}
+                onClick={() => setShowAll((v) => !v)}>
+          {showAll ? 'hide the full board' : `full board (${chipCount} chips)`}
+        </button>
       )}
-      {cohOut.length > 0 && (
-        <span className="hs-group">
-          <em className="hs-tag hs-tag-out">money out</em>
-          {cohOut.map((r) => (
-            <HotChip key={r.group} row={r} kind="cohort" rankedBy={data.ranked_by} title={cohortTitle(r)}
-                     open={open} onOpen={setOpen} />
-          ))}
-        </span>
-      )}
-      {indIn.length > 0 && (
-        <span className="hs-group">
-          <em className="hs-tag hs-tag-in">industry in</em>
-          {indIn.map((r) => (
-            <HotChip key={`ii-${r.group}`} row={r} kind="industry"
-                     title={industryTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen} />
-          ))}
-        </span>
-      )}
-      {indOut.length > 0 && (
-        <span className="hs-group">
-          <em className="hs-tag hs-tag-out">industry out</em>
-          {indOut.map((r) => (
-            <HotChip key={`io-${r.group}`} row={r} kind="industry"
-                     title={industryTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen} />
-          ))}
-        </span>
-      )}
-      {thmIn.length > 0 && (
-        <span className="hs-group">
-          <em className="hs-tag hs-tag-in">theme in</em>
-          {thmIn.map((r) => (
-            <HotChip key={`ti-${r.group}`} row={r} kind="theme"
-                     title={themeTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen}>
-              {r.thin ? ' ·thin' : ''}
-            </HotChip>
-          ))}
-        </span>
-      )}
-      {thmOut.length > 0 && (
-        <span className="hs-group">
-          <em className="hs-tag hs-tag-out">theme out</em>
-          {thmOut.map((r) => (
-            <HotChip key={`to-${r.group}`} row={r} kind="theme"
-                     title={themeTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen}>
-              {r.thin ? ' ·thin' : ''}
-            </HotChip>
-          ))}
-        </span>
+      {showAll && (
+        <>
+        {cohIn.length > 0 && (
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-in">money in</em>
+            {cohIn.map((r) => (
+              <HotChip key={r.group} row={r} kind="cohort" rankedBy={data.ranked_by} title={cohortTitle(r)}
+                       open={open} onOpen={setOpen} />
+            ))}
+          </span>
+        )}
+        {cohOut.length > 0 && (
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-out">money out</em>
+            {cohOut.map((r) => (
+              <HotChip key={r.group} row={r} kind="cohort" rankedBy={data.ranked_by} title={cohortTitle(r)}
+                       open={open} onOpen={setOpen} />
+            ))}
+          </span>
+        )}
+        {indIn.length > 0 && (
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-in">industry in</em>
+            {indIn.map((r) => (
+              <HotChip key={`ii-${r.group}`} row={r} kind="industry"
+                       title={industryTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen} />
+            ))}
+          </span>
+        )}
+        {indOut.length > 0 && (
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-out">industry out</em>
+            {indOut.map((r) => (
+              <HotChip key={`io-${r.group}`} row={r} kind="industry"
+                       title={industryTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen} />
+            ))}
+          </span>
+        )}
+        {thmIn.length > 0 && (
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-in">theme in</em>
+            {thmIn.map((r) => (
+              <HotChip key={`ti-${r.group}`} row={r} kind="theme"
+                       title={themeTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen}>
+                {r.thin ? ' ·thin' : ''}
+              </HotChip>
+            ))}
+          </span>
+        )}
+        {thmOut.length > 0 && (
+          <span className="hs-group">
+            <em className="hs-tag hs-tag-out">theme out</em>
+            {thmOut.map((r) => (
+              <HotChip key={`to-${r.group}`} row={r} kind="theme"
+                       title={themeTitle(r)} rankedBy={data.ranked_by} open={open} onOpen={setOpen}>
+                {r.thin ? ' ·thin' : ''}
+              </HotChip>
+            ))}
+          </span>
+        )}
+        </>
       )}
       <Link to="/rotation" className="hs-more">full rotation →</Link>
       {open && (

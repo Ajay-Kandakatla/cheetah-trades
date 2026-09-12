@@ -94,7 +94,15 @@ function stub(members: unknown = MEMBERS, ok = true) {
   }));
 }
 
-const draw = () => render(<MemoryRouter><HotSectors /></MemoryRouter>);
+/* The ~35-chip board is FOLDED on arrival (Ajay 2026-09-12: "this whole thing
+ * is super messay"). Every chip assertion below therefore opens it first —
+ * which is itself the contract: the chips are all still there, they are just
+ * no longer the first thing on the page. */
+const draw = async () => {
+  const r = render(<MemoryRouter><HotSectors /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: /full board/ }));
+  return r;
+};
 const chip = (name: RegExp) => screen.getByRole('button', { name });
 /** The decoded query of the last member request (URLSearchParams encodes a
  *  space as '+', which decodeURIComponent leaves alone). */
@@ -109,7 +117,7 @@ describe('the chip asks for the grain the backend handed it', () => {
      * label back as a sector would drill 348 names under a median measured on
      * the 25 large caps — two different questions, one number. */
     stub();
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     await screen.findByRole('dialog');
     expect(asked).toHaveLength(1);
@@ -121,7 +129,7 @@ describe('the chip asks for the grain the backend handed it', () => {
 
   it('an industry chip drills the industry grain', async () => {
     stub({ ...MEMBERS, kind: 'industry', group: 'Semiconductors' });
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Semiconductors/ }));
     await screen.findByRole('dialog');
     expect(lastAsk()).toMatch(/(kind|grain)=industry/);
@@ -130,7 +138,7 @@ describe('the chip asks for the grain the backend handed it', () => {
 
   it('a theme chip drills the theme grain', async () => {
     stub({ ...MEMBERS, kind: 'theme', group: 'robotics' });
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /robotics/ }));
     await screen.findByRole('dialog');
     expect(lastAsk()).toMatch(/(kind|grain)=theme/);
@@ -139,7 +147,7 @@ describe('the chip asks for the grain the backend handed it', () => {
 
   it('a second chip is a second request, not the first panel relabelled', async () => {
     stub();
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     await screen.findByRole('dialog');
     fireEvent.click(chip(/Real Estate · small caps/));
@@ -154,7 +162,7 @@ describe('opening the panel changes no number he already sees', () => {
     /* HOUSE RULE. The panel's own median is over the FULL membership; writing
      * it back onto the chip would silently restate the strip. */
     stub();
-    draw();
+    await draw();
     const c = await screen.findByRole('button', { name: /Technology · large caps/ });
     const before = c.textContent;
     const title = c.getAttribute('title');
@@ -169,7 +177,7 @@ describe('opening the panel changes no number he already sees', () => {
 
   it('the rest of the strip is untouched while a panel is open', async () => {
     stub();
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     await screen.findByRole('dialog');
     expect(chip(/Real Estate · small caps/).textContent)
@@ -182,7 +190,7 @@ describe('opening the panel changes no number he already sees', () => {
 describe('the rows carry the numbers the ranking is made of', () => {
   it('every member arrives with its 5 / 21 / 63 and its vs-group points', async () => {
     stub();
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     const dialog = await screen.findByRole('dialog');
 
@@ -206,7 +214,7 @@ describe('the sample-vs-full sentence cannot be dropped', () => {
 
   it('is on screen with the payload', async () => {
     stub();
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toMatch(RECONCILE);
@@ -216,7 +224,7 @@ describe('the sample-vs-full sentence cannot be dropped', () => {
 
   it('NEGATIVE: a payload with no counts still says the two are different sets', async () => {
     stub({ ...MEMBERS, n_population: null, n_full: null });
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toMatch(RECONCILE);
@@ -228,7 +236,7 @@ describe('the sample-vs-full sentence cannot be dropped', () => {
      * the path where the panel is emptiest — so it is the path where the full
      * list is most likely to be read as the chip's arithmetic. */
     stub({ error: 'HTTP 503' }, false);
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText(/Member read failed/)).toBeInTheDocument();
@@ -243,7 +251,7 @@ describe('an empty table is still information', () => {
   it('NEGATIVE: no stored member list says so, rather than rendering blank', async () => {
     stub({ ...MEMBERS, n_full: 0, priced: 0, unpriced: 0,
            unpriced_symbols: [], rows: [], n: 0, shown: 0 });
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText(/No member list is stored/i)).toBeInTheDocument();
@@ -253,7 +261,7 @@ describe('an empty table is still information', () => {
 
   it('NEGATIVE: names that could not be priced are counted, not hidden', async () => {
     stub({ ...MEMBERS, priced: 0, rows: [], n: 0, shown: 0 });
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText(/None of this group/i)).toBeInTheDocument();
@@ -266,7 +274,7 @@ describe('an empty table is still information', () => {
 describe('closing it', () => {
   it('Escape closes the panel and leaves the strip standing', async () => {
     stub();
-    draw();
+    await draw();
     fireEvent.click(await screen.findByRole('button', { name: /Technology · large caps/ }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });

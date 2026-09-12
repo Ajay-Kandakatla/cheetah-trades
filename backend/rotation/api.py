@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 from . import backtest as B
 from . import hottest as H
+from .history import TOP_N as H_TOP_N, MIN_MOVE as H_MIN_MOVE
 from . import tracker as T
 
 log = logging.getLogger("rotation.api")
@@ -472,6 +473,46 @@ async def rotation_members(
 # moves on the scale of months, not minutes.
 _BT_TTL_SEC = 12 * 60 * 60
 _bt_cache: dict = {}
+
+
+@router.get("/rotation/changes")
+async def rotation_changes(
+    grain: str = Query("all",
+                      description="all | themes | sectors | industries | cohorts"),
+    top_n: int = Query(H_TOP_N, ge=2, le=20),
+    min_move: int = Query(H_MIN_MOVE, ge=1, le=10),
+):
+    """What CHANGED in the ranking since the previous stored session.
+
+    Ajay 2026-09-12, on the six-row Hot-sectors strip: "this is what I mean
+    when I said messy ... I am trying to see what changed if there is no change
+    continously same sectors continue to show the top for example energy has
+    been continous."
+
+    `quiet: true` is the ANSWER, not an empty result — it means nothing crossed
+    the top band and nothing moved by `min_move`, which is what lets the strip
+    collapse from ~35 chips to one line. `streaks` carries how many consecutive
+    stored sessions each group has held its current rank, so "Energy #1" can
+    be printed as "Energy #1 · 8 days".
+
+    A shift being VISIBLE is not a reason to trade it: sector heat measured no
+    forward edge (2026-09-09, -0.57pp with the interval spanning zero).
+    """
+    from rotation import history as RH
+    payload = dict(_members_payload() or {})
+    g = grain if isinstance(grain, str) else "all"
+    kw = dict(top_n=_coerce_int(top_n, RH.TOP_N),
+              min_move=_coerce_int(min_move, RH.MIN_MOVE))
+    # "all" is the default because the strip renders three grains at once: a
+    # single-grain answer would let it print "no change" on a session where
+    # another grain reshuffled underneath it.
+    out = (RH.changes_all(payload, **kw) if g == "all"
+           else RH.changes(payload, grain=g, **kw))
+    out["grain"] = g
+    out["as_of"] = payload.get("as_of")
+    out["note"] = ("A change detector over a ranking with no measured forward "
+                   "edge. Visible is not tradeable.")
+    return JSONResponse(_scrub(out))
 
 
 @router.get("/rotation/hottest")

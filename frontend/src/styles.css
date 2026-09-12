@@ -11453,6 +11453,43 @@ a.tk-link:hover   { color: inherit; }
 .hs-chip:focus-visible { outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; }
 .hs-chip[aria-expanded="true"] { border-color: currentColor; }
 
+/* ── 🔄 What changed (Ajay 2026-09-12) ────────────────────────────────────
+   "this whole thing is super messay ... I am trying to see what changed".
+   The change line takes the WHOLE row and sits above the folded board, so the
+   first thing read is the delta and not six rows of yesterday. */
+.rc {
+  flex: 1 0 100%; margin: 0; display: flex; flex-wrap: wrap;
+  align-items: baseline; gap: 0.3rem 0.5rem;
+  padding: 0.3rem 0 0.35rem; border-bottom: 1px dashed var(--rule, #2a2f3a);
+}
+.rc-head {
+  font-style: normal; font-weight: 700; color: var(--ink, #e7e7e7);
+  white-space: nowrap;
+}
+.rc-moves, .rc-quiet {
+  display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.45rem;
+}
+.rc-quiet { color: var(--cm-slate, #8595ad); }
+.rc-chip {
+  padding: 0.05rem 0.35rem; border-radius: 5px; font-weight: 600;
+  border: 1px solid var(--rule, #2a2f3a); white-space: nowrap;
+}
+.rc-in  { color: var(--cm-green, #22c55e); }
+.rc-out { color: var(--cm-red, #dc2626); }
+.rc-up  { color: var(--cm-green, #22c55e); }
+.rc-dn  { color: var(--cm-red, #dc2626); }
+.rc-dim, .rc-steady { color: var(--cm-slate, #8595ad); white-space: nowrap; }
+.rc-steady { font-weight: 600; }
+
+/* The fold itself. A link-looking button, because it reveals rather than acts. */
+.hs-toggle {
+  font: inherit; appearance: none; -webkit-appearance: none; cursor: pointer;
+  background: none; border: 0; padding: 0; text-decoration: underline dotted;
+  color: var(--cm-slate, #8595ad); white-space: nowrap;
+}
+.hs-toggle:hover { color: var(--ink, #e7e7e7); }
+.hs-toggle:focus-visible { outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; }
+
 /* ── Hot sectors member popover (Ajay 2026-09-09) ─────────────────────────
    Same portal + overlay conventions as the app's other drill panels. Body
    scroll is deliberately NOT locked — locking it strands mobile readers. */
