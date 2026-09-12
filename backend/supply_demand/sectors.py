@@ -488,6 +488,56 @@ SECTORS: list[Sector] = [
         "thesis": "Not a supply gap — an approval and readout story. Value moves on dated binary events (PDUFA actions, advisory committees, phase-3 readouts), not on capacity. READ THIS BEFORE TRADING THE ZONE MACHINERY HERE: these names GAP on those dates, they do not walk down into a demand band and bounce, and a stop parked at a band floor does not fill anywhere near it through a failed readout. Treat this board as a watchlist, not as a source of zone entries.",
         "leverage_etfs": ["XBI", "IBB", "ARKG"],
     },
+    # Ajay 2026-09-11: "What are companies like SNDK explosive ness and produce
+    # things for all.. I would imagine there are companies like SNDK but for raw
+    # material for Semis, or optical fiber." Then: "yes add that".
+    #
+    # THE LAYER BELOW THE CHIP. ai_chips holds the designers plus the four
+    # equipment giants (AMAT LRCX KLAC ASML). Nothing held the consumables,
+    # metrology, test and packaging layer under them, so 17 names that DO scan
+    # and DO chart had no thematic bucket at all — including the two that ran
+    # hardest in the 2026-03→09 window, AEHR +166% and COHU +110%. He had seen
+    # them under "Technology", which is the GICS sector on the companies
+    # collection (industry: Semiconductor Equipment & Materials); that is a
+    # different axis from this curated thematic file and does not feed these
+    # boards.
+    #
+    # NO TICKER OVERLAPS ai_chips OR memory_hbm — verified at ship time, along
+    # with a fresh bar and `full`-universe membership for all 17 (the NTSK
+    # lesson: a roster ticker outside the scan universe is a chip that never
+    # charts or alerts). Unlike NTSK, none needed adding.
+    #
+    # READ THIS BEFORE TRADING THE BOARD — measured 2026-09-11 over the same
+    # 6-month window, and it is the opposite of the obvious thesis: being
+    # upstream is NOT the edge. The big bottleneck names returned ASML +26%,
+    # KLAC +27%, AMAT +34%, LIN -6%, APD +1%, GLW +29%. The small ones in the
+    # identical layer returned AEHR +166%, COHU +110%, MTRN +89%, VECO +45%,
+    # ONTO +48%. A monopoly is not a catalyst; a monopoly that just became
+    # binding is. Treat this as a place to LOOK, not a reason to buy.
+    #
+    # gap_economics is deliberately ABSENT. Real bottlenecks exist in this layer
+    # (photoresist, specialty gases, quartz), but nothing in a filing gives us
+    # dollar numbers, and the field is off rather than carrying invented ones —
+    # same call as cybersecurity and biotech.
+    {
+        "id": "semi_materials",
+        "label": "Semi Materials, Test & Packaging",
+        "narrative": "The layer under the chip: the consumables, subsystems and metrology a fab burns through per wafer, and the test, probe and packaging step every finished die has to pass.",
+        # No pure-play ETF exists. SOXX is designer-weighted and will understate
+        # this layer — it is a proxy benchmark, not a tracking vehicle. Stated
+        # here rather than left silently misleading.
+        "etf": "SOXX",
+        "commodity": "",
+        "keywords": ["wafer starts", "photoresist", "specialty gas", "CMP slurry",
+                     "sputtering target", "photomask", "probe card", "burn-in test",
+                     "advanced packaging", "CoWoS", "OSAT", "metrology", "ion implant",
+                     "wafer fab equipment spending", "sub-fab subsystems"],
+        "sp_tickers": ["ENTG", "MTRN", "CBT", "ROG", "UCTT", "ICHR", "ACMR", "ONTO",
+                       "AEHR", "COHU", "TER", "AMKR", "KLIC", "ACLS", "FORM", "VECO",
+                       "PLAB"],
+        "thesis": "Paid per wafer and per die rather than per tool, so revenue tracks fab UTILISATION instead of the lumpy capex cycle that swings the equipment giants. Advanced packaging is the live bottleneck — CoWoS capacity gates AI accelerator shipments, and test time per die rises with chiplet count, which is what AEHR and COHU sell into. The hazard is the same one that makes it attractive: these are small, cyclical, single-customer-concentrated names that fall as hard as they rise, and the measured record above says the SIZE of the company mattered far more than its position in the stack.",
+        "leverage_etfs": ["SOXX", "SMH", "XSD"],
+    },
 ]
 
 

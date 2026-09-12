@@ -70,6 +70,9 @@ def _build_ticker_buckets() -> dict:
         # map a sectors.py id → a coarse bucket
         id_to_bucket = {
             "ai_chips": "semis_ai", "memory_hbm": "semis_ai", "semis": "semis_ai",
+            # 2026-09-11: the consumables/test layer is semis-AI exposed too —
+            # without this it would fall through to "broad" and be mis-bucketed.
+            "semi_materials": "semis_ai",
             "lithium": "materials", "uranium": "energy", "oil_gas": "energy",
             "defense": "defense", "cybersecurity": "software_growth",
             "quantum": "software_growth", "software": "software_growth",
