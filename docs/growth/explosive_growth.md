@@ -159,6 +159,62 @@ board.
 `test_the_growth_chip_reaches_EVERY_Chart_Maps_tab` (frontend contract) fails if
 a new non-board tab is added whose renderer forgets the chip.
 
+## The sector tree
+
+Ajay 2026-09-11: *"I wanna see the secorts in the growth.. To show that only
+some are growing.. I do need individual categories of these."*
+Ajay 2026-09-12: *"What are these nymbers no headers"* ·
+*"I need them to be clickable in to tickers and pick the top 10 in each sector."*
+
+Built by `growth/api.py::_group()`, grouped on `companies.sector` / `.industry`
+— the **GICS axis**, the same one the 🔥 Hottest tab uses. NOT the 24 curated
+thematic sectors in `supply_demand/sectors.py`, and not the 13 themes in
+`sepa/universe.THEME_UNIVERSE`; the three lists share no code path.
+
+Four columns, each labelled since 2026-09-12:
+
+| Column | Source | Meaning |
+|---|---|---|
+| **Sector** | `group` | GICS sector; a row with no tag lands in an explicit `(unmapped)` bucket rather than being dropped |
+| **Qualified** | `n` **of** `n_scanned` | names clearing the screen / names of that sector in `sepa_research_cache` |
+| **Hit rate** | `hit_rate_pct` | `n / n_scanned` — em-dash, never `0%`, when the denominator is unknown |
+| **Med. sales** | `median_sales_growth_pct` | median YoY sales growth of the qualifiers |
+
+The denominator is the whole point. `9` says nothing; `9 of 493` is the
+statement he asked for.
+
+**Med. sales is small-n by construction and the caption says so.** At 2 or 3
+qualifiers a median is one name's number: Financial Services read `+8033.1%`
+off 2 names on 2026-09-12 and Healthcare `+1842.7%` off 3 (PTGX alone
+`+3749.2%`). Those are base effects on a collapsed year-ago quarter. **Hit
+rate is the column with a real denominator** and the only one that supports a
+sector-level read.
+
+### Top 10, and why the cap is on the backend
+
+`TOP_N_SYMBOLS = 10` in `growth/api.py`. `_top()` is the ONE place the list is
+cut, at both the sector and the industry level — pinned by
+`test_the_cap_is_one_named_constant_not_a_literal_in_the_loop`, because a
+hand-typed `10` in one of the two levels is how they drift apart.
+
+Two rules the tests hold:
+
+- **The ten are the richest ten**, ranked by `sales_growth_pct` descending —
+  the same axis the row's median is computed on, so the list and the number
+  agree. A missing sales number sorts last, never crashes.
+- **`n` stays the TRUE count.** The cap is display-only, so the row renders
+  `+N more` instead of silently under-reporting the sector. Mutating `n` to the
+  capped length is caught by
+  `test_n_stays_the_true_count_so_the_row_can_say_plus_n_more`.
+
+Every ticker renders through `<SymStrip>` → `<TickerLink>`, so Cmd-click /
+middle-click open a new tab natively. `showWatchlist={false}` on these: ten ★
+in one line is noise, and the star lives on the name's own page.
+
+**Nothing on the 2026-09-12 board is actually capped** — the largest sector
+carries 9 names. The cap is a guard for a wider list, not a change to what is
+on screen today.
+
 ## Known limits
 
 1. **Nothing here is backtested.** The 100/100 screen has never been measured

@@ -72,6 +72,32 @@ export type GrowthPayload = {
 function pct(v?: number | null, digits = 0): string {
   return v == null || Number.isNaN(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(digits)}%`;
 }
+/** A row's tickers as clickable links, richest sales growth first.
+ *
+ *  Ajay 2026-09-12: "I need them to be clickable in to tickers and pick the
+ *  top 10 in each sector." Capped at 10 by the BACKEND (growth/api.TOP_N_SYMBOLS)
+ *  so the payload never balloons; `total` is the true count, so a truncated row
+ *  says "+N more" rather than silently under-reporting the sector.
+ *
+ *  The ★ is suppressed: ten stars in one line is noise, and every name is one
+ *  click from its own page where the star lives. */
+function SymStrip({ syms, total }: { syms: string[]; total: number }) {
+  const more = Math.max(0, total - syms.length);
+  if (!syms.length) return <span className="eg-dim">—</span>;
+  return (
+    <span className="eg-ind-syms">
+      {syms.map((sym, i) => (
+        <span key={sym}>
+          {i > 0 && ', '}
+          <TickerLink ticker={sym} fromLabel="Explosive Growth"
+                      className="eg-sym" showWatchlist={false} />
+        </span>
+      ))}
+      {more > 0 && <span className="eg-dim"> +{more} more</span>}
+    </span>
+  );
+}
+
 function cap(v?: number | null): string {
   if (v == null || Number.isNaN(v)) return '—';
   if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
@@ -187,11 +213,23 @@ export function ExplosiveGrowth() {
         <div className="eg-groups">
           <div className="eg-groups-head">
             Sectors — how many of each sector's scanned names clear the screen.
+            {' '}Med. sales is a median: at 2 or 3 names it is one name's number,
+            not a sector read.
             {sector && (
               <button className="eg-btn eg-clear" onClick={() => setSector(null)}>
                 clear filter ({sector})
               </button>
             )}
+          </div>
+          {/* Ajay 2026-09-12: "What are these nymbers no headers". Every column
+              in this tree was unlabelled — "9 of 493 / 1.8% / +144.0%" reads as
+              three unrelated numbers without them. */}
+          <div className="eg-grp-row eg-grp-cols" aria-hidden="true">
+            <span />
+            <span>Sector</span>
+            <span className="eg-grp-n">Qualified</span>
+            <span className="eg-num">Hit rate</span>
+            <span className="eg-num">Med. sales</span>
           </div>
           {groups.map((g) => {
             const isOpen = !!open[g.group];
@@ -218,12 +256,18 @@ export function ExplosiveGrowth() {
                 </div>
                 {isOpen && (
                   <div className="eg-inds">
+                    <div className="eg-grp-top">
+                      <span className="eg-dim">
+                        Top {Math.min(g.symbols.length, g.n)} by sales growth
+                      </span>
+                      <SymStrip syms={g.symbols} total={g.n} />
+                    </div>
                     {g.industries.map((i) => (
                       <div key={i.group} className="eg-ind">
                         <span className="eg-ind-name">{i.group}</span>
                         <span className="eg-grp-n"><b>{i.n}</b></span>
                         <span className="eg-num eg-good">{pct(i.median_sales_growth_pct, 1)}</span>
-                        <span className="eg-ind-syms">{i.symbols.join(', ')}</span>
+                        <SymStrip syms={i.symbols} total={i.n} />
                       </div>
                     ))}
                   </div>

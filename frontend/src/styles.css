@@ -12072,4 +12072,22 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   gap: 8px; align-items: baseline; padding: 3px 0; font-size: 0.72rem;
 }
 .eg-ind-name { color: var(--ink-muted); }
-.eg-ind-syms { color: var(--ink-muted); font-size: 0.68rem; }
+.eg-ind-syms { color: var(--ink-muted); font-size: 0.68rem; line-height: 1.5; }
+/* Column labels for the sector tree (Ajay 2026-09-12: "What are these nymbers
+ * no headers"). Same grid as .eg-grp-row so the labels sit over their own
+ * columns; never hover-highlighted, it is not a row. */
+.eg-grp-cols {
+  font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-muted); padding-bottom: 3px;
+  border-bottom: 1px solid var(--hairline);
+}
+.eg-grp-cols:hover { background: none; }
+/* The sector's own top-10, first line of the drill-in. */
+.eg-grp-top {
+  display: grid; grid-template-columns: minmax(120px, 1fr) 44px 78px 2.2fr;
+  gap: 8px; align-items: baseline; padding: 3px 0 5px;
+  font-size: 0.72rem; border-bottom: 1px dashed var(--hairline);
+  margin-bottom: 3px;
+}
+.eg-grp-top > span:first-child { grid-column: 1 / span 3; }
+.eg-sym { font-weight: 600; }

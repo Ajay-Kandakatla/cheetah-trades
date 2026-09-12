@@ -293,3 +293,88 @@ def test_the_order_block_IS_still_displayed():
               if isinstance(n, ast.FunctionDef) and n.name == "message")
     assert "order_block" in ast.dump(fn), \
         "the order-block note is gone from the push body"
+
+
+# ------------------------------------------------- sector tree (2026-09-12)
+# Ajay 2026-09-12: "I need them to be clickable in to tickers and pick the top
+# 10 in each sector." The cap lives on the BACKEND so the payload never
+# balloons; `n` must stay the TRUE count so the UI can say "+N more" instead
+# of silently under-reporting a sector.
+
+def _grouped(rows, totals=None, monkeypatch=None):
+    from growth import api as GA
+    monkeypatch.setattr(GA, "_sector_totals", lambda: (totals or {}))
+    return GA._group(rows)
+
+
+def r(sym, sales, sector="Technology", industry="Semiconductors"):
+    return {"symbol": sym, "sales_growth_pct": sales, "q_eps_growth_pct": 150.0,
+            "sector": sector, "industry": industry}
+
+
+def test_a_sector_lists_at_most_ten_tickers(monkeypatch):
+    rows = [r("S%02d" % i, 500.0 - i) for i in range(25)]
+    g = _grouped(rows, {"Technology": 493}, monkeypatch)[0]
+    assert len(g["symbols"]) == 10
+    assert len(g["industries"][0]["symbols"]) == 10
+
+
+def test_the_ten_are_the_RICHEST_ten_not_the_first_ten(monkeypatch):
+    rows = [r("LOW", 101.0), r("TOP", 900.0), r("MID", 400.0)]
+    rows += [r("F%d" % i, 150.0 + i) for i in range(12)]
+    g = _grouped(rows, {"Technology": 493}, monkeypatch)[0]
+    assert g["symbols"][0] == "TOP"
+    assert g["symbols"][1] == "MID"
+    assert "LOW" not in g["symbols"]          # weakest of 15 is cut, not kept
+
+
+def test_n_stays_the_true_count_so_the_row_can_say_plus_n_more(monkeypatch):
+    rows = [r("S%02d" % i, 500.0 - i) for i in range(14)]
+    g = _grouped(rows, {"Technology": 493}, monkeypatch)[0]
+    assert g["n"] == 14                        # NOT 10 — the cap is display-only
+    assert g["n"] - len(g["symbols"]) == 4
+    assert g["hit_rate_pct"] == pytest.approx(100.0 * 14 / 493, abs=0.01)
+
+
+def test_NEGATIVE_a_sector_under_ten_is_not_padded(monkeypatch):
+    g = _grouped([r("A", 400.0), r("B", 300.0)], {"Technology": 493},
+                 monkeypatch)[0]
+    assert g["symbols"] == ["A", "B"]
+    assert g["n"] == 2
+
+
+def test_NEGATIVE_a_missing_sales_number_sorts_last_never_crashes(monkeypatch):
+    rows = [r("BLANK", None), r("REAL", 120.0)]
+    g = _grouped(rows, {"Technology": 493}, monkeypatch)[0]
+    assert g["symbols"] == ["REAL", "BLANK"]
+
+
+def test_NEGATIVE_an_unmapped_sector_gets_its_own_bucket_never_dropped(monkeypatch):
+    rows = [r("A", 400.0), r("NOSEC", 300.0, sector=None, industry=None)]
+    groups = _grouped(rows, {"Technology": 493}, monkeypatch)
+    assert {g["group"] for g in groups} == {"Technology", "(unmapped)"}
+    assert sum(g["n"] for g in groups) == 2    # nothing vanished
+    unmapped = [g for g in groups if g["group"] == "(unmapped)"][0]
+    assert unmapped["n_scanned"] is None and unmapped["hit_rate_pct"] is None
+
+
+def test_the_cap_is_one_named_constant_not_a_literal_in_the_loop():
+    """Source guard: two levels cap the list, and both must read the same
+    constant — a hand-typed 10 in one of them is how they drift apart."""
+    import ast as _ast
+    src = io.open(os.path.join(HERE, "growth", "api.py"),
+                  encoding="utf-8").read()
+    tree = _ast.parse(src)
+    assert any(isinstance(n, _ast.Assign)
+               and any(getattr(t, "id", None) == "TOP_N_SYMBOLS" for t in n.targets)
+               for n in tree.body), "TOP_N_SYMBOLS must be a module constant"
+    top = [n for n in tree.body
+           if isinstance(n, _ast.FunctionDef) and n.name == "_top"]
+    assert top, "_top() must be the ONE place the list is cut"
+    names = {n.id for n in _ast.walk(top[0]) if isinstance(n, _ast.Name)}
+    assert "TOP_N_SYMBOLS" in names
+    grp = [n for n in tree.body
+           if isinstance(n, _ast.FunctionDef) and n.name == "_group"][0]
+    calls = {getattr(c.func, "id", None) for c in _ast.walk(grp)
+             if isinstance(c, _ast.Call)}
+    assert "_top" in calls, "_group must cut through _top(), not inline"

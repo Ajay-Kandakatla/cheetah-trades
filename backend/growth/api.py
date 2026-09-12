@@ -41,6 +41,22 @@ def _median(v):
     return v[n // 2] if n % 2 else round((v[n // 2 - 1] + v[n // 2]) / 2.0, 2)
 
 
+TOP_N_SYMBOLS = 10
+"""How many tickers a sector / industry row lists.
+
+Ajay 2026-09-12: "I need them to be clickable in to tickers and pick the top
+10 in each sector." Ranked by sales growth, richest first — the same axis the
+group's median is computed on, so the list and the number agree. `n` stays the
+TRUE count so the row can say "+N more" instead of quietly truncating.
+"""
+
+
+def _top(rows: list) -> list:
+    """The TOP_N_SYMBOLS richest-growth symbols in `rows`, richest first."""
+    ranked = sorted(rows, key=lambda x: -(x.get("sales_growth_pct") or 0))
+    return [x["symbol"] for x in ranked[:TOP_N_SYMBOLS]]
+
+
 def _sector_totals() -> dict:
     """{sector: how many SCANNED names sit in it} — the denominator.
 
@@ -88,8 +104,7 @@ def _group(rows: list) -> list:
             "n": len(rs),
             "median_sales_growth_pct": _median([x.get("sales_growth_pct") for x in rs]),
             "median_eps_growth_pct": _median([x.get("q_eps_growth_pct") for x in rs]),
-            "symbols": [x["symbol"] for x in
-                        sorted(rs, key=lambda x: -(x.get("sales_growth_pct") or 0))],
+            "symbols": _top(rs),
         } for ind, rs in by_ind.items()]
         inds.sort(key=lambda g: -(g["median_sales_growth_pct"] or 0))
         scanned = totals.get(sec)
@@ -103,8 +118,7 @@ def _group(rows: list) -> list:
             "median_sales_growth_pct": _median([x.get("sales_growth_pct") for x in names]),
             "median_eps_growth_pct": _median([x.get("q_eps_growth_pct") for x in names]),
             "industries": inds,
-            "symbols": [x["symbol"] for x in
-                        sorted(names, key=lambda x: -(x.get("sales_growth_pct") or 0))],
+            "symbols": _top(names),
         })
     out.sort(key=lambda g: (-g["n"], -(g["median_sales_growth_pct"] or 0)))
     return out

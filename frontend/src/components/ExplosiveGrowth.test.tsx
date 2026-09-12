@@ -133,7 +133,70 @@ describe('ExplosiveGrowth board', () => {
     fireEvent.click(twist);
     await waitFor(() => expect(screen.getByText('Semiconductors')).toBeTruthy());
     expect(screen.getByText('Semiconductor Equipment & Materials')).toBeTruthy();
-    expect(screen.getByText(/AXTI, TER/)).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /TER/ }).length).toBeGreaterThan(0);
+  });
+
+  /* Ajay 2026-09-12: "What are these nymbers no headers" — the tree shipped
+     with five unlabelled columns. */
+  it('labels every column in the sector tree', async () => {
+    stub([row()]);
+    mount();
+    await waitFor(() => expect(screen.getByText('Technology')).toBeTruthy());
+    expect(screen.getByText('Sector')).toBeTruthy();
+    expect(screen.getByText('Qualified')).toBeTruthy();
+    expect(screen.getByText('Hit rate')).toBeTruthy();
+    expect(screen.getByText('Med. sales')).toBeTruthy();
+  });
+
+  /* Ajay 2026-09-12: "I need them to be clickable in to tickers". */
+  it('every ticker in the tree is a real link to that ticker page', async () => {
+    stub([row()]);
+    mount();
+    await waitFor(() => expect(screen.getByText('Technology')).toBeTruthy());
+    fireEvent.click(screen.getAllByLabelText('expand')[0]);
+    await waitFor(() => expect(screen.getByText('Semiconductors')).toBeTruthy());
+    const crdo = screen.getAllByRole('link', { name: /CRDO/ })[0] as HTMLAnchorElement;
+    expect(crdo.getAttribute('href')).toContain('/sepa/CRDO');
+  });
+
+  it('the drill-in leads with the SECTOR top 10, above the industries', async () => {
+    stub([row()]);
+    mount();
+    await waitFor(() => expect(screen.getByText('Technology')).toBeTruthy());
+    expect(screen.queryByText(/Top 3 by sales growth/)).toBeNull();   // collapsed
+    fireEvent.click(screen.getAllByLabelText('expand')[0]);
+    await waitFor(() => expect(screen.getByText(/Top 3 by sales growth/)).toBeTruthy());
+    expect(screen.getAllByRole('link', { name: /SNDK/ }).length).toBeGreaterThan(0);
+  });
+
+  /* The backend caps the list at 10; the row must SAY it was capped rather
+     than quietly under-reporting the sector. */
+  it('a capped list says "+N more" instead of truncating silently', async () => {
+    const ten = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    stub([row()], [{ group: 'Technology', n: 14, n_scanned: 493, hit_rate_pct: 2.84,
+                     median_sales_growth_pct: 144.0,
+                     industries: [{ group: 'Semiconductors', n: 14,
+                                    median_sales_growth_pct: 126.5, symbols: ten }],
+                     symbols: ten }]);
+    mount();
+    await waitFor(() => expect(screen.getByText('Technology')).toBeTruthy());
+    fireEvent.click(screen.getAllByLabelText('expand')[0]);
+    await waitFor(() => expect(screen.getByText(/Top 10 by sales growth/)).toBeTruthy());
+    expect(screen.getAllByText(/\+4 more/).length).toBe(2);   // sector line + industry
+  });
+
+  it('NEGATIVE: an industry with no symbols shows an em-dash, not a blank', async () => {
+    stub([row()], [{ group: 'Technology', n: 1, n_scanned: 493, hit_rate_pct: 0.2,
+                     median_sales_growth_pct: 144.0,
+                     industries: [{ group: 'Semiconductors', n: 1,
+                                    median_sales_growth_pct: 126.5, symbols: [] }],
+                     symbols: [] }]);
+    mount();
+    await waitFor(() => expect(screen.getByText('Technology')).toBeTruthy());
+    fireEvent.click(screen.getAllByLabelText('expand')[0]);
+    await waitFor(() => expect(screen.getByText('Semiconductors')).toBeTruthy());
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/more/)).toBeNull();
   });
 
   it('clicking a sector filters the table to it', async () => {

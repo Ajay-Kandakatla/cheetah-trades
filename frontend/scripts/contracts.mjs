@@ -1200,6 +1200,26 @@ const CONTRACTS = [
       if (!/industries\.map\(/.test(tsx)) {
         errs.push('a sector must expand into its industries — he asked for the individual categories');
       }
+      // Ajay 2026-09-12: "What are these nymbers no headers" — the tree shipped
+      // with five unlabelled columns, so "9 of 493 / 1.8% / +144.0%" read as
+      // three unrelated numbers. Never again.
+      for (const label of ['Sector', 'Qualified', 'Hit rate', 'Med. sales']) {
+        if (!tsx.includes(`>${label}<`)) {
+          errs.push(`the sector tree must label its "${label}" column — unlabelled numbers are unreadable`);
+        }
+      }
+      // Ajay 2026-09-12: "I need them to be clickable in to tickers and pick the
+      // top 10 in each sector." A ticker printed as plain text is a dead end —
+      // he picks names off this tree.
+      if (/symbols\.join\(/.test(tsx)) {
+        errs.push('the sector tree must not join symbols into plain text — every ticker is a TickerLink');
+      }
+      if (!/<SymStrip syms=\{i\.symbols\}/.test(tsx) || !/<SymStrip syms=\{g\.symbols\}/.test(tsx)) {
+        errs.push('both the sector AND the industry rows must render tickers through <SymStrip> (clickable + "+N more")');
+      }
+      if (!/\+\{more\} more/.test(tsx)) {
+        errs.push('a capped ticker list must say "+N more" — silent truncation under-reports the sector');
+      }
       // The board must PRINT the warnings, not merely receive them. Rendering
       // the row without them is the silent-unbuyable-list failure.
       if (!/warns\.map\(/.test(tsx)) {
