@@ -16,6 +16,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
+import { GrowthChip } from './GrowthChip';
 
 export type HpBand = { kind?: string; lo: number; hi: number; touches?: number | null; strength?: number | null };
 export type HpPlan = {
@@ -147,6 +148,7 @@ function Row({ r }: { r: HpRow }) {
     <li className="hp-row" data-testid="hp-row">
       <div className="hp-row__head">
         <a className="hp-row__sym" href={`/chart-maps?tab=support&symbol=${encodeURIComponent(r.symbol)}`}>{r.symbol}</a>
+        <GrowthChip symbol={r.symbol} className="cm-badge" />
         <span className="hp-row__px">{money(r.close)}</span>
         <span className="hp-row__chg is-dn">{pct(r.change_pct)}</span>
         {r.date && <span className="hp-row__date">{r.date}</span>}

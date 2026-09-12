@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
+import { GrowthChip } from './GrowthChip';
 import OverlayLegend from './OverlayLegend';
 import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import {
@@ -198,6 +199,7 @@ function NoDataCard({ row, onPick }: { row: SessionRow; onPick?: (s: string) => 
               title="Open this name on the Support Levels tab">
         {row.symbol}
       </button>
+      <GrowthChip symbol={row.symbol} className="sb-chip" />
       <span className="sb-name">{row.name || ''}</span>
       <span className="sb-bias" style={{ color: toneColor(meta.tone) }}>
         {meta.dot} {meta.label}

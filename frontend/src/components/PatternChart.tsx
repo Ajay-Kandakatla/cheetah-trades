@@ -22,6 +22,7 @@ import {
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
+import { GrowthChip } from './GrowthChip';
 
 const W = 620;
 const PAD_Y = 10;
@@ -140,6 +141,13 @@ export const PatternChart = memo(function PatternChart(
           </div>
           <div className="cm-tile-badges">
             {theme ? <span className="cm-badge cm-badge-theme">{theme}</span> : null}
+            {/* 🚀 Explosive Growth (Ajay 2026-09-11: "I am hoping this new
+                list will be considerd in all chart maps. Like in Deep demand
+                scan"). Every tile board renders through this component, so one
+                chip here lights up Back in Demand, Deep Demand, Quick Bounce,
+                Breaking, VCP and the rest. ⛔ tone when the trading engine will
+                refuse the name — good sales must not make it look clean. */}
+            <GrowthChip symbol={tile.symbol} />
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}

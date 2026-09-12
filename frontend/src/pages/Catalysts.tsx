@@ -1,6 +1,7 @@
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
+import { GrowthChip } from '../components/GrowthChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BounceRoomRow } from '../lib/bounceRoom';
@@ -507,7 +508,12 @@ function CandidateCard({ c, br, onClick }: { c: Candidate; br?: BounceRoomRow; o
     <article className={`cat-card cat-card--${c.quadrant.toLowerCase()}`} onClick={onClick}>
       <header className="cat-card__head">
         <div>
-          <h3 className="cat-card__ticker">{c.ticker}</h3>
+          <h3 className="cat-card__ticker">
+            {c.ticker}
+            {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
+                TABS IN CHART MAPS"). */}
+            <GrowthChip symbol={c.ticker} className="cm-badge" />
+          </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>
         <div className="cat-card__price">
@@ -911,7 +917,12 @@ function PremarketCard({ c, onClick }: { c: PremarketCandidate; onClick: () => v
     <article className="cat-card cat-card--premarket" onClick={onClick}>
       <header className="cat-card__head">
         <div>
-          <h3 className="cat-card__ticker">{c.ticker}</h3>
+          <h3 className="cat-card__ticker">
+            {c.ticker}
+            {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
+                TABS IN CHART MAPS"). */}
+            <GrowthChip symbol={c.ticker} className="cm-badge" />
+          </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>
         <div className="cat-card__price">

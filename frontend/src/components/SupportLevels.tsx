@@ -33,6 +33,7 @@ import {
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
 import { tvChartUrl } from '../lib/tvChart';
+import { GrowthChip } from './GrowthChip';
 
 type Props = {
   symbol: string;
@@ -241,6 +242,7 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
           <div className="sl-head">
             <h2 className="sl-sym">
               {data.symbol}
+              <GrowthChip symbol={data.symbol} className="cm-badge" />
               {data.name ? <span className="sl-name">{data.name}</span> : null}
             </h2>
             <div className="sl-meta">

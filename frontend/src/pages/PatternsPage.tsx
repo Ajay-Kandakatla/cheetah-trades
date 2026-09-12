@@ -9,6 +9,7 @@ import { Navigate } from 'react-router-dom';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { GrowthChip } from '../components/GrowthChip';
 import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
 import { PatternMatchCards } from '../components/PatternMatchCards';
@@ -460,6 +461,7 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
                   background: 'var(--bg-sunken,#0f1115)', border: '1px solid var(--hairline,#2a2a2a)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <TickerCell symbol={v.symbol} size="0.88rem" />
+        <GrowthChip symbol={v.symbol} className="cm-badge" />
         {s.is_buyable && <span style={{ fontSize: '0.72rem', color: C.green }}>✅ buyable</span>}
         {sources.map((m) => (
           <button key={m.label} onClick={() => navigate(m.to)}
@@ -532,6 +534,7 @@ function Card({ p, navigate }: { p: Pattern; navigate?: (path: string) => void }
                   border: `1px solid ${conf ? C.green + '55' : 'var(--hairline,#2a2a2a)'}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <TickerCell symbol={p.symbol} size="0.95rem" />
+        <GrowthChip symbol={p.symbol} className="cm-badge" />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{PATTERN_LABEL[p.pattern] || p.pattern}</span>
         <button type="button"
                 onClick={() => (navigate ? navigate(winnersHref(p.pattern))

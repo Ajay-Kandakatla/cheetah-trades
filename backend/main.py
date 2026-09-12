@@ -742,6 +742,13 @@ app.include_router(chart_maps_router)
 from rotation.api import router as rotation_router  # noqa: E402
 app.include_router(rotation_router)
 
+# Explosive-growth tracker — the 100%+ sales AND 100%+ quarterly EPS screen
+# (Ajay 2026-09-11). Its own board, its own alert kind, and DELIBERATELY no
+# market-cap floor ("remove the 700M rule for this page"); the rows the trading
+# engine will refuse to buy carry that in their own warnings.
+from growth.api import router as growth_router  # noqa: E402
+app.include_router(growth_router)
+
 # Giants module — full per-fund 13F portfolios from SEC EDGAR: "where the
 # giants are buying" aggregate leaderboard + per-symbol money rotation.
 from giants.api import router as giants_router  # noqa: E402

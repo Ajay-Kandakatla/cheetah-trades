@@ -12,6 +12,8 @@ from typing import Optional
 
 from trading import risk_rules as RR
 from trading import safety_floor as SFL
+from growth import alerts as GA
+from growth import tracker as GT
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import zero_dte_lane as ZDL
@@ -30,6 +32,10 @@ from . import zone_edge as ZE
 from . import zone_store as ZS
 
 SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
+                # 🚀 Explosive Growth (2026-09-11) — its own section because the
+                # board has NO cap floor while everything above it does, and
+                # that difference is the thing he needs the panel to state.
+                "growth",
                 "sepa_bounce", "catalysts", "options", "quick_bounce")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
@@ -326,6 +332,41 @@ def sections() -> dict:
         ],
         "note": "Paper account. Minervini numbers are TLSW pp.291-315 (trading/risk_rules.py); "
                 "zone and catalyst lanes are owner rules, no book.",
+    }
+
+    out["growth"] = {
+        "title": "\U0001F680 Explosive Growth", "emoji": "\U0001F680",
+        "picks": [
+            "Sales up %d%%+ AND quarterly EPS up %d%%+ year-over-year on the latest "
+            "reported quarter — and the quarter BEFORE it also growing. That last leg is "
+            "what separates a real ramp from a name lapping one bad quarter."
+            % (int(GT.MIN_SALES_GROWTH_PCT), int(GT.MIN_EPS_GROWTH_PCT)),
+            "NO market-cap floor on this board (his call, 2026-09-11). Every other board "
+            "and the trading engine use %s, so a row marked \u26D4 is on the list here and "
+            "REFUSED at the broker — the row says which." % _b(SFL.MIN_CAP_USD),
+            "Rebuilt Sundays 09:00 ET, after the weekly research refresh writes the "
+            "fundamentals it screens on — new Russell entrants join on their own.",
+            "Screened over the weekly research cache (the `broad` universe, ~3,700 names), "
+            "which is WIDER than the ~2,650 the zone bands are built from — so a row can "
+            "qualify and carry no demand read at all. That prints as \u201Cno zone bands\u201D, "
+            "never as an empty one.",
+        ],
+        "stops": [
+            "Nothing on this board is a stop or a size. It is a discovery list: the "
+            "100/100 screen has never been measured forward.",
+        ],
+        "alerts": [
+            "\U0001F680 %s fires when a board name is inside a tested demand band whose "
+            "floor has NEVER been pierced (the one gate that measured, +8.6pp over 31,861 "
+            "events), with \u2265 %s room to the first band overhead and the print between "
+            "the band floor and %s above its top. One push per name per band per day."
+            % (GA.KIND, gate_room, gate_prox),
+            "An order block is carried in the push body and gates NOTHING — the ICT study "
+            "measured +0.03R over 6,004 signals.",
+            "A name the engine will refuse still alerts, labelled \u26D4 — the board has no "
+            "cap floor, so silence would hide it.",
+        ],
+        "note": "Owner screen, no book. Not backtested.",
     }
 
     bounce = [

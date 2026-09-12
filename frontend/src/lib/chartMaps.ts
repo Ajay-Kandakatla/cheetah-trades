@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'patterns';
+export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -48,7 +48,7 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // of the patterns board instead: one at the top, one on every card, each
 // filtered to that pattern. A link from the thing you are looking at beats a
 // tab two seats over.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -72,10 +72,15 @@ export function isBoardTab(t: CmTab): boolean {
   // endpoints and sub-tabs, nothing from /chart-maps.
   return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
     && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns'
-    && t !== 'hot_sectors';
+    && t !== 'hot_sectors'
+    && t !== 'growth';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  growth: {
+    label: '\uD83D\uDE80 Explosive Growth',
+    blurb: 'Sales up 100%+ AND quarterly EPS up 100%+ year-over-year on the latest reported quarter \u2014 with the quarter BEFORE it also growing, which is the leg that separates a real ramp from an easy year-ago base. Ajay 2026-09-11: "I want real growing stocks like AXTI and SABR with genuine sales". THIS BOARD HAS NO MARKET-CAP FLOOR \u2014 your call ("remove the 700M rule for this page") \u2014 so it can show a name before it is big. Every other board in the app filters to $700M+, and so does the trading engine: a row the engine will REFUSE to buy (under $2 a share, or a known cap under $700M) says exactly that in its own warnings rather than looking buyable. \u26A0\uFE0F also flags a thin tape and a promo-tagged name. The \uD83E\uDDF2 demand column is the one gate that measured \u2014 the band floor never pierced (+8.6pp win rate over 31,861 events); an order block rides along as a DISPLAY flag only, because the ICT study measured +0.03R over 6,004 signals, i.e. nothing. Rebuilt Sundays after the weekly research refresh, so new Russell entrants join on their own. NOTHING HERE IS BACKTESTED: the 100/100 screen has never been measured forward. It is a discovery list, not a buy signal.',
+  },
   hot_sectors: {
     label: '\uD83D\uDD25 Hottest',
     blurb: 'Every sector ranked, opening into its industries and then its names, with the sales block on each row \u2014 built to surface names you are NOT already tracking. Three legs: today, 5 days and 21 days, each against RSP (equal-weight), so a name is measured against the average stock rather than the mega-caps. ALL ELEVEN sectors are listed, not just the hot end, deliberately: a strong name often sits in a cold sector \u2014 ANDE, the name that prompted this board, is 2nd of Consumer Defensive\u2019s 76 over 21 days while the sector itself is 8th of 11, so a hot-sectors-only list could never find it. Sector and industry heat is the rotation grid\u2019s sampled median (the SAME number the Hot-sectors strip prints, reused so the two can never disagree); name rows are the FULL membership, which is what makes those names reachable. Industries too small for a ranked row still show inside their sector, flagged \u2014 a 6-name median is not a 25-name one. Names are ranked by the return legs, NOT by traction: traction measures acceleration, and it ranks ANDE 23rd of 76 while the 5-day ranks it 3rd. This is a DISCOVERY list off trailing returns \u2014 nothing here is backtested and none of it is a buy signal. Sales, EPS and margin come from the weekly research cache, so they can be up to a week behind a fresh print; a blank is printed as \u2014 and never as a zero.',

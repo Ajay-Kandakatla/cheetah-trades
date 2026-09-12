@@ -55,6 +55,16 @@ UNIVERSE: list[str] = [
     # thing that makes a ticker scannable: supply_demand/sectors.py sp_tickers
     # is display-only and shares no code path with this file.
     "NTSK",
+    # AXTI added 2026-09-11 — the SAME invisibility, found while building the
+    # growth tracker. Ajay named AXTI as the shape he wants ("I want real
+    # growing stocks like AXTI and SABR with genuine sales") and it screens at
+    # sales +145.9% YoY on a growing prior quarter, quarterly EPS +185.0%, cap
+    # $3.95B. It sits in Russell 3000, so it reaches the `broad` universe
+    # (3,703) that only the 16:30 fast-scan runs — but NOT `full` (2,651),
+    # which is what the hourly scan, zone_store, every board and every alert
+    # actually use. Net effect: zero zone_store docs, so AXTI could never fire
+    # a demand alert no matter how good the setup. Curating it fixes that.
+    "AXTI",
     # CFLT + SMAR removed 2026-08-25 — both delisted (see sepa.symbols.DELISTED)
     "SHOP", "TEAM", "WDAY", "HUBS", "TOST",
     # Consumer growth

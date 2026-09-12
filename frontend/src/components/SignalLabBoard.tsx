@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
+import { GrowthChip } from './GrowthChip';
 import { SymbolSearch } from './SymbolSearch';
 import { PremarketEntry } from './PremarketEntry';
 import type { CmTile } from '../lib/chartMaps';
@@ -146,7 +147,12 @@ export function SignalLabBoard() {
               </div>
             ) : (
               <div key={r.symbol} className="cm-note cm-note-warn">
-                {r.symbol}: {r.error || 'no data'}
+                {r.symbol}
+                {/* 🚀 also on the Explosive Growth board. The tiles above get
+                    this from PatternChart; the no-data rows are the only place
+                    a Signals name renders without one. */}
+                <GrowthChip symbol={r.symbol} className="cm-badge" />
+                : {r.error || 'no data'}
               </div>
             ))}
           </div>

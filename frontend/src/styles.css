@@ -11973,3 +11973,64 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   .hs-table { min-width: 760px; font-size: 0.72rem; }
   .hs-sym { min-width: 150px; }
 }
+
+/* ── 🚀 Explosive Growth board (2026-09-11) ─────────────────────────────────
+ * Same sticky-header recipe the Hottest table uses and for the same reason:
+ * `overflow-x: auto` makes the box a scroll container on BOTH axes, so without
+ * a bounded height the page scrolls instead of the box and `top: 0` sticks to
+ * something that is itself scrolling away. Bound the height -> the box is the
+ * scroller -> the header holds. */
+.eg-wrap { display: flex; flex-direction: column; gap: 10px; }
+.eg-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; flex-wrap: wrap; font-size: 0.82rem;
+}
+.eg-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.eg-chk {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.74rem; color: var(--ink-muted); cursor: pointer;
+}
+.eg-btn {
+  font-size: 0.74rem; padding: 4px 10px; border-radius: 7px;
+  border: 1px solid var(--hairline); background: var(--bg-raised);
+  color: inherit; cursor: pointer;
+}
+.eg-btn:disabled { opacity: 0.55; cursor: default; }
+.eg-note { font-size: 0.72rem; color: var(--ink-muted); line-height: 1.5; }
+.eg-scroll {
+  overflow: auto;
+  max-height: calc(100vh - var(--sticky-top, 0px) - 2.5rem);
+  overscroll-behavior: contain;
+}
+.eg-table { width: 100%; min-width: 1040px; border-collapse: collapse; font-size: 0.78rem; }
+.eg-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--bg-raised); color: var(--ink-muted);
+  text-align: left; font-weight: 600; padding: 7px 9px;
+  border-bottom: 1px solid var(--hairline); white-space: nowrap;
+}
+.eg-table td { padding: 7px 9px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.eg-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.eg-table thead th.eg-num { text-align: right; }
+.eg-coname { font-size: 0.66rem; color: var(--ink-muted); margin-top: 2px; }
+.eg-flags { max-width: 340px; font-size: 0.7rem; line-height: 1.45; }
+.eg-good { color: var(--good, #3fb950); }
+.eg-warn { color: var(--warn, #d29922); }
+.eg-err  { color: var(--bad, #f85149); }
+.eg-dim  { color: var(--ink-muted); }
+
+/* 🚀 GrowthChip — "also on the Explosive Growth board" (2026-09-11).
+ * Ajay: "I am hoping this new list will be considerd in all chart maps ... ALL
+ * TABS IN CHART MAPS". One chip, every renderer. `-bad` is the tone when the
+ * trading engine will refuse the name; the other boards already own `.cm-badge`,
+ * so only the two new tones and the two table variants are defined here. */
+.cm-badge-growth { color: #22d3ee; background: rgba(34,211,238,0.12); }
+.cm-badge-bad    { color: #f85149; background: rgba(248,81,73,0.12); }
+.hs-badge, .sb-chip-growth, .sb-chip-bad {
+  display: inline-block; font-size: 0.66rem; padding: 1px 6px;
+  border-radius: 999px; white-space: nowrap; margin-left: 5px;
+}
+.hs-badge-growth { color: #22d3ee; background: rgba(34,211,238,0.12); }
+.hs-badge-bad    { color: #f85149; background: rgba(248,81,73,0.12); }
+.sb-chip-growth  { color: #22d3ee; background: rgba(34,211,238,0.12); }
+.sb-chip-bad     { color: #f85149; background: rgba(248,81,73,0.12); }

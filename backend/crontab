@@ -975,3 +975,22 @@
 # from Portfolio signal." Its own graded forward record was 8 hits / 25
 # misses, names +3.6% on average AFTER a "sell". Portfolio sell signals come
 # from portfolio/supply_watch.py only (supply reached, entry-band stop).
+
+# ── 🚀 EXPLOSIVE GROWTH TRACKER (growth/) — Ajay 2026-09-11 ─────────────────
+# "tell me which new ones are blowing up? in Sales by 100% or more and 100
+# growth Quarter over Quarter ... I wanna know when ever these are in demand,
+# separately just trackers ... make sure we are going to update this list as
+# new one come to the market.. Like getting added to russel 3000 or 2000 and
+# 1000 and such every week with new scans."
+#
+# The board rebuilds SUNDAY 09:00 ET, right after the Sunday 08:00 weekly
+# research refresh writes the fundamentals it screens on — a Saturday rebuild
+# would screen last week's numbers. NOT gated by market_hours.gate: Sunday is
+# a closed day and the gate would skip it forever.
+0      9     *    *    0    /usr/local/bin/python -m growth build
+#
+# Demand alerts every 15 min in session, market days only. The board is
+# separate and has no cap floor, but the PUSH still passes his 2026-09-05
+# standing gates (>=5% room overhead, print within 1% above the band floor)
+# plus the one measured gate, `intact`. One push per symbol per band per day.
+*/15   9-16  *    *    1-5  /usr/local/bin/python -m market_hours.gate growth alerts

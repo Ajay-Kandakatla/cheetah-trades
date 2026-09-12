@@ -28,6 +28,10 @@ export type NotificationPrefs = {
   // Breaking resistance → new highs (supply_demand.zone_edge, every minute
   // in session). The near-demand side of that pass reuses demand_alert.
   supply_break_alert?: boolean;
+  /* 🚀 Explosive Growth at demand (growth/alerts.py, 2026-09-11). Its own kind
+     because Ajay asked for it "separately just trackers" — the board has no cap
+     floor, the push still carries the standing room/proximity gates. */
+  growth_demand_alert?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

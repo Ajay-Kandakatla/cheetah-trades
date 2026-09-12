@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { useGappers, type DayProfile } from '../hooks/useDayTrading';
 import { useSort } from '../lib/useSort';
 import { TickerName } from './TickerCell';
+import { GrowthChip } from './GrowthChip';
 
 const SESSION_META: Record<string, { title: string; badge: string; cls: string }> = {
   premarket:  { title: 'Premarket Movers · live',        badge: 'PREMARKET',     cls: 'og-sess--pm' },
@@ -119,6 +120,7 @@ export function OvernightGappers({ profile, onPick }: {
                         {g.symbol}
                         <TickerName symbol={g.symbol} width={16} />
                       </Link>
+                      <GrowthChip symbol={g.symbol} className="cm-badge" />
                     </td>
                     <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>
                       {/* The chip follows the NUMBER: it marks the headline move as

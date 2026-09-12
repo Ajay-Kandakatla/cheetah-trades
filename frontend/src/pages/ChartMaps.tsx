@@ -36,6 +36,7 @@ import {
 import { SupportLevels } from '../components/SupportLevels';
 import { SignalLabBoard } from '../components/SignalLabBoard';
 import { HottestSectors } from '../components/HottestSectors';
+import { ExplosiveGrowth } from '../components/ExplosiveGrowth';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
@@ -591,6 +592,14 @@ export function ChartMaps() {
          * movers boards (Catalysts, Overnight) — it answers the same question
          * they do, one level up. */
         <HottestSectors />
+      ) : tab === 'growth' ? (
+        /* 🚀 Explosive Growth (Ajay 2026-09-11: 100%+ sales AND 100%+ quarterly
+         * EPS, "I wanna know when ever these are in demand, separately just
+         * trackers", "remove the 700M rule for this page"). Its own endpoint,
+         * its own board and its own alert kind — deliberately NO cap floor,
+         * with the rows the trading engine will refuse marked ⛔ rather than
+         * hidden. Sits beside Hottest: both are discovery surfaces. */
+        <ExplosiveGrowth />
       ) : tab === 'catalysts' ? (
         /* The Catalysts page body, mounted as a tab (Ajay 2026-09-05: "move
          * catalyst tab in to Chart maps"). Same component as the old

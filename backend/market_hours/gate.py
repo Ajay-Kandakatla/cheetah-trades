@@ -65,6 +65,9 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # 2026-09-09 keep-set: both read closed daily bars, so both are MARKET kinds
     # and must stay silent on weekends and NYSE holidays.
     "hot_pullback_alert", "pattern_alert",
+    # 🚀 growth board at demand (2026-09-11) — reads closed daily bars and a
+    # live print, so it is a MARKET kind: silent on weekends and NYSE holidays.
+    "growth_demand_alert",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

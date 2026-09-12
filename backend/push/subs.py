@@ -418,6 +418,15 @@ def default_prefs() -> dict:
         # MUST be here — a kind missing from default_prefs silently drops
         # for every device.
         "supply_break_alert": True,
+        # 🚀 Explosive Growth at demand (growth/alerts.py, Ajay 2026-09-11: "I
+        # wanna know when ever these are in demand, separately just trackers").
+        # Its own kind on purpose: the board it comes from has NO cap floor,
+        # so these pushes cover names the other zone kinds skip entirely, and
+        # he must be able to silence one without silencing the other. The push
+        # still carries the standing room + proximity gates and the measured
+        # `intact` gate. MUST be here — a kind missing from default_prefs
+        # silently drops for every device.
+        "growth_demand_alert": True,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

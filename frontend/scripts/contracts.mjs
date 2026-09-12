@@ -1153,6 +1153,161 @@ const CONTRACTS = [
   // 🏆 Past Winners is the other half and is the only honest way to use a board
   // whose patterns do not beat a coin flip.
   {
+    name: 'Chart Maps carries the \u{1F680} Explosive Growth tab, with the no-cap-floor deal visible (2026-09-11)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-11: 100%+ sales AND 100%+ quarterly EPS, "separately just
+    // trackers", "remove the 700M rule for this page". The DEAL is: no cap
+    // floor on the board, and the rows the trading engine will refuse say so.
+    // If the ⛔ rendering ever disappears, the board silently starts looking
+    // like a buy list for names the engine will not touch.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+      if (!tabs.includes('growth')) errs.push("CM_TABS no longer lists 'growth'");
+      if (!/growth:\s*\{[\s\S]*?label:/.test(src)) errs.push('TAB_META has no growth entry');
+      if (!/t !== 'growth'/.test(src)) errs.push('isBoardTab must exclude growth — it has its own endpoint and renderer');
+      const meta = /\n  growth:\s*\{[\s\S]*?\n  \},\n/.exec(src);
+      if (meta) {
+        if (!/NO MARKET-CAP FLOOR/i.test(meta[0])) {
+          errs.push('the Explosive Growth blurb must say the board has NO cap floor — that is the whole deal he agreed to');
+        }
+        if (!/REFUSE/i.test(meta[0])) {
+          errs.push('the blurb must say the trading engine still refuses sub-$2 / sub-$700M names');
+        }
+        if (!/NOTHING HERE IS BACKTESTED|never been measured forward/i.test(meta[0])) {
+          errs.push('the blurb must say the 100/100 screen is unmeasured — it is a discovery list');
+        }
+      }
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/<ExplosiveGrowth \/>/.test(page)) errs.push('ChartMaps.tsx no longer mounts <ExplosiveGrowth />');
+
+      const tsx = read('src/components/ExplosiveGrowth.tsx');
+      if (!/\/growth\/\$\{refresh \? 'refresh' : 'board'\}/.test(tsx)) {
+        errs.push('ExplosiveGrowth must read GET /growth/board (and POST /growth/refresh)');
+      }
+      // The board must PRINT the warnings, not merely receive them. Rendering
+      // the row without them is the silent-unbuyable-list failure.
+      if (!/warns\.map\(/.test(tsx)) {
+        errs.push('every row must render its warnings[] — a ⛔ row must never look clean');
+      }
+      if (!/No market-cap floor on this board/.test(tsx)) {
+        errs.push('the board body must state the no-cap-floor deal where he reads it, not only in the tab blurb');
+      }
+      // intact is the one gate that measured; it must not read the same as a
+      // pierced band.
+      if (!/intact/.test(tsx)) errs.push('the demand column must distinguish an INTACT floor — the only gate that measured');
+      if (!/<SignalWatchButton\s+symbol=\{r\.symbol\}/.test(tsx)) {
+        errs.push('every growth row must carry the + Signals button — he picks names off these tables');
+      }
+
+      const css = read('src/styles.css');
+      // Same sticky-header trap as the Hottest and Catalysts tables.
+      const scroll = /\.eg-scroll\s*\{([^}]*)\}/.exec(css);
+      if (!scroll) errs.push('styles.css has no .eg-scroll rule — the growth table has no scroll container');
+      else {
+        if (!/overflow:\s*auto/.test(scroll[1])) errs.push('.eg-scroll must be `overflow: auto` on BOTH axes — overflow-x alone traps the sticky header');
+        if (!/max-height:/.test(scroll[1])) errs.push('.eg-scroll needs a max-height or the box never scrolls vertically and the static header never engages');
+      }
+      const thead = /\.eg-table thead th\s*\{([^}]*)\}/.exec(css);
+      if (!thead) errs.push('styles.css lost the .eg-table thead th rule');
+      else if (!/position:\s*sticky/.test(thead[1]) || !/top:\s*0/.test(thead[1])) {
+        errs.push('.eg-table thead th must stay `position: sticky; top: 0`');
+      }
+      // every eg-* class the TSX uses must have a rule that SHIPS — jsdom
+      // loads no stylesheets, so no render test can catch a missing one.
+      const used = new Set((tsx.match(/\beg-[a-z0-9-]+/g) || []));
+      for (const c of used) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} is used in ExplosiveGrowth.tsx but has no CSS rule`);
+        }
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the \u{1F680} growth chip reaches EVERY Chart Maps tab (2026-09-11)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-11: "I am hoping this new list will be considerd in all
+    // chart maps. Like in Deep demand scan." then, plainly: "ALL TABS IN CHART
+    // MAPS". Every board tab renders through PatternChart; the eight non-board
+    // tabs each have their own renderer. If a NEW non-board tab is added and
+    // its renderer forgets the chip, this fails — that is the whole point.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+
+      // 'growth' IS the list, so it needs no pointer back to itself.
+      const RENDERER = {
+        hot_pullback: 'src/components/HotPullbackBoard.tsx',
+        patterns: 'src/pages/PatternsPage.tsx',
+        session: 'src/components/SessionBoard.tsx',
+        signals: 'src/components/SignalLabBoard.tsx',
+        hot_sectors: 'src/components/HottestSectors.tsx',
+        catalysts: 'src/pages/Catalysts.tsx',
+        overnight: 'src/components/OvernightGappers.tsx',
+        support: 'src/components/SupportLevels.tsx',
+      };
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners)$/.test(t));
+      for (const t of nonBoard) {
+        if (t === 'growth') continue;
+        const file = RENDERER[t];
+        if (!file) {
+          errs.push(`tab '${t}' has no renderer listed in this contract — add it and give it a <GrowthChip>`);
+          continue;
+        }
+        const tsx = read(file);
+        if (!/<GrowthChip\s/.test(tsx)) {
+          errs.push(`${file} (tab '${t}') does not render <GrowthChip> — "ALL TABS IN CHART MAPS"`);
+        }
+      }
+      // The board tabs all funnel through the one tile component.
+      const tile = read('src/components/PatternChart.tsx');
+      if (!/<GrowthChip\s+symbol=\{tile\.symbol\}/.test(tile)) {
+        errs.push('PatternChart must render <GrowthChip> — it is the one renderer behind every board tab');
+      }
+      // The chip is a POINTER to the growth board, never a second screen.
+      const chip = read('src/components/GrowthChip.tsx');
+      if (/sales_growth_pct\s*>=|100/.test(chip)) {
+        errs.push('GrowthChip must not re-implement the 100/100 screen — it reads /growth/tags');
+      }
+      if (!/refused/.test(chip)) {
+        errs.push('the chip must carry the refused tone — good sales must not make an unbuyable row look clean');
+      }
+      const css = read('src/styles.css');
+      for (const c of ['cm-badge-growth', 'cm-badge-bad', 'hs-badge-growth', 'sb-chip-growth']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the chip would ship unstyled`);
+        }
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the growth board declares its own push kind everywhere (2026-09-11)',
+    file: 'src/pages/Notifications.tsx',
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/key: 'growth_demand_alert'[\s\S]*?\},\n/);
+      if (!m) return ['growth_demand_alert must stay listed on the Notifications page'];
+      const d = m[0];
+      if (!/separately just trackers/.test(d)) errs.push('must quote why it is its own kind');
+      if (!/NO MARKET-CAP FLOOR/i.test(d)) errs.push('must say the board has no cap floor');
+      if (!/5% of room|5% of the room|at least 5%/.test(d)) errs.push('must say the standing room gate still applies');
+      if (!/intact/.test(d)) errs.push('must name the one measured gate');
+      if (!/NOTHING HERE IS BACKTESTED|never been measured forward/i.test(d)) {
+        errs.push('must say the screen is unmeasured');
+      }
+      const prefs = read('src/hooks/useNotificationPrefs.ts');
+      if (!/growth_demand_alert\?: boolean/.test(prefs)) {
+        errs.push('NotificationPrefs must carry growth_demand_alert or the toggle cannot be stored');
+      }
+      return errs;
+    },
+  },
+  {
     name: 'Chart Maps carries the 🔥 Hottest tab, styled and wired (2026-09-11)',
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-09-11: "find the hottest of the sectors like the most growth

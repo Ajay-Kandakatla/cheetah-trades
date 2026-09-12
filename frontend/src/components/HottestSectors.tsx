@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
+import { GrowthChip } from './GrowthChip';
 import { SignalWatchButton } from './SignalWatchButton';
 import { InfoButton } from './InfoButton';
 
@@ -94,6 +95,9 @@ function NameRow({ r }: { r: HsName }) {
     <tr className="hs-name">
       <td className="hs-sym">
         <TickerLink ticker={r.symbol} fromLabel="Hottest sectors" />
+        {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11:
+            "ALL TABS IN CHART MAPS"). */}
+        <GrowthChip symbol={r.symbol} className="hs-badge" />
         {/* Ajay 2026-09-11: "add to signals button in that table I wanna pick a
             few stocks from this". NOT compact — compact prints a bare "+" which
             sits next to TickerLink's ☆ and reads as decoration rather than a
