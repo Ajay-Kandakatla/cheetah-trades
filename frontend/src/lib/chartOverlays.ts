@@ -102,6 +102,29 @@ for (const g of OVERLAY_GROUPS) {
   for (const p of g.linePrefixes || []) BY_PREFIX.push([p, g.key]);
 }
 
+/** The overlay family a TAB is about, when it is about one.
+ *
+ *  The 🌀 boards (2026-09-13) draw exactly one family each, and both families
+ *  are OFF in the default hidden-set — so without this, opening KC Coiled
+ *  would show a grid of bare candles with a verdict badge and no channel, and
+ *  the only way to see the thing the tab exists for would be to know which
+ *  checkbox to tick. A tab's own family is forced visible ON THAT TAB ONLY;
+ *  his saved choices are untouched and every other tab still honours them. */
+export function tabFamily(tab: string): string | undefined {
+  return tab === 'keltner' ? 'keltner' : tab === 'amd' ? 'amd' : undefined;
+}
+
+/** `hidden` minus the tab's own family. Returns the SAME set when there is
+ *  nothing to force, so the common case allocates nothing and memo keys on
+ *  identity still hold. */
+export function hiddenForTab(hidden: Set<string>, tab: string): Set<string> {
+  const fam = tabFamily(tab);
+  if (!fam || !hidden.has(fam)) return hidden;
+  const next = new Set(hidden);
+  next.delete(fam);
+  return next;
+}
+
 /** Which family a LINE belongs to. Label prefix beats tone — see the type. */
 function lineGroup(l: { label?: string; tone?: string }): string | undefined {
   const lab = (l.label || '').toLowerCase();
@@ -124,6 +147,13 @@ export function presentGroups(tiles: Array<Partial<CmTile>>): OverlayGroup[] {
       const g = lineGroup(l as any);
       if (g) seen.add(g);
     }
+    // A curve is a drawn overlay like any other, so the family that owns it
+    // gets its checkbox even on a board whose only Keltner content is the
+    // channel itself (the 🌀 tab draws NO flat KC lines — 2026-09-13).
+    for (const c of (t as any).curves || []) {
+      const g = lineGroup(c as any);
+      if (g) seen.add(g);
+    }
   }
   return OVERLAY_GROUPS.filter((g) => g.always || seen.has(g.key));
 }
@@ -137,7 +167,13 @@ export function filterTile<T extends Partial<CmTile>>(tile: T, hidden: Set<strin
     ...tile,
     bands: (tile.bands || []).filter((b) => !hidden.has(BY_BAND[b.kind as string] || '')),
     lines: (tile.lines || []).filter((l) => !hidden.has(lineGroup(l as any) || '')),
-  };
+    curves: ((tile as any).curves || [])
+      .filter((c: any) => !hidden.has(lineGroup(c) || '')),
+    // The VERDICT SENTENCE is gated with its own drawing (2026-09-13). A badge
+    // with no `group` is a board badge (Setup ready, Vol drying) and is never
+    // touched — only a study verdict carries one.
+    badges: (tile.badges || []).filter((b) => !b.group || !hidden.has(b.group)),
+  } as T;
 }
 
 /* v2 on 2026-09-12. The KEY IS BUMPED ON PURPOSE: the default flipped from

@@ -36,7 +36,13 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # board has NO cap floor while everything above it does, and
                 # that difference is the thing he needs the panel to state.
                 "growth",
-                "sepa_bounce", "catalysts", "options", "quick_bounce")
+                "sepa_bounce", "catalysts", "options", "quick_bounce",
+                # 🌀 Turning Bullish (2026-09-13) — the two Chart Maps tabs.
+                # Its own section for the reason the panel exists: these are
+                # the only boards in the app built from UNCITED studies that
+                # gate nothing, and the reader has to be told that before the
+                # rules and not after them.
+                "turning_bullish")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -463,6 +469,70 @@ def sections() -> dict:
             % "15:55",
         ],
         "alerts": ["No separate push: the 🧲 / 🪃 alerts already cover these names."],
+        "note": _DISCLAIMER,
+    }
+
+    from supply_demand import turning_bullish as TB
+    from supply_demand import keltner as KC
+    from supply_demand import amd as AMD
+    out["turning_bullish"] = {
+        "title": "Turning Bullish — Keltner coil & AMD raid", "emoji": "🌀",
+        "picks": [
+            "Keltner tab: the Bollinger band sits INSIDE a %.1f× Keltner channel "
+            "(the squeeze) or released it on the last bar, AND price is in the "
+            "upper half of the %.1f× channel (position ≥ %.2f), AND the EMA-%d "
+            "midline is higher than it was %d bars ago. All three, or the name "
+            "grades 'upper half' and is context rather than a turn."
+            % (KC.SQUEEZE_MULT, KC.MULT, TB.COILED_MIN_POSITION, KC.EMA_LEN,
+               TB.MID_SLOPE_BARS),
+            "AMD tab: a base of %d+ bars whose range fits inside %.1f× its own "
+            "median true range (and under %.0f%% of price) had its LOW traded "
+            "through and the bar CLOSED back inside it — the stops under the "
+            "base are gone and the markup through the top has not happened. "
+            "The raid must be within %d sessions: 'turning', his word, taken "
+            "literally." % (AMD.MIN_BASE_BARS, AMD.MAX_BASE_ATR,
+                            AMD.MAX_BASE_PCT, TB.MAX_RAID_BARS_AGO),
+            "'Recent 6 months' = %d trading sessions; a cycle dated older than "
+            "that reads as context and never as a turn." % TB.WINDOW_SESSIONS,
+            "Both boards print their own FIRE RATE — what share of the scanned "
+            "universe the state describes — under the tab. A state that fires "
+            "on half the market is a description of the market, and the number "
+            "is there so you can see that for yourself. Keltner fires on 5.4%% "
+            "of names; AMD on 22.7%% at the %d-session bound and 45.8%% at ten "
+            "sessions." % TB.MAX_RAID_BARS_AGO,
+        ],
+        "stops": [
+            "No stop, no target and no size: neither board proposes a trade. "
+            "The drawn levels are the channel bands and the base edges, which "
+            "are where the chart's own structure is, not an entry plan.",
+        ],
+        "alerts": [
+            "MEASURED 2026-09-13 AND BOTH CLAIMS CAME BACK INVERTED — not "
+            "null, inverted. Keltner, 2,660 names / 1,200,755 closed daily "
+            "bars: coiled bars returned LESS than every other bar of the same "
+            "names (21d median lift −0.33pp, 95% CI −0.57 to −0.12), and a "
+            "coiled name closes above its upper band within 21 sessions 40.0% "
+            "of the time against 55.0% for a name in the same upper half with "
+            "the same rising EMA and no squeeze — the squeeze makes that "
+            "break 14.8pp LESS likely. AMD, 2,666 names / 1,150,446 bars: "
+            "forward returns span zero leaning negative (21d lift −0.25%, CI "
+            "−1.30 to +0.72), and against a like-for-like bar inside its own "
+            "base at the same distance below the top a fresh raid makes the "
+            "close above that top LESS likely — 42.7% vs 51.6%, −8.9pp (CI "
+            "−11.4 to −5.9), negative in all seven distance buckets. Scripts: "
+            "backend/scripts/turning_bullish_keltner_study.py and "
+            "..._amd_study.py.",
+            "NOTHING HERE PUSHES, GATES OR BUYS, and after that measurement "
+            "nothing should without a new study saying otherwise. "
+            "`keltner.CITED` and `amd.CITED` are both False. The app measured "
+            "AMD's nearest relative, the ICT tab, at +0.03R over 6,004 "
+            "signals against placebo (2026-09-04) — flat; these two are worse "
+            "than flat.",
+            "A squeeze is compression, NOT a direction — the Keltner module "
+            "says so itself and this board does not overrule it. Direction "
+            "here comes from the position and the midline slope, which is a "
+            "convention too.",
+        ],
         "note": _DISCLAIMER,
     }
     return out

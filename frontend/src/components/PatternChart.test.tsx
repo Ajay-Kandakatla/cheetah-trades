@@ -41,6 +41,40 @@ const draw = (tile: CmTile) =>
   render(<MemoryRouter><PatternChart tile={tile} /></MemoryRouter>);
 
 describe('PatternChart', () => {
+  /* The Keltner channel as a CURVE (Ajay 2026-09-13, MU: "I was hoping to see
+   * the KC bands like this but it should flat horizontal"). A `line` is one
+   * price and renders horizontally by construction; a channel that bends every
+   * bar needs its own carrier, and the drawing has to break where the data
+   * does rather than joining across a gap. */
+  it('draws a per-bar curve as a polyline, and labels it at its last value', () => {
+    const b = bars(40);
+    draw({ ...TILE, curves: [{ tone: 'keltner', label: 'KC mid',
+                               values: b.map((x) => x.c + 1) }] });
+    const poly = document.querySelectorAll('polyline');
+    expect(poly.length).toBe(1);
+    expect(poly[0].getAttribute('points')!.split(' ').length).toBe(40);
+    expect(screen.getByText(/KC mid \d/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE — a gap in a curve SPLITS the path instead of joining across it', () => {
+    // The EMA/ATR warm-up leaves the left edge empty on a long frame, and a
+    // tile can carry today's live bar the cached channel has no value for.
+    // One polyline through both sides would draw a straight segment through
+    // prices the channel never had.
+    const b = bars(40);
+    const values = b.map((x, i) => (i >= 18 && i <= 21 ? null : x.c + 1));
+    draw({ ...TILE, curves: [{ tone: 'keltner', label: 'KC mid', values }] });
+    expect(document.querySelectorAll('polyline').length).toBe(2);
+  });
+
+  it('NEGATIVE — an all-null curve draws nothing and labels nothing', () => {
+    const b = bars(40);
+    draw({ ...TILE, curves: [{ tone: 'keltner', label: 'KC mid',
+                               values: b.map(() => null) }] });
+    expect(document.querySelectorAll('polyline').length).toBe(0);
+    expect(screen.queryByText(/KC mid/)).not.toBeInTheDocument();
+  });
+
   it('renders the ticker, its why-line and its stats', () => {
     draw(TILE);
     expect(screen.getByText('IONQ')).toBeInTheDocument();

@@ -51,7 +51,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -3032,6 +3032,183 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": data.get("as_of")}
 
 
+def _verdict_badges(kind: str, v: dict) -> list:
+    """The one badge for a turning-bullish tile, gated like every other study.
+
+    `group` is what lets `chartOverlays.filterTile` drop the SENTENCE along
+    with the band and the line when he unticks the family. It is carried even
+    on these two tabs, where the family is the whole point, because the tile
+    shape must be identical everywhere — a badge without a group would survive
+    a filter that removes its own drawing, and the chart would then show a
+    verdict for an overlay that is not on the screen.
+    """
+    from supply_demand import turning_bullish as TB
+    text, tone = TB.verdict_text(kind, v)
+    return [{"text": text, "tone": tone, "group": kind}] if text else []
+
+
+def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
+                          days: int = BARS_DEFAULT,
+                          themes_first: bool = THEMES_FIRST_DEFAULT,
+                          min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """Two tabs — Keltner coils and AMD raids (Ajay 2026-09-13).
+
+    *"I need two tabs in chart maps for me to look at where stocks are bullish
+    in the recent 6 months where they are turning bullish"*.
+
+    Both read the SAME modules the chart overlays draw from
+    (`supply_demand/keltner.py`, `supply_demand/amd.py`) through
+    `supply_demand/turning_bullish.py`, so a name on the board and the same
+    name's chart can never disagree about its state.
+
+    Reads the cron's stored document — never scans on the request path. The
+    sweep is cheap (2,669 names in 11s, measured) but it still loads a 500-bar
+    frame per symbol, and doing that while he waits is how a tab times out at
+    the open.
+
+    NEITHER STUDY IS CITED AND NEITHER GATES ANYTHING. `keltner.CITED` and
+    `amd.CITED` are both False; the app measured AMD's nearest relative, the
+    ICT tab, at +0.03R over 6,004 signals against placebo. Both boards print
+    their own fire rate under them for the same reason.
+    """
+    from supply_demand import turning_bullish as TB
+
+    b = TB.board(kind, limit=limit)
+    rows = b.get("rows") or []
+    # Sortable tile numbers come from the SEPA scan row, same as every other
+    # tab — `tile_metrics` takes a ROW, never a symbol. A name the scan has not
+    # seen still gets a tile: it simply carries no metrics, rather than being
+    # dropped from a board that is about chart structure, not liquidity.
+    try:
+        from sepa import scanner
+        latest = scanner.load_latest() or {}
+        scan_by_sym = {r.get("symbol"): r for r in (latest.get("all_results") or [])
+                       if r.get("symbol")}
+    except Exception as exc:                                # noqa: BLE001
+        log.debug("turning_bullish_tiles: scan rows unavailable: %s", exc)
+        scan_by_sym = {}
+    tiles = []
+    for r in rows:
+        sym = r["symbol"]
+        bars = bars_for(sym, days)
+        if not bars:
+            continue
+        v = r.get(kind) or {}
+        bands, lines = [], []
+        if kind == "keltner":
+            # NO FLAT LINES HERE (Ajay 2026-09-13, MU): the channel is an EMA
+            # plus an ATR multiple, so it bends every bar. Three scalars drawn
+            # across the tile would say the band sat at its LAST value for the
+            # whole window, which is false everywhere except the right edge.
+            # The curve is attached below, after the frame is loaded once.
+            pass
+        else:
+            lo, hi = _num(v.get("base_lo")), _num(v.get("base_hi"))
+            if lo is not None and hi is not None:
+                bands.append({"kind": "amd_accumulation", "lo": lo, "hi": hi,
+                              "label": "A — base (%s bars)" % (v.get("base_bars") or "?")})
+            raid = _num(v.get("raid_price"))
+            if raid is not None:
+                lines.append({"price": raid, "tone": "amd",
+                              "label": "AMD M — raid %.2f" % raid})
+        tiles.append({
+            "symbol": sym, "name": _name_for(sym), "theme": _theme(sym),
+            "href": _href(sym), "bars": bars,
+            "last_close": _num(r.get("last_close")),
+            "bands": bands, "lines": lines,
+            # The verdict rides ON the tile so the board and the chart say the
+            # same sentence about one name — literally the same helper, so the
+            # tab's badge and the chart's badge are one string built once.
+            "verdict": v,
+            "badges": _verdict_badges(kind, v),
+            **tile_metrics(scan_by_sym.get(sym) or {}),
+        })
+        if kind == "keltner":
+            try:
+                from sepa import prices
+                _keltner_curves(tiles[-1],
+                                _norm_frame(prices.load_prices(sym.upper())))
+            except Exception as exc:                            # noqa: BLE001
+                log.debug("turning_bullish_tiles: curve %s failed: %s", sym, exc)
+
+    if themes_first:
+        tiles.sort(key=lambda t: _theme_rank(t.get("theme")))
+
+    n_rows = b.get("n_rows") or 0
+    n_all = b.get("n_all") or 0
+    pct = round(100.0 * n_all / n_rows, 1) if n_rows else None
+    return {
+        "tiles": tiles[:limit],
+        "matched": n_all,
+        "scanned": b.get("n_scanned"),
+        "priced": n_rows,
+        "fire_pct": pct,
+        "counts": b.get("counts") or {},
+        "params": b.get("params") or {},
+        "built_at": b.get("built_at"),
+        "note": _turning_note(kind, n_all, n_rows, pct),
+    }
+
+
+def _turning_note(kind: str, n_all: int, n_rows: int, pct) -> str:
+    """The sentence under the board.
+
+    IT LEADS WITH THE MEASUREMENT, not with the mechanics. Both reads were
+    measured against a placebo on 2026-09-13 and BOTH CAME BACK INVERTED on
+    their own claim — not null, inverted — so a note that explained the setup
+    first and mentioned the study last would be burying the only thing on the
+    page that changes what he does with it. Scripts:
+    `backend/scripts/turning_bullish_keltner_study.py` and
+    `..._amd_study.py`, both re-runnable verbatim.
+    """
+    where = ("%s of %s priced names (%s%%)"
+             % (f"{n_all:,}", f"{n_rows:,}", pct if pct is not None else "?"))
+    common = (" Uncited and display-only: nothing in the app gates, alerts or "
+              "buys on either read. Re-run the study yourself — "
+              "backend/scripts/turning_bullish_%s_study.py."
+              % ("keltner" if kind == "keltner" else "amd"))
+    if kind == "keltner":
+        return (
+            "MEASURED 2026-09-13 AND THE CLAIM IS INVERTED. Over 2,660 names "
+            "and 1,200,755 closed daily bars (2024-09-12 → 2026-09-11) a "
+            "coiled bar returned LESS than every other bar of the same names: "
+            "21-day median lift −0.33pp (95% CI −0.57 to −0.12), 10d −0.23pp "
+            "(−0.33 to −0.10), 5d −0.20pp (−0.27 to −0.12); win rate 49.0% vs "
+            "50.9% at 5d. And a coiled name closes above its upper Keltner "
+            "band within 21 sessions 40.0% of the time (CI 39.0–41.1) against "
+            "55.0% (54.5–55.6) for a name in the SAME upper half with the "
+            "SAME rising 20-EMA and no squeeze — the squeeze makes that break "
+            "14.8pp LESS likely. Against that one-clause control the squeeze "
+            "adds nothing either way (21d +0.11pp, CI −0.17 to +0.41). The "
+            "one positive cell is a coil of 21+ bars, which beat the control "
+            "at all three horizons (21d +1.34pp, CI +0.39 to +2.33) — 1 of 4 "
+            "buckets, 471 names, and 4 names on today's board. Exploratory. "
+            "WHAT THE BOARD IS: the Bollinger band inside the Keltner channel "
+            "(compression), price in the upper half, the 20-day midline "
+            "rising. A squeeze is COMPRESSION, NOT A DIRECTION. Longest coil "
+            "first, which is also the only cell that measured anything. "
+            + where + "." + common)
+    return (
+        "MEASURED 2026-09-13 AND THE CLAIM IS INVERTED. Over 2,666 names and "
+        "1,150,446 evaluated bars, forward returns are indistinguishable from "
+        "every other bar of the same names — 21d +1.77% vs +2.02%, lift "
+        "−0.25% (95% CI −1.30 to +0.72); 5d and 10d likewise span zero. And "
+        "the one thing this read claims is backwards: against a like-for-like "
+        "bar sitting INSIDE its own base at the same distance below the top, "
+        "a fresh raid makes a close above that top within 21 sessions LESS "
+        "likely — 42.7% vs 51.6%, −8.9pp (95% CI −11.4 to −5.9), negative in "
+        "all seven distance buckets and worse the further price sits below "
+        "the top. Raid recency separates nothing (0–3 bars vs 4–10: every CI "
+        "spans zero, and fresh leans worse), so the 3-session bound here is a "
+        "BOARD-SIZE cut and not an accuracy gain — at 10 sessions this state "
+        "carries 1,201 of 2,621 names. WHAT THE BOARD IS: the base low was "
+        "swept and price CLOSED back inside it, so the stops under the base "
+        "are gone and the markup through the top has not happened. A close "
+        "BEYOND the edge would be a breakout and means the opposite thing. "
+        "Longest base first. " + where
+        + ", so treat it as a description of the tape, not a screen." + common)
+
+
 def topping_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                   themes_first: bool = THEMES_FIRST_DEFAULT,
                   sort: str = DEFAULT_SORT,
@@ -3821,6 +3998,84 @@ def _study_overlays(df, days: int) -> dict:
     return {"bands": bands, "lines": lines}
 
 
+def _keltner_curves(tile: dict, df) -> None:
+    """Draw the Keltner channel as three CURVES on one tile, in place.
+
+    Ajay 2026-09-13 (MU): *"I was hoping to see the KC bands like this but it
+    should flat horizontal. Are they accurate?"* They were accurate for the
+    last bar and drawn across every bar, which made them wrong everywhere else.
+    A `line` in this payload is one price and renders horizontally by
+    definition, so the channel needs its own carrier: `curves`, a value per
+    bar, aligned to the tile's own bars BY DATE rather than by position.
+
+    By date and not by slicing: the tile's bars can carry today's live
+    extended-hours bar (`prices.with_today_bar`), which the cached frame this
+    channel is computed from does not have, so a positional tail would shift
+    the whole channel one bar left. A date with no channel value (the EMA/ATR
+    warm-up at the left edge of a long frame) becomes a gap, never a guess.
+    """
+    bars = tile.get("bars") or []
+    if not bars:
+        return
+    try:
+        from supply_demand import keltner as KC
+        ser = KC.channel_series(df)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: keltner series failed: %s", exc)
+        return
+    if not ser:
+        return
+    by_date = {d: i for i, d in enumerate(ser["dates"])}
+    curves = []
+    for key, label in (("upper", "KC upper"), ("mid", "KC mid"),
+                       ("lower", "KC lower")):
+        vals = [(ser[key][by_date[str(b.get("t"))]]
+                 if str(b.get("t")) in by_date else None) for b in bars]
+        if not any(v is not None for v in vals):
+            continue
+        curves.append({"tone": "keltner", "label": label, "values": vals})
+    if curves:
+        tile["curves"] = list(tile.get("curves") or []) + curves
+
+
+def _attach_verdicts(tile: dict, df) -> None:
+    """Put the Keltner and AMD verdicts ON one tile, in place.
+
+    Ajay 2026-09-13 asked for a verdict "when I check those boxes in the
+    charts", so the sentence is gated the same way the drawing is: each badge
+    carries `group`, and `chartOverlays.filterTile` drops a badge whose family
+    is unticked exactly as it already drops that family's bands and lines. One
+    checkbox governs the band, the line and the sentence — they can never
+    disagree about whether the reader asked to see AMD.
+
+    The words come from `turning_bullish.verdict_text`, the same helper the two
+    boards use, so a name's tile and the board listing it cannot say different
+    things about it.
+    """
+    try:
+        from supply_demand import turning_bullish as TB
+        v = TB.verdicts(df)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: verdicts failed: %s", exc)
+        return
+    if not v:
+        return
+    badges = list(tile.get("badges") or [])
+    for group in ("keltner", "amd"):
+        r = v.get(group)
+        if not r:
+            continue
+        text, tone = TB.verdict_text(group, r)
+        if not text:
+            continue
+        badges.append({"text": text, "tone": tone, "group": group})
+    if badges:
+        tile["badges"] = badges
+    # The full reads ride along so a caller (and the tests) can assert on the
+    # grade itself rather than parsing an English sentence.
+    tile["verdict"] = {**(tile.get("verdict") or {}), **v}
+
+
 def _attach_studies(out: dict, days: int) -> None:
     """Append the study overlays to every tile in `out`, in place.
 
@@ -3839,6 +4094,22 @@ def _attach_studies(out: dict, days: int) -> None:
             df = _norm_frame(prices.load_prices(str(sym).upper()))
             if df is None or len(df) < 40:
                 continue
+            # THE VERDICT IS READ ON THE FULL FRAME, BEFORE THE ZOOM CUT.
+            #
+            # Ajay 2026-09-13: "give me a Kelner base verdict and AMD based
+            # verdict of stocks when I check those boxes in the charts as
+            # well". A verdict that changes when he moves the zoom dropdown is
+            # not a verdict: `days` runs 20..1260 and `amd.LOOKBACK` is 180, so
+            # on the 6-month zoom a base that plainly exists on the 1-year
+            # chart cannot be reached, and at days=20 both modules return None
+            # and the tile would carry no verdict at all with nothing said.
+            # The DRAWN overlay still follows the zoom — that is a picture of
+            # the window he is looking at — but the sentence does not.
+            _attach_verdicts(t, df)
+            # The CURVE is built from the full frame as well, then aligned to
+            # whatever bars the tile actually carries — so the zoom changes how
+            # much of the channel is visible, never what the channel was.
+            _keltner_curves(t, df)
             if days and len(df) > days:
                 df = df.iloc[-int(days):]
             o = _study_overlays(df, days)
@@ -3901,6 +4172,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = ict_tiles(limit, days, themes_first, srt, tier,
                         bias=bias if isinstance(bias, str) else "all",
                         micro=micro if isinstance(micro, str) else "60m")
+    elif t in ("keltner", "amd"):
+        out = turning_bullish_tiles(t, limit, days, themes_first, tier)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
@@ -3937,7 +4210,15 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # they are OFF by default in the UI, so computing three studies for sixty
     # tiles on every board load would be pure waste. The frontend asks for them
     # when, and only when, one of the three checkboxes is on.
-    if studies:
+    #
+    # `is True`, NOT truthiness. FastAPI resolves `Query(...)` defaults at
+    # REQUEST time, so every direct in-container call — the smoke-test path
+    # this repo uses constantly — hands `board()` a Query OBJECT, which is
+    # truthy. `api.py` coerces at its own call site and the support endpoint
+    # coerces inline; this was the one door left open, and through it every
+    # container measurement silently ran with studies ON. The same bug shipped
+    # twice on the demand board (2026-08-14).
+    if studies is True:
         _attach_studies(out, days)
     out["tab"] = t
     out["count"] = len(out.get("tiles") or [])

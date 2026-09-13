@@ -14,7 +14,7 @@
 import { memo, useCallback, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  bandAt, barDomain, barIndexAt, barWidth, clipBands, dropCollidingTicks,
+  bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
   gutterWidth, hoverLines, lineLabels, markerIndex, priceAt, timeTicks,
   priceTicks, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmTile,
@@ -80,9 +80,10 @@ export const PatternChart = memo(function PatternChart(
   if (!bars.length) return null;
 
   const H = height;
-  const domain = barDomain(bars, tile.bands, tile.lines);
+  const domain = barDomain(bars, tile.bands, tile.lines, 6, tile.curves);
   const bands = clipBands(tile.bands || [], domain);
-  const labels = lineLabels(tile.lines || [], domain, H, PAD_Y, LABEL_FS);
+  const labels = lineLabels(
+    [...(tile.lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS);
   const axis = priceTicks(domain, H, PAD_Y);
   // The gutter is sized from the labels it has to hold. Ajay 2026-08-19 sent a
   // META tile reading "overhead 553" and "support 527." — a fixed 62 units
@@ -271,6 +272,31 @@ export const PatternChart = memo(function PatternChart(
                       opacity={0.9} />
               );
             })}
+
+          {/* Per-bar overlays — the Keltner channel (Ajay 2026-09-13, MU).
+            * Drawn UNDER the candles so the price action stays on top, and
+            * split on nulls: the EMA/ATR warm-up leaves the left edge empty
+            * on a long frame, and joining across that gap would draw a
+            * straight segment through a channel that did not exist yet. */}
+          {(tile.curves || []).map((c) => {
+            const segs: string[] = [];
+            let cur: string[] = [];
+            (c.values || []).forEach((v, i) => {
+              if (v == null || !Number.isFinite(v)) {
+                if (cur.length > 1) segs.push(cur.join(' '));
+                cur = [];
+                return;
+              }
+              cur.push(`${xFor(i, bars.length, W, padR)},${yFor(v, domain, H, PAD_Y)}`);
+            });
+            if (cur.length > 1) segs.push(cur.join(' '));
+            return segs.map((pts, si) => (
+              <polyline key={`cv-${c.label}-${si}`} points={pts} fill="none"
+                        stroke={toneColor(c.tone)} strokeWidth={1.1}
+                        strokeDasharray={c.label.includes('mid') ? '5,4' : undefined}
+                        opacity={0.85} />
+            ));
+          })}
 
           {/* extended-hours shading (live frame only) */}
           {extSpans.map((sp) => {

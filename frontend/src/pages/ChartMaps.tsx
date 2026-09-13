@@ -42,8 +42,11 @@ import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
 import OverlayLegend from '../components/OverlayLegend';
-import { filterForGrid, filterTile, loadHidden, presentGroups, saveHidden,
-         studiesWanted } from '../lib/chartOverlays';
+import { filterForGrid, filterTile, hiddenForTab, loadHidden, presentGroups,
+         saveHidden, studiesWanted, tabFamily } from '../lib/chartOverlays';
+
+/** Stable empty set so `lockedOverlays` keeps identity on every non-🌀 tab. */
+const EMPTY_LOCK: Set<string> = new Set();
 import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
@@ -231,6 +234,27 @@ export function ChartMaps() {
    * temporal dead zone at that point. */
   const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(() => loadHidden());
 
+  /* THE ONE BIT OF THE OVERLAY STATE THE FETCH ACTUALLY DEPENDS ON.
+   *
+   * `load` used to list `hiddenOverlays` itself, and `toggleOverlay` builds a
+   * NEW Set on every click — so ticking ANY of the twelve families, including
+   * the pure client-side filters (demand, now, trade), rebuilt `load`, flipped
+   * the spinner on and refetched all 24 tiles. The 2026-09-12 note promised
+   * "it refetches on the CROSSING only"; this is the line that makes that
+   * true. Only the boolean crossing changes identity, so a client-side tick
+   * stays client-side.
+   *
+   * `tabHidden` is the same set with the TAB'S OWN family forced visible: both
+   * study families are off by default, so KC Coiled would otherwise open as a
+   * grid of bare candles with its channel filtered out. */
+  const wantStudies = studiesWanted(hiddenOverlays);
+  const tabHidden = useMemo(
+    () => hiddenForTab(hiddenOverlays, tab), [hiddenOverlays, tab]);
+  const lockedOverlays = useMemo(() => {
+    const fam = tabFamily(tab);
+    return fam ? new Set([fam]) : EMPTY_LOCK;
+  }, [tab]);
+
   const boardSeq = useRef(0);
   const load = useCallback(async () => {
     const my = ++boardSeq.current;
@@ -247,7 +271,7 @@ export function ChartMaps() {
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
-    const qs = studiesWanted(hiddenOverlays) ? `${q}&studies=true` : q;
+    const qs = wantStudies ? `${q}&studies=true` : q;
     try {
       const r = await fetch(`${API}/chart-maps?${qs}`, {
         credentials: 'include', cache: 'no-store',
@@ -262,7 +286,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, hiddenOverlays]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -392,8 +416,8 @@ export function ChartMaps() {
   // draw fib" — he reported it as "Non of these are showing up I selected AMD,
   // Fibonacci". Fib draws on the tiles; the checkbox is how he turns it off.
   const tiles = useMemo(
-    () => rawTiles.map((t) => filterForGrid(filterTile(t, hiddenOverlays), true)),
-    [rawTiles, hiddenOverlays]);
+    () => rawTiles.map((t) => filterForGrid(filterTile(t, tabHidden), true)),
+    [rawTiles, tabHidden]);
   const ictParams = useMemo(() => ictParamRows(data?.params), [data?.params]);
   // The backend flags which values the video actually states (3-candle
   // fractal, "two or more" consolidations); they get their own line so the
@@ -954,7 +978,8 @@ export function ChartMaps() {
         </div>
       ) : null}
 
-      <OverlayLegend present={overlayGroups} hidden={hiddenOverlays}
+      <OverlayLegend present={overlayGroups} hidden={tabHidden}
+                           locked={lockedOverlays}
                      onToggle={toggleOverlay} />
       <div className="cm-grid">
         {tiles.map((t) => <PatternChart key={`${t.symbol}-${t.href}`} tile={t} />)}

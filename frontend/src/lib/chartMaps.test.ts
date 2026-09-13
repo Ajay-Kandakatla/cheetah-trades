@@ -658,7 +658,12 @@ describe('the Earnings Flow tab', () => {
     // ledger tabs — that grouping is its own rule, so the patterns board links
     // out to it instead of the tab moving up beside it.
     expect(CM_TABS).toEqual(
-      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+      ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns',
+       // 2026-09-13: the two 🌀 Turning Bullish study tabs land MID-PACK, not
+       // at the front. The order is meant to be measured and a new tab has no
+       // usage yet; `tabUsageKey` counts them from the first open.
+       'keltner', 'amd',
+       'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -1579,7 +1584,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(22);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12
+    expect(CM_TABS).toHaveLength(24);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd 2026-09-13
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });

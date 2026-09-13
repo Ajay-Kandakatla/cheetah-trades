@@ -1085,3 +1085,15 @@
 # standing gates (>=5% room overhead, print within 1% above the band floor)
 # plus the one measured gate, `intact`. One push per symbol per band per day.
 */15   9-16  *    *    1-5  /usr/local/bin/python -m market_hours.gate growth alerts
+#
+# 🌀 Turning Bullish (2026-09-13) — the Keltner-coil and AMD-raid boards.
+#
+# Both verdicts need a ~500-bar frame per name, so this can never run on the
+# request path: the sweep is 2,669 names in ~11s with 8 workers, which is fine
+# for a cron and is a timeout at the open. The two tabs read the document this
+# writes and nothing else.
+#
+# 17:20 ET, market days only: after the 16:30 fast scan has refreshed prices,
+# so the verdicts are read on the day that just closed rather than yesterday.
+# Nothing here pushes, gates or buys — both studies are uncited and unmeasured.
+20     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.turning_bullish warm

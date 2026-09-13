@@ -22,7 +22,14 @@ const read = (rel) => readFileSync(join(FRONTEND_ROOT, rel), 'utf8');
 const parseCmTabs = (src) => {
   const m = /export const CM_TABS:\s*CmTab\[\]\s*=\s*\[([^\]]*)\]/.exec(src);
   if (!m) return null;
-  return m[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+  // Strip `//` comments FIRST. The array is commented in place — every tab
+  // added since 2026-09-06 explains where it sits in the most-used-first
+  // order — and without this each comment line split on its own commas and
+  // became phantom "tabs", failing contracts that had nothing to do with the
+  // change (2026-09-13: adding keltner/amd broke the GnT and growth-chip
+  // contracts, neither of which touches those tabs).
+  const body = m[1].replace(/\/\/[^\n]*/g, '');
+  return body.split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
 };
 
 const CONTRACTS = [
@@ -1284,7 +1291,7 @@ const CONTRACTS = [
         support: 'src/components/SupportLevels.tsx',
         gnt: 'src/components/GntBoard.tsx',
       };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -1714,7 +1721,12 @@ const CONTRACTS = [
     checks: (src) => {
       const errs = [];
       if (!/'gnt'/.test(src)) errs.push('the tab key must exist');
-      if (!/CM_TABS[\s\S]{0,400}'gnt'/.test(src)) errs.push('the tab must be in the tab order');
+      // Parsed, not measured by character distance. The old regex demanded
+      // 'gnt' within 400 chars of the CM_TABS declaration, which is a proxy
+      // for "is in the list" that breaks the moment a comment is added above
+      // it — as one was on 2026-09-13, failing this contract over a change
+      // that never touched the GnT tab.
+      if (!(parseCmTabs(src) || []).includes('gnt')) errs.push('the tab must be in the tab order');
       if (!/t !== 'gnt'/.test(src)) {
         errs.push('the GnT board is its own table, not a zone-tile board');
       }

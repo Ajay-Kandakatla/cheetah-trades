@@ -157,13 +157,68 @@ def reading(df, **kw) -> Optional[dict]:
         return None
     sq = squeeze(df) or {"on": False, "bars": 0, "released": False}
     pos = ch["position"]
-    where = ("above the upper band" if pos is not None and pos > 1 else
-             "below the lower band" if pos is not None and pos < 0 else
-             "upper half" if pos is not None and pos >= 0.5 else "lower half")
+    # "unknown" is a real branch, not a tidy-up. `position` is None whenever the
+    # channel has no span (ATR collapsed to zero on a halted or one-price
+    # name), and the old chain fell through every test to the CONCRETE string
+    # "lower half" — an unmeasurable name reading as a definite state. Anything
+    # written off `where` (a badge, a "not coiled so it's clear" sentence)
+    # would then be asserting the favourable read on no evidence.
+    where = ("unknown" if pos is None else
+             "above the upper band" if pos > 1 else
+             "below the lower band" if pos < 0 else
+             "upper half" if pos >= 0.5 else "lower half")
     return {**ch, "squeeze": sq["on"], "squeeze_bars": sq["bars"],
             "squeeze_released": sq["released"], "where": where,
             # said every time, because a squeeze reads like a signal and is not
             "note": "a squeeze is compression, not a direction"}
+
+
+def channel_series(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
+                   mult: float = MULT) -> Optional[dict]:
+    """The channel as a SERIES — one upper/mid/lower per bar, keyed by date.
+
+    THE BUG THIS EXISTS TO FIX (Ajay 2026-09-13, MU): *"I was hoping to see the
+    KC bands like this but it should flat horizontal. Are they accurate?"*
+    `chart_lines` returns the channel at the LAST bar as three scalars, and a
+    scalar renders as a horizontal level across the whole tile. The numbers
+    were right for the last bar and wrong for every other bar on the screen:
+    the drawing asserted the band sat at 1056.21 three months ago, when it was
+    somewhere else entirely. A Keltner channel is an EMA plus an ATR multiple;
+    both move every bar, so the channel bends and the drawing has to bend with
+    it.
+
+    Computed on the FULL frame that comes in, never on a zoom slice — an EMA
+    and a Wilder ATR both need warm-up, and seeding them at the left edge of a
+    6-month window would draw a channel that is wrong exactly where the eye
+    lands first.
+
+    Returns {"dates": [...], "upper": [...], "mid": [...], "lower": [...]} with
+    None in any slot the warm-up has not filled, or None when the frame is too
+    short. A None must survive to the renderer as a GAP: joining across it
+    would draw a straight segment through prices the channel never had.
+    """
+    if df is None or len(df) < max(MIN_BARS, ema_len, atr_len):
+        return None
+    try:
+        close = df["close"].astype(float)
+        mid_s = close.ewm(span=ema_len, adjust=False).mean()
+        atr_s = _atr(df, atr_len)
+        dates = [str(getattr(d, "date", lambda: d)())[:10] for d in df.index]
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("keltner: channel_series failed: %s", exc)
+        return None
+    up, mi, lo = [], [], []
+    for m, a in zip(mid_s.tolist(), atr_s.tolist()):
+        mf, af = _f(m), _f(a)
+        if mf is None or af is None or af <= 0:
+            up.append(None), mi.append(None), lo.append(None)
+            continue
+        up.append(round(mf + mult * af, 4))
+        mi.append(round(mf, 4))
+        lo.append(round(mf - mult * af, 4))
+    if not any(v is not None for v in mi):
+        return None
+    return {"dates": dates, "upper": up, "mid": mi, "lower": lo}
 
 
 def chart_lines(df, **kw) -> list:

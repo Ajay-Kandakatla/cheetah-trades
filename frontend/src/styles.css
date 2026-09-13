@@ -11595,6 +11595,12 @@ a.tk-link:hover   { color: inherit; }
   white-space: nowrap;
 }
 .olg-item input { accent-color: var(--cm-green, #22c55e); }
+/* The tab's own overlay (2026-09-13): ticked, disabled, and visibly so — it is
+   always drawn here, and a control that looks clickable but is not reads as a
+   bug. `cursor: default` on the whole label, not just the box, because the
+   label is what the pointer lands on. */
+.olg-locked { opacity: 0.75; cursor: default; }
+.olg-locked input { cursor: default; }
 .olg-swatch {
   width: 0.85rem; height: 0.55rem; border-radius: 2px; display: inline-block;
   opacity: 0.85;

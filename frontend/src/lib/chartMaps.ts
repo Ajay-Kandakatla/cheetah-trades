@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
+export type CmTab = 'keltner' | 'amd' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -48,7 +48,15 @@ export type CmTab = 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_deman
 // of the patterns board instead: one at the top, one on every card, each
 // filtered to that pattern. A link from the thing you are looking at beats a
 // tab two seats over.
-export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns',
+  // 🌀 Turning Bullish (Ajay 2026-09-13: "I need two tabs in chart maps
+  // for me to look at where stocks are bullish in the recent 6 months
+  // where they are turning bullish"). Placed mid-pack rather than at the
+  // front on purpose: the order is supposed to be MEASURED, and a brand
+  // new tab has no usage yet. `tabUsageKey` counts them from the first
+  // open, so the next re-cut moves them on evidence.
+  'keltner', 'amd',
+  'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -97,6 +105,19 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   signals: {
     label: '\u26A1 Signals',
     blurb: 'Your own tickers on 1-minute candles with BUY / SELL tags \u2014 opening-range breaks, liquidity sweeps and BOS/CHoCH structure composed into the five-step entry (stop at the trap wick, 2R target). Closed bars only; signals never repaint. Same board as the Signal Lab page.',
+  },
+  // 🌀 Turning Bullish, two tabs (Ajay 2026-09-13: "I need two tabs in chart
+  // maps for me to look at where stocks are bullish in the recent 6 months
+  // where they are turning bullish"). Both read the SAME modules the chart
+  // overlays draw from, through supply_demand/turning_bullish.py, so a name on
+  // the board and that name's chart can never disagree about its state.
+  keltner: {
+    label: '\u{1F300} KC Coiled',
+    blurb: 'MEASURED 2026-09-13 AND THE CLAIM IS INVERTED \u2014 read this before the rules. Over 2,660 names and 1,200,755 closed daily bars (2024-09-12 \u2192 2026-09-11) a coiled bar returned LESS than every other bar of the same names: 21-day median lift \u22120.33pp (95% CI \u22120.57 to \u22120.12), 10d \u22120.23pp (\u22120.33 to \u22120.10), 5d \u22120.20pp (\u22120.27 to \u22120.12); win rate 49.0% vs 50.9% at 5 days. And the one thing a coil is supposed to do it does LESS often: a coiled name closes above its upper Keltner band within 21 sessions 40.0% of the time (CI 39.0\u201341.1) against 55.0% (54.5\u201355.6) for a name in the SAME upper half of the channel with the SAME rising 20-EMA and no squeeze \u2014 the squeeze makes that break 14.8pp LESS likely. Against that one-clause control the squeeze adds nothing either way (21d +0.11pp, CI \u22120.17 to +0.41), so the whole negative lift is \u201cbuying strength inside the channel\u201d, not the compression. THE ONE POSITIVE CELL: a coil of 21+ bars beat that control at all three horizons (21d +1.34pp, CI +0.39 to +2.33) \u2014 which is why the board sorts LONGEST COIL FIRST \u2014 but it is 1 of 4 buckets, 471 names, it disagrees with the other three, and it is four names on today\u2019s board. Exploratory, not a rule. Script: backend/scripts/turning_bullish_keltner_study.py, re-runnable verbatim. WHAT THE BOARD IS: the Bollinger band inside a 1.5\u00d7 Keltner channel (the squeeze) or released on the last bar, price in the upper half of the 2\u00d7 channel, and the 20-day EMA midline higher than 20 bars ago \u2014 all three, or it grades \u201cupper half\u201d and is context. Fires on 144 of 2,669 names (5.4%). The channel is drawn as a CURVE, not three flat lines: an EMA plus an ATR multiple moves every bar, and the flat draw claimed the band sat at its latest value across the whole window (your MU catch \u2014 the midline was 921.60 sixty bars back against 960.61 now). HOW IT DIFFERS FROM STRONG VCP: that board is the book\u2019s own cited contraction with a pivot and a stop; this is Carter\u2019s TTM compression test over Raschke\u2019s EMA+ATR channel \u2014 no cited source in your library, and now measured negative. A squeeze is COMPRESSION, NOT A DIRECTION. Nothing here pushes, gates a scan, or buys in any lane. Not advice.',
+  },
+  amd: {
+    label: '\u{1F300} AMD Raided',
+    blurb: 'MEASURED 2026-09-13 AND THE CLAIM IS INVERTED \u2014 more clearly than the Keltner tab. Over 2,666 names and 1,150,446 evaluated bars, forward returns are indistinguishable from every other bar of the same names: 21d +1.77% vs +2.02%, lift \u22120.25% (95% CI \u22121.30 to +0.72), and 5d and 10d likewise span zero leaning negative. The one thing this read claims is backwards: against a like-for-like bar sitting INSIDE its own base at the same distance below the top, a fresh raid makes a close above that top within 21 sessions LESS likely \u2014 42.7% vs 51.6%, \u22128.9pp (95% CI \u221211.4 to \u22125.9) \u2014 negative in all seven distance buckets and worse the further price sits below the top. The module\u2019s own phase agrees: it reads \u201cdistribution\u201d within 21 bars on 48.1% of firing bars against 65.7% of non-firing ones. Raid recency rescues nothing (0\u20133 bars vs 4\u201310: every CI spans zero and fresh leans WORSE), so the 3-session bound here is a BOARD-SIZE cut, never an accuracy gain \u2014 at 10 sessions this state carries 1,201 of 2,621 names, 45.8% of the market. Script: backend/scripts/turning_bullish_amd_study.py. WHAT THE BOARD IS: a base of 8+ bars whose whole range fits inside 3\u00d7 its own median true range had its LOW traded through and the bar CLOSED BACK INSIDE it \u2014 the stops under the base are gone and the markup through the top has not happened. A close BEYOND the edge is a breakout and means the opposite thing, so the close is the whole test. It fires on 30.3% of all bars; today\u2019s board is 606 (22.7%), which is still a description of the tape rather than a selection. Longest base first, because a longer base is a level more people are watching \u2014 an ORDER, not a measured ranking. This app measured AMD\u2019s nearest relative, the ICT tab, at +0.03R over 6,004 signals against placebo; this one is worse than that null. Nothing here pushes, gates or buys. Not advice.',
   },
   vcp: {
     label: 'Strong VCP',
@@ -240,7 +261,25 @@ export type CmLine = { price: number; label: string; tone: CmLineTone };
 export type CmTapeSession = 'premarket' | 'rth' | 'afterhours' | 'closed';
 export type CmMarker = { date: string; label?: string; kind?: string; price?: number };
 export type CmStat = { k: string; v: string };
-export type CmBadge = { text: string; tone: 'good' | 'warn' | 'muted' };
+export type CmBadge = {
+  text: string; tone: 'good' | 'warn' | 'muted';
+  /** Overlay family this badge belongs to, when it belongs to one. Present on
+   *  the study verdicts (`keltner`, `amd`) so `filterTile` can drop the
+   *  SENTENCE along with that family's bands and lines — one checkbox governs
+   *  the drawing and the words together. A badge with no group is a board
+   *  badge (Setup ready, Vol drying) and is never filtered. */
+  group?: string;
+};
+
+/** A per-bar overlay: one value per tile bar, `null` where there is none.
+ *
+ *  Ajay 2026-09-13 (MU): "I was hoping to see the KC bands like this but it
+ *  should flat horizontal." A `CmLine` is ONE price and renders as a
+ *  horizontal level, which is right for a pivot, a stop or a band edge and
+ *  wrong for a Keltner channel — an EMA plus an ATR multiple moves every bar.
+ *  `values` is aligned 1:1 with `tile.bars`; a null is a GAP in the drawn
+ *  path, never a point joined through. */
+export type CmCurve = { tone: CmLineTone; label: string; values: (number | null)[] };
 
 export type CmTile = {
   symbol: string;
@@ -254,6 +293,7 @@ export type CmTile = {
   why: string;
   theme?: string | null;
   badges?: CmBadge[];
+  curves?: CmCurve[];
   pattern?: string | null;
 };
 
@@ -770,6 +810,7 @@ export function barDomain(
   bands: CmBand[] = [],
   lines: CmLine[] = [],
   padPct = 6,
+  curves: CmCurve[] = [],
 ): Domain {
   const highs = bars.map((b) => b.h).filter((n) => Number.isFinite(n));
   const lows = bars.map((b) => b.l).filter((n) => Number.isFinite(n));
@@ -787,6 +828,11 @@ export function barDomain(
   };
   for (const b of bands) { stretch(b.lo); stretch(b.hi); }
   for (const l of lines) stretch(l.price);
+  // A curve is drawn across the whole tile, so a channel that runs wider than
+  // the candles would be CLIPPED at the top or bottom of the plot without
+  // this. Same `stretch` guard as every other overlay: a value more than one
+  // chart-height away is an outlier and never squashes the candles to fit it.
+  for (const c of curves) for (const v of c.values || []) stretch(v);
 
   const pad = ((hi - lo) || hi || 1) * (padPct / 100);
   return { lo: lo - pad, hi: hi + pad };
@@ -847,6 +893,28 @@ export function nowLabelText(label: string, price: number): string {
   if (!Number.isFinite(price)) return label;
   const px = Math.abs(price) < 1 ? price.toFixed(3) : price.toFixed(2);
   return `${label || 'now'} ${px}`;
+}
+
+/** A curve's gutter label — its value at the LAST bar it has one.
+ *
+ *  The number in the gutter always means "where this overlay is now", which
+ *  for a flat level is the level itself and for a bending channel is its
+ *  right-hand end. Returned as pseudo-lines so `lineLabels` lays them out in
+ *  the same collision pass as everything else: a channel label that overlapped
+ *  a stop label would be the 2026-09-08 overlap bug again, on a new family. */
+export function curveLabels(curves: CmCurve[] = []): CmLine[] {
+  const out: CmLine[] = [];
+  for (const c of curves || []) {
+    const vals = c.values || [];
+    for (let i = vals.length - 1; i >= 0; i -= 1) {
+      const v = vals[i];
+      if (v != null && Number.isFinite(v)) {
+        out.push({ price: v, tone: c.tone, label: `${c.label} ${v.toFixed(2)}` });
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 export function lineLabels(
