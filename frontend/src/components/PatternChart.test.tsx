@@ -75,6 +75,43 @@ describe('PatternChart', () => {
     expect(screen.queryByText(/KC mid/)).not.toBeInTheDocument();
   });
 
+  /* ONE channel, ONE label per level (Ajay 2026-09-14: "Bug for later —
+   * multiple KC indicators on the charts"). His FLY tile printed each KC level
+   * twice because the payload carried the channel as three flat `lines` AND as
+   * three `curves`, and `curveLabels` formats a curve label exactly the way
+   * the old flat builder did. The backend now serves one carrier; this is the
+   * render-side proof that one carrier means one label. */
+  it('draws exactly ONE label per KC level for a three-curve channel', () => {
+    const b = bars(40);
+    const curve = (label: string, off: number) =>
+      ({ tone: 'keltner' as const, label, values: b.map((x) => x.c + off) });
+    draw({ ...TILE, lines: [], curves: [
+      curve('KC upper', 1.5), curve('KC mid', 1.0), curve('KC lower', 0.5)] });
+    for (const lvl of ['KC upper', 'KC mid', 'KC lower']) {
+      expect(screen.getAllByText(new RegExp(`^${lvl} \\d`))).toHaveLength(1);
+    }
+    expect(document.querySelectorAll('polyline').length).toBe(3);
+  });
+
+  it('NEGATIVE — a payload carrying BOTH carriers would double every label', () => {
+    // The bug itself, pinned from the render side so the guard is honest about
+    // WHY the backend fix matters: PatternChart draws faithfully and has no
+    // dedupe, so a duplicated payload is visible immediately rather than being
+    // silently swallowed (which is what hid this from him for a day).
+    const b = bars(40);
+    draw({ ...TILE,
+      lines: [{ price: b[39].c + 1, label: 'KC mid 14.90', tone: 'keltner' }],
+      curves: [{ tone: 'keltner', label: 'KC mid', values: b.map((x) => x.c + 1) }] });
+    expect(screen.getAllByText(/^KC mid \d/).length).toBeGreaterThan(1);
+  });
+
+  it('carries the squeeze state after the value, not inside the name', () => {
+    const b = bars(40);
+    draw({ ...TILE, lines: [], curves: [{ tone: 'keltner', label: 'KC mid',
+      suffix: ' · squeeze 39b', values: b.map((x) => x.c + 1) }] });
+    expect(screen.getByText(/^KC mid \d+\.\d+ · squeeze 39b$/)).toBeInTheDocument();
+  });
+
   it('renders the ticker, its why-line and its stats', () => {
     draw(TILE);
     expect(screen.getByText('IONQ')).toBeInTheDocument();

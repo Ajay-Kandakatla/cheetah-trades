@@ -220,6 +220,84 @@ def test_curves_align_BY_DATE_so_a_live_bar_cannot_shift_the_channel():
     assert mid["values"][-2] == ser["mid"][-1]        # ...and nothing shifted
 
 
+# ───────────────────────────── ONE Keltner channel, drawn ONCE (2026-09-14)
+#
+# Ajay: *"Bug for later — multiple KC indicators on the charts"*. FLY on the
+# Support tab printed "KC upper 25.17", "KC mid 22.27" and "KC lower 19.37"
+# TWICE each, stacked. Two independent causes, so two guards.
+
+
+def _tile_for(df, n=40):
+    dates = [str(d.date()) for d in df.index][-n:]
+    return {"bars": [{"t": d, "o": 1, "h": 1, "l": 1, "c": 1, "v": 1}
+                     for d in dates]}
+
+
+def test_NEGATIVE_the_study_overlays_carry_NO_keltner_LINES():
+    """CAUSE ONE, and the one his screenshot showed. The channel is a curve;
+    a flat scalar line at the same value renders a second time with a label
+    `curveLabels` builds character-for-character identically. Every checkbox
+    surface — the Support tab and every board tab — comes through here."""
+    from chart_maps import board as B
+    df = dated([100 + i * 0.8 for i in range(200)])
+    o = B._study_overlays(df, 200)
+    assert [l for l in o["lines"] if l.get("tone") == "keltner"] == []
+    # the other three families must be untouched by this removal
+    assert {l.get("tone") for l in o["lines"]} <= {"amd", "fib", "meanrev"}
+
+
+def test_NEGATIVE_attaching_the_curves_TWICE_still_leaves_exactly_three():
+    """CAUSE TWO. `_keltner_curves` appended, and it has two callers: the 🌀
+    tab's own builder and `_attach_studies`. On tab=keltner&studies=true both
+    ran and the payload carried SIX curves — the same three levels twice, value
+    for value. Idempotence makes call order and call count stop mattering."""
+    from chart_maps import board as B
+    df = dated([100 + i * 0.8 for i in range(200)])
+    tile = _tile_for(df)
+    B._keltner_curves(tile, df)
+    first = [dict(c) for c in tile["curves"]]
+    B._keltner_curves(tile, df)
+    B._keltner_curves(tile, df)
+    assert tile["curves"] == first
+    assert [c["label"] for c in tile["curves"]] == ["KC upper", "KC mid", "KC lower"]
+
+
+def test_exactly_ONE_curve_per_level_and_foreign_curves_survive():
+    """The replace must be surgical: it may only drop the keltner family."""
+    from chart_maps import board as B
+    df = dated([100 + i * 0.8 for i in range(200)])
+    tile = _tile_for(df)
+    tile["curves"] = [{"tone": "meanrev", "label": "mean", "values": [1.0]}]
+    B._keltner_curves(tile, df)
+    B._keltner_curves(tile, df)
+    kc = [c for c in tile["curves"] if c["tone"] == "keltner"]
+    assert len(kc) == 3
+    assert len({c["label"] for c in kc}) == 3
+    assert [c for c in tile["curves"] if c["tone"] == "meanrev"] == [
+        {"tone": "meanrev", "label": "mean", "values": [1.0]}]
+
+
+def test_the_squeeze_state_SURVIVED_the_move_onto_the_mid_curve():
+    """It used to hang off the flat mid LINE, which no longer exists. Losing it
+    would have quietly deleted the one thing the overlay reports that the eye
+    cannot read off the chart — and it is a SUFFIX, not part of the name,
+    because the renderer prints the value between the two."""
+    from chart_maps import board as B
+    rng = np.random.default_rng(11)
+    tight = list(100 + rng.normal(0, 0.05, 200))
+    df = dated(tight, [x + 0.06 for x in tight], [x - 0.06 for x in tight])
+    assert KC.reading(df)["squeeze"] is True
+    tile = _tile_for(df)
+    B._keltner_curves(tile, df)
+    mid = next(c for c in tile["curves"] if c["label"] == "KC mid")
+    assert mid["label"] == "KC mid"                    # the NAME stays clean
+    assert "squeeze" in (mid.get("suffix") or "")
+    # and the levels that have no squeeze state carry no suffix at all
+    for c in tile["curves"]:
+        if c["label"] != "KC mid":
+            assert not c.get("suffix")
+
+
 # ─────────────────────────────────────────── the studies gate
 def test_NEGATIVE_studies_is_gated_on_True_not_on_truthiness():
     """SOURCE GUARD, and it has a history: FastAPI resolves `Query(...)`

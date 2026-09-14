@@ -3990,11 +3990,24 @@ def _study_overlays(df, days: int) -> dict:
         lines.extend(_mr.chart_lines(df))
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: meanrev overlay failed: %s", exc)
-    try:
-        from supply_demand import keltner as _kc
-        lines.extend(_kc.chart_lines(df))
-    except Exception as exc:                                    # noqa: BLE001
-        log.debug("chart-maps: keltner overlay failed: %s", exc)
+    # NO KELTNER LINES HERE. The channel is a CURVE and only a curve.
+    #
+    # Ajay 2026-09-14: *"Bug for later — multiple KC indicators on the charts"*
+    # — FLY on the Support tab drew "KC upper 25.17", "KC mid 22.27" and
+    # "KC lower 19.37" TWICE each, stacked and overlapping.
+    #
+    # It was one overlay drawn by two carriers. The 2026-09-13 curve fix (his
+    # MU catch) removed the three flat scalars from the 🌀 tab's own builder,
+    # which is why that tab's comment reads "the curve is attached below" — but
+    # THIS helper is the path every *checkbox* surface uses (Support and every
+    # board tab), and it still called `keltner.chart_lines`. So the flat level
+    # and the curve both rendered, and `curveLabels` formats a curve label as
+    # "<name> <value at its last bar>" — character-for-character the same
+    # string `chart_lines` built. Two identical labels, two sets of lines.
+    #
+    # Deleting the flat draw is the whole fix: a scalar renders horizontally by
+    # definition and was wrong everywhere except the right edge. The squeeze
+    # state the mid line used to carry now rides on the mid CURVE.
     return {"bands": bands, "lines": lines}
 
 
@@ -4025,6 +4038,17 @@ def _keltner_curves(tile: dict, df) -> None:
         return
     if not ser:
         return
+    # The squeeze tag used to hang off the flat "KC mid" LINE, which no longer
+    # exists (see `_study_overlays`). It rides on the mid curve instead, as a
+    # suffix rather than part of the name, so the renderer can still put the
+    # value straight after the label: "KC mid 22.27 · squeeze 39b".
+    tag = ""
+    try:
+        r = KC.reading(df)
+        if r and r.get("squeeze"):
+            tag = " · squeeze %db" % r["squeeze_bars"]
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: keltner squeeze read failed: %s", exc)
     by_date = {d: i for i, d in enumerate(ser["dates"])}
     curves = []
     for key, label in (("upper", "KC upper"), ("mid", "KC mid"),
@@ -4033,9 +4057,23 @@ def _keltner_curves(tile: dict, df) -> None:
                  if str(b.get("t")) in by_date else None) for b in bars]
         if not any(v is not None for v in vals):
             continue
-        curves.append({"tone": "keltner", "label": label, "values": vals})
-    if curves:
-        tile["curves"] = list(tile.get("curves") or []) + curves
+        c = {"tone": "keltner", "label": label, "values": vals}
+        if key == "mid" and tag:
+            c["suffix"] = tag
+        curves.append(c)
+    if not curves:
+        return
+    # IDEMPOTENT ON PURPOSE — it appended before, and it has two callers.
+    #
+    # The 🌀 keltner tab attaches the channel in its own builder (it needs one
+    # even when `studies` is off), and `_attach_studies` attaches it again for
+    # every other surface. On `tab=keltner&studies=true` both ran and the
+    # append gave SIX curves — the same three levels twice, value for value.
+    # Replacing the family rather than extending it makes the call order and
+    # the call count stop mattering.
+    kept = [c for c in (tile.get("curves") or [])
+            if (c or {}).get("tone") != "keltner"]
+    tile["curves"] = kept + curves
 
 
 def _attach_verdicts(tile: dict, df) -> None:

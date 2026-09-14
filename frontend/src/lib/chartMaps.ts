@@ -289,7 +289,13 @@ export type CmBadge = {
  *  wrong for a Keltner channel — an EMA plus an ATR multiple moves every bar.
  *  `values` is aligned 1:1 with `tile.bars`; a null is a GAP in the drawn
  *  path, never a point joined through. */
-export type CmCurve = { tone: CmLineTone; label: string; values: (number | null)[] };
+export type CmCurve = {
+  tone: CmLineTone; label: string; values: (number | null)[];
+  /** Trailing text for the gutter label, AFTER the value — "· squeeze 39b".
+   *  It is not part of `label` because the value is printed between the two:
+   *  "KC mid 22.27 · squeeze 39b". */
+  suffix?: string | null;
+};
 
 export type CmTile = {
   symbol: string;
@@ -919,7 +925,10 @@ export function curveLabels(curves: CmCurve[] = []): CmLine[] {
     for (let i = vals.length - 1; i >= 0; i -= 1) {
       const v = vals[i];
       if (v != null && Number.isFinite(v)) {
-        out.push({ price: v, tone: c.tone, label: `${c.label} ${v.toFixed(2)}` });
+        out.push({
+          price: v, tone: c.tone,
+          label: `${c.label} ${v.toFixed(2)}${c.suffix || ''}`,
+        });
         break;
       }
     }

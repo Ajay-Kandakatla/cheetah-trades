@@ -179,8 +179,9 @@ def channel_series(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
 
     THE BUG THIS EXISTS TO FIX (Ajay 2026-09-13, MU): *"I was hoping to see the
     KC bands like this but it should flat horizontal. Are they accurate?"*
-    `chart_lines` returns the channel at the LAST bar as three scalars, and a
-    scalar renders as a horizontal level across the whole tile. The numbers
+    The old `chart_lines` returned the channel at the LAST bar as three scalars
+    (removed 2026-09-14, see below), and a scalar renders as a horizontal level
+    across the whole tile. The numbers
     were right for the last bar and wrong for every other bar on the screen:
     the drawing asserted the band sat at 1056.21 three months ago, when it was
     somewhere else entirely. A Keltner channel is an EMA plus an ATR multiple;
@@ -221,17 +222,16 @@ def channel_series(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
     return {"dates": dates, "upper": up, "mid": mi, "lower": lo}
 
 
-def chart_lines(df, **kw) -> list:
-    """Three lines for a tile: {price, label, tone}. Tone is always "keltner"
-    so the family gets its own checkbox and can never be mistaken for the
-    demand/supply levels he trades."""
-    r = reading(df, **kw)
-    if not r:
-        return []
-    tag = " · squeeze %db" % r["squeeze_bars"] if r["squeeze"] else ""
-    return [
-        {"price": r["upper"], "tone": "keltner", "label": "KC upper %.2f" % r["upper"]},
-        {"price": r["mid"], "tone": "keltner",
-         "label": "KC mid %.2f%s" % (r["mid"], tag)},
-        {"price": r["lower"], "tone": "keltner", "label": "KC lower %.2f" % r["lower"]},
-    ]
+# THERE IS DELIBERATELY NO `chart_lines` IN THIS MODULE.
+#
+# It existed until 2026-09-14 and returned the channel's last bar as three
+# scalars {price, label, tone}. A scalar is drawn as a horizontal level across
+# the whole tile, which is what `channel_series` was written to fix (Ajay's MU
+# catch, 2026-09-13) — and after that fix the two carriers BOTH drew, so every
+# Keltner level appeared twice with an identical label (his FLY screenshot,
+# 2026-09-14).
+#
+# A Keltner channel bends every bar. It has exactly one drawable form here:
+# `channel_series`, served as `curves`. `reading` stays for the numbers — the
+# squeeze state, `where`, the band values — which are text, not a drawing.
+# Anything that wants to DRAW this channel takes the series.

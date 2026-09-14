@@ -342,7 +342,7 @@ def test_the_squeeze_NEVER_claims_a_direction():
 
 def test_NEGATIVE_too_few_bars_draws_nothing():
     assert K.channel(frame(list(np.linspace(10, 11, 12)))) is None
-    assert K.chart_lines(frame(list(np.linspace(10, 11, 12)))) == []
+    assert K.channel_series(frame(list(np.linspace(10, 11, 12)))) is None
     assert K.squeeze(None) is None
 
 
@@ -353,8 +353,19 @@ def test_NEGATIVE_a_flat_series_has_no_atr_and_draws_nothing():
     assert K.channel(flat) is None
 
 
-def test_keltner_lines_have_their_OWN_tone():
-    assert {l["tone"] for l in K.chart_lines(kc_frame())} == {"keltner"}
+def test_NEGATIVE_the_module_offers_NO_flat_level_draw_at_all():
+    """THE DUPLICATE GUARD (Ajay 2026-09-14: "multiple KC indicators on the
+    charts"). `chart_lines` returned the channel's last bar as three scalars,
+    and a scalar draws as a horizontal level across the whole tile. Once the
+    curve shipped (2026-09-13) both carriers drew and every level appeared
+    twice with an identical label. There must be exactly ONE way to draw this
+    channel, so the flat builder is gone and must not come back."""
+    assert not hasattr(K, "chart_lines")
+    # ...and nothing else in the module may grow into a replacement: the only
+    # drawable export is the per-bar series.
+    drawable = [n for n in dir(K)
+                if n.startswith(("chart_", "lines", "draw_", "overlay"))]
+    assert drawable == [], drawable
 
 
 def test_keltner_is_uncited_and_says_a_squeeze_is_not_direction():
