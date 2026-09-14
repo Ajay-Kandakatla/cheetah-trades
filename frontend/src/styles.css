@@ -11009,6 +11009,43 @@ a.tk-link:hover   { color: inherit; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 20ch;
 }
 .cm-tile-badges { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+/* The two ACTIONS live in the head beside the symbol; the chips moved out of
+   the head entirely (see .cm-tile-quads). */
+.cm-tile-actions { display: flex; align-items: baseline; gap: 0.3rem; }
+
+/* ── the 2x2 (Ajay 2026-09-14: "I need the chips in 4 quadrants") ──────────
+   Its OWN full-width row under the head. As a flex child of .cm-tile-head the
+   grid would only get the width left after the symbol + a 20ch name, and the
+   two columns would not be equal — the whole arithmetic assumes full width. */
+.cm-tile-quads {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 0.6rem; margin-bottom: 0.4rem;
+  align-items: start;
+}
+.cm-quad { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.cm-quad-label {
+  font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-faint, #6b7686);
+  border-bottom: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+  padding-bottom: 0.12rem;
+}
+.cm-quad-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; min-height: 0; }
+/* MEASURED across 225 live tiles: the bottom-right box is empty on 93% of
+   them, so an empty cell is the NORMAL case, not an error state. It keeps its
+   place and dims rather than collapsing — a box that moves defeats the point
+   of having boxes. */
+.cm-quad-empty { opacity: 0.4; }
+.cm-badge-more {
+  color: var(--cm-slate, #8595ad); background: none; cursor: pointer;
+  font: inherit; font-size: 0.63rem; font-weight: 700;
+}
+.cm-badge-more:hover { color: var(--ink, #e7e7e7); }
+/* One column at the SAME breakpoint .cm-grid already collapses at, so the
+   tile and the grid around it change shape at one width. */
+@media (max-width: 640px) {
+  .cm-tile-quads { grid-template-columns: 1fr; gap: 0.25rem; }
+  .cm-quad-empty { display: none; }
+}
 .cm-badge {
   font-size: 0.63rem; font-weight: 700; border-radius: 999px;
   padding: 0.08rem 0.4rem; border: 1px solid currentColor; white-space: nowrap;
@@ -12388,4 +12425,72 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-gchip-bad {
   color: var(--bad, #f85149); border: 1px solid rgba(248,81,73,0.40);
   background: rgba(248,81,73,0.10);
+}
+
+/* ── Long-term fundamentals (ticker ▸ Fundamentals tab, 2026-09-14) ──────────
+   Ajay: "Move them to fundamentals tab in the individual ticker and give a
+   score on the fundamentals ranking for longterm."
+   The score is deliberately NOT colour-coded good/bad. It is a sector
+   percentile, not a verdict, and colouring it green would make a forecast the
+   backend has not earned (`score_is_measured` is still false). */
+.lt-wrap { display: flex; flex-direction: column; gap: 14px; }
+.lt-note { color: var(--muted, #8b95a5); font-size: 14px; padding: 14px 0; }
+
+.lt-scorecard { display: flex; gap: 18px; align-items: flex-start;
+  background: var(--panel, #161b24); border: 1px solid var(--border, #242c39);
+  border-radius: 8px; padding: 16px 18px; }
+.lt-scorenum { display: flex; align-items: baseline; gap: 3px; flex: none; }
+.lt-score-value { font-size: 40px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.lt-score-of { font-size: 13px; color: var(--muted, #8b95a5); }
+.lt-scorebody { display: flex; flex-direction: column; gap: 6px; }
+.lt-score-title { font-weight: 600; font-size: 15px; }
+.lt-score-sub { font-size: 13px; color: var(--muted, #8b95a5); line-height: 1.5; }
+.lt-unmeasured { font-size: 12.5px; line-height: 1.5; color: var(--muted, #8b95a5);
+  border-left: 2px solid var(--warn, #d9a441); padding-left: 10px; margin-top: 2px; }
+
+.lt-coverage { font-size: 12.5px; color: var(--muted, #8b95a5);
+  font-variant-numeric: tabular-nums; }
+.lt-cov-ok { color: var(--good, #3dd68c); font-weight: 600; }
+.lt-cov-thin { color: var(--warn, #d9a441); font-weight: 600; }
+.lt-cov-warn { color: var(--warn, #d9a441); }
+
+.lt-tablewrap { overflow-x: auto; }
+.lt-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.lt-table th { text-align: left; font-size: 10.5px; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--muted, #8b95a5); font-weight: 500;
+  padding: 8px 12px; border-bottom: 1px solid var(--border, #242c39); }
+.lt-table td { padding: 8px 12px; border-bottom: 1px solid var(--border, #242c39); }
+.lt-table .lt-r { text-align: right; }
+.lt-val { font-variant-numeric: tabular-nums; }
+.lt-metric { font-weight: 600; cursor: help; }
+.lt-why { color: var(--muted, #8b95a5); font-size: 12px; }
+.lt-dim { color: var(--muted, #8b95a5); }
+.lt-pctl { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lt-pctl small { font-size: 9px; opacity: .65; margin-left: 1px; }
+.lt-inst td { background: rgba(125, 140, 170, .06); }
+.lt-hist { font-size: 12.5px; }
+
+.lt-promoter { font-size: 12.5px; color: var(--muted, #8b95a5); line-height: 1.55;
+  margin: 0; }
+.lt-toggle { background: none; border: 1px solid var(--border, #242c39);
+  color: inherit; border-radius: 6px; padding: 6px 12px; font-size: 12.5px;
+  cursor: pointer; }
+.lt-toggle:hover { border-color: var(--muted, #8b95a5); }
+.lt-history { display: flex; flex-direction: column; gap: 10px; }
+
+.lt-weights { font-size: 12.5px; color: var(--muted, #8b95a5); }
+.lt-weights summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.lt-weights p { line-height: 1.55; }
+.lt-weights ul { display: flex; flex-wrap: wrap; gap: 4px 18px; list-style: none;
+  padding: 0; }
+.lt-weights code { font-size: 12px; }
+.lt-origin { font-style: italic; }
+.lt-built { font-size: 11.5px; color: var(--muted, #8b95a5); }
+.lt-divider { border: none; border-top: 1px solid var(--border, #242c39);
+  margin: 26px 0 4px; }
+
+@media (max-width: 640px) {
+  .lt-scorecard { flex-direction: column; gap: 10px; }
+  .lt-score-value { font-size: 34px; }
 }

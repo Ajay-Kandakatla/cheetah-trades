@@ -1949,6 +1949,35 @@ async def sepa_card_enrichment(
     return JSONResponse(_clean_json_floats(payload))
 
 
+@app.get("/sepa/longterm/{symbol}")
+async def sepa_longterm(symbol: str):
+    """The ten long-term fundamentals + the sector-relative score for one name.
+
+    Ajay 2026-09-14: *"Move them to fundamentals tab in the individual ticker
+    and give a score on the fundamentals ranking for longterm."*
+
+    Its own endpoint rather than another block on `/sepa/candidate/{symbol}`:
+    the Fundamentals tab is one of fourteen and most page loads never open it,
+    while this call reaches the provider for the filed annual statements and
+    pages the trade tape for block share. Bolting it onto the detail payload
+    would put that cost on every ticker view.
+
+    Answers 200 with `ok: false` and a reason rather than erroring — a name
+    with no filed financials (a recent IPO, an ETF, a trust) is a normal case
+    on this endpoint, not a fault.
+    """
+    from sepa import longterm as LT
+    sym = (symbol or "").upper().strip()
+    if not sym:
+        return JSONResponse({"ok": False, "reason": "no symbol"}, status_code=200)
+    try:
+        return JSONResponse(_scrub_nan(LT.score_for(sym)))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("sepa/longterm %s failed: %s", sym, exc)
+        return JSONResponse({"ok": False, "symbol": sym,
+                             "reason": f"{type(exc).__name__}"}, status_code=200)
+
+
 @app.get("/sepa/candidate/{symbol}")
 async def sepa_candidate_detail(symbol: str):
     """Deep-dive on a single candidate: trend + catalyst + insider + IPO age.

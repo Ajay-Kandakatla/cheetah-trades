@@ -1097,6 +1097,18 @@
 # so the verdicts are read on the day that just closed rather than yesterday.
 # Nothing here pushes, gates or buys — both studies are uncited and unmeasured.
 20     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.turning_bullish warm
+
+# ── Long-term fundamentals cross-section (Ajay 2026-09-14) ───────────────────
+# "give a score on the fundamentals ranking for longterm". The score is a
+# percentile WITHIN a stock's own sector, so it needs the whole universe
+# computed together — one cron builds the cross-section, the ticker page reads
+# it. ~5 minutes over 2,685 names at 8 workers.
+#
+# WEEKLY, on Sunday, and deliberately NOT gated by market_hours.gate: filed
+# annual financials do not change intraday or even weekly, this reads no live
+# prices, and the closed-day gate would skip the only day quiet enough to run
+# it. Sunday 06:20 ET keeps it clear of the Sunday growth-board rebuild.
+20     6     *    *    0    /usr/local/bin/python -m sepa.longterm warm
 #
 # CPA columns on the Explosive Growth + Breakouts boards (Ajay 2026-09-13):
 # dilution, cash vs debt, EV/Sales, FCF yield.

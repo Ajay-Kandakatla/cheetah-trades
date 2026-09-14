@@ -17,6 +17,7 @@ const RankTrendChart = lazyWithReload(() => import('../components/RankTrendChart
 import { InsiderFilingTimeline } from '../components/InsiderFilingTimeline';
 import { EarningsQualityPanel } from '../components/EarningsQualityPanel';
 import { SalesPanel } from '../components/SalesPanel';
+import { LongTermFundamentals } from '../components/LongTermFundamentals';
 import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
 import { CheetahVerdictPanel } from '../components/CheetahVerdictPanel';
 const BreakoutHistoryBody = lazyWithReload(() => import('../components/BreakoutHistoryModal').then(m => ({ default: m.BreakoutHistoryBody })));
@@ -1310,6 +1311,18 @@ export function SepaCandidatePage() {
 
             {tab === 'fundamentals' && (
               <section>
+                {/* Long-term block first (Ajay 2026-09-14: "Move them to
+                    fundamentals tab in the individual ticker and give a score
+                    on the fundamentals ranking for longterm"). It sits ABOVE
+                    CANSLIM deliberately: CANSLIM is O'Neil's cited momentum
+                    screen on the CURRENT quarter, this is the decade view, and
+                    he asked for the decade view. They are kept visually apart
+                    so the cited framework is never confused with my composite. */}
+                <div className="eyebrow">Long-term fundamentals</div>
+                <LongTermFundamentals symbol={symbol} />
+
+                <hr className="lt-divider" />
+
                 <div className="sepa-tab-help">
                   <strong>CANSLIM Fundamentals</strong>{' '}
                   <InfoButton inline title="What CANSLIM stands for">
