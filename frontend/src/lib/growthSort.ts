@@ -39,6 +39,12 @@ export type GrowthRowLike = {
   market_cap?: number | null;
   avg_dollar_vol?: number | null;
   zone?: GrowthZoneLike;
+  // Ajay 2026-09-13 — the CPA columns. See sepa/board_metrics.py for coverage
+  // and for the two guards that make `shares_yoy_pct` null rather than wrong.
+  shares_yoy_pct?: number | null;
+  cash_minus_debt?: number | null;
+  ev_sales?: number | null;
+  fcf_yield?: number | null;
 };
 
 /* ── the demand ladder ─────────────────────────────────────────────────────
@@ -77,6 +83,7 @@ export function demandRank(z?: GrowthZoneLike): number | null {
 export const SORT_KEYS = [
   'symbol', 'sales_growth_pct', 'sales_prior_pct', 'q_eps_growth_pct',
   'npm_latest_pct', 'price', 'market_cap', 'avg_dollar_vol', 'demand',
+  'shares_yoy_pct', 'cash_minus_debt', 'ev_sales', 'fcf_yield',
 ] as const;
 export type GrowthSortKey = (typeof SORT_KEYS)[number];
 export type SortDir = 'asc' | 'desc';
@@ -90,7 +97,14 @@ export const DEFAULT_DIR: SortDir = 'desc';
  *  Every column here is "bigger is more interesting" except the symbol, which
  *  is a name and reads A→Z. */
 export function initialDir(key: GrowthSortKey): SortDir {
-  return key === 'symbol' ? 'asc' : 'desc';
+  if (key === 'symbol') return 'asc';           // a name reads A→Z
+  // EV/Sales is the one column where SMALL is the interesting end — it is a
+  // price tag, and the reason to open it is to find what is cheap for its
+  // growth, the same direction the Under Value tab's PSG screen reads.
+  if (key === 'ev_sales') return 'asc';
+  // Dilution opens on the WORST end on purpose. It is a risk column: the row
+  // that matters is the one issuing 300% more stock, not the one buying back.
+  return 'desc';
 }
 
 /** (known, value) for a row under one key. `known:false` is the missing case
@@ -161,4 +175,8 @@ export const SORT_LABEL: Record<GrowthSortKey, string> = {
   market_cap: 'market cap',
   avg_dollar_vol: 'dollar volume',
   demand: 'demand — intact floors first',
+  shares_yoy_pct: 'share count YoY — most diluted first',
+  cash_minus_debt: 'cash minus debt',
+  ev_sales: 'EV/Sales — cheapest first',
+  fcf_yield: 'free-cash-flow yield',
 };

@@ -126,6 +126,19 @@ def _group(rows: list) -> list:
 
 def _payload(doc: dict) -> dict:
     rows = doc.get("rows") or []
+    # Dilution / cash-vs-debt / EV-Sales / FCF-yield (Ajay 2026-09-13), attached
+    # at READ time and deliberately not baked into the stored doc.
+    #
+    # This board is rebuilt ONCE A WEEK (Sundays), while these metrics refresh
+    # every 36h. Persisting them inside `build()` would freeze a balance sheet
+    # to whatever it was the Sunday the screen last ran, and a name that raised
+    # stock on Tuesday would still read as undiluted on Saturday. Reading them
+    # here costs one projected Mongo query over ~29 symbols.
+    try:
+        from sepa import board_metrics as _bm
+        _bm.attach(rows)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: board_metrics attach failed: %s", exc)
     # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
     # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
     # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks

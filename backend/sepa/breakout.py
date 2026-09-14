@@ -422,6 +422,24 @@ def board(top: int = 250, min_count: int = 1, stages: bool = False,
     for x in rows:
         x["beta"] = _betas.get(x["symbol"])
 
+    # Dilution / cash-vs-debt / EV-Sales / FCF-yield (Ajay 2026-09-13).
+    #
+    # AFTER the cut, deliberately, and for the same reason beta is: these are
+    # DISPLAY columns, not ranked fields. The board's own order stays the
+    # income+growth blend, so widening this read to all 2,840 candidates would
+    # buy nothing and cost a provider round-trip per name. The ordering rule
+    # above — rank BEFORE the cut — binds fields that decide the ranking, and
+    # none of these do.
+    #
+    # Reads a cache the cron warms for exactly the names on the two boards; it
+    # never fetches on the request path. A cold or missing entry leaves the row
+    # untouched and the cell renders an em-dash.
+    try:
+        from sepa import board_metrics as _bm
+        _bm.attach(rows)
+    except Exception as exc:                        # noqa: BLE001
+        log.debug("board: board_metrics attach failed: %s", exc)
+
     def _mp(x):
         return ((x.get("buy_verdict") or {}).get("minervini") or {}).get("passed")
 

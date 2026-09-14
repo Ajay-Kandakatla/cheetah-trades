@@ -22,6 +22,7 @@ import {
 } from '../lib/growthSort';
 import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
+import { metricCells } from '../lib/boardMetrics';
 
 export type GrowthZone = {
   missing?: boolean; in_band?: boolean; intact?: boolean | null;
@@ -40,6 +41,16 @@ export type GrowthRow = {
   q_eps_growth_pct?: number | null; eps_prior_pct?: number | null;
   npm_latest_pct?: number | null; npm_expanding?: boolean | null;
   inst_ownership_pct?: number | null;
+  // The CPA columns (Ajay 2026-09-13). Backend sepa/board_metrics.py attaches
+  // these at READ time, not build time — this board rebuilds weekly and the
+  // balance-sheet cache refreshes every 36h.
+  shares_yoy_pct?: number | null;
+  shares_yoy_reason?: string | null;
+  shares_yoy_period?: string | null;
+  cash?: number | null; debt?: number | null;
+  cash_minus_debt?: number | null;
+  ev_sales?: number | null; fcf_yield?: number | null;
+  balance_meaningful?: boolean | null;
   zone?: GrowthZone; warnings?: string[];
   as_of?: string | null;
 };
@@ -392,6 +403,22 @@ export function ExplosiveGrowth() {
                   $ vol/day{arrow('avg_dollar_vol', sortKey, sortDir)}
                 </button>
               </th>
+              {/* The CPA columns (Ajay 2026-09-13), between liquidity and the
+                  demand read: they describe the BUSINESS, so they sit after
+                  the price/size block and before the chart-structure one. */}
+              {([
+                ['shares_yoy_pct', 'Shares YoY', 'Diluted share count vs the same quarter a year earlier. A name doubling revenue while doubling its share count has flat revenue per share.'],
+                ['cash_minus_debt', 'Cash − Debt', 'Cash minus total debt. One signed number rather than a ratio, so it cannot explode on a small denominator.'],
+                ['ev_sales', 'EV/Sales', 'Enterprise value over trailing revenue — debt already counted. Opens cheapest-first.'],
+                ['fcf_yield', 'FCF yield', 'Free cash flow as a percent of market cap. Negative means the business is burning cash.'],
+              ] as const).map(([key, label, hint]) => (
+                <th key={key} className="eg-num" title={hint}
+                    aria-sort={sortKey === key ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                  <button type="button" className="eg-sort" onClick={() => clickSort(key)}>
+                    {label}{arrow(key, sortKey, sortDir)}
+                  </button>
+                </th>
+              ))}
               <th
                   aria-sort={sortKey === 'demand' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
                 <button type="button" className="eg-sort"
@@ -426,6 +453,10 @@ export function ExplosiveGrowth() {
                   <td className="eg-num">
                     {r.avg_dollar_vol == null ? '—' : `$${(r.avg_dollar_vol / 1e6).toFixed(1)}M`}
                   </td>
+                  {metricCells(r).map((c, i) => (
+                    <td key={`m${i}`} className={`eg-num ${c.tone ? `eg-${c.tone}` : ''}`}
+                        title={c.title}>{c.text}</td>
+                  ))}
                   <td className={d.tone} title={d.title}>{d.text}</td>
                   <td className="eg-flags">
                     {warns.length === 0
@@ -439,7 +470,7 @@ export function ExplosiveGrowth() {
               );
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={11} className="eg-dim">
+              <tr><td colSpan={15} className="eg-dim">
                 nothing matches the current filters.
               </td></tr>
             )}

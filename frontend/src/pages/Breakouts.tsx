@@ -26,6 +26,7 @@ import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { ListSkeleton } from '../components/Skeletons';
 import { InfoButton } from '../components/InfoButton';
 import { NewBadge } from '../components/NewBadge';
+import { metricCells } from '../lib/boardMetrics';
 
 type FilterKey = 'all' | 'today' | 'buyable' | 'minervini_pass' | 'minervini_fail' | 'bonde_pass' | 'bonde_fail' | 'both_pass';
 
@@ -322,6 +323,14 @@ export function BreakoutsPage() {
     turnover: turnoverOf,
     stage: (r) => r.stage,
     beta: (r) => r.beta,
+    // The CPA columns (Ajay 2026-09-13). `useSort` sinks nulls in BOTH
+    // directions, which is exactly right here: a dilution figure this app
+    // REFUSED to compute (an up-C basis flip, a suspected split) must never
+    // outrank a measured one in either direction.
+    dilution: (r) => r.shares_yoy_pct ?? null,
+    netcash: (r) => r.cash_minus_debt ?? null,
+    evsales: (r) => r.ev_sales ?? null,
+    fcfy: (r) => r.fcf_yield ?? null,
     march: (r) => marchToTarget(r.last_close, r.r1, r.r2).pct,
     buyable: (r) => (r.is_buyable ? 1e15 : 0) + (turnoverOf(r) || 0),
     conviction: (r) => (r.is_buyable ? 1e9 : 0) + (r.conviction ?? 0),
@@ -545,7 +554,7 @@ export function BreakoutsPage() {
             overscrollBehaviorX: 'contain',
           }}
         >
-          <div className="breakouts-table" role="table" style={{ minWidth: 1200 }}>
+          <div className="breakouts-table" role="table" style={{ minWidth: 1500 }}>
             <div className="breakouts-row breakouts-row--head" role="row" style={headRow}>
               <span style={{ width: 36 }}>#</span>
               <Th label="Ticker" k="ticker" style={colTicker} preferred="asc" sort={sort} />
@@ -561,6 +570,14 @@ export function BreakoutsPage() {
               <Th label="Turnover" k="turnover" style={colTurnover} align="right" sort={sort} />
               <Th label="Stage" k="stage" style={colStage} sort={sort} />
               <Th label="Beta" k="beta" style={colBeta} align="right" preferred="asc" sort={sort} />
+              {/* The CPA columns (Ajay 2026-09-13). EV/Sales opens ASCENDING —
+                  it is a price tag, so the interesting end is the cheap one —
+                  while dilution opens descending because it is a RISK column
+                  and the row worth seeing is the one issuing stock hardest. */}
+              <Th label="Shares YoY" k="dilution" style={colDilution} align="right" sort={sort} />
+              <Th label="Cash−Debt" k="netcash" style={colNetCash} align="right" sort={sort} />
+              <Th label="EV/Sales" k="evsales" style={colEvSales} align="right" preferred="asc" sort={sort} />
+              <Th label="FCF yld" k="fcfy" style={colFcf} align="right" sort={sort} />
               <Th label="→ R1/R2" k="march" style={colMarch} preferred="asc" sort={sort} />
               <span style={colVerdict}>verdict</span>
             </div>
@@ -743,6 +760,15 @@ export function BreakoutsPage() {
                       </span>
                     );
                   })()}
+                  {/* The CPA columns (Ajay 2026-09-13). Same helper as the
+                      Explosive Growth table, so a name cannot read one way on
+                      one board and another way on the other. */}
+                  {metricCells(r).map((c, i) => (
+                    <span key={`m${i}`} className="mono"
+                          style={{ ...METRIC_COLS[i], fontSize: '0.78rem',
+                                   color: METRIC_TONE[c.tone] }}
+                          title={c.title}>{c.text}</span>
+                  ))}
                   {(() => {
                     // Marching toward R1/R2 — distance (%) above current price to
                     // the next trade-plan target (entry+1R / +2R).
@@ -863,4 +889,24 @@ const colTurnover: CSSProperties = { width: 96, textAlign: 'right' };
 const colStage: CSSProperties = { width: 62 };
 const colBeta: CSSProperties = { width: 60, textAlign: 'right' };
 const colMarch: CSSProperties = { width: 104 };
+/* Deliberately narrow (2026-09-13). The row already wanted 1,529px against a
+   ~1,392px laptop viewport before these four, so every one of them is sized to
+   its widest real value and no wider: "+1559%" never renders (that name blanks
+   on the basis guard), "−$16.5B" is the longest Cash−Debt on the live board,
+   EV/Sales prints whole numbers above 10x, and FCF yield is one decimal. */
+const colDilution: CSSProperties = { width: 76, textAlign: 'right' };
+const colNetCash: CSSProperties = { width: 84, textAlign: 'right' };
+const colEvSales: CSSProperties = { width: 68, textAlign: 'right' };
+const colFcf: CSSProperties = { width: 68, textAlign: 'right' };
+/* Header order, reused by the data row so the two can never drift apart. */
+const METRIC_COLS: CSSProperties[] = [colDilution, colNetCash, colEvSales, colFcf];
+/* This page styles inline rather than by class (it is a flex pseudo-table, not
+   a <table>), so the shared tone names are mapped to its own palette here. */
+const METRIC_TONE: Record<string, string> = {
+  good: 'var(--positive, #10b981)',
+  warn: 'var(--warn, #d29922)',
+  bad: 'var(--negative, #f87171)',
+  dim: 'var(--cm-slate, #94a3b8)',
+  '': 'var(--ink, #eee)',
+};
 const colVerdict: CSSProperties = { flex: '2 1 220px', minWidth: 200 };

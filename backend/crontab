@@ -1097,3 +1097,17 @@
 # so the verdicts are read on the day that just closed rather than yesterday.
 # Nothing here pushes, gates or buys — both studies are uncited and unmeasured.
 20     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.turning_bullish warm
+#
+# CPA columns on the Explosive Growth + Breakouts boards (Ajay 2026-09-13):
+# dilution, cash vs debt, EV/Sales, FCF yield.
+#
+# BOARD-SCOPED ON PURPOSE, and the timing follows from that. The weekly research
+# cron walks 3,738 symbols and gets rate-limited into a 40% fill — measured. This
+# job warms only the ~275 names actually ON the two boards, which the same
+# providers answer at 98-100%, and finishes in about a minute at 3 workers.
+#
+# 17:45 ET, market days: after the 16:30 fast scan has refreshed the breakout
+# candidates and after the 17:20 turning-bullish sweep, so the two never contend
+# for the same provider. Only names whose entry is older than the 36h TTL are
+# refetched; `--all` forces the lot.
+45     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.board_metrics warm

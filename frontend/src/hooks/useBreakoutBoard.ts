@@ -22,7 +22,21 @@ export type BreakoutBoardRow = {
   rs_rank?: number | null;
   stage?: number | null;
   stage_label?: string | null;
-  beta?: number | null;               // 1y daily beta vs SPY — volatility (<1 = low-vol)
+  beta?: number | null;
+  // The CPA columns (Ajay 2026-09-13) — attached server-side by
+  // sepa/board_metrics.py AFTER the top-N cut, like beta, because they are
+  // DISPLAY fields and decide no ranking. Every one is null rather than wrong
+  // when the app refused to compute it; `shares_yoy_reason` says which refusal.
+  shares_yoy_pct?: number | null;
+  shares_yoy_reason?: string | null;
+  shares_yoy_period?: string | null;
+  cash?: number | null;
+  debt?: number | null;
+  cash_minus_debt?: number | null;
+  ev_sales?: number | null;
+  fcf_yield?: number | null;
+  sector?: string | null;
+  balance_meaningful?: boolean | null;               // 1y daily beta vs SPY — volatility (<1 = low-vol)
   r1?: number | null;                 // trade-plan R-multiple targets (entry +1R / +2R)
   r2?: number | null;
   industry?: string | null;

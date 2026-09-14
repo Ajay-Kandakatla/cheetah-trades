@@ -138,6 +138,6 @@ describe('the header state', () => {
   it('every printed column is sortable and every key is unique', () => {
     expect(new Set(SORT_KEYS).size).toBe(SORT_KEYS.length);
     expect(SORT_KEYS).toContain('demand');
-    expect(SORT_KEYS.length).toBe(9);
+    expect(SORT_KEYS.length).toBe(13);   // +4 CPA columns 2026-09-13
   });
 });
