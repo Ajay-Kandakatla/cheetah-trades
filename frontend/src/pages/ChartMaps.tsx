@@ -38,6 +38,7 @@ import { SignalLabBoard } from '../components/SignalLabBoard';
 import { HottestSectors } from '../components/HottestSectors';
 import { ExplosiveGrowth } from '../components/ExplosiveGrowth';
 import GntBoard from '../components/GntBoard';
+import BondeBoard from '../components/BondeBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HotSectors from '../components/HotSectors';
@@ -632,6 +633,13 @@ export function ChartMaps() {
          * movers boards (Catalysts, Overnight) — it answers the same question
          * they do, one level up. */
         <HottestSectors />
+      ) : tab === 'bonde' ? (
+        /* 📈 Bonde (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see
+           his stocks"). His sales tiers are the universe, his Episodic Pivot
+           is the entry, and the board is the intersection — either leg alone
+           is unusable (the sales gate passes 50.6% of the scan; the Pivot
+           alone carries declining-sales names). ✨ NEW marks arrivals. */
+        <BondeBoard />
       ) : tab === 'gnt' ? (
         /* 📌 One public trader's posts + our own read (Ajay 2026-09-12:
            "I wanna track his stocks for investing"). Sentences, not a ticker

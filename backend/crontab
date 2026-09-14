@@ -1110,4 +1110,17 @@
 # candidates and after the 17:20 turning-bullish sweep, so the two never contend
 # for the same provider. Only names whose entry is older than the 36h TTL are
 # refetched; `--all` forces the lot.
+#
+# 📈 Bonde board arrivals (Ajay 2026-09-13: "I wanna see explicitly new ones
+# getting added in this tab").
+#
+# `bonde.board()` stamps first_seen for every name that passes his screen, so
+# building it IS the recording. It must run on a schedule rather than relying on
+# him opening the tab: an arrival that happened on a day he did not look would
+# otherwise be stamped with the date he finally looked, and the ✨ NEW badge
+# would be measuring his browsing rather than the market.
+#
+# 17:40 ET, market days — after the scan the board reads, before the metrics
+# warm at 17:45 that picks these names up.
+40     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.bonde show
 45     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.board_metrics warm

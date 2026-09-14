@@ -663,6 +663,8 @@ describe('the Earnings Flow tab', () => {
        // at the front. The order is meant to be measured and a new tab has no
        // usage yet; `tabUsageKey` counts them from the first open.
        'keltner', 'amd',
+       // 📈 Bonde 2026-09-13 — beside the growth boards it belongs with.
+       'bonde',
        'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
@@ -731,7 +733,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly nine tabs not driven by a board fetch', () => {
+  it('is one of exactly ten tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -752,9 +754,13 @@ describe('the Support Levels tab', () => {
     // /rotation/hottest and renders a grouped table, not tiles.
     // Also 2026-09-11: `growth` is the eighth — the 🚀 Explosive Growth board
     // reads /growth/board and renders its own table with per-row warnings.
+    // 2026-09-12: `gnt` is the ninth — one trader's posts, sentences not tiles.
+    // 2026-09-13: `bonde` is the tenth — Pradeep Bonde's screen reads
+    // /bonde/board and renders SECTIONS (⚡ Pivots, then his sales tiers), so
+    // neither the tile grid nor the sort/tier controls apply to it.
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1584,7 +1590,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(24);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd 2026-09-13
+    expect(CM_TABS).toHaveLength(25);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });

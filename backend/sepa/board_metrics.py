@@ -484,6 +484,14 @@ def _main(argv=None) -> int:
             syms += [r["symbol"] for r in (doc.get("rows") or []) if r.get("symbol")]
     except Exception as exc:                                   # noqa: BLE001
         log.warning("board_metrics: growth names unavailable: %s", exc)
+    try:
+        # The Bonde board renders the same four columns (2026-09-13), so its
+        # names have to be in the same warm set or its rows show four dashes
+        # while the other two boards are populated.
+        from sepa import bonde
+        syms += bonde.symbols(db=d)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("board_metrics: bonde names unavailable: %s", exc)
 
     only_missing = "--all" not in args
     res = warm(syms, db=d, only_missing=only_missing)

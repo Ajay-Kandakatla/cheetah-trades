@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'keltner' | 'amd' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -56,6 +56,10 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // new tab has no usage yet. `tabUsageKey` counts them from the first
   // open, so the next re-cut moves them on evidence.
   'keltner', 'amd',
+  // Bonde (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see his
+  // stocks"). Beside the growth boards it belongs with, not at the front —
+  // same measured-order rule as the two above.
+  'bonde',
   'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
@@ -81,6 +85,8 @@ export function isBoardTab(t: CmTab): boolean {
   return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
     && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns'
     && t !== 'hot_sectors'
+    // Bonde is a sectioned table off /bonde/board, not a tile grid.
+    && t !== 'bonde'
     && t !== 'growth'
     && t !== 'gnt';
 }
@@ -111,6 +117,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // where they are turning bullish"). Both read the SAME modules the chart
   // overlays draw from, through supply_demand/turning_bullish.py, so a name on
   // the board and that name's chart can never disagree about its state.
+  bonde: {
+    label: '\ud83d\udcc8 Bonde',
+    blurb: 'Pradeep Bonde\u2019s (Stockbee) own screen, as he describes his process: the SALES growth is the universe, the EPISODIC PIVOT is the entry. THE BOARD IS THE INTERSECTION, and that is a measured decision, not a preference \u2014 on the live scan his sales gate ALONE passes 1,051 of 2,076 names (50.6%), which is a description of the market rather than a selection, while the Episodic Pivot alone carries names with DECLINING sales, precisely what his own screen throws away. Eleven of the 32 Pivot names in the scan were declining. Together they were twelve. So \u26a1 Pivots lead \u2014 they are the only part of this board that selects \u2014 and the sales tiers underneath are a WATCHLIST ordered by top-line growth, not a ranking anything measured. \u2728 NEW marks names that ARRIVED on his screen, which was your ask; the ledger refuses to badge the first cohort it ever sees, because \u201cwe have only just started looking\u201d must never read as \u201cthese are fresh finds\u201d. WHOSE NUMBERS ARE WHOSE: the 5% floor / 25% preferred / 100% explosive tiers are Bonde\u2019s own, documented in his writing (docs/sepa/sales_confidence_methodology.md, which also lists the figures widely attributed to him that FAILED source verification and are deliberately not used). The Pivot\u2019s 8% gap on 5\u00d7 volume are THIS APP\u2019S owner settings, chosen to be stricter than its PEG cousin because it has no earnings-calendar filter \u2014 he never published them. A ranking guard of this app\u2019s own: a percentage measured off a NEGATIVE or sub-$1M year-ago quarter is a sign flip or a ratio, not growth (DBRG reads +15,961% off MINUS $3.2M, QUBT +9,000% off $61,000), so those names still show with their dollars but never outrank a real base. Nothing on this tab gates a scan, fires an alert, or buys in any lane. Not advice.',
+  },
   keltner: {
     label: '\u{1F300} KC Coiled',
     blurb: 'MEASURED 2026-09-13 AND THE CLAIM IS INVERTED \u2014 read this before the rules. Over 2,660 names and 1,200,755 closed daily bars (2024-09-12 \u2192 2026-09-11) a coiled bar returned LESS than every other bar of the same names: 21-day median lift \u22120.33pp (95% CI \u22120.57 to \u22120.12), 10d \u22120.23pp (\u22120.33 to \u22120.10), 5d \u22120.20pp (\u22120.27 to \u22120.12); win rate 49.0% vs 50.9% at 5 days. And the one thing a coil is supposed to do it does LESS often: a coiled name closes above its upper Keltner band within 21 sessions 40.0% of the time (CI 39.0\u201341.1) against 55.0% (54.5\u201355.6) for a name in the SAME upper half of the channel with the SAME rising 20-EMA and no squeeze \u2014 the squeeze makes that break 14.8pp LESS likely. Against that one-clause control the squeeze adds nothing either way (21d +0.11pp, CI \u22120.17 to +0.41), so the whole negative lift is \u201cbuying strength inside the channel\u201d, not the compression. THE ONE POSITIVE CELL: a coil of 21+ bars beat that control at all three horizons (21d +1.34pp, CI +0.39 to +2.33) \u2014 which is why the board sorts LONGEST COIL FIRST \u2014 but it is 1 of 4 buckets, 471 names, it disagrees with the other three, and it is four names on today\u2019s board. Exploratory, not a rule. Script: backend/scripts/turning_bullish_keltner_study.py, re-runnable verbatim. WHAT THE BOARD IS: the Bollinger band inside a 1.5\u00d7 Keltner channel (the squeeze) or released on the last bar, price in the upper half of the 2\u00d7 channel, and the 20-day EMA midline higher than 20 bars ago \u2014 all three, or it grades \u201cupper half\u201d and is context. Fires on 144 of 2,669 names (5.4%). The channel is drawn as a CURVE, not three flat lines: an EMA plus an ATR multiple moves every bar, and the flat draw claimed the band sat at its latest value across the whole window (your MU catch \u2014 the midline was 921.60 sixty bars back against 960.61 now). HOW IT DIFFERS FROM STRONG VCP: that board is the book\u2019s own cited contraction with a pivot and a stop; this is Carter\u2019s TTM compression test over Raschke\u2019s EMA+ATR channel \u2014 no cited source in your library, and now measured negative. A squeeze is COMPRESSION, NOT A DIRECTION. Nothing here pushes, gates a scan, or buys in any lane. Not advice.',

@@ -749,6 +749,15 @@ app.include_router(rotation_router)
 from growth.api import router as growth_router  # noqa: E402
 app.include_router(growth_router)
 
+# Bonde board (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see
+# explicitly new ones getting added"). Pradeep Bonde's own screen — his sales
+# tiers are the universe, his Episodic Pivot is the entry, and the board is the
+# INTERSECTION because either leg alone is unusable: the sales gate passes 50.6%
+# of the scan, and the Pivot alone carries names with declining sales. Calls the
+# existing cited modules, re-derives nothing, gates nothing.
+from sepa.bonde_api import router as bonde_router  # noqa: E402
+app.include_router(bonde_router)
+
 # 📌 Public traders this app tracks (Ajay 2026-09-12: "create a tab for me. I
 # wanna track his stocks for investing"). One public X account, read-only, no
 # key. His calls, never advice — and never a gate on anything.

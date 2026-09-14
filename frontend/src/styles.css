@@ -12275,3 +12275,93 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .gnt-tab.is-on { color: var(--ink, #e7e7e7); border-color: currentColor; font-weight: 600; }
 .gnt-tab:focus-visible { outline: 2px solid var(--cm-blue, #60a5fa); outline-offset: 2px; }
+
+/* ── 📈 Bonde board (Ajay 2026-09-13) ──────────────────────────────────────
+   A sectioned table, not a tile grid: his sales tiers stack under the ⚡ Pivot
+   section, and each row has to carry the growth number AND the dollars behind
+   it, because a percentage off a tiny base is the one thing this board must
+   never let read as a ramp. Grid columns are fixed so the tiers line up with
+   each other down the page — a reader scanning for arrivals is comparing rows
+   across sections, not within one. */
+.bd-wrap { display: flex; flex-direction: column; gap: 1.1rem; }
+.bd-head {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.6rem;
+}
+.bd-stats { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; font-size: 0.85rem; }
+.bd-new-count { color: var(--gold, #c9a227); }
+.bd-toggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.78rem; cursor: pointer; color: var(--ink-muted);
+}
+.bd-toggle input { accent-color: var(--gold, #c9a227); cursor: pointer; }
+/* The empty-⚡-Pivots explanation. Styled as a notice rather than an error:
+   the scanners being off is his own rule working, not a fault. */
+.bd-paused {
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  background: rgba(210, 153, 34, 0.08);
+  border-radius: 8px; padding: 0.6rem 0.75rem;
+  font-size: 0.8rem; line-height: 1.45; color: var(--ink, #e7e7e7);
+}
+.bd-section { display: flex; flex-direction: column; gap: 0.35rem; }
+.bd-h {
+  display: flex; align-items: baseline; gap: 0.5rem;
+  margin: 0; font-size: 0.95rem; font-weight: 700;
+}
+.bd-count {
+  font-size: 0.72rem; font-weight: 600; color: var(--cm-slate, #94a3b8);
+}
+.bd-blurb { margin: 0 0 0.2rem; font-size: 0.74rem; color: var(--ink-muted); line-height: 1.4; }
+.bd-empty { font-size: 0.78rem; color: var(--ink-muted); padding: 0.35rem 0; }
+.bd-rows { display: flex; flex-direction: column; }
+.bd-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.4fr) minmax(120px, 1fr) minmax(150px, 1.2fr) minmax(110px, 0.9fr) minmax(190px, 1.3fr);
+  gap: 0.6rem; align-items: center;
+  padding: 0.4rem 0; border-bottom: 1px solid var(--hairline, rgba(255,255,255,0.06));
+}
+.bd-sym { display: flex; flex-direction: column; gap: 0.12rem; }
+.bd-new {
+  font-size: 0.58rem; font-weight: 800; letter-spacing: 0.04em;
+  color: var(--gold, #c9a227); border: 1px solid rgba(201,162,39,0.45);
+  background: rgba(201,162,39,0.10); border-radius: 5px;
+  padding: 0 4px; margin-left: 5px; white-space: nowrap;
+}
+.bd-coname { font-size: 0.66rem; color: var(--ink-muted); }
+.bd-sales, .bd-pivot { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.82rem; }
+.bd-sub { font-size: 0.66rem; }
+.bd-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.bd-chip {
+  font-size: 0.6rem; font-weight: 600; white-space: nowrap;
+  color: var(--cm-cyan, #38bdf8); border: 1px solid rgba(56,189,248,0.35);
+  background: rgba(56,189,248,0.08); border-radius: 5px; padding: 0 4px;
+  cursor: help;
+}
+.bd-metrics { display: flex; gap: 0.5rem; justify-content: flex-end; font-size: 0.72rem; }
+.bd-m { font-variant-numeric: tabular-nums; cursor: help; min-width: 52px; text-align: right; }
+.bd-note { font-size: 0.74rem; color: var(--ink-muted); line-height: 1.5; }
+.bd-foot { margin-top: 0.4rem; }
+.bd-good { color: var(--positive, #10b981); }
+.bd-warn { color: var(--warn, #d29922); }
+.bd-bad  { color: var(--bad, #f85149); }
+.bd-dim  { color: var(--ink-muted); }
+.bd-err  { color: var(--bad, #f85149); }
+@media (max-width: 860px) {
+  .bd-row { grid-template-columns: 1fr 1fr; row-gap: 0.3rem; }
+  .bd-metrics { justify-content: flex-start; }
+}
+
+/* The 🚀 growth chip on a Bonde row — same three states GrowthChip emits
+   everywhere (`<class>`, `<class>-growth`, `<class>-bad`). */
+.bd-gchip {
+  font-size: 0.58rem; font-weight: 700; border-radius: 5px; padding: 0 4px;
+  margin-left: 5px; white-space: nowrap; cursor: help;
+}
+.bd-gchip-growth {
+  color: var(--positive, #10b981); border: 1px solid rgba(16,185,129,0.40);
+  background: rgba(16,185,129,0.10);
+}
+.bd-gchip-bad {
+  color: var(--bad, #f85149); border: 1px solid rgba(248,81,73,0.40);
+  background: rgba(248,81,73,0.10);
+}
