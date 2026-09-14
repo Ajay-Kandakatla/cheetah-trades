@@ -12581,3 +12581,20 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .ol-link { background: none; border: 0; color: inherit; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
 .ol-link:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
 @media (max-width: 640px) { .ol-msg { max-width: 94%; } .ol-page { padding: 0.6rem 0.6rem 0.9rem; } }
+
+/* ── 🦙 Ollama nav icon — primary admin only (2026-09-14) ─────────────── */
+.ollama-icon {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 2px 8px; border-radius: 999px;
+  font: 600 0.72rem var(--sans, system-ui);
+  text-decoration: none; white-space: nowrap;
+  color: var(--gold, #d4af37);
+  background: rgba(212,175,55,0.10);
+  border: 1px solid rgba(212,175,55,0.40);
+}
+.ollama-icon:hover { background: rgba(212,175,55,0.18); }
+.ollama-icon:focus-visible { outline: 2px solid var(--gold, #d4af37); outline-offset: 1px; }
+.ollama-icon.is-active { outline: 1px solid currentColor; outline-offset: 1px; }
+.ollama-icon__glyph { font-size: 0.95rem; line-height: 1; }
+.ollama-icon__label { letter-spacing: 0.02em; }
+.ollama-icon--compact { padding: 2px 6px; }
