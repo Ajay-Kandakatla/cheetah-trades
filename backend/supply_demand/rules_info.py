@@ -8,6 +8,8 @@ so the panel can not drift from the code. Configured owner rules, S/D scope:
 no book cites (feedback_sepa_book_scope). Decision support, not advice."""
 from __future__ import annotations
 
+import logging
+
 from typing import Optional
 
 from trading import risk_rules as RR
@@ -18,6 +20,8 @@ from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import zero_dte_lane as ZDL
 from . import premarket_entry as PME
+
+log = logging.getLogger("supply_demand.rules_info")
 from trading import catalyst_entry as CE
 from trading import options_lane as OL
 from . import alert_gates as AG
@@ -42,7 +46,11 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # the only boards in the app built from UNCITED studies that
                 # gate nothing, and the reader has to be told that before the
                 # rules and not after them.
-                "turning_bullish")
+                "turning_bullish",
+                # Same reason as turning_bullish: a study board whose own
+                # thesis measured inverted, and the reader must meet that
+                # before the rules rather than after them.
+                "bonde")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -535,7 +543,102 @@ def sections() -> dict:
         ],
         "note": _DISCLAIMER,
     }
+
+    # ── 📈 Bonde ────────────────────────────────────────────────────────────
+    # Built from sepa.bonde.MEASURED, never retyped. That dict is the single
+    # home for these figures; if a re-run moves one, this panel moves with it.
+    try:
+        from sepa import bonde as BD
+        from sepa.sales import SALES_FLOOR_PCT, SALES_PREFERRED_PCT
+        m = BD.MEASURED
+        out["bonde"] = {
+            "title": "Bonde — his sales screen × the Episodic Pivot",
+            "emoji": "📈",
+            "picks": [
+                "His SALES gate (`sepa/buyable_verdict.py::_bonde_pillar`): "
+                "revenue growth year over year at or above his %s floor AND "
+                "'character' — accelerating, or at least %d consecutive growth "
+                "quarters. Tiers above that floor are his own %s preferred and "
+                "100%% explosive levels."
+                % (_pct(SALES_FLOOR_PCT), BD_MIN_CONSEC(),
+                   _pct(SALES_PREFERRED_PCT)),
+                "The ⚡ Episodic Pivot (`setups/episodic_pivot.py`): a gap of "
+                "at least 8% on at least 5× the 50-day average volume, on any "
+                "catalyst. Those two numbers are THIS APP'S owner settings, "
+                "not figures Bonde published — they are stricter than the PEG "
+                "cousin's because this setup has no earnings-calendar filter.",
+                "🔎 The last section is NOT on his screen: names that cleared "
+                "his floor and were rejected by the character clause. It is "
+                "there because that clause measured backwards (below).",
+            ],
+            "stops": [
+                "No stop, no target and no size: this board proposes no trade. "
+                "The ⚡ rows print the setup's own trigger/stop/target because "
+                "`episodic_pivot` computes them, and the measured expectancy "
+                "on that bracket is %s%%." % _sgn_pct(m["expectancy_pct"]),
+            ],
+            "alerts": [
+                "MEASURED %s AND THIS BOARD'S OWN THESIS IS INVERTED. On %d "
+                "Episodic Pivots reconstructed from closed bars (%s), the %d "
+                "that ALSO passed his sales gate returned a 21-day median "
+                "%s%% (win %.1f%%) against %s%% (%.1f%%) for date-matched "
+                "non-Pivot names — a lift of %spp, 95%% CI %s to %s. His sales "
+                "gate on its own separated nothing at any horizon (%spp, CI "
+                "%s to %s). Scripts: %s."
+                % (m["run_date"], m["ep_events"], m["window"], m["cell_a_n"],
+                   _sgn_pct(m["cell_a_med_21d"]), m["cell_a_win_21d"],
+                   _sgn_pct(m["placebo_med_21d"]), m["placebo_win_21d"],
+                   _sgn_pct(m["lift_21d"]), _sgn_pct(m["lift_ci"][0]),
+                   _sgn_pct(m["lift_ci"][1]), _sgn_pct(m["sales_alone_lift"]),
+                   _sgn_pct(m["sales_alone_ci"][0]),
+                   _sgn_pct(m["sales_alone_ci"][1]), m["scripts"]),
+                "THE CHARACTER CLAUSE MEASURES BACKWARDS, and it is the one "
+                "finding that survived every attack: among names clearing his "
+                "%s floor, the cohort the gate REJECTS won %.1f%% of the next "
+                "21 sessions against %.1f%% for the cohort it accepts "
+                "(%spp, CI %s to %s). Clause by clause it is the CONSISTENCY "
+                "half; `accelerating` is a null, not a negative. His gate is "
+                "NOT edited — the rejected cohort is shown beside it instead."
+                % (_pct(SALES_FLOOR_PCT), m["reject_win_21d"],
+                   m["pass_win_21d"], _sgn_pct(m["reject_minus_pass_21d"]),
+                   _sgn_pct(m["reject_ci_21d"][0]),
+                   _sgn_pct(m["reject_ci_21d"][1])),
+                "The tiers do not separate on the typical name either: over "
+                "%s symbol-bars in %d monthly cross-sections the ≥100%% and "
+                "≥25%% tiers beat the scored universe by a MEDIAN of %spp and "
+                "%spp at 21 days, both CIs including zero, win rates level "
+                "with the market. The mean lift is the right tail and falls "
+                "to %spp once the top 5%% of returns are dropped. So the "
+                "board never sorts on the 0-100 sales score, and no tier "
+                "number prints without its median, its win rate and its "
+                "placebo."
+                % (f"{m['panel_bars']:,}", m["panel_dates"],
+                   _sgn_pct(m["tier_explosive_med"]),
+                   _sgn_pct(m["tier_strong_med"]),
+                   _sgn_pct(m["tier_strong_mean_trimmed"])),
+                "NOTHING HERE PUSHES, GATES OR BUYS. This is not a licence to "
+                "short them either — that cohort's 21-day MEAN is −2.18% with "
+                "a CI including zero.",
+            ],
+            "note": _DISCLAIMER,
+        }
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: bonde section unavailable: %s", exc)
+
     return out
+
+
+def BD_MIN_CONSEC() -> int:
+    """Bonde's consecutive-quarter minimum, read from the module that enforces
+    it rather than typed here."""
+    from sepa.buyable_verdict import BONDE_MIN_CONSEC_Q
+    return int(BONDE_MIN_CONSEC_Q)
+
+
+def _sgn_pct(v) -> str:
+    """A signed number with a real minus sign, for the panel's prose."""
+    v = float(v)
+    return ("+%.2f" if v >= 0 else "−%.2f") % abs(v)
 
 
 def payload(section: Optional[str] = None) -> dict:

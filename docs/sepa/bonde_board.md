@@ -7,6 +7,14 @@ added in this tab … but I wanna see his stocks."*
 Chart Maps tab `bonde`. **Nothing here re-derives Bonde** — every rule is called
 from the module that already implements and cites it.
 
+> **MEASURED 2026-09-13, and the board's own thesis is INVERTED.** The tab
+> shipped in the morning on the reasoning in §1; by the evening two measurement
+> passes had put its headline cell at a 21-day median **−3.22%** against
+> **−0.11%** for date-matched non-Pivot names — a lift of **−3.11pp**
+> (95% CI −5.28 to −1.16). The board leads with that verdict rather than with
+> the rules. Read **§1 first**; everything after it describes a study board.
+> Scripts: `backend/scripts/bonde_audit/`.
+
 | What | Where it already lived |
 |---|---|
 | His 5% / 25% / 100% sales tiers | `sepa/sales.py` |
@@ -16,22 +24,156 @@ from the module that already implements and cites it.
 
 ---
 
-## 1. Why the board is the INTERSECTION
+## 1. MEASURED 2026-09-13 — and the board's own thesis is INVERTED
 
-Measured on the live scan the day it was built — this is what decided the shape:
+The tab shipped on this reasoning, measured on the live scan the day it was
+built:
 
-| Leg | Count | Verdict |
+| Leg | Count | The reasoning at the time |
 |---|---|---|
 | **Sales gate alone** | **1,051 of 2,076 (50.6%)** | Half the market. A description, not a selection. |
 | **Episodic Pivot alone** | 50 setups; of the 32 in the scan, **11 have DECLINING sales** | A tape pattern. On its own it selects what his screen throws away. |
-| **Both** | **12** | A board. |
+| **Both** | **12** | "A board." |
 
-Sales tiers underneath the gate: explosive 72, strong 317, steady 691, weak 227,
-declining 265, unknown 504.
+That reasoning was then measured — first pass, then an **independent audit**
+with its own code, its own fetch and roughly twice the panel. The intersection
+is the **worst cell either pass found.**
 
-So **the sales screen is the universe and the Pivot is the entry** — which is how
-Bonde describes his own process. ⚡ Pivots lead because that intersection is the
-only part of this board that selects; the tiers below are a watchlist.
+### The headline
+
+780 Episodic Pivots reconstructed bar by bar from **closed** bars,
+2024-09-13 → 2026-09-11. The rule reproduced **62 of 63** stored setup docs;
+the lookahead probe found **0 of 780** events using a quarter filed after its
+own bar.
+
+| Cell | n | 21d median | win |
+|---|---|---|---|
+| **A — Pivot + sales PASS** (the tab's thesis) | 376 | **−3.22%** | **39.8%** |
+| B — Pivot + sales FAIL | 404 | −0.81% | 46.2% |
+| C — sales PASS, no Pivot | 1,172 | −0.51% | 47.7% |
+| **D — neither (placebo)** | 1,376 | −0.11% | 49.6% |
+
+**A − D = −3.11pp**, 95% CI **−5.28 to −1.16** symbol-clustered, **−5.19 to
+−1.13** date-clustered. It holds at 3d (−0.88), 5d (−1.19) and 10d (−1.89);
+under a ≥$1M liquidity cut; under entry at the next **open** (worse, −4.76pp at
+21d); and in all four point-in-time fundamentals variants (−3.11 / −3.45 /
+−3.07 / −2.71).
+
+**His sales gate on its own separated nothing at any horizon**: C − D is
+−0.40pp, CI −1.40 to +0.61. It passes 48.2% of Pivot events against 46.0% of
+date-matched non-Pivot draws — it carries no information about the pivot.
+
+**The bracket**, which is the setup's own stated outcome: expectancy
+**−0.92%** [−2.14, +0.27], and the sales gate moves it by −0.06pp
+[−1.70, +1.62]. The 58% target-before-stop rate is **bracket geometry, not a
+win rate** — target a fixed 6.00% away, stop a median 13.71% away. Per this
+repo's ledger convention that raw rate never prints without both distances.
+
+**This is not an inverted signal to trade the other way.** Cell A's 21d **mean**
+is −2.18% with a CI that includes zero. The finding is "these bleed at the
+median and win less than half the time", not "these reliably fall".
+
+### The tiers do not separate either
+
+24 monthly cross-sections, 54,786 symbol-bars, sales state computable on 45,425
+(82.9%).
+
+| Tier | n bars | 21d median lift vs all scored | 21d mean lift | win lift |
+|---|---|---|---|---|
+| explosive ≥100% | 1,563 | **+0.45pp** [−0.31, +1.36] | +2.43pp | +0.96pp [−1.40, +3.14] |
+| strong ≥25% | 5,391 | **+0.37pp** [−0.16, +0.78] | +5.27pp | +0.68pp [−0.68, +1.94] |
+| steady 5–25% | 17,434 | −0.01pp | — | — |
+| declining <0% | 13,160 | −0.21pp | — | — |
+
+Every median lift and every win-rate lift spans zero, at both horizons, in the
+primary run and in three of four variants. **The mean is the right tail**:
+strong's +5.27pp falls to +0.62pp dropping the top 1% of returns and **+0.26pp**
+dropping the top 5%. Date-clustering — 3.67× wider than iid here, while symbol
+clustering buys 0–15% — kills what is left. A per-date sign test has explosive
+beating the day's whole cross-section 12 of 20 times. Names passing the **full**
+gate are indistinguishable from any stock: +0.48pp, CI −0.47 to +2.20.
+
+Consequences for the board, enforced in code:
+
+- it **never sorts on `sales.compute`'s 0–100 score** (`bonde._sales_key`), and
+- no tier number prints without its **median**, its **win rate** and its
+  **placebo** beside any mean.
+
+### The one finding that survived every attack — and why there is a 🔎 section
+
+His PASS rule is *floor* **AND** *character*, where character is `accelerating`
+OR ≥2 consecutive growth quarters. The **character half measures backwards.**
+
+| Cell (scored bars) | n | 21d win | 63d |
+|---|---|---|---|
+| floor ✅ character ✅ → **PASS** | 19,949 | 51.2% | — |
+| floor ✅ character ❌ → **gate rejects** | 3,117 | **56.8%** | — |
+
+PASS − REJECT: **−5.64pp** [−7.52, −3.91] at 21 days and **−7.66pp**
+[−10.64, −4.44] at 63. Clause by clause it is the **consistency** half: ≥2
+consecutive quarters costs 3.31pp of win rate [−4.68, −1.83] at 21d and 4.13pp
+at 63d. **`accelerating` is a null, not a negative** (+1.63pp mean, CI −0.85 to
++7.54) — the first pass claimed both clauses were inverted and that half is
+struck. Note also the mean/win split: PASS − REJECT on the **mean** is −0.22pp
+[−1.93, +2.73]. The rejected names win *more often*; they do not earn more on
+average.
+
+**The gate is not edited.** It is Bonde's, and this board exists to show his
+screen. The cohort it discards is shown beside it instead, as the
+🔎 **"Cleared his floor, rejected for character"** section, labelled as **not on
+his screen**, capped at 40, never mixed into the tiers, and never badged ✨ NEW
+(that badge means "arrived on his screen").
+
+Caveat printed with it: this result does **not** survive date clustering at 21
+days (it does at 63), and the variant matching production's raw list position
+shrinks the cell to 1,030 bars with 63d CIs spanning zero.
+
+### Struck on re-measurement — said nowhere on the tab
+
+1. *"Pivot + sales-PASS loses to Pivot + sales-FAIL"* (first pass: −3.36pp
+   [−5.84, −0.87]). Re-measured **−2.42pp [−4.88, +0.30]**, spanning zero in all
+   four variants; at 5d it is +0.01pp. **Struck.**
+2. *"Both character clauses measure backwards."* Only the consistency one does.
+3. *"Coverage is 46%, so this is the large/mid-cap half."* That was the first
+   pass's own **no-retry fetcher** losing about half its requests — 1,301 names
+   it called "no financials" do return them, and the dropout was uniform across
+   the alphabet. The audit's panel is ~2× larger.
+
+### Limits that belong next to any of these numbers
+
+- **Delisting survivorship is unmeasured.** `load_universe()` is today's
+  membership, so every name that went to zero or was acquired between 2024-09
+  and 2026-09 is absent from every cell. Direction: the missing population skews
+  toward the declining-sales microcap end, which flatters cells B and D, so the
+  A-vs-B inversion is if anything understated — A-vs-D could move either way and
+  cannot be bounded.
+- **24 cross-sections, ONE bull regime.** The date cluster is the binding one
+  and a 24-cluster bootstrap is itself fragile. It is reported as the honest
+  floor, not as a comfortable number.
+- **The derived-Q4 availability date is an assumption.** 24.3% of quarterly rows
+  carry `filing_date: None` and are assumed available at `end_date + 90d` (the
+  10-K deadline); 99.6% of events have at least one in their window. Every
+  headline was re-run with those rows dropped.
+- **The availability proxy is the SEC filing date, not the press release**, so
+  for about half the events the sales state is a 45+ day old quarter — what a
+  trader would genuinely have had, but not "the number that caused the gap".
+- **24.6% of Pivot events are unclassifiable and the dropout is structural** —
+  212 of 255 are recent IPOs and de-SPACs, exactly the population most prone to
+  episodic pivots.
+- **Gross returns.** No commissions, slippage or borrow; real fills on 8%-gap
+  names would be worse for the Pivot cohort than for the placebo.
+- **Catalyst type could not be split historically** —
+  `episodic_pivot._classify_catalyst` reads earnings dates for today only, and
+  Bonde's own EP taxonomy is catalyst-named. If an edge exists it may live in a
+  split this data cannot make.
+- **Only this app's 8% / 5× Pivot thresholds were measured.** PEG's 5% / 4× and
+  every other pair are unmeasured.
+
+Scripts, re-runnable verbatim: **`backend/scripts/bonde_audit/`** — `README.md`
+there carries the run recipe (inside the `api` container only; a throwaway
+container falls back to Yahoo), the struck claims and these limits. The first
+pass is kept alongside as `parent_ep.py` / `parent_tiers.py` so the disagreement
+is visible.
 
 ---
 
@@ -136,13 +278,19 @@ market is in correction" is itself the useful information.
 
 ---
 
-## 6. Not measured
+## 6. What is measured and what is not
 
-The Episodic Pivot has **never been measured** in this app — the pattern accuracy
-ledger (`GET /patterns/accuracy`) tracks chart patterns (double_bottom,
-cup_with_handle …), not setups. The board ships labelled as such, the same way the
-ICT, Keltner and AMD tabs do. Nothing here gates a scan, fires an alert, or buys
-in any lane.
+The Episodic Pivot **is now measured** — see §1, and
+`backend/scripts/bonde_audit/`. That measurement is the reason this board leads
+with a verdict banner rather than with the rules.
+
+Still unmeasured: the Pivot's catalyst split (earnings vs news vs M&A vs FDA),
+any threshold pair other than this app's 8% / 5×, and any holding rule other
+than close-to-close and the setup's own bracket. `GET /patterns/accuracy`
+tracks chart patterns (double_bottom, cup_with_handle …), not setups, so nothing
+here appears in that ledger.
+
+Nothing on this tab gates a scan, fires an alert, or buys in any lane.
 
 ---
 
@@ -155,7 +303,8 @@ backend/sepa/first_seen.py         the ✨ NEW ledger, generically
 backend/sepa/board_metrics.py      warm list extended to Bonde names
 backend/main.py                    router mount
 backend/crontab                    40 17 * * 1-5 (arrivals), 45 17 (metrics)
-backend/tests/test_bonde.py        13 tests
+backend/scripts/bonde_audit/       the measurement (README + 10 scripts)
+backend/tests/test_bonde.py        the board + the measured-verdict guards
 backend/tests/test_first_seen.py   7 tests incl. the drift guard
 frontend/src/components/BondeBoard.tsx
 frontend/src/components/BondeBoard.test.tsx   12 tests

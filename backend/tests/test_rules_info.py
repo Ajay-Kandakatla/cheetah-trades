@@ -96,3 +96,33 @@ async def test_route_serves_the_payload_and_404s_an_unknown_section():
     assert list(json.loads(res.body)["sections"]) == ["alerts"]
     with pytest.raises(HTTPException):
         await SA.supply_demand_rules(section="nope")
+
+
+def test_the_BONDE_section_leads_with_the_measurement_and_never_retypes_it():
+    """ℹ️ Rules panel — 📈 Bonde.
+
+    Two things at once. First, the panel must carry the verdict, because the
+    tab's own thesis measured inverted and the panel is where a reader goes to
+    find out what a board actually does. Second, every figure is read from
+    `sepa.bonde.MEASURED` rather than typed here — the panel's whole design
+    rule is that a line is built from the constant that enforces it, and a
+    measured number is the case where drift is most expensive.
+    """
+    from supply_demand import rules_info as RI
+    from sepa import bonde as BD
+
+    sec = RI.sections()["bonde"]
+    assert "bonde" in RI.payload()["keys"]
+    blob = " ".join(sec["picks"] + sec["stops"] + sec["alerts"])
+
+    assert "INVERTED" in blob
+    assert "%.2f" % abs(BD.MEASURED["cell_a_med_21d"]) in blob     # −3.22
+    assert "%.1f" % BD.MEASURED["cell_a_win_21d"] in blob          # 39.8
+    assert "%.1f" % BD.MEASURED["placebo_win_21d"] in blob         # the placebo
+    assert BD.MEASURED["scripts"] in blob
+    assert "NOTHING HERE PUSHES, GATES OR BUYS" in blob
+
+    # whose numbers are whose — his tiers, this app's pivot thresholds
+    assert "not figures Bonde published" in blob
+    # and the 8%/5x line must read as a percentage, not as a format artifact
+    assert "8%%" not in blob

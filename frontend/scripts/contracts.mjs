@@ -1745,6 +1745,80 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // Ajay 2026-09-13: "create me a Bonde tab … I wanna see his stocks."
+  // It shipped that morning on the thesis that his SALES screen is the universe
+  // and the EPISODIC PIVOT is the entry, so the intersection is the selection.
+  // Two measurement passes the same day — the second an independent audit on
+  // ~2x the panel — put that intersection at a 21-day median −3.22% against
+  // −0.11% for date-matched non-Pivot names. The board therefore leads with the
+  // verdict, and these are the sentences it may not lose.
+  {
+    name: 'the Bonde tab leads with its INVERTED measurement (2026-09-13)',
+    file: 'src/lib/chartMaps.ts',
+    checks: (src) => {
+      const errs = [];
+      if (!(parseCmTabs(src) || []).includes('bonde')) errs.push('the tab must be in the tab order');
+      if (!/t !== 'bonde'/.test(src)) errs.push('the Bonde board is its own table, not a zone-tile board');
+      const meta = /bonde:\s*\{[\s\S]*?blurb:\s*'([\s\S]*?)',\n\s*\},/.exec(src);
+      if (!meta) { errs.push('the tab needs a label and a blurb'); return errs; }
+      // The blurb is written with \uXXXX escapes, and reading the file as TEXT
+      // leaves those escapes literal — so a check for a real minus sign or an
+      // emoji silently never matches. Decode first, then assert on what the
+      // reader actually sees.
+      const b = meta[1].replace(/\\u([0-9a-fA-F]{4})/g,
+                                (_, h) => String.fromCharCode(parseInt(h, 16)));
+      if (!/^MEASURED 2026-09-13 AND THIS BOARD\u2019S OWN THESIS IS INVERTED/.test(b)) {
+        errs.push('the blurb must OPEN with the verdict — the rules come after it');
+      }
+      // A rate never ships without its placebo and its interval.
+      for (const [re, msg] of [
+        [/\u22123\.22%/, 'the measured median must be stated'],
+        [/\u22120\.11%/, 'the PLACEBO must be printed beside the rate'],
+        [/CI \u22125\.28 to \u22121\.16/, 'the confidence interval must travel with the lift'],
+        [/separated nothing at any horizon/, 'the sales gate measuring null on its own must be stated'],
+        [/backend\/scripts\/bonde_audit\//, 'the re-runnable script must be named'],
+        [/NOT A LICENCE TO SHORT/, 'an inverted result must not read as a short signal'],
+        [/MEDIAN of \+0\.45pp and \+0\.37pp/, 'tier lifts must print the MEDIAN, not only the mean'],
+        [/never sorts on the 0-100 sales score/, 'the score must be declared as a non-ranking'],
+        [/\ud83d\udd0e section/, 'the rejected cohort section must be explained'],
+      ]) if (!re.test(b)) errs.push(msg);
+      // The struck claims must not come back. The first pass's punchiest
+      // sentence did not reproduce (−2.42pp, CI −4.88 to +0.30).
+      if (/loses to Pivot\+FAIL \(\u22123\.36/.test(b) || /\u22123\.36pp/.test(b)) {
+        errs.push('the struck A-vs-B claim must not be printed');
+      }
+      if (/BOTH character clauses are inverted(?!\))/.test(b) && !/that BOTH character clauses are inverted,/.test(b)) {
+        errs.push('only the consistency clause is inverted — `accelerating` is a null');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the Bonde verdict banner is SERVED, never typed into the board (2026-09-13)',
+    file: 'src/components/BondeBoard.tsx',
+    checks: (src) => {
+      const errs = [];
+      if (!/measured\?:\s*BondeMeasured/.test(src) && !/measured\?: BondeMeasured/.test(src)) {
+        errs.push('the payload must carry the served verdict');
+      }
+      if (!/m\?\.headline/.test(src) || !/bd-verdict/.test(src)) {
+        errs.push('the banner must render from the served object');
+      }
+      // Numbers typed into TSX are numbers that go stale silently. The tier
+      // blurbs are prose written once with the tab; the VERDICT is served.
+      const banner = /bd-verdict[\s\S]*?<\/div>\s*\)\}/.exec(src);
+      if (banner && /\d\.\d\dpp/.test(banner[0])) {
+        errs.push('the banner must not hard-code a measured figure — it comes from sepa/bonde.py::MEASURED');
+      }
+      if (!/rejected/.test(src) || !/NOT ON HIS SCREEN/.test(src)) {
+        errs.push('the cohort his gate rejects must be shown and labelled as not on his screen');
+      }
+      if (!/k !== SECTION_REJECTED|'rejected'/.test(src)) {
+        errs.push('the rejected section must exist as its own key');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -208,3 +208,243 @@ def test_the_board_RE_DERIVES_nothing():
     assert "sepa/sales.py" in src          # the tiers
     assert "episodic_pivot" in src         # the entry
     assert "NOTHING HERE RE-DERIVES BONDE" in src
+
+
+# ═══════════════════════════════════════════ MEASURED 2026-09-13 — INVERTED
+# This board shipped in the morning on the thesis that his sales screen is the
+# universe and the Episodic Pivot is the entry, so the intersection is the
+# selection. It was measured twice the same day and the intersection is the
+# WORST cell either pass found. These tests exist so nobody — me included —
+# can quietly walk that back to a rules-first board.
+# Source: backend/scripts/bonde_audit/ (README.md carries the run recipe).
+
+def test_the_note_LEADS_with_the_inverted_measurement():
+    """The first words a reader meets must be the verdict, not the rules.
+
+    Same treatment the Keltner and AMD tabs got the same day, and for the same
+    reason: a board that explains its mechanics first has already been read as
+    a buy list by the time it admits what it measured.
+    """
+    note = BD.note(1051, 2076, {"pivot": 12})
+    assert note.startswith("MEASURED 2026-09-13 AND THE THESIS IS INVERTED")
+    # the number, its placebo and its interval — never a bare point estimate
+    assert "−3.22%" in note and "39.8%" in note
+    assert "−0.11%" in note and "49.6%" in note        # the placebo
+    assert "−3.11pp" in note and "−5.28 to −1.16" in note
+    assert "STUDY BOARD" in note
+    assert "backend/scripts/bonde_audit/" in note      # the re-runnable source
+    # ...and the fire rate is still there, just no longer the headline
+    assert "1,051 of 2,076" in note and "50.6%" in note
+
+
+def test_the_note_says_his_SALES_GATE_ALONE_separated_nothing():
+    """The gate passes 48.2% of Pivot events and 46.0% of matched non-Pivot
+    draws — it carries no information about the pivot. A board that prints the
+    intersection's number without this one implies the gate did some work."""
+    note = BD.note(1051, 2076, {"pivot": 12})
+    assert "−0.40pp" in note and "−1.40 to +0.61" in note
+
+
+def test_the_verdict_banner_is_SERVED_not_typed_into_the_component():
+    """One home for the numbers (`MEASURED`), so a re-run moves every surface.
+
+    The alternative — the figures living in TSX — is how a board ends up
+    quoting a stale lift months after the script that produced it changed.
+    """
+    v = BD.measured_verdict()
+    assert "INVERTED" in v["headline"] and BD.MEASURED["run_date"] in v["headline"]
+    assert "−3.22%" in v["body"] and "−0.11%" in v["body"]
+    assert "STUDY BOARD, NOT A BUY LIST" in v["body"]
+    # every claimed section is present and non-empty
+    for k in ("body", "not_a_short", "tiers", "rejected", "struck", "limits"):
+        assert v[k] and len(v[k]) > 80, k
+    assert v["scripts"] == "backend/scripts/bonde_audit/"
+
+
+def test_NEGATIVE_the_verdict_refuses_to_read_as_a_SHORT_signal():
+    """Cell A's 21-day MEAN is −2.18% with a CI that includes zero. 'These
+    bleed at the median and win less than half the time' is the finding;
+    'these reliably fall' is a different claim the data does not support."""
+    v = BD.measured_verdict()
+    assert "−2.18%" in v["not_a_short"]
+    assert "includes zero" in v["not_a_short"]
+
+
+def test_NEGATIVE_the_STRUCK_claims_appear_nowhere():
+    """Three first-pass claims did not reproduce under an independent audit on
+    ~2x the panel. The most tempting one is the most wrong: 'EP + sales-PASS
+    even loses to EP + sales-FAIL' is a punchy sentence and it spans zero in
+    all four fundamentals variants."""
+    v = BD.measured_verdict()
+    blob = " ".join(v.values()) + BD.note(1051, 2076, {"pivot": 12})
+    # the struck A-vs-B claim may appear ONLY inside the 'struck' paragraph
+    assert "−2.42pp" in v["struck"]
+    assert blob.count("−2.42pp") == 1
+    assert "only the consistency one is" in v["struck"]
+    assert "no-retry fetcher" in v["struck"]
+
+
+def test_the_TIERS_never_print_a_mean_without_its_median_and_placebo():
+    """The first pass's '+3.8pp / +1.6pp' were MEAN lifts printed as if they
+    were typical outcomes. Median lifts are +0.45pp and +0.37pp with CIs that
+    include zero, and the mean is the right tail: it falls to +0.26pp once the
+    top 5% of returns are dropped."""
+    t = BD.measured_verdict()["tiers"]
+    assert "MEDIAN" in t
+    assert "+0.45pp" in t and "+0.37pp" in t
+    assert "include zero" in t
+    assert "+0.26pp" in t and "top 5%" in t
+    assert "scored universe" in t          # the placebo, named
+
+
+def test_the_LIMITS_are_printed_with_the_numbers_not_buried_in_a_doc():
+    lim = BD.measured_verdict()["limits"]
+    for phrase in ("survivorship", "ONE bull regime", "filing date",
+                   "unclassifiable", "gross of commissions"):
+        assert phrase in lim, phrase
+
+
+# ─────────────────────────────────────────── the 🔎 rejected cohort
+def _pillar(passed, growth, **kw):
+    d = {"passed": passed, "growth_yoy_pct": growth, "tier": kw.get("tier"),
+         "score": kw.get("score"), "accelerating": kw.get("accelerating", False),
+         "consecutive_growth_q": kw.get("consec", 0), "sales_led": None,
+         "reason": ""}
+    return d
+
+
+def test_the_cohort_his_gate_REJECTS_is_shown_because_it_MEASURED_BETTER():
+    """THE ONE FINDING THAT SURVIVED EVERY ATTACK.
+
+    Among names clearing his 5% floor, requiring 'character' (accelerating OR
+    >=2 consecutive growth quarters) measures NEGATIVE: the rejected cohort won
+    56.8% of the next 21 sessions against 51.2% for the cohort the gate accepts
+    (+5.64pp, CI +3.91 to +7.52). His gate is not edited — it is his — so the
+    discarded names get their own labelled section instead.
+    """
+    assert BD.SECTION_REJECTED in BD.SECTIONS
+    assert BD.SECTIONS[-1] == BD.SECTION_REJECTED      # last, never leading
+    rej = BD.measured_verdict()["rejected"]
+    assert "56.8%" in rej and "51.2%" in rej
+    assert "+5.64pp" in rej and "+3.91 to +7.52" in rej
+    assert "not edited" in rej
+
+
+def test_only_the_CONSISTENCY_clause_is_inverted_accelerating_is_a_NULL():
+    """The first pass said both clauses measure backwards. `accelerating` is
+    +1.63pp mean with a CI of −0.85 to +7.54 — a null, and calling a null an
+    inversion is the same error in the other direction."""
+    rej = BD.measured_verdict()["rejected"]
+    assert "CONSISTENCY" in rej
+    assert "accelerating` is a null, not a negative" in rej
+
+
+def test_the_rejected_cohorts_own_CAVEAT_travels_with_it():
+    """It does not survive date clustering at 21 days (it does at 63), and the
+    variant matching production's raw list position shrinks it to 1,030 bars
+    with CIs spanning zero. Shipping the finding without that is the Hot
+    Pullback mistake again."""
+    rej = BD.measured_verdict()["rejected"]
+    assert "date clustering at 21 days" in rej
+    assert "1,030 bars" in rej
+
+
+def test_the_floor_check_matches_the_pillars_own_ROUNDING_seam():
+    """`_bonde_pillar` tests the ROUNDED growth against the 5% floor while
+    `sales.compute` tiers off the unrounded value. The audit found exactly one
+    row in that seam out of 780. The board must sit on the same side of it as
+    the rule it is describing, or a name renders as 'rejected for character'
+    when the gate actually rejected it for the floor."""
+    assert BD._cleared_floor(_pillar(False, 4.6)) is True      # rounds to 5
+    assert BD._cleared_floor(_pillar(False, 4.4)) is False
+    assert BD._cleared_floor(_pillar(False, None)) is False
+
+
+def test_NEGATIVE_the_board_does_NOT_sort_on_the_0_to_100_sales_score():
+    """The audit could not separate whatever ranking value that score has from
+    the right tail of the return distribution, so it decides no order a reader
+    might mistake for a ranking."""
+    low_score_big_grower = {"symbol": "AAA", "base_state": "ok",
+                            "growth_yoy_pct": 300.0, "rev_added": 2e8,
+                            "sales_score": 40}
+    high_score_small = {"symbol": "BBB", "base_state": "ok",
+                        "growth_yoy_pct": 30.0, "rev_added": 1e6,
+                        "sales_score": 100}
+    assert sorted([high_score_small, low_score_big_grower],
+                  key=BD._sales_key)[0]["symbol"] == "AAA"
+    src = open(BD.__file__).read()
+    assert "NOT `sales.compute`'s 0-100 score, deliberately" in src
+
+
+def test_NEGATIVE_the_rejected_section_is_never_badged_as_a_NEW_ARRIVAL():
+    """✨ NEW means 'arrived on HIS screen'. A 🔎 row is by definition not on
+    it, so a name that passed last week and fails the character clause today
+    would otherwise render as a fresh find on a board it just fell off."""
+    src = open(BD.__file__).read()
+    assert '(k != SECTION_REJECTED) and (r["symbol"] in new)' in src
+
+
+def test_SOURCE_GUARD_the_measurement_ships_its_own_script():
+    """STANDING RULE: any measured number on a board he trades ships its
+    re-runnable script and a CI, never a bare point estimate."""
+    import os
+    d = os.path.join(os.path.dirname(os.path.dirname(BD.__file__)),
+                     "scripts", "bonde_audit")
+    assert os.path.isdir(d)
+    for f in ("README.md", "core.py", "lane1.py", "lane1b.py", "lane2.py",
+              "attack.py", "sens.py", "oracle.py", "fetch.py"):
+        assert os.path.isfile(os.path.join(d, f)), f
+    readme = open(os.path.join(d, "README.md")).read()
+    assert "−3.11pp" in readme and "−5.28 to −1.16" in readme
+    # the superseded first pass is kept so the struck claims stay visible
+    assert os.path.isfile(os.path.join(d, "parent_ep.py"))
+    assert "SUPERSEDED" in open(os.path.join(d, "parent_ep.py")).read()
+
+
+def test_board_routes_a_floor_clearer_WITHOUT_character_into_the_rejected_section(monkeypatch):
+    """END TO END. Three names, three fates:
+
+      PASS   clears the floor AND has character   -> his screen (a tier)
+      REJ    clears the floor, no character       -> 🔎, and NOT in any tier
+      LOW    below the floor                      -> nowhere at all
+
+    The third row is the one worth the test: a name that failed the FLOOR must
+    never land in a section labelled 'rejected for character', because that
+    label is a claim about which half of his rule threw it out.
+    """
+    from sepa import scanner, board_metrics as BM
+    rows = [
+        scan_row("PASS", [200_000_000, 0, 0, 0, 100_000_000],
+                 sales={"score": 90, "tier": "strong", "growth_yoy_pct": 100.0,
+                        "accelerating": True, "consecutive_growth_q": 4}),
+        scan_row("REJ", [120_000_000, 0, 0, 0, 100_000_000],
+                 sales={"score": 55, "tier": "steady", "growth_yoy_pct": 20.0,
+                        "accelerating": False, "consecutive_growth_q": 1}),
+        scan_row("LOW", [101_000_000, 0, 0, 0, 100_000_000],
+                 sales={"score": 20, "tier": "weak", "growth_yoy_pct": 1.0,
+                        "accelerating": False, "consecutive_growth_q": 0}),
+    ]
+    monkeypatch.setattr(scanner, "load_latest", lambda *a, **k: {"all_results": rows})
+    monkeypatch.setattr(BD, "_pivots", lambda *a, **k: {})
+    monkeypatch.setattr(BD, "regime_state", lambda *a, **k: {"scanners_paused": False})
+    monkeypatch.setattr(BM, "attach", lambda *a, **k: None)
+    monkeypatch.setattr(FS, "record", lambda *a, **k: 0)
+    monkeypatch.setattr(FS, "newly_found", lambda *a, **k: {"PASS", "REJ"})
+    monkeypatch.setattr(FS, "first_seen_map", lambda *a, **k: {})
+
+    b = BD.board()
+    got = {k: [r["symbol"] for r in v] for k, v in b["sections"].items()}
+    assert got[BD.SECTION_REJECTED] == ["REJ"]
+    assert "REJ" not in got["steady"] and "REJ" not in got["strong"]
+    assert got["strong"] == ["PASS"]
+    assert "LOW" not in [s for v in got.values() for s in v]
+
+    assert b["n_pass"] == 1                      # his screen, unchanged
+    assert b["n_rejected"] == 1                  # the cohort beside it
+    assert b["measured"]["headline"].endswith("INVERTED")
+
+    # ✨ NEW is a claim about HIS screen: it may light on PASS, never on REJ.
+    new_by_sym = {r["symbol"]: r["is_new"]
+                  for v in b["sections"].values() for r in v}
+    assert new_by_sym["PASS"] is True
+    assert new_by_sym["REJ"] is False

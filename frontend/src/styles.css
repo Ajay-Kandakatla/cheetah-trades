@@ -12297,6 +12297,30 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-toggle input { accent-color: var(--gold, #c9a227); cursor: pointer; }
 /* The empty-⚡-Pivots explanation. Styled as a notice rather than an error:
    the scanners being off is his own rule working, not a fault. */
+/* The verdict banner. Deliberately the loudest thing on the tab: the board's
+   own thesis measured inverted, and a reader who meets the rows first has
+   already read them as a buy list. Red rather than the amber used by
+   .bd-paused, which is a status, not a finding. */
+.bd-verdict {
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.07);
+  border-radius: 8px; padding: 0.7rem 0.85rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.bd-vh {
+  margin: 0; font-size: 0.86rem; font-weight: 800; letter-spacing: 0.01em;
+  color: #f87171;
+}
+.bd-verdict p {
+  margin: 0; font-size: 0.78rem; line-height: 1.5;
+  color: var(--ink, #e7e7e7);
+}
+.bd-verdict p.bd-vdim { color: var(--ink-muted, #9aa3ad); font-size: 0.73rem; }
+.bd-verdict code {
+  font-size: 0.72rem; padding: 0.05rem 0.25rem; border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .bd-paused {
   border: 1px solid rgba(210, 153, 34, 0.4);
   background: rgba(210, 153, 34, 0.08);
