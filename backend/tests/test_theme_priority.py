@@ -133,7 +133,11 @@ def test_priority_is_the_order_ajay_asked_for():
     assert order == ["space", "quantum", "ai_semis", "semi_materials",
                      "ai_power", "nuclear",
                      "energy", "optical", "robotics", "ai_infra",
-                     "datacenter_build", "defense", "rare_earth", "crypto"]
+                     "datacenter_build", "defense", "rare_earth",
+                     # 2026-09-14 — an AI-ecosystem story (agent and model
+                     # security is the new attack surface) but an indirect one,
+                     # so it sits behind the hardware and ahead of crypto.
+                     "infosec", "crypto"]
 
 
 def test_every_roster_has_a_priority():

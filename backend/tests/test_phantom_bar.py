@@ -37,9 +37,26 @@ def test_drops_exact_duplicate_tail():
 
 
 def test_keeps_same_close_different_volume():
-    # Same close but a different volume is a real (flat) session — keep it.
-    df = _series([100, 101, 102, 102], [1000, 1100, 1200, 1201])
+    # Same close but a GENUINELY different volume is a real (flat) session.
+    #
+    # WIDENED 2026-09-14. The guard used to demand byte-identical volume, and
+    # the echo does not deliver that: AMKR's differed by a float round-trip
+    # (0.15 shares) and NVDA's by a 1,415-share late restatement of the prior
+    # aggregate, so both placeholders survived and every pre-market 1-day
+    # return came back exactly 0.00 — Ajay: "This can't be true all of them
+    # have 0.1%?". The close is now the binding leg and the volume only has to
+    # land within 0.5%.
+    #
+    # So this case needs a real volume difference to mean what it says. One
+    # share out of 1,200 was never a distinguishable session; 30% is.
+    df = _series([100, 101, 102, 102], [1000, 1100, 1200, 1560])
     assert len(prices._drop_phantom_tail(df)) == len(df)
+
+
+def test_a_volume_INSIDE_the_tolerance_is_the_echo_not_a_session():
+    # The other side of the same line, pinned so the band cannot drift.
+    df = _series([100, 101, 102, 102], [1000, 1100, 1200, 1201])
+    assert len(prices._drop_phantom_tail(df)) == 3
 
 
 def test_keeps_different_close():

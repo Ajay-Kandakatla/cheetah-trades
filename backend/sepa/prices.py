@@ -369,10 +369,31 @@ def _drop_phantom_tail(df: Optional[pd.DataFrame]) -> Optional[pd.DataFrame]:
         return df
     try:
         last, prev = df.iloc[-1], df.iloc[-2]
-        if (
-            float(last["close"]) == float(prev["close"])
-            and float(last["volume"]) == float(prev["volume"])
-        ):
+        lc, pc = float(last["close"]), float(prev["close"])
+        lv, pv = float(last["volume"]), float(prev["volume"])
+        # CAUGHT 2026-09-14, and it had every pre-market surface in the app
+        # reading FLAT. Ajay, looking at Hot Sectors at 09:22 ET: "This can't
+        # be true all of them have 0.1%?" — every member of every group showed
+        # +0.1%, because each one's 1-day return was exactly 0.00.
+        #
+        # The echo is written with a ROUNDED volume, so byte-equality missed
+        # it: AMKR held 3,064,207.847861 on Friday and 3,064,208.0 stamped
+        # today. An exact `==` compares those as different sessions, keeps the
+        # placeholder, and every trailing_return(bars, 1) comes back 0.0.
+        #
+        # A relative tolerance is still unambiguous. Two real sessions sharing
+        # a close to the cent AND a volume to within one share in 100,000 does
+        # not happen; a float round-trip through the cache produces exactly
+        # this. Conservative as before: at most one trailing bar, and only when
+        # BOTH legs match.
+        # The CLOSE carries the weight, not the volume. AMKR's echo differed by
+        # a float round-trip (0.15 shares) but NVDA's differed by 1,415 shares —
+        # a late-reported restatement of Friday's aggregate — so any tolerance
+        # tight enough to be "rounding" misses half of them. Two consecutive
+        # real sessions closing at a byte-identical price is already vanishingly
+        # rare; requiring the volume to also land within 0.5% makes a false
+        # positive essentially impossible while catching both shapes.
+        if lc == pc and abs(lv - pv) <= max(1.0, abs(pv) * 5e-3):
             return df.iloc[:-1]
     except (KeyError, ValueError, TypeError):
         pass

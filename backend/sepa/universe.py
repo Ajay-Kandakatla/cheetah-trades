@@ -366,6 +366,25 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # MP the anchor, USAR mine-to-magnet, UUUU first US heavy-REE production
     # (Mar 2026), METC Brook Mine optionality on met-coal revenue.
     "rare_earth": ["MP", "USAR", "UUUU", "METC"],
+    # Information security (Ajay 2026-09-14, watching the AI dump: "Where is
+    # information security? Like NTSK and other companies").
+    #
+    # WHY IT EARNED A ROSTER ON THAT DAY: on 2026-09-14 the 15 names below ran
+    # a median +7.80% while ai_semis ran -6.95% on the same tape — +8.00pp
+    # against RSP, with all 15 green. The Technology SECTOR read only +1.15
+    # because it averages collapsing semis against ripping software, so the
+    # rotation was invisible at every grain the app had.
+    #
+    # Pure-play security only. NET, DDOG, AKAM and CHKP are deliberately OUT:
+    # the first three are CDN/observability businesses that carry a security
+    # line, and a roster that admits them stops measuring this thesis.
+    #
+    # VALIDATED LIVE 2026-09-14 by LAST BAR DATE, not bar count (the SDIG trap
+    # — a dead ticker keeps its history). Three names failed and must not be
+    # re-added without re-checking: CYBR (last bar 2026-02-10), JAMF
+    # (2026-01-29), MIME (no data — taken private 2022).
+    "infosec":   ["CRWD", "PANW", "ZS", "S", "OKTA", "FTNT", "TENB", "QLYS",
+                  "VRNS", "RPD", "SAIL", "NTSK", "RBRK", "GEN", "OSPN"],
 }
 
 # Ordering BETWEEN themes, most-wanted first — Ajay's stated priority, then the
@@ -394,9 +413,13 @@ THEME_PRIORITY: dict[str, int] = {
     "datacenter_build": 10,
     "defense":   11,
     "rare_earth": 12,
+    # 2026-09-14 — ahead of crypto, behind the AI build-out. It is an
+    # AI-ecosystem story (agent and model security is the new attack surface)
+    # but an indirect one, so it does not outrank the hardware.
+    "infosec":   13,
     # Last on purpose: it is the only roster here with no AI-ecosystem thesis,
     # and his standing rule puts AI-ecosystem winners on top of every list.
-    "crypto":    13,
+    "crypto":    14,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of
