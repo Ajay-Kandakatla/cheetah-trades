@@ -49,7 +49,9 @@ function dtLocalToEpoch(s: string): number | null {
 
 export default function AdminTodosPage() {
   const { user } = useCurrentUser();
-  const isAdmin = (user?.email || '').toLowerCase() === 'ajaykandakatla@gmail.com';
+  // Server-side flag from /auth/me (exactly one address). The previous
+  // string compare shipped the admin's Gmail into the JS bundle.
+  const isAdmin = !!user?.is_primary_admin;
 
   const [recipients,  setRecipients]  = useState<string[]>([]);
   const [recipient,   setRecipient]   = useState<string>('');

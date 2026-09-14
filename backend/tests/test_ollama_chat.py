@@ -313,9 +313,21 @@ def test_nginx_api_block_accepts_image_bodies(conf):
 
 
 def test_admin_email_never_reaches_the_frontend_sources():
+    """Walks ALL of frontend/src — nothing excluded. The four-file version of
+    this guard missed pages/AdminTodos.tsx, which kept a string compare on
+    the address and shipped it in its bundle chunk (caught 2026-09-14 by
+    grepping the nginx assets live). Gates read ``is_primary_admin`` /
+    ``is_admin`` off /auth/me; the address itself stays server-side."""
     fe = ROOT.parent / "frontend" / "src"
-    for rel in ("pages/OllamaChat.tsx", "App.tsx", "hooks/useUser.ts", "lib/newFeatures.ts"):
-        assert ADMIN not in (fe / rel).read_text(), rel
+    files = [p for p in fe.rglob("*") if p.suffix in (".ts", ".tsx")]
+    assert len(files) > 100, "frontend/src walk found too few files"
+    assert any(p.name == "AdminTodos.tsx" for p in files)
+    hits = [
+        str(p.relative_to(fe))
+        for p in files
+        if ADMIN in p.read_text(encoding="utf-8", errors="replace").lower()
+    ]
+    assert hits == [], hits
 
 
 def test_env_has_the_two_settings():
