@@ -3576,6 +3576,9 @@ async def auth_me(
         # constants that used to live in App.tsx, NavBar.tsx,
         # AdminAccess/Push/Todos.tsx, Notifications.tsx.
         "is_admin": is_admin_email(email),
+        # ONE address, not the house-owner set above. Gates /ollama — see
+        # ollama_chat/api.py for why the two flags must stay separate.
+        "is_primary_admin": _ollama_is_primary_admin(email),
     })
 
 
@@ -4198,6 +4201,11 @@ async def push_list_subscriptions(email: str = Depends(current_user_email)):
 # path, same row shape, same default behaviour; see that module's docstring.
 from push.recent import router as notifications_recent_router  # noqa: E402
 app.include_router(notifications_recent_router)
+
+# Private chat with the local Ollama model (Ajay only, 404 to everyone else).
+from ollama_chat.api import router as ollama_router  # noqa: E402
+from ollama_chat.api import is_primary_admin as _ollama_is_primary_admin  # noqa: E402
+app.include_router(ollama_router)
 
 
 @app.get("/push/history")

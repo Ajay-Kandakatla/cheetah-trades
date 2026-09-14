@@ -427,6 +427,7 @@ _ADMIN_MENU_ITEMS: list[dict] = [
     {"to": "/admin/push",   "label": "Push Subscriptions"},
     {"to": "/admin/todos",  "label": "Add Vineetha’s Todo"},
     {"to": "/admin/usage",  "label": "Usage Dashboard"},
+    {"to": "/ollama",       "label": "Ollama (local LLM)"},
 ]
 
 

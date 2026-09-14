@@ -13,6 +13,9 @@ export type CurrentUser = {
    *  into the JS bundle — anyone could curl the static assets to grep
    *  out a personal Gmail address. */
   is_admin: boolean;
+  /** True for exactly one address (the primary admin). Gates /ollama.
+   *  NOT the same as is_admin, which every house owner carries. */
+  is_primary_admin?: boolean;
 };
 
 let _cached: CurrentUser | null = null;

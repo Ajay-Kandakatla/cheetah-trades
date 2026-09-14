@@ -77,6 +77,7 @@ const AdminAccessPage             = lazyWithReload(() => import('./pages/AdminAc
 const SignInPage                  = lazyWithReload(() => import('./pages/SignIn'));
 const SignUpPage                  = lazyWithReload(() => import('./pages/SignUp'));
 const AdminPushPage               = lazyWithReload(() => import('./pages/AdminPush'));
+const OllamaChatPage              = lazyWithReload(() => import('./pages/OllamaChat'));
 const TodosPage                   = lazyWithReload(() => import('./pages/Todos'));
 const TinyPage                    = lazyWithReload(() => import('./pages/Tiny'));
 const SetupsPage                  = lazyWithReload(() => import('./pages/Setups'));
@@ -157,6 +158,17 @@ function AdminRoute({ children }: { children: ReactNode }) {
   if (!user?.is_admin) {
     return <Navigate to="/" replace />;
   }
+  return <>{children}</>;
+}
+
+/** Gate a route to the ONE primary admin — `is_primary_admin` from /auth/me,
+ *  which is a single address, unlike `is_admin` (every house owner). Renders
+ *  the stealth 404 rather than redirecting so the route reads as absent.
+ *  Ajay 2026-09-14 on the Ollama chat: "only available for me". */
+function PrimaryAdminRoute({ children }: { children: ReactNode }) {
+  const { user } = useCurrentUser();
+  if (user === null) return <PageLoader />;
+  if (!user?.is_primary_admin) return <NotFound />;
   return <>{children}</>;
 }
 
@@ -326,6 +338,7 @@ export function App() {
             <Route path="/admin/todos"  element={<AdminRoute><AdminTodosPage /></AdminRoute>} />
             <Route path="/admin/access" element={<AdminRoute><AdminAccessPage /></AdminRoute>} />
             <Route path="/admin/push"   element={<AdminRoute><AdminPushPage /></AdminRoute>} />
+            <Route path="/ollama"       element={<PrimaryAdminRoute><OllamaChatPage /></PrimaryAdminRoute>} />
 
             {/* Anything unknown also passes through SmartLanding so
                 users land somewhere they can actually use. */}

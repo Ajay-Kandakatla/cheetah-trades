@@ -12519,3 +12519,65 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .eg-sel select { background: var(--panel, #161b24); color: inherit;
   border: 1px solid var(--border, #242c39); border-radius: 6px;
   padding: 4px 8px; font-size: 12.5px; }
+
+/* ── /ollama — private local-model chat (Ajay only) ─────────────────────── */
+.ol-page { max-width: 880px; margin: 0 auto; padding: 1rem 1rem 1.25rem; display: flex; flex-direction: column;
+  min-height: calc(100vh - 64px); box-sizing: border-box; }
+.ol-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding-bottom: 0.6rem; border-bottom: 1px solid var(--cm-border, rgba(255,255,255,0.08)); }
+.ol-title { margin: 0; }
+.ol-status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--cm-slate); }
+.ol-model { font-family: ui-monospace, monospace; font-size: 11.5px; color: inherit; }
+.ol-status-text { opacity: 0.85; }
+.ol-cap { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 6px; border-radius: 999px;
+  border: 1px solid var(--cm-border, rgba(255,255,255,0.14)); }
+.ol-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--cm-slate); }
+.ol-dot-on { background: var(--cm-green); box-shadow: 0 0 0 3px rgba(80,200,120,0.18); }
+.ol-dot-warm { background: var(--cm-amber); animation: ol-pulse 1.2s ease-in-out infinite; }
+.ol-dot-off { background: var(--cm-red); }
+@keyframes ol-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .ol-dot-warm { animation: none; } }
+
+.ol-thread { flex: 1 1 auto; overflow-y: auto; padding: 0.9rem 0 0.5rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.ol-empty { color: var(--cm-slate); font-size: 13px; margin: 2rem auto; text-align: center; }
+.ol-msg { max-width: 82%; border-radius: 12px; padding: 0.55rem 0.8rem; font-size: 14px; line-height: 1.5; }
+.ol-user { align-self: flex-end; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.28); }
+.ol-assistant { align-self: flex-start; background: var(--panel, #161b24);
+  border: 1px solid var(--cm-border, rgba(255,255,255,0.08)); }
+.ol-body { overflow-wrap: anywhere; }
+.ol-plain { white-space: pre-wrap; }
+.ol-cursor { color: var(--cm-amber); animation: ol-pulse 0.9s ease-in-out infinite; }
+.ol-err { margin-top: 0.35rem; font-size: 12.5px; color: var(--cm-red); }
+.ol-meta { margin-top: 0.3rem; font-size: 11px; color: var(--cm-slate); font-variant-numeric: tabular-nums; }
+.ol-think { margin: 0 0 0.4rem; font-size: 12px; color: var(--cm-slate); }
+.ol-think summary { cursor: pointer; user-select: none; }
+.ol-think pre { white-space: pre-wrap; margin: 0.3rem 0 0; font-family: inherit; font-size: 12px; opacity: 0.85;
+  max-height: 240px; overflow: auto; }
+
+.ol-thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.ol-thumb { width: 96px; height: 96px; object-fit: cover; border-radius: 8px;
+  border: 1px solid var(--cm-border, rgba(255,255,255,0.12)); }
+.ol-thumb-gone { font-size: 12px; color: var(--cm-slate); }
+.ol-pending { margin: 0 0 0.4rem; }
+.ol-pending-item { position: relative; display: inline-block; }
+.ol-x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: 0;
+  background: var(--cm-red); color: #fff; font-size: 13px; line-height: 20px; padding: 0; cursor: pointer; }
+
+.ol-composer { position: sticky; bottom: 0; padding-top: 0.6rem; background: inherit; }
+.ol-row { display: flex; gap: 8px; align-items: flex-end; }
+.ol-input { flex: 1 1 auto; resize: vertical; min-height: 44px; max-height: 40vh; padding: 0.55rem 0.7rem; border-radius: 10px;
+  background: var(--panel, #161b24); color: inherit; border: 1px solid var(--cm-border, rgba(255,255,255,0.12));
+  font: inherit; font-size: 14px; line-height: 1.45; }
+.ol-input:focus { outline: 2px solid rgba(212,175,55,0.45); outline-offset: 1px; }
+.ol-btn { height: 44px; padding: 0 0.95rem; border-radius: 10px; border: 1px solid var(--cm-border, rgba(255,255,255,0.14));
+  background: var(--panel, #161b24); color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+.ol-btn:disabled { opacity: 0.45; cursor: default; }
+.ol-attach { width: 44px; padding: 0; font-size: 17px; }
+.ol-send { background: rgba(212,175,55,0.18); border-color: rgba(212,175,55,0.45); }
+.ol-stop { background: rgba(230,80,80,0.16); border-color: rgba(230,80,80,0.45); }
+.ol-tools { display: flex; align-items: center; gap: 12px; margin-top: 0.4rem; font-size: 12px; color: var(--cm-slate); }
+.ol-toggle { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.ol-hint { margin-left: auto; }
+.ol-link { background: none; border: 0; color: inherit; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+.ol-link:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+@media (max-width: 640px) { .ol-msg { max-width: 94%; } .ol-page { padding: 0.6rem 0.6rem 0.9rem; } }
