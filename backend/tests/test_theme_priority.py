@@ -137,7 +137,10 @@ def test_priority_is_the_order_ajay_asked_for():
                      # 2026-09-14 — an AI-ecosystem story (agent and model
                      # security is the new attack surface) but an indirect one,
                      # so it sits behind the hardware and ahead of crypto.
-                     "infosec", "crypto"]
+                     "infosec", "crypto",
+                     # 2026-09-14 — the one theme here with no AI story at
+                     # all, so by his "AI winners lead" rule it ranks last.
+                     "biotech"]
 
 
 def test_every_roster_has_a_priority():

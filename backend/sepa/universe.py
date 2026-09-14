@@ -385,6 +385,36 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # (2026-01-29), MIME (no data — taken private 2022).
     "infosec":   ["CRWD", "PANW", "ZS", "S", "OKTA", "FTNT", "TENB", "QLYS",
                   "VRNS", "RPD", "SAIL", "NTSK", "RBRK", "GEN", "OSPN"],
+    # 2026-09-14 — Ajay, with a watchlist screenshot of green biotech against a
+    # red tape: "Do we have any bio and theraputics stocks especially these a
+    # bunch of them are gaining momentun in this down trend market whcih is
+    # mostly red". We did not: all 15 existing themes were AI, hardware, energy,
+    # defence, crypto or infosec, and nothing covered drug developers.
+    #
+    # He was right about the tape. Measured that afternoon: XLV +1.40%,
+    # ARKG +3.01%, XBI +1.00% against SMH -4.75% and QQQ -0.66% — a six-point
+    # spread on the day. The Healthcare SECTOR grain only read +2.81% over 21
+    # days, because a 642-name sector dilutes a biotech move exactly the way
+    # "Technology" once hid a 33-point semis-vs-software spread (2026-09-09).
+    # That dilution is the whole reason this is a theme and not a sector read.
+    #
+    # THERAPEUTICS ONLY — the line is "does its value sit in a drug pipeline".
+    # Deliberately NOT here, including two from his own screenshot:
+    #   ACHC  behavioural-health FACILITIES — a hospital operator
+    #   EL    Estee Lauder, cosmetics — not healthcare at all
+    #   NTRA VCYT   diagnostics, and TWST synthetic-DNA tools — they sell to
+    #               drug developers, they do not develop drugs
+    #   GANX  real therapeutics but ~$1M/day; it would swing the median on noise
+    # Validated by LAST BAR DATE, not bar count (the infosec lesson from the
+    # same morning). Nine candidates were dropped as dead despite carrying years
+    # of history: APLS (last bar 2026-05-13), CRNX (08-31), FOLD (04-24),
+    # SAVA (03-10), DVAX (02-09), BPMC (2025-07-17), SWTX (2025-06-30),
+    # ITCI (2025-04-01), BGNE (2024-12-31).
+    "biotech":   ["AMGN", "GILD", "VRTX", "REGN", "BIIB", "MRNA", "BNTX",
+                  "ALNY", "NBIX", "SRPT", "BMRN", "INCY", "EXEL", "HALO",
+                  "AXSM", "PTGX", "LQDA", "VERA", "DYN", "RYTM", "KRYS",
+                  "SMMT", "IOVA", "RARE", "IONS", "UTHR", "MDGL", "TGTX",
+                  "ARWR", "PCVX", "RVMD", "JAZZ"],
 }
 
 # Ordering BETWEEN themes, most-wanted first — Ajay's stated priority, then the
@@ -420,6 +450,12 @@ THEME_PRIORITY: dict[str, int] = {
     # Last on purpose: it is the only roster here with no AI-ecosystem thesis,
     # and his standing rule puts AI-ecosystem winners on top of every list.
     "crypto":    14,
+    # 2026-09-14 — ranked BELOW every AI theme and below crypto, deliberately.
+    # It is the one theme here that is not an AI story at all, and his standing
+    # rule is that AI-ecosystem winners lead any list. This tag decides which
+    # label a name carries when it sits in two themes; it does not decide where
+    # a theme ranks on a board — the rotation grain ranks on measured return.
+    "biotech":   15,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of
