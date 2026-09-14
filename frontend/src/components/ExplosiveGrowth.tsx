@@ -15,6 +15,8 @@
  * The backend owns every number (growth/tracker.py). Nothing here re-screens.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { balanceRead, passesDebtFilter,
+         type DebtTier } from '../lib/balanceRead';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import {
@@ -163,6 +165,10 @@ export function ExplosiveGrowth() {
   const [busy, setBusy] = useState(false);
   const [onlyBuyable, setOnlyBuyable] = useState(false);
   const [onlyDemand, setOnlyDemand] = useState(false);
+  // Ajay 2026-09-14: "I do not want them to have any debt." Defaulted ON
+  // at the widest tier that is still honestly debt-light, because a
+  // literal debt===0 filter returns ZERO of 29 rows — see balanceRead.ts.
+  const [debtTier, setDebtTier] = useState<DebtTier | null>('net cash');
   const [sector, setSector] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   // Ajay 2026-09-12: "sort this by demand intact". The board OPENS on demand
@@ -202,16 +208,23 @@ export function ExplosiveGrowth() {
     if (onlyBuyable) r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
     if (onlyDemand) r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
     if (sector) r = r.filter((x) => (x.sector || '(unmapped)') === sector);
+    if (debtTier) r = r.filter((x) => passesDebtFilter(x, debtTier));
     // Sort LAST, on the filtered set: every row the screen returned is in this
     // payload (29 of a 300 cap), so unlike the 🔥 Hottest board this is a
     // complete ordering and needs no round-trip.
     return sortRows(r, sortKey, sortDir);
-  }, [data, onlyBuyable, onlyDemand, sector, sortKey, sortDir]);
+  }, [data, onlyBuyable, onlyDemand, sector, debtTier, sortKey, sortDir]);
 
   const groups = data?.groups ?? [];
   const blockedN = (data?.rows ?? []).filter(
     (x) => (x.warnings ?? []).some((w) => w.startsWith('⛔'))).length;
   const demandN = (data?.rows ?? []).filter((x) => x.zone?.in_band && x.zone?.intact).length;
+  const debtN = useMemo(() => {
+    const rows = data?.rows ?? [];
+    const n = (t: DebtTier) => rows.filter((x) => balanceRead(x).tier === t).length;
+    return { free: n('debt-free'), netCash: n('net cash'),
+             modest: n('modest'), levered: n('levered'), na: n('n/a') };
+  }, [data]);
 
   if (loading) return <div className="eg-note">loading the growth board…</div>;
   if (err) return <div className="eg-note eg-err">⛔ {err}</div>;
@@ -236,6 +249,20 @@ export function ExplosiveGrowth() {
             <input type="checkbox" checked={onlyBuyable}
                    onChange={(e) => setOnlyBuyable(e.target.checked)} />
             hide what the engine refuses ({blockedN})
+          </label>
+          {/* Ajay 2026-09-14: "I do not want them to have any debt." A literal
+              zero-debt test empties this board (0 of 29 qualify), so the tiers
+              are relative to the company's own cash — see balanceRead.ts. */}
+          <label className="eg-sel" title="Debt is graded against the company's own cash. Lenders and mortgage REITs are excluded rather than failed — leverage is how they earn.">
+            <span>Debt</span>
+            <select value={debtTier ?? 'all'}
+                    onChange={(e) => setDebtTier(
+                      e.target.value === 'all' ? null : (e.target.value as DebtTier))}>
+              <option value="debt-free">no debt ({debtN.free})</option>
+              <option value="net cash">no debt + net cash ({debtN.free + debtN.netCash})</option>
+              <option value="modest">…through some debt ({debtN.free + debtN.netCash + debtN.modest})</option>
+              <option value="all">show everything ({(data?.rows ?? []).length})</option>
+            </select>
           </label>
           <button className="eg-btn" disabled={busy} onClick={() => void load(true)}>
             {busy ? 'rebuilding…' : 'Rebuild now'}
@@ -426,6 +453,12 @@ export function ExplosiveGrowth() {
                   Demand{arrow('demand', sortKey, sortDir)}
                 </button>
               </th>
+              {/* The indicator Ajay asked for. Sits beside the raw
+                  Cash − Debt number rather than replacing it: the number is
+                  the evidence, this is the read. */}
+              <th title="How the balance sheet reads on debt, graded against the company's own cash. Lenders and mortgage REITs read 'Debt is the business' — for them leverage is the product, not a weakness.">
+                Balance
+              </th>
               <th>Flags</th>
               <th />
             </tr>
@@ -458,6 +491,22 @@ export function ExplosiveGrowth() {
                         title={c.title}>{c.text}</td>
                   ))}
                   <td className={d.tone} title={d.title}>{d.text}</td>
+                  {(() => {
+                    const b = balanceRead(r);
+                    return (
+                      <td className="eg-bal" title={b.hint}>
+                        <span className={`eg-bal-chip ${b.cls}`}>
+                          {b.label}
+                        </span>
+                        {b.debtPctOfCash !== null && b.tier !== 'n/a' && (
+                          <div className="eg-bal-sub">
+                            debt {b.debtPctOfCash < 1 && b.debtPctOfCash > 0
+                              ? '<1' : b.debtPctOfCash.toFixed(0)}% of cash
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })()}
                   <td className="eg-flags">
                     {warns.length === 0
                       ? <span className="eg-dim">—</span>
@@ -470,7 +519,7 @@ export function ExplosiveGrowth() {
               );
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={15} className="eg-dim">
+              <tr><td colSpan={16} className="eg-dim">
                 nothing matches the current filters.
               </td></tr>
             )}

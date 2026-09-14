@@ -12494,3 +12494,28 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   .lt-scorecard { flex-direction: column; gap: 10px; }
   .lt-score-value { font-size: 34px; }
 }
+
+/* ── Explosive Growth · balance/debt indicator (Ajay 2026-09-14) ─────────────
+   "add a new indicator to show me balance sheet and Debt. I do not want them
+   to have any debt."
+   Only the two debt-light tiers get colour. "Levered" is deliberately NEUTRAL,
+   not red: plenty of good businesses carry debt, and the board's job here is
+   to answer HIS question, not to grade every balance sheet as pass/fail. */
+.eg-bal { white-space: nowrap; }
+.eg-bal-chip { display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 10px; border: 1px solid transparent; }
+.eg-bal-debtfree { color: #3dd68c; background: rgba(61, 214, 140, .12);
+  border-color: rgba(61, 214, 140, .35); }
+.eg-bal-netcash { color: #6fb2e8; background: rgba(111, 178, 232, .12);
+  border-color: rgba(111, 178, 232, .30); }
+.eg-bal-modest { color: var(--muted, #8b95a5); background: rgba(139, 149, 165, .10); }
+.eg-bal-levered { color: var(--muted, #8b95a5); }
+.eg-bal-na { color: var(--muted, #8b95a5); font-style: italic; }
+.eg-bal-unknown { color: var(--muted, #8b95a5); }
+.eg-bal-sub { font-size: 10.5px; color: var(--muted, #8b95a5); margin-top: 2px;
+  font-variant-numeric: tabular-nums; }
+
+.eg-sel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.eg-sel select { background: var(--panel, #161b24); color: inherit;
+  border: 1px solid var(--border, #242c39); border-radius: 6px;
+  padding: 4px 8px; font-size: 12.5px; }
