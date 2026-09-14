@@ -12598,3 +12598,29 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .ollama-icon__glyph { font-size: 0.95rem; line-height: 1; }
 .ollama-icon__label { letter-spacing: 0.02em; }
 .ollama-icon--compact { padding: 2px 6px; }
+
+/* ── /ollama Agent mode — Hermes tool cards, approvals, mode switch (2026-09-14) ── */
+.ol-head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ol-mode { display: inline-flex; border: 1px solid var(--cm-border, rgba(255,255,255,0.14)); border-radius: 999px; padding: 2px; }
+.ol-mode-btn { border: 0; background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 600;
+  padding: 3px 11px; border-radius: 999px; cursor: pointer; opacity: 0.75; }
+.ol-mode-btn.is-on { background: rgba(212,175,55,0.18); color: var(--gold, #d4af37); opacity: 1; }
+.ol-mode-btn:disabled { cursor: default; }
+.ol-tools-list { display: flex; flex-direction: column; gap: 4px; margin: 0.2rem 0 0.5rem; }
+.ol-tool { font-size: 12.5px; border: 1px solid var(--cm-border, rgba(255,255,255,0.10)); border-radius: 8px;
+  padding: 4px 8px; background: rgba(0,0,0,0.18); }
+.ol-tool summary { cursor: pointer; user-select: none; font-family: ui-monospace, monospace; font-size: 12px;
+  overflow-wrap: anywhere; }
+.ol-tool-live summary { color: var(--cm-amber); }
+.ol-tool-done summary { color: var(--cm-slate); }
+.ol-tool-glyph { display: inline-block; width: 1em; }
+.ol-tool-out { white-space: pre-wrap; margin: 0.35rem 0 0.1rem; font-family: ui-monospace, monospace; font-size: 11.5px;
+  line-height: 1.4; max-height: 320px; overflow: auto; color: #cfcfd4; }
+.ol-approval { margin: 0.3rem 0 0.5rem; padding: 0.5rem 0.7rem; border-radius: 10px;
+  border: 1px solid var(--cm-amber); background: rgba(212,160,23,0.10); font-size: 13px; }
+.ol-approval-text code { font-family: ui-monospace, monospace; font-size: 12px; }
+.ol-approval-btns { display: flex; gap: 6px; margin-top: 0.4rem; flex-wrap: wrap; }
+.ol-approval-btns .ol-btn { height: 32px; padding: 0 0.7rem; font-size: 12.5px; }
+.ol-approval-done { margin-top: 0.3rem; font-size: 12px; color: var(--cm-slate); }
+.ol-notes { margin-top: 0.3rem; }
+.ol-note { font-size: 11.5px; color: var(--cm-slate); }

@@ -10,7 +10,8 @@
 import { fireEvent, render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import OllamaChat, {
-  STORAGE_KEY, MAX_IMAGES, stripDataUrl, parseSse, fmtDuration, tokPerSec,
+  STORAGE_KEY, AGENT_STORAGE_KEY, AGENT_SESSION_KEY, MAX_IMAGES, stripDataUrl, parseSse, fmtDuration, tokPerSec,
+  toolSummary, toolResultText,
 } from './OllamaChat';
 
 const ME_OK = {
@@ -318,5 +319,166 @@ describe('images', () => {
     mockFetch({ '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }) });
     render(<OllamaChat />);
     expect(await screen.findByText('📷 2')).toBeTruthy();
+  });
+});
+
+describe('agent mode (Hermes)', () => {
+  const HERMES_OK = { ok: true, base_url: 'http://host.docker.internal:9119', reachable: true, token_set: true, reason: null };
+  function agentOn() {
+    window.localStorage.setItem(`${STORAGE_KEY}.mode`, 'agent');
+  }
+
+  it('pure: tool summary and result text', () => {
+    expect(toolSummary({ name: 'terminal', context: 'uname -a', duration_s: 0.19, done: true })).toBe('terminal · uname -a · 0.2s');
+    expect(toolSummary({ name: 'read_file', args: { path: '/tmp/x' }, done: false })).toBe('read_file · /tmp/x');
+    expect(toolResultText({ output: 'Darwin', exit_code: 0 })).toBe('Darwin');
+    expect(toolResultText('plain')).toBe('plain');
+    expect(toolResultText(null)).toBe('');
+  });
+
+  it('default mode is Model and the Agent tab switches the endpoint', async () => {
+    const { res } = streamResponse([sse([{ session: { session_id: 'rt1', stored_session_id: 'st1', model: 'm' } }, { delta: 'hi' }, { done: { text: 'hi', usage: { input: 1, output: 2 } } }])]);
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify(HERMES_OK), { status: 200 }),
+      '/hermes/chat': () => res,
+    });
+    render(<OllamaChat />);
+    await screen.findByPlaceholderText(/Message/);
+    expect((screen.getByRole('tab', { name: 'Model' }) as HTMLButtonElement).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Agent' }));
+    expect(await screen.findByText('Hermes')).toBeTruthy();
+    await waitFor(() => expect(calls.some(c => c.url.endsWith('/hermes/me'))).toBe(true));
+    expect(await screen.findByText('connected · new session')).toBeTruthy();
+    const ta = screen.getByPlaceholderText(/Ask Hermes/);
+    fireEvent.change(ta, { target: { value: 'do it' } });
+    fireEvent.keyDown(ta, { key: 'Enter' });
+    expect(await screen.findByText('hi')).toBeTruthy();
+    const body = lastBody('/hermes/chat');
+    expect(body).toEqual({ text: 'do it', session_id: null });
+    expect(calls.some(c => c.url.endsWith('/ollama/chat'))).toBe(false);
+    // The session from the stream is remembered for the next turn.
+    expect(JSON.parse(window.localStorage.getItem(AGENT_SESSION_KEY)!).stored_session_id).toBe('st1');
+    expect(screen.getByText(/1 in · 2 out/)).toBeTruthy();
+    expect(window.localStorage.getItem(`${STORAGE_KEY}.mode`)).toBe('agent');
+  });
+
+  it('resumes the stored session and renders tool cards', async () => {
+    agentOn();
+    window.localStorage.setItem(AGENT_SESSION_KEY, JSON.stringify({ session_id: 'rt0', stored_session_id: 'st9' }));
+    const { res } = streamResponse([
+      sse([{ session: { session_id: 'rt1', stored_session_id: 'st9' } }, { thinking: 'plan' }, { tool_generating: 'terminal' }]),
+      sse([{ tool_start: { tool_id: 'c1', name: 'terminal', context: 'uname -a', args: { command: 'uname -a' } } }]),
+      sse([{ tool_done: { tool_id: 'c1', name: 'terminal', duration_s: 0.2, result: { output: 'Darwin box' } } }, { delta: 'It is Darwin.' }]),
+      sse([{ status: { kind: 'warn', text: 'title gen failed' } }, { done: { text: 'It is Darwin.', usage: { input: 5, output: 3 } } }]),
+    ]);
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify(HERMES_OK), { status: 200 }),
+      '/hermes/chat': () => res,
+    });
+    render(<OllamaChat />);
+    expect(await screen.findByText('session st9')).toBeTruthy();
+    const ta = await screen.findByPlaceholderText(/Ask Hermes/);
+    fireEvent.change(ta, { target: { value: 'what os' } });
+    fireEvent.keyDown(ta, { key: 'Enter' });
+    expect(await screen.findByText('It is Darwin.')).toBeTruthy();
+    expect(lastBody('/hermes/chat').session_id).toBe('st9');
+    expect(screen.getByText('terminal · uname -a · 0.2s')).toBeTruthy();
+    expect(screen.getByText('Darwin box')).toBeTruthy();
+    expect(screen.getByText('warn: title gen failed')).toBeTruthy();
+    expect(screen.getByText('plan')).toBeTruthy();
+    // Only one tool card: the "generating" placeholder was replaced by the real call.
+    expect(document.querySelectorAll('.ol-tool').length).toBe(1);
+    expect(JSON.parse(window.localStorage.getItem(AGENT_STORAGE_KEY)!).length).toBe(2);
+  });
+
+  it('final done.text replaces streamed interim commentary', async () => {
+    agentOn();
+    const { res } = streamResponse([sse([{ session: { session_id: 'r', stored_session_id: 's' } }, { delta: 'Let me check. ' }, { done: { text: 'Final answer only.' } }])]);
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify(HERMES_OK), { status: 200 }),
+      '/hermes/chat': () => res,
+    });
+    render(<OllamaChat />);
+    const ta = await screen.findByPlaceholderText(/Ask Hermes/);
+    fireEvent.change(ta, { target: { value: 'x' } });
+    fireEvent.keyDown(ta, { key: 'Enter' });
+    expect(await screen.findByText('Final answer only.')).toBeTruthy();
+    expect(screen.queryByText(/Let me check/)).toBeNull();
+  });
+
+  it('approval request renders buttons that call /hermes/approve with the runtime session', async () => {
+    agentOn();
+    const { res } = streamResponse([sse([
+      { session: { session_id: 'rt1', stored_session_id: 's' } },
+      { approval: { request_id: 'ap1', session_id: 'rt1', command: 'rm -rf /tmp/x', choices: ['once', 'session', 'deny'] } },
+    ])], { hang: true });
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify(HERMES_OK), { status: 200 }),
+      '/hermes/chat': () => res,
+      '/hermes/approve': () => new Response('{"ok":true}', { status: 200 }),
+    });
+    render(<OllamaChat />);
+    const ta = await screen.findByPlaceholderText(/Ask Hermes/);
+    fireEvent.change(ta, { target: { value: 'clean up' } });
+    fireEvent.keyDown(ta, { key: 'Enter' });
+    expect(await screen.findByText('rm -rf /tmp/x')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'once' }));
+    await waitFor(() => expect(lastBody('/hermes/approve')).toEqual({ session_id: 'rt1', request_id: 'ap1', choice: 'once' }));
+    expect(await screen.findByText('answered: once')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'deny' })).toBeNull();
+  });
+
+  it('Stop in agent mode also posts /hermes/interrupt for the runtime session', async () => {
+    agentOn();
+    window.localStorage.setItem(AGENT_SESSION_KEY, JSON.stringify({ session_id: 'rt7', stored_session_id: 'st7' }));
+    const { res } = streamResponse([sse([{ session: { session_id: 'rt7', stored_session_id: 'st7' } }, { delta: 'partial' }])], { hang: true });
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify(HERMES_OK), { status: 200 }),
+      '/hermes/chat': () => res,
+      '/hermes/interrupt': () => new Response('{"ok":true}', { status: 200 }),
+    });
+    render(<OllamaChat />);
+    const ta = await screen.findByPlaceholderText(/Ask Hermes/);
+    fireEvent.change(ta, { target: { value: 'count' } });
+    fireEvent.keyDown(ta, { key: 'Enter' });
+    expect(await screen.findByText('partial')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: 'Stop' }));
+    await waitFor(() => expect(lastBody('/hermes/interrupt')).toEqual({ session_id: 'rt7' }));
+    expect(await screen.findByRole('button', { name: 'Send' })).toBeTruthy();
+  });
+
+  it('shows the reason when the Hermes backend is down, and no mode switch mid-stream', async () => {
+    agentOn();
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify({ ...HERMES_OK, reachable: false, reason: 'Hermes backend not reachable at host.docker.internal:9119' }), { status: 200 }),
+    });
+    render(<OllamaChat />);
+    expect(await screen.findByText(/Hermes backend not reachable/)).toBeTruthy();
+  });
+
+  it('New session forgets the Hermes session and the agent thread, leaves the model thread alone', async () => {
+    agentOn();
+    window.localStorage.setItem(AGENT_SESSION_KEY, JSON.stringify({ session_id: 'r', stored_session_id: 's' }));
+    window.localStorage.setItem(AGENT_STORAGE_KEY, JSON.stringify([{ role: 'user', content: 'agent old' }]));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([{ role: 'user', content: 'model old' }]));
+    mockFetch({
+      '/ollama/me': () => new Response(JSON.stringify(ME_OK), { status: 200 }),
+      '/hermes/me': () => new Response(JSON.stringify(HERMES_OK), { status: 200 }),
+    });
+    render(<OllamaChat />);
+    expect(await screen.findByText('agent old')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'New session' }));
+    expect(screen.queryByText('agent old')).toBeNull();
+    expect(window.localStorage.getItem(AGENT_SESSION_KEY)).toBeNull();
+    expect(window.localStorage.getItem(AGENT_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toContain('model old');
+    fireEvent.click(screen.getByRole('tab', { name: 'Model' }));
+    expect(await screen.findByText('model old')).toBeTruthy();
   });
 });

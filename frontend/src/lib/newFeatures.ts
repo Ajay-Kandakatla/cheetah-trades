@@ -22,6 +22,9 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // "Can you let me connect it via the hermes setup so I can chat with it and
+  // make it do things for me via the chat?"
+  { id: 'hermes-agent-mode-2026-09-14', label: "\u{1F6E0}\uFE0F AGENT MODE on the \u{1F999} page \u2014 the same private chat, now through your Hermes Agent, so it can DO things: run commands on this Mac, browse, read and edit files, remember across sessions. Flip Model \u2192 Agent at the top. Every tool call shows as a card in the thread (what it ran, how long, the output), and if Hermes ever asks for approval the buttons appear inline. The conversation is a real Hermes session \u2014 the same one you would see in the terminal \u2014 kept across reloads; New session starts fresh. HOW IT IS WIRED: Hermes's own backend (hermes serve, the one its desktop app uses) now runs at login as a LaunchAgent on 127.0.0.1:9119, and the api container attaches over its JSON-RPC socket. Probed end-to-end from inside the container before shipping: PONG, then `uname -a` executed on the Mac and came back, then a blue image was recognised as blue through Hermes. STILL ONLY YOU: same primary-admin gate, 404 for everyone else, and the bridge token never leaves the server. Your Hermes config is not in approval mode, so it will run what you ask without confirming \u2014 that is your setting, not mine; `hermes config` changes it.", addedAt: '2026-09-14', route: '/ollama' },
   // "Can you build me a chat interface to talk to my Ollamma LLM the
   // abliterated model. I wanna chat with it from this app but only available
   // for me. ... I can upload images and talk to it."

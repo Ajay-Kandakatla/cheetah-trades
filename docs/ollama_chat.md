@@ -120,6 +120,58 @@ OLLAMA_CHAT_MODEL=huihui_ai/Qwen3.8-abliterated:27b
   image path, MAX_IMAGES cap, remove ×, restored `📷 n`, no `@gmail.com`
   in source.
 
+## Agent mode — Hermes (2026-09-14)
+
+> *"Can you let me connect it via the hermes setup so I can chat with it and
+> make it do things for me via the chat?"*
+
+**Model ↔ Agent** switch at the top of `/ollama`. Agent mode talks to
+**Hermes Agent v0.21.1** (`~/.hermes/hermes-agent`, same abliterated model
+through Ollama's OpenAI endpoint, toolsets `hermes-cli` + `web`, terminal
+backend `local`) — so it runs commands on the Mac, browses, edits files,
+remembers.
+
+| Piece | Where |
+|---|---|
+| Hermes backend | `hermes serve --skip-build --host 127.0.0.1 --port 9119` as LaunchAgent **`~/Library/LaunchAgents/ai.hermes.serve.plist`** (RunAtLoad + KeepAlive, logs `~/.hermes/logs/serve*.log`). `launchctl kickstart -k gui/$(id -u)/ai.hermes.serve` restarts it. |
+| Token | `HERMES_DASHBOARD_SESSION_TOKEN` in `~/.hermes/.env` (fixed so it survives restarts) = `HERMES_WS_TOKEN` in `backend/.env`. Never logged, never returned. |
+| Bridge | `backend/ollama_chat/hermes.py` — `GET /hermes/me`, `POST /hermes/chat` (SSE), `POST /hermes/approve`, `POST /hermes/interrupt`. Same primary-admin dependency gate. |
+| Page | `OllamaChat.tsx` agent path: tool cards, approval buttons, session id in `localStorage` (`pounce_hermes_session_v1`). |
+
+**The two guards a container must pass** (measured): Hermes rejects a
+non-loopback `Host` header (DNS-rebinding guard) and a non-loopback peer.
+Docker Desktop presents the container's connection from 127.0.0.1, so the
+peer passes; the bridge keeps the URI at `ws://127.0.0.1:9119` and dials
+`host.docker.internal` via websockets' `host=`/`port=` override. A plain
+`ws://host.docker.internal:9119` gets **HTTP 403**.
+
+**Wire, per turn:** connect → `gateway.ready` → `session.resume {stored}`
+(or `session.create`) → `image.attach_bytes` × n → `prompt.submit` → stream
+`thinking.delta` / `reasoning.delta` / `message.delta` / `tool.start` /
+`tool.complete` / `approval.request` / `status.update` → `message.complete`
+(final text authoritative) or `turn.error`. Browser disconnect →
+`session.interrupt`. One socket per turn; a new socket may submit to a
+runtime session another one created and gets its events (measured).
+
+**Probed live from inside the api container before shipping:** PONG; `uname -a`
+executed on the Mac via the `terminal` tool (no approval prompt — his config
+is not in approval mode); a blue PNG recognised as "Blue" through
+`image.attach_bytes`; `session.interrupt` → `interrupted`; `session.resume`
+returned the same runtime id.
+
+**Not exercised live:** `approval.request` / `approval.respond` — his Hermes
+is not in approval mode, so the path is wired and unit-tested only.
+
+SSE events to the page: `session`, `thinking`, `delta`, `interim`,
+`tool_generating`, `tool_start`, `tool_done` (result capped at 4000 chars),
+`approval`, `status`, `done {text, usage, status}`, `error`.
+
+Tests: `backend/tests/test_hermes_bridge.py` (gate, loopback-Host target,
+missing token never dials, 403/refused reasons, event relay order incl.
+other-session filtering and after-complete drop, resume + image-before-submit
+ordering, resume fallback, truncation, approval, interrupt 502, input guards,
+source guards). FE: agent-mode tests in `OllamaChat.test.tsx`.
+
 ## Not done / his call
 
 * No server-side history — the thread lives in his browser.

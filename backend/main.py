@@ -4206,6 +4206,9 @@ app.include_router(notifications_recent_router)
 from ollama_chat.api import router as ollama_router  # noqa: E402
 from ollama_chat.api import is_primary_admin as _ollama_is_primary_admin  # noqa: E402
 app.include_router(ollama_router)
+# Agent mode: the same page, through Hermes Agent's tools (Ajay only).
+from ollama_chat.hermes import router as hermes_router  # noqa: E402
+app.include_router(hermes_router)
 
 
 @app.get("/push/history")
