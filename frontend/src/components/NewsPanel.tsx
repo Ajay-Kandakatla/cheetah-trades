@@ -62,6 +62,8 @@ export function NewsPanel() {
             className="refresh-btn-mini"
             onClick={load}
             disabled={loading}
+            aria-label="Refresh news"
+            title="Refresh news"
           >
             {loading ? '…' : '↻'}
           </button>
